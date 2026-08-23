@@ -1,452 +1,478 @@
 ---
 id: validacao-real
-title: A validação real — GitHub remoto e modelo de verdade
-sidebar_label: Validação real (13b)
+title: The real validation — remote GitHub and a real model
+sidebar_label: Real validation (13b)
 sidebar_position: 6
-description: A execução contra um repositório remoto de verdade, com dev agent real e modelo de API — o que ela provou, o que ela reprovou, e por que reprovar aqui vale mais que passar.
-keywords: [validação, dogfooding, GitHub, dev agent, medição, FASE 13b]
+description: The execution against a real remote repository, with a real dev agent and an API model — what it proved, what it disproved, and why failing here is worth more than passing.
+keywords: [validation, dogfooding, GitHub, dev agent, measurement, PHASE 13b]
 ---
 
-# A validação real — GitHub remoto e modelo de verdade
+# The real validation — remote GitHub and a real model
 
-A [validação da Fase 12](./validacao-fase-12.md) declara os próprios limites com
-todas as letras: `LocalGitProvider`, `NoopDevAgent`, veredito de gate escrito
-pelo próprio script. Ela existe para provar a **cadeia** sem depender de rede
-nem de julgamento de modelo, e faz isso bem.
+The [Phase 12 validation](./validacao-fase-12.md) states its own limits in
+full: `LocalGitProvider`, `NoopDevAgent`, a gate verdict written by the
+script itself. It exists to prove the **chain** without depending on network
+or model judgment, and it does that well.
 
-Esta aqui troca exatamente as três coisas que aquela deixou de fora — GitHub
-remoto, dev agent real, modelo de API — e o resultado é o que se espera de um
-dogfooding honesto: **a metade barata passou inteira, e a metade cara falhou de
-um jeito que nenhum teste tinha mostrado.**
+This one swaps out exactly the three things that one left out — remote
+GitHub, a real dev agent, an API model — and the result is what you'd expect
+from an honest dogfooding run: **the cheap half passed entirely, and the
+expensive half failed in a way no test had shown.**
 
-O script é `pnpm --filter api validacao:real -- --repo <owner/repo>`.
+The script is `pnpm --filter api validacao:real -- --repo <owner/repo>`.
 
-## O que passou, e é mais do que parece
+## What passed, and is more than it looks
 
-Tudo abaixo rodou contra `daneiel/test` no GitHub de verdade, e **sem gastar um
-centavo** — é a fase `--ate backlog`.
+Everything below ran against `daneiel/test` on real GitHub, and **without
+spending a cent** — it's the `--ate backlog` phase.
 
-| o que | resultado |
+| what | result |
 |---|---|
-| adoção remota (`getRepo` de verdade) | `origin: adopted`, branch padrão `main` |
-| plano em dry-run | 6 mutações, 6 diagnósticos, **decisão nula** |
-| repositório intocado até a decisão | verificado pela API: **zero branches, zero conteúdo** |
-| readoção converge | 6 mutações na 1ª passada, **3 na 2ª** ([RN-046](../business-rules.md#rn-046)) |
-| story única fica `draft` + proposta | sim, sem promoção automática |
-| `claimNext` antes da promoção | `null` — nada pegável |
-| promoção | registrada com o **usuário** como ator |
+| remote adoption (real `getRepo`) | `origin: adopted`, default branch `main` |
+| dry-run plan | 6 mutations, 6 diagnostics, **null decision** |
+| repository untouched until the decision | verified via the API: **zero branches, zero content** |
+| re-adoption converges | 6 mutations on the 1st pass, **3 on the 2nd** ([RN-046](../business-rules.md#rn-046)) |
+| single story becomes `draft` + proposed | yes, no automatic promotion |
+| `claimNext` before promotion | `null` — nothing claimable |
+| promotion | recorded with the **user** as the actor |
 
-A RN-045 deixa de ser provada só contra um bare local: o repositório remoto foi
-conferido **depois** da adoção e estava literalmente vazio.
+RN-045 stops being proven only against a local bare repo: the remote
+repository was checked **after** adoption and was literally empty.
 
-### O achado D aconteceu de verdade
+### Finding D actually happened
 
-O bootstrap parou em `protect_branches` com
-`Upgrade to GitHub Pro or make this repository public` — repositório privado no
-plano gratuito. É exatamente o cenário que a Fase D documentou, agora observado
-fora de teste.
+The bootstrap stopped at `protect_branches` with
+`Upgrade to GitHub Pro or make this repository public` — a private
+repository on the free plan. It's exactly the scenario Finding D
+documented, now observed outside a test.
 
-E a premissa da [RN-078](../business-rules.md#rn-078) se confirmou: conferido o
-repositório logo depois, `dev`, `main` e `qa` existiam e os arquivos estavam
-commitados. É o **último** passo, e o único cuja falha deixa um repositório
-utilizável. O script reconhece a falha e segue, que é a saída desenhada para
-isso.
+And [RN-078](../business-rules.md#rn-078)'s premise was confirmed: checking
+the repository right after, `dev`, `main`, and `qa` existed and the files
+were committed. It's the **last** step, and the only one whose failure
+leaves a usable repository. The script recognizes the failure and moves on,
+which is the intended outcome.
 
-## O que a execução paga mostrou
+## What the expensive execution showed
 
-Modelo `openai/gpt-5-mini` via OpenRouter, dev agent real, uma story com uma
-task: *"Expor GET /saudacao"*.
+Model `openai/gpt-5-mini` via OpenRouter, real dev agent, one story with one
+task: *"Expose GET /greeting"*.
 
-**A task foi bloqueada por `limite de iterações atingido`, com origem
-`modelo`.** Nenhuma PR foi aberta, e portanto nenhum gate chegou a julgar.
+**The task was blocked by `iteration limit reached`, with origin
+`modelo`.** No PR was opened, and so no gate ever got to judge.
 
-O diagnóstico gravado é de uma clareza incômoda: `(nenhum terminal rodado)`.
+The recorded diagnosis is uncomfortably clear: `(no terminal run)`.
 
-### A medição
+### The measurement
 
-Extraída por `pnpm --filter api medir:execucao`, nunca anotada à mão:
+Extracted by `pnpm --filter api medir:execucao`, never recorded by hand:
 
 | | |
 |---|---|
-| janela | 1m36s |
-| sessões · eventos | 3 · 59 |
-| **restart do engine no meio** | **não** |
-| voltas de gate | nenhuma (não houve PR) |
-| turnos mudos | nenhum |
-| intervenções do usuário | nenhuma |
+| window | 1m36s |
+| sessions · events | 3 · 59 |
+| **engine restart in between** | **no** |
+| gate round-trips | none (no PR happened) |
+| silent turns | none |
+| user interventions | none |
 
-| agente | chamadas | in | out | custo | modelo |
+| agent | calls | in | out | cost | model |
 |---|---|---|---|---|---|
-| dev-api | 8 | 5.671 | 205 | < US$ 0,01 | `openai/gpt-5-mini` |
-| anamnese | 1 | 6.779 | 967 | < US$ 0,01 | deepseek-v4-flash |
-| psicologo | 1 | 3.212 | 1.981 | < US$ 0,01 | deepseek-v4-flash |
+| dev-api | 8 | 5,671 | 205 | < US$ 0.01 | `openai/gpt-5-mini` |
+| anamnese | 1 | 6,779 | 967 | < US$ 0.01 | deepseek-v4-flash |
+| psicologo | 1 | 3,212 | 1,981 | < US$ 0.01 | deepseek-v4-flash |
 
-O critério **zero restarts** fechou. E o custo é a parte menos interessante:
-205 tokens de saída em oito chamadas é um agente que não escreveu nada.
+The **zero restarts** criterion passed. And the cost is the least
+interesting part: 205 output tokens across eight calls is an agent that
+wrote nothing.
 
-### O que o produto descobriu sozinho
+### What the product discovered on its own
 
-O Psicólogo rodou em tier pesado e produziu três hipóteses. A primeira e a
-segunda são o diagnóstico correto, sem ninguém apontar:
+The Psychologist ran on the heavy tier and produced three hypotheses. The
+first and second are the correct diagnosis, with no one pointing it out:
 
-> O dev-api não tinha (ou não utilizou) um ambiente terminal funcional […] em
-> toda a sessão não existe nenhum tool.call de execução de comando […] apenas
-> `search_workspace`/`read_file`.
+> The dev-api didn't have (or didn't use) a working terminal environment
+> […] throughout the whole session there isn't a single command-execution
+> tool.call […] only `search_workspace`/`read_file`.
 
-> A ferramenta `search_workspace` está sub-indexada ou mal configurada para
-> este repositório: não encontrou nenhum arquivo de código ou manifesto […]
-> Isso enganou o agente, que ficou tentando entender "onde está o projeto".
+> The `search_workspace` tool is under-indexed or misconfigured for this
+> repository: it found no code or manifest file whatsoever […] That
+> misled the agent, which kept trying to figure out "where the project
+> is".
 
-Isto merece registro separado: a introspecção do produto **funcionou**. O
-Psicólogo leu o event log de uma execução fracassada e nomeou a causa com
-precisão maior que a de qualquer asserção do script.
+This deserves its own record: the product's introspection **worked**. The
+Psychologist read the event log of a failed execution and named the cause
+more precisely than any assertion in the script.
 
-## Os achados, para a triagem da 13c
+## The findings, for 13c triage
 
-A disciplina da fase vale aqui como em todo lugar: **achado novo entra como
-item, nunca como fix**.
+The phase's discipline holds here as everywhere: **a new finding becomes an
+item, never a fix**.
 
-### X. O dev agent queima o teto de iterações explorando repositório vazio
+### X. The dev agent burns the iteration cap exploring an empty repository
 
-Dada uma task num repositório recém-provisionado — que tem só o template do
-Gitflow, sem código —, o agente gastou as oito iterações em
-`search_workspace`/`read_file` procurando "onde está o projeto", e nunca rodou
-um comando nem escreveu um arquivo.
+Given a task in a freshly provisioned repository — which only has the
+Gitflow template, no code — the agent spent all eight iterations on
+`search_workspace`/`read_file` looking for "where the project is", and
+never ran a single command or wrote a single file.
 
-O sintoma é `limite de iterações atingido` com origem `modelo`, o que é
-tecnicamente verdade e praticamente inútil: o modelo não errou um julgamento,
-ele nunca chegou a julgar nada. A causa é a ausência de sinal de que **não há
-o que procurar** — um repositório vazio é indistinguível, pelas ferramentas
-disponíveis, de um repositório onde a busca falhou.
+The symptom is `iteration limit reached` with origin `modelo`, which is
+technically true and practically useless: the model didn't misjudge
+anything, it never got to judge anything at all. The cause is the absence
+of a signal that **there's nothing to find** — an empty repository is,
+given the available tools, indistinguishable from a repository where the
+search failed.
 
-Vale notar que este é o **primeiro** cenário do produto em que o dev agent
-começa do zero absoluto. Todo teste e toda demo partiram de um workspace com
-código.
+Worth noting this is the **first** scenario in the product where the dev
+agent starts from absolute zero. Every test and every demo so far started
+from a workspace with code.
 
-### Y. `search_workspace` não distingue "vazio" de "não encontrei"
+### Y. `search_workspace` doesn't distinguish "empty" from "found nothing"
 
-Consequência direta do anterior, e provavelmente a peça acionável: as cinco
-primeiras chamadas devolveram `nenhum resultado`, o que o agente leu como
-"procure melhor" em vez de "não há nada aqui". O Psicólogo chegou à mesma
-conclusão sozinho.
+Direct consequence of the previous one, and probably the actionable piece:
+the first five calls returned `no results`, which the agent read as "search
+harder" instead of "there's nothing here". The Psychologist reached the
+same conclusion on its own.
 
-## A segunda execução: a correção do Y NÃO fechou o X
+## The second execution: fixing Y did NOT close X
 
-Depois de fechar o achado Y, a mesma execução rodou de novo — mesma story,
-mesmo repositório, mesmo modelo. **Só a frase da ferramenta mudou entre as
-duas.**
+After closing finding Y, the same execution ran again — same story, same
+repository, same model. **Only the tool's message changed between the
+two.**
 
-| | 1ª execução | 2ª execução |
+| | 1st execution | 2nd execution |
 |---|---|---|
-| chamadas do dev-api | 8 | 8 |
-| tokens de saída | 205 | 248 |
-| desfecho | `limite de iterações atingido` | `limite de iterações atingido` |
-| PR | nenhuma | nenhuma |
+| dev-api calls | 8 | 8 |
+| output tokens | 205 | 248 |
+| outcome | `iteration limit reached` | `iteration limit reached` |
+| PR | none | none |
 
-O comportamento mudou de forma observável — **uma** busca em vez de cinco,
-seguida de `read_file` — e o desfecho não. A mensagem nova chegou ao agente e
-foi a correta para o caso (`o workspace tem 2 arquivo(s), então a busca
-funcionou`), porque o repositório tinha o template do Gitflow e não estava
-vazio.
+The behavior changed observably — **one** search instead of five, followed
+by `read_file` — and the outcome didn't. The new message reached the agent
+and was the correct one for the case (`the workspace has 2 file(s), so the
+search worked`), because the repository had the Gitflow template and wasn't
+empty.
 
-**A hipótese registrada aqui estava errada.** O texto anterior dizia *"a
-correção é a frase, não o teto"*. A evidência diz outra coisa: das oito
-iterações, sete foram exploração. Sobra UMA para escrever o arquivo, commitar,
-dar push e abrir a PR — nem um agente perfeito fecharia isso.
+**The hypothesis recorded here was wrong.** The earlier text said *"the fix
+is the message, not the cap"*. The evidence says otherwise: of the eight
+iterations, seven were exploration. That leaves ONE to write the file,
+commit, push, and open the PR — not even a perfect agent would close that
+out.
 
-`TOOL_LOOP_MAX_ITERATIONS` é `8` por default
-(`apps/engine/config/runtime.exs:100`). O número nasceu para agente
-conversacional, e nunca foi reavaliado para um dev agent que precisa explorar
-um repositório antes de agir.
+`TOOL_LOOP_MAX_ITERATIONS` defaults to `8`
+(`apps/engine/config/runtime.exs:100`). The number was born for a
+conversational agent, and was never reassessed for a dev agent that needs
+to explore a repository before acting.
 
-O Psicólogo, de novo, foi mais preciso que a asserção do script:
+The Psychologist, again, was more precise than the script's assertion:
 
-> o workspace não contém o código do projeto: não há package.json, nem src,
-> nem README
+> the workspace doesn't contain the project's code: no package.json, no
+> src, no README
 
-> ficou apenas em modo leitura/exploração
+> it stayed in read-only/exploration mode only
 
-### O que isso ensina sobre medir
+### What this teaches about measuring
 
-Registrar o resultado negativo é o ponto. Se a segunda execução não tivesse
-sido feita, o achado Y — que é real e está coberto por teste — seria fácil de
-confundir com a solução do X. Foi uma correção correta que **não** produziu o
-efeito esperado, e só a execução mostrou isso.
+Recording the negative result is the point. If the second execution hadn't
+been run, finding Y — which is real and covered by a test — would have been
+easy to mistake for the solution to X. It was a correct fix that did
+**not** produce the expected effect, and only the execution showed that.
 
-## A terceira execução: o teto ERA a causa
+## The third execution: the cap WAS the cause
 
-Com `TOOL_LOOP_MAX_ITERATIONS=25` no lugar de `8`, e nada mais mudado, o dev
-agent mudou de patamar:
+With `TOOL_LOOP_MAX_ITERATIONS=25` instead of `8`, and nothing else
+changed, the dev agent moved up a level:
 
-| ferramenta | 2ª execução (teto 8) | 3ª execução (teto 25) |
+| tool | 2nd execution (cap 8) | 3rd execution (cap 25) |
 |---|---|---|
 | `search_workspace` | 2 | 4 |
 | `read_file` | 5 | 6 |
 | **`write_file`** | **0** | **3** |
 | **`terminal`** | **0** | **1** |
-| desfecho | limite de iterações | `dev.awaiting_approval` |
+| outcome | iteration limit | `dev.awaiting_approval` |
 
-Ele explorou, **escreveu três arquivos** e chamou `npm test --silent`. A
-hipótese registrada acima estava certa: o teto de 8 — herdado do agente
-conversacional — não cabe num dev agent que precisa entender um repositório
-antes de agir.
+It explored, **wrote three files**, and called `npm test --silent`. The
+hypothesis recorded above was right: the cap of 8 — inherited from the
+conversational agent — doesn't fit a dev agent that needs to understand a
+repository before acting.
 
-**E o motivo de parar mudou completamente.** Não houve bloqueio: a ação de
-terminal virou `proposed_action` com `require_approval` e o agente entrou em
-`dev.awaiting_approval` — suspenso, retendo worktree e histórico, como o
-[ADR 0052](../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md) desenhou. Ele
-parou e esperou, em vez de queimar iterações batendo na porta.
+**And the reason it stopped changed completely.** There was no block: the
+terminal action became a `proposed_action` with `require_approval` and the
+agent entered `dev.awaiting_approval` — suspended, holding onto its worktree
+and history, as [ADR 0052](../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)
+designed. It stopped and waited, instead of burning iterations knocking on
+the door.
 
-## A quarta execução, e o que ela revelou sobre a Fase F
+## The fourth execution, and what it revealed about Phase F
 
-Liberar `npm`, `pnpm`, `node` e `npx` no `allow` do projeto não destravou: o
-agente rodou **`ls -la`**, verbo que não estava na lista, e ficou pendente de
-novo.
+Allowing `npm`, `pnpm`, `node`, and `npx` in the project's `allow` list
+didn't unblock it: the agent ran **`ls -la`**, a verb not on the list, and
+went back to pending.
 
-Isso expõe uma diferença entre o que a Fase F entregou e o que foi pedido. O
-pedido era *"permita sempre comandos desde que seja na pasta do projeto"*. O
-[ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) entregou
-um **teto**: comando que toca caminho fora da pasta nunca é auto-aprovável, por
-mais que o verbo esteja em `allow`. O teto protege o **caminho** — o **verbo**
-continua governado pelo allowlist, que é uma lista fechada por desenho.
+This exposes a gap between what Phase F delivered and what was asked for.
+The request was *"always allow commands as long as they're inside the
+project folder"*. [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md)
+delivered a **ceiling**: a command that touches a path outside the folder
+is never auto-approvable, no matter how much the verb is in `allow`. The
+ceiling protects the **path** — the **verb** is still governed by the
+allowlist, which is a closed list by design.
 
-Consequência prática: cada comando novo que o agente inventa cai em
-`require_approval`. A escada continua existindo, só ficou mais segura.
+Practical consequence: every new command the agent invents falls into
+`require_approval`. The ladder still exists, it's just safer now.
 
-**Não trato isso como defeito**, e sim como escopo: o ADR 0055 nunca prometeu
-promover verbo. Mas a lacuna entre o pedido e a entrega é real, e vira item de
-triagem.
+**I don't treat this as a defect**, but as scope: ADR 0055 never promised to
+promote verbs. But the gap between the request and the delivery is real,
+and it becomes a triage item.
 
-### Uma armadilha do próprio instrumento
+### A trap in the instrument itself
 
-A primeira tentativa de configurar a política não teve efeito nenhum, e a causa
-merece registro porque é reincidente: o script rodava **pelo host**, então
-`PROJECT_WORKSPACES_ROOT` caiu no default `/tmp/brabo-project-workspaces` e o
-`permissions.json` nasceu num filesystem que o engine não enxerga.
+The first attempt to configure the policy had no effect at all, and the
+cause is worth recording because it's recurring: the script ran **on the
+host**, so `PROJECT_WORKSPACES_ROOT` fell back to the default
+`/tmp/brabo-project-workspaces` and `permissions.json` was born on a
+filesystem the engine can't see.
 
-É a mesma armadilha do repositório cobaia em `/tmp` que a
-[validação da Fase 12](./validacao-fase-12.md) já documenta — reaparecendo por
-outro caminho, no mesmo dia. O cabeçalho do script agora exige, com todas as
-letras, execução de dentro do container.
+It's the same trap as the test-fixture repository in `/tmp` that the
+[Phase 12 validation](./validacao-fase-12.md) already documents —
+resurfacing via a different path, on the same day. The script's header now
+requires, explicitly, execution from inside the container.
 
-## A quinta execução: a cadeia chega ao GitHub
+## The fifth execution: the chain reaches GitHub
 
-Rodando **de dentro do container** (a condição que faltava) e com os verbos de
-terminal liberados, a cadeia andou inteira:
+Running **from inside the container** (the missing condition) and with the
+terminal verbs allowed, the chain went all the way:
 
-| ação | política | desfecho |
+| action | policy | outcome |
 |---|---|---|
 | `terminal` ×2 | `auto_approve` | ✅ executed |
 | `git_commit` | `auto_approve` | ✅ executed |
 | `git_push` | `auto_approve` | ✅ executed |
 | `pr_open` | `auto_approve` | ❌ **failed** |
 
-**A branch do agente existe no GitHub**: `feature/task-d4b36a5b`, ao lado de
-`dev`, `main` e `qa`. Código escrito por um modelo, commitado com a identidade
-`dev-api[bot]` e empurrado para um repositório remoto de verdade.
+**The agent's branch exists on GitHub**: `feature/task-d4b36a5b`, alongside
+`dev`, `main`, and `qa`. Code written by a model, committed under the
+`dev-api[bot]` identity, and pushed to a real remote repository.
 
-O `pr_open` falhou com `Requires authentication`, e a causa é o **achado AA**:
-a api resolve o token de git por `action.decidedBy`, que é NULL quando a
-política auto-aprova. O push funcionou porque quem empurra é o engine, que
-injeta a credencial do owner (RN-076).
+`pr_open` failed with `Requires authentication`, and the cause is
+**finding AA**: the api resolves the git token via `action.decidedBy`,
+which is NULL when policy auto-approves. The push worked because the engine
+does the pushing, and it injects the owner's credential (RN-076).
 
-## A sexta execução: a PR abriu no GitHub
+## The sixth execution: the PR opened on GitHub
 
-Com a [RN-082](../business-rules.md#rn-082) no lugar, a cadeia fechou até a PR:
+With [RN-082](../business-rules.md#rn-082) in place, the chain closed all
+the way to the PR:
 
-> **PR #1 — "Rota pública de saudação — Expor GET /saudacao"**,
-> de `feature/task-636ef1aa`, aberta em `daneiel/test`.
+> **PR #1 — "Public greeting route — Expose GET /greeting"**,
+> from `feature/task-636ef1aa`, opened on `daneiel/test`.
 
-Código escrito por um modelo, commitado como `dev-api[bot]`, empurrado e
-publicado como pull request num repositório remoto de verdade. **O gate abriu**
-(`pr.gate_changed`, `gateStatus: awaiting_qa`) e a área de QA rodou.
+Code written by a model, committed as `dev-api[bot]`, pushed and published
+as a pull request on a real remote repository. **The gate opened**
+(`pr.gate_changed`, `gateStatus: awaiting_qa`) and the QA area ran.
 
-O `qa-performance-seguranca` foi **dispensado corretamente**
-(`delegation.dispensed`, justificativa *"story sem RNF"*) — dispensa com
-justificativa, nunca silêncio, como o ADR 0038 desenhou.
+`qa-performance-seguranca` was **correctly skipped**
+(`delegation.dispensed`, justification *"story has no NFR"*) — a skip with
+justification, never silence, as ADR 0038 intended.
 
-O `qa-automacao` falhou, e virou o **achado AB**: ele chamou um comando
-composto cujo último segmento (`head`) não estava no `allow`, o ToolLoop
-suspendeu em `awaiting_approval`, e o QA Lead classificou a suspensão como
-*"desfecho inesperado"* com origem `infra`. É o defeito que o ADR 0052 corrigiu
-para o dev agent e que não alcançou os agentes de gate.
+`qa-automacao` failed, and became **finding AB**: it called a compound
+command whose last segment (`head`) wasn't in `allow`, the ToolLoop
+suspended in `awaiting_approval`, and the QA Lead classified the suspension
+as an *"unexpected outcome"* with origin `infra`. It's the defect ADR 0052
+fixed for the dev agent and that never reached the gate agents.
 
-## A sétima execução: ampliar o allowlist não bastou, e isso era previsível
+## The seventh execution: widening the allowlist wasn't enough, and it was predictable
 
-Com 25 verbos liberados — critério explícito: o que LÊ ou CONSTRÓI, nunca o que
-busca na rede ou destrói — o gate travou de novo. E não por falta de verbo:
+With 25 verbs allowed — explicit criterion: whatever READS or BUILDS, never
+whatever reaches the network or destroys — the gate stalled again. And not
+for lack of a verb:
 
 ```
 ls -la && echo "---" && cat package.json 2>/dev/null; …
 ```
 
-`ls`, `echo` e `cat` estavam todos em `allow`. O que barra é `2>/dev/null`, e
-vira o **achado AC**: o parser trata `>` como separador, o redirecionamento
-vira um segmento cujo verbo é `/dev/null`, e o mesmo token ainda é um caminho
-absoluto fora do projeto.
+`ls`, `echo`, and `cat` were all in `allow`. What blocks it is
+`2>/dev/null`, and it becomes **finding AC**: the parser treats `>` as a
+separator, the redirect becomes a segment whose "verb" is `/dev/null`, and
+that same token is also an absolute path outside the project.
 
-**A previsão registrada antes da execução se confirmou.** O allowlist é lista
-fechada e o modelo inventa comandos; ampliar a lista é remendo. A 7ª execução
-prova isso de forma difícil de contestar: 25 verbos, e travou pela FORMA do
-comando, não pelo verbo.
+**The prediction recorded before the execution was confirmed.** The
+allowlist is a closed list and the model invents commands; widening the
+list is a patch. The 7th execution proves this in a way that's hard to
+dispute: 25 verbs, and it stalled on the SHAPE of the command, not the
+verb.
 
-## A oitava execução, e o argumento que ela fecha
+## The eighth execution, and the argument it closes
 
-Com Y, AA, AB e AC corrigidos, o dev agent fez uma única chamada:
-`bash -lc npm test --silent`. Verbo `bash`, fora da lista, `require_approval`.
+With Y, AA, AB, and AC fixed, the dev agent made a single call:
+`bash -lc npm test --silent`. Verb `bash`, off the list, `require_approval`.
 
-**A recusa está certa** — liberar `bash` anularia o allowlist inteiro, inclusive
-os `deny` embutidos. Mas as três últimas execuções, juntas, dizem uma coisa que
-nenhuma delas dizia sozinha:
+**The refusal is correct** — allowing `bash` would nullify the entire
+allowlist, including the built-in `deny` entries. But the last three
+executions, together, say something none of them said alone:
 
-| execução | travou por | categoria |
+| execution | stalled on | category |
 |---|---|---|
-| 6ª | `head` | **verbo** |
-| 7ª | `2>/dev/null` | **forma** |
-| 8ª | `bash -lc` | **invocação** |
+| 6th | `head` | **verb** |
+| 7th | `2>/dev/null` | **shape** |
+| 8th | `bash -lc` | **invocation** |
 
-Três categorias distintas em três rodadas. Ampliar a lista resolve a primeira e
-não toca nas outras duas. **O allowlist de verbos não converge** contra um
-agente que escolhe livremente como invocar o que quer rodar.
+Three distinct categories across three rounds. Widening the list solves the
+first and touches neither of the other two. **The verb allowlist doesn't
+converge** against an agent that freely chooses how to invoke what it wants
+to run.
 
-Isso não é defeito do allowlist: ele cumpre o que promete, e a recusa do `bash`
-é a prova de que a fronteira segura. É um limite de ESCOPO — ele não foi
-desenhado para viabilizar autonomia, e não viabiliza.
+This isn't a defect in the allowlist: it does what it promises, and
+refusing `bash` is proof the boundary holds. It's a limit of SCOPE — it
+wasn't designed to enable autonomy, and it doesn't.
 
-A conclusão prática da 13b é essa, e vale mais que a PR: **o caminho para o
-gate por LLM não passa por afrouxar política.** Passa por fazer o agente
-esperar a decisão em vez de morrer (achado AB), que é o que o ADR 0052 já fez
-para o dev agent.
+The 13b's practical conclusion is that, and it's worth more than the PR:
+**the path to an LLM-judged gate doesn't run through loosening policy.** It
+runs through making the agent wait for the decision instead of dying
+(finding AB), which is what ADR 0052 already did for the dev agent.
 
-## A nona execução: a correção barata que teria destruído a garantia
+## The ninth execution: the cheap fix that would have destroyed the guarantee
 
-A nona travou no mesmo `bash` da oitava, e o conserto óbvio estava a uma linha
-de distância: pôr `bash` no `allow` e ver a esteira ficar verde.
+The ninth stalled on the same `bash` as the eighth, and the obvious fix was
+one line away: put `bash` in `allow` and watch the pipeline turn green.
 
-**Não foi feito, e essa é a entrega da execução.** Liberar `bash` não amplia o
-allowlist — ele o *anula*, porque todo comando barrado passa a ter uma forma
-permitida de ser invocado, inclusive os `deny` embutidos. A rodada teria passado
-e a garantia teria acabado, sem que nada no resultado indicasse a troca.
+**It wasn't done, and that's this execution's contribution.** Allowing
+`bash` doesn't widen the allowlist — it *nullifies* it, because every
+blocked command now has a permitted way to be invoked, including the
+built-in `deny` entries. The round would have passed and the guarantee
+would have been gone, with nothing in the result indicating the trade-off.
 
-O que a nona fixou, então, foi o diagnóstico: o problema nunca foi *qual* verbo
-está na lista, e sim que **o agente de gate morria** quando a política mandava
-perguntar. Daí saiu o [ADR 0057](../adr/0057-o-gate-espera-a-aprovacao.md), estendendo
-ao gate o que o [ADR 0052](../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md) já fizera para o dev
-agent: diante de uma ação que exige decisão, **suspender e esperar** em vez de
-classificar a própria suspensão como falha de infra (o achado AB).
+What the ninth run fixed, then, was the diagnosis: the problem was never
+*which* verb is on the list, it was that **the gate agent was dying**
+when policy needed to ask. That's what led to
+[ADR 0057](../adr/0057-o-gate-espera-a-aprovacao.md), extending to the gate
+what [ADR 0052](../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)
+had already done for the dev agent: faced with an action that requires a
+decision, **suspend and wait** instead of classifying the suspension itself
+as an infra failure (finding AB).
 
-## A décima execução: a cadeia inteira, ponta a ponta
+## The tenth execution: the whole chain, end to end
 
-Com o ADR 0057 no lugar, a décima fechou tudo o que as nove anteriores tinham
-deixado em aberto, **sem um único restart do engine**:
+With ADR 0057 in place, the tenth closed everything the previous nine had
+left open, **without a single engine restart**:
 
-| etapa | desfecho |
+| step | outcome |
 |---|---|
-| adoção remota | `origin: adopted` contra `daneiel/test` |
-| plano de repositório | executado só depois da **sua** decisão |
-| promoção da story | manual, com o usuário como ator |
-| dev agent real | escreveu código, commitou como `<agente>[bot]` |
-| push e **PR remota** | publicada no GitHub |
-| gate | abriu (`pr.gate_changed`) |
-| área de QA | delegou e **dispensou com justificativa** |
-| subagente | **suspendeu** em aprovação, e não morreu |
-| sua recusa | **retomou** o laço em vez de encerrá-lo |
-| veredito | `changes_requested`, julgado por LLM |
+| remote adoption | `origin: adopted` against `daneiel/test` |
+| repository plan | executed only after **your** decision |
+| story promotion | manual, with the user as the actor |
+| real dev agent | wrote code, committed as `<agent>[bot]` |
+| push and **remote PR** | published on GitHub |
+| gate | opened (`pr.gate_changed`) |
+| QA area | delegated and **skipped with justification** |
+| subagent | **suspended** for approval, and didn't die |
+| your refusal | **resumed** the loop instead of ending it |
+| verdict | `changes_requested`, judged by an LLM |
 
-As duas linhas que importam são as duas últimas. O subagente parar e continuar
-vivo é o ADR 0057 funcionando; a **recusa do usuário retomar o laço** é o ponto
-que nenhuma execução anterior tinha alcançado — a decisão humana entra no meio
-do trabalho do agente e ele segue dali, em vez de recomeçar ou desistir.
+The last two rows are the ones that matter. The subagent stopping and
+staying alive is ADR 0057 working; the **user's refusal resuming the
+loop** is the point no previous execution had reached — the human decision
+enters mid-way through the agent's work and it carries on from there,
+instead of starting over or giving up.
 
-E o veredito não foi escrito pelo script: saiu do julgamento do modelo sobre uma
-PR real. É a diferença exata que esta validação existe para cobrir em relação à
-[irmã determinística](./validacao-fase-12.md).
+And the verdict wasn't written by the script: it came from the model's own
+judgment of a real PR. It's the exact difference this validation exists to
+cover, relative to its
+[deterministic sibling](./validacao-fase-12.md).
 
-> **TODO(humano):** o custo em dólares e a contagem de chamadas destas duas
-> execuções não foram extraídos com `medir:execucao` na época. Se ainda houver
-> `token_usage` das sessões, vale preencher — as demais medições deste documento
-> vêm todas de script, e estas duas são a exceção.
+> **TODO(humano):** the dollar cost and call count for these two executions
+> weren't extracted with `medir:execucao` at the time. If `token_usage` for
+> those sessions still exists, it's worth filling in — every other
+> measurement in this document comes from a script, and these two are the
+> exception.
 
-## As execuções com dois módulos: o paralelismo posto à prova
+## The two-module executions: parallelism put to the test
 
-As dez primeiras rodaram com **um módulo**. Isso basta para provar a cadeia, e
-não basta para provar o paralelismo: com uma história só, o Dev Lead **recusa**
-paralelizar — "esbarrariam nos mesmos arquivos" — e está certo. O teto da
-[RN-083](../business-rules.md#rn-083) nunca chegava a ser consultado por
-trabalho real.
+The first ten runs used **one module**. That's enough to prove the chain,
+and not enough to prove parallelism: with a single story, the Dev Lead
+**refuses** to parallelize — "they'd collide on the same files" — and it's
+right. The cap from [RN-083](../business-rules.md#rn-083) was never
+actually consulted by real work.
 
-Vieram então três rodadas com `--modulos 2` (uma história em `api`, uma em
-`web`). As duas primeiras estão contadas no
-[achado AF](./achados-execucao-real.md) — a que quebrou e a que provou a
-correção. O que segue é a **terceira**, que existe para medir.
+Then came three rounds with `--modulos 2` (one story in `api`, one in
+`web`). The first two are covered in
+[finding AF](./achados-execucao-real.md) — the one that broke and the one
+that proved the fix. What follows is the **third**, which exists purely to
+measure.
 
-O Dev Lead planejou sozinho:
+The Dev Lead planned on its own:
 
-> **2 agentes em 2 módulos** — *"cada módulo tem exatamente uma história, então
-> um agente por módulo é o mínimo justificável sem desperdício."*
+> **2 agents across 2 modules** — *"each module has exactly one story, so
+> one agent per module is the minimum that's justifiable without waste."*
 
-E a rodada fechou, medida por `medir:execucao` e não à mão:
+And the round closed clean, measured by `medir:execucao`, not by hand:
 
 | | |
 |---|---|
-| duração | **3m56s**, 182 eventos em 3 sessões |
-| chamadas | **33** (dev-api 10, dev-web 9, arquiteto 7, qa-automacao 6, dev-lead 1) |
-| custo | **< US$ 0,01** |
-| restart do engine | **não** |
-| turnos mudos | **nenhum** |
+| duration | **3m56s**, 182 events across 3 sessions |
+| calls | **33** (dev-api 10, dev-web 9, arquiteto 7, qa-automacao 6, dev-lead 1) |
+| cost | **< US$ 0.01** |
+| engine restart | **no** |
+| silent turns | **none** |
 | gates | `qa` **approved**, `secops` **approved** |
 
-**O teto cobrou a decisão.** Com os dois agentes de pé, o pedido seguinte parou
-em `aguardando_autorizacao` com a ação `parallelize` **pendente no banco** — 2
-ativos, teto 2. Nada subiu: se tivesse subido, a autorização seria teatro.
+**The cap enforced the decision.** With both agents already up, the next
+request stalled in `aguardando_autorizacao` with the `parallelize` action
+**pending in the database** — 2 active, cap 2. Nothing came up: if it had,
+the authorization would have been theater.
 
-### O que os dois módulos quebraram, antes desta rodada
+### What the two modules broke, before this round
 
-Esta rodada saiu limpa, mas ela é a **terceira** com dois módulos, e as duas
-primeiras é que pagaram o preço. Na primeira, o `dev-web` pegou a task e morreu
-em `fatal: not a git repository` **antes do primeiro turno** — zero token gasto,
-task bloqueada. É o [achado AF](./achados-execucao-real.md): a guarda do caminho
-rápido de `Workspace.ensure!/4` perguntava se `.git` existia, e `git init` cria
-o `.git` antes do `fetch`; o segundo agente lia "pronto" e pulava o lock.
+This round came out clean, but it's the **third** with two modules, and the
+first two are the ones that paid the price. In the first, `dev-web`
+claimed the task and died on `fatal: not a git repository` **before the
+first turn** — zero tokens spent, task blocked. It's
+[finding AF](./achados-execucao-real.md): the fast-path guard in
+`Workspace.ensure!/4` checked whether `.git` existed, and `git init`
+creates `.git` before the `fetch`; the second agent read that as "ready"
+and skipped the lock.
 
-O lock existia desde a Fase 4 e estava correto. O que estava errado era o
-critério que decidia se valia a pena pegá-lo — e **nenhuma das dez execuções
-anteriores podia tê-lo mostrado**, porque nenhuma teve um segundo agente.
-Corrigido, o `dev-web` passou de 0 para 16 chamadas na rodada seguinte, e é daí
-que esta terceira herda o direito de ser só uma medição.
+The lock had existed since Phase 4 and was correct. What was wrong was the
+criterion that decided whether it was worth acquiring — and **none of the
+previous ten executions could have shown this**, because none had a second
+agent. Once fixed, `dev-web` went from 0 to 16 calls in the following
+round, and that's how this third one inherits the right to be a pure
+measurement.
 
-O instrumento também aprendeu: a asserção do teto afirmava o **número** (o 3º
-pedido pede autorização), o que valia para um módulo e reprovou uma execução em
-que o produto agiu certo — com dois módulos a ativação já enche o teto. Agora
-ela afirma a **regra**: enquanto couber, sobe sem perguntar; quando não couber,
-para.
+The instrument also learned something: the cap's assertion stated the
+**number** (the 3rd request asks for authorization), which held for one
+module and failed a run where the product did the right thing — with two
+modules, activation alone fills the cap. It now states the **rule**
+instead: while there's room, it goes up without asking; when there isn't,
+it stops.
 
-## O que esta validação ainda NÃO prova
+## What this validation still does NOT prove
 
-Honestidade sobre o alcance, como na irmã dela:
+Honesty about scope, as with its sibling:
 
-- **Merge.** Continua fora por desenho
-  ([RN-014](../business-rules.md#rn-014)), e continuará: quem aperta o botão
-  numa branch protegida é você.
-- **Os outros cinco providers.** Só o OpenRouter rodou com credencial real; os
-  demais seguem sem smoke por falta de chave, e o que vale para um provider não
-  se transfere para os outros por argumento.
-- **Isolamento.** O agente executa no mesmo container que este monorepo. O
-  [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) diz de si que é *política*, não
-  isolamento — `..` reprova, mas symlink de dentro para fora não é detectado.
-- **Autonomia sem política no caminho.** O allowlist de verbos **não converge**
-  (achados Z e AD), e isso é limite de escopo, não bug a corrigir.
-- **O teto de paralelismo pedido pelo PRÓPRIO Dev Lead.** Com dois módulos ele
-  planejou 2 agentes e o teto é 2 — coube. Quem estourou o teto foi o roteiro,
-  chamando o caso de uso direto. Para ver o *lead* pedir mais do que pode seriam
-  precisos 3+ módulos, e isso ainda não rodou.
+- **Merge.** Still out by design ([RN-014](../business-rules.md#rn-014)),
+  and will remain so: whoever presses the button on a protected branch is
+  you.
+- **The other five providers.** Only OpenRouter ran with a real credential;
+  the rest remain without a smoke test for lack of a key, and what holds
+  for one provider doesn't transfer to the others by argument.
+- **Isolation.** The agent runs in the same container as this monorepo.
+  [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md)
+  states of itself that it's *policy*, not isolation — `..` fails, but a
+  symlink pointing from inside to outside isn't detected.
+- **Autonomy with no policy in the way.** The verb allowlist **doesn't
+  converge** (findings Z and AD), and that's a scope limit, not a bug to
+  fix.
+- **The parallelism cap requested by the Dev Lead ITSELF.** With two
+  modules it planned 2 agents and the cap is 2 — it fit. What overflowed
+  the cap was the script, calling the use case directly. Seeing the
+  *lead* ask for more than it can have would take 3+ modules, and that
+  hasn't run yet.
 
-A cadeia em si — da adoção ao veredito de gate por LLM — **está provada contra
-rede real**. O que continua em aberto acima não é a cadeia: é o ambiente em que
-ela roda e a superfície que ela cobre.
+The chain itself — from adoption to an LLM-judged gate verdict — **is
+proven against a real network**. What remains open above isn't the chain:
+it's the environment it runs in and the surface it covers.
 
-## Referências
+## References
 
-- [validacao-fase-12.md](./validacao-fase-12.md) — a irmã determinística
-- [achados-execucao-real.md](./achados-execucao-real.md) — a colheita
-- [backlog.md](./backlog.md) — para onde X e Y vão
+- [validacao-fase-12.md](./validacao-fase-12.md) — its deterministic sibling
+- [achados-execucao-real.md](./achados-execucao-real.md) — the harvest
+- [backlog.md](./backlog.md) — where X and Y go

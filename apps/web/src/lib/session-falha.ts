@@ -1,3 +1,5 @@
+import i18n from './i18n';
+
 /**
  * O que a tela mostra quando um turno de agente falha.
  *
@@ -7,14 +9,15 @@
  * que a mudança inteira existe para matar — então há sempre uma frase, e a
  * origem desconhecida se chama `indeterminada`, nunca uma das quatro por chute
  * (ADR 0020).
+ *
+ * As duas frases-padrão (sem mensagem / origem indeterminada) resolvem via
+ * `i18n.t()` DENTRO da função — não em constante de módulo — para reagir ao
+ * idioma vigente em cada chamada, mesmo sendo módulo não-React.
  */
 export interface FalhaDeTurno {
   mensagem: string;
   origem: string;
 }
-
-const SEM_MENSAGEM =
-  'O turno falhou e o motivo não foi registrado. Tente de novo; se repetir, o log de eventos tem o payload bruto.';
 
 export function lerFalhaDeTurno(payload: unknown): FalhaDeTurno {
   const p = (payload ?? {}) as { mensagem?: unknown; origem?: unknown };
@@ -22,12 +25,12 @@ export function lerFalhaDeTurno(payload: unknown): FalhaDeTurno {
   const mensagem =
     typeof p.mensagem === 'string' && p.mensagem.trim() !== ''
       ? p.mensagem
-      : SEM_MENSAGEM;
+      : i18n.t('sessionFailure.noMessage', { ns: 'sessions' });
 
   const origem =
     typeof p.origem === 'string' && p.origem.trim() !== ''
       ? p.origem
-      : 'indeterminada';
+      : i18n.t('sessionFailure.unknownOrigin', { ns: 'sessions' });
 
   return { mensagem, origem };
 }

@@ -34,32 +34,3 @@
   font-size: 12px;
   line-height: 1.5;
 }
-
-.instrucao {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  max-width: 480px;
-}
-
-.instrucao p {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.instrucao code {
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: var(--code-bg);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  user-select: all;
-}
-
-.instrucaoDetalhe {
-  color: var(--text-muted);
-  font-size: 11px !important;
-}

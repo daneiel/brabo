@@ -1,105 +1,112 @@
-# 0028 — Proteção de branch: divergência entre providers e a matriz de aprovação
+# 0028 — Branch protection: divergence between providers and the approval matrix
 
-## Contexto
+## Context
 
-O [ADR 0001](0001-git-provider-contract-shape.md) normalizou nove operações de
-git num contrato único. Oito delas divergem entre GitHub e GitLab apenas na
-FORMA da API — nome de campo, formato de id, código de erro — e a normalização
-resolve. `protectBranch` é a exceção: ali os dois divergem no **modelo**, e a
-tradução não é possível sem perder significado.
+[ADR 0001](0001-git-provider-contract-shape.md) normalized nine git
+operations into a single contract. Eight of them diverge between GitHub
+and GitLab only in the FORM of the API — field name, id format, error code
+— and normalization handles it. `protectBranch` is the exception: there the
+two diverge in the **model**, and translation isn't possible without losing
+meaning.
 
-A divergência estava registrada em comentário nos dois providers desde a Fase 2.
-Este ADR a promove a decisão explícita porque, da Fase 4 em diante, o domínio
-passou a ter a **sua própria matriz de aprovação** — QA → SecOps → usuário, com
-o teto da trava de merge em `decide.ts` — e agora existem duas fontes de
-autoridade sobre o mesmo merge. Essa sobreposição não existia quando o
-comentário foi escrito.
+The divergence had been recorded as a comment in both providers since
+Phase 2. This ADR promotes it to an explicit decision because, from Phase 4
+onward, the domain gained its **own approval matrix** — QA → SecOps → user,
+with the merge lock's ceiling in `decide.ts` — and now there are two
+sources of authority over the same merge. That overlap didn't exist when
+the comment was written.
 
-## O que cada provider faz hoje
+## What each provider does today
 
-`ProtectBranchInput` (packages/shared) carrega **apenas** `externalId`,
-`branchName` e `accessToken` — nenhuma configuração de política. Cada
-implementação escolhe "o mais restritivo razoável" e isso cai em lugares
-diferentes:
+`ProtectBranchInput` (packages/shared) carries **only** `externalId`,
+`branchName` and `accessToken` — no policy configuration. Each
+implementation picks "the most restrictive that's reasonable", and that
+lands in different places:
 
-| provider | modelo da plataforma | o que aplicamos |
+| provider | platform model | what we apply |
 |---|---|---|
-| **GitHub** | regras independentes num payload rico | `enforce_admins: true`, `required_approving_review_count: 1`, sem status checks, sem restrição de push |
-| **GitLab** | dois níveis de acesso | `pushAccessLevel: MAINTAINER`, `mergeAccessLevel: MAINTAINER` |
-| **local** | não existe plataforma | `capabilities.protectBranch: false`; a chamada rejeita com `GitNotSupportedError` |
+| **GitHub** | independent rules in a rich payload | `enforce_admins: true`, `required_approving_review_count: 1`, no status checks, no push restriction |
+| **GitLab** | two access levels | `pushAccessLevel: MAINTAINER`, `mergeAccessLevel: MAINTAINER` |
+| **local** | no platform exists | `capabilities.protectBranch: false`; the call is rejected with `GitNotSupportedError` |
 
-O passo `protect_branches` do bootstrap consulta a capability antes de agir, e a
-suite de contrato afirma por **capability**, não por provider — por isso a
-divergência nunca quebrou teste: os dois caminhos são igualmente válidos para o
-contrato.
+The bootstrap's `protect_branches` step checks the capability before
+acting, and the contract suite asserts by **capability**, not by provider —
+that's why the divergence never broke a test: both paths are equally valid
+for the contract.
 
-## A assimetria que a matriz de aprovação expõe
+## The asymmetry the approval matrix exposes
 
-As duas proteções não são "a mesma coisa escrita diferente". Elas interagem de
-formas opostas com a matriz do domínio:
+The two protections aren't "the same thing written differently". They
+interact with the domain's matrix in opposite ways:
 
-- **No GitHub, criamos uma segunda autoridade.** `required_approving_review_count: 1`
-  exige uma aprovação DA PLATAFORMA que o domínio não conhece e não preenche —
-  os pareceres de QA e SecOps são eventos nossos, não reviews do GitHub. Somado
-  a `enforce_admins: true`, que remove o bypass de administrador, o merge manual
-  do usuário — que o CLAUDE.md torna obrigatório — pode ficar **bloqueado pela
-  plataforma** quando não há um segundo humano para aprovar a PR.
-- **No GitLab, não criamos autoridade nenhuma.** Não há contagem de aprovação:
-  quem tiver papel Maintainer faz push e merge direto. A matriz do domínio é o
-  ÚNICO portão, e um token de Maintainer a contorna inteira.
-- **No local, só existe o portão do domínio**, por construção.
+- **On GitHub, we create a second authority.** `required_approving_review_count: 1`
+  requires an approval FROM THE PLATFORM that the domain doesn't know about
+  and doesn't fill in — QA and SecOps's verdicts are our own events, not
+  GitHub reviews. Combined with `enforce_admins: true`, which removes the
+  administrator bypass, the user's manual merge — which CLAUDE.md makes
+  mandatory — can end up **blocked by the platform** when there's no second
+  human to approve the PR.
+- **On GitLab, we create no authority at all.** There's no approval count:
+  whoever holds the Maintainer role can push and merge directly. The
+  domain's matrix is the ONLY gate, and a Maintainer token bypasses it
+  entirely.
+- **On local, only the domain's gate exists**, by construction.
 
-Ou seja: o mesmo sistema é mais rígido que o pretendido num provider e mais
-frouxo no outro, pelo mesmo `protectBranch()` sem argumentos.
+In other words: the same system ends up stricter than intended on one
+provider and looser on the other, through the same argument-less
+`protectBranch()`.
 
-## Decisão
+## Decision
 
-**1. A matriz de aprovação do domínio é a fonte de verdade.** QA → SecOps →
-usuário, com o teto de `decide.ts` (merge com destino em branch protegida nunca
-é auto-aprovável). A proteção da plataforma é defesa em profundidade contra
-acesso por fora do Brabo — não é o portão, e nenhuma lógica do domínio deve
-depender dela.
+**1. The domain's approval matrix is the source of truth.** QA → SecOps →
+user, with `decide.ts`'s ceiling (a merge targeting a protected branch is
+never auto-approvable). The platform's protection is defense in depth
+against access outside of Brabo — it isn't the gate, and no domain logic
+should depend on it.
 
-**2. A divergência fica.** Traduzir os dois modelos para um denominador comum
-significaria descer o GitHub ao nível do GitLab (perdendo `enforce_admins`) ou
-inventar no GitLab um conceito de aprovação que a plataforma não tem no tier
-livre. Cada lado aplica o mais restritivo que consegue expressar, e o contrato
-promete apenas o observável: `listBranches` devolve `protected: true`.
+**2. The divergence stays.** Translating the two models into a common
+denominator would mean either bringing GitHub down to GitLab's level
+(losing `enforce_admins`) or inventing an approval concept on GitLab that
+the platform doesn't have on the free tier. Each side applies the most
+restrictive thing it can express, and the contract promises only what's
+observable: `listBranches` returns `protected: true`.
 
-**3. `ProtectBranchInput` NÃO ganha configuração agora.** Acrescentar
-`requiredApprovals`, `enforceAdmins` e afins criaria um vocabulário que só um
-dos providers sabe honrar, e o outro teria de ignorar em silêncio — que é pior
-do que a divergência atual, porque passaria a mentir. Quando houver necessidade
-real, o caminho é um `ProtectionPolicy` normalizado com o provider declarando
-via `capabilities` o que sabe aplicar, e o bootstrap reportando o que foi
-ignorado.
+**3. `ProtectBranchInput` does NOT gain configuration now.** Adding
+`requiredApprovals`, `enforceAdmins` and the like would create a vocabulary
+that only one of the providers knows how to honor, and the other would
+have to silently ignore — which is worse than the current divergence,
+because it would start lying. When there's a real need, the path is a
+normalized `ProtectionPolicy`, with the provider declaring via
+`capabilities` what it knows how to apply, and the bootstrap reporting
+what was ignored.
 
-## Consequências
+## Consequences
 
-**Aceitas:**
+**Accepted:**
 
-- Rigidez diferente por provider, documentada aqui e nos comentários dos dois
-  arquivos, que passam a apontar para este ADR.
-- No GitHub, um repositório de dono único pode ter o merge manual bloqueado pela
-  própria proteção que aplicamos. O contorno é do operador (reduzir
-  `required_approving_review_count` a 0 no repositório), não do código —
-  mudá-lo por padrão afrouxaria a proteção em todo repositório para resolver um
-  caso particular.
+- Different strictness per provider, documented here and in the comments
+  of both files, which now point to this ADR.
+- On GitHub, a single-owner repository can have its manual merge blocked
+  by the very protection we apply. The workaround is the operator's
+  (lowering `required_approving_review_count` to 0 on the repository), not
+  the code's — changing it by default would loosen the protection for
+  every repository to solve one particular case.
 
-**Não verificado:**
+**Not verified:**
 
-- **Nenhum destes dois caminhos foi exercitado contra API real neste
-  repositório.** Os smokes (`github-provider.smoke.spec.ts`,
-  `gitlab-provider.smoke.spec.ts`) são manuais e pulados sem
-  `GITHUB_TEST_TOKEN` / `GITLAB_TEST_TOKEN`; o CI usa `LocalGitProvider`, cuja
-  capability é `false`. O bloqueio de merge descrito acima é dedução do
-  comportamento documentado das duas plataformas, não observação. **Ao ligar o
-  primeiro repositório real, verificar isso é o primeiro teste a fazer.**
+- **Neither of these two paths has been exercised against a real API in
+  this repository.** The smokes (`github-provider.smoke.spec.ts`,
+  `gitlab-provider.smoke.spec.ts`) are manual and skipped without
+  `GITHUB_TEST_TOKEN` / `GITLAB_TEST_TOKEN`; CI uses `LocalGitProvider`,
+  whose capability is `false`. The merge blocking described above is a
+  deduction from the two platforms' documented behavior, not an
+  observation. **When the first real repository is connected, verifying
+  this is the first test to run.**
 
-**Fora de escopo:**
+**Out of scope:**
 
-- Refletir os pareceres de QA/SecOps como status checks do GitHub, que
-  eliminaria a sobreposição transformando a matriz do domínio na condição de
-  merge da plataforma. É a solução certa e depende de o Brabo ter um endpoint
-  público para o GitHub chamar — ver o item de registry/exposição pendente no
-  [ADR 0027](0027-fase5-backup-hardening-release.md).
+- Reflecting QA/SecOps's verdicts as GitHub status checks, which would
+  eliminate the overlap by turning the domain's matrix into the platform's
+  merge condition. That's the right solution and depends on Brabo having a
+  public endpoint for GitHub to call — see the pending registry/exposure
+  item in [ADR 0027](0027-fase5-backup-hardening-release.md).

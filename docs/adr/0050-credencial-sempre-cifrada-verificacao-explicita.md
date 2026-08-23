@@ -1,131 +1,147 @@
-# 0050 — Credencial sempre cifrada; verificação vira ação explícita
+# 0050 — Credential always encrypted; verification becomes an explicit action
 
-## Contexto
+## Context
 
-O [ADR 0004](0004-git-credential-registration.md) estabeleceu, para tokens de
-git, que o cadastro **testa a credencial contra o provider antes de cifrar e
-persistir** — token inválido responde erro em vez de ser guardado para falhar
-depois. A Fase 11a copiou a mesma ordem para chaves de LLM.
+[ADR 0004](0004-git-credential-registration.md) established, for git
+tokens, that registration **tests the credential against the provider
+before encrypting and persisting it** — an invalid token responds with an
+error instead of being stored to fail later. Phase 11a copied the same
+ordering for LLM keys.
 
-A ordem parecia prudente. Em uso real produziu o pior desfecho possível.
+The ordering seemed prudent. In real use it produced the worst possible
+outcome.
 
-Um owner tentou cadastrar a chave do OpenRouter na tela de configurações.
-Seis cliques, seis `POST /users/me/credentials`, seis `422`. Do lado dele, o
-botão Salvar **não fazia nada** — e essa parte era um segundo defeito, no web
-(`handleSave` sem `try/catch`, com o `ApiError` escapando para o
-`window.onunhandledrejection`, que só loga). Mas mesmo com a mensagem na tela,
-o desenho já estava errado, por três motivos que só aparecem juntos:
+An owner tried to register their OpenRouter key in the settings screen.
+Six clicks, six `POST /users/me/credentials`, six `422`s. On their end,
+the Save button **did nothing** — and that part was a second defect, in
+the web app (`handleSave` with no `try/catch`, the `ApiError` escaping to
+`window.onunhandledrejection`, which only logs). But even with the message
+showing on screen, the design was already wrong, for three reasons that
+only show up together:
 
-1. **Nada é gravado, e a chave não é recuperável.** O campo é write-only e a
-   tela nunca reexibe o que foi digitado. Uma recusa deixa o usuário sem
-   credencial **e** sem o texto para corrigir — ele reabre a tela no mesmo
-   estado de antes, tendo perdido o que colou.
-2. **O cadastro julga com informação incompleta.** O teste falha por chave
-   inválida, por chave sem saldo, por rede, por timeout, por DNS. Todos viram
-   o mesmo `422` no momento errado: o de guardar. A pergunta "esta chave é
-   boa?" não é a mesma que "quero guardar esta chave?", e amarrá-las faz a
-   segunda depender da primeira ter resposta agora.
-3. **A promessa da tela fica impossível de cumprir.** "Write-only, nunca
-   reexibida" quer dizer que ninguém — nem o dono — consegue conferir o que
-   está guardado. Se guardar pode falhar em silêncio, não sobra nenhuma forma
-   de saber em que estado a credencial está.
+1. **Nothing is saved, and the key isn't recoverable.** The field is
+   write-only and the screen never redisplays what was typed. A rejection
+   leaves the user with no credential **and** no text to fix — they reopen
+   the screen in the same state as before, having lost what they pasted.
+2. **Registration judges with incomplete information.** The test fails for
+   an invalid key, a key with no balance, network issues, timeouts, DNS.
+   All of these come back as the same `422` at the wrong moment: the
+   moment of saving. "Is this key good?" is not the same question as "do
+   I want to save this key?", and tying them together makes the second
+   depend on the first having an answer right now.
+3. **The screen's promise becomes impossible to keep.** "Write-only, never
+   redisplayed" means nobody — not even the owner — can check what's
+   stored. If saving can fail silently, there's no way left to know what
+   state the credential is in.
 
-Havia ainda uma assimetria sem justificativa: o único motivo documentado para
-`POST /users/me/git-credentials` existir separado de
-`POST /users/me/credentials` era justamente o teste obrigatório.
+There was also an unjustified asymmetry: the only documented reason
+`POST /users/me/git-credentials` existed separately from
+`POST /users/me/credentials` was precisely the mandatory test.
 
-## Decisão
+## Decision
 
-**Guardar e verificar são dois assuntos. O cadastro só guarda; a verificação é
-uma ação própria sobre a credencial já gravada.**
+**Saving and verifying are two different matters. Registration only
+saves; verification is its own action on the credential already stored.**
 
-Vale para as duas famílias — chave de LLM e token de git. São a mesma tabela
-(`user_credentials`), o mesmo mecanismo de envelope encryption e a mesma
-promessa ao usuário; tratá-las diferente produziria duas telas com regras
-distintas para o mesmo objeto.
+This holds for both families — LLM key and git token. They're the same
+table (`user_credentials`), the same envelope encryption mechanism, and
+the same promise to the user; treating them differently would produce two
+screens with different rules for the same object.
 
-1. **`UpsertUserCredentialUseCase` e `RegisterGitCredentialUseCase` perdem o
-   tester.** Restam duas linhas: cifrar e gravar. Uma chave que o provider
-   recusaria é gravada do mesmo jeito — o cadastro não julga.
+1. **`UpsertUserCredentialUseCase` and `RegisterGitCredentialUseCase` lose
+   the tester.** What's left is two steps: encrypt and save. A key the
+   provider would reject is saved just the same — registration doesn't
+   judge.
 
-2. **`TestStoredCredentialUseCase`** (novo,
-   `application/use-cases/credentials/`) lê o envelope por
-   `findSecretByUserAndProvider`, decifra, chama o tester certo (git ou LLM,
-   despachado por `isGitCredentialProvider`) e devolve **só o veredito**. O
-   texto plano existe dentro do método e não atravessa fronteira nenhuma.
+2. **`TestStoredCredentialUseCase`** (new,
+   `application/use-cases/credentials/`) reads the envelope via
+   `findSecretByUserAndProvider`, decrypts it, calls the right tester (git
+   or LLM, dispatched by `isGitCredentialProvider`) and returns **only the
+   verdict**. The plaintext exists inside the method and never crosses any
+   boundary.
 
-3. **O resultado tem TRÊS estados, não dois:**
+3. **The result has THREE states, not two:**
 
-   | | quando | por quê |
+   | | when | why |
    |---|---|---|
-   | `ok` | o provider aceitou | — |
-   | `recusado` | o provider rejeitou | carrega o **motivo dele** (`401`, timeout, sem saldo) — o diagnóstico útil |
-   | `nao_suportado` | não há endpoint de teste verificado | `ollama`, `anthropic`, `openai` |
+   | `ok` | the provider accepted it | — |
+   | `rejected` | the provider rejected it | carries the provider's **own reason** (`401`, timeout, no balance) — the useful diagnostic |
+   | `unsupported` | there's no verified test endpoint | `ollama`, `anthropic`, `openai` |
 
-   O terceiro estado não é enfeite. O tester de LLM é NO-OP para os providers
-   sem endpoint verificado, e num resultado binário eles voltariam como `ok`:
-   a tela afirmaria que a chave foi checada quando ninguém a checou. É a mesma
-   regra de capability do [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)
-   — só se declara o que foi provado. Por isso o port ganhou `supports()`: sem
-   ele o silêncio de `test()` é ambíguo.
+   The third state isn't decoration. The LLM tester is a no-op for
+   providers with no verified endpoint, and in a binary result they'd come
+   back as `ok`: the screen would claim the key was checked when nobody
+   checked it. It's the same capability rule from
+   [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+   — only what's been proven is declared. That's why the port gained
+   `supports()`: without it, `test()`'s silence is ambiguous.
 
-4. **`POST /users/me/credentials/:provider/test`** — 200 nos três resultados,
-   porque o pedido foi processado; `recusado` é um resultado, não um erro de
-   protocolo. 404 quando não há credencial: aí não há o que testar.
+4. **`POST /users/me/credentials/:provider/test`** — 200 on all three
+   results, because the request was processed; `rejected` is a result,
+   not a protocol error. 404 when there's no credential: there's nothing
+   to test.
 
-5. **Chave ruim deixou de ser exceção HTTP.** `LLMCredentialConnectionTestFailedError`
-   e `GitCredentialConnectionTestFailedError` continuam existindo e sendo
-   lançados pelos testers, mas agora são capturados pelo caso de uso. Saíram
-   dos dois `@Catch` (`LlmBindingErrorFilter`, `GitProviderErrorFilter`): um
-   filtro que não pode disparar é regra morta, mesmo critério que o docmap
-   aplica a glob que não casa com arquivo nenhum.
+5. **A bad key stopped being an HTTP exception.**
+   `LLMCredentialConnectionTestFailedError` and
+   `GitCredentialConnectionTestFailedError` still exist and are still
+   thrown by the testers, but now they're caught by the use case. They
+   left the two `@Catch` filters (`LlmBindingErrorFilter`,
+   `GitProviderErrorFilter`): a filter that can no longer fire is dead
+   rule, the same criterion the docmap applies to a glob that matches no
+   file.
 
-6. **Um teto de comprimento, e ele é proteção — não validação de formato.**
-   `CREDENCIAL_COMPRIMENTO_MAXIMO = 512` nos dois DTOs, mesma natureza do
-   `@MaxLength` da senha (`domain/auth/password-policy.ts`): a rota cifra, e
-   cifrar copia a entrada. O valor é folgado de propósito. A tentação, depois
-   de uma chave truncada ter sido gravada em silêncio, é apertar o teto até
-   ele "validar" a chave — e isso recriaria o portão por outra porta. As
-   credenciais reais dos nove providers vão de ~26 caracteres (`glpat-`) a
-   ~164 (project key da OpenAI); um teto perto do tamanho real recusaria
-   cadastro de chave boa, e envelheceria mal quando um provider alongasse o
-   formato. Uma chave pela metade continua sendo aceita, e é a rota de teste
-   que a desmascara.
+6. **A length cap, and it's protection — not format validation.**
+   `CREDENCIAL_COMPRIMENTO_MAXIMO = 512` on both DTOs, the same nature as
+   the `@MaxLength` on the password (`domain/auth/password-policy.ts`):
+   the route encrypts, and encrypting copies the input. The value is
+   generous on purpose. The temptation, after a truncated key got saved
+   silently, is to tighten the cap until it "validates" the key — and
+   that would recreate the same gate through another door. Real
+   credentials across the nine providers range from ~26 characters
+   (`glpat-`) to ~164 (OpenAI project key); a cap close to the real size
+   would reject the registration of a good key, and would age badly the
+   moment a provider lengthened its format. A half-pasted key is still
+   accepted, and it's the test route that unmasks it.
 
-7. **A tela oferece o que é possível oferecer.** Não dá para conferir o que
-   está guardado, então o que se oferece é **trocar** (o campo agora fica
-   visível também com credencial salva — antes era preciso remover primeiro) e
-   **testar**. E todo caminho ganhou `try/catch` com toast: era a ausência
-   deles que transformava um 422 explicado numa tela muda.
+7. **The screen offers what's possible to offer.** There's no way to
+   check what's stored, so what's offered is to **swap it** (the field is
+   now visible even with a credential already saved — before, you had to
+   remove it first) and to **test it**. And every path gained a
+   `try/catch` with a toast: it was their absence that turned an explained
+   422 into a silent screen.
 
-## Consequências
+## Consequences
 
-**O que melhora.** A credencial sempre existe depois do cadastro, então há
-sempre o que corrigir, trocar ou testar. O diagnóstico ficou melhor do que era:
-antes, `422` dizia "não deu"; agora `recusado` carrega a frase do provider. A
-rota de git deixou de ter motivo especial para existir separada — segue
-separada só pelo formato do corpo, o que está escrito no controller.
+**What improves.** The credential always exists after registration, so
+there's always something to fix, swap, or test. The diagnostic is better
+than it was: before, `422` said "didn't work"; now `rejected` carries the
+provider's own message. The git route no longer has a special reason to
+exist separately — it stays separate only because of the body format,
+which is written in the controller.
 
-**O que piora, e é aceito.** Uma chave inválida pode ficar guardada até alguém
-testá-la ou até o primeiro uso real falhar. Isso é intencional: o erro do
-primeiro uso é normalizado por `code` desde o ADR 0041, e a alternativa —
-recusar a gravação — é o que este ADR está desfazendo. O smoke de cada provider
-continua provando a chave real contra a API real, agora pelo caminho novo.
+**What gets worse, and is accepted.** An invalid key can sit stored until
+someone tests it or the first real use fails. This is intentional: the
+error on first use is normalized by `code` since ADR 0041, and the
+alternative — refusing to save — is what this ADR undoes. Each provider's
+smoke test still proves the real key against the real API, now through the
+new path.
 
-**O que não muda.** Envelope encryption, `user_credentials`, a projeção sem
-segredo, o RBAC das rotas, e a regra de que o texto plano nunca volta em
-resposta nenhuma.
+**What doesn't change.** Envelope encryption, `user_credentials`, the
+secret-free projection, the routes' RBAC, and the rule that plaintext
+never comes back in any response.
 
-## O que fica para depois
+## What's left for later
 
-- **Testar no momento de usar, e mostrar.** Hoje a recusa em `chat`/`sync`
-  aparece como erro de turno; poderia marcar a credencial como suspeita na
-  tela. Precisa de estado persistido por credencial — não é este ADR.
-- **`openai`/`anthropic` sem endpoint de teste verificado** seguem em
-  `nao_suportado`. Fecha-se lendo a doc oficial de cada um e acrescentando a
-  base URL no mapa do tester, com smoke que prove.
+- **Test at time of use, and show it.** Today a rejection in
+  `chat`/`sync` shows up as a turn error; it could flag the credential as
+  suspect on screen. That needs per-credential persisted state — not this
+  ADR.
+- **`openai`/`anthropic` with no verified test endpoint** remain
+  `unsupported`. Closed by reading each one's official docs and adding
+  the base URL to the tester's map, with a smoke test to prove it.
 
-Referencia o [ADR 0004](0004-git-credential-registration.md), cuja ordem este
-inverte, e o [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md),
-de quem herda a regra de só declarar o que foi provado. Nenhum dos dois é
-editado.
+References [ADR 0004](0004-git-credential-registration.md), whose
+ordering this one reverses, and
+[ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md),
+from which it inherits the rule of only declaring what's been proven.
+Neither is edited.

@@ -1,0 +1,159 @@
+{
+  "projectCodeTab": {
+    "loadProjectError": "Could not load this project.",
+    "checkGateError": "Could not check whether the Code tab is unlocked.",
+    "blocked": {
+      "title": "The Code tab isn't unlocked yet",
+      "description": "The Architect hasn't decided which container image to use for this project yet. Without that decision the container doesn't start, and it's the container that isolates execution — there's nowhere to run the code this tab would show.",
+      "note": "As soon as the Architect issues the image decision, this tab unlocks on its own — no need to reload the page manually."
+    }
+  },
+  "bottomPanel": {
+    "tablistLabel": "Bottom panel",
+    "tabs": {
+      "terminal": "Terminal",
+      "problems": "Problems",
+      "diff": "PR diff",
+      "output": "Output"
+    },
+    "status": {
+      "provisioning": "Provisioning",
+      "running": "Running",
+      "stopped": "Stopped",
+      "failed": "Failed",
+      "removed": "Removed"
+    },
+    "checkStateError": "Could not check the container status.",
+    "since": "since",
+    "neverProvisioned": "Project container: never provisioned (RN-267).",
+    "problemsEmpty": "There's no integrated lint or tests running over this project's code — no static analysis tool scans the managed repository today. Showing an error or warning count here would be decoration, not state: once that integration exists, this tab will start listing real diagnostics.",
+    "outputEmpty": "There's no AGGREGATED build or deploy command stream in this tab — the interactive terminal (Terminal tab) already has its own output, inside it. `git push`, PR and deploy don't go through the terminal anyway (RN-106): once there's a build or deploy pipeline separate from the terminal, its output will show up here."
+  },
+  "branchPicker": {
+    "noDefaultBranch": "no default branch",
+    "dropdownAriaLabel": "Select branch",
+    "header_one": "{{count}} branch compared to default",
+    "header_other": "{{count}} branches compared to default",
+    "headerPlaceholder": "branches",
+    "loading": "Loading branches…",
+    "loadErrorFallback": "Could not load the branches.",
+    "empty": "No branches found in this repository.",
+    "truncated": "The list was cut at the enriched-branches cap.",
+    "manualPlaceholder": "go to an exact tag or sha",
+    "manualAriaLabel": "Go to an exact tag or sha",
+    "goButton": "Go",
+    "prState": {
+      "open": "open",
+      "merged": "merged",
+      "closed": "closed"
+    },
+    "metaCurrent": "current",
+    "metaProtected": "protected",
+    "prLabel": "PR #{{number}}",
+    "prLabelWithState": "PR #{{number}} ({{state}})",
+    "producedByTitle": "Branch by the \"{{moduleId}}\" module dev ({{agentId}})"
+  },
+  "shell": {
+    "railTablistLabel": "Explorer panel",
+    "explorerTitle": "Explorer",
+    "searchTitle": "Search",
+    "railDisabled": {
+      "agents": {
+        "label": "Agents",
+        "reason": "The rail is about CODE; who's working already shows in the Overview. Duplicating it here without its own data would be a second place for the same fact to drift."
+      },
+      "tests": {
+        "label": "Tests",
+        "reason": "There's no lint/test integration in the Code tab — a declared pending item from PHASE 26."
+      }
+    },
+    "railDisabledTitle": "{{label}}: {{reason}}",
+    "railDisabledAriaLabel": "{{label}} (unavailable)",
+    "bottomPanelOpen": "Bottom panel",
+    "bottomPanelClose": "Close bottom panel",
+    "refLabel": "ref",
+    "encodingLabel": "UTF-8",
+    "activeAgents_one": "{{count}} active agent",
+    "activeAgents_other": "{{count}} active agents"
+  },
+  "editor": {
+    "openTabsAriaLabel": "Open files",
+    "closeFileAriaLabel": "Close {{path}}",
+    "blameButton": "Blame",
+    "blameButtonTitle": "Annotate each line with the commit, author, and date that last touched it",
+    "emptyState": "Select a file in the explorer, or search a snippet in the Search tab.",
+    "loadFileErrorFallback": "Could not open this file.",
+    "truncatedFile": "File larger than the read cap — showing only the start ({{bytes}} bytes).",
+    "blameLoading": "Loading authorship annotations…",
+    "blameErrorFallback": "Could not load the blame for this file.",
+    "blameEmpty": "No authorship annotations for this file.",
+    "blameTruncated": "Authorship annotation cut at {{lines}} lines — file larger than the blame cap.",
+    "blameNoLine": "No authorship annotation for this line.",
+    "blameLineLabel": "{{author}} · {{sha}}",
+    "blameTooltip": "{{author}} · {{date}} · {{sha}} · {{summary}}",
+    "minimapAriaLabel": "Minimap — click to jump to that part of the file"
+  },
+  "explorer": {
+    "title": "Explorer",
+    "noRef": "No branch to browse.",
+    "loading": "Loading…",
+    "loadErrorFallback": "Could not list the repository root.",
+    "empty": "Empty repository at this ref.",
+    "truncated": "The root has more entries than the per-level cap — refine by browsing into folders.",
+    "folderErrorFallback": "Could not list this folder.",
+    "folderEmpty": "Empty folder.",
+    "folderTruncated": "More entries than the per-level cap."
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Term (min. 2 characters)",
+    "ariaLabel": "Search term",
+    "button": "Search",
+    "initial": "Type a term and search the content of the current ref.",
+    "searching": "Searching…",
+    "errorFallback": "Could not search right now.",
+    "noResults": "No results for “{{query}}”.",
+    "filesScanned_one": "{{count}} file scanned",
+    "filesScanned_other": "{{count}} files scanned",
+    "truncatedSuffix": " · search cut by the budget — refine the term or the path"
+  },
+  "diff": {
+    "fileStatus": {
+      "added": "new",
+      "modified": "modified",
+      "removed": "removed",
+      "renamed": "renamed"
+    },
+    "prState": {
+      "open": "open",
+      "merged": "merged",
+      "closed": "closed"
+    },
+    "filters": {
+      "open": "Open",
+      "merged": "Merged",
+      "closed": "Closed",
+      "all": "All"
+    },
+    "backToList": "Back to list",
+    "loadingDiff": "Loading diff…",
+    "diffErrorFallback": "Could not load this PR's diff.",
+    "noFiles": "This PR didn't change any files.",
+    "truncatedFiles": "The file list was cut at the per-PR cap.",
+    "loadingPrs": "Loading pull requests…",
+    "prListErrorFallback": "Could not load the PR list.",
+    "noPrsWithState": "No {{state}} PRs in this repository.",
+    "noPrsAny": "No PRs in this repository.",
+    "truncatedList": "The PR list was cut at the per-call cap.",
+    "idLabel": "Already know the id?",
+    "idPlaceholder": "e.g. 218, or the provider's id",
+    "viewDiffButton": "View diff",
+    "noPatchText": "No diff text available for this file.",
+    "emptyPatchText": "Diff with no text content (e.g. mode change only).",
+    "openPrAriaLabel": "Open PR #{{number}}: {{title}}",
+    "unknownAuthor": "unknown author"
+  },
+  "shared": {
+    "retry": "Try again"
+  }
+}

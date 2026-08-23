@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -56,12 +57,11 @@ interface LoginPageProps {
  * onde ele aparece.
  */
 export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState<string | null>(
-    erroOAuth
-      ? 'Não foi possível concluir o login social. Tente de novo ou entre com e-mail e senha.'
-      : null,
+    erroOAuth ? t('loginPage.oauthError') : null,
   );
   const [enviando, setEnviando] = useState(false);
 
@@ -77,11 +77,11 @@ export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
       }
       setErro(
         r.status === 403
-          ? 'Confirme seu e-mail antes de entrar. Procure a mensagem de verificação.'
-          : 'E-mail ou senha incorretos.',
+          ? t('loginPage.errors.unverifiedEmail')
+          : t('loginPage.errors.invalidCredentials'),
       );
     } catch {
-      setErro('Não foi possível falar com o servidor. Tente de novo.');
+      setErro(t('loginPage.errors.network'));
     } finally {
       setEnviando(false);
     }
@@ -89,25 +89,26 @@ export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
 
   return (
     <AuthLayout
-      titulo="Entrar"
-      subtitulo="Acesse seu workspace e retome as sessões em andamento."
+      titulo={t('loginPage.title')}
+      subtitulo={t('loginPage.subtitle')}
       irPara={irPara}
       rodapeDoCartao={
         <>
-          Não tem acesso?{' '}
+          {t('loginPage.footer.noAccessPrompt')}{' '}
           <button
             type="button"
             className={styles.link}
             onClick={() => irPara('/registrar')}
           >
-            Criar uma conta
+            {t('loginPage.footer.createAccount')}
           </button>
         </>
       }
       abaixoDoCartao={
         <Alert tone="warning">
-          Sua conta existia antes desta versão? Peça o link em{' '}
-          <strong>Esqueci minha senha</strong> — a senha antiga não foi migrada.
+          {t('loginPage.migrationNotice.prefix')}
+          <strong>{t('loginPage.migrationNotice.strong')}</strong>
+          {t('loginPage.migrationNotice.suffix')}
         </Alert>
       }
     >
@@ -119,9 +120,9 @@ export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
 
       <form className={styles.form} onSubmit={submeter}>
         <Input
-          label="E-mail"
+          label={t('loginPage.form.emailLabel')}
           type="email"
-          placeholder="voce@empresa.com"
+          placeholder={t('loginPage.form.emailPlaceholder')}
           autoComplete="username"
           required
           preenchido
@@ -129,7 +130,7 @@ export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
           onChange={(e) => setEmail(e.target.value)}
         />
         <Input
-          label="Senha"
+          label={t('loginPage.form.passwordLabel')}
           type="password"
           placeholder="••••••••••"
           autoComplete="current-password"
@@ -145,19 +146,19 @@ export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
               className={`${styles.link} ${styles.linkPequeno}`}
               onClick={() => irPara('/esqueci-senha')}
             >
-              Esqueci minha senha
+              {t('loginPage.form.forgotPassword')}
             </button>
           }
         />
         <div className={styles.acoes}>
           <Button type="submit" fullWidth size="lg" loading={enviando}>
-            {enviando ? 'Autenticando…' : 'Entrar'}
+            {enviando ? t('loginPage.form.submitting') : t('loginPage.form.submit')}
           </Button>
         </div>
 
         <div className={styles.divisor}>
           <span className={styles.linhaDivisor} aria-hidden="true" />
-          <span className={styles.textoDivisor}>ou</span>
+          <span className={styles.textoDivisor}>{t('loginPage.form.divider')}</span>
           <span className={styles.linhaDivisor} aria-hidden="true" />
         </div>
 
@@ -167,14 +168,14 @@ export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
             href={`${runtimeConfig.apiUrl}/auth/oauth/github/start`}
           >
             <GitHubIcon size={17} />
-            Continuar com GitHub
+            {t('loginPage.form.githubButton')}
           </a>
           <a
             className={styles.botaoSocial}
             href={`${runtimeConfig.apiUrl}/auth/oauth/gitlab/start`}
           >
             <GitLabIcon size={17} />
-            Continuar com GitLab
+            {t('loginPage.form.gitlabButton')}
           </a>
         </div>
       </form>

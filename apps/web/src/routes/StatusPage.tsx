@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import type { HealthStatus } from '@brabo/shared';
 import { API_URL, ENGINE_URL, fetchHealth } from '../lib/health';
 
@@ -75,6 +76,7 @@ export function StatusPage({
   irPara: (rota: string) => void;
   voltarPara: string;
 }) {
+  const { t } = useTranslation('dashboard');
   const apiHealth = useHealthQuery('api', API_URL);
   const engineHealth = useHealthQuery('engine', ENGINE_URL);
 
@@ -87,7 +89,7 @@ export function StatusPage({
       }}
     >
       <h1 style={{ fontSize: 28, marginBottom: 'var(--space-4)' }}>
-        Brabo — status da plataforma
+        {t('status.heading')}
       </h1>
       <table
         style={{
@@ -110,19 +112,19 @@ export function StatusPage({
             }}
           >
             <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
-              Serviço
+              {t('status.columns.service')}
             </th>
             <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
-              Status
+              {t('status.columns.status')}
             </th>
             <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
-              Último check
+              {t('status.columns.lastCheck')}
             </th>
           </tr>
         </thead>
         <tbody>
-          <StatusRow label="api (NestJS)" query={apiHealth} />
-          <StatusRow label="engine (Elixir/Phoenix)" query={engineHealth} />
+          <StatusRow label={t('status.services.api')} query={apiHealth} />
+          <StatusRow label={t('status.services.engine')} query={engineHealth} />
         </tbody>
       </table>
       <p style={{ marginTop: 'var(--space-4)' }}>
@@ -139,7 +141,7 @@ export function StatusPage({
             cursor: 'pointer',
           }}
         >
-          Voltar
+          {t('status.back')}
         </button>
       </p>
     </main>

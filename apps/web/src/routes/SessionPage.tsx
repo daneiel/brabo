@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   acceptHandoff,
   activateExecution,
@@ -248,19 +249,25 @@ export function afundarDesfechos(entradas: TimelineEntry[]): TimelineEntry[] {
  */
 const PONTO_DA_SESSAO: Record<
   SessionStatus,
-  { classe: 'pulsing' | 'statusDotParado' | 'statusDotFalha'; rotulo: string }
+  { classe: 'pulsing' | 'statusDotParado' | 'statusDotFalha'; rotuloKey: string }
 > = {
-  created: { classe: 'statusDotParado', rotulo: 'ainda não ativada' },
-  active: { classe: 'pulsing', rotulo: 'ativa' },
-  closing: { classe: 'statusDotParado', rotulo: 'encerrando' },
-  closed: { classe: 'statusDotParado', rotulo: 'encerrada' },
-  closed_abnormally: { classe: 'statusDotFalha', rotulo: 'encerrada anormalmente' },
+  created: { classe: 'statusDotParado', rotuloKey: 'status.created' },
+  active: { classe: 'pulsing', rotuloKey: 'status.active' },
+  closing: { classe: 'statusDotParado', rotuloKey: 'status.closing' },
+  closed: { classe: 'statusDotParado', rotuloKey: 'status.closed' },
+  closed_abnormally: { classe: 'statusDotFalha', rotuloKey: 'status.closedAbnormally' },
 };
 
+/**
+ * `rotuloKey` é a CHAVE de tradução (namespace `sessionPage`), não o texto —
+ * quem chama resolve com `t()`. Manter a função pura (sem depender do hook
+ * `useTranslation`) é o que permite `SessionPage.ponto.test.ts` testá-la sem
+ * precisar montar um `I18nextProvider`.
+ */
 export function pontoDaSessao(status: SessionStatus | undefined) {
   // Sem sessão carregada ainda não é "encerrada": é desconhecido, e o ponto
   // fica apagado até o dado chegar.
-  return status ? PONTO_DA_SESSAO[status] : { classe: 'statusDotParado' as const, rotulo: 'carregando' };
+  return status ? PONTO_DA_SESSAO[status] : { classe: 'statusDotParado' as const, rotuloKey: 'status.loading' };
 }
 
 /**
@@ -392,11 +399,12 @@ function StorySlide({
   onPromover: () => void;
   onDevolver: () => void;
 }) {
+  const { t } = useTranslation('sessionPage');
   return (
     <div className={styles.storySlide}>
       <span className={styles.handoffPill}>
         <StackIcon size={13} />
-        história &quot;{titulo}&quot; pronta, aguardando sua promoção
+        {t('historia.pendente', { titulo })}
       </span>
       {resumo && <p className={styles.storySlideResumo}>{resumo}</p>}
       <div style={{ display: 'flex', gap: 8 }}>
@@ -406,10 +414,10 @@ function StorySlide({
           loading={promovendo}
           onClick={onPromover}
         >
-          Promover
+          {t('historia.promover')}
         </Button>
         <Button variant="ghost" disabled={desabilitado} onClick={onDevolver}>
-          Devolver
+          {t('historia.devolver')}
         </Button>
       </div>
       <Link
@@ -418,7 +426,7 @@ function StorySlide({
         search={{ tab: 'backlog' }}
         className={styles.timelineLink}
       >
-        Ver no Backlog
+        {t('compartilhado.verNoBacklog')}
         <ChevronRightIcon size={11} />
       </Link>
     </div>
@@ -505,6 +513,7 @@ function StructuredQuestionCard({
   onTurnoIniciado: () => void;
   onTurnoTerminado: () => void;
 }) {
+  const { t } = useTranslation('sessionPage');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [respostas, setRespostas] = useState<Record<string, string>>({});
@@ -524,7 +533,7 @@ function StructuredQuestionCard({
           <AvatarDoAgente id={agent} />
           <span className={styles.handoffPill}>
             <ChatIcon size={13} />
-            perguntas do {nomeDoAgente(agent)} — respondidas
+            {t('perguntas.respondidas', { agente: nomeDoAgente(agent) })}
           </span>
         </span>
         <dl className={styles.structuredQuestionAnswers}>
@@ -556,10 +565,10 @@ function StructuredQuestionCard({
     try {
       await answerStructuredQuestion(projectId, sessionId, agent, questionSetId, respostas);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      showToast({ title: 'Respostas enviadas', tone: 'success' });
+      showToast({ title: t('perguntas.respostasEnviadas'), tone: 'success' });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível enviar as respostas'),
+        title: mensagemDaApi(erro, t('perguntas.erroEnviar')),
         tone: 'danger',
       });
     } finally {
@@ -577,7 +586,7 @@ function StructuredQuestionCard({
         <AvatarDoAgente id={agent} />
         <span className={styles.handoffPill}>
           <ChatIcon size={13} />
-          perguntas do {nomeDoAgente(agent)}
+          {t('perguntas.titulo', { agente: nomeDoAgente(agent) })}
         </span>
       </span>
       <div className={styles.structuredQuestionForm}>
@@ -628,7 +637,7 @@ function StructuredQuestionCard({
                   }}
                 >
                   <option value="" disabled>
-                    Selecione
+                    {t('perguntas.selecione')}
                   </option>
                   {q.options.map((opcao) => (
                     <option key={opcao} value={opcao}>
@@ -639,7 +648,7 @@ function StructuredQuestionCard({
                       só existe quando a pergunta a permite (default do
                       engine: sim, para `select`). */}
                   {permiteOutra(q) && (
-                    <option value={OUTRA_RESPOSTA}>Outra (escrever)</option>
+                    <option value={OUTRA_RESPOSTA}>{t('perguntas.outraEscrever')}</option>
                   )}
                 </Select>
                 {emOutra && (
@@ -647,7 +656,7 @@ function StructuredQuestionCard({
                   // `select` abertos teria dois campos chamados "Sua
                   // resposta" — indistinguíveis para quem usa leitor de tela.
                   <Input
-                    label={`Sua resposta — ${q.label}`}
+                    label={t('perguntas.suaResposta', { pergunta: q.label })}
                     value={value}
                     disabled={enviando}
                     autoFocus
@@ -675,7 +684,7 @@ function StructuredQuestionCard({
         disabled={!completo || enviando}
         onClick={handleSubmit}
       >
-        Enviar respostas
+        {t('perguntas.enviarRespostas')}
       </Button>
     </div>
   );
@@ -686,6 +695,7 @@ export function SessionPage({
   sessionId,
   highlightEvent,
 }: SessionPageProps) {
+  const { t } = useTranslation('sessionPage');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // O access token carrega o e-mail; o nome não vem mais em claim nenhuma
@@ -1185,56 +1195,226 @@ export function SessionPage({
         }, -1)
       : -1;
 
-    // Carrossel de histórias (RN-148) — pré-passada pra saber, ANTES de
-    // decidir como cada `backlog.story_promotion_proposed` aparece, se as
-    // pendentes formam uma LEVA (2+ ao mesmo tempo). Mesmo critério de
-    // "resolvida" que o card avulso já checa por evento (`_transitioned`/
-    // `_promotion_returned` posterior com o mesmo storyId), olhado de uma
-    // vez só pra sessão inteira.
-    const promocoesPendentes = events
-      .filter((e) => e.type === 'backlog.story_promotion_proposed')
-      .map((e) => {
-        const payload = e.payload as {
-          storyId?: unknown;
-          title?: unknown;
-          description?: unknown;
-          rf?: unknown;
+    // Carrossel de histórias (RN-148) — a leva é o conjunto de histórias
+    // REALMENTE pendentes de promoção NESTA sessão, e essa verdade NÃO PODE
+    // depender de quantos eventos aconteceram desde a proposta: numa sessão
+    // longa, `backlog.story_promotion_proposed` sai da janela dos últimos
+    // 200 eventos de `useSessionEvents` (`latest: true`) enquanto a story
+    // continua pendente de verdade — a leva encolhia (ou sumia por completo)
+    // silenciosamente. É a MESMA classe de bug que a RN-180 já corrigiu para
+    // `ContextAside` trocando a fonte windowed pela completa (RN-XXX).
+    //
+    // A fonte de CONTEÚDO/CONTAGEM passa a ser `useBacklog` (`backlogQuery`,
+    // já usado acima para `hasPromotedStory` — mesma queryKey, sem
+    // round-trip novo): `Story.proposedReady` já é o dado COMPLETO e
+    // project-wide, sem janela — toda `Story` desta sessão com
+    // `proposedReady: true` é uma pendência real, exista ou não o evento de
+    // proposta ainda na janela. Quando a story ainda não existe no backlog
+    // carregado (query não respondeu, ou mockada vazia — os testes
+    // existentes de carrossel/promoção mockam `useBacklog` como `[]` de
+    // propósito), degrada story a story pro scan de janela de sempre, o que
+    // é o que mantém esses testes passando sem mudança nenhuma.
+    const backlogStoriesById = new Map(
+      (backlogQuery.data ?? [])
+        .flatMap((epic) => epic.stories)
+        .filter((s) => s.sessionId === sessionId)
+        .map((s) => [s.id, s] as const),
+    );
+
+    const resumoDeTextos = (
+      description: string | undefined,
+      rf: string[] | undefined,
+    ): string | undefined => {
+      if (description && description !== '') return description;
+      if (rf && rf.length > 0) return rf.join(' · ');
+      return undefined;
+    };
+
+    // Propostas na JANELA: enriquecem título/resumo quando o payload trouxer
+    // mais detalhe que a `Story`, dizem ONDE ancorar a leva na timeline, e
+    // são o fallback usado quando a story não está no backlog carregado.
+    const propostaNaJanelaPorStoryId = new Map<
+      string,
+      { seq: number; titulo: string; resumo: string | undefined }
+    >();
+    for (const e of events) {
+      if (e.type !== 'backlog.story_promotion_proposed') continue;
+      const payload = e.payload as {
+        storyId?: unknown;
+        title?: unknown;
+        description?: unknown;
+        rf?: unknown;
+      };
+      const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
+      if (!storyId) continue;
+      const titulo = typeof payload?.title === 'string' ? payload.title : t('compartilhado.semTitulo');
+      const description =
+        typeof payload?.description === 'string' ? payload.description : undefined;
+      const rf =
+        Array.isArray(payload?.rf) && payload.rf.every((r) => typeof r === 'string')
+          ? (payload.rf as string[])
+          : undefined;
+      propostaNaJanelaPorStoryId.set(storyId, {
+        seq: e.seq,
+        titulo,
+        resumo: resumoDeTextos(description, rf),
+      });
+    }
+
+    const windowDizResolvida = (storyId: string, propostaSeq: number) =>
+      events.some(
+        (e2) =>
+          e2.seq > propostaSeq &&
+          ((e2.type === 'backlog.story_transitioned' &&
+            (e2.payload as { storyId?: unknown })?.storyId === storyId) ||
+            (e2.type === 'backlog.story_promotion_returned' &&
+              (e2.payload as { storyId?: unknown })?.storyId === storyId)),
+      );
+
+    const idsConsiderados = new Set<string>([
+      ...propostaNaJanelaPorStoryId.keys(),
+      ...[...backlogStoriesById.values()]
+        .filter((s) => s.proposedReady)
+        .map((s) => s.id),
+    ]);
+
+    const promocoesPendentes = [...idsConsiderados]
+      .map((storyId) => {
+        const story = backlogStoriesById.get(storyId);
+        const naJanela = propostaNaJanelaPorStoryId.get(storyId);
+        const pendente = story
+          ? story.proposedReady
+          : naJanela !== undefined && !windowDizResolvida(storyId, naJanela.seq);
+        if (!pendente) return null;
+        return {
+          storyId,
+          titulo: naJanela?.titulo ?? story?.title ?? t('compartilhado.semTitulo'),
+          resumo: naJanela?.resumo ?? resumoDeTextos(story?.description, story?.rf),
+          // `undefined` quando o evento que abriu esta pendência já saiu da
+          // janela — é o sinal de que a leva precisa ancorar no topo do
+          // trecho visível em vez de sumir (requisito 2 da RN-XXX).
+          seq: naJanela?.seq,
         };
-        const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
-        const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
-        // `resumo` degrada pro título sozinho: `CreateStoryUseCase` hoje só
-        // grava storyId/epicId/title no evento — sem descrição nem RF. Fica
-        // pronto pra quando o payload ganhar o campo, em vez de reinventado
-        // nessa hora (requisito da tarefa: "se disponível no payload").
-        const resumo =
-          typeof payload?.description === 'string' && payload.description !== ''
-            ? payload.description
-            : Array.isArray(payload?.rf) &&
-                payload.rf.length > 0 &&
-                payload.rf.every((r) => typeof r === 'string')
-              ? (payload.rf as string[]).join(' · ')
-              : undefined;
-        return { seq: e.seq, storyId, titulo, resumo };
       })
       .filter(
-        (p): p is { seq: number; storyId: string; titulo: string; resumo: string | undefined } =>
-          typeof p.storyId === 'string' &&
-          !events.some(
-            (e2) =>
-              e2.seq > p.seq &&
-              ((e2.type === 'backlog.story_transitioned' &&
-                (e2.payload as { storyId?: unknown })?.storyId === p.storyId) ||
-                (e2.type === 'backlog.story_promotion_returned' &&
-                  (e2.payload as { storyId?: unknown })?.storyId === p.storyId)),
-          ),
-      );
+        (
+          p,
+        ): p is { storyId: string; titulo: string; resumo: string | undefined; seq: number | undefined } =>
+          p !== null,
+      )
+      // Mais antiga primeiro — mesma ordem que a janela já dava; quem saiu
+      // da janela é, por definição, mais antiga que quem ficou.
+      .sort((a, b) => (a.seq ?? -1) - (b.seq ?? -1));
+
+    const pendingStoryIds = new Set(promocoesPendentes.map((p) => p.storyId));
+    const seqsDaLevaNaJanela = promocoesPendentes
+      .map((p) => p.seq)
+      .filter((seq): seq is number => seq !== undefined);
+    // `null` quando NENHUMA pendente real tem o evento que a abriu ainda na
+    // janela — a leva inteira "saiu" do log visível, mas continua pendente
+    // de verdade.
+    const primeiraDaLevaNaJanela =
+      seqsDaLevaNaJanela.length > 0 ? Math.min(...seqsDaLevaNaJanela) : null;
+
     // 1 história pendente não ganha nada virando carrossel de um slide só —
-    // o card simples de sempre já resolve (degradação decidida, requisito 4
-    // da tarefa). 0 nem chega a ser pergunta.
-    const ehLevaDeHistorias = promocoesPendentes.length >= 2;
-    const primeiraDaLeva = ehLevaDeHistorias
-      ? Math.min(...promocoesPendentes.map((p) => p.seq))
-      : -1;
+    // o card simples de sempre já resolve (RN-148); 2+ viram o carrossel.
+    // Nó ÚNICO reaproveitado nos dois pontos possíveis de ancoragem abaixo.
+    const construirNoDaLeva = (): ReactNode => {
+      if (promocoesPendentes.length === 0) return null;
+      if (promocoesPendentes.length === 1) {
+        const p = promocoesPendentes[0];
+        return (
+          <div className={styles.handoffCard} key={`leva-unica-${p.storyId}`}>
+            <span className={styles.handoffPill}>
+              <StackIcon size={13} />
+              {t('historia.pendente', { titulo: p.titulo })}
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button
+                variant="success"
+                disabled={promovendoStoryId === p.storyId}
+                loading={promovendoStoryId === p.storyId}
+                onClick={() => handlePromoteStory(p.storyId)}
+              >
+                {t('historia.promover')}
+              </Button>
+              <Button
+                variant="ghost"
+                disabled={promovendoStoryId === p.storyId}
+                onClick={() => {
+                  setRecusandoStory({ id: p.storyId, title: p.titulo });
+                  setMotivoRecusa('');
+                }}
+              >
+                {t('historia.devolver')}
+              </Button>
+            </div>
+            <Link
+              to="/projects/$projectId"
+              params={{ projectId }}
+              search={{ tab: 'backlog' }}
+              className={styles.timelineLink}
+            >
+              {t('compartilhado.verNoBacklog')}
+              <ChevronRightIcon size={11} />
+            </Link>
+          </div>
+        );
+      }
+      const slides: CarouselSlide[] = promocoesPendentes.map((p) => ({
+        key: p.storyId,
+        label: p.titulo,
+        node: (
+          <StorySlide
+            key={p.storyId}
+            projectId={projectId}
+            titulo={p.titulo}
+            resumo={p.resumo}
+            promovendo={promovendoStoryId === p.storyId}
+            desabilitado={promovendoStoryId !== null || promovendoTodas}
+            onPromover={() => handlePromoteStory(p.storyId)}
+            onDevolver={() => {
+              setRecusandoStory({ id: p.storyId, title: p.titulo });
+              setMotivoRecusa('');
+            }}
+          />
+        ),
+      }));
+      return (
+        <Carousel
+          key="carrossel-historias"
+          ariaLabel={t('historia.aguardandoPromocao', { count: promocoesPendentes.length })}
+          slides={slides}
+          headerActions={
+            <Button
+              variant="success"
+              loading={promovendoTodas}
+              disabled={promovendoStoryId !== null}
+              onClick={() => handlePromoteAll(promocoesPendentes.map((p) => p.storyId))}
+            >
+              {t('historia.aprovarTodas')}
+            </Button>
+          }
+        />
+      );
+    };
+
+    // O evento que abriu a leva já saiu da janela inteira — nenhuma pendente
+    // tem `seq` (RN-XXX). Nunca esconder um estado real por causa de corte
+    // de leitura (mesma régua da RN-180): ancora no TOPO do trecho visível
+    // em vez de sumir, com um `seq` sentinela menor que qualquer evento da
+    // janela — só a ORDEM importa aqui, `afundarDesfechos` não mexe em
+    // entrada sem `desfecho`.
+    if (promocoesPendentes.length > 0 && primeiraDaLevaNaJanela === null) {
+      const seqDeAncoragem = (events[0]?.seq ?? 1) - 1;
+      items.push({
+        seq: seqDeAncoragem,
+        autor: 'agent:po',
+        turno: turnoDoSeq(aberturas, seqDeAncoragem),
+        origem: 'eventos',
+        node: construirNoDaLeva(),
+      });
+    }
 
     for (const event of events) {
       // Todo item nascido deste evento herda o eixo (`seq`), o AUTOR e o
@@ -1271,7 +1451,7 @@ export function SessionPage({
               </span>
               <div className={styles.messageBody}>
                 <div className={styles.messageHeader}>
-                  <span className={styles.messageName}>{user.name ?? 'Você'}</span>
+                  <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
                 </div>
                 <div className={styles.bubble}>{text}</div>
               </div>
@@ -1346,7 +1526,7 @@ export function SessionPage({
                   {nomeDoAgente(event.actor.id)}
                 </span>
                 <ChevronRightIcon size={13} />
-                passou o bastão ao
+                {t('handoff.passouOBastaoAo')}
                 <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>
                   {nomeDoAgente(toAgent)}
                 </span>
@@ -1355,7 +1535,7 @@ export function SessionPage({
                 variant="success"
                 onClick={() => handleAcceptHandoff(offeredHandoff!.id, offeredHandoff!.toAgent)}
               >
-                Aceitar handoff e iniciar {offeredHandoff!.toAgent}
+                {t('handoff.aceitarEIniciar', { agente: offeredHandoff!.toAgent })}
               </Button>
               {/* Handoff pro Dev Lead é o início da EXECUÇÃO — quem aceita
                   precisa saber onde acompanhar depois (RN-125). As outras
@@ -1371,7 +1551,7 @@ export function SessionPage({
                     loading={ativandoExecucao}
                     onClick={handleActivateExecution}
                   >
-                    Ativar execução
+                    {t('handoff.ativarExecucao')}
                   </Button>
                   <Link
                     to="/projects/$projectId"
@@ -1379,7 +1559,7 @@ export function SessionPage({
                     search={{ tab: 'executores' }}
                     className={styles.timelineLink}
                   >
-                    Acompanhe a execução em Executores
+                    {t('handoff.acompanheExecucao')}
                     <ChevronRightIcon size={11} />
                   </Link>
                 </>
@@ -1392,7 +1572,7 @@ export function SessionPage({
                   {nomeDoAgente(event.actor.id)}
                 </span>
                 <ChevronRightIcon size={13} />
-                passou o bastão ao
+                {t('handoff.passouOBastaoAo')}
                 <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>
                   {nomeDoAgente(toAgent)}
                 </span>
@@ -1419,9 +1599,9 @@ export function SessionPage({
         // do PO dentro do próprio turno dele, e segue elegível ao colapso
         // por agente (RN-138).
         const payload = event.payload as { title?: unknown };
-        const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
-        const verbo =
-          event.type === 'backlog.epic_created' ? 'criou o épico' : 'criou a história';
+        const titulo = typeof payload?.title === 'string' ? payload.title : t('compartilhado.semTitulo');
+        const verboKey =
+          event.type === 'backlog.epic_created' ? 'backlog.criouEpico' : 'backlog.criouHistoria';
         empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
@@ -1431,7 +1611,7 @@ export function SessionPage({
                 <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
                   {nomeDoAgente(event.actor.id)}
                 </span>
-                {verbo} &quot;{titulo}&quot;
+                {t(verboKey)} &quot;{titulo}&quot;
               </span>
               <Link
                 to="/projects/$projectId"
@@ -1439,7 +1619,7 @@ export function SessionPage({
                 search={{ tab: 'backlog' }}
                 className={styles.timelineLink}
               >
-                Ver no Backlog
+                {t('compartilhado.verNoBacklog')}
                 <ChevronRightIcon size={11} />
               </Link>
             </div>
@@ -1449,132 +1629,45 @@ export function SessionPage({
         // Promoção inline (RN-126) — a decisão que RN-048 já resolve na aba
         // Backlog ganha um segundo lugar: o fio da própria sessão do PO, onde
         // a história nasceu. Mesmo mecanismo (`promoteStories`/`returnStory`),
-        // sem endpoint novo. O card fica ACIONÁVEL só enquanto NENHUM evento
-        // posterior já decidiu o destino desta história — promovida
-        // (`backlog.story_transitioned`, que `PromoteStoriesUseCase` emite via
-        // `TransitionStoryUseCase`) ou devolvida
-        // (`backlog.story_promotion_returned`). Sem esta checagem, promover ou
-        // devolver deixaria os mesmos dois botões plantados no fio, oferecendo
-        // a mesma decisão de novo sobre uma história que já saiu da fila.
+        // sem endpoint novo.
+        //
+        // "Pendente" não é mais decidido por scan de janela (RN-XXX): vem do
+        // `pendingStoryIds` calculado acima a partir de `useBacklog`, com
+        // fallback pra janela só quando a story não está no backlog
+        // carregado. Card e carrossel colapsam pro MESMO nó
+        // (`construirNoDaLeva`, 1 ou 2+ pendentes) — só a story ÂNCORA (a
+        // proposta pendente mais antiga ainda na janela) o materializa;
+        // qualquer outra proposta pendente na mesma leva só faz `continue`,
+        // porque já está representada dentro dele.
         const payload = event.payload as { storyId?: unknown; title?: unknown };
         const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
-        const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
-        const resolvida =
-          !storyId ||
-          events.some(
-            (e) =>
-              e.seq > event.seq &&
-              ((e.type === 'backlog.story_transitioned' &&
-                (e.payload as { storyId?: unknown })?.storyId === storyId) ||
-                (e.type === 'backlog.story_promotion_returned' &&
-                  (e.payload as { storyId?: unknown })?.storyId === storyId)),
-          );
+        const titulo = typeof payload?.title === 'string' ? payload.title : t('compartilhado.semTitulo');
+        const pendente = storyId ? pendingStoryIds.has(storyId) : false;
 
-        if (ehLevaDeHistorias && storyId && !resolvida) {
-          // Faz parte da LEVA (RN-148): o carrossel entra uma vez só, na
-          // posição da primeira proposta ainda pendente — as demais não
-          // viram card avulso aqui, porque já estão representadas como
-          // slide dele. `continue` em vez de `items.push`: nada nasce nesta
-          // volta do loop para as pendentes que não são a primeira.
-          if (event.seq === primeiraDaLeva) {
-            const slides: CarouselSlide[] = promocoesPendentes.map((p) => ({
-              key: p.storyId,
-              label: p.titulo,
-              node: (
-                <StorySlide
-                  key={p.storyId}
-                  projectId={projectId}
-                  titulo={p.titulo}
-                  resumo={p.resumo}
-                  promovendo={promovendoStoryId === p.storyId}
-                  desabilitado={promovendoStoryId !== null || promovendoTodas}
-                  onPromover={() => handlePromoteStory(p.storyId)}
-                  onDevolver={() => {
-                    setRecusandoStory({ id: p.storyId, title: p.titulo });
-                    setMotivoRecusa('');
-                  }}
-                />
-              ),
-            }));
-            empurrar({
-              node: (
-                <Carousel
-                  key="carrossel-historias"
-                  ariaLabel={`${promocoesPendentes.length} histórias aguardando promoção`}
-                  slides={slides}
-                  headerActions={
-                    <Button
-                      variant="success"
-                      loading={promovendoTodas}
-                      disabled={promovendoStoryId !== null}
-                      onClick={() =>
-                        handlePromoteAll(promocoesPendentes.map((p) => p.storyId))
-                      }
-                    >
-                      Aprovar todas
-                    </Button>
-                  }
-                />
-              ),
-            });
+        if (pendente) {
+          if (event.seq === primeiraDaLevaNaJanela) {
+            empurrar({ node: construirNoDaLeva() });
           }
           continue;
         }
 
         empurrar({
-          node:
-            !resolvida && storyId ? (
-              <div className={styles.handoffCard} key={event.id}>
-                <span className={styles.handoffPill}>
-                  <StackIcon size={13} />
-                  história &quot;{titulo}&quot; pronta, aguardando sua promoção
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button
-                    variant="success"
-                    disabled={promovendoStoryId === storyId}
-                    loading={promovendoStoryId === storyId}
-                    onClick={() => handlePromoteStory(storyId)}
-                  >
-                    Promover
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled={promovendoStoryId === storyId}
-                    onClick={() => {
-                      setRecusandoStory({ id: storyId, title: titulo });
-                      setMotivoRecusa('');
-                    }}
-                  >
-                    Devolver
-                  </Button>
-                </div>
-                <Link
-                  to="/projects/$projectId"
-                  params={{ projectId }}
-                  search={{ tab: 'backlog' }}
-                  className={styles.timelineLink}
-                >
-                  Ver no Backlog
-                  <ChevronRightIcon size={11} />
-                </Link>
-              </div>
-            ) : (
-              <div className={styles.handoffDivider} key={event.id}>
-                <span className={styles.handoffPill}>
-                  <StackIcon size={13} />
-                  história &quot;{titulo}&quot; esteve aguardando sua promoção
-                </span>
-              </div>
-            ),
+          node: (
+            <div className={styles.handoffDivider} key={event.id}>
+              <span className={styles.handoffPill}>
+                <StackIcon size={13} />
+                {t('historia.estevePendente', { titulo })}
+              </span>
+            </div>
+          ),
         });
       } else if (event.type === 'backlog.story_promotion_returned') {
         // Narração simétrica ao card acima (RN-126) — mesma frase que
         // `activity.ts` já usa no log colapsado da sidebar, reaproveitada
         // aqui em vez de reinventada.
         const payload = event.payload as { title?: unknown; reason?: unknown };
-        const titulo = typeof payload?.title === 'string' ? payload.title : 'uma história';
-        const motivo = typeof payload?.reason === 'string' ? payload.reason : 'sem motivo';
+        const titulo = typeof payload?.title === 'string' ? payload.title : t('historia.tituloFallback');
+        const motivo = typeof payload?.reason === 'string' ? payload.reason : t('historia.semMotivo');
         empurrar({
           node: (
             <div
@@ -1587,8 +1680,8 @@ export function SessionPage({
               </span>
               <div className={styles.messageBody}>
                 <div className={styles.messageHeader}>
-                  <span className={styles.messageName}>{user.name ?? 'Você'}</span>
-                  <span className={styles.messageMeta}>devolveu ao PO</span>
+                  <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
+                  <span className={styles.messageMeta}>{t('historia.devolveuAoPo')}</span>
                 </div>
                 <div className={styles.bubble}>
                   &quot;{titulo}&quot;: {motivo}
@@ -1643,12 +1736,12 @@ export function SessionPage({
                       .join(' ')}
                     title={
                       modelName
-                        ? `Modelo que gerou esta resposta: ${modelName}`
-                        : 'Esta resposta foi gravada sem o nome do modelo'
+                        ? t('mensagens.modeloGerador', { modelName })
+                        : t('mensagens.modeloNaoGravado')
                     }
                   >
                     <ModelIcon size={11} />
-                    {modelName ?? 'modelo não registrado'}
+                    {modelName ?? t('mensagens.modeloNaoRegistrado')}
                   </span>
                 </div>
                 {/* Resposta vazia é evento ANTIGO: até a RN-059, falha de
@@ -1658,9 +1751,7 @@ export function SessionPage({
                     se apagam, então a tela os NOMEIA. */}
                 {text === '' ? (
                   <div className={[styles.bubble, styles.bubbleVazio].join(' ')}>
-                    Resposta vazia — evento anterior à RN-059, quando falha de
-                    turno era gravada como resposta em branco. O motivo real
-                    não foi registrado.
+                    {t('mensagens.respostaVazia')}
                   </div>
                 ) : (
                   // RN-158: Markdown leve (negrito, cabeçalho, lista, fence de
@@ -1696,7 +1787,7 @@ export function SessionPage({
                   <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
                   {/* A ORIGEM fica visível: é ela que diz se o próximo passo é
                       trocar a chave, esperar o provider ou abrir um bug. */}
-                  <span className={styles.messageMeta}>falha · origem {origem}</span>
+                  <span className={styles.messageMeta}>{t('mensagens.falhaOrigem', { origem })}</span>
                 </div>
                 <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
                   {mensagem}
@@ -1820,6 +1911,7 @@ export function SessionPage({
     podeAtivarAutoMode,
     iniciarTurnoDoAgente,
     finalizarTurnoDoAgente,
+    backlogQuery.data,
   ]);
 
   // Colapso de mensagens por agente depois que ele passa o bastão (RN-138) —
@@ -1865,7 +1957,7 @@ export function SessionPage({
                     {nomeDoAgente(agentId)}
                   </span>
                 }
-                trailing={`${grupo.length} mensagens`}
+                trailing={t('artefatos.mensagensCount', { count: grupo.length })}
                 classNameCabecalho={styles.agentGroupCabecalho}
                 className={styles.agentGroup}
               >
@@ -1941,7 +2033,7 @@ export function SessionPage({
       queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível ativar a sessão'),
+        title: mensagemDaApi(erro, t('toasts.erroAtivarSessao')),
         tone: 'danger',
       });
     }
@@ -1967,7 +2059,7 @@ export function SessionPage({
       // só apareceria lá no próximo carregamento da tela.
       queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível renomear a sessão', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroRenomear'), tone: 'danger' });
     }
   }
 
@@ -1976,7 +2068,7 @@ export function SessionPage({
       await startAgent(projectId, sessionId, 'criativo');
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível iniciar a ideação', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroIniciarIdeacao'), tone: 'danger' });
     }
   }
 
@@ -2000,7 +2092,7 @@ export function SessionPage({
       finalizarTurnoDoAgente();
     } catch {
       setStreaming(false);
-      showToast({ title: 'Erro', message: 'Não foi possível confirmar prontidão', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroConfirmarProntidao'), tone: 'danger' });
     }
   }
 
@@ -2024,8 +2116,8 @@ export function SessionPage({
     } catch {
       setStreaming(false);
       showToast({
-        title: 'Erro',
-        message: 'Não foi possível confirmar a arquitetura',
+        title: t('toasts.erro'),
+        message: t('toasts.erroConfirmarArquitetura'),
         tone: 'danger',
       });
     }
@@ -2047,10 +2139,10 @@ export function SessionPage({
     try {
       await validateNecessity(projectId, sessionId);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      showToast({ title: 'Necessidade validada', tone: 'success' });
+      showToast({ title: t('toasts.necessidadeValidada'), tone: 'success' });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível validar a necessidade'),
+        title: mensagemDaApi(erro, t('toasts.erroValidarNecessidade')),
         tone: 'danger',
       });
     } finally {
@@ -2083,7 +2175,7 @@ export function SessionPage({
       }
     } catch {
       turnoAgentRef.current = null;
-      showToast({ title: 'Erro', message: 'Não foi possível aceitar o handoff', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroAceitarHandoff'), tone: 'danger' });
     }
   }
 
@@ -2122,10 +2214,10 @@ export function SessionPage({
       await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
       queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
-      showToast({ title: 'Execução ativada', tone: 'success' });
+      showToast({ title: t('toasts.execucaoAtivada'), tone: 'success' });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível ativar a execução'),
+        title: mensagemDaApi(erro, t('toasts.erroAtivarExecucao')),
         tone: 'danger',
       });
     } finally {
@@ -2146,10 +2238,10 @@ export function SessionPage({
         mode: 'auto_approve',
       });
       await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
-      showToast({ title: 'Modo automático ligado', message: agentId, tone: 'success' });
+      showToast({ title: t('toasts.modoAutomaticoLigado'), message: agentId, tone: 'success' });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível ligar o modo automático'),
+        title: mensagemDaApi(erro, t('toasts.erroModoAutomatico')),
         message: agentId,
         tone: 'danger',
       });
@@ -2170,15 +2262,15 @@ export function SessionPage({
       queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
       if (r.failed.length > 0) {
         showToast({
-          title: 'Não foi possível promover',
+          title: t('toasts.erroPromover'),
           message: r.failed[0]?.reason,
           tone: 'danger',
         });
       } else {
-        showToast({ title: 'História promovida', tone: 'success' });
+        showToast({ title: t('toasts.historiaPromovida'), tone: 'success' });
       }
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível promover a história', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroPromoverHistoria'), tone: 'danger' });
     } finally {
       setPromovendoStoryId(null);
     }
@@ -2197,24 +2289,24 @@ export function SessionPage({
       queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
       if (r.failed.length === 0) {
         showToast({
-          title: r.promoted.length === 1 ? 'História promovida' : `${r.promoted.length} histórias promovidas`,
+          title: t('toasts.historiasPromovidas', { count: r.promoted.length }),
           tone: 'success',
         });
       } else if (r.promoted.length > 0) {
         showToast({
-          title: `${r.promoted.length} de ${storyIds.length} promovidas`,
+          title: t('toasts.promovidasParcial', { promovidas: r.promoted.length, total: storyIds.length }),
           message: r.failed[0]?.reason,
           tone: 'warning',
         });
       } else {
         showToast({
-          title: 'Não foi possível promover',
+          title: t('toasts.erroPromover'),
           message: r.failed[0]?.reason,
           tone: 'danger',
         });
       }
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível promover as histórias', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroPromoverHistorias'), tone: 'danger' });
     } finally {
       setPromovendoTodas(false);
     }
@@ -2234,9 +2326,9 @@ export function SessionPage({
       setMotivoRecusa('');
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-      showToast({ title: 'História devolvida ao PO', tone: 'success' });
+      showToast({ title: t('toasts.historiaDevolvida'), tone: 'success' });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível devolver a história', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroDevolverHistoria'), tone: 'danger' });
     } finally {
       setEnviandoRecusa(false);
       // Idempotente e nos DOIS caminhos: um erro que deixasse `streaming`
@@ -2270,7 +2362,7 @@ export function SessionPage({
       } catch {
         setStreaming(false);
         setOptimisticUser(null);
-        showToast({ title: 'Erro', message: 'Não foi possível iniciar a ideação', tone: 'danger' });
+        showToast({ title: t('toasts.erro'), message: t('toasts.erroIniciarIdeacao'), tone: 'danger' });
         return;
       }
     }
@@ -2304,7 +2396,7 @@ export function SessionPage({
       } catch {
         setStreaming(false);
         setOptimisticUser(null);
-        showToast({ title: 'Erro', message: 'Não foi possível enviar a mensagem', tone: 'danger' });
+        showToast({ title: t('toasts.erro'), message: t('toasts.erroEnviarMensagem'), tone: 'danger' });
       }
       return;
     }
@@ -2317,9 +2409,9 @@ export function SessionPage({
         if (evt.type === 'delta') {
           setStreamingText((t) => t + evt.text);
         } else if (evt.type === 'error') {
-          showToast({ title: 'Erro no chat', message: evt.message, tone: 'danger' });
+          showToast({ title: t('toasts.erroNoChat'), message: evt.message, tone: 'danger' });
         } else if (evt.type === 'metering_failed') {
-          showToast({ title: 'Aviso', message: evt.message, tone: 'warning' });
+          showToast({ title: t('toasts.aviso'), message: evt.message, tone: 'warning' });
         }
       }
     } finally {
@@ -2355,7 +2447,7 @@ export function SessionPage({
     try {
       await cancelAgentTurn(projectId, sessionId, agentAlvo);
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível cancelar o turno', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroCancelarTurno'), tone: 'danger' });
       return;
     }
 
@@ -2418,8 +2510,8 @@ export function SessionPage({
           to="/projects/$projectId"
           params={{ projectId }}
           className={styles.voltar}
-          aria-label="Voltar ao projeto"
-          title="Voltar ao projeto"
+          aria-label={t('topbar.voltarAoProjeto')}
+          title={t('topbar.voltarAoProjeto')}
         >
           <ArrowLeftIcon size={17} />
         </Link>
@@ -2432,7 +2524,7 @@ export function SessionPage({
             .filter(Boolean)
             .join(' ')}
           role="status"
-          aria-label={`Sessão ${pontoDaSessao(session?.status).rotulo}`}
+          aria-label={t('status.ariaLabel', { status: t(pontoDaSessao(session?.status).rotuloKey) })}
         />
         {/* Título e metadados em UMA linha cada, como o desenho — e por isso
             com reticências quando a barra aperta. `title` porque texto
@@ -2447,8 +2539,8 @@ export function SessionPage({
               value={rascunhoDoNome}
               autoFocus
               maxLength={LIMITE_DO_NOME}
-              aria-label="Nome da sessão"
-              placeholder={`Sem nome — a sessão fica ${hashtag}`}
+              aria-label={t('topbar.nomeDaSessao')}
+              placeholder={t('topbar.semNomeFicaHashtag', { hashtag })}
               onChange={(e) => setRascunhoDoNome(e.target.value)}
               onBlur={handleRename}
               onKeyDown={(e) => {
@@ -2460,11 +2552,11 @@ export function SessionPage({
             <button
               type="button"
               className={styles.title}
-              title={`Sessão ${rotulo} — clique para renomear`}
+              title={t('topbar.tituloRenomear', { rotulo })}
               onClick={() => setRascunhoDoNome(session?.name ?? '')}
               disabled={!session}
             >
-              Sessão {rotulo}
+              {t('topbar.tituloSessao', { rotulo })}
             </button>
           )}
           <div className={styles.meta} title={metaDaSessao}>
@@ -2529,13 +2621,13 @@ export function SessionPage({
               aria-hidden="true"
             />
             <span className={styles.iniciarIdeacaoDica}>
-              traz o Criativo pra conversa
+              {t('topbar.trazCriativo')}
             </span>
             <Button
               onClick={handleStartIdeation}
-              title="Traz o Criativo para conduzir a ideação desta sessão — ele ainda não entrou"
+              title={t('topbar.iniciarIdeacaoTitulo')}
             >
-              Iniciar ideação
+              {t('topbar.iniciarIdeacao')}
             </Button>
           </span>
         )}
@@ -2549,7 +2641,7 @@ export function SessionPage({
             `danger`, não um botão fantasma indistinguível dos outros. */}
         <Button variant="danger" onClick={handleClose} disabled={!session || session.status === 'closed'}>
           <StopSquareIcon size={15} />
-          Encerrar
+          {t('topbar.encerrar')}
         </Button>
         <button
           type="button"
@@ -2558,7 +2650,7 @@ export function SessionPage({
             .join(' ')}
           onClick={() => setAsideOpen((v) => !v)}
           aria-pressed={asideOpen}
-          aria-label="Alternar painel de contexto"
+          aria-label={t('topbar.alternarPainel')}
         >
           <LayoutSidebarIcon size={17} />
         </button>
@@ -2578,14 +2670,13 @@ export function SessionPage({
               {conviteVisivel && (
                 sessaoCriativa ? (
                   <div className={styles.convite}>
-                    <h2 className={styles.conviteTitulo}>A vez é sua</h2>
+                    <h2 className={styles.conviteTitulo}>{t('convite.criativa.titulo')}</h2>
                     <p className={styles.conviteTexto}>
-                      Esta é uma sessão <strong>criativa</strong>. O{' '}
-                      <strong>Criativo</strong> conduz a ideação: ele faz
-                      perguntas sobre o produto e registra as{' '}
-                      <strong>regras de negócio</strong> que saírem da conversa.
-                      Ele não decide tecnologia nem escreve código — isso é do
-                      Arquiteto e dos devs, mais adiante.
+                      <Trans
+                        i18nKey="convite.criativa.texto"
+                        ns="sessionPage"
+                        components={{ b: <strong /> }}
+                      />
                     </p>
                     {/* A AÇÃO, e não uma seta apontando para ela (FASE 24).
                         Ativar o Criativo continua sendo um clique explícito:
@@ -2594,47 +2685,49 @@ export function SessionPage({
                     {!criativoActive && (
                       <div className={styles.conviteAcao}>
                         <Button onClick={handleStartIdeation} disabled={!isActive}>
-                          Iniciar ideação
+                          {t('convite.criativa.iniciarIdeacao')}
                         </Button>
                         <span className={styles.conviteAcaoNota}>
-                          Ele ainda não entrou — é este clique que o traz.
+                          {t('convite.criativa.iniciarIdeacaoNota')}
                         </span>
                       </div>
                     )}
                     <p className={styles.conviteTexto}>
-                      Comece contando o que você quer construir e para quem. Por
-                      exemplo:
+                      {t('convite.criativa.exemploIntro')}
                     </p>
                     <button
                       type="button"
                       className={styles.conviteExemplo}
                       onClick={() =>
-                        setDraft(
-                          'Quero uma API que responda uma saudação para quem chamar. É para eu validar o fluxo de ponta a ponta.',
-                        )
+                        setDraft(t('convite.criativa.exemplo'))
                       }
                     >
-                      “Quero uma API que responda uma saudação para quem chamar. É
-                      para eu validar o fluxo de ponta a ponta.”
+                      “{t('convite.criativa.exemplo')}”
                     </button>
                     <p className={styles.conviteRodape}>
-                      Quando as regras estiverem completas, use{' '}
-                      <strong>Estou pronto para produzir</strong> — é o que gera o
-                      brief e passa a bola ao PO.
+                      <Trans
+                        i18nKey="convite.criativa.rodape"
+                        ns="sessionPage"
+                        components={{ b: <strong /> }}
+                      />
                     </p>
                   </div>
                 ) : (
                   <div className={styles.convite}>
-                    <h2 className={styles.conviteTitulo}>Sessão consultiva</h2>
+                    <h2 className={styles.conviteTitulo}>{t('convite.consultiva.titulo')}</h2>
                     <p className={styles.conviteTexto}>
-                      Aqui é conversa com o modelo: pergunte, peça contexto,
-                      tire dúvidas. <strong>Nenhum agente é ativado</strong>, o
-                      Criativo não entra e esta sessão não vai para execução.
+                      <Trans
+                        i18nKey="convite.consultiva.texto"
+                        ns="sessionPage"
+                        components={{ b: <strong /> }}
+                      />
                     </p>
                     <p className={styles.conviteRodape}>
-                      Quando for para <strong>produzir</strong>, abra uma sessão{' '}
-                      <strong>criativa</strong> na aba Sessões do projeto — o
-                      tipo é escolhido na criação e não muda depois.
+                      <Trans
+                        i18nKey="convite.consultiva.rodape"
+                        ns="sessionPage"
+                        components={{ b: <strong /> }}
+                      />
                     </p>
                   </div>
                 )
@@ -2680,7 +2773,7 @@ export function SessionPage({
                   </span>
                   <div className={styles.messageBody}>
                     <div className={styles.messageHeader}>
-                      <span className={styles.messageName}>{user.name ?? 'Você'}</span>
+                      <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
                     </div>
                     <div className={styles.bubble}>{optimisticUser}</div>
                   </div>
@@ -2731,8 +2824,8 @@ export function SessionPage({
                       */}
                       <span className={styles.messageName}>
                         {streamingText
-                          ? (agenteExibido?.name ?? 'agente')
-                          : 'Reunindo informações...'}
+                          ? (agenteExibido?.name ?? t('compartilhado.agenteGenerico'))
+                          : t('mensagens.reunindoInformacoes')}
                       </span>
                     </div>
                     {streamingText ? (
@@ -2760,17 +2853,17 @@ export function SessionPage({
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={handleComposerKeyDown}
-                placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)"
+                placeholder={t('composer.placeholder')}
                 disabled={streaming}
               />
               <Button onClick={handleSend} disabled={streaming || !draft.trim()}>
-                Enviar
+                {t('composer.enviar')}
               </Button>
               {/* RN-122: só existe (habilitado) enquanto há turno em curso —
                   fora disso não há o que parar. */}
               {streaming && (
                 <Button variant="danger" onClick={handleCancel}>
-                  Parar
+                  {t('composer.parar')}
                 </Button>
               )}
               {/*
@@ -2787,11 +2880,11 @@ export function SessionPage({
                   disabled={streaming || !hasBusinessRule}
                   title={
                     !hasBusinessRule
-                      ? 'Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão'
+                      ? t('composer.prontoParaProduzirDesabilitado')
                       : undefined
                   }
                 >
-                  Estou pronto para produzir
+                  {t('composer.prontoParaProduzir')}
                 </Button>
               )}
               {/*
@@ -2806,11 +2899,11 @@ export function SessionPage({
                   disabled={streaming || !hasPromotedStory}
                   title={
                     !hasPromotedStory
-                      ? 'Promova pelo menos uma história no Backlog antes de confirmar a arquitetura'
+                      ? t('composer.confirmarArquiteturaDesabilitado')
                       : undefined
                   }
                 >
-                  Confirmar arquitetura pronta
+                  {t('composer.confirmarArquitetura')}
                 </Button>
               )}
               {/*
@@ -2830,11 +2923,11 @@ export function SessionPage({
                   disabled={streaming || !hasProductBrief}
                   title={
                     !hasProductBrief
-                      ? 'Confirme "Estou pronto para produzir" com o Criativo antes de validar a necessidade'
+                      ? t('composer.confirmarNecessidadeDesabilitado')
                       : undefined
                   }
                 >
-                  Confirmar necessidade validada
+                  {t('composer.confirmarNecessidade')}
                 </Button>
               )}
             </div>
@@ -2842,11 +2935,11 @@ export function SessionPage({
             <div className={styles.activatePrompt}>
               {session?.status === 'created' ? (
                 <>
-                  Sessão ainda não ativada.
-                  <Button onClick={handleActivate}>Ativar sessão</Button>
+                  {t('ativacao.naoAtivada')}
+                  <Button onClick={handleActivate}>{t('ativacao.ativarSessao')}</Button>
                 </>
               ) : (
-                <span>Sessão {session?.status} — não é possível enviar mensagens.</span>
+                <span>{t('ativacao.statusGenerico', { status: session?.status })}</span>
               )}
             </div>
           )}
@@ -2875,15 +2968,15 @@ export function SessionPage({
           card inline em vez da aba Backlog. */}
       {recusandoStory && (
         <Modal
-          title={`Devolver "${recusandoStory.title}" ao PO?`}
+          title={t('modal.devolverTitulo', { titulo: recusandoStory.title })}
           onClose={() => setRecusandoStory(null)}
         >
           <Textarea
-            label="Motivo"
+            label={t('modal.motivo')}
             value={motivoRecusa}
             onChange={(e) => setMotivoRecusa(e.target.value)}
-            hint="Vai como mensagem fixada na sessão do PO. Diga o que falta — é com isto que ele reescreve a história."
-            placeholder="Ex.: os critérios de aceite não cobrem a recusa do pagamento."
+            hint={t('modal.motivoDica')}
+            placeholder={t('modal.motivoPlaceholder')}
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <Button
@@ -2892,10 +2985,10 @@ export function SessionPage({
               disabled={motivoRecusa.trim() === ''}
               onClick={handleReturnStory}
             >
-              Devolver ao PO
+              {t('modal.devolverAoPo')}
             </Button>
             <Button variant="ghost" onClick={() => setRecusandoStory(null)}>
-              Cancelar
+              {t('modal.cancelar')}
             </Button>
           </div>
         </Modal>
@@ -2922,9 +3015,9 @@ interface ArtefatoGerado {
 /** `pr_open` (PR de dev) e `open_adr_pr` (PR de ADR do Arquiteto) — os dois
  *  são "uma PR foi aberta", só o autor e o conteúdo mudam; o painel os
  *  mostra juntos, com o MESMO ícone. */
-const TITULO_PADRAO_POR_TIPO_DE_PR: Partial<Record<ProposedAction['actionType'], string>> = {
-  pr_open: 'Pull request',
-  open_adr_pr: 'ADR',
+const CHAVE_TITULO_PADRAO_POR_TIPO_DE_PR: Partial<Record<ProposedAction['actionType'], string>> = {
+  pr_open: 'artefatos.pullRequest',
+  open_adr_pr: 'artefatos.adr',
 };
 
 function urlDaPr(action: ProposedAction): string | null {
@@ -2950,15 +3043,22 @@ function urlDaPr(action: ProposedAction): string | null {
 interface NoDeBacklog {
   id: string;
   evento: SessionEvent;
-  titulo: string;
-  /** Como se chama o que está PENDURADO nele, quando há. */
-  rotuloDosFilhos: string;
+  /**
+   * `null` quando o evento não trouxe título (fallback de exibição) — a
+   * função é pura e não tem acesso ao `t()` do React, então quem RESOLVE o
+   * texto de fallback é o componente que consome a árvore
+   * ({@link ItemDeBacklog}), com a chave `compartilhado.semTitulo`.
+   */
+  titulo: string | null;
+  /** A CHAVE de tradução (namespace `sessionPage`) do que está PENDURADO
+   *  nele, quando há — `ItemDeBacklog` resolve com `t()`. */
+  rotuloDosFilhosKey: string;
   filhos: NoDeBacklog[];
 }
 
 const ROTULO_DOS_FILHOS: Record<string, string> = {
-  'backlog.epic_created': 'histórias',
-  'backlog.story_created': 'tarefas',
+  'backlog.epic_created': 'artefatos.historias',
+  'backlog.story_created': 'artefatos.tarefas',
   'backlog.task_created': '',
 };
 
@@ -2997,8 +3097,8 @@ export function montarArvoreDeBacklog(events: SessionEvent[]): NoDeBacklog[] {
     const no: NoDeBacklog = {
       id,
       evento: e,
-      titulo: typeof payload?.title === 'string' ? payload.title : '(sem título)',
-      rotuloDosFilhos: ROTULO_DOS_FILHOS[e.type],
+      titulo: typeof payload?.title === 'string' ? payload.title : null,
+      rotuloDosFilhosKey: ROTULO_DOS_FILHOS[e.type],
       filhos: [],
     };
     porId.set(id, no);
@@ -3037,6 +3137,7 @@ function ItemDeBacklog({
   projectId: string;
   no: NoDeBacklog;
 }) {
+  const { t } = useTranslation('sessionPage');
   return (
     <div className={styles.artefatoNo}>
       <Link
@@ -3046,11 +3147,13 @@ function ItemDeBacklog({
         className={[styles.artefatoItem, styles.artefatoItemLink].join(' ')}
       >
         <StackIcon size={13} className={styles.artefatoItemIcone} />
-        <span className={styles.artefatoItemTitulo}>{no.titulo}</span>
+        <span className={styles.artefatoItemTitulo}>
+          {no.titulo ?? t('compartilhado.semTitulo')}
+        </span>
       </Link>
       {no.filhos.length > 0 && (
         <Disclosure
-          titulo={no.rotuloDosFilhos || 'itens'}
+          titulo={no.rotuloDosFilhosKey ? t(no.rotuloDosFilhosKey) : t('artefatos.itens')}
           trailing={no.filhos.length}
           classNameCabecalho={styles.artefatoFilhosCabecalho}
         >
@@ -3092,6 +3195,7 @@ function ContextAside({
   citedEvent?: SessionEvent;
   citedEventMissing?: boolean;
 }) {
+  const { t } = useTranslation('sessionPage');
   /**
    * RN-180 — o painel deixa de mentir sobre o teto.
    *
@@ -3147,7 +3251,8 @@ function ContextAside({
 
   for (const a of actions) {
     if (a.actionType !== 'pr_open' && a.actionType !== 'open_adr_pr') continue;
-    const titulo = (a.payload as { title?: string }).title ?? TITULO_PADRAO_POR_TIPO_DE_PR[a.actionType]!;
+    const titulo =
+      (a.payload as { title?: string }).title ?? t(CHAVE_TITULO_PADRAO_POR_TIPO_DE_PR[a.actionType]!);
     const url = urlDaPr(a);
     artefatos.push({
       key: `pr-${a.id}`,
@@ -3234,7 +3339,7 @@ function ContextAside({
       {/* O trilho se nomeia (handoff, seção 5). Sem isto, quem abre o painel vê
           quatro rótulos mono soltos e nenhuma pista do que os junta. */}
       <div className={styles.asideTitleBar}>
-        <h2 className={styles.asideTitle}>Contexto da sessão</h2>
+        <h2 className={styles.asideTitle}>{t('aside.titulo')}</h2>
       </div>
 
       {/* RN-180 — o teto que existia em silêncio passa a estar escrito. Uma
@@ -3242,10 +3347,12 @@ function ContextAside({
           eventos baixados, e é o mesmo botão que traz mais para todas. */}
       {eventosAnteriores > 0 && (
         <p className={styles.asideTeto}>
-          Este painel lê os <strong>{events.length}</strong> eventos já
-          carregados desta sessão. Há <strong>{eventosAnteriores}</strong>{' '}
-          anteriores — “Carregar mais antigos”, no Log de eventos, traz mais, e
-          as outras seções crescem junto.
+          <Trans
+            i18nKey="aside.teto"
+            ns="sessionPage"
+            values={{ lidos: events.length, anteriores: eventosAnteriores }}
+            components={{ b: <strong /> }}
+          />
         </p>
       )}
 
@@ -3256,13 +3363,13 @@ function ContextAside({
             não tinha como saber quantas já existiam. Sem threshold: o ganho
             é mostrar o número real, não decidir por um mínimo. */}
         <Disclosure
-          titulo="Regras de negócio"
+          titulo={t('aside.regrasDeNegocio')}
           trailing={businessRules.length}
           padraoAberto
           classNameCabecalho={styles.asideHeader}
         >
           {businessRules.length === 0 ? (
-            <div className={styles.asideEmpty}>Nada ainda.</div>
+            <div className={styles.asideEmpty}>{t('aside.nadaAinda')}</div>
           ) : (
             <>
               {regrasDaPagina.map((e) => {
@@ -3272,7 +3379,9 @@ function ContextAside({
                     <div className={styles.ruleTitle}>{rule.title}</div>
                     <div className={styles.ruleDescription}>{rule.description}</div>
                     <div className={styles.ruleOrigin}>
-                      origem: {Array.isArray(rule.origin) ? rule.origin.length : 0} ref(s)
+                      {t('aside.origemRefs', {
+                        count: Array.isArray(rule.origin) ? rule.origin.length : 0,
+                      })}
                     </div>
                   </div>
                 );
@@ -3287,19 +3396,19 @@ function ContextAside({
                     className={styles.asidePagerBotao}
                     onClick={() => setPaginaDeRegras(Math.max(0, pagina - 1))}
                     disabled={pagina === 0}
-                    aria-label="Página anterior de regras de negócio"
+                    aria-label={t('aside.paginaAnterior')}
                   >
                     ‹
                   </button>
                   <span className={styles.asidePagerTexto}>
-                    {pagina + 1} de {totalDePaginas}
+                    {t('aside.paginaDe', { atual: pagina + 1, total: totalDePaginas })}
                   </span>
                   <button
                     type="button"
                     className={styles.asidePagerBotao}
                     onClick={() => setPaginaDeRegras(Math.min(totalDePaginas - 1, pagina + 1))}
                     disabled={pagina >= totalDePaginas - 1}
-                    aria-label="Próxima página de regras de negócio"
+                    aria-label={t('aside.proximaPagina')}
                   >
                     ›
                   </button>
@@ -3316,13 +3425,13 @@ function ContextAside({
             QUEM abriu cada PR nem incluir épico/história do PO. RN-179: e as
             tarefas, penduradas na história a que pertencem. */}
         <Disclosure
-          titulo="Artefatos gerados"
+          titulo={t('aside.artefatosGerados')}
           trailing={totalDeArtefatos}
           padraoAberto
           classNameCabecalho={styles.asideHeader}
         >
           {gruposDeArtefatos.length === 0 ? (
-            <div className={styles.asideEmpty}>Nada ainda.</div>
+            <div className={styles.asideEmpty}>{t('aside.nadaAinda')}</div>
           ) : (
             gruposDeArtefatos.map(({ actorId, itens }) => (
               <div key={actorId} style={corDoAgente(actorId)}>
@@ -3348,9 +3457,9 @@ function ContextAside({
       </div>
 
       <div className={styles.asideSection}>
-        <div className={styles.asideHeader}>Arquivos tocados</div>
+        <div className={styles.asideHeader}>{t('aside.arquivosTocados')}</div>
         {filesTouched.length === 0 ? (
-          <div className={styles.asideEmpty}>Nada ainda.</div>
+          <div className={styles.asideEmpty}>{t('aside.nadaAinda')}</div>
         ) : (
           filesTouched.map((file) => (
             <div key={`${file.actionId}-${file.path}`} className={styles.asideItem}>
@@ -3374,7 +3483,7 @@ function ContextAside({
           do alvo de clique — a linha inteira alterna, como nas outras seis. */}
       <div className={styles.asideSection}>
         <Disclosure
-          titulo="Log de eventos"
+          titulo={t('aside.logDeEventos')}
           trailing={historico.carregados}
           aberto={logOpen}
           onAlternar={onToggleLog}
@@ -3385,14 +3494,14 @@ function ContextAside({
           {highlightEvent && citedEvent && (
             <div className={styles.citedEvent}>
               <div className={styles.citedEventLabel}>
-                Evento citado
+                {t('aside.eventoCitado')}
               </div>
               <EventItem event={citedEvent} highlighted />
             </div>
           )}
           {highlightEvent && citedEventMissing && (
             <div className={styles.asideEmpty}>
-              O evento citado não foi encontrado nesta sessão.
+              {t('aside.eventoCitadoNaoEncontrado')}
             </div>
           )}
           {/* Os três estados da RN-088, com o ERRO antes do vazio — o painel
@@ -3400,7 +3509,7 @@ function ContextAside({
               de "não aconteceu nada". */}
           {historico.isError ? (
             <ErroDeCarregamento
-              titulo="Não foi possível carregar o log de eventos."
+              titulo={t('aside.erroCarregarLog')}
               erro={historico.error}
               onTentarDeNovo={historico.refetch}
             />

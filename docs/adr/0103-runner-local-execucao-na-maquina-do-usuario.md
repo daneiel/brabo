@@ -1,106 +1,112 @@
-# ADR 0103 — Runner local: execução na máquina do usuário por canal Phoenix com ticket de uso único
+# ADR 0103 — Local runner: execution on the user's machine over a Phoenix channel with a single-use ticket
 
-- **Status:** Aceito
-- **Data:** 2026-08-20
-- **Contexto:** pedido do dono do produto, RN-419/420 — companheiro do
+- **Status:** Accepted
+- **Date:** 2026-08-20
+- **Context:** product owner's request, RN-419/420 — companion to
   [ADR 0102](0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.md)
-- **Revisa (sem atenuar) o terreno de:** [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md),
+- **Revises (without softening) the ground of:** [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md),
   [ADR 0072](0072-projeto-local-ou-container.md)
 
-## Contexto
+## Context
 
-Até esta entrega, NADA no produto executava fora do container: todo
-comando de terminal é `System.cmd("sh", ["-c", cmd])` dentro do processo
-do engine (`terminal_executor.ex`), e o modo `local` (ADR 0072) só muda a
-PASTA via bind-mount — o comando continua rodando no MESMO container do
-engine. O pedido do dono do produto foi cruzar essa fronteira de verdade:
-agente executando na MÁQUINA do usuário, na pasta local, pelo terminal
-padrão dele — mais um terminal interativo de verdade na aba Code, que até
-aqui só mostrava texto explicativo + estado do `project_containers`
-(nunca um terminal real).
+Until this delivery, NOTHING in the product executed outside the
+container: every terminal command is `System.cmd("sh", ["-c", cmd])`
+inside the engine's own process (`terminal_executor.ex`), and `local`
+mode (ADR 0072) only changes the FOLDER via bind-mount — the command
+still runs in the SAME container as the engine. The product owner's
+request was to truly cross that boundary: an agent executing on the
+user's OWN MACHINE, in the local folder, through the user's standard
+terminal — plus a genuinely interactive terminal in the Code tab,
+which until now only showed explanatory text + the state of
+`project_containers` (never a real terminal).
 
-## Decisão
+## Decision
 
-**Componente novo, `apps/runner`** (Node/TS): um CLI (`brabo-runner`) que
-o usuário roda na PRÓPRIA máquina. Ele NÃO é orquestrado pelo produto —
-sobe por escolha e consentimento explícito do usuário, com os
-PRIVILÉGIOS dele.
+**New component, `apps/runner`** (Node/TS): a CLI (`brabo-runner`)
+that the user runs on their OWN machine. It is NOT orchestrated by the
+product — it comes up by the user's explicit choice and consent, with
+the user's own PRIVILEGES.
 
-**Canal**: socket Phoenix NOVO em `/runner` (ao lado do `/socket` de
-sessão que já existe), tópico `terminal:<projectId>`, autenticado por
-ticket de USO ÚNICO — mesmo padrão de segurança da RN-108 (ticket de
-socket de sessão), mas com um detalhe de propriedade INVERTIDO: o ticket
-é emitido pelo próprio ENGINE (tabela `runner_socket_tickets`, schema
-`"engine"`, migration Ecto própria), e a API o PEDE ao engine via rota
-HTTP interna — o inverso do fluxo do ticket de sessão, onde a api grava
-o ticket na própria tabela. A troca é justificada: o ticket de runner não
-tem uma sessão de chat associada (é por PROJETO), e o estado que precisa
-validar exclusividade (só um runner por projeto) já vive no engine
+**Channel**: a NEW Phoenix socket at `/runner` (alongside the existing
+session `/socket`), topic `terminal:<projectId>`, authenticated by a
+SINGLE-USE ticket — the same security pattern as RN-108 (session
+socket ticket), but with one INVERTED ownership detail: the ticket is
+issued by the ENGINE itself (table `runner_socket_tickets`, schema
+`"engine"`, its own Ecto migration), and the API REQUESTS it from the
+engine via an internal HTTP route — the reverse of the session ticket
+flow, where the api writes the ticket to its own table. The swap is
+justified: the runner ticket has no associated chat session (it's per
+PROJECT), and the state that needs to validate exclusivity (only one
+runner per project) already lives in the engine
 (`Engine.Runners.Registry`, `:global`).
 
-**Dois papéis no mesmo tópico**: `:runner` (o CLI, exclusividade garantida
-por `:global.register_name/3` — só UM por projeto, um segundo `join`
-recusado) e `:web` (a aba Terminal, múltiplos simultâneos). O engine faz
-RELAY puro dos bytes do PTY entre os dois — nunca interpreta o conteúdo.
+**Two roles on the same topic**: `:runner` (the CLI, exclusivity
+guaranteed by `:global.register_name/3` — only ONE per project, a
+second `join` refused) and `:web` (the Terminal tab, multiple
+simultaneous). The engine does a PURE RELAY of the PTY bytes between
+the two — it never interprets the content.
 
-**Roteamento SEMPRE depois da aprovação.** `TerminalExecutor` só decide
-rotear pro runner (em vez do `System.cmd` de sempre) DEPOIS que o
-pipeline normal (`decide()`/`proposed_action`) já aprovou o comando — o
-runner nunca é um segundo caminho de execução que escapa da política, é
-só um DESTINO diferente pro mesmo comando já autorizado. Sem runner
-conectado, mesmo em modo `local`, o comportamento de sempre continua
-(`System.cmd` no container via bind-mount) — o runner é aditivo, nunca
-uma dependência obrigatória.
+**Routing ALWAYS happens after approval.** `TerminalExecutor` only
+decides to route to the runner (instead of the usual `System.cmd`)
+AFTER the normal pipeline (`decide()`/`proposed_action`) has already
+approved the command — the runner is never a second execution path
+that escapes policy, it's just a different DESTINATION for the same
+already-authorized command. With no runner connected, even in `local`
+mode, the usual behavior continues (`System.cmd` in the container via
+bind-mount) — the runner is additive, never a required dependency.
 
-**A fronteira de segurança do runner NÃO é sandboxing.** É a composição
-de três coisas: autenticação (o CLI se identifica com o token da CONTA do
-usuário), o pipeline de aprovação de sempre (todo comando de agente
-continua nascendo `proposed_action`, com os tetos absolutos do ADR 0102
-valendo igual), e o CONSENTIMENTO do usuário em rodar o binário na própria
-máquina. `apps/runner/src/guard.ts` valida que o `cwd` recebido fica
-dentro da raiz do projeto por resolução léxica — mas está DECLARADO no
-código como best-effort, não a garantia real; a garantia real é a
-composição acima. Isto revisa, sem atenuar, o terreno dos ADRs 0055/0072:
-para execução via runner, a contenção estrutural do `join(raiz, coluna)`
-que protege o modo container não existe — o comando roda com os
-privilégios do PRÓPRIO usuário, na própria máquina dele.
+**The runner's security boundary is NOT sandboxing.** It's the
+composition of three things: authentication (the CLI identifies itself
+with the user's ACCOUNT token), the usual approval pipeline (every
+agent command is still born a `proposed_action`, with ADR 0102's
+absolute ceilings applying equally), and the user's CONSENT to run the
+binary on their own machine. `apps/runner/src/guard.ts` validates that
+the received `cwd` stays inside the project root by lexical
+resolution — but this is DECLARED in the code as best-effort, not the
+real guarantee; the real guarantee is the composition above. This
+revises, without softening, the ground of ADRs 0055/0072: for
+execution via the runner, the structural containment of
+`join(root, column)` that protects container mode does not exist — the
+command runs with the user's OWN privileges, on their own machine.
 
-**PTY interativo é ação do usuário, com rastro.** `pty_open`/`pty_close`
-vindos da web emitem `terminal.session.started`/`ended` no event log
-(auditoria) — inclusive quando a aba cai sem fechar explicitamente
-(`terminate/2` do canal fecha o rastro). Não passa por `proposed_action`
-porque não é o agente agindo — é o usuário autenticado digitando no
-terminal da própria máquina.
+**Interactive PTY is a user action, with a trail.** `pty_open`/
+`pty_close` coming from the web emit `terminal.session.started`/`ended`
+into the event log (audit trail) — including when the tab drops without
+closing explicitly (the channel's `terminate/2` closes the trail).
+It doesn't go through `proposed_action` because it isn't the agent
+acting — it's the authenticated user typing into their own machine's
+terminal.
 
-## Achado real durante a implementação
+## Real finding during implementation
 
-O produto NÃO tem, hoje, um mecanismo de token de conta de LONGA DURAÇÃO
-pra automação — `account_tokens` existe só pra links de e-mail de uso
-único (verificação, reset de senha, senha inicial pós-migração). O runner
-precisava de algo que sobrevivesse entre execuções do CLI. Solução
-adotada até um mecanismo de automação de verdade existir: o runner
-replica o fluxo de LOGIN do browser (usuário/senha na primeira execução,
-cookie httpOnly + CSRF extraídos e persistidos em
-`~/.brabo/runner-credentials.json` com permissão `0600`, rotacionados via
-`/auth/refresh`). Isso está sinalizado no código como o módulo a trocar
-quando um token de automação real (personal access token, ou equivalente)
-entrar no produto — não é a forma final, é a forma possível com o que
-existe hoje.
+The product does NOT have, today, a LONG-LIVED account token mechanism
+for automation — `account_tokens` exists only for single-use email
+links (verification, password reset, post-migration initial
+password). The runner needed something that would survive across CLI
+runs. Adopted solution until a real automation mechanism exists: the
+runner replicates the browser's LOGIN flow (username/password on the
+first run, httpOnly cookie + CSRF extracted and persisted to
+`~/.brabo/runner-credentials.json` with `0600` permissions, rotated via
+`/auth/refresh`). This is flagged in the code as the module to swap
+out once a real automation token (a personal access token, or
+equivalent) enters the product — it isn't the final form, it's the
+form possible with what exists today.
 
-## Consequências
+## Consequences
 
-- Quatro dependências novas, todas isoladas: `@xterm/xterm` +
-  `@xterm/addon-fit` na web (mesma régua do `mermaid`/ADR 0068 —
-  `import()` dinâmico; ausência de `eval`/`new Function` confirmada por
-  grep no pacote instalado, declarada como evidência forte, NÃO garantia
-  formal contra ofuscação); `phoenix` + `node-pty` no runner.
-- O terminal interativo do CONTAINER continua não existindo — a FASE 25b
-  segue cortada. O runner NÃO é essa peça: é um caminho paralelo,
-  na máquina do usuário, não dentro do container do projeto.
-- `TERMINAL_ACTION_TIMEOUT_MS`/`TERMINAL_OUTPUT_MAX_BYTES` (tetos que já
-  existiam pro executor do container) são replicados como default no
-  runner — mesmos valores, para não haver dois comportamentos de teto
-  diferentes dependendo de onde o comando roda.
-- Guarda de escopo (`guard.ts`) é best-effort, declarado — não fortalece
-  o argumento em torno dele além do que está escrito: ele ajuda a pegar
-  erro grosseiro, não é uma parede.
+- Four new dependencies, all isolated: `@xterm/xterm` +
+  `@xterm/addon-fit` on the web (the same rule as `mermaid`/ADR 0068 —
+  dynamic `import()`; absence of `eval`/`new Function` confirmed by
+  grep on the installed package, declared as strong evidence, NOT a
+  formal guarantee against obfuscation); `phoenix` + `node-pty` on the
+  runner.
+- The CONTAINER's interactive terminal still doesn't exist — Phase 25b
+  remains cut. The runner is NOT that piece: it's a parallel path, on
+  the user's machine, not inside the project's container.
+- `TERMINAL_ACTION_TIMEOUT_MS`/`TERMINAL_OUTPUT_MAX_BYTES` (caps that
+  already existed for the container executor) are replicated as
+  defaults in the runner — same values, so there aren't two different
+  ceiling behaviors depending on where the command runs.
+- The scope guard (`guard.ts`) is best-effort, declared as such — it
+  doesn't overstate the argument around it beyond what's written: it
+  helps catch a gross error, it isn't a wall.

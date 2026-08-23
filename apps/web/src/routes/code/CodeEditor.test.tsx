@@ -1,8 +1,11 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CodeEditor } from './CodeEditor';
+// Instância REAL do app — `CodeEditor` não tem `I18nextProvider` próprio
+// (mesmo padrão de `Dashboard.test.tsx`/`ProjectExecutorsTab.test.tsx`).
+import i18n from '../../lib/i18n';
 import type { CodeBlame, CodeFile } from '../../lib/api-types';
 
 const getCodeFile = vi.fn();
@@ -63,9 +66,14 @@ function porTextoDaLinha(texto: string) {
   };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
   vi.clearAllMocks();
   getCodeFile.mockResolvedValue(arquivo);
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('CodeEditor — blame', () => {

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeAll } from 'vitest';
+import i18n from './i18n';
 import {
   alertaDeOrcamento,
   alturasRelativas,
@@ -9,6 +10,18 @@ import {
   type BudgetParaAlerta,
   type SpendLinha,
 } from './spend';
+
+/**
+ * `tituloDoDia`/`rotuloDoAtor`/`alertaDeOrcamento` resolvem texto pelo
+ * singleton REAL de `./i18n` (mesmo padrão de `session-kind.ts`) — sem
+ * `changeLanguage`, o idioma seguiria `idiomaInicial()` (o default do app,
+ * `en`, quando `navigator.language` do jsdom não começa com "pt"). Fixar
+ * `pt-BR` aqui mantém as asserções abaixo idênticas ao texto que já existia
+ * antes da extração.
+ */
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
 
 describe('alturasRelativas', () => {
   it('escala pelo maior da série', () => {

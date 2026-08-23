@@ -29,9 +29,30 @@
  * de chegar aqui. Symlink resolvido por `realpath` reduz, mas não fecha,
  * o vetor de escape por link simbólico — a mesma ressalva que o ADR 0055 já
  * registra para o container.
+ *
+ * ## `validarDirDentroDoHomeNoLinux` — checagem de STARTUP, não de `exec`
+ *
+ * Segunda checagem deste módulo, sem relação com o `cwd` de um comando: valida
+ * o `--dir` que a própria CLI recebeu na linha de comando, uma vez, no início
+ * do processo (RN-434, ADR 0104). Reusa `dentroDoEscopo`/`semBarraFinal` pelo
+ * mesmo motivo de sempre — não duplicar comparação de caminho —, mas é mais
+ * simples que `validarCwdDentroDaRaiz`: sem `realpath`/símlink/TOCTOU, porque
+ * não protege contra um SERVIDOR malicioso, só orienta o USUÁRIO local que
+ * digitou um caminho errado na hora de subir o próprio CLI.
+ *
+ * ## `garantirDiretorio` — terceira checagem de STARTUP, DEPOIS da anterior
+ *
+ * RN-435 (ADR 0104, extensão aditiva): `--dir` que ainda não existe deixou
+ * de ser erro fatal — o CLI cria a pasta (`mkdir -p`) em vez de recusar.
+ * A ORDEM importa: `lerArgumentos()` chama `validarDirDentroDoHomeNoLinux`
+ * ANTES desta função, porque aquela checagem funciona em caminho que ainda
+ * não existe (só `resolve()`, sem tocar disco) — criar a pasta antes de
+ * validar o `$HOME` abriria a brecha que a RN-434 tinha acabado de fechar
+ * (criar fora do home no Linux). `--dir` apontando para um ARQUIVO
+ * existente continua erro real — nunca sobrescrito silenciosamente.
  */
 
-import { realpathSync } from 'node:fs';
+import { existsSync, mkdirSync, realpathSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 export class CwdForaDaRaizError extends Error {
@@ -134,4 +155,94 @@ export function validarCwdDentroDaRaiz(cwdRecebido: string, raiz: string): strin
   }
 
   return alvoNormalizado;
+}
+
+export class DirForaDoHomeError extends Error {
+  readonly dirRecebido: string;
+  readonly home: string;
+
+  constructor(dirRecebido: string, home: string) {
+    super(
+      `--dir precisa estar dentro do seu diretório de usuário (${home}) quando o runner roda ` +
+        `no Linux. Recebido: ${JSON.stringify(dirRecebido)}. Aponte para uma pasta dentro de ` +
+        `${home} (ex.: ${home}/meu-projeto) — fora do Linux esta restrição não se aplica.`,
+    );
+    this.name = 'DirForaDoHomeError';
+    this.dirRecebido = dirRecebido;
+    this.home = home;
+  }
+}
+
+/**
+ * Valida que `dir` (já resolvido/absoluto) está dentro de `home` — só quando
+ * `platform === 'linux'` (decisão do dono do produto, RN-434/ADR 0104: no
+ * Linux, o workspace do modo `runner` só pode viver dentro do `$HOME` do
+ * usuário). Fora do Linux, não faz nada — a restrição não vale lá. Lança
+ * `DirForaDoHomeError` quando recusa; não devolve nada em caso de sucesso.
+ */
+export function validarDirDentroDoHomeNoLinux(
+  dir: string,
+  platform: NodeJS.Platform,
+  home: string,
+): void {
+  if (platform !== 'linux') return;
+
+  const homeNormalizado = semBarraFinal(resolve(home));
+  const dirNormalizado = semBarraFinal(resolve(dir));
+
+  if (!dentroDoEscopo(dirNormalizado, homeNormalizado)) {
+    throw new DirForaDoHomeError(dir, homeNormalizado);
+  }
+}
+
+export class DirNaoEUmaPastaError extends Error {
+  readonly dirRecebido: string;
+
+  constructor(dirRecebido: string) {
+    super(
+      `--dir precisa ser uma pasta. Recebido um caminho que já existe e não é ` +
+        `pasta: ${JSON.stringify(dirRecebido)}. Este CLI nunca sobrescreve um ` +
+        `arquivo existente.`,
+    );
+    this.name = 'DirNaoEUmaPastaError';
+    this.dirRecebido = dirRecebido;
+  }
+}
+
+export class NaoConsegiuCriarDiretorioError extends Error {
+  readonly dirRecebido: string;
+
+  constructor(dirRecebido: string, causa: unknown) {
+    const mensagemDaCausa = causa instanceof Error ? causa.message : String(causa);
+    super(`Não consegui criar a pasta ${dirRecebido}: ${mensagemDaCausa}`);
+    this.name = 'NaoConsegiuCriarDiretorioError';
+    this.dirRecebido = dirRecebido;
+  }
+}
+
+/**
+ * Garante que `dir` (já resolvido/absoluto, e já aprovado por
+ * `validarDirDentroDoHomeNoLinux` quando aplicável) existe como pasta —
+ * criando com `mkdir -p` quando ainda não existe (RN-435, ADR 0104).
+ *
+ * - já existe e é pasta → não faz nada.
+ * - já existe e NÃO é pasta (é um arquivo) → lança `DirNaoEUmaPastaError`,
+ *   sem tentar criar nada.
+ * - não existe → cria recursivamente; se a criação falhar (permissão, disco
+ *   cheio, etc.) → lança `NaoConsegiuCriarDiretorioError`.
+ */
+export function garantirDiretorio(dir: string): void {
+  if (existsSync(dir)) {
+    if (!statSync(dir).isDirectory()) {
+      throw new DirNaoEUmaPastaError(dir);
+    }
+    return;
+  }
+
+  try {
+    mkdirSync(dir, { recursive: true });
+  } catch (erro) {
+    throw new NaoConsegiuCriarDiretorioError(dir, erro);
+  }
+  console.log(`pasta criada: ${dir}`);
 }

@@ -1,136 +1,138 @@
-# ADR 0089 — `analytics` e `delivery-metricas` viram script de relatório
+# ADR 0089 — `analytics` and `delivery-metricas` become a report script
 
-- **Status:** Aceito
-- **Data:** 2026-08-16
-- **Contexto:** decisão do dono do produto de antecipar dois papéis do
-  modelo-alvo (`docs/fluxo.yml`) sem esperar o gatilho orgânico
-- **Peça irmã:** [ADR 0085](0085-fluxo-como-registro-declarativo.md)
-  (`docs/fluxo.yml`); precedente direto de FORMA:
-  `apps/api/scripts/medir-execucao.ts` (Fase 13b)
+- **Status:** Accepted
+- **Date:** 2026-08-16
+- **Context:** product owner's decision to anticipate two roles of the
+  target model (`docs/fluxo.yml`) without waiting for the organic trigger
+- **Sibling piece:** [ADR 0085](0085-fluxo-como-registro-declarativo.md)
+  (`docs/fluxo.yml`); direct FORM precedent:
+  `apps/api/scripts/medir-execucao.ts` (Phase 13b)
 
-## Contexto
+## Context
 
-`docs/fluxo.yml` já descrevia dois papéis do modelo-alvo como
-`status: proposto`, cada um com o critério de separação que faltava para
-virarem `active` já escrito:
+`docs/fluxo.yml` already described two target-model roles as
+`status: proposto`, each already carrying the separation criterion that
+was missing for them to become `active`:
 
-- `analytics` (Analytics Engineer, métrica de PRODUTO) — "absorvido por
-  `medicao` (que só cobre métrica de EXECUÇÃO)", com o critério "o dia em
-  que `metricas-de-produto` virar entrada obrigatória do PO";
-- `delivery-metricas` (Delivery Manager, fluxo — DORA) — "absorvido por
-  `medicao` (parcialmente)", com o critério "nunca vira agente; vira
-  RELATÓRIO do `medicao` (lead time, deployment frequency, MTTR, change
-  failure rate extraídos do event log + `gates.yml`)".
+- `analytics` (Analytics Engineer, PRODUCT metric) — "absorbed by
+  `medicao` (which only covers EXECUTION metric)," with the criterion
+  "the day `metricas-de-produto` becomes a mandatory PO input";
+- `delivery-metricas` (Delivery Manager, flow — DORA) — "absorbed by
+  `medicao` (partially)," with the criterion "never becomes an agent; it
+  becomes a REPORT of `medicao` (lead time, deployment frequency, MTTR,
+  change failure rate extracted from the event log + `gates.yml`)."
 
-Nenhum dos dois gatilhos disparou organicamente. O dono do produto decidiu
-antecipar a construção mesmo assim: o funil sessão → commit → PR → merge e
-uma fatia real de DORA (lead time, deployment frequency) já são
-extraíveis do dado que o produto já grava — `proposed_actions.execution_result`
-para as três ações git que o dev agent produz
-(`apps/api/src/domain/git/git-action-execution-result.ts`) e
-`docs/gates.yml` para o gate `backmerge`. Esperar o gatilho orgânico
-adiaria um relatório que já é possível.
+Neither trigger fired organically. The product owner decided to
+anticipate the build anyway: the session → commit → PR → merge funnel and
+a real slice of DORA (lead time, deployment frequency) are already
+extractable from data the product already records —
+`proposed_actions.execution_result` for the three git actions the dev
+agent produces
+(`apps/api/src/domain/git/git-action-execution-result.ts`) and
+`docs/gates.yml` for the `backmerge` gate. Waiting for the organic
+trigger would postpone a report that's already possible.
 
-## Decisão
+## Decision
 
-Os dois papéis viram `status: active` em `docs/fluxo.yml`, e o que os
-materializa é UM SCRIPT só — `apps/api/scripts/analise-funil.ts`
-(`pnpm --filter api analise:funil -- --projeto <uuid> [--json]`) — no
-MESMO formato de `apps/api/scripts/medir-execucao.ts`:
-`NestFactory.createApplicationContext(AppModule)`, argumento
-`--projeto <uuid>` obrigatório, leitura pura via Drizzle, zero escrita no
-banco, saída Markdown por padrão e `--json` para consumo programático.
+The two roles become `status: active` in `docs/fluxo.yml`, and what
+materializes them is a SINGLE SCRIPT — `apps/api/scripts/analise-funil.ts`
+(`pnpm --filter api analise:funil -- --projeto <uuid> [--json]`) — in the
+SAME format as `apps/api/scripts/medir-execucao.ts`:
+`NestFactory.createApplicationContext(AppModule)`, required
+`--projeto <uuid>` argument, pure Drizzle read, zero database writes,
+Markdown output by default and `--json` for programmatic consumption.
 
-Isto não é uma feature nova de produto: é a forma que o próprio
-`docs/fluxo.yml` já prescrevia para os dois papéis, só que construída
-antes do gatilho previsto. Nenhum GenServer, nenhum agente de LLM, nenhuma
-rota HTTP nova.
+This isn't a new product feature: it's the form `docs/fluxo.yml` already
+prescribed for the two roles, just built before the anticipated trigger.
+No GenServer, no LLM agent, no new HTTP route.
 
-### O que o script mede DE VERDADE
+### What the script measures FOR REAL
 
-- **Funil real** (`calcularFunil`): quantas sessões produziram pelo menos
-  um `git_commit`, uma `pr_open` e um `git_merge` `executed`, e a taxa de
-  conversão entre etapas consecutivas. Conta SESSÃO, não ação.
-- **Lead time real** (`calcularLeadTimes`): do primeiro `git_commit`
-  `executed` ao primeiro `git_merge` `executed` da mesma sessão, usando
-  `updated_at` — o instante em que `ExecuteGitActionUseCase` gravou o
-  `execution_result` de verdade, não quando a ação foi proposta.
-- **Deployment frequency real** (`deploymentFrequencyPorDia`): `git_merge`
-  `executed` cujo `targetBranch` está em `PROTECTED_BRANCHES`, agrupado por
-  dia. Cruza por REFERÊNCIA com o gate `backmerge` (`docs/gates.yml`) — a
-  evidência dele é CI (`.release/gate.json`), fora do alcance de um script
-  que só lê o banco, então não há junção de dado nenhuma, só o mesmo
-  recorte de branch.
+- **Real funnel** (`calcularFunil`): how many sessions produced at least
+  one `executed` `git_commit`, one `pr_open`, and one `git_merge`, and the
+  conversion rate between consecutive stages. Counts SESSIONS, not
+  actions.
+- **Real lead time** (`calcularLeadTimes`): from the first `executed`
+  `git_commit` to the first `executed` `git_merge` in the same session,
+  using `updated_at` — the moment `ExecuteGitActionUseCase` actually
+  recorded the `execution_result`, not when the action was proposed.
+- **Real deployment frequency** (`deploymentFrequencyPorDia`): `executed`
+  `git_merge` whose `targetBranch` is in `PROTECTED_BRANCHES`, grouped by
+  day. Cross-references by REFERENCE with the `backmerge` gate
+  (`docs/gates.yml`) — its evidence is CI (`.release/gate.json`), out of
+  reach for a script that only reads the database, so there's no data
+  join at all, just the same branch filter.
 
-### O que o script DECLARA ausente, e por quê isso não é "dado que falta"
+### What the script DECLARES absent, and why that isn't "missing data"
 
-Três métricas ficam numa seção "Não medido, de propósito" da saída, e a
-decisão de mantê-las assim é permanente enquanto as pré-condições abaixo
-não mudarem — não é lacuna a fechar na próxima rodada:
+Three metrics live in a "Not measured, on purpose" section of the output,
+and the decision to keep them that way is permanent while the
+preconditions below don't change — it's not a gap to close next round:
 
-1. **Funil de produto completo (ideação → commit).** `sessions` não tem
-   `storyId` — [RN-230](../business-rules.md#rn-230) já declara essa
-   lacuna na aba Criativo (`apps/web/src/routes/ProjectSessionsTab.tsx`).
-   Fechá-la exigiria schema novo (coluna nova, possivelmente migration em
-   `sessions` ou tabela de vínculo), fora de escopo desta frente por
-   princípio: **nenhuma migration nesta rodada**.
-2. **Evidência de adoção por feature.** Diferente da primeira, esta não é
-   dado que falta COLETAR: é uma capacidade que o produto não tem CAMINHO
-   nenhum para ter hoje. O Brabo não instrumenta os projetos que ele
-   CONSTRÓI — não existe pipeline de telemetria de uso saindo do código
-   gerado, nem decisão de produto sobre como ele existiria. Declarar
-   "ausente" aqui seguiu o mesmo princípio do ADR 0042 para nota de
-   modelo e do ADR 0077 (RN-210) para ranking "ideal": nunca aproximar com
-   um número que pareceria real.
-3. **MTTR e change failure rate.** As duas exigem sinal de INCIDENTE de
-   produção real, a mesma dependência que `docs/fluxo.yml` já registra
-   para os papéis `secops-runtime`/`platform` (`status: proposto`/
-   `planned`, ativação sincronizada com `DEPLOY_ENABLED`). É trabalho de
-   outra frente, não desta.
+1. **Complete product funnel (ideation → commit).** `sessions` has no
+   `storyId` — [RN-230](../business-rules.md#rn-230) already declares
+   this gap in the Criativo tab (`apps/web/src/routes/ProjectSessionsTab.tsx`).
+   Closing it would require new schema (a new column, possibly a
+   migration on `sessions` or a link table), out of scope for this piece
+   on principle: **no migration in this round**.
+2. **Feature-level adoption evidence.** Unlike the first, this isn't data
+   that's missing to COLLECT: it's a capability the product has NO PATH
+   to today. Brabo doesn't instrument the projects it BUILDS — there's no
+   usage-telemetry pipeline coming out of the generated code, nor a
+   product decision about how it would exist. Declaring it "absent" here
+   followed the same principle as ADR 0042 for model score and ADR 0077
+   (RN-210) for the "ideal" ranking: never approximate with a number that
+   would look real.
+3. **MTTR and change failure rate.** Both require a real production
+   INCIDENT signal, the same dependency `docs/fluxo.yml` already records
+   for the `secops-runtime`/`platform` roles (`status: proposto`/
+   `planned`, activation synced to `DEPLOY_ENABLED`). Work for another
+   round, not this one.
 
-## Consequências
+## Consequences
 
-- `docs/fluxo.yml`: `analytics` e `delivery-metricas` saem de
-  `status: proposto` para `status: active`, com `saidas_alvo` reescrito
-  para `saidas` (o que é real hoje) mais um campo `lacunas` explícito
-  (o que continua `status: lacuna`, sem apagar a declaração).
-- `apps/api/package.json`: nova entrada `"analise:funil"`.
-- Nenhuma migration, nenhuma rota HTTP nova, nenhuma tela nova.
-- RN-320..322 em `docs/business-rules.md` cobrem a forma do script (RN-320),
-  a semântica do funil e do lead time (RN-321), e a deployment frequency
-  mais as três ausências declaradas (RN-322).
+- `docs/fluxo.yml`: `analytics` and `delivery-metricas` move from
+  `status: proposto` to `status: active`, with `saidas_alvo` rewritten to
+  `saidas` (what's real today) plus an explicit `lacunas` field (what
+  remains `status: lacuna`, without erasing the declaration).
+- `apps/api/package.json`: new `"analise:funil"` entry.
+- No migration, no new HTTP route, no new screen.
+- RN-320..322 in `docs/business-rules.md` cover the script's form
+  (RN-320), the funnel and lead-time semantics (RN-321), and deployment
+  frequency plus the three declared absences (RN-322).
 
-## Alternativas consideradas
+## Alternatives considered
 
-**Esperar o gatilho orgânico de cada papel.** Era o plano-padrão do
-`docs/fluxo.yml` e continua sendo o comportamento default do modelo de
-time para os outros papéis `proposto`. Recusada aqui só porque o dono do
-produto decidiu explicitamente antecipar — não é precedente para
-antecipar os demais papéis `proposto` sem decisão equivalente.
+**Wait for each role's organic trigger.** Was the default plan in
+`docs/fluxo.yml` and remains the default behavior of the team model for
+the other `proposto` roles. Rejected here only because the product owner
+explicitly decided to anticipate — not a precedent for anticipating the
+other `proposto` roles without an equivalent decision.
 
-**Um agente `analytics` de LLM lendo o banco e narrando o funil.**
-Recusada pelo próprio critério de separação que `docs/fluxo.yml` já
-declarava para `delivery-metricas` ("nunca vira agente") e que esta
-decisão estende a `analytics`: o relatório é determinístico — soma,
-agrupa, filtra por status — e não precisa de um modelo para interpretá-lo.
-Um agente aqui seria custo de LLM sem ganho de informação.
+**An `analytics` LLM agent reading the database and narrating the
+funnel.** Rejected by the very separation criterion `docs/fluxo.yml`
+already declared for `delivery-metricas` ("never becomes an agent"),
+which this decision extends to `analytics`: the report is
+deterministic — sum, group, filter by status — and doesn't need a model
+to interpret it. An agent here would be LLM cost with no information
+gain.
 
-**Aproximar as três métricas ausentes com um proxy** (ex.: contar
-`chat.message` como proxy de "uso", ou tempo até o próximo commit como
-proxy de MTTR). Recusada: um proxy que se parece com a métrica real e não
-é ela é o erro que o ADR 0042 já nomeou para nota de modelo — melhor "—"
-com o motivo escrito do que um número que ensina errado.
+**Approximate the three absent metrics with a proxy** (e.g., counting
+`chat.message` as a proxy for "usage," or time to the next commit as a
+proxy for MTTR). Rejected: a proxy that looks like the real metric and
+isn't it is the same error ADR 0042 already named for model score —
+better a "—" with the reason written than a number that teaches wrong.
 
-## Referências
+## References
 
-- `docs/fluxo.yml` (blocos `id: analytics`, `id: delivery-metricas`)
+- `docs/fluxo.yml` (blocks `id: analytics`, `id: delivery-metricas`)
 - `apps/api/scripts/analise-funil.ts` / `apps/api/scripts/medir-execucao.ts`
-  (precedente de forma, Fase 13b)
+  (form precedent, Phase 13b)
 - `apps/api/src/domain/git/git-action-execution-result.ts`
-- `docs/gates.yml` (gate `backmerge`)
-- [RN-230](../business-rules.md#rn-230) — a lacuna ideação → commit, já
-  declarada na aba Criativo
+- `docs/gates.yml` (`backmerge` gate)
+- [RN-230](../business-rules.md#rn-230) — the ideation → commit gap,
+  already declared in the Criativo tab
 - [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) —
-  o princípio de nunca fingir dado que não existe
+  the principle of never faking data that doesn't exist
 - [ADR 0077](0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md) —
-  a mesma recusa aplicada a "modelo ideal"
+  the same rejection applied to "ideal model"

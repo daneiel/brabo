@@ -1,143 +1,155 @@
-# Insumo 0 — o texto de entrada da sessão 0 (Criativo)
+# Input 0 — the session 0 (Creative) input text
 
-Material operacional da Fase 10b. Este arquivo tem o **texto literal** para colar
-no chat da primeira sessão, e os prompts de refino da sessão seguinte.
+Operational material for Phase 10b. This file has the **literal text** to
+paste into the chat of the first session, and the refinement prompts for
+the following session.
 
-## Por que o Criativo, e não o PO
+## Why the Creative agent, and not the PO
 
-O plano original mandava um handoff direto ao PO com os insumos. Isso não é
-possível, e a razão importa porque ela também explica o formato do texto abaixo.
+The original plan called for a direct handoff to the PO with the inputs.
+That's not possible, and the reason matters because it also explains the
+format of the text below.
 
-O único caminho até o PO é o botão "Estou pronto para produzir", que só aparece
-com o Criativo ativo — não existe handoff manual para um agente à sua escolha. E
-mesmo que existisse, o PO sozinho não resolveria: uma story só chega a `ready`
-com **ao menos uma regra de negócio vinculada**, cada `business_rule_id` é
-validado contra um evento `artifact.business_rule` real, e o PO **não tem a
-ferramenta** que emite esse artefato — só o Criativo tem.
+The only path to the PO is the "I'm ready to produce" button, which only
+appears with the Creative agent active — there's no manual handoff to an
+agent of your choice. And even if there were, the PO alone wouldn't solve
+it: a story only reaches `ready` with **at least one linked business
+rule**, each `business_rule_id` is validated against a real
+`artifact.business_rule` event, and the PO **doesn't have the tool** that
+emits that artifact — only the Creative agent does.
 
-Sem regra de negócio no log, nenhuma story fica `ready`; sem story `ready`,
-nenhum dev pega task. Por isso o texto abaixo insiste tanto em regras: **elas são
-o que destrava a execução inteira**, não enfeite de documentação.
+Without a business rule in the log, no story becomes `ready`; without a
+`ready` story, no dev picks up a task. That's why the text below insists so
+much on rules: **they're what unblocks the whole execution**, not
+documentation decoration.
 
-Detalhe de mecânica: não existe upload nem anexo no produto. O único jeito de o
-conteúdo dos insumos chegar ao agente é você **colar texto** na caixa de
-mensagem.
-
----
-
-## O texto para colar
-
-Cole isto na primeira mensagem da sessão 0. Ele é longo de propósito — o Criativo
-não tem acesso ao repositório, então o contexto precisa vir junto.
+Mechanical detail: there's no upload or attachment in the product. The
+only way for the input content to reach the agent is for you to **paste
+text** into the message box.
 
 ---
 
-> Vamos definir o escopo de uma entrega de plataforma. O produto é o **Brabo**, e
-> desta vez o cliente é o próprio time: vamos acrescentar dois **providers de
-> git** ao sistema.
+## The text to paste
+
+Paste this in the first message of session 0. It's long on purpose — the
+Creative agent has no access to the repository, so the context needs to
+come along with it.
+
+---
+
+> Let's define the scope of a platform delivery. The product is **Brabo**,
+> and this time the client is the team itself: we're going to add two
+> **git providers** to the system.
 >
-> **O que já existe.** O Brabo tem um contrato único de git provider com dez
-> operações (`createRepo`, `getRepo`, `createBranch`, `protectBranch`,
+> **What already exists.** Brabo has a single git provider contract with
+> ten operations (`createRepo`, `getRepo`, `createBranch`, `protectBranch`,
 > `commitFiles`, `listBranches`, `openPullRequest`, `mergePullRequest`,
-> `getFileContent`, `commentOnPullRequest`), duas capabilities declaradas por
-> provider (`protectBranch` e `pullRequests`), sete classes de erro normalizado,
-> e uma suite de contrato única com 19 cenários que roda igual contra qualquer
-> implementação. Hoje existem três providers: Local, GitHub e GitLab.
+> `getFileContent`, `commentOnPullRequest`), two capabilities declared per
+> provider (`protectBranch` and `pullRequests`), seven normalized error
+> classes, and a single contract suite with 19 scenarios that runs the
+> same against any implementation. Today there are three providers: Local,
+> GitHub, and GitLab.
 >
-> **O que falta.** Dois providers novos:
+> **What's missing.** Two new providers:
 >
-> 1. **Bitbucket Cloud** — uma plataforma completa, como GitHub e GitLab. O
->    desafio é traduzir a API dela para o contrato: autenticação, identidade do
->    repositório, restrição de branch, estratégias de merge e o mapa de erro por
->    status. Nada disso deve ser adivinhado: cada semântica precisa ser conferida
->    na documentação oficial antes de virar código.
-> 2. **Generic** — um servidor git qualquer, sem API de plataforma (Gitea, um
->    bare repo atrás de SSH, um Forgejo). Aqui o desafio é o oposto: declarar
->    **honestamente** o que não dá para fazer, e garantir que o sistema degrade
->    em vez de quebrar. O provider Local já é o precedente disso.
+> 1. **Bitbucket Cloud** — a full platform, like GitHub and GitLab. The
+>    challenge is translating its API into the contract: authentication,
+>    repository identity, branch restriction, merge strategies, and the
+>    error map by status. None of this should be guessed: every semantic
+>    needs to be checked against the official documentation before
+>    becoming code.
+> 2. **Generic** — a plain git server, no platform API (Gitea, a bare repo
+>    behind SSH, a Forgejo). Here the challenge is the opposite: declare
+>    **honestly** what can't be done, and make sure the system degrades
+>    instead of breaking. The Local provider is already the precedent for
+>    this.
 >
-> **O que eu preciso de você nesta sessão.** Emita uma **regra de negócio** para
-> cada afirmação abaixo que deva valer no produto. Elas são o contrato que o
-> backlog inteiro vai referenciar, então prefira várias regras específicas a uma
-> genérica:
+> **What I need from you in this session.** Emit a **business rule** for
+> each statement below that should hold in the product. They're the
+> contract the whole backlog will reference, so prefer several specific
+> rules over one generic one:
 >
-> - capability declarada tem que bater com o comportamento: operação não
->   suportada é recusada explicitamente, nunca falha em silêncio;
-> - o provider novo passa na suite de contrato existente sem escrever cenário
->   próprio;
-> - semântica de plataforma não verificada na documentação oficial não vira
->   código — vira limitação declarada;
-> - erro de vendor é traduzido para a taxonomia normalizada por status e
->   marcador, nunca por texto livre da mensagem;
-> - o bootstrap de Gitflow degrada (não falha) quando o provider não suporta uma
->   capability;
-> - a interface precisa deixar o usuário escolher os providers novos, senão eles
->   existem e ninguém alcança.
+> - a declared capability has to match the actual behavior: an
+>   unsupported operation is explicitly rejected, never fails silently;
+> - the new provider passes the existing contract suite without writing
+>   its own scenario;
+> - a platform semantic not verified against the official documentation
+>   never becomes code — it becomes a declared limitation;
+> - a vendor error is translated into the normalized taxonomy by status
+>   and marker, never by free-text message matching;
+> - the Gitflow bootstrap degrades (doesn't fail) when the provider
+>   doesn't support a capability;
+> - the interface needs to let the user choose the new providers, or else
+>   they exist and nobody can reach them.
 >
-> Acrescente as que você achar que faltam — você conhece o produto.
+> Add whatever else you think is missing — you know the product.
 >
-> **Um requisito não-funcional obrigatório:** pelo menos uma parte deste escopo
-> tem requisito de **performance**. A suite de contrato roda contra os cinco
-> providers a cada PR, e o tempo dela é caminho crítico do CI. Registre isso com
-> essa palavra, "performance", explicitamente.
+> **One mandatory non-functional requirement:** at least part of this
+> scope has a **performance** requirement. The contract suite runs against
+> the five providers on every PR, and its runtime is on CI's critical
+> path. Record this with that exact word, "performance", explicitly.
 >
-> **Granularidade.** Quando isto virar backlog, o trabalho vai ser fatiado em
-> **muitos módulos com poucas tarefas cada**, não em poucos módulos com fila
-> longa. Tenha isso em mente ao separar os assuntos.
+> **Granularity.** When this becomes backlog, the work will be sliced into
+> **many modules with few tasks each**, not a few modules with a long
+> queue. Keep that in mind when separating the subjects.
 >
-> **O que NÃO decidir agora.** Não escolha endpoint, formato de payload nem
-> estratégia de autenticação do Bitbucket. Isso é decisão de arquitetura, tomada
-> depois, contra a documentação oficial. Aqui definimos **o quê** e **por quê**,
-> não **como**.
+> **What NOT to decide now.** Don't choose Bitbucket's endpoint, payload
+> format, or authentication strategy. That's an architecture decision,
+> made later, against the official documentation. Here we define **what**
+> and **why**, not **how**.
 
 ---
 
-## Antes de clicar em "Estou pronto para produzir"
+## Before clicking "I'm ready to produce"
 
-Confira, no fio da sessão, que as regras de negócio foram **emitidas** — não só
-mencionadas na conversa. Elas aparecem como artefatos.
+Check, in the session thread, that the business rules were **emitted** —
+not just mentioned in conversation. They appear as artifacts.
 
-Se você avançar sem elas, o PO gera o backlog inteiro e todas as stories ficam em
-`draft`. Você só descobre nas sessões de execução, quando nenhum dev conseguir
-pegar task, e aí terá gastado duas sessões para voltar ao começo.
+If you move on without them, the PO generates the whole backlog and every
+story ends up in `draft`. You'll only find out during the execution
+sessions, when no dev manages to pick up a task, having spent two sessions
+just to get back to the start.
 
-Contagem esperada: **uma regra por afirmação da lista**, mais as que o Criativo
-acrescentar. Menos que isso, continue conversando.
-
----
-
-## Prompts de refino para a sessão 1 (PO)
-
-O PO gera o backlog inteiro sozinho assim que você aceita o handoff — não espera
-instrução. Estes prompts são para **depois**, olhando o que ele produziu na aba
-Backlog.
-
-**Se o backlog vier com poucos módulos e muitas tarefas:**
-
-> Refatore o backlog para ter mais módulos com menos tarefas cada. A execução
-> processa uma tarefa por módulo de cada vez, então fila longa dentro de um
-> módulo não acelera nada — separar assuntos em módulos distintos, sim.
-
-**Se nenhuma story tiver RNF de performance:**
-
-> Nenhuma história tem requisito não-funcional de performance. Acrescente um
-> explicitamente, usando a palavra "performance", na história que trata da suite
-> de contrato — o tempo dela é caminho crítico do CI.
-
-**Se alguma story ficou sem regra vinculada:**
-
-> A história "X" não referencia nenhuma regra de negócio. Vincule as regras que a
-> originaram — sem isso ela não fica pronta para execução.
-
-**Para revisar cobertura:**
-
-> Liste quais regras de negócio ainda não estão cobertas por nenhuma história.
+Expected count: **one rule per statement in the list**, plus whatever the
+Creative agent adds. Less than that, keep talking.
 
 ---
 
-## O que anotar na tabela desta sessão
+## Refinement prompts for session 1 (PO)
 
-- Quantas mensagens você precisou trocar com o Criativo até as regras saírem.
-- Se ele emitiu regra demais, de menos, ou fora de escopo.
-- Se o PO precisou de refino, quantas rodadas — e o que ele errou. **Devolução ao
-  PO não tem registro no domínio**: se você não anotar, some.
+The PO generates the whole backlog on its own as soon as you accept the
+handoff — it doesn't wait for instruction. These prompts are for
+**afterward**, looking at what it produced in the Backlog tab.
+
+**If the backlog comes back with few modules and many tasks:**
+
+> Rework the backlog to have more modules with fewer tasks each.
+> Execution processes one task per module at a time, so a long queue
+> inside one module doesn't speed anything up — separating subjects into
+> distinct modules does.
+
+**If no story has a performance NFR:**
+
+> No story has a non-functional performance requirement. Add one
+> explicitly, using the word "performance", to the story about the
+> contract suite — its runtime is on CI's critical path.
+
+**If any story ended up with no linked rule:**
+
+> Story "X" doesn't reference any business rule. Link the rules that
+> originated it — without that it can't be ready for execution.
+
+**To review coverage:**
+
+> List which business rules aren't yet covered by any story.
+
+---
+
+## What to note for this session's table row
+
+- How many messages you needed to exchange with the Creative agent before
+  the rules came out.
+- Whether it emitted too many rules, too few, or out of scope.
+- Whether the PO needed refinement, how many rounds — and what it got
+  wrong. **Returning something to the PO has no record in the domain**: if
+  you don't note it, it's gone.

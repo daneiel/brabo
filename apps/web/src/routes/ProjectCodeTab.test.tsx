@@ -1,8 +1,31 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import codePtBR from '../locales/pt-BR/code.json';
+// `ErroDeCarregamento` (namespace `ui`) é filho deste componente — sem o
+// namespace aqui, `t('erroDeCarregamento.retry')` cai na chave crua.
+import uiPtBR from '../locales/pt-BR/ui.json';
 import { ProjectCodeTab } from './ProjectCodeTab';
 import type { EstadoDoContainer } from '../lib/api-types';
+
+// Instância isolada de i18next, mesmo padrão de `AccountPage.test.tsx`: o
+// componente usa `useTranslation('code')` e as asserções abaixo já existiam
+// em pt-BR, então a instância de teste fica em pt-BR.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: { 'pt-BR': { code: codePtBR, ui: uiPtBR } },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'code',
+    ns: ['code', 'ui'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
 
 const getContainerState = vi.fn();
 const getProject = vi.fn();
@@ -23,10 +46,13 @@ vi.mock('./code/CodeShell', () => ({
 
 function montar() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const i18n = novaInstanciaI18n();
   return render(
-    <QueryClientProvider client={client}>
-      <ProjectCodeTab projectId="proj-1" />
-    </QueryClientProvider>,
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ProjectCodeTab projectId="proj-1" />
+      </QueryClientProvider>
+    </I18nextProvider>,
   );
 }
 

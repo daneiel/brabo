@@ -96,6 +96,8 @@ const handlersVazios = {
   onPtyInput: vi.fn(),
   onPtyResize: vi.fn(),
   onPtyClose: vi.fn(),
+  onFsListDir: vi.fn(),
+  onFsHomeDir: vi.fn(),
 };
 
 describe('conectarCanal', () => {

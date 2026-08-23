@@ -1,0 +1,69 @@
+---
+id: user-preferences-controller-update
+title: "Writes the authenticated user's language preference"
+description: "Only `locale` for now — it's the only preference that exists. Closed to the `pt-BR`/`en` list; any other value is a 400."
+sidebar_label: "Writes the authenticated user's language preference"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "patch api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Writes the authenticated user's language preference"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"patch"}
+  path={"/users/me/preferences"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Only `locale` for now — it's the only preference that exists. Closed to the `pt-BR`/`en` list; any other value is a 400.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./user-preferences-controller-update.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./user-preferences-controller-update.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./user-preferences-controller-update.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

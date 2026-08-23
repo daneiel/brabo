@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { getContainerLifecycle } from '../../lib/api-client';
 import { ErroDeCarregamento } from '../../components/ErroDeCarregamento';
 import { Badge, type BadgeTone } from '../../components/ui/Badge';
@@ -12,19 +13,19 @@ import styles from './CodeBottomPanel.module.css';
 
 type PainelInferior = 'terminal' | 'problems' | 'diff' | 'output';
 
-const ABAS: { chave: PainelInferior; rotulo: string }[] = [
-  { chave: 'terminal', rotulo: 'Terminal' },
-  { chave: 'problems', rotulo: 'Problemas' },
-  { chave: 'diff', rotulo: 'Diff de PR' },
-  { chave: 'output', rotulo: 'Saída' },
+const ABAS: { chave: PainelInferior; chaveRotulo: string }[] = [
+  { chave: 'terminal', chaveRotulo: 'bottomPanel.tabs.terminal' },
+  { chave: 'problems', chaveRotulo: 'bottomPanel.tabs.problems' },
+  { chave: 'diff', chaveRotulo: 'bottomPanel.tabs.diff' },
+  { chave: 'output', chaveRotulo: 'bottomPanel.tabs.output' },
 ];
 
-const STATUS_LABEL: Record<ContainerLifecycleStatus, string> = {
-  provisioning: 'Provisionando',
-  running: 'Rodando',
-  stopped: 'Parado',
-  failed: 'Falhou',
-  removed: 'Removido',
+const STATUS_LABEL_KEY: Record<ContainerLifecycleStatus, string> = {
+  provisioning: 'bottomPanel.status.provisioning',
+  running: 'bottomPanel.status.running',
+  stopped: 'bottomPanel.status.stopped',
+  failed: 'bottomPanel.status.failed',
+  removed: 'bottomPanel.status.removed',
 };
 
 const STATUS_TONE: Record<ContainerLifecycleStatus, BadgeTone> = {
@@ -62,6 +63,7 @@ const STATUS_TONE: Record<ContainerLifecycleStatus, BadgeTone> = {
  *   terminal interativo já tem a própria saída, dentro dele.
  */
 export function CodeBottomPanel({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('code');
   const [aba, setAba] = useState<PainelInferior>('terminal');
 
   const lifecycleQuery = useQuery({
@@ -76,7 +78,7 @@ export function CodeBottomPanel({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.painel}>
-      <div className={styles.abas} role="tablist" aria-label="Painel inferior">
+      <div className={styles.abas} role="tablist" aria-label={t('bottomPanel.tablistLabel')}>
         {ABAS.map((item) => (
           <button
             key={item.chave}
@@ -86,7 +88,7 @@ export function CodeBottomPanel({ projectId }: { projectId: string }) {
             className={[styles.aba, aba === item.chave && styles.abaAtiva].filter(Boolean).join(' ')}
             onClick={() => setAba(item.chave)}
           >
-            {item.rotulo}
+            {t(item.chaveRotulo)}
           </button>
         ))}
       </div>
@@ -101,7 +103,7 @@ export function CodeBottomPanel({ projectId }: { projectId: string }) {
 
               {lifecycleQuery.isError && (
                 <ErroDeCarregamento
-                  titulo="Não consegui consultar o estado do container."
+                  titulo={t('bottomPanel.checkStateError')}
                   erro={lifecycleQuery.error}
                   onTentarDeNovo={() => void lifecycleQuery.refetch()}
                 />
@@ -111,10 +113,10 @@ export function CodeBottomPanel({ projectId }: { projectId: string }) {
                 (lifecycleQuery.data ? (
                   <div className={styles.cicloDeVida}>
                     <Badge tone={STATUS_TONE[lifecycleQuery.data.status]}>
-                      {STATUS_LABEL[lifecycleQuery.data.status]}
+                      {t(STATUS_LABEL_KEY[lifecycleQuery.data.status])}
                     </Badge>
                     <span className={styles.cicloDeVidaDetalhe}>
-                      desde{' '}
+                      {t('bottomPanel.since')}{' '}
                       {new Date(lifecycleQuery.data.statusChangedAt).toLocaleString('pt-BR')}
                     </span>
                     {lifecycleQuery.data.status === 'failed' &&
@@ -126,7 +128,7 @@ export function CodeBottomPanel({ projectId }: { projectId: string }) {
                   </div>
                 ) : (
                   <span className={styles.cicloDeVidaDetalhe}>
-                    Container do projeto: nunca provisionado (RN-267).
+                    {t('bottomPanel.neverProvisioned')}
                   </span>
                 ))}
             </div>
@@ -139,26 +141,14 @@ export function CodeBottomPanel({ projectId }: { projectId: string }) {
         {aba === 'problems' && (
           <div className={styles.terminalVazio}>
             <AlertIcon size={22} />
-            <p>
-              Não há lint nem testes integrados rodando sobre o código deste
-              projeto — nenhuma ferramenta de análise estática hoje escaneia o
-              repositório gerido. Mostrar uma contagem de erros ou avisos aqui
-              seria decoração, não estado: quando essa integração existir, esta
-              aba passa a listar diagnósticos reais.
-            </p>
+            <p>{t('bottomPanel.problemsEmpty')}</p>
           </div>
         )}
         {aba === 'diff' && <CodeDiffPanel projectId={projectId} />}
         {aba === 'output' && (
           <div className={styles.terminalVazio}>
             <OutputIcon size={22} />
-            <p>
-              Não há stream de comando de build ou deploy AGREGADO nesta aba —
-              o terminal interativo (aba Terminal) já tem a própria saída,
-              dentro dele. `git push`, PR e deploy não saem pelo terminal de
-              qualquer forma (RN-106): quando houver um pipeline de build ou
-              deploy separado do terminal, a saída dele aparece aqui.
-            </p>
+            <p>{t('bottomPanel.outputEmpty')}</p>
           </div>
         )}
       </div>

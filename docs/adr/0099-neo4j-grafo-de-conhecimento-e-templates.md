@@ -1,84 +1,90 @@
-# ADR 0099 — Neo4j como grafo de conhecimento e templates de prompt, driver na api
+# ADR 0099 — Neo4j as knowledge graph and prompt templates, driver in the api
 
-- **Status:** Aceito
-- **Data:** 2026-08-19
-- **Contexto:** fundação do grafo de conhecimento (RN-413/414/415), decisão
-  do dono do produto de trazer Neo4j para o produto
+- **Status:** Accepted
+- **Date:** 2026-08-19
+- **Context:** foundation of the knowledge graph (RN-413/414/415), the
+  product owner's decision to bring Neo4j into the product
 
-## Contexto
+## Context
 
-Dois vãos reais do produto motivaram esta entrega. Primeiro: **nenhum
-agente consome o RAG** que já existe (pgvector, busca híbrida vetor+léxico,
-`HybridSearchUseCase`) — ele só é usado pela aba web "Chat RAG". Segundo:
-**todo prompt de agente é heredoc Elixir inline** — identidades
-(`Engine.Harness.Agents`), kickoffs de PO/Arquiteto/Dev Lead/UX/Infra, o
-prompt de sumarização do `ContextManager` — nada disso vive fora do
-código, versionado ou reutilizável.
+Two real gaps in the product motivated this delivery. First: **no
+agent consumes the RAG** that already exists (pgvector, hybrid
+vector+lexical search, `HybridSearchUseCase`) — it's only used by the
+"Chat RAG" web tab. Second: **every agent prompt is an inline Elixir
+heredoc** — identities (`Engine.Harness.Agents`), kickoffs for
+PO/Architect/Dev Lead/UX/Infra, the `ContextManager`'s summarization
+prompt — none of it lives outside the code, versioned or reusable.
 
-O dono do produto pediu Neo4j inspirado no repositório
+The product owner asked for Neo4j, inspired by the repository
 [`ErickWendel/neo4j-ai-experiments`](https://github.com/ErickWendel/neo4j-ai-experiments),
-que usa o grafo como memória de agentes de IA e mantém os prompts em
-arquivos separados da lógica da aplicação (diretório `prompts/`, com
-templates nomeados para conversão NL→Cypher, contexto e formatação de
-resposta). **Este projeto foi a inspiração concreta do padrão adotado
-aqui** — vale o agradecimento explícito: sem ele, a forma "prompt como
-arquivo versionado, não string presa no código" não teria um precedente
-tão direto para seguir.
+which uses the graph as AI agent memory and keeps prompts in files
+separate from application logic (a `prompts/` directory, with
+templates named for NL→Cypher conversion, context, and response
+formatting). **This project was the concrete inspiration for the
+pattern adopted here** — the explicit thanks is warranted: without it,
+the "prompt as versioned file, not string embedded in code" shape
+wouldn't have had such a direct precedent to follow.
 
-## Decisão
+## Decision
 
-Neo4j entra como **grafo de conhecimento** — memória DERIVADA do event
-log, nunca fonte de verdade — com duas responsabilidades:
+Neo4j enters as a **knowledge graph** — memory DERIVED from the event
+log, never the source of truth — with two responsibilities:
 
-1. **Templates de prompt versionados** (`PromptTemplate`/`PromptVersion`),
-   substituindo gradualmente os heredocs inline (a migração dos GenServers
-   em si é onda futura; esta entrega só constrói a fundação).
-2. **Memória relacional**: interações do usuário, hipóteses do Psicólogo
-   com evidência (`EVIDENCIA` → `Evento{sessionId,seq}`), perfis de
-   proficiência da Anamnese, handoffs entre agentes.
+1. **Versioned prompt templates** (`PromptTemplate`/`PromptVersion`),
+   gradually replacing the inline heredocs (migrating the GenServers
+   themselves is a future wave; this delivery only builds the
+   foundation).
+2. **Relational memory**: user interactions, Psychologist hypotheses
+   with evidence (`EVIDENCIA` → `Evento{sessionId,seq}`), Anamnese
+   proficiency profiles, handoffs between agents.
 
-**pgvector CONTINUA sendo o índice vetorial dos chunks** — o grafo não
-guarda embedding nenhum. Guardar o mesmo vetor em dois bancos divergiria
-na primeira reindexação que só tocasse um dos dois; a decisão foi manter
-UMA fonte vetorial e o grafo como camada de RELAÇÃO por cima.
+**pgvector CONTINUES to be the vector index for chunks** — the graph
+stores no embedding at all. Storing the same vector in two databases
+would diverge on the first reindex that only touched one of them; the
+decision was to keep ONE vector source with the graph as a
+RELATIONSHIP layer on top.
 
-**Driver: `neo4j-driver` (pacote oficial) na `apps/api`, não no engine.**
-A api já é dona de TODA persistência do produto (Postgres, pgvector,
-`permissions.json`) e do RAG existente; o engine já consome tudo por HTTP
-interno com service token, nunca abriu conexão direta a um banco de
-domínio. Repetir esse padrão — engine chama rota interna, api fala com o
-banco — mantém UMA fronteira de credencial/pool, em vez de duas.
+**Driver: `neo4j-driver` (official package) in `apps/api`, not the
+engine.** The api already owns ALL persistence for the product
+(Postgres, pgvector, `permissions.json`) and the existing RAG; the
+engine already consumes everything over internal HTTP with a service
+token, and has never opened a direct connection to a domain database.
+Repeating that pattern — engine calls an internal route, api talks to
+the database — keeps ONE credential/pool boundary instead of two.
 
-**Esquema mínimo, com constraints de unicidade** (Neo4j Community não tem
-NODE KEY composto, só `IS UNIQUE` sobre propriedade única):
+**Minimal schema, with uniqueness constraints** (Neo4j Community has
+no composite NODE KEY, only `IS UNIQUE` on a single property):
 `PromptTemplate.name`, `Usuario.id`, `Projeto.id`, `Agente.slug`,
-`Interacao.sessionId`. `Hipotese`/`Handoff` usam MERGE por chave natural
-própria (id da hipótese; `(sessionId, seq)` do handoff) sem constraint
-formal — a idempotência vem do MERGE, não de uma restrição estrutural
-adicional.
+`Interacao.sessionId`. `Hipotese`/`Handoff` use MERGE on their own
+natural key (hypothesis id; handoff `(sessionId, seq)`) with no formal
+constraint — idempotency comes from the MERGE, not an extra structural
+restriction.
 
-## Degradação, não crash
+## Degradation, not crash
 
-`GraphStore.onModuleInit` NUNCA lança. Três variáveis de ambiente
-(`NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`) são **obrigatórias em
-produção** (falha cedo no boot, mesmo espírito do `GIT_OAUTH_STATE_SECRET`
-do ADR 0059) e **opcionais fora dela** — ninguém precisa subir um Neo4j
-local só para rodar a suite da api. Ausente ou indisponível, o driver fica
-`null` e toda operação lança `GraphUnavailableError`, convertido em 503
-(nunca 500 cru) pelo filtro global `GraphErrorFilter`, ou em resposta
-degradada nos casos de uso que têm fallback (busca RAG sem enriquecimento
-de grafo, por exemplo).
+`GraphStore.onModuleInit` NEVER throws. Three environment variables
+(`NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`) are **required in
+production** (fail fast at boot, the same spirit as `GIT_OAUTH_STATE_SECRET`
+in ADR 0059) and **optional outside it** — nobody needs to spin up a
+local Neo4j just to run the api's suite. When absent or unreachable,
+the driver stays `null` and every operation throws
+`GraphUnavailableError`, converted to 503 (never a raw 500) by the
+global `GraphErrorFilter`, or into a degraded response in the use
+cases that have a fallback (RAG search without graph enrichment, for
+example).
 
-## Consequências
+## Consequences
 
-- O grafo é reconstruível por replay do event log/outbox (ver Onda 2,
-  RN-416) — nunca uma segunda fonte de verdade a manter sincronizada por
-  disciplina manual.
-- Migração dos kickoffs inline dos GenServers para consumir templates do
-  grafo é onda POSTERIOR, declarada fora desta entrega — esta ADR só
-  estabelece que o mecanismo existe e é seguro de introduzir aos poucos.
-- Consequência aceita e nova para o produto: é a primeira dependência de
-  infraestrutura que não é Postgres nem Ollama. O `docker-compose.yml`
-  ganha um serviço a mais para quem roda `pnpm dev` local, com heap
-  limitado (a máquina de dev de referência tem 15 GB, já dividida entre
-  Postgres, Ollama, api, engine e web).
+- The graph is reconstructible by replaying the event log/outbox (see
+  Wave 2, RN-416) — never a second source of truth to keep in sync by
+  manual discipline.
+- Migrating the GenServers' inline kickoffs to consume graph templates
+  is a LATER wave, declared out of scope here — this ADR only
+  establishes that the mechanism exists and is safe to introduce
+  gradually.
+- An accepted consequence, new for the product: this is the first
+  infrastructure dependency that is neither Postgres nor Ollama. The
+  `docker-compose.yml` gains one more service for anyone running
+  `pnpm dev` locally, with a bounded heap (the reference dev machine
+  has 15 GB, already split between Postgres, Ollama, api, engine, and
+  web).

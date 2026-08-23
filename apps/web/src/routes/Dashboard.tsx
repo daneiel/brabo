@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import {
   useCurrentWorkspace,
@@ -47,6 +48,7 @@ function ProjectCardContainer({
   carregando: boolean;
 }) {
   const navigate = useNavigate();
+  const { t } = useTranslation('dashboard');
 
   const provisioningStatus = summary?.provisioningStatus ?? null;
   const provider = summary?.provider ?? 'local';
@@ -65,7 +67,7 @@ function ProjectCardContainer({
 
   const lastActivityText = summary?.lastEvent
     ? `${classifyEvent(summary.lastEvent).text} · ${formatRelativeTime(summary.lastEvent.createdAt)}`
-    : 'Sem atividade ainda';
+    : t('activity.none');
 
   return (
     <ProjectCard
@@ -110,6 +112,7 @@ function ProjectCardContainer({
 }
 
 export function Dashboard() {
+  const { t } = useTranslation('dashboard');
   const { data: workspace } = useCurrentWorkspace();
   const projectsQuery = useProjects(workspace?.id);
   const projects = projectsQuery.data;
@@ -145,9 +148,9 @@ export function Dashboard() {
   return (
     <>
       <div className={styles.topbar}>
-        <h1 className={styles.title}>Projetos</h1>
+        <h1 className={styles.title}>{t('topbar.title')}</h1>
         <div className={styles.search}>
-          <Input placeholder="Buscar projetos…" icon={<SearchIcon size={14} />} value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input placeholder={t('topbar.searchPlaceholder')} icon={<SearchIcon size={14} />} value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <div className={styles.spacer} />
         <NotificationBell
@@ -162,16 +165,20 @@ export function Dashboard() {
           }}
         />
         <Button onClick={() => setWizardOpen(true)}>
-          <PlusIcon size={14} /> Novo projeto
+          <PlusIcon size={14} /> {t('topbar.newProject')}
         </Button>
       </div>
 
       <div className={styles.content}>
         <div className={styles.summary}>
           {summaryQuery.isError ? (
-            <span className={styles.summaryFallback}>resumo indisponível</span>
+            <span className={styles.summaryFallback}>{t('summary.unavailable')}</span>
           ) : summaryQuery.data ? (
-            `${contagemProjetos(summaryQuery.data.activeProjects)} · ${contagemAgentes(summaryQuery.data.agentCount)} · ${usdFmt.format(microsParaUsd(summaryQuery.data.spentMicros))} este mês`
+            t('summary.line', {
+              projects: contagemProjetos(summaryQuery.data.activeProjects),
+              agents: contagemAgentes(summaryQuery.data.agentCount),
+              spent: usdFmt.format(microsParaUsd(summaryQuery.data.spentMicros)),
+            })
           ) : (
             <Skeleton width={220} height={13} />
           )}
@@ -185,7 +192,7 @@ export function Dashboard() {
           // contrário é pior (RN-088).
           <div className={styles.empty}>
             <ErroDeCarregamento
-              titulo="Não foi possível carregar seus projetos."
+              titulo={t('empty.loadError')}
               erro={projectsQuery.error}
               onTentarDeNovo={() => void projectsQuery.refetch()}
             />
@@ -201,14 +208,14 @@ export function Dashboard() {
           // distinto do caso abaixo (busca sem resultado), que tem projetos
           // e não precisa de CTA de criar o primeiro.
           <div className={styles.empty}>
-            <p>Nenhum projeto por aqui ainda.</p>
+            <p>{t('empty.noProjectsYet')}</p>
             <Button onClick={() => setWizardOpen(true)}>
-              <PlusIcon size={14} /> Criar projeto
+              <PlusIcon size={14} /> {t('empty.createProject')}
             </Button>
           </div>
         ) : filtered.length === 0 ? (
           <div className={styles.empty}>
-            Nenhum projeto encontrado para &quot;{search}&quot;.
+            {t('empty.noSearchResults', { search })}
           </div>
         ) : (
           <div className={styles.grid}>

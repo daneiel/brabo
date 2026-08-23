@@ -2,6 +2,13 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import settingsPtBR from '../locales/pt-BR/settings.json';
+// `ModelPicker`/`ModelCatalogSection` (namespace `models`) são filhos de
+// `AreaModelsSection`/`ModelsSection` — sem o namespace aqui, o gatilho do
+// picker cai na chave crua (`picker.selectModel`).
+import modelsPtBR from '../locales/pt-BR/models.json';
 import {
   AreaModelsSection,
   CredentialsSection,
@@ -115,13 +122,38 @@ function project(over: Partial<Project> = {}): Project {
   };
 }
 
+/**
+ * Instância própria de i18next para o teste, como `AccountPage.test.tsx` já
+ * faz — só o namespace "settings" que este arquivo precisa, em pt-BR: é o
+ * idioma que as asserções existentes já esperavam antes da extração, e trocar
+ * de idioma não é o que este arquivo prova (isso é `idioma.test.ts`).
+ */
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      'pt-BR': { settings: settingsPtBR, models: modelsPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'settings',
+    ns: ['settings', 'models'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
 function montarSecao(secao: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  const i18n = novaInstanciaI18n();
   return render(
     <QueryClientProvider client={client}>
-      <ToastProvider>{secao}</ToastProvider>
+      <I18nextProvider i18n={i18n}>
+        <ToastProvider>{secao}</ToastProvider>
+      </I18nextProvider>
     </QueryClientProvider>,
   );
 }

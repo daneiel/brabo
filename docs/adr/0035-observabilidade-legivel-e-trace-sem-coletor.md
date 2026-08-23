@@ -1,209 +1,237 @@
-# 0035 — Trace sem coletor, e o caminho entre camadas no log
+# 0035 — Trace without a collector, and the path between layers in the log
 
-## Contexto
+## Context
 
-O [ADR 0026](0026-fase5-observabilidade-e-graceful-shutdown.md) projetou a
-correlação ponta a ponta: uma sessão é uma trace raiz, o `traceparent` viaja pelos
-três pontos de injeção, e os três serviços logam JSON com o mesmo `trace_id`.
-Nada disso estava errado. O problema é que, **em desenvolvimento, nada disso
-existia** — e desenvolvimento é onde se lê log com os olhos.
+[ADR 0026](0026-fase5-observabilidade-e-graceful-shutdown.md) designed
+end-to-end correlation: a session is a root trace, `traceparent` travels
+through the three injection points, and all three services log JSON with
+the same `trace_id`. None of that was wrong. The problem is that, **in
+development, none of it existed** — and development is where a log gets
+read with human eyes.
 
-A decisão 9 daquele ADR condicionou a instrumentação a
-`OTEL_EXPORTER_OTLP_ENDPOINT`, com a justificativa de que um exportador
-entregando para lugar nenhum enche o log de falha de conexão. A justificativa é
-verdadeira. A implementação confundiu duas coisas diferentes: **criar** telemetria
-e **entregar** telemetria.
+Decision 9 of that ADR made instrumentation conditional on
+`OTEL_EXPORTER_OTLP_ENDPOINT`, on the grounds that an exporter delivering
+to nowhere floods the log with connection failures. That reasoning is
+true. The implementation conflated two different things: **creating**
+telemetry and **delivering** telemetry.
 
-Na api, sem a variável o `NodeSDK` não era construído. Sem `start()` não há
-context manager nem propagador registrados, então:
+In the api, without the variable, `NodeSDK` wasn't even constructed.
+Without `start()` there's no context manager or propagator registered, so:
 
-- `currentTraceId()` devolvia `undefined` e o `mixin` do pino não estampava
-  `trace_id` em nenhuma linha;
-- o `traceparent` que a web manda em **toda** requisição era descartado em
-  silêncio;
-- `injectTraceHeaders` não injetava nada nas chamadas para o engine.
+- `currentTraceId()` returned `undefined` and pino's `mixin` never stamped
+  `trace_id` on any line;
+- the `traceparent` the web app sends on **every** request was silently
+  dropped;
+- `injectTraceHeaders` injected nothing into calls to the engine.
 
-No engine o gate estava pior: **invertido**. Não existe (nem existia) config
-`:opentelemetry` no projeto, então o SDK subia com o default do
-`otel_configuration`, que é `{opentelemetry_exporter, %{}}` apontando para
-`localhost:4318`. O engine pagava por um batch condenado em desenvolvimento **e em
-`mix test`** — exatamente o custo que o gate dizia evitar. E o que o gate
-desligava era `OpentelemetryBandit.setup()`, ou seja a **extração** do
-`traceparent` que chega: a única peça que faz a span do engine ser filha da span
-da api. O moduledoc de `Engine.Telemetry.Span` afirmava que sem coletor tudo virava
-no-op; era falso, e o teste ao lado agora prova o contrário.
+The engine's gate was worse: **inverted**. There is (and was) no
+`:opentelemetry` config in the project, so the SDK came up with
+`otel_configuration`'s default, which is `{opentelemetry_exporter, %{}}`
+pointing at `localhost:4318`. The engine paid for a doomed batch in
+development **and in `mix test`** — exactly the cost the gate claimed to
+avoid. And what the gate was actually turning off was
+`OpentelemetryBandit.setup()`, i.e. the **extraction** of the incoming
+`traceparent` — the one piece that makes the engine's span a child of the
+api's span. `Engine.Telemetry.Span`'s moduledoc claimed everything became
+a no-op without a collector; that was false, and the test alongside it now
+proves the opposite.
 
-Três furos de correlação apareceram ao investigar, todos silenciosos:
+Three correlation gaps turned up while investigating, all of them silent:
 
-1. `Engine.Outbox.Event` não declarava a coluna `metadata`. O struct não tinha a
-   chave, a primeira cláusula de `Drain.traceparent/1` era **inalcançável**, e
-   todo job do Oban nascia com `traceparent: nil`. A api gravava a coluna
-   corretamente desde a Fase 5. Nenhum worker lia o argumento, então corrigir só o
-   schema deixaria o dado inerte.
-2. O `traceparent` engine→api era injetado dentro de `post_returning/3`, funil só
-   dos POSTs. Os seis `Req.get` e o `llm_turn_stream` iam sem trace — toda a
-   metade de leitura da conversa entre os serviços aparecia como trace órfã.
-3. `chat-stream.ts` contorna o `api-client.ts` e não mandava `traceparent`. Era o
-   único caminho da web sem trace, e o pior possível: o turno de LLM.
+1. `Engine.Outbox.Event` didn't declare the `metadata` column. The struct
+   had no such key, `Drain.traceparent/1`'s first clause was
+   **unreachable**, and every Oban job was born with `traceparent: nil`.
+   The api had been writing the column correctly since Phase 5. No worker
+   read the argument, so fixing only the schema would leave the data
+   inert.
+2. The engine→api `traceparent` was injected inside `post_returning/3`, a
+   funnel only for POSTs. The six `Req.get` calls and `llm_turn_stream`
+   went out with no trace — the entire read half of the conversation
+   between the services showed up as an orphan trace.
+3. `chat-stream.ts` bypasses `api-client.ts` and wasn't sending
+   `traceparent`. It was the only path on the web app with no trace, and
+   the worst possible one: the LLM turn.
 
-Somado a isso, o pedido original que originou este trabalho: o log era difícil de
-ler para gente, não dizia de onde a linha saiu, e não mostrava por onde a ação do
-usuário passou entre as camadas.
+On top of that, the original request that started this work: the log was
+hard for people to read, didn't say where a line came from, and didn't
+show the path a user's action took across layers.
 
-## Decisão
+## Decision
 
-**1. Instrumentar e exportar são decisões separadas.** O SDK sobe sempre, nos dois
-serviços. `OTEL_EXPORTER_OTLP_ENDPOINT` passa a controlar só o destino:
+**1. Instrumenting and exporting are separate decisions.** The SDK comes
+up always, in both services. `OTEL_EXPORTER_OTLP_ENDPOINT` now controls
+only the destination:
 
-| | com endpoint | sem endpoint |
+| | with endpoint | without endpoint |
 |---|---|---|
-| api | `traceExporter` OTLP | `spanProcessors: [NoopSpanProcessor]` |
-| engine | default do `opentelemetry_exporter` | `traces_exporter: :none` |
-| contexto e propagação | registrados | **registrados** |
+| api | OTLP `traceExporter` | `spanProcessors: [NoopSpanProcessor]` |
+| engine | `opentelemetry_exporter` default | `traces_exporter: :none` |
+| context and propagation | registered | **registered** |
 
-O `spanProcessors` explícito na api não é decoração: sem ele o SDK cai em
-`getSpanProcessorsFromEnv()`, que com `OTEL_TRACES_EXPORTER` vazio monta um
-exportador para `localhost:4318` — o mesmo defeito que o gate tentava evitar. E a
-lista precisa ter pelo menos um elemento, porque `sdk.start()` só registra o
-tracer provider global quando `spanProcessors.length > 0`; sem provider a span
-nasce inválida e o propagador não injeta nada.
+The explicit `spanProcessors` in the api isn't decoration: without it the
+SDK falls back to `getSpanProcessorsFromEnv()`, which with
+`OTEL_TRACES_EXPORTER` empty builds an exporter pointing at
+`localhost:4318` — the same defect the gate was trying to avoid. And the
+list needs at least one element, because `sdk.start()` only registers the
+global tracer provider when `spanProcessors.length > 0`; with no provider
+the span is born invalid and the propagator injects nothing.
 
-As duas escolhas são seguras para memória, e por construção: o `NoopSpanProcessor`
-não retém no `onEnd`, e o `otel_batch_processor` do Erlang chama `disable/1`
-quando o exporter é `none` e passa a devolver `dropped` sem tocar a ETS. As
-alternativas não seriam — `BatchSpanProcessor` com exportador morto retém 2048
-spans e fica retentando, e `InMemorySpanExporter` cresce sem limite.
+Both choices are memory-safe, by construction: `NoopSpanProcessor` retains
+nothing in `onEnd`, and Erlang's `otel_batch_processor` calls `disable/1`
+when the exporter is `none` and starts returning `dropped` without ever
+touching ETS. The alternatives wouldn't be — `BatchSpanProcessor` with a
+dead exporter holds onto 2048 spans and keeps retrying, and
+`InMemorySpanExporter` grows without bound.
 
-**2. `tracing.ts` exporta função, e o efeito colateral mora em `tracing-boot.ts`.**
-`startTracing()` como função permite um spec importar o módulo sem registrar
-estado global — o que quebraria `trace-context.spec.ts`, que afirma o oposto de
-propósito. Mas a chamada não pode ficar no corpo do `main.ts`: TypeScript e SWC
-elevam todos os `require` para o topo, então uma linha entre imports rodaria
-**depois** de `pg` e `express` carregarem, e o monkey-patch não pega em módulo
-carregado. Um módulo separado resolve porque `require` é síncrono.
+**2. `tracing.ts` exports a function, and the side effect lives in
+`tracing-boot.ts`.** Having `startTracing()` as a function lets a spec
+import the module without registering global state — which would break
+`trace-context.spec.ts`, which asserts the opposite on purpose. But the
+call can't sit in the body of `main.ts`: TypeScript and SWC hoist all
+`require`s to the top, so a line placed among imports would run **after**
+`pg` and `express` load, and the monkey-patch doesn't take on an
+already-loaded module. A separate module solves it because `require` is
+synchronous.
 
-**3. O caminho entre camadas vem de `AsyncLocalStorage`, não de span.** Um
-decorator `@Traced('<camada>')` nas fronteiras registra classe, método, camada e
-duração num contexto por requisição; um interceptor global emite **uma** linha no
-fim. Span também é aberta, mas o caminho não depende dela — é o que faz a feature
-funcionar sem coletor.
+**3. The path between layers comes from `AsyncLocalStorage`, not from
+spans.** A `@Traced('<layer>')` decorator at the boundaries records class,
+method, layer and duration in a per-request context; a global interceptor
+emits **one** line at the end. A span is also opened, but the path doesn't
+depend on it — that's what makes the feature work without a collector.
 
-O padrão é o mesmo do `drizzle-context.ts`, que já carregava a transação ativa
-pela pilha de chamadas. O contexto tem **teto de 64 passos**: sem isso, um caso de
-uso que chama repositório em laço cresceria o array pela vida da requisição e
-depois serializaria tudo numa linha de log.
+The pattern is the same one `drizzle-context.ts` already used to carry the
+active transaction through the call stack. The context has a **cap of 64
+steps**: without it, a use case calling a repository in a loop would grow
+the array for the request's whole lifetime and then serialize all of it
+into one log line.
 
-Os passos são registrados na **entrada** do método, não na saída. Registrar na
-saída daria ordem de término — a chamada mais interna termina primeiro, e o
-caminho sairia de dentro para fora.
+Steps are recorded on method **entry**, not on exit. Recording on exit
+would give termination order — the innermost call finishes first, and the
+path would come out inside-out.
 
-**4. `@Traced` é proibido sob `apps/api/src/interfaces/http/**`.** Regra dura, e o
-motivo é de segurança. Os decorators do Nest (`SetMetadata` e derivados) gravam
-metadata **no objeto função** do método; decorators legacy aplicam de baixo para
-cima, então trocar `descriptor.value` descarta a metadata escrita abaixo. Num
-controller isso é um `@RequireRole` que desaparece — compila, passa na suite, e é
-buraco de autorização.
+**4. `@Traced` is forbidden under `apps/api/src/interfaces/http/**`.** A
+hard rule, and the reason is security. Nest's decorators (`SetMetadata`
+and derivatives) write metadata **onto the method's function object**;
+legacy decorators apply bottom-up, so replacing `descriptor.value` discards
+metadata written below it. On a controller that means a `@RequireRole`
+disappearing — it compiles, it passes the suite, and it's an authorization
+hole.
 
-Não há nada a ganhar decorando controller: o interceptor cobre a fronteira HTTP de
-graça, lendo `ExecutionContext.getClass()` e `getHandler()`. A opção sem diff em
-30 arquivos é também a segura. (O decorator copia a metadata adiante de todo jeito,
-como cinto e suspensório.)
+There's nothing to gain by decorating a controller anyway: the interceptor
+covers the HTTP boundary for free, reading `ExecutionContext.getClass()`
+and `getHandler()`. The option with no diff across 30 files is also the
+safe one. (The decorator forwards the metadata regardless, as belt and
+suspenders.)
 
-Duas exclusões pela mesma razão técnica: **nada que devolva `Observable` ou seja
-gerador**. A heurística "é thenable?" classificaria os dois como síncronos e
-fecharia a span antes de o stream produzir. `traced-llm-provider.chat` é gerador
-assíncrono e ficou de fora; handler `@Sse` fica com o interceptor, que usa
+Two exclusions for the same technical reason: **nothing that returns an
+`Observable` or is a generator.** The "is it thenable?" heuristic would
+classify both as synchronous and close the span before the stream
+produces. `traced-llm-provider.chat` is an async generator and was left
+out; the `@Sse` handler is covered by the interceptor, which uses
 `finalize`.
 
-**5. `ownSpan: true` para quem já gerencia a própria span.**
-`CreateSessionUseCase.execute` abre `session.create`, que o ADR 0026 designa raiz
-da trace da sessão e que `docs/reference/events.md` documenta como raiz. Envolvê-la
-faria da span do decorator a raiz: o `trace_id` continuaria certo, e a doc
-passaria a ser falsa sem nada quebrar. Com `ownSpan` o passo do caminho é
-registrado e nenhuma span nova é aberta.
+**5. `ownSpan: true` for whoever already manages their own span.**
+`CreateSessionUseCase.execute` opens `session.create`, which ADR 0026
+designates as the root of the session's trace and which
+`docs/reference/events.md` documents as the root. Wrapping it would make
+the decorator's span the root instead: `trace_id` would still be correct,
+and the docs would become false without anything breaking. With
+`ownSpan`, the path step is recorded and no new span is opened.
 
-**6. Pretty em desenvolvimento, uma linha de JSON em produção.** Em produção
-`transport` fica ausente e o pino escreve um `JSON.stringify` por evento — é
-requisito, não estética: o Alloy lê o stdout do pod linha a linha.
+**6. Pretty in development, one JSON line in production.** In production,
+`transport` stays absent and pino writes one `JSON.stringify` per event —
+that's a requirement, not aesthetics: Alloy reads the pod's stdout line by
+line.
 
-Em desenvolvimento o `pino-pretty` roda **em processo**, como stream, e não via
-`transport`. O motivo é concreto: `transport` executa numa worker thread e as
-opções passam por structured clone, então `messageFormat` e `customPrettifiers`
-**como função** não podem ser passados — e são eles que desenham a árvore de
-camadas. O `require` é guardado em try/catch, porque `pino-pretty` é
-devDependency e não existe na imagem de produção; o fallback é JSON, que é o modo
-de falha certo para um logger.
+In development `pino-pretty` runs **in-process**, as a stream, not via
+`transport`. The reason is concrete: `transport` runs on a worker thread
+and its options pass through structured clone, so `messageFormat` and
+`customPrettifiers` **as functions** can't be passed — and those are what
+draw the layer tree. The `require` is wrapped in try/catch, because
+`pino-pretty` is a devDependency and doesn't exist in the production
+image; the fallback is JSON, which is the right failure mode for a logger.
 
-No engine, `Engine.Telemetry.LogFields` passou a ser a fonte única dos campos, o
-`JsonLogFormatter` só serializa, e um `PrettyLogFormatter` novo cobre dev — onde
-`dev.exs` jogava fora timestamp e toda a metadata, deixando `trace_id`,
-`session_id` e `mfa` invisíveis.
+In the engine, `Engine.Telemetry.LogFields` became the single source for
+the fields, `JsonLogFormatter` only serializes, and a new
+`PrettyLogFormatter` covers dev — where `dev.exs` had been discarding the
+timestamp and all metadata, leaving `trace_id`, `session_id` and `mfa`
+invisible.
 
-**7. `trace_id` continua sendo contrato, e nada mudou nele.** Campos novos
-(`path`, `duration_ms`, `layer_count`, `layer`, `class`, `fn`) entram como irmãos
-planos. O `stage.json` do Alloy seleciona por expressão, não enumera, então chave
-irmã nova é ignorada e o `derivedFields` do Loki segue funcionando. O array
-`layers` fica **fora** de produção: como string `path` são ~150 bytes, como array
-5-10×, e Loki cobra por byte.
+**7. `trace_id` stays a contract, and nothing about it changed.** New
+fields (`path`, `duration_ms`, `layer_count`, `layer`, `class`, `fn`) go in
+as flat siblings. Alloy's `stage.json` selects by expression rather than
+enumerating, so a new sibling key is ignored and Loki's `derivedFields`
+keeps working. The `layers` array stays **out** of production: as a string,
+`path` is ~150 bytes; as an array, 5-10× that, and Loki charges by the
+byte.
 
-**8. Os três furos, fechados junto.** `field :metadata` no schema do outbox mais
-`Span.with_session(args["traceparent"], …)` e `Logger.metadata(session_id:)` nos
-dois workers — `Logger.metadata/1` não era chamado em lugar nenhum do engine, e é
-por isso que o campo `session_id` do formatter sempre saiu ausente. Um funil
-`headers/0` no `EngineApiClient`, cobrindo os 8 call sites. E `traceparent` no
-`chat-stream.ts`.
+**8. The three gaps, closed together.** `field :metadata` on the outbox
+schema plus `Span.with_session(args["traceparent"], …)` and
+`Logger.metadata(session_id:)` in both workers —
+`Logger.metadata/1` wasn't being called anywhere in the engine, and that's
+why the formatter's `session_id` field always came out missing. A single
+`headers/0` funnel in `EngineApiClient`, covering all 8 call sites. And
+`traceparent` in `chat-stream.ts`.
 
-## Consequências
+## Consequences
 
-- Com **zero coletor**, `pnpm dev` produz três streams de log com o mesmo
-  `trace_id`, gerado no browser. É a diferença entre poder e não poder seguir uma
-  ação do usuário atravessando os processos.
-- Uma linha por requisição mostra o caminho entre camadas com a duração de cada
-  passo. Em dev como árvore indentada; em produção como o campo `path`.
-- O trabalho assíncrono dos agentes passou a ser correlacionável de fato: o job do
-  Psicólogo disparado pelo fechamento de uma sessão carrega o `trace_id` da sessão
-  que o originou. Antes, `traceparent: nil` em todo job.
-- A metade de leitura da conversa engine→api saiu da orfandade, incluindo o
+- With **zero collector**, `pnpm dev` produces three log streams sharing
+  the same `trace_id`, generated in the browser. That's the difference
+  between being able to follow a user action across processes and not
+  being able to.
+- One line per request shows the path across layers with each step's
+  duration. As an indented tree in dev; as the `path` field in production.
+- Agents' asynchronous work became genuinely correlatable: the job the
+  Psychologist agent fires on a session closing now carries the
+  `trace_id` of the session that triggered it. Before, every job had
+  `traceparent: nil`.
+- The read half of the engine→api conversation left orphanhood, including
   `llm_turn_stream`.
-- O engine deixou de gastar um batch de exportação condenado em dev e na suite.
-- O log da api ganhou teste de shape, que não existia: uma linha em produção,
-  `trace_id` no topo, e a lista de `redact` como contrato. A lista cresceu com o
-  token de serviço api↔engine, que **não** era redigido.
-- `allowedHeaders` do CORS ficou explícito. Antes a correlação inteira dependia do
-  default do pacote `cors`, que reflete o header pedido no preflight — comportamento
-  implícito de biblioteca, sem teste cobrindo.
-- O engine passou a ter log de acesso (não havia nenhum) e a recusa de token de
-  serviço deixou de ser silenciosa.
-- `WEB_LOG_LEVEL` ligado no k8s: `logger.debug` era código morto em todo ambiente
-  publicado.
-- Dois textos que afirmavam o contrário do comportamento foram corrigidos: o
-  moduledoc de `Engine.Telemetry.Span` e a causa 1 de "quando não há trace" no
-  runbook — esta última já era falsa para o engine antes desta mudança.
+- The engine stopped paying for a doomed export batch in dev and in the
+  test suite.
+- The api's log gained a shape test that didn't exist before: one line in
+  production, `trace_id` at the top, and the `redact` list as a contract.
+  The list grew to include the api↔engine service token, which had
+  **not** been redacted.
+- CORS's `allowedHeaders` became explicit. Before, all correlation
+  depended on the `cors` package's default, which reflects back whatever
+  header was requested in the preflight — implicit library behavior, with
+  no test covering it.
+- The engine gained an access log (there was none before), and refusing a
+  service token stopped being silent.
+- `WEB_LOG_LEVEL` turned on in k8s: `logger.debug` was dead code in every
+  published environment.
+- Two pieces of text that claimed the opposite of the actual behavior
+  were corrected: `Engine.Telemetry.Span`'s moduledoc and cause 1 of "when
+  there's no trace" in the runbook — the latter was already false for the
+  engine even before this change.
 
-## Limitações conhecidas
+## Known limitations
 
-1. **Guard roda antes de interceptor.** `JwtAuthGuard`, `RateLimitGuard` e
-   `RolesGuard` ficam fora do caminho (~1-3ms, já visíveis como spans `pg` no
-   Tempo). O caminho de upgrade é aditivo: mover só o `runWithRequestContext` para
-   um middleware e manter o interceptor semeando e emitindo.
-2. **`depth` sob concorrência é aproximado.** Um `Promise.all` de chamadas
-   decoradas interleava as profundidades e a árvore fica torta. Os caminhos
-   críticos são sequenciais.
-3. **A linha do SSE chega no fechamento do stream**, via `finalize` — possivelmente
-   minutos depois de a requisição começar. É consistente com a linha `res` do
-   pino-http, que também espera a resposta terminar.
-4. **`genReqId` não foi tocado.** Seria uma segunda chave de correlação que nada
-   consome, ao lado do campo que o ADR 0026 chama de contrato. Correlaciona-se por
-   `trace_id`.
-5. **Log da web não chega ao Loki.** O Alloy só lê stdout de pod. O `trace_id` do
-   browser serve para um humano casar a linha do console com o span de servidor —
-   segue valendo o que o ADR 0026 registrou.
-6. **`@Traced` está aplicado só nos caminhos críticos** (sessões, ações, auth e a
-   ponte api↔engine). O resto dos repositórios continua fora, por escolha de
-   escopo, não por impedimento.
-7. **Nenhuma RN foi criada.** As regras de negócio vivem em
-   `apps/api/src/domain/`, que é puro; observabilidade não é regra de negócio.
-   Registrado aqui para não parecer esquecimento.
-8. **A web não ganhou error boundary**, e ~20 `catch {}` mudos seguem mudos fora
-   dos caminhos de auth e chat. Boundary é decisão de UI, e a conversão dos
-   demais é mecânica — os dois merecem mudança própria.
+1. **The guard runs before the interceptor.** `JwtAuthGuard`,
+   `RateLimitGuard` and `RolesGuard` sit outside the path (~1-3ms, already
+   visible as `pg` spans in Tempo). The upgrade path is additive: move
+   just `runWithRequestContext` into a middleware and keep the
+   interceptor seeding and emitting.
+2. **`depth` under concurrency is approximate.** A `Promise.all` of
+   decorated calls interleaves the depths and the tree comes out skewed.
+   Critical paths are sequential.
+3. **The SSE line arrives when the stream closes**, via `finalize` —
+   possibly minutes after the request began. It's consistent with
+   pino-http's `res` line, which also waits for the response to finish.
+4. **`genReqId` wasn't touched.** It would be a second correlation key
+   that nothing consumes, alongside the field ADR 0026 calls a contract.
+   Correlation happens via `trace_id`.
+5. **The web app's log doesn't reach Loki.** Alloy only reads pod stdout.
+   The browser's `trace_id` lets a human match the console line to the
+   server-side span — what ADR 0026 recorded still holds.
+6. **`@Traced` is applied only on the critical paths** (sessions, actions,
+   auth, and the api↔engine bridge). The rest of the repositories remain
+   outside it, by scope choice, not by obstacle.
+7. **No RN was created.** Business rules live in `apps/api/src/domain/`,
+   which is pure; observability isn't a business rule. Recorded here so
+   it doesn't look like an oversight.
+8. **The web app didn't gain an error boundary**, and ~20 silent
+   `catch {}`s remain silent outside the auth and chat paths. A boundary
+   is a UI decision, and converting the rest is mechanical — both deserve
+   their own change.

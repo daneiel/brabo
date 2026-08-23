@@ -19,9 +19,10 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.6.0"
   },
   "scripts": {
+    "start": "node src/index.ts",
     "build": "tsup",
     "smoke": "node scripts/smoke-dist.mjs",
     "test": "vitest run",

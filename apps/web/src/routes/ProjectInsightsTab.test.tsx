@@ -1,10 +1,33 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import insightsEn from '../locales/en/insights.json';
+import insightsPtBR from '../locales/pt-BR/insights.json';
 import { ProjectInsightsTab } from './ProjectInsightsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import { ApiError } from '../lib/api-client';
 import type { PsychologistAnalysis, PsychologistHypothesis } from '../lib/api-types';
+
+// Instância REAL de i18next, com os recursos do namespace "insights" — mesmo
+// padrão de AccountPage.test.tsx/HypothesisCard.test.tsx.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      en: { insights: insightsEn },
+      'pt-BR': { insights: insightsPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'insights',
+    ns: ['insights'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
 
 const listHypotheses = vi.fn();
 const listPsychologistAnalyses = vi.fn();
@@ -76,13 +99,16 @@ function montar() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  const i18n = novaInstanciaI18n();
 
   return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <ProjectInsightsTab projectId="proj-1" />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ProjectInsightsTab projectId="proj-1" />
+        </ToastProvider>
+      </QueryClientProvider>
+    </I18nextProvider>,
   );
 }
 

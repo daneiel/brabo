@@ -1,10 +1,13 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, act, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Handoff, ProposedAction, Session } from '../lib/api-types';
 import type { SessionChannelHandlers } from '../lib/session-channel';
 import { historicoFalso } from '../test/historico-de-eventos';
+// Instância REAL do app (mesmo padrão de SessionPage.arquiteto-modelo-icone.test.tsx):
+// as asserções abaixo esperam texto em pt-BR, e `en` é o idioma DEFAULT.
+import i18n from '../lib/i18n';
 
 /**
  * Três problemas confirmados por investigação de código + observação ao vivo,
@@ -170,13 +173,18 @@ function montar() {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
   canalHandlers = undefined;
   eventos.mockReturnValue({ items: [] });
   acoes.mockReturnValue([]);
   handoffsMock.mockReturnValue([]);
   getSession.mockResolvedValue(sessao());
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('RN-155 — ordemDaAcaoNaTimeline (unidade)', () => {

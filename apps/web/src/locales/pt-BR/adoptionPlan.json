@@ -1,0 +1,18 @@
+{
+  "title": "Adotar repositório existente",
+  "fallbackProjectName": "Projeto",
+  "readingRepo": "Lendo o repositório…",
+  "genericAdoptError": "Não foi possível ler o repositório agora.",
+  "planChangedError": "O plano mudou desde que esta tela carregou. Recarregue para decidir sobre o plano atual.",
+  "decisionError": "Não foi possível registrar a decisão agora.",
+  "introBefore": "Nada foi alterado no repositório. Isto é o que o bootstrap ",
+  "introStrong": "faria",
+  "introAfter": " — nenhuma proteção existente é sobrescrita sem a sua aprovação.",
+  "nothingToDo": "O repositório já está como o template espera. Não há nada a aplicar.",
+  "divergencesTitle": "Divergências",
+  "approvePlan": "Aprovar plano",
+  "adoptAsIs": "Adotar como está",
+  "adoptedAsIsAlert": "Repositório adotado como está. O bootstrap foi dispensado — nada foi alterado.",
+  "goToProject": "Ir para o projeto",
+  "applyingPlan": "Aplicando o plano…"
+}

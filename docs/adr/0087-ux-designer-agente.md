@@ -1,192 +1,203 @@
-# ADR 0087 — O UX Designer entra como agente conversacional
+# ADR 0087 — The UX Designer enters as a conversational agent
 
-- **Status:** Aceito
-- **Data:** 2026-08-17
-- **Contexto:** decisão explícita do dono do produto, antecipando o
-  gatilho de separação que `docs/fluxo.yml` já declarava para o papel
+- **Status:** Accepted
+- **Date:** 2026-08-17
+- **Context:** explicit decision of the product owner, anticipating the
+  separation trigger that `docs/fluxo.yml` already declared for the role
 
-## Contexto
+## Context
 
-`docs/fluxo.yml` (ADR 0085) já registrava `ux-designer` como papel do
-modelo-alvo do time, com `status: proposto`, `hoje_absorvido_por: criativo
-(discovery) + design/ (design system como dado)` e um critério de separação
-objetivo:
+`docs/fluxo.yml` (ADR 0085) already registered `ux-designer` as a
+target-model role for the team, with `status: proposto`,
+`hoje_absorvido_por: criativo (discovery) + design/ (design system as
+data)`, and a written objective separation criterion:
 
-> Quando o projeto GERENCIADO tiver interface própria a desenhar — hoje o
-> design system é insumo estático. Separa quando protótipo virar artefato
-> recorrente.
+> When the MANAGED project has its own interface to design — today the
+> design system is a static input. Separates when the prototype becomes
+> a recurring artifact.
 
-Esse gatilho **não disparou**. O Brabo ainda não constrói projetos com UI
-própria de verdade em produção; o design system (`design/tokens.css`,
-`design/COMPONENTS.md`) continua sendo insumo estático que o Arquiteto e os
-dev agents consultam, nunca um projeto vivo que precise de decisão de UX
-recorrente.
+That trigger **did not fire**. Brabo doesn't yet build projects with
+real UI of their own in production; the design system
+(`design/tokens.css`, `design/COMPONENTS.md`) remains a static input
+that the Arquiteto and dev agents consult, never a live project needing
+recurring UX decisions.
 
-O dono do produto decidiu, mesmo assim, construir o agente agora — decisão
-CONSCIENTE de antecipar, registrada aqui para não ser confundida com um erro
-de leitura do critério. O histórico do que o papel absorvia continua em
-`docs/fluxo.yml`, como comentário: o texto anterior não é apagado, só deixa
-de ser o estado vigente.
+The product owner decided to build the agent now anyway — a CONSCIOUS
+decision to get ahead, recorded here so it isn't mistaken for a
+misreading of the criterion. The history of what the role absorbed
+remains in `docs/fluxo.yml`, as a comment: the previous text isn't
+erased, it just stops being the current state.
 
-## Decisão
+## Decision
 
-**O UX Designer entra como o quinto agente conversacional — Criativo, PO,
-Arquiteto, Dev Lead e agora UX Designer —, SOLO (sem área, sem subagentes),
-espelhando o desenho do `Engine.Agents.DevLeadServer`.**
+**The UX Designer enters as the fifth conversational agent — Criativo,
+PO, Arquiteto, Dev Lead, and now UX Designer —, SOLO (no area, no
+subagents), mirroring the design of `Engine.Agents.DevLeadServer`.**
 
-### As peças
+### The pieces
 
 1. **`Engine.Agents.UxDesignerServer`**
-   (`apps/engine/lib/engine/agents/ux_designer_server.ex`) — GenServer por
-   sessão, rehydration do event log, streaming, laço bounded de tool use com
-   teto 14 (mesmo calibre de Arquiteto/Dev Lead: agente de RACIOCÍNIO, não
-   conversação leve como Criativo/PO, que têm teto 12). Ativado por handoff
-   `accepted` endereçado a "ux-designer" — o mecanismo é GENÉRICO
-   (`ActivateAgentUseCase`/`canActivateAgent` na api já aceitam qualquer
-   agente com handoff aceito; nenhuma linha mudou lá) — e o kickoff só roda
-   num start FRESCO (restart não regera o protótipo).
-2. **O kickoff lê `artifact.product_brief`**, a MESMA "necessidade de
-   negócio" que o Criativo produz — sem artefato novo, mesmo padrão de
-   leitura que `ArquitetoServer.build_kickoff/1` já faz.
-3. **O sistema de design é DESCRITO na identidade**
-   (`Engine.Harness.Agents`, entrada `"ux-designer"`), texto estático com os
-   tokens de `design/tokens.css` (cores semânticas, tipografia, espaçamento,
-   raio) e as convenções de `design/COMPONENTS.md` (variantes de botão,
-   estilo de ícone). Os agentes conversacionais NÃO têm ferramenta de
-   leitura de arquivo do repositório — não havia tool a reusar —, e a
-   identidade é a única camada do prompt presente em TODO turno, não só no
-   kickoff.
+   (`apps/engine/lib/engine/agents/ux_designer_server.ex`) — GenServer
+   per session, event-log rehydration, streaming, bounded tool-use loop
+   with a cap of 14 (same tier as Arquiteto/Dev Lead: a REASONING agent,
+   not light conversation like Criativo/PO, which have a cap of 12).
+   Activated by a handoff `accepted` addressed to "ux-designer" — the
+   mechanism is GENERIC (`ActivateAgentUseCase`/`canActivateAgent` in the
+   api already accept any agent with an accepted handoff; not a line
+   changed there) — and the kickoff only runs on a FRESH start (a restart
+   doesn't regenerate the prototype).
+2. **The kickoff reads `artifact.product_brief`**, the SAME "business
+   need" that Criativo produces — no new artifact, the same reading
+   pattern `ArquitetoServer.build_kickoff/1` already uses.
+3. **The design system is DESCRIBED in the identity**
+   (`Engine.Harness.Agents`, entry `"ux-designer"`), static text with the
+   `design/tokens.css` tokens (semantic colors, typography, spacing,
+   radius) and `design/COMPONENTS.md` conventions (button variants, icon
+   style). Conversational agents do NOT have a repository file-reading
+   tool — there was no tool to reuse —, and the identity is the only
+   prompt layer present in EVERY turn, not just the kickoff.
 4. **`propose_prototype`** (`Engine.Agents.UxDesignerTools`,
-   `apps/engine/lib/engine/agents/ux_designer_tools.ex`) — a ÚNICA
-   ferramenta: `personas`, `jornadas`, `prototipo` (`telas` + `anotacoes`) e
-   `resumo`. Grava `artifact.prototipo_navegavel` e oferece handoff para
-   "po" e para "dev-lead" sobre o MESMO artefato.
-5. **`Engine.Agents.UxDesignerSupervisor`** — cópia exata do padrão de
-   `DevLeadSupervisor`; registrado em `Engine.Application` ao lado dele.
-   `EngineWeb.AgentCommandController` ganhou as três cláusulas (`start`,
-   `message`, `via_for`) que os outros quatro conversacionais já têm.
-6. **`apps/web/src/lib/agents.ts`**: `'ux-designer'` no `AgentKey`, entrada
-   com `color: 'var(--accent)'`. Nenhum dos cinco tokens semânticos de
-   `design/tokens.css` estava livre de outro agente — `--accent` é o menos
-   reusado (só o Arquiteto), e a regra do design system proíbe hex novo.
-   `icon: PencilIcon`, o único ícone do catálogo semanticamente ligado a
-   design/edição ainda sem dono.
+   `apps/engine/lib/engine/agents/ux_designer_tools.ex`) — the ONLY
+   tool: `personas`, `jornadas`, `prototipo` (`telas` + `anotacoes`), and
+   `resumo`. Writes `artifact.prototipo_navegavel` and offers a handoff to
+   "po" and to "dev-lead" over the SAME artifact.
+5. **`Engine.Agents.UxDesignerSupervisor`** — an exact copy of the
+   `DevLeadSupervisor` pattern; registered in `Engine.Application`
+   alongside it. `EngineWeb.AgentCommandController` gained the three
+   clauses (`start`, `message`, `via_for`) the other four conversational
+   agents already have.
+6. **`apps/web/src/lib/agents.ts`**: `'ux-designer'` in `AgentKey`, entry
+   with `color: 'var(--accent)'`. None of the five semantic tokens of
+   `design/tokens.css` was free of another agent — `--accent` is the
+   least reused (only the Arquiteto), and the design-system rule
+   prohibits new hex codes. `icon: PencilIcon`, the only icon in the
+   catalog semantically tied to design/editing that was still unowned.
 
-### `artifact.prototipo_navegavel`: sem tabela, e sem caso de uso dedicado na api
+### `artifact.prototipo_navegavel`: no table, and no dedicated api use case
 
-Esta é a decisão que precisou de investigação antes de codar, porque os dois
-precedentes de "artefato sem tabela" (`artifact.project_image`, ADR 0065;
-`artifact.c4_diagram`, RN-149) usam um caminho DIFERENTE do que
-`artifact.business_rule`/`artifact.product_brief` usam, e os dois caminhos
-parecem intercambiáveis até se olhar POR QUÊ.
+This is the decision that needed investigation before coding, because the
+two precedents of "artifact without table" (`artifact.project_image`, ADR
+0065; `artifact.c4_diagram`, RN-149) use a DIFFERENT path than the one
+`artifact.business_rule`/`artifact.product_brief` use, and the two paths
+look interchangeable until you look at WHY.
 
-`choose_project_image`/`create_c4_diagram` têm caso de uso PRÓPRIO na api
-(`DecidirImagemDoProjetoUseCase`, `CreateC4DiagramUseCase`) porque cada um
-tem um motivo estrutural para isso:
+`choose_project_image`/`create_c4_diagram` have their OWN use case in the
+api (`DecidirImagemDoProjetoUseCase`, `CreateC4DiagramUseCase`) because
+each has a structural reason for that:
 
-- o Container level do C4 é DERIVADO do `module_map` vigente — conteúdo que
-  o modelo não pode redigitar sem arriscar divergir da fonte real;
-- a decisão de imagem tem recusa de domínio (tag explícita, teto de
-  recursos) que mais de um consumidor precisa respeitar da mesma forma.
+- the C4 Container level is DERIVED from the current `module_map` —
+  content the model can't retype without risking divergence from the real
+  source;
+- the image decision has a domain rejection (explicit tag, resource cap)
+  that more than one consumer needs to respect the same way.
 
-`propose_prototype` não tem nenhum dos dois. Personas, jornadas, telas e
-anotações são conteúdo AUTOCONTIDO — só o próprio UX Designer escreve, só
-ele lê de volta, nada é derivado de outro artefato e não há uma segunda
-regra de domínio compartilhada esperando reuso. Por isso ele segue o
-caminho do `business_rule`/`product_brief`: validação de FORMA no ENGINE
-(`Engine.Harness.ArtifactSchemas`, tipo `"prototipo_navegavel"`) e gravação
-pelo caminho GENÉRICO que a api já expõe para qualquer `session_event`
-(`EngineApiClient.append_event_returning/3`, sem rota nova). Abrir um
-`CreatePrototipoUseCase` replicaria a forma de `CreateC4DiagramUseCase` sem
-nenhum dos dois motivos que a justificam ali — complexidade sem argumento.
+`propose_prototype` has neither. Personas, journeys, screens, and
+annotations are SELF-CONTAINED content — only the UX Designer itself
+writes it, only it reads it back, nothing is derived from another
+artifact, and there's no second shared domain rule waiting to be reused.
+So it follows the `business_rule`/`product_brief` path: FORM validation
+in the ENGINE (`Engine.Harness.ArtifactSchemas`, type
+`"prototipo_navegavel"`) and writing through the GENERIC path the api
+already exposes for any `session_event`
+(`EngineApiClient.append_event_returning/3`, no new route). Opening a
+`CreatePrototipoUseCase` would replicate `CreateC4DiagramUseCase`'s form
+without either of the two reasons that justify it there —
+complexity without an argument.
 
-### Um artefato, dois handoffs — nunca dois artefatos
+### One artifact, two handoffs — never two artifacts
 
-`docs/fluxo.yml` lista duas saídas do papel: `prototipo` (para o PO) e
-`spec-visual` (para o Dev Lead). A tentação óbvia era um segundo tool call
-ou um segundo artefato para "spec-visual". A decisão foi NÃO duplicar: o
-protótipo (telas + anotações de comportamento) É a spec visual — o PO lê
-`resumo`/`prototipo` para desenhar o backlog, o Dev Lead lê as MESMAS
-`telas`/`anotacoes` como referência de implementação. Duas cópias do mesmo
-conteúdo divergiriam na primeira revisão feita de um lado só — o mesmo
-argumento que já vale para o C4 não redigitar o `module_map`.
+`docs/fluxo.yml` lists two outputs of the role: `prototipo` (to the PO)
+and `spec-visual` (to the Dev Lead). The obvious temptation was a second
+tool call or a second artifact for "spec-visual." The decision was NOT
+to duplicate: the prototype (screens + behavior annotations) IS the
+visual spec — the PO reads `resumo`/`prototipo` to design the backlog,
+the Dev Lead reads the SAME `telas`/`anotacoes` as implementation
+reference. Two copies of the same content would diverge the first time
+only one side gets revised — the same argument that already applies to
+the C4 not retyping the `module_map`.
 
-### O turno para no primeiro sucesso — a lição do Dev Lead, sem a suspensão dele
+### The turn stops at the first success — the Dev Lead's lesson, without its suspension
 
-`UxDesignerServer` reusa a metade do desenho do `DevLeadServer` que
-sobrevive sem o ADR 0086: um `propose_prototype` BEM-SUCEDIDO encerra o
-turno, para o modelo não propor de novo e produzir dois protótipos com o
-mesmo total (o defeito real que motivou aquela guarda no Dev Lead). A OUTRA
-metade do ADR 0086 — suspender esperando `proposed_action` — não se aplica
-aqui: `propose_prototype` não tem efeito externo nenhum (é conteúdo, não
-ação; não há paralelo do "gasto que o teto da RN-083 cobra"), então nasce
-como evento simples, do jeito que `execution.plan_proposed` nascia antes do
-0086.
+`UxDesignerServer` reuses the half of `DevLeadServer`'s design that
+survives without ADR 0086: a SUCCESSFUL `propose_prototype` ends the
+turn, so the model doesn't propose again and produce two prototypes for
+the same total (the real defect that motivated that guard in the Dev
+Lead). The OTHER half of ADR 0086 — suspending to wait for a
+`proposed_action` — does NOT apply here: `propose_prototype` has no
+external effect at all (it's content, not action; there's no parallel to
+the "spend the RN-083 cap charges for"), so it's born as a simple event,
+the way `execution.plan_proposed` was born before 0086.
 
-## Consequências
+## Consequences
 
-**A favor**
+**For**
 
-- O papel entra ativo com o MESMO rigor dos outros quatro conversacionais —
-  teto de iterações, rehydration, falha narrada com origem (RN-059/163) —,
-  em vez de crescer como funcionalidade ad-hoc dentro do Criativo.
-- Zero rota nova na api: o mecanismo de ativação por handoff, o
-  `append_event_returning` genérico e o `create_handoff` genérico já
-  bastavam. A única superfície nova na api é o campo `uxDesignerActive` no
-  roster (RN-287), simétrico ao que `infraActive` já fazia.
-- `docs/fluxo.yml` deixa de descrever um papel que o código não tinha —
-  `status: active`, entradas/saídas reais, sem o sufixo `_alvo`.
+- The role enters active with the SAME rigor as the other four
+  conversational agents — iteration cap, rehydration, failure narrated
+  with origin (RN-059/163) —, instead of growing as an ad-hoc feature
+  inside Criativo.
+- Zero new api route: the handoff-based activation mechanism, the
+  generic `append_event_returning`, and the generic `create_handoff`
+  already sufficed. The only new api surface is the `uxDesignerActive`
+  field on the roster (RN-287), symmetric to what `infraActive` already
+  did.
+- `docs/fluxo.yml` stops describing a role the code didn't have —
+  `status: active`, real inputs/outputs, no `_alvo` suffix.
 
-**Contra**
+**Against**
 
-- **Gatilho antecipado, por decisão explícita.** O critério de separação
-  original (interface própria em projeto gerenciado) não se sustenta
-  sozinho como justificativa — é aceito porque o dono do produto pediu,
-  ciente disso.
-- **`teste-de-usabilidade` fica fora de alcance.** Exige usuário humano
-  real testando a interface; nenhum agente substitui isso. Não simulado.
-- **`metricas-de-uso` segue lacuna declarada.** Depende do papel
-  `analytics` (métrica de PRODUTO), que `docs/fluxo.yml` mantém `proposto`
-  — sem ele, a entrada correspondente do UX Designer não tem fonte real.
-- **O card do dashboard e o painel do time calculam `uxDesignerActive`
-  separadamente** (RN-090) — mesma duplicação que `infraActive` já tinha,
-  aceita pelo mesmo motivo: a api responde FATOS, a apresentação é do web.
+- **Anticipated trigger, by explicit decision.** The original separation
+  criterion (own interface in a managed project) doesn't hold up on its
+  own as a justification — it's accepted because the product owner asked
+  for it, aware of that.
+- **`teste-de-usabilidade` remains out of reach.** It requires a real
+  human user testing the interface; no agent replaces that. Not
+  simulated.
+- **`metricas-de-uso` remains a declared gap.** It depends on the
+  `analytics` role (PRODUCT metric), which `docs/fluxo.yml` keeps as
+  `proposto` — without it, the UX Designer's corresponding input has no
+  real source.
+- **The dashboard card and the team panel calculate `uxDesignerActive`
+  separately** (RN-090) — the same duplication `infraActive` already
+  had, accepted for the same reason: the api answers FACTS, the
+  presentation is the web's job.
 
-## Alternativas consideradas
+## Alternatives considered
 
-**Esperar o gatilho de separação disparar.** Era a leitura literal de
-`docs/fluxo.yml` antes desta mudança. Recusada por decisão explícita do
-dono do produto — ver Contexto.
+**Wait for the separation trigger to fire.** This was the literal
+reading of `docs/fluxo.yml` before this change. Rejected by explicit
+decision of the product owner — see Context.
 
-**`artifact.prototipo_navegavel` com caso de uso dedicado na api, no
-padrão de `CreateC4DiagramUseCase`.** Recusada: nenhum dos dois motivos que
-justificam aquele padrão (conteúdo derivado, recusa de domínio
-compartilhada) se aplica aqui. Copiar a forma sem o motivo é complexidade
-que a próxima pessoa lendo o código teria de justificar sozinha.
+**`artifact.prototipo_navegavel` with a dedicated api use case, in the
+`CreateC4DiagramUseCase` pattern.** Rejected: neither of the two reasons
+that justify that pattern (derived content, shared domain rejection)
+applies here. Copying the form without the reason is complexity the next
+person reading the code would have to justify on their own.
 
-**Um segundo tool call/artefato para "spec-visual".** Recusada: o protótipo
-já é a spec visual. Duas cópias do mesmo conteúdo (uma para o PO, outra
-para o Dev Lead) arriscariam divergir na primeira revisão feita de um lado
-só.
+**A second tool call/artifact for "spec-visual."** Rejected: the
+prototype already IS the visual spec. Two copies of the same content
+(one for the PO, another for the Dev Lead) would risk diverging the
+first time only one side gets revised.
 
-**UX Designer como subagente de uma área nova.** Recusada: nada no papel
-pede delegação interna nem múltiplos executores em paralelo — é raciocínio
-de UMA pessoa por sessão, como Criativo/PO/Arquiteto/Dev Lead já são.
+**UX Designer as a subagent of a new area.** Rejected: nothing in the
+role calls for internal delegation or multiple parallel executors — it's
+ONE person's reasoning per session, as Criativo/PO/Arquiteto/Dev Lead
+already are.
 
-## Referências
+## References
 
-- `docs/fluxo.yml` — bloco `id: ux-designer`, o gatilho de separação
-  original
+- `docs/fluxo.yml` — `id: ux-designer` block, the original separation
+  trigger
 - [ADR 0085](0085-fluxo-como-registro-declarativo.md) — `docs/fluxo.yml`
-  como registro declarativo dos papéis
-- [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) — cria o Dev Lead,
-  o molde que este ADR replica
-- [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md) — por que
-  `propose_prototype` NÃO suspende (não tem efeito externo)
+  as the declarative record of roles
+- [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) — creates the Dev
+  Lead, the mold this ADR replicates
+- [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md) — why
+  `propose_prototype` does NOT suspend (no external effect)
 - [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md),
-  [RN-149](../business-rules.md#rn-149) — o padrão de artefato sem tabela
-  que `artifact.prototipo_navegavel` segue, e por que ele NÃO precisa do
-  caso de uso dedicado que os outros dois têm
+  [RN-149](../business-rules.md#rn-149) — the artifact-without-table
+  pattern `artifact.prototipo_navegavel` follows, and why it does NOT
+  need the dedicated use case the other two have
 - `apps/engine/lib/engine/agents/ux_designer_server.ex`,
   `ux_designer_tools.ex`, `ux_designer_supervisor.ex`
 - `apps/engine/lib/engine/harness/agents.ex`, `artifact_schemas.ex`

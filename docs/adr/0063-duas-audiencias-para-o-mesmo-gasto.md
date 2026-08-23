@@ -1,133 +1,143 @@
-# ADR 0063 — Duas audiências para o mesmo gasto: a fatura do owner e o consumo do membro
+# ADR 0063 — Two audiences for the same spend: the owner's bill and the member's consumption
 
-- **Status:** aceito
-- **Data:** 2026-08-09
-- **Contexto anterior:** [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
-  (o preço congelado em `token_usage`, que é o que torna qualquer relatório
-  reproduzível), [RN-058](../business-rules.md#rn-058) (a chave que o agente
-  gasta é a do owner) e [RN-060](../business-rules.md#rn-060) (o gasto das
-  chaves é do owner, e só ele vê)
+- **Status:** accepted
+- **Date:** 2026-08-09
+- **Prior context:** [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+  (the price frozen into `token_usage`, which is what makes any report
+  reproducible), [RN-058](../business-rules.md#rn-058) (the key an agent
+  spends is the owner's) and [RN-060](../business-rules.md#rn-060) (spend on
+  those keys belongs to the owner, and only they see it)
 
-## Contexto
+## Context
 
-O pedido era uma aba de resumo de gastos, no espírito da tela de *activity* do
-OpenRouter, mas falando dos providers, do owner e dos agentes deste produto. A
-decisão de quem vê o quê veio junto e é do usuário: **o owner vê tudo do
-workspace; o membro vê só o próprio consumo.**
+The request was a spend-summary tab, in the spirit of OpenRouter's *activity*
+screen, but talking about this product's providers, owner and agents. The
+decision of who sees what came along with it and is the user's: **the owner
+sees the whole workspace; the member sees only their own consumption.**
 
-O dado nunca foi o problema. `token_usage` tem tudo em coluna desde a Fase 9 —
-provider, modelo, ator, tokens, custo, origem do binding, latência, e o preço
-que produziu o custo, congelado no instante da chamada pelo
-[ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md). O que faltava eram as
-**agregações**: existiam cinco, todas por agente ou por provider×mês, e nenhuma
-por modelo, por projeto dentro do workspace, por sessão ou por pessoa.
+The data was never the problem. `token_usage` has had everything in columns
+since Phase 9 — provider, model, actor, tokens, cost, binding origin,
+latency, and the price that produced the cost, frozen at call time by
+[ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md).
+What was missing were the **aggregations**: five existed, all by agent or by
+provider×month, and none by model, by project within the workspace, by
+session, or by person.
 
-A dificuldade está em outro lugar, e é uma colisão entre duas regras que o
-produto já tinha:
+The difficulty lies elsewhere, and it's a collision between two rules the
+product already had:
 
-- pela **RN-058**, a chave de LLM que qualquer agente gasta é a do **owner do
-  workspace**. Um membro rodando um agente gasta a credencial de outra pessoa;
-- pela **RN-060**, o relatório desse gasto é do owner **e só dele**, com
-  `@RequireRole('owner')` na rota. Não é `maintainer`: a fatura do dono não é
-  assunto de quem opera um projeto.
+- by **RN-058**, the LLM key any agent spends is the **workspace owner's**.
+  A member running an agent spends someone else's credential;
+- by **RN-060**, the report of that spend belongs to the owner **and only
+  them**, with `@RequireRole('owner')` on the route. Not `maintainer`: the
+  owner's bill isn't the business of whoever operates a project.
 
-Juntas, elas fazem "quanto EU gastei" ser, literalmente, um pedido de fatia da
-fatura de outra pessoa. Duas saídas fáceis existiam, e as duas são erradas:
+Together, they make "how much did I spend" literally a request for a slice of
+someone else's bill. Two easy paths existed, and both are wrong:
 
-1. **abrir o relatório de credencial ao membro**, filtrando as linhas dele.
-   Isso revoga a RN-060 pela porta dos fundos — a resposta continuaria falando
-   de provider e de chave, que é exatamente o que a regra reserva ao dono, e
-   bastaria o membro somar as linhas para reconstruir a conta;
-2. **não mostrar nada ao membro**. Também é errado, e por um motivo prático: o
-   consumo dele existe, está registrado com o nome dele em `token_usage`, e a
-   única pessoa que não pode vê-lo seria justamente ele.
+1. **opening the credential report to the member**, filtering their rows.
+   That revokes RN-060 through the back door — the response would still talk
+   about provider and key, which is exactly what the rule reserves for the
+   owner, and the member would just need to sum the rows to reconstruct the
+   bill;
+2. **showing the member nothing**. Also wrong, and for a practical reason:
+   their consumption exists, it's recorded under their name in
+   `token_usage`, and the one person who couldn't see it would be precisely
+   them.
 
-## Decisão
+## Decision
 
-**As duas audiências recebem relatórios diferentes porque fazem perguntas
-diferentes. Nenhum dos dois é um recorte do outro.**
+**The two audiences get different reports because they ask different
+questions. Neither one is a slice of the other.**
 
-**A RN-060 continua governando o relatório por CREDENCIAL.** `GET
-/workspaces/:id/credential-spend`, o `GetCredentialSpendUseCase` e o
-`CredentialSpendSection` ficam como estão: agrupados por **provider**, que é a
-unidade da chave, exigindo `owner`, e respondendo à pergunta da **fatura** —
-"quanto saiu da minha chave da OpenRouter este mês". A aba nova o **reaproveita
-inteiro** em vez de reescrevê-lo.
+**RN-060 continues to govern the report BY CREDENTIAL.** `GET
+/workspaces/:id/credential-spend`, `GetCredentialSpendUseCase` and
+`CredentialSpendSection` stay as they are: grouped by **provider**, the
+unit the key belongs to, requiring `owner`, and answering the **bill**
+question — "how much came out of my OpenRouter key this month". The new tab
+**reuses it whole** instead of rewriting it.
 
-**A visão do membro é por ATOR**, em tokens e custo **estimado**, e **não quebra
-por provider nem por credencial**. `GET /projects/:id/spend/me` devolve o
-consumo de quem chamou, por sessão e por dia, dentro de um projeto. O ator sai
-do **token autenticado**, e o caso de uso não expõe forma de perguntar por
-outro: não existe parâmetro onde escrever o id de outra pessoa. "Membro não vê
-linha de outro ator" é uma propriedade da assinatura, não uma checagem que
-alguém pode esquecer de chamar.
+**The member's view is by ACTOR**, in tokens and **estimated** cost, and it
+**never breaks down by provider or credential**. `GET
+/projects/:id/spend/me` returns the caller's own consumption, by session and
+by day, within a project. The actor comes from the **authenticated token**,
+and the use case exposes no way to ask for another one: there's no
+parameter where you can write someone else's id. "A member doesn't see
+another actor's row" is a property of the signature, not a check someone
+could forget to call.
 
-**Agente não entra na conta do membro.** `token_usage` registra **quem gastou**,
-não quem mandou gastar; atribuir um agente a quem o iniciou seria inventar um
-dado que a tabela não tem. O que os agentes gastam aparece no relatório do
-owner, que é de quem é a chave.
+**Agents don't enter the member's account.** `token_usage` records **who
+spent**, not who told it to spend; attributing an agent to whoever started
+it would be inventing data the table doesn't have. What the agents spend
+shows up in the owner's report, since the key belongs to them.
 
-**O eixo de provider não existe na agregação nova.** As cinco dimensões novas
-(`model`, `project`, `actor`, `session`, `day`) vivem num método só do
-repositório, `sumGroupedBy(dimensao, escopo)`, e `provider` **não é uma delas**.
-A ausência é estrutural, não um esquecimento: quebrar gasto por provider é
-quebrar por credencial, e é assim que a visão do membro fica impedida de ganhar
-esse eixo por descuido — não há argumento a passar. Pelo mesmo motivo, dois
-providers servindo o **mesmo nome de modelo** caem numa linha só na dimensão
-`model`: separá-los reintroduziria o eixo de credencial com outro nome.
+**The provider axis doesn't exist in the new aggregation.** The five new
+dimensions (`model`, `project`, `actor`, `session`, `day`) live in a single
+repository method, `sumGroupedBy(dimension, scope)`, and `provider` is
+**not one of them**. The absence is structural, not an oversight: breaking
+down spend by provider is breaking it down by credential, and this is what
+keeps the member's view from gaining that axis by accident — there's no
+argument to pass. For the same reason, two providers serving the **same
+model name** collapse into a single row in the `model` dimension: telling
+them apart would reintroduce the credential axis under another name.
 
-**O owner vê as duas coisas** — a quebra do workspace por modelo, projeto, ator
-e dia, e a fatura por credencial logo abaixo — porque ele é a única pessoa que
-pode ver as duas. A tela nunca dispara a rota de owner sem o papel: pedir um 403
-de propósito é ruído no log de segurança.
+**The owner sees both things** — the workspace breakdown by model, project,
+actor and day, and the credential bill right below it — because they're the
+only person who can see both. The screen never fires the owner route
+without the role: triggering a 403 on purpose is noise in the security log.
 
-**Sem biblioteca de gráficos.** São duas formas, uma série cada: barras por dia
-(magnitude discreta — uma linha sugeriria gasto contínuo entre dois dias, que
-não existe) e barras horizontais de ranking. `<rect>` e `<span>` em SVG inline e
-CSS cobrem, e uma dependência de gráficos aqui seria peso de runtime por uma
-geometria que cabe em dez linhas. A série diária vem **densa** da api: dia sem
-gasto entra com zero, senão três chamadas em três semanas viram três barras
-coladas, indistinguíveis de três dias seguidos de uso.
+**No charting library.** There are two shapes, one series each: bars per day
+(discrete magnitude — a line would suggest continuous spend between two
+days, which doesn't exist) and horizontal ranking bars. `<rect>` and
+`<span>` in inline SVG and CSS cover it, and a charting dependency here would
+be runtime weight for a geometry that fits in ten lines. The daily series
+comes **dense** from the api: a day with no spend enters as zero, otherwise
+three calls across three weeks turn into three adjacent bars,
+indistinguishable from three consecutive days of use.
 
-## Consequências
+## Consequences
 
-**A pergunta do membro fica declaradamente incompleta, e é o preço certo.** Ele
-vê o próprio chat e não vê os agentes que rodou. Enquanto a chave for a do owner
-(RN-058), qualquer número "de agente" mostrado ao membro seria gasto de outra
-pessoa com o nome dele em cima. Se um dia o produto tiver credencial por pessoa,
-esta decisão precisa ser revisitada — e será por um ADR novo, não editando este.
+**The member's question stays declaredly incomplete, and that's the right
+price.** They see their own chat and don't see the agents they ran. As long
+as the key belongs to the owner (RN-058), any "agent" number shown to the
+member would be someone else's spend with their name on top. If the product
+ever gets per-person credentials, this decision needs revisiting — and it
+will be through a new ADR, not by editing this one.
 
-**São duas rotas e não uma com ramificação por papel.** Um único endpoint que
-mudasse de forma conforme quem chama teria dois contratos com o mesmo nome, e o
-teste de superfície (`docs/security-surface.md`) classificaria uma rota só com o
-papel mais permissivo — perdendo justamente a distinção que este ADR existe para
-manter.
+**These are two routes, not one branching by role.** A single endpoint that
+changed shape depending on who calls it would be two contracts under one
+name, and the surface test (`docs/security-surface.md`) would classify a
+single route with the most permissive role — losing exactly the distinction
+this ADR exists to maintain.
 
-**A dimensão `model` mistura providers.** Quem quiser saber por onde um modelo
-foi servido não descobre aqui, de propósito. `upstream_provider` continua na
-tabela para quem precisar investigar caso a caso.
+**The `model` dimension mixes providers.** Whoever wants to know which
+provider served a model doesn't find out here, on purpose.
+`upstream_provider` stays in the table for anyone who needs to investigate
+case by case.
 
-**Nenhuma migration, e nenhum índice — ainda.** `token_usage` tem só a PK, e as
-duas consultas fazem *seq scan*. Medido com 525 mil linhas no banco de teste
-isolado: o relatório do workspace sai em **55 ms** e o do membro em **38 ms**.
-Com um índice em `token_usage(created_at)` os mesmos planos viram *bitmap heap
-scan* e caem para **32 ms** e **19 ms**. O ganho é real e o índice é barato, mas
-o slot de migration desta onda é de outra fase; ele entra depois, com a medição
-já feita e registrada aqui. O que muda a conta é volume: as duas consultas leem
-a janela inteira, e o custo cresce com o tamanho de `token_usage`, não com o do
-pedido.
+**No migration, and no index — yet.** `token_usage` only has the PK, and
+both queries do a *seq scan*. Measured with 525,000 rows in the isolated
+test database: the workspace report comes back in **55 ms** and the
+member's in **38 ms**. With an index on `token_usage(created_at)` the same
+plans turn into a *bitmap heap scan* and drop to **32 ms** and **19 ms**.
+The gain is real and the index is cheap, but this wave's migration slot
+belongs to another phase; it goes in later, with the measurement already
+done and recorded here. What changes the cost is volume: both queries read
+the entire window, and the cost grows with the size of `token_usage`, not
+with the size of the request.
 
-**A janela é deslizante e tem teto (180 dias, padrão 30).** Um relatório sem
-teto seria um convite a varrer a tabela inteira por query string, e a lição do
-`429` que virava tela branca (RN-088/RN-090) é recente demais para ignorar.
+**The window is sliding and capped (180 days, default 30).** A report
+without a cap would be an invitation to scan the whole table via query
+string, and the lesson of the `429` that turned into a blank screen
+(RN-088/RN-090) is too recent to ignore.
 
-**O custo mostrado ao membro é estimado, e a tela diz isso.** Ele vem do preço
-congelado no instante da chamada (ADR 0042), que é o melhor número que existe —
-mas a fatura que chega ao owner é do provider, e nunca prometemos que os dois
-batem ao centavo.
+**The cost shown to the member is estimated, and the screen says so.** It
+comes from the price frozen at call time (ADR 0042), which is the best
+number available — but the bill that reaches the owner comes from the
+provider, and we never promise the two match to the cent.
 
-**Fica de fora, declarado:** moeda e taxa de câmbio (backlog, e converter com
-taxa inventada seria pior que dólar honesto), gasto por área (cortado desde o
-ADR 0038 — os tetos reais continuam em projeto, sessão e task) e qualquer
-exportação. A aba **lê**: não há verbo de escrita nela, e é a ausência de verbo
-que torna essa fronteira verificável.
+**Left out, declared:** currency and exchange rate (backlog, and converting
+with a made-up rate would be worse than an honest dollar amount), spend by
+area (cut since ADR 0038 — real caps stay at project, session and task) and
+any export. The tab **reads**: there's no write verb in it, and it's the
+absence of a verb that makes that boundary verifiable.

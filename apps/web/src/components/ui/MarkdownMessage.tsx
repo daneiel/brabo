@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   parseMarkdown,
   normalizarLinguagemDoFence,
@@ -65,6 +66,7 @@ function textoSimples(nodes: MdInline[]): string {
 }
 
 function CodeFence({ lang, content }: { lang: string; content: string }) {
+  const { t } = useTranslation('ui');
   const linguagem = normalizarLinguagemDoFence(lang);
   const terminal = LINGUAGENS_DE_TERMINAL.has(linguagem);
   const linhasFonte = content.split('\n');
@@ -73,7 +75,7 @@ function CodeFence({ lang, content }: { lang: string; content: string }) {
   return (
     <div className={[styles.fence, terminal && styles.fenceTerminal].filter(Boolean).join(' ')}>
       <div className={styles.fenceCabecalho}>
-        <span>{lang.trim() || 'texto'}</span>
+        <span>{lang.trim() || t('markdownMessage.codeFence.defaultLanguage')}</span>
       </div>
       <pre className={styles.fencePre}>
         <code>
@@ -120,6 +122,7 @@ function TabelaMarkdown({
   aligns: MdAlinhamento[];
   rows: MdInline[][][];
 }) {
+  const { t } = useTranslation('ui');
   const columns: TableColumn<{ celulas: MdInline[][]; indice: number }>[] = header.map(
     (celula, c) => ({
       key: String(c),
@@ -143,7 +146,7 @@ function TabelaMarkdown({
         columns={columns}
         rows={rows.map((celulas, i) => ({ celulas, indice: i }))}
         rowKey={(row) => String(row.indice)}
-        emptyMessage="Tabela sem linhas."
+        emptyMessage={t('markdownMessage.table.emptyMessage')}
       />
     </div>
   );

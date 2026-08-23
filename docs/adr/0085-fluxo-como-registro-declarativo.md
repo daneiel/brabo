@@ -1,50 +1,53 @@
-# ADR 0085 — Fluxo de papéis como registro declarativo (fluxo.yml)
+# ADR 0085 — Role flow as a declarative registry (fluxo.yml)
 
 ## Status
-Proposto
+Proposed
 
-## Contexto
-O produto tem três verdades sobre o time de agentes em três lugares:
-o catálogo (`agent-areas.ts`, uma fonte, FASE 18), o controle
-(`docs/gates.yml`, ADR 0054) e as RELAÇÕES — quem entrega o quê a
-quem — que só existem implícitas em prompts, casos de uso e no
-histórico de ADRs. Relação implícita não é auditável nem medível. O
-modelo de time desenhado em ago/2026 (mapa de profissões de mercado →
-agentes) produziu essa terceira peça sem lugar para morar, e a
-auditoria contra o produto divergiu em quatro pontos justamente por
-falta dela.
+## Context
+The product holds three truths about the agent team in three places:
+the catalog (`agent-areas.ts`, single source, PHASE 18), the control
+(`docs/gates.yml`, ADR 0054), and the RELATIONSHIPS — who delivers what
+to whom — which only exist implicitly in prompts, use cases, and the ADR
+history. An implicit relationship is neither auditable nor measurable.
+The team model designed in Aug/2026 (market-profession map → agents)
+produced this third piece with nowhere to live, and auditing it against
+the product diverged on exactly four points for lack of it.
 
-## Decisão
-`docs/fluxo.yml` versionado, segregado por camada, com contratos por
-papel: missão, entradas/saídas tipadas (artefato + origem/destino +
-via), gate de saída referenciando gates.yml, status
-(`active|planned|proposto|em-refinamento`) e absorções declaradas.
-Regras:
-- Papel `proposto` DECLARA quem o absorve hoje e o critério objetivo
-  de separação — o organograma-alvo vira sequência de ativação, nunca
-  aspiração.
-- Papel que referencia gate inexistente no gates.yml reprova em teste;
-  gate ativo sem papel dono reprova.
-- Papel `em-refinamento` mantém código intocado e sai do fluxo formal;
-  as pendências que a suspensão cria são declaradas no próprio arquivo.
-- Relação com status `lacuna` é backlog rastreável, nunca promessa.
+## Decision
+`docs/fluxo.yml`, versioned, segmented by layer, with per-role contracts:
+mission, typed inputs/outputs (artifact + origin/destination + via),
+exit gate referencing gates.yml, status
+(`active|planned|proposto|em-refinamento`) and declared absorptions.
+Rules:
+- A `proposto` role DECLARES who absorbs it today and the objective
+  criterion for separation — the target org chart becomes an activation
+  sequence, never an aspiration.
+- A role that references a gate missing from gates.yml fails the test;
+  an active gate with no owning role fails too.
+- An `em-refinamento` role keeps its code untouched and drops out of the
+  formal flow; the pending items the suspension creates are declared in
+  the file itself.
+- A relationship with `lacuna` status is trackable backlog, never a
+  promise.
 
-## Alternativas consideradas
-- Manter implícito: rejeitado — foi a ausência desta peça que fez a
-  auditoria divergir do produto.
-- Fundir com gates.yml: rejeitado — controle e relação mudam por
-  motivos diferentes (ADR 0054 declara travas; este declara contratos).
-- Registrar só os papéis ativos: rejeitado — sem os `proposto` com
-  critério, cada nova capacidade redescobriria o modelo do zero.
+## Alternatives considered
+- Keep it implicit: rejected — it was the absence of this piece that
+  made the audit diverge from the product.
+- Merge with gates.yml: rejected — control and relationship change for
+  different reasons (ADR 0054 declares locks; this one declares
+  contracts).
+- Register only active roles: rejected — without the `proposto` ones
+  and their criteria, every new capability would rediscover the model
+  from scratch.
 
-## Consequências
-- A ativação de Staff/Platform e dos gates propostos
+## Consequences
+- Activating Staff/Platform and the proposed gates
   (necessidade-validada, adr-aprovado, implementavel,
-  prototipo-validado) vira mudança de dado + ADR próprio.
-- Psicólogo/Anamnese em refinamento ficam com pendências visíveis
-  (autor da proposta de teto RN-086; gatilho do Staff).
-- A tabela de gatilhos do modelo-de-time.md é o roteiro de ondas
-  futuras: cada gatilho dispara a separação de papel correspondente.
+  prototipo-validado) becomes a data change + its own ADR.
+- Psychologist/Anamnese under refinement are left with visible pending
+  items (author of the cap proposal RN-086; the Staff's trigger).
+- The trigger table in modelo-de-time.md is the roadmap for future
+  waves: each trigger fires the separation of the corresponding role.
 
-## Referências
-ADR 0038, 0053, 0054; RN-083/086/087; FASE 15/18.
+## References
+ADR 0038, 0053, 0054; RN-083/086/087; PHASE 15/18.

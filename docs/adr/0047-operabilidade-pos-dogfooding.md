@@ -1,114 +1,126 @@
-# 0047 — Operabilidade pós-dogfooding: o fechamento da Fase 12
+# 0047 — Post-dogfooding operability: closing Phase 12
 
-## Contexto
+## Context
 
-A Fase 10 foi a primeira execução real do Brabo construindo o próprio Brabo. Ela
-produziu dezessete achados, conservados em
-[O que o primeiro dogfooding ensinou](../explanation/primeiro-dogfooding.md).
-Três deles eram de **operabilidade** — o que separa um experimento conduzido à
-mão de um sistema com que se convive:
+Phase 10 was Brabo's first real execution building Brabo itself. It
+produced seventeen findings, preserved in
+[What the first dogfooding taught us](../explanation/primeiro-dogfooding.md).
+Three of them were about **operability** — what separates an
+experiment run by hand from a system you can live with:
 
-| # | o que era | fechado por |
+| # | what it was | closed by |
 |---|---|---|
-| 1 | o produto só sabia CRIAR repositório; apontar um projeto para um repo existente exigia inserir linhas à mão em duas tabelas | [ADR 0044](0044-adocao-de-repositorio-existente.md) |
-| 10 | um dev agent processava UMA task e parava; a fase rodou em tandas, com restart do engine entre elas | [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) |
-| 13 | a promoção `draft → ready` era automática na criação — o PO decidia sozinho o que entrava na fila dos devs | [ADR 0046](0046-promocao-de-story-com-autoridade-do-usuario.md) |
+| 1 | the product only knew how to CREATE a repository; pointing a project at an existing repo required inserting rows by hand into two tables | [ADR 0044](0044-adocao-de-repositorio-existente.md) |
+| 10 | a dev agent processed ONE task and stopped; the phase ran in batches, with an engine restart between each | [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) |
+| 13 | `draft → ready` promotion was automatic on creation — the PO decided alone what entered the devs' queue | [ADR 0046](0046-promocao-de-story-com-autoridade-do-usuario.md) |
 
-Os três já tinham teste próprio quando este ADR foi escrito. O que faltava era
-outra coisa: **a prova de que morreram juntos**. Um sistema pode ter as três
-correções e ainda assim não ser operável, se elas só funcionarem em isolamento —
-foi exatamente o que a Fase 10 revelou sobre features que passavam nos testes de
-suas fases e não sobreviviam ao primeiro contato com uso real.
+The three already had their own test when this ADR was written. What
+was missing was something else: **proof that they died together.** A
+system can have all three fixes and still not be operable, if they
+only work in isolation — that's exactly what Phase 10 revealed about
+features that passed their own phase's tests and didn't survive first
+contact with real use.
 
-## Decisão
+## Decision
 
-**A validação é um script executável, não um roteiro em prosa.**
-`apps/api/scripts/validacao-fase-12.ts`, no molde de `demo-noop-execution.ts`:
-sobe o contexto Nest, chama os casos de uso reais e **sai com código diferente de
-zero quando um critério não fecha**. A alternativa — um checklist para alguém
-seguir clicando — produziria uma validação que envelhece em silêncio, do mesmo
-jeito que a tabela de observação da Fase 10 ficou em branco.
+**The validation is an executable script, not a prose checklist.**
+`apps/api/scripts/validacao-fase-12.ts`, in the mold of
+`demo-noop-execution.ts`: it brings up the Nest context, calls the real
+use cases and **exits with a non-zero code when a criterion doesn't
+close.** The alternative — a checklist for someone to follow by
+clicking — would produce a validation that silently rots, the same way
+Phase 10's observation table stayed blank.
 
-**A evidência é extraída do banco, não transcrita.** O script termina imprimindo
-uma tabela Markdown de `session_events.id` (ULID) da própria corrida, pronta para
-colar no documento. E se recusa a terminar com sucesso se alguma etapa que ele
-afirmou ter exercitado não deixou evidência no event log — sem essa checagem,
-uma consulta errada produziria uma tabela curta e a validação passaria assim
-mesmo, que é o modo de falha clássico de relatório gerado.
+**The evidence is extracted from the database, not transcribed.** The
+script ends up printing a Markdown table of `session_events.id` (ULID)
+from the run itself, ready to paste into the document. And it refuses
+to succeed if some step it claimed to have exercised left no evidence
+in the event log — without that check, a wrong query would produce a
+short table and the validation would pass anyway, which is the classic
+failure mode of a generated report.
 
-**A validação roda local e sem LLM, e isso é declarado no primeiro parágrafo do
-documento.** Não no rodapé. Duas razões concretas, ambas verificadas:
+**The validation runs locally and without an LLM, and that's stated in
+the document's first paragraph.** Not in a footnote. Two concrete
+reasons, both verified:
 
-- o **fork da Fase 10 nunca foi nomeado** — `dogfooding-mission.md:135` continua
-  sendo um `TODO(humano)`, então não existe alvo para readotar. O caminho de
-  adoção é o mesmo nos dois providers; o que muda é a rede, coberta pelo smoke
-  `adopt-repository.smoke.spec.ts`, gated por credencial real;
-- o **julgamento dos gates com modelo local não é determinístico**, e o
-  [ADR 0020](0020-destravar-gates-qa-secops.md) já dizia isso. O veredito entra
-  pelo `RecordGateVerdictUseCase`, que é o funil REAL onde nasce
-  `task.gate_resolved`. O que a 12b precisa provar é a cadeia veredito → outbox
-  → wake → claim, não se um 7B sabe ler uma suite.
+- the **Phase 10 fork was never named** — `dogfooding-mission.md:135`
+  is still a `TODO(humano)`, so there's no target to readopt. The
+  adoption path is the same across both providers; what changes is the
+  network, covered by the `adopt-repository.smoke.spec.ts` smoke, gated
+  by a real credential;
+- **judging gates with a local model isn't deterministic**, and
+  [ADR 0020](0020-destravar-gates-qa-secops.md) already said so. The
+  verdict comes in through `RecordGateVerdictUseCase`, which is the
+  REAL funnel where `task.gate_resolved` is born. What 12b needs to
+  prove is the chain verdict → outbox → wake → claim, not whether a 7B
+  model can read a suite.
 
-Uma validação que fingisse cobrir mais do que cobre seria pior que a ausência
-dela: daria por fechado o que não foi exercitado.
+A validation that pretended to cover more than it does would be worse
+than none at all: it would declare closed what was never exercised.
 
-**O `NoopDevAgentServer` entrou na máquina de estados da 12b — e isso foi um
-achado da própria preparação da validação.** A Fase 12b mudou só o
-`DevAgentServer` real. O Noop continuava fixando `status: :working`, sem assinar
-o `Engine.Dev.Wake`, processando uma task e parando: **o achado #10 seguia vivo
-dentro do único veículo capaz de validar a fase sem gastar token.** Uma execução
-de ponta a ponta com ele teria reprovado o critério "zero restarts" por defeito
-do instrumento, não do produto.
+**`NoopDevAgentServer` entered 12b's state machine — and that was a
+finding from preparing the validation itself.** Phase 12b only changed
+the real `DevAgentServer`. The Noop kept fixing `status: :working`,
+without subscribing to `Engine.Dev.Wake`, processing one task and
+stopping: **finding #10 was still alive inside the only vehicle able
+to validate the phase without spending tokens.** An end-to-end run with
+it would have failed the "zero restarts" criterion due to the
+instrument's defect, not the product's.
 
-A correção não foi copiar a máquina para o Noop, e sim movê-la para
-`Engine.Dev.AgentIo` — o módulo que já existia justamente porque "um Noop que
-reimplementasse essas partes validaria uma cópia, não a infraestrutura". O
-argumento valia para worktree e identidade de commit desde a Fase 4a; passou a
-valer para o reagendamento. O que difere entre os dois agentes é `run_task`, e
-só ele, então ele entra como função e não como behaviour.
+The fix wasn't to copy the state machine into the Noop, but to move it
+into `Engine.Dev.AgentIo` — the module that already existed precisely
+because "a Noop that reimplemented these parts would validate a copy,
+not the infrastructure." The argument held for worktree and commit
+identity since Phase 4a; it started holding for rescheduling too. What
+differs between the two agents is `run_task`, and only that, so it
+enters as a function rather than a behaviour.
 
-**A colheita da Fase 10 foi escrita agora, com os buracos declarados.**
-`CLAUDE.md:77` referenciava `docs/explanation/primeiro-dogfooding.md` desde o
-fim daquela fase, e o arquivo nunca existiu. Ele foi escrito do que é
-reconstruível — os dezessete achados com arquivo e linha, a narrativa das tandas,
-o seed manual — e **tudo que dependeria de contagem ao vivo entrou como
-`não medido`**, jamais como estimativa. É a regra da própria colheita
-(`colheita-esqueleto.md:22-24`): nenhum número entra sem uma consulta que o
-produza.
+**Phase 10's harvest was written now, with the gaps declared.**
+`CLAUDE.md:77` referenced `docs/explanation/primeiro-dogfooding.md`
+since that phase ended, and the file never existed. It was written from
+what's reconstructible — the seventeen findings with file and line, the
+narrative of the batches, the manual seed — and **everything that would
+depend on a live count went in as `not measured`**, never as an
+estimate. It's the harvest's own rule
+(`colheita-esqueleto.md:22-24`): no number goes in without a query that
+produces it.
 
-Na tabela de contraste, "1 restart por task entregue" aparece como **propriedade
-derivada do código de então**, não como média observada — a distinção está
-escrita na própria célula.
+In the contrast table, "1 restart per task delivered" appears as a
+**property derived from the code at that time**, not as an observed
+average — the distinction is written right in the cell.
 
-## Consequências
+## Consequences
 
-A Fase 12 fecha com os três achados P1 de operabilidade resolvidos e provados
-numa execução única. Os outros catorze continuam listados e abertos na colheita;
-nenhum foi corrigido de passagem, pelo mesmo princípio que a missão da Fase 10
-estabeleceu — corrigir um achado fora da fase que o endereça esconde a evidência
-de por que ele existia.
+Phase 12 closes with the three P1 operability findings resolved and
+proven in a single run. The other fourteen remain listed and open in
+the harvest; none were fixed along the way, by the same principle the
+Phase 10 mission established: fixing a finding outside the phase that
+addresses it hides the evidence of why it existed.
 
-Três coisas que esta fase revelou e que entram como **backlog, não conserto**:
+Three things this phase revealed that go in as **backlog, not a fix**:
 
-1. **A instrumentação da métrica principal precede o experimento.** O achado #17
-   (P1, aberto) diz que `proposed_action.approved`/`.denied` vão só para o
-   outbox, nunca para `session_events`. A metade quantitativa da colheita da
-   Fase 10 não existe em boa parte por causa disso. Um próximo dogfooding sem
-   resolver o #17 antes vai perder os mesmos números de novo.
-2. **Não existe ferramenta de editar história.** O loop de recusa da 12c fecha
-   por recriação (`create_story`), e a história recusada fica em `draft` com o
-   motivo gravado. É auditável, mas deixa resíduo no backlog. Está registrado no
+1. **Instrumenting the main metric precedes the experiment.** Finding
+   #17 (P1, open) says `proposed_action.approved`/`.denied` only go to
+   the outbox, never to `session_events`. Much of Phase 10's harvest is
+   missing its quantitative half because of this. A next dogfooding
+   that doesn't resolve #17 first will lose the same numbers again.
+2. **There's no story-editing tool.** 12c's refusal loop closes by
+   recreation (`create_story`), and the refused story stays in `draft`
+   with the reason recorded. It's auditable, but leaves residue in the
+   backlog. It's recorded in
    [ADR 0046](0046-promocao-de-story-com-autoridade-do-usuario.md).
-3. **A cobertura do docmap tinha um vão exatamente onde esta fase mais mexeu.**
-   Nenhuma regra observava `apps/engine/lib/engine/dev/**` nem
-   `apps/engine/lib/engine/agents/**`: a máquina de estados dos dev agents e os
-   agentes conversacionais podiam mudar sem doc nenhuma ser cobrada. Este ADR
-   corrige o vão junto, porque deixá-lo aberto faria o próprio mecanismo de
-   documentação mentir sobre a fase que o exercitou.
+3. **The docmap's coverage had a gap exactly where this phase touched
+   the most.** No rule watched `apps/engine/lib/engine/dev/**` or
+   `apps/engine/lib/engine/agents/**`: the dev agents' state machine
+   and the conversational agents could change with no doc being
+   demanded. This ADR fixes the gap along the way, because leaving it
+   open would make the documentation mechanism itself lie about the
+   phase that exercised it.
 
-O que a Fase 12 **não** mudou, e vale dizer explicitamente porque é o eixo do
-produto: o pipeline de aprovações está exatamente como estava, e merge em branch
-protegida continua sendo decisão manual do usuário. O passo 6 da validação
-propõe um merge com autonomia `auto_approve` e `permissions.json` liberando, e
-exige `pending` como resultado. Reagendar o agente não é conceder autonomia — é
-só ele não morrer entre tarefas.
+What Phase 12 did **not** change, and it's worth stating explicitly
+because it's the product's axis: the approval pipeline is exactly as
+it was, and merging into a protected branch is still the user's manual
+decision. Step 6 of the validation proposes a merge with `auto_approve`
+autonomy and `permissions.json` allowing it, and requires `pending` as
+the result. Rescheduling the agent isn't granting autonomy — it's just
+the agent not dying between tasks.

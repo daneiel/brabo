@@ -2,243 +2,269 @@
 sidebar_position: 7
 ---
 
-# Os gates, e como eles são medidos
+# The gates, and how they're measured
 
-Um **gate** é um ponto do fluxo onde o trabalho para até alguém — pessoa, agente
-ou script — dizer que pode seguir. O produto tem treze, e até a FASE 15a nenhum
-deles existia como lista: estavam espalhados entre regra pura, use case, teste e
-workflow de CI. Responder "quais gates existem" exigia ler seis arquivos.
+A **gate** is a point in the flow where work stops until someone —
+person, agent, or script — says it can proceed. The product has
+thirteen, and until PHASE 15a none of them existed as a list: they were
+scattered across pure rules, use cases, tests and CI workflows.
+Answering "which gates exist" required reading six files.
 
-`docs/gates.yml` é essa lista. Este documento explica o que ela é, e — o mais
-importante — o que ela **não** é.
+`docs/gates.yml` is that list. This document explains what it is, and —
+more importantly — what it is **not**.
 
-## O registro descreve; ele não executa
+## The registry describes; it doesn't execute
 
-Nenhum gate passa a ser aplicado por causa do arquivo. Trocar `severidade` nele
-não muda comportamento nenhum: quem barra um merge continua sendo
-`decide.ts`, quem julga uma PR continua sendo o agente de QA, quem reprova um
-backmerge continua sendo o workflow.
+No gate becomes enforced because of the file. Changing `severidade` in
+it doesn't change any behavior: who blocks a merge is still
+`decide.ts`, who judges a PR is still the QA agent, who fails a
+backmerge is still the CI workflow.
 
-É a suposição mais fácil de fazer errado, então vale repetir: **o registro é
-índice, não política.** A política de branches continua morando em
-[branching-policy.md](branching-policy.md); os campos `entrada` e `entregavel`
-são uma frase em português, e `onde` aponta para o código que manda de verdade.
+It's the easiest assumption to get wrong, so it's worth repeating:
+**the registry is an index, not policy.** The branching policy still
+lives in [branching-policy.md](branching-policy.md); the `entrada` and
+`entregavel` fields are a sentence in Portuguese, and `onde` points to
+the code that really governs.
 
-O que o registro compra é outra coisa: tornar os gates **enumeráveis**. A lição
-das Fases 10 e 13 — métrica extraída por script, nunca anotada à mão — não tem
-como ser aplicada ao que não dá para listar.
+What the registry buys is something else: making gates
+**enumerable**. The lesson from Phases 10 and 13 — metric extracted by
+script, never annotated by hand — can't be applied to what can't be
+listed.
 
-## Os dois campos que envelhecem se não forem definidos
+## The two fields that age if left undefined
 
-**`verificacao`** responde *como se prova que este gate passou*, e não quem
-julga. `script` quer dizer que existe artefato mecânico — um evento, um teste,
-um job — que serve de prova. Por isso `qa-verificada` é `script` mesmo sendo um
-LLM que emite o veredito: o artefato é o `pr.gate_changed` com `veredito`. Quem
-julga está em `dono`.
+**`verificacao`** answers *how you prove this gate passed*, not who
+judges it. `script` means there's a mechanical artifact — an event, a
+test, a job — that serves as proof. That's why `qa-verificada` is
+`script` even though it's an LLM issuing the verdict: the artifact is
+the `pr.gate_changed` with `veredito`. Who judges lives in `dono`.
 
-**`aprovacao_humana: true`** quer dizer que a decisão é do usuário — direta no
-clique, **ou** delegada por uma política que ele mesmo escreveu. É isso que
-deixa `acao-aprovada` conviver com `status: auto_approved`: a política decidindo
-sozinha é o usuário tendo decidido antes. `merge-protegida` é o caso onde nem a
-delegação existe, porque o teto rebaixa `auto_approve` para `require_approval`
-mesmo com autonomia ligada.
+**`aprovacao_humana: true`** means the decision belongs to the user —
+directly by a click, **or** delegated by a policy the user wrote
+themselves. That's what lets `acao-aprovada` coexist with `status:
+auto_approved`: the policy deciding on its own is the user having
+decided beforehand. `merge-protegida` is the case where not even
+delegation exists, because the ceiling downgrades `auto_approve` to
+`require_approval` even with autonomy on.
 
-Nos quatro gates que a constituição declara manuais, esse campo é invariante e
-está travado por teste ([RN-071](../business-rules.md#rn-071)).
+In the four gates the constitution declares manual, this field is
+invariant and locked by a test
+([RN-071](../business-rules.md#rn-071)).
 
-## Três formas de evidência, porque nem toda prova está no log
+## Three forms of evidence, because not every proof lives in the log
 
-| tipo | quando | o que o localizador traz |
+| type | when | what the locator brings |
 |---|---|---|
-| `event_log` | o desfecho vira evento de domínio | tipos de evento + filtro de payload |
-| `teste` | a garantia é uma asserção | caminho do spec |
-| `ci` | o gate vive no repositório | workflow + spec |
+| `event_log` | the outcome becomes a domain event | event types + payload filter |
+| `teste` | the guarantee is an assertion | spec path |
+| `ci` | the gate lives in the repository | workflow + spec |
 
-Os dois casos que forçaram o campo a existir:
+The two cases that forced the field to exist:
 
-- **`merge-protegida`** não emite evento próprio. É um teto aplicado por último
-  sobre o veredito já calculado, que rebaixa `auto_approve` para
-  `require_approval`; o desfecho aparece como um `proposed_action.created`
-  pendente, indistinguível de qualquer outra pendência. O que garante a trava é
-  o teste.
-- **`backmerge`** vive fora da aplicação: é check required, com estado
-  versionado em `.release/gate.json` na `main`.
+- **`merge-protegida`** doesn't emit its own event. It's a ceiling
+  applied last on top of the already-computed verdict, which downgrades
+  `auto_approve` to `require_approval`; the outcome shows up as a
+  pending `proposed_action.created`, indistinguishable from any other
+  pending item. What guarantees the block is the test.
+- **`backmerge`** lives outside the application: it's a required check,
+  with state versioned in `.release/gate.json` on `main`.
 
-Sem `evidencia`, a regra "gate `block` sem prova reprova" tornaria as duas
-travas mais duras do produto vermelhas para sempre.
+Without `evidencia`, the rule "a `block` gate without proof fails"
+would turn the product's two hardest locks permanently red.
 
-## A armadilha do tipo compartilhado
+## The shared-type trap
 
-`qa-verificada` e `secops-segura` **não são dois tipos de evento**: os dois
-gravam `pr.gate_changed`, discriminados por `payload.gate`. Pior — o mesmo tipo
-é gravado na **abertura** do gate, sem `veredito`.
+`qa-verificada` and `secops-segura` **are not two event types**: both
+record `pr.gate_changed`, discriminated by `payload.gate`. Worse — the
+same type is recorded when the gate **opens**, without a `veredito`.
 
-Um registro que guardasse só o nome do tipo contaria abertura como passagem e
-mediria o dobro do que aconteceu. Daí o filtro, e daí a sentinela
-`veredito: presente`. O mesmo vale para os dois gates de PR de infra, que
-compartilham `infra.gate_changed`.
+A registry that stored only the type name would count opening as
+passing and measure double what actually happened. Hence the filter,
+and hence the `veredito: presente` sentinel. The same applies to the
+two infra PR gates, which share `infra.gate_changed`.
 
-O teste afirma que **nenhum par (`event_types` + `filtro`) se repete** no
-registro. É essa unicidade que faz a medição significar alguma coisa.
+The test asserts that **no pair** (`event_types` + `filtro`) repeats in
+the registry. That uniqueness is what makes the measurement mean
+anything.
 
-O filtro só alcança o **payload**, de propósito: aceitar coluna arbitrária no
-YAML abriria a consulta inteira. Quem promoveu uma story — pessoa ou o PO — vive
-na coluna `actor_kind` e fica de fora do vocabulário declarativo.
+The filter only reaches the **payload**, on purpose: accepting an
+arbitrary column in the YAML would open up the entire query. Who
+promoted a story — a person or the PO — lives in the `actor_kind`
+column and stays outside the declarative vocabulary.
 
-## Medir
+## Measuring
 
 ```bash
-pnpm --filter api validacao:gates                    # relatório completo
-pnpm --filter api validacao:gates -- --sem-banco     # só registro e localizadores
+pnpm --filter api validacao:gates                    # full report
+pnpm --filter api validacao:gates -- --sem-banco     # registry and locators only
 pnpm --filter api validacao:gates -- --projeto <uuid>
 ```
 
-Três fases, nesta ordem: **registro** (carrega e valida), **localizadores**
-(alvo de `teste`/`ci` existe?) e **event log** (última passagem, com event id).
-As duas primeiras não tocam o banco — é o que torna o script útil em CI sem
-Postgres.
+Three phases, in this order: **registry** (loads and validates),
+**locators** (does the `teste`/`ci` target exist?) and **event log**
+(latest passage, with event id). The first two never touch the
+database — that's what makes the script useful in CI without Postgres.
 
-| saída | quando |
+| exit code | when |
 |---|---|
-| `0` | registro válido e localizadores no lugar |
-| `1` | invariante violada, alvo inexistente, ou gate sem passagem **quando `--projeto` foi dado** |
-| `2` | uso inválido |
+| `0` | valid registry and locators in place |
+| `1` | invariant violated, target missing, or gate with no passage **when `--projeto` was given** |
+| `2` | invalid usage |
 
-A assimetria é deliberada. Registro e localizadores são afirmações sobre o
-**repositório**: valem sempre. Evidência no event log é afirmação sobre uma
-**execução**, e só existe se houver uma — sem `--projeto`, a fase 3 é relatório.
-Cobrar passagem num banco recém-criado faria o script sair `1` sempre, e um
-script que reprova sempre vira ruído que ninguém lê.
+The asymmetry is deliberate. Registry and locators are claims about the
+**repository**: they always hold. Event-log evidence is a claim about
+an **execution**, and only exists if one happened — without
+`--projeto`, phase 3 is just a report. Requiring a passage on a
+freshly created database would make the script exit `1` always, and a
+script that always fails becomes noise nobody reads.
 
-## O que enumerar já rendeu
+## What enumerating already paid off
 
-Antes de medir qualquer coisa, escrever a lista encontrou duas coisas que
-ninguém estava vendo:
+Before measuring anything, writing the list found two things nobody
+was seeing:
 
-- o julgamento de QA e SecOps sobre PR de **infra**, que tem caminho próprio
-  (`infra.gate_changed`, sem task de backlog por trás) e não estava na
-  especificação;
-- `promotion-check` era check required **sem spec própria**, ao contrário de
-  `pr-police` e `approval-ladder`. A evidência apontava para o script, com a
-  lacuna escrita ali, e o item foi para a triagem — a fase declara e mede, não
-  conserta. **A triagem o fechou:** `scripts/ci/promotion-check.spec.ts` existe,
-  e a evidência do gate passou a apontar para ela. É o ciclo funcionando como
-  desenhado — enumerar achou, a triagem priorizou, outra fase consertou.
+- QA and SecOps's judgment on **infra** PRs, which has its own path
+  (`infra.gate_changed`, with no backlog task behind it) and wasn't in
+  the spec;
+- `promotion-check` was a required check **with no spec of its own**,
+  unlike `pr-police` and `approval-ladder`. The evidence pointed to the
+  script, with the gap written right there, and the item went to
+  triage — the phase declares and measures, it doesn't fix. **Triage
+  closed it:** `scripts/ci/promotion-check.spec.ts` exists, and the
+  gate's evidence now points to it. It's the cycle working as
+  designed — enumerating found it, triage prioritized it, another
+  phase fixed it.
 
-O terceiro achado veio da primeira execução do medidor: o filtro de
-`story-promovida` apontava para `actor_kind`, que é **coluna** e não payload, e
-o gate aparecia como "nunca passou" num banco onde ele tinha passado horas
-antes. Um registro que ninguém roda é um registro que mente.
+The third finding came from the measurer's first run: the
+`story-promovida` filter pointed at `actor_kind`, which is a **column**
+and not payload, and the gate showed up as "never passed" on a database
+where it had passed hours before. A registry nobody runs is a registry
+that lies.
 
-## Ativar um gate `planned` é o mesmo trabalho de qualquer outro
+## Activating a `planned` gate is the same work as any other
 
-`implementavel` (dono `dev-lead`) nasceu `planned` na FASE 14d, junto com o
-resto do organograma-alvo que `docs/gates.yml`/`docs/fluxo.yml` já
-descreviam sem código por trás. O [ADR 0090](../adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
-o ativou — e o exercício vale de exemplo porque **nada no registro em si
-mudou de forma**: `status: planned → active` mais o bloco `evidencia`
-(apontando para `proposed_action.created` filtrado por
-`actionType: assess_implementability`) são as ÚNICAS duas linhas que um
-gate `warn` precisa ganhar para deixar de ser aspiração. `severidade`
-continua `warn` — o comentário no arquivo já dizia "nasce warn mesmo
-quando ativar", e ativar não é a mesma decisão que promover para `block`
-(essa exigiria medir passagens reais primeiro, mesma disciplina da FASE 15a).
+`implementavel` (owner `dev-lead`) was born `planned` in PHASE 14d,
+alongside the rest of the target org chart that `docs/gates.yml`/
+`docs/fluxo.yml` already described with no code behind it. The
+[ADR 0090](../adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+activated it — and the exercise is worth using as an example because
+**nothing about the registry's shape changed**: `status: planned →
+active` plus the `evidencia` block (pointing to
+`proposed_action.created` filtered by `actionType:
+assess_implementability`) are the ONLY two lines a `warn` gate needs to
+gain to stop being an aspiration. `severidade` stays `warn` — the
+comment in the file already said "born warn even when activated," and
+activating isn't the same decision as promoting to `block` (that would
+require measuring real passages first, same discipline as PHASE 15a).
 
-O trabalho de verdade fica do lado de fora do arquivo: o Dev Lead precisou
-de uma ferramenta nova (`assess_implementability`) que propõe o parecer
-como `proposed_action`, e a QA-estratégia — até então papel `proposto` em
-`docs/fluxo.yml`, com o critério de separação já escrito lá ("pode ser o
-próprio qa-lead em segundo momento") — precisou existir para alimentar o
-parecer com um plano de teste de verdade. O registro só passou a descrever
-o que o código agora faz.
+The real work sits outside the file: the Dev Lead needed a new tool
+(`assess_implementability`) that proposes the assessment as a
+`proposed_action`, and QA-strategy — until then a `proposto` role in
+`docs/fluxo.yml`, with the separation criterion already written there
+("can be the qa-lead itself in a second moment") — had to exist to
+feed the assessment with a real test plan. The registry only started
+describing what the code now does.
 
-## Um registro pode envelhecer para o lado errado — desatualizado, não inativo
+## A registry can age in the wrong direction — stale, not inactive
 
-`implementavel` é o exemplo de gate que precisou de código novo pra sair de
-`planned`. `paralelismo-autorizado` é o oposto: o mecanismo (`RequestParallelizationUseCase`,
-[RN-083](../business-rules.md#rn-083)) está em produção desde a FASE 14d — foi o
-registro que ficou pra trás, declarando `planned` sobre algo que já era `active` no
-`docs/fluxo.yml` irmão e no código. A auditoria fluxo.yml × código (achado A1/B5,
-[auditoria-fluxo-vs-codigo.md](auditoria-fluxo-vs-codigo.md)) achou a divergência;
-a correção foi só as duas linhas que `implementavel` também ganhou —
-`status: active` mais `evidencia` apontando para `proposed_action.created`
-filtrado por `actionType: parallelize`.
+`implementavel` is the example of a gate that needed new code to leave
+`planned`. `paralelismo-autorizado` is the opposite: the mechanism
+(`RequestParallelizationUseCase`,
+[RN-083](../business-rules.md#rn-083)) has been in production since
+PHASE 14d — it was the registry that fell behind, declaring `planned`
+over something that was already `active` in the sibling `docs/fluxo.yml`
+and in the code. The fluxo.yml × code audit (finding A1/B5,
+[auditoria-fluxo-vs-codigo.md](auditoria-fluxo-vs-codigo.md)) found the
+divergence; the fix was just the same two lines `implementavel` also
+gained — `status: active` plus `evidencia` pointing to
+`proposed_action.created` filtered by `actionType: parallelize`.
 
-Vale registrar por que isso não mudou nada na esteira de PR do painel do time:
-`paralelismo-autorizado` é `fluxo: execucao`, e a tela só deriva etapas de gates
-`fluxo: pr` (ver "Consumo" abaixo) — um gate pode virar `active` no registro sem
-aparecer em lugar nenhum da UI, se o fluxo dele for outro.
+Worth noting why this changed nothing on the team panel's PR track:
+`paralelismo-autorizado` is `fluxo: execucao`, and the screen only
+derives steps from `fluxo: pr` gates (see "Consumption" below) — a
+gate can become `active` in the registry without appearing anywhere in
+the UI, if its flow is a different one.
 
-## Um gate pode nascer `active` direto — quando o mecanismo e o registro chegam juntos
+## A gate can be born `active` directly — when the mechanism and the registry arrive together
 
-`implementavel` e `paralelismo-autorizado` são os dois exemplos de gate que
-já existia (declarado `planned` ou desatualizado) e ganhou o registro
-DEPOIS. `necessidade-validada` ([RN-406](../business-rules.md#rn-406),
-[ADR 0095](../adr/0095-gate-necessidade-validada.md)) é o terceiro padrão:
-mecanismo e registro nasceram na MESMA mudança, porque o gate em si não
-existia em lugar nenhum — nem `planned` no arquivo, nem código atrás.
+`implementavel` and `paralelismo-autorizado` are the two examples of a
+gate that already existed (declared `planned` or stale) and gained its
+registry entry AFTERWARD. `necessidade-validada`
+([RN-406](../business-rules.md#rn-406),
+[ADR 0095](../adr/0095-gate-necessidade-validada.md)) is the third
+pattern: mechanism and registry were born in the SAME change, because
+the gate itself didn't exist anywhere — not `planned` in the file, nor
+code behind it.
 
-A escolha de `severidade: warn` segue o mesmo raciocínio de
-`implementavel`, mas por um motivo diferente. `implementavel` é `warn`
-porque promover para `block` exigiria medir passagens reais primeiro
-(FASE 15a). `necessidade-validada` é `warn` porque NADA no produto hoje
-consulta a passagem dele antes de deixar o PO seguir — o handoff
-Criativo→PO já acontece dentro de `confirm_readiness`, antes deste gate
-sequer existir. `block` prometeria uma trava que não existe; `warn`
-descreve exatamente o que o gate é: medição de que um humano validou o
-mérito da necessidade, não um portão que impede o próximo passo.
+The choice of `severidade: warn` follows the same reasoning as
+`implementavel`, but for a different reason. `implementavel` is `warn`
+because promoting to `block` would require measuring real passages
+first (PHASE 15a). `necessidade-validada` is `warn` because NOTHING in
+the product today checks its passage before letting the PO continue —
+the Creative→PO handoff already happens inside `confirm_readiness`,
+before this gate even exists. `block` would promise a lock that doesn't
+exist; `warn` describes exactly what the gate is: a measurement that a
+human validated the need's merit, not a gate that blocks the next
+step.
 
 `workspace-verificado` ([RN-423](../business-rules.md#rn-423),
 [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md))
-é o quarto exemplo, e o mais claro dos quatro sobre por que `warn` não é
-"trava fraca": quem trava de verdade AQUI não é o gate, é a recusa
-explícita de `Engine.Actions.TerminalExecutor.decisao_de_execucao/1` —
-sem workspace verificado ou sem runner conectado, o comando é recusado
-incondicionalmente, código adentro, sem passar pelo registro. O gate
-existe só para dar EVIDÊNCIA de quando a confirmação aconteceu
-(`project.workspace_verified` no event log); promovê-lo a `block`
-descreveria uma trava que já existe em outro lugar, do mesmo jeito que
-`necessidade-validada` teria mentido sobre uma que não existe em lugar
-nenhum.
+is the fourth example, and the clearest of the four about why `warn` isn't
+a "weak lock": what really locks things down HERE isn't the gate, it's the
+explicit refusal in
+`Engine.Actions.TerminalExecutor.decisao_de_execucao/1` — without a
+verified workspace or a connected runner, the command is refused
+unconditionally, deep inside the code, without going through the registry.
+The gate exists only to give EVIDENCE of when the confirmation happened
+(`project.workspace_verified` in the event log); promoting it to `block`
+would describe a lock that already exists somewhere else, the same way
+`necessidade-validada` would have lied about one that doesn't exist
+anywhere.
 
-## Consumo: a tela deriva, não repete
+## Consumption: the screen derives, it doesn't repeat
 
-A esteira de PR no painel — Dev → QA → SecOps → Você — era uma lista escrita no
-componente. Desde a FASE 15b ela vem do registro, por `GET /gates`.
+The PR track on the panel — Dev → QA → SecOps → You — used to be a
+list written into the component. Since PHASE 15b it comes from the
+registry, via `GET /gates`.
 
-O que muda na prática é uma propriedade, não a aparência: **gate que sai do
-registro sai da tela sozinho**. Antes, desativar o SecOps deixava uma etapa
-morta na esteira até alguém lembrar de editar o código — que é exatamente a
-forma de envelhecimento que motivou o registro existir.
+What changes in practice is one property, not the appearance: **a gate
+that leaves the registry leaves the screen on its own.** Before,
+deactivating SecOps left a dead step on the track until someone
+remembered to edit the code — exactly the kind of aging that motivated
+the registry to exist.
 
-Três decisões que valem explicação:
+Three decisions worth explaining:
 
-**A rota é separada da interna.** `/internal/gates` é service-to-service, com
-token de serviço, e serve o script de medição; `/gates` é do usuário logado e
-serve a tela. Mesmo registro, públicos diferentes.
+**The route is separate from the internal one.** `/internal/gates` is
+service-to-service, with a service token, and serves the measurement
+script; `/gates` belongs to the logged-in user and serves the screen.
+Same registry, different audiences.
 
-**Sem `projectId`.** O registro é fato do PRODUTO: os mesmos gates valem para
-todos os projetos. Pendurá-lo num projeto sugeriria que dá para ter gates
-diferentes por projeto, que é o que o ADR 0054 deliberadamente não decidiu.
+**No `projectId`.** The registry is a fact about the PRODUCT: the same
+gates apply to every project. Attaching it to a project would suggest
+it's possible to have different gates per project, which is exactly
+what ADR 0054 deliberately left undecided.
 
-**Só gate `active`.** Gate `planned` descreve papel futuro (dev-lead, platform).
-Numa tela que diz o que está acontecendo agora, ele apareceria como se
-estivesse acontecendo.
+**Only `active` gates.** A `planned` gate describes a future role
+(dev-lead, platform). On a screen that says what's happening now, it
+would appear as if it were happening.
 
-### O que a tela ainda decide sozinha
+### What the screen still decides on its own
 
-O **rótulo** de cada etapa (`QA`, `Você`) e **qual etapa cada gate representa**
-continuam no componente. Não é inconsistência: o registro descreve política, e
-como chamar as coisas para o usuário é decisão de tela. O que saiu de lá foi a
-LISTA — quais etapas existem.
+Each step's **label** (`QA`, `You`) and **which step each gate
+represents** stay in the component. It's not an inconsistency: the
+registry describes policy, and what to call things for the user is a
+screen decision. What left it was the LIST — which steps exist.
 
-Um gate de PR que o registro traga e a tela ainda não saiba desenhar é
-**ignorado**, com teste afirmando isso: uma etapa `undefined` no meio da esteira
-seria pior que a ausência dela.
+A PR gate the registry brings that the screen doesn't yet know how to
+draw is **ignored**, with a test asserting it: an `undefined` step in
+the middle of the track would be worse than its absence.
 
-## Referências
+## References
 
-- [ADR 0054](../adr/0054-gates-como-registro-declarativo.md) — a decisão
-- [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) — a decisão no
-  event log, sem a qual não haveria o que medir
+- [ADR 0054](../adr/0054-gates-como-registro-declarativo.md) — the
+  decision
+- [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) — the
+  decision in the event log, without which there'd be nothing to
+  measure
 - [RN-070](../business-rules.md#rn-070), [RN-071](../business-rules.md#rn-071)

@@ -1,0 +1,20 @@
+{
+  "sidebar": {
+    "account": "Account"
+  },
+  "account": {
+    "title": "Account",
+    "subtitle": "Settings that follow you, not a specific project.",
+    "emailLabel": "Signed in as",
+    "language": {
+      "title": "Language",
+      "eyebrow": "interface",
+      "subtitle": "Only this page is translated so far — the rest of the interface is being translated in a separate, larger pass.",
+      "ptBR": "Portuguese (Brazil)",
+      "en": "English",
+      "saving": "Saving…",
+      "saved": "Language saved",
+      "error": "Could not save your language preference"
+    }
+  }
+}

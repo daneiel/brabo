@@ -1,6 +1,16 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
+// Instância REAL, não uma isolada: `lib/session-kind.ts` (`TIPOS_DE_SESSAO`)
+// e `components/CredentialSpendSection.tsx#formatarUsd` são módulos
+// NÃO-React que resolvem texto/moeda direto no singleton de `../lib/i18n`,
+// fora de qualquer `I18nextProvider` local — mesmo padrão de
+// `ProjectSpendTab.test.tsx`. Uma instância isolada aqui deixaria essas duas
+// leituras presas no idioma default do singleton (`en`) enquanto o resto do
+// componente (via `useTranslation('sessions')`) lesse pt-BR da instância
+// local, misturando os dois idiomas na mesma tela.
+import i18n from '../lib/i18n';
 import {
   ProjectChatTab,
   ProjectCriativoTab,
@@ -11,6 +21,16 @@ import { ToastProvider } from '../components/ui/ToastProvider';
 // a classe de verdade — é ela que carrega a frase que o toast mostra.
 import { ApiError } from '../lib/api-client';
 import type { ProposedAction, Session, SessionKind } from '../lib/api-types';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+
+// Restaura o default do app: o singleton é compartilhado entre arquivos de
+// teste no mesmo worker do vitest.
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
 
 const listSessions = vi.fn();
 const listActions = vi.fn();
@@ -96,11 +116,13 @@ function montar(kind: SessionKind = 'consultiva') {
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <ProjectSessionsTab projectId="proj-1" kind={kind} />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ProjectSessionsTab projectId="proj-1" kind={kind} />
+        </ToastProvider>
+      </QueryClientProvider>
+    </I18nextProvider>,
   );
 }
 
@@ -109,11 +131,13 @@ function montarAba(Aba: typeof ProjectChatTab) {
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <Aba projectId="proj-1" />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <Aba projectId="proj-1" />
+        </ToastProvider>
+      </QueryClientProvider>
+    </I18nextProvider>,
   );
 }
 

@@ -1,7 +1,20 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ApprovalCard } from './ApprovalCard';
 import type { ActionType, ProposedAction } from '../lib/api-types';
+// Instância REAL do app (mesmo motivo de `AgentCard.test.tsx`): sem
+// `I18nextProvider` no teste, o hook `useTranslation` cai no singleton
+// global de `lib/i18n.ts` — as asserções abaixo checam o texto ATUAL em
+// português.
+import i18n from '../lib/i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
 
 /**
  * Os 15 tipos do backend (`apps/api/src/domain/actions/decide.ts`).
@@ -300,6 +313,63 @@ describe('ApprovalCard', () => {
       expect(screen.getByText('primeiro arquivo')).toBeTruthy();
       expect(screen.getByText('segundo arquivo')).toBeTruthy();
       expect(screen.getByText('po.md')).toBeTruthy();
+    });
+  });
+
+  /**
+   * Onda 2 do programa de abas agrupadas (aba PRs) — `git_merge` tinha corpo
+   * genérico até aqui e caía no despejo de JSON cru (`COM_CORPO_PROPRIO` não
+   * o listava), o mesmo defeito que a RN-096 já tinha corrigido para
+   * `pr_open`/`instruction_patch`/etc. A aba PRs é a primeira produtora real
+   * de `git_merge` pela UI.
+   */
+  describe('git_merge (Onda 2 — aba PRs)', () => {
+    function mergeAction(payload: Record<string, unknown> = {}) {
+      return makeAction({
+        actionType: 'git_merge',
+        payload: {
+          pullRequestId: '218',
+          sourceBranch: 'feature/task-a1b2c3d4',
+          targetBranch: 'dev',
+          title: 'feat: aba de PRs',
+          ...payload,
+        },
+      });
+    }
+
+    it('mostra branches e título — não o payload cru', () => {
+      render(
+        <ApprovalCard
+          action={mergeAction()}
+          variant="queue"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      // Corpo próprio nasce colapsado na variante "queue" — abre para ler.
+      fireEvent.click(screen.getByRole('button', { name: 'Detalhes' }));
+
+      expect(screen.getByText('feat: aba de PRs')).toBeTruthy();
+      expect(screen.getByText('feature/task-a1b2c3d4')).toBeTruthy();
+      expect(screen.getByText('dev')).toBeTruthy();
+      expect(screen.queryByText(/"pullRequestId"/)).toBeNull();
+    });
+
+    it('sem título no payload, degrada para "Pull request #<id>"', () => {
+      render(
+        <ApprovalCard
+          action={mergeAction({ title: undefined })}
+          variant="queue"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Detalhes' }));
+      expect(screen.getByText('Pull request #218')).toBeTruthy();
     });
   });
 

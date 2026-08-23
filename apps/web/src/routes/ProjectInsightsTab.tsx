@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useHypotheses, usePsychologistAnalyses } from '../lib/hooks';
@@ -35,6 +36,7 @@ import styles from './ProjectOverviewTab.module.css';
  * duas filas de decisão do projeto (backlog e aprovações).
  */
 export function ProjectInsightsTab({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('insights');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const hypothesesQuery = useHypotheses(projectId);
@@ -76,8 +78,11 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
       await queryClient.invalidateQueries({ queryKey: ['hypotheses', projectId] });
     } catch {
       showToast({
-        title: 'Erro',
-        message: `Não foi possível ${action === 'accept' ? 'aceitar' : 'descartar'} a hipótese`,
+        title: t('projectInsightsTab.toasts.genericErrorTitle'),
+        message:
+          action === 'accept'
+            ? t('projectInsightsTab.toasts.acceptError')
+            : t('projectInsightsTab.toasts.dismissError'),
         tone: 'danger',
       });
     }
@@ -90,8 +95,8 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
     try {
       await reanalyzeSession(projectId, sessionId);
       showToast({
-        title: 'Reanálise enfileirada',
-        message: 'O Psicólogo vai analisar esta sessão de novo.',
+        title: t('projectInsightsTab.toasts.reanalyzeQueuedTitle'),
+        message: t('projectInsightsTab.toasts.reanalyzeQueuedMessage'),
       });
     } catch (erro) {
       if (erro instanceof ApiError && erro.status === 503) {
@@ -100,14 +105,17 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
         // ReanalyzeSessionUseCase).
         setPsicologoDesativado(true);
         showToast({
-          title: 'Psicólogo pausado',
-          message: mensagemDaApi(erro, 'O Psicólogo está desativado globalmente.'),
+          title: t('projectInsightsTab.toasts.psychologistPausedTitle'),
+          message: mensagemDaApi(
+            erro,
+            t('projectInsightsTab.toasts.psychologistPausedFallback'),
+          ),
           tone: 'warning',
         });
       } else {
         showToast({
-          title: 'Erro',
-          message: 'Não foi possível enfileirar a reanálise',
+          title: t('projectInsightsTab.toasts.genericErrorTitle'),
+          message: t('projectInsightsTab.toasts.reanalyzeError'),
           tone: 'danger',
         });
       }
@@ -116,27 +124,28 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.arch}>
-      <div className={styles.sectionHeader}>Insights</div>
+      <div className={styles.sectionHeader}>{t('projectInsightsTab.header')}</div>
       {/* Os três estados da RN-088, com o ERRO antes do vazio: `data ?? []`
           seguido de `length === 0` fazia a api respondendo 429 dizer "sem
           hipóteses ainda", que é indistinguível de um projeto que o Psicólogo
           nunca analisou. */}
       {hypothesesQuery.isError ? (
         <ErroDeCarregamento
-          titulo="Não foi possível carregar as hipóteses."
+          titulo={t('projectInsightsTab.errorTitle')}
           erro={hypothesesQuery.error}
           onTentarDeNovo={() => void hypothesesQuery.refetch()}
         />
       ) : hypothesesQuery.data === undefined ? (
-        <div className={styles.sectionSub}>Carregando as hipóteses…</div>
+        <div className={styles.sectionSub}>{t('projectInsightsTab.loading')}</div>
       ) : all.length === 0 ? (
-        <div className={styles.sectionSub}>
-          Sem hipóteses ainda — o Psicólogo analisa cada sessão encerrada.
-        </div>
+        <div className={styles.sectionSub}>{t('projectInsightsTab.empty')}</div>
       ) : (
         <>
           <div className={styles.sectionSub}>
-            {all.length} hipótese(s) · {pending.length} aguardando decisão
+            {t('projectInsightsTab.summary', {
+              total: all.length,
+              pending: pending.length,
+            })}
           </div>
 
           {/* Faixa de análises: é aqui que o custo distinto entre triagem
@@ -146,18 +155,22 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
               {runs.map((run) => (
                 <div key={run.id} className={styles.analysisRow}>
                   <Badge tone={run.tier === 'pesada' ? 'accent' : 'muted'}>
-                    triagem {run.tier}
+                    {t('projectInsightsTab.analysisStrip.tier', { tier: run.tier })}
                   </Badge>
                   <Link
                     to="/projects/$projectId/sessions/$sessionId"
                     params={{ projectId, sessionId: run.sessionId }}
                     className={styles.analysisSession}
                   >
-                    sessão {idCurtoDaSessao(run.sessionId)}
+                    {t('projectInsightsTab.analysisStrip.sessionLabel', {
+                      id: idCurtoDaSessao(run.sessionId),
+                    })}
                   </Link>
                   <span className={styles.analysisMeta}>
-                    {run.eventCountAtAnalysis} evento(s) · {run.hypothesisCount}{' '}
-                    hipótese(s)
+                    {t('projectInsightsTab.analysisStrip.meta', {
+                      events: run.eventCountAtAnalysis,
+                      hypotheses: run.hypothesisCount,
+                    })}
                   </span>
                   <span className={styles.analysisCost}>
                     {formatMicros(run.costMicros)}
@@ -169,11 +182,11 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
                     disabled={psicologoDesativado}
                     title={
                       psicologoDesativado
-                        ? 'O Psicólogo está pausado globalmente'
-                        : 'Roda a análise de novo e gasta orçamento; a anterior fica no histórico'
+                        ? t('projectInsightsTab.analysisStrip.reanalyzeTitleDisabled')
+                        : t('projectInsightsTab.analysisStrip.reanalyzeTitleEnabled')
                     }
                   >
-                    Reanalisar
+                    {t('projectInsightsTab.analysisStrip.reanalyzeButton')}
                   </button>
                 </div>
               ))}
@@ -185,9 +198,7 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
               que some (RN-088). */}
           {psicologoDesativado && (
             <div className={styles.sectionSub} style={{ marginTop: 8 }}>
-              O Psicólogo está pausado globalmente por decisão do time — sem
-              reanálise nova por enquanto. As hipóteses já emitidas continuam
-              aqui.
+              {t('projectInsightsTab.pausedNotice')}
             </div>
           )}
 

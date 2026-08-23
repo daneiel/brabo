@@ -1,132 +1,135 @@
-# ADR 0078 — Moldura de tela, e o registro de abas diverge do handoff de propósito
+# ADR 0078 — Screen frame, and the tab registry diverges from the handoff on purpose
 
-- **Status:** aceito
-- **Data:** 2026-08-15
-- **Contexto anterior:** [RN-048](../business-rules.md#rn-048)
-  (promoção de história pendente), [RN-104](../business-rules.md#rn-104) (Chat e
-  Criativo como lugares, com a chave `sessions`), [RN-121](../business-rules.md#rn-121)
-  (aba Executores, dev agent e QA fora do "Time de agentes" misturado),
-  [ADR 0075](0075-embeddings-no-contrato-de-llm-provider.md) (embeddings no
-  contrato de `LLMProvider` — fundação sem consumo)
+- **Status:** accepted
+- **Date:** 2026-08-15
+- **Prior context:** [RN-048](../business-rules.md#rn-048)
+  (pending story promotion), [RN-104](../business-rules.md#rn-104) (Chat and
+  Creative as places, with the `sessions` key), [RN-121](../business-rules.md#rn-121)
+  (Executors tab, dev agent and QA kept out of the mixed "agent team"),
+  [ADR 0075](0075-embeddings-no-contrato-de-llm-provider.md) (embeddings in
+  the `LLMProvider` contract — foundation with no consumer yet)
 
-## Contexto
+## Context
 
-O checklist "moldura de tela" do handoff de design (`design_handoff_brabo/CHECKLIST-CONFRONTO.md`,
-seção 2) descreve a faixa que envolve toda tela de projeto: header de 60px,
-régua de abas logo abaixo, aba ativa com `box-shadow: inset 0 -2px 0
-var(--accent)`, rolagem horizontal em telas estreitas, e container de conteúdo
-com largura máxima 960–1040px. O código de `ProjectPage.tsx` tinha os quatro
-defeitos: header com padding variável em vez de altura fixa, aba ativa com
-`border-bottom` (não `box-shadow`), sem rolagem horizontal declarada, e sem
-teto de largura no container de conteúdo.
+The "screen frame" checklist from the design handoff
+(`design_handoff_brabo/CHECKLIST-CONFRONTO.md`, section 2) describes the band
+that wraps every project screen: 60px header, tab strip right below it, the
+active tab with `box-shadow: inset 0 -2px 0 var(--accent)`, horizontal
+scrolling on narrow screens, and a content container capped at 960–1040px.
+`ProjectPage.tsx`'s code had all four defects: a header with variable padding
+instead of a fixed height, an active tab using `border-bottom` (not
+`box-shadow`), no declared horizontal scroll, and no width cap on the content
+container.
 
-Corrigir os quatro é o essencial deste ADR, mas a parte que precisa de decisão
-— e não só de CSS — é outra: **o handoff lista 7 abas** (Visão geral, Criativo,
-Código, Chat RAG, Gastos, Aprovações, Configurações) e **o registro
-(`apps/web/src/routes/project-tabs.ts`) tem 10**. As três a mais são
-`executores`, `backlog` e `insights`.
+Fixing the four is the essential part of this ADR, but the piece that needs
+a decision — not just CSS — is another one: **the handoff lists 7 tabs**
+(Overview, Creative, Code, Chat RAG, Spend, Approvals, Settings) and **the
+registry (`apps/web/src/routes/project-tabs.ts`) has 10**. The three extra
+ones are `executores`, `backlog` and `insights`.
 
-O handoff é de uma leva anterior do PROGRAMA 16–26. Entre a leva que o desenhou
-e hoje, três coisas aconteceram que ele não podia prever:
+The handoff is from an earlier wave of PROGRAM 16–26. Between the wave that
+designed it and today, three things happened it couldn't have anticipated:
 
-1. **Executores** nasceu na FASE 27 (RN-121) quando o grid de agentes saiu da
-   Visão geral para uma aba própria — dado real (status ao vivo, modelo
-   vinculado, toggle de autonomia), não maquete.
-2. **Backlog** tem contador próprio de histórias aguardando promoção do
-   usuário desde a Fase 12c (RN-048) — outra fila de decisão, com regra de
-   negócio e teste cobrindo o quê e quando ela soa.
-3. **Insights** mostra as hipóteses do Psicólogo esperando aceitar/descartar
-   — a terceira fila de decisão do projeto, existente desde antes do handoff
-   ser escrito.
+1. **Executors** was born in PHASE 27 (RN-121) when the agent grid moved out
+   of the Overview into its own tab — real data (live status, bound model,
+   autonomy toggle), not a mockup.
+2. **Backlog** has had its own counter for stories awaiting user promotion
+   since Phase 12c (RN-048) — another decision queue, with a business rule
+   and a test covering exactly what it chimes and when.
+3. **Insights** shows the Psychologist's hypotheses waiting to be
+   accepted/discarded — the project's third decision queue, existing since
+   before the handoff was written.
 
-Nenhuma das três é redundante com as 7 do handoff, e nenhuma é ornamento:
-todas têm dado real, contador derivado de consulta, e pelo menos uma RN
-própria com teste. Apagá-las para "bater" com o handoff destruiria informação
-que o produto já sabia mostrar.
+None of the three is redundant with the handoff's 7, and none is decoration:
+all of them have real data, a counter derived from a query, and at least one
+business rule with a test of its own. Deleting them to "match" the handoff
+would destroy information the product already knew how to show.
 
-## Decisão
+## Decision
 
-**As 10 abas ficam. O handoff é referência de fidelidade VISUAL — cores,
-tipografia, espaçamento, o desenho da moldura — não teto de quantas abas o
-produto pode ter** (RN-203). Ele fixa como cada tela deve SE PARECER; não
-congela o inventário de funcionalidades no dia em que foi escrito. A regra já
-valia implicitamente (a FASE 26 registrou a aba Código sem o handoff prever
-"Executores" nem "Insights" como abas separadas, e ninguém cogitou removê-las
-por isso) — este ADR só a torna explícita, com teste que reprova se alguém
-"arrumar" o registro contra o handoff sem ler esta decisão.
+**The 10 tabs stay. The handoff is a reference for VISUAL fidelity —
+colors, typography, spacing, the frame's design — not a ceiling on how many
+tabs the product can have** (RN-203). It fixes how each screen should LOOK;
+it doesn't freeze the feature inventory on the day it was written. The rule
+already held implicitly (PHASE 26 registered the Code tab without the
+handoff ever picturing "Executors" or "Insights" as separate tabs, and no
+one considered removing them for that) — this ADR just makes it explicit,
+with a test that fails if someone "tidies up" the registry against the
+handoff without reading this decision.
 
-**A chave `sessions` continua rotulada "Chat", nunca "Chat RAG"** (RN-202). O
-handoff chama essa aba de "Chat RAG" nas telas mais recentes
-(`designs/Brabo Chat.dc.html`), e a tentação óbvia seria só trocar a string do
-rótulo. A rejeição é literal: "Chat RAG" descreve uma FUNCIONALIDADE — consulta
-por embeddings sobre o repositório indexado, com citação de fonte — que o
-produto não tem. O ADR 0075 pôs `embed` no contrato de `LLMProvider`
-(capability provada só no Ollama), mas nada ainda CONSOME essa operação: não
-há pipeline de indexação, não há índice vetorial por projeto, não há UI de
-citação. A aba `sessions` de hoje é o Chat CONSULTIVO comum (RN-104) — um
-agente respondendo com o contexto da sessão, igual ao Criativo, só que sem
-produzir backlog. Rotulá-la "Chat RAG" hoje seria a mesma mentira que o ADR
-0042 recusa para modelo de catálogo: anunciar uma capacidade antes de ela
-existir, só porque o nome já está reservado no design.
+**The `sessions` key stays labeled "Chat", never "Chat RAG"** (RN-202). The
+handoff calls this tab "Chat RAG" in its more recent screens
+(`designs/Brabo Chat.dc.html`), and the obvious temptation would be to just
+swap the label string. The rejection is literal: "Chat RAG" describes a
+FEATURE — embedding-based lookup over an indexed repository, with source
+citation — that the product doesn't have. ADR 0075 put `embed` in the
+`LLMProvider` contract (capability proven only on Ollama), but nothing yet
+CONSUMES that operation: no indexing pipeline, no per-project vector index,
+no citation UI. Today's `sessions` tab is plain CONSULTATIVE Chat (RN-104) —
+an agent answering with the session's context, same as the Creative agent,
+just without producing a backlog. Labeling it "Chat RAG" today would be the
+same lie ADR 0042 rejects for the model catalog: announcing a capability
+before it exists, just because the name is already reserved in the design.
 
-**As quatro correções literais da moldura, sem exceção declarada:**
+**The four literal moldura fixes, with no declared exception:**
 
-1. **Header como piso, não teto.** `.headerTop` (o cabeçalho de identidade do
-   projeto — ícone do provider, nome, chip de repositório, branch/adotado — e
-   o `TokenMeter` compacto) ganhou `min-height: var(--header-h)` (60px), não
-   `height`. O conteúdo desta faixa é mais rico do que o cabeçalho genérico
-   que o handoff desenha nas 6 telas internas (título 18/600 + subtítulo mono
-   + chip + indicador): o card do `TokenMeter` sozinho, com o próprio padding
-   interno, já soma cerca de 70px. Forçar 60px cortaria o alerta de
-   orçamento — e a RN-088 já estabeleceu que falha/estado nunca vira
-   invisível; cortar o orçamento por estética seria a mesma classe de erro
-   com outro nome. `min-height` honra o token como PISO — quando o conteúdo é
-   mais simples (sem `TokenMeter`, por exemplo, em carregamento), a faixa fica
-   perto de 60px; quando não é, ela cresce, visível.
-2. **Aba ativa com `box-shadow: inset 0 -2px 0 var(--accent)`**, não
-   `border-bottom`, em `Tabs.module.css`. A diferença visual entre os dois é
-   pequena, mas `border-bottom` desloca o layout em 2px na troca de estado
-   (a borda ocupa espaço mesmo transparente-vs-sólida quando mal
-   implementada) e o handoff é explícito no atributo. Os valores de
-   espaçamento (`gap: 2px`, `padding: 11px 13px`) que viviam como override de
-   CSS de descendente em `ProjectPage.module.css` — pendência declarada desde
-   a FASE 16 ("quando ela puder mudar, o lugar disto é lá") — migraram para a
-   primitiva, porque esta onda deu o mesmo dono aos dois arquivos.
-3. **Rolagem horizontal** (`overflow-x: auto` em `.list`, `flex-shrink: 0` e
-   `white-space: nowrap` em `.tab`) — não existia; a régua quebraria linha ou
-   espremeria rótulos em telas estreitas.
-4. **Largura máxima do container de conteúdo** — `.body` ganhou
-   `max-width: 1040px; margin: 0 auto`, para as abas em forma de documento
-   (Backlog, Aprovações, Insights, Gastos, Configurações, Criativo, Chat).
-   Continua sem teto nas abas `semRespiro` (Visão geral, Código): a primeira
-   tem um trilho lateral próprio, e a segunda é "a aba mais custosa do
-   programa" nas palavras do próprio handoff — as duas usam a tela inteira
-   de propósito.
+1. **Header as a floor, not a ceiling.** `.headerTop` (the project identity
+   header — provider icon, name, repo chip, branch/adopted — and the compact
+   `TokenMeter`) got `min-height: var(--header-h)` (60px), not `height`.
+   This band's content is richer than the generic header the handoff draws
+   for its 6 internal screens (18/600 title + mono subtitle + chip +
+   indicator): the `TokenMeter` card alone, with its own internal padding,
+   already adds up to about 70px. Forcing 60px would cut off the budget
+   alert — and RN-088 already established that failure/state states never
+   go invisible; cutting the budget for the sake of aesthetics would be the
+   same class of error under a different name. `min-height` honors the
+   token as a FLOOR — when the content is simpler (no `TokenMeter`, say,
+   while loading), the band sits near 60px; when it isn't, it grows,
+   visibly.
+2. **Active tab with `box-shadow: inset 0 -2px 0 var(--accent)`**, not
+   `border-bottom`, in `Tabs.module.css`. The visual difference between the
+   two is small, but `border-bottom` shifts the layout by 2px on state
+   change (the border takes up space even transparent-vs-solid when poorly
+   implemented) and the handoff is explicit about the attribute. The
+   spacing values (`gap: 2px`, `padding: 11px 13px`) that lived as a
+   descendant CSS override in `ProjectPage.module.css` — a declared pending
+   item since PHASE 16 ("when it can move, this is where it belongs") —
+   migrated to the primitive, because this wave gave the same owner to both
+   files.
+3. **Horizontal scrolling** (`overflow-x: auto` on `.list`, `flex-shrink: 0`
+   and `white-space: nowrap` on `.tab`) — didn't exist; the strip would wrap
+   or squeeze labels on narrow screens.
+4. **Content container max width** — `.body` got `max-width: 1040px; margin:
+   0 auto`, for the document-shaped tabs (Backlog, Approvals, Insights,
+   Spend, Settings, Creative, Chat). Still uncapped on the `semRespiro` tabs
+   (Overview, Code): the first has its own side rail, and the second is "the
+   most expensive tab in the program" in the handoff's own words — both use
+   the full screen on purpose.
 
-**O rótulo "Code" virou "Código".** Nenhum outro ponto do código compara pela
-STRING do rótulo (busca confirmada por grep); a CHAVE de registro e de
-deep-link continua `code`, intocada.
+**The "Code" label became "Código".** No other point in the code compares by
+the label STRING (confirmed by grep); the registry KEY and the deep-link key
+remain `code`, untouched.
 
-## Consequências
+## Consequences
 
-**O registro de abas fica, deliberadamente, maior que a intenção original do
-handoff — e cada item a mais tem RN e teste próprios apontados neste ADR.**
-Quem ler só o handoff e comparar com o código vai ver uma divergência; quem
-ler este ADR entende que ela é escolhida, não esquecida.
+**The tab registry ends up, deliberately, bigger than the handoff's original
+intent — and each extra item has its own RN and test cited in this ADR.**
+Anyone reading only the handoff and comparing it to the code will see a
+divergence; anyone reading this ADR understands it's chosen, not forgotten.
 
-**Nenhuma FORMA de export mudou.** `AbaDoProjeto` continua com os mesmos
-campos (`key`, `label`, `component`, `count?`, `ordem`, `semRespiro?`), e
-`ABAS_DO_PROJETO` continua sendo o array ordenado que outros consumidores
-(a Frente B do shell de navegação, em paralelo nesta mesma onda) leem para
-listar as abas de um projeto na sidebar — só o VALOR do rótulo de `code`
-mudou, e a lista de chaves não perdeu nem ganhou nenhuma.
+**No export SHAPE changed.** `AbaDoProjeto` still has the same fields
+(`key`, `label`, `component`, `count?`, `ordem`, `semRespiro?`), and
+`ABAS_DO_PROJETO` remains the ordered array other consumers (the navigation
+shell's front B, running in parallel in this same wave) read to list a
+project's tabs in the sidebar — only `code`'s label VALUE changed, and the
+key list neither lost nor gained anything.
 
-**"Chat RAG" fica reservado, não cancelado.** Quando o pipeline de indexação e
-a UI de citação existirem, a aba `sessions` deste registro é onde a
-funcionalidade chega — o nome muda naquele dia, com o dado por trás dele.
-Renomear antes seria a mesma classe de erro que o ADR 0042 já nomeou para
-modelo: "ativar" a aparência de uma capacidade sem a capacidade.
+**"Chat RAG" stays reserved, not cancelled.** When the indexing pipeline and
+the citation UI exist, this registry's `sessions` tab is where the feature
+lands — the name changes that day, with the data behind it. Renaming it
+sooner would be the same class of error ADR 0042 already named for the
+model: "activating" the appearance of a capability without the capability.
 
-**Fica de fora, declarado:** o dropdown rico de branch da aba Código, a UI de
-blame e a lista de PRs (FASE 26b) não são tocados por este ADR — moldura é
-sobre o CONTORNO das telas, não sobre o conteúdo interno de cada uma.
+**Left out, declared:** the Code tab's rich branch dropdown, the blame UI,
+and the PR list (PHASE 26b) are untouched by this ADR — moldura is about the
+CONTOUR of screens, not the internal content of each one.

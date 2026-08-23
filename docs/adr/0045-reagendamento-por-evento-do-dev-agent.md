@@ -1,235 +1,239 @@
-# 0045 — Reagendamento por evento do dev agent, e o circuit breaker
+# 0045 — Event-based rescheduling of the dev agent, and the circuit breaker
 
-## Contexto
+## Context
 
-O achado P1 #10 do dogfooding, verbatim de
+Dogfooding's P1 finding #10, verbatim from
 `docs/missions/dogfooding-mission.md:659`:
 
-> **Um dev agent processa UMA task e para.** `:work` só é disparado na
-> ativação e no aceite de paralelização; o `report_done` abre o gate e
-> não se reagenda; nenhum worker do Oban redispara. Teto por módulo: 1
-> task, ou 2 com paralelização.
+> **A dev agent processes ONE task and stops.** `:work` is only
+> triggered on activation and on accepting parallelization; `report_done`
+> opens the gate and doesn't reschedule; no Oban worker redispatches it.
+> Cap per module: 1 task, or 2 with parallelization.
 
-A consequência prática está em `:396-398` da mesma colheita: a Fase 10
-rodou em **tandas** — um humano reativando a execução (ou reiniciando o
-engine) entre cada task, porque nada no sistema levava o agente da PR
-aberta de volta a "livre pra reivindicar". O achado #11 (`:660`, P2)
-descreve o sintoma de tentar contornar isso por fora: reativar não
-redispara `:work` (o supervisor devolve `:existing`) e ainda cria uma
-sessão órfã.
+The practical consequence is in `:396-398` of the same harvest: Phase
+10 ran in **batches** — a human reactivating execution (or restarting
+the engine) between each task, because nothing in the system took the
+agent from the open PR back to "free to claim." Finding #11 (`:660`,
+P2) describes the symptom of trying to work around it from the
+outside: reactivating doesn't redispatch `:work` (the supervisor
+returns `:existing`) and still creates an orphaned session.
 
-Dois fatos verificados no código, ANTES de desenhar, moldaram a decisão
-inteira:
+Two facts verified in the code, BEFORE designing, shaped the entire
+decision:
 
-1. **O worktree é por AGENTE, não por task.** `WorktreeManager.add_worktree/3`
-   apaga o worktree anterior do agente antes de criar o próximo, e
-   `QaLeadServer`/`SecOpsAgentServer` o encontram via
-   `DevAgentState.find_by_task_id/2` enquanto o gate roda. Reivindicar a
-   próxima task assim que a PR abre destruiria fisicamente o worktree
-   que o gate ainda está varrendo. Isso decidiu que PR aberta não pode
-   liberar o agente — precisa de um estado que RETÉM o worktree até o
-   gate terminar.
-2. **`prod/patches.yaml` roda 2 réplicas do engine**, e
-   `Engine.Dev.Registry` é local ao nó. Um job assíncrono (Oban) pode
-   rodar em qualquer réplica; resolver "onde está o processo desse
-   agente" por Registry erraria a entrega em metade dos casos em
-   produção.
+1. **The worktree is per AGENT, not per task.** `WorktreeManager.add_worktree/3`
+   deletes the agent's previous worktree before creating the next one,
+   and `QaLeadServer`/`SecOpsAgentServer` find it via
+   `DevAgentState.find_by_task_id/2` while the gate runs. Claiming the
+   next task as soon as the PR opens would physically destroy the
+   worktree the gate is still scanning. That decided that an open PR
+   can't free the agent — it needs a state that RETAINS the worktree
+   until the gate finishes.
+2. **`prod/patches.yaml` runs 2 engine replicas**, and
+   `Engine.Dev.Registry` is local to the node. An async job (Oban) can
+   run on any replica; resolving "where is this agent's process" via
+   Registry would miss delivery in half the cases in production.
 
-## Decisão
+## Decision
 
-### O sinal é outbox, não uma chamada em processo
+### The signal is outbox, not an in-process call
 
-`task.gate_resolved` (só em desfechos TERMINAIS — `done`/`blocked`) e
-`task.became_claimable` (story promovida, task criada sob story já
-pronta, task desbloqueada) são linhas de outbox que a api emite,
-lidas pelo `Engine.Outbox.Drain` já existente (`aggregate_type` ganhou
-`"task"` ao lado de `"session"`) e roteadas pro
-`Engine.Workers.DevAgentWakeWorker` novo — mesmo mecanismo de sempre,
-handler novo.
+`task.gate_resolved` (only on TERMINAL outcomes — `done`/`blocked`)
+and `task.became_claimable` (story promoted, task created under an
+already-ready story, task unblocked) are outbox lines the api emits,
+read by the already-existing `Engine.Outbox.Drain` (`aggregate_type`
+gained `"task"` alongside `"session"`) and routed to the new
+`Engine.Workers.DevAgentWakeWorker` — the same mechanism as always, a
+new handler.
 
-A escolha de outbox em vez de, por exemplo, o gate chamar
-`DevAgentServer.correct/3` como já faz pra `changes_requested` (essa
-chamada em processo CONTINUA existindo, inalterada) é sobre
-**sobrevivência**: uma linha de outbox persiste um restart do engine
-entre o veredito e o wake. Uma chamada em processo não — e é exatamente
-essa propriedade que a Fase 12b-6 (reidratação) precisa pra fechar o
-`awaiting_gate` reidratado reagindo a um gate resolvido depois do
-restart.
+The choice of outbox instead of, for example, the gate calling
+`DevAgentServer.correct/3` directly the way it already does for
+`changes_requested` (that in-process call CONTINUES to exist,
+unchanged) is about **survival**: an outbox line persists across an
+engine restart between the verdict and the wake. An in-process call
+doesn't — and that's exactly the property Phase 12b-6 (rehydration)
+needs to close the rehydrated `awaiting_gate` reacting to a gate
+resolved after the restart.
 
-### `awaiting_gate` é o interlock, não um rótulo
+### `awaiting_gate` is the interlock, not a label
 
-PR aberta → o agente entra em `awaiting_gate` e MANTÉM
-`task_id`/`worktree`/`branch` — nada reivindica enquanto o gate não
-resolver. Só o desfecho terminal (via `task.gate_resolved`) libera,
-através de `finish_task/2`. O worktree do fato #1 acima é a razão
-inteira desse estado existir.
+Open PR → the agent enters `awaiting_gate` and KEEPS
+`task_id`/`worktree`/`branch` — nothing claims anything while the gate
+hasn't resolved. Only the terminal outcome (via `task.gate_resolved`)
+releases it, through `finish_task/2`. The worktree fact from #1 above
+is the entire reason this state exists.
 
-### Entrega por PubSub, não Registry
+### Delivery via PubSub, not Registry
 
-`Engine.Dev.Wake` usa `Phoenix.PubSub` (já supervisionado como
-`Engine.PubSub`, sem uso em `lib/` até aqui) — cluster-wide de graça,
-ao contrário do Registry local ao nó (fato #2). `DevAgentServer`
-assina o próprio tópico no `init/1`; `DevAgentWakeWorker` nunca chama o
-GenServer direto, sempre via `Wake.deliver/3`.
+`Engine.Dev.Wake` uses `Phoenix.PubSub` (already supervised as
+`Engine.PubSub`, unused in `lib/` until now) — cluster-wide for free,
+unlike the node-local Registry (fact #2). `DevAgentServer` subscribes
+to its own topic in `init/1`; `DevAgentWakeWorker` never calls the
+GenServer directly, always via `Wake.deliver/3`.
 
-**Limite aceito conscientemente: entrega é AT-MOST-ONCE.** Se o
-processo do agente estiver momentaneamente fora do ar quando o
-broadcast acontece, o wake se perde e o agente só acorda no PRÓXIMO
-evento. Fechar isso de vez pediria registro `:global` pros dev agents
-— o mesmo que `Engine.Sessions.SessionServer` já faz, pelo mesmo motivo
-— reescrevendo `AgentIo.via/2`, `DevAgentSupervisor.start_agent` e
-`Monitor`. Fora do escopo desta fase; ver "o que fica para depois".
+**Consciously accepted limit: delivery is AT-MOST-ONCE.** If the
+agent's process is momentarily down when the broadcast happens, the
+wake is lost and the agent only wakes on the NEXT event. Fully closing
+this would require `:global` registration for dev agents — the same
+thing `Engine.Sessions.SessionServer` already does, for the same
+reason — rewriting `AgentIo.via/2`, `DevAgentSupervisor.start_agent`
+and `Monitor`. Out of scope for this phase; see "what's left for
+later."
 
-### O circuit breaker mora no engine, não na api
+### The circuit breaker lives in the engine, not in the api
 
-`backlog.task_blocked`'s `actor.id` é QUEM BLOQUEOU (`qa-agent`,
-`secops-agent`, `qa-lead`, ou o próprio dev) — a api não tem como
-distinguir "a sequência DESTE agente" a partir dele.
-`consecutive_blocked` fica em `dev_agent_states`, incrementado só num
-lugar (`finish_task/2`), porque é o único ponto por onde o agente
-aprende TODO desfecho da própria task — local (ToolLoop) ou remoto
-(`task.gate_resolved` com `nextAction: "blocked"`, teto de correções do
-gate estourado). RN-047 detalha o mecanismo e as invariantes.
+`backlog.task_blocked`'s `actor.id` is WHO BLOCKED IT (`qa-agent`,
+`secops-agent`, `qa-lead`, or the dev itself) — the api has no way to
+tell "THIS agent's sequence" apart from it. `consecutive_blocked` lives
+in `dev_agent_states`, incremented in only one place (`finish_task/2`),
+because it's the only point through which the agent learns EVERY
+outcome of its own task — local (ToolLoop) or remote
+(`task.gate_resolved` with `nextAction: "blocked"`, the gate's
+correction cap exhausted). RN-047 details the mechanism and the
+invariants.
 
-O teto (`max_consecutive_blocked`) segue o padrão de
-`task_budget_micros` — coluna em `projects`, resolvida na ativação
-(parâmetro → setting do projeto → default) — mas ganhou o que aquele
-nunca teve: PATCH + campo em Configurações. Decisão do usuário: mesmo
-custando mais superfície, o teto do breaker é do tipo que se quer
-ajustar sem reativar a execução às cegas.
+The cap (`max_consecutive_blocked`) follows the pattern of
+`task_budget_micros` — a column on `projects`, resolved at activation
+(parameter → project setting → default) — but got what that one never
+had: a PATCH + a field in Settings. The user's decision: even at the
+cost of more surface, the breaker's cap is the kind you want to adjust
+without blindly reactivating execution.
 
-### Rearm é a única saída de `idle_tripped`
+### Rearm is the only way out of `idle_tripped`
 
-Um clique (`POST .../agents/:agentId/rearm`) — sem destrave automático,
-mesmo princípio de `unblock` pra tasks individuais. A api registra
-`dev.rearmed` com `actor: user` ANTES de qualquer coisa acontecer no
-engine ser garantida (mesma ordem — engine primeiro, evento depois —
-que `AcceptParallelizationUseCase` já usa, pelo mesmo motivo: o event
-log é imutável, e registrar antes da recusa deixaria uma mentira nele).
-O engine NÃO emite um segundo `dev.rearmed` próprio: seria o mesmo
-evento contado duas vezes por atores diferentes na mesma sessão. O que
-acontece depois (reivindicou ou voltou a idle) já narra via
-`dev.working`/`dev.idle`, que o `try_claim/1` do rearm dispara.
+A single click (`POST .../agents/:agentId/rearm`) — no automatic
+unlock, same principle as `unblock` for individual tasks. The api
+records `dev.rearmed` with `actor: user` BEFORE anything is guaranteed
+to happen in the engine (the same order — engine first, event after —
+that `AcceptParallelizationUseCase` already uses, for the same reason:
+the event log is immutable, and recording before a refusal would leave
+a lie in it). The engine does NOT emit a second `dev.rearmed` of its
+own: that would be the same event counted twice by different actors in
+the same session. What happens next (claimed something or went back to
+idle) already gets narrated via `dev.working`/`dev.idle`, which the
+rearm's `try_claim/1` triggers.
 
-## Consequências
+## Consequences
 
-- **Aceite do requisito central**: um projeto com N tasks prontas num
-  módulo processa todas em sequência com UM agente, sem restart do
-  engine e sem reativação manual — a cadeia claim → PR → gate aprovado
-  → claim da próxima → fila vazia → idle → task nova → acorda é
-  determinística e testada de ponta a ponta
-  (`dev_agent_chain_test.exs`), com a infraestrutura REAL de
-  outbox/drain/worker/PubSub no meio, não simulada.
-- **O caminho dev↔gate de correção (`changes_requested`) fica
-  exatamente como estava** — em processo, sem outbox. É a prova
-  mecânica de que reagendar não duplica esse caminho: `task.gate_resolved`
-  só é emitido para desfechos terminais, então não existe uma segunda
-  linha pra ele acionar.
-- **Reidratação deixou de ser "volta em branco"**: `awaiting_gate` e
-  `working` retêm ou recuperam o que fazia sentido reter; `working`
-  interrompido bloqueia com diagnóstico honesto do restart em vez de
-  reclamar em silêncio ou tentar retomar um ToolLoop que não existe
-  mais.
-- **O claim atômico não mudou** (`FOR UPDATE OF t SKIP LOCKED`,
-  `backlog.repository.ts`) — reagendamento aumenta QUEM tenta claim
-  (o mesmo agente, mais vezes; dois agentes do módulo acordando juntos),
-  não muda a garantia que já existia. A prova de concorrência da api
-  (8 claims paralelos reais) continua intocada; a nova é do lado do
-  engine, sobre a lógica de reação.
-- **`NoopDevAgentServer` fica fora do mecanismo inteiro**: nunca abre
-  gate, nunca é acordado, `status` fixo em `"working"`. É smoke test de
-  infraestrutura, não um segundo produto a manter em dia com a máquina
-  de estados.
+- **Acceptance of the central requirement**: a project with N ready
+  tasks in a module processes all of them in sequence with ONE agent,
+  with no engine restart and no manual reactivation — the chain claim
+  → PR → gate approved → claim next → empty queue → idle → new task →
+  wakes up is deterministic and tested end to end
+  (`dev_agent_chain_test.exs`), with the REAL outbox/drain/worker/PubSub
+  infrastructure in the middle, not simulated.
+- **The dev↔gate correction path (`changes_requested`) stays exactly
+  as it was** — in-process, without outbox. It's the mechanical proof
+  that rescheduling doesn't duplicate that path: `task.gate_resolved`
+  is only emitted for terminal outcomes, so there's no second line to
+  trigger it.
+- **Rehydration stopped being "come back blank"**: `awaiting_gate` and
+  `working` retain or recover whatever made sense to retain; an
+  interrupted `working` blocks with an honest restart diagnosis instead
+  of silently complaining or trying to resume a ToolLoop that no longer
+  exists.
+- **The atomic claim didn't change** (`FOR UPDATE OF t SKIP LOCKED`,
+  `backlog.repository.ts`) — rescheduling increases WHO attempts the
+  claim (the same agent, more times; two agents of the module waking up
+  together), not the guarantee that already existed. The api's
+  concurrency proof (8 real parallel claims) stays untouched; the new
+  one is on the engine side, over the reaction logic.
+- **`NoopDevAgentServer` stays outside the entire mechanism**: never
+  opens a gate, never gets woken up, `status` fixed at `"working"`.
+  It's an infrastructure smoke test, not a second product to keep in
+  sync with the state machine.
 
-## Revisão adversarial, e o que ela achou
+## Adversarial review, and what it found
 
-A implementação passou por uma auditoria independente ANTES de sair da
-branch — feita sem alimentar o auditor com as justificativas acima, para
-não herdar os pontos cegos de quem escreveu. Ela achou **oito defeitos,
-quatro deles capazes de travar um agente ou o boot**. Todos foram
-corrigidos; o registro fica aqui porque a lição é mais útil que a lista.
+The implementation went through an independent audit BEFORE leaving
+the branch — done without feeding the auditor the justifications
+above, so as not to inherit whoever wrote it's blind spots. It found
+**eight defects, four of them capable of locking up an agent or the
+boot**. All were fixed; the record stays here because the lesson is
+more useful than the list.
 
-**A decisão deste ADR não mudou.** O que mudou foi a implementação dela,
-que estava errada em pontos que os testes não alcançavam.
+**This ADR's decision didn't change.** What changed was its
+implementation, which was wrong at points the tests couldn't reach.
 
-**Por que a suite inteira passou verde com quatro travamentos dentro:**
-os fakes (`FakeWorktreeManager`, `FakeEngineApiClient`) retornam
-instantaneamente e **sempre com sucesso**. Não existia caminho de teste
-para um `claim_task` que falha, para o custo real do ToolLoop dentro do
-`init/1`, nem para um gate terminando a task por fora do
-`RecordGateVerdictUseCase`. Um teste que só exercita o caminho feliz
-mede a ausência de erros de digitação, não a corretude do desenho. O
-fake ganhou ramo de erro e atraso configurável junto das correções.
+**Why the whole suite passed green with four lockups inside:** the
+fakes (`FakeWorktreeManager`, `FakeEngineApiClient`) return instantly
+and **always with success**. There was no test path for a `claim_task`
+that fails, for the ToolLoop's real cost inside `init/1`, nor for a
+gate finishing a task outside `RecordGateVerdictUseCase`. A test that
+only exercises the happy path measures the absence of typos, not the
+correctness of the design. The fake gained an error branch and
+configurable delay along with the fixes.
 
-Os quatro críticos, pelo que ensinam:
+The four critical ones, for what they teach:
 
-- **Estado parcial é pior que estado errado.** `finish_task/2` zerava
-  `task_id` mas não tocava em `status`; bastava um 5xx transitório no
-  claim para o agente ficar `awaiting_gate` com `task_id` nil — uma
-  combinação que NENHUM dos três guards aceita. O agente ficava
-  morto-vivo, e a causa era uma falha de rede de um segundo.
-- **`init/1` é caminho de boot, não lugar de trabalho.** A recuperação
-  de um `working` interrompido rodava lá dentro, e como
-  `start_link`/`start_child` esperam `:infinity`, o boot inteiro ficava
-  preso pela duração de uma task de LLM. Foi para `handle_continue`.
-- **Um funil que não é o único funil não é funil.** O desenho dizia "o
-  agente aprende TODO desfecho da própria task por `finish_task/2`" —
-  mas o `QaLeadServer` bloqueia chamando `MarkTaskBlockedUseCase`
-  direto, sem passar pelo `RecordGateVerdictUseCase` onde a emissão
-  estava. A emissão desceu para o funil de verdade.
-- **Copiei o mecanismo do outbox sem copiar a razão dele.** As quatro
-  emissões novas não usavam `UnitOfWork`, embora o
-  `AppendSessionEventUseCase` use — quebrando a invariante que o
-  `architecture.md` descreve como o motivo de o outbox existir, num
-  arquivo que editei nesta mesma fase.
+- **Partial state is worse than wrong state.** `finish_task/2` zeroed
+  `task_id` but didn't touch `status`; a transient 5xx on the claim was
+  enough for the agent to end up `awaiting_gate` with `task_id` nil —
+  a combination NONE of the three guards accept. The agent stayed
+  half-dead, and the cause was a one-second network failure.
+- **`init/1` is a boot path, not a place to work.** Recovering an
+  interrupted `working` ran in there, and since `start_link`/`start_child`
+  expect `:infinity`, the whole boot got stuck for the duration of an
+  LLM task. It moved to `handle_continue`.
+- **A funnel that isn't the only funnel isn't a funnel.** The design
+  said "the agent learns EVERY outcome of its own task via
+  `finish_task/2`" — but `QaLeadServer` blocks by calling
+  `MarkTaskBlockedUseCase` directly, without going through
+  `RecordGateVerdictUseCase`, where the emission lived. The emission
+  moved down to the real funnel.
+- **I copied the outbox mechanism without copying its reason.** The
+  four new emissions didn't use `UnitOfWork`, even though
+  `AppendSessionEventUseCase` does — breaking the invariant
+  `architecture.md` describes as the reason the outbox exists, in a
+  file I edited in this same phase.
 
-## O que fica para depois
+## What's left for later
 
-- **`:global` pros dev agents** — fecharia a lacuna at-most-once da
-  entrega por PubSub. Não é urgente: o próximo evento (outro gate,
-  outra task pegável) ainda alcança um agente que perdeu um wake, só
-  não imediatamente.
-- **"3 gates reais em sequência, sem restart" como aceite manual, não
-  CI.** QA Lead e SecOps são julgamento de LLM — não determinístico por
-  natureza, mesma razão que o [ADR 0020](0020-destravar-gates-qa-secops.md)
-  já registrou pro critério de aceite da Fase 4a ("FECHADO, mas não
-  determinístico"). O que a suite prova é tudo A JUSANTE do veredito;
-  o dogfooding com gates de verdade continua sendo demonstração humana,
-  registrada no CHANGELOG.
-- **Kill no meio do ToolLoop não tem retomada automática, por
-  decisão.** Turno, mensagens e edições do worktree só existem em
-  memória — não há o que retomar. Bloquear com diagnóstico e deixar um
-  humano decidir é a mesma doutrina que já rege bloqueios locais; uma
-  retomada automática completa (re-despachar um ToolLoop novo na MESMA
-  task já reivindicada) seria autonomia nova, e o CLAUDE.md marca
-  isso como não-objetivo explícito da Fase 12.
-- **O worktree pode sumir debaixo de uma aprovação pendente** — achado
-  D5 da revisão, **aceito conscientemente, não corrigido**. O interlock
-  `awaiting_gate` protege a janela do GATE, mas não a do pipeline de
-  aprovações: com a autonomia do dev em `manual` (o toggle do painel
-  permite), `git_commit`/`git_push` ficam `pending`; os gates varrem o
-  WORKTREE e não a PR, então podem aprovar, o agente reivindica a
-  próxima task e `add_worktree/3` apaga o diretório — e a aprovação
-  humana, quando vier, executa contra um caminho que não existe mais.
-  Antes da 12b o agente parava e o worktree sobrevivia indefinidamente.
+- **`:global` for dev agents** — would close the at-most-once gap of
+  PubSub delivery. Not urgent: the next event (another gate, another
+  claimable task) still reaches an agent that missed a wake, just not
+  immediately.
+- **"3 real gates in sequence, no restart" as manual acceptance, not
+  CI.** QA Lead and SecOps are LLM judgment — non-deterministic by
+  nature, the same reason [ADR 0020](0020-destravar-gates-qa-secops.md)
+  already recorded for Phase 4a's acceptance criterion ("CLOSED, but
+  not deterministic"). What the suite proves is everything DOWNSTREAM
+  of the verdict; dogfooding with real gates remains a human
+  demonstration, recorded in the CHANGELOG.
+- **A kill in the middle of the ToolLoop has no automatic resumption,
+  by decision.** Turn, messages and worktree edits only exist in
+  memory — there's nothing to resume. Blocking with a diagnosis and
+  leaving a human to decide is the same doctrine that already governs
+  local blocks; a full automatic resumption (redispatching a new
+  ToolLoop on the SAME already-claimed task) would be new autonomy, and
+  CLAUDE.md marks that as an explicit non-goal of Phase 12.
+- **The worktree can disappear under a pending approval** — finding D5
+  from the review, **consciously accepted, not fixed**. The
+  `awaiting_gate` interlock protects the GATE window, but not the
+  approval pipeline's window: with the dev's autonomy set to `manual`
+  (the panel toggle allows it), `git_commit`/`git_push` stay `pending`;
+  gates scan the WORKTREE, not the PR, so they can approve, the agent
+  claims the next task and `add_worktree/3` deletes the directory — and
+  the human approval, when it comes, runs against a path that no
+  longer exists. Before 12b the agent would stop and the worktree would
+  survive indefinitely.
 
-  Não foi corrigido porque a correção óbvia — segurar o claim enquanto
-  houver `proposed_action` pendente daquele worktree — reintroduz
-  exatamente o acoplamento que esta fase removeu: o agente voltaria a
-  depender de um estado externo para decidir se pode trabalhar. O
-  caminho também exige sair do default: `ActivateExecutionUseCase`
-  seeda `auto_approve` para `git_commit`/`git_push`/`pr_open` de todo
-  dev agent, então só alcança quem mudou a autonomia à mão. Fica
-  registrado como limite conhecido; se aparecer na prática, a
-  correção certa é o worktree ser por TASK e não por agente, o que é
-  mudança estrutural e pede ADR próprio.
-- **12b não mexeu nos achados #12 a #16** da mesma colheita (handoff
-  manual livre, promoção de story — essa é a Fase 12c —, devolução ao
-  PO, aba compartilhada do painel, contador de aprovações). Fora de
-  escopo.
+  It wasn't fixed because the obvious fix — holding the claim while
+  there's a pending `proposed_action` for that worktree — reintroduces
+  exactly the coupling this phase removed: the agent would go back to
+  depending on external state to decide whether it can work. The path
+  also requires leaving the default: `ActivateExecutionUseCase` seeds
+  `auto_approve` for `git_commit`/`git_push`/`pr_open` of every dev
+  agent, so it only reaches whoever changed autonomy by hand. It stays
+  recorded as a known limit; if it shows up in practice, the right fix
+  is for the worktree to be per TASK instead of per agent, which is a
+  structural change and calls for its own ADR.
+- **12b didn't touch findings #12 through #16** from the same harvest
+  (free manual handoff, story promotion — that's Phase 12c —, return
+  to the PO, shared panel tab, approval counter). Out of scope.
 
-Referencia [ADR 0005](0005-repo-bootstrap-idempotent-steps.md) (o
-molde de estado durável + reidratação que este ADR estende pra dev
-agents) e [ADR 0020](0020-destravar-gates-qa-secops.md) (a origem da
-doutrina "nunca reclaim silencioso" e do precedente de aceite manual
-pra critério não-determinístico).
+References [ADR 0005](0005-repo-bootstrap-idempotent-steps.md) (the
+durable-state + rehydration mold this ADR extends to dev agents) and
+[ADR 0020](0020-destravar-gates-qa-secops.md) (the origin of the
+"never silent reclaim" doctrine and the precedent for manual acceptance
+of a non-deterministic criterion).

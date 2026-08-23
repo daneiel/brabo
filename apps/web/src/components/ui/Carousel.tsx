@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { ChevronLeftIcon, ChevronRightIcon } from './icons';
 import styles from './Carousel.module.css';
@@ -38,6 +39,7 @@ interface CarouselProps {
  * apontando pro vazio.
  */
 export function Carousel({ ariaLabel, slides, headerActions, className }: CarouselProps) {
+  const { t } = useTranslation('ui');
   const [indiceBruto, setIndiceBruto] = useState(0);
 
   if (slides.length === 0) return null;
@@ -63,12 +65,12 @@ export function Carousel({ ariaLabel, slides, headerActions, className }: Carous
     <div
       className={[styles.carousel, className].filter(Boolean).join(' ')}
       role="group"
-      aria-roledescription="carrossel"
+      aria-roledescription={t('carousel.roleDescription')}
       aria-label={ariaLabel}
     >
       <div className={styles.cabecalho}>
         <span className={styles.contagem}>
-          {indice + 1} de {slides.length}
+          {t('carousel.counter', { current: indice + 1, total: slides.length })}
         </span>
         {headerActions}
       </div>
@@ -80,7 +82,11 @@ export function Carousel({ ariaLabel, slides, headerActions, className }: Carous
         tabIndex={0}
         onKeyDown={onKeyDown}
         aria-live="polite"
-        aria-label={atual?.label ? `Slide ${indice + 1}: ${atual.label}` : `Slide ${indice + 1}`}
+        aria-label={
+          atual?.label
+            ? t('carousel.slideLabelNamed', { index: indice + 1, label: atual.label })
+            : t('carousel.slideLabel', { index: indice + 1 })
+        }
       >
         {atual?.node}
       </div>
@@ -89,21 +95,25 @@ export function Carousel({ ariaLabel, slides, headerActions, className }: Carous
         <Button
           type="button"
           variant="ghost"
-          aria-label="História anterior"
+          aria-label={t('carousel.previousLabel')}
           disabled={indice === 0}
           onClick={() => ir(indice - 1)}
         >
           <ChevronLeftIcon size={14} />
         </Button>
 
-        <div className={styles.dots} role="tablist" aria-label="Ir para história">
+        <div className={styles.dots} role="tablist" aria-label={t('carousel.dotsGroupLabel')}>
           {slides.map((s, i) => (
             <button
               key={s.key}
               type="button"
               role="tab"
               aria-selected={i === indice}
-              aria-label={s.label ? `História ${i + 1}: ${s.label}` : `História ${i + 1}`}
+              aria-label={
+                s.label
+                  ? t('carousel.dotLabelNamed', { index: i + 1, label: s.label })
+                  : t('carousel.dotLabel', { index: i + 1 })
+              }
               className={[styles.dot, i === indice && styles.dotAtivo].filter(Boolean).join(' ')}
               onClick={() => ir(i)}
             />
@@ -113,7 +123,7 @@ export function Carousel({ ariaLabel, slides, headerActions, className }: Carous
         <Button
           type="button"
           variant="ghost"
-          aria-label="Próxima história"
+          aria-label={t('carousel.nextLabel')}
           disabled={indice === slides.length - 1}
           onClick={() => ir(indice + 1)}
         >

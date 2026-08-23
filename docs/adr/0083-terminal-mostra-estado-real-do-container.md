@@ -1,94 +1,95 @@
-# 0083 — A aba Terminal ganha o consumidor real do ciclo de vida, não o terminal
+# 0083 — The Terminal tab gets the real consumer of the lifecycle, not the terminal
 
 ## Status
 
-Aceito. Revisa a seção "Nenhuma rota HTTP nova" do
-[ADR 0081](0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md), que
-adiou essa rota de propósito até existir um consumidor real. Não revisa —
-e não pode revisar — o [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
-nem a FASE 25b (CLAUDE.md), que continuam declarando o terminal interativo
-cortado: este documento não sobe a parede física do container, só lê o
-estado registrado do lado de fora dela.
+Accepted. Revises the "No new HTTP route" section of
+[ADR 0081](0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md), which
+deliberately deferred that route until a real consumer existed. It does not
+revise — and cannot revise — [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
+nor PHASE 25b (CLAUDE.md), which continue to declare the interactive
+terminal cut: this document does not raise the container's physical wall,
+it only reads the state recorded from outside it.
 
-## Contexto
+## Context
 
-O plano original desta frente (PROGRAMA 28, Onda 5, frente F2) era "terminal
-interativo", assumindo que por esta altura o container por projeto já teria
-ciclo de vida real — provisionamento de verdade, com o worktree do agente
-vivendo dentro do container. Isso não aconteceu. A Onda 4/frente F1 (ADR
-0081) entregou `project_containers` — uma TABELA de estado
-(`provisioning/running/stopped/failed/removed`) e dois casos de uso que
-gravam e leem essa tabela — mas nenhuma chamada real a Docker: nenhum
-serviço monta `/var/run/docker.sock`, nenhum roda `privileged`, e
-`RegistrarTransicaoDeContainerUseCase` não tem chamador nenhum fora dos
-próprios testes. Não existe container real rodando para abrir um terminal
-DENTRO dele.
+This front's original plan (PROGRAM 28, Wave 5, front F2) was "interactive
+terminal," assuming that by this point the per-project container would
+already have a real lifecycle — real provisioning, with the agent's
+worktree living inside the container. That didn't happen. Wave 4/front F1
+(ADR 0081) delivered `project_containers` — a state TABLE
+(`provisioning/running/stopped/failed/removed`) and two use cases that
+write and read that table — but no real Docker calls: no service mounts
+`/var/run/docker.sock`, none runs `privileged`, and
+`RegistrarTransicaoDeContainerUseCase` has no caller outside its own
+tests. There is no real container running to open a terminal INSIDE it.
 
-Implementar um terminal que finge executar comandos, ou que executa no MESMO
-container do monorepo do Brabo — a dívida que o ADR 0055 já descreve como
-política, não isolamento —, inventaria uma capacidade que não existe. É o
-mesmo erro que os ADRs 0041/0042 já recusam para provider de LLM sem prova e
-modelo de catálogo sem curadoria: capability só se declara quando provada.
+Implementing a terminal that fakes executing commands, or that executes in
+the SAME container as Brabo's monorepo — the debt ADR 0055 already
+describes as policy, not isolation —, would invent a capability that
+doesn't exist. It's the same mistake ADRs 0041/0042 already refuse for an
+unproven LLM provider and an uncurated catalog model: a capability is only
+declared once it's proven.
 
-O ADR 0081 já tinha nomeado esta frente como o consumidor que faltava:
+ADR 0081 had already named this front as the missing consumer:
 
-> Nada na Onda 4 consome esta tabela por HTTP ainda — o terminal interativo
-> (25b/Onda 5) é o candidato óbvio, e decidir a forma da rota antes de saber
-> exatamente o que ele precisa ler seria adivinhar um contrato.
+> Nothing in Wave 4 consumes this table over HTTP yet — the interactive
+> terminal (25b/Wave 5) is the obvious candidate, and deciding the route's
+> shape before knowing exactly what it needs to read would be guessing a
+> contract.
 > — ADR 0081
 
-## Decisão
+## Decision
 
-**A aba Terminal não ganha um terminal.** Ganha o consumidor real que o ADR
-0081 esperava: `GET /projects/:projectId/container/lifecycle` (RN-267), uma
-rota de leitura só, `role:viewer`, que espelha
-`ObterCicloDeVidaDoContainerUseCase` sem adicionar lógica — `null` quando o
-projeto nunca foi provisionado (o caso comum hoje, porque nada em produção
-transiciona a tabela) ou o estado registrado
+**The Terminal tab does not get a terminal.** It gets the real consumer
+ADR 0081 was waiting for: `GET /projects/:projectId/container/lifecycle`
+(RN-267), a read-only route, `role:viewer`, that mirrors
+`ObterCicloDeVidaDoContainerUseCase` without adding logic — `null` when the
+project was never provisioned (the common case today, since nothing in
+production transitions the table) or the recorded state
 (`status`/`imageVersion`/`resources`/`failureReason`/`statusChangedAt`).
 
-Sob o texto explicativo que já existia em `CodeBottomPanel.tsx` desde a FASE
-26b ("o terminal interativo ainda não existe — FASE 25b"), a aba passa a
-mostrar esse estado com um `Badge` traduzido para pt-BR e o motivo da falha
-quando houver. A busca só acontece enquanto a aba Terminal está aberta
-(`enabled: aba === 'terminal'`), sem polling em segundo plano — a mesma
-disciplina de tráfego que a RN-107 já aplica ao gate da imagem.
+Beneath the explanatory text that already existed in `CodeBottomPanel.tsx`
+since PHASE 26b ("the interactive terminal doesn't exist yet — PHASE 25b"),
+the tab now shows this state with a `Badge` translated to pt-BR and the
+failure reason when there is one. The fetch only happens while the Terminal
+tab is open (`enabled: aba === 'terminal'`), with no background polling —
+the same traffic discipline RN-107 already applies to the image gate.
 
-O texto explicativo da FASE 25b **não é removido nem enfraquecido**: o
-estado do ciclo de vida é informação adicional, não substituição da
-explicação de por que o terminal em si não existe. Um projeto podendo
-mostrar `running` não significa que há algo executável ali — significa
-apenas que alguém (hoje, um teste ou uma chamada manual) registrou essa
-transição na tabela.
+PHASE 25b's explanatory text is **neither removed nor weakened**: the
+lifecycle state is additional information, not a replacement for the
+explanation of why the terminal itself doesn't exist. A project able to
+show `running` doesn't mean anything is executable there — it only means
+someone (today, a test or a manual call) recorded that transition in the
+table.
 
-## Consequências
+## Consequences
 
-**O que passa a existir.** A primeira exposição HTTP do ciclo de vida do
-container, e a primeira tela do produto que lê `project_containers` — antes
-disso a tabela só era visível a quem consultasse o banco ou os testes
-diretamente.
+**What comes to exist.** The first HTTP exposure of the container
+lifecycle, and the first product screen that reads `project_containers` —
+before this, the table was only visible to whoever queried the database or
+the tests directly.
 
-**O que continua exatamente como estava.** O terminal interativo. A FASE 25b
-segue cortada e declarada — nenhuma linha desta ADR sobe um orquestrador,
-monta um socket Docker ou roteia um comando de terminal para dentro de um
-container. Os achados Z e AD (allowlist de verbo não converge) continuam
-abertos pelo mesmo motivo do ADR 0081: fechar exige a parede física, não uma
-tela que lê uma tabela de estado.
+**What stays exactly as it was.** The interactive terminal. PHASE 25b
+remains cut and declared — no line of this ADR raises an orchestrator,
+mounts a Docker socket, or routes a terminal command into a container.
+Findings Z and AD (verb allowlist doesn't converge) remain open for the
+same reason as ADR 0081: closing them requires the physical wall, not a
+screen that reads a state table.
 
-**O que fica honesto por construção.** Como nada em produção hoje transiciona
-`project_containers`, a resposta mais comum da rota nova é `null`, e a aba
-mostra isso literalmente ("ainda não foi provisionado") em vez de inventar
-um status. No dia em que um orquestrador real existir e começar a
-transicionar a tabela de verdade, esta mesma tela passa a refletir esse
-estado sem precisar mudar — ela já lê o que a tabela diz, nunca o que
-gostaríamos que ela dissesse.
+**What stays honest by construction.** Since nothing in production today
+transitions `project_containers`, the route's most common response is
+`null`, and the tab shows this literally ("not yet provisioned") instead
+of inventing a status. The day a real orchestrator exists and starts
+genuinely transitioning the table, this same screen starts reflecting that
+state without needing to change — it already reads what the table says,
+never what we'd wish it said.
 
-## Referências
+## References
 
 - [ADR 0081](0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md) —
-  a tabela e os dois casos de uso que este documento finalmente expõe por HTTP.
+  the table and the two use cases this document finally exposes over HTTP.
 - [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md) —
-  a FASE 25b, que continua cortada; este documento não a reabre.
+  PHASE 25b, which remains cut; this document does not reopen it.
 - [RN-105](../business-rules.md#rn-105), [RN-107](../business-rules.md#rn-107),
   [RN-243](../business-rules.md#rn-243), [RN-267](../business-rules.md#rn-267),
   [RN-268](../business-rules.md#rn-268).

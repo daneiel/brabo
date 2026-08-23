@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { alturasRelativas, diaCurto, tituloDoDia, type SpendPorDia } from '../lib/spend';
 import { formatarUsd } from './CredentialSpendSection';
 import styles from './SpendCharts.module.css';
@@ -36,6 +37,7 @@ export function BarrasPorDia({
   serie: SpendPorDia[];
   titulo: string;
 }) {
+  const { t } = useTranslation('spend');
   const alturas = alturasRelativas(serie.map((p) => p.costMicros));
   const largura = Math.max(serie.length, 1) * 10;
   const semGasto = alturas.every((a) => a === 0);
@@ -77,7 +79,7 @@ export function BarrasPorDia({
         <span>{serie.length > 0 ? diaCurto(serie[serie.length - 1].dia) : ''}</span>
       </div>
       {semGasto && (
-        <div className={styles.eixoVazio}>Nenhum gasto nesta janela.</div>
+        <div className={styles.eixoVazio}>{t('charts.noSpendInWindow')}</div>
       )}
     </figure>
   );

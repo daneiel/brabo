@@ -1,0 +1,54 @@
+{
+  "shared": {
+    "loading": "Carregando…",
+    "summing": "Somando…",
+    "retry": "Tentar de novo",
+    "tokensDetail": "{{input}} entrada · {{output}} saída",
+    "rankingDetail": "{{tokens}} tok · {{calls}}×"
+  },
+  "role": {
+    "error": "Não consegui descobrir o seu papel neste workspace, e é ele que diz qual relatório mostrar."
+  },
+  "budget": {
+    "notSet": "Nenhum orçamento definido para este projeto ainda — sem teto, este bloco não tem o que mostrar."
+  },
+  "workspace": {
+    "title": "Gastos do workspace",
+    "subtitle": "Últimos {{dias}} dias. Onde o dinheiro foi — por modelo, por provider, por projeto, por agente e por pessoa. De qual <strong>chave</strong> ele saiu é a seção de baixo.",
+    "error": "Não consegui carregar o gasto agora. O consumo continua registrado — isto é só a leitura.",
+    "totalLabel": "Total em {{dias}} dias",
+    "callsDetail": "{{count}} chamada(s)",
+    "tokensLabel": "Tokens",
+    "dailySpendTitle": "Gasto por dia",
+    "byModelTitle": "Por modelo",
+    "byModelEmpty": "Nenhuma chamada nesta janela.",
+    "byProviderTitle": "Por provider",
+    "byProviderEmpty": "Nenhum provider gastou nesta janela.",
+    "byProjectTitle": "Por projeto",
+    "byProjectEmpty": "Nenhum projeto gastou nesta janela.",
+    "byActorTitle": "Por agente e pessoa",
+    "byActorEmpty": "Ninguém gastou nesta janela."
+  },
+  "member": {
+    "title": "O meu consumo",
+    "subtitle": "Últimos {{dias}} dias, só o que <strong>você</strong> consumiu neste projeto. O custo é <strong>estimado</strong>: quem paga a chamada é a chave do dono do workspace, e a fatura dela é dele.",
+    "error": "Não consegui carregar o seu consumo agora. O registro continua lá — isto é só a leitura.",
+    "estimatedLabel": "Estimado em {{dias}} dias",
+    "callsDetail": "{{count}} chamada(s) suas",
+    "tokensLabel": "Tokens seus",
+    "dailySpendTitle": "Seu gasto por dia",
+    "bySessionTitle": "Por sessão",
+    "bySessionEmpty": "Você não gastou nada neste projeto nos últimos 30 dias. O que os agentes gastam sai da chave do dono do workspace, e aparece no relatório dele.",
+    "note": "Aqui não há quebra por provider nem por credencial — é a conta de outra pessoa, e a pergunta desta tela é o seu consumo."
+  },
+  "charts": {
+    "noSpendInWindow": "Nenhum gasto nesta janela."
+  },
+  "libSpend": {
+    "callTitle_one": "{{dia}} · {{custo}} · {{count}} chamada",
+    "callTitle_other": "{{dia}} · {{custo}} · {{count}} chamadas",
+    "actorPerson": "{{id}} (pessoa)",
+    "budgetBlocked": "Este projeto atingiu {{pct}}% do orçamento — novas chamadas de LLM estão BLOQUEADAS até o teto subir.",
+    "budgetWarning": "Este projeto já passou de {{pct}}% do orçamento definido."
+  }
+}

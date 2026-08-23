@@ -1,141 +1,149 @@
-# ADR 0073 — O caminho publicado nomeia o ambiente, não a branch
+# ADR 0073 — The published path names the environment, not the branch
 
-- **Status:** aceito
-- **Data:** 2026-08-13
-- **Revisa:** [ADR 0071](0071-publicacao-simetrica-por-degrau.md)
+- **Status:** accepted
+- **Date:** 2026-08-13
+- **Revises:** [ADR 0071](0071-publicacao-simetrica-por-degrau.md)
 
-## Contexto
+## Context
 
-O [ADR 0071](0071-publicacao-simetrica-por-degrau.md) pôs os três degraus em
-`/brabo/<branch>/` e resolveu a assimetria que existia desde o
-[ADR 0034](0034-documentacao-publicada-por-degrau.md). O que ele não questionou
-foi a identidade entre as duas coisas: o segmento da URL **era** o nome da
-branch, por interpolação de `$GITHUB_REF_NAME`.
+[ADR 0071](0071-publicacao-simetrica-por-degrau.md) put the three stages at
+`/brabo/<branch>/` and resolved the asymmetry that had existed since
+[ADR 0034](0034-documentacao-publicada-por-degrau.md). What it didn't
+question was the identity between the two things: the URL segment **was**
+the branch name, by interpolation of `$GITHUB_REF_NAME`.
 
-Isso deixou a documentação estável em `https://daneiel.github.io/brabo/main/`, e
-`main` é uma palavra de quem commita. Quem lê a documentação não está escolhendo
-uma branch — está escolhendo **quão maduro** é o texto que vai ler. `qa` e `dev`
-funcionam como endereço por coincidência: são, ao mesmo tempo, nome de branch e
-nome de ambiente. `main` não é nome de ambiente em lugar nenhum.
+That left the stable documentation at `https://daneiel.github.io/brabo/main/`,
+and `main` is a word for whoever commits. Whoever reads the documentation
+isn't choosing a branch — they're choosing **how mature** the text they're
+about to read is. `qa` and `dev` work as an address by coincidence: they are,
+at the same time, a branch name and an environment name. `main` isn't an
+environment name anywhere.
 
-O pedido veio do dono do produto, em uma frase: *"a `main` não pode ter o path
-`/main`, modificar para `/prd`"*.
+The request came from the product owner, in one sentence: *"`main` can't
+have the path `/main`, change it to `/prd`"*.
 
-## Decisão
+## Decision
 
-### 1. `main` publica em `/brabo/prd/`
+### 1. `main` publishes at `/brabo/prd/`
 
-Os outros dois seguem em `/brabo/qa/` e `/brabo/dev/`. A publicação continua
-simétrica no mecanismo — o que muda é que o mapa branch→caminho passa a
-**existir**, em vez de ser a função identidade escrita como interpolação de
-string.
+The other two remain at `/brabo/qa/` and `/brabo/dev/`. Publishing remains
+symmetric in mechanism — what changes is that the branch→path map now
+**exists**, instead of being the identity function written as string
+interpolation.
 
-| branch | caminho publicado |
+| branch | published path |
 |---|---|
 | `main` | `/brabo/prd/` |
 | `qa` | `/brabo/qa/` |
 | `dev` | `/brabo/dev/` |
 
-### 2. O mapa mora num lugar por processo, e cada um deriva o resto dele
+### 2. The map lives in one place per process, and each one derives the rest from it
 
-São três processos independentes, e cada um tem seu ponto único:
+These are three independent processes, and each has its single source point:
 
-- **`.github/workflows/docs-deploy.yml`** — o passo "Qual degrau, e para onde ele
-  publica" emite `branch`, `caminho` e `base`. `baseUrl` e subdiretório saem
-  **juntos** daí; separá-los é como eles passam a divergir, e um `baseUrl` que
-  não bate com o diretório serve HTML e nada mais.
-- **`website/docusaurus.config.ts`** — a tabela `DEGRAUS` traz `branch`,
-  `caminho` e rótulo. O seletor da navbar e o `baseUrl` default leem dela.
-- **`scripts/docs/landing.mjs`** — a mesma tabela, com `caminho` (o diretório na
-  árvore) separado de `branch` (de onde sai a **tag** que carimba a versão do
-  degrau). Este é o par que mais engana: a versão de `/prd/` vem das tags da
-  `main`, e trocar um pelo outro faria `/prd/` parecer nunca publicado.
+- **`.github/workflows/docs-deploy.yml`** — the step "which stage, and where
+  does it publish" emits `branch`, `caminho` (path), and `base`. `baseUrl`
+  and the subdirectory come out of it **together**; separating them is how
+  they end up diverging, and a `baseUrl` that doesn't match the directory
+  serves HTML and nothing else.
+- **`website/docusaurus.config.ts`** — the `DEGRAUS` (stages) table carries
+  `branch`, `caminho`, and a label. The navbar selector and the default
+  `baseUrl` read from it.
+- **`scripts/docs/landing.mjs`** — the same table, with `caminho` (the
+  directory in the tree) kept separate from `branch` (where the **tag** that
+  stamps the stage's version comes from). This is the pair that's most
+  deceptive: `/prd/`'s version comes from `main`'s tags, and swapping one
+  for the other would make `/prd/` look like it was never published.
 
-O que **não** é derivado do caminho: `E_PRODUCAO` continua sendo
-`DOCS_BRANCH === 'main'`. O item 4 do ADR 0071 registra por que deduzir ambiente
-de string de caminho é acoplamento que só aparece quando o caminho muda — e este
-ADR é o caminho mudando. Confirmar isso era o teste mais importante da mudança:
-`DOCS_BRANCH=main` continua **sem** `noIndex`; `dev` continua com.
+What is **not** derived from the path: `E_PRODUCAO` remains
+`DOCS_BRANCH === 'main'`. Item 4 of ADR 0071 records why deriving the
+environment from a path string is coupling that only shows up when the path
+changes — and this ADR is the path changing. Confirming this was the most
+important test of the change: `DOCS_BRANCH=main` still has **no**
+`noIndex`; `dev` still does.
 
-### 3. `/brabo/main/` é reescrito pelo `404.html`, não preservado
+### 3. `/brabo/main/` is rewritten by `404.html`, not preserved
 
-O diretório `main/` **existe publicado hoje**. Como a árvore é montada e
-empurrada com `keep_files: false`, ele fica órfão e some no primeiro push — e
-todo link salvo para `/brabo/main/architecture` quebraria.
+The `main/` directory **exists published today**. Since the tree is
+assembled and pushed with `keep_files: false`, it becomes orphaned and
+disappears on the first push — and every saved link to
+`/brabo/main/architecture` would break.
 
-A saída é a mesma que o ADR 0071 usou para os links da raiz antiga, e pelo mesmo
-motivo (manter uma cópia do site em dois endereços é duplicar a publicação a
-cada push): o `404.html` da raiz reescreve o prefixo. `/brabo/main/<algo>` →
-`/brabo/prd/<algo>`.
+The fix is the same one ADR 0071 used for the old root's links, and for the
+same reason (keeping a copy of the site at two addresses duplicates the
+publish on every push): the root's `404.html` rewrites the prefix.
+`/brabo/main/<something>` → `/brabo/prd/<something>`.
 
-O detalhe que não é detalhe: isso é um caso **próprio**, não o
-reencaminhamento genérico. A guarda anti-laço do ADR 0071 ignorava qualquer
-caminho começado por `main|qa|dev`, e com `main` fora da árvore ela faria
-exatamente a coisa errada — devolver 404 para o único caminho que precisa de
-tratamento. A guarda passa a cobrir só os caminhos que **existem**
-(`prd|qa|dev`), e `main` é tratado antes dela. Sem o caso próprio, o genérico
-produziria `/brabo/prd/main/<algo>`.
+The detail that isn't a detail: this is its **own** case, not the generic
+forwarding. ADR 0071's anti-loop guard ignored any path starting with
+`main|qa|dev`, and with `main` out of the tree it would do exactly the wrong
+thing — return 404 for the one path that needs handling. The guard now
+covers only paths that **exist** (`prd|qa|dev`), and `main` is handled before
+it. Without this special case, the generic one would produce
+`/brabo/prd/main/<something>`.
 
-### 4. A transição semeia `/prd/` a partir do `gh-pages:main`
+### 4. The transition seeds `/prd/` from `gh-pages:main`
 
-Mesmo raciocínio do item 6 do ADR 0071. `gh-pages:prd` só nasce quando a `main`
-passar pela esteira depois desta mudança, e o primeiro push de `dev` ou `qa`
-chega antes disso: sem semente, `/brabo/prd/` responderia 404 por dias, com o
-`404.html` mandando todo mundo justamente para lá.
+Same reasoning as item 6 of ADR 0071. `gh-pages:prd` is only born once `main`
+goes through the pipeline after this change, and the first push from `dev`
+or `qa` arrives before that happens: without a seed, `/brabo/prd/` would
+respond 404 for days, with `404.html` sending everyone right there.
 
-O conteúdo de `gh-pages:main` é, literalmente, o build da `main`. Ele semeia
-`/prd/` — **reescrito**, e essa parte foi descoberta simulando a montagem contra
-a `gh-pages` real: o `baseUrl` embutido naquele build aponta para
-`/brabo/main/`, e o `404.html` do item 3 **não salva subrecurso**. O script dele
-roda em navegação; um `<script src>` ou `<link rel=stylesheet>` que caia no 404
-recebe HTML com status 404 e falha calado. Sem reescrever, `/prd/` serviria
-texto sem CSS, sem busca e sem hidratação — o "carrega HTML e nada mais" que o
-`docusaurus.config.ts` descreve como o modo de falha mais traiçoeiro desta
-publicação.
+`gh-pages:main`'s content is, literally, `main`'s build. It seeds `/prd/` —
+**rewritten**, and that part was discovered by simulating the assembly
+against the real `gh-pages`: the `baseUrl` embedded in that build points to
+`/brabo/main/`, and item 3's `404.html` **doesn't save sub-resources**. Its
+script runs on navigation; a `<script src>` or `<link rel=stylesheet>` that
+hits the 404 gets back 404-status HTML and fails silently. Without
+rewriting, `/prd/` would serve text with no CSS, no search, and no
+hydration — the "loads HTML and nothing else" that `docusaurus.config.ts`
+describes as this publication's most treacherous failure mode.
 
-A reescrita é um `sed` de `/brabo/main/` para `/brabo/prd/` nos arquivos de
-TEXTO da semente que contêm a string (542 dos 634, na simulação). Arquivo
-binário fica de fora por `grep -I`: `sed -i` num deles pode acrescentar o
-newline final que falta e corrompê-lo.
+The rewrite is a `sed` from `/brabo/main/` to `/brabo/prd/` across the seed's
+TEXT files that contain the string (542 of 634, in the simulation). Binary
+files are excluded via `grep -I`: `sed -i` on one of them could add the
+missing trailing newline and corrupt it.
 
-Na primeira publicação de `main` o caminho normal assume e o bloco não roda
-mais.
+On the first `main` publication, the normal path takes over and this block
+stops running.
 
-O bloco análogo do ADR 0071 (semear `/main/` a partir da raiz antiga) foi
-**removido** no mesmo commit. Ele já cumpriu o papel — a `gh-pages` de hoje tem
-`main/`, `qa/` e `dev/` —, e a condição dele (`FETCH_HEAD:index.html` existir)
-passou a casar com o índice gerado pela própria landing: mantido, ele
-transformaria a página raiz em degrau.
+The analogous block from ADR 0071 (seeding `/main/` from the old root) was
+**removed** in the same commit. It had already served its purpose — today's
+`gh-pages` has `main/`, `qa/`, and `dev/` — and its condition
+(`FETCH_HEAD:index.html` existing) had come to match the index generated by
+the landing page itself: left in place, it would turn the root page into a
+stage.
 
-## Consequências
+## Consequences
 
-- **Um link para `/brabo/main/…` passa a custar um redirecionamento**, para
-  sempre. É o preço declarado de mover um endereço público, e é menor que o de
-  duplicar o site ou o de quebrar links salvos.
-- **`qa` e `dev` viram coincidência, não regra.** Quem for renomear um deles
-  amanhã mexe na tabela e em nada mais — foi essa a mudança estrutural, e não o
-  valor `prd` em si.
-- **A raiz não muda de papel.** Continua sendo o índice gerado que lista os três,
-  agora canonizando para `/prd/`; o About do repositório, o README e o
-  `AuthLayout.tsx` apontam para ela e seguem corretos.
-- **O `noIndex` continua atado à branch.** Nenhum ambiente novo é criado, e
-  nenhuma configuração do GitHub Pages muda: a fonte segue sendo a branch
-  `gh-pages` na pasta `/ (root)`.
-- **Um degrau a mais é uma linha a mais** em três tabelas — não uma varredura
-  atrás de `$GITHUB_REF_NAME` interpolado.
+- **A link to `/brabo/main/…` now costs a redirect**, forever. That's the
+  declared price of moving a public address, and it's smaller than
+  duplicating the site or breaking saved links.
+- **`qa` and `dev` become a coincidence, not a rule.** Whoever renames one of
+  them tomorrow touches the table and nothing else — that was the structural
+  change, not the `prd` value itself.
+- **The root doesn't change role.** It's still the generated index listing
+  all three, now canonicalizing to `/prd/`; the repository's About, the
+  README, and `AuthLayout.tsx` point to it and remain correct.
+- **`noIndex` remains tied to the branch.** No new environment is created,
+  and no GitHub Pages configuration changes: the source is still the
+  `gh-pages` branch at the `/ (root)` folder.
+- **One more stage is one more line** in three tables — not a sweep for an
+  interpolated `$GITHUB_REF_NAME`.
 
-## Alternativas descartadas
+## Discarded alternatives
 
-- **Publicar em `/prd/` e manter `/main/` como cópia.** Preserva os links sem
-  redirecionamento, ao custo de duplicar o site inteiro a cada publicação e de
-  ter dois endereços indexáveis com o mesmo conteúdo — a mesma alternativa que o
-  ADR 0071 já descartara para a raiz.
-- **Renomear a branch `main` para `prd`.** Resolveria a identidade mantendo a
-  interpolação, e trocaria um endereço público por uma quebra em rulesets,
-  esteira de release, backmerge e em toda referência a `main` no repositório. O
-  vocabulário de quem commita não é o problema; o de quem lê é.
-- **Redirecionar `/brabo/main/` no servidor.** O GitHub Pages não tem regra de
-  redirecionamento; o `404.html` da raiz é o mecanismo que existe.
-- **Deixar como estava.** É a alternativa que o pedido recusa, e ela tem um
-  argumento fraco a favor (`main` já estava publicado) contra um forte contra: o
-  endereço fala com quem lê, não com quem commita.
+- **Publish at `/prd/` and keep `/main/` as a copy.** Preserves links
+  without a redirect, at the cost of duplicating the entire site on every
+  publish and having two indexable addresses with the same content — the
+  same alternative ADR 0071 had already discarded for the root.
+- **Rename the `main` branch to `prd`.** Would solve the identity issue
+  while keeping the interpolation, and would trade a public address for a
+  break in rulesets, the release pipeline, backmerge, and every reference to
+  `main` in the repository. The vocabulary of whoever commits isn't the
+  problem; the vocabulary of whoever reads is.
+- **Redirect `/brabo/main/` on the server.** GitHub Pages has no redirect
+  rule; the root's `404.html` is the mechanism that exists.
+- **Leave it as is.** It's the alternative the request rules out, and it has
+  a weak argument in its favor (`main` was already published) against a
+  strong one: the address speaks to the reader, not to the committer.

@@ -1,10 +1,23 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { AgentTimelineTree } from './AgentTimelineTree';
 import { getAgentLastSeenSeq } from '../lib/read-state';
 import type { SessionEvent } from '../lib/api-types';
+// Instância REAL do app (mesmo motivo de `AgentCard.test.tsx`): sem
+// `I18nextProvider` no teste, o hook `useTranslation` cai no singleton
+// global de `lib/i18n.ts` — as asserções abaixo checam o texto ATUAL em
+// português.
+import i18n from '../lib/i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
 
 // Mesma técnica de `ui/Disclosure.test.tsx`: jsdom não resolve CSS Module, a
 // folha crua é a única evidência que um teste em Node consegue olhar.

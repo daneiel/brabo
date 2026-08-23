@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Model, ModelsByCategory } from '../lib/api-types';
 import { agruparModelos, formatarJanela, formatarPreco } from '../lib/models';
 import { Badge } from './ui/Badge';
@@ -59,6 +60,7 @@ export function ModelPicker({
   filtroDeAgentesPadrao = false,
   disabled = false,
 }: ModelPickerProps) {
+  const { t } = useTranslation('models');
   const [open, setOpen] = useState(false);
   const [soAptos, setSoAptos] = useState(filtroDeAgentesPadrao);
   const [posicao, setPosicao] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
@@ -192,7 +194,7 @@ export function ModelPicker({
             tabela de bindings, um `displayName` longo empurrava as colunas de
             origem e fallback para fora da grade. */}
         <span className={styles.triggerLabel}>
-          {selected ? selected.displayName : 'Selecionar modelo'}
+          {selected ? selected.displayName : t('picker.selectModel')}
         </span>
         {/* Chevron também no `inline`: no desenho o seletor de modelo da tabela
             tem chevron, e sem ele o botão não se anuncia como abrível. */}
@@ -215,17 +217,14 @@ export function ModelPicker({
               checked={soAptos}
               onChange={(e) => setSoAptos(e.target.checked)}
             />
-            aptos para agentes
+            {t('picker.filterFitForAgents')}
           </label>
 
           {todosOsModelos.length === 0 && (
-            <div className={styles.groupHeader}>Nenhum modelo cadastrado</div>
+            <div className={styles.groupHeader}>{t('picker.noModelsRegistered')}</div>
           )}
           {todosOsModelos.length > 0 && grupos.length === 0 && (
-            <div className={styles.vazio}>
-              Nenhum modelo faz tool calling nativo. Desmarque o filtro para ver
-              os demais.
-            </div>
+            <div className={styles.vazio}>{t('picker.noToolCallingModels')}</div>
           )}
           {grupos.map((grupo) => (
             <div key={grupo.kind}>
@@ -247,6 +246,7 @@ export function ModelPicker({
 }
 
 function ModelOption({ model, selected, onClick }: { model: Model; selected: boolean; onClick: () => void }) {
+  const { t } = useTranslation('models');
   const isFree = model.provider === 'ollama';
   const indisponivel = model.availability === 'unavailable';
   const janela = formatarJanela(model);
@@ -270,10 +270,12 @@ function ModelOption({ model, selected, onClick }: { model: Model; selected: boo
         <span className={styles.selos}>
           <Badge tone={isFree ? 'success' : 'muted'}>{formatarPreco(model)}</Badge>
           {janela && <Badge tone="muted">{janela}</Badge>}
-          {model.supportsToolCalling && <Badge tone="accent">tool calling</Badge>}
+          {model.supportsToolCalling && (
+            <Badge tone="accent">{t('badges.toolCalling')}</Badge>
+          )}
           {/* Indisponível aparece MARCADO, nunca some: um modelo ausente da
               lista deixaria o binding que aponta pra ele sem explicação. */}
-          {indisponivel && <Badge tone="warning">indisponível no provider</Badge>}
+          {indisponivel && <Badge tone="warning">{t('badges.unavailable')}</Badge>}
         </span>
       </span>
     </button>

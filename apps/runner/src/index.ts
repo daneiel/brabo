@@ -12,16 +12,20 @@
  * Ver o docblock de cada módulo para o desenho de cada parte:
  * `auth.ts` (autenticação + ticket), `channel.ts` (protocolo Phoenix),
  * `exec.ts` (execução não-interativa), `pty.ts` (terminal interativo),
- * `guard.ts` (barreira best-effort de `cwd`).
+ * `guard.ts` (barreira best-effort de `cwd`), `fs-browser.ts` (navegação
+ * de pasta local, sem a barreira de `guard.ts` — ver o docblock dele).
  */
 
-import { existsSync, realpathSync, statSync } from 'node:fs';
+import { realpathSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { obterToken, obterTicketDoRunner } from './auth.ts';
 import {
   conectarCanal,
   enviarExecResult,
+  enviarFsHomeDirReply,
+  enviarFsListDirReply,
   enviarPtyData,
   enviarPtyError,
   enviarPtyOpened,
@@ -29,10 +33,21 @@ import {
   JoinRecusadoError,
   type ChannelLike,
   type ExecMessage,
+  type FsHomeDirMessage,
+  type FsListDirMessage,
   type PtyOpenMessage,
 } from './channel.ts';
 import { executarComando } from './exec.ts';
-import { CwdForaDaRaizError, validarCwdDentroDaRaiz } from './guard.ts';
+import { diretorioInicial, listarDiretorio } from './fs-browser.ts';
+import {
+  CwdForaDaRaizError,
+  DirForaDoHomeError,
+  DirNaoEUmaPastaError,
+  garantirDiretorio,
+  NaoConsegiuCriarDiretorioError,
+  validarCwdDentroDaRaiz,
+  validarDirDentroDoHomeNoLinux,
+} from './guard.ts';
 import { GerenciadorDePty } from './pty.ts';
 
 interface Argumentos {
@@ -45,6 +60,10 @@ interface Argumentos {
 function uso(): never {
   console.error(
     'uso: brabo-runner --project <projectId> --dir <caminho-absoluto> [--api-url <url>] [--token <brb_...>]',
+  );
+  console.error(
+    '--dir: se a pasta ainda não existir, ela é criada automaticamente (dentro do ' +
+      '$HOME no Linux, RN-434/RN-435). Se apontar para um arquivo existente, é erro.',
   );
   console.error(
     'Autenticação: --token <brb_...>, ou BRABO_ACCOUNT_TOKEN no ambiente. Gere em ' +
@@ -70,9 +89,34 @@ function lerArgumentos(argv: string[]): Argumentos {
   if (!dirBruto || dirBruto.startsWith('--')) uso();
 
   const dir = resolve(dirBruto);
-  if (!existsSync(dir) || !statSync(dir).isDirectory()) {
-    console.error(`--dir precisa ser uma pasta existente. Recebido: ${dirBruto}`);
-    process.exit(2);
+
+  // RN-434 (ADR 0104): no Linux, o workspace do modo `runner` só pode viver
+  // dentro do $HOME do usuário — nunca fora dele (/etc, /root, outra conta
+  // em /home, etc.). Fora do Linux a restrição não se aplica. RODA ANTES de
+  // `garantirDiretorio` de propósito (RN-435): ela funciona em caminho que
+  // ainda não existe, e criar a pasta antes de validar o $HOME reabriria a
+  // brecha que a RN-434 fechou.
+  try {
+    validarDirDentroDoHomeNoLinux(dir, process.platform, homedir());
+  } catch (erro) {
+    if (erro instanceof DirForaDoHomeError) {
+      console.error(erro.message);
+      process.exit(2);
+    }
+    throw erro;
+  }
+
+  // RN-435 (ADR 0104): `--dir` que ainda não existe é criado (mkdir -p) em
+  // vez de recusado — `--dir` apontando para um ARQUIVO existente continua
+  // erro real, nunca sobrescrito silenciosamente.
+  try {
+    garantirDiretorio(dir);
+  } catch (erro) {
+    if (erro instanceof DirNaoEUmaPastaError || erro instanceof NaoConsegiuCriarDiretorioError) {
+      console.error(erro.message);
+      process.exit(2);
+    }
+    throw erro;
   }
 
   let token: string;
@@ -167,6 +211,25 @@ function tratarPtyOpen(estado: EstadoDoRunner, msg: PtyOpenMessage): void {
   }
 }
 
+async function tratarFsListDir(estado: EstadoDoRunner, msg: FsListDirMessage): Promise<void> {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+
+  const resultado = await listarDiretorio(msg.path);
+
+  // Canal pode ter caído enquanto listava — não perde silenciosamente, só
+  // não empurra pra um canal que já não existe mais.
+  if (estado.canalAtual !== canal) return;
+  enviarFsListDirReply(canal, { ref: msg.ref, ...resultado });
+}
+
+function tratarFsHomeDir(estado: EstadoDoRunner, msg: FsHomeDirMessage): void {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+
+  enviarFsHomeDirReply(canal, { ref: msg.ref, path: diretorioInicial() });
+}
+
 /**
  * Uma "rodada" de conexão: pede um ticket FRESCO (o token é resolvido uma
  * vez só, em `lerArgumentos` — PAT não expira por uso, então não há razão
@@ -200,6 +263,8 @@ async function conectarERodar(
       onPtyResize: (msg) =>
         estado.gerenciadorPty.redimensionar(msg.sessionRef, msg.cols, msg.rows),
       onPtyClose: (msg) => estado.gerenciadorPty.fechar(msg.sessionRef),
+      onFsListDir: (msg) => void tratarFsListDir(estado, msg),
+      onFsHomeDir: (msg) => tratarFsHomeDir(estado, msg),
       onDisconnected: () => resolverQueda(),
     },
   });

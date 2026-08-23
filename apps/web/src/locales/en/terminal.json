@@ -1,0 +1,33 @@
+{
+  "terminalPanel": {
+    "loading": "Opening terminal…",
+    "connectionLost": "The connection to the runner dropped. Close and reopen this tab to try again."
+  },
+  "folderBrowserModal": {
+    "title": "Choose folder",
+    "noProjectMessage": "Folder browsing becomes available once the project exists — the runner connects to an already-created project. For now, type the path manually in this screen's field.",
+    "understood": "Got it",
+    "shortcutsLabel": "Shortcuts",
+    "personalFolder": "Home folder",
+    "root": "Root",
+    "breadcrumbLabel": "Current path",
+    "entriesLabel": "Items in this folder",
+    "loading": "Loading…",
+    "empty": "Empty folder.",
+    "detailsLabel": "Details",
+    "folderType": "Folder",
+    "itemCount_one": "{{count}} item",
+    "itemCount_other": "{{count}} items",
+    "cancel": "Cancel",
+    "select": "Use this folder",
+    "initialDirError": "Could not get the runner's initial folder."
+  },
+  "runnerOnboarding": {
+    "defaultMessage": "No runner connected to this project.",
+    "instructionPrefix": "On your machine, inside the Brabo checkout (see",
+    "instructionSuffix": "):",
+    "command": "pnpm --filter runner start -- --project {{projectId}} --dir <folder>",
+    "detail": "The runner connects automatically as soon as it's running — no new action needs to happen here.",
+    "retryButton": "I already installed it, connect"
+  }
+}

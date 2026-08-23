@@ -1,8 +1,24 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, beforeAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
+import i18n from '../lib/i18n';
 import { ProjectSpendTab } from './ProjectSpendTab';
 import type { MySpend, WorkspaceSpendReport } from '../lib/spend';
+
+/**
+ * A instância REAL do i18next, não uma isolada como em `AccountPage.test.tsx`
+ * — `lib/spend.ts` (`rotuloDoAtor`/`tituloDoDia`/`alertaDeOrcamento`) é módulo
+ * NÃO-React e resolve texto direto no singleton de `../lib/i18n` (mesmo
+ * padrão de `session-kind.ts`), fora do contexto de qualquer
+ * `I18nextProvider` local. Uma instância isolada aqui divergiria da língua
+ * usada por essas funções, e o texto renderizado ficaria metade num idioma,
+ * metade noutro. `changeLanguage('pt-BR')` mantém as asserções abaixo
+ * idênticas ao texto que já existia antes da extração.
+ */
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
 
 const getMySpend = vi.fn();
 const getWorkspaceSpendReport = vi.fn();
@@ -141,9 +157,11 @@ function montar() {
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={client}>
-      <ProjectSpendTab projectId="p-1" />
-    </QueryClientProvider>,
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ProjectSpendTab projectId="p-1" />
+      </QueryClientProvider>
+    </I18nextProvider>,
   );
 }
 

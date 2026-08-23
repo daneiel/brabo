@@ -1,0 +1,162 @@
+{
+  "status": {
+    "created": "not activated yet",
+    "active": "active",
+    "closing": "closing",
+    "closed": "closed",
+    "closedAbnormally": "closed abnormally",
+    "loading": "loading",
+    "ariaLabel": "Session {{status}}"
+  },
+  "compartilhado": {
+    "semTitulo": "(no title)",
+    "verNoBacklog": "View in Backlog",
+    "voce": "You",
+    "agenteGenerico": "agent"
+  },
+  "topbar": {
+    "voltarAoProjeto": "Back to project",
+    "nomeDaSessao": "Session name",
+    "semNomeFicaHashtag": "No name — the session stays {{hashtag}}",
+    "tituloRenomear": "Session {{rotulo}} — click to rename",
+    "tituloSessao": "Session {{rotulo}}",
+    "trazCriativo": "brings the Creative into the conversation",
+    "iniciarIdeacao": "Start ideation",
+    "iniciarIdeacaoTitulo": "Brings the Creative in to lead this session's ideation — it hasn't joined yet",
+    "encerrar": "Close",
+    "alternarPainel": "Toggle context panel"
+  },
+  "convite": {
+    "criativa": {
+      "titulo": "It's your turn",
+      "texto": "This is a <b>creative</b> session. The <b>Creative</b> leads the ideation: it asks questions about the product and records the <b>business rules</b> that come out of the conversation. It doesn't decide on technology or write code — that's for the Architect and the devs, later on.",
+      "iniciarIdeacao": "Start ideation",
+      "iniciarIdeacaoNota": "It hasn't joined yet — this click is what brings it in.",
+      "exemploIntro": "Start by telling us what you want to build and for whom. For example:",
+      "exemplo": "I want an API that responds with a greeting to whoever calls it. It's for me to validate the end-to-end flow.",
+      "rodape": "When the rules are complete, use <b>I'm ready to build</b> — that's what generates the brief and hands the ball to the PO."
+    },
+    "consultiva": {
+      "titulo": "Advisory session",
+      "texto": "This is a conversation with the model: ask questions, get context, clear up doubts. <b>No agent is activated</b>, the Creative doesn't join, and this session won't go to execution.",
+      "rodape": "When it's time to <b>build</b>, open a <b>creative</b> session in the project's Sessions tab — the type is chosen at creation and doesn't change afterward."
+    }
+  },
+  "composer": {
+    "placeholder": "Write a message… (Enter sends, Shift+Enter for a new line)",
+    "enviar": "Send",
+    "parar": "Stop",
+    "prontoParaProduzir": "I'm ready to build",
+    "prontoParaProduzirDesabilitado": "Capture at least one business rule with the Creative before confirming readiness",
+    "confirmarArquitetura": "Confirm architecture ready",
+    "confirmarArquiteturaDesabilitado": "Promote at least one story in the Backlog before confirming the architecture",
+    "confirmarNecessidade": "Confirm need validated",
+    "confirmarNecessidadeDesabilitado": "Confirm \"I'm ready to build\" with the Creative before validating the need"
+  },
+  "ativacao": {
+    "naoAtivada": "Session not activated yet.",
+    "ativarSessao": "Activate session",
+    "statusGenerico": "Session {{status}} — can't send messages."
+  },
+  "mensagens": {
+    "reunindoInformacoes": "Gathering information...",
+    "respostaVazia": "Empty response — event predating RN-059, when turn failures were recorded as a blank response. The real reason wasn't recorded.",
+    "modeloGerador": "Model that generated this response: {{modelName}}",
+    "modeloNaoGravado": "This response was recorded without the model's name",
+    "modeloNaoRegistrado": "model not recorded",
+    "falhaOrigem": "failure · origin {{origem}}"
+  },
+  "historia": {
+    "pendente": "story \"{{titulo}}\" ready, awaiting your promotion",
+    "estevePendente": "story \"{{titulo}}\" was awaiting your promotion",
+    "promover": "Promote",
+    "devolver": "Return",
+    "aprovarTodas": "Approve all",
+    "aguardandoPromocao_one": "{{count}} story awaiting promotion",
+    "aguardandoPromocao_other": "{{count}} stories awaiting promotion",
+    "devolveuAoPo": "returned to the PO",
+    "tituloFallback": "a story",
+    "semMotivo": "no reason given"
+  },
+  "handoff": {
+    "passouOBastaoAo": "handed off to",
+    "aceitarEIniciar": "Accept handoff and start {{agente}}",
+    "ativarExecucao": "Activate execution",
+    "acompanheExecucao": "Follow the execution in Executors"
+  },
+  "backlog": {
+    "criouEpico": "created the epic",
+    "criouHistoria": "created the story"
+  },
+  "perguntas": {
+    "respondidas": "questions from {{agente}} — answered",
+    "titulo": "questions from {{agente}}",
+    "selecione": "Select",
+    "outraEscrever": "Other (write in)",
+    "suaResposta": "Your answer — {{pergunta}}",
+    "enviarRespostas": "Send answers",
+    "respostasEnviadas": "Answers sent",
+    "erroEnviar": "Could not send the answers"
+  },
+  "toasts": {
+    "erro": "Error",
+    "erroAtivarSessao": "Could not activate the session",
+    "erroRenomear": "Could not rename the session",
+    "erroIniciarIdeacao": "Could not start the ideation",
+    "erroConfirmarProntidao": "Could not confirm readiness",
+    "erroConfirmarArquitetura": "Could not confirm the architecture",
+    "necessidadeValidada": "Need validated",
+    "erroValidarNecessidade": "Could not validate the need",
+    "erroAceitarHandoff": "Could not accept the handoff",
+    "execucaoAtivada": "Execution activated",
+    "erroAtivarExecucao": "Could not activate the execution",
+    "modoAutomaticoLigado": "Automatic mode turned on",
+    "erroModoAutomatico": "Could not turn on automatic mode",
+    "erroPromover": "Could not promote",
+    "historiaPromovida": "Story promoted",
+    "historiasPromovidas_one": "Story promoted",
+    "historiasPromovidas_other": "{{count}} stories promoted",
+    "promovidasParcial": "{{promovidas}} of {{total}} promoted",
+    "erroPromoverHistoria": "Could not promote the story",
+    "erroPromoverHistorias": "Could not promote the stories",
+    "historiaDevolvida": "Story returned to the PO",
+    "erroDevolverHistoria": "Could not return the story",
+    "erroEnviarMensagem": "Could not send the message",
+    "erroCancelarTurno": "Could not cancel the turn",
+    "erroNoChat": "Chat error",
+    "aviso": "Warning"
+  },
+  "modal": {
+    "devolverTitulo": "Return \"{{titulo}}\" to the PO?",
+    "motivo": "Reason",
+    "motivoDica": "Goes as a pinned message in the PO's session. Say what's missing — that's what it uses to rewrite the story.",
+    "motivoPlaceholder": "E.g.: the acceptance criteria don't cover payment refusal.",
+    "devolverAoPo": "Return to the PO",
+    "cancelar": "Cancel"
+  },
+  "artefatos": {
+    "pullRequest": "Pull request",
+    "adr": "ADR",
+    "historias": "stories",
+    "tarefas": "tasks",
+    "itens": "items",
+    "mensagensCount_one": "{{count}} message",
+    "mensagensCount_other": "{{count}} messages"
+  },
+  "aside": {
+    "titulo": "Session context",
+    "teto": "This panel reads the <b>{{lidos}}</b> events already loaded for this session. There are <b>{{anteriores}}</b> older ones — “Load older”, in the Event log, brings more, and the other sections grow along with it.",
+    "regrasDeNegocio": "Business rules",
+    "nadaAinda": "Nothing yet.",
+    "origemRefs": "origin: {{count}} ref(s)",
+    "paginaAnterior": "Previous page of business rules",
+    "proximaPagina": "Next page of business rules",
+    "paginaDe": "{{atual}} of {{total}}",
+    "artefatosGerados": "Artifacts generated",
+    "arquivosTocados": "Files touched",
+    "logDeEventos": "Event log",
+    "eventoCitado": "Cited event",
+    "eventoCitadoNaoEncontrado": "The cited event wasn't found in this session.",
+    "erroCarregarLog": "Could not load the event log."
+  }
+}

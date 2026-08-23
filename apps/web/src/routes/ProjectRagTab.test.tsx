@@ -2,9 +2,33 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import sessionsPtBR from '../locales/pt-BR/sessions.json';
+// `ErroDeCarregamento` (namespace `ui`) é filho deste componente — sem o
+// namespace aqui, `t('erroDeCarregamento.retry')` cai na chave crua.
+import uiPtBR from '../locales/pt-BR/ui.json';
 import { ProjectRagTab } from './ProjectRagTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import type { RagCoverage, RagSearchResult, Role } from '../lib/api-types';
+
+// Instância isolada de i18next, mesmo padrão de `AccountPage.test.tsx`: o
+// componente usa `useTranslation('sessions')` e as asserções abaixo já
+// existiam em pt-BR, então a instância de teste fica em pt-BR (o inglês é
+// coberto pelos próprios JSON de recurso, não por este teste).
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: { 'pt-BR': { sessions: sessionsPtBR, ui: uiPtBR } },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'sessions',
+    ns: ['sessions', 'ui'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
 
 const getRagCoverage = vi.fn();
 const searchRag = vi.fn();
@@ -42,12 +66,15 @@ const cobertura: RagCoverage = {
 
 function montar() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const i18n = novaInstanciaI18n();
   return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <ProjectRagTab projectId="p-1" />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ProjectRagTab projectId="p-1" />
+        </ToastProvider>
+      </QueryClientProvider>
+    </I18nextProvider>,
   );
 }
 

@@ -1,5 +1,9 @@
+import type { ReactElement } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, cleanup, act } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import terminalPtBR from '../../locales/pt-BR/terminal.json';
 import { TerminalPanel } from './TerminalPanel';
 import type { TerminalChannelHandlers } from '../../lib/terminal-channel';
 
@@ -9,7 +13,29 @@ import type { TerminalChannelHandlers } from '../../lib/terminal-channel';
  * WebSocket de verdade em jsdom, e o que importa aqui é a ORQUESTRAÇÃO: qual
  * estado a tela mostra em cada resposta do canal, e se o que chega por
  * `pty_data` vira `terminal.write(...)`.
+ *
+ * Instância própria de i18next (mesmo padrão de `AccountPage.test.tsx`), só
+ * com o namespace `terminal` e `lng: 'pt-BR'` — mantém as asserções em
+ * português que este teste já fazia antes da extração.
  */
+
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: { 'pt-BR': { terminal: terminalPtBR } },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'terminal',
+    ns: ['terminal'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
+function renderComI18n(ui: ReactElement) {
+  return render(<I18nextProvider i18n={novaInstanciaI18n()}>{ui}</I18nextProvider>);
+}
 
 const {
   fakeTerminal,
@@ -78,14 +104,14 @@ beforeEach(() => {
 
 describe('TerminalPanel (RN-088)', () => {
   it('estado de carregamento: aparece antes de qualquer resposta do canal', async () => {
-    render(<TerminalPanel projectId="proj-1" />);
+    renderComI18n(<TerminalPanel projectId="proj-1" />);
     expect(screen.getByText('Abrindo terminal…')).toBeInTheDocument();
     await flush();
     cleanup();
   });
 
   it('pty_error (sem runner) mostra a mensagem e a instrução com o projectId real', async () => {
-    render(<TerminalPanel projectId="proj-1" />);
+    renderComI18n(<TerminalPanel projectId="proj-1" />);
     await flush();
 
     capturarHandlers().onErro('nenhum runner conectado a este projeto');
@@ -94,14 +120,14 @@ describe('TerminalPanel (RN-088)', () => {
       await screen.findByText('nenhum runner conectado a este projeto'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText((texto) => texto.includes('brabo-runner --project proj-1')),
+      screen.getByText((texto) => texto.includes('--project proj-1')),
     ).toBeInTheDocument();
     expect(screen.queryByText('Abrindo terminal…')).not.toBeInTheDocument();
     cleanup();
   });
 
   it('pty_opened + pty_data: o terminal aparece e escreve o que chegou', async () => {
-    render(<TerminalPanel projectId="proj-1" />);
+    renderComI18n(<TerminalPanel projectId="proj-1" />);
     await flush();
 
     const handlers = capturarHandlers();
@@ -121,7 +147,7 @@ describe('TerminalPanel (RN-088)', () => {
   });
 
   it('cleanup no unmount: fecha o canal e destrói o terminal', async () => {
-    const { unmount } = render(<TerminalPanel projectId="proj-1" />);
+    const { unmount } = renderComI18n(<TerminalPanel projectId="proj-1" />);
     await flush();
 
     unmount();

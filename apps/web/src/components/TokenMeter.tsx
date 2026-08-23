@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { AlertIcon, ArrowUpIcon } from './ui/icons';
 import { brlFmt, numberFmt, usdFmt } from '../lib/currency';
 import styles from './TokenMeter.module.css';
@@ -51,10 +52,12 @@ export function TokenMeter({
   savingsBRL,
   savingsPct,
   variant = 'default',
-  unitLabel = 'tokens',
+  unitLabel,
   noBudget = false,
   onDefineBudget,
 }: TokenMeterProps) {
+  const { t } = useTranslation('shell');
+  const unit = unitLabel ?? t('tokenMeter.unitTokens');
   const pct = limit > 0 ? Math.min(999, Math.round((used / limit) * 100)) : 0;
   const barPct = Math.min(100, pct);
   const threshold = tokenThreshold(pct);
@@ -66,14 +69,16 @@ export function TokenMeter({
       <div className={[styles.card, styles.live].join(' ')} data-testid="token-meter" data-threshold={threshold}>
         <span className={styles.liveIndicator}>
           <span className={styles.liveDot} />
-          ao vivo
+          {t('tokenMeter.live.indicator')}
         </span>
         <div className={styles.liveMain}>
           <div className={styles.liveTopRow}>
             <span className={styles.liveUsage}>
               {numberFmt.format(used)}/{numberFmt.format(limit)}
             </span>
-            <span className={styles.liveRemaining}>falta {numberFmt.format(remaining)}</span>
+            <span className={styles.liveRemaining}>
+              {t('tokenMeter.live.remaining', { value: numberFmt.format(remaining) })}
+            </span>
           </div>
           <span className={styles.liveCost}>{brlFmt.format(costBRL)}</span>
         </div>
@@ -115,7 +120,7 @@ export function TokenMeter({
             }
           }}
         >
-          Definir orçamento
+          {t('tokenMeter.noBudgetCta')}
         </span>
       </div>
     );
@@ -129,7 +134,7 @@ export function TokenMeter({
     >
       <div className={styles.topRow}>
         <span className={styles.usage}>
-          {numberFmt.format(used)} / {numberFmt.format(limit)} {unitLabel}
+          {numberFmt.format(used)} / {numberFmt.format(limit)} {unit}
         </span>
         <span className={styles.pct} style={{ ['--pct-color' as string]: THRESHOLD_COLOR[threshold] }} data-testid="token-meter-pct">
           {isDanger ? (
@@ -166,7 +171,9 @@ export function TokenMeter({
         </div>
       )}
 
-      {isDanger && !compact && <span className={styles.alertLabel}>{pct}% do limite mensal</span>}
+      {isDanger && !compact && (
+        <span className={styles.alertLabel}>{t('tokenMeter.overLimit', { pct })}</span>
+      )}
 
       {!compact && (
         <div className={styles.footer}>
@@ -182,14 +189,16 @@ export function TokenMeter({
       {!compact && savingsPct !== undefined && savingsPct > 0 && (
         <span className={styles.savingsBadge}>
           <ArrowUpIcon size={12} />
-          {savingsPct}% de tokens poupados este ciclo
+          {t('tokenMeter.savingsPct', { pct: savingsPct })}
         </span>
       )}
 
       {compact && (
         <div className={styles.compactFooter}>
-          <span>gasto {usdFmt.format(costUSD)}</span>
-          <span>saldo {usdFmt.format(Math.max(0, limit - used))}</span>
+          <span>{t('tokenMeter.compactFooter.spent', { value: usdFmt.format(costUSD) })}</span>
+          <span>
+            {t('tokenMeter.compactFooter.balance', { value: usdFmt.format(Math.max(0, limit - used)) })}
+          </span>
         </div>
       )}
     </div>

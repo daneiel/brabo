@@ -1,0 +1,21 @@
+{
+  "feed": {
+    "kindLabel": {
+      "commit": "Commits",
+      "pr": "Pull requests",
+      "hypothesis": "Hypotheses",
+      "session": "Session",
+      "permission": "Permissions",
+      "terminal": "Commands",
+      "delegation": "Delegations",
+      "generic": "Other"
+    },
+    "allAgents": "All agents",
+    "machineEvents": "Machine events",
+    "machineEventsTitle": "tool.call, tool.result, agent.response/delta, agent.status and context.compacted — what the agent and the harness exchange with each other",
+    "empty": "No activity here yet.",
+    "pagerCount": "{{shown}} of {{total}} loaded",
+    "loadingOlder": "Loading…",
+    "loadOlder": "Load older"
+  }
+}

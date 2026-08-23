@@ -1,53 +1,55 @@
-# ADR 0076 — `provider` volta a ser dimensão de gasto, e a contenção passa a ser do tipo
+# ADR 0076 — `provider` becomes a spend dimension again, and containment moves to the type
 
-- **Status:** aceito
-- **Data:** 2026-08-14
-- **Revisa:** [ADR 0063](0063-duas-audiencias-para-o-mesmo-gasto.md) (as duas
-  audiências do mesmo gasto), que excluiu `provider` das dimensões de
-  propósito
-- **Contexto anterior:** [RN-058](../business-rules.md#rn-058) (a chave que o
-  agente gasta é a do owner), [RN-060](../business-rules.md#rn-060) (o gasto
-  das chaves é do owner, e só ele vê) e
-  [RN-101](../business-rules.md#rn-101) (as duas audiências)
+- **Status:** accepted
+- **Date:** 2026-08-14
+- **Revises:** [ADR 0063](0063-duas-audiencias-para-o-mesmo-gasto.md) (the two
+  audiences for the same spend), which excluded `provider` from the
+  dimensions on principle
+- **Prior context:** [RN-058](../business-rules.md#rn-058) (the key an agent
+  spends is the workspace owner's), [RN-060](../business-rules.md#rn-060)
+  (the key spend report belongs to the owner, and only them) and
+  [RN-101](../business-rules.md#rn-101) (the two audiences)
 
-## Contexto
+## Context
 
-O [ADR 0063](0063-duas-audiencias-para-o-mesmo-gasto.md) deixou `provider` fora
-das dimensões de `sumGroupedBy` com uma frase sem meio-termo: *"a ausência é
-estrutural, não um esquecimento: quebrar gasto por provider é quebrar por
-CREDENCIAL, e é assim que a visão do membro fica impedida de ganhar esse eixo
-por descuido — não há argumento a passar"*. O tipo carregava o mesmo aviso em
-comentário: *"Os cinco recortes do relatório de gasto. Nenhum deles é
-provider."*
+[ADR 0063](0063-duas-audiencias-para-o-mesmo-gasto.md) left `provider` out
+of `sumGroupedBy`'s dimensions with an unqualified sentence: *"the absence is
+structural, not an oversight: breaking spend down by provider means breaking
+it down by CREDENTIAL, and that's what keeps the member's view from gaining
+that axis by carelessness — there is no argument to pass"*. The type carried
+the same warning in a comment: *"The five slices of the spend report. None
+of them is provider."*
 
-O dono do produto decidiu **reabrir a dimensão**, ciente da consequência. Este
-ADR não existe para dizer que o 0063 errou — o argumento dele continua correto,
-e é justamente por ele que a reabertura precisa vir com a contenção escrita.
+The product owner decided to **reopen the dimension**, aware of the
+consequence. This ADR does not exist to say the 0063 was wrong — its
+argument still holds, and it's precisely because of it that reopening needs
+to come with the containment spelled out.
 
-O que a decisão de 2026-08-09 não separava, e o uso pediu:
+What the 2026-08-09 decision didn't separate, and usage asked for:
 
-- **o owner não consegue ver, na janela deslizante, por onde o dinheiro saiu.**
-  `credential-spend` responde por provider, mas em MESES-calendário e amarrado
-  à credencial que existe hoje. Perguntar "nestes 30 dias, quanto foi OpenRouter
-  e quanto foi Anthropic" exigia ler dois relatórios com janelas diferentes e
-  somar à mão;
-- **pessoa e agente vinham no mesmo ranking.** A lista `porAtor` mistura os
-  dois, distintos só por um campo, e o handoff de design pede dois blocos.
+- **the owner can't see, over the sliding window, where the money went.**
+  `credential-spend` answers by provider, but in CALENDAR MONTHS and tied to
+  the credential that exists today. Asking "in these last 30 days, how much
+  was OpenRouter and how much was Anthropic" meant reading two reports with
+  different windows and adding them up by hand;
+- **person and agent showed up in the same ranking.** The `porAtor` list
+  mixes the two, distinguished only by one field, and the design handoff
+  calls for two separate blocks.
 
-## Decisão
+## Decision
 
-**`provider` volta a ser `SpendDimension`, e o relatório do owner ganha
-`porProvider`** ([RN-186](../business-rules.md#rn-186)). O eixo mora numa rota
-que já exigia `owner` — a mesma régua da RN-060 —, e o membro não ganha campo
-nenhum. `credential-spend` fica **intocada**: ela responde a fatura por mês, com
-o vínculo à chave que existe hoje (`temCredencial`), e o eixo novo responde o
-gasto por provider DENTRO da janela, ao lado de modelo, projeto e ator. Não é
-recorte uma da outra, pelo mesmo critério que o 0063 usou para separar as duas
-audiências.
+**`provider` becomes a `SpendDimension` again, and the owner's report gains
+`porProvider`** ([RN-186](../business-rules.md#rn-186)). The axis lives on a
+route that already required `owner` — the same rule as RN-060 — and the
+member gains no field at all. `credential-spend` stays **untouched**: it
+answers the invoice by month, tied to the key that exists today
+(`temCredencial`), and the new axis answers spend by provider WITHIN the
+window, alongside model, project and actor. It isn't a slice of the other,
+by the same criterion the 0063 used to separate the two audiences.
 
-**A contenção da privacidade muda de forma, não de força: quem contém agora é o
-TIPO** ([RN-187](../business-rules.md#rn-187)). `sumGroupedBy` tem duas
-sobrecargas, e o que as separa é o escopo:
+**The privacy containment changes shape, not strength: the TYPE now does the
+containing** ([RN-187](../business-rules.md#rn-187)). `sumGroupedBy` has two
+overloads, and what separates them is the scope:
 
 ```ts
 abstract sumGroupedBy(d: SpendDimensionDoAtor, e: SpendScopeDeAtor): Promise<SpendBucket[]>;
@@ -56,80 +58,84 @@ abstract sumGroupedBy(d: SpendDimension,       e: SpendScopeAmplo): Promise<Spen
 export type SpendDimensionDoAtor = Exclude<SpendDimension, 'provider'>;
 ```
 
-Um escopo que carrega `actor` — a visão do membro, e o único escopo que ela tem
-— só aceita `SpendDimensionDoAtor`. `sumGroupedBy('provider', escopoComAtor)`
-**não compila**. Os dois escopos são mutuamente exclusivos por construção
-(`SpendScopeAmplo` declara `actor?: undefined`), então a sobrecarga certa é
-escolhida sem ninguém precisar dizer qual.
+A scope that carries `actor` — the member's view, and the only scope it has
+— accepts only `SpendDimensionDoAtor`. `sumGroupedBy('provider',
+escopoComAtor)` **does not compile**. The two scopes are mutually exclusive
+by construction (`SpendScopeAmplo` declares `actor?: undefined`), so the
+right overload gets picked without anyone having to say which.
 
-**Nenhum `if` sobre essa combinação**, nem no repositório nem no caso de uso, e
-a ausência é deliberada: uma checagem em tempo de execução daria a impressão de
-que a garantia é dinâmica, quando quem a sustenta é o compilador — e um `if` é
-exatamente o que a próxima refatoração remove sem deixar nenhum teste vermelho.
-É o mesmo raciocínio da RN-153/154, em que a resolução do "auto mode" mora no
-repositório e `decide.ts` não ganhou uma linha: garantia por construção vale
-mais que garantia por vigilância.
+**No `if` over this combination**, neither in the repository nor in the use
+case, and the absence is deliberate: a runtime check would give the
+impression the guarantee is dynamic, when what actually sustains it is the
+compiler — and an `if` is exactly what the next refactor removes without
+leaving a single red test. It's the same reasoning as RN-153/154, where
+resolving the "auto mode" lives in the repository and `decide.ts` didn't
+gain a single line: a guarantee by construction beats a guarantee by
+vigilance.
 
-**`Exclude` em vez de uma segunda lista escrita à mão.** Dimensão nova nasce
-alcançável pelas duas audiências, e tirá-la do alcance do membro passa a ser um
-ato explícito **naquele ponto** — nunca um esquecimento em outro arquivo. A
-alternativa (duas listas independentes) tem um modo de falha conhecido: a lista
-restrita envelhece calada.
+**`Exclude` instead of a second hand-written list.** A new dimension is born
+reachable by both audiences, and removing it from the member's reach becomes
+an explicit act **at that one point** — never an oversight in another file.
+The alternative (two independent lists) has a known failure mode: the
+restricted list ages quietly.
 
-**Pessoa e agente viram dois blocos, derivados e não consultados**
-([RN-188](../business-rules.md#rn-188)). `porOwner` e `porAgente` são partição
-de `porAtor` por `actor_kind`, feita no caso de uso; `porAtor` continua inteira
-para quem já a consumia. O 0063 mediu que o custo destas consultas cresce com o
-tamanho de `token_usage` e não com o do pedido — varrer a janela duas vezes a
-mais para separar o que já está separado em memória seria caro pelo motivo
-errado.
+**Person and agent become two blocks, derived and not separately queried**
+([RN-188](../business-rules.md#rn-188)). `porOwner` and `porAgente` are a
+partition of `porAtor` by `actor_kind`, done in the use case; `porAtor`
+remains whole for whoever already consumed it. The 0063 measured that the
+cost of these queries scales with the size of `token_usage`, not with the
+size of the request — scanning the window twice more to separate what's
+already separate in memory would be expensive for the wrong reason.
 
-**O índice em `token_usage(created_at)` entra agora** (migração `0044`). O 0063
-mediu e deixou registrado: a 525 mil linhas, 55 ms e 38 ms por *seq scan*, 32 ms
-e 19 ms com o índice. Faltava só o slot de migration.
+**The index on `token_usage(created_at)` lands now** (migration `0044`). The
+0063 measured it and left it on record: at 525 thousand rows, 55 ms and 38
+ms per *seq scan*, 32 ms and 19 ms with the index. All that was missing was
+the migration slot.
 
-**A dimensão `model` não muda.** Dois providers servindo o mesmo nome de modelo
-continuam numa linha só. Agora existe a lista por provider ao lado; cruzar as
-duas dimensões multiplicaria as linhas do ranking sem responder pergunta que as
-duas listas separadas já não respondam.
+**The `model` dimension does not change.** Two providers serving the same
+model name still land on a single line. Now there's a per-provider list
+alongside it; crossing the two dimensions would multiply the ranking's rows
+without answering a question the two separate lists don't already answer.
 
-## Consequências
+## Consequences
 
-**A frase mais dura do 0063 deixou de valer, e é honesto dizer qual.** "Não há
-argumento a passar" era uma garantia de superfície de API: nenhuma assinatura
-aceitava a palavra `provider`. Hoje uma assinatura aceita, e a garantia depende
-de o chamador do lado do membro estar tipado com `SpendScopeDeAtor`. Ele está —
-`GetMySpendUseCase` declara o tipo explicitamente, e não o infere, por essa
-razão —, mas a diferença é real: passamos de "impossível de expressar" para
-"impossível de compilar". A segunda é mais fraca que a primeira, e é o preço
-aceito pela decisão do dono do produto.
+**The 0063's strongest sentence no longer holds, and it's honest to say
+which one.** "There is no argument to pass" was a surface-of-API guarantee:
+no signature accepted the word `provider`. Today one does, and the guarantee
+depends on the caller on the member's side being typed as
+`SpendScopeDeAtor`. It is — `GetMySpendUseCase` declares the type
+explicitly, rather than inferring it, for that exact reason — but the
+difference is real: we went from "impossible to express" to "impossible to
+compile". The second is weaker than the first, and it's the price accepted
+by the product owner's decision.
 
-**O que segura o preço são duas barreiras independentes.** A rota do membro
-**não tem parâmetro de dimensão** (`projectId` e `dias`, e nada mais), então
-`?dimensao=provider` é descartado pelo Nest antes de o handler existir. A
-primeira barreira já bastava; a segunda existe para que ela continue bastando
-depois da próxima mudança. As duas têm teste, e o do tipo é um
-`@ts-expect-error` — se a barreira cair, o `tsc` reprova a linha por diretiva
-NÃO USADA, em vez de o teste passar a testar nada.
+**What holds that price down are two independent barriers.** The member's
+route **has no dimension parameter** (`projectId` and `dias`, and nothing
+else), so `?dimensao=provider` gets dropped by Nest before the handler even
+exists. The first barrier already sufficed; the second exists so it keeps
+sufficing after the next change. Both have tests, and the type one is a
+`@ts-expect-error` — if the barrier falls, `tsc` fails the line for an
+UNUSED directive, instead of the test passing while testing nothing.
 
-**Quem pode ver credencial não mudou.** `owner` nas duas rotas que falam de
-provider; `viewer` na do membro, que não fala. A classificação em
-`docs/security-surface.md` é a mesma — nenhuma rota nasceu, nenhuma mudou de
-papel —, e é por isso que o eixo novo não afrouxa a superfície exposta.
+**Who can see credentials hasn't changed.** `owner` on the two routes that
+talk about provider; `viewer` on the member's, which doesn't. The
+classification in `docs/security-surface.md` is the same — no route was
+born, none changed roles — which is why the new axis doesn't loosen the
+exposed surface.
 
-**"Por owner" é o rótulo do handoff, e o bloco é de PESSOAS.** `porOwner` traz
-toda linha de `actor_kind = 'user'`, não só as do dono do workspace; o rótulo se
-sustenta porque, pela RN-058, é a chave do owner que todas elas gastam. Quem é o
-dono continua sendo o campo `ownerId`. Se um dia houver credencial por pessoa,
-este bloco precisa de nome novo — e o mesmo vale para a RN-101 inteira, como o
-0063 já previa.
+**"By owner" is the handoff's label, and the block is about PEOPLE.**
+`porOwner` brings every line with `actor_kind = 'user'`, not only the
+workspace owner's; the label holds because, per RN-058, it's the owner's key
+that all of them spend. Who the owner is remains the `ownerId` field. If a
+per-person credential ever exists, this block needs a new name — and the
+same goes for RN-101 as a whole, as the 0063 already anticipated.
 
-**`actor_kind` que não é pessoa nem agente fica fora dos dois blocos.** Hoje é
-só `system`, que continua em `porAtor` e no total. Abrir um terceiro bloco diria
-que o produto tem uma audiência que ele não tem; escondê-lo do total seria
-mentir sobre o gasto.
+**An `actor_kind` that is neither person nor agent stays out of both
+blocks.** Today that's only `system`, which stays in `porAtor` and in the
+total. Opening a third block would claim an audience the product doesn't
+have; hiding it from the total would misstate the spend.
 
-**Fica de fora, declarado:** a TELA. Esta mudança é só backend — `porProvider`,
-`porOwner` e `porAgente` chegam ao cliente pelos tipos de `apps/web/src/lib`, e
-nenhum componente os desenha ainda. Continuam fora, do 0063: moeda e taxa de
-câmbio, gasto por área e qualquer exportação.
+**Left out, declared:** the SCREEN. This change is backend-only —
+`porProvider`, `porOwner` and `porAgente` reach the client through the types
+in `apps/web/src/lib`, and no component renders them yet. Still out, from
+0063: currency and exchange rate, spend by area, and any export.

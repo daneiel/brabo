@@ -1,109 +1,111 @@
-# ADR 0093 — O papel `dbre` vira dois scripts: linter de migration e relatório de backup
+# ADR 0093 — The `dbre` role becomes two scripts: migration linter and backup report
 
-- **Status:** Aceito
-- **Data:** 2026-08-17
-- **Contexto:** decisão do dono do produto de antecipar parte do papel
-  `dbre` declarado em `docs/fluxo.yml` (ADR 0085), sem esperar o gatilho
-  ("volume real de dados") disparar
-- **Revisa:** `docs/fluxo.yml`, bloco `id: dbre`
+- **Status:** Accepted
+- **Date:** 2026-08-17
+- **Context:** the product owner's decision to bring forward part of the
+  `dbre` role declared in `docs/fluxo.yml` (ADR 0085), without waiting for
+  the trigger ("real data volume") to fire
+- **Revises:** `docs/fluxo.yml`, block `id: dbre`
 
-## Contexto
+## Context
 
-`docs/fluxo.yml` (ADR 0085) já declarava `dbre` como `proposto`, absorvido
-por `dev-lead` (revisão de migração) e `platform` (tuning, quando ativar),
-com o critério de separação: "volume real de dados no projeto gerenciado
-(hoje o risco é de SCHEMA, não de carga)".
+`docs/fluxo.yml` (ADR 0085) already declared `dbre` as `proposto`, absorbed
+by `dev-lead` (migration review) and `platform` (tuning, once activated),
+with the separation criterion: "real data volume in the managed project
+(today the risk is SCHEMA risk, not load risk)".
 
-Essa frase já continha a resposta que faltava executar. Dos quatro
-entregáveis alvo do papel — `parecer-de-migracao`, `plano-de-capacidade`,
-`backup-restore-testado`, `tuning` —, só dois genuinamente dependem de
-volume real de dados:
+That sentence already contained the answer that was missing execution. Of
+the four target deliverables for the role — `parecer-de-migracao`,
+`plano-de-capacidade`, `backup-restore-testado`, `tuning` —, only two
+genuinely depend on real data volume:
 
-- **`plano-de-capacidade`** e **`tuning`** exigem carga real para significar
-  algo. Simulá-los sem ela seria inventar um número — a mesma classe de erro
-  que o [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
-  já recusa para nota de modelo e o [ADR 0077](0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)
-  recusa para ranking de capacidade.
-- **`parecer-de-migracao`** é análise ESTÁTICA de texto SQL: um padrão de
-  risco (`DROP COLUMN`, `ALTER COLUMN ... TYPE`, `ADD COLUMN ... NOT NULL`
-  sem `DEFAULT`) é arriscado independente de o banco gerenciado ter dez ou
-  dez milhões de linhas.
-- **`backup-restore-testado`** já é real e testado HOJE — o CronJob de
-  backup roda desde a Fase 5, grava em `backup_runs`, e o procedimento de
-  restore foi EXECUTADO de verdade (`docs/runbook.md#restore`, RTO real
-  ~40s contra um banco de ~108 KB). Faltava só um jeito de LER esse estado
-  sob demanda, formatado como relatório.
+- **`plano-de-capacidade`** and **`tuning`** require real load to mean
+  anything. Simulating them without it would be inventing a number — the
+  same class of error that [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+  already refuses for model rating and [ADR 0077](0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)
+  refuses for capability ranking.
+- **`parecer-de-migracao`** is STATIC analysis of SQL text: a risk pattern
+  (`DROP COLUMN`, `ALTER COLUMN ... TYPE`, `ADD COLUMN ... NOT NULL`
+  without `DEFAULT`) is risky regardless of whether the managed database
+  has ten or ten million rows.
+- **`backup-restore-testado`** is already real and tested TODAY — the
+  backup CronJob has been running since Phase 5, writes to `backup_runs`,
+  and the restore procedure has been EXECUTED for real
+  (`docs/runbook.md#restore`, real RTO ~40s against a ~108 KB database).
+  What was missing was just a way to READ that state on demand, formatted
+  as a report.
 
-Nenhum dos dois pede um agente LLM (não há julgamento de linguagem natural
-a fazer — é reconhecimento de padrão em texto SQL e leitura de uma tabela)
-nem um `GenServer` do engine (não há estado de longa duração nem laço —
-cada execução é uma leitura pontual, disparada por um humano ou por CI). A
-decisão foi tratá-los como o que são: dois scripts mecânicos, do mesmo
-gênero de `scripts/ci/pr-police.ts` e `apps/api/scripts/medir-execucao.ts`.
+Neither one calls for an LLM agent (there's no natural-language judgment
+to make — it's pattern recognition over SQL text and reading a table) nor
+an engine `GenServer` (there's no long-lived state or loop — each run is a
+point-in-time read, triggered by a human or by CI). The decision was to
+treat them for what they are: two mechanical scripts, of the same genre as
+`scripts/ci/pr-police.ts` and `apps/api/scripts/medir-execucao.ts`.
 
-## Decisão
+## Decision
 
-1. **`apps/api/scripts/lint-migracao.ts`** varre TODO `apps/api/src/db/migrations/*.sql`
-   (sem `--projeto` — é análise do repositório, não de uma execução) e
-   sinaliza cinco padrões de risco, linha a linha: `DROP TABLE`, `TRUNCATE`,
-   `DROP COLUMN`, `ALTER COLUMN ... TYPE`/`SET DATA TYPE`, e
-   `ADD COLUMN ... NOT NULL` sem `DEFAULT`. A lógica é PURA
-   (`lintarConteudo`, recebe nome + texto do SQL, devolve achados) separada
-   do adaptador de I/O (`lintarDiretorio`/`principal`), mesmo desenho de
-   `pr-police.ts` (`avaliarPr`). Linha comentária é ignorada, porque
-   comentários deste repositório citam os próprios padrões em prosa para
-   explicar por que foram EVITADOS (caso real:
-   `0042_tough_captain_midlands.sql`, linha 3). Sai `!= 0` se achar
-   qualquer ocorrência.
-2. **`apps/api/scripts/relatorio-backup.ts`** lê `backup_runs` com a MESMA
-   lógica de `DomainGaugesCollector.collectBackup()` (último SUCESSO —
-   idade, tamanho — e como terminou a ÚLTIMA execução), formatada como
-   relatório sob demanda — não um gauge Prometheus, uma leitura pontual
-   para quem quer a resposta agora. Cita o procedimento de restore já
-   testado em vez de reexecutá-lo. A lógica de classificação
-   (`avaliarBackup`) é pura, testável com `backup_runs` mockado.
-3. **Nenhum dos dois entra em CI por ora** — ver Consequências.
-4. **`docs/fluxo.yml`**: `dbre` passa de `status: proposto` para
-   `status: active`. `entregaveis_alvo` (lista plana) vira `entregaveis`
-   (lista de objetos com `status`): `parecer-de-migracao` e
-   `backup-restore-testado` marcados `real`, com o mecanismo que os prova;
-   `plano-de-capacidade` e `tuning` mantidos `lacuna`, com o motivo
-   explícito. `hoje_absorvido_por`/`criterio_de_separacao` continuam no
-   bloco, agora descrevendo só o que resta — a regra de UMA migration por
-   onda (`meta/_journal.json`) NÃO é mais chamada de "versão mecanizada do
-   papel": ela evita CONFLITO de snapshot entre agentes em paralelo, uma
-   preocupação ortogonal a "este SQL tem um padrão arriscado", que agora
-   tem mecanismo próprio.
+1. **`apps/api/scripts/lint-migracao.ts`** scans ALL of
+   `apps/api/src/db/migrations/*.sql` (no `--projeto` — it's analysis of
+   the repository, not of a run) and flags five risk patterns, line by
+   line: `DROP TABLE`, `TRUNCATE`, `DROP COLUMN`, `ALTER COLUMN ...
+   TYPE`/`SET DATA TYPE`, and `ADD COLUMN ... NOT NULL` without
+   `DEFAULT`. The logic is PURE (`lintarConteudo`, receives name + SQL
+   text, returns findings) separate from the I/O adapter
+   (`lintarDiretorio`/`principal`), the same design as `pr-police.ts`
+   (`avaliarPr`). Comment lines are ignored, because comments in this
+   repository cite these very patterns in prose to explain why they were
+   AVOIDED (real case: `0042_tough_captain_midlands.sql`, line 3). Exits
+   `!= 0` if it finds any occurrence.
+2. **`apps/api/scripts/relatorio-backup.ts`** reads `backup_runs` with the
+   SAME logic as `DomainGaugesCollector.collectBackup()` (last SUCCESS —
+   age, size — and how the LAST run ended), formatted as an on-demand
+   report — not a Prometheus gauge, a point-in-time read for whoever wants
+   the answer now. It cites the already-tested restore procedure instead
+   of re-executing it. The classification logic (`avaliarBackup`) is pure,
+   testable with a mocked `backup_runs`.
+3. **Neither one enters CI for now** — see Consequences.
+4. **`docs/fluxo.yml`**: `dbre` moves from `status: proposto` to `status:
+   active`. `entregaveis_alvo` (flat list) becomes `entregaveis` (list of
+   objects with `status`): `parecer-de-migracao` and
+   `backup-restore-testado` marked `real`, with the mechanism that proves
+   them; `plano-de-capacidade` and `tuning` kept as `lacuna`, with the
+   explicit reason. `hoje_absorvido_por`/`criterio_de_separacao` remain in
+   the block, now describing only what's left — the rule of ONE migration
+   per wave (`meta/_journal.json`) is NO LONGER called the "mechanized
+   version of the role": it prevents snapshot CONFLICTS between agents
+   running in parallel, a concern orthogonal to "this SQL has a risky
+   pattern", which now has its own mechanism.
 
-## Consequências
+## Consequences
 
-- **O linter varre o REPOSITÓRIO inteiro, não o diff de uma PR.** Rodá-lo
-  contra as migrations reais de hoje ACHA três ocorrências em migrations já
-  mergeadas e aceitas — `0006_whole_princess_powerful.sql:22` e
+- **The linter scans the ENTIRE repository, not a PR's diff.** Running it
+  against today's real migrations FINDS three occurrences in migrations
+  already merged and accepted — `0006_whole_princess_powerful.sql:22` and
   `0034_quick_saracen.sql:33` (`DROP COLUMN`), `0007_groovy_bullseye.sql:2`
-  (`ALTER COLUMN ... SET DATA TYPE`). Isso não é defeito a corrigir: são
-  decisões já tomadas e aceitas, e corrigi-las de passagem apagaria a
-  evidência de por que existiam (mesma regra do CLAUDE.md para os achados
-  Z/AD/AE). É exatamente por isso que o script **não entrou como step de
-  CI**: um gate que varre o repositório inteiro reprovaria toda PR, para
-  sempre, por achados que não são dela. Torná-lo um gate de verdade exige a
-  mesma técnica de `pr-police.ts` — escopar ao diff contra a base do PR —,
-  deixada para quando o `dbre` precisar de fato BLOQUEAR merge; hoje ele é
-  parecer, não veredito, e roda manual (`pnpm --filter api lint:migracao`).
-- **O relatório de backup não reexecuta o restore.** Ele reusa
-  exclusivamente a leitura que `collectBackup()` já faz; o procedimento de
-  restaurar em si já está testado e documentado (`docs/runbook.md#restore`).
-  Confundir os dois inflaria o escopo do script para reimplementar algo que
-  já existe e já funciona.
-- **O limiar de "backup atrasado" (26h) é duplicado**, não importado, do
-  alerta `brabo-backup-atrasado`
-  (`deploy/k8s/observability/alerts/brabo-alerts.yaml`) — o YAML do
-  Grafana não é lido pelo processo Node do script. Os dois números podem
-  divergir se alguém mudar um lado e esquecer o outro; aceito
-  conscientemente, pelo mesmo custo que qualquer limiar duplicado no
-  código teria.
-- **`plano-de-capacidade` e `tuning` continuam LACUNA**, declarados em
-  `docs/fluxo.yml`, sem prazo. O gatilho para separá-los continua sendo
-  volume real de dados no projeto GERENCIADO — não o volume de
-  `token_usage`/`session_events` do próprio Brabo, que já é grande, mas o
-  do produto que os agentes constroem.
+  (`ALTER COLUMN ... SET DATA TYPE`). This isn't a defect to fix: these
+  are decisions already made and accepted, and fixing them in passing
+  would erase the evidence of why they existed (the same rule CLAUDE.md
+  states for findings Z/AD/AE). This is exactly why the script **did not
+  enter as a CI step**: a gate that scans the whole repository would fail
+  every PR, forever, for findings that aren't the PR's. Turning it into a
+  real gate requires the same technique as `pr-police.ts` — scoping to the
+  diff against the PR's base — left for when `dbre` actually needs to
+  BLOCK a merge; today it's a report, not a verdict, and runs manually
+  (`pnpm --filter api lint:migracao`).
+- **The backup report doesn't re-execute the restore.** It reuses
+  exclusively the read that `collectBackup()` already does; the restore
+  procedure itself is already tested and documented
+  (`docs/runbook.md#restore`). Conflating the two would inflate the
+  script's scope into reimplementing something that already exists and
+  already works.
+- **The "backup overdue" threshold (26h) is duplicated**, not imported,
+  from the `brabo-backup-atrasado` alert
+  (`deploy/k8s/observability/alerts/brabo-alerts.yaml`) — the Grafana YAML
+  isn't read by the script's Node process. The two numbers can drift apart
+  if someone changes one side and forgets the other; accepted consciously,
+  the same cost any duplicated threshold in code would have.
+- **`plano-de-capacidade` and `tuning` remain a GAP**, declared in
+  `docs/fluxo.yml`, with no deadline. The trigger for splitting them off
+  is still real data volume in the MANAGED project — not the
+  `token_usage`/`session_events` volume of Brabo itself, which is already
+  large, but that of the product the agents build.

@@ -1,1 +1,1 @@
-{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"email":{"type":"string","example":"fulano@brabo.dev"},"senha":{"type":"string","example":"cavalo bateria grampo correto"}},"required":["email","senha"],"title":"LoginDto"}}}}}
+{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"email":{"type":"string","example":"fulano@brabo.dev"},"senha":{"type":"string","example":"correct horse battery staple"}},"required":["email","senha"],"title":"LoginDto"}}}}}

@@ -1,99 +1,98 @@
-# 0082 — Chat RAG: aba própria de busca híbrida, sem renomear "Chat"
+# 0082 — Chat RAG: its own hybrid-search tab, without renaming "Chat"
 
 ## Status
 
-Aceito.
+Accepted.
 
-## Contexto
+## Context
 
-O [ADR 0080](0080-busca-hibrida-pesos-limiar-e-citacao.md) (PROGRAMA 28,
-Onda 4, frente G2) deixou o pipeline de indexação e as três rotas HTTP do
-Chat RAG prontas — `POST .../rag/search`, `POST .../rag/reindex`,
-`GET .../rag/coverage` — mas declarou explicitamente que a TELA era
-trabalho da Onda 5. Enquanto isso, o [ADR 0078](0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.md)
-(RN-202) tinha decidido que a aba `sessions` continuaria rotulada "Chat",
-nunca "Chat RAG" como o handoff mais recente pede — porque, naquele
-momento, "Chat RAG" descrevia uma capacidade que o produto não tinha
-(sem pipeline, sem UI de citação). Esta frente (Onda 5, G3) é o momento
-em que essa capacidade passa a existir de verdade, e a pergunta que ela
-precisa responder é: agora que RAG existe, o rótulo "Chat RAG" vai para
-onde?
+[ADR 0080](0080-busca-hibrida-pesos-limiar-e-citacao.md) (PROGRAM 28,
+Wave 4, front G2) left the indexing pipeline and the three Chat RAG HTTP
+routes ready — `POST .../rag/search`, `POST .../rag/reindex`,
+`GET .../rag/coverage` — but explicitly declared the SCREEN as Wave 5
+work. Meanwhile, [ADR 0078](0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.md)
+(RN-202) had decided the `sessions` tab would keep the label "Chat," never
+"Chat RAG" as the more recent handoff asks — because, at that moment,
+"Chat RAG" described a capability the product didn't have (no pipeline, no
+citation UI). This front (Wave 5, G3) is the moment that capability starts
+to genuinely exist, and the question it needs to answer is: now that RAG
+exists, where does the "Chat RAG" label go?
 
-Duas opções: renomear `sessions` para "Chat RAG" (o que o handoff
-literalmente sugere), ou dar a "Chat RAG" uma aba PRÓPRIA. As duas
-telas respondem perguntas estruturalmente diferentes — `sessions` é
-conversa com um agente ATIVADO, que gasta a chave do owner por turno
-(RN-058) e pode escrever no backlog, no código, em qualquer ferramenta
-que o agente tenha; RAG é busca sobre um ÍNDICE já construído, sem
-agente nenhum no meio, e read-only por natureza (as três rotas do ADR
-0080 são `viewer`/`viewer`/`maintainer`, nenhuma delas invoca um LLM de
-conversa). Fundir as duas na mesma aba obrigaria a UI a expressar "isto
-é uma citação de um chunk indexado" e "isto é a fala de um agente" no
-mesmo fio, quando o usuário nunca pediu as duas coisas ao mesmo tempo.
+Two options: rename `sessions` to "Chat RAG" (what the handoff literally
+suggests), or give "Chat RAG" its OWN tab. The two screens answer
+structurally different questions — `sessions` is conversation with an
+ACTIVATED agent, which spends the owner's key per turn (RN-058) and can
+write to the backlog, to the code, to any tool the agent has; RAG is
+search over an already-built INDEX, with no agent in the middle, and
+read-only by nature (the three ADR 0080 routes are `viewer`/`viewer`/
+`maintainer`, none of them invokes a conversational LLM). Merging the two
+into the same tab would force the UI to express "this is a citation from
+an indexed chunk" and "this is an agent speaking" in the same thread, when
+the user never asked for both at once.
 
-## Decisão
+## Decision
 
-**"Chat RAG" vira aba própria, `key: 'rag'`, sem tocar o rótulo de
-`sessions`.** A RN-202 continua válida como estava — `sessions` nunca
-foi "Chat RAG", e continua não sendo — mas a razão dela muda de "a
-capacidade não existe" para "a capacidade existe em OUTRO lugar". A aba
-entra em `apps/web/src/routes/project-tabs.ts` (`ordem: 28`, logo depois
-de `code` e antes de `backlog`) — a mesma vizinhança de "olhar o que já
-foi produzido/indexado" que a aba Código ocupa, e antes do Backlog, que
-é onde a produção nova nasce.
+**"Chat RAG" becomes its own tab, `key: 'rag'`, without touching the
+`sessions` label.** RN-202 remains valid as it was — `sessions` was never
+"Chat RAG," and continues not being it — but its reasoning shifts from
+"the capability doesn't exist" to "the capability exists somewhere ELSE."
+The tab enters `apps/web/src/routes/project-tabs.ts` (`ordem: 28`, right
+after `code` and before `backlog`) — the same neighborhood of "look at what
+has already been produced/indexed" that the Code tab occupies, and before
+Backlog, which is where new production is born.
 
-**A tela consome os três contratos do ADR 0080 sem adivinhar forma**
-(`apps/web/src/lib/api-client.ts`/`api-types.ts` ganham `searchRag`/
-`getRagCoverage`/`reindexRag` e os tipos espelhados 1:1 do DTO —
-`RagSearchHit`, `RagChunkOrigin` como união discriminada por `kind`,
-`RagCoverage`). A UI tem três peças:
+**The screen consumes the three ADR 0080 contracts without guessing their
+shape** (`apps/web/src/lib/api-client.ts`/`api-types.ts` gain `searchRag`/
+`getRagCoverage`/`reindexRag` and the types mirrored 1:1 from the DTO —
+`RagSearchHit`, `RagChunkOrigin` as a union discriminated by `kind`,
+`RagCoverage`). The UI has three pieces:
 
-1. `RagCoveragePanel` — contagem REAL de `docs`/`adr`/sessões indexadas
-   contra o total real, e `chunksTotal`/`chunksWithoutVector`. Nenhum
-   "reindexado há Xmin": a resposta do backend não carrega esse dado
-   desde o ADR 0080, e não é esta tela que vai inventá-lo (RN-252).
-2. Busca com filtro de escopo (pills `docs`/`adr`/`session`, ausência =
-   todos) e um aviso quando `vectorAvailable: false` — "busca só por
-   palavra-chave — embedding indisponível", com o motivo quando o
-   backend o der (RN-252, a mesma degradação honesta da RN-233 chegando
-   à UI).
-3. `RagCitationCard` — a citação com score combinado e os dois sinais
-   separados (`null` quando o sinal não achou o chunk, nunca 0%,
-   preservando a distinção do ADR 0080). Origem `file` mostra
-   caminho/`headingPath` como texto; origem `session` navega até o
-   EVENTO exato via `useNavigate` + `search: { highlightEvent }` — a
-   MESMA rota e o mesmo parâmetro que os chips de evidência do
-   Psicólogo já usam (`HypothesisCard.tsx`, Fase 4b) — reuso, não um
-   segundo caminho de navegação (RN-253).
+1. `RagCoveragePanel` — REAL count of indexed `docs`/`adr`/sessions
+   against the real total, and `chunksTotal`/`chunksWithoutVector`. No
+   "reindexed Xmin ago": the backend response has not carried that data
+   since ADR 0080, and this screen isn't the one to invent it (RN-252).
+2. Search with a scope filter (`docs`/`adr`/`session` pills, absence =
+   all) and a warning when `vectorAvailable: false` — "keyword-only
+   search — embedding unavailable," with the reason when the backend
+   provides it (RN-252, the same honest degradation as RN-233 reaching
+   the UI).
+3. `RagCitationCard` — the citation with combined score and the two
+   separate signals (`null` when the signal didn't find the chunk, never
+   0%, preserving ADR 0080's distinction). `file` origin shows path/
+   `headingPath` as text; `session` origin navigates to the exact EVENT
+   via `useNavigate` + `search: { highlightEvent }` — the SAME route and
+   parameter the Psychologist's evidence chips already use
+   (`HypothesisCard.tsx`, Phase 4b) — reuse, not a second navigation path
+   (RN-253).
 
-**O botão "Reindexar agora" só aparece para `owner`/`maintainer`**,
-espelhando no cliente a régua que a rota já aplica (RN-238) — mesmo
-padrão de `useCurrentWorkspaceWithRole` que `ProjectSettingsTab`/
-`ProjectApprovalsTab` já usam para outros gates de `maintainer` (RN-254).
-Quem não tem o papel simplesmente não vê o botão, em vez de vê-lo
-desabilitado: reindexar dispara N chamadas ao repositório do projeto e
-ao provider de embedding, a mesma régua "muda o que o produto gasta sem
-perguntar" do teto de paralelismo de área (RN-083).
+**The "Reindex now" button only appears for `owner`/`maintainer`**,
+mirroring on the client the rule the route already enforces (RN-238) —
+same pattern as `useCurrentWorkspaceWithRole` that `ProjectSettingsTab`/
+`ProjectApprovalsTab` already use for other `maintainer` gates (RN-254).
+Whoever doesn't have the role simply doesn't see the button, rather than
+seeing it disabled: reindexing triggers N calls to the project's repository
+and to the embedding provider, the same "changes what the product spends
+without asking" rule as the area parallelism cap (RN-083).
 
-## Consequências
+## Consequences
 
-**A promessa que a RN-202 tinha adiado chega, mas não do jeito que o
-handoff desenhou.** O handoff renomeia uma aba existente; o produto abre
-uma nova. É a decisão mais defensável dado que as duas telas nunca
-tiveram a mesma pergunta — e o custo de estar errado (uma aba a mais no
-registro) é menor que o custo de misturar conversa-com-agente e
-busca-sobre-índice na mesma superfície.
+**The promise RN-202 had deferred arrives, but not the way the handoff
+designed it.** The handoff renames an existing tab; the product opens a
+new one. It's the more defensible decision given the two screens never
+answered the same question — and the cost of being wrong (one extra tab in
+the registry) is lower than the cost of mixing conversation-with-agent and
+search-over-index in the same surface.
 
-**Nenhum deep-link por caminho para a aba Código.** Uma citação de
-origem `file` mostra `sourcePath`/`headingPath` como texto simples, sem
-navegar — a aba Código (FASE 26/26b) não tem hoje mecanismo de abrir num
-arquivo específico via rota/`search`, e construir esse mecanismo é fora
-do escopo desta frente. Fica declarado, não meio-implementado: o texto
-mostra o caminho real, só não é clicável.
+**No deep-link by path to the Code tab.** A `file`-origin citation shows
+`sourcePath`/`headingPath` as plain text, without navigating — the Code
+tab (PHASE 26/26b) has no mechanism today to open a specific file via
+route/`search`, and building that mechanism is out of scope for this
+front. It stays declared, not half-implemented: the text shows the real
+path, it just isn't clickable.
 
-**O gate de `maintainer` no cliente é só UX.** Quem garante que
-`reindex` não roda sem o papel continua sendo a api (`RequireRole`,
-RN-238) — a tela só evita o clique que a api recusaria de qualquer
-forma. Isto segue o mesmo padrão de todos os outros gates de UI do
-produto (auto mode, teto de paralelismo, modelo de área): nenhum deles
-substitui a checagem do servidor.
+**The `maintainer` gate on the client is UX only.** What guarantees
+`reindex` doesn't run without the role remains the api (`RequireRole`,
+RN-238) — the screen only avoids the click the api would refuse anyway.
+This follows the same pattern as every other UI gate in the product (auto
+mode, parallelism cap, area model): none of them replaces the server-side
+check.

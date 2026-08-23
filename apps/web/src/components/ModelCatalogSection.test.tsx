@@ -1,8 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ModelCatalogSection } from './ModelCatalogSection';
 import { ToastProvider } from './ui/ToastProvider';
+// A instância REAL do app: o componente usa `useTranslation('models')` sem
+// `I18nextProvider` próprio — mesmo padrão de `ProjectExecutorsTab.test.tsx`.
+import i18n from '../lib/i18n';
 import type {
   CatalogoPorCategoria,
   ModelComCuradoria,
@@ -64,13 +67,18 @@ function montar() {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
   listModelCatalog.mockResolvedValue(catalogo([model()]));
   setModelsActive.mockResolvedValue([]);
   setModelUses.mockResolvedValue([]);
   syncModelCatalog.mockResolvedValue({ porProvider: [] });
   listCredentials.mockResolvedValue([]);
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 function credencial(provider: string) {

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { getCodeBlame, getCodeFile, mensagemDaApi } from '../../lib/api-client';
 import type { CodeBlameLine } from '../../lib/api-types';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -102,6 +104,7 @@ export function CodeEditor({
   onSelectTab,
   onCloseTab,
 }: CodeEditorProps) {
+  const { t } = useTranslation('code');
   const fileQuery = useQuery({
     queryKey: ['code-file', projectId, gitRef, activePath],
     queryFn: () => getCodeFile(projectId, { ref: gitRef, path: activePath! }),
@@ -180,7 +183,7 @@ export function CodeEditor({
   return (
     <div className={styles.editor}>
       {openTabs.length > 0 && (
-        <div className={styles.abas} role="tablist" aria-label="Arquivos abertos">
+        <div className={styles.abas} role="tablist" aria-label={t('editor.openTabsAriaLabel')}>
           {openTabs.map((path) => (
             <div
               key={path}
@@ -197,7 +200,7 @@ export function CodeEditor({
               <button
                 type="button"
                 className={styles.abaFechar}
-                aria-label={`Fechar ${path}`}
+                aria-label={t('editor.closeFileAriaLabel', { path })}
                 onClick={() => onCloseTab(path)}
               >
                 <XIcon size={11} />
@@ -224,10 +227,10 @@ export function CodeEditor({
               .join(' ')}
             aria-pressed={blameOn}
             onClick={() => setBlameOn((v) => !v)}
-            title="Anotar cada linha com o commit, autor e data que a tocou por último"
+            title={t('editor.blameButtonTitle')}
           >
             <UserIcon size={13} />
-            Blame
+            {t('editor.blameButton')}
           </button>
         </div>
       )}
@@ -241,9 +244,7 @@ export function CodeEditor({
           data-testid="editor-scroll"
         >
           {!activePath && (
-            <div className={styles.vazio}>
-              Selecione um arquivo no explorador, ou busque um trecho na aba Buscar.
-            </div>
+            <div className={styles.vazio}>{t('editor.emptyState')}</div>
           )}
 
           {activePath && fileQuery.isLoading && (
@@ -257,7 +258,7 @@ export function CodeEditor({
 
           {activePath && fileQuery.isError && (
             <div className={styles.erro} role="alert">
-              {mensagemDaApi(fileQuery.error, 'Não consegui abrir este arquivo.')}
+              {mensagemDaApi(fileQuery.error, t('editor.loadFileErrorFallback'))}
             </div>
           )}
 
@@ -265,38 +266,36 @@ export function CodeEditor({
             <>
               {fileQuery.data.truncated && (
                 <div className={styles.aviso}>
-                  Arquivo maior que o teto de leitura — mostrando só o início ({fileQuery.data.bytes}{' '}
-                  bytes).
+                  {t('editor.truncatedFile', { bytes: fileQuery.data.bytes })}
                 </div>
               )}
 
               {blameOn && blameQuery.isLoading && (
-                <div className={styles.blameEstado}>Carregando anotações de autoria…</div>
+                <div className={styles.blameEstado}>{t('editor.blameLoading')}</div>
               )}
 
               {blameOn && blameQuery.isError && (
                 <div className={styles.blameErro} role="alert">
                   <span>
-                    {mensagemDaApi(blameQuery.error, 'Não consegui carregar o blame deste arquivo.')}
+                    {mensagemDaApi(blameQuery.error, t('editor.blameErrorFallback'))}
                   </span>
                   <button
                     type="button"
                     className={styles.blameTentar}
                     onClick={() => void blameQuery.refetch()}
                   >
-                    Tentar de novo
+                    {t('shared.retry')}
                   </button>
                 </div>
               )}
 
               {blameOn && blameQuery.data && blameQuery.data.lines.length === 0 && (
-                <div className={styles.blameEstado}>Sem anotações de autoria para este arquivo.</div>
+                <div className={styles.blameEstado}>{t('editor.blameEmpty')}</div>
               )}
 
               {blameOn && blameQuery.data && blameQuery.data.truncated && (
                 <div className={styles.aviso}>
-                  Anotação de autoria cortada em {blameQuery.data.lines.length} linhas — arquivo maior
-                  que o teto de blame.
+                  {t('editor.blameTruncated', { lines: blameQuery.data.lines.length })}
                 </div>
               )}
 
@@ -327,6 +326,7 @@ function CodigoComRealce({
   /** `null` = blame desligado. Mapa vazio é estado válido (arquivo sem linhas anotadas). */
   blame: Map<number, CodeBlameLine> | null;
 }) {
+  const { t } = useTranslation('code');
   const total = linhas.length;
   const linhasVisiveis: { numero: number; tokens: ReturnType<typeof highlightFile>[number] }[] = [];
   for (let i = janela.inicio; i < janela.fim; i++) {
@@ -354,10 +354,13 @@ function CodigoComRealce({
                   className={[styles.gutterBlame, inicioDeBloco && styles.gutterBlameInicio]
                     .filter(Boolean)
                     .join(' ')}
-                  title={anotacao ? tituloBlame(anotacao) : 'Sem anotação de autoria para esta linha'}
+                  title={anotacao ? tituloBlame(anotacao, t) : t('editor.blameNoLine')}
                 >
                   {anotacao && inicioDeBloco
-                    ? `${anotacao.author} · ${anotacao.commitSha.slice(0, 7)}`
+                    ? t('editor.blameLineLabel', {
+                        author: anotacao.author,
+                        sha: anotacao.commitSha.slice(0, 7),
+                      })
                     : ''}
                 </span>
               )}
@@ -401,6 +404,7 @@ function Minimap({
   totalLinhas: number;
   onNavigate: (linha: number) => void;
 }) {
+  const { t } = useTranslation('code');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [altura, setAltura] = useState(0);
@@ -438,7 +442,7 @@ function Minimap({
       className={styles.minimapa}
       role="button"
       tabIndex={0}
-      aria-label="Minimapa — clique para ir até a região do arquivo"
+      aria-label={t('editor.minimapAriaLabel')}
       onClick={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const linha = linhaNoOffsetY(e.clientY - rect.top, rect.height, totalLinhas);
@@ -455,10 +459,15 @@ function Minimap({
   );
 }
 
-function tituloBlame(linha: CodeBlameLine): string {
+function tituloBlame(linha: CodeBlameLine, t: TFunction): string {
   const data = new Date(linha.authorDate);
   const dataFormatada = Number.isNaN(data.getTime())
     ? linha.authorDate
     : data.toLocaleString('pt-BR', { dateStyle: 'medium', timeStyle: 'short' });
-  return `${linha.author} · ${dataFormatada} · ${linha.commitSha.slice(0, 7)} · ${linha.summary}`;
+  return t('editor.blameTooltip', {
+    author: linha.author,
+    date: dataFormatada,
+    sha: linha.commitSha.slice(0, 7),
+    summary: linha.summary,
+  });
 }

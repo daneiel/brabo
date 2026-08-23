@@ -1,7 +1,20 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { AgentCard } from './AgentCard';
 import { AGENTS } from '../lib/agents';
+// Instância REAL do app (mesmo motivo de `agent-status.test.ts`): sem
+// `I18nextProvider` no teste, o hook `useTranslation` cai no singleton
+// global de `lib/i18n.ts` — as asserções abaixo checam o texto ATUAL em
+// português.
+import i18n from '../lib/i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
 
 function renderCard(props: Partial<Parameters<typeof AgentCard>[0]> = {}) {
   return render(

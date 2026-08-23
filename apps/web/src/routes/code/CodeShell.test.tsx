@@ -1,8 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CodeShell } from './CodeShell';
+// Instância REAL do app — `CodeShell` não tem `I18nextProvider` próprio
+// (mesmo padrão de `Dashboard.test.tsx`/`ProjectExecutorsTab.test.tsx`).
+import i18n from '../../lib/i18n';
 
 const getRepository = vi.fn();
 const getCodeBranches = vi.fn();
@@ -50,7 +53,8 @@ function montar() {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
   vi.clearAllMocks();
   getRepository.mockResolvedValue({
     id: 'r-1', projectId: 'p-1', provider: 'github', externalId: 'x',
@@ -63,6 +67,10 @@ beforeEach(() => {
     ],
     truncated: false,
   });
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('CodeShell', () => {
@@ -117,7 +125,10 @@ describe('CodeShell', () => {
 
   it('sem sessão/eventos ainda, mostra 0 agentes ativos — dado real, não inventado', async () => {
     montar();
-    expect(await screen.findByText(/0 agentes ativos/)).toBeInTheDocument();
+    // CLDR pt-BR: n=0 cai na categoria "one" (`Intl.PluralRules('pt-BR').select(0)
+    // === 'one'`), então a regra i18next `activeAgents_one` responde no singular
+    // — mesmo padrão já em uso em `aprovacoes.ts`/`approvals.json` (`activeCount_one`).
+    expect(await screen.findByText(/0 agente ativo/)).toBeInTheDocument();
   });
 
   it('a status bar mostra ↑/↓ real da branch atual (getCodeBranches, não inventado)', async () => {

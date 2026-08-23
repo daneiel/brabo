@@ -1,6 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import sessionsPtBR from '../../locales/pt-BR/sessions.json';
 import { RagCitationCard } from './RagCitationCard';
 import type { RagSearchHit } from '../../lib/api-types';
 
@@ -9,6 +12,33 @@ const navigate = vi.fn();
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigate,
 }));
+
+// Instância isolada de i18next, mesmo padrão de `AccountPage.test.tsx`: o
+// componente usa `useTranslation('sessions')` e as asserções abaixo já
+// existiam em pt-BR, então a instância de teste fica em pt-BR (o inglês é
+// coberto pelos próprios JSON de recurso, não por este teste).
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: { 'pt-BR': { sessions: sessionsPtBR } },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'sessions',
+    ns: ['sessions'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
+function montar(hit: RagSearchHit, projectId = 'p-1') {
+  const i18n = novaInstanciaI18n();
+  return render(
+    <I18nextProvider i18n={i18n}>
+      <RagCitationCard hit={hit} projectId={projectId} />
+    </I18nextProvider>,
+  );
+}
 
 beforeEach(() => {
   navigate.mockClear();
@@ -29,7 +59,7 @@ function makeHit(overrides: Partial<RagSearchHit> = {}): RagSearchHit {
 
 describe('RagCitationCard', () => {
   it('caminho feliz: origem de arquivo mostra caminho e a trilha de heading', () => {
-    render(<RagCitationCard hit={makeHit()} projectId="p-1" />);
+    montar(makeHit());
 
     expect(screen.getByText(/docs\/gates\.md/)).toBeInTheDocument();
     expect(screen.getByText(/Gates › PR/)).toBeInTheDocument();
@@ -43,7 +73,7 @@ describe('RagCitationCard', () => {
       scope: 'session',
       origin: { kind: 'session', sessionId: 'sess-1', eventId: 'evt-9', title: 'user:u-1' },
     });
-    render(<RagCitationCard hit={hit} projectId="p-1" />);
+    montar(hit);
 
     await user.click(screen.getByRole('button', { name: /user:u-1/ }));
 
@@ -56,7 +86,7 @@ describe('RagCitationCard', () => {
 
   it('CASO DE FALHA: sinal ausente (null) aparece como "—", nunca como 0% (RN-234)', () => {
     const hit = makeHit({ vectorScore: null, lexicalScore: null });
-    render(<RagCitationCard hit={hit} projectId="p-1" />);
+    montar(hit);
 
     expect(screen.getByText(/vetor — · léxico —/)).toBeInTheDocument();
   });

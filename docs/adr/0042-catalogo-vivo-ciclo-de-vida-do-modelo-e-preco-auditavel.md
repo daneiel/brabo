@@ -1,170 +1,188 @@
-# 0042 — Catálogo vivo, ciclo de vida do modelo e preço auditável
+# 0042 — Living catalog, model lifecycle and auditable price
 
-## Contexto
+## Context
 
-O [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md) entregou
-a base OpenAI-compatível, o contrato de providers e as capabilities por modelo.
-Faltava a outra metade da Fase 9: descobrir modelos sozinho, saber o que fazer
-quando um deles some, e mudar preço sem estragar o histórico.
+[ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+delivered the OpenAI-compatible base, the provider contract, and per-model
+capabilities. What was missing was the other half of Phase 9: discovering
+models on its own, knowing what to do when one disappears, and changing
+price without corrupting history.
 
-A exploração antes de codar encontrou três coisas que redefiniram o trabalho.
+The exploration before coding found three things that redefined the work.
 
-### O custo histórico já estava congelado — o buraco era outro
+### The historical cost was already frozen — the hole was elsewhere
 
-O escopo pedia um teste provando que "mudar o preço não altera o custo de
-ontem". Esse teste passaria hoje, vazio: `calculateCostMicros` roda no instante
-da chamada e o resultado vira `token_usage.cost_micros`; nada recalcula depois.
+The scope called for a test proving that "changing the price doesn't
+change yesterday's cost". That test would pass today, vacuously:
+`calculateCostMicros` runs at call time and the result becomes
+`token_usage.cost_micros`; nothing recalculates it later.
 
-O buraco real é que `token_usage` **não guardava o preço** que produziu o custo.
-Um valor antigo era imutável, mas não **reproduzível**: `tokens × preço` deixava
-de fechar assim que alguém corrigisse a linha de `models`, e não havia como
-distinguir "o custo está certo" de "o custo está errado desde sempre".
+The real hole is that `token_usage` **didn't store the price** that
+produced the cost. An old value was immutable, but not
+**reproducible**: `tokens × price` stopped adding up as soon as someone
+corrected a row in `models`, and there was no way to tell "the cost is
+right" apart from "the cost has been wrong all along".
 
-### `is_active` era decorativo
+### `is_active` was decorative
 
-A coluna existia desde a Fase 1 e era lida em **um** lugar: `listActive()`.
-`findById` e `findCandidates` a ignoravam. Desativar um modelo não impedia
-binding novo, não interrompia binding existente, e a chamada continuava sendo
-feita e cobrada. A tela dizia "desativado" e o sistema não concordava.
+The column had existed since Phase 1 and was read in **one** place:
+`listActive()`. `findById` and `findCandidates` ignored it. Deactivating a
+model didn't stop a new binding, didn't interrupt an existing one, and the
+call kept happening and getting billed. The screen said "deactivated" and
+the system disagreed.
 
-### Não existia fallback por disponibilidade
+### There was no fallback based on availability
 
-`binding-resolver.ts` recebia `{scope, modelId}` e nada mais — não conhecia o
-modelo. A cascata era sobre ESCOPOS, nunca sobre o estado do modelo apontado. Um
-binding para um modelo que o provider tivesse removido resolveria normalmente e
-falharia só na chamada, com um 404 do vendor.
+`binding-resolver.ts` received `{scope, modelId}` and nothing else — it
+didn't know the model. The cascade was over SCOPES, never over the state
+of the model being pointed to. A binding to a model the provider had
+removed would resolve normally and only fail at call time, with a 404
+from the vendor.
 
-## Decisão
+## Decision
 
-### Dois eixos independentes, não um estado só
+### Two independent axes, not a single state
 
-| coluna | quem escreve | pergunta que responde |
+| column | who writes it | question it answers |
 | --- | --- | --- |
-| `models.is_active` | o owner, pela tela de curadoria | "eu quero usar este modelo?" |
-| `models.availability` | o sync, sozinho | "este modelo ainda existe lá?" |
+| `models.is_active` | the owner, via the curation screen | "do I want to use this model?" |
+| `models.availability` | the sync, on its own | "does this model still exist over there?" |
 
-Um estado só não daria conta: se o sync escrevesse em `is_active`, um modelo que
-sumisse por uma hora voltaria **desligado**, perdendo a curadoria; se o owner
-escrevesse em `availability`, ele poderia "reativar" um modelo que não existe
-mais do outro lado. O cruzamento dos dois é o que gera o aviso na tela.
+A single state wouldn't do the job: if the sync wrote to `is_active`, a
+model that disappeared for an hour would come back **turned off**, losing
+its curation; if the owner wrote to `availability`, they could "reactivate"
+a model that no longer exists on the other end. The intersection of the
+two is what generates the warning on the screen.
 
-O `set` do upsert do repositório **não inclui `is_active`** — é a linha que
-garante a regra: o sync reencontrando um modelo não pode religar o que alguém
-desligou de propósito.
+The repository's upsert `set` **doesn't include `is_active`** — that's the
+line guaranteeing the rule: the sync rediscovering a model can't turn back
+on what someone deliberately turned off.
 
-### Modelo descoberto entra INATIVO, modelo sumido é marcado e preservado
+### A discovered model comes in INACTIVE, a disappeared model is flagged and preserved
 
-Formalizado na [RN-043](../business-rules.md#rn-043). Deletar nunca é opção:
-`model_bindings` e `token_usage` apontam para a linha.
+Formalized in [RN-043](../business-rules.md#rn-043). Deleting is never an
+option: `model_bindings` and `token_usage` point to the row.
 
-A terceira regra é a que menos aparece e mais importa: **provider que falhou não
-indisponibiliza nada.** Um 401 significa "não sei o que tem lá". Tratar isso
-como catálogo vazio marcaria todos os modelos daquele provider como sumidos e
-derrubaria todos os bindings de uma vez — por causa de uma chave revogada. O
-provider é PULADO, com a origem da falha (`infra` | `modelo`) no relatório, no
-vocabulário do [ADR 0020](0020-destravar-gates-qa-secops.md).
+The third rule is the one that shows up least and matters most: **a
+provider that failed doesn't make anything unavailable.** A 401 means "I
+don't know what's over there." Treating that as an empty catalog would
+mark every model from that provider as gone and take down every binding
+at once — because of one revoked key. The provider is SKIPPED, with the
+origin of the failure (`infra` | `modelo`) in the report, in the
+vocabulary of [ADR 0020](0020-destravar-gates-qa-secops.md).
 
-Pela mesma razão, o `listModels` da base **lança** quando a capability não está
-declarada, em vez de devolver `[]`: lista vazia é indistinguível de "o provider
-não tem modelo nenhum", e o sync leria isso como "sumiram todos".
+For the same reason, the base's `listModels` **throws** when the
+capability isn't declared, instead of returning `[]`: an empty list is
+indistinguishable from "the provider has no models at all", and the sync
+would read that as "they all disappeared".
 
-### A cascata revalida capability a cada nível
+### The cascade revalidates capability at every level
 
-`resolveBinding` passou a receber `{availability, supportsToolCalling}` junto do
-id e devolve `skipped[]` — o que foi descartado e por quê.
+`resolveBinding` now receives `{availability, supportsToolCalling}`
+alongside the id and returns `skipped[]` — what was discarded and why.
 
-O ponto não óbvio: quando o turno carrega ferramentas, o filtro de
-`supports_tool_calling` vale para **todo** candidato, não só para o primeiro.
-Sem isso, um binding de agente para modelo indisponível cairia para o nível de
-baixo e pousaria num modelo chat-only, violando a
-[RN-040](../business-rules.md#rn-040) em silêncio — a falha só apareceria depois,
-no ToolLoop, como "o agente parou sozinho". É exatamente o modo de falha que o
-ADR 0020 custou nove execuções para diagnosticar.
+The non-obvious point: when the turn carries tools, the
+`supports_tool_calling` filter applies to **every** candidate, not just
+the first. Without that, an agent's binding to an unavailable model would
+fall to the level below and land on a chat-only model, silently violating
+[RN-040](../business-rules.md#rn-040) — the failure would only show up
+later, in the ToolLoop, as "the agent just stopped by itself". That's
+exactly the kind of failure that cost nine executions to diagnose in
+ADR 0020.
 
-O gatilho é o turno TER ferramentas, não o ator ser agente: um turno de resumo
-do context-manager sem `tools` roda bem em modelo chat-only, e travá-lo
-restringiria mais do que a regra pede.
+The trigger is the turn HAVING tools, not the actor being an agent: a
+context-manager summarization turn with no `tools` runs fine on a
+chat-only model, and locking it down would restrict more than the rule
+calls for.
 
-### Preço: snapshot em `token_usage`, auditoria em tabela própria
+### Price: snapshot in `token_usage`, audit trail in its own table
 
-`token_usage` ganhou `input_price_per_million_micros` e
-`output_price_per_million_micros` — o preço que produziu aquele custo. É o que
-torna o custo antigo reproduzível, e não apenas imutável
+`token_usage` gained `input_price_per_million_micros` and
+`output_price_per_million_micros` — the price that produced that cost.
+That's what makes an old cost reproducible, not merely immutable
 ([RN-044](../business-rules.md#rn-044)).
 
-A alternativa considerada era uma **tabela de vigência** (preço com intervalo de
-validade, custo recalculado por join). Foi descartada: obrigaria toda leitura de
-custo a resolver o intervalo certo, e um bug nesse join reprecificaria o passado
-inteiro — exatamente o que a fase proíbe. O snapshot põe a resposta na linha.
+The alternative considered was a **validity-period table** (a price with a
+validity interval, cost recalculated via join). It was discarded: it would
+force every cost read to resolve the right interval, and a bug in that
+join would reprice the entire past — exactly what the phase forbids. The
+snapshot puts the answer on the row itself.
 
-`model_price_changes` é append-only, com o par antes/depois. Fica em tabela
-própria e **não no outbox**: `Engine.Outbox.Drain.run_once/0` filtra
-`aggregate_type == "session"`, então uma linha de preço ali ficaria com
-`processed_at` nulo para sempre e sujaria a métrica de lag da outbox. É log de
-domínio imutável, como `session_events` — mesma regra do CLAUDE.md.
+`model_price_changes` is append-only, with the before/after pair. It lives
+in its own table and **not in the outbox**:
+`Engine.Outbox.Drain.run_once/0` filters `aggregate_type == "session"`, so
+a price row there would sit with `processed_at` null forever and pollute
+the outbox lag metric. It's an immutable domain log, like
+`session_events` — the same CLAUDE.md rule.
 
-### O engine agenda, a api executa
+### The engine schedules, the api executes
 
-O sync roda como worker Oban **auto-reagendado** (`ModelSyncSchedulerWorker`),
-no idioma que o repositório já usa desde o `OutboxDrainWorker` —
-`Oban.Plugins.Cron` não está instalado, e o `unique:` fica só no `kickoff/0`,
-nunca no `use`, senão o job em execução colidiria consigo mesmo e mataria a
-corrente depois de uma rodada.
+The sync runs as a **self-rescheduling** Oban worker
+(`ModelSyncSchedulerWorker`), in the idiom the repository has used since
+`OutboxDrainWorker` — `Oban.Plugins.Cron` isn't installed, and the
+`unique:` clause stays only on `kickoff/0`, never on `use`, or else a job
+already in progress would collide with itself and kill the chain after one
+round.
 
-O worker chama `POST /internal/models/sync` porque é a api que tem as
-credenciais e o registry de providers; duplicar o registry no Elixir
-significaria manter dois catálogos. O reagendamento acontece **antes** do
-trabalho, de propósito: uma rodada ruim não pode matar a corrente periódica.
+The worker calls `POST /internal/models/sync` because the api is the one
+that holds the credentials and the provider registry; duplicating the
+registry in Elixir would mean maintaining two catalogs. The rescheduling
+happens **before** the work, on purpose: a bad round can't kill the
+periodic chain.
 
-O botão "Atualizar catálogo" da UI chama o mesmo caso de uso por
-`POST /workspaces/:id/models/sync` — não existem duas reconciliações que possam
-divergir.
+The UI's "Refresh catalog" button calls the same use case via
+`POST /workspaces/:id/models/sync` — there aren't two reconciliations that
+could diverge.
 
-### A curadoria pende de um `:workspaceId`, e o catálogo é global
+### Curation hangs off a `:workspaceId`, and the catalog is global
 
-O `RolesGuard` resolve o papel efetivo a partir de `:projectId` ou
-`:workspaceId` na rota. Sem um dos dois ele não tem de onde tirar papel nenhum,
-e um `@RequireRole('owner')` numa rota sem escopo **reprovaria sempre**. Por
-isso as rotas de curadoria são `/workspaces/:workspaceId/models/*`.
+`RolesGuard` resolves the effective role from `:projectId` or
+`:workspaceId` in the route. Without either it has nowhere to pull a role
+from, and a `@RequireRole('owner')` on a scopeless route would **always
+reject**. That's why the curation routes are `/workspaces/:workspaceId/models/*`.
 
-O catálogo em si continua global — a tabela `models` nunca foi por workspace. O
-workspace no caminho é âncora de RBAC, não recorte de dados, e a consequência
-está registrada abaixo como backlog.
+The catalog itself stays global — the `models` table was never
+per-workspace. The workspace in the path is an RBAC anchor, not a data
+scope, and the consequence is recorded below as backlog.
 
-## Consequências
+## Consequences
 
-- Um provider novo que exponha `GET /models` ganha sync sem escrever sync:
-  declara `listModels: true` e, se o formato divergir, um `parseCatalogo`.
-- A UI passou a ter uma tela de curadoria, com ativação em lote e o relatório do
-  sync mostrando **todo** provider, inclusive o pulado.
-- O `ModelPicker` foi reagrupado por origem (Local · APIs diretas · Hubs) e
-  ganhou o filtro "aptos para agentes" — que a mensagem de erro da RN-040 citava
-  desde a Fase 9a sem existir.
-- O preço passou a ser mostrado com entrada e saída **separadas**. A média
-  escondia a assimetria: um modelo de 3 USD de entrada e 15 de saída aparecia
-  como "9", que não é o preço de nada.
+- A new provider that exposes `GET /models` gets sync without anyone
+  writing sync code: it declares `listModels: true` and, if the format
+  diverges, a `parseCatalogo`.
+- The UI now has a curation screen, with batch activation and the sync
+  report showing **every** provider, including the skipped one.
+- The `ModelPicker` was regrouped by origin (Local · Direct APIs · Hubs)
+  and gained the "fit for agents" filter — which the RN-040 error message
+  had been referencing since Phase 9a without it existing.
+- Price is now shown with input and output **separated**. The average
+  hid the asymmetry: a model with 3 USD input and 15 output showed up as
+  "9", which is the price of nothing.
 
-## O que fica para depois
+## What's left for later
 
-- **Os seis providers da Fase 9b** (NVIDIA NIM, Deep Infra, Together AI, Bitdeer
-  AI, Vultr e OpenRouter). A política de egress do ambiente desta sessão nega
-  todo HTTPS de saída, e o escopo da fase exige verificar `baseUrl`, auth,
-  formato de `usage` e particularidades de streaming **na doc oficial** antes de
-  codar. A base, o contrato, o sync e o metering por `upstream_provider` estão
-  prontos para recebê-los: cada um é config + seed + kind de credencial.
-- **O aceite com credencial real do OpenRouter** (catálogo de verdade e
-  `upstream_provider` preenchido numa task), que depende do item acima.
-- **`listModels` do Ollama e do Anthropic.** Os dois têm endpoint de catálogo,
-  não verificado na doc nesta fase. Declaram `false` e são pulados
-  explicitamente, que é honesto; declarar `true` com parsing adivinhado marcaria
-  o catálogo inteiro como sumido.
-- **Sync automático de preço ligado por default.** O sync grava preço só onde a
-  linha não está marcada como `manual_pricing`; aplicar preço vindo de sync
-  sobre linha manual exige decisão explícita do owner, e a UI dessa decisão não
-  existe ainda.
-- **Catálogo por workspace.** Hoje a curadoria é global e o `:workspaceId` da
-  rota é só âncora de RBAC — um owner do workspace A ativando um modelo o ativa
-  para o B.
-- **Bedrock e Azure OpenAI**, fora do escopo da Fase 9 desde o enunciado.
-- **`brabo_llm_call_errors_total`**, que o ADR 0041 registrou como praticamente
-  inerte. Segue anotado, não corrigido de passagem.
+- **The six Phase 9b providers** (NVIDIA NIM, Deep Infra, Together AI,
+  Bitdeer AI, Vultr and OpenRouter). This session's environment egress
+  policy denies all outbound HTTPS, and the phase scope requires verifying
+  `baseUrl`, auth, `usage` format and streaming quirks **against the
+  official docs** before coding. The base, the contract, the sync and the
+  metering by `upstream_provider` are ready to receive them: each one is
+  config + seed + a credential kind.
+- **OpenRouter's acceptance with a real credential** (a real catalog and
+  `upstream_provider` filled in on a task), which depends on the item
+  above.
+- **`listModels` for Ollama and Anthropic.** Both have a catalog endpoint,
+  not verified against the docs in this phase. They declare `false` and
+  are explicitly skipped, which is honest; declaring `true` with guessed
+  parsing would mark the whole catalog as gone.
+- **Automatic price sync turned on by default.** The sync only writes
+  price where the row isn't flagged `manual_pricing`; applying a
+  sync-sourced price over a manual row requires an explicit owner
+  decision, and the UI for that decision doesn't exist yet.
+- **Catalog per workspace.** Today curation is global and the route's
+  `:workspaceId` is just an RBAC anchor — an owner of workspace A
+  activating a model activates it for B too.
+- **Bedrock and Azure OpenAI**, out of scope for Phase 9 since the
+  original brief.
+- **`brabo_llm_call_errors_total`**, which ADR 0041 recorded as
+  practically inert. Still noted, not fixed in passing.

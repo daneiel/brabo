@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import authEn from '../locales/en/auth.json';
+import authPtBR from '../locales/pt-BR/auth.json';
 import { VerifyEmailPage } from './VerifyEmailPage';
 
 /**
@@ -10,13 +14,35 @@ import { VerifyEmailPage } from './VerifyEmailPage';
  * não há formulário —, então os três estados da RN-088 (carregando/erro/
  * sucesso) importam mais do que em qualquer outra tela de auth.
  */
+// Instância REAL de i18next, com os recursos do namespace "auth" — mesmo
+// padrão de AccountPage.test.tsx: o que se prova aqui é o texto que a tela
+// mostra, não a mecânica de i18next em si.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      en: { auth: authEn },
+      'pt-BR': { auth: authPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'auth',
+    ns: ['auth'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
 function montar(
   onVerificar = vi.fn().mockResolvedValue({ ok: true }),
   token: string | undefined = 'tok-123',
 ) {
   const irPara = vi.fn();
   render(
-    <VerifyEmailPage token={token} onVerificar={onVerificar} irPara={irPara} />,
+    <I18nextProvider i18n={novaInstanciaI18n()}>
+      <VerifyEmailPage token={token} onVerificar={onVerificar} irPara={irPara} />
+    </I18nextProvider>,
   );
   return { onVerificar, irPara };
 }
@@ -47,11 +73,13 @@ describe('VerifyEmailPage', () => {
     // desapareceria (mesma pegadinha documentada em SetPasswordPage.test.tsx).
     const onVerificar = vi.fn();
     render(
-      <VerifyEmailPage
-        token={undefined}
-        onVerificar={onVerificar}
-        irPara={vi.fn()}
-      />,
+      <I18nextProvider i18n={novaInstanciaI18n()}>
+        <VerifyEmailPage
+          token={undefined}
+          onVerificar={onVerificar}
+          irPara={vi.fn()}
+        />
+      </I18nextProvider>,
     );
 
     expect(await screen.findByRole('alert')).toHaveTextContent(

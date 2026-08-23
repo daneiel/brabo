@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { LogoMark } from '../components/ui/icons';
 import { runtimeConfig } from '../lib/runtime-config';
 import styles from './AuthLayout.module.css';
@@ -64,6 +65,7 @@ export function AuthLayout({
   abaixoDoCartao,
   irPara,
 }: AuthLayoutProps) {
+  const { t } = useTranslation('auth');
   return (
     <main className={styles.tela}>
       <div className={styles.grade} aria-hidden="true" />
@@ -76,7 +78,7 @@ export function AuthLayout({
           </span>
           <span className={styles.nomes}>
             <span className={styles.nome}>Brabo</span>
-            <span className={styles.tagline}>Orquestração de agentes</span>
+            <span className={styles.tagline}>{t('authLayout.tagline')}</span>
           </span>
         </header>
 
@@ -109,7 +111,7 @@ export function AuthLayout({
             className={styles.linkRodape}
             onClick={() => irPara('/status')}
           >
-            Status
+            {t('authLayout.statusLink')}
           </button>
           <span className={styles.separador} aria-hidden="true">
             ·
@@ -120,7 +122,7 @@ export function AuthLayout({
             target="_blank"
             rel="noreferrer"
           >
-            Documentação
+            {t('authLayout.docsLink')}
           </a>
         </footer>
       </div>

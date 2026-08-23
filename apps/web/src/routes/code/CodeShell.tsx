@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { getCodeBranches, getRepository } from '../../lib/api-client';
 import {
   useArchitecture,
@@ -22,16 +23,14 @@ import styles from './CodeShell.module.css';
 type RailView = 'explorer' | 'search';
 
 /** Itens do rail SEM dado real por trás — desabilitados, e o tooltip diz por quê. */
-const RAIL_DESABILITADO: { rotulo: string; motivo: string }[] = [
+const RAIL_DESABILITADO: { chaveRotulo: string; chaveMotivo: string }[] = [
   {
-    rotulo: 'Agentes',
-    motivo:
-      'O rail é sobre CÓDIGO; quem está trabalhando já aparece na Visão geral. ' +
-      'Duplicar aqui sem dado próprio seria um segundo lugar para o mesmo fato divergir.',
+    chaveRotulo: 'shell.railDisabled.agents.label',
+    chaveMotivo: 'shell.railDisabled.agents.reason',
   },
   {
-    rotulo: 'Testes',
-    motivo: 'Não há integração de lint/testes na aba Code — pendência declarada da FASE 26.',
+    chaveRotulo: 'shell.railDisabled.tests.label',
+    chaveMotivo: 'shell.railDisabled.tests.reason',
   },
 ];
 
@@ -48,6 +47,7 @@ const RAIL_DESABILITADO: { rotulo: string; motivo: string }[] = [
  * Problemas em `CodeBottomPanel.tsx`).
  */
 export function CodeShell({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('code');
   const [railView, setRailView] = useState<RailView>('explorer');
   const [ref, setRef] = useState('');
   const [openTabs, setOpenTabs] = useState<string[]>([]);
@@ -114,12 +114,12 @@ export function CodeShell({ projectId }: { projectId: string }) {
   return (
     <div className={styles.shell}>
       <div className={styles.topo}>
-        <span className={styles.topoRotulo}>ref</span>
+        <span className={styles.topoRotulo}>{t('shell.refLabel')}</span>
         <CodeBranchPicker projectId={projectId} currentRef={refEfetiva} onSelect={setRef} />
       </div>
 
       <div className={styles.corpo}>
-        <div className={styles.rail} role="tablist" aria-label="Painel do explorador">
+        <div className={styles.rail} role="tablist" aria-label={t('shell.railTablistLabel')}>
           <button
             type="button"
             role="tab"
@@ -127,7 +127,7 @@ export function CodeShell({ projectId }: { projectId: string }) {
             className={[styles.railItem, railView === 'explorer' && styles.railItemAtivo]
               .filter(Boolean)
               .join(' ')}
-            title="Explorador"
+            title={t('shell.explorerTitle')}
             onClick={() => setRailView('explorer')}
           >
             <FolderIcon size={18} />
@@ -139,25 +139,29 @@ export function CodeShell({ projectId }: { projectId: string }) {
             className={[styles.railItem, railView === 'search' && styles.railItemAtivo]
               .filter(Boolean)
               .join(' ')}
-            title="Buscar"
+            title={t('shell.searchTitle')}
             onClick={() => setRailView('search')}
           >
             <SearchIcon size={18} />
           </button>
-          {RAIL_DESABILITADO.map((item) => (
-            <button
-              key={item.rotulo}
-              type="button"
-              disabled
-              className={styles.railItemDesabilitado}
-              title={`${item.rotulo}: ${item.motivo}`}
-              aria-label={`${item.rotulo} (indisponível)`}
-            >
-              <span className={styles.railItemDesabilitadoLetra} aria-hidden="true">
-                {item.rotulo[0]}
-              </span>
-            </button>
-          ))}
+          {RAIL_DESABILITADO.map((item) => {
+            const rotulo = t(item.chaveRotulo);
+            const motivo = t(item.chaveMotivo);
+            return (
+              <button
+                key={item.chaveRotulo}
+                type="button"
+                disabled
+                className={styles.railItemDesabilitado}
+                title={t('shell.railDisabledTitle', { label: rotulo, reason: motivo })}
+                aria-label={t('shell.railDisabledAriaLabel', { label: rotulo })}
+              >
+                <span className={styles.railItemDesabilitadoLetra} aria-hidden="true">
+                  {rotulo[0]}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <div className={styles.painelLateral}>
@@ -200,7 +204,7 @@ export function CodeShell({ projectId }: { projectId: string }) {
             onAlternar={() => setBottomOpen((v) => !v)}
             className={styles.bottomToggleRow}
             classNameCabecalho={styles.bottomToggle}
-            titulo={bottomOpen ? 'Fechar painel inferior' : 'Painel inferior'}
+            titulo={bottomOpen ? t('shell.bottomPanelClose') : t('shell.bottomPanelOpen')}
           >
             <CodeBottomPanel projectId={projectId} />
           </Disclosure>
@@ -217,10 +221,10 @@ export function CodeShell({ projectId }: { projectId: string }) {
         {activePath && linguagemPorCaminho(activePath) && (
           <span className={styles.statusItem}>{linguagemPorCaminho(activePath)}</span>
         )}
-        <span className={styles.statusItem}>UTF-8</span>
+        <span className={styles.statusItem}>{t('shell.encodingLabel')}</span>
         <span className={styles.statusItem}>
           <span className={styles.pulso} aria-hidden="true" />
-          {agentesAtivos} {agentesAtivos === 1 ? 'agente ativo' : 'agentes ativos'}
+          {t('shell.activeAgents', { count: agentesAtivos })}
         </span>
       </div>
     </div>

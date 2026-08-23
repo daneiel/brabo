@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ApiError, mensagemDaApi } from '../lib/api-client';
 import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
@@ -36,17 +37,20 @@ export function ErroDeCarregamento({
   erro,
   onTentarDeNovo,
 }: ErroDeCarregamentoProps) {
+  const { t } = useTranslation('ui');
   const traceId = erro instanceof ApiError ? erro.traceId : undefined;
 
   return (
     <Alert tone="danger" role="alert">
       <strong>{titulo}</strong>
-      <p>{mensagemDaApi(erro, 'Não foi possível falar com a api.')}</p>
-      {traceId && <div className={styles.trace}>trace {traceId}</div>}
+      <p>{mensagemDaApi(erro, t('erroDeCarregamento.defaultMessage'))}</p>
+      {traceId && (
+        <div className={styles.trace}>{t('erroDeCarregamento.trace', { traceId })}</div>
+      )}
       {onTentarDeNovo && (
         <div className={styles.acao}>
           <Button variant="secondary" onClick={onTentarDeNovo}>
-            Tentar de novo
+            {t('erroDeCarregamento.retry')}
           </Button>
         </div>
       )}

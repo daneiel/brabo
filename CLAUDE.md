@@ -1926,7 +1926,7 @@ conectado; sem qualquer um dos dois, RECUSA explicitamente — nunca cai no
 
 **Achado da implementação, corrigindo o ADR (que não é editado — a
 correção mora aqui e em
-[backlog.md](docs/explanation/backlog.md#backlog-do-runnerexecution_mode-adr-0104)):**
+[backlog.md](docs/explanation/backlog.md#backlog-of-the-runnerexecution_mode-adr-0104)):**
 a frase do ADR 0104 de que a conversão entre os três modos de projeto
 existente "passa a ser permitida sem recriar o projeto" está INCORRETA.
 `UpdateProjectDto` continua excluindo `executionMode`/`workspacePath` de
@@ -1987,6 +1987,81 @@ sumirem, porque o menu deve dizer o que o produto não faz; e
 um `DROP SCHEMA` puro faria a migração seguinte falhar, e como o engine
 divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
 
+## Abas agrupadas, PRs project-wide, pasta local via Runner, carrossel do PO (2026-08-20)
+Cinco ondas independentes, rodadas em paralelo por arquivo disputado, vindas
+de uso real da tela de projeto — nenhuma planejada de antemão. A sexta onda
+do mesmo programa (tradução completa de produto e documentação, i18n) é
+maior que as cinco juntas; a FUNDAÇÃO dela (Onda 6a — mecanismo, sem
+tradução de conteúdo ainda) já fechou: `react-i18next`+`i18next` na web
+(`en` virou idioma default do app, `pt-BR` mantido — RN-425), coluna
+`locale` em `users` embutida no payload de login/refresh, `AccountPage`
+nova (`/account`) provando o mecanismo, e Docusaurus com
+`i18n.defaultLocale: 'en'`/`locales: ['en', 'pt-BR']` — o snapshot pt-BR
+atual de `docs/` já está preservado em
+`website/i18n/pt-BR/docusaurus-plugin-content-docs/current/`. A Onda 6b
+(extração em massa da interface + tradução de `docs/`) avançou bastante em
+2026-08-22, em quatro frentes paralelas — ver CHANGELOG.md (Unreleased/
+Documentação) para o detalhe de cada uma — mas AINDA NÃO fechou: faltam
+`docs/business-rules.md` (só o front-matter foi traduzido; o corpo, com
+centenas de RNs, continua 100% em português — é o maior arquivo da doc
+inteira e cresce mais rápido do que dá pra traduzir de passagem) e uma
+fatia residual de componentes `.tsx` menores. Quando fechar de verdade,
+esta seção ganha o resumo final e o restante do CLAUDE.md (Stack,
+"Documentação") é revisado por completo para registrar inglês como idioma
+primário de verdade.
+
+- **Régua de abas agrupada**: 11 abas soltas viraram 6 no topo — Visão
+  geral, **Agentes ▾** (Executores, Criativo, Chat, Insights), **Dev ▾**
+  (Código, PRs, Aprovações), **Documentação ▾** (Backlog, Arquitetura),
+  Gastos, Configurações — via `GroupedTabs` novo (`apps/web/src/components/
+  ui/GroupedTabs.tsx`), construído POR CIMA do `Tabs` genérico, que
+  continua sem grupo pras outras telas. `ChaveDeAba` continua flat — só a
+  apresentação ficou agrupada, pra não mexer no deep-link `?tab=`. Chat e
+  Chat RAG viram UMA aba (`ProjectChatShell.tsx`) com controle segmentado
+  interno ("Conversar"/"Buscar") — a distinção de negócio entre os dois
+  (RN-202: conversar ativa agente e gasta a chave do owner por turno; RAG é
+  leitura sobre índice, sem agente) não mudou, só o contêiner de UI.
+- **Aba PRs, project-wide**: `ProjectApprovalsTab` escopava "PRs em
+  revisão" à sessão mais recente — a revisão de uma PR de sessão anterior
+  sumia da tela assim que uma sessão nova propunha outra. A aba `prs` nova
+  lista direto do provider de git (nunca por sessão) e cruza com
+  `proposed_action` pendente via `findPendingByProject`, novo, ao lado do
+  método já existente escopado por sessão — decisão usa o `sessionId` da
+  PRÓPRIA ação, nunca `latestSession` (RN-423). É a primeira produtora real
+  de `git_merge` pela UI; a trava de branch protegida (RN-154) continua
+  absoluta e intocada — botão "Merge" só PROPÕE, a aprovação humana
+  continua sendo o único jeito de executar.
+- **Aba Arquitetura**: extraída da Visão Geral (module_map, diagrama C4,
+  ADRs, pendências), que fica com um resumo condensado + link. Primeiro
+  lightbox do design system — `Modal` ganhou `size="full"` — pra ampliar o
+  diagrama C4 (SVG, sem perda de qualidade) (RN-424).
+- **Navegação de pasta local via o Runner (RN-422, ADR 0104)**: revisa a
+  ADR 0072 (que tinha recusado seletor de pasta explicitamente) SEM
+  editá-la — a navegação existe, mas pelo Runner, que já roda com o
+  privilégio real do usuário na máquina dele, nunca pela api enumerando o
+  filesystem do container. Dois eventos novos no canal já existente
+  (`fs_list_dir`/`fs_home_dir`), relay puro do engine, mesmo padrão do PTY.
+  `FolderBrowserModal` funciona onde o projeto já existe. Na criação
+  (`NewProjectWizard.tsx`), o gap ficou declarado até o ADR 0108: no modo
+  `mounted` o projeto ainda só nasce na confirmação (a validação de caminho
+  toca disco ali), mas no modo `runner` "Procurar pasta..." passa a criar o
+  projeto ANTECIPADAMENTE — reusado por snapshot de identidade em vez de
+  duplicado a cada clique — pra poder ancorar o ticket do canal antes da
+  confirmação (RN-437, ADR 0108). `RunnerOnboardingPanel` novo
+  (compartilhado com a aba Terminal) substitui o `<code>` cru de antes.
+  `apps/runner` ganhou README — publicar de verdade no npm/empacotar
+  binário assinado continua fora do escopo, declarado no README.
+  O explorador de pasta em si virou três colunas (atalhos, lista com um
+  clique seleciona/duplo clique entra, painel de detalhes — RN-436),
+  seguindo a referência visual do dono do produto.
+- **Bug do carrossel do PO corrigido (RN-421)**: a leva de promoções
+  pendentes dependia de scan sobre os últimos 200 eventos
+  (`useSessionEvents`) — numa sessão longa, a proposta saía da janela e o
+  carrossel degradava pra card único ou sumia. Mesma classe de bug que a
+  RN-180 já tinha corrigido pra `ContextAside`; a fonte agora é
+  `useBacklog` (completo, sem janela), com fallback por história quando o
+  backlog ainda não respondeu.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector;
   `nodemailer` para SMTP real do `MailSender` (ADR 0096), atrás de
@@ -1995,7 +2070,10 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   DERIVADA do event log, nunca fonte de verdade; pgvector CONTINUA sendo
   o índice vetorial dos chunks, o grafo não guarda embedding
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
-- `apps/web`: React 19 + Vite + TanStack Query/Router; `mermaid` (runtime,
+- `apps/web`: React 19 + Vite + TanStack Query/Router; `react-i18next`+
+  `i18next` (fundação de i18n, RN-425) atrás de `lib/i18n.ts`/`lib/idioma.ts`
+  — `en` é o idioma default, `pt-BR` mantido, servidor é a fonte de verdade
+  (`localStorage` só evita flash no primeiro paint); `mermaid` (runtime,
   ADR 0068) para o diagrama C4 do Arquiteto, isolado atrás de
   `lib/mermaid-render.ts` com `import()` dinâmico; `@xterm/xterm` +
   `@xterm/addon-fit` (ADR 0103) para o terminal interativo do runner
@@ -2091,7 +2169,11 @@ divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
   (RN-105) NÃO vale para projeto `mounted`/`runner`, que não sobem
   container. Consequência declarada no ADR: a contenção estrutural do `join`
   some para esses projetos, e o vetor de symlink do ADR 0055 continua
-  aberto.
+  aberto. No LINUX, o próprio CLI `brabo-runner` recusa `--dir` fora do
+  `$HOME` do usuário (RN-434, ADR 0104) — checagem de startup do processo
+  local, não a fronteira de segurança (essa continua sendo autenticação +
+  pipeline de aprovação, ver `apps/runner/src/guard.ts`); fora do Linux a
+  restrição não se aplica.
 - A imagem de container de um projeto é ARTEFATO do ARQUITETO
   (`artifact.project_image`, versionado, sem tabela), nunca configuração
   escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105) —

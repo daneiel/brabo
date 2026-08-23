@@ -1,178 +1,184 @@
-# ADR 0094 — A delegação Dev Lead → dev vira dado, com `parecerArtifactId` redefinido
+# ADR 0094 — The Dev Lead → dev delegation becomes data, with `parecerArtifactId` redefined
 
-- **Status:** Aceito
-- **Data:** 2026-08-17
-- **Contexto:** auditoria fluxo.yml × código (Onda 2, item B1,
-  `docs/explanation/auditoria-fluxo-vs-codigo.md`, seção D)
-- **Revoga corte de:** [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md)
-  (item 5, "Delegação interna", declarado como consequência direta do Dev
-  Lead existir mas explicitamente **não implementado** à época — ver também
-  CLAUDE.md, "O que NÃO fazer" / FASE 14d)
-- **Estende:** [ADR 0038](0038-hierarquia-de-agentes.md) (dono do desenho
-  original de `delegations`/`RecordDelegationUseCase` — tabela, `area` como
-  TEXT, e o padrão `completed`/`failed`/`dispensed` que QA e Infra já usam)
+- **Status:** Accepted
+- **Date:** 2026-08-17
+- **Context:** fluxo.yml × code audit (Wave 2, item B1,
+  `docs/explanation/auditoria-fluxo-vs-codigo.md`, section D)
+- **Revokes cut from:** [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md)
+  (item 5, "Internal delegation", declared as a direct consequence of the
+  Dev Lead existing but explicitly **not implemented** at the time — see
+  also CLAUDE.md, "What NOT to do" / Phase 14d)
+- **Extends:** [ADR 0038](0038-hierarquia-de-agentes.md) (owner of the
+  original design of `delegations`/`RecordDelegationUseCase` — table,
+  `area` as TEXT, and the `completed`/`failed`/`dispensed` pattern that QA
+  and Infra already use)
 
-## Contexto
+## Context
 
-O ADR 0053 (FASE 14d) criou o Dev Lead e, no mesmo texto, já previu que a
-ativação de um `dev-<modulo>` seria "delegação de área, privada, na tabela
-`delegations` com `area = "dev"` — o mesmo caminho de QA e Infra". Mas
-declarou isso **fora do escopo daquela entrega**, junto com o botão "Ativar
-execução" mudar de dono — as duas listadas em CLAUDE.md como cortes
-reversíveis, "a execução continua no caminho atual".
+ADR 0053 (Phase 14d) created the Dev Lead and, in the same document,
+already anticipated that activating a `dev-<modulo>` would be an "area
+delegation, private, in the `delegations` table with `area = "dev"` — the
+same path as QA and Infra". But it declared that **out of scope for that
+delivery**, along with the "Activate execution" button changing owner —
+both listed in CLAUDE.md as reversible cuts, "execution continues on the
+current path".
 
-A auditoria só-leitura de `docs/fluxo.yml` × código (achado B1) confirmou
-que a lacuna seguia aberta: `dev_lead_server.ex` só tem duas ferramentas
-(`propose_execution_plan`, `assess_implementability`) e NUNCA grava
-`delegations` — só QA (`qa_lead_server.ex`) e Infra (`infra_lead_server.ex`)
-gravam, e os dois do lado ENGINE, via `EngineApiClient.record_delegation/1`
-→ `POST /internal/sessions/:sessionId/delegations` →
+The read-only fluxo.yml × code audit (finding B1) confirmed the gap was
+still open: `dev_lead_server.ex` only has two tools
+(`propose_execution_plan`, `assess_implementability`) and NEVER writes to
+`delegations` — only QA (`qa_lead_server.ex`) and Infra
+(`infra_lead_server.ex`) write to it, and both do so from the ENGINE side,
+via `EngineApiClient.record_delegation/1` →
+`POST /internal/sessions/:sessionId/delegations` →
 `RecordDelegationUseCase`.
 
-### Por que o Dev Lead não pode simplesmente imitar QA/Infra
+### Why the Dev Lead can't simply mirror QA/Infra
 
-QA e Infra gravam a delegação do lado ENGINE porque é lá que o subagente
-roda e produz um **parecer** — um veredito de uma rodada única
-(`record_gate_verdict`, `open_infra_pr`) que justifica `parecerArtifactId`
-apontando para o artefato que aquele parecer produziu.
+QA and Infra record the delegation from the ENGINE side because that's
+where the subagent runs and produces a **verdict** — a single-round verdict
+(`record_gate_verdict`, `open_infra_pr`) that justifies
+`parecerArtifactId` pointing to the artifact that verdict produced.
 
-O Dev Lead não tem esse padrão. A ativação de um `dev-<modulo>` acontece do
-lado **API**, em `AcceptParallelizationUseCase.execute`
+The Dev Lead has no such pattern. Activating a `dev-<modulo>` happens on
+the **API** side, in `AcceptParallelizationUseCase.execute`
 (`apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts`),
-chamada tanto pelo caminho direto (abaixo do teto,
-`RequestParallelizationUseCase`) quanto pelo caminho aprovado (acima do
-teto, `ExecuteParallelizationUseCase` depois que o usuário aprova a
-`proposed_action` tipo `parallelize`). Não existe "parecer" nenhum: o dev
-agent não produz um veredito ao subir, ele só começa a trabalhar.
+called both by the direct path (below the cap,
+`RequestParallelizationUseCase`) and by the approved path (above the cap,
+`ExecuteParallelizationUseCase` after the user approves the `parallelize`
+type `proposed_action`). There is no "verdict" at all: the dev agent
+doesn't produce a judgment when it comes up, it just starts working.
 
-## Decisão
+## Decision
 
-**A gravação entra dentro de `AcceptParallelizationUseCase.execute`, do
-lado API — sem tocar Elixir/engine.** Cobre os dois caminhos (direto e
-aprovado) de graça, porque os dois já convergem nesse método.
+**The write happens inside `AcceptParallelizationUseCase.execute`, on the
+API side — without touching Elixir/engine.** It covers both paths (direct
+and approved) for free, because both already converge on that method.
 
-### `status: 'completed'` é redefinido para esta área
+### `status: 'completed'` is redefined for this area
 
-Em QA e Infra, `completed` significa "o subagente terminou e emitiu
-parecer". Para o dev, `completed` passa a significar **"a delegação foi
-EFETIVADA"** — o agente `dev-<modulo>` realmente subiu. É uma redefinição
-CONSCIENTE do mesmo campo para uma terceira área, sem mudar o schema: o
-tipo (`DelegationStatus`) e a constraint do banco
-(`delegations_completed_tem_parecer`) continuam exigindo
-`parecerArtifactId` não-nulo em `completed`, mas o que aquele id
-JUSTIFICA muda por área.
+For QA and Infra, `completed` means "the subagent finished and issued a
+verdict". For dev, `completed` comes to mean **"the delegation was
+FULFILLED"** — the `dev-<modulo>` agent actually came up. It's a CONSCIOUS
+redefinition of the same field for a third area, without changing the
+schema: the type (`DelegationStatus`) and the database constraint
+(`delegations_completed_tem_parecer`) still require a non-null
+`parecerArtifactId` for `completed`, but what that id JUSTIFIES changes
+per area.
 
-`parecerArtifactId` aponta para o `id` do evento `artifact.module_map`
-mais recente e vigente do projeto — o mesmo artefato que
-`QaEstrategiaContext.fetch/3` e `AppSecContextBuilder` já buscam do lado
-engine, aqui obtido via `SessionEventRepository.listByTypeForProject
-(projectId, 'artifact.module_map')` (método genérico já existente, usado
-por `computeCoverage` para `artifact.business_rule` — nenhuma consulta
-nova foi escrita, só uma chamada a mais dele), tomando o ÚLTIMO item (a
-função ordena por `createdAt` ASC). É o artefato que **justificou a
-decisão de delegar**: o Dev Lead decide quantos agentes por módulo olhando
-o `module_map`, e é essa leitura — não um parecer de subagente — que dá
-sentido à delegação.
+`parecerArtifactId` points to the `id` of the most recent, current
+`artifact.module_map` event for the project — the same artifact that
+`QaEstrategiaContext.fetch/3` and `AppSecContextBuilder` already fetch on
+the engine side, obtained here via
+`SessionEventRepository.listByTypeForProject(projectId,
+'artifact.module_map')` (a generic method that already existed, used by
+`computeCoverage` for `artifact.business_rule` — no new query was
+written, just one more call to it), taking the LAST item (the function
+sorts by `createdAt` ASC). It's the artifact that **justified the decision
+to delegate**: the Dev Lead decides how many agents per module by looking
+at the `module_map`, and that read — not a subagent's verdict — is what
+gives the delegation its meaning.
 
-### Sem module_map: nunca um id falso
+### Without a module_map: never a fake id
 
-Se não houver `artifact.module_map` nenhum no projeto — não deveria
-acontecer, já que o Arquiteto sempre entrega module_map antes do Dev Lead
-operar (entrada obrigatória dele em `docs/fluxo.yml`) —, a delegação NÃO é
-gravada com um id inventado. `AcceptParallelizationUseCase` loga o estado
-inesperado com `Logger.error` e retorna, pela mesma lição da
-[RN-059](../business-rules.md#rn-059): nunca falha silenciosa, mas também
-nunca finge uma justificativa que não existe.
+If there is no `artifact.module_map` at all for the project — this
+shouldn't happen, since the Architect always delivers a module_map before
+the Dev Lead operates (a mandatory input of his in `docs/fluxo.yml`) —,
+the delegation is NOT recorded with a made-up id.
+`AcceptParallelizationUseCase` logs the unexpected state with
+`Logger.error` and returns, by the same lesson as
+[RN-059](../business-rules.md#rn-059): never fail silently, but also never
+fake a justification that doesn't exist.
 
-### Falha ao registrar não derruba a ativação
+### A failure to record doesn't roll back the activation
 
-A ativação do dev agent já é sucesso quando a tentativa de gravar a
-delegação acontece — ela vem DEPOIS de `engineClient.acceptParallelization`
-e do evento `execution.parallelization_accepted`. Se
-`RecordDelegationUseCase.execute` lançar (ex.: violação de constraint,
-banco fora do ar), o erro é capturado e logado, nunca propagado: o
-`AcceptParallelizationUseCase.execute` sempre resolve `{ ok: true }` quando
-chegou até esse ponto. Só a GRAVAÇÃO da delegação pode falhar/pular — a
-ativação em si, não.
+The dev agent's activation is already a success by the time the attempt to
+write the delegation happens — it comes AFTER
+`engineClient.acceptParallelization` and the
+`execution.parallelization_accepted` event. If
+`RecordDelegationUseCase.execute` throws (e.g., constraint violation,
+database down), the error is caught and logged, never propagated:
+`AcceptParallelizationUseCase.execute` always resolves `{ ok: true }` once
+it reaches that point. Only the delegation's WRITE can fail/skip — not the
+activation itself.
 
 ### `area`/`lead_agent`/`subagent`
 
-`area: 'dev'`, `lead_agent: 'dev-lead'` (string literal, mesmo padrão de
-`'qa-lead'`/`'infra-lead'`), `subagent`: o id exato do agente
-`dev-<modulo>` recém-ativado — `extraDevAgentId(module)`, a MESMA função
-que `AcceptParallelizationUseCase` já usa para nomear o agente (inclui o
-sufixo `-2` de instância extra, mesmo padrão que a RN-195..201 documenta
-em outro contexto). Nenhum formato novo foi inventado.
+`area: 'dev'`, `lead_agent: 'dev-lead'` (string literal, same pattern as
+`'qa-lead'`/`'infra-lead'`), `subagent`: the exact id of the freshly
+activated `dev-<modulo>` agent — `extraDevAgentId(module)`, the SAME
+function `AcceptParallelizationUseCase` already uses to name the agent
+(includes the `-2` extra-instance suffix, the same pattern that
+RN-195..201 documents in another context). No new format was invented.
 
-`taskId` fica `null` (default de `RecordDelegationUseCase`) — mesma
-escolha de Infra: a delegação é sobre a SESSÃO/módulo, não sobre uma task
-de backlog específica.
+`taskId` stays `null` (default of `RecordDelegationUseCase`) — the same
+choice as Infra: the delegation is about the SESSION/module, not about a
+specific backlog task.
 
-## Consequências
+## Consequences
 
-**A favor**
+**For**
 
-- Fecha a divergência entre `docs/fluxo.yml` (que já declarava
-  `delegacao`/`dev` como entrega real desde o ADR 0053) e o código —
-  mesma classe de correção do ADR 0086.
-- `delegations` passa a ter as TRÊS áreas (`qa`, `infra`, `dev`)
-  gravando pelo mesmo mecanismo, com o painel do time e qualquer leitura
-  futura de "quem o lead delegou" cobrindo o dev sem caso especial.
-- Zero schema novo, zero migration: a tabela e a constraint já suportavam
-  o caso, só faltava o chamador do lado dev.
+- Closes the divergence between `docs/fluxo.yml` (which already declared
+  `delegacao`/`dev` as a real deliverable since ADR 0053) and the code —
+  the same class of correction as ADR 0086.
+- `delegations` now has all THREE areas (`qa`, `infra`, `dev`) writing
+  through the same mechanism, with the team panel and any future "who did
+  the lead delegate to" reading covering dev without a special case.
+- Zero new schema, zero migration: the table and constraint already
+  supported the case, only the dev-side caller was missing.
 
-**Contra**
+**Against**
 
-- `parecerArtifactId` deixa de significar uma coisa só em `delegations`:
-  quem lê a tabela sem contexto de área pode assumir "sempre é um parecer
-  de subagente", o que é falso para `area = 'dev'`. Mitigado por este ADR
-  e pela RN nova ficarem como referência única da redefinição — nenhuma
-  tela hoje interpreta `parecerArtifactId` de forma que dependa dessa
-  distinção (é campo opaco, exibido como id).
-- A gravação da delegação pode SILENCIOSAMENTE não acontecer (module_map
-  ausente, ou `RecordDelegationUseCase` falhando) sem que o usuário veja
-  isso na tela — só no log do processo. Aceito pela mesma razão do ADR
-  0053 item 5 original: a ativação do agente é o que importa para a
-  execução seguir, e bloquear um sucesso já consumado por causa de uma
-  gravação auxiliar seria pior.
+- `parecerArtifactId` stops meaning just one thing across `delegations`:
+  whoever reads the table without area context might assume "it's always a
+  subagent's verdict", which is false for `area = 'dev'`. Mitigated by
+  this ADR and the new RN standing as the single reference for the
+  redefinition — no screen today interprets `parecerArtifactId` in a way
+  that depends on that distinction (it's an opaque field, shown as an id).
+- The delegation write can SILENTLY fail to happen (missing module_map, or
+  `RecordDelegationUseCase` failing) without the user seeing it on
+  screen — only in the process log. Accepted for the same reason as the
+  original ADR 0053 item 5: the agent's activation is what matters for
+  execution to continue, and blocking an already-consumed success because
+  of an auxiliary write would be worse.
 
-## Alternativas consideradas
+## Alternatives considered
 
-**Gravar a delegação do lado ENGINE, no `dev_lead_server.ex`, imitando
-QA/Infra ao pé da letra.** Recusada: exigiria uma chamada HTTP nova
-engine→api só para isso, quando a ativação já acontece inteiramente do
-lado API. Também obrigaria inventar um "parecer" que o Dev Lead não
-produz — o plano de paralelismo (ADR 0086) já é `proposed_action`
-separada, e reusar aquele evento como parecer da delegação misturaria dois
-desfechos distintos (autorização de paralelismo vs. efetivação da
-ativação).
+**Write the delegation from the ENGINE side, in `dev_lead_server.ex`,
+mirroring QA/Infra to the letter.** Rejected: it would require a new
+engine→api HTTP call just for this, when activation already happens
+entirely on the API side. It would also force inventing a "verdict" the
+Dev Lead doesn't produce — the parallelism plan (ADR 0086) is already a
+separate `proposed_action`, and reusing that event as the delegation's
+verdict would mix two distinct outcomes (parallelism authorization vs.
+activation fulfillment).
 
-**`status: 'completed'` só depois de o dev agent produzir algo (ex.: abrir
-a primeira PR).** Recusada: não há gatilho natural nem evento único que
-marque isso, e adiar a gravação até lá deixaria delegações "pendentes" por
-tempo indefinido — o schema não tem `status: 'pending'` de propósito
-(nota em `record-delegation.use-case.ts`: "o lead resolve cada delegação
-síncrona, numa rodada só").
+**`status: 'completed'` only after the dev agent produces something (e.g.,
+opening the first PR).** Rejected: there's no natural trigger or single
+event that marks this, and delaying the write until then would leave
+delegations "pending" indefinitely — the schema has no `status: 'pending'`
+on purpose (note in `record-delegation.use-case.ts`: "the lead resolves
+each delegation synchronously, in a single round").
 
-**Travar a ativação se a delegação não puder ser gravada.** Recusada:
-inverteria a prioridade errada — a ativação do dev agent é o valor real
-entregue ao usuário; a delegação é auditoria sobre um fato que já
-aconteceu. Falhar a ativação por causa de auditoria seria pior do que a
-lacuna que este ADR fecha.
+**Block the activation if the delegation can't be written.** Rejected: it
+would invert the wrong priority — activating the dev agent is the real
+value delivered to the user; the delegation is an audit trail over a fact
+that already happened. Failing the activation because of an audit write
+would be worse than the gap this ADR closes.
 
-## Referências
+## References
 
 - `apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts`
   (`recordDevDelegation`)
 - `apps/api/src/application/use-cases/execution/record-delegation.use-case.ts`
 - `apps/api/test/application/use-cases/execution/accept-parallelization.use-case.spec.ts`
-- [RN-404](../business-rules.md#rn-404) (delegação Dev Lead → dev)
-- [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) — item 5,
-  corte revogado aqui
-- [ADR 0038](0038-hierarquia-de-agentes.md) — desenho original de
+- [RN-404](../business-rules.md#rn-404) (Dev Lead → dev delegation)
+- [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) — item 5, cut
+  revoked here
+- [ADR 0038](0038-hierarquia-de-agentes.md) — original design of
   `delegations`/`RecordDelegationUseCase`
-- [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md) — outro
-  fechamento de divergência entre `docs/fluxo.yml` declarado e código do
-  Dev Lead
-- `docs/fluxo.yml` — entrada `delegacao`/`dev` (deixa de citar
-  `status: lacuna`)
+- [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md) — another
+  closing of a divergence between declared `docs/fluxo.yml` and the Dev
+  Lead's code
+- `docs/fluxo.yml` — `delegacao`/`dev` entry (no longer cites `status:
+  lacuna`)

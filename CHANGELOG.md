@@ -6,6 +6,29 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: `FolderBrowserModal` vira um explorador de três colunas —
+  atalhos ("Pasta pessoal", "Raiz"), lista central com breadcrumb e um
+  painel de detalhes —, seguindo a referência visual do dono do produto
+  (picker estilo GNOME Files/GTK). Um clique agora SELECIONA (destaca e
+  atualiza os detalhes) e duplo clique ENTRA — antes um único clique já
+  navegava. A lista deixou de esconder arquivos: eles aparecem visualmente
+  apagados e sem gesto nenhum, só pasta continua navegável/selecionável. O
+  botão final foi renomeado para "Usar esta pasta" (RN-436)
+- **api,web**: no modo de projeto `runner`, "Procurar pasta..." passa a
+  criar o projeto ANTECIPADAMENTE — ao clicar, não só na confirmação —
+  fechando a lacuna que o ADR 0107 já tinha declarado (o ticket do canal do
+  Runner precisa de um `projectId` real). Reuso por SNAPSHOT de identidade
+  (nome/repositório a adotar), nunca pelo caminho digitado: clicar de novo
+  sem mudar a identidade reabre o MESMO projeto, e a confirmação final
+  reusa em vez de criar de novo. O modo `mounted` não muda — continua sem
+  projeto até a confirmação, porque ali a validação de caminho toca disco
+  na criação (RN-437, ADR 0108)
+- **web**: `fs-browser-channel.ts` tinha o mesmo bug de path duplicado que a
+  RN-433 já tinha corrigido no `terminal-channel.ts` irmão (concatenava
+  `/runner/websocket` a um `engineWsUrl` que já vem pronto), então a
+  navegação de pasta contra um engine real caía direto em "a conexão com o
+  runner caiu". Achado ao verificar a RN-437 ponta a ponta — o módulo não
+  tinha teste próprio até agora (RN-438)
 - **api,web**: `maintainer` passa a revogar o Personal Access Token de
   QUALQUER usuário do projeto — resposta a incidente (dev desligado com
   token vazando), item declarado fora de escopo pelo ADR 0105. Rotas
@@ -46,6 +69,71 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   Comando de agente roteado a um projeto `runner` sem workspace verificado
   ou sem runner conectado é RECUSADO explicitamente, nunca cai no
   fallback de container (RN-421/422/423, ADR 0104)
+- **runner**: no Linux, `brabo-runner --dir` só aceita um caminho dentro do
+  `$HOME` do usuário (o próprio home ou uma subpasta dele) — caminho fora
+  dessa árvore (`/etc`, `/root`, outra conta em `/home`, etc.) é recusado
+  na inicialização do CLI, com mensagem explicando o motivo. Fora do
+  Linux o comportamento não muda (RN-434, ADR 0104)
+- **runner**: `brabo-runner --dir` apontando para uma pasta que ainda não
+  existe deixa de ser erro fatal — a pasta é criada automaticamente
+  (`mkdir -p`), sempre DEPOIS de passar pela checagem do `$HOME` no Linux
+  (RN-434), então um caminho fora do home continua recusado mesmo quando
+  ainda não existe. `--dir` apontando para um arquivo já existente
+  continua erro real — nunca sobrescrito silenciosamente (RN-435, ADR
+  0104)
+- **api,web**: fundação de i18n — coluna `locale` em `users` (`'pt-BR'|'en'`,
+  default `'pt-BR'`), embutida no corpo de `/auth/login`/`/auth/refresh` (sem
+  chamada extra) via `EmitirSessaoUseCase`; `GET/PATCH /users/me/preferences`
+  como via redundante para a `AccountPage` nova (`/account`, fora do escopo
+  de projeto, link no rodapé da sidebar). `react-i18next`+`i18next` como
+  dependência nova de `apps/web`, isolada atrás de `lib/i18n.ts`/
+  `lib/idioma.ts` (mesmo desenho de `tema.ts` — servidor é a fonte de
+  verdade, `localStorage` só evita flash no primeiro paint). `en` é o idioma
+  default do app a partir de agora; `pt-BR` continua disponível. Docusaurus
+  (`website/`) ganhou `i18n.defaultLocale: 'en'`/`locales: ['en', 'pt-BR']`,
+  com o snapshot pt-BR atual de `docs/` preservado em
+  `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` antes de
+  `docs/` virar a fonte em inglês, e uma regra `warn` nova no docmap
+  (`traducao-pt-br`) cobrindo o drift entre as duas árvores. Extração em
+  massa do resto da interface e tradução de `docs/` são a próxima etapa,
+  em andamento (RN-432)
+- **web**: navegação por abas agrupadas — a régua de 11 abas do projeto vira
+  6 no topo (Visão geral, Agentes ▾, Dev ▾, Documentação ▾, Gastos,
+  Configurações), com `GroupedTabs` novo por cima do `Tabs` existente. Chat
+  e Chat RAG viram UMA aba com um controle segmentado interno
+  ("Conversar"/"Buscar") — a distinção de negócio entre os dois (RN-202)
+  não muda, só o contêiner de UI
+- **api,web**: aba **PRs** — listagem de pull requests do PROJETO inteiro,
+  direto do provider de git (nunca escopada a uma sessão), resolvendo o bug
+  em que a revisão de uma PR proposta numa sessão antiga sumia da tela assim
+  que uma sessão nova nascia. Novo cruzamento project-wide de ações
+  pendentes (`GET /projects/:id/actions?status=pending&actionType=`) acha a
+  proposta de merge correspondente independente de qual sessão a criou, e a
+  decisão usa o `sessionId` da própria ação. Botão "Merge" propõe
+  `git_merge` (primeira produtora real pela UI), desabilitado quando o gate
+  do dev agent bloqueou a task; a trava de branch protegida continua
+  absoluta (RN-154). `git_merge` ganhou corpo próprio no card de aprovação
+  em vez do despejo de JSON cru (RN-430)
+- **web**: aba própria **Arquitetura**, extraída da Visão Geral (module_map,
+  diagrama C4, ADRs, pendências de validação cruzada); a Visão Geral passa a
+  mostrar um resumo condensado com link "Ver arquitetura completa →".
+  Primeiro lightbox do design system: `C4DiagramView` ganha botão de
+  ampliar por diagrama, abrindo o SVG em tela cheia sobre `Modal`
+  (`size="full"`, novo) (RN-431)
+- **api,web,engine,runner**: navegação de pasta local via o Runner — dois
+  eventos novos no MESMO canal `terminal:<projectId>` (`fs_list_dir`/
+  `fs_home_dir`), relay puro do engine, exatamente como o PTY.
+  `FolderBrowserModal` (breadcrumb, subpastas, `..`, "Selecionar esta
+  pasta") integrado à criação de projeto e reaproveitável onde o projeto já
+  existe; sem runner conectado, `RunnerOnboardingPanel` (novo, compartilhado
+  com a aba Terminal) explica a instalação em vez de travar carregando. A
+  api continua sem enumerar filesystem nenhum — nenhuma rota nova (RN-429,
+  ADR 0107, revisa a ADR 0072)
+- **web**: corrigido o carrossel de promoção de histórias do PO, que
+  degradava silenciosamente para card único (ou sumia) em sessão longa —
+  a leva pendente agora vem de `useBacklog` (completo, sem janela) em vez
+  de um scan sobre os últimos 200 eventos, mesma classe de bug que a
+  RN-180 já corrigiu em `ContextAside` (RN-427)
 - **api,engine,web,runner**: execução de agente na máquina do usuário —
   `apps/runner` (workspace novo, CLI `brabo-runner`) conecta ao engine
   por canal Phoenix com ticket de uso único, executa comando de agente
@@ -366,11 +454,87 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   célula, via `render`) e `Badge` não é usado com `onClick` em lugar nenhum
   do produto hoje.
 
+### Correções
+
+- **docker,web**: o terminal do runner local (Code → Dev → Terminal, ADR
+  0103/0104) ficava preso em "Abrindo terminal..." para sempre em projeto
+  no modo `runner`, com o socket falhando em loop no console do browser.
+  Três causas empilhadas: `ENGINE_PUBLIC_URL` não tinha default nenhum em
+  `docker/docker-compose.yml` — o fallback do código caía em `ENGINE_URL`
+  (`http://engine:4000`, hostname que só resolve DENTRO da rede do
+  Compose, inalcançável pelo browser); `apps/web/src/lib/terminal-channel.ts`
+  nunca desligava a reconexão automática do `phoenix.js`, então um socket
+  que nunca abre (URL errada, engine fora do ar) girava sozinho pra sempre
+  em silêncio em vez de mostrar erro; e o mesmo módulo concatenava
+  `/runner/websocket` a um `engineWsUrl` que a api já devolve PRONTO
+  (`ws://host:porta/runner`) — o `Socket` do `phoenix.js` ainda acrescenta
+  `/websocket` sozinho, e o path duplicado (`/runner/runner/websocket/
+  websocket`) era recusado pelo engine (`NoRouteError`), o defeito que de
+  fato impedia a conexão, só visível depois de corrigir os dois primeiros.
+  Compose ganhou o mesmo default que `VITE_ENGINE_URL` já usa
+  (`http://localhost:4000`); o canal do terminal ganhou timeout próprio de
+  8s que chama `onErro` e desconecta, em vez de depender do backoff nativo
+  do Phoenix; e parou de concatenar path no `engineWsUrl`. Verificado
+  ponta a ponta contra o engine real (RN-433)
+- **api**: `POST .../runner-ticket` (autenticação por Personal Access
+  Token, ADR 0105) sempre respondia `403 "Não autenticado"`, mesmo com um
+  PAT válido — o runner local nunca conseguia conectar por essa via.
+  `RolesGuard`, guard GLOBAL, rodava antes de `PatAuthGuard`, guard local
+  da rota (ordem do Nest, não configurável pelo controller), e recusava
+  toda chamada com `request.user` ainda vazio antes do `PatAuthGuard`
+  sequer autenticar. Um segundo defeito, escondido atrás do primeiro:
+  `PatAuthGuard` comparava o token bruto direto contra o hash gravado no
+  banco, em vez de hashear antes de comparar — nunca teria funcionado
+  mesmo sem o problema de ordem. `RolesGuard` passa a se abster em rota
+  `@RequirePatAuth()` (mesmo desvio que `JwtAuthGuard` já tinha) e
+  `PatAuthGuard` passa a autenticar E autorizar (`@RequireRole`) no MESMO
+  guard. Verificado com o `brabo-runner` conectando de verdade a um
+  projeto real (RN-439)
+
 ### Desempenho
 
 - **api**: índice `token_usage(created_at)` (migração `0044`). Medido pelo ADR
   0063 a 525 mil linhas: o relatório do workspace sai de 55 ms para 32 ms e o
   do membro de 38 ms para 19 ms — os dois planos deixam de ser *seq scan*.
+
+### Documentação
+
+- **docs,web,api**: Onda 6b (i18n) — a extração em massa da interface e a
+  tradução de `docs/` que a Onda 6a (RN-432) tinha deixado como "próxima
+  etapa" avançaram bastante, em quatro frentes paralelas:
+  - **web**: mais 14 componentes convertidos pra `react-i18next`
+    (`ActivityFeed`, `AgentTimelineTree`, `ApprovalCard`, `PrGateTimeline`,
+    `ProjectApprovalsTab`, `ProjectPrsTab`, `ProjectSettingsTab`,
+    `ProjectPage`, `ProvisioningPage`/`BootstrapSteps`, `AdoptionPlanPage`,
+    `Carousel`, `NewProjectWizard`, `SessionPage`), com 6 namespaces novos
+    (`activity`, `approvals`, `adoptionPlan`, `newProject`, `projectPage`,
+    `provisioning`). Os 80 arquivos `.tsx` não-teste do app foram varridos;
+    sobra só 1 string literal fora de UI (fallback de payload interno em
+    `ProjectPrsTab.tsx`, nunca renderizada) e dois módulos de biblioteca
+    (`fs-browser-channel.ts`/`terminal-channel.ts`) deixados de propósito
+    fora do escopo por estarem sendo mexidos por outra frente concorrente.
+  - **api → docs/reference/api**: as descrições Swagger/OpenAPI (`@ApiOperation`,
+    `@ApiResponse`, `@ApiProperty` etc.) de 123 arquivos de controller/DTO
+    sob `apps/api/src/interfaces/http/**` viraram inglês, regerando 186 dos
+    191 `.mdx` gerados (os 5 restantes — `runner-tickets`/
+    `personal-access-tokens` — ficaram de fora de propósito, mesmo motivo
+    do item anterior). `route-surface.spec.ts` atualizado pra cobrar as
+    tags novas em inglês.
+  - **docs/reference (hand-written)**: os 9 arquivos que não são gerados
+    (`artifacts.md`, `configuration.md`, `events.md`, `git-providers.md`,
+    `internal-api.md`, `llm-providers.md`, `permissions.md`, `rulesets.md`)
+    mais `scripts.md` — que É gerado por inteiro, então a tradução certa
+    foi na FONTE (`scripts/docs/generate.mjs`, `Makefile`), nunca no
+    arquivo, que seria sobrescrito no próximo `docs:generate`.
+  - **docs/adr, docs/explanation, raiz**: os 7 ADRs, 3 `explanation/` e os
+    resíduos de `docs/security-surface.md`/`docs/runbook.md` que ainda
+    restavam viraram inglês — 101 dos 108 ADRs traduzidos agora.
+
+  `docs/business-rules.md` (o arquivo mais pesado — só o front-matter tinha
+  sido traduzido até aqui, o corpo com as centenas de RNs continua em
+  português) e uma fatia de componentes `.tsx` menores seguem como o que
+  falta pra fechar a onda por completo — ver o CLAUDE.md pro estado
+  atualizado.
 
 
 ## v3.1.0 — 2026-08-13

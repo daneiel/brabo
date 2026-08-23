@@ -69,6 +69,8 @@ import type {
   CredentialTestResult,
   UnreadCursor,
   UserCredentialMetadata,
+  UserLocale,
+  UserPreferences,
   PersonalAccessTokenSummary,
   PersonalAccessTokenIssued,
   PersonalAccessTokenAdminSummary,
@@ -818,6 +820,20 @@ export const denyAction = (
     { reason },
   );
 
+// Ações PENDENTES do PROJETO inteiro, em qualquer sessão (Onda 2 — aba PRs).
+// Ao lado de `listActions` (escopado por SESSÃO): esta é a consulta que a
+// aba PRs usa para achar a `proposed_action` correspondente a um PR (ex.: um
+// `git_merge` pendente) sem depender de qual sessão a propôs — o bug de raiz
+// que escondia revisão de sessão antiga em `ProjectApprovalsTab`. Só
+// `status=pending` é suportado hoje.
+export const getProjectPendingActions = (
+  projectId: string,
+  opts: { actionType?: ActionType } = {},
+) =>
+  get<ProposedAction[]>(
+    `/projects/${projectId}/actions${qs({ status: 'pending', actionType: opts.actionType })}`,
+  );
+
 // --- LLM: modelos, bindings, credenciais, budgets ---
 
 // Pende do PROJETO desde o ADR 0049: a curadoria é por workspace, e o
@@ -936,6 +952,15 @@ export const setAreaModelBinding = (
 ) => put<void>(`/projects/${projectId}/area-bindings/${areaKey}`, { modelId });
 export const clearAreaModelBinding = (projectId: string, areaKey: string) =>
   del<void>(`/projects/${projectId}/area-bindings/${areaKey}`);
+
+// Preferências do próprio usuário (fundação de i18n, Onda 6a). A leitura
+// aqui é redundante com `locale` no corpo de `/auth/login` e `/auth/refresh`
+// (ver `lib/auth.ts`) — de propósito: serve só para reafirmar o valor sem
+// esperar o próximo refresh, nunca como fonte primária.
+export const getMyPreferences = () =>
+  get<UserPreferences>('/users/me/preferences');
+export const updateMyPreferences = (input: { locale: UserLocale }) =>
+  patch<UserPreferences>('/users/me/preferences', input);
 
 export const listCredentials = () =>
   get<UserCredentialMetadata[]>('/users/me/credentials');

@@ -82,14 +82,19 @@ describe('trocarVersaoAnunciada', () => {
    * 26. O check exige a frase inteira lá — versão E contagem de fases —, e este
    * teste guarda o acordo: o gerador escreve a versão, e o padrão do check
    * continua encontrando o texto que ele escreveu.
+   *
+   * `docs/intro.md` foi traduzido pra inglês na Onda 6b — a frase pt-BR virou
+   * a versão em inglês, e o padrão do check em generate.mjs foi atualizado
+   * junto. Este teste segue o mesmo idioma do arquivo real, não o do README
+   * (que continua em pt-BR).
    */
   it('o check cobre docs/intro.md com a frase inteira, fases incluídas', () => {
     const gerador = readFileSync(daRaiz('scripts/docs/generate.mjs'), 'utf8');
 
     expect(gerador).toContain("arquivo: 'docs/intro.md'");
-    expect(gerador).toContain('\\*\\*Fases 1 a \\d+ concluídas\\*\\*, versão');
+    expect(gerador).toContain('\\*\\*Phases 1 through \\d+ complete\\*\\*, version');
 
     const intro = readFileSync(daRaiz('docs/intro.md'), 'utf8');
-    expect(intro).toMatch(/\*\*Fases 1 a \d+ concluídas\*\*, versão \*\*v\d+\.\d+\.\d+\*\*/);
+    expect(intro).toMatch(/\*\*Phases 1 through \d+ complete\*\*, version \*\*v\d+\.\d+\.\d+\*\*/);
   });
 });

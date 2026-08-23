@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Terminal as XTermTerminal } from '@xterm/xterm';
 import type { FitAddon as XTermFitAddon } from '@xterm/addon-fit';
 import { connectTerminalChannel, type TerminalChannel } from '../../lib/terminal-channel';
 import { createXtermTerminal } from '../../lib/xterm-runtime';
-import { TerminalIcon } from '../../components/ui/icons';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { RunnerOnboardingPanel } from '../../components/RunnerOnboardingPanel';
 import styles from './TerminalPanel.module.css';
 
 /**
@@ -58,8 +59,13 @@ function temaDoXterm() {
 }
 
 export function TerminalPanel({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('terminal');
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [estado, setEstado] = useState<EstadoDoTerminal>({ tipo: 'carregando' });
+  // Reconsulta a conexão sem fechar/reabrir a aba — o botão "Já instalei,
+  // conectar" do RunnerOnboardingPanel incrementa isto, o efeito abaixo
+  // reroda por inteiro (mesmo caminho de um remount real).
+  const [tentativa, setTentativa] = useState(0);
 
   useEffect(() => {
     let cancelado = false;
@@ -116,8 +122,7 @@ export function TerminalPanel({ projectId }: { projectId: string }) {
           if (cancelado) return;
           setEstado({
             tipo: 'erro',
-            mensagem:
-              'A conexão com o runner caiu. Feche e reabra esta aba para tentar de novo.',
+            mensagem: t('terminalPanel.connectionLost'),
           });
         },
       });
@@ -147,33 +152,24 @@ export function TerminalPanel({ projectId }: { projectId: string }) {
       canal?.fechar();
       term?.dispose();
     };
-  }, [projectId]);
+  }, [projectId, tentativa, t]);
 
   return (
     <div className={styles.wrapper}>
       {estado.tipo === 'carregando' && (
         <div className={styles.overlay}>
           <Skeleton width={220} height={20} radius={999} />
-          <p className={styles.overlayTexto}>Abrindo terminal…</p>
+          <p className={styles.overlayTexto}>{t('terminalPanel.loading')}</p>
         </div>
       )}
 
       {estado.tipo === 'erro' && (
-        <div className={styles.overlay} role="status">
-          <TerminalIcon size={22} />
-          <p className={styles.overlayTexto}>{estado.mensagem}</p>
-          <div className={styles.instrucao}>
-            <p>
-              Nenhum runner conectado a este projeto. Na sua máquina, dentro da
-              pasta do checkout:
-            </p>
-            <code>brabo-runner --project {projectId} --dir &lt;pasta&gt;</code>
-            <p className={styles.instrucaoDetalhe}>
-              O runner conecta a este canal e o terminal aparece aqui
-              automaticamente enquanto ele estiver rodando — nenhuma ação
-              nova precisa acontecer nesta aba.
-            </p>
-          </div>
+        <div className={styles.overlay}>
+          <RunnerOnboardingPanel
+            projectId={projectId}
+            mensagem={estado.mensagem}
+            onRetry={() => setTentativa((t) => t + 1)}
+          />
         </div>
       )}
 

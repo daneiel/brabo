@@ -1,0 +1,9 @@
+{
+  "loadErrorTitle": "Could not open this project.",
+  "visibility": {
+    "public": "public",
+    "private": "private"
+  },
+  "adopted": "adopted",
+  "repositoryNotProvisioned": "repository not provisioned"
+}

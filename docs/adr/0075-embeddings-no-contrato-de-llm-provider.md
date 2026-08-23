@@ -1,44 +1,44 @@
-# ADR 0075 — Embeddings no contrato de LLMProvider
+# ADR 0075 — Embeddings in the LLMProvider contract
 
-- **Status:** aceito
-- **Data:** 2026-08-14
-- **Estende:** [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md),
+- **Status:** accepted
+- **Date:** 2026-08-14
+- **Extends:** [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md),
   [ADR 0043](0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.md)
 
-## Contexto
+## Context
 
-O Chat RAG que vem por aí precisa transformar texto em vetor, e o produto não
-sabe fazer isso. A busca é literal: **a palavra "embedding" aparecia em um
-comentário**, na prosa do `bitdeer-provider.ts`, explicando que o único exemplo
-de `curl` autenticado encontrado na doc da Bitdeer era o da API de embeddings
-deles. Nenhum provider implementa a operação, nenhum tipo a descreve, nenhuma
-capability a declara.
+The Chat RAG coming down the line needs to turn text into vectors, and the
+product doesn't know how to do that. The search was literal: **the word
+"embedding" showed up in one comment**, in the prose of `bitdeer-provider.ts`,
+explaining that the only authenticated `curl` example found in Bitdeer's docs
+was for their embeddings API. No provider implements the operation, no type
+describes it, no capability declares it.
 
-Três coisas tornam isto mais do que "acrescentar um método".
+Three things make this more than "add a method".
 
-**1. A capability é uma dimensão nova, não uma variação das que existem.** As
-capabilities de hoje — `streaming`, `toolCalling`, `listModels`, e as colunas
-`supports_*` de `models` — falam de como o modelo CONVERSA. Embedding não é uma
-conversa mais pobre: é outra operação, com outro endpoint, outro corpo e outro
-tipo de resposta.
+**1. The capability is a new dimension, not a variation of the existing
+ones.** Today's capabilities — `streaming`, `toolCalling`, `listModels`, and
+the `supports_*` columns of `models` — describe how the model CONVERSES.
+Embedding isn't a poorer conversation: it's a different operation, with a
+different endpoint, a different body, and a different response type.
 
-**2. A camada de modelo aqui é EXCLUSÃO, não gradiente.** Tool calling admite
-degradação: um modelo que não pede ferramentas ainda responde texto, e é por
-isso que a [RN-040](../business-rules.md#rn-040) só recusa o binding de agente
-em vez de proibir o modelo. Embedding não admite: `nomic-embed-text` não
-responde uma pergunta e `llama3.2` não devolve vetor. São dois conjuntos
-disjuntos de modelos, e a pergunta "este modelo é de embedding?" não cabia em
-nenhuma coluna existente.
+**2. The model layer here is EXCLUSION, not a gradient.** Tool calling
+admits degradation: a model that doesn't request tools still answers with
+text, which is why [RN-040](../business-rules.md#rn-040) only blocks agent
+binding rather than banning the model outright. Embedding admits none:
+`nomic-embed-text` doesn't answer a question and `llama3.2` doesn't return a
+vector. They are two disjoint sets of models, and the question "is this
+model an embedding model?" didn't fit into any existing column.
 
-**3. Declarar por leitura de documentação já custou caro.** O
-[ADR 0043](0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.md) registra
-duas reversões AO VIVO — DeepInfra e Vultr — de capabilities que a doc
-prometia e a execução desmentiu. Todo provider de nuvem tem uma página
-dizendo que serve `/embeddings`; nenhuma delas é prova.
+**3. Declaring by reading documentation has already cost money.**
+[ADR 0043](0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.md) records
+two LIVE reversals — DeepInfra and Vultr — of capabilities the docs promised
+and execution disproved. Every cloud provider has a page saying it serves
+`/embeddings`; none of them is proof.
 
-## Decisão
+## Decision
 
-### A operação: `embed`, opcional, com erro que LANÇA
+### The operation: `embed`, optional, with an error that THROWS
 
 ```ts
 embed?(
@@ -47,106 +47,110 @@ embed?(
 ): Promise<EmbeddingResult>;
 ```
 
-Opcional pelo mesmo contrato de dois lados que `listModels` cumpre desde a
-Fase 9c: **quem declara a capability implementa o método, e quem não declara
-não o expõe**. Quem consome degrada olhando a capability, nunca descobrindo na
-falha.
+Optional under the same two-sided contract `listModels` has followed since
+Phase 9c: **whoever declares the capability implements the method, and
+whoever doesn't declare it doesn't expose it**. Consumers degrade by looking
+at the capability, never by discovering it on failure.
 
-**Lote, não unidade.** Um índice recebe N trechos de uma vez, e todo provider
-aceita `input` como array. A ordem é o único vínculo entre entrada e vetor, e
-disso sai a garantia mais importante do contrato: **um vetor por entrada ou
-erro** — nunca uma lista mais curta. Uma resposta parcialmente recusada é
-indetectável depois, porque o i-ésimo vetor passa a ser de outra frase e o
-índice fica errado em silêncio.
+**Batch, not single.** An index receives N chunks at once, and every
+provider accepts `input` as an array. Order is the only link between input
+and vector, and from that comes the contract's most important guarantee:
+**one vector per input or an error** — never a shorter list. A partially
+rejected response is undetectable later, because the i-th vector would then
+belong to a different sentence and the index would be silently wrong.
 
-**O retorno diz quatro coisas**, e cada uma existe por um motivo:
+**The return carries four things**, each for a reason:
 
-| campo | por quê |
+| field | why |
 | --- | --- |
-| `vectors` | o resultado, na ordem das entradas |
-| `dimensions` | conferido contra o que VEIO, não copiado do catálogo — índice vetorial tem dimensão fixa, e gravar tamanho diferente falha longe da causa |
-| `model` | o que o provider DIZ ter usado, que nem sempre é o pedido (alias resolve para versão datada) — é ele que vai ao metering, pelo mesmo motivo do preço congelado ([RN-044](../business-rules.md#rn-044)) |
-| `inputTokens` + `estimated` | embedding gasta, e a distinção "disse zero" × "não disse nada" é a mesma da [RN-041](../business-rules.md#rn-041) |
+| `vectors` | the result, in the order of the inputs |
+| `dimensions` | checked against what CAME BACK, not copied from the catalog — a vector index has a fixed dimension, and writing a different size fails far from the cause |
+| `model` | what the provider SAYS it used, which isn't always the one requested (an alias resolves to a dated version) — this is what goes to metering, for the same reason as the frozen price ([RN-044](../business-rules.md#rn-044)) |
+| `inputTokens` + `estimated` | embedding costs money, and the distinction "said zero" × "said nothing" is the same one from [RN-041](../business-rules.md#rn-041) |
 
-**O erro LANÇA, normalizado por `code`**, em vez de virar chunk como no `chat`.
-A razão do chunk é preservar o gasto de um turno que já aconteceu; aqui não há
-nada a preservar — ou o provider devolveu os vetores e cobrou, ou não devolveu
-e não cobrou. É a mesma escolha que `listModels` fez, com o mesmo argumento, e
-a taxonomia é a MESMA (`auth`, `rate_limit`, `model_not_found`,
-`context_length`, `timeout`, `connection`, `upstream`): nenhum código novo.
+**The error THROWS, normalized by `code`**, instead of turning into a chunk
+like in `chat`. The reason for the chunk pattern is to preserve the spend of
+a turn already in progress; here there's nothing to preserve — either the
+provider returned the vectors and charged for them, or it didn't return them
+and didn't charge. It's the same choice `listModels` made, with the same
+argument, and the taxonomy is the SAME (`auth`, `rate_limit`,
+`model_not_found`, `context_length`, `timeout`, `connection`, `upstream`): no
+new code.
 
-### A capability em duas camadas
+### The capability in two layers
 
-**Provider** — `LLMProviderCapabilities.embeddings`, obrigatório (não
-opcional), pelo mesmo argumento que tornou `code` obrigatório em
-`ChatErrorChunk`: com campo opcional, um provider novo esquece de declarar e
-ninguém percebe.
+**Provider** — `LLMProviderCapabilities.embeddings`, required (not
+optional), by the same argument that made `code` required in
+`ChatErrorChunk`: with an optional field, a new provider forgets to declare
+it and nobody notices.
 
-**Modelo** — `ModeloDoCatalogo.supportsEmbeddings` e `embeddingDimensions`,
-ambos opcionais, porque ausência é **"o provider não disse"** e nunca `false`
-inventado (ADR 0041). O Ollama é o único dos nove que publica isto por modelo:
-`capabilities: ["embedding"]` no `/api/tags`, com `details.embedding_length`
-dando a dimensão.
+**Model** — `ModeloDoCatalogo.supportsEmbeddings` and `embeddingDimensions`,
+both optional, because absence means **"the provider didn't say"** and is
+never a made-up `false` (ADR 0041). Ollama is the only one of the nine that
+publishes this per model: `capabilities: ["embedding"]` in `/api/tags`, with
+`details.embedding_length` giving the dimension.
 
-O guarda `assertCanEmbed` confere as duas na ordem em que falham melhor: o
-provider primeiro, porque trocar de modelo não resolve provider que não embeda.
-Ele recusa também o modelo **sem declaração**, com mensagem diferente — a ação
-de quem lê é sincronizar o catálogo, não trocar de modelo. Deduzir a capability
-do NOME do modelo seria palpite vestido de dado, exatamente o que o ADR 0041
-proíbe.
+The `assertCanEmbed` guard checks the two in the order that fails best: the
+provider first, because switching models doesn't fix a provider that can't
+embed. It also rejects a model **without a declaration**, with a different
+message — the reader's next action is to sync the catalog, not to switch
+models. Inferring the capability from the model's NAME would be a guess
+dressed as data, exactly what ADR 0041 forbids.
 
-### A prova: um `true`, oito `false`
+### The proof: one `true`, eight `false`
 
-A suite de contrato ganhou cinco casos, rodados contra todo provider que
-declara a capability: um vetor por entrada na ordem certa, dimensão e modelo
-usados, lote incompleto virando erro, erro do provider normalizado por `code`,
-e lista de entradas vazia recusada antes de sair pela rede.
+The contract suite gained five cases, run against every provider that
+declares the capability: one vector per input in the right order, dimension
+and model used, an incomplete batch turning into an error, provider errors
+normalized by `code`, and an empty input list rejected before hitting the
+network.
 
-**Só o `ollama` declara `embeddings: true`**, e a prova é execução: `POST
-/api/embed` contra o daemon 0.32.1 com `nomic-embed-text`, duas entradas → dois
-vetores de 768 e `prompt_eval_count: 10`. A mesma execução produziu o achado
-que virou teste: **um modelo de chat responde `501`** ("This server does not
-support embeddings") — a camada de modelo falhando no lugar mais tarde
-possível, que é a razão de `assertCanEmbed` existir.
+**Only `ollama` declares `embeddings: true`**, and the proof is execution:
+`POST /api/embed` against daemon 0.32.1 with `nomic-embed-text`, two inputs
+→ two vectors of 768 and `prompt_eval_count: 10`. The same run produced the
+finding that became a test: **a chat model responds `501`** ("This server
+does not support embeddings") — the model layer failing at the latest
+possible point, which is the reason `assertCanEmbed` exists.
 
-Os outros oito declaram `false`, e por dois motivos diferentes que a prosa de
-cada um registra. Sete são **falta de prova**: não há chave deles no ambiente,
-e o único smoke pago que já rodou (OpenRouter, Fase 13a) foi de CHAT — num hub,
-embedding roteia para provedores diferentes dos de chat, e a prova de um
-endpoint não é a do outro. O oitavo é **ausência da operação**: a Anthropic não
-tem endpoint de embedding próprio, e a doc dela manda usar um terceiro, que é
-outro provider com outra chave e outro dialeto.
+The other eight declare `false`, for two different reasons that each one's
+prose records. Seven are **lack of proof**: there's no key for them in the
+environment, and the only paid smoke that has run (OpenRouter, Phase 13a)
+was for CHAT — on a hub, embedding routes to different providers than chat
+does, and proof of one endpoint isn't proof of the other. The eighth is
+**absence of the operation**: Anthropic has no embedding endpoint of its
+own, and its docs point to a third party, which is a different provider with
+a different key and a different dialect.
 
-O dialeto `/embeddings` da base OpenAI-compatível, porém, está **provado** —
-a suite de contrato roda uma segunda vez sobre a base configurada com a
-capability ligada. Isso é o que torna barato virar um provider para `true` no
-dia em que a chave existir: muda uma linha do literal, e o parsing já está
-exercitado.
+The OpenAI-compatible base's `/embeddings` dialect, however, IS **proven** —
+the contract suite runs a second time against the base configured with the
+capability turned on. That's what makes it cheap to flip a provider to
+`true` the day a key exists: change one literal, and the parsing is already
+exercised.
 
-## Consequências
+## Consequences
 
-**O gasto de embedding ainda não é medido, e isto é um corte declarado, não um
-esquecimento.** O retorno carrega `inputTokens`/`estimated` exatamente para
-alimentar o `RecordLlmUsageUseCase`, que continua sendo o único caminho de
-metering — e `calculateCostMicros(input, 0, …)` já serve, porque embedding não
-tem saída em tokens. O que falta é estrutural e não cabia aqui: `token_usage`
-tem `session_id` **NOT NULL** com FK para `sessions`, e indexar um repositório
-não acontece dentro de uma sessão. Improvisar uma sessão sintética para ter
-onde gravar produziria a correção logo depois; a decisão é da onda que
-implementa o consumidor.
+**Embedding spend still isn't metered, and this is a declared cut, not an
+oversight.** The return carries `inputTokens`/`estimated` precisely to feed
+`RecordLlmUsageUseCase`, which remains the only metering path — and
+`calculateCostMicros(input, 0, …)` already works, because embedding has no
+output tokens. What's missing is structural and didn't fit here:
+`token_usage` has `session_id` as **NOT NULL** with an FK to `sessions`, and
+indexing a repository doesn't happen inside a session. Improvising a
+synthetic session just to have somewhere to write would produce the fix
+right after; the decision belongs to the wave that implements the consumer.
 
-**A camada de modelo ainda não tem coluna.** Ela vive hoje na linha de catálogo
-(`ModeloDoCatalogo.supportsEmbeddings`), e `models` não ganhou
-`supports_embeddings` porque o slot de migration desta onda é de outra frente —
-duas migrations concorrentes colidem no `_journal.json` e nos snapshots do
-drizzle, que é o limitador declarado do programa. A consequência honesta: o
-sync de catálogo lê a capability e ainda não tem onde persisti-la, então quem
-consumir precisa perguntar ao provider ou carregar a coluna junto. `assertCanEmbed`
-recebe um `Pick` estreito de propósito, para servir às duas fontes sem mudar
-quando a coluna existir.
+**The model layer still has no column.** It lives today on the catalog row
+(`ModeloDoCatalogo.supportsEmbeddings`), and `models` did not gain a
+`supports_embeddings` column because this wave's migration slot belongs to a
+different front — two concurrent migrations collide in `_journal.json` and
+the drizzle snapshots, which is the program's declared bottleneck. The
+honest consequence: catalog sync reads the capability and still has nowhere
+to persist it, so whoever consumes it needs to ask the provider or load the
+column separately. `assertCanEmbed` receives a narrow `Pick` on purpose, to
+serve both sources without changing once the column exists.
 
-**Nove providers passaram a declarar um campo a mais.** O custo é real e foi
-pago de uma vez: capability obrigatória é o que impede o próximo provider de
-nascer sem resposta. O `TracedLLMProvider` encaminha `embed` condicionalmente,
-como faz com `listModels` — e ganhou teste próprio, porque foi exatamente aí
-que `listModels` sumiu do produto inteiro em silêncio uma vez.
+**Nine providers now declare one more field.** The cost is real and was paid
+up front: a required capability is what keeps the next provider from being
+born without an answer. `TracedLLMProvider` forwards `embed` conditionally,
+same as it does `listModels` — and it got its own test, because that's
+exactly where `listModels` once vanished from the whole product silently.

@@ -1,4 +1,5 @@
 import type { TokenThreshold } from '../components/TokenMeter';
+import i18n from './i18n';
 
 /**
  * O relatório de gasto, em duas audiências (FASE 22, ADR 0063, RN-101).
@@ -102,17 +103,30 @@ export function diaCurto(dia: string): string {
   return `${d}/${mes}`;
 }
 
-/** `US$ 0,03 · 42 chamadas` — o texto que o título acessível da barra carrega. */
+/**
+ * `US$ 0,03 · 42 chamadas` — o texto que o título acessível da barra carrega.
+ *
+ * `i18n.t()` resolve DENTRO da função, não em constante de módulo, para
+ * reagir ao idioma vigente a cada chamada (mesmo padrão de `session-kind.ts`)
+ * — e `count` deixa o próprio i18next escolher `_one`/`_other`, em vez da
+ * lógica manual de plural que havia aqui antes.
+ */
 export function tituloDoDia(ponto: SpendPorDia, custo: string): string {
-  return `${diaCurto(ponto.dia)} · ${custo} · ${ponto.chamadas} chamada${
-    ponto.chamadas === 1 ? '' : 's'
-  }`;
+  return i18n.t('libSpend.callTitle', {
+    ns: 'spend',
+    count: ponto.chamadas,
+    dia: diaCurto(ponto.dia),
+    custo,
+  });
 }
 
 /** Rótulo de ator: agente aparece pelo slug, pessoa pelo id curto. */
 export function rotuloDoAtor(linha: SpendLinha): string {
   if (linha.actorKind === 'agent') return linha.chave;
-  return `${linha.chave.slice(0, 8)} (pessoa)`;
+  return i18n.t('libSpend.actorPerson', {
+    ns: 'spend',
+    id: linha.chave.slice(0, 8),
+  });
 }
 
 /** Tokens somados — o número que a tabela mostra ao lado do custo. */
@@ -206,8 +220,14 @@ export function alertaDeOrcamento(
     budget.policy === 'block' && budget.spentMicros >= budget.limitMicros;
 
   const mensagem = bloqueado
-    ? `Este projeto atingiu ${budget.lastThresholdNotified}% do orçamento — novas chamadas de LLM estão BLOQUEADAS até o teto subir.`
-    : `Este projeto já passou de ${budget.lastThresholdNotified}% do orçamento definido.`;
+    ? i18n.t('libSpend.budgetBlocked', {
+        ns: 'spend',
+        pct: budget.lastThresholdNotified,
+      })
+    : i18n.t('libSpend.budgetWarning', {
+        ns: 'spend',
+        pct: budget.lastThresholdNotified,
+      });
 
   return { nivel, mensagem };
 }

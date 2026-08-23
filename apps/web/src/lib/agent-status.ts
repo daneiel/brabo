@@ -1,3 +1,4 @@
+import i18n from './i18n';
 import { AGENTS, AREAS, areaFor, type AgentDef } from './agents';
 import type { AgentStatus } from '../components/AgentCard';
 import type { DelegationEventPayload, SessionEvent, ModuleMap, Handoff } from './api-types';
@@ -125,11 +126,17 @@ export function subagentOutcomeLabel(events: SessionEvent[], subagentId: string)
   const payload = last.payload as DelegationEventPayload;
   switch (last.type) {
     case 'delegation.completed':
-      return 'concluiu a delegação';
+      return i18n.t('agentStatus.delegation.completed', { ns: 'executors' });
     case 'delegation.failed':
-      return `falhou — origem: ${payload.failureOrigin ?? '?'}`;
+      return i18n.t('agentStatus.delegation.failed', {
+        ns: 'executors',
+        origin: payload.failureOrigin ?? '?',
+      });
     case 'delegation.dispensed':
-      return `dispensada — ${payload.justification ?? ''}`;
+      return i18n.t('agentStatus.delegation.dispensed', {
+        ns: 'executors',
+        justification: payload.justification ?? '',
+      });
     default:
       return undefined;
   }
@@ -146,7 +153,9 @@ export function breakerReasonFor(events: SessionEvent[], agentId: string): strin
   );
   if (!last) return undefined;
   const n = (last.payload as { consecutiveBlocked?: number }).consecutiveBlocked;
-  return n ? `circuit breaker: ${n} tasks blocked seguidas` : 'circuit breaker disparado';
+  return n
+    ? i18n.t('agentStatus.circuitBreaker.withCount', { ns: 'executors', count: n })
+    : i18n.t('agentStatus.circuitBreaker.default', { ns: 'executors' });
 }
 
 // Um agente com ação pendente de aprovação está BLOQUEADO esperando o humano,

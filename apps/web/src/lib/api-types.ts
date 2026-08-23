@@ -5,6 +5,16 @@
 
 export type Role = 'owner' | 'maintainer' | 'developer' | 'viewer';
 
+/**
+ * O idioma da interface (fundação de i18n, Onda 6a). Espelha o enum
+ * `user_locale` da api — fechado a dois valores.
+ */
+export type UserLocale = 'pt-BR' | 'en';
+
+export interface UserPreferences {
+  locale: UserLocale;
+}
+
 export interface Workspace {
   id: string;
   name: string;

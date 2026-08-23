@@ -1,175 +1,179 @@
 ---
 id: primeiro-dogfooding
-title: O que o primeiro dogfooding ensinou
-sidebar_label: Primeiro dogfooding
+title: What the first dogfooding run taught
+sidebar_label: First dogfooding
 sidebar_position: 4
-description: A colheita da Fase 10 — os dezessete achados da primeira vez em que o Brabo construiu o próprio Brabo, o que ficou medido e o que se perdeu por não ter sido anotado.
-keywords: [dogfooding, colheita, Fase 10, achados, operabilidade]
+description: The Phase 10 harvest — the seventeen findings from the first time Brabo built Brabo itself, what got measured, and what was lost by not being recorded.
+keywords: [dogfooding, harvest, Phase 10, findings, operability]
 ---
 
-# O que o primeiro dogfooding ensinou
+# What the first dogfooding run taught
 
-Na Fase 10 o Brabo construiu uma parte do próprio Brabo: o suporte a Bitbucket e
-o `GenericGitProvider` foram entregues pelos agentes do produto, num fork, com
-um humano no papel de usuário. Foi a primeira execução real fora de demo.
+In Phase 10, Brabo built part of itself: Bitbucket support and the
+`GenericGitProvider` were delivered by the product's own agents, on a fork,
+with a human in the user role. It was the first real execution outside a demo.
 
-Este documento é a **colheita** dessa corrida. Ele existe porque o
-`CLAUDE.md` a referenciava desde a Fase 10 e ela nunca tinha sido escrita —
-uma ausência que vale registrar, e que é ela mesma um dos achados.
+This document is the **harvest** of that run. It exists because `CLAUDE.md`
+had referenced it since Phase 10 and it had never been written — an absence
+worth recording, and one of the findings in its own right.
 
-:::warning O que se perdeu
+:::warning What was lost
 
-A tabela de observação da missão (`docs/missions/dogfooding-mission.md:488-490`)
-tem **uma única linha preenchida**: a #1, o seed manual, anotada antes de a
-primeira sessão começar. Nenhuma corrida foi contada.
+The mission's observation table (`docs/missions/dogfooding-mission.md:488-490`)
+has **a single filled-in row**: #1, the manual seed, recorded before the first
+session began. No run was counted.
 
-Não existe no repositório o número de restarts do engine, de intervenções
-manuais, de cliques de aprovação nem de custo por sessão. A própria missão
-avisava (`colheita-esqueleto.md:63-68`) que `restarts do engine` **não tem
-registro nenhum no sistema** — é só anotação humana, e se não for anotada ao
-vivo, some.
+The repository has no record of the number of engine restarts, manual
+interventions, approval clicks, or cost per session. The mission itself warned
+(`colheita-esqueleto.md:63-68`) that `engine restarts` has **no record
+whatsoever in the system** — it's human annotation only, and if it isn't
+recorded live, it's gone.
 
-Por isso tudo o que é quantitativo aqui aparece como **`não medido`**, nunca
-como estimativa. É a regra da própria colheita: nenhum número entra sem uma
-consulta que o produza (`colheita-esqueleto.md:22-24`).
+That's why everything quantitative here appears as **`not measured`**, never
+as an estimate. That's the harvest's own rule: no number goes in without a
+query that produced it (`colheita-esqueleto.md:22-24`).
 
 :::
 
-## O que ficou registrado, e é real
+## What was recorded, and is real
 
-O que sobreviveu é a parte **qualitativa**, e ela é densa: dezessete achados com
-arquivo e linha, verificados no código durante a corrida. É dela que a Fase 12
-inteira saiu.
+What survived is the **qualitative** part, and it's dense: seventeen findings
+with file and line, verified in the code during the run. All of Phase 12
+came out of it.
 
-### Antes da primeira sessão: o seed manual
+### Before the first session: the manual seed
 
-A corrida começou com uma intervenção que não estava no plano. O experimento
-rodou contra um fork, e as linhas de `project_repositories` e `repo_bootstraps`
-foram **inseridas à mão**, marcadas como convergidas, para o produto não tentar
-retomar um bootstrap (`dogfooding-mission.md:104-134`).
+The run began with an intervention that wasn't in the plan. The experiment
+ran against a fork, and the `project_repositories` and `repo_bootstraps` rows
+were **inserted by hand**, marked as converged, so the product wouldn't try
+to resume a bootstrap (`dogfooding-mission.md:104-134`).
 
-O motivo é o achado #1: o produto só sabia **criar** repositório. `createRepo`
-era incondicional e `getRepo` existia sem nenhum chamador desde a Fase 2.
+The reason is finding #1: the product only knew how to **create** a
+repository. `createRepo` was unconditional and `getRepo` had existed with no
+caller since Phase 2.
 
-> Foi a primeira intervenção manual do experimento, e ela aconteceu **antes de o
-> experimento começar** (`:130-133`).
+> It was the experiment's first manual intervention, and it happened **before
+> the experiment began** (`:130-133`).
 
-### Durante: as tandas
+### During: the batches
 
-O segundo fato estrutural da corrida foi o achado #10: **um dev agent processava
-uma task e parava**. `:work` só era disparado na ativação e no aceite de
-paralelização; nada levava o agente da PR aberta de volta a "livre para
-reivindicar".
+The run's second structural fact was finding #10: **a dev agent processed one
+task and stopped**. `:work` was only triggered on activation and on accepting
+parallelization; nothing moved the agent from an opened PR back to "free to
+claim".
 
-A consequência operacional está descrita em `:393-416`: a fase rodou em
-**tandas**. Para cada task seguinte era preciso reiniciar o engine — os dev
-agents são `restart: :temporary`, morrem e não voltam — e reativar a execução.
-Reativar sem reiniciar não resolvia: o supervisor devolvia o agente existente
-sem disparar `:work`, e ainda criava uma sessão órfã (achado #11).
+The operational consequence is described in `:393-416`: the phase ran in
+**batches**. Each following task required restarting the engine — dev agents
+are `restart: :temporary`, they die and don't come back — and reactivating
+execution. Reactivating without restarting didn't fix it either: the
+supervisor returned the existing agent without triggering `:work`, and it
+also created an orphan session (finding #11).
 
-O número de restarts é **não medido**. O que se sabe com certeza é a
-propriedade: pelo desenho de então, **um restart por task entregue** era o piso,
-não uma média observada.
+The number of restarts is **not measured**. What's known for certain is the
+property: by the design at the time, **one restart per delivered task** was
+the floor, not an observed average.
 
-### O terceiro: a promoção sem passo humano
+### The third one: promotion without a human step
 
-O achado #13 era P2 na classificação original e foi promovido a P1 depois. A
-transição `draft → ready` acontecia **automaticamente na criação**;
-`TransitionStoryUseCase` validava e emitia o evento, mas não estava ligado a
-rota nenhuma — código morto. A aba Backlog era somente leitura.
+Finding #13 was P2 in the original classification and was later promoted to
+P1. The `draft → ready` transition happened **automatically on creation**;
+`TransitionStoryUseCase` validated and emitted the event, but wasn't wired to
+any route — dead code. The Backlog tab was read-only.
 
-Ou seja: o PO, um agente de LLM, decidia sozinho o que entrava na fila de
-trabalho dos dev agents, num produto cujo princípio declarado é a autoridade
-final do usuário.
+In other words: the PO, an LLM agent, decided on its own what entered the dev
+agents' work queue, in a product whose stated principle is the user's final
+authority.
 
-## Os dezessete achados
+## The seventeen findings
 
-Conservados verbatim da missão, com a prioridade que receberam então. Os que a
-Fase 12 fechou estão marcados.
+Kept verbatim from the mission, with the priority they received at the time.
+The ones Phase 12 closed are marked.
 
-### Do levantamento anterior à primeira sessão
+### From the survey before the first session
 
-| # | achado | onde | prio | estado |
+| # | finding | where | prio | state |
 |---|---|---|---|---|
-| 1 | O produto não sabe apontar um projeto para repositório existente. `createRepo` é incondicional; `getRepo` existe e não é chamado por nenhum caso de uso; o DTO não tem campo para `externalId` | `provision-repository.use-case.ts:144` | **P1** | **fechado** — [ADR 0044](../adr/0044-adocao-de-repositorio-existente.md) |
-| 2 | `protectBranch` no GitHub aplica `enforce_admins: true` + 1 revisor sobre proteção existente, sem ler o estado atual — pode travar o merge manual do dono | `github-provider.ts:170-175` | **P1** | **fechado** — virou regra de produto ([RN-045](../business-rules.md#rn-045)) |
-| 3 | O bootstrap cria e protege uma branch `rc` que a política de branches do Brabo (Fase 6) não usa | `bootstrap-steps.ts:94,195` | P2 | **fechado** — [RN-029](../business-rules.md#rn-029) |
-| 4 | `agent_areas`/`agent_area_members` não existem; áreas, leads e membros são hardcoded em dois lugares que podem divergir | `schema.ts:781-786` | P2 | corte registrado da Fase 8 |
-| 5 | Os seis providers de LLM da Fase 9b não entraram, e o CLAUDE.md descrevia a Fase 9 como se tivessem entrado | ADR 0042:147-156 | P2 | fechado na Fase 11 |
-| 6 | `git-providers.md` afirma que Bitbucket e Generic são "fora de escopo"; o CLAUDE.md marcava os dois como fase ativa | `docs/reference/git-providers.md:170-174` | P2 | fechado na própria Fase 10 |
-| 7 | O comentário de `git-errors.ts` diz "8 operações"; o contrato tem 10 | `git-errors.ts:3` | P3 | **fechado** — e a contagem virou teste |
-| 8 | O cabeçalho da suite de contrato diz que só o Local a exercita; GitHub e GitLab já a rodam desde a Fase 2 | `git-provider.contract.ts:12-18` | P3 | **fechado** — e a lista de chamadores virou teste |
+| 1 | The product doesn't know how to point a project at an existing repository. `createRepo` is unconditional; `getRepo` exists and is called by no use case; the DTO has no field for `externalId` | `provision-repository.use-case.ts:144` | **P1** | **closed** — [ADR 0044](../adr/0044-adocao-de-repositorio-existente.md) |
+| 2 | GitHub's `protectBranch` applies `enforce_admins: true` + 1 reviewer over the existing protection, without reading the current state — can lock out the owner's manual merge | `github-provider.ts:170-175` | **P1** | **closed** — became a product rule ([RN-045](../business-rules.md#rn-045)) |
+| 3 | The bootstrap creates and protects an `rc` branch that Brabo's branch policy (Phase 6) doesn't use | `bootstrap-steps.ts:94,195` | P2 | **closed** — [RN-029](../business-rules.md#rn-029) |
+| 4 | `agent_areas`/`agent_area_members` don't exist; areas, leads, and members are hardcoded in two places that can diverge | `schema.ts:781-786` | P2 | Phase 8 recorded cut |
+| 5 | The six Phase 9b LLM providers didn't land, and CLAUDE.md described Phase 9 as if they had | ADR 0042:147-156 | P2 | closed in Phase 11 |
+| 6 | `git-providers.md` claims Bitbucket and Generic are "out of scope"; CLAUDE.md marked both as an active phase | `docs/reference/git-providers.md:170-174` | P2 | closed in Phase 10 itself |
+| 7 | The comment in `git-errors.ts` says "8 operations"; the contract has 10 | `git-errors.ts:3` | P3 | **closed** — and the count became a test |
+| 8 | The contract suite's header says only Local exercises it; GitHub and GitLab have run it since Phase 2 | `git-provider.contract.ts:12-18` | P3 | **closed** — and the list of callers became a test |
 
-### Do levantamento da condução
+### From the survey during the run
 
-| # | achado | onde | prio | estado |
+| # | finding | where | prio | state |
 |---|---|---|---|---|
-| 9 | **O Criativo não pode ser dispensado.** O claim exige story `ready`; `ready` exige ≥1 regra de negócio; o id é validado contra evento real; e só o Criativo tem `emit_artifact` | `story-readiness.ts:46`, `po_server.ex:18` | **P1** | aberto |
-| 10 | **Um dev agent processa UMA task e para.** `:work` só é disparado na ativação e no aceite de paralelização | `dev_agent_server.ex:76-91,306-327` | **P1** | **fechado** — [ADR 0045](../adr/0045-reagendamento-por-evento-do-dev-agent.md) |
-| 11 | Reativar a execução não redispara `:work` e ainda cria uma sessão a mais sem agentes vinculados | `dev_agent_supervisor.ex:33-52` | P2 | **fechado** — [RN-053](../business-rules.md#rn-053) |
-| 12 | Não existe handoff manual para um agente à escolha, e a validação de alvo do ADR 0038 nunca foi implementada | `SessionPage.tsx:403-407` | P2 | **metade fechada** — validação de alvo em [RN-054](../business-rules.md#rn-054); handoff manual segue aberto |
-| 13 | Não existe "promover a ready": a promoção é automática na criação. `TransitionStoryUseCase` não está ligado a rota nenhuma — é código morto | `create-story.use-case.ts:75-78` | P2 → **P1** | **fechado** — [ADR 0046](../adr/0046-promocao-de-story-com-autoridade-do-usuario.md) |
-| 14 | Não existe devolução ao PO — nenhum estado, evento ou botão | — | P2 | **fechado** junto com o #13 |
-| 15 | O painel do time e as hipóteses do Psicólogo dividem a mesma aba, que é a default do projeto | `ProjectOverviewTab.tsx:227-263` | P2 | **fechado** — aba Insights própria, com contador |
-| 16 | Nenhuma tela soma aprovações por sessão; a Anamnese sob demanda não tem botão | `hooks.ts:153-160` | P3 | **fechado em parte** — ver nota abaixo |
-| 17 | **A métrica principal da fase não está no event log.** `proposed_action.approved`/`.denied` vão só para o outbox | `approve-action.use-case.ts:98` | **P1** | **fechado** — [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) |
+| 9 | **The Creative agent can't be skipped.** The claim requires a `ready` story; `ready` requires ≥1 business rule; the id is validated against a real event; and only the Creative agent has `emit_artifact` | `story-readiness.ts:46`, `po_server.ex:18` | **P1** | open |
+| 10 | **A dev agent processes ONE task and stops.** `:work` is only triggered on activation and on accepting parallelization | `dev_agent_server.ex:76-91,306-327` | **P1** | **closed** — [ADR 0045](../adr/0045-reagendamento-por-evento-do-dev-agent.md) |
+| 11 | Reactivating execution doesn't re-trigger `:work` and also creates an extra session with no linked agents | `dev_agent_supervisor.ex:33-52` | P2 | **closed** — [RN-053](../business-rules.md#rn-053) |
+| 12 | There's no manual handoff to an agent of choice, and ADR 0038's target validation was never implemented | `SessionPage.tsx:403-407` | P2 | **half closed** — target validation in [RN-054](../business-rules.md#rn-054); manual handoff remains open |
+| 13 | There's no "promote to ready": promotion is automatic on creation. `TransitionStoryUseCase` isn't wired to any route — it's dead code | `create-story.use-case.ts:75-78` | P2 → **P1** | **closed** — [ADR 0046](../adr/0046-promocao-de-story-com-autoridade-do-usuario.md) |
+| 14 | There's no way to return a story to the PO — no state, event, or button | — | P2 | **closed** together with #13 |
+| 15 | The team panel and the Psychologist's hypotheses share the same tab, which is the project's default | `ProjectOverviewTab.tsx:227-263` | P2 | **closed** — dedicated Insights tab, with counter |
+| 16 | No screen totals approvals per session; the on-demand Anamnese has no button | `hooks.ts:153-160` | P3 | **partly closed** — see note below |
+| 17 | **The phase's main metric isn't in the event log.** `proposed_action.approved`/`.denied` only go to the outbox | `approve-action.use-case.ts:98` | **P1** | **closed** — [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) |
 
-:::note O achado #16 tinha uma metade errada
+:::note Finding #16 had one half that was wrong
 
-Ao fechá-lo, a verificação mostrou que a segunda afirmação — "a Anamnese sob
-demanda não tem botão" — **já era falsa quando o achado foi escrito**: a rota
-`POST /projects/:projectId/anamnese/run` existe (`anamnese.controller.ts:71`) e
-o botão "Rodar agora" está em Configurações › Proficiência
-(`ProjectSettingsTab.tsx:777`), coberto por
+When closing it, verification showed that the second claim — "the on-demand
+Anamnese has no button" — **was already false when the finding was written**:
+the route `POST /projects/:projectId/anamnese/run` exists
+(`anamnese.controller.ts:71`) and the "Run now" button is in Settings ›
+Proficiency (`ProjectSettingsTab.tsx:777`), covered by
 `ProficiencySection.test.tsx`.
 
-A primeira metade era real e foi fechada: a aba Sessões passa a somar as ações
-propostas **de cada sessão**, separando o que foi clique seu (`decidedBy`) do
-que a política auto-aprovou (`resolvedPolicy`). Antes tudo saía de
-`usePendingActions`, que exige um `sessionId`, e os três chamadores passavam o
-da sessão mais recente — uma decisão esquecida numa sessão anterior ficava
-invisível para sempre.
+The first half was real and got closed: the Sessions tab now totals proposed
+actions **per session**, separating what you clicked (`decidedBy`) from what
+policy auto-approved (`resolvedPolicy`). Before, everything came from
+`usePendingActions`, which requires a `sessionId`, and all three callers
+passed the most recent session's — a decision forgotten in an earlier session
+stayed invisible forever.
 
-O registro fica porque **a colheita não se corrige apagando**: um achado
-parcialmente errado é informação sobre como a corrida foi conduzida.
+The record stays because **the harvest doesn't correct itself by erasing**: a
+partly wrong finding is information about how the run was conducted.
 
 :::
 
-Dois itens entraram como **registro, não defeito**, para a colheita não os
-confundir com lacuna: o **merge fora do produto** (`awaiting_user` é terminal de
-propósito, [RN-014](../business-rules.md#rn-014) — o engine sequer conhece
-`git_merge`) e a **dispensa do QA por palavra-chave** no RNF
-(`qa_lead.ex:20-28`), que é heurística declarada, não NLP.
+Two items entered as **record, not defect**, so the harvest wouldn't confuse
+them with a gap: **merge staying outside the product**
+(`awaiting_user` is a terminal state by design,
+[RN-014](../business-rules.md#rn-014) — the engine doesn't even know about
+`git_merge`) and **QA being skipped by keyword** in the NFR
+(`qa_lead.ex:20-28`), which is declared heuristic, not NLP.
 
-## O que não foi medido
+## What wasn't measured
 
-Listado explicitamente, para não parecer esquecimento:
+Listed explicitly, so it doesn't look like an oversight:
 
-| o quê | por quê |
+| what | why |
 |---|---|
-| restarts do engine por task | não tem registro no sistema; dependia de anotação humana ao vivo |
-| intervenções manuais e seus motivos | idem — a tabela de observação ficou em branco a partir da linha 2 |
-| cliques de aprovação por sessão | o achado #17 explica: `proposed_action.approved` não ia para `session_events`; a fonte durável era `proposed_actions.decided_at`, que a corrida não consolidou. Fechado depois pelo [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) — a métrica existe daqui em diante, mas não retroage a esta corrida |
-| custo em tokens por agente e por provider | `token_usage` tem os dados, mas nenhuma consulta foi rodada e o banco daquela execução não foi preservado |
-| voltas de correção nos gates | idem |
+| engine restarts per task | not recorded in the system; depended on live human annotation |
+| manual interventions and their reasons | same — the observation table was blank from row 2 onward |
+| approval clicks per session | finding #17 explains it: `proposed_action.approved` didn't go to `session_events`; the durable source was `proposed_actions.decided_at`, which the run never consolidated. Later closed by [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) — the metric exists from that point on, but doesn't retroactively apply to this run |
+| token cost per agent and per provider | `token_usage` has the data, but no query was ever run and that execution's database wasn't preserved |
+| gate correction round-trips | same |
 
-O achado #17 é o mais custoso deste conjunto, e a lição é de instrumentação: **a
-métrica principal de um experimento precisa estar no log durável antes de o
-experimento começar.** Não estava, e por isso a metade quantitativa da colheita
-não existe. Ele foi fechado depois, pelo
-[ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md), e isso vale para o
-**próximo** experimento: nenhuma correção reconstrói dado que não foi gravado.
+Finding #17 is the costliest item in this set, and the lesson is about
+instrumentation: **an experiment's main metric needs to be in the durable log
+before the experiment starts.** It wasn't, and that's why the quantitative
+half of the harvest doesn't exist. It was later closed by
+[ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md), and that holds
+for the **next** experiment too: no fix reconstructs data that was never
+recorded.
 
-## O que a Fase 12 fez com isto
+## What Phase 12 did about this
 
-Os três achados P1 de **operabilidade** — #1, #10 e #13 — foram fechados na Fase
-12, e a prova de que morreram numa execução única está em
-[Validação da Fase 12](./validacao-fase-12.md).
+The three operability P1 findings — #1, #10, and #13 — were closed in
+Phase 12, and the proof that they died in a single execution is in
+[Phase 12 validation](./validacao-fase-12.md).
 
-O quarto P1, o #17, foi fechado depois pelo
-[ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md), junto com o D5 que
-o ADR 0045 tinha deixado registrado.
+The fourth P1, #17, was closed later by
+[ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md), together with the
+D5 that ADR 0045 had left on record.
 
-Os demais continuam abertos, listados acima, e nenhum foi corrigido de passagem:
-corrigir um achado fora da fase que o endereça é exatamente o que a missão
-proibia (princípio 3).
+The rest remain open, listed above, and none was fixed in passing: fixing a
+finding outside the phase that addresses it is exactly what the mission
+forbade (principle 3).

@@ -1,0 +1,32 @@
+{
+  "provisioningPage": {
+    "title": "Provisioning repository",
+    "fallbackProjectName": "Project",
+    "subtitle": "{{name}} · Gitflow bootstrap",
+    "successBanner": "Repository provisioned successfully.",
+    "failedBannerTitle": "Failed at: {{step}}",
+    "protectionFailureNote": "Protecting branches often fails on a private repository on the free plan. You can proceed without it — Brabo's merge lock doesn't depend on the provider's protection and still applies.",
+    "starting": "Starting provisioning…",
+    "goToProject": "Go to project",
+    "retry": "Try again",
+    "proceedWithoutProtection": "Proceed without protecting the branches",
+    "working": "Working…"
+  },
+  "bootstrapSteps": {
+    "stepLabel": {
+      "commitPrTemplate": "PR template commit",
+      "commitBranchingPolicy": "Branching policy commit",
+      "createDevBranch": "Create dev branch",
+      "createQaBranch": "Create qa branch",
+      "protectBranches": "Protect branches"
+    },
+    "stateLabel": {
+      "pendente": "Pending",
+      "rodando": "Running",
+      "ok": "OK",
+      "skip": "Skipped",
+      "falha": "Failed"
+    },
+    "notSupportedNote": "not supported"
+  }
+}

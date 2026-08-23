@@ -1,91 +1,96 @@
-# 0039 — actionlint e a validação do pipeline de CI gerado
+# 0039 — actionlint and validation of the generated CI pipeline
 
-## Contexto
+## Context
 
-CLAUDE.md 8c pede a segunda instância do modelo do ADR 0038: o InfraAgent
-vira Infra Lead, e ganha o subagente Workflows, que gera o pipeline de CI do
-projeto do usuário (GitHub Actions ou GitLab CI, conforme o provider — RN-037).
-Este ADR não reabre o modelo genérico de área/lead/delegação (isso é o ADR
-0038); fixa só a decisão nova e específica desta instância: como o Workflows
-valida localmente o que gera, antes de propor, e o que fica sem validação por
-falta de ferramenta.
+CLAUDE.md 8c calls for the second instance of the ADR 0038 model: the
+InfraAgent becomes an Infra Lead, and gains the Workflows subagent, which
+generates the user's project's CI pipeline (GitHub Actions or GitLab CI,
+depending on the provider — RN-037). This ADR doesn't reopen the generic
+area/lead/delegation model (that's ADR 0038); it fixes only the new,
+instance-specific decision: how Workflows validates locally what it
+generates, before proposing it, and what's left without validation for lack
+of a tool.
 
-O precedente é o hadolint do InfraAgent original (Fase 4a, ADR 0021): sem o
-binário, o gate de QA de infra aprovava qualquer Dockerfile — inclusive um
-que não parseava — porque a ausência era tratada como "pulado" em vez de
-"reprovado por falta de prova". A mesma armadilha se aplica aqui: sem
-validação nenhuma, o Workflows proporia um pipeline de CI sintaticamente
-quebrado sem nenhum sinal disso na PR.
+The precedent is hadolint for the original InfraAgent (Phase 4a, ADR 0021):
+without the binary, the infra QA gate approved any Dockerfile — including
+one that didn't even parse — because the absence was treated as "skipped"
+instead of "rejected for lack of proof". The same trap applies here: with no
+validation at all, Workflows would propose a syntactically broken CI
+pipeline with no signal of that in the PR.
 
-## Decisão
+## Decision
 
-### 1. `actionlint` pinado no Dockerfile do engine, mesmo padrão do gitleaks/hadolint
+### 1. `actionlint` pinned in the engine's Dockerfile, same pattern as gitleaks/hadolint
 
-`docker/engine/Dockerfile` (best-effort, `|| echo`) e `docker/engine/
-Dockerfile.prod` (hard-fail, `ARG ACTIONLINT_SHA256` verificado com
-`sha256sum -c -`, entra no bloco de probe que prova todo binário dos gates
-presente e executável). Versão `1.7.12`, checksum conferido contra o
-`actionlint_1.7.12_checksums.txt` publicado no release do `rhysd/actionlint`
-e por download+`sha256sum` independente do tarball. Espelhado em
-`.github/workflows/ci.yml` (`env.ACTIONLINT_VERSION`, instalado no job
-`test-engine` — mesma paridade dev/prod/CI que gitleaks/hadolint já exigem).
+`docker/engine/Dockerfile` (best-effort, `|| echo`) and
+`docker/engine/Dockerfile.prod` (hard-fail, `ARG ACTIONLINT_SHA256` verified
+with `sha256sum -c -`, entering the probe block that proves every gate
+binary is present and executable). Version `1.7.12`, checksum verified
+against the `actionlint_1.7.12_checksums.txt` published in the
+`rhysd/actionlint` release and by an independent download+`sha256sum` of the
+tarball. Mirrored in `.github/workflows/ci.yml` (`env.ACTIONLINT_VERSION`,
+installed in the `test-engine` job — the same dev/prod/CI parity
+gitleaks/hadolint already require).
 
-Nasceu pinado em `1.7.7` (Go 1.23.4) e subiu pra `1.7.12` (Go 1.26.1) ainda
-nesta entrega — o CI de imagem (`trivy`) reprovou o `1.7.7` por 15 CVEs de
-Go stdlib herdados do binário oficial (1 CRITICAL). A versão nova não zera
-a lista (o `rhysd/actionlint` mais recente ainda não empacota o patch de Go
-mais novo pra cada CVE), mas derruba a CRITICAL e 3 das HIGH — as 12 HIGH
-restantes ficam em `.trivyignore.yaml` com `expired_at`, mesmo padrão do
-gitleaks: binário de terceiro só baixado (não compilado), já no último
-release publicado, com data de expiração.
+It was born pinned at `1.7.7` (Go 1.23.4) and moved up to `1.7.12` (Go
+1.26.1) within this same delivery — the image CI (`trivy`) rejected `1.7.7`
+for 15 Go-stdlib CVEs inherited from the official binary (1 CRITICAL). The
+new version doesn't zero out the list (the latest `rhysd/actionlint` doesn't
+yet package the newer Go patch for every CVE), but it knocks out the
+CRITICAL and 3 of the HIGHs — the remaining 12 HIGHs go into
+`.trivyignore.yaml` with `expired_at`, the same pattern as gitleaks: a
+third-party binary that's only downloaded (not compiled), already at the
+latest published release, with an expiration date.
 
-`Engine.Actions.ActionlintDetector` (Live + Fake) é mirror exato de
-`Engine.Actions.HadolintDetector`: `System.find_executable/1`, degrada pra
-`:unavailable` sem quebrar o turno, exit `0`/`1` normalizados (`1` = achados,
-não falha de processo).
+`Engine.Actions.ActionlintDetector` (Live + Fake) is an exact mirror of
+`Engine.Actions.HadolintDetector`: `System.find_executable/1`, degrades to
+`:unavailable` without breaking the turn, exit codes `0`/`1` normalized
+(`1` = findings, not a process failure).
 
-### 2. A validação acontece na GERAÇÃO, não num gate pós-PR novo
+### 2. Validation happens at GENERATION time, not in a new post-PR gate
 
-`Engine.Infra.Tools.ValidateInfraFile` (generalizada nesta fase — antes só
-sabia hadolint) despacha por extensão de caminho: `Dockerfile*` → hadolint,
-`.github/workflows/*.{yml,yaml}` → actionlint, `.gitlab-ci.yml` → sem
-validação (item 3). O `WorkflowsAgent` chama esta tool antes de
-`emit_infra_delegation_result` — a mesma disciplina que o Lead já seguia com
-Dockerfiles.
+`Engine.Infra.Tools.ValidateInfraFile` (generalized in this phase — before
+it only knew hadolint) dispatches by path extension: `Dockerfile*` →
+hadolint, `.github/workflows/*.{yml,yaml}` → actionlint, `.gitlab-ci.yml` →
+no validation (item 3). `WorkflowsAgent` calls this tool before
+`emit_infra_delegation_result` — the same discipline the Lead already
+followed for Dockerfiles.
 
-**Não** criamos um terceiro gate pós-PR: `Engine.Infra.InfraGateRunner`
-continua validando YAML genérico (compose + qualquer pipeline de CI) com
-`yamllint`, sintático e superficial — checa se PARSEIA, não se as `actions`
-referenciadas existem ou são versões válidas. `actionlint` faz uma análise
-semântica mais profunda (nomes de action, tipos de expressão, contextos
-válidos), e faz isso ANTES da PR existir — na geração, onde o Workflows ainda
-pode corrigir sem gastar um ciclo de correção do gate. Rodar as duas
-validações (yamllint pós-PR + actionlint pré-proposta) não é redundante: são
-duas profundidades diferentes, no mesmo espírito de hadolint (sintático,
-pré-proposta) coexistir com o scanner de segredo do SecOps (semântico,
-pós-PR).
+We did **not** create a third post-PR gate: `Engine.Infra.InfraGateRunner`
+keeps validating generic YAML (compose + any CI pipeline) with `yamllint`,
+syntactic and surface-level — it checks whether it PARSES, not whether the
+referenced `actions` exist or are valid versions. `actionlint` does a
+deeper semantic analysis (action names, expression types, valid contexts),
+and does it BEFORE the PR exists — at generation time, where Workflows can
+still fix things without spending a gate correction cycle. Running both
+validations (yamllint post-PR + actionlint pre-proposal) isn't redundant:
+they're two different depths, in the same spirit as hadolint (syntactic,
+pre-proposal) coexisting with SecOps's secret scanner (semantic, post-PR).
 
-### 3. `.gitlab-ci.yml` fica sem validação estática local — gap documentado
+### 3. `.gitlab-ci.yml` is left without local static validation — a documented gap
 
-Não existe um binário offline equivalente ao `actionlint` para GitLab CI — o
-linter oficial (`POST /api/v4/projects/:id/ci/lint`) precisa de uma
-instância GitLab viva, e o Workflows não tem (nem deveria ter) credencial de
-GitLab pra chamar essa API só pra validar sintaxe. `ValidateInfraFile`
-degrada com uma mensagem explícita ("sem linter estático local") em vez de
-inventar uma validação parcial (ex.: um parser de YAML genérico que não
-entenderia o schema de `.gitlab-ci.yml`) que daria falsa confiança. Registrado
-como limite conhecido do ambiente (`docs/runbook.md`), não escondido.
+There's no offline binary equivalent to `actionlint` for GitLab CI — the
+official linter (`POST /api/v4/projects/:id/ci/lint`) needs a live GitLab
+instance, and Workflows doesn't have (and shouldn't have) a GitLab
+credential just to call that API to validate syntax. `ValidateInfraFile`
+degrades with an explicit message ("no local static linter") instead of
+inventing a partial validation (e.g., a generic YAML parser that wouldn't
+understand `.gitlab-ci.yml`'s schema) that would give false confidence.
+Recorded as a known environment limitation (`docs/runbook.md`), not hidden.
 
-## Consequências
+## Consequences
 
-- Todo Dockerfile OU workflow do GitHub Actions que o Workflows/Lead propõe
-  já passou por uma validação sintática/semântica antes da PR existir — sem
-  o binário, a mensagem "indisponível" fica registrada no `tool.result` do
-  evento, e é isso que o demo `demo:infra-workflows-github` verifica (RN-037).
-- `.gitlab-ci.yml` gerado por um projeto com `GithubProvider` nunca acontece
-  (o Workflows decide o formato pelo `gitProvider` do contexto — RN-037);
-  `.gitlab-ci.yml` só nasce pra projeto GitLab, e nasce sem validação local.
-- Se o GitLab CI vier a ganhar um validador offline no futuro, o ponto de
-  extensão é `Engine.Infra.Tools.ValidateInfraFile.gitlab_ci?/1` — trocar a
-  branch de "sem linter" por uma chamada a um novo
-  `Engine.Actions.GitlabCiLintDetector`, mesmo padrão dos outros três.
+- Every Dockerfile OR GitHub Actions workflow that Workflows/Lead proposes
+  has already gone through syntactic/semantic validation before the PR
+  exists — without the binary, the "unavailable" message stays recorded in
+  the event's `tool.result`, and that's what the `demo:infra-workflows-github`
+  demo verifies (RN-037).
+- `.gitlab-ci.yml` generated for a project with `GithubProvider` never
+  happens (Workflows decides the format from the context's `gitProvider` —
+  RN-037); `.gitlab-ci.yml` only ever gets born for a GitLab project, and it
+  gets born without local validation.
+- If GitLab CI ever gains an offline validator in the future, the extension
+  point is `Engine.Infra.Tools.ValidateInfraFile.gitlab_ci?/1` — swap the
+  "no linter" branch for a call to a new
+  `Engine.Actions.GitlabCiLintDetector`, the same pattern as the other
+  three.

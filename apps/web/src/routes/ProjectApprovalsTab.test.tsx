@@ -1,9 +1,22 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ProjectApprovalsTab } from './ProjectApprovalsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import type { PermissionsFile, ProposedAction, Session } from '../lib/api-types';
+// Instância REAL do app (mesmo motivo de `AgentCard.test.tsx`): sem
+// `I18nextProvider` no teste, o hook `useTranslation` cai no singleton
+// global de `lib/i18n.ts` — as asserções abaixo checam o texto ATUAL em
+// português.
+import i18n from '../lib/i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
 
 const listSessions = vi.fn();
 const listActions = vi.fn();

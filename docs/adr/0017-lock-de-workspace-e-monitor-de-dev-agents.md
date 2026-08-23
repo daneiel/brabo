@@ -1,95 +1,108 @@
-# ADR 0017 — Lock de inicialização do workspace, Monitor de dev agents e herança de teto
+# ADR 0017 — Workspace initialization lock, dev agent Monitor and ceiling inheritance
 
-- Status: aceito
-- Data: 2026-07-25
-- Fase: 4a (correções pós-auditoria)
+- Status: accepted
+- Date: 2026-07-25
+- Phase: 4a (post-audit corrections)
 
-## Contexto
+## Context
 
-Auditoria da Fase 4a contra os 7 itens da sessão original e o critério de aceite.
-Quatro defeitos confirmados (um deles quebrando o critério de aceite) e uma
-flakiness de ~50% na suite do engine. Este ADR registra o que muda de estrutural;
-as decisões originais estão no [ADR 0011](0011-infra-dev-agents-worktrees-merge-lock.md).
+Phase 4a audit against the original session's 7 items and the acceptance
+criterion. Four confirmed defects (one of them breaking the acceptance
+criterion) and ~50% flakiness in the engine suite. This ADR records what
+changes structurally; the original decisions are in
+[ADR 0011](0011-infra-dev-agents-worktrees-merge-lock.md).
 
-## Decisões
+## Decisions
 
-### 1. `Workspace.ensure!/3` serializa a inicialização por projeto (revisa 0011 §4)
+### 1. `Workspace.ensure!/3` serializes per-project initialization (revises 0011 §4)
 
-O ADR 0011 aceitou a corrida do working tree como "não é um requisito do critério
-de aceite". **Era**: na ativação, os N dev agents do projeto sobem juntos e todos
-chamam `ensure!/3` vendo o working tree ainda inexistente. Os `git init`/`fetch`
-colidiam no mesmo diretório (`could not lock config file`, `cannot copy
-.../hooks/*.sample`). Medido: com 8 agentes, 7 morriam; com 2 — o número do
-critério de aceite — 1 morria, reprodutível em 6/6 execuções.
+ADR 0011 accepted the working-tree race as "not a requirement of the
+acceptance criterion". **It was one**: on activation, a project's N dev
+agents come up together and all call `ensure!/3` seeing the working tree
+still nonexistent. The `git init`/`fetch` calls collided on the same
+directory (`could not lock config file`, `cannot copy
+.../hooks/*.sample`). Measured: with 8 agents, 7 died; with 2 — the
+acceptance criterion's number — 1 died, reproducible in 6/6 runs.
 
-A inicialização passa a rodar dentro de `:global.trans({{Workspace, project_id},
-self()})`, com recheque dentro da seção crítica (quem esperou encontra o working
-tree pronto). O lock é por projeto: projetos distintos seguem em paralelo. O
-caminho quente (working tree já existente) nem toca no lock.
+Initialization now runs inside `:global.trans({{Workspace, project_id},
+self()})`, with a recheck inside the critical section (whoever waited
+finds the working tree already ready). The lock is per project: distinct
+projects keep running in parallel. The hot path (working tree already
+existing) doesn't even touch the lock.
 
-### 2. `Workspace.ensure/3` não levanta; falha de worktree devolve a task
+### 2. `Workspace.ensure/3` doesn't raise; a worktree failure returns the task
 
-`ensure!/3` levantava `MatchError`, e o `DevAgentServer` é `restart: :temporary` —
-o agente morria em definitivo. Pior: a task já fora reivindicada (`in_progress`,
-`blocked = false`), ficando invisível pro claim (que só pega `todo`) e fora do
-alcance do unblock. Task travada sem caminho de recuperação pela UI.
+`ensure!/3` used to raise `MatchError`, and `DevAgentServer` is
+`restart: :temporary` — the agent died for good. Worse: the task had
+already been claimed (`in_progress`, `blocked = false`), becoming invisible
+to claiming (which only picks up `todo`) and out of reach for unblocking.
+A stuck task with no recovery path from the UI.
 
-Novo `ensure/3` devolve `{:ok, dir} | {:error, mensagem}`, usado pelo
-`WorktreeManager.create/3`; o `DevAgentServer` fixa o `task_id` no state **antes**
-de montar o worktree e chama `block_task/3` na falha.
+New `ensure/3` returns `{:ok, dir} | {:error, mensagem}`, used by
+`WorktreeManager.create/3`; `DevAgentServer` fixes the `task_id` in its
+state **before** setting up the worktree and calls `block_task/3` on
+failure.
 
-### 3. `Engine.Dev.Monitor` — dev agents ganham o Monitor que só sessões tinham
+### 3. `Engine.Dev.Monitor` — dev agents get the Monitor that only sessions had
 
-`DevAgentState.delete/2` existia sem nenhum call site: a linha sobrevivia ao
-processo e o `DevRehydrator` ressuscitava, a cada boot, todo dev agent que já
-existiu (inclusive os mortos por crash, que voltavam sem ciclo de trabalho e
-seguravam o `agent_id` no Registry — deixando o `WorktreeCleanupWorker` inócuo,
-já que agente "vivo" nunca tem worktree órfão).
+`DevAgentState.delete/2` existed with no call site anywhere: the row
+outlived the process, and `DevRehydrator` would resurrect, on every boot,
+every dev agent that had ever existed (including the ones killed by a
+crash, which came back with no work cycle and held onto the `agent_id` in
+the Registry — leaving `WorktreeCleanupWorker` inert, since an
+agent that's "alive" never has an orphaned worktree).
 
-Novo `Engine.Dev.Monitor` espelha o `Engine.Sessions.Monitor`, com uma distinção
-que o de sessões não faz: **`:shutdown` preserva a linha** (é exatamente o caso
-que a rehydration cobre — o nó descendo), qualquer outro motivo a apaga.
+New `Engine.Dev.Monitor` mirrors `Engine.Sessions.Monitor`, with one
+distinction the session one doesn't make: **`:shutdown` preserves the
+row** (it's exactly the case rehydration covers — the node going down),
+any other reason deletes it.
 
-Os dois Monitors são **singletons**: se morrem, o engine perde de uma vez o
-monitoramento de todos os processos observados. O `delete` no banco passa a ser
-guardado (`rescue`/`catch :exit`) nos dois — uma indisponibilidade do banco não
-pode ter esse efeito. Era também a causa raiz da flakiness restante da suite.
+Both Monitors are **singletons**: if they die, the engine loses monitoring
+of all observed processes at once. The database `delete` is now guarded
+(`rescue`/`catch :exit`) in both — a database outage must not have that
+effect. It was also the root cause of the suite's remaining flakiness.
 
-### 4. O subagente da paralelização herda os tetos do agente base
+### 4. The parallelization subagent inherits the base agent's ceilings
 
-`parallelize` subia o `dev-<modulo>-2` com os defaults `nil`. Como a guarda do
-`ToolLoop` é `when is_integer(budget)`, `nil` significa **ilimitado**: o aceite de
-um clique criava um agente sem teto de gasto. A api não serve de fonte — ela não
-persiste o orçamento escolhido na ativação —, então o extra herda do estado
-durável do agente base; sem agente base, o engine recusa com 409 em vez de criar
-um agente sem teto. O `AcceptParallelizationUseCase` passa a chamar o engine
-**antes** de gravar o evento, já que o event log é imutável.
+`parallelize` used to bring up `dev-<module>-2` with `nil` defaults. Since
+the `ToolLoop`'s guard is `when is_integer(budget)`, `nil` means
+**unlimited**: accepting with a single click created an agent with no
+spending ceiling. The api can't be the source — it doesn't persist the
+budget chosen at activation —, so the extra agent inherits from the base
+agent's durable state; with no base agent, the engine refuses with a 409
+instead of creating an unbounded agent. `AcceptParallelizationUseCase` now
+calls the engine **before** writing the event, since the event log is
+immutable.
 
-### 5. `persist/1` grava `max_gate_corrections` explicitamente
+### 5. `persist/1` writes `max_gate_corrections` explicitly
 
-A coluna está na lista de `:replace` do `on_conflict`; omiti-la no upsert a zerava
-no primeiro ciclo de task. Os gates leem esse campo do banco
-(`qa_agent_server`/`secops_agent_server`), então o teto escolhido pelo usuário
-virava silenciosamente o `DEFAULT_MAX_GATE_CORRECTIONS = 3` da api.
+The column is in the `on_conflict`'s `:replace` list; omitting it in the
+upsert zeroed it out on the task's first cycle. The gates read this field
+from the database (`qa_agent_server`/`secops_agent_server`), so the
+ceiling the user chose silently turned into the api's
+`DEFAULT_MAX_GATE_CORRECTIONS = 3`.
 
-## Consequências
+## Consequences
 
-- O critério de aceite de dois devs em paralelo passa a valer em projeto novo.
-- Testes novos: 8 `ensure/3` concorrentes no mesmo projeto; `ensure/3` devolvendo
-  erro sem levantar; falha de worktree devolvendo a task; tetos sobrevivendo ao
-  `persist`; Monitor apagando no crash e preservando no `:shutdown`; herança de
-  teto na paralelização e o 409 sem agente base.
-- Suite do engine: 173 testes, 12/12 execuções verdes (linha de base: 9 falhas em
-  18 execuções).
-- `workspace_test.exs` e `workspace_files_test.exs` viram `async: false` — eram os
-  únicos módulos `async: true` mutando o `Application.env` global
-  `:project_workspaces_root`.
+- The two-devs-in-parallel acceptance criterion now holds on a new
+  project.
+- New tests: 8 concurrent `ensure/3` calls on the same project; `ensure/3`
+  returning an error without raising; a worktree failure returning the
+  task; ceilings surviving `persist`; the Monitor deleting on crash and
+  preserving on `:shutdown`; ceiling inheritance in parallelization and the
+  409 without a base agent.
+- Engine suite: 173 tests, 12/12 green runs (baseline: 9 failures across
+  18 runs).
+- `workspace_test.exs` and `workspace_files_test.exs` become
+  `async: false` — they were the only `async: true` modules mutating the
+  global `Application.env` `:project_workspaces_root`.
 
-## Não resolvido (auditoria)
+## Unresolved (audit)
 
-Fica registrado o que a auditoria achou e esta sessão não trata: a sugestão de
-paralelização ainda é `count >= 2`, não grafo de dependências (não há dependência
-entre tasks no schema); `dev_agent_states.status` nunca sai de `"working"`; a
-branch não é persistida; a trava de merge não cobre `git_merge` sem `targetBranch`
-no payload (hoje inalcançável — nenhum agente propõe `git_merge`); e o outbox só
-drena `aggregate_type = "session"`.
+What the audit found and this session doesn't address is recorded here:
+the parallelization suggestion is still `count >= 2`, not a dependency
+graph (there's no dependency between tasks in the schema);
+`dev_agent_states.status` never leaves `"working"`; the branch isn't
+persisted; the merge lock doesn't cover `git_merge` without `targetBranch`
+in the payload (unreachable today — no agent proposes `git_merge`); and
+the outbox only drains `aggregate_type = "session"`.

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SessionEvent } from '../lib/api-types';
 import {
   agruparPorOrigem,
@@ -14,15 +15,17 @@ import { Select } from './ui/Select';
 import { ClockIcon } from './ui/icons';
 import styles from './ActivityFeed.module.css';
 
-const KIND_LABEL: Record<ActivityKind, string> = {
-  commit: 'Commits',
-  pr: 'Pull requests',
-  hypothesis: 'Hipóteses',
-  session: 'Sessão',
-  permission: 'Permissões',
-  terminal: 'Comandos',
-  delegation: 'Delegações',
-  generic: 'Outros',
+// A CHAVE (namespace `activity`, `feed.kindLabel.<kind>`) resolvida no
+// render — mesmo padrão de `AgentCard.tsx#STATUS_LABEL_KEY`.
+const KIND_LABEL_KEY: Record<ActivityKind, string> = {
+  commit: 'feed.kindLabel.commit',
+  pr: 'feed.kindLabel.pr',
+  hypothesis: 'feed.kindLabel.hypothesis',
+  session: 'feed.kindLabel.session',
+  permission: 'feed.kindLabel.permission',
+  terminal: 'feed.kindLabel.terminal',
+  delegation: 'feed.kindLabel.delegation',
+  generic: 'feed.kindLabel.generic',
 };
 
 /**
@@ -56,6 +59,7 @@ export function ActivityFeed({
   hasOlder = false,
   loadingOlder = false,
 }: ActivityFeedProps) {
+  const { t } = useTranslation('activity');
   const [agentFilter, setAgentFilter] = useState<string>('');
   const [kindFilter, setKindFilter] = useState<ActivityKind | null>(null);
   // RN-177: o ruído de máquina deixa de ser invisível e passa a ser uma
@@ -128,7 +132,7 @@ export function ActivityFeed({
         {agentOptions.length > 0 && (
           <div className={styles.select}>
             <Select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)}>
-              <option value="">Todos os agentes</option>
+              <option value="">{t('feed.allAgents')}</option>
               {agentOptions.map((agent) => (
                 <option key={agent.id} value={agent.id}>
                   {agent.label}
@@ -145,7 +149,7 @@ export function ActivityFeed({
               className={[styles.chip, kindFilter === kind && styles.active].filter(Boolean).join(' ')}
               onClick={() => setKindFilter((current) => (current === kind ? null : kind))}
             >
-              {KIND_LABEL[kind]}
+              {t(KIND_LABEL_KEY[kind])}
             </button>
           ))}
           <button
@@ -153,9 +157,9 @@ export function ActivityFeed({
             className={[styles.chip, mostrarMaquina && styles.active].filter(Boolean).join(' ')}
             aria-pressed={mostrarMaquina}
             onClick={() => setMostrarMaquina((v) => !v)}
-            title="tool.call, tool.result, agent.response/delta, agent.status e context.compacted — o que o agente e o harness trocam entre si"
+            title={t('feed.machineEventsTitle')}
           >
-            Eventos de máquina
+            {t('feed.machineEvents')}
           </button>
         </div>
       </div>
@@ -163,7 +167,7 @@ export function ActivityFeed({
       {filtered.length === 0 ? (
         <div className={styles.empty}>
           <ClockIcon size={22} />
-          Nenhuma atividade por aqui ainda.
+          {t('feed.empty')}
         </div>
       ) : (
         <>
@@ -215,7 +219,7 @@ export function ActivityFeed({
       {onLoadOlder && (
         <div className={styles.pager}>
           <span className={styles.pagerCount}>
-            {filtered.length} de {events.length} carregados
+            {t('feed.pagerCount', { shown: filtered.length, total: events.length })}
           </span>
           {hasOlder && (
             <button
@@ -224,7 +228,7 @@ export function ActivityFeed({
               onClick={onLoadOlder}
               disabled={loadingOlder}
             >
-              {loadingOlder ? 'Carregando…' : 'Carregar mais antigos'}
+              {loadingOlder ? t('feed.loadingOlder') : t('feed.loadOlder')}
             </button>
           )}
         </div>

@@ -1,103 +1,105 @@
-# ADR 0098 — Limites de transporte e janela efetiva de compactação coerentes
+# ADR 0098 — Consistent transport limits and effective compaction window
 
-- **Status:** Aceito
-- **Data:** 2026-08-19
-- **Contexto:** correção do `413 request entity too large` nas PRs
-  (achado por uso real), RN-412
+- **Status:** Accepted
+- **Date:** 2026-08-19
+- **Context:** fix for `413 request entity too large` on PRs
+  (found through real use), RN-412
 
-## Contexto
+## Context
 
-O gate de QA/SecOps morria com `413 request entity too large` em PRs
-legítimas. Comentários espalhados pelo código (`apps/engine/config/runtime.exs`,
+The QA/SecOps gate was dying with `413 request entity too large` on
+legitimate PRs. Comments scattered across the code (`apps/engine/config/runtime.exs`,
 `apps/engine/lib/engine/actions/terminal_executor.ex`, `docker/docker-compose.yml`)
-atribuíam o erro ao PROVIDER de LLM. A investigação confirmou que essa
-atribuição estava errada: `Engine.Agents.FalhaDeTurno.origem({413, _})`
-já classificava a falha como `"codigo"`, não `"modelo"` — e o
-classificador estava certo, só ninguém tinha seguido a pista até o
-fim.
+attributed the error to the LLM PROVIDER. The investigation confirmed that
+attribution was wrong: `Engine.Agents.FalhaDeTurno.origem({413, _})`
+already classified the failure as `"codigo"` (code), not `"modelo"`
+(model) — the classifier was correct, nobody had just followed the
+trail to the end.
 
-A causa real tem duas pontas independentes, e as duas precisam fechar
-juntas — corrigir só uma adia o estouro, não o resolve:
+The real cause has two independent ends, and both need to close
+together — fixing only one just postpones the overflow, it doesn't
+resolve it:
 
-1. **A api nunca configurou limite de body do Express.** `NestFactory.create`
-   em `apps/api/src/main.ts` não tocava o parser JSON, então valia o
-   default do Express: **100 KB**. O Phoenix (engine) aceita corpos de
-   até 8 MB. No sentido mais pesado do transporte — engine → api,
-   especificamente `POST /internal/sessions/:sessionId/llm-turn`, que
-   recebe o HISTÓRICO INTEIRO da conversa a cada iteração do `ToolLoop`
-   — a api era o gargalo mais estreito por um fator de 80×, sem que
-   ninguém tivesse decidido isso: era ausência de configuração, não
-   escolha.
-2. **A compactação de contexto do engine era estruturalmente
-   inalcançável antes do estouro.** `Engine.Harness.ContextManager.Default`
-   decide compactar quando a estimativa de tokens ultrapassa
-   `threshold * context_window`. Dois defeitos empurravam esse gatilho
-   para muito depois do limite de transporte:
-   - `estimate/1` somava só o campo `content` das mensagens.
-     Mensagens `assistant` com `toolCalls` (o formato de uma chamada de
-     ferramenta) têm `content` vazio — os argumentos da tool call, que
-     SÃO bytes reais no corpo HTTP, contavam como ~zero tokens.
-   - A janela de compactação usava só `context_window` — 128.000
-     tokens nos cinco agentes de gate/dev (`qa_automacao_agent.ex`,
+1. **The api never configured an Express body limit.** `NestFactory.create`
+   in `apps/api/src/main.ts` never touched the JSON parser, so the
+   Express default applied: **100 KB**. Phoenix (engine) accepts bodies
+   up to 8 MB. On the heaviest leg of the transport — engine → api,
+   specifically `POST /internal/sessions/:sessionId/llm-turn`, which
+   receives the ENTIRE conversation history on every `ToolLoop`
+   iteration — the api was the narrowest bottleneck by a factor of 80×,
+   without anyone having decided this: it was an absence of
+   configuration, not a choice.
+2. **The engine's context compaction was structurally unreachable
+   before the overflow.** `Engine.Harness.ContextManager.Default`
+   decides to compact when the token estimate exceeds
+   `threshold * context_window`. Two defects pushed that trigger far
+   past the transport limit:
+   - `estimate/1` only summed the `content` field of messages.
+     `assistant` messages with `toolCalls` (the format of a tool call)
+     have empty `content` — the tool call arguments, which ARE real
+     bytes in the HTTP body, counted as ~zero tokens.
+   - The compaction window used only `context_window` — 128,000
+     tokens across the five gate/dev agents (`qa_automacao_agent.ex`,
      `qa_performance_seguranca_agent.ex`, `qa_estrategia_agent.ex`,
-     `appsec_agent.ex`, `dev_agent_server.ex`). Com `threshold: 0.7`,
-     isso dá compactação em ~350 KB de payload estimado — bem depois
-     de qualquer limite de transporte razoável, e pior ainda quando a
-     estimativa em si já estava subcontando.
+     `appsec_agent.ex`, `dev_agent_server.ex`). With `threshold: 0.7`,
+     that puts compaction at ~350 KB of estimated payload — well past
+     any reasonable transport limit, and worse still when the estimate
+     itself was already undercounting.
 
-Com um gate de 60 iterações (teto de agentes de execução/gate) e três
-a quatro tool results de 32 KiB (o teto INDIVIDUAL já fechado pela
-RN-150), o corpo acumulado ultrapassava 100 KB muito antes de a
-compactação sequer considerar agir.
+With a gate at 60 iterations (the ceiling for execution/gate agents)
+and three to four 32 KiB tool results (the INDIVIDUAL cap already
+closed by RN-150), the accumulated body exceeded 100 KB long before
+compaction would even consider acting.
 
-## Decisão
+## Decision
 
-**As duas pontas fecham na mesma correção, deliberadamente juntas:**
+**Both ends close in the same fix, deliberately together:**
 
-1. `apps/api/src/main.ts` passa a configurar explicitamente o limite
-   do parser JSON (`app.useBodyParser('json', { limit })`), lido de
-   `API_JSON_BODY_LIMIT` com default `10mb` — folga sobre os 8 MB que
-   o Phoenix já aceita, sem exigir novo deploy se o teto do engine
-   mudar.
-2. `Engine.Harness.ContextManager.Default` ganha:
-   - `estimate/1` conta `content` de TODA mensagem MAIS a serialização
-     JSON de `toolCalls` de mensagens `assistant` — a heurística de
-     bytes-por-token é a MESMA do tokenizer aproximado
-     (`Engine.Harness.Tokenizer.bytes_per_token/0`, nova função
-     pública, para não duplicar a constante).
-   - A janela EFETIVA de compactação vira `min(context_window,
-     teto_de_transporte)`, onde o teto de transporte é UMA config nova
-     (`transport_max_body_bytes`, default 8 MiB — o teto do PRÓPRIO
-     transporte do engine, não replicado nos cinco arquivos de agente,
-     que continuam declarando `context_window: 128_000` porque isso
-     descreve o MODELO, não o transporte).
-   - O corte entre mensagens antigas (sumarizadas) e recentes
-     (preservadas) passa a respeitar FRONTEIRA DE ITERAÇÃO do
-     `ToolLoop` (`group_by_iteration/1`) — uma mensagem `assistant` com
-     `toolCalls` e os `role: "tool"` que a respondem viajam sempre
-     juntas para o mesmo lado do corte. Cortar no meio quebraria o
-     protocolo de tool-use do provider (resultado de ferramenta sem a
-     chamada correspondente no histórico).
+1. `apps/api/src/main.ts` now explicitly configures the JSON parser
+   limit (`app.useBodyParser('json', { limit })`), read from
+   `API_JSON_BODY_LIMIT` with default `10mb` — headroom over the 8 MB
+   that Phoenix already accepts, with no redeploy required if the
+   engine's cap changes.
+2. `Engine.Harness.ContextManager.Default` gains:
+   - `estimate/1` now counts `content` of EVERY message PLUS the JSON
+     serialization of `toolCalls` on `assistant` messages — the
+     bytes-per-token heuristic is the SAME one the approximate
+     tokenizer uses (`Engine.Harness.Tokenizer.bytes_per_token/0`, a
+     new public function, to avoid duplicating the constant).
+   - The EFFECTIVE compaction window becomes `min(context_window,
+     transport_ceiling)`, where the transport ceiling is a NEW config
+     (`transport_max_body_bytes`, default 8 MiB — the cap of the
+     engine's OWN transport, not replicated across the five agent
+     files, which keep declaring `context_window: 128_000` because
+     that describes the MODEL, not the transport).
+   - The cut between old messages (summarized) and recent ones
+     (preserved) now respects the `ToolLoop`'s ITERATION BOUNDARY
+     (`group_by_iteration/1`) — an `assistant` message with `toolCalls`
+     and the `role: "tool"` messages that answer it always travel
+     together to the same side of the cut. Cutting through the middle
+     would break the provider's tool-use protocol (a tool result with
+     no matching call in the history).
 
-A regra geral que esta ADR registra: **a compactação deve disparar
-ANTES do corpo estourar o limite HTTP real, não antes do modelo
-"esquecer" a janela dele.** Um teto de transporte que só existe
-implicitamente (o default de uma lib) não é um teto — é uma falha
-esperando o payload certo.
+The general rule this ADR records: **compaction must trigger BEFORE
+the body overflows the real HTTP limit, not before the model
+"forgets" its window.** A transport ceiling that only exists implicitly
+(a library's default) isn't a ceiling — it's a failure waiting for the
+right payload.
 
-## Consequências
+## Consequences
 
-- O valor de `transport_max_body_bytes` (8 MiB) é config declarada, não
-  calibrada contra tráfego real — mesma régua de honestidade que os
-  pesos da busca híbrida (RAG) e os tetos de `search_workspace`
-  (RN-150) já seguem: ponto de partida ajustável, não número definitivo.
-- Subir só o limite da api sem corrigir a estimativa do engine (ou
-  vice-versa) reintroduz o defeito sob outra forma: ou o corpo volta a
-  crescer sem freio até um teto maior, ou a compactação passa a agir
-  cedo demais e resumir contexto que ainda caberia no transporte. As
-  duas pontas nasceram no mesmo commit.
-- `dev.awaiting_gate` como estado do dev agent deveria ficar mais raro
-  na prática (o gate não morre mais por 413 em payload legítimo), mas
-  a RN-412 também estende `DEV_PENDING_TYPES` para segurar a sessão
-  nesse estado — defesa em profundidade, não dependência de que este
-  ADR feche 100% dos casos de gate lento/travado por outro motivo.
+- The value of `transport_max_body_bytes` (8 MiB) is declared config,
+  not calibrated against real traffic — the same honesty rule the
+  hybrid search (RAG) weights and the `search_workspace` caps
+  (RN-150) already follow: an adjustable starting point, not a
+  definitive number.
+- Raising only the api's limit without fixing the engine's estimate
+  (or vice versa) reintroduces the defect in another form: either the
+  body keeps growing unchecked up to a bigger ceiling, or compaction
+  starts acting too early and summarizes context that would still fit
+  in the transport. Both ends were born in the same commit.
+- `dev.awaiting_gate` as a dev agent state should get rarer in
+  practice (the gate no longer dies to a 413 on a legitimate payload),
+  but RN-412 also extends `DEV_PENDING_TYPES` to hold the session in
+  that state — defense in depth, not a dependency on this ADR closing
+  100% of the gate-slow/stuck cases for any other reason.

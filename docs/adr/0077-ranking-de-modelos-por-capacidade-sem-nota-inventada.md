@@ -1,108 +1,110 @@
-# ADR 0077 — Ranking de modelos por capacidade, sem nota inventada
+# ADR 0077 — Model ranking by capability, with no invented score
 
-- **Status:** aceito
-- **Data:** 2026-08-15
-- **Contexto:** PROGRAMA 28, Onda 2, frente H2 — handoff de design,
-  Configurações item 5 ("Melhores modelos por capacidade") e item 6
-  ("Modelos por agente", dropdown com badge "ideal")
-- **Estende:** [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)
-  (capability só declarada quando provada), [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
-  (curadoria sempre manual), [ADR 0051](0051-facetas-de-capability-e-curadoria-por-uso.md)
-  (`uses` como curadoria de workspace, não capability — [RN-057](../business-rules.md#rn-057))
+- **Status:** accepted
+- **Date:** 2026-08-15
+- **Context:** PROGRAM 28, Wave 2, front H2 — design handoff, Settings item 5
+  ("Best models by capability") and item 6 ("Models by agent", dropdown with
+  an "ideal" badge)
+- **Extends:** [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+  (capability declared only when proven), [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+  (curation is always manual), [ADR 0051](0051-facetas-de-capability-e-curadoria-por-uso.md)
+  (`uses` as workspace curation, not capability — [RN-057](../business-rules.md#rn-057))
 
-## Contexto
+## Context
 
-O handoff (`design_handoff_brabo/README.md`, seção 7) pede duas coisas que a
-tela de Configurações não tinha:
+The handoff (`design_handoff_brabo/README.md`, section 7) asks for two things
+the Settings screen didn't have:
 
-1. Uma tabela de RANKING — "Melhores modelos por capacidade" — com colunas
-   capacidade, recomendado, alternativa, **score** e "usado por". O exemplo do
-   mock mostra números como "código → claude-sonnet-4 / qwen2.5-coder:14b
-   (9.4)".
-2. Um badge verde **ideal** no dropdown de `ModelPicker`, "quando o modelo
-   cobre TODAS as capacidades exigidas pelo agente".
+1. A RANKING table — "Best models by capability" — with columns capability,
+   recommended, alternative, **score**, and "used by". The mock example shows
+   numbers like "code → claude-sonnet-4 / qwen2.5-coder:14b (9.4)".
+2. A green **ideal** badge in the `ModelPicker` dropdown, "when the model
+   covers ALL the capabilities the agent requires".
 
-As duas pedem o mesmo tipo de dado que o produto não tem, e a investigação
-antes de codar confirmou isso por DOIS caminhos independentes.
+Both ask for the same kind of data the product doesn't have, and the
+investigation before coding confirmed this through TWO independent paths.
 
-### O score é fictício
+### The score is fictitious
 
-"9.4", "9.1", "8.7"... são números do MOCK, sem correspondência em nenhum
-catálogo de provider nem em nenhuma métrica que o produto calcule. Nenhum
-provider publica "qualidade de código" e o produto não mede taxa de acerto,
-satisfação ou qualquer proxy disso. Copiar os números do mock para produção
-seria exibir dado fabricado como se fosse medido — o mesmo "palpite vestido
-de dado" que o [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)
-proíbe para capability de MODELO, agora sobre qualidade.
+"9.4", "9.1", "8.7"... are numbers from the MOCK, with no correspondence in
+any provider catalog nor in any metric the product computes. No provider
+publishes "code quality" and the product doesn't measure success rate,
+satisfaction, or any proxy for that. Copying the mock's numbers into
+production would mean showing fabricated data as if it were measured — the
+same "guess dressed as data" that [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+forbids for MODEL capability, now applied to quality.
 
-### "Capacidades exigidas pelo agente" não existe no domínio
+### "Capabilities the agent requires" doesn't exist in the domain
 
-A busca no código (web e api) não achou NENHUMA estrutura que amarre um
-`AgentKey` a um conjunto de capacidades exigidas. Mais que isso: o próprio
-`ModelsSection` (`ProjectSettingsTab.tsx`) já tinha decidido isso antes desta
-frente — a coluna do desenho era "Agente · capacidades" e o código a renomeou
-para só "Agente", com o comentário "as capacidades exigidas por agente não
-existem no domínio, e prometer uma coluna que não tem conteúdo é pior que não
-prometer". Inventar uma tabela `AgentKey → UsoDeModelo[]` agora, mesmo
-"declarada" à mão como `color`/`icon`/`initials` em `agents.ts`, contradiria
-essa decisão sem revogá-la — e é exatamente o tipo de classificação de
-produto que o CLAUDE.md reserva para decisão explícita do usuário, com ADR.
+The code search (web and api) found NO structure at all binding an
+`AgentKey` to a set of required capabilities. More than that: `ModelsSection`
+(`ProjectSettingsTab.tsx`) itself had already decided this before this front
+— the column in the design was "Agent · capabilities" and the code renamed
+it to just "Agent", with the comment "the capabilities required per agent
+don't exist in the domain, and promising a column with no content is worse
+than not promising one". Inventing an `AgentKey → UsoDeModelo[]` table now,
+even "declared" by hand like `color`/`icon`/`initials` in `agents.ts`, would
+contradict that decision without revoking it — and it's exactly the kind of
+product classification CLAUDE.md reserves for an explicit user decision, with
+an ADR.
 
-Há uma segunda barreira, estrutural, que fecha a questão mesmo se a primeira
-não existisse: o `ModelPicker` usado para vincular modelo a um agente lê
-`GET /projects/:projectId/models` (papel `viewer`), que devolve `Model` PURO.
-A curadoria (`uses`, ADR 0051) só existe em `ModelComCuradoria`, servida por
-`GET /workspaces/:workspaceId/models/catalog` — que exige `maintainer`. Pintar
-um badge que depende de `uses` nesse picker exigiria ou (a) elevar o nível de
-acesso do picker de agente para `maintainer` (recuo de RBAC que ninguém
-pediu), ou (b) abrir uma rota nova que vaze `uses` num nível mais baixo — as
-duas são mudança de fronteira de acesso, decisão de produto por si só.
+There's a second barrier, structural, that closes the question even if the
+first didn't exist: the `ModelPicker` used to bind a model to an agent reads
+`GET /projects/:projectId/models` (role `viewer`), which returns a plain
+`Model`. Curation (`uses`, ADR 0051) only exists on `ModelComCuradoria`,
+served by `GET /workspaces/:workspaceId/models/catalog` — which requires
+`maintainer`. Painting a badge that depends on `uses` in that picker would
+require either (a) raising the agent picker's access level to `maintainer`
+(an RBAC step-back nobody asked for), or (b) opening a new route that leaks
+`uses` at a lower level — both are a change to the access boundary, a
+product decision in its own right.
 
-## Decisão
+## Decision
 
-**O badge "ideal" NÃO é construído.** Fica documentado em
-`apps/web/src/components/ModelPicker.tsx`, no lugar onde o handoff o pedia,
-com as duas razões acima. Não é regressão: o badge nunca existiu. É pendência
-declarada, como as que a FASE 26 já deixou para blame/PRs antes da 26b.
+**The "ideal" badge is NOT built.** It's documented in
+`apps/web/src/components/ModelPicker.tsx`, at the spot where the handoff
+asked for it, with the two reasons above. It isn't a regression: the badge
+never existed. It's a declared pending item, like the ones PHASE 26 already
+left for blame/PRs before 26b.
 
-**O bloco "Melhores modelos por capacidade" É construído, com dois sinais
-REAIS e nenhuma nota:**
+**The "Best models by capability" block IS built, with two REAL signals and
+no score:**
 
-| coluna do handoff | o que a tela mostra agora | de onde vem |
+| handoff column | what the screen shows now | where it comes from |
 | --- | --- | --- |
-| score | *(removida)* | não existe dado — ver acima |
-| recomendado / alternativa | os dois primeiros modelos, entre os que a curadoria (`uses`) marcou para aquela capacidade | `workspace_models.uses` (ADR 0051), nunca calculado |
-| usado por | contagem de agentes DESTE projeto cujo binding vigente resolve para aquele modelo | a mesma cascata que `ModelsSection` já lê (`getAgentModelBinding` por agente) |
+| score | *(removed)* | no data exists — see above |
+| recommended / alternative | the top two models, among the ones curation (`uses`) marked for that capability | `workspace_models.uses` (ADR 0051), never computed |
+| used by | count of agents in THIS project whose current binding resolves to that model | the same cascade `ModelsSection` already reads (`getAgentModelBinding` per agent) |
 
-O desempate entre candidatos é por CUSTO (`inputPricePerMillionMicros`
-ascendente) — real, do catálogo, nunca proxy de qualidade. A ORDEM de
-prioridade é uso real primeiro (quantos agentes do projeto já resolvem para
-aquele modelo), custo em segundo: "o que o time já escolheu" é o sinal mais
-honesto disponível sem inventar nota. Capacidade sem nenhum modelo curado
-mostra "sem cobertura curada" — nunca some a linha, mesmo padrão de
-`fallbackDe`/coluna Origem em `ModelsSection`.
+Tie-breaking between candidates is by COST (`inputPricePerMillionMicros`
+ascending) — real, from the catalog, never a quality proxy. The priority
+ORDER is real usage first (how many agents in the project already resolve to
+that model), cost second: "what the team already chose" is the most honest
+signal available without inventing a score. A capability with no curated
+model shows "no curated coverage" — the line never disappears, same pattern
+as `fallbackDe`/the Origin column in `ModelsSection`.
 
-A seção (`MelhoresModelosPorCapacidadeSection`,
-`apps/web/src/routes/ProjectSettingsTab.tsx`) lê
-`GET /workspaces/:workspaceId/models/catalog` — a mesma rota de
-`ModelCatalogSection`, e por isso herda a MESMA visibilidade (`maintainer`):
-não é uma tela nova com regra de acesso própria, é a mesma pergunta
-("como este workspace curou o catálogo?") respondida de outro jeito.
+The section (`MelhoresModelosPorCapacidadeSection`,
+`apps/web/src/routes/ProjectSettingsTab.tsx`) reads
+`GET /workspaces/:workspaceId/models/catalog` — the same route as
+`ModelCatalogSection`, and thus inherits the SAME visibility (`maintainer`):
+this isn't a new screen with its own access rule, it's the same question
+("how did this workspace curate the catalog?") answered a different way.
 
-## Consequências
+## Consequences
 
-- Quem não é `maintainer` do workspace não vê esta seção — igual ao
-  `CatalogoDeModelos` que já existia. Não é regra nova.
-- "Recomendado" muda quando o time muda de modelo (uso real) ou quando o
-  owner reprecifica manualmente (`manualPricing`) — nunca por conta própria:
-  não há job recalculando nada, é derivado na leitura.
-- Se um dia o produto ganhar uma métrica real de qualidade (taxa de sucesso
-  de proposed_action por modelo, por exemplo), ela entra como COLUNA NOVA,
-  não substitui "usado por"/custo — as duas perguntas ("o que o time usa" e
-  "o que funciona melhor") são diferentes, mesmo argumento do
-  [ADR 0063](0063-duas-audiencias-para-o-mesmo-gasto.md) para não fundir
-  perguntas diferentes numa métrica só.
-- O badge "ideal" continua no backlog de
-  `docs/explanation/backlog.md`-equivalente só se o usuário decidir que
-  "capacidades exigidas por agente" vale a pena existir como dado — o que é
-  decisão de produto, não retomada automática desta frente.
+- Anyone who isn't a workspace `maintainer` doesn't see this section — same
+  as the existing `CatalogoDeModelos`. Not a new rule.
+- "Recommended" changes when the team switches models (real usage) or when
+  the owner manually re-prices (`manualPricing`) — never on its own: there's
+  no job recomputing anything, it's derived at read time.
+- If the product ever gains a real quality metric someday (proposed_action
+  success rate by model, for example), it comes in as a NEW COLUMN, not a
+  replacement for "used by"/cost — the two questions ("what does the team
+  use" and "what performs better") are different, same argument as
+  [ADR 0063](0063-duas-audiencias-para-o-mesmo-gasto.md) for not merging
+  different questions into a single metric.
+- The "ideal" badge stays in the `docs/explanation/backlog.md`-equivalent
+  backlog only if the user decides "capabilities required per agent" is
+  worth existing as data — which is a product decision, not an automatic
+  resumption of this front.

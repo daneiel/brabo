@@ -1,7 +1,39 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
 import { NotificationBell, type NotificationGroup } from './NotificationBell';
 import type { SessionEvent } from '../lib/api-types';
+import shellEn from '../locales/en/shell.json';
+import shellPtBR from '../locales/pt-BR/shell.json';
+
+/**
+ * Instância REAL de i18next, própria do teste (mesmo padrão de
+ * `AccountPage.test.tsx`) — `NotificationBell.tsx` só usa `useTranslation`,
+ * sem provider ela cairia no fallback interno do react-i18next. `pt-BR`
+ * trocado de propósito: as asserções abaixo continuam literais em
+ * português.
+ */
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      en: { shell: shellEn },
+      'pt-BR': { shell: shellPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'en',
+    defaultNS: 'shell',
+    ns: ['shell'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
+function comProvider(children: React.ReactNode) {
+  return <I18nextProvider i18n={novaInstanciaI18n()}>{children}</I18nextProvider>;
+}
 
 /**
  * O sino mostra a JANELA que a api escolheu, na ORDEM em que ela chegou
@@ -41,13 +73,15 @@ function grupo(overrides: Partial<NotificationGroup> = {}): NotificationGroup {
 function renderAberto(groups: NotificationGroup[], onMarkRead = vi.fn()) {
   const total = groups.reduce((s, g) => s + g.unreadCount, 0);
   render(
-    <NotificationBell
-      groups={groups}
-      unreadCount={total}
-      open
-      onOpenChange={() => {}}
-      onMarkRead={onMarkRead}
-    />,
+    comProvider(
+      <NotificationBell
+        groups={groups}
+        unreadCount={total}
+        open
+        onOpenChange={() => {}}
+        onMarkRead={onMarkRead}
+      />,
+    ),
   );
   return onMarkRead;
 }
@@ -55,13 +89,15 @@ function renderAberto(groups: NotificationGroup[], onMarkRead = vi.fn()) {
 describe('NotificationBell', () => {
   it('renderiza os eventos NA ORDEM recebida, sem reordenar', () => {
     const { container } = render(
-      <NotificationBell
-        groups={[grupo()]}
-        unreadCount={3}
-        open
-        onOpenChange={() => {}}
-        onMarkRead={() => {}}
-      />,
+      comProvider(
+        <NotificationBell
+          groups={[grupo()]}
+          unreadCount={3}
+          open
+          onOpenChange={() => {}}
+          onMarkRead={() => {}}
+        />,
+      ),
     );
 
     const ids = [...container.querySelectorAll('[id^="event-evt-"]')].map(
@@ -107,13 +143,15 @@ describe('NotificationBell', () => {
 
   it('gaveta fechada não renderiza conteúdo nenhum', () => {
     render(
-      <NotificationBell
-        groups={[grupo()]}
-        unreadCount={3}
-        open={false}
-        onOpenChange={() => {}}
-        onMarkRead={() => {}}
-      />,
+      comProvider(
+        <NotificationBell
+          groups={[grupo()]}
+          unreadCount={3}
+          open={false}
+          onOpenChange={() => {}}
+          onMarkRead={() => {}}
+        />,
+      ),
     );
 
     expect(screen.queryByText('Notificações')).toBeNull();

@@ -1,127 +1,136 @@
-# ADR 0070 — Observabilidade no Compose local: métrica e log, sem trace
+# ADR 0070 — Observability in the local Compose: metric and log, no trace
 
-- **Status:** aceito
-- **Data:** 2026-08-14
-- **Estende:** [ADR 0026](0026-fase5-observabilidade-e-graceful-shutdown.md),
+- **Status:** accepted
+- **Date:** 2026-08-14
+- **Extends:** [ADR 0026](0026-fase5-observabilidade-e-graceful-shutdown.md),
   [ADR 0035](0035-observabilidade-legivel-e-trace-sem-coletor.md)
 
-## Contexto
+## Context
 
-O ADR 0026 montou observabilidade completa — Prometheus, Loki, Tempo, Alloy,
-OpenTelemetry Collector e Grafana — **só para Kubernetes**. O critério de aceite
-daquela sessão dizia "no Grafana local", e "local" ali significava o cluster
-k3d, não o Docker Compose.
+ADR 0026 set up full observability — Prometheus, Loki, Tempo, Alloy,
+OpenTelemetry Collector, and Grafana — **only for Kubernetes**. That
+session's acceptance criteria said "in the local Grafana", and "local" there
+meant the k3d cluster, not Docker Compose.
 
-A consequência prática: quem desenvolve com `pnpm dev` tem a instrumentação
-inteira funcionando — a api expõe 102 séries em `/metrics`, o engine expõe
-`oban_queue_depth` e `brabo_engine_sessions_hosted`, os três serviços carimbam
-`trace_id` no log — e **nada disso é observável**. Para ver um painel era
-preciso subir um cluster, que por desenho não coexiste com o `pnpm dev` (as duas
-publicam nas mesmas portas, ADR 0025).
+The practical consequence: whoever develops with `pnpm dev` has the entire
+instrumentation working — the api exposes 102 series at `/metrics`, the
+engine exposes `oban_queue_depth` and `brabo_engine_sessions_hosted`, all
+three services stamp `trace_id` in the log — and **none of it is
+observable**. To see a dashboard you had to spin up a cluster, which by
+design doesn't coexist with `pnpm dev` (the two publish on the same ports,
+ADR 0025).
 
-## Decisão
+## Decision
 
-### 1. Um overlay opt-in, não parte do `pnpm dev`
+### 1. An opt-in overlay, not part of `pnpm dev`
 
-`docker/docker-compose.observability.yml` sobe Prometheus, Loki, Alloy e
-Grafana. Não entra no `pnpm dev` porque são quatro containers a mais numa
-máquina que já roda Postgres, Ollama e três apps: quem não está investigando
-nada não deve pagar por eles.
+`docker/docker-compose.observability.yml` spins up Prometheus, Loki, Alloy,
+and Grafana. It doesn't enter `pnpm dev` because that's four more containers
+on a machine already running Postgres, Ollama, and three apps: whoever isn't
+investigating anything shouldn't pay for them.
 
-### 2. Métrica e log. Trace fica de fora, e isso é decisão
+### 2. Metric and log. Trace is left out, and that's a decision
 
-O ADR 0026 (decisão 9) estabeleceu que trace passa por um OpenTelemetry
-Collector, e que métrica e log **não** passam — métrica é scrape, log é lido do
-stdout. Este overlay implementa as duas que não precisam de coletor.
+ADR 0026 (decision 9) established that trace goes through an OpenTelemetry
+Collector, and that metric and log **don't** — metric is scrape, log is read
+from stdout. This overlay implements the two that don't need a collector.
 
-Trace exigiria Collector + Tempo, e o ADR 0035 já separou instrumentar de
-exportar justamente para que a ausência de endpoint fosse o estado normal em
-desenvolvimento. Por isso o overlay **não** define
-`OTEL_EXPORTER_OTLP_ENDPOINT`: apontar para um endereço inexistente produziria
-erro de exportação a cada turno, que é pior que não exportar.
+Trace would require Collector + Tempo, and ADR 0035 already separated
+instrumenting from exporting precisely so that the absence of an endpoint
+would be the normal state in development. That's why the overlay does
+**not** define `OTEL_EXPORTER_OTLP_ENDPOINT`: pointing to a nonexistent
+address would produce an export error on every turn, which is worse than
+not exporting at all.
 
-O `trace_id` continua no log, e continua sendo o que correlaciona api e engine.
+`trace_id` stays in the log, and it's still what correlates api and engine.
 
-### 3. Os artefatos são os MESMOS do cluster, não uma cópia
+### 3. The artifacts are the SAME ones from the cluster, not a copy
 
-O Compose monta `deploy/k8s/observability/dashboards/` diretamente, e os UIDs
-de datasource (`brabo-prometheus`, `brabo-loki`) são idênticos aos do
-`grafana-values.yaml`. Dashboard referencia datasource por UID: divergir aqui
-obrigaria a mais uma cópia dos JSON, e cópia de dashboard diverge no primeiro
-painel que alguém corrige de um lado só.
+Compose mounts `deploy/k8s/observability/dashboards/` directly, and the
+datasource UIDs (`brabo-prometheus`, `brabo-loki`) are identical to the ones
+in `grafana-values.yaml`. A dashboard references its datasource by UID:
+diverging here would force yet another copy of the JSON files, and a
+dashboard copy diverges the first time someone fixes just one panel on one
+side.
 
-Pelo mesmo motivo o scrape do Prometheus emite os rótulos `app` e `pod` que os
-dashboards do cluster agrupam, e o coletor de log emite o rótulo `app`
-(`api`/`engine`/`web`) que o Alloy do cluster deriva de
+For the same reason, Prometheus's scrape emits the `app` and `pod` labels
+that the cluster's dashboards group by, and the log collector emits the
+`app` label (`api`/`engine`/`web`) that the cluster's Alloy derives from
 `app.kubernetes.io/name`.
 
-O dashboard novo desta entrega — **Brabo — logs**, com seletor de serviço e de
-nível — nasce no mesmo diretório, então vale nos dois ambientes.
+The new dashboard in this delivery — **Brabo — logs**, with a service and
+level selector — is born in the same directory, so it holds in both
+environments.
 
-### 4. O parsing do log é por regex, e não por `stage.json`
+### 4. Log parsing is by regex, not by `stage.json`
 
-No cluster o Alloy faz `stage.json`, porque em produção o pino escreve uma linha
-de JSON por evento. Em desenvolvimento o `pino-pretty` desenha a árvore de
-camadas legível, e o engine usa o `PrettyLogFormatter` — decisão deliberada, e
-boa, que não se troca para agradar o coletor.
+In the cluster, Alloy does `stage.json`, because in production pino writes
+one JSON line per event. In development `pino-pretty` draws the readable
+layer tree, and the engine uses `PrettyLogFormatter` — a deliberate, and
+good, decision that doesn't get swapped just to please the collector.
 
-Então o coletor é que se adapta: limpa ANSI, extrai o nível dos dois formatos
-(pino e Elixir) e normaliza a caixa. O que **não** muda são os rótulos, que são
-o contrato com o dashboard.
+So the collector is the one that adapts: it strips ANSI, extracts the level
+from both formats (pino and Elixir), and normalizes the case. What **doesn't**
+change are the labels, which are the contract with the dashboard.
 
-### 5. Só as três aplicações vão para o Loki
+### 5. Only the three applications go to Loki
 
-`api`, `engine` e `web`. Postgres e Ollama são infraestrutura de terceiros com
-log volumoso, e quem precisa deles tem `docker compose logs`.
+`api`, `engine`, and `web`. Postgres and Ollama are third-party
+infrastructure with high-volume logs, and whoever needs them has
+`docker compose logs`.
 
-O stack de observabilidade fica de fora por um motivo mais duro: ele roda no
-MESMO projeto do Compose, então sem o filtro o Loki ingeriria o próprio log — e
-o log dessa ingestão — num laço que se alimenta sozinho.
+The observability stack itself is left out for a stronger reason: it runs on
+the SAME Compose project, so without the filter Loki would ingest its own
+log — and the log of that ingestion — in a self-feeding loop.
 
-### 6. `trace_id` é metadado estruturado, nunca rótulo
+### 6. `trace_id` is structured metadata, never a label
 
-Mesma decisão do cluster, e o motivo é cardinalidade: um rótulo por trace
-explode o índice do Loki. Isso exige `allow_structured_metadata: true` e schema
-`v13`, que a config padrão da imagem não traz — daí o
-`docker/observability/loki.yml` próprio.
+Same decision as in the cluster, and the reason is cardinality: one label
+per trace explodes Loki's index. This requires
+`allow_structured_metadata: true` and schema `v13`, which the image's
+default config doesn't ship — hence the dedicated
+`docker/observability/loki.yml`.
 
-## Consequências
+## Consequences
 
-- Métrica e log ficam observáveis sem cluster, e o mesmo dashboard serve os dois
-  ambientes.
-- **O Grafana local e o do cluster disputam a porta 3001.** É a mesma
-  incompatibilidade que já existe entre `pnpm dev` e `make deploy-local`, pelo
-  mesmo motivo, e não se resolve mudando a porta de um dos dois — resolve-se não
-  rodando os dois.
-- O Alloy lê o socket do Docker. É montado somente-leitura, e é dev.
-- Painel de custo/tokens nasce vazio num banco sem tráfego: aquelas métricas têm
-  rótulo, e no `prom-client` uma métrica rotulada não emite série antes da
-  primeira observação. Está registrado no runbook para não virar suspeita de
-  painel quebrado.
+- Metric and log become observable without a cluster, and the same
+  dashboard serves both environments.
+- **The local Grafana and the cluster's compete for port 3001.** It's the
+  same incompatibility that already exists between `pnpm dev` and
+  `make deploy-local`, for the same reason, and it's not solved by changing
+  one of the two ports — it's solved by not running both.
+- Alloy reads the Docker socket. It's mounted read-only, and it's dev-only.
+- The cost/token dashboard is born empty on a database with no traffic:
+  those metrics have labels, and in `prom-client` a labeled metric doesn't
+  emit a series before the first observation. Documented in the runbook so
+  it doesn't get mistaken for a broken panel.
 
-## Três modos de falha silenciosa que custaram tempo e viraram comentário no código
+## Three silent-failure modes that cost time and became code comments
 
-Valem registro porque a assinatura dos três é a mesma — **configuração válida,
-zero erro no log, dado errado no painel**:
+They're worth recording because the three share the same signature —
+**valid configuration, zero error in the log, wrong data on the panel**:
 
-1. **`stage.replace` sem grupo de captura.** Ele substitui os grupos, não o
-   trecho casado. Sem parêntese a regex casa e nada acontece, e o ANSI vaza para
-   o painel.
-2. **Escape de `\x1b` em string do River.** O River processa escapes antes de a
-   regex compilar, então quantas barras invertidas escrever vira adivinhação. A
-   classe POSIX `[[:cntrl:]]` não depende dessa camada.
-3. **Template do Go com chave ausente** renderiza o texto literal `<NO VALUE>`,
-   que virou um valor de nível no seletor do dashboard. O `else` explícito
-   (`OUTRO`) é o que fecha a cardinalidade.
+1. **`stage.replace` without a capture group.** It replaces the groups, not
+   the matched span. Without parentheses the regex matches and nothing
+   happens, and ANSI leaks into the panel.
+2. **Escaping `\x1b` in a River string.** River processes escapes before the
+   regex compiles, so how many backslashes to write becomes guesswork. The
+   POSIX class `[[:cntrl:]]` doesn't depend on that layer.
+3. **A Go template with a missing key** renders the literal text
+   `<NO VALUE>`, which ended up as a level value in the dashboard's
+   selector. The explicit `else` (`OUTRO`) is what closes off the
+   cardinality.
 
-## Alternativas descartadas
+## Discarded alternatives
 
-- **Pôr os quatro serviços no `docker-compose.yml`**: sempre ligados, custo para
-  todo mundo, benefício para quem está investigando.
-- **Copiar os dashboards para `docker/observability/`**: duas cópias que
-  divergem no primeiro painel corrigido de um lado só.
-- **Fazer o log de desenvolvimento virar JSON** para reusar o `stage.json` do
-  cluster: trocaria a legibilidade do dia a dia de quem desenvolve pela
-  conveniência do coletor. O coletor é que se adapta.
-- **Subir Tempo e Collector junto**: escopo próprio, e o ADR 0035 já estabeleceu
-  que não exportar é o estado normal em desenvolvimento.
+- **Put the four services in `docker-compose.yml`**: always on, a cost for
+  everyone, a benefit for whoever is investigating.
+- **Copy the dashboards to `docker/observability/`**: two copies that
+  diverge the first time a panel gets fixed on one side only.
+- **Make the development log turn into JSON** to reuse the cluster's
+  `stage.json`: it would trade the day-to-day readability of whoever is
+  developing for the collector's convenience. The collector is the one that
+  adapts.
+- **Bring up Tempo and the Collector as well**: its own scope, and ADR 0035
+  already established that not exporting is the normal state in
+  development.

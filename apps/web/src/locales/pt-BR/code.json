@@ -1,0 +1,159 @@
+{
+  "projectCodeTab": {
+    "loadProjectError": "Não consegui carregar este projeto.",
+    "checkGateError": "Não consegui verificar se a aba Code está liberada.",
+    "blocked": {
+      "title": "A aba Code ainda não está liberada",
+      "description": "O Arquiteto ainda não decidiu qual imagem de container sobe para este projeto. Sem essa decisão o container não sobe, e é ele que isola a execução — não há onde rodar o código que esta aba mostraria.",
+      "note": "Assim que o Arquiteto emitir a decisão de imagem, esta aba libera sozinha — não é preciso recarregar a página manualmente."
+    }
+  },
+  "bottomPanel": {
+    "tablistLabel": "Painel inferior",
+    "tabs": {
+      "terminal": "Terminal",
+      "problems": "Problemas",
+      "diff": "Diff de PR",
+      "output": "Saída"
+    },
+    "status": {
+      "provisioning": "Provisionando",
+      "running": "Rodando",
+      "stopped": "Parado",
+      "failed": "Falhou",
+      "removed": "Removido"
+    },
+    "checkStateError": "Não consegui consultar o estado do container.",
+    "since": "desde",
+    "neverProvisioned": "Container do projeto: nunca provisionado (RN-267).",
+    "problemsEmpty": "Não há lint nem testes integrados rodando sobre o código deste projeto — nenhuma ferramenta de análise estática hoje escaneia o repositório gerido. Mostrar uma contagem de erros ou avisos aqui seria decoração, não estado: quando essa integração existir, esta aba passa a listar diagnósticos reais.",
+    "outputEmpty": "Não há stream de comando de build ou deploy AGREGADO nesta aba — o terminal interativo (aba Terminal) já tem a própria saída, dentro dele. `git push`, PR e deploy não saem pelo terminal de qualquer forma (RN-106): quando houver um pipeline de build ou deploy separado do terminal, a saída dele aparece aqui."
+  },
+  "branchPicker": {
+    "noDefaultBranch": "sem branch padrão",
+    "dropdownAriaLabel": "Selecionar branch",
+    "header_one": "{{count}} branch · comparada com a default",
+    "header_other": "{{count}} branches · comparadas com a default",
+    "headerPlaceholder": "branches",
+    "loading": "Carregando branches…",
+    "loadErrorFallback": "Não consegui carregar as branches.",
+    "empty": "Nenhuma branch encontrada neste repositório.",
+    "truncated": "A lista foi cortada no teto de branches enriquecidas.",
+    "manualPlaceholder": "ir para tag ou sha exato",
+    "manualAriaLabel": "Ir para tag ou sha exato",
+    "goButton": "Ir",
+    "prState": {
+      "open": "aberta",
+      "merged": "mesclada",
+      "closed": "fechada"
+    },
+    "metaCurrent": "atual",
+    "metaProtected": "protegida",
+    "prLabel": "PR #{{number}}",
+    "prLabelWithState": "PR #{{number}} ({{state}})",
+    "producedByTitle": "Branch do dev do módulo \"{{moduleId}}\" ({{agentId}})"
+  },
+  "shell": {
+    "railTablistLabel": "Painel do explorador",
+    "explorerTitle": "Explorador",
+    "searchTitle": "Buscar",
+    "railDisabled": {
+      "agents": {
+        "label": "Agentes",
+        "reason": "O rail é sobre CÓDIGO; quem está trabalhando já aparece na Visão geral. Duplicar aqui sem dado próprio seria um segundo lugar para o mesmo fato divergir."
+      },
+      "tests": {
+        "label": "Testes",
+        "reason": "Não há integração de lint/testes na aba Code — pendência declarada da FASE 26."
+      }
+    },
+    "railDisabledTitle": "{{label}}: {{reason}}",
+    "railDisabledAriaLabel": "{{label}} (indisponível)",
+    "bottomPanelOpen": "Painel inferior",
+    "bottomPanelClose": "Fechar painel inferior",
+    "refLabel": "ref",
+    "encodingLabel": "UTF-8",
+    "activeAgents_one": "{{count}} agente ativo",
+    "activeAgents_other": "{{count}} agentes ativos"
+  },
+  "editor": {
+    "openTabsAriaLabel": "Arquivos abertos",
+    "closeFileAriaLabel": "Fechar {{path}}",
+    "blameButton": "Blame",
+    "blameButtonTitle": "Anotar cada linha com o commit, autor e data que a tocou por último",
+    "emptyState": "Selecione um arquivo no explorador, ou busque um trecho na aba Buscar.",
+    "loadFileErrorFallback": "Não consegui abrir este arquivo.",
+    "truncatedFile": "Arquivo maior que o teto de leitura — mostrando só o início ({{bytes}} bytes).",
+    "blameLoading": "Carregando anotações de autoria…",
+    "blameErrorFallback": "Não consegui carregar o blame deste arquivo.",
+    "blameEmpty": "Sem anotações de autoria para este arquivo.",
+    "blameTruncated": "Anotação de autoria cortada em {{lines}} linhas — arquivo maior que o teto de blame.",
+    "blameNoLine": "Sem anotação de autoria para esta linha.",
+    "blameLineLabel": "{{author}} · {{sha}}",
+    "blameTooltip": "{{author}} · {{date}} · {{sha}} · {{summary}}",
+    "minimapAriaLabel": "Minimapa — clique para ir até a região do arquivo"
+  },
+  "explorer": {
+    "title": "Explorador",
+    "noRef": "Sem branch para navegar.",
+    "loading": "Carregando…",
+    "loadErrorFallback": "Não consegui listar a raiz do repositório.",
+    "empty": "Repositório vazio nesta ref.",
+    "truncated": "A raiz tem mais entradas do que o teto por nível — refine navegando pelas pastas.",
+    "folderErrorFallback": "Não consegui listar esta pasta.",
+    "folderEmpty": "Pasta vazia.",
+    "folderTruncated": "Mais entradas do que o teto por nível."
+  },
+  "search": {
+    "title": "Buscar",
+    "placeholder": "Termo (mín. 2 caracteres)",
+    "ariaLabel": "Termo de busca",
+    "button": "Buscar",
+    "initial": "Digite um termo e busque no conteúdo da ref atual.",
+    "searching": "Buscando…",
+    "errorFallback": "Não consegui buscar agora.",
+    "noResults": "Nenhum resultado para “{{query}}”.",
+    "filesScanned_one": "{{count}} arquivo verificado",
+    "filesScanned_other": "{{count}} arquivos verificados",
+    "truncatedSuffix": " · busca cortada pelo orçamento — refine o termo ou o caminho"
+  },
+  "diff": {
+    "fileStatus": {
+      "added": "novo",
+      "modified": "modificado",
+      "removed": "removido",
+      "renamed": "renomeado"
+    },
+    "prState": {
+      "open": "aberta",
+      "merged": "mesclada",
+      "closed": "fechada"
+    },
+    "filters": {
+      "open": "Abertas",
+      "merged": "Mescladas",
+      "closed": "Fechadas",
+      "all": "Todas"
+    },
+    "backToList": "Voltar à lista",
+    "loadingDiff": "Carregando diff…",
+    "diffErrorFallback": "Não consegui carregar o diff desta PR.",
+    "noFiles": "Esta PR não mudou nenhum arquivo.",
+    "truncatedFiles": "A lista de arquivos foi cortada no teto por PR.",
+    "loadingPrs": "Carregando pull requests…",
+    "prListErrorFallback": "Não consegui carregar a lista de PRs.",
+    "noPrsWithState": "Nenhuma PR {{state}} neste repositório.",
+    "noPrsAny": "Nenhuma PR neste repositório.",
+    "truncatedList": "A lista de PRs foi cortada no teto por chamada.",
+    "idLabel": "Já sabe o id?",
+    "idPlaceholder": "ex.: 218, ou o id do provider",
+    "viewDiffButton": "Ver diff",
+    "noPatchText": "Sem texto de diff disponível para este arquivo.",
+    "emptyPatchText": "Diff sem conteúdo de texto (ex.: só mudança de modo).",
+    "openPrAriaLabel": "Abrir PR #{{number}}: {{title}}",
+    "unknownAuthor": "autor desconhecido"
+  },
+  "shared": {
+    "retry": "Tentar de novo"
+  }
+}
