@@ -6,6 +6,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: handoff manual a agente à escolha (ADR 0109), fechando item
+  de backlog aberto desde a FASE 13c. `SessionPage.tsx` ganha um seletor
+  ("Endereçar handoff a...") sobre `addressableAgents()` (lead de área ∪
+  agente conversacional solo), que POSTa em `POST
+  .../sessions/:sessionId/handoffs` — mesmo `CreateHandoffUseCase` que um
+  agente já usa para oferecer handoff, com `actor: {kind:'user'}`
+  registrando que quem decidiu foi um humano. O caso real que motivou:
+  Staff (ADR 0088) e `ux-designer` (ADR 0087) tinham plumbing de engine
+  pronto e NENHUM caminho humano até eles — os dois entram em
+  `AGENTES_DE_CHAT` na mesma mudança (RN-440/RN-441)
 - **web**: `FolderBrowserModal` vira um explorador de três colunas —
   atalhos ("Pasta pessoal", "Raiz"), lista central com breadcrumb e um
   painel de detalhes —, seguindo a referência visual do dono do produto

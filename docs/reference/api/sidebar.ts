@@ -1128,6 +1128,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/agents-controller-request-manual",
+          label: "Manually offers a handoff to a chosen agent",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/agents-controller-accept",
           label: "Accepts a handoff and activates the destination agent",
           className: "api-method post",

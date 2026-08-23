@@ -82,7 +82,10 @@
     "passouOBastaoAo": "handed off to",
     "aceitarEIniciar": "Accept handoff and start {{agente}}",
     "ativarExecucao": "Activate execution",
-    "acompanheExecucao": "Follow the execution in Executors"
+    "acompanheExecucao": "Follow the execution in Executors",
+    "manualLabel": "Address handoff to another agent",
+    "manualPlaceholder": "Choose agent...",
+    "manualBotao": "Address handoff"
   },
   "backlog": {
     "criouEpico": "created the epic",
@@ -108,6 +111,8 @@
     "necessidadeValidada": "Need validated",
     "erroValidarNecessidade": "Could not validate the need",
     "erroAceitarHandoff": "Could not accept the handoff",
+    "handoffManualEnviado": "Handoff sent",
+    "erroHandoffManual": "Could not send the handoff",
     "execucaoAtivada": "Execution activated",
     "erroAtivarExecucao": "Could not activate the execution",
     "modoAutomaticoLigado": "Automatic mode turned on",

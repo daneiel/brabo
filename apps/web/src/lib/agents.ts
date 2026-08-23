@@ -266,3 +266,35 @@ export function areaFor(agentKey: string): AreaDef | undefined {
     (area) => area.lead === agentKey || (area.members as string[]).includes(agentKey),
   );
 }
+
+/**
+ * Agentes conversacionais SOLO — sem área, sem subagentes. Mirror MANUAL de
+ * `SOLO_CONVERSATIONAL_AGENTS` em
+ * `apps/api/src/domain/agents/agent-areas.ts` (ADR 0109/RN-440) — não vem do
+ * gerador (que só cobre `AREAS`), então mudar um lado sem o outro NÃO
+ * reprova em teste automático hoje; a validação de VERDADE (quem o backend
+ * de fato aceita) mora no `RequestManualHandoffUseCase`, e um alvo
+ * desatualizado aqui só produz um 400 tratável na UI, nunca escrita
+ * indevida. Lacuna aceita — cruzar as duas listas por teste exigiria o
+ * mesmo mecanismo de `gerar:areas` (Fase 18), fora do escopo desta feature.
+ */
+export const SOLO_CONVERSATIONAL_AGENTS: AgentKey[] = [
+  'criativo',
+  'po',
+  'arquiteto',
+  'ux-designer',
+  'staff',
+];
+
+/**
+ * Handoff manual a agente à escolha (ADR 0109/RN-440): todo agente que a
+ * tela pode oferecer no seletor de "Endereçar handoff a..." —
+ * leads de área ∪ agentes solo. Mesma regra do backend
+ * (`addressableAgents` em `agent-areas.ts`), calculada aqui só para
+ * povoar o `<Select>`; a validação de VERDADE mora no
+ * `RequestManualHandoffUseCase`, do lado do servidor.
+ */
+export function addressableAgents(): AgentKey[] {
+  const leads = Object.values(AREAS).map((area) => area.lead);
+  return [...new Set([...leads, ...SOLO_CONVERSATIONAL_AGENTS])];
+}
