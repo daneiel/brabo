@@ -26,6 +26,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   configurar um limite. Rota `PUT projects/:projectId/agent-areas/:key/budget`
   (`maintainer`), e a rota `GET agent-areas` já existente passa a devolver
   `budgetMicros`/`spentMicros` (RN-443, ADR 0110)
+- **runner**: binário standalone do `@brabo/runner` — download direto de
+  `dist-bin/brabo-runner-<plataforma>-<arquitetura>[.exe]` numa GitHub
+  Release, sem Node/npm/node-gyp instalado na máquina. `bun build --compile`
+  empacota o CLI num único executável, com o `.node` nativo do `node-pty`
+  embutido (`with { type: 'file' }`) e extraído pra um diretório real em
+  runtime — o mecanismo completo, e o que ficou VALIDADO por execução real
+  em cada plataforma (só `linux-x64` neste sandbox; as outras quatro por
+  reasoning + a primeira execução real de CI na próxima tag), está no ADR
+  0112. Cinco plataformas (`linux-x64`, `linux-arm64`, `darwin-x64`,
+  `darwin-arm64`, `win32-x64`), cada uma construída no seu runner NATIVO
+  (`build-runner-binaries.yml`, mesmo gatilho de tag final de
+  `publish-runner.yml`) e anexada à Release já existente. Fecha o item de
+  backlog do ADR 0104 ("binário standalone (pkg/bun build --compile)"),
+  companion do ADR 0106 (RN-451/452)
 - **web**: `FolderBrowserModal` vira um explorador de três colunas —
   atalhos ("Pasta pessoal", "Raiz"), lista central com breadcrumb e um
   painel de detalhes —, seguindo a referência visual do dono do produto

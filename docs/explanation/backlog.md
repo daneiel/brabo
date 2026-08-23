@@ -447,13 +447,31 @@ the case this wave exists to enable — invocation via the installed `bin`
 resolved by realpath while `import.meta.url` always is). The final fix
 applies `realpathSync` to `argv[1]` before comparing — see ADR 0106.
 
+**Wave 4 — standalone binary, [ADR 0112](../adr/0112-binario-standalone-do-runner-via-bun-build-compile.md), DONE with an honest per-platform gap:**
+
+| # | Severity | Item | Evidence (file:line) |
+|---|---|---|---|
+| 1 | **CLOSED** | `node-pty` resolves its native `.node` addon by a path COMPUTED at runtime — `bun build --compile` can't embed what it can't statically resolve, confirmed empirically (build succeeds, runtime throws `Cannot find module`) before designing a fix | `apps/runner/src/native-pty-loader.ts` (real extraction to `fs.mkdtempSync`, preserving `node-pty`'s original relative layout, then `import()` by absolute path — never `require('node-pty')` by package name); `apps/runner/scripts/build-bin.mjs` (generates `native-pty-embed.generated.ts`, one static `with { type: 'file' }` import per file, the only form Bun accepts for embedding) |
+| 2 | **CLOSED** | `bun build --compile` silently bundled the FALLBACK `await import('node-pty')` (used only outside a compiled binary) and threw at runtime instead of at build time, wasting real debugging time on a misleading error before being isolated | `apps/runner/scripts/build-bin.mjs` (`--external node-pty` on the `bun build` invocation) |
+| 3 | **CLOSED** | The ADR 0106 auto-run guard fix (`realpathSync` on `argv[1]`) throws `ENOENT`, uncaught, inside a compiled binary — `process.argv[1]` there is `/$bunfs/root/<name>`, a virtual path `realpathSync` can't resolve | `apps/runner/src/index.ts` (checks `import.meta.url.includes('/$bunfs/')` FIRST, runs `main()` unconditionally in that case) |
+| 4 | **PARTIAL, stated precisely — not silently declared done** | Only `linux-x64` was validated by REAL execution in this sandbox (`build:bin`+`smoke:bin` green, repeatedly, including the two bugs above found by running the real compiled binary). `linux-arm64`/`darwin-x64`/`darwin-arm64`/`win32-x64` — especially Windows, with THREE native files instead of one and a `worker_threads` path to resolve — were reasoned through by reading `node-pty`'s source, never executed on a real machine of that OS. `build-runner-binaries.yml` is tag-triggered (same as `publish-runner.yml`), so its first real execution for those four platforms is the NEXT version tag push, not this PR | `.github/workflows/build-runner-binaries.yml` (5-target matrix, each on its own native runner); ADR 0112's target-matrix table has the exact per-platform status |
+
+No per-platform fallback (the cheaper "binary + `node-pty-native/` folder"
+alternative, explicitly offered to and rejected by the product owner) was
+implemented anywhere — nothing found in this investigation DISPROVED the
+true single-file approach for any of the five targets. If a real tag build
+shows one genuinely doesn't work this way (Windows is the likeliest
+candidate), that becomes a NEW, single-platform item here — not something
+to guess at and pre-emptively work around today.
+
 **What's left for later — backlog prioritized by the product owner, in
 this order:**
 
 | item | cost | activation criterion | where it was decided |
 |---|---|---|---|
-| Standalone binary (`pkg`/`bun build --compile`) | G | not blocking; no trigger defined, future item separate from npm distribution | ADR 0104 |
 | Runner exclusivity by `{project_id, machine_id}` instead of just `project_id` (`apps/engine/lib/engine/runners/registry.ex`) | M | DEFERRED — explicit activation criterion: a second dev actually using the same project simultaneously | ADR 0104 |
+| Code-signing the standalone binaries (macOS notarization, Windows Authenticode) | M | operator action — needs the product owner to obtain/fund a signing identity, same category as `NPM_TOKEN` in ADR 0106 | ADR 0112 |
+| Real execution of `build-runner-binaries.yml` for `linux-arm64`/`darwin-x64`/`darwin-arm64`/`win32-x64` — the workflow only fires on a real tag push | — | happens automatically on the next `vX.Y.Z` tag; if any platform fails, the fix becomes its own targeted item | ADR 0112 |
 
 `apps/runner/src/guard.ts` (best-effort lexical check of `cwd`) **is not
 a backlog item** — it's an invariant declared since ADR 0103 and

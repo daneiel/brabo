@@ -24,7 +24,9 @@
   "scripts": {
     "start": "node src/index.ts",
     "build": "tsup",
+    "build:bin": "node scripts/build-bin.mjs",
     "smoke": "node scripts/smoke-dist.mjs",
+    "smoke:bin": "node scripts/smoke-bin.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
