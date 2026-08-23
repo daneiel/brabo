@@ -50,6 +50,18 @@
  * validar o `$HOME` abriria a brecha que a RN-434 tinha acabado de fechar
  * (criar fora do home no Linux). `--dir` apontando para um ARQUIVO
  * existente continua erro real — nunca sobrescrito silenciosamente.
+ *
+ * ## `resolverDir` — resolve `--dir` relativo contra o cwd de VERDADE
+ *
+ * Achado real, não hipotético: `pnpm --filter runner start -- --dir
+ * ../exp001`, rodado de `~/dev/brabo`, criava `~/dev/brabo/apps/exp001` em
+ * vez de `~/dev/exp001`. A causa é `pnpm --filter <pkg> run <script>`
+ * rebasear `process.cwd()` para a pasta do PACOTE (`apps/runner`) — um
+ * `resolve(dirBruto)` simples resolvia contra o lugar errado. `INIT_CWD` é a
+ * variável que npm/pnpm sempre define com a pasta de onde o usuário de fato
+ * digitou o comando; presente só quando o processo nasce de um script do
+ * package.json, ausente (binário standalone, `node dist/index.cjs` direto)
+ * cai em `process.cwd()`, que aí já é a pasta correta.
  */
 
 import { existsSync, mkdirSync, realpathSync, statSync } from 'node:fs';
@@ -155,6 +167,20 @@ export function validarCwdDentroDaRaiz(cwdRecebido: string, raiz: string): strin
   }
 
   return alvoNormalizado;
+}
+
+/**
+ * Resolve `--dir` para caminho absoluto, contra `initCwd` quando presente
+ * (a pasta ORIGINAL de invocação, via `INIT_CWD`) e contra `cwdDoProcesso`
+ * quando não — ver o docblock do módulo. Se `dirBruto` já é absoluto,
+ * `resolve` o devolve normalizado e ignora a base, como sempre.
+ */
+export function resolverDir(
+  dirBruto: string,
+  initCwd: string | undefined,
+  cwdDoProcesso: string,
+): string {
+  return resolve(initCwd ?? cwdDoProcesso, dirBruto);
 }
 
 export class DirForaDoHomeError extends Error {

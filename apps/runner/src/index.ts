@@ -18,7 +18,6 @@
 
 import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { obterToken, obterTicketDoRunner } from './auth.ts';
 import {
@@ -45,6 +44,7 @@ import {
   DirNaoEUmaPastaError,
   garantirDiretorio,
   NaoConsegiuCriarDiretorioError,
+  resolverDir,
   validarCwdDentroDaRaiz,
   validarDirDentroDoHomeNoLinux,
 } from './guard.ts';
@@ -89,7 +89,11 @@ function lerArgumentos(argv: string[]): Argumentos {
   if (!projectId || projectId.startsWith('--')) uso();
   if (!dirBruto || dirBruto.startsWith('--')) uso();
 
-  const dir = resolve(dirBruto);
+  // `INIT_CWD` é a pasta de onde o usuário de fato digitou o comando —
+  // sem ela, `--dir` relativo resolveria contra `process.cwd()`, que
+  // `pnpm --filter runner run <script>` REBASEIA para a pasta do pacote
+  // (ver docblock de `resolverDir` em guard.ts).
+  const dir = resolverDir(dirBruto, process.env.INIT_CWD, process.cwd());
 
   // RN-434 (ADR 0104): no Linux, o workspace do modo `runner` só pode viver
   // dentro do $HOME do usuário — nunca fora dele (/etc, /root, outra conta
