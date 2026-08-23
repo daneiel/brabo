@@ -370,6 +370,7 @@ are deferred product decisions — hence no priority here.
 | ~~Currency preference with manual exchange rate~~ | **WON'T DO** — decision recorded. Converting would require a manually-maintained exchange rate, which ages; a wrong number is worse than an honest USD number (same principle already applied in `formatarCustoMicros`, `ProjectSettingsTab.tsx`) |
 | Reactivate the Anamnese (`ANAMNESE_ENABLED=true`) | paused by user decision on 2026-08-10 — "today it isn't bringing much-value data" ([RN-115](../business-rules.md#rn-115)). No data was erased (hypotheses, proficiency profiles and instruction patches remain intact and visible); the pause is only on the new-round PATH, awaiting future refinement of what Anamnese derives before turning it back on |
 | Reactivate the Psychologist (`PSYCHOLOGIST_ENABLED=true`) | paused by user decision on 2026-08-10, same reason and same pattern as Anamnese above ([RN-117](../business-rules.md#rn-117)). No data was erased (already-emitted analyses and hypotheses remain intact and visible); the pause is only on the new-round PATH (automatic and on-demand) |
+| Problems/lint/tests panel in the Code tab | declared pending in FASE 26 (`CLAUDE.md`) alongside blame, PR list and branch detail — those three closed in FASE 26b, this one didn't and was never picked up again. No data source exists yet (no lint/test-runner integration in the product); recorded here so it isn't silently dropped from tracking |
 
 ## Backlog of the runner/execution_mode (ADR 0104)
 
