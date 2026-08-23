@@ -139,6 +139,24 @@
       "error": "Could not save"
     }
   },
+  "executionMode": {
+    "title": "Where the code lives",
+    "eyebrow": "convert execution mode",
+    "subtitle": "Changes WHERE this project's commands execute — the managed folder, a folder of yours mounted via bind-mount, or a folder of yours connected through the runner.",
+    "needsMaintainer": "Only a maintainer or owner can convert.",
+    "warning": "This migrates the agent's working folder. If any dev agent is working or stuck right now, the conversion is refused — wait for it to finish (or unblock the stuck task) and try again.",
+    "card": {
+      "title": "Execution mode"
+    },
+    "selectAria": "New execution mode",
+    "pathAria": "New folder path",
+    "save": "Convert",
+    "saving": "Converting…",
+    "toast": {
+      "success": "Execution mode converted",
+      "error": "Could not convert"
+    }
+  },
   "parallelism": {
     "title": "Parallelism by area",
     "eyebrow": "how many agents without asking",

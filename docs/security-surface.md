@@ -455,6 +455,7 @@ reason in the URL.
 | DELETE | `/projects/:projectId` | role:maintainer |
 | GET | `/projects/:projectId` | role:viewer |
 | PATCH | `/projects/:projectId` | role:maintainer |
+| PUT | `/projects/:projectId/execution-mode` | role:maintainer |
 | GET | `/projects/:projectId/models` | role:viewer |
 | GET | `/projects/:projectId/actions` | role:developer |
 | GET | `/projects/:projectId/agent-autonomy` | role:maintainer |

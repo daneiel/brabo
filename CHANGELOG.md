@@ -6,6 +6,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: converter `execution_mode` de um projeto EXISTENTE, sem
+  recriá-lo — fecha a correção que a Onda 1 do runner (ADR 0104) já tinha
+  registrado em `docs/explanation/backlog.md` (o item 4 daquele ADR dizia
+  que a conversão já era possível, e não era). Rota dedicada, `PUT
+  projects/:projectId/execution-mode` (`maintainer`), que orquestra a
+  migração em vez de um `PATCH` que só trocaria a coluna: relocaliza o
+  `permissions.json` para o novo escopo (o CONTEÚDO não muda), encerra o
+  ciclo de vida do container ao SAIR de `container` (ADR 0081), zera
+  `workspaceVerifiedAt` em toda conversão real e recusa com 409 enquanto
+  qualquer dev agent do projeto estiver trabalhando ou travado — ele não
+  re-resolve o worktree sozinho por baixo da troca. Nova seção em
+  Configurações do projeto, com o mesmo aviso e a mesma copy dos três
+  modos do wizard de criação (RN-447..450, ADR 0111)
 - **api,web**: handoff manual a agente à escolha (ADR 0109), fechando item
   de backlog aberto desde a FASE 13c. `SessionPage.tsx` ganha um seletor
   ("Endereçar handoff a...") sobre `addressableAgents()` (lead de área ∪

@@ -360,7 +360,7 @@ are deferred product decisions — hence no priority here.
 
 | item | where it was decided |
 |---|---|
-| ~~Budget per area~~ | **FIXED AND CLOSED.** `agent_areas` gained `budget_micros`/`spent_micros` — a THIRD independent ceiling next to project/session, additive (not the ADR 0064 cascade), mirroring `max_parallel`'s pattern on the same row ([RN-443](../business-rules.md#rn-440), [ADR 0110](../adr/0110-budget-por-area-aditivo-nao-cascata.md)) |
+| ~~Budget per area~~ | **FIXED AND CLOSED.** `agent_areas` gained `budget_micros`/`spent_micros` — a THIRD independent ceiling next to project/session, additive (not the ADR 0064 cascade), mirroring `max_parallel`'s pattern on the same row ([RN-443](../business-rules.md#rn-443), [ADR 0110](../adr/0110-budget-por-area-aditivo-nao-cascata.md)) |
 | Dev Lead and `module_map`-based areas | **left the backlog**: ADR 0053, implemented by FASE 14d |
 | ~~Manual handoff to an agent of choice~~ | **CLOSED** — [ADR 0109](../adr/0109-handoff-manual-a-agente-a-escolha.md)/[RN-440](../business-rules.md#rn-440)/[RN-441](../business-rules.md#rn-441). `SessionPage.tsx` gained a picker over `addressableAgents()` (leads ∪ solo agents) POSTing to `POST .../sessions/:sessionId/handoffs` — the SAME `CreateHandoffUseCase` an agent's own `offer_handoff` uses, with `actor: {kind:'user'}` recording who decided. The Staff (ADR 0088) and `ux-designer` (ADR 0087), both found reachable only via the internal route, entered `AGENTES_DE_CHAT` in the same change |
 | MFA, social login, OIDC, federation | [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) — social login (GitHub/GitLab) LEFT the ban and is implemented (ADR 0084); the rest stays out of scope |
@@ -387,20 +387,21 @@ table's shape is reused; the kind of finding is new.
 | 2 | **CLOSED** (RN-422) | The wizard only taught bind-mount, never the runner command, even though it already existed | `apps/web/src/routes/NewProjectWizard.tsx` — third entry in `MODOS_DE_WORKSPACE` (`runner`), with the command `brabo-runner --project <id> --dir <pasta>` right in the "Where the code will live" step, not just in the Terminal |
 | 3 | **CLOSED** (RN-421) | A 2-value enum (`workspace_mode`) didn't express 3 physically distinct execution modes | `apps/api/src/db/migrations/0048_quiet_iron_fist.sql` (`project_execution_mode`, three values); `apps/api/src/domain/iam/project.entity.ts` (`PROJECT_EXECUTION_MODES`) |
 
-**Correction recorded during Wave 1's implementation — the ADR isn't
-edited, the correction lives here**: item 4 of ADR 0104 states that
-converting between the three modes of an EXISTING project "becomes
-allowed without recreating the project." That's **incorrect** — Wave 1
-investigated and found that `UpdateProjectDto` still deliberately
-excludes `executionMode`/`workspacePath` (the worktree, `permissions.json`
-and the engine's cache point at the old scope; it isn't a trivial
-`PATCH`). Wave 1 only delivered the three-value field at CREATION.
-Converting an already-existing project stays as a NEW backlog item, with
-no design yet:
+**Correction recorded during Wave 1's implementation, CLOSED separately**
+(not itself one of this document's numbered runner waves — see below):
+item 4 of ADR 0104 stated that converting between the three modes of an
+EXISTING project "becomes allowed without recreating the project." Wave 1
+found that incorrect — `UpdateProjectDto` still deliberately excluded
+`executionMode`/`workspacePath`, and only the three-value field at
+CREATION had actually been delivered. **[ADR 0111](../adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
+makes the sentence TRUE again**, via a dedicated route (`PUT
+.../execution-mode`, `ConvertProjectExecutionModeUseCase`, RN-447..450) —
+not by editing ADR 0104's accepted text, which stays as it was written,
+wrong at the time and corrected here instead:
 
 | item | cost | activation criterion | where it was decided |
 |---|---|---|---|
-| Converting `execution_mode` on an EXISTING project, without recreating it (the worktree, `permissions.json` and the engine's cache need to migrate scope along with it) | M | none — ADR 0104 already promised this and the promise is incorrect today; only the design is missing | found in Wave 1, correcting ADR 0104 item 4 |
+| ~~Converting `execution_mode` on an EXISTING project, without recreating it~~ | **CLOSED** (RN-447..450) | — | [ADR 0111](../adr/0111-conversao-de-execution-mode-de-projeto-existente.md) |
 
 **Wave 2 — PAT, [ADR 0105](../adr/0105-personal-access-token-do-runner-escopado-por-construcao.md), DONE (RN-424/425/426; RN-427 closed later, same decision wave):**
 

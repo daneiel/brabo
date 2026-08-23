@@ -504,6 +504,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/projects-controller-convert-execution-mode-route",
+          label: "Converts the project's execution mode",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/projects-controller-list-members",
           label: "Lists the project's members with their effective role",
           className: "api-method get",

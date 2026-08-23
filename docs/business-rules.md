@@ -10357,7 +10357,7 @@ se manifestar — corrigir só o primeiro teria trocado um 403 sempre por um
   nenhuma suíte exercitava `RolesGuard` e `PatAuthGuard` na mesma
   requisição
 
-### RN-443 — Budget de área é ADITIVO ao de projeto/sessão, nunca cascata; só `maintainer` muda o teto {#rn-440}
+### RN-443 — Budget de área é ADITIVO ao de projeto/sessão, nunca cascata; só `maintainer` muda o teto {#rn-443}
 
 Fecha o item "budget por área" do corte do ADR 0038, em aberto desde a
 FASE 8. `agent_areas` ganha `budget_micros` (nullable — `null` é SEM
@@ -10490,7 +10490,120 @@ caminho humano até si.
 
 ---
 
-### RN-451 — Smoke do binário standalone roda o SUBPROCESSO real, nunca mock {#rn-440}
+### RN-447 — Converter `execution_mode` de projeto EXISTENTE recusa (409) enquanto qualquer dev agent do projeto não está `idle` {#rn-447}
+
+`ConvertProjectExecutionModeUseCase` (`PUT .../execution-mode`, papel
+`maintainer`) lê `engine.dev_agent_states` DIRETO (cross-schema, mesmo
+banco físico — mesmo caminho da RN-409) por `project_id`, em TODAS as
+sessões do projeto, não só a mais recente. Qualquer status diferente de
+`idle` (`working`/`blocked`/`idle_tripped`/`awaiting_gate`/
+`awaiting_approval`) recusa a conversão: `Engine.Dev.DevAgentServer` NÃO
+re-resolve o worktree sozinho — `workspace_root` é capturado UMA vez, na
+criação do worktree, e trocar a coluna por baixo dele deixaria o agente
+escrevendo num escopo que o `permissions.json` e a política de terminal
+(ADR 0055) já abandonaram. A decisão é RECUSAR e explicar (mesmo padrão
+"recusa e ensina" da RN-088/RN-422) — nunca drenar ou forçar a migração de
+um agente vivo.
+
+`idle_tripped` conta como ATIVO aqui, diferente da RN-409 (que o exclui de
+`onlineAgentCount`): as duas perguntas são diferentes — "alguém está
+olhando este agente trabalhar agora" (RN-409) contra "existe um ponteiro
+de escopo que ficaria obsoleto" (aqui). Um agente com o circuit breaker
+disparado ainda tem `workspace_root` capturado, esperando desbloqueio
+humano — não é "ocioso" para efeito de conversão, mesmo não sendo
+"online" para efeito de contagem.
+
+Mesmo (modo, caminho) de hoje é NO-OP: a checagem de dev agent nem roda —
+reenviar o formulário sem mudar nada não deveria custar uma varredura de
+agentes ativos.
+
+- **Onde:** `apps/api/src/application/use-cases/iam/convert-project-execution-mode.use-case.ts`;
+  `apps/api/src/application/ports/dev-agent-activity.port.ts`;
+  `apps/api/src/infrastructure/persistence/drizzle/dev-agent-activity.repository.ts`
+- **Teste:** `apps/api/test/application/use-cases/iam/convert-project-execution-mode.use-case.spec.ts`
+  (recusa com dev agent ativo, sem gravar nada; no-op não checa);
+  `apps/api/test/infrastructure/persistence/drizzle/dev-agent-activity.repository.spec.ts`
+  (`idle` não conta, todo o resto conta, isolamento entre projetos)
+- **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
+- **Origem:** correção registrada em `docs/explanation/backlog.md` durante
+  a implementação da Onda 1 do runner (ADR 0104), fechada nesta Onda 2
+
+---
+
+### RN-448 — `permissions.json` é RELOCALIZADO na conversão — o conteúdo nunca muda, só o caminho {#rn-448}
+
+`PermissionsFileStore.move(from, to)` lê o arquivo na localização ANTIGA
+(`projectScopeRoot(localAntiga)`), grava o MESMO conteúdo na localização
+NOVA e apaga o antigo (best-effort — se já não existir, não há o que
+apagar). O conteúdo (padrões `allow`/`deny`/`ask`) não carrega caminho nem
+modo dentro de si, então não há nada para REESCREVER, só para mover.
+`from === to` (nenhuma raiz efetiva mudou) é no-op.
+
+Confirmado por leitura de `projectScopeRoot` (`project-workspaces-root.ts`):
+para `mounted`/`runner` a raiz É o `workspacePath`, tratado como caminho
+DENTRO DO CONTAINER DA API — em `runner`, isso já era verdade ANTES desta
+entrega (sem bind-mount, o arquivo mora numa pasta que só coincide em
+STRING com a pasta real do usuário, desconectada dela). A conversão não
+muda essa propriedade existente, só a relocaliza de forma consistente —
+sem caso especial para `runner` além de usar `move()` como qualquer outro
+par.
+
+- **Onde:** `apps/api/src/application/ports/permissions-file-store.port.ts`
+  (`move`); `apps/api/src/infrastructure/filesystem/fs-permissions-file-store.ts`
+- **Teste:** `apps/api/test/infrastructure/filesystem/fs-permissions-file-store.spec.ts`
+  (conteúdo sobrevive e é apagado da origem; origem sem arquivo grava vazio
+  sem lançar; `from === to` é no-op)
+- **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
+
+---
+
+### RN-449 — Saindo de `container`, o ciclo de vida do container é encerrado (`removed`) ANTES da coluna mudar {#rn-449}
+
+`ConvertProjectExecutionModeUseCase` chama
+`RegistrarTransicaoDeContainerUseCase` (ADR 0081) para levar a linha de
+`project_containers` a `removed` — via `stopped` primeiro quando está
+`running` (`container-lifecycle.ts` não tem aresta direta
+`running -> removed`) — ANTES de gravar o novo `execution_mode`. A ordem é
+obrigatória: `RegistrarTransicaoDeContainerUseCase` recusa (400) qualquer
+transição num projeto que não esteja em `execution_mode = 'container'`
+NO MOMENTO da chamada, então chamá-lo depois de trocar a coluna sempre
+falharia. Sem linha de container (projeto que nunca provisionou), nenhuma
+transição é disparada.
+
+Entrar em `container` a partir de `mounted`/`runner` NÃO auto-provisiona
+nada — o portão da imagem do Arquiteto (RN-105) e o ciclo de vida normal
+valem a partir daí, como para qualquer projeto `container` — nunca um
+atalho que pula o portão porque o projeto "já tinha código em algum
+lugar".
+
+- **Onde:** `apps/api/src/application/use-cases/iam/convert-project-execution-mode.use-case.ts`
+  (`removerContainerSeExistir`)
+- **Teste:** `apps/api/test/application/use-cases/iam/convert-project-execution-mode.use-case.spec.ts`
+  (`running` passa por `stopped`; `provisioning` vai direto; sem linha,
+  nenhuma transição; entrar em `container` nunca dispara transição)
+- **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
+
+---
+
+### RN-450 — `workspaceVerifiedAt` zera em TODA conversão real, mesmo voltando para `runner` com o "mesmo" caminho {#rn-450}
+
+Só faz sentido em `execution_mode: 'runner'` (RN-423): um timestamp
+provando que um runner CONECTADO confirmou o caminho no host real.
+Qualquer conversão que muda de fato o par (modo, caminho) — incluindo uma
+que pousa de novo em `runner` com um caminho de aparência igual — zera o
+campo, forçando confirmação NOVA: o timestamp antigo atesta uma
+verificação que aconteceu sob um par DIFERENTE, e carregá-lo adiante
+afirmaria uma confirmação que nunca aconteceu para o estado novo. O
+no-op (RN-447) é a única exceção — nada muda, então nada zera.
+
+- **Onde:** `apps/api/src/application/use-cases/iam/convert-project-execution-mode.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/iam/convert-project-execution-mode.use-case.spec.ts`
+  (`runner -> container` zera; no-op preserva)
+- **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
+
+---
+
+### RN-451 — Smoke do binário standalone roda o SUBPROCESSO real, nunca mock {#rn-451}
 
 O mesmo padrão de disciplina que `smoke-dist.mjs` (ADR 0106) já aplica ao
 `dist/index.cjs` publicado no npm passa a valer também para
@@ -10520,7 +10633,7 @@ apagaria a única coisa que o teste precisa provar.
 
 ---
 
-### RN-452 — `node-pty` resolvido por injeção, não import estático — e a lacuna que isso abriu no smoke do npm foi fechada no mesmo commit {#rn-441}
+### RN-452 — `node-pty` resolvido por injeção, não import estático — e a lacuna que isso abriu no smoke do npm foi fechada no mesmo commit {#rn-452}
 
 `pty.ts` deixou de fazer `import * as nodePty from 'node-pty'` estático no
 topo do módulo — passou a receber o módulo já resolvido por injeção no
@@ -10586,6 +10699,7 @@ silenciosa.
 | Login social: e-mail do provider bate com conta existente mas NÃO verificado | recusado com 403, nenhum vínculo gravado — e-mail não verificado não é prova de identidade (RN-274) |
 | Login social: `state` inválido/expirado, ou de outro PROPÓSITO (fluxo de conexão de git) | recusado, nenhuma chamada ao provider nem escrita no banco (RN-273) |
 | Validar a necessidade sem `product_brief` nenhum na sessão | recusado (400) ANTES de gravar qualquer evento — não há o que validar ainda (RN-406) |
+| Converter `execution_mode` com dev agent trabalhando ou travado | recusado (409) ANTES de mexer no permissions.json ou no ciclo de vida do container — nunca migra um agente vivo (RN-447) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

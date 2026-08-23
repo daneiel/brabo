@@ -139,6 +139,24 @@
       "error": "Não foi possível salvar"
     }
   },
+  "executionMode": {
+    "title": "Onde o código mora",
+    "eyebrow": "converter modo de execução",
+    "subtitle": "Muda ONDE o comando deste projeto executa — a pasta gerenciada, uma pasta sua montada por bind-mount, ou uma pasta sua conectada pelo runner.",
+    "needsMaintainer": "Só quem é maintainer ou owner pode converter.",
+    "warning": "Isto migra a pasta de trabalho do agente. Se algum dev agent estiver trabalhando ou travado agora, a conversão é recusada — espere terminar (ou desbloqueie a task travada) e tente de novo.",
+    "card": {
+      "title": "Modo de execução"
+    },
+    "selectAria": "Novo modo de execução",
+    "pathAria": "Novo caminho da pasta",
+    "save": "Converter",
+    "saving": "Convertendo…",
+    "toast": {
+      "success": "Modo de execução convertido",
+      "error": "Não foi possível converter"
+    }
+  },
   "parallelism": {
     "title": "Paralelismo por área",
     "eyebrow": "quantos agentes sem perguntar",

@@ -2142,6 +2142,44 @@ do binário é um caminho VIRTUAL (`/$bunfs/root/...`) que `realpathSync`
 não alcança, lançando `ENOENT` fora de qualquer `try/catch` antes de
 `main()` ser tentado.
 
+## Converter execution_mode de projeto existente (RN-447..450, ADR 0111)
+Fecha a correção que a Onda 1 do runner (ADR 0104) tinha registrado em
+`docs/explanation/backlog.md`: o item 4 daquele ADR dizia que converter
+`execution_mode` entre `container`/`mounted`/`runner` num projeto que já
+existe "passa a ser permitida sem recriar o projeto", e isso era falso até
+aqui — `UpdateProjectDto` continua excluindo os dois campos de propósito.
+`PUT projects/:projectId/execution-mode` (`maintainer`,
+`ConvertProjectExecutionModeUseCase`) é rota DEDICADA, não um `PATCH`
+afrouxado: ela orquestra a migração em vez de só trocar a coluna.
+
+Recusa com 409 enquanto qualquer dev agent do projeto (em QUALQUER sessão,
+lido direto de `engine.dev_agent_states` por `project_id`, mesmo caminho da
+RN-409) não está `idle` — `idle_tripped` CONTA como ativo aqui, ao
+contrário do critério de "online" da RN-409, porque o agente ainda tem
+`workspace_root` capturado em memória esperando desbloqueio humano
+(RN-447). `PermissionsFileStore` ganhou `move(from, to)`: o conteúdo do
+permissions.json nunca muda, só o caminho físico, porque `projectScopeRoot`
+deriva do par (modo, caminho) (RN-448). Saindo de `container` com container
+provisionado, o ciclo de vida (ADR 0081) é levado a `removed` — via
+`stopped` primeiro se estava `running` — ANTES da coluna mudar, porque
+`RegistrarTransicaoDeContainerUseCase` recusa transição fora do modo
+`container`; entrar EM `container` nunca auto-provisiona (RN-449).
+`workspaceVerifiedAt` zera em toda conversão real, inclusive voltando para
+`runner` com caminho de aparência igual (RN-450). Mesmo (modo, caminho) de
+hoje é no-op — nem checa dev agent ativo.
+
+**Consequência declarada, não escondida**: a conversão NUNCA copia o código
+já escrito entre a raiz antiga e a nova. Isso é seguro para o que já foi
+COMMITADO — o engine deriva o worktree do bare repo do zero
+(`Engine.Actions.Workspace.ensure!/4`) sempre que a pasta de destino ainda
+não está marcada pronta, então o próximo agente reconstrói a árvore de
+trabalho na raiz nova a partir do git de verdade. O que NÃO sobrevive é
+diff NÃO commitado no worktree abandonado — ele fica órfão no disco antigo,
+nunca migrado nem apagado. O teto de dev agent ativo (RN-447) reduz o
+risco (nunca converte com um agente `working`) mas não elimina: um agente
+`idle` entre tasks pode estar sentado sobre um diff sujo, e nada aqui
+inspeciona limpeza de working tree antes de converter.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector;
   `nodemailer` para SMTP real do `MailSender` (ADR 0096), atrás de
@@ -2238,7 +2276,9 @@ não alcança, lançando `ENOENT` fora de qualquer `try/catch` antes de
   fonte pra esse teto não virar decorativo (`ApproveAlwaysActionUseCase`
   recusa gravar padrão pra esses comandos).
 - O projeto escolhe ONDE o código mora, na criação (RN-169/RN-421/RN-422,
-  ADR 0072/0104): `container` (DEFAULT — a pasta gerenciada em
+  ADR 0072/0104) — e pode CONVERTER depois, sem recriar o projeto, por
+  `PUT projects/:projectId/execution-mode` (`maintainer`, RN-447..450, ADR
+  0111): `container` (DEFAULT — a pasta gerenciada em
   `PROJECT_WORKSPACES_ROOT`, o comportamento de sempre), `mounted` (o antigo
   `local`, renomeado — uma pasta do USUÁRIO montada por bind-mount, caminho
   absoluto livre em `projects.workspace_path`) ou `runner` (uma pasta do
