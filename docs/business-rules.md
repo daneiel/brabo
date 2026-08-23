@@ -10357,7 +10357,7 @@ se manifestar — corrigir só o primeiro teria trocado um 403 sempre por um
   nenhuma suíte exercitava `RolesGuard` e `PatAuthGuard` na mesma
   requisição
 
-### RN-443 — Budget de área é ADITIVO ao de projeto/sessão, nunca cascata; só `maintainer` muda o teto {#rn-440}
+### RN-443 — Budget de área é ADITIVO ao de projeto/sessão, nunca cascata; só `maintainer` muda o teto {#rn-443}
 
 Fecha o item "budget por área" do corte do ADR 0038, em aberto desde a
 FASE 8. `agent_areas` ganha `budget_micros` (nullable — `null` é SEM
@@ -10600,6 +10600,78 @@ no-op (RN-447) é a única exceção — nada muda, então nada zera.
 - **Teste:** `apps/api/test/application/use-cases/iam/convert-project-execution-mode.use-case.spec.ts`
   (`runner -> container` zera; no-op preserva)
 - **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
+
+---
+
+### RN-451 — Smoke do binário standalone roda o SUBPROCESSO real, nunca mock {#rn-451}
+
+O mesmo padrão de disciplina que `smoke-dist.mjs` (ADR 0106) já aplica ao
+`dist/index.cjs` publicado no npm passa a valer também para
+`dist-bin/brabo-runner-<platform>-<arch>[.exe]` (ADR 0112): nenhuma suíte
+prova que um artefato EMPACOTADO funciona lendo o código-fonte dele — só
+executando o artefato de verdade, como subprocesso, e observando saída
+real. `scripts/smoke-bin.mjs` roda o binário COMPILADO (nunca
+`node src/index.ts` nem qualquer forma não-compilada) com `--self-test-pty`
+— uma flag interna, não documentada em `uso()` — que resolve `node-pty`
+exatamente como produção e spawna um PTY real via `GerenciadorDePty`,
+escrevendo e lendo dele. Só a linha `node-pty carregado com sucesso` +
+`SELF_TEST_PTY_OK:` no stdout do processo real conta como prova; nenhum
+mock de `node-pty` nem de `child_process` é aceitável para este teste
+específico, porque o que ele existe para provar é justamente que o `.node`
+nativo embutido (`with { type: 'file' }`, `native-pty-embed.generated.ts`)
+carrega e funciona DENTRO do binário — mockar qualquer peça do caminho
+apagaria a única coisa que o teste precisa provar.
+
+- **Onde:** `apps/runner/scripts/smoke-bin.mjs`; `apps/runner/src/index.ts`
+  (`rodarAutoTestePty`, a implementação de `--self-test-pty`)
+- **Teste:** o próprio `smoke-bin.mjs` — não há teste unitário que o
+  substitua, de propósito (é o mesmo desenho de `smoke-dist.mjs`, que
+  também não tem par unitário)
+- **ADR:** [0112](adr/0112-binario-standalone-do-runner-via-bun-build-compile.md)
+- **Origem:** requisito explícito do dono do produto para este item de
+  backlog ("no mocking")
+
+---
+
+### RN-452 — `node-pty` resolvido por injeção, não import estático — e a lacuna que isso abriu no smoke do npm foi fechada no mesmo commit {#rn-452}
+
+`pty.ts` deixou de fazer `import * as nodePty from 'node-pty'` estático no
+topo do módulo — passou a receber o módulo já resolvido por injeção no
+construtor de `GerenciadorDePty`, resolvido uma vez em `main()`
+(`src/index.ts`) via `native-pty-loader.ts#carregarNodePty()`. A mudança
+existe para o binário standalone (ADR 0112): o caminho compilado precisa
+extrair os arquivos embutidos pra um diretório real ANTES de resolver
+`node-pty`, o que exige uma chamada assíncrona — incompatível com um
+`import` estático hoisted. Fora do binário compilado, o comportamento é
+idêntico a antes (`await import('node-pty')`, resolvido do `node_modules`
+de quem instalou o pacote).
+
+**A lacuna que a mudança abriu, fechada no MESMO commit**: a ADR 0106 já
+registrava que o `import` estático de `node-pty`, por ser hoisted antes de
+qualquer parsing de argumento, fazia `smoke-dist.mjs` provar que o binding
+nativo carregava só por IMPORTAR `dist/index.cjs` — mesmo no caminho de
+`uso()` (zero argumentos), que nunca chega a `main()`. Mover a resolução
+pra dentro de `main()` quebrou essa garantia em silêncio, porque
+`smoke-dist.mjs` só exercitava o caminho de `uso()`. `smoke-dist.mjs`
+ganhou uma terceira checagem — roda o CLI com argumentos válidos (mas sem
+api/engine reais do outro lado) e espera a linha `node-pty carregado com
+sucesso` no stdout antes de matar o processo — fechando a lacuna que a
+própria mudança abriu, em vez de deixá-la como perda de cobertura
+silenciosa.
+
+- **Onde:** `apps/runner/src/pty.ts` (`GerenciadorDePty`, injeção de
+  `NodePtyModule`); `apps/runner/src/native-pty-loader.ts`
+  (`carregarNodePty`); `apps/runner/src/index.ts` (`main`, resolve uma vez);
+  `apps/runner/scripts/smoke-dist.mjs` (terceira checagem,
+  `verificarNodePtyCarrega`)
+- **Teste:** `apps/runner/scripts/smoke-dist.mjs` (caminho npm/tsup) e
+  `apps/runner/scripts/smoke-bin.mjs` (caminho binário, RN-451) — os dois
+  únicos lugares que exercitam o artefato empacotado de verdade, nenhum
+  teste unitário substitui
+- **ADR:** [0112](adr/0112-binario-standalone-do-runner-via-bun-build-compile.md)
+- **Origem:** necessidade técnica do binário standalone; a lacuna no smoke
+  do npm foi achada por auditoria própria da mudança, não por execução real
+  reportando falha
 
 ---
 

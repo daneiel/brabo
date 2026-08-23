@@ -48,6 +48,7 @@ import {
   validarCwdDentroDaRaiz,
   validarDirDentroDoHomeNoLinux,
 } from './guard.ts';
+import { carregarNodePty } from './native-pty-loader.ts';
 import { GerenciadorDePty } from './pty.ts';
 
 interface Argumentos {
@@ -284,10 +285,95 @@ async function conectarERodar(
   }
 }
 
+/**
+ * Flag INTERNA, não documentada em `uso()` — existe só pra
+ * `scripts/smoke-bin.mjs` (ADR 0112) provar que o `.node` nativo embutido
+ * no binário standalone carrega e que `GerenciadorDePty` spawna, ESCREVE
+ * e LÊ de um PTY de verdade, sem precisar de rede (engine/api reais) nem
+ * de `--project`/`--dir`/`--token`. Nunca chega a
+ * `lerArgumentos`/`conectarERodar`.
+ *
+ * Usa `/bin/cat` como "shell" (via `SHELL`, a única forma que
+ * `GerenciadorDePty`/`shellPadrao()` expõe pra escolher o binário — sem
+ * argumento próprio pra isso, de propósito: produção sempre abre o shell
+ * REAL do usuário), não `/bin/bash` — achado empírico durante a
+ * investigação deste ADR: abrir um shell interativo de verdade (bash) num
+ * PTY e esperar o PROMPT redesenhar depois de `echo` é lento e ficou
+ * flaky sob o runtime do Bun neste sandbox (a saída do prompt nunca
+ * chegava dentro do timeout, embora funcionasse sob Node puro). `cat` é
+ * determinístico — devolve exatamente o que recebe, sem prompt, sem rc
+ * file — e ainda prova o caminho de verdade: `abrir()` spawna um processo
+ * REAL via o `.node` nativo, `escrever()` escreve no seu stdin pelo PTY, e
+ * o `onData` de volta prova que o processo leu e respondeu. O eco do
+ * PRÓPRIO pty (nível kernel, antes de qualquer processo ler) soma UMA
+ * ocorrência do marcador; o `cat` ecoando de volta o que leu soma a
+ * SEGUNDA — só a segunda prova que um processo de verdade está do outro
+ * lado.
+ */
+async function rodarAutoTestePty(): Promise<void> {
+  const nodePty = await carregarNodePty();
+  console.log('node-pty carregado com sucesso');
+
+  const shellOriginal = process.env.SHELL;
+  process.env.SHELL = '/bin/cat';
+  try {
+    await new Promise<void>((resolvePromise, rejeitar) => {
+      let saida = '';
+      let concluido = false;
+      const gerenciador = new GerenciadorDePty(
+        process.cwd(),
+        (_sessionRef, dataBase64) => {
+          if (concluido) return;
+          saida += Buffer.from(dataBase64, 'base64').toString('utf8');
+          const ocorrencias = saida.split('SELF_TEST_PTY_MARKER').length - 1;
+          if (ocorrencias >= 2) {
+            concluido = true;
+            gerenciador.fechar('self-test');
+            console.log(`SELF_TEST_PTY_OK: ${JSON.stringify(saida)}`);
+            resolvePromise();
+          }
+        },
+        () => {},
+        nodePty,
+      );
+      const resultado = gerenciador.abrir('self-test', 80, 24);
+      if (!resultado.ok) {
+        rejeitar(new Error(`self-test-pty: abrir() falhou: ${resultado.message}`));
+        return;
+      }
+      gerenciador.escrever(
+        'self-test',
+        Buffer.from('SELF_TEST_PTY_MARKER\n').toString('base64'),
+      );
+      setTimeout(
+        () =>
+          rejeitar(
+            new Error(`self-test-pty: timeout esperando o marcador. saida=${JSON.stringify(saida)}`),
+          ),
+        10_000,
+      );
+    });
+  } finally {
+    process.env.SHELL = shellOriginal;
+  }
+}
+
 async function main(): Promise<void> {
+  if (process.argv.includes('--self-test-pty')) {
+    await rodarAutoTestePty();
+    return;
+  }
+
   const { projectId, dir, apiUrl, token } = lerArgumentos(process.argv);
 
   console.log(`brabo-runner — projeto ${projectId}, raiz ${dir}, api ${apiUrl}`);
+
+  // Resolvido UMA vez, antes de montar o estado — normal `import('node-pty')`
+  // sob `node dist/index.cjs`/`bun run src/index.ts`; extraído do binário
+  // compilado (ADR 0112) só quando `native-pty-loader.ts` detecta que está
+  // rodando dentro de um `bun build --compile`.
+  const nodePty = await carregarNodePty();
+  console.log('node-pty carregado com sucesso');
 
   const estado: EstadoDoRunner = {
     canalAtual: null,
@@ -306,6 +392,7 @@ async function main(): Promise<void> {
         // (já feito em `GerenciadorDePty.abrir`'s `onExit`) e registramos.
         console.log(`pty ${sessionRef}: processo encerrado`);
       },
+      nodePty,
     ),
   };
 
@@ -364,9 +451,25 @@ async function main(): Promise<void> {
 // comparação dava `false` sempre que o CLI rodava pelo `bin` instalado, e
 // `main()` nunca era chamado. No Windows o shim `.cmd`/`.ps1` do npm já
 // invoca `node <caminho real>` sem symlink — `realpathSync` vira no-op ali.
+//
+// ADR 0112 — o binário `bun build --compile` quebra essa checagem de um
+// jeito NOVO, e pior: `process.argv[1]` dentro dele é `/$bunfs/root/<nome>`
+// — um caminho VIRTUAL, dentro do bundle, que `realpathSync` não alcança
+// (`lstat` real num caminho que não existe no disco real). Testado
+// empiricamente antes de corrigir: sem tratar este caso, `realpathSync`
+// LANÇA `ENOENT` fora de qualquer `try/catch`, e o processo morre antes de
+// `main()` ser sequer tentado — silencioso o bastante para passar
+// despercebido num binário que "compila sem erro". A saída: detectar o
+// binário compilado PRIMEIRO (`import.meta.url` de todo módulo embutido no
+// bundle começa com `file:///$bunfs/`, provado empiricamente — nunca
+// acontece sob `node`/`bun run` fora de um `--compile`) e, nesse caso, rodar
+// `main()` incondicionalmente — não há ambiguidade "importado por teste vs.
+// executado direto" pra um binário standalone: o próprio entrypoint É o CLI.
+const invocadoComoBinarioCompilado = import.meta.url.includes('/$bunfs/');
 if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
+  invocadoComoBinarioCompilado ||
+  (process.argv[1] &&
+    import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href)
 ) {
   main().catch((erro) => {
     console.error(`falha fatal: ${mensagemDeErro(erro)}`);
