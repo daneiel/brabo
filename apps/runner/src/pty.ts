@@ -5,14 +5,22 @@
  * `channel.ts` e no contrato fixado com a R3.
  *
  * `node-pty` é o binding nativo — o mesmo que o VS Code usa para o terminal
- * integrado dele.
+ * integrado dele. O módulo NÃO é mais importado estaticamente aqui — ver
+ * `native-pty-loader.ts` para o motivo (o binário standalone do
+ * `bun build --compile`, ADR 0109, precisa resolvê-lo em runtime, depois de
+ * extrair os arquivos embutidos para um diretório real). `GerenciadorDePty`
+ * recebe o módulo já resolvido por injeção, no construtor — `main()` em
+ * `index.ts` resolve uma vez só, antes de montar o estado do runner.
  */
 
-import * as nodePty from 'node-pty';
+import type * as NodePtyNamespace from 'node-pty';
+
+/** O `typeof import('node-pty')` inteiro — só o TIPO, nunca importado em runtime aqui. */
+export type NodePtyModule = typeof NodePtyNamespace;
 
 export interface SessaoPty {
   sessionRef: string;
-  processo: nodePty.IPty;
+  processo: NodePtyNamespace.IPty;
 }
 
 function shellPadrao(): string {
@@ -31,15 +39,18 @@ export class GerenciadorDePty {
   private readonly raiz: string;
   private readonly onData: (sessionRef: string, dataBase64: string) => void;
   private readonly onExit: (sessionRef: string) => void;
+  private readonly nodePty: NodePtyModule;
 
   constructor(
     raiz: string,
     onData: (sessionRef: string, dataBase64: string) => void,
     onExit: (sessionRef: string) => void,
+    nodePty: NodePtyModule,
   ) {
     this.raiz = raiz;
     this.onData = onData;
     this.onExit = onExit;
+    this.nodePty = nodePty;
   }
 
   /** Devolve `{ok: true}` ou `{ok: false, message}` — nunca lança. */
@@ -49,7 +60,7 @@ export class GerenciadorDePty {
     }
 
     try {
-      const processo = nodePty.spawn(shellPadrao(), [], {
+      const processo = this.nodePty.spawn(shellPadrao(), [], {
         name: 'xterm-256color',
         cols,
         rows,

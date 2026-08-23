@@ -1,0 +1,196 @@
+name: Build runner binaries
+
+# ADR 0109 — o item de backlog do ADR 0104 ("binário standalone (pkg/bun
+# build --compile)"), até agora fora de escopo. Workflow PRÓPRIO, disparado
+# pela MESMA tag final de `release.yml`/`publish-runner.yml` — mesma
+# disciplina do ADR 0030 ("workflow PRÓPRIO disparado pela tag... nada a
+# religar aqui"). Cinco binários (um por plataforma do backlog), cada um
+# construído no seu runner NATIVO — nunca cross-compila addon nativo — e
+# anexado à MESMA GitHub Release que `release.yml` já criou (`gh release
+# upload`, nunca `create`: a Release já existe quando este job termina).
+#
+# Roda em PARALELO a `release.yml`/`publish-runner.yml`, sem `needs:` — a
+# única dependência real é a Release EXISTIR, e o passo de upload trata a
+# ausência dela como erro explícito (nunca cria uma por conta própria).
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag final a (re)construir (ex.: v1.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write # gh release upload
+
+env:
+  NODE_VERSION: '24.11.1'
+  PNPM_VERSION: '11.3.0'
+  # `oven-sh/setup-bun` aceita "latest", mas fixar a versão evita que uma
+  # release do Bun quebre os cinco builds ao mesmo tempo sem aviso — mesmo
+  # raciocínio que já vale para NODE_VERSION/PNPM_VERSION no resto do repo.
+  BUN_VERSION: '1.4.0'
+
+concurrency:
+  # Mesmo padrão de `publish-runner.yml`: evita duas construções da MESMA
+  # tag em paralelo (push e dispatch manual coincidindo).
+  group: build-runner-binaries-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Binário (${{ matrix.target }})
+    strategy:
+      # `fail-fast: false` — uma plataforma falhando não deve impedir as
+      # outras quatro de publicar o binário delas. O ADR 0109 documenta
+      # exatamente qual plataforma foi validada de ponta a ponta neste
+      # sandbox (só linux-x64) e quais dependem só desta matriz para a
+      # primeira prova real.
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            os: ubuntu-latest
+          # GitHub-hosted, Cobalt 100 (Ubuntu 24.04) — confirmado disponível
+          # em repositório PÚBLICO sem custo extra em 2026 (a oferta de ARM
+          # hospedado mudou desde o preview de jan/2025; este label é o
+          # atual). `node-pty` não publica prebuild pra Linux nenhum —
+          # `node-gyp rebuild` compila local aqui como em `linux-x64`.
+          - target: linux-arm64
+            os: ubuntu-24.04-arm
+          - target: darwin-x64
+            os: macos-13
+          - target: darwin-arm64
+            os: macos-14
+          - target: win32-x64
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        # O default do windows-latest é `pwsh` — os passos abaixo são bash
+        # de propósito (mesma sintaxe `set -euo pipefail` do resto do repo),
+        # e o `windows-latest` do GitHub já traz um bash utilizável (Git
+        # Bash) sob `C:\Program Files\Git\bin\bash.exe`, que é o que
+        # `shell: bash` resolve.
+        shell: bash
+    steps:
+      # Mesma restrição de `publish-runner.yml`/`release.yml`: quem
+      # reconstrói manualmente é o responsável nomeado, não qualquer um com
+      # escrita no repo.
+      - name: Quem pode (re)construir
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          ATOR: ${{ github.actor }}
+          MODO: ${{ vars.APPROVAL_MODE || 'solo' }}
+          OWNER: ${{ vars.OWNER_HANDLE }}
+        run: |
+          set -euo pipefail
+          if [ "$MODO" != 'solo' ]; then
+            echo "::notice::APPROVAL_MODE=$MODO — a restrição de dispatch por owner vale no modo solo."
+            exit 0
+          fi
+          if [ -z "${OWNER:-}" ] || [ "$ATOR" != "$OWNER" ]; then
+            echo "::error::'$ATOR' não pode disparar construção manual."
+            exit 1
+          fi
+          echo "ator autorizado: $ATOR"
+
+      # Mesmo motivo de `publish-runner.yml`: num dispatch, `github.ref_name`
+      # é a branch padrão, não a tag pedida. Um lugar só resolve e valida.
+      - name: Qual tag construir
+        id: alvo
+        env:
+          ENTRADA: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+            tag="$ENTRADA"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+          if ! printf '%s' "$tag" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::'$tag' não é tag final. O formato é vX.Y.Z, sem sufixo -dev.N nem -qa.N."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "tag a construir: $tag"
+
+      - uses: actions/checkout@v4
+        with:
+          # Checkout NA TAG, nunca no ref do evento — mesmo motivo de
+          # `publish-runner.yml`.
+          ref: ${{ steps.alvo.outputs.tag }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # `pnpm install` — mesmo que sem publicar no npm, é ELE quem roda o
+      # `install` do `node-pty` (`node scripts/prebuild.js || node-gyp
+      # rebuild`), que decide se `build/Release/pty.node` (compilado local)
+      # ou `prebuilds/<platform>-<arch>/*.node` (binário pronto do pacote) é
+      # o que `scripts/build-bin.mjs` vai embutir — Node é exigido aqui por
+      # causa do fallback de compilação local do `node-gyp`, mesmo o
+      # artefato final sendo compilado pelo Bun.
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build do binário (${{ matrix.target }})
+        run: pnpm --filter runner build:bin
+
+      # Smoke REAL sobre o binário recém-construído — nunca confiar em CI
+      # antigo. `--self-test-pty` spawna um PTY de verdade e prova que o
+      # `.node` nativo embutido carrega e funciona NESTE runner, para ESTA
+      # plataforma — é o mesmo raciocínio de "cinto e suspensório" que
+      # `publish-runner.yml` já aplica ao smoke do `dist/index.cjs`.
+      - name: Smoke do binário
+        run: pnpm --filter runner smoke:bin
+
+      # Idempotência — mesmo padrão de `publish-runner.yml` ("Essa versão já
+      # está publicada?"): republicar a MESMA tag (workflow_dispatch depois
+      # de um push que já rodou) não deve falhar tentando anexar um asset
+      # que já existe. `gh release upload` sem `--clobber` falharia com 422
+      # nesse caso; a checagem evita alcançar isso.
+      - name: Anexar à GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.alvo.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          arquivo="$(ls apps/runner/dist-bin/brabo-runner-* 2>/dev/null | head -1)"
+          if [ -z "$arquivo" ]; then
+            echo "::error::nenhum binário encontrado em apps/runner/dist-bin/ — o build falhou silenciosamente?"
+            exit 1
+          fi
+          nome="$(basename "$arquivo")"
+
+          # A Release já existe quando este job roda — publicada por
+          # `release.yml`, que corre em PARALELO sem `needs:` entre os dois
+          # (mesma tag, mesmo evento). Se não existir ainda (corrida rara,
+          # ou dispatch manual apontando pra tag sem Release), falha
+          # EXPLÍCITO — este workflow nunca cria Release por conta própria.
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::a Release de $TAG não existe ainda — este workflow só ANEXA a uma Release existente, nunca cria uma."
+            exit 1
+          fi
+
+          ja_anexado="$(gh release view "$TAG" --json assets --jq ".assets[].name" | grep -qx "$nome" && echo true || echo false)"
+          if [ "$ja_anexado" = 'true' ]; then
+            echo "::notice::$nome já está anexado a $TAG — nada a fazer (idempotência)."
+          else
+            gh release upload "$TAG" "$arquivo"
+            echo "anexado: $nome -> $TAG"
+          fi

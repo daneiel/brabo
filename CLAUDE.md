@@ -2062,6 +2062,47 @@ primário de verdade.
   `useBacklog` (completo, sem janela), com fallback por história quando o
   backlog ainda não respondeu.
 
+## Binário standalone do runner (2026-08-23, RN-440/441, ADR 0109)
+Item de backlog do ADR 0104 ("standalone binary, `pkg`/`bun build
+--compile`"), companion do ADR 0106 (distribuição via npm). Decisão
+explícita do dono do produto: binário ÚNICO de verdade, matriz completa
+com Windows desde a v1 — a alternativa mais barata ("binário + pasta
+`node-pty-native/` ao lado") foi oferecida e recusada.
+
+`bun build --compile` embute o `.node` nativo do `node-pty` via
+`with { type: 'file' }` e o extrai pra um diretório TEMPORÁRIO REAL em
+runtime (`native-pty-loader.ts`) — necessário porque `node-pty` resolve o
+próprio addon por um `require()` de caminho COMPUTADO
+(`lib/utils.js#loadNativeModule`), que o Bun não consegue embutir sozinho
+(build passa, runtime lança `Cannot find module`, testado antes de
+desenhar a correção). Cinco plataformas
+(`linux-x64`/`linux-arm64`/`darwin-x64`/`darwin-arm64`/`win32-x64`), cada
+uma construída no seu runner NATIVO
+(`.github/workflows/build-runner-binaries.yml`, gatilho de tag final,
+mesmo padrão de `publish-runner.yml`), binário anexado à Release já
+existente.
+
+**Validação honesta, por plataforma**: só `linux-x64` foi executado de
+verdade neste ambiente (`build:bin`+`smoke:bin` verdes, repetidamente —
+foi rodando o binário real que os dois bugs abaixo apareceram). As outras
+quatro — Windows em especial, com TRÊS arquivos nativos em vez de um —
+foram raciocinadas lendo o código-fonte do `node-pty`, nunca executadas
+numa máquina real daquele SO; a primeira execução real delas é a PRÓXIMA
+tag de versão, não esta PR. Nenhum fallback por plataforma foi aplicado
+preventivamente — nada nesta investigação PROVOU que alguma das cinco não
+funciona assim; se uma tag real mostrar que sim, isso vira item novo, não
+suposição de hoje.
+
+Dois defeitos achados só rodando o binário compilado, não lendo a API:
+`--external node-pty` precisa estar no comando do `bun build` mesmo sem
+`import` estático nenhum de `node-pty` no código — o `await import(...)`
+de fallback (usado só fora do binário) é descoberto e embutido pelo Bun de
+qualquer forma, e falha em runtime com erro enganoso; e a guarda de
+auto-run (ADR 0106) precisou de um segundo ramo — `process.argv[1]` dentro
+do binário é um caminho VIRTUAL (`/$bunfs/root/...`) que `realpathSync`
+não alcança, lançando `ENOENT` fora de qualquer `try/catch` antes de
+`main()` ser tentado.
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector;
   `nodemailer` para SMTP real do `MailSender` (ADR 0096), atrás de
@@ -2081,9 +2122,15 @@ primário de verdade.
 - `apps/runner`: workspace novo, Node/TS — CLI (`brabo-runner`) que roda
   na máquina do usuário, conectando ao engine via canal Phoenix (`phoenix`,
   embutido no bundle) para executar comandos aprovados e terminal
-  interativo (`node-pty`, único `external` — binding nativo) — ver
-  "Runner local" (ADR 0103). Publicado como `@brabo/runner` via `tsup` +
-  `npm publish` (ADR 0106)
+  interativo (`node-pty`, único `external` do build `tsup` — binding
+  nativo, resolvido via `node_modules` de quem instalou o pacote) — ver
+  "Runner local" (ADR 0103). TRÊS caminhos de distribuição: clonar o
+  monorepo (dev), `npm install -g @brabo/runner` via `tsup` + `npm publish`
+  (ADR 0106), e binário standalone via `bun` (`bun build --compile`, ADR
+  0109) — o `.node` nativo do `node-pty` embutido por `with { type: 'file'
+  }` e extraído para um diretório real em runtime, já que `node-pty`
+  resolve seu próprio addon por um `require()` de caminho COMPUTADO que o
+  Bun não consegue embutir sozinho
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev
 - Auth: first-party no domínio da api (argon2id + access JWT curto +
   refresh opaco com rotação); autorização RBAC no domínio da api
