@@ -65,7 +65,7 @@ export function Carousel({ ariaLabel, slides, headerActions, className }: Carous
     <div
       className={[styles.carousel, className].filter(Boolean).join(' ')}
       role="group"
-      aria-roledescription="carrossel"
+      aria-roledescription={t('carousel.roleDescription')}
       aria-label={ariaLabel}
     >
       <div className={styles.cabecalho}>

@@ -11,7 +11,8 @@
   "compartilhado": {
     "semTitulo": "(no title)",
     "verNoBacklog": "View in Backlog",
-    "voce": "You"
+    "voce": "You",
+    "agenteGenerico": "agent"
   },
   "topbar": {
     "voltarAoProjeto": "Back to project",
@@ -121,7 +122,9 @@
     "historiaDevolvida": "Story returned to the PO",
     "erroDevolverHistoria": "Could not return the story",
     "erroEnviarMensagem": "Could not send the message",
-    "erroCancelarTurno": "Could not cancel the turn"
+    "erroCancelarTurno": "Could not cancel the turn",
+    "erroNoChat": "Chat error",
+    "aviso": "Warning"
   },
   "modal": {
     "devolverTitulo": "Return \"{{titulo}}\" to the PO?",

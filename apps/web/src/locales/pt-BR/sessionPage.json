@@ -11,7 +11,8 @@
   "compartilhado": {
     "semTitulo": "(sem título)",
     "verNoBacklog": "Ver no Backlog",
-    "voce": "Você"
+    "voce": "Você",
+    "agenteGenerico": "agente"
   },
   "topbar": {
     "voltarAoProjeto": "Voltar ao projeto",
@@ -121,7 +122,9 @@
     "historiaDevolvida": "História devolvida ao PO",
     "erroDevolverHistoria": "Não foi possível devolver a história",
     "erroEnviarMensagem": "Não foi possível enviar a mensagem",
-    "erroCancelarTurno": "Não foi possível cancelar o turno"
+    "erroCancelarTurno": "Não foi possível cancelar o turno",
+    "erroNoChat": "Erro no chat",
+    "aviso": "Aviso"
   },
   "modal": {
     "devolverTitulo": "Devolver \"{{titulo}}\" ao PO?",

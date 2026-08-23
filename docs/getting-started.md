@@ -201,7 +201,7 @@ Some steps can come back as **`skipped`** (already done) or **`degraded`**
 (finished without a capability). Both are success. With the Local
 provider, branch protection always comes back `degraded` — there's no
 platform to apply it to, and that doesn't weaken anything: what prevents
-an improper merge is the [ceiling in the domain](reference/permissions.md#os-tetos),
+an improper merge is the [ceiling in the domain](reference/permissions.md#caps),
 not the platform.
 
 If a step fails, fix the cause and tell it to resume: the bootstrap picks

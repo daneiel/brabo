@@ -51,5 +51,16 @@
       "failed": "failed — origin: {{origin}}",
       "dispensed": "dismissed — {{justification}}"
     }
+  },
+  "timelineTree": {
+    "empty": "No agent has taken action in this session yet.",
+    "newSinceLastVisit": "{{count}} new milestone(s) since last visit",
+    "iteration": "iteration {{n}}",
+    "marker": {
+      "args": "arguments",
+      "result": "result",
+      "resultFailed": "result (failed)",
+      "error": "error: {{error}}"
+    }
   }
 }

@@ -1,25 +1,30 @@
+import i18n from './i18n';
 import type { BootstrapStepName, SessionEvent } from './api-types';
 
 // Passos do bootstrap de Gitflow em ordem de EXECUÇÃO (igual
 // BOOTSTRAP_STEP_SEQUENCE em apps/api/.../bootstrap-steps.ts): os dois
 // commits em main vêm ANTES das branches — createRepo não faz commit
 // inicial em nenhum provider, então nada pode nascer de um main sem commit.
+//
+// `labelKey` (não `label`): o rótulo do passo é resolvido via `t()` pelo
+// componente que renderiza (BootstrapSteps.tsx/ProvisioningPage.tsx),
+// ambos no namespace `provisioning`, compartilhado entre os dois.
 export interface BootstrapStepDef {
   name: BootstrapStepName;
-  label: string;
+  labelKey: string;
 }
 
 export const BOOTSTRAP_STEPS: readonly BootstrapStepDef[] = [
-  { name: 'commit_pr_template', label: 'Commit do template de PR' },
-  { name: 'commit_branching_policy', label: 'Commit da política de branches' },
-  { name: 'create_dev_branch', label: 'Criar branch dev' },
-  { name: 'create_qa_branch', label: 'Criar branch qa' },
+  { name: 'commit_pr_template', labelKey: 'bootstrapSteps.stepLabel.commitPrTemplate' },
+  { name: 'commit_branching_policy', labelKey: 'bootstrapSteps.stepLabel.commitBranchingPolicy' },
+  { name: 'create_dev_branch', labelKey: 'bootstrapSteps.stepLabel.createDevBranch' },
+  { name: 'create_qa_branch', labelKey: 'bootstrapSteps.stepLabel.createQaBranch' },
   // `create_rc_branch` saiu com o degrau `rc` (ADR 0030, achado #3). O nome
   // continua no VOCABULÁRIO (`BootstrapStepName`, e o enum do banco), porque
   // projetos bootstrapados antes têm eventos e cursor com ele — o que esta
   // lista descreve é o que o bootstrap FAZ hoje, e listar um passo que nunca
   // vai rodar o deixaria `pendente` para sempre no painel.
-  { name: 'protect_branches', label: 'Proteger branches' },
+  { name: 'protect_branches', labelKey: 'bootstrapSteps.stepLabel.protectBranches' },
 ];
 
 // pendente = sem evento ainda; rodando = step_started sem terminal;
@@ -74,7 +79,7 @@ export function deriveStepStates(
 
     const note =
       event.type === 'bootstrap.step_degraded'
-        ? 'não suportado'
+        ? i18n.t('bootstrapSteps.notSupportedNote', { ns: 'provisioning' })
         : event.type === 'bootstrap.step_failed'
           ? payload.error
           : undefined;

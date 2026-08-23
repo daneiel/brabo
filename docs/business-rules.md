@@ -907,7 +907,7 @@ The other two providers diverge, and the divergence is normalized, not
 hidden: Ollama simply doesn't emit `usage` without the `done` line;
 Anthropic can't omit the count, because `usage` is mandatory in its
 protocol's `message_start`. The three responses are in
-[docs/reference/llm-providers.md](reference/llm-providers.md#divergências-normalizadas).
+[docs/reference/llm-providers.md](reference/llm-providers.md#normalized-divergences).
 
 - **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:150`
 - **Test:** `test/contract/llm-provider.contract.ts` (scenario
@@ -9939,6 +9939,370 @@ antes de existir conta.
   mudar o formato de sessão pra ninguém que não usa o campo novo
 - **Origem:** pedido do dono do produto — interface e docs em inglês por
   padrão, com português preservado
+
+---
+
+## Terminal do runner local preso em "Abrindo terminal..." para sempre (RN-432)
+
+Achado testando um projeto novo no modo `runner` (ADR 0103/0104) e abrindo
+Code → Dev → Terminal: a tela nunca saía do skeleton de carregamento, e o
+console mostrava `socket do terminal com erro`/`socket do terminal fechado`
+em loop, com backoff crescente até estabilizar em ~5-6s — o padrão do
+backoff PADRÃO do `phoenix.js`.
+
+### RN-432 — O socket do terminal desiste depois de um timeout, o default de `ENGINE_PUBLIC_URL` é alcançável PELO BROWSER, e o endpoint não duplica path {#rn-432}
+
+Três defeitos empilhados. Os dois primeiros foram achados investigando o
+sintoma; o TERCEIRO só apareceu depois de corrigir os dois primeiros — sem
+eles, o browser nunca alcançava o engine pra revelar o bug de path por
+baixo. Corrigir só um deixa os outros de pé:
+
+1. `ENGINE_PUBLIC_URL` (RN-419) nunca tinha default nenhum no
+   `docker/docker-compose.yml` — só `ENGINE_URL` (`http://engine:4000`,
+   hostname que SÓ resolve dentro da rede do Compose). O fallback do
+   código (`process.env.ENGINE_PUBLIC_URL ?? process.env.ENGINE_URL ?? …`,
+   `request-runner-ticket.use-case.ts`) caía silenciosamente no valor
+   errado, e o browser tentava abrir um WebSocket contra um hostname que
+   ele nunca resolve. `docker/docker-compose.yml` ganhou
+   `ENGINE_PUBLIC_URL: ${ENGINE_PUBLIC_URL:-http://localhost:4000}` no
+   serviço `api` — o MESMO default que `VITE_ENGINE_URL` já usa no
+   serviço `web`, pelo mesmo motivo.
+2. Mesmo com a URL certa, um transporte que NUNCA abre (engine fora do ar,
+   firewall, reconfiguração futura errada) não tinha teto nenhum:
+   `apps/web/src/lib/terminal-channel.ts` nunca passava `reconnectAfterMs`
+   pro `Socket`, então o `phoenix.js` caía no backoff PADRÃO dele e ficava
+   tentando reconectar sozinho pra sempre — o próprio docblock do módulo
+   já declarava a intenção de "sem reconexão automática" (mesma régua de
+   `session-channel.ts`/RN-108), mas nunca era cumprida na prática. Sem
+   `onError`/`onClose` chamando `handlers.onErro`, `TerminalPanel` ficava
+   preso em `'carregando'` (RN-088 — toda tela distingue carregando/erro/
+   vazio — violada em silêncio). Corrigido com `reconnectAfterMs` devolvendo
+   um valor que praticamente nunca dispara (24h, mesmo padrão de
+   `session-channel.ts`) e um timeout PRÓPRIO de 8s
+   (`TIMEOUT_CONEXAO_MS`): se `onOpen` não disparar antes disso, o módulo
+   chama `handlers.onErro` com mensagem acionável e desconecta.
+3. **O defeito que de fato impedia a conexão, mascarado pelos dois
+   acima**: `terminal-channel.ts` concatenava `'/runner/websocket'` a um
+   `engineWsUrl` que a api já devolve PRONTO — `ws://host:porta/runner`
+   (`engineWsUrlPublico()`) —, e o PRÓPRIO `Socket` do `phoenix.js` ainda
+   acrescenta `/websocket` sozinho no construtor
+   (`this.endPoint = ${endPoint}/websocket`). O resultado batia no engine
+   como `GET /runner/runner/websocket/websocket`, que
+   `Phoenix.Router.NoRouteError` recusa — confirmado no log do engine
+   (`docker logs brabo-engine-1`) durante a verificação end-to-end desta
+   correção. `apps/runner/src/channel.ts` (o lado do CLI) já fazia
+   certo — passa `engineWsUrl` direto pro `Socket`, sem tocar — e o teste
+   de `terminal-channel.ts` nunca pegou porque o mock de
+   `getTerminalTicket` usava um `engineWsUrl` (`http://engine.local`, sem
+   `/runner`) que não reflete o contrato real da api; corrigido junto.
+   Fix: `terminal-channel.ts` passa a usar `engineWsUrl` (só com o
+   `.replace(/^http/, 'ws')` defensivo) direto, sem concatenar path
+   nenhum.
+
+Verificado END TO END contra `exp001` (modo `runner`, sem `brabo-runner`
+real conectado): antes da correção, a aba girava pra sempre; depois, o
+log do engine mostra `CONNECTED TO EngineWeb.RunnerSocket` →
+`JOINED terminal:<projectId>` → `pty_resize descartado — sem runner
+conectado`, e a tela mostra `RunnerOnboardingPanel` com o comando
+`brabo-runner` em menos de 1s — nunca o timeout de 8s do item 2, que
+segue como rede de segurança pro caso do engine estar genuinamente fora
+do ar.
+
+- **Onde:** `docker/docker-compose.yml`, `.env.example`,
+  `apps/web/src/lib/terminal-channel.ts`
+- **Teste:** `apps/web/src/lib/terminal-channel.test.ts` (socket que nunca
+  abre chama `onErro` dentro do timeout, sem reconexão automática do
+  phoenix; `engineWsUrl` do mock corrigido pra refletir o contrato real —
+  já com `/runner`, sem `/websocket` — e a asserção do caminho feliz
+  passa a exigir a URL usada no `Socket` IGUAL ao `engineWsUrl` do
+  ticket, sem concatenação)
+- **ADR:** nenhum — correção de bug restaurando o comportamento que o ADR
+  0103/0104 e o próprio docblock do módulo já declaravam como intenção
+- **Origem:** achado testando manualmente um projeto novo no modo
+  `runner`; o item 3 só apareceu ao verificar a correção dos itens 1/2
+  ponta a ponta no browser contra o engine real
+
+---
+
+### RN-433 — No Linux, `--dir` do runner local só é aceito dentro do `$HOME` do usuário {#rn-433}
+
+O CLI `brabo-runner` (modo `runner`, ADR 0103/0104) validava só que
+`--dir` existe e é uma pasta — sem restrição nenhuma de ONDE essa pasta
+podia estar no sistema de arquivos. `lerArgumentos()`
+(`apps/runner/src/index.ts`) passou a chamar
+`validarDirDentroDoHomeNoLinux(dir, process.platform, homedir())`
+(`apps/runner/src/guard.ts`) logo depois da checagem de existência: no
+Linux (`process.platform === 'linux'`), `--dir` só é aceito dentro de
+`os.homedir()` — o próprio `$HOME` ou qualquer subpasta dele; um caminho
+fora dessa árvore (`/etc`, `/root`, `/`, ou até outra conta em `/home`)
+é recusado com `process.exit(2)` e mensagem explicando o motivo e
+mostrando o home esperado. Fora do Linux (macOS, Windows) o
+comportamento não muda — a restrição é só para Linux.
+
+A checagem reusa `dentroDoEscopo`/`semBarraFinal`, os mesmos primitivos
+de comparação de caminho que `validarCwdDentroDaRaiz` já usa no mesmo
+módulo, mas é deliberadamente mais simples que ela: sem `realpath` nem
+proteção a TOCTOU/symlink, porque não protege contra um SERVIDOR
+malicioso (aquele é o papel de `validarCwdDentroDaRaiz`, exercido a cada
+`exec`) — é uma checagem de STARTUP do próprio CLI local, orientando o
+usuário que digitou um caminho errado ao subir o runner.
+
+- **Onde:** `apps/runner/src/guard.ts`
+  (`DirForaDoHomeError`/`validarDirDentroDoHomeNoLinux`),
+  `apps/runner/src/index.ts` (`lerArgumentos`)
+- **Teste:** `apps/runner/src/guard.spec.ts`
+  (`describe('validarDirDentroDoHomeNoLinux', …)` — aceita o próprio
+  home e subpasta dele no Linux, recusa caminho fora do home e outra
+  conta dentro de `/home` no Linux, e confirma que a restrição NÃO se
+  aplica fora do Linux)
+- **ADR:** [0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+  (extensão aditiva — o runner já era declarado "fonte da verdade do
+  caminho"; esta regra só estreita o que ele aceita como `--dir` no
+  Linux)
+- **Origem:** pedido explícito do dono do produto, durante um teste real
+  de criação de projeto (tentativa de apontar `--dir` para um caminho
+  fora do home, `/home/dev/exp001`, que não existia na máquina — levou
+  à decisão de travar caminhos fora do `$HOME` no Linux)
+
+---
+
+### RN-434 — `--dir` do runner local inexistente é criado, não recusado {#rn-434}
+
+O CLI `brabo-runner` (modo `runner`, ADR 0103/0104) recusava com
+`process.exit(2)` qualquer `--dir` que ainda não existisse no disco — a
+pasta do projeto tinha de ser criada manualmente antes de subir o CLI.
+`garantirDiretorio()` (`apps/runner/src/guard.ts`) passou a criar a pasta
+automaticamente (`mkdirSync(dir, { recursive: true })`) quando ela não
+existe, e `lerArgumentos()` (`apps/runner/src/index.ts`) chama essa função
+LOGO DEPOIS de `validarDirDentroDoHomeNoLinux` (RN-433) — a ORDEM é a
+regra: a checagem do `$HOME` funciona em caminho que ainda não existe (só
+`resolve()`, sem tocar disco), então roda primeiro e continua recusando
+`--dir` fora do home no Linux mesmo quando ele ainda não existe, ANTES de
+qualquer tentativa de criação — criar primeiro reabriria a brecha que a
+RN-433 tinha acabado de fechar. `--dir` apontando para um ARQUIVO já
+existente continua erro real (`DirNaoEUmaPastaError`, `process.exit(2)`,
+sem tentar criar nada) — este CLI nunca sobrescreve um arquivo
+silenciosamente. Falha na criação em si (permissão negada, disco cheio,
+etc.) também recusa (`NaoConsegiuCriarDiretorioError`), com a mensagem do
+erro original embutida.
+
+- **Onde:** `apps/runner/src/guard.ts`
+  (`garantirDiretorio`/`DirNaoEUmaPastaError`/`NaoConsegiuCriarDiretorioError`),
+  `apps/runner/src/index.ts` (`lerArgumentos`)
+- **Teste:** `apps/runner/src/guard.spec.ts`
+  (`describe('garantirDiretorio', …)` — não faz nada quando a pasta já
+  existe, cria recursivamente quando não existe, recusa sem criar quando o
+  caminho já existe e é um arquivo, e embrulha falha de `mkdir` em
+  `NaoConsegiuCriarDiretorioError`; e um caso a mais em
+  `describe('validarDirDentroDoHomeNoLinux', …)` provando que um `--dir`
+  fora do home e AINDA INEXISTENTE continua recusado, confirmando que a
+  ordem das duas checagens não abre brecha)
+- **ADR:** [0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+  (extensão aditiva — não muda o desenho do runner como fonte da verdade
+  do caminho, só reduz o atrito de subir um projeto novo)
+- **Origem:** pedido do dono do produto, ao notar que a pasta de um
+  projeto novo no modo `runner` não existia na máquina e precisava ser
+  criada manualmente antes de rodar o CLI — o mesmo cenário que motivou a
+  RN-433 (`/home/dev/exp001` inexistente), agora resolvido criando a
+  pasta em vez de só recusar
+
+---
+
+## O explorador de pasta do Runner vira três colunas, e a criação de um projeto `runner` deixa de esperar o passo final (RN-435/436)
+
+Duas mudanças pedidas pelo dono do produto depois de testar a criação de um
+projeto real: (1) o navegador de pasta existente
+(`FolderBrowserModal`) era uma lista simples com breadcrumb, quando a
+referência visual que ele mandou (um picker estilo GNOME Files/GTK, de três
+colunas) já existia como handoff de design pronto pra adaptar; (2) "Procurar
+pasta..." não funcionava na TELA DE CRIAÇÃO do projeto — só depois de
+criado — porque o ticket do canal do Runner (ADR 0107) é ancorado a um
+`projectId` que, até esta correção, só nascia na confirmação.
+
+### RN-435 — `FolderBrowserModal` vira um explorador de três colunas: atalhos, lista com um clique seleciona/duplo clique entra, e um painel de detalhes {#rn-435}
+
+O layout de lista única virou três colunas dentro do `Modal size="full"`:
+atalhos (Pasta pessoal, que chama `diretorioInicial()`; Raiz, `/`), a lista
+central com breadcrumb, e um painel de detalhes à direita. O protocolo
+(`FsEntrada`, em `apps/web/src/lib/fs-browser-channel.ts`) só tem
+`{ nome, isDir }` — sem tamanho nem data de modificação — e não foi
+estendido (mexeria em `apps/engine`/`apps/runner`, fora do escopo desta
+entrega); o painel de detalhes só mostra o que dá pra derivar client-side:
+nome, tipo, e a contagem de itens quando o item exibido é a pasta JÁ ABERTA
+(nunca de uma pasta só selecionada, que exigiria uma chamada extra ao
+runner).
+
+Os DOIS gestos que antes estavam fundidos num único clique (que já navegava
+pra dentro da pasta) foram separados: um clique agora só SELECIONA (destaca
+o item e atualiza o painel de detalhes) e um duplo clique ENTRA. O botão
+final ("Usar esta pasta", renomeado de "Selecionar esta pasta" — a chave
+`folderBrowserModal.select` de `pt-BR`/`en` mudou junto) usa o item
+selecionado quando houver um (`selected.kind === 'dir' ? join(path,
+selected.name) : path`) ou a pasta aberta no momento quando não houver
+nenhum. A lista deixou de filtrar arquivos — a listagem inteira aparece
+agora, com arquivos renderizados como `<div aria-disabled>` em vez de
+`<button>`: visualmente apagados e sem gesto nenhum, porque só pasta
+continua navegável/selecionável.
+
+- **Onde:** `apps/web/src/components/FolderBrowserModal.tsx`,
+  `FolderBrowserModal.module.css`,
+  `apps/web/src/locales/{pt-BR,en}/terminal.json`
+- **Teste:** `apps/web/src/components/FolderBrowserModal.test.tsx` — clique
+  único seleciona sem chamar `listarDiretorio` de novo; duplo clique navega;
+  arquivo aparece na lista mas não é alcançável por `getByRole('button')`;
+  atalhos "Pasta pessoal"/"Raiz"; e "Usar esta pasta" usa o selecionado
+  quando houver, senão a pasta aberta
+- **ADR:** nenhum — redesenho de UI sobre um componente que já existia, sem
+  mudança de protocolo nem de fronteira de dado (o ADR 0107 continua
+  descrevendo o mecanismo por trás)
+- **Origem:** pedido do dono do produto, depois de testar a criação de um
+  projeto real e achar o navegador de pasta pouco parecido com um
+  explorador de arquivos de verdade — referência visual enviada por ele
+  (picker de três colunas, estilo GNOME Files/GTK)
+
+### RN-436 — No modo `runner`, "Procurar pasta..." cria o projeto ANTECIPADAMENTE, e a confirmação final reusa por SNAPSHOT de identidade {#rn-436}
+
+O ADR 0107 já tinha declarado esta lacuna na própria seção de Consequências:
+sem projeto ainda, o ticket do canal (RN-428) não tem a quem se ancorar, e
+"Procurar pasta..." caía sempre no estado "disponível depois que o projeto
+existir" — mesmo no modo `runner`, onde a criação NÃO depende de validar
+disco (ADR 0104, item 2). Fechado pelo [ADR 0108](adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.md):
+`NewProjectWizard.tsx` (`handleProcurarPasta`) chama `createProject` ao
+clicar "Procurar pasta..." quando `modoDeWorkspace === 'runner'` — usando o
+caminho já digitado, ou um placeholder lexicalmente válido e claramente
+provisório (`/workspace-a-confirmar`) quando o campo ainda está vazio, nunca
+bloqueando o clique. O modo `mounted` **não muda**: continua com
+`projectId={null}` até a confirmação, porque ali a validação de disco roda
+na criação e criar cedo com caminho vazio devolveria a recusa da RN-422 num
+momento em que o usuário nem pensou em caminho ainda.
+
+Um SNAPSHOT de identidade (`{ name, externalId, adotando }` — nunca
+`caminhoLocal`, cujo refino é o PROPÓSITO de navegar) decide quando reusar:
+clicar "Procurar pasta..." de novo com a identidade intacta reabre o modal
+com o MESMO projeto, sem criar outro; mudar o nome (ou voltar e trocar o
+repositório a adotar) invalida o snapshot, e a próxima navegada cria um
+projeto novo. `handleConfirm` aplica a mesma régua — reusa o projeto
+já criado ao navegar quando o snapshot ainda bate, e só chama `createProject`
+quando não há nada pra reusar. `montarPayloadDeCriacao`, função pura extraída
+do que antes vivia só dentro de `handleConfirm`, é reaproveitada pelos dois
+caminhos.
+
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx`
+  (`handleProcurarPasta`, `handleConfirm`, `montarPayloadDeCriacao`,
+  `snapshotDeIdentidade`/`mesmaIdentidade`)
+- **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx`, describe
+  `navegação de pasta antecipada no modo Runner` — cria o projeto e abre o
+  modal com o id real; usa o placeholder quando o campo está vazio; clicar
+  de novo sem mudar nada não cria outro; mudar o nome invalida o snapshot e
+  cria um projeto diferente; `handleConfirm` reusa em vez de duplicar. O
+  teste preexistente "'Procurar pasta...' mostra o estado declarado" (modo
+  `mounted`) continua verde, sem alteração — prova que o escopo não vazou
+- **ADR:** [0108](adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.md)
+  — mudança estrutural (QUANDO um projeto passa a existir no fluxo de
+  criação), com o efeito colateral aceito de projeto "não provisionado"
+  órfão quando o wizard é fechado sem terminar (o MESMO estado que qualquer
+  criação interrompida hoje já produz, não uma regressão nova)
+- **Origem:** pedido do dono do produto, depois de testar a criação de um
+  projeto real no modo Runner e não conseguir navegar pastas antes de
+  confirmar — a lacuna que o ADR 0107 já tinha declarado e adiado
+
+### RN-437 — `fs-browser-channel.ts` tinha o MESMO bug de path duplicado que a RN-432 já tinha corrigido no `terminal-channel.ts` irmão {#rn-437}
+
+Achado ao verificar a RN-436 ponta a ponta no Chrome, contra o engine real:
+o modal abria com o `projectId` certo, mas a conexão caía na hora com "A
+conexão com o runner caiu — feche e reabra para tentar de novo." em vez de
+mostrar `RunnerOnboardingPanel`. `apps/web/src/lib/fs-browser-channel.ts`
+concatenava `'/runner/websocket'` a um `engineWsUrl` que a api já devolve
+PRONTO (`ws://host:porta/runner`, de `engineWsUrlPublico()`) — o mesmo
+`Socket` do `phoenix.js` ainda acrescenta `/websocket` sozinho no
+construtor, e o resultado batia no engine como `GET
+/runner/runner/websocket/websocket`, que `Phoenix.Router.NoRouteError`
+recusa. É EXATAMENTE o item 3 da RN-432, só que no módulo IRMÃO — a
+correção de lá nunca tinha sido replicada aqui, e nenhuma suite pegava
+porque este módulo não tinha teste nenhum até agora (o próprio docblock
+dizia, incorretamente, que `terminal-channel.test.ts` cobria "indiretamente").
+Fix: mesma linha da RN-432 — `engineWsUrl.replace(/^http/, 'ws')`, sem
+concatenar path nenhum.
+
+Verificado END TO END contra um projeto `runner` real (owner logado,
+`teste-navegacao`, criado pela RN-436): antes da correção, o modal caía
+direto no erro de conexão; depois, mostra `RunnerOnboardingPanel` com o
+comando `brabo-runner --project <id-real> --dir <pasta>` em menos de 2s —
+o resultado esperado sem um runner de verdade conectado.
+
+- **Onde:** `apps/web/src/lib/fs-browser-channel.ts`
+- **Teste:** `apps/web/src/lib/fs-browser-channel.test.ts` (novo — o
+  módulo não tinha teste próprio nenhum até esta correção). Caminho feliz
+  confirma `socket.url === engineWsUrl` sem concatenação; mais
+  `diretorioInicial`/`listarDiretorio` roundtrip, falha ao buscar ticket, e
+  `fechar()` idempotente
+- **ADR:** nenhum — restaura o comportamento que o ADR 0103/0107 e a RN-432
+  já declaravam como intenção, só que num módulo que a correção anterior não
+  alcançou
+- **Origem:** achado testando manualmente a RN-436 (criação antecipada de
+  projeto `runner`) contra o Chrome e o engine real — a primeira vez que
+  `FolderBrowserModal` foi exercitado ponta a ponta contra uma conexão de
+  verdade, porque antes desta entrega "Procurar pasta..." nunca alcançava
+  um projeto real antes da confirmação
+
+### RN-438 — `POST .../runner-ticket` autentica E autoriza no MESMO guard; `RolesGuard` (global) se abstém em rota `@RequirePatAuth()` {#rn-438}
+
+`POST /projects/:projectId/runner-ticket` respondia `403 "Não autenticado"`
+para TODO PAT, mesmo válido, recém-emitido, escopado ao projeto certo —
+achado numa verificação AO VIVO do `brabo-runner` conectando a um projeto
+real, nunca por teste automatizado. Causa raiz: `JwtAuthGuard` e
+`RolesGuard` são os dois `APP_GUARD` — GLOBAIS — e um guard global SEMPRE
+roda ANTES de um guard LOCAL de rota (`@UseGuards`), não importa a ordem dos
+decorators no controller. `JwtAuthGuard` já sabia se abster nesta rota (o
+desvio de `IS_PAT_ROUTE_KEY` já existia, sem popular `request.user`,
+contando com `PatAuthGuard` pra autenticar depois); `RolesGuard` não sabia,
+e recusava toda chamada com `request.user` ainda vazio — `PatAuthGuard`
+nunca chegava a rodar. O comentário do controller descrevia a ordem ao
+contrário ("`RolesGuard` roda DEPOIS do `PatAuthGuard`"), e nunca foi assim.
+
+A correção seguiu o MESMO padrão que `JwtAuthGuard` já usava para este
+problema: `RolesGuard` ganhou o desvio gêmeo (`IS_PAT_ROUTE_KEY` →
+retorna `true` sem checar `request.user`), delegando a autorização inteira
+para quem passa a ser o ÚNICO guard rodando depois de `request.user`
+populado nesta rota — o próprio `PatAuthGuard`, que agora também lê
+`@RequireRole` (via `Reflector`) e resolve o papel efetivo
+(`ResolveEffectiveRoleUseCase.forProject`), recusando com a MESMA mensagem
+que `RolesGuard` usaria ("Papel insuficiente para esta ação"). A lógica é
+duplicada entre os dois guards de PROPÓSITO — `RolesGuard` mora em `iam`,
+`PatAuthGuard` mora em `auth`, e uma dependência cruzada só para reusar
+~10 linhas não valeria a pena.
+
+Um SEGUNDO defeito ficou escondido atrás do primeiro, e só apareceu quando
+o teste de integração passou a exercitar os dois guards JUNTOS: `PatAuthGuard`
+comparava o token BRUTO direto contra `personal_access_tokens.token_hash`
+em `validarEUsar` — que sempre espera o HASH (`hashDeToken`, HMAC-SHA256+
+pepper, o mesmo que `TokenFactory`/`IssuePersonalAccessTokenUseCase` usam
+para gravar). Corrigido para `this.tokens.validarEUsar(hashDeToken(token))`.
+Enquanto `RolesGuard` recusava tudo antes, este segundo bug nunca chegava a
+se manifestar — corrigir só o primeiro teria trocado um 403 sempre por um
+401 sempre, e o runner continuaria nunca conectando de verdade.
+
+- **Onde:** `apps/api/src/interfaces/http/iam/roles.guard.ts` (desvio
+  `IS_PAT_ROUTE_KEY`); `apps/api/src/interfaces/http/auth/pat-auth.guard.ts`
+  (autorização por papel + hash do token); `apps/api/src/interfaces/http/runner/runner-http.module.ts`
+  (`IamUseCasesModule` importado, pelo `ResolveEffectiveRoleUseCase` que
+  `PatAuthGuard` passou a precisar); comentário corrigido em
+  `apps/api/src/interfaces/http/runner/runner-tickets.controller.ts`
+- **Teste:** `apps/api/test/interfaces/pat-auth.guard.spec.ts` (autorização
+  por papel isolada + hash do token); `apps/api/test/interfaces/roles.guard.spec.ts`
+  (desvio `IS_PAT_ROUTE_KEY`); `apps/api/test/interfaces/http/runner/runner-tickets.guards.integration.spec.ts`
+  (NOVO — sobe `JwtAuthGuard`+`RolesGuard`+`PatAuthGuard` num Nest real, com
+  `supertest`, na MESMA ordem relativa do `AppModule`: é o teste que
+  faltava, porque cada guard só era exercitado isolado antes disto).
+  Verificado também AO VIVO: `brabo-runner` conectou de verdade a um
+  projeto `runner` real com um PAT emitido depois da correção
+- **ADR:** [0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+  — correção de bug na implementação da decisão já tomada lá (PAT
+  autentica esta rota), não uma decisão nova
+- **Origem:** achado rodando o `brabo-runner` de verdade contra um projeto
+  real e isolando com `curl` direto — nunca por teste automatizado, porque
+  nenhuma suíte exercitava `RolesGuard` e `PatAuthGuard` na mesma
+  requisição
 
 ---
 

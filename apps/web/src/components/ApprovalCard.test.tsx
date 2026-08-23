@@ -1,7 +1,20 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ApprovalCard } from './ApprovalCard';
 import type { ActionType, ProposedAction } from '../lib/api-types';
+// Instância REAL do app (mesmo motivo de `AgentCard.test.tsx`): sem
+// `I18nextProvider` no teste, o hook `useTranslation` cai no singleton
+// global de `lib/i18n.ts` — as asserções abaixo checam o texto ATUAL em
+// português.
+import i18n from '../lib/i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
 
 /**
  * Os 15 tipos do backend (`apps/api/src/domain/actions/decide.ts`).

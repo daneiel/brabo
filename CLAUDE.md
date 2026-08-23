@@ -1918,7 +1918,7 @@ conectado; sem qualquer um dos dois, RECUSA explicitamente — nunca cai no
 
 **Achado da implementação, corrigindo o ADR (que não é editado — a
 correção mora aqui e em
-[backlog.md](docs/explanation/backlog.md#backlog-do-runnerexecution_mode-adr-0104)):**
+[backlog.md](docs/explanation/backlog.md#backlog-of-the-runnerexecution_mode-adr-0104)):**
 a frase do ADR 0104 de que a conversão entre os três modos de projeto
 existente "passa a ser permitida sem recriar o projeto" está INCORRETA.
 `UpdateProjectDto` continua excluindo `executionMode`/`workspacePath` de
@@ -1990,11 +1990,17 @@ tradução de conteúdo ainda) já fechou: `react-i18next`+`i18next` na web
 nova (`/account`) provando o mecanismo, e Docusaurus com
 `i18n.defaultLocale: 'en'`/`locales: ['en', 'pt-BR']` — o snapshot pt-BR
 atual de `docs/` já está preservado em
-`website/i18n/pt-BR/docusaurus-plugin-content-docs/current/`. A EXTRAÇÃO em
-massa do resto da interface e a TRADUÇÃO de `docs/` (Onda 6b, o grosso do
-volume) estão em andamento à parte; quando fechar, esta seção ganha o
-resumo final e o restante do CLAUDE.md (Stack, "Documentação") é revisado
-por completo para registrar inglês como idioma primário de verdade.
+`website/i18n/pt-BR/docusaurus-plugin-content-docs/current/`. A Onda 6b
+(extração em massa da interface + tradução de `docs/`) avançou bastante em
+2026-08-22, em quatro frentes paralelas — ver CHANGELOG.md (Unreleased/
+Documentação) para o detalhe de cada uma — mas AINDA NÃO fechou: faltam
+`docs/business-rules.md` (só o front-matter foi traduzido; o corpo, com
+centenas de RNs, continua 100% em português — é o maior arquivo da doc
+inteira e cresce mais rápido do que dá pra traduzir de passagem) e uma
+fatia residual de componentes `.tsx` menores. Quando fechar de verdade,
+esta seção ganha o resumo final e o restante do CLAUDE.md (Stack,
+"Documentação") é revisado por completo para registrar inglês como idioma
+primário de verdade.
 
 - **Régua de abas agrupada**: 11 abas soltas viraram 6 no topo — Visão
   geral, **Agentes ▾** (Executores, Criativo, Chat, Insights), **Dev ▾**
@@ -2027,13 +2033,19 @@ por completo para registrar inglês como idioma primário de verdade.
   privilégio real do usuário na máquina dele, nunca pela api enumerando o
   filesystem do container. Dois eventos novos no canal já existente
   (`fs_list_dir`/`fs_home_dir`), relay puro do engine, mesmo padrão do PTY.
-  `FolderBrowserModal` funciona onde o projeto já existe; na criação
-  (`NewProjectWizard.tsx`) o projeto só nasce na confirmação, então falta
-  ticket pra conectar ali — gap DECLARADO, o campo de texto livre continua
-  sendo o único caminho na tela de criação. `RunnerOnboardingPanel` novo
+  `FolderBrowserModal` funciona onde o projeto já existe. Na criação
+  (`NewProjectWizard.tsx`), o gap ficou declarado até o ADR 0108: no modo
+  `mounted` o projeto ainda só nasce na confirmação (a validação de caminho
+  toca disco ali), mas no modo `runner` "Procurar pasta..." passa a criar o
+  projeto ANTECIPADAMENTE — reusado por snapshot de identidade em vez de
+  duplicado a cada clique — pra poder ancorar o ticket do canal antes da
+  confirmação (RN-436, ADR 0108). `RunnerOnboardingPanel` novo
   (compartilhado com a aba Terminal) substitui o `<code>` cru de antes.
   `apps/runner` ganhou README — publicar de verdade no npm/empacotar
   binário assinado continua fora do escopo, declarado no README.
+  O explorador de pasta em si virou três colunas (atalhos, lista com um
+  clique seleciona/duplo clique entra, painel de detalhes — RN-435),
+  seguindo a referência visual do dono do produto.
 - **Bug do carrossel do PO corrigido (RN-421)**: a leva de promoções
   pendentes dependia de scan sobre os últimos 200 eventos
   (`useSessionEvents`) — numa sessão longa, a proposta saía da janela e o
@@ -2149,7 +2161,11 @@ por completo para registrar inglês como idioma primário de verdade.
   (RN-105) NÃO vale para projeto `mounted`/`runner`, que não sobem
   container. Consequência declarada no ADR: a contenção estrutural do `join`
   some para esses projetos, e o vetor de symlink do ADR 0055 continua
-  aberto.
+  aberto. No LINUX, o próprio CLI `brabo-runner` recusa `--dir` fora do
+  `$HOME` do usuário (RN-433, ADR 0104) — checagem de startup do processo
+  local, não a fronteira de segurança (essa continua sendo autenticação +
+  pipeline de aprovação, ver `apps/runner/src/guard.ts`); fora do Linux a
+  restrição não se aplica.
 - A imagem de container de um projeto é ARTEFATO do ARQUITETO
   (`artifact.project_image`, versionado, sem tabela), nunca configuração
   escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105) —

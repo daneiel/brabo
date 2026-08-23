@@ -1,1 +1,1 @@
-{"responses":{"204":{"description":"E-mail verificado; o login já funciona."},"400":{"description":"Link inválido, expirado ou já usado — os três com a mesma resposta."}}}
+{"responses":{"204":{"description":"Email verified; login already works."},"400":{"description":"Link invalid, expired, or already used — all three with the same response."}}}

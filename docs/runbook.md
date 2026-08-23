@@ -385,6 +385,60 @@ Two checks before blaming the address, if `ENGINE_URL` is correct:
   behavior when activating from outside the interface
   (`SESSION_HEARTBEAT_TIMEOUT_MS`).
 
+### The Terminal tab is stuck on "Opening terminal..." forever {#terminal-preso-abrindo}
+
+Symptom: a project in `runner` mode (ADR 0103/0104), Code → Dev → Terminal
+tab never leaves the loading skeleton. The browser console shows, in a
+tight loop with growing backoff:
+
+```
+socket do terminal com erro {"erro":"[object Event]"}
+socket do terminal fechado
+```
+
+This is the browser's WebSocket never reaching the engine, not a runner
+problem — it happens even before any `brabo-runner` connects. Three
+stacked causes, all closed by [RN-432](business-rules.md#rn-432):
+
+1. **`ENGINE_PUBLIC_URL` resolving to a Docker-internal hostname.** The
+   ticket the api hands the browser (`POST .../terminal-ticket`) carries
+   `engineWsUrl`, built from `ENGINE_PUBLIC_URL` — distinct from
+   `ENGINE_URL` (RN-419), which is for api→engine calls **inside** the
+   compose network. `docker/docker-compose.yml` now sets
+   `ENGINE_PUBLIC_URL: ${ENGINE_PUBLIC_URL:-http://localhost:4000}` on the
+   `api` service (same default `VITE_ENGINE_URL` already uses for `web`).
+   Confirm from inside the container:
+
+   ```bash
+   docker exec brabo-api-1 sh -c 'echo $ENGINE_PUBLIC_URL'
+   # expected: http://localhost:4000 (or your real public engine address)
+   ```
+
+   An empty value here on an environment built before this fix means the
+   code fell back to `ENGINE_URL` (`http://engine:4000`) — a hostname that
+   only resolves inside the Docker network, never from the browser. Fix:
+   rebuild/recreate the `api` container so the new compose default takes
+   effect, or set `ENGINE_PUBLIC_URL` explicitly in `.env` if the engine's
+   real public address is something else (a tunnel, a different host).
+2. **A socket that never opens used to retry forever, silently.**
+   Independent of the address above — even a genuinely unreachable engine
+   (down, firewalled) should surface as an error, never spin forever.
+   `apps/web/src/lib/terminal-channel.ts` now gives up after 8s if the
+   socket hasn't opened, and shows `RunnerOnboardingPanel` with an
+   actionable message instead of looping on the browser's default
+   WebSocket reconnect behavior.
+3. **The socket URL duplicated its path.** The actual blocker once the
+   first two were fixed: `terminal-channel.ts` used to concatenate
+   `/runner/websocket` onto an `engineWsUrl` the api already returns
+   complete (`ws://host:port/runner`) — and `phoenix.js`'s own `Socket`
+   constructor appends `/websocket` again on top of whatever endpoint it's
+   given. The engine received `GET /runner/runner/websocket/websocket` and
+   rejected it (`Phoenix.Router.NoRouteError`), visible in
+   `docker logs brabo-engine-1` as a connection that never gets past
+   `REFUSED CONNECTION`. Fixed by passing `engineWsUrl` straight to
+   `Socket` — `apps/runner/src/channel.ts` (the CLI side of the same
+   contract) already did this correctly.
+
 ### The api refuses to boot over an OAuth secret {#segredo-de-oauth-no-boot}
 
 Symptom: with `NODE_ENV=production`, the api dies at start with a message
@@ -488,18 +542,19 @@ password; an empty `NEO4J_AUTH` brings down the `neo4j` container first).
 export NEO4J_PASSWORD="$(openssl rand -hex 24)"
 ```
 
-**HEX, não base64.** O entrypoint do Neo4j lê `NEO4J_AUTH` como
-`usuario/senha` e divide na PRIMEIRA barra — uma senha em base64 pode conter
-`/` (o alfabeto tem `/` e `+`), e isso quebra esse parse com
-`Invalid value for NEO4J_AUTH`, derrubando o container `neo4j` num loop de
-reinício. Já aconteceu de verdade: o smoke do CI reprovou assim depois de um
-merge que reintroduziu o `-base64` por engano. Hex não tem `/`, `+` nem `=`.
+**HEX, not base64.** Neo4j's entrypoint reads `NEO4J_AUTH` as
+`user/password` and splits on the FIRST slash — a base64 password can
+contain `/` (the alphabet has `/` and `+`), and that breaks the parse with
+`Invalid value for NEO4J_AUTH`, taking down the `neo4j` container in a
+restart loop. This actually happened: CI's smoke test failed this way after
+a merge that reintroduced `-base64` by mistake. Hex has no `/`, `+` or `=`.
 
-`docker/smoke.sh` já gera as cinco variáveis efêmeras acima (as quatro
-irmãs e `NEO4J_PASSWORD`, esta em hex) a cada execução — é assim que o job
-"Build, scan e smoke das imagens de produção" do CI sobe o
-`docker-compose.prod.yml` sem
-segredo nenhum commitado.
+`docker/smoke.sh` already generates the five ephemeral variables above (the
+four siblings plus `NEO4J_PASSWORD`, this one in hex) on every run — that's
+how the CI job
+"Build, scan e smoke das imagens de produção" brings up
+`docker-compose.prod.yml` with
+no secret committed.
 
 Changing `AUTH_JWT_SECRET` or `BRABO_SERVICE_TOKEN` without the
 `_PREVIOUS` dance has the same effect already documented in

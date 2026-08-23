@@ -1,67 +1,68 @@
-# ADR 0106 — Distribuição do `@brabo/runner` via `tsup` e `npm publish`, versão injetada só em CI
+# ADR 0106 — Distribution of `@brabo/runner` via `tsup` and `npm publish`, version injected only in CI
 
-- **Status:** Aceito
-- **Data:** 2026-08-22
-- **Contexto:** backlog do [ADR 0104](0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
-  ("distribuição do runner via `tsup` → pacote único + `npm publish
-  @brabo/runner`"), desbloqueado pelo [ADR 0105](0105-personal-access-token-do-runner-escopado-por-construcao.md)
-  (PAT — "nenhuma dependência restante")
+- **Status:** Accepted
+- **Date:** 2026-08-22
+- **Context:** backlog of [ADR 0104](0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+  ("runner distribution via `tsup` → single package + `npm publish
+  @brabo/runner`"), unblocked by [ADR 0105](0105-personal-access-token-do-runner-escopado-por-construcao.md)
+  (PAT — "no remaining dependency")
 
-## Contexto
+## Context
 
-`apps/runner/package.json` era `"private": true`, com `bin` apontando pra um
-`.ts` cru (`./src/index.ts`) — só alcançável clonando o monorepo inteiro e
-confiando no type-stripping nativo do Node 24 usado em dev. O backlog já
-nomeava a saída literalmente: `tsup` produzindo um `dist/index.cjs` único,
-publicado como `@brabo/runner`.
+`apps/runner/package.json` was `"private": true`, with `bin` pointing to a
+raw `.ts` (`./src/index.ts`) — only reachable by cloning the whole monorepo
+and trusting Node 24's native type-stripping used in dev. The backlog
+already named the output literally: `tsup` producing a single
+`dist/index.cjs`, published as `@brabo/runner`.
 
-Esta é a PRIMEIRA vez que este repositório publica algo num registry externo
-— confirmado por grep exaustivo antes de começar: zero menção a `NPM_TOKEN`,
-`NODE_AUTH_TOKEN`, `registry.npmjs.org` ou `provenance` em todo o código.
+This is the FIRST time this repository publishes anything to an external
+registry — confirmed by an exhaustive grep before starting: zero mention of
+`NPM_TOKEN`, `NODE_AUTH_TOKEN`, `registry.npmjs.org`, or `provenance`
+anywhere in the code.
 
-## Decisão
+## Decision
 
-**`tsup` empacota `src/index.ts` num `dist/index.cjs` único**
-(`apps/runner/tsup.config.ts`), `format: cjs`, `target: node18` (o runtime
-que `engines.node` do `package.json` promete — eixo diferente do `ES2023` do
-`tsconfig.json`, que só serve o `tsc --noEmit` de dev). `node-pty` é o único
-`external`: é binding NATIVO (compila via node-gyp no postinstall, o mesmo
-binding que o VS Code usa — `pnpm-workspace.yaml` já o allowlista
-explicitamente em `allowBuilds`) e não pode ser embutido num arquivo JS —
-continua `require('node-pty')` em runtime, resolvido pelo `node_modules` de
-quem instalou o pacote. `phoenix` (puro JS) é embutido automaticamente por
-não estar em `external`, e por isso saiu de `dependencies` pra
-`devDependencies` — o consumidor não precisa mais instalá-lo à parte. O nome
-`dist/index.cjs` sai de graça de `format: ['cjs']` + `"type": "module"`
-(já existente no `package.json`) — é assim que tsup decide a extensão, sem
-precisar de `outExtension`. Shebang (`#!/usr/bin/env node`) e o bit de
-execução (755) do artefato são tratados automaticamente pelo tsup, que
-detecta o shebang na entrada e replica no output.
+**`tsup` bundles `src/index.ts` into a single `dist/index.cjs`**
+(`apps/runner/tsup.config.ts`), `format: cjs`, `target: node18` (the
+runtime `engines.node` in `package.json` promises — a different axis from
+the `tsconfig.json`'s `ES2023`, which only serves dev's `tsc --noEmit`).
+`node-pty` is the only `external`: it's a NATIVE binding (compiles via
+node-gyp on postinstall, the same binding VS Code uses —
+`pnpm-workspace.yaml` already explicitly allowlists it in `allowBuilds`)
+and can't be embedded in a JS file — it stays `require('node-pty')` at
+runtime, resolved from the `node_modules` of whoever installed the package.
+`phoenix` (pure JS) is embedded automatically by not being in `external`,
+and because of that it moved from `dependencies` to `devDependencies` — the
+consumer no longer needs to install it separately. The `dist/index.cjs`
+name comes for free from `format: ['cjs']` + `"type": "module"` (already
+present in `package.json`) — that's how tsup decides the extension, with no
+need for `outExtension`. The shebang (`#!/usr/bin/env node`) and the
+artifact's execute bit (755) are handled automatically by tsup, which
+detects the shebang in the entry point and replicates it in the output.
 
-### O achado real: a guarda de auto-run estava quebrada pro caso que esta onda existe pra habilitar
+### The real finding: the auto-run guard was broken for the very case this wave exists to enable
 
-`apps/runner/src/index.ts` decidia rodar `main()` comparando
-`process.argv[1]?.endsWith('index.ts') || .endsWith('brabo-runner')` — um
-teste por SUFIXO DE NOME DE ARQUIVO, frágil a qualquer rename por bundling.
-A correção óbvia (`import.meta.url === pathToFileURL(process.argv[1]).href`,
-o idioma padrão ESM pra "sou eu o módulo de entrada?") foi TESTADA
-empiricamente com um processo Node real e um symlink antes de entrar no
-código — e ela também está quebrada, pelo motivo oposto do esperado:
+`apps/runner/src/index.ts` decided whether to run `main()` by comparing
+`process.argv[1]?.endsWith('index.ts') || .endsWith('brabo-runner')` — a
+test by FILE-NAME SUFFIX, fragile to any rename from bundling. The obvious
+fix (`import.meta.url === pathToFileURL(process.argv[1]).href`, the
+standard ESM idiom for "am I the entry module?") was TESTED empirically
+with a real Node process and a symlink before going into the code — and it
+too is broken, for the opposite reason than expected:
 
-`process.argv[1]` **nunca** é resolvido por realpath pelo Node — é o caminho
-literal que o SO usou pra invocar, só tornado absoluto. `import.meta.url`
-(e o shim que o tsup gera pra `import.meta.url` em build cjs, baseado em
-`__filename`) **sempre** é resolvido por realpath pelo carregador de
-módulos. `npm install -g` cria exatamente essa assimetria: um symlink em
-`node_modules/.bin/brabo-runner` apontando pro `dist/index.cjs` real dentro
-de `node_modules/@brabo/runner/`. Rodar o CLI pelo `bin` instalado — o
-CAMINHO PRINCIPAL que esta onda inteira existe pra habilitar — faria a
-comparação dar `false` sempre, e `main()` nunca seria chamado. Um bug
-silencioso: nenhum smoke que só rode `node dist/index.cjs` diretamente (sem
-passar pelo symlink) o pegaria.
+`process.argv[1]` is **never** resolved via realpath by Node — it's the
+literal path the OS used to invoke it, only made absolute. `import.meta.url`
+(and the shim tsup generates for `import.meta.url` in a cjs build, based on
+`__filename`) is **always** resolved via realpath by the module loader.
+`npm install -g` creates exactly that asymmetry: a symlink at
+`node_modules/.bin/brabo-runner` pointing to the real `dist/index.cjs`
+inside `node_modules/@brabo/runner/`. Running the CLI via the installed
+`bin` — the MAIN PATH this entire wave exists to enable — would make the
+comparison always come out `false`, and `main()` would never be called. A
+silent bug: no smoke test that only runs `node dist/index.cjs` directly
+(without going through the symlink) would catch it.
 
-A correção final aplica `realpathSync` em `process.argv[1]` antes de
-comparar:
+The final fix applies `realpathSync` to `process.argv[1]` before comparing:
 
 ```ts
 import { realpathSync } from 'node:fs';
@@ -72,105 +73,108 @@ const invocadoDiretamente =
   import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
 ```
 
-Verificado (com processo Node real) nos quatro casos: dev
-(`node src/index.ts`), `node dist/index.cjs` direto, via symlink (o caso que
-estava quebrado) e nunca dispara quando `import`ado por um teste. No
-Windows, o shim `.cmd`/`.ps1` do npm já invoca `node <caminho real>` sem
-symlink algum — `realpathSync` vira no-op ali, sem regressão.
+Verified (with a real Node process) across all four cases: dev
+(`node src/index.ts`), `node dist/index.cjs` directly, via symlink (the
+case that was broken), and it never fires when `import`ed by a test. On
+Windows, npm's `.cmd`/`.ps1` shim already invokes `node <real path>` with
+no symlink at all — `realpathSync` becomes a no-op there, with no
+regression.
 
-### Versão: injetada só em CI, nunca commitada
+### Version: injected only in CI, never committed
 
-A versão do repo inteiro é calculada e vive só na tag git (`vX.Y.Z`, Fase 6)
-— nunca em `package.json`. `npm publish`, porém, EXIGE que `package.json`
-carregue a versão sendo publicada. A saída: `npm pkg set version=<versão-da-tag>`
-roda dentro do checkout DESCARTÁVEL do workflow de publicação, nunca
-commitado de volta ao repositório — mesma filosofia de "a tag é a única
-fonte de verdade", só satisfazendo uma exigência mecânica do próprio `npm
-publish`.
+The whole repo's version is calculated and lives only in the git tag
+(`vX.Y.Z`, Phase 6) — never in `package.json`. `npm publish`, however,
+REQUIRES `package.json` to carry the version being published. The way out:
+`npm pkg set version=<tag-version>` runs inside the publish workflow's
+DISPOSABLE checkout, never committed back to the repository — the same
+philosophy of "the tag is the only source of truth," just satisfying a
+mechanical requirement of `npm publish` itself.
 
-### O `latest` do npm pode retroceder — mitigado antes de acontecer
+### npm's `latest` can go backward — mitigated before it happens
 
-Este repositório já tem **seis tags finais órfãs** (`v0.2.0`, `v0.3.0`,
-`v0.3.1`, `v1.0.0`, `v1.0.1`, `v1.1.0` — nunca publicadas, documentado em
-`docs/reference/rulesets.md`), e o `workflow_dispatch` de republicação
-manual existe precisamente pra reparar esse tipo de buraco (mesmo padrão de
-`release.yml`). `npm publish` move a dist-tag `latest` pro que acabou de
-publicar por padrão, SEM checar ordem semver — republicar uma tag órfã
-antiga depois de uma versão mais nova já estar publicada moveria `latest`
-pra trás em silêncio, e `npm install -g @brabo/runner` passaria a instalar
-código velho. `publish-runner.yml` compara a versão-alvo com
-`npm view @brabo/runner version` antes de publicar: se for `>=` o `latest`
-atual, publica normal; senão, publica com uma dist-tag própria
-(`--tag antiga-<versão>`), nunca tocando `latest`.
+This repository already has **six orphaned final tags** (`v0.2.0`,
+`v0.3.0`, `v0.3.1`, `v1.0.0`, `v1.0.1`, `v1.1.0` — never published,
+documented in `docs/reference/rulesets.md`), and the manual republish
+`workflow_dispatch` exists precisely to repair that kind of hole (same
+pattern as `release.yml`). `npm publish` moves the `latest` dist-tag to
+whatever was just published by default, WITHOUT checking semver order —
+republishing an old orphaned tag after a newer version is already published
+would silently move `latest` backward, and `npm install -g @brabo/runner`
+would start installing old code. `publish-runner.yml` compares the target
+version against `npm view @brabo/runner version` before publishing: if it's
+`>=` the current `latest`, it publishes normally; otherwise, it publishes
+under its own dist-tag (`--tag antiga-<version>`), never touching `latest`.
 
-### Workflow próprio, não um passo a mais em `release.yml`
+### A workflow of its own, not one more step in `release.yml`
 
-`publish-runner.yml` é disparado pelo MESMO evento de `release.yml`
-(`push: tags: 'v[0-9]+.[0-9]+.[0-9]+'`) mas é um arquivo separado — mesma
-disciplina já registrada no ADR 0030 pro `tag-release.yml`: "workflow
-PRÓPRIO disparado pela tag... nada a religar aqui". Publicar imagem Docker e
-publicar pacote npm são dois produtos independentes do mesmo evento, cada um
-com seu próprio modo de falhar; bolar isto dentro de `release.yml` faria uma
-falha de npm derrubar (ou mascarar) a GitHub Release, ou vice-versa. Os dois
-rodam em PARALELO, sem `needs:` — não há dependência real entre eles.
+`publish-runner.yml` is triggered by the SAME event as `release.yml`
+(`push: tags: 'v[0-9]+.[0-9]+.[0-9]+'`) but is a separate file — the same
+discipline already recorded in ADR 0030 for `tag-release.yml`: "a workflow
+OF ITS OWN triggered by the tag... nothing to rewire here." Publishing a
+Docker image and publishing an npm package are two independent products of
+the same event, each with its own way of failing; folding this into
+`release.yml` would let an npm failure bring down (or mask) the GitHub
+Release, or vice versa. The two run in PARALLEL, with no `needs:` — there's
+no real dependency between them.
 
-**Sem `NODE_AUTH_TOKEN` sozinho.** `actions/setup-node` só escreve o
-`~/.npmrc` que faz `NODE_AUTH_TOKEN` autenticar de verdade quando o step
-recebe `registry-url` (e `scope`) — nenhum workflow deste repo jamais
-precisou disso, então nenhum já fazia. Sem o secret `NPM_TOKEN` configurado,
-o workflow AVISA (`::warning::`) e PULA — nunca falha —, mesmo padrão
-`TEM_PAT` já usado em `tag-release.yml`/`release.yml` (`secrets.*` não pode
-ir direto num `if:`).
+**No `NODE_AUTH_TOKEN` on its own.** `actions/setup-node` only writes the
+`~/.npmrc` that makes `NODE_AUTH_TOKEN` actually authenticate when the step
+receives `registry-url` (and `scope`) — no workflow in this repo had ever
+needed that, so none already did it. Without the `NPM_TOKEN` secret
+configured, the workflow WARNS (`::warning::`) and SKIPS — never fails —
+the same `TEM_PAT` pattern already used in `tag-release.yml`/`release.yml`
+(`secrets.*` can't go directly into an `if:`).
 
-## Fechamento do buraco de cobertura em `ci.yml`
+## Closing the coverage gap in `ci.yml`
 
-`apps/runner` nunca rodou teste nenhum no job `Testes TS (api + web)`
-(confirmado lendo o arquivo por inteiro) — buraco pré-existente, mais grave
-agora que este código é distribuído a terceiros. Quatro steps novos ali
-(`test`, `typecheck`, `build`, `smoke`), sem renomear o job — o nome do job
-**é** a identidade do check required no GitHub (`docs/reference/rulesets.md`
-documenta isso explicitamente), e renomeá-lo apagaria um check required que
-nunca mais rodaria.
+`apps/runner` had never run any test in the `Testes TS (api + web)` job
+(confirmed by reading the whole file) — a pre-existing gap, now more
+serious since this code is distributed to third parties. Four new steps
+there (`test`, `typecheck`, `build`, `smoke`), without renaming the job —
+the job's name **is** the identity of the required check on GitHub
+(`docs/reference/rulesets.md` documents this explicitly), and renaming it
+would erase a required check that would never run again.
 
-`apps/runner/scripts/smoke-dist.mjs` é o único teste que exercita o
-ARTEFATO EMPACOTADO de ponta a ponta — os testes unitários só chamam
-funções exportadas de `src/`, nunca o `dist/index.cjs` publicado. Ele
-confere existência + bit de execução, e roda o binário de DUAS formas: exec
-direto (exercita o shebang de verdade — `node dist/index.cjs` sozinho NUNCA
-testaria isso) e via `node dist/index.cjs` explícito. Efeito colateral que
-vale registrar: como `pty.ts` importa `node-pty` no topo do módulo (hoisted
-antes de qualquer parsing de argumento), este smoke também prova que o
-binding nativo resolve e carrega no ambiente do CI — não é só teste de
-bundling, é um smoke real do native addon. Reusado por `ci.yml` (todo PR,
-pra pegar regressão de bundling ANTES do merge) e por `publish-runner.yml`
-(direto antes de publicar, cinto e suspensório — nunca confiar num build de
-PR antigo).
+`apps/runner/scripts/smoke-dist.mjs` is the only test that exercises the
+BUNDLED ARTIFACT end to end — the unit tests only call functions exported
+from `src/`, never the published `dist/index.cjs`. It checks for existence
++ the execute bit, and runs the binary in TWO ways: direct exec (exercises
+the real shebang — `node dist/index.cjs` alone would NEVER test that) and
+via explicit `node dist/index.cjs`. A side effect worth recording: since
+`pty.ts` imports `node-pty` at the top of the module (hoisted before any
+argument parsing), this smoke also proves the native binding resolves and
+loads in the CI environment — it's not just a bundling test, it's a real
+smoke test of the native addon. Reused by `ci.yml` (every PR, to catch a
+bundling regression BEFORE merge) and by `publish-runner.yml` (right before
+publishing, belt and suspenders — never trust an old PR's build).
 
-## Consequências
+## Consequences
 
-- Desbloqueia `npm install -g @brabo/runner` como caminho de distribuição
-  real — o item que fecha a última pendência do backlog do ADR 0104.
-- **Pendência operacional, fora do alcance deste PR**: o dono do produto
-  precisa criar/confirmar o escopo `@brabo` no npmjs.com, gerar um npm
-  Automation Token e configurar o secret `NPM_TOKEN` no repositório. Até lá,
-  `publish-runner.yml` roda e avisa, sem publicar de verdade e sem falhar o
-  workflow — mesmo padrão do `BRABO_BOT_TOKEN` ausente em `release.yml`.
-- Branch de entrega é `breaking/` — não `feature/` — porque a publicação
-  real exige essa ação de operador antes de funcionar de ponta a ponta,
-  mesmo padrão do login social (ADR 0084) e da lição já registrada em
-  CLAUDE.md sobre um secret de OAuth obrigatório que nasceu (errado) em
-  `bugfix/`. Isso bump MAJOR a versão do repositório inteiro (a política é
-  repo-wide, não por workspace) — consequência aceita conscientemente.
-- Sem RN nova em `docs/business-rules.md` — isto é infraestrutura de
-  distribuição, não regra de negócio do produto. Sem entrada nova em
-  `docs/gates.yml` — não é um gate de decisão do produto, é mecanismo de
-  CI. As duas ausências são decisão declarada.
-- `docs/reference/rulesets.md` não muda — a tabela "Checks obrigatórios" é
-  escopada a checks de workflow disparado por `pull_request`, e
-  `publish-runner.yml` dispara só em push de tag final/`workflow_dispatch`.
-- Fora do escopo, por decisão declarada: binário standalone
-  (`pkg`/`bun build --compile`, item separado do backlog, custo maior, sem
-  gatilho definido); exclusividade do runner por `{project_id, machine_id}`
-  (adiada); revogação de PAT de outro usuário por `maintainer` (fora de
-  escopo desde o ADR 0105); `guard.ts` best-effort (invariante reafirmado,
-  não uma lacuna).
+- Unblocks `npm install -g @brabo/runner` as a real distribution path — the
+  item that closes the last pending item in ADR 0104's backlog.
+- **Operational pending item, out of this PR's reach**: the product owner
+  needs to create/confirm the `@brabo` scope on npmjs.com, generate an npm
+  Automation Token, and configure the `NPM_TOKEN` secret in the repository.
+  Until then, `publish-runner.yml` runs and warns, without actually
+  publishing and without failing the workflow — the same pattern as the
+  missing `BRABO_BOT_TOKEN` in `release.yml`.
+- Delivery branch is `breaking/` — not `feature/` — because real
+  publication requires that operator action before it works end to end, the
+  same pattern as social login (ADR 0084) and the lesson already recorded
+  in CLAUDE.md about a mandatory OAuth secret that was born (wrongly) in
+  `bugfix/`. This bumps the whole repository's version MAJOR (the policy is
+  repo-wide, not per workspace) — a consciously accepted consequence.
+- No new RN in `docs/business-rules.md` — this is distribution
+  infrastructure, not a product business rule. No new entry in
+  `docs/gates.yml` — it's not a product decision gate, it's a CI mechanism.
+  Both absences are a declared decision.
+- `docs/reference/rulesets.md` doesn't change — the "Required checks" table
+  is scoped to checks from a workflow triggered by `pull_request`, and
+  `publish-runner.yml` only triggers on a final tag push /
+  `workflow_dispatch`.
+- Out of scope, by declared decision: a standalone binary
+  (`pkg`/`bun build --compile`, a separate backlog item, higher cost, no
+  defined trigger); runner exclusivity by `{project_id, machine_id}`
+  (deferred); PAT revocation for another user by a `maintainer` (out of
+  scope since ADR 0105); `guard.ts` best-effort (a reaffirmed invariant,
+  not a gap).

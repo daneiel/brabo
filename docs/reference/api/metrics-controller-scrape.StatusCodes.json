@@ -1,1 +1,1 @@
-{"responses":{"200":{"description":"Métricas no formato de exposição.","content":{"text/plain":{"schema":{"type":"string"},"example":"# HELP oban_queue_depth Profundidade da fila do Oban\n# TYPE oban_queue_depth gauge\noban_queue_depth{queue=\"default\",state=\"available\"} 0\n"}}}}}
+{"responses":{"200":{"description":"Metrics in exposition format.","content":{"text/plain":{"schema":{"type":"string"},"example":"# HELP oban_queue_depth Oban queue depth\n# TYPE oban_queue_depth gauge\noban_queue_depth{queue=\"default\",state=\"available\"} 0\n"}}}}}

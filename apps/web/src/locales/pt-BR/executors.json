@@ -51,5 +51,16 @@
       "failed": "falhou — origem: {{origin}}",
       "dispensed": "dispensada — {{justification}}"
     }
+  },
+  "timelineTree": {
+    "empty": "Nenhum agente entrou em ação nesta sessão ainda.",
+    "newSinceLastVisit": "{{count}} marco(s) novo(s) desde a última vez",
+    "iteration": "iteração {{n}}",
+    "marker": {
+      "args": "argumentos",
+      "result": "resultado",
+      "resultFailed": "resultado (falhou)",
+      "error": "erro: {{error}}"
+    }
   }
 }

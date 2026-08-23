@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { getProject, getProjectBudget, getRepository } from '../lib/api-client';
 import {
@@ -27,8 +28,8 @@ import styles from './ProjectPage.module.css';
 
 const PROVIDER_ICON = { github: GitHubIcon, gitlab: GitLabIcon, local: LocalRepoIcon } as const;
 
-/** O chip ao lado do nome diz o que o repositório É, em pt-BR (handoff, seção 4). */
-const VISIBILIDADE = { public: 'público', private: 'privado' } as const;
+/** O chip ao lado do nome diz o que o repositório É (handoff, seção 4). */
+const VISIBILIDADE_KEY = { public: 'visibility.public', private: 'visibility.private' } as const;
 
 interface ProjectPageProps {
   projectId: string;
@@ -36,6 +37,7 @@ interface ProjectPageProps {
 }
 
 export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
+  const { t } = useTranslation('projectPage');
   const [tab, setTab] = useState<ChaveDeAba>(initialTab ?? ABA_PADRAO);
 
   // `initialTab` só valia no MOUNT (o nome já diz): um link `?tab=` clicado
@@ -120,7 +122,7 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
     return (
       <div className={styles.falha}>
         <ErroDeCarregamento
-          titulo="Não foi possível abrir este projeto."
+          titulo={t('loadErrorTitle')}
           erro={projectQuery.error}
           onTentarDeNovo={() => void projectQuery.refetch()}
         />
@@ -186,7 +188,7 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
                 <h1 className={styles.name}>{project.name}</h1>
                 {repository && (
                   <span className={styles.repoChip}>
-                    {repository.provider} · {VISIBILIDADE[repository.visibility]}
+                    {repository.provider} · {t(VISIBILIDADE_KEY[repository.visibility])}
                   </span>
                 )}
               </div>
@@ -201,12 +203,12 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
                     {repository.origin === 'adopted' && (
                       <>
                         <span className={styles.metaSep} />
-                        <span>adotado</span>
+                        <span>{t('adopted')}</span>
                       </>
                     )}
                   </>
                 ) : (
-                  'repositório não provisionado'
+                  t('repositoryNotProvisioned')
                 )}
               </div>
             </div>

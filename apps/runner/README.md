@@ -36,9 +36,17 @@ brabo-runner --project <projectId> --dir <caminho-absoluto> --token brb_... [--a
   (`Engine.Runners.Registry`) — um segundo `brabo-runner` para o mesmo
   projeto é recusado no join.
 - `--dir`: a pasta absoluta onde o código do projeto vive nesta máquina —
-  raiz para os comandos (`exec`) e o terminal (PTY). A navegação de pasta
+  raiz para os comandos (`exec`) e o terminal (PTY). Se a pasta ainda não
+  existir, ela é **criada automaticamente** (`mkdir -p`); se `--dir` apontar
+  para um arquivo já existente, é erro — este CLI nunca sobrescreve um
+  arquivo (RN-434, ADR 0104). A navegação de pasta
   (`fs_list_dir`/`fs_home_dir`) **não** é restrita a esta pasta — ela
-  navega livre pela máquina, de propósito (ver `src/fs-browser.ts`).
+  navega livre pela máquina, de propósito (ver `src/fs-browser.ts`). No
+  **Linux**, `--dir` só é aceito dentro do `$HOME` do usuário (o próprio
+  home ou uma subpasta dele) — fora do Linux essa restrição não vale
+  (RN-433, ADR 0104); a checagem do `$HOME` roda ANTES da criação
+  automática, então uma pasta fora do home no Linux continua recusada
+  mesmo quando ainda não existe.
 - `--token`: um Personal Access Token (`brb_…`), gerado em **Configurações do
   projeto → Tokens de acesso**. Também pode vir pela variável de ambiente
   `BRABO_ACCOUNT_TOKEN` — nunca é gravado em disco por este CLI.

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { GitProviderName } from '../lib/api-types';
@@ -22,6 +23,7 @@ interface ProvisioningPageProps {
 }
 
 export function ProvisioningPage({ projectId, provider }: ProvisioningPageProps) {
+  const { t } = useTranslation('provisioning');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const firedRef = useRef(false);
@@ -100,24 +102,28 @@ export function ProvisioningPage({ projectId, provider }: ProvisioningPageProps)
       });
   }
 
-  const failedStepLabel = failedStep
-    ? BOOTSTRAP_STEPS.find((s) => s.name === failedStep)?.label ?? failedStep
+  const failedStepDef = failedStep
+    ? BOOTSTRAP_STEPS.find((s) => s.name === failedStep)
     : null;
+  const failedStepLabel = failedStepDef ? t(failedStepDef.labelKey) : failedStep;
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Provisionando repositório</h1>
+        <h1 className={styles.title}>{t('provisioningPage.title')}</h1>
         <p className={styles.subtitle}>
-          {projectQuery.data ? projectQuery.data.name : 'Projeto'} · bootstrap de
-          Gitflow
+          {t('provisioningPage.subtitle', {
+            name: projectQuery.data
+              ? projectQuery.data.name
+              : t('provisioningPage.fallbackProjectName'),
+          })}
         </p>
       </div>
 
       {status === 'provisioned' && (
         <div className={[styles.banner, styles.bannerOk].join(' ')}>
           <CheckIcon size={16} />
-          <span>Repositório provisionado com sucesso.</span>
+          <span>{t('provisioningPage.successBanner')}</span>
         </div>
       )}
 
@@ -126,14 +132,12 @@ export function ProvisioningPage({ projectId, provider }: ProvisioningPageProps)
           <AlertIcon size={16} />
           <div>
             <div className={styles.bannerTitle}>
-              Falhou em: {failedStepLabel}
+              {t('provisioningPage.failedBannerTitle', { step: failedStepLabel })}
             </div>
             {lastError && <div className={styles.bannerError}>{lastError}</div>}
             {podeSeguirSemProtecao && (
               <div className={styles.bannerError}>
-                Proteger branches costuma falhar em repositório privado no plano
-                gratuito. Você pode seguir sem ela — a trava de merge do Brabo
-                não depende da proteção do provider e continua valendo.
+                {t('provisioningPage.protectionFailureNote')}
               </div>
             )}
           </div>
@@ -141,7 +145,7 @@ export function ProvisioningPage({ projectId, provider }: ProvisioningPageProps)
       )}
 
       {status === null && (
-        <div className={styles.starting}>Iniciando provisionamento…</div>
+        <div className={styles.starting}>{t('provisioningPage.starting')}</div>
       )}
 
       <BootstrapSteps stepStates={stepStates} failedStep={failedStep} />
@@ -157,19 +161,19 @@ export function ProvisioningPage({ projectId, provider }: ProvisioningPageProps)
               })
             }
           >
-            Ir para o projeto
+            {t('provisioningPage.goToProject')}
           </Button>
         ) : status === 'provision_failed' ? (
           <>
-            <Button onClick={handleRetry}>Tentar novamente</Button>
+            <Button onClick={handleRetry}>{t('provisioningPage.retry')}</Button>
             {podeSeguirSemProtecao && (
               <Button variant="success" onClick={handleAcknowledge}>
-                Seguir sem proteger as branches
+                {t('provisioningPage.proceedWithoutProtection')}
               </Button>
             )}
           </>
         ) : (
-          <span className={styles.working}>Trabalhando…</span>
+          <span className={styles.working}>{t('provisioningPage.working')}</span>
         )}
       </div>
     </div>

@@ -491,7 +491,7 @@ failure would leave the tag orphaned forever, because republishing would
 require deleting and recreating the tag — rewriting the record to fix
 its own effect. Whoever republishes is the release owner, the same
 restriction as `promote`. The procedure is in
-[Rulesets](../reference/rulesets.md#republicar-uma-tag-que-ficou-órfã).
+[Rulesets](../reference/rulesets.md#republishing-a-tag-that-was-orphaned).
 
 ### The CHANGELOG comes back via PR, and why not by push
 

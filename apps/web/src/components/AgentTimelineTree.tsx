@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   marcoExpansivel,
   montarArvore,
@@ -9,6 +10,11 @@ import {
 import type { SessionEvent } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
 import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
+// `conteudoDoMarco`/`detalheExpandido` são funções PURAS fora do componente
+// (chamadas de dentro do render, mas não hooks) — mesmo padrão de
+// `lib/agent-status.ts#descreverStatus`: `i18n.t()` direto, com `ns`
+// explícito, em vez de `useTranslation` (que só vale dentro de componente).
+import i18n from '../lib/i18n';
 import { AvatarDoAgente } from './ui/AvatarDoAgente';
 import { Disclosure } from './ui/Disclosure';
 import styles from './AgentTimelineTree.module.css';
@@ -46,6 +52,7 @@ export function AgentTimelineTree({
   events: SessionEvent[];
   projectId: string;
 }) {
+  const { t } = useTranslation('executors');
   const { ramos } = useMemo(() => montarArvore(events), [events]);
   const abertosPadrao = useMemo(() => ramosAbertosPorPadrao(ramos), [ramos]);
   const [fechados, setFechados] = useState<Set<string>>(new Set());
@@ -84,7 +91,7 @@ export function AgentTimelineTree({
   if (ramos.length === 0) {
     return (
       <div className={styles.vazio}>
-        Nenhum agente entrou em ação nesta sessão ainda.
+        {t('timelineTree.empty')}
       </div>
     );
   }
@@ -131,7 +138,9 @@ export function AgentTimelineTree({
                     .filter(Boolean)
                     .join(' ')}
                   title={
-                    naoVistos > 0 ? `${naoVistos} marco(s) novo(s) desde a última vez` : undefined
+                    naoVistos > 0
+                      ? t('timelineTree.newSinceLastVisit', { count: naoVistos })
+                      : undefined
                   }
                 >
                   {naoVistos > 0 ? `+${naoVistos}` : ramo.marcos.length}
@@ -148,7 +157,7 @@ export function AgentTimelineTree({
                     <Fragment key={m.eventId}>
                       {novaIteracao && (
                         <li className={styles.marcoIteracao} aria-hidden="true">
-                          iteração {m.iteracao}
+                          {t('timelineTree.iteration', { n: m.iteracao })}
                         </li>
                       )}
                       <li
@@ -233,7 +242,11 @@ function detalheExpandido(m: Marco, agente: string) {
           </div>
         )}
         {texto && <div className={styles.detalheBolha}>{texto}</div>}
-        {erro && <div className={styles.detalheErro}>erro: {erro}</div>}
+        {erro && (
+          <div className={styles.detalheErro}>
+            {i18n.t('timelineTree.marker.error', { ns: 'executors', error: erro })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -243,11 +256,17 @@ function detalheExpandido(m: Marco, agente: string) {
 function conteudoDoMarco(m: Marco): { rotulo?: string; texto?: string; erro?: string } | null {
   switch (m.eventType) {
     case 'tool.call':
-      return { rotulo: 'argumentos', texto: formatar(m.payload.args) };
+      return {
+        rotulo: i18n.t('timelineTree.marker.args', { ns: 'executors' }),
+        texto: formatar(m.payload.args),
+      };
     case 'tool.result': {
       const ok = m.payload.ok !== false;
       return {
-        rotulo: ok ? 'resultado' : 'resultado (falhou)',
+        rotulo: i18n.t(
+          ok ? 'timelineTree.marker.result' : 'timelineTree.marker.resultFailed',
+          { ns: 'executors' },
+        ),
         texto: formatar(m.payload.result),
       };
     }
@@ -256,7 +275,10 @@ function conteudoDoMarco(m: Marco): { rotulo?: string; texto?: string; erro?: st
       const error = m.payload.error;
       const iteration = m.payload.iteration;
       return {
-        rotulo: typeof iteration === 'number' ? `iteração ${iteration}` : undefined,
+        rotulo:
+          typeof iteration === 'number'
+            ? i18n.t('timelineTree.iteration', { ns: 'executors', n: iteration })
+            : undefined,
         texto: typeof content === 'string' && content.trim() !== '' ? content : undefined,
         erro: error != null && error !== '' ? formatar(error) : undefined,
       };

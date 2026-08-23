@@ -209,16 +209,17 @@ step.
 
 `workspace-verificado` ([RN-423](../business-rules.md#rn-423),
 [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md))
-é o quarto exemplo, e o mais claro dos quatro sobre por que `warn` não é
-"trava fraca": quem trava de verdade AQUI não é o gate, é a recusa
-explícita de `Engine.Actions.TerminalExecutor.decisao_de_execucao/1` —
-sem workspace verificado ou sem runner conectado, o comando é recusado
-incondicionalmente, código adentro, sem passar pelo registro. O gate
-existe só para dar EVIDÊNCIA de quando a confirmação aconteceu
-(`project.workspace_verified` no event log); promovê-lo a `block`
-descreveria uma trava que já existe em outro lugar, do mesmo jeito que
-`necessidade-validada` teria mentido sobre uma que não existe em lugar
-nenhum.
+is the fourth example, and the clearest of the four about why `warn` isn't
+a "weak lock": what really locks things down HERE isn't the gate, it's the
+explicit refusal in
+`Engine.Actions.TerminalExecutor.decisao_de_execucao/1` — without a
+verified workspace or a connected runner, the command is refused
+unconditionally, deep inside the code, without going through the registry.
+The gate exists only to give EVIDENCE of when the confirmation happened
+(`project.workspace_verified` in the event log); promoting it to `block`
+would describe a lock that already exists somewhere else, the same way
+`necessidade-validada` would have lied about one that doesn't exist
+anywhere.
 
 ## Consumption: the screen derives, it doesn't repeat
 

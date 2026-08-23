@@ -371,91 +371,94 @@ are deferred product decisions — hence no priority here.
 | Reactivate the Anamnese (`ANAMNESE_ENABLED=true`) | paused by user decision on 2026-08-10 — "today it isn't bringing much-value data" ([RN-115](../business-rules.md#rn-115)). No data was erased (hypotheses, proficiency profiles and instruction patches remain intact and visible); the pause is only on the new-round PATH, awaiting future refinement of what Anamnese derives before turning it back on |
 | Reactivate the Psychologist (`PSYCHOLOGIST_ENABLED=true`) | paused by user decision on 2026-08-10, same reason and same pattern as Anamnese above ([RN-117](../business-rules.md#rn-117)). No data was erased (already-emitted analyses and hypotheses remain intact and visible); the pause is only on the new-round PATH (automatic and on-demand) |
 
-## Backlog do runner/execution_mode (ADR 0104)
+## Backlog of the runner/execution_mode (ADR 0104)
 
-Primeiro achado do tipo "dois ADRs divergentes entre si" registrado neste
-documento — os precedentes de tabela abaixo (a auditoria `fluxo.yml`×código,
-já fechada) eram sempre doc-declarativo × código, nunca ADR × ADR. A forma
-da tabela é reaproveitada; o tipo de achado é novo.
+First finding of the "two ADRs diverging from each other" kind recorded in
+this document — the table precedents below (the `fluxo.yml`×code audit,
+already closed) were always doc-declarative × code, never ADR × ADR. The
+table's shape is reused; the kind of finding is new.
 
-**A divergência, fechada pelo [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
-— reconciliação ACEITA, Onda 1 (RN-421/422/423) CONCLUÍDA:**
+**The divergence, closed by [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+— reconciliation ACCEPTED, Wave 1 (RN-421/422/423) DONE:**
 
-| # | Severidade | Item | Evidência (arquivo:linha) |
+| # | Severity | Item | Evidence (file:line) |
 |---|---|---|---|
-| 1 | **FECHADO** (RN-423) | RN-170 exigia bind-mount na criação; RN-420 roteava pro runner sob a mesma flag `workspace_mode == 'local'`, sem bind-mount nenhum | `apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts` (o runner confirma e vira fonte da verdade); `apps/engine/lib/engine/actions/terminal_executor.ex` (`decisao_de_execucao/1`, quatro saídas — recusa explícita sem workspace verificado/runner conectado, nunca fallback pro container) |
-| 2 | **FECHADO** (RN-422) | Wizard só ensinava bind-mount, nunca o comando do runner, mesmo ele já existindo | `apps/web/src/routes/NewProjectWizard.tsx` — terceira entrada em `MODOS_DE_WORKSPACE` (`runner`), com o comando `brabo-runner --project <id> --dir <pasta>` no próprio passo "Onde o código vai morar", não só no Terminal |
-| 3 | **FECHADO** (RN-421) | Enum de 2 valores (`workspace_mode`) não expressava 3 execuções fisicamente distintas | `apps/api/src/db/migrations/0048_quiet_iron_fist.sql` (`project_execution_mode`, três valores); `apps/api/src/domain/iam/project.entity.ts` (`PROJECT_EXECUTION_MODES`) |
+| 1 | **CLOSED** (RN-423) | RN-170 required bind-mount at creation; RN-420 routed to the runner under the same `workspace_mode == 'local'` flag, with no bind-mount at all | `apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts` (the runner confirms and becomes the source of truth); `apps/engine/lib/engine/actions/terminal_executor.ex` (`decisao_de_execucao/1`, four outcomes — explicit refusal without a verified workspace/connected runner, never a fallback to the container) |
+| 2 | **CLOSED** (RN-422) | The wizard only taught bind-mount, never the runner command, even though it already existed | `apps/web/src/routes/NewProjectWizard.tsx` — third entry in `MODOS_DE_WORKSPACE` (`runner`), with the command `brabo-runner --project <id> --dir <pasta>` right in the "Where the code will live" step, not just in the Terminal |
+| 3 | **CLOSED** (RN-421) | A 2-value enum (`workspace_mode`) didn't express 3 physically distinct execution modes | `apps/api/src/db/migrations/0048_quiet_iron_fist.sql` (`project_execution_mode`, three values); `apps/api/src/domain/iam/project.entity.ts` (`PROJECT_EXECUTION_MODES`) |
 
-**Correção registrada durante a implementação da Onda 1 — o ADR não é
-editado, a correção mora aqui**: o item 4 do ADR 0104 afirma que a
-conversão entre os três modos de um projeto EXISTENTE "passa a ser
-permitida sem recriar o projeto". Isso está **incorreto** — a Onda 1
-investigou e achou que `UpdateProjectDto` continua excluindo
-`executionMode`/`workspacePath` de propósito (worktree, `permissions.json`
-e cache do engine apontam pro escopo antigo; não é um `PATCH` trivial). A
-Onda 1 entregou só o campo de três valores na CRIAÇÃO. Conversão de
-projeto já existente fica como item de backlog NOVO, sem desenho ainda:
+**Correction recorded during Wave 1's implementation — the ADR isn't
+edited, the correction lives here**: item 4 of ADR 0104 states that
+converting between the three modes of an EXISTING project "becomes
+allowed without recreating the project." That's **incorrect** — Wave 1
+investigated and found that `UpdateProjectDto` still deliberately
+excludes `executionMode`/`workspacePath` (the worktree, `permissions.json`
+and the engine's cache point at the old scope; it isn't a trivial
+`PATCH`). Wave 1 only delivered the three-value field at CREATION.
+Converting an already-existing project stays as a NEW backlog item, with
+no design yet:
 
-| item | custo | critério de ativação | onde foi decidido |
+| item | cost | activation criterion | where it was decided |
 |---|---|---|---|
-| Conversão de `execution_mode` em projeto EXISTENTE, sem recriar (worktree, `permissions.json` e cache do engine precisam migrar de escopo junto) | M | nenhum — o ADR 0104 já prometia isso e a promessa está incorreta hoje; falta só o desenho | achado na Onda 1, corrigindo o ADR 0104 item 4 |
+| Converting `execution_mode` on an EXISTING project, without recreating it (the worktree, `permissions.json` and the engine's cache need to migrate scope along with it) | M | none — ADR 0104 already promised this and the promise is incorrect today; only the design is missing | found in Wave 1, correcting ADR 0104 item 4 |
 
-**Onda 2 — PAT, [ADR 0105](../adr/0105-personal-access-token-do-runner-escopado-por-construcao.md), CONCLUÍDA (RN-424/425/426):**
+**Wave 2 — PAT, [ADR 0105](../adr/0105-personal-access-token-do-runner-escopado-por-construcao.md), DONE (RN-424/425/426):**
 
-O item "token de conta de longa duração" da tabela original tinha DOIS
-erros de texto, corrigidos na implementação em vez de seguidos cegamente
-— registrados aqui porque a tabela abaixo os repetia:
+The "long-lived account token" item in the original table had TWO textual
+errors, corrected during implementation instead of being followed
+blindly — recorded here because the table below repeated them:
 
-1. **"hash argon2 no banco" estava errado.** O padrão real do produto pra
-   segredo de ALTA entropia (256 bits de CSPRNG) é HMAC-SHA256 + pepper
-   via `hashDeToken()`/`TokenFactory` — o mesmo mecanismo de refresh
-   tokens e account tokens. Argon2 é pra segredo de BAIXA entropia
-   (senha), onde resistência a dicionário importa; aqui só quebraria a
-   busca indexada `WHERE token_hash = $1` sem ganhar nada.
-2. **"reaproveitando a infra de rotação de família de refresh" era
-   impreciso.** PAT é apresentado repetidamente SEM MUDAR — nunca
-   consumido-e-reemitido como um refresh token. Só a geração
-   (`TokenFactory.gerar()`) e o hashing são reaproveitados; a família/
-   rotação inteira seria inventar um comportamento que o PAT não precisa.
+1. **"argon2 hash in the database" was wrong.** The product's real
+   pattern for a HIGH-entropy secret (256 bits of CSPRNG) is
+   HMAC-SHA256 + pepper via `hashDeToken()`/`TokenFactory` — the same
+   mechanism as refresh tokens and account tokens. Argon2 is for a
+   LOW-entropy secret (password), where dictionary resistance matters;
+   here it would just break the indexed lookup `WHERE token_hash = $1`
+   for no gain.
+2. **"reusing the refresh-token-family rotation infrastructure" was
+   imprecise.** A PAT is presented repeatedly WITHOUT CHANGING — never
+   consumed-and-reissued like a refresh token. Only the generation
+   (`TokenFactory.gerar()`) and the hashing are reused; the whole
+   family/rotation would be inventing a behavior the PAT doesn't need.
 
-| # | Severidade | Item | Evidência (arquivo:linha) |
+| # | Severity | Item | Evidence (file:line) |
 |---|---|---|---|
-| 1 | **FECHADO** (RN-424) | PAT precisava autenticar `runner-ticket` sem virar credencial válida pra qualquer outra rota do usuário | `apps/api/src/interfaces/http/auth/pat-route.decorator.ts` (`@RequirePatAuth()`), `apps/api/src/interfaces/http/auth/jwt-auth.guard.ts` (terceiro early-out), `apps/api/src/interfaces/http/auth/pat-auth.guard.ts` (`PatAuthGuard`, aplicado só em `runnerTicket`) |
-| 2 | **FECHADO** (RN-425) | Validação de token de alta entropia sem vazar qual dos três motivos de recusa (inexistente/revogado/expirado) se aplica; `last_used_at` sem regredir uma reconexão legítima | `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts` (`validarEUsar` — UPDATE condicional único, sem throttle no mesmo WHERE) |
-| 3 | **FECHADO** (RN-426) | Emitir/revogar/listar sem vazar token de um usuário pro outro | `apps/api/src/application/use-cases/auth/*-personal-access-token*.use-case.ts`, escopo por `userId` no WHERE da query |
+| 1 | **CLOSED** (RN-424) | The PAT needed to authenticate `runner-ticket` without becoming a valid credential for any other route of the user | `apps/api/src/interfaces/http/auth/pat-route.decorator.ts` (`@RequirePatAuth()`), `apps/api/src/interfaces/http/auth/jwt-auth.guard.ts` (third early-out), `apps/api/src/interfaces/http/auth/pat-auth.guard.ts` (`PatAuthGuard`, applied only to `runnerTicket`) |
+| 2 | **CLOSED** (RN-425) | High-entropy token validation without leaking which of the three refusal reasons (nonexistent/revoked/expired) applies; `last_used_at` not regressing on a legitimate reconnection | `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts` (`validarEUsar` — a single conditional UPDATE, no throttle on the same WHERE) |
+| 3 | **CLOSED** (RN-426) | Issuing/revoking/listing without leaking one user's token to another | `apps/api/src/application/use-cases/auth/*-personal-access-token*.use-case.ts`, scoped by `userId` in the query's WHERE |
 
-`apps/runner/src/auth.ts` perdeu por completo login interativo, cookies
-e `~/.brabo/runner-credentials.json` — só valida formato e repassa
-`--token`/`BRABO_ACCOUNT_TOKEN`, nunca gravado em disco pelo CLI.
+`apps/runner/src/auth.ts` completely lost interactive login, cookies and
+`~/.brabo/runner-credentials.json` — it only validates the format and
+passes through `--token`/`BRABO_ACCOUNT_TOKEN`, never written to disk by
+the CLI.
 
-**Onda 3 — distribuição via npm, [ADR 0106](../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.md), CONCLUÍDA:**
+**Wave 3 — npm distribution, [ADR 0106](../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.md), DONE:**
 
-| # | Severidade | Item | Evidência (arquivo:linha) |
+| # | Severity | Item | Evidence (file:line) |
 |---|---|---|---|
-| 1 | **FECHADO** | `apps/runner` era `"private": true`, `bin` apontando pra um `.ts` cru, só alcançável clonando o monorepo | `apps/runner/tsup.config.ts` (`format: cjs`, `external: ['node-pty']`), `apps/runner/package.json` (`bin` → `dist/index.cjs`, `publishConfig.access: public`), `.github/workflows/publish-runner.yml` (publica a cada tag final, workflow próprio, paralelo a `release.yml`) |
+| 1 | **CLOSED** | `apps/runner` was `"private": true`, with `bin` pointing at a raw `.ts`, reachable only by cloning the monorepo | `apps/runner/tsup.config.ts` (`format: cjs`, `external: ['node-pty']`), `apps/runner/package.json` (`bin` → `dist/index.cjs`, `publishConfig.access: public`), `.github/workflows/publish-runner.yml` (publishes on every final tag, its own workflow, parallel to `release.yml`) |
 
-Achado real durante a implementação, testado empiricamente antes de entrar
-no código: a correção óbvia da guarda de auto-run de `index.ts`
-(`import.meta.url === pathToFileURL(argv[1]).href`) estava QUEBRADA
-exatamente no caso que esta onda existe pra habilitar — invocação via `bin`
-instalado (`npm install -g` cria um symlink, e `process.argv[1]` nunca é
-resolvido por realpath enquanto `import.meta.url` sempre é). A correção
-final aplica `realpathSync` em `argv[1]` antes de comparar — ver ADR 0106.
+Real finding during implementation, tested empirically before it went
+into the code: the obvious fix for `index.ts`'s auto-run guard
+(`import.meta.url === pathToFileURL(argv[1]).href`) was BROKEN in exactly
+the case this wave exists to enable — invocation via the installed `bin`
+(`npm install -g` creates a symlink, and `process.argv[1]` is never
+resolved by realpath while `import.meta.url` always is). The final fix
+applies `realpathSync` to `argv[1]` before comparing — see ADR 0106.
 
-**O que fica para depois — backlog priorizado pelo dono do produto, nesta
-ordem:**
+**What's left for later — backlog prioritized by the product owner, in
+this order:**
 
-| item | custo | critério de ativação | onde foi decidido |
+| item | cost | activation criterion | where it was decided |
 |---|---|---|---|
-| Binário standalone (`pkg`/`bun build --compile`) | G | não bloqueante; sem gatilho definido, item futuro separado da distribuição via npm | ADR 0104 |
-| `maintainer` revogar PAT de OUTRO usuário (resposta a incidente — dev desligado com token vazando) | P | nenhum — declarado fora de escopo da Onda 2, não implementado | ADR 0105 |
-| Exclusividade do runner por `{project_id, machine_id}` em vez de só `project_id` (`apps/engine/lib/engine/runners/registry.ex`) | M | ADIADO — critério de ativação explícito: existir de fato um segundo dev usando o mesmo projeto simultaneamente | ADR 0104 |
+| Standalone binary (`pkg`/`bun build --compile`) | G | not blocking; no trigger defined, future item separate from npm distribution | ADR 0104 |
+| `maintainer` revoking ANOTHER user's PAT (incident response — a dev leaving with a leaking token) | P | none — declared out of scope for Wave 2, not implemented | ADR 0105 |
+| Runner exclusivity by `{project_id, machine_id}` instead of just `project_id` (`apps/engine/lib/engine/runners/registry.ex`) | M | DEFERRED — explicit activation criterion: a second dev actually using the same project simultaneously | ADR 0104 |
 
-`apps/runner/src/guard.ts` (checagem léxica best-effort de `cwd`) **não é
-item de backlog** — é invariante declarado desde o ADR 0103 e REAFIRMADO
-pelo ADR 0104: a fronteira de segurança real do runner é autenticação +
-pipeline de aprovação de sempre + consentimento do usuário, nunca
+`apps/runner/src/guard.ts` (best-effort lexical check of `cwd`) **is not
+a backlog item** — it's an invariant declared since ADR 0103 and
+REAFFIRMED by ADR 0104: the runner's real security boundary is
+authentication + the usual approval pipeline + user consent, never
 sandboxing.
 
 ## Backlog of the team model (ADR 0085) — AUDIT CLOSED

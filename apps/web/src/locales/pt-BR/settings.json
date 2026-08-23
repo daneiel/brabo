@@ -266,6 +266,46 @@
       "evidenceUnavailableMessage": "O evento citado não foi encontrado neste projeto."
     }
   },
+  "personalAccessTokens": {
+    "title": "Tokens de acesso",
+    "eyebrow": "Runner local · ADR 0105",
+    "subtitle": {
+      "before": "Um Personal Access Token autentica o ",
+      "after": " nesta máquina, escopado só a este projeto — revogável a qualquer hora, e o valor bruto nunca aparece de novo depois de emitido."
+    },
+    "namePlaceholder": "Nome (ex.: laptop)",
+    "expiresPlaceholder": "Expira em N dias (opcional)",
+    "generateButton": "Gerar token",
+    "toast": {
+      "issueErrorTitle": "Falha ao gerar token",
+      "issueErrorMessage": "Tente novamente.",
+      "copyErrorTitle": "Não consegui copiar",
+      "copyErrorMessage": "Copie o valor manualmente."
+    },
+    "table": {
+      "name": "Nome",
+      "created": "Criado",
+      "expires": "Expira",
+      "expiresNever": "nunca",
+      "lastUsed": "Último uso",
+      "lastUsedNever": "nunca usado",
+      "status": "Status",
+      "statusRevoked": "revogado",
+      "statusActive": "ativo",
+      "removeAria": "Revogar {{name}}",
+      "removeTitle": "Revogar"
+    },
+    "emptyMessage": "Nenhum token de acesso emitido para este projeto.",
+    "modal": {
+      "title": "Token gerado",
+      "bodyBefore": "Copie agora — este token não é recuperável depois de fechar esta janela. Use em ",
+      "bodyMiddle": " ou ",
+      "bodyAfter": " do ",
+      "bodyEnd": ".",
+      "copyButton": "Copiar",
+      "copiedButton": "Copiado"
+    }
+  },
   "instructionVersions": {
     "title": "Histórico de instruções",
     "eyebrow": "versionamento por agente",

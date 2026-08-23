@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   approveAction,
@@ -73,6 +74,7 @@ function acaoDeMergeParaPr(
  * paralelismo). Esta aba é listagem + gestão de PR, project-wide.
  */
 export function ProjectPrsTab({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('approvals');
   const { latest: latestSession } = useLatestSession(projectId);
   const backlogQuery = useBacklog(projectId);
   const mergeActionsQuery = useProjectPendingActions(projectId, 'git_merge');
@@ -103,7 +105,7 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
       invalidateMergeActions();
     } catch (erro) {
       showToast({
-        title: 'Não consegui propor o merge',
+        title: t('prsTab.mergeErrorTitle'),
         message: mensagemDaApi(erro),
         tone: 'danger',
       });
@@ -129,16 +131,13 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
   return (
     <div>
       <div className={styles.cabecalho}>
-        <h2 className={styles.titulo}>Pull requests do projeto</h2>
-        <p className={styles.subtitulo}>
-          Direto do provider de git — de TODAS as sessões, não só a mais
-          recente.
-        </p>
+        <h2 className={styles.titulo}>{t('prsTab.title')}</h2>
+        <p className={styles.subtitulo}>{t('prsTab.subtitle')}</p>
       </div>
 
       {backlogQuery.isError && (
         <ErroDeCarregamento
-          titulo="Não consegui carregar o status de gate do backlog."
+          titulo={t('prsTab.gateStatusError')}
           erro={backlogQuery.error}
           onTentarDeNovo={() => void backlogQuery.refetch()}
         />
@@ -176,14 +175,14 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
                 loading={propondo === pr.id}
                 title={
                   bloqueado
-                    ? (task?.blockedReason ?? 'Gate bloqueado — corrija antes de propor o merge.')
+                    ? (task?.blockedReason ?? t('prsTab.mergeBlockedFallback'))
                     : !latestSession
-                      ? 'Sem sessão no projeto para propor a ação.'
+                      ? t('prsTab.mergeNoSession')
                       : undefined
                 }
                 onClick={() => void proporMerge(pr)}
               >
-                Merge
+                {t('prsTab.mergeButton')}
               </Button>
             </div>
           );

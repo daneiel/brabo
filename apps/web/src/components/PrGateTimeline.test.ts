@@ -96,7 +96,13 @@ describe('etapasDaEsteira', () => {
   });
 
   it('os rótulos são de tela, não do registro', () => {
+    // O `label` é a CHAVE i18n (`prGateTimeline.steps.*`), não o texto final —
+    // quem renderiza resolve com `t()`. O que este teste protege continua o
+    // mesmo: o rótulo não vem do `id` do gate no registro.
     const r = registro([gate('qa-verificada')]);
-    expect(etapasDaEsteira(r).map((e) => e.label)).toEqual(['Dev', 'QA']);
+    expect(etapasDaEsteira(r).map((e) => e.label)).toEqual([
+      'prGateTimeline.steps.dev',
+      'prGateTimeline.steps.qa',
+    ]);
   });
 });

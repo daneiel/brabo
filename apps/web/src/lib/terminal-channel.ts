@@ -22,6 +22,15 @@ import { getTerminalTicket } from './api-client';
  *    `fechar()` é o único jeito de encerrar, e uma queda inesperada é
  *    reportada por `onDesconectado` pro chamador decidir (hoje, `TerminalPanel`
  *    trata como "sem runner" e deixa o usuário tentar de novo).
+ *
+ * A intenção do item 2 ficava incumprida até esta correção: `reconnectAfterMs`
+ * nunca era passado pro `Socket`, então quando o transporte nunca abria
+ * (URL errada, engine fora do ar) o `phoenix.js` caía no backoff PADRÃO dele
+ * e ficava tentando de novo sozinho pra sempre, em silêncio — `TerminalPanel`
+ * nunca saía de `'carregando'`. `reconnectAfterMs` agora devolve um valor que
+ * praticamente nunca dispara (mesmo padrão de `session-channel.ts`), e um
+ * timeout PRÓPRIO (`TIMEOUT_CONEXAO_MS`) cobre o caso "nunca abriu": estoura
+ * `onErro` e desconecta, em vez de girar pra sempre.
  */
 
 export interface TerminalChannelHandlers {
@@ -45,6 +54,14 @@ export interface TerminalChannel {
   /** `pty_close` + `channel.leave()` + `socket.disconnect()`. Idempotente. */
   fechar: () => void;
 }
+
+/** Quanto tempo o SOCKET (transporte) tem pra abrir antes de virar erro. */
+const TIMEOUT_CONEXAO_MS = 8_000;
+
+/** Mesmo valor gigante de `session-channel.ts` pra neutralizar o reconnect
+ * automático embutido do `Phoenix.Socket` — aqui o timeout próprio acima é
+ * quem decide quando desistir, nunca o backoff nativo do phoenix.js. */
+const NUNCA_RECONECTAR_SOZINHO_MS = 24 * 60 * 60 * 1000;
 
 /** UTF-8 seguro: `btoa`/`atob` puros truncam qualquer código acima de 0xFF. */
 function paraBase64(texto: string): string {
@@ -76,6 +93,14 @@ export function connectTerminalChannel(
   let channel: ReturnType<Socket['channel']> | null = null;
   let fechado = false;
   let ptyAberto = false;
+  let timeoutConexao: ReturnType<typeof setTimeout> | null = null;
+
+  function limparTimeoutConexao() {
+    if (timeoutConexao) {
+      clearTimeout(timeoutConexao);
+      timeoutConexao = null;
+    }
+  }
 
   // `abrirPty`/`enviarInput`/`redimensionar` podem ser chamados pelo
   // `TerminalPanel` ANTES do ticket voltar (o fetch é assíncrono, o mount não
@@ -110,8 +135,27 @@ export function connectTerminalChannel(
 
     if (fechado) return;
 
-    const wsUrl = engineWsUrl.replace(/^http/, 'ws') + '/runner/websocket';
-    socket = new Socket(wsUrl, { params: { ticket } });
+    // `engineWsUrl` já é o endpoint FINAL do socket, no formato
+    // `ws(s)://host:porta/runner` (`engineWsUrlPublico()`,
+    // `request-runner-ticket.use-case.ts`) — o `.replace` é só defesa contra
+    // um `http(s)://` residual, nunca o caminho normal. Concatenar
+    // `/runner/websocket` aqui era bug: duplicava o `/runner` que o
+    // endpoint já carrega E antecipava o `/websocket` que o PRÓPRIO
+    // `Socket` do phoenix.js já acrescenta sozinho (`endPoint =
+    // ${endPoint}/websocket`, dentro do construtor) — o engine via
+    // `GET /runner/runner/websocket/websocket` e recusava com
+    // `NoRouteError`, silenciosamente (o erro chegava como transporte
+    // fechado, nunca com uma mensagem legível). `apps/runner/src/channel.ts`
+    // já fazia certo: passa `engineWsUrl` direto pro `Socket`, sem tocar.
+    const wsUrl = engineWsUrl.replace(/^http/, 'ws');
+    socket = new Socket(wsUrl, {
+      params: { ticket },
+      // Reconexão automática do phoenix.js DESLIGADA — ver o docblock do
+      // módulo. Sem isto, o transporte que nunca abre gira sozinho pra
+      // sempre no backoff padrão dele, e o timeout abaixo nunca teria chance
+      // de decidir nada.
+      reconnectAfterMs: () => NUNCA_RECONECTAR_SOZINHO_MS,
+    });
 
     socket.onError((erro: unknown) => {
       logger.warn('socket do terminal com erro', { projectId, erro: String(erro) });
@@ -120,8 +164,28 @@ export function connectTerminalChannel(
       logger.info('socket do terminal fechado', { projectId });
       if (!fechado && ptyAberto) handlers.onDesconectado?.();
     });
+    socket.onOpen(() => {
+      // O transporte abriu — a partir daqui, falha é de CANAL/PTY (já
+      // reportada por `join().receive('error'/'timeout')` e `pty_error`),
+      // não mais de socket nunca conseguir conectar.
+      limparTimeoutConexao();
+    });
 
     socket.connect();
+
+    // Cobre o caso que `reconnectAfterMs` sozinho não cobre: a PRIMEIRA
+    // tentativa nunca abrindo (URL errada, engine fora do ar, rede). Sem
+    // isto, `TerminalPanel` ficava preso em `'carregando'` pra sempre —
+    // nenhum `onErro` nunca era chamado.
+    timeoutConexao = setTimeout(() => {
+      timeoutConexao = null;
+      if (fechado) return;
+      logger.warn('timeout ao abrir o socket do terminal', { projectId });
+      handlers.onErro(
+        'Não consegui conectar ao engine — verifique a rede e tente de novo.',
+      );
+      socket?.disconnect();
+    }, TIMEOUT_CONEXAO_MS);
 
     const canal = socket.channel(`terminal:${projectId}`, {});
 
@@ -184,6 +248,7 @@ export function connectTerminalChannel(
     fechar() {
       if (fechado) return;
       fechado = true;
+      limparTimeoutConexao();
       filaAntesDoCanal = [];
       channel?.push('pty_close', { sessionRef });
       channel?.leave();

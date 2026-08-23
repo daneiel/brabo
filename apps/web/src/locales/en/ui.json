@@ -1,5 +1,6 @@
 {
   "carousel": {
+    "roleDescription": "carousel",
     "counter": "{{current}} of {{total}}",
     "previousLabel": "Previous story",
     "nextLabel": "Next story",

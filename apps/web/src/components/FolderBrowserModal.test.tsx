@@ -10,11 +10,11 @@ import type { FsBrowserChannel } from '../lib/fs-browser-channel';
 
 /**
  * `fs-browser-channel` é substituído por um dublê controlável — o que
- * importa aqui é a ORQUESTRAÇÃO da navegação (breadcrumb, subir, escolher
- * subpasta, "Selecionar esta pasta") e os TRÊS estados (carregando / sem
- * runner / pronto), não o protocolo Phoenix em si (coberto em
- * `fs-browser-channel` indiretamente pelo `terminal-channel.test.ts`
- * irmão, e no engine por `terminal_channel_test.exs`).
+ * importa aqui é a ORQUESTRAÇÃO da navegação (atalhos, breadcrumb, subir,
+ * um clique seleciona / duplo clique entra, "Usar esta pasta") e os TRÊS
+ * estados (carregando / sem runner / pronto), não o protocolo Phoenix em si
+ * (coberto em `fs-browser-channel` indiretamente pelo `terminal-channel.
+ * test.ts` irmão, e no engine por `terminal_channel_test.exs`).
  *
  * Instância própria de i18next (mesmo padrão de `AccountPage.test.tsx`), só
  * com o namespace `terminal` e `lng: 'pt-BR'` — mantém as asserções em
@@ -74,8 +74,7 @@ describe('FolderBrowserModal', () => {
     ).toBeInTheDocument();
   });
 
-  it('caminho feliz: abre em os.homedir(), lista subpastas, navega e seleciona', async () => {
-    const user = userEvent.setup();
+  it('lista pastas E arquivos, mas só a pasta é selecionável/navegável', async () => {
     fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
     fakeChannel.listarDiretorio.mockImplementation(async (path: string) => {
       if (path === '/home/user') {
@@ -87,10 +86,73 @@ describe('FolderBrowserModal', () => {
           ],
         };
       }
+      return { path, entradas: [] };
+    });
+
+    renderComI18n(
+      <FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    expect(connectFsBrowserChannelMock).toHaveBeenCalledWith('proj-1');
+    expect(await screen.findByText('projetos')).toBeInTheDocument();
+    // Arquivo aparece na lista — protocolo devolve os dois — mas não é um
+    // controle interativo (nunca <button>, sem seleção nem navegação).
+    expect(screen.getByText('arquivo.txt')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'arquivo.txt' })).not.toBeInTheDocument();
+  });
+
+  it('um clique SELECIONA a pasta (destaca e atualiza o painel de detalhes) sem navegar', async () => {
+    const user = userEvent.setup();
+    fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
+    fakeChannel.listarDiretorio.mockImplementation(async (path: string) => ({
+      path,
+      entradas: [{ nome: 'projetos', isDir: true }],
+    }));
+
+    renderComI18n(
+      <FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    const item = await screen.findByRole('option', { name: 'projetos' });
+    await user.click(item);
+
+    // Nenhuma navegação nova — só a carga inicial de `/home/user`.
+    expect(fakeChannel.listarDiretorio).toHaveBeenCalledTimes(1);
+    expect(item).toHaveAttribute('aria-selected', 'true');
+    // O painel de detalhes passa a descrever o item SELECIONADO.
+    expect(screen.getAllByText('projetos').length).toBeGreaterThan(1);
+  });
+
+  it('duplo clique ENTRA na pasta', async () => {
+    const user = userEvent.setup();
+    fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
+    fakeChannel.listarDiretorio.mockImplementation(async (path: string) => {
+      if (path === '/home/user') {
+        return { path: '/home/user', entradas: [{ nome: 'projetos', isDir: true }] };
+      }
       if (path === '/home/user/projetos') {
         return { path: '/home/user/projetos', entradas: [{ nome: 'loja', isDir: true }] };
       }
       return { path, entradas: [] };
+    });
+
+    renderComI18n(
+      <FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    const item = await screen.findByRole('option', { name: 'projetos' });
+    await user.dblClick(item);
+
+    expect(await screen.findByText('loja')).toBeInTheDocument();
+    expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user/projetos');
+  });
+
+  it('"Usar esta pasta" usa o item SELECIONADO quando houver um', async () => {
+    const user = userEvent.setup();
+    fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
+    fakeChannel.listarDiretorio.mockResolvedValue({
+      path: '/home/user',
+      entradas: [{ nome: 'projetos', isDir: true }],
     });
 
     const onSelecionar = vi.fn();
@@ -99,18 +161,66 @@ describe('FolderBrowserModal', () => {
       <FolderBrowserModal projectId="proj-1" onSelecionar={onSelecionar} onClose={onClose} />,
     );
 
-    expect(connectFsBrowserChannelMock).toHaveBeenCalledWith('proj-1');
-    expect(await screen.findByText('projetos')).toBeInTheDocument();
-    // Arquivo (não-diretório) nunca aparece na lista de navegação.
-    expect(screen.queryByText('arquivo.txt')).not.toBeInTheDocument();
+    const item = await screen.findByRole('option', { name: 'projetos' });
+    await user.click(item);
 
-    await user.click(screen.getByText('projetos'));
-    expect(await screen.findByText('loja')).toBeInTheDocument();
-    expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user/projetos');
-
-    await user.click(screen.getByRole('button', { name: 'Selecionar esta pasta' }));
+    await user.click(screen.getByRole('button', { name: 'Usar esta pasta' }));
     expect(onSelecionar).toHaveBeenCalledWith('/home/user/projetos');
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('sem seleção, "Usar esta pasta" usa a pasta ATUALMENTE ABERTA', async () => {
+    const user = userEvent.setup();
+    fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
+    fakeChannel.listarDiretorio.mockResolvedValue({ path: '/home/user', entradas: [] });
+
+    const onSelecionar = vi.fn();
+    renderComI18n(
+      <FolderBrowserModal projectId="proj-1" onSelecionar={onSelecionar} onClose={vi.fn()} />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Usar esta pasta' })).not.toBeDisabled(),
+    );
+    await user.click(screen.getByRole('button', { name: 'Usar esta pasta' }));
+    expect(onSelecionar).toHaveBeenCalledWith('/home/user');
+  });
+
+  it('atalho "Pasta pessoal" volta para `os.homedir()`', async () => {
+    const user = userEvent.setup();
+    fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
+    fakeChannel.listarDiretorio.mockImplementation(async (path: string) => ({
+      path,
+      entradas: [],
+    }));
+
+    renderComI18n(<FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />);
+
+    await waitFor(() => expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user'));
+
+    // Navega pra outro lugar, depois volta pelo atalho.
+    await user.click(screen.getByText('..'));
+    expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home');
+
+    fakeChannel.diretorioInicial.mockClear();
+    await user.click(screen.getByRole('button', { name: 'Pasta pessoal' }));
+    await waitFor(() => expect(fakeChannel.diretorioInicial).toHaveBeenCalledTimes(1));
+  });
+
+  it('atalho "Raiz" navega para `/`', async () => {
+    const user = userEvent.setup();
+    fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
+    fakeChannel.listarDiretorio.mockImplementation(async (path: string) => ({
+      path,
+      entradas: [],
+    }));
+
+    renderComI18n(<FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />);
+
+    await waitFor(() => expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user'));
+
+    await user.click(screen.getByRole('button', { name: 'Raiz' }));
+    await waitFor(() => expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/'));
   });
 
   it('".." sobe um nível a partir do path atual', async () => {

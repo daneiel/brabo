@@ -1009,6 +1009,7 @@ function MembersSection({ projectId }: { projectId: string }) {
  * nunca pode carregar o valor bruto.
  */
 export function PersonalAccessTokensSection({ projectId }: { projectId: string }) {
+  const { t, i18n } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: tokens } = useQuery({
@@ -1038,7 +1039,11 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
       setEmitido(issued);
       invalidate();
     } catch {
-      showToast({ title: 'Falha ao gerar token', message: 'Tente novamente.', tone: 'danger' });
+      showToast({
+        title: t('personalAccessTokens.toast.issueErrorTitle'),
+        message: t('personalAccessTokens.toast.issueErrorMessage'),
+        tone: 'danger',
+      });
     }
   }
 
@@ -1053,42 +1058,51 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
       await navigator.clipboard.writeText(emitido.token);
       setCopiado(true);
     } catch {
-      showToast({ title: 'Não consegui copiar', message: 'Copie o valor manualmente.', tone: 'danger' });
+      showToast({
+        title: t('personalAccessTokens.toast.copyErrorTitle'),
+        message: t('personalAccessTokens.toast.copyErrorMessage'),
+        tone: 'danger',
+      });
     }
   }
 
   const columns: TableColumn<PersonalAccessTokenSummary>[] = [
-    { key: 'name', label: 'Nome', width: '2fr', render: (t) => t.name },
+    { key: 'name', label: t('personalAccessTokens.table.name'), width: '2fr', render: (pat) => pat.name },
     {
       key: 'createdAt',
-      label: 'Criado',
+      label: t('personalAccessTokens.table.created'),
       width: '1fr',
-      render: (t) => new Date(t.createdAt).toLocaleDateString('pt-BR'),
+      render: (pat) => new Date(pat.createdAt).toLocaleDateString(i18n.language),
     },
     {
       key: 'expiresAt',
-      label: 'Expira',
+      label: t('personalAccessTokens.table.expires'),
       width: '1fr',
-      render: (t) => (t.expiresAt ? new Date(t.expiresAt).toLocaleDateString('pt-BR') : 'nunca'),
+      render: (pat) =>
+        pat.expiresAt
+          ? new Date(pat.expiresAt).toLocaleDateString(i18n.language)
+          : t('personalAccessTokens.table.expiresNever'),
     },
     {
       key: 'lastUsedAt',
-      label: 'Último uso',
+      label: t('personalAccessTokens.table.lastUsed'),
       width: '1fr',
-      render: (t) =>
-        t.lastUsedAt ? new Date(t.lastUsedAt).toLocaleDateString('pt-BR') : 'nunca usado',
+      render: (pat) =>
+        pat.lastUsedAt
+          ? new Date(pat.lastUsedAt).toLocaleDateString(i18n.language)
+          : t('personalAccessTokens.table.lastUsedNever'),
     },
     {
       key: 'status',
-      label: 'Status',
+      label: t('personalAccessTokens.table.status'),
       width: '120px',
-      render: (t) =>
-        t.revokedAt ? (
-          <Badge tone="danger">revogado</Badge>
+      render: (pat) =>
+        pat.revokedAt ? (
+          <Badge tone="danger">{t('personalAccessTokens.table.statusRevoked')}</Badge>
         ) : (
           <span className={styles.status}>
             <span className={styles.statusDot} />
-            ativo
+            {t('personalAccessTokens.table.statusActive')}
           </span>
         ),
     },
@@ -1096,14 +1110,14 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
       key: 'action',
       label: '',
       width: '56px',
-      render: (t) =>
-        t.revokedAt ? null : (
+      render: (pat) =>
+        pat.revokedAt ? null : (
           <button
             type="button"
-            aria-label={`Revogar ${t.name}`}
-            title="Revogar"
+            aria-label={t('personalAccessTokens.table.removeAria', { name: pat.name })}
+            title={t('personalAccessTokens.table.removeTitle')}
             className={styles.remove}
-            onClick={() => handleRevoke(t.id)}
+            onClick={() => handleRevoke(pat.id)}
           >
             <TrashIcon size={14} />
           </button>
@@ -1114,19 +1128,19 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>Tokens de acesso</h2>
-        <span className={styles.eyebrow}>Runner local · ADR 0105</span>
+        <h2 className={styles.title}>{t('personalAccessTokens.title')}</h2>
+        <span className={styles.eyebrow}>{t('personalAccessTokens.eyebrow')}</span>
       </div>
       <p className={styles.subtitle}>
-        Um Personal Access Token autentica o <code>brabo-runner</code> nesta máquina,
-        escopado só a este projeto — revogável a qualquer hora, e o valor bruto nunca
-        aparece de novo depois de emitido.
+        {t('personalAccessTokens.subtitle.before')}
+        <code>brabo-runner</code>
+        {t('personalAccessTokens.subtitle.after')}
       </p>
 
       <div className={styles.inviteBar}>
         <div className={styles.inviteInput}>
           <Input
-            placeholder="Nome (ex.: laptop)"
+            placeholder={t('personalAccessTokens.namePlaceholder')}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -1135,30 +1149,35 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
           <Input
             type="number"
             min={1}
-            placeholder="Expira em N dias (opcional)"
+            placeholder={t('personalAccessTokens.expiresPlaceholder')}
             value={expiresInDays}
             onChange={(e) => setExpiresInDays(e.target.value)}
           />
         </div>
-        <Button onClick={handleIssue}>Gerar token</Button>
+        <Button onClick={handleIssue}>{t('personalAccessTokens.generateButton')}</Button>
       </div>
 
       <Table
         columns={columns}
         rows={tokens ?? []}
-        rowKey={(t) => t.id}
-        emptyMessage="Nenhum token de acesso emitido para este projeto."
+        rowKey={(pat) => pat.id}
+        emptyMessage={t('personalAccessTokens.emptyMessage')}
       />
 
       {emitido && (
-        <Modal title="Token gerado" onClose={() => setEmitido(null)}>
+        <Modal title={t('personalAccessTokens.modal.title')} onClose={() => setEmitido(null)}>
           <p className={styles.subtitle}>
-            Copie agora — este token não é recuperável depois de fechar esta janela. Use em{' '}
-            <code>--token</code> ou <code>BRABO_ACCOUNT_TOKEN</code> do <code>brabo-runner</code>.
+            {t('personalAccessTokens.modal.bodyBefore')}
+            <code>--token</code>
+            {t('personalAccessTokens.modal.bodyMiddle')}
+            <code>BRABO_ACCOUNT_TOKEN</code>
+            {t('personalAccessTokens.modal.bodyAfter')}
+            <code>brabo-runner</code>
+            {t('personalAccessTokens.modal.bodyEnd')}
           </p>
           <Input mono readOnly value={emitido.token} onFocus={(e) => e.currentTarget.select()} />
           <Button onClick={copiarToken} variant="secondary">
-            {copiado ? 'Copiado' : 'Copiar'}
+            {copiado ? t('personalAccessTokens.modal.copiedButton') : t('personalAccessTokens.modal.copyButton')}
           </Button>
         </Modal>
       )}
@@ -1558,7 +1577,7 @@ function MatrixSection() {
 
 // Exportada para o teste, como ExecutionSection e PromotionSection.
 export function CredentialsSection() {
-  const { t } = useTranslation('settings');
+  const { t, i18n } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: credentials } = useQuery({ queryKey: ['credentials'], queryFn: listCredentials });
@@ -1705,7 +1724,7 @@ export function CredentialsSection() {
               <div className={styles.conectorNota}>
                 {existing
                   ? t('credentials.connector.configuredNote', {
-                      date: new Date(existing.updatedAt).toLocaleDateString('pt-BR'),
+                      date: new Date(existing.updatedAt).toLocaleDateString(i18n.language),
                     })
                   : t('credentials.connector.noneSaved')}
               </div>

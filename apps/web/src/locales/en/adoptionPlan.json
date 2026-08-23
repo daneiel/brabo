@@ -1,0 +1,18 @@
+{
+  "title": "Adopt existing repository",
+  "fallbackProjectName": "Project",
+  "readingRepo": "Reading the repository…",
+  "genericAdoptError": "Could not read the repository right now.",
+  "planChangedError": "The plan changed since this screen loaded. Reload to decide on the current plan.",
+  "decisionError": "Could not record the decision right now.",
+  "introBefore": "Nothing was changed in the repository. This is what the bootstrap ",
+  "introStrong": "would do",
+  "introAfter": " — no existing protection is overwritten without your approval.",
+  "nothingToDo": "The repository already matches what the template expects. There's nothing to apply.",
+  "divergencesTitle": "Divergences",
+  "approvePlan": "Approve plan",
+  "adoptAsIs": "Adopt as-is",
+  "adoptedAsIsAlert": "Repository adopted as-is. The bootstrap was dismissed — nothing was changed.",
+  "goToProject": "Go to project",
+  "applyingPlan": "Applying the plan…"
+}

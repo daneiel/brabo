@@ -114,7 +114,19 @@ export function connectFsBrowserChannel(projectId: string): FsBrowserChannel {
 
     if (fechado) return;
 
-    const wsUrl = engineWsUrl.replace(/^http/, 'ws') + '/runner/websocket';
+    // `engineWsUrl` já é o endpoint FINAL do socket, pronto de
+    // `engineWsUrlPublico()` — `ws(s)://host:porta/runner`. Concatenar
+    // `/runner/websocket` aqui era o MESMO bug que a RN-432 já tinha achado
+    // e corrigido no `terminal-channel.ts` irmão: duplicava o `/runner` que
+    // o endpoint já carrega E antecipava o `/websocket` que o PRÓPRIO
+    // `Socket` do phoenix.js acrescenta sozinho no construtor
+    // (`this.endPoint = \`${endPoint}/websocket\``) — o engine via `GET
+    // /runner/runner/websocket/websocket` e recusava a conexão, então o
+    // canal caía direto em "A conexão com o runner caiu". Achado navegando
+    // de verdade ao verificar a RN-436 (criação antecipada do projeto
+    // `runner`) — antes desta correção, `FolderBrowserModal` nunca tinha
+    // sido exercitado contra um engine real neste caminho.
+    const wsUrl = engineWsUrl.replace(/^http/, 'ws');
     socket = new Socket(wsUrl, { params: { ticket } });
 
     socket.onError((erro: unknown) => {

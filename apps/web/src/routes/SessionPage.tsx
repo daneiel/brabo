@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   acceptHandoff,
   activateExecution,
@@ -1957,7 +1957,7 @@ export function SessionPage({
                     {nomeDoAgente(agentId)}
                   </span>
                 }
-                trailing={`${grupo.length} mensagens`}
+                trailing={t('artefatos.mensagensCount', { count: grupo.length })}
                 classNameCabecalho={styles.agentGroupCabecalho}
                 className={styles.agentGroup}
               >
@@ -2033,7 +2033,7 @@ export function SessionPage({
       queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível ativar a sessão'),
+        title: mensagemDaApi(erro, t('toasts.erroAtivarSessao')),
         tone: 'danger',
       });
     }
@@ -2059,7 +2059,7 @@ export function SessionPage({
       // só apareceria lá no próximo carregamento da tela.
       queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível renomear a sessão', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroRenomear'), tone: 'danger' });
     }
   }
 
@@ -2068,7 +2068,7 @@ export function SessionPage({
       await startAgent(projectId, sessionId, 'criativo');
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível iniciar a ideação', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroIniciarIdeacao'), tone: 'danger' });
     }
   }
 
@@ -2092,7 +2092,7 @@ export function SessionPage({
       finalizarTurnoDoAgente();
     } catch {
       setStreaming(false);
-      showToast({ title: 'Erro', message: 'Não foi possível confirmar prontidão', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroConfirmarProntidao'), tone: 'danger' });
     }
   }
 
@@ -2116,8 +2116,8 @@ export function SessionPage({
     } catch {
       setStreaming(false);
       showToast({
-        title: 'Erro',
-        message: 'Não foi possível confirmar a arquitetura',
+        title: t('toasts.erro'),
+        message: t('toasts.erroConfirmarArquitetura'),
         tone: 'danger',
       });
     }
@@ -2139,10 +2139,10 @@ export function SessionPage({
     try {
       await validateNecessity(projectId, sessionId);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      showToast({ title: 'Necessidade validada', tone: 'success' });
+      showToast({ title: t('toasts.necessidadeValidada'), tone: 'success' });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível validar a necessidade'),
+        title: mensagemDaApi(erro, t('toasts.erroValidarNecessidade')),
         tone: 'danger',
       });
     } finally {
@@ -2175,7 +2175,7 @@ export function SessionPage({
       }
     } catch {
       turnoAgentRef.current = null;
-      showToast({ title: 'Erro', message: 'Não foi possível aceitar o handoff', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroAceitarHandoff'), tone: 'danger' });
     }
   }
 
@@ -2214,10 +2214,10 @@ export function SessionPage({
       await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
       queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
-      showToast({ title: 'Execução ativada', tone: 'success' });
+      showToast({ title: t('toasts.execucaoAtivada'), tone: 'success' });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível ativar a execução'),
+        title: mensagemDaApi(erro, t('toasts.erroAtivarExecucao')),
         tone: 'danger',
       });
     } finally {
@@ -2238,10 +2238,10 @@ export function SessionPage({
         mode: 'auto_approve',
       });
       await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
-      showToast({ title: 'Modo automático ligado', message: agentId, tone: 'success' });
+      showToast({ title: t('toasts.modoAutomaticoLigado'), message: agentId, tone: 'success' });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível ligar o modo automático'),
+        title: mensagemDaApi(erro, t('toasts.erroModoAutomatico')),
         message: agentId,
         tone: 'danger',
       });
@@ -2262,15 +2262,15 @@ export function SessionPage({
       queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
       if (r.failed.length > 0) {
         showToast({
-          title: 'Não foi possível promover',
+          title: t('toasts.erroPromover'),
           message: r.failed[0]?.reason,
           tone: 'danger',
         });
       } else {
-        showToast({ title: 'História promovida', tone: 'success' });
+        showToast({ title: t('toasts.historiaPromovida'), tone: 'success' });
       }
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível promover a história', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroPromoverHistoria'), tone: 'danger' });
     } finally {
       setPromovendoStoryId(null);
     }
@@ -2289,24 +2289,24 @@ export function SessionPage({
       queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
       if (r.failed.length === 0) {
         showToast({
-          title: r.promoted.length === 1 ? 'História promovida' : `${r.promoted.length} histórias promovidas`,
+          title: t('toasts.historiasPromovidas', { count: r.promoted.length }),
           tone: 'success',
         });
       } else if (r.promoted.length > 0) {
         showToast({
-          title: `${r.promoted.length} de ${storyIds.length} promovidas`,
+          title: t('toasts.promovidasParcial', { promovidas: r.promoted.length, total: storyIds.length }),
           message: r.failed[0]?.reason,
           tone: 'warning',
         });
       } else {
         showToast({
-          title: 'Não foi possível promover',
+          title: t('toasts.erroPromover'),
           message: r.failed[0]?.reason,
           tone: 'danger',
         });
       }
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível promover as histórias', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroPromoverHistorias'), tone: 'danger' });
     } finally {
       setPromovendoTodas(false);
     }
@@ -2326,9 +2326,9 @@ export function SessionPage({
       setMotivoRecusa('');
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-      showToast({ title: 'História devolvida ao PO', tone: 'success' });
+      showToast({ title: t('toasts.historiaDevolvida'), tone: 'success' });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível devolver a história', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroDevolverHistoria'), tone: 'danger' });
     } finally {
       setEnviandoRecusa(false);
       // Idempotente e nos DOIS caminhos: um erro que deixasse `streaming`
@@ -2362,7 +2362,7 @@ export function SessionPage({
       } catch {
         setStreaming(false);
         setOptimisticUser(null);
-        showToast({ title: 'Erro', message: 'Não foi possível iniciar a ideação', tone: 'danger' });
+        showToast({ title: t('toasts.erro'), message: t('toasts.erroIniciarIdeacao'), tone: 'danger' });
         return;
       }
     }
@@ -2396,7 +2396,7 @@ export function SessionPage({
       } catch {
         setStreaming(false);
         setOptimisticUser(null);
-        showToast({ title: 'Erro', message: 'Não foi possível enviar a mensagem', tone: 'danger' });
+        showToast({ title: t('toasts.erro'), message: t('toasts.erroEnviarMensagem'), tone: 'danger' });
       }
       return;
     }
@@ -2409,9 +2409,9 @@ export function SessionPage({
         if (evt.type === 'delta') {
           setStreamingText((t) => t + evt.text);
         } else if (evt.type === 'error') {
-          showToast({ title: 'Erro no chat', message: evt.message, tone: 'danger' });
+          showToast({ title: t('toasts.erroNoChat'), message: evt.message, tone: 'danger' });
         } else if (evt.type === 'metering_failed') {
-          showToast({ title: 'Aviso', message: evt.message, tone: 'warning' });
+          showToast({ title: t('toasts.aviso'), message: evt.message, tone: 'warning' });
         }
       }
     } finally {
@@ -2447,7 +2447,7 @@ export function SessionPage({
     try {
       await cancelAgentTurn(projectId, sessionId, agentAlvo);
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível cancelar o turno', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroCancelarTurno'), tone: 'danger' });
       return;
     }
 
@@ -2510,8 +2510,8 @@ export function SessionPage({
           to="/projects/$projectId"
           params={{ projectId }}
           className={styles.voltar}
-          aria-label="Voltar ao projeto"
-          title="Voltar ao projeto"
+          aria-label={t('topbar.voltarAoProjeto')}
+          title={t('topbar.voltarAoProjeto')}
         >
           <ArrowLeftIcon size={17} />
         </Link>
@@ -2539,8 +2539,8 @@ export function SessionPage({
               value={rascunhoDoNome}
               autoFocus
               maxLength={LIMITE_DO_NOME}
-              aria-label="Nome da sessão"
-              placeholder={`Sem nome — a sessão fica ${hashtag}`}
+              aria-label={t('topbar.nomeDaSessao')}
+              placeholder={t('topbar.semNomeFicaHashtag', { hashtag })}
               onChange={(e) => setRascunhoDoNome(e.target.value)}
               onBlur={handleRename}
               onKeyDown={(e) => {
@@ -2552,11 +2552,11 @@ export function SessionPage({
             <button
               type="button"
               className={styles.title}
-              title={`Sessão ${rotulo} — clique para renomear`}
+              title={t('topbar.tituloRenomear', { rotulo })}
               onClick={() => setRascunhoDoNome(session?.name ?? '')}
               disabled={!session}
             >
-              Sessão {rotulo}
+              {t('topbar.tituloSessao', { rotulo })}
             </button>
           )}
           <div className={styles.meta} title={metaDaSessao}>
@@ -2621,13 +2621,13 @@ export function SessionPage({
               aria-hidden="true"
             />
             <span className={styles.iniciarIdeacaoDica}>
-              traz o Criativo pra conversa
+              {t('topbar.trazCriativo')}
             </span>
             <Button
               onClick={handleStartIdeation}
-              title="Traz o Criativo para conduzir a ideação desta sessão — ele ainda não entrou"
+              title={t('topbar.iniciarIdeacaoTitulo')}
             >
-              Iniciar ideação
+              {t('topbar.iniciarIdeacao')}
             </Button>
           </span>
         )}
@@ -2641,7 +2641,7 @@ export function SessionPage({
             `danger`, não um botão fantasma indistinguível dos outros. */}
         <Button variant="danger" onClick={handleClose} disabled={!session || session.status === 'closed'}>
           <StopSquareIcon size={15} />
-          Encerrar
+          {t('topbar.encerrar')}
         </Button>
         <button
           type="button"
@@ -2650,7 +2650,7 @@ export function SessionPage({
             .join(' ')}
           onClick={() => setAsideOpen((v) => !v)}
           aria-pressed={asideOpen}
-          aria-label="Alternar painel de contexto"
+          aria-label={t('topbar.alternarPainel')}
         >
           <LayoutSidebarIcon size={17} />
         </button>
@@ -2670,14 +2670,13 @@ export function SessionPage({
               {conviteVisivel && (
                 sessaoCriativa ? (
                   <div className={styles.convite}>
-                    <h2 className={styles.conviteTitulo}>A vez é sua</h2>
+                    <h2 className={styles.conviteTitulo}>{t('convite.criativa.titulo')}</h2>
                     <p className={styles.conviteTexto}>
-                      Esta é uma sessão <strong>criativa</strong>. O{' '}
-                      <strong>Criativo</strong> conduz a ideação: ele faz
-                      perguntas sobre o produto e registra as{' '}
-                      <strong>regras de negócio</strong> que saírem da conversa.
-                      Ele não decide tecnologia nem escreve código — isso é do
-                      Arquiteto e dos devs, mais adiante.
+                      <Trans
+                        i18nKey="convite.criativa.texto"
+                        ns="sessionPage"
+                        components={{ b: <strong /> }}
+                      />
                     </p>
                     {/* A AÇÃO, e não uma seta apontando para ela (FASE 24).
                         Ativar o Criativo continua sendo um clique explícito:
@@ -2686,47 +2685,49 @@ export function SessionPage({
                     {!criativoActive && (
                       <div className={styles.conviteAcao}>
                         <Button onClick={handleStartIdeation} disabled={!isActive}>
-                          Iniciar ideação
+                          {t('convite.criativa.iniciarIdeacao')}
                         </Button>
                         <span className={styles.conviteAcaoNota}>
-                          Ele ainda não entrou — é este clique que o traz.
+                          {t('convite.criativa.iniciarIdeacaoNota')}
                         </span>
                       </div>
                     )}
                     <p className={styles.conviteTexto}>
-                      Comece contando o que você quer construir e para quem. Por
-                      exemplo:
+                      {t('convite.criativa.exemploIntro')}
                     </p>
                     <button
                       type="button"
                       className={styles.conviteExemplo}
                       onClick={() =>
-                        setDraft(
-                          'Quero uma API que responda uma saudação para quem chamar. É para eu validar o fluxo de ponta a ponta.',
-                        )
+                        setDraft(t('convite.criativa.exemplo'))
                       }
                     >
-                      “Quero uma API que responda uma saudação para quem chamar. É
-                      para eu validar o fluxo de ponta a ponta.”
+                      “{t('convite.criativa.exemplo')}”
                     </button>
                     <p className={styles.conviteRodape}>
-                      Quando as regras estiverem completas, use{' '}
-                      <strong>Estou pronto para produzir</strong> — é o que gera o
-                      brief e passa a bola ao PO.
+                      <Trans
+                        i18nKey="convite.criativa.rodape"
+                        ns="sessionPage"
+                        components={{ b: <strong /> }}
+                      />
                     </p>
                   </div>
                 ) : (
                   <div className={styles.convite}>
-                    <h2 className={styles.conviteTitulo}>Sessão consultiva</h2>
+                    <h2 className={styles.conviteTitulo}>{t('convite.consultiva.titulo')}</h2>
                     <p className={styles.conviteTexto}>
-                      Aqui é conversa com o modelo: pergunte, peça contexto,
-                      tire dúvidas. <strong>Nenhum agente é ativado</strong>, o
-                      Criativo não entra e esta sessão não vai para execução.
+                      <Trans
+                        i18nKey="convite.consultiva.texto"
+                        ns="sessionPage"
+                        components={{ b: <strong /> }}
+                      />
                     </p>
                     <p className={styles.conviteRodape}>
-                      Quando for para <strong>produzir</strong>, abra uma sessão{' '}
-                      <strong>criativa</strong> na aba Sessões do projeto — o
-                      tipo é escolhido na criação e não muda depois.
+                      <Trans
+                        i18nKey="convite.consultiva.rodape"
+                        ns="sessionPage"
+                        components={{ b: <strong /> }}
+                      />
                     </p>
                   </div>
                 )
@@ -2823,8 +2824,8 @@ export function SessionPage({
                       */}
                       <span className={styles.messageName}>
                         {streamingText
-                          ? (agenteExibido?.name ?? 'agente')
-                          : 'Reunindo informações...'}
+                          ? (agenteExibido?.name ?? t('compartilhado.agenteGenerico'))
+                          : t('mensagens.reunindoInformacoes')}
                       </span>
                     </div>
                     {streamingText ? (
@@ -2852,17 +2853,17 @@ export function SessionPage({
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={handleComposerKeyDown}
-                placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)"
+                placeholder={t('composer.placeholder')}
                 disabled={streaming}
               />
               <Button onClick={handleSend} disabled={streaming || !draft.trim()}>
-                Enviar
+                {t('composer.enviar')}
               </Button>
               {/* RN-122: só existe (habilitado) enquanto há turno em curso —
                   fora disso não há o que parar. */}
               {streaming && (
                 <Button variant="danger" onClick={handleCancel}>
-                  Parar
+                  {t('composer.parar')}
                 </Button>
               )}
               {/*
@@ -2879,11 +2880,11 @@ export function SessionPage({
                   disabled={streaming || !hasBusinessRule}
                   title={
                     !hasBusinessRule
-                      ? 'Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão'
+                      ? t('composer.prontoParaProduzirDesabilitado')
                       : undefined
                   }
                 >
-                  Estou pronto para produzir
+                  {t('composer.prontoParaProduzir')}
                 </Button>
               )}
               {/*
@@ -2898,11 +2899,11 @@ export function SessionPage({
                   disabled={streaming || !hasPromotedStory}
                   title={
                     !hasPromotedStory
-                      ? 'Promova pelo menos uma história no Backlog antes de confirmar a arquitetura'
+                      ? t('composer.confirmarArquiteturaDesabilitado')
                       : undefined
                   }
                 >
-                  Confirmar arquitetura pronta
+                  {t('composer.confirmarArquitetura')}
                 </Button>
               )}
               {/*
@@ -2922,11 +2923,11 @@ export function SessionPage({
                   disabled={streaming || !hasProductBrief}
                   title={
                     !hasProductBrief
-                      ? 'Confirme "Estou pronto para produzir" com o Criativo antes de validar a necessidade'
+                      ? t('composer.confirmarNecessidadeDesabilitado')
                       : undefined
                   }
                 >
-                  Confirmar necessidade validada
+                  {t('composer.confirmarNecessidade')}
                 </Button>
               )}
             </div>
@@ -2934,11 +2935,11 @@ export function SessionPage({
             <div className={styles.activatePrompt}>
               {session?.status === 'created' ? (
                 <>
-                  Sessão ainda não ativada.
-                  <Button onClick={handleActivate}>Ativar sessão</Button>
+                  {t('ativacao.naoAtivada')}
+                  <Button onClick={handleActivate}>{t('ativacao.ativarSessao')}</Button>
                 </>
               ) : (
-                <span>Sessão {session?.status} — não é possível enviar mensagens.</span>
+                <span>{t('ativacao.statusGenerico', { status: session?.status })}</span>
               )}
             </div>
           )}
@@ -2967,15 +2968,15 @@ export function SessionPage({
           card inline em vez da aba Backlog. */}
       {recusandoStory && (
         <Modal
-          title={`Devolver "${recusandoStory.title}" ao PO?`}
+          title={t('modal.devolverTitulo', { titulo: recusandoStory.title })}
           onClose={() => setRecusandoStory(null)}
         >
           <Textarea
-            label="Motivo"
+            label={t('modal.motivo')}
             value={motivoRecusa}
             onChange={(e) => setMotivoRecusa(e.target.value)}
-            hint="Vai como mensagem fixada na sessão do PO. Diga o que falta — é com isto que ele reescreve a história."
-            placeholder="Ex.: os critérios de aceite não cobrem a recusa do pagamento."
+            hint={t('modal.motivoDica')}
+            placeholder={t('modal.motivoPlaceholder')}
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <Button
@@ -2984,10 +2985,10 @@ export function SessionPage({
               disabled={motivoRecusa.trim() === ''}
               onClick={handleReturnStory}
             >
-              Devolver ao PO
+              {t('modal.devolverAoPo')}
             </Button>
             <Button variant="ghost" onClick={() => setRecusandoStory(null)}>
-              Cancelar
+              {t('modal.cancelar')}
             </Button>
           </div>
         </Modal>
@@ -3014,9 +3015,9 @@ interface ArtefatoGerado {
 /** `pr_open` (PR de dev) e `open_adr_pr` (PR de ADR do Arquiteto) — os dois
  *  são "uma PR foi aberta", só o autor e o conteúdo mudam; o painel os
  *  mostra juntos, com o MESMO ícone. */
-const TITULO_PADRAO_POR_TIPO_DE_PR: Partial<Record<ProposedAction['actionType'], string>> = {
-  pr_open: 'Pull request',
-  open_adr_pr: 'ADR',
+const CHAVE_TITULO_PADRAO_POR_TIPO_DE_PR: Partial<Record<ProposedAction['actionType'], string>> = {
+  pr_open: 'artefatos.pullRequest',
+  open_adr_pr: 'artefatos.adr',
 };
 
 function urlDaPr(action: ProposedAction): string | null {
@@ -3194,6 +3195,7 @@ function ContextAside({
   citedEvent?: SessionEvent;
   citedEventMissing?: boolean;
 }) {
+  const { t } = useTranslation('sessionPage');
   /**
    * RN-180 — o painel deixa de mentir sobre o teto.
    *
@@ -3249,7 +3251,8 @@ function ContextAside({
 
   for (const a of actions) {
     if (a.actionType !== 'pr_open' && a.actionType !== 'open_adr_pr') continue;
-    const titulo = (a.payload as { title?: string }).title ?? TITULO_PADRAO_POR_TIPO_DE_PR[a.actionType]!;
+    const titulo =
+      (a.payload as { title?: string }).title ?? t(CHAVE_TITULO_PADRAO_POR_TIPO_DE_PR[a.actionType]!);
     const url = urlDaPr(a);
     artefatos.push({
       key: `pr-${a.id}`,
@@ -3336,7 +3339,7 @@ function ContextAside({
       {/* O trilho se nomeia (handoff, seção 5). Sem isto, quem abre o painel vê
           quatro rótulos mono soltos e nenhuma pista do que os junta. */}
       <div className={styles.asideTitleBar}>
-        <h2 className={styles.asideTitle}>Contexto da sessão</h2>
+        <h2 className={styles.asideTitle}>{t('aside.titulo')}</h2>
       </div>
 
       {/* RN-180 — o teto que existia em silêncio passa a estar escrito. Uma
@@ -3344,10 +3347,12 @@ function ContextAside({
           eventos baixados, e é o mesmo botão que traz mais para todas. */}
       {eventosAnteriores > 0 && (
         <p className={styles.asideTeto}>
-          Este painel lê os <strong>{events.length}</strong> eventos já
-          carregados desta sessão. Há <strong>{eventosAnteriores}</strong>{' '}
-          anteriores — “Carregar mais antigos”, no Log de eventos, traz mais, e
-          as outras seções crescem junto.
+          <Trans
+            i18nKey="aside.teto"
+            ns="sessionPage"
+            values={{ lidos: events.length, anteriores: eventosAnteriores }}
+            components={{ b: <strong /> }}
+          />
         </p>
       )}
 
@@ -3358,13 +3363,13 @@ function ContextAside({
             não tinha como saber quantas já existiam. Sem threshold: o ganho
             é mostrar o número real, não decidir por um mínimo. */}
         <Disclosure
-          titulo="Regras de negócio"
+          titulo={t('aside.regrasDeNegocio')}
           trailing={businessRules.length}
           padraoAberto
           classNameCabecalho={styles.asideHeader}
         >
           {businessRules.length === 0 ? (
-            <div className={styles.asideEmpty}>Nada ainda.</div>
+            <div className={styles.asideEmpty}>{t('aside.nadaAinda')}</div>
           ) : (
             <>
               {regrasDaPagina.map((e) => {
@@ -3374,7 +3379,9 @@ function ContextAside({
                     <div className={styles.ruleTitle}>{rule.title}</div>
                     <div className={styles.ruleDescription}>{rule.description}</div>
                     <div className={styles.ruleOrigin}>
-                      origem: {Array.isArray(rule.origin) ? rule.origin.length : 0} ref(s)
+                      {t('aside.origemRefs', {
+                        count: Array.isArray(rule.origin) ? rule.origin.length : 0,
+                      })}
                     </div>
                   </div>
                 );
@@ -3389,19 +3396,19 @@ function ContextAside({
                     className={styles.asidePagerBotao}
                     onClick={() => setPaginaDeRegras(Math.max(0, pagina - 1))}
                     disabled={pagina === 0}
-                    aria-label="Página anterior de regras de negócio"
+                    aria-label={t('aside.paginaAnterior')}
                   >
                     ‹
                   </button>
                   <span className={styles.asidePagerTexto}>
-                    {pagina + 1} de {totalDePaginas}
+                    {t('aside.paginaDe', { atual: pagina + 1, total: totalDePaginas })}
                   </span>
                   <button
                     type="button"
                     className={styles.asidePagerBotao}
                     onClick={() => setPaginaDeRegras(Math.min(totalDePaginas - 1, pagina + 1))}
                     disabled={pagina >= totalDePaginas - 1}
-                    aria-label="Próxima página de regras de negócio"
+                    aria-label={t('aside.proximaPagina')}
                   >
                     ›
                   </button>
@@ -3418,13 +3425,13 @@ function ContextAside({
             QUEM abriu cada PR nem incluir épico/história do PO. RN-179: e as
             tarefas, penduradas na história a que pertencem. */}
         <Disclosure
-          titulo="Artefatos gerados"
+          titulo={t('aside.artefatosGerados')}
           trailing={totalDeArtefatos}
           padraoAberto
           classNameCabecalho={styles.asideHeader}
         >
           {gruposDeArtefatos.length === 0 ? (
-            <div className={styles.asideEmpty}>Nada ainda.</div>
+            <div className={styles.asideEmpty}>{t('aside.nadaAinda')}</div>
           ) : (
             gruposDeArtefatos.map(({ actorId, itens }) => (
               <div key={actorId} style={corDoAgente(actorId)}>
@@ -3450,9 +3457,9 @@ function ContextAside({
       </div>
 
       <div className={styles.asideSection}>
-        <div className={styles.asideHeader}>Arquivos tocados</div>
+        <div className={styles.asideHeader}>{t('aside.arquivosTocados')}</div>
         {filesTouched.length === 0 ? (
-          <div className={styles.asideEmpty}>Nada ainda.</div>
+          <div className={styles.asideEmpty}>{t('aside.nadaAinda')}</div>
         ) : (
           filesTouched.map((file) => (
             <div key={`${file.actionId}-${file.path}`} className={styles.asideItem}>
@@ -3476,7 +3483,7 @@ function ContextAside({
           do alvo de clique — a linha inteira alterna, como nas outras seis. */}
       <div className={styles.asideSection}>
         <Disclosure
-          titulo="Log de eventos"
+          titulo={t('aside.logDeEventos')}
           trailing={historico.carregados}
           aberto={logOpen}
           onAlternar={onToggleLog}
@@ -3487,14 +3494,14 @@ function ContextAside({
           {highlightEvent && citedEvent && (
             <div className={styles.citedEvent}>
               <div className={styles.citedEventLabel}>
-                Evento citado
+                {t('aside.eventoCitado')}
               </div>
               <EventItem event={citedEvent} highlighted />
             </div>
           )}
           {highlightEvent && citedEventMissing && (
             <div className={styles.asideEmpty}>
-              O evento citado não foi encontrado nesta sessão.
+              {t('aside.eventoCitadoNaoEncontrado')}
             </div>
           )}
           {/* Os três estados da RN-088, com o ERRO antes do vazio — o painel
@@ -3502,7 +3509,7 @@ function ContextAside({
               de "não aconteceu nada". */}
           {historico.isError ? (
             <ErroDeCarregamento
-              titulo="Não foi possível carregar o log de eventos."
+              titulo={t('aside.erroCarregarLog')}
               erro={historico.error}
               onTentarDeNovo={historico.refetch}
             />

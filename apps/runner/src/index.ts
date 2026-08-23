@@ -16,7 +16,8 @@
  * de pasta local, sem a barreira de `guard.ts` — ver o docblock dele).
  */
 
-import { existsSync, realpathSync, statSync } from 'node:fs';
+import { realpathSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { obterToken, obterTicketDoRunner } from './auth.ts';
@@ -38,7 +39,15 @@ import {
 } from './channel.ts';
 import { executarComando } from './exec.ts';
 import { diretorioInicial, listarDiretorio } from './fs-browser.ts';
-import { CwdForaDaRaizError, validarCwdDentroDaRaiz } from './guard.ts';
+import {
+  CwdForaDaRaizError,
+  DirForaDoHomeError,
+  DirNaoEUmaPastaError,
+  garantirDiretorio,
+  NaoConsegiuCriarDiretorioError,
+  validarCwdDentroDaRaiz,
+  validarDirDentroDoHomeNoLinux,
+} from './guard.ts';
 import { GerenciadorDePty } from './pty.ts';
 
 interface Argumentos {
@@ -51,6 +60,10 @@ interface Argumentos {
 function uso(): never {
   console.error(
     'uso: brabo-runner --project <projectId> --dir <caminho-absoluto> [--api-url <url>] [--token <brb_...>]',
+  );
+  console.error(
+    '--dir: se a pasta ainda não existir, ela é criada automaticamente (dentro do ' +
+      '$HOME no Linux, RN-433/RN-434). Se apontar para um arquivo existente, é erro.',
   );
   console.error(
     'Autenticação: --token <brb_...>, ou BRABO_ACCOUNT_TOKEN no ambiente. Gere em ' +
@@ -76,9 +89,34 @@ function lerArgumentos(argv: string[]): Argumentos {
   if (!dirBruto || dirBruto.startsWith('--')) uso();
 
   const dir = resolve(dirBruto);
-  if (!existsSync(dir) || !statSync(dir).isDirectory()) {
-    console.error(`--dir precisa ser uma pasta existente. Recebido: ${dirBruto}`);
-    process.exit(2);
+
+  // RN-433 (ADR 0104): no Linux, o workspace do modo `runner` só pode viver
+  // dentro do $HOME do usuário — nunca fora dele (/etc, /root, outra conta
+  // em /home, etc.). Fora do Linux a restrição não se aplica. RODA ANTES de
+  // `garantirDiretorio` de propósito (RN-434): ela funciona em caminho que
+  // ainda não existe, e criar a pasta antes de validar o $HOME reabriria a
+  // brecha que a RN-433 fechou.
+  try {
+    validarDirDentroDoHomeNoLinux(dir, process.platform, homedir());
+  } catch (erro) {
+    if (erro instanceof DirForaDoHomeError) {
+      console.error(erro.message);
+      process.exit(2);
+    }
+    throw erro;
+  }
+
+  // RN-434 (ADR 0104): `--dir` que ainda não existe é criado (mkdir -p) em
+  // vez de recusado — `--dir` apontando para um ARQUIVO existente continua
+  // erro real, nunca sobrescrito silenciosamente.
+  try {
+    garantirDiretorio(dir);
+  } catch (erro) {
+    if (erro instanceof DirNaoEUmaPastaError || erro instanceof NaoConsegiuCriarDiretorioError) {
+      console.error(erro.message);
+      process.exit(2);
+    }
+    throw erro;
   }
 
   let token: string;

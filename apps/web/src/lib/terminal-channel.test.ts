@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 /**
  * Canal `terminal:<projectId>` — roundtrip básico com `phoenix` e
@@ -30,7 +30,7 @@ const { FakeSocket, fakeChannel, socketInstances, getTerminalTicketMock, listene
 
     class FakeSocket {
       url: string;
-      opts: { params?: { ticket?: string } };
+      opts: { params?: { ticket?: string }; reconnectAfterMs?: () => number };
       connect = vi.fn();
       disconnect = vi.fn();
       channel = vi.fn(() => fakeChannel);
@@ -38,7 +38,10 @@ const { FakeSocket, fakeChannel, socketInstances, getTerminalTicketMock, listene
       onClose = vi.fn();
       onError = vi.fn();
 
-      constructor(url: string, opts: { params?: { ticket?: string } }) {
+      constructor(
+        url: string,
+        opts: { params?: { ticket?: string }; reconnectAfterMs?: () => number },
+      ) {
         this.url = url;
         this.opts = opts;
         socketInstances.push(this);
@@ -86,11 +89,21 @@ beforeEach(() => {
   for (const chave of Object.keys(listeners)) delete listeners[chave];
 });
 
+afterEach(() => {
+  // Cobre o teste de timeout abaixo, que liga fake timers — garante que um
+  // teste seguinte nunca herda o relógio congelado se algo falhar no meio.
+  vi.useRealTimers();
+});
+
 describe('connectTerminalChannel', () => {
-  it('caminho feliz: busca o ticket, conecta em <engineWsUrl>/runner/websocket e entra em terminal:<projectId>', async () => {
+  it('caminho feliz: busca o ticket, conecta DIRETO no <engineWsUrl> do corpo do ticket (já `ws://…/runner`) e entra em terminal:<projectId>', async () => {
     getTerminalTicketMock.mockResolvedValue({
       ticket: 'ticket-1',
-      engineWsUrl: 'http://engine.local',
+      // Já vem PRONTO de `engineWsUrlPublico()` — `ws://…/runner`, sem
+      // `/websocket` (o próprio `Socket` do phoenix.js acrescenta isso).
+      // Concatenar mais path aqui era o bug (RN-432): duplicava `/runner` e
+      // antecipava o `/websocket`, e o engine recusava a conexão.
+      engineWsUrl: 'ws://engine.local/runner',
     });
 
     const handlers = { onAberto: vi.fn(), onErro: vi.fn(), onDados: vi.fn() };
@@ -99,7 +112,7 @@ describe('connectTerminalChannel', () => {
 
     expect(getTerminalTicketMock).toHaveBeenCalledWith('proj-1');
     expect(socketInstances).toHaveLength(1);
-    expect(socketInstances[0].url).toBe('ws://engine.local/runner/websocket');
+    expect(socketInstances[0].url).toBe('ws://engine.local/runner');
     expect(socketInstances[0].opts.params).toEqual({ ticket: 'ticket-1' });
     expect(socketInstances[0].channel).toHaveBeenCalledWith('terminal:proj-1', {});
 
@@ -121,7 +134,7 @@ describe('connectTerminalChannel', () => {
     canal.abrirPty(80, 24);
     expect(fakeChannel.push).not.toHaveBeenCalled();
 
-    resolverTicket!({ ticket: 't-1', engineWsUrl: 'http://engine.local' });
+    resolverTicket!({ ticket: 't-1', engineWsUrl: 'ws://engine.local/runner' });
     await flush();
 
     expect(fakeChannel.push).toHaveBeenCalledWith('pty_open', {
@@ -136,7 +149,7 @@ describe('connectTerminalChannel', () => {
   it('pty_opened do sessionRef certo chama onAberto; de outro sessionRef é ignorado', async () => {
     getTerminalTicketMock.mockResolvedValue({
       ticket: 'ticket-1',
-      engineWsUrl: 'http://engine.local',
+      engineWsUrl: 'ws://engine.local/runner',
     });
     const handlers = { onAberto: vi.fn(), onErro: vi.fn(), onDados: vi.fn() };
     const canal = connectTerminalChannel('proj-1', handlers);
@@ -157,7 +170,7 @@ describe('connectTerminalChannel', () => {
   it('pty_error chama onErro com a mensagem do servidor — o sinal de "sem runner"', async () => {
     getTerminalTicketMock.mockResolvedValue({
       ticket: 'ticket-1',
-      engineWsUrl: 'http://engine.local',
+      engineWsUrl: 'ws://engine.local/runner',
     });
     const handlers = { onAberto: vi.fn(), onErro: vi.fn(), onDados: vi.fn() };
     const canal = connectTerminalChannel('proj-1', handlers);
@@ -175,7 +188,7 @@ describe('connectTerminalChannel', () => {
   it('pty_data decodifica base64 e entrega texto pronto por onDados', async () => {
     getTerminalTicketMock.mockResolvedValue({
       ticket: 'ticket-1',
-      engineWsUrl: 'http://engine.local',
+      engineWsUrl: 'ws://engine.local/runner',
     });
     const handlers = { onAberto: vi.fn(), onErro: vi.fn(), onDados: vi.fn() };
     const canal = connectTerminalChannel('proj-1', handlers);
@@ -196,7 +209,7 @@ describe('connectTerminalChannel', () => {
   it('enviarInput codifica o texto do usuário em base64 antes de empurrar pty_input', async () => {
     getTerminalTicketMock.mockResolvedValue({
       ticket: 'ticket-1',
-      engineWsUrl: 'http://engine.local',
+      engineWsUrl: 'ws://engine.local/runner',
     });
     const handlers = { onAberto: vi.fn(), onErro: vi.fn(), onDados: vi.fn() };
     const canal = connectTerminalChannel('proj-1', handlers);
@@ -223,10 +236,47 @@ describe('connectTerminalChannel', () => {
     expect(socketInstances).toHaveLength(0);
   });
 
+  it('socket que nunca abre chama onErro dentro do timeout, sem reconexão automática do phoenix', async () => {
+    vi.useFakeTimers();
+    getTerminalTicketMock.mockResolvedValue({
+      ticket: 'ticket-1',
+      engineWsUrl: 'ws://engine.local/runner',
+    });
+
+    const handlers = { onAberto: vi.fn(), onErro: vi.fn(), onDados: vi.fn() };
+    const canal = connectTerminalChannel('proj-1', handlers);
+
+    // O fetch do ticket é assíncrono — sob fake timers, microtasks ainda
+    // rodam sozinhas, mas precisamos ceder o loop de eventos pra promise
+    // resolver antes de o socket nascer.
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(socketInstances).toHaveLength(1);
+    // Reconexão automática do phoenix.js precisa estar DESLIGADA — senão o
+    // backoff nativo dele reconectaria sozinho pra sempre e o timeout
+    // próprio nunca teria chance de decidir nada.
+    expect(socketInstances[0].opts.reconnectAfterMs?.()).toBeGreaterThan(
+      60 * 60 * 1000,
+    );
+    expect(handlers.onErro).not.toHaveBeenCalled();
+
+    // `onOpen` nunca é disparado (dublê, sem socket real) — o transporte
+    // nunca abriu, exatamente o caso que o timeout cobre.
+    await vi.advanceTimersByTimeAsync(8_000);
+
+    expect(handlers.onErro).toHaveBeenCalledWith(
+      expect.stringContaining('conectar'),
+    );
+    expect(socketInstances[0].disconnect).toHaveBeenCalled();
+
+    canal.fechar();
+    vi.useRealTimers();
+  });
+
   it('fechar() é idempotente e desconecta o socket só uma vez', async () => {
     getTerminalTicketMock.mockResolvedValue({
       ticket: 'ticket-1',
-      engineWsUrl: 'http://engine.local',
+      engineWsUrl: 'ws://engine.local/runner',
     });
     const handlers = { onAberto: vi.fn(), onErro: vi.fn(), onDados: vi.fn() };
     const canal = connectTerminalChannel('proj-1', handlers);
