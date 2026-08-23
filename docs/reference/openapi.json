@@ -6105,6 +6105,108 @@
         ]
       }
     },
+    "/projects/{projectId}/personal-access-tokens/{tokenId}/admin": {
+      "delete": {
+        "description": "Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro.",
+        "operationId": "PersonalAccessTokensController_revokePatAsMaintainer",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tokenId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Token revogado. Sem corpo."
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoga o Personal Access Token de QUALQUER usuário no projeto",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
+    "/projects/{projectId}/personal-access-tokens/all": {
+      "get": {
+        "description": "Visão de `maintainer` para resposta a incidente (RN-427) — inclui o dono de cada token. Nunca inclui o token bruto.",
+        "operationId": "PersonalAccessTokensController_listAllPats",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalAccessTokenAdminResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token, token expirado ou assinatura inválida."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit por usuário ou por IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista TODOS os Personal Access Tokens do projeto, de qualquer usuário",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
     "/projects/{projectId}/proficiency": {
       "get": {
         "description": "O PRÓPRIO perfil por default; a visão agregada do time só para quem administra o projeto. Perfil de competência é dado sobre a pessoa, e o default menos surpreendente é ela ver o dela.",
@@ -15206,6 +15308,64 @@
           "allow",
           "deny",
           "ask"
+        ]
+      },
+      "PersonalAccessTokenAdminResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000PAT000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "laptop"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO000000001"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-22T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = sem expiração."
+          },
+          "revokedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true
+          },
+          "lastUsedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = nunca usado."
+          },
+          "userId": {
+            "type": "string",
+            "example": "01JC4Z0000USUARIO000000001"
+          },
+          "userEmail": {
+            "type": "string",
+            "example": "dev@exemplo.com"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "projectId",
+          "createdAt",
+          "expiresAt",
+          "revokedAt",
+          "lastUsedAt",
+          "userId",
+          "userEmail"
         ]
       },
       "PersonalAccessTokenResponseDto": {

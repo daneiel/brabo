@@ -190,10 +190,11 @@ motivo na URL.
   de `@ServiceRoute()`/`EngineServiceGuard` — bypass por metadado, nunca um
   `if` que uma rota nova poderia esquecer), e é o ÚNICO lugar da api que
   aceita esse formato de token: em qualquer outra rota um `brb_...` falha a
-  verificação de JWT normalmente. As três rotas de
+  verificação de JWT normalmente. As cinco rotas de
   `/projects/:projectId/personal-access-tokens` (emitir/listar/revogar o
-  PAT em si) continuam JWT de sessão normal — só a rota que o TOKEN em si
-  autentica é que muda de mecanismo.
+  PAT em si, mais as duas de `maintainer` — RN-427, listar/revogar de
+  QUALQUER usuário do projeto) continuam JWT de sessão normal — só a rota
+  que o TOKEN em si autentica é que muda de mecanismo.
 - **As rotas `engine-service` não são "internas" por convenção de nome.** O que
   as protege é o `EngineServiceGuard` comparando o `X-Brabo-Service-Token` com
   o segredo compartilhado em tempo constante, mais a NetworkPolicy. O prefixo
@@ -471,7 +472,9 @@ motivo na URL.
 | PUT | `/projects/:projectId/permissions` | role:maintainer |
 | POST | `/projects/:projectId/personal-access-tokens` | role:developer |
 | GET | `/projects/:projectId/personal-access-tokens` | role:developer |
+| GET | `/projects/:projectId/personal-access-tokens/all` | role:maintainer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
+| DELETE | `/projects/:projectId/personal-access-tokens/:tokenId/admin` | role:maintainer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |
 | DELETE | `/projects/:projectId/proficiency/me` | role:viewer |
 | POST | `/projects/:projectId/proficiency/me/opt-in` | role:viewer |

@@ -30,6 +30,8 @@ import {
   listPersonalAccessTokens,
   issuePersonalAccessToken,
   revokePersonalAccessToken,
+  listAllPersonalAccessTokens,
+  revokePersonalAccessTokenAsMaintainer,
   mensagemDaApi,
   setAgentModelBinding,
   setAreaModelBinding,
@@ -48,6 +50,7 @@ import type {
   ModelComCuradoria,
   PersonalAccessTokenIssued,
   PersonalAccessTokenSummary,
+  PersonalAccessTokenAdminSummary,
   ResolvedBinding,
   ProficiencyLevel,
   ProficiencyProfile,
@@ -963,14 +966,18 @@ function MembersSection({ projectId }: { projectId: string }) {
 
 /**
  * Personal Access Tokens do runner local (`brb_…`, ADR 0105) — cada usuário
- * gerencia só os PRÓPRIOS tokens deste projeto (RN-426, sem admin cross-user
- * nesta onda). O token bruto só existe no `emitido` LOCAL deste componente,
- * nunca no cache do react-query que também alimenta a listagem — a lista
- * nunca pode carregar o valor bruto.
+ * gerencia os PRÓPRIOS tokens deste projeto (RN-426); `maintainer`/`owner`
+ * ganham, além disso, a visão de TODOS os tokens do projeto para resposta a
+ * incidente (RN-427). O token bruto só existe no `emitido` LOCAL deste
+ * componente, nunca no cache do react-query que também alimenta a listagem —
+ * a lista nunca pode carregar o valor bruto.
  */
 export function PersonalAccessTokensSection({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { data: comPapel } = useCurrentWorkspaceWithRole();
+  const podeGerenciarDeTodos =
+    comPapel?.role === 'owner' || comPapel?.role === 'maintainer';
   const { data: tokens } = useQuery({
     queryKey: ['pats', projectId],
     queryFn: () => listPersonalAccessTokens(projectId),
@@ -1005,6 +1012,17 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
   async function handleRevoke(tokenId: string) {
     await revokePersonalAccessToken(projectId, tokenId);
     invalidate();
+  }
+
+  const { data: todosOsTokens } = useQuery({
+    queryKey: ['pats-admin', projectId],
+    queryFn: () => listAllPersonalAccessTokens(projectId),
+    enabled: podeGerenciarDeTodos,
+  });
+
+  async function handleRevokeComoMaintainer(tokenId: string) {
+    await revokePersonalAccessTokenAsMaintainer(projectId, tokenId);
+    queryClient.invalidateQueries({ queryKey: ['pats-admin', projectId] });
   }
 
   async function copiarToken() {
@@ -1071,6 +1089,48 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
     },
   ];
 
+  const colunasAdmin: TableColumn<PersonalAccessTokenAdminSummary>[] = [
+    { key: 'name', label: 'Nome', width: '2fr', render: (t) => t.name },
+    { key: 'userEmail', label: 'Dono', width: '2fr', render: (t) => t.userEmail },
+    {
+      key: 'createdAt',
+      label: 'Criado',
+      width: '1fr',
+      render: (t) => new Date(t.createdAt).toLocaleDateString('pt-BR'),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      width: '120px',
+      render: (t) =>
+        t.revokedAt ? (
+          <Badge tone="danger">revogado</Badge>
+        ) : (
+          <span className={styles.status}>
+            <span className={styles.statusDot} />
+            ativo
+          </span>
+        ),
+    },
+    {
+      key: 'action',
+      label: '',
+      width: '56px',
+      render: (t) =>
+        t.revokedAt ? null : (
+          <button
+            type="button"
+            aria-label={`Revogar ${t.name} (${t.userEmail})`}
+            title="Revogar"
+            className={styles.remove}
+            onClick={() => handleRevokeComoMaintainer(t.id)}
+          >
+            <TrashIcon size={14} />
+          </button>
+        ),
+    },
+  ];
+
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
@@ -1109,6 +1169,25 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
         rowKey={(t) => t.id}
         emptyMessage="Nenhum token de acesso emitido para este projeto."
       />
+
+      {podeGerenciarDeTodos && (
+        <div className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.title}>Todos os tokens do projeto</h2>
+            <span className={styles.eyebrow}>maintainer · RN-427</span>
+          </div>
+          <p className={styles.subtitle}>
+            Resposta a incidente — revogue o token de qualquer usuário do
+            projeto, não só o seu.
+          </p>
+          <Table
+            columns={colunasAdmin}
+            rows={todosOsTokens ?? []}
+            rowKey={(t) => t.id}
+            emptyMessage="Nenhum token de acesso emitido para este projeto."
+          />
+        </div>
+      )}
 
       {emitido && (
         <Modal title="Token gerado" onClose={() => setEmitido(null)}>

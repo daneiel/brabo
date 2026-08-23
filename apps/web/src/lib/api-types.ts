@@ -542,6 +542,15 @@ export interface PersonalAccessTokenIssued extends PersonalAccessTokenSummary {
   token: string;
 }
 
+/**
+ * Visão de `maintainer` (RN-427) — os mesmos campos, mais o DONO do token.
+ * Só a rota `/personal-access-tokens/all` devolve isto.
+ */
+export interface PersonalAccessTokenAdminSummary extends PersonalAccessTokenSummary {
+  userId: string;
+  userEmail: string;
+}
+
 export type BudgetPolicy = 'block' | 'allow';
 
 // Custo por AGENTE numa sessão (Fase 4a — painel do time). Espelha

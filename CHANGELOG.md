@@ -6,6 +6,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: `maintainer` passa a revogar o Personal Access Token de
+  QUALQUER usuário do projeto — resposta a incidente (dev desligado com
+  token vazando), item declarado fora de escopo pelo ADR 0105. Rotas
+  separadas (`GET .../personal-access-tokens/all`,
+  `DELETE .../personal-access-tokens/:tokenId/admin`, ambas
+  `@RequireRole('maintainer')`), escopo por `projectId` em vez de
+  `userId` — a autorevogação de cada usuário não muda. Sub-lista nova em
+  Configurações do projeto, visível só para `owner`/`maintainer`, com o
+  e-mail do dono de cada token (RN-427, extensão do ADR 0105)
 - **runner**: `@brabo/runner` publicado no npm — `npm install -g
   @brabo/runner` instala o CLI sem precisar clonar o monorepo. `tsup`
   empacota `apps/runner` num `dist/index.cjs` único (`node-pty`

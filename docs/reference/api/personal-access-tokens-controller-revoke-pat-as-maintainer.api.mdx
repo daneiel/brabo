@@ -1,0 +1,69 @@
+---
+id: personal-access-tokens-controller-revoke-pat-as-maintainer
+title: "Revoga o Personal Access Token de QUALQUER usuário no projeto"
+description: "Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro."
+sidebar_label: "Revoga o Personal Access Token de QUALQUER usuário no projeto"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "delete api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Revoga o Personal Access Token de QUALQUER usuário no projeto"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/projects/{projectId}/personal-access-tokens/{tokenId}/admin"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./personal-access-tokens-controller-revoke-pat-as-maintainer.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./personal-access-tokens-controller-revoke-pat-as-maintainer.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./personal-access-tokens-controller-revoke-pat-as-maintainer.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

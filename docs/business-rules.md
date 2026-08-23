@@ -9637,9 +9637,10 @@ chamador, devolve `null` — a MESMA resposta (404 no controller) pros
 dois casos, pra não vazar a existência de um token alheio pelo código de
 status.
 
-**Fora desta onda, declarado**: um `maintainer` revogar o PAT de outro
-usuário — o caso de resposta a incidente (dev desligado com token
-vazando). Registrado como item de backlog, não implementado agora.
+**Fechado pela RN-427**: um `maintainer` revogar o PAT de outro usuário —
+o caso de resposta a incidente (dev desligado com token vazando) — que
+esta seção declarava fora de escopo saiu do backlog e está implementado.
+Esta régua (autorevogação, escopo por `userId`) não mudou em nada.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/list-personal-access-tokens.use-case.ts`
   (`ListPersonalAccessTokensUseCase`), `apps/api/src/application/use-cases/auth/revoke-personal-access-token.use-case.ts`,
@@ -9651,6 +9652,58 @@ vazando). Registrado como item de backlog, não implementado agora.
   (revogar token de outro usuário → `null`)
 - **Decisão arquitetural:**
   [ADR 0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+
+---
+
+### RN-427 — `maintainer` revoga PAT de QUALQUER usuário do projeto, escopado por `project_id` — resposta a incidente {#rn-427}
+
+Extensão do modelo da RN-426, não uma decisão de arquitetura nova: mesmo
+padrão já usado para fechar a RN-407 (PO lendo métricas de produto) sobre
+um modelo já decidido, sem ADR próprio. Fecha o corte que o ADR 0105
+declarava "fora desta onda" — resposta a incidente real (dev desligado
+com token vazando), onde esperar o próprio usuário revogar não é opção.
+
+`ListPersonalAccessTokensAsMaintainerUseCase`/
+`RevokePersonalAccessTokenAsMaintainerUseCase` são casos de uso NOVOS,
+em rotas SEPARADAS (`GET .../personal-access-tokens/all`,
+`DELETE .../personal-access-tokens/:tokenId/admin`, ambas
+`@RequireRole('maintainer')`) — nunca um `if` dentro dos handlers de
+self-service, mesmo princípio já usado no resto do produto para
+autorização por nível (`OfferInfraHandoffUseCase`). A rota de
+autorevogação (RN-426) não muda em nada.
+
+`listarDoProjeto` traz TODOS os tokens do projeto — sem filtro de
+`userId` — com um `innerJoin` em `users` pro e-mail do dono, mesmo padrão
+que a listagem de membros do projeto já usa: sem o e-mail, um
+`maintainer` vendo "revogar token de quem?" só teria um UUID cru, e o
+próprio motivo do item (resposta a incidente) pede saber QUEM é o dono.
+
+`revogarComoMaintainer(id, projectId, motivo)` é o mesmo desenho
+idempotente de `revogar()` — `UPDATE` condicional seguido de `SELECT` de
+desempate quando o `UPDATE` não acha linha —, mas o `WHERE` compara
+`project_id`, nunca `user_id`: um `maintainer` revoga qualquer dono
+DENTRO do projeto dele, nunca um token de outro projeto. Sem linha
+nenhuma (token não existe OU é de outro projeto), devolve `null` — a
+MESMA resposta (404) pros dois casos, mesma disciplina de não vazar
+existência que a RN-426 já aplicava.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/list-personal-access-tokens-as-maintainer.use-case.ts`,
+  `apps/api/src/application/use-cases/auth/revoke-personal-access-token-as-maintainer.use-case.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts`
+  (`listarDoProjeto`, `revogarComoMaintainer`),
+  `apps/api/src/interfaces/http/runner/personal-access-tokens.controller.ts`
+  (`listAllPats`, `revokePatAsMaintainer`),
+  `apps/web/src/routes/ProjectSettingsTab.tsx` (`PersonalAccessTokensSection`,
+  sub-lista visível só para `owner`/`maintainer`)
+- **Teste:** `apps/api/test/application/use-cases/auth/list-personal-access-tokens-as-maintainer.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/auth/revoke-personal-access-token-as-maintainer.use-case.spec.ts`,
+  `apps/api/test/infrastructure/persistence/personal-access-token.repository.spec.ts`
+  (`listarDoProjeto`/`revogarComoMaintainer`),
+  `apps/api/test/interfaces/http/runner/personal-access-tokens.controller.spec.ts`,
+  `apps/web/src/routes/ProjectSettingsTab.test.tsx`
+- **Decisão arquitetural:**
+  [ADR 0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+  (extensão do modelo existente, sem ADR novo)
 
 ---
 
