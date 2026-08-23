@@ -866,7 +866,7 @@ Os outros dois providers divergem, e a divergência é normalizada, não escondi
 o Ollama simplesmente não emite `usage` sem a linha `done`; o Anthropic não sabe
 omitir contagem, porque `usage` é obrigatório no `message_start` do protocolo
 dele. As três respostas estão em
-[docs/reference/llm-providers.md](reference/llm-providers.md#divergências-normalizadas).
+[docs/reference/llm-providers.md](reference/llm-providers.md#normalized-divergences).
 
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:150`
 - **Teste:** `test/contract/llm-provider.contract.ts` (cenário `sem_usage`,

@@ -151,10 +151,35 @@ const config: Config = {
       onBrokenMarkdownLinks: ({ sourceFilePath, url }) => {
         // `sourceFilePath` chega relativo ao CWD do processo (`website/`),
         // por isso `../docs/reference/...` — nunca comparar com `startsWith`
-        // supondo raiz do repo.
-        const fonteEhReferencia = sourceFilePath.includes('docs/reference/');
+        // supondo raiz do repo. Calculado uma vez, ANTES do throw, porque a
+        // detecção de gap (abaixo) e a reescrita (mais abaixo) precisam da
+        // MESMA noção de "caminho lógico dentro da árvore de docs" — uma
+        // fonte em `website/i18n/pt-BR/.../current/adr/x.md` e uma em
+        // `docs/adr/x.md` são o MESMO tipo de arquivo, só em locales
+        // diferentes, e comparar por `sourceFilePath.includes('docs/adr/')`
+        // isolado (como a Onda 6b tinha feito) não enxerga a primeira.
+        const MARCA_I18N = 'docusaurus-plugin-content-docs/current/';
+        const origemRelativaARaiz = sourceFilePath.includes(MARCA_I18N)
+          ? sourceFilePath.slice(sourceFilePath.indexOf(MARCA_I18N) + MARCA_I18N.length)
+          : sourceFilePath.slice(sourceFilePath.indexOf('docs/') + 'docs/'.length);
+
+        const fonteEhReferencia = origemRelativaARaiz.startsWith('reference/');
         const alvoEhReferencia = url.includes('/reference/');
-        if (!fonteEhReferencia && !alvoEhReferencia) {
+        // Mesma classe de gap, achada pela Onda 6b: `docs/adr/` (e seu
+        // espelho em `website/i18n/pt-BR/.../adr/`) é a zona que sabidamente
+        // atrasa tradução — ADR novo nasce toda semana, override em
+        // `i18n/pt-BR/` não acompanha no mesmo commit. O fallback do
+        // Docusaurus pro locale default monta o conteúdo sob a rota `pt-BR`,
+        // mas a resolução de link relativo tropeça do mesmo jeito que o gap
+        // de `reference/` — o alvo existe no repositório, só não bate com a
+        // árvore do locale sendo compilado agora. Os DOIS lados importam:
+        // fonte-é-ADR fecha `docs/adr/*.md` → `../business-rules.md` (o ADR
+        // atrasado arrasta o que ele linka); alvo-é-ADR fecha
+        // `business-rules.md` → `adr/0104-*.md` (um arquivo já traduzido
+        // linkando um ADR que atrasou ou foi renumerado depois do snapshot).
+        const fonteEhAdr = origemRelativaARaiz.startsWith('adr/');
+        const alvoEhAdr = /(^|\/)\d{4}-[^/]+\.md$/.test(url.split('#')[0]);
+        if (!fonteEhReferencia && !alvoEhReferencia && !fonteEhAdr && !alvoEhAdr) {
           throw new Error(
             `Markdown link quebrado: "${url}" em ${sourceFilePath}. Corrija o link ou aplique o protocolo pathname://.`,
           );
@@ -164,17 +189,6 @@ const config: Config = {
         // repositório usa query string, só fragmento.
         const [caminhoRelativo, ...resto] = url.split('#');
         const fragmento = resto.length > 0 ? `#${resto.join('#')}` : '';
-
-        // Cálculo LÓGICO (string, sem tocar o disco) — de propósito: o alvo
-        // pode não existir fisicamente na árvore da fonte (é exatamente o
-        // gap). `docs/` e `website/i18n/pt-BR/.../current/` espelham a MESMA
-        // topologia de diretório (a cópia da Onda 6a preserva estrutura),
-        // então o caminho relativo dentro de cada raiz é comparável mesmo
-        // quando as raízes físicas são outras.
-        const MARCA_I18N = 'docusaurus-plugin-content-docs/current/';
-        const origemRelativaARaiz = sourceFilePath.includes(MARCA_I18N)
-          ? sourceFilePath.slice(sourceFilePath.indexOf(MARCA_I18N) + MARCA_I18N.length)
-          : sourceFilePath.slice(sourceFilePath.indexOf('docs/') + 'docs/'.length);
 
         const slug = path
           .join(path.dirname(origemRelativaARaiz), caminhoRelativo)

@@ -40,7 +40,7 @@ const ARQUIVOS = ['README.md', 'docs/intro.md'];
  * virou "version" só num dos dois arquivos. O grupo 1 captura qual PALAVRA
  * casou para a troca devolver a mesma, em vez de fixar "versão" e quebrar
  * silenciosamente o arquivo em inglês (ou vice-versa, se o README também for
- * traduzido depois).
+ * traduzido depois). O grupo 2 é a versão em si.
  */
 const PADRAO = /(versão|version) \*\*v(\d+\.\d+\.\d+)\*\*/;
 
@@ -63,10 +63,13 @@ export function trocarVersaoAnunciada(texto: string, tag: string): Troca {
   if (achado === null) return { texto, anterior: null };
 
   return {
-    texto: texto.replace(PADRAO, `versão **v${versao}**`),
-    // O grupo 1 existe sempre que o padrão casa; `?? null` é só para o
-    // typecheck estrito do pacote de scripts, não um caso real.
-    anterior: achado[1] ?? null,
+    // Usa a MESMA palavra que casou (`achado[1]`) em vez de fixar "versão":
+    // é o que impede a troca de reescrever "version **v3.2.0**" (inglês)
+    // como "versão **v3.2.0**" e quebrar o arquivo traduzido.
+    texto: texto.replace(PADRAO, `${achado[1]} **v${versao}**`),
+    // Grupo 2 é a versão; grupo 1 é só a palavra que casou. `?? null` é
+    // para o typecheck estrito do pacote de scripts, não um caso real.
+    anterior: achado[2] ?? null,
   };
 }
 
