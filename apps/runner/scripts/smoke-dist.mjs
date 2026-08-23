@@ -8,7 +8,7 @@
  * que `node dist/index.cjs` sozinho NUNCA testaria, porque ignora o shebang
  * completamente).
  *
- * ADR 0109 mudou ONDE `node-pty` é resolvido: antes (ADR 0106) `pty.ts`
+ * ADR 0112 mudou ONDE `node-pty` é resolvido: antes (ADR 0106) `pty.ts`
  * importava `node-pty` no topo do módulo — hoisted antes de qualquer parsing
  * de argumento —, então só IMPORTAR `dist/index.cjs` já provava que o
  * binding nativo carregava. Agora a resolução é LAZY

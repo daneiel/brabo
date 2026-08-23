@@ -1,6 +1,6 @@
 name: Build runner binaries
 
-# ADR 0109 — o item de backlog do ADR 0104 ("binário standalone (pkg/bun
+# ADR 0112 — o item de backlog do ADR 0104 ("binário standalone (pkg/bun
 # build --compile)"), até agora fora de escopo. Workflow PRÓPRIO, disparado
 # pela MESMA tag final de `release.yml`/`publish-runner.yml` — mesma
 # disciplina do ADR 0030 ("workflow PRÓPRIO disparado pela tag... nada a
@@ -45,7 +45,7 @@ jobs:
     name: Binário (${{ matrix.target }})
     strategy:
       # `fail-fast: false` — uma plataforma falhando não deve impedir as
-      # outras quatro de publicar o binário delas. O ADR 0109 documenta
+      # outras quatro de publicar o binário delas. O ADR 0112 documenta
       # exatamente qual plataforma foi validada de ponta a ponta neste
       # sandbox (só linux-x64) e quais dependem só desta matriz para a
       # primeira prova real.

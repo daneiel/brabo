@@ -1,13 +1,13 @@
 /**
  * Resolve o módulo `node-pty` de verdade, para os DOIS modelos de execução
- * do runner (ADR 0106 / ADR 0109):
+ * do runner (ADR 0106 / ADR 0112):
  *
  * - `dist/index.cjs` via `node` (o caminho de sempre, `npm install -g
  *   @brabo/runner`): `import('node-pty')` simples, resolvido do
  *   `node_modules` de quem instalou o pacote — ZERO mudança de
  *   comportamento em relação a antes desta mudança, que fazia
  *   `import * as nodePty from 'node-pty'` estático em `pty.ts`.
- * - binário standalone do `bun build --compile` (ADR 0109): `node-pty` não
+ * - binário standalone do `bun build --compile` (ADR 0112): `node-pty` não
  *   está instalado do lado de quem baixou o binário — não há
  *   `node_modules` nenhum. Os arquivos de `node-pty` (o `lib/*.js` real do
  *   pacote e o(s) `.node` nativo(s) da plataforma) foram embutidos no

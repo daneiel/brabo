@@ -10359,11 +10359,11 @@ se manifestar — corrigir só o primeiro teria trocado um 403 sempre por um
 
 ---
 
-### RN-440 — Smoke do binário standalone roda o SUBPROCESSO real, nunca mock {#rn-440}
+### RN-451 — Smoke do binário standalone roda o SUBPROCESSO real, nunca mock {#rn-440}
 
 O mesmo padrão de disciplina que `smoke-dist.mjs` (ADR 0106) já aplica ao
 `dist/index.cjs` publicado no npm passa a valer também para
-`dist-bin/brabo-runner-<platform>-<arch>[.exe]` (ADR 0109): nenhuma suíte
+`dist-bin/brabo-runner-<platform>-<arch>[.exe]` (ADR 0112): nenhuma suíte
 prova que um artefato EMPACOTADO funciona lendo o código-fonte dele — só
 executando o artefato de verdade, como subprocesso, e observando saída
 real. `scripts/smoke-bin.mjs` roda o binário COMPILADO (nunca
@@ -10383,19 +10383,19 @@ apagaria a única coisa que o teste precisa provar.
 - **Teste:** o próprio `smoke-bin.mjs` — não há teste unitário que o
   substitua, de propósito (é o mesmo desenho de `smoke-dist.mjs`, que
   também não tem par unitário)
-- **ADR:** [0109](adr/0109-binario-standalone-do-runner-via-bun-build-compile.md)
+- **ADR:** [0112](adr/0112-binario-standalone-do-runner-via-bun-build-compile.md)
 - **Origem:** requisito explícito do dono do produto para este item de
   backlog ("no mocking")
 
 ---
 
-### RN-441 — `node-pty` resolvido por injeção, não import estático — e a lacuna que isso abriu no smoke do npm foi fechada no mesmo commit {#rn-441}
+### RN-452 — `node-pty` resolvido por injeção, não import estático — e a lacuna que isso abriu no smoke do npm foi fechada no mesmo commit {#rn-441}
 
 `pty.ts` deixou de fazer `import * as nodePty from 'node-pty'` estático no
 topo do módulo — passou a receber o módulo já resolvido por injeção no
 construtor de `GerenciadorDePty`, resolvido uma vez em `main()`
 (`src/index.ts`) via `native-pty-loader.ts#carregarNodePty()`. A mudança
-existe para o binário standalone (ADR 0109): o caminho compilado precisa
+existe para o binário standalone (ADR 0112): o caminho compilado precisa
 extrair os arquivos embutidos pra um diretório real ANTES de resolver
 `node-pty`, o que exige uma chamada assíncrona — incompatível com um
 `import` estático hoisted. Fora do binário compilado, o comportamento é
@@ -10421,10 +10421,10 @@ silenciosa.
   `apps/runner/scripts/smoke-dist.mjs` (terceira checagem,
   `verificarNodePtyCarrega`)
 - **Teste:** `apps/runner/scripts/smoke-dist.mjs` (caminho npm/tsup) e
-  `apps/runner/scripts/smoke-bin.mjs` (caminho binário, RN-440) — os dois
+  `apps/runner/scripts/smoke-bin.mjs` (caminho binário, RN-451) — os dois
   únicos lugares que exercitam o artefato empacotado de verdade, nenhum
   teste unitário substitui
-- **ADR:** [0109](adr/0109-binario-standalone-do-runner-via-bun-build-compile.md)
+- **ADR:** [0112](adr/0112-binario-standalone-do-runner-via-bun-build-compile.md)
 - **Origem:** necessidade técnica do binário standalone; a lacuna no smoke
   do npm foi achada por auditoria própria da mudança, não por execução real
   reportando falha

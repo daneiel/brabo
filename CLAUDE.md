@@ -2062,7 +2062,7 @@ primário de verdade.
   `useBacklog` (completo, sem janela), com fallback por história quando o
   backlog ainda não respondeu.
 
-## Binário standalone do runner (2026-08-23, RN-440/441, ADR 0109)
+## Binário standalone do runner (2026-08-23, RN-451/441, ADR 0112)
 Item de backlog do ADR 0104 ("standalone binary, `pkg`/`bun build
 --compile`"), companion do ADR 0106 (distribuição via npm). Decisão
 explícita do dono do produto: binário ÚNICO de verdade, matriz completa
@@ -2127,7 +2127,7 @@ não alcança, lançando `ENOENT` fora de qualquer `try/catch` antes de
   "Runner local" (ADR 0103). TRÊS caminhos de distribuição: clonar o
   monorepo (dev), `npm install -g @brabo/runner` via `tsup` + `npm publish`
   (ADR 0106), e binário standalone via `bun` (`bun build --compile`, ADR
-  0109) — o `.node` nativo do `node-pty` embutido por `with { type: 'file'
+  0112) — o `.node` nativo do `node-pty` embutido por `with { type: 'file'
   }` e extraído para um diretório real em runtime, já que `node-pty`
   resolve seu próprio addon por um `require()` de caminho COMPUTADO que o
   Bun não consegue embutir sozinho

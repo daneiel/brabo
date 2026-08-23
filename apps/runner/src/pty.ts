@@ -7,7 +7,7 @@
  * `node-pty` é o binding nativo — o mesmo que o VS Code usa para o terminal
  * integrado dele. O módulo NÃO é mais importado estaticamente aqui — ver
  * `native-pty-loader.ts` para o motivo (o binário standalone do
- * `bun build --compile`, ADR 0109, precisa resolvê-lo em runtime, depois de
+ * `bun build --compile`, ADR 0112, precisa resolvê-lo em runtime, depois de
  * extrair os arquivos embutidos para um diretório real). `GerenciadorDePty`
  * recebe o módulo já resolvido por injeção, no construtor — `main()` em
  * `index.ts` resolve uma vez só, antes de montar o estado do runner.

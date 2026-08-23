@@ -3,7 +3,7 @@
 /**
  * Constrói o binário standalone do runner para a plataforma ATUAL —
  * `dist-bin/brabo-runner-<platform>-<arch>[.exe]` — via `bun build
- * --compile` (ADR 0109, item do backlog do ADR 0104: "binário standalone
+ * --compile` (ADR 0112, item do backlog do ADR 0104: "binário standalone
  * (pkg/bun build --compile)").
  *
  * NUNCA cross-compila um addon nativo: cada plataforma do backlog builda
@@ -12,7 +12,7 @@
  * platform`/`process.arch`, o par que `node-pty` já usa pra nomear
  * `prebuilds/<platform>-<arch>`.
  *
- * O mecanismo (documentado por inteiro no ADR 0109, provado empiricamente
+ * O mecanismo (documentado por inteiro no ADR 0112, provado empiricamente
  * antes de codar — ver o ADR pra o histórico da investigação):
  *
  * 1. `node-pty` resolve o `.node` nativo por um `require()` com CAMINHO
@@ -137,7 +137,7 @@ function gerarManifesto(raizDoNodePty) {
     '/**',
     ' * GERADO por scripts/build-bin.mjs — NÃO editar à mão. Sobrescrito antes de',
     ' * `bun build --compile` e restaurado ao placeholder logo depois (ver o',
-    ' * próprio script e o ADR 0109). Se você está lendo isto num diff de PR,',
+    ' * próprio script e o ADR 0112). Se você está lendo isto num diff de PR,',
     ' * algo saiu errado — este arquivo nunca deveria ficar commitado assim.',
     ' */',
   ];
@@ -186,7 +186,7 @@ function main() {
     // native module") assim que qualquer código tenta alcançar aquele
     // import — Bun troca o que não consegue resolver de verdade por um
     // stub que lança, e isso só aparece ao RODAR, nunca ao compilar (achado
-    // empírico, documentado por inteiro no ADR 0109).
+    // empírico, documentado por inteiro no ADR 0112).
     ['build', '--compile', '--external', 'node-pty', '--outfile', SAIDA, join('src', 'index.ts')],
     { cwd: raizDoPacote, stdio: 'inherit' },
   );

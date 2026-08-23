@@ -287,7 +287,7 @@ async function conectarERodar(
 
 /**
  * Flag INTERNA, não documentada em `uso()` — existe só pra
- * `scripts/smoke-bin.mjs` (ADR 0109) provar que o `.node` nativo embutido
+ * `scripts/smoke-bin.mjs` (ADR 0112) provar que o `.node` nativo embutido
  * no binário standalone carrega e que `GerenciadorDePty` spawna, ESCREVE
  * e LÊ de um PTY de verdade, sem precisar de rede (engine/api reais) nem
  * de `--project`/`--dir`/`--token`. Nunca chega a
@@ -370,7 +370,7 @@ async function main(): Promise<void> {
 
   // Resolvido UMA vez, antes de montar o estado — normal `import('node-pty')`
   // sob `node dist/index.cjs`/`bun run src/index.ts`; extraído do binário
-  // compilado (ADR 0109) só quando `native-pty-loader.ts` detecta que está
+  // compilado (ADR 0112) só quando `native-pty-loader.ts` detecta que está
   // rodando dentro de um `bun build --compile`.
   const nodePty = await carregarNodePty();
   console.log('node-pty carregado com sucesso');
@@ -452,7 +452,7 @@ async function main(): Promise<void> {
 // `main()` nunca era chamado. No Windows o shim `.cmd`/`.ps1` do npm já
 // invoca `node <caminho real>` sem symlink — `realpathSync` vira no-op ali.
 //
-// ADR 0109 — o binário `bun build --compile` quebra essa checagem de um
+// ADR 0112 — o binário `bun build --compile` quebra essa checagem de um
 // jeito NOVO, e pior: `process.argv[1]` dentro dele é `/$bunfs/root/<nome>`
 // — um caminho VIRTUAL, dentro do bundle, que `realpathSync` não alcança
 // (`lstat` real num caminho que não existe no disco real). Testado

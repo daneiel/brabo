@@ -1,4 +1,4 @@
-# ADR 0109 — Standalone binary of `@brabo/runner` via `bun build --compile`, native `.node` addon embedded by real extraction to a temp directory
+# ADR 0112 — Standalone binary of `@brabo/runner` via `bun build --compile`, native `.node` addon embedded by real extraction to a temp directory
 
 - **Status:** Accepted
 - **Date:** 2026-08-23
@@ -228,12 +228,12 @@ preemptively without evidence.
   `import`; the type-only `import type * as NodePtyNamespace from
   'node-pty'` carries zero runtime cost (erased by `verbatimModuleSyntax`).
 - `apps/runner/src/index.ts` — resolves `node-pty` once in `main()`
-  (`RN-441`), fixes the auto-run guard for the `/$bunfs/` case, and adds
+  (`RN-452`), fixes the auto-run guard for the `/$bunfs/` case, and adds
   the internal `--self-test-pty` path.
 - `apps/runner/scripts/build-bin.mjs` — generates the manifest, invokes
   `bun build --compile --external node-pty`, `chmod 755` on non-Windows.
 - `apps/runner/scripts/smoke-bin.mjs` — mirrors `smoke-dist.mjs`'s
-  pattern but runs the COMPILED BINARY as a real subprocess (`RN-441`).
+  pattern but runs the COMPILED BINARY as a real subprocess (`RN-452`).
 - `.github/workflows/build-runner-binaries.yml` — same tag trigger as
   `publish-runner.yml`/`release.yml`, 5-target matrix, each job builds on
   its OWN native runner (never cross-compiles), runs the real smoke, and

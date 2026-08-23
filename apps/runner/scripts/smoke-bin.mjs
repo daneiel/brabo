@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Smoke do BINÁRIO STANDALONE (`dist-bin/brabo-runner-<platform>-<arch>`,
- * ADR 0109) — espelha `scripts/smoke-dist.mjs` (ADR 0106), mas roda o
+ * ADR 0112) — espelha `scripts/smoke-dist.mjs` (ADR 0106), mas roda o
  * binário COMPILADO em vez de `node dist/index.cjs`. As duas checagens de
  * "uso" (zero args) já provam que o binário executa como CLI de verdade;
  * a que importa de verdade é `--self-test-pty`, que executa `main()`
@@ -9,7 +9,7 @@
  * `GerenciadorDePty` (o mesmo caminho que produção usa em
  * `tratarPtyOpen`/`onPtyInput`), escreve nele e lê a resposta de volta —
  * a prova de que o `.node` nativo embutido (via `with { type: 'file' }`,
- * ver `scripts/build-bin.mjs` e o ADR 0109) carrega e FUNCIONA de verdade
+ * ver `scripts/build-bin.mjs` e o ADR 0112) carrega e FUNCIONA de verdade
  * dentro do binário, não só que o processo não lança na largada. Nenhum
  * mock: é o binário publicável de verdade, rodando como subprocesso real.
  */
@@ -68,7 +68,7 @@ assertUso('uso (zero args)', () => execFileSync(binario, [], { encoding: 'utf8' 
  * spawna um `cat` real dentro de um PTY real — sem precisar de rede
  * (engine/api) nem de argumentos de projeto/dir/token. Ver o docblock da
  * função em `src/index.ts` para o porquê de `cat` (não um shell
- * interativo — achado empírico da investigação do ADR 0109: bash sob o
+ * interativo — achado empírico da investigação do ADR 0112: bash sob o
  * runtime do Bun neste sandbox nunca terminava de redesenhar o prompt
  * dentro do timeout, embora o mesmo funcionasse sob Node puro).
  */

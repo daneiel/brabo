@@ -48,10 +48,10 @@ chmod +x ./brabo-runner-<plataforma>
 ```
 
 O binário é um único arquivo — o addon nativo (`node-pty`, usado só pelo
-terminal interativo da aba Code) já vem embutido dentro dele (ADR 0109),
+terminal interativo da aba Code) já vem embutido dentro dele (ADR 0112),
 extraído para um diretório temporário na primeira execução. Não é
 assinado/notarizado ainda (macOS Gatekeeper e o SmartScreen do Windows vão
-avisar no primeiro uso) — item de backlog declarado no ADR 0109, exige o
+avisar no primeiro uso) — item de backlog declarado no ADR 0112, exige o
 dono do produto obter/custear uma identidade de assinatura de código.
 
 ## Uso
@@ -126,7 +126,7 @@ local, em [ADR 0103](https://github.com/daneiel/brabo/blob/main/docs/adr/0103-ru
 [ADR 0105](https://github.com/daneiel/brabo/blob/main/docs/adr/0105-personal-access-token-do-runner-escopado-por-construcao.md),
 [ADR 0106](https://github.com/daneiel/brabo/blob/main/docs/adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.md),
 [ADR 0107](https://github.com/daneiel/brabo/blob/main/docs/adr/0107-navegacao-de-pasta-local-via-o-runner.md)
-e [ADR 0109](https://github.com/daneiel/brabo/blob/main/docs/adr/0109-binario-standalone-do-runner-via-bun-build-compile.md)
+e [ADR 0112](https://github.com/daneiel/brabo/blob/main/docs/adr/0112-binario-standalone-do-runner-via-bun-build-compile.md)
 (o binário standalone).
 
 ## Licença
