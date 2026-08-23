@@ -6,6 +6,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **ci**: toda branch cujo PR é mergeado passa a ser arquivada
+  automaticamente (`.github/workflows/archive-merged-branch.yml`) — move
+  de `refs/heads/<nome>` para `refs/archive/<nome>`, nunca apaga:
+  histórico intacto, recuperável a qualquer momento. Exceções: `dev`,
+  `qa`, `main` (aparecem como `head` de todo PR de promoção), `gh-pages`
+  (deploy do site de docs, não é branch de feature) e branch de fork. A
+  decisão (quem entra, quem fica de fora) mora em
+  `scripts/ci/archive-branch.ts`, testado. Ver
+  docs/explanation/branching-policy.md, seção "Merged branches get
+  archived".
 - **scripts,api**: `Docker › Reset total` (`pnpm bootstrap`,
   `scripts/dev/reset-total.sh`) soma numa folha só o que antes era manual —
   rebuild das imagens, apagar o banco, subir até tudo saudável (`--wait`),

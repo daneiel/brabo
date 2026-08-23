@@ -1,0 +1,68 @@
+name: archive-merged-branch
+
+# Toda branch mergeada sai da lista de branches do GitHub — exceto dev, qa,
+# main (permanentes) e gh-pages (deploy do site de docs). "Arquivar" é
+# mecânico: mover de `refs/heads/<nome>` para `refs/archive/<nome>`, nunca
+# apagar — o objeto e o histórico continuam no repositório, recuperável por
+# quem souber o ref. Fonte da política: docs/explanation/branching-policy.md
+#
+# Não é check required — roda DEPOIS do merge, e nada depende do veredito
+# dele. Por isso o `if:` fica no JOB (diferente de promotion-check/pr-police,
+# onde o filtro mora dentro do passo para o check sempre existir).
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: archive-branch-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  arquivar:
+    if: github.event.pull_request.merged == true
+    name: Arquivar branch mergeada
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Decidir e arquivar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          if ! REF="$(node scripts/ci/archive-branch.ts "$BRANCH" "$HEAD_REPO" "$BASE_REPO")"; then
+            echo "::notice::não arquivando '$BRANCH' — permanente, deploy do site, ou fork"
+            exit 0
+          fi
+
+          echo "arquivando '$BRANCH' → $REF"
+
+          # Cria o ref de arquivo ANTES de apagar a branch — se a criação
+          # falhar, a branch original continua de pé, nunca some sem deixar
+          # rastro. Nome reaproveitado (branch antiga apagada, nome recriado
+          # depois) é o único caso em que a criação falha com "já existe"; aí
+          # a atualização força o arquivo mais RECENTE daquele nome a valer.
+          if ! gh api "repos/${BASE_REPO}/git/refs" -f ref="$REF" -f sha="$SHA" 2>/tmp/archive-create-err; then
+            if grep -q "Reference already exists" /tmp/archive-create-err; then
+              gh api -X PATCH "repos/${BASE_REPO}/git/${REF#refs/}" -f sha="$SHA" -F force=true
+            else
+              cat /tmp/archive-create-err >&2
+              exit 1
+            fi
+          fi
+
+          # A branch pode já ter sido apagada por fora (manual, ou reprocessamento
+          # deste mesmo evento) — 422/404 aqui não é falha real, é no-op.
+          gh api -X DELETE "repos/${BASE_REPO}/git/refs/heads/${BRANCH}" \
+            || echo "::warning::'$BRANCH' já não existia em refs/heads — ok"

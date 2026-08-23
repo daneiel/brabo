@@ -184,6 +184,39 @@ The exact configuration is in [Rulesets](../reference/rulesets.md), and
 applying it is a manual step — the repository versions the source, GitHub
 receives the application.
 
+## Merged branches get archived
+
+Every branch whose PR merges gets moved out of the branch list —
+mechanically, by `archive-merged-branch.yml`, on every `pull_request`
+`closed` event where `merged == true`. "Archived" is literal, not a
+euphemism for deleted: the branch moves from `refs/heads/<name>` to
+`refs/archive/<name>`, a namespace GitHub's UI doesn't show as a branch.
+The commit object and its history stay in the repository exactly as they
+were — recoverable by anyone who knows the ref, with a single
+`git push origin refs/archive/<name>:refs/heads/<name>` to bring it back.
+
+Four names are never archived, and the reason is the same for all four:
+none of them is disposable feature work.
+
+| name | why it's excluded |
+|---|---|
+| `dev`, `qa`, `main` | the three permanents — they appear as the `head` of every merged promotion PR (`dev`→`qa`, `qa`→`main`), which is exactly the case this exclusion exists to catch |
+| `gh-pages` | the documentation site's deploy branch (see "Direct push is blocked" above) — not a feature branch, and deleting `refs/heads/gh-pages` would take the live site down with it |
+
+A fifth condition isn't a name, it's a boundary: a PR whose head branch
+lives in a **fork** (`head.repo.full_name != base.repo.full_name`) is
+never touched. The workflow's `GITHUB_TOKEN` is scoped to this
+repository — it has no business rewriting refs in someone else's.
+
+The decision itself — which four names are excluded, and the fork check —
+is a tested pure function
+([`scripts/ci/archive-branch.ts`](https://github.com/daneiel/brabo/blob/dev/scripts/ci/archive-branch.ts)),
+not inline shell: it's the part of this mechanism that's actually worth
+getting wrong tests for. The workflow step that follows just calls the
+GitHub API twice — create the `refs/archive/` ref, then delete the
+`refs/heads/` one — and only deletes after the create succeeds, so a
+failure never drops a branch without leaving the archived copy behind.
+
 ## Bots skip the ladder
 
 PRs opened by `dependabot[bot]` and `github-actions[bot]` are **exempt**
