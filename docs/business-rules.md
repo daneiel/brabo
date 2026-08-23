@@ -10161,6 +10161,41 @@ erro original embutida.
 
 ---
 
+### RN-453 — `--dir` relativo do runner local resolve contra `INIT_CWD`, não contra o cwd rebaseado do pnpm {#rn-453}
+
+`resolve(dirBruto)` em `lerArgumentos()` resolvia `--dir` relativo contra
+`process.cwd()` — correto quando o CLI roda direto (binário standalone,
+`npm install -g @brabo/runner`), mas ERRADO no único caminho de invocação
+que existe hoje sem publicação real no npm (achado real, ADR 0106/backlog):
+`pnpm --filter runner start` REBASEIA `process.cwd()` para a pasta do
+PACOTE (`apps/runner`), não a pasta de onde o usuário digitou o comando.
+`pnpm --filter runner start -- --dir ../exp001`, rodado de `~/dev/brabo`,
+criava `~/dev/brabo/apps/exp001` em vez de `~/dev/exp001` — silenciosamente,
+sem erro, porque RN-435 já faz `--dir` inexistente ser criado em vez de
+recusado.
+
+`resolverDir()` (`apps/runner/src/guard.ts`) resolve contra `INIT_CWD`
+quando presente — a variável que npm/pnpm SEMPRE define com a pasta
+original de invocação, existente só quando o processo nasce de um script
+do `package.json` — e cai em `process.cwd()` quando ausente (binário
+direto, onde já é a pasta certa). `resolve()` do Node já ignora a base
+quando `dirBruto` é absoluto, então caminho absoluto (o caso documentado no
+README) não muda de comportamento.
+
+- **Onde:** `apps/runner/src/guard.ts` (`resolverDir`), `apps/runner/src/index.ts` (`lerArgumentos`)
+- **Teste:** `apps/runner/src/guard.spec.ts` (`describe('resolverDir', …)`
+  — relativo contra `INIT_CWD` quando presente, cai no cwd do processo
+  quando ausente, absoluto ignora as duas bases)
+- **ADR:** [0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+  (extensão aditiva, mesma categoria de RN-435 — reduz atrito de invocação,
+  não muda o runner como fonte da verdade do caminho)
+- **Origem:** achado em uso real, rodando `pnpm --filter runner start --
+  dir ../exp001` de dentro do checkout do monorepo — o único caminho de
+  invocação disponível hoje, porque `@brabo/runner` ainda não foi publicado
+  de verdade no npm (`NPM_TOKEN` pendente, ver backlog do ADR 0106)
+
+---
+
 ## O explorador de pasta do Runner vira três colunas, e a criação de um projeto `runner` deixa de esperar o passo final (RN-436/436)
 
 Duas mudanças pedidas pelo dono do produto depois de testar a criação de um

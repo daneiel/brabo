@@ -16,6 +16,7 @@ import {
   DirNaoEUmaPastaError,
   NaoConsegiuCriarDiretorioError,
   garantirDiretorio,
+  resolverDir,
   validarCwdDentroDaRaiz,
   validarDirDentroDoHomeNoLinux,
 } from './guard.ts';
@@ -157,5 +158,27 @@ describe('garantirDiretorio', () => {
     const alvo = join(arquivoNoMeio, 'sub');
 
     expect(() => garantirDiretorio(alvo)).toThrow(NaoConsegiuCriarDiretorioError);
+  });
+});
+
+describe('resolverDir', () => {
+  it('resolve relativo contra initCwd quando presente — o achado real', () => {
+    // `pnpm --filter runner start -- --dir ../exp001`, rodado de
+    // `~/dev/brabo`, rebaseia `process.cwd()` para `apps/runner`; sem
+    // `INIT_CWD`, `../exp001` viraria `~/dev/brabo/apps/exp001`.
+    expect(resolverDir('../exp001', '/home/user/dev/brabo', '/home/user/dev/brabo/apps/runner')).toBe(
+      '/home/user/dev/exp001',
+    );
+  });
+
+  it('cai no cwd do processo quando INIT_CWD está ausente', () => {
+    // Binário standalone / `node dist/index.cjs` direto: não nasce de um
+    // script do package.json, então não há INIT_CWD — e ali `process.cwd()`
+    // já é a pasta certa.
+    expect(resolverDir('exp001', undefined, '/home/user/dev')).toBe('/home/user/dev/exp001');
+  });
+
+  it('caminho já absoluto ignora as duas bases', () => {
+    expect(resolverDir('/abs/pasta', '/qualquer', '/outro/qualquer')).toBe('/abs/pasta');
   });
 });
