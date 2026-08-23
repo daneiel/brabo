@@ -1987,6 +1987,45 @@ sumirem, porque o menu deve dizer o que o produto não faz; e
 um `DROP SCHEMA` puro faria a migração seguinte falhar, e como o engine
 divide o mesmo banco, recuperar exige `db:migrate` E `engine:migrate`.
 
+**`Docker › Reset total`** (`scripts/dev/reset-total.sh`) soma essa
+sequência inteira numa folha só — preflight, `up --build --wait` (o
+`--wait` do Compose v2.17+ é o "até tudo saudável", sem laço de saúde
+escrito à mão), o mesmo `DROP SCHEMA` da Delete, `db:migrate` +
+`engine:migrate` e o seed — com tela de confirmação PRÓPRIA
+(`confirmar_reset`, exige digitar `RESET`), distinta da da Delete (que
+exige o NOME do banco) e sem a precondição "postgres já de pé" da Delete,
+porque é o próprio comando que sobe o compose do zero. O seed
+(`apps/api/src/db/seed.ts`) ganhou um passo que ativa credencial de
+provider a partir de `.env`, reaproveitando as MESMAS variáveis
+`<PROVIDER>_TEST_KEY` que os smokes de LLM já usam
+(`apps/api/test/infrastructure/llm/*.smoke.spec.ts`) — uma convenção de
+nome só, dois consumidores; provider sem variável definida não entra, sem
+erro, e a credencial fica no OWNER (RN-058).
+
+Dois achados ao rodar o reset pela primeira vez, e não pelo item em si —
+nenhum dos dois é hipotético, os dois quebraram a execução real:
+
+1. `gemma:1b` não existe no registry da Ollama (`manifest unknown` — só
+   `gemma3:1b` existe), então `ollama-model-loader` sempre falhava e o
+   `--wait` nunca fechava verde. Corrigido nos seis lugares que carregavam o
+   valor errado como CÓDIGO — `docker-compose.yml`/`.prod.yml`,
+   `.env.example`, `docker/ollama/pull-models.sh`,
+   `scripts/dev/verificar-modelos-ollama.sh`,
+   `deploy/k8s/base/ollama/job-model-loader.yaml` e a RN-415 em
+   `docs/business-rules.md` — sem tocar os ADRs 0099/0100 (aceitos) nem a
+   narrativa histórica desta mesma seção do CLAUDE.md, que descrevem o que
+   foi pedido/decidido na época, não o valor operacional corrente.
+2. Mais sério, e mais antigo — `Database › Delete` (item 3.4, existente
+   desde a criação do menu) nunca dropava de verdade: `DROP SCHEMA public
+   CASCADE` não alcança `engine.*` (Ecto/Oban vive em schema PRÓPRIO,
+   `engine`) nem `drizzle.__drizzle_migrations` (o controle do drizzle-kit
+   vive em schema PRÓPRIO, `drizzle`). Resultado: `mix ecto.migrate` batia
+   em `duplicate_table` nas tabelas do engine que sobreviviam, e
+   `pnpm db:migrate` — pior, SEM erro nenhum — via o controle do
+   drizzle-kit intacto, concluía que já tinha rodado tudo e não recriava
+   NENHUMA tabela da api. `Delete`/`Reset total` agora dropam `engine` e
+   `drizzle` também, nesta ordem, antes de `public`.
+
 ## Abas agrupadas, PRs project-wide, pasta local via Runner, carrossel do PO (2026-08-20)
 Cinco ondas independentes, rodadas em paralelo por arquivo disputado, vindas
 de uso real da tela de projeto — nenhuma planejada de antemão. A sexta onda

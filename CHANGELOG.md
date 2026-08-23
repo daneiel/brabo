@@ -6,6 +6,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **scripts,api**: `Docker › Reset total` (`pnpm bootstrap`,
+  `scripts/dev/reset-total.sh`) soma numa folha só o que antes era manual —
+  rebuild das imagens, apagar o banco, subir até tudo saudável (`--wait`),
+  migrar (api + engine) e semear — com tela de confirmação própria (exige
+  digitar `RESET`). O seed ganhou um passo que ativa credencial de provider
+  já salva em `.env`, reaproveitando as MESMAS variáveis `<PROVIDER>_TEST_KEY`
+  que os smokes de LLM já usam; provider sem variável definida não entra,
+  sem erro.
+
+### Correções
+
+- **docker,scripts,deploy**: `gemma:1b` não existe no registry da Ollama
+  (`manifest unknown`) — só `gemma3:1b` existe. `ollama-model-loader`
+  sempre falhava e travava qualquer `docker compose up --wait`. Corrigido
+  em `docker-compose.yml`/`.prod.yml`, `.env.example`,
+  `docker/ollama/pull-models.sh`, `scripts/dev/verificar-modelos-ollama.sh`
+  e `deploy/k8s/base/ollama/job-model-loader.yaml` (RN-415).
+- **scripts**: `Database › Delete` nunca dropava de verdade — `DROP SCHEMA
+  public CASCADE` não alcança `engine.*` (Ecto/Oban vive em schema PRÓPRIO)
+  nem `drizzle.__drizzle_migrations` (controle do drizzle-kit, também em
+  schema próprio). Resultado real: `mix ecto.migrate` batia em
+  `duplicate_table` e `pnpm db:migrate` — sem erro nenhum — não recriava
+  NENHUMA tabela da api, porque via o controle do drizzle-kit intacto e
+  concluía que já tinha rodado tudo. `Delete`/`Reset total` agora dropam
+  `engine` e `drizzle` também.
+
 - **api,web**: converter `execution_mode` de um projeto EXISTENTE, sem
   recriá-lo — fecha a correção que a Onda 1 do runner (ADR 0104) já tinha
   registrado em `docs/explanation/backlog.md` (o item 4 daquele ADR dizia

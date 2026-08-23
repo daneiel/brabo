@@ -9246,7 +9246,7 @@ serviço `ollama` só puxava `llama3.2:1b`, e o RAG degradava para
 léxico-only em SILÊNCIO em qualquer ambiente limpo, sem nenhum sinal de
 que isso estava acontecendo. Serviço novo `ollama-model-loader` (one-shot,
 `docker-compose.yml` dev e prod), lendo `OLLAMA_REQUIRED_MODELS`
-(default `gemma:1b,yi-coder:1.5b,nomic-embed-text`), aditivo ao serviço
+(default `gemma3:1b,yi-coder:1.5b,nomic-embed-text`), aditivo ao serviço
 `ollama` existente — o entrypoint dele continua intocado.
 
 A degradação deixou de ser silenciosa: `rag_search` (RN-414) e a busca
