@@ -9,10 +9,16 @@ import settingsPtBR from '../locales/pt-BR/settings.json';
 // `AreaModelsSection`/`ModelsSection` — sem o namespace aqui, o gatilho do
 // picker cai na chave crua (`picker.selectModel`).
 import modelsPtBR from '../locales/pt-BR/models.json';
+// `ExecutionModeSection` reusa os rótulos dos três modos e o placeholder do
+// caminho do wizard de criação (`newProject:workspaceMode.*`/
+// `newProject:workspace.pathPlaceholder`) — sem o namespace aqui, esses
+// textos caem na chave crua.
+import newProjectPtBR from '../locales/pt-BR/newProject.json';
 import {
   AreaModelsSection,
   BudgetSection,
   CredentialsSection,
+  ExecutionModeSection,
   ExecutionSection,
   MelhoresModelosPorCapacidadeSection,
   ModelsSection,
@@ -28,6 +34,7 @@ import type { Project, UserCredentialMetadata } from '../lib/api-types';
 
 const getProject = vi.fn();
 const updateProject = vi.fn();
+const convertProjectExecutionMode = vi.fn();
 const listCredentials = vi.fn();
 const upsertCredential = vi.fn();
 const deleteCredential = vi.fn();
@@ -71,6 +78,8 @@ vi.mock('../lib/api-client', async () => {
     mensagemDaApi: real.mensagemDaApi,
     getProject: (...args: unknown[]) => getProject(...args),
     updateProject: (...args: unknown[]) => updateProject(...args),
+    convertProjectExecutionMode: (...args: unknown[]) =>
+      convertProjectExecutionMode(...args),
     listCredentials: (...args: unknown[]) => listCredentials(...args),
     upsertCredential: (...args: unknown[]) => upsertCredential(...args),
     deleteCredential: (...args: unknown[]) => deleteCredential(...args),
@@ -135,12 +144,16 @@ function novaInstanciaI18n() {
   const instancia = i18next.createInstance();
   void instancia.use(initReactI18next).init({
     resources: {
-      'pt-BR': { settings: settingsPtBR, models: modelsPtBR },
+      'pt-BR': {
+        settings: settingsPtBR,
+        models: modelsPtBR,
+        newProject: newProjectPtBR,
+      },
     },
     lng: 'pt-BR',
     fallbackLng: 'pt-BR',
     defaultNS: 'settings',
-    ns: ['settings', 'models'],
+    ns: ['settings', 'models', 'newProject'],
     interpolation: { escapeValue: false },
     returnNull: false,
   });
@@ -168,6 +181,7 @@ function montar() {
 beforeEach(() => {
   vi.clearAllMocks();
   updateProject.mockResolvedValue(project({ maxConsecutiveBlocked: 3 }));
+  convertProjectExecutionMode.mockResolvedValue(project({ executionMode: 'mounted' }));
   listCredentials.mockResolvedValue([]);
   listModels.mockResolvedValue({ local: {}, cloud: {} });
   listModelCatalog.mockResolvedValue({ local: {}, cloud: {} });
@@ -482,6 +496,117 @@ describe('ExecutionSection', () => {
 
     fireEvent.click(screen.getByText('Salvar'));
     expect(updateProject).not.toHaveBeenCalled();
+  });
+});
+
+describe('ExecutionModeSection (RN-447..450, ADR 0111)', () => {
+  function montarModo() {
+    return montarSecao(<ExecutionModeSection projectId="proj-1" />);
+  }
+
+  it('mostra o modo atual (container) e não pede caminho', async () => {
+    getProject.mockResolvedValue(project({ executionMode: 'container' }));
+    montarModo();
+
+    expect(await screen.findByDisplayValue('Container')).toBeTruthy();
+    expect(screen.queryByLabelText('Novo caminho da pasta')).toBeNull();
+    // Nada mudou ainda — Converter fica desabilitado.
+    expect(screen.getByText('Converter').closest('button')?.disabled).toBe(
+      true,
+    );
+  });
+
+  it('trocar para `mounted` mostra o campo de caminho, vazio', async () => {
+    getProject.mockResolvedValue(project({ executionMode: 'container' }));
+    montarModo();
+
+    const select = await screen.findByLabelText('Novo modo de execução');
+    fireEvent.change(select, { target: { value: 'mounted' } });
+
+    const campo = await screen.findByLabelText('Novo caminho da pasta');
+    expect(campo).toHaveValue('');
+    // Sem caminho digitado, Converter continua desabilitado.
+    expect(screen.getByText('Converter').closest('button')?.disabled).toBe(
+      true,
+    );
+  });
+
+  it('converte com o modo e o caminho digitados', async () => {
+    getProject.mockResolvedValue(project({ executionMode: 'container' }));
+    convertProjectExecutionMode.mockResolvedValue(
+      project({ executionMode: 'mounted', workspacePath: '/home/voce/loja' }),
+    );
+    montarModo();
+
+    const select = await screen.findByLabelText('Novo modo de execução');
+    fireEvent.change(select, { target: { value: 'mounted' } });
+    const campo = await screen.findByLabelText('Novo caminho da pasta');
+    fireEvent.change(campo, { target: { value: '/home/voce/loja' } });
+    fireEvent.click(screen.getByText('Converter'));
+
+    await waitFor(() =>
+      expect(convertProjectExecutionMode).toHaveBeenCalledWith('proj-1', {
+        executionMode: 'mounted',
+        workspacePath: '/home/voce/loja',
+      }),
+    );
+    expect(await screen.findByText('Modo de execução convertido')).toBeTruthy();
+  });
+
+  it('projeto já `runner`: voltar para `container` não exige caminho', async () => {
+    getProject.mockResolvedValue(
+      project({ executionMode: 'runner', workspacePath: '/home/voce/loja' }),
+    );
+    convertProjectExecutionMode.mockResolvedValue(
+      project({ executionMode: 'container', workspacePath: null }),
+    );
+    montarModo();
+
+    const select = await screen.findByLabelText('Novo modo de execução');
+    fireEvent.change(select, { target: { value: 'container' } });
+
+    expect(screen.queryByLabelText('Novo caminho da pasta')).toBeNull();
+    fireEvent.click(screen.getByText('Converter'));
+
+    await waitFor(() =>
+      expect(convertProjectExecutionMode).toHaveBeenCalledWith('proj-1', {
+        executionMode: 'container',
+      }),
+    );
+  });
+
+  it('quem não é maintainer/owner: controles desabilitados, com aviso', async () => {
+    useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'developer' } });
+    getProject.mockResolvedValue(project({ executionMode: 'container' }));
+    montarModo();
+
+    expect(
+      await screen.findByText(/Só quem é maintainer ou owner pode converter/),
+    ).toBeTruthy();
+    expect(screen.getByLabelText('Novo modo de execução')).toBeDisabled();
+    expect(screen.getByText('Converter').closest('button')?.disabled).toBe(
+      true,
+    );
+  });
+
+  it('dev agent ativo: a api recusa (409) e a mensagem DELA aparece, não uma genérica', async () => {
+    getProject.mockResolvedValue(project({ executionMode: 'container' }));
+    convertProjectExecutionMode.mockRejectedValue(
+      new ApiError(409, {
+        message: 'Este projeto tem dev agent trabalhando ou travado agora',
+      }),
+    );
+    montarModo();
+
+    const select = await screen.findByLabelText('Novo modo de execução');
+    fireEvent.change(select, { target: { value: 'runner' } });
+    const campo = await screen.findByLabelText('Novo caminho da pasta');
+    fireEvent.change(campo, { target: { value: '/home/voce/loja' } });
+    fireEvent.click(screen.getByText('Converter'));
+
+    expect(
+      await screen.findByText(/dev agent trabalhando ou travado agora/),
+    ).toBeTruthy();
   });
 });
 

@@ -387,20 +387,21 @@ table's shape is reused; the kind of finding is new.
 | 2 | **CLOSED** (RN-422) | The wizard only taught bind-mount, never the runner command, even though it already existed | `apps/web/src/routes/NewProjectWizard.tsx` — third entry in `MODOS_DE_WORKSPACE` (`runner`), with the command `brabo-runner --project <id> --dir <pasta>` right in the "Where the code will live" step, not just in the Terminal |
 | 3 | **CLOSED** (RN-421) | A 2-value enum (`workspace_mode`) didn't express 3 physically distinct execution modes | `apps/api/src/db/migrations/0048_quiet_iron_fist.sql` (`project_execution_mode`, three values); `apps/api/src/domain/iam/project.entity.ts` (`PROJECT_EXECUTION_MODES`) |
 
-**Correction recorded during Wave 1's implementation — the ADR isn't
-edited, the correction lives here**: item 4 of ADR 0104 states that
-converting between the three modes of an EXISTING project "becomes
-allowed without recreating the project." That's **incorrect** — Wave 1
-investigated and found that `UpdateProjectDto` still deliberately
-excludes `executionMode`/`workspacePath` (the worktree, `permissions.json`
-and the engine's cache point at the old scope; it isn't a trivial
-`PATCH`). Wave 1 only delivered the three-value field at CREATION.
-Converting an already-existing project stays as a NEW backlog item, with
-no design yet:
+**Correction recorded during Wave 1's implementation, CLOSED separately**
+(not itself one of this document's numbered runner waves — see below):
+item 4 of ADR 0104 stated that converting between the three modes of an
+EXISTING project "becomes allowed without recreating the project." Wave 1
+found that incorrect — `UpdateProjectDto` still deliberately excluded
+`executionMode`/`workspacePath`, and only the three-value field at
+CREATION had actually been delivered. **[ADR 0111](../adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
+makes the sentence TRUE again**, via a dedicated route (`PUT
+.../execution-mode`, `ConvertProjectExecutionModeUseCase`, RN-447..450) —
+not by editing ADR 0104's accepted text, which stays as it was written,
+wrong at the time and corrected here instead:
 
 | item | cost | activation criterion | where it was decided |
 |---|---|---|---|
-| Converting `execution_mode` on an EXISTING project, without recreating it (the worktree, `permissions.json` and the engine's cache need to migrate scope along with it) | M | none — ADR 0104 already promised this and the promise is incorrect today; only the design is missing | found in Wave 1, correcting ADR 0104 item 4 |
+| ~~Converting `execution_mode` on an EXISTING project, without recreating it~~ | **CLOSED** (RN-447..450) | — | [ADR 0111](../adr/0111-conversao-de-execution-mode-de-projeto-existente.md) |
 
 **Wave 2 — PAT, [ADR 0105](../adr/0105-personal-access-token-do-runner-escopado-por-construcao.md), DONE (RN-424/425/426; RN-427 closed later, same decision wave):**
 

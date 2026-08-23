@@ -1,0 +1,69 @@
+---
+id: projects-controller-convert-execution-mode-route
+title: "Converts the project's execution mode"
+description: "Migrates `execution_mode`/`workspacePath` for a project that ALREADY exists (RN-447..450, ADR 0111) — dedicated route, separate from PATCH, because it orchestrates more than a column write: it moves permissions.json to the new scope root, retires the container lifecycle row when leaving `container` mode, and refuses (409) while any dev agent of the project is non-idle, since a running agent doesn't re-resolve its worktree location on its own."
+sidebar_label: "Converts the project's execution mode"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "put api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Converts the project's execution mode"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"put"}
+  path={"/projects/{projectId}/execution-mode"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Migrates `execution_mode`/`workspacePath` for a project that ALREADY exists (RN-447..450, ADR 0111) — dedicated route, separate from PATCH, because it orchestrates more than a column write: it moves permissions.json to the new scope root, retires the container lifecycle row when leaving `container` mode, and refuses (409) while any dev agent of the project is non-idle, since a running agent doesn't re-resolve its worktree location on its own.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./projects-controller-convert-execution-mode-route.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./projects-controller-convert-execution-mode-route.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./projects-controller-convert-execution-mode-route.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

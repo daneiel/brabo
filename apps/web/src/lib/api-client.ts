@@ -306,6 +306,18 @@ export const updateProject = (
   },
 ) => patch<Project>(`/projects/${projectId}`, input);
 
+/**
+ * Converte o `execution_mode` de um projeto EXISTENTE (RN-447..450, ADR
+ * 0111) — rota DEDICADA, separada de `updateProject`: a api orquestra a
+ * migração do `permissions.json`, o encerramento do ciclo de vida do
+ * container (saindo de `container`) e recusa com 409 se algum dev agent do
+ * projeto estiver trabalhando ou travado agora.
+ */
+export const convertProjectExecutionMode = (
+  projectId: string,
+  input: { executionMode: ExecutionMode; workspacePath?: string },
+) => put<Project>(`/projects/${projectId}/execution-mode`, input);
+
 export const listProjectMembers = (projectId: string) =>
   get<ProjectMemberWithUser[]>(`/projects/${projectId}/members`);
 export const addProjectMember = (
