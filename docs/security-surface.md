@@ -475,6 +475,7 @@ reason in the URL.
 | PUT | `/projects/:projectId/budget` | role:maintainer |
 | GET | `/projects/:projectId/agent-areas` | role:developer |
 | PATCH | `/projects/:projectId/agent-areas/:key/max-parallel` | role:maintainer |
+| PUT | `/projects/:projectId/agent-areas/:key/budget` | role:maintainer |
 | GET | `/projects/:projectId/code/blame` | role:viewer |
 | GET | `/projects/:projectId/code/branches` | role:viewer |
 | GET | `/projects/:projectId/code/file` | role:viewer |
