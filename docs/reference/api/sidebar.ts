@@ -600,6 +600,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/execution-controller-set-budget",
+          label: "Sets (or clears) an area's spend cap",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/execution-controller-set-max-parallel",
           label: "Changes an area's parallelism cap",
           className: "api-method patch",

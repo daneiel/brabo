@@ -6,6 +6,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: budget por ÁREA (`agent_areas.budget_micros`/`spent_micros`)
+  fecha o item do backlog do ADR 0038 — teto de gasto opcional, configurável
+  por lead em Configurações (`maintainer`), ADITIVO aos budgets de projeto
+  e sessão que já existiam (nunca cascata: os três são checados
+  independentemente, e qualquer um bloqueado já recusa a chamada). `null`
+  é o default (sem teto); o gasto acumulado da área soma SEMPRE, com ou sem
+  teto configurado, o que já mostra o gasto real por área antes de alguém
+  configurar um limite. Rota `PUT projects/:projectId/agent-areas/:key/budget`
+  (`maintainer`), e a rota `GET agent-areas` já existente passa a devolver
+  `budgetMicros`/`spentMicros` (RN-440, ADR 0109)
 - **web**: `FolderBrowserModal` vira um explorador de três colunas —
   atalhos ("Pasta pessoal", "Raiz"), lista central com breadcrumb e um
   painel de detalhes —, seguindo a referência visual do dono do produto

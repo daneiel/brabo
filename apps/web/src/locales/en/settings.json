@@ -167,6 +167,32 @@
       "error": "Could not save"
     }
   },
+  "budget": {
+    "title": "Spend cap by area",
+    "eyebrow": "optional ceiling",
+    "subtitle": {
+      "before": "An optional spend cap for each area, ",
+      "strong": "additive",
+      "after": " to the project and session budgets — whichever of the three hits its cap first blocks the call. Leave it blank for no cap, which is also the default."
+    },
+    "empty": {
+      "before": "No area yet. They're born when you activate execution, because the members of the dev area come from the ",
+      "code": "module_map",
+      "after": " from the Architect."
+    },
+    "card": {
+      "title": "{{area}} area",
+      "spent": "Spent: {{amount}}",
+      "capAria": "Spend cap for the {{area}} area, in dollars"
+    },
+    "placeholder": "No cap",
+    "save": "Save",
+    "saving": "Saving…",
+    "toast": {
+      "success": "{{area}} area's spend cap saved",
+      "error": "Could not save"
+    }
+  },
   "promotion": {
     "title": "Story promotion",
     "eyebrow": "who takes the step",

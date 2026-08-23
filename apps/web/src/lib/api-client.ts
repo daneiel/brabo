@@ -760,6 +760,19 @@ export const setAreaMaxParallel = (
   patch<AgentArea>(`/projects/${projectId}/agent-areas/${key}/max-parallel`, {
     maxParallel,
   });
+
+/**
+ * `limitUsd: null` limpa o teto (ADR 0109) — a conversão dólar→micro-USD é
+ * feita no servidor, mesma convenção de `setProjectBudget`/`setSessionBudget`.
+ */
+export const setAreaBudget = (
+  projectId: string,
+  key: string,
+  limitUsd: number | null,
+) =>
+  put<AgentArea>(`/projects/${projectId}/agent-areas/${key}/budget`, {
+    limitUsd,
+  });
 // Libera uma task que o dev agent devolveu bloqueada, depois de o usuário ler
 // o diagnóstico. Enquanto `blocked`, ela é excluída do claim atômico — sem
 // isto uma task impossível ficaria parada pra sempre.

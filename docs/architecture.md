@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 107 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 108 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -508,7 +508,15 @@ had cut. It came back because the **dev** area isn't enumerable in code:
 project. The unique `(project_id, key)` is what makes seeding idempotent,
 and `max_parallel` (default 2) is the ceiling the lead uses without asking
 — above it, `proposed_action`
-(see [RN-083](business-rules.md#rn-083)).
+(see [RN-083](business-rules.md#rn-083)). `budget_micros`/`spent_micros`
+(ADR 0109) mirror `max_parallel` on the same row — a spend ceiling that is
+ADDITIVE to `budgets` (project/session), never a cascade: it is checked
+and incremented independently, by the same `CheckBudgetGateUseCase`/
+`RecordLlmUsageUseCase` that already own project and session spend (see
+[RN-440](business-rules.md#rn-440)). Do not confuse this with the model-
+binding cascade of [ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)
+(`session > agent > area > project > workspace`) — that one picks a single
+winner; area budget never does.
 
 **Migrations:** Drizzle in the api (`src/db/migrations/`, applied by a
 one-shot Job — replicas do **not** migrate on boot, or they'd race for the

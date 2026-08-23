@@ -82,6 +82,14 @@ export interface AgentArea {
   leadAgentId: string;
   /** Quantos agentes o lead sobe na SESSÃO sem pedir autorização. */
   maxParallel: number;
+  /**
+   * Teto de gasto da área, em micro-USD (ADR 0109). `null` = sem teto —
+   * ADITIVO ao budget de projeto/sessão, nunca cascata (não confundir com o
+   * binding herdável de modelo do ADR 0064).
+   */
+  budgetMicros: number | null;
+  /** Gasto acumulado da área, em micro-USD. Soma sempre, com ou sem teto. */
+  spentMicros: number;
   members: string[];
 }
 

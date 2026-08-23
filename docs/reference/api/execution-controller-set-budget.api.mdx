@@ -1,0 +1,69 @@
+---
+id: execution-controller-set-budget
+title: "Sets (or clears) an area's spend cap"
+description: "Requires `maintainer`, same reason as the parallelism cap: this is an INDEPENDENT, additive check next to the project and session budgets (ADR 0109) — not a cascade, and not a replacement for either. The limit comes in as DOLLARS and is converted to micro-USD server-side, same convention as `BudgetsController`. `null` clears the cap."
+sidebar_label: "Sets (or clears) an area's spend cap"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "put api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Sets (or clears) an area's spend cap"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"put"}
+  path={"/projects/{projectId}/agent-areas/{key}/budget"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Requires `maintainer`, same reason as the parallelism cap: this is an INDEPENDENT, additive check next to the project and session budgets (ADR 0109) — not a cascade, and not a replacement for either. The limit comes in as DOLLARS and is converted to micro-USD server-side, same convention as `BudgetsController`. `null` clears the cap.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./execution-controller-set-budget.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./execution-controller-set-budget.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./execution-controller-set-budget.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

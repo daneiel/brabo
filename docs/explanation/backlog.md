@@ -360,7 +360,7 @@ are deferred product decisions — hence no priority here.
 
 | item | where it was decided |
 |---|---|
-| Budget per area | cut from Phase 8; **one step away** — `agent_areas` came to exist in FASE 14d ([ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)), the missing table |
+| ~~Budget per area~~ | **FIXED AND CLOSED.** `agent_areas` gained `budget_micros`/`spent_micros` — a THIRD independent ceiling next to project/session, additive (not the ADR 0064 cascade), mirroring `max_parallel`'s pattern on the same row ([RN-440](../business-rules.md#rn-440), [ADR 0109](../adr/0109-budget-por-area-aditivo-nao-cascata.md)) |
 | Dev Lead and `module_map`-based areas | **left the backlog**: ADR 0053, implemented by FASE 14d |
 | Manual handoff to an agent of choice | Activation criterion: when an agent OUTSIDE the fixed handoff pipeline needs to be reached by human decision — today that's exactly the Staff's case (ADR 0088), reachable only via the internal route (`POST .../agent/message`), never from the screen |
 | MFA, social login, OIDC, federation | [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) — social login (GitHub/GitLab) LEFT the ban and is implemented (ADR 0084); the rest stays out of scope |

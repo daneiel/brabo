@@ -10357,6 +10357,61 @@ se manifestar — corrigir só o primeiro teria trocado um 403 sempre por um
   nenhuma suíte exercitava `RolesGuard` e `PatAuthGuard` na mesma
   requisição
 
+### RN-440 — Budget de área é ADITIVO ao de projeto/sessão, nunca cascata; só `maintainer` muda o teto {#rn-440}
+
+Fecha o item "budget por área" do corte do ADR 0038, em aberto desde a
+FASE 8. `agent_areas` ganha `budget_micros` (nullable — `null` é SEM
+TETO, o default) e `spent_micros` (`NOT NULL DEFAULT 0`), espelhando
+exatamente `max_parallel`: mesma linha, mesmo dono da decisão, mesmo
+`AgentAreaRepository`. **Não é** a cascata de binding de modelo do ADR
+0064 (`sessão > agente > área > projeto > workspace`, "o mais específico
+vence") — os dois mecanismos usam a palavra "área" e não têm mais nada em
+comum. Budget de área é um TERCEIRO teto independente ao lado dos de
+projeto e sessão que já existiam: `CheckBudgetGateUseCase.execute` agora
+resolve a área do `agentId` (via `areaDo`, função pura, sem tocar banco a
+menos que ache correspondência) e checa os três em paralelo — qualquer um
+bloqueado já recusa a chamada, sem hierarquia entre eles.
+
+`RecordLlmUsageUseCase` incrementa `spent_micros` da área do ator SEMPRE
+que ele pertence a uma (lead ou membro — `areaDo` devolve área pros dois),
+com ou sem `budget_micros` configurado: o gasto real da área fica visível
+antes mesmo de alguém configurar um teto. Ator sem área (usuário no chat,
+agente fora de qualquer área) não grava nada — não é omissão silenciosa,
+é o comportamento correto quando não há o que incrementar.
+
+`SetAreaBudgetUseCase` exige `maintainer` (mesma régua de
+`SetAreaMaxParallelUseCase` — mudar quanto o produto pode gastar sem
+perguntar), converte dólar→micro-USD no controller (mesma convenção de
+`BudgetsController`) e não emite evento de domínio (config de projeto, sem
+sessão pra gravar — mesmo raciocínio já registrado em
+`SetAreaMaxParallelUseCase`). `null` LIMPA o teto — campo obrigatório que
+aceita `null` como valor válido (`ValidateIf`, não `IsOptional`), mesmo
+padrão de `RenameSessionDto`.
+
+- **Onde:** `apps/api/src/db/schema.ts` (`agentAreas`, colunas
+  `budgetMicros`/`spentMicros` e os dois CHECK); `apps/api/src/domain/llm/area-budget.ts`
+  (`isAreaBudgetExceeded`); `apps/api/src/application/use-cases/llm/check-budget-gate.use-case.ts`;
+  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts`;
+  `apps/api/src/application/use-cases/execution/set-area-budget.use-case.ts`;
+  `apps/api/src/infrastructure/persistence/drizzle/agent-area.repository.ts`
+  (`setBudget`/`incrementSpent`); `apps/api/src/interfaces/http/execution/execution.controller.ts`
+  (`PUT agent-areas/:key/budget`); `apps/web/src/routes/ProjectSettingsTab.tsx`
+  (`BudgetSection`)
+- **Teste:** `apps/api/test/application/use-cases/llm/check-budget-gate.use-case.spec.ts`
+  (describe `budget de área — aditivo, não cascata`: área excedida bloqueia
+  com projeto/sessão OK e vice-versa, sem teto nunca bloqueia, agente sem
+  área não é afetado); `apps/api/test/application/use-cases/llm/record-llm-usage.use-case.spec.ts`
+  (describe `gasto por área`: incrementa pro membro e pro lead, não faz
+  nada nocivo sem área, soma sem teto configurado);
+  `apps/api/test/application/use-cases/execution/set-area-budget.use-case.spec.ts`
+  (grava, limpa com `null`, recusa negativo/NaN/Infinity, zero é válido);
+  `apps/api/test/infrastructure/persistence/drizzle/agent-area.repository.spec.ts`
+  (`setBudget`/`incrementSpent`, atomicidade sob concorrência)
+- **ADR:** [0109](adr/0109-budget-por-area-aditivo-nao-cascata.md)
+- **Origem:** item de backlog aprovado pelo dono do produto numa sessão de
+  planejamento explícita — `docs/explanation/backlog.md`, tabela "Older
+  backlog"
+
 ---
 
 ## Quando dá errado
