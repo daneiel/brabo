@@ -362,12 +362,12 @@ are deferred product decisions — hence no priority here.
 |---|---|
 | Budget per area | cut from Phase 8; **one step away** — `agent_areas` came to exist in FASE 14d ([ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)), the missing table |
 | Dev Lead and `module_map`-based areas | **left the backlog**: ADR 0053, implemented by FASE 14d |
-| Manual handoff to an agent of choice | — |
-| MFA, social login, OIDC, federation | [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) |
+| Manual handoff to an agent of choice | Activation criterion: when an agent OUTSIDE the fixed handoff pipeline needs to be reached by human decision — today that's exactly the Staff's case (ADR 0088), reachable only via the internal route (`POST .../agent/message`), never from the screen |
+| MFA, social login, OIDC, federation | [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) — social login (GitHub/GitLab) LEFT the ban and is implemented (ADR 0084); the rest stays out of scope |
 | Deploy (`DEPLOY_ENABLED` + Environments) | the `operavel` gate is already declared `planned` |
 | Return of `rc`/`rcfix` | [ADR 0030](../adr/0030-politica-de-branches-mecanizada.md) |
 | ~~Community mode of the approval-ladder~~ | **FIXED AND CLOSED.** The reference "becomes a change to `aprovacao_humana` in the gate registry" was imprecise — it came from a speculative sentence in ADR 0054, not from something actually missing. The `community` mode is already implemented and tested since FASE 6 (`scripts/ci/approval-ladder.ts`), just switched off by `APPROVAL_MODE=solo` (default); `aprovacao_humana` for the `aprovacoes-da-escada` gate is already `true` in both modes, with no `APPROVAL_MODE` awareness in the schema. What was genuinely missing was the `TODO(humano)` in `branching-policy.md` — the criterion for who joins each approver list —, closed by `GOVERNANCE.md` (repository root). Actually activating the mode remains an operational decision (recruiting real people for the three roles), not an engineering pending item |
-| Currency preference with manual exchange rate | — |
+| ~~Currency preference with manual exchange rate~~ | **WON'T DO** — decision recorded. Converting would require a manually-maintained exchange rate, which ages; a wrong number is worse than an honest USD number (same principle already applied in `formatarCustoMicros`, `ProjectSettingsTab.tsx`) |
 | Reactivate the Anamnese (`ANAMNESE_ENABLED=true`) | paused by user decision on 2026-08-10 — "today it isn't bringing much-value data" ([RN-115](../business-rules.md#rn-115)). No data was erased (hypotheses, proficiency profiles and instruction patches remain intact and visible); the pause is only on the new-round PATH, awaiting future refinement of what Anamnese derives before turning it back on |
 | Reactivate the Psychologist (`PSYCHOLOGIST_ENABLED=true`) | paused by user decision on 2026-08-10, same reason and same pattern as Anamnese above ([RN-117](../business-rules.md#rn-117)). No data was erased (already-emitted analyses and hypotheses remain intact and visible); the pause is only on the new-round PATH (automatic and on-demand) |
 
@@ -402,7 +402,7 @@ no design yet:
 |---|---|---|---|
 | Converting `execution_mode` on an EXISTING project, without recreating it (the worktree, `permissions.json` and the engine's cache need to migrate scope along with it) | M | none — ADR 0104 already promised this and the promise is incorrect today; only the design is missing | found in Wave 1, correcting ADR 0104 item 4 |
 
-**Wave 2 — PAT, [ADR 0105](../adr/0105-personal-access-token-do-runner-escopado-por-construcao.md), DONE (RN-424/425/426):**
+**Wave 2 — PAT, [ADR 0105](../adr/0105-personal-access-token-do-runner-escopado-por-construcao.md), DONE (RN-424/425/426; RN-427 closed later, same decision wave):**
 
 The "long-lived account token" item in the original table had TWO textual
 errors, corrected during implementation instead of being followed
@@ -426,6 +426,7 @@ blindly — recorded here because the table below repeated them:
 | 1 | **CLOSED** (RN-424) | The PAT needed to authenticate `runner-ticket` without becoming a valid credential for any other route of the user | `apps/api/src/interfaces/http/auth/pat-route.decorator.ts` (`@RequirePatAuth()`), `apps/api/src/interfaces/http/auth/jwt-auth.guard.ts` (third early-out), `apps/api/src/interfaces/http/auth/pat-auth.guard.ts` (`PatAuthGuard`, applied only to `runnerTicket`) |
 | 2 | **CLOSED** (RN-425) | High-entropy token validation without leaking which of the three refusal reasons (nonexistent/revoked/expired) applies; `last_used_at` not regressing on a legitimate reconnection | `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts` (`validarEUsar` — a single conditional UPDATE, no throttle on the same WHERE) |
 | 3 | **CLOSED** (RN-426) | Issuing/revoking/listing without leaking one user's token to another | `apps/api/src/application/use-cases/auth/*-personal-access-token*.use-case.ts`, scoped by `userId` in the query's WHERE |
+| 4 | **CLOSED** (RN-427) | `maintainer` revoking ANOTHER user's PAT (incident response — a dev leaving with a leaking token), declared out of scope at the time | `apps/api/src/application/use-cases/auth/*-personal-access-token-as-maintainer.use-case.ts`, `apps/api/src/interfaces/http/runner/personal-access-tokens.controller.ts` (`listAllPats`/`revokePatAsMaintainer`, separate routes, `@RequireRole('maintainer')`), scoped by `projectId` in the query's WHERE |
 
 `apps/runner/src/auth.ts` completely lost interactive login, cookies and
 `~/.brabo/runner-credentials.json` — it only validates the format and
@@ -452,7 +453,6 @@ this order:**
 | item | cost | activation criterion | where it was decided |
 |---|---|---|---|
 | Standalone binary (`pkg`/`bun build --compile`) | G | not blocking; no trigger defined, future item separate from npm distribution | ADR 0104 |
-| `maintainer` revoking ANOTHER user's PAT (incident response — a dev leaving with a leaking token) | P | none — declared out of scope for Wave 2, not implemented | ADR 0105 |
 | Runner exclusivity by `{project_id, machine_id}` instead of just `project_id` (`apps/engine/lib/engine/runners/registry.ex`) | M | DEFERRED — explicit activation criterion: a second dev actually using the same project simultaneously | ADR 0104 |
 
 `apps/runner/src/guard.ts` (best-effort lexical check of `cwd`) **is not

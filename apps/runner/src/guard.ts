@@ -34,7 +34,7 @@
  *
  * Segunda checagem deste módulo, sem relação com o `cwd` de um comando: valida
  * o `--dir` que a própria CLI recebeu na linha de comando, uma vez, no início
- * do processo (RN-433, ADR 0104). Reusa `dentroDoEscopo`/`semBarraFinal` pelo
+ * do processo (RN-434, ADR 0104). Reusa `dentroDoEscopo`/`semBarraFinal` pelo
  * mesmo motivo de sempre — não duplicar comparação de caminho —, mas é mais
  * simples que `validarCwdDentroDaRaiz`: sem `realpath`/símlink/TOCTOU, porque
  * não protege contra um SERVIDOR malicioso, só orienta o USUÁRIO local que
@@ -42,12 +42,12 @@
  *
  * ## `garantirDiretorio` — terceira checagem de STARTUP, DEPOIS da anterior
  *
- * RN-434 (ADR 0104, extensão aditiva): `--dir` que ainda não existe deixou
+ * RN-435 (ADR 0104, extensão aditiva): `--dir` que ainda não existe deixou
  * de ser erro fatal — o CLI cria a pasta (`mkdir -p`) em vez de recusar.
  * A ORDEM importa: `lerArgumentos()` chama `validarDirDentroDoHomeNoLinux`
  * ANTES desta função, porque aquela checagem funciona em caminho que ainda
  * não existe (só `resolve()`, sem tocar disco) — criar a pasta antes de
- * validar o `$HOME` abriria a brecha que a RN-433 tinha acabado de fechar
+ * validar o `$HOME` abriria a brecha que a RN-434 tinha acabado de fechar
  * (criar fora do home no Linux). `--dir` apontando para um ARQUIVO
  * existente continua erro real — nunca sobrescrito silenciosamente.
  */
@@ -175,7 +175,7 @@ export class DirForaDoHomeError extends Error {
 
 /**
  * Valida que `dir` (já resolvido/absoluto) está dentro de `home` — só quando
- * `platform === 'linux'` (decisão do dono do produto, RN-433/ADR 0104: no
+ * `platform === 'linux'` (decisão do dono do produto, RN-434/ADR 0104: no
  * Linux, o workspace do modo `runner` só pode viver dentro do `$HOME` do
  * usuário). Fora do Linux, não faz nada — a restrição não vale lá. Lança
  * `DirForaDoHomeError` quando recusa; não devolve nada em caso de sucesso.
@@ -223,7 +223,7 @@ export class NaoConsegiuCriarDiretorioError extends Error {
 /**
  * Garante que `dir` (já resolvido/absoluto, e já aprovado por
  * `validarDirDentroDoHomeNoLinux` quando aplicável) existe como pasta —
- * criando com `mkdir -p` quando ainda não existe (RN-434, ADR 0104).
+ * criando com `mkdir -p` quando ainda não existe (RN-435, ADR 0104).
  *
  * - já existe e é pasta → não faz nada.
  * - já existe e NÃO é pasta (é um arquivo) → lança `DirNaoEUmaPastaError`,

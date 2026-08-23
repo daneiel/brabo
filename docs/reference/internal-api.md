@@ -30,7 +30,10 @@ immediate response, it goes through HTTP.
 `.../agents/criativo/validate-necessity` (gate `necessidade-validada`,
 [RN-406](../business-rules.md#rn-406), ADR 0095) or the CRUD of
 `/projects/:projectId/personal-access-tokens` ([RN-426](../business-rules.md#rn-426),
-ADR 0105) — are not "internal" in the sense of this document, even when an
+ADR 0105) — including the two `maintainer` routes
+(`GET .../personal-access-tokens/all`,
+`DELETE .../personal-access-tokens/:tokenId/admin`,
+[RN-427](../business-rules.md#rn-427)) — are not "internal" in the sense of this document, even when an
 agent is who effectively calls through them. The
 shared service token NEVER serves as credential on these routes, and the user's JWT
 never works on `/internal/*` — the two mechanisms don't overlap

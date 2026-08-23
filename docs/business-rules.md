@@ -9767,9 +9767,10 @@ chamador, devolve `null` — a MESMA resposta (404 no controller) pros
 dois casos, pra não vazar a existência de um token alheio pelo código de
 status.
 
-**Fora desta onda, declarado**: um `maintainer` revogar o PAT de outro
-usuário — o caso de resposta a incidente (dev desligado com token
-vazando). Registrado como item de backlog, não implementado agora.
+**Fechado pela RN-427**: um `maintainer` revogar o PAT de outro usuário —
+o caso de resposta a incidente (dev desligado com token vazando) — que
+esta seção declarava fora de escopo saiu do backlog e está implementado.
+Esta régua (autorevogação, escopo por `userId`) não mudou em nada.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/list-personal-access-tokens.use-case.ts`
   (`ListPersonalAccessTokensUseCase`), `apps/api/src/application/use-cases/auth/revoke-personal-access-token.use-case.ts`,
@@ -9784,7 +9785,59 @@ vazando). Registrado como item de backlog, não implementado agora.
 
 ---
 
-### RN-427 — Carrossel de promoção de histórias sobrevive à janela de eventos {#rn-427}
+### RN-427 — `maintainer` revoga PAT de QUALQUER usuário do projeto, escopado por `project_id` — resposta a incidente {#rn-427}
+
+Extensão do modelo da RN-426, não uma decisão de arquitetura nova: mesmo
+padrão já usado para fechar a RN-407 (PO lendo métricas de produto) sobre
+um modelo já decidido, sem ADR próprio. Fecha o corte que o ADR 0105
+declarava "fora desta onda" — resposta a incidente real (dev desligado
+com token vazando), onde esperar o próprio usuário revogar não é opção.
+
+`ListPersonalAccessTokensAsMaintainerUseCase`/
+`RevokePersonalAccessTokenAsMaintainerUseCase` são casos de uso NOVOS,
+em rotas SEPARADAS (`GET .../personal-access-tokens/all`,
+`DELETE .../personal-access-tokens/:tokenId/admin`, ambas
+`@RequireRole('maintainer')`) — nunca um `if` dentro dos handlers de
+self-service, mesmo princípio já usado no resto do produto para
+autorização por nível (`OfferInfraHandoffUseCase`). A rota de
+autorevogação (RN-426) não muda em nada.
+
+`listarDoProjeto` traz TODOS os tokens do projeto — sem filtro de
+`userId` — com um `innerJoin` em `users` pro e-mail do dono, mesmo padrão
+que a listagem de membros do projeto já usa: sem o e-mail, um
+`maintainer` vendo "revogar token de quem?" só teria um UUID cru, e o
+próprio motivo do item (resposta a incidente) pede saber QUEM é o dono.
+
+`revogarComoMaintainer(id, projectId, motivo)` é o mesmo desenho
+idempotente de `revogar()` — `UPDATE` condicional seguido de `SELECT` de
+desempate quando o `UPDATE` não acha linha —, mas o `WHERE` compara
+`project_id`, nunca `user_id`: um `maintainer` revoga qualquer dono
+DENTRO do projeto dele, nunca um token de outro projeto. Sem linha
+nenhuma (token não existe OU é de outro projeto), devolve `null` — a
+MESMA resposta (404) pros dois casos, mesma disciplina de não vazar
+existência que a RN-426 já aplicava.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/list-personal-access-tokens-as-maintainer.use-case.ts`,
+  `apps/api/src/application/use-cases/auth/revoke-personal-access-token-as-maintainer.use-case.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/personal-access-token.repository.ts`
+  (`listarDoProjeto`, `revogarComoMaintainer`),
+  `apps/api/src/interfaces/http/runner/personal-access-tokens.controller.ts`
+  (`listAllPats`, `revokePatAsMaintainer`),
+  `apps/web/src/routes/ProjectSettingsTab.tsx` (`PersonalAccessTokensSection`,
+  sub-lista visível só para `owner`/`maintainer`)
+- **Teste:** `apps/api/test/application/use-cases/auth/list-personal-access-tokens-as-maintainer.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/auth/revoke-personal-access-token-as-maintainer.use-case.spec.ts`,
+  `apps/api/test/infrastructure/persistence/personal-access-token.repository.spec.ts`
+  (`listarDoProjeto`/`revogarComoMaintainer`),
+  `apps/api/test/interfaces/http/runner/personal-access-tokens.controller.spec.ts`,
+  `apps/web/src/routes/ProjectSettingsTab.test.tsx`
+- **Decisão arquitetural:**
+  [ADR 0105](adr/0105-personal-access-token-do-runner-escopado-por-construcao.md)
+  (extensão do modelo existente, sem ADR novo)
+
+---
+
+### RN-428 — Carrossel de promoção de histórias sobrevive à janela de eventos {#rn-428}
 
 `promocoesPendentes`/o carrossel de promoção do PO (RN-148) não depende mais
 de scan sobre a janela dos últimos 200 eventos de `useSessionEvents`. A fonte
@@ -9808,7 +9861,7 @@ corte de leitura.
 
 ---
 
-### RN-428 — Navegação de pasta local é relay puro pelo Runner, nunca a api enumerando o container {#rn-428}
+### RN-429 — Navegação de pasta local é relay puro pelo Runner, nunca a api enumerando o container {#rn-429}
 
 O canal `terminal:<projectId>` ganha dois eventos, no MESMO desenho de relay
 do PTY: `fs_list_dir`/`fs_home_dir` (`:web` pede, engine faz relay DIRETO
@@ -9849,7 +9902,7 @@ de texto livre continua sendo o caminho manual, como antes.
 
 ---
 
-### RN-429 — PRs são project-wide; a decisão usa o sessionId da própria ação, nunca a mais recente {#rn-429}
+### RN-430 — PRs são project-wide; a decisão usa o sessionId da própria ação, nunca a mais recente {#rn-430}
 
 A aba `prs` resolve o defeito de `ProjectApprovalsTab.tsx`, que escopava a
 seção "PRs em revisão" a `usePendingActions(projectId, latestSession?.id)`
@@ -9889,7 +9942,7 @@ RN-096 já corrigiu para outros tipos).
 
 ---
 
-### RN-430 — O selo da aba Arquitetura conta pendência de validação, nunca "diagrama não gerado" {#rn-430}
+### RN-431 — O selo da aba Arquitetura conta pendência de validação, nunca "diagrama não gerado" {#rn-431}
 
 `contagens.arquiteturaPendente` (régua de abas) vem de
 `architecture.pendencies.length` (divergência de validação cruzada
@@ -9907,7 +9960,7 @@ badigar por isso seria ruído.
 
 ---
 
-### RN-431 — Preferência de idioma vem no payload de login/refresh, nunca numa chamada extra {#rn-431}
+### RN-432 — Preferência de idioma vem no payload de login/refresh, nunca numa chamada extra {#rn-432}
 
 Fundação de i18n da interface (Onda 6a de um programa maior — a extração em
 massa das strings do resto do app é etapa separada, em paralelo). Coluna
@@ -9942,7 +9995,7 @@ antes de existir conta.
 
 ---
 
-## Terminal do runner local preso em "Abrindo terminal..." para sempre (RN-432)
+## Terminal do runner local preso em "Abrindo terminal..." para sempre (RN-433)
 
 Achado testando um projeto novo no modo `runner` (ADR 0103/0104) e abrindo
 Code → Dev → Terminal: a tela nunca saía do skeleton de carregamento, e o
@@ -9950,7 +10003,7 @@ console mostrava `socket do terminal com erro`/`socket do terminal fechado`
 em loop, com backoff crescente até estabilizar em ~5-6s — o padrão do
 backoff PADRÃO do `phoenix.js`.
 
-### RN-432 — O socket do terminal desiste depois de um timeout, o default de `ENGINE_PUBLIC_URL` é alcançável PELO BROWSER, e o endpoint não duplica path {#rn-432}
+### RN-433 — O socket do terminal desiste depois de um timeout, o default de `ENGINE_PUBLIC_URL` é alcançável PELO BROWSER, e o endpoint não duplica path {#rn-433}
 
 Três defeitos empilhados. Os dois primeiros foram achados investigando o
 sintoma; o TERCEIRO só apareceu depois de corrigir os dois primeiros — sem
@@ -10024,7 +10077,7 @@ do ar.
 
 ---
 
-### RN-433 — No Linux, `--dir` do runner local só é aceito dentro do `$HOME` do usuário {#rn-433}
+### RN-434 — No Linux, `--dir` do runner local só é aceito dentro do `$HOME` do usuário {#rn-434}
 
 O CLI `brabo-runner` (modo `runner`, ADR 0103/0104) validava só que
 `--dir` existe e é uma pasta — sem restrição nenhuma de ONDE essa pasta
@@ -10066,7 +10119,7 @@ usuário que digitou um caminho errado ao subir o runner.
 
 ---
 
-### RN-434 — `--dir` do runner local inexistente é criado, não recusado {#rn-434}
+### RN-435 — `--dir` do runner local inexistente é criado, não recusado {#rn-435}
 
 O CLI `brabo-runner` (modo `runner`, ADR 0103/0104) recusava com
 `process.exit(2)` qualquer `--dir` que ainda não existisse no disco — a
@@ -10074,12 +10127,12 @@ pasta do projeto tinha de ser criada manualmente antes de subir o CLI.
 `garantirDiretorio()` (`apps/runner/src/guard.ts`) passou a criar a pasta
 automaticamente (`mkdirSync(dir, { recursive: true })`) quando ela não
 existe, e `lerArgumentos()` (`apps/runner/src/index.ts`) chama essa função
-LOGO DEPOIS de `validarDirDentroDoHomeNoLinux` (RN-433) — a ORDEM é a
+LOGO DEPOIS de `validarDirDentroDoHomeNoLinux` (RN-434) — a ORDEM é a
 regra: a checagem do `$HOME` funciona em caminho que ainda não existe (só
 `resolve()`, sem tocar disco), então roda primeiro e continua recusando
 `--dir` fora do home no Linux mesmo quando ele ainda não existe, ANTES de
 qualquer tentativa de criação — criar primeiro reabriria a brecha que a
-RN-433 tinha acabado de fechar. `--dir` apontando para um ARQUIVO já
+RN-434 tinha acabado de fechar. `--dir` apontando para um ARQUIVO já
 existente continua erro real (`DirNaoEUmaPastaError`, `process.exit(2)`,
 sem tentar criar nada) — este CLI nunca sobrescreve um arquivo
 silenciosamente. Falha na criação em si (permissão negada, disco cheio,
@@ -10103,12 +10156,12 @@ erro original embutida.
 - **Origem:** pedido do dono do produto, ao notar que a pasta de um
   projeto novo no modo `runner` não existia na máquina e precisava ser
   criada manualmente antes de rodar o CLI — o mesmo cenário que motivou a
-  RN-433 (`/home/dev/exp001` inexistente), agora resolvido criando a
+  RN-434 (`/home/dev/exp001` inexistente), agora resolvido criando a
   pasta em vez de só recusar
 
 ---
 
-## O explorador de pasta do Runner vira três colunas, e a criação de um projeto `runner` deixa de esperar o passo final (RN-435/436)
+## O explorador de pasta do Runner vira três colunas, e a criação de um projeto `runner` deixa de esperar o passo final (RN-436/436)
 
 Duas mudanças pedidas pelo dono do produto depois de testar a criação de um
 projeto real: (1) o navegador de pasta existente
@@ -10119,7 +10172,7 @@ pasta..." não funcionava na TELA DE CRIAÇÃO do projeto — só depois de
 criado — porque o ticket do canal do Runner (ADR 0107) é ancorado a um
 `projectId` que, até esta correção, só nascia na confirmação.
 
-### RN-435 — `FolderBrowserModal` vira um explorador de três colunas: atalhos, lista com um clique seleciona/duplo clique entra, e um painel de detalhes {#rn-435}
+### RN-436 — `FolderBrowserModal` vira um explorador de três colunas: atalhos, lista com um clique seleciona/duplo clique entra, e um painel de detalhes {#rn-436}
 
 O layout de lista única virou três colunas dentro do `Modal size="full"`:
 atalhos (Pasta pessoal, que chama `diretorioInicial()`; Raiz, `/`), a lista
@@ -10160,10 +10213,10 @@ continua navegável/selecionável.
   explorador de arquivos de verdade — referência visual enviada por ele
   (picker de três colunas, estilo GNOME Files/GTK)
 
-### RN-436 — No modo `runner`, "Procurar pasta..." cria o projeto ANTECIPADAMENTE, e a confirmação final reusa por SNAPSHOT de identidade {#rn-436}
+### RN-437 — No modo `runner`, "Procurar pasta..." cria o projeto ANTECIPADAMENTE, e a confirmação final reusa por SNAPSHOT de identidade {#rn-437}
 
 O ADR 0107 já tinha declarado esta lacuna na própria seção de Consequências:
-sem projeto ainda, o ticket do canal (RN-428) não tem a quem se ancorar, e
+sem projeto ainda, o ticket do canal (RN-429) não tem a quem se ancorar, e
 "Procurar pasta..." caía sempre no estado "disponível depois que o projeto
 existir" — mesmo no modo `runner`, onde a criação NÃO depende de validar
 disco (ADR 0104, item 2). Fechado pelo [ADR 0108](adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.md):
@@ -10206,9 +10259,9 @@ caminhos.
   projeto real no modo Runner e não conseguir navegar pastas antes de
   confirmar — a lacuna que o ADR 0107 já tinha declarado e adiado
 
-### RN-437 — `fs-browser-channel.ts` tinha o MESMO bug de path duplicado que a RN-432 já tinha corrigido no `terminal-channel.ts` irmão {#rn-437}
+### RN-438 — `fs-browser-channel.ts` tinha o MESMO bug de path duplicado que a RN-433 já tinha corrigido no `terminal-channel.ts` irmão {#rn-438}
 
-Achado ao verificar a RN-436 ponta a ponta no Chrome, contra o engine real:
+Achado ao verificar a RN-437 ponta a ponta no Chrome, contra o engine real:
 o modal abria com o `projectId` certo, mas a conexão caía na hora com "A
 conexão com o runner caiu — feche e reabra para tentar de novo." em vez de
 mostrar `RunnerOnboardingPanel`. `apps/web/src/lib/fs-browser-channel.ts`
@@ -10217,15 +10270,15 @@ PRONTO (`ws://host:porta/runner`, de `engineWsUrlPublico()`) — o mesmo
 `Socket` do `phoenix.js` ainda acrescenta `/websocket` sozinho no
 construtor, e o resultado batia no engine como `GET
 /runner/runner/websocket/websocket`, que `Phoenix.Router.NoRouteError`
-recusa. É EXATAMENTE o item 3 da RN-432, só que no módulo IRMÃO — a
+recusa. É EXATAMENTE o item 3 da RN-433, só que no módulo IRMÃO — a
 correção de lá nunca tinha sido replicada aqui, e nenhuma suite pegava
 porque este módulo não tinha teste nenhum até agora (o próprio docblock
 dizia, incorretamente, que `terminal-channel.test.ts` cobria "indiretamente").
-Fix: mesma linha da RN-432 — `engineWsUrl.replace(/^http/, 'ws')`, sem
+Fix: mesma linha da RN-433 — `engineWsUrl.replace(/^http/, 'ws')`, sem
 concatenar path nenhum.
 
 Verificado END TO END contra um projeto `runner` real (owner logado,
-`teste-navegacao`, criado pela RN-436): antes da correção, o modal caía
+`teste-navegacao`, criado pela RN-437): antes da correção, o modal caía
 direto no erro de conexão; depois, mostra `RunnerOnboardingPanel` com o
 comando `brabo-runner --project <id-real> --dir <pasta>` em menos de 2s —
 o resultado esperado sem um runner de verdade conectado.
@@ -10236,16 +10289,16 @@ o resultado esperado sem um runner de verdade conectado.
   confirma `socket.url === engineWsUrl` sem concatenação; mais
   `diretorioInicial`/`listarDiretorio` roundtrip, falha ao buscar ticket, e
   `fechar()` idempotente
-- **ADR:** nenhum — restaura o comportamento que o ADR 0103/0107 e a RN-432
+- **ADR:** nenhum — restaura o comportamento que o ADR 0103/0107 e a RN-433
   já declaravam como intenção, só que num módulo que a correção anterior não
   alcançou
-- **Origem:** achado testando manualmente a RN-436 (criação antecipada de
+- **Origem:** achado testando manualmente a RN-437 (criação antecipada de
   projeto `runner`) contra o Chrome e o engine real — a primeira vez que
   `FolderBrowserModal` foi exercitado ponta a ponta contra uma conexão de
   verdade, porque antes desta entrega "Procurar pasta..." nunca alcançava
   um projeto real antes da confirmação
 
-### RN-438 — `POST .../runner-ticket` autentica E autoriza no MESMO guard; `RolesGuard` (global) se abstém em rota `@RequirePatAuth()` {#rn-438}
+### RN-439 — `POST .../runner-ticket` autentica E autoriza no MESMO guard; `RolesGuard` (global) se abstém em rota `@RequirePatAuth()` {#rn-439}
 
 `POST /projects/:projectId/runner-ticket` respondia `403 "Não autenticado"`
 para TODO PAT, mesmo válido, recém-emitido, escopado ao projeto certo —

@@ -164,7 +164,7 @@ afterAll(() => {
 describe('abas do projeto derivam de um registro só', () => {
   // `.map(aba => aba.key)`, NUNCA `.label` aqui: `it.each` avalia este array
   // na COLETA do teste, antes de qualquer `beforeEach` rodar — `.label` é
-  // getter sobre `i18n.t()` (RN-431), e capturá-lo agora prenderia o idioma
+  // getter sobre `i18n.t()` (RN-432), e capturá-lo agora prenderia o idioma
   // que o singleton tinha ANTES de `changeLanguage('pt-BR')`. O rótulo certo
   // só existe depois, dentro do corpo do teste.
   it.each(ABAS_DO_PROJETO.map((aba) => aba.key))(

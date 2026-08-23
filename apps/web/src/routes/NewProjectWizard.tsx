@@ -71,7 +71,7 @@ const PROVIDERS: {
   { id: 'local', labelKey: 'provider.local.label', descKey: 'provider.local.desc', icon: LocalRepoIcon },
 ];
 
-// Navegação antecipada de pasta (RN-436, ADR 0108). Só os campos que
+// Navegação antecipada de pasta (RN-437, ADR 0108). Só os campos que
 // determinam a IDENTIDADE do projeto — nunca `caminhoLocal`: o propósito
 // inteiro de navegar é REFINAR o caminho depois de já existir um projeto, e
 // incluí-lo no snapshot invalidaria o reuso a cada clique em "Procurar
@@ -97,7 +97,7 @@ function mesmaIdentidade(a: SnapshotDeIdentidade, b: SnapshotDeIdentidade): bool
 /**
  * Payload de `createProject`, reaproveitado pelos DOIS caminhos que criam o
  * projeto: a confirmação final de sempre, e a criação ANTECIPADA (só modo
- * `runner`, ao clicar "Procurar pasta..." — RN-436, ADR 0108).
+ * `runner`, ao clicar "Procurar pasta..." — RN-437, ADR 0108).
  * `workspacePath` já vem resolvido pelo chamador (recortado, com o
  * placeholder aplicado quando for o caso) — esta função só monta a forma
  * que a api espera, sem decidir nada sobre o caminho.
@@ -264,7 +264,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   }
 
   /**
-   * "Procurar pasta..." (RN-436, ADR 0108). Fora do modo `runner`, só abre o
+   * "Procurar pasta..." (RN-437, ADR 0108). Fora do modo `runner`, só abre o
    * modal — comportamento de sempre, `projectId: null` (ver
    * `FolderBrowserModal`). No modo `runner`, o modal precisa de um projeto
    * real pra ancorar o ticket do canal: se já existe um criado
@@ -317,7 +317,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       const snapshotAtual = snapshotDeIdentidade({ adotando, name, externalId });
       // Reusa o projeto criado ao navegar em vez de criar de novo — duas
       // linhas pro mesmo clique de "Provisionar"/"Ver o plano" seria bug,
-      // não feature (RN-436). Se o wizard for fechado sem chegar até aqui,
+      // não feature (RN-437). Se o wizard for fechado sem chegar até aqui,
       // o projeto criado antecipadamente fica "não provisionado": o MESMO
       // estado que qualquer criação interrompida já produz hoje — não é
       // regressão desta entrega.
@@ -609,7 +609,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                 // `runner`: nada aqui trava a criação (RN-423) — o caminho só é
                 // confirmado quando o runner conectar, nunca "recusado na hora"
                 // como o aviso de `mounted` acima. Com `projetoParaNavegar` já
-                // preenchido (clicou "Procurar pasta..." — RN-436), o comando
+                // preenchido (clicou "Procurar pasta..." — RN-437), o comando
                 // mostra o id REAL em vez do placeholder genérico.
                 <Alert tone="accent">
                   {projetoParaNavegar
@@ -747,7 +747,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       // `mounted`: `projectId={null}` — o projeto ainda não existe (só
       // nasce na confirmação), ver o docblock de `FolderBrowserModal`.
       // `runner`: `handleProcurarPasta` já garantiu um projeto real antes
-      // de abrir o modal (RN-436, ADR 0108) — `projetoParaNavegar` sempre
+      // de abrir o modal (RN-437, ADR 0108) — `projetoParaNavegar` sempre
       // está preenchido aqui.
       <FolderBrowserModal
         projectId={modoDeWorkspace === 'runner' ? (projetoParaNavegar?.id ?? null) : null}

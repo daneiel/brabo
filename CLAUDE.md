@@ -1893,6 +1893,14 @@ em disco pelo CLI. O PAT nunca autentica fora de
 global, que deixaria `RolesGuard` autorizar o PAT pra qualquer rota do
 papel do usuário.
 
+**`maintainer` revoga PAT de outro usuário (RN-427)**, fechando o item
+que o ADR 0105 tinha declarado fora de escopo por ora (resposta a
+incidente — dev desligado com token vazando). Extensão do mesmo modelo,
+sem ADR novo: rotas SEPARADAS (`GET .../personal-access-tokens/all`,
+`DELETE .../personal-access-tokens/:tokenId/admin`), escopo por
+`projectId` em vez de `userId` — a autorevogação de cada usuário
+(RN-426) não muda.
+
 `@xterm/xterm`/`@xterm/addon-fit` (web) e `phoenix`/`node-pty` (runner)
 são as quatro dependências novas — mesma régua de exceção do `mermaid`
 (ADR 0068): `import()` dinâmico, sem `eval`/`new Function` confirmado por
@@ -2039,12 +2047,12 @@ primário de verdade.
   toca disco ali), mas no modo `runner` "Procurar pasta..." passa a criar o
   projeto ANTECIPADAMENTE — reusado por snapshot de identidade em vez de
   duplicado a cada clique — pra poder ancorar o ticket do canal antes da
-  confirmação (RN-436, ADR 0108). `RunnerOnboardingPanel` novo
+  confirmação (RN-437, ADR 0108). `RunnerOnboardingPanel` novo
   (compartilhado com a aba Terminal) substitui o `<code>` cru de antes.
   `apps/runner` ganhou README — publicar de verdade no npm/empacotar
   binário assinado continua fora do escopo, declarado no README.
   O explorador de pasta em si virou três colunas (atalhos, lista com um
-  clique seleciona/duplo clique entra, painel de detalhes — RN-435),
+  clique seleciona/duplo clique entra, painel de detalhes — RN-436),
   seguindo a referência visual do dono do produto.
 - **Bug do carrossel do PO corrigido (RN-421)**: a leva de promoções
   pendentes dependia de scan sobre os últimos 200 eventos
@@ -2162,7 +2170,7 @@ primário de verdade.
   container. Consequência declarada no ADR: a contenção estrutural do `join`
   some para esses projetos, e o vetor de symlink do ADR 0055 continua
   aberto. No LINUX, o próprio CLI `brabo-runner` recusa `--dir` fora do
-  `$HOME` do usuário (RN-433, ADR 0104) — checagem de startup do processo
+  `$HOME` do usuário (RN-434, ADR 0104) — checagem de startup do processo
   local, não a fronteira de segurança (essa continua sendo autenticação +
   pipeline de aprovação, ver `apps/runner/src/guard.ts`); fora do Linux a
   restrição não se aplica.

@@ -101,7 +101,7 @@ describe('connectTerminalChannel', () => {
       ticket: 'ticket-1',
       // Já vem PRONTO de `engineWsUrlPublico()` — `ws://…/runner`, sem
       // `/websocket` (o próprio `Socket` do phoenix.js acrescenta isso).
-      // Concatenar mais path aqui era o bug (RN-432): duplicava `/runner` e
+      // Concatenar mais path aqui era o bug (RN-433): duplicava `/runner` e
       // antecipava o `/websocket`, e o engine recusava a conexão.
       engineWsUrl: 'ws://engine.local/runner',
     });

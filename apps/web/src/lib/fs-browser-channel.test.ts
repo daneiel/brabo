@@ -86,15 +86,15 @@ beforeEach(() => {
 });
 
 describe('connectFsBrowserChannel', () => {
-  it('conecta DIRETO no <engineWsUrl> do corpo do ticket, sem concatenar path (RN-432/RN-436)', async () => {
+  it('conecta DIRETO no <engineWsUrl> do corpo do ticket, sem concatenar path (RN-433/RN-437)', async () => {
     getTerminalTicketMock.mockResolvedValue({
       ticket: 'ticket-1',
       // Já vem PRONTO de `engineWsUrlPublico()` — `ws://…/runner`, sem
       // `/websocket` (o próprio `Socket` do phoenix.js acrescenta isso).
       // Concatenar `/runner/websocket` aqui duplicava `/runner` e
-      // antecipava `/websocket` — o mesmo bug que a RN-432 já tinha
+      // antecipava `/websocket` — o mesmo bug que a RN-433 já tinha
       // corrigido no `terminal-channel.ts` irmão, achado aqui só ao
-      // verificar a RN-436 contra um engine real.
+      // verificar a RN-437 contra um engine real.
       engineWsUrl: 'ws://engine.local/runner',
     });
 

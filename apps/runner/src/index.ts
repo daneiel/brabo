@@ -63,7 +63,7 @@ function uso(): never {
   );
   console.error(
     '--dir: se a pasta ainda não existir, ela é criada automaticamente (dentro do ' +
-      '$HOME no Linux, RN-433/RN-434). Se apontar para um arquivo existente, é erro.',
+      '$HOME no Linux, RN-434/RN-435). Se apontar para um arquivo existente, é erro.',
   );
   console.error(
     'Autenticação: --token <brb_...>, ou BRABO_ACCOUNT_TOKEN no ambiente. Gere em ' +
@@ -90,12 +90,12 @@ function lerArgumentos(argv: string[]): Argumentos {
 
   const dir = resolve(dirBruto);
 
-  // RN-433 (ADR 0104): no Linux, o workspace do modo `runner` só pode viver
+  // RN-434 (ADR 0104): no Linux, o workspace do modo `runner` só pode viver
   // dentro do $HOME do usuário — nunca fora dele (/etc, /root, outra conta
   // em /home, etc.). Fora do Linux a restrição não se aplica. RODA ANTES de
-  // `garantirDiretorio` de propósito (RN-434): ela funciona em caminho que
+  // `garantirDiretorio` de propósito (RN-435): ela funciona em caminho que
   // ainda não existe, e criar a pasta antes de validar o $HOME reabriria a
-  // brecha que a RN-433 fechou.
+  // brecha que a RN-434 fechou.
   try {
     validarDirDentroDoHomeNoLinux(dir, process.platform, homedir());
   } catch (erro) {
@@ -106,7 +106,7 @@ function lerArgumentos(argv: string[]): Argumentos {
     throw erro;
   }
 
-  // RN-434 (ADR 0104): `--dir` que ainda não existe é criado (mkdir -p) em
+  // RN-435 (ADR 0104): `--dir` que ainda não existe é criado (mkdir -p) em
   // vez de recusado — `--dir` apontando para um ARQUIVO existente continua
   // erro real, nunca sobrescrito silenciosamente.
   try {

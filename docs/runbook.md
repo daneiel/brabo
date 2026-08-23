@@ -398,7 +398,7 @@ socket do terminal fechado
 
 This is the browser's WebSocket never reaching the engine, not a runner
 problem — it happens even before any `brabo-runner` connects. Three
-stacked causes, all closed by [RN-432](business-rules.md#rn-432):
+stacked causes, all closed by [RN-433](business-rules.md#rn-433):
 
 1. **`ENGINE_PUBLIC_URL` resolving to a Docker-internal hostname.** The
    ticket the api hands the browser (`POST .../terminal-ticket`) carries

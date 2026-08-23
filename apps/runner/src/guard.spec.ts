@@ -97,7 +97,7 @@ describe('validarDirDentroDoHomeNoLinux', () => {
   });
 
   it('recusa caminho fora do home no Linux mesmo quando ele ainda NÃO existe no disco', () => {
-    // RN-434: `garantirDiretorio` (que cria a pasta) só pode rodar DEPOIS
+    // RN-435: `garantirDiretorio` (que cria a pasta) só pode rodar DEPOIS
     // desta checagem — esta função nunca toca disco (só `resolve()`), então
     // um `--dir` inexistente e fora do $HOME continua recusado, e a criação
     // automática nunca chega a ser tentada fora do home.

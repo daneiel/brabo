@@ -207,10 +207,11 @@ reason in the URL.
   pattern as `@ServiceRoute()`/`EngineServiceGuard` — bypass by metadata,
   never an `if` a new route could forget), and it's the ONLY place in the
   api that accepts this token format: on any other route a `brb_...` fails
-  JWT verification normally. The three routes under
+  JWT verification normally. The five routes under
   `/projects/:projectId/personal-access-tokens` (issue/list/revoke the PAT
-  itself) remain regular session JWT — only the route the TOKEN ITSELF
-  authenticates changes mechanism.
+  itself, plus the two `maintainer` ones — RN-427, list/revoke of ANY
+  user in the project) remain regular session JWT — only the route the
+  TOKEN ITSELF authenticates changes mechanism.
 - **The `engine-service` routes aren't "internal" by naming convention.**
   What protects them is `EngineServiceGuard` comparing
   `X-Brabo-Service-Token` against the shared secret in constant time, plus
@@ -513,7 +514,9 @@ reason in the URL.
 | PUT | `/projects/:projectId/permissions` | role:maintainer |
 | POST | `/projects/:projectId/personal-access-tokens` | role:developer |
 | GET | `/projects/:projectId/personal-access-tokens` | role:developer |
+| GET | `/projects/:projectId/personal-access-tokens/all` | role:maintainer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
+| DELETE | `/projects/:projectId/personal-access-tokens/:tokenId/admin` | role:maintainer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |
 | DELETE | `/projects/:projectId/proficiency/me` | role:viewer |
 | POST | `/projects/:projectId/proficiency/me/opt-in` | role:viewer |

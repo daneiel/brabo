@@ -49,6 +49,8 @@ const runAnamnese = vi.fn();
 const listPersonalAccessTokens = vi.fn();
 const issuePersonalAccessToken = vi.fn();
 const revokePersonalAccessToken = vi.fn();
+const listAllPersonalAccessTokens = vi.fn();
+const revokePersonalAccessTokenAsMaintainer = vi.fn();
 
 vi.mock('../lib/hooks', () => ({
   useCurrentWorkspaceWithRole: (...args: unknown[]) =>
@@ -95,6 +97,10 @@ vi.mock('../lib/api-client', async () => {
       issuePersonalAccessToken(...args),
     revokePersonalAccessToken: (...args: unknown[]) =>
       revokePersonalAccessToken(...args),
+    listAllPersonalAccessTokens: (...args: unknown[]) =>
+      listAllPersonalAccessTokens(...args),
+    revokePersonalAccessTokenAsMaintainer: (...args: unknown[]) =>
+      revokePersonalAccessTokenAsMaintainer(...args),
   };
 });
 
@@ -179,6 +185,8 @@ beforeEach(() => {
   listPersonalAccessTokens.mockResolvedValue([]);
   issuePersonalAccessToken.mockResolvedValue(undefined);
   revokePersonalAccessToken.mockResolvedValue(undefined);
+  listAllPersonalAccessTokens.mockResolvedValue([]);
+  revokePersonalAccessTokenAsMaintainer.mockResolvedValue(undefined);
 });
 
 function credencial(over: Partial<UserCredentialMetadata> = {}): UserCredentialMetadata {
@@ -1021,5 +1029,61 @@ describe('PersonalAccessTokensSection (ADR 0105)', () => {
       expect(revokePersonalAccessToken).toHaveBeenCalledWith('proj-1', 'pat-1'),
     );
     expect(listPersonalAccessTokens).toHaveBeenCalledTimes(2);
+  });
+
+  function tokenDeOutro(over: Record<string, unknown> = {}) {
+    return {
+      ...token(over),
+      userId: 'user-2',
+      userEmail: 'outro@brabo.dev',
+      ...over,
+    };
+  }
+
+  it('maintainer vê a sub-lista com TODOS os tokens do projeto, com o dono de cada um (RN-427)', async () => {
+    useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'maintainer' } });
+    listAllPersonalAccessTokens.mockResolvedValue([
+      tokenDeOutro({ id: 'pat-2', name: 'ci', userEmail: 'outro@brabo.dev' }),
+    ]);
+    montarTokens();
+
+    expect(await screen.findByText('Todos os tokens do projeto')).toBeInTheDocument();
+    expect(await screen.findByText('outro@brabo.dev')).toBeInTheDocument();
+    expect(listAllPersonalAccessTokens).toHaveBeenCalledWith('proj-1');
+  });
+
+  it('developer NÃO vê a sub-lista de admin nem dispara a listagem de todos', async () => {
+    useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'developer' } });
+    listPersonalAccessTokens.mockResolvedValue([token({ id: 'pat-1', name: 'laptop' })]);
+    montarTokens();
+
+    expect(await screen.findByText('laptop')).toBeInTheDocument();
+    expect(screen.queryByText('Todos os tokens do projeto')).not.toBeInTheDocument();
+    expect(listAllPersonalAccessTokens).not.toHaveBeenCalled();
+  });
+
+  it('revogar como maintainer chama o DELETE de admin e invalida só a listagem de admin (RN-427)', async () => {
+    listPersonalAccessTokens.mockResolvedValue([token({ id: 'pat-1', name: 'laptop' })]);
+    listAllPersonalAccessTokens.mockResolvedValueOnce([
+      tokenDeOutro({ id: 'pat-2', name: 'ci' }),
+    ]);
+    listAllPersonalAccessTokens.mockResolvedValueOnce([
+      tokenDeOutro({ id: 'pat-2', name: 'ci', revokedAt: '2026-08-11T00:00:00.000Z' }),
+    ]);
+    montarTokens();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Revogar ci (outro@brabo.dev)' }),
+    );
+
+    await waitFor(() =>
+      expect(revokePersonalAccessTokenAsMaintainer).toHaveBeenCalledWith(
+        'proj-1',
+        'pat-2',
+      ),
+    );
+    expect(listAllPersonalAccessTokens).toHaveBeenCalledTimes(2);
+    // Revogar de admin não mexe na listagem própria — são queries separadas.
+    expect(revokePersonalAccessToken).not.toHaveBeenCalled();
   });
 });

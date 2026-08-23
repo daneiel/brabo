@@ -972,6 +972,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/personal-access-tokens-controller-revoke-pat-as-maintainer",
+          label: "Revoga o Personal Access Token de QUALQUER usuário no projeto",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/personal-access-tokens-controller-list-all-pats",
+          label: "Lista TODOS os Personal Access Tokens do projeto, de qualquer usuário",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/runner-tickets-controller-runner-ticket",
           label: "Emite um ticket de uso único para o runner local conectar",
           className: "api-method post",

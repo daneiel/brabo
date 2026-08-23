@@ -73,6 +73,7 @@ import type {
   UserPreferences,
   PersonalAccessTokenSummary,
   PersonalAccessTokenIssued,
+  PersonalAccessTokenAdminSummary,
   Workspace,
   WorkspaceSummary,
   WorkspaceWithRole,
@@ -327,6 +328,17 @@ export const issuePersonalAccessToken = (
   );
 export const revokePersonalAccessToken = (projectId: string, tokenId: string) =>
   del<void>(`/projects/${projectId}/personal-access-tokens/${tokenId}`);
+
+/** Visão de `maintainer` (RN-427) — todos os tokens do projeto, de qualquer usuário. */
+export const listAllPersonalAccessTokens = (projectId: string) =>
+  get<PersonalAccessTokenAdminSummary[]>(
+    `/projects/${projectId}/personal-access-tokens/all`,
+  );
+export const revokePersonalAccessTokenAsMaintainer = (
+  projectId: string,
+  tokenId: string,
+) =>
+  del<void>(`/projects/${projectId}/personal-access-tokens/${tokenId}/admin`);
 
 export const getProjectPermissions = (projectId: string) =>
   get<PermissionsFile>(`/projects/${projectId}/permissions`);

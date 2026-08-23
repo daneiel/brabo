@@ -36,7 +36,7 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 
 // `FolderBrowserModal` real é montado quando `execution_mode` é `runner`
-// (RN-436, ADR 0108) — o canal Phoenix é substituído pelo MESMO dublê de
+// (RN-437, ADR 0108) — o canal Phoenix é substituído pelo MESMO dublê de
 // `FolderBrowserModal.test.tsx`, controlável e sem depender de rede.
 const { connectFsBrowserChannelMock } = vi.hoisted(() => {
   const fakeChannel = {
@@ -291,7 +291,7 @@ describe('NewProjectWizard — onde o código vai morar', () => {
 });
 
 /**
- * Navegação de pasta ANTECIPADA no modo Runner (RN-436, ADR 0108).
+ * Navegação de pasta ANTECIPADA no modo Runner (RN-437, ADR 0108).
  *
  * `ADR 0107` tinha declarado como lacuna: "Procurar pasta..." não conseguia
  * ancorar num projeto porque ele só nascia na confirmação. Esta entrega

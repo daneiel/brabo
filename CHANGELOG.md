@@ -13,7 +13,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   atualiza os detalhes) e duplo clique ENTRA — antes um único clique já
   navegava. A lista deixou de esconder arquivos: eles aparecem visualmente
   apagados e sem gesto nenhum, só pasta continua navegável/selecionável. O
-  botão final foi renomeado para "Usar esta pasta" (RN-435)
+  botão final foi renomeado para "Usar esta pasta" (RN-436)
 - **api,web**: no modo de projeto `runner`, "Procurar pasta..." passa a
   criar o projeto ANTECIPADAMENTE — ao clicar, não só na confirmação —
   fechando a lacuna que o ADR 0107 já tinha declarado (o ticket do canal do
@@ -22,13 +22,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   sem mudar a identidade reabre o MESMO projeto, e a confirmação final
   reusa em vez de criar de novo. O modo `mounted` não muda — continua sem
   projeto até a confirmação, porque ali a validação de caminho toca disco
-  na criação (RN-436, ADR 0108)
+  na criação (RN-437, ADR 0108)
 - **web**: `fs-browser-channel.ts` tinha o mesmo bug de path duplicado que a
-  RN-432 já tinha corrigido no `terminal-channel.ts` irmão (concatenava
+  RN-433 já tinha corrigido no `terminal-channel.ts` irmão (concatenava
   `/runner/websocket` a um `engineWsUrl` que já vem pronto), então a
   navegação de pasta contra um engine real caía direto em "a conexão com o
-  runner caiu". Achado ao verificar a RN-436 ponta a ponta — o módulo não
-  tinha teste próprio até agora (RN-437)
+  runner caiu". Achado ao verificar a RN-437 ponta a ponta — o módulo não
+  tinha teste próprio até agora (RN-438)
+- **api,web**: `maintainer` passa a revogar o Personal Access Token de
+  QUALQUER usuário do projeto — resposta a incidente (dev desligado com
+  token vazando), item declarado fora de escopo pelo ADR 0105. Rotas
+  separadas (`GET .../personal-access-tokens/all`,
+  `DELETE .../personal-access-tokens/:tokenId/admin`, ambas
+  `@RequireRole('maintainer')`), escopo por `projectId` em vez de
+  `userId` — a autorevogação de cada usuário não muda. Sub-lista nova em
+  Configurações do projeto, visível só para `owner`/`maintainer`, com o
+  e-mail do dono de cada token (RN-427, extensão do ADR 0105)
 - **runner**: `@brabo/runner` publicado no npm — `npm install -g
   @brabo/runner` instala o CLI sem precisar clonar o monorepo. `tsup`
   empacota `apps/runner` num `dist/index.cjs` único (`node-pty`
@@ -64,13 +73,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `$HOME` do usuário (o próprio home ou uma subpasta dele) — caminho fora
   dessa árvore (`/etc`, `/root`, outra conta em `/home`, etc.) é recusado
   na inicialização do CLI, com mensagem explicando o motivo. Fora do
-  Linux o comportamento não muda (RN-433, ADR 0104)
+  Linux o comportamento não muda (RN-434, ADR 0104)
 - **runner**: `brabo-runner --dir` apontando para uma pasta que ainda não
   existe deixa de ser erro fatal — a pasta é criada automaticamente
   (`mkdir -p`), sempre DEPOIS de passar pela checagem do `$HOME` no Linux
-  (RN-433), então um caminho fora do home continua recusado mesmo quando
+  (RN-434), então um caminho fora do home continua recusado mesmo quando
   ainda não existe. `--dir` apontando para um arquivo já existente
-  continua erro real — nunca sobrescrito silenciosamente (RN-434, ADR
+  continua erro real — nunca sobrescrito silenciosamente (RN-435, ADR
   0104)
 - **api,web**: fundação de i18n — coluna `locale` em `users` (`'pt-BR'|'en'`,
   default `'pt-BR'`), embutida no corpo de `/auth/login`/`/auth/refresh` (sem
@@ -87,7 +96,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `docs/` virar a fonte em inglês, e uma regra `warn` nova no docmap
   (`traducao-pt-br`) cobrindo o drift entre as duas árvores. Extração em
   massa do resto da interface e tradução de `docs/` são a próxima etapa,
-  em andamento (RN-431)
+  em andamento (RN-432)
 - **web**: navegação por abas agrupadas — a régua de 11 abas do projeto vira
   6 no topo (Visão geral, Agentes ▾, Dev ▾, Documentação ▾, Gastos,
   Configurações), com `GroupedTabs` novo por cima do `Tabs` existente. Chat
@@ -104,13 +113,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `git_merge` (primeira produtora real pela UI), desabilitado quando o gate
   do dev agent bloqueou a task; a trava de branch protegida continua
   absoluta (RN-154). `git_merge` ganhou corpo próprio no card de aprovação
-  em vez do despejo de JSON cru (RN-429)
+  em vez do despejo de JSON cru (RN-430)
 - **web**: aba própria **Arquitetura**, extraída da Visão Geral (module_map,
   diagrama C4, ADRs, pendências de validação cruzada); a Visão Geral passa a
   mostrar um resumo condensado com link "Ver arquitetura completa →".
   Primeiro lightbox do design system: `C4DiagramView` ganha botão de
   ampliar por diagrama, abrindo o SVG em tela cheia sobre `Modal`
-  (`size="full"`, novo) (RN-430)
+  (`size="full"`, novo) (RN-431)
 - **api,web,engine,runner**: navegação de pasta local via o Runner — dois
   eventos novos no MESMO canal `terminal:<projectId>` (`fs_list_dir`/
   `fs_home_dir`), relay puro do engine, exatamente como o PTY.
@@ -118,7 +127,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   pasta") integrado à criação de projeto e reaproveitável onde o projeto já
   existe; sem runner conectado, `RunnerOnboardingPanel` (novo, compartilhado
   com a aba Terminal) explica a instalação em vez de travar carregando. A
-  api continua sem enumerar filesystem nenhum — nenhuma rota nova (RN-428,
+  api continua sem enumerar filesystem nenhum — nenhuma rota nova (RN-429,
   ADR 0107, revisa a ADR 0072)
 - **web**: corrigido o carrossel de promoção de histórias do PO, que
   degradava silenciosamente para card único (ou sumia) em sessão longa —
@@ -466,7 +475,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   (`http://localhost:4000`); o canal do terminal ganhou timeout próprio de
   8s que chama `onErro` e desconecta, em vez de depender do backoff nativo
   do Phoenix; e parou de concatenar path no `engineWsUrl`. Verificado
-  ponta a ponta contra o engine real (RN-432)
+  ponta a ponta contra o engine real (RN-433)
 - **api**: `POST .../runner-ticket` (autenticação por Personal Access
   Token, ADR 0105) sempre respondia `403 "Não autenticado"`, mesmo com um
   PAT válido — o runner local nunca conseguia conectar por essa via.
@@ -480,7 +489,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `@RequirePatAuth()` (mesmo desvio que `JwtAuthGuard` já tinha) e
   `PatAuthGuard` passa a autenticar E autorizar (`@RequireRole`) no MESMO
   guard. Verificado com o `brabo-runner` conectando de verdade a um
-  projeto real (RN-438)
+  projeto real (RN-439)
 
 ### Desempenho
 
@@ -491,7 +500,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Documentação
 
 - **docs,web,api**: Onda 6b (i18n) — a extração em massa da interface e a
-  tradução de `docs/` que a Onda 6a (RN-431) tinha deixado como "próxima
+  tradução de `docs/` que a Onda 6a (RN-432) tinha deixado como "próxima
   etapa" avançaram bastante, em quatro frentes paralelas:
   - **web**: mais 14 componentes convertidos pra `react-i18next`
     (`ActivityFeed`, `AgentTimelineTree`, `ApprovalCard`, `PrGateTimeline`,
