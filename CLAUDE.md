@@ -2062,7 +2062,46 @@ primário de verdade.
   `useBacklog` (completo, sem janela), com fallback por história quando o
   backlog ainda não respondeu.
 
-## Binário standalone do runner (2026-08-23, RN-451/441, ADR 0112)
+## Handoff manual a agente à escolha (RN-440/441, ADR 0109)
+Fecha o item de backlog aberto desde a FASE 13c. `CreateHandoffUseCase`
+continua sendo o ÚNICO lugar que grava `toAgent` (ADR 0038) — ganhou só um
+`actor?: Actor` opcional, default `{kind:'agent', id: fromAgent}` de
+sempre. `RequestManualHandoffUseCase` (rota nova, `POST
+.../sessions/:sessionId/handoffs`, papel `developer`) valida `toAgent`
+contra `addressableAgents()` — catálogo FECHADO (leads de área ∪
+`SOLO_CONVERSATIONAL_AGENTS`), mais estrito que `assertHandoffTargetAllowed`
+(que só recusa subagente) — resolve `fromAgent` pelo `agent.activated`
+mais recente da sessão (sentinela `"usuario"` sem nenhum), e grava
+`actor: {kind:'user'}`. O handoff nasce `offered` igual a um automático:
+o card de aceite já existente (`SessionPage.tsx`) o pega sozinho, zero
+mudança no caminho de aceite.
+
+Investigação ANTES de codar achou `ux-designer` (ADR 0087) na MESMA
+situação do Staff (ADR 0088) que motivou o item: cláusula de `message/2`
+pronta em `agent_command_controller.ex`, nenhum caminho humano até ela.
+Os dois entraram em `AGENTES_DE_CHAT` na mesma mudança — `infra`/`qa`
+continuam de fora, mesmo padrão já documentado ali (leads sem `kickoff/1`
+nem cláusula de `message`). Declarado, não escondido: o mirror de
+`SOLO_CONVERSATIONAL_AGENTS` do lado web (`apps/web/src/lib/agents.ts`)
+NÃO é cruzado por teste com o da api — divergir produz, no pior caso, uma
+opção velha no seletor que o backend ainda recusa com 400.
+
+## Budget por área — fecha o corte do ADR 0038 (RN-443, ADR 0110)
+Item aprovado do backlog ("Older backlog", `docs/explanation/backlog.md`).
+`agent_areas` ganha `budget_micros`/`spent_micros`, espelhando exatamente
+`max_parallel` — mesma linha, mesmo dono da decisão (`maintainer`), sem
+tabela nova. É um TERCEIRO teto ADITIVO ao lado de projeto e sessão
+(`CheckBudgetGateUseCase` checa os três em paralelo, qualquer um bloqueado
+já recusa), **não** a cascata de binding de modelo do ADR 0064 (`sessão >
+agente > área > projeto > workspace`, "o mais específico vence") — os dois
+mecanismos compartilham a palavra "área" e mais nada; não confundir os
+dois é o ponto central do ADR 0110, do mesmo jeito que RN-101/ADR 0063 já
+separa a visão do owner da visão do membro no relatório de gasto.
+`spent_micros` soma SEMPRE que o ator pertence a uma área (lead ou
+membro, via `areaDo` — função pura, sem tocar banco pra ator sem área),
+com ou sem `budget_micros` configurado (`null` é o default, sem teto).
+
+## Binário standalone do runner (2026-08-23, RN-451/452, ADR 0112)
 Item de backlog do ADR 0104 ("standalone binary, `pkg`/`bun build
 --compile`"), companion do ADR 0106 (distribuição via npm). Decisão
 explícita do dono do produto: binário ÚNICO de verdade, matriz completa

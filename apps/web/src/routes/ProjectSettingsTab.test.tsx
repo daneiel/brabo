@@ -11,6 +11,7 @@ import settingsPtBR from '../locales/pt-BR/settings.json';
 import modelsPtBR from '../locales/pt-BR/models.json';
 import {
   AreaModelsSection,
+  BudgetSection,
   CredentialsSection,
   ExecutionSection,
   MelhoresModelosPorCapacidadeSection,
@@ -44,6 +45,7 @@ const getProjectAgentCosts = vi.fn();
 const setAgentModelBinding = vi.fn();
 const listAgentAreas = vi.fn();
 const setAreaMaxParallel = vi.fn();
+const setAreaBudget = vi.fn();
 const useCurrentWorkspaceWithRole = vi.fn();
 const runAnamnese = vi.fn();
 const listPersonalAccessTokens = vi.fn();
@@ -90,6 +92,7 @@ vi.mock('../lib/api-client', async () => {
     setAgentModelBinding: (...args: unknown[]) => setAgentModelBinding(...args),
     listAgentAreas: (...args: unknown[]) => listAgentAreas(...args),
     setAreaMaxParallel: (...args: unknown[]) => setAreaMaxParallel(...args),
+    setAreaBudget: (...args: unknown[]) => setAreaBudget(...args),
     runAnamnese: (...args: unknown[]) => runAnamnese(...args),
     listPersonalAccessTokens: (...args: unknown[]) =>
       listPersonalAccessTokens(...args),
@@ -180,6 +183,7 @@ beforeEach(() => {
   deleteCredential.mockResolvedValue({ ok: true });
   listAgentAreas.mockResolvedValue([]);
   setAreaMaxParallel.mockResolvedValue({});
+  setAreaBudget.mockResolvedValue({});
   useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'maintainer' } });
   runAnamnese.mockResolvedValue(undefined);
   listPersonalAccessTokens.mockResolvedValue([]);
@@ -211,6 +215,8 @@ function area(over: Record<string, unknown> = {}) {
     key: 'dev',
     leadAgentId: 'dev-lead',
     maxParallel: 2,
+    budgetMicros: null,
+    spentMicros: 0,
     members: ['dev-api', 'dev-web'],
     ...over,
   };
@@ -291,6 +297,142 @@ describe('ParallelismSection', () => {
 
     expect(
       await screen.findByText(/max_parallel precisa ser inteiro/i),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('BudgetSection (ADR 0110, RN-443)', () => {
+  it('sem áreas: explica DE ONDE elas vêm em vez de sumir', async () => {
+    listAgentAreas.mockResolvedValue([]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    expect(
+      await screen.findByText(/nascem quando você ativa a execução/i),
+    ).toBeInTheDocument();
+  });
+
+  it('sem teto configurado, o campo nasce VAZIO — não zero', async () => {
+    listAgentAreas.mockResolvedValue([area({ budgetMicros: null })]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    expect(campo).toHaveValue(null);
+  });
+
+  it('com teto configurado, mostra o valor em DÓLAR, convertido de micro-USD', async () => {
+    listAgentAreas.mockResolvedValue([area({ budgetMicros: 20_000_000 })]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    expect(campo).toHaveValue(20);
+  });
+
+  it('mostra o gasto acumulado da área', async () => {
+    listAgentAreas.mockResolvedValue([area({ spentMicros: 4_300_000 })]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    expect(await screen.findByText(/Gasto: US\$ 4,30/)).toBeInTheDocument();
+  });
+
+  it('salva o teto novo, convertido pra micro-USD pelo backend (envia em dólar)', async () => {
+    listAgentAreas.mockResolvedValue([area()]);
+    setAreaBudget.mockResolvedValue(area({ budgetMicros: 30_000_000 }));
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    fireEvent.change(campo, { target: { value: '30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() =>
+      expect(setAreaBudget).toHaveBeenCalledWith('proj-1', 'dev', 30),
+    );
+  });
+
+  it('campo vazio salva null — LIMPA o teto, não é erro', async () => {
+    listAgentAreas.mockResolvedValue([area({ budgetMicros: 20_000_000 })]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    fireEvent.change(campo, { target: { value: '' } });
+
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() =>
+      expect(setAreaBudget).toHaveBeenCalledWith('proj-1', 'dev', null),
+    );
+  });
+
+  it('negativo NÃO salva: o botão fica desabilitado', async () => {
+    listAgentAreas.mockResolvedValue([area()]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    fireEvent.change(campo, { target: { value: '-5' } });
+
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+    expect(setAreaBudget).not.toHaveBeenCalled();
+  });
+
+  it('zero é válido — é um teto de verdade, não erro', async () => {
+    listAgentAreas.mockResolvedValue([area()]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    fireEvent.change(campo, { target: { value: '0' } });
+
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+  });
+
+  it('cada área tem o seu campo, e editar uma não mexe na outra', async () => {
+    listAgentAreas.mockResolvedValue([
+      area(),
+      area({
+        id: 'area-2',
+        key: 'qa',
+        leadAgentId: 'qa-lead',
+        budgetMicros: 5_000_000,
+      }),
+    ]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const devInput = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    fireEvent.change(devInput, { target: { value: '99' } });
+
+    expect(
+      screen.getByLabelText('Teto de gasto da área qa, em dólares'),
+    ).toHaveValue(5);
+  });
+
+  it('a api recusando mostra a mensagem DELA, não uma genérica', async () => {
+    listAgentAreas.mockResolvedValue([area()]);
+    setAreaBudget.mockRejectedValue(
+      new ApiError(400, { message: 'budgetMicros precisa ser null ou >= 0' }),
+    );
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    fireEvent.change(campo, { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(
+      await screen.findByText(/budgetMicros precisa ser null/i),
     ).toBeInTheDocument();
   });
 });

@@ -622,6 +622,19 @@ export const acceptHandoff = (
   post<Handoff>(
     `/projects/${projectId}/sessions/${sessionId}/handoffs/${handoffId}/accept`,
   );
+// Handoff manual a agente à escolha (ADR 0109/RN-440): `toAgent` tem de
+// estar no catálogo `addressableAgents()` do backend — lead de área ou
+// agente conversacional solo. Nasce `offered`, do mesmo jeito que um
+// handoff automático; `acceptHandoff` acima continua sendo o único caminho
+// de aceite.
+export const requestManualHandoff = (
+  projectId: string,
+  sessionId: string,
+  toAgent: string,
+) =>
+  post<Handoff>(`/projects/${projectId}/sessions/${sessionId}/handoffs`, {
+    toAgent,
+  });
 
 // --- Backlog (Fase 3b) ---
 
@@ -759,6 +772,19 @@ export const setAreaMaxParallel = (
 ) =>
   patch<AgentArea>(`/projects/${projectId}/agent-areas/${key}/max-parallel`, {
     maxParallel,
+  });
+
+/**
+ * `limitUsd: null` limpa o teto (ADR 0110) — a conversão dólar→micro-USD é
+ * feita no servidor, mesma convenção de `setProjectBudget`/`setSessionBudget`.
+ */
+export const setAreaBudget = (
+  projectId: string,
+  key: string,
+  limitUsd: number | null,
+) =>
+  put<AgentArea>(`/projects/${projectId}/agent-areas/${key}/budget`, {
+    limitUsd,
   });
 // Libera uma task que o dev agent devolveu bloqueada, depois de o usuário ler
 // o diagnóstico. Enquanto `blocked`, ela é excluída do claim atômico — sem

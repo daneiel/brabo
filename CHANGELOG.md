@@ -6,6 +6,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: handoff manual a agente à escolha (ADR 0109), fechando item
+  de backlog aberto desde a FASE 13c. `SessionPage.tsx` ganha um seletor
+  ("Endereçar handoff a...") sobre `addressableAgents()` (lead de área ∪
+  agente conversacional solo), que POSTa em `POST
+  .../sessions/:sessionId/handoffs` — mesmo `CreateHandoffUseCase` que um
+  agente já usa para oferecer handoff, com `actor: {kind:'user'}`
+  registrando que quem decidiu foi um humano. O caso real que motivou:
+  Staff (ADR 0088) e `ux-designer` (ADR 0087) tinham plumbing de engine
+  pronto e NENHUM caminho humano até eles — os dois entram em
+  `AGENTES_DE_CHAT` na mesma mudança (RN-440/RN-441)
+- **api,web**: budget por ÁREA (`agent_areas.budget_micros`/`spent_micros`)
+  fecha o item do backlog do ADR 0038 — teto de gasto opcional, configurável
+  por lead em Configurações (`maintainer`), ADITIVO aos budgets de projeto
+  e sessão que já existiam (nunca cascata: os três são checados
+  independentemente, e qualquer um bloqueado já recusa a chamada). `null`
+  é o default (sem teto); o gasto acumulado da área soma SEMPRE, com ou sem
+  teto configurado, o que já mostra o gasto real por área antes de alguém
+  configurar um limite. Rota `PUT projects/:projectId/agent-areas/:key/budget`
+  (`maintainer`), e a rota `GET agent-areas` já existente passa a devolver
+  `budgetMicros`/`spentMicros` (RN-443, ADR 0110)
 - **runner**: binário standalone do `@brabo/runner` — download direto de
   `dist-bin/brabo-runner-<plataforma>-<arquitetura>[.exe]` numa GitHub
   Release, sem Node/npm/node-gyp instalado na máquina. `bun build --compile`
@@ -14,12 +34,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   runtime — o mecanismo completo, e o que ficou VALIDADO por execução real
   em cada plataforma (só `linux-x64` neste sandbox; as outras quatro por
   reasoning + a primeira execução real de CI na próxima tag), está no ADR
-  0109. Cinco plataformas (`linux-x64`, `linux-arm64`, `darwin-x64`,
+  0112. Cinco plataformas (`linux-x64`, `linux-arm64`, `darwin-x64`,
   `darwin-arm64`, `win32-x64`), cada uma construída no seu runner NATIVO
   (`build-runner-binaries.yml`, mesmo gatilho de tag final de
   `publish-runner.yml`) e anexada à Release já existente. Fecha o item de
   backlog do ADR 0104 ("binário standalone (pkg/bun build --compile)"),
-  companion do ADR 0106 (RN-440/441)
+  companion do ADR 0106 (RN-451/452)
 - **web**: `FolderBrowserModal` vira um explorador de três colunas —
   atalhos ("Pasta pessoal", "Raiz"), lista central com breadcrumb e um
   painel de detalhes —, seguindo a referência visual do dono do produto

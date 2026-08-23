@@ -1,0 +1,1 @@
+{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"toAgent":{"type":"string","example":"staff","description":"Slug of the target agent. Must be a lead or an area-less agent — never a subagent."}},"required":["toAgent"],"title":"RequestManualHandoffDto"}}}}}

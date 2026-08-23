@@ -600,6 +600,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/execution-controller-set-budget",
+          label: "Sets (or clears) an area's spend cap",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/execution-controller-set-max-parallel",
           label: "Changes an area's parallelism cap",
           className: "api-method patch",
@@ -1125,6 +1131,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/agents-controller-handoffs",
           label: "Lists the session's agent-to-agent handoffs",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/agents-controller-request-manual",
+          label: "Manually offers a handoff to a chosen agent",
+          className: "api-method post",
         },
         {
           type: "doc",
