@@ -1,0 +1,69 @@
+---
+id: agents-controller-request-manual
+title: "Manually offers a handoff to a chosen agent"
+description: "Born as `offered`, exactly like an agent's own `offer_handoff` — the only difference is who decided. `toAgent` has to be in the addressable catalog (area lead or area-less agent); a subagent or an unknown slug is refused with 400."
+sidebar_label: "Manually offers a handoff to a chosen agent"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Manually offers a handoff to a chosen agent"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/sessions/{sessionId}/handoffs"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Born as `offered`, exactly like an agent's own `offer_handoff` — the only difference is who decided. `toAgent` has to be in the addressable catalog (area lead or area-less agent); a subagent or an unknown slug is refused with 400.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./agents-controller-request-manual.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./agents-controller-request-manual.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./agents-controller-request-manual.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

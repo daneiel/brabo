@@ -6,6 +6,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: handoff manual a agente à escolha (ADR 0109), fechando item
+  de backlog aberto desde a FASE 13c. `SessionPage.tsx` ganha um seletor
+  ("Endereçar handoff a...") sobre `addressableAgents()` (lead de área ∪
+  agente conversacional solo), que POSTa em `POST
+  .../sessions/:sessionId/handoffs` — mesmo `CreateHandoffUseCase` que um
+  agente já usa para oferecer handoff, com `actor: {kind:'user'}`
+  registrando que quem decidiu foi um humano. O caso real que motivou:
+  Staff (ADR 0088) e `ux-designer` (ADR 0087) tinham plumbing de engine
+  pronto e NENHUM caminho humano até eles — os dois entram em
+  `AGENTES_DE_CHAT` na mesma mudança (RN-440/RN-441)
 - **api,web**: budget por ÁREA (`agent_areas.budget_micros`/`spent_micros`)
   fecha o item do backlog do ADR 0038 — teto de gasto opcional, configurável
   por lead em Configurações (`maintainer`), ADITIVO aos budgets de projeto
@@ -15,7 +25,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   teto configurado, o que já mostra o gasto real por área antes de alguém
   configurar um limite. Rota `PUT projects/:projectId/agent-areas/:key/budget`
   (`maintainer`), e a rota `GET agent-areas` já existente passa a devolver
-  `budgetMicros`/`spentMicros` (RN-440, ADR 0109)
+  `budgetMicros`/`spentMicros` (RN-443, ADR 0110)
 - **web**: `FolderBrowserModal` vira um explorador de três colunas —
   atalhos ("Pasta pessoal", "Raiz"), lista central com breadcrumb e um
   painel de detalhes —, seguindo a referência visual do dono do produto

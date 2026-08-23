@@ -47,6 +47,9 @@ camada_produto:
     # analytics, que continua proposto.
     entradas: [{ artefato: necessidade-de-negocio, origem: criativo },
                { artefato: metricas-de-uso, origem: analytics, status: lacuna }]
+    # Handoff manual (ADR 0109, RN-440/441): entrou em AGENTES_DE_CHAT e no
+    # seletor de SessionPage.tsx — o mecanismo já era genérico, faltava só
+    # a tela
     saidas: [{ artefato: prototipo, destino: po },
              { artefato: spec-visual, destino: dev-lead }]
     ferramentas: [propose_prototype]
@@ -129,7 +132,9 @@ camada_decisao_tecnica:
       "staff", mecanismo GENÉRICO (sem entrar em USER_STARTED_AGENTS)
     ativacao: gatilho AUTOMÁTICO (problema sistêmico RECORRENTE registrado
       pela anamnese) segue pendente enquanto ANAMNESE_ENABLED=false —
-      dormente para disparo automático, não para acionamento manual
+      dormente para disparo automático, não para acionamento manual.
+      Acionamento manual ganhou TELA (ADR 0109, RN-440/441) — seletor em
+      SessionPage.tsx, rota POST .../sessions/sessionId/handoffs
     entregaveis_alvo: [rfc, poc-descartavel, parecer-sistemico]
     saidas_alvo: [{ artefato: rfc + poc, destino: arquiteto }]
 

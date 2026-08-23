@@ -622,6 +622,19 @@ export const acceptHandoff = (
   post<Handoff>(
     `/projects/${projectId}/sessions/${sessionId}/handoffs/${handoffId}/accept`,
   );
+// Handoff manual a agente à escolha (ADR 0109/RN-440): `toAgent` tem de
+// estar no catálogo `addressableAgents()` do backend — lead de área ou
+// agente conversacional solo. Nasce `offered`, do mesmo jeito que um
+// handoff automático; `acceptHandoff` acima continua sendo o único caminho
+// de aceite.
+export const requestManualHandoff = (
+  projectId: string,
+  sessionId: string,
+  toAgent: string,
+) =>
+  post<Handoff>(`/projects/${projectId}/sessions/${sessionId}/handoffs`, {
+    toAgent,
+  });
 
 // --- Backlog (Fase 3b) ---
 
