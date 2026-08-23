@@ -10357,7 +10357,7 @@ se manifestar — corrigir só o primeiro teria trocado um 403 sempre por um
   nenhuma suíte exercitava `RolesGuard` e `PatAuthGuard` na mesma
   requisição
 
-### RN-440 — Budget de área é ADITIVO ao de projeto/sessão, nunca cascata; só `maintainer` muda o teto {#rn-440}
+### RN-443 — Budget de área é ADITIVO ao de projeto/sessão, nunca cascata; só `maintainer` muda o teto {#rn-440}
 
 Fecha o item "budget por área" do corte do ADR 0038, em aberto desde a
 FASE 8. `agent_areas` ganha `budget_micros` (nullable — `null` é SEM
@@ -10407,7 +10407,7 @@ padrão de `RenameSessionDto`.
   (grava, limpa com `null`, recusa negativo/NaN/Infinity, zero é válido);
   `apps/api/test/infrastructure/persistence/drizzle/agent-area.repository.spec.ts`
   (`setBudget`/`incrementSpent`, atomicidade sob concorrência)
-- **ADR:** [0109](adr/0109-budget-por-area-aditivo-nao-cascata.md)
+- **ADR:** [0110](adr/0110-budget-por-area-aditivo-nao-cascata.md)
 - **Origem:** item de backlog aprovado pelo dono do produto numa sessão de
   planejamento explícita — `docs/explanation/backlog.md`, tabela "Older
   backlog"

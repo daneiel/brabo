@@ -301,7 +301,7 @@ describe('ParallelismSection', () => {
   });
 });
 
-describe('BudgetSection (ADR 0109, RN-440)', () => {
+describe('BudgetSection (ADR 0110, RN-443)', () => {
   it('sem áreas: explica DE ONDE elas vêm em vez de sumir', async () => {
     listAgentAreas.mockResolvedValue([]);
     montarSecao(<BudgetSection projectId="proj-1" />);

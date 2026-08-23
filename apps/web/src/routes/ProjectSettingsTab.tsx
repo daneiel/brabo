@@ -1530,7 +1530,7 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
 }
 
 /**
- * O teto de GASTO de cada área, opcional (ADR 0109, RN-440).
+ * O teto de GASTO de cada área, opcional (ADR 0110, RN-443).
  *
  * Mesmo padrão de `ParallelismSection` — uma linha por área, botão de salvar
  * explícito (não autosave, pelo mesmo motivo: salvar a cada tecla mandaria

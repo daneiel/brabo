@@ -762,7 +762,7 @@ export const setAreaMaxParallel = (
   });
 
 /**
- * `limitUsd: null` limpa o teto (ADR 0109) — a conversão dólar→micro-USD é
+ * `limitUsd: null` limpa o teto (ADR 0110) — a conversão dólar→micro-USD é
  * feita no servidor, mesma convenção de `setProjectBudget`/`setSessionBudget`.
  */
 export const setAreaBudget = (

@@ -1,4 +1,4 @@
-# ADR 0109 — Budget per area is ADDITIVE, next to project/session — not a cascade, and not a new table
+# ADR 0110 — Budget per area is ADDITIVE, next to project/session — not a cascade, and not a new table
 
 - **Status:** Accepted
 - **Date:** 2026-08-23
@@ -145,4 +145,4 @@ temptation to conflate the two real enough to warrant writing it down.
   pure predicate
 - `apps/api/src/domain/agents/agent-areas.ts` — `areaDo`, the pure
   membership resolver reused here
-- [RN-440](../business-rules.md#rn-440)
+- [RN-443](../business-rules.md#rn-440)

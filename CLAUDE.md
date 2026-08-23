@@ -2062,7 +2062,7 @@ primário de verdade.
   `useBacklog` (completo, sem janela), com fallback por história quando o
   backlog ainda não respondeu.
 
-## Budget por área — fecha o corte do ADR 0038 (RN-440, ADR 0109)
+## Budget por área — fecha o corte do ADR 0038 (RN-443, ADR 0110)
 Item aprovado do backlog ("Older backlog", `docs/explanation/backlog.md`).
 `agent_areas` ganha `budget_micros`/`spent_micros`, espelhando exatamente
 `max_parallel` — mesma linha, mesmo dono da decisão (`maintainer`), sem
@@ -2071,7 +2071,7 @@ tabela nova. É um TERCEIRO teto ADITIVO ao lado de projeto e sessão
 já recusa), **não** a cascata de binding de modelo do ADR 0064 (`sessão >
 agente > área > projeto > workspace`, "o mais específico vence") — os dois
 mecanismos compartilham a palavra "área" e mais nada; não confundir os
-dois é o ponto central do ADR 0109, do mesmo jeito que RN-101/ADR 0063 já
+dois é o ponto central do ADR 0110, do mesmo jeito que RN-101/ADR 0063 já
 separa a visão do owner da visão do membro no relatório de gasto.
 `spent_micros` soma SEMPRE que o ator pertence a uma área (lead ou
 membro, via `areaDo` — função pura, sem tocar banco pra ator sem área),

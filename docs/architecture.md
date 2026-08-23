@@ -509,11 +509,11 @@ project. The unique `(project_id, key)` is what makes seeding idempotent,
 and `max_parallel` (default 2) is the ceiling the lead uses without asking
 — above it, `proposed_action`
 (see [RN-083](business-rules.md#rn-083)). `budget_micros`/`spent_micros`
-(ADR 0109) mirror `max_parallel` on the same row — a spend ceiling that is
+(ADR 0110) mirror `max_parallel` on the same row — a spend ceiling that is
 ADDITIVE to `budgets` (project/session), never a cascade: it is checked
 and incremented independently, by the same `CheckBudgetGateUseCase`/
 `RecordLlmUsageUseCase` that already own project and session spend (see
-[RN-440](business-rules.md#rn-440)). Do not confuse this with the model-
+[RN-443](business-rules.md#rn-440)). Do not confuse this with the model-
 binding cascade of [ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)
 (`session > agent > area > project > workspace`) — that one picks a single
 winner; area budget never does.
