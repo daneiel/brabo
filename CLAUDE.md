@@ -2323,6 +2323,15 @@ chutado (RN-458).
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   únicas exceções de push: tags (bot de release) e .release/gate.json
   (bot do gate).
+- Toda branch cujo PR é mergeado é ARQUIVADA automaticamente
+  (`.github/workflows/archive-merged-branch.yml`) — move de
+  `refs/heads/<nome>` para `refs/archive/<nome>`, nunca apaga: histórico
+  intacto, recuperável com um `git push` de volta. Exceções: dev/qa/main
+  (aparecem como `head` de todo PR de promoção), `gh-pages` (deploy do
+  site, não é branch de feature) e branch de fork. A política mora em
+  `scripts/ci/archive-branch.ts` (testado), ver
+  docs/explanation/branching-policy.md, seção "Merged branches get
+  archived".
 - Comunicação api ↔ engine: eventos via Postgres (transactional outbox
   na api, Oban no engine) + HTTP interno com service token para
   comandos síncronos.

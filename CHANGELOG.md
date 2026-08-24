@@ -6,6 +6,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **ci**: toda branch cujo PR é mergeado passa a ser arquivada
+  automaticamente (`.github/workflows/archive-merged-branch.yml`) — move
+  de `refs/heads/<nome>` para `refs/archive/<nome>`, nunca apaga:
+  histórico intacto, recuperável a qualquer momento. Exceções: `dev`,
+  `qa`, `main` (aparecem como `head` de todo PR de promoção), `gh-pages`
+  (deploy do site de docs, não é branch de feature) e branch de fork. A
+  decisão (quem entra, quem fica de fora) mora em
+  `scripts/ci/archive-branch.ts`, testado. Ver
+  docs/explanation/branching-policy.md, seção "Merged branches get
+  archived".
 - **api,web**: anexar uma pasta LOCAL da própria máquina do usuário a um
   projeto como referência de leitura para os agentes (RN-455..457,
   ADR 0113) — sem o CLI `brabo-runner`, diferente de `execution_mode:
