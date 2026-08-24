@@ -302,7 +302,7 @@ export function addressableAgents(): AgentKey[] {
 /**
  * Nome de exibição do agente; degrada para o id quando ele não está no
  * roster. Movida de `SessionPage.tsx` (faixa de atividade do turno,
- * RN-XXX) para ser a MESMA fonte que `TurnActivityStrip.tsx` usa — evitar
+ * RN-460) para ser a MESMA fonte que `TurnActivityStrip.tsx` usa — evitar
  * duas cópias da mesma regra de fallback.
  */
 export function nomeDoAgente(id: string | undefined): string {

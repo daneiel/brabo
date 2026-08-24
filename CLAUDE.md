@@ -45,6 +45,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Abas agrupadas / PRs project-wide / carrossel do PO | Régua de abas agrupada, aba PRs project-wide, aba Arquitetura extraída, bug do carrossel do PO corrigido | RN-421..424 |
 | Handoff manual / budget por área / pasta local no RAG | Fecham itens do backlog antigo | ADR 0109–0110, 0113 |
 | pnpm bootstrap | Menu de terminal sobre comandos existentes; Reset total | histórico |
+| Faixa de atividade do turno | Narração em tempo real do turno dos 6 conversacionais; teto de iterações não termina mais calado | RN-459/460 |
 
 ## Estado atual e aberto
 
@@ -318,11 +319,16 @@ daqui e o fechamento vai para o histórico.
   Lead, UX Designer e Staff 14 — raciocínio, não conversa leve) — não o
   teto do `ToolLoop` (`Engine.Harness.Iteracoes`), que é dos agentes de
   execução e de gate. Erro de ferramenta é ENTRADA do laço, não fim de
-  linha; teto esgotado é narrado, nunca silêncio; e o agente não anuncia
-  ação que o código não vá executar — o que se promete é decidido pelo
-  teto, nunca por texto fixo (RN-163). O Staff é o único SEM `kickoff/1`
-  — sobe e fica ocioso até a primeira `user_message`, porque não há
-  artefato de sessão para sintetizar uma abertura (ADR 0088).
+  linha; teto esgotado é narrado, nunca silêncio, nos SEIS (RN-163;
+  RN-459 fechou os quatro que ainda terminavam calados — só PO e
+  Criativo tinham corrigido antes); e o agente não anuncia ação que o
+  código não vá executar — o que se promete é decidido pelo teto, nunca
+  por texto fixo (RN-163). O Staff é o único SEM `kickoff/1` — sobe e
+  fica ocioso até a primeira `user_message`, porque não há artefato de
+  sessão para sintetizar uma abertura (ADR 0088). Durante o turno, a
+  tela de Sessão narra em tempo real o que o agente está fazendo numa
+  faixa acima do composer — o fio só recebe a bolha de resposta depois
+  que o turno termina (RN-460).
 - O turno de um agente conversacional pode SUSPENDER esperando aprovação
   humana (ADR 0086, RN-284) — hoje só o Dev Lead, no `propose_execution_plan`.
   `Engine.Agents.TurnoAssincrono` responde ao `from` síncrono na hora
