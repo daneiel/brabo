@@ -121,6 +121,7 @@ const sidebars: SidebarsConfig = {
         'explanation/aceite-providers',
         'explanation/gates',
         'explanation/auditoria-fluxo-vs-codigo',
+        'explanation/historico-de-fases',
       ],
     },
     {

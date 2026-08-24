@@ -179,7 +179,22 @@ const config: Config = {
         // linkando um ADR que atrasou ou foi renumerado depois do snapshot).
         const fonteEhAdr = origemRelativaARaiz.startsWith('adr/');
         const alvoEhAdr = /(^|\/)\d{4}-[^/]+\.md$/.test(url.split('#')[0]);
-        if (!fonteEhReferencia && !alvoEhReferencia && !fonteEhAdr && !alvoEhAdr) {
+        // Mesmo gap, achado ao mover a narrativa histórica do CLAUDE.md para
+        // `docs/explanation/historico-de-fases.md`: arquivo novo em
+        // `explanation/` nasce sem override em `website/i18n/pt-BR/...`, e um
+        // link com ÂNCORA para outro arquivo de `explanation/` (aqui,
+        // `backlog.md#...`) tropeça na compilação `pt-BR` do mesmo jeito que
+        // `adr/`/`reference/` — nenhum link ANCORADO entre dois arquivos de
+        // `explanation/` existia antes deste, e por isso o gap nunca tinha
+        // sido exercitado.
+        const fonteEhExplicacao = origemRelativaARaiz.startsWith('explanation/');
+        if (
+          !fonteEhReferencia &&
+          !alvoEhReferencia &&
+          !fonteEhAdr &&
+          !alvoEhAdr &&
+          !fonteEhExplicacao
+        ) {
           throw new Error(
             `Markdown link quebrado: "${url}" em ${sourceFilePath}. Corrija o link ou aplique o protocolo pathname://.`,
           );
