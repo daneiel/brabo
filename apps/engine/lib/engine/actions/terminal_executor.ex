@@ -12,10 +12,28 @@ defmodule Engine.Actions.TerminalExecutor do
   matar o lado Erlang de uma porta não manda SIGKILL pro processo OS por
   trás dela). Aceitável pra este incremento (demo-grade); resolver isso
   de verdade pediria uma lib tipo MuonTrap, não justificada ainda.
+
+  ## Roteamento pro runner local (projeto `runner`, verificado, conectado —
+  ## RN-423, ADR 0104)
+
+  O comando que chega aqui JÁ foi aprovado pelo pipeline de sempre
+  (`decide()`/`proposed_action` do lado api) — este módulo nunca decide SE
+  um comando pode rodar, só ONDE. Quando o projeto está em modo `runner`
+  (ADR 0072/0104), há TRÊS pré-condições, não uma: workspace VERIFICADO
+  (`workspace_verified_at` não-nulo — o runner confirmou o caminho no host
+  pelo menos uma vez) e runner CONECTADO agora (`Engine.Runners.Registry`).
+  Só com as duas o comando é entregue via canal Phoenix
+  (`Engine.Runners.RunnerRouter`) em vez de `System.cmd` local.
+
+  Faltando qualquer uma das duas, o comando é RECUSADO explicitamente — NUNCA
+  cai no `System.cmd`/bind-mount de `mounted`, que não existe pra um projeto
+  `runner`. O fallback de container só continua valendo para
+  `container`/`mounted`, que nunca tiveram essa pré-condição.
   """
 
   alias Engine.Actions.Workspace
-  alias Engine.Projects.ProjectRepository
+  alias Engine.Projects.{Project, ProjectRepository}
+  alias Engine.Runners.{Registry, RunnerRouter}
 
   @bytes_per_token 4
 
@@ -29,9 +47,91 @@ defmodule Engine.Actions.TerminalExecutor do
       Keyword.get(opts, :timeout_ms) ||
         Application.fetch_env!(:engine, :terminal_action_timeout_ms)
 
-    case Keyword.get(opts, :cwd) do
-      nil -> run_in_project_workspace(project_id, command, timeout)
-      cwd -> execute(cwd, command, timeout)
+    cwd = Keyword.get(opts, :cwd)
+
+    case decisao_de_execucao(project_id) do
+      :rotear_runner ->
+        run_via_runner(project_id, command, cwd, timeout)
+
+      :recusar_nao_verificado ->
+        failed_result(
+          "projeto no modo \"runner\" ainda não teve o workspace confirmado " <>
+            "— rode `brabo-runner --project #{project_id} --dir <pasta>` na " <>
+            "sua máquina antes de tentar de novo (RN-423)."
+        )
+
+      :recusar_runner_desconectado ->
+        failed_result(
+          "workspace já confirmado, mas nenhum runner está conectado a " <>
+            "este projeto agora — rode `brabo-runner --project #{project_id} " <>
+            "--dir <pasta>` na sua máquina e tente de novo."
+        )
+
+      :caminho_de_sempre ->
+        case cwd do
+          nil -> run_in_project_workspace(project_id, command, timeout)
+          cwd -> execute(cwd, command, timeout)
+        end
+    end
+  end
+
+  # `Project.get/1` (não `ProjectRepository`, que não expõe execution_mode)
+  # devolve `nil` pra projeto inexistente/id malformado — degrada pro
+  # caminho de sempre, nunca propaga erro daqui.
+  #
+  # QUATRO saídas, não duas (RN-423, ADR 0104): um projeto `runner` NUNCA cai
+  # no fallback de container — ele não tem bind-mount nenhum, e "cair pro
+  # caminho de sempre" seria rodar às cegas numa pasta que não existe pro
+  # processo do engine. `container`/`mounted` continuam indo pro caminho de
+  # sempre, sem checagem nova nenhuma.
+  defp decisao_de_execucao(project_id) do
+    case Project.get(project_id) do
+      %{execution_mode: "runner", workspace_verified_at: nil} ->
+        :recusar_nao_verificado
+
+      %{execution_mode: "runner"} ->
+        if Registry.connected?(project_id),
+          do: :rotear_runner,
+          else: :recusar_runner_desconectado
+
+      _ ->
+        :caminho_de_sempre
+    end
+  rescue
+    _ -> :caminho_de_sempre
+  end
+
+  defp run_via_runner(project_id, command, cwd, timeout) do
+    efetivo_cwd = cwd || workspace_path_local(project_id)
+
+    case RunnerRouter.exec(project_id, command, efetivo_cwd, timeout) do
+      {:ok, payload} ->
+        build_result(
+          Map.get(payload, "output") || "",
+          Map.get(payload, "exitCode"),
+          Map.get(payload, "timedOut") || false
+        )
+
+      # Race: Registry dizia conectado no início de run/3, mas o runner
+      # caiu entre a checagem e o dispatch (ou nunca respondeu). NÃO cai
+      # pro container (RN-423): um projeto `runner` não tem bind-mount, e
+      # "cair pro caminho de sempre" seria a mesma execução às cegas que
+      # `:recusar_runner_desconectado` já recusa — a mesma recusa aqui.
+      {:error, :not_connected} ->
+        failed_result(
+          "o runner caiu durante a execução — rode `brabo-runner --project " <>
+            "#{project_id} --dir <pasta>` na sua máquina e tente de novo."
+        )
+
+      {:error, :timeout} ->
+        failed_result("timeout do runner após #{timeout}ms", timed_out: true)
+    end
+  end
+
+  defp workspace_path_local(project_id) do
+    case Project.get(project_id) do
+      %{workspace_path: path} when is_binary(path) -> path
+      _ -> nil
     end
   end
 
@@ -96,9 +196,10 @@ defmodule Engine.Actions.TerminalExecutor do
   # A saída de CADA comando fica no histórico do laço e viaja em TODO turno
   # seguinte. Sem teto, um `find` numa árvore grande basta: a execução do
   # hello-limpo morreu com `{413, "request entity too large"}` no turno 18,
-  # antes de escrever uma linha. O estouro é de BYTES da requisição, não de
-  # janela de contexto — a maior chamada bem-sucedida tinha só 28.993 tokens
-  # de entrada.
+  # antes de escrever uma linha. O estouro é de BYTES da requisição contra o
+  # limite de transporte HTTP da própria api do Brabo — não do provider de
+  # LLM, e não de janela de contexto: a maior chamada bem-sucedida tinha só
+  # 28.993 tokens de entrada.
   #
   # `raw_bytes` continua sendo o tamanho REAL produzido, não o truncado: é
   # medição, e mentir nela esconderia exatamente o comportamento que motivou

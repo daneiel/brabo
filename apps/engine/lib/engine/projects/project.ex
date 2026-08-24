@@ -17,11 +17,17 @@ defmodule Engine.Projects.Project do
     field :name, :string
     field :slug, :string
     field :workspace_dir_name, :string
-    # ONDE o código mora (RN-169, ADR 0072). O engine LÊ as duas colunas em vez
-    # de presumir a pasta gerenciada: ele e a api têm que derivar a MESMA raiz,
-    # e a api passou a derivá-la do par (modo, caminho).
-    field :workspace_mode, :string
+    # ONDE o comando executa (RN-169/RN-421, ADR 0072/0104). O engine LÊ as
+    # colunas em vez de presumir a pasta gerenciada: ele e a api têm que
+    # derivar a MESMA raiz, e a api passou a derivá-la do par (modo, caminho).
+    field :execution_mode, :string
     field :workspace_path, :string
+    # `nil` = não verificado. Só ganha sentido em `execution_mode: "runner"`
+    # — é o que `Engine.Actions.TerminalExecutor` checa antes de rotear pro
+    # runner (RN-423): runner conectado com workspace AINDA não verificado
+    # recusa, nunca roteia às cegas nem cai no fallback de container (que
+    # não existe pra um projeto `runner`).
+    field :workspace_verified_at, :utc_datetime
   end
 
   @doc """
@@ -46,12 +52,12 @@ defmodule Engine.Projects.Project do
   decide o que fazer quando vem `nil` (hoje: cai de volta no `project_id`
   cru, o mesmo comportamento de antes desta coluna existir).
 
-  "Localizador" e não mais "nome de pasta" porque desde o ADR 0072 ele é uma
-  de duas coisas, e a consulta resolve qual (RN-169):
+  "Localizador" e não mais "nome de pasta" porque desde o ADR 0072/0104 ele é
+  uma de duas coisas, e a consulta resolve qual (RN-169/RN-421):
 
   - no modo `container`, o NOME da pasta dentro de `PROJECT_WORKSPACES_ROOT`
     (RN-109) — relativo, sem barra inicial;
-  - no modo `local`, o CAMINHO ABSOLUTO da pasta do usuário.
+  - nos modos `mounted`/`runner`, o CAMINHO ABSOLUTO da pasta do usuário.
 
   Os dois casos são distinguíveis sem ambiguidade pela barra inicial: o nome
   de pasta é validado na api contra `^[A-Za-z0-9_-]{1,64}$`, que não admite
@@ -87,8 +93,8 @@ defmodule Engine.Projects.Project do
             where: p.id == ^project_id,
             select:
               fragment(
-                "case when ? = 'local' then ? else coalesce(?, ?::text) end",
-                p.workspace_mode,
+                "case when ? <> 'container' then ? else coalesce(?, ?::text) end",
+                p.execution_mode,
                 p.workspace_path,
                 p.workspace_dir_name,
                 p.id
@@ -108,9 +114,9 @@ defmodule Engine.Projects.Project do
   projeto (ver comentário lá).
 
   A chave conserva o nome antigo, mas o VALOR é o mesmo localizador de
-  `workspace_dir_name/1` (RN-169): caminho absoluto no modo `local`. Tem que
-  ser o mesmo, senão a poda varreria a pasta gerenciada de um projeto cujo
-  worktree vive na pasta do usuário.
+  `workspace_dir_name/1` (RN-169/RN-421): caminho absoluto nos modos
+  `mounted`/`runner`. Tem que ser o mesmo, senão a poda varreria a pasta
+  gerenciada de um projeto cujo worktree vive na pasta do usuário.
   """
   def all_workspace_dirs do
     Repo.all(
@@ -119,8 +125,8 @@ defmodule Engine.Projects.Project do
           id: p.id,
           workspace_dir_name:
             fragment(
-              "case when ? = 'local' then ? else coalesce(?, ?::text) end",
-              p.workspace_mode,
+              "case when ? <> 'container' then ? else coalesce(?, ?::text) end",
+              p.execution_mode,
               p.workspace_path,
               p.workspace_dir_name,
               p.id

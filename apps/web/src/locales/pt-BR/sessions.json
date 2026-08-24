@@ -1,0 +1,184 @@
+{
+  "chatShell": {
+    "segments": {
+      "chat": "Conversar",
+      "search": "Buscar"
+    },
+    "ariaLabel": "Modo do Chat"
+  },
+  "rag": {
+    "scopes": {
+      "docs": "Docs",
+      "adr": "ADR",
+      "session": "Sessões",
+      "local": "Local"
+    },
+    "title": "Chat RAG",
+    "subtitle": "Busca híbrida (vetor + léxico) sobre docs/ADR do repositório, as conversas registradas neste projeto e pastas locais anexadas — nunca código-fonte, nunca Pull Request.",
+    "reindexButton": {
+      "idle": "Reindexar agora",
+      "loading": "Reindexando…"
+    },
+    "coverageError": "Não consegui carregar a cobertura do índice.",
+    "loadingCoverage": "Carregando cobertura…",
+    "reindexSuccessTitle": "Reindexação concluída",
+    "reindexSuccessMessage": "{{docsAdrChunks}} chunk(s) de docs/ADR · {{indexed}} de {{total}} sessão(ões){{embeddingSuffix}}",
+    "embeddingUnavailableSuffix": " · embedding indisponível, indexado só com o sinal léxico",
+    "reindexErrorTitle": "Reindexação falhou",
+    "reindexErrorDefaultMessage": "A api não respondeu. O índice não foi alterado.",
+    "searchPlaceholder": "Buscar no índice (mín. 2 caracteres)",
+    "searchAriaLabel": "Termo de busca",
+    "searchButton": "Buscar",
+    "scopeFilterAriaLabel": "Filtrar por escopo",
+    "allScopes": "todos os escopos",
+    "scopesMarked": "{{count}} escopo(s) marcado(s)",
+    "emptyPrompt": "Digite um termo e busque no índice do projeto.",
+    "searching": "Buscando…",
+    "searchError": "Não consegui buscar agora.",
+    "vectorUnavailable": "Busca só por palavra-chave — embedding indisponível",
+    "noResults": "Nenhum resultado para “{{query}}”.",
+    "attachLocalFolder": {
+      "button": "Anexar pasta local",
+      "modalTitle": "Anexar pasta local",
+      "explanation": "O conteúdo dos arquivos é lido pelo seu navegador e enviado como texto — nenhum caminho da sua máquina é enviado. Cada nova pasta SUBSTITUI a anexada anteriormente.",
+      "chooseFolder": "Escolher pasta…",
+      "reading": "Lendo arquivos…",
+      "emptyFolder": "Nenhum arquivo elegível encontrado nesta pasta (texto/código reconhecido).",
+      "summary": "{{included}} arquivo(s) de “{{folderName}}”, {{skipped}} pulado(s) (grande demais ou binário)",
+      "summaryNoSkipped": "{{included}} arquivo(s) de “{{folderName}}”",
+      "tooManyFiles": "A pasta tem {{count}} arquivo(s) — o teto é {{limit}}. Escolha uma pasta menor.",
+      "tooManyBytes": "O conteúdo da pasta soma mais que o teto permitido. Escolha uma pasta menor.",
+      "confirmButton": "Anexar {{count}} arquivo(s)",
+      "confirmButtonLoading": "Anexando…",
+      "cancelButton": "Cancelar",
+      "successTitle": "Pasta anexada",
+      "successMessage": "{{filesIndexed}} arquivo(s) indexado(s) de “{{folderName}}”{{embeddingSuffix}}",
+      "errorTitle": "Falha ao anexar",
+      "errorDefaultMessage": "A api não respondeu. Nada foi alterado."
+    }
+  },
+  "ragCitation": {
+    "scopeLabels": {
+      "docs": "docs",
+      "adr": "ADR",
+      "session": "sessão",
+      "local": "local"
+    },
+    "scoreTitle": "Score combinado (0.6 vetor + 0.4 léxico)",
+    "relevance": "{{score}} relevância",
+    "signals": "vetor {{vector}} · léxico {{lexical}}",
+    "collapse": "recolher",
+    "expand": "ver trecho completo",
+    "viewInSession": "Ver na sessão"
+  },
+  "ragCoverage": {
+    "noFilesInRepo": "nenhum arquivo no repositório",
+    "filesIndexed": "arquivos indexados",
+    "truncated": "contagem cortada pelo teto",
+    "docsLabel": "docs",
+    "adrLabel": "ADR",
+    "sessionsLabel": "sessões",
+    "noSessionsInProject": "nenhuma sessão no projeto",
+    "sessionsIndexed": "sessões indexadas",
+    "localLabel": "local",
+    "noLocalFolder": "nenhuma pasta anexada",
+    "localFolder": "de “{{folderName}}”",
+    "localAttachedAt": "anexado em {{date}}",
+    "chunksInIndex": "{{count}} chunk(s) no índice",
+    "chunksWithoutVector": "{{count}} sem vetor — indexado(s) só com o sinal léxico"
+  },
+  "sessionFailure": {
+    "noMessage": "O turno falhou e o motivo não foi registrado. Tente de novo; se repetir, o log de eventos tem o payload bruto.",
+    "unknownOrigin": "indeterminada"
+  },
+  "sessionKind": {
+    "consultiva": {
+      "label": "Consultiva",
+      "description": "Só conversa: perguntas, contexto, tirar dúvidas. Nenhum agente é ativado sozinho e ela não entra em execução."
+    },
+    "criativa": {
+      "label": "Criativa",
+      "description": "Para produzir: abre a ideação com o Criativo, que registra as regras de negócio e passa a bola ao PO. É a única que entra em execução."
+    }
+  },
+  "sessionsTab": {
+    "status": {
+      "created": "aguardando",
+      "active": "ativa",
+      "closing": "encerrando",
+      "closed": "fechada",
+      "closedAbnormally": "abortada"
+    },
+    "filters": {
+      "all": "Todas",
+      "active": "Ativas",
+      "closed": "Fechadas",
+      "aborted": "Abortadas"
+    },
+    "kindCopy": {
+      "criativa": {
+        "title": "Criativo",
+        "openButton": "+ Nova ideação",
+        "confirmButton": "Abrir sessão criativa",
+        "empty": "Nenhuma ideação ainda. Abra uma para o Criativo levantar com você as regras de negócio do produto."
+      },
+      "consultiva": {
+        "title": "Chat",
+        "openButton": "+ Nova conversa",
+        "confirmButton": "Abrir sessão consultiva",
+        "empty": "Nenhuma conversa ainda. Abra uma para perguntar e pedir contexto sem ativar agente nenhum."
+      }
+    },
+    "cancelButton": "Cancelar",
+    "renameError": {
+      "title": "Erro",
+      "message": "Não foi possível renomear a sessão"
+    },
+    "createActivationFailed": {
+      "title": "A sessão foi criada, mas não ativou",
+      "message": "Abra a sessão e tente \"Ativar sessão\"."
+    },
+    "createFailed": {
+      "title": "Não foi possível abrir a sessão"
+    },
+    "newSessionForm": {
+      "nameLabel": "Nome (opcional)",
+      "namePlaceholder": "Checkout do carrinho",
+      "nameHint": "A hashtag do id continua aparecendo — o nome só se soma a ela."
+    },
+    "openingButton": "Abrindo…",
+    "filterGroupAriaLabel": "Filtrar sessões por status",
+    "summaryLine": "{{total}} ação(ões) proposta(s) nestas sessões · {{decided}} decidida(s) por você · {{autoApproved}} auto-aprovada(s) pela política · {{pending}} aguardando",
+    "loadError": "Não foi possível carregar as sessões deste projeto.",
+    "filterEmpty": "Nenhuma sessão neste filtro.",
+    "renameInput": {
+      "ariaLabel": "Nome da sessão",
+      "placeholder": "Sem nome — a sessão fica {{hashtag}}"
+    },
+    "rowTitle": "Sessão {{rotulo}} — clique para renomear",
+    "approvalsPending": "{{pending}} aguardando · {{decided}} decidida(s) por você",
+    "approvalsDecided": "{{decided}} decidida(s) por você · {{auto}} auto",
+    "kpis": {
+      "sessionsInProject": {
+        "label": "Sessões no projeto",
+        "detail": "todas as ideações, em qualquer status"
+      },
+      "activeNow": {
+        "label": "Ativas agora",
+        "detail": "de {{total}} no total"
+      },
+      "ideationToCommit": {
+        "label": "Taxa ideação → commit",
+        "value": "—",
+        "detail": "não medido: sessão não é vinculada a commit hoje"
+      },
+      "monthlyCost": {
+        "label": "Custo do mês",
+        "errorValue": "—",
+        "loadingValue": "…",
+        "errorDetail": "não foi possível carregar",
+        "detail": "seu consumo neste projeto, 30 dias"
+      }
+    }
+  }
+}

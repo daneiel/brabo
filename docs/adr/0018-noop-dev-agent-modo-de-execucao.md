@@ -1,89 +1,96 @@
-# ADR 0018 — NoopDevAgent como modo de execução permanente
+# ADR 0018 — NoopDevAgent as a permanent execution mode
 
-- Status: aceito
-- Data: 2026-07-25
-- Fase: 4a (validação da infraestrutura de execução)
+- Status: accepted
+- Date: 2026-07-25
+- Phase: 4a (execution infrastructure validation)
 
-## Contexto
+## Context
 
-O NoopDevAgent existiu na Fase 4a (ADR 0011) como o corpo do `:work` do
-`DevAgentServer` e foi **substituído** pelo agente real na sessão seguinte
-(ADR 0012). Com isso, a única forma de exercitar a infraestrutura de execução
-de ponta a ponta — worktree isolado, identidade `dev-<modulo>[bot]`, pipeline
-de `proposed_actions`, PR — passou a ser rodar o agente REAL, que depende de
-LLM: caro, lento e não determinístico. Um smoke test de infraestrutura não
-pode depender de um modelo.
+The NoopDevAgent existed in Phase 4a (ADR 0011) as the body of the
+`DevAgentServer`'s `:work`, and was **replaced** by the real agent in the
+following session (ADR 0012). With that, the only way to exercise the
+execution infrastructure end to end — an isolated worktree, the
+`dev-<module>[bot]` identity, the `proposed_actions` pipeline, the PR —
+became running the REAL agent, which depends on an LLM: expensive, slow
+and non-deterministic. An infrastructure smoke test can't depend on a
+model.
 
-Esta sessão traz o Noop de volta, agora como um **modo de execução
-permanente** que convive com o agente real.
+This session brings the Noop back, now as a **permanent execution mode**
+that coexists with the real agent.
 
-## Decisões
+## Decisions
 
-### 1. `Engine.Dev.AgentIo` — os efeitos colaterais compartilhados
-Novo módulo com `via/2`, `emit/3`, `claim_task/1`, `propose/3`,
-`propose_commit/2` (a identidade), `propose_push/1`, `propose_pr/3`,
-`persist/1`, `block_task/3` e `worktree_manager/0`, extraídos do
-`DevAgentServer` sem mudança de comportamento. **Os dois servers usam o mesmo
-código**: um Noop que reimplementasse worktree/identidade/pipeline validaria
-uma cópia, não a infraestrutura. `dev_agent_server_test.exs` (12 casos) é a
-rede de segurança da extração — passou sem edição.
+### 1. `Engine.Dev.AgentIo` — the shared side effects
+New module with `via/2`, `emit/3`, `claim_task/1`, `propose/3`,
+`propose_commit/2` (the identity), `propose_push/1`, `propose_pr/3`,
+`persist/1`, `block_task/3` and `worktree_manager/0`, extracted from
+`DevAgentServer` with no behavior change. **Both servers use the same
+code**: a Noop that reimplemented worktree/identity/pipeline would
+validate a copy, not the infrastructure. `dev_agent_server_test.exs` (12
+cases) is the extraction's safety net — it passed with no edits.
 
-### 2. `Engine.Dev.NoopDevAgentServer` — modo, não identidade
-GenServer próprio, mesmo Registry, **mesmo `agent_id`** (`dev-<modulo>`) e
-mesmo estado durável do agente real. Por ser o mesmo agent_id, a autonomia e
-as instruções seedadas pela api valem sem nenhuma mudança. Ciclo: claim →
-worktree → arquivo trivial → commit → push → PR → task `in_review`.
-**Não abre gate** (QA é agente de LLM): o Noop para na PR. `{:correct, _}`
-tem cláusula defensiva que devolve a task com diagnóstico em vez de derrubar
-o processo — `DevAgentServer.correct/3` é um cast no `via/2` e chegaria aqui.
+### 2. `Engine.Dev.NoopDevAgentServer` — a mode, not an identity
+Its own GenServer, same Registry, **same `agent_id`** (`dev-<module>`) and
+the same real agent's durable state. Being the same agent_id, the autonomy
+and instructions seeded by the api apply with no change at all. Cycle:
+claim → worktree → trivial file → commit → push → PR → task `in_review`.
+**Doesn't open a gate** (QA is an LLM agent): the Noop stops at the PR.
+`{:correct, _}` has a defensive clause that returns the task with a
+diagnostic instead of crashing the process — `DevAgentServer.correct/3` is
+a cast on the `via/2` and would land here.
 
-### 3. `dev_agent_states.impl` — o modo é durável
-Coluna nova (`"real"` default). A reidratação é quem escolhe o módulo a
-subir: sem persistir o modo, um Noop voltaria como agente **real** depois de
-um restart do nó — passando a gastar token sem ninguém pedir.
-`DevAgentSupervisor.start_agent/7` recebe `impl`; `server_for/1` mapeia
-modo → módulo (qualquer coisa fora de `"noop"` cai no real — o default
-seguro é o de produção). O aceite da paralelização **herda o `impl`** do
-agente base, pela mesma razão que já herdava os tetos.
+### 3. `dev_agent_states.impl` — the mode is durable
+New column (default `"real"`). Rehydration is what picks the module to
+bring up: without persisting the mode, a Noop would come back as a
+**real** agent after a node restart — starting to spend tokens with
+nobody asking for it. `DevAgentSupervisor.start_agent/7` receives `impl`;
+`server_for/1` maps mode → module (anything other than `"noop"` falls
+through to the real one — the safe default is the production one). The
+parallelization acceptance **inherits the `impl`** of the base agent, for
+the same reason it already inherited the ceilings.
 
-### 4. Aceite da paralelização passa a seedar o subagente extra
-Correção de um bug real: `AcceptParallelizationUseCase` não criava linha de
-`agent_autonomy` nem instrução pro `dev-<modulo>-2`. Sem autonomia, `decide()`
-cai no default `require_approval` — o "aceite de um clique" virava três
-aprovações manuais por task, e o critério de aceite ("ver o terceiro
-trabalhando") não fechava. Agora seeda instrução + `auto_approve` nos mesmos
-`DEV_AUTO_GIT_ACTIONS` do agente base, **antes** de chamar o engine.
-`git_merge` continua de fora.
+### 4. Accepting parallelization now seeds the extra subagent
+A fix for a real bug: `AcceptParallelizationUseCase` wasn't creating an
+`agent_autonomy` row nor an instruction for `dev-<module>-2`. Without
+autonomy, `decide()` falls back to the `require_approval` default — the
+"one-click acceptance" turned into three manual approvals per task, and
+the acceptance criterion ("see the third one working") didn't close. Now
+it seeds instruction + `auto_approve` on the same `DEV_AUTO_GIT_ACTIONS`
+as the base agent, **before** calling the engine. `git_merge` stays
+excluded.
 
-### 5. Bare repos montados RW pro engine no Compose
-Era `git_local_repos:/data/git-repos:ro`. Desde a Fase 4a o executor
-`git_push` roda NO ENGINE e empurra a branch do worktree pro bare repo — com
-o mount read-only o push morre em `remote unpack failed: unable to create
-temporary object directory` e a PR do dev agent nunca abre. O `:ro` era uma
-premissa da Fase 1 (o engine só fazia checkout) que a Fase 4a invalidou sem
-que ninguém percebesse: o demo do critério de aceite **não passava** com a
-configuração anterior.
+### 5. Bare repos mounted RW for the engine in Compose
+It used to be `git_local_repos:/data/git-repos:ro`. Since Phase 4a the
+`git_push` executor runs ON THE ENGINE and pushes the worktree branch to
+the bare repo — with the mount read-only, the push dies with `remote
+unpack failed: unable to create temporary object directory` and the dev
+agent's PR never opens. The `:ro` was a Phase 1 assumption (the engine
+only did checkouts) that Phase 4a invalidated without anyone noticing:
+the acceptance criterion demo **did not pass** with the previous
+configuration.
 
-## Consequências
+## Consequences
 
-- `POST /projects/:id/execution/activate` aceita `devAgentImpl: 'real' |
-  'noop'` (omitido = `real`). A UI **não muda** — o modo Noop é ferramenta de
-  validação, não recurso de produto; o demo o aciona via script.
-- `pnpm --filter api demo:noop-execution` roda o critério de aceite inteiro
-  contra a stack do Compose.
-- Testes novos: `noop_dev_agent_server_test.exs` (ciclo, identidade, ausência
-  de LLM, worktree falhando, 2 agentes em paralelo),
-  `dev_rehydrator_test.exs` (o modo sobrevive ao restart, `:work` não é
-  redisparado, idempotência) e `git_executor_test.exs` (a identidade no
-  **git de verdade**: author bot + `Co-authored-by`, worktrees isolados) —
-  este último cobria uma lacuna: até agora só se afirmava o payload da
-  proposta, nunca o commit resultante.
+- `POST /projects/:id/execution/activate` accepts `devAgentImpl: 'real' |
+  'noop'` (omitted = `real`). The UI **doesn't change** — the Noop mode is
+  a validation tool, not a product feature; the demo triggers it via a
+  script.
+- `pnpm --filter api demo:noop-execution` runs the whole acceptance
+  criterion against the Compose stack.
+- New tests: `noop_dev_agent_server_test.exs` (cycle, identity, absence of
+  an LLM, worktree failing, 2 agents in parallel),
+  `dev_rehydrator_test.exs` (the mode survives a restart, `:work` isn't
+  re-triggered, idempotency) and `git_executor_test.exs` (the identity
+  against **real git**: bot author + `Co-authored-by`, isolated
+  worktrees) — the latter covered a gap: until now only the proposal
+  payload was asserted, never the resulting commit.
 
-## Escopo & assunções
+## Scope & assumptions
 
-O Noop não substitui o agente real em nada: não lê contexto de task, não roda
-suite, não passa por gates. Serve pra responder "a infraestrutura de execução
-está de pé?" sem acender um LLM. A sugestão de paralelização continua sendo
-`countClaimableByModule >= 2`, não um grafo de dependências de tasks (não há
-dependência entre tasks no schema) — segue em aberto, como ADR 0017 já
-registrava.
+The Noop doesn't replace the real agent in any way: it doesn't read task
+context, doesn't run the suite, doesn't go through gates. It exists to
+answer "is the execution infrastructure standing?" without lighting up an
+LLM. The parallelization suggestion is still
+`countClaimableByModule >= 2`, not a task-dependency graph (there's no
+dependency between tasks in the schema) — it remains open, as ADR 0017
+already recorded.

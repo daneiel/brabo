@@ -185,11 +185,14 @@ defmodule Engine.Agents.PoServerTest do
 
       assert "listar_regras_de_negocio" in nomes
       assert "listar_backlog" in nomes
+      # RN-407: a terceira leitura do PO — funil/DORA parcial do projeto.
+      assert "listar_metricas_de_produto" in nomes
       # RN-165: perguntar é uma saída, e só existe se estiver na lista.
       assert "ask_structured_questions" in nomes
 
       indice = fn nome -> Enum.find_index(nomes, &(&1 == nome)) end
       assert indice.("listar_regras_de_negocio") < indice.("create_epic")
+      assert indice.("listar_metricas_de_produto") < indice.("create_epic")
     end
 
     test "listar_regras_de_negocio roda e injeta o resultado como tool-result", %{state: state} do
@@ -235,6 +238,47 @@ defmodule Engine.Agents.PoServerTest do
 
       tool_msgs = Enum.filter(new_state.messages, &(&1["role"] == "tool"))
       assert Enum.any?(tool_msgs, &String.contains?(&1["content"], "ÉPICO id=ep-1"))
+    end
+
+    test "listar_metricas_de_produto roda e injeta o resultado como tool-result", %{
+      state: state
+    } do
+      Process.put(:fake_product_metrics, %{
+        "project" => %{"id" => "p1", "name" => "exp003"},
+        "totalActionsConsidered" => 1,
+        "funnel" => %{
+          "etapas" => [
+            %{"etapa" => "sessão produziu commit", "sessoes" => 1, "taxaDaEtapaAnterior" => nil}
+          ],
+          "sessoesComCommit" => ["s1"],
+          "sessoesComPr" => [],
+          "sessoesComMerge" => []
+        },
+        "leadTimes" => %{"perSession" => [], "averageMs" => nil},
+        "deploymentFrequency" => []
+      })
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("listar_metricas_de_produto", %{}),
+        FakeEngineApiClient.final_response("vi o funil")
+      ])
+
+      assert {:reply, :ok, new_state} =
+               sync_call(PoServer, {:user_message, "o produto está entregando?"}, state)
+
+      assert_received {:product_metrics_listed, _}
+
+      tool_msgs = Enum.filter(new_state.messages, &(&1["role"] == "tool"))
+
+      assert Enum.any?(
+               tool_msgs,
+               &String.contains?(&1["content"], "Funil de entrega e DORA parcial")
+             )
+
+      # As três ausências permanentes viajam SEMPRE no texto (RN-407) —
+      # nunca só nos números, que sozinhos deixariam o modelo concluir por
+      # omissão que não há lacuna.
+      assert Enum.any?(tool_msgs, &String.contains?(&1["content"], "Não medido, de propósito"))
     end
   end
 

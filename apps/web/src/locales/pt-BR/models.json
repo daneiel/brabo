@@ -1,0 +1,155 @@
+{
+  "groupLabel": {
+    "local": "Local",
+    "direct": "APIs diretas",
+    "hub": "Hubs"
+  },
+  "upstreamLabel": {
+    "outros": "Sem fabricante declarado"
+  },
+  "facets": {
+    "toolCalling": {
+      "label": "tool calling",
+      "help": "Só os que um agente consegue usar (RN-040)."
+    },
+    "vision": {
+      "label": "lê imagem",
+      "help": "Aceita imagem na ENTRADA — print, diagrama, PDF renderizado."
+    },
+    "reasoning": {
+      "label": "thinking",
+      "help": "Expõe raciocínio explícito antes da resposta."
+    },
+    "imagem": {
+      "label": "gera imagem",
+      "help": "PRODUZ imagem — eixo diferente de saber lê-la."
+    }
+  },
+  "uses": {
+    "codigo": "código",
+    "documentacao": "documentação",
+    "analise": "análise",
+    "imagem": "imagem",
+    "conversa": "conversa"
+  },
+  "providerLabel": {
+    "ollama": "Ollama (local)",
+    "anthropic": "Anthropic",
+    "openai": "OpenAI",
+    "openrouter": "OpenRouter",
+    "nvidia-nim": "NVIDIA NIM",
+    "together": "Together AI",
+    "deepinfra": "DeepInfra",
+    "bitdeer": "Bitdeer",
+    "vultr": "Vultr"
+  },
+  "price": {
+    "free": "grátis",
+    "per1m": "por 1M"
+  },
+  "contextWindow": {
+    "thousands": "{{value}}k ctx",
+    "exact": "{{value}} ctx"
+  },
+  "badges": {
+    "active": "ativo",
+    "inactive": "desativado",
+    "unavailable": "indisponível no provider",
+    "toolCalling": "tool calling",
+    "readsImage": "lê imagem",
+    "thinking": "thinking",
+    "generatesImage": "gera imagem",
+    "manualPricing": "preço manual"
+  },
+  "catalog": {
+    "title": "Catálogo de modelos",
+    "eyebrow": "curadoria por workspace",
+    "subtitle": "O que o sync descobre entra desativado. Só o que você ativar aparece no seletor de modelos.",
+    "expandAll": "Expandir tudo",
+    "collapseAll": "Minimizar tudo",
+    "syncing": "Sincronizando…",
+    "updateButton": "Atualizar catálogo",
+    "usesFilterTitle": "Modelos que este workspace marcou como \"{{use}}\"",
+    "countOfTotal": "{{visible}} de {{total}}",
+    "filteredEmpty": {
+      "prefix": "Nenhum modelo atende a tudo que está marcado. Capability não declarada pelo provider conta como ausente, e uso é o que ",
+      "thisWorkspace": "este workspace",
+      "suffix": " marcou — desligue um filtro para ver o resto."
+    },
+    "missingCatalog": {
+      "prefix": "Você tem credencial de ",
+      "middle_one": " e nenhum modelo dele no catálogo. Cadastrar a chave não descobre modelo — clique em ",
+      "middle_other": " e nenhum modelo deles no catálogo. Cadastrar a chave não descobre modelo — clique em ",
+      "suffix": " para buscá-los no provider."
+    },
+    "toasts": {
+      "syncSuccess": "Catálogo sincronizado",
+      "syncErrorTitle": "Sync falhou",
+      "syncErrorMessage": "A api não respondeu. Nada foi alterado no catálogo.",
+      "activated": "Modelos ativados",
+      "deactivated": "Modelos desativados",
+      "saveError": "Não foi possível salvar",
+      "usesUpdated": "Usos atualizados"
+    },
+    "empty": "Nenhum modelo no catálogo. Cadastre uma credencial de provider e atualize.",
+    "markedHidden_one": "{{count}} marcado",
+    "markedHidden_other": "{{count}} marcados",
+    "batchBar": {
+      "selectedCount_one": "{{count}} selecionado",
+      "selectedCount_other": "{{count}} selecionados",
+      "activate": "Ativar",
+      "deactivate": "Desativar",
+      "markAs": "marcar como",
+      "applyUsesTitle": "Substitui os usos dos modelos marcados — não soma aos que já tinham",
+      "applyUses": "Aplicar usos",
+      "clearUses": "Limpar usos"
+    },
+    "syncReport": {
+      "skippedNoCapability": "sem listagem de catálogo",
+      "skippedNoCredential": "sem credencial cadastrada",
+      "failed": "falhou · origem {{origin}}",
+      "summary": "{{discovered}} novo(s) · {{reencountered}} de volta · {{missing}} sumido(s)"
+    }
+  },
+  "picker": {
+    "filterFitForAgents": "aptos para agentes",
+    "noModelsRegistered": "Nenhum modelo cadastrado",
+    "noToolCallingModels": "Nenhum modelo faz tool calling nativo. Desmarque o filtro para ver os demais.",
+    "selectModel": "Selecionar modelo"
+  },
+  "spend": {
+    "title": "Gasto das suas chaves",
+    "eyebrow": "só você vê",
+    "subtitlePrefix": "Os agentes de todos os projetos deste workspace gastam as ",
+    "subtitleYours": "suas",
+    "subtitleSuffix": " credenciais. Aqui está o que saiu de cada uma, por mês.",
+    "loading": "Somando…",
+    "error": "Não consegui carregar o gasto agora. O consumo continua registrado — isto é só a leitura.",
+    "empty": "Nenhuma chamada de LLM registrada nos últimos {{months}} meses.",
+    "totalLabel": "Total nos últimos {{months}} meses",
+    "headers": {
+      "provider": "PROVIDER",
+      "agents": "AGENTES",
+      "youInChat": "VOCÊ NO CHAT",
+      "calls": "CHAMADAS",
+      "total": "TOTAL"
+    },
+    "credentialNotRegistered": "chave não cadastrada",
+    "callsCount_one": "({{count}} chamada)",
+    "callsCount_other": "({{count}} chamadas)",
+    "currency": {
+      "belowCent": "< {{value}}"
+    }
+  },
+  "credentialStep": {
+    "hint": "Provisionar no {{provider}} exige um token de acesso pessoal (PAT). Selecione um já cadastrado ou adicione um novo — o token é cifrado ao salvar e nunca é reexibido. A verificação fica nas configurações do projeto, sobre o token já guardado.",
+    "credLabel": "{{provider}} conectado",
+    "credMeta": "desde {{time}}",
+    "fieldLabel": "Novo token do {{provider}}",
+    "placeholder": "ghp_… / glpat-…",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "addNewToken": "Adicionar novo token"
+  }
+}

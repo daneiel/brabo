@@ -1,0 +1,1 @@
+{"parameters":[{"name":"provider","required":true,"in":"path","schema":{"enum":["github","gitlab"],"type":"string"}},{"name":"code","required":true,"in":"query","schema":{"type":"string"}},{"name":"state","required":true,"in":"query","schema":{"type":"string"}}]}

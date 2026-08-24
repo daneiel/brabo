@@ -1,281 +1,399 @@
-# Superfície exposta da api
+# Api's Exposed Surface
 
-Toda rota registrada, com a classificação de autenticação e a justificativa das
-que ficam abertas. Decisões em
+Every registered route, with its authentication classification and the
+justification for the ones left open. Decisions in
 [ADR 0027](adr/0027-fase5-backup-hardening-release.md).
 
-> **Este documento é a fonte de verdade de um teste**, não uma cópia dele.
-> `apps/api/test/interfaces/route-surface.spec.ts` sobe a aplicação, enumera as
-> rotas **registradas em runtime** e compara com a tabela abaixo. Rota nova sem
-> linha aqui **quebra o teste**; linha com classificação diferente da anotação
-> real **quebra o teste**; linha órfã (que não corresponde a rota nenhuma)
-> **quebra o teste**. Não dá para a documentação envelhecer em silêncio.
+> **This document is the source of truth for a test**, not a copy of one.
+> `apps/api/test/interfaces/route-surface.spec.ts` boots the application,
+> enumerates the routes **registered at runtime**, and compares them
+> against the table below. A new route with no row here **fails the
+> test**; a row whose classification differs from the real annotation
+> **fails the test**; an orphan row (matching no route at all) **fails
+> the test**. The documentation can't go stale in silence.
 
-## Classificações
+## Classifications
 
-| valor | o que significa |
+| value | what it means |
 |---|---|
-| `public` | `@Public()` — sem token. Cada uma justificada abaixo |
-| `engine-service` | `EngineServiceGuard`: `X-Brabo-Service-Token` igual ao segredo compartilhado. É a superfície interna api↔engine, fora do JWT |
-| `role:<papel>` | autenticada e restrita pelo RBAC do domínio (`@RequireRole`) |
-| `jwt` | autenticada, sem papel exigido na rota — o escopo vem do próprio recurso |
+| `public` | `@Public()` — no token. Each one justified below |
+| `engine-service` | `EngineServiceGuard`: `X-Brabo-Service-Token` matching the shared secret. This is the internal api↔engine surface, outside the JWT |
+| `role:<role>` | authenticated and restricted by the domain's RBAC (`@RequireRole`) |
+| `jwt` | authenticated, no role required on the route — the scope comes from the resource itself |
 
-## As doze rotas públicas
+## The fourteen public routes
 
-Eram quatro até a Fase 6. A Fase 7a acrescentou oito de uma vez — o auth
-first-party — e cada uma está justificada abaixo. Abrir mais alguma continua
-exigindo mexer na asserção de `route-surface.spec.ts`, que lista as públicas
-literalmente para forçar a conversa.
+There were four until Phase 6. Phase 7a added eight at once — first-party
+auth — and ADR 0084 added two more, social login. Each one is justified
+below. Opening any more still requires touching the assertion in
+`route-surface.spec.ts`, which lists the public ones literally to force
+the conversation.
 
-### Infraestrutura
+### Infrastructure
 
-**`GET /live`** — liveness. Não toca no banco de propósito: responde enquanto o
-processo estiver vivo. Exigir token aqui faria o kubelet reiniciar o pod ao
-primeiro problema no caminho de autenticação, transformando degradação em queda
-total.
+**`GET /live`** — liveness. Doesn't touch the database on purpose:
+responds as long as the process is alive. Requiring a token here would
+make kubelet restart the pod at the first hiccup in the auth path,
+turning a degradation into a full outage.
 
-**`GET /health`** — readiness, com `select 1`. Mesmo raciocínio: é o kubelet
-quem chama, e ele não carrega token. Revela apenas se o banco responde.
+**`GET /health`** — readiness, with `select 1`. Same reasoning: kubelet
+is the caller, and it carries no token. Reveals only whether the
+database responds.
 
-**`GET /metrics`** — scrape do Prometheus, que também não carrega token nenhum.
-Exposição controlada por REDE, não por auth: a NetworkPolicy só
-libera o namespace `monitoring`, e o Ingress de produção bloqueia o caminho.
-Sem `@Public()` o alvo apareceria como `down` com todo o resto verde.
+**`GET /metrics`** — Prometheus scrape, which also carries no token at
+all. Exposure controlled by NETWORK, not by auth: the NetworkPolicy only
+opens it to the `monitoring` namespace, and the production Ingress
+blocks the path. Without `@Public()` the target would show as `down`
+while everything else stays green.
 
-**`GET /git/oauth/:provider/callback`** — o retorno do OAuth de GitHub/GitLab.
-O browser do usuário chega aqui vindo do provider, sem sessão da api. Não é
-irrestrita: o parâmetro `state` é validado por HMAC
-(`GIT_OAUTH_STATE_SECRET`), e sem `state` válido a chamada é recusada.
+**`GET /git/oauth/:provider/callback`** — the GitHub/GitLab OAuth
+return. The user's browser lands here coming from the provider, with no
+api session. It isn't unrestricted, though: the `state` parameter is
+validated by HMAC (`GIT_OAUTH_STATE_SECRET`), and without a valid
+`state` the call is refused.
 
-Essa garantia vale exatamente o quanto vale a chave, e por isso ela deixou de
-ter default: em produção a api **não sobe** com a chave de exemplo do
-repositório, que é pública (ADR 0059, [RN-093](business-rules.md#rn-093)). Com
-a chave conhecida, esta rota volta a ser irrestrita na prática — qualquer um
-assina um `state` para o projeto que quiser.
+That guarantee is worth exactly as much as the key, which is why it
+stopped having a default: in production the api **refuses to boot** with
+the repository's example key, which is public (ADR 0059,
+[RN-093](business-rules.md#rn-093)). With a known key, this route goes
+back to being unrestricted in practice — anyone can sign a `state` for
+whichever project they want.
 
-### Auth first-party
+### First-party auth
 
-As sete rotas de `/auth/*` mais o JWKS. **Todas precisam ser públicas pela
-mesma razão estrutural:** são o caminho por onde se OBTÉM um access token, e o
-`JwtAuthGuard` global exige um. Uma rota de auth atrás do guard pediria a
-credencial que ela mesma emite. O `logout` é a única que poderia ser
-autenticada, e não é de propósito: ele já carrega a credencial que lhe
-interessa — o refresh no cookie, com o par de CSRF — e deslogar precisa
-funcionar mesmo com o access token expirado.
+The seven `/auth/*` routes plus JWKS. **All of them need to be public for
+the same structural reason:** they're the path through which an access
+token is OBTAINED, and the global `JwtAuthGuard` requires one. An auth
+route behind the guard would ask for the credential it itself issues.
+`logout` is the only one that could be authenticated, and isn't, on
+purpose: it already carries the credential it cares about — the refresh
+in the cookie, with its CSRF pair — and logging out needs to work even
+with an expired access token.
 
-> **O que protege estas rotas não é o rate limit.** O `RateLimitGuard` libera
-> rota `@Public()` — de propósito, para não estrangular `/health` até o kubelet
-> reiniciar o pod. Quem segura esta superfície é o **lockout progressivo** por
-> e-mail e por IP, dentro dos casos de uso. Não é reforço opcional: é a única
-> defesa que existe aqui. Ver
-> [RN-030](business-rules.md#rn-030) e [RN-031](business-rules.md#rn-031).
+> **What protects these routes isn't the rate limit.** `RateLimitGuard`
+> exempts `@Public()` routes — on purpose, so as not to strangle
+> `/health` until kubelet restarts the pod. What holds this surface is
+> **progressive lockout** by email and by IP, inside the use cases. It's
+> not an optional reinforcement: it's the only defense that exists here.
+> See
+> [RN-030](business-rules.md#rn-030) and [RN-031](business-rules.md#rn-031).
 
-**`POST /auth/register`** — cadastro. Responde `202` tanto para endereço novo
-quanto para já cadastrado; no segundo caso nada é criado e o dono do endereço
-recebe um aviso. Um `409 Conflict`, que é o que o bom senso REST pediria,
-entregaria a lista de usuários a quem tiver uma wordlist.
+**`POST /auth/register`** — sign-up. Responds `202` for both a new
+address and one already registered; in the second case nothing is
+created and the address's owner gets a notice. A `409 Conflict`, which is
+what good REST sense would ask for, would hand the user list to anyone
+with a wordlist.
 
-**`POST /auth/login`** — autenticação. E-mail inexistente, senha errada e conta
-bloqueada devolvem a **mesma** resposta 401, e gastam o **mesmo** tempo (o ramo
-sem conta verifica contra um hash dummy de parâmetros idênticos).
+**`POST /auth/login`** — authentication. A nonexistent email, a wrong
+password, and a locked account all return the **same** 401 response, and
+take the **same** time (the no-account branch checks against a dummy
+hash with identical parameters).
 
-**`POST /auth/refresh`** — rotação. O próprio refresh token é a credencial, e
-por isso a rota não pode exigir outra.
+**`POST /auth/refresh`** — rotation. The refresh token itself is the
+credential, so the route can't require another one.
 
-**`POST /auth/logout`** — revoga a família do token apresentado. Sempre `204`,
-inclusive para token desconhecido: responder 401 aqui seria um oráculo de
-validade de token.
+**`POST /auth/logout`** — revokes the presented token's family. Always
+`204`, even for an unknown token: answering 401 here would be a
+token-validity oracle.
 
 **`POST /auth/verify-email`**, **`POST /auth/request-password-reset`**,
-**`POST /auth/reset-password`** — fluxos de conta. Quem chega neles ainda não
-tem sessão, por definição. A credencial é o token de uso único que veio por
-e-mail; link inválido, expirado e já usado têm resposta idêntica.
+**`POST /auth/reset-password`** — account flows. Whoever reaches them has
+no session yet, by definition. The credential is the single-use token
+that came by email; an invalid, expired, or already-used link all get an
+identical response.
 
-**`GET /.well-known/jwks.json`** — a metade **pública** do par Ed25519 que
-assina os access tokens. Mesmo raciocínio de `/metrics`: quem consome não tem
-token, e exigir um seria pedir credencial para poder validar credencial.
-Publicar chave pública é o propósito do formato — o que não pode sair daqui é
-o componente `d` da JWK, travado por teste.
+**`GET /.well-known/jwks.json`** — the **public** half of the Ed25519
+pair that signs access tokens. Same reasoning as `/metrics`: the
+consumer has no token, and requiring one would mean asking for a
+credential in order to validate a credential. Publishing the public key
+is the format's whole purpose — what can never leave here is the JWK's
+`d` component, locked down by a test.
 
-## Notas
+### Social login (ADR 0084)
 
-- **`POST /workspaces/:workspaceId/projects` decide onde o agente vai escrever,
-  e por isso é rota de superfície de segurança, não só de cadastro**
-  ([ADR 0072](adr/0072-projeto-local-ou-container.md),
-  [RN-169](business-rules.md#rn-169)/[RN-170](business-rules.md#rn-170)). O
-  corpo ganhou `workspaceMode` (`container` — o default e o comportamento de
-  sempre — ou `local`) e `workspacePath`. No modo `local` o caminho absoluto
-  informado vira a **raiz do escopo de terminal** do ADR 0055: o que se digita
-  aqui é o que o agente pode ler e escrever. Nenhuma rota nova, e nenhuma
-  mudança de papel (`RequireRole('maintainer')`, como já era) — o que mudou é
-  o alcance do que a rota concede.
+**`GET /auth/oauth/:provider/start`** — redirects straight to the
+provider (GitHub/GitLab). Public for the same structural reason as the
+other seven: it's the entry point itself, before any session exists. The
+`state` it generates is HMAC-signed with its OWN purpose
+(`signSocialOauthState`/[RN-273](business-rules.md#rn-273)) — never the
+same `state` as `GET /git/oauth/:provider/callback` above, even though
+both routes sign with the SAME `GIT_OAUTH_STATE_SECRET` key. The
+`purpose` field in the payload is what keeps a `state` from one flow
+being accepted by the other's verifier.
 
-  A validação está toda na criação (RN-170: absoluto, sem `..`, existente,
-  gravável de dentro do container, nunca raiz nem pasta de sistema, nunca
-  sobreposto ao checkout do Brabo nos dois sentidos) e a recusa é `400` com a
-  linha de compose que resolve. O modo é **congelado** depois: `UpdateProjectDto`
-  omite os dois campos de propósito, senão `PartialType(CreateProjectDto)` os
-  exporia num `PATCH` sem guarda nenhuma. O predicado léxico ainda roda a cada
-  derivação da raiz, porque o único jeito de burlar a criação é escrever direto
-  no banco.
-- **`GET /`** é o "Hello World!" do scaffold do NestJS
-  (`src/app.controller.ts`). Está atrás do guard e não vaza nada, mas não serve
-  a nada — candidata a remoção. Ficou registrada aqui em vez de removida por
-  ser decisão de produto, fora do escopo desta sessão.
-- **`GET /internal/projects/:projectId/git-remote` é a única rota do produto que
-  devolve um segredo DECIFRADO** — o token de git do owner do workspace
-  ([ADR 0056](adr/0056-o-engine-trabalha-em-repositorio-remoto.md)). Ela existe
-  porque o engine trabalha no sistema de arquivos e não tem a chave mestra;
-  replicá-la no engine dobraria o raio de explosão do segredo mais sensível do
-  produto. Duas propriedades a mantêm defensável: o `origin` que ela devolve é
-  **limpo** (a credencial vem em campo separado, e nunca embutida na URL), e
-  quem consome tem a obrigação de injetá-la por invocação, nunca em arquivo —
-  ver `Engine.Actions.GitAuth` e o porquê disso na
-  [RN-076](business-rules.md#rn-076). Se algum dia esta rota passar a devolver
-  a URL já autenticada, o token vai parar no `.git/config`, dentro da pasta
-  onde o dev agent tem leitura auto-aprovada.
-- **As duas rotas de leitura do PO** — `GET /internal/projects/:projectId/business-rules`
-  e `GET /internal/projects/:projectId/backlog`
-  ([RN-164](business-rules.md#rn-164)) — não devolvem segredo nenhum e **não
-  aceitam nada além do id do projeto**: sem termo de busca, sem paginação, sem
-  filtro. É de propósito. Uma rota de leitura para agente é uma superfície que
-  o modelo escolhe chamar, e parâmetro é onde o modelo escreve o que quiser;
-  aqui não há onde escrever. O escopo é fechado no projeto pelo caminho, e o
-  custo por chamada é constante (três leituras no backlog, duas nas regras).
-- **As rotas `engine-service` não são "internas" por convenção de nome.** O que
-  as protege é o `EngineServiceGuard` comparando o `X-Brabo-Service-Token` com
-  o segredo compartilhado em tempo constante, mais a NetworkPolicy. O prefixo
-  `/internal` é sinalização para humanos. Elas ficam **fora do JWT** por
-  `@ServiceRoute()`: o token de usuário não serve aqui e o de serviço não serve
-  em nenhuma outra rota — os dois mecanismos nunca se sobrepõem
-  ([RN-035](business-rules.md#rn-035)).
-- **`/docs` e `/docs-json` NÃO estão na tabela, e isso é uma lacuna
-  conhecida.** O Swagger UI é montado por `SwaggerModule.setup()` no nível do
-  Express, não como controller, e o teste enumera por `DiscoveryService` — ele
-  estruturalmente não as vê. As duas só existem com `NODE_ENV !== 'production'`
-  (`main.ts`), são públicas, e servem o mesmo documento que a
-  [referência gerada](reference/api/brabo-api) publica. Registrado aqui em vez
-  de omitido: o que o teste não alcança precisa estar na prosa.
-- **`GET /projects/:projectId/agent-areas` passou a devolver dados de verdade,
-  e a classificação não mudou** — continua `role:developer`, enquanto o `PATCH`
-  do teto continua `role:maintainer`. Até a FASE 18 a tabela `agent_areas`
-  nunca era gravada e a rota respondia `[]` a todo mundo, o que fazia a
-  classificação parecer folgada por acidente e não por decisão. Com a área
-  nascendo junto com o projeto ([RN-094](business-rules.md#rn-094)), o corte
-  volta a ser o que a FASE 14d quis: **ler** o teto é trabalho de quem executa;
-  **mudá-lo** é decidir quanto o produto gasta sem perguntar, e por isso exige
-  o mesmo papel de ativar a execução.
-- **As quatro rotas `/projects/:projectId/code/*` são `role:viewer` e SÓ
-  LEITURA** (FASE 26b). Ver o código do projeto é a mesma permissão que ver o
-  projeto — o mesmo corte de `GET /projects/:id/git/repository`. Três coisas
-  fazem essa folga aparente ser decisão e não descuido:
-  - **não há verbo de escrita no controller**, e não pode haver: a aba Code é de
-    leitura, e escrita é efeito externo, que nasce `proposed_action` e é fase
-    seguinte. Um `@Post` neste arquivo é mudança de fase, não de rota;
-  - **o caminho é contido em UM lugar** ([RN-095](business-rules.md#rn-095)),
-    pela mesma checagem central da [RN-092](business-rules.md#rn-092) — e a
-    contenção importa aqui mais que o papel, porque nos providers remotos o
-    caminho vira segmento de URL da API do provider e um `../` troca de
-    **endpoint**, não de arquivo;
-  - **a credencial gasta é a do owner do workspace**
+**`GET /auth/oauth/:provider/callback`** — receives the provider's
+return. Same reasoning as the git-connection callback: the browser
+arrives with no session, `state` is HMAC-verified, and the route never
+returns JSON — it always redirects, to `WEB_ORIGIN/` on success (with
+the session cookies already written) and to
+`WEB_ORIGIN/login?oauth_error=1` on failure, without detailing the
+reason in the URL.
+
+## Notes
+
+- **`POST /workspaces/:workspaceId/projects` decides where the agent will
+  write, and that's why it's a security-surface route, not just a
+  registration one**
+  ([ADR 0072](adr/0072-projeto-local-ou-container.md)/
+  [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md),
+  [RN-169](business-rules.md#rn-169)/[RN-421](business-rules.md#rn-421)/
+  [RN-422](business-rules.md#rn-422)). The body gained `executionMode`
+  (`container` — the default and the always-been behavior —, `mounted`, the
+  old `local`, renamed, or `runner`) and `workspacePath`. In `mounted`/
+  `runner` the absolute path supplied becomes the **terminal scope root**
+  of ADR 0055: what's typed here is what the agent can read and write. No
+  new route, and no role change (`RequireRole('maintainer')`, as it already
+  was) — what changed is the reach of what the route grants.
+
+  Validation diverges across the TWO modes that aren't `container`
+  (RN-422): `mounted` still touches disk at creation time (absolute, no
+  `..`, existing, writable from inside the container, never root or a
+  system folder, never overlapping the Brabo checkout in either direction),
+  with a `400` refusal and the compose line that resolves it; `runner`
+  validates only the LEXICAL form — the same list of prohibitions, without
+  touching disk — because only the runner, running on the real host, has
+  the authority to confirm the folder exists (RN-423, see
+  `POST /internal/projects/:projectId/workspace-verification` below). The
+  mode is **frozen** afterward: `UpdateProjectDto` deliberately omits both
+  fields, otherwise `PartialType(CreateProjectDto)` would expose them on a
+  `PATCH` with no guard at all. The lexical predicate still runs on every
+  derivation of the root — on READS too, not just on creation — because the
+  only way to bypass creation is to write straight to the database.
+- **`GET /`** is the NestJS scaffold's "Hello World!"
+  (`src/app.controller.ts`). It's behind the guard and leaks nothing, but
+  serves no purpose — a removal candidate. It stayed recorded here instead
+  of being removed, since that's a product decision, out of scope for this
+  session.
+- **`GET /internal/projects/:projectId/git-remote` is the only route in the
+  product that returns a DECRYPTED secret** — the workspace owner's git
+  token ([ADR 0056](adr/0056-o-engine-trabalha-em-repositorio-remoto.md)).
+  It exists because the engine works on the filesystem and doesn't hold the
+  master key; replicating it in the engine would double the blast radius of
+  the product's most sensitive secret. Two properties keep it defensible:
+  the `origin` it returns is **clean** (the credential comes in a separate
+  field, never embedded in the URL), and the consumer is obligated to
+  inject it per invocation, never to a file — see `Engine.Actions.GitAuth`
+  and the reasoning for that in [RN-076](business-rules.md#rn-076). If this
+  route ever starts returning the already-authenticated URL, the token
+  would end up in `.git/config`, inside the folder where the dev agent has
+  auto-approved reads.
+- **The PO's three read routes** — `GET /internal/projects/:projectId/business-rules`,
+  `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules.md#rn-164))
+  and `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407)) —
+  return no secret at all and **accept nothing beyond the project id**: no
+  search term, no pagination, no filter. That's on purpose. A read route for
+  an agent is a surface the model chooses to call, and a parameter is where
+  the model writes whatever it wants; here there's nowhere to write. The
+  scope is closed to the project by the path, and the cost per call is
+  constant (three reads in the backlog, two in the rules, one query against
+  `proposed_actions` filtered by index in the product metrics).
+- **`POST /internal/projects/:projectId/workspace-verification`** (RN-423,
+  ADR 0104) is called only by the engine, after a runner connects and sends
+  `workspace_confirm` over the channel — never directly by the runner,
+  which doesn't hold the service token. The runner is the SOURCE OF TRUTH
+  for the path (it OVERWRITES `workspacePath`, without requiring it to
+  match what was typed at creation), but the reported path still goes
+  through the SAME lexical check as creation
+  (`caminhoDeWorkspaceLocalValido`) — system root and overlap with the
+  Brabo checkout remain forbidden even coming from the runner. `400` if the
+  project isn't in `runner` mode.
+- **`POST /projects/:projectId/runner-ticket` is classified `role:developer`
+  like any other route, but does NOT accept a session JWT** (ADR 0105,
+  RN-424) — only a Personal Access Token (`brb_…`). The automatic
+  classification (`route-surface.spec.ts`) doesn't distinguish the two
+  mechanisms, because the role REQUIREMENT is the same; what changes is
+  only how `request.user` gets established. `PatAuthGuard` runs in place of
+  `JwtAuthGuard` on this route (`@RequirePatAuth()`, the same structural
+  pattern as `@ServiceRoute()`/`EngineServiceGuard` — bypass by metadata,
+  never an `if` a new route could forget), and it's the ONLY place in the
+  api that accepts this token format: on any other route a `brb_...` fails
+  JWT verification normally. The five routes under
+  `/projects/:projectId/personal-access-tokens` (issue/list/revoke the PAT
+  itself, plus the two `maintainer` ones — RN-427, list/revoke of ANY
+  user in the project) remain regular session JWT — only the route the
+  TOKEN ITSELF authenticates changes mechanism.
+- **The `engine-service` routes aren't "internal" by naming convention.**
+  What protects them is `EngineServiceGuard` comparing
+  `X-Brabo-Service-Token` against the shared secret in constant time, plus
+  the NetworkPolicy. The `/internal` prefix is signaling for humans. They
+  sit **outside the JWT** via `@ServiceRoute()`: the user token doesn't
+  work here and the service token doesn't work on any other route — the
+  two mechanisms never overlap ([RN-035](business-rules.md#rn-035)).
+- **`/docs` and `/docs-json` are NOT in the table, and that's a known
+  gap.** The Swagger UI is mounted by `SwaggerModule.setup()` at the
+  Express level, not as a controller, and the test enumerates via
+  `DiscoveryService` — it structurally can't see them. Both only exist
+  with `NODE_ENV !== 'production'` (`main.ts`), are public, and serve
+  the same document the
+  [generated reference](reference/api/brabo-api) publishes. Recorded
+  here instead of left out: what the test can't reach needs to be in
+  the prose.
+- **`GET /projects/:projectId/agent-areas` started returning real data,
+  and the classification didn't change** — it's still `role:developer`,
+  while the ceiling's `PATCH` remains `role:maintainer`. Until PHASE 18
+  the `agent_areas` table was never written and the route answered `[]`
+  to everyone, which made the classification look lenient by accident,
+  not by decision. With the area now born together with the project
+  ([RN-094](business-rules.md#rn-094)), the split goes back to what
+  PHASE 14d intended: **reading** the ceiling is work for whoever
+  executes; **changing it** is deciding how much the product spends
+  without asking, and that's why it requires the same role that
+  activates execution.
+- **The four `/projects/:projectId/rag/*` routes split the role by the
+  same criterion as the area parallelism ceiling (RN-083)** (PROGRAM 28,
+  Wave 4 — RN-231..234, ADR 0080): `search` and `coverage` are
+  `role:viewer` (pure reading over what's already indexed), and
+  `reindex` is `role:maintainer` — it triggers N calls to the project's
+  repository and to the embedding provider, the same "changes what the
+  product spends without asking" that already justifies the higher role
+  on other expensive-trigger routes. `local` (RN-455, ADR 0113) is
+  `role:maintainer` too, same reasoning: it calls the embedding provider
+  and replaces what the project has indexed for that scope. Its body is
+  browser-read TEXT, never a host path.
+- **The four `/projects/:projectId/code/*` routes are `role:viewer` and
+  READ-ONLY** (PHASE 26b). Seeing a project's code is the same
+  permission as seeing the project — the same cut as
+  `GET /projects/:id/git/repository`. Three things make this apparent
+  looseness a decision rather than an oversight:
+  - **there's no write verb on the controller**, and there can't be: the
+    Code tab is for reading, and writing is an external effect, which
+    is born a `proposed_action` and belongs to a later phase. A `@Post`
+    in this file is a phase change, not a route change;
+  - **the path is contained in ONE place** ([RN-095](business-rules.md#rn-095)),
+    via the same central check as [RN-092](business-rules.md#rn-092) —
+    and containment matters here more than the role, because on remote
+    providers the path becomes a URL segment of the provider's API and a
+    `../` swaps the **endpoint**, not the file;
+  - **the credential spent is the workspace owner's**
     ([RN-058](business-rules.md#rn-058)/[RN-082](business-rules.md#rn-082)),
-    como na escrita. Ler custa rate limit do provider, e é por isso que a busca
-    tem orçamento: sem teto, um `viewer` pagaria a conta do owner à vontade.
-- **`POST /projects/:projectId/sessions/:sessionId/socket-ticket` é
-  `role:viewer` na tabela, mas isso é o PISO, não o teto** (RN-108). O
-  `@RequireRole('viewer')` cobre `scope: "heartbeat"` — o socket de
-  heartbeat/eventos ao vivo que já existe; `scope: "terminal"` exige
-  `developer`, checado DENTRO do `CreateSocketTicketUseCase` contra
-  `request.effectiveRole` (o mesmo que o `RolesGuard` já resolveu), porque o
-  papel mínimo depende do CORPO da requisição, não só da rota — o mesmo padrão
-  de `MIN_ROLE_FOR_ACTION_TYPE.terminal` em `domain/actions/decide.ts`. Hoje
-  nenhum caminho pede `scope: "terminal"` de verdade (o socket de terminal
-  interativo é FASE 25); o valor já nasce certo para quando existir.
-- **`jwt` sem papel não significa sem autorização.** Em `/users/me/*` o escopo é
-  o próprio usuário; em `GET /workspaces` a listagem já é filtrada pela
-  associação de quem chamou.
-- **O `X-Brabo-Service-Token` passou a ser redigido no log** ([ADR
-  0035](adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)). Ele é o bearer
-  de todo o tráfego api↔engine e **não** constava da lista de `redact` do pino: se
-  caísse num corpo de erro logado, iria para o Loki em texto claro e com retenção.
-  Entraram junto `serviceToken`, `privateKey`, `encryptedDek` e `dek`. A lista
-  completa está em `apps/api/src/infrastructure/observability/logger.config.ts`, e
-  há teste afirmando cada caminho — a lista é contrato, não conveniência.
-- **`allowedHeaders` do CORS é explícito**, e a lista precisa conter todo header
-  que a web manda: `Content-Type`, `Authorization`, `X-CSRF-Token` e `traceparent`.
-  Faltar um não quebra teste nenhum (teste não faz preflight) e quebra o browser.
-- **O engine tem CORS só nas rotas de health** ([ADR
-  0037](adr/0037-cors-do-engine-e-a-porta-como-contrato.md)). `/health`, `/live` e
-  `/ready` respondem `Access-Control-Allow-Origin` para as origens de
-  `WEB_ORIGIN`; **`/internal/*` e `/metrics` não**, e a exclusão é o ponto. As 13
-  rotas internas são server-to-server com segredo compartilhado
-  ([RN-035](business-rules.md#rn-035)); CORS ali não habilitaria nada — o cliente
-  HTTP da api ignora esses cabeçalhos — mas **anunciaria a um navegador que ele é
-  um cliente esperado daquele canal**. Há teste afirmando a ausência, e um sobre a
-  lista de caminhos ter exatamente três entradas, para mover a fronteira aparecer
-  no diff.
-- **Origem desconhecida recebe resposta, não `403`.** Nos dois serviços, o pedido
-  é atendido e sai sem o cabeçalho; quem barra a leitura é o navegador, que é de
-  quem a decisão é. Responder `403` quebraria todo cliente que não manda `Origin`
-  — probe do kubelet, `curl`, o `docker/smoke.sh`.
-- **`POST .../delegations` é engine-service como as demais rotas internas**
-  (Fase 8b QA, Fase 8c Infra — ADR 0038) — o lead de cada área registra o
-  desfecho de cada delegado (`completed`/`failed`/`dispensed`) SEPARADO da
-  chamada que a área usa pra reportar o resultado consolidado pra fora
-  (`gates/verdict` pro QA, `open_infra_pr` pro Infra). Session-scoped, não
-  task-scoped — `taskId` é opcional no corpo. Delegação nunca é visível como
-  handoff.
-- **`POST /projects/:projectId/execution/activate` ganhou `originSessionId`
-  opcional no corpo, e a classificação não mudou** — continua `role:maintainer`
-  (RN-135). O campo deixa quem já tem esse papel fechar a sessão de CHAT que
-  originou o pedido, mas com duas contenções que impedem usá-lo pra fechar
-  sessão alheia: `findInProject(projectId, originSessionId)` recusa silenciosamente
-  um id que não pertença ao PRÓPRIO projeto do path, e o fechamento só acontece
-  se `GetSessionPendingWorkUseCase` (a mesma trava do heartbeat de inatividade,
-  [RN-073](business-rules.md#rn-073)) confirmar que não há handoff, ação ou
-  turno pendurado ali. Nunca fecha a sessão de execução que a própria chamada
-  acabou de ativar.
-- **`GET /projects/:projectId/execution/session` é `role:viewer`, o mesmo
-  papel de `GET /sessions/:sessionId`** ([RN-139](business-rules.md#rn-139)).
-  Devolve a sessão de execução VIGENTE do projeto — `active` com
-  `execution.activated` gravado — ou `null`; nunca a sessão mais recente do
-  projeto, que é o que a aba Executores lia antes e que muda de sessão em
-  silêncio assim que outra sessão nasce depois dela.
-- **`POST .../llm-turn` e `POST .../llm-turn-stream` ganharam `modelName` no
-  corpo de resposta/frame final, e a classificação não mudou** — continuam
-  `engine-service` como sempre ([RN-146](business-rules.md#rn-146)). O nome
-  do modelo já era resolvido para chamar o provider; só passou a viajar de
-  volta ao engine, que o inclui no payload de `agent.response`. Nenhum dado
-  novo é lido, nenhuma credencial nova é exposta — é o mesmo nome que já sai
-  em `token_usage`.
-- **`PUT /projects/:projectId/agent-autonomy` passou a aceitar `actionType:
-  "*"` — "auto mode" ([RN-153](business-rules.md#rn-153)) —, e a
-  classificação não mudou:** continua `role:maintainer`, o mesmo do `GET`
-  ao lado. A diferença é o que o corpo agora AUTORIZA, não quem pode
-  chamar: a curinga concede autonomia pra QUALQUER tipo de ação do agente
-  de uma vez, em vez de um tipo por vez como antes. A resolução (uma regra
-  ESPECÍFICA sempre vence a curinga) mora inteira no repositório
-  (`DrizzleAgentAutonomyRepository.findMode`), nunca em `decide()` — que
-  segue recebendo só o `PermissionPolicy` já resolvido, exatamente como
-  antes da curinga existir. É por isso que os três tetos absolutos —
-  merge em branch protegida, `instruction_patch`,
-  `parallelize`/`raise_max_parallel` — continuam bloqueando mesmo com a
-  curinga em `auto_approve` ([RN-154](business-rules.md#rn-154)): eles
-  reagem a `current.policy === 'auto_approve'`, nunca à origem dela, e
-  nenhuma exceção precisou entrar em `decide()` pra isso continuar
-  valendo. `ApprovalCard.tsx` só oferece o botão que grava a curinga a
-  quem o cliente já sabe ter `maintainer`/`owner` — mas quem garante o
-  papel de verdade é este mesmo `@RequireRole('maintainer')`, inalterado.
+    same as with writing. Reading costs the provider's rate limit, which
+    is why search has a budget: without a ceiling, a `viewer` could run
+    up the owner's bill at will.
+- **`GET /workspaces/:workspaceId/spend-report` started returning the
+  breakdown by provider, which is a breakdown by CREDENTIAL**
+  ([ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md),
+  [RN-186](business-rules.md#rn-186)/[RN-187](business-rules.md#rn-187)).
+  No new route and no role change — still `role:owner`, as it already
+  was — but what it GRANTS changed, which is why this note exists. ADR
+  [0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md) had refused
+  that axis for exactly this reason; 0076 revises it by the product
+  owner's decision. What now holds the boundary is TWO independent
+  barriers: `GET /projects/:projectId/spend/me` (`role:viewer`) has no
+  dimension parameter at all, and the TYPE refuses the combination — a
+  scope with `actor` only accepts
+  `Exclude<SpendDimension, 'provider'>`, so asking for provider in the
+  member's view doesn't compile. The second is weaker than the previous
+  guarantee ("the dimension didn't exist"), which is why there are two.
+- **`POST /projects/:projectId/sessions/:sessionId/socket-ticket` is
+  `role:viewer` in the table, but that's the FLOOR, not the ceiling**
+  (RN-108). The `@RequireRole('viewer')` covers `scope: "heartbeat"` —
+  the existing heartbeat/live-events socket; `scope: "terminal"`
+  requires `developer`, checked INSIDE `CreateSocketTicketUseCase`
+  against `request.effectiveRole` (the same one `RolesGuard` already
+  resolved), because the minimum role depends on the request's BODY, not
+  just the route — the same pattern as
+  `MIN_ROLE_FOR_ACTION_TYPE.terminal` in `domain/actions/decide.ts`.
+  Today no real path asks for `scope: "terminal"` (the interactive
+  terminal socket is PHASE 25); the value is already born correct for
+  when it exists.
+- **`jwt` with no role doesn't mean without authorization.** On
+  `/users/me/*` the scope is the user themselves; on `GET /workspaces`
+  the listing is already filtered by the caller's membership.
+- **`X-Brabo-Service-Token` started getting redacted in the log**
+  ([ADR 0035](adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)).
+  It's the bearer for all api↔engine traffic and was **not** on pino's
+  `redact` list: if it landed in a logged error body, it would go to
+  Loki in plain text and with retention. `serviceToken`, `privateKey`,
+  `encryptedDek`, and `dek` were added at the same time. The full list is
+  in `apps/api/src/infrastructure/observability/logger.config.ts`, and
+  there's a test asserting each path — the list is a contract, not a
+  convenience.
+- **CORS's `allowedHeaders` is explicit**, and the list needs to contain
+  every header the web sends: `Content-Type`, `Authorization`,
+  `X-CSRF-Token`, and `traceparent`. Missing one breaks no test at all
+  (no test does a preflight) and breaks the browser.
+- **The engine has CORS only on its health routes**
+  ([ADR 0037](adr/0037-cors-do-engine-e-a-porta-como-contrato.md)).
+  `/health`, `/live`, and `/ready` return
+  `Access-Control-Allow-Origin` for `WEB_ORIGIN`'s origins;
+  **`/internal/*` and `/metrics` don't**, and the exclusion is the
+  point. The 13 internal routes are server-to-server with a shared
+  secret ([RN-035](business-rules.md#rn-035)); CORS there wouldn't
+  enable anything — the api's HTTP client ignores those headers — but it
+  **would announce to a browser that it's an expected client of that
+  channel**. There's a test asserting the absence, and one asserting the
+  path list has exactly three entries, so moving the boundary shows up
+  in the diff.
+- **An unknown origin gets a response, not a `403`.** On both services,
+  the request is served and goes out without the header; what blocks the
+  read is the browser, which is whose decision it is. Answering `403`
+  would break every client that doesn't send `Origin` — kubelet's probe,
+  `curl`, `docker/smoke.sh`.
+- **`POST .../delegations` is engine-service like the other internal
+  routes** (Phase 8b QA, Phase 8c Infra — ADR 0038) — each area's lead
+  records each delegate's outcome (`completed`/`failed`/`dispensed`)
+  SEPARATELY from the call the area uses to report its consolidated
+  result to the outside (`gates/verdict` for QA, `open_infra_pr` for
+  Infra). Session-scoped, not task-scoped — `taskId` is optional in the
+  body. Delegation is never visible as a handoff.
+- **`POST /projects/:projectId/execution/activate` gained an optional
+  `originSessionId` in the body, and the classification didn't change**
+  — still `role:maintainer` (RN-135). The field lets whoever already has
+  that role close the CHAT session that originated the request, but with
+  two containments that prevent using it to close someone else's
+  session: `findInProject(projectId, originSessionId)` silently refuses
+  an id that doesn't belong to the path's OWN project, and the closing
+  only happens if `GetSessionPendingWorkUseCase` (the same guard as the
+  inactivity heartbeat, [RN-073](business-rules.md#rn-073)) confirms
+  there's no handoff, action, or turn hanging there. It never closes the
+  execution session the call itself just activated.
+- **`GET /projects/:projectId/execution/session` is `role:viewer`, the
+  same role as `GET /sessions/:sessionId`**
+  ([RN-139](business-rules.md#rn-139)). Returns the project's CURRENT
+  execution session — `active` with `execution.activated` recorded — or
+  `null`; never the project's most recent session, which is what the
+  Executors tab used to read and which silently switched sessions the
+  moment another session was born after it.
+- **`POST .../llm-turn` and `POST .../llm-turn-stream` gained
+  `modelName` in the response body/final frame, and the classification
+  didn't change** — still `engine-service` as always
+  ([RN-146](business-rules.md#rn-146)). The model's name was already
+  being resolved to call the provider; it just started traveling back to
+  the engine, which includes it in the `agent.response` payload. No new
+  data is read, no new credential is exposed — it's the same name that
+  already shows up in `token_usage`.
+- **`PUT /projects/:projectId/agent-autonomy` started accepting
+  `actionType: "*"` — "auto mode" ([RN-153](business-rules.md#rn-153))
+  — and the classification didn't change:** still `role:maintainer`,
+  the same as the `GET` next to it. The difference is what the body now
+  AUTHORIZES, not who can call it: the wildcard grants autonomy for ANY
+  agent action type at once, instead of one type at a time like before.
+  The resolution (a SPECIFIC rule always beats the wildcard) lives
+  entirely in the repository
+  (`DrizzleAgentAutonomyRepository.findMode`), never in `decide()` —
+  which keeps receiving only the already-resolved `PermissionPolicy`,
+  exactly as before the wildcard existed. That's why the three absolute
+  ceilings — merging into a protected branch, `instruction_patch`,
+  `parallelize`/`raise_max_parallel` — keep blocking even with the
+  wildcard set to `auto_approve` ([RN-154](business-rules.md#rn-154)):
+  they react to `current.policy === 'auto_approve'`, never to where it
+  came from, and no exception had to enter `decide()` for that to keep
+  holding. `ApprovalCard.tsx` only offers the button that writes the
+  wildcard to a client that already knows it has `maintainer`/`owner` —
+  but what actually guarantees the role is this same
+  `@RequireRole('maintainer')`, unchanged.
 
-## Tabela
+## Table
 
-<!-- INÍCIO DA TABELA — o teste parseia daqui até o fim do documento. -->
+<!-- START OF TABLE — the test parses from here to the end of the document. -->
 
-| método | caminho | classificação |
+| method | path | classification |
 |---|---|---|
 | GET | `/.well-known/jwks.json` | public |
 | POST | `/auth/login` | public |
 | POST | `/auth/logout` | public |
+| GET | `/auth/oauth/:provider/callback` | public |
+| GET | `/auth/oauth/:provider/start` | public |
 | POST | `/auth/refresh` | public |
 | POST | `/auth/register` | public |
 | POST | `/auth/request-password-reset` | public |
@@ -309,10 +427,15 @@ o componente `d` da JWK, travado por teste.
 | POST | `/internal/sessions/:sessionId/project-image` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |
 | POST | `/internal/models/sync` | engine-service |
+| GET | `/internal/graph/prompt-templates/:name` | engine-service |
+| POST | `/internal/graph/prompt-templates` | engine-service |
+| POST | `/internal/rag/search` | engine-service |
 | GET | `/internal/gates` | engine-service |
 | GET | `/internal/projects/:projectId/git-remote` | engine-service |
 | GET | `/internal/projects/:projectId/business-rules` | engine-service |
 | GET | `/internal/projects/:projectId/backlog` | engine-service |
+| GET | `/internal/projects/:projectId/product-metrics` | engine-service |
+| POST | `/internal/projects/:projectId/workspace-verification` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
@@ -328,12 +451,16 @@ o componente `d` da JWK, travado por teste.
 | POST | `/users/me/credentials/:provider/test` | jwt |
 | DELETE | `/users/me/credentials/:provider` | jwt |
 | POST | `/users/me/git-credentials` | jwt |
+| GET | `/users/me/preferences` | jwt |
+| PATCH | `/users/me/preferences` | jwt |
 | GET | `/workspaces` | jwt |
 | POST | `/workspaces` | jwt |
 | DELETE | `/projects/:projectId` | role:maintainer |
 | GET | `/projects/:projectId` | role:viewer |
 | PATCH | `/projects/:projectId` | role:maintainer |
+| PUT | `/projects/:projectId/execution-mode` | role:maintainer |
 | GET | `/projects/:projectId/models` | role:viewer |
+| GET | `/projects/:projectId/actions` | role:developer |
 | GET | `/projects/:projectId/agent-autonomy` | role:maintainer |
 | PUT | `/projects/:projectId/agent-autonomy` | role:maintainer |
 | DELETE | `/projects/:projectId/agent-bindings/:agentSlug` | role:developer |
@@ -352,6 +479,7 @@ o componente `d` da JWK, travado por teste.
 | PUT | `/projects/:projectId/budget` | role:maintainer |
 | GET | `/projects/:projectId/agent-areas` | role:developer |
 | PATCH | `/projects/:projectId/agent-areas/:key/max-parallel` | role:maintainer |
+| PUT | `/projects/:projectId/agent-areas/:key/budget` | role:maintainer |
 | GET | `/projects/:projectId/code/blame` | role:viewer |
 | GET | `/projects/:projectId/code/branches` | role:viewer |
 | GET | `/projects/:projectId/code/file` | role:viewer |
@@ -359,7 +487,12 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/code/pull-requests/:pullRequestId/diff` | role:viewer |
 | GET | `/projects/:projectId/code/search` | role:viewer |
 | GET | `/projects/:projectId/code/tree` | role:viewer |
+| POST | `/projects/:projectId/rag/search` | role:viewer |
+| POST | `/projects/:projectId/rag/reindex` | role:maintainer |
+| POST | `/projects/:projectId/rag/local` | role:maintainer |
+| GET | `/projects/:projectId/rag/coverage` | role:viewer |
 | GET | `/projects/:projectId/container` | role:viewer |
+| GET | `/projects/:projectId/container/lifecycle` | role:viewer |
 | GET | `/projects/:projectId/coverage` | role:viewer |
 | GET | `/projects/:projectId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |
@@ -385,10 +518,18 @@ o componente `d` da JWK, travado por teste.
 | PUT | `/projects/:projectId/model-binding` | role:maintainer |
 | GET | `/projects/:projectId/permissions` | role:maintainer |
 | PUT | `/projects/:projectId/permissions` | role:maintainer |
+| POST | `/projects/:projectId/personal-access-tokens` | role:developer |
+| GET | `/projects/:projectId/personal-access-tokens` | role:developer |
+| GET | `/projects/:projectId/personal-access-tokens/all` | role:maintainer |
+| DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
+| DELETE | `/projects/:projectId/personal-access-tokens/:tokenId/admin` | role:maintainer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |
 | DELETE | `/projects/:projectId/proficiency/me` | role:viewer |
 | POST | `/projects/:projectId/proficiency/me/opt-in` | role:viewer |
 | GET | `/projects/:projectId/psychologist/analyses` | role:viewer |
+| GET | `/projects/:projectId/psychologist/status` | role:viewer |
+| POST | `/projects/:projectId/runner-ticket` | role:developer |
+| POST | `/projects/:projectId/terminal-ticket` | role:viewer |
 | GET | `/projects/:projectId/sessions` | role:viewer |
 | POST | `/projects/:projectId/sessions` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId` | role:viewer |
@@ -404,6 +545,7 @@ o componente `d` da JWK, travado por teste.
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/arquiteto/handoff-infra` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/criativo/validate-necessity` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/budget` | role:developer |
 | PUT | `/projects/:projectId/sessions/:sessionId/budget` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/chat` | role:developer |
@@ -412,6 +554,7 @@ o componente `d` da JWK, travado por teste.
 | GET | `/projects/:projectId/sessions/:sessionId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/sessions/:sessionId/execution/parallelize` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/handoffs` | role:viewer |
+| POST | `/projects/:projectId/sessions/:sessionId/handoffs` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/handoffs/:handoffId/accept` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/model-binding` | role:viewer |
 | PUT | `/projects/:projectId/sessions/:sessionId/model-binding` | role:developer |

@@ -1,396 +1,519 @@
 ---
 id: internal-api
-title: API interna (api ↔ engine)
-sidebar_label: API interna
+title: Internal API (api ↔ engine)
+sidebar_label: Internal API
 sidebar_position: 6
-description: Os dois sentidos da comunicação entre api e engine — HTTP para comandos síncronos, outbox e Oban para eventos.
-keywords: [api interna, engine, outbox, oban, engine-service, contrato]
+description: The two directions of communication between api and engine — HTTP for synchronous commands, outbox and Oban for events.
+keywords: [internal api, engine, outbox, oban, engine-service, contract]
 ---
 
-# API interna (api ↔ engine)
+# Internal API (api ↔ engine)
 
-A api e o engine conversam de **duas** formas, e a escolha entre elas não é
-estilística:
+The api and the engine talk in **two** ways, and the choice between them is not
+stylistic:
 
-| sentido | mecanismo | quando |
+| direction | mechanism | when |
 |---|---|---|
-| api → engine | **outbox + Oban** | eventos: algo aconteceu, o engine reage quando puder |
-| api → engine | **HTTP** | comandos síncronos: preciso da resposta agora |
-| engine → api | **HTTP** (`/internal/*`) | o engine pede dado ou registra resultado |
+| api → engine | **outbox + Oban** | events: something happened, the engine reacts when it can |
+| api → engine | **HTTP** | synchronous commands: I need the response now |
+| engine → api | **HTTP** (`/internal/*`) | the engine requests data or records a result |
 
-O critério: se a operação precisa ser atômica com uma escrita no banco, vai
-pelo outbox — a api grava o evento e a intenção de publicá-lo na mesma
-transação, e não existe janela em que uma exista sem a outra. Se ela precisa de
-resposta imediata, vai por HTTP.
+The criterion: if the operation needs to be atomic with a database write, it goes
+through the outbox — the api writes the event and the intent to publish it in the same
+transaction, and there is no window where one exists without the other. If it needs an
+immediate response, it goes through HTTP.
 
-**Fora do escopo desta página**: rotas HTTP autenticadas pelo JWT normal do
-usuário (RBAC por papel, `@RequireRole`) — como
-`/projects/:projectId/agent-autonomy` — não são "internas" no sentido deste
-documento, mesmo quando um agente é quem efetivamente chama através delas. O
-service token compartilhado NUNCA serve como credencial nessas rotas, e o JWT
-de usuário nunca serve em `/internal/*` — os dois mecanismos não se sobrepõem
-([RN-035](../business-rules.md#rn-035)). A classificação de exposição de toda
-rota HTTP, interna ou não, está em [docs/security-surface.md](../security-surface.md).
+**Out of scope for this page**: HTTP routes authenticated by the user's normal JWT
+(role-based RBAC, `@RequireRole`) — such as
+`/projects/:projectId/agent-autonomy`, `/projects/:projectId/container/lifecycle`
+([RN-267](../business-rules.md#rn-267)),
+`.../agents/criativo/validate-necessity` (gate `necessidade-validada`,
+[RN-406](../business-rules.md#rn-406), ADR 0095) or the CRUD of
+`/projects/:projectId/personal-access-tokens` ([RN-426](../business-rules.md#rn-426),
+ADR 0105) — including the two `maintainer` routes
+(`GET .../personal-access-tokens/all`,
+`DELETE .../personal-access-tokens/:tokenId/admin`,
+[RN-427](../business-rules.md#rn-427)) — are not "internal" in the sense of this document, even when an
+agent is who effectively calls through them. The
+shared service token NEVER serves as credential on these routes, and the user's JWT
+never works on `/internal/*` — the two mechanisms don't overlap
+([RN-035](../business-rules.md#rn-035)).
 
-## Autenticação
+**A third credential, neither service token nor user JWT**:
+`POST /projects/:projectId/runner-ticket` is `role:developer` like any
+RBAC route, but does not accept the normal session JWT — only a Personal Access
+Token (`brb_…`, `PatAuthGuard`/`@RequirePatAuth()`), scoped by construction
+to this single route ([RN-424](../business-rules.md#rn-424), ADR 0105). Worth
+noting here because it's the distinction this page exists to explain:
+"it's not `/internal/*`" doesn't mean "so it's a user JWT" — the PAT is a
+third mechanism, with no overlap with the other two.
 
-Nenhuma das duas pontas confia em rede privada. Ambas apresentam o **mesmo
-service token** — um segredo compartilhado por env, rotacionável, no cabeçalho
-`X-Brabo-Service-Token`:
+Also out of scope: the
+`@Public()` routes that are the actual ENTRY POINT before any session
+exists — `POST /auth/login`, `POST /auth/register`,
+`GET /auth/oauth/:provider/start`/`callback` (social login, ADR 0084) and the
+rest of `auth.controller.ts`. None of them use the service token or the user's
+JWT (it's what THEY issue, not what they require), so the
+service-token-vs-JWT distinction this page exists to explain doesn't apply —
+they simply have no credential at all on entry. The exposure classification of
+every HTTP route, internal or not, is in
+[docs/security-surface.md](../security-surface.md).
 
-| chamador | verificado por | comparação |
+## Authentication
+
+Neither end trusts the private network. Both present the **same
+service token** — a secret shared via env, rotatable, in the
+`X-Brabo-Service-Token` header:
+
+| caller | verified by | comparison |
 |---|---|---|
 | engine → api | `EngineServiceGuard` | `comparaEmTempoConstante` |
 | api → engine | `EngineWeb.Plugs.VerifyServiceToken` | `Plug.Crypto.secure_compare/2` |
 
-> **Este tráfego não passa pelo JWT.** As rotas `/internal/*` são anotadas com
-> `@ServiceRoute()`, o que as tira do `JwtAuthGuard` e as isenta do
-> `RateLimitGuard` (que roda antes do guard de controller, então a isenção
-> precisa vir do metadado). Um access token de usuário, mesmo de um `owner`,
-> não abre nenhuma delas; e o service token não abre nenhuma outra rota. Ver
+> **This traffic does not go through the JWT.** The `/internal/*` routes are annotated with
+> `@ServiceRoute()`, which takes them out of the `JwtAuthGuard` and exempts them from the
+> `RateLimitGuard` (which runs before the controller guard, so the exemption
+> needs to come from the metadata). A user access token, even from an `owner`,
+> does not open any of them; and the service token does not open any other route. See
 > [RN-035](../business-rules.md#rn-035).
 
-> **Rotação sem downtime.** `BRABO_SERVICE_TOKEN` é o valor enviado;
-> `BRABO_SERVICE_TOKEN_PREVIOUS` é aceito **só na verificação**. Como os dois
-> lados enviam o atual e aceitam ambos, a rotação é a mesma dança em três
-> etapas do `AUTH_JWT_SECRET`, descrita no
+> **Rotation without downtime.** `BRABO_SERVICE_TOKEN` is the value sent;
+> `BRABO_SERVICE_TOKEN_PREVIOUS` is accepted **only during verification**. Since both
+> sides send the current one and accept both, rotation is the same three-step dance
+> as `AUTH_JWT_SECRET`, described in the
 > [runbook](../runbook.md#rotacao-das-chaves-do-auth).
 
-## Correlação
+## Correlation
 
-Toda chamada entre os dois serviços leva também o cabeçalho `traceparent` (W3C),
-e isso vale nos **dois sentidos e em todos os métodos** — GET, POST e o stream de
-SSE do turno de LLM. Cada lado tem um funil único que monta os cabeçalhos:
+Every call between the two services also carries the `traceparent` header (W3C),
+and this holds in **both directions and all methods** — GET, POST and the LLM turn
+SSE stream. Each side has a single funnel that assembles the headers:
 
-| chamador | funil |
+| caller | funnel |
 |---|---|
 | api → engine | `HttpApiToEngineClient.buildHeaders()` |
 | engine → api | `EngineApiClient.headers/0` |
 
-Até o [ADR 0035](../adr/0035-observabilidade-legivel-e-trace-sem-coletor.md) o
-`traceparent` do lado do engine era injetado apenas nos POSTs, então as leituras
-(`list_events`, o contexto do agente) e o `llm_turn_stream` chegavam à api sem
-correlação — apareciam no Tempo como traces órfãs. Se você acrescentar uma chamada
-nova neste contrato, use o funil: é o que garante que ela não nasça órfã.
+Until [ADR 0035](../adr/0035-observabilidade-legivel-e-trace-sem-coletor.md) the
+engine side's `traceparent` was injected only into POSTs, so reads
+(`list_events`, the agent's context) and `llm_turn_stream` arrived at the api without
+correlation — they showed up in Tempo as orphan traces. If you add a
+new call to this contract, use the funnel: it's what guarantees it won't be born orphaned.
 
-> A recusa de service token é registrada em log dos dois lados, com rota e origem
-> — e **sem** o token apresentado. Um 401 aqui é indistinguível, sem log, de
-> "engine fora do ar", que era exatamente o sintoma antes.
+> The rejection of a service token is logged on both sides, with route and origin
+> — and **without** the token presented. A 401 here is indistinguishable, without logs,
+> from "engine is down", which was exactly the symptom before.
 
-> As rotas `/internal/*` **não são internas por convenção de nome.** O prefixo é
-> legibilidade; o que as protege é o guard verificando o service token. A
-> classificação
-> completa está em
-> [`docs/security-surface.md`](../security-surface.md), e um teste de tabela
-> reprova rota nova sem classificação.
+> The `/internal/*` routes **are not internal by naming convention.** The prefix is
+> for readability; what protects them is the guard verifying the service token. The
+> full classification is at
+> [`docs/security-surface.md`](../security-surface.md), and a table test
+> fails a new route without a classification.
 
 ## engine → api
 
-Vinte e oito rotas, todas sob `/internal/sessions/:sessionId/` salvo indicação.
-Agrupadas pelo que fazem:
+Twenty-eight routes, all under `/internal/sessions/:sessionId/` unless noted otherwise.
+Grouped by what they do:
 
-### Event log e ações
+### Event log and actions
 
-| método | caminho |
+| method | path |
 |---|---|
 | GET · POST | `/events` |
 | POST | `/actions` |
 | POST | `/termination` |
 | POST | `/handoffs` |
 
-O engine nunca escreve na tabela de eventos direto — ele **pede** à api, que é
-quem controla a `seq` e a atomicidade com o outbox.
+The engine never writes directly to the events table — it **asks** the api, which
+controls the `seq` and the atomicity with the outbox.
 
-E é por isso que a trava do tipo de sessão mora no caso de uso do append, e não
-no `ActivateExecutionUseCase`: `POST /events` daqui e a rota do usuário caem no
-mesmo funil. Desde a FASE 20, `execution.activated` numa sessão `consultiva`
-responde **409** por este caminho também — o tipo é intenção de criação e o
-evento não o promove ([RN-097](../business-rules.md#rn-097)). Nenhuma outra
-mudança de contrato: os demais tipos de evento seguem idênticos, e a recusa
-acontece **antes** do `incrementSeq`, então tentativa recusada não abre buraco
-na `seq`.
+And that's why the session-type guard lives in the append use case, and not
+in `ActivateExecutionUseCase`: `POST /events` here and the user's route fall into the
+same funnel. Since FASE 20, `execution.activated` in a `consultiva` session
+returns **409** through this path too — the type is creation intent and the
+event does not promote it ([RN-097](../business-rules.md#rn-097)). No other
+contract change: the other event types remain identical, and the rejection
+happens **before** `incrementSeq`, so a rejected attempt does not open a gap
+in `seq`.
 
-`ActivateExecutionUseCase` ganhou um segundo efeito colateral que **não** passa
-por nenhuma rota deste documento ([RN-135](../business-rules.md#rn-135)): ao
-final da ativação, se a rota do usuário informar `originSessionId` (a sessão de
-CHAT de onde partiu o clique), ele fecha essa sessão via
-`TransitionSessionUseCase` — o mesmo caminho que o `POST /termination` desta
-página usa para o engine reportar término, mas disparado pela api, sem viagem
-nenhuma ao engine. Nenhuma rota nova, nenhuma mudança no contrato `engine → api`
-existente.
+`ActivateExecutionUseCase` gained a second side effect that does **not** go
+through any route in this document ([RN-135](../business-rules.md#rn-135)): at the
+end of activation, if the user's route provides `originSessionId` (the CHAT
+session the click came from), it closes that session via
+`TransitionSessionUseCase` — the same path that `POST /termination` on this
+page uses for the engine to report termination, but triggered by the api, with no trip
+at all to the engine. No new route, no change to the existing `engine → api`
+contract.
 
 `GET /projects/:projectId/execution/session` ([RN-139](../business-rules.md#rn-139))
-é a mesma história ao contrário: expõe por HTTP externo uma leitura
-(`findActiveExecutionSession`) que já existia só dentro de
-`ActivateExecutionUseCase`. Nenhum caminho novo `engine → api`, nenhum efeito
-colateral — é `SELECT`, e o critério (sessão `active` com `execution.activated`
-gravado) não muda em nada o que o engine já fazia.
+is the same story in reverse: it exposes via external HTTP a read
+(`findActiveExecutionSession`) that previously existed only inside
+`ActivateExecutionUseCase`. No new `engine → api` path, no side
+effect — it's a `SELECT`, and the criterion (an `active` session with `execution.activated`
+recorded) doesn't change anything about what the engine already did.
 
 ### LLM
 
-| método | caminho |
+| method | path |
 |---|---|
 | POST | `/llm-turn` |
 | POST | `/llm-turn-stream` |
 
-Toda chamada de modelo passa pela api. Não é indireção gratuita: é onde o
-metering acontece e onde o orçamento pode **recusar** a chamada. Um engine que
-falasse direto com o provedor tornaria o teto de gasto inaplicável.
+Every model call goes through the api. It's not gratuitous indirection: it's where
+metering happens and where the budget can **reject** the call. An engine that
+talked directly to the provider would make the spending cap unenforceable.
 
-Os **dois** caminhos usam o mesmo teto de tempo, `LLM_TURN_TIMEOUT_MS` (default
-300 000 ms). Um turno de LLM não é uma chamada de API comum: com modelo local o
-primeiro turno ainda carrega vários GB de pesos antes do primeiro token, e com
-provider de API o contexto grande demora. Em `/llm-turn-stream` o valor vale por
-CHUNK recebido, ou seja, é o teto de INATIVIDADE que o
+**Both** paths use the same time cap, `LLM_TURN_TIMEOUT_MS` (default
+300,000 ms). An LLM turn is not an ordinary API call: with a local model the
+first turn still loads several GB of weights before the first token, and with an
+API provider a large context takes a while. In `/llm-turn-stream` the value applies
+PER CHUNK received — i.e. it's the INACTIVITY cap that
 [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
-pede — não o da
-resposta inteira.
+calls for — not the
+whole response.
 
-O teto precisa ser explícito nos dois: sem passá-lo, o `Req` usa o default dele,
-de 15 segundos. Enquanto só o caminho não-streamado o passava, os quatro agentes
-conversacionais — que usam apenas o streamado — falhavam a 15s com
-`%Req.TransportError{reason: :timeout}`, classificado como origem `infra`. Com
-modelo local o turno cabia nos 15s e o defeito não aparecia.
+The cap needs to be explicit on both: without passing it, `Req` uses its
+default, 15 seconds. While only the non-streamed path passed it, the four
+conversational agents — which use only the streamed one — would fail at 15s with
+`%Req.TransportError{reason: :timeout}`, classified as origin `infra`. With
+a local model the turn fit within 15s and the defect didn't show up.
 
-#### O frame final carrega o nome do modelo ([RN-146](../business-rules.md#rn-146))
+#### The final frame carries the model name ([RN-146](../business-rules.md#rn-146))
 
-`RunLlmTurnResult` e o quadro `final` de `LlmTurnStreamEvent` ganham
-`modelName: string | null` — o nome do modelo que a api resolveu
-(`resolveModelBinding` → `models.findById`) antes de chamar o provider.
-`null` só quando o turno falhou ANTES de resolver um modelo nenhum (sem
-binding, ou binding para modelo que não existe mais); nos demais casos —
-inclusive orçamento excedido — o binding já tinha resolvido e o nome viaja
-mesmo no frame de erro. Os quatro agentes conversacionais do engine
-extraem o campo do frame e o incluem no payload de `agent.response`
-(`modelName`), que é o que `SessionPage.tsx` lê para mostrar o modelo ao
-lado do nome do agente.
+`RunLlmTurnResult` and the `final` frame of `LlmTurnStreamEvent` gain
+`modelName: string | null` — the name of the model the api resolved
+(`resolveModelBinding` → `models.findById`) before calling the provider.
+`null` only when the turn failed BEFORE resolving any model at all (no
+binding, or a binding to a model that no longer exists); in all other cases —
+including budget exceeded — the binding had already resolved and the name travels
+even in the error frame. The four engine conversational agents
+extract the field from the frame and include it in the `agent.response` payload
+(`modelName`), which is what `SessionPage.tsx` reads to show the model next
+to the agent's name.
 
-#### Os relatórios de gasto NÃO passam por aqui
+#### Spend reports do NOT go through here
 
-O metering é escrito **neste** caminho: cada `/llm-turn` grava uma linha em
-`token_usage` antes de a resposta voltar ao engine. A LEITURA desse dado — a
-fatura do owner (`/workspaces/:id/credential-spend` e
-`/workspaces/:id/spend-report`) e o consumo do membro
-(`/projects/:id/spend/me`) — é superfície **externa**, autenticada por JWT e
-classificada em [security-surface.md](../security-surface.md).
+Metering is written on **this** path: each `/llm-turn` writes a row to
+`token_usage` before the response returns to the engine. READING that data — the
+owner's invoice (`/workspaces/:id/credential-spend` and
+`/workspaces/:id/spend-report`) and the member's consumption
+(`/projects/:id/spend/me`) — is an **external** surface, authenticated by JWT and
+classified in [security-surface.md](../security-surface.md).
 
-Não é detalhe de organização: essas três rotas ramificam por **papel de
-pessoa** — `owner` para a fatura, `viewer` para o próprio consumo
-([RN-101](../business-rules.md#rn-101)). O `X-Brabo-Service-Token` não carrega
-pessoa nenhuma, então uma contraparte interna teria de escolher entre não
-distinguir as audiências ou receber o id do ator como parâmetro — que é
-exatamente o que o [ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
-recusa. O engine escreve o gasto; quem o lê é gente.
+This is not an organizational detail: these three routes branch by **person's
+role** — `owner` for the invoice, `viewer` for one's own consumption
+([RN-101](../business-rules.md#rn-101)). The `X-Brabo-Service-Token` doesn't carry
+a person at all, so an internal counterpart would have to choose between not
+distinguishing the audiences or receiving the actor's id as a parameter — which is
+exactly what [ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
+rejects. The engine writes the spend; people are the ones who read it.
 
-### Ciclo de vida da sessão
+[ADR 0076](../adr/0076-provider-volta-a-ser-dimensao-de-gasto.md) revised
+0063 and reopened the breakdown by **provider**, which is a breakdown by CREDENTIAL. Neither the
+route nor the role changed — both remain classified as above —
+but what the owner's route RETURNS did change, and that's why the boundary is worth stating
+here: `porProvider` exists only in the workspace report (`owner`), and the member's
+consumption remains without provider and without credential. What really changed is the
+guarantee mechanism: the dimension requested with an actor scope **does not compile**
+([RN-187](../business-rules.md#rn-187)), instead of relying on the route not
+offering the parameter. The argument in the paragraph above still stands — it's what
+explains why this read never comes down here.
 
-| método | caminho |
+### Session lifecycle
+
+| method | path |
 |---|---|
-| GET | `/internal/sessions/:id/pending-work` (**não** é session-scoped no sentido dos demais: é sobre a sessão, não dentro dela) |
+| GET | `/internal/sessions/:id/pending-work` (**not** session-scoped in the sense of the others: it's about the session, not within it) |
 
-O `SessionServer` pergunta antes de encerrar por heartbeat. O timeout mede
-inatividade da ABA — 30 segundos —, e fechar sessão é sobre o TRABALHO ter
-acabado, não sobre quem está olhando. Numa execução real isso prendeu um
-handoff `offered` para o Arquiteto dentro de uma sessão fechada
+The `SessionServer` asks before closing on heartbeat. The timeout measures
+TAB inactivity — 30 seconds — and closing a session is about WORK having
+finished, not about who's still watching. In a real execution this held on to
+an `offered` handoff for the Architect inside a closed session
 ([RN-064](../business-rules.md#rn-064)).
 
-Resposta: `{ pending, motivo }`. `motivo` vai para o log do engine — sessão que
-se recusa a fechar sem dizer por quê é indiagnosticável. E api fora do ar
-**não** impede o encerramento: trocar sessão órfã por sessão imortal seria
-trocar um defeito por outro.
+Response: `{ pending, motivo }`. `motivo` goes to the engine log — a session that
+refuses to close without saying why is undiagnosable. And the api being down
+does **not** prevent closing: trading an orphan session for an immortal session would be
+trading one defect for another.
 
-### Registro de gates
+### Gate registry
 
-| método | caminho |
+| method | path |
 |---|---|
-| GET | `/internal/gates` (**não** é session-scoped) |
+| GET | `/internal/gates` (**not** session-scoped) |
 
-Leitura do registro declarativo de `docs/gates.yml`
-([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)). Não é
-session-scoped pelo mesmo motivo do catálogo de modelos: o registro é global —
-quais gates existem é fato do produto, igual para todo projeto.
+Read of the declarative registry in `docs/gates.yml`
+([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)). It's not
+session-scoped for the same reason as the model catalog: the registry is global —
+which gates exist is a fact about the product, the same for every project.
 
-Read-only, e sem rota de escrita **de propósito**: o registro muda por PR
-revisado, não em runtime. Uma rota de escrita transformaria uma decisão de
-engenharia em configuração de produção, que é o que o ADR recusou ao escolher
-YAML em vez de tabela.
+Read-only, and with no write route **on purpose**: the registry changes via a PR
+review, not at runtime. A write route would turn an engineering decision into
+production configuration, which is what the ADR rejected by choosing
+YAML instead of a table.
 
-O arquivo viaja dentro da imagem (`COPY docs/gates.yml` em
-`docker/api/Dockerfile.prod`), como as migrations: o loader sobe de
-`__dirname` até achá-lo, e em produção o encontra em `/app/docs/gates.yml`. A
-carga é preguiçosa — arquivo ilegível responde erro nesta rota, em vez de
-impedir a api de subir.
+The file travels inside the image (`COPY docs/gates.yml` in
+`docker/api/Dockerfile.prod`), like the migrations: the loader climbs from
+`__dirname` until it finds it, and in production finds it at `/app/docs/gates.yml`. The
+loading is lazy — an unreadable file returns an error on this route, instead of
+preventing the api from starting.
 
-O mecanismo inteiro está em
+The whole mechanism is documented in
 [docs/explanation/gates.md](../explanation/gates.md).
 
-**Há uma segunda rota para o mesmo registro, e ela NÃO é interna.** O painel do
-time (FASE 15b) lê `GET /gates`, autenticada por JWT de usuário como qualquer
-rota de produto. Não é duplicação por descuido: `/internal/*` é autenticada por
-**service token**, que o navegador não tem e não pode ter — entregá-lo ao front
-daria a ele a superfície interna inteira, não só os gates. As duas diferem
-também no que devolvem: a interna entrega o registro como está no YAML, a
-pública devolve **só os gates `active`**, porque um gate `planned` é
-planejamento de engenharia e não tem por que aparecer na tela de quem espera
-uma PR. A classificação das duas está em
+**There is a second route for the same registry, and it is NOT internal.** The team
+panel (FASE 15b) reads `GET /gates`, authenticated by user JWT like any
+product route. It's not duplication by oversight: `/internal/*` is authenticated by
+**service token**, which the browser doesn't have and can't have — handing it to the front end
+would give it the entire internal surface, not just the gates. The two also differ
+in what they return: the internal one delivers the registry as it is in the YAML, the
+public one returns **only the `active` gates**, because a `planned` gate is
+engineering planning and has no reason to appear on the screen of someone waiting for
+a PR. The classification of both is in
 [docs/security-surface.md](../security-surface.md).
 
-### Catálogo de modelos
+### Model catalog
 
-| método | caminho |
+| method | path |
 |---|---|
-| POST | `/internal/models/sync` (**não** é session-scoped) |
+| POST | `/internal/models/sync` (**not** session-scoped) |
 
-Uma das duas rotas `engine → api` fora de `/internal/sessions/:sessionId/` (a
-outra é o [remoto de trabalho](#remoto-de-trabalho-do-projeto)), porque o
-sync de catálogo não pertence a sessão nem a workspace nenhum: o catálogo é
-GLOBAL — nome, preço, janela e capabilities são fato do provider, iguais para
-todo mundo. Desde o [ADR 0051](../adr/0051-facetas-de-capability-e-curadoria-por-uso.md)
-isso inclui as facetas de modalidade (lê imagem, gera imagem, thinking), que a
-mesma chamada reconcilia a partir do catálogo remoto — modalidade que o
-provider não declara fica preservada, não zerada. O que é por workspace é a **curadoria**, e o sync não a alcança
-([ADR 0049](../adr/0049-curadoria-de-modelo-por-workspace.md)). Quem
-**agenda** é o engine (`ModelSyncSchedulerWorker`, Oban, com o mesmo idioma de
-worker que se reagenda do `AnamneseSchedulerWorker`); quem tem as credenciais e
-o registry de providers é a api. Duplicar o registry no Elixir seria manter dois
-catálogos — ver [ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md).
+One of the two `engine → api` routes outside `/internal/sessions/:sessionId/` (the
+other is the [project working remote](#project-working-remote)), because the
+catalog sync doesn't belong to any session or workspace: the catalog is
+GLOBAL — name, price, window and capabilities are a fact about the provider, the same for
+everyone. Since [ADR 0051](../adr/0051-facetas-de-capability-e-curadoria-por-uso.md)
+this includes the modality facets (reads image, generates image, thinking), which the
+same call reconciles from the remote catalog — modality the
+provider doesn't declare is preserved, not zeroed out. What is per-workspace is the **curation**, and the sync doesn't reach it
+([ADR 0049](../adr/0049-curadoria-de-modelo-por-workspace.md)). The one who
+**schedules** is the engine (`ModelSyncSchedulerWorker`, Oban, with the same self-rescheduling
+worker idiom as `AnamneseSchedulerWorker`); the one with the credentials and
+the provider registry is the api. Duplicating the registry in Elixir would mean maintaining two
+catalogs — see [ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md).
 
-Responde **200** com um relatório por provider (`porProvider[]`), nunca 5xx por
-causa de um provider: cada linha traz `descobertos`, `reencontrados`,
-`indisponibilizados` e — quando o provider não foi sincronizado — `pulado`
-(`sem_capability` | `sem_credencial` | `falha`) com `origemDaFalha`
-(`infra` | `modelo`) e `detalhe`. Provider pulado **não indisponibiliza nada**:
-"não sei o que tem lá" não é "não tem nada lá"
-([RN-043](../business-rules.md#rn-043)). O corpo completo está no
-[OpenAPI gerado](api/brabo-api) sob a tag `internal`.
+It responds with **200** with a report per provider (`porProvider[]`), never 5xx because of
+one provider: each row carries `descobertos`, `reencontrados`,
+`indisponibilizados` and — when the provider was not synced — `pulado`
+(`sem_capability` | `sem_credencial` | `falha`) with `origemDaFalha`
+(`infra` | `modelo`) and `detalhe`. A skipped provider **does not deactivate anything**:
+"I don't know what's there" is not "there's nothing there"
+([RN-043](../business-rules.md#rn-043)). The full body is in the
+[generated OpenAPI](api/brabo-api) under the `internal` tag.
 
-Duas coisas que esta rota **não** faz, e que já foram diferentes:
+Two things this route does **not** do, and that used to be different:
 
-- **Não liga nem desliga modelo em workspace nenhum.** `descobertos` conta
-  linhas novas em `models`; nenhuma delas ganha curadoria. Modelo descoberto
-  não tem linha em `workspace_models`, e ausência de linha é o desligado
+- **It does not turn a model on or off in any workspace.** `descobertos` counts
+  new rows in `models`; none of them gain curation. A discovered model
+  has no row in `workspace_models`, and the absence of a row is the off state
   ([RN-052](../business-rules.md#rn-052)).
-- **Não troca preço em silêncio.** Preço marcado `manual_pricing` é preservado
-  como está, e toda troca que o sync faz grava uma linha em
-  `model_price_changes` com origem `sync` — na mesma transação da escrita
+- **It does not change price silently.** A price marked `manual_pricing` is preserved
+  as is, and every change the sync makes writes a row to
+  `model_price_changes` with origin `sync` — within the same transaction as the write
   ([RN-044](../business-rules.md#rn-044), [RN-051](../business-rules.md#rn-051)).
 
-### Remoto de trabalho do projeto
+### Project working remote
 
-| método | caminho |
+| method | path |
 |---|---|
-| GET | `/internal/projects/:projectId/git-remote` (**não** é session-scoped) |
+| GET | `/internal/projects/:projectId/git-remote` (**not** session-scoped) |
 
-A segunda rota `engine → api` fora de `/internal/sessions/:sessionId/` a
-existir — as duas de leitura do PO, na seção seguinte, vieram depois — e a
-**única do produto que devolve um segredo decifrado**
+The second `engine → api` route outside `/internal/sessions/:sessionId/` to
+exist — the two PO reads, in the following section, came later — and the
+**only one in the product that returns a decrypted secret**
 ([ADR 0056](../adr/0056-o-engine-trabalha-em-repositorio-remoto.md)).
 
-Ela existe pela mesma divisão do sync de catálogo, aplicada a outro recurso:
-quem trabalha no sistema de arquivos é o engine, quem tem a chave mestra é a
-api. Sem ela, projeto em provider remoto fazia a metade conversacional e parava
-na de construção — `get_local_repo_path/1` recusava tudo que não fosse `local`,
-e worktree, terminal, diff de gate e contexto paravam junto.
+It exists for the same split as the catalog sync, applied to another resource:
+the one who works on the file system is the engine, the one with the master key is the
+api. Without it, a project on a remote provider did the conversational half and stopped
+at the construction one — `get_local_repo_path/1` rejected anything that wasn't `local`,
+and worktree, terminal, gate diff and context stopped along with it.
 
-Responde com a origem **limpa** (`origin`), a branch default e, para provider
-remoto, `token` e `username` à parte. A separação não é estética:
+It responds with the **clean** origin (`origin`), the default branch and, for a
+remote provider, `token` and `username` separately. The separation is not cosmetic:
 
-> **O `origin` nunca carrega credencial.** É esse valor que fica gravado no
-> `.git/config` do workspace, **dentro da pasta onde o dev agent tem leitura
-> auto-aprovada** ([RN-075](../business-rules.md#rn-075)). Uma URL do tipo
-> `https://x-access-token:TOKEN@…` ali seria um `cat .git/config` de distância
-> de virar contexto de LLM.
+> **The `origin` never carries a credential.** This is the value stored in
+> the workspace's `.git/config`, **inside the folder where the dev agent has
+> auto-approved read access** ([RN-075](../business-rules.md#rn-075)). A URL like
+> `https://x-access-token:TOKEN@…` there would be a `cat .git/config` away
+> from becoming LLM context.
 
-Quem consome tem a obrigação simétrica: injetar o token **por invocação**, no
-ambiente do processo filho de cada chamada do git, e nunca em argv nem em
-arquivo ([RN-076](../business-rules.md#rn-076), `Engine.Actions.GitAuth`).
+Whoever consumes it has the symmetric obligation: inject the token **per invocation**, into
+the environment of each git call's child process, and never in argv or in a
+file ([RN-076](../business-rules.md#rn-076), `Engine.Actions.GitAuth`).
 
-A credencial é a do **owner do workspace**, pelo mesmo resolvedor da
-[RN-058](../business-rules.md#rn-058). Provider `local` **não chega aqui**: é
-resolvido direto do banco pelo engine, não tem token e não depende de a api
-estar no ar — é o caminho que o `pnpm dev` e a suite inteira exercitam.
+The credential is the **workspace owner's**, via the same resolver as
+[RN-058](../business-rules.md#rn-058). The `local` provider **does not reach here**: it
+is resolved directly from the database by the engine, has no token and does not depend on the api
+being up — it's the path `pnpm dev` and the entire test suite exercise.
 
-#### A aba Code NÃO passa por aqui, e a assimetria é o ponto
+#### The Code tab does NOT go through here, and the asymmetry is the point
 
-A superfície de leitura de código da FASE 26b (`/projects/:projectId/code/*`)
-**não tem contraparte interna**, e é útil dizer por quê — a rota acima existe
-para o caso oposto, e as duas juntas mostram a divisão.
+The FASE 26b code-reading surface (`/projects/:projectId/code/*`)
+**has no internal counterpart**, and it's worth explaining why — the route above exists
+for the opposite case, and the two together show the split.
 
-O engine precisa de `git-remote` porque ele trabalha no **sistema de arquivos**:
-clona, cria worktree, roda comando. A aba Code não trabalha em lugar nenhum —
-ela pergunta ao **provider** pelo conteúdo de uma ref, pela api, com a
-credencial que a api já tem. Nada nesse caminho precisa de segredo decifrado
-atravessando processo, e por isso nada nesse caminho abre rota interna.
+The engine needs `git-remote` because it works on the **file system**:
+clones, creates a worktree, runs a command. The Code tab doesn't work anywhere —
+it asks the **provider** for the content of a ref, through the api, with the
+credential the api already has. Nothing on this path needs a decrypted secret
+crossing a process, and that's why nothing on this path opens an internal route.
 
-A consequência prática é a que importa: a única rota do produto que devolve
-segredo decifrado continua sendo UMA. Ler código não a multiplicou.
+The practical consequence is the one that matters: the only route in the product that returns
+a decrypted secret remains just ONE. Reading code did not multiply it.
 
-### O que o PO relê: regras de negócio e backlog
+#### Chat RAG indexing (Wave 4/G2) also does not open an internal route
 
-| método | caminho |
+`docs`/`adr` are indexed via `ReadProjectCodeUseCase` — the SAME
+surface as the Code tab, same owner credential, same container gate
+(RN-105) — for the reason above: nothing on this path decrypts a
+secret in a separate process. `session` reads `chat.message`/`agent.response`
+directly from the event log, without leaving the api. The embedding (`RagEmbeddingService`)
+never goes through the RN-058 credential resolver: it requests the
+FIXED provider `ollama` directly from the `LLMProviderRegistry`, the same path that
+RN-058 already describes as "the search is skipped" for that provider — there is no
+user secret to decrypt here, and that's why there is also no
+internal route to open ([RN-232](../business-rules.md#rn-232),
+[ADR 0080](../adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)).
+
+### What the PO re-reads: business rules and backlog
+
+| method | path |
 |---|---|
-| GET | `/internal/projects/:projectId/business-rules` (**não** é session-scoped) |
-| GET | `/internal/projects/:projectId/backlog` (**não** é session-scoped) |
+| GET | `/internal/projects/:projectId/business-rules` (**not** session-scoped) |
+| GET | `/internal/projects/:projectId/backlog` (**not** session-scoped) |
 
-As outras duas rotas fora de `/internal/sessions/:sessionId/`, e pelo mesmo
-critério das anteriores: o recurso é do **projeto**, e um segmento de sessão
-aqui seria decorativo — pior, seria enganoso, porque é justamente o escopo de
-sessão que causou o defeito que elas corrigem
+The other two routes outside `/internal/sessions/:sessionId/`, and by the
+same criterion as the previous ones: the resource belongs to the **project**, and a
+session segment here would be decorative — worse, it would be misleading, because it's
+exactly the session scope that caused the defect these routes fix
 ([RN-164](../business-rules.md#rn-164)).
 
-O PO tinha **quatro ferramentas e todas de escrita** (`create_epic`,
-`create_story`, `create_task`, `offer_handoff`). O contexto dele era montado
-uma vez, no kickoff, a partir dos 200 últimos eventos da **sessão corrente** —
-e depois disso ele nunca mais relia nada. Numa sessão longa, ou numa retomada,
-ele não sabia quais regras existiam, quais já tinha coberto, nem o que ele
-próprio já havia criado. O sintoma que apareceu no uso real foi um backlog com
-épico e **nenhuma história**: sem história não há tarefa, e sem tarefa a
-execução trava sem erro nenhum.
+The PO had **four tools and all of them writes** (`create_epic`,
+`create_story`, `create_task`, `offer_handoff`). Its context was assembled
+once, at kickoff, from the last 200 events of the **current session** —
+and after that it never re-read anything again. In a long session, or in a resumed
+one, it didn't know which rules existed, which it had already covered, nor what it
+had already created itself. The symptom that appeared in real use was a backlog with
+an epic and **no stories at all**: without a story there's no task, and without a task
+execution stalls with no error at all.
 
-`/business-rules` devolve todo `artifact.business_rule` das sessões do
-projeto — com a `description` inteira, quais histórias já citam cada regra
-(`coveredByStoryIds`) e o `uncoveredCount`. Não é a `GetCoverageUseCase` de
-novo: aquela responde "quanto do produto já virou história" para a TELA e por
-isso só carrega título; esta responde "o que eu preciso transformar em
-história" para o MODELO, e sem a descrição o PO teria o enunciado da regra e
-não o conteúdo dela. O CÁLCULO de cobertura é o mesmo (`computeCoverage`,
-puro) — duas contas do mesmo fato divergiriam no primeiro ajuste.
+`/business-rules` returns every `artifact.business_rule` from the project's sessions
+— with the full `description`, which stories already cite each rule
+(`coveredByStoryIds`) and the `uncoveredCount`. It's not `GetCoverageUseCase`
+again: that one answers "how much of the product has already become a story" for the
+SCREEN and so only carries the title; this one answers "what I need to turn into
+a story" for the MODEL, and without the description the PO would have the rule's statement and
+not its content. The CALCULATION of coverage is the same (`computeCoverage`,
+pure) — two calculations of the same fact would diverge on the first tweak.
 
-`/backlog` devolve a MESMA árvore épico → história → tarefa da aba Backlog,
-pelo mesmo `ListBacklogUseCase` (três leituras por projeto, nunca N+1).
+`/backlog` returns the SAME epic → story → task tree as the Backlog tab,
+via the same `ListBacklogUseCase` (three reads per project, never N+1).
 
-Nenhuma das duas devolve segredo, e **nenhuma das duas aceita parâmetro além
-do id do projeto**: sem termo de busca, sem paginação, sem filtro. É
-deliberado, e é o que as mantém do lado certo do
-[ADR 0060](../adr/0060-superficie-de-leitura-de-codigo.md): ler não é
-efeito externo e não vira `proposed_action`, mas leitura de agente precisa ser
-CONTIDA — e uma rota sem parâmetro não tem onde o modelo escrever o que
-quiser. O custo por chamada é constante, e o texto entregue ao modelo tem teto
-de linhas, sempre declarando o total real quando trunca.
+Neither of the two returns a secret, and **neither of the two accepts a parameter beyond
+the project id**: no search term, no pagination, no filter. It's
+deliberate, and it's what keeps them on the right side of
+[ADR 0060](../adr/0060-superficie-de-leitura-de-codigo.md): reading is not
+an external effect and doesn't become a `proposed_action`, but an agent's read needs to be
+CONTAINED — and a route without a parameter has nowhere for the model to write whatever it
+wants. The cost per call is constant, and the text delivered to the model has a
+line cap, always declaring the real total when it truncates.
 
-### Onde o workspace do projeto mora — e por que isso também não virou rota
+### What the PO re-reads: product metrics
 
-O modo de workspace ([ADR 0072](../adr/0072-projeto-local-ou-container.md),
-[RN-169](../business-rules.md#rn-169)) segue a mesma divisão. A partir dele um
-projeto pode ser `container` (a pasta gerenciada em `PROJECT_WORKSPACES_ROOT`, o
-default) ou `local` (um caminho absoluto do usuário) — e o engine precisa saber
-qual, porque é ele quem cria worktree e roda comando ali dentro.
+| method | path |
+|---|---|
+| GET | `/internal/projects/:projectId/product-metrics` (**not** session-scoped) |
 
-**Nenhuma rota interna nova.** O engine resolve o localizador lendo as MESMAS
-colunas do MESMO banco (`projects.workspace_mode` e `projects.workspace_path`),
-como já fazia com `workspace_dir_name` desde o
-[ADR 0066](../adr/0066-nome-de-pasta-legivel-do-workspace.md). É o mesmo
-argumento de sempre: as duas derivações — api e engine — precisam concordar, e
-concordar por leitura da mesma linha é mais barato e mais difícil de divergir
-que concordar por contrato HTTP. Não há segredo envolvido, então não há motivo
-para uma rota.
+The THIRD PO read route, same design as the two above
+([RN-407](../business-rules.md#rn-407)) — closes the last pending item from the
+`fluxo.yml` × code audit
+([item B4](../explanation/auditoria-fluxo-vs-codigo.md#b-gaps-in-active-roles-already-implementable-work)):
+`docs/fluxo.yml` (role `po`, entry `metricas-de-produto`) declared
+`status: lacuna` since ADR 0089 — the DATA already existed (the
+`analise:funil` script measures the session → commit → PR → merge funnel, real lead time
+and real deployment frequency), only the reading MECHANISM within the
+turn was missing.
 
-O engine distingue os dois casos pela **barra inicial** do localizador: nome de
-pasta no modo `container`, caminho absoluto no `local`.
+The report is assembled by the SAME pure functions and the SAME query as the script —
+`calcularFunil`/`calcularLeadTimes`/`leadTimeMedioMs`/
+`deploymentFrequencyPorDia`/`buscarAcoesGitDoFunil`, extracted to
+`apps/api/src/application/services/funil-metrics.ts` (`scripts/` can't
+import `src/` in the reverse direction, and a use case can't import from
+`scripts/`), so that the PO's read and the human report never diverge from
+the same fact. `apps/api/scripts/analise-funil.ts` now REEXPORTS from there
+instead of defining locally — with no change in signature or behavior.
 
-### Contexto por agente
+The JSON body has no field at all for the three permanent absences the
+script declares ("Not measured, on purpose": full product funnel
+ideation → commit, evidence of adoption per feature, MTTR/change failure
+rate) — the PO's tool (`listar_metricas_de_produto`) names the three
+by name in the TEXT it returns to the model, never letting it conclude by
+omission that there is no gap.
 
-| método | caminho |
+### Where the project's workspace lives — and why READING still isn't a route
+
+The project's `execution_mode` ([ADR 0072](../adr/0072-projeto-local-ou-container.md)/
+[ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md),
+[RN-169](../business-rules.md#rn-169)/[RN-421](../business-rules.md#rn-421))
+follows the same split. From it a project can be `container` (the
+managed folder in `PROJECT_WORKSPACES_ROOT`, the default), `mounted` (an
+absolute path of the user's, mounted via bind-mount) or `runner` (an absolute
+path of the user's, WITHOUT bind-mount, confirmed by a connected `brabo-runner`) — and the
+engine needs to know which one, because it's the one that creates the worktree and runs commands
+inside it.
+
+**READING remains without an internal route.** The engine resolves the locator by reading
+the SAME columns of the SAME database (`projects.execution_mode` and
+`projects.workspace_path`), as it already did with `workspace_dir_name` since
+[ADR 0066](../adr/0066-nome-de-pasta-legivel-do-workspace.md). It's the same
+argument as always: the two derivations — api and engine — need to agree, and
+agreeing by reading the same row is cheaper and harder to diverge from
+than agreeing via an HTTP contract. There is no secret involved, so there's no reason
+for a read route.
+
+The engine distinguishes `container` from the other two by the **leading slash** of
+the locator: folder name in `container`, absolute path in
+`mounted`/`runner` — the two share the SAME root derivation; what
+changes between them is WHEN/WHO confirms that the path actually exists (see the
+next section).
+
+### Workspace confirmation by the runner — the WRITE, which is a new route ([RN-423](../business-rules.md#rn-423))
+
+| method | path |
+|---|---|
+| POST | `/internal/projects/:projectId/workspace-verification` (**not** session-scoped) |
+
+The exception to the previous section's rule: WRITING the path for a
+`runner` project cannot be a direct column read, because the one with authority
+over the path is neither the api nor the engine — it's the `brabo-runner`, running on
+the real HOST. The `terminal:<projectId>` channel receives `workspace_confirm`
+from the runner right after the `join`; the engine forwards it to this route
+(`Engine.Sessions.EngineApiClient.confirm_workspace/4`), which:
+
+1. Rejects with `400` if the project is not in `execution_mode: "runner"`;
+2. Revalidates the path with the SAME lexical predicate as creation
+   (`caminhoDeWorkspaceLocalValido`) — system root and overlap with the
+   Brabo checkout remain forbidden even coming from the runner;
+3. **Overwrites** `workspacePath` and writes `workspaceVerifiedAt = now()` — the
+   runner is the source of truth, without requiring equality with what was typed
+   in the wizard;
+4. Is idempotent: reconnecting with the SAME path rewrites nothing
+   (`changed: false`);
+5. Attempts to write `project.workspace_verified` to the event log of the project's
+   most recent session — without a session yet, the `UPDATE` happens the same way
+   and only the event is skipped, the same degradation `pty_open`/`pty_close`
+   already accept.
+
+`Engine.Actions.TerminalExecutor.decisao_de_execucao/1` is the one that CONSUMES the
+result: routes to the runner only with `workspaceVerifiedAt` non-null **and**
+a runner connected right now; missing either of the two, it rejects
+explicitly — never falling back to `mounted`'s `System.cmd`/bind-mount, which does not
+exist for a `runner` project.
+
+### Per-agent context
+
+| method | path |
 |---|---|
 | GET | `/dev-context` |
 | GET | `/infra-context` |
@@ -398,20 +521,20 @@ pasta no modo `container`, caminho absoluto no `local`.
 | GET | `/anamnese-context` |
 | GET | `/infra-artifacts/:prActionId/files` |
 
-Um endpoint por agente, em vez de um genérico: cada um monta exatamente o que
-aquele papel precisa, e o Harness não fica filtrando no engine o que a api
-poderia não ter enviado.
+One endpoint per agent, instead of a generic one: each one assembles exactly what
+that role needs, and the Harness doesn't end up filtering in the engine what
+the api could have simply not sent.
 
-`/infra-context` ganhou `gitProvider` na Fase 8c (`null` sem repositório
-provisionado) — é como o subagente Workflows decide `.github/workflows/
-ci.yml` vs `.gitlab-ci.yml`, sem rota nova (mesmo padrão de "um GET por
-agente" — ver [RN-037](../business-rules.md#rn-037)). **Não** é
-`capabilities` do `GitProvider`: GitHub e GitLab têm as MESMAS capabilities
-(`{protectBranch: true, pullRequests: true}`) — só `provider.name` distingue.
+`/infra-context` gained `gitProvider` in FASE 8c (`null` with no repository
+provisioned) — it's how the Workflows subagent decides `.github/workflows/
+ci.yml` vs `.gitlab-ci.yml`, with no new route (same "one GET per
+agent" pattern — see [RN-037](../business-rules.md#rn-037)). It is **not**
+`capabilities` of the `GitProvider`: GitHub and GitLab have the SAME capabilities
+(`{protectBranch: true, pullRequests: true}`) — only `provider.name` distinguishes them.
 
-### Backlog e arquitetura
+### Backlog and architecture
 
-| método | caminho |
+| method | path |
 |---|---|
 | POST | `/epics` · `/stories` · `/tasks` |
 | POST | `/story-modules` |
@@ -422,166 +545,190 @@ agente" — ver [RN-037](../business-rules.md#rn-037)). **Não** é
 | POST | `/tasks/:taskId/status` |
 | POST | `/tasks/:taskId/block` |
 
-`tasks/claim` é atômico do lado da api — é o que impede dois dev agents de
-pegarem a mesma task.
+`tasks/claim` is atomic on the api side — it's what prevents two dev agents from
+claiming the same task.
 
-`/project-image` é a ferramenta `choose_project_image` do Arquiteto (FASE 25a,
+`/project-image` is the Architect's `choose_project_image` tool (FASE 25a,
 [ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)):
-fixa a imagem de container do projeto. Do mesmo calibre de `/module-map` — o
-artefato É o evento `artifact.project_image`, sem tabela própria, versionado
-(o vigente é o de maior `version`). Imagem sem tag explícita (`latest`
-recusado), `rationale` curto ou recurso acima do teto voltam `400`, com o
-motivo inteiro no corpo — é isso que permite ao modelo corrigir pelo
-tool-result em vez de reemitir igual ([RN-061](../business-rules.md#rn-061)).
-Enquanto nenhuma versão existe, `GET /projects/:projectId/container` (rota
-pública, `role:viewer`) devolve `status: "sem_decisao"`, e é o mesmo estado que
-faz a aba Code responder `409` ([RN-105](../business-rules.md#rn-105)).
+fixes the project's container image. Same caliber as `/module-map` — the
+artifact IS the `artifact.project_image` event, with no table of its own, versioned
+(the current one is the one with the highest `version`). An image with no explicit tag
+(`latest` rejected), a short `rationale`, or a resource above the cap return `400`, with
+the full reason in the body — that's what lets the model correct itself via the
+tool-result instead of re-emitting the same thing ([RN-061](../business-rules.md#rn-061)).
+While no version exists, `GET /projects/:projectId/container` (public route,
+`role:viewer`) returns `status: "sem_decisao"`, and it's the same state that
+makes the Code tab return `409` ([RN-105](../business-rules.md#rn-105)).
 
-`/c4-diagram` é a ferramenta `create_c4_diagram` do Arquiteto
+`/c4-diagram` is the Architect's `create_c4_diagram` tool
 ([RN-149](../business-rules.md#rn-149),
-[ADR 0068](../adr/0068-diagrama-c4-do-arquiteto.md)): gera as sintaxes
-Mermaid dos níveis Context e Container do diagrama C4 (modelo de Simon
-Brown). Mesmo calibre de `/module-map`/`/project-image` — o artefato É o
-evento `artifact.c4_diagram`, sem tabela, versionado (o vigente é o de
-maior `version`, revisar é gerar de novo). O corpo carrega só
-`system_name`/`system_description`/`actors` — os módulos do nível
-Container NÃO vêm no corpo: o caso de uso busca o `module_map` VIGENTE do
-projeto e o deriva de lá, nunca do que o modelo redigita. Sem module_map
-vigente, `400` (não há Container level sem módulos). `GET
-/projects/:projectId/architecture` (rota pública, `role:viewer`) devolve o
-diagrama vigente em `c4Diagram`, no mesmo objeto que já traz `moduleMap` e
-`adrs`.
+[ADR 0068](../adr/0068-diagrama-c4-do-arquiteto.md)): generates the Mermaid
+syntax for the Context and Container levels of the C4 diagram (Simon
+Brown's model). Same caliber as `/module-map`/`/project-image` — the artifact IS the
+`artifact.c4_diagram` event, with no table, versioned (the current one is the
+highest `version`; revising means generating again). The body carries only
+`system_name`/`system_description`/`actors` — the Container level's modules
+do NOT come in the body: the use case fetches the project's CURRENT `module_map`
+and derives it from there, never from what the model rewrites. With no current
+module_map, `400` (there is no Container level without modules). `GET
+/projects/:projectId/architecture` (public route, `role:viewer`) returns the
+current diagram in `c4Diagram`, in the same object that already carries `moduleMap`
+and `adrs`.
 
-**Sem task pegável, a resposta é `201` com corpo VAZIO**, não `null` no corpo: o
-caso de uso devolve `null` e o NestJS serializa isso como `content-length: 0`.
-Quem consome precisa tratar corpo vazio como "nada a reivindicar" — e é
-justamente o que o `EngineApiClient.claim_task/4` faz, normalizando para `nil`
-antes de entregar ao `AgentIo`.
+**With no claimable task, the response is `201` with an EMPTY body**, not `null` in the
+body: the use case returns `null` and NestJS serializes that as `content-length: 0`.
+Whoever consumes it needs to treat an empty body as "nothing to claim" — and that's
+exactly what `EngineApiClient.claim_task/4` does, normalizing to `nil`
+before delivering it to `AgentIo`.
 
-Vale escrever porque a suposição contrária custou caro: o cliente assumia
-`null` decodificado, recebia `""`, e o dev agent tratava a string vazia como se
-fosse uma task — morrendo no momento mais comum que existe, o da fila do módulo
-esvaziando (achado W, em
+Worth writing down because the opposite assumption was costly: the client assumed
+decoded `null`, received `""`, and the dev agent treated the empty string as if
+it were a task — dying at the most common moment there is, the module's queue
+emptying out (finding W, in
 [achados-execucao-real.md](../explanation/achados-execucao-real.md)).
 
 ### Gates
 
-| método | caminho |
+| method | path |
 |---|---|
 | POST | `/tasks/:taskId/gate/open` |
 | POST | `/gates/verdict` |
 | POST | `/infra-gates/verdict` |
 | POST | `/delegations` |
 
-A **máquina de estados de gate vive na api**, não no engine. O engine reporta o
-parecer; quem decide se a transição é legal — e recusa QA tentando pular para
-`awaiting_user` — é o domínio ([RN-014](../business-rules.md#rn-014)).
+The **gate state machine lives in the api**, not in the engine. The engine reports the
+verdict; who decides whether the transition is legal — and rejects QA trying to jump to
+`awaiting_user` — is the domain ([RN-014](../business-rules.md#rn-014)).
 
-`/delegations` é DIFERENTE dos outros três: não move a máquina de estados do
-gate — só registra o desfecho de um delegado de área (QA, Fase 8b; Infra,
-Fase 8c — [ADR 0038](../adr/0038-hierarquia-de-agentes.md)). O lead da área
-chama esta rota uma vez por delegado (`completed`/`failed`/`dispensed`),
-SEPARADO da chamada que a área usa pra reportar o resultado consolidado pra
-fora (`/gates/verdict` pro QA, `open_infra_pr` pro Infra) — ver
+`/delegations` is DIFFERENT from the other three: it doesn't move the gate's
+state machine — it only records the outcome of an area delegate (QA, FASE 8b; Infra,
+FASE 8c — [ADR 0038](../adr/0038-hierarquia-de-agentes.md)). The area lead
+calls this route once per delegate (`completed`/`failed`/`dispensed`),
+SEPARATE from the call the area uses to report the consolidated result to the
+outside (`/gates/verdict` for QA, `open_infra_pr` for Infra) — see
 [RN-036](../business-rules.md#rn-036)/[RN-037](../business-rules.md#rn-037).
-Session-scoped, não task-scoped: `taskId` vai no CORPO, opcional — QA sempre
-manda, Infra nunca manda (a delegação é sobre a sessão, sem task de backlog
-por trás de uma PR de infra).
+Session-scoped, not task-scoped: `taskId` goes in the BODY, optional — QA always
+sends it, Infra never sends it (the delegation is about the session, with no backlog task
+behind an infra PR).
 
-### Psicólogo e Anamnese
+### Psychologist and Anamnese
 
-| método | caminho |
+| method | path |
 |---|---|
 | POST | `/hypotheses` |
 | POST | `/proficiency` |
 | POST | `/instruction-patches` |
 | POST | `/max-parallel-proposals` |
 
-A validação de evidência ([RN-021](../business-rules.md#rn-021)) e o catálogo
-fechado de competências ([RN-024](../business-rules.md#rn-024)) são aplicados
-**aqui**, na api. O engine não consegue gravar uma hipótese sem evidência
-válida nem perfilar uma competência fora do catálogo, ainda que o modelo peça.
+Evidence validation ([RN-021](../business-rules.md#rn-021)) and the closed
+catalog of competencies ([RN-024](../business-rules.md#rn-024)) are enforced
+**here**, in the api. The engine cannot write a hypothesis without valid
+evidence nor profile a competency outside the catalog, even if the model asks for it.
 
-`/max-parallel-proposals` (FASE 14d) segue a mesma divisão: a Anamnese propõe
-subir o teto de paralelismo de uma área, e é a **api** que recusa uma proposta
-que não sobe nada — a Anamnese roda periodicamente, e sem essa recusa
-reproporia a mesma coisa a cada rodada. A ação que nasce daí **nunca é
-auto-aprovável** ([RN-086](../business-rules.md#rn-086)): automatizar o ajuste
-seria o produto elevando o próprio limite de gasto.
+`/max-parallel-proposals` (FASE 14d) follows the same split: the Anamnese proposes
+raising an area's parallelism cap, and it's the **api** that rejects a proposal
+that doesn't raise anything — the Anamnese runs periodically, and without this
+rejection it would re-propose the same thing on every round. The action born from this
+is **never auto-approvable** ([RN-086](../business-rules.md#rn-086)): automating the adjustment
+would be the product raising its own spending limit.
 
-Esta rota **respondia `400` em todo projeto** até a FASE 18, e nada no contrato
-denunciava isso: a validação `área "<key>" não existe neste projeto` é a
-primeira coisa que ela faz, e `agent_areas` nunca era gravada — o `upsert` do
-repositório não tinha chamador nenhum. Agora a área nasce com o projeto
-([RN-094](../business-rules.md#rn-094)) e a recusa volta a significar o que
-diz: chave de área inexistente. Projetos anteriores à correção são cobertos
-pela migração de backfill.
+This route **responded with `400` on every project** until FASE 18, and nothing in the contract
+gave it away: the validation `área "<key>" não existe neste projeto` is the
+first thing it does, and `agent_areas` was never written — the repository's `upsert`
+had no caller at all. Now the area is created with the project
+([RN-094](../business-rules.md#rn-094)) and the rejection once again means what it
+says: nonexistent area key. Projects predating the fix are covered
+by the backfill migration.
+
+### Knowledge graph and RAG ([ADR 0099](../adr/0099-neo4j-grafo-de-conhecimento-e-templates.md)/[0100](../adr/0100-rag-search-e-modelos-garantidos-no-boot.md)/[0101](../adr/0101-memoria-relacional-como-projecao-do-event-log.md))
+
+| method | path |
+|---|---|
+| GET | `/internal/graph/prompt-templates/:name` |
+| POST | `/internal/graph/prompt-templates` |
+| POST | `/internal/rag/search` |
+
+The two template routes write/read prompt versions in Neo4j, idempotent
+by hash — `Engine.Harness.InstructionFiles` (source `:graph`) and the
+Psychologist/Anamnese workers resolve kickoff/identity through here, always with a fallback
+to inline text on any failure ([RN-413](../business-rules.md#rn-413)/[RN-417](../business-rules.md#rn-417)).
+`scripts/dev/seed-prompts.ts` populates the graph from `prompts/*.md`.
+`/internal/rag/search` is a thin PROJECTION over `HybridSearchUseCase` (the
+same vector+lexical hybrid search the "Chat RAG" tab already uses) — service
+token instead of user JWT, same response format with explicit `degraded`
+when embedding was not available
+([RN-414](../business-rules.md#rn-414)). **None of the three is the relational
+memory's WRITE path** — handoff, hypothesis, profile and session close
+reach the graph via `GraphProjector`, on the api side, draining a
+second line of the transactional outbox; the engine never writes to the graph directly
+([RN-416](../business-rules.md#rn-416)).
 
 ## api → engine
 
-Quinze rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
+Sixteen command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
 
-| método | caminho | o que dispara |
+| method | path | what it triggers |
 |---|---|---|
-| POST | `/sessions` | sobe o `SessionServer` |
-| POST | `/sessions/:id/agent/start` | inicia um turno de agente |
-| POST | `/sessions/:id/agent/message` | mensagem do usuário no fio |
-| POST | `/sessions/:id/agent/cancel` | cancela o turno em curso do agente ativo ([RN-122](../business-rules.md#rn-122)) — mata a Task que segura a chamada ao LLM (`Task.shutdown/2`, `:brutal_kill`); idempotente, NO-OP sem turno em curso |
-| POST | `/sessions/:id/agent/readiness` | confirmação de prontidão |
-| POST | `/sessions/:id/agent/revise` | devolve ao PO uma história que o usuário recusou promover (Fase 12c — RN-048); **404 se o PO não está de pé**, e isso não é erro para a api |
-| POST | `/sessions/:id/agent/offer-infra-handoff` | oferta de handoff ao Infra |
-| POST | `/sessions/:id/agent/offer-dev-handoff` | oferta de handoff ao **Dev Lead** (FASE 14d — [RN-087](../business-rules.md#rn-087)) |
-| POST | `/sessions/:id/execution/start` | ativa a fase de execução |
-| POST | `/sessions/:id/execution/parallelize` | cria subagentes — **executa, não decide** (ver abaixo) |
-| POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearma um dev agent travado (Fase 12b — RN-047); 404 se não existe, **409 se não está `idle_tripped`** |
-| POST | `/sessions/:id/psychologist/reanalyze` | reanálise sob demanda |
-| POST | `/projects/:id/anamnese/run` | execução da Anamnese |
-| POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalida o cache de instrução |
-| POST | `/actions/execute` · `/actions/execute-git` | executa uma ação **já aprovada** |
+| POST | `/sessions` | starts the `SessionServer` |
+| POST | `/sessions/:id/agent/start` | starts an agent turn |
+| POST | `/sessions/:id/agent/message` | user message in the thread |
+| POST | `/sessions/:id/agent/cancel` | cancels the active agent's ongoing turn ([RN-122](../business-rules.md#rn-122)) — kills the Task holding the LLM call (`Task.shutdown/2`, `:brutal_kill`); idempotent, NO-OP with no turn in progress |
+| POST | `/sessions/:id/agent/readiness` | readiness confirmation |
+| POST | `/sessions/:id/agent/revise` | returns to the PO a story the user declined to promote (FASE 12c — RN-048); **404 if the PO is not up**, and that is not an error for the api |
+| POST | `/sessions/:id/agent/offer-infra-handoff` | handoff offer to Infra |
+| POST | `/sessions/:id/agent/offer-dev-handoff` | handoff offer to the **Dev Lead** (FASE 14d — [RN-087](../business-rules.md#rn-087)) |
+| POST | `/sessions/:id/execution/start` | activates the execution phase |
+| POST | `/sessions/:id/execution/parallelize` | creates subagents — **executes, does not decide** (see below) |
+| POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearms a stuck dev agent (FASE 12b — RN-047); 404 if it doesn't exist, **409 if it isn't `idle_tripped`** |
+| POST | `/sessions/:id/psychologist/reanalyze` | on-demand reanalysis |
+| GET | `/psychologist/status` | reads the global `PSYCHOLOGIST_ENABLED` flag ([RN-454](../business-rules.md#rn-454)) — no side effect, global (not scoped to a session) |
+| POST | `/projects/:id/anamnese/run` | Anamnese run |
+| POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalidates the instruction cache |
+| POST | `/actions/execute` · `/actions/execute-git` | executes an **already approved** action |
 
-As duas ofertas de handoff saem da **mesma** confirmação de arquitetura
-pronta, e são rotas separadas de propósito: Infra e Dev são áreas com desfechos
-independentes, e uma chamada só faria a falha de uma derrubar a outra. A ordem
-importa — Infra primeiro, porque o event log é imutável e um handoff já
-ofertado não teria como ser retratado.
+The two handoff offers come from the **same** confirmation of architecture
+ready, and they are separate routes on purpose: Infra and Dev are areas with independent
+outcomes, and a single call would make one's failure bring down the other. The order
+matters — Infra first, because the event log is immutable and a handoff already
+offered would have no way to be retracted.
 
-`/actions/execute` merece atenção: ele executa, não decide. A decisão já
-aconteceu na api. Se o engine pudesse decidir, o pipeline de aprovação teria
-uma porta dos fundos.
+`/actions/execute` deserves attention: it executes, it doesn't decide. The decision has
+already happened in the api. If the engine could decide, the approval pipeline would have
+a back door.
 
-**`execution/parallelize` é o mesmo caso, e desde a FASE 14d isso é visível.**
-A rota PÚBLICA de mesmo nome (`POST /projects/:projectId/sessions/:sessionId/execution/parallelize`)
-passa antes pelo teto da área ([RN-083](../business-rules.md#rn-083)): dentro
-dele o agente sobe na hora; acima dele a api cria uma `proposed_action` e **não
-chama o engine**. Quando o engine recebe este comando, a decisão já foi tomada
-— por teto ou por você.
+**`execution/parallelize` is the same case, and since FASE 14d this is visible.**
+The PUBLIC route with the same name (`POST /projects/:projectId/sessions/:sessionId/execution/parallelize`)
+first goes through the area cap ([RN-083](../business-rules.md#rn-083)): within
+it the agent comes up right away; above it the api creates a `proposed_action` and does **not
+call the engine**. By the time the engine receives this command, the decision has already been made
+— by cap or by you.
 
-Vale reparar que o nome repetido nos dois lados esconde a assimetria: a rota
-pública é o PORTÃO, a interna é o EXECUTOR. É a mesma divisão de
-`/actions/execute`, e a razão de ela existir é idêntica.
+Worth noting that the name repeated on both sides hides the asymmetry: the public
+route is the GATE, the internal one is the EXECUTOR. It's the same split as
+`/actions/execute`, and the reason it exists is identical.
 
-**Perguntas estruturadas do Criativo (RN-162) não abrem rota interna nova.** A
-rota pública `POST /projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer`
-(`AnswerStructuredQuestionUseCase`) grava `chat.structured_question_answered`
-e então chama esta MESMA `/sessions/:id/agent/message` acima — as respostas do
-formulário viram uma mensagem concatenada ("1. {label}: {resposta}"), como se
-o usuário tivesse digitado no fio. Do lado do engine não existe canal separado
-para "ler resposta estruturada": o Criativo lê o próximo `chat.message`
-normalmente, no turno seguinte.
+**The Criativo's structured questions (RN-162) do not open a new internal route.** The
+public route `POST /projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer`
+(`AnswerStructuredQuestionUseCase`) writes `chat.structured_question_answered`
+and then calls this SAME `/sessions/:id/agent/message` above — the form's answers
+become a concatenated message ("1. {label}: {resposta}"), as if
+the user had typed it in the thread. On the engine side there is no separate channel
+for "read structured answer": the Criativo reads the next `chat.message`
+normally, in the following turn.
 
-### Saúde e métricas
+### Health and metrics
 
-| caminho | responde |
+| path | responds |
 |---|---|
-| `/health` | conexão com o Postgres |
-| `/live` | **sem tocar o banco** — um liveness ligado ao Postgres reiniciaria todas as réplicas de uma vez num banco lento |
-| `/ready` | só libera tráfego depois que a reidratação de sessões terminou; vira 503 durante o drain |
-| `/metrics` | Prometheus, incluindo `oban_queue_depth{queue,state}` |
+| `/health` | Postgres connection |
+| `/live` | **without touching the database** — a liveness check tied to Postgres would restart all replicas at once on a slow database |
+| `/ready` | only opens traffic after session rehydration has finished; becomes 503 during drain |
+| `/metrics` | Prometheus, including `oban_queue_depth{queue,state}` |
 
-Três probes porque as perguntas são diferentes
+Three probes because the questions are different
 ([ADR 0025](../adr/0025-fase5-deploy-kubernetes-kustomize.md)).
 
-## O caminho do evento
+## The event's path
 
 ```mermaid
 sequenceDiagram
@@ -589,47 +736,47 @@ sequenceDiagram
   participant P as postgres
   participant E as engine
 
-  Note over A,P: uma transação só
+  Note over A,P: a single transaction
   A->>P: insert session_events
   A->>P: insert outbox
   A->>P: COMMIT
 
-  E->>P: Oban consome
-  E->>E: processa
-  E->>A: HTTP /internal/... (resultado)
-  A->>P: novo evento
+  E->>P: Oban consumes
+  E->>E: processes
+  E->>A: HTTP /internal/... (result)
+  A->>P: new event
 ```
 
-Não há broker. A fila é o Postgres, via Oban — e é por isso que a profundidade
-dela é uma métrica de banco, consultável por SQL, e serve de sinal para o HPA.
+There is no broker. The queue is Postgres, via Oban — and that's why its
+depth is a database metric, queryable via SQL, and serves as a signal for the HPA.
 
-O diagrama acima é o caminho de `aggregate_type = "session"` — todo evento de
-domínio grava um `session_events` na mesma transação do outbox. A Fase 12b
-acrescentou `aggregate_type = "task"` (`task.gate_resolved`,
-`task.became_claimable`, o reagendamento do dev agent): sem `session_events`
-correspondente, só a linha de outbox — o Drain roteia pro
-`Engine.Workers.DevAgentWakeWorker`, que entrega por PubSub a UM agente
-específico ou a todos os `idle` de um módulo. Ver
+The diagram above is the path for `aggregate_type = "session"` — every domain
+event writes a `session_events` row within the same outbox transaction. FASE 12b
+added `aggregate_type = "task"` (`task.gate_resolved`,
+`task.became_claimable`, the dev agent's rescheduling): with no corresponding
+`session_events`, only the outbox row — the Drain routes it to the
+`Engine.Workers.DevAgentWakeWorker`, which delivers via PubSub to ONE
+specific agent or to all `idle` agents in a module. See
 [ADR 0045](../adr/0045-reagendamento-por-evento-do-dev-agent.md).
 
-## Onde o contrato vive
+## Where the contract lives
 
-Desde a Fase 7b existe **OpenAPI** para o sentido engine → api: as 32 rotas
-abaixo estão na [referência gerada](api/brabo-api), sob a tag `internal`, com
-corpo de request, corpo de response e códigos de erro. O documento sai do
-código por `pnpm docs:generate` e o `docs:check` reprova quando ele
-desatualiza.
+Since FASE 7b there is **OpenAPI** for the engine → api direction: the 32 routes
+below are in the [generated reference](api/brabo-api), under the `internal` tag, with
+request body, response body and error codes. The document is generated
+from the code by `pnpm docs:generate` and `docs:check` fails when it
+goes out of date.
 
-| lado | fonte |
+| side | source |
 |---|---|
-| rotas da api | o [OpenAPI gerado](api/brabo-api) (contrato) e [`security-surface.md`](../security-surface.md) (exposição) |
-| rotas do engine | `apps/engine/lib/engine_web/router.ex` |
-| tipos compartilhados | `packages/shared/src/index.ts` (só api ↔ web) |
-| cliente do engine | `apps/engine/lib/engine/sessions/engine_api_client.ex` |
+| api routes | the [generated OpenAPI](api/brabo-api) (contract) and [`security-surface.md`](../security-surface.md) (exposure) |
+| engine routes | `apps/engine/lib/engine_web/router.ex` |
+| shared types | `packages/shared/src/index.ts` (api ↔ web only) |
+| engine client | `apps/engine/lib/engine/sessions/engine_api_client.ex` |
 
-> **TODO(humano):** a referência gerada dá às duas pontas a mesma fonte para
-> conferir, mas **não fecha a lacuna**: continua não havendo checagem
-> automática de que o `engine_api_client.ex` bate com as rotas da api. Ele é o
-> arquivo mais alterado do engine, e uma mudança de assinatura ainda só aparece
-> em runtime. O que fecharia de verdade é gerar o cliente Elixir a partir do
-> `openapi.json`, ou um teste de contrato entre as duas pontas.
+> **TODO(human):** the generated reference gives both ends the same source to
+> check against, but it **does not close the gap**: there still isn't automatic
+> checking that `engine_api_client.ex` matches the api's routes. It's the
+> file most frequently changed in the engine, and a signature change still only shows up
+> in runtime. What would truly close it is generating the Elixir client from the
+> `openapi.json`, or a contract test between the two ends.

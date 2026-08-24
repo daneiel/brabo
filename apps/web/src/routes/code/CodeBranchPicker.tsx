@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { getCodeBranches, mensagemDaApi } from '../../lib/api-client';
 import type {
   CodeBranchDetail,
@@ -10,10 +12,10 @@ import { AGENTS, type AgentDef } from '../../lib/agents';
 import { BranchIcon, CheckIcon, ChevronDownIcon } from '../../components/ui/icons';
 import styles from './CodeBranchPicker.module.css';
 
-const ROTULO_ESTADO_PR: Record<CodePullRequestState, string> = {
-  open: 'aberta',
-  merged: 'mesclada',
-  closed: 'fechada',
+const CHAVE_ESTADO_PR: Record<CodePullRequestState, string> = {
+  open: 'branchPicker.prState.open',
+  merged: 'branchPicker.prState.merged',
+  closed: 'branchPicker.prState.closed',
 };
 
 interface CodeBranchPickerProps {
@@ -32,6 +34,7 @@ interface CodeBranchPickerProps {
  * de branches não enumera essas duas coisas.
  */
 export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranchPickerProps) {
+  const { t } = useTranslation('code');
   const [open, setOpen] = useState(false);
   const [refManual, setRefManual] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -84,10 +87,12 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        title={currentRef || 'sem branch padrão'}
+        title={currentRef || t('branchPicker.noDefaultBranch')}
       >
         <BranchIcon size={13} />
-        <span className={styles.triggerLabel}>{currentRef || 'sem branch padrão'}</span>
+        <span className={styles.triggerLabel}>
+          {currentRef || t('branchPicker.noDefaultBranch')}
+        </span>
         {branchAtual && <MetaAheadBehind branch={branchAtual} />}
         <span className={styles.chevron}>
           <ChevronDownIcon size={12} />
@@ -95,30 +100,34 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
       </button>
 
       {open && (
-        <div className={styles.dropdown} role="listbox" aria-label="Selecionar branch">
+        <div className={styles.dropdown} role="listbox" aria-label={t('branchPicker.dropdownAriaLabel')}>
           <div className={styles.cabecalho}>
             {branchesQuery.data
-              ? `${branchesQuery.data.items.length} branch(es) · comparadas com a default`
-              : 'branches'}
+              ? t('branchPicker.header', { count: branchesQuery.data.items.length })
+              : t('branchPicker.headerPlaceholder')}
           </div>
 
-          {branchesQuery.isLoading && <div className={styles.estado}>Carregando branches…</div>}
+          {branchesQuery.isLoading && (
+            <div className={styles.estado}>{t('branchPicker.loading')}</div>
+          )}
 
           {branchesQuery.isError && (
             <div className={styles.estadoErro} role="alert">
-              <span>{mensagemDaApi(branchesQuery.error, 'Não consegui carregar as branches.')}</span>
+              <span>
+                {mensagemDaApi(branchesQuery.error, t('branchPicker.loadErrorFallback'))}
+              </span>
               <button
                 type="button"
                 className={styles.botaoTentar}
                 onClick={() => void branchesQuery.refetch()}
               >
-                Tentar de novo
+                {t('shared.retry')}
               </button>
             </div>
           )}
 
           {branchesQuery.data && branchesQuery.data.items.length === 0 && (
-            <div className={styles.estado}>Nenhuma branch encontrada neste repositório.</div>
+            <div className={styles.estado}>{t('branchPicker.empty')}</div>
           )}
 
           {branchesQuery.data && branchesQuery.data.items.length > 0 && (
@@ -149,7 +158,9 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
                         )}
                         <span className={styles.nome}>{branch.name}</span>
                       </span>
-                      <span className={styles.meta}>{metaDaBranch(branch, branch.name === currentRef)}</span>
+                      <span className={styles.meta}>
+                        {metaDaBranch(branch, branch.name === currentRef, t)}
+                      </span>
                     </span>
                   </button>
                 </li>
@@ -158,7 +169,7 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
           )}
 
           {branchesQuery.data?.truncated && (
-            <div className={styles.truncado}>A lista foi cortada no teto de branches enriquecidas.</div>
+            <div className={styles.truncado}>{t('branchPicker.truncated')}</div>
           )}
 
           <form className={styles.formManual} onSubmit={irParaRefManual}>
@@ -166,11 +177,11 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
               className={styles.inputManual}
               value={refManual}
               onChange={(e) => setRefManual(e.target.value)}
-              placeholder="ir para tag ou sha exato"
-              aria-label="Ir para tag ou sha exato"
+              placeholder={t('branchPicker.manualPlaceholder')}
+              aria-label={t('branchPicker.manualAriaLabel')}
             />
             <button type="submit" className={styles.botaoIr} disabled={!refManual.trim()}>
-              Ir
+              {t('branchPicker.goButton')}
             </button>
           </form>
         </div>
@@ -186,15 +197,17 @@ function corDoPonto(branch: CodeBranchDetail, atual: boolean): string {
   return 'var(--success)';
 }
 
-function metaDaBranch(branch: CodeBranchDetail, atual: boolean): string {
+function metaDaBranch(branch: CodeBranchDetail, atual: boolean, t: TFunction): string {
   const partes: string[] = [];
-  if (atual) partes.push('atual');
-  if (branch.protected) partes.push('protegida');
+  if (atual) partes.push(t('branchPicker.metaCurrent'));
+  if (branch.protected) partes.push(t('branchPicker.metaProtected'));
   if (branch.producedBy) partes.push(branch.producedBy.agentId);
   if (branch.pullRequest) {
     const { number, state } = branch.pullRequest;
     partes.push(
-      state === 'open' ? `PR #${number}` : `PR #${number} (${ROTULO_ESTADO_PR[state]})`,
+      state === 'open'
+        ? t('branchPicker.prLabel', { number })
+        : t('branchPicker.prLabelWithState', { number, state: t(CHAVE_ESTADO_PR[state]) }),
     );
   }
   const aheadBehind = formatarAheadBehind(branch);
@@ -221,13 +234,17 @@ function defDoAgenteProdutor(agentId: string): AgentDef {
  * pra escanear a lista.
  */
 function IconeDoAgenteProdutor({ producedBy }: { producedBy: CodeBranchProducedBy }) {
+  const { t } = useTranslation('code');
   const def = defDoAgenteProdutor(producedBy.agentId);
   const Icon = def.icon;
   return (
     <span
       className={styles.agenteIcone}
       style={{ color: def.color }}
-      title={`Branch do dev do módulo "${producedBy.moduleId}" (${producedBy.agentId})`}
+      title={t('branchPicker.producedByTitle', {
+        moduleId: producedBy.moduleId,
+        agentId: producedBy.agentId,
+      })}
     >
       <Icon size={11} />
     </span>

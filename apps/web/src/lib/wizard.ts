@@ -44,26 +44,29 @@ export function canAdvanceFromMode(
   return modo !== undefined;
 }
 
-// --- Onde o código mora (ADR 0072) ---
+// --- Onde o comando executa (ADR 0072/0104) ---
 
 /**
- * `container` é a pasta GERENCIADA pelo produto (o comportamento de sempre);
- * `local` é uma pasta DO USUÁRIO, de caminho livre.
+ * `container` é a pasta GERENCIADA pelo produto (o comportamento de
+ * sempre); `mounted` (antigo `local`) é uma pasta DO USUÁRIO montada por
+ * bind-mount; `runner` é uma pasta DO USUÁRIO sem bind-mount, confirmada
+ * por um CLI (`brabo-runner`) rodando na máquina dela.
  *
  * Não confunda com o `GitProviderName` `'local'`, que é outra pergunta do
  * mesmo wizard: aquele diz onde o REPOSITÓRIO git vive, este diz onde o
- * CÓDIGO em disco vive. As duas escolhas são ortogonais.
+ * COMANDO executa. As duas escolhas são ortogonais.
  */
-export type ModoDeWorkspace = 'container' | 'local';
+export type ModoDeWorkspace = 'container' | 'mounted' | 'runner';
 
 /**
  * O que a tela consegue julgar sozinha sobre o caminho, e só isso.
  *
- * O veredito que vale é o da API, que é a única que enxerga o sistema de
- * arquivos de dentro do container (RN-170) — o navegador não tem como saber
- * se `/home/voce/projetos/loja` existe lá dentro. Esta função é a checagem
- * BARATA que evita mandar ao servidor o que já se sabe errado, e a mensagem
- * de recusa de verdade continua vindo do backend.
+ * O veredito que vale é o da API — para `mounted`, ela é a única que
+ * enxerga o sistema de arquivos de dentro do container (RN-422); para
+ * `runner`, a verificação de disco não acontece agora nenhuma, nem no
+ * navegador nem na api (RN-423), só a forma. Esta função é a checagem
+ * BARATA que evita mandar ao servidor o que já se sabe errado, e a
+ * mensagem de recusa de verdade continua vindo do backend.
  */
 export function caminhoLocalParecePlausivel(caminho: string): boolean {
   const limpo = caminho.trim();
@@ -72,7 +75,7 @@ export function caminhoLocalParecePlausivel(caminho: string): boolean {
   return !limpo.split('/').some((s) => s === '..' || s === '.');
 }
 
-/** Container avança sempre; Local só com um caminho plausível digitado. */
+/** Container avança sempre; mounted/runner só com um caminho plausível digitado. */
 export function canAdvanceFromWorkspace(
   modo: ModoDeWorkspace | undefined,
   caminho: string,

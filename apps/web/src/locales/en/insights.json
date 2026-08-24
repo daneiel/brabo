@@ -1,0 +1,46 @@
+{
+  "projectInsightsTab": {
+    "header": "Insights",
+    "errorTitle": "Could not load the hypotheses.",
+    "loading": "Loading the hypotheses…",
+    "empty": "No hypotheses yet — the Psychologist analyzes every closed session.",
+    "emptyPaused": "The Psychologist is paused — no session is analyzed until it is reactivated.",
+    "summary": "{{total}} hypothesis(es) · {{pending}} awaiting decision",
+    "analysisStrip": {
+      "tier": "screening {{tier}}",
+      "sessionLabel": "session {{id}}",
+      "meta": "{{events}} event(s) · {{hypotheses}} hypothesis(es)",
+      "reanalyzeButton": "Reanalyze",
+      "reanalyzeTitleDisabled": "The Psychologist is globally paused",
+      "reanalyzeTitleEnabled": "Runs the analysis again and spends budget; the previous one stays in history"
+    },
+    "pausedNotice": "The Psychologist is globally paused by the team's decision — no new reanalysis for now. Hypotheses already issued stay here.",
+    "toasts": {
+      "acceptError": "Could not accept the hypothesis",
+      "dismissError": "Could not dismiss the hypothesis",
+      "genericErrorTitle": "Error",
+      "reanalyzeQueuedTitle": "Reanalysis queued",
+      "reanalyzeQueuedMessage": "The Psychologist will analyze this session again.",
+      "psychologistPausedTitle": "Psychologist paused",
+      "psychologistPausedFallback": "The Psychologist is globally disabled.",
+      "reanalyzeError": "Could not queue the reanalysis"
+    }
+  },
+  "hypothesisCard": {
+    "status": {
+      "accepted": "accepted",
+      "dismissed": "dismissed",
+      "proposed": "proposed"
+    },
+    "confidence": "{{percent}}% confidence",
+    "disclosureTitle": "What the Psychologist based this on",
+    "disclosureTrailing": "{{count}} piece(s) of evidence",
+    "observationLabel": "Observation",
+    "suggestionLabel": "Suggestion",
+    "evidenceLabel": "Evidence",
+    "terminationLabel": "Abnormal termination · {{cause}}",
+    "terminationState": "State at the time: {{state}}",
+    "acceptButton": "Accept",
+    "dismissButton": "Dismiss"
+  }
+}

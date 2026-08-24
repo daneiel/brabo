@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   useActiveExecutionSession,
   useArchitecture,
+  useCurrentWorkspace,
   useHandoffs,
   usePendingActions,
+  useProjectsSummary,
   useSessionEvents,
   useSessionTokenUsage,
 } from '../lib/hooks';
@@ -62,6 +65,7 @@ import styles from './ProjectOverviewTab.module.css';
  * exibida, nos três estados da RN-088.
  */
 export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('executors');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const executionSessionQuery = useActiveExecutionSession(projectId);
@@ -75,10 +79,31 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const handoffsQuery = useHandoffs(projectId, sessionId);
   const handoffs = handoffsQuery.data ?? [];
 
-  const executionActivated = events.some((e) => e.type === 'execution.activated');
+  // `execution.activated` é dos PRIMEIROS eventos de uma sessão de execução —
+  // `useSessionEvents` só traz os ÚLTIMOS 200 (`latest: true`), então numa
+  // sessão real ele sai da janela e `events.some(...)` volta a mentir
+  // "nunca ativou". O resumo do workspace (RN-090) agrega TODOS os eventos
+  // no backend (`projects-summary.repository.ts`), então é ele — não a
+  // janela — quem decide se o roster de dev agents aparece.
+  const { data: workspace } = useCurrentWorkspace();
+  const summaryQuery = useProjectsSummary(workspace?.id);
+  const projectSummary = summaryQuery.data?.find((s) => s.projectId === projectId);
+  const executionActivated = projectSummary?.roster.executionActivated ?? false;
   const pendingActionAgentIds = new Set(
     actions.filter((a) => a.status === 'pending').map((a) => a.actor.id),
   );
+  // LIMITAÇÃO CONHECIDA, não corrigida aqui: `deriveAgentRoster` também
+  // decide QA/SecOps por `gatesEverOpened`, calculado por dentro de
+  // `rosterFactsFromEvents` direto sobre a MESMA janela de 200 eventos —
+  // sofre da classe de defeito acima (`pr.gate_changed`/`infra.gate_changed`
+  // saindo da janela numa sessão longa). O resumo do workspace já carrega o
+  // valor agregado certo (`ProjectCardSummary.roster.gatesEverOpened`), mas
+  // corrigi-lo aqui exigiria mudar a ASSINATURA de `deriveAgentRoster`/
+  // `rosterFactsFromEvents` (aceitar um override, como já existe para
+  // `executionActivated`) — fora do escopo desta correção, que não deve
+  // tocar `lib/agent-status.ts`. Duplicar a regra de presença no call site em
+  // vez disso é pior: o próprio comentário de `RosterFacts` explica por que
+  // duas fontes da mesma regra divergem no primeiro agente novo.
   const roster = deriveAgentRoster(
     events,
     architecture?.moduleMap,
@@ -154,7 +179,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
       await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
     } catch {
       showToast({
-        title: 'Não foi possível mudar a autonomia',
+        title: t('tab.toast.autonomyError'),
         message: `${agentId} · ${actionType}`,
         tone: 'danger',
       });
@@ -168,9 +193,9 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
       await queryClient.invalidateQueries({
         queryKey: ['session-events', projectId, sessionId],
       });
-      showToast({ title: 'Agente rearmado', tone: 'success' });
+      showToast({ title: t('tab.toast.rearmed'), tone: 'success' });
     } catch {
-      showToast({ title: 'Não foi possível rearmar o agente', message: agentId, tone: 'danger' });
+      showToast({ title: t('tab.toast.rearmError'), message: agentId, tone: 'danger' });
     }
   }
 
@@ -182,17 +207,18 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   return (
     <div>
       <div className={styles.sectionRow}>
-        <h2 className={styles.sectionHeader}>Executores</h2>
+        <h2 className={styles.sectionHeader}>{t('tab.title')}</h2>
         {sessionId && (
           <span className={styles.sectionCount}>
-            {executorRoster.length} agentes · {workingCount} trabalhando · {waitingCount} aguardando
+            {t('tab.summary', {
+              count: executorRoster.length,
+              working: workingCount,
+              waiting: waitingCount,
+            })}
           </span>
         )}
       </div>
-      <div className={styles.sectionSub}>
-        Dev agent e QA — quem implementa e quem verifica. O resto do time está
-        na Visão geral.
-      </div>
+      <div className={styles.sectionSub}>{t('tab.subtitle')}</div>
 
       {/* Indicador de QUAL sessão a aba está olhando (RN-139) — os três
           estados da RN-088, erro antes de vazio: sem isto a troca silenciosa
@@ -200,7 +226,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
           desta vez escondida atrás de um indicador que mentiria "tudo bem". */}
       {executionSessionQuery.isError ? (
         <ErroDeCarregamento
-          titulo="Não foi possível descobrir a sessão de execução deste projeto."
+          titulo={t('tab.sessionError.title')}
           erro={executionSessionQuery.error}
           onTentarDeNovo={() => void executionSessionQuery.refetch()}
         />
@@ -209,12 +235,10 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
           <Skeleton width={220} height={18} />
         </div>
       ) : !executionSession ? (
-        <div className={styles.sectionSub}>
-          Nenhuma execução ativa neste projeto no momento.
-        </div>
+        <div className={styles.sectionSub}>{t('tab.noActiveExecution')}</div>
       ) : (
         <div className={styles.sectionSub}>
-          Mostrando{' '}
+          {t('tab.showingSession')}{' '}
           <Link
             to="/projects/$projectId/sessions/$sessionId"
             params={{ projectId, sessionId: executionSession.id }}
@@ -229,10 +253,21 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
 
       {sessionId && (
         <>
-          {executorGroups.length === 0 ? (
-            <div className={styles.sectionSub}>
-              Nenhum dev agent ou QA entrou em ação nesta sessão ainda.
+          {/* `executionActivated` vem do resumo agregado — os três estados
+              da RN-088 aqui: sem eles, um "nenhum dev agent" de CARREGANDO
+              (o resumo ainda não chegou) fica indistinguível do vazio real. */}
+          {summaryQuery.isError ? (
+            <ErroDeCarregamento
+              titulo={t('tab.rosterError.title')}
+              erro={summaryQuery.error}
+              onTentarDeNovo={() => void summaryQuery.refetch()}
+            />
+          ) : summaryQuery.isPending ? (
+            <div className={styles.sectionSub} aria-busy="true">
+              <Skeleton width={220} height={18} />
             </div>
+          ) : executorGroups.length === 0 ? (
+            <div className={styles.sectionSub}>{t('tab.noExecutors')}</div>
           ) : (
             <AgentTeamGrid
               roster={roster}
@@ -251,12 +286,9 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
           )}
 
           <div className={styles.arch}>
-            <h2 className={styles.sectionHeader}>Linha do tempo</h2>
+            <h2 className={styles.sectionHeader}>{t('tab.timeline.title')}</h2>
           </div>
-          <div className={styles.sectionSub}>
-            Os ramos de dev agent e QA, do primeiro marco ao que estão fazendo
-            agora.
-          </div>
+          <div className={styles.sectionSub}>{t('tab.timeline.subtitle')}</div>
           <AgentTimelineTree events={executorEvents} projectId={projectId} />
         </>
       )}

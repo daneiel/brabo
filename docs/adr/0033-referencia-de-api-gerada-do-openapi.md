@@ -1,180 +1,195 @@
-# 0033 — A referência de API sai do código, e o teste de tabela cobra os metadados
+# 0033 — The API reference comes out of code, and the table test enforces the metadata
 
-## Contexto
+## Context
 
-A api expõe **118 rotas em 23 controllers**, e até aqui a única documentação de
-contrato era `docs/security-surface.md`. Ela responde *quem pode chamar* cada
-rota — e nada sobre o que a rota faz, o que aceita ou o que devolve. Quem
-integrava lia o controller.
+The api exposes **118 routes across 23 controllers**, and until now the only
+contract documentation was `docs/security-surface.md`. It answers *who can
+call* each route — and nothing about what the route does, what it accepts,
+or what it returns. Anyone integrating had to read the controller.
 
-A 7.1 abriu a exceção: os dois controllers de auth nasceram com
-`@ApiTags`/`@ApiOperation`/`@ApiProperty`, e o cabeçalho de `auth/dto/auth.dto.ts`
-registrou a intenção — *"os decorators entram AGORA, junto com as rotas, e não
-numa varredura retroativa"*. Esta entrega é a varredura retroativa que aquele
-comentário prometeu não precisar de novo, e o mecanismo que a torna a última.
+7.1 opened the exception: the two auth controllers were born with
+`@ApiTags`/`@ApiOperation`/`@ApiProperty`, and the header of
+`auth/dto/auth.dto.ts` recorded the intent — *"the decorators go in NOW,
+along with the routes, not in a retroactive sweep."* This delivery is the
+retroactive sweep that comment promised wouldn't be needed again, and the
+mechanism that makes it the last one.
 
-O `@nestjs/swagger` já era dependência desde a 7.1, mas o `SwaggerModule` não
-estava ligado em lugar nenhum: o documento não existia.
+`@nestjs/swagger` had already been a dependency since 7.1, but
+`SwaggerModule` wasn't wired up anywhere: the document didn't exist.
 
-Três achados da exploração redesenharam a entrega antes de uma linha ser
-escrita:
+Three findings from the exploration reshaped the delivery before a single
+line was written:
 
-1. **O `@nestjs/swagger` SINTETIZA uma resposta quando não há decorator
-   nenhum.** `api-response.explorer.js` devolve `{ '<status>': { description: '' } }`
-   para todo handler sem `@ApiResponse`. Antes desta fase, **111 das 118 rotas**
-   estavam exatamente nesse estado. A asserção óbvia — *"toda rota tem uma
-   resposta 2xx"* — nasceria verde sem verificar coisa alguma.
-2. **`@HttpCode` é ignorado assim que existe qualquer `@ApiResponse`.** O
-   status documentado passa a vir só do decorator. O defeito já existia no
-   repositório: `POST /auth/register` e `POST /auth/request-password-reset`
-   tinham `@HttpCode(202)` com `@ApiOkResponse`, e o documento afirmava 200.
-3. **Fora do auth, nenhum handler declara tipo de retorno.** O padrão é
-   `return this.useCase.execute(...)`, que resolve para *interfaces* e *type
-   aliases* de `src/domain/**` — dos quais o `@nestjs/swagger` não deriva
-   schema, e sobre os quais ele emite `{}` **sem avisar**.
+1. **`@nestjs/swagger` SYNTHESIZES a response when there's no decorator at
+   all.** `api-response.explorer.js` returns `{ '<status>': { description:
+   '' } }` for every handler without `@ApiResponse`. Before this phase,
+   **111 of the 118 routes** were exactly in that state. The obvious
+   assertion — *"every route has a 2xx response"* — would pass green
+   without checking anything at all.
+2. **`@HttpCode` gets ignored as soon as any `@ApiResponse` exists.** The
+   documented status then comes only from the decorator. The bug already
+   existed in the repository: `POST /auth/register` and `POST
+   /auth/request-password-reset` had `@HttpCode(202)` with
+   `@ApiOkResponse`, and the document claimed 200.
+3. **Outside auth, no handler declares a return type.** The pattern is
+   `return this.useCase.execute(...)`, which resolves to *interfaces* and
+   *type aliases* from `src/domain/**` — from which `@nestjs/swagger`
+   derives no schema, and about which it emits `{}` **with no warning**.
 
-## Decisão
+## Decision
 
-**A referência é gerada do OpenAPI e nunca escrita à mão**, e o teste de tabela
-da Fase 5 passa a cobrar os metadados que a alimentam.
+**The reference is generated from OpenAPI and never hand-written**, and the
+table test from Phase 5 now enforces the metadata that feeds it.
 
-### Os DTOs de resposta espelham a entidade por TIPO
+### Response DTOs mirror the entity by TYPE
 
-Existem ~55 formas de resposta distintas (não 118: `ProposedAction` serve 6
-rotas, `Session` 5). Cada uma virou uma classe em
-`interfaces/http/<domínio>/dto/*.response.dto.ts`. Nada em `src/domain/**` foi
-tocado — pôr `@ApiProperty` numa entidade fere a pureza do domínio.
+There are ~55 distinct response shapes (not 118: `ProposedAction` serves 6
+routes, `Session` serves 5). Each one became a class in
+`interfaces/http/<domain>/dto/*.response.dto.ts`. Nothing in
+`src/domain/**` was touched — putting `@ApiProperty` on an entity would
+break the domain's purity.
 
-Escrever os DTOs é o fácil. O risco é o dia em que a entidade ganha um campo e
-o DTO não: a referência passa a mentir **em silêncio**. Contra isso, duas
-travas de tipo, e as duas são necessárias:
+Writing the DTOs is the easy part. The risk is the day an entity gains a
+field and the DTO doesn't: the reference starts lying **silently**. Against
+that, two type-level locks, and both are necessary:
 
 ```ts
 export class SessionResponseDto implements Wire<Session> { … }
 export const _chavesSession: MesmasChaves<SessionResponseDto, Session> = true;
 ```
 
-`implements Session` direto não serve: a entidade diz `createdAt: Date` e o
-corpo JSON diz `string`. `Wire<T>` é a entidade **como ela sai no fio**, e aí o
-`implements` é honesto. Mas `implements` é unidirecional — ele é **cego a campo
-sobrando**, e um DTO que descreve um campo já removido compilaria para sempre.
-`MesmasChaves` fecha esse lado.
+`implements Session` directly doesn't work — the entity says
+`createdAt: Date` and the JSON body says `string`. `Wire<T>` is the entity
+**as it goes over the wire**, and there `implements` is honest. But
+`implements` is one-directional — it's **blind to extra fields**, and a DTO
+that describes a field that's already been removed would compile forever.
+`MesmasChaves` ("SameKeys") closes that side.
 
-Os quatro modos de falha foram verificados por execução antes de qualquer DTO
-ser escrito em cima disso:
+The four failure modes were verified by execution before a single DTO was
+written on top of this:
 
-| erro | pego por |
+| error | caught by |
 |---|---|
-| entidade ganhou campo | `implements` — TS2420 |
-| DTO tipou `Date` onde o fio tem `string` | `implements` — TS2416 |
-| DTO tem campo que a entidade não tem mais | `MesmasChaves` — TS2322, e **só** ele |
-| DTO correto | compila limpo |
+| entity gained a field | `implements` — TS2420 |
+| DTO typed `Date` where the wire has `string` | `implements` — TS2416 |
+| DTO has a field the entity no longer has | `MesmasChaves` — TS2322, and **only** that one |
+| DTO correct | compiles clean |
 
-Quem executa as travas é o `tsc`, não o vitest — que transpila por SWC e não
-verifica tipo nenhum. Daí o `pnpm --filter api typecheck` novo no CI: sem ele a
-prova só rodaria no job de imagens, vinte minutos depois.
+What runs these locks is `tsc`, not vitest — which transpiles via SWC and
+checks no types at all. Hence the new `pnpm --filter api typecheck` in CI:
+without it the proof would only run in the image job, twenty minutes later.
 
-### O teste de tabela cobra o DOCUMENTO, não os decorators
+### The table test enforces the DOCUMENT, not the decorators
 
-`route-surface.spec.ts` ganhou sete asserções, todas sobre o documento montado
-por `SwaggerModule.createDocument` — o mesmo que vai para o site. Refletir
-`DECORATORS.API_RESPONSE` handler a handler testaria um passo intermediário: um
-`type:` apontando para uma interface passaria na checagem de decorator e
-produziria `{}` no documento.
+`route-surface.spec.ts` gained seven assertions, all against the document
+assembled by `SwaggerModule.createDocument` — the same one that goes to the
+site. Reflecting `DECORATORS.API_RESPONSE` handler by handler would test an
+intermediate step: a `type:` pointing at an interface would pass the
+decorator check and still produce `{}` in the document.
 
-A asserção de resposta exige **conteúdo resolvido ou descrição não vazia**, e
-não a mera presença de uma chave 2xx — é o achado 1 acima que obriga a isso.
-A de status recomputa o valor real a partir de `HTTP_CODE_METADATA`, o que
-fecha o achado 2. E a última amarra o documento aos **guards de verdade**: rota
-`@Public()` não pode declarar `security`, rota autenticada tem de declarar. Sem
-ela a referência poderia afirmar que uma rota é aberta quando o guard a fecha —
-errar justamente onde errar é caro.
+The response assertion requires **resolved content or a non-empty
+description**, not merely the presence of a 2xx key — that's finding 1
+above forcing the point. The status assertion recomputes the real value
+from `HTTP_CODE_METADATA`, which closes finding 2. And the last one ties
+the document to the **actual guards**: a `@Public()` route can't declare
+`security`, an authenticated route has to declare it. Without it, the
+reference could claim a route is open when the guard closes it — getting
+it wrong exactly where getting it wrong is expensive.
 
-Excluir uma rota da referência exige uma entrada em `EXCLUIDAS_DA_REFERENCIA`,
-e uma rota sem corpo JSON exige uma em `SEM_CORPO_JSON` **com obrigação
-própria** (SSE declara `text/event-stream`, redirect declara o header
-`Location`, 204 declara 204). Sem isso, `@ApiExcludeEndpoint()` seria a saída
-fácil para escapar de tudo, e "é um stream" viraria licença para não documentar
-nada.
+Excluding a route from the reference requires an entry in
+`EXCLUIDAS_DA_REFERENCIA`, and a route with no JSON body requires one in
+`SEM_CORPO_JSON` **with its own obligation** (SSE declares
+`text/event-stream`, redirect declares the `Location` header, 204 declares
+204). Without this, `@ApiExcludeEndpoint()` would be the easy way out of
+everything, and "it's a stream" would become a license to document
+nothing.
 
-### O `--check` usa um manifesto, não regera
+### `--check` uses a manifest, it doesn't regenerate
 
-`pnpm docs:check` promete não escrever. Rodar `gen-api-docs` para comparar
-quebraria a promessa. A trava é um manifesto com o sha256 de cada arquivo
-gerado mais o do `openapi.json` que os produziu, escrito pelo mesmo
-`escrever()` de todos os outros gerados — e portanto com o mesmo comportamento
-em check.
+`pnpm docs:check` promises not to write. Running `gen-api-docs` to compare
+would break that promise. The lock is a manifest with the sha256 of each
+generated file plus the sha256 of the `openapi.json` that produced them,
+written by the same `escrever()` used for every other generated file — and
+therefore with the same behavior under check.
 
-Ele pega as quatro derivas que importam: MDX editado à mão, MDX velho para
-spec nova, arquivo gerado ausente e arquivo órfão. Três foram verificadas por
-execução.
+It catches the four drifts that matter: hand-edited MDX, stale MDX against
+a new spec, missing generated file, and orphan file. Three were verified
+by execution.
 
-A ordenação do `openapi.json` é fixada (paths, verbos, schemas, tags, status)
-porque a ordem que o Nest entrega vem da ordem de registro dos módulos: sem
-normalizar, mover uma linha de `import` no `AppModule` produziria milhares de
-linhas de diff, e o passo seguinte previsível seria alguém desligar o check.
+The ordering of `openapi.json` is fixed (paths, verbs, schemas, tags,
+status) because the order Nest delivers comes from module registration
+order: without normalizing it, moving one `import` line in `AppModule`
+would produce thousands of lines of diff, and the predictable next step
+would be someone turning the check off.
 
-### Swagger UI fora de produção
+### Swagger UI outside production
 
-`/docs` e `/docs-json` só existem com `NODE_ENV !== 'production'`. A referência
-de produção é o site de docs, gerado do mesmo documento; servir a superfície
-inteira num ambiente real não acrescenta nada e dá mapa de graça a quem sondar.
+`/docs` and `/docs-json` only exist with `NODE_ENV !== 'production'`. The
+production reference is the docs site, generated from the same document;
+serving the entire surface in a real environment adds nothing and hands a
+map for free to anyone probing.
 
-## Consequências
+## Consequences
 
-A referência tem 118 páginas, uma por rota, agrupadas por tag. A visão geral —
-autenticação, convenção de erros, rate limit — sai do `info.description`, então
-é gerada de fonte única em vez de escrita num `.md` que divergiria.
+The reference has 118 pages, one per route, grouped by tag. The overview —
+authentication, error convention, rate limiting — comes from
+`info.description`, so it's generated from a single source instead of
+written into a `.md` file that would drift.
 
-**Rota nova sem metadados não entra.** É o mecanismo anti-drift que o docmap
-não tem: o docmap dispara quando um arquivo muda, mas não enxerga rota nova que
-nasceu sem documentação.
+**A new route with no metadata doesn't get in.** It's the anti-drift
+mechanism the docmap doesn't have: the docmap triggers when a file
+changes, but it can't see a new route that was born without documentation.
 
-### O que a varredura corrigiu no caminho
+### What the sweep fixed along the way
 
-Não foi só documentação:
+It wasn't just documentation:
 
-- `PUT /projects/:id/agent-autonomy` e `DELETE /projects/:id/members/:userId`
-  devolviam **200 com corpo vazio**. O `api-client.ts` da web só trata 204 como
-  "sem corpo" e caía em `res.json()`, lançando `SyntaxError`. Os dois viraram
+- `PUT /projects/:id/agent-autonomy` and `DELETE
+  /projects/:id/members/:userId` returned **200 with an empty body.**
+  `api-client.ts` on the web app only treats 204 as "no body" and fell
+  through to `res.json()`, throwing a `SyntaxError`. Both became
   `@HttpCode(204)`.
-- `UpdateWorkspaceDto` e `UpdateProjectDto` usavam `PartialType` do
-  `@nestjs/mapped-types`, que copia só a validação: os dois sairiam **sem
-  propriedade nenhuma** no documento.
-- O `@ApiBearerAuth` de classe no `GitController` vazava para o callback de
-  OAuth, que é `@Public()` — a referência afirmava que o browser precisa de
-  token para voltar do provider. Nenhum decorator do `@nestjs/swagger` limpa
-  exigência herdada, então a declaração passou a ser por rota.
-- Os dois `@HttpCode(202)` do auth documentados como 200.
+- `UpdateWorkspaceDto` and `UpdateProjectDto` used `PartialType` from
+  `@nestjs/mapped-types`, which copies only validation. Both would have
+  come out **with no properties at all** in the document.
+- The class-level `@ApiBearerAuth` on `GitController` leaked into the
+  OAuth callback, which is `@Public()` — the reference claimed the browser
+  needs a token to come back from the provider. No `@nestjs/swagger`
+  decorator clears an inherited requirement, so the declaration moved to
+  per-route.
+- Both `@HttpCode(202)`s in auth were documented as 200.
 
-### Custos aceitos
+### Accepted costs
 
-- **2,7 MB de gerado versionado** (117 MDX mais 352 JSON que eles `require()`).
-  Sem isso o docmap teria uma regra morta e o `git ls-files` não veria nada.
-- **Sem snippets por linguagem.** O `postman-code-generators` roda um
-  `npm install` aninhado no postinstall — rede no meio do nosso install, que é
-  o que a disciplina da Fase 5 recusa. Entrou em `allowBuilds` como `false`.
-- **O `outputDir` é apagado inteiro** pelo `clean-api-docs`, então a spec mora
-  um nível acima. Um gerador que apaga a própria entrada funciona na primeira
-  execução e falha na segunda.
-- **Os ids do sidebar gerado vêm um nível fundo demais**, porque o plugin supõe
-  que o `outputDir` esteja dentro do site. A correção vive na `sidebars.ts`
-  escrita à mão, não numa reescrita do arquivo gerado — mutá-lo faria o
-  `docs:check` acusar deriva a cada rodada.
+- **2.7 MB of versioned generated output** (117 MDX plus 352 JSON files
+  they `require()`). Without it the docmap would have a dead rule and `git
+  ls-files` would see nothing.
+- **No per-language snippets.** `postman-code-generators` runs a nested
+  `npm install` in its postinstall — network access in the middle of our
+  install, which is exactly what Phase 5's discipline refuses. It went
+  into `allowBuilds` as `false`.
+- **The entire `outputDir` gets wiped** by `clean-api-docs`, so the spec
+  lives one level up. A generator that deletes its own input works on the
+  first run and fails on the second.
+- **The generated sidebar ids come out one level too deep**, because the
+  plugin assumes `outputDir` sits inside the site. The fix lives in the
+  hand-written `sidebars.ts`, not in a rewrite of the generated file —
+  mutating it would make `docs:check` flag drift on every run.
 
-### O que continua aberto
+### What's still open
 
-O `engine_api_client.ex` segue **sem checagem automática** de que bate com as
-rotas da api. A referência dá às duas pontas a mesma fonte para conferir, e o
-`TODO(humano)` de `internal-api.md` continua válido: o que fecharia de verdade
-é gerar o cliente Elixir a partir do `openapi.json`, ou um teste de contrato
-entre as pontas.
+`engine_api_client.ex` still has **no automatic check** that it matches
+the api's routes. The reference gives both ends the same source to compare
+against, and the `TODO(humano)` in `internal-api.md` remains valid: what
+would truly close this is generating the Elixir client from
+`openapi.json`, or a contract test between the two ends.
 
-Fica também fora: cliente TS gerado para a web (`api-client.ts` continua à
-mão), versionamento da api, e a remoção do `GET /` do scaffold — que ganhou
-`@ApiExcludeEndpoint()` com justificativa em vez de sumir, porque removê-lo é
-decisão de produto.
+Also out of scope: a generated TS client for the web app (`api-client.ts`
+stays hand-written), api versioning, and removing the scaffold's `GET /` —
+which got `@ApiExcludeEndpoint()` with a justification instead of being
+deleted, because removing it is a product decision.
 
-Referencia [ADR 0027](0027-fase5-backup-hardening-release.md), que criou o
-teste de tabela, e [ADR 0031](0031-auth-first-party-argon2id-e-rotacao-de-refresh.md),
-onde os primeiros decorators entraram.
+References [ADR 0027](0027-fase5-backup-hardening-release.md), which
+created the table test, and [ADR
+0031](0031-auth-first-party-argon2id-e-rotacao-de-refresh.md), where the
+first decorators went in.

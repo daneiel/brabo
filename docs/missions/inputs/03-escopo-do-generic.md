@@ -1,157 +1,164 @@
-# Insumo 3 — GenericGitProvider: capabilities mínimas e degradação
+# Input 3 — GenericGitProvider: minimal capabilities and degradation
 
-Material de entrada do PO para a Fase 10.
+Input material for the PO in Phase 10.
 
-O `GenericGitProvider` é o provider para "um servidor git qualquer, sem API de
-plataforma": Gitea auto-hospedado, um bare repo atrás de SSH, um Forgejo, um
-servidor que fala só o protocolo git. Ele é o oposto do Bitbucket como
-problema — lá o desafio é traduzir uma API rica; aqui é **declarar honestamente
-o que não dá para fazer**, e garantir que o resto do sistema degrade em vez de
-quebrar.
+`GenericGitProvider` is the provider for "some plain git server, no
+platform API": a self-hosted Gitea, a bare repo behind SSH, a Forgejo, a
+server that only speaks the plain git protocol. It's the opposite kind of
+problem from Bitbucket — there the challenge is translating a rich API;
+here it's **honestly declaring what can't be done**, and making sure the
+rest of the system degrades instead of breaking.
 
-O contrato a satisfazer está em `inputs/01-contrato-gitprovider.md`.
+The contract to satisfy is in `inputs/01-contrato-gitprovider.md`.
 
 ---
 
-## O precedente já existe: `LocalGitProvider`
+## The precedent already exists: `LocalGitProvider`
 
-Não é um provider novo em espírito — é o `LocalGitProvider` com o remoto em
-outro lugar. Tudo que o épico precisa decidir já tem resposta ali, e o caminho
-mais barato é ler aquele arquivo antes de projetar qualquer coisa
-(`apps/api/src/infrastructure/git/local-git-provider.ts`, 467 linhas).
+It isn't a new provider in spirit — it's `LocalGitProvider` with the
+remote somewhere else. Everything the epic needs to decide already has an
+answer there, and the cheapest path is reading that file before designing
+anything
+(`apps/api/src/infrastructure/git/local-git-provider.ts`, 467 lines).
 
-O que ele estabelece:
+What it establishes:
 
-- **Declara `protectBranch: false`** e `pullRequests: true`
+- **Declares `protectBranch: false`** and `pullRequests: true`
   (`apps/api/src/infrastructure/git/local-git-provider.ts:55-58`).
-- **Recusa a operação não suportada com `GitNotSupportedError`**, nunca em
-  silêncio (`:137`, e também em `:290` e `:323` para caminhos de merge sem PR
-  real).
-- **Implementa PR de verdade sem plataforma**: um PR store leve num sidecar do
-  bare repo, feito para os dev agents da Fase 4a (`:51-54`). Ou seja,
-  `pullRequests: true` sem servidor de PR **é possível** — a questão é onde o
-  estado mora.
-- **Fala git de verdade**, via `execFile` do binário, não uma reimplementação.
+- **Rejects an unsupported operation with `GitNotSupportedError`**, never
+  silently (`:137`, and also `:290` and `:323` for merge paths without a
+  real PR).
+- **Implements real PRs without a platform**: a lightweight PR store in a
+  sidecar of the bare repo, built for the Phase 4a dev agents (`:51-54`).
+  In other words, `pullRequests: true` without a PR server **is
+  possible** — the question is where the state lives.
+- **Speaks real git**, via `execFile` on the binary, not a
+  reimplementation.
 
 ---
 
-## A pergunta central: onde mora o estado que o servidor não guarda
+## The central question: where does the state the server doesn't keep live
 
-Um servidor git puro sabe de refs, objetos e nada mais. Ele não tem PR, não tem
-comentário, não tem proteção de branch. As dez operações do contrato precisam de
-uma resposta para cada uma dessas ausências.
+A plain git server knows about refs, objects, and nothing else. It has no
+PR, no comment, no branch protection. The contract's ten operations each
+need an answer for that absence.
 
-| operação | o servidor git puro sabe? | resposta esperada |
+| operation | does the plain git server know it? | expected answer |
 |---|---|---|
-| `createRepo` | depende — criar repo remoto exige API ou acesso ao disco | investigar; pode ser a capability que falta |
-| `getRepo` | parcialmente — dá para descobrir `defaultBranch` por `ls-remote` | provavelmente sim |
-| `createBranch` | **sim** — é push de ref | sim |
-| `protectBranch` | **não** | `false` + `GitNotSupportedError` |
-| `commitFiles` | **sim** | sim |
-| `listBranches` | **sim** — `ls-remote --heads` | sim, com `protected: false` sempre |
-| `openPullRequest` | **não** nativamente | decisão: store próprio (como o Local) ou `false` |
-| `mergePullRequest` | **não** nativamente | idem |
-| `commentOnPullRequest` | **não** | idem — e é o que os gates usam |
-| `getFileContent` | **sim** — `git show ref:path` | sim, com `null` nos dois casos de ausência |
+| `createRepo` | depends — creating a remote repo requires an API or disk access | investigate; may be the missing capability |
+| `getRepo` | partially — `defaultBranch` can be discovered via `ls-remote` | probably yes |
+| `createBranch` | **yes** — it's a ref push | yes |
+| `protectBranch` | **no** | `false` + `GitNotSupportedError` |
+| `commitFiles` | **yes** | yes |
+| `listBranches` | **yes** — `ls-remote --heads` | yes, always with `protected: false` |
+| `openPullRequest` | **no**, natively | decision: own store (like Local) or `false` |
+| `mergePullRequest` | **no**, natively | same |
+| `commentOnPullRequest` | **no** | same — and this is what the gates use |
+| `getFileContent` | **yes** — `git show ref:path` | yes, with `null` for both absence cases |
 
-**A decisão de arquitetura é uma só:** o Generic reusa o mecanismo de PR do
-`LocalGitProvider` (e então declara `pullRequests: true`), ou declara `false` e
-aceita a degradação em cascata? As duas são defensáveis. O que não é defensável é
-declarar `true` e lançar `GitNotSupportedError` — a suite de contrato reprova
-isso, de propósito.
-
----
-
-## O que "declarar `false`" custa, em cascata
-
-Antes de escolher, é preciso saber o que se perde. Declarar `pullRequests: false`
-não é um detalhe de provider — desliga parte do produto.
-
-- Os **gates de QA e SecOps** postam parecer no PR
-  (`commentOnPullRequest`, a décima operação, nasceu para isso na Fase 4a).
-  Sem PR, o parecer existe como artefato no event log mas não aparece no
-  repositório.
-- O **fluxo dos dev agents** abre PR ao terminar a task.
-- A **trava de merge protegido** (`decide.ts:149-160`) continua valendo — ela é
-  do domínio, não da plataforma. Isso é importante: **não ter proteção no
-  servidor não afrouxa nada**, porque quem impede merge indevido é o teto no
-  domínio.
-
-O épico precisa dizer explicitamente o que acontece com cada um desses no
-Generic. "Degrada" não é resposta — degrada **para o quê** é.
+**The single architecture decision:** does Generic reuse `LocalGitProvider`'s
+PR mechanism (and then declare `pullRequests: true`), or does it declare
+`false` and accept the cascading degradation? Both are defensible. What's
+not defensible is declaring `true` and then throwing
+`GitNotSupportedError` — the contract suite fails that, on purpose.
 
 ---
 
-## Degradação no bootstrap: o mecanismo já está pronto
+## What declaring `false` costs, in cascade
 
-**RN-029** — o bootstrap de Gitflow é idempotente e retomável; são seis passos,
-cada um verifica antes de agir, e `skip` **é sucesso**
+Before choosing, it's necessary to know what gets lost. Declaring
+`pullRequests: false` isn't a provider detail — it turns off part of the
+product.
+
+- The **QA and SecOps gates** post their verdict on the PR
+  (`commentOnPullRequest`, the tenth operation, was born for this in
+  Phase 4a). Without a PR, the verdict exists as an event-log artifact but
+  doesn't show up in the repository.
+- The **dev agents' flow** opens a PR when a task is done.
+- The **protected-merge lock** (`decide.ts:149-160`) still holds — it's a
+  domain concern, not a platform one. This matters: **not having
+  protection on the server doesn't loosen anything**, because what
+  prevents an improper merge is the cap in the domain.
+
+The epic needs to say explicitly what happens to each of these on
+Generic. "Degrades" isn't an answer — degrades **into what** is.
+
+---
+
+## Degradation in the bootstrap: the mechanism is already there
+
+**RN-029** — the Gitflow bootstrap is idempotent and resumable; it's six
+steps, each one checks before acting, and `skip` **is success**
 (`apps/api/src/application/use-cases/git/bootstrap-steps.ts`).
 
-Para um provider sem `protectBranch`, o passo `protect_branches` não falha:
-sai **`degraded`**, que também é sucesso. O evento
-`bootstrap.step_degraded` existe exatamente para "concluiu sem uma capability do
-provider" — ver `docs/reference/events.md`, seção "Git e bootstrap". Com o
-provider Local isso já acontece hoje, em toda execução.
+For a provider without `protectBranch`, the `protect_branches` step
+doesn't fail: it comes out **`degraded`**, which is also success. The
+`bootstrap.step_degraded` event exists exactly for "completed without one
+of the provider's capabilities" — see `docs/reference/events.md`, the
+"Git and bootstrap" section. With the Local provider this already happens
+today, on every run.
 
-Ou seja: **a degradação não precisa ser construída, precisa ser declarada.**
-O sistema já sabe lidar com capability ausente; o que ele não perdoa é
-capability mentida.
+In other words: **degradation doesn't need to be built, it needs to be
+declared.** The system already knows how to handle a missing capability;
+what it won't forgive is a capability that lied.
 
 ---
 
-## O que "mínimo" significa, concretamente
+## What "minimal" means, concretely
 
-Um provider é aceito quando:
+A provider is accepted when:
 
-1. As dez operações existem — mesmo que algumas só lancem
+1. The ten operations exist — even if some only throw
    `GitNotSupportedError` (`apps/api/src/domain/git/git-errors.ts:51`).
-2. As duas capabilities refletem a realidade
+2. The two capabilities reflect reality
    (`packages/shared/src/index.ts:182-185`).
-3. Os **19 cenários** da suite única passam, sem cenário próprio escrito
-   (`apps/api/test/contract/git-provider.contract.ts`). Os cenários de
-   `protectBranch`, `openPullRequest`, `mergePullRequest` e
-   `commentOnPullRequest` verificam justamente a coerência entre a flag
-   declarada e o comportamento — funcionar quando `true`, recusar quando
-   `false`.
+3. The **19 scenarios** of the single suite pass, with no scenario of its
+   own written (`apps/api/test/contract/git-provider.contract.ts`). The
+   `protectBranch`, `openPullRequest`, `mergePullRequest`, and
+   `commentOnPullRequest` scenarios specifically check the coherence
+   between the declared flag and the behavior — working when `true`,
+   rejecting when `false`.
 
-**RN-028** fecha a regra: capability decide, não o nome do provider. Nenhum
-consumidor pode ganhar um `if (provider.name === 'generic')`. Se algum precisar,
-o problema é a modelagem das capabilities, não o consumidor — e aí é ADR.
-
----
-
-## Perguntas em aberto para o Arquiteto
-
-- **Configuração.** O Generic precisa de URL do remoto, e provavelmente de
-  credencial. Como isso entra? `CreateRepoInput` tem `name`, `visibility`,
-  `namespace` e `accessToken` — nenhum deles é "URL do servidor". Onde a URL
-  mora: no `externalId`, numa coluna nova de `provisioned_repositories`, ou em
-  configuração de projeto?
-- **Autenticação.** Token em HTTPS, chave SSH, ou os dois? Chave SSH não cabe em
-  `accessToken?: string` da mesma forma que um token cabe, e o
-  `credentialProviderEnum` (`apps/api/src/db/schema.ts:198-203`) precisaria de
-  entrada nova de qualquer jeito.
-- **`visibility`.** `GitRepo` exige `"public" | "private"`
-  (`packages/shared/src/index.ts:187-193`). Um servidor git puro pode não ter o
-  conceito. O que se devolve — um default declarado, ou isso vira campo
-  opcional no contrato?
-- **`createRepo`.** Se o Generic não souber criar repositório remoto, ele é
-  inútil para o wizard atual, que sempre chama `createRepo`
-  (`provision-repository.use-case.ts:144`). Isso conecta com o achado P1 da
-  missão: o produto não sabe adotar repositório existente. **O Generic pode ser
-  exatamente o provider que torna esse achado urgente** — vale o Arquiteto
-  avaliar se os dois se resolvem juntos.
-- **Segurança.** URL de servidor arbitrário fornecida pelo usuário é superfície
-  de SSRF. Vale checar como `docs/security-surface.md` trata saída de rede antes
-  de decidir.
+**RN-028** closes the rule: capability decides, not the provider's name.
+No consumer gets an `if (provider.name === 'generic')`. If one needs it,
+the problem is the capability modeling, not the consumer — and that goes
+to an ADR.
 
 ---
 
-## O que NÃO fazer
+## Open questions for the Architect
 
-- Não implementar as dez operações "de qualquer jeito" para poder declarar tudo
-  `true`. Honestidade na capability é o requisito; completude não é.
-- Não copiar o `LocalGitProvider` por cópia literal. O que se reusa é a
-  **decisão** (onde mora o estado de PR), não necessariamente o código.
-- Não criar `if` por nome de provider em consumidor nenhum.
+- **Configuration.** Generic needs the remote's URL, and probably a
+  credential. How does that get in? `CreateRepoInput` has `name`,
+  `visibility`, `namespace`, and `accessToken` — none of them is "server
+  URL". Where does the URL live: in `externalId`, in a new column on
+  `provisioned_repositories`, or in project configuration?
+- **Authentication.** Token over HTTPS, an SSH key, or both? An SSH key
+  doesn't fit `accessToken?: string` the way a token does, and
+  `credentialProviderEnum` (`apps/api/src/db/schema.ts:198-203`) would
+  need a new entry either way.
+- **`visibility`.** `GitRepo` requires `"public" | "private"`
+  (`packages/shared/src/index.ts:187-193`). A plain git server may not
+  have that concept. What gets returned — a declared default, or does it
+  become an optional field in the contract?
+- **`createRepo`.** If Generic can't create a remote repository, it's
+  useless for the current wizard, which always calls `createRepo`
+  (`provision-repository.use-case.ts:144`). This connects to the
+  mission's P1 finding: the product doesn't know how to adopt an existing
+  repository. **Generic may be exactly the provider that makes that
+  finding urgent** — worth having the Architect assess whether the two
+  should be solved together.
+- **Security.** A server URL supplied by the user is an SSRF surface.
+  Worth checking how `docs/security-surface.md` handles outbound network
+  access before deciding.
+
+---
+
+## What NOT to do
+
+- Don't implement the ten operations "somehow" just to be able to declare
+  everything `true`. Honesty in the capability is the requirement;
+  completeness isn't.
+- Don't copy `LocalGitProvider` by literal copy-paste. What gets reused is
+  the **decision** (where the PR state lives), not necessarily the code.
+- Don't create an `if` by provider name in any consumer.

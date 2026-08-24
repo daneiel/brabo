@@ -1,691 +1,746 @@
-# Missão: primeiro dogfooding — Bitbucket e Generic pela mão dos agentes
+# Mission: first dogfooding — Bitbucket and Generic by the agents' own hand
 
-A Fase 10 entrega dois providers de git do backlog — `BitbucketProvider` e
-`GenericGitProvider` — e entrega junto a primeira execução real do Brabo
-construindo software de produção. O software é o próprio Brabo.
+Phase 10 delivers two git providers from the backlog — `BitbucketProvider`
+and `GenericGitProvider` — and delivers alongside it the first real
+execution of Brabo building production software. The software is Brabo
+itself.
 
-**O método é parte do escopo.** Este documento não é um plano de implementação:
-é o protocolo do experimento. Quem implementa são os agentes, conduzidos dentro
-do produto. Quem observa é você. Desvio do protocolo é achado, não atalho.
+**The method is part of the scope.** This document is not an
+implementation plan: it is the experiment's protocol. The agents do the
+implementing, driven from inside the product. You observe. Deviating from
+the protocol is a finding, not a shortcut.
 
-Este arquivo não é página do site — `docs/missions/**` é excluído do build do
-Docusaurus (`website/docusaurus.config.ts:186-187`), mesmo motivo pelo qual
-`doc-mission.md` mora aqui. Ele é material de trabalho versionado, lido no
-repositório.
-
----
-
-## O que está sendo medido
-
-Duas coisas ao mesmo tempo, e é importante não confundi-las:
-
-1. **O produto entrega?** Os dois providers existem no fim, passando na suite de
-   contrato única?
-2. **Como é conviver com ele?** Quantos cliques de aprovação por task. Quantas
-   vezes você precisou intervir à mão, e por quê. Quanto custou. Se o parecer
-   consolidado do QA Lead dizia algo útil ou era ruído.
-
-A segunda é a que não dá para recuperar depois. Um travamento de agente às 2h da
-manhã, destravado no impulso e não anotado, é dado perdido para sempre. A tabela
-da Parte 4 existe para isso.
+This file is not a site page — `docs/missions/**` is excluded from the
+Docusaurus build (`website/docusaurus.config.ts:186-187`), the same reason
+`doc-mission.md` lives here. It is versioned working material, meant to be
+read in the repository.
 
 ---
 
-## Princípios inegociáveis
+## What is being measured
 
-1. **Travamento é achado de altíssimo valor.** Se os agentes empacarem, a
-   resposta **nunca** é abrir o editor e implementar o provider por fora. É
-   registrar o travamento com a origem (`infra` | `modelo` | `código` |
-   `política`), destravar por intervenção **documentada** na tabela, e seguir.
-   O experimento que nunca trava não mede nada.
+Two things at once, and it matters not to conflate them:
 
-2. **Nenhum ajuste de instrução fora do fluxo da Anamnese.** Se um agente está
-   se comportando mal, isso é sintoma a ser observado — não bug a ser corrigido
-   editando o prompt no meio do caminho. O caminho legítimo é o Psicólogo propor
-   hipótese e a Anamnese virar patch, que **você aprova ou nega**. Editar
-   instrução por fora invalida o loop inteiro, que é justamente uma das coisas
-   sob teste.
+1. **Does the product deliver?** Do the two providers exist at the end,
+   passing the single contract suite?
+2. **What is it like to live with it?** How many approval clicks per task.
+   How many times you had to intervene by hand, and why. What it cost.
+   Whether the QA Lead's consolidated verdict said something useful or was
+   noise.
 
-3. **Nenhum refactor do produto durante a fase.** Achado vira backlog priorizado
-   na colheita (Parte 5), nunca fix embutido. Corrigir enquanto mede destrói a
-   medição.
-
-4. **A esteira do repositório vale integralmente para PR de agente.**
-   `pr-police`, `approval-ladder`, gates de QA e SecOps. Sem exceção, sem
-   bypass, sem "é só um teste".
-
-5. **Merge em branch protegida é sempre seu, manual.** Isso não é regra do
-   experimento — é garantia do produto (`decide.ts:149-160`: merge com destino
-   protegido nunca é auto-aprovável, nem por `agent_autonomy`, nem por
-   `permissions.json`). Está aqui só para deixar claro que não há o que afrouxar.
-
-6. **Não invente número na colheita.** Toda métrica da Parte 5 tem que fechar
-   com o event log. O que não fechar entra como "não medido", não como
-   estimativa.
+The second is the one you can't recover afterward. An agent hanging at
+2am, unstuck on impulse and never recorded, is data lost forever. The
+table in Part 4 exists for this.
 
 ---
 
-# PARTE 1 — MONTAGEM
+## Non-negotiable principles
 
-## 1.1 O bloqueio que define a montagem
+1. **A hang is a very high-value finding.** If the agents get stuck, the
+   answer is **never** to open the editor and implement the provider from
+   the outside. It is to record the hang with its origin (`infra` |
+   `modelo` | `código` | `política`), unstick it via a **documented**
+   intervention, and move on. An experiment that never hangs measures
+   nothing.
 
-O plano original era apontar um projeto dentro do Brabo para o repositório do
-próprio Brabo. **O produto não sabe fazer isso**, e a descoberta é o primeiro
-achado da fase.
+2. **No instruction adjustment outside the Anamnese flow.** If an agent is
+   misbehaving, that's a symptom to be observed — not a bug to be fixed by
+   editing the prompt mid-course. The legitimate path is for the
+   Psychologist to propose a hypothesis and for the Anamnese to turn it
+   into a patch, which **you approve or deny**. Editing an instruction
+   from the outside invalidates the whole loop, which is precisely one of
+   the things under test.
 
-`ProvisionRepositoryUseCase` só tem dois caminhos: retomar um repositório já
-persistido para aquele projeto, ou chamar `provider.createRepo(...)` — sem
-condição, sem alternativa (`provision-repository.use-case.ts:144`). A única rota
-de provisionamento é `POST projects/:projectId/git/:provider/repository`
-(`git.controller.ts:159`), e o DTO aceita apenas `name`, `visibility` e
-`namespace` (`apps/api/src/interfaces/http/git/dto/provision-repository.dto.ts`)
-— não há campo para `externalId` nem URL de repositório existente.
+3. **No product refactoring during the phase.** A finding becomes a
+   prioritized backlog item at harvest time (Part 5), never an embedded
+   fix. Fixing while measuring destroys the measurement.
 
-O método `getRepo`, que leria um repositório alheio por id, existe no provider
-(`github-provider.ts:82`) e **não é chamado por nenhum caso de uso**. É
-capability morta para este fluxo.
+4. **The repository's full pipeline applies fully to an agent's PR.**
+   `pr-police`, `approval-ladder`, QA and SecOps gates. No exception, no
+   bypass, no "it's just a test".
 
-Contra um repositório que já existe, `createRepo` levanta
-`GitRepoAlreadyExistsError` (`github-provider.ts:73`) — tratado como erro, nunca
-como oportunidade de adoção.
+5. **Merge into a protected branch is always yours, manual.** This isn't a
+   rule of the experiment — it's a product guarantee (`decide.ts:149-160`:
+   a merge with a protected target is never auto-approvable, not by
+   `agent_autonomy`, not by `permissions.json`). It's here just to make
+   clear there's nothing to loosen.
 
-E forçar o caminho seria pior do que não conseguir. O passo `protect_branches`
-do bootstrap roda `updateBranchProtection` com `enforce_admins: true` e
-`required_approving_review_count: 1` (`github-provider.ts:170-175`), sobre as
-quatro branches de `PROTECTED_BRANCH_NAMES` (`bootstrap-steps.ts:94`:
-`main`, `rc`, `qa`, `dev`). Isso **sobrescreveria as proteções da Fase 6** e
-pode bloquear o seu próprio merge manual num repositório de dono único — risco
-que o `docs/adr/0028-protecao-de-branch-divergencia-entre-providers.md:83-84` já
-documenta em prosa. O bootstrap ainda criaria uma branch `rc`
-(`bootstrap-steps.ts:195`) que a política de branches do Brabo não usa.
+6. **Don't invent a number at harvest time.** Every metric in Part 5 has
+   to close against the event log. Whatever doesn't close goes in as "not
+   measured", never as an estimate.
 
-## 1.2 O procedimento: fork, seed manual, sem bootstrap
+---
 
-**Decisão:** o experimento roda contra um **fork** do `brabo`, e as linhas de
-repositório provisionado são inseridas à mão, marcadas como convergidas. O
-bootstrap de Gitflow **não roda**.
+# PART 1 — SETUP
 
-Por que fork e não repositório novo pelo wizard: um repositório novo nasce vazio.
-Os agentes precisam do código do Brabo para implementar os providers dentro dele,
-e precisam dos workflows de `pr-police`/`approval-ladder`/gates para que o
-princípio 4 seja verdade. O fork traz as três coisas de graça — histórico,
-`dev`/`qa`/`main`, e `.github/workflows/`.
+## 1.1 The blocker that shapes the setup
 
-Por que não rodar o bootstrap: os seis passos são idempotentes e a maioria sairia
-`skipped` contra um fork (as branches já existem), mas dois **agiriam** —
-`create_rc_branch` criaria a `rc`, e `protect_branches` sobrescreveria a proteção
-herdada. Nenhum dos dois é desejado, e "skip é sucesso" (RN-029) não ajuda
-quando o passo não é skip.
+The original plan was to point a project inside Brabo at Brabo's own
+repository. **The product doesn't know how to do that**, and the
+discovery is the phase's first finding.
 
-Passos:
+`ProvisionRepositoryUseCase` only has two paths: resume a repository
+already persisted for that project, or call `provider.createRepo(...)` —
+no condition, no alternative (`provision-repository.use-case.ts:144`). The
+only provisioning route is
+`POST projects/:projectId/git/:provider/repository`
+(`git.controller.ts:159`), and the DTO only accepts `name`, `visibility`,
+and `namespace`
+(`apps/api/src/interfaces/http/git/dto/provision-repository.dto.ts`) —
+there's no field for `externalId` or the URL of an existing repository.
 
-1. Fork do `brabo` na sua conta. Anote o `owner/repo` resultante.
-2. Registre o PAT do GitHub por `POST users/me/git-credentials`. O token é
-   testado **antes** de ser cifrado (`register-git-credential.use-case.ts:23`),
-   então token inválido não chega a gravar nada.
-3. Crie o projeto no Brabo pela UI normalmente, **sem** provisionar repositório.
-4. Insira à mão a linha de `provisioned_repositories` apontando para o fork
-   (`provider: 'github'`, `external_id: '<owner>/<repo>'`, `default_branch:
-   'dev'`), e a linha de `repo_bootstraps` correspondente marcada como
-   convergida — para o produto não tentar retomar bootstrap nenhum.
-5. Registre isso como a **entrada #1** da tabela de observação. É a primeira
-   intervenção manual do experimento, e ela aconteceu antes de o experimento
-   começar.
+The `getRepo` method, which would read someone else's repository by id,
+exists on the provider (`github-provider.ts:82`) and **is not called by
+any use case**. It's a dead capability for this flow.
 
-> **TODO(humano):** qual `owner/repo` do fork? O procedimento acima precisa do
-> valor literal para a linha de `provisioned_repositories` — e a colheita vai
-> querer citá-lo.
+Against a repository that already exists, `createRepo` raises
+`GitRepoAlreadyExistsError` (`github-provider.ts:73`) — treated as an
+error, never as an adoption opportunity.
 
-## 1.3 Pré-condições — status real
+And forcing the path would be worse than failing. The `protect_branches`
+step of the bootstrap runs `updateBranchProtection` with
+`enforce_admins: true` and `required_approving_review_count: 1`
+(`github-provider.ts:170-175`), over the four branches of
+`PROTECTED_BRANCH_NAMES` (`bootstrap-steps.ts:94`: `main`, `rc`, `qa`,
+`dev`). This would **overwrite the Phase 6 protections** and could block
+your own manual merge in a single-owner repository — a risk that
+`docs/adr/0028-protecao-de-branch-divergencia-entre-providers.md:83-84`
+already documents in prose. The bootstrap would also create an `rc`
+branch (`bootstrap-steps.ts:195`) that Brabo's branch policy doesn't use.
 
-Levantado contra o código, não contra o CLAUDE.md.
+## 1.2 The procedure: fork, manual seed, no bootstrap
 
-| # | pré-condição | status | evidência |
+**Decision:** the experiment runs against a **fork** of `brabo`, and the
+provisioned-repository rows are inserted by hand, marked as converged.
+Gitflow bootstrap **does not run**.
+
+Why a fork and not a new repository through the wizard: a new repository
+is born empty. The agents need Brabo's code to implement the providers
+inside it, and they need the `pr-police`/`approval-ladder`/gate workflows
+for principle 4 to hold. The fork gives all three for free — history,
+`dev`/`qa`/`main`, and `.github/workflows/`.
+
+Why not run the bootstrap: the six steps are idempotent and most would
+come back `skipped` against a fork (the branches already exist), but two
+**would act** — `create_rc_branch` would create `rc`, and
+`protect_branches` would overwrite the inherited protection. Neither is
+wanted, and "skip is success" (RN-029) doesn't help when the step isn't a
+skip.
+
+Steps:
+
+1. Fork `brabo` into your account. Note the resulting `owner/repo`.
+2. Register the GitHub PAT via `POST users/me/git-credentials`. The token
+   is tested **before** it's encrypted
+   (`register-git-credential.use-case.ts:23`), so an invalid token never
+   gets written.
+3. Create the project in Brabo through the UI as usual, **without**
+   provisioning a repository.
+4. Insert the `provisioned_repositories` row by hand, pointing to the fork
+   (`provider: 'github'`, `external_id: '<owner>/<repo>'`,
+   `default_branch: 'dev'`), and the corresponding `repo_bootstraps` row
+   marked as converged — so the product doesn't try to resume any
+   bootstrap.
+5. Record this as **entry #1** of the observation table. It's the
+   experiment's first manual intervention, and it happened before the
+   experiment began.
+
+> **TODO(human):** which `owner/repo` for the fork? The procedure above
+> needs the literal value for the `provisioned_repositories` row — and the
+> harvest will want to cite it.
+
+## 1.3 Preconditions — actual status
+
+Assessed against the code, not against CLAUDE.md.
+
+| # | precondition | status | evidence |
 |---|---|---|---|
-| 1 | Projeto apontando para o repositório do Brabo | ⛔ **bloqueado** — contornado pelo fork (1.2) | `provision-repository.use-case.ts:144` |
-| 2 | Credencial do GitHub válida | ✅ pronto — rota existe e testa a conexão antes de cifrar | `register-git-credential.use-case.ts:23` |
-| 3 | Áreas de QA e Infra ativas | ➖ **não aplicável** — não há o que ativar (ver 1.3.1) | `apps/api/src/db/schema.ts:781-786` |
-| 4 | Bindings de modelo por agente | ✅ pronto — `PUT projects/:projectId/agent-bindings/:agentSlug` | `model-bindings.controller.ts:153` |
-| 5 | Budget por task | ✅ pronto — `projects.task_budget_micros`, via `POST .../execution/activate` | `apps/api/src/db/schema.ts:288` |
-| 5b | Budget por área | ⛔ **não existe** — só desenhado no ADR 0038 | ver 1.3.1 |
-| 6 | Catálogo de modelos sincronizado | ⚠️ **parcial** — só o OpenAI lista catálogo (ver 1.3.2) | `openai-provider.ts:22` |
-| 7 | Autonomia manual em tudo | ✅ pronto **por default** — nada a configurar (ver 2.1) | `decide.ts:125-128` |
-| 8 | Seed base | ⚠️ parcial — cria workspace, projeto e 7 modelos; sem git, sem budget, sem execução | `apps/api/src/db/seed.ts` |
+| 1 | Project pointing at Brabo's own repository | ⛔ **blocked** — worked around by the fork (1.2) | `provision-repository.use-case.ts:144` |
+| 2 | Valid GitHub credential | ✅ ready — the route exists and tests the connection before encrypting | `register-git-credential.use-case.ts:23` |
+| 3 | QA and Infra areas active | ➖ **not applicable** — there's nothing to activate (see 1.3.1) | `apps/api/src/db/schema.ts:781-786` |
+| 4 | Per-agent model bindings | ✅ ready — `PUT projects/:projectId/agent-bindings/:agentSlug` | `model-bindings.controller.ts:153` |
+| 5 | Per-task budget | ✅ ready — `projects.task_budget_micros`, via `POST .../execution/activate` | `apps/api/src/db/schema.ts:288` |
+| 5b | Per-area budget | ⛔ **doesn't exist** — only sketched in ADR 0038 | see 1.3.1 |
+| 6 | Model catalog synced | ⚠️ **partial** — only OpenAI lists a catalog (see 1.3.2) | `openai-provider.ts:22` |
+| 7 | Manual autonomy everywhere | ✅ ready **by default** — nothing to configure (see 2.1) | `decide.ts:125-128` |
+| 8 | Base seed | ⚠️ partial — creates workspace, project, and 7 models; no git, no budget, no execution | `apps/api/src/db/seed.ts` |
 
-### 1.3.1 Sobre o item 3: a tabela `agent_areas` não existe
+### 1.3.1 On item 3: the `agent_areas` table doesn't exist
 
-O aparato genérico de áreas do ADR 0038 foi cortado de escopo na Fase 8. O
-comentário no schema diz isso literalmente
-(`apps/api/src/db/schema.ts:781-786`): *"Sem `agent_areas`/`agent_area_members`
-(o aparato genérico do ADR 0038)"*.
+The generic areas apparatus from ADR 0038 was cut from scope in Phase 8.
+The schema comment says so literally
+(`apps/api/src/db/schema.ts:781-786`): *"No
+`agent_areas`/`agent_area_members` (the ADR 0038 generic apparatus)"*.
 
-O que existe é a tabela `delegations` (`apps/api/src/db/schema.ts:791-831`), com
-`area` como TEXT livre — hoje só `"qa"` e `"infra"`. Área, lead e membros são
-**hardcoded**: `apps/web/src/lib/agents.ts:167-180` no front, e comportamento
-fixo em `apps/engine/lib/engine/gates/qa_lead_server.ex` e
-`apps/engine/lib/engine/infra/infra_lead_server.ex` no engine.
+What exists is the `delegations` table
+(`apps/api/src/db/schema.ts:791-831`), with `area` as free TEXT — today
+only `"qa"` and `"infra"`. Area, lead, and members are **hardcoded**:
+`apps/web/src/lib/agents.ts:167-180` on the front end, and fixed behavior
+in `apps/engine/lib/engine/gates/qa_lead_server.ex` and
+`apps/engine/lib/engine/infra/infra_lead_server.ex` in the engine.
 
-Consequência prática: **não existe rota para ativar uma área num projeto**. A
-área entra em cena quando o Dispatcher aciona QA ou Infra — sempre. Não é
-configuração pendente; é configuração inexistente porque não é configurável.
+Practical consequence: **there's no route to activate an area on a
+project**. The area comes into play whenever the Dispatcher triggers QA
+or Infra — always. It's not pending configuration; it's configuration
+that doesn't exist because it isn't configurable.
 
-Como `agent_areas.budget_micros` também não existe, **não há teto de orçamento
-por área**. Os tetos disponíveis são: projeto e sessão (tabela `budgets`), e
-task (`projects.task_budget_micros`). O CLAUDE.md descreve orçamento no nível da
-área como parte da Fase 8 concluída — não está implementado.
+Since `agent_areas.budget_micros` also doesn't exist, **there's no budget
+cap per area**. The available caps are: project and session (`budgets`
+table), and task (`projects.task_budget_micros`). CLAUDE.md describes a
+per-area budget as part of the completed Phase 8 — it isn't implemented.
 
-### 1.3.2 Sobre o item 6: quais providers de LLM existem de fato
+### 1.3.2 On item 6: which LLM providers actually exist
 
-`LLM_PROVIDER_NAMES` tem três entradas —  `ollama`, `anthropic`, `openai`
-(`apps/api/src/domain/llm/llm-provider-names.ts`). Os seis providers descritos na
-Fase 9b (OpenRouter, NVIDIA NIM, Together, Deep Infra, Bitdeer, Vultr) **não
-entraram**; o `docs/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md:147-156`
-os registra como "o que fica para depois".
+`LLM_PROVIDER_NAMES` has three entries — `ollama`, `anthropic`, `openai`
+(`apps/api/src/domain/llm/llm-provider-names.ts`). The six providers
+described in Phase 9b (OpenRouter, NVIDIA NIM, Together, Deep Infra,
+Bitdeer, Vultr) **did not land**; the
+`docs/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md:147-156`
+records them as "what's left for later".
 
-Além disso, só o OpenAI declara `listModels: true` (`openai-provider.ts:22`).
-Ollama (`ollama-provider.ts:34-40`) e Anthropic (`anthropic-provider.ts:48-53`)
-declaram `false` e são pulados pelo sync — honestamente, com o motivo no
-comentário. Ou seja: "catálogo sincronizado" só tem efeito para OpenAI; para
-Anthropic os modelos vêm do seed (`apps/api/src/db/seed.ts` semeia
-`claude-opus-4-8`, `claude-sonnet-5` e `claude-haiku-4-5-20251001`).
+Also, only OpenAI declares `listModels: true` (`openai-provider.ts:22`).
+Ollama (`ollama-provider.ts:34-40`) and Anthropic
+(`anthropic-provider.ts:48-53`) declare `false` and are skipped by the
+sync — honestly, with the reason in the comment. In other words, "synced
+catalog" only has an effect for OpenAI; for Anthropic the models come from
+the seed (`apps/api/src/db/seed.ts` seeds `claude-opus-4-8`,
+`claude-sonnet-5`, and `claude-haiku-4-5-20251001`).
 
-Isso não bloqueia o experimento — Anthropic e OpenAI bastam para os bindings de
-API. Mas muda o que o item 6 significa: não há catálogo a sincronizar para o
-provider que você provavelmente vai usar no dev.
+This doesn't block the experiment — Anthropic and OpenAI are enough for
+the API bindings. But it changes what item 6 means: there's no catalog to
+sync for the provider you'll probably use for the dev agent.
 
-## 1.4 O que depende de você antes de começar
+## 1.4 What depends on you before starting
 
-- [ ] Criar o fork e anotar o `owner/repo`
-- [ ] Registrar o PAT do GitHub (escopo `repo`)
-- [ ] Inserir as linhas de `provisioned_repositories` e `repo_bootstraps`
-- [ ] Escolher o modelo do dev e preencher a tabela de 2.2
-- [ ] Definir os dois tetos do critério de encerramento (4.4)
-- [ ] Registrar a entrada #1 da tabela de observação
+- [ ] Create the fork and note the `owner/repo`
+- [ ] Register the GitHub PAT (`repo` scope)
+- [ ] Insert the `provisioned_repositories` and `repo_bootstraps` rows
+- [ ] Choose the dev's model and fill in the table in 2.2
+- [ ] Set the two caps for the exit criteria (4.4)
+- [ ] Record entry #1 of the observation table
 
-> ⛔ **PARE AQUI.** A Parte 2 só começa com os seis itens acima fechados. Montar
-> pela metade e descobrir na terceira sessão que o binding do gate estava num
-> modelo local de 7B contamina tudo que veio antes.
+> ⛔ **STOP HERE.** Part 2 only starts once the six items above are
+> closed. Setting up halfway and discovering, in the third session, that
+> the gate binding was on a local 7B model contaminates everything that
+> came before.
 
 ---
 
-# PARTE 2 — REGRAS DO EXPERIMENTO
+# PART 2 — RULES OF THE EXPERIMENT
 
-## 2.1 Autonomia manual: não configurar, e não relaxar
+## 2.1 Manual autonomy: don't configure it, and don't relax it
 
-**Aprovação explícita de tudo já é o comportamento padrão.** Sem nenhuma
-configuração, `decide()` cai em `require_approval` com motivo `"default (sem
-regra aplicável)"` (`decide.ts:125-128`), e o `permissions.json` de um projeto
-novo nasce vazio (`permissions-file.ts:14-18`). Não há nada a ligar.
+**Explicit approval for everything is already the default behavior.**
+With no configuration at all, `decide()` falls into `require_approval`
+with reason `"default (no applicable rule)"` (`decide.ts:125-128`), and a
+new project's `permissions.json` is born empty
+(`permissions-file.ts:14-18`). There's nothing to turn on.
 
-A regra do experimento é o oposto de configurar: **não afrouxar**.
+The rule of the experiment is the opposite of configuring: **don't
+loosen**.
 
-- Nunca usar `approve_always` — ele grava padrão no `allow` e o clique deixa de
-  existir a partir dali. Os cliques são o dado; gastá-los é apagar a medição.
-- Nunca popular `allow` à mão no `permissions.json`.
-- Nunca gravar linha em `agent_autonomy`.
+- Never use `approve_always` — it writes a pattern into `allow`, and the
+  click stops existing from then on. The clicks are the data; spending
+  them erases the measurement.
+- Never populate `allow` by hand in `permissions.json`.
+- Never write a row into `agent_autonomy`.
 
-Se a fadiga de aprovação ficar insuportável, **isso é o resultado**, não um
-problema de setup. Anote na coluna de nota livre e continue.
+If approval fatigue becomes unbearable, **that is the result**, not a
+setup problem. Note it in the free-text column and continue.
 
-Dois tetos permanecem ativos independentemente de qualquer coisa, e é bom saber
-que existem para não confundi-los com bug: merge em branch protegida
-(`decide.ts:149-160`) e patch de instrução (`decide.ts:166-175`) nunca são
-auto-aprováveis. Há também um conjunto de padrões sempre negados
-(`decide.ts:84`).
+Two caps stay active regardless of anything else, and it's good to know
+they exist so as not to mistake them for a bug: merge into a protected
+branch (`decide.ts:149-160`) and instruction patches
+(`decide.ts:166-175`) are never auto-approvable. There is also a set of
+always-denied patterns (`decide.ts:84`).
 
-## 2.2 Bindings fixados antes de começar, e não tocados depois
+## 2.2 Bindings fixed before starting, and not touched afterward
 
-Trocar modelo no meio invalida a comparação de custo e de qualidade entre
-sessões. Fixe uma vez, registre aqui, e se precisar mudar — anote como
-intervenção manual com motivo.
+Changing the model midway invalidates the cost and quality comparison
+between sessions. Fix it once, record it here, and if you need to change
+it — note it as a manual intervention with a reason.
 
-Os slugs abaixo são os reais, de `apps/web/src/lib/agents.ts:25-38`. Note que o
-lead de QA é `qa` (não `qa-lead`; esse nome só existe como ator interno do
-engine), e que não há slug genérico `dev-<modulo>` no roster fixo — os devs
-dinâmicos por módulo são derivados do `module_map` em tempo de execução.
+The slugs below are the real ones, from
+`apps/web/src/lib/agents.ts:25-38`. Note that the QA lead is `qa` (not
+`qa-lead`; that name only exists as the engine's internal actor), and
+that there's no generic `dev-<module>` slug in the fixed roster — the
+per-module dynamic devs are derived from the `module_map` at runtime.
 
-| agente | papel na fase | modelo | por quê |
+| agent | role in the phase | model | why |
 |---|---|---|---|
-| `po` | estrutura épico e stories | | |
-| `arquiteto` | ADR das semânticas, valida module_map | | |
-| `dev-backend` | implementa os dois providers | | |
-| `qa` | lead da área, consolida o veredito | | |
+| `po` | structures epic and stories | | |
+| `arquiteto` | ADR for the semantics, validates module_map | | |
+| `dev-backend` | implements the two providers | | |
+| `qa` | area lead, consolidates the verdict | | |
 | `qa-automacao` | suite + coverage matrix | | |
-| `qa-performance-seguranca` | RNFs e apoio ao checklist | | |
-| `secops` | gate próprio, determinístico | — | não usa LLM |
-| `infra` | lead da área de infra | | |
-| `infra-workflows` | pipeline de CI | | |
-| `psicologo` | hipóteses sobre a sessão | | |
-| `psicologo-leve` | passo barato | | |
-| `anamnese` | perfil e patches de instrução | | |
-| `criativo` | **dispensado** — escopo conhecido | — | |
+| `qa-performance-seguranca` | NFRs and support for the checklist | | |
+| `secops` | its own deterministic gate | — | doesn't use an LLM |
+| `infra` | infra area lead | | |
+| `infra-workflows` | CI pipeline | | |
+| `psicologo` | hypotheses about the session | | |
+| `psicologo-leve` | cheap step | | |
+| `anamnese` | profile and instruction patches | | |
+| `criativo` | **dismissed** — scope already known | — | |
 
-> **TODO(humano):** qual modelo em cada linha? Duas restrições que a fase impõe:
-> o dev precisa de modelo forte de API (o trabalho é implementar contra contrato,
-> não completar boilerplate), e **nenhum gate pode ficar num 7B local no passo
-> semântico** — foi exatamente essa combinação que o
-> `docs/adr/0020-destravar-gates-qa-secops.md` levou nove execuções para
-> diagnosticar.
+> **TODO(human):** which model for each row? Two constraints the phase
+> imposes: the dev needs a strong API model (the work is implementing
+> against a contract, not completing boilerplate), and **no gate can be
+> on a local 7B for the semantic step** — that exact combination is what
+> took `docs/adr/0020-destravar-gates-qa-secops.md` nine executions to
+> diagnose.
 
-Todo modelo vinculado a agente precisa de `supports_tool_calling`; o domínio
-recusa o binding com 422 se não tiver (RN-040). Modelo descoberto por sync entra
-inativo e precisa de curadoria antes de aparecer para binding.
+Every model bound to an agent needs `supports_tool_calling`; the domain
+rejects the binding with a 422 if it doesn't (RN-040). A model discovered
+by sync comes in inactive and needs curation before it can appear for
+binding.
 
-## 2.3 Instruções: o único caminho é a Anamnese
+## 2.3 Instructions: the only path is the Anamnese
 
-Reafirmando o princípio 2 com o mecanismo: patch de instrução nasce como
-`proposed_action` e **nunca** é auto-aprovável (`decide.ts:166-175`). Você vê o
-diff e decide.
+Restating principle 2 with the mechanism: an instruction patch is born as
+a `proposed_action` and is **never** auto-approvable
+(`decide.ts:166-175`). You see the diff and decide.
 
-A regra do experimento: **negue ao menos um patch de propósito**. É o que
-exercita a RN-026 — patch negado não é reproposto, e a comparação é sobre o
-conteúdo normalizado, então reindentar o mesmo patch não o transforma em
-proposta nova. Se a Anamnese repropuser um patch que você negou, isso é um
-achado grande, e é o tipo de coisa que só aparece em execução real.
+The rule of the experiment: **deny at least one patch on purpose**. This
+is what exercises RN-026 — a denied patch is not re-proposed, and the
+comparison is over normalized content, so re-indenting the same patch
+doesn't turn it into a new proposal. If the Anamnese re-proposes a patch
+you denied, that is a big finding, and the kind of thing that only shows
+up in real execution.
 
 ---
 
-# PARTE 3 — CONDUÇÃO (10b)
+# PART 3 — EXECUTION (10b)
 
-A ordem das sessões dentro do produto. Cada seção diz o que o produto **de fato**
-faz — em vários pontos isso diverge do que o `CLAUDE.md` descrevia, e a
-divergência está registrada na tabela de achados no fim deste documento.
+The order of the sessions inside the product. Each section describes what
+the product **actually** does — in several places this diverges from what
+CLAUDE.md described, and the divergence is recorded in the findings table
+at the end of this document.
 
-## 3.0 Antes da sessão 0 — smoke da stack
+## 3.0 Before session 0 — stack smoke test
 
-Não gaste sessão real num ambiente que não fecha o ciclo. Rode primeiro:
+Don't spend a real session on an environment that doesn't close the loop.
+Run this first:
 
 ```bash
 pnpm --filter api demo:pr-gates-area-qa
 ```
 
-Ele exercita a área de QA inteira (delegação às duas subespecialidades,
-consolidação num veredito só) contra o servidor falso. Se ele não fecha, nenhuma
-sessão vai fechar.
+It exercises the whole QA area (delegation to the two subspecialties,
+consolidation into a single verdict) against the fake server. If it
+doesn't close, no session will close either.
 
-Dois guards do engine importam aqui:
+Two engine guards matter here:
 
-- **`START_OUTBOX_DRAIN=true` é obrigatório.** É o drain que entrega
-  `session.closed` ao `PsychologistWorker`
-  (`apps/engine/lib/engine/outbox/drain.ex:58-61`). Sem ele o Psicólogo nunca
-  roda e o passo 3.6 não acontece. O compose de dev já traz `true`.
-- **`START_ANAMNESE`** vale desligar durante a execução e ligar entre as
-  tandas. O `docs/runbook.md#ambiente-de-inferencia` registra que Psicólogo e
-  Anamnese consomem turnos de LLM em paralelo com os agentes de execução e
-  chegam a derrubar a conexão no meio do ciclo. Atenção ao aviso de lá: **o
-  guard não purga a fila** — jobs antigos rodam no boot seguinte de qualquer
-  jeito.
+- **`START_OUTBOX_DRAIN=true` is required.** It's the drain that delivers
+  `session.closed` to the `PsychologistWorker`
+  (`apps/engine/lib/engine/outbox/drain.ex:58-61`). Without it the
+  Psychologist never runs and step 3.6 doesn't happen. The dev compose
+  already ships with `true`.
+- **`START_ANAMNESE`** is worth turning off during execution and on
+  between batches. `docs/runbook.md#ambiente-de-inferencia` records that
+  the Psychologist and the Anamnese consume LLM turns in parallel with the
+  execution agents and can drop the connection mid-cycle. Note the
+  warning there: **the guard doesn't purge the queue** — old jobs run on
+  the next boot regardless.
 
-Confira também o resto daquela seção do runbook (`OLLAMA_CONTEXT_LENGTH`,
-modelos residentes, GPU). São as cinco causas que o ADR 0020 levou nove
-execuções para isolar.
+Also check the rest of that runbook section
+(`OLLAMA_CONTEXT_LENGTH`, resident models, GPU). These are the five causes
+that took ADR 0020 nine executions to isolate.
 
-## 3.1 Sessão 0 — Criativo
+## 3.1 Session 0 — Criativo (Creative)
 
-**Esta sessão não estava no plano original, e é obrigatória.** O motivo está no
-achado #9: sem o Criativo, nenhuma story chega a `ready` e nenhum dev pega task.
-O Criativo é o único agente com `emit_artifact`, e regra de negócio é
-pré-requisito de prontidão.
+**This session was not in the original plan, and it is mandatory.** The
+reason is finding #9: without the Creative agent, no story ever reaches
+`ready` and no dev picks up a task. The Creative agent is the only one
+with `emit_artifact`, and a business rule is a readiness prerequisite.
 
-1. Abra uma sessão nova. O Criativo é quem conduz.
-2. Cole o texto de `docs/missions/inputs/00-handoff-criativo.md`.
-3. Converse até ele ter emitido **uma `business_rule` por semântica a cobrir**.
-4. **Critério de saída, não negociável:** confira que as regras existem antes de
-   seguir. Elas aparecem no fio da sessão como artefatos emitidos. Se você
-   avançar sem elas, a sessão 1 nasce morta e você só descobre nas sessões 3+,
-   quando nenhum dev conseguir pegar task.
-5. Clique **"Estou pronto para produzir"**. O Criativo oferece o handoff ao PO.
-6. Aceite o handoff (**"Aceitar handoff e iniciar po"**).
+1. Open a new session. The Creative agent leads it.
+2. Paste the text from `docs/missions/inputs/00-handoff-criativo.md`.
+3. Converse until it has emitted **one `business_rule` per semantic to
+   cover**.
+4. **Non-negotiable exit criterion:** confirm the rules exist before
+   continuing. They appear in the session thread as emitted artifacts. If
+   you move on without them, session 1 is born dead and you only find out
+   in sessions 3+, when no dev manages to pick up a task.
+5. Click **"I'm ready to produce"**. The Creative agent offers the
+   handoff to the PO.
+6. Accept the handoff (**"Accept handoff and start po"**).
 
-Não peça a ele para decidir semântica do Bitbucket — isso é do Arquiteto, contra
-a doc oficial, na sessão 2.
+Don't ask it to decide the Bitbucket semantics — that's the Architect's
+job, against the official docs, in session 2.
 
-## 3.2 Sessão 1 — PO
+## 3.2 Session 1 — PO
 
-O PO **não espera instrução**: na ativação ele faz um `:kickoff` automático e
-gera o backlog inteiro de uma vez, a partir do brief e das regras que o Criativo
-deixou no event log (`apps/engine/lib/engine/agents/po_server.ex:68-80`).
+The PO **doesn't wait for instruction**: on activation it does an
+automatic `:kickoff` and generates the whole backlog at once, from the
+brief and the rules the Creative agent left in the event log
+(`apps/engine/lib/engine/agents/po_server.ex:68-80`).
 
-O que o produto faz, e que difere do plano original:
+What the product does, differing from the original plan:
 
-- **Não existe "promover a ready".** A promoção é automática na criação, se a
-  story já nascer com DoD, DoR, ≥1 RF e ≥1 regra vinculada
-  (`create-story.use-case.ts:75-78`). O que você controla é a qualidade da
-  entrada, não um portão no meio.
-- **Não existe devolução ao PO.** Não há botão, estado nem evento. Rejeição é
-  conversa no fio — então **só existe na tabela se você anotar**. Anote: é dado
-  do experimento, e é o único registro que vai sobrar.
-- A aba **Backlog** é somente leitura. Serve para revisar depois do fato.
+- **There's no "promote to ready".** Promotion is automatic on creation,
+  if the story is already born with a DoD, DoR, ≥1 functional requirement,
+  and ≥1 linked rule (`create-story.use-case.ts:75-78`). What you control
+  is the quality of the input, not a gate in the middle.
+- **There's no returning it to the PO.** No button, no state, no event.
+  Rejection is just conversation in the thread — so **it only exists in
+  the table if you note it**. Note it: it's experiment data, and it's the
+  only record that will survive.
+- The **Backlog** tab is read-only. It's for reviewing after the fact.
 
-Duas instruções deliberadas ao refinar com ele:
+Two deliberate instructions when refining with it:
 
-- **Muitos módulos, poucas tasks cada.** Pelo achado #10, cada dev agent processa **uma**
-  task por ativação. O paralelismo real vem de módulos distintos, não de fila de
-  tasks. Um backlog com 3 módulos × 2 tasks anda muito melhor que 1 módulo × 6.
-- **Ao menos uma story com RNF de performance**, escrito com uma das
-  palavras-chave que o QA Lead reconhece (`apps/engine/lib/engine/gates/qa_lead.ex:20-28`):
-  `performance`, `desempenho`, `latência`, `throughput`, `vazão`,
-  `tempo de resposta`, `escalabilidade`. A checagem é substring, não semântica —
-  "precisa ser rápido" **não** casa. Sem isso, o QA Lead dispensa a
-  subespecialidade de Performance/Segurança em toda task e o experimento nunca
-  exercita a segunda delegação.
+- **Many modules, few tasks each.** Per finding #10, each dev agent
+  processes **one** task per activation. Real parallelism comes from
+  distinct modules, not from a task queue. A backlog with 3 modules × 2
+  tasks moves much better than 1 module × 6.
+- **At least one story with a performance NFR**, written with one of the
+  keywords the QA Lead recognizes
+  (`apps/engine/lib/engine/gates/qa_lead.ex:20-28`): `performance`,
+  `desempenho`, `latência`, `throughput`, `vazão`, `tempo de resposta`,
+  `escalabilidade`. The check is a substring match, not semantic — "needs
+  to be fast" does **not** match. Without this, the QA Lead dismisses the
+  Performance/Security subspecialty on every task and the experiment
+  never exercises the second delegation.
 
-## 3.3 Sessão 2 — Arquiteto
+## 3.3 Session 2 — Architect
 
-O Arquiteto valida as stories contra o `module_map` e produz o ADR das
-semânticas via PR real, com gates. É a sua primeira leitura de parecer de agente
-na fase.
+The Architect validates the stories against the `module_map` and produces
+the semantics ADR via a real PR, with gates. It's your first reading of an
+agent verdict in the phase.
 
-Três coisas que só aparecem aqui e travam a execução se passarem batido:
+Three things that only show up here and stall execution if missed:
 
-- **`assign_story_modules` é o que põe `module_ids` na story.** O SQL do claim
-  casa `s.module_ids ? module`
+- **`assign_story_modules` is what puts `module_ids` on the story.** The
+  claim SQL matches `s.module_ids ? module`
   (`apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:189`).
-  Story sem módulo atribuído é invisível para todo dev, mesmo `ready`.
-- **Publicar um `module_map` novo rebaixa story `ready` órfã para `draft`**
-  (`create-module-map.use-case.ts:63-82`), com ator
-  `system/module-map-revalidation`. Se o Arquiteto republicar o mapa depois de o
-  PO ter fechado o backlog, parte dele volta para `draft` sem aviso.
-- **A ativação da execução exige `module_map` vigente.** Sem ele a resposta é
-  400 com a mensagem "Projeto sem module_map vigente"
-  (`activate-execution.use-case.ts:88-92`) — não 409.
+  A story without an assigned module is invisible to every dev, even when
+  `ready`.
+- **Publishing a new `module_map` demotes an orphaned `ready` story back
+  to `draft`** (`create-module-map.use-case.ts:63-82`), with actor
+  `system/module-map-revalidation`. If the Architect republishes the map
+  after the PO has closed the backlog, part of it goes back to `draft`
+  without warning.
+- **Activating execution requires a current `module_map`.** Without one
+  the response is a 400 with the message "Project has no current
+  module_map" (`activate-execution.use-case.ts:88-92`) — not a 409.
 
-## 3.4 Sessões 3+ — Devs, em tandas
+## 3.4 Sessions 3+ — Devs, in batches
 
-Aqui a realidade diverge bastante do plano original, por causa do achado #10: **um
-dev agent processa exatamente uma task e para.** Não há reagendamento após o
-gate; nenhum worker redispara. Reativar a execução também não resolve — o
-supervisor devolve o agente existente, `:work` não é disparado, e ainda nasce uma
-sessão a mais sem agentes vinculados (achado #11).
+This is where reality diverges quite a bit from the original plan, because
+of finding #10: **a dev agent processes exactly one task and stops.**
+There's no rescheduling after the gate; no worker fires again. Reactivating
+execution doesn't help either — the supervisor returns the existing agent,
+`:work` isn't dispatched, and an extra session with no agents attached is
+even born (finding #11).
 
-O ciclo de uma **tanda**:
+The cycle of a **batch**:
 
-1. Ativar a execução (`maintainer`). Isso cria a sessão, sobe um dev agent por
-   módulo e dispara uma task para cada.
-2. Opcionalmente aceitar a paralelização (ver abaixo) — soma `dev-<módulo>-2`,
-   que faz mais uma task naquele módulo.
-3. Acompanhar os gates (3.5) e mergear no GitHub — o merge é fora do
-   produto, ver 3.5.
-4. **Reiniciar o engine.** Os dev agents são `restart: :temporary`
-   (`dev_agent_server.ex:16`): morrem e não voltam.
-5. Reativar a execução. Agora o registro está vazio, os agentes sobem de novo e
-   pegam a próxima task.
+1. Activate execution (`maintainer`). This creates the session, spins up
+   one dev agent per module, and dispatches one task to each.
+2. Optionally accept parallelization (below) — adds `dev-<module>-2`,
+   which handles one more task in that module.
+3. Watch the gates (3.5) and merge on GitHub — the merge happens outside
+   the product, see 3.5.
+4. **Restart the engine.** Dev agents are `restart: :temporary`
+   (`dev_agent_server.ex:16`): they die and don't come back.
+5. Reactivate execution. Now the registry is empty, the agents come back
+   up, and pick up the next task.
 
-Anote a contagem de restarts na tabela. **É a métrica mais honesta da fase**: o
-número de reinícios manuais por task entregue diz mais sobre convivência do que
-qualquer outra coluna.
+Record the restart count in the table. **It's the most honest metric in
+the phase**: the number of manual restarts per delivered task says more
+about the experience of living with it than any other column.
 
-**Paralelização.** A sugestão é calculada **uma vez, na ativação**, para cada
-módulo com ≥2 tasks pegáveis (`activate-execution.use-case.ts:159-172`) — ela vai
-estar lá desde o primeiro minuto, não aparece "quando o sistema achar". Serial é
-o default por você **não** clicar em "Aceitar". Aceite na segunda metade e
-compare as medições, como planejado.
+**Parallelization.** The suggestion is computed **once, at activation**,
+for every module with ≥2 claimable tasks
+(`activate-execution.use-case.ts:159-172`) — it'll be there from the first
+minute, not appearing "when the system figures it out". Serial is the
+default because you **don't** click "Accept". Accept it in the second half
+and compare the measurements, as planned.
 
-**Ciclo K.** `DEFAULT_MAX_GATE_CORRECTIONS = 3`
-(`record-gate-verdict.use-case.ts:21`), configurável na ativação. Esgotado, a
-task vira `blocked`, perde o dono e **sai do claim automático**; o destrave é
-manual, por `POST .../sessions/:sessionId/tasks/:taskId/unblock`, com botão na
-seção "Tasks bloqueadas" da Visão geral.
+**Cycle K.** `DEFAULT_MAX_GATE_CORRECTIONS = 3`
+(`record-gate-verdict.use-case.ts:21`), configurable at activation. Once
+exhausted, the task becomes `blocked`, loses its owner, and **drops out of
+automatic claiming**; unblocking is manual, via
+`POST .../sessions/:sessionId/tasks/:taskId/unblock`, with a button in the
+"Blocked tasks" section of the Overview.
 
-> **Nota para não confundir com a regra 2.1:** a ativação **escreve sozinha** os
-> `DEV_TERMINAL_ALLOW_PATTERNS` no `permissions.json` do projeto
-> (`activate-execution.use-case.ts:115-118`). Isso é mecanismo do produto — sem
-> ele todo `terminal` do dev cairia em aprovação e nenhuma suite fecharia. Não é
-> violação do "nunca popular `allow`", que continua valendo **para você**.
+> **Note so it isn't confused with rule 2.1:** activation **writes on its
+> own** the `DEV_TERMINAL_ALLOW_PATTERNS` into the project's
+> `permissions.json` (`activate-execution.use-case.ts:115-118`). This is a
+> product mechanism — without it every dev's `terminal` call would fall
+> into approval and no suite would ever close. It is not a violation of
+> "never populate `allow`", which still holds **for you**.
 
-## 3.5 Gates em toda PR
+## 3.5 Gates on every PR
 
-Onde olhar: aba **Aprovações** do projeto, componente de linha do tempo da PR.
-Cada parecer é um card expansível; dentro dele ficam os itens, a
-`coverageMatrix`, os **sub-vereditos por subespecialidade** e as **dispensas**
-com justificativa.
+Where to look: the project's **Approvals** tab, the PR timeline component.
+Each verdict is an expandable card; inside it are the items, the
+`coverageMatrix`, the **per-subspecialty sub-verdicts**, and the
+**dismissals** with justification.
 
-- **QA Lead** consolida. A dispensa nunca é silêncio: vira
-  `delegation.dispensed` com `justification`.
-- **SecOps** é determinístico, sem LLM — roda semgrep e gitleaks sobre o diff.
-  Scanner ausente é pulado e registrado no resumo, nunca quebra o gate.
-- A ordem é imutável: `awaiting_qa → awaiting_secops → awaiting_user`. Tentar
-  pular etapa é recusado no domínio.
+- **QA Lead** consolidates. A dismissal is never silent: it becomes
+  `delegation.dispensed` with `justification`.
+- **SecOps** is deterministic, no LLM — runs semgrep and gitleaks over the
+  diff. A missing scanner is skipped and recorded in the summary, never
+  breaks the gate.
+- The order is immutable: `awaiting_qa → awaiting_secops → awaiting_user`.
+  Trying to skip a step is rejected by the domain.
 
-**O merge não é etapa do produto.** `awaiting_user` é terminal de propósito — o
-engine não conhece `git_merge` nem `awaiting_user`. Você lê o parecer
-consolidado, clica em "ver PR" e **mergeia no GitHub**. Isso é desenho, não
-lacuna (RN-014).
+**The merge is not a product step.** `awaiting_user` is terminal by
+design — the engine doesn't know about `git_merge` or `awaiting_user`. You
+read the consolidated verdict, click "view PR", and **merge on GitHub**.
+This is by design, not a gap (RN-014).
 
-## 3.6 Fim de cada sessão — ordem obrigatória
+## 3.6 End of each session — mandatory order
 
-Nesta ordem, sem pular:
+In this order, no skipping:
 
-1. **Encerrar pelo botão "Encerrar"** no topo da sessão. Ele dispara `closing` e
-   depois `closed` (`apps/web/src/routes/SessionPage.tsx:271-276`).
-2. **Deixar o Psicólogo processar.** Ele roda sozinho em ~2s, pelo drain do
-   outbox — não há botão a apertar. É idempotente e só reage aos dois eventos
-   terminais.
-3. **Preencher a linha da tabela ANTES de abrir a próxima sessão.** A coluna de
-   intervenções é a que evapora.
-4. **Não ler as hipóteses.** Elas são lidas em lote, só na colheita.
+1. **End it via the "End" button** at the top of the session. It fires
+   `closing` and then `closed`
+   (`apps/web/src/routes/SessionPage.tsx:271-276`).
+2. **Let the Psychologist process it.** It runs on its own in ~2s, via the
+   outbox drain — there's no button to press. It's idempotent and only
+   reacts to the two terminal events.
+3. **Fill in the table row BEFORE opening the next session.** The
+   interventions column is the one that evaporates.
+4. **Don't read the hypotheses.** They're read in a batch, only at harvest
+   time.
 
-O protocolo anti-contaminação, concreto — porque o painel do time que você
-precisa e as hipóteses que você deve evitar moram na **mesma aba** (achado #15):
+The concrete anti-contamination protocol — because the team panel you need
+and the hypotheses you must avoid live on the **same tab** (finding #15):
 
-- No feed de **Atividade**, fixe o filtro de tipo em "Delegações". Ele é
-  exclusivo: mostra só o tipo escolhido, e some com as hipóteses.
-- **Não role até a seção Insights** da Visão geral. Ela não tem colapso.
-- **Não clique em chip de evidência** de hipótese: além de te fazer ler a
-  hipótese, o link abre a sessão analisada já com o log de eventos expandido.
-- Dentro do fio de uma sessão você está seguro: o "Log de eventos" nasce
-  colapsado.
+- In the **Activity** feed, pin the type filter to "Delegations". It's
+  exclusive: shows only the chosen type, and hides the hypotheses.
+- **Don't scroll down to the Insights section** of the Overview. It has no
+  collapse.
+- **Don't click an evidence chip** of a hypothesis: besides making you
+  read the hypothesis, the link opens the analyzed session already with
+  the event log expanded.
+- Inside a session's thread you're safe: the "Event log" is born
+  collapsed.
 
 ---
 
-# PARTE 4 — OBSERVAÇÃO
+# PART 4 — OBSERVATION
 
-## 4.1 A tabela
+## 4.1 The table
 
-Uma linha por sessão. Preencher **durante**, não depois — a coluna de
-intervenções é a que evapora.
+One row per session. Fill it in **during**, not after — the interventions
+column is the one that evaporates.
 
-| # | sessão | task | cliques de aprovação | intervenções manuais + motivo | restarts do engine | custo | veredito dos gates | nota livre |
+| # | session | task | approval clicks | manual interventions + reason | engine restarts | cost | gate verdicts | free note |
 |---|---|---|---|---|---|---|---|---|
-| 1 | — (pré-experimento) | — | 0 | Seed manual de `provisioned_repositories`/`repo_bootstraps` apontando para o fork. Motivo: o produto não sabe adotar repositório existente (`provision-repository.use-case.ts:144`) | 0 | 0 | — | Primeiro achado da fase, antes da primeira sessão. Vira P1 na colheita |
+| 1 | — (pre-experiment) | — | 0 | Manual seeding of `provisioned_repositories`/`repo_bootstraps` pointing at the fork. Reason: the product doesn't know how to adopt an existing repository (`provision-repository.use-case.ts:144`) | 0 | 0 | — | The phase's first finding, before the first session. Becomes P1 at harvest time |
 | 2 | | | | | | | | |
 
-Convenções de preenchimento:
+Conventions for filling it in:
 
-- **cliques de aprovação** — conta bruta de decisões suas na tela de Aprovações
-  naquela sessão, aprovadas e negadas somadas. É proxy de fadiga, então a conta
-  bruta importa mais que a proporção. Nenhuma tela soma isso para você (achado #16): a
-  conta sai do event log, na colheita.
-- **intervenções manuais** — qualquer coisa que você fez que o agente deveria ter
-  feito, ou que o produto deveria ter permitido. Sempre com motivo. Se o motivo
-  for "travou", registre a **origem** (`infra` | `modelo` | `código` |
-  `política`) — nunca por eliminação.
-- **restarts do engine** — quantas vezes você precisou reiniciar o engine para a
-  tanda seguinte andar (3.4). Conte separado das outras intervenções: é a
-  métrica que mede o gargalo do achado #10, e a que vale mais na colheita.
-- **custo** — em USD, do `TokenMeter` da sessão. A conferência contra o event log
-  fica para a colheita.
-- **veredito dos gates** — `approved` ou `changes_requested` por gate, e se houve
-  ciclo de correção, quantos.
+- **approval clicks** — raw count of your decisions in the Approvals
+  screen during that session, approved and denied summed. It's a proxy
+  for fatigue, so the raw count matters more than the ratio. No screen
+  totals this for you (finding #16): the count comes out of the event log,
+  at harvest time.
+- **manual interventions** — anything you did that the agent should have
+  done, or that the product should have allowed. Always with a reason. If
+  the reason is "it got stuck", record the **origin** (`infra` | `modelo`
+  | `código` | `política`) — never by elimination.
+- **engine restarts** — how many times you had to restart the engine for
+  the next batch to move forward (3.4). Count it separately from the other
+  interventions: it's the metric that measures finding #10's bottleneck,
+  and the one that matters most at harvest time.
+- **cost** — in USD, from the session's `TokenMeter`. Cross-checking
+  against the event log is done at harvest time.
+- **gate verdicts** — `approved` or `changes_requested` per gate, and if
+  there was a correction cycle, how many rounds.
 
-## 4.2 Onde cada coluna se valida no event log
+## 4.2 Where each column is validated in the event log
 
-A tabela é anotação humana; o event log é a prova. Na colheita (Parte 5), cada
-coluna é conferida contra estes tipos — todos existentes, conferidos em
-`docs/reference/events.md`:
+The table is a human note; the event log is the proof. At harvest time
+(Part 5), each column is checked against these types — all of which exist,
+confirmed in `docs/reference/events.md`:
 
-> ⚠️ **Correção (achado #17):** a coluna mais importante da tabela **não** se
-> valida no event log. `ApproveActionUseCase` grava `proposed_action.approved`
-> só no outbox (`approve-action.use-case.ts:98`), nunca em `session_events` —
-> confirmado por query, zero eventos `proposed_action.*` num banco com centenas
-> de ações. A fonte durável é a tabela `proposed_actions`, e as queries prontas
-> estão em `docs/missions/colheita-queries.sql`.
+> ⚠️ **Correction (finding #17):** the table's most important column
+> **does not** validate against the event log. `ApproveActionUseCase`
+> writes `proposed_action.approved` only to the outbox
+> (`approve-action.use-case.ts:98`), never to `session_events` —
+> confirmed by query, zero `proposed_action.*` events in a database with
+> hundreds of actions. The durable source is the `proposed_actions` table,
+> and the ready-made queries are in `docs/missions/colheita-queries.sql`.
 
-| coluna | onde confere |
+| column | where it's checked |
 |---|---|
-| cliques de aprovação | `proposed_actions.decided_at IS NOT NULL` — **não** o event log. `decided_at` só é preenchido quando uma pessoa decidiu. Duas armadilhas: contar por `status` subestima (aprovada que executa vira `executed`), e `status = 'denied'` inclui o que a política barrou sem chegar a um humano (`resolved_policy = 'deny'`) |
-| custo | tabela `token_usage` — cada linha grava o preço que produziu o custo, então o número de ontem continua reproduzível (RN-044); mais `budget.threshold_crossed` para os limiares |
-| veredito dos gates | `pr.gate_changed` e `infra.gate_changed`; o conteúdo do parecer nos artefatos `qa_verdict` / `secops_verdict` |
-| qualidade do parecer consolidado | `delegation.completed` / `delegation.failed` / `delegation.dispensed` — um por subespecialidade, com `parecerArtifactId` do parecer INTERNO; a dispensa carrega `justification` |
-| intervenções manuais | `chat.message` com ator `user` durante a fase de execução, cruzado com o que você anotou à mão |
-| origem de falha | `payload.failureOrigin` em `delegation.failed`, e a classificação determinística de término (RN-023) |
-| loop do Psicólogo | `psychologist.hypothesis_proposed` / `_accepted` / `_dismissed` / `_accepted_for_anamnese`, e `anamnese.run_completed` |
-| travamento de task | `backlog.task_blocked` — teto de correções esgotado ou impedimento |
+| approval clicks | `proposed_actions.decided_at IS NOT NULL` — **not** the event log. `decided_at` is only set once a person decided. Two traps: counting by `status` undercounts (an approved action that executes becomes `executed`), and `status = 'denied'` includes what policy blocked before ever reaching a human (`resolved_policy = 'deny'`) |
+| cost | `token_usage` table — each row records the price that produced the cost, so yesterday's number is still reproducible (RN-044); plus `budget.threshold_crossed` for the thresholds |
+| gate verdicts | `pr.gate_changed` and `infra.gate_changed`; the verdict content in the `qa_verdict` / `secops_verdict` artifacts |
+| quality of the consolidated verdict | `delegation.completed` / `delegation.failed` / `delegation.dispensed` — one per subspecialty, with the `parecerArtifactId` of the INTERNAL verdict; the dismissal carries a `justification` |
+| manual interventions | `chat.message` with actor `user` during the execution phase, cross-checked against what you noted by hand |
+| failure origin | `payload.failureOrigin` in `delegation.failed`, and the deterministic termination classification (RN-023) |
+| Psychologist loop | `psychologist.hypothesis_proposed` / `_accepted` / `_dismissed` / `_accepted_for_anamnese`, and `anamnese.run_completed` |
+| task hang | `backlog.task_blocked` — correction cap exhausted or an impediment |
 
-Se uma coluna não fechar com o log, ela entra na colheita como **não medida**.
-Não estime.
+If a column doesn't close against the log, it goes into the harvest as
+**not measured**. Don't estimate.
 
-## 4.3 O loop Psicólogo → Anamnese
+## 4.3 The Psychologist → Anamnese loop
 
-O loop só é exercitado se as hipóteses forem decididas nos dois sentidos. Um
-experimento que aceita tudo não testa nada.
+The loop is only exercised if the hypotheses are decided both ways. An
+experiment that accepts everything tests nothing.
 
-**Regra de leitura:** hipóteses são lidas **em lote, só na colheita**. Ler no
-meio muda o seu comportamento como observador e contamina as sessões seguintes.
-A exceção é a decisão em si — que precisa acontecer para o loop rodar.
+**Reading rule:** hypotheses are read **in a batch, only at harvest
+time**. Reading them midway changes your behavior as an observer and
+contaminates the following sessions. The exception is the decision
+itself — which needs to happen for the loop to run.
 
-O que decidir de propósito, e o que cada decisão exercita:
+What to decide on purpose, and what each decision exercises:
 
-| decisão | exercita |
+| decision | exercises |
 |---|---|
-| Aceitar ao menos uma hipótese e encaminhar para a Anamnese | o elo `psychologist.hypothesis_accepted_for_anamnese` — o único caminho que fecha o loop |
-| Descartar ao menos uma | RN-022: o ciclo é compare-and-swap, `proposed → accepted \| dismissed` |
-| Negar ao menos um patch de instrução resultante | RN-026: patch negado não é reproposto (comparação sobre conteúdo normalizado) |
-| Se algum patch for aprovado e piorar o agente, reverter | RN-027: rollback é operação **para frente** — cria versão nova, não apaga histórico |
+| Accept at least one hypothesis and forward it to the Anamnese | the `psychologist.hypothesis_accepted_for_anamnese` link — the only path that closes the loop |
+| Dismiss at least one | RN-022: the cycle is compare-and-swap, `proposed → accepted \| dismissed` |
+| Deny at least one resulting instruction patch | RN-026: a denied patch is not re-proposed (comparison over normalized content) |
+| If an approved patch makes the agent worse, roll it back | RN-027: rollback is a **forward** operation — creates a new version, doesn't erase history |
 
-Vale observar sem intervir: hipótese sem evidência válida não chega a ser gravada
-(RN-021, validação atômica por lote). Se o Psicólogo propuser pouca coisa, pode
-ser que esteja sendo reprovado nessa porta — o que é informação, não defeito.
+Worth observing without intervening: a hypothesis with no valid evidence
+never gets recorded (RN-021, atomic batch validation). If the Psychologist
+proposes little, it may be getting rejected at that gate — which is
+information, not a defect.
 
-## 4.4 Critério de encerramento
+## 4.4 Exit criteria
 
-A fase termina quando **qualquer um** destes for verdade:
+The phase ends when **any one** of these is true:
 
-1. **Sucesso** — `BitbucketProvider` e `GenericGitProvider` passam na suite de
-   contrato única, e as PRs correspondentes foram mergeadas por você pela esteira
-   normal.
-2. **Teto de custo** — o gasto acumulado do experimento atinge o valor abaixo.
-3. **Teto de tempo** — o experimento atinge o número de dias abaixo.
+1. **Success** — `BitbucketProvider` and `GenericGitProvider` pass the
+   single contract suite, and the corresponding PRs were merged by you
+   through the normal pipeline.
+2. **Cost cap** — the experiment's accumulated spend reaches the value
+   below.
+3. **Time cap** — the experiment reaches the number of days below.
 
-Os dois tetos existem para o experimento não virar projeto. Atingir um deles
-**não é fracasso**: é resultado, e a colheita é escrita do mesmo jeito, com o que
-foi obtido até ali.
+Both caps exist so the experiment doesn't turn into a project. Hitting
+either one **is not a failure**: it's a result, and the harvest is written
+the same way, with whatever was obtained up to that point.
 
-> **TODO(humano):** qual o teto de custo total do experimento, em USD? Ele deve
-> ser um número que você aceita gastar sem retorno nenhum — porque esse é o pior
-> caso.
+> **TODO(human):** what's the experiment's total cost cap, in USD? It
+> should be a number you'd accept spending with zero return — because
+> that's the worst case.
 
-> **TODO(humano):** qual o teto de dias corridos? Contados do início da primeira
-> sessão da 10b, não da montagem.
+> **TODO(human):** what's the calendar-day cap? Counted from the start of
+> 10b's first session, not from setup.
 
-> **TODO(humano):** se a suite fechar nos dois providers antes dos tetos, o
-> experimento continua para colher mais dados de convivência, ou encerra na
-> hora? As duas respostas servem; a que não serve é decidir isso no calor do
-> momento.
+> **TODO(human):** if the suite closes on both providers before either
+> cap is hit, does the experiment continue to gather more experience data,
+> or end right away? Either answer works; the one that doesn't work is
+> deciding it in the heat of the moment.
 
 ---
 
-# PARTE 5 — COLHEITA (10c)
+# PART 5 — HARVEST (10c)
 
-Só começa depois do encerramento. **O kit já está pronto:**
+Only starts after the exit. **The kit is already ready:**
 
-| arquivo | o que é |
+| file | what it is |
 |---|---|
-| `docs/missions/colheita-queries.sql` | as 11 queries que produzem cada número, já validadas contra o schema real |
-| `docs/missions/colheita-esqueleto.md` | o molde do relatório, com cada número amarrado à query que o preenche, mais o roteiro do ADR |
+| `docs/missions/colheita-queries.sql` | the 11 queries that produce each number, already validated against the real schema |
+| `docs/missions/colheita-esqueleto.md` | the report's mold, with each number tied to the query that fills it, plus the ADR outline |
 
-Antes de rodar qualquer coisa: **`pnpm --filter api db:migrate`**. As queries de
-custo usam `input_price_per_million_micros`, `output_price_per_million_micros` e
-`upstream_provider`, que só existem a partir das migrações da Fase 9.
+Before running anything: **`pnpm --filter api db:migrate`**. The cost
+queries use `input_price_per_million_micros`,
+`output_price_per_million_micros`, and `upstream_provider`, which only
+exist starting with the Phase 9 migrations.
 
-Nesta ordem:
+In this order:
 
-1. **Conferir a tabela contra o banco**, coluna por coluna, pelo mapa de 4.2 —
-   com a correção do achado #17 em mente: cliques saem de `proposed_actions`, não
-   do event log. O que não fechar vira "não medido", explicitamente, no texto.
+1. **Check the table against the database**, column by column, using the
+   4.2 map — with finding #17's correction in mind: clicks come from
+   `proposed_actions`, not the event log. Whatever doesn't close becomes
+   "not measured", explicitly, in the text.
 
-2. **Preencher `colheita-esqueleto.md` e movê-lo** para
-   `docs/explanation/primeiro-dogfooding.md`. Só então ele vira página do site, e
-   aí precisa de frontmatter (`id`, `title`, `sidebar_label`, `sidebar_position`,
-   `description`, `keywords`, no padrão de
-   `docs/explanation/documentation-workflow.md`) e de entrada em
-   `website/sidebars.ts`. Conteúdo: as métricas validadas, o custo real por
-   provider, as intervenções, e o diff entre promessa e realidade em prosa
-   honesta — **incluindo o que os agentes fizeram melhor que o esperado**. Sem
-   número inventado.
+2. **Fill in `colheita-esqueleto.md` and move it** to
+   `docs/explanation/primeiro-dogfooding.md`. Only then does it become a
+   site page, and at that point it needs frontmatter (`id`, `title`,
+   `sidebar_label`, `sidebar_position`, `description`, `keywords`, in the
+   pattern of `docs/explanation/documentation-workflow.md`) and an entry
+   in `website/sidebars.ts`. Content: the validated metrics, the real cost
+   per provider, the interventions, and the diff between promise and
+   reality in honest prose — **including what the agents did better than
+   expected**. No invented numbers.
 
-3. **Revisar as hipóteses do Psicólogo em lote**, uma a uma, e avaliar os patches
-   da Anamnese decorrentes. Aqui é onde se responde se o loop produziu algo útil
-   ou só ruído caro.
+3. **Review the Psychologist's hypotheses in a batch**, one by one, and
+   evaluate the resulting Anamnese patches. This is where you answer
+   whether the loop produced something useful or just expensive noise.
 
-4. **ADR "primeiro dogfooding"** com o próximo número livre. Aprendizados e
-   achados convertidos em **backlog priorizado P1/P2/P3** — nunca fixes
-   embutidos. O ADR registra o que foi decidido sobre o que fazer, não faz.
+4. **"First dogfooding" ADR** with the next free number. Learnings and
+   findings turned into a **prioritized P1/P2/P3 backlog** — never
+   embedded fixes. The ADR records what was decided to do about it, it
+   doesn't do it.
 
-5. **Atualizar o que a fase tornou falso.** Em particular
-   `docs/reference/git-providers.md`, que hoje afirma que Bitbucket e Generic
-   estão fora de escopo (ver achado #6 abaixo).
+5. **Update whatever the phase made false.** In particular
+   `docs/reference/git-providers.md`, which today states that Bitbucket
+   and Generic are out of scope (see finding #6 below).
 
 ---
 
-# Achados já conhecidos, antes da primeira sessão
+# Findings already known, before the first session
 
-Estes saíram da preparação (10a) e entram na colheita já com prioridade sugerida.
-Nenhum foi corrigido — corrigir durante a fase violaria o princípio 3.
+These came out of preparation (10a) and enter the harvest already with a
+suggested priority. None was fixed — fixing during the phase would violate
+principle 3.
 
-| # | achado | onde | prio |
+| # | finding | where | prio |
 |---|---|---|---|
-| 1 | O produto não sabe apontar um projeto para repositório existente. `createRepo` é incondicional; `getRepo` existe e não é chamado por nenhum caso de uso; o DTO não tem campo para `externalId` | `provision-repository.use-case.ts:144`, `github-provider.ts:82` | **P1** |
-| 2 | `protectBranch` no GitHub aplica `enforce_admins: true` + 1 revisor sobre proteção existente, sem ler o estado atual — pode travar o merge manual do dono | `github-provider.ts:170-175`, ADR 0028:83-84 | **P1** |
-| 3 | O bootstrap cria e protege uma branch `rc` que a política de branches do Brabo (Fase 6) não usa | `bootstrap-steps.ts:94,195` | P2 |
-| 4 | `agent_areas`/`agent_area_members` não existem; áreas, leads e membros são hardcoded em dois lugares que podem divergir (front e engine). Sem orçamento por área | `apps/api/src/db/schema.ts:781-786`, `apps/web/src/lib/agents.ts:167-180` | P2 |
-| 5 | Os seis providers de LLM da Fase 9b não entraram, e o CLAUDE.md descreve a Fase 9 como se tivessem entrado | ADR 0042:147-156 | P2 |
-| 6 | `docs/reference/git-providers.md:170-174` afirma que Bitbucket e Generic são "fora de escopo — decisão, não backlog esquecido"; o CLAUDE.md marca os dois como fase ativa. É a doc que o PO lê como verdade | `docs/reference/git-providers.md:170-174` | P2 |
-| 7 | O comentário de `git-errors.ts` diz "8 operações"; o contrato tem 10 | `apps/api/src/domain/git/git-errors.ts:3` | P3 |
-| 8 | O cabeçalho da suite de contrato diz que só o Local a exercita; GitHub e GitLab já a rodam desde a Fase 2 | `apps/api/test/contract/git-provider.contract.ts:12-18` | P3 |
+| 1 | The product doesn't know how to point a project at an existing repository. `createRepo` is unconditional; `getRepo` exists and isn't called by any use case; the DTO has no field for `externalId` | `provision-repository.use-case.ts:144`, `github-provider.ts:82` | **P1** |
+| 2 | `protectBranch` on GitHub applies `enforce_admins: true` + 1 reviewer over an existing protection, without reading the current state — can lock the owner out of their own manual merge | `github-provider.ts:170-175`, ADR 0028:83-84 | **P1** |
+| 3 | The bootstrap creates and protects an `rc` branch that Brabo's branch policy (Phase 6) doesn't use | `bootstrap-steps.ts:94,195` | P2 |
+| 4 | `agent_areas`/`agent_area_members` don't exist; areas, leads, and members are hardcoded in two places that can diverge (frontend and engine). No per-area budget | `apps/api/src/db/schema.ts:781-786`, `apps/web/src/lib/agents.ts:167-180` | P2 |
+| 5 | The six Phase 9b LLM providers didn't land, and CLAUDE.md describes Phase 9 as if they had | ADR 0042:147-156 | P2 |
+| 6 | `docs/reference/git-providers.md:170-174` states Bitbucket and Generic are "out of scope — a decision, not a forgotten backlog item"; CLAUDE.md marks the two as an active phase. That's the doc the PO reads as truth | `docs/reference/git-providers.md:170-174` | P2 |
+| 7 | The `git-errors.ts` comment says "8 operations"; the contract has 10 | `apps/api/src/domain/git/git-errors.ts:3` | P3 |
+| 8 | The contract suite's header says only Local exercises it; GitHub and GitLab have already been running it since Phase 2 | `apps/api/test/contract/git-provider.contract.ts:12-18` | P3 |
 
-O achado #6 tem um valor extra: corrigi-lo é a primeira mudança de doc que os
-agentes vão fazer nesta fase, o que torna a correção um teste do próprio drift
-check.
+Finding #6 has extra value: fixing it is the first doc change the agents
+will make in this phase, which turns the fix into a test of the drift
+check itself.
 
-## Achados do levantamento da condução (Parte 3)
+## Findings from assessing the execution plan (Part 3)
 
-Estes saíram ao verificar se os passos da 10b eram executáveis. Quatro não eram.
-Nenhum foi corrigido, pelo mesmo princípio 3.
+These came out of checking whether the 10b steps were actually
+executable. Four weren't. None was fixed, per the same principle 3.
 
-| # | achado | onde | prio |
+| # | finding | where | prio |
 |---|---|---|---|
-| 9 | **O Criativo não pode ser dispensado.** O claim exige story `ready`; `ready` exige ≥1 regra de negócio; o id da regra é validado contra um evento real; e só o Criativo tem `emit_artifact` — o PO não tem. Sem Criativo, nenhum dev pega task | `backlog.repository.ts:188`, `story-readiness.ts:46`, `create-story.use-case.ts:55-59`, `po_server.ex:18` | **P1** |
-| 10 | **Um dev agent processa UMA task e para.** `:work` só é disparado na ativação e no aceite de paralelização; o `report_done` abre o gate e não se reagenda; nenhum worker do Oban redispara. Teto por módulo: 1 task, ou 2 com paralelização | `execution_command_controller.ex:35,75`, `dev_agent_server.ex:76-91,306-327` | **P1** |
-| 11 | Reativar a execução não redispara `:work` (o supervisor devolve `:existing`) e ainda cria uma sessão a mais sem agentes vinculados. O 409 "execução já ativa" que o Swagger promete **não existe** no use-case | `execution.controller.ts:50-52`, `dev_agent_supervisor.ex:33-52` | P2 |
-| 12 | Não existe handoff manual para um agente à sua escolha — só Criativo→PO (botão) e Arquiteto→Infra (rota sem botão na web). E a validação de alvo do ADR 0038 (`assertHandoffTargetAllowed`, `HandoffToSubagentError`) **nunca foi implementada**; o `toAgent` é string livre | `SessionPage.tsx:403-407,476-478` | P2 |
-| 13 | Não existe "promover a ready": a promoção é automática na criação. `TransitionStoryUseCase` valida e emite `backlog.story_transitioned`, mas **não está ligado a rota nenhuma** — é código morto. A aba Backlog é somente leitura | `create-story.use-case.ts:75-78` | P2 |
-| 14 | Não existe devolução ao PO — nenhum estado, evento ou botão. `backlog.story_demoted` é outra coisa (revalidação de `module_map`). Rejeição só existe se o humano anotar | `create-module-map.use-case.ts:63-82` | P2 |
-| 15 | O painel do time e as hipóteses do Psicólogo dividem a mesma aba, que é a default do projeto — o protocolo de leitura em lote depende de disciplina de filtro, não do produto | `ProjectOverviewTab.tsx:227-263,278-285,576-714` | P2 |
-| 16 | Nenhuma tela soma aprovações por sessão; a Anamnese sob demanda não tem botão (só rota) | `hooks.ts:153-160`, `anamnese.controller.ts:71-81` | P3 |
-| 17 | **A métrica principal da fase não está no event log.** `proposed_action.approved`/`.denied` vão só para o outbox, nunca para `session_events` — a Parte 4.2 afirmava o contrário e foi corrigida. A fonte durável é `proposed_actions.decided_at`; o outbox retém as linhas (`processed_at`) e serve de conferência cruzada | `approve-action.use-case.ts:98`, `deny-action.use-case.ts:50` | **P1** |
+| 9 | **The Creative agent cannot be skipped.** Claiming requires a `ready` story; `ready` requires ≥1 business rule; the rule id is validated against a real event; and only the Creative agent has `emit_artifact` — the PO doesn't. Without the Creative agent, no dev picks up a task | `backlog.repository.ts:188`, `story-readiness.ts:46`, `create-story.use-case.ts:55-59`, `po_server.ex:18` | **P1** |
+| 10 | **A dev agent processes ONE task and stops.** `:work` is only dispatched at activation and when parallelization is accepted; `report_done` opens the gate and doesn't reschedule itself; no Oban worker re-dispatches. Cap per module: 1 task, or 2 with parallelization | `execution_command_controller.ex:35,75`, `dev_agent_server.ex:76-91,306-327` | **P1** |
+| 11 | Reactivating execution doesn't re-dispatch `:work` (the supervisor returns `:existing`), and it also creates an extra session with no agents attached. The 409 "execution already active" the Swagger docs promise **doesn't exist** in the use case | `execution.controller.ts:50-52`, `dev_agent_supervisor.ex:33-52` | P2 |
+| 12 | There's no manual handoff to an agent of your choice — only Creative→PO (button) and Architect→Infra (route, no button on the web). And the ADR 0038 target validation (`assertHandoffTargetAllowed`, `HandoffToSubagentError`) **was never implemented**; `toAgent` is a free string | `SessionPage.tsx:403-407,476-478` | P2 |
+| 13 | There's no "promote to ready": promotion is automatic on creation. `TransitionStoryUseCase` validates and emits `backlog.story_transitioned`, but **isn't wired to any route** — it's dead code. The Backlog tab is read-only | `create-story.use-case.ts:75-78` | P2 |
+| 14 | There's no returning it to the PO — no state, event, or button. `backlog.story_demoted` is something else (`module_map` revalidation). Rejection only exists if the human notes it | `create-module-map.use-case.ts:63-82` | P2 |
+| 15 | The team panel and the Psychologist's hypotheses share the same tab, which is the project's default — the batch-reading protocol depends on filter discipline, not on the product | `ProjectOverviewTab.tsx:227-263,278-285,576-714` | P2 |
+| 16 | No screen totals approvals per session; on-demand Anamnese has no button (only a route) | `hooks.ts:153-160`, `anamnese.controller.ts:71-81` | P3 |
+| 17 | **The phase's main metric is not in the event log.** `proposed_action.approved`/`.denied` only go to the outbox, never to `session_events` — Part 4.2 claimed the opposite and was corrected. The durable source is `proposed_actions.decided_at`; the outbox retains the rows (`processed_at`) and serves as a cross-check | `approve-action.use-case.ts:98`, `deny-action.use-case.ts:50` | **P1** |
 
-Dois deles não são defeito, e entram só como registro para a colheita não os
-confundir com lacuna: o **merge fora do produto** (`awaiting_user` é terminal de
-propósito, RN-014 — o engine sequer conhece `git_merge`), e a **dispensa do QA
-por palavra-chave** no RNF (`qa_lead.ex:20-28`), que é heurística declarada, não
-NLP.
+Two of these are not defects, and they're included only as a note so the
+harvest doesn't confuse them with a gap: **merge outside the product**
+(`awaiting_user` is terminal by design, RN-014 — the engine doesn't even
+know about `git_merge`), and the **QA dismissal by keyword** in the NFR
+(`qa_lead.ex:20-28`), which is a declared heuristic, not NLP.
 
 ---
 
-# Os insumos
+# The inputs
 
-Ninguém parte do zero na 10b. Os quatro arquivos em `docs/missions/inputs/` são o
-material de entrada:
+Nobody starts from scratch in 10b. The four files in `docs/missions/inputs/`
+are the input material:
 
-| arquivo | para quem | o que é |
+| file | for whom | what it is |
 |---|---|---|
-| `inputs/00-handoff-criativo.md` | você, na sessão 0 | o **texto literal** para colar no Criativo, mais os prompts de refino do PO |
-| `inputs/01-contrato-gitprovider.md` | PO e Arquiteto | o que já existe: as 10 operações, as capabilities, os erros normalizados, a suite única |
-| `inputs/02-bitbucket-cloud-a-investigar.md` | Arquiteto | **perguntas**, não respostas — o que verificar na doc oficial do Bitbucket Cloud antes de codar |
-| `inputs/03-escopo-do-generic.md` | Arquiteto | o que "capabilities mínimas" significa, e como degradar honestamente |
+| `inputs/00-handoff-criativo.md` | you, in session 0 | the **literal text** to paste to the Creative agent, plus the PO's refinement prompts |
+| `inputs/01-contrato-gitprovider.md` | PO and Architect | what already exists: the 10 operations, the capabilities, the normalized errors, the single suite |
+| `inputs/02-bitbucket-cloud-a-investigar.md` | Architect | **questions**, not answers — what to verify in Bitbucket Cloud's official docs before coding |
+| `inputs/03-escopo-do-generic.md` | Architect | what "minimal capabilities" means, and how to degrade honestly |
 
-O Criativo **não** é dispensado, ao contrário do que o plano original previa: ele
-é o único caminho até o PO e o único agente capaz de emitir as regras de negócio
-que destravam a execução (achado #9). O escopo continua conhecido — o que muda é
-que ele passa pelo Criativo em vez de entrar direto no PO.
+The Creative agent is **not** skipped, contrary to what the original plan
+expected: it's the only path to the PO and the only agent capable of
+emitting the business rules that unblock execution (finding #9). The
+scope is still known — what changes is that it now goes through the
+Creative agent instead of straight into the PO.

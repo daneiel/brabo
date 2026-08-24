@@ -1,8 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CodeDiffPanel } from './CodeDiffPanel';
+// Instância REAL do app — `CodeDiffPanel`/`PrListAndDiff` não têm
+// `I18nextProvider` próprio (mesmo padrão de `Dashboard.test.tsx`).
+import i18n from '../../lib/i18n';
+import { ApiError } from '../../lib/api-client';
 import type { CodeDiff, CodePullRequestList } from '../../lib/api-types';
 
 const getCodeDiff = vi.fn();
@@ -13,6 +17,7 @@ vi.mock('../../lib/api-client', async () => {
   return {
     ApiError: real.ApiError,
     mensagemDaApi: real.mensagemDaApi,
+    isContainerImageGateError: real.isContainerImageGateError,
     getCodeDiff: (...args: unknown[]) => getCodeDiff(...args),
     getCodePullRequests: (...args: unknown[]) => getCodePullRequests(...args),
   };
@@ -35,9 +40,14 @@ async function pedirDiffPeloId(id: string) {
 
 const listaVazia: CodePullRequestList = { items: [], truncated: false };
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
   vi.clearAllMocks();
   getCodePullRequests.mockResolvedValue(listaVazia);
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('CodeDiffPanel — lista de PRs', () => {
@@ -103,6 +113,29 @@ describe('CodeDiffPanel — lista de PRs', () => {
     montar();
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
+  });
+
+  // Achado de uso: o 409 do portão do container (RN-105) — o Arquiteto ainda
+  // não decidiu a imagem — não é erro transitório, então não pode cair no
+  // banner genérico com "Tentar de novo". `PrListAndDiff` é consumido tanto
+  // aqui (painel inferior da aba Código, já protegido pelo gate PRÉVIO de
+  // `ProjectCodeTab.tsx`) quanto pela aba PRs, que NÃO pergunta antes —
+  // o teste cobre o componente compartilhado independente de quem o chama.
+  it('409 do portão do container mostra o estado dedicado, não o erro genérico', async () => {
+    getCodePullRequests.mockRejectedValue(
+      new ApiError(409, {
+        message:
+          'A aba Code ainda não está liberada: o Arquiteto não decidiu qual imagem de container sobe para este projeto.',
+      }),
+    );
+    montar();
+
+    expect(
+      await screen.findByText('A aba Code ainda não está liberada'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/o Arquiteto ainda não decidiu/i)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tentar de novo')).not.toBeInTheDocument();
   });
 });
 
@@ -180,5 +213,17 @@ describe('CodeDiffPanel — diff por id conhecido', () => {
     await pedirDiffPeloId('1');
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
+  });
+
+  it('409 do portão do container no diff por id também mostra o estado dedicado', async () => {
+    getCodeDiff.mockRejectedValue(new ApiError(409, { message: 'irrelevante aqui' }));
+    montar();
+    await screen.findByText('Nenhuma PR aberta neste repositório.');
+    await pedirDiffPeloId('1');
+
+    expect(
+      await screen.findByText('A aba Code ainda não está liberada'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

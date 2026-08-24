@@ -225,4 +225,67 @@ defmodule Engine.Agents.TurnoAssincronoTest do
       assert final_state.session_id == state.session_id
     end
   end
+
+  describe "resultado com :aguardando_aprovacao (ADR 0086, RN-284)" do
+    # O caso do Dev Lead: o turno parou no meio de um tool call que virou
+    # `proposed_action` pending. `from` é respondido do MESMO jeito e na
+    # MESMA hora (rompe o bloqueio síncrono), mas o turno NÃO terminou.
+    test "responde ao from, NÃO emite agent.done, e emite agent.status: awaiting_approval", %{
+      state: state
+    } do
+      Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> state.session_id)
+      from = {self(), make_ref()}
+
+      pendente = %{action_id: "pa-1", tool_call_id: "call-1", tool_name: "propose_execution_plan"}
+
+      {:noreply, state_with_task} =
+        TurnoAssincrono.iniciar(state, from, fn ->
+          Map.put(state, :aguardando_aprovacao, pendente)
+        end)
+
+      %{task: %Task{ref: ref}} = state_with_task.turno_assincrono
+      assert_receive {^ref, resultado}, 1_000
+
+      assert {:ok, final_state} =
+               TurnoAssincrono.tratar_resultado({ref, resultado}, state_with_task)
+
+      # `from` foi respondido: quem chamou (handle_call síncrono) não fica
+      # pendurado — é isto que rompe o bloqueio de até 180s no momento certo.
+      {_pid, tag} = from
+      assert_received {^tag, :ok}
+
+      # O turno_assincrono foi limpo (mesmo caminho de sempre)...
+      assert final_state.turno_assincrono == nil
+      # ...mas a chave de suspensão SOBREVIVE no state devolvido — é o que o
+      # chamador (`DevLeadServer`) lê para saber que está esperando.
+      assert final_state.aguardando_aprovacao == pendente
+
+      # NUNCA agent.done: o turno não terminou.
+      refute_received %Phoenix.Socket.Broadcast{event: "agent.done"}
+      # NUNCA agent.status: idle — diria ao painel que o agente está livre.
+      refute_received %Phoenix.Socket.Broadcast{event: "agent.status", payload: %{status: "idle"}}
+      # SÓ o status de suspensão.
+      assert_received %Phoenix.Socket.Broadcast{
+        event: "agent.status",
+        payload: %{status: "awaiting_approval"}
+      }
+    end
+
+    test "sem a chave :aguardando_aprovacao, o caminho de sempre (finalizar/1) continua valendo",
+         %{state: state} do
+      Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> state.session_id)
+      from = {self(), make_ref()}
+
+      {:noreply, state_with_task} = TurnoAssincrono.iniciar(state, from, fn -> state end)
+      %{task: %Task{ref: ref}} = state_with_task.turno_assincrono
+      assert_receive {^ref, resultado}, 1_000
+
+      assert {:ok, final_state} =
+               TurnoAssincrono.tratar_resultado({ref, resultado}, state_with_task)
+
+      refute Map.has_key?(final_state, :aguardando_aprovacao)
+      assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
+      assert_received %Phoenix.Socket.Broadcast{event: "agent.status", payload: %{status: "idle"}}
+    end
+  end
 end

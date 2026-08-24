@@ -113,14 +113,21 @@ CREATE TABLE IF NOT EXISTS public.projects (
 # quem chama trata como "usa o project_id cru").
 Engine.Repo.query!("ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workspace_dir_name text")
 
-# RN-169 (ADR 0072): o localizador da pasta deixou de ser só o nome. As duas
-# colunas são lidas pela MESMA consulta que resolve `workspace_dir_name/1`, e
-# sem elas o fixture reprovaria com "column does not exist". Nullable e sem
-# default de propósito, como a de cima: `case when workspace_mode = 'local'`
-# com a coluna nula cai no ramo `container`, que é o comportamento que as
-# dezenas de specs que inserem em "projects" sempre tiveram.
-Engine.Repo.query!("ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workspace_mode text")
+# RN-169/RN-421 (ADR 0072/0104): o localizador da pasta deixou de ser só o
+# nome. As colunas são lidas pela MESMA consulta que resolve
+# `workspace_dir_name/1`, e sem elas o fixture reprovaria com "column does
+# not exist". Nullable e sem default de propósito, como a de cima:
+# `case when execution_mode <> 'container'` com a coluna nula cai no ramo
+# `container`, que é o comportamento que as dezenas de specs que inserem em
+# "projects" sempre tiveram. `text` solto, e não o enum real da api — o
+# fixture nunca precisou do CHECK/enum, só do valor lido de volta.
+Engine.Repo.query!("ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS execution_mode text")
 Engine.Repo.query!("ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workspace_path text")
+# `nil` = não verificado (RN-423) — só ganha sentido em `execution_mode:
+# "runner"`, checado por `Engine.Actions.TerminalExecutor` antes de rotear.
+Engine.Repo.query!(
+  "ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workspace_verified_at timestamptz"
+)
 
 # sessions: lida pela Anamnese (Fase 4b) — pra achar a sessão do projeto
 # onde narrar a rodada, e pra filtrar a janela de eventos por projeto

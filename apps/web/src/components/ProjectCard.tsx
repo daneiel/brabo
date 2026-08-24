@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { GitProviderName, ProvisioningStatus } from '../lib/api-types';
 import type { RosterGroup } from '../lib/agent-status';
 import { TokenMeter } from './TokenMeter';
@@ -14,18 +15,18 @@ const PROVIDER_ICON: Record<GitProviderName, typeof GitHubIcon> = {
   local: LocalRepoIcon,
 };
 
-const PROVIDER_LABEL: Record<GitProviderName, string> = {
-  github: 'GitHub',
-  gitlab: 'GitLab',
-  local: 'Repositório local',
+const PROVIDER_LABEL_KEY: Record<GitProviderName, string> = {
+  github: 'projectCard.provider.github',
+  gitlab: 'projectCard.provider.gitlab',
+  local: 'projectCard.provider.local',
 };
 
 const PROVISIONING_BADGE: Record<
   Exclude<ProvisioningStatus, 'provisioned'>,
-  { tone: BadgeTone; label: string; pulse?: boolean }
+  { tone: BadgeTone; labelKey: string; pulse?: boolean }
 > = {
-  provisioning: { tone: 'warning', label: 'Provisionando', pulse: true },
-  provision_failed: { tone: 'danger', label: 'Falha' },
+  provisioning: { tone: 'warning', labelKey: 'projectCard.provisioning.provisioning', pulse: true },
+  provision_failed: { tone: 'danger', labelKey: 'projectCard.provisioning.failed' },
   // Fase 12a: repo adotado com plano gerado e ainda não decidido — nada roda
   // até o usuário aprovar ou dispensar (RN-045). O estado entrou no tipo e
   // este mapa ficou para trás, o que quebrava o BUILD de produção (`tsc -b`
@@ -33,7 +34,7 @@ const PROVISIONING_BADGE: Record<
   // `pulse` porque é pendência de decisão, não trabalho em andamento.
   awaiting_plan_decision: {
     tone: 'warning',
-    label: 'Aguardando sua decisão',
+    labelKey: 'projectCard.provisioning.awaitingPlanDecision',
     pulse: true,
   },
 };
@@ -54,6 +55,12 @@ interface ProjectCardProps {
   lastActivityText: string;
   /** Aprovações pendentes do projeto (RN-151) — mesmo número do badge da sidebar. */
   pendingApprovalsCount?: number;
+  /**
+   * Agentes ONLINE agora — trabalhando ou com pendência esperando decisão
+   * (RN-409). Nunca tamanho de equipe: `0`/`undefined` não desenha nada,
+   * não um "0 online" que sugeriria equipe vazia.
+   */
+  onlineAgentCount?: number;
   onClick: () => void;
 }
 
@@ -70,8 +77,10 @@ export function ProjectCard({
   onDefineBudget,
   lastActivityText,
   pendingApprovalsCount,
+  onlineAgentCount,
   onClick,
 }: ProjectCardProps) {
+  const { t } = useTranslation('dashboard');
   const ProviderIcon = PROVIDER_ICON[provider];
   const provisioningBadge =
     provisioningStatus && provisioningStatus !== 'provisioned'
@@ -86,7 +95,7 @@ export function ProjectCard({
         </span>
         <div className={styles.titleBlock}>
           <div className={styles.name}>{name}</div>
-          <div className={styles.providerLabel}>{PROVIDER_LABEL[provider]}</div>
+          <div className={styles.providerLabel}>{t(PROVIDER_LABEL_KEY[provider])}</div>
         </div>
         {provisioningBadge && (
           <Badge
@@ -95,12 +104,19 @@ export function ProjectCard({
             pulse={provisioningBadge.pulse}
             className={styles.unreadBadge}
           >
-            {provisioningBadge.label}
+            {t(provisioningBadge.labelKey)}
           </Badge>
         )}
         {!!pendingApprovalsCount && (
           <Badge tone="accent" className={styles.unreadBadge}>
             {pendingApprovalsCount}
+          </Badge>
+        )}
+        {/* RN-409 — só desenha com pelo menos 1: "0 online" sugeriria uma
+            equipe (vazia), não a AUSÊNCIA de trabalho ao vivo agora. */}
+        {!!onlineAgentCount && (
+          <Badge tone="success" dot className={styles.unreadBadge}>
+            {t('projectCard.online', { count: onlineAgentCount })}
           </Badge>
         )}
       </div>

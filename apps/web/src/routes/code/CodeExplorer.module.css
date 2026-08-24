@@ -29,12 +29,16 @@
   padding: 0;
 }
 
+/* `var(--indent, 8px)` — a profundidade da pasta chega por variável CSS,
+   setada no `<li>` que envolve o `Disclosure` (`CodeExplorer.tsx`); arquivo
+   (não colapsável, sem `Disclosure`) continua usando `style` inline direto,
+   que sempre vence sobre esta regra. */
 .linha {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px 4px 8px;
+  padding: 4px 10px 4px var(--indent, 8px);
   background: transparent;
   border: none;
   border-left: 2px solid transparent;

@@ -1,254 +1,271 @@
-# ADR 0021 — Fechamento da Fase 4a: gate de infra que valida, e painel que diz a verdade
+# ADR 0021 — Closing Phase 4a: an infra gate that actually validates, and a panel that tells the truth
 
-- Status: aceito — critério de aceite NÃO fechado (ver a seção própria)
-- Data: 2026-07-25
-- Fase: 4a (fechamento — auditoria do ADR 0014)
+- Status: accepted — acceptance criterion NOT closed (see the dedicated section)
+- Date: 2026-07-25
+- Phase: 4a (closing — audit of ADR 0014)
 
-## Contexto
+## Context
 
-O ADR 0014 entregou o InfraAgent, os gates de PR de infra e o painel do time.
-Como nos ADRs 0019 e 0020, **o critério de aceite nunca rodou**: não existia
-demo de infra (`grep` por `InfraAgent|open_infra_pr|handoff-infra` nos quatro
-scripts de demo devolvia 0 em todos).
+ADR 0014 delivered the InfraAgent, the infra PR gates, and the team panel.
+As with ADRs 0019 and 0020, **the acceptance criterion had never run**:
+there was no infra demo (`grep` for
+`InfraAgent|open_infra_pr|handoff-infra` across the four demo scripts
+returned 0 in all of them).
 
-A auditoria por leitura achou que os DOIS lados do critério de aceite estavam
-comprometidos — o gate de QA não validava nada, e o painel mostrava estado
-errado para a maioria dos agentes.
+The reading audit found that BOTH sides of the acceptance criterion were
+compromised — the QA gate validated nothing, and the panel showed the wrong
+state for most agents.
 
-O que estava correto e não foi mexido: a negação de terminal ao InfraAgent
-(estrutural pelo tool registry + policy `agent_autonomy deny`, com o
-curto-circuito provado em `decide.spec.ts` e o caminho completo em
-`propose-action.use-case.spec.ts`), a máquina de gates compartilhada, o ciclo
-de correção sem PR nova, e a recusa do `docker build --check` (o container do
-engine não tem o `docker` CLI nem o socket montado — confirmado por inspeção).
+What was correct and wasn't touched: the denial of terminal access to the
+InfraAgent (structural via the tool registry + the `agent_autonomy deny`
+policy, with the short-circuit proven in `decide.spec.ts` and the full path
+in `propose-action.use-case.spec.ts`), the shared gate machine, the
+correction cycle with no new PR, and the rejection of `docker build --check`
+(the engine container has neither the `docker` CLI nor the socket mounted —
+confirmed by inspection).
 
-## Decisões
+## Decisions
 
-### 1. O gate de QA de infra aprovava QUALQUER Dockerfile (o achado central)
+### 1. The infra QA gate approved ANY Dockerfile (the central finding)
 
-`hadolint` **não estava instalado no container do engine**. E
-`InfraGateRunner.lint_dockerfiles/1` trata a ausência como degradação
-graciosa: devolve `{[], ["hadolint indisponível, pulado"]}` → `findings == []`
-→ `veredito = "approved"`.
+`hadolint` **was not installed in the engine container**. And
+`InfraGateRunner.lint_dockerfiles/1` treats its absence as graceful
+degradation: it returns `{[], ["hadolint unavailable, skipped"]}` →
+`findings == []` → `veredito = "approved"`.
 
-O critério de aceite ("PR com Dockerfile válido que passa os gates") passaria
-sem que nada tivesse sido verificado. Mesma classe do gitleaks do ADR 0020: o
-gate parecia verde justamente porque não checava nada, e a degradação
-graciosa — que existe por bons motivos — escondia isso.
+The acceptance criterion ("PR with a valid Dockerfile that passes the
+gates") would pass without anything having been checked. Same class as
+ADR 0020's gitleaks: the gate looked green precisely because it checked
+nothing, and the graceful degradation — which exists for good reasons — was
+hiding that.
 
-`hadolint` entrou no Dockerfile no MESMO bloco do gitleaks, pra aproveitar o
-`curl` do grupo virtual antes dele ser removido.
+`hadolint` went into the Dockerfile in the SAME block as gitleaks, to reuse
+the virtual group's `curl` before it gets removed.
 
-### 2. Compose e CI não passavam por validação nenhuma
+### 2. Compose and CI went through no validation at all
 
-`lint_dockerfiles/1` filtra por `dockerfile?/1`, e havia até um teste fixando
-que "sem Dockerfile entre os arquivos, aprova sem rodar hadolint". Mas o
-InfraAgent propõe TAMBÉM um `docker-compose.yml` e um `.github/workflows/ci.yml`,
-e o enunciado pede "validação sintática" das PRs de infra.
+`lint_dockerfiles/1` filters by `dockerfile?/1`, and there was even a test
+pinning that "with no Dockerfile among the files, approve without running
+hadolint". But the InfraAgent ALSO proposes a `docker-compose.yml` and a
+`.github/workflows/ci.yml`, and the spec calls for "syntactic validation" of
+infra PRs.
 
-`Engine.Actions.YamlLintDetector` (novo) espelha o `HadolintDetector` —
-conteúdo em vez de path, `available?/0` + `lint/1`, `.Live`/`.Fake`, mesma
-degradação. Usa `yamllint` via pip, aproveitando o python3 que já veio com o
-semgrep: não há parser de YAML nas deps do Elixir, e o padrão da casa pra
-validação é ferramenta externa com detecção opcional, não dependência nova.
+`Engine.Actions.YamlLintDetector` (new) mirrors `HadolintDetector` —
+content instead of path, `available?/0` + `lint/1`, `.Live`/`.Fake`, same
+degradation. Uses `yamllint` via pip, reusing the python3 that already came
+with semgrep: there's no YAML parser among the Elixir deps, and the house
+pattern for validation is an external tool with optional detection, not a
+new dependency.
 
-### 3. Severidade: só `error` reprova — senão o gate é inútil
+### 3. Severity: only `error` fails — otherwise the gate is useless
 
-Descoberto testando os binários antes de escrever o código, e é o que decide
-se o gate é usável:
+Discovered by testing the binaries before writing the code, and it's what
+decides whether the gate is usable:
 
-- Um Dockerfile perfeitamente razoável (`FROM node:24-alpine` +
-  `RUN apk add --no-cache git`) já colhe `warning` DL3018 ("pin versions in
-  apk add"). Se `warning` reprovasse, **nenhum Dockerfile gerado por LLM
-  passaria** e o InfraAgent circularia até estourar o teto de correções —
-  exatamente o loop que travou o aceite do ADR 0020.
-- No yamllint, filtrar por nível não bastava: no perfil `relaxed` ele
-  classifica `new-line-at-end-of-file` como `[error]`, e YAML gerado por LLM
-  raramente termina com quebra de linha. A saída foi rodar com **regras
-  vazias** (`-d "{rules: {}}"`): sem nenhuma regra ativa, o yamllint só reporta
-  falha de PARSE, que é o que "validação sintática" quer dizer. Verificado:
-  YAML válido sem newline final sai limpo, `ports: [` sem fechar sai
-  `[error] syntax error (syntax)`.
+- A perfectly reasonable Dockerfile (`FROM node:24-alpine` +
+  `RUN apk add --no-cache git`) already picks up a `warning` DL3018 ("pin
+  versions in apk add"). If `warning` failed the gate, **no LLM-generated
+  Dockerfile would ever pass** and the InfraAgent would loop until the
+  correction cap was hit — exactly the loop that got the ADR 0020
+  acceptance run stuck.
+- In yamllint, filtering by level wasn't enough: in the `relaxed` profile
+  it classifies `new-line-at-end-of-file` as `[error]`, and LLM-generated
+  YAML rarely ends with a trailing newline. The solution was running with
+  **empty rules** (`-d "{rules: {}}"`): with no rule active, yamllint only
+  reports PARSE failures, which is what "syntactic validation" is meant
+  to mean. Verified: valid YAML with no trailing newline comes out clean,
+  `ports: [` left unclosed comes out `[error] syntax error (syntax)`.
 
-Os achados não-bloqueantes continuam no parecer como informação — o resumo
-distingue "N achado(s)" de "N aviso(s) não bloqueante(s)", pra o parecer não
-sugerir que um nit de estilo barrou a PR.
+Non-blocking findings still show up in the verdict as information — the
+summary distinguishes "N finding(s)" from "N non-blocking warning(s)", so
+the verdict doesn't imply a style nit blocked the PR.
 
-### 4. `agent.status` nunca era persistido — 4 agentes presos em "ocioso"
+### 4. `agent.status` was never persisted — 4 agents stuck at "idle"
 
-No engine o `agent.status` existia só como `EngineWeb.Endpoint.broadcast`. Mas
-`deriveAgentRoster` lê `agent.status` do event log buscado por HTTP — então
-Criativo, PO, Arquiteto e Infra apareciam **permanentemente "ocioso"**,
-inclusive no meio de um turno. Pior: o handler `onAgentStatus` da web
-invalidava uma query que, por construção, nunca conteria o dado que o push
-acabara de carregar.
+In the engine, `agent.status` only existed as an
+`EngineWeb.Endpoint.broadcast`. But `deriveAgentRoster` reads `agent.status`
+from the event log fetched over HTTP — so Creative, PO, Architect, and
+Infra appeared **permanently "idle"**, even in the middle of a turn. Worse:
+the web's `onAgentStatus` handler was invalidating a query that, by
+construction, could never contain the data the push had just delivered.
 
-`Engine.Sessions.LiveBroadcast.agent_status/4` (novo) broadcasta E persiste.
-Os quatro servidores passaram a rotear pela cláusula de `broadcast/3` em vez
-de terem 20 call sites alterados. Broadcast primeiro (é o caminho ao vivo, não
-deve esperar o round-trip HTTP); falha no append não derruba o turno — status
-é narrativa, não decisão.
+`Engine.Sessions.LiveBroadcast.agent_status/4` (new) broadcasts AND
+persists. The four servers now route through the `broadcast/3` clause
+instead of having 20 call sites changed. Broadcast first (it's the live
+path, it shouldn't wait on the HTTP round trip); a failure on append doesn't
+bring down the turn — status is narrative, not decision.
 
-### 5. O painel lia os 200 PRIMEIROS eventos da sessão
+### 5. The panel read the FIRST 200 events of the session
 
-`listPaginated` ordena `asc(seq)` com `limit`. O painel do time, a seção de
-execução e o feed de atividade derivavam estado do COMEÇO da sessão pra
-sempre, assim que ela passava de 200 eventos — o que uma execução real faz
-com folga. Sozinho, isto invalidava "estados corretos durante uma execução
-real".
+`listPaginated` orders `asc(seq)` with `limit`. The team panel, the
+execution section, and the activity feed derived state from the START of
+the session forever, as soon as it went past 200 events — which any real
+execution does comfortably. On its own, this invalidated "correct states
+during a real execution".
 
-`ListPaginatedOptions.latest` (opt-in) pega do fim pelo banco e reverte na
-memória, devolvendo em ordem crescente pra não mudar a leitura de quem
-consome. `nextCursor` é `null`: não existe página mais recente que a última —
-quem varre a sessão inteira continua usando `afterSeq`, que `latest` ignora.
+`ListPaginatedOptions.latest` (opt-in) fetches from the end via the
+database and reverses in memory, returning in ascending order so as not to
+change how consumers read it. `nextCursor` is `null`: there's no page more
+recent than the last one — whoever sweeps the whole session continues using
+`afterSeq`, which `latest` ignores.
 
-### 6. Heurísticas de status que nunca diziam a verdade
+### 6. Status heuristics that never told the truth
 
-- `devStatus` devolvia `trabalhando` para tudo que não fosse bloqueio,
-  inclusive com `dev.idle` no log e inclusive **sem nenhum evento do agente**:
-  um dev parado aparecia trabalhando pra sempre. Agora `dev.idle` e o silêncio
-  total dizem `ocioso`.
-- **Nenhum caminho produzia `aguardando`** — o contador do header era sempre 0.
-  Agora um agente com `proposed_action` pendente entra como `aguardando`, que
-  é o estado mais informativo que ele pode ter no painel. `falhou` continua
-  vencendo: uma task bloqueada é o que o usuário precisa ver primeiro.
+- `devStatus` returned `working` for everything that wasn't a block,
+  including with `dev.idle` in the log and even **with no event from the
+  agent at all**: a stopped dev appeared "working" forever. It now says
+  `idle` for `dev.idle` and total silence alike.
+- **No path ever produced `waiting`** — the header's counter was always
+  0. Now an agent with a pending `proposed_action` shows as `waiting`,
+  which is the most informative state it can have on the panel. `failed`
+  still wins: a blocked task is what the user needs to see first.
 
-### 7. O AgentCard não mostrava autonomia, task nem tokens
+### 7. The AgentCard showed no autonomy, task, or tokens
 
-- O toggle de autonomia **nunca renderizava**: o `AgentCard` exige
-  `autonomy && onAutonomyChange`, e o `ProjectOverviewTab` nunca passou o
-  handler. `setAgentAutonomy` existia no `api-client.ts` desde a Fase 4a como
-  **código morto**. Além disso `autonomyActionTypeFor` só mapeava `infra` e
-  `dev-*` — criativo/po/arquiteto/qa/secops nem recebiam a prop.
-- Task e tokens não tinham prop nem slot. A task já era derivada por
-  `deriveExecutionProgress` mas só alimentava a `ExecutionSection`: o mesmo
-  `dev-<modulo>` aparecia duas vezes na tela, uma com o dado e outra sem.
-- **Tokens por agente não existiam no backend.** `token_usage` tem
-  `session_id`/`actor_id`/`cost_micros`, mas o port só expunha
-  `sumBySessionAndActorIds`, consumido apenas pelo custo do Psicólogo, e não
-  havia rota. Novos: `sumBySessionGroupedByActor`, `GetSessionTokenUsageUseCase`
-  e `GET projects/:id/sessions/:id/token-usage`. Nenhuma instrumentação nova —
-  `RecordLlmUsageUseCase` já gravava pra qualquer agente.
+- The autonomy toggle **never rendered**: `AgentCard` requires
+  `autonomy && onAutonomyChange`, and `ProjectOverviewTab` never passed
+  the handler. `setAgentAutonomy` had existed in `api-client.ts` since
+  Phase 4a as **dead code**. On top of that, `autonomyActionTypeFor` only
+  mapped `infra` and `dev-*` — creative/po/architect/qa/secops didn't
+  even receive the prop.
+- Task and tokens had no prop and no slot. The task was already derived
+  by `deriveExecutionProgress` but only fed the `ExecutionSection`: the
+  same `dev-<module>` appeared twice on the screen, once with the data
+  and once without.
+- **Per-agent tokens didn't exist in the backend.** `token_usage` has
+  `session_id`/`actor_id`/`cost_micros`, but the port only exposed
+  `sumBySessionAndActorIds`, consumed only by the Psychologist's cost,
+  and there was no route. New: `sumBySessionGroupedByActor`,
+  `GetSessionTokenUsageUseCase` and
+  `GET projects/:id/sessions/:id/token-usage`. No new instrumentation —
+  `RecordLlmUsageUseCase` already recorded for any agent.
 
-### 8. Recuperação de tool call não valia pros agentes conversacionais
+### 8. Tool-call recovery didn't apply to the conversational agents
 
-Achado na execução do critério de aceite. O InfraAgent escreveu o
-`propose_infra_pr` CERTO, mas como bloco de texto em vez de tool call nativa —
-e o turno terminou com resposta vazia e o agente foi pra ocioso sem propor
-nada. `Engine.Harness.ToolCallRecovery` existia desde o ADR 0020 e resolve
-exatamente isso, mas vive dentro do `ToolLoop`, e os quatro agentes
-conversacionais (Criativo/PO/Arquiteto/Infra) têm **loop próprio** — ficaram
-de fora da correção sem que ninguém notasse, porque nenhum deles tinha rodado
-contra um modelo local desde então.
+Found while running the acceptance criterion. The InfraAgent wrote the
+correct `propose_infra_pr`, but as a text block instead of a native tool
+call — and the turn ended with an empty response and the agent went idle
+without proposing anything. `Engine.Harness.ToolCallRecovery` had existed
+since ADR 0020 and solves exactly this, but it lives inside the `ToolLoop`,
+and the four conversational agents (Creative/PO/Architect/Infra) have their
+**own loop** — they were left out of the fix without anyone noticing,
+because none of them had run against a local model since then.
 
-`tool_calls/2` dos quatro agora consulta a recuperação quando `toolCalls` vem
-vazio, ancorada nos `tool_specs` do próprio agente (mesma precisão do ToolLoop:
-só recupera nome que é ferramenta registrada de verdade).
+`tool_calls/2` of all four now consults the recovery when `toolCalls` comes
+back empty, anchored to the agent's own `tool_specs` (same precision as the
+ToolLoop: it only recovers a name that's a genuinely registered tool).
 
-### 9. O gate de QA aprovava PR de infra SEM NENHUM arquivo válido
+### 9. The QA gate approved an infra PR with NO VALID FILE AT ALL
 
-Segunda forma de aprovação vazia, e também só apareceu rodando: o modelo
-produziu `files` malformados — os `path` eram blobs de JSON —, então nenhum
-Dockerfile nem YAML foi reconhecido, `lint_dockerfiles/1` e `lint_yamls/1`
-devolveram lista vazia, e o veredito saiu **`approved`** com o resumo dizendo
-literalmente "nenhum Dockerfile encontrado na PR nenhum YAML encontrado na PR".
-A PR chegou a `awaiting_user` sem conter um único artefato de infra.
+A second form of empty approval, and it also only showed up while running
+things: the model produced malformed `files` — the `path` values were JSON
+blobs — so no Dockerfile or YAML was recognized, `lint_dockerfiles/1` and
+`lint_yamls/1` returned an empty list, and the verdict came out
+**`approved`**, with the summary literally saying "no Dockerfile found in
+the PR no YAML found in the PR". The PR reached `awaiting_user` without
+containing a single infra artifact.
 
-A asserção do demo pegou (exigindo um Dockerfile); o GATE não. Agora uma PR de
-infra sem nenhum arquivo reconhecível é `changes_requested`, com um item que
-explica o formato esperado de `path`/`content`. **Invalidável não é o mesmo que
-válido** — e o teste que existia (`"sem Dockerfile entre os arquivos, aprova
-sem rodar hadolint"`) estava fixando justamente o defeito.
+The demo's assertion caught it (it requires a Dockerfile); the GATE didn't.
+Now an infra PR with no recognizable file at all is `changes_requested`,
+with an item explaining the expected `path`/`content` format. **Not
+invalidatable isn't the same as valid** — and the test that existed
+("with no Dockerfile among the files, approve without running hadolint")
+was pinning exactly this defect.
 
-### 10. O feed não narrava a fase de execução
+### 10. The feed didn't narrate the execution phase
 
-`classifyEvent` cobria pareceres, gates e infra, mas os eventos que o enunciado
-lista nominalmente caíam no genérico:
+`classifyEvent` covered verdicts, gates, and infra, but the events the spec
+lists by name fell into the generic path:
 
-- `backlog.task_claimed` → "atualizou o backlog", sem dizer QUAL task
-- **a PR de um dev** → a api grava `action.pr_open`, que caía no ramo de
-  `action.*` e era narrado como "executou um comando", junto de qualquer
+- `backlog.task_claimed` → "updated the backlog", without saying WHICH task
+- **a dev's PR** → the api records `action.pr_open`, which fell into the
+  `action.*` branch and was narrated as "ran a command", lumped in with any
   terminal
-- `backlog.task_blocked`/`task_unblocked`/`task_status_changed` → genérico
+- `backlog.task_blocked`/`task_unblocked`/`task_status_changed` → generic
 
-### 11. Caminho absoluto derrubava a PR, e a branch órfã travava a sessão
+### 11. An absolute path took down the PR, and an orphan branch stalled the session
 
-Dois defeitos encadeados, ambos nossos, achados na execução:
+Two chained defects, both ours, found while running things:
 
-- O modelo escolheu `path: "/api/Dockerfile"`. O `commitFiles` do provider
-  local passa o path direto pro `git update-index --cacheinfo`, que recusa
-  caminho absoluto — a PR inteira morria com um `Command failed: git ...
-  update-index` opaco. `normalizeInfraPath` (nova, pura, testada) tira a barra
-  à esquerda (intenção inequívoca de "raiz do repo") e **recusa** travessia
-  (`..`) com mensagem clara: conteúdo vindo de LLM nunca tem motivo legítimo
-  pra escrever fora do repositório.
-- Com a primeira tentativa falhando DEPOIS de `createBranch` e ANTES do
-  artefato ser gravado (ele só nasce no sucesso), toda tentativa seguinte caía
-  em `createBranch` de novo e morria com "branch já existe" — a sessão ficava
-  **permanentemente** incapaz de abrir a PR de infra. Cinco tentativas seguidas
-  assim no log. `createBranch` agora tolera a branch existente.
+- The model chose `path: "/api/Dockerfile"`. The local provider's
+  `commitFiles` passes the path straight to `git update-index
+  --cacheinfo`, which rejects an absolute path — the whole PR died with
+  an opaque `Command failed: git ... update-index`. `normalizeInfraPath`
+  (new, pure, tested) strips the leading slash (unambiguous intent of
+  "repo root") and **rejects** traversal (`..`) with a clear message:
+  content coming from an LLM never has a legitimate reason to write
+  outside the repository.
+- With the first attempt failing AFTER `createBranch` and BEFORE the
+  artifact was written (it's only born on success), every following
+  attempt fell into `createBranch` again and died with "branch already
+  exists" — the session became **permanently** unable to open the infra
+  PR. Five consecutive attempts like that in the log. `createBranch` now
+  tolerates the branch already existing.
 
-`ExecuteInfraPrUseCase` não tinha teste nenhum; ganhou seis.
+`ExecuteInfraPrUseCase` had no test at all; it gained six.
 
-## Estado do critério de aceite: NÃO FECHADO
+## Acceptance criterion status: NOT CLOSED
 
-Quatro execuções, nenhuma completou. As três primeiras falharam por **defeitos
-nossos** (itens 8, 9 e 11) — e é por isso que valeu insistir: cada execução
-pagou um defeito real que nenhuma leitura tinha achado.
+Four runs, none completed. The first three failed on **our own defects**
+(items 8, 9, and 11) — and that's why it was worth persisting: each run
+paid off a real defect that no reading had found.
 
-A quarta falhou por **limite do modelo**: o `qwen2.5-coder:7b` produziu o
-`propose_infra_pr` com JSON malformado (aspas desbalanceadas) e conteúdo sem
-sentido (`node_modules/@express·require` como conteúdo de Dockerfile). A
-recuperação de tool call corretamente devolveu vazio — ela recusa adivinhar
-sobre JSON quebrado, e essa recusa é o comportamento certo.
+The fourth failed on a **model limitation**: `qwen2.5-coder:7b` produced
+`propose_infra_pr` with malformed JSON (unbalanced quotes) and nonsensical
+content (`node_modules/@express·require` as Dockerfile content). The
+tool-call recovery correctly returned empty — it refuses to guess about
+broken JSON, and that refusal is the correct behavior.
 
-A tarefa do InfraAgent é mais dura que a do DevAgent: três tipos de artefato
-(Dockerfile por módulo + compose + CI), com conteúdo real, numa única chamada
-de ferramenta com payload aninhado. Um 7B local não sustenta isso de forma
-confiável.
+The InfraAgent's task is harder than the DevAgent's: three artifact types
+(Dockerfile per module + compose + CI), with real content, in a single tool
+call with a nested payload. A local 7B doesn't sustain that reliably.
 
-**O que falta**: apontar `DEMO_MODEL` do demo de infra pra um modelo de API.
-Mesma conclusão do ADR 0020 sobre o gate semântico do QA, e o binding por
-agente já existe pra isso.
+**What's missing**: pointing the infra demo's `DEMO_MODEL` at an API model.
+Same conclusion as ADR 0020 about the QA semantic gate, and the per-agent
+binding already exists for this.
 
-O que ESTÁ verificado em execução real, apesar disso:
+What IS verified against a real run, despite this:
 
-- `agent.status` persistido (`working`/`idle` no event log — item 4)
-- a recuperação de tool call nos agentes conversacionais funcionando (item 8):
-  numa das execuções o InfraAgent propôs a PR e os dois gates rodaram até
-  `awaiting_user`
-- os gates de infra disparando na ordem e registrando parecer com `prActionId`
-- o gate recusando PR sem artefato válido (item 9) e o hadolint/yamllint
-  instalados e respondendo no container
+- `agent.status` persisted (`working`/`idle` in the event log — item 4)
+- tool-call recovery in the conversational agents working (item 8): in
+  one of the runs the InfraAgent proposed the PR and both gates ran all
+  the way to `awaiting_user`
+- the infra gates firing in order and recording a verdict with
+  `prActionId`
+- the gate rejecting a PR with no valid artifact (item 9), and
+  hadolint/yamllint installed and responding inside the container
 
-## Consequências
+## Consequences
 
 - Suites: engine 237, api 445, web 72 (baseline 227/433/47).
-- Testes: `hadolint_detector_test` e `yamllint_detector_test` contra os
-  BINÁRIOS reais (tags `:hadolint`/`:yamllint`, excluídas automaticamente
-  quando ausentes — mesmo mecanismo do `:gitleaks`), fixando que sintaxe
-  quebrada reprova e nit de estilo não; `session-event-latest.repository`
-  (primeiros × últimos); `token-usage.repository` (agregação por ator);
-  `agent-status.test.ts` e `activity.test.ts` — **`deriveAgentRoster` e
-  `classifyEvent` não tinham teste NENHUM**, e são exatamente os itens 3 e 4
-  do enunciado; `AgentCard.test.tsx` (os cinco campos + o toggle).
-- `apps/api/scripts/demo-infra-agent.ts` (`pnpm --filter api demo:infra-agent`)
-  é o critério de aceite executável. Ele falha explicitamente se o resumo do
-  parecer disser "hadolint indisponível" ou "yamllint indisponível" — um gate
-  que aprova sem validar não conta como aprovação.
+- Tests: `hadolint_detector_test` and `yamllint_detector_test` against the
+  REAL binaries (`:hadolint`/`:yamllint` tags, automatically excluded when
+  absent — same mechanism as `:gitleaks`), pinning that broken syntax
+  fails and a style nit doesn't; `session-event-latest.repository`
+  (first × last); `token-usage.repository` (aggregation by actor);
+  `agent-status.test.ts` and `activity.test.ts` — **`deriveAgentRoster`
+  and `classifyEvent` had NO test at all**, and they're exactly items 3
+  and 4 of the spec; `AgentCard.test.tsx` (the five fields + the toggle).
+- `apps/api/scripts/demo-infra-agent.ts` (`pnpm --filter api
+  demo:infra-agent`) is the executable acceptance criterion. It fails
+  explicitly if the verdict summary says "hadolint unavailable" or
+  "yamllint unavailable" — a gate that approves without validating
+  doesn't count as an approval.
 
-## Escopo & assunções
+## Scope & assumptions
 
-`docker build --check` continua fora (sem `docker` CLI nem socket no container
-do engine) — o enunciado acomoda com "quando disponíveis no container".
+`docker build --check` remains out (no `docker` CLI or socket in the engine
+container) — the spec accommodates this with "when available in the
+container".
 
-O canal Phoenix segue como GATILHO de refetch, não fonte de dados: o payload
-de `event.appended` é descartado e o que atualiza a tela é a invalidação da
-query. Com `agent.status` agora persistido, o dado que o push anuncia existe de
-fato no log — que era o elo quebrado. Um relay que use o payload direto
-continua fora de escopo.
+The Phoenix channel remains a refetch TRIGGER, not a data source: the
+`event.appended` payload is discarded and what updates the screen is the
+query invalidation. With `agent.status` now persisted, the data the push
+announces actually exists in the log — that was the broken link. A relay
+that uses the payload directly remains out of scope.
 
-Status de dev/qa/secops segue heurístico sobre o event log (best-effort, nunca
-usado por decisão de gate). O demo não é determinístico: o InfraAgent gera os
-arquivos via LLM, e o que se exige é a PR com Dockerfile e os dois pareceres —
-não que o modelo escreva um Dockerfile específico.
+Dev/qa/secops status remains heuristic over the event log (best-effort,
+never used for gate decisions). The demo isn't deterministic: the
+InfraAgent generates the files via LLM, and what's required is the PR with
+a Dockerfile and the two verdicts — not that the model writes a specific
+Dockerfile.

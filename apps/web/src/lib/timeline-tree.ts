@@ -288,3 +288,64 @@ export function ramosAbertosPorPadrao(ramos: RamoDeAgente[]): Set<string> {
   const quantos = Math.max(ativos, 5);
   return new Set(ramos.slice(0, quantos).map((r) => r.agente));
 }
+
+/** Um agente e suas instâncias, para quem precisa do segundo nível — ver `agruparPorInstancia`. */
+export interface GrupoDeAgente {
+  /** O `agent_id` do módulo, SEM o sufixo de instância extra (ex.: `dev-backend`). */
+  agenteBase: string;
+  /** 1 ou 2 ramos — nunca 0. Instância extra, quando existe, vem por ÚLTIMO. */
+  instancias: RamoDeAgente[];
+}
+
+/**
+ * Sufixo de subagente extra do MESMO módulo (paralelização, ADR 0053/RN-083).
+ * Tem de bater com `extraDevAgentId` em
+ * `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts`
+ * — o teto é DOIS por módulo (RN-154), então o sufixo é sempre exatamente
+ * `-2`, nunca uma sequência a inventar.
+ */
+const SUFIXO_INSTANCIA_EXTRA = /-2$/;
+
+/**
+ * Agrupa os ramos por AGENTE-BASE, revelando um segundo nível quando o mesmo
+ * módulo tem duas instâncias (achado da Onda 1/frente B0 do PROGRAMA 28).
+ *
+ * A "instância" NÃO é um contador renumerado (`-01`/`-02`) — é o `agent_id`
+ * REAL que o produto já escreve. `montarArvore` (acima) já agrupa por
+ * `evento.actor.id`, então `dev-backend` e `dev-backend-2` já chegam aqui
+ * como dois RAMOS separados; esta função só decide quais ramos pertencem ao
+ * mesmo grupo visual. Um ramo só vira "instância extra" de outro se o
+ * agente-base (sem o sufixo) TAMBÉM tiver um ramo na mesma lista — senão ele
+ * É o próprio agente, mesmo terminando em "-2" por coincidência de nome (não
+ * existe hoje, mas a checagem custa nada e evita adivinhação).
+ *
+ * A ordem dos grupos preserva a ordem de `ramos` (que `montarArvore` já
+ * ordena: ativo primeiro, depois por recência) — usar o primeiro ramo
+ * encontrado de cada grupo como âncora de posição é o que garante isso.
+ */
+export function agruparPorInstancia(ramos: RamoDeAgente[]): GrupoDeAgente[] {
+  const porAgente = new Map(ramos.map((r) => [r.agente, r] as const));
+  const jaAgrupados = new Set<string>();
+  const grupos: GrupoDeAgente[] = [];
+
+  for (const ramo of ramos) {
+    if (jaAgrupados.has(ramo.agente)) continue;
+
+    const ehInstanciaExtra =
+      SUFIXO_INSTANCIA_EXTRA.test(ramo.agente) &&
+      porAgente.has(ramo.agente.replace(SUFIXO_INSTANCIA_EXTRA, ''));
+    if (ehInstanciaExtra) continue; // processado junto do agente-base, abaixo
+
+    jaAgrupados.add(ramo.agente);
+    const idExtra = `${ramo.agente}-2`;
+    const extra = porAgente.get(idExtra);
+    if (extra) jaAgrupados.add(idExtra);
+
+    grupos.push({
+      agenteBase: ramo.agente,
+      instancias: extra ? [ramo, extra] : [ramo],
+    });
+  }
+
+  return grupos;
+}

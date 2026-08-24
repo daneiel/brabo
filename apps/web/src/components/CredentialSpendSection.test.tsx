@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import {
@@ -6,6 +6,11 @@ import {
   formatarMes,
   formatarUsd,
 } from './CredentialSpendSection';
+// A instância REAL do app: o componente usa `useTranslation('models')` sem
+// `I18nextProvider` próprio, e `formatarUsd`/`formatarMes` chamam
+// `i18n.t`/`i18n.language` direto no singleton — mesmo padrão de
+// `ProjectExecutorsTab.test.tsx`.
+import i18n from '../lib/i18n';
 import type { CredentialSpend } from '../lib/api-types';
 
 const getCredentialSpend = vi.fn();
@@ -45,9 +50,14 @@ const relatorio: CredentialSpend = {
   ],
 };
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
   getCredentialSpend.mockResolvedValue(relatorio);
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 /**
@@ -120,8 +130,10 @@ describe('formatarMes', () => {
 describe('formatarUsd', () => {
   /** Sub-centavo virando `US$ 0,00` apagaria a diferença que o relatório mostra. */
   it('abaixo de um centavo não vira zero', () => {
-    expect(formatarUsd(0)).toBe('US$ 0,00');
-    expect(formatarUsd(1_811)).toBe('< US$ 0,01');
-    expect(formatarUsd(1_250_000)).toBe('US$ 1,25');
+    // `Intl.NumberFormat('pt-BR', …)` separa símbolo e valor com NBSP
+    // (U+00A0), não espaço comum — comparação exata precisa do caractere real.
+    expect(formatarUsd(0)).toBe('US$ 0,00');
+    expect(formatarUsd(1_811)).toBe('< US$ 0,01');
+    expect(formatarUsd(1_250_000)).toBe('US$ 1,25');
   });
 });

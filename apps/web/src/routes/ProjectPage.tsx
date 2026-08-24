@@ -1,23 +1,26 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { getProject, getProjectBudget, getRepository } from '../lib/api-client';
 import {
+  useArchitecture,
   useBacklog,
   useHypotheses,
   useLatestSession,
   usePendingActions,
+  useProjectPendingActions,
 } from '../lib/hooks';
 import { setLastSeenSeq } from '../lib/read-state';
 import { TokenMeter } from '../components/TokenMeter';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
-import { Tabs } from '../components/ui/Tabs';
+import { GroupedTabs, type ItemDeRegua } from '../components/ui/GroupedTabs';
 import { BranchIcon, GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
 import { aguardandoPromocao } from './ProjectBacklogTab';
 import {
-  ABAS_DO_PROJETO,
   ABA_PADRAO,
   abaPorChave,
+  GRUPOS_DO_PROJETO,
   type ChaveDeAba,
   type ContagensDeAba,
 } from './project-tabs';
@@ -25,8 +28,8 @@ import styles from './ProjectPage.module.css';
 
 const PROVIDER_ICON = { github: GitHubIcon, gitlab: GitLabIcon, local: LocalRepoIcon } as const;
 
-/** O chip ao lado do nome diz o que o repositório É, em pt-BR (handoff, seção 4). */
-const VISIBILIDADE = { public: 'público', private: 'privado' } as const;
+/** O chip ao lado do nome diz o que o repositório É (handoff, seção 4). */
+const VISIBILIDADE_KEY = { public: 'visibility.public', private: 'visibility.private' } as const;
 
 interface ProjectPageProps {
   projectId: string;
@@ -34,7 +37,20 @@ interface ProjectPageProps {
 }
 
 export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
+  const { t } = useTranslation('projectPage');
   const [tab, setTab] = useState<ChaveDeAba>(initialTab ?? ABA_PADRAO);
+
+  // `initialTab` só valia no MOUNT (o nome já diz): um link `?tab=` clicado
+  // de DENTRO de um `ProjectPage` já montado (ex.: "Ver arquitetura
+  // completa" na Visão geral, Onda 3) muda a URL mas não remonta esta
+  // página — mesma rota, só a busca muda — e o `useState` acima ignora
+  // atualização de valor inicial. Sem este efeito o clique reescrevia a URL
+  // e não movia a régua nenhum milímetro. `latestSession`/promoção (efeito
+  // logo abaixo) continuam olhando só o `tab` resolvido, não `initialTab`.
+  useEffect(() => {
+    if (initialTab) setTab(initialTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTab]);
 
   const projectQuery = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
   const project = projectQuery.data;
@@ -60,10 +76,32 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
     (h) => h.status === 'proposed',
   ).length;
 
+  // Onda 3 do PROGRAMA de abas agrupadas: `arquiteturaPendente` deixou de
+  // ser o placeholder fixo em `0`. A escolha NÃO é "diagrama ainda não
+  // gerado" — isso é trabalho do Arquiteto, não uma fila de decisão do
+  // usuário, e um selo ali seria ruído (mesma régua das outras três
+  // contagens: o selo é sempre "algo espera SUA decisão"). O dado real que
+  // já existe e É acionável é `architecture.pendencies` — as pendências de
+  // validação cruzada entre história e módulo (mesmo campo que
+  // `ArchitectureContent`/`ProjectArchitectureTab.tsx` já lista com badge
+  // "Pendências de validação cruzada").
+  const architectureQuery = useArchitecture(projectId);
+  const arquiteturaPendente = architectureQuery.data?.pendencies.length ?? 0;
+
+  // Onda 2 do PROGRAMA de abas agrupadas: `prsPendentes` deixou de ser o
+  // placeholder fixo em `0`. O dado é PROJECT-WIDE de propósito (mesma
+  // consulta que `ProjectPrsTab` usa) — `git_merge` pendente em qualquer
+  // sessão, não só a mais recente, é a mesma correção que resolve o bug de
+  // visibilidade da aba.
+  const mergeActionsQuery = useProjectPendingActions(projectId, 'git_merge');
+  const prsPendentes = mergeActionsQuery.data?.length ?? 0;
+
   const contagens: ContagensDeAba = {
     promocoesPendentes,
     aprovacoesPendentes: pendingCount,
     hipotesesPendentes,
+    prsPendentes,
+    arquiteturaPendente,
   };
 
   useEffect(() => {
@@ -84,7 +122,7 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
     return (
       <div className={styles.falha}>
         <ErroDeCarregamento
-          titulo="Não foi possível abrir este projeto."
+          titulo={t('loadErrorTitle')}
           erro={projectQuery.error}
           onTentarDeNovo={() => void projectQuery.refetch()}
         />
@@ -107,6 +145,32 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
   const aba = abaPorChave(tab);
   const PainelDaAba = aba.component;
 
+  // A estrutura (grupo/solta) sai de `GRUPOS_DO_PROJETO`; resolver `count`
+  // contra `contagens` continua sendo trabalho DESTA página, mesma divisão
+  // que já existia para `ABAS_DO_PROJETO` — o registro nunca viu um evento
+  // de domínio, só sabe de ONDE tirar o número.
+  const itensDaRegua: ItemDeRegua[] = GRUPOS_DO_PROJETO.map((item) =>
+    item.tipo === 'grupo'
+      ? {
+          tipo: 'grupo' as const,
+          chave: item.chave,
+          label: item.label,
+          abas: item.abas.map((filha) => ({
+            key: filha.key,
+            label: filha.label,
+            count: filha.count?.(contagens),
+          })),
+        }
+      : {
+          tipo: 'aba' as const,
+          aba: {
+            key: item.aba.key,
+            label: item.aba.label,
+            count: item.aba.count?.(contagens),
+          },
+        },
+  );
+
   return (
     <div className={styles.wrapper}>
       {/* A régua vive DENTRO do cabeçalho, e o cabeçalho é uma faixa
@@ -124,7 +188,7 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
                 <h1 className={styles.name}>{project.name}</h1>
                 {repository && (
                   <span className={styles.repoChip}>
-                    {repository.provider} · {VISIBILIDADE[repository.visibility]}
+                    {repository.provider} · {t(VISIBILIDADE_KEY[repository.visibility])}
                   </span>
                 )}
               </div>
@@ -139,12 +203,12 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
                     {repository.origin === 'adopted' && (
                       <>
                         <span className={styles.metaSep} />
-                        <span>adotado</span>
+                        <span>{t('adopted')}</span>
                       </>
                     )}
                   </>
                 ) : (
-                  'repositório não provisionado'
+                  t('repositoryNotProvisioned')
                 )}
               </div>
             </div>
@@ -163,14 +227,10 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
         </div>
 
         <div className={styles.tabsRow}>
-          <Tabs
+          <GroupedTabs
             active={tab}
             onChange={(key) => setTab(key as ChaveDeAba)}
-            items={ABAS_DO_PROJETO.map((aba) => ({
-              key: aba.key,
-              label: aba.label,
-              count: aba.count?.(contagens),
-            }))}
+            itens={itensDaRegua}
           />
         </div>
       </header>

@@ -1,281 +1,296 @@
 ---
 id: events
-title: Eventos
-sidebar_label: Eventos
+title: Events
+sidebar_label: Events
 sidebar_position: 2
-description: Os tipos de evento do log imutável, os broadcasts de canal e os spans de trace — três coisas diferentes com nomes parecidos.
-keywords: [eventos, event log, session_events, broadcast, span, outbox]
+description: The event types in the immutable log, the channel broadcasts, and the trace spans — three different things with similar names.
+keywords: [events, event log, session_events, broadcast, span, outbox]
 ---
 
-# Eventos
+# Events
 
-Três famílias de nome convivem no Brabo e são fáceis de confundir porque todas
-usam `assunto.verbo`:
+Three name families coexist in Brabo, and they're easy to confuse because all
+of them use `subject.verb`:
 
-| família | onde vive | durabilidade |
+| family | where it lives | durability |
 |---|---|---|
-| **Evento de domínio** | linha em `session_events` | **permanente e imutável** |
-| **Broadcast** | canal Phoenix → browser | efêmero, não é persistido |
-| **Span** | trace OpenTelemetry | retenção do Tempo (24 h no local) |
+| **Domain event** | row in `session_events` | **permanent and immutable** |
+| **Broadcast** | Phoenix channel → browser | ephemeral, not persisted |
+| **Span** | OpenTelemetry trace | Tempo retention (24 h locally) |
 
-Só a primeira é contrato. As outras duas são transporte e observação.
+Only the first is a contract. The other two are transport and observation.
 
-## Evento de domínio
+## Domain event
 
-Uma linha em `session_events`, append-only, com `seq` densa por sessão
-([RN-002](../business-rules.md#rn-002)). Colunas:
+A row in `session_events`, append-only, with a `seq` that's dense per session
+([RN-002](../business-rules.md#rn-002)). Columns:
 
-| coluna | o quê |
+| column | what |
 |---|---|
 | `id` | uuid |
-| `session_id` | a sessão dona |
-| `seq` | ordem dentro da sessão, começando em 1, sem buraco |
-| `type` | o identificador abaixo |
-| `actor` | quem causou: `{kind, id}` — usuário, agente ou sistema |
-| `payload` | jsonb, formato específico por tipo |
+| `session_id` | the owning session |
+| `seq` | order within the session, starting at 1, no gaps |
+| `type` | the identifier below |
+| `actor` | who caused it: `{kind, id}` — user, agent or system |
+| `payload` | jsonb, format specific to each type |
 | `created_at` | — |
 
-> **O `type` é `string` livre no código** — não existe union TypeScript nem
-> enum no banco listando os tipos válidos. A lista abaixo foi extraída dos
-> pontos de emissão, e é por isso que ela pode envelhecer sem quebrar nada. Ver
-> a nota no fim desta página.
+> **`type` is a free-form `string` in the code** — there's no TypeScript union
+> or database enum listing the valid types. The list below was extracted from
+> the emission points, which is why it can go stale without breaking
+> anything. See the note at the end of this page.
 
-### Sessão
+### Session
 
-| tipo | quando |
+| type | when |
 |---|---|
-| `session.created` | sessão nasce em `created` |
-| `session.activated` | passou para `active` |
-| `session.draining` | o nó que hospedava está drenando |
-| `session.closed` | encerramento normal |
-| `session.closed_abnormally` | encerramento com causa — `node_shutdown` é a mais comum |
+| `session.created` | session is born in `created` |
+| `session.activated` | moved to `active` |
+| `session.draining` | the node hosting it is draining |
+| `session.closed` | normal termination |
+| `session.closed_abnormally` | termination with a cause — `node_shutdown` is the most common |
 
-### Chat e agentes
+### Chat and agents
 
-| tipo | quando |
+| type | when |
 |---|---|
-| `chat.message` | mensagem no fio da sessão, do usuário ou do agente |
-| `chat.structured_question` | o Criativo pediu VÁRIAS respostas de uma vez, num formulário — ferramenta `ask_structured_questions` (RN-162). Cada pergunta traz `id`, `label`, `type`, `options` e `allowOther` — este último é a saída por texto livre do `select`, e vale `true` quando o modelo não declara nada ([RN-171](../business-rules.md#rn-171)) |
-| `chat.structured_question_answered` | o usuário respondeu o formulário; as respostas também voltam como `chat.message` para o agente ler |
-| `agent.activated` | um agente assumiu trabalho na sessão |
-| `agent.response` | resposta completa do agente, já consolidada. `modelName` diz QUAL modelo a gerou, nos três produtores (os quatro conversacionais, o `ToolLoop` de todo agente de execução/gate e o chat sem agente ativo na api) — `null` quando o turno falhou antes de resolver o binding, e ausente em evento gravado antes da regra ([RN-175](../business-rules.md#rn-175)) |
-| `agent.error` | falha do agente, com `origem` (`infra`/`modelo`/`codigo`/`politica`) e a `mensagem` que ele diz no fio ([RN-059](../business-rules.md#rn-059)). Cobre o turno inteiro e também a falha de UMA ferramenta no meio do laço, com `tool` e `retentativa` no payload ([RN-163](../business-rules.md#rn-163)) |
-| `tool.result` | resultado de uma execução de ferramenta, gravado pelo hook `Engine.Harness.Hooks.EventLog` |
-| `handoff.offered` | um agente ofereceu o trabalho a outro |
-| `handoff.accepted` | o destinatário aceitou |
+| `chat.message` | message in the session thread, from the user or the agent |
+| `chat.structured_question` | the Creative agent asked for SEVERAL answers at once, via a form — `ask_structured_questions` tool (RN-162). Each question carries `id`, `label`, `type`, `options` and `allowOther` — the latter is the `select`'s free-text output, and defaults to `true` when the model declares nothing ([RN-171](../business-rules.md#rn-171)) |
+| `chat.structured_question_answered` | the user answered the form; the answers also come back as `chat.message` for the agent to read |
+| `agent.activated` | an agent took on work in the session |
+| `agent.response` | the agent's complete, consolidated response. `modelName` says WHICH model generated it, across the three producers (the five conversational agents, the `ToolLoop` of every execution/gate agent, and the api chat with no active agent) — `null` when the turn failed before resolving the binding, and absent in events recorded before the rule existed ([RN-175](../business-rules.md#rn-175)) |
+| `agent.error` | agent failure, with `origem` (`infra`/`modelo`/`codigo`/`politica`) and the `mensagem` it states in the thread ([RN-059](../business-rules.md#rn-059)). Covers the whole turn as well as the failure of a SINGLE tool mid-loop, with `tool` and `retentativa` in the payload ([RN-163](../business-rules.md#rn-163)) |
+| `tool.result` | result of a tool execution, recorded by the `Engine.Harness.Hooks.EventLog` hook |
+| `handoff.offered` | one agent offered the work to another |
+| `handoff.accepted` | the recipient accepted |
 
-### Ações propostas
+### Proposed actions
 
-| tipo | quando |
+| type | when |
 |---|---|
-| `proposed_action.created` | nasceu a ação — antes de qualquer execução. `payload.status` diz como ela nasceu (`pending`, `auto_approved` ou `denied`), e é o que distingue decisão humana de política ([RN-049](../business-rules.md#rn-049)) |
-| `proposed_action.approved` | decidida pelo usuário — o `actor` é **quem clicou**. Auto-aprovação NÃO passa por aqui: ela aparece no `created` com `status: auto_approved` e ator agente |
-| `proposed_action.denied` | negada — estado terminal. `actor` é quem recusou, e `payload.reason` o motivo |
-| `proposed_action.executed` | executou com sucesso |
-| `action.failed` | executou e falhou |
-| `permission.granted` | concessão registrada na política |
+| `proposed_action.created` | the action was born — before any execution. `payload.status` says how it was born (`pending`, `auto_approved` or `denied`), and that's what distinguishes a human decision from policy ([RN-049](../business-rules.md#rn-049)) |
+| `proposed_action.approved` | decided by the user — `actor` is **whoever clicked**. Auto-approval does NOT go through here: it shows up in `created` with `status: auto_approved` and an agent actor |
+| `proposed_action.denied` | denied — terminal state. `actor` is whoever refused it, and `payload.reason` is the reason |
+| `proposed_action.executed` | executed successfully |
+| `action.failed` | executed and failed |
+| `permission.granted` | grant recorded in the policy |
 
 ### Backlog
 
-| tipo | quando |
+| type | when |
 |---|---|
 | `backlog.epic_created` | — |
 | `backlog.story_created` | — |
-| `backlog.story_transitioned` | mudança de estado da história. O `actor` diz quem promoveu: `agent/po` no modo `auto`, `user` no modo `manual` ([RN-048](../business-rules.md#rn-048)) |
-| `backlog.story_promotion_proposed` | o PO terminou uma história COMPLETA num projeto em modo `manual`: ela fica `draft` aguardando a decisão do usuário, e nenhuma tarefa dela é pegável até lá ([RN-048](../business-rules.md#rn-048)) |
-| `backlog.story_promotion_returned` | o usuário RECUSOU promover e devolveu a história ao PO com um motivo — que vira mensagem fixada na sessão dele, como a devolução de um gate ao dev ([RN-048](../business-rules.md#rn-048)) |
-| `backlog.story_demoted` | módulo sumiu do `module_map`; a história voltou para `draft` ([RN-012](../business-rules.md#rn-012)) |
-| `backlog.story_overlap_warned` | a história foi criada, mas TODAS as regras que ela cita já estavam cobertas por outra — aviso, não bloqueio: quem julga se é sobreposição é o usuário ([RN-081](../business-rules.md#rn-081)) |
-| `backlog.story_modules_assigned` | vínculo história ↔ módulo |
+| `backlog.story_transitioned` | story state change. `actor` says who promoted it: `agent/po` in `auto` mode, `user` in `manual` mode ([RN-048](../business-rules.md#rn-048)) |
+| `backlog.story_promotion_proposed` | the PO finished a COMPLETE story in a project running `manual` mode: it stays `draft` awaiting the user's decision, and none of its tasks is claimable until then ([RN-048](../business-rules.md#rn-048)) |
+| `backlog.story_promotion_returned` | the user REFUSED to promote it and returned the story to the PO with a reason — which becomes a pinned message in its session, the same as a gate being returned to a dev ([RN-048](../business-rules.md#rn-048)) |
+| `backlog.story_demoted` | a module disappeared from `module_map`; the story went back to `draft` ([RN-012](../business-rules.md#rn-012)) |
+| `backlog.story_overlap_warned` | the story was created, but ALL the rules it cites were already covered by another one — a warning, not a block: the user is the one who judges whether it's overlap ([RN-081](../business-rules.md#rn-081)) |
+| `backlog.story_modules_assigned` | story ↔ module link |
 | `backlog.task_created` | — |
-| `backlog.task_claimed` | um dev agent pegou a task |
+| `backlog.task_claimed` | a dev agent claimed the task |
 | `backlog.task_status_changed` | — |
-| `backlog.task_blocked` | teto de correções esgotado, ou impedimento registrado |
+| `backlog.task_blocked` | fix-attempt cap exhausted, or an impediment was recorded |
 | `backlog.task_unblocked` | — |
-| `backlog.epic_without_story` | o PO encerrou um turno tendo criado épico e NENHUMA história para ele. Épico não gera tarefa — história gera —, então este é o estado que trava a execução sem erro visível. Desfecho explícito no padrão da [RN-059](../business-rules.md#rn-059): evento durável com `origem`, `epicIds`/`epicTitles` e a mensagem, mais o broadcast `agent.error`. Reportado UMA vez por ocorrência, nunca em loop ([RN-165](../business-rules.md#rn-165)) |
+| `backlog.epic_without_story` | the PO ended a turn having created an epic and NO story for it. An epic doesn't generate a task — a story does —, so this is the state that stalls execution with no visible error. An explicit outcome in the [RN-059](../business-rules.md#rn-059) pattern: a durable event with `origem`, `epicIds`/`epicTitles` and the message, plus the `agent.error` broadcast. Reported ONCE per occurrence, never in a loop ([RN-165](../business-rules.md#rn-165)) |
 
-### Execução e gates
+### Execution and gates
 
-| tipo | quando |
+| type | when |
 |---|---|
-| `execution.plan_proposed` | o Dev Lead propôs o plano: quantos agentes por módulo e por quê (FASE 14d) |
-| `execution.activated` | a fase de execução começou. **Só entra em sessão `criativa`** — numa `consultiva` o append responde 409 ([RN-097](../business-rules.md#rn-097)). Continua sendo ele, e não a coluna `sessions.kind`, quem diz que uma sessão ESTÁ executando |
-| `execution.parallelization_suggested` | o sistema propôs paralelizar |
-| `execution.parallelization_accepted` | aceita — o subagente herda o teto do agente base |
-| `dev.started` | o dev agent começou o ciclo (ativação, paralelização — NÃO reidratação, que nunca redispara) |
-| `dev.working` | reivindicou uma task e montou o worktree |
-| `dev.idle` | fila do módulo vazia — sem task pegável agora |
-| `dev.awaiting_approval` | as ações git ficaram pendentes de aprovação (Fase 12e): **o gate NÃO abre** — sem PR não há o que julgar — e o worktree fica retido até `task.pr_settled` ([RN-050](../business-rules.md#rn-050)) |
-| `dev.awaiting_gate` | PR aberta, esperando o gate (Fase 12b) — `task_id`/`worktree` continuam retidos |
-| `dev.blocked` | a task devolvida com diagnóstico (limite de iterações, orçamento excedido, `report_blocked`, falha de worktree/contexto) |
-| `dev.idle_tripped` | circuit breaker disparado (RN-047) — N tasks blocked seguidas param o agente |
-| `dev.rearmed` | usuário rearmou um agente travado (Fase 12b) — `actor` é o USUÁRIO que clicou, não o agente |
-| `pr.gate_changed` | o PR mudou de gate (`awaiting_qa` → `awaiting_secops` → `awaiting_user`) |
-| `infra.gate_changed` | gate do Infra |
-| `infra.artifact_blocked` | artefato do Infra reprovado |
+| `execution.plan_proposed` | **DISCONTINUED since ADR 0086** ([RN-284](../business-rules.md#rn-284)) — older sessions may still have this type in the log; new sessions use a `proposed_action` of type `propose_execution_plan` (see `docs/reference/permissions.md`), because the Dev Lead's plan became a real decision, approved or refused in Approvals, no longer a plain event |
+| `execution.activated` | the execution phase began. **Only enters on a `criativa` session** — on a `consultiva` one the append responds 409 ([RN-097](../business-rules.md#rn-097)). It's still this event, not the `sessions.kind` column, that says whether a session IS executing |
+| `execution.parallelization_suggested` | the system proposed parallelizing |
+| `execution.parallelization_accepted` | accepted — the subagent inherits the base agent's cap |
+| `dev.started` | the dev agent began the cycle (activation, parallelization — NOT rehydration, which never re-fires) |
+| `dev.working` | claimed a task and set up the worktree |
+| `dev.idle` | the module's queue is empty — no task claimable right now |
+| `dev.awaiting_approval` | the git actions became pending approval (Phase 12e): **the gate does NOT open** — with no PR there's nothing to judge — and the worktree stays held until `task.pr_settled` ([RN-050](../business-rules.md#rn-050)) |
+| `dev.awaiting_gate` | PR open, waiting on the gate (Phase 12b) — `task_id`/`worktree` remain held |
+| `dev.blocked` | the task was returned with a diagnosis (iteration limit, budget exceeded, `report_blocked`, worktree/context failure) |
+| `dev.idle_tripped` | circuit breaker tripped (RN-047) — N consecutive blocked tasks stop the agent |
+| `dev.rearmed` | the user re-armed a stuck agent (Phase 12b) — `actor` is the USER who clicked, not the agent |
+| `pr.gate_changed` | the PR moved to a new gate (`awaiting_qa` → `awaiting_secops` → `awaiting_user`) |
+| `infra.gate_changed` | Infra's gate |
+| `infra.artifact_blocked` | Infra's artifact was rejected |
 
-### Delegação (Fase 8b, ADR 0038)
+### Delegation (Phase 8b, ADR 0038)
 
-| tipo | quando |
+| type | when |
 |---|---|
-| `delegation.completed` | a subespecialidade concluiu; `payload.parecerArtifactId` referencia o `artifact.qa_verdict` INTERNO dela — nunca o que chega ao gate |
-| `delegation.failed` | a subespecialidade não concluiu; `payload.failureOrigin` é a ORIGEM (`infra`\|`modelo`\|`codigo`\|`politica`, nunca por eliminação — ADR 0020) |
-| `delegation.dispensed` | o lead decidiu NÃO delegar; `payload.justification` explica por quê — dispensa nunca é silêncio |
+| `delegation.completed` | the subspecialty finished; `payload.parecerArtifactId` references its INTERNAL `artifact.qa_verdict` — never the one that reaches the gate |
+| `delegation.failed` | the subspecialty didn't finish; `payload.failureOrigin` is the ORIGIN (`infra`\|`modelo`\|`codigo`\|`politica`, never by elimination — ADR 0020) |
+| `delegation.dispensed` | the lead decided NOT to delegate; `payload.justification` explains why — dispensing is never silent |
 
-Os três são emitidos pelo `QaLeadServer`, um por subespecialidade, SEPARADOS
-da chamada a `record_gate_verdict` — o `pr.gate_changed` acima continua sendo
-o único evento que descreve o gate em si; estes descrevem a área por trás
-dele.
+All three are emitted by `QaLeadServer`, one per subspecialty, SEPARATE from
+the call to `record_gate_verdict` — the `pr.gate_changed` event above remains
+the only event that describes the gate itself; these describe the area
+behind it.
 
-### Laço de ferramentas
+### Tool loop
 
-| tipo | quando |
+| type | when |
 |---|---|
-| `toolloop.limit_reached` | o laço bateu no teto de iterações. `payload` traz `iteration` e `max_iterations` — o teto é por TIPO de agente ([RN-085](../business-rules.md#rn-085)) |
-| `toolloop.budget_exceeded` | o orçamento de tokens daquele laço acabou antes do trabalho; `payload` traz `tokens_spent_micros` e `token_budget_micros` |
+| `toolloop.limit_reached` | the loop hit its iteration cap. `payload` carries `iteration` and `max_iterations` — the cap is per agent TYPE ([RN-085](../business-rules.md#rn-085)) |
+| `toolloop.budget_exceeded` | that loop's token budget ran out before the work did; `payload` carries `tokens_spent_micros` and `token_budget_micros` |
 
-Emitidos pelo `Engine.Harness.ToolLoop` e — desde a
-[RN-166](../business-rules.md#rn-166) — também pelo `PoServer`, que tem laço
-PRÓPRIO e até então esgotava o teto **em silêncio**. Mesmo tipo e mesmo
-payload de propósito: é o mesmo fato, e quem lê o log não deve precisar
-aprender um segundo nome porque o agente conversacional não usa o `ToolLoop`.
+Emitted by `Engine.Harness.ToolLoop` and — since
+[RN-166](../business-rules.md#rn-166) — also by `PoServer`, which has its OWN
+loop and, until then, exhausted its cap **silently**. Same type and same
+payload on purpose: it's the same fact, and whoever reads the log shouldn't
+have to learn a second name just because the conversational agent doesn't use
+`ToolLoop`.
 
-### Artefatos
+### Artifacts
 
-| tipo | schema |
+| type | schema |
 |---|---|
 | `artifact.product_brief` | `title`, `summary`, `rules` |
 | `artifact.business_rule` | `title`, `description`, `origin` |
-| `artifact.module_map` | o mapa de módulos do Arquiteto |
+| `artifact.module_map` | the Architect's module map |
 | `artifact.insight` | — |
+| `artifact.prototipo_navegavel` | `personas`, `jornadas`, `prototipo` (`telas`, `anotacoes`), `resumo` — the UX Designer's prototype ([RN-286](../business-rules.md#rn-286), ADR 0087) |
+| `artifact.rfc_staff` | — (validated in `Engine.Agents.StaffTools`, not by `ArtifactSchemas` — same case as `artifact.insight`): `problema`, `opcoes` (list of `descricao`/`tradeoffs`), `recomendacao`, `poc` (`escopo`, `descartavel: true` fixed). The Staff's RFC (ADR 0088), returned to the Architect via handoff in the same tool call |
+| `artifact.plano_de_teste` | `storyId`, `planoDeTeste`, `criteriosExecutaveis`, `estrategiaDeAutomacao` — the QA-strategy deliverable (ADR 0090), PRE-DEV |
+| `artifact.threat_model` | `storyId`, `threatModel`, `requisitosDeSeguranca` — SecOps' "second moment" over a story's DESIGN ([RN-360](../business-rules.md#rn-360), ADR 0090) |
 
-Os schemas são fechados: campo faltando reprova a emissão
+The schemas are closed: a missing field rejects the emission
 (`Engine.Harness.ArtifactSchemas`).
 
-### Arquitetura e prontidão
+### Architecture and readiness
 
-| tipo | quando |
+| type | when |
 |---|---|
 | `architecture.readiness_confirmed` | — |
 | `readiness.confirmed` | — |
+| `necessity.validated` | `necessidade-validada` gate (Creative → PO): the user confirms that the `product_brief` the Creative agent consolidated reflects the actual business need — a click separate from `readiness.confirmed`, never a model inference ([RN-406](../business-rules.md#rn-406), ADR 0095). `payload.productBriefId` references the validated `artifact.product_brief` |
 
-### Git e bootstrap
+### Git and bootstrap
 
-| tipo | quando |
+| type | when |
 |---|---|
-| `project.git_connected` | credencial de git vinculada ao projeto |
-| `project.repository_provisioned` | repositório **criado** pelo Brabo |
-| `project.repository_adopted` | repositório que **já existia** passou a ser o do projeto ([RN-046](../business-rules.md#rn-046)) |
-| `bootstrap.repository_adopted` | o mesmo fato na sessão dedicada, com o `defaultBranch` observado no provider |
-| `bootstrap.step_started` | um dos seis passos do Gitflow começou |
-| `bootstrap.step_completed` | concluído |
-| `bootstrap.step_skipped` | já estava feito — **é sucesso**, não erro ([RN-029](../business-rules.md#rn-029)) |
-| `bootstrap.step_degraded` | concluiu sem uma capability do provider (ex.: proteção de branch no Local) |
-| `bootstrap.step_failed` | falhou; o bootstrap é retomável deste ponto |
-| `bootstrap.plan_approved` | o usuário aprovou o plano de adoção — **é só daqui que o bootstrap roda num repo adotado** ([RN-045](../business-rules.md#rn-045)) |
-| `bootstrap.adopted_as_is` | o usuário dispensou o bootstrap; nenhum passo rodou, e o plano fica guardado como evidência do que não foi aplicado |
+| `project.git_connected` | git credential linked to the project |
+| `project.repository_provisioned` | repository **created** by Brabo |
+| `project.repository_adopted` | a repository that **already existed** became the project's ([RN-046](../business-rules.md#rn-046)) |
+| `bootstrap.repository_adopted` | the same fact in the dedicated session, with the `defaultBranch` observed from the provider |
+| `bootstrap.step_started` | one of the six Gitflow steps began |
+| `bootstrap.step_completed` | completed |
+| `bootstrap.step_skipped` | it was already done — **that's a success**, not an error ([RN-029](../business-rules.md#rn-029)) |
+| `bootstrap.step_degraded` | completed without one of the provider's capabilities (e.g. branch protection on Local) |
+| `bootstrap.step_failed` | failed; the bootstrap is resumable from this point |
+| `bootstrap.plan_approved` | the user approved the adoption plan — **only from here does bootstrap run on an adopted repo** ([RN-045](../business-rules.md#rn-045)) |
+| `bootstrap.adopted_as_is` | the user dismissed the bootstrap; no step ran, and the plan is kept as evidence of what wasn't applied |
 
-### Custo
+### Cost
 
-| tipo | quando |
+| type | when |
 |---|---|
-| `budget.threshold_crossed` | 70%, 90% ou 100% — **uma vez por limiar** ([RN-018](../business-rules.md#rn-018)) |
+| `budget.threshold_crossed` | 70%, 90% or 100% — **once per threshold** ([RN-018](../business-rules.md#rn-018)) |
 
-### Psicólogo
+### Local runner (ADR 0103/0104)
 
-| tipo | quando |
+| type | when |
+|---|---|
+| `project.workspace_verified` | `brabo-runner` connected and confirmed the path for a project with `execution_mode: runner` — the runner is the source of truth for the path, overwriting whatever was typed at creation ([RN-423](../business-rules.md#rn-423)) |
+
+### Psychologist
+
+| type | when |
 |---|---|
 | `psychologist.analysis_completed` | — |
-| `psychologist.analysis_failed` | com causa classificada: `infra`, `modelo`, `código` ou `política` |
-| `psychologist.analysis_skipped` | a sessão não tinha evento ANALISÁVEL e a análise não rodou — `payload.analisaveis` e `payload.eventCount` mostram a diferença ([RN-079](../business-rules.md#rn-079)) |
-| `psychologist.hypothesis_proposed` | hipótese com `evidenceEventIds` válidos ([RN-021](../business-rules.md#rn-021)) |
+| `psychologist.analysis_failed` | with a classified cause: `infra`, `modelo`, `código` or `política` |
+| `psychologist.analysis_skipped` | the session had no ANALYZABLE event and the analysis didn't run — `payload.analisaveis` and `payload.eventCount` show the difference ([RN-079](../business-rules.md#rn-079)) |
+| `psychologist.hypothesis_proposed` | a hypothesis with valid `evidenceEventIds` ([RN-021](../business-rules.md#rn-021)) |
 | `psychologist.hypothesis_accepted` | — |
 | `psychologist.hypothesis_dismissed` | — |
-| `psychologist.hypothesis_accepted_for_anamnese` | aceita e encaminhada — é o elo que fecha o loop com a Anamnese |
+| `psychologist.hypothesis_accepted_for_anamnese` | accepted and forwarded — the link that closes the loop with the Anamnesis |
 
-### Anamnese e instruções
+### Anamnesis and instructions
 
-| tipo | quando |
+| type | when |
 |---|---|
 | `anamnese.run_completed` | — |
 | `anamnese.run_failed` | — |
-| `anamnese.run_skipped` | a rodada encerrou SEM perfil, de propósito — `payload.motivo` diz por quê ([RN-063](../business-rules.md#rn-063)) |
-| `anamnese.profile_updated` | o `proficiency_profile` mudou |
-| `instruction.rolled_back` | reversão de versão de instrução — cria versão nova, não apaga ([RN-027](../business-rules.md#rn-027)) |
+| `anamnese.run_skipped` | the round ended WITHOUT a profile, on purpose — `payload.motivo` says why ([RN-063](../business-rules.md#rn-063)) |
+| `anamnese.profile_updated` | the `proficiency_profile` changed |
+| `instruction.rolled_back` | rollback of an instruction version — creates a new version, doesn't delete ([RN-027](../business-rules.md#rn-027)) |
 
 ---
 
 ## Broadcast
 
-Mensagens de canal Phoenix para o browser. **Não** são persistidas: quem
-recarrega a página não as recupera — recupera o event log.
+Phoenix channel messages to the browser. They are **not** persisted: whoever
+reloads the page doesn't get them back — they get the event log back instead.
 
-| broadcast | o quê |
+| broadcast | what |
 |---|---|
-| `agent.delta` | pedaço de texto do streaming do modelo |
-| `agent.status` | mudança de estado visível do agente |
-| `agent.done` | turno terminou |
-| `agent.error` | turno falhou |
-| `event.appended` | um evento novo entrou no log — é o gatilho de atualização do painel |
+| `agent.delta` | chunk of text from the model's streaming |
+| `agent.status` | visible agent state change |
+| `agent.done` | turn ended |
+| `agent.error` | turn failed |
+| `event.appended` | a new event entered the log — the panel's refresh trigger |
 
-Um evento de domínio quase sempre gera um `event.appended`; o inverso não vale.
+A domain event almost always produces an `event.appended`; the reverse doesn't hold.
 
-### Quem pode ouvir (RN-108)
+### Who can listen (RN-108)
 
-Entrar no canal `session:<id>` — e portanto receber qualquer um destes
-broadcasts — exige um ticket opaco de uso único emitido por
-`POST /projects/:projectId/sessions/:sessionId/socket-ticket` (TTL de 30s).
-Até a RN-108 o `connect/3` do socket Phoenix não checava nada além do
-`session_id` existir: quem descobrisse o UUID entrava e ouvia tudo. O ticket
-não é persistido/lido no event log — mora em `session_socket_tickets`,
-verificado e consumido pelo próprio engine — então não aparece no inventário
-de eventos de domínio abaixo. Ver [RN-108](../business-rules.md#rn-108).
+Joining the `session:<id>` channel — and therefore receiving any of these
+broadcasts — requires a single-use opaque ticket issued by
+`POST /projects/:projectId/sessions/:sessionId/socket-ticket` (30s TTL).
+Before RN-108, the Phoenix socket's `connect/3` checked nothing beyond the
+`session_id` existing: anyone who discovered the UUID could join and listen
+to everything. The ticket isn't persisted/read in the event log — it lives in
+`session_socket_tickets`, verified and consumed by the engine itself — so it
+doesn't show up in the domain-event inventory below. See
+[RN-108](../business-rules.md#rn-108).
 
 ## Span
 
-Nomes de span OpenTelemetry. Uma sessão é uma **trace raiz** atravessando api e
-engine ([ADR 0026](../adr/0026-fase5-observabilidade-e-graceful-shutdown.md)).
+OpenTelemetry span names. A session is a **root trace** spanning both the api
+and the engine ([ADR 0026](../adr/0026-fase5-observabilidade-e-graceful-shutdown.md)).
 
-### Nomes de domínio
+### Domain names
 
-Nomeados à mão, um por operação que interessa. São estes que se procura no Tempo:
+Named by hand, one per operation that matters. These are the ones you look up in Tempo:
 
-| span | onde |
+| span | where |
 |---|---|
-| `session.create` | api — a raiz |
-| `agent.turn` | engine — uma volta do ToolLoop |
-| `llm.turn` | engine — a chamada ao modelo |
-| `tool.call` | engine — a execução de uma ferramenta |
-| `gate.scanner` | engine — um scanner do SecOps, com o nome do scanner no atributo |
-| `outbox.session_lifecycle` | engine — job do Oban, pendurado na trace da sessão |
-| `outbox.psychologist` | engine — idem, a análise do Psicólogo |
+| `session.create` | api — the root |
+| `agent.turn` | engine — one pass of the ToolLoop |
+| `llm.turn` | engine — the call to the model |
+| `tool.call` | engine — a tool execution |
+| `gate.scanner` | engine — a SecOps scanner, with the scanner name in an attribute |
+| `outbox.session_lifecycle` | engine — Oban job, attached to the session's trace |
+| `outbox.psychologist` | engine — same, the Psychologist's analysis |
 
-### Nomes derivados de código
+### Code-derived names
 
-O decorator `@Traced` da api
-([ADR 0035](../adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)) nomeia a
-span como **`Classe.metodo`** — por exemplo `TransitionSessionUseCase.execute`,
-`DrizzleOutboxRepository.append`. Não são enumeráveis aqui: nascem e morrem com o
-código, e a lista apodreceria na primeira renomeação.
+The api's `@Traced` decorator
+([ADR 0035](../adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)) names
+the span as **`Class.method`** — for example `TransitionSessionUseCase.execute`,
+`DrizzleOutboxRepository.append`. They can't be enumerated here: they're born
+and die with the code, and the list would go stale the first time something
+gets renamed.
 
-A distinção importa na hora de consultar: nome de domínio é estável e pode ir
-numa query salva ou num dashboard; nome derivado de código não.
+The distinction matters when querying: a domain name is stable and can go
+into a saved query or a dashboard; a code-derived name can't.
 
-Os atributos que essas spans carregam — `brabo.layer`, `code.namespace`,
-`code.function` — servem para busca no Tempo e **não são contrato**, ao contrário
-de `trace_id`. Podem ser renomeados sem quebrar nada fora do Tempo.
+The attributes these spans carry — `brabo.layer`, `code.namespace`,
+`code.function` — are for searching in Tempo and **are not a contract**,
+unlike `trace_id`. They can be renamed without breaking anything outside Tempo.
 
-Como navegar de uma sessão até um `tool.call` está no
-[runbook](../runbook.md#observabilidade); o modelo inteiro está em
-[observabilidade](../explanation/observability.md).
+How to navigate from a session to a `tool.call` is documented in the
+[runbook](../runbook.md#observabilidade); the whole model is documented in
+[observability](../explanation/observability.md).
 
 ---
 
-## Como o evento chega ao engine
+## How the event reaches the engine
 
-Não por fila externa. A api grava o evento e a intenção de publicá-lo **na
-mesma transação** (transactional outbox); o Oban consome do próprio Postgres. É
-o que impede "gravou o evento mas o engine não soube".
+Not through an external queue. The api writes the event and the intent to
+publish it **in the same transaction** (transactional outbox); Oban consumes
+straight from Postgres. That's what prevents "the event was written but the
+engine never knew."
 
 ```mermaid
 sequenceDiagram
@@ -287,24 +302,23 @@ sequenceDiagram
   A->>P: insert session_events
   A->>P: insert outbox
   A->>P: COMMIT
-  E->>P: Oban consome a outbox
-  E->>E: processa
+  E->>P: Oban consumes the outbox
+  E->>E: processes
 ```
 
 ---
 
-## Inventário completo
+## Complete inventory
 
-As seções acima dizem **quando** cada evento acontece. Esta é a varredura
-mecânica dos pontos de emissão, refeita a cada `pnpm docs:generate` — é o que
-faz um identificador novo aparecer aqui mesmo que ninguém tenha escrito a
-respeito.
+The sections above say **when** each event happens. This is the mechanical
+scan of the emission points, redone on every `pnpm docs:generate` — it's what
+makes a new identifier show up here even if nobody wrote about it.
 
 <!-- BEGIN:GENERATED:eventos-inventario -->
 
-> ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build sobrescreve.
+> ⚠️ Block generated by `pnpm docs:generate`. Do not edit by hand — the next build overwrites it.
 
-Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não aparecem descritos acima.
+Extracted from the emission points: **88 identifiers**, of which **2** are not described above.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -318,12 +332,15 @@ Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não a
 - `anamnese.run_completed` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
 - `anamnese.run_failed` <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub>
 - `anamnese.run_skipped` <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub>
-- `architecture.module_map_created` — ⚠️ **não descrito acima** <sub>(apps/engine/lib/engine/agents/dev_lead_server.ex)</sub>
+- `architecture.module_map_created` — ⚠️ **not described above** <sub>(apps/engine/lib/engine/agents/dev_lead_server.ex)</sub>
 - `architecture.readiness_confirmed` <sub>(apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts)</sub>
 - `artifact.business_rule` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.insight` <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub>
 - `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
+- `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `artifact.prototipo_navegavel` <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub>
+- `artifact.rfc_staff` <sub>(apps/engine/lib/engine/agents/staff_tools.ex)</sub>
 - `backlog.epic_created` <sub>(apps/api/src/application/use-cases/backlog/create-epic.use-case.ts)</sub>
 - `backlog.epic_without_story` <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub>
 - `backlog.story_created` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
@@ -341,7 +358,7 @@ Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não a
 - `bootstrap.adopted_as_is` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
 - `bootstrap.plan_approved` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
 - `bootstrap.repository_adopted` <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub>
-- `bootstrap.step_acknowledged` — ⚠️ **não descrito acima** <sub>(apps/api/src/application/use-cases/git/acknowledge-protection-failure.use-case.ts)</sub>
+- `bootstrap.step_acknowledged` — ⚠️ **not described above** <sub>(apps/api/src/application/use-cases/git/acknowledge-protection-failure.use-case.ts)</sub>
 - `bootstrap.step_completed` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
 - `bootstrap.step_degraded` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
 - `bootstrap.step_failed` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
@@ -358,7 +375,6 @@ Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não a
 - `execution.activated` <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub>
 - `execution.parallelization_accepted` <sub>(apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts)</sub>
 - `execution.parallelization_suggested` <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub>
-- `execution.plan_proposed` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
 - `gate.scanner` <sub>(apps/engine/lib/engine/gates/scanner.ex)</sub>
 - `handoff.accepted` <sub>(apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts)</sub>
 - `handoff.offered` <sub>(apps/api/src/application/use-cases/agents/create-handoff.use-case.ts)</sub>
@@ -366,11 +382,13 @@ Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não a
 - `infra.gate_changed` <sub>(apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts)</sub>
 - `instruction.rolled_back` <sub>(apps/api/src/application/use-cases/instructions/rollback-instruction.use-case.ts)</sub>
 - `llm.turn` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>
+- `necessity.validated` <sub>(apps/api/src/application/use-cases/agents/validate-necessity.use-case.ts)</sub>
 - `permission.granted` <sub>(apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts)</sub>
 - `pr.gate_changed` <sub>(apps/api/src/application/use-cases/execution/open-gate.use-case.ts)</sub>
 - `project.git_connected` <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub>
 - `project.repository_adopted` <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub>
 - `project.repository_provisioned` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
+- `project.workspace_verified` <sub>(apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts)</sub>
 - `proposed_action.approved` <sub>(apps/api/src/application/use-cases/actions/approve-action.use-case.ts)</sub>
 - `proposed_action.created` <sub>(apps/api/src/application/use-cases/actions/propose-action.use-case.ts)</sub>
 - `proposed_action.denied` <sub>(apps/api/src/application/use-cases/actions/deny-action.use-case.ts)</sub>
@@ -394,9 +412,10 @@ Extraído dos pontos de emissão: **84 identificadores**, dos quais **2** não a
 
 ---
 
-> **TODO(humano):** `type` é `string` livre em
-> `application/ports/session-event-repository.port.ts` — nada impede um typo de
-> criar um tipo novo em silêncio, e nada garante que esta página cubra todos.
-> Um union TypeScript exportado do `packages/shared` resolveria os dois
-> problemas e permitiria **gerar** esta lista em vez de mantê-la. Enquanto isso
-> não existe, a lista acima é uma extração datada dos pontos de emissão.
+> **TODO(human):** `type` is a free-form `string` in
+> `application/ports/session-event-repository.port.ts` — nothing prevents a
+> typo from silently creating a new type, and nothing guarantees this page
+> covers all of them. A TypeScript union exported from `packages/shared`
+> would solve both problems and would let this list be **generated** instead
+> of maintained by hand. Until that exists, the list above is a dated
+> extraction of the emission points.

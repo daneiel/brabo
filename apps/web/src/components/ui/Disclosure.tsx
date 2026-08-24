@@ -25,6 +25,14 @@ interface DisclosureProps {
   className?: string;
   /** Classe extra do cabeçalho, para quem precisa de tipografia própria. */
   classNameCabecalho?: string;
+  /**
+   * `data-testid` do cabeçalho. Só existe porque um call site (a árvore de
+   * agentes, `AgentTimelineTree`) tem testes que precisam achar UM ramo
+   * específico entre vários com o mesmo papel/nome acessível parcial — o
+   * `id` gerado por `useId` não serve de seletor estável em teste. Opcional
+   * de propósito: `getByRole` continua sendo a forma preferida.
+   */
+  testId?: string;
 }
 
 /**
@@ -36,11 +44,19 @@ interface DisclosureProps {
  * é dela que sai o comportamento aqui: cabeçalho é `button` de verdade, a linha
  * inteira alterna, e o chevron é decorativo.
  *
- * **Nenhum dos seis call sites migra nesta entrega**, de propósito: os arquivos
- * onde eles moram (`SessionPage`, `ProjectOverviewTab`, `ApprovalCard`,
- * `ModelCatalogSection`) são os mais disputados do programa, e migrá-los aqui
- * colocaria esta mudança na mesma onda de quem os está reescrevendo. Cada fase
- * migra o seu.
+ * Nenhum dos seis call sites migrou nesta entrega original — de propósito, para
+ * não colocar a extração na mesma onda de quem reescrevia os arquivos mais
+ * disputados do programa. Migrados desde então, arquivo por arquivo, em fases
+ * separadas: `SessionPage` (FASE 20), `ApprovalCard` (colapso "Detalhes"/
+ * "Payload cru", FASE 19) e, na Onda 4/frente H4 do PROGRAMA 28,
+ * `ModelCatalogSection` (a referência original), `AgentTimelineTree` (ramo +
+ * marco), a faixa de arquivo de `ApprovalCard` NÃO entrou (gira o chevron por
+ * `transform`, animação que este componente não expõe — corrigida por fora,
+ * só `aria-controls`/região), `code/CodeExplorer.tsx` (pasta da árvore) e
+ * `code/CodeShell.tsx` (painel inferior). `ProjectOverviewTab` deixou de ter
+ * colapso nenhum antes de chegar sua vez. O componente ganhou `testId` nesta
+ * mesma onda — único hook de teste que um consumidor precisou além de
+ * `classNameCabecalho`.
  *
  * Três decisões que valem registro:
  *
@@ -62,6 +78,7 @@ export function Disclosure({
   trailing,
   className,
   classNameCabecalho,
+  testId,
 }: DisclosureProps) {
   const base = useId();
   const idBotao = `${base}-cabecalho`;
@@ -85,6 +102,7 @@ export function Disclosure({
         className={[styles.cabecalho, classNameCabecalho].filter(Boolean).join(' ')}
         aria-expanded={estaAberto}
         aria-controls={idRegiao}
+        data-testid={testId}
         onClick={alternar}
       >
         {/* Decorativo: o estado já é anunciado pelo `aria-expanded`. Repeti-lo

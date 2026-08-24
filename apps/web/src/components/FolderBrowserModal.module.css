@@ -1,0 +1,227 @@
+.semProjeto {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+/* Explorador de 3 colunas — atalhos | central (breadcrumb + lista) |
+   detalhes —, referência GNOME Files/GTK refeita com os tokens deste
+   design system. Altura fixa (com teto de viewport) pra caber no
+   `Modal size="full"` sem crescer com a lista. */
+.layout {
+  display: flex;
+  min-height: 360px;
+  max-height: 58vh;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-0);
+}
+
+.atalhos {
+  flex-shrink: 0;
+  width: 168px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: var(--surface-2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+.atalhoItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.atalhoItem:hover:not(:disabled) {
+  background: var(--surface-3, var(--surface-1));
+}
+
+.atalhoItem:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.central {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.breadcrumb {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+.segmentoWrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.segmento {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font: inherit;
+}
+
+.segmento:hover:not(:disabled) {
+  background: var(--surface-3, var(--surface-2));
+  color: var(--text-primary);
+}
+
+.segmento:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.segmento:last-child {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.lista {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.item:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* Pasta selecionada por UM clique (não navegou ainda — duplo clique entra). */
+.itemSelecionado {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.itemSelecionado:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Arquivo: aparece na listagem (o protocolo devolve os dois), mas nunca é
+   navegável nem selecionável — só pasta é. */
+.itemArquivo {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.estado {
+  padding: 12px 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.detalhes {
+  flex-shrink: 0;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 14px;
+  background: var(--surface-2);
+  border-left: 1px solid var(--border);
+  text-align: center;
+  overflow-y: auto;
+}
+
+.detalhesIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--surface-3, var(--surface-1));
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.detalhesNome {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.detalhesLinha {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.rodape {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Responsivo: sem espaço pras três colunas, o explorador colapsa pra só a
+   central (breadcrumb + lista) — atalhos e detalhes existem pra acelerar,
+   nunca são o único caminho até uma pasta. */
+@media (max-width: 720px) {
+  .atalhos,
+  .detalhes {
+    display: none;
+  }
+}

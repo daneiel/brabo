@@ -1,115 +1,119 @@
-# ADR 0059 — A chave que assina o `state` do OAuth de git não tem default
+# ADR 0059 — The key that signs the git OAuth `state` has no default
 
-- **Status:** aceito
-- **Data:** 2026-08-08
-- **Contexto anterior:** [ADR 0024](0024-fase5-imagens-producao-ci.md) (segredos
-  do compose de produção), [ADR 0058](0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md)
-  (foi ao dispensar um alerta sobre esta chave que o defeito apareceu)
+- **Status:** accepted
+- **Date:** 2026-08-08
+- **Prior context:** [ADR 0024](0024-fase5-imagens-producao-ci.md) (production
+  compose secrets), [ADR 0058](0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md)
+  (it was while dismissing an alert about this key that the defect surfaced)
 
-## Contexto
+## Context
 
-Ao fechar os alertas de segurança do ADR 0058, um deles (`js/insufficient-password-hash`,
-sobre `oauth-state.ts`) foi dispensado com o argumento de que ali não há senha:
-o "password" é `GIT_OAUTH_STATE_SECRET`, uma chave HMAC de servidor, e
-HMAC-SHA256 é o primitivo certo para assinar um `state` de OAuth.
+While closing the security alerts from ADR 0058, one of them
+(`js/insufficient-password-hash`, about `oauth-state.ts`) was dismissed with
+the argument that there is no password there: the "password" is
+`GIT_OAUTH_STATE_SECRET`, a server-side HMAC key, and HMAC-SHA256 is the
+right primitive for signing an OAuth `state`.
 
-O argumento está certo e continua valendo. O que ele não considerou é que uma
-chave de servidor **com valor padrão conhecido não assina nada** — e era esse o
-caso. Os dois pontos de leitura faziam:
+The argument is correct and still holds. What it did not consider is that a
+server key **with a known default value signs nothing** — and that was
+exactly the case. Both read points did:
 
 ```ts
 process.env.GIT_OAUTH_STATE_SECRET ?? 'dev-oauth-state-secret-change-me'
 ```
 
-É o mesmo modo de falha que o `WEB_ORIGIN` já tivera fechado em
-`cors-origins.ts`: default de desenvolvimento valendo igual em produção. Aqui
-ele é pior por duas razões.
+It is the same failure mode `WEB_ORIGIN` already had closed in
+`cors-origins.ts`: a development default holding equally in production.
+Here it is worse for two reasons.
 
-**A primeira é que o valor é público.** Está no `.env.example` de um
-repositório open source. Não é um default fraco que um atacante precisaria
-adivinhar; é um segredo publicado.
+**The first is that the value is public.** It is in the `.env.example` of an
+open-source repository. It is not a weak default an attacker would need to
+guess; it is a published secret.
 
-**A segunda é o que a chave protege.** O `state` é o que impede o callback do
-OAuth de ser forjado (ver `docs/security-surface.md`). Com a chave conhecida,
-qualquer um assina um `state` válido para `{projectId, userId, provider}` à
-escolha, e o callback grava — no projeto apontado por esse payload — o token de
-git obtido do provider. É CSRF no fluxo de conexão, com credencial de git como
-prêmio.
+**The second is what the key protects.** The `state` is what prevents the
+OAuth callback from being forged (see `docs/security-surface.md`). With the
+key known, anyone can sign a valid `state` for a `{projectId, userId,
+provider}` of their choosing, and the callback writes — into the project
+pointed at by that payload — the git token obtained from the provider. It is
+CSRF on the git-connection flow, with a git credential as the prize.
 
-E o caminho para isso acontecer não era hipotético. O `docker-compose.prod.yml`
-supria o literal como fallback:
+And the path to this happening was not hypothetical. `docker-compose.prod.yml`
+supplied the literal as a fallback:
 
 ```yaml
 GIT_OAUTH_STATE_SECRET: ${GIT_OAUTH_STATE_SECRET:-dev-oauth-state-secret-change-me}
 ```
 
-Quem esquecesse a variável subia produção assinando com a chave do exemplo, sem
-nenhum sinal. Esse detalhe decide o formato da correção, e é o mais importante
-deste ADR: **exigir apenas que a variável "não esteja vazia" não teria pego
-nada**, porque no caminho real de erro ela estava definida — com o valor errado.
+Anyone who forgot the variable brought production up signing with the
+example key, with no warning at all. This detail decides the shape of the
+fix, and it is the most important point in this ADR: **requiring only that
+the variable "not be empty" would not have caught anything**, because on the
+real error path it WAS set — with the wrong value.
 
-## Decisão
+## Decision
 
-A resolução da chave sai dos casos de uso e vira função única em
-`apps/api/src/infrastructure/security/oauth-state-secret.ts`, ao lado do
-`cors-origins.ts` que resolveu o problema equivalente. Em produção
-(`NODE_ENV === 'production'`) ela **derruba o boot** em três situações:
+Resolving the key moves out of the use cases into a single function in
+`apps/api/src/infrastructure/security/oauth-state-secret.ts`, alongside the
+`cors-origins.ts` that solved the equivalent problem. In production
+(`NODE_ENV === 'production'`) it **crashes the boot** in three situations:
 
-1. variável ausente ou só com espaços;
-2. variável igual ao literal de exemplo do repositório;
-3. variável com menos de 16 caracteres.
+1. variable missing or only whitespace;
+2. variable equal to the repository's example literal;
+3. variable shorter than 16 characters.
 
-Fora de produção o default continua valendo, porque `docker compose up` sem
-`.env` tem que funcionar.
+Outside production the default still applies, because `docker compose up`
+with no `.env` still has to work.
 
-A verificação roda no **boot**, em `main.ts`, e não no primeiro uso. Uma api que
-só falhasse quando alguém tentasse conectar git poderia passar semanas de pé
-aceitando `state` assinado com chave pública — o erro precisa aparecer no start,
-onde é barulhento e reversível.
+The check runs at **boot**, in `main.ts`, not on first use. An api that only
+failed when someone tried to connect git could stay up for weeks accepting
+`state` signed with the public key — the error needs to appear at start,
+where it is loud and reversible.
 
-### Por que uma função, e não a checagem em cada chamador
+### Why a function, and not the check at every caller
 
-Pela mesma razão que fez `projectScopeRoot()` existir
-([RN-092](../business-rules.md#rn-092)): eram duas cópias do mesmo literal, em
-arquivos diferentes (`start-git-oauth.use-case.ts` e
-`handle-git-oauth-callback.use-case.ts`). Uma checagem duplicada é uma checagem
-que um dia diverge — e divergindo aqui, o callback recusaria todo `state`
-legítimo. Há teste cobrindo especificamente que as duas pontas assinam e
-verificam com a mesma chave.
+For the same reason `projectScopeRoot()` exists
+([RN-092](../business-rules.md#rn-092)): there were two copies of the same
+literal, in different files (`start-git-oauth.use-case.ts` and
+`handle-git-oauth-callback.use-case.ts`). A duplicated check is a check that
+one day diverges — and diverging here, the callback would reject every
+legitimate `state`. There is a test covering specifically that both ends
+sign and verify with the same key.
 
-### Por que um piso de tamanho
+### Why a length floor
 
-A tabela de `docs/reference/configuration.md` sempre disse, sobre esta variável,
-"fraco = CSRF no fluxo de conexão de git". O piso transforma a frase em
-verificação. Ele é baixo de propósito: reprova `senha123` e não opina sobre uma
-chave gerada por qualquer meio sério — `openssl rand -base64 32` dá 44
-caracteres.
+The `docs/reference/configuration.md` table has always said, about this
+variable, "weak = CSRF on the git connection flow". The floor turns the
+sentence into a check. It is deliberately low: it rejects `senha123` and
+does not second-guess a key generated by any serious means —
+`openssl rand -base64 32` gives 44 characters.
 
-### O que mudou fora do código
+### What changed outside the code
 
-- `docker-compose.prod.yml` deixa de suprir o literal. A linha continua lá, com
-  valor vazio, porque omiti-la esconderia que a variável existe.
-- `docker/smoke.sh` gera a própria chave e a descarta com o stack. Um valor fixo
-  no script seria mais um literal público — exatamente o que a checagem existe
-  para impedir.
-- O README passa a mostrar a geração da chave junto do comando que sobe o
-  compose de produção.
+- `docker-compose.prod.yml` stops supplying the literal. The line stays,
+  with an empty value, because omitting it would hide that the variable
+  exists.
+- `docker/smoke.sh` generates its own key and discards it with the stack. A
+  fixed value in the script would be one more public literal — exactly what
+  the check exists to prevent.
+- The README now shows generating the key alongside the command that brings
+  up the production compose.
 
-## Consequências
+## Consequences
 
-**Quebra deliberada:** uma produção que hoje sobe sem `GIT_OAUTH_STATE_SECRET`
-(ou com a de exemplo) **deixa de subir**, com mensagem dizendo o que gerar. Isso
-é o objetivo, não um efeito colateral: essa produção já estava vulnerável, e
-antes não havia como saber. Vale para o `docker compose -f
-docker/docker-compose.prod.yml` documentado no README.
+**Deliberate breakage:** a production that today comes up without
+`GIT_OAUTH_STATE_SECRET` (or with the example one) **stops coming up**, with
+a message saying what to generate. This is the goal, not a side effect: that
+production was already vulnerable, and there was previously no way to know.
+Applies to the `docker compose -f docker/docker-compose.prod.yml` documented
+in the README.
 
-Em Kubernetes nada muda: `deploy/k8s/base/common/externalsecrets.yaml` já
-buscava a variável de um cofre.
+Nothing changes in Kubernetes: `deploy/k8s/base/common/externalsecrets.yaml`
+already pulled the variable from a vault.
 
-**Fica aberto, e é maior que este ADR:** o mesmo padrão vale para
-`AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` e
-`SECRET_KEY_BASE`, todos com default de desenvolvimento no compose de produção.
-Nenhum foi tocado aqui — o escopo desta mudança foi a chave do OAuth, e tratar
-os outros de passagem esconderia que são quatro decisões independentes, cada uma
-com seu raio de quebra. Está registrado em
+**Left open, and bigger than this ADR:** the same pattern applies to
+`AUTH_JWT_SECRET`, `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY`, and
+`SECRET_KEY_BASE`, all with a development default in the production compose.
+None of them were touched here — the scope of this change was the OAuth key,
+and handling the others in passing would hide that they are four independent
+decisions, each with its own blast radius. It is recorded in
 [docs/explanation/backlog.md](../explanation/backlog.md).

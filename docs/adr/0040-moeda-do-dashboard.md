@@ -1,47 +1,50 @@
-# 0040 — Moeda do dashboard: USD por ora, câmbio manual por workspace adiado
+# 0040 — Dashboard currency: USD for now, manual per-workspace exchange rate deferred
 
-## Contexto
+## Context
 
-A fidelidade do dashboard de projetos ao mock aprovado (`design/SCREENS.md`,
-`design/COMPONENTS.md`) pediu que a linha de resumo e o `TokenMeter` compacto
-do card mostrassem gasto e saldo — algo que o `TokenMeter` `compact` nem
-tinha até aqui (a variante existia só com a barra/percentual, sem rodapé de
-custo nenhum).
+Making the projects dashboard faithful to the approved mock
+(`design/SCREENS.md`, `design/COMPONENTS.md`) required the summary line and
+the card's compact `TokenMeter` to show spend and balance — something the
+`compact` `TokenMeter` variant didn't even have until now (the variant
+existed only with the bar/percentage, with no cost footer at all).
 
-O mock base mostra a dupla `"R$ X · US$ Y"` em todo lugar onde aparece custo
-— é o padrão do `TokenMeter` `default`/`live`, usados hoje em
-`ProjectPage.tsx` (header do projeto) e `SessionPage.tsx` (topbar do chat).
-Mas não existe fonte de câmbio nenhuma no sistema: `costBRL` sempre chegou
-como `0` do lado do dashboard (`ProjectCardContainer` em `Dashboard.tsx`
-nunca calculou um valor real pra ele), e não há preferência de moeda por
-workspace nem taxa de conversão configurável em lugar nenhum do domínio. O
-"R$" que aparecia era, na prática, sempre zero — um dado fantasma.
+The base mock shows the `"R$ X · US$ Y"` pair everywhere cost appears — it's
+the pattern of the `default`/`live` `TokenMeter`, used today in
+`ProjectPage.tsx` (project header) and `SessionPage.tsx` (chat topbar). But
+there's no exchange-rate source anywhere in the system: `costBRL` always
+arrived as `0` on the dashboard side (`ProjectCardContainer` in
+`Dashboard.tsx` never computed a real value for it), and there's no
+per-workspace currency preference or configurable conversion rate anywhere
+in the domain. The "R$" that showed up was, in practice, always zero — a
+ghost value.
 
-## Decisão
+## Decision
 
-1. **A linha de resumo do dashboard e o rodapé novo do `TokenMeter`
-   `compact` mostram só USD.** É a moeda de origem: os preços de modelo em
-   `apps/api/src/domain/llm/` (`MODEL_SEEDS` do seed, tabela `models`) são
-   micro-USD nativamente — não há conversão nenhuma envolvida, só
-   formatação (`apps/web/src/lib/currency.ts`, `usdFmt`).
-2. **Divergência ISOLADA a essa superfície.** `TokenMeter` `default` (header
-   de projeto) e `live` (topbar de sessão) continuam mostrando `"R$ X · US$
-   Y"` exatamente como hoje — não foram tocados. A mudança de moeda é
-   escopo do card do dashboard e da linha de resumo, não do componente
-   inteiro.
-3. **Preferência de moeda por workspace, com taxa de câmbio manual
-   editável, fica REGISTRADA e ADIADA.** Não implementada nesta entrega.
-   Quando existir, o desenho natural é um campo em `workspaces` (ou tabela
-   própria) com `currency` + `manualExchangeRate`, resolvido na formatação
-   do lado do backend ou do cliente — mas commitar a essa forma agora, sem
-   um segundo caso de uso pressionando o design, seria adivinhação.
+1. **The dashboard's summary line and the new `compact` `TokenMeter`
+   footer show USD only.** It's the source currency: model prices in
+   `apps/api/src/domain/llm/` (the seed's `MODEL_SEEDS`, the `models`
+   table) are natively micro-USD — there's no conversion involved at all,
+   just formatting (`apps/web/src/lib/currency.ts`, `usdFmt`).
+2. **The divergence is ISOLATED to this surface.** The `default`
+   `TokenMeter` (project header) and `live` (session topbar) keep showing
+   `"R$ X · US$ Y"` exactly as they do today — untouched. The currency
+   change is scoped to the dashboard card and the summary line, not the
+   whole component.
+3. **Per-workspace currency preference, with an editable manual exchange
+   rate, is RECORDED and DEFERRED.** Not implemented in this delivery.
+   When it exists, the natural design is a field on `workspaces` (or its
+   own table) with `currency` + `manualExchangeRate`, resolved during
+   formatting on either the backend or the client side — but committing to
+   that shape now, without a second use case putting pressure on the
+   design, would be guessing.
 
-## Consequências
+## Consequences
 
-- O `"R$ 0,00"` fantasma que aparecia no card do dashboard some — o valor
-  que sobra (USD) é o único que o sistema de fato sabe calcular hoje.
-- Quem quiser ver o custo em R$ continua tendo isso no header do projeto e
-  no chat (`default`/`live`), só não no card da listagem nem no resumo.
-- Câmbio manual por workspace é trabalho real, não fechado por este ADR:
-  quando alguém precisar dele, o ponto de partida é este documento, não uma
-  decisão nova do zero.
+- The ghost `"R$ 0,00"` that used to show up on the dashboard card is gone
+  — the value left (USD) is the only one the system actually knows how to
+  compute today.
+- Whoever wants to see cost in R$ can still do so in the project header and
+  the chat (`default`/`live`), just not on the listing card or the summary.
+- Manual per-workspace exchange rate is real work, not closed by this ADR:
+  whoever needs it, this document is the starting point, not a decision
+  made from scratch.

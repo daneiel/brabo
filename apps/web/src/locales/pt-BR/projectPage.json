@@ -1,0 +1,9 @@
+{
+  "loadErrorTitle": "Não foi possível abrir este projeto.",
+  "visibility": {
+    "public": "público",
+    "private": "privado"
+  },
+  "adopted": "adotado",
+  "repositoryNotProvisioned": "repositório não provisionado"
+}

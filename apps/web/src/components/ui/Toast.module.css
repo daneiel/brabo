@@ -51,17 +51,41 @@
   margin-top: 3px;
 }
 
+/*
+ * 32px — piso de alvo de toque de ícone de ação primária (PROGRAMA 28, Onda
+ * 5/H5), mesmo tratamento de `Modal.module.css`'s `.close` (a referência do
+ * padrão). Antes não tinha `width`/`height` NENHUM: encolhia para o tamanho
+ * do ícone (13px). Margem negativa compensa o alvo maior sem alargar o
+ * toast — a posição visual não muda, só a área clicável.
+ */
 .close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: none;
+  width: 32px;
+  height: 32px;
+  margin: -6px -8px -6px 0;
   border: none;
+  border-radius: var(--radius-md);
+  background: none;
   color: var(--text-muted);
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .close:hover {
+  background: var(--surface-2);
   color: var(--text-primary);
+}
+
+.close:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+@media (forced-colors: active) {
+  .close:focus-visible {
+    outline: 2px solid Highlight;
+  }
 }

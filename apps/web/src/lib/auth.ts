@@ -24,6 +24,14 @@ const API_URL = runtimeConfig.apiUrl;
 let accessToken: string | null = null;
 let refreshEmVoo: Promise<string | null> | null = null;
 
+/**
+ * O idioma que o SERVIDOR mandou no último login/refresh (fundação de i18n,
+ * Onda 6a) — nunca a fonte de verdade sozinho, mas o que existe sem exigir
+ * chamada extra. `apps/web/src/lib/idioma.ts` é quem consome; este módulo só
+ * guarda o valor bruto, do mesmo jeito que já guarda o access token.
+ */
+let locale: string | null = null;
+
 type Ouvinte = (autenticado: boolean) => void;
 const ouvintes = new Set<Ouvinte>();
 
@@ -68,9 +76,49 @@ export function emailDaSessao(): string | null {
   }
 }
 
-function guardar(token: string | null): void {
+/**
+ * O id do usuário da sessão, lido do `sub` do access token — mesmo padrão de
+ * `emailDaSessao` e a mesma ressalva (decodificado sem verificar assinatura,
+ * quem valida é a api a cada requisição). Existe para o `actor.id` de uma
+ * `proposed_action` que o PRÓPRIO usuário propõe pela UI (Onda 2 — aba PRs,
+ * botão "Merge"): antes desta rodada nenhuma tela do web propunha ação
+ * nenhuma, só exibia/decidia as que os agentes propunham.
+ */
+export function userIdDaSessao(): string | null {
+  if (!accessToken) return null;
+  try {
+    const payload = accessToken.split('.')[1];
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const claims = JSON.parse(json) as { sub?: string };
+    return claims.sub ?? null;
+  } catch {
+    logger.debug('access token não decodificável');
+    return null;
+  }
+}
+
+/**
+ * `novoLocale` é `undefined` quando o chamador não tem o valor à mão (ex.:
+ * `sair()`, que só zera). `null` explícito ZERA a preferência — usado quando
+ * `token` também é `null`, para uma sessão morta não deixar idioma de outro
+ * usuário para trás na próxima leitura.
+ */
+function guardar(token: string | null, novoLocale?: string | null): void {
   accessToken = token;
+  if (token === null) {
+    locale = null;
+  } else if (novoLocale !== undefined) {
+    locale = novoLocale;
+  }
   anunciar();
+}
+
+/**
+ * O idioma que veio no último login/refresh, ou `null` sem sessão nenhuma
+ * ainda. Ver a nota em cima da variável `locale`.
+ */
+export function localeDaSessao(): string | null {
+  return locale;
 }
 
 /** Lê o cookie de CSRF. É o único cookie de sessão que o JS enxerga. */
@@ -133,8 +181,11 @@ export function renovarSessao(): Promise<string | null> {
         guardar(null);
         return null;
       }
-      const dados = (await res.json()) as { accessToken: string };
-      guardar(dados.accessToken);
+      const dados = (await res.json()) as {
+        accessToken: string;
+        locale?: string;
+      };
+      guardar(dados.accessToken, dados.locale ?? null);
       return dados.accessToken;
     } catch (erro) {
       // Falha de rede na renovação: mesmo desfecho, causa completamente
@@ -174,8 +225,8 @@ export async function entrar(
     guardar(null);
     return { ok: false, status: res.status };
   }
-  const dados = (await res.json()) as { accessToken: string };
-  guardar(dados.accessToken);
+  const dados = (await res.json()) as { accessToken: string; locale?: string };
+  guardar(dados.accessToken, dados.locale ?? null);
   return { ok: true };
 }
 

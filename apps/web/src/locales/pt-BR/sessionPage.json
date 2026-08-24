@@ -1,0 +1,167 @@
+{
+  "status": {
+    "created": "ainda não ativada",
+    "active": "ativa",
+    "closing": "encerrando",
+    "closed": "encerrada",
+    "closedAbnormally": "encerrada anormalmente",
+    "loading": "carregando",
+    "ariaLabel": "Sessão {{status}}"
+  },
+  "compartilhado": {
+    "semTitulo": "(sem título)",
+    "verNoBacklog": "Ver no Backlog",
+    "voce": "Você",
+    "agenteGenerico": "agente"
+  },
+  "topbar": {
+    "voltarAoProjeto": "Voltar ao projeto",
+    "nomeDaSessao": "Nome da sessão",
+    "semNomeFicaHashtag": "Sem nome — a sessão fica {{hashtag}}",
+    "tituloRenomear": "Sessão {{rotulo}} — clique para renomear",
+    "tituloSessao": "Sessão {{rotulo}}",
+    "trazCriativo": "traz o Criativo pra conversa",
+    "iniciarIdeacao": "Iniciar ideação",
+    "iniciarIdeacaoTitulo": "Traz o Criativo para conduzir a ideação desta sessão — ele ainda não entrou",
+    "encerrar": "Encerrar",
+    "alternarPainel": "Alternar painel de contexto"
+  },
+  "convite": {
+    "criativa": {
+      "titulo": "A vez é sua",
+      "texto": "Esta é uma sessão <b>criativa</b>. O <b>Criativo</b> conduz a ideação: ele faz perguntas sobre o produto e registra as <b>regras de negócio</b> que saírem da conversa. Ele não decide tecnologia nem escreve código — isso é do Arquiteto e dos devs, mais adiante.",
+      "iniciarIdeacao": "Iniciar ideação",
+      "iniciarIdeacaoNota": "Ele ainda não entrou — é este clique que o traz.",
+      "exemploIntro": "Comece contando o que você quer construir e para quem. Por exemplo:",
+      "exemplo": "Quero uma API que responda uma saudação para quem chamar. É para eu validar o fluxo de ponta a ponta.",
+      "rodape": "Quando as regras estiverem completas, use <b>Estou pronto para produzir</b> — é o que gera o brief e passa a bola ao PO."
+    },
+    "consultiva": {
+      "titulo": "Sessão consultiva",
+      "texto": "Aqui é conversa com o modelo: pergunte, peça contexto, tire dúvidas. <b>Nenhum agente é ativado</b>, o Criativo não entra e esta sessão não vai para execução.",
+      "rodape": "Quando for para <b>produzir</b>, abra uma sessão <b>criativa</b> na aba Sessões do projeto — o tipo é escolhido na criação e não muda depois."
+    }
+  },
+  "composer": {
+    "placeholder": "Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)",
+    "enviar": "Enviar",
+    "parar": "Parar",
+    "prontoParaProduzir": "Estou pronto para produzir",
+    "prontoParaProduzirDesabilitado": "Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão",
+    "confirmarArquitetura": "Confirmar arquitetura pronta",
+    "confirmarArquiteturaDesabilitado": "Promova pelo menos uma história no Backlog antes de confirmar a arquitetura",
+    "confirmarNecessidade": "Confirmar necessidade validada",
+    "confirmarNecessidadeDesabilitado": "Confirme \"Estou pronto para produzir\" com o Criativo antes de validar a necessidade"
+  },
+  "ativacao": {
+    "naoAtivada": "Sessão ainda não ativada.",
+    "ativarSessao": "Ativar sessão",
+    "statusGenerico": "Sessão {{status}} — não é possível enviar mensagens."
+  },
+  "mensagens": {
+    "reunindoInformacoes": "Reunindo informações...",
+    "respostaVazia": "Resposta vazia — evento anterior à RN-059, quando falha de turno era gravada como resposta em branco. O motivo real não foi registrado.",
+    "modeloGerador": "Modelo que gerou esta resposta: {{modelName}}",
+    "modeloNaoGravado": "Esta resposta foi gravada sem o nome do modelo",
+    "modeloNaoRegistrado": "modelo não registrado",
+    "falhaOrigem": "falha · origem {{origem}}"
+  },
+  "historia": {
+    "pendente": "história \"{{titulo}}\" pronta, aguardando sua promoção",
+    "estevePendente": "história \"{{titulo}}\" esteve aguardando sua promoção",
+    "promover": "Promover",
+    "devolver": "Devolver",
+    "aprovarTodas": "Aprovar todas",
+    "aguardandoPromocao_one": "{{count}} história aguardando promoção",
+    "aguardandoPromocao_other": "{{count}} histórias aguardando promoção",
+    "devolveuAoPo": "devolveu ao PO",
+    "tituloFallback": "uma história",
+    "semMotivo": "sem motivo"
+  },
+  "handoff": {
+    "passouOBastaoAo": "passou o bastão ao",
+    "aceitarEIniciar": "Aceitar handoff e iniciar {{agente}}",
+    "ativarExecucao": "Ativar execução",
+    "acompanheExecucao": "Acompanhe a execução em Executores",
+    "manualLabel": "Endereçar handoff a outro agente",
+    "manualPlaceholder": "Escolher agente...",
+    "manualBotao": "Endereçar handoff"
+  },
+  "backlog": {
+    "criouEpico": "criou o épico",
+    "criouHistoria": "criou a história"
+  },
+  "perguntas": {
+    "respondidas": "perguntas do {{agente}} — respondidas",
+    "titulo": "perguntas do {{agente}}",
+    "selecione": "Selecione",
+    "outraEscrever": "Outra (escrever)",
+    "suaResposta": "Sua resposta — {{pergunta}}",
+    "enviarRespostas": "Enviar respostas",
+    "respostasEnviadas": "Respostas enviadas",
+    "erroEnviar": "Não foi possível enviar as respostas"
+  },
+  "toasts": {
+    "erro": "Erro",
+    "erroAtivarSessao": "Não foi possível ativar a sessão",
+    "erroRenomear": "Não foi possível renomear a sessão",
+    "erroIniciarIdeacao": "Não foi possível iniciar a ideação",
+    "erroConfirmarProntidao": "Não foi possível confirmar prontidão",
+    "erroConfirmarArquitetura": "Não foi possível confirmar a arquitetura",
+    "necessidadeValidada": "Necessidade validada",
+    "erroValidarNecessidade": "Não foi possível validar a necessidade",
+    "erroAceitarHandoff": "Não foi possível aceitar o handoff",
+    "handoffManualEnviado": "Handoff enviado",
+    "erroHandoffManual": "Não foi possível enviar o handoff",
+    "execucaoAtivada": "Execução ativada",
+    "erroAtivarExecucao": "Não foi possível ativar a execução",
+    "modoAutomaticoLigado": "Modo automático ligado",
+    "erroModoAutomatico": "Não foi possível ligar o modo automático",
+    "erroPromover": "Não foi possível promover",
+    "historiaPromovida": "História promovida",
+    "historiasPromovidas_one": "História promovida",
+    "historiasPromovidas_other": "{{count}} histórias promovidas",
+    "promovidasParcial": "{{promovidas}} de {{total}} promovidas",
+    "erroPromoverHistoria": "Não foi possível promover a história",
+    "erroPromoverHistorias": "Não foi possível promover as histórias",
+    "historiaDevolvida": "História devolvida ao PO",
+    "erroDevolverHistoria": "Não foi possível devolver a história",
+    "erroEnviarMensagem": "Não foi possível enviar a mensagem",
+    "erroCancelarTurno": "Não foi possível cancelar o turno",
+    "erroNoChat": "Erro no chat",
+    "aviso": "Aviso"
+  },
+  "modal": {
+    "devolverTitulo": "Devolver \"{{titulo}}\" ao PO?",
+    "motivo": "Motivo",
+    "motivoDica": "Vai como mensagem fixada na sessão do PO. Diga o que falta — é com isto que ele reescreve a história.",
+    "motivoPlaceholder": "Ex.: os critérios de aceite não cobrem a recusa do pagamento.",
+    "devolverAoPo": "Devolver ao PO",
+    "cancelar": "Cancelar"
+  },
+  "artefatos": {
+    "pullRequest": "Pull request",
+    "adr": "ADR",
+    "historias": "histórias",
+    "tarefas": "tarefas",
+    "itens": "itens",
+    "mensagensCount_one": "{{count}} mensagem",
+    "mensagensCount_other": "{{count}} mensagens"
+  },
+  "aside": {
+    "titulo": "Contexto da sessão",
+    "teto": "Este painel lê os <b>{{lidos}}</b> eventos já carregados desta sessão. Há <b>{{anteriores}}</b> anteriores — “Carregar mais antigos”, no Log de eventos, traz mais, e as outras seções crescem junto.",
+    "regrasDeNegocio": "Regras de negócio",
+    "nadaAinda": "Nada ainda.",
+    "origemRefs": "origem: {{count}} ref(s)",
+    "paginaAnterior": "Página anterior de regras de negócio",
+    "proximaPagina": "Próxima página de regras de negócio",
+    "paginaDe": "{{atual}} de {{total}}",
+    "artefatosGerados": "Artefatos gerados",
+    "arquivosTocados": "Arquivos tocados",
+    "logDeEventos": "Log de eventos",
+    "eventoCitado": "Evento citado",
+    "eventoCitadoNaoEncontrado": "O evento citado não foi encontrado nesta sessão.",
+    "erroCarregarLog": "Não foi possível carregar o log de eventos."
+  }
+}

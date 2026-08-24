@@ -1,0 +1,21 @@
+{
+  "feed": {
+    "kindLabel": {
+      "commit": "Commits",
+      "pr": "Pull requests",
+      "hypothesis": "Hipóteses",
+      "session": "Sessão",
+      "permission": "Permissões",
+      "terminal": "Comandos",
+      "delegation": "Delegações",
+      "generic": "Outros"
+    },
+    "allAgents": "Todos os agentes",
+    "machineEvents": "Eventos de máquina",
+    "machineEventsTitle": "tool.call, tool.result, agent.response/delta, agent.status e context.compacted — o que o agente e o harness trocam entre si",
+    "empty": "Nenhuma atividade por aqui ainda.",
+    "pagerCount": "{{shown}} de {{total}} carregados",
+    "loadingOlder": "Carregando…",
+    "loadOlder": "Carregar mais antigos"
+  }
+}

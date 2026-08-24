@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type {
   CoverageMatrixRow,
   ProposedAction,
@@ -67,15 +68,16 @@ type GateStepState = 'done' | 'current' | 'blocked' | 'pending';
 type StepKey = 'dev' | 'qa' | 'secops' | 'user';
 
 /**
- * Rótulo de cada etapa. NÃO é a lista de etapas — essa vem do registro
- * (`GET /gates`, ADR 0054). Aqui só mora como a etapa se CHAMA para o
- * usuário, que é decisão de tela e não de política.
+ * Chave i18n do rótulo de cada etapa. NÃO é a lista de etapas — essa vem do
+ * registro (`GET /gates`, ADR 0054). Aqui só mora como a etapa se CHAMA para
+ * o usuário, que é decisão de tela e não de política. `etapasDaEsteira`
+ * devolve a CHAVE (não o texto): quem renderiza resolve com `t()`.
  */
 const ROTULOS: Record<StepKey, string> = {
-  dev: 'Dev',
-  qa: 'QA',
-  secops: 'SecOps',
-  user: 'Você',
+  dev: 'prGateTimeline.steps.dev',
+  qa: 'prGateTimeline.steps.qa',
+  secops: 'prGateTimeline.steps.secops',
+  user: 'prGateTimeline.steps.user',
 };
 
 /** Qual etapa da tela cada gate do registro representa. */
@@ -162,6 +164,7 @@ export function PrGateTimeline({
   verdicts,
   registro,
 }: PrGateTimelineProps) {
+  const { t } = useTranslation('approvals');
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const steps = etapasDaEsteira(registro);
 
@@ -187,10 +190,10 @@ export function PrGateTimeline({
         <span className={styles.title}>{task.title}</span>
         {prUrl && (
           <a href={prUrl} target="_blank" rel="noreferrer" className={styles.prLink}>
-            ver PR
+            {t('prGateTimeline.viewPr')}
           </a>
         )}
-        {task.blocked && <Badge tone="danger">bloqueada</Badge>}
+        {task.blocked && <Badge tone="danger">{t('prGateTimeline.blocked')}</Badge>}
       </div>
 
       <div className={styles.steps}>
@@ -202,7 +205,7 @@ export function PrGateTimeline({
                 <span className={styles.marker}>
                   <StepIcon state={state} />
                 </span>
-                <span className={styles.stepLabel}>{step.label}</span>
+                <span className={styles.stepLabel}>{t(step.label)}</span>
               </div>
               {i < steps.length - 1 && <span className={styles.connector} />}
             </div>
@@ -239,24 +242,25 @@ function VerdictCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const gateLabel = verdict.gate === 'qa' ? 'QA' : 'SecOps';
+  const { t } = useTranslation('approvals');
+  const gateLabel = verdict.gate === 'qa' ? t('prGateTimeline.steps.qa') : t('prGateTimeline.steps.secops');
   const approved = verdict.veredito === 'approved';
 
   const columns: TableColumn<CoverageMatrixRow>[] = [
-    { key: 'rule', label: 'Regra', width: '2fr', render: (r) => r.rule },
+    { key: 'rule', label: t('prGateTimeline.coverage.rule'), width: '2fr', render: (r) => r.rule },
     {
       key: 'tests',
-      label: 'Testes',
+      label: t('prGateTimeline.coverage.tests'),
       width: '2fr',
       render: (r) => r.tests.join(', ') || '—',
     },
     {
       key: 'covered',
-      label: 'Cobertura',
+      label: t('prGateTimeline.coverage.covered'),
       width: '110px',
       render: (r) => (
         <Badge tone={r.covered ? 'success' : 'danger'}>
-          {r.covered ? 'coberta' : 'sem teste'}
+          {r.covered ? t('prGateTimeline.coverage.coveredYes') : t('prGateTimeline.coverage.coveredNo')}
         </Badge>
       ),
     },
@@ -266,7 +270,8 @@ function VerdictCard({
     <div className={styles.verdictCard}>
       <button type="button" className={styles.verdictHeader} onClick={onToggle}>
         <Badge tone={approved ? 'success' : 'danger'}>
-          {gateLabel}: {approved ? 'aprovado' : 'mudanças solicitadas'}
+          {gateLabel}:{' '}
+          {approved ? t('prGateTimeline.verdict.approved') : t('prGateTimeline.verdict.changesRequested')}
         </Badge>
         <span className={styles.verdictSummary}>{verdict.resumo}</span>
       </button>
@@ -292,7 +297,10 @@ function VerdictCard({
                 <div key={sv.agentId} className={styles.subVerdictCard}>
                   <div className={styles.subVerdictHeader}>
                     <Badge tone={sv.veredito === 'approved' ? 'success' : 'danger'}>
-                      {sv.label}: {sv.veredito === 'approved' ? 'aprovado' : 'mudanças solicitadas'}
+                      {sv.label}:{' '}
+                      {sv.veredito === 'approved'
+                        ? t('prGateTimeline.verdict.approved')
+                        : t('prGateTimeline.verdict.changesRequested')}
                     </Badge>
                     <span className={styles.verdictSummary}>{sv.resumo}</span>
                   </div>
@@ -312,7 +320,9 @@ function VerdictCard({
               {verdict.dispensed.map((d) => (
                 <div key={d.agentId} className={styles.subVerdictCard}>
                   <div className={styles.subVerdictHeader}>
-                    <Badge tone="muted">{d.label}: dispensada</Badge>
+                    <Badge tone="muted">
+                    {d.label}: {t('prGateTimeline.verdict.dispensed')}
+                  </Badge>
                     <span className={styles.verdictSummary}>{d.justification}</span>
                   </div>
                 </div>

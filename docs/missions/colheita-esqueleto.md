@@ -1,265 +1,284 @@
-# Esqueleto da colheita (10c)
+# Harvest skeleton (10c)
 
-Material de trabalho. **Este arquivo não é o relatório** — é o molde dele.
+Working material. **This file is not the report** — it is its mold.
 
-Quando a 10b tiver rodado, preencha os marcadores, escreva a prosa, e **mova**
-o resultado para `docs/explanation/primeiro-dogfooding.md`, que é página
-publicada e portanto precisa de frontmatter (`id`, `title`, `sidebar_label`,
-`sidebar_position`, `description`, `keywords`, no padrão de
-`docs/explanation/documentation-workflow.md`) e de entrada em
-`website/sidebars.ts`. Este arquivo mora em `docs/missions/`, excluído do build,
-justamente para o esqueleto não ir ao ar dizendo nada.
+Once 10b has run, fill in the markers, write the prose, and **move** the
+result to `docs/explanation/primeiro-dogfooding.md`, which is a published
+page and therefore needs frontmatter (`id`, `title`, `sidebar_label`,
+`sidebar_position`, `description`, `keywords`, in the pattern of
+`docs/explanation/documentation-workflow.md`) and an entry in
+`website/sidebars.ts`. This file lives in `docs/missions/`, excluded from
+the build, precisely so the skeleton never ships saying nothing.
 
-**Como preencher.** Cada número aparece como `<!-- query: nome -->`. O nome é o
-bloco correspondente em `docs/missions/colheita-queries.sql`. Rode:
+**How to fill it in.** Each number appears as `<!-- query: name -->`. The
+name is the corresponding block in `docs/missions/colheita-queries.sql`. Run:
 
 ```bash
-pnpm --filter api db:migrate     # obrigatório: as queries de custo usam colunas da Fase 9
+pnpm --filter api db:migrate     # required: the cost queries use Phase 9 columns
 docker exec -i brabo-postgres-1 psql -U brabo -d brabo \
   -f - < docs/missions/colheita-queries.sql
 ```
 
-**Regra que vale mais que o prazo:** nenhum número entra sem query que o
-produza. O que não fechar entra como "não medido" — nunca como estimativa
-(princípio 6 da missão).
+**Rule that matters more than the deadline:** no number goes in without the
+query that produces it. Whatever doesn't close goes in as "not measured" —
+never as an estimate (principle 6 of the mission).
 
 ---
 
-## 1. A resposta
+## 1. The answer
 
-> A pergunta que a fase existe para responder: **quanto custou, em dinheiro e em
-> atenção humana, cada provider — e o Brabo compensa?**
+> The question the phase exists to answer: **how much did each provider
+> cost, in money and in human attention — and does Brabo pay off?**
 
-Responda em três parágrafos, nesta ordem, antes de qualquer tabela. Quem lê isto
-daqui a um ano quer a conclusão, não a apuração.
+Answer in three paragraphs, in this order, before any table. Whoever reads
+this a year from now wants the conclusion, not the audit trail.
 
-| provider | sessões | chamadas de LLM | custo (USD) | cliques que custou |
+| provider | sessions | LLM calls | cost (USD) | clicks it cost |
 |---|---|---|---|---|
 | Bitbucket | <!-- query: a-pergunta-da-fase --> | | | |
 | Generic | <!-- query: a-pergunta-da-fase --> | | | |
 
-**Compensa?** Não responda com o custo isolado. A comparação honesta é contra o
-que o mesmo trabalho custaria fora do Brabo — e o número que ninguém mais mede é
-o da coluna da direita: quantas vezes uma pessoa teve que parar o que estava
-fazendo para decidir.
+**Does it pay off?** Don't answer with the isolated cost. The honest
+comparison is against what the same work would cost outside Brabo — and the
+number nobody else measures is the right-hand column: how many times a
+person had to stop what they were doing to decide.
 
-> ⚠️ Se o Arquiteto não separou os dois providers em módulos distintos no
-> `module_map`, esta tabela não separa também. Isso é achado — registre em §8 em
-> vez de rateio inventado.
+> ⚠️ If the Architect did not separate the two providers into distinct
+> modules in the `module_map`, this table doesn't separate them either.
+> That's a finding — record it in §8 instead of an invented split.
 
 ---
 
-## 2. Consolidação por sessão
+## 2. Consolidation by session
 
-Copie a tabela preenchida da missão (Parte 4.1) e confronte com o banco.
+Copy the filled-in table from the mission (Part 4.1) and cross-check it
+against the database.
 
-| # | sessão | task | cliques | intervenções | restarts | custo | gates | nota |
+| # | session | task | clicks | interventions | restarts | cost | gates | note |
 |---|---|---|---|---|---|---|---|---|
 | | | | <!-- query: cliques-por-sessao --> | | | <!-- query: custo-por-agente --> | <!-- query: voltas-de-gate --> | |
 
-**Divergência entre a anotação e o banco é achado sobre a observabilidade, não
-erro seu.** Registre as duas colunas lado a lado quando divergirem, e explique em
-§8. Duas fontes de divergência já conhecidas antes de começar:
+**A divergence between the note and the database is a finding about
+observability, not your error.** Record the two columns side by side when
+they diverge, and explain in §8. Two sources of divergence already known
+before starting:
 
-- a contagem de cliques **não está no event log** (achado #17) — a fonte é
+- the click count **is not in the event log** (finding #17) — the source is
   `proposed_actions.decided_at`;
-- `restarts do engine` não tem registro nenhum no sistema. É só a sua anotação.
-  Se você não anotou, ficou perdido.
+- `engine restarts` has no record anywhere in the system. It's only your
+  note. If you didn't note it, it's lost.
 
 ---
 
-## 3. Onde a atenção humana foi gasta
+## 3. Where human attention was spent
 
 <!-- query: cliques-por-tipo -->
 
-| tipo de ação | cliques | passou sem clique | % que exigiu humano |
+| action type | clicks | went through without a click | % that required a human |
 |---|---|---|---|
 
-A leitura que interessa: **qual tipo de ação concentrou a fadiga.** Se um só tipo
-responde pela maioria dos cliques, aí está o candidato natural a afrouxamento de
-política — e a fase mediu justamente o custo de *não* ter afrouxado nada.
+The reading that matters: **which action type concentrated the fatigue.**
+If a single type accounts for most of the clicks, that's the natural
+candidate for loosening policy — and the phase measured precisely the cost
+of *not* having loosened anything.
 
 ---
 
-## 4. Custo
+## 4. Cost
 
-### Por agente
+### By agent
 
 <!-- query: custo-por-agente -->
 
-| agente | chamadas | tokens in | tokens out | USD | contagens estimadas |
+| agent | calls | tokens in | tokens out | USD | estimated counts |
 |---|---|---|---|---|---|
 
-A coluna de **contagens estimadas** importa: são chamadas em que o provider não
-informou `usage` e o número saiu do tokenizer local (RN-041). Custo com muitas
-estimativas é menos confiável, e dizer isso é mais honesto que arredondar.
+The **estimated counts** column matters: these are calls where the provider
+didn't report `usage` and the number came from the local tokenizer
+(RN-041). Cost with many estimates is less reliable, and saying so is more
+honest than rounding.
 
-### Por provider de LLM
+### By LLM provider
 
 <!-- query: custo-por-provider-de-llm -->
 
-| provider de entrada | provedor real | modelo | chamadas | USD |
+| input provider | actual provider | model | calls | USD |
 |---|---|---|---|---|
 
-### O custo é reproduzível?
+### Is the cost reproducible?
 
 <!-- query: custo-reproduzivel -->
 
-Esperado: **nenhuma linha na categoria `nao_fecha`**. Linhas em
-`sem_preco_gravado` são anteriores às migrações da Fase 9 e não são defeito.
+Expected: **no row in the `nao_fecha` category**. Rows in
+`sem_preco_gravado` predate the Phase 9 migrations and are not a defect.
 
-Se aparecer `nao_fecha`, isso contradiz a RN-044 e vira achado P1 sobre o
-metering — mais importante que qualquer número desta seção, porque coloca todos
-os outros em dúvida.
+If `nao_fecha` shows up, it contradicts RN-044 and becomes a P1 finding
+about the metering — more important than any other number in this section,
+because it puts every other number in doubt.
 
 ---
 
 ## 5. Gates
 
-### Voltas de correção
+### Correction rounds
 
 <!-- query: voltas-de-gate -->
 
-| task | gate | voltas | bloqueada | origem |
+| task | gate | rounds | blocked | origin |
 |---|---|---|---|---|
 
-Task bloqueada com `blocked_origin` preenchida esgotou o ciclo K (teto 3, salvo
-configuração na ativação). **A origem é o dado**: `infra` e `modelo` dizem coisas
-opostas sobre o produto — a primeira é ambiente, a segunda é o agente não dando
-conta.
+A task blocked with `blocked_origin` filled in exhausted cycle K (cap 3,
+unless configured on activation). **The origin is the data**: `infra` and
+`modelo` say opposite things about the product — the first is environment,
+the second is the agent not managing.
 
-### A área de QA funcionou?
+### Did the QA area work?
 
 <!-- query: delegacoes-e-dispensas -->
 
-| área | lead | subagente | status | quantas | com falha |
+| area | lead | subagent | status | how many | with failure |
 |---|---|---|---|---|---|
 
-Três perguntas a responder em prosa:
+Three questions to answer in prose:
 
-1. O parecer consolidado dizia algo **útil**, ou era colagem dos sub-pareceres?
-2. As dispensas foram justificadas de forma **verificável**?
-3. A subespecialidade de Performance/Segurança chegou a rodar? Se só houve
-   dispensa, a causa provável é nenhuma story ter RNF com uma das palavras-chave
-   que o QA Lead reconhece — o que é achado sobre a heurística, não sobre o QA.
+1. Did the consolidated verdict say something **useful**, or was it a
+   collage of the sub-verdicts?
+2. Were the dismissals justified in a **verifiable** way?
+3. Did the Performance/Security subspecialty ever run? If it was only
+   dismissed, the likely cause is that no story had an NFR with one of the
+   keywords the QA Lead recognizes — which is a finding about the
+   heuristic, not about QA.
 
 ---
 
-## 6. O loop Psicólogo → Anamnese
+## 6. The Psychologist → Anamnese loop
 
-**Leia as hipóteses agora, em lote — não antes.** Se você leu durante a fase, diga
-isso aqui: contamina a interpretação e é honesto registrar.
+**Read the hypotheses now, in a batch — not before.** If you read them
+during the phase, say so here: it contaminates the interpretation, and
+it's honest to record it.
 
 <!-- query: hipoteses-e-decisoes -->
 
-| agente-alvo | status | quantas | confiança média | evidências por hipótese |
+| target agent | status | how many | average confidence | evidence per hypothesis |
 |---|---|---|---|---|
 
 <!-- query: hipotese-para-patch -->
 
-| hipótese | decisão | virou patch? | versão | decisão do patch |
+| hypothesis | decision | became a patch? | version | patch decision |
 |---|---|---|---|---|
 
-O que a tabela precisa provar:
+What the table needs to prove:
 
-- **hipótese aceita que não virou patch** (`patch_id` nulo) — o loop não fechou, e
-  isso é achado;
-- **patch negado que foi reproposto** — contradiz a RN-026 e é achado grande;
-- se você negou ao menos um de propósito, como a missão pedia (2.3), diga o que
-  aconteceu depois.
+- **accepted hypothesis that didn't become a patch** (`patch_id` null) — the
+  loop didn't close, and that's a finding;
+- **denied patch that was re-proposed** — contradicts RN-026 and is a big
+  finding;
+- if you denied at least one on purpose, as the mission asked (2.3), say
+  what happened afterward.
 
 ---
 
-## 7. Linha do tempo das PRs
+## 7. PR timeline
 
 <!-- query: linha-do-tempo-das-prs -->
 
-| quando | quem abriu | título | branch | onde parou |
+| when | who opened it | title | branch | where it stopped |
 |---|---|---|---|---|
 
-Lembre que `awaiting_user` é terminal **de propósito**: o merge acontece no
-provider de git, fora do produto. PR parada ali não está travada — está esperando
-você, como desenhado.
+Remember that `awaiting_user` is terminal **by design**: the merge happens
+at the git provider, outside the product. A PR stopped there isn't
+stuck — it's waiting for you, as designed.
 
 ---
 
-## 8. Promessa × realidade
+## 8. Promise × reality
 
-A seção mais importante, e a única que não sai de query. Prosa honesta.
+The most important section, and the only one that doesn't come from a
+query. Honest prose.
 
-### O que não funcionou como prometido
+### What didn't work as promised
 
-Os achados #1–#17 da missão já estão levantados e **não precisam ser
-redescobertos** — referencie-os. O que esta seção acrescenta é o que só a
-execução revela: onde o produto travou de verdade, quantas vezes, e quanto custou
-contornar.
+Findings #1–#17 from the mission are already raised and **don't need to be
+rediscovered** — reference them. What this section adds is what only
+execution reveals: where the product actually got stuck, how many times,
+and how much it cost to work around it.
 
-### O que os agentes fizeram MELHOR que o esperado
+### What the agents did BETTER than expected
 
-Seção obrigatória, e resista a deixá-la vazia por modéstia ou por viés: um
-relatório que só lista falhas é tão inútil quanto um que só lista sucessos.
-Perguntas que ajudam a encontrar material:
+Mandatory section — resist leaving it empty out of modesty or bias: a
+report that only lists failures is as useless as one that only lists
+successes. Questions that help find material:
 
-- Algum parecer de QA pegou algo que **você** teria deixado passar?
-- Algum agente resolveu uma ambiguidade do backlog sem precisar perguntar?
-- O SecOps determinístico achou algo real, ou só ruído?
-- Alguma hipótese do Psicólogo estava **certa** de um jeito que te surpreendeu?
-- O ADR do Arquiteto ficou melhor do que você teria escrito com o mesmo tempo?
+- Did any QA verdict catch something **you** would have let through?
+- Did any agent resolve a backlog ambiguity without needing to ask?
+- Did the deterministic SecOps find something real, or just noise?
+- Was any Psychologist hypothesis **correct** in a way that surprised you?
+- Did the Architect's ADR turn out better than what you would have written
+  in the same time?
 
-### O que mudou de opinião
+### What changed your mind
 
-Se a fase te fez mudar de ideia sobre alguma decisão de arquitetura anterior,
-este é o lugar. É o parágrafo mais valioso do documento e o mais fácil de omitir.
+If the phase made you change your mind about any earlier architectural
+decision, this is the place. It's the most valuable paragraph in the
+document and the easiest to omit.
 
 ---
 
-## 9. Roteiro do ADR
+## 9. ADR outline
 
-O ADR nasce **aqui**, na colheita, com o próximo número livre na hora — não
-antes. ADR é registro de decisão, e as decisões saem dos dados; um ADR criado
-vazio queimaria o número e nasceria destinado a ser reescrito, contra a regra de
-que ADR aceito nunca é editado.
+The ADR is born **here**, at harvest time, with the next free number at
+that moment — not before. An ADR is a record of a decision, and decisions
+come from the data; an ADR created empty would burn the number and be born
+destined to be rewritten, against the rule that an accepted ADR is never
+edited.
 
-Título sugerido: **"primeiro dogfooding"**. Três seções, só elas (Contexto,
-Decisão, Consequências), como todo ADR do repositório.
+Suggested title: **"first dogfooding"**. Three sections, only these
+(Context, Decision, Consequences), like every ADR in the repository.
 
-**Contexto** — o que a fase se propôs a medir e o que de fato mediu.
+**Context** — what the phase set out to measure and what it actually
+measured.
 
-**Decisão** — os aprendizados **estruturais**, não a lista de bugs. O que a fase
-ensinou sobre o desenho do produto que vale mudar. Candidatos que a preparação já
-sugere, a confirmar ou refutar com os dados:
+**Decision** — the **structural** learnings, not the bug list. What the
+phase taught about the product's design that's worth changing. Candidates
+the preparation already suggests, to confirm or refute with the data:
 
-- o gargalo de uma task por agente é limitação de desenho ou de implementação?
-- a métrica central da fase não estar no event log é acidente ou sintoma de o
-  event log servir a outro propósito?
-- áreas hardcoded resolveram bem o suficiente, ou a tabela do ADR 0038 faz falta?
+- is the one-task-per-agent bottleneck a design limitation or an
+  implementation one?
+- is the phase's central metric not being in the event log an accident, or
+  a symptom that the event log serves a different purpose?
+- did hardcoded areas resolve well enough, or is the ADR 0038 table
+  missed?
 
-**Consequências** — o backlog priorizado. Formato:
+**Consequences** — the prioritized backlog. Format:
 
-| # | item | prio | justificativa |
+| # | item | prio | justification |
 |---|---|---|---|
-| | | P1/P2/P3 | por que esta prioridade, com o dado que a sustenta |
+| | | P1/P2/P3 | why this priority, with the data behind it |
 
-**P1** = impede o produto de fazer o que promete. **P2** = custa caro em atenção
-ou dinheiro, mas tem contorno. **P3** = incômodo ou dívida de clareza.
+**P1** = prevents the product from doing what it promises. **P2** =
+expensive in attention or money, but has a workaround. **P3** = annoyance
+or clarity debt.
 
-**Nenhum fix embutido.** O ADR registra o que foi decidido fazer; não faz.
+**No embedded fixes.** The ADR records what was decided to do; it doesn't
+do it.
 
 ---
 
-## 10. Entrega técnica
+## 10. Technical delivery
 
-Status verificado em **2026-08-01**, antes de a 10b rodar. Reconfira na colheita.
+Status verified on **2026-08-01**, before 10b ran. Re-check at harvest
+time.
 
-| critério | status | evidência |
+| criterion | status | evidence |
 |---|---|---|
-| suite de contrato verde nos 5 providers | ⛔ **3** — local, github, gitlab | 5 chamadas a `runGitProviderContract`, 3 providers distintos |
-| wizard com Bitbucket e Generic | ⛔ ausentes | `apps/web/src/routes/NewProjectWizard.tsx:34-36` |
-| degradação do Generic testada | ⛔ não existe | nenhum arquivo `*generic-git*` em `apps/` |
-| divergência "sem Bitbucket na UI" removida | ⛔ travada por teste | `apps/web/src/components/ProjectCard.test.tsx:69` afirma "só github, gitlab ou local — sem Bitbucket"; `design/COMPONENTS.md:222` pede grid 2x2 **com** Bitbucket |
-| docmap / CHANGELOG / docs verdes | ✅ | `pnpm docs:check` e `pnpm docs:build` passam |
+| contract suite green across the 5 providers | ⛔ **3** — local, github, gitlab | 5 calls to `runGitProviderContract`, 3 distinct providers |
+| wizard with Bitbucket and Generic | ⛔ absent | `apps/web/src/routes/NewProjectWizard.tsx:34-36` |
+| Generic degradation tested | ⛔ doesn't exist | no `*generic-git*` file under `apps/` |
+| "no Bitbucket in the UI" divergence removed | ⛔ locked in by a test | `apps/web/src/components/ProjectCard.test.tsx:69` asserts "only github, gitlab, or local — no Bitbucket"; `design/COMPONENTS.md:222` calls for a 2x2 grid **with** Bitbucket |
+| docmap / CHANGELOG / docs green | ✅ | `pnpm docs:check` and `pnpm docs:build` pass |
 
-Sobre o quarto item: a divergência **não é esquecimento** — é trancada por um
-teste que afirma existirem só três providers. Implementar o Bitbucket vai
-reprovar esse teste, e isso é o mecanismo funcionando. Na colheita, registre se
-o agente entendeu isso sozinho ou se precisou de intervenção.
+About the fourth item: the divergence **is not an oversight** — it's locked
+in by a test that asserts only three providers exist. Implementing
+Bitbucket will fail that test, and that's the mechanism working. At harvest
+time, record whether the agent understood this on its own or needed
+intervention.

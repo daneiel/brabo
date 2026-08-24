@@ -1,6 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { deriveStepStates } from './bootstrap';
 import type { SessionEvent } from './api-types';
+// Instância REAL do app: `deriveStepStates` resolve a nota "não suportado"
+// via `i18n.t(..., { ns: 'provisioning' })` fora de componente (mesmo padrão
+// de `lib/agent-status.ts`/`lib/spend.ts`) — sem trocar o idioma para pt-BR,
+// o default do app (`en`, RN-425) faria a asserção abaixo falhar.
+import i18n from './i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
 
 function evt(
   seq: number,

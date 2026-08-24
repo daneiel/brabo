@@ -1,0 +1,184 @@
+{
+  "chatShell": {
+    "segments": {
+      "chat": "Chat",
+      "search": "Search"
+    },
+    "ariaLabel": "Chat mode"
+  },
+  "rag": {
+    "scopes": {
+      "docs": "Docs",
+      "adr": "ADR",
+      "session": "Sessions",
+      "local": "Local"
+    },
+    "title": "RAG Chat",
+    "subtitle": "Hybrid search (vector + lexical) over the repository's docs/ADRs, the conversations recorded in this project, and attached local folders — never source code, never a Pull Request.",
+    "reindexButton": {
+      "idle": "Reindex now",
+      "loading": "Reindexing…"
+    },
+    "coverageError": "Could not load the index coverage.",
+    "loadingCoverage": "Loading coverage…",
+    "reindexSuccessTitle": "Reindexing complete",
+    "reindexSuccessMessage": "{{docsAdrChunks}} chunk(s) of docs/ADR · {{indexed}} of {{total}} session(s){{embeddingSuffix}}",
+    "embeddingUnavailableSuffix": " · embedding unavailable, indexed with lexical signal only",
+    "reindexErrorTitle": "Reindexing failed",
+    "reindexErrorDefaultMessage": "The api did not respond. The index was not changed.",
+    "searchPlaceholder": "Search the index (min. 2 characters)",
+    "searchAriaLabel": "Search term",
+    "searchButton": "Search",
+    "scopeFilterAriaLabel": "Filter by scope",
+    "allScopes": "all scopes",
+    "scopesMarked": "{{count}} scope(s) selected",
+    "emptyPrompt": "Type a term and search the project's index.",
+    "searching": "Searching…",
+    "searchError": "Could not search right now.",
+    "vectorUnavailable": "Keyword-only search — embedding unavailable",
+    "noResults": "No results for “{{query}}”.",
+    "attachLocalFolder": {
+      "button": "Attach local folder",
+      "modalTitle": "Attach local folder",
+      "explanation": "File contents are read by your browser and sent as text — no path from your machine is ever sent. Each new folder REPLACES the previously attached one.",
+      "chooseFolder": "Choose folder…",
+      "reading": "Reading files…",
+      "emptyFolder": "No eligible files found in this folder (recognized text/code).",
+      "summary": "{{included}} file(s) from “{{folderName}}”, {{skipped}} skipped (too large or binary)",
+      "summaryNoSkipped": "{{included}} file(s) from “{{folderName}}”",
+      "tooManyFiles": "The folder has {{count}} file(s) — the cap is {{limit}}. Choose a smaller folder.",
+      "tooManyBytes": "The folder's content sums more than the allowed cap. Choose a smaller folder.",
+      "confirmButton": "Attach {{count}} file(s)",
+      "confirmButtonLoading": "Attaching…",
+      "cancelButton": "Cancel",
+      "successTitle": "Folder attached",
+      "successMessage": "{{filesIndexed}} file(s) indexed from “{{folderName}}”{{embeddingSuffix}}",
+      "errorTitle": "Failed to attach",
+      "errorDefaultMessage": "The api did not respond. Nothing was changed."
+    }
+  },
+  "ragCitation": {
+    "scopeLabels": {
+      "docs": "docs",
+      "adr": "ADR",
+      "session": "session",
+      "local": "local"
+    },
+    "scoreTitle": "Combined score (0.6 vector + 0.4 lexical)",
+    "relevance": "{{score}} relevance",
+    "signals": "vector {{vector}} · lexical {{lexical}}",
+    "collapse": "collapse",
+    "expand": "view full excerpt",
+    "viewInSession": "View in session"
+  },
+  "ragCoverage": {
+    "noFilesInRepo": "no files in the repository",
+    "filesIndexed": "files indexed",
+    "truncated": "count cut off by the cap",
+    "docsLabel": "docs",
+    "adrLabel": "ADR",
+    "sessionsLabel": "sessions",
+    "noSessionsInProject": "no sessions in the project",
+    "sessionsIndexed": "sessions indexed",
+    "localLabel": "local",
+    "noLocalFolder": "no folder attached",
+    "localFolder": "from “{{folderName}}”",
+    "localAttachedAt": "attached on {{date}}",
+    "chunksInIndex": "{{count}} chunk(s) in the index",
+    "chunksWithoutVector": "{{count}} without a vector — indexed with lexical signal only"
+  },
+  "sessionFailure": {
+    "noMessage": "The turn failed and the reason was not recorded. Try again; if it happens again, the event log has the raw payload.",
+    "unknownOrigin": "unknown"
+  },
+  "sessionKind": {
+    "consultiva": {
+      "label": "Consultative",
+      "description": "Just conversation: questions, context, clearing up doubts. No agent is activated on its own and it never enters execution."
+    },
+    "criativa": {
+      "label": "Creative",
+      "description": "For building: opens ideation with the Creative agent, who records the business rules and hands off to the PO. It's the only kind that enters execution."
+    }
+  },
+  "sessionsTab": {
+    "status": {
+      "created": "waiting",
+      "active": "active",
+      "closing": "closing",
+      "closed": "closed",
+      "closedAbnormally": "aborted"
+    },
+    "filters": {
+      "all": "All",
+      "active": "Active",
+      "closed": "Closed",
+      "aborted": "Aborted"
+    },
+    "kindCopy": {
+      "criativa": {
+        "title": "Creative",
+        "openButton": "+ New ideation",
+        "confirmButton": "Open creative session",
+        "empty": "No ideation yet. Open one for the Creative agent to work through the product's business rules with you."
+      },
+      "consultiva": {
+        "title": "Chat",
+        "openButton": "+ New conversation",
+        "confirmButton": "Open consultative session",
+        "empty": "No conversation yet. Open one to ask questions and get context without activating any agent."
+      }
+    },
+    "cancelButton": "Cancel",
+    "renameError": {
+      "title": "Error",
+      "message": "Could not rename the session"
+    },
+    "createActivationFailed": {
+      "title": "The session was created, but it did not activate",
+      "message": "Open the session and try \"Activate session\"."
+    },
+    "createFailed": {
+      "title": "Could not open the session"
+    },
+    "newSessionForm": {
+      "nameLabel": "Name (optional)",
+      "namePlaceholder": "Checkout flow",
+      "nameHint": "The id's hashtag keeps showing up — the name is just added to it."
+    },
+    "openingButton": "Opening…",
+    "filterGroupAriaLabel": "Filter sessions by status",
+    "summaryLine": "{{total}} proposed action(s) in these sessions · {{decided}} decided by you · {{autoApproved}} auto-approved by policy · {{pending}} awaiting",
+    "loadError": "Could not load this project's sessions.",
+    "filterEmpty": "No sessions in this filter.",
+    "renameInput": {
+      "ariaLabel": "Session name",
+      "placeholder": "No name — the session stays {{hashtag}}"
+    },
+    "rowTitle": "Session {{rotulo}} — click to rename",
+    "approvalsPending": "{{pending}} awaiting · {{decided}} decided by you",
+    "approvalsDecided": "{{decided}} decided by you · {{auto}} auto",
+    "kpis": {
+      "sessionsInProject": {
+        "label": "Sessions in project",
+        "detail": "all ideations, in any status"
+      },
+      "activeNow": {
+        "label": "Active now",
+        "detail": "of {{total}} total"
+      },
+      "ideationToCommit": {
+        "label": "Ideation → commit rate",
+        "value": "—",
+        "detail": "not measured: a session isn't linked to a commit today"
+      },
+      "monthlyCost": {
+        "label": "Cost this month",
+        "errorValue": "—",
+        "loadingValue": "…",
+        "errorDetail": "could not load",
+        "detail": "your spend on this project, 30 days"
+      }
+    }
+  }
+}

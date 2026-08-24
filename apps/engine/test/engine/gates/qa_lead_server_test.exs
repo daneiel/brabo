@@ -57,6 +57,12 @@ defmodule Engine.Gates.QaLeadServerTest do
     }
   end
 
+  # --- helpers de run_design (ADR 0090) ---
+  defp epico(stories), do: %{"id" => "ep-1", "title" => "Épico", "stories" => stories}
+
+  defp story_backlog(id),
+    do: %{"id" => id, "title" => "Cadastro", "rf" => [], "rnf" => [], "dod" => []}
+
   defp dev_context(rnf) do
     %{
       "task" => %{"id" => "task-abc12345", "title" => "Cadastro", "description" => ""},
@@ -308,6 +314,63 @@ defmodule Engine.Gates.QaLeadServerTest do
                )
 
       assert igual.pendente.action_id == "pa-99"
+    end
+  end
+
+  # ADR 0090 — o segundo momento: SEM task_id, SEM DevAgentState. O contexto
+  # do `setup` (DevAgentState de "task-abc12345") não entra aqui de propósito
+  # — é o que prova que este caminho não depende dele.
+  describe "run_design (ADR 0090, segundo momento do qa-lead)" do
+    test "story inexistente: agent.error com origem modelo, nada mais", %{
+      state: state,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      Process.put(:fake_backlog, [])
+
+      assert {:noreply, ^state} =
+               QaLeadServer.handle_cast({:run_design, session_id, "st-fantasma"}, state)
+
+      assert_received {:event_appended, ^project_id, ^session_id,
+                       %{type: "agent.error", payload: payload}}
+
+      assert payload.origem == "modelo"
+      assert payload.mensagem =~ "st-fantasma"
+      refute_received {:llm_turn, "qa-estrategia", _messages, _tools}
+    end
+
+    test "story existente: QaEstrategiaAgent roda e o plano vira artefato", %{
+      state: state,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      # `QaEstrategiaAgent` roda sem `workspace_root` (ver o moduledoc dele) —
+      # o ToolLoop cai no fallback `Workspace.workspace_dir/1`, que lê este
+      # env. As demais describes deste arquivo nunca precisaram: o
+      # `dev_state.worktree_path` do `setup` já preenche `workspace_root`.
+      Application.put_env(:engine, :project_workspaces_root, System.tmp_dir!())
+      on_exit(fn -> Application.delete_env(:engine, :project_workspaces_root) end)
+
+      Process.put(:fake_backlog, [epico([story_backlog("st-1")])])
+      Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("read_file", %{"path" => "src/x.ts"}),
+        FakeEngineApiClient.tool_call_response("emit_plano_de_teste", %{
+          "planoDeTeste" => "cobrir o cadastro",
+          "criteriosExecutaveis" => ["dado X, quando Y, então Z"],
+          "estrategiaDeAutomacao" => "integração"
+        })
+      ])
+
+      assert {:noreply, ^state} =
+               QaLeadServer.handle_cast({:run_design, session_id, "st-1"}, state)
+
+      assert_received {:event_appended, ^project_id, ^session_id,
+                       %{type: "artifact.plano_de_teste", payload: payload}}
+
+      assert payload.storyId == "st-1"
+      refute_received {:event_appended, _, _, %{type: "agent.error"}}
     end
   end
 end

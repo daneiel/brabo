@@ -15,6 +15,26 @@
   border-color: var(--border-strong);
 }
 
+/*
+ * `:focus-visible` com `outline` transparente (ADR 0036) — cópia literal do
+ * tratamento de `Input.module.css` (mesma cor, largura, offset e o bloco de
+ * `forced-colors`). O card é um `<button>` (Tab alcança), mas até aqui não
+ * tinha NENHUMA indicação de foco própria — só o `:hover`, que teclado não
+ * aciona.
+ */
+.card:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid transparent;
+  outline-offset: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+@media (forced-colors: active) {
+  .card:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
 /* `flex-start` e não `center`: o bloco de título tem duas linhas e o ícone do
    provider tem uma — centralizado, o ícone descia meio pixel abaixo do nome,
    que é onde o olho procura o alinhamento. */

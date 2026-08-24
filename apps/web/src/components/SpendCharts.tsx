@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { alturasRelativas, diaCurto, tituloDoDia, type SpendPorDia } from '../lib/spend';
 import { formatarUsd } from './CredentialSpendSection';
 import styles from './SpendCharts.module.css';
@@ -11,6 +12,13 @@ import styles from './SpendCharts.module.css';
  *
  * Uma série só, então não há legenda: o título já a nomeia. A cor é o `--accent`
  * do design system, e o texto usa tokens de TEXTO — nunca a cor da série.
+ *
+ * `BarrasPorDia` NÃO ganhou modo empilhado por provider (PROGRAMA 28, Onda 3,
+ * frente D1). Não é esquecimento: a quebra por provider virou `Ranking` (ver
+ * `ProjectSpendTab.tsx`), e o porquê — paleta categórica que não passa na
+ * validação da skill de dataviz, mais a ausência de agregação cruzada
+ * dia×provider no backend — está em `lib/spend.ts`, no bloco "Gasto por
+ * PROVIDER na tela" (RN-211).
  */
 
 /**
@@ -29,6 +37,7 @@ export function BarrasPorDia({
   serie: SpendPorDia[];
   titulo: string;
 }) {
+  const { t } = useTranslation('spend');
   const alturas = alturasRelativas(serie.map((p) => p.costMicros));
   const largura = Math.max(serie.length, 1) * 10;
   const semGasto = alturas.every((a) => a === 0);
@@ -70,7 +79,7 @@ export function BarrasPorDia({
         <span>{serie.length > 0 ? diaCurto(serie[serie.length - 1].dia) : ''}</span>
       </div>
       {semGasto && (
-        <div className={styles.eixoVazio}>Nenhum gasto nesta janela.</div>
+        <div className={styles.eixoVazio}>{t('charts.noSpendInWindow')}</div>
       )}
     </figure>
   );

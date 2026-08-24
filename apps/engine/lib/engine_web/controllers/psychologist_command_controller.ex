@@ -13,6 +13,11 @@ defmodule EngineWeb.PsychologistCommandController do
   usuário em 2026-08-10, mesmo padrão da Anamnese, ver
   docs/explanation/backlog.md): 503 com um corpo JSON, sem sequer criar o
   job — de propósito, mesmo padrão do `AnamneseCommandController`.
+
+  `status/2` (RN-454) existe para a aba Insights conseguir saber que a
+  pausa é DECISÃO antes de o usuário clicar em "Reanalisar" — sem ela, o
+  único jeito de descobrir era esbarrar no 503 acima, e uma tela sem
+  hipótese nenhuma nunca chega perto do botão que dispara isso.
   """
 
   use EngineWeb, :controller
@@ -34,5 +39,9 @@ defmodule EngineWeb.PsychologistCommandController do
       |> put_status(503)
       |> json(%{error: "psicologo_desativado"})
     end
+  end
+
+  def status(conn, _params) do
+    json(conn, %{enabled: Engine.Workers.PsychologistWorker.enabled?()})
   end
 end

@@ -205,12 +205,13 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Scripts](docs/reference/scripts.md) | todo comando `pnpm` e alvo do `Makefile`, extraídos da fonte |
 | [Eventos](docs/reference/events.md) | os tipos do event log, broadcasts e spans |
 | [Permissões](docs/reference/permissions.md) | o formato do `permissions.json` e a ordem da decisão |
-| [Artefatos](docs/reference/artifacts.md) | os sete schemas e quem pode emitir cada um |
+| [Artefatos](docs/reference/artifacts.md) | os nove schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de quinze operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 72 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 112 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
+| [Governança](GOVERNANCE.md) | modelo hoje (mantenedor único), os três papéis do modo `community` e o critério de quem entra em cada um |
 | [Onde pedir ajuda](SUPPORT.md) | qual canal para cada tipo de assunto |
 | [Código de conduta](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 |
 

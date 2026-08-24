@@ -57,7 +57,12 @@ const dispensado = labelsPr.includes('docs-not-needed') || Boolean(motivoNoCorpo
 
 const docmap = lerDocmap();
 const acionadas = regrasAcionadas(docmap, alterados);
-const docsAlterados = new Set(alterados.filter((a) => a.startsWith('docs/') || a === 'README.md'));
+// Nenhum filtro por prefixo aqui — `regra.docs` já enumera o caminho exato
+// que importa por regra; restringir a `docs/`/`README.md` só fazia arquivo
+// de referência FORA de `docs/` (`CLAUDE.md`, `GOVERNANCE.md`) nunca contar
+// como satisfeito, mesmo tocado no mesmo diff. Achado corrigindo a regra
+// `governanca`, que apontava pro mesmo problema que `claude-md` já tinha.
+const docsAlterados = new Set(alterados);
 const temAdrNovo = alterados.some((a) => /^docs\/adr\/\d{4}-.+\.md$/.test(a));
 
 const bloqueios = [];

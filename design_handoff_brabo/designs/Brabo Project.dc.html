@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="support.js"></script>
+<script src="./support.js"></script>
 </head>
 <body>
 <x-dc>
@@ -32,16 +32,27 @@
   @keyframes bring{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--success) 45%,transparent);}70%{box-shadow:0 0 0 6px transparent;}100%{box-shadow:0 0 0 0 transparent;}}
   @keyframes balert{0%,100%{opacity:1;}50%{opacity:.5;}}
   @keyframes bfade{from{opacity:0;}to{opacity:1;}}
+
+  html[data-theme="light"]{
+    --surface-0:#F5EDE0; --surface-1:#FCF8F1; --surface-2:#ECDDC7;
+    --text-primary:#0A2E3D; --text-secondary:#3C5A66; --text-muted:#80939A;
+    --accent:#C4552D; --accent-hover:#A5451F; --on-accent:#F7EEE2;
+    --success:#217E73; --warning:#B5701C; --danger:#B33A26;
+    --border:#DEC9AA; --border-strong:#C6AF8C; --code-bg:#EFE4D2;
+    --shadow:0 1px 2px rgba(10,46,61,.08),0 10px 28px rgba(10,46,61,.10);
+    color-scheme:light;
+  }
+  html[data-theme="light"] ::-webkit-scrollbar-thumb{background:#D3BE9F;}
 </style>
 </helmet>
-<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--surface-0);color:var(--text-primary);">
+<div style="display:flex;height:100vh;overflow:hidden;background:var(--surface-0);color:var(--text-primary);">
+<x-import component-from-global-scope="brabo-sidebar" from="./brabo-sidebar.js" active="app" project="brabo-api" hint-size="264px,100vh"></x-import>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;height:100vh;overflow:hidden;">
 
   <!-- ===== REGION 1 · TOP ===== -->
   <header style="flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface-1);">
     <div style="padding:16px 24px 14px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-        <div style="width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;flex-shrink:0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 3.6v16.8" stroke-width="3.4"/><path d="M10.4 4.6l5.6 3.8-5.6 3.8" stroke-width="2.8"/><path d="M10.4 12l5.6 3.8-5.6 3.8" stroke-width="2.8" opacity=".58"/></svg></div>
-        <div style="width:1px;height:24px;background:var(--border);flex-shrink:0;"></div>
         <div style="width:36px;height:36px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);display:grid;place-items:center;flex-shrink:0;color:var(--text-secondary);">
           <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2C6.5 2 2 6.5 2 12c0 4.4 2.9 8.2 6.8 9.5.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.4-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-4.9 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.8-2.3 4.6-4.6 4.9.4.3.7.9.7 1.8v2.7c0 .3.2.6.7.5A10 10 0 0 0 22 12c0-5.5-4.5-10-10-10z"/></svg>
         </div>
@@ -209,6 +220,7 @@
   </sc-if>
 
 </div>
+</div>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
@@ -258,8 +270,9 @@ class Component extends DCLogic {
 
   renderVals() {
     const st = this.state;
-    const setTab = id => () => this.setState({ tab:id });
-    const tabDefs = [['overview','Visão geral',null],['sessions','Sessões',null],['backlog','Backlog',null],['approvals','Aprovações','2'],['settings','Configurações',null]];
+    const hrefs = { criativo:'Brabo%20Criativo.dc.html', sessions:'Brabo%20Criativo.dc.html', code:'Brabo%20Code.dc.html', chat:'Brabo%20Chat.dc.html', gastos:'Brabo%20Gastos.dc.html', approvals:'Brabo%20Approvals.dc.html', settings:'Brabo%20Settings.dc.html' };
+    const setTab = id => () => { if (hrefs[id]) { try { localStorage.setItem('brabo.tab', id); } catch(e){} window.location.href = hrefs[id]; return; } this.setState({ tab:id }); };
+    const tabDefs = [['overview','Visão geral',null],['sessions','Criativo',null],['code','Código',null],['chat','Chat RAG',null],['gastos','Gastos',null],['approvals','Aprovações','2'],['settings','Configurações',null]];
     const tabs = tabDefs.map(([id,label,badge])=>({ id,label,badge, onClick:setTab(id),
       color:st.tab===id?'var(--text-primary)':'var(--text-muted)', border:st.tab===id?'var(--accent)':'transparent', weight:st.tab===id?'600':'500' }));
 
@@ -315,7 +328,7 @@ class Component extends DCLogic {
       return { text:e.text, agent:e.agent, time:e.time, color:col, bg:'color-mix(in srgb,'+col+' 15%,transparent)', icon:this.smallIcon(e.type, col) }; });
 
     const isOther = st.tab!=='overview';
-    const otherNames = { sessions:'Sessões', backlog:'Backlog', approvals:'Aprovações', settings:'Configurações' };
+    const otherNames = { sessions:'Criativo', code:'Código', chat:'Chat RAG', gastos:'Gastos', approvals:'Aprovações', settings:'Configurações' };
 
     return {
       tabs, tabIsOverview:st.tab==='overview', tabIsOther:isOther, otherTabName:otherNames[st.tab]||'',

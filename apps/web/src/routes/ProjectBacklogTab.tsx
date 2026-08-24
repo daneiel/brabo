@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { useBacklog, useCoverage } from '../lib/hooks';
 import { promoteStories, returnStory } from '../lib/api-client';
@@ -23,11 +24,11 @@ const STATUS_TONE: Record<StoryStatus, BadgeTone> = {
   done: 'success',
 };
 
-const STATUS_LABEL: Record<StoryStatus, string> = {
-  draft: 'rascunho',
-  ready: 'pronta',
-  in_progress: 'em progresso',
-  done: 'concluída',
+const STATUS_LABEL_KEY: Record<StoryStatus, string> = {
+  draft: 'statusLabel.draft',
+  ready: 'statusLabel.ready',
+  in_progress: 'statusLabel.inProgress',
+  done: 'statusLabel.done',
 };
 
 /**
@@ -41,6 +42,7 @@ export function aguardandoPromocao(epics: Epic[] | undefined): Story[] {
 }
 
 export function ProjectBacklogTab({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('backlog');
   const { data: epics } = useBacklog(projectId);
   const { data: coverage } = useCoverage(projectId);
   const propostas = aguardandoPromocao(epics);
@@ -52,12 +54,9 @@ export function ProjectBacklogTab({ projectId }: { projectId: string }) {
           <PromotionQueue projectId={projectId} stories={propostas} />
         )}
 
-        <div className={styles.sectionLabel}>Backlog</div>
+        <div className={styles.sectionLabel}>{t('sectionLabel.backlog')}</div>
         {!epics || epics.length === 0 ? (
-          <div className={styles.empty}>
-            Nenhum épico ainda. Aceite o handoff do Criativo numa sessão para o
-            PO gerar o backlog.
-          </div>
+          <div className={styles.empty}>{t('empty.epics')}</div>
         ) : (
           epics.map((epic) => <EpicNode key={epic.id} epic={epic} />)
         )}
@@ -65,13 +64,15 @@ export function ProjectBacklogTab({ projectId }: { projectId: string }) {
 
       <aside className={styles.traceability}>
         <div className={styles.sectionLabel}>
-          Rastreabilidade
+          {t('sectionLabel.traceability')}
           {coverage && coverage.uncoveredCount > 0 && (
-            <Badge tone="danger">{coverage.uncoveredCount} descoberta(s)</Badge>
+            <Badge tone="danger">
+              {t('coverage.uncoveredBadge', { count: coverage.uncoveredCount })}
+            </Badge>
           )}
         </div>
         {!coverage || coverage.rules.length === 0 ? (
-          <div className={styles.empty}>Sem regras de negócio ainda.</div>
+          <div className={styles.empty}>{t('empty.rules')}</div>
         ) : (
           coverage.rules.map((r) => (
             <div
@@ -83,11 +84,13 @@ export function ProjectBacklogTab({ projectId }: { projectId: string }) {
               <div className={styles.ruleTitle}>{r.title}</div>
               {r.covered ? (
                 <div className={styles.ruleMeta}>
-                  <CheckIcon size={12} /> coberta por {r.coveredByStoryIds.length}{' '}
-                  história(s)
+                  <CheckIcon size={12} />{' '}
+                  {t('coverage.coveredBy', {
+                    count: r.coveredByStoryIds.length,
+                  })}
                 </div>
               ) : (
-                <Badge tone="danger">descoberta — sem história</Badge>
+                <Badge tone="danger">{t('coverage.uncovered')}</Badge>
               )}
             </div>
           ))
@@ -117,6 +120,7 @@ function PromotionQueue({
   projectId: string;
   stories: Story[];
 }) {
+  const { t } = useTranslation('backlog');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -147,7 +151,7 @@ function PromotionQueue({
 
       if (r.failed.length === 0) {
         showToast({
-          title: `${r.promoted.length} história(s) promovida(s)`,
+          title: t('promotionQueue.toast.promoted', { count: r.promoted.length }),
           tone: 'success',
         });
       } else {
@@ -155,13 +159,16 @@ function PromotionQueue({
         // que "não deu", e a causa mais comum (módulo que saiu do module_map
         // entre a proposta e a decisão) não é adivinhável.
         showToast({
-          title: `${r.promoted.length} promovida(s), ${r.failed.length} recusada(s) pelo domínio`,
+          title: t('promotionQueue.toast.partial', {
+            promoted: r.promoted.length,
+            failed: r.failed.length,
+          }),
           message: r.failed[0]?.reason,
           tone: 'warning',
         });
       }
     } catch {
-      showToast({ title: 'Não foi possível promover', tone: 'danger' });
+      showToast({ title: t('promotionQueue.toast.promoteError'), tone: 'danger' });
     } finally {
       setOcupado(false);
     }
@@ -175,9 +182,9 @@ function PromotionQueue({
       setRecusando(null);
       setMotivo('');
       await invalidate();
-      showToast({ title: 'História devolvida ao PO', tone: 'success' });
+      showToast({ title: t('promotionQueue.toast.returnedSuccess'), tone: 'success' });
     } catch {
-      showToast({ title: 'Não foi possível devolver', tone: 'danger' });
+      showToast({ title: t('promotionQueue.toast.returnError'), tone: 'danger' });
     } finally {
       setOcupado(false);
     }
@@ -186,23 +193,20 @@ function PromotionQueue({
   return (
     <section className={styles.promotion}>
       <div className={styles.sectionLabel}>
-        Aguardando sua promoção
+        {t('sectionLabel.promotionQueue')}
         <Badge tone="warning">{stories.length}</Badge>
       </div>
-      <p className={styles.promotionHint}>
-        O PO terminou estas histórias e elas estão completas. Até você promover,
-        nenhuma tarefa delas é pegável por um dev agent.
-      </p>
+      <p className={styles.promotionHint}>{t('promotionQueue.hint')}</p>
 
       {selected.size > 0 && (
         <div className={styles.selectionBar}>
-          <span>{selected.size} selecionada(s)</span>
+          <span>{t('promotionQueue.selectedCount', { count: selected.size })}</span>
           <Button
             variant="success"
             loading={ocupado}
             onClick={() => promover(Array.from(selected))}
           >
-            Promover selecionadas
+            {t('promotionQueue.promoteSelected')}
           </Button>
         </div>
       )}
@@ -215,7 +219,7 @@ function PromotionQueue({
                 type="checkbox"
                 checked={selected.has(story.id)}
                 onChange={() => toggleSelect(story.id)}
-                aria-label={`Selecionar ${story.title}`}
+                aria-label={t('promotionQueue.selectAria', { title: story.title })}
               />
             </label>
             <div className={styles.proposalBody}>
@@ -223,13 +227,13 @@ function PromotionQueue({
               {story.description && (
                 <p className={styles.description}>{story.description}</p>
               )}
-              <FieldList label="RF" items={story.rf} />
-              <FieldList label="DoR" items={story.dor} />
-              <FieldList label="DoD" items={story.dod} />
+              <FieldList label={t('fieldLabels.rf')} items={story.rf} />
+              <FieldList label={t('fieldLabels.dor')} items={story.dor} />
+              <FieldList label={t('fieldLabels.dod')} items={story.dod} />
               <div className={styles.ruleRefs}>
-                {story.businessRuleIds.length} regra(s) de negócio vinculada(s)
+                {t('ruleRefs', { count: story.businessRuleIds.length })}
                 {story.tasks.length > 0 &&
-                  ` · ${story.tasks.length} tarefa(s) que ficam pegáveis`}
+                  t('promotionQueue.taskRefsSuffix', { count: story.tasks.length })}
               </div>
             </div>
             <div className={styles.proposalActions}>
@@ -238,7 +242,7 @@ function PromotionQueue({
                 disabled={ocupado}
                 onClick={() => promover([story.id])}
               >
-                Promover
+                {t('promotionQueue.promote')}
               </Button>
               <Button
                 variant="ghost"
@@ -248,7 +252,7 @@ function PromotionQueue({
                   setMotivo('');
                 }}
               >
-                Recusar
+                {t('promotionQueue.reject')}
               </Button>
             </div>
           </div>
@@ -257,15 +261,15 @@ function PromotionQueue({
 
       {recusando && (
         <Modal
-          title={`Devolver "${recusando.title}" ao PO?`}
+          title={t('promotionQueue.returnModalTitle', { title: recusando.title })}
           onClose={() => setRecusando(null)}
         >
           <Textarea
-            label="Motivo"
+            label={t('promotionQueue.reasonLabel')}
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
-            hint="Vai como mensagem fixada na sessão do PO. Diga o que falta — é com isto que ele reescreve a história."
-            placeholder="Ex.: os critérios de aceite não cobrem a recusa do pagamento."
+            hint={t('promotionQueue.reasonHint')}
+            placeholder={t('promotionQueue.reasonPlaceholder')}
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <Button
@@ -274,10 +278,10 @@ function PromotionQueue({
               disabled={motivo.trim() === ''}
               onClick={confirmarRecusa}
             >
-              Devolver ao PO
+              {t('promotionQueue.returnConfirm')}
             </Button>
             <Button variant="ghost" onClick={() => setRecusando(null)}>
-              Cancelar
+              {t('promotionQueue.cancel')}
             </Button>
           </div>
         </Modal>
@@ -287,6 +291,7 @@ function PromotionQueue({
 }
 
 function EpicNode({ epic }: { epic: Epic }) {
+  const { t } = useTranslation('backlog');
   const [open, setOpen] = useState(true);
   return (
     <div className={styles.epic}>
@@ -304,7 +309,9 @@ function EpicNode({ epic }: { epic: Epic }) {
         </span>
         <StackIcon size={15} />
         <span className={styles.epicTitle}>{epic.title}</span>
-        <span className={styles.count}>{epic.stories.length} história(s)</span>
+        <span className={styles.count}>
+          {t('epicNode.storyCount', { count: epic.stories.length })}
+        </span>
       </button>
       {open && (
         <div className={styles.stories}>
@@ -318,6 +325,7 @@ function EpicNode({ epic }: { epic: Epic }) {
 }
 
 function StoryNode({ story }: { story: Story }) {
+  const { t } = useTranslation('backlog');
   const [open, setOpen] = useState(false);
   return (
     <div className={styles.story}>
@@ -336,29 +344,33 @@ function StoryNode({ story }: { story: Story }) {
         <HypothesisIcon size={13} />
         <span className={styles.storyTitle}>{story.title}</span>
         <Badge tone={STATUS_TONE[story.status]}>
-          {STATUS_LABEL[story.status]}
+          {t(STATUS_LABEL_KEY[story.status])}
         </Badge>
         {/* Chip ADICIONAL, não substituto: `proposedReady` é uma proposta que
             convive com o status `draft`, não um estado da máquina. */}
-        {story.proposedReady && <Badge tone="warning">aguardando você</Badge>}
-        {story.returnedReason && <Badge tone="danger">devolvida</Badge>}
+        {story.proposedReady && (
+          <Badge tone="warning">{t('storyNode.awaitingYou')}</Badge>
+        )}
+        {story.returnedReason && (
+          <Badge tone="danger">{t('storyNode.returned')}</Badge>
+        )}
       </button>
       {open && (
         <div className={styles.storyBody}>
           {story.returnedReason && (
             <p className={styles.returned}>
-              <strong>Você devolveu ao PO:</strong> {story.returnedReason}
+              <strong>{t('storyNode.youReturned')}</strong> {story.returnedReason}
             </p>
           )}
           {story.description && (
             <p className={styles.description}>{story.description}</p>
           )}
-          <FieldList label="RF" items={story.rf} />
-          <FieldList label="RNF" items={story.rnf} />
-          <FieldList label="DoR" items={story.dor} />
-          <FieldList label="DoD" items={story.dod} />
+          <FieldList label={t('fieldLabels.rf')} items={story.rf} />
+          <FieldList label={t('fieldLabels.rnf')} items={story.rnf} />
+          <FieldList label={t('fieldLabels.dor')} items={story.dor} />
+          <FieldList label={t('fieldLabels.dod')} items={story.dod} />
           <div className={styles.ruleRefs}>
-            {story.businessRuleIds.length} regra(s) de negócio vinculada(s)
+            {t('ruleRefs', { count: story.businessRuleIds.length })}
           </div>
           {story.tasks.length > 0 && (
             <ul className={styles.tasks}>

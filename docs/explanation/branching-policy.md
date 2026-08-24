@@ -1,231 +1,278 @@
 ---
 id: branching-policy
-title: Política de branches e versionamento
-sidebar_label: Política de branches
+title: Branch and versioning policy
+sidebar_label: Branching policy
 sidebar_position: 2
-description: A escada dev → qa → rc → main, a taxonomia de branches, quem nasce de onde e por que a política é mecanizada em vez de combinada.
-keywords: [branches, gitflow, promoção, hotfix, versionamento, release]
+description: The dev → qa → rc → main ladder, the branch taxonomy, who's born where, and why the policy is mechanized instead of agreed upon.
+keywords: [branches, gitflow, promotion, hotfix, versioning, release]
 ---
 
-# Política de branches e versionamento
+# Branch and versioning policy
 
-Esta página é a **fonte** da política. Os workflows que a aplicam saem daqui —
-se um mecanismo divergir do que está escrito, o mecanismo está errado.
+This page is the **source** of the policy. The workflows that apply it
+derive from here — if a mechanism diverges from what's written, the
+mechanism is wrong.
 
-## Por que mecanizar
+## Why mechanize it
 
-Política de branches combinada em reunião dura até a primeira sexta-feira à
-noite. A pressa não é má-fé: é que a regra vive na cabeça das pessoas, e cabeça
-sob pressão otimiza para o curto prazo.
+A branching policy agreed upon in a meeting survives until the first
+Friday night. The rush isn't bad faith: it's that the rule lives in
+people's heads, and a head under pressure optimizes for the short term.
 
-Então a política aqui **não pede colaboração** — ela é aplicada por CI. Não por
-desconfiança, mas porque regra que depende de disciplina individual não
-sobrevive a incidente, e é exatamente durante o incidente que ela mais importa.
+So the policy here **doesn't ask for cooperation** — it's enforced by CI.
+Not out of distrust, but because a rule that depends on individual
+discipline doesn't survive an incident, and it's exactly during an
+incident that it matters most.
 
-Duas consequências que assumimos de propósito:
+Two consequences we accept on purpose:
 
-- **O PR fica mais burocrático.** Nome de branch errado reprova. É o custo.
-- **A mensagem de erro tem que ensinar.** Um check que só diz "inválido" treina
-  as pessoas a contornar. Todo erro cita a regra, o que veio, e o exemplo
-  certo.
+- **The PR becomes more bureaucratic.** A wrong branch name fails the
+  check. That's the cost.
+- **The error message has to teach.** A check that only says "invalid"
+  trains people to work around it. Every error cites the rule, what came
+  in, and the correct example.
 
-## A escada
+## The ladder
 
-Três branches permanentes, **uma por ambiente**. Código sobe um degrau por vez.
+Three permanent branches, **one per environment**. Code climbs one step
+at a time.
 
 ```mermaid
 flowchart LR
-  D[dev<br/>desenvolvimento] -->|promoção| Q[qa<br/>homologação]
-  Q -->|promoção| M[main<br/>produção]
-  M -.->|retropropagação| Q
-  Q -.->|retropropagação| D
+  D[dev<br/>development] -->|promotion| Q[qa<br/>staging]
+  Q -->|promotion| M[main<br/>production]
+  M -.->|back-merge| Q
+  Q -.->|back-merge| D
 ```
 
-| branch | ambiente | o que significa estar aqui |
+| branch | environment | what being here means |
 |---|---|---|
-| `dev` | desenvolvimento | integrado, testado por CI |
-| `qa` | homologação | em validação funcional |
-| `main` | produção | o que está no ar |
+| `dev` | development | integrated, tested by CI |
+| `qa` | staging | under functional validation |
+| `main` | production | what's live |
 
-Havia um quarto degrau, `rc` (preprod), entre `qa` e `main`. Foi removido: com
-um mantenedor e um ciclo curto, o degrau a mais custava uma promoção inteira e
-um ambiente para separar "validado" de "quase pronto" — distinção que não
-estava pagando o próprio custo. `qa` passa a ser o único portão antes de
-produção.
+There used to be a fourth step, `rc` (pre-prod), between `qa` and `main`.
+It was removed: with a single maintainer and a short cycle, the extra step
+cost a whole promotion and an environment to separate "validated" from
+"almost ready" — a distinction that wasn't paying for itself. `qa` becomes
+the only gate before production.
 
-A remoção levou tempo para chegar ao fim. O `pr-police` passou a operar com
-três degraus imediatamente, mas o **bootstrap de Gitflow** continuou criando
-`rc`, protegendo `rc` e commitando no repositório do usuário um
-`branching-policy.md` que ensinava a escada de quatro — o produto documentando
-para quem o usa uma política que ele mesmo tinha abandonado. Foi o achado #3 do
-[primeiro dogfooding](./primeiro-dogfooding.md), fechado depois
+The removal took a while to fully land. `pr-police` started operating
+with three steps immediately, but the **Gitflow bootstrap** kept creating
+`rc`, protecting `rc` and committing a `branching-policy.md` into the
+user's repository that taught the four-step ladder — the product
+documenting, for whoever used it, a policy it had itself already dropped.
+It was finding #3 of the
+[first dogfooding round](./primeiro-dogfooding.md), closed afterward
 ([RN-029](../business-rules.md#rn-029)).
 
-Duas pontas ficaram de pé de propósito, e por motivos diferentes: o valor
-`create_rc_branch` continua no enum `bootstrap_step` do banco (bootstraps já
-rodados têm linhas com ele) e `rc` continua na lista de **merge protegido** —
-ver a nota em [permissions.md](../reference/permissions.md).
+Two loose ends were left standing on purpose, and for different reasons:
+the value `create_rc_branch` remains in the database's `bootstrap_step`
+enum (already-run bootstraps have rows with it), and `rc` remains in the
+**protected-merge** list — see the note in
+[permissions.md](../reference/permissions.md).
 
-**Não se pula degrau.** `dev → main` não existe, nem em emergência —
-emergência tem caminho próprio (`hotfix`, abaixo), e ele também respeita a
-escada, só que começando do topo.
+**No step can be skipped.** `dev → main` doesn't exist, not even in an
+emergency — an emergency has its own path (`hotfix`, below), and it too
+respects the ladder, just starting from the top.
 
-## Taxonomia
+## Taxonomy
 
-Toda branch é `funcao/descritivo`, validada por
-`^.{0,30}/\S{0,32}$` — até 30 caracteres de função, até 32 de descritivo, sem
-espaço.
+Every branch is `function/descriptor`, validated by
+`^.{0,30}/\S{0,32}$` — up to 30 characters for the function, up to 32 for
+the descriptor, no spaces.
 
 ```
 ✅ feature/pr-police          ✅ bugfix/rate-limit-off-by-one
 ✅ hotfix/vaza-token          ✅ docs/politica-de-branches
 
-❌ minha-branch               (sem função)
-❌ ci/build-paralelo          (`ci` não está na lista; use `chore`)
-❌ fix/algo                   (`fix` não está na lista; use `bugfix`)
+❌ minha-branch               (no function)
+❌ ci/build-paralelo          (`ci` isn't on the list; use `chore`)
+❌ fix/algo                   (`fix` isn't on the list; use `bugfix`)
 ```
 
-O regex sozinho não basta: a função precisa estar na **lista fechada**.
+The regex alone isn't enough: the function needs to be on the **closed
+list**.
 
-### Quem nasce de onde
+### Who's born where
 
-| função | nasce de | PR mira | para quê |
+| function | born from | PR targets | for |
 |---|---|---|---|
-| `breaking` | `dev` | `dev` | mudança incompatível |
-| `feature` | `dev` | `dev` | funcionalidade nova |
-| `bugfix` | `dev` | `dev` | correção comum |
-| `perf` | `dev` | `dev` | desempenho |
-| `refactor` | `dev` | `dev` | reestruturação sem mudar comportamento |
-| `chore` | `dev` | `dev` | manutenção, tooling, CI |
-| `docs` | `dev` | `dev` | documentação |
-| `test` | `dev` | `dev` | cobertura |
-| `hotfix` | `main` | `main` | incidente em produção |
+| `breaking` | `dev` | `dev` | incompatible change |
+| `feature` | `dev` | `dev` | new functionality |
+| `bugfix` | `dev` | `dev` | ordinary fix |
+| `perf` | `dev` | `dev` | performance |
+| `refactor` | `dev` | `dev` | restructuring without behavior change |
+| `chore` | `dev` | `dev` | maintenance, tooling, CI |
+| `docs` | `dev` | `dev` | documentation |
+| `test` | `dev` | `dev` | coverage |
+| `hotfix` | `main` | `main` | production incident |
 
-Correção achada em **homologação** não tem prefixo próprio: vira `bugfix/` a
-partir de `dev` e sobe pela escada. Existia um `rcfix/` para a preprod, e ele
-saiu junto com o degrau `rc` — prefixo sem branch de origem é armadilha.
+A fix found in **staging** has no prefix of its own: it becomes a
+`bugfix/` starting from `dev` and climbs the ladder. There used to be an
+`rcfix/` for pre-prod, and it left along with the `rc` step — a prefix
+with no origin branch is a trap.
 
-A origem não é sugestão — é **verificada por merge-base**. Um `hotfix` que
-nasceu de `dev` carrega junto tudo que está em `dev` e ainda não foi validado;
-levar isso para produção com pressa de incidente é como o desastre acontece.
+The origin isn't a suggestion — it's **verified by merge-base**. A
+`hotfix` born from `dev` carries along everything that's in `dev` and
+hasn't been validated yet; rushing that into production during an
+incident is how disaster happens.
 
-### Correção que nasce alta volta para baixo
+### A fix born high goes back down
 
-`hotfix` entra direto no degrau em que o problema apareceu. Isso deixa os
-degraus de baixo **desatualizados** — a correção existe em `main` e não em
-`dev`.
+`hotfix` enters directly at the step where the problem showed up. That
+leaves the steps below it **out of date** — the fix exists in `main` and
+not in `dev`.
 
-Por isso toda correção alta gera **retropropagação**: `main → qa → dev`,
-em cadeia e na ordem. Enquanto ela não completa, os degraus afetados ficam
-travados — ver [O backmerge gate](#o-backmerge-gate).
+That's why every high-born fix generates a **back-merge**: `main → qa →
+dev`, in a chain, in order. While it hasn't completed, the affected steps
+stay locked — see [The back-merge gate](#the-back-merge-gate).
 
-A cadeia inteira de um hotfix são **três PRs**: o hotfix mais os dois
-backmerges.
+The full chain for a hotfix is **three PRs**: the hotfix plus the two
+back-merges.
 
-## Famílias de PR
+## PR families
 
-Todo PR recebe um rótulo de família, aplicado automaticamente:
+Every PR gets a family label, applied automatically:
 
-| família | quando | exemplo |
+| family | when | example |
 |---|---|---|
-| `trabalho` | função de trabalho → `dev` | `feature/pr-police` → `dev` |
-| `correcao-alta` | `hotfix` → `main` | `hotfix/vaza-token` → `main` |
-| `promocao` | degrau adjacente, subindo | `dev` → `qa` |
-| `retropropagacao` | degrau adjacente, descendo | `main` → `qa` |
+| `trabalho` (work) | a work function → `dev` | `feature/pr-police` → `dev` |
+| `correcao-alta` (high fix) | `hotfix` → `main` | `hotfix/vaza-token` → `main` |
+| `promocao` (promotion) | adjacent step, going up | `dev` → `qa` |
+| `retropropagacao` (back-merge) | adjacent step, going down | `main` → `qa` |
 
-O rótulo não é decoração: ele é o que permite responder "quantos hotfixes
-tivemos neste trimestre?" sem arqueologia de git.
+The label isn't decoration: it's what lets you answer "how many hotfixes
+did we have this quarter?" without git archaeology.
 
-## Push direto é bloqueado
+## Direct push is blocked
 
-Nenhuma das três permanentes aceita push direto. Toda mudança entra por PR.
-É a **porta única** — e ela tem exatamente três exceções, todas de robô, todas
-escritas aqui porque exceção que não está documentada vira precedente:
+None of the three permanents accept direct push. Every change enters via
+PR. It's the **single door** — and it has exactly three exceptions, all
+bots, all written here because an undocumented exception becomes a
+precedent:
 
-| exceção | quem | por quê |
+| exception | who | why |
 |---|---|---|
-| tags `v*` | `brabo-release[bot]` | versão nasce de workflow, nunca da mão |
-| `.release/gate.json` em `main` | `brabo-release[bot]` | o gate precisa se escrever ao travar e ao destravar |
-| a branch `gh-pages` | `github-actions[bot]` | publicar documentação por degrau exige árvore mutável ([ADR 0034](../adr/0034-documentacao-publicada-por-degrau.md)) |
+| `v*` tags | `brabo-release[bot]` | a version is born from a workflow, never by hand |
+| `.release/gate.json` on `main` | `brabo-release[bot]` | the gate needs to write itself when it locks and unlocks |
+| the `gh-pages` branch | `github-actions[bot]` | publishing documentation per step requires a mutable tree ([ADR 0034](../adr/0034-documentacao-publicada-por-degrau.md)) |
 
-**A terceira é a mais fácil de aceitar das três, e é importante dizer por quê,
-para que ela não sirva de precedente para as difíceis.** A `gh-pages` **não é
-branch de código**: nada nela é fonte, tudo é gerado a partir de `docs/` e
-`website/`, e apagá-la inteira não perde informação — o próximo push a
-reconstrói. Não há revisor possível para um site gerado, e um PR por publicação
-seria cerimônia sem leitor. O `git log` dela é o registro de cada publicação, com
-data e sha de origem.
+**The third is the easiest of the three to accept, and it's worth saying
+why, so it doesn't set a precedent for the hard ones.** `gh-pages` **is
+not a code branch**: nothing in it is source, everything is generated
+from `docs/` and `website/`, and deleting it entirely loses nothing — the
+next push rebuilds it. There's no possible reviewer for a generated site,
+and a PR per publication would be ceremony with no reader. Its `git log`
+is the record of every publication, with date and origin sha.
 
-Ela também **não é permanente**, então não entra nos rulesets — e é por isso que
-o `GITHUB_TOKEN` basta, sem bypass e sem o `BRABO_BOT_TOKEN`.
+It's also **not permanent**, so it doesn't enter the rulesets — which is
+why the `GITHUB_TOKEN` is enough, no bypass and no `BRABO_BOT_TOKEN`.
 
-A segunda é a mais desconfortável das três, então vale dizer por que ela existe
-em vez de o gate entrar por PR: o gate trava as branches, e um PR para abrir a
-trava seria barrado pelo próprio gate. A alternativa — guardar o estado fora do
-repositório — trocaria uma exceção visível no histórico por um estado invisível
-em algum painel. O commit do bot fica no `git log`, com data e conteúdo.
+The second is the most uncomfortable of the three, so it's worth saying
+why the gate exists instead of going through a PR: the gate locks the
+branches, and a PR to open the lock would be blocked by the gate itself.
+The alternative — storing the state outside the repository — would trade
+a visible exception in the history for an invisible state in some
+dashboard. The bot's commit stays in `git log`, with date and content.
 
-O `tag-release` reconhece esse commit **pelo conteúdo** (mexe só em
-`.release/`), nunca pelo autor ou pela mensagem: quem escreve é verificável,
-quem *diz* que escreveu não é.
+`tag-release` recognizes that commit **by its content** (it only touches
+`.release/`), never by author or message: who wrote it is verifiable,
+who *claims* to have written it isn't.
 
-A configuração exata está em [Rulesets](../reference/rulesets.md), e aplicá-la
-é passo manual — o repositório versiona a fonte, o GitHub recebe a aplicação.
+The exact configuration is in [Rulesets](../reference/rulesets.md), and
+applying it is a manual step — the repository versions the source, GitHub
+receives the application.
 
-## Bots não passam pela régua
+## Merged branches get archived
 
-PRs abertos por `dependabot[bot]` e `github-actions[bot]` são **isentos** da
-validação de nome, origem e destino.
+Every branch whose PR merges gets moved out of the branch list —
+mechanically, by `archive-merged-branch.yml`, on every `pull_request`
+`closed` event where `merged == true`. "Archived" is literal, not a
+euphemism for deleted: the branch moves from `refs/heads/<name>` to
+`refs/archive/<name>`, a namespace GitHub's UI doesn't show as a branch.
+The commit object and its history stay in the repository exactly as they
+were — recoverable by anyone who knows the ref, with a single
+`git push origin refs/archive/<name>:refs/heads/<name>` to bring it back.
 
-O motivo é prático: o Dependabot nomeia branches como
-`dependabot/npm_and_yarn/brace-expansion-5.0.8`, e não há como ensiná-lo a usar
-a taxonomia. Reprovar significaria renomear branch à mão a cada alerta de
-segurança — ou seja, atrito em cima justamente do fluxo que precisa ser rápido.
+Four names are never archived, and the reason is the same for all four:
+none of them is disposable feature work.
 
-Mensagem pedagógica não ensina robô. A isenção é por **autor**, não por
-prefixo, para que ninguém a use como brecha nomeando uma branch de
-`dependabot/`.
-
-## Quem aprova
-
-A exigência de aprovação tem **dois modos**, escolhidos pela variável de
-repositório `APPROVAL_MODE`. Os dois são implementados e testados; trocar de um
-para o outro é **só mudar variáveis**, sem tocar em código.
-
-### Modo `solo` — o que vale hoje
-
-O projeto tem **um mantenedor**. A escada completa de aprovadores pressupõe
-times que ainda não existem, e regra que não pode ser cumprida é regra que
-ensina a burlar.
-
-| situação | exigência |
+| name | why it's excluded |
 |---|---|
-| PR de terceiro | **1 aprovação do owner** |
-| PR de autoria do próprio owner | passa no check **sem review** |
+| `dev`, `qa`, `main` | the three permanents — they appear as the `head` of every merged promotion PR (`dev`→`qa`, `qa`→`main`), which is exactly the case this exclusion exists to catch |
+| `gh-pages` | the documentation site's deploy branch (see "Direct push is blocked" above) — not a feature branch, and deleting `refs/heads/gh-pages` would take the live site down with it |
 
-A segunda linha não é privilégio, é como o GitHub funciona: **ninguém aprova o
-próprio PR pela interface**. Num projeto BDFL, o **merge manual do owner é a
-aprovação** — é o ato deliberado dele, no momento em que ele escolhe apertar o
-botão. Exigir um review que a plataforma não permite dar só produziria um check
-eternamente vermelho.
+A fifth condition isn't a name, it's a boundary: a PR whose head branch
+lives in a **fork** (`head.repo.full_name != base.repo.full_name`) is
+never touched. The workflow's `GITHUB_TOKEN` is scoped to this
+repository — it has no business rewriting refs in someone else's.
 
-A exigência de **pessoas distintas fica suspensa** neste modo, e está suspensa
-de propósito: com um mantenedor, ela é aritmeticamente impossível.
+The decision itself — which four names are excluded, and the fork check —
+is a tested pure function
+([`scripts/ci/archive-branch.ts`](https://github.com/daneiel/brabo/blob/dev/scripts/ci/archive-branch.ts)),
+not inline shell: it's the part of this mechanism that's actually worth
+getting wrong tests for. The workflow step that follows just calls the
+GitHub API twice — create the `refs/archive/` ref, then delete the
+`refs/heads/` one — and only deletes after the create succeeds, so a
+failure never drops a branch without leaving the archived copy behind.
 
-### Modo `community` — quando houver gente
+## Bots skip the ladder
 
-| destino | exigência |
+PRs opened by `dependabot[bot]` and `github-actions[bot]` are **exempt**
+from name, origin and destination validation.
+
+The reason is practical: Dependabot names branches like
+`dependabot/npm_and_yarn/brace-expansion-5.0.8`, and there's no way to
+teach it the taxonomy. Rejecting it would mean renaming branches by hand
+on every security alert — friction on top of exactly the flow that needs
+to be fast.
+
+A pedagogical message doesn't teach a bot. The exemption is by
+**author**, not by prefix, so no one uses it as a loophole by naming a
+branch `dependabot/`.
+
+## Who approves
+
+The approval requirement has **two modes**, chosen by the repository
+variable `APPROVAL_MODE`. Both are implemented and tested; switching from
+one to the other is **just changing variables**, no code touched.
+
+### `solo` mode — what applies today
+
+The project has **one maintainer**. The full approver ladder assumes
+teams that don't exist yet, and a rule that can't be fulfilled is a rule
+that teaches people to cheat.
+
+| situation | requirement |
+|---|---|
+| PR from a third party | **1 approval from the owner** |
+| PR authored by the owner | passes the check **without review** |
+
+The second line isn't a privilege, it's how GitHub works: **no one can
+approve their own PR through the interface**. In a BDFL project, the
+**owner's manual merge is the approval** — it's their deliberate act, at
+the moment they choose to click the button. Requiring a review the
+platform doesn't allow would only produce a permanently red check.
+
+The requirement for **distinct people is suspended** in this mode, and
+it's suspended on purpose: with a single maintainer, it's arithmetically
+impossible.
+
+### `community` mode — for when there are people
+
+| target | requirement |
 |---|---|
 | `dev` | 1 × devs |
 | `qa` | 2 × devs |
-| `main` | 1 × PO **+** 1 × gestão |
+| `main` | 1 × PO **+** 1 × management |
 
-Em `main`, **pessoas distintas** — a exigência volta a valer. Em `dev` e `qa` a
-distinção é automática: as vagas são do mesmo papel e cada pessoa tem um review
-só.
+For `main`, **distinct people** — the requirement applies again. For
+`dev` and `qa` the distinction is automatic: the slots are the same role
+and each person only gets one review.
 
-Os papéis são **listas de handles** em variáveis de repositório, não times do
-GitHub:
+The roles are **lists of handles** in repository variables, not GitHub
+teams:
 
 ```
 APROVADORES_DEVS    = ana,bruno,carla
@@ -233,418 +280,475 @@ APROVADORES_PO      = paula
 APROVADORES_GESTAO  = gustavo
 ```
 
-Times seriam o caminho óbvio e **não funcionam aqui**: eles só existem dentro de
-uma organização, este repositório pertence a um usuário, e o `GITHUB_TOKEN` não
-lê membership de time nem em org — precisaria de um PAT com `read:org`. Com
-listas, o modo `community` é ativável hoje e a troca é mesmo só de variável.
+Teams would be the obvious path and **don't work here**: they only exist
+inside an organization, this repository belongs to a user, and the
+`GITHUB_TOKEN` can't read team membership even inside an org — that would
+need a PAT with `read:org`. With lists, `community` mode is activatable
+today and the switch really is just a variable.
 
-O custo honesto: manter as listas é trabalho manual, e uma pessoa que sai do
-projeto continua aprovando até alguém editar a variável. Se o projeto virar uma
-org com times de verdade, trocar a fonte é mudar uma função — a escada e a
-regra de pessoas distintas não mudam.
+The honest cost: keeping the lists up to date is manual work, and a
+person who leaves the project keeps approving until someone edits the
+variable. If the project becomes an org with real teams, changing the
+source is a one-function change — the ladder and the distinct-people rule
+don't change.
 
-#### Por que "pessoas distintas" precisa de mais que contar
+#### Why "distinct people" needs more than counting
 
-Em `main`, quem estiver **nas duas listas** (`po` e `gestao`) poderia satisfazer
-as duas vagas sozinho, se o check apenas contasse aprovações por papel. O check
-resolve isso como um problema de **atribuição**: existe uma distribuição de
-aprovadores distintos que preencha todas as vagas?
+For `main`, whoever is on **both lists** (`po` and `gestao`) could
+satisfy both slots alone, if the check simply counted approvals per role.
+The check treats this as an **assignment** problem instead: does there
+exist a distribution of distinct approvers that fills every slot?
 
-Isso também evita o erro oposto. Se `paula` é a única de `po` mas também está em
-`gestao`, dar a vaga de `gestao` a ela deixaria `po` descoberta — mesmo havendo
-outra pessoa que serviria. A atribuição correta existe, e o check a encontra.
+This also avoids the opposite error. If `paula` is the only one in `po`
+but is also in `gestao`, giving the `gestao` slot to her would leave `po`
+uncovered — even though another person could have filled it. The correct
+assignment exists, and the check finds it.
 
-### Regras comuns aos dois modos
+### Rules common to both modes
 
-- Só contam reviews **`APPROVED` no último commit**. Aprovação em commit
-  antigo não vale: o que foi aprovado não é mais o que vai ser mergeado.
-- O resumo do check mostra **o modo ativo, quem aprovou e o que falta**. Um
-  check que só diz "faltam aprovações" obriga a adivinhar.
+- Only reviews **`APPROVED` on the last commit** count. An approval on an
+  old commit doesn't count: what was approved isn't what's about to be
+  merged.
+- The check's summary shows **the active mode, who approved and what's
+  missing**. A check that only says "approvals missing" forces you to
+  guess.
 
-### Migração para modo `community`
+### Migrating to `community` mode
 
-Pré-requisitos, antes de trocar qualquer variável:
+Prerequisites, before flipping any variable:
 
-1. **Cada papel com gente de verdade.** `main` exige PO **e** gestão; se as duas
-   listas apontarem para a mesma pessoa, nenhum PR para `main` fecha — a regra
-   de pessoas distintas não tem como ser satisfeita. `qa` exige **dois** devs
-   distintos: uma lista com um nome só trava a promoção.
-2. **Critério de quem entra em cada lista** definido e escrito — quem entra,
-   quem sai, e com base em quê.
+1. **Every role with real people.** `main` requires PO **and**
+   management; if both lists point to the same person, no PR to `main`
+   ever passes — the distinct-people rule can't be satisfied. `qa`
+   requires **two** distinct devs: a list with a single name blocks
+   promotion.
+2. **A criterion for who joins each list**, defined and written down —
+   who joins, who leaves, and based on what.
 
-Passo a passo da troca:
+Step by step for the switch:
 
 ```bash
 gh variable set APROVADORES_DEVS   --body "ana,bruno,carla"
 gh variable set APROVADORES_PO     --body "paula"
 gh variable set APROVADORES_GESTAO --body "gustavo"
 
-# por último: com as listas vazias, community reprova tudo
+# last: with empty lists, community rejects everything
 gh variable set APPROVAL_MODE --body community
 ```
 
-A ordem importa. Com `APPROVAL_MODE=community` e as listas ainda vazias, todo
-PR fica vermelho dizendo qual variável está faltando — correto, mas
-desnecessariamente ruidoso. Preencha primeiro.
+The order matters. With `APPROVAL_MODE=community` and the lists still
+empty, every PR turns red saying which variable is missing — correct, but
+needlessly noisy. Fill them in first.
 
-Para voltar: `gh variable set APPROVAL_MODE --body solo`.
+To go back: `gh variable set APPROVAL_MODE --body solo`.
 
-**Nenhum deploy, nenhum merge, nenhuma alteração de código** — a troca é de
-configuração, e há teste que roda a mesma entrada nos dois modos afirmando
-vereditos diferentes.
+**No deploy, no merge, no code change** — the switch is configuration
+only, and there's a test that runs the same input through both modes
+asserting different verdicts.
 
-> **TODO(humano):** o critério de quem entra em cada lista deveria estar
-> alinhado a um `GOVERNANCE.md`, mas **ele não existe** — foi cortado do escopo
-> da FASE DOC. Ou ele é escrito antes da migração, ou o critério mora aqui e
-> esta seção passa a ser a fonte. As duas servem; a que não serve é o critério
-> não existir em lugar nenhum quando o primeiro contribuidor externo aparecer.
+The criterion for who joins each list — who joins, who leaves, and based
+on what — lives in `GOVERNANCE.md`, at the repository root. This section
+remains the source of the MECHANISM (the ladder, the distinct-people
+requirement, the switch's step by step); `GOVERNANCE.md` is the source of
+the CRITERION for who fills each role.
 
-## Promoção
+## Promotion
 
-Código sobe de degrau por **PR de promoção**, aberto pelo workflow `promote`
-(`workflow_dispatch`, entrada: o par da esteira).
+Code climbs a step via a **promotion PR**, opened by the `promote`
+workflow (`workflow_dispatch`, input: the pipeline pair).
 
-O workflow **não mergeia nada** — ele calcula e abre o PR. O merge continua
-sendo ato manual, como toda entrada em permanente.
+The workflow **doesn't merge anything** — it computes and opens the PR.
+The merge remains a manual act, like every entry into a permanent branch.
 
-| passo | o quê |
+| step | what |
 |---|---|
-| 1 | **quem dispara** — em `APPROVAL_MODE=solo`, só o `OWNER_HANDLE`. Outro ator falha nomeando quem pode |
-| 2 | **par adjacente** — `dev→qa` e `qa→main`. `dev→main` é recusado com o caminho em etapas |
-| 3 | **versão do ciclo** — calculada dos PRs mergeados desde a última tag final |
-| 4 | **PR aberto** — corpo listando cada PR, sua função, seu impacto e a versão proposta |
+| 1 | **who triggers it** — under `APPROVAL_MODE=solo`, only
+`OWNER_HANDLE`. Any other actor fails, naming who's allowed |
+| 2 | **adjacent pair** — `dev→qa` and `qa→main`. `dev→main` is refused,
+pointing to the staged path |
+| 3 | **cycle version** — computed from the PRs merged since the last
+final tag |
+| 4 | **PR opened** — body listing each PR, its function, its impact and
+the proposed version |
 
-O corpo do passo 4 é uma **tabela markdown**, e o título de um PR é texto que
-ninguém controla — então ele é escapado antes de virar célula
-(`celulaDeTabela`, em `scripts/ci/promote.ts`). Escapar o `|` não basta: a
-contrabarra tem que ser escapada **antes**, senão um título terminado em `\`
-logo antes de um `|` produz `\\|`, que o GFM lê como contrabarra escapada
-seguida de um DELIMITADOR de coluna — a linha ganha uma célula a mais e a
-tabela quebra. É por isso que a ordem das duas substituições é load-bearing, e
-o teste em `promote.spec.ts` conta os delimitadores REAIS da linha em vez de
-comparar a string inteira.
+Step 4's body is a **markdown table**, and a PR's title is text no one
+controls — so it's escaped before becoming a table cell
+(`celulaDeTabela`, in `scripts/ci/promote.ts`). Escaping the `|` isn't
+enough — the backslash has to be escaped **first**, otherwise a title
+ending in `\` right before a `|` produces `\\|`, which GFM reads as an
+escaped backslash followed by a column DELIMITER — the row gains an
+extra cell and the table breaks. That's why the order of the two
+substitutions is load-bearing, and the test in `promote.spec.ts` counts
+the line's REAL delimiters instead of comparing the whole string.
 
-### O check de promoção
+### The promotion check
 
-Um PR de promoção passa por um check próprio, separado do `pr-police`. Aquele
-valida a **forma** (nome, origem, destino); este valida o **estado**:
+A promotion PR goes through a check of its own, separate from
+`pr-police`. That one validates the **shape** (name, origin, destination);
+this one validates the **state**:
 
-| conferência | por quê |
+| check | why |
 |---|---|
-| **range limpo** | o head do PR é o tip da branch de origem. Se alguém empurrou algo depois de o PR abrir, o que seria promovido não é o que está lá |
-| **degrau anterior carimbado** | o commit tem a tag do estágio de baixo. Promover sem ela é promover algo que nunca passou por lá |
-| **merge commit possível** | promoção é `--no-ff`. Squash achataria os commits do degrau de baixo, e a tag do estágio passaria a apontar para um commit que não existe mais |
+| **clean range** | the PR's head is the tip of the origin branch. If
+someone pushed something after the PR opened, what would be promoted
+isn't what's there |
+| **prior step stamped** | the commit has the stage-below's tag.
+Promoting without it means promoting something that never went through
+there |
+| **merge commit possible** | promotion is `--no-ff`. A squash would
+flatten the lower step's commits, and the stage's tag would end up
+pointing to a commit that no longer exists |
 
-Verificação que **não pôde ser feita** conta como reprovada, nunca como
-aprovada — uma ref que não resolve é ignorância, não permissão.
+A check that **couldn't be performed** counts as failed, never as
+passed — a ref that fails to resolve is ignorance, not permission.
 
-As duas primeiras conferências são exercitadas por
-`scripts/ci/promotion-check.spec.ts`, no mesmo espírito das specs do
-`pr-police` e do `approval-ladder`. O que ela fixa não é a implementação e sim
-a regra: qual carimbo cada destino cobra, e que o carimbo tem de ser **daquele
-commit** — tag de outro commit, de outro estágio, ou que não resolveu sha não
-valem. Aceitar qualquer uma delas deixaria `qa` receber código que nunca passou
-por `dev`.
+The first two checks are exercised by
+`scripts/ci/promotion-check.spec.ts`, in the same spirit as
+`pr-police`'s and `approval-ladder`'s specs. What it fixes isn't the
+implementation but the rule: which stamp each destination requires, and
+that the stamp has to be **that commit's** — a tag on another commit, on
+another stage, or one that failed to resolve a sha don't count. Accepting
+any of those would let `qa` receive code that never went through `dev`.
 
-A exceção é a leitura da **configuração de merge**: o token do workflow
-legitimamente não tem permissão para lê-la, e travar toda promoção por isso
-seria pior que a falha que se quer evitar. Ali a impossibilidade vira **aviso**,
-e a garantia de verdade fica no `tag-release`: depois do merge, ele confere que
-o commit tem **dois pais**. Isso não depende de permissão nenhuma, e olha o
-fato consumado em vez da intenção declarada.
+The exception is reading the **merge configuration**: the workflow's
+token legitimately lacks permission to read it, and blocking every
+promotion over that would be worse than the failure it's meant to
+prevent. There, the impossibility becomes a **warning**, and the real
+guarantee lives in `tag-release`: after the merge, it confirms the
+commit has **two parents**. That doesn't depend on any permission, and it
+looks at the fact on the ground rather than the declared intent.
 
-## Versionamento
+## Versioning
 
-Toda tag nasce de workflow, no formato `vX.Y.Z-dev.N` / `-qa.N` / final.
+Every tag is born from a workflow, in the format `vX.Y.Z-dev.N` /
+`-qa.N` / final.
 
-**A versão vive na TAG, não nos arquivos.** Ninguém pode commitar direto numa
-permanente para bumpar `package.json`, então exigir que os quatro arquivos de
-versão acompanhem obrigaria a um PR de bump por ciclo — cerimônia que o cálculo
-automático existe para eliminar. O `release.yml` confere os arquivos como
-**aviso** e só dispara em tag final.
+**The version lives in the TAG, not in files.** No one can commit
+directly to a permanent branch to bump `package.json`, so requiring the
+four version files to keep up would force a bump PR every cycle — the
+ceremony automated calculation exists to eliminate.
+`release.yml` checks the files as a **warning** and only fires on a final
+tag.
 
-### O que a tag final produz
+### What the final tag produces
 
-O `release.yml` é o fim da esteira, e o que ele entrega é deliberadamente
-modesto:
+`release.yml` is the end of the pipeline, and what it delivers is
+deliberately modest:
 
-| entrega | o quê |
+| delivery | what |
 |---|---|
-| GitHub Release | com as notas geradas do CHANGELOG pela `scripts/changelog.mjs` |
-| conferência de versão | os quatro arquivos versionados, como **aviso** |
-| as quatro imagens de produção | construídas para provar que a tag é **construível** |
-| a versão dentro de duas delas | assada como `ARG` na api e no web — ver abaixo |
+| GitHub Release | with notes generated from the CHANGELOG by
+`scripts/changelog.mjs` |
+| version check | the four versioned files, as a **warning** |
+| the four production images | built to prove the tag is **buildable** |
+| the version baked into two of them | baked in as an `ARG` in the api
+and web — see below |
 
-#### A versão vive na tag, e é o release que a leva ao artefato
+#### The version lives in the tag, and the release is what carries it to the artifact
 
-A tag é a fonte da versão, mas uma imagem não consegue ler a própria tag: o
-container não sabe com que nome foi publicado, e a tag pode ser movida. Então o
-`release.yml` **passa a versão para dentro do build** — e é o único lugar do
-repositório que faz isso.
+The tag is the source of the version, but an image can't read its own
+tag: the container doesn't know what name it was published under, and
+the tag can be moved. So `release.yml` **passes the version into the
+build** — and it's the only place in the repository that does this.
 
-`VERSION` é uma variável do `docker-bake.hcl`, separada de `TAG`, com default
-`dev`. O alvo `api` a converte em `BRABO_VERSION` e o alvo `web` em
-`VITE_BRABO_VERSION`; cada `Dockerfile.prod` a declara como `ARG` com o mesmo
-default. Daí ela chega ao `service.version` dos spans da api e ao rodapé das telas
-de auth da web ([ADR 0036](../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md)).
+`VERSION` is a `docker-bake.hcl` variable, separate from `TAG`, with a
+default of `dev`. The `api` target converts it into `BRABO_VERSION` and
+the `web` target into `VITE_BRABO_VERSION`; each `Dockerfile.prod`
+declares it as an `ARG` with the same default. From there it reaches the
+api's spans' `service.version` and the auth screens' footer on the web
+([ADR 0036](../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md)).
 
-Duas consequências, e as duas são a intenção:
+Two consequences, and both are intentional:
 
-- **Só release carimba versão.** O `ci.yml` usa o mesmo bakefile com `TAG=prod` e
-  não define `VERSION`, então as imagens dele reportam `dev`. Se a versão viesse
-  de `TAG`, todo span do CI sairia com `service.version=prod`, que não é versão de
-  nada.
-- **Versão não é configuração.** Ela é `ARG` de build e não chave de ConfigMap,
-  porque é propriedade do artefato: `brabo-web:1.1.2` não deve poder reportar
-  outra coisa. As URLs continuam em runtime, pelo `/config.js`, porque aquelas são
-  propriedade do ambiente (ADR 0024).
+- **Only a release stamps a version.** `ci.yml` uses the same bakefile
+  with `TAG=prod` and doesn't set `VERSION`, so its images report `dev`.
+  If the version came from `TAG`, every CI span would come out with
+  `service.version=prod`, which isn't a version of anything.
+- **Version isn't configuration.** It's a build `ARG`, not a ConfigMap
+  key, because it's a property of the artifact:
+  `brabo-web:1.1.2` shouldn't be able to report anything else. URLs stay
+  runtime-configured, via `/config.js`, because those are a property of
+  the environment (ADR 0024).
 
-Mexer nessa cadeia é mexer na política: quem alterar `VERSION` no bakefile ou nos
-`ARG` precisa alterar os dois lados juntos, ou a versão silenciosamente volta a
-`dev` — sem erro em lugar nenhum, porque `dev` é um valor válido.
+Touching this chain is touching policy: whoever changes `VERSION` in the
+bakefile or in the `ARG`s needs to change both sides together, or the
+version silently reverts to `dev` — with no error anywhere, because
+`dev` is a valid value.
 
-**As imagens não são publicadas** — `push: false`. Publicar em registry ainda não
-está decidido (o overlay de produção aponta para `ghcr.io/OWNER/*`, um
-placeholder), e a decisão está registrada no
-[ADR 0027](../adr/0027-fase5-backup-hardening-release.md). Construir sem publicar
-não é meia-medida: é o que impede uma tag existir para um commit que não compila.
+**The images aren't published** — `push: false`. Publishing to a
+registry hasn't been decided yet (the production overlay points to
+`ghcr.io/OWNER/*`, a placeholder), and the decision is recorded in
+[ADR 0027](../adr/0027-fase5-backup-hardening-release.md). Building
+without publishing isn't a half-measure: it's what prevents a tag from
+existing for a commit that doesn't compile.
 
-Elas saem do mesmo `docker-bake.hcl` que o `ci.yml` usa, em paralelo. Antes eram
-quatro `docker build` em sequência — mesmo veredito, ~160s a mais por release.
+They're built from the same `docker-bake.hcl` that `ci.yml` uses, in
+parallel. They used to be four sequential `docker build`s — same
+verdict, ~160s more per release.
 
-**Não existe passo de deploy, aqui nem em lugar nenhum.** A tag é o registro do
-que **estaria** em cada ambiente, e isso vale mesmo sem ambiente. Passo que nunca
-roda apodrece: ninguém o testa, ninguém percebe quando quebra, e no dia de ligar
-estará errado. Quando houver ambiente, o deploy será workflow **próprio**,
-disparado pela tag.
+**There's no deploy step, here or anywhere.** The tag is the record of
+what **would be** in each environment, and that holds even without an
+environment. A step that never runs rots: no one tests it, no one
+notices when it breaks, and on the day it's flipped on it'll be wrong.
+When there's an environment, the deploy will be its **own** workflow,
+triggered by the tag.
 
-#### A Release depende do PAT, e a falta dele já custou seis
+#### The Release depends on the PAT, and its absence has already cost six
 
-O `release.yml` dispara em `push` de tag final. Mas **tag empurrada com o
-`GITHUB_TOKEN` não dispara workflow** — é a regra do GitHub contra recursão. O
-`tag-release` usa `secrets.BRABO_BOT_TOKEN || github.token`: sem o PAT, a tag
-nasce e a Release não sai.
+`release.yml` fires on a final tag `push`. But **a tag pushed with the
+`GITHUB_TOKEN` doesn't trigger a workflow** — it's GitHub's anti-recursion
+rule. `tag-release` uses `secrets.BRABO_BOT_TOKEN || github.token`:
+without the PAT, the tag is born and the Release doesn't go out.
 
-A degradação é visível de propósito (há um aviso em toda execução), mas visível
-não é impedida: **`v0.2.0`, `v0.3.0`, `v0.3.1`, `v1.0.0`, `v1.0.1` e `v1.1.0`
-existem sem Release** — seis ciclos inteiros em que o aviso apareceu e ninguém
-agiu sobre ele.
+The degradation is visible on purpose (there's a warning on every run),
+but visible isn't the same as prevented: **`v0.2.0`, `v0.3.0`, `v0.3.1`,
+`v1.0.0`, `v1.0.1` and `v1.1.0` exist with no Release** — six whole
+cycles where the warning showed up and no one acted on it.
 
-Com o PAT configurado, a `v1.1.1` fechou a esteira sozinha: tag empurrada pelo
-token, `release.yml` disparado por ela, Release publicada. Antes dela, só a
-`v0.1.0` tinha Release, e por push manual. **O PAT não recupera as seis
-anteriores** — ele vale para tag nova.
+With the PAT configured, `v1.1.1` closed the pipeline on its own: tag
+pushed by the token, `release.yml` triggered by it, Release published.
+Before it, only `v0.1.0` had a Release, and by a manual push. **The PAT
+doesn't recover the previous six** — it only applies to new tags.
 
-Isso separa dois problemas que é fácil confundir:
+This separates two problems that are easy to confuse:
 
-| problema | conserto |
+| problem | fix |
 |---|---|
-| a Release não sai **sozinha** | configurar o `BRABO_BOT_TOKEN` |
-| a Release que não saiu **não pode sair depois** | o `workflow_dispatch` do `release.yml` |
+| the Release doesn't go out **on its own** | configure the
+`BRABO_BOT_TOKEN` |
+| a Release that didn't go out **can't go out later** |
+`release.yml`'s `workflow_dispatch` |
 
-O segundo continuaria aberto mesmo com o PAT no lugar: qualquer falha no
-workflow deixaria a tag órfã para sempre, porque republicar exigiria apagar e
-recriar a tag — reescrever o registro para consertar o efeito dele. Quem
-republica é o responsável de release, a mesma restrição do `promote`. O
-procedimento está em [Rulesets](../reference/rulesets.md#republicar-uma-tag-que-ficou-órfã).
+The second would remain open even with the PAT in place: any workflow
+failure would leave the tag orphaned forever, because republishing would
+require deleting and recreating the tag — rewriting the record to fix
+its own effect. Whoever republishes is the release owner, the same
+restriction as `promote`. The procedure is in
+[Rulesets](../reference/rulesets.md#republishing-a-tag-that-was-orphaned).
 
-### O CHANGELOG volta por PR, e por que não por push
+### The CHANGELOG comes back via PR, and why not by push
 
-Publicada a Release, o `release.yml` abre uma PR `chore/changelog-<tag>` para
-**`dev`** com o corte da versão no `CHANGELOG.md` — e, no mesmo commit, com a
-versão anunciada em prosa nos **dois** arquivos que a escrevem: o `README.md` e
-o `docs/intro.md`, a primeira página do site publicado. Quem reescreve os dois é
-`scripts/ci/readme-version.ts`, e ele lê e troca todos antes de gravar qualquer
-um: frase ausente num deles reprova o release inteiro sem deixar metade gravada.
+Once the Release is published, `release.yml` opens a `chore/changelog-<tag>`
+PR to **`dev`** with the version's cut in `CHANGELOG.md` — and, in the
+same commit, with the version announced in prose in the **two** files
+that write it: `README.md` and `docs/intro.md`, the published site's
+first page. Whoever rewrites both is `scripts/ci/readme-version.ts`, and
+it reads and swaps all of them before writing any one of them: a phrase
+missing in either fails the whole release rather than leaving it half
+written.
 
-As três coisas andam juntas de propósito. A versão é **gerável** (o release sabe
-qual é), e o `docs:check` confere que ela bate com o corte mais recente do
-CHANGELOG em cada um dos arquivos; separar as duas pontas faria toda PR de
-changelog nascer vermelha, aberta pelo bot e esperando uma mão humana que a
-política não prevê. Frase não encontrada REPROVA o passo em vez de passar
-batido — a regex deste script e a de `scripts/docs/generate.mjs` são os dois
-lados do mesmo contrato, e um teste guarda o acordo.
+The three things move together on purpose. The version is **generatable**
+(the release knows what it is), and `docs:check` confirms it matches the
+CHANGELOG's most recent cut in each of the files; separating the two
+ends would make every changelog PR born red, opened by the bot and
+waiting for a human hand the policy doesn't provide for. A phrase not
+found FAILS the step instead of sliding through — this script's regex and
+`scripts/docs/generate.mjs`'s are the two sides of the same contract, and
+a test guards the agreement.
 
-Por PR, e não por push, porque nenhum dos caminhos diretos existe: `main` só
-aceita tag (bot de release) e `.release/gate.json` (bot do gate), e commitar em
-`qa` ou `dev` antes da promoção quebraria o **range limpo** do check de
-promoção — o head do PR deixaria de ser o tip da origem.
+By PR, and not by push, because none of the direct paths exist: `main`
+only accepts a tag (release bot) and `.release/gate.json` (gate bot), and
+committing to `qa` or `dev` before promotion would break the promotion
+check's **clean range** — the PR's head would stop being the origin's
+tip.
 
-**Consequência aceita:** o `CHANGELOG.md` de `main` fica um ciclo atrás. Não é
-perda de informação: a fonte autoritativa das notas é a **GitHub Release**,
-publicada no mesmo instante da tag, e o corte sobe no ciclo seguinte como
-qualquer outra mudança.
+**Accepted consequence:** `main`'s `CHANGELOG.md` stays one cycle behind.
+It's not information loss: the authoritative source of the notes is the
+**GitHub Release**, published at the same moment as the tag, and the cut
+lands in the next cycle like any other change.
 
-> Antes disso **nada nunca escrevia no arquivo**. O gerador só era chamado com
-> `--stdout`, para montar o corpo da Release, e o `CHANGELOG.md` acumulou doze
-> versões dentro de um único "Unreleased" — enquanto seis Releases saíam com o
-> corpo vazio, porque a "tag anterior" incluía as pré-releases da própria
-> versão sendo lançada.
+> Before this, **nothing ever wrote to the file**. The generator was only
+> ever called with `--stdout`, to build the Release's body, and
+> `CHANGELOG.md` had accumulated twelve versions inside a single
+> "Unreleased" — while six Releases went out with an empty body, because
+> the "previous tag" included that same version's own pre-releases.
 
-### A versão do ciclo
+### The cycle's version
 
-Sai do **maior impacto** entre os PRs mergeados desde a última final:
+Comes from the **largest impact** among the PRs merged since the last
+final tag:
 
-| função da branch | impacto |
+| branch function | impact |
 |---|---|
 | `breaking/` | MAJOR |
 | `feature/` | MINOR |
-| todo o resto | PATCH |
+| everything else | PATCH |
 
-Um `breaking` no meio de dez `docs` faz o ciclo inteiro ser MAJOR. E é a
-**função da branch** que decide, não a label de família: `breaking/x` e
-`docs/y` são ambos da família `trabalho`.
+A single `breaking` among ten `docs` makes the whole cycle MAJOR. And
+it's the **branch's function** that decides, not the family label:
+`breaking/x` and `docs/y` are both in the `trabalho` family.
 
-#### `breaking/` exige o marcador no commit
+#### `breaking/` requires the marker on the commit
 
-O `pr-police` reprova um PR de `breaking/` cujos commits não marcam a quebra —
-`!` no assunto (`feat(api)!: …`) ou `BREAKING CHANGE:` no corpo — e reprova
-também o inverso: commit marcado numa branch que não é `breaking/`.
+`pr-police` rejects a `breaking/` PR whose commits don't mark the break
+— `!` in the subject (`feat(api)!: …`) or `BREAKING CHANGE:` in the body
+— and it also rejects the inverse: a marked commit on a branch that isn't
+`breaking/`.
 
-A regra existe porque são **dois mecanismos para o mesmo fato**, e eles viviam
-soltos: a versão sai da FUNÇÃO da branch (a tabela acima), e o CHANGELOG
-detecta quebra pelo MARCADOR no commit. Nada os ligava.
+The rule exists because these are **two mechanisms for the same fact**,
+and they used to live apart: the version comes from the branch's
+FUNCTION (the table above), and the CHANGELOG detects a break by the
+commit's MARKER. Nothing connected them.
 
-O preço foi medido. `breaking/fase-7-auth-e-openapi` removeu o Keycloak,
-deslogou todo mundo e subiu MAJOR corretamente — e o CHANGELOG não registra
-quebra nenhuma, em **nenhuma** das doze versões, porque nenhum commit do
-histórico jamais usou os marcadores. As duas metades funcionavam; a informação
-não atravessava de uma para a outra.
+The cost was measured. `breaking/fase-7-auth-e-openapi` removed
+Keycloak, logged everyone out and correctly bumped MAJOR — and the
+CHANGELOG records no breakage at all, in **none** of the twelve versions,
+because no commit in the history had ever used the markers. Both halves
+worked; the information just never crossed from one to the other.
 
-As duas direções importam, e a segunda é pior:
+Both directions matter, and the second is worse:
 
-| situação | o que acontecia |
+| situation | what used to happen |
 |---|---|
-| `breaking/` sem marcador | a versão salta MAJOR e o changelog não diz o que quebrou |
-| marcador fora de `breaking/` | o changelog anuncia a quebra e a versão sai PATCH — quem confia no número quebra sem aviso |
+| `breaking/` with no marker | the version jumps MAJOR and the
+changelog doesn't say what broke |
+| marker outside `breaking/` | the changelog announces a break and the
+version comes out PATCH — whoever trusts the number breaks without
+warning |
 
-Verificação que não pôde ser feita (checkout raso, ref não buscada) **não
-reprova**: a regra só roda quando o intervalo `base..head` é legível, a mesma
-doutrina da checagem de contaminação.
+A check that couldn't be performed (shallow checkout, ref not fetched)
+**doesn't fail**: the rule only runs when the `base..head` range is
+readable, the same doctrine as the contamination check.
 
-Ciclo **vazio** — nenhum PR desde a última final — falha com mensagem em vez de
-gerar tag. Tag nova apontando para o mesmo commit da anterior faz o histórico
-de versões mentir.
+An **empty** cycle — no PR since the last final — fails with a message
+instead of generating a tag. A new tag pointing at the same commit as the
+previous one would make the version history lie.
 
-#### De onde saem os PRs do ciclo
+#### Where the cycle's PRs come from
 
-Do `git log` entre a última final e `dev`, lendo o número do PR no assunto do
-commit. Os **dois estilos de merge** precisam ser entendidos, porque o número
-cai em lugares diferentes:
+From the `git log` between the last final tag and `dev`, reading the PR
+number from the commit's subject. The **two merge styles** need to be
+understood, because the number lands in different places:
 
-| estilo | assunto |
+| style | subject |
 |---|---|
 | squash | `feat(ci): faz coisa (#53)` |
 | merge commit | `Merge pull request #56 from daneiel/feature/x` |
 
-Ler só o primeiro foi um bug real: o `--no-merges` do range escondia
-exatamente a linha que cita o número num merge commit, e o ciclo inteiro
-parecia vazio — o merge do #56 em `dev` não gerou tag nenhuma.
+Reading only the first was a real bug: the range's `--no-merges` was
+hiding exactly the line that cites the number in a merge commit, and the
+whole cycle looked empty — merging #56 into `dev` generated no tag at
+all.
 
-**Promoção e retropropagação não contam.** Elas nascem de uma permanente, e o
-que carregam já foi contado ou já foi lançado. Sem essa exclusão, um backmerge
-de hotfix sozinho geraria um ciclo novo: uma tag `-dev.N` sobre uma versão que
-não mudou nada.
+**Promotion and back-merge don't count.** They're born from a permanent
+branch, and what they carry has already been counted or already
+released. Without this exclusion, a solo hotfix back-merge would
+generate a whole new cycle: a `-dev.N` tag on a version that changed
+nothing.
 
-Duas peças fazem essa descoberta e **têm que concordar**: o `tag-release`, que
-carimba no merge, e o `promote`, que calcula a versão do PR de promoção. Se
-divergirem, o PR de promoção anuncia uma versão e a tag sai com outra. As duas
-usam a mesma função — a duplicação da lógica já custou uma promoção reprovada
-com "ciclo vazio" logo depois de o `tag-release` ter carimbado `-dev.2`.
+Two pieces do this discovery and **have to agree**: `tag-release`, which
+stamps at merge time, and `promote`, which computes the version for the
+promotion PR. If they diverge, the promotion PR announces one version and
+the tag comes out with another. Both use the same function — the logic's
+duplication has already cost one promotion, rejected as "empty cycle"
+right after `tag-release` had stamped `-dev.2`.
 
-> **O `promote` roda com o código da branch PADRÃO.** É `workflow_dispatch`
-> (ver a tabela de gatilhos em [Rulesets](../reference/rulesets.md)), então
-> corrigir o cálculo em `dev` **não** conserta o dispatch enquanto a correção
-> não chegar em `main`. Até lá, a saída é a mesma já documentada: rodar
-> `node scripts/ci/promote.ts` à mão, com o mesmo script.
+> **`promote` runs with the code from the DEFAULT branch.** It's
+> `workflow_dispatch` (see the trigger table in
+> [Rulesets](../reference/rulesets.md)), so fixing the calculation in
+> `dev` does **not** fix the dispatch until the fix reaches `main`. Until
+> then, the workaround is the one already documented: run
+> `node scripts/ci/promote.ts` by hand, with the same script.
 
-### O `N`
+### The `N`
 
-`N` é quantas tags daquela versão já existem naquele estágio, mais um.
+`N` is however many tags of that version already exist at that stage,
+plus one.
 
-Não há estado guardado em lugar nenhum: **as próprias tags são o contador**. É
-o que faz "promoveu, reprovou, corrigiu, repromoveu" virar `-qa.2` sem ninguém
-anotar a reprovação — e o número passa a dizer quantas voltas o ciclo deu antes
-de passar.
+There's no state stored anywhere: **the tags themselves are the
+counter**. That's what makes "promoted, rejected, fixed, re-promoted"
+become `-qa.2` with no one recording the rejection — and the number ends
+up saying how many laps the cycle took before passing.
 
-### A âncora da tag final
+### The final tag's anchor
 
-A tag final só nasce se o que está em `main` for **exatamente** o que passou
-por `qa`. Se não for, o workflow falha ruidosamente em vez de publicar.
+The final tag is only born if what's in `main` is **exactly** what
+passed through `qa`. If it isn't, the workflow fails loudly instead of
+publishing.
 
-Como promoção é `--no-ff`, o merge **cria um commit novo** — o sha de `main`
-nunca vai ser o sha de `qa`. Comparar shas seria uma verificação impossível de
-passar. O que se compara são duas coisas, e juntas elas são mais fortes:
+Since promotion is `--no-ff`, the merge **creates a new commit** —
+`main`'s sha will never be `qa`'s sha. Comparing shas would be a check
+impossible to pass. What gets compared are two things, and together
+they're stronger:
 
-| conferência | o que garante |
+| check | what it guarantees |
 |---|---|
-| a `-qa.N` é **pai** do commit de `main` | foi ela que entrou, não um ancestral qualquer |
-| a **árvore** é idêntica | o conteúdo é byte a byte o que foi validado |
+| the `-qa.N` is the **parent** of the commit on `main` | it was that
+one that entered, not some ancestor |
+| the **tree** is identical | the content is byte-for-byte what was
+validated |
 
-A segunda é a que realmente importa. Se o outro lado do merge trouxesse um
-arquivo, a árvore mudaria e a verificação reprovaria — que é exatamente o caso
-que a âncora existe para pegar. Igualdade de árvore é mais forte que igualdade
-de commit: ela olha o conteúdo, não a identidade.
+The second is the one that really matters. If the other side of the
+merge brought in a file, the tree would change and the check would fail
+— exactly the case the anchor exists to catch. Tree equality is stronger
+than commit equality: it looks at content, not identity.
 
-### Os dois caminhos da `main`
+### `main`'s two paths
 
-`main` recebe merge de dois jeitos, e eles pedem versões diferentes. A
-distinção sai do **segundo pai** do merge commit — o lado que entrou:
+`main` receives merges in two ways, and they call for different
+versions. The distinction comes from the merge commit's **second
+parent** — the side that entered:
 
-| segundo pai | caminho | versão |
+| second parent | path | version |
 |---|---|---|
-| é o commit de uma `-qa.N` | promoção | a do ciclo, **com âncora** |
-| qualquer outro | hotfix | última final **+ PATCH**, sem âncora |
+| the commit of a `-qa.N` | promotion | the cycle's, **with anchor** |
+| anything else | hotfix | last final **+ PATCH**, no anchor |
 
-O hotfix nasce de `main` e nunca passa por `qa`. Exigir âncora dele seria
-exigir o impossível — e a tag PATCH precisa nascer, porque é ela que os PRs de
-retropropagação citam.
+The hotfix is born from `main` and never goes through `qa`. Requiring an
+anchor from it would demand the impossible — and the PATCH tag has to be
+born, because it's the one the back-merge PRs cite.
 
-Uma `-dev.N` de segundo pai **não** conta como promoção: um merge de `dev`
-direto em `main` pula `qa`, e a final sairia carimbando código que ninguém
-validou.
+A `-dev.N` as second parent does **not** count as a promotion: a merge
+straight from `dev` into `main` skips `qa`, and the final tag would end
+up stamping code no one validated.
 
-Casos que falham ruidosamente em vez de adivinhar:
+Cases that fail loudly instead of guessing:
 
-| situação | por quê |
+| situation | why |
 |---|---|
-| merge em `main` com um pai só | squash apaga o lado que entrou; sem ele o caminho é indeterminável |
-| hotfix sem nenhuma final publicada | PATCH é incremento sobre algo lançado |
+| a merge into `main` with a single parent | a squash erases the side
+that entered; without it the path can't be determined |
+| a hotfix with no final tag published yet | PATCH is an increment over
+something already released |
 
-E dois casos que **não geram tag nenhuma**, de propósito: o commit do gate
-(mexe só em `.release/`) e a retropropagação `main → qa`/`dev`, que traz
-conteúdo que já está em `main`. Sem essa segunda saída, o backmerge carimbaria
-uma `-qa.N` num commit que nunca foi promovido de `dev` — uma tag dizendo
-"isto passou por qa" sobre algo que não passou.
+And two cases that generate **no tag at all**, on purpose: the gate's
+commit (touches only `.release/`) and the `main → qa`/`dev` back-merge,
+which carries content already in `main`. Without this second escape
+hatch, the back-merge would stamp a `-qa.N` on a commit that was never
+promoted from `dev` — a tag saying "this passed through qa" on something
+that didn't.
 
-### Não há deploy
+### There's no deploy
 
-Os workflows **terminam na tag**. Não há ambiente, não há GitHub Environments,
-não há passo de deploy — nem desligado. A tag é o registro do que *estaria* em
-cada estágio, e vale por si.
+The workflows **end at the tag**. There's no environment, no GitHub
+Environments, no deploy step — not even a disabled one. The tag is the
+record of what *would be* at each stage, and stands on its own.
 
-Um passo de deploy que nunca roda é um passo que apodrece: ninguém o testa,
-ninguém percebe quando quebra, e no dia em que for ligado estará errado. Quando
-houver ambiente, o deploy será um workflow próprio disparado **pela tag**.
+A deploy step that never runs is a step that rots: no one tests it, no
+one notices when it breaks, and on the day it's turned on it'll be
+wrong. When there's an environment, the deploy will be its own workflow,
+triggered **by the tag**.
 
-Para olhar com os próprios olhos o que uma tag carimbou:
+To look with your own eyes at what a tag stamped:
 
 ```bash
 make deploy-local TAG=v0.2.0-qa.1
 ```
 
-## O backmerge gate
+## The back-merge gate
 
-O `hotfix` resolve o incidente e cria um problema novo: a correção está em
-`main` e não está em `qa` nem em `dev`. Se alguém promover `dev → qa → main`
-antes de a correção descer, o release **desfaz o hotfix** — sem conflito, sem
-aviso, meses depois, e ninguém vai ligar o bug de volta àquele merge.
+`hotfix` solves the incident and creates a new problem: the fix is in
+`main` and not in `qa` or `dev`. If someone promotes `dev → qa → main`
+before the fix comes down, the release **undoes the hotfix** — no
+conflict, no warning, months later, and no one will connect the bug back
+to that merge.
 
-O gate fecha esse buraco travando os degraus de baixo até a correção descer.
+The gate closes that hole by locking the lower steps until the fix comes
+down.
 
-### O estado
+### The state
 
-O gate mora em `.release/gate.json`, na `main`:
+The gate lives at `.release/gate.json`, on `main`:
 
 ```json
 {
@@ -658,105 +762,115 @@ O gate mora em `.release/gate.json`, na `main`:
 }
 ```
 
-| campo | o quê |
+| field | what |
 |---|---|
-| `locked` | branches que não aceitam merge nenhum |
-| `awaiting` | a tag do hotfix mais recente — `null` quando limpo |
-| `order` | a ordem em que as travas saem: sempre de cima para baixo |
-| `historico` | todos os hotfixes desta rodada; zera quando a cadeia fecha |
+| `locked` | branches that accept no merge at all |
+| `awaiting` | the most recent hotfix's tag — `null` when clean |
+| `order` | the order the locks come off in: always top to bottom |
+| `historico` | every hotfix in this round; resets when the chain closes |
 
-Ele é lido **sempre da `main`**, nunca da branch do PR: os PRs de
-retropropagação carregam uma cópia do arquivo junto, e ler essa cópia daria o
-estado velho justamente durante a cadeia em que ele muda a cada merge.
+It's read **always from `main`**, never from the PR's branch: the
+back-merge PRs carry a copy of the file along, and reading that copy
+would give the stale state precisely during the chain it changes at
+every merge.
 
-### O que acontece no merge de um hotfix
+### What happens when a hotfix merges
 
-Tudo no mesmo workflow (`tag-release`), nesta ordem — e a ordem importa, porque
-os PRs precisam citar a tag:
+All in the same workflow (`tag-release`), in this order — and the order
+matters, because the PRs need to cite the tag:
 
-1. a tag **PATCH** nasce normalmente (`v0.2.0` + hotfix → `v0.2.1`);
-2. os **dois PRs de retropropagação** são abertos: `main → qa` e `main → dev`;
-3. `.release/gate.json` é escrito em `main` travando `qa` e `dev`.
+1. the **PATCH** tag is born normally (`v0.2.0` + hotfix → `v0.2.1`);
+2. the **two back-merge PRs** are opened: `main → qa` and `main → dev`;
+3. `.release/gate.json` is written on `main`, locking `qa` and `dev`.
 
-### Acúmulo sai de graça
+### Accumulation comes free
 
-Um segundo hotfix durante gate ativo **não abre PR novo e não cria fila
-paralela**. Os PRs `main → qa` e `main → dev` já estão abertos e carregam o que
-`main` tiver — inclusive o hotfix novo. O gate só acrescenta a entrada no
-`historico` e reafirma a trava. Uma branch já destravada **volta a travar**,
-porque agora há conteúdo novo para descer.
+A second hotfix during an active gate **doesn't open a new PR and
+doesn't create a parallel queue**. The `main → qa` and `main → dev` PRs
+are already open and carry whatever `main` has — including the new
+hotfix. The gate only appends the entry to `historico` and re-affirms the
+lock. A branch already unlocked **locks again**, because now there's new
+content that needs to come down.
 
-### O check, em todo PR
+### The check, on every PR
 
-| situação | veredito |
+| situation | verdict |
 |---|---|
-| `locked` vazio | ✓ passa |
-| `main` → primeiro degrau ainda travado | ✓ é a retropropagação da vez |
-| `main` → degrau fora de ordem | ✗ "destrave `qa` antes de `dev`" |
-| qualquer PR para branch travada | ✗ com o link do PR que resolve |
-| `hotfix/` → `main` | ✓ `main` nunca é travada |
+| `locked` empty | ✓ passes |
+| `main` → first still-locked step | ✓ it's that step's back-merge |
+| `main` → step out of order | ✗ "unlock `qa` before `dev`" |
+| any PR to a locked branch | ✗ with the link to the PR that resolves
+it |
+| `hotfix/` → `main` | ✓ `main` is never locked |
 
-`bugfix/` para `dev` durante gate ativo é **barrado**. A tentação é achar que
-"é correção, então pode passar": não pode. Ela nasce de `dev`, não carrega o
-hotfix, não resolve a trava, e ainda empilha trabalho por cima do buraco.
+`bugfix/` to `dev` during an active gate is **blocked**. The temptation is
+to think "it's a fix, so it should pass": it can't. It's born from `dev`,
+doesn't carry the hotfix, doesn't resolve the lock, and just piles more
+work on top of the hole.
 
-### A ordem não é burocracia
+### The order isn't bureaucracy
 
-Destravar `dev` antes de `qa` deixaria o degrau do meio sem a correção — que é
-exatamente o buraco que o gate existe para fechar. A última destrava limpa o
-`awaiting` e zera o histórico.
+Unlocking `dev` before `qa` would leave the middle step without the fix
+— exactly the hole the gate exists to close. The last unlock clears
+`awaiting` and resets the history.
 
-### A trava é conferida, não só declarada
+### The lock is checked, not just declared
 
-`locked` é o **registro da intenção**; a verdade é a contenção. Antes de
-avaliar, o check pergunta ao git se o commit do hotfix **já está** em cada
-branch travada, e deixa cair as travas que a realidade já satisfez.
+`locked` is the **record of intent**; the truth is the containment.
+Before evaluating, the check asks git whether the hotfix commit is
+**already** in each locked branch, and lets fall whichever locks reality
+has already satisfied.
 
-Isso não é zelo: é o conserto de uma armadilha real. Os PRs de retropropagação
-levam o `gate.json` para `qa` e `dev`; meses depois, uma promoção `qa → main`
-pode subir aquela cópia velha de volta. Sem a conferência, uma trava fantasma
-reapareceria em `main` sem nenhum hotfix por trás — e nada a destravaria,
-porque não há retropropagação pendente. O repositório ficaria parado para
-sempre.
+This isn't fussiness: it's the fix for a real trap. The back-merge PRs
+carry `gate.json` to `qa` and `dev`; months later, a `qa → main` promotion
+could bring that stale copy back up. Without the check, a phantom lock
+would reappear on `main` with no hotfix behind it — and nothing would
+unlock it, because there's no pending back-merge. The repository would
+stay stuck forever.
 
-**Não conseguir verificar mantém a trava.** Desconhecido não é permissão.
+**Failing to verify keeps the lock.** Unknown isn't permission.
 
-## O que a política não resolve
+## What the policy doesn't solve
 
-**Não impede código ruim.** Ela garante que o código passou pelos degraus, não
-que é bom. Quem faz isso é revisão, teste e os gates de QA e SecOps.
+**It doesn't prevent bad code.** It guarantees the code went through the
+steps, not that it's good. That's review, testing and the QA/SecOps gates'
+job.
 
-**Não substitui julgamento em incidente.** Ela dá um caminho rápido e seguro
-(`hotfix`) para que ninguém precise escolher entre "seguir a regra" e "resolver
-agora". Se a política estiver atrapalhando durante um incidente, o problema é
-a política — abra uma issue depois, não burle durante.
+**It doesn't replace judgment during an incident.** It gives a fast, safe
+path (`hotfix`) so no one has to choose between "follow the rule" and
+"fix it now." If the policy is getting in the way during an incident, the
+policy is the problem — open an issue afterward, don't cheat during.
 
-## Papéis
+## Roles
 
-Enquanto `APPROVAL_MODE=solo`, os dois papéis abaixo são exercidos pelo
-**owner**. Não é concentração por descuido — é o reconhecimento de que um
-projeto de um mantenedor não tem a quem delegar, escrito em vez de subentendido.
+While `APPROVAL_MODE=solo`, the two roles below are held by the
+**owner**. It's not concentration by neglect — it's the acknowledgment,
+written down instead of left implicit, that a single-maintainer project
+has no one to delegate to.
 
-| papel | quem | o que faz |
+| role | who | what they do |
 |---|---|---|
-| **responsável de release** | owner | único autorizado a disparar o `promote` |
-| **plantão de hotfix** | owner | aprova o merge em `main` durante incidente |
+| **release owner** | owner | the only one authorized to trigger
+`promote` |
+| **hotfix on-call** | owner | approves the merge into `main` during an
+incident |
 
-As duas atribuições **reabrem na migração para `community`**. Ali o plantão
-volta a ser pergunta de verdade: a escada exigirá PO + gestor para `main`, e
-alguém precisa poder agir às 3h da manhã quando os dois estão dormindo. Esse
-fallback terá de ser **exceção documentada no mapa de exigências** — com quem
-pode exercê-la e o que fica registrado depois —, nunca uma burla informal.
-
----
-
-> **TODO(humano):** esta página foi reconstruída a partir do `CLAUDE.md`, não
-> da apresentação original da política. Se a apresentação disser algo que aqui
-> não está — SLA de retropropagação, papéis nomeados, política de branch
-> obsoleta —, confira e complete.
+Both assignments **reopen once migrating to `community`**. There, on-call
+becomes a real question again: the ladder will require a PO + a manager
+for `main`, and someone needs to be able to act at 3am when both of them
+are asleep. That fallback will have to be a **documented exception in the
+requirements map** — with who can exercise it and what gets recorded
+afterward —, never an informal workaround.
 
 ---
 
-<sub>Esteira exercitada de ponta a ponta em 2026-07-27: `v0.2.0-dev.1` → `-dev.2`
-→ `-qa.1` → `-qa.2` → final, com uma reprovação encenada entre os dois carimbos
-de `qa` para provar que o `N` conta sozinho.</sub>
+> **TODO(humano):** this page was rebuilt from `CLAUDE.md`, not from the
+> policy's original presentation. If the presentation says something
+> that's not here — back-merge SLA, named roles, an obsolete branch
+> policy —, check and complete it.
+
+---
+
+<sub>Pipeline exercised end to end on 2026-07-27: `v0.2.0-dev.1` → `-dev.2`
+→ `-qa.1` → `-qa.2` → final, with a staged rejection between the two `qa`
+stamps to prove that `N` counts on its own.</sub>

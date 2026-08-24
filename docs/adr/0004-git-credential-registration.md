@@ -1,87 +1,88 @@
-# 0004 — Cadastro de credenciais de git do usuário
+# 0004 — Registration of the user's git credentials
 
-## Contexto
+## Context
 
-Item 3 da Fase 2 (ver CLAUDE.md): credenciais de git do usuário
-(tokens do GitHub/GitLab usados pelo `GithubProvider`/`GitlabProvider`
-pra operar em nome dele) precisam viver na mesma tabela
-`user_credentials` das API keys de LLM (Fase 1), com a mesma envelope
-encryption, e com teste de conexão obrigatório no cadastro.
+Item 3 of Phase 2 (see CLAUDE.md): the user's git credentials (GitHub/GitLab
+tokens used by `GithubProvider`/`GitlabProvider` to operate on their
+behalf) need to live in the same `user_credentials` table as the LLM API
+keys (Phase 1), with the same envelope encryption, and with a mandatory
+connection test at registration time.
 
-Duas questões de shape:
+Two shape questions:
 
-1. `user_credentials.provider` já era `llm_provider` enum
-   (`ollama`/`anthropic`/...). Um token de git não é um provider de LLM
-   — alargar `llm_provider` misturaria dois domínios num enum só usado
-   também por `models`/`token_usage` (LLM-only de verdade).
-   Reaproveitar `git_provider` (usado por `project_git_connections`)
-   também não serve: ele inclui `'local'`, que não faz sentido como
-   provider de uma *credencial* (não existe token pra git local).
-2. Um token inválido/revogado só é descoberto ao tentar usá-lo — sem
-   teste de conexão, o cadastro "sucede" e a falha só aparece no
-   primeiro bootstrap de Gitflow, bem mais tarde e mais caro de
-   diagnosticar.
+1. `user_credentials.provider` was already an `llm_provider` enum
+   (`ollama`/`anthropic`/...). A git token isn't an LLM provider —
+   widening `llm_provider` would mix two domains into a single enum
+   also used by `models`/`token_usage` (genuinely LLM-only). Reusing
+   `git_provider` (used by `project_git_connections`) doesn't work
+   either: it includes `'local'`, which makes no sense as a
+   *credential* provider (there's no token for local git).
+2. An invalid/revoked token is only discovered when it's actually used —
+   without a connection test, registration "succeeds" and the failure
+   only surfaces at the first Gitflow bootstrap, much later and more
+   costly to diagnose.
 
-## Decisão
+## Decision
 
-**Enum dedicado** `credential_provider` (migration `0007`), com
+**Dedicated enum** `credential_provider` (migration `0007`), with
 `CredentialProviderName = LLMProviderName | GitCredentialProviderName`
-em `packages/shared` — união dos dois domínios só no tipo que
-`UserCredentialRepository` usa, sem misturar os enums de banco.
-`GitCredentialProviderName` é `Extract<GitProviderName, 'github' |
-'gitlab'>` — deriva do enum de provider de git, não duplica a lista,
-mas exclui `'local'` estruturalmente.
+in `packages/shared` — a union of the two domains only in the type used
+by `UserCredentialRepository`, without mixing the database enums.
+`GitCredentialProviderName` is `Extract<GitProviderName, 'github' |
+'gitlab'>` — it derives from the git provider enum instead of
+duplicating the list, but structurally excludes `'local'`.
 
-**Teste de conexão SÍNCRONO e OBRIGATÓRIO antes de cifrar/persistir.**
-`RegisterGitCredentialUseCase.execute` (novo) chama
-`GitCredentialConnectionTester.test(provider, token)` primeiro; só se
-isso resolver é que o token é cifrado
-(`EncryptionService.encrypt`) e gravado
-(`UserCredentialRepository.upsert`). Numa falha, nada é escrito — ver
-`GitCredentialConnectionTestFailedError` em
-`domain/git/git-errors.ts`. A implementação real
-(`GitCredentialConnectionTesterImpl`) faz a chamada mais barata
-possível em cada API pra confirmar que o token autentica:
-`GET /user` (Octokit `users.getAuthenticated`) no GitHub,
-`GET /user` (Gitbeaker `Users.showCurrentUser`) no GitLab — nenhuma
-tenta listar repos ou qualquer coisa que dependa de escopo além de
-autenticação básica.
+**SYNCHRONOUS and MANDATORY connection test before encrypting/persisting.**
+`RegisterGitCredentialUseCase.execute` (new) calls
+`GitCredentialConnectionTester.test(provider, token)` first; only if
+that resolves is the token encrypted
+(`EncryptionService.encrypt`) and written
+(`UserCredentialRepository.upsert`). On a failure, nothing is written —
+see `GitCredentialConnectionTestFailedError` in
+`domain/git/git-errors.ts`. The real implementation
+(`GitCredentialConnectionTesterImpl`) makes the cheapest possible call
+on each API to confirm the token authenticates:
+`GET /user` (Octokit `users.getAuthenticated`) on GitHub,
+`GET /user` (Gitbeaker `Users.showCurrentUser`) on GitLab — neither
+attempts to list repos or anything that depends on scope beyond basic
+authentication.
 
-**PAT sempre via `token:` no Gitbeaker, nunca `oauthToken:`.** O
-GitLab valida os dois de formas diferentes (header `PRIVATE-TOKEN` vs.
-`Authorization: Bearer`) — não são intercambiáveis. `oauthToken` fica
-reservado pro fluxo de OAuth de projeto
-(`project_git_connections`, Fase 2 item 4+), que essa sessão não
-altera.
+**PAT always via `token:` in Gitbeaker, never `oauthToken:`.** GitLab
+validates the two differently (`PRIVATE-TOKEN` header vs.
+`Authorization: Bearer`) — they aren't interchangeable. `oauthToken` is
+reserved for the project-level OAuth flow
+(`project_git_connections`, Phase 2 item 4+), which this session doesn't
+change.
 
-**Endpoint próprio só pro registro; GET/DELETE reaproveitados.**
-`POST /users/me/git-credentials` (novo,
-`GitCredentialsController`) é o único caminho nesta sessão, porque só
-o registro precisa do teste de conexão síncrono. Listagem e remoção
-já existiam em `CredentialsController` (Fase 1, LLM) sobre a mesma
-tabela/repositório — `UserCredentialRepository` foi alargado de
-`LLMProviderName` pra `CredentialProviderName` (era o `LLMProviderName`
-solto que sobrou e quebrava o build, ver `delete()` em
-`user-credential.repository.ts`) em vez de duplicar
-list/delete pra git. Nenhum `@RequireRole` no controller novo: é sobre
-a credencial do próprio usuário autenticado, mesmo padrão do endpoint
-LLM equivalente.
+**Dedicated endpoint only for registration; GET/DELETE reused.**
+`POST /users/me/git-credentials` (new,
+`GitCredentialsController`) is the only path in this session, because
+only registration needs the synchronous connection test. Listing and
+deletion already existed in `CredentialsController` (Phase 1, LLM) over
+the same table/repository — `UserCredentialRepository` was widened from
+`LLMProviderName` to `CredentialProviderName` (it was the loose
+`LLMProviderName` left over that broke the build, see `delete()` in
+`user-credential.repository.ts`) instead of duplicating
+list/delete for git. No `@RequireRole` on the new controller: it's
+about the authenticated user's own credential, the same pattern as the
+equivalent LLM endpoint.
 
-**Falha de conexão mapeia pra 422, não 400 nem 409**
-(`git-provider-error.filter.ts`): não é payload malformado (400) nem
-conflito com estado existente (409) — é uma entidade semanticamente
-inválida (token que nunca autenticou), o caso clássico de 422.
+**Connection failure maps to 422, not 400 or 409**
+(`git-provider-error.filter.ts`): it's neither malformed payload (400)
+nor a conflict with existing state (409) — it's a semantically invalid
+entity (a token that never authenticated), the textbook 422 case.
 
-## Consequências
+## Consequences
 
-- Cadastrar uma credencial de git agora faz uma chamada de rede
-  síncrona à API do provider antes de responder — o endpoint é mais
-  lento que um cadastro "cego", de propósito (ver Decisão).
-- `UserCredentialRepository` (e sua migration `0007`) agora serve dois
-  domínios (LLM e git) pela mesma tabela/enum de tipo — qualquer
-  provider de credencial futuro (git ou não) entra por
-  `CredentialProviderName`, não por um enum novo.
-- O teste de conexão não é retentado (`GitCredentialConnectionTester`
-  não usa `withRetry`, ver 0003) — uma falha transitória de rede no
-  cadastro exige que o usuário tente de novo manualmente; aceitável
-  porque é uma ação interativa única, não uma operação de background.
+- Registering a git credential now makes a synchronous network call to
+  the provider's API before responding — the endpoint is slower than a
+  "blind" registration, deliberately (see Decision).
+- `UserCredentialRepository` (and its migration `0007`) now serves two
+  domains (LLM and git) through the same table/type enum — any future
+  credential provider (git or otherwise) enters through
+  `CredentialProviderName`, not a new enum.
+- The connection test isn't retried (`GitCredentialConnectionTester`
+  doesn't use `withRetry`, see 0003) — a transient network failure
+  during registration requires the user to try again manually;
+  acceptable because it's a one-off interactive action, not a
+  background operation.

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trans, useTranslation } from 'react-i18next';
 import type { GitProviderName } from '../lib/api-types';
 import {
   ApiError,
@@ -25,7 +26,8 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
 import { useToast } from '../components/ui/ToastProvider';
-import { GitHubIcon, GitLabIcon, LocalRepoIcon, PlusIcon } from '../components/ui/icons';
+import { GitHubIcon, GitLabIcon, LocalRepoIcon, PlusIcon, FolderIcon } from '../components/ui/icons';
+import { FolderBrowserModal } from '../components/FolderBrowserModal';
 import styles from './NewProjectWizard.module.css';
 
 type StepKey =
@@ -38,59 +40,102 @@ type StepKey =
   | 'confirm';
 type Visibility = 'private' | 'public';
 
-const MODOS: { id: ModoDeRepositorio; label: string; desc: string }[] = [
-  {
-    id: 'create',
-    label: 'Criar novo',
-    desc: 'O Brabo cria o repositório no provider e roda o bootstrap de Gitflow.',
-  },
-  {
-    id: 'adopt',
-    label: 'Adotar existente',
-    desc: 'Aponta o projeto para um repositório que já existe. Nada é criado, e nada é alterado sem você aprovar.',
-  },
+const MODOS: { id: ModoDeRepositorio; labelKey: string; descKey: string }[] = [
+  { id: 'create', labelKey: 'mode.create.label', descKey: 'mode.create.desc' },
+  { id: 'adopt', labelKey: 'mode.adopt.label', descKey: 'mode.adopt.desc' },
 ];
 
-// Onde o CÓDIGO deste projeto vai morar (ADR 0072). Passo próprio, e não uma
-// caixinha no passo de detalhes, porque a escolha muda quem é dono da pasta —
-// e a variante Local só funciona se o caminho estiver montado no container,
-// que é um pré-requisito do AMBIENTE, não um detalhe do projeto.
+// ONDE O COMANDO deste projeto vai EXECUTAR (ADR 0072/0104). Passo próprio,
+// e não uma caixinha no passo de detalhes, porque a escolha muda quem é
+// dono da pasta — e as variantes `mounted`/`runner` só funcionam com um
+// pré-requisito do AMBIENTE (bind-mount, ou o CLI rodando), não um detalhe
+// do projeto.
 const MODOS_DE_WORKSPACE: {
   id: ModoDeWorkspace;
-  label: string;
-  desc: string;
+  labelKey: string;
+  descKey: string;
 }[] = [
-  {
-    id: 'container',
-    label: 'Container',
-    desc: 'O Brabo gerencia a pasta, dentro do volume compartilhado com o engine. É o padrão, e não exige nada de você.',
-  },
-  {
-    id: 'local',
-    label: 'Local',
-    desc: 'O código mora numa pasta SUA. Ela precisa estar montada dentro dos containers da api e do engine, no mesmo caminho.',
-  },
+  { id: 'container', labelKey: 'workspaceMode.container.label', descKey: 'workspaceMode.container.desc' },
+  { id: 'mounted', labelKey: 'workspaceMode.mounted.label', descKey: 'workspaceMode.mounted.desc' },
+  { id: 'runner', labelKey: 'workspaceMode.runner.label', descKey: 'workspaceMode.runner.desc' },
 ];
 
 const PROVIDERS: {
   id: GitProviderName;
-  label: string;
-  desc: string;
+  labelKey: string;
+  descKey: string;
   icon: typeof GitHubIcon;
 }[] = [
-  { id: 'github', label: 'GitHub', desc: 'Repositório via API do GitHub', icon: GitHubIcon },
-  { id: 'gitlab', label: 'GitLab', desc: 'Repositório via API do GitLab', icon: GitLabIcon },
-  { id: 'local', label: 'Local', desc: 'Repositório git local, sem provider externo', icon: LocalRepoIcon },
+  { id: 'github', labelKey: 'provider.github.label', descKey: 'provider.github.desc', icon: GitHubIcon },
+  { id: 'gitlab', labelKey: 'provider.gitlab.label', descKey: 'provider.gitlab.desc', icon: GitLabIcon },
+  { id: 'local', labelKey: 'provider.local.label', descKey: 'provider.local.desc', icon: LocalRepoIcon },
 ];
 
-const STEP_TITLE: Record<StepKey, string> = {
-  mode: 'Criar novo ou adotar existente',
-  provider: 'Onde hospedar',
-  credential: 'Credencial de acesso',
-  details: 'Nome e visibilidade',
-  workspace: 'Onde o código vai morar',
-  policy: 'Política de branches',
-  confirm: 'Confirmar',
+// Navegação antecipada de pasta (RN-437, ADR 0108). Só os campos que
+// determinam a IDENTIDADE do projeto — nunca `caminhoLocal`: o propósito
+// inteiro de navegar é REFINAR o caminho depois de já existir um projeto, e
+// incluí-lo no snapshot invalidaria o reuso a cada clique em "Procurar
+// pasta...".
+interface SnapshotDeIdentidade {
+  name: string;
+  externalId: string;
+  adotando: boolean;
+}
+
+function snapshotDeIdentidade(input: {
+  adotando: boolean;
+  name: string;
+  externalId: string;
+}): SnapshotDeIdentidade {
+  return { name: input.name, externalId: input.externalId, adotando: input.adotando };
+}
+
+function mesmaIdentidade(a: SnapshotDeIdentidade, b: SnapshotDeIdentidade): boolean {
+  return a.name === b.name && a.externalId === b.externalId && a.adotando === b.adotando;
+}
+
+/**
+ * Payload de `createProject`, reaproveitado pelos DOIS caminhos que criam o
+ * projeto: a confirmação final de sempre, e a criação ANTECIPADA (só modo
+ * `runner`, ao clicar "Procurar pasta..." — RN-437, ADR 0108).
+ * `workspacePath` já vem resolvido pelo chamador (recortado, com o
+ * placeholder aplicado quando for o caso) — esta função só monta a forma
+ * que a api espera, sem decidir nada sobre o caminho.
+ */
+function montarPayloadDeCriacao(input: {
+  adotando: boolean;
+  name: string;
+  externalId: string;
+  modoDeWorkspace: ModoDeWorkspace;
+  workspacePath: string;
+}): { name: string; slug: string; executionMode: ModoDeWorkspace; workspacePath?: string } {
+  const nomeDoProjeto = input.adotando ? nomeDoExternalId(input.externalId) : input.name;
+  return {
+    name: nomeDoProjeto,
+    slug: slugify(nomeDoProjeto),
+    executionMode: input.modoDeWorkspace,
+    // Só fora do modo Container: mandar o campo vazio junto com `container`
+    // é 400 na api, de propósito (campo descartado em silêncio vira "mas eu
+    // configurei").
+    ...(input.modoDeWorkspace !== 'container' ? { workspacePath: input.workspacePath } : {}),
+  };
+}
+
+// Placeholder lexicalmente válido (`caminhoLocalParecePlausivel`: absoluto,
+// um segmento só, não é raiz) e claramente PROVISÓRIO — usado só quando o
+// usuário clica "Procurar pasta..." antes de digitar nada. Nunca é a fonte
+// da verdade: quando um runner de verdade conecta, ele sobrescreve
+// `workspacePath` com o caminho real que reporta (RN-423).
+const CAMINHO_PROVISORIO = '/workspace-a-confirmar';
+
+const STEP_TITLE_KEY: Record<StepKey, string> = {
+  mode: 'steps.mode',
+  provider: 'steps.provider',
+  credential: 'steps.credential',
+  details: 'steps.details',
+  workspace: 'steps.workspace',
+  policy: 'steps.policy',
+  confirm: 'steps.confirm',
 };
 
 interface NewProjectWizardProps {
@@ -99,6 +144,7 @@ interface NewProjectWizardProps {
 }
 
 export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps) {
+  const { t } = useTranslation('newProject');
   const [modo, setModo] = useState<ModoDeRepositorio | undefined>();
   const [provider, setProvider] = useState<GitProviderName | undefined>();
   const [name, setName] = useState('');
@@ -110,6 +156,20 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   const [modoDeWorkspace, setModoDeWorkspace] =
     useState<ModoDeWorkspace>('container');
   const [caminhoLocal, setCaminhoLocal] = useState('');
+  // Navegação de pasta local via o Runner (ADR 0107/ADR 0108). No modo
+  // `mounted` o projeto ainda não existe nesta tela (só nasce na
+  // confirmação) e o modal abre no estado declarado — ver
+  // `FolderBrowserModal` sobre `projectId: null`. No modo `runner`, o
+  // clique em "Procurar pasta..." cria o projeto ANTECIPADAMENTE
+  // (`handleProcurarPasta`) para poder ancorar o ticket do canal a um
+  // `projectId` real — `projetoParaNavegar` guarda o id criado e o
+  // SNAPSHOT de identidade que autorizou a criação, pra saber quando é
+  // seguro reusar em vez de criar de novo.
+  const [navegadorDePastaAberto, setNavegadorDePastaAberto] = useState(false);
+  const [projetoParaNavegar, setProjetoParaNavegar] = useState<
+    { id: string; snapshot: SnapshotDeIdentidade } | undefined
+  >();
+  const [criandoParaNavegar, setCriandoParaNavegar] = useState(false);
   const [erroDeCriacao, setErroDeCriacao] = useState<string | null>(null);
   const [selectedCredentialId, setSelectedCredentialId] = useState<string>();
   const [registering, setRegistering] = useState(false);
@@ -191,15 +251,61 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       const cred = await registerGitCredential({ provider, token });
       await queryClient.invalidateQueries({ queryKey: ['credentials'] });
       setSelectedCredentialId(cred.id);
-      showToast({ title: 'Token validado', tone: 'success' });
+      showToast({ title: t('credential.tokenValidated'), tone: 'success' });
     } catch (error) {
       setCredError(
         error instanceof ApiError && error.status === 422
-          ? 'Token inválido ou sem escopo suficiente. Confira e tente de novo.'
-          : 'Não foi possível validar o token agora.',
+          ? t('credential.errors.invalidToken')
+          : t('credential.errors.generic'),
       );
     } finally {
       setRegistering(false);
+    }
+  }
+
+  /**
+   * "Procurar pasta..." (RN-437, ADR 0108). Fora do modo `runner`, só abre o
+   * modal — comportamento de sempre, `projectId: null` (ver
+   * `FolderBrowserModal`). No modo `runner`, o modal precisa de um projeto
+   * real pra ancorar o ticket do canal: se já existe um criado
+   * ANTECIPADAMENTE e a identidade (nome/externalId/adotando) não mudou
+   * desde então, reusa; senão cria agora, com o caminho digitado ou o
+   * placeholder provisório.
+   */
+  async function handleProcurarPasta() {
+    if (modoDeWorkspace !== 'runner') {
+      setNavegadorDePastaAberto(true);
+      return;
+    }
+
+    const snapshotAtual = snapshotDeIdentidade({ adotando, name, externalId });
+    if (projetoParaNavegar && mesmaIdentidade(projetoParaNavegar.snapshot, snapshotAtual)) {
+      setNavegadorDePastaAberto(true);
+      return;
+    }
+
+    setCriandoParaNavegar(true);
+    try {
+      const project = await createProject(
+        workspaceId,
+        montarPayloadDeCriacao({
+          adotando,
+          name,
+          externalId,
+          modoDeWorkspace,
+          workspacePath: caminhoLocal.trim() || CAMINHO_PROVISORIO,
+        }),
+      );
+      await queryClient.invalidateQueries({ queryKey: ['projects', workspaceId] });
+      setProjetoParaNavegar({ id: project.id, snapshot: snapshotAtual });
+      setNavegadorDePastaAberto(true);
+    } catch {
+      showToast({
+        title: t('toasts.folderNavigationPrepareFailed'),
+        tone: 'danger',
+      });
+    } finally {
+      setCriandoParaNavegar(false);
     }
   }
 
@@ -208,21 +314,30 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
     setSubmitting(true);
     setErroDeCriacao(null);
     try {
-      // Na adoção o nome do PROJETO vem do identificador do repositório
-      // (o usuário não digitou nome nenhum) — `acme/checkout` vira
-      // "checkout".
-      const nomeDoProjeto = adotando ? nomeDoExternalId(externalId) : name;
-      const project = await createProject(workspaceId, {
-        name: nomeDoProjeto,
-        slug: slugify(nomeDoProjeto),
-        workspaceMode: modoDeWorkspace,
-        // Só no modo Local: mandar o campo vazio junto com `container` é 400
-        // na api, de propósito (campo descartado em silêncio vira "mas eu
-        // configurei").
-        ...(modoDeWorkspace === 'local'
-          ? { workspacePath: caminhoLocal.trim() }
-          : {}),
-      });
+      const snapshotAtual = snapshotDeIdentidade({ adotando, name, externalId });
+      // Reusa o projeto criado ao navegar em vez de criar de novo — duas
+      // linhas pro mesmo clique de "Provisionar"/"Ver o plano" seria bug,
+      // não feature (RN-437). Se o wizard for fechado sem chegar até aqui,
+      // o projeto criado antecipadamente fica "não provisionado": o MESMO
+      // estado que qualquer criação interrompida já produz hoje — não é
+      // regressão desta entrega.
+      const podeReaproveitar =
+        modoDeWorkspace === 'runner' &&
+        !!projetoParaNavegar &&
+        mesmaIdentidade(projetoParaNavegar.snapshot, snapshotAtual);
+
+      const project = podeReaproveitar
+        ? { id: projetoParaNavegar!.id }
+        : await createProject(
+            workspaceId,
+            montarPayloadDeCriacao({
+              adotando,
+              name,
+              externalId,
+              modoDeWorkspace,
+              workspacePath: caminhoLocal.trim(),
+            }),
+          );
       await queryClient.invalidateQueries({ queryKey: ['projects', workspaceId] });
       onClose();
       // Adotar vai para a tela do PLANO, nunca para a de provisionamento:
@@ -252,7 +367,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
           : null;
       setErroDeCriacao(motivo);
       showToast({
-        title: motivo ? 'Não deu para criar o projeto' : 'Falha ao criar projeto',
+        title: motivo ? t('toasts.createFailedWithReason') : t('toasts.createFailedGeneric'),
         tone: 'danger',
       });
       setSubmitting(false);
@@ -260,7 +375,8 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   }
 
   return (
-    <Modal title="Novo projeto" icon={<PlusIcon size={16} />} onClose={onClose}>
+    <>
+    <Modal title={t('modal.title')} icon={<PlusIcon size={16} />} onClose={onClose}>
       <div className={styles.stepper}>
         {stepKeys.map((key, n) => (
           <div
@@ -285,7 +401,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         ))}
       </div>
 
-      <div className={styles.stepTitle}>{STEP_TITLE[currentStep]}</div>
+      <div className={styles.stepTitle}>{t(STEP_TITLE_KEY[currentStep])}</div>
 
       {currentStep === 'mode' && (
         <div className={styles.providerGrid}>
@@ -298,8 +414,8 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                 .join(' ')}
               onClick={() => setModo(m.id)}
             >
-              <span className={styles.providerLabel}>{m.label}</span>
-              <span className={styles.providerDesc}>{m.desc}</span>
+              <span className={styles.providerLabel}>{t(m.labelKey)}</span>
+              <span className={styles.providerDesc}>{t(m.descKey)}</span>
             </button>
           ))}
         </div>
@@ -321,8 +437,8 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                 }}
               >
                 <Icon size={20} />
-                <span className={styles.providerLabel}>{p.label}</span>
-                <span className={styles.providerDesc}>{p.desc}</span>
+                <span className={styles.providerLabel}>{t(p.labelKey)}</span>
+                <span className={styles.providerDesc}>{t(p.descKey)}</span>
               </button>
             );
           })}
@@ -345,27 +461,27 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         <div>
           <div className={styles.field}>
             <label className={styles.fieldLabel} htmlFor="repo-external-id">
-              Repositório existente
+              {t('details.adopt.repoLabel')}
             </label>
             <Input
               id="repo-external-id"
               value={externalId}
               onChange={(e) => setExternalId(e.target.value)}
               placeholder={
-                provider === 'local' ? '/caminho/do/repo.git' : 'acme/checkout'
+                provider === 'local'
+                  ? t('details.adopt.placeholderLocal')
+                  : t('details.adopt.placeholderRemote')
               }
               autoFocus
             />
             <div className={styles.slugPreview}>
               {provider === 'local'
-                ? 'caminho absoluto do bare repo'
-                : 'no formato dono/repositório, como aparece na URL'}
+                ? t('details.adopt.hintLocal')
+                : t('details.adopt.hintRemote')}
             </div>
           </div>
           <p className={styles.policyNote}>
-            Nada é criado e nada é alterado agora. O próximo passo mostra um{' '}
-            <strong>plano</strong> do que o bootstrap faria neste repositório —
-            e você decide se aplica ou adota como está.
+            <Trans i18nKey="details.adopt.note" ns="newProject" components={{ strong: <strong /> }} />
           </p>
         </div>
       )}
@@ -374,23 +490,27 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         <div>
           <div className={styles.field}>
             <label className={styles.fieldLabel} htmlFor="project-name">
-              Nome do projeto
+              {t('details.create.nameLabel')}
             </label>
             <Input
               id="project-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex.: Loja Online"
+              placeholder={t('details.create.namePlaceholder')}
               autoFocus
             />
             {/* Sem dono no rótulo: quem provisiona é o backend, com o dono da
                 CREDENCIAL (`createForAuthenticatedUser`). Dizia `brabo/<slug>`,
                 fixo no código — e o nome errado ia até a tela de confirmação,
                 onde o usuário aprova. Melhor mostrar só o que se sabe. */}
-            {slug && <div className={styles.slugPreview}>repo: {slug}</div>}
+            {slug && (
+              <div className={styles.slugPreview}>
+                {t('details.create.repoPreview', { slug })}
+              </div>
+            )}
           </div>
           <div className={styles.field}>
-            <span className={styles.fieldLabel}>Visibilidade</span>
+            <span className={styles.fieldLabel}>{t('details.create.visibilityLabel')}</span>
             <div className={styles.toggleRow}>
               {(['private', 'public'] as Visibility[]).map((v) => (
                 <button
@@ -399,7 +519,9 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   className={[styles.toggleOption, visibility === v && styles.selected].filter(Boolean).join(' ')}
                   onClick={() => setVisibility(v)}
                 >
-                  {v === 'private' ? 'Privado' : 'Público'}
+                  {v === 'private'
+                    ? t('details.create.visibilityPrivate')
+                    : t('details.create.visibilityPublic')}
                 </button>
               ))}
             </div>
@@ -410,12 +532,11 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                 repositório criado. */}
             {provider === 'github' && visibility === 'private' && (
               <Alert tone="warning">
-                No plano gratuito do GitHub, <strong>repositório privado não
-                aceita proteção de branch</strong>. O projeto funciona e as
-                branches são criadas, mas o passo "Proteger branches" vai
-                falhar, e o GitHub não impedirá push direto em{' '}
-                <code>main</code>, <code>qa</code> e <code>dev</code> — a trava
-                de merge do Brabo continua valendo, a do GitHub não.
+                <Trans
+                  i18nKey="details.create.githubPrivateWarning"
+                  ns="newProject"
+                  components={{ strong: <strong />, code: <code /> }}
+                />
               </Alert>
             )}
           </div>
@@ -437,40 +558,76 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   .join(' ')}
                 onClick={() => setModoDeWorkspace(m.id)}
               >
-                <span className={styles.providerLabel}>{m.label}</span>
-                <span className={styles.providerDesc}>{m.desc}</span>
+                <span className={styles.providerLabel}>{t(m.labelKey)}</span>
+                <span className={styles.providerDesc}>{t(m.descKey)}</span>
               </button>
             ))}
           </div>
 
-          {modoDeWorkspace === 'local' && (
+          {modoDeWorkspace !== 'container' && (
             <div className={styles.field} style={{ marginTop: 16 }}>
               <label className={styles.fieldLabel} htmlFor="workspace-path">
-                Caminho da pasta
+                {t('workspace.pathLabel')}
               </label>
-              <Input
-                id="workspace-path"
-                value={caminhoLocal}
-                onChange={(e) => setCaminhoLocal(e.target.value)}
-                placeholder="/home/voce/projetos/loja"
-                autoFocus
-              />
-              <div className={styles.slugPreview}>
-                caminho absoluto, como ele aparece DENTRO do container
+              <div className={styles.toggleRow}>
+                <Input
+                  id="workspace-path"
+                  value={caminhoLocal}
+                  onChange={(e) => setCaminhoLocal(e.target.value)}
+                  placeholder={t('workspace.pathPlaceholder')}
+                  autoFocus
+                  style={{ flex: 1, minWidth: 0 }}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void handleProcurarPasta()}
+                  disabled={criandoParaNavegar}
+                >
+                  <FolderIcon size={14} />
+                  {criandoParaNavegar ? t('workspace.preparing') : t('workspace.browseButton')}
+                </Button>
               </div>
-              {/* O aviso é a decisão do dono do produto declarada na tela: o
-                  caminho é livre, e livre só funciona se estiver montado. Sem
-                  isto, a recusa da api (RN-170) chegaria como surpresa. */}
-              <Alert tone="warning">
-                A pasta precisa estar <strong>montada nos containers</strong> da
-                api e do engine, no <strong>mesmo caminho absoluto</strong> — os
-                dois escrevem no mesmo lugar. No{' '}
-                <code>docker/docker-compose.yml</code>, acrescente{' '}
-                <code>- {caminhoLocal.trim() || '/sua/pasta'}:{caminhoLocal.trim() || '/sua/pasta'}</code>{' '}
-                aos serviços <code>api</code> e <code>engine</code>. Se não
-                estiver, a criação é <strong>recusada</strong> aqui mesmo — o
-                projeto não nasce quebrado.
-              </Alert>
+              <div className={styles.slugPreview}>
+                {modoDeWorkspace === 'mounted'
+                  ? t('workspace.hintMounted')
+                  : t('workspace.hintRunner')}
+              </div>
+              {modoDeWorkspace === 'mounted' ? (
+                // O aviso é a decisão do dono do produto declarada na tela: o
+                // caminho é livre, e livre só funciona se estiver montado. Sem
+                // isto, a recusa da api (RN-422) chegaria como surpresa.
+                <Alert tone="warning">
+                  <Trans
+                    i18nKey="workspace.mountedWarning"
+                    ns="newProject"
+                    values={{ caminho: caminhoLocal.trim() || '/sua/pasta' }}
+                    components={{ strong: <strong />, code: <code /> }}
+                  />
+                </Alert>
+              ) : (
+                // `runner`: nada aqui trava a criação (RN-423) — o caminho só é
+                // confirmado quando o runner conectar, nunca "recusado na hora"
+                // como o aviso de `mounted` acima. Com `projetoParaNavegar` já
+                // preenchido (clicou "Procurar pasta..." — RN-437), o comando
+                // mostra o id REAL em vez do placeholder genérico.
+                <Alert tone="accent">
+                  {projetoParaNavegar
+                    ? t('workspace.runnerHint.introExisting')
+                    : t('workspace.runnerHint.intro')}
+                  <br />
+                  <code>
+                    {t('workspace.runnerHint.command', {
+                      id: projetoParaNavegar
+                        ? projetoParaNavegar.id
+                        : t('workspace.runnerHint.placeholderId'),
+                      caminho: caminhoLocal.trim() || '/sua/pasta',
+                    })}
+                  </code>
+                  <br />
+                  {t('workspace.runnerHint.note')}
+                </Alert>
+              )}
             </div>
           )}
         </div>
@@ -478,17 +635,16 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
 
       {currentStep === 'policy' && (
         <div className={styles.policy}>
-          <p className={styles.policyIntro}>
-            Ao provisionar, o bootstrap de Gitflow roda estes passos no repo:
-          </p>
+          <p className={styles.policyIntro}>{t('policy.intro')}</p>
           <ol className={styles.policySteps}>
             {BOOTSTRAP_STEPS.map((step) => (
-              <li key={step.name}>{step.label}</li>
+              <li key={step.name}>{t(step.labelKey, { ns: 'provisioning' })}</li>
             ))}
           </ol>
           <div className={styles.branchPills}>
             {/* Sem `rc`: as permanentes hoje são main, dev e qa — a volta da
-                rc/rcfix está no backlog do ADR 0030. */}
+                rc/rcfix está no backlog do ADR 0030. Nomes de branch não são
+                traduzidos: são identificadores, não texto de interface. */}
             {['main', 'dev', 'qa'].map((b) => (
               <span key={b} className={styles.pill}>
                 {b}
@@ -496,11 +652,10 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
             ))}
           </div>
           <p className={styles.policyNote}>
-            Cascata de promoção: <code>dev ← main</code>, <code>qa ← dev</code>.
-            As permanentes recebem proteção
+            <Trans i18nKey="policy.note" ns="newProject" components={{ code: <code /> }} />
             {provider === 'local'
-              ? ' — exceto no Local, que não tem proteção de branch (o passo é pulado com aviso).'
-              : ' (main, qa, dev).'}
+              ? t('policy.noteSuffixLocal')
+              : t('policy.noteSuffixDefault')}
           </p>
         </div>
       )}
@@ -508,32 +663,49 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       {currentStep === 'confirm' && (
         <div className={styles.summary}>
           <SummaryRow
-            label="Modo"
-            value={adotando ? 'Adotar existente' : 'Criar novo'}
+            label={t('confirm.modeLabel')}
+            value={adotando ? t('mode.adopt.label') : t('mode.create.label')}
           />
-          <SummaryRow label="Provider" value={PROVIDERS.find((p) => p.id === provider)?.label ?? '—'} />
           <SummaryRow
-            label="Código em"
+            label={t('confirm.providerLabel')}
             value={
-              modoDeWorkspace === 'local'
-                ? caminhoLocal.trim()
-                : 'pasta gerenciada pelo Brabo'
+              PROVIDERS.find((p) => p.id === provider)
+                ? t(PROVIDERS.find((p) => p.id === provider)!.labelKey)
+                : t('confirm.unknownProvider')
             }
-            mono={modoDeWorkspace === 'local'}
+          />
+          <SummaryRow
+            label={t('confirm.codeAtLabel')}
+            value={
+              modoDeWorkspace !== 'container'
+                ? caminhoLocal.trim()
+                : t('confirm.managedFolder')
+            }
+            mono={modoDeWorkspace !== 'container'}
           />
           {adotando ? (
             <>
-              <SummaryRow label="Repositório" value={externalId.trim()} mono />
+              <SummaryRow label={t('confirm.repoLabel')} value={externalId.trim()} mono />
               <SummaryRow
-                label="Bootstrap"
-                value="nada roda sem sua aprovação"
+                label={t('confirm.bootstrapLabel')}
+                value={t('confirm.bootstrapAdoptValue')}
               />
             </>
           ) : (
             <>
-              <SummaryRow label="Repositório" value={slug} mono />
-              <SummaryRow label="Visibilidade" value={visibility === 'private' ? 'Privado' : 'Público'} />
-              <SummaryRow label="Bootstrap" value={`${BOOTSTRAP_STEPS.length} passos de Gitflow`} />
+              <SummaryRow label={t('confirm.repoLabel')} value={slug} mono />
+              <SummaryRow
+                label={t('confirm.visibilityLabel')}
+                value={
+                  visibility === 'private'
+                    ? t('details.create.visibilityPrivate')
+                    : t('details.create.visibilityPublic')
+                }
+              />
+              <SummaryRow
+                label={t('confirm.bootstrapLabel')}
+                value={t('confirm.bootstrapStepsValue', { count: BOOTSTRAP_STEPS.length })}
+              />
             </>
           )}
         </div>
@@ -546,31 +718,45 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       <div className={styles.footer}>
         {stepIndex > 0 ? (
           <Button variant="ghost" onClick={() => setStepIndex((s) => s - 1)} disabled={submitting}>
-            Voltar
+            {t('footer.back')}
           </Button>
         ) : (
           <span />
         )}
         <span className={styles.stepLabel}>
-          passo {stepIndex + 1} de {stepKeys.length}
+          {t('footer.stepLabel', { atual: stepIndex + 1, total: stepKeys.length })}
         </span>
         <div className={styles.footerActions}>
           {currentStep !== 'confirm' ? (
             <Button onClick={() => setStepIndex((s) => s + 1)} disabled={!canAdvance()}>
-              Continuar
+              {t('footer.continue')}
             </Button>
           ) : (
             <Button variant="success" onClick={handleConfirm} disabled={submitting}>
               {submitting
-                ? 'Criando…'
+                ? t('footer.submitting')
                 : adotando
-                  ? 'Ver o plano'
-                  : 'Provisionar'}
+                  ? t('footer.viewPlan')
+                  : t('footer.provision')}
             </Button>
           )}
         </div>
       </div>
     </Modal>
+    {navegadorDePastaAberto && (
+      // `mounted`: `projectId={null}` — o projeto ainda não existe (só
+      // nasce na confirmação), ver o docblock de `FolderBrowserModal`.
+      // `runner`: `handleProcurarPasta` já garantiu um projeto real antes
+      // de abrir o modal (RN-437, ADR 0108) — `projetoParaNavegar` sempre
+      // está preenchido aqui.
+      <FolderBrowserModal
+        projectId={modoDeWorkspace === 'runner' ? (projetoParaNavegar?.id ?? null) : null}
+        caminhoInicial={caminhoLocal.trim() || undefined}
+        onSelecionar={(caminho) => setCaminhoLocal(caminho)}
+        onClose={() => setNavegadorDePastaAberto(false)}
+      />
+    )}
+    </>
   );
 }
 

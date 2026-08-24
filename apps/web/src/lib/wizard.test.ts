@@ -81,10 +81,19 @@ describe('canAdvanceFromWorkspace', () => {
     expect(canAdvanceFromWorkspace('container', '')).toBe(true);
   });
 
-  it('Local só avança com caminho plausível', () => {
-    expect(canAdvanceFromWorkspace('local', '')).toBe(false);
-    expect(canAdvanceFromWorkspace('local', 'projetos/loja')).toBe(false);
-    expect(canAdvanceFromWorkspace('local', '/home/voce/loja')).toBe(true);
+  it('Pasta montada só avança com caminho plausível', () => {
+    expect(canAdvanceFromWorkspace('mounted', '')).toBe(false);
+    expect(canAdvanceFromWorkspace('mounted', 'projetos/loja')).toBe(false);
+    expect(canAdvanceFromWorkspace('mounted', '/home/voce/loja')).toBe(true);
+  });
+
+  // RN-423 (ADR 0104): `runner` usa o MESMO predicado léxico de `mounted` —
+  // a diferença entre os dois é QUEM/QUANDO verifica o disco, não o que
+  // conta como caminho plausível.
+  it('Runner só avança com caminho plausível', () => {
+    expect(canAdvanceFromWorkspace('runner', '')).toBe(false);
+    expect(canAdvanceFromWorkspace('runner', 'projetos/loja')).toBe(false);
+    expect(canAdvanceFromWorkspace('runner', '/home/voce/loja')).toBe(true);
   });
 });
 

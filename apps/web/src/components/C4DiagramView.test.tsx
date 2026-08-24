@@ -1,7 +1,36 @@
+import type { ReactElement } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import overviewPtBR from '../locales/pt-BR/overview.json';
+import uiPtBR from '../locales/pt-BR/ui.json';
 import { C4DiagramView } from './C4DiagramView';
 import type { C4Diagrama } from '../lib/api-types';
+
+// Mesmo padrão de `AccountPage.test.tsx`: instância isolada de i18next em
+// pt-BR, para as asserções (já escritas em pt-BR) continuarem valendo sem
+// depender do resto do app inicializar `lib/i18n.ts`. O namespace `ui` entra
+// porque o lightbox usa o `Modal` do design system, que lê `modal.closeLabel`
+// dele — sem ele o botão de fechar caía na chave crua.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: { 'pt-BR': { overview: overviewPtBR, ui: uiPtBR } },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'overview',
+    ns: ['overview', 'ui'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
+function renderComI18n(ui: ReactElement) {
+  return render(<I18nextProvider i18n={novaInstanciaI18n()}>{ui}</I18nextProvider>);
+}
 
 // `lib/mermaid-render` é mockado, não o pacote `mermaid` direto: em jsdom o
 // `render` real depende de layout de texto que o ambiente não tem, e mockar
@@ -35,7 +64,7 @@ describe('C4DiagramView', () => {
   it('mostra o SVG dos dois níveis quando o Mermaid renderiza com sucesso', async () => {
     render_.mockResolvedValue({ svg: '<svg data-testid="fake-svg"></svg>' });
 
-    render(<C4DiagramView diagrama={diagrama()} />);
+    renderComI18n(<C4DiagramView diagrama={diagrama()} />);
 
     expect(await screen.findAllByText('Contexto')).toHaveLength(1);
     expect(screen.getByText('Container')).toBeInTheDocument();
@@ -48,7 +77,7 @@ describe('C4DiagramView', () => {
   it('sintaxe inválida vira erro legível, não uma tela quebrada', async () => {
     render_.mockRejectedValue(new Error('Parse error on line 1'));
 
-    render(<C4DiagramView diagrama={diagrama()} />);
+    renderComI18n(<C4DiagramView diagrama={diagrama()} />);
 
     const erros = await screen.findAllByText(/Não foi possível desenhar este diagrama/);
     expect(erros).toHaveLength(2);
@@ -59,11 +88,60 @@ describe('C4DiagramView', () => {
   });
 
   it('diagrama vazio (string em branco) também vira erro, sem tentar renderizar', async () => {
-    render(
+    renderComI18n(
       <C4DiagramView diagrama={diagrama({ contextDiagram: '', containerDiagram: '   ' })} />,
     );
 
     expect(await screen.findAllByText('Diagrama vazio.')).toHaveLength(2);
     expect(render_).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Lightbox (ONDA 3 — aba Arquitetura): o botão de ampliar só existe no
+   * estado `pronto` — RN-088, os outros dois estados não têm SVG nenhum
+   * pra mostrar maior.
+   */
+  describe('botão de ampliar (lightbox sobre o Modal)', () => {
+    it('ausente enquanto carrega', () => {
+      render_.mockReturnValue(new Promise(() => {}));
+
+      renderComI18n(<C4DiagramView diagrama={diagrama()} />);
+
+      expect(screen.queryByRole('button', { name: /Ampliar diagrama/ })).not.toBeInTheDocument();
+    });
+
+    it('ausente quando o diagrama deu erro', async () => {
+      render_.mockRejectedValue(new Error('Parse error'));
+
+      renderComI18n(<C4DiagramView diagrama={diagrama()} />);
+
+      await screen.findAllByText(/Não foi possível desenhar este diagrama/);
+      expect(screen.queryByRole('button', { name: /Ampliar diagrama/ })).not.toBeInTheDocument();
+    });
+
+    it('presente quando pronto, e clicar abre o SVG dentro do Modal em tamanho maior', async () => {
+      render_.mockResolvedValue({ svg: '<svg data-testid="fake-svg"></svg>' });
+      const user = userEvent.setup();
+
+      renderComI18n(<C4DiagramView diagrama={diagrama()} />);
+
+      const botoes = await screen.findAllByRole('button', { name: /Ampliar diagrama/ });
+      expect(botoes).toHaveLength(2); // Contexto + Container
+
+      await user.click(botoes[0]);
+
+      // O `Modal` abre com o mesmo título do card clicado ("Contexto") e o
+      // MESMO SVG (agora em três cópias no DOM: o card original de cada um
+      // dos dois diagramas, mais a do lightbox aberto).
+      expect(screen.getAllByText('Contexto').length).toBeGreaterThanOrEqual(1);
+      expect(document.querySelectorAll('[data-testid="fake-svg"]')).toHaveLength(3);
+
+      const fechar = screen.getByRole('button', { name: 'Fechar' });
+      await user.click(fechar);
+
+      await waitFor(() => {
+        expect(document.querySelectorAll('[data-testid="fake-svg"]')).toHaveLength(2);
+      });
+    });
   });
 });

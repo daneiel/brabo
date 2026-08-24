@@ -1,9 +1,31 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Model, ModelsByCategory } from '../lib/api-types';
 import { agruparModelos, formatarJanela, formatarPreco } from '../lib/models';
 import { Badge } from './ui/Badge';
 import { ChevronDownIcon, ModelIcon } from './ui/icons';
 import styles from './ModelPicker.module.css';
+
+/**
+ * O handoff (`design_handoff_brabo/README.md`, seção 7 "Dropdown de modelo")
+ * pede um badge verde **ideal** em cada opção "quando o modelo cobre TODAS as
+ * capacidades exigidas pelo agente". Investigado e NÃO construído — ver
+ * ADR 0077.
+ *
+ * O motivo é duplo, e o segundo por si só já fecharia a questão:
+ *
+ * 1. "Capacidades exigidas por agente" não existe no domínio. A tabela de
+ *    bindings (`ModelsSection`, `ProjectSettingsTab.tsx`) já registrou isso
+ *    ao renomear a coluna de "Agente · capacidades" para só "Agente" —
+ *    prometer aqui o que já foi recusado ali reabriria a mesma lacuna.
+ * 2. Mesmo que existisse, este picker não tem como LER capacidade curada
+ *    (`uses`, ADR 0051): ele recebe `Model` de `GET /projects/:id/models`
+ *    (papel `viewer`), e `uses` só existe em `ModelComCuradoria`, de
+ *    `GET /workspaces/:id/models/catalog` (papel `maintainer`). Buscar a
+ *    segunda rota para pintar um badge no seletor de um `developer`
+ *    alargaria o que ele pode LER — mudança de RBAC, decisão de produto,
+ *    fora do escopo desta frente.
+ */
 
 // Precisa casar com .dropdown no CSS — o cálculo de posição depende disso.
 const DROPDOWN_WIDTH = 320;
@@ -38,6 +60,7 @@ export function ModelPicker({
   filtroDeAgentesPadrao = false,
   disabled = false,
 }: ModelPickerProps) {
+  const { t } = useTranslation('models');
   const [open, setOpen] = useState(false);
   const [soAptos, setSoAptos] = useState(filtroDeAgentesPadrao);
   const [posicao, setPosicao] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
@@ -171,7 +194,7 @@ export function ModelPicker({
             tabela de bindings, um `displayName` longo empurrava as colunas de
             origem e fallback para fora da grade. */}
         <span className={styles.triggerLabel}>
-          {selected ? selected.displayName : 'Selecionar modelo'}
+          {selected ? selected.displayName : t('picker.selectModel')}
         </span>
         {/* Chevron também no `inline`: no desenho o seletor de modelo da tabela
             tem chevron, e sem ele o botão não se anuncia como abrível. */}
@@ -194,17 +217,14 @@ export function ModelPicker({
               checked={soAptos}
               onChange={(e) => setSoAptos(e.target.checked)}
             />
-            aptos para agentes
+            {t('picker.filterFitForAgents')}
           </label>
 
           {todosOsModelos.length === 0 && (
-            <div className={styles.groupHeader}>Nenhum modelo cadastrado</div>
+            <div className={styles.groupHeader}>{t('picker.noModelsRegistered')}</div>
           )}
           {todosOsModelos.length > 0 && grupos.length === 0 && (
-            <div className={styles.vazio}>
-              Nenhum modelo faz tool calling nativo. Desmarque o filtro para ver
-              os demais.
-            </div>
+            <div className={styles.vazio}>{t('picker.noToolCallingModels')}</div>
           )}
           {grupos.map((grupo) => (
             <div key={grupo.kind}>
@@ -226,6 +246,7 @@ export function ModelPicker({
 }
 
 function ModelOption({ model, selected, onClick }: { model: Model; selected: boolean; onClick: () => void }) {
+  const { t } = useTranslation('models');
   const isFree = model.provider === 'ollama';
   const indisponivel = model.availability === 'unavailable';
   const janela = formatarJanela(model);
@@ -249,10 +270,12 @@ function ModelOption({ model, selected, onClick }: { model: Model; selected: boo
         <span className={styles.selos}>
           <Badge tone={isFree ? 'success' : 'muted'}>{formatarPreco(model)}</Badge>
           {janela && <Badge tone="muted">{janela}</Badge>}
-          {model.supportsToolCalling && <Badge tone="accent">tool calling</Badge>}
+          {model.supportsToolCalling && (
+            <Badge tone="accent">{t('badges.toolCalling')}</Badge>
+          )}
           {/* Indisponível aparece MARCADO, nunca some: um modelo ausente da
               lista deixaria o binding que aponta pra ele sem explicação. */}
-          {indisponivel && <Badge tone="warning">indisponível no provider</Badge>}
+          {indisponivel && <Badge tone="warning">{t('badges.unavailable')}</Badge>}
         </span>
       </span>
     </button>

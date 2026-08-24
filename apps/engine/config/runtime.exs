@@ -86,15 +86,18 @@ config :engine,
     String.to_integer(System.get_env("TERMINAL_ACTION_TIMEOUT_MS", "15000")),
   # Teto de BYTES da saída de um comando (achado S). A saída fica no histórico
   # do laço e viaja em todo turno seguinte; sem teto, um `find` numa árvore
-  # grande derruba a execução inteira com 413 do provider. 32 KiB ≈ 8k tokens
-  # estimados por comando — folgado para leitura de arquivo, apertado o
-  # bastante para não acumular. Ver Engine.Actions.TerminalExecutor.truncate/2.
+  # grande derruba a execução inteira com 413 — a api do Brabo (não o
+  # provider de LLM) recusando o corpo de `POST .../llm-turn` por exceder o
+  # limite de transporte HTTP dela. 32 KiB ≈ 8k tokens estimados por comando —
+  # folgado para leitura de arquivo, apertado o bastante para não acumular.
+  # Ver Engine.Actions.TerminalExecutor.truncate/2.
   terminal_output_max_bytes:
     String.to_integer(System.get_env("TERMINAL_OUTPUT_MAX_BYTES", "32768")),
   # Teto de BYTES do conteúdo lido por read_file — mesmo incidente do achado
-  # S (413 do provider), pela porta do read_file em vez do terminal. Const
-  # PRÓPRIA, não a mesma var de terminal_output_max_bytes: hoje coincide em
-  # valor, não em acoplamento. Ver Engine.Harness.Tools.ReadFile.truncate/2.
+  # S (413 da api do Brabo, não do provider de LLM), pela porta do read_file
+  # em vez do terminal. Const PRÓPRIA, não a mesma var de
+  # terminal_output_max_bytes: hoje coincide em valor, não em acoplamento.
+  # Ver Engine.Harness.Tools.ReadFile.truncate/2.
   read_file_max_bytes: String.to_integer(System.get_env("READ_FILE_MAX_BYTES", "32768")),
   # Teto de BYTES do texto final devolvido por search_workspace — mesmo
   # incidente do achado S, pela porta da busca. Const PRÓPRIA, não reaproveita
@@ -135,6 +138,17 @@ config :engine,
     String.to_float(System.get_env("CONTEXT_COMPACTION_THRESHOLD", "0.7")),
   # Janela de contexto assumida quando o modelo não informa uma.
   default_context_window: String.to_integer(System.get_env("DEFAULT_CONTEXT_WINDOW", "8192")),
+  # Teto de TRANSPORTE (bytes do corpo HTTP de `POST .../llm-turn`), distinto
+  # da janela do MODELO. A compactação deve disparar ANTES do corpo estourar
+  # o limite HTTP da api — usar só `context_window` (128k tokens nos gates)
+  # dava compactação lá pelos ~350 KB de payload, muito depois do limite real
+  # de transporte (413 confirmado bem antes disso). 8 MiB fica folgado abaixo
+  # do teto da api (que sobe para ~10 MiB numa frente paralela) sem depender
+  # do valor exato dela. Convertido para tokens pela mesma heurística de
+  # bytes-por-token do tokenizer (Engine.Harness.Tokenizer.Approximate) —
+  # ver Engine.Harness.ContextManager.Default.transport_window_tokens/0.
+  transport_max_body_bytes:
+    String.to_integer(System.get_env("TRANSPORT_MAX_BODY_BYTES", "8388608")),
   # Agentes de fundo (Psicólogo via outbox, Anamnese periódica) competem por
   # turnos de LLM com os agentes de execução. Com provider local de um modelo
   # só, essa disputa derruba a conexão do dev no meio do ciclo. Desligáveis por
@@ -194,6 +208,25 @@ config :engine,
     String.to_integer(System.get_env("PSYCHOLOGIST_MAX_PROMPT_EVENTS_PESADA", "400")),
   psychologist_max_payload_chars:
     String.to_integer(System.get_env("PSYCHOLOGIST_MAX_PAYLOAD_CHARS", "600")),
+  # Consumo do grafo pelo Psicólogo (onda de consumo, ver
+  # Engine.Psychologist.ContextBuilder/Engine.Workers.PsychologistWorker):
+  # quantos trechos de RAG relevantes ao GATILHO entram no contexto —
+  # Engine.Psychologist.Triage.rag_top_k/0.
+  psychologist_rag_top_k: String.to_integer(System.get_env("PSYCHOLOGIST_RAG_TOP_K", "3")),
+  # Flag de ROLLOUT do consumo de templates/RAG do grafo (ADR 0099/0100 —
+  # fundação; esta variável nasce NESTA onda, sem doc anterior a conciliar
+  # contra), COMPARTILHADA por todo agente que já sabe falar com o grafo:
+  # decide se o kickoff do Psicólogo TENTA resolver `psychologist-kickoff`
+  # via `EngineApiClient.get_prompt_template/2` (ver
+  # `Engine.Workers.PsychologistWorker.render_kickoff/4`) E se o kickoff da
+  # Anamnese tenta resolver `anamnese-kickoff` (ver
+  # `Engine.Workers.AnamneseWorker.initial_message/1`) antes de cair na
+  # string inline — mesma flag pras duas, não um nome por agente. Mesmo
+  # critério de segurança de `psychologist_enabled?`/`anamnese_enabled?`:
+  # capacidade nova nasce DESLIGADA até provada — e mesmo ligada,
+  # falha/ausência do template (api fora, ainda não semeado) degrada pra
+  # inline sem erro nos dois agentes.
+  graph_templates_enabled?: System.get_env("GRAPH_TEMPLATES_ENABLED", "false") == "true",
   # Anamnese (Fase 4b) — mesma racional dos knobs do Psicólogo acima: teto de
   # custo é coisa que o operador aperta por ambiente, não constante de código.
   # O tick é global e faz fan-out por projeto (ver AnamneseSchedulerWorker).
@@ -213,7 +246,22 @@ config :engine,
   anamnese_max_prompt_events:
     String.to_integer(System.get_env("ANAMNESE_MAX_PROMPT_EVENTS", "500")),
   anamnese_max_payload_chars:
-    String.to_integer(System.get_env("ANAMNESE_MAX_PAYLOAD_CHARS", "600"))
+    String.to_integer(System.get_env("ANAMNESE_MAX_PAYLOAD_CHARS", "600")),
+  # Grafo de conhecimento (Neo4j) como fonte de INSTRUCTION_FILES/identidade
+  # (Onda 2, frente C1) — `Engine.Harness.InstructionFiles.graph_template/2`
+  # e a fonte `:graph` do merge banco > grafo > diretório > raiz. Nome
+  # PRÓPRIO (não `graph_templates_enabled?`, o nome mais genérico que a
+  # frente de consumo abaixo escolheu pra `rag_search`/`get_prompt_template`
+  # em geral) — as duas flags colidiriam com defaults CONTRÁRIOS
+  # (`false` aqui, `true` lá) se dividissem a chave, e a resolução de
+  # `config/2` com chave duplicada fica com a ÚLTIMA ocorrência, silenciando
+  # uma das duas sem erro nenhum. Default DESLIGADO: o seed
+  # (`scripts/dev/seed-prompts.ts`) ainda não populou o grafo em todo
+  # ambiente, e com a flag ligada sem seed rodado a fonte só degrada
+  # silenciosamente pro próximo nível — inofensivo, mas sem ganho nenhum até
+  # alguém rodar o seeder e ativar deliberadamente.
+  graph_instruction_templates_enabled?:
+    System.get_env("GRAPH_INSTRUCTION_TEMPLATES_ENABLED", "false") == "true"
 
 if config_env() == :prod do
   database_url =

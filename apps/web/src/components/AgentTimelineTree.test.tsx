@@ -1,8 +1,30 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, beforeAll, afterAll } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { AgentTimelineTree } from './AgentTimelineTree';
 import { getAgentLastSeenSeq } from '../lib/read-state';
 import type { SessionEvent } from '../lib/api-types';
+// Instância REAL do app (mesmo motivo de `AgentCard.test.tsx`): sem
+// `I18nextProvider` no teste, o hook `useTranslation` cai no singleton
+// global de `lib/i18n.ts` — as asserções abaixo checam o texto ATUAL em
+// português.
+import i18n from '../lib/i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
+
+// Mesma técnica de `ui/Disclosure.test.tsx`: jsdom não resolve CSS Module, a
+// folha crua é a única evidência que um teste em Node consegue olhar.
+const FOLHA = readFileSync(
+  resolve(process.cwd(), 'src/components/AgentTimelineTree.module.css'),
+  'utf8',
+);
 
 const PROJECT_ID = 'proj-1';
 
@@ -180,5 +202,18 @@ describe('AgentTimelineTree', () => {
 
     expect(cabecalhoAlvo().getAttribute('aria-expanded')).toBe('false');
     expect(within(cabecalhoAlvo()).getByText('+1')).toBeInTheDocument();
+  });
+
+  /**
+   * RN-249: o alvo de clique do marco era 20px, abaixo do WCAG 2.2 AA 2.5.8
+   * (mínimo 24px) que o comentário ACIMA da regra já prometia sem cumprir —
+   * a migração pro `Disclosure` (que já nasce em 24px) trouxe a correção.
+   */
+  it('o cabeçalho do marco declara alvo de no mínimo 24px (WCAG 2.2 AA 2.5.8)', () => {
+    const regra = FOLHA.match(/\.marcoLinha\s*\{([^}]*)\}/);
+    expect(regra).not.toBeNull();
+    const minHeight = regra![1].match(/min-height:\s*(\d+)px/);
+    expect(minHeight).not.toBeNull();
+    expect(Number(minHeight![1])).toBeGreaterThanOrEqual(24);
   });
 });

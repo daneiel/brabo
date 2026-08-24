@@ -2,6 +2,671 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Novidades
+
+- **ci**: toda branch cujo PR é mergeado passa a ser arquivada
+  automaticamente (`.github/workflows/archive-merged-branch.yml`) — move
+  de `refs/heads/<nome>` para `refs/archive/<nome>`, nunca apaga:
+  histórico intacto, recuperável a qualquer momento. Exceções: `dev`,
+  `qa`, `main` (aparecem como `head` de todo PR de promoção), `gh-pages`
+  (deploy do site de docs, não é branch de feature) e branch de fork. A
+  decisão (quem entra, quem fica de fora) mora em
+  `scripts/ci/archive-branch.ts`, testado. Ver
+  docs/explanation/branching-policy.md, seção "Merged branches get
+  archived".
+- **api,web**: anexar uma pasta LOCAL da própria máquina do usuário a um
+  projeto como referência de leitura para os agentes (RN-455..457,
+  ADR 0113) — sem o CLI `brabo-runner`, diferente de `execution_mode:
+  runner`. O navegador lê o conteúdo dos arquivos (`File.text()`) e envia
+  como texto puro; nenhum caminho de host atravessa a rede. `chunks.scope`
+  ganha um quarto valor, `'local'`, reusando o pipeline de indexação/busca
+  híbrida do Chat RAG já existente (ADR 0079/0080) em vez de um mecanismo
+  paralelo. Botão "Anexar pasta local" na aba Chat RAG (`maintainer`);
+  teto de arquivos/bytes REJEITA o upload inteiro em vez de truncar em
+  silêncio; reanexar é o único mecanismo de resincronizar — nunca o
+  "Reindexar agora" genérico.
+- **scripts,api**: `Docker › Reset total` (`pnpm bootstrap`,
+  `scripts/dev/reset-total.sh`) soma numa folha só o que antes era manual —
+  rebuild das imagens, apagar o banco, subir até tudo saudável (`--wait`),
+  migrar (api + engine) e semear — com tela de confirmação própria (exige
+  digitar `RESET`). O seed ganhou um passo que ativa credencial de provider
+  já salva em `.env`, reaproveitando as MESMAS variáveis `<PROVIDER>_TEST_KEY`
+  que os smokes de LLM já usam; provider sem variável definida não entra,
+  sem erro.
+
+### Correções
+
+- **engine,api,web**: a aba Insights, com zero hipóteses, mostrava "Sem
+  hipóteses ainda — o Psicólogo analisa cada sessão encerrada" mesmo com
+  `PSYCHOLOGIST_ENABLED=false` — indistinguível de "ainda ativo, só não
+  rodou". A tela nunca chegava perto do botão "Reanalisar" (só existe com
+  uma rodada de análise já feita), então nunca esbarrava no 503 que
+  denunciava a pausa. `GET /projects/:projectId/psychologist/status`
+  (`role:viewer`, sem efeito colateral) lê a flag global de antemão; a
+  tela agora diz "O Psicólogo está pausado — nenhuma sessão é analisada
+  até ser reativado" quando é o caso, e mantém a frase original quando de
+  fato ainda está ativo (RN-454)
+- **web**: a aba PRs mostrava o 409 do portão do container (RN-105 — o
+  Arquiteto ainda não decidiu qual imagem sobe para o projeto) como erro
+  transitório genérico, com botão "Tentar de novo" — a afordância errada
+  para um estado estável que só se resolve quando o Arquiteto decide, nunca
+  clicando de novo. A apresentação dedicada que a aba Code já tinha
+  (RN-107) foi extraída para `ContainerImageGateNotice`
+  (`components/ContainerImageGate.tsx`) e a aba PRs (`code/PrListAndDiff.tsx`)
+  passou a reconhecer o mesmo 409 (`isContainerImageGateError`,
+  `lib/api-client.ts`) e mostrar o mesmo estado. Placeholder truncado no
+  campo "Já sabe o id?" corrigido junto (largura do input de 200px para
+  260px).
+- **docker,scripts,deploy**: `gemma:1b` não existe no registry da Ollama
+  (`manifest unknown`) — só `gemma3:1b` existe. `ollama-model-loader`
+  sempre falhava e travava qualquer `docker compose up --wait`. Corrigido
+  em `docker-compose.yml`/`.prod.yml`, `.env.example`,
+  `docker/ollama/pull-models.sh`, `scripts/dev/verificar-modelos-ollama.sh`
+  e `deploy/k8s/base/ollama/job-model-loader.yaml` (RN-415).
+- **scripts**: `Database › Delete` nunca dropava de verdade — `DROP SCHEMA
+  public CASCADE` não alcança `engine.*` (Ecto/Oban vive em schema PRÓPRIO)
+  nem `drizzle.__drizzle_migrations` (controle do drizzle-kit, também em
+  schema próprio). Resultado real: `mix ecto.migrate` batia em
+  `duplicate_table` e `pnpm db:migrate` — sem erro nenhum — não recriava
+  NENHUMA tabela da api, porque via o controle do drizzle-kit intacto e
+  concluía que já tinha rodado tudo. `Delete`/`Reset total` agora dropam
+  `engine` e `drizzle` também.
+
+- **api,web**: converter `execution_mode` de um projeto EXISTENTE, sem
+  recriá-lo — fecha a correção que a Onda 1 do runner (ADR 0104) já tinha
+  registrado em `docs/explanation/backlog.md` (o item 4 daquele ADR dizia
+  que a conversão já era possível, e não era). Rota dedicada, `PUT
+  projects/:projectId/execution-mode` (`maintainer`), que orquestra a
+  migração em vez de um `PATCH` que só trocaria a coluna: relocaliza o
+  `permissions.json` para o novo escopo (o CONTEÚDO não muda), encerra o
+  ciclo de vida do container ao SAIR de `container` (ADR 0081), zera
+  `workspaceVerifiedAt` em toda conversão real e recusa com 409 enquanto
+  qualquer dev agent do projeto estiver trabalhando ou travado — ele não
+  re-resolve o worktree sozinho por baixo da troca. Nova seção em
+  Configurações do projeto, com o mesmo aviso e a mesma copy dos três
+  modos do wizard de criação (RN-447..450, ADR 0111)
+- **api,web**: handoff manual a agente à escolha (ADR 0109), fechando item
+  de backlog aberto desde a FASE 13c. `SessionPage.tsx` ganha um seletor
+  ("Endereçar handoff a...") sobre `addressableAgents()` (lead de área ∪
+  agente conversacional solo), que POSTa em `POST
+  .../sessions/:sessionId/handoffs` — mesmo `CreateHandoffUseCase` que um
+  agente já usa para oferecer handoff, com `actor: {kind:'user'}`
+  registrando que quem decidiu foi um humano. O caso real que motivou:
+  Staff (ADR 0088) e `ux-designer` (ADR 0087) tinham plumbing de engine
+  pronto e NENHUM caminho humano até eles — os dois entram em
+  `AGENTES_DE_CHAT` na mesma mudança (RN-440/RN-441)
+- **api,web**: budget por ÁREA (`agent_areas.budget_micros`/`spent_micros`)
+  fecha o item do backlog do ADR 0038 — teto de gasto opcional, configurável
+  por lead em Configurações (`maintainer`), ADITIVO aos budgets de projeto
+  e sessão que já existiam (nunca cascata: os três são checados
+  independentemente, e qualquer um bloqueado já recusa a chamada). `null`
+  é o default (sem teto); o gasto acumulado da área soma SEMPRE, com ou sem
+  teto configurado, o que já mostra o gasto real por área antes de alguém
+  configurar um limite. Rota `PUT projects/:projectId/agent-areas/:key/budget`
+  (`maintainer`), e a rota `GET agent-areas` já existente passa a devolver
+  `budgetMicros`/`spentMicros` (RN-443, ADR 0110)
+- **runner**: binário standalone do `@brabo/runner` — download direto de
+  `dist-bin/brabo-runner-<plataforma>-<arquitetura>[.exe]` numa GitHub
+  Release, sem Node/npm/node-gyp instalado na máquina. `bun build --compile`
+  empacota o CLI num único executável, com o `.node` nativo do `node-pty`
+  embutido (`with { type: 'file' }`) e extraído pra um diretório real em
+  runtime — o mecanismo completo, e o que ficou VALIDADO por execução real
+  em cada plataforma (só `linux-x64` neste sandbox; as outras quatro por
+  reasoning + a primeira execução real de CI na próxima tag), está no ADR
+  0112. Cinco plataformas (`linux-x64`, `linux-arm64`, `darwin-x64`,
+  `darwin-arm64`, `win32-x64`), cada uma construída no seu runner NATIVO
+  (`build-runner-binaries.yml`, mesmo gatilho de tag final de
+  `publish-runner.yml`) e anexada à Release já existente. Fecha o item de
+  backlog do ADR 0104 ("binário standalone (pkg/bun build --compile)"),
+  companion do ADR 0106 (RN-451/452)
+- **web**: `FolderBrowserModal` vira um explorador de três colunas —
+  atalhos ("Pasta pessoal", "Raiz"), lista central com breadcrumb e um
+  painel de detalhes —, seguindo a referência visual do dono do produto
+  (picker estilo GNOME Files/GTK). Um clique agora SELECIONA (destaca e
+  atualiza os detalhes) e duplo clique ENTRA — antes um único clique já
+  navegava. A lista deixou de esconder arquivos: eles aparecem visualmente
+  apagados e sem gesto nenhum, só pasta continua navegável/selecionável. O
+  botão final foi renomeado para "Usar esta pasta" (RN-436)
+- **api,web**: no modo de projeto `runner`, "Procurar pasta..." passa a
+  criar o projeto ANTECIPADAMENTE — ao clicar, não só na confirmação —
+  fechando a lacuna que o ADR 0107 já tinha declarado (o ticket do canal do
+  Runner precisa de um `projectId` real). Reuso por SNAPSHOT de identidade
+  (nome/repositório a adotar), nunca pelo caminho digitado: clicar de novo
+  sem mudar a identidade reabre o MESMO projeto, e a confirmação final
+  reusa em vez de criar de novo. O modo `mounted` não muda — continua sem
+  projeto até a confirmação, porque ali a validação de caminho toca disco
+  na criação (RN-437, ADR 0108)
+- **web**: `fs-browser-channel.ts` tinha o mesmo bug de path duplicado que a
+  RN-433 já tinha corrigido no `terminal-channel.ts` irmão (concatenava
+  `/runner/websocket` a um `engineWsUrl` que já vem pronto), então a
+  navegação de pasta contra um engine real caía direto em "a conexão com o
+  runner caiu". Achado ao verificar a RN-437 ponta a ponta — o módulo não
+  tinha teste próprio até agora (RN-438)
+- **api,web**: `maintainer` passa a revogar o Personal Access Token de
+  QUALQUER usuário do projeto — resposta a incidente (dev desligado com
+  token vazando), item declarado fora de escopo pelo ADR 0105. Rotas
+  separadas (`GET .../personal-access-tokens/all`,
+  `DELETE .../personal-access-tokens/:tokenId/admin`, ambas
+  `@RequireRole('maintainer')`), escopo por `projectId` em vez de
+  `userId` — a autorevogação de cada usuário não muda. Sub-lista nova em
+  Configurações do projeto, visível só para `owner`/`maintainer`, com o
+  e-mail do dono de cada token (RN-427, extensão do ADR 0105)
+- **runner**: `@brabo/runner` publicado no npm — `npm install -g
+  @brabo/runner` instala o CLI sem precisar clonar o monorepo. `tsup`
+  empacota `apps/runner` num `dist/index.cjs` único (`node-pty`
+  continua dependência separada, é binding nativo); publicação a cada
+  tag final via workflow próprio (`publish-runner.yml`), paralelo ao
+  `release.yml`. Fecha o backlog do ADR 0104 (ADR 0106)
+- **api,web,runner**: Personal Access Token (`brb_…`) pro `brabo-runner`,
+  fechando o item de backlog do ADR 0104 que bloqueava
+  `npm publish @brabo/runner`. `apps/runner/src/auth.ts` deixa de
+  replicar login (e-mail/senha interativos, cookies persistidos em
+  `~/.brabo/runner-credentials.json`) — o CLI passa a receber um token
+  de longa duração via `--token`/`BRABO_ACCOUNT_TOKEN`, emitido em
+  Configurações do projeto, revogável, com expiração opcional, escopado
+  a UM projeto. O token nunca autentica fora de
+  `POST /projects/:projectId/runner-ticket`, por construção
+  (`IS_PAT_ROUTE_KEY`/`@RequirePatAuth()` + `PatAuthGuard` de rota, nunca
+  um branch no `JwtAuthGuard` global) — nem sob papel elevado, nem em
+  nenhuma outra rota (RN-424/425/426, ADR 0105)
+- **api,engine,web,runner**: `execution_mode` do projeto passa a ter TRÊS
+  valores — `container` (default, inalterado), `mounted` (o antigo `local`,
+  renomeado) e `runner` (novo: pasta do usuário SEM bind-mount, confirmada
+  por um `brabo-runner` conectado). Reconcilia os ADRs 0072 e 0103: antes,
+  o roteamento pro runner reusava a mesma flag do modo `local`, então
+  usar o runner de verdade exigia passar pela validação de bind-mount que
+  ele não precisa. Criação de projeto `runner` valida só o caminho
+  (léxico, sem tocar disco); o runner confirma o caminho de verdade ao
+  conectar (`POST /internal/projects/:projectId/workspace-verification`,
+  novo), sobrescrevendo o que foi digitado — ele é a fonte da verdade.
+  Comando de agente roteado a um projeto `runner` sem workspace verificado
+  ou sem runner conectado é RECUSADO explicitamente, nunca cai no
+  fallback de container (RN-421/422/423, ADR 0104)
+- **runner**: no Linux, `brabo-runner --dir` só aceita um caminho dentro do
+  `$HOME` do usuário (o próprio home ou uma subpasta dele) — caminho fora
+  dessa árvore (`/etc`, `/root`, outra conta em `/home`, etc.) é recusado
+  na inicialização do CLI, com mensagem explicando o motivo. Fora do
+  Linux o comportamento não muda (RN-434, ADR 0104)
+- **runner**: `brabo-runner --dir` apontando para uma pasta que ainda não
+  existe deixa de ser erro fatal — a pasta é criada automaticamente
+  (`mkdir -p`), sempre DEPOIS de passar pela checagem do `$HOME` no Linux
+  (RN-434), então um caminho fora do home continua recusado mesmo quando
+  ainda não existe. `--dir` apontando para um arquivo já existente
+  continua erro real — nunca sobrescrito silenciosamente (RN-435, ADR
+  0104)
+- **api,web**: fundação de i18n — coluna `locale` em `users` (`'pt-BR'|'en'`,
+  default `'pt-BR'`), embutida no corpo de `/auth/login`/`/auth/refresh` (sem
+  chamada extra) via `EmitirSessaoUseCase`; `GET/PATCH /users/me/preferences`
+  como via redundante para a `AccountPage` nova (`/account`, fora do escopo
+  de projeto, link no rodapé da sidebar). `react-i18next`+`i18next` como
+  dependência nova de `apps/web`, isolada atrás de `lib/i18n.ts`/
+  `lib/idioma.ts` (mesmo desenho de `tema.ts` — servidor é a fonte de
+  verdade, `localStorage` só evita flash no primeiro paint). `en` é o idioma
+  default do app a partir de agora; `pt-BR` continua disponível. Docusaurus
+  (`website/`) ganhou `i18n.defaultLocale: 'en'`/`locales: ['en', 'pt-BR']`,
+  com o snapshot pt-BR atual de `docs/` preservado em
+  `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` antes de
+  `docs/` virar a fonte em inglês, e uma regra `warn` nova no docmap
+  (`traducao-pt-br`) cobrindo o drift entre as duas árvores. Extração em
+  massa do resto da interface e tradução de `docs/` são a próxima etapa,
+  em andamento (RN-432)
+- **web**: navegação por abas agrupadas — a régua de 11 abas do projeto vira
+  6 no topo (Visão geral, Agentes ▾, Dev ▾, Documentação ▾, Gastos,
+  Configurações), com `GroupedTabs` novo por cima do `Tabs` existente. Chat
+  e Chat RAG viram UMA aba com um controle segmentado interno
+  ("Conversar"/"Buscar") — a distinção de negócio entre os dois (RN-202)
+  não muda, só o contêiner de UI
+- **api,web**: aba **PRs** — listagem de pull requests do PROJETO inteiro,
+  direto do provider de git (nunca escopada a uma sessão), resolvendo o bug
+  em que a revisão de uma PR proposta numa sessão antiga sumia da tela assim
+  que uma sessão nova nascia. Novo cruzamento project-wide de ações
+  pendentes (`GET /projects/:id/actions?status=pending&actionType=`) acha a
+  proposta de merge correspondente independente de qual sessão a criou, e a
+  decisão usa o `sessionId` da própria ação. Botão "Merge" propõe
+  `git_merge` (primeira produtora real pela UI), desabilitado quando o gate
+  do dev agent bloqueou a task; a trava de branch protegida continua
+  absoluta (RN-154). `git_merge` ganhou corpo próprio no card de aprovação
+  em vez do despejo de JSON cru (RN-430)
+- **web**: aba própria **Arquitetura**, extraída da Visão Geral (module_map,
+  diagrama C4, ADRs, pendências de validação cruzada); a Visão Geral passa a
+  mostrar um resumo condensado com link "Ver arquitetura completa →".
+  Primeiro lightbox do design system: `C4DiagramView` ganha botão de
+  ampliar por diagrama, abrindo o SVG em tela cheia sobre `Modal`
+  (`size="full"`, novo) (RN-431)
+- **api,web,engine,runner**: navegação de pasta local via o Runner — dois
+  eventos novos no MESMO canal `terminal:<projectId>` (`fs_list_dir`/
+  `fs_home_dir`), relay puro do engine, exatamente como o PTY.
+  `FolderBrowserModal` (breadcrumb, subpastas, `..`, "Selecionar esta
+  pasta") integrado à criação de projeto e reaproveitável onde o projeto já
+  existe; sem runner conectado, `RunnerOnboardingPanel` (novo, compartilhado
+  com a aba Terminal) explica a instalação em vez de travar carregando. A
+  api continua sem enumerar filesystem nenhum — nenhuma rota nova (RN-429,
+  ADR 0107, revisa a ADR 0072)
+- **web**: corrigido o carrossel de promoção de histórias do PO, que
+  degradava silenciosamente para card único (ou sumia) em sessão longa —
+  a leva pendente agora vem de `useBacklog` (completo, sem janela) em vez
+  de um scan sobre os últimos 200 eventos, mesma classe de bug que a
+  RN-180 já corrigiu em `ContextAside` (RN-427)
+- **api,engine,web,runner**: execução de agente na máquina do usuário —
+  `apps/runner` (workspace novo, CLI `brabo-runner`) conecta ao engine
+  por canal Phoenix com ticket de uso único, executa comando de agente
+  já aprovado no `$SHELL` do usuário e abre terminal PTY interativo na
+  aba Code. Roteamento sempre acontece depois do pipeline de aprovação
+  normal; sem runner conectado, o comportamento de sempre (container)
+  continua. Junto: `git push`/PR/deploy e `sudo`/`doas` saem de `deny`
+  incondicional e viram teto absoluto — sempre pedem aprovação humana,
+  nunca auto-aprováveis mesmo com modo automático ligado, decisão
+  global do dono do produto (RN-418/419/420, ADR 0102/0103)
+- **api,engine**: consumo do grafo de conhecimento — ux-designer,
+  Psicólogo e Anamnese passam a resolver o kickoff/identidade a partir de
+  um template versionado do grafo (com fallback obrigatório pro texto
+  inline, atrás de duas flags separadas, default desligadas). Psicólogo e
+  Anamnese ganham uma segunda fonte de contexto: `rag_search` busca
+  trechos RELEVANTES ao gatilho da análise, compondo (nunca substituindo)
+  a leitura de eventos recentes/janela temporal existente, sempre dentro
+  do orçamento de tokens já declarado. O grafo passa a se escrever
+  sozinho — `GraphProjector` drena uma fila própria da outbox
+  transacional e projeta handoffs, hipóteses do Psicólogo, perfis da
+  Anamnese e fechamento de sessão, sem o engine nunca escrever no grafo
+  diretamente (RN-416/417, ADR 0101)
+- **api,engine**: fundação do grafo de conhecimento — Neo4j (`neo4j-driver`
+  na api, memória DERIVADA do event log, nunca fonte de verdade) para
+  templates de prompt versionados (idempotentes por hash) e memória
+  relacional (interações, hipóteses do Psicólogo, perfis da Anamnese,
+  handoffs). pgvector continua sendo o índice vetorial dos chunks — sem
+  duplicar embedding em dois bancos. Tool nova `rag_search` para os
+  agentes do engine, fechando o maior vão do RAG existente (nenhum agente
+  o consultava até agora); `ollama-model-loader` garante `gemma:1b`,
+  `yi-coder:1.5b` e `nomic-embed-text` no boot, fechando um bug real
+  separado (`nomic-embed-text` nunca era puxado automaticamente).
+  Primeira leva de templates extraída para `prompts/*.md`, sem editar
+  nenhum `.ex` ainda. Padrão inspirado no repositório
+  [ErickWendel/neo4j-ai-experiments](https://github.com/ErickWendel/neo4j-ai-experiments)
+  (RN-413/414/415, ADR 0099/0100)
+- **web,design**: o tema claro deixa de ser inalcançável — `public/theme-boot.js` aplica `data-theme` a partir de `localStorage['brabo.theme']` antes do primeiro paint (arquivo, não script inline, porque a imagem serve sob `script-src 'self'`), e `src/lib/tema.ts` é a API que o shell consome para alternar (ADR 0074, RN-182/RN-183)
+- **design**: os tokens que faltavam do handoff — escala `--fs-*`, raios `--r-xs`/`--r-sm` (mais alias para `--r-md`/`--r-lg`/`--r-pill`), métricas do shell (`--sidebar-w`, `--sidebar-w-collapsed`, `--header-h`, `--tabs-h`) e os nomes `--font-display`/`--shadow-modal` como ALIAS dos existentes
+- **design**: a paleta de realce passa a ter os oito papéis do handoff com prefixo `--syntax-*`, valor próprio por tema e 4,5:1 contra `--code-bg` nos dois — cinco dos oito valores do handoff foram recusados por medição (RN-185)
+- **web**: scrollbar customizada em `--border-strong`, raio 6px e borda na cor da superfície, nos dois temas
+- **api**: o relatório de gasto do workspace (`GET
+  /workspaces/:id/spend-report`, papel `owner`) ganhou a quebra por
+  **provider** e blocos separados de **pessoa** e **agente** — `porProvider`,
+  `porOwner` e `porAgente` (ADR 0076, RN-186/188). O relatório do membro
+  (`GET /projects/:id/spend/me`) **não mudou**: continua sem provider e sem
+  credencial, e agora a garantia é do TIPO — pedir a dimensão com escopo de
+  ator não compila (RN-187).
+- **web**: a aba Configurações ganha "Melhores modelos por capacidade" —
+  para código, documentação, análise, imagem e conversa, mostra o modelo mais
+  usado pelos agentes deste projeto entre os que a curadoria do workspace
+  marcou para aquele uso, com custo como desempate. Sem coluna de "nota":
+  o handoff pedia um score por capacidade, mas é dado fictício do mock — o
+  produto não mede qualidade de modelo em lugar nenhum (ADR 0077, RN-210)
+- **web**: a sidebar recolhe (264px ↔ 62px, trilha de ícones por projeto)
+  com preferência persistida; projetos ficam expansíveis (N ao mesmo tempo)
+  revelando as abas de cada um; nova seção **Atividades**, agrupada por
+  agente e, quando o módulo tem paralelização, por INSTÂNCIA real
+  (`dev-<modulo>`/`dev-<modulo>-2`, nunca um contador inventado); botão de
+  tema no rodapé; os dois itens globais sem rota ("Chat global"/
+  "Configurações") saem — só Projetos e Atividades são globais. A aba
+  Código recolhe a sidebar automaticamente, sem gravar a preferência
+  (RN-195..201)
+- **web**: moldura de tela conforme o handoff — cabeçalho do projeto com
+  `--header-h` (piso de 60px, sem cortar o alerta de orçamento), régua de abas
+  com `box-shadow: inset 0 -2px 0 var(--accent)` em vez de `border-bottom`,
+  rolagem horizontal em telas estreitas, e container de conteúdo com largura
+  máxima de 1040px. O rótulo "Code" virou "Código" (ADR 0078).
+- **web**: aba de Gastos ganha quebra por provider (Ranking, RN-211), bloco
+  de orçamento por projeto com o `TokenMeter` existente (RN-212) e alerta
+  de custo lido do orçamento (RN-213). KPI de economia com modelo local
+  fica de fora, declarado — falta preço contrafactual defensável (RN-214)
+- **web**: o painel inferior da aba Código ganha as quatro abas do handoff
+  (Terminal, Problemas, Diff de PR, Saída) — Problemas e Saída nascem com
+  estado vazio honesto, sem lint/teste ou stream de comando inventados
+  (RN-215/216) — e a status bar de 24px passa a mostrar `↑N ↓M` real da
+  branch e a linguagem do arquivo ativo (RN-217); abas do painel ganham
+  foco visível (RN-218)
+- **web**: a aba Criativo ganhou os 4 KPIs do handoff (sessões no projeto,
+  ativas agora, taxa ideação→commit, custo do mês), filtros pill
+  (todas/ativas/fechadas/abortadas) e selos de status para os 5 estados
+  reais da sessão — `closing` com selo próprio "encerrando", nunca fundido
+  com "fechada" (RN-227..230)
+- **api**: pipeline de indexação (`docs`/`adr`/`session`, chunking por
+  heading/parágrafo com 1200 caracteres e 150 de sobreposição) e busca
+  híbrida (vetor + léxico, pesos 0.6/0.4, limiar 0.2) do Chat RAG, com
+  degradação honesta quando o provider de embedding está indisponível e
+  três rotas novas (`POST .../rag/search`, `POST .../rag/reindex`,
+  `GET .../rag/coverage`) — RN-231..238, ADR 0080
+- **web**: virtualização de linha na aba Código — arquivo de 5.000 linhas
+  renderiza uma janela pequena de nós de DOM, não o arquivo inteiro — e
+  minimapa em `<canvas>` reaproveitando a tokenização já feita pelo realce
+  de sintaxe, sem segundo passe sobre o arquivo (RN-239..242)
+- **api**: ciclo de vida do container como tabela de estado
+  (`project_containers`, migração `0046`), sem orquestrador — máquina de
+  estados pura (`provisioning → running ⇄ stopped`, `failed`, `removed`),
+  primeira transição exigindo a imagem já decidida pelo Arquiteto e
+  congelando versão/recursos; nenhuma chamada real a Docker ainda
+  (RN-243..248, ADR 0081)
+- **web**: a aba **Chat RAG** (`key: 'rag'`), separada da aba Chat
+  (`sessions`, que continua sendo conversa com agente ativado) — busca com
+  filtro de escopo (docs/ADR/sessões), citações navegáveis (origem de
+  sessão leva ao evento exato; origem de arquivo mostra caminho/heading,
+  sem link — a aba Código não tem deep-link por caminho ainda), painel de
+  cobertura do índice com contagem REAL (nunca "reindexado há Xmin"
+  inventado) e botão de reindexar restrito a `maintainer`/`owner`. Avisa
+  quando a busca degradou para só léxica por falta de embedding
+  (RN-252..254, ADR 0082)
+- **api,web**: primeira exposição HTTP do ciclo de vida do container
+  (`GET .../container/lifecycle`, role:viewer) e a aba Terminal passa a
+  mostrar esse estado real (status, motivo de falha) sob o texto
+  explicativo que já existia — nunca um terminal simulado, porque não há
+  container real rodando ainda (FASE 25b segue cortada) (RN-267/268,
+  ADR 0083)
+- **api,web**: login social via GitHub/GitLab — revoga a proibição do
+  backlog do ADR 0031 só para esta capacidade. Reusa o mesmo app OAuth da
+  conexão de git (zero variável de ambiente nova) e a emissão de sessão do
+  login por senha; vincular a conta existente exige e-mail verificado pelo
+  provider, contra account takeover; conta provisionada nasce sem senha.
+  Branch `breaking/`: o operador precisa cadastrar um segundo callback
+  OAuth no provider antes do deploy (RN-272..283, ADR 0084)
+- **api,engine**: o plano de execução do Dev Lead (quantos agentes por
+  módulo e por quê) vira uma decisão real em Aprovações — antes só narrava
+  no fio, sem pipeline de aprovação nenhum. Enquanto ela não é decidida, a
+  conversa com o Dev Lead PAUSA: é a primeira vez que um agente
+  conversacional suspende esperando aprovação humana no meio do turno
+  síncrono (RN-284, ADR 0086)
+- **engine,web**: o UX Designer entra como o quinto agente conversacional
+  (Criativo, PO, Arquiteto, Dev Lead e agora ele), SOLO e sem área —
+  antecipado pelo dono do produto antes do gatilho de separação declarado
+  em `docs/fluxo.yml` ter disparado. Kickoff a partir do product brief do
+  Criativo; a única ferramenta, `propose_prototype`, registra personas,
+  jornadas e o protótipo navegável (`artifact.prototipo_navegavel`, sem
+  tabela nem rota nova na api) e oferece o mesmo artefato como handoff ao
+  PO e ao Dev Lead. `teste-de-usabilidade` fica fora de alcance (exige
+  usuário humano real); `metricas-de-uso` segue lacuna declarada
+  (RN-285..287, ADR 0087)
+- **engine,api,web**: o Staff/Principal Engineer ganha CÓDIGO — sexto
+  agente conversacional solo (`propose_rfc`: problema, opções com
+  trade-offs, recomendação e PoC descartável, devolvido ao Arquiteto por
+  handoff no mesmo tool call), acionável MANUALMENTE por handoff aceito
+  endereçado a "staff" (caminho genérico, sem entrar em
+  `USER_STARTED_AGENTS`). O gatilho AUTOMÁTICO (a Anamnese notando um
+  problema sistêmico recorrente) segue pendente enquanto
+  `ANAMNESE_ENABLED=false` — dormente para disparo automático, não para
+  acionamento manual (RN-305/306, ADR 0088)
+- **api,engine**: o gate `implementavel` sai de `planned` para `active` — o
+  Dev Lead ganha `assess_implementability`, o parecer de implementabilidade
+  de uma story (viável/inviável, com justificativa), a partir do plano de
+  teste que a QA-estratégia produz. A QA-estratégia deixa de ser papel
+  `proposto` em `docs/fluxo.yml`: é o próprio `qa-lead`, num SEGUNDO
+  momento (mesmo processo, entregável separado do veredito de PR) — sem
+  worktree, sem task, PRE-DEV. O parecer nasce `proposed_action`, mesmo
+  padrão do plano de execução (RN-340/341, ADR 0090)
+- **engine**: o papel `appsec` (`docs/fluxo.yml`) ganha o segundo momento do
+  secops — threat model de DESIGN (checklist STRIDE-lite) sobre a story e o
+  module_map vigente, ANTES de existir código ou PR. Roda no MESMO processo
+  do `SecOpsAgentServer` (`run_design/2`, sem worktree/task_id), termina
+  emitindo `artifact.threat_model` e criando handoff para arquiteto, dev-lead
+  e o lead de Infra. `run_design/2` já é acionável, mas nenhum caminho aciona
+  sozinho ainda — o gatilho automático fica para a frente `qa-estrategia`
+  (RN-360/361, ADR 0090)
+- **api**: novo script `pnpm --filter api analise:funil -- --projeto
+  <uuid> [--json]` — os papéis `analytics`/`delivery-metricas` de
+  `docs/fluxo.yml` (antes `status: proposto`) viram `active`, entregues
+  como RELATÓRIO puro (mesmo formato de `medir-execucao.ts`, sem agente,
+  sem GenServer). Mede funil real sessão → commit → PR → merge, lead time
+  real e deployment frequency real em branch protegida, todos extraídos
+  de `proposed_actions.execution_result`. Declara, de propósito, três
+  métricas sem caminho para existir hoje: funil de produto completo
+  (ideação → commit), evidência de adoção por feature e MTTR/change
+  failure rate (RN-320..322, ADR 0089)
+- **api**: `pnpm --filter api relatorio:seguranca-runtime` — o papel
+  `secops-runtime` (`docs/fluxo.yml`) antecipado como SCRIPT, não agente,
+  sobre o dado que o `RateLimitGuard` já coleta hoje (`rate_limit_hits`):
+  ranking de baldes (usuário/IP) com mais hits e distribuição temporal dos
+  picos, com a janela de retenção (curta, poucos minutos) sempre declarada.
+  Detecção automática de incidente, resposta a incidente e postmortem de
+  segurança seguem FORA — dependem de tráfego de produção real, que não
+  existe — e o relatório lista essa lacuna, sem simular incidente de
+  exemplo (RN-375..377, ADR 0091)
+- **api**: o papel `platform` (`docs/fluxo.yml`, `status: planned` —
+  ativação ainda pendente de `DEPLOY_ENABLED`, que não existe) ganha uma
+  primeira entrega honesta: `pnpm --filter api relatorio:telemetria
+  [--projeto <uuid>] [--json]`, um SCRIPT (não agente) que lê sob demanda as
+  mesmas fontes do `DomainGaugesCollector` — sessões ativas/closing e tasks
+  bloqueadas por projeto, estado do último backup — e linka para os
+  dashboards/alertas/runbook já versionados, sem duplicar. A saída declara
+  explicitamente o que NÃO mede: SLO numérico (nenhum definido), postmortem
+  (sem incidente real) e telemetria automática em loop fechado
+  (RN-385/386, ADR 0092)
+- **api**: o papel `dbre` vira dois scripts mecânicos —
+  `lint:migracao` varre `apps/api/src/db/migrations/*.sql` e sinaliza
+  `DROP TABLE`/`TRUNCATE`/`DROP COLUMN`/`ALTER COLUMN ... TYPE`/`ADD
+  COLUMN ... NOT NULL` sem `DEFAULT` (informativo, não bloqueia CI ainda);
+  `relatorio:backup` lê `backup_runs` sob demanda com a mesma lógica do
+  `DomainGaugesCollector`, citando o procedimento de restore já testado
+  em `docs/runbook.md`. Plano de capacidade e tuning seguem declarados
+  como lacuna — exigem volume real de dados, que não existe hoje
+  (RN-400..403, ADR 0093)
+- **api**: a delegação Dev Lead → `dev-<modulo>` vira DADO auditável em
+  `delegations` (`area: 'dev'`), fechando o item que o ADR 0053 (item 5)
+  tinha declarado fora de escopo. `status: 'completed'` é redefinido para
+  esta área — significa "o agente foi ativado", não "parecer emitido" como
+  em QA/Infra —, e `parecerArtifactId` aponta para o `artifact.module_map`
+  mais recente do projeto, o artefato que justificou a decisão de delegar
+  (RN-405, ADR 0094, auditoria fluxo.yml × código, item B1)
+- **api,web**: o gate `necessidade-validada` (Criativo → PO) ganha um
+  terceiro botão dedicado, "Confirmar necessidade validada", no mesmo
+  padrão de "Confirmar arquitetura pronta" — confirmação humana SEPARADA
+  do Criativo, nunca o modelo se autovalidando. Habilita só depois de
+  `confirm_readiness` já ter consolidado o `product_brief`; grava
+  `necessity.validated` sem sinalizar o engine, porque o handoff
+  Criativo→PO já aconteceu antes. `docs/gates.yml` ganha o gate
+  correspondente (`active`, `warn`) (RN-406, ADR 0095, auditoria
+  fluxo.yml × código, item B2 — última onda do plano)
+- **api,engine**: o PO ganha a terceira ferramenta de leitura,
+  `listar_metricas_de_produto` — o mesmo relatório de funil de entrega e
+  DORA parcial do script `analise:funil` (ADR 0089), agora legível dentro
+  do turno (`GET /internal/projects/:projectId/product-metrics`). As
+  funções de cálculo puras e a query migraram para
+  `apps/api/src/application/services/funil-metrics.ts`, reexportadas pelo
+  script sem mudar comportamento. Fecha o item B4 — a ÚLTIMA pendência da
+  auditoria fluxo.yml × código (RN-407)
+- **api,web**: SMTP real no `MailSender`, fechando o item de backlog aberto
+  desde o corte do Keycloak. `MAIL_TRANSPORT=smtp` (default continua `log`,
+  inclusive em produção) liga o envio de verdade via `nodemailer`, com
+  `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM` validados no boot em
+  produção pelo mesmo padrão da RN-114 (RN-408, ADR 0096). A investigação
+  achou uma lacuna real: `email_verification` não tinha rota web — nova tela
+  `/verificar-email` fecha isso, espelhando `/definir-senha`
+- **api,web**: o card do dashboard mostra "N online" — quantos agentes estão
+  trabalhando ou com pendência esperando decisão AGORA, nunca tamanho de
+  equipe ou presença histórica. Soma dev agents (`engine.dev_agent_states`,
+  agregado em lote) e agentes conversacionais (último `agent.status` da
+  sessão mais recente); QA/SecOps nunca contam, porque não emitem
+  `agent.status` (veredito único por invocação). Fecha o item de backlog
+  "N agentes online" no dashboard (RN-409, ADR 0097)
+
+### Documentação
+
+- **docs**: CLAUDE.md tinha ~170 KB, ~70% narrativa histórica de fase
+  CONCLUÍDA, sem prejuízo pra sessões que só precisam do estado vigente —
+  ele é lido em TODA sessão. A narrativa (`## Status` até o bloco anterior
+  a `## Stack`, todas as FASES 1–26b, PROGRAMA 16–26/28, RODADAS
+  exp001/exp003, agentes antecipados e o resto) foi MOVIDA, verbatim, para
+  `docs/explanation/historico-de-fases.md` — recorte mecânico, nenhuma
+  frase resumida, reescrita ou perdida (prova por reconstrução byte-a-byte
+  no PR). No lugar entram duas seções novas: "Histórico" (índice de uma
+  linha por fase/programa, com link pro arquivo novo) e "Estado atual e
+  aberto" (decisões de produto em aberto, cortes/pausas vigentes, lacunas
+  aceitas e pendências com dono humano — sem duplicar o que já fechou).
+  CLAUDE.md cai para a faixa de 30–45 KB.
+
+### Correções
+
+- **api,engine**: corrigido o `413 request entity too large` que estourava
+  em PRs legítimas no gate de QA/SecOps — causa era da própria api do
+  Brabo, nunca do provider de LLM. A api nunca configurava limite de body
+  do Express (valia o default de 100 KB contra os 8 MB que o Phoenix
+  aceita); `API_JSON_BODY_LIMIT` (default 10 MB) fecha essa ponta. No
+  engine, a compactação de contexto era estruturalmente inalcançável antes
+  do estouro — a estimativa de tokens não contava `toolCalls` e a janela
+  usava só a janela do modelo (128k, ~350 KB antes de compactar); a janela
+  efetiva agora é `min(context_window, teto_de_transporte)`, com corte
+  sempre em fronteira de iteração do `ToolLoop` (RN-412, ADR 0098)
+- **api,web**: a aba Executores/Visão Geral não fica mais vazia com
+  execução real rolando — `executionActivated` era derivado da janela dos
+  últimos 200 eventos, e `execution.activated` (um dos primeiros eventos
+  da sessão) saía dessa janela em qualquer execução longa, apagando o
+  roster inteiro. As duas telas passam a usar o valor agregado sobre
+  TODOS os eventos que o resumo do workspace já calculava (RN-090). A
+  régua de trabalho pendente (`DEV_PENDING_TYPES`) ganhou
+  `dev.awaiting_gate`/`dev.awaiting_approval` — o heartbeat não fecha mais
+  a sessão com dev agent esperando o gate ou uma aprovação (RN-412,
+  estende a RN-411)
+- **api**: sessão de execução não fecha mais por baixo de dev agent
+  trabalhando ou travado esperando desbloqueio — o heartbeat de 30s só
+  enxergava `agent.status` (vocabulário dos conversacionais), e dev agents
+  usam vocabulário próprio (`dev.*`). Quarto sinal em
+  `GetSessionPendingWorkUseCase`: último evento `dev.working`/`dev.blocked`/
+  `dev.idle_tripped` de qualquer `dev-<modulo>` segura a sessão; `dev.idle`
+  não. Achado numa sessão de execução real com cinco dev agents em
+  `idle_tripped` (RN-411)
+- **api**: toda conta NOVA (registro por e-mail/senha ou login social)
+  ganha um workspace pessoal automático, na mesma transação que cria a
+  conta — antes `RegisterUseCase`/`SocialLoginCallbackUseCase` criavam
+  usuário e credencial mas nenhum workspace, e o botão "Novo projeto" do
+  dashboard silenciosamente não fazia nada. Nome/slug saem de uma função
+  única, `nomeESlugDoWorkspacePessoal`, e o slug leva sempre um sufixo do
+  id do usuário para ser único sem round-trip ao banco (RN-410)
+- **api**: "Confirmar arquitetura pronta" (RN-160) agora é revalidado no
+  BACKEND — antes só a UI desabilitava o botão sem história promovida do
+  backlog, e uma chamada HTTP direta a `POST
+  /agents/arquiteto/handoff-infra` ignorava a regra por completo. Recusa
+  ANTES de gravar qualquer evento ou sinalizar o engine (RN-404, ADR 0094,
+  auditoria fluxo.yml × código, item B6)
+
+- **web**: os seis colapsos ad-hoc restantes migram para o `Disclosure`
+  compartilhado (`ModelCatalogSection`, `AgentTimelineTree`,
+  `code/CodeExplorer.tsx`, `code/CodeShell.tsx`) — o marco com detalhe de
+  `AgentTimelineTree` tinha alvo de clique de 20px, abaixo do piso de 24px
+  do WCAG 2.2 AA (2.5.8); a faixa de arquivo do diff em `ApprovalCard` NÃO
+  migrou (animação própria de chevron que o componente genérico não
+  replica) e ganhou só o `aria-controls` que faltava (RN-249..251)
+- **web**: fecha o resto da varredura de acessibilidade — alvos de toque
+  abaixo do piso de 32px do handoff em botões de ícone da sidebar
+  (colapsada e expandida), ações destrutivas de Aprovações/Configurações e
+  o botão de fechar do `Toast` (que não tinha tamanho explícito nenhum, e
+  também ganhou `:focus-visible`); quatro alvos abaixo do piso de 24px do
+  WCAG corrigidos em telas reais. `aria-expanded` da sidebar auditado e já
+  estava correto nos dois controles
+
+- **web**: os valores de espaçamento da régua de abas do projeto, que viviam
+  como override de CSS de descendente em `ProjectPage.module.css` desde a
+  FASE 16, migraram para `Tabs.module.css` — pendência declarada fechada
+- **web**: a régua de abas do projeto (`Tabs.module.css`) ganhou
+  `:focus-visible` — navegar por Tab não mostrava indicação de foco nenhuma;
+  achado pela frente de acessibilidade, corrigido no mesmo padrão de
+  `Input.module.css` (ADR 0036), com anel `inset` (a régua rola
+  horizontalmente e um anel para fora seria cortado)
+
+- **design**: seis tokens do tema claro corrigidos até passarem AA — `--accent` 3,56 → 4,81:1, `--warning` 3,15 → 4,98:1, `--success` 3,89 → 5,12:1, `--violet` 4,16 → 4,95:1 e `--text-muted` 2,76 → 5,17:1 contra o fundo que os cobrava, mais `--accent-hover` um degrau abaixo; o tema escuro não mudou nenhum valor e a dívida dele segue travada nos mesmos cinco números (ADR 0074, RN-184)
+- **web**: o contraste passa a ser medido nos DOIS temas nos três arquivos que o medem — o teste que afirmava que "nada na app define `data-theme=light`" e que três pares reprovavam foi invertido junto com o produto
+- **web**: cor de agente e o `#fff` do botão `.success` saem de token (`var(--violet)`, `var(--on-accent)`); três cores de agente sem contraparte semântica ficam declaradas no arquivo, não inventadas
+- **web**: `Select`, `Modal` (botão de fechar) e `ProjectCard` ganham
+  `:focus-visible` no mesmo tratamento calibrado de `Input.module.css`
+  (ADR 0036, incluindo o bloco de `forced-colors`) — nenhum dos três tinha
+  indicação de foco própria alcançável só por teclado. O botão de fechar do
+  `Modal` também sobe de 30px para 32px, o piso de alvo de toque em desktop.
+  `Table` e `Badge` foram auditados e não precisaram de mudança: nenhum dos
+  dois expõe afordância interativa própria — linha de `Table` é apresentação
+  pura (quem precisa de linha clicável já usa `<button>`/`<a>` dentro da
+  célula, via `render`) e `Badge` não é usado com `onClick` em lugar nenhum
+  do produto hoje.
+
+### Correções
+
+- **docker,web**: o terminal do runner local (Code → Dev → Terminal, ADR
+  0103/0104) ficava preso em "Abrindo terminal..." para sempre em projeto
+  no modo `runner`, com o socket falhando em loop no console do browser.
+  Três causas empilhadas: `ENGINE_PUBLIC_URL` não tinha default nenhum em
+  `docker/docker-compose.yml` — o fallback do código caía em `ENGINE_URL`
+  (`http://engine:4000`, hostname que só resolve DENTRO da rede do
+  Compose, inalcançável pelo browser); `apps/web/src/lib/terminal-channel.ts`
+  nunca desligava a reconexão automática do `phoenix.js`, então um socket
+  que nunca abre (URL errada, engine fora do ar) girava sozinho pra sempre
+  em silêncio em vez de mostrar erro; e o mesmo módulo concatenava
+  `/runner/websocket` a um `engineWsUrl` que a api já devolve PRONTO
+  (`ws://host:porta/runner`) — o `Socket` do `phoenix.js` ainda acrescenta
+  `/websocket` sozinho, e o path duplicado (`/runner/runner/websocket/
+  websocket`) era recusado pelo engine (`NoRouteError`), o defeito que de
+  fato impedia a conexão, só visível depois de corrigir os dois primeiros.
+  Compose ganhou o mesmo default que `VITE_ENGINE_URL` já usa
+  (`http://localhost:4000`); o canal do terminal ganhou timeout próprio de
+  8s que chama `onErro` e desconecta, em vez de depender do backoff nativo
+  do Phoenix; e parou de concatenar path no `engineWsUrl`. Verificado
+  ponta a ponta contra o engine real (RN-433)
+- **api**: `POST .../runner-ticket` (autenticação por Personal Access
+  Token, ADR 0105) sempre respondia `403 "Não autenticado"`, mesmo com um
+  PAT válido — o runner local nunca conseguia conectar por essa via.
+  `RolesGuard`, guard GLOBAL, rodava antes de `PatAuthGuard`, guard local
+  da rota (ordem do Nest, não configurável pelo controller), e recusava
+  toda chamada com `request.user` ainda vazio antes do `PatAuthGuard`
+  sequer autenticar. Um segundo defeito, escondido atrás do primeiro:
+  `PatAuthGuard` comparava o token bruto direto contra o hash gravado no
+  banco, em vez de hashear antes de comparar — nunca teria funcionado
+  mesmo sem o problema de ordem. `RolesGuard` passa a se abster em rota
+  `@RequirePatAuth()` (mesmo desvio que `JwtAuthGuard` já tinha) e
+  `PatAuthGuard` passa a autenticar E autorizar (`@RequireRole`) no MESMO
+  guard. Verificado com o `brabo-runner` conectando de verdade a um
+  projeto real (RN-439)
+
+### Desempenho
+
+- **api**: índice `token_usage(created_at)` (migração `0044`). Medido pelo ADR
+  0063 a 525 mil linhas: o relatório do workspace sai de 55 ms para 32 ms e o
+  do membro de 38 ms para 19 ms — os dois planos deixam de ser *seq scan*.
+
+### Documentação
+
+- **docs,web,api**: Onda 6b (i18n) — a extração em massa da interface e a
+  tradução de `docs/` que a Onda 6a (RN-432) tinha deixado como "próxima
+  etapa" avançaram bastante, em quatro frentes paralelas:
+  - **web**: mais 14 componentes convertidos pra `react-i18next`
+    (`ActivityFeed`, `AgentTimelineTree`, `ApprovalCard`, `PrGateTimeline`,
+    `ProjectApprovalsTab`, `ProjectPrsTab`, `ProjectSettingsTab`,
+    `ProjectPage`, `ProvisioningPage`/`BootstrapSteps`, `AdoptionPlanPage`,
+    `Carousel`, `NewProjectWizard`, `SessionPage`), com 6 namespaces novos
+    (`activity`, `approvals`, `adoptionPlan`, `newProject`, `projectPage`,
+    `provisioning`). Os 80 arquivos `.tsx` não-teste do app foram varridos;
+    sobra só 1 string literal fora de UI (fallback de payload interno em
+    `ProjectPrsTab.tsx`, nunca renderizada) e dois módulos de biblioteca
+    (`fs-browser-channel.ts`/`terminal-channel.ts`) deixados de propósito
+    fora do escopo por estarem sendo mexidos por outra frente concorrente.
+  - **api → docs/reference/api**: as descrições Swagger/OpenAPI (`@ApiOperation`,
+    `@ApiResponse`, `@ApiProperty` etc.) de 123 arquivos de controller/DTO
+    sob `apps/api/src/interfaces/http/**` viraram inglês, regerando 186 dos
+    191 `.mdx` gerados (os 5 restantes — `runner-tickets`/
+    `personal-access-tokens` — ficaram de fora de propósito, mesmo motivo
+    do item anterior). `route-surface.spec.ts` atualizado pra cobrar as
+    tags novas em inglês.
+  - **docs/reference (hand-written)**: os 9 arquivos que não são gerados
+    (`artifacts.md`, `configuration.md`, `events.md`, `git-providers.md`,
+    `internal-api.md`, `llm-providers.md`, `permissions.md`, `rulesets.md`)
+    mais `scripts.md` — que É gerado por inteiro, então a tradução certa
+    foi na FONTE (`scripts/docs/generate.mjs`, `Makefile`), nunca no
+    arquivo, que seria sobrescrito no próximo `docs:generate`.
+  - **docs/adr, docs/explanation, raiz**: os 7 ADRs, 3 `explanation/` e os
+    resíduos de `docs/security-surface.md`/`docs/runbook.md` que ainda
+    restavam viraram inglês — 101 dos 108 ADRs traduzidos agora.
+
+  `docs/business-rules.md` (o arquivo mais pesado — só o front-matter tinha
+  sido traduzido até aqui, o corpo com as centenas de RNs continua em
+  português) e uma fatia de componentes `.tsx` menores seguem como o que
+  falta pra fechar a onda por completo — ver o CLAUDE.md pro estado
+  atualizado.
+
+
 ## v3.1.0 — 2026-08-13
 
 ### Novidades

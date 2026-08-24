@@ -1,5 +1,9 @@
+import type { ReactElement } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import uiPtBR from '../../locales/pt-BR/ui.json';
 import { Carousel } from './Carousel';
 
 /**
@@ -13,19 +17,41 @@ import { Carousel } from './Carousel';
  * 3. o índice nunca aponta pro vazio: encolher `slides` clampa sozinho.
  * 4. ARIA: `role="group"` com `aria-roledescription`, dots como `tablist`,
  *    prev/next desabilitam nas pontas.
+ *
+ * Instância própria de i18next (mesmo padrão de `AccountPage.test.tsx`), só
+ * com o namespace `ui` e `lng: 'pt-BR'` — mantém as asserções em português
+ * que este teste já fazia antes da extração.
  */
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: { 'pt-BR': { ui: uiPtBR } },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'ui',
+    ns: ['ui'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
+function renderComI18n(node: ReactElement) {
+  return render(<I18nextProvider i18n={novaInstanciaI18n()}>{node}</I18nextProvider>);
+}
+
 function slide(n: number) {
   return { key: `s${n}`, label: `Slide ${n}`, node: <div>Conteúdo {n}</div> };
 }
 
 describe('Carousel', () => {
   it('sem slides não renderiza nada', () => {
-    const { container } = render(<Carousel ariaLabel="Vazio" slides={[]} />);
+    const { container } = renderComI18n(<Carousel ariaLabel="Vazio" slides={[]} />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it('mostra só o slide atual — os outros não estão no DOM', () => {
-    render(<Carousel ariaLabel="Histórias" slides={[slide(1), slide(2), slide(3)]} />);
+    renderComI18n(<Carousel ariaLabel="Histórias" slides={[slide(1), slide(2), slide(3)]} />);
 
     expect(screen.getByText('Conteúdo 1')).toBeInTheDocument();
     expect(screen.queryByText('Conteúdo 2')).not.toBeInTheDocument();
@@ -34,7 +60,7 @@ describe('Carousel', () => {
   });
 
   it('botão "próxima" avança o slide', () => {
-    render(<Carousel ariaLabel="Histórias" slides={[slide(1), slide(2), slide(3)]} />);
+    renderComI18n(<Carousel ariaLabel="Histórias" slides={[slide(1), slide(2), slide(3)]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Próxima história' }));
 
@@ -44,7 +70,7 @@ describe('Carousel', () => {
   });
 
   it('botão "anterior" desabilitado no primeiro slide, "próxima" no último', () => {
-    render(<Carousel ariaLabel="Histórias" slides={[slide(1), slide(2)]} />);
+    renderComI18n(<Carousel ariaLabel="Histórias" slides={[slide(1), slide(2)]} />);
 
     expect(screen.getByRole('button', { name: 'História anterior' })).toBeDisabled();
 
@@ -54,7 +80,7 @@ describe('Carousel', () => {
   });
 
   it('as setas do teclado navegam a partir do viewport', () => {
-    render(<Carousel ariaLabel="Histórias" slides={[slide(1), slide(2), slide(3)]} />);
+    renderComI18n(<Carousel ariaLabel="Histórias" slides={[slide(1), slide(2), slide(3)]} />);
 
     const viewport = screen.getByLabelText('Slide 1: Slide 1');
     fireEvent.keyDown(viewport, { key: 'ArrowRight' });
@@ -65,7 +91,7 @@ describe('Carousel', () => {
   });
 
   it('os dots pulam direto pro slide clicado, e o ativo tem aria-selected', () => {
-    render(<Carousel ariaLabel="Histórias" slides={[slide(1), slide(2), slide(3)]} />);
+    renderComI18n(<Carousel ariaLabel="Histórias" slides={[slide(1), slide(2), slide(3)]} />);
 
     const dots = screen.getAllByRole('tab');
     expect(dots).toHaveLength(3);
@@ -79,15 +105,22 @@ describe('Carousel', () => {
   });
 
   it('índice clampa quando a lista de slides encolhe (história promovida sai da leva)', () => {
+    const i18n = novaInstanciaI18n();
     const { rerender } = render(
-      <Carousel ariaLabel="Histórias" slides={[slide(1), slide(2), slide(3)]} />,
+      <I18nextProvider i18n={i18n}>
+        <Carousel ariaLabel="Histórias" slides={[slide(1), slide(2), slide(3)]} />
+      </I18nextProvider>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Próxima história' }));
     fireEvent.click(screen.getByRole('button', { name: 'Próxima história' }));
     expect(screen.getByText('Conteúdo 3')).toBeInTheDocument();
 
-    rerender(<Carousel ariaLabel="Histórias" slides={[slide(1), slide(2)]} />);
+    rerender(
+      <I18nextProvider i18n={i18n}>
+        <Carousel ariaLabel="Histórias" slides={[slide(1), slide(2)]} />
+      </I18nextProvider>,
+    );
 
     expect(screen.getByText('Conteúdo 2')).toBeInTheDocument();
     expect(screen.getByText('2 de 2')).toBeInTheDocument();
@@ -95,7 +128,7 @@ describe('Carousel', () => {
 
   it('aceita ação extra no cabeçalho (ex.: "Aprovar todas")', () => {
     const onClick = vi.fn();
-    render(
+    renderComI18n(
       <Carousel
         ariaLabel="Histórias"
         slides={[slide(1), slide(2)]}

@@ -1,7 +1,13 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from './Dashboard';
+// A instância REAL do app: `Dashboard.tsx`/`ProjectCard.tsx` usam
+// `useTranslation('dashboard')` sem `I18nextProvider` próprio — mesmo padrão
+// de `Dashboard.test.tsx`, `changeLanguage('pt-BR')` mantém as asserções
+// abaixo (`Notificações`, `Projeto N`) no texto de sempre; `en` é o default
+// do app desde a Onda 6a.
+import i18n from '../lib/i18n';
 import type { Project, ProjectCardSummary } from '../lib/api-types';
 
 /**
@@ -55,8 +61,9 @@ function projeto(i: number): Project {
     createdBy: 'user-1',
     maxConsecutiveBlocked: null,
     storyPromotion: 'manual',
-  workspaceMode: 'container',
+  executionMode: 'container',
   workspacePath: null,
+  workspaceVerifiedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -73,12 +80,15 @@ function resumo(i: number): ProjectCardSummary {
     lastEvent: null,
     storiesAwaitingPromotion: 0,
     pendingApprovalsCount: 0,
+    onlineAgentCount: 0,
     roster: {
       executionActivated: true,
       moduleNames: ['api', 'web'],
       gatesEverOpened: true,
       delegatedSubagents: ['qa-automacao'],
       infraActive: false,
+      uxDesignerActive: false,
+      staffActive: false,
     },
   };
 }
@@ -154,6 +164,13 @@ vi.mock('../lib/api-client', async () => {
       );
     },
   };
+});
+
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 async function renderComProjetos(n: number): Promise<number> {

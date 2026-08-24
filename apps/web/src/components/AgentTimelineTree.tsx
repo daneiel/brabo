@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   marcoExpansivel,
   montarArvore,
@@ -9,8 +10,13 @@ import {
 import type { SessionEvent } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
 import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
+// `conteudoDoMarco`/`detalheExpandido` são funções PURAS fora do componente
+// (chamadas de dentro do render, mas não hooks) — mesmo padrão de
+// `lib/agent-status.ts#descreverStatus`: `i18n.t()` direto, com `ns`
+// explícito, em vez de `useTranslation` (que só vale dentro de componente).
+import i18n from '../lib/i18n';
 import { AvatarDoAgente } from './ui/AvatarDoAgente';
-import { ChevronDownIcon, ChevronRightIcon } from './ui/icons';
+import { Disclosure } from './ui/Disclosure';
 import styles from './AgentTimelineTree.module.css';
 
 /**
@@ -46,6 +52,7 @@ export function AgentTimelineTree({
   events: SessionEvent[];
   projectId: string;
 }) {
+  const { t } = useTranslation('executors');
   const { ramos } = useMemo(() => montarArvore(events), [events]);
   const abertosPadrao = useMemo(() => ramosAbertosPorPadrao(ramos), [ramos]);
   const [fechados, setFechados] = useState<Set<string>>(new Set());
@@ -84,7 +91,7 @@ export function AgentTimelineTree({
   if (ramos.length === 0) {
     return (
       <div className={styles.vazio}>
-        Nenhum agente entrou em ação nesta sessão ainda.
+        {t('timelineTree.empty')}
       </div>
     );
   }
@@ -98,38 +105,48 @@ export function AgentTimelineTree({
           ? 0
           : ramo.marcos.filter((m) => m.seq > getAgentLastSeenSeq(projectId, ramo.agente)).length;
         return (
-          <div key={ramo.agente} className={styles.ramo}>
-            <button
-              type="button"
-              className={styles.cabecalho}
-              aria-expanded={aberto}
-              data-testid={`ramo-cabecalho-${ramo.agente}`}
-              onClick={() => alternar(ramo.agente)}
-              style={{ ['--msg-color' as string]: corDo(ramo.agente) }}
+          // A cor por agente vive na CSS var no wrapper, não no botão do
+          // `Disclosure` — o mesmo padrão de `SessionPage.tsx` (agrupamento
+          // de artefatos por agente): o componente compartilhado não expõe
+          // `style`, e não precisa: a variável herda para dentro.
+          <div
+            key={ramo.agente}
+            className={styles.ramo}
+            style={{ ['--msg-color' as string]: corDo(ramo.agente) }}
+          >
+            <Disclosure
+              aberto={aberto}
+              onAlternar={() => alternar(ramo.agente)}
+              classNameCabecalho={styles.cabecalho}
+              testId={`ramo-cabecalho-${ramo.agente}`}
+              titulo={
+                <span className={styles.tituloRamo}>
+                  <AvatarDoAgente id={ramo.agente} />
+                  <span className={styles.nome}>{rotuloDo(ramo.agente)}</span>
+                  <span
+                    className={[styles.agora, ramo.ativo && styles.agoraAtivo]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    {ramo.agora}
+                  </span>
+                </span>
+              }
+              trailing={
+                <span
+                  className={[styles.contagem, naoVistos > 0 && styles.contagemNova]
+                    .filter(Boolean)
+                    .join(' ')}
+                  title={
+                    naoVistos > 0
+                      ? t('timelineTree.newSinceLastVisit', { count: naoVistos })
+                      : undefined
+                  }
+                >
+                  {naoVistos > 0 ? `+${naoVistos}` : ramo.marcos.length}
+                </span>
+              }
             >
-              <span className={styles.chevron}>
-                {aberto ? <ChevronDownIcon size={13} /> : <ChevronRightIcon size={13} />}
-              </span>
-              <AvatarDoAgente id={ramo.agente} />
-              <span className={styles.nome}>{rotuloDo(ramo.agente)}</span>
-              <span
-                className={[styles.agora, ramo.ativo && styles.agoraAtivo]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                {ramo.agora}
-              </span>
-              <span
-                className={[styles.contagem, naoVistos > 0 && styles.contagemNova]
-                  .filter(Boolean)
-                  .join(' ')}
-                title={naoVistos > 0 ? `${naoVistos} marco(s) novo(s) desde a última vez` : undefined}
-              >
-                {naoVistos > 0 ? `+${naoVistos}` : ramo.marcos.length}
-              </span>
-            </button>
-
-            {aberto && (
               <ol className={styles.marcos}>
                 {ramo.marcos.map((m, i) => {
                   const anterior = ramo.marcos[i - 1];
@@ -140,7 +157,7 @@ export function AgentTimelineTree({
                     <Fragment key={m.eventId}>
                       {novaIteracao && (
                         <li className={styles.marcoIteracao} aria-hidden="true">
-                          iteração {m.iteracao}
+                          {t('timelineTree.iteration', { n: m.iteracao })}
                         </li>
                       )}
                       <li
@@ -149,26 +166,32 @@ export function AgentTimelineTree({
                           .join(' ')}
                       >
                         {expansivel ? (
-                          <button
-                            type="button"
-                            className={styles.marcoLinha}
-                            aria-expanded={expandido}
-                            aria-controls={`marco-detalhe-${m.eventId}`}
-                            data-testid={`marco-cabecalho-${m.eventId}`}
-                            onClick={() => alternarMarco(m.eventId)}
+                          // `className={styles.marcoBloco}` restaura o `gap`
+                          // de 6px que antes vinha do `<li>` flex-column com
+                          // DOIS filhos diretos (botão + região) — agora os
+                          // dois moram dentro do wrapper do `Disclosure`, que
+                          // não declara gap nenhum por padrão.
+                          <Disclosure
+                            className={styles.marcoBloco}
+                            classNameCabecalho={styles.marcoLinha}
+                            aberto={expandido}
+                            onAlternar={() => alternarMarco(m.eventId)}
+                            testId={`marco-cabecalho-${m.eventId}`}
+                            titulo={
+                              <>
+                                <span className={[styles.bolinha, styles[m.tipo]].join(' ')} />
+                                <span className={styles.rotulo}>{m.rotulo}</span>
+                                {m.detalhe && (
+                                  <span className={styles.detalhe}>{m.detalhe}</span>
+                                )}
+                              </>
+                            }
+                            trailing={<span className={styles.hora}>{hora(m)}</span>}
                           >
-                            <span className={styles.marcoChevron} aria-hidden="true">
-                              {expandido ? (
-                                <ChevronDownIcon size={11} />
-                              ) : (
-                                <ChevronRightIcon size={11} />
-                              )}
-                            </span>
-                            <span className={[styles.bolinha, styles[m.tipo]].join(' ')} />
-                            <span className={styles.rotulo}>{m.rotulo}</span>
-                            {m.detalhe && <span className={styles.detalhe}>{m.detalhe}</span>}
-                            <span className={styles.hora}>{hora(m)}</span>
-                          </button>
+                            <div className={styles.marcoDetalhe}>
+                              {detalheExpandido(m, ramo.agente)}
+                            </div>
+                          </Disclosure>
                         ) : (
                           <span className={styles.marcoLinhaEstatica}>
                             <span className={[styles.bolinha, styles[m.tipo]].join(' ')} />
@@ -177,22 +200,12 @@ export function AgentTimelineTree({
                             <span className={styles.hora}>{hora(m)}</span>
                           </span>
                         )}
-
-                        {expansivel && expandido && (
-                          <div
-                            id={`marco-detalhe-${m.eventId}`}
-                            role="region"
-                            className={styles.marcoDetalhe}
-                          >
-                            {detalheExpandido(m, ramo.agente)}
-                          </div>
-                        )}
                       </li>
                     </Fragment>
                   );
                 })}
               </ol>
-            )}
+            </Disclosure>
           </div>
         );
       })}
@@ -229,7 +242,11 @@ function detalheExpandido(m: Marco, agente: string) {
           </div>
         )}
         {texto && <div className={styles.detalheBolha}>{texto}</div>}
-        {erro && <div className={styles.detalheErro}>erro: {erro}</div>}
+        {erro && (
+          <div className={styles.detalheErro}>
+            {i18n.t('timelineTree.marker.error', { ns: 'executors', error: erro })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -239,11 +256,17 @@ function detalheExpandido(m: Marco, agente: string) {
 function conteudoDoMarco(m: Marco): { rotulo?: string; texto?: string; erro?: string } | null {
   switch (m.eventType) {
     case 'tool.call':
-      return { rotulo: 'argumentos', texto: formatar(m.payload.args) };
+      return {
+        rotulo: i18n.t('timelineTree.marker.args', { ns: 'executors' }),
+        texto: formatar(m.payload.args),
+      };
     case 'tool.result': {
       const ok = m.payload.ok !== false;
       return {
-        rotulo: ok ? 'resultado' : 'resultado (falhou)',
+        rotulo: i18n.t(
+          ok ? 'timelineTree.marker.result' : 'timelineTree.marker.resultFailed',
+          { ns: 'executors' },
+        ),
         texto: formatar(m.payload.result),
       };
     }
@@ -252,7 +275,10 @@ function conteudoDoMarco(m: Marco): { rotulo?: string; texto?: string; erro?: st
       const error = m.payload.error;
       const iteration = m.payload.iteration;
       return {
-        rotulo: typeof iteration === 'number' ? `iteração ${iteration}` : undefined,
+        rotulo:
+          typeof iteration === 'number'
+            ? i18n.t('timelineTree.iteration', { ns: 'executors', n: iteration })
+            : undefined,
         texto: typeof content === 'string' && content.trim() !== '' ? content : undefined,
         erro: error != null && error !== '' ? formatar(error) : undefined,
       };

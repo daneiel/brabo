@@ -1,10 +1,14 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CodeShell } from './CodeShell';
+// Instância REAL do app — `CodeShell` não tem `I18nextProvider` próprio
+// (mesmo padrão de `Dashboard.test.tsx`/`ProjectExecutorsTab.test.tsx`).
+import i18n from '../../lib/i18n';
 
 const getRepository = vi.fn();
+const getCodeBranches = vi.fn();
 
 vi.mock('../../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../../lib/api-client')>('../../lib/api-client');
@@ -12,6 +16,7 @@ vi.mock('../../lib/api-client', async () => {
     ApiError: real.ApiError,
     mensagemDaApi: real.mensagemDaApi,
     getRepository: (...args: unknown[]) => getRepository(...args),
+    getCodeBranches: (...args: unknown[]) => getCodeBranches(...args),
   };
 });
 
@@ -48,13 +53,24 @@ function montar() {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
   vi.clearAllMocks();
   getRepository.mockResolvedValue({
     id: 'r-1', projectId: 'p-1', provider: 'github', externalId: 'x',
     url: 'https://github.com/x/y', defaultBranch: 'dev', visibility: 'private',
     origin: 'created', provisionedBy: 'u-1', createdAt: '', updatedAt: '',
   });
+  getCodeBranches.mockResolvedValue({
+    items: [
+      { name: 'dev', commitSha: 'a1', protected: true, ahead: 3, behind: 1, pullRequest: null, producedBy: null },
+    ],
+    truncated: false,
+  });
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('CodeShell', () => {
@@ -89,14 +105,46 @@ describe('CodeShell', () => {
     await screen.findByText('painel explorador');
 
     expect(screen.queryByText('painel inferior')).not.toBeInTheDocument();
-    await user.click(screen.getByText('Terminal / Diff de PR'));
+    const botao = screen.getByText('Painel inferior').closest('button')!;
+    expect(botao.getAttribute('aria-expanded')).toBe('false');
+
+    await user.click(botao);
     expect(await screen.findByText('painel inferior')).toBeInTheDocument();
+    expect(botao.getAttribute('aria-expanded')).toBe('true');
+    // `aria-controls` aponta para uma região que existe — o defeito real que
+    // a migração pro `Disclosure` fechou (o botão ad-hoc de antes não tinha
+    // nenhum dos dois).
+    const idRegiao = botao.getAttribute('aria-controls');
+    expect(idRegiao).toBeTruthy();
+    expect(document.getElementById(idRegiao!)).not.toBeNull();
+
     await user.click(screen.getByText('Fechar painel inferior'));
     expect(screen.queryByText('painel inferior')).not.toBeInTheDocument();
+    expect(botao.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('sem sessão/eventos ainda, mostra 0 agentes ativos — dado real, não inventado', async () => {
     montar();
-    expect(await screen.findByText(/0 agentes ativos/)).toBeInTheDocument();
+    // CLDR pt-BR: n=0 cai na categoria "one" (`Intl.PluralRules('pt-BR').select(0)
+    // === 'one'`), então a regra i18next `activeAgents_one` responde no singular
+    // — mesmo padrão já em uso em `aprovacoes.ts`/`approvals.json` (`activeCount_one`).
+    expect(await screen.findByText(/0 agente ativo/)).toBeInTheDocument();
+  });
+
+  it('a status bar mostra ↑/↓ real da branch atual (getCodeBranches, não inventado)', async () => {
+    montar();
+    expect(await screen.findByText('↑3 ↓1')).toBeInTheDocument();
+  });
+
+  it('sem ahead/behind (branch em dia), a status bar não mostra o par vazio', async () => {
+    getCodeBranches.mockResolvedValue({
+      items: [
+        { name: 'dev', commitSha: 'a1', protected: true, ahead: 0, behind: 0, pullRequest: null, producedBy: null },
+      ],
+      truncated: false,
+    });
+    montar();
+    await screen.findByText('painel explorador');
+    expect(screen.queryByText(/↑|↓/)).not.toBeInTheDocument();
   });
 });

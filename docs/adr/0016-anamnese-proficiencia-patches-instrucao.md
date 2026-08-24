@@ -1,195 +1,198 @@
-# ADR 0016 — Anamnese: perfil de proficiência, patches de instrução e loop fechado
+# ADR 0016 — Anamnesis: proficiency profile, instruction patches and closed loop
 
-- Status: aceito
-- Data: 2026-07-24
-- Fase: 4b (sessão 2 — fecha a Fase 4)
+- Status: accepted
+- Date: 2026-07-24
+- Phase: 4b (session 2 — closes Phase 4)
 
-## Contexto
+## Context
 
-O Psicólogo (ADR 0015) já produz hipóteses com evidência e emite
-`psychologist.hypothesis_accepted_for_anamnese` — um evento
-deliberadamente sem consumidor, documentado lá como "gancho pra 4.6".
-Esta sessão constrói o consumidor: a **Anamnese**, job Oban periódico
-por projeto que deriva `proficiency_profile` por usuário+competência a
-partir de janelas do event log, propõe `instruction_patch` nos arquivos
-de agente (com diff, aprovação e rollback) e fecha o loop
-hipótese→patch→versão.
+The Psychologist (ADR 0015) already produces evidence-backed hypotheses and
+emits `psychologist.hypothesis_accepted_for_anamnese` — an event
+deliberately left without a consumer, documented there as a "hook for
+4.6". This session builds that consumer: the **Anamnesis**, a periodic
+per-project Oban job that derives a `proficiency_profile` per
+user+competency from windows of the event log, proposes an
+`instruction_patch` on agent files (with diff, approval and rollback) and
+closes the loop hypothesis→patch→version.
 
-Critério de aceite: a Anamnese propõe 1 patch com diff compreensível;
-aceitar uma hipótese faz o patch seguinte referenciá-la; rollback faz o
-agente voltar ao comportamento anterior.
+Acceptance criterion: the Anamnesis proposes 1 patch with an understandable
+diff; accepting a hypothesis makes the next patch reference it; rollback
+makes the agent go back to its previous behavior.
 
-## Decisões
+## Decisions
 
-### 1. Guarda-corpo é ESTRUTURAL, não uma instrução de prompt
+### 1. The guardrail is STRUCTURAL, not a prompt instruction
 
-`domain/anamnese/competency-catalog.ts` deriva o catálogo permitido
-deterministicamente: stacks do `module_map` vigente (normalizadas) +
-uma lista de competências de processo **hard-coded**
-(`git`, `agile`, `arquitetura`, `testes`, `seguranca`, `infra`).
-`validateProficiencyBatch` rejeita o LOTE INTEIRO se qualquer entrada
-citar algo fora do catálogo.
+`domain/anamnese/competency-catalog.ts` deterministically derives the
+allowed catalog: stacks from the current `module_map` (normalized) + a
+**hard-coded** list of process competencies (`git`, `agile`,
+`arquitetura`, `testes`, `seguranca`, `infra`). `validateProficiencyBatch`
+rejects the WHOLE BATCH if any entry cites something outside the catalog.
 
-O ponto: um modelo que tentasse emitir "ansiedade", "saúde mental" ou
-"personalidade" **não tem caminho de escrita que aceite** — a proibição
-não depende do prompt obedecer. O prompt reforça, o domínio garante. Há
-teste explícito com 8 atributos sensíveis.
+The point: a model that tried to emit "anxiety", "mental health" or
+"personality" **has no write path that accepts it** — the prohibition
+doesn't depend on the prompt being obeyed. The prompt reinforces it, the
+domain guarantees it. There's an explicit test with 8 sensitive
+attributes.
 
-### 2. Apagar o perfil apaga de verdade — e o opt-out impede a re-derivação
+### 2. Deleting the profile really deletes it — and opt-out prevents re-derivation
 
-`DELETE` das linhas + uma linha em `anamnese_opt_outs`. Sem o opt-out, a
-rodada seguinte re-derivaria exatamente o mesmo perfil e o botão
-"apagar" seria cosmético. O usuário volta a ser perfilado só com opt-in
-explícito. Usuário opted-out é filtrado em DOIS pontos (o contexto que
-vai pro prompt e a validação do lote), então nem entra no prompt nem
-consegue virar linha.
+`DELETE` of the rows + a row in `anamnese_opt_outs`. Without the opt-out,
+the next round would re-derive exactly the same profile and the "delete"
+button would be cosmetic. The user only gets profiled again with explicit
+opt-in. An opted-out user is filtered at TWO points (the context that goes
+into the prompt and the batch validation), so they neither enter the
+prompt nor can become a row.
 
-### 3. Histórico de instrução em tabela append-only separada
+### 3. Instruction history in a separate append-only table
 
-`agent_instructions` tinha `unique(project_id, agent)` e bumpava
-`version` destrutivamente — o conteúdo anterior era perdido, rollback
-era impossível.
+`agent_instructions` had `unique(project_id, agent)` and destructively
+bumped `version` — the previous content was lost, rollback was
+impossible.
 
-Em vez de reformar essa tabela, `agent_instruction_versions` (nova,
-append-only) guarda o histórico e **`agent_instructions` segue intocada
-como ponteiro do "current"** — que é exatamente o que o engine lê via
-Ecto read-only. Resultado: nenhuma mudança no schema do engine nem no
-fixture de teste dele.
+Instead of reworking that table, `agent_instruction_versions` (new,
+append-only) holds the history and **`agent_instructions` remains
+untouched as the "current" pointer** — which is exactly what the engine
+reads via read-only Ecto. Result: no change to the engine's schema nor to
+its test fixture.
 
-**Backfill retroativo**: tudo que foi semeado antes desta fase tem
-instrução mas nenhuma versão no histórico. `ApplyInstructionVersionService`
-captura o conteúdo vigente como versão ANTES de sobrescrever, quando o
-histórico está vazio — sem isso o primeiro rollback não teria pra onde
-voltar.
+**Retroactive backfill**: everything seeded before this phase has an
+instruction but no version in the history. `ApplyInstructionVersionService`
+captures the current content as a version BEFORE overwriting, when the
+history is empty — without this, the first rollback would have nowhere to
+return to.
 
-### 4. Rollback é operação PRA FRENTE
+### 4. Rollback is a FORWARD operation
 
-Reverter pra v2 grava uma versão NOVA com o conteúdo da v2. Nada é
-apagado nem reescrito: dá pra "desfazer o desfazer", e a trilha de
-auditoria mostra quando cada reversão aconteceu. A versão restaurada
-preserva o `sourceHypothesisId` original, então a rastreabilidade
-sobrevive ao rollback.
+Reverting to v2 writes a NEW version with v2's content. Nothing is deleted
+or rewritten: you can "undo the undo", and the audit trail shows when
+each reversion happened. The restored version preserves the original
+`sourceHypothesisId`, so traceability survives the rollback.
 
-`ApplyInstructionVersionService` é o ponto ÚNICO por onde o conteúdo
-muda (patch aprovado e rollback passam os dois por ele), o que garante
-que nenhum caminho esqueça de gravar a versão ou invalidar o cache.
+`ApplyInstructionVersionService` is the SINGLE point through which content
+changes (both an approved patch and a rollback go through it), which
+guarantees no path ever forgets to write the version or invalidate the
+cache.
 
-### 5. Cache de instrução: match-delete em TODAS as raízes
+### 5. Instruction cache: match-delete across ALL roots
 
-Descoberta desta sessão: `InstructionFiles.invalidate/3` existia mas
-**nunca era chamado em produção** — só no teste. Pior, a chave do cache
-é `{project_id, agent, root}` e a `root` varia (nil pro workspace
-compartilhado, path do worktree pros dev agents), então invalidar uma
-chave deixaria o dev servindo a instrução velha.
+Discovery of this session: `InstructionFiles.invalidate/3` existed but
+**was never called in production** — only in tests. Worse, the cache key
+is `{project_id, agent, root}` and `root` varies (nil for the shared
+workspace, the worktree path for dev agents), so invalidating one key
+would leave the dev serving the stale instruction.
 
-Novo `Cache.delete_agent/2` (`:ets.match_delete` por
+New `Cache.delete_agent/2` (`:ets.match_delete` by
 `{{project_id, agent, :_}, :_}`) + `InstructionFiles.invalidate_all/2` +
-endpoint interno `POST /internal/projects/:id/agents/:agent/instructions/invalidate`,
-chamado pela api depois de todo patch/rollback.
+internal endpoint
+`POST /internal/projects/:id/agents/:agent/instructions/invalidate`,
+called by the api after every patch/rollback.
 
-**Limitação conhecida e aceita**: agentes que montam o system prompt a
-cada `run` (dev-*, QA, SecOps, Psicólogo, Anamnese — os alvos típicos de
-um patch) pegam a mudança na PRÓXIMA execução; os conversacionais
-(Criativo/PO/Arquiteto/Infra) congelam o prompt no `init` e só pegam ao
-reiniciar. Rebuild de prompt em GenServer vivo foi descartado
-deliberadamente: mexeria em 4 GenServers da Fase 3 que o CLAUDE.md pede
-pra não refatorar sem necessidade, e o critério de aceite fecha sem
-isso. A invalidação é **best-effort** — falhar nela não reprova o
-patch (o conteúdo já está no banco).
+**Known and accepted limitation**: agents that rebuild the system prompt
+on every `run` (dev-*, QA, SecOps, Psychologist, Anamnesis — the typical
+targets of a patch) pick up the change on the NEXT execution; the
+conversational ones (Creative/PO/Architect/Infra) freeze the prompt at
+`init` and only pick it up on restart. Rebuilding the prompt in a live
+GenServer was deliberately dropped: it would touch 4 GenServers from
+Phase 3 that CLAUDE.md asks not to refactor without necessity, and the
+acceptance criterion closes without it. Invalidation is **best-effort** —
+failing it doesn't fail the patch (the content is already in the
+database).
 
-### 6. Diff LCS escrito à mão, sem dependência nova
+### 6. Hand-written LCS diff, no new dependency
 
-`domain/instructions/text-diff.ts`, ~60 linhas puras. Justificativa
-(CLAUDE.md pede justificar libs): o formato de saída já era ditado pelo
-renderer que JÁ existe em `ApprovalCard.tsx`
-(`{kind: 'add'|'del'|'ctx', content, lineNo}`), instruções são arquivos
-de dezenas a poucas centenas de linhas (n·m trivial, não precisa de
-Myers), e o repo favorece funções de domínio puras e testadas. O
-`ProposeInstructionPatchUseCase` já entrega `files[].lines` no formato
-do renderer — a UI não ganhou differ próprio.
+`domain/instructions/text-diff.ts`, ~60 pure lines. Justification
+(CLAUDE.md requires justifying libraries): the output format was already
+dictated by the renderer that ALREADY exists in `ApprovalCard.tsx`
+(`{kind: 'add'|'del'|'ctx', content, lineNo}`), instructions are files of
+tens to a few hundred lines (n·m is trivial, no need for Myers), and the
+repo favors pure, tested domain functions. `ProposeInstructionPatchUseCase`
+already delivers `files[].lines` in the renderer's format — the UI didn't
+get its own differ.
 
-### 7. "Não repropor patch negado" sem tabela nova
+### 7. "Don't re-propose a denied patch" without a new table
 
-`isDuplicateOfRejected` compara contra os conteúdos das
-`proposed_actions` do tipo `instruction_patch` com status `denied` —
-derivado dos dados que já existem, sem estrutura nova pra manter em
-sincronia. A normalização enxerga através de CRLF, espaço à direita e
-padding de linhas em branco (ruído de formatação), mas **preserva
-indentação à esquerda** (pode mudar o sentido em markdown), então uma
-reindentação conta como patch diferente.
+`isDuplicateOfRejected` compares against the contents of `denied`-status
+`proposed_actions` of type `instruction_patch` — derived from data that
+already exists, with no new structure to keep in sync. The normalization
+looks through CRLF, trailing whitespace and blank-line padding
+(formatting noise), but **preserves leading indentation** (it can change
+meaning in markdown), so a re-indentation counts as a different patch.
 
-### 8. Patch de instrução NUNCA é auto-aprovável
+### 8. An instruction patch is NEVER auto-approvable
 
-Teto em `decide.ts` no mesmo espírito da trava de merge: nem
-`agent_autonomy` nem `permissions.json` conseguem promover
-`instruction_patch` a `auto_approve`. O valor da feature está no humano
-ver o diff antes; auto-aprovar seria o agente reescrevendo a si mesmo.
+A ceiling in `decide.ts`, in the same spirit as the merge lock: neither
+`agent_autonomy` nor `permissions.json` can promote `instruction_patch` to
+`auto_approve`. The feature's value is in the human seeing the diff first;
+auto-approving would be the agent rewriting itself.
 
-### 9. Loop fechado por fila explícita, não por outbox
+### 9. Closed loop via an explicit queue, not the outbox
 
-`AcceptHypothesisUseCase` enfileira em `anamnese_queue` (unique por
-`hypothesisId`, idempotente) ao lado dos eventos que já emitia. Enfileirar
-aqui é determinístico — não depende de rotear o outbox nem de o
-consumidor estar de pé. `Engine.Anamnese.Triage.should_run?/2` faz
-hipótese na fila **sempre forçar** a rodada (mesmo com janela silenciosa):
-ignorá-la quebraria o loop que o usuário acabou de pedir.
+`AcceptHypothesisUseCase` enqueues into `anamnese_queue` (unique per
+`hypothesisId`, idempotent) alongside the events it already emitted.
+Enqueuing here is deterministic — it doesn't depend on routing the outbox
+nor on the consumer being up. `Engine.Anamnese.Triage.should_run?/2` makes
+a hypothesis in the queue **always force** the round (even during a silent
+window): ignoring it would break the loop the user just requested.
 
-A cadeia completa: hipótese aceita → `anamnese_queue` → prompt da rodada
-como "input PRIORIZADO" → `propose_instruction_patch` com
-`hypothesisId` → payload da proposed_action → `sourceHypothesisId` na
-versão gravada → badge de origem na UI.
+The full chain: hypothesis accepted → `anamnese_queue` → the round's
+prompt as "PRIORITIZED input" → `propose_instruction_patch` with
+`hypothesisId` → the proposed_action's payload → `sourceHypothesisId` on
+the written version → origin badge in the UI.
 
-### 10. Rodada periódica: scheduler global com fan-out por projeto
+### 10. Periodic round: a global scheduler with per-project fan-out
 
-`AnamneseSchedulerWorker` reusa o idioma exato do `OutboxDrainWorker`
-(sem `:unique` no `use` — o job em execução colidiria consigo mesmo e
-mataria a corrente; `unique:` só no `kickoff/0` com
-`states: [:available, :scheduled, :retryable]`). Tick de 15 min;
-os jobs FILHOS têm `unique` por `project_id`, então um projeto lento não
-empilha rodadas.
+`AnamneseSchedulerWorker` reuses the exact idiom of `OutboxDrainWorker`
+(no `:unique` in the `use` — the running job would collide with itself and
+kill the chain; `unique:` only on `kickoff/0` with
+`states: [:available, :scheduled, :retryable]`). A 15-minute tick; the
+CHILD jobs have `unique` per `project_id`, so a slow project doesn't pile
+up rounds.
 
-A Anamnese é project-scoped mas `append_event`/`token_usage` são
-session-scoped por FK — o scheduler escolhe a sessão mais recente do
-projeto como endereço da narração (precedente: `repo_bootstraps` usa uma
-sessão dedicada). Projeto sem sessão nenhuma não roda.
+The Anamnesis is project-scoped but `append_event`/`token_usage` are
+session-scoped by FK — the scheduler picks the project's most recent
+session as the narration's address (precedent: `repo_bootstraps` uses a
+dedicated session). A project with no session at all doesn't run.
 
-Rodada que não conclui **não grava** `anamnese_runs`, então a janela é
-reprocessada na próxima (mesma disciplina do Psicólogo); rodada sem
-material novo e sem fila é **pulada sem gastar LLM**.
+A round that doesn't conclude **writes nothing** to `anamnese_runs`, so
+the window is reprocessed on the next one (the same discipline as the
+Psychologist); a round with no new material and no queue is **skipped
+without spending LLM cost**.
 
-## Consequências
+## Consequences
 
-- Novo `SessionEventRepository.listForProjectInWindow` (api) e
-  `Engine.SessionEvents.Event.list_for_project_window/4` (engine) — não
-  existia consulta por janela de tempo. O engine lê a janela direto do
-  Postgres (mais barato que trafegar o log por HTTP), juntando em
-  `sessions` porque `session_events` não carrega `project_id`.
-- Nova `Engine.Sessions.ProjectSession` (read-only) e
-  `Engine.Projects.Project.list_ids/0` — o engine não sabia listar
-  projetos nem achar a sessão de um.
-- "Comandos que aprova/nega" não são session_events (só outbox + a
-  tabela `proposed_actions`, onde vive o `rejectionReason` em texto
-  livre). Nesta sessão a janela cobre os eventos de usuário do log; ler
-  as decisões de `proposed_actions` fica como evolução natural do
-  contexto.
-- UI: duas seções novas em `ProjectSettingsTab` (perfil com evidências
-  clicáveis e botão de apagar; histórico de versões com diff e
-  rollback), branch `instruction_patch` no `ApprovalCard` com badge da
-  hipótese de origem, e branches `instruction.*`/`anamnese.*` em
+- New `SessionEventRepository.listForProjectInWindow` (api) and
+  `Engine.SessionEvents.Event.list_for_project_window/4` (engine) — no
+  window-based query existed before. The engine reads the window directly
+  from Postgres (cheaper than shipping the log over HTTP), joining on
+  `sessions` because `session_events` doesn't carry `project_id`.
+- New `Engine.Sessions.ProjectSession` (read-only) and
+  `Engine.Projects.Project.list_ids/0` — the engine didn't know how to
+  list projects nor find a project's session.
+- "Commands that approve/deny" aren't session_events (only the outbox +
+  the `proposed_actions` table, where the free-text `rejectionReason`
+  lives). In this session the window covers user events from the log;
+  reading decisions from `proposed_actions` remains a natural evolution of
+  the context.
+- UI: two new sections in `ProjectSettingsTab` (a profile with clickable
+  evidence and a delete button; a version history with diff and rollback),
+  an `instruction_patch` branch in `ApprovalCard` with the origin
+  hypothesis's badge, and `instruction.*`/`anamnese.*` branches in
   `activity.ts`.
-- `Engine.Harness.Agents` — a identity de `"anamnese"` descrevia
-  onboarding de projeto; reescrita pro papel real (perfilamento com
-  evidência e proibição explícita de atributo sensível).
+- `Engine.Harness.Agents` — the `"anamnese"` identity described project
+  onboarding; rewritten for the real role (evidence-backed profiling and
+  an explicit prohibition on sensitive attributes).
 
-## Escopo & assunções
+## Scope & assumptions
 
-Fora: sincronizar a união `ActionType` do web com os 12 tipos do backend
-(dívida pré-existente — só `instruction_patch` entrou, por ter
-renderização própria); rebuild de prompt em GenServer conversacional
-vivo; índice novo em `session_events` pra janela por projeto (se a
-varredura virar gargalo, vira follow-up); edição manual de instrução
-pela UI (só patch proposto + rollback).
+Out of scope: syncing the web's `ActionType` union with the backend's 12
+types (pre-existing debt — only `instruction_patch` was added, since it
+has its own rendering); rebuilding the prompt in a live conversational
+GenServer; a new index on `session_events` for the per-project window (if
+the scan becomes a bottleneck, it becomes a follow-up); manual instruction
+editing via the UI (only proposed patch + rollback).
 
-O nível de proficiência é uma escala de três (`iniciante`/
-`intermediario`/`avancado`) — deliberadamente grossa: a precisão de uma
-escala maior não seria sustentável a partir de evidência observacional.
+The proficiency level is a three-point scale (`iniciante`/`intermediario`/
+`avancado` — beginner/intermediate/advanced) — deliberately coarse: the
+precision of a finer scale wouldn't be sustainable from observational
+evidence.

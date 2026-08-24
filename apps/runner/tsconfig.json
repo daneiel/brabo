@@ -1,0 +1,26 @@
+{
+  // Mesmo desenho de scripts/tsconfig.json: o Node 24 executa os `.ts` deste
+  // pacote por type stripping (ele APAGA os tipos, não os verifica) — não há
+  // passo de build, nem em dev nem no `bin` publicado. Este tsconfig existe só
+  // para o `tsc --noEmit` (script `typecheck`) verificar o que o Node não
+  // verifica.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    // Reprova enum/namespace/parameter property — o que o type stripping do
+    // Node não sabe apagar.
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    // O Node exige a extensão real no import relativo (`./exec.ts`), e o tsc
+    // só aceita isso com esta flag — que por sua vez exige `noEmit`.
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

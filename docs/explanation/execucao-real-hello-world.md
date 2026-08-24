@@ -1,111 +1,119 @@
 ---
 id: execucao-real-hello-world
-title: A execução real — o hello world
-sidebar_label: Execução real (hello world)
-description: A primeira execução do Brabo com modelo de API de ponta a ponta, os dezesseis achados que ela produziu e o que ainda não foi provado.
-keywords: [dogfooding, execução real, achados, fase 13]
+title: The real execution — the hello world
+sidebar_label: Real execution (hello world)
+description: Brabo's first end-to-end execution with an API model, the sixteen findings it produced, and what still hasn't been proven.
+keywords: [dogfooding, real execution, findings, phase 13]
 ---
 
-# A execução real — o hello world
+# The real execution — the hello world
 
-Primeira vez que a cadeia de agentes rodou com **modelo de API** de ponta a
-ponta, no lugar do Ollama local. Projeto novo (`Hello API`), repositório real
-no GitHub, provider OpenRouter, modelo `~deepseek/deepseek-v4-flash-latest`.
+The first time the agent chain ran with an **API model** end to end,
+instead of local Ollama. A new project (`Hello API`), a real GitHub
+repository, the OpenRouter provider, model
+`~deepseek/deepseek-v4-flash-latest`.
 
-O objetivo não era entregar o hello world. Era descobrir o que quebra quando o
-produto é usado como um usuário o usaria — e isso ele fez em quantidade.
+The goal wasn't to deliver the hello world. It was to discover what
+breaks when the product is used the way a user would use it — and it
+did that in quantity.
 
-:::caution Esta execução NÃO é a medição oficial da FASE 13b
-Houve **restart do engine no meio**, várias vezes, para carregar as correções
-que a própria execução exigiu. O critério "zero restart" está perdido, e a
-tabela abaixo mede uma corrida acidentada de propósito. A medição que vale
-ainda precisa ser feita, com tudo já corrigido e sem interrupção.
+:::caution This execution is NOT the official measurement from PHASE 13b
+There were **engine restarts in the middle**, several times, to load
+the fixes the execution itself required. The "zero restart" criterion
+was lost, and the table below measures a run that was deliberately
+rocky. The measurement that counts still needs to be done, with
+everything already fixed and with no interruption.
 :::
 
-## Até onde a cadeia chegou
+## How far the chain got
 
-| etapa | resultado |
+| step | result |
 |---|---|
-| Provisionamento GitHub | ✅ `daneiel/hello-api`, 4 de 5 passos do Gitflow |
-| Criativo | ✅ 4 regras de negócio, com rastreabilidade |
-| Prontidão → brief | ✅ `product_brief` referenciando as 4 regras |
-| PO | ✅ 1 épico, 4 histórias com RF/DOR/DOD |
-| Promoção manual | ✅ 4 histórias promovidas pelo usuário (RN-048) |
-| Arquiteto | ❌ nunca recebeu o bastão |
-| Dev, PR, gates | ❌ não alcançados |
+| GitHub provisioning | ✅ `daneiel/hello-api`, 4 of 5 Gitflow steps |
+| Creative | ✅ 4 business rules, with traceability |
+| Readiness → brief | ✅ `product_brief` referencing the 4 rules |
+| PO | ✅ 1 epic, 4 stories with RF/DOR/DOD |
+| Manual promotion | ✅ 4 stories promoted by the user (RN-048) |
+| Architect | ❌ never received the baton |
+| Dev, PR, gates | ❌ never reached |
 
-O passo 5 do bootstrap (proteger branches) falhou por limitação do **plano** do
-GitHub: repositório privado não aceita proteção de branch no plano gratuito.
-Não é defeito do produto — mas o produto tratava como falha dura, sem avisar
-antes. O wizard passou a avisar na hora da escolha.
+Step 5 of the bootstrap (protecting branches) failed due to a GitHub
+**plan** limitation: a private repository doesn't accept branch
+protection on the free plan. It's not a product defect — but the
+product treated it as a hard failure, without warning beforehand. The
+wizard now warns at the time of the choice.
 
-## O custo, extraído do `token_usage`
+## The cost, extracted from `token_usage`
 
-| agente | chamadas | tokens de entrada | saída | custo (micro-USD) |
+| agent | calls | input tokens | output | cost (micro-USD) |
 |---|---|---|---|---|
-| **anamnese** | 32 | **392.510** | 18.207 | 38.605 |
-| psicologo | 2 | 16.406 | 5.140 | 2.401 |
-| po | 5 | 18.777 | 3.492 | 2.318 |
-| criativo | 6 | 6.406 | 3.343 | 1.180 |
-| psicologo-leve | 1 | 1.947 | 2.039 | 542 |
+| **anamnese** | 32 | **392,510** | 18,207 | 38,605 |
+| psicologo | 2 | 16,406 | 5,140 | 2,401 |
+| po | 5 | 18,777 | 3,492 | 2,318 |
+| criativo | 6 | 6,406 | 3,343 | 1,180 |
+| psicologo-leve | 1 | 1,947 | 2,039 | 542 |
 
-A Anamnese gastou **8× o Criativo e o PO somados** sem produzir nada — ela não
-tinha como dizer "não há nada a emitir" ([RN-063](../business-rules.md#rn-063)).
-É o número mais importante desta tabela: o trabalho custou centavos, o
-desperdício custou o resto.
+The Anamnese spent **8× the Creative and PO combined** without
+producing anything — it had no way to say "there's nothing to emit"
+([RN-063](../business-rules.md#rn-063)). It's the most important
+number in this table: the actual work cost pennies, the waste cost the
+rest.
 
-## Os dezesseis achados
+## The sixteen findings
 
-Numerados na ordem em que apareceram. Os corrigidos foram decididos pelo
-usuário, um a um.
+Numbered in the order they appeared. The fixed ones were decided by
+the user, one at a time.
 
-### Corrigidos nesta execução
+### Fixed in this execution
 
-| # | o quê | onde ficou |
+| # | what | where it landed |
 |---|---|---|
-| 4 | wizard mostrava `brabo/<slug>` como destino do repo, com `brabo/` hardcoded — a api cria em `createForAuthenticatedUser` | aberto |
-| 6 | provisionamento falhava e a tela ficava em "Trabalhando…" para sempre, com zero eventos | aberto |
-| 8 | bootstrap morria em **todo projeto GitHub novo**: repo vazio responde 409 em toda a Git Data API, e o provider tratava só 404 | PR #125 |
-| — | fake do GitHub respondia 404 onde o real responde 409 — a suite ficava verde com o produto quebrado | PR #125 |
-| — | plano gratuito não protege branch em repo privado, e a escolha não avisava | PR #125 |
-| 13 | **nenhum agente conseguia usar provider com credencial**: o turno procurava a chave pelo slug do agente numa coluna UUID | PR #126 |
-| 14 | falha de turno virava `agent.response` vazio no log, com o motivo só em broadcast efêmero | PR #127 |
-| — | o chat do Criativo abria em branco, sem dizer que a vez era do usuário | PR #127 |
-| 12 | o Criativo decidia tecnologia (`GET` ou `POST`? JSON ou texto?) — a identidade não dizia o que **não** era dele | PR #131 |
-| — | falha de FERRAMENTA era descartada com `_ =`: quatro regras recusadas em silêncio | PR #131 |
-| — | restart do engine matava a conversa sem nada na tela | PR #131 |
-| 15 | Anamnese sem verbo para encerrar: repetia chamada impossível até o teto, a cada tick | PR #132 |
-| 16 | heartbeat de 30s matava sessão com handoff pendente — trabalho ficava inalcançável | PR #133 |
+| 4 | the wizard showed `brabo/<slug>` as the repo destination, with `brabo/` hardcoded — the api creates it in `createForAuthenticatedUser` | open |
+| 6 | provisioning failed and the screen stayed on "Working…" forever, with zero events | open |
+| 8 | bootstrap died on **every new GitHub project**: an empty repo responds 409 across the entire Git Data API, and the provider only handled 404 | PR #125 |
+| — | the GitHub fake responded 404 where the real one responds 409 — the suite stayed green with the product broken | PR #125 |
+| — | the free plan doesn't protect branches on a private repo, and the choice gave no warning | PR #125 |
+| 13 | **no agent could use a provider with credentials**: the turn looked up the key by the agent's slug in a UUID column | PR #126 |
+| 14 | turn failure turned into an empty `agent.response` in the log, with the reason only in an ephemeral broadcast | PR #127 |
+| — | the Creative's chat opened blank, without saying it was the user's turn to speak | PR #127 |
+| 12 | the Creative was deciding technology (`GET` or `POST`? JSON or text?) — its identity didn't say what was **not** its job | PR #131 |
+| — | TOOL failure was discarded with `_ =`: four rules refused in silence | PR #131 |
+| — | an engine restart killed the conversation with nothing on screen | PR #131 |
+| 15 | Anamnese had no verb to end: it repeated an impossible call up to the cap, every tick | PR #132 |
+| 16 | a 30s heartbeat killed the session with a pending handoff — work became unreachable | PR #133 |
 
-### Abertos, para triagem
+### Open, pending triage
 
-| # | o quê |
+| # | what |
 |---|---|
-| 1 | "Configurações" do menu lateral não navega; o catálogo (do workspace) só se alcança dentro de um projeto |
-| 2 | não existe seção de credencial de **git** nas configurações — só de LLM |
-| 3 | wizard promete "selecione uma credencial já cadastrada" e "verifique nas configurações", e nenhuma das duas existe |
-| 4 | `brabo/` hardcoded no preview **e na tela de confirmação** do wizard |
-| 5 | passo de política anuncia a branch `rc` e a cascata `rc ← qa`, removidas pelo ADR 0030 |
-| 6 | falha antes da linha de `repo_bootstraps` deixa a tela girando para sempre, sem evento nenhum |
-| 7 | feed de atividade mostra "atividade em system" para todo evento |
-| 11 | sessão fecha por inatividade da **aba** (parcialmente resolvido pela RN-064: só protege quando há handoff pendente) |
-| — | a Anamnese roda **dentro** da sessão de trabalho, intercalando eventos e disputando orçamento |
+| 1 | "Settings" in the side menu doesn't navigate; the (workspace-level) catalog is only reachable from inside a project |
+| 2 | there's no **git** credential section in settings — only LLM |
+| 3 | the wizard promises "select an already-registered credential" and "check settings," and neither exists |
+| 4 | `brabo/` hardcoded in the preview **and in the wizard's confirmation screen** |
+| 5 | the policy step announces the `rc` branch and the `rc ← qa` cascade, removed by ADR 0030 |
+| 6 | a failure before the `repo_bootstraps` row leaves the screen spinning forever, with no event at all |
+| 7 | the activity feed shows "activity in system" for every event |
+| 11 | session closes due to **tab** inactivity (partially resolved by RN-064: it only protects when there's a pending handoff) |
+| — | the Anamnese runs **inside** the work session, interleaving events and competing for budget |
 
-## O que esta execução provou, e o que não provou
+## What this execution proved, and what it didn't
 
-**Provou** que a cadeia Criativo → PO funciona com modelo de API e produz
-artefato de qualidade real: o backlog saiu com rastreabilidade fechada, e o
-DOR das histórias dizia "formato e detalhes técnicos definidos pelo Arquiteto"
-— a fronteira acrescentada ao Criativo atravessou o brief e chegou ao backlog.
+**It proved** that the Creative → PO chain works with an API model and
+produces a real-quality artifact: the backlog came out with closed
+traceability, and the stories' DOR said "format and technical details
+defined by the Architect" — the boundary added to the Creative crossed
+through the brief and reached the backlog.
 
-**Provou** que o produto engolia erro em três camadas diferentes (turno,
-ferramenta, processo), e que era isso que mantinha os defeitos invisíveis. As
-três agora falam.
+**It proved** that the product swallowed errors in three different
+layers (turn, tool, process), and that's what kept the defects
+invisible. All three now speak up.
 
-**Não provou** o Arquiteto, o dev, a PR remota nem os gates. **Não provou**
-nada sobre custo real de uma execução completa. E não serve como medição da
-FASE 13b, pelo restart no meio.
+**It didn't prove** the Architect, the dev, the remote PR, or the
+gates. **It didn't prove** anything about the real cost of a complete
+execution. And it doesn't count as the PHASE 13b measurement, because
+of the restart in the middle.
 
-> **TODO(humano):** a execução limpa — sem restart, com tudo corrigido — ainda
-> precisa ser rodada, e é ela que preenche `docs/explanation/validacao-real.md`
-> com a tabela extraída por `pnpm --filter api medir:execucao`.
+> **TODO(human):** the clean execution — no restart, everything fixed
+> — still needs to be run, and it's the one that fills
+> `docs/explanation/validacao-real.md` with the table extracted by
+> `pnpm --filter api medir:execucao`.

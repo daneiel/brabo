@@ -5,6 +5,16 @@
 
 export type Role = 'owner' | 'maintainer' | 'developer' | 'viewer';
 
+/**
+ * O idioma da interface (fundação de i18n, Onda 6a). Espelha o enum
+ * `user_locale` da api — fechado a dois valores.
+ */
+export type UserLocale = 'pt-BR' | 'en';
+
+export interface UserPreferences {
+  locale: UserLocale;
+}
+
 export interface Workspace {
   id: string;
   name: string;
@@ -32,12 +42,17 @@ export interface Project {
   // de projeto novo; os projetos que existiam antes da fase ficaram em `auto`,
   // que é o comportamento anterior.
   storyPromotion: StoryPromotionMode;
-  // ONDE o código mora (RN-169 — ADR 0072). `container`: a pasta gerenciada
-  // pelo produto, que é o default e o comportamento de sempre. `local`: a
-  // pasta do usuário em `workspacePath`.
-  workspaceMode: WorkspaceMode;
-  // Caminho absoluto da pasta do usuário; `null` fora do modo `local`.
+  // ONDE o comando executa (RN-169/RN-421 — ADR 0072/0104). `container`: a
+  // pasta gerenciada pelo produto, que é o default e o comportamento de
+  // sempre. `mounted`: a pasta do usuário em `workspacePath`, montada por
+  // bind-mount. `runner`: a pasta do usuário confirmada por um runner
+  // conectado (ver `workspaceVerifiedAt`).
+  executionMode: ExecutionMode;
+  // Caminho absoluto da pasta do usuário; `null` no modo `container`.
   workspacePath: string | null;
+  // Quando o runner confirmou o caminho pela primeira vez (RN-423). `null` =
+  // não verificado — só ganha sentido em `executionMode: 'runner'`.
+  workspaceVerifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -45,17 +60,19 @@ export interface Project {
 export type StoryPromotionMode = 'manual' | 'auto';
 
 /**
- * ONDE o código de um projeto mora (RN-169 — ADR 0072). Espelha o enum
- * `project_workspace_mode` da api.
+ * ONDE o comando de um projeto EXECUTA (RN-169/RN-421 — ADR 0072/0104).
+ * Espelha o enum `project_execution_mode` da api.
  *
  * `container` é a pasta gerenciada pelo produto em PROJECT_WORKSPACES_ROOT —
- * o default e o comportamento de sempre. `local` é uma pasta do usuário, que
- * só funciona montada dentro dos containers da api e do engine.
+ * o default e o comportamento de sempre. `mounted` (antigo `local`) é uma
+ * pasta do usuário que só funciona montada dentro dos containers da api e do
+ * engine. `runner` é uma pasta do usuário sem bind-mount, confirmada por um
+ * CLI (`brabo-runner`) rodando na máquina dela.
  *
- * Cuidado com o homônimo: nada a ver com o `GitProviderName` `'local'`, que
- * fala de onde o REPOSITÓRIO vive.
+ * Cuidado com o homônimo: nenhum destes valores tem relação com o
+ * `GitProviderName` `'local'`, que fala de onde o REPOSITÓRIO vive.
  */
-export type WorkspaceMode = 'container' | 'local';
+export type ExecutionMode = 'container' | 'mounted' | 'runner';
 
 /** Uma área de agente e seu teto de paralelismo (FASE 14d, ADR 0053). */
 export interface AgentArea {
@@ -65,6 +82,14 @@ export interface AgentArea {
   leadAgentId: string;
   /** Quantos agentes o lead sobe na SESSÃO sem pedir autorização. */
   maxParallel: number;
+  /**
+   * Teto de gasto da área, em micro-USD (ADR 0110). `null` = sem teto —
+   * ADITIVO ao budget de projeto/sessão, nunca cascata (não confundir com o
+   * binding herdável de modelo do ADR 0064).
+   */
+  budgetMicros: number | null;
+  /** Gasto acumulado da área, em micro-USD. Soma sempre, com ou sem teto. */
+  spentMicros: number;
   members: string[];
 }
 
@@ -124,12 +149,21 @@ export interface ProjectCardSummary {
    * (RN-151) — o que a sidebar mostra como badge do projeto.
    */
   pendingApprovalsCount: number;
+  /**
+   * Agentes ONLINE agora — trabalhando ou com pendência esperando decisão
+   * (RN-409). Nunca tamanho de equipe/presença histórica.
+   */
+  onlineAgentCount: number;
   roster: {
     executionActivated: boolean;
     moduleNames: string[];
     gatesEverOpened: boolean;
     delegatedSubagents: string[];
     infraActive: boolean;
+    /** ADR 0087 — mesmo critério de `infraActive`. */
+    uxDesignerActive: boolean;
+    /** Staff (docs/fluxo.yml, ADR 0088) — mesmo critério de `infraActive`. */
+    staffActive: boolean;
   };
 }
 
@@ -212,6 +246,19 @@ export interface SocketTicket {
   expiresAt: string;
 }
 
+/**
+ * Ticket do canal `terminal:<projectId>` (runner local + PTY interativo,
+ * frente paralela em engine/api). Formato PRÓPRIO, diferente de
+ * `SocketTicket`: não é escopado a uma sessão, e `engineWsUrl` viaja no
+ * corpo em vez de derivado de `runtimeConfig` — o canal conecta num socket
+ * NOVO (`/runner`, distinto de `/socket`), então o cliente não presume a
+ * URL, usa a que o servidor devolveu.
+ */
+export interface TerminalTicket {
+  ticket: string;
+  engineWsUrl: string;
+}
+
 export interface Session {
   id: string;
   projectId: string;
@@ -282,7 +329,9 @@ export type ActionType =
   | 'open_infra_pr'
   | 'instruction_patch'
   | 'parallelize'
-  | 'raise_max_parallel';
+  | 'raise_max_parallel'
+  | 'propose_execution_plan'
+  | 'assess_implementability';
 
 export type ActionStatus =
   | 'pending'
@@ -490,6 +539,34 @@ export interface UserCredentialMetadata {
 export interface CredentialTestResult {
   resultado: 'ok' | 'recusado' | 'nao_suportado';
   motivo?: string;
+}
+
+/**
+ * Personal Access Token do runner (`brb_…`, ADR 0105) — nunca carrega o
+ * token bruto. Escopado a um projeto e a um usuário (o dono).
+ */
+export interface PersonalAccessTokenSummary {
+  id: string;
+  name: string;
+  projectId: string;
+  createdAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  lastUsedAt: string | null;
+}
+
+/** Só a resposta de EMISSÃO carrega o bruto — ela não se repete. */
+export interface PersonalAccessTokenIssued extends PersonalAccessTokenSummary {
+  token: string;
+}
+
+/**
+ * Visão de `maintainer` (RN-427) — os mesmos campos, mais o DONO do token.
+ * Só a rota `/personal-access-tokens/all` devolve isto.
+ */
+export interface PersonalAccessTokenAdminSummary extends PersonalAccessTokenSummary {
+  userId: string;
+  userEmail: string;
 }
 
 export type BudgetPolicy = 'block' | 'allow';
@@ -767,6 +844,15 @@ export interface PsychologistAnalysis {
   costMicros: number;
   hypothesisCount: number;
   createdAt: string;
+}
+
+/**
+ * Leitura da flag global `PSYCHOLOGIST_ENABLED` (RN-454) — sem efeito
+ * colateral, ao contrário de `reanalyzeSession`. `enabled: false` é decisão
+ * de PRODUTO, não bug: hipóteses e análises já emitidas continuam intactas.
+ */
+export interface PsychologistStatus {
+  enabled: boolean;
 }
 
 // --- Anamnese (Fase 4b) ---
@@ -1096,6 +1182,28 @@ export interface EstadoDoContainer {
   decidedAt: string | null;
 }
 
+/**
+ * O ciclo de vida do container (ADR 0081/0083, RN-243..248/RN-267) —
+ * distinto de `EstadoDoContainer`, que é a DECISÃO de imagem. `null` é o
+ * estado honesto de "nunca provisionado": nenhum orquestrador real
+ * transiciona `project_containers` hoje.
+ */
+export type ContainerLifecycleStatus =
+  | 'provisioning'
+  | 'running'
+  | 'stopped'
+  | 'failed'
+  | 'removed';
+
+export interface CicloDeVidaDoContainer {
+  status: ContainerLifecycleStatus;
+  imageVersion: number;
+  resources: RecursosDoContainer;
+  failureReason: string | null;
+  createdAt: string;
+  statusChangedAt: string;
+}
+
 // --- Aba Code, só leitura (FASE 26) — espelha
 // apps/api/src/application/use-cases/git/read-project-code.use-case.ts +
 // interfaces/http/git/dto/code.response.dto.ts ---
@@ -1255,4 +1363,191 @@ export interface CodeBranchDetailList {
   items: CodeBranchDetail[];
   /** A lista foi cortada no teto de branches enriquecidas. */
   truncated: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// APÊNDICE DA FRENTE D0 (ADR 0076) — gasto por provider, owner e agente.
+//
+// Escrito no FIM do arquivo, e não junto dos tipos de gasto, porque esta onda
+// roda em paralelo com outras que editam este mesmo arquivo: apêndice não
+// conflita, edição no meio conflita. A frente de integração recolhe isto para
+// onde ele mora de verdade (`lib/spend.ts`, que a TELA de Gastos consome).
+//
+// Só a camada de API. A tela é da Onda 3 e não foi tocada.
+// ---------------------------------------------------------------------------
+
+/**
+ * Os três blocos que `GET /workspaces/:id/spend-report` ganhou.
+ *
+ * `porProvider` fala de CREDENCIAL, e é por isso que ele só existe na resposta
+ * da rota de `owner` (RN-060/RN-186). `MySpend`, a do membro, não ganhou campo
+ * nenhum — a assimetria é o desenho, não uma pendência.
+ */
+export interface WorkspaceSpendPorProvider {
+  /** Por PROVIDER. Chave = nome do provider; `rotulo` e `actorKind` são `null`. */
+  porProvider: import('./spend').SpendLinha[];
+  /**
+   * As linhas de PESSOA (`actorKind === 'user'`) — o bloco que o handoff chama
+   * de "Por owner", porque pela RN-058 é a chave do owner que todas elas
+   * gastam. Quem é o dono continua sendo `ownerId`.
+   */
+  porOwner: import('./spend').SpendLinha[];
+  /** As linhas de AGENTE (`actorKind === 'agent'`). */
+  porAgente: import('./spend').SpendLinha[];
+}
+
+// ---------------------------------------------------------------------------
+// APÊNDICE DA FRENTE G3 (PROGRAMA 28, Onda 5) — a tela do Chat RAG.
+//
+// Espelha 1:1 o contrato HTTP de `rag.controller.ts`/`rag.response.dto.ts`
+// (RN-231..238, ADR 0080), escrito no FIM do arquivo pelo mesmo motivo do
+// apêndice da frente D0: outras frentes da Onda 5 editam este arquivo em
+// paralelo, e um bloco novo no fim é o que menos colide.
+// ---------------------------------------------------------------------------
+
+/**
+ * Os QUATRO escopos honestos do índice (RN-219/232/454): nunca
+ * código-fonte do repositório, nunca PR. `local` (ADR 0113) é uma pasta do
+ * PRÓPRIO usuário anexada via upload do navegador — nunca um caminho de
+ * host.
+ */
+export type RagChunkScope = 'docs' | 'adr' | 'session' | 'local';
+
+/**
+ * União discriminada por `kind` — o mesmo motivo do `ChunkOrigin` do
+ * servidor: quem consome nunca deveria checar dois campos opcionais para
+ * saber qual é o `null`.
+ */
+export type RagChunkOrigin =
+  | {
+      kind: 'file';
+      sourcePath: string;
+      /** Trilha de headings da seção de onde o trecho veio, quando há uma. */
+      headingPath?: string[];
+      title?: string;
+    }
+  | {
+      kind: 'session';
+      sessionId: string;
+      /** O evento de origem — o mesmo id que `highlightEvent` navega até. */
+      eventId?: string;
+      title?: string;
+    };
+
+export interface RagSearchHit {
+  chunkId: string;
+  scope: RagChunkScope;
+  content: string;
+  /** Combinado (0.6 vetor + 0.4 léxico), já acima do limiar de 0.2 (RN-234). */
+  score: number;
+  /** Similaridade de cosseno, 0..1. `null` quando o sinal não achou o chunk. */
+  vectorScore: number | null;
+  /** `ts_rank` normalizado, 0..1. `null` quando o termo não casou lexicalmente. */
+  lexicalScore: number | null;
+  origin: RagChunkOrigin;
+}
+
+export interface RagSearchResult {
+  query: string;
+  hits: RagSearchHit[];
+  /**
+   * `false` quando o provider de embedding não respondeu (RN-233) — a busca
+   * rodou só com o sinal léxico. A tela avisa; nunca esconde.
+   */
+  vectorAvailable: boolean;
+  vectorUnavailableReason?: string;
+}
+
+export interface RagFileCoverage {
+  filesInRepo: number;
+  filesIndexed: number;
+  truncated: boolean;
+}
+
+export interface RagSessionCoverage {
+  sessionsInProject: number;
+  sessionsIndexed: number;
+}
+
+/**
+ * Cobertura do escopo `local` (RN-455, ADR 0113) — forma DIFERENTE de
+ * `RagFileCoverage`: não há "total real" pra comparar (a pasta só existe no
+ * navegador de quem anexou), então mostra o que está indexado AGORA.
+ * `lastAttachedAt` É um valor real (`MAX(created_at)`), a única exceção à
+ * regra "nunca Xmin" — ver o comentário de `RagCoverage` abaixo.
+ */
+export interface RagLocalCoverage {
+  filesIndexed: number;
+  folderName: string | null;
+  lastAttachedAt: string | null;
+}
+
+/**
+ * Contagem REAL, nunca "reindexado há Xmin" (RN-237) — não existe coluna de
+ * timestamp de indexação por escopo, e um número chutado mentiria. `local`
+ * é a exceção declarada: `lastAttachedAt` é um `MAX(created_at)` real, não
+ * um "reindexado há Xmin" chutado (RN-455).
+ */
+export interface RagCoverage {
+  docs: RagFileCoverage;
+  adr: RagFileCoverage;
+  session: RagSessionCoverage;
+  local: RagLocalCoverage;
+  chunksTotal: number;
+  chunksWithoutVector: number;
+}
+
+export interface RagIndexEmbeddingReport {
+  available: boolean;
+  embedded: number;
+  skipped: number;
+  reason?: string;
+}
+
+export interface RagIndexDocsReport {
+  filesScanned: number;
+  docsChunks: number;
+  adrChunks: number;
+  truncated: boolean;
+  embedding: RagIndexEmbeddingReport;
+}
+
+export interface RagReindexSessionsReport {
+  total: number;
+  indexed: number;
+  chunksCreated: number;
+}
+
+/** A resposta de `POST .../rag/reindex` — full rebuild idempotente (RN-236). */
+export interface RagReindexReport {
+  docs: RagIndexDocsReport;
+  sessions: RagReindexSessionsReport;
+  embeddingAvailable: boolean;
+  embeddingReason?: string;
+}
+
+// ---------------------------------------------------------------------------
+// APÊNDICE — pasta local anexada (RN-455, ADR 0113). Escrito no FIM do bloco
+// pelo mesmo motivo dos apêndices acima: texto puro lido pelo NAVEGADOR
+// (`File.text()`), nunca um caminho de host.
+// ---------------------------------------------------------------------------
+
+export interface LocalFolderFile {
+  /** Caminho relativo dentro da pasta escolhida (de `File.webkitRelativePath`). */
+  path: string;
+  content: string;
+}
+
+export interface AttachLocalFolderRequest {
+  folderName: string;
+  files: LocalFolderFile[];
+}
+
+/** A resposta de `POST .../rag/local` — full rebuild idempotente do escopo `local`. */
+export interface AttachLocalFolderReport {
+  folderName: string;
+  filesIndexed: number;
+  filesSkipped: number;
+  chunksCreated: number;
+  embedding: RagIndexEmbeddingReport;
 }

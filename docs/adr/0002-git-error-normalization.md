@@ -1,68 +1,69 @@
-# 0002 — Normalização de erros do GitProvider
+# 0002 — GitProvider error normalization
 
-## Contexto
+## Context
 
-A suite de contrato do `GitProviderContract` (ver 0001) precisa de
-erros normalizados e estáveis pras 8 operações — em particular os 3
-cenários citados no pedido original (repositório já existe, branch
-inexistente, permissão negada) mais o caso de capability ausente, que
-nunca pode ser um crash cru.
+The `GitProviderContract` contract suite (see 0001) needs normalized,
+stable errors for the 8 operations — in particular the 3 scenarios cited
+in the original request (repository already exists, branch not found,
+permission denied) plus the missing-capability case, which can never be
+a raw crash.
 
-O resto do código já tem uma convenção de erro de domínio: cada erro é
-uma `class X extends Error` avulsa, com `this.name` setado
-explicitamente e campos de contexto tipados (nunca um enum de `code`
-genérico) — ver `apps/api/src/domain/git/git-provider-errors.ts`
-(`GitProviderAuthError`, `InvalidOauthStateError`, focados em OAuth) e
-os erros de máquina de estado de sessão/ação.
+The rest of the codebase already has a domain-error convention: each
+error is a standalone `class X extends Error`, with `this.name` set
+explicitly and typed context fields (never a generic `code` enum) — see
+`apps/api/src/domain/git/git-provider-errors.ts`
+(`GitProviderAuthError`, `InvalidOauthStateError`, focused on OAuth) and
+the session/action state-machine errors.
 
-## Decisão
+## Decision
 
-**Sem classe-base comum.** Considerado introduzir uma `GitError extends
-Error` abstrata pras 6 classes novas convergirem (facilitaria um futuro
-`@Catch(GitError)` único), e rejeitado: nenhum filtro HTTP novo é
-registrado nesta sessão (nenhum endpoint expõe as 8 operações ainda —
-isso é dos itens 4-6 da Fase 2, futuros), então uma base comum não tem
-uso imediato, e destoaria da convenção "sem base" já estabelecida em
-todo o resto do domínio sem motivo concreto agora.
+**No common base class.** Introducing an abstract `GitError extends
+Error` for the 6 new classes to converge on was considered, and
+rejected: no new HTTP filter is registered in this session (no endpoint
+exposes the 8 operations yet — that's items 4-6 of Phase 2, future
+work), so a common base has no immediate use, and it would deviate from
+the "no base" convention already established across the rest of the
+domain for no concrete reason right now.
 
-Seis classes avulsas em `apps/api/src/domain/git/git-errors.ts` (arquivo
-novo, separado do `git-provider-errors.ts` de OAuth):
+Six standalone classes in `apps/api/src/domain/git/git-errors.ts` (new
+file, separate from the OAuth `git-provider-errors.ts`):
 
 - `GitRepoAlreadyExistsError(repoId)`
 - `GitRepoNotFoundError(repoId)`
 - `GitBranchNotFoundError(repoId, ref)`
-- `GitBranchAlreadyExistsError(repoId, branchName)` — cai de graça da
-  semântica de compare-and-swap do `git update-ref` usada em
-  `createBranch`; não fazia parte da lista original de 3 cenários, mas
-  é o comportamento natural de rejeitar sobrescrever uma branch
-  existente.
+- `GitBranchAlreadyExistsError(repoId, branchName)` — falls out for free
+  from the compare-and-swap semantics of `git update-ref` used in
+  `createBranch`; it wasn't part of the original list of 3 scenarios,
+  but it's the natural behavior of rejecting an overwrite of an
+  existing branch.
 - `GitPermissionDeniedError(path)`
 - `GitNotSupportedError(provider, operation)`
 
-**Teste de permissão negada e containers rodando como root.** Os
-containers de dev da api rodam como root
-(`docker/api/Dockerfile`, sem `USER`). Root ignora checagem de
-permissão Unix (DAC), então um teste que faz `chmod(dir, 0o000)` e
-espera `EACCES` não reproduz nada real rodando como root — o teste
-"passaria" sem exercitar nenhum código de tratamento de erro, o que é
-pior que não ter o teste. Considerado (e adiado, desproporcional pro
-escopo desta sessão) usar as opções `uid`/`gid` do `child_process` do
-Node pra derrubar privilégio de propósito antes de tentar a operação —
-isso exigiria assumir um uid não-privilegiado específico (`nobody` ou
-similar) presente em todo ambiente onde a suite roda, e adicionaria uma
-via de override de identidade só pra benefício de teste. Decisão: a
-suite detecta `process.getuid?.() === 0` e pula (`it.skipIf`) o teste
-de permissão negada quando rodando como root, com comentário explícito
-no código — nunca finge que passou.
+**Permission-denied test and containers running as root.** The api's
+dev containers run as root
+(`docker/api/Dockerfile`, no `USER`). Root bypasses Unix permission
+checks (DAC), so a test that does `chmod(dir, 0o000)` and expects
+`EACCES` doesn't reproduce anything real when running as root — the
+test would "pass" without exercising any error-handling code, which is
+worse than not having the test at all. Considered (and deferred, out of
+proportion for this session's scope): using Node's `child_process`
+`uid`/`gid` options to deliberately drop privilege before attempting the
+operation — this would require assuming a specific unprivileged uid
+(`nobody` or similar) present in every environment where the suite
+runs, and would add an identity-override path just for the test's
+benefit. Decision: the suite detects `process.getuid?.() === 0` and
+skips (`it.skipIf`) the permission-denied test when running as root,
+with an explicit comment in the code — it never pretends to have
+passed.
 
-## Consequências
+## Consequences
 
-- Nenhum filtro HTTP (`@Catch(...)`) é adicionado nesta sessão — fica
-  pendente pra quando uma sessão futura expuser as 8 operações via
-  endpoint (itens 4-6 da Fase 2). Até lá, essas 6 classes só circulam
-  dentro do processo da api (chamadas diretas ao provider, testes).
-- Em ambientes onde os testes rodam como usuário não-root (ex.: CI
-  configurado sem root, ou uma imagem de dev futura com `USER`
-  não-root), o teste de permissão negada passa a ser exercitado de
-  verdade — nenhuma mudança de código é necessária pra isso acontecer,
-  só o ambiente.
+- No HTTP filter (`@Catch(...)`) is added in this session — it's left
+  pending for when a future session exposes the 8 operations via
+  endpoint (items 4-6 of Phase 2). Until then, these 6 classes only
+  circulate inside the api process (direct calls to the provider,
+  tests).
+- In environments where tests run as a non-root user (e.g. CI
+  configured without root, or a future dev image with a non-root
+  `USER`), the permission-denied test starts being exercised for real —
+  no code change is needed for that to happen, just the environment.

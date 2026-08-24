@@ -1,5 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import insightsEn from '../locales/en/insights.json';
+import insightsPtBR from '../locales/pt-BR/insights.json';
 import { HypothesisCard } from './HypothesisCard';
 import type { PsychologistHypothesis } from '../lib/api-types';
 
@@ -8,6 +12,26 @@ const navigate = vi.fn();
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigate,
 }));
+
+// Instância REAL de i18next, com os recursos do namespace "insights" —
+// mesmo padrão de AccountPage.test.tsx: o que se prova aqui é o texto que a
+// tela mostra, não a mecânica de i18next em si.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      en: { insights: insightsEn },
+      'pt-BR': { insights: insightsPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'insights',
+    ns: ['insights'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
 
 beforeEach(() => {
   navigate.mockClear();
@@ -42,14 +66,17 @@ function makeHypothesis(
 function renderCard(hypothesis = makeHypothesis(), handlers = {}) {
   const onAccept = vi.fn();
   const onDismiss = vi.fn();
+  const i18n = novaInstanciaI18n();
   render(
-    <HypothesisCard
-      hypothesis={hypothesis}
-      projectId="project-1"
-      onAccept={onAccept}
-      onDismiss={onDismiss}
-      {...handlers}
-    />,
+    <I18nextProvider i18n={i18n}>
+      <HypothesisCard
+        hypothesis={hypothesis}
+        projectId="project-1"
+        onAccept={onAccept}
+        onDismiss={onDismiss}
+        {...handlers}
+      />
+    </I18nextProvider>,
   );
   return { onAccept, onDismiss };
 }

@@ -1,176 +1,184 @@
-# ADR 0015 — Psicólogo real: ToolLoop, hipóteses com evidência e triagem de custo
+# ADR 0015 — Real Psychologist: ToolLoop, evidence-backed hypotheses and cost triage
 
-- Status: aceito
-- Data: 2026-07-24
-- Fase: 4b (sessão 1 — substitui o PsychologistStub)
+- Status: accepted
+- Date: 2026-07-24
+- Phase: 4b (session 1 — replaces the PsychologistStub)
 
-## Contexto
+## Context
 
-O `PsychologistWorker` da Fase 1 era um placeholder explícito: lia o event
-log e gravava um `psychologist.hypothesis` de texto fixo
-(`Engine.Psychologist.Stub.summarize/1`), sem LLM, sem evidência, sem
-idempotência (a própria docstring documentava que uma retentativa do Oban
-duplicaria o evento).
+Phase 1's `PsychologistWorker` was an explicit placeholder: it read the
+event log and wrote a fixed-text `psychologist.hypothesis`
+(`Engine.Psychologist.Stub.summarize/1`), with no LLM, no evidence, no
+idempotency (the docstring itself documented that an Oban retry would
+duplicate the event).
 
-Esta sessão o substitui pelo Psicólogo real: consumer de
-`session.closed`/`session.closed_abnormally` (qualquer causa) que monta
-contexto (event log completo + regras de negócio do projeto + hipóteses
-anteriores não descartadas) e produz via harness hipóteses estruturadas —
-cada uma OBRIGATORIAMENTE com evidência apontando pra event ids reais.
+This session replaces it with the real Psychologist: a consumer of
+`session.closed`/`session.closed_abnormally` (any cause) that assembles
+context (the full event log + the project's business rules + previous
+undismissed hypotheses) and produces structured hypotheses via the
+harness — each one MANDATORILY backed by evidence pointing to real event
+ids.
 
-Critério de aceite: encerrar 3 sessões (normal, kill, erro) gera hipóteses
-com evidências navegáveis nos 3 casos, custos distintos entre triagem leve
-e pesada visíveis no metering.
+Acceptance criterion: closing 3 sessions (normal, killed, error) generates
+hypotheses with navigable evidence in all 3 cases, with distinct costs
+between light and heavy triage visible in metering.
 
-## Decisões
+## Decisions
 
-### 1. Oban job chamando ToolLoop direto — sem GenServer
+### 1. An Oban job calling ToolLoop directly — no GenServer
 
-Diferente de QA/SecOps/Dev/Infra (GenServers por projeto/sessão, que
-recebem casts repetidos ao longo da vida do projeto), o Psicólogo roda
-UMA vez por fechamento de sessão e nunca precisa ser endereçado depois. O
-Oban já dá processo supervisionado com retentativa (`max_attempts: 5`),
-então um GenServer/Supervisor/Registry seria cerimônia sem função.
-`PsychologistWorker.perform/1` monta o ctx e chama `ToolLoop.run/1`
-sincronamente — mesma forma do `QaAgentServer.run_qa/2`, sem o wrapper.
+Unlike QA/SecOps/Dev/Infra (per-project/per-session GenServers that receive
+repeated casts throughout the project's lifetime), the Psychologist runs
+ONCE per session closure and never needs to be addressed again. Oban
+already provides a supervised process with retries (`max_attempts: 5`), so
+a GenServer/Supervisor/Registry would be ceremony without purpose.
+`PsychologistWorker.perform/1` builds the ctx and calls `ToolLoop.run/1`
+synchronously — the same shape as `QaAgentServer.run_qa/2`, without the
+wrapper.
 
-### 2. "Até M tentativas" é o `max_iterations` do ToolLoop
+### 2. "Up to M attempts" is the ToolLoop's `max_iterations`
 
-Não há subsistema de retry novo. O mecanismo que a CLAUDE.md pede
-("hipótese sem evidência válida é rejeitada e re-solicitada ao modelo,
-até M tentativas") já é o loop normal do harness: uma tool que retorna
-`{:error, reason}` tem essa string injetada como o próximo `tool`-result,
-e o modelo corrige no turno seguinte. `M` é literalmente
-`Triage.max_iterations(tier)` no ctx (4 no tier leve, 8 no pesado).
+There's no new retry subsystem. The mechanism CLAUDE.md asks for ("a
+hypothesis without valid evidence is rejected and re-requested from the
+model, up to M attempts") is already the harness's normal loop: a tool that
+returns `{:error, reason}` has that string injected as the next
+`tool`-result, and the model corrects on the following turn. `M` is
+literally `Triage.max_iterations(tier)` in the ctx (4 for the light tier, 8
+for the heavy one).
 
-`Engine.Psychologist.Tools.EmitHypotheses` é a tool obrigatória (mesma
-forma de `EmitArtifact`/`EmitQaVerdict`); `Engine.Psychologist.Hooks.
-Termination` é o `:post_tool_use` que dá halt SÓ quando a validação
-passou. Dois estágios de propósito: a tool valida, o hook termina.
+`Engine.Psychologist.Tools.EmitHypotheses` is the mandatory tool (same
+shape as `EmitArtifact`/`EmitQaVerdict`); `Engine.Psychologist.Hooks.
+Termination` is the `:post_tool_use` hook that only halts when validation
+passed. Two stages on purpose: the tool validates, the hook terminates.
 
-### 3. Validação de evidência mora no domínio da api, atômica por lote
+### 3. Evidence validation lives in the api's domain, atomic per batch
 
-`ProposeHypothesesUseCase` resolve cada `evidenceEventId` via
-`SessionEventRepository.findById` e exige que o evento exista E pertença
-à sessão analisada (mesmo padrão de `CreateStoryUseCase` pra
+`ProposeHypothesesUseCase` resolves each `evidenceEventId` via
+`SessionEventRepository.findById` and requires that the event exist AND
+belong to the analyzed session (same pattern as `CreateStoryUseCase` for
 `business_rule_id`); `domain/psychologist/hypothesis-evidence.ts`
-(`validateHypothesisBatch`, puro) aplica as regras restantes (evidência
-não-vazia, confiança 0–100 inteira, `terminationAnalysis` obrigatória em
-ao menos uma hipótese quando a sessão caiu anormalmente).
+(`validateHypothesisBatch`, pure) applies the remaining rules (non-empty
+evidence, integer confidence 0–100, `terminationAnalysis` mandatory in at
+least one hypothesis when the session terminated abnormally).
 
-O LOTE INTEIRO é rejeitado se qualquer hipótese falhar — parcial-aceite
-faria o modelo acreditar que parte foi registrada quando o tool-result é
-agregado, quebrando a clareza do ciclo de correção.
+The WHOLE BATCH is rejected if any hypothesis fails — partial acceptance
+would make the model believe part was recorded when the tool-result is
+aggregated, breaking the clarity of the correction cycle.
 
-### 4. Ciclo de vida exige tabela mutável (eventos são imutáveis)
+### 4. The lifecycle requires a mutable table (events are immutable)
 
-`session_events` é append-only (CLAUDE.md), então o estado que muda
-(`proposed → accepted | dismissed`) mora numa tabela dedicada
-`psychologist_hypotheses` — mesmo padrão de `tasks.gate_status`/
-`infra_artifacts.gate_status`. Cada transição TAMBÉM emite seu evento
-imutável (`psychologist.hypothesis_proposed`/`_accepted`/`_dismissed`,
-`psychologist.analysis_completed`/`_failed`) pra trilha de auditoria.
+`session_events` is append-only (CLAUDE.md), so the state that changes
+(`proposed → accepted | dismissed`) lives in a dedicated table
+`psychologist_hypotheses` — the same pattern as `tasks.gate_status`/
+`infra_artifacts.gate_status`. Each transition ALSO emits its own
+immutable event (`psychologist.hypothesis_proposed`/`_accepted`/
+`_dismissed`, `psychologist.analysis_completed`/`_failed`) for the audit
+trail.
 
-`domain/psychologist/hypothesis-lifecycle.ts` (`assertHypothesisTransition`,
-puro) só permite sair de `proposed` — evita corrida de double-accept.
+`domain/psychologist/hypothesis-lifecycle.ts`
+(`assertHypothesisTransition`, pure) only allows leaving `proposed` — this
+avoids a double-accept race.
 
-### 5. Idempotência: índice parcial único + "run falho não grava linha"
+### 5. Idempotency: unique partial index + "a failed run doesn't write a row"
 
-`psychologist_analyses` tem
+`psychologist_analyses` has
 `uniqueIndex('psychologist_analyses_current_idx').on(sessionId).where(superseded = false)`
-— no máximo UMA análise current por sessão, sempre. Isso É a "chave única
-session_id + já processado".
+— at most ONE current analysis per session, always. That IS the
+"session_id + already processed unique key".
 
-Duas camadas: o worker pré-checa `alreadyAnalyzed` (curto-circuito barato,
-não gasta LLM numa retentativa do Oban) e o índice é a rede de segurança
-contra corrida real.
+Two layers: the worker pre-checks `alreadyAnalyzed` (a cheap short-circuit,
+so an Oban retry doesn't spend LLM cost) and the index is the safety net
+against a real race.
 
-**Uma linha só nasce quando a análise CONCLUI.** Um run que estoura
-limite/orçamento sem emitir hipóteses válidas não grava nada — de
-propósito: isso distingue "duplicar uma análise concluída" (bloqueado) de
-"retentar uma que falhou" (permitido, e é exatamente o cenário
-kill-do-engine/análise-pós-restart do critério de aceite). O desfecho
-falho ainda narra `psychologist.analysis_failed` — nunca fica sem
-desfecho, mesma disciplina do DevAgent/QA.
+**A row is only born when the analysis CONCLUDES.** A run that exceeds a
+limit/budget without emitting valid hypotheses writes nothing — on
+purpose: this distinguishes "duplicating a completed analysis" (blocked)
+from "retrying one that failed" (allowed, and it's exactly the
+engine-kill/post-restart-analysis scenario from the acceptance criterion).
+The failed outcome still narrates `psychologist.analysis_failed` — it
+never goes without an outcome, the same discipline as DevAgent/QA.
 
-**Reprocessamento explícito** (`triggeredBy: "manual"`, via `POST
-projects/:id/sessions/:id/psychologist/reanalyze` → engine enfileira o
-job) sempre roda: marca a análise anterior `superseded = true` (NUNCA
-apaga) e insere a nova. Histórico preservado de graça — as hipóteses
-antigas continuam lá, só não são mais "current".
+**Explicit reprocessing** (`triggeredBy: "manual"`, via `POST
+projects/:id/sessions/:id/psychologist/reanalyze` → the engine enqueues
+the job) always runs: it marks the previous analysis `superseded = true`
+(NEVER deletes it) and inserts the new one. History is preserved for free
+— the old hypotheses stay there, they just aren't "current" anymore.
 
-### 6. Causa de término é classificação determinística, não julgamento do LLM
+### 6. Termination cause is a deterministic classification, not an LLM judgment
 
-`Engine.Psychologist.TerminationClassifier.classify/2` é pattern-match
-puro sobre `sessions.termination_reason` — reconhecer "heartbeat_timeout"
-vs um sinal de kill vs uma mensagem de exceção é casamento de padrão, não
-semântica (mesma racional do ADR 0013 pro SecOps determinístico). A causa
-entra no prompt como FATO; o modelo analisa as CONSEQUÊNCIAS dela.
+`Engine.Psychologist.TerminationClassifier.classify/2` is a pure pattern
+match over `sessions.termination_reason` — recognizing "heartbeat_timeout"
+vs a kill signal vs an exception message is pattern matching, not
+semantics (same rationale as ADR 0013's deterministic SecOps). The cause
+enters the prompt as a FACT; the model analyzes its CONSEQUENCES.
 
-Isso exigiu fechar um gap: `ReportSessionTerminationUseCase` recebia
-`reason` do engine mas só logava. Agora threada até uma coluna nova
-`sessions.termination_reason` (nullable — fecho humano/gracioso fica
-null).
+This required closing a gap: `ReportSessionTerminationUseCase` received
+`reason` from the engine but only logged it. It's now threaded through to
+a new nullable column `sessions.termination_reason` (null for a
+human/graceful close).
 
-### 7. Triagem: bindings de agente genuinamente diferentes
+### 7. Triage: genuinely different agent bindings
 
-`Engine.Psychologist.Triage.decide/1` — menos de **20** eventos → `:leve`,
-senão `:pesada`. Racional do limiar: abaixo disso a sessão tipicamente é
-alguém abrindo e trocando duas mensagens, sem sinal comportamental
-suficiente pra justificar um modelo forte.
+`Engine.Psychologist.Triage.decide/1` — fewer than **20** events →
+`:leve` (light), otherwise `:pesada` (heavy). Rationale for the
+threshold: below that, the session is typically someone opening it and
+exchanging a couple of messages, without enough behavioral signal to
+justify a strong model.
 
-O tier escolhe o **slug do agente** no ctx (`"psicologo-leve"` vs
-`"psicologo"`), não um override de modelo em código — assim a cascata de
-binding que já existe (`session > agent > project > workspace`) resolve
-sozinha, o operador continua controlando os dois tiers pela tabela de
-bindings do `ProjectSettingsTab` sem tela nova, e o custo diverge de
-verdade no `token_usage` que `RunLlmTurnUseCase` já grava
-incondicionalmente. O seed liga `psicologo → Opus 4.8` e
+The tier picks the agent's **slug** in the ctx (`"psicologo-leve"` vs
+`"psicologo"`), not a code-level model override — this way the existing
+binding cascade (`session > agent > project > workspace`) resolves on its
+own, the operator keeps controlling both tiers through the existing
+binding table in `ProjectSettingsTab` with no new screen, and cost
+genuinely diverges in the `token_usage` that `RunLlmTurnUseCase` already
+writes unconditionally. The seed binds `psicologo → Opus 4.8` and
 `psicologo-leve → Haiku 4.5`.
 
-O tier também define `max_iterations` e `token_budget_micros` (50k vs
-300k micro-USD), enforced pelo mecanismo que já existe no ToolLoop
-(`{:budget_exceeded, ctx}`) — zero código de enforcement novo.
+The tier also sets `max_iterations` and `token_budget_micros` (50k vs
+300k micro-USD), enforced by the mechanism the ToolLoop already has
+(`{:budget_exceeded, ctx}`) — zero new enforcement code.
 
-## Consequências
+## Consequences
 
-- UI: nova seção **Insights** no `ProjectOverviewTab`, escopo de PROJETO
-  (não da sessão aberta — o critério de aceite fecha 3 sessões
-  diferentes), hipóteses agrupadas por agente alvo, `HypothesisCard` com
-  confiança, análise de término e chips de evidência clicáveis. Cada chip
-  navega pra `/projects/:id/sessions/:sessionId?highlightEvent=:eventId`
-  — `SessionPage` ganhou um painel "Log de eventos" colapsável
-  (reaproveitando `ActivityFeed`/`EventItem`, que já classificam todo
-  tipo de evento) que abre sozinho e rola até o evento destacado.
-  `activity.ts` ganhou branches `psychologist.*` reais — o branch antigo
-  `startsWith('hypothesis')` era código morto (nunca batia em
-  `psychologist.hypothesis`).
-- Testes: domínio (`hypothesis-lifecycle`, `hypothesis-evidence` — id
-  inexistente, id de outra sessão, `terminationAnalysis` faltando),
-  `ProposeHypothesesUseCase` (feliz, rejeição atômica, supersede),
-  `GetPsychologistContextUseCase`, `ReportSessionTerminationUseCase`
-  (motivo persistido); engine: `Triage` (fronteira do limiar),
-  `TerminationClassifier` (5 causas), `EmitHypotheses` (mensagem da api
-  preservada verbatim pro modelo corrigir), `PsychologistWorker`
-  (idempotência não chama LLM, triagem escolhe o agent certo, término
-  anormal exige `terminationAnalysis`, kill→restart conclui).
-- O evento pra Anamnese (`psychologist.hypothesis_accepted_for_anamnese`)
-  é emitido como um TIPO distinto (não uma flag no payload) — filtrável
-  por um consumidor futuro sem inspecionar payload, mesmo espírito de
-  `session.closed` vs `session.closed_abnormally` serem tipos separados.
-  Sem outbox: não há consumidor ainda, e rotear pelo outbox exigiria
-  nomear um worker inexistente em `handlers_for/1`.
+- UI: a new **Insights** section in `ProjectOverviewTab`, scoped to the
+  PROJECT (not the currently open session — the acceptance criterion
+  closes 3 different sessions), hypotheses grouped by target agent,
+  `HypothesisCard` with confidence, termination analysis and clickable
+  evidence chips. Each chip navigates to
+  `/projects/:id/sessions/:sessionId?highlightEvent=:eventId` —
+  `SessionPage` gained a collapsible "Event log" panel (reusing
+  `ActivityFeed`/`EventItem`, which already classify every event type)
+  that opens by itself and scrolls to the highlighted event. `activity.ts`
+  gained real `psychologist.*` branches — the old `startsWith('hypothesis')`
+  branch was dead code (it never matched `psychologist.hypothesis`).
+- Tests: domain (`hypothesis-lifecycle`, `hypothesis-evidence` — a
+  nonexistent id, an id from another session, missing
+  `terminationAnalysis`), `ProposeHypothesesUseCase` (happy path, atomic
+  rejection, supersede), `GetPsychologistContextUseCase`,
+  `ReportSessionTerminationUseCase` (reason persisted); engine: `Triage`
+  (the threshold boundary), `TerminationClassifier` (5 causes),
+  `EmitHypotheses` (the api's message preserved verbatim for the model to
+  correct), `PsychologistWorker` (idempotency doesn't call the LLM, triage
+  picks the right agent, abnormal termination requires
+  `terminationAnalysis`, kill→restart concludes).
+- The event to the Anamnesis
+  (`psychologist.hypothesis_accepted_for_anamnese`) is emitted as a
+  DISTINCT TYPE (not a flag in the payload) — filterable by a future
+  consumer without inspecting the payload, the same spirit as
+  `session.closed` vs `session.closed_abnormally` being separate types. No
+  outbox: there's no consumer yet, and routing through the outbox would
+  require naming a nonexistent worker in `handlers_for/1`.
 
-## Escopo & assunções
+## Scope & assumptions
 
-Fora desta sessão: a **Anamnese** em si (jobs periódicos,
-`proficiency_profile`, `instruction_patch` como proposed_action,
-versionamento/rollback de arquivo de agente — Fase 4.6); qualquer lógica
-de priorização/consumo do evento encaminhado a ela; dashboard de custo
-além do número por análise; `Oban unique:` no nível do job (a constraint
-de banco + pré-check já bastam — fica como follow-up se flakiness
-aparecer na prática); reanálise em lote.
+Out of this session: the **Anamnesis** itself (periodic jobs,
+`proficiency_profile`, `instruction_patch` as a proposed_action,
+agent-file versioning/rollback — Phase 4.6); any prioritization/consumption
+logic for the event forwarded to it; a cost dashboard beyond the
+per-analysis number; job-level `Oban unique:` (the database constraint +
+pre-check are already enough — it stays as a follow-up if flakiness shows
+up in practice); batch reanalysis.
 
-O status de "já analisada" é por SESSÃO, não por projeto — cada sessão
-encerrada rende no máximo uma análise current, e reanalisar uma não
-afeta as outras.
+The "already analyzed" status is per SESSION, not per project — each closed
+session yields at most one current analysis, and reanalyzing one doesn't
+affect the others.

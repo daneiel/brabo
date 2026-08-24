@@ -115,4 +115,18 @@ defmodule Engine.Psychologist.Triage do
   @spec max_payload_chars() :: pos_integer()
   def max_payload_chars,
     do: Application.get_env(:engine, :psychologist_max_payload_chars, 600)
+
+  @doc """
+  Quantos trechos de RAG (relevância ao GATILHO da análise — a causa de
+  término classificada) entram no contexto do Psicólogo.
+
+  Teto PRÓPRIO, pequeno de propósito (mesma disciplina da RN-150/`RagSearch`
+  tool: cada consumidor de RAG tem seu teto, nunca reaproveitado de outro):
+  o espaço que os trechos ocupam é descontado do teto de EVENTOS recentes
+  no momento de montar o prompt (ver `Engine.Workers.PsychologistWorker`),
+  então um `top_k` grande empurraria a cauda do log — o que a análise mais
+  precisa — pra fora da janela.
+  """
+  @spec rag_top_k() :: pos_integer()
+  def rag_top_k, do: Application.get_env(:engine, :psychologist_rag_top_k, 3)
 end

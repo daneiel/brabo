@@ -55,7 +55,11 @@
   align-items: center;
   justify-content: center;
   /* 24px é o piso de alvo de toque da WCAG 2.2 AA (2.5.8) — a mesma régua
-     que scripts/dev/validacao-visual.js aplica no navegador. Era 22px. */
+     que scripts/dev/validacao-visual.js aplica no navegador. Era 22px.
+     NÃO sobe para os 32px do handoff (PROGRAMA 28, Onda 5/H5): fechar de
+     aba é controle DENSO e repetido por aba aberta — o mesmo argumento do
+     `.dot` de `Carousel.module.css` — e não o botão de ícone PRIMÁRIO que a
+     régua de 32px mira (ex.: `.close` de `Modal`). */
   width: 24px;
   height: 24px;
   margin-right: 6px;
@@ -133,10 +137,24 @@
   color: var(--text-primary);
 }
 
-.conteudo {
+/* Contêiner do handoff: `position: relative`, scroller absoluto por baixo,
+   minimapa como overlay absoluto por cima (design_handoff_brabo/README.md:273). */
+.corpo {
+  position: relative;
   flex: 1;
   min-height: 0;
+}
+
+.conteudo {
+  position: absolute;
+  inset: 0;
   overflow: auto;
+}
+
+/* Só quando o minimapa está de pé (arquivo carregado) — sem ele, reservar
+   64px seria espaço morto à direita de estados vazio/erro/carregando. */
+.conteudoComMinimapa {
+  padding-right: 64px;
 }
 
 .vazio {
@@ -263,3 +281,27 @@
 .tkType { composes: tkType from '../../components/ui/SyntaxTokens.module.css'; }
 .tkOperator { composes: tkOperator from '../../components/ui/SyntaxTokens.module.css'; }
 .tkText { composes: tkText from '../../components/ui/SyntaxTokens.module.css'; }
+
+/* Minimapa — RN-241/242. Overlay de 64px, um <canvas> só (ver minimap.ts:
+   um nó de DOM independente do tamanho do arquivo, nunca um por linha). */
+.minimapa {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 64px;
+  border-left: 1px solid var(--border);
+  background: var(--surface-0);
+  cursor: pointer;
+}
+
+.minimapa:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.minimapaCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

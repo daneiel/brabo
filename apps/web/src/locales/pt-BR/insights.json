@@ -1,0 +1,46 @@
+{
+  "projectInsightsTab": {
+    "header": "Insights",
+    "errorTitle": "Não foi possível carregar as hipóteses.",
+    "loading": "Carregando as hipóteses…",
+    "empty": "Sem hipóteses ainda — o Psicólogo analisa cada sessão encerrada.",
+    "emptyPaused": "O Psicólogo está pausado — nenhuma sessão é analisada até ser reativado.",
+    "summary": "{{total}} hipótese(s) · {{pending}} aguardando decisão",
+    "analysisStrip": {
+      "tier": "triagem {{tier}}",
+      "sessionLabel": "sessão {{id}}",
+      "meta": "{{events}} evento(s) · {{hypotheses}} hipótese(s)",
+      "reanalyzeButton": "Reanalisar",
+      "reanalyzeTitleDisabled": "O Psicólogo está pausado globalmente",
+      "reanalyzeTitleEnabled": "Roda a análise de novo e gasta orçamento; a anterior fica no histórico"
+    },
+    "pausedNotice": "O Psicólogo está pausado globalmente por decisão do time — sem reanálise nova por enquanto. As hipóteses já emitidas continuam aqui.",
+    "toasts": {
+      "acceptError": "Não foi possível aceitar a hipótese",
+      "dismissError": "Não foi possível descartar a hipótese",
+      "genericErrorTitle": "Erro",
+      "reanalyzeQueuedTitle": "Reanálise enfileirada",
+      "reanalyzeQueuedMessage": "O Psicólogo vai analisar esta sessão de novo.",
+      "psychologistPausedTitle": "Psicólogo pausado",
+      "psychologistPausedFallback": "O Psicólogo está desativado globalmente.",
+      "reanalyzeError": "Não foi possível enfileirar a reanálise"
+    }
+  },
+  "hypothesisCard": {
+    "status": {
+      "accepted": "aceita",
+      "dismissed": "descartada",
+      "proposed": "proposta"
+    },
+    "confidence": "{{percent}}% de confiança",
+    "disclosureTitle": "No que o Psicólogo se baseou",
+    "disclosureTrailing": "{{count}} evidência(s)",
+    "observationLabel": "Observação",
+    "suggestionLabel": "Sugestão",
+    "evidenceLabel": "Evidências",
+    "terminationLabel": "Término anormal · {{cause}}",
+    "terminationState": "Estado no momento: {{state}}",
+    "acceptButton": "Aceitar",
+    "dismissButton": "Descartar"
+  }
+}

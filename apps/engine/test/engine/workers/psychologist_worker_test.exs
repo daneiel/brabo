@@ -128,6 +128,18 @@ defmodule Engine.Workers.PsychologistWorkerTest do
     Enum.map_join(messages, "\n", &Map.get(&1, "content", ""))
   end
 
+  # Igual `prompt_content/0`, mas devolve a mensagem de kickoff (role
+  # "user") inteira, não só o texto concatenado — a primeira mensagem da
+  # lista é a identidade do agente (sistema), não o kickoff.
+  defp kickoff_message do
+    assert_received {:llm_turn, _agent, messages, _tools}
+    Enum.find(messages, &(Map.get(&1, "role") == "user"))
+  end
+
+  defp rag_hit(path \\ "docs/relevante.md") do
+    %{"path" => path, "excerpt" => "trecho relevante ao gatilho", "score" => 0.8}
+  end
+
   test "idempotência: sessão já analisada no caminho automático não chama o LLM", %{
     project_id: project_id,
     session_id: session_id
@@ -541,6 +553,205 @@ defmodule Engine.Workers.PsychologistWorkerTest do
       refute content =~ "seq=1 "
       assert content =~ "payload truncado"
       refute content =~ String.duplicate("x", 200)
+    end
+  end
+
+  describe "template do grafo (get_prompt_template, flag graph_templates_enabled?)" do
+    setup do
+      Application.put_env(:engine, :graph_templates_enabled?, true)
+      on_exit(fn -> Application.delete_env(:engine, :graph_templates_enabled?) end)
+      :ok
+    end
+
+    test "com sucesso, a mensagem inicial usa o template do grafo com os placeholders substituídos",
+         %{project_id: project_id, session_id: session_id} do
+      Process.put(:fake_psychologist_context, context())
+
+      Process.put(:fake_prompt_template, %{
+        "name" => "psychologist-kickoff",
+        "version" => "2",
+        "body" =>
+          "TEMPLATE: {{cause_label}} | regras={{business_rules}} | " <>
+            "hipoteses={{prior_hypotheses}} | rag={{relevant_excerpts}} | " <>
+            "nota={{omission_note}} | eventos={{events}} | fim={{termination_instruction}}",
+        "hash" => "abc"
+      })
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_hypotheses", %{
+          "hypotheses" => [hypothesis()]
+        })
+      ])
+
+      assert :ok = PsychologistWorker.perform(job(session_id, project_id))
+
+      assert_received {:prompt_template_fetched, "psychologist-kickoff", nil}
+
+      # `ToolLoop.to_wire/1` remove `:pinned` de TODA mensagem antes de ir
+      # pro wire (`Map.delete(message, :pinned)`) — por isso a propriedade
+      # não é observável neste ponto de captura, pra nenhum agente. O que
+      # garante `:pinned => true` nos dois caminhos é `initial_message/4`
+      # setá-lo incondicionalmente ANTES de escolher entre template/inline
+      # (`render_kickoff/4` só decide o texto de `"content"`) — não há como
+      # o template do grafo divergir disso sem tocar `initial_message/4`.
+      msg = kickoff_message()
+      content = Map.get(msg, "content", "")
+      assert content =~ "TEMPLATE: encerramento normal"
+      assert content =~ "regras=(nenhuma)"
+      assert content =~ "hipoteses=(nenhuma)"
+      assert content =~ "rag=(nenhum trecho relevante encontrado)"
+      refute content =~ "{{"
+    end
+
+    test "com hits de RAG, o placeholder relevant_excerpts traz os trechos formatados", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      Process.put(:fake_psychologist_context, context())
+      Process.put(:fake_rag_search, %{"hits" => [rag_hit()], "degraded" => true})
+
+      Process.put(:fake_prompt_template, %{
+        "name" => "psychologist-kickoff",
+        "version" => "2",
+        "body" => "RELEVANTES:\n{{relevant_excerpts}}\nEVENTOS:\n{{events}}"
+      })
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_hypotheses", %{
+          "hypotheses" => [hypothesis()]
+        })
+      ])
+
+      assert :ok = PsychologistWorker.perform(job(session_id, project_id))
+
+      content = prompt_content()
+      # Degradação nunca escondida — mesma disciplina da tool `rag_search`.
+      assert content =~ "AVISO: busca degradada"
+      assert content =~ "docs/relevante.md"
+      assert content =~ "trecho relevante ao gatilho"
+    end
+
+    test "com falha (template não semeado/api fora), cai no fallback inline sem erro", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      Process.put(:fake_psychologist_context, context())
+      Process.put(:fake_prompt_template, {:error, :not_found})
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_hypotheses", %{
+          "hypotheses" => [hypothesis()]
+        })
+      ])
+
+      assert :ok = PsychologistWorker.perform(job(session_id, project_id))
+
+      # Ver comentário equivalente no teste de sucesso acima: `:pinned` não
+      # é observável neste ponto (removido pelo `ToolLoop.to_wire/1` antes
+      # do wire, pra toda mensagem) — quem garante que o fallback preserva
+      # a propriedade é `initial_message/4` setá-la ANTES do `if` que
+      # escolhe entre template/inline.
+      msg = kickoff_message()
+      content = Map.get(msg, "content", "")
+      # Mesma string inline de sempre — nenhum placeholder cru vazou.
+      assert content =~ "A sessão abaixo foi encerrada (encerramento normal)"
+      refute content =~ "{{"
+    end
+  end
+
+  describe "flag desligada (default): nunca chama get_prompt_template" do
+    test "sem GRAPH_TEMPLATES_ENABLED, o kickoff é sempre a string inline", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      Process.put(:fake_psychologist_context, context())
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_hypotheses", %{
+          "hypotheses" => [hypothesis()]
+        })
+      ])
+
+      assert :ok = PsychologistWorker.perform(job(session_id, project_id))
+
+      refute_received {:prompt_template_fetched, _name, _version}
+
+      content = prompt_content()
+      assert content =~ "A sessão abaixo foi encerrada (encerramento normal)"
+    end
+  end
+
+  describe "orçamento: RAG desconta vaga da janela de eventos recentes" do
+    setup do
+      Application.put_env(:engine, :psychologist_triage_threshold, 3)
+      Application.put_env(:engine, :psychologist_max_prompt_events_pesada, 5)
+
+      on_exit(fn ->
+        Application.delete_env(:engine, :psychologist_triage_threshold)
+        Application.delete_env(:engine, :psychologist_max_prompt_events_pesada)
+      end)
+
+      :ok
+    end
+
+    test "com N trechos relevantes, a janela de eventos recentes perde N vagas", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      limpar_log!(session_id)
+      seed_events!(session_id, 5)
+
+      Process.put(:fake_psychologist_context, context())
+
+      Process.put(:fake_rag_search, %{
+        "hits" => [rag_hit("docs/a.md"), rag_hit("docs/b.md")],
+        "degraded" => false
+      })
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_hypotheses", %{
+          "hypotheses" => [hypothesis()]
+        })
+      ])
+
+      assert :ok = PsychologistWorker.perform(job(session_id, project_id))
+
+      content = prompt_content()
+
+      # Teto de eventos era 5; 2 trechos de RAG descontam 2 vagas -> só 3
+      # cabem (seq 3,4,5), com a nota de omissão refletindo os 2 que sobraram
+      # de fora.
+      assert content =~ "2 evento(s) mais antigo(s) omitido(s)"
+      assert content =~ "seq=5"
+      assert content =~ "seq=3"
+      refute content =~ "seq=2 "
+      assert content =~ "trecho relevante ao gatilho"
+    end
+
+    test "sem hit nenhum de RAG, a janela de eventos permanece do tamanho de sempre", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      limpar_log!(session_id)
+      seed_events!(session_id, 5)
+
+      Process.put(:fake_psychologist_context, context())
+      Process.put(:fake_rag_search, %{"hits" => [], "degraded" => false})
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_hypotheses", %{
+          "hypotheses" => [hypothesis()]
+        })
+      ])
+
+      assert :ok = PsychologistWorker.perform(job(session_id, project_id))
+
+      content = prompt_content()
+
+      # Sem trecho de RAG, nada é descontado: os 5 eventos cabem inteiros.
+      refute content =~ "evento(s) mais antigo(s) omitido(s)"
+      assert content =~ "seq=1 "
+      assert content =~ "seq=5"
     end
   end
 end
