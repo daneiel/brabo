@@ -4518,9 +4518,14 @@ de todo projeto. `sem_decisao` vira `decidido` só quando o Arquiteto emite
 de tag explícita (`latest` recusado), `rationale` e postura de rede.
 
 A checagem mora no MESMO funil que a contenção de caminho da
-[RN-095](#rn-095) (`ReadProjectCodeUseCase.alvo`), e não em cada uma das quatro
-rotas — checagem duplicada em quatro chamadores é checagem que um dia diverge
-em um deles ([ADR 0058](adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md)).
+[RN-095](#rn-095) (`ReadProjectCodeUseCase.alvo`), e não em cada uma das sete
+rotas (árvore, arquivo, busca, diff de PR, [blame](#rn-110), [lista de
+PRs](#rn-111) e [branches detalhadas](#rn-112), FASE 26b) — checagem
+duplicada em sete chamadores é checagem que um dia diverge em um deles
+([ADR 0058](adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md)).
+Contagem corrigida aqui: este registro dizia "quatro rotas" desde a FASE 26,
+e ficou desatualizado quando a FASE 26b acrescentou as três últimas ao mesmo
+funil sem que ninguém revisasse este número.
 
 O artefato não tem tabela: é o próprio evento no event log, versionado
 (`version` cresce a cada emissão, o vigente é o de maior `version`), do mesmo
@@ -4602,13 +4607,36 @@ Enquanto bloqueada, a tela reconsulta sozinha a cada 15s — depois de decidida
 a imagem não muda sem ação humana nova, e ficar reconsultando um estado
 estável seria a mesma família de tráfego desnecessário da PÓS-FASE 15.
 
+A apresentação do quarto estado foi EXTRAÍDA para `ContainerImageGateNotice`
+(`apps/web/src/components/ContainerImageGate.tsx`) — achado de uso: a aba PRs
+(`apps/web/src/routes/code/PrListAndDiff.tsx`, consumida por
+`ProjectPrsTab.tsx` e por `CodeDiffPanel.tsx`) chama `getCodePullRequests`/
+`getCodeDiff`, que passam pelo MESMO funil (RN-105) e podem devolver o MESMO
+409 — mas, ao contrário desta aba, sem perguntar antes. Ela mostrava esse 409
+no banner de erro genérico com "Tentar de novo", a afordância errada para um
+estado que só o Arquiteto resolve. `isContainerImageGateError`
+(`apps/web/src/lib/api-client.ts`) identifica a causa pelo `status === 409`
+— única causa de `ConflictException` em `ReadProjectCodeUseCase.alvo` — e
+`PrListAndDiff` troca o banner por `ContainerImageGateNotice` quando ela bate,
+sem pré-checagem própria (reage ao 409 da query que já ia rodar).
+
 - **Onde:** `apps/web/src/routes/ProjectCodeTab.tsx`,
-  `apps/web/src/routes/ProjectCodeTab.module.css`
-- **Teste:** `apps/web/src/routes/ProjectCodeTab.test.tsx` ("o gate")
+  `apps/web/src/routes/ProjectCodeTab.module.css`,
+  `apps/web/src/components/ContainerImageGate.tsx` (apresentação
+  compartilhada), `apps/web/src/routes/code/PrListAndDiff.tsx` (consumidor
+  reativo ao 409), `apps/web/src/lib/api-client.ts`
+  (`isContainerImageGateError`)
+- **Teste:** `apps/web/src/routes/ProjectCodeTab.test.tsx` ("o gate"),
+  `apps/web/src/routes/code/CodeDiffPanel.test.tsx`,
+  `apps/web/src/routes/ProjectPrsTab.test.tsx` ("o gate do container não é
+  erro genérico")
 - **Borda:** a checagem no front NÃO substitui a da api — é conveniência de
   UX. Se a api mudar de estado entre a consulta do gate e a leitura de
   verdade, a rota de leitura ainda recusa com 409 (RN-105); o front só evita
-  o caso comum de mostrar o editor vazio por um instante.
+  o caso comum de mostrar o editor vazio por um instante. A aba PRs não faz
+  pré-checagem: ela descobre o bloqueio quando a query já falhou, porque não
+  há árvore/arquivo nenhum ali para o instante "vazio" que a pré-checagem da
+  aba Code evita.
 - **Origem:** [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
 
 ### RN-110 — `blame` é a 13ª operação do `GitProviderContract`, com o mesmo vocabulário de ausência das outras leituras {#rn-110}

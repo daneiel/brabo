@@ -27,6 +27,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   tela agora diz "O Psicólogo está pausado — nenhuma sessão é analisada
   até ser reativado" quando é o caso, e mantém a frase original quando de
   fato ainda está ativo (RN-454)
+- **web**: a aba PRs mostrava o 409 do portão do container (RN-105 — o
+  Arquiteto ainda não decidiu qual imagem sobe para o projeto) como erro
+  transitório genérico, com botão "Tentar de novo" — a afordância errada
+  para um estado estável que só se resolve quando o Arquiteto decide, nunca
+  clicando de novo. A apresentação dedicada que a aba Code já tinha
+  (RN-107) foi extraída para `ContainerImageGateNotice`
+  (`components/ContainerImageGate.tsx`) e a aba PRs (`code/PrListAndDiff.tsx`)
+  passou a reconhecer o mesmo 409 (`isContainerImageGateError`,
+  `lib/api-client.ts`) e mostrar o mesmo estado. Placeholder truncado no
+  campo "Já sabe o id?" corrigido junto (largura do input de 200px para
+  260px).
 - **docker,scripts,deploy**: `gemma:1b` não existe no registry da Ollama
   (`manifest unknown`) — só `gemma3:1b` existe. `ollama-model-loader`
   sempre falhava e travava qualquer `docker compose up --wait`. Corrigido
