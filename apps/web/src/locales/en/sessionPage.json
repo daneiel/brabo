@@ -163,5 +163,11 @@
     "eventoCitado": "Cited event",
     "eventoCitadoNaoEncontrado": "The cited event wasn't found in this session.",
     "erroCarregarLog": "Could not load the event log."
+  },
+  "turno": {
+    "pensando": "Thinking…",
+    "passosDoTurno": "Turn steps",
+    "passosCount_one": "{{count}} step",
+    "passosCount_other": "{{count}} steps"
   }
 }

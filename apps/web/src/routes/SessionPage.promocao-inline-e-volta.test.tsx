@@ -305,18 +305,18 @@ describe('SessionPage — item 2: promoção de história inline no fio (RN-126)
 
       await devolver();
 
-      expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+      expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(5000);
       });
-      expect(screen.getByText('Reunindo informações...')).toBeInTheDocument();
+      expect(screen.getByText('Pensando…')).toBeInTheDocument();
 
       await act(async () => {
         resolver();
       });
       await waitFor(() =>
-        expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument(),
+        expect(screen.queryByText('Pensando…')).not.toBeInTheDocument(),
       );
     });
 
@@ -329,7 +329,7 @@ describe('SessionPage — item 2: promoção de história inline no fio (RN-126)
         await vi.advanceTimersByTimeAsync(5000);
       });
 
-      expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+      expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
     });
   });
 });

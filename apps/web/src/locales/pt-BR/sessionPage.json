@@ -163,5 +163,11 @@
     "eventoCitado": "Evento citado",
     "eventoCitadoNaoEncontrado": "O evento citado não foi encontrado nesta sessão.",
     "erroCarregarLog": "Não foi possível carregar o log de eventos."
+  },
+  "turno": {
+    "pensando": "Pensando…",
+    "passosDoTurno": "Passos do turno",
+    "passosCount_one": "{{count}} passo",
+    "passosCount_other": "{{count}} passos"
   }
 }

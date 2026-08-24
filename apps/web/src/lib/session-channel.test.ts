@@ -190,4 +190,31 @@ describe('connectSessionHeartbeat (RN-108)', () => {
     expect(createSocketTicketMock).toHaveBeenCalledTimes(1);
     expect(socketInstances).toHaveLength(1);
   });
+
+  it('onToolCall: registra `tool.call` e repassa tool/agent, ignorando payload sem `tool` string', async () => {
+    createSocketTicketMock.mockResolvedValue({
+      ticket: 'ticket-1',
+      expiresAt: new Date().toISOString(),
+    });
+    const onToolCall = vi.fn();
+
+    const disconnect = connectSessionHeartbeat('proj-1', 'sess-1', { onToolCall });
+    await flush();
+
+    const chamada = fakeChannel.on.mock.calls.find(([evento]) => evento === 'tool.call');
+    expect(chamada).toBeDefined();
+    const callback = chamada![1] as (payload: { tool?: string; agent?: string }) => void;
+
+    callback({ tool: 'create_story', agent: 'po' });
+    expect(onToolCall).toHaveBeenCalledWith('create_story', 'po');
+
+    callback({ tool: 'emit_artifact' });
+    expect(onToolCall).toHaveBeenCalledWith('emit_artifact', undefined);
+
+    onToolCall.mockClear();
+    callback({});
+    expect(onToolCall).not.toHaveBeenCalled();
+
+    disconnect();
+  });
 });

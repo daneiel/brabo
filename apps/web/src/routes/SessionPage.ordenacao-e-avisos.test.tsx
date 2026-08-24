@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, act, waitFor, within } from '@testing-library/react';
+import { render, screen, act, waitFor, within, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Handoff, ProposedAction, Session } from '../lib/api-types';
 import type { SessionChannelHandlers } from '../lib/session-channel';
@@ -23,7 +23,8 @@ import i18n from '../lib/i18n';
  *    `payload.actionId` apontando pra ela — o `seq` DESSE evento é o eixo
  *    certo, não o `action.seq` cru.
  * 2. **Texto do indicador de 5s (RN-156)** — "{Agente} está escrevendo…"
- *    virou "Reunindo informações...", frase fixa sem o nome do agente.
+ *    virou frase fixa sem o nome do agente (hoje "Pensando…", na faixa de
+ *    atividade do turno — ver o teste "RN-156 — indicador de 5s" abaixo).
  * 3. **Aviso compacto do PO ao criar épico/história (RN-157)** —
  *    `backlog.epic_created`/`backlog.story_created` deixam de virar bolha
  *    completa (`.message`/`.bubble`, avatar 32px) e passam a usar o mesmo
@@ -115,8 +116,14 @@ vi.mock('../lib/api-client', () => ({
   transitionSession: vi.fn(),
 }));
 
-const { SessionPage, ordemDaAcaoNaTimeline, aberturasDeTurno, turnoDoSeq, afundarDesfechos } =
-  await import('./SessionPage');
+const {
+  SessionPage,
+  ordemDaAcaoNaTimeline,
+  aberturasDeTurno,
+  turnoDoSeq,
+  afundarDesfechos,
+  agruparNarracoesDoTurno,
+} = await import('./SessionPage');
 const { ToastProvider } = await import('../components/ui/ToastProvider');
 
 const ID = 'a1b2c3d4-e5f6-4789-a0b1-c2d3e4f5a6b7';
@@ -468,8 +475,16 @@ describe('RN-172 — a sequência REAL do engine, renderizada', () => {
 
     const { container } = montar();
 
-    await screen.findByText('Backlog montado');
+    // `agruparNarracoesDoTurno`: duas `agent.response` SEGUIDAS do mesmo
+    // turno/autor ("Backlog montado" e "Fechando: passo a bola") — a
+    // primeira colapsa num "Passos do turno", a última fica intacta. Abrir o
+    // Disclosure é o que revela "Backlog montado" antes de checar a ordem —
+    // o teste continua provando o mesmo fato de sempre (RN-172), só que
+    // agora com um clique a mais até o texto ficar visível.
     await screen.findByText('Fechando: passo a bola');
+    fireEvent.click(screen.getByRole('button', { name: /Passos do turno/ }));
+
+    await screen.findByText('Backlog montado');
     await screen.findByText('passou o bastão ao');
 
     const texto = container.textContent ?? '';
@@ -743,7 +758,7 @@ describe('RN-156 — indicador de 5s', () => {
     vi.useRealTimers();
   });
 
-  it('depois de 5s sem texto, mostra "Reunindo informações...", sem o nome do agente', async () => {
+  it('depois de 5s sem texto, a faixa de atividade mostra "Pensando…"', async () => {
     // Mesmo gatilho de `SessionPage.pista-e-status.test.tsx` (achado B): o
     // `agent.status` "working" chega pelo canal ANTES de qualquer delta
     // quando o turno nasce de um handoff aceito — é o caminho real que arma
@@ -793,14 +808,14 @@ describe('RN-156 — indicador de 5s', () => {
     await waitFor(() => expect(canalHandlers?.onAgentStatus).toBeTypeOf('function'));
     act(() => canalHandlers!.onAgentStatus!({ status: 'working' }));
 
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
     expect(screen.queryByText(/está escrevendo/)).not.toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
 
-    expect(screen.getByText('Reunindo informações...')).toBeInTheDocument();
+    expect(screen.getByText('Pensando…')).toBeInTheDocument();
 
     resolverAceite();
   });
@@ -864,5 +879,117 @@ describe('RN-157 — aviso compacto do PO ao criar épico/história', () => {
     ).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /Ver no Backlog/ });
     expect(link).toHaveAttribute('href', '/projects/proj-1?tab=backlog');
+  });
+});
+
+describe('agruparNarracoesDoTurno — "Passos do turno" colapsados', () => {
+  const ROTULOS = {
+    titulo: 'Passos do turno',
+    trailing: (count: number) => `${count} passos`,
+  };
+
+  const entradaResposta = (
+    seq: number,
+    texto: string,
+    over: { autor?: string; turno?: number } = {},
+  ) => ({
+    seq,
+    node: <div key={seq}>{texto}</div>,
+    autor: 'agent:po',
+    turno: 1,
+    origem: 'agente' as const,
+    agentId: 'po',
+    agentResponse: true,
+    ...over,
+  });
+
+  function montarSaida(entradas: ReturnType<typeof entradaResposta>[]) {
+    const resultado = agruparNarracoesDoTurno(entradas, ROTULOS);
+    render(<>{resultado.map((e) => <div key={e.seq}>{e.node}</div>)}</>);
+    return resultado;
+  }
+
+  it('3 respostas seguidas do MESMO turno/autor: as duas primeiras colapsam, a última fica intacta fora do Disclosure', () => {
+    const resultado = montarSaida([
+      entradaResposta(1, 'Um'),
+      entradaResposta(2, 'Dois'),
+      entradaResposta(3, 'Três'),
+    ]);
+
+    // Duas entradas de saída: o Disclosure compacto + a última intacta.
+    expect(resultado).toHaveLength(2);
+
+    // A última fica sempre visível, sem clique nenhum.
+    expect(screen.getByText('Três')).toBeInTheDocument();
+    // As duas primeiras ficam dentro do Disclosure, fechado por padrão.
+    expect(screen.queryByText('Um')).not.toBeInTheDocument();
+    expect(screen.queryByText('Dois')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Passos do turno/ }));
+    expect(screen.getByText('Um')).toBeInTheDocument();
+    expect(screen.getByText('Dois')).toBeInTheDocument();
+  });
+
+  it('1 resposta sozinha: fica INTACTA, sem Disclosure nenhum', () => {
+    const resultado = montarSaida([entradaResposta(1, 'Única')]);
+
+    expect(resultado).toHaveLength(1);
+    expect(screen.getByText('Única')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Passos do turno/ })).not.toBeInTheDocument();
+  });
+
+  it('turnos diferentes NUNCA se misturam, mesmo com respostas múltiplas em cada um', () => {
+    montarSaida([
+      entradaResposta(1, 'T1-a', { turno: 1 }),
+      entradaResposta(2, 'T1-b', { turno: 1 }),
+      entradaResposta(3, 'T2-a', { turno: 3 }),
+      entradaResposta(4, 'T2-b', { turno: 3 }),
+    ]);
+
+    // Dois grupos independentes — um por turno.
+    const cabecalhos = screen.getAllByRole('button', { name: /Passos do turno/ });
+    expect(cabecalhos).toHaveLength(2);
+
+    // As últimas de cada turno ficam sempre visíveis.
+    expect(screen.getByText('T1-b')).toBeInTheDocument();
+    expect(screen.getByText('T2-b')).toBeInTheDocument();
+
+    // Expandir o grupo do turno 1 NÃO revela nada do turno 3.
+    fireEvent.click(cabecalhos[0]);
+    expect(screen.getByText('T1-a')).toBeInTheDocument();
+    expect(screen.queryByText('T2-a')).not.toBeInTheDocument();
+  });
+
+  it('autores diferentes no MESMO turno também não se misturam (sessão de execução, vários agentes)', () => {
+    montarSaida([
+      entradaResposta(1, 'Dev-a', { autor: 'agent:dev-core' }),
+      entradaResposta(2, 'Dev-b', { autor: 'agent:dev-core' }),
+      entradaResposta(3, 'Po-a', { autor: 'agent:po' }),
+      entradaResposta(4, 'Po-b', { autor: 'agent:po' }),
+    ]);
+
+    expect(screen.getAllByRole('button', { name: /Passos do turno/ })).toHaveLength(2);
+    expect(screen.getByText('Dev-b')).toBeInTheDocument();
+    expect(screen.getByText('Po-b')).toBeInTheDocument();
+  });
+
+  it('entradas que NÃO são agent.response passam direto, sem participar de grupo nenhum', () => {
+    const divisor = {
+      seq: 2,
+      node: <div key="divisor">Divisor</div>,
+      autor: 'agent:po',
+      turno: 1,
+      origem: 'agente' as const,
+      desfecho: true,
+    };
+    const resultado = agruparNarracoesDoTurno(
+      [entradaResposta(1, 'Um'), divisor, entradaResposta(3, 'Dois')],
+      ROTULOS,
+    );
+    // A entrada não-resposta quebra o agrupamento — as duas respostas ficam
+    // SEPARADAS (uma de cada lado do divisor), nenhuma delas com Disclosure
+    // (cada grupo tem só 1 entrada).
+    expect(resultado).toHaveLength(3);
+    expect(resultado[1]).toBe(divisor);
   });
 });
