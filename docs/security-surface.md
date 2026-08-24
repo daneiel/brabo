@@ -527,6 +527,7 @@ reason in the URL.
 | DELETE | `/projects/:projectId/proficiency/me` | role:viewer |
 | POST | `/projects/:projectId/proficiency/me/opt-in` | role:viewer |
 | GET | `/projects/:projectId/psychologist/analyses` | role:viewer |
+| GET | `/projects/:projectId/psychologist/status` | role:viewer |
 | POST | `/projects/:projectId/runner-ticket` | role:developer |
 | POST | `/projects/:projectId/terminal-ticket` | role:viewer |
 | GET | `/projects/:projectId/sessions` | role:viewer |

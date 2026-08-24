@@ -6614,9 +6614,49 @@
         ]
       }
     },
+    "/projects/{projectId}/psychologist/status": {
+      "get": {
+        "description": "Read-only — has no side effect. `enabled: false` means the pause is a PRODUCT decision (not a bug): existing analyses and hypotheses aren't touched by it.",
+        "operationId": "PsychologistController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PsychologistStatusResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role on the project."
+          },
+          "404": {
+            "description": "Project, session, or hypothesis does not exist."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reports whether the Psychologist can run a NEW analysis today",
+        "tags": [
+          "psychologist"
+        ]
+      }
+    },
     "/projects/{projectId}/rag/coverage": {
       "get": {
-        "description": "Real count (never estimated) of `.md` files under `docs`/`docs/adr` in the project's repository against how many have a chunk, and the project's sessions against how many have a chunk. Does not include \"N minutes ago\" for those three scopes — there is no per-scope indexing timestamp column, and a guessed number would lie (same rule as ADR 0042 for model rating). `local` (RN-454) is the one exception: `lastAttachedAt` is a real `MAX(created_at)` over that scope, because a browser upload has no repository state to compare against.",
+        "description": "Real count (never estimated) of `.md` files under `docs`/`docs/adr` in the project's repository against how many have a chunk, and the project's sessions against how many have a chunk. Does not include \"N minutes ago\" for those three scopes — there is no per-scope indexing timestamp column, and a guessed number would lie (same rule as ADR 0042 for model rating). `local` (RN-455) is the one exception: `lastAttachedAt` is a real `MAX(created_at)` over that scope, because a browser upload has no repository state to compare against.",
         "operationId": "RagController_obterCobertura",
         "parameters": [
           {
@@ -6719,7 +6759,7 @@
             "bearer": []
           }
         ],
-        "summary": "Attaches a local folder (browser upload) as read-only reference (RN-454, ADR 0113)",
+        "summary": "Attaches a local folder (browser upload) as read-only reference (RN-455, ADR 0113)",
         "tags": [
           "rag"
         ]
@@ -17406,6 +17446,19 @@
           "priorHypotheses"
         ]
       },
+      "PsychologistStatusResponseDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "example": false,
+            "description": "Whether a NEW analysis round can run today, automatic or on-demand. Disabled does not touch existing data — past analyses and hypotheses stay intact and visible."
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
       "RagCoverageResponseDto": {
         "type": "object",
         "properties": {
@@ -17469,7 +17522,7 @@
           "lastAttachedAt": {
             "type": "string",
             "nullable": true,
-            "description": "Real `MAX(chunks.created_at)` for this scope — never a guessed \"N minutes ago\" (RN-454)."
+            "description": "Real `MAX(chunks.created_at)` for this scope — never a guessed \"N minutes ago\" (RN-455)."
           }
         },
         "required": [

@@ -17,6 +17,7 @@ import type {
   InfraArtifact,
   PsychologistHypothesis,
   PsychologistAnalysis,
+  PsychologistStatus,
   ProficiencyProfile,
   AgentInstructionVersion,
   Budget,
@@ -120,6 +121,24 @@ export function mensagemDaApi(erro: unknown, padrao = 'Erro inesperado'): string
     return `A api respondeu ${erro.status}.`;
   }
   return erro instanceof Error ? erro.message : padrao;
+}
+
+/**
+ * `true` quando `erro` é o portão do container (RN-105) — o Arquiteto ainda
+ * não decidiu qual imagem sobe para o projeto. `ReadProjectCodeUseCase.alvo`
+ * é o funil ÚNICO por onde as sete leituras de código passam (árvore,
+ * arquivo, busca, diff, blame, lista de PRs, branches), e o 409 que ele
+ * levanta (`portaoDoContainer`) é a ÚNICA causa de `ConflictException` nesse
+ * caso de uso — o status sozinho já basta para identificar o estado, sem
+ * casar texto de mensagem (que muda de idioma e um dia diverge).
+ *
+ * Achado de uso: a aba PRs chamava `getCodePullRequests`/`getCodeDiff` sem
+ * saber disto, e mostrava esse 409 como erro transitório genérico com
+ * "Tentar de novo" — a mesma classe de erro que `ContainerImageGateNotice`
+ * (`components/ContainerImageGate.tsx`) resolve para a aba Code.
+ */
+export function isContainerImageGateError(erro: unknown): boolean {
+  return erro instanceof ApiError && erro.status === 409;
 }
 
 /**
@@ -693,6 +712,10 @@ export const dismissHypothesis = (projectId: string, hypothesisId: string) =>
   );
 export const listPsychologistAnalyses = (projectId: string) =>
   get<PsychologistAnalysis[]>(`/projects/${projectId}/psychologist/analyses`);
+// Leitura pura (RN-454) — ver reanalyzeSession abaixo, que é o que faz
+// efeito (cria job) e o `/reanalyze` que devolve 503 quando desativado.
+export const getPsychologistStatus = (projectId: string) =>
+  get<PsychologistStatus>(`/projects/${projectId}/psychologist/status`);
 // --- Anamnese (Fase 4b) ---
 
 // Um evento pelo id resolvendo a SESSÃO dele. A janela da Anamnese é de

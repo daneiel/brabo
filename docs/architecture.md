@@ -205,9 +205,9 @@ the browser). Explained in `design/README.md`.
 
 **The Code tab (PHASE 26) is the same read pattern**, applied to code
 instead of events: `getContainerState`/`getCodeTree`/`getCodeFile`/
-`searchCode`/`getCodeDiff` in `lib/api-client.ts` mirror the api's five
-read routes (`container` plus the four in `code.controller.ts`), with the
-types in `lib/api-types.ts` (`EstadoDoContainer`, `CodeTree`, `CodeFile`,
+`searchCode`/`getCodeDiff` in `lib/api-client.ts` mirror the api's read
+routes (`container` plus the seven in `code.controller.ts`, FASE 26b), with
+the types in `lib/api-types.ts` (`EstadoDoContainer`, `CodeTree`, `CodeFile`,
 `CodeSearchResult`, `CodeDiff`) copied from the DTOs — the same convention
 as the rest of the file, without importing `apps/api`. `routes/code/
 highlight.ts` is a regex-based tokenizer OF ITS OWN for syntax highlighting,
@@ -215,14 +215,27 @@ zero new dependency. `ProjectCodeTab.tsx`'s gate (RN-107) asks for the
 container's state BEFORE trying to read code, so it can appear as its own
 message instead of as a 409's footnote.
 
-**PHASE 26b added three functions/types to the same pattern, with no screen
-consuming them yet**: `getCodeBlame`/`getCodePullRequests`/
-`getCodeBranches` in `lib/api-client.ts`, with `CodeBlame`/
-`CodePullRequestList`/`CodeBranchDetailList` in `lib/api-types.ts` —
-foundation for the Code tab's three declared pending items
-(RN-110/111/112), ready for the next wave's three agents to consume.
-`CodeShell.tsx`/`CodeDiffPanel.tsx` didn't change behavior, only the
-comment documenting that the foundation already exists.
+**PHASE 26b added `getCodeBlame`/`getCodePullRequests`/`getCodeBranches` to
+the same pattern**, with `CodeBlame`/`CodePullRequestList`/
+`CodeBranchDetailList` in `lib/api-types.ts` — foundation for the Code
+tab's three declared pending items (RN-110/111/112). All three now have a
+consumer: `CodeEditor.tsx` (blame toggle), `code/PrListAndDiff.tsx` (PR
+list + diff, consumed by both `CodeDiffPanel.tsx` and the standalone `prs`
+tab) and `CodeBranchPicker.tsx` (the rich branch dropdown).
+
+The container-image gate (RN-105) is a single funnel
+(`ReadProjectCodeUseCase.alvo`) shared by all seven routes, so any of them
+can 409 while the Architect hasn't decided the image — not just the tree.
+`ProjectCodeTab.tsx` avoids that 409 with a pre-check (`RN-107`, above); the
+`prs` tab has no tree/file read to pre-check against, so
+`code/PrListAndDiff.tsx` instead reacts to the 409 from its own
+`getCodePullRequests`/`getCodeDiff` calls. Both paths render the same
+presentation, `ContainerImageGateNotice`
+(`components/ContainerImageGate.tsx`), detected via `isContainerImageGateError`
+(`lib/api-client.ts`, matches `ApiError.status === 409`) — a bug found by
+use: before this, the `prs` tab surfaced that 409 as a generic transient
+error with a "try again" button, which is the wrong affordance for a state
+that only resolves when the Architect acts.
 
 ### Outside the applications
 

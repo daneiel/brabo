@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { useHypotheses, usePsychologistAnalyses } from '../lib/hooks';
+import {
+  useHypotheses,
+  usePsychologistAnalyses,
+  usePsychologistStatus,
+} from '../lib/hooks';
 import {
   acceptHypothesis,
   ApiError,
@@ -42,13 +46,21 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
   const hypothesesQuery = useHypotheses(projectId);
   const { data: analyses } = usePsychologistAnalyses(projectId);
   // O Psicólogo pode estar pausado GLOBALMENTE (decisão do usuário em
-  // 2026-08-10, não bug — ver docs/explanation/backlog.md). Não há hoje um
-  // jeito de saber isso ANTES de clicar (o estado é do engine, não vem em
-  // nenhuma leitura desta tela); "Reanalisar" descobre no primeiro clique e
-  // os botões ficam desabilitados dali em diante, com a explicação
-  // PERSISTENTE na tela — não só um toast que some (RN-088: nunca falha
-  // silenciosa ou confusa). Mesmo padrão de `ProficiencySection` (Anamnese).
+  // 2026-08-10, não bug — ver docs/explanation/backlog.md). RN-454: a
+  // leitura de `usePsychologistStatus` sabe disso de ANTEMÃO — antes desta
+  // rodada, o único jeito de descobrir era o 503 do primeiro clique em
+  // "Reanalisar", e esse botão só existe quando já há uma rodada de análise
+  // (`runs.length > 0`); a tela com ZERO hipóteses nunca chegava perto dele,
+  // então nunca conseguia distinguir "pausado por decisão" de "ainda não
+  // analisou nada". `psicologoDesativado` continua existindo como reforço
+  // do 503 em si — a flag pode mudar EM VOO entre a leitura de status e o
+  // clique — com a explicação PERSISTENTE na tela, não só um toast que some
+  // (RN-088: nunca falha silenciosa ou confusa). Mesmo padrão de
+  // `ProficiencySection` (Anamnese).
+  const { data: status } = usePsychologistStatus(projectId);
   const [psicologoDesativado, setPsicologoDesativado] = useState(false);
+  const pausadoConhecido = status?.enabled === false;
+  const psicologoBloqueado = psicologoDesativado || pausadoConhecido;
 
   const all = hypothesesQuery.data ?? [];
   const pending = all.filter((h) => h.status === 'proposed');
@@ -128,7 +140,9 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
       {/* Os três estados da RN-088, com o ERRO antes do vazio: `data ?? []`
           seguido de `length === 0` fazia a api respondendo 429 dizer "sem
           hipóteses ainda", que é indistinguível de um projeto que o Psicólogo
-          nunca analisou. */}
+          nunca analisou. RN-454: o estado vazio TAMBÉM se divide em dois —
+          pausado por decisão (sabido) vs. genuinamente ainda sem análise —
+          e cada um tem a frase que É verdade para ele. */}
       {hypothesesQuery.isError ? (
         <ErroDeCarregamento
           titulo={t('projectInsightsTab.errorTitle')}
@@ -138,7 +152,13 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
       ) : hypothesesQuery.data === undefined ? (
         <div className={styles.sectionSub}>{t('projectInsightsTab.loading')}</div>
       ) : all.length === 0 ? (
-        <div className={styles.sectionSub}>{t('projectInsightsTab.empty')}</div>
+        <div className={styles.sectionSub}>
+          {t(
+            pausadoConhecido
+              ? 'projectInsightsTab.emptyPaused'
+              : 'projectInsightsTab.empty',
+          )}
+        </div>
       ) : (
         <>
           <div className={styles.sectionSub}>
@@ -179,9 +199,9 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
                     type="button"
                     className={styles.analysisReanalyze}
                     onClick={() => reanalyze(run.sessionId)}
-                    disabled={psicologoDesativado}
+                    disabled={psicologoBloqueado}
                     title={
-                      psicologoDesativado
+                      psicologoBloqueado
                         ? t('projectInsightsTab.analysisStrip.reanalyzeTitleDisabled')
                         : t('projectInsightsTab.analysisStrip.reanalyzeTitleEnabled')
                     }
@@ -196,7 +216,7 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
           {/* Pausa GLOBAL — decisão do usuário em 2026-08-10, aguardando
               refinamento futuro. Fica visível de propósito, não só um toast
               que some (RN-088). */}
-          {psicologoDesativado && (
+          {psicologoBloqueado && (
             <div className={styles.sectionSub} style={{ marginTop: 8 }}>
               {t('projectInsightsTab.pausedNotice')}
             </div>

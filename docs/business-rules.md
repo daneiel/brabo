@@ -4518,9 +4518,14 @@ de todo projeto. `sem_decisao` vira `decidido` só quando o Arquiteto emite
 de tag explícita (`latest` recusado), `rationale` e postura de rede.
 
 A checagem mora no MESMO funil que a contenção de caminho da
-[RN-095](#rn-095) (`ReadProjectCodeUseCase.alvo`), e não em cada uma das quatro
-rotas — checagem duplicada em quatro chamadores é checagem que um dia diverge
-em um deles ([ADR 0058](adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md)).
+[RN-095](#rn-095) (`ReadProjectCodeUseCase.alvo`), e não em cada uma das sete
+rotas (árvore, arquivo, busca, diff de PR, [blame](#rn-110), [lista de
+PRs](#rn-111) e [branches detalhadas](#rn-112), FASE 26b) — checagem
+duplicada em sete chamadores é checagem que um dia diverge em um deles
+([ADR 0058](adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md)).
+Contagem corrigida aqui: este registro dizia "quatro rotas" desde a FASE 26,
+e ficou desatualizado quando a FASE 26b acrescentou as três últimas ao mesmo
+funil sem que ninguém revisasse este número.
 
 O artefato não tem tabela: é o próprio evento no event log, versionado
 (`version` cresce a cada emissão, o vigente é o de maior `version`), do mesmo
@@ -4602,13 +4607,36 @@ Enquanto bloqueada, a tela reconsulta sozinha a cada 15s — depois de decidida
 a imagem não muda sem ação humana nova, e ficar reconsultando um estado
 estável seria a mesma família de tráfego desnecessário da PÓS-FASE 15.
 
+A apresentação do quarto estado foi EXTRAÍDA para `ContainerImageGateNotice`
+(`apps/web/src/components/ContainerImageGate.tsx`) — achado de uso: a aba PRs
+(`apps/web/src/routes/code/PrListAndDiff.tsx`, consumida por
+`ProjectPrsTab.tsx` e por `CodeDiffPanel.tsx`) chama `getCodePullRequests`/
+`getCodeDiff`, que passam pelo MESMO funil (RN-105) e podem devolver o MESMO
+409 — mas, ao contrário desta aba, sem perguntar antes. Ela mostrava esse 409
+no banner de erro genérico com "Tentar de novo", a afordância errada para um
+estado que só o Arquiteto resolve. `isContainerImageGateError`
+(`apps/web/src/lib/api-client.ts`) identifica a causa pelo `status === 409`
+— única causa de `ConflictException` em `ReadProjectCodeUseCase.alvo` — e
+`PrListAndDiff` troca o banner por `ContainerImageGateNotice` quando ela bate,
+sem pré-checagem própria (reage ao 409 da query que já ia rodar).
+
 - **Onde:** `apps/web/src/routes/ProjectCodeTab.tsx`,
-  `apps/web/src/routes/ProjectCodeTab.module.css`
-- **Teste:** `apps/web/src/routes/ProjectCodeTab.test.tsx` ("o gate")
+  `apps/web/src/routes/ProjectCodeTab.module.css`,
+  `apps/web/src/components/ContainerImageGate.tsx` (apresentação
+  compartilhada), `apps/web/src/routes/code/PrListAndDiff.tsx` (consumidor
+  reativo ao 409), `apps/web/src/lib/api-client.ts`
+  (`isContainerImageGateError`)
+- **Teste:** `apps/web/src/routes/ProjectCodeTab.test.tsx` ("o gate"),
+  `apps/web/src/routes/code/CodeDiffPanel.test.tsx`,
+  `apps/web/src/routes/ProjectPrsTab.test.tsx` ("o gate do container não é
+  erro genérico")
 - **Borda:** a checagem no front NÃO substitui a da api — é conveniência de
   UX. Se a api mudar de estado entre a consulta do gate e a leitura de
   verdade, a rota de leitura ainda recusa com 409 (RN-105); o front só evita
-  o caso comum de mostrar o editor vazio por um instante.
+  o caso comum de mostrar o editor vazio por um instante. A aba PRs não faz
+  pré-checagem: ela descobre o bloqueio quando a query já falhou, porque não
+  há árvore/arquivo nenhum ali para o instante "vazio" que a pré-checagem da
+  aba Code evita.
 - **Origem:** [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
 
 ### RN-110 — `blame` é a 13ª operação do `GitProviderContract`, com o mesmo vocabulário de ausência das outras leituras {#rn-110}
@@ -4843,11 +4871,9 @@ pendente, nunca uma corrente infinita. Por isso a suite pré-existente de
 `{"error": "psicologo_desativado"}` quando desativado, sem sequer criar o
 job. `ReanalyzeSessionUseCase`, do lado api, converte o 503 do engine em
 `ServiceUnavailableException` com `reason: "psychologist_disabled"` no
-corpo — nunca um 500 genérico. A web (`ProjectInsightsTab.tsx`) descobre o
-estado no primeiro clique de "Reanalisar" (não há hoje uma leitura prévia
-do estado global) e, a partir daí, desabilita os botões e mantém a
-explicação VISÍVEL na tela — não só um toast que some (RN-088: nunca falha
-silenciosa ou confusa).
+corpo — nunca um 500 genérico. Isto descobre a pausa quando já existe uma
+análise para reprocessar; a tela SEM hipótese nenhuma tem uma leitura
+prévia própria, que não existia aqui — ver [RN-454](#rn-454).
 
 - **Onde:** `apps/engine/lib/engine/workers/psychologist_worker.ex`
   (`enabled?/0`), `apps/engine/lib/engine/outbox/drain.ex`
@@ -10707,6 +10733,63 @@ silenciosa.
 - **Origem:** necessidade técnica do binário standalone; a lacuna no smoke
   do npm foi achada por auditoria própria da mudança, não por execução real
   reportando falha
+
+### RN-454 — A aba Insights sabe que o Psicólogo está pausado ANTES de o usuário esbarrar no 503 {#rn-454}
+
+Achado por USO: a aba Insights, com zero hipóteses, mostrava "Sem hipóteses
+ainda — o Psicólogo analisa cada sessão encerrada" mesmo com
+`PSYCHOLOGIST_ENABLED=false` — a mesma frase que aparece quando o Psicólogo
+está ATIVO e só ainda não rodou. As duas situações são indistinguíveis pelo
+texto, o que é a mesma classe de defeito que a RN-088/RN-107 já fecharam
+para outras telas: um estado que existe e o produto sabe, mas não mostra.
+
+A [RN-117](#rn-117) já cobria a descoberta da pausa, mas só no CLIQUE de
+"Reanalisar" (503 → `PsychologistDisabledError`) — e esse botão só existe
+na faixa de análises, que só aparece quando `runs.length > 0`. Uma sessão
+sem hipótese nenhuma nunca chega perto dele, então a pausa era invisível
+justamente na tela vazia.
+
+`GET /internal/psychologist/status` (engine, `PsychologistCommandController.status/2`)
+é leitura pura de `PsychologistWorker.enabled?/0` — SEM efeito colateral,
+diferente de `/reanalyze`, que cria um job quando ativado. A api expõe
+`GET /projects/:projectId/psychologist/status` (`GetPsychologistStatusUseCase`,
+`role:viewer`) por cima disso — projeto na URL só por consistência com as
+rotas irmãs (`hypotheses`, `psychologist/analyses`); a flag em si é GLOBAL,
+como a RN-117 já registra. `ProjectInsightsTab.tsx` consome essa leitura
+(`usePsychologistStatus`) e escolhe a frase do estado vazio por ela: pausado
+mostra "O Psicólogo está pausado — nenhuma sessão é analisada até ser
+reativado" (`insights.projectInsightsTab.emptyPaused`); do contrário, mantém
+a frase original, que É honesta quando a feature está de fato ativa. O
+aviso persistente (`pausedNotice`) e os botões de "Reanalisar" também
+passaram a refletir essa leitura proativa, e não só o `useState` descoberto
+pelo 503 — que continua existindo, como reforço, para o caso raro de a
+flag mudar EM VOO entre a leitura de status e o clique.
+
+- **Onde:** `apps/engine/lib/engine_web/controllers/psychologist_command_controller.ex`
+  (`status/2`), `apps/engine/lib/engine_web/router.ex`
+  (`GET /internal/psychologist/status`),
+  `apps/api/src/application/ports/api-to-engine-client.port.ts`
+  (`getPsychologistStatus`),
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts`,
+  `apps/api/src/application/use-cases/execution/get-psychologist-status.use-case.ts`,
+  `apps/api/src/interfaces/http/psychologist/psychologist.controller.ts`
+  (`status`), `apps/web/src/lib/api-client.ts` (`getPsychologistStatus`),
+  `apps/web/src/lib/hooks.ts` (`usePsychologistStatus`),
+  `apps/web/src/routes/ProjectInsightsTab.tsx`
+- **Teste:**
+  `apps/engine/test/engine_web/controllers/psychologist_command_controller_test.exs`
+  (`status/2`, `enabled: true`/`false`),
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts`
+  (`getPsychologistStatus`),
+  `apps/api/test/application/use-cases/execution/get-psychologist-status.use-case.spec.ts`,
+  `apps/web/src/routes/ProjectInsightsTab.test.tsx`
+- **Borda:** a flag continua GLOBAL (ver RN-117) — a rota da api aceita
+  `projectId` na URL só para bater com o padrão das rotas irmãs do
+  controller, e não porque a resposta varia por projeto.
+- **Origem:** achado por USO real navegando a aba Insights com
+  `PSYCHOLOGIST_ENABLED=false`, não roteiro. Sem ADR — extensão pontual do
+  mecanismo de leitura já existente da RN-117, mesmo padrão da RN-088/
+  RN-107 para o resto do produto.
 
 ---
 

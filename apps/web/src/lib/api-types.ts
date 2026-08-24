@@ -846,6 +846,15 @@ export interface PsychologistAnalysis {
   createdAt: string;
 }
 
+/**
+ * Leitura da flag global `PSYCHOLOGIST_ENABLED` (RN-454) — sem efeito
+ * colateral, ao contrário de `reanalyzeSession`. `enabled: false` é decisão
+ * de PRODUTO, não bug: hipóteses e análises já emitidas continuam intactas.
+ */
+export interface PsychologistStatus {
+  enabled: boolean;
+}
+
 // --- Anamnese (Fase 4b) ---
 
 export type ProficiencyLevel = 'iniciante' | 'intermediario' | 'avancado';
