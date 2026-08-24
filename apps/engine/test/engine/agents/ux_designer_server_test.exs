@@ -149,6 +149,55 @@ defmodule Engine.Agents.UxDesignerServerTest do
     assert length(artefatos) == 1
   end
 
+  # A faixa de atividade da tela de Sessão narra o que o agente está fazendo
+  # AO VIVO — o `tool.call` durável já existia, mas só chega no próximo poll
+  # do event log. O broadcast é o mesmo evento, efêmero, sem `args` (payload
+  # cru nunca viaja por aqui — RN-096/RN-412).
+  test "tool.call é rebroadcastado no canal Phoenix, sem os args crus", %{state: state} do
+    session_id = state.session_id
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+    Process.put(:fake_events, brief_events())
+    Process.put(:fake_llm_turns, [prototipo_turn(), FakeEngineApiClient.final_response("ok")])
+
+    assert {:noreply, _} = sync_cast(UxDesignerServer, :kickoff, state)
+
+    assert_received %Phoenix.Socket.Broadcast{
+      event: "tool.call",
+      payload: %{tool: "propose_prototype", agent: "ux-designer"} = payload
+    }
+
+    refute Map.has_key?(payload, :args)
+  end
+
+  # RN-166 (aplicada ao PO) estendida ao UX Designer: o teto de iterações era
+  # SILENCIOSO aqui — `run_turn(state, remaining) when remaining <= 0, do:
+  # state` — e um UX Designer que esgotasse as 14 idas ao modelo terminava
+  # sem rastro nenhum. Ferramenta desconhecida nunca conta como sucesso
+  # (`desfecho == :ok`), então ela mantém o laço vivo até o teto.
+  test "teto de iterações emite toolloop.limit_reached", %{state: state} do
+    session_id = state.session_id
+
+    Process.put(
+      :fake_llm_always,
+      %{
+        "message" => %{
+          "role" => "assistant",
+          "content" => "",
+          "toolCalls" => [
+            %{"id" => "tc-x", "name" => "ferramenta_desconhecida", "arguments" => %{}}
+          ]
+        },
+        "usage" => %{"estimated" => true},
+        "error" => nil
+      }
+    )
+
+    assert {:reply, :ok, _} = sync_call(UxDesignerServer, {:user_message, "vai"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "toolloop.limit_reached", payload: %{max_iterations: 14}}}
+  end
+
   defp receber_eventos(acc) do
     receive do
       {:event_appended, _proj, _sess, event} -> receber_eventos([event | acc])

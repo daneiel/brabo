@@ -357,6 +357,7 @@ defmodule Engine.Agents.CriativoServer do
   defp executar(call, state, tool, fun) do
     args = Map.get(call, "arguments", %{})
     emit(state, "tool.call", %{tool: tool, args: args})
+    broadcast(state, "tool.call", %{tool: tool, agent: @agent})
 
     # O resultado era DESCARTADO (`_ =`). Um payload recusado pelo schema — o
     # modelo emitiu `titulo`/`descricao` contra `title`/`description` — sumia
