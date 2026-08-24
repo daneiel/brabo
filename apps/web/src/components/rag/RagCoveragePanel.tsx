@@ -34,6 +34,11 @@ function CartaoDeArquivos({ rotulo, cobertura }: { rotulo: string; cobertura: Ra
  * inventa um. `chunksWithoutVector` é histórico do que já foi gravado, não da
  * busca ATUAL: um chunk sem vetor continua achável só pelo sinal léxico até a
  * próxima reindexação com o provider de embedding no ar.
+ *
+ * O cartão `local` (RN-455, ADR 0113) é a ÚNICA exceção declarada à régua
+ * "nunca Xmin": `lastAttachedAt` é um `MAX(created_at)` real sobre esse
+ * escopo, porque uma pasta anexada não tem "total no repositório" pra
+ * comparar — mostrar o que está indexado AGORA é a única leitura honesta.
  */
 export function RagCoveragePanel({ coverage }: { coverage: RagCoverage }) {
   const { t } = useTranslation('sessions');
@@ -52,6 +57,23 @@ export function RagCoveragePanel({ coverage }: { coverage: RagCoverage }) {
             {coverage.session.sessionsInProject === 0
               ? t('ragCoverage.noSessionsInProject')
               : t('ragCoverage.sessionsIndexed')}
+          </div>
+        </div>
+        <div className={styles.cartao}>
+          <div className={styles.cartaoRotulo}>{t('ragCoverage.localLabel')}</div>
+          <div className={styles.cartaoValor}>{coverage.local.filesIndexed}</div>
+          <div className={styles.cartaoNota}>
+            {coverage.local.folderName
+              ? t('ragCoverage.localFolder', { folderName: coverage.local.folderName })
+              : t('ragCoverage.noLocalFolder')}
+            {coverage.local.lastAttachedAt && (
+              <>
+                {' · '}
+                {t('ragCoverage.localAttachedAt', {
+                  date: new Date(coverage.local.lastAttachedAt).toLocaleDateString('pt-BR'),
+                })}
+              </>
+            )}
           </div>
         </div>
       </div>

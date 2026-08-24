@@ -2219,6 +2219,48 @@ risco (nunca converte com um agente `working`) mas não elimina: um agente
 `idle` entre tasks pode estar sentado sobre um diff sujo, e nada aqui
 inspeciona limpeza de working tree antes de converter.
 
+## Pasta local anexada como referência do Chat RAG (2026-08-23, RN-455..457, ADR 0113)
+Pedido do dono do produto: anexar uma pasta da PRÓPRIA máquina do usuário a
+um projeto como referência de LEITURA para os agentes — sem o CLI
+`brabo-runner` (ADR 0103). Explicitamente NÃO é execução/workspace de
+projeto: `execution_mode: runner` (ADR 0104) precisa do CLI porque precisa
+de um caminho de HOST real pro container rotear comando; isto é mais
+parecido com "anexar arquivos a uma conversa". O navegador lê o CONTEÚDO
+(`File.text()`) e o caminho RELATIVO (`File.webkitRelativePath`) dos
+arquivos escolhidos — nunca um caminho absoluto de host (a API de `File`
+não expõe um, pra nenhum site), e por isso o ADR 0113 é explícito que NÃO
+é uma revisão do que os ADRs 0072/0107 recusaram: aqueles recusavam
+RESOLVER um caminho de host a partir do navegador; aqui não existe caminho
+nenhum a resolver, só bytes que o navegador já tinha o direito de ler.
+
+`chunks.scope` (ADR 0079/0080) ganha um QUARTO valor, `'local'` (migração
+`0052`, `ALTER TYPE ... ADD VALUE`, aditivo — os dois CHECK da migração
+`0045` já são escritos como "é `session` ou não é", então `local` cai do
+mesmo lado de `docs`/`adr` sem CHECK novo). `IndexLocalFolderUseCase`
+espelha `IndexProjectDocsUseCase` de perto — chunking Markdown-aware pra
+`.md`/`.mdx`, `RagEmbeddingService`, chunk sem vetor em vez de falhar
+quando o embedding cai (RN-233) — mas REJEITA (400) o upload inteiro
+quando os tetos AGREGADOS estouram (quantidade de arquivos, bytes
+somados), nunca trunca em silêncio: é um gesto ÚNICO do usuário com um
+seletor de pasta na tela, não uma varredura em background. Arquivo
+individual grande demais ou de extensão não reconhecida só é PULADO
+(`filesSkipped`), nunca derruba o lote (RN-456). `origemDoChunk` não
+precisou de nenhum ramo novo: `local` carrega `sourcePath` como
+`docs`/`adr`, cai no `kind: 'file'` que a citação já sabia renderizar.
+
+**Nunca entra no "Reindexar agora" genérico (RN-457)**: `ReindexProjectUseCase`
+reindexa lendo de uma fonte que o SERVIDOR consegue revisitar (repositório
+do projeto, event log); `local` não tem fonte nenhuma pra revisitar — o
+texto só existe no navegador de quem anexou. Reanexar a pasta (novo
+upload em `POST .../rag/local`, `maintainer`) É o mecanismo de
+resincronizar, um botão deliberadamente separado, com comentário cruzado
+nos dois casos de uso apontando um pro outro e pro ADR 0113, pra uma
+"correção" futura não religar os dois e apagar o material do usuário. A
+cobertura (`RagCoverage.local`) é forma PRÓPRIA — não há "total no
+repositório" pra comparar — e `lastAttachedAt` é a ÚNICA exceção real à
+regra "nunca Xmin" (RN-237): um `MAX(chunks.created_at)` de verdade, não
+chutado (RN-458).
+
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector;
   `nodemailer` para SMTP real do `MailSender` (ADR 0096), atrás de

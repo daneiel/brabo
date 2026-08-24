@@ -10,10 +10,11 @@
     "scopes": {
       "docs": "Docs",
       "adr": "ADR",
-      "session": "Sessões"
+      "session": "Sessões",
+      "local": "Local"
     },
     "title": "Chat RAG",
-    "subtitle": "Busca híbrida (vetor + léxico) sobre docs/ADR do repositório e as conversas registradas neste projeto — nunca código-fonte, nunca Pull Request.",
+    "subtitle": "Busca híbrida (vetor + léxico) sobre docs/ADR do repositório, as conversas registradas neste projeto e pastas locais anexadas — nunca código-fonte, nunca Pull Request.",
     "reindexButton": {
       "idle": "Reindexar agora",
       "loading": "Reindexando…"
@@ -35,13 +36,33 @@
     "searching": "Buscando…",
     "searchError": "Não consegui buscar agora.",
     "vectorUnavailable": "Busca só por palavra-chave — embedding indisponível",
-    "noResults": "Nenhum resultado para “{{query}}”."
+    "noResults": "Nenhum resultado para “{{query}}”.",
+    "attachLocalFolder": {
+      "button": "Anexar pasta local",
+      "modalTitle": "Anexar pasta local",
+      "explanation": "O conteúdo dos arquivos é lido pelo seu navegador e enviado como texto — nenhum caminho da sua máquina é enviado. Cada nova pasta SUBSTITUI a anexada anteriormente.",
+      "chooseFolder": "Escolher pasta…",
+      "reading": "Lendo arquivos…",
+      "emptyFolder": "Nenhum arquivo elegível encontrado nesta pasta (texto/código reconhecido).",
+      "summary": "{{included}} arquivo(s) de “{{folderName}}”, {{skipped}} pulado(s) (grande demais ou binário)",
+      "summaryNoSkipped": "{{included}} arquivo(s) de “{{folderName}}”",
+      "tooManyFiles": "A pasta tem {{count}} arquivo(s) — o teto é {{limit}}. Escolha uma pasta menor.",
+      "tooManyBytes": "O conteúdo da pasta soma mais que o teto permitido. Escolha uma pasta menor.",
+      "confirmButton": "Anexar {{count}} arquivo(s)",
+      "confirmButtonLoading": "Anexando…",
+      "cancelButton": "Cancelar",
+      "successTitle": "Pasta anexada",
+      "successMessage": "{{filesIndexed}} arquivo(s) indexado(s) de “{{folderName}}”{{embeddingSuffix}}",
+      "errorTitle": "Falha ao anexar",
+      "errorDefaultMessage": "A api não respondeu. Nada foi alterado."
+    }
   },
   "ragCitation": {
     "scopeLabels": {
       "docs": "docs",
       "adr": "ADR",
-      "session": "sessão"
+      "session": "sessão",
+      "local": "local"
     },
     "scoreTitle": "Score combinado (0.6 vetor + 0.4 léxico)",
     "relevance": "{{score}} relevância",
@@ -59,6 +80,10 @@
     "sessionsLabel": "sessões",
     "noSessionsInProject": "nenhuma sessão no projeto",
     "sessionsIndexed": "sessões indexadas",
+    "localLabel": "local",
+    "noLocalFolder": "nenhuma pasta anexada",
+    "localFolder": "de “{{folderName}}”",
+    "localAttachedAt": "anexado em {{date}}",
     "chunksInIndex": "{{count}} chunk(s) no índice",
     "chunksWithoutVector": "{{count}} sem vetor — indexado(s) só com o sinal léxico"
   },

@@ -6,6 +6,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: anexar uma pasta LOCAL da própria máquina do usuário a um
+  projeto como referência de leitura para os agentes (RN-455..457,
+  ADR 0113) — sem o CLI `brabo-runner`, diferente de `execution_mode:
+  runner`. O navegador lê o conteúdo dos arquivos (`File.text()`) e envia
+  como texto puro; nenhum caminho de host atravessa a rede. `chunks.scope`
+  ganha um quarto valor, `'local'`, reusando o pipeline de indexação/busca
+  híbrida do Chat RAG já existente (ADR 0079/0080) em vez de um mecanismo
+  paralelo. Botão "Anexar pasta local" na aba Chat RAG (`maintainer`);
+  teto de arquivos/bytes REJEITA o upload inteiro em vez de truncar em
+  silêncio; reanexar é o único mecanismo de resincronizar — nunca o
+  "Reindexar agora" genérico.
 - **scripts,api**: `Docker › Reset total` (`pnpm bootstrap`,
   `scripts/dev/reset-total.sh`) soma numa folha só o que antes era manual —
   rebuild das imagens, apagar o banco, subir até tudo saudável (`--wait`),

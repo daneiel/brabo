@@ -239,14 +239,17 @@ reason in the URL.
   executes; **changing it** is deciding how much the product spends
   without asking, and that's why it requires the same role that
   activates execution.
-- **The three `/projects/:projectId/rag/*` routes split the role by the
+- **The four `/projects/:projectId/rag/*` routes split the role by the
   same criterion as the area parallelism ceiling (RN-083)** (PROGRAM 28,
   Wave 4 — RN-231..234, ADR 0080): `search` and `coverage` are
   `role:viewer` (pure reading over what's already indexed), and
   `reindex` is `role:maintainer` — it triggers N calls to the project's
   repository and to the embedding provider, the same "changes what the
   product spends without asking" that already justifies the higher role
-  on other expensive-trigger routes.
+  on other expensive-trigger routes. `local` (RN-455, ADR 0113) is
+  `role:maintainer` too, same reasoning: it calls the embedding provider
+  and replaces what the project has indexed for that scope. Its body is
+  browser-read TEXT, never a host path.
 - **The four `/projects/:projectId/code/*` routes are `role:viewer` and
   READ-ONLY** (PHASE 26b). Seeing a project's code is the same
   permission as seeing the project — the same cut as
@@ -486,6 +489,7 @@ reason in the URL.
 | GET | `/projects/:projectId/code/tree` | role:viewer |
 | POST | `/projects/:projectId/rag/search` | role:viewer |
 | POST | `/projects/:projectId/rag/reindex` | role:maintainer |
+| POST | `/projects/:projectId/rag/local` | role:maintainer |
 | GET | `/projects/:projectId/rag/coverage` | role:viewer |
 | GET | `/projects/:projectId/container` | role:viewer |
 | GET | `/projects/:projectId/container/lifecycle` | role:viewer |

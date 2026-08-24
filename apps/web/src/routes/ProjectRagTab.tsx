@@ -7,17 +7,19 @@ import type { RagChunkScope } from '../lib/api-types';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { RagCitationCard } from '../components/rag/RagCitationCard';
 import { RagCoveragePanel } from '../components/rag/RagCoveragePanel';
+import { AttachLocalFolderModal } from '../components/rag/AttachLocalFolderModal';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
-import { AlertIcon, SearchIcon } from '../components/ui/icons';
+import { AlertIcon, FolderIcon, SearchIcon } from '../components/ui/icons';
 import styles from './ProjectRagTab.module.css';
 
-const ORDEM_DOS_ESCOPOS: RagChunkScope[] = ['docs', 'adr', 'session'];
+const ORDEM_DOS_ESCOPOS: RagChunkScope[] = ['docs', 'adr', 'session', 'local'];
 
 const CHAVE_DO_ESCOPO: Record<RagChunkScope, string> = {
   docs: 'rag.scopes.docs',
   adr: 'rag.scopes.adr',
   session: 'rag.scopes.session',
+  local: 'rag.scopes.local',
 };
 
 /**
@@ -50,6 +52,7 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
   const [termo, setTermo] = useState('');
   const [buscado, setBuscado] = useState<string | null>(null);
   const [escopos, setEscopos] = useState<Set<RagChunkScope>>(new Set());
+  const [anexandoPasta, setAnexandoPasta] = useState(false);
 
   const coverageQuery = useQuery({
     queryKey: ['rag-coverage', projectId],
@@ -114,15 +117,32 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
           <p className={styles.subtitulo}>{t('rag.subtitle')}</p>
         </div>
         {podeReindexar && (
-          <Button
-            variant="secondary"
-            onClick={() => reindexMutation.mutate()}
-            loading={reindexMutation.isPending}
-          >
-            {reindexMutation.isPending ? t('rag.reindexButton.loading') : t('rag.reindexButton.idle')}
-          </Button>
+          <div className={styles.acoesCabecalho}>
+            <Button variant="secondary" onClick={() => setAnexandoPasta(true)}>
+              <FolderIcon size={14} /> {t('rag.attachLocalFolder.button')}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => reindexMutation.mutate()}
+              loading={reindexMutation.isPending}
+            >
+              {reindexMutation.isPending ? t('rag.reindexButton.loading') : t('rag.reindexButton.idle')}
+            </Button>
+          </div>
         )}
       </div>
+
+      {anexandoPasta && (
+        <AttachLocalFolderModal
+          projectId={projectId}
+          onClose={() => setAnexandoPasta(false)}
+          onAttached={() => {
+            setAnexandoPasta(false);
+            void queryClient.invalidateQueries({ queryKey: ['rag-coverage', projectId] });
+            void queryClient.invalidateQueries({ queryKey: ['rag-search', projectId] });
+          }}
+        />
+      )}
 
       {coverageQuery.isError && (
         <ErroDeCarregamento

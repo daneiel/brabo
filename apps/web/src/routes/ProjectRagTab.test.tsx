@@ -33,6 +33,7 @@ function novaInstanciaI18n() {
 const getRagCoverage = vi.fn();
 const searchRag = vi.fn();
 const reindexRag = vi.fn();
+const attachLocalFolder = vi.fn();
 const listWorkspaces = vi.fn();
 const navigate = vi.fn();
 
@@ -48,6 +49,7 @@ vi.mock('../lib/api-client', async () => {
     getRagCoverage: (...args: unknown[]) => getRagCoverage(...args),
     searchRag: (...args: unknown[]) => searchRag(...args),
     reindexRag: (...args: unknown[]) => reindexRag(...args),
+    attachLocalFolder: (...args: unknown[]) => attachLocalFolder(...args),
     listWorkspaces: (...args: unknown[]) => listWorkspaces(...args),
   };
 });
@@ -60,6 +62,7 @@ const cobertura: RagCoverage = {
   docs: { filesInRepo: 12, filesIndexed: 10, truncated: false },
   adr: { filesInRepo: 4, filesIndexed: 4, truncated: false },
   session: { sessionsInProject: 3, sessionsIndexed: 2 },
+  local: { filesIndexed: 0, folderName: null, lastAttachedAt: null },
   chunksTotal: 180,
   chunksWithoutVector: 0,
 };
@@ -159,6 +162,18 @@ describe('ProjectRagTab', () => {
     // único nesta cobertura (adr=4, sessões indexadas=2).
     await waitFor(() => expect(screen.getByText('10')).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: /Reindexar agora/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Anexar pasta local/ })).not.toBeInTheDocument();
+  });
+
+  it('maintainer vê "Anexar pasta local" e abre o modal ao clicar (RN-455)', async () => {
+    listWorkspaces.mockResolvedValue(comPapel('maintainer'));
+    const user = userEvent.setup();
+    montar();
+
+    const botao = await screen.findByRole('button', { name: /Anexar pasta local/ });
+    await user.click(botao);
+
+    expect(screen.getByRole('button', { name: /Escolher pasta/ })).toBeInTheDocument();
   });
 
   it('maintainer vê e pode disparar a reindexação', async () => {

@@ -10793,6 +10793,111 @@ flag mudar EM VOO entre a leitura de status e o clique.
 
 ---
 
+## Pasta local anexada vira o quarto escopo do índice RAG, lido pelo NAVEGADOR (RN-455..457, ADR 0113)
+
+Pedido do dono do produto: anexar uma pasta da PRÓPRIA máquina do usuário a
+um projeto como referência de leitura para os agentes — sem exigir o CLI
+`brabo-runner` (ADR 0103), diferente de `execution_mode: runner`
+(ADR 0104), que precisa de um caminho de HOST real porque roteia comando
+para lá. O navegador lê o CONTEÚDO dos arquivos (`File.text()`) e o caminho
+RELATIVO dentro da pasta escolhida (`File.webkitRelativePath`) — nunca um
+caminho absoluto de máquina, porque a API de `File` do navegador não expõe
+um, para nenhum site. O que atravessa a rede é texto que o navegador já
+tinha o direito de ler, o mesmo modelo de confiança de qualquer upload de
+arquivo comum.
+
+### RN-455 — `chunks.scope` ganha `'local'`, reusando o pipeline de RAG inteiro {#rn-455}
+
+`ChunkScope` passa de `'docs' | 'adr' | 'session'` para incluir `'local'`
+(migração `0052`, `ALTER TYPE ... ADD VALUE`) — aditivo, sem migração de
+dado, sem CHECK novo: os dois CHECK de `chunks` (migração `0045`) já são
+escritos como "é `session` ou não é", então `local` cai do mesmo lado de
+`docs`/`adr` (tem `source_path`, não tem `session_id`) sem mudança
+nenhuma além do valor do enum. `origemDoChunk` (`domain/rag/rag-citation.ts`)
+não precisou de nenhum ramo novo: um chunk `local` carrega `sourcePath`
+exatamente como `docs`/`adr`, então cai no `kind: 'file'` que a citação já
+sabia renderizar.
+
+- **Onde:** `apps/api/src/db/schema.ts` (`chunkScopeEnum`),
+  `apps/api/src/db/migrations/0052_chunks_local_scope.sql`,
+  `apps/api/src/application/ports/chunk-repository.port.ts` (`ChunkScope`),
+  `apps/api/src/application/use-cases/rag/index-local-folder.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/rag/index-local-folder.use-case.spec.ts`
+  (caminho feliz e full rebuild), `apps/api/test/interfaces/http/rag/rag.controller.spec.ts`
+- **ADR:** [0113](adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md)
+- **Origem:** pedido do dono do produto
+
+### RN-456 — Teto agregado REJEITA (400) o upload inteiro; arquivo individual grande/binário só é PULADO {#rn-456}
+
+Diferente de `docs`/`adr` (uma varredura em background, sem ninguém
+olhando), anexar uma pasta é um gesto ÚNICO com um seletor de pasta na
+tela. `IndexLocalFolderUseCase` recusa (400) o lote inteiro quando a
+quantidade de arquivos (`RAG_LOCAL_FILE_COUNT_LIMIT`, 500) ou os bytes
+somados (`RAG_LOCAL_TOTAL_BYTES_LIMIT`, 8 MiB) estouram — nunca trunca em
+silêncio, porque quem clicou "Anexar" pode escolher uma pasta menor. Um
+arquivo individual grande demais (`RAG_LOCAL_FILE_BYTES_LIMIT`, 512 KiB) ou
+de extensão não reconhecida (`RAG_LOCAL_ALLOWED_EXTENSIONS`, allowlist) é
+só PULADO (`filesSkipped`), nunca derruba o lote — a mesma distinção que
+`IndexProjectDocsUseCase` já faz implicitamente ao filtrar só `.md`.
+Caminho com `..` ou barra inicial é RECUSADO (400), nunca aceito
+silenciosamente, mesma disciplina de nunca confiar em caminho vindo do
+cliente (RN-092/095) mesmo quando ele "não deveria" conter isso.
+`apps/web/src/lib/rag-local-limits.ts` espelha os mesmos números no
+cliente, só como conveniência de UX (resumo antes de enviar) — quem
+garante de verdade é o servidor.
+
+- **Onde:** `apps/api/src/domain/rag/rag-search-limits.ts` (`RAG_LOCAL_*`),
+  `apps/api/src/application/use-cases/rag/index-local-folder.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/rag/index-local-folder.use-case.spec.ts`
+  (tetos de quantidade e bytes somados rejeitam; arquivo grande/binário é
+  pulado; caminho com `..`/barra inicial é recusado)
+- **ADR:** [0113](adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md)
+- **Origem:** pedido do dono do produto
+
+### RN-457 — `maintainer`, e reanexar é o MECANISMO de resincronizar — nunca o "Reindexar agora" genérico {#rn-457}
+
+`POST .../rag/local` exige `maintainer`, mesma régua de `POST .../rag/reindex`
+(RN-238): as duas chamam o provider de embedding e substituem o que o
+projeto já tinha indexado. `ReindexProjectUseCase` NÃO foi estendido para
+cobrir `local` — ele reindexa lendo de uma fonte que o SERVIDOR consegue
+revisitar (o repositório do projeto, o event log), e `local` não tem
+fonte nenhuma para revisitar: o texto só existe no navegador de quem
+anexou, e o servidor nunca guardou caminho de host nenhum (não há um).
+Chamar `deleteByScope(projectId, 'local')` no botão genérico apagaria a
+referência anexada sem ter como recriá-la — reanexar a pasta (novo
+upload) É o mecanismo de resincronizar, e é um botão deliberadamente
+separado. Os dois casos de uso carregam comentário cruzado explicando o
+porquê, para uma "correção" futura não religar os dois e apagar
+silenciosamente o material do usuário.
+
+- **Onde:** `apps/api/src/interfaces/http/rag/rag.controller.ts`
+  (`anexarPastaLocal`, `@RequireRole('maintainer')`),
+  `apps/api/src/application/use-cases/rag/reindex-project.use-case.ts`
+  (comentário "Por que `local` NÃO entra aqui")
+- **Teste:** `apps/api/test/interfaces/http/rag/rag.controller.spec.ts`
+- **ADR:** [0113](adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md)
+- **Origem:** pedido do dono do produto
+
+### RN-458 — Cobertura de `local` é forma PRÓPRIA, e `lastAttachedAt` é a ÚNICA exceção real ao "nunca Xmin" (RN-237) {#rn-458}
+
+`RagCoverage.local` não reusa `RagFileCoverage` (RN-237, ADR 0080): não há
+"total no repositório" pra comparar — uma pasta anexada não tem um total
+que o servidor possa recontar. `RagLocalCoverage` mostra o que está
+indexado AGORA (`filesIndexed`, `folderName`) e `lastAttachedAt`, um
+`MAX(chunks.created_at)` REAL sobre o escopo — a única exceção declarada
+à regra de nunca mostrar um "reindexado há Xmin" chutado, porque aqui o
+valor real EXISTE e é barato de calcular (mesmo `todosOsChunks` que
+`GetRagCoverageUseCase` já busca).
+
+- **Onde:** `apps/api/src/application/use-cases/rag/get-rag-coverage.use-case.ts`
+  (`RagLocalCoverage`), `apps/web/src/components/rag/RagCoveragePanel.tsx`
+- **Teste:** `apps/api/test/application/use-cases/rag/get-rag-coverage.use-case.spec.ts`,
+  `apps/web/src/components/rag/RagCoveragePanel.test.tsx`
+- **ADR:** [0113](adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md)
+- **Origem:** pedido do dono do produto
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -10818,6 +10923,8 @@ flag mudar EM VOO entre a leitura de status e o clique.
 | Login social: `state` inválido/expirado, ou de outro PROPÓSITO (fluxo de conexão de git) | recusado, nenhuma chamada ao provider nem escrita no banco (RN-273) |
 | Validar a necessidade sem `product_brief` nenhum na sessão | recusado (400) ANTES de gravar qualquer evento — não há o que validar ainda (RN-406) |
 | Converter `execution_mode` com dev agent trabalhando ou travado | recusado (409) ANTES de mexer no permissions.json ou no ciclo de vida do container — nunca migra um agente vivo (RN-447) |
+| Pasta local anexada estoura o teto de arquivos ou de bytes somados | recusado (400), o lote inteiro — nunca trunca em silêncio (RN-456) |
+| Arquivo individual da pasta local é grande demais ou de extensão não reconhecida | só PULADO (`filesSkipped`), nunca derruba o upload inteiro (RN-456) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

@@ -1405,8 +1405,13 @@ export interface WorkspaceSpendPorProvider {
 // paralelo, e um bloco novo no fim é o que menos colide.
 // ---------------------------------------------------------------------------
 
-/** Os três escopos honestos do índice (RN-219/232): nunca código-fonte, nunca PR. */
-export type RagChunkScope = 'docs' | 'adr' | 'session';
+/**
+ * Os QUATRO escopos honestos do índice (RN-219/232/454): nunca
+ * código-fonte do repositório, nunca PR. `local` (ADR 0113) é uma pasta do
+ * PRÓPRIO usuário anexada via upload do navegador — nunca um caminho de
+ * host.
+ */
+export type RagChunkScope = 'docs' | 'adr' | 'session' | 'local';
 
 /**
  * União discriminada por `kind` — o mesmo motivo do `ChunkOrigin` do
@@ -1465,13 +1470,29 @@ export interface RagSessionCoverage {
 }
 
 /**
+ * Cobertura do escopo `local` (RN-455, ADR 0113) — forma DIFERENTE de
+ * `RagFileCoverage`: não há "total real" pra comparar (a pasta só existe no
+ * navegador de quem anexou), então mostra o que está indexado AGORA.
+ * `lastAttachedAt` É um valor real (`MAX(created_at)`), a única exceção à
+ * regra "nunca Xmin" — ver o comentário de `RagCoverage` abaixo.
+ */
+export interface RagLocalCoverage {
+  filesIndexed: number;
+  folderName: string | null;
+  lastAttachedAt: string | null;
+}
+
+/**
  * Contagem REAL, nunca "reindexado há Xmin" (RN-237) — não existe coluna de
- * timestamp de indexação por escopo, e um número chutado mentiria.
+ * timestamp de indexação por escopo, e um número chutado mentiria. `local`
+ * é a exceção declarada: `lastAttachedAt` é um `MAX(created_at)` real, não
+ * um "reindexado há Xmin" chutado (RN-455).
  */
 export interface RagCoverage {
   docs: RagFileCoverage;
   adr: RagFileCoverage;
   session: RagSessionCoverage;
+  local: RagLocalCoverage;
   chunksTotal: number;
   chunksWithoutVector: number;
 }
@@ -1503,4 +1524,30 @@ export interface RagReindexReport {
   sessions: RagReindexSessionsReport;
   embeddingAvailable: boolean;
   embeddingReason?: string;
+}
+
+// ---------------------------------------------------------------------------
+// APÊNDICE — pasta local anexada (RN-455, ADR 0113). Escrito no FIM do bloco
+// pelo mesmo motivo dos apêndices acima: texto puro lido pelo NAVEGADOR
+// (`File.text()`), nunca um caminho de host.
+// ---------------------------------------------------------------------------
+
+export interface LocalFolderFile {
+  /** Caminho relativo dentro da pasta escolhida (de `File.webkitRelativePath`). */
+  path: string;
+  content: string;
+}
+
+export interface AttachLocalFolderRequest {
+  folderName: string;
+  files: LocalFolderFile[];
+}
+
+/** A resposta de `POST .../rag/local` — full rebuild idempotente do escopo `local`. */
+export interface AttachLocalFolderReport {
+  folderName: string;
+  filesIndexed: number;
+  filesSkipped: number;
+  chunksCreated: number;
+  embedding: RagIndexEmbeddingReport;
 }

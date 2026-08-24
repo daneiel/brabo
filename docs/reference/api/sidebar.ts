@@ -1026,6 +1026,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/rag-controller-anexar-pasta-local",
+          label: "Attaches a local folder (browser upload) as read-only reference (RN-455, ADR 0113)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/rag-controller-reindexar",
           label: "Reindexes the project's docs/ADR/sessions (idempotent full rebuild)",
           className: "api-method post",
