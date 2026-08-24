@@ -487,6 +487,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `agent.status` (veredito único por invocação). Fecha o item de backlog
   "N agentes online" no dashboard (RN-409, ADR 0097)
 
+### Documentação
+
+- **docs**: CLAUDE.md tinha ~170 KB, ~70% narrativa histórica de fase
+  CONCLUÍDA, sem prejuízo pra sessões que só precisam do estado vigente —
+  ele é lido em TODA sessão. A narrativa (`## Status` até o bloco anterior
+  a `## Stack`, todas as FASES 1–26b, PROGRAMA 16–26/28, RODADAS
+  exp001/exp003, agentes antecipados e o resto) foi MOVIDA, verbatim, para
+  `docs/explanation/historico-de-fases.md` — recorte mecânico, nenhuma
+  frase resumida, reescrita ou perdida (prova por reconstrução byte-a-byte
+  no PR). No lugar entram duas seções novas: "Histórico" (índice de uma
+  linha por fase/programa, com link pro arquivo novo) e "Estado atual e
+  aberto" (decisões de produto em aberto, cortes/pausas vigentes, lacunas
+  aceitas e pendências com dono humano — sem duplicar o que já fechou).
+  CLAUDE.md cai para a faixa de 30–45 KB.
+
 ### Correções
 
 - **api,engine**: corrigido o `413 request entity too large` que estourava
