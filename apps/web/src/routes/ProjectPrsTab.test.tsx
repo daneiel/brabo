@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ProjectPrsTab } from './ProjectPrsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
+import { ApiError } from '../lib/api-client';
 import type { CodePullRequestList, Epic, ProposedAction, Session, Task } from '../lib/api-types';
 // Instância REAL do app (mesmo motivo de `AgentCard.test.tsx`): sem
 // `I18nextProvider` no teste, o hook `useTranslation` cai no singleton
@@ -282,5 +283,40 @@ describe('ProjectPrsTab — botão Merge', () => {
 
     expect(await screen.findByText('#3 feat: C')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Merge' })).toBeNull();
+  });
+});
+
+describe('ProjectPrsTab — o gate do container não é erro genérico (achado de uso)', () => {
+  // Bug real: a aba PRs (diferente da aba Code, que PERGUNTA antes em
+  // `ProjectCodeTab.tsx`) chamava `getCodePullRequests` sem saber do portão
+  // do container (RN-105) e mostrava o 409 dele como erro transitório, com
+  // "Tentar de novo" — a afordância errada para um estado que só o
+  // Arquiteto resolve, decidindo a imagem.
+  it('409 do portão vira o mesmo estado dedicado da aba Code, não um banner com Tentar de novo', async () => {
+    getCodePullRequests.mockRejectedValue(
+      new ApiError(409, {
+        message:
+          'A aba Code ainda não está liberada: o Arquiteto não decidiu qual imagem de container sobe para este projeto.',
+      }),
+    );
+
+    montar();
+
+    expect(
+      await screen.findByText('A aba Code ainda não está liberada'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/o Arquiteto ainda não decidiu/i)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tentar de novo')).not.toBeInTheDocument();
+  });
+
+  it('erro de verdade (não o gate) continua com o banner e Tentar de novo', async () => {
+    getCodePullRequests.mockRejectedValue(new ApiError(500, { message: 'falha interna' }));
+
+    montar();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
+    expect(screen.queryByText('A aba Code ainda não está liberada')).not.toBeInTheDocument();
   });
 });

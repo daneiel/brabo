@@ -123,6 +123,24 @@ export function mensagemDaApi(erro: unknown, padrao = 'Erro inesperado'): string
 }
 
 /**
+ * `true` quando `erro` é o portão do container (RN-105) — o Arquiteto ainda
+ * não decidiu qual imagem sobe para o projeto. `ReadProjectCodeUseCase.alvo`
+ * é o funil ÚNICO por onde as sete leituras de código passam (árvore,
+ * arquivo, busca, diff, blame, lista de PRs, branches), e o 409 que ele
+ * levanta (`portaoDoContainer`) é a ÚNICA causa de `ConflictException` nesse
+ * caso de uso — o status sozinho já basta para identificar o estado, sem
+ * casar texto de mensagem (que muda de idioma e um dia diverge).
+ *
+ * Achado de uso: a aba PRs chamava `getCodePullRequests`/`getCodeDiff` sem
+ * saber disto, e mostrava esse 409 como erro transitório genérico com
+ * "Tentar de novo" — a mesma classe de erro que `ContainerImageGateNotice`
+ * (`components/ContainerImageGate.tsx`) resolve para a aba Code.
+ */
+export function isContainerImageGateError(erro: unknown): boolean {
+  return erro instanceof ApiError && erro.status === 409;
+}
+
+/**
  * Uma tentativa: monta os cabeçalhos com o token que houver agora.
  *
  * O access token vem de `auth.ts` (memória, 15 min). Se não houver nenhum, a
