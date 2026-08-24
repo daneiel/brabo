@@ -24,7 +24,7 @@ export type ChunkScope = 'docs' | 'adr' | 'session' | 'local';
  * Metadados de origem do trecho — tudo opcional porque quem decide o que
  * preencher é o pipeline de indexação, não este port.
  *
- * `uploadedBy`/`folderName` (RN-454, ADR 0113) só se aplicam a `scope:
+ * `uploadedBy`/`folderName` (RN-455, ADR 0113) só se aplicam a `scope:
  * 'local'` — quem anexou a pasta e o nome dela, para o painel de cobertura
  * poder mostrar "X arquivos de <folderName>" sem uma coluna nova.
  */
@@ -102,7 +102,7 @@ export abstract class ChunkRepository {
    * Apaga todos os chunks de UM escopo de arquivo (`docs`/`adr`/`local`) do
    * projeto — nunca `session`, que é sempre um recorte por SESSÃO
    * (`deleteBySession`), não por projeto inteiro (RN-231). `local`
-   * (RN-454) segue exatamente o mesmo desenho de `docs`/`adr`: full
+   * (RN-455) segue exatamente o mesmo desenho de `docs`/`adr`: full
    * rebuild por projeto, não por sessão.
    *
    * O pipeline de indexação (Onda 4) reindexa por FULL REBUILD: apaga o

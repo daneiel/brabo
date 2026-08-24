@@ -1,5 +1,5 @@
 /**
- * Tetos do upload de "pasta local anexada" (RN-454, ADR 0113), espelhando
+ * Tetos do upload de "pasta local anexada" (RN-455, ADR 0113), espelhando
  * `apps/api/src/domain/rag/rag-search-limits.ts` — os dois arquivos
  * PRECISAM ficar em sincronia manualmente (não há import cruzado entre
  * `apps/web` e `apps/api`, e `packages/shared` é só tipo por invariante

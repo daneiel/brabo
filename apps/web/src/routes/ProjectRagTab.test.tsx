@@ -165,7 +165,7 @@ describe('ProjectRagTab', () => {
     expect(screen.queryByRole('button', { name: /Anexar pasta local/ })).not.toBeInTheDocument();
   });
 
-  it('maintainer vê "Anexar pasta local" e abre o modal ao clicar (RN-454)', async () => {
+  it('maintainer vê "Anexar pasta local" e abre o modal ao clicar (RN-455)', async () => {
     listWorkspaces.mockResolvedValue(comPapel('maintainer'));
     const user = userEvent.setup();
     montar();

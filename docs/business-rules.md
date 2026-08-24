@@ -10710,7 +10710,7 @@ silenciosa.
 
 ---
 
-## Pasta local anexada vira o quarto escopo do índice RAG, lido pelo NAVEGADOR (RN-454..457, ADR 0113)
+## Pasta local anexada vira o quarto escopo do índice RAG, lido pelo NAVEGADOR (RN-455..457, ADR 0113)
 
 Pedido do dono do produto: anexar uma pasta da PRÓPRIA máquina do usuário a
 um projeto como referência de leitura para os agentes — sem exigir o CLI
@@ -10723,7 +10723,7 @@ um, para nenhum site. O que atravessa a rede é texto que o navegador já
 tinha o direito de ler, o mesmo modelo de confiança de qualquer upload de
 arquivo comum.
 
-### RN-454 — `chunks.scope` ganha `'local'`, reusando o pipeline de RAG inteiro {#rn-454}
+### RN-455 — `chunks.scope` ganha `'local'`, reusando o pipeline de RAG inteiro {#rn-455}
 
 `ChunkScope` passa de `'docs' | 'adr' | 'session'` para incluir `'local'`
 (migração `0052`, `ALTER TYPE ... ADD VALUE`) — aditivo, sem migração de
@@ -10744,7 +10744,7 @@ sabia renderizar.
 - **ADR:** [0113](adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md)
 - **Origem:** pedido do dono do produto
 
-### RN-455 — Teto agregado REJEITA (400) o upload inteiro; arquivo individual grande/binário só é PULADO {#rn-455}
+### RN-456 — Teto agregado REJEITA (400) o upload inteiro; arquivo individual grande/binário só é PULADO {#rn-456}
 
 Diferente de `docs`/`adr` (uma varredura em background, sem ninguém
 olhando), anexar uma pasta é um gesto ÚNICO com um seletor de pasta na
@@ -10771,7 +10771,7 @@ garante de verdade é o servidor.
 - **ADR:** [0113](adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md)
 - **Origem:** pedido do dono do produto
 
-### RN-456 — `maintainer`, e reanexar é o MECANISMO de resincronizar — nunca o "Reindexar agora" genérico {#rn-456}
+### RN-457 — `maintainer`, e reanexar é o MECANISMO de resincronizar — nunca o "Reindexar agora" genérico {#rn-457}
 
 `POST .../rag/local` exige `maintainer`, mesma régua de `POST .../rag/reindex`
 (RN-238): as duas chamam o provider de embedding e substituem o que o
@@ -10795,7 +10795,7 @@ silenciosamente o material do usuário.
 - **ADR:** [0113](adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md)
 - **Origem:** pedido do dono do produto
 
-### RN-457 — Cobertura de `local` é forma PRÓPRIA, e `lastAttachedAt` é a ÚNICA exceção real ao "nunca Xmin" (RN-237) {#rn-457}
+### RN-458 — Cobertura de `local` é forma PRÓPRIA, e `lastAttachedAt` é a ÚNICA exceção real ao "nunca Xmin" (RN-237) {#rn-458}
 
 `RagCoverage.local` não reusa `RagFileCoverage` (RN-237, ADR 0080): não há
 "total no repositório" pra comparar — uma pasta anexada não tem um total
@@ -10840,8 +10840,8 @@ valor real EXISTE e é barato de calcular (mesmo `todosOsChunks` que
 | Login social: `state` inválido/expirado, ou de outro PROPÓSITO (fluxo de conexão de git) | recusado, nenhuma chamada ao provider nem escrita no banco (RN-273) |
 | Validar a necessidade sem `product_brief` nenhum na sessão | recusado (400) ANTES de gravar qualquer evento — não há o que validar ainda (RN-406) |
 | Converter `execution_mode` com dev agent trabalhando ou travado | recusado (409) ANTES de mexer no permissions.json ou no ciclo de vida do container — nunca migra um agente vivo (RN-447) |
-| Pasta local anexada estoura o teto de arquivos ou de bytes somados | recusado (400), o lote inteiro — nunca trunca em silêncio (RN-455) |
-| Arquivo individual da pasta local é grande demais ou de extensão não reconhecida | só PULADO (`filesSkipped`), nunca derruba o upload inteiro (RN-455) |
+| Pasta local anexada estoura o teto de arquivos ou de bytes somados | recusado (400), o lote inteiro — nunca trunca em silêncio (RN-456) |
+| Arquivo individual da pasta local é grande demais ou de extensão não reconhecida | só PULADO (`filesSkipped`), nunca derruba o upload inteiro (RN-456) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

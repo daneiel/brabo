@@ -57,7 +57,7 @@ export class HybridSearchRequestDto {
 
 /**
  * One file already read by the BROWSER (`File.text()`, `webkitRelativePath`)
- * — never a host path (RN-454, ADR 0113). `content` is plain UTF-8 text, not
+ * — never a host path (RN-455, ADR 0113). `content` is plain UTF-8 text, not
  * base64, to avoid the ~33% transport inflation for what is reference text,
  * not binary. `MaxLength` on `content` is a structural pre-check (roughly
  * `RAG_LOCAL_FILE_BYTES_LIMIT` chars, a safe upper bound for UTF-8 where a
@@ -81,7 +81,7 @@ export class LocalFolderFileDto {
   content!: string;
 }
 
-/** O corpo de `POST /projects/:projectId/rag/local` (RN-454, ADR 0113). */
+/** O corpo de `POST /projects/:projectId/rag/local` (RN-455, ADR 0113). */
 export class AttachLocalFolderRequestDto {
   @ApiProperty({
     example: 'brabo',

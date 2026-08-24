@@ -2219,7 +2219,7 @@ risco (nunca converte com um agente `working`) mas não elimina: um agente
 `idle` entre tasks pode estar sentado sobre um diff sujo, e nada aqui
 inspeciona limpeza de working tree antes de converter.
 
-## Pasta local anexada como referência do Chat RAG (2026-08-23, RN-454..457, ADR 0113)
+## Pasta local anexada como referência do Chat RAG (2026-08-23, RN-455..457, ADR 0113)
 Pedido do dono do produto: anexar uma pasta da PRÓPRIA máquina do usuário a
 um projeto como referência de LEITURA para os agentes — sem o CLI
 `brabo-runner` (ADR 0103). Explicitamente NÃO é execução/workspace de
@@ -2244,11 +2244,11 @@ quando os tetos AGREGADOS estouram (quantidade de arquivos, bytes
 somados), nunca trunca em silêncio: é um gesto ÚNICO do usuário com um
 seletor de pasta na tela, não uma varredura em background. Arquivo
 individual grande demais ou de extensão não reconhecida só é PULADO
-(`filesSkipped`), nunca derruba o lote (RN-455). `origemDoChunk` não
+(`filesSkipped`), nunca derruba o lote (RN-456). `origemDoChunk` não
 precisou de nenhum ramo novo: `local` carrega `sourcePath` como
 `docs`/`adr`, cai no `kind: 'file'` que a citação já sabia renderizar.
 
-**Nunca entra no "Reindexar agora" genérico (RN-456)**: `ReindexProjectUseCase`
+**Nunca entra no "Reindexar agora" genérico (RN-457)**: `ReindexProjectUseCase`
 reindexa lendo de uma fonte que o SERVIDOR consegue revisitar (repositório
 do projeto, event log); `local` não tem fonte nenhuma pra revisitar — o
 texto só existe no navegador de quem anexou. Reanexar a pasta (novo
@@ -2259,7 +2259,7 @@ nos dois casos de uso apontando um pro outro e pro ADR 0113, pra uma
 cobertura (`RagCoverage.local`) é forma PRÓPRIA — não há "total no
 repositório" pra comparar — e `lastAttachedAt` é a ÚNICA exceção real à
 regra "nunca Xmin" (RN-237): um `MAX(chunks.created_at)` de verdade, não
-chutado (RN-457).
+chutado (RN-458).
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector;

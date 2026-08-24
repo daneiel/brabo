@@ -93,7 +93,7 @@ export const RAG_SEARCH_WEIGHT_LEXICAL = 0.4;
 export const RAG_SEARCH_SCORE_THRESHOLD = 0.2;
 
 // ---------------------------------------------------------------------------
-// Pasta local anexada (ADR 0113, RN-454) — upload do NAVEGADOR, um gesto
+// Pasta local anexada (ADR 0113, RN-455) — upload do NAVEGADOR, um gesto
 // ÚNICO com um seletor de pasta na frente, não uma varredura em background.
 // Por isso a régua é REJEITAR (400) acima do teto em vez de truncar em
 // silêncio como `docs`/`adr`: quem clicou "Anexar" está olhando a tela e

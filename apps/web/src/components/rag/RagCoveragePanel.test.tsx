@@ -80,7 +80,7 @@ describe('RagCoveragePanel', () => {
     expect(screen.getByText('nenhuma pasta anexada')).toBeInTheDocument();
   });
 
-  it('caminho feliz: pasta local anexada mostra o nome real e a data REAL do último upload (RN-454)', () => {
+  it('caminho feliz: pasta local anexada mostra o nome real e a data REAL do último upload (RN-455)', () => {
     montar(
       makeCoverage({
         local: {

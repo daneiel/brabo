@@ -91,7 +91,7 @@ describe('RagCitationCard', () => {
     expect(screen.getByText(/vetor — · léxico —/)).toBeInTheDocument();
   });
 
-  it('escopo `local` (RN-454, ADR 0113) é `kind: "file"`, mesma renderização de `docs`/`adr`', () => {
+  it('escopo `local` (RN-455, ADR 0113) é `kind: "file"`, mesma renderização de `docs`/`adr`', () => {
     const hit = makeHit({
       scope: 'local',
       origin: { kind: 'file', sourcePath: 'src/index.ts' },

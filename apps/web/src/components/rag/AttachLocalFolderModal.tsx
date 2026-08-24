@@ -25,7 +25,7 @@ interface Preview {
 }
 
 /**
- * "Anexar pasta local" (RN-454, ADR 0113) — o navegador lê o CONTEÚDO dos
+ * "Anexar pasta local" (RN-455, ADR 0113) — o navegador lê o CONTEÚDO dos
  * arquivos escolhidos (`<input webkitdirectory>` + `File.text()`) e envia
  * como texto puro. Nenhum caminho de máquina do usuário atravessa a rede —
  * é a distinção completa com o runner (ADR 0103/0107) que este componente

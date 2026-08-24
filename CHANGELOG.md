@@ -7,7 +7,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Novidades
 
 - **api,web**: anexar uma pasta LOCAL da própria máquina do usuário a um
-  projeto como referência de leitura para os agentes (RN-454..457,
+  projeto como referência de leitura para os agentes (RN-455..457,
   ADR 0113) — sem o CLI `brabo-runner`, diferente de `execution_mode:
   runner`. O navegador lê o conteúdo dos arquivos (`File.text()`) e envia
   como texto puro; nenhum caminho de host atravessa a rede. `chunks.scope`

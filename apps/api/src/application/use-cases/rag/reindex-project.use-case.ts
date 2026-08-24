@@ -35,7 +35,7 @@ export interface ReindexProjectReport {
  * desta onda (ADR 0079: "reindexar é responsabilidade de quem escrever o
  * pipeline", e o pipeline aqui é sob demanda, não reativo).
  *
- * ## Por que `local` (ADR 0113/RN-454) NÃO entra aqui
+ * ## Por que `local` (ADR 0113/RN-455) NÃO entra aqui
  *
  * Este caso de uso reindexa lendo de uma fonte que o SERVIDOR consegue
  * revisitar — o repositório do projeto (`docs`/`adr`) e o event log

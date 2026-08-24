@@ -1461,7 +1461,7 @@ export interface RagSessionCoverage {
 }
 
 /**
- * Cobertura do escopo `local` (RN-454, ADR 0113) — forma DIFERENTE de
+ * Cobertura do escopo `local` (RN-455, ADR 0113) — forma DIFERENTE de
  * `RagFileCoverage`: não há "total real" pra comparar (a pasta só existe no
  * navegador de quem anexou), então mostra o que está indexado AGORA.
  * `lastAttachedAt` É um valor real (`MAX(created_at)`), a única exceção à
@@ -1477,7 +1477,7 @@ export interface RagLocalCoverage {
  * Contagem REAL, nunca "reindexado há Xmin" (RN-237) — não existe coluna de
  * timestamp de indexação por escopo, e um número chutado mentiria. `local`
  * é a exceção declarada: `lastAttachedAt` é um `MAX(created_at)` real, não
- * um "reindexado há Xmin" chutado (RN-454).
+ * um "reindexado há Xmin" chutado (RN-455).
  */
 export interface RagCoverage {
   docs: RagFileCoverage;
@@ -1518,7 +1518,7 @@ export interface RagReindexReport {
 }
 
 // ---------------------------------------------------------------------------
-// APÊNDICE — pasta local anexada (RN-454, ADR 0113). Escrito no FIM do bloco
+// APÊNDICE — pasta local anexada (RN-455, ADR 0113). Escrito no FIM do bloco
 // pelo mesmo motivo dos apêndices acima: texto puro lido pelo NAVEGADOR
 // (`File.text()`), nunca um caminho de host.
 // ---------------------------------------------------------------------------

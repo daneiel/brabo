@@ -49,7 +49,7 @@ import {
  * Reindexação automática por push/fechamento de sessão — é decisão futura
  * (ADR 0079/0080), não desta rota. `reindex` é sempre disparado por alguém.
  *
- * ## `local` (ADR 0113, RN-454)
+ * ## `local` (ADR 0113, RN-455)
  *
  * `POST .../rag/local` é o quarto escopo: uma pasta do PRÓPRIO usuário, lida
  * pelo NAVEGADOR e enviada como texto puro — nenhum caminho de host chega
@@ -119,7 +119,7 @@ export class RagController {
   @RequireRole('maintainer')
   @ApiOperation({
     summary:
-      'Attaches a local folder (browser upload) as read-only reference (RN-454, ADR 0113)',
+      'Attaches a local folder (browser upload) as read-only reference (RN-455, ADR 0113)',
     description:
       'Text content already read by the browser (`<input webkitdirectory>`), never a host path — ' +
       'that distinction is the whole point of ADR 0113. Idempotent full rebuild of the `local` scope: ' +
@@ -152,7 +152,7 @@ export class RagController {
       "project's sessions against how many have a chunk. Does not include " +
       '"N minutes ago" for those three scopes — there is no per-scope ' +
       'indexing timestamp column, and a guessed number would lie (same rule ' +
-      'as ADR 0042 for model rating). `local` (RN-454) is the one exception: ' +
+      'as ADR 0042 for model rating). `local` (RN-455) is the one exception: ' +
       '`lastAttachedAt` is a real `MAX(created_at)` over that scope, because ' +
       'a browser upload has no repository state to compare against.',
   })

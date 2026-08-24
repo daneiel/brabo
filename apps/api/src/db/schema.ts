@@ -2187,7 +2187,7 @@ const tsvector = customType<{ data: string }>({
   },
 });
 
-// Os QUATRO escopos honestos do índice (RN-219, ampliado pela RN-454):
+// Os QUATRO escopos honestos do índice (RN-219, ampliado pela RN-455):
 // documentação, ADR, sessão e — desde o ADR 0113 — `local`, uma pasta do
 // PRÓPRIO usuário anexada como referência de leitura via upload do
 // navegador (nunca um caminho de host, nunca o mesmo mecanismo do runner —

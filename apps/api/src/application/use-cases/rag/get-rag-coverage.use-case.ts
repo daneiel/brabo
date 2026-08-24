@@ -21,7 +21,7 @@ export interface RagSessionCoverage {
 }
 
 /**
- * Cobertura do escopo `local` (RN-454, ADR 0113) — não há "total real" para
+ * Cobertura do escopo `local` (RN-455, ADR 0113) — não há "total real" para
  * comparar (a pasta só existe no navegador de quem anexou, o servidor nunca
  * a viu antes do upload), então esta forma é DIFERENTE de `RagFileCoverage`:
  * conta o que está indexado AGORA, nunca um "de quantos". `lastAttachedAt` é

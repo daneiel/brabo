@@ -34,7 +34,7 @@ export interface IndexLocalFolderReport {
 }
 
 /**
- * Indexa uma pasta LOCAL anexada pelo navegador para o Chat RAG (RN-454,
+ * Indexa uma pasta LOCAL anexada pelo navegador para o Chat RAG (RN-455,
  * ADR 0113) — o quarto escopo honesto do índice, ao lado de `docs`/`adr`/
  * `session`.
  *

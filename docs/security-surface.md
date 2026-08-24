@@ -246,7 +246,7 @@ reason in the URL.
   `reindex` is `role:maintainer` — it triggers N calls to the project's
   repository and to the embedding provider, the same "changes what the
   product spends without asking" that already justifies the higher role
-  on other expensive-trigger routes. `local` (RN-454, ADR 0113) is
+  on other expensive-trigger routes. `local` (RN-455, ADR 0113) is
   `role:maintainer` too, same reasoning: it calls the embedding provider
   and replaces what the project has indexed for that scope. Its body is
   browser-read TEXT, never a host path.

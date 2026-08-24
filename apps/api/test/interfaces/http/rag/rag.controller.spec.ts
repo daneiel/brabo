@@ -18,7 +18,7 @@ const USUARIO: User = {
 };
 
 /**
- * `RagController.anexarPastaLocal` (RN-454, ADR 0113) — o controller só
+ * `RagController.anexarPastaLocal` (RN-455, ADR 0113) — o controller só
  * repassa `projectId`/`user.id`/o corpo pro caso de uso, mesma forma de
  * `InternalRagController.buscar`. O teste cobre o QUE é repassado, não a
  * lógica de indexação (coberta em `index-local-folder.use-case.spec.ts`).

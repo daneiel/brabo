@@ -19,7 +19,7 @@ import type {
 
 /**
  * Respostas do pipeline de indexação e da busca híbrida do Chat RAG
- * (PROGRAMA 28, Onda 4, frente G2 — RN-231..234, ADR 0080; RN-454/ADR 0113
+ * (PROGRAMA 28, Onda 4, frente G2 — RN-231..234, ADR 0080; RN-455/ADR 0113
  * ampliou pra `local`).
  */
 
@@ -157,7 +157,7 @@ export const _chavesIndexSession: MesmasChaves<
   Wire<IndexSessionReport>
 > = true;
 
-/** A resposta de `POST .../rag/local` (RN-454, ADR 0113). */
+/** A resposta de `POST .../rag/local` (RN-455, ADR 0113). */
 export class AttachLocalFolderResponseDto implements Wire<IndexLocalFolderReport> {
   @ApiProperty() folderName!: string;
   @ApiProperty() filesIndexed!: number;
@@ -203,7 +203,7 @@ export class RagLocalCoverageResponseDto implements Wire<RagLocalCoverage> {
     type: String,
     nullable: true,
     description:
-      'Real `MAX(chunks.created_at)` for this scope — never a guessed "N minutes ago" (RN-454).',
+      'Real `MAX(chunks.created_at)` for this scope — never a guessed "N minutes ago" (RN-455).',
   })
   lastAttachedAt!: string | null;
 }

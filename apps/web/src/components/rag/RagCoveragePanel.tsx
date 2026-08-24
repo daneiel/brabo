@@ -35,7 +35,7 @@ function CartaoDeArquivos({ rotulo, cobertura }: { rotulo: string; cobertura: Ra
  * busca ATUAL: um chunk sem vetor continua achável só pelo sinal léxico até a
  * próxima reindexação com o provider de embedding no ar.
  *
- * O cartão `local` (RN-454, ADR 0113) é a ÚNICA exceção declarada à régua
+ * O cartão `local` (RN-455, ADR 0113) é a ÚNICA exceção declarada à régua
  * "nunca Xmin": `lastAttachedAt` é um `MAX(created_at)` real sobre esse
  * escopo, porque uma pasta anexada não tem "total no repositório" pra
  * comparar — mostrar o que está indexado AGORA é a única leitura honesta.
