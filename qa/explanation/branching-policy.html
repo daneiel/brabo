@@ -1,25 +1,29 @@
-<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/branching-policy" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Política de branches e versionamento | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/qa/explanation/branching-policy /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Política de branches e versionamento | Brabo"/><meta data-rh=true name=description content="A escada dev → qa → rc → main, a taxonomia de branches, quem nasce de onde e por que a política é mecanizada em vez de combinada."/><meta data-rh=true property=og:description content="A escada dev → qa → rc → main, a taxonomia de branches, quem nasce de onde e por que a política é mecanizada em vez de combinada."/><meta data-rh=true name=keywords content=branches,gitflow,promoção,hotfix,versionamento,release /><link data-rh=true rel=icon href=/brabo/qa/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/qa/explanation/branching-policy /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/explanation/branching-policy hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/explanation/branching-policy hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/qa/explanation/branching-policy","name":"Política de branches","position":1}]}</script><link rel=stylesheet href=/brabo/qa/assets/css/styles.bae5b9bf.css /><script src=/brabo/qa/assets/js/runtime~main.73f4045d.js defer></script><script src=/brabo/qa/assets/js/main.0ccf275a.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/branching-policy" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Branch and versioning policy | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/qa/explanation/branching-policy /><meta data-rh=true property=og:locale content=en /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Branch and versioning policy | Brabo"/><meta data-rh=true name=description content="The dev → qa → rc → main ladder, the branch taxonomy, who's born where, and why the policy is mechanized instead of agreed upon."/><meta data-rh=true property=og:description content="The dev → qa → rc → main ladder, the branch taxonomy, who's born where, and why the policy is mechanized instead of agreed upon."/><meta data-rh=true name=keywords content=branches,gitflow,promotion,hotfix,versioning,release /><link data-rh=true rel=icon href=/brabo/qa/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/qa/explanation/branching-policy /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/explanation/branching-policy hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/pt-BR/explanation/branching-policy hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/explanation/branching-policy hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/qa/explanation/branching-policy","name":"Branching policy","position":1}]}</script><link rel=stylesheet href=/brabo/qa/assets/css/styles.bae5b9bf.css /><script src=/brabo/qa/assets/js/runtime~main.b911d2b3.js defer></script><script src=/brabo/qa/assets/js/main.d990c184.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-6fd")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/qa/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_aRZD href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/qa/><div class=navbar__logo><img src=/brabo/qa/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--light_TNiM"/><img src=/brabo/qa/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--dark__fCd"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/qa/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/qa/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/qa/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>qa</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><div class="toggle_B7FD colorModeToggle_i51f"><button class="clean-btn toggleButton_iBXZ toggleButtonDisabled_g7aN" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f lightToggleIcon_IoAw"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f darkToggleIcon_CFpV"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f systemToggleIcon_FD32"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_H1qa><div class="navbar__search searchBarContainer_E7mJ" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_Fmbc" value="" /><div class="loadingRing_yYGt searchBarLoadingRing_TCpJ"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_sSUF"><div class=docsWrapper__5pg><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_woZa" type=button></button><div class=docRoot_jND2><aside class="theme-doc-sidebar-container docSidebarContainer_tVYW"><div class=sidebarViewport_gVXc><div class=sidebar_vRsD><nav aria-label="Painel lateral de documentos" class="menu thin-scrollbar menu_IacH"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/><span class=categoryLinkLabel_U9or>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/><span class=linkLabel_pWVb>Introdução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/getting-started><span class=linkLabel_pWVb>Primeiros passos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/architecture><span class=categoryLinkLabel_U9or>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/architecture><span class=linkLabel_pWVb>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist" tabindex=0 href=/brabo/qa/adr><span class=categoryLinkLabel_U9or>Decisões (ADR)</span></a><button aria-label="Expandir a categoria 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/business-rules><span class=categoryLinkLabel_U9or>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/business-rules><span class=linkLabel_pWVb>Regras de negócio</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/reference/configuration><span class=categoryLinkLabel_U9or>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/configuration><span class=linkLabel_pWVb>Configuração</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/events><span class=linkLabel_pWVb>Eventos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/permissions><span class=linkLabel_pWVb>Permissões</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/artifacts><span class=linkLabel_pWVb>Artefatos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/git-providers><span class=linkLabel_pWVb>Providers de git</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/internal-api><span class=linkLabel_pWVb>API interna</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/scripts><span class=linkLabel_pWVb>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/rulesets><span class=linkLabel_pWVb>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/security-surface><span class=linkLabel_pWVb>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/reference/api/brabo-api><span class=categoryLinkLabel_U9or>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/qa/explanation/documentation-workflow><span class=categoryLinkLabel_U9or>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/documentation-workflow><span class=linkLabel_pWVb>Sincronização de docs</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/qa/explanation/branching-policy><span class=linkLabel_pWVb>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/observability><span class=linkLabel_pWVb>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/primeiro-dogfooding><span class=linkLabel_pWVb>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/execucao-real-hello-world><span class=linkLabel_pWVb>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/achados-execucao-real><span class=linkLabel_pWVb>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/backlog><span class=linkLabel_pWVb>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/validacao-fase-12><span class=linkLabel_pWVb>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/validacao-real><span class=linkLabel_pWVb>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/aceite-providers><span class=linkLabel_pWVb>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/gates><span class=linkLabel_pWVb>Os gates, e como eles são medidos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/runbook><span class=categoryLinkLabel_U9or>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/runbook><span class=linkLabel_pWVb>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/glossary><span class=categoryLinkLabel_U9or>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/glossary><span class=linkLabel_pWVb>Glossário</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_U9or>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_SmZv><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_XH1Q"><div class=docItemContainer_uk13><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_g2_L" aria-label=Trilha><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Página Inicial" class=breadcrumbs__link href=/brabo/qa/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_ILC1><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 Explicação</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Política de branches</span></ul></nav><div class="tocCollapsible_sC5p theme-doc-toc-mobile tocMobile_jNpd"><button type=button class="clean-btn tocCollapsibleButton_sMs7">Nesta página</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Política de branches e versionamento</h1></header>
-<p>Esta página é a <strong>fonte</strong> da política. Os workflows que a aplicam saem daqui —
-se um mecanismo divergir do que está escrito, o mecanismo está errado.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=por-que-mecanizar>Por que mecanizar<a href=#por-que-mecanizar class=hash-link aria-label="Link direto para Por que mecanizar" title="Link direto para Por que mecanizar" translate=no>​</a></h2>
-<p>Política de branches combinada em reunião dura até a primeira sexta-feira à
-noite. A pressa não é má-fé: é que a regra vive na cabeça das pessoas, e cabeça
-sob pressão otimiza para o curto prazo.</p>
-<p>Então a política aqui <strong>não pede colaboração</strong> — ela é aplicada por CI. Não por
-desconfiança, mas porque regra que depende de disciplina individual não
-sobrevive a incidente, e é exatamente durante o incidente que ela mais importa.</p>
-<p>Duas consequências que assumimos de propósito:</p>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-6fd")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/qa/img/logo.svg /><div role=region aria-label="Skip to main content"><a class=skipToContent_aRZD href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/qa/><div class=navbar__logo><img src=/brabo/qa/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--light_TNiM"/><img src=/brabo/qa/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--dark__fCd"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/qa/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/qa/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/qa/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>qa</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><div class="toggle_B7FD colorModeToggle_i51f"><button class="clean-btn toggleButton_iBXZ toggleButtonDisabled_g7aN" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f lightToggleIcon_IoAw"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f darkToggleIcon_CFpV"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f systemToggleIcon_FD32"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_H1qa><div class="navbar__search searchBarContainer_E7mJ" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_Fmbc" value="" /><div class="loadingRing_yYGt searchBarLoadingRing_TCpJ"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_sSUF"><div class=docsWrapper__5pg><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_woZa" type=button></button><div class=docRoot_jND2><aside class="theme-doc-sidebar-container docSidebarContainer_tVYW"><div class=sidebarViewport_gVXc><div class=sidebar_vRsD><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_IacH"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/><span class=categoryLinkLabel_U9or>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/><span class=linkLabel_pWVb>Introduction</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/getting-started><span class=linkLabel_pWVb>Getting Started</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/architecture><span class=categoryLinkLabel_U9or>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/architecture><span class=linkLabel_pWVb>Architecture</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist" tabindex=0 href=/brabo/qa/adr><span class=categoryLinkLabel_U9or>Decisões (ADR)</span></a><button aria-label="Expand sidebar category 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/business-rules><span class=categoryLinkLabel_U9or>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/business-rules><span class=linkLabel_pWVb>Regras de negócio</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/reference/configuration><span class=categoryLinkLabel_U9or>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/configuration><span class=linkLabel_pWVb>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/events><span class=linkLabel_pWVb>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/permissions><span class=linkLabel_pWVb>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/artifacts><span class=linkLabel_pWVb>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/git-providers><span class=linkLabel_pWVb>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/internal-api><span class=linkLabel_pWVb>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/scripts><span class=linkLabel_pWVb>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/rulesets><span class=linkLabel_pWVb>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/security-surface><span class=linkLabel_pWVb>Api's Exposed Surface</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/reference/api/brabo-api><span class=categoryLinkLabel_U9or>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/qa/explanation/documentation-workflow><span class=categoryLinkLabel_U9or>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/documentation-workflow><span class=linkLabel_pWVb>Docs sync</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/qa/explanation/branching-policy><span class=linkLabel_pWVb>Branching policy</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/observability><span class=linkLabel_pWVb>Observability</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/primeiro-dogfooding><span class=linkLabel_pWVb>First dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/execucao-real-hello-world><span class=linkLabel_pWVb>Real execution (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/achados-execucao-real><span class=linkLabel_pWVb>Findings from the real execution of the pipeline</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/backlog><span class=linkLabel_pWVb>Triaged backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/validacao-fase-12><span class=linkLabel_pWVb>Phase 12 validation</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/validacao-real><span class=linkLabel_pWVb>Real validation (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/aceite-providers><span class=linkLabel_pWVb>Provider acceptance</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/gates><span class=linkLabel_pWVb>The gates, and how they're measured</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_pWVb>Audit: fluxo.yml × code (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/historico-de-fases><span class=linkLabel_pWVb>Histórico de fases</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/runbook><span class=categoryLinkLabel_U9or>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/runbook><span class=linkLabel_pWVb>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/glossary><span class=categoryLinkLabel_U9or>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/glossary><span class=linkLabel_pWVb>Glossary</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_U9or>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_SmZv><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_XH1Q"><div class=docItemContainer_uk13><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_g2_L" aria-label=Breadcrumbs><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Home page" class=breadcrumbs__link href=/brabo/qa/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_ILC1><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 Explicação</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Branching policy</span></ul></nav><div class="tocCollapsible_sC5p theme-doc-toc-mobile tocMobile_jNpd"><button type=button class="clean-btn tocCollapsibleButton_sMs7">On this page</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Branch and versioning policy</h1></header>
+<p>This page is the <strong>source</strong> of the policy. The workflows that apply it
+derive from here — if a mechanism diverges from what's written, the
+mechanism is wrong.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=why-mechanize-it>Why mechanize it<a href=#why-mechanize-it class=hash-link aria-label="Direct link to Why mechanize it" title="Direct link to Why mechanize it" translate=no>​</a></h2>
+<p>A branching policy agreed upon in a meeting survives until the first
+Friday night. The rush isn't bad faith: it's that the rule lives in
+people's heads, and a head under pressure optimizes for the short term.</p>
+<p>So the policy here <strong>doesn't ask for cooperation</strong> — it's enforced by CI.
+Not out of distrust, but because a rule that depends on individual
+discipline doesn't survive an incident, and it's exactly during an
+incident that it matters most.</p>
+<p>Two consequences we accept on purpose:</p>
 <ul>
-<li class=""><strong>O PR fica mais burocrático.</strong> Nome de branch errado reprova. É o custo.</li>
-<li class=""><strong>A mensagem de erro tem que ensinar.</strong> Um check que só diz "inválido" treina
-as pessoas a contornar. Todo erro cita a regra, o que veio, e o exemplo
-certo.</li>
+<li class=""><strong>The PR becomes more bureaucratic.</strong> A wrong branch name fails the
+check. That's the cost.</li>
+<li class=""><strong>The error message has to teach.</strong> A check that only says "invalid"
+trains people to work around it. Every error cites the rule, what came
+in, and the correct example.</li>
 </ul>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-escada>A escada<a href=#a-escada class=hash-link aria-label="Link direto para A escada" title="Link direto para A escada" translate=no>​</a></h2>
-<p>Três branches permanentes, <strong>uma por ambiente</strong>. Código sobe um degrau por vez.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=the-ladder>The ladder<a href=#the-ladder class=hash-link aria-label="Direct link to The ladder" title="Direct link to The ladder" translate=no>​</a></h2>
+<p>Three permanent branches, <strong>one per environment</strong>. Code climbs one step
+at a time.</p>
 <!-- -->
 
 
@@ -46,33 +50,36 @@ certo.</li>
 
 
 
-<table><thead><tr><th>branch<th>ambiente<th>o que significa estar aqui<tbody><tr><td><code>dev</code><td>desenvolvimento<td>integrado, testado por CI<tr><td><code>qa</code><td>homologação<td>em validação funcional<tr><td><code>main</code><td>produção<td>o que está no ar</table>
-<p>Havia um quarto degrau, <code>rc</code> (preprod), entre <code>qa</code> e <code>main</code>. Foi removido: com
-um mantenedor e um ciclo curto, o degrau a mais custava uma promoção inteira e
-um ambiente para separar "validado" de "quase pronto" — distinção que não
-estava pagando o próprio custo. <code>qa</code> passa a ser o único portão antes de
-produção.</p>
-<p>A remoção levou tempo para chegar ao fim. O <code>pr-police</code> passou a operar com
-três degraus imediatamente, mas o <strong>bootstrap de Gitflow</strong> continuou criando
-<code>rc</code>, protegendo <code>rc</code> e commitando no repositório do usuário um
-<code>branching-policy.md</code> que ensinava a escada de quatro — o produto documentando
-para quem o usa uma política que ele mesmo tinha abandonado. Foi o achado #3 do
-<a class="" href=/brabo/qa/explanation/primeiro-dogfooding>primeiro dogfooding</a>, fechado depois
+<table><thead><tr><th>branch<th>environment<th>what being here means<tbody><tr><td><code>dev</code><td>development<td>integrated, tested by CI<tr><td><code>qa</code><td>staging<td>under functional validation<tr><td><code>main</code><td>production<td>what's live</table>
+<p>There used to be a fourth step, <code>rc</code> (pre-prod), between <code>qa</code> and <code>main</code>.
+It was removed: with a single maintainer and a short cycle, the extra step
+cost a whole promotion and an environment to separate "validated" from
+"almost ready" — a distinction that wasn't paying for itself. <code>qa</code> becomes
+the only gate before production.</p>
+<p>The removal took a while to fully land. <code>pr-police</code> started operating
+with three steps immediately, but the <strong>Gitflow bootstrap</strong> kept creating
+<code>rc</code>, protecting <code>rc</code> and committing a <code>branching-policy.md</code> into the
+user's repository that taught the four-step ladder — the product
+documenting, for whoever used it, a policy it had itself already dropped.
+It was finding #3 of the
+<a class="" href=/brabo/qa/explanation/primeiro-dogfooding>first dogfooding round</a>, closed afterward
 (<a class="" href=/brabo/qa/business-rules#rn-029>RN-029</a>).</p>
-<p>Duas pontas ficaram de pé de propósito, e por motivos diferentes: o valor
-<code>create_rc_branch</code> continua no enum <code>bootstrap_step</code> do banco (bootstraps já
-rodados têm linhas com ele) e <code>rc</code> continua na lista de <strong>merge protegido</strong> —
-ver a nota em <a class="" href=/brabo/qa/reference/permissions>permissions.md</a>.</p>
-<p><strong>Não se pula degrau.</strong> <code>dev → main</code> não existe, nem em emergência —
-emergência tem caminho próprio (<code>hotfix</code>, abaixo), e ele também respeita a
-escada, só que começando do topo.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=taxonomia>Taxonomia<a href=#taxonomia class=hash-link aria-label="Link direto para Taxonomia" title="Link direto para Taxonomia" translate=no>​</a></h2>
-<p>Toda branch é <code>funcao/descritivo</code>, validada por
-<code>^.{0,30}/\S{0,32}$</code> — até 30 caracteres de função, até 32 de descritivo, sem
-espaço.</p>
-<div class="language-text codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-text codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token plain">✅ feature/pr-police          ✅ bugfix/rate-limit-off-by-one</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">✅ hotfix/vaza-token          ✅ docs/politica-de-branches</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">❌ minha-branch               (sem função)</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">❌ ci/build-paralelo          (`ci` não está na lista; use `chore`)</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">❌ fix/algo                   (`fix` não está na lista; use `bugfix`)</span><br/></div></code></pre></div></div>
-<p>O regex sozinho não basta: a função precisa estar na <strong>lista fechada</strong>.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=quem-nasce-de-onde>Quem nasce de onde<a href=#quem-nasce-de-onde class=hash-link aria-label="Link direto para Quem nasce de onde" title="Link direto para Quem nasce de onde" translate=no>​</a></h3>
+<p>Two loose ends were left standing on purpose, and for different reasons:
+the value <code>create_rc_branch</code> remains in the database's <code>bootstrap_step</code>
+enum (already-run bootstraps have rows with it), and <code>rc</code> remains in the
+<strong>protected-merge</strong> list — see the note in
+<a class="" href=/brabo/qa/reference/permissions>permissions.md</a>.</p>
+<p><strong>No step can be skipped.</strong> <code>dev → main</code> doesn't exist, not even in an
+emergency — an emergency has its own path (<code>hotfix</code>, below), and it too
+respects the ladder, just starting from the top.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=taxonomy>Taxonomy<a href=#taxonomy class=hash-link aria-label="Direct link to Taxonomy" title="Direct link to Taxonomy" translate=no>​</a></h2>
+<p>Every branch is <code>function/descriptor</code>, validated by
+<code>^.{0,30}/\S{0,32}$</code> — up to 30 characters for the function, up to 32 for
+the descriptor, no spaces.</p>
+<div class="language-text codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-text codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token plain">✅ feature/pr-police          ✅ bugfix/rate-limit-off-by-one</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">✅ hotfix/vaza-token          ✅ docs/politica-de-branches</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">❌ minha-branch               (no function)</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">❌ ci/build-paralelo          (`ci` isn't on the list; use `chore`)</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">❌ fix/algo                   (`fix` isn't on the list; use `bugfix`)</span><br/></div></code></pre></div></div>
+<p>The regex alone isn't enough: the function needs to be on the <strong>closed
+list</strong>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=whos-born-where>Who's born where<a href=#whos-born-where class=hash-link aria-label="Direct link to Who's born where" title="Direct link to Who's born where" translate=no>​</a></h3>
 
 
 
@@ -138,24 +145,25 @@ espaço.</p>
 
 
 
-<table><thead><tr><th>função<th>nasce de<th>PR mira<th>para quê<tbody><tr><td><code>breaking</code><td><code>dev</code><td><code>dev</code><td>mudança incompatível<tr><td><code>feature</code><td><code>dev</code><td><code>dev</code><td>funcionalidade nova<tr><td><code>bugfix</code><td><code>dev</code><td><code>dev</code><td>correção comum<tr><td><code>perf</code><td><code>dev</code><td><code>dev</code><td>desempenho<tr><td><code>refactor</code><td><code>dev</code><td><code>dev</code><td>reestruturação sem mudar comportamento<tr><td><code>chore</code><td><code>dev</code><td><code>dev</code><td>manutenção, tooling, CI<tr><td><code>docs</code><td><code>dev</code><td><code>dev</code><td>documentação<tr><td><code>test</code><td><code>dev</code><td><code>dev</code><td>cobertura<tr><td><code>hotfix</code><td><code>main</code><td><code>main</code><td>incidente em produção</table>
-<p>Correção achada em <strong>homologação</strong> não tem prefixo próprio: vira <code>bugfix/</code> a
-partir de <code>dev</code> e sobe pela escada. Existia um <code>rcfix/</code> para a preprod, e ele
-saiu junto com o degrau <code>rc</code> — prefixo sem branch de origem é armadilha.</p>
-<p>A origem não é sugestão — é <strong>verificada por merge-base</strong>. Um <code>hotfix</code> que
-nasceu de <code>dev</code> carrega junto tudo que está em <code>dev</code> e ainda não foi validado;
-levar isso para produção com pressa de incidente é como o desastre acontece.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=correção-que-nasce-alta-volta-para-baixo>Correção que nasce alta volta para baixo<a href=#correção-que-nasce-alta-volta-para-baixo class=hash-link aria-label="Link direto para Correção que nasce alta volta para baixo" title="Link direto para Correção que nasce alta volta para baixo" translate=no>​</a></h3>
-<p><code>hotfix</code> entra direto no degrau em que o problema apareceu. Isso deixa os
-degraus de baixo <strong>desatualizados</strong> — a correção existe em <code>main</code> e não em
-<code>dev</code>.</p>
-<p>Por isso toda correção alta gera <strong>retropropagação</strong>: <code>main → qa → dev</code>,
-em cadeia e na ordem. Enquanto ela não completa, os degraus afetados ficam
-travados — ver <a href=#o-backmerge-gate class="">O backmerge gate</a>.</p>
-<p>A cadeia inteira de um hotfix são <strong>três PRs</strong>: o hotfix mais os dois
-backmerges.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=famílias-de-pr>Famílias de PR<a href=#famílias-de-pr class=hash-link aria-label="Link direto para Famílias de PR" title="Link direto para Famílias de PR" translate=no>​</a></h2>
-<p>Todo PR recebe um rótulo de família, aplicado automaticamente:</p>
+<table><thead><tr><th>function<th>born from<th>PR targets<th>for<tbody><tr><td><code>breaking</code><td><code>dev</code><td><code>dev</code><td>incompatible change<tr><td><code>feature</code><td><code>dev</code><td><code>dev</code><td>new functionality<tr><td><code>bugfix</code><td><code>dev</code><td><code>dev</code><td>ordinary fix<tr><td><code>perf</code><td><code>dev</code><td><code>dev</code><td>performance<tr><td><code>refactor</code><td><code>dev</code><td><code>dev</code><td>restructuring without behavior change<tr><td><code>chore</code><td><code>dev</code><td><code>dev</code><td>maintenance, tooling, CI<tr><td><code>docs</code><td><code>dev</code><td><code>dev</code><td>documentation<tr><td><code>test</code><td><code>dev</code><td><code>dev</code><td>coverage<tr><td><code>hotfix</code><td><code>main</code><td><code>main</code><td>production incident</table>
+<p>A fix found in <strong>staging</strong> has no prefix of its own: it becomes a
+<code>bugfix/</code> starting from <code>dev</code> and climbs the ladder. There used to be an
+<code>rcfix/</code> for pre-prod, and it left along with the <code>rc</code> step — a prefix
+with no origin branch is a trap.</p>
+<p>The origin isn't a suggestion — it's <strong>verified by merge-base</strong>. A
+<code>hotfix</code> born from <code>dev</code> carries along everything that's in <code>dev</code> and
+hasn't been validated yet; rushing that into production during an
+incident is how disaster happens.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=a-fix-born-high-goes-back-down>A fix born high goes back down<a href=#a-fix-born-high-goes-back-down class=hash-link aria-label="Direct link to A fix born high goes back down" title="Direct link to A fix born high goes back down" translate=no>​</a></h3>
+<p><code>hotfix</code> enters directly at the step where the problem showed up. That
+leaves the steps below it <strong>out of date</strong> — the fix exists in <code>main</code> and
+not in <code>dev</code>.</p>
+<p>That's why every high-born fix generates a <strong>back-merge</strong>: <code>main → qa → dev</code>, in a chain, in order. While it hasn't completed, the affected steps
+stay locked — see <a href=#the-back-merge-gate class="">The back-merge gate</a>.</p>
+<p>The full chain for a hotfix is <strong>three PRs</strong>: the hotfix plus the two
+back-merges.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=pr-families>PR families<a href=#pr-families class=hash-link aria-label="Direct link to PR families" title="Direct link to PR families" translate=no>​</a></h2>
+<p>Every PR gets a family label, applied automatically:</p>
 
 
 
@@ -186,13 +194,14 @@ backmerges.</p>
 
 
 
-<table><thead><tr><th>família<th>quando<th>exemplo<tbody><tr><td><code>trabalho</code><td>função de trabalho → <code>dev</code><td><code>feature/pr-police</code> → <code>dev</code><tr><td><code>correcao-alta</code><td><code>hotfix</code> → <code>main</code><td><code>hotfix/vaza-token</code> → <code>main</code><tr><td><code>promocao</code><td>degrau adjacente, subindo<td><code>dev</code> → <code>qa</code><tr><td><code>retropropagacao</code><td>degrau adjacente, descendo<td><code>main</code> → <code>qa</code></table>
-<p>O rótulo não é decoração: ele é o que permite responder "quantos hotfixes
-tivemos neste trimestre?" sem arqueologia de git.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=push-direto-é-bloqueado>Push direto é bloqueado<a href=#push-direto-é-bloqueado class=hash-link aria-label="Link direto para Push direto é bloqueado" title="Link direto para Push direto é bloqueado" translate=no>​</a></h2>
-<p>Nenhuma das três permanentes aceita push direto. Toda mudança entra por PR.
-É a <strong>porta única</strong> — e ela tem exatamente três exceções, todas de robô, todas
-escritas aqui porque exceção que não está documentada vira precedente:</p>
+<table><thead><tr><th>family<th>when<th>example<tbody><tr><td><code>trabalho</code> (work)<td>a work function → <code>dev</code><td><code>feature/pr-police</code> → <code>dev</code><tr><td><code>correcao-alta</code> (high fix)<td><code>hotfix</code> → <code>main</code><td><code>hotfix/vaza-token</code> → <code>main</code><tr><td><code>promocao</code> (promotion)<td>adjacent step, going up<td><code>dev</code> → <code>qa</code><tr><td><code>retropropagacao</code> (back-merge)<td>adjacent step, going down<td><code>main</code> → <code>qa</code></table>
+<p>The label isn't decoration: it's what lets you answer "how many hotfixes
+did we have this quarter?" without git archaeology.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=direct-push-is-blocked>Direct push is blocked<a href=#direct-push-is-blocked class=hash-link aria-label="Direct link to Direct push is blocked" title="Direct link to Direct push is blocked" translate=no>​</a></h2>
+<p>None of the three permanents accept direct push. Every change enters via
+PR. It's the <strong>single door</strong> — and it has exactly three exceptions, all
+bots, all written here because an undocumented exception becomes a
+precedent:</p>
 
 
 
@@ -218,44 +227,39 @@ escritas aqui porque exceção que não está documentada vira precedente:</p>
 
 
 
-<table><thead><tr><th>exceção<th>quem<th>por quê<tbody><tr><td>tags <code>v*</code><td><code>brabo-release[bot]</code><td>versão nasce de workflow, nunca da mão<tr><td><code>.release/gate.json</code> em <code>main</code><td><code>brabo-release[bot]</code><td>o gate precisa se escrever ao travar e ao destravar<tr><td>a branch <code>gh-pages</code><td><code>github-actions[bot]</code><td>publicar documentação por degrau exige árvore mutável (<a class="" href=/brabo/qa/adr/0034-documentacao-publicada-por-degrau>ADR 0034</a>)</table>
-<p><strong>A terceira é a mais fácil de aceitar das três, e é importante dizer por quê,
-para que ela não sirva de precedente para as difíceis.</strong> A <code>gh-pages</code> <strong>não é
-branch de código</strong>: nada nela é fonte, tudo é gerado a partir de <code>docs/</code> e
-<code>website/</code>, e apagá-la inteira não perde informação — o próximo push a
-reconstrói. Não há revisor possível para um site gerado, e um PR por publicação
-seria cerimônia sem leitor. O <code>git log</code> dela é o registro de cada publicação, com
-data e sha de origem.</p>
-<p>Ela também <strong>não é permanente</strong>, então não entra nos rulesets — e é por isso que
-o <code>GITHUB_TOKEN</code> basta, sem bypass e sem o <code>BRABO_BOT_TOKEN</code>.</p>
-<p>A segunda é a mais desconfortável das três, então vale dizer por que ela existe
-em vez de o gate entrar por PR: o gate trava as branches, e um PR para abrir a
-trava seria barrado pelo próprio gate. A alternativa — guardar o estado fora do
-repositório — trocaria uma exceção visível no histórico por um estado invisível
-em algum painel. O commit do bot fica no <code>git log</code>, com data e conteúdo.</p>
-<p>O <code>tag-release</code> reconhece esse commit <strong>pelo conteúdo</strong> (mexe só em
-<code>.release/</code>), nunca pelo autor ou pela mensagem: quem escreve é verificável,
-quem <em>diz</em> que escreveu não é.</p>
-<p>A configuração exata está em <a class="" href=/brabo/qa/reference/rulesets>Rulesets</a>, e aplicá-la
-é passo manual — o repositório versiona a fonte, o GitHub recebe a aplicação.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=bots-não-passam-pela-régua>Bots não passam pela régua<a href=#bots-não-passam-pela-régua class=hash-link aria-label="Link direto para Bots não passam pela régua" title="Link direto para Bots não passam pela régua" translate=no>​</a></h2>
-<p>PRs abertos por <code>dependabot[bot]</code> e <code>github-actions[bot]</code> são <strong>isentos</strong> da
-validação de nome, origem e destino.</p>
-<p>O motivo é prático: o Dependabot nomeia branches como
-<code>dependabot/npm_and_yarn/brace-expansion-5.0.8</code>, e não há como ensiná-lo a usar
-a taxonomia. Reprovar significaria renomear branch à mão a cada alerta de
-segurança — ou seja, atrito em cima justamente do fluxo que precisa ser rápido.</p>
-<p>Mensagem pedagógica não ensina robô. A isenção é por <strong>autor</strong>, não por
-prefixo, para que ninguém a use como brecha nomeando uma branch de
-<code>dependabot/</code>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=quem-aprova>Quem aprova<a href=#quem-aprova class=hash-link aria-label="Link direto para Quem aprova" title="Link direto para Quem aprova" translate=no>​</a></h2>
-<p>A exigência de aprovação tem <strong>dois modos</strong>, escolhidos pela variável de
-repositório <code>APPROVAL_MODE</code>. Os dois são implementados e testados; trocar de um
-para o outro é <strong>só mudar variáveis</strong>, sem tocar em código.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=modo-solo--o-que-vale-hoje>Modo <code>solo</code> — o que vale hoje<a href=#modo-solo--o-que-vale-hoje class=hash-link aria-label="Link direto para modo-solo--o-que-vale-hoje" title="Link direto para modo-solo--o-que-vale-hoje" translate=no>​</a></h3>
-<p>O projeto tem <strong>um mantenedor</strong>. A escada completa de aprovadores pressupõe
-times que ainda não existem, e regra que não pode ser cumprida é regra que
-ensina a burlar.</p>
+<table><thead><tr><th>exception<th>who<th>why<tbody><tr><td><code>v*</code> tags<td><code>brabo-release[bot]</code><td>a version is born from a workflow, never by hand<tr><td><code>.release/gate.json</code> on <code>main</code><td><code>brabo-release[bot]</code><td>the gate needs to write itself when it locks and unlocks<tr><td>the <code>gh-pages</code> branch<td><code>github-actions[bot]</code><td>publishing documentation per step requires a mutable tree (<a class="" href=/brabo/qa/adr/0034-documentacao-publicada-por-degrau>ADR 0034</a>)</table>
+<p><strong>The third is the easiest of the three to accept, and it's worth saying
+why, so it doesn't set a precedent for the hard ones.</strong> <code>gh-pages</code> <strong>is
+not a code branch</strong>: nothing in it is source, everything is generated
+from <code>docs/</code> and <code>website/</code>, and deleting it entirely loses nothing — the
+next push rebuilds it. There's no possible reviewer for a generated site,
+and a PR per publication would be ceremony with no reader. Its <code>git log</code>
+is the record of every publication, with date and origin sha.</p>
+<p>It's also <strong>not permanent</strong>, so it doesn't enter the rulesets — which is
+why the <code>GITHUB_TOKEN</code> is enough, no bypass and no <code>BRABO_BOT_TOKEN</code>.</p>
+<p>The second is the most uncomfortable of the three, so it's worth saying
+why the gate exists instead of going through a PR: the gate locks the
+branches, and a PR to open the lock would be blocked by the gate itself.
+The alternative — storing the state outside the repository — would trade
+a visible exception in the history for an invisible state in some
+dashboard. The bot's commit stays in <code>git log</code>, with date and content.</p>
+<p><code>tag-release</code> recognizes that commit <strong>by its content</strong> (it only touches
+<code>.release/</code>), never by author or message: who wrote it is verifiable,
+who <em>claims</em> to have written it isn't.</p>
+<p>The exact configuration is in <a class="" href=/brabo/qa/reference/rulesets>Rulesets</a>, and
+applying it is a manual step — the repository versions the source, GitHub
+receives the application.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=merged-branches-get-archived>Merged branches get archived<a href=#merged-branches-get-archived class=hash-link aria-label="Direct link to Merged branches get archived" title="Direct link to Merged branches get archived" translate=no>​</a></h2>
+<p>Every branch whose PR merges gets moved out of the branch list —
+mechanically, by <code>archive-merged-branch.yml</code>, on every <code>pull_request</code>
+<code>closed</code> event where <code>merged == true</code>. "Archived" is literal, not a
+euphemism for deleted: the branch moves from <code>refs/heads/&lt;name></code> to
+<code>refs/archive/&lt;name></code>, a namespace GitHub's UI doesn't show as a branch.
+The commit object and its history stay in the repository exactly as they
+were — recoverable by anyone who knows the ref, with a single
+<code>git push origin refs/archive/&lt;name>:refs/heads/&lt;name></code> to bring it back.</p>
+<p>Four names are never archived, and the reason is the same for all four:
+none of them is disposable feature work.</p>
 
 
 
@@ -273,15 +277,38 @@ ensina a burlar.</p>
 
 
 
-<table><thead><tr><th>situação<th>exigência<tbody><tr><td>PR de terceiro<td><strong>1 aprovação do owner</strong><tr><td>PR de autoria do próprio owner<td>passa no check <strong>sem review</strong></table>
-<p>A segunda linha não é privilégio, é como o GitHub funciona: <strong>ninguém aprova o
-próprio PR pela interface</strong>. Num projeto BDFL, o <strong>merge manual do owner é a
-aprovação</strong> — é o ato deliberado dele, no momento em que ele escolhe apertar o
-botão. Exigir um review que a plataforma não permite dar só produziria um check
-eternamente vermelho.</p>
-<p>A exigência de <strong>pessoas distintas fica suspensa</strong> neste modo, e está suspensa
-de propósito: com um mantenedor, ela é aritmeticamente impossível.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=modo-community--quando-houver-gente>Modo <code>community</code> — quando houver gente<a href=#modo-community--quando-houver-gente class=hash-link aria-label="Link direto para modo-community--quando-houver-gente" title="Link direto para modo-community--quando-houver-gente" translate=no>​</a></h3>
+<table><thead><tr><th>name<th>why it's excluded<tbody><tr><td><code>dev</code>, <code>qa</code>, <code>main</code><td>the three permanents — they appear as the <code>head</code> of every merged promotion PR (<code>dev</code>→<code>qa</code>, <code>qa</code>→<code>main</code>), which is exactly the case this exclusion exists to catch<tr><td><code>gh-pages</code><td>the documentation site's deploy branch (see "Direct push is blocked" above) — not a feature branch, and deleting <code>refs/heads/gh-pages</code> would take the live site down with it</table>
+<p>A fifth condition isn't a name, it's a boundary: a PR whose head branch
+lives in a <strong>fork</strong> (<code>head.repo.full_name != base.repo.full_name</code>) is
+never touched. The workflow's <code>GITHUB_TOKEN</code> is scoped to this
+repository — it has no business rewriting refs in someone else's.</p>
+<p>The decision itself — which four names are excluded, and the fork check —
+is a tested pure function
+(<a href=https://github.com/daneiel/brabo/blob/dev/scripts/ci/archive-branch.ts target=_blank rel="noopener noreferrer" class=""><code>scripts/ci/archive-branch.ts</code></a>),
+not inline shell: it's the part of this mechanism that's actually worth
+getting wrong tests for. The workflow step that follows just calls the
+GitHub API twice — create the <code>refs/archive/</code> ref, then delete the
+<code>refs/heads/</code> one — and only deletes after the create succeeds, so a
+failure never drops a branch without leaving the archived copy behind.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=bots-skip-the-ladder>Bots skip the ladder<a href=#bots-skip-the-ladder class=hash-link aria-label="Direct link to Bots skip the ladder" title="Direct link to Bots skip the ladder" translate=no>​</a></h2>
+<p>PRs opened by <code>dependabot[bot]</code> and <code>github-actions[bot]</code> are <strong>exempt</strong>
+from name, origin and destination validation.</p>
+<p>The reason is practical: Dependabot names branches like
+<code>dependabot/npm_and_yarn/brace-expansion-5.0.8</code>, and there's no way to
+teach it the taxonomy. Rejecting it would mean renaming branches by hand
+on every security alert — friction on top of exactly the flow that needs
+to be fast.</p>
+<p>A pedagogical message doesn't teach a bot. The exemption is by
+<strong>author</strong>, not by prefix, so no one uses it as a loophole by naming a
+branch <code>dependabot/</code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=who-approves>Who approves<a href=#who-approves class=hash-link aria-label="Direct link to Who approves" title="Direct link to Who approves" translate=no>​</a></h2>
+<p>The approval requirement has <strong>two modes</strong>, chosen by the repository
+variable <code>APPROVAL_MODE</code>. Both are implemented and tested; switching from
+one to the other is <strong>just changing variables</strong>, no code touched.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=solo-mode--what-applies-today><code>solo</code> mode — what applies today<a href=#solo-mode--what-applies-today class=hash-link aria-label="Direct link to solo-mode--what-applies-today" title="Direct link to solo-mode--what-applies-today" translate=no>​</a></h3>
+<p>The project has <strong>one maintainer</strong>. The full approver ladder assumes
+teams that don't exist yet, and a rule that can't be fulfilled is a rule
+that teaches people to cheat.</p>
 
 
 
@@ -299,71 +326,102 @@ de propósito: com um mantenedor, ela é aritmeticamente impossível.</p>
 
 
 
+<table><thead><tr><th>situation<th>requirement<tbody><tr><td>PR from a third party<td><strong>1 approval from the owner</strong><tr><td>PR authored by the owner<td>passes the check <strong>without review</strong></table>
+<p>The second line isn't a privilege, it's how GitHub works: <strong>no one can
+approve their own PR through the interface</strong>. In a BDFL project, the
+<strong>owner's manual merge is the approval</strong> — it's their deliberate act, at
+the moment they choose to click the button. Requiring a review the
+platform doesn't allow would only produce a permanently red check.</p>
+<p>The requirement for <strong>distinct people is suspended</strong> in this mode, and
+it's suspended on purpose: with a single maintainer, it's arithmetically
+impossible.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=community-mode--for-when-there-are-people><code>community</code> mode — for when there are people<a href=#community-mode--for-when-there-are-people class=hash-link aria-label="Direct link to community-mode--for-when-there-are-people" title="Direct link to community-mode--for-when-there-are-people" translate=no>​</a></h3>
 
 
 
 
-<table><thead><tr><th>destino<th>exigência<tbody><tr><td><code>dev</code><td>1 × devs<tr><td><code>qa</code><td>2 × devs<tr><td><code>main</code><td>1 × PO <strong>+</strong> 1 × gestão</table>
-<p>Em <code>main</code>, <strong>pessoas distintas</strong> — a exigência volta a valer. Em <code>dev</code> e <code>qa</code> a
-distinção é automática: as vagas são do mesmo papel e cada pessoa tem um review
-só.</p>
-<p>Os papéis são <strong>listas de handles</strong> em variáveis de repositório, não times do
-GitHub:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>target<th>requirement<tbody><tr><td><code>dev</code><td>1 × devs<tr><td><code>qa</code><td>2 × devs<tr><td><code>main</code><td>1 × PO <strong>+</strong> 1 × management</table>
+<p>For <code>main</code>, <strong>distinct people</strong> — the requirement applies again. For
+<code>dev</code> and <code>qa</code> the distinction is automatic: the slots are the same role
+and each person only gets one review.</p>
+<p>The roles are <strong>lists of handles</strong> in repository variables, not GitHub
+teams:</p>
 <div class="language-text codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-text codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token plain">APROVADORES_DEVS    = ana,bruno,carla</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">APROVADORES_PO      = paula</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">APROVADORES_GESTAO  = gustavo</span><br/></div></code></pre></div></div>
-<p>Times seriam o caminho óbvio e <strong>não funcionam aqui</strong>: eles só existem dentro de
-uma organização, este repositório pertence a um usuário, e o <code>GITHUB_TOKEN</code> não
-lê membership de time nem em org — precisaria de um PAT com <code>read:org</code>. Com
-listas, o modo <code>community</code> é ativável hoje e a troca é mesmo só de variável.</p>
-<p>O custo honesto: manter as listas é trabalho manual, e uma pessoa que sai do
-projeto continua aprovando até alguém editar a variável. Se o projeto virar uma
-org com times de verdade, trocar a fonte é mudar uma função — a escada e a
-regra de pessoas distintas não mudam.</p>
-<h4 class="anchor anchorTargetStickyNavbar_URsz" id=por-que-pessoas-distintas-precisa-de-mais-que-contar>Por que "pessoas distintas" precisa de mais que contar<a href=#por-que-pessoas-distintas-precisa-de-mais-que-contar class=hash-link aria-label='Link direto para Por que "pessoas distintas" precisa de mais que contar' title='Link direto para Por que "pessoas distintas" precisa de mais que contar' translate=no>​</a></h4>
-<p>Em <code>main</code>, quem estiver <strong>nas duas listas</strong> (<code>po</code> e <code>gestao</code>) poderia satisfazer
-as duas vagas sozinho, se o check apenas contasse aprovações por papel. O check
-resolve isso como um problema de <strong>atribuição</strong>: existe uma distribuição de
-aprovadores distintos que preencha todas as vagas?</p>
-<p>Isso também evita o erro oposto. Se <code>paula</code> é a única de <code>po</code> mas também está em
-<code>gestao</code>, dar a vaga de <code>gestao</code> a ela deixaria <code>po</code> descoberta — mesmo havendo
-outra pessoa que serviria. A atribuição correta existe, e o check a encontra.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=regras-comuns-aos-dois-modos>Regras comuns aos dois modos<a href=#regras-comuns-aos-dois-modos class=hash-link aria-label="Link direto para Regras comuns aos dois modos" title="Link direto para Regras comuns aos dois modos" translate=no>​</a></h3>
+<p>Teams would be the obvious path and <strong>don't work here</strong>: they only exist
+inside an organization, this repository belongs to a user, and the
+<code>GITHUB_TOKEN</code> can't read team membership even inside an org — that would
+need a PAT with <code>read:org</code>. With lists, <code>community</code> mode is activatable
+today and the switch really is just a variable.</p>
+<p>The honest cost: keeping the lists up to date is manual work, and a
+person who leaves the project keeps approving until someone edits the
+variable. If the project becomes an org with real teams, changing the
+source is a one-function change — the ladder and the distinct-people rule
+don't change.</p>
+<h4 class="anchor anchorTargetStickyNavbar_URsz" id=why-distinct-people-needs-more-than-counting>Why "distinct people" needs more than counting<a href=#why-distinct-people-needs-more-than-counting class=hash-link aria-label='Direct link to Why "distinct people" needs more than counting' title='Direct link to Why "distinct people" needs more than counting' translate=no>​</a></h4>
+<p>For <code>main</code>, whoever is on <strong>both lists</strong> (<code>po</code> and <code>gestao</code>) could
+satisfy both slots alone, if the check simply counted approvals per role.
+The check treats this as an <strong>assignment</strong> problem instead: does there
+exist a distribution of distinct approvers that fills every slot?</p>
+<p>This also avoids the opposite error. If <code>paula</code> is the only one in <code>po</code>
+but is also in <code>gestao</code>, giving the <code>gestao</code> slot to her would leave <code>po</code>
+uncovered — even though another person could have filled it. The correct
+assignment exists, and the check finds it.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=rules-common-to-both-modes>Rules common to both modes<a href=#rules-common-to-both-modes class=hash-link aria-label="Direct link to Rules common to both modes" title="Direct link to Rules common to both modes" translate=no>​</a></h3>
 <ul>
-<li class="">Só contam reviews <strong><code>APPROVED</code> no último commit</strong>. Aprovação em commit
-antigo não vale: o que foi aprovado não é mais o que vai ser mergeado.</li>
-<li class="">O resumo do check mostra <strong>o modo ativo, quem aprovou e o que falta</strong>. Um
-check que só diz "faltam aprovações" obriga a adivinhar.</li>
+<li class="">Only reviews <strong><code>APPROVED</code> on the last commit</strong> count. An approval on an
+old commit doesn't count: what was approved isn't what's about to be
+merged.</li>
+<li class="">The check's summary shows <strong>the active mode, who approved and what's
+missing</strong>. A check that only says "approvals missing" forces you to
+guess.</li>
 </ul>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=migração-para-modo-community>Migração para modo <code>community</code><a href=#migração-para-modo-community class=hash-link aria-label="Link direto para migração-para-modo-community" title="Link direto para migração-para-modo-community" translate=no>​</a></h3>
-<p>Pré-requisitos, antes de trocar qualquer variável:</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=migrating-to-community-mode>Migrating to <code>community</code> mode<a href=#migrating-to-community-mode class=hash-link aria-label="Direct link to migrating-to-community-mode" title="Direct link to migrating-to-community-mode" translate=no>​</a></h3>
+<p>Prerequisites, before flipping any variable:</p>
 <ol>
-<li class=""><strong>Cada papel com gente de verdade.</strong> <code>main</code> exige PO <strong>e</strong> gestão; se as duas
-listas apontarem para a mesma pessoa, nenhum PR para <code>main</code> fecha — a regra
-de pessoas distintas não tem como ser satisfeita. <code>qa</code> exige <strong>dois</strong> devs
-distintos: uma lista com um nome só trava a promoção.</li>
-<li class=""><strong>Critério de quem entra em cada lista</strong> definido e escrito — quem entra,
-quem sai, e com base em quê.</li>
+<li class=""><strong>Every role with real people.</strong> <code>main</code> requires PO <strong>and</strong>
+management; if both lists point to the same person, no PR to <code>main</code>
+ever passes — the distinct-people rule can't be satisfied. <code>qa</code>
+requires <strong>two</strong> distinct devs: a list with a single name blocks
+promotion.</li>
+<li class=""><strong>A criterion for who joins each list</strong>, defined and written down —
+who joins, who leaves, and based on what.</li>
 </ol>
-<p>Passo a passo da troca:</p>
-<div class="language-bash codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-bash codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable </span><span class="token builtin class-name" style="color:rgb(189, 147, 249)">set</span><span class="token plain"> APROVADORES_DEVS   </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--body</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"ana,bruno,carla"</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable </span><span class="token builtin class-name" style="color:rgb(189, 147, 249)">set</span><span class="token plain"> APROVADORES_PO     </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--body</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"paula"</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable </span><span class="token builtin class-name" style="color:rgb(189, 147, 249)">set</span><span class="token plain"> APROVADORES_GESTAO </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--body</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"gustavo"</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token comment" style="color:rgb(98, 114, 164)"># por último: com as listas vazias, community reprova tudo</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable </span><span class="token builtin class-name" style="color:rgb(189, 147, 249)">set</span><span class="token plain"> APPROVAL_MODE </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--body</span><span class="token plain"> community</span><br/></div></code></pre></div></div>
-<p>A ordem importa. Com <code>APPROVAL_MODE=community</code> e as listas ainda vazias, todo
-PR fica vermelho dizendo qual variável está faltando — correto, mas
-desnecessariamente ruidoso. Preencha primeiro.</p>
-<p>Para voltar: <code>gh variable set APPROVAL_MODE --body solo</code>.</p>
-<p><strong>Nenhum deploy, nenhum merge, nenhuma alteração de código</strong> — a troca é de
-configuração, e há teste que roda a mesma entrada nos dois modos afirmando
-vereditos diferentes.</p>
-<blockquote>
-<p><strong>TODO(humano):</strong> o critério de quem entra em cada lista deveria estar
-alinhado a um <code>GOVERNANCE.md</code>, mas <strong>ele não existe</strong> — foi cortado do escopo
-da FASE DOC. Ou ele é escrito antes da migração, ou o critério mora aqui e
-esta seção passa a ser a fonte. As duas servem; a que não serve é o critério
-não existir em lugar nenhum quando o primeiro contribuidor externo aparecer.</p>
-</blockquote>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=promoção>Promoção<a href=#promoção class=hash-link aria-label="Link direto para Promoção" title="Link direto para Promoção" translate=no>​</a></h2>
-<p>Código sobe de degrau por <strong>PR de promoção</strong>, aberto pelo workflow <code>promote</code>
-(<code>workflow_dispatch</code>, entrada: o par da esteira).</p>
-<p>O workflow <strong>não mergeia nada</strong> — ele calcula e abre o PR. O merge continua
-sendo ato manual, como toda entrada em permanente.</p>
+<p>Step by step for the switch:</p>
+<div class="language-bash codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-bash codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable </span><span class="token builtin class-name" style="color:rgb(189, 147, 249)">set</span><span class="token plain"> APROVADORES_DEVS   </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--body</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"ana,bruno,carla"</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable </span><span class="token builtin class-name" style="color:rgb(189, 147, 249)">set</span><span class="token plain"> APROVADORES_PO     </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--body</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"paula"</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable </span><span class="token builtin class-name" style="color:rgb(189, 147, 249)">set</span><span class="token plain"> APROVADORES_GESTAO </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--body</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"gustavo"</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token comment" style="color:rgb(98, 114, 164)"># last: with empty lists, community rejects everything</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable </span><span class="token builtin class-name" style="color:rgb(189, 147, 249)">set</span><span class="token plain"> APPROVAL_MODE </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--body</span><span class="token plain"> community</span><br/></div></code></pre></div></div>
+<p>The order matters. With <code>APPROVAL_MODE=community</code> and the lists still
+empty, every PR turns red saying which variable is missing — correct, but
+needlessly noisy. Fill them in first.</p>
+<p>To go back: <code>gh variable set APPROVAL_MODE --body solo</code>.</p>
+<p><strong>No deploy, no merge, no code change</strong> — the switch is configuration
+only, and there's a test that runs the same input through both modes
+asserting different verdicts.</p>
+<p>The criterion for who joins each list — who joins, who leaves, and based
+on what — lives in <code>GOVERNANCE.md</code>, at the repository root. This section
+remains the source of the MECHANISM (the ladder, the distinct-people
+requirement, the switch's step by step); <code>GOVERNANCE.md</code> is the source of
+the CRITERION for who fills each role.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=promotion>Promotion<a href=#promotion class=hash-link aria-label="Direct link to Promotion" title="Direct link to Promotion" translate=no>​</a></h2>
+<p>Code climbs a step via a <strong>promotion PR</strong>, opened by the <code>promote</code>
+workflow (<code>workflow_dispatch</code>, input: the pipeline pair).</p>
+<p>The workflow <strong>doesn't merge anything</strong> — it computes and opens the PR.
+The merge remains a manual act, like every entry into a permanent branch.</p>
 
 
 
@@ -389,19 +447,6 @@ sendo ato manual, como toda entrada em permanente.</p>
 
 
 
-<table><thead><tr><th>passo<th>o quê<tbody><tr><td>1<td><strong>quem dispara</strong> — em <code>APPROVAL_MODE=solo</code>, só o <code>OWNER_HANDLE</code>. Outro ator falha nomeando quem pode<tr><td>2<td><strong>par adjacente</strong> — <code>dev→qa</code> e <code>qa→main</code>. <code>dev→main</code> é recusado com o caminho em etapas<tr><td>3<td><strong>versão do ciclo</strong> — calculada dos PRs mergeados desde a última tag final<tr><td>4<td><strong>PR aberto</strong> — corpo listando cada PR, sua função, seu impacto e a versão proposta</table>
-<p>O corpo do passo 4 é uma <strong>tabela markdown</strong>, e o título de um PR é texto que
-ninguém controla — então ele é escapado antes de virar célula
-(<code>celulaDeTabela</code>, em <code>scripts/ci/promote.ts</code>). Escapar o <code>|</code> não basta: a
-contrabarra tem que ser escapada <strong>antes</strong>, senão um título terminado em <code>\</code>
-logo antes de um <code>|</code> produz <code>\\|</code>, que o GFM lê como contrabarra escapada
-seguida de um DELIMITADOR de coluna — a linha ganha uma célula a mais e a
-tabela quebra. É por isso que a ordem das duas substituições é load-bearing, e
-o teste em <code>promote.spec.ts</code> conta os delimitadores REAIS da linha em vez de
-comparar a string inteira.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=o-check-de-promoção>O check de promoção<a href=#o-check-de-promoção class=hash-link aria-label="Link direto para O check de promoção" title="Link direto para O check de promoção" translate=no>​</a></h3>
-<p>Um PR de promoção passa por um check próprio, separado do <code>pr-police</code>. Aquele
-valida a <strong>forma</strong> (nome, origem, destino); este valida o <strong>estado</strong>:</p>
 
 
 
@@ -418,37 +463,25 @@ valida a <strong>forma</strong> (nome, origem, destino); este valida o <strong>e
 
 
 
+<table><thead><tr><th>step<th>what<tbody><tr><td>1<td><strong>who triggers it</strong> — under <code>APPROVAL_MODE=solo</code>, only<tr><td><code>OWNER_HANDLE</code>. Any other actor fails, naming who's allowed<td><tr><td>2<td><strong>adjacent pair</strong> — <code>dev→qa</code> and <code>qa→main</code>. <code>dev→main</code> is refused,<tr><td>pointing to the staged path<td><tr><td>3<td><strong>cycle version</strong> — computed from the PRs merged since the last<tr><td>final tag<td><tr><td>4<td><strong>PR opened</strong> — body listing each PR, its function, its impact and<tr><td>the proposed version<td></table>
+<p>Step 4's body is a <strong>markdown table</strong>, and a PR's title is text no one
+controls — so it's escaped before becoming a table cell
+(<code>celulaDeTabela</code>, in <code>scripts/ci/promote.ts</code>). Escaping the <code>|</code> isn't
+enough — the backslash has to be escaped <strong>first</strong>, otherwise a title
+ending in <code>\</code> right before a <code>|</code> produces <code>\\|</code>, which GFM reads as an
+escaped backslash followed by a column DELIMITER — the row gains an
+extra cell and the table breaks. That's why the order of the two
+substitutions is load-bearing, and the test in <code>promote.spec.ts</code> counts
+the line's REAL delimiters instead of comparing the whole string.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-promotion-check>The promotion check<a href=#the-promotion-check class=hash-link aria-label="Direct link to The promotion check" title="Direct link to The promotion check" translate=no>​</a></h3>
+<p>A promotion PR goes through a check of its own, separate from
+<code>pr-police</code>. That one validates the <strong>shape</strong> (name, origin, destination);
+this one validates the <strong>state</strong>:</p>
 
 
 
 
 
-<table><thead><tr><th>conferência<th>por quê<tbody><tr><td><strong>range limpo</strong><td>o head do PR é o tip da branch de origem. Se alguém empurrou algo depois de o PR abrir, o que seria promovido não é o que está lá<tr><td><strong>degrau anterior carimbado</strong><td>o commit tem a tag do estágio de baixo. Promover sem ela é promover algo que nunca passou por lá<tr><td><strong>merge commit possível</strong><td>promoção é <code>--no-ff</code>. Squash achataria os commits do degrau de baixo, e a tag do estágio passaria a apontar para um commit que não existe mais</table>
-<p>Verificação que <strong>não pôde ser feita</strong> conta como reprovada, nunca como
-aprovada — uma ref que não resolve é ignorância, não permissão.</p>
-<p>As duas primeiras conferências são exercitadas por
-<code>scripts/ci/promotion-check.spec.ts</code>, no mesmo espírito das specs do
-<code>pr-police</code> e do <code>approval-ladder</code>. O que ela fixa não é a implementação e sim
-a regra: qual carimbo cada destino cobra, e que o carimbo tem de ser <strong>daquele
-commit</strong> — tag de outro commit, de outro estágio, ou que não resolveu sha não
-valem. Aceitar qualquer uma delas deixaria <code>qa</code> receber código que nunca passou
-por <code>dev</code>.</p>
-<p>A exceção é a leitura da <strong>configuração de merge</strong>: o token do workflow
-legitimamente não tem permissão para lê-la, e travar toda promoção por isso
-seria pior que a falha que se quer evitar. Ali a impossibilidade vira <strong>aviso</strong>,
-e a garantia de verdade fica no <code>tag-release</code>: depois do merge, ele confere que
-o commit tem <strong>dois pais</strong>. Isso não depende de permissão nenhuma, e olha o
-fato consumado em vez da intenção declarada.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=versionamento>Versionamento<a href=#versionamento class=hash-link aria-label="Link direto para Versionamento" title="Link direto para Versionamento" translate=no>​</a></h2>
-<p>Toda tag nasce de workflow, no formato <code>vX.Y.Z-dev.N</code> / <code>-qa.N</code> / final.</p>
-<p><strong>A versão vive na TAG, não nos arquivos.</strong> Ninguém pode commitar direto numa
-permanente para bumpar <code>package.json</code>, então exigir que os quatro arquivos de
-versão acompanhem obrigaria a um PR de bump por ciclo — cerimônia que o cálculo
-automático existe para eliminar. O <code>release.yml</code> confere os arquivos como
-<strong>aviso</strong> e só dispara em tag final.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=o-que-a-tag-final-produz>O que a tag final produz<a href=#o-que-a-tag-final-produz class=hash-link aria-label="Link direto para O que a tag final produz" title="Link direto para O que a tag final produz" translate=no>​</a></h3>
-<p>O <code>release.yml</code> é o fim da esteira, e o que ele entrega é deliberadamente
-modesto:</p>
 
 
 
@@ -474,57 +507,140 @@ modesto:</p>
 
 
 
-<table><thead><tr><th>entrega<th>o quê<tbody><tr><td>GitHub Release<td>com as notas geradas do CHANGELOG pela <code>scripts/changelog.mjs</code><tr><td>conferência de versão<td>os quatro arquivos versionados, como <strong>aviso</strong><tr><td>as quatro imagens de produção<td>construídas para provar que a tag é <strong>construível</strong><tr><td>a versão dentro de duas delas<td>assada como <code>ARG</code> na api e no web — ver abaixo</table>
-<h4 class="anchor anchorTargetStickyNavbar_URsz" id=a-versão-vive-na-tag-e-é-o-release-que-a-leva-ao-artefato>A versão vive na tag, e é o release que a leva ao artefato<a href=#a-versão-vive-na-tag-e-é-o-release-que-a-leva-ao-artefato class=hash-link aria-label="Link direto para A versão vive na tag, e é o release que a leva ao artefato" title="Link direto para A versão vive na tag, e é o release que a leva ao artefato" translate=no>​</a></h4>
-<p>A tag é a fonte da versão, mas uma imagem não consegue ler a própria tag: o
-container não sabe com que nome foi publicado, e a tag pode ser movida. Então o
-<code>release.yml</code> <strong>passa a versão para dentro do build</strong> — e é o único lugar do
-repositório que faz isso.</p>
-<p><code>VERSION</code> é uma variável do <code>docker-bake.hcl</code>, separada de <code>TAG</code>, com default
-<code>dev</code>. O alvo <code>api</code> a converte em <code>BRABO_VERSION</code> e o alvo <code>web</code> em
-<code>VITE_BRABO_VERSION</code>; cada <code>Dockerfile.prod</code> a declara como <code>ARG</code> com o mesmo
-default. Daí ela chega ao <code>service.version</code> dos spans da api e ao rodapé das telas
-de auth da web (<a class="" href=/brabo/qa/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas>ADR 0036</a>).</p>
-<p>Duas consequências, e as duas são a intenção:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>check<th>why<tbody><tr><td><strong>clean range</strong><td>the PR's head is the tip of the origin branch. If<tr><td>someone pushed something after the PR opened, what would be promoted<td><tr><td>isn't what's there<td><tr><td><strong>prior step stamped</strong><td>the commit has the stage-below's tag.<tr><td>Promoting without it means promoting something that never went through<td><tr><td>there<td><tr><td><strong>merge commit possible</strong><td>promotion is <code>--no-ff</code>. A squash would<tr><td>flatten the lower step's commits, and the stage's tag would end up<td><tr><td>pointing to a commit that no longer exists<td></table>
+<p>A check that <strong>couldn't be performed</strong> counts as failed, never as
+passed — a ref that fails to resolve is ignorance, not permission.</p>
+<p>The first two checks are exercised by
+<code>scripts/ci/promotion-check.spec.ts</code>, in the same spirit as
+<code>pr-police</code>'s and <code>approval-ladder</code>'s specs. What it fixes isn't the
+implementation but the rule: which stamp each destination requires, and
+that the stamp has to be <strong>that commit's</strong> — a tag on another commit, on
+another stage, or one that failed to resolve a sha don't count. Accepting
+any of those would let <code>qa</code> receive code that never went through <code>dev</code>.</p>
+<p>The exception is reading the <strong>merge configuration</strong>: the workflow's
+token legitimately lacks permission to read it, and blocking every
+promotion over that would be worse than the failure it's meant to
+prevent. There, the impossibility becomes a <strong>warning</strong>, and the real
+guarantee lives in <code>tag-release</code>: after the merge, it confirms the
+commit has <strong>two parents</strong>. That doesn't depend on any permission, and it
+looks at the fact on the ground rather than the declared intent.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=versioning>Versioning<a href=#versioning class=hash-link aria-label="Direct link to Versioning" title="Direct link to Versioning" translate=no>​</a></h2>
+<p>Every tag is born from a workflow, in the format <code>vX.Y.Z-dev.N</code> /
+<code>-qa.N</code> / final.</p>
+<p><strong>The version lives in the TAG, not in files.</strong> No one can commit
+directly to a permanent branch to bump <code>package.json</code>, so requiring the
+four version files to keep up would force a bump PR every cycle — the
+ceremony automated calculation exists to eliminate.
+<code>release.yml</code> checks the files as a <strong>warning</strong> and only fires on a final
+tag.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=what-the-final-tag-produces>What the final tag produces<a href=#what-the-final-tag-produces class=hash-link aria-label="Direct link to What the final tag produces" title="Direct link to What the final tag produces" translate=no>​</a></h3>
+<p><code>release.yml</code> is the end of the pipeline, and what it delivers is
+deliberately modest:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>delivery<th>what<tbody><tr><td>GitHub Release<td>with notes generated from the CHANGELOG by<tr><td><code>scripts/changelog.mjs</code><td><tr><td>version check<td>the four versioned files, as a <strong>warning</strong><tr><td>the four production images<td>built to prove the tag is <strong>buildable</strong><tr><td>the version baked into two of them<td>baked in as an <code>ARG</code> in the api<tr><td>and web — see below<td></table>
+<h4 class="anchor anchorTargetStickyNavbar_URsz" id=the-version-lives-in-the-tag-and-the-release-is-what-carries-it-to-the-artifact>The version lives in the tag, and the release is what carries it to the artifact<a href=#the-version-lives-in-the-tag-and-the-release-is-what-carries-it-to-the-artifact class=hash-link aria-label="Direct link to The version lives in the tag, and the release is what carries it to the artifact" title="Direct link to The version lives in the tag, and the release is what carries it to the artifact" translate=no>​</a></h4>
+<p>The tag is the source of the version, but an image can't read its own
+tag: the container doesn't know what name it was published under, and
+the tag can be moved. So <code>release.yml</code> <strong>passes the version into the
+build</strong> — and it's the only place in the repository that does this.</p>
+<p><code>VERSION</code> is a <code>docker-bake.hcl</code> variable, separate from <code>TAG</code>, with a
+default of <code>dev</code>. The <code>api</code> target converts it into <code>BRABO_VERSION</code> and
+the <code>web</code> target into <code>VITE_BRABO_VERSION</code>; each <code>Dockerfile.prod</code>
+declares it as an <code>ARG</code> with the same default. From there it reaches the
+api's spans' <code>service.version</code> and the auth screens' footer on the web
+(<a class="" href=/brabo/qa/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas>ADR 0036</a>).</p>
+<p>Two consequences, and both are intentional:</p>
 <ul>
-<li class=""><strong>Só release carimba versão.</strong> O <code>ci.yml</code> usa o mesmo bakefile com <code>TAG=prod</code> e
-não define <code>VERSION</code>, então as imagens dele reportam <code>dev</code>. Se a versão viesse
-de <code>TAG</code>, todo span do CI sairia com <code>service.version=prod</code>, que não é versão de
-nada.</li>
-<li class=""><strong>Versão não é configuração.</strong> Ela é <code>ARG</code> de build e não chave de ConfigMap,
-porque é propriedade do artefato: <code>brabo-web:1.1.2</code> não deve poder reportar
-outra coisa. As URLs continuam em runtime, pelo <code>/config.js</code>, porque aquelas são
-propriedade do ambiente (ADR 0024).</li>
+<li class=""><strong>Only a release stamps a version.</strong> <code>ci.yml</code> uses the same bakefile
+with <code>TAG=prod</code> and doesn't set <code>VERSION</code>, so its images report <code>dev</code>.
+If the version came from <code>TAG</code>, every CI span would come out with
+<code>service.version=prod</code>, which isn't a version of anything.</li>
+<li class=""><strong>Version isn't configuration.</strong> It's a build <code>ARG</code>, not a ConfigMap
+key, because it's a property of the artifact:
+<code>brabo-web:1.1.2</code> shouldn't be able to report anything else. URLs stay
+runtime-configured, via <code>/config.js</code>, because those are a property of
+the environment (ADR 0024).</li>
 </ul>
-<p>Mexer nessa cadeia é mexer na política: quem alterar <code>VERSION</code> no bakefile ou nos
-<code>ARG</code> precisa alterar os dois lados juntos, ou a versão silenciosamente volta a
-<code>dev</code> — sem erro em lugar nenhum, porque <code>dev</code> é um valor válido.</p>
-<p><strong>As imagens não são publicadas</strong> — <code>push: false</code>. Publicar em registry ainda não
-está decidido (o overlay de produção aponta para <code>ghcr.io/OWNER/*</code>, um
-placeholder), e a decisão está registrada no
-<a class="" href=/brabo/qa/adr/0027-fase5-backup-hardening-release>ADR 0027</a>. Construir sem publicar
-não é meia-medida: é o que impede uma tag existir para um commit que não compila.</p>
-<p>Elas saem do mesmo <code>docker-bake.hcl</code> que o <code>ci.yml</code> usa, em paralelo. Antes eram
-quatro <code>docker build</code> em sequência — mesmo veredito, ~160s a mais por release.</p>
-<p><strong>Não existe passo de deploy, aqui nem em lugar nenhum.</strong> A tag é o registro do
-que <strong>estaria</strong> em cada ambiente, e isso vale mesmo sem ambiente. Passo que nunca
-roda apodrece: ninguém o testa, ninguém percebe quando quebra, e no dia de ligar
-estará errado. Quando houver ambiente, o deploy será workflow <strong>próprio</strong>,
-disparado pela tag.</p>
-<h4 class="anchor anchorTargetStickyNavbar_URsz" id=a-release-depende-do-pat-e-a-falta-dele-já-custou-seis>A Release depende do PAT, e a falta dele já custou seis<a href=#a-release-depende-do-pat-e-a-falta-dele-já-custou-seis class=hash-link aria-label="Link direto para A Release depende do PAT, e a falta dele já custou seis" title="Link direto para A Release depende do PAT, e a falta dele já custou seis" translate=no>​</a></h4>
-<p>O <code>release.yml</code> dispara em <code>push</code> de tag final. Mas <strong>tag empurrada com o
-<code>GITHUB_TOKEN</code> não dispara workflow</strong> — é a regra do GitHub contra recursão. O
-<code>tag-release</code> usa <code>secrets.BRABO_BOT_TOKEN || github.token</code>: sem o PAT, a tag
-nasce e a Release não sai.</p>
-<p>A degradação é visível de propósito (há um aviso em toda execução), mas visível
-não é impedida: <strong><code>v0.2.0</code>, <code>v0.3.0</code>, <code>v0.3.1</code>, <code>v1.0.0</code>, <code>v1.0.1</code> e <code>v1.1.0</code>
-existem sem Release</strong> — seis ciclos inteiros em que o aviso apareceu e ninguém
-agiu sobre ele.</p>
-<p>Com o PAT configurado, a <code>v1.1.1</code> fechou a esteira sozinha: tag empurrada pelo
-token, <code>release.yml</code> disparado por ela, Release publicada. Antes dela, só a
-<code>v0.1.0</code> tinha Release, e por push manual. <strong>O PAT não recupera as seis
-anteriores</strong> — ele vale para tag nova.</p>
-<p>Isso separa dois problemas que é fácil confundir:</p>
+<p>Touching this chain is touching policy: whoever changes <code>VERSION</code> in the
+bakefile or in the <code>ARG</code>s needs to change both sides together, or the
+version silently reverts to <code>dev</code> — with no error anywhere, because
+<code>dev</code> is a valid value.</p>
+<p><strong>The images aren't published</strong> — <code>push: false</code>. Publishing to a
+registry hasn't been decided yet (the production overlay points to
+<code>ghcr.io/OWNER/*</code>, a placeholder), and the decision is recorded in
+<a class="" href=/brabo/qa/adr/0027-fase5-backup-hardening-release>ADR 0027</a>. Building
+without publishing isn't a half-measure: it's what prevents a tag from
+existing for a commit that doesn't compile.</p>
+<p>They're built from the same <code>docker-bake.hcl</code> that <code>ci.yml</code> uses, in
+parallel. They used to be four sequential <code>docker build</code>s — same
+verdict, ~160s more per release.</p>
+<p><strong>There's no deploy step, here or anywhere.</strong> The tag is the record of
+what <strong>would be</strong> in each environment, and that holds even without an
+environment. A step that never runs rots: no one tests it, no one
+notices when it breaks, and on the day it's flipped on it'll be wrong.
+When there's an environment, the deploy will be its <strong>own</strong> workflow,
+triggered by the tag.</p>
+<h4 class="anchor anchorTargetStickyNavbar_URsz" id=the-release-depends-on-the-pat-and-its-absence-has-already-cost-six>The Release depends on the PAT, and its absence has already cost six<a href=#the-release-depends-on-the-pat-and-its-absence-has-already-cost-six class=hash-link aria-label="Direct link to The Release depends on the PAT, and its absence has already cost six" title="Direct link to The Release depends on the PAT, and its absence has already cost six" translate=no>​</a></h4>
+<p><code>release.yml</code> fires on a final tag <code>push</code>. But <strong>a tag pushed with the
+<code>GITHUB_TOKEN</code> doesn't trigger a workflow</strong> — it's GitHub's anti-recursion
+rule. <code>tag-release</code> uses <code>secrets.BRABO_BOT_TOKEN || github.token</code>:
+without the PAT, the tag is born and the Release doesn't go out.</p>
+<p>The degradation is visible on purpose (there's a warning on every run),
+but visible isn't the same as prevented: <strong><code>v0.2.0</code>, <code>v0.3.0</code>, <code>v0.3.1</code>,
+<code>v1.0.0</code>, <code>v1.0.1</code> and <code>v1.1.0</code> exist with no Release</strong> — six whole
+cycles where the warning showed up and no one acted on it.</p>
+<p>With the PAT configured, <code>v1.1.1</code> closed the pipeline on its own: tag
+pushed by the token, <code>release.yml</code> triggered by it, Release published.
+Before it, only <code>v0.1.0</code> had a Release, and by a manual push. <strong>The PAT
+doesn't recover the previous six</strong> — it only applies to new tags.</p>
+<p>This separates two problems that are easy to confuse:</p>
 
 
 
@@ -542,43 +658,57 @@ anteriores</strong> — ele vale para tag nova.</p>
 
 
 
-<table><thead><tr><th>problema<th>conserto<tbody><tr><td>a Release não sai <strong>sozinha</strong><td>configurar o <code>BRABO_BOT_TOKEN</code><tr><td>a Release que não saiu <strong>não pode sair depois</strong><td>o <code>workflow_dispatch</code> do <code>release.yml</code></table>
-<p>O segundo continuaria aberto mesmo com o PAT no lugar: qualquer falha no
-workflow deixaria a tag órfã para sempre, porque republicar exigiria apagar e
-recriar a tag — reescrever o registro para consertar o efeito dele. Quem
-republica é o responsável de release, a mesma restrição do <code>promote</code>. O
-procedimento está em <a class="" href=/brabo/qa/reference/rulesets#republicar-uma-tag-que-ficou-%C3%B3rf%C3%A3>Rulesets</a>.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=o-changelog-volta-por-pr-e-por-que-não-por-push>O CHANGELOG volta por PR, e por que não por push<a href=#o-changelog-volta-por-pr-e-por-que-não-por-push class=hash-link aria-label="Link direto para O CHANGELOG volta por PR, e por que não por push" title="Link direto para O CHANGELOG volta por PR, e por que não por push" translate=no>​</a></h3>
-<p>Publicada a Release, o <code>release.yml</code> abre uma PR <code>chore/changelog-&lt;tag></code> para
-<strong><code>dev</code></strong> com o corte da versão no <code>CHANGELOG.md</code> — e, no mesmo commit, com a
-versão anunciada em prosa nos <strong>dois</strong> arquivos que a escrevem: o <code>README.md</code> e
-o <code>docs/intro.md</code>, a primeira página do site publicado. Quem reescreve os dois é
-<code>scripts/ci/readme-version.ts</code>, e ele lê e troca todos antes de gravar qualquer
-um: frase ausente num deles reprova o release inteiro sem deixar metade gravada.</p>
-<p>As três coisas andam juntas de propósito. A versão é <strong>gerável</strong> (o release sabe
-qual é), e o <code>docs:check</code> confere que ela bate com o corte mais recente do
-CHANGELOG em cada um dos arquivos; separar as duas pontas faria toda PR de
-changelog nascer vermelha, aberta pelo bot e esperando uma mão humana que a
-política não prevê. Frase não encontrada REPROVA o passo em vez de passar
-batido — a regex deste script e a de <code>scripts/docs/generate.mjs</code> são os dois
-lados do mesmo contrato, e um teste guarda o acordo.</p>
-<p>Por PR, e não por push, porque nenhum dos caminhos diretos existe: <code>main</code> só
-aceita tag (bot de release) e <code>.release/gate.json</code> (bot do gate), e commitar em
-<code>qa</code> ou <code>dev</code> antes da promoção quebraria o <strong>range limpo</strong> do check de
-promoção — o head do PR deixaria de ser o tip da origem.</p>
-<p><strong>Consequência aceita:</strong> o <code>CHANGELOG.md</code> de <code>main</code> fica um ciclo atrás. Não é
-perda de informação: a fonte autoritativa das notas é a <strong>GitHub Release</strong>,
-publicada no mesmo instante da tag, e o corte sobe no ciclo seguinte como
-qualquer outra mudança.</p>
+
+
+
+
+
+
+
+
+<table><thead><tr><th>problem<th>fix<tbody><tr><td>the Release doesn't go out <strong>on its own</strong><td>configure the<tr><td><code>BRABO_BOT_TOKEN</code><td><tr><td>a Release that didn't go out <strong>can't go out later</strong><td><tr><td><code>release.yml</code>'s <code>workflow_dispatch</code><td></table>
+<p>The second would remain open even with the PAT in place: any workflow
+failure would leave the tag orphaned forever, because republishing would
+require deleting and recreating the tag — rewriting the record to fix
+its own effect. Whoever republishes is the release owner, the same
+restriction as <code>promote</code>. The procedure is in
+<a class="" href=/brabo/qa/reference/rulesets#republishing-a-tag-that-was-orphaned>Rulesets</a>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-changelog-comes-back-via-pr-and-why-not-by-push>The CHANGELOG comes back via PR, and why not by push<a href=#the-changelog-comes-back-via-pr-and-why-not-by-push class=hash-link aria-label="Direct link to The CHANGELOG comes back via PR, and why not by push" title="Direct link to The CHANGELOG comes back via PR, and why not by push" translate=no>​</a></h3>
+<p>Once the Release is published, <code>release.yml</code> opens a <code>chore/changelog-&lt;tag></code>
+PR to <strong><code>dev</code></strong> with the version's cut in <code>CHANGELOG.md</code> — and, in the
+same commit, with the version announced in prose in the <strong>two</strong> files
+that write it: <code>README.md</code> and <code>docs/intro.md</code>, the published site's
+first page. Whoever rewrites both is <code>scripts/ci/readme-version.ts</code>, and
+it reads and swaps all of them before writing any one of them: a phrase
+missing in either fails the whole release rather than leaving it half
+written.</p>
+<p>The three things move together on purpose. The version is <strong>generatable</strong>
+(the release knows what it is), and <code>docs:check</code> confirms it matches the
+CHANGELOG's most recent cut in each of the files; separating the two
+ends would make every changelog PR born red, opened by the bot and
+waiting for a human hand the policy doesn't provide for. A phrase not
+found FAILS the step instead of sliding through — this script's regex and
+<code>scripts/docs/generate.mjs</code>'s are the two sides of the same contract, and
+a test guards the agreement.</p>
+<p>By PR, and not by push, because none of the direct paths exist: <code>main</code>
+only accepts a tag (release bot) and <code>.release/gate.json</code> (gate bot), and
+committing to <code>qa</code> or <code>dev</code> before promotion would break the promotion
+check's <strong>clean range</strong> — the PR's head would stop being the origin's
+tip.</p>
+<p><strong>Accepted consequence:</strong> <code>main</code>'s <code>CHANGELOG.md</code> stays one cycle behind.
+It's not information loss: the authoritative source of the notes is the
+<strong>GitHub Release</strong>, published at the same moment as the tag, and the cut
+lands in the next cycle like any other change.</p>
 <blockquote>
-<p>Antes disso <strong>nada nunca escrevia no arquivo</strong>. O gerador só era chamado com
-<code>--stdout</code>, para montar o corpo da Release, e o <code>CHANGELOG.md</code> acumulou doze
-versões dentro de um único "Unreleased" — enquanto seis Releases saíam com o
-corpo vazio, porque a "tag anterior" incluía as pré-releases da própria
-versão sendo lançada.</p>
+<p>Before this, <strong>nothing ever wrote to the file</strong>. The generator was only
+ever called with <code>--stdout</code>, to build the Release's body, and
+<code>CHANGELOG.md</code> had accumulated twelve versions inside a single
+"Unreleased" — while six Releases went out with an empty body, because
+the "previous tag" included that same version's own pre-releases.</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=a-versão-do-ciclo>A versão do ciclo<a href=#a-versão-do-ciclo class=hash-link aria-label="Link direto para A versão do ciclo" title="Link direto para A versão do ciclo" translate=no>​</a></h3>
-<p>Sai do <strong>maior impacto</strong> entre os PRs mergeados desde a última final:</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-cycles-version>The cycle's version<a href=#the-cycles-version class=hash-link aria-label="Direct link to The cycle's version" title="Direct link to The cycle's version" translate=no>​</a></h3>
+<p>Comes from the <strong>largest impact</strong> among the PRs merged since the last
+final tag:</p>
 
 
 
@@ -600,23 +730,25 @@ versão sendo lançada.</p>
 
 
 
-<table><thead><tr><th>função da branch<th>impacto<tbody><tr><td><code>breaking/</code><td>MAJOR<tr><td><code>feature/</code><td>MINOR<tr><td>todo o resto<td>PATCH</table>
-<p>Um <code>breaking</code> no meio de dez <code>docs</code> faz o ciclo inteiro ser MAJOR. E é a
-<strong>função da branch</strong> que decide, não a label de família: <code>breaking/x</code> e
-<code>docs/y</code> são ambos da família <code>trabalho</code>.</p>
-<h4 class="anchor anchorTargetStickyNavbar_URsz" id=breaking-exige-o-marcador-no-commit><code>breaking/</code> exige o marcador no commit<a href=#breaking-exige-o-marcador-no-commit class=hash-link aria-label="Link direto para breaking-exige-o-marcador-no-commit" title="Link direto para breaking-exige-o-marcador-no-commit" translate=no>​</a></h4>
-<p>O <code>pr-police</code> reprova um PR de <code>breaking/</code> cujos commits não marcam a quebra —
-<code>!</code> no assunto (<code>feat(api)!: …</code>) ou <code>BREAKING CHANGE:</code> no corpo — e reprova
-também o inverso: commit marcado numa branch que não é <code>breaking/</code>.</p>
-<p>A regra existe porque são <strong>dois mecanismos para o mesmo fato</strong>, e eles viviam
-soltos: a versão sai da FUNÇÃO da branch (a tabela acima), e o CHANGELOG
-detecta quebra pelo MARCADOR no commit. Nada os ligava.</p>
-<p>O preço foi medido. <code>breaking/fase-7-auth-e-openapi</code> removeu o Keycloak,
-deslogou todo mundo e subiu MAJOR corretamente — e o CHANGELOG não registra
-quebra nenhuma, em <strong>nenhuma</strong> das doze versões, porque nenhum commit do
-histórico jamais usou os marcadores. As duas metades funcionavam; a informação
-não atravessava de uma para a outra.</p>
-<p>As duas direções importam, e a segunda é pior:</p>
+<table><thead><tr><th>branch function<th>impact<tbody><tr><td><code>breaking/</code><td>MAJOR<tr><td><code>feature/</code><td>MINOR<tr><td>everything else<td>PATCH</table>
+<p>A single <code>breaking</code> among ten <code>docs</code> makes the whole cycle MAJOR. And
+it's the <strong>branch's function</strong> that decides, not the family label:
+<code>breaking/x</code> and <code>docs/y</code> are both in the <code>trabalho</code> family.</p>
+<h4 class="anchor anchorTargetStickyNavbar_URsz" id=breaking-requires-the-marker-on-the-commit><code>breaking/</code> requires the marker on the commit<a href=#breaking-requires-the-marker-on-the-commit class=hash-link aria-label="Direct link to breaking-requires-the-marker-on-the-commit" title="Direct link to breaking-requires-the-marker-on-the-commit" translate=no>​</a></h4>
+<p><code>pr-police</code> rejects a <code>breaking/</code> PR whose commits don't mark the break
+— <code>!</code> in the subject (<code>feat(api)!: …</code>) or <code>BREAKING CHANGE:</code> in the body
+— and it also rejects the inverse: a marked commit on a branch that isn't
+<code>breaking/</code>.</p>
+<p>The rule exists because these are <strong>two mechanisms for the same fact</strong>,
+and they used to live apart: the version comes from the branch's
+FUNCTION (the table above), and the CHANGELOG detects a break by the
+commit's MARKER. Nothing connected them.</p>
+<p>The cost was measured. <code>breaking/fase-7-auth-e-openapi</code> removed
+Keycloak, logged everyone out and correctly bumped MAJOR — and the
+CHANGELOG records no breakage at all, in <strong>none</strong> of the twelve versions,
+because no commit in the history had ever used the markers. Both halves
+worked; the information just never crossed from one to the other.</p>
+<p>Both directions matter, and the second is worse:</p>
 
 
 
@@ -634,17 +766,29 @@ não atravessava de uma para a outra.</p>
 
 
 
-<table><thead><tr><th>situação<th>o que acontecia<tbody><tr><td><code>breaking/</code> sem marcador<td>a versão salta MAJOR e o changelog não diz o que quebrou<tr><td>marcador fora de <code>breaking/</code><td>o changelog anuncia a quebra e a versão sai PATCH — quem confia no número quebra sem aviso</table>
-<p>Verificação que não pôde ser feita (checkout raso, ref não buscada) <strong>não
-reprova</strong>: a regra só roda quando o intervalo <code>base..head</code> é legível, a mesma
-doutrina da checagem de contaminação.</p>
-<p>Ciclo <strong>vazio</strong> — nenhum PR desde a última final — falha com mensagem em vez de
-gerar tag. Tag nova apontando para o mesmo commit da anterior faz o histórico
-de versões mentir.</p>
-<h4 class="anchor anchorTargetStickyNavbar_URsz" id=de-onde-saem-os-prs-do-ciclo>De onde saem os PRs do ciclo<a href=#de-onde-saem-os-prs-do-ciclo class=hash-link aria-label="Link direto para De onde saem os PRs do ciclo" title="Link direto para De onde saem os PRs do ciclo" translate=no>​</a></h4>
-<p>Do <code>git log</code> entre a última final e <code>dev</code>, lendo o número do PR no assunto do
-commit. Os <strong>dois estilos de merge</strong> precisam ser entendidos, porque o número
-cai em lugares diferentes:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>situation<th>what used to happen<tbody><tr><td><code>breaking/</code> with no marker<td>the version jumps MAJOR and the<tr><td>changelog doesn't say what broke<td><tr><td>marker outside <code>breaking/</code><td>the changelog announces a break and the<tr><td>version comes out PATCH — whoever trusts the number breaks without<td><tr><td>warning<td></table>
+<p>A check that couldn't be performed (shallow checkout, ref not fetched)
+<strong>doesn't fail</strong>: the rule only runs when the <code>base..head</code> range is
+readable, the same doctrine as the contamination check.</p>
+<p>An <strong>empty</strong> cycle — no PR since the last final — fails with a message
+instead of generating a tag. A new tag pointing at the same commit as the
+previous one would make the version history lie.</p>
+<h4 class="anchor anchorTargetStickyNavbar_URsz" id=where-the-cycles-prs-come-from>Where the cycle's PRs come from<a href=#where-the-cycles-prs-come-from class=hash-link aria-label="Direct link to Where the cycle's PRs come from" title="Direct link to Where the cycle's PRs come from" translate=no>​</a></h4>
+<p>From the <code>git log</code> between the last final tag and <code>dev</code>, reading the PR
+number from the commit's subject. The <strong>two merge styles</strong> need to be
+understood, because the number lands in different places:</p>
 
 
 
@@ -662,63 +806,45 @@ cai em lugares diferentes:</p>
 
 
 
-<table><thead><tr><th>estilo<th>assunto<tbody><tr><td>squash<td><code>feat(ci): faz coisa (#53)</code><tr><td>merge commit<td><code>Merge pull request #56 from daneiel/feature/x</code></table>
-<p>Ler só o primeiro foi um bug real: o <code>--no-merges</code> do range escondia
-exatamente a linha que cita o número num merge commit, e o ciclo inteiro
-parecia vazio — o merge do #56 em <code>dev</code> não gerou tag nenhuma.</p>
-<p><strong>Promoção e retropropagação não contam.</strong> Elas nascem de uma permanente, e o
-que carregam já foi contado ou já foi lançado. Sem essa exclusão, um backmerge
-de hotfix sozinho geraria um ciclo novo: uma tag <code>-dev.N</code> sobre uma versão que
-não mudou nada.</p>
-<p>Duas peças fazem essa descoberta e <strong>têm que concordar</strong>: o <code>tag-release</code>, que
-carimba no merge, e o <code>promote</code>, que calcula a versão do PR de promoção. Se
-divergirem, o PR de promoção anuncia uma versão e a tag sai com outra. As duas
-usam a mesma função — a duplicação da lógica já custou uma promoção reprovada
-com "ciclo vazio" logo depois de o <code>tag-release</code> ter carimbado <code>-dev.2</code>.</p>
+<table><thead><tr><th>style<th>subject<tbody><tr><td>squash<td><code>feat(ci): faz coisa (#53)</code><tr><td>merge commit<td><code>Merge pull request #56 from daneiel/feature/x</code></table>
+<p>Reading only the first was a real bug: the range's <code>--no-merges</code> was
+hiding exactly the line that cites the number in a merge commit, and the
+whole cycle looked empty — merging #56 into <code>dev</code> generated no tag at
+all.</p>
+<p><strong>Promotion and back-merge don't count.</strong> They're born from a permanent
+branch, and what they carry has already been counted or already
+released. Without this exclusion, a solo hotfix back-merge would
+generate a whole new cycle: a <code>-dev.N</code> tag on a version that changed
+nothing.</p>
+<p>Two pieces do this discovery and <strong>have to agree</strong>: <code>tag-release</code>, which
+stamps at merge time, and <code>promote</code>, which computes the version for the
+promotion PR. If they diverge, the promotion PR announces one version and
+the tag comes out with another. Both use the same function — the logic's
+duplication has already cost one promotion, rejected as "empty cycle"
+right after <code>tag-release</code> had stamped <code>-dev.2</code>.</p>
 <blockquote>
-<p><strong>O <code>promote</code> roda com o código da branch PADRÃO.</strong> É <code>workflow_dispatch</code>
-(ver a tabela de gatilhos em <a class="" href=/brabo/qa/reference/rulesets>Rulesets</a>), então
-corrigir o cálculo em <code>dev</code> <strong>não</strong> conserta o dispatch enquanto a correção
-não chegar em <code>main</code>. Até lá, a saída é a mesma já documentada: rodar
-<code>node scripts/ci/promote.ts</code> à mão, com o mesmo script.</p>
+<p><strong><code>promote</code> runs with the code from the DEFAULT branch.</strong> It's
+<code>workflow_dispatch</code> (see the trigger table in
+<a class="" href=/brabo/qa/reference/rulesets>Rulesets</a>), so fixing the calculation in
+<code>dev</code> does <strong>not</strong> fix the dispatch until the fix reaches <code>main</code>. Until
+then, the workaround is the one already documented: run
+<code>node scripts/ci/promote.ts</code> by hand, with the same script.</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=o-n>O <code>N</code><a href=#o-n class=hash-link aria-label="Link direto para o-n" title="Link direto para o-n" translate=no>​</a></h3>
-<p><code>N</code> é quantas tags daquela versão já existem naquele estágio, mais um.</p>
-<p>Não há estado guardado em lugar nenhum: <strong>as próprias tags são o contador</strong>. É
-o que faz "promoveu, reprovou, corrigiu, repromoveu" virar <code>-qa.2</code> sem ninguém
-anotar a reprovação — e o número passa a dizer quantas voltas o ciclo deu antes
-de passar.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=a-âncora-da-tag-final>A âncora da tag final<a href=#a-âncora-da-tag-final class=hash-link aria-label="Link direto para A âncora da tag final" title="Link direto para A âncora da tag final" translate=no>​</a></h3>
-<p>A tag final só nasce se o que está em <code>main</code> for <strong>exatamente</strong> o que passou
-por <code>qa</code>. Se não for, o workflow falha ruidosamente em vez de publicar.</p>
-<p>Como promoção é <code>--no-ff</code>, o merge <strong>cria um commit novo</strong> — o sha de <code>main</code>
-nunca vai ser o sha de <code>qa</code>. Comparar shas seria uma verificação impossível de
-passar. O que se compara são duas coisas, e juntas elas são mais fortes:</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>conferência<th>o que garante<tbody><tr><td>a <code>-qa.N</code> é <strong>pai</strong> do commit de <code>main</code><td>foi ela que entrou, não um ancestral qualquer<tr><td>a <strong>árvore</strong> é idêntica<td>o conteúdo é byte a byte o que foi validado</table>
-<p>A segunda é a que realmente importa. Se o outro lado do merge trouxesse um
-arquivo, a árvore mudaria e a verificação reprovaria — que é exatamente o caso
-que a âncora existe para pegar. Igualdade de árvore é mais forte que igualdade
-de commit: ela olha o conteúdo, não a identidade.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=os-dois-caminhos-da-main>Os dois caminhos da <code>main</code><a href=#os-dois-caminhos-da-main class=hash-link aria-label="Link direto para os-dois-caminhos-da-main" title="Link direto para os-dois-caminhos-da-main" translate=no>​</a></h3>
-<p><code>main</code> recebe merge de dois jeitos, e eles pedem versões diferentes. A
-distinção sai do <strong>segundo pai</strong> do merge commit — o lado que entrou:</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-n>The <code>N</code><a href=#the-n class=hash-link aria-label="Direct link to the-n" title="Direct link to the-n" translate=no>​</a></h3>
+<p><code>N</code> is however many tags of that version already exist at that stage,
+plus one.</p>
+<p>There's no state stored anywhere: <strong>the tags themselves are the
+counter</strong>. That's what makes "promoted, rejected, fixed, re-promoted"
+become <code>-qa.2</code> with no one recording the rejection — and the number ends
+up saying how many laps the cycle took before passing.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-final-tags-anchor>The final tag's anchor<a href=#the-final-tags-anchor class=hash-link aria-label="Direct link to The final tag's anchor" title="Direct link to The final tag's anchor" translate=no>​</a></h3>
+<p>The final tag is only born if what's in <code>main</code> is <strong>exactly</strong> what
+passed through <code>qa</code>. If it isn't, the workflow fails loudly instead of
+publishing.</p>
+<p>Since promotion is <code>--no-ff</code>, the merge <strong>creates a new commit</strong> —
+<code>main</code>'s sha will never be <code>qa</code>'s sha. Comparing shas would be a check
+impossible to pass. What gets compared are two things, and together
+they're stronger:</p>
 
 
 
@@ -739,14 +865,20 @@ distinção sai do <strong>segundo pai</strong> do merge commit — o lado que e
 
 
 
-<table><thead><tr><th>segundo pai<th>caminho<th>versão<tbody><tr><td>é o commit de uma <code>-qa.N</code><td>promoção<td>a do ciclo, <strong>com âncora</strong><tr><td>qualquer outro<td>hotfix<td>última final <strong>+ PATCH</strong>, sem âncora</table>
-<p>O hotfix nasce de <code>main</code> e nunca passa por <code>qa</code>. Exigir âncora dele seria
-exigir o impossível — e a tag PATCH precisa nascer, porque é ela que os PRs de
-retropropagação citam.</p>
-<p>Uma <code>-dev.N</code> de segundo pai <strong>não</strong> conta como promoção: um merge de <code>dev</code>
-direto em <code>main</code> pula <code>qa</code>, e a final sairia carimbando código que ninguém
-validou.</p>
-<p>Casos que falham ruidosamente em vez de adivinhar:</p>
+
+
+
+
+
+<table><thead><tr><th>check<th>what it guarantees<tbody><tr><td>the <code>-qa.N</code> is the <strong>parent</strong> of the commit on <code>main</code><td>it was that<tr><td>one that entered, not some ancestor<td><tr><td>the <strong>tree</strong> is identical<td>the content is byte-for-byte what was<tr><td>validated<td></table>
+<p>The second is the one that really matters. If the other side of the
+merge brought in a file, the tree would change and the check would fail
+— exactly the case the anchor exists to catch. Tree equality is stronger
+than commit equality: it looks at content, not identity.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=mains-two-paths><code>main</code>'s two paths<a href=#mains-two-paths class=hash-link aria-label="Direct link to mains-two-paths" title="Direct link to mains-two-paths" translate=no>​</a></h3>
+<p><code>main</code> receives merges in two ways, and they call for different
+versions. The distinction comes from the merge commit's <strong>second
+parent</strong> — the side that entered:</p>
 
 
 
@@ -764,29 +896,69 @@ validou.</p>
 
 
 
-<table><thead><tr><th>situação<th>por quê<tbody><tr><td>merge em <code>main</code> com um pai só<td>squash apaga o lado que entrou; sem ele o caminho é indeterminável<tr><td>hotfix sem nenhuma final publicada<td>PATCH é incremento sobre algo lançado</table>
-<p>E dois casos que <strong>não geram tag nenhuma</strong>, de propósito: o commit do gate
-(mexe só em <code>.release/</code>) e a retropropagação <code>main → qa</code>/<code>dev</code>, que traz
-conteúdo que já está em <code>main</code>. Sem essa segunda saída, o backmerge carimbaria
-uma <code>-qa.N</code> num commit que nunca foi promovido de <code>dev</code> — uma tag dizendo
-"isto passou por qa" sobre algo que não passou.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=não-há-deploy>Não há deploy<a href=#não-há-deploy class=hash-link aria-label="Link direto para Não há deploy" title="Link direto para Não há deploy" translate=no>​</a></h3>
-<p>Os workflows <strong>terminam na tag</strong>. Não há ambiente, não há GitHub Environments,
-não há passo de deploy — nem desligado. A tag é o registro do que <em>estaria</em> em
-cada estágio, e vale por si.</p>
-<p>Um passo de deploy que nunca roda é um passo que apodrece: ninguém o testa,
-ninguém percebe quando quebra, e no dia em que for ligado estará errado. Quando
-houver ambiente, o deploy será um workflow próprio disparado <strong>pela tag</strong>.</p>
-<p>Para olhar com os próprios olhos o que uma tag carimbou:</p>
+
+
+
+<table><thead><tr><th>second parent<th>path<th>version<tbody><tr><td>the commit of a <code>-qa.N</code><td>promotion<td>the cycle's, <strong>with anchor</strong><tr><td>anything else<td>hotfix<td>last final <strong>+ PATCH</strong>, no anchor</table>
+<p>The hotfix is born from <code>main</code> and never goes through <code>qa</code>. Requiring an
+anchor from it would demand the impossible — and the PATCH tag has to be
+born, because it's the one the back-merge PRs cite.</p>
+<p>A <code>-dev.N</code> as second parent does <strong>not</strong> count as a promotion: a merge
+straight from <code>dev</code> into <code>main</code> skips <code>qa</code>, and the final tag would end
+up stamping code no one validated.</p>
+<p>Cases that fail loudly instead of guessing:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>situation<th>why<tbody><tr><td>a merge into <code>main</code> with a single parent<td>a squash erases the side<tr><td>that entered; without it the path can't be determined<td><tr><td>a hotfix with no final tag published yet<td>PATCH is an increment over<tr><td>something already released<td></table>
+<p>And two cases that generate <strong>no tag at all</strong>, on purpose: the gate's
+commit (touches only <code>.release/</code>) and the <code>main → qa</code>/<code>dev</code> back-merge,
+which carries content already in <code>main</code>. Without this second escape
+hatch, the back-merge would stamp a <code>-qa.N</code> on a commit that was never
+promoted from <code>dev</code> — a tag saying "this passed through qa" on something
+that didn't.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=theres-no-deploy>There's no deploy<a href=#theres-no-deploy class=hash-link aria-label="Direct link to There's no deploy" title="Direct link to There's no deploy" translate=no>​</a></h3>
+<p>The workflows <strong>end at the tag</strong>. There's no environment, no GitHub
+Environments, no deploy step — not even a disabled one. The tag is the
+record of what <em>would be</em> at each stage, and stands on its own.</p>
+<p>A deploy step that never runs is a step that rots: no one tests it, no
+one notices when it breaks, and on the day it's turned on it'll be
+wrong. When there's an environment, the deploy will be its own workflow,
+triggered <strong>by the tag</strong>.</p>
+<p>To look with your own eyes at what a tag stamped:</p>
 <div class="language-bash codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-bash codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token function" style="color:rgb(80, 250, 123)">make</span><span class="token plain"> deploy-local </span><span class="token assign-left variable" style="color:rgb(189, 147, 249);font-style:italic">TAG</span><span class="token operator">=</span><span class="token plain">v0.2.0-qa.1</span><br/></div></code></pre></div></div>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=o-backmerge-gate>O backmerge gate<a href=#o-backmerge-gate class=hash-link aria-label="Link direto para O backmerge gate" title="Link direto para O backmerge gate" translate=no>​</a></h2>
-<p>O <code>hotfix</code> resolve o incidente e cria um problema novo: a correção está em
-<code>main</code> e não está em <code>qa</code> nem em <code>dev</code>. Se alguém promover <code>dev → qa → main</code>
-antes de a correção descer, o release <strong>desfaz o hotfix</strong> — sem conflito, sem
-aviso, meses depois, e ninguém vai ligar o bug de volta àquele merge.</p>
-<p>O gate fecha esse buraco travando os degraus de baixo até a correção descer.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=o-estado>O estado<a href=#o-estado class=hash-link aria-label="Link direto para O estado" title="Link direto para O estado" translate=no>​</a></h3>
-<p>O gate mora em <code>.release/gate.json</code>, na <code>main</code>:</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=the-back-merge-gate>The back-merge gate<a href=#the-back-merge-gate class=hash-link aria-label="Direct link to The back-merge gate" title="Direct link to The back-merge gate" translate=no>​</a></h2>
+<p><code>hotfix</code> solves the incident and creates a new problem: the fix is in
+<code>main</code> and not in <code>qa</code> or <code>dev</code>. If someone promotes <code>dev → qa → main</code>
+before the fix comes down, the release <strong>undoes the hotfix</strong> — no
+conflict, no warning, months later, and no one will connect the bug back
+to that merge.</p>
+<p>The gate closes that hole by locking the lower steps until the fix comes
+down.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-state>The state<a href=#the-state class=hash-link aria-label="Direct link to The state" title="Direct link to The state" translate=no>​</a></h3>
+<p>The gate lives at <code>.release/gate.json</code>, on <code>main</code>:</p>
 <div class="language-json codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-json codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token punctuation" style="color:rgb(248, 248, 242)">{</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"versao"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token number">1</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"locked"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(248, 248, 242)">[</span><span class="token string" style="color:rgb(255, 121, 198)">"qa"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"dev"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">]</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"awaiting"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"v0.2.1"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"order"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(248, 248, 242)">[</span><span class="token string" style="color:rgb(255, 121, 198)">"qa"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"dev"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">]</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"historico"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(248, 248, 242)">[</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">    </span><span class="token punctuation" style="color:rgb(248, 248, 242)">{</span><span class="token plain"> </span><span class="token property">"tag"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"v0.2.1"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"> </span><span class="token property">"sha"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"…"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"> </span><span class="token property">"em"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"…"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"> </span><span class="token property">"prs"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(248, 248, 242)">{</span><span class="token plain"> </span><span class="token property">"qa"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token number">60</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"> </span><span class="token property">"dev"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token number">61</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(248, 248, 242)">}</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(248, 248, 242)">}</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token punctuation" style="color:rgb(248, 248, 242)">]</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token punctuation" style="color:rgb(248, 248, 242)">}</span><br/></div></code></pre></div></div>
 
 
@@ -813,25 +985,27 @@ aviso, meses depois, e ninguém vai ligar o bug de volta àquele merge.</p>
 
 
 
-<table><thead><tr><th>campo<th>o quê<tbody><tr><td><code>locked</code><td>branches que não aceitam merge nenhum<tr><td><code>awaiting</code><td>a tag do hotfix mais recente — <code>null</code> quando limpo<tr><td><code>order</code><td>a ordem em que as travas saem: sempre de cima para baixo<tr><td><code>historico</code><td>todos os hotfixes desta rodada; zera quando a cadeia fecha</table>
-<p>Ele é lido <strong>sempre da <code>main</code></strong>, nunca da branch do PR: os PRs de
-retropropagação carregam uma cópia do arquivo junto, e ler essa cópia daria o
-estado velho justamente durante a cadeia em que ele muda a cada merge.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=o-que-acontece-no-merge-de-um-hotfix>O que acontece no merge de um hotfix<a href=#o-que-acontece-no-merge-de-um-hotfix class=hash-link aria-label="Link direto para O que acontece no merge de um hotfix" title="Link direto para O que acontece no merge de um hotfix" translate=no>​</a></h3>
-<p>Tudo no mesmo workflow (<code>tag-release</code>), nesta ordem — e a ordem importa, porque
-os PRs precisam citar a tag:</p>
+<table><thead><tr><th>field<th>what<tbody><tr><td><code>locked</code><td>branches that accept no merge at all<tr><td><code>awaiting</code><td>the most recent hotfix's tag — <code>null</code> when clean<tr><td><code>order</code><td>the order the locks come off in: always top to bottom<tr><td><code>historico</code><td>every hotfix in this round; resets when the chain closes</table>
+<p>It's read <strong>always from <code>main</code></strong>, never from the PR's branch: the
+back-merge PRs carry a copy of the file along, and reading that copy
+would give the stale state precisely during the chain it changes at
+every merge.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=what-happens-when-a-hotfix-merges>What happens when a hotfix merges<a href=#what-happens-when-a-hotfix-merges class=hash-link aria-label="Direct link to What happens when a hotfix merges" title="Direct link to What happens when a hotfix merges" translate=no>​</a></h3>
+<p>All in the same workflow (<code>tag-release</code>), in this order — and the order
+matters, because the PRs need to cite the tag:</p>
 <ol>
-<li class="">a tag <strong>PATCH</strong> nasce normalmente (<code>v0.2.0</code> + hotfix → <code>v0.2.1</code>);</li>
-<li class="">os <strong>dois PRs de retropropagação</strong> são abertos: <code>main → qa</code> e <code>main → dev</code>;</li>
-<li class=""><code>.release/gate.json</code> é escrito em <code>main</code> travando <code>qa</code> e <code>dev</code>.</li>
+<li class="">the <strong>PATCH</strong> tag is born normally (<code>v0.2.0</code> + hotfix → <code>v0.2.1</code>);</li>
+<li class="">the <strong>two back-merge PRs</strong> are opened: <code>main → qa</code> and <code>main → dev</code>;</li>
+<li class=""><code>.release/gate.json</code> is written on <code>main</code>, locking <code>qa</code> and <code>dev</code>.</li>
 </ol>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=acúmulo-sai-de-graça>Acúmulo sai de graça<a href=#acúmulo-sai-de-graça class=hash-link aria-label="Link direto para Acúmulo sai de graça" title="Link direto para Acúmulo sai de graça" translate=no>​</a></h3>
-<p>Um segundo hotfix durante gate ativo <strong>não abre PR novo e não cria fila
-paralela</strong>. Os PRs <code>main → qa</code> e <code>main → dev</code> já estão abertos e carregam o que
-<code>main</code> tiver — inclusive o hotfix novo. O gate só acrescenta a entrada no
-<code>historico</code> e reafirma a trava. Uma branch já destravada <strong>volta a travar</strong>,
-porque agora há conteúdo novo para descer.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=o-check-em-todo-pr>O check, em todo PR<a href=#o-check-em-todo-pr class=hash-link aria-label="Link direto para O check, em todo PR" title="Link direto para O check, em todo PR" translate=no>​</a></h3>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=accumulation-comes-free>Accumulation comes free<a href=#accumulation-comes-free class=hash-link aria-label="Direct link to Accumulation comes free" title="Direct link to Accumulation comes free" translate=no>​</a></h3>
+<p>A second hotfix during an active gate <strong>doesn't open a new PR and
+doesn't create a parallel queue</strong>. The <code>main → qa</code> and <code>main → dev</code> PRs
+are already open and carry whatever <code>main</code> has — including the new
+hotfix. The gate only appends the entry to <code>historico</code> and re-affirms the
+lock. A branch already unlocked <strong>locks again</strong>, because now there's new
+content that needs to come down.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-check-on-every-pr>The check, on every PR<a href=#the-check-on-every-pr class=hash-link aria-label="Direct link to The check, on every PR" title="Direct link to The check, on every PR" translate=no>​</a></h3>
 
 
 
@@ -861,36 +1035,44 @@ porque agora há conteúdo novo para descer.</p>
 
 
 
-<table><thead><tr><th>situação<th>veredito<tbody><tr><td><code>locked</code> vazio<td>✓ passa<tr><td><code>main</code> → primeiro degrau ainda travado<td>✓ é a retropropagação da vez<tr><td><code>main</code> → degrau fora de ordem<td>✗ "destrave <code>qa</code> antes de <code>dev</code>"<tr><td>qualquer PR para branch travada<td>✗ com o link do PR que resolve<tr><td><code>hotfix/</code> → <code>main</code><td>✓ <code>main</code> nunca é travada</table>
-<p><code>bugfix/</code> para <code>dev</code> durante gate ativo é <strong>barrado</strong>. A tentação é achar que
-"é correção, então pode passar": não pode. Ela nasce de <code>dev</code>, não carrega o
-hotfix, não resolve a trava, e ainda empilha trabalho por cima do buraco.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=a-ordem-não-é-burocracia>A ordem não é burocracia<a href=#a-ordem-não-é-burocracia class=hash-link aria-label="Link direto para A ordem não é burocracia" title="Link direto para A ordem não é burocracia" translate=no>​</a></h3>
-<p>Destravar <code>dev</code> antes de <code>qa</code> deixaria o degrau do meio sem a correção — que é
-exatamente o buraco que o gate existe para fechar. A última destrava limpa o
-<code>awaiting</code> e zera o histórico.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=a-trava-é-conferida-não-só-declarada>A trava é conferida, não só declarada<a href=#a-trava-é-conferida-não-só-declarada class=hash-link aria-label="Link direto para A trava é conferida, não só declarada" title="Link direto para A trava é conferida, não só declarada" translate=no>​</a></h3>
-<p><code>locked</code> é o <strong>registro da intenção</strong>; a verdade é a contenção. Antes de
-avaliar, o check pergunta ao git se o commit do hotfix <strong>já está</strong> em cada
-branch travada, e deixa cair as travas que a realidade já satisfez.</p>
-<p>Isso não é zelo: é o conserto de uma armadilha real. Os PRs de retropropagação
-levam o <code>gate.json</code> para <code>qa</code> e <code>dev</code>; meses depois, uma promoção <code>qa → main</code>
-pode subir aquela cópia velha de volta. Sem a conferência, uma trava fantasma
-reapareceria em <code>main</code> sem nenhum hotfix por trás — e nada a destravaria,
-porque não há retropropagação pendente. O repositório ficaria parado para
-sempre.</p>
-<p><strong>Não conseguir verificar mantém a trava.</strong> Desconhecido não é permissão.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=o-que-a-política-não-resolve>O que a política não resolve<a href=#o-que-a-política-não-resolve class=hash-link aria-label="Link direto para O que a política não resolve" title="Link direto para O que a política não resolve" translate=no>​</a></h2>
-<p><strong>Não impede código ruim.</strong> Ela garante que o código passou pelos degraus, não
-que é bom. Quem faz isso é revisão, teste e os gates de QA e SecOps.</p>
-<p><strong>Não substitui julgamento em incidente.</strong> Ela dá um caminho rápido e seguro
-(<code>hotfix</code>) para que ninguém precise escolher entre "seguir a regra" e "resolver
-agora". Se a política estiver atrapalhando durante um incidente, o problema é
-a política — abra uma issue depois, não burle durante.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=papéis>Papéis<a href=#papéis class=hash-link aria-label="Link direto para Papéis" title="Link direto para Papéis" translate=no>​</a></h2>
-<p>Enquanto <code>APPROVAL_MODE=solo</code>, os dois papéis abaixo são exercidos pelo
-<strong>owner</strong>. Não é concentração por descuido — é o reconhecimento de que um
-projeto de um mantenedor não tem a quem delegar, escrito em vez de subentendido.</p>
+
+
+
+
+<table><thead><tr><th>situation<th>verdict<tbody><tr><td><code>locked</code> empty<td>✓ passes<tr><td><code>main</code> → first still-locked step<td>✓ it's that step's back-merge<tr><td><code>main</code> → step out of order<td>✗ "unlock <code>qa</code> before <code>dev</code>"<tr><td>any PR to a locked branch<td>✗ with the link to the PR that resolves<tr><td>it<td><tr><td><code>hotfix/</code> → <code>main</code><td>✓ <code>main</code> is never locked</table>
+<p><code>bugfix/</code> to <code>dev</code> during an active gate is <strong>blocked</strong>. The temptation is
+to think "it's a fix, so it should pass": it can't. It's born from <code>dev</code>,
+doesn't carry the hotfix, doesn't resolve the lock, and just piles more
+work on top of the hole.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-order-isnt-bureaucracy>The order isn't bureaucracy<a href=#the-order-isnt-bureaucracy class=hash-link aria-label="Direct link to The order isn't bureaucracy" title="Direct link to The order isn't bureaucracy" translate=no>​</a></h3>
+<p>Unlocking <code>dev</code> before <code>qa</code> would leave the middle step without the fix
+— exactly the hole the gate exists to close. The last unlock clears
+<code>awaiting</code> and resets the history.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-lock-is-checked-not-just-declared>The lock is checked, not just declared<a href=#the-lock-is-checked-not-just-declared class=hash-link aria-label="Direct link to The lock is checked, not just declared" title="Direct link to The lock is checked, not just declared" translate=no>​</a></h3>
+<p><code>locked</code> is the <strong>record of intent</strong>; the truth is the containment.
+Before evaluating, the check asks git whether the hotfix commit is
+<strong>already</strong> in each locked branch, and lets fall whichever locks reality
+has already satisfied.</p>
+<p>This isn't fussiness: it's the fix for a real trap. The back-merge PRs
+carry <code>gate.json</code> to <code>qa</code> and <code>dev</code>; months later, a <code>qa → main</code> promotion
+could bring that stale copy back up. Without the check, a phantom lock
+would reappear on <code>main</code> with no hotfix behind it — and nothing would
+unlock it, because there's no pending back-merge. The repository would
+stay stuck forever.</p>
+<p><strong>Failing to verify keeps the lock.</strong> Unknown isn't permission.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=what-the-policy-doesnt-solve>What the policy doesn't solve<a href=#what-the-policy-doesnt-solve class=hash-link aria-label="Direct link to What the policy doesn't solve" title="Direct link to What the policy doesn't solve" translate=no>​</a></h2>
+<p><strong>It doesn't prevent bad code.</strong> It guarantees the code went through the
+steps, not that it's good. That's review, testing and the QA/SecOps gates'
+job.</p>
+<p><strong>It doesn't replace judgment during an incident.</strong> It gives a fast, safe
+path (<code>hotfix</code>) so no one has to choose between "follow the rule" and
+"fix it now." If the policy is getting in the way during an incident, the
+policy is the problem — open an issue afterward, don't cheat during.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=roles>Roles<a href=#roles class=hash-link aria-label="Direct link to Roles" title="Direct link to Roles" translate=no>​</a></h2>
+<p>While <code>APPROVAL_MODE=solo</code>, the two roles below are held by the
+<strong>owner</strong>. It's not concentration by neglect — it's the acknowledgment,
+written down instead of left implicit, that a single-maintainer project
+has no one to delegate to.</p>
 
 
 
@@ -911,20 +1093,31 @@ projeto de um mantenedor não tem a quem delegar, escrito em vez de subentendido
 
 
 
-<table><thead><tr><th>papel<th>quem<th>o que faz<tbody><tr><td><strong>responsável de release</strong><td>owner<td>único autorizado a disparar o <code>promote</code><tr><td><strong>plantão de hotfix</strong><td>owner<td>aprova o merge em <code>main</code> durante incidente</table>
-<p>As duas atribuições <strong>reabrem na migração para <code>community</code></strong>. Ali o plantão
-volta a ser pergunta de verdade: a escada exigirá PO + gestor para <code>main</code>, e
-alguém precisa poder agir às 3h da manhã quando os dois estão dormindo. Esse
-fallback terá de ser <strong>exceção documentada no mapa de exigências</strong> — com quem
-pode exercê-la e o que fica registrado depois —, nunca uma burla informal.</p>
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>role<th>who<th>what they do<tbody><tr><td><strong>release owner</strong><td>owner<td>the only one authorized to trigger<tr><td><code>promote</code><td><td><tr><td><strong>hotfix on-call</strong><td>owner<td>approves the merge into <code>main</code> during an<tr><td>incident<td><td></table>
+<p>Both assignments <strong>reopen once migrating to <code>community</code></strong>. There, on-call
+becomes a real question again: the ladder will require a PO + a manager
+for <code>main</code>, and someone needs to be able to act at 3am when both of them
+are asleep. That fallback will have to be a <strong>documented exception in the
+requirements map</strong> — with who can exercise it and what gets recorded
+afterward —, never an informal workaround.</p>
 <hr/>
 <blockquote>
-<p><strong>TODO(humano):</strong> esta página foi reconstruída a partir do <code>CLAUDE.md</code>, não
-da apresentação original da política. Se a apresentação disser algo que aqui
-não está — SLA de retropropagação, papéis nomeados, política de branch
-obsoleta —, confira e complete.</p>
+<p><strong>TODO(humano):</strong> this page was rebuilt from <code>CLAUDE.md</code>, not from the
+policy's original presentation. If the presentation says something
+that's not here — back-merge SLA, named roles, an obsolete branch
+policy —, check and complete it.</p>
 </blockquote>
 <hr/>
-<p><sub>Esteira exercitada de ponta a ponta em 2026-07-27: <code>v0.2.0-dev.1</code> → <code>-dev.2</code>
-→ <code>-qa.1</code> → <code>-qa.2</code> → final, com uma reprovação encenada entre os dois carimbos
-de <code>qa</code> para provar que o <code>N</code> conta sozinho.</sub></div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_M5Wn"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/branching-policy.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_eJZs aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_y3Pe"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-08-14T02:57:14.000Z itemprop=dateModified>14 de ago. de 2026</time></b> por <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/qa/explanation/documentation-workflow><div class=pagination-nav__sublabel>Anterior</div><div class=pagination-nav__label>Sincronização de docs</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/qa/explanation/observability><div class=pagination-nav__sublabel>Próxima</div><div class=pagination-nav__label>Observabilidade</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_P_6G thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#por-que-mecanizar class="table-of-contents__link toc-highlight">Por que mecanizar</a><li><a href=#a-escada class="table-of-contents__link toc-highlight">A escada</a><li><a href=#taxonomia class="table-of-contents__link toc-highlight">Taxonomia</a><ul><li><a href=#quem-nasce-de-onde class="table-of-contents__link toc-highlight">Quem nasce de onde</a><li><a href=#correção-que-nasce-alta-volta-para-baixo class="table-of-contents__link toc-highlight">Correção que nasce alta volta para baixo</a></ul><li><a href=#famílias-de-pr class="table-of-contents__link toc-highlight">Famílias de PR</a><li><a href=#push-direto-é-bloqueado class="table-of-contents__link toc-highlight">Push direto é bloqueado</a><li><a href=#bots-não-passam-pela-régua class="table-of-contents__link toc-highlight">Bots não passam pela régua</a><li><a href=#quem-aprova class="table-of-contents__link toc-highlight">Quem aprova</a><ul><li><a href=#modo-solo--o-que-vale-hoje class="table-of-contents__link toc-highlight">Modo <code>solo</code> — o que vale hoje</a><li><a href=#modo-community--quando-houver-gente class="table-of-contents__link toc-highlight">Modo <code>community</code> — quando houver gente</a><li><a href=#regras-comuns-aos-dois-modos class="table-of-contents__link toc-highlight">Regras comuns aos dois modos</a><li><a href=#migração-para-modo-community class="table-of-contents__link toc-highlight">Migração para modo <code>community</code></a></ul><li><a href=#promoção class="table-of-contents__link toc-highlight">Promoção</a><ul><li><a href=#o-check-de-promoção class="table-of-contents__link toc-highlight">O check de promoção</a></ul><li><a href=#versionamento class="table-of-contents__link toc-highlight">Versionamento</a><ul><li><a href=#o-que-a-tag-final-produz class="table-of-contents__link toc-highlight">O que a tag final produz</a><li><a href=#o-changelog-volta-por-pr-e-por-que-não-por-push class="table-of-contents__link toc-highlight">O CHANGELOG volta por PR, e por que não por push</a><li><a href=#a-versão-do-ciclo class="table-of-contents__link toc-highlight">A versão do ciclo</a><li><a href=#o-n class="table-of-contents__link toc-highlight">O <code>N</code></a><li><a href=#a-âncora-da-tag-final class="table-of-contents__link toc-highlight">A âncora da tag final</a><li><a href=#os-dois-caminhos-da-main class="table-of-contents__link toc-highlight">Os dois caminhos da <code>main</code></a><li><a href=#não-há-deploy class="table-of-contents__link toc-highlight">Não há deploy</a></ul><li><a href=#o-backmerge-gate class="table-of-contents__link toc-highlight">O backmerge gate</a><ul><li><a href=#o-estado class="table-of-contents__link toc-highlight">O estado</a><li><a href=#o-que-acontece-no-merge-de-um-hotfix class="table-of-contents__link toc-highlight">O que acontece no merge de um hotfix</a><li><a href=#acúmulo-sai-de-graça class="table-of-contents__link toc-highlight">Acúmulo sai de graça</a><li><a href=#o-check-em-todo-pr class="table-of-contents__link toc-highlight">O check, em todo PR</a><li><a href=#a-ordem-não-é-burocracia class="table-of-contents__link toc-highlight">A ordem não é burocracia</a><li><a href=#a-trava-é-conferida-não-só-declarada class="table-of-contents__link toc-highlight">A trava é conferida, não só declarada</a></ul><li><a href=#o-que-a-política-não-resolve class="table-of-contents__link toc-highlight">O que a política não resolve</a><li><a href=#papéis class="table-of-contents__link toc-highlight">Papéis</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/qa/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
+<p><sub>Pipeline exercised end to end on 2026-07-27: <code>v0.2.0-dev.1</code> → <code>-dev.2</code>
+→ <code>-qa.1</code> → <code>-qa.2</code> → final, with a staged rejection between the two <code>qa</code>
+stamps to prove that <code>N</code> counts on its own.</sub></div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_M5Wn"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/branching-policy.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_eJZs aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_y3Pe"><span class=theme-last-updated>Last updated<!-- --> on <b><time datetime=2026-08-24T04:07:03.000Z itemprop=dateModified>Aug 24, 2026</time></b> by <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/qa/explanation/documentation-workflow><div class=pagination-nav__sublabel>Previous</div><div class=pagination-nav__label>Docs sync</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/qa/explanation/observability><div class=pagination-nav__sublabel>Next</div><div class=pagination-nav__label>Observability</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_P_6G thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#why-mechanize-it class="table-of-contents__link toc-highlight">Why mechanize it</a><li><a href=#the-ladder class="table-of-contents__link toc-highlight">The ladder</a><li><a href=#taxonomy class="table-of-contents__link toc-highlight">Taxonomy</a><ul><li><a href=#whos-born-where class="table-of-contents__link toc-highlight">Who's born where</a><li><a href=#a-fix-born-high-goes-back-down class="table-of-contents__link toc-highlight">A fix born high goes back down</a></ul><li><a href=#pr-families class="table-of-contents__link toc-highlight">PR families</a><li><a href=#direct-push-is-blocked class="table-of-contents__link toc-highlight">Direct push is blocked</a><li><a href=#merged-branches-get-archived class="table-of-contents__link toc-highlight">Merged branches get archived</a><li><a href=#bots-skip-the-ladder class="table-of-contents__link toc-highlight">Bots skip the ladder</a><li><a href=#who-approves class="table-of-contents__link toc-highlight">Who approves</a><ul><li><a href=#solo-mode--what-applies-today class="table-of-contents__link toc-highlight"><code>solo</code> mode — what applies today</a><li><a href=#community-mode--for-when-there-are-people class="table-of-contents__link toc-highlight"><code>community</code> mode — for when there are people</a><li><a href=#rules-common-to-both-modes class="table-of-contents__link toc-highlight">Rules common to both modes</a><li><a href=#migrating-to-community-mode class="table-of-contents__link toc-highlight">Migrating to <code>community</code> mode</a></ul><li><a href=#promotion class="table-of-contents__link toc-highlight">Promotion</a><ul><li><a href=#the-promotion-check class="table-of-contents__link toc-highlight">The promotion check</a></ul><li><a href=#versioning class="table-of-contents__link toc-highlight">Versioning</a><ul><li><a href=#what-the-final-tag-produces class="table-of-contents__link toc-highlight">What the final tag produces</a><li><a href=#the-changelog-comes-back-via-pr-and-why-not-by-push class="table-of-contents__link toc-highlight">The CHANGELOG comes back via PR, and why not by push</a><li><a href=#the-cycles-version class="table-of-contents__link toc-highlight">The cycle's version</a><li><a href=#the-n class="table-of-contents__link toc-highlight">The <code>N</code></a><li><a href=#the-final-tags-anchor class="table-of-contents__link toc-highlight">The final tag's anchor</a><li><a href=#mains-two-paths class="table-of-contents__link toc-highlight"><code>main</code>'s two paths</a><li><a href=#theres-no-deploy class="table-of-contents__link toc-highlight">There's no deploy</a></ul><li><a href=#the-back-merge-gate class="table-of-contents__link toc-highlight">The back-merge gate</a><ul><li><a href=#the-state class="table-of-contents__link toc-highlight">The state</a><li><a href=#what-happens-when-a-hotfix-merges class="table-of-contents__link toc-highlight">What happens when a hotfix merges</a><li><a href=#accumulation-comes-free class="table-of-contents__link toc-highlight">Accumulation comes free</a><li><a href=#the-check-on-every-pr class="table-of-contents__link toc-highlight">The check, on every PR</a><li><a href=#the-order-isnt-bureaucracy class="table-of-contents__link toc-highlight">The order isn't bureaucracy</a><li><a href=#the-lock-is-checked-not-just-declared class="table-of-contents__link toc-highlight">The lock is checked, not just declared</a></ul><li><a href=#what-the-policy-doesnt-solve class="table-of-contents__link toc-highlight">What the policy doesn't solve</a><li><a href=#roles class="table-of-contents__link toc-highlight">Roles</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/qa/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>

@@ -1,0 +1,606 @@
+<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/validacao-real" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>A validação real — GitHub remoto e modelo de verdade | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/qa/pt-BR/explanation/validacao-real /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="A validação real — GitHub remoto e modelo de verdade | Brabo"/><meta data-rh=true name=description content="A execução contra um repositório remoto de verdade, com dev agent real e modelo de API — o que ela provou, o que ela reprovou, e por que reprovar aqui vale mais que passar."/><meta data-rh=true property=og:description content="A execução contra um repositório remoto de verdade, com dev agent real e modelo de API — o que ela provou, o que ela reprovou, e por que reprovar aqui vale mais que passar."/><meta data-rh=true name=keywords content="validação,dogfooding,GitHub,dev agent,medição,FASE 13b"/><link data-rh=true rel=icon href=/brabo/qa/pt-BR/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/qa/pt-BR/explanation/validacao-real /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/explanation/validacao-real hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/pt-BR/explanation/validacao-real hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/explanation/validacao-real hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/qa/pt-BR/explanation/validacao-real","name":"Validação real (13b)","position":1}]}</script><link rel=stylesheet href=/brabo/qa/pt-BR/assets/css/styles.bae5b9bf.css /><script src=/brabo/qa/pt-BR/assets/js/runtime~main.9af7843e.js defer></script><script src=/brabo/qa/pt-BR/assets/js/main.5763179a.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-44b")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/qa/pt-BR/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_aRZD href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/qa/pt-BR/><div class=navbar__logo><img src=/brabo/qa/pt-BR/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--light_TNiM"/><img src=/brabo/qa/pt-BR/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--dark__fCd"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/qa/pt-BR/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/qa/pt-BR/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/qa/pt-BR/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>qa</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><div class="toggle_B7FD colorModeToggle_i51f"><button class="clean-btn toggleButton_iBXZ toggleButtonDisabled_g7aN" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f lightToggleIcon_IoAw"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f darkToggleIcon_CFpV"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f systemToggleIcon_FD32"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_H1qa><div class="navbar__search searchBarContainer_E7mJ" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_Fmbc" value="" /><div class="loadingRing_yYGt searchBarLoadingRing_TCpJ"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_sSUF"><div class=docsWrapper__5pg><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_woZa" type=button></button><div class=docRoot_jND2><aside class="theme-doc-sidebar-container docSidebarContainer_tVYW"><div class=sidebarViewport_gVXc><div class=sidebar_vRsD><nav aria-label="Painel lateral de documentos" class="menu thin-scrollbar menu_IacH"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/pt-BR/><span class=categoryLinkLabel_U9or>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/><span class=linkLabel_pWVb>Introdução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/getting-started><span class=linkLabel_pWVb>Primeiros passos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/pt-BR/architecture><span class=categoryLinkLabel_U9or>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/architecture><span class=linkLabel_pWVb>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist" tabindex=0 href=/brabo/qa/pt-BR/adr><span class=categoryLinkLabel_U9or>Decisões (ADR)</span></a><button aria-label="Expandir a categoria 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/pt-BR/business-rules><span class=categoryLinkLabel_U9or>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/business-rules><span class=linkLabel_pWVb>Regras de negócio</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/pt-BR/reference/configuration><span class=categoryLinkLabel_U9or>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/configuration><span class=linkLabel_pWVb>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/events><span class=linkLabel_pWVb>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/permissions><span class=linkLabel_pWVb>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/artifacts><span class=linkLabel_pWVb>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/git-providers><span class=linkLabel_pWVb>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/internal-api><span class=linkLabel_pWVb>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/scripts><span class=linkLabel_pWVb>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/rulesets><span class=linkLabel_pWVb>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/security-surface><span class=linkLabel_pWVb>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/pt-BR/reference/api/brabo-api><span class=categoryLinkLabel_U9or>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/qa/pt-BR/explanation/documentation-workflow><span class=categoryLinkLabel_U9or>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/documentation-workflow><span class=linkLabel_pWVb>Sincronização de docs</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/branching-policy><span class=linkLabel_pWVb>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/observability><span class=linkLabel_pWVb>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/primeiro-dogfooding><span class=linkLabel_pWVb>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/execucao-real-hello-world><span class=linkLabel_pWVb>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/achados-execucao-real><span class=linkLabel_pWVb>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/backlog><span class=linkLabel_pWVb>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/validacao-fase-12><span class=linkLabel_pWVb>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/qa/pt-BR/explanation/validacao-real><span class=linkLabel_pWVb>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/aceite-providers><span class=linkLabel_pWVb>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/gates><span class=linkLabel_pWVb>Os gates, e como eles são medidos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_pWVb>Auditoria: fluxo.yml × código (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/historico-de-fases><span class=linkLabel_pWVb>Histórico de fases</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/pt-BR/runbook><span class=categoryLinkLabel_U9or>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/runbook><span class=linkLabel_pWVb>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/pt-BR/glossary><span class=categoryLinkLabel_U9or>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/glossary><span class=linkLabel_pWVb>Glossário</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_U9or>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_SmZv><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_XH1Q"><div class=docItemContainer_uk13><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_g2_L" aria-label=Trilha><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Página Inicial" class=breadcrumbs__link href=/brabo/qa/pt-BR/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_ILC1><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 Explicação</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Validação real (13b)</span></ul></nav><div class="tocCollapsible_sC5p theme-doc-toc-mobile tocMobile_jNpd"><button type=button class="clean-btn tocCollapsibleButton_sMs7">Nesta página</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>A validação real — GitHub remoto e modelo de verdade</h1></header>
+<p>A <a class="" href=/brabo/qa/pt-BR/explanation/validacao-fase-12>validação da Fase 12</a> declara os próprios limites com
+todas as letras: <code>LocalGitProvider</code>, <code>NoopDevAgent</code>, veredito de gate escrito
+pelo próprio script. Ela existe para provar a <strong>cadeia</strong> sem depender de rede
+nem de julgamento de modelo, e faz isso bem.</p>
+<p>Esta aqui troca exatamente as três coisas que aquela deixou de fora — GitHub
+remoto, dev agent real, modelo de API — e o resultado é o que se espera de um
+dogfooding honesto: <strong>a metade barata passou inteira, e a metade cara falhou de
+um jeito que nenhum teste tinha mostrado.</strong></p>
+<p>O script é <code>pnpm --filter api validacao:real -- --repo &lt;owner/repo></code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=o-que-passou-e-é-mais-do-que-parece>O que passou, e é mais do que parece<a href=#o-que-passou-e-é-mais-do-que-parece class=hash-link aria-label="Link direto para O que passou, e é mais do que parece" title="Link direto para O que passou, e é mais do que parece" translate=no>​</a></h2>
+<p>Tudo abaixo rodou contra <code>daneiel/test</code> no GitHub de verdade, e <strong>sem gastar um
+centavo</strong> — é a fase <code>--ate backlog</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>o que<th>resultado<tbody><tr><td>adoção remota (<code>getRepo</code> de verdade)<td><code>origin: adopted</code>, branch padrão <code>main</code><tr><td>plano em dry-run<td>6 mutações, 6 diagnósticos, <strong>decisão nula</strong><tr><td>repositório intocado até a decisão<td>verificado pela API: <strong>zero branches, zero conteúdo</strong><tr><td>readoção converge<td>6 mutações na 1ª passada, <strong>3 na 2ª</strong> (<a class="" href=/brabo/qa/pt-BR/business-rules#rn-046>RN-046</a>)<tr><td>story única fica <code>draft</code> + proposta<td>sim, sem promoção automática<tr><td><code>claimNext</code> antes da promoção<td><code>null</code> — nada pegável<tr><td>promoção<td>registrada com o <strong>usuário</strong> como ator</table>
+<p>A RN-045 deixa de ser provada só contra um bare local: o repositório remoto foi
+conferido <strong>depois</strong> da adoção e estava literalmente vazio.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=o-achado-d-aconteceu-de-verdade>O achado D aconteceu de verdade<a href=#o-achado-d-aconteceu-de-verdade class=hash-link aria-label="Link direto para O achado D aconteceu de verdade" title="Link direto para O achado D aconteceu de verdade" translate=no>​</a></h3>
+<p>O bootstrap parou em <code>protect_branches</code> com
+<code>Upgrade to GitHub Pro or make this repository public</code> — repositório privado no
+plano gratuito. É exatamente o cenário que a Fase D documentou, agora observado
+fora de teste.</p>
+<p>E a premissa da <a class="" href=/brabo/qa/pt-BR/business-rules#rn-078>RN-078</a> se confirmou: conferido o
+repositório logo depois, <code>dev</code>, <code>main</code> e <code>qa</code> existiam e os arquivos estavam
+commitados. É o <strong>último</strong> passo, e o único cuja falha deixa um repositório
+utilizável. O script reconhece a falha e segue, que é a saída desenhada para
+isso.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=o-que-a-execução-paga-mostrou>O que a execução paga mostrou<a href=#o-que-a-execução-paga-mostrou class=hash-link aria-label="Link direto para O que a execução paga mostrou" title="Link direto para O que a execução paga mostrou" translate=no>​</a></h2>
+<p>Modelo <code>openai/gpt-5-mini</code> via OpenRouter, dev agent real, uma story com uma
+task: <em>"Expor GET /saudacao"</em>.</p>
+<p><strong>A task foi bloqueada por <code>limite de iterações atingido</code>, com origem
+<code>modelo</code>.</strong> Nenhuma PR foi aberta, e portanto nenhum gate chegou a julgar.</p>
+<p>O diagnóstico gravado é de uma clareza incômoda: <code>(nenhum terminal rodado)</code>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=a-medição>A medição<a href=#a-medição class=hash-link aria-label="Link direto para A medição" title="Link direto para A medição" translate=no>​</a></h3>
+<p>Extraída por <code>pnpm --filter api medir:execucao</code>, nunca anotada à mão:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th><th><tbody><tr><td>janela<td>1m36s<tr><td>sessões · eventos<td>3 · 59<tr><td><strong>restart do engine no meio</strong><td><strong>não</strong><tr><td>voltas de gate<td>nenhuma (não houve PR)<tr><td>turnos mudos<td>nenhum<tr><td>intervenções do usuário<td>nenhuma</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>agente<th>chamadas<th>in<th>out<th>custo<th>modelo<tbody><tr><td>dev-api<td>8<td>5.671<td>205<td>&lt; US$ 0,01<td><code>openai/gpt-5-mini</code><tr><td>anamnese<td>1<td>6.779<td>967<td>&lt; US$ 0,01<td>deepseek-v4-flash<tr><td>psicologo<td>1<td>3.212<td>1.981<td>&lt; US$ 0,01<td>deepseek-v4-flash</table>
+<p>O critério <strong>zero restarts</strong> fechou. E o custo é a parte menos interessante:
+205 tokens de saída em oito chamadas é um agente que não escreveu nada.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=o-que-o-produto-descobriu-sozinho>O que o produto descobriu sozinho<a href=#o-que-o-produto-descobriu-sozinho class=hash-link aria-label="Link direto para O que o produto descobriu sozinho" title="Link direto para O que o produto descobriu sozinho" translate=no>​</a></h3>
+<p>O Psicólogo rodou em tier pesado e produziu três hipóteses. A primeira e a
+segunda são o diagnóstico correto, sem ninguém apontar:</p>
+<blockquote>
+<p>O dev-api não tinha (ou não utilizou) um ambiente terminal funcional […] em
+toda a sessão não existe nenhum tool.call de execução de comando […] apenas
+<code>search_workspace</code>/<code>read_file</code>.</p>
+</blockquote>
+<blockquote>
+<p>A ferramenta <code>search_workspace</code> está sub-indexada ou mal configurada para
+este repositório: não encontrou nenhum arquivo de código ou manifesto […]
+Isso enganou o agente, que ficou tentando entender "onde está o projeto".</p>
+</blockquote>
+<p>Isto merece registro separado: a introspecção do produto <strong>funcionou</strong>. O
+Psicólogo leu o event log de uma execução fracassada e nomeou a causa com
+precisão maior que a de qualquer asserção do script.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=os-achados-para-a-triagem-da-13c>Os achados, para a triagem da 13c<a href=#os-achados-para-a-triagem-da-13c class=hash-link aria-label="Link direto para Os achados, para a triagem da 13c" title="Link direto para Os achados, para a triagem da 13c" translate=no>​</a></h2>
+<p>A disciplina da fase vale aqui como em todo lugar: <strong>achado novo entra como
+item, nunca como fix</strong>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=x-o-dev-agent-queima-o-teto-de-iterações-explorando-repositório-vazio>X. O dev agent queima o teto de iterações explorando repositório vazio<a href=#x-o-dev-agent-queima-o-teto-de-iterações-explorando-repositório-vazio class=hash-link aria-label="Link direto para X. O dev agent queima o teto de iterações explorando repositório vazio" title="Link direto para X. O dev agent queima o teto de iterações explorando repositório vazio" translate=no>​</a></h3>
+<p>Dada uma task num repositório recém-provisionado — que tem só o template do
+Gitflow, sem código —, o agente gastou as oito iterações em
+<code>search_workspace</code>/<code>read_file</code> procurando "onde está o projeto", e nunca rodou
+um comando nem escreveu um arquivo.</p>
+<p>O sintoma é <code>limite de iterações atingido</code> com origem <code>modelo</code>, o que é
+tecnicamente verdade e praticamente inútil: o modelo não errou um julgamento,
+ele nunca chegou a julgar nada. A causa é a ausência de sinal de que <strong>não há
+o que procurar</strong> — um repositório vazio é indistinguível, pelas ferramentas
+disponíveis, de um repositório onde a busca falhou.</p>
+<p>Vale notar que este é o <strong>primeiro</strong> cenário do produto em que o dev agent
+começa do zero absoluto. Todo teste e toda demo partiram de um workspace com
+código.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=y-search_workspace-não-distingue-vazio-de-não-encontrei>Y. <code>search_workspace</code> não distingue "vazio" de "não encontrei"<a href=#y-search_workspace-não-distingue-vazio-de-não-encontrei class=hash-link aria-label="Link direto para y-search_workspace-não-distingue-vazio-de-não-encontrei" title="Link direto para y-search_workspace-não-distingue-vazio-de-não-encontrei" translate=no>​</a></h3>
+<p>Consequência direta do anterior, e provavelmente a peça acionável: as cinco
+primeiras chamadas devolveram <code>nenhum resultado</code>, o que o agente leu como
+"procure melhor" em vez de "não há nada aqui". O Psicólogo chegou à mesma
+conclusão sozinho.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-segunda-execução-a-correção-do-y-não-fechou-o-x>A segunda execução: a correção do Y NÃO fechou o X<a href=#a-segunda-execução-a-correção-do-y-não-fechou-o-x class=hash-link aria-label="Link direto para A segunda execução: a correção do Y NÃO fechou o X" title="Link direto para A segunda execução: a correção do Y NÃO fechou o X" translate=no>​</a></h2>
+<p>Depois de fechar o achado Y, a mesma execução rodou de novo — mesma story,
+mesmo repositório, mesmo modelo. <strong>Só a frase da ferramenta mudou entre as
+duas.</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th><th>1ª execução<th>2ª execução<tbody><tr><td>chamadas do dev-api<td>8<td>8<tr><td>tokens de saída<td>205<td>248<tr><td>desfecho<td><code>limite de iterações atingido</code><td><code>limite de iterações atingido</code><tr><td>PR<td>nenhuma<td>nenhuma</table>
+<p>O comportamento mudou de forma observável — <strong>uma</strong> busca em vez de cinco,
+seguida de <code>read_file</code> — e o desfecho não. A mensagem nova chegou ao agente e
+foi a correta para o caso (<code>o workspace tem 2 arquivo(s), então a busca funcionou</code>), porque o repositório tinha o template do Gitflow e não estava
+vazio.</p>
+<p><strong>A hipótese registrada aqui estava errada.</strong> O texto anterior dizia <em>"a
+correção é a frase, não o teto"</em>. A evidência diz outra coisa: das oito
+iterações, sete foram exploração. Sobra UMA para escrever o arquivo, commitar,
+dar push e abrir a PR — nem um agente perfeito fecharia isso.</p>
+<p><code>TOOL_LOOP_MAX_ITERATIONS</code> é <code>8</code> por default
+(<code>apps/engine/config/runtime.exs:100</code>). O número nasceu para agente
+conversacional, e nunca foi reavaliado para um dev agent que precisa explorar
+um repositório antes de agir.</p>
+<p>O Psicólogo, de novo, foi mais preciso que a asserção do script:</p>
+<blockquote>
+<p>o workspace não contém o código do projeto: não há package.json, nem src,
+nem README</p>
+</blockquote>
+<blockquote>
+<p>ficou apenas em modo leitura/exploração</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=o-que-isso-ensina-sobre-medir>O que isso ensina sobre medir<a href=#o-que-isso-ensina-sobre-medir class=hash-link aria-label="Link direto para O que isso ensina sobre medir" title="Link direto para O que isso ensina sobre medir" translate=no>​</a></h3>
+<p>Registrar o resultado negativo é o ponto. Se a segunda execução não tivesse
+sido feita, o achado Y — que é real e está coberto por teste — seria fácil de
+confundir com a solução do X. Foi uma correção correta que <strong>não</strong> produziu o
+efeito esperado, e só a execução mostrou isso.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-terceira-execução-o-teto-era-a-causa>A terceira execução: o teto ERA a causa<a href=#a-terceira-execução-o-teto-era-a-causa class=hash-link aria-label="Link direto para A terceira execução: o teto ERA a causa" title="Link direto para A terceira execução: o teto ERA a causa" translate=no>​</a></h2>
+<p>Com <code>TOOL_LOOP_MAX_ITERATIONS=25</code> no lugar de <code>8</code>, e nada mais mudado, o dev
+agent mudou de patamar:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>ferramenta<th>2ª execução (teto 8)<th>3ª execução (teto 25)<tbody><tr><td><code>search_workspace</code><td>2<td>4<tr><td><code>read_file</code><td>5<td>6<tr><td><strong><code>write_file</code></strong><td><strong>0</strong><td><strong>3</strong><tr><td><strong><code>terminal</code></strong><td><strong>0</strong><td><strong>1</strong><tr><td>desfecho<td>limite de iterações<td><code>dev.awaiting_approval</code></table>
+<p>Ele explorou, <strong>escreveu três arquivos</strong> e chamou <code>npm test --silent</code>. A
+hipótese registrada acima estava certa: o teto de 8 — herdado do agente
+conversacional — não cabe num dev agent que precisa entender um repositório
+antes de agir.</p>
+<p><strong>E o motivo de parar mudou completamente.</strong> Não houve bloqueio: a ação de
+terminal virou <code>proposed_action</code> com <code>require_approval</code> e o agente entrou em
+<code>dev.awaiting_approval</code> — suspenso, retendo worktree e histórico, como o
+<a class="" href=/brabo/qa/pt-BR/adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco>ADR 0052</a> desenhou. Ele
+parou e esperou, em vez de queimar iterações batendo na porta.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-quarta-execução-e-o-que-ela-revelou-sobre-a-fase-f>A quarta execução, e o que ela revelou sobre a Fase F<a href=#a-quarta-execução-e-o-que-ela-revelou-sobre-a-fase-f class=hash-link aria-label="Link direto para A quarta execução, e o que ela revelou sobre a Fase F" title="Link direto para A quarta execução, e o que ela revelou sobre a Fase F" translate=no>​</a></h2>
+<p>Liberar <code>npm</code>, <code>pnpm</code>, <code>node</code> e <code>npx</code> no <code>allow</code> do projeto não destravou: o
+agente rodou <strong><code>ls -la</code></strong>, verbo que não estava na lista, e ficou pendente de
+novo.</p>
+<p>Isso expõe uma diferença entre o que a Fase F entregou e o que foi pedido. O
+pedido era <em>"permita sempre comandos desde que seja na pasta do projeto"</em>. O
+<a class="" href=/brabo/qa/pt-BR/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a> entregou
+um <strong>teto</strong>: comando que toca caminho fora da pasta nunca é auto-aprovável, por
+mais que o verbo esteja em <code>allow</code>. O teto protege o <strong>caminho</strong> — o <strong>verbo</strong>
+continua governado pelo allowlist, que é uma lista fechada por desenho.</p>
+<p>Consequência prática: cada comando novo que o agente inventa cai em
+<code>require_approval</code>. A escada continua existindo, só ficou mais segura.</p>
+<p><strong>Não trato isso como defeito</strong>, e sim como escopo: o ADR 0055 nunca prometeu
+promover verbo. Mas a lacuna entre o pedido e a entrega é real, e vira item de
+triagem.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=uma-armadilha-do-próprio-instrumento>Uma armadilha do próprio instrumento<a href=#uma-armadilha-do-próprio-instrumento class=hash-link aria-label="Link direto para Uma armadilha do próprio instrumento" title="Link direto para Uma armadilha do próprio instrumento" translate=no>​</a></h3>
+<p>A primeira tentativa de configurar a política não teve efeito nenhum, e a causa
+merece registro porque é reincidente: o script rodava <strong>pelo host</strong>, então
+<code>PROJECT_WORKSPACES_ROOT</code> caiu no default <code>/tmp/brabo-project-workspaces</code> e o
+<code>permissions.json</code> nasceu num filesystem que o engine não enxerga.</p>
+<p>É a mesma armadilha do repositório cobaia em <code>/tmp</code> que a
+<a class="" href=/brabo/qa/pt-BR/explanation/validacao-fase-12>validação da Fase 12</a> já documenta — reaparecendo por
+outro caminho, no mesmo dia. O cabeçalho do script agora exige, com todas as
+letras, execução de dentro do container.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-quinta-execução-a-cadeia-chega-ao-github>A quinta execução: a cadeia chega ao GitHub<a href=#a-quinta-execução-a-cadeia-chega-ao-github class=hash-link aria-label="Link direto para A quinta execução: a cadeia chega ao GitHub" title="Link direto para A quinta execução: a cadeia chega ao GitHub" translate=no>​</a></h2>
+<p>Rodando <strong>de dentro do container</strong> (a condição que faltava) e com os verbos de
+terminal liberados, a cadeia andou inteira:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>ação<th>política<th>desfecho<tbody><tr><td><code>terminal</code> ×2<td><code>auto_approve</code><td>✅ executed<tr><td><code>git_commit</code><td><code>auto_approve</code><td>✅ executed<tr><td><code>git_push</code><td><code>auto_approve</code><td>✅ executed<tr><td><code>pr_open</code><td><code>auto_approve</code><td>❌ <strong>failed</strong></table>
+<p><strong>A branch do agente existe no GitHub</strong>: <code>feature/task-d4b36a5b</code>, ao lado de
+<code>dev</code>, <code>main</code> e <code>qa</code>. Código escrito por um modelo, commitado com a identidade
+<code>dev-api[bot]</code> e empurrado para um repositório remoto de verdade.</p>
+<p>O <code>pr_open</code> falhou com <code>Requires authentication</code>, e a causa é o <strong>achado AA</strong>:
+a api resolve o token de git por <code>action.decidedBy</code>, que é NULL quando a
+política auto-aprova. O push funcionou porque quem empurra é o engine, que
+injeta a credencial do owner (RN-076).</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-sexta-execução-a-pr-abriu-no-github>A sexta execução: a PR abriu no GitHub<a href=#a-sexta-execução-a-pr-abriu-no-github class=hash-link aria-label="Link direto para A sexta execução: a PR abriu no GitHub" title="Link direto para A sexta execução: a PR abriu no GitHub" translate=no>​</a></h2>
+<p>Com a <a class="" href=/brabo/qa/pt-BR/business-rules#rn-082>RN-082</a> no lugar, a cadeia fechou até a PR:</p>
+<blockquote>
+<p><strong>PR #1 — "Rota pública de saudação — Expor GET /saudacao"</strong>,
+de <code>feature/task-636ef1aa</code>, aberta em <code>daneiel/test</code>.</p>
+</blockquote>
+<p>Código escrito por um modelo, commitado como <code>dev-api[bot]</code>, empurrado e
+publicado como pull request num repositório remoto de verdade. <strong>O gate abriu</strong>
+(<code>pr.gate_changed</code>, <code>gateStatus: awaiting_qa</code>) e a área de QA rodou.</p>
+<p>O <code>qa-performance-seguranca</code> foi <strong>dispensado corretamente</strong>
+(<code>delegation.dispensed</code>, justificativa <em>"story sem RNF"</em>) — dispensa com
+justificativa, nunca silêncio, como o ADR 0038 desenhou.</p>
+<p>O <code>qa-automacao</code> falhou, e virou o <strong>achado AB</strong>: ele chamou um comando
+composto cujo último segmento (<code>head</code>) não estava no <code>allow</code>, o ToolLoop
+suspendeu em <code>awaiting_approval</code>, e o QA Lead classificou a suspensão como
+<em>"desfecho inesperado"</em> com origem <code>infra</code>. É o defeito que o ADR 0052 corrigiu
+para o dev agent e que não alcançou os agentes de gate.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-sétima-execução-ampliar-o-allowlist-não-bastou-e-isso-era-previsível>A sétima execução: ampliar o allowlist não bastou, e isso era previsível<a href=#a-sétima-execução-ampliar-o-allowlist-não-bastou-e-isso-era-previsível class=hash-link aria-label="Link direto para A sétima execução: ampliar o allowlist não bastou, e isso era previsível" title="Link direto para A sétima execução: ampliar o allowlist não bastou, e isso era previsível" translate=no>​</a></h2>
+<p>Com 25 verbos liberados — critério explícito: o que LÊ ou CONSTRÓI, nunca o que
+busca na rede ou destrói — o gate travou de novo. E não por falta de verbo:</p>
+<div class="language-text codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-text codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token plain">ls -la && echo "---" && cat package.json 2>/dev/null; …</span><br/></div></code></pre></div></div>
+<p><code>ls</code>, <code>echo</code> e <code>cat</code> estavam todos em <code>allow</code>. O que barra é <code>2>/dev/null</code>, e
+vira o <strong>achado AC</strong>: o parser trata <code>></code> como separador, o redirecionamento
+vira um segmento cujo verbo é <code>/dev/null</code>, e o mesmo token ainda é um caminho
+absoluto fora do projeto.</p>
+<p><strong>A previsão registrada antes da execução se confirmou.</strong> O allowlist é lista
+fechada e o modelo inventa comandos; ampliar a lista é remendo. A 7ª execução
+prova isso de forma difícil de contestar: 25 verbos, e travou pela FORMA do
+comando, não pelo verbo.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-oitava-execução-e-o-argumento-que-ela-fecha>A oitava execução, e o argumento que ela fecha<a href=#a-oitava-execução-e-o-argumento-que-ela-fecha class=hash-link aria-label="Link direto para A oitava execução, e o argumento que ela fecha" title="Link direto para A oitava execução, e o argumento que ela fecha" translate=no>​</a></h2>
+<p>Com Y, AA, AB e AC corrigidos, o dev agent fez uma única chamada:
+<code>bash -lc npm test --silent</code>. Verbo <code>bash</code>, fora da lista, <code>require_approval</code>.</p>
+<p><strong>A recusa está certa</strong> — liberar <code>bash</code> anularia o allowlist inteiro, inclusive
+os <code>deny</code> embutidos. Mas as três últimas execuções, juntas, dizem uma coisa que
+nenhuma delas dizia sozinha:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>execução<th>travou por<th>categoria<tbody><tr><td>6ª<td><code>head</code><td><strong>verbo</strong><tr><td>7ª<td><code>2>/dev/null</code><td><strong>forma</strong><tr><td>8ª<td><code>bash -lc</code><td><strong>invocação</strong></table>
+<p>Três categorias distintas em três rodadas. Ampliar a lista resolve a primeira e
+não toca nas outras duas. <strong>O allowlist de verbos não converge</strong> contra um
+agente que escolhe livremente como invocar o que quer rodar.</p>
+<p>Isso não é defeito do allowlist: ele cumpre o que promete, e a recusa do <code>bash</code>
+é a prova de que a fronteira segura. É um limite de ESCOPO — ele não foi
+desenhado para viabilizar autonomia, e não viabiliza.</p>
+<p>A conclusão prática da 13b é essa, e vale mais que a PR: <strong>o caminho para o
+gate por LLM não passa por afrouxar política.</strong> Passa por fazer o agente
+esperar a decisão em vez de morrer (achado AB), que é o que o ADR 0052 já fez
+para o dev agent.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-nona-execução-a-correção-barata-que-teria-destruído-a-garantia>A nona execução: a correção barata que teria destruído a garantia<a href=#a-nona-execução-a-correção-barata-que-teria-destruído-a-garantia class=hash-link aria-label="Link direto para A nona execução: a correção barata que teria destruído a garantia" title="Link direto para A nona execução: a correção barata que teria destruído a garantia" translate=no>​</a></h2>
+<p>A nona travou no mesmo <code>bash</code> da oitava, e o conserto óbvio estava a uma linha
+de distância: pôr <code>bash</code> no <code>allow</code> e ver a esteira ficar verde.</p>
+<p><strong>Não foi feito, e essa é a entrega da execução.</strong> Liberar <code>bash</code> não amplia o
+allowlist — ele o <em>anula</em>, porque todo comando barrado passa a ter uma forma
+permitida de ser invocado, inclusive os <code>deny</code> embutidos. A rodada teria passado
+e a garantia teria acabado, sem que nada no resultado indicasse a troca.</p>
+<p>O que a nona fixou, então, foi o diagnóstico: o problema nunca foi <em>qual</em> verbo
+está na lista, e sim que <strong>o agente de gate morria</strong> quando a política mandava
+perguntar. Daí saiu o <a class="" href=/brabo/qa/pt-BR/adr/0057-o-gate-espera-a-aprovacao>ADR 0057</a>, estendendo
+ao gate o que o <a class="" href=/brabo/qa/pt-BR/adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco>ADR 0052</a> já fizera para o dev
+agent: diante de uma ação que exige decisão, <strong>suspender e esperar</strong> em vez de
+classificar a própria suspensão como falha de infra (o achado AB).</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-décima-execução-a-cadeia-inteira-ponta-a-ponta>A décima execução: a cadeia inteira, ponta a ponta<a href=#a-décima-execução-a-cadeia-inteira-ponta-a-ponta class=hash-link aria-label="Link direto para A décima execução: a cadeia inteira, ponta a ponta" title="Link direto para A décima execução: a cadeia inteira, ponta a ponta" translate=no>​</a></h2>
+<p>Com o ADR 0057 no lugar, a décima fechou tudo o que as nove anteriores tinham
+deixado em aberto, <strong>sem um único restart do engine</strong>:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>etapa<th>desfecho<tbody><tr><td>adoção remota<td><code>origin: adopted</code> contra <code>daneiel/test</code><tr><td>plano de repositório<td>executado só depois da <strong>sua</strong> decisão<tr><td>promoção da story<td>manual, com o usuário como ator<tr><td>dev agent real<td>escreveu código, commitou como <code>&lt;agente>[bot]</code><tr><td>push e <strong>PR remota</strong><td>publicada no GitHub<tr><td>gate<td>abriu (<code>pr.gate_changed</code>)<tr><td>área de QA<td>delegou e <strong>dispensou com justificativa</strong><tr><td>subagente<td><strong>suspendeu</strong> em aprovação, e não morreu<tr><td>sua recusa<td><strong>retomou</strong> o laço em vez de encerrá-lo<tr><td>veredito<td><code>changes_requested</code>, julgado por LLM</table>
+<p>As duas linhas que importam são as duas últimas. O subagente parar e continuar
+vivo é o ADR 0057 funcionando; a <strong>recusa do usuário retomar o laço</strong> é o ponto
+que nenhuma execução anterior tinha alcançado — a decisão humana entra no meio
+do trabalho do agente e ele segue dali, em vez de recomeçar ou desistir.</p>
+<p>E o veredito não foi escrito pelo script: saiu do julgamento do modelo sobre uma
+PR real. É a diferença exata que esta validação existe para cobrir em relação à
+<a class="" href=/brabo/qa/pt-BR/explanation/validacao-fase-12>irmã determinística</a>.</p>
+<blockquote>
+<p><strong>TODO(humano):</strong> o custo em dólares e a contagem de chamadas destas duas
+execuções não foram extraídos com <code>medir:execucao</code> na época. Se ainda houver
+<code>token_usage</code> das sessões, vale preencher — as demais medições deste documento
+vêm todas de script, e estas duas são a exceção.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=as-execuções-com-dois-módulos-o-paralelismo-posto-à-prova>As execuções com dois módulos: o paralelismo posto à prova<a href=#as-execuções-com-dois-módulos-o-paralelismo-posto-à-prova class=hash-link aria-label="Link direto para As execuções com dois módulos: o paralelismo posto à prova" title="Link direto para As execuções com dois módulos: o paralelismo posto à prova" translate=no>​</a></h2>
+<p>As dez primeiras rodaram com <strong>um módulo</strong>. Isso basta para provar a cadeia, e
+não basta para provar o paralelismo: com uma história só, o Dev Lead <strong>recusa</strong>
+paralelizar — "esbarrariam nos mesmos arquivos" — e está certo. O teto da
+<a class="" href=/brabo/qa/pt-BR/business-rules#rn-083>RN-083</a> nunca chegava a ser consultado por
+trabalho real.</p>
+<p>Vieram então três rodadas com <code>--modulos 2</code> (uma história em <code>api</code>, uma em
+<code>web</code>). As duas primeiras estão contadas no
+<a class="" href=/brabo/qa/pt-BR/explanation/achados-execucao-real>achado AF</a> — a que quebrou e a que provou a
+correção. O que segue é a <strong>terceira</strong>, que existe para medir.</p>
+<p>O Dev Lead planejou sozinho:</p>
+<blockquote>
+<p><strong>2 agentes em 2 módulos</strong> — <em>"cada módulo tem exatamente uma história, então
+um agente por módulo é o mínimo justificável sem desperdício."</em></p>
+</blockquote>
+<p>E a rodada fechou, medida por <code>medir:execucao</code> e não à mão:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th><th><tbody><tr><td>duração<td><strong>3m56s</strong>, 182 eventos em 3 sessões<tr><td>chamadas<td><strong>33</strong> (dev-api 10, dev-web 9, arquiteto 7, qa-automacao 6, dev-lead 1)<tr><td>custo<td><strong>&lt; US$ 0,01</strong><tr><td>restart do engine<td><strong>não</strong><tr><td>turnos mudos<td><strong>nenhum</strong><tr><td>gates<td><code>qa</code> <strong>approved</strong>, <code>secops</code> <strong>approved</strong></table>
+<p><strong>O teto cobrou a decisão.</strong> Com os dois agentes de pé, o pedido seguinte parou
+em <code>aguardando_autorizacao</code> com a ação <code>parallelize</code> <strong>pendente no banco</strong> — 2
+ativos, teto 2. Nada subiu: se tivesse subido, a autorização seria teatro.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=o-que-os-dois-módulos-quebraram-antes-desta-rodada>O que os dois módulos quebraram, antes desta rodada<a href=#o-que-os-dois-módulos-quebraram-antes-desta-rodada class=hash-link aria-label="Link direto para O que os dois módulos quebraram, antes desta rodada" title="Link direto para O que os dois módulos quebraram, antes desta rodada" translate=no>​</a></h3>
+<p>Esta rodada saiu limpa, mas ela é a <strong>terceira</strong> com dois módulos, e as duas
+primeiras é que pagaram o preço. Na primeira, o <code>dev-web</code> pegou a task e morreu
+em <code>fatal: not a git repository</code> <strong>antes do primeiro turno</strong> — zero token gasto,
+task bloqueada. É o <a class="" href=/brabo/qa/pt-BR/explanation/achados-execucao-real>achado AF</a>: a guarda do caminho
+rápido de <code>Workspace.ensure!/4</code> perguntava se <code>.git</code> existia, e <code>git init</code> cria
+o <code>.git</code> antes do <code>fetch</code>; o segundo agente lia "pronto" e pulava o lock.</p>
+<p>O lock existia desde a Fase 4 e estava correto. O que estava errado era o
+critério que decidia se valia a pena pegá-lo — e <strong>nenhuma das dez execuções
+anteriores podia tê-lo mostrado</strong>, porque nenhuma teve um segundo agente.
+Corrigido, o <code>dev-web</code> passou de 0 para 16 chamadas na rodada seguinte, e é daí
+que esta terceira herda o direito de ser só uma medição.</p>
+<p>O instrumento também aprendeu: a asserção do teto afirmava o <strong>número</strong> (o 3º
+pedido pede autorização), o que valia para um módulo e reprovou uma execução em
+que o produto agiu certo — com dois módulos a ativação já enche o teto. Agora
+ela afirma a <strong>regra</strong>: enquanto couber, sobe sem perguntar; quando não couber,
+para.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=o-que-esta-validação-ainda-não-prova>O que esta validação ainda NÃO prova<a href=#o-que-esta-validação-ainda-não-prova class=hash-link aria-label="Link direto para O que esta validação ainda NÃO prova" title="Link direto para O que esta validação ainda NÃO prova" translate=no>​</a></h2>
+<p>Honestidade sobre o alcance, como na irmã dela:</p>
+<ul>
+<li class=""><strong>Merge.</strong> Continua fora por desenho
+(<a class="" href=/brabo/qa/pt-BR/business-rules#rn-014>RN-014</a>), e continuará: quem aperta o botão
+numa branch protegida é você.</li>
+<li class=""><strong>Os outros cinco providers.</strong> Só o OpenRouter rodou com credencial real; os
+demais seguem sem smoke por falta de chave, e o que vale para um provider não
+se transfere para os outros por argumento.</li>
+<li class=""><strong>Isolamento.</strong> O agente executa no mesmo container que este monorepo. O
+<a class="" href=/brabo/qa/pt-BR/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a> diz de si que é <em>política</em>, não
+isolamento — <code>..</code> reprova, mas symlink de dentro para fora não é detectado.</li>
+<li class=""><strong>Autonomia sem política no caminho.</strong> O allowlist de verbos <strong>não converge</strong>
+(achados Z e AD), e isso é limite de escopo, não bug a corrigir.</li>
+<li class=""><strong>O teto de paralelismo pedido pelo PRÓPRIO Dev Lead.</strong> Com dois módulos ele
+planejou 2 agentes e o teto é 2 — coube. Quem estourou o teto foi o roteiro,
+chamando o caso de uso direto. Para ver o <em>lead</em> pedir mais do que pode seriam
+precisos 3+ módulos, e isso ainda não rodou.</li>
+</ul>
+<p>A cadeia em si — da adoção ao veredito de gate por LLM — <strong>está provada contra
+rede real</strong>. O que continua em aberto acima não é a cadeia: é o ambiente em que
+ela roda e a superfície que ela cobre.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=referências>Referências<a href=#referências class=hash-link aria-label="Link direto para Referências" title="Link direto para Referências" translate=no>​</a></h2>
+<ul>
+<li class=""><a class="" href=/brabo/qa/pt-BR/explanation/validacao-fase-12>validacao-fase-12.md</a> — a irmã determinística</li>
+<li class=""><a class="" href=/brabo/qa/pt-BR/explanation/achados-execucao-real>achados-execucao-real.md</a> — a colheita</li>
+<li class=""><a class="" href=/brabo/qa/pt-BR/explanation/backlog>backlog.md</a> — para onde X e Y vão</li>
+</ul></div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_M5Wn"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/validacao-real.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_eJZs aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_y3Pe"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-08-24T04:07:03.000Z itemprop=dateModified>24 de ago. de 2026</time></b> por <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/qa/pt-BR/explanation/validacao-fase-12><div class=pagination-nav__sublabel>Anterior</div><div class=pagination-nav__label>Validação da Fase 12</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/qa/pt-BR/explanation/aceite-providers><div class=pagination-nav__sublabel>Próxima</div><div class=pagination-nav__label>Aceite dos providers</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_P_6G thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#o-que-passou-e-é-mais-do-que-parece class="table-of-contents__link toc-highlight">O que passou, e é mais do que parece</a><ul><li><a href=#o-achado-d-aconteceu-de-verdade class="table-of-contents__link toc-highlight">O achado D aconteceu de verdade</a></ul><li><a href=#o-que-a-execução-paga-mostrou class="table-of-contents__link toc-highlight">O que a execução paga mostrou</a><ul><li><a href=#a-medição class="table-of-contents__link toc-highlight">A medição</a><li><a href=#o-que-o-produto-descobriu-sozinho class="table-of-contents__link toc-highlight">O que o produto descobriu sozinho</a></ul><li><a href=#os-achados-para-a-triagem-da-13c class="table-of-contents__link toc-highlight">Os achados, para a triagem da 13c</a><ul><li><a href=#x-o-dev-agent-queima-o-teto-de-iterações-explorando-repositório-vazio class="table-of-contents__link toc-highlight">X. O dev agent queima o teto de iterações explorando repositório vazio</a><li><a href=#y-search_workspace-não-distingue-vazio-de-não-encontrei class="table-of-contents__link toc-highlight">Y. <code>search_workspace</code> não distingue "vazio" de "não encontrei"</a></ul><li><a href=#a-segunda-execução-a-correção-do-y-não-fechou-o-x class="table-of-contents__link toc-highlight">A segunda execução: a correção do Y NÃO fechou o X</a><ul><li><a href=#o-que-isso-ensina-sobre-medir class="table-of-contents__link toc-highlight">O que isso ensina sobre medir</a></ul><li><a href=#a-terceira-execução-o-teto-era-a-causa class="table-of-contents__link toc-highlight">A terceira execução: o teto ERA a causa</a><li><a href=#a-quarta-execução-e-o-que-ela-revelou-sobre-a-fase-f class="table-of-contents__link toc-highlight">A quarta execução, e o que ela revelou sobre a Fase F</a><ul><li><a href=#uma-armadilha-do-próprio-instrumento class="table-of-contents__link toc-highlight">Uma armadilha do próprio instrumento</a></ul><li><a href=#a-quinta-execução-a-cadeia-chega-ao-github class="table-of-contents__link toc-highlight">A quinta execução: a cadeia chega ao GitHub</a><li><a href=#a-sexta-execução-a-pr-abriu-no-github class="table-of-contents__link toc-highlight">A sexta execução: a PR abriu no GitHub</a><li><a href=#a-sétima-execução-ampliar-o-allowlist-não-bastou-e-isso-era-previsível class="table-of-contents__link toc-highlight">A sétima execução: ampliar o allowlist não bastou, e isso era previsível</a><li><a href=#a-oitava-execução-e-o-argumento-que-ela-fecha class="table-of-contents__link toc-highlight">A oitava execução, e o argumento que ela fecha</a><li><a href=#a-nona-execução-a-correção-barata-que-teria-destruído-a-garantia class="table-of-contents__link toc-highlight">A nona execução: a correção barata que teria destruído a garantia</a><li><a href=#a-décima-execução-a-cadeia-inteira-ponta-a-ponta class="table-of-contents__link toc-highlight">A décima execução: a cadeia inteira, ponta a ponta</a><li><a href=#as-execuções-com-dois-módulos-o-paralelismo-posto-à-prova class="table-of-contents__link toc-highlight">As execuções com dois módulos: o paralelismo posto à prova</a><ul><li><a href=#o-que-os-dois-módulos-quebraram-antes-desta-rodada class="table-of-contents__link toc-highlight">O que os dois módulos quebraram, antes desta rodada</a></ul><li><a href=#o-que-esta-validação-ainda-não-prova class="table-of-contents__link toc-highlight">O que esta validação ainda NÃO prova</a><li><a href=#referências class="table-of-contents__link toc-highlight">Referências</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/qa/pt-BR/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/pt-BR/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/pt-BR/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/pt-BR/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>

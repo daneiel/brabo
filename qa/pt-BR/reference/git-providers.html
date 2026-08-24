@@ -1,0 +1,483 @@
+<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/git-providers" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Git Providers | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/qa/pt-BR/reference/git-providers /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Git Providers | Brabo"/><meta data-rh=true name=description content="The fifteen-operation contract that makes Local, GitHub, and GitLab interchangeable, with capabilities, normalized errors, and retry policy."/><meta data-rh=true property=og:description content="The fifteen-operation contract that makes Local, GitHub, and GitLab interchangeable, with capabilities, normalized errors, and retry policy."/><meta data-rh=true name=keywords content=git,GitProvider,GitHub,GitLab,capabilities,retry /><link data-rh=true rel=icon href=/brabo/qa/pt-BR/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/qa/pt-BR/reference/git-providers /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/git-providers hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/pt-BR/reference/git-providers hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/git-providers hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/qa/pt-BR/reference/git-providers","name":"Git Providers","position":1}]}</script><link rel=stylesheet href=/brabo/qa/pt-BR/assets/css/styles.bae5b9bf.css /><script src=/brabo/qa/pt-BR/assets/js/runtime~main.9af7843e.js defer></script><script src=/brabo/qa/pt-BR/assets/js/main.5763179a.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-44b")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/qa/pt-BR/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_aRZD href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/qa/pt-BR/><div class=navbar__logo><img src=/brabo/qa/pt-BR/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--light_TNiM"/><img src=/brabo/qa/pt-BR/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--dark__fCd"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/qa/pt-BR/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/qa/pt-BR/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/qa/pt-BR/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>qa</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><div class="toggle_B7FD colorModeToggle_i51f"><button class="clean-btn toggleButton_iBXZ toggleButtonDisabled_g7aN" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f lightToggleIcon_IoAw"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f darkToggleIcon_CFpV"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f systemToggleIcon_FD32"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_H1qa><div class="navbar__search searchBarContainer_E7mJ" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_Fmbc" value="" /><div class="loadingRing_yYGt searchBarLoadingRing_TCpJ"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_sSUF"><div class=docsWrapper__5pg><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_woZa" type=button></button><div class=docRoot_jND2><aside class="theme-doc-sidebar-container docSidebarContainer_tVYW"><div class=sidebarViewport_gVXc><div class=sidebar_vRsD><nav aria-label="Painel lateral de documentos" class="menu thin-scrollbar menu_IacH"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/pt-BR/><span class=categoryLinkLabel_U9or>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/><span class=linkLabel_pWVb>Introdução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/getting-started><span class=linkLabel_pWVb>Primeiros passos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/pt-BR/architecture><span class=categoryLinkLabel_U9or>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/architecture><span class=linkLabel_pWVb>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist" tabindex=0 href=/brabo/qa/pt-BR/adr><span class=categoryLinkLabel_U9or>Decisões (ADR)</span></a><button aria-label="Expandir a categoria 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/pt-BR/business-rules><span class=categoryLinkLabel_U9or>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/business-rules><span class=linkLabel_pWVb>Regras de negócio</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/qa/pt-BR/reference/configuration><span class=categoryLinkLabel_U9or>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/configuration><span class=linkLabel_pWVb>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/events><span class=linkLabel_pWVb>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/permissions><span class=linkLabel_pWVb>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/artifacts><span class=linkLabel_pWVb>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/qa/pt-BR/reference/git-providers><span class=linkLabel_pWVb>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/internal-api><span class=linkLabel_pWVb>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/scripts><span class=linkLabel_pWVb>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/reference/rulesets><span class=linkLabel_pWVb>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/security-surface><span class=linkLabel_pWVb>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/pt-BR/reference/api/brabo-api><span class=categoryLinkLabel_U9or>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/pt-BR/explanation/documentation-workflow><span class=categoryLinkLabel_U9or>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/documentation-workflow><span class=linkLabel_pWVb>Sincronização de docs</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/branching-policy><span class=linkLabel_pWVb>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/observability><span class=linkLabel_pWVb>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/primeiro-dogfooding><span class=linkLabel_pWVb>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/execucao-real-hello-world><span class=linkLabel_pWVb>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/achados-execucao-real><span class=linkLabel_pWVb>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/backlog><span class=linkLabel_pWVb>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/validacao-fase-12><span class=linkLabel_pWVb>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/validacao-real><span class=linkLabel_pWVb>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/aceite-providers><span class=linkLabel_pWVb>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/gates><span class=linkLabel_pWVb>Os gates, e como eles são medidos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_pWVb>Auditoria: fluxo.yml × código (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/explanation/historico-de-fases><span class=linkLabel_pWVb>Histórico de fases</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/pt-BR/runbook><span class=categoryLinkLabel_U9or>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/runbook><span class=linkLabel_pWVb>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/pt-BR/glossary><span class=categoryLinkLabel_U9or>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/pt-BR/glossary><span class=linkLabel_pWVb>Glossário</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_U9or>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_SmZv><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_XH1Q"><div class=docItemContainer_uk13><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_g2_L" aria-label=Trilha><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Página Inicial" class=breadcrumbs__link href=/brabo/qa/pt-BR/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_ILC1><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Referência</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Git Providers</span></ul></nav><div class="tocCollapsible_sC5p theme-doc-toc-mobile tocMobile_jNpd"><button type=button class="clean-btn tocCollapsibleButton_sMs7">Nesta página</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Git Providers</h1></header>
+<p>Brabo works on top of a real git repository, and three backends serve that
+role: <strong>Local</strong> (bare repos on disk), <strong>GitHub</strong>, and <strong>GitLab</strong>. The domain
+code doesn't know which one is in use — it speaks to a single contract.</p>
+<p>Decisions in ADRs <a href=/brabo/qa/pt-BR/pt-BR/adr/0001-git-provider-contract-shape target=_blank rel="noopener noreferrer" class="">0001</a> through
+<a href=/brabo/qa/pt-BR/pt-BR/adr/0005-repo-bootstrap-idempotent-steps target=_blank rel="noopener noreferrer" class="">0005</a> and
+<a href=/brabo/qa/pt-BR/pt-BR/adr/0028-protecao-de-branch-divergencia-entre-providers target=_blank rel="noopener noreferrer" class="">0028</a>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=the-contract>The contract<a href=#the-contract class=hash-link aria-label="Link direto para The contract" title="Link direto para The contract" translate=no>​</a></h2>
+<p><code>GitProviderContract</code>, in <code>packages/shared/src/index.ts</code>. <strong>Fifteen operations</strong> —
+the tenth entered in Phase 4a, with the PR gates; the 11th and 12th in PHASE 26, with
+the Code tab (read-only); the 13th, 14th, and 15th in PHASE 26b, the foundation of
+that same tab's declared pending items (blame, navigable PRs, rich branch —
+no UI consuming them yet):</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>operation<th>returns<tbody><tr><td><code>createRepo</code><td><code>GitRepo</code><tr><td><code>getRepo</code><td><code>GitRepo</code><tr><td><code>createBranch</code><td><code>GitBranch</code><tr><td><code>protectBranch</code><td>—<tr><td><code>listBranches</code><td><code>GitBranch[]</code><tr><td><code>commitFiles</code><td><code>GitCommitResult</code><tr><td><code>getFileContent</code><td><code>string | null</code> — <code>null</code> if the file (or the branch) doesn't exist<tr><td><code>openPullRequest</code><td><code>GitPullRequest</code><tr><td><code>mergePullRequest</code><td><code>GitPullRequest</code><tr><td><code>commentOnPullRequest</code><td>— (QA/SecOps verdict on the PR)<tr><td><code>listTree</code><td><code>GitTree | null</code> — <code>null</code> if the ref or the path don't exist<tr><td><code>getPullRequestDiff</code><td><code>GitPullRequestDiff | null</code> — <code>null</code> if the PR doesn't exist<tr><td><code>blame</code><td><code>GitBlame | null</code> — <code>null</code> if the file (or the ref) doesn't exist<tr><td><code>listPullRequests</code><td><code>GitPullRequestList</code> — summary per PR, not <code>GitPullRequest[]</code><tr><td><code>listBranchesDetailed</code><td><code>GitBranchDetailList</code> — <code>ahead</code>/<code>behind</code>/associated PR per branch</table>
+<p>Two more fields: <code>name</code> and <code>capabilities</code>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-two-read-operations-phase-26>The two read operations (PHASE 26)<a href=#the-two-read-operations-phase-26 class=hash-link aria-label="Link direto para The two read operations (PHASE 26)" title="Link direto para The two read operations (PHASE 26)" translate=no>​</a></h3>
+<p><code>listTree</code> lists <strong>one level</strong> of the tree, never the whole tree: the Code tab
+navigates on demand, and asking for everything in a large repository is the
+traffic amplifier the phase forbids. A missing or <code>""</code> <code>path</code> is the root; each
+entry carries the full <code>path</code> and <code>name</code> (the leaf).</p>
+<p><code>getPullRequestDiff</code> normalizes the diff into <code>status</code>
+(<code>added|modified|removed|renamed</code>), <code>additions</code>, <code>deletions</code>, and <code>patch</code>. The
+<code>patch</code> is <code>string | null</code>, and the distinction matters: <code>null</code> means <strong>it
+didn't come back</strong> (binary, or a patch too large for the response), while <code>""</code>
+would mean "it came back empty". Collapsing the two would make the screen say
+"no changes" for a changed binary.</p>
+<p>Both absences follow the vocabulary <code>getFileContent</code> already used — <code>null</code>,
+not an exception — so the Code tab treats "doesn't exist" in a single way.</p>
+<p><strong>Ceilings.</strong> Both cut off, and warn via <code>truncated: true</code>. The numbers live in
+<code>apps/api/src/domain/git/git-read-limits.ts</code> (1000 entries per level, 300
+files per diff) and <strong>not</strong> in <code>packages/shared</code>, which is 100% types — an
+<code>export const</code> there survives <code>tsc</code> and breaks the api's boot in production
+(guarded by <code>apps/api/test/packages-shared-so-tipos.spec.ts</code>).</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-three-foundation-operations-phase-26b--rn-110111112>The three foundation operations (PHASE 26b — RN-110/111/112)<a href=#the-three-foundation-operations-phase-26b--rn-110111112 class=hash-link aria-label="Link direto para The three foundation operations (PHASE 26b — RN-110/111/112)" title="Link direto para The three foundation operations (PHASE 26b — RN-110/111/112)" translate=no>​</a></h3>
+<p>Foundation for the three declared pending items of the Code tab (blame, rich
+branch dropdown, navigable PR list) — the UI for each is a later wave, in
+three separate agents. All three follow the absence vocabulary
+<code>getFileContent</code>/<code>listTree</code>/<code>getPullRequestDiff</code> already used: <code>null</code>, never
+an exception, when the resource doesn't exist.</p>
+<p><code>blame(ref, path)</code> annotates each line with the commit that last touched it —
+sha, author, date, first line of the message. It's the <strong>only</strong> operation
+that speaks GraphQL: GitHub's REST API has no blame, only the GraphQL API
+(<code>repository.object(expression:).blame(path:)</code>). GitLab uses
+<code>RepositoryFiles.allFileBlames</code>; Local uses <code>git blame --porcelain</code>. It cuts
+off at <code>GIT_BLAME_LINE_LIMIT</code> (2000 lines).</p>
+<p><code>listPullRequests(state?)</code> returns <code>GitPullRequestSummary[]</code> — id, number,
+title, author, state, branches, <code>updatedAt</code> — <strong>not</strong> <code>GitPullRequest[]</code>,
+which is the WRITE type (open/merge) and never had a title or author. <code>local</code>
+lists from the SAME sidecar PR store from Phase 4a. It cuts off at
+<code>GIT_PR_LIST_LIMIT</code> (100, one page, no follow-up pagination).</p>
+<p><code>listBranchesDetailed(defaultBranch)</code> is its <strong>own</strong> operation, not an
+extension of <code>listBranches</code> — see the capabilities table below for why. Each
+enriched branch gets <code>ahead</code>/<code>behind</code> (relative to <code>defaultBranch</code>, which the
+CALLER already knows and passes — asking the provider for it again would be
+one more call) and the open associated PR, if any. <code>null</code> in both numbers
+when the provider can't compute it (orphan branch, unrelated history) —
+honest degradation, never a made-up number. It cuts off at
+<code>GIT_BRANCH_DETAIL_LIMIT</code> (30 branches).</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-call-ceiling-and-the-consumption-ceiling-phase-26b>The CALL ceiling, and the CONSUMPTION ceiling (PHASE 26b)<a href=#the-call-ceiling-and-the-consumption-ceiling-phase-26b class=hash-link aria-label="Link direto para The CALL ceiling, and the CONSUMPTION ceiling (PHASE 26b)" title="Link direto para The CALL ceiling, and the CONSUMPTION ceiling (PHASE 26b)" translate=no>​</a></h3>
+<p>The two numbers above limit what a provider returns in <strong>one</strong> call. The HTTP
+surface that consumes them has its own ceilings, in the same file, and they
+answer a different question: how many CALLS a single client request can
+trigger. <code>listTree</code> is cheap once and expensive a thousand times.</p>
+<p>What forces the distinction is the <strong>Code tab search</strong>, which is <strong>not an
+operation of this contract</strong> — none of the three providers has it. GitHub and
+GitLab have platform-level code search, with their own semantics and limits;
+<code>LocalGitProvider</code> is a bare repo and has nothing like that. Declaring it here
+would mean either a 13th operation with capability <code>false</code> on local (a tab
+that disappears on one provider), or a platform's vocabulary leaking into the
+normalized contract that exists precisely to prevent that.</p>
+<p>So it stays <strong>composed at the application layer</strong>
+(<code>application/use-cases/git/read-project-code.use-case.ts</code>), on top of
+<code>listTree</code> + <code>getFileContent</code>, with three budgets — directories traversed,
+files opened, and matches returned — plus a short-TTL cache
+(<code>domain/git/git-read-cache.ts</code>) so browsing and searching don't repeat the
+same calls. Who pays is the <strong>workspace owner's</strong> credential
+(<a href=/brabo/qa/pt-BR/pt-BR/business-rules#rn-058 target=_blank rel="noopener noreferrer" class="">RN-058</a>/<a href=/brabo/qa/pt-BR/pt-BR/business-rules#rn-082 target=_blank rel="noopener noreferrer" class="">RN-082</a>),
+and the rate limit is the provider's — see <a href=/brabo/qa/pt-BR/pt-BR/business-rules#rn-095 target=_blank rel="noopener noreferrer" class="">RN-095</a>
+and <a href=/brabo/qa/pt-BR/pt-BR/adr/0060-superficie-de-leitura-de-codigo target=_blank rel="noopener noreferrer" class="">ADR 0060</a>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=capabilities>Capabilities<a href=#capabilities class=hash-link aria-label="Link direto para Capabilities" title="Link direto para Capabilities" translate=no>​</a></h2>
+<p>Not every backend does everything, and that's <strong>declared</strong>, not discovered on
+failure:</p>
+<div class="language-ts codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-ts codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">interface</span><span class="token plain"> </span><span class="token class-name">GitProviderCapabilities</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(248, 248, 242)">{</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">readonly</span><span class="token plain"> protectBranch</span><span class="token operator">:</span><span class="token plain"> </span><span class="token builtin" style="color:rgb(189, 147, 249)">boolean</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">readonly</span><span class="token plain"> pullRequests</span><span class="token operator">:</span><span class="token plain"> </span><span class="token builtin" style="color:rgb(189, 147, 249)">boolean</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">readonly</span><span class="token plain"> listTree</span><span class="token operator">:</span><span class="token plain"> </span><span class="token builtin" style="color:rgb(189, 147, 249)">boolean</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">readonly</span><span class="token plain"> pullRequestDiff</span><span class="token operator">:</span><span class="token plain"> </span><span class="token builtin" style="color:rgb(189, 147, 249)">boolean</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">readonly</span><span class="token plain"> blame</span><span class="token operator">:</span><span class="token plain"> </span><span class="token builtin" style="color:rgb(189, 147, 249)">boolean</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">readonly</span><span class="token plain"> pullRequestsList</span><span class="token operator">:</span><span class="token plain"> </span><span class="token builtin" style="color:rgb(189, 147, 249)">boolean</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token keyword" style="color:rgb(189, 147, 249);font-style:italic">readonly</span><span class="token plain"> branchesDetailed</span><span class="token operator">:</span><span class="token plain"> </span><span class="token builtin" style="color:rgb(189, 147, 249)">boolean</span><span class="token punctuation" style="color:rgb(248, 248, 242)">;</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token punctuation" style="color:rgb(248, 248, 242)">}</span><br/></div></code></pre></div></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>provider<th><code>protectBranch</code><th><code>pullRequests</code><th><code>listTree</code><th><code>pullRequestDiff</code><th><code>blame</code><th><code>pullRequestsList</code><th><code>branchesDetailed</code><tbody><tr><td>Local<td>❌<td>✅<td>✅<td>✅<td>✅<td>✅<td>✅<tr><td>GitHub<td>✅<td>✅<td>✅<td>✅<td>✅<td>✅<td>✅<tr><td>GitLab<td>✅<td>✅<td>✅<td>✅<td>✅<td>✅<td>✅</table>
+<p>The two PHASE 26 capabilities, and the three from PHASE 26b, are <code>true</code> on all
+three because the <strong>contract suite exercises them on all three</strong> — it's the
+same criterion from ADRs 0041/0042, which also applies to git: a capability
+is only declared once proven, and without proof it's declared <code>false</code> and
+degrades. Local fulfills them with <code>git ls-tree</code>/<code>git diff</code>/<code>git blame --porcelain</code>/<code>git rev-list --left-right --count</code> on the bare repo, with no
+platform behind it at all — it's the only one of the three providers tested
+against REAL git (<code>local-git-provider.contract.spec.ts</code>); GitHub and GitLab
+run against msw's fake backends, and the real smoke tests
+(<code>{github,gitlab}-provider.smoke.spec.ts</code>) remain skipped without
+<code>GITHUB_TEST_TOKEN</code>/<code>GITLAB_TEST_TOKEN</code> in the environment — the same
+situation already documented in PHASE 13a for the LLM providers.</p>
+<p><code>pullRequestsList</code> deserves a separate note: the original assumption was that
+<code>local</code> wouldn't have PRs, "single-repository concept has no PR" — that
+didn't hold up. The sidecar PR store from Phase 4a (self-contained for the
+dev agents) is already the source, and all three <code>local</code> capabilities ended
+up <code>true</code>.</p>
+<p>One declared degradation, and it's about DATA, not about the operation: GitLab
+doesn't bring file size in the tree listing (<code>RepositoryTreeSchema</code> has no
+such field, and asking for it per entry would cost one request per file), so
+<code>size</code> comes back <code>null</code> there. The operation exists and works; what's
+missing is a column.</p>
+<p>The Local provider implements PRs internally (there's no server to host
+them, but the flow exists) and does <strong>not</strong> implement branch protection —
+there's no platform to apply it. Calling <code>protectBranch</code> on it raises
+<code>GitNotSupportedError</code>, an explicit error, never a silent no-op
+(<a href=/brabo/qa/pt-BR/pt-BR/business-rules#rn-028 target=_blank rel="noopener noreferrer" class="">RN-028</a>).</p>
+<blockquote>
+<p><strong>Capability isn't the gate.</strong> Platform branch protection is defense in
+depth. What prevents an improper merge is the <strong>domain-level ceiling</strong>,
+which works the same way on all three providers, including Local, which has
+no protection at all (<a href=/brabo/qa/pt-BR/pt-BR/business-rules#rn-006 target=_blank rel="noopener noreferrer" class="">RN-006</a>). The
+<a href=/brabo/qa/pt-BR/pt-BR/adr/0028-protecao-de-branch-divergencia-entre-providers target=_blank rel="noopener noreferrer" class="">ADR 0028</a>
+documents the divergence between GitHub and GitLab and why it doesn't
+change the guarantee.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=normalized-errors>Normalized errors<a href=#normalized-errors class=hash-link aria-label="Link direto para Normalized errors" title="Link direto para Normalized errors" translate=no>​</a></h2>
+<p>Each provider translates its own platform's error into one of these classes.
+The domain never sees a GitHub 422 or a git <code>fatal:</code>:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>error<th>when<tbody><tr><td><code>GitRepoAlreadyExistsError</code><td>creating a repository that already exists<tr><td><code>GitRepoNotFoundError</code><td>repository doesn't exist or no access<tr><td><code>GitBranchNotFoundError</code><td>branch doesn't exist<tr><td><code>GitBranchAlreadyExistsError</code><td>creating a branch that already exists<tr><td><code>GitPermissionDeniedError</code><td>valid credential, insufficient permission<tr><td><code>GitNotSupportedError</code><td>operation outside that provider's <code>capabilities</code><tr><td><code>GitCredentialConnectionTestFailedError</code><td>credential connection test failed — <strong>doesn't</strong> reach HTTP: <code>TestStoredCredentialUseCase</code> catches it and returns <code>refused</code> (<a href=/brabo/qa/pt-BR/pt-BR/adr/0050-credencial-sempre-cifrada-verificacao-explicita target=_blank rel="noopener noreferrer" class="">ADR 0050</a>)<tr><td><code>GitProviderAuthError</code><td>invalid or expired credential<tr><td><code>InvalidOauthStateError</code><td>OAuth <code>state</code> doesn't match</table>
+<p><strong>There is no common base class</strong>, and that was decided, not forgotten: the
+<a href=/brabo/qa/pt-BR/pt-BR/adr/0002-git-error-normalization target=_blank rel="noopener noreferrer" class="">ADR 0002</a> records that an abstract
+<code>GitError</code> was considered and rejected for not paying for itself while no
+single HTTP filter needs it.</p>
+<p>The distinction that matters most in practice is <code>GitPermissionDeniedError</code>
+versus <code>GitProviderAuthError</code>: the first means "the token is valid but can't
+do this", the second "the token doesn't work". Confusing the two sends the
+user to re-authenticate when the problem was scope.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=retry>Retry<a href=#retry class=hash-link aria-label="Link direto para Retry" title="Link direto para Retry" translate=no>​</a></h2>
+<p><strong>Only on reads, never on mutations</strong>
+(<a href=/brabo/qa/pt-BR/pt-BR/adr/0003-git-provider-retry-policy target=_blank rel="noopener noreferrer" class="">ADR 0003</a>).</p>
+<p>The algorithm is Full Jitter, AWS's:
+<code>sleep = random(0, min(maxDelay, base · 2^attempt))</code>, with 4 attempts by
+default. <code>apps/api/src/infrastructure/git/retry.ts</code>.</p>
+<p>The asymmetry is the whole decision: retrying a <code>listBranches</code> that timed out
+is harmless; retrying a <code>commitFiles</code> that may have gone through creates a
+duplicate commit. When there's no way to know whether the mutation happened,
+the right answer is to fail and let a human look.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=the-contract-suite>The contract suite<a href=#the-contract-suite class=hash-link aria-label="Link direto para The contract suite" title="Link direto para The contract suite" translate=no>​</a></h2>
+<p>A single suite — <code>apps/api/test/contract/git-provider.contract.ts</code> — runs
+against all <strong>three</strong> providers. It's what guarantees that "works on Local"
+doesn't become "works only on Local".</p>
+<p>It's also the mechanism that keeps <code>capabilities</code> honest: a provider that
+declares <code>protectBranch: true</code> needs to pass the protection tests; one that
+declares <code>false</code> needs to raise <code>GitNotSupportedError</code>. Declaring it wrong
+breaks the suite in both directions.</p>
+<p>Two guardrails accompany the suite, in
+<code>apps/api/test/contract/git-provider-contract-callers.spec.ts</code>. The first
+checks that the suite's header lists exactly who invokes it. The second is
+item 33 of PHASE 26: <strong>a contract operation with no consumer in <code>src/</code> fails
+CI</strong> — an operation all three providers implement and nobody calls is
+permanent weight, and nothing proves it works on the real path.</p>
+<p>The escape hatch for a phase to deliver a contract before the routes is
+narrow and named: the <code>SEM_CONSUMIDOR_AINDA</code> map, with the phase that will
+consume it written next to each operation. It closes itself — as soon as the
+operation gets a consumer, the entry starts to <strong>fail</strong>, forcing whoever
+wrote the route to delete it.</p>
+<p><strong>The map has been empty since PHASE 26b</strong>, and it was emptied by the
+mechanism, not by anyone's memory: as soon as
+<code>application/use-cases/git/read-project-code.use-case.ts</code> started calling
+<code>listTree</code> and <code>getPullRequestDiff</code>, the second test failed pointing at the
+two entries by name. Empty, and not removed — the escape hatch remains
+available for the next contract that's born before its consumer.</p>
+<p>:::caution The fake has to lie the same way the remote does
+The suite runs against fake backends (msw) for the remote providers, and a
+fake that's more GENEROUS than the real API leaves the suite green while the
+product breaks. That's what happened with the empty repository: GitHub's fake
+responded <code>404</code> to a nonexistent ref, GitHub actually responds
+<strong><code>409 Git Repository is empty</code></strong>, and bootstrap died on the very first step
+of every new GitHub project — with the whole suite green. When adding a case
+to the fake, check the response against the live API, not against what seems
+reasonable.
+:::</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=the-first-commit-in-an-empty-repository>The first commit in an empty repository<a href=#the-first-commit-in-an-empty-repository class=hash-link aria-label="Link direto para The first commit in an empty repository" title="Link direto para The first commit in an empty repository" translate=no>​</a></h3>
+<p>A freshly created GitHub repository has no commit at all (<code>auto_init: false</code>),
+and there the <strong>entire Git Data API</strong> responds <code>409</code> — refs, blobs, trees,
+commits. There's no way to assemble the first commit through it. What works
+is the Contents API (<code>PUT /repos/:owner/:repo/contents/:path</code>), which creates
+the file, commit, and branch all at once; it's what <code>commitFiles</code> uses when
+it detects the repo is empty.</p>
+<p>With <strong>one</strong> file — bootstrap's case, which commits one per step — you get
+exactly one commit, as the contract promises. With more than one, the first
+is born via the Contents API (it's the one that creates the branch) and the
+rest go into a second commit via the normal path: two commits instead of one,
+a declared degradation because the alternative would be refusing the initial
+multi-file commit.</p>
+<p><code>LocalGitProvider</code> doesn't go through any of this: its <code>git init --bare</code>
+accepts the first commit via the usual path.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=gitflow-bootstrap>Gitflow bootstrap<a href=#gitflow-bootstrap class=hash-link aria-label="Link direto para Gitflow bootstrap" title="Link direto para Gitflow bootstrap" translate=no>​</a></h2>
+<p>Five steps that prepare the project's repository: permanent branches
+(<code>dev</code>, <code>qa</code>, <code>main</code>), protections where the provider supports them, and base
+files.</p>
+<p>There used to be six: there was a <code>create_rc_branch</code> step, which created the
+<code>rc</code> rung between <code>qa</code> and <code>main</code>. The rung left the policy via
+<a href=/brabo/qa/pt-BR/pt-BR/adr/0030-politica-de-branches-mecanizada target=_blank rel="noopener noreferrer" class="">ADR 0030</a> and the step left
+bootstrap afterward, once the mismatch was noticed — the product was
+creating, protecting, and <strong>documenting in the user's repository</strong> a
+four-rung ladder it had itself abandoned. The <code>create_rc_branch</code> value
+remains in the database's <code>bootstrap_step</code> enum: old bootstraps have rows
+with it, and a step that actually happened doesn't get erased.</p>
+<p>Two properties, both tested
+(<a href=/brabo/qa/pt-BR/pt-BR/adr/0005-repo-bootstrap-idempotent-steps target=_blank rel="noopener noreferrer" class="">ADR 0005</a>,
+<a href=/brabo/qa/pt-BR/pt-BR/business-rules#rn-029 target=_blank rel="noopener noreferrer" class="">RN-029</a>):</p>
+<p><strong>Idempotent</strong> — each step checks before acting. Running it twice doesn't
+duplicate anything.</p>
+<p><strong>Resumable</strong> — failed on step 4? The resume starts at 4, not at 1.</p>
+<p>Each step emits its own event, and there are five possible outcomes:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>event<th>means<tbody><tr><td><code>bootstrap.step_started</code><td>started<tr><td><code>bootstrap.step_completed</code><td>did the work<tr><td><code>bootstrap.step_skipped</code><td>was already done — <strong>this is success</strong><tr><td><code>bootstrap.step_degraded</code><td>completed without a capability (branch protection on Local)<tr><td><code>bootstrap.step_failed</code><td>failed; the resume starts here</table>
+<p><code>skipped</code> and <code>degraded</code> exist separately from <code>completed</code> on purpose: a
+bootstrap that skipped everything because the repository was already ready is
+a different outcome from one that did everything, and one that ran without
+branch protection is different from both. Collapsing all three into "ok"
+would lose exactly the information someone will want later.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=adopting-an-existing-repository-phase-12a>Adopting an existing repository (Phase 12a)<a href=#adopting-an-existing-repository-phase-12a class=hash-link aria-label="Link direto para Adopting an existing repository (Phase 12a)" title="Link direto para Adopting an existing repository (Phase 12a)" translate=no>​</a></h2>
+<p>A project can point to a repository that <strong>already exists</strong>, instead of
+creating one. <code>project_repositories.origin</code> says which of the two it was
+(<a href=/brabo/qa/pt-BR/pt-BR/business-rules#rn-046 target=_blank rel="noopener noreferrer" class="">RN-046</a>).</p>
+<p>Adoption uses <strong>only what the contract already had</strong>: <code>getRepo</code> validates
+access — it had existed since Phase 2 and no use case called it — and the
+diagnostic uses <code>listBranches</code> and <code>getFileContent</code>. <strong>No new method entered
+the contract, and the contract suite was left untouched.</strong></p>
+<p>Bootstrap does NOT run on adoption. What comes out is a <strong>plan</strong>: the
+serialized list of what it would do, obtained by calling each step's
+<code>check()</code> — the same one that gives idempotency — without executing anything.
+The user then either approves the whole plan, or adopts as-is and dismisses
+bootstrap
+(<a href=/brabo/qa/pt-BR/pt-BR/business-rules#rn-045 target=_blank rel="noopener noreferrer" class="">RN-045</a>).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>event<th>means<tbody><tr><td><code>bootstrap.repository_adopted</code><td>the repository became the project's; nothing in it was changed<tr><td><code>bootstrap.plan_approved</code><td>the user approved it — <strong>only from here does bootstrap run on an adopted repo</strong><tr><td><code>bootstrap.adopted_as_is</code><td>the user dismissed bootstrap; the plan stays stored as evidence of what wasn't applied</table>
+<p><strong>Divergent protection is presence × absence, and only that.</strong> The contract
+exposes <code>GitBranch.protected</code> as a boolean, and
+<a href=/brabo/qa/pt-BR/pt-BR/adr/0028-protecao-de-branch-divergencia-entre-providers target=_blank rel="noopener noreferrer" class="">ADR 0028</a>
+deferred a normalized <code>ProtectionPolicy</code> — so the plan can say "<code>qa</code> is
+unprotected → would apply" and "<code>main</code> is already protected → won't touch",
+but it can't say that the existing protection requires two reviewers and ours
+would require one. A branch with PARTIAL protection counts as unprotected,
+and can be overwritten — always within an approved plan.</p>
+<p>A branch the template doesn't know about (<code>develop</code>, <code>release/*</code>) becomes an
+<strong>informational diagnostic</strong> and is never touched: an adopted repository has
+whatever policy it has.</p>
+<p>Decision in <a href=/brabo/qa/pt-BR/pt-BR/adr/0044-adocao-de-repositorio-existente target=_blank rel="noopener noreferrer" class="">ADR 0044</a>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=credentials>Credentials<a href=#credentials class=hash-link aria-label="Link direto para Credentials" title="Link direto para Credentials" translate=no>​</a></h2>
+<p>Git tokens are user secrets: encrypted with envelope encryption, one DEK per
+record, never in plaintext in the database or in logs. The table is
+<code>project_git_connections</code>, and it takes part in the master key rotation
+alongside LLM credentials — see the
+<a href=/brabo/qa/pt-BR/pt-BR/runbook#rotacao-da-chave-mestra target=_blank rel="noopener noreferrer" class="">runbook</a>.</p>
+<p>Registration uses a dedicated database enum (<code>credential_provider</code>), joined
+with the LLM providers <strong>only at the TypeScript type level</strong>, without mixing
+the enums
+(<a href=/brabo/qa/pt-BR/pt-BR/adr/0004-git-credential-registration target=_blank rel="noopener noreferrer" class="">ADR 0004</a>).</p>
+<p>Two connection paths: <strong>PAT</strong> (pasted token) and <strong>OAuth</strong> (GitHub and
+GitLab). OAuth requires <code>GITHUB_OAUTH_CLIENT_ID</code>/<code>_SECRET</code> or the GitLab
+pair configured; without them, PAT only
+(<a class="" href=/brabo/qa/pt-BR/reference/configuration#git>configuration</a>).</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=what-doesnt-exist>What doesn't exist<a href=#what-doesnt-exist class=hash-link aria-label="Link direto para What doesn't exist" title="Link direto para What doesn't exist" translate=no>​</a></h2>
+<p>Bitbucket and a <code>GenericGitProvider</code> are <strong>out of scope</strong> — they aren't
+forgotten backlog, they're a decision. Adding a new provider means
+implementing all fifteen operations, honestly declaring the capabilities, and
+passing the contract suite.</p>
+<p><strong>Writing from the Code tab also doesn't exist.</strong> The seven read operations
+(<code>listTree</code>, <code>getPullRequestDiff</code>, <code>blame</code>, <code>listPullRequests</code>,
+<code>listBranchesDetailed</code>, plus <code>getFileContent</code> and the composed search) are
+read-only, and that's all. Saving a file from the tab is a future phase, and
+when it comes, writing is an external effect: it's born as a
+<code>proposed_action</code>, like every git mutation. What makes this verifiable
+instead of just an intention is that <code>CodeController</code> doesn't have <strong>a
+single</strong> write verb — no <code>@Post</code>, no <code>@Put</code>, no <code>@Patch</code>, no
+<code>@Delete</code> — even after PHASE 26b added three routes to it.</div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_M5Wn"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/git-providers.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_eJZs aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_y3Pe"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-08-24T04:07:03.000Z itemprop=dateModified>24 de ago. de 2026</time></b> por <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/qa/pt-BR/reference/artifacts><div class=pagination-nav__sublabel>Anterior</div><div class=pagination-nav__label>Artifacts</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/qa/pt-BR/reference/internal-api><div class=pagination-nav__sublabel>Próxima</div><div class=pagination-nav__label>Internal API</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_P_6G thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#the-contract class="table-of-contents__link toc-highlight">The contract</a><ul><li><a href=#the-two-read-operations-phase-26 class="table-of-contents__link toc-highlight">The two read operations (PHASE 26)</a><li><a href=#the-three-foundation-operations-phase-26b--rn-110111112 class="table-of-contents__link toc-highlight">The three foundation operations (PHASE 26b — RN-110/111/112)</a><li><a href=#the-call-ceiling-and-the-consumption-ceiling-phase-26b class="table-of-contents__link toc-highlight">The CALL ceiling, and the CONSUMPTION ceiling (PHASE 26b)</a></ul><li><a href=#capabilities class="table-of-contents__link toc-highlight">Capabilities</a><li><a href=#normalized-errors class="table-of-contents__link toc-highlight">Normalized errors</a><li><a href=#retry class="table-of-contents__link toc-highlight">Retry</a><li><a href=#the-contract-suite class="table-of-contents__link toc-highlight">The contract suite</a><ul><li><a href=#the-first-commit-in-an-empty-repository class="table-of-contents__link toc-highlight">The first commit in an empty repository</a></ul><li><a href=#gitflow-bootstrap class="table-of-contents__link toc-highlight">Gitflow bootstrap</a><li><a href=#adopting-an-existing-repository-phase-12a class="table-of-contents__link toc-highlight">Adopting an existing repository (Phase 12a)</a><li><a href=#credentials class="table-of-contents__link toc-highlight">Credentials</a><li><a href=#what-doesnt-exist class="table-of-contents__link toc-highlight">What doesn't exist</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/qa/pt-BR/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/pt-BR/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/pt-BR/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/pt-BR/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>

