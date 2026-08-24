@@ -11,6 +11,11 @@
   gap: 16px;
 }
 
+.acoesCabecalho {
+  display: flex;
+  gap: 8px;
+}
+
 .titulo {
   margin: 0 0 4px;
   font-family: var(--font-heading);

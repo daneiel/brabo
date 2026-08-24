@@ -1,0 +1,69 @@
+---
+id: rag-controller-anexar-pasta-local
+title: "Attaches a local folder (browser upload) as read-only reference (RN-454, ADR 0113)"
+description: "Text content already read by the browser (`<input webkitdirectory>`), never a host path — that distinction is the whole point of ADR 0113. Idempotent full rebuild of the `local` scope: every call deletes and recreates it from the files sent THIS time, so re-uploading is the resync mechanism. Rejects (400) over the file-count/total-bytes caps instead of truncating silently — this is a one-shot user gesture with a folder picker in front of it, not a background scan. An individual oversized or unrecognized-extension file is only skipped, never fails the batch."
+sidebar_label: "Attaches a local folder (browser upload) as read-only reference (RN-454, ADR 0113)"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Attaches a local folder (browser upload) as read-only reference (RN-454, ADR 0113)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/projects/{projectId}/rag/local"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Text content already read by the browser (`<input webkitdirectory>`), never a host path — that distinction is the whole point of ADR 0113. Idempotent full rebuild of the `local` scope: every call deletes and recreates it from the files sent THIS time, so re-uploading is the resync mechanism. Rejects (400) over the file-count/total-bytes caps instead of truncating silently — this is a one-shot user gesture with a folder picker in front of it, not a background scan. An individual oversized or unrecognized-extension file is only skipped, never fails the batch.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./rag-controller-anexar-pasta-local.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./rag-controller-anexar-pasta-local.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./rag-controller-anexar-pasta-local.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

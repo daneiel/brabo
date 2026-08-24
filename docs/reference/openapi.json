@@ -6616,7 +6616,7 @@
     },
     "/projects/{projectId}/rag/coverage": {
       "get": {
-        "description": "Real count (never estimated) of `.md` files under `docs`/`docs/adr` in the project's repository against how many have a chunk, and the project's sessions against how many have a chunk. Does not include \"N minutes ago\" — there is no per-scope indexing timestamp column, and a guessed number would lie (same rule as ADR 0042 for model rating).",
+        "description": "Real count (never estimated) of `.md` files under `docs`/`docs/adr` in the project's repository against how many have a chunk, and the project's sessions against how many have a chunk. Does not include \"N minutes ago\" for those three scopes — there is no per-scope indexing timestamp column, and a guessed number would lie (same rule as ADR 0042 for model rating). `local` (RN-454) is the one exception: `lastAttachedAt` is a real `MAX(created_at)` over that scope, because a browser upload has no repository state to compare against.",
         "operationId": "RagController_obterCobertura",
         "parameters": [
           {
@@ -6658,6 +6658,68 @@
           }
         ],
         "summary": "Index coverage: indexed files/sessions against the real total",
+        "tags": [
+          "rag"
+        ]
+      }
+    },
+    "/projects/{projectId}/rag/local": {
+      "post": {
+        "description": "Text content already read by the browser (`<input webkitdirectory>`), never a host path — that distinction is the whole point of ADR 0113. Idempotent full rebuild of the `local` scope: every call deletes and recreates it from the files sent THIS time, so re-uploading is the resync mechanism. Rejects (400) over the file-count/total-bytes caps instead of truncating silently — this is a one-shot user gesture with a folder picker in front of it, not a background scan. An individual oversized or unrecognized-extension file is only skipped, never fails the batch.",
+        "operationId": "RagController_anexarPastaLocal",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachLocalFolderRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachLocalFolderResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role on the project."
+          },
+          "404": {
+            "description": "Project does not exist."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Attaches a local folder (browser upload) as read-only reference (RN-454, ADR 0113)",
         "tags": [
           "rag"
         ]
@@ -11672,6 +11734,55 @@
           "moduleIds"
         ]
       },
+      "AttachLocalFolderRequestDto": {
+        "type": "object",
+        "properties": {
+          "folderName": {
+            "type": "string",
+            "example": "brabo",
+            "description": "The folder name as chosen in the browser — shown in the coverage panel."
+          },
+          "files": {
+            "description": "Up to 500 files. The exact summed-byte cap (RAG_LOCAL_TOTAL_BYTES_LIMIT) and the per-file extension allowlist are enforced by the use case, not by this DTO — an array of individually-valid strings can still add up to a payload too large.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalFolderFileDto"
+            }
+          }
+        },
+        "required": [
+          "folderName",
+          "files"
+        ]
+      },
+      "AttachLocalFolderResponseDto": {
+        "type": "object",
+        "properties": {
+          "folderName": {
+            "type": "string"
+          },
+          "filesIndexed": {
+            "type": "number"
+          },
+          "filesSkipped": {
+            "type": "number",
+            "description": "Skipped for being over the per-file byte cap or having an unrecognized extension — never fails the whole batch."
+          },
+          "chunksCreated": {
+            "type": "number"
+          },
+          "embedding": {
+            "$ref": "#/components/schemas/IndexEmbeddingResponseDto"
+          }
+        },
+        "required": [
+          "folderName",
+          "filesIndexed",
+          "filesSkipped",
+          "chunksCreated",
+          "embedding"
+        ]
+      },
       "BlockTaskInternalDto": {
         "type": "object",
         "properties": {
@@ -14123,7 +14234,8 @@
             "enum": [
               "docs",
               "adr",
-              "session"
+              "session",
+              "local"
             ]
           },
           "content": {
@@ -14169,13 +14281,14 @@
           },
           "scopes": {
             "type": "array",
-            "description": "When absent, searches all three scopes (RN-219).",
+            "description": "When absent, searches all four scopes (RN-219/454).",
             "items": {
               "type": "string",
               "enum": [
                 "docs",
                 "adr",
-                "session"
+                "session",
+                "local"
               ]
             }
           },
@@ -14929,6 +15042,24 @@
           "outputTokens",
           "costMicros",
           "estimated"
+        ]
+      },
+      "LocalFolderFileDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "example": "src/domain/rag/chunking.ts",
+            "description": "Relative path within the chosen folder — never absolute, never `..`."
+          },
+          "content": {
+            "type": "string",
+            "description": "Plain UTF-8 text — never base64."
+          }
+        },
+        "required": [
+          "path",
+          "content"
         ]
       },
       "LoginDto": {
@@ -17287,6 +17418,9 @@
           "session": {
             "$ref": "#/components/schemas/RagSessionCoverageResponseDto"
           },
+          "local": {
+            "$ref": "#/components/schemas/RagLocalCoverageResponseDto"
+          },
           "chunksTotal": {
             "type": "number"
           },
@@ -17298,6 +17432,7 @@
           "docs",
           "adr",
           "session",
+          "local",
           "chunksTotal",
           "chunksWithoutVector"
         ]
@@ -17319,6 +17454,28 @@
           "filesInRepo",
           "filesIndexed",
           "truncated"
+        ]
+      },
+      "RagLocalCoverageResponseDto": {
+        "type": "object",
+        "properties": {
+          "filesIndexed": {
+            "type": "number"
+          },
+          "folderName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastAttachedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Real `MAX(chunks.created_at)` for this scope — never a guessed \"N minutes ago\" (RN-454)."
+          }
+        },
+        "required": [
+          "filesIndexed",
+          "folderName",
+          "lastAttachedAt"
         ]
       },
       "RagSearchInternalDto": {

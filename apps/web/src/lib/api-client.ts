@@ -1115,3 +1115,14 @@ export const getRagCoverage = (projectId: string) =>
 
 export const reindexRag = (projectId: string) =>
   post<import('./api-types').RagReindexReport>(`/projects/${projectId}/rag/reindex`);
+
+// A pasta local anexada (RN-454, ADR 0113) — texto já lido pelo NAVEGADOR,
+// nunca um caminho de host. `maintainer`, mesma régua de `reindex`.
+export const attachLocalFolder = (
+  projectId: string,
+  body: import('./api-types').AttachLocalFolderRequest,
+) =>
+  post<import('./api-types').AttachLocalFolderReport>(
+    `/projects/${projectId}/rag/local`,
+    body,
+  );

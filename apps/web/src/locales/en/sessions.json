@@ -10,10 +10,11 @@
     "scopes": {
       "docs": "Docs",
       "adr": "ADR",
-      "session": "Sessions"
+      "session": "Sessions",
+      "local": "Local"
     },
     "title": "RAG Chat",
-    "subtitle": "Hybrid search (vector + lexical) over the repository's docs/ADRs and the conversations recorded in this project — never source code, never a Pull Request.",
+    "subtitle": "Hybrid search (vector + lexical) over the repository's docs/ADRs, the conversations recorded in this project, and attached local folders — never source code, never a Pull Request.",
     "reindexButton": {
       "idle": "Reindex now",
       "loading": "Reindexing…"
@@ -35,13 +36,33 @@
     "searching": "Searching…",
     "searchError": "Could not search right now.",
     "vectorUnavailable": "Keyword-only search — embedding unavailable",
-    "noResults": "No results for “{{query}}”."
+    "noResults": "No results for “{{query}}”.",
+    "attachLocalFolder": {
+      "button": "Attach local folder",
+      "modalTitle": "Attach local folder",
+      "explanation": "File contents are read by your browser and sent as text — no path from your machine is ever sent. Each new folder REPLACES the previously attached one.",
+      "chooseFolder": "Choose folder…",
+      "reading": "Reading files…",
+      "emptyFolder": "No eligible files found in this folder (recognized text/code).",
+      "summary": "{{included}} file(s) from “{{folderName}}”, {{skipped}} skipped (too large or binary)",
+      "summaryNoSkipped": "{{included}} file(s) from “{{folderName}}”",
+      "tooManyFiles": "The folder has {{count}} file(s) — the cap is {{limit}}. Choose a smaller folder.",
+      "tooManyBytes": "The folder's content sums more than the allowed cap. Choose a smaller folder.",
+      "confirmButton": "Attach {{count}} file(s)",
+      "confirmButtonLoading": "Attaching…",
+      "cancelButton": "Cancel",
+      "successTitle": "Folder attached",
+      "successMessage": "{{filesIndexed}} file(s) indexed from “{{folderName}}”{{embeddingSuffix}}",
+      "errorTitle": "Failed to attach",
+      "errorDefaultMessage": "The api did not respond. Nothing was changed."
+    }
   },
   "ragCitation": {
     "scopeLabels": {
       "docs": "docs",
       "adr": "ADR",
-      "session": "session"
+      "session": "session",
+      "local": "local"
     },
     "scoreTitle": "Combined score (0.6 vector + 0.4 lexical)",
     "relevance": "{{score}} relevance",
@@ -59,6 +80,10 @@
     "sessionsLabel": "sessions",
     "noSessionsInProject": "no sessions in the project",
     "sessionsIndexed": "sessions indexed",
+    "localLabel": "local",
+    "noLocalFolder": "no folder attached",
+    "localFolder": "from “{{folderName}}”",
+    "localAttachedAt": "attached on {{date}}",
     "chunksInIndex": "{{count}} chunk(s) in the index",
     "chunksWithoutVector": "{{count}} without a vector — indexed with lexical signal only"
   },

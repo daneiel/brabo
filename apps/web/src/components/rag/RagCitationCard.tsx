@@ -10,12 +10,14 @@ const CHAVE_DO_ESCOPO: Record<RagSearchHit['scope'], string> = {
   docs: 'ragCitation.scopeLabels.docs',
   adr: 'ragCitation.scopeLabels.adr',
   session: 'ragCitation.scopeLabels.session',
+  local: 'ragCitation.scopeLabels.local',
 };
 
 const TOM_DO_ESCOPO: Record<RagSearchHit['scope'], BadgeTone> = {
   docs: 'muted',
   adr: 'accent',
   session: 'muted',
+  local: 'accent',
 };
 
 /** `null` é "sinal não achou o chunk" (RN-234) — nunca confundir com 0%. */
