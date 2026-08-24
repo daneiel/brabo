@@ -1,0 +1,24 @@
+{
+  "tools": {
+    "listar_regras_de_negocio": "Relendo as regras de negócio do projeto",
+    "listar_backlog": "Conferindo o que já existe no backlog",
+    "listar_metricas_de_produto": "Consultando as métricas do produto",
+    "create_epic": "Criando um épico",
+    "create_story": "Escrevendo uma história",
+    "create_task": "Adicionando uma tarefa",
+    "ask_structured_questions": "Preparando perguntas para você",
+    "offer_handoff": "Preparando a passagem de bastão",
+    "emit_artifact": "Registrando o que aprendeu",
+    "create_module_map": "Desenhando o mapa de módulos",
+    "assign_story_modules": "Ligando histórias aos módulos",
+    "choose_project_image": "Escolhendo a imagem do projeto",
+    "create_c4_diagram": "Desenhando o diagrama C4",
+    "propose_adr": "Redigindo um ADR",
+    "emit_insight": "Registrando um insight",
+    "propose_execution_plan": "Montando o plano de execução",
+    "assess_implementability": "Avaliando se a história é implementável",
+    "propose_prototype": "Desenhando o protótipo",
+    "propose_rfc": "Redigindo a RFC"
+  },
+  "fallback": "Usando {{tool}}…"
+}
