@@ -17,6 +17,7 @@ import type {
   InfraArtifact,
   PsychologistHypothesis,
   PsychologistAnalysis,
+  PsychologistStatus,
   ProficiencyProfile,
   AgentInstructionVersion,
   Budget,
@@ -693,6 +694,10 @@ export const dismissHypothesis = (projectId: string, hypothesisId: string) =>
   );
 export const listPsychologistAnalyses = (projectId: string) =>
   get<PsychologistAnalysis[]>(`/projects/${projectId}/psychologist/analyses`);
+// Leitura pura (RN-454) — ver reanalyzeSession abaixo, que é o que faz
+// efeito (cria job) e o `/reanalyze` que devolve 503 quando desativado.
+export const getPsychologistStatus = (projectId: string) =>
+  get<PsychologistStatus>(`/projects/${projectId}/psychologist/status`);
 // --- Anamnese (Fase 4b) ---
 
 // Um evento pelo id resolvendo a SESSÃO dele. A janela da Anamnese é de

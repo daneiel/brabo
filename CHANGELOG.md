@@ -17,6 +17,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine,api,web**: a aba Insights, com zero hipóteses, mostrava "Sem
+  hipóteses ainda — o Psicólogo analisa cada sessão encerrada" mesmo com
+  `PSYCHOLOGIST_ENABLED=false` — indistinguível de "ainda ativo, só não
+  rodou". A tela nunca chegava perto do botão "Reanalisar" (só existe com
+  uma rodada de análise já feita), então nunca esbarrava no 503 que
+  denunciava a pausa. `GET /projects/:projectId/psychologist/status`
+  (`role:viewer`, sem efeito colateral) lê a flag global de antemão; a
+  tela agora diz "O Psicólogo está pausado — nenhuma sessão é analisada
+  até ser reativado" quando é o caso, e mantém a frase original quando de
+  fato ainda está ativo (RN-454)
 - **docker,scripts,deploy**: `gemma:1b` não existe no registry da Ollama
   (`manifest unknown`) — só `gemma3:1b` existe. `ollama-model-loader`
   sempre falhava e travava qualquer `docker compose up --wait`. Corrigido

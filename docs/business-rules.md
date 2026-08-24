@@ -4843,11 +4843,9 @@ pendente, nunca uma corrente infinita. Por isso a suite pré-existente de
 `{"error": "psicologo_desativado"}` quando desativado, sem sequer criar o
 job. `ReanalyzeSessionUseCase`, do lado api, converte o 503 do engine em
 `ServiceUnavailableException` com `reason: "psychologist_disabled"` no
-corpo — nunca um 500 genérico. A web (`ProjectInsightsTab.tsx`) descobre o
-estado no primeiro clique de "Reanalisar" (não há hoje uma leitura prévia
-do estado global) e, a partir daí, desabilita os botões e mantém a
-explicação VISÍVEL na tela — não só um toast que some (RN-088: nunca falha
-silenciosa ou confusa).
+corpo — nunca um 500 genérico. Isto descobre a pausa quando já existe uma
+análise para reprocessar; a tela SEM hipótese nenhuma tem uma leitura
+prévia própria, que não existia aqui — ver [RN-454](#rn-454).
 
 - **Onde:** `apps/engine/lib/engine/workers/psychologist_worker.ex`
   (`enabled?/0`), `apps/engine/lib/engine/outbox/drain.ex`
@@ -10707,6 +10705,63 @@ silenciosa.
 - **Origem:** necessidade técnica do binário standalone; a lacuna no smoke
   do npm foi achada por auditoria própria da mudança, não por execução real
   reportando falha
+
+### RN-454 — A aba Insights sabe que o Psicólogo está pausado ANTES de o usuário esbarrar no 503 {#rn-454}
+
+Achado por USO: a aba Insights, com zero hipóteses, mostrava "Sem hipóteses
+ainda — o Psicólogo analisa cada sessão encerrada" mesmo com
+`PSYCHOLOGIST_ENABLED=false` — a mesma frase que aparece quando o Psicólogo
+está ATIVO e só ainda não rodou. As duas situações são indistinguíveis pelo
+texto, o que é a mesma classe de defeito que a RN-088/RN-107 já fecharam
+para outras telas: um estado que existe e o produto sabe, mas não mostra.
+
+A [RN-117](#rn-117) já cobria a descoberta da pausa, mas só no CLIQUE de
+"Reanalisar" (503 → `PsychologistDisabledError`) — e esse botão só existe
+na faixa de análises, que só aparece quando `runs.length > 0`. Uma sessão
+sem hipótese nenhuma nunca chega perto dele, então a pausa era invisível
+justamente na tela vazia.
+
+`GET /internal/psychologist/status` (engine, `PsychologistCommandController.status/2`)
+é leitura pura de `PsychologistWorker.enabled?/0` — SEM efeito colateral,
+diferente de `/reanalyze`, que cria um job quando ativado. A api expõe
+`GET /projects/:projectId/psychologist/status` (`GetPsychologistStatusUseCase`,
+`role:viewer`) por cima disso — projeto na URL só por consistência com as
+rotas irmãs (`hypotheses`, `psychologist/analyses`); a flag em si é GLOBAL,
+como a RN-117 já registra. `ProjectInsightsTab.tsx` consome essa leitura
+(`usePsychologistStatus`) e escolhe a frase do estado vazio por ela: pausado
+mostra "O Psicólogo está pausado — nenhuma sessão é analisada até ser
+reativado" (`insights.projectInsightsTab.emptyPaused`); do contrário, mantém
+a frase original, que É honesta quando a feature está de fato ativa. O
+aviso persistente (`pausedNotice`) e os botões de "Reanalisar" também
+passaram a refletir essa leitura proativa, e não só o `useState` descoberto
+pelo 503 — que continua existindo, como reforço, para o caso raro de a
+flag mudar EM VOO entre a leitura de status e o clique.
+
+- **Onde:** `apps/engine/lib/engine_web/controllers/psychologist_command_controller.ex`
+  (`status/2`), `apps/engine/lib/engine_web/router.ex`
+  (`GET /internal/psychologist/status`),
+  `apps/api/src/application/ports/api-to-engine-client.port.ts`
+  (`getPsychologistStatus`),
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts`,
+  `apps/api/src/application/use-cases/execution/get-psychologist-status.use-case.ts`,
+  `apps/api/src/interfaces/http/psychologist/psychologist.controller.ts`
+  (`status`), `apps/web/src/lib/api-client.ts` (`getPsychologistStatus`),
+  `apps/web/src/lib/hooks.ts` (`usePsychologistStatus`),
+  `apps/web/src/routes/ProjectInsightsTab.tsx`
+- **Teste:**
+  `apps/engine/test/engine_web/controllers/psychologist_command_controller_test.exs`
+  (`status/2`, `enabled: true`/`false`),
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts`
+  (`getPsychologistStatus`),
+  `apps/api/test/application/use-cases/execution/get-psychologist-status.use-case.spec.ts`,
+  `apps/web/src/routes/ProjectInsightsTab.test.tsx`
+- **Borda:** a flag continua GLOBAL (ver RN-117) — a rota da api aceita
+  `projectId` na URL só para bater com o padrão das rotas irmãs do
+  controller, e não porque a resposta varia por projeto.
+- **Origem:** achado por USO real navegando a aba Insights com
+  `PSYCHOLOGIST_ENABLED=false`, não roteiro. Sem ADR — extensão pontual do
+  mecanismo de leitura já existente da RN-117, mesmo padrão da RN-088/
+  RN-107 para o resto do produto.
 
 ---
 

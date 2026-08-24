@@ -665,7 +665,7 @@ second line of the transactional outbox; the engine never writes to the graph di
 
 ## api → engine
 
-Fifteen command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
+Sixteen command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
 
 | method | path | what it triggers |
 |---|---|---|
@@ -681,6 +681,7 @@ Fifteen command routes, plus the health ones. Under `/internal` with `VerifyServ
 | POST | `/sessions/:id/execution/parallelize` | creates subagents — **executes, does not decide** (see below) |
 | POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearms a stuck dev agent (FASE 12b — RN-047); 404 if it doesn't exist, **409 if it isn't `idle_tripped`** |
 | POST | `/sessions/:id/psychologist/reanalyze` | on-demand reanalysis |
+| GET | `/psychologist/status` | reads the global `PSYCHOLOGIST_ENABLED` flag ([RN-454](../business-rules.md#rn-454)) — no side effect, global (not scoped to a session) |
 | POST | `/projects/:id/anamnese/run` | Anamnese run |
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalidates the instruction cache |
 | POST | `/actions/execute` · `/actions/execute-git` | executes an **already approved** action |
