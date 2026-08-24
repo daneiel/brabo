@@ -1,0 +1,24 @@
+{
+  "tools": {
+    "listar_regras_de_negocio": "Rereading the project's business rules",
+    "listar_backlog": "Checking what's already in the backlog",
+    "listar_metricas_de_produto": "Checking the product's metrics",
+    "create_epic": "Creating an epic",
+    "create_story": "Writing a story",
+    "create_task": "Adding a task",
+    "ask_structured_questions": "Preparing questions for you",
+    "offer_handoff": "Preparing the handoff",
+    "emit_artifact": "Recording what it learned",
+    "create_module_map": "Drawing the module map",
+    "assign_story_modules": "Linking stories to modules",
+    "choose_project_image": "Choosing the project image",
+    "create_c4_diagram": "Drawing the C4 diagram",
+    "propose_adr": "Drafting an ADR",
+    "emit_insight": "Recording an insight",
+    "propose_execution_plan": "Putting together the execution plan",
+    "assess_implementability": "Assessing whether the story is implementable",
+    "propose_prototype": "Designing the prototype",
+    "propose_rfc": "Drafting the RFC"
+  },
+  "fallback": "Using {{tool}}…"
+}
