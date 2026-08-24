@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 import { AREAS } from './agent-areas.generated';
 import {
   BulbIcon,
@@ -297,4 +297,26 @@ export const SOLO_CONVERSATIONAL_AGENTS: AgentKey[] = [
 export function addressableAgents(): AgentKey[] {
   const leads = Object.values(AREAS).map((area) => area.lead);
   return [...new Set([...leads, ...SOLO_CONVERSATIONAL_AGENTS])];
+}
+
+/**
+ * Nome de exibição do agente; degrada para o id quando ele não está no
+ * roster. Movida de `SessionPage.tsx` (faixa de atividade do turno,
+ * RN-460) para ser a MESMA fonte que `TurnActivityStrip.tsx` usa — evitar
+ * duas cópias da mesma regra de fallback.
+ */
+export function nomeDoAgente(id: string | undefined): string {
+  if (!id) return 'agente';
+  return AGENTS[id as keyof typeof AGENTS]?.name ?? id;
+}
+
+/**
+ * Cor do agente — a mesma do card, do avatar e da marca de handoff.
+ *
+ * O fallback é `--accent` porque nem todo ator é agente do roster: no chat sem
+ * agente ativo quem responde é o MODELO, e `actor.id` é o slug dele.
+ */
+export function corDoAgente(id: string | undefined): CSSProperties {
+  const cor = id ? AGENTS[id as keyof typeof AGENTS]?.color : undefined;
+  return { ['--msg-color' as string]: cor ?? 'var(--accent)' } as CSSProperties;
 }

@@ -2270,3 +2270,51 @@ repositório" pra comparar — e `lastAttachedAt` é a ÚNICA exceção real à
 regra "nunca Xmin" (RN-237): um `MAX(chunks.created_at)` de verdade, não
 chutado (RN-458).
 
+## Faixa de atividade do turno — o fio só recebe a resposta no fim (RN-459/460)
+
+Pedido do dono do produto: a tela de Sessão passa a mostrar, ACIMA do
+composer, uma faixa que narra em linguagem humana o que um agente
+conversacional (Criativo, PO, Arquiteto, Dev Lead, UX Designer, Staff)
+está fazendo DURANTE o turno — referência visual: a linha de status do
+Claude Code. O fio só recebe a bolha de resposta DEPOIS que o turno
+termina; a regra é do CHAT (canal Phoenix) e vale só pros seis
+conversacionais — o chat consultivo sem agente ativo (SSE,
+`streamChatMessage`) continua com a bolha de streaming de sempre,
+intocada.
+
+**Mecanismo**: os seis servers já emitiam `tool.call` DURÁVEL; passam a
+também `broadcast(state, "tool.call", %{tool: name, agent: @agent})` —
+EFÊMERO, sem `args` (RN-096/RN-412) — pro canal entregar em tempo real.
+Não há behaviour/macro compartilhado entre os seis `dispatch_tool`
+(quatro formas estruturais distintas, confirmadas por leitura completa) —
+a mudança foi seis edições adaptadas à forma local de cada um, não uma
+refatoração. Do lado web, um reducer PURO
+(`reduzirAtividadeDoTurno`/`lib/atividade-do-turno.ts`) acumula o
+`agent.delta` como texto corrente; ao chegar `tool.call`, arquiva o
+corrente não-vazio como linha de narração, zera, e sempre adiciona uma
+linha de ferramenta com `fraseDaFerramenta(tool)` (dicionário das 19
+ferramentas, `lib/narracao-de-ferramentas.ts`, sem RN própria). Uma flag
+PRÓPRIA (`turnoViaCanal`, nunca derivada de `statusAgent`/`streamingAgent`,
+que passam por janelas legitimamente `null` no meio do turno) decide se a
+faixa aparece ou a bolha antiga — nunca as duas.
+
+**Regra de apresentação (histórico)**: `agruparNarracoesDoTurno`, nova
+passada pura depois de `afundarDesfechos` (RN-172) no mesmo `useMemo` —
+`agent.response` consecutivas do mesmo `turno`+`autor` viram um
+`Disclosure` compacto ("Passos do turno · N"), só a última fica intacta
+fora dele. `turno === 0` (o prólogo sentinela de `turnoDoSeq`) fica de
+FORA do agrupamento — fixtures antigas empilham `agent.response` sem
+fronteira de turno pra testar outro mecanismo (RN-138/RN-177), e sem a
+exclusão o agrupamento novo produziria `Disclosure` dentro de
+`Disclosure` ali. `afundarDesfechos` em si não mudou.
+
+**Achado no caminho, escopo estendido por decisão do dono do produto**: a
+investigação achou que QUATRO dos seis servers (Arquiteto, Dev Lead, UX
+Designer, Staff) terminavam CALADOS no teto de iterações —
+`defp run_turn(state, remaining) when remaining <= 0, do: state`, sem
+evento nenhum, contradizendo a regra permanente de que laço de agente não
+termina calado. Só o PO já emitia `toolloop.limit_reached` (RN-166); o
+Criativo diverge deliberadamente com `agent.error` (decisão documentada
+no próprio código). Os quatro corrigidos passam a emitir
+`toolloop.limit_reached`, mesmo evento do PO (RN-459).
+

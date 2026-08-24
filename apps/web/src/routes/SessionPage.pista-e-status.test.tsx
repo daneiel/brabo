@@ -282,19 +282,19 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
 
     // Nenhum delta chegou ainda, e ainda não passaram 5s: nada aparece —
     // é exatamente o ruído que RN-131 elimina.
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
 
     // Passa dos 5s sem nenhum delta: agora sim o indicador aparece — texto
     // FIXO (RN-156), sem interpolar o nome do agente.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
-    expect(screen.getByText('Reunindo informações...')).toBeInTheDocument();
+    expect(screen.getByText('Pensando…')).toBeInTheDocument();
 
     // O primeiro delta chega — o indicador cede lugar ao streaming normal,
     // na hora, sem esperar timer nenhum.
     act(() => canalHandlers!.onAgentDelta!('Olá', 'po'));
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
     expect(screen.getByText('Olá')).toBeInTheDocument();
 
     resolverAceite();
@@ -315,7 +315,7 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
 
     await waitFor(() => expect(canalHandlers?.onAgentStatus).toBeTypeOf('function'));
     act(() => canalHandlers!.onAgentStatus!({ status: 'working' }));
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
 
     // O turno acaba ANTES dos 5s (resposta rápida, sem texto nenhum) — o
     // timer é desarmado e o indicador NUNCA chega a aparecer.
@@ -324,7 +324,7 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
   });
 
   it('CASO DE FALHA: erro ao aceitar o handoff não deixa indicador nenhum preso', async () => {
@@ -348,6 +348,6 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
     // Mesmo que um "working" tardio chegasse depois da falha, não há mais
     // agente esperado (`turnoAgentRef` foi limpo) — mas o teste garante o
     // caminho direto: nenhum indicador aparece, mesmo depois dos 5s.
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
   });
 });

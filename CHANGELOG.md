@@ -6,6 +6,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine,web**: a tela de Sessão ganha uma faixa de atividade do turno
+  ACIMA do composer — narra em linguagem humana o que um agente
+  conversacional (Criativo, PO, Arquiteto, Dev Lead, UX Designer, Staff)
+  está fazendo ENQUANTO o turno roda (referência visual: a linha de status
+  do Claude Code), com o texto sendo digitado e, ao chamar uma ferramenta,
+  arquivando a narração corrente e mostrando "Fazendo X" (dicionário das
+  19 ferramentas em `lib/narracao-de-ferramentas.ts`). O fio só recebe a
+  bolha de resposta DEPOIS que o turno termina — a bolha de streaming
+  antiga fica exclusiva do chat consultivo sem agente ativo (SSE). Os seis
+  servers passam a rebroadcastar `tool.call` EFÊMERO (sem `args`, RN-096)
+  pelo canal Phoenix; `Disclosure`s expandem o passo-a-passo, e
+  `agruparNarracoesDoTurno` colapsa `agent.response` consecutivas do mesmo
+  turno no histórico ("Passos do turno · N"), deixando só a última bolha
+  intacta (RN-460). Achado no caminho: quatro dos seis servers
+  (Arquiteto, Dev Lead, UX Designer, Staff) terminavam CALADOS no teto de
+  iterações — agora emitem `toolloop.limit_reached`, mesmo evento do PO
+  (RN-459)
 - **ci**: toda branch cujo PR é mergeado passa a ser arquivada
   automaticamente (`.github/workflows/archive-merged-branch.yml`) — move
   de `refs/heads/<nome>` para `refs/archive/<nome>`, nunca apaga:

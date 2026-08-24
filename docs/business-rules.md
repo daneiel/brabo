@@ -10896,6 +10896,90 @@ valor real EXISTE e é barato de calcular (mesmo `todosOsChunks` que
 - **ADR:** [0113](adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md)
 - **Origem:** pedido do dono do produto
 
+### RN-459 — Teto de iterações não termina mais calado em quatro dos seis agentes conversacionais {#rn-459}
+
+Achado durante a investigação da faixa de atividade do turno (RN-460):
+`arquiteto_server.ex`, `dev_lead_server.ex`, `ux_designer_server.ex` e
+`staff_server.ex` terminavam CALADOS quando o teto de iterações estourava
+(`defp run_turn(state, remaining) when remaining <= 0, do: state`, sem
+evento nenhum) — contradizendo a regra permanente de que laço de agente
+não termina calado. Só o PO já emitia `toolloop.limit_reached`
+(RN-166); o Criativo diverge deliberadamente com `agent.error` (`reason:
+"limite_de_iteracoes"`, decisão documentada no próprio código — reusar o
+nome do `ToolLoop` mentiria sobre quem produziu o evento) e não foi
+tocado. Os quatro corrigidos passam a emitir `toolloop.limit_reached`
+(mesmo evento do PO, mesmo payload `iteration`/`max_iterations`) antes de
+retornar — nenhuma mudança na estrutura de `dispatch_tool` de cada um.
+
+- **Onde:** `apps/engine/lib/engine/agents/arquiteto_server.ex:193`,
+  `dev_lead_server.ex:244`, `ux_designer_server.ex:121`,
+  `staff_server.ex:113`
+- **Teste:** `apps/engine/test/engine/agents/{arquiteto,dev_lead,
+  ux_designer,staff}_server_test.exs` ("teto de iterações emite
+  toolloop.limit_reached")
+- **Origem:** achado por leitura completa dos seis servers, durante a
+  implementação da RN-460; escopo estendido por decisão do dono do
+  produto
+
+### RN-460 — A faixa de atividade do turno narra em tempo real, e o fio só recebe a resposta no fim {#rn-460}
+
+A tela de Sessão mostra, ACIMA do composer, uma faixa que narra em
+linguagem humana o que um agente conversacional (Criativo, PO, Arquiteto,
+Dev Lead, UX Designer, Staff) está fazendo DURANTE o turno — referência
+visual: a linha de status do Claude Code. O fio só recebe a bolha de
+resposta DEPOIS que o turno termina; a regra é do CHAT (canal Phoenix) e
+vale só para os seis agentes conversacionais — o chat consultivo sem
+agente ativo (SSE, `streamChatMessage`) continua com a bolha de streaming
+de sempre, intocada.
+
+**Mecanismo (engine)**: os seis servers já emitem `tool.call` DURÁVEL no
+event log; passam a também fazer `broadcast(state, "tool.call", %{tool:
+name, agent: @agent})` — EFÊMERO, sem `args` (nunca payload cru, mesma
+régua da RN-096/RN-412) — logo depois, pro canal `session:<id>` entregar
+em tempo real. Não há behaviour/macro compartilhado entre os seis
+`dispatch_tool` (quatro formas estruturais distintas confirmadas por
+leitura completa): a mudança é seis edições adaptadas à forma local de
+cada um.
+
+**Mecanismo (web)**: um reducer PURO
+(`reduzirAtividadeDoTurno`/`lib/atividade-do-turno.ts`) acumula o texto do
+`agent.delta` como "corrente"; ao chegar um `tool.call` do canal, arquiva
+o corrente não-vazio como linha de NARRAÇÃO, zera, e SEMPRE adiciona uma
+linha de FERRAMENTA com `fraseDaFerramenta(tool)` (dicionário das 19
+ferramentas dos seis agentes, `lib/narracao-de-ferramentas.ts`, sem RN
+própria — só existe pra servir esta regra) — duas chamadas consecutivas
+sem delta entre elas viram duas linhas separadas, nunca uma. Fim de turno
+reseta (`finalizarTurnoDoAgente`, ÚNICO ponto de reset). `turnoViaCanal`
+é uma flag PRÓPRIA (nunca derivada de `statusAgent`/`streamingAgent`, que
+passam por janelas legitimamente `null` no meio de um turno) que decide
+se a faixa aparece OU a bolha antiga — nunca as duas.
+
+**Regra de apresentação (histórico)**: `agruparNarracoesDoTurno`, nova
+passada pura que roda DEPOIS de `afundarDesfechos` (RN-172) no mesmo
+`useMemo` — dentro de um mesmo `turno`+`autor`, `agent.response`
+consecutivas viram um `Disclosure` compacto ("Passos do turno · N"),
+deixando só a última intacta e fora dele. `turno === 0` (o prólogo
+sentinela de `turnoDoSeq`) fica de FORA do agrupamento, de propósito —
+não é um turno de verdade, e fixtures antigas empilham `agent.response`
+sem fronteira de turno pra testar outro mecanismo (RN-138/RN-177).
+Função agnóstica a agente (só lê `turno`/`autor`), `afundarDesfechos` em
+si não muda.
+
+- **Onde:** `apps/engine/lib/engine/agents/{po,criativo,arquiteto,
+  dev_lead,ux_designer,staff}_server.ex` (broadcast de `tool.call`);
+  `apps/web/src/lib/atividade-do-turno.ts` (reducer);
+  `apps/web/src/components/TurnActivityStrip.tsx` (componente);
+  `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
+  `apps/web/src/routes/SessionPage.tsx:281` (`agruparNarracoesDoTurno`),
+  `SessionPage.tsx:854` (`turnoViaCanal`)
+- **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
+  `apps/web/src/components/TurnActivityStrip.test.tsx`,
+  `apps/web/src/lib/session-channel.test.ts`,
+  `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+  (`agruparNarracoesDoTurno`), suite de `apps/engine/test/engine/agents/
+  *_server_test.exs` (broadcast de `tool.call` sem args crus)
+- **Origem:** pedido do dono do produto
+
 ---
 
 ## Quando dá errado

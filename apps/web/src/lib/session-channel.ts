@@ -41,6 +41,13 @@ export interface SessionChannelHandlers {
   // pra antecipar o refetch do polling (nunca substitui o parsing/cache do
   // GET .../events já existente).
   onEvent?: (payload: { type: string; actorId: string; payload: unknown }) => void;
+  // Ferramenta chamada durante um turno de agente conversacional — broadcast
+  // efêmero (faixa de atividade da sessão), rebroadcastado pelo server do
+  // agente logo depois do `tool.call` durável (ver os seis servers em
+  // `apps/engine/lib/engine/agents/*_server.ex`). Sem `args`: o payload cru
+  // da ferramenta nunca viaja pro cliente (RN-096) — quem consome resolve a
+  // frase por `fraseDaFerramenta(tool)`.
+  onToolCall?: (tool: string, agent?: string) => void;
 }
 
 /**
@@ -169,6 +176,16 @@ export function connectSessionHeartbeat(
       canal.on('agent.status', (payload: { status?: string }) => {
         if (payload?.status === 'working' || payload?.status === 'idle') {
           handlers.onAgentStatus!({ status: payload.status });
+        }
+      });
+    }
+    if (handlers.onToolCall) {
+      canal.on('tool.call', (payload: { tool?: string; agent?: string }) => {
+        if (typeof payload?.tool === 'string') {
+          handlers.onToolCall!(
+            payload.tool,
+            typeof payload.agent === 'string' ? payload.agent : undefined,
+          );
         }
       });
     }

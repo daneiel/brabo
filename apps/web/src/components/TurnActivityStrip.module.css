@@ -1,0 +1,92 @@
+/*
+ * A faixa de atividade do turno — referência visual: a linha de status do
+ * Claude Code. Fica entre o fim do fio e o composer (fora da área que rola),
+ * então o layout é uma FITA fina, não uma bolha de chat — mas a cor de
+ * "quem está falando" é a mesma linguagem do resto da tela (`--msg-color`,
+ * fixado pelo ancestral via `corDoAgente()`, mesmo padrão de
+ * `ChatBubble.module.css`).
+ */
+
+/*
+ * `--surface-0`, e não `--surface-1`: o `Disclosure` embutido tem `.trailing`
+ * e `.chevron` fixados em `--text-muted` (`Disclosure.module.css`, componente
+ * do design system, não desta faixa) — e `--text-muted` sobre `--surface-1`
+ * REPROVA 4,5:1 no tema escuro (3,89:1, ver
+ * `design-contraste.test.ts`, "regressão dos pares já documentados"). Os
+ * outros dois usos de `Disclosure` nesta mesma tela (`fioHistoricoCabecalho`,
+ * `agentGroupCabecalho`) seguem a mesma regra: nenhum dos dois tem fundo
+ * próprio, os dois herdam o `--surface-0` do `body`. Esta faixa não é
+ * exceção.
+ */
+.faixa {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 24px 10px;
+  padding: 8px 12px;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.corpo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* O avatar (32px, `ChatBubble.module.css`) é mais alto que uma linha de
+     texto só — alinha o corpo com o centro dele em vez do topo. */
+  padding-top: 4px;
+}
+
+/* A prévia de UMA linha (RN — faixa de atividade): texto corrente, ou a
+   última linha arquivada quando uma ferramenta acabou de arquivar o
+   corrente. Corte por CSS, nunca por JS — a string inteira continua no DOM
+   (acessível a leitor de tela e a `getByText` em teste), só a exibição
+   visual é que trunca. */
+.previa {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.disclosureCabecalho {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  /* `--text-secondary`, não `--text-muted` — ver o comentário de `.faixa`. */
+  color: var(--text-secondary);
+  padding: 2px 0 0;
+  min-height: 20px;
+}
+
+.linhas {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 0 2px;
+}
+
+.linha {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.linhaIconeFerramenta {
+  flex-shrink: 0;
+  color: var(--msg-color);
+}
+
+.linhaIconeNarracao {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
