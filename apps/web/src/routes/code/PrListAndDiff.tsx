@@ -1,7 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { getCodeDiff, getCodePullRequests, mensagemDaApi } from '../../lib/api-client';
+import {
+  getCodeDiff,
+  getCodePullRequests,
+  isContainerImageGateError,
+  mensagemDaApi,
+} from '../../lib/api-client';
+import { ContainerImageGateNotice } from '../../components/ContainerImageGate';
 import { Disclosure } from '../../components/ui/Disclosure';
 import { ArrowLeftIcon, PrIcon } from '../../components/ui/icons';
 import type { CodeDiffFile, CodePullRequestState, CodePullRequestSummary } from '../../lib/api-types';
@@ -54,6 +60,21 @@ export interface PrListAndDiffProps {
  * este é o componente com a lógica de verdade; `CodeDiffPanel` virou um
  * wrapper fino no mesmo lugar de sempre (painel inferior da aba Código), e a
  * aba PRs nova o consome com `renderItemExtra` para o botão de merge.
+ *
+ * ## O gate do container (RN-105) não é erro transitório (achado de uso)
+ *
+ * `getCodePullRequests`/`getCodeDiff` passam pelo MESMO funil que a árvore e
+ * o arquivo (`ReadProjectCodeUseCase.alvo`) e por isso podem devolver o
+ * mesmo 409 enquanto o Arquiteto não decide a imagem do container — mas,
+ * diferente da aba Code (que PERGUNTA antes, em `ProjectCodeTab.tsx`), este
+ * componente também é consumido de dentro da aba PRs (project-wide,
+ * sem gate pré-checado) e portanto só descobre o bloqueio quando a query
+ * já falhou. `isContainerImageGateError` (`lib/api-client.ts`) distingue
+ * esse 409 de um erro de verdade e troca o banner genérico de "Tentar de
+ * novo" pela MESMA apresentação que a aba Code usa
+ * (`ContainerImageGateNotice`) — retentativa é a afordância errada para um
+ * estado que só se resolve quando o Arquiteto decide, nunca clicando de
+ * novo.
  */
 export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps) {
   const { t } = useTranslation('code');
@@ -104,14 +125,17 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
 
         {diffQuery.isLoading && <div className={styles.estado}>{t('diff.loadingDiff')}</div>}
 
-        {diffQuery.isError && (
-          <div className={styles.estadoErro} role="alert">
-            <span>{mensagemDaApi(diffQuery.error, t('diff.diffErrorFallback'))}</span>
-            <button type="button" className={styles.botaoTentar} onClick={() => void diffQuery.refetch()}>
-              {t('shared.retry')}
-            </button>
-          </div>
-        )}
+        {diffQuery.isError &&
+          (isContainerImageGateError(diffQuery.error) ? (
+            <ContainerImageGateNotice />
+          ) : (
+            <div className={styles.estadoErro} role="alert">
+              <span>{mensagemDaApi(diffQuery.error, t('diff.diffErrorFallback'))}</span>
+              <button type="button" className={styles.botaoTentar} onClick={() => void diffQuery.refetch()}>
+                {t('shared.retry')}
+              </button>
+            </div>
+          ))}
 
         {diffQuery.data && diffQuery.data.files.length === 0 && (
           <div className={styles.estado}>{t('diff.noFiles')}</div>
@@ -166,14 +190,17 @@ export function PrListAndDiff({ projectId, renderItemExtra }: PrListAndDiffProps
 
       {listaQuery.isLoading && <div className={styles.estado}>{t('diff.loadingPrs')}</div>}
 
-      {listaQuery.isError && (
-        <div className={styles.estadoErro} role="alert">
-          <span>{mensagemDaApi(listaQuery.error, t('diff.prListErrorFallback'))}</span>
-          <button type="button" className={styles.botaoTentar} onClick={() => void listaQuery.refetch()}>
-            {t('shared.retry')}
-          </button>
-        </div>
-      )}
+      {listaQuery.isError &&
+        (isContainerImageGateError(listaQuery.error) ? (
+          <ContainerImageGateNotice />
+        ) : (
+          <div className={styles.estadoErro} role="alert">
+            <span>{mensagemDaApi(listaQuery.error, t('diff.prListErrorFallback'))}</span>
+            <button type="button" className={styles.botaoTentar} onClick={() => void listaQuery.refetch()}>
+              {t('shared.retry')}
+            </button>
+          </div>
+        ))}
 
       {listaQuery.data && listaQuery.data.items.length === 0 && (
         <div className={styles.estado}>
