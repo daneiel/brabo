@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "f6fad1aef629f9fa52df094989cd211e220807dcafaf8cbe98ed4d6a60941c55",
+  "openapiSha256": "ee0585c42df2a0e18ec4d05bd64b004f9194ccf690efc0a8c4c92cc4732cc943",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -663,6 +663,10 @@
     "psychologist-controller-reanalyze.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "psychologist-controller-reanalyze.StatusCodes.json": "f37ba8fa167581ddc7d9bfb2f0b170865e07e8fe5820c99478f5fa75e197f2cd",
     "psychologist-controller-reanalyze.api.mdx": "efce85c7095292f826bc79520e25d95dc1dc3decd047730927f3f304eab16353",
+    "psychologist-controller-status.ParamsDetails.json": "c7c69ffea7e3e6af99994c9347a2f29c4a558bdf8854ac3b61df817cbadcd1f7",
+    "psychologist-controller-status.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
+    "psychologist-controller-status.StatusCodes.json": "b8d6540326130bfbe3472ca31311638dbf6926cf4e33e4e1d1ba30c988526bfd",
+    "psychologist-controller-status.api.mdx": "4d67b78a557ec15fc28ca00f1f55b7f8e597f48267d4aa4be77583d703479d87",
     "rag-controller-buscar.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "rag-controller-buscar.RequestSchema.json": "4fb638c442183bf60127dabd7f10f81d423b9b08eda03497267580cc90f9893f",
     "rag-controller-buscar.StatusCodes.json": "569f32446bef32a263f8546b3fc2b667a0c0f1aef4c4966455fd4d5fe7fa6a44",
@@ -719,7 +723,7 @@
     "sessions-controller-transition.RequestSchema.json": "0b3fdadba6baf76eed16149b3e3603a9eece3025c94505b52141d733f32da248",
     "sessions-controller-transition.StatusCodes.json": "bac29893341373baad1228e2c1d4f2b90f0191796538e73e36010c2202898646",
     "sessions-controller-transition.api.mdx": "44678ecd7ea93a5ebe598abe3dd1a73773a2483cebfcd55c5ef953f4908945b8",
-    "sidebar.ts": "9e03ecdb3521fe0043599062244cc974c25bc5c27c433c9f7f32d53bd5f89db5",
+    "sidebar.ts": "492a5fcf5f4747829deef6d69a6029ca053d1f8def017c5a2165a73e87aebaaa",
     "spend-controller-get-my-spend.ParamsDetails.json": "e45ac28a1c400c6a9ca93fc8413c1917113f32cca6e1b229e552ed1fe4e45f31",
     "spend-controller-get-my-spend.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "spend-controller-get-my-spend.StatusCodes.json": "edb168dd12843168011cf3d731fd24fd339c015693dd2fdcf8e0941921b875b5",
