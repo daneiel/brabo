@@ -122,6 +122,49 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
   end
 
+  # A faixa de atividade da tela de Sessão narra o que o agente está fazendo
+  # AO VIVO — o `tool.call` durável já existia, mas só chega no próximo poll
+  # do event log. O broadcast é o mesmo evento, efêmero, sem `args` (payload
+  # cru nunca viaja por aqui — RN-096/RN-412).
+  test "tool.call é rebroadcastado no canal Phoenix, sem os args crus", %{
+    state: state,
+    session_id: session_id
+  } do
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+    Process.put(:fake_events, brief_rules_backlog())
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("create_module_map", %{"modules" => []}),
+      FakeEngineApiClient.final_response("ok")
+    ])
+
+    assert {:noreply, _} = sync_cast(ArquitetoServer, :kickoff, state)
+
+    assert_received %Phoenix.Socket.Broadcast{
+      event: "tool.call",
+      payload: %{tool: "create_module_map", agent: "arquiteto"} = payload
+    }
+
+    refute Map.has_key?(payload, :args)
+  end
+
+  # RN-166 (aplicada ao PO) estendida ao Arquiteto: o teto de iterações era
+  # SILENCIOSO aqui — `run_turn(state, remaining) when remaining <= 0, do:
+  # state` — e um Arquiteto que esgotasse as 14 idas ao modelo terminava sem
+  # rastro nenhum, indistinguível de um turno bem-sucedido.
+  test "teto de iterações emite toolloop.limit_reached", %{state: state, session_id: session_id} do
+    Process.put(
+      :fake_llm_always,
+      tool_turn("ferramenta_desconhecida", %{})
+    )
+
+    assert {:reply, :ok, _} =
+             sync_call(ArquitetoServer, {:user_message, "vai"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "toolloop.limit_reached", payload: %{max_iterations: 14}}}
+  end
+
   # Achado do problema 2 (RN-146): o `agent.response` carrega o nome do
   # modelo que gerou a resposta, extraído do frame `final` da api.
   test "agent.response carrega o nome do modelo", %{state: state, session_id: session_id} do

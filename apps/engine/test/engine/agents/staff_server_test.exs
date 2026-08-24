@@ -141,6 +141,51 @@ defmodule Engine.Agents.StaffServerTest do
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
   end
 
+  # A faixa de atividade da tela de Sessão narra o que o agente está fazendo
+  # AO VIVO — o `tool.call` durável já existia, mas só chega no próximo poll
+  # do event log. O broadcast é o mesmo evento, efêmero, sem `args` (payload
+  # cru nunca viaja por aqui — RN-096/RN-412).
+  test "tool.call é rebroadcastado no canal Phoenix, sem os args crus", %{
+    state: state,
+    session_id: session_id
+  } do
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_rfc", rfc_args()),
+      FakeEngineApiClient.final_response("RFC registrado.")
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(StaffServer, {:user_message, "problema sistêmico"}, state)
+
+    assert_received %Phoenix.Socket.Broadcast{
+      event: "tool.call",
+      payload: %{tool: "propose_rfc", agent: "staff"} = payload
+    }
+
+    refute Map.has_key?(payload, :args)
+  end
+
+  # RN-166 (aplicada ao PO) estendida ao Staff: o teto de iterações era
+  # SILENCIOSO aqui — `run_turn(state, remaining) when remaining <= 0, do:
+  # state` — e um Staff que esgotasse as 14 idas ao modelo terminava sem
+  # rastro nenhum.
+  test "teto de iterações emite toolloop.limit_reached", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(
+      :fake_llm_always,
+      tool_turn("ferramenta_desconhecida", %{})
+    )
+
+    assert {:reply, :ok, _} = sync_call(StaffServer, {:user_message, "vai"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "toolloop.limit_reached", payload: %{max_iterations: 14}}}
+  end
+
   test "agent.response carrega o nome do modelo (RN-146)", %{
     state: state,
     session_id: session_id

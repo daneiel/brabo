@@ -238,7 +238,17 @@ defmodule Engine.Agents.DevLeadServer do
 
   # --- Turno com loop bounded de tool use ---
 
-  defp run_turn(state, remaining) when remaining <= 0, do: state
+  # O teto de iterações deixou de ser SILENCIOSO — mesma correção da RN-166
+  # já aplicada ao PO: um Dev Lead que esgotasse as 14 iterações terminava
+  # sem evento nenhum, indistinguível de um turno que simplesmente acabou.
+  defp run_turn(state, remaining) when remaining <= 0 do
+    emit(state, "toolloop.limit_reached", %{
+      iteration: @max_iterations,
+      max_iterations: @max_iterations
+    })
+
+    state
+  end
 
   defp run_turn(state, remaining) do
     # Ver o comentário em `criativo_server.ex`: quem fala é o agente (achado C).
@@ -351,6 +361,7 @@ defmodule Engine.Agents.DevLeadServer do
     id = Map.get(call, "id")
 
     emit(state, "tool.call", %{tool: name, args: args})
+    broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
     case run_tool(name, args, state) do
       {:ok, texto} ->

@@ -227,6 +227,7 @@ defmodule Engine.Agents.PoServer do
     id = Map.get(call, "id")
 
     emit(state, "tool.call", %{tool: name, args: args})
+    broadcast(state, "tool.call", %{tool: name, agent: @agent})
     result = run_tool(name, args, state)
 
     text =

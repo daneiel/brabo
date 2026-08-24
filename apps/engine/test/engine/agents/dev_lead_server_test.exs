@@ -157,6 +157,55 @@ defmodule Engine.Agents.DevLeadServerTest do
     assert length(propostas_de_plano()) == 1
   end
 
+  # A faixa de atividade da tela de Sessão narra o que o agente está fazendo
+  # AO VIVO — o `tool.call` durável já existia, mas só chega no próximo poll
+  # do event log. O broadcast é o mesmo evento, efêmero, sem `args` (payload
+  # cru nunca viaja por aqui — RN-096/RN-412).
+  test "tool.call é rebroadcastado no canal Phoenix, sem os args crus", %{state: state} do
+    session_id = state.session_id
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+    Process.put(:fake_llm_turns, [plano_turn("um agente na api")])
+
+    assert {:noreply, _} = sync_cast(DevLeadServer, :kickoff, state)
+
+    assert_received %Phoenix.Socket.Broadcast{
+      event: "tool.call",
+      payload: %{tool: "propose_execution_plan", agent: "dev-lead"} = payload
+    }
+
+    refute Map.has_key?(payload, :args)
+  end
+
+  # RN-166 (aplicada ao PO) estendida ao Dev Lead: o teto de iterações era
+  # SILENCIOSO aqui — `run_turn(state, remaining) when remaining <= 0, do:
+  # state` — e um Dev Lead que esgotasse as 14 idas ao modelo terminava sem
+  # rastro nenhum. Uma ferramenta desconhecida (`{:error, _}`) nunca encerra o
+  # laço sozinha (só um plano BEM-SUCEDIDO faz isso), então ela mantém o
+  # laço vivo até o teto.
+  test "teto de iterações emite toolloop.limit_reached", %{state: state} do
+    session_id = state.session_id
+
+    Process.put(
+      :fake_llm_always,
+      %{
+        "message" => %{
+          "role" => "assistant",
+          "content" => "",
+          "toolCalls" => [
+            %{"id" => "tc-x", "name" => "ferramenta_desconhecida", "arguments" => %{}}
+          ]
+        },
+        "usage" => %{"estimated" => true},
+        "error" => nil
+      }
+    )
+
+    assert {:reply, :ok, _} = sync_call(DevLeadServer, {:user_message, "vai"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "toolloop.limit_reached", payload: %{max_iterations: 14}}}
+  end
+
   # Achado do problema 2 (RN-146): o `agent.response` carrega o nome do
   # modelo que gerou a resposta, extraído do frame `final` da api.
   test "agent.response carrega o nome do modelo", %{state: state} do

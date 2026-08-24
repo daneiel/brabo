@@ -265,6 +265,28 @@ defmodule Engine.Agents.CriativoServerTest do
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
   end
 
+  # A faixa de atividade da tela de Sessão narra o que o agente está fazendo
+  # AO VIVO — o `tool.call` durável já existia, mas só chega no próximo poll
+  # do event log. O broadcast é o mesmo evento, efêmero, sem `args` (payload
+  # cru nunca viaja por aqui — RN-096/RN-412).
+  test "tool.call é rebroadcastado no canal Phoenix, sem os args crus", %{
+    state: state,
+    session_id: session_id
+  } do
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+    Process.put(:fake_llm_turns, [business_rule_turn([2])])
+
+    assert {:reply, :ok, _} =
+             sync_call(CriativoServer, {:user_message, "quero um app de cadastro"}, state)
+
+    assert_received %Phoenix.Socket.Broadcast{
+      event: "tool.call",
+      payload: %{tool: "emit_artifact", agent: "criativo"} = payload
+    }
+
+    refute Map.has_key?(payload, :args)
+  end
+
   # A falha de um turno era o pior desfecho possível: `agent.response` VAZIO no
   # event log (indistinguível de sucesso) e o motivo só por broadcast, que é
   # efêmero. Quem não estivesse com a aba aberta nunca saberia.
