@@ -4,6 +4,7 @@
     "errorTitle": "Could not load the hypotheses.",
     "loading": "Loading the hypotheses…",
     "empty": "No hypotheses yet — the Psychologist analyzes every closed session.",
+    "emptyPaused": "The Psychologist is paused — no session is analyzed until it is reactivated.",
     "summary": "{{total}} hypothesis(es) · {{pending}} awaiting decision",
     "analysisStrip": {
       "tier": "screening {{tier}}",

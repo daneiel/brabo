@@ -4,6 +4,7 @@
     "errorTitle": "Não foi possível carregar as hipóteses.",
     "loading": "Carregando as hipóteses…",
     "empty": "Sem hipóteses ainda — o Psicólogo analisa cada sessão encerrada.",
+    "emptyPaused": "O Psicólogo está pausado — nenhuma sessão é analisada até ser reativado.",
     "summary": "{{total}} hipótese(s) · {{pending}} aguardando decisão",
     "analysisStrip": {
       "tier": "triagem {{tier}}",

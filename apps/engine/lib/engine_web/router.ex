@@ -64,6 +64,10 @@ defmodule EngineWeb.Router do
          PsychologistCommandController,
          :reanalyze
 
+    # RN-454: leitura da flag global — a aba Insights precisa saber que a
+    # pausa é DECISÃO sem esbarrar no 503 de "/reanalyze" primeiro.
+    get "/psychologist/status", PsychologistCommandController, :status
+
     post "/projects/:projectId/anamnese/run", AnamneseCommandController, :run
 
     post "/projects/:projectId/agents/:agent/instructions/invalidate",

@@ -4518,9 +4518,14 @@ de todo projeto. `sem_decisao` vira `decidido` só quando o Arquiteto emite
 de tag explícita (`latest` recusado), `rationale` e postura de rede.
 
 A checagem mora no MESMO funil que a contenção de caminho da
-[RN-095](#rn-095) (`ReadProjectCodeUseCase.alvo`), e não em cada uma das quatro
-rotas — checagem duplicada em quatro chamadores é checagem que um dia diverge
-em um deles ([ADR 0058](adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md)).
+[RN-095](#rn-095) (`ReadProjectCodeUseCase.alvo`), e não em cada uma das sete
+rotas (árvore, arquivo, busca, diff de PR, [blame](#rn-110), [lista de
+PRs](#rn-111) e [branches detalhadas](#rn-112), FASE 26b) — checagem
+duplicada em sete chamadores é checagem que um dia diverge em um deles
+([ADR 0058](adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md)).
+Contagem corrigida aqui: este registro dizia "quatro rotas" desde a FASE 26,
+e ficou desatualizado quando a FASE 26b acrescentou as três últimas ao mesmo
+funil sem que ninguém revisasse este número.
 
 O artefato não tem tabela: é o próprio evento no event log, versionado
 (`version` cresce a cada emissão, o vigente é o de maior `version`), do mesmo
@@ -4602,13 +4607,36 @@ Enquanto bloqueada, a tela reconsulta sozinha a cada 15s — depois de decidida
 a imagem não muda sem ação humana nova, e ficar reconsultando um estado
 estável seria a mesma família de tráfego desnecessário da PÓS-FASE 15.
 
+A apresentação do quarto estado foi EXTRAÍDA para `ContainerImageGateNotice`
+(`apps/web/src/components/ContainerImageGate.tsx`) — achado de uso: a aba PRs
+(`apps/web/src/routes/code/PrListAndDiff.tsx`, consumida por
+`ProjectPrsTab.tsx` e por `CodeDiffPanel.tsx`) chama `getCodePullRequests`/
+`getCodeDiff`, que passam pelo MESMO funil (RN-105) e podem devolver o MESMO
+409 — mas, ao contrário desta aba, sem perguntar antes. Ela mostrava esse 409
+no banner de erro genérico com "Tentar de novo", a afordância errada para um
+estado que só o Arquiteto resolve. `isContainerImageGateError`
+(`apps/web/src/lib/api-client.ts`) identifica a causa pelo `status === 409`
+— única causa de `ConflictException` em `ReadProjectCodeUseCase.alvo` — e
+`PrListAndDiff` troca o banner por `ContainerImageGateNotice` quando ela bate,
+sem pré-checagem própria (reage ao 409 da query que já ia rodar).
+
 - **Onde:** `apps/web/src/routes/ProjectCodeTab.tsx`,
-  `apps/web/src/routes/ProjectCodeTab.module.css`
-- **Teste:** `apps/web/src/routes/ProjectCodeTab.test.tsx` ("o gate")
+  `apps/web/src/routes/ProjectCodeTab.module.css`,
+  `apps/web/src/components/ContainerImageGate.tsx` (apresentação
+  compartilhada), `apps/web/src/routes/code/PrListAndDiff.tsx` (consumidor
+  reativo ao 409), `apps/web/src/lib/api-client.ts`
+  (`isContainerImageGateError`)
+- **Teste:** `apps/web/src/routes/ProjectCodeTab.test.tsx` ("o gate"),
+  `apps/web/src/routes/code/CodeDiffPanel.test.tsx`,
+  `apps/web/src/routes/ProjectPrsTab.test.tsx` ("o gate do container não é
+  erro genérico")
 - **Borda:** a checagem no front NÃO substitui a da api — é conveniência de
   UX. Se a api mudar de estado entre a consulta do gate e a leitura de
   verdade, a rota de leitura ainda recusa com 409 (RN-105); o front só evita
-  o caso comum de mostrar o editor vazio por um instante.
+  o caso comum de mostrar o editor vazio por um instante. A aba PRs não faz
+  pré-checagem: ela descobre o bloqueio quando a query já falhou, porque não
+  há árvore/arquivo nenhum ali para o instante "vazio" que a pré-checagem da
+  aba Code evita.
 - **Origem:** [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)
 
 ### RN-110 — `blame` é a 13ª operação do `GitProviderContract`, com o mesmo vocabulário de ausência das outras leituras {#rn-110}
@@ -4843,11 +4871,9 @@ pendente, nunca uma corrente infinita. Por isso a suite pré-existente de
 `{"error": "psicologo_desativado"}` quando desativado, sem sequer criar o
 job. `ReanalyzeSessionUseCase`, do lado api, converte o 503 do engine em
 `ServiceUnavailableException` com `reason: "psychologist_disabled"` no
-corpo — nunca um 500 genérico. A web (`ProjectInsightsTab.tsx`) descobre o
-estado no primeiro clique de "Reanalisar" (não há hoje uma leitura prévia
-do estado global) e, a partir daí, desabilita os botões e mantém a
-explicação VISÍVEL na tela — não só um toast que some (RN-088: nunca falha
-silenciosa ou confusa).
+corpo — nunca um 500 genérico. Isto descobre a pausa quando já existe uma
+análise para reprocessar; a tela SEM hipótese nenhuma tem uma leitura
+prévia própria, que não existia aqui — ver [RN-454](#rn-454).
 
 - **Onde:** `apps/engine/lib/engine/workers/psychologist_worker.ex`
   (`enabled?/0`), `apps/engine/lib/engine/outbox/drain.ex`
@@ -10708,6 +10734,168 @@ silenciosa.
   do npm foi achada por auditoria própria da mudança, não por execução real
   reportando falha
 
+### RN-454 — A aba Insights sabe que o Psicólogo está pausado ANTES de o usuário esbarrar no 503 {#rn-454}
+
+Achado por USO: a aba Insights, com zero hipóteses, mostrava "Sem hipóteses
+ainda — o Psicólogo analisa cada sessão encerrada" mesmo com
+`PSYCHOLOGIST_ENABLED=false` — a mesma frase que aparece quando o Psicólogo
+está ATIVO e só ainda não rodou. As duas situações são indistinguíveis pelo
+texto, o que é a mesma classe de defeito que a RN-088/RN-107 já fecharam
+para outras telas: um estado que existe e o produto sabe, mas não mostra.
+
+A [RN-117](#rn-117) já cobria a descoberta da pausa, mas só no CLIQUE de
+"Reanalisar" (503 → `PsychologistDisabledError`) — e esse botão só existe
+na faixa de análises, que só aparece quando `runs.length > 0`. Uma sessão
+sem hipótese nenhuma nunca chega perto dele, então a pausa era invisível
+justamente na tela vazia.
+
+`GET /internal/psychologist/status` (engine, `PsychologistCommandController.status/2`)
+é leitura pura de `PsychologistWorker.enabled?/0` — SEM efeito colateral,
+diferente de `/reanalyze`, que cria um job quando ativado. A api expõe
+`GET /projects/:projectId/psychologist/status` (`GetPsychologistStatusUseCase`,
+`role:viewer`) por cima disso — projeto na URL só por consistência com as
+rotas irmãs (`hypotheses`, `psychologist/analyses`); a flag em si é GLOBAL,
+como a RN-117 já registra. `ProjectInsightsTab.tsx` consome essa leitura
+(`usePsychologistStatus`) e escolhe a frase do estado vazio por ela: pausado
+mostra "O Psicólogo está pausado — nenhuma sessão é analisada até ser
+reativado" (`insights.projectInsightsTab.emptyPaused`); do contrário, mantém
+a frase original, que É honesta quando a feature está de fato ativa. O
+aviso persistente (`pausedNotice`) e os botões de "Reanalisar" também
+passaram a refletir essa leitura proativa, e não só o `useState` descoberto
+pelo 503 — que continua existindo, como reforço, para o caso raro de a
+flag mudar EM VOO entre a leitura de status e o clique.
+
+- **Onde:** `apps/engine/lib/engine_web/controllers/psychologist_command_controller.ex`
+  (`status/2`), `apps/engine/lib/engine_web/router.ex`
+  (`GET /internal/psychologist/status`),
+  `apps/api/src/application/ports/api-to-engine-client.port.ts`
+  (`getPsychologistStatus`),
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts`,
+  `apps/api/src/application/use-cases/execution/get-psychologist-status.use-case.ts`,
+  `apps/api/src/interfaces/http/psychologist/psychologist.controller.ts`
+  (`status`), `apps/web/src/lib/api-client.ts` (`getPsychologistStatus`),
+  `apps/web/src/lib/hooks.ts` (`usePsychologistStatus`),
+  `apps/web/src/routes/ProjectInsightsTab.tsx`
+- **Teste:**
+  `apps/engine/test/engine_web/controllers/psychologist_command_controller_test.exs`
+  (`status/2`, `enabled: true`/`false`),
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts`
+  (`getPsychologistStatus`),
+  `apps/api/test/application/use-cases/execution/get-psychologist-status.use-case.spec.ts`,
+  `apps/web/src/routes/ProjectInsightsTab.test.tsx`
+- **Borda:** a flag continua GLOBAL (ver RN-117) — a rota da api aceita
+  `projectId` na URL só para bater com o padrão das rotas irmãs do
+  controller, e não porque a resposta varia por projeto.
+- **Origem:** achado por USO real navegando a aba Insights com
+  `PSYCHOLOGIST_ENABLED=false`, não roteiro. Sem ADR — extensão pontual do
+  mecanismo de leitura já existente da RN-117, mesmo padrão da RN-088/
+  RN-107 para o resto do produto.
+
+---
+
+## Pasta local anexada vira o quarto escopo do índice RAG, lido pelo NAVEGADOR (RN-455..457, ADR 0113)
+
+Pedido do dono do produto: anexar uma pasta da PRÓPRIA máquina do usuário a
+um projeto como referência de leitura para os agentes — sem exigir o CLI
+`brabo-runner` (ADR 0103), diferente de `execution_mode: runner`
+(ADR 0104), que precisa de um caminho de HOST real porque roteia comando
+para lá. O navegador lê o CONTEÚDO dos arquivos (`File.text()`) e o caminho
+RELATIVO dentro da pasta escolhida (`File.webkitRelativePath`) — nunca um
+caminho absoluto de máquina, porque a API de `File` do navegador não expõe
+um, para nenhum site. O que atravessa a rede é texto que o navegador já
+tinha o direito de ler, o mesmo modelo de confiança de qualquer upload de
+arquivo comum.
+
+### RN-455 — `chunks.scope` ganha `'local'`, reusando o pipeline de RAG inteiro {#rn-455}
+
+`ChunkScope` passa de `'docs' | 'adr' | 'session'` para incluir `'local'`
+(migração `0052`, `ALTER TYPE ... ADD VALUE`) — aditivo, sem migração de
+dado, sem CHECK novo: os dois CHECK de `chunks` (migração `0045`) já são
+escritos como "é `session` ou não é", então `local` cai do mesmo lado de
+`docs`/`adr` (tem `source_path`, não tem `session_id`) sem mudança
+nenhuma além do valor do enum. `origemDoChunk` (`domain/rag/rag-citation.ts`)
+não precisou de nenhum ramo novo: um chunk `local` carrega `sourcePath`
+exatamente como `docs`/`adr`, então cai no `kind: 'file'` que a citação já
+sabia renderizar.
+
+- **Onde:** `apps/api/src/db/schema.ts` (`chunkScopeEnum`),
+  `apps/api/src/db/migrations/0052_chunks_local_scope.sql`,
+  `apps/api/src/application/ports/chunk-repository.port.ts` (`ChunkScope`),
+  `apps/api/src/application/use-cases/rag/index-local-folder.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/rag/index-local-folder.use-case.spec.ts`
+  (caminho feliz e full rebuild), `apps/api/test/interfaces/http/rag/rag.controller.spec.ts`
+- **ADR:** [0113](adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md)
+- **Origem:** pedido do dono do produto
+
+### RN-456 — Teto agregado REJEITA (400) o upload inteiro; arquivo individual grande/binário só é PULADO {#rn-456}
+
+Diferente de `docs`/`adr` (uma varredura em background, sem ninguém
+olhando), anexar uma pasta é um gesto ÚNICO com um seletor de pasta na
+tela. `IndexLocalFolderUseCase` recusa (400) o lote inteiro quando a
+quantidade de arquivos (`RAG_LOCAL_FILE_COUNT_LIMIT`, 500) ou os bytes
+somados (`RAG_LOCAL_TOTAL_BYTES_LIMIT`, 8 MiB) estouram — nunca trunca em
+silêncio, porque quem clicou "Anexar" pode escolher uma pasta menor. Um
+arquivo individual grande demais (`RAG_LOCAL_FILE_BYTES_LIMIT`, 512 KiB) ou
+de extensão não reconhecida (`RAG_LOCAL_ALLOWED_EXTENSIONS`, allowlist) é
+só PULADO (`filesSkipped`), nunca derruba o lote — a mesma distinção que
+`IndexProjectDocsUseCase` já faz implicitamente ao filtrar só `.md`.
+Caminho com `..` ou barra inicial é RECUSADO (400), nunca aceito
+silenciosamente, mesma disciplina de nunca confiar em caminho vindo do
+cliente (RN-092/095) mesmo quando ele "não deveria" conter isso.
+`apps/web/src/lib/rag-local-limits.ts` espelha os mesmos números no
+cliente, só como conveniência de UX (resumo antes de enviar) — quem
+garante de verdade é o servidor.
+
+- **Onde:** `apps/api/src/domain/rag/rag-search-limits.ts` (`RAG_LOCAL_*`),
+  `apps/api/src/application/use-cases/rag/index-local-folder.use-case.ts`
+- **Teste:** `apps/api/test/application/use-cases/rag/index-local-folder.use-case.spec.ts`
+  (tetos de quantidade e bytes somados rejeitam; arquivo grande/binário é
+  pulado; caminho com `..`/barra inicial é recusado)
+- **ADR:** [0113](adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md)
+- **Origem:** pedido do dono do produto
+
+### RN-457 — `maintainer`, e reanexar é o MECANISMO de resincronizar — nunca o "Reindexar agora" genérico {#rn-457}
+
+`POST .../rag/local` exige `maintainer`, mesma régua de `POST .../rag/reindex`
+(RN-238): as duas chamam o provider de embedding e substituem o que o
+projeto já tinha indexado. `ReindexProjectUseCase` NÃO foi estendido para
+cobrir `local` — ele reindexa lendo de uma fonte que o SERVIDOR consegue
+revisitar (o repositório do projeto, o event log), e `local` não tem
+fonte nenhuma para revisitar: o texto só existe no navegador de quem
+anexou, e o servidor nunca guardou caminho de host nenhum (não há um).
+Chamar `deleteByScope(projectId, 'local')` no botão genérico apagaria a
+referência anexada sem ter como recriá-la — reanexar a pasta (novo
+upload) É o mecanismo de resincronizar, e é um botão deliberadamente
+separado. Os dois casos de uso carregam comentário cruzado explicando o
+porquê, para uma "correção" futura não religar os dois e apagar
+silenciosamente o material do usuário.
+
+- **Onde:** `apps/api/src/interfaces/http/rag/rag.controller.ts`
+  (`anexarPastaLocal`, `@RequireRole('maintainer')`),
+  `apps/api/src/application/use-cases/rag/reindex-project.use-case.ts`
+  (comentário "Por que `local` NÃO entra aqui")
+- **Teste:** `apps/api/test/interfaces/http/rag/rag.controller.spec.ts`
+- **ADR:** [0113](adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md)
+- **Origem:** pedido do dono do produto
+
+### RN-458 — Cobertura de `local` é forma PRÓPRIA, e `lastAttachedAt` é a ÚNICA exceção real ao "nunca Xmin" (RN-237) {#rn-458}
+
+`RagCoverage.local` não reusa `RagFileCoverage` (RN-237, ADR 0080): não há
+"total no repositório" pra comparar — uma pasta anexada não tem um total
+que o servidor possa recontar. `RagLocalCoverage` mostra o que está
+indexado AGORA (`filesIndexed`, `folderName`) e `lastAttachedAt`, um
+`MAX(chunks.created_at)` REAL sobre o escopo — a única exceção declarada
+à regra de nunca mostrar um "reindexado há Xmin" chutado, porque aqui o
+valor real EXISTE e é barato de calcular (mesmo `todosOsChunks` que
+`GetRagCoverageUseCase` já busca).
+
+- **Onde:** `apps/api/src/application/use-cases/rag/get-rag-coverage.use-case.ts`
+  (`RagLocalCoverage`), `apps/web/src/components/rag/RagCoveragePanel.tsx`
+- **Teste:** `apps/api/test/application/use-cases/rag/get-rag-coverage.use-case.spec.ts`,
+  `apps/web/src/components/rag/RagCoveragePanel.test.tsx`
+- **ADR:** [0113](adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md)
+- **Origem:** pedido do dono do produto
+
 ---
 
 ## Quando dá errado
@@ -10735,6 +10923,8 @@ silenciosa.
 | Login social: `state` inválido/expirado, ou de outro PROPÓSITO (fluxo de conexão de git) | recusado, nenhuma chamada ao provider nem escrita no banco (RN-273) |
 | Validar a necessidade sem `product_brief` nenhum na sessão | recusado (400) ANTES de gravar qualquer evento — não há o que validar ainda (RN-406) |
 | Converter `execution_mode` com dev agent trabalhando ou travado | recusado (409) ANTES de mexer no permissions.json ou no ciclo de vida do container — nunca migra um agente vivo (RN-447) |
+| Pasta local anexada estoura o teto de arquivos ou de bytes somados | recusado (400), o lote inteiro — nunca trunca em silêncio (RN-456) |
+| Arquivo individual da pasta local é grande demais ou de extensão não reconhecida | só PULADO (`filesSkipped`), nunca derruba o upload inteiro (RN-456) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

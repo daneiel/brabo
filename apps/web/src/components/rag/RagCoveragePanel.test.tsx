@@ -29,6 +29,7 @@ function makeCoverage(overrides: Partial<RagCoverage> = {}): RagCoverage {
     docs: { filesInRepo: 12, filesIndexed: 10, truncated: false },
     adr: { filesInRepo: 8, filesIndexed: 8, truncated: false },
     session: { sessionsInProject: 5, sessionsIndexed: 3 },
+    local: { filesIndexed: 0, folderName: null, lastAttachedAt: null },
     chunksTotal: 240,
     chunksWithoutVector: 0,
     ...overrides,
@@ -71,5 +72,26 @@ describe('RagCoveragePanel', () => {
     montar(makeCoverage({ chunksWithoutVector: 17 }));
 
     expect(screen.getByText(/17 sem vetor/)).toBeInTheDocument();
+  });
+
+  it('sem pasta local anexada, o cartão diz isso em vez de inventar nome ou data', () => {
+    montar(makeCoverage());
+
+    expect(screen.getByText('nenhuma pasta anexada')).toBeInTheDocument();
+  });
+
+  it('caminho feliz: pasta local anexada mostra o nome real e a data REAL do último upload (RN-455)', () => {
+    montar(
+      makeCoverage({
+        local: {
+          filesIndexed: 4,
+          folderName: 'meu-projeto',
+          lastAttachedAt: '2026-08-23T10:00:00.000Z',
+        },
+      }),
+    );
+
+    expect(screen.getByText(/de\s*“meu-projeto”/)).toBeInTheDocument();
+    expect(screen.getByText(/anexado em/)).toBeInTheDocument();
   });
 });

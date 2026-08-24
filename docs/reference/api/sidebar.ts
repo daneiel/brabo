@@ -954,6 +954,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/psychologist-controller-status",
+          label: "Reports whether the Psychologist can run a NEW analysis today",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/psychologist-controller-reanalyze",
           label: "Triggers a reanalysis of the session",
           className: "api-method post",
@@ -1017,6 +1023,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/rag-controller-obter-cobertura",
           label: "Index coverage: indexed files/sessions against the real total",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/rag-controller-anexar-pasta-local",
+          label: "Attaches a local folder (browser upload) as read-only reference (RN-455, ADR 0113)",
+          className: "api-method post",
         },
         {
           type: "doc",
