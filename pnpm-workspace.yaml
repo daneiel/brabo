@@ -96,12 +96,15 @@ overrides:
   # drizzle-kit só usa a lib para transpilar `drizzle.config.ts`. Mesmo assim
   # vale fechar — o alerta some e a 0.25.12 já estava na árvore por outro pai.
   esbuild@<0.24.3: 0.25.12
-  # HIGH · CVE-2026-67213 (alerta #29) — gerador customizado entra em laço
-  # infinito quando `size` é zero (DoS). Entra por `postcss@8.5.23`, que pede
-  # `nanoid: ^3.3.16` — a 3.3.17 é patch da mesma linha e satisfaz a faixa.
-  # Note que o `postcss` aqui já é o alvo de um override acima: os dois
-  # convivem, um fixa o pai e o outro a transitiva dele.
-  nanoid@>=3.0.0 <3.3.17: 3.3.17
+  # HIGH · CVE-2026-67213 (alerta #29, revisado como #32) — gerador
+  # customizado entra em laço infinito quando `size` é zero (DoS). Entra por
+  # `postcss@8.5.23`, que pede `nanoid: ^3.3.16`. O fix original saiu na
+  # 3.3.17 (alerta #29), mas o advisory foi revisado: a correção era
+  # incompleta, e a faixa vulnerável cresceu até < 3.3.18 (alerta #32) — a
+  # faixa aqui acompanha a revisão. Note que o `postcss` aqui já é o alvo de
+  # um override acima: os dois convivem, um fixa o pai e o outro a
+  # transitiva dele.
+  nanoid@>=3.0.0 <3.3.18: 3.3.18
   # MODERATE · GHSA (alerta #28) — o `IN_PLACE` remove o hook e deixa a
   # subárvore destacada executável, o que reabre XSS. Entra por
   # `mermaid@11.16.1` (ele próprio um override acima), que pede
