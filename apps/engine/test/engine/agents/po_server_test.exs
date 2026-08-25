@@ -120,6 +120,32 @@ defmodule Engine.Agents.PoServerTest do
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
   end
 
+  # A faixa de atividade da tela de Sessão narra o que o agente está fazendo
+  # AO VIVO — o `tool.call` durável já existia, mas só chega no próximo poll
+  # do event log. O broadcast é o mesmo evento, efêmero, sem `args` (payload
+  # cru nunca viaja por aqui — RN-096/RN-412).
+  test "tool.call é rebroadcastado no canal Phoenix, sem os args crus", %{
+    state: state,
+    session_id: session_id
+  } do
+    Phoenix.PubSub.subscribe(Engine.PubSub, "session:" <> session_id)
+    Process.put(:fake_events, brief_and_rules())
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("create_epic", %{"title" => "Cadastro"}),
+      FakeEngineApiClient.final_response("ok")
+    ])
+
+    assert {:noreply, _} = sync_cast(PoServer, :kickoff, state)
+
+    assert_received %Phoenix.Socket.Broadcast{
+      event: "tool.call",
+      payload: %{tool: "create_epic", agent: "po"} = payload
+    }
+
+    refute Map.has_key?(payload, :args)
+  end
+
   # Achado do problema 2 (RN-146): o `agent.response` carrega o nome do
   # modelo que gerou a resposta, extraído do frame `final` da api.
   test "agent.response carrega o nome do modelo", %{state: state, session_id: session_id} do

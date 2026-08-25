@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
@@ -32,6 +32,11 @@ import {
 import { streamChatMessage } from '../lib/chat-stream';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import {
+  ESTADO_INICIAL_DA_ATIVIDADE,
+  reduzirAtividadeDoTurno,
+} from '../lib/atividade-do-turno';
+import { fraseDaFerramenta } from '../lib/narracao-de-ferramentas';
+import {
   useBacklog,
   useCurrentWorkspaceWithRole,
   useSessionEvents,
@@ -42,7 +47,7 @@ import {
 } from '../lib/hooks';
 import { pollQueParaNoErro } from '../lib/query-policy';
 import { emailDaSessao } from '../lib/auth';
-import { AGENTS, addressableAgents } from '../lib/agents';
+import { AGENTS, addressableAgents, corDoAgente, nomeDoAgente } from '../lib/agents';
 import {
   agruparPorOrigem,
   classifyEvent,
@@ -67,6 +72,7 @@ import { ApprovalCard } from '../components/ApprovalCard';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { EventItem } from '../components/EventItem';
+import { TurnActivityStrip } from '../components/TurnActivityStrip';
 import { Skeleton } from '../components/ui/Skeleton';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { MarkdownMessage } from '../components/ui/MarkdownMessage';
@@ -151,6 +157,15 @@ interface TimelineEntry {
    * "de que camada veio?").
    */
   origem: OrigemDeEvento;
+  /**
+   * A entrada nasceu de um evento `agent.response` — o único marcador que
+   * `agruparNarracoesDoTurno` (abaixo) lê pra decidir o que agrupar. Não é
+   * redundante com `agentId` (que também existe em `agent.error`, épico/
+   * história criados pelo PO, o divisor de `delegation.*`…): sem um campo
+   * próprio, a função teria que reconhecer o TIPO de evento por fora do
+   * `TimelineEntry`, que já não carrega mais essa informação neste ponto.
+   */
+  agentResponse?: boolean;
 }
 
 /**
@@ -242,6 +257,93 @@ export function afundarDesfechos(entradas: TimelineEntry[]): TimelineEntry[] {
 }
 
 /**
+ * Colapsa `agent.response` CONSECUTIVAS do mesmo turno+autor num `Disclosure`
+ * compacto ("Passos do turno · N"), deixando só a ÚLTIMA intacta e fora dele —
+ * a faixa de atividade (`TurnActivityStrip`) já narra o CAMINHO até a
+ * resposta em tempo real; isto é o mesmo princípio aplicado ao HISTÓRICO, para
+ * um turno que produziu várias respostas seguidas (ex.: o modelo "pensa em
+ * voz alta" entre chamadas de ferramenta) não virar N bolhas iguais empilhadas
+ * no fio.
+ *
+ * Roda DEPOIS de `afundarDesfechos` na composição (nunca antes: a ordem de
+ * apresentação já precisa estar resolvida) e reusa os MESMOS dois campos que
+ * `afundarDesfechos` já lê — `turno` e `autor` — pra decidir a partição:
+ * turnos ou autores diferentes NUNCA se misturam no mesmo grupo. Só entradas
+ * com `agentResponse: true` participam; qualquer outro tipo quebra a
+ * sequência corrente (mesma régua de "fronteira" que `afundarDesfechos` usa
+ * pra desfecho) e passa direto, sem ser tocado.
+ *
+ * Função AGNÓSTICA a agente — nenhuma lista de nomes de agente aqui dentro,
+ * só `turno`/`autor`/o marcador de tipo. `titulo`/`trailing` chegam já
+ * resolvidos (quem chama passa o `t()` da sessão) pra este módulo continuar
+ * testável como função pura, sem precisar montar `I18nextProvider`.
+ */
+export function agruparNarracoesDoTurno(
+  entradas: TimelineEntry[],
+  rotulos: { titulo: string; trailing: (count: number) => string },
+): TimelineEntry[] {
+  const resultado: TimelineEntry[] = [];
+  let grupo: TimelineEntry[] = [];
+
+  function fecharGrupo() {
+    if (grupo.length === 0) return;
+    if (grupo.length === 1) {
+      resultado.push(grupo[0]);
+      grupo = [];
+      return;
+    }
+    const compactadas = grupo.slice(0, -1);
+    const ultima = grupo[grupo.length - 1];
+    const primeira = compactadas[0];
+    resultado.push({
+      ...primeira,
+      node: (
+        <Disclosure
+          key={`narracoes-${primeira.seq}`}
+          titulo={rotulos.titulo}
+          trailing={rotulos.trailing(compactadas.length)}
+          classNameCabecalho={styles.narracoesCabecalho}
+          className={styles.narracoesGrupo}
+        >
+          <div className={styles.narracoesRegiao}>
+            {compactadas.map((e) => (
+              <div key={e.seq}>{e.node}</div>
+            ))}
+          </div>
+        </Disclosure>
+      ),
+    });
+    resultado.push(ultima);
+    grupo = [];
+  }
+
+  for (const entrada of entradas) {
+    // `turno === 0` é o PRÓLOGO (`turnoDoSeq`: "antes da primeira abertura"),
+    // nunca um turno de verdade — não há o que narrar como "passos DO turno"
+    // ali. Excluir o prólogo também é o que preserva o comportamento de
+    // fixtures antigas (`SessionPage.painel-e-agrupamento.test.tsx`,
+    // `SessionPage.handoff-devlead-e-colapso.test.tsx`) que empilham vários
+    // `agent.response` sem nenhum evento de usuário entre eles só pra testar
+    // OUTRO mecanismo (RN-138, RN-177) — sem fronteira de turno nenhuma,
+    // agrupá-los aqui coincidiria por acidente com o que aquele mecanismo já
+    // resolve, produzindo Disclosure dentro de Disclosure.
+    if (!entrada.agentResponse || entrada.turno === 0) {
+      fecharGrupo();
+      resultado.push(entrada);
+      continue;
+    }
+    const anterior = grupo[grupo.length - 1];
+    if (anterior && (anterior.turno !== entrada.turno || anterior.autor !== entrada.autor)) {
+      fecharGrupo();
+    }
+    grupo.push(entrada);
+  }
+  fecharGrupo();
+
+  return resultado;
+}
+
+/**
  * O ponto de estado da barra de topo, derivado da máquina de estados da sessão
  * (`created → active → closing → closed | closed_abnormally`).
  *
@@ -314,23 +416,6 @@ const FIO_RECENTES_ABERTAS = 5;
  */
 function rolarParaOFim(el: HTMLElement | null) {
   el?.scrollIntoView?.({ block: 'end' });
-}
-
-/** Nome de exibição do agente; degrada para o id quando ele não está no roster. */
-function nomeDoAgente(id: string | undefined): string {
-  if (!id) return 'agente';
-  return AGENTS[id as keyof typeof AGENTS]?.name ?? id;
-}
-
-/**
- * Cor do agente — a mesma do card, do avatar e da marca de handoff.
- *
- * O fallback é `--accent` porque nem todo ator é agente do roster: no chat sem
- * agente ativo quem responde é o MODELO, e `actor.id` é o slug dele.
- */
-function corDoAgente(id: string | undefined): CSSProperties {
-  const cor = id ? AGENTS[id as keyof typeof AGENTS]?.color : undefined;
-  return { ['--msg-color' as string]: cor ?? 'var(--accent)' } as CSSProperties;
 }
 
 /**
@@ -745,6 +830,28 @@ export function SessionPage({
   // QUEM está falando (achado C). O delta passou a carregar o agente; sem ele
   // a tela rotulava a bolha com o nome do MODELO, que é detalhe de execução.
   const [streamingAgent, setStreamingAgent] = useState<string | null>(null);
+  // A faixa de atividade do turno (`TurnActivityStrip.tsx`) — narração em
+  // tempo real do que um agente conversacional está fazendo, substituindo a
+  // bolha de streaming NO FIO para esse caso (a bolha continua existindo só
+  // pro chat consultivo sem agente ativo, via SSE — ver `turnoViaCanal`
+  // abaixo). Reducer PURO (`lib/atividade-do-turno.ts`), testado sem
+  // React nenhum.
+  const [atividadeDoTurno, dispatchAtividade] = useReducer(
+    reduzirAtividadeDoTurno,
+    ESTADO_INICIAL_DA_ATIVIDADE,
+  );
+  // O turno em curso é via CANAL do agente (Criativo/PO/Arquiteto/Dev Lead/UX
+  // Designer/Staff), e não o chat consultivo sem agente ativo (SSE genérico,
+  // `streamChatMessage`)? É esta flag — nunca `streaming`/`statusAgent`
+  // sozinhos — que decide se a faixa (`TurnActivityStrip`) aparece OU a
+  // bolha antiga: os dois streams compartilham `streaming`, e `statusAgent`/
+  // `streamingAgent` passam por janelas legitimamente `null` NO MEIO de um
+  // turno de agente (ex.: delta sem `agent` no payload). Ligada em TODO
+  // ponto de entrada de turno de agente (handleSend, handleReadiness,
+  // handleArchitectureReadiness, handleAcceptHandoff, `iniciarTurnoDoAgente`)
+  // e desligada só por `finalizarTurnoDoAgente` — o ÚNICO lugar que finaliza
+  // um turno.
+  const [turnoViaCanal, setTurnoViaCanal] = useState(false);
   // Espelho do `streaming` para os handlers do canal: eles são registrados uma
   // vez e enxergariam sempre o valor inicial do state.
   const streamingRef = useRef(false);
@@ -1040,6 +1147,7 @@ export function SessionPage({
     turnoAgentRef.current = agente;
     setStreaming(true);
     setStreamingText('');
+    setTurnoViaCanal(true);
     // `statusAgent` é o que dá NOME ao indicador antes do primeiro delta.
     // `streaming` sozinho já o faria aparecer, mas como "agente" genérico.
     setStatusAgent(agente);
@@ -1060,6 +1168,12 @@ export function SessionPage({
     // streamar texto nenhum (só ferramentas, por exemplo).
     turnoAgentRef.current = null;
     setStatusAgent(null);
+    // A faixa de atividade: sai de cena (o fio já vai ganhar a bolha
+    // definitiva assim que a invalidação abaixo trouxer o `agent.response`
+    // persistido) e o reducer volta ao estado vazio — ÚNICO ponto de reset,
+    // pelo mesmo argumento do resto desta função.
+    setTurnoViaCanal(false);
+    dispatchAtividade({ tipo: 'reset' });
     queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
     queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
     queryClient.invalidateQueries({ queryKey: ['session-budget', projectId, sessionId] });
@@ -1073,11 +1187,21 @@ export function SessionPage({
       onAgentDelta: (text, agent) => {
         streamingRef.current = true;
         setStreaming(true);
-        setStreamingText((t) => t + text);
+        // Redirecionado pro reducer da faixa de atividade — `streamingText`
+        // continua existindo, mas só o chat consultivo sem agente ativo
+        // (SSE, `streamChatMessage`) ainda escreve nele. Defensivo: liga
+        // `turnoViaCanal` aqui também, caso o delta chegue antes de
+        // qualquer um dos pontos de entrada abaixo tê-lo ligado.
+        setTurnoViaCanal(true);
+        dispatchAtividade({ tipo: 'delta', texto: text });
         if (agent) setStreamingAgent(agent);
         // O delta é o streaming de verdade — o indicador de "comecei a
         // trabalhar" (achado B) já cumpriu o papel dele.
         setStatusAgent(null);
+      },
+      onToolCall: (tool) => {
+        setTurnoViaCanal(true);
+        dispatchAtividade({ tipo: 'tool_call', frase: fraseDaFerramenta(tool) });
       },
       onAgentDone: finalizarTurnoDoAgente,
       // Achado B: `agent.status` "working" chega bem antes do primeiro
@@ -1145,22 +1269,27 @@ export function SessionPage({
     agenteFalando ??
     (statusAgent ? AGENTS[statusAgent as keyof typeof AGENTS] : undefined);
 
-  // Arma/desarma o timer de 5s do indicador de "pensando" (RN-131). Só conta
-  // o tempo enquanto há turno em curso (`streaming`/`statusAgent`) E nenhum
-  // texto chegou ainda — os dois viram `false` de novo assim que qualquer um
-  // dos dois deixa de valer: texto chegando (streaming REAL não espera nada,
-  // aparece na hora) ou o turno terminando antes dos 5s (a resposta foi
-  // rápida, e o indicador nunca deveria ter existido). O timer é cancelado no
-  // cleanup do próprio efeito sempre que uma dessas dependências muda, então
-  // nunca liga `pensandoVisivel` depois do fato.
+  // Arma/desarma o timer de 5s do indicador de "pensando" (RN-131) — o MESMO
+  // timer que a faixa de atividade (`TurnActivityStrip`) reusa pro seu
+  // próprio "Pensando…", via a prop `pensandoVisivel`. Só conta o tempo
+  // enquanto há turno em curso (`streaming`/`statusAgent`) E NENHUM conteúdo
+  // chegou ainda — nem pelo caminho antigo (`streamingText`, SSE) nem pelo
+  // novo (o reducer da faixa, `atividadeDoTurno`): os dois viram `false` de
+  // novo assim que qualquer um deixa de valer — conteúdo chegando (streaming
+  // REAL não espera nada, aparece na hora) ou o turno terminando antes dos 5s
+  // (a resposta foi rápida, e o indicador nunca deveria ter existido). O
+  // timer é cancelado no cleanup do próprio efeito sempre que uma dessas
+  // dependências muda, então nunca liga `pensandoVisivel` depois do fato.
+  const semConteudoNoTurno =
+    !streamingText && !atividadeDoTurno.corrente && atividadeDoTurno.linhas.length === 0;
   useEffect(() => {
-    if (!(streaming || statusAgent) || streamingText) {
+    if (!(streaming || statusAgent) || !semConteudoNoTurno) {
       setPensandoVisivel(false);
       return;
     }
     const timer = setTimeout(() => setPensandoVisivel(true), 5000);
     return () => clearTimeout(timer);
-  }, [streaming, statusAgent, streamingText]);
+  }, [streaming, statusAgent, semConteudoNoTurno]);
 
   // A CONVERSA começou? (achado G, revisto por investigação AO VIVO — RN-131)
   // O critério ERA "existe `chat.message`/`agent.response`", pra não confundir
@@ -1733,6 +1862,9 @@ export function SessionPage({
             : undefined;
         empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
+          // `agruparNarracoesDoTurno` lê este marcador pra saber que ESTA
+          // entrada, e só ela, participa do colapso de "Passos do turno".
+          agentResponse: true,
           node: (
             <div className={styles.message} key={event.id} style={corDoAgente(event.actor.id)}>
               <span className={styles.avatar}>
@@ -1914,7 +2046,14 @@ export function SessionPage({
     // ano vê que a timeline é ordenada pelo event log e que handoff/aprovação
     // são reposicionados por uma decisão de produto explícita — não vê um
     // comparador com três termos que ninguém sabe mais justificar.
-    return afundarDesfechos(items.sort((a, b) => a.seq - b.seq));
+    //
+    // `agruparNarracoesDoTurno` entra DEPOIS de `afundarDesfechos` — colapsa
+    // `agent.response` consecutivas do MESMO turno+autor, sem mexer na ordem
+    // que a passada anterior já decidiu.
+    return agruparNarracoesDoTurno(afundarDesfechos(items.sort((a, b) => a.seq - b.seq)), {
+      titulo: t('turno.passosDoTurno'),
+      trailing: (count) => t('turno.passosCount', { count }),
+    });
   }, [
     events,
     actions,
@@ -2096,6 +2235,9 @@ export function SessionPage({
     try {
       setStreaming(true);
       setStreamingText('');
+      setTurnoViaCanal(true);
+      turnoAgentRef.current = 'criativo';
+      setStatusAgent('criativo');
       await confirmReadiness(projectId, sessionId);
       // O product_brief + handoff chegam via o canal (agent.done) + poll.
       //
@@ -2112,6 +2254,9 @@ export function SessionPage({
       finalizarTurnoDoAgente();
     } catch {
       setStreaming(false);
+      setTurnoViaCanal(false);
+      turnoAgentRef.current = null;
+      setStatusAgent(null);
       showToast({ title: t('toasts.erro'), message: t('toasts.erroConfirmarProntidao'), tone: 'danger' });
     }
   }
@@ -2131,10 +2276,16 @@ export function SessionPage({
     try {
       setStreaming(true);
       setStreamingText('');
+      setTurnoViaCanal(true);
+      turnoAgentRef.current = 'arquiteto';
+      setStatusAgent('arquiteto');
       await confirmArchitectureReadiness(projectId, sessionId);
       finalizarTurnoDoAgente();
     } catch {
       setStreaming(false);
+      setTurnoViaCanal(false);
+      turnoAgentRef.current = null;
+      setStatusAgent(null);
       showToast({
         title: t('toasts.erro'),
         message: t('toasts.erroConfirmarArquitetura'),
@@ -2203,6 +2354,7 @@ export function SessionPage({
     // pelo canal antes mesmo desta chamada resolver. Sem o ref pronto agora,
     // o handler perderia a corrida e o indicador nasceria sem saber quem é.
     turnoAgentRef.current = toAgent;
+    setTurnoViaCanal(true);
     try {
       await acceptHandoff(projectId, sessionId, handoffId);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
@@ -2222,6 +2374,7 @@ export function SessionPage({
       }
     } catch {
       turnoAgentRef.current = null;
+      setTurnoViaCanal(false);
       showToast({ title: t('toasts.erro'), message: t('toasts.erroAceitarHandoff'), tone: 'danger' });
     }
   }
@@ -2418,6 +2571,15 @@ export function SessionPage({
     // turno roda no engine (harness); os deltas e o fim chegam pelo canal
     // Phoenix. Senão (sessão consultiva), chat humano stateless via SSE.
     if (agentParaEnviar) {
+      // A faixa de atividade (`turnoViaCanal`) liga AQUI, e não no `try` —
+      // `statusAgent` dá nome ao avatar da faixa mesmo antes de o primeiro
+      // `agent.status`/`agent.delta` do canal chegar (o mesmo argumento de
+      // `iniciarTurnoDoAgente`, que este caminho não usa porque já toggla
+      // `streaming`/`streamingText` acima, antes de `agentParaEnviar` ser
+      // conhecido).
+      turnoAgentRef.current = agentParaEnviar;
+      setStatusAgent(agentParaEnviar);
+      setTurnoViaCanal(true);
       try {
         await sendAgentMessage(projectId, sessionId, agentParaEnviar, text);
         // Rede de segurança contra o canal perder o `agent.done` (achado da
@@ -2443,6 +2605,9 @@ export function SessionPage({
       } catch {
         setStreaming(false);
         setOptimisticUser(null);
+        turnoAgentRef.current = null;
+        setStatusAgent(null);
+        setTurnoViaCanal(false);
         showToast({ title: t('toasts.erro'), message: t('toasts.erroEnviarMensagem'), tone: 'danger' });
       }
       return;
@@ -2838,8 +3003,14 @@ export function SessionPage({
                   (`pensandoVisivel`, armado pelo efeito acima) — texto de
                   verdade (`streamingText`) sempre aparece na hora, nunca
                   espera o timer. É por isso que a condição é "tem texto OU
-                  já passou o prazo", nunca só "tem texto". */}
-              {(streamingText || (pensandoVisivel && (streaming || statusAgent))) && (
+                  já passou o prazo", nunca só "tem texto".
+
+                  `!turnoViaCanal`: esta bolha ficou EXCLUSIVA do chat
+                  consultivo sem agente ativo (SSE, `streamChatMessage`) — um
+                  turno de agente conversacional narra pela faixa de
+                  atividade (`TurnActivityStrip`, logo abaixo do fio), nunca
+                  pelos dois ao mesmo tempo. */}
+              {!turnoViaCanal && (streamingText || (pensandoVisivel && (streaming || statusAgent))) && (
                 <div
                   className={styles.message}
                   style={
@@ -2892,6 +3063,20 @@ export function SessionPage({
               <div ref={messagesEndRef} />
             </div>
           </div>
+
+          {/* A faixa de atividade do turno — narra em tempo real o que um
+              agente conversacional está fazendo, FORA da área que rola (o
+              fio já rola pra ela sozinho quando o card final chega, via a
+              invalidação que `finalizarTurnoDoAgente` dispara). Só existe
+              turno de agente via `turnoViaCanal`: o chat consultivo sem
+              agente ativo continua na bolha antiga, dentro do fio. */}
+          {turnoViaCanal && (
+            <TurnActivityStrip
+              estado={atividadeDoTurno}
+              agente={streamingAgent ?? statusAgent}
+              pensandoVisivel={pensandoVisivel}
+            />
+          )}
 
           {/*
             Handoff manual a agente à escolha (ADR 0109/RN-440): a cadeia

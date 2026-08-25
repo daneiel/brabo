@@ -754,6 +754,29 @@
   padding-top: 10px;
 }
 
+/* Colapso de `agent.response` CONSECUTIVAS do MESMO turno+autor
+   (`agruparNarracoesDoTurno`) — "Passos do turno · N", com a última resposta
+   sempre fora dele. Sem `--msg-color`: ao contrário de `.agentGroup`
+   (RN-138), esta função não é envolvida por um `div` que o fixa — mesma
+   régua de `.fioHistoricoCabecalho`, que também vive sem cor de agente. */
+.narracoesCabecalho {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.narracoesGrupo {
+  display: flex;
+  flex-direction: column;
+}
+
+.narracoesRegiao {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 10px;
+}
+
 /* Histórico do fio recolhido por ORIGEM (RN-177). Fica no TOPO porque o fio é
    crescente, e a borda inferior marca onde a conversa recente começa — sem
    ela, um grupo fechado encosta na primeira mensagem aberta e os dois se leem

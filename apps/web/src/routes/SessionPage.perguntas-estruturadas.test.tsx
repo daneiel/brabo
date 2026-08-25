@@ -425,19 +425,19 @@ describe('SessionPage — responder o formulário arma o indicador de turno (RN-
     await waitFor(() => expect(answerStructuredQuestion).toHaveBeenCalled());
 
     // Antes dos 5s nada aparece — a regra do indicador (RN-131) não mudou.
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
-    expect(screen.getByText('Reunindo informações...')).toBeInTheDocument();
+    expect(screen.getByText('Pensando…')).toBeInTheDocument();
 
     // A chamada resolve: o turno acabou, e o indicador sai junto.
     await act(async () => {
       resolver();
     });
     await waitFor(() =>
-      expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument(),
+      expect(screen.queryByText('Pensando…')).not.toBeInTheDocument(),
     );
   });
 
@@ -462,6 +462,6 @@ describe('SessionPage — responder o formulário arma o indicador de turno (RN-
       await vi.advanceTimersByTimeAsync(5000);
     });
 
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
   });
 });
