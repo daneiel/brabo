@@ -34,7 +34,12 @@ ADR 0105) — including the two `maintainer` routes
 (`GET .../personal-access-tokens/all`,
 `DELETE .../personal-access-tokens/:tokenId/admin`,
 [RN-427](../business-rules.md#rn-427)) — are not "internal" in the sense of this document, even when an
-agent is who effectively calls through them. The
+agent is who effectively calls through them. The same is true of the four
+`HuggingFaceModelsController` routes under
+`/workspaces/:workspaceId/huggingface/*`
+([RN-462](../business-rules.md#rn-462), [RN-463](../business-rules.md#rn-463),
+ADR 0115): `role:maintainer`, a human's own direct action from Project/Workspace
+Settings, never called by the engine. The
 shared service token NEVER serves as credential on these routes, and the user's JWT
 never works on `/internal/*` — the two mechanisms don't overlap
 ([RN-035](../business-rules.md#rn-035)).
