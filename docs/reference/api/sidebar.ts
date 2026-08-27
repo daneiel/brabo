@@ -774,6 +774,30 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/hugging-face-models-controller-search",
+          label: "Searches GGUF models on the Hugging Face Hub",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/hugging-face-models-controller-create-pull-request",
+          label: "Creates a PENDING pull request — nothing downloads yet",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/hugging-face-models-controller-get-status",
+          label: "Status of a pull request, for the frontend to poll",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/hugging-face-models-controller-confirm",
+          label: "The second confirmation — actually runs the pull",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/model-bindings-controller-get-workspace-binding",
           label: "Reads the workspace model binding",
           className: "api-method get",

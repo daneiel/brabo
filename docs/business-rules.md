@@ -10980,6 +10980,100 @@ si não muda.
   *_server_test.exs` (broadcast de `tool.call` sem args crus)
 - **Origem:** pedido do dono do produto
 
+## Ollama nativo no bootstrap dev e pull de modelo Hugging Face (RN-461..463, ADR 0114/0115)
+
+### RN-461 — Ollama nativo: pergunta uma vez, a resposta persiste em `.env`, nunca pergunta de novo {#rn-461}
+
+`scripts/dev/preflight.mjs` detecta um Ollama nativo já escutando em
+`OLLAMA_PORT` (mesmo default, 11434, de uma instalação nativa) confirmando
+por HTTP (`GET /api/tags`) que é mesmo um Ollama, não qualquer processo na
+porta. Confirmado, PERGUNTA uma única vez se é para usar essa instância —
+default "Sim" quando não há TTY (o `bootstrap.sh` roda o comando com stdin
+de `/dev/null` de propósito, para não roubar as setas do usuário) — e
+grava a resposta em `.env` (`OLLAMA_MODE=host|container`). A partir daí a
+detecção nem roda de novo: com `OLLAMA_MODE` já presente, a função
+retorna cedo. `ollama`/`ollama-model-loader` entram em `profiles:
+["local-llm"]` no compose para não subirem quando o modo é `host`. A
+ÚNICA forma de reabrir a pergunta é o item de menu dedicado "Docker ›
+Reconfigurar Ollama", que apaga as chaves gravadas — nunca uma pergunta
+espontânea de novo enquanto elas existirem.
+
+- **Onde:** `scripts/dev/preflight.mjs:118` (`escreverEnv`),
+  `scripts/dev/preflight.mjs:159` (`ehOllama`),
+  `scripts/dev/preflight.mjs:198` (`perguntarUsoDoOllama`),
+  `scripts/dev/preflight.mjs:234` (`detectarOllamaNativo`),
+  `scripts/dev/reconfigurar-ollama.sh`, `scripts/dev/perfil-ollama.sh`,
+  `docker/docker-compose.yml:82,119` (`profiles: ["local-llm"]`)
+- **Teste:** `scripts/dev/bootstrap.spec.ts` (cobre a fiação do menu — o
+  perfil condicional em Deploy › All/Create e o item dedicado
+  "Reconfigurar Ollama"). A lógica de detecção/persistência em si
+  (`detectarOllamaNativo`/`escreverEnv`) foi validada ponta a ponta
+  manualmente contra um servidor HTTP fake e contra o Ollama real desta
+  máquina (ver ADR 0114) — **lacuna declarada**: não existe suíte
+  automatizada própria para `preflight.mjs` hoje.
+- **ADR:** [0114](adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.md)
+- **Origem:** pedido do dono do produto, achado real durante a execução
+  (colisão de porta com Ollama nativo)
+
+### RN-462 — Pull de modelo Hugging Face exige confirmação explícita em duas etapas; nunca roda sozinho {#rn-462}
+
+`POST .../huggingface/pull-requests` só CRIA o pedido, em
+`pending_confirmation` — nenhum download começa. Somente uma chamada
+SEPARADA, `POST .../pull-requests/:id/confirm`, move o pedido para
+`confirmed` → `pulling` e de fato chama `OllamaProvider.pullModel`.
+`ConfirmModelPullUseCase` RECUSA (409) confirmar um pedido que já não
+esteja em `pending_confirmation` — a transição de estado É a segunda
+confirmação, não uma flag à parte, e por isso não é reexecutável. Falha
+do Ollama durante o pull marca o pedido `failed` com `failedReason`
+prefixado pela origem (`infra`/`modelo`/`código`, vocabulário do ADR
+0020) — nunca falha silenciosa, e nada é ativado no catálogo quando falha.
+
+- **Onde:** `apps/api/src/application/use-cases/llm/huggingface/request-model-pull.use-case.ts:23`
+  (`RequestModelPullUseCase`),
+  `apps/api/src/application/use-cases/llm/huggingface/confirm-model-pull.use-case.ts:45`
+  (`ConfirmModelPullUseCase`),
+  `apps/api/src/interfaces/http/llm/huggingface-models.controller.ts:109-165`
+  (as duas rotas, `role:maintainer`)
+- **Teste:** `apps/api/test/application/use-cases/llm/huggingface/request-model-pull.use-case.spec.ts`
+  (cria em `pending_confirmation`, nada além disso),
+  `apps/api/test/application/use-cases/llm/huggingface/confirm-model-pull.use-case.spec.ts`
+  (caminho feliz ativa no catálogo; falha do Ollama marca `failed` com a
+  origem certa — `modelo`/`infra`; recusa reconfirmar um pedido que já
+  saiu de `pending_confirmation`; 404 para pedido inexistente no
+  workspace)
+- **ADR:** [0115](adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.md)
+- **Origem:** pedido do dono do produto
+
+### RN-463 — Allowlist de publishers oficiais; comunidade exige opt-in explícito com aviso de segurança {#rn-463}
+
+Busca no Hugging Face Hub filtra para publishers OFICIAIS por padrão —
+`HUGGINGFACE_OFFICIAL_PUBLISHERS`, vocabulário FECHADO e curado à mão
+(`meta-llama`, `google`, `mistralai`, `microsoft`, `Qwen`, `deepseek-ai`,
+`openai`, `nvidia`), comparado por igualdade EXATA de caixa — um reupload
+minúsculo (`qwen/...`) não herda o selo da org oficial (`Qwen/...`).
+`includeCommunity=true` traz todo o resto, cada resultado marcado
+`official: true|false`, nunca ocultando a distinção. Na tela, o toggle de
+comunidade nasce DESLIGADO e, enquanto ligado, mostra um aviso de
+segurança (`Alert tone="danger"`) — o opt-in e o aviso são o mesmo gesto,
+nunca uma preferência que o usuário liga uma vez e esquece que está
+ligada.
+
+- **Onde:** `apps/api/src/domain/llm/huggingface-official-publishers.ts:17-41`
+  (`HUGGINGFACE_OFFICIAL_PUBLISHERS`/`isOfficialPublisher`),
+  `apps/api/src/application/use-cases/llm/huggingface/search-huggingface-models.use-case.ts:28-39`
+  (filtro por padrão), `apps/web/src/components/HuggingFaceModelBrowser.tsx:190-203`
+  (toggle + `Alert` de aviso)
+- **Teste:** `apps/api/test/domain/huggingface/huggingface-official-publishers.spec.ts`
+  (reconhece publisher do allowlist; recusa reupload de terceiro;
+  sensível a caixa; `repoId` sem `/` nunca casa),
+  `apps/api/test/application/use-cases/llm/huggingface/search-huggingface-models.use-case.spec.ts`
+  (só oficiais por padrão; `includeCommunity` traz todos marcados),
+  `apps/web/src/components/HuggingFaceModelBrowser.test.tsx`
+  (toggle nasce desligado e só mostra o aviso quando ligado; busca respeita
+  `includeCommunity`)
+- **ADR:** [0115](adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.md)
+- **Origem:** pedido do dono do produto
+
 ---
 
 ## Quando dá errado
@@ -11009,6 +11103,8 @@ si não muda.
 | Converter `execution_mode` com dev agent trabalhando ou travado | recusado (409) ANTES de mexer no permissions.json ou no ciclo de vida do container — nunca migra um agente vivo (RN-447) |
 | Pasta local anexada estoura o teto de arquivos ou de bytes somados | recusado (400), o lote inteiro — nunca trunca em silêncio (RN-456) |
 | Arquivo individual da pasta local é grande demais ou de extensão não reconhecida | só PULADO (`filesSkipped`), nunca derruba o upload inteiro (RN-456) |
+| Confirmar um pedido de pull de modelo que já não está `pending_confirmation` | recusado (409) — a confirmação não é reexecutável (RN-462) |
+| Pull de modelo Hugging Face falha no Ollama | pedido termina `failed` com a origem declarada (infra/modelo), nada é ativado no catálogo (RN-462) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

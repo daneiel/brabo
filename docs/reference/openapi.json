@@ -10034,6 +10034,237 @@
         ]
       }
     },
+    "/workspaces/{workspaceId}/huggingface/models": {
+      "get": {
+        "description": "Filters to OFFICIAL publishers only by default (the allowlist in `domain/llm/huggingface-official-publishers.ts`) — same \"manual curation always\" spirit as the LLM catalog (ADR 0042), applied to the \"official\" badge instead of to activation. `includeCommunity=true` brings in every publisher, each one tagged `official: false` for the screen to render the security warning — never hidden.",
+        "operationId": "HuggingFaceModelsController_search",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Search text.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeCommunity",
+            "required": false,
+            "in": "query",
+            "description": "Pass `true` to also include non-official publishers.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HuggingFaceModelResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Requires `maintainer` on the workspace."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Searches GGUF models on the Hugging Face Hub",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/huggingface/pull-requests": {
+      "post": {
+        "description": "First of two explicit steps: this call only records the intent, in `pending_confirmation`. Nothing is pulled until a separate call to `POST .../pull-requests/:id/confirm` — the product never runs an automatic, silent pull.",
+        "operationId": "HuggingFaceModelsController_createPullRequest",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestModelPullDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelPullRequestResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Requires `maintainer` on the workspace."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Creates a PENDING pull request — nothing downloads yet",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/huggingface/pull-requests/{id}": {
+      "get": {
+        "operationId": "HuggingFaceModelsController_getStatus",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelPullRequestResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Requires `maintainer` on the workspace."
+          },
+          "404": {
+            "description": "Pull request not found."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Status of a pull request, for the frontend to poll",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/huggingface/pull-requests/{id}/confirm": {
+      "post": {
+        "description": "Moves `pending_confirmation` → `confirmed` → `pulling`, calls the Ollama daemon, and on success upserts the model into the catalog (`models`) and activates it for THIS workspace. On failure the request ends in `failed` with a reason declaring its origin (infra | model | code | policy) — never a silent failure. This call runs SYNCHRONOUSLY for the whole pull (see the use case for why); use the GET route below to poll instead of holding this connection open.",
+        "operationId": "HuggingFaceModelsController_confirm",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelPullRequestResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Requires `maintainer` on the workspace."
+          },
+          "404": {
+            "description": "Pull request not found."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The second confirmation — actually runs the pull",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
     "/workspaces/{workspaceId}/members": {
       "post": {
         "description": "Only `owner` can touch the member roster. The role here is inherited by ALL of the workspace's projects.",
@@ -14263,6 +14494,40 @@
           "timestamp"
         ]
       },
+      "HuggingFaceModelResponseDto": {
+        "type": "object",
+        "properties": {
+          "repoId": {
+            "type": "string",
+            "example": "meta-llama/Llama-3.1-8B-Instruct-GGUF",
+            "description": "`<publisher>/<modelo>` no Hugging Face Hub."
+          },
+          "publisher": {
+            "type": "string",
+            "example": "meta-llama"
+          },
+          "downloads": {
+            "type": "number",
+            "example": 182034
+          },
+          "likes": {
+            "type": "number",
+            "example": 210
+          },
+          "official": {
+            "type": "boolean",
+            "example": true,
+            "description": "O publisher está no allowlist curado de fabricantes conhecidos (`domain/llm/huggingface-official-publishers.ts`). `false` é qualquer reupload de terceiro — a tela mostra o aviso de segurança quando `includeCommunity=true` trouxe este resultado."
+          }
+        },
+        "required": [
+          "repoId",
+          "publisher",
+          "downloads",
+          "likes",
+          "official"
+        ]
+      },
       "HybridSearchHitResponseDto": {
         "type": "object",
         "properties": {
@@ -15402,6 +15667,80 @@
           "source",
           "changedBy",
           "createdAt"
+        ]
+      },
+      "ModelPullRequestResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b"
+          },
+          "workspaceId": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b"
+          },
+          "requestedBy": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b"
+          },
+          "repoId": {
+            "type": "string",
+            "example": "meta-llama/Llama-3.1-8B-Instruct-GGUF"
+          },
+          "estimatedSizeBytes": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Só presente quando o Hub publicou `usedStorage` na busca — nunca estimado por palpite."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending_confirmation",
+              "confirmed",
+              "pulling",
+              "active",
+              "failed"
+            ],
+            "example": "pending_confirmation",
+            "description": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. Os dois primeiros estados SÃO a segunda confirmação explícita que o produto exige antes de qualquer download rodar."
+          },
+          "confirmedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "format": "date-time",
+            "description": "Quando o clique de confirmação aconteceu."
+          },
+          "failedReason": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Só em `failed`, prefixado pela origem (infra | modelo | código | política) — nunca falha calada."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-26T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-08-26T12:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "requestedBy",
+          "repoId",
+          "estimatedSizeBytes",
+          "status",
+          "confirmedAt",
+          "failedReason",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "ModelResponseDto": {
@@ -18089,6 +18428,24 @@
         },
         "required": [
           "toAgent"
+        ]
+      },
+      "RequestModelPullDto": {
+        "type": "object",
+        "properties": {
+          "repoId": {
+            "type": "string",
+            "example": "meta-llama/Llama-3.1-8B-Instruct-GGUF",
+            "description": "`<publisher>/<modelo>` no Hugging Face Hub."
+          },
+          "estimatedSizeBytes": {
+            "type": "number",
+            "example": 4900000000,
+            "description": "Vem da busca quando o Hub publicou o tamanho — nunca estimado por palpite no cliente."
+          }
+        },
+        "required": [
+          "repoId"
         ]
       },
       "RequestPasswordResetDto": {

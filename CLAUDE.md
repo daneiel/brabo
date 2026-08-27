@@ -46,6 +46,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Handoff manual / budget por área / pasta local no RAG | Fecham itens do backlog antigo | ADR 0109–0110, 0113 |
 | pnpm bootstrap | Menu de terminal sobre comandos existentes; Reset total | histórico |
 | Faixa de atividade do turno | Narração em tempo real do turno dos 6 conversacionais; teto de iterações não termina mais calado | RN-459/460 |
+| Ollama nativo / pull de Hugging Face | Bootstrap dev pergunta uma vez e persiste o modo do Ollama em `.env`; navegador de modelos do Hub com pull em duas etapas e allowlist de publisher oficial | RN-461..463, ADR 0114–0115 |
 
 ## Estado atual e aberto
 
@@ -102,6 +103,9 @@ daqui e o fechamento vai para o histórico.
   contra um corpo real de perguntas rodado contra o índice (ADR 0080)
 - `rc/rcfix` (ADR 0030) e preferência de moeda com taxa manual seguem no
   backlog original da FASE 13c, sem revisão desde então
+- Pull de modelo Hugging Face roda o download inteiro de forma SÍNCRONA
+  dentro do request HTTP — a api não tem fila própria; corte declarado,
+  candidato a ADR quando o volume de pulls justificar (ADR 0115)
 
 **Pendências com dono humano (TODO(humano) vivos):**
 - Smokes de LLM: 5 de 6 providers sem credencial no ambiente (só OpenRouter

@@ -1149,3 +1149,45 @@ export const attachLocalFolder = (
     `/projects/${projectId}/rag/local`,
     body,
   );
+
+// --- Hugging Face Hub → pull para o Ollama ---
+//
+// Ancoradas no workspace, mesmo padrão da curadoria de catálogo acima:
+// `maintainer` é o papel que o `RolesGuard` resolve a partir de `:workspaceId`.
+// `repoId` vai no CORPO do POST de criação, nunca em segmento de path — o
+// formato real do Hub (`<publisher>/<modelo>`) contém `/`, que quebraria o
+// casamento de rota (mesma razão de `getCodeFile` para caminho de arquivo).
+
+export const searchHuggingFaceModels = (
+  workspaceId: string,
+  params: { q: string; includeCommunity?: boolean },
+) =>
+  get<import('./api-types').HuggingFaceModel[]>(
+    `/workspaces/${workspaceId}/huggingface/models${qs({
+      q: params.q,
+      includeCommunity: params.includeCommunity || undefined,
+    })}`,
+  );
+
+export const requestModelPull = (
+  workspaceId: string,
+  body: { repoId: string; estimatedSizeBytes?: number },
+) =>
+  post<import('./api-types').ModelPullRequest>(
+    `/workspaces/${workspaceId}/huggingface/pull-requests`,
+    body,
+  );
+
+// Roda o pull inteiro SINCRONAMENTE no servidor (sem fila própria na api
+// ainda) — a chamada pode demorar minutos e um proxy no meio pode fechar a
+// conexão antes do fim. `getModelPullRequest` (poll) é a fonte de verdade
+// de status, independente de esta promise resolver ou rejeitar.
+export const confirmModelPull = (workspaceId: string, id: string) =>
+  post<import('./api-types').ModelPullRequest>(
+    `/workspaces/${workspaceId}/huggingface/pull-requests/${id}/confirm`,
+  );
+
+export const getModelPullRequest = (workspaceId: string, id: string) =>
+  get<import('./api-types').ModelPullRequest>(
+    `/workspaces/${workspaceId}/huggingface/pull-requests/${id}`,
+  );
