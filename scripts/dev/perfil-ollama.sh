@@ -13,10 +13,11 @@
 # continuar valendo.
 #
 # Script PRÓPRIO, não inline em cada CMD do bootstrap.sh nem duplicado em
-# reset-total.sh: os três chamadores (Docker › Deploy › All, Docker › Create
-# e reset-total.sh) precisam da MESMA decisão, e um `grep` levemente
-# diferente em cada lugar é exatamente o tipo de divergência que este
-# arquivo existe para evitar.
+# reset-total.sh: os quatro chamadores (Docker › Deploy › All, Docker ›
+# Create, Docker › Destroy e reset-total.sh) precisam da MESMA decisão —
+# Destroy usa o mesmo `--profile` do `up` para poder derrubar exatamente o
+# que ele subiu — e um `grep` levemente diferente em cada lugar é
+# exatamente o tipo de divergência que este arquivo existe para evitar.
 #
 # Uso:
 #   ${COMPOSE} $(bash scripts/dev/perfil-ollama.sh) up -d

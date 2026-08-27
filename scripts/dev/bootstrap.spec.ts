@@ -103,6 +103,14 @@ describe('bootstrap.sh — árvore de comandos', () => {
     expect(porCaminho(folhas, '1.3').comando).not.toContain('-v');
   });
 
+  it('Docker › Destroy também passa pelo perfil do Ollama, para derrubar o que o up subiu', () => {
+    // `docker compose down` SEM `--profile` ignora containers de um profile
+    // inativo — sem isso, `ollama`/`ollama-model-loader` ficam órfãos (e a
+    // rede presa, "resource still in use") sempre que tiverem subido sob
+    // `profiles: ["local-llm"]`.
+    expect(porCaminho(folhas, '1.3').comando).toContain('$(bash scripts/dev/perfil-ollama.sh)');
+  });
+
   it('Docker › Reset total chama o script dedicado e pede confirmação própria', () => {
     // Não reimplementa nada aqui: rebuild + apagar banco + subir até saudável
     // + migrar + semear mora em scripts/dev/reset-total.sh, testável por si

@@ -22,7 +22,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   resposta em `.env` (`OLLAMA_MODE=host|container`) — nunca pergunta de
   novo depois disso (RN-461, ADR 0114). `ollama`/`ollama-model-loader`
   entram sob `profiles: ["local-llm"]` no compose, ligado/desligado em
-  tempo de execução por `scripts/dev/perfil-ollama.sh`. Novo item de menu
+  tempo de execução por `scripts/dev/perfil-ollama.sh` — inclusive em
+  "Docker › Destroy", que agora derruba exatamente o que o `up`
+  correspondente subiu, sem deixar container ou rede órfãos. Novo item de menu
   "Docker › Reconfigurar Ollama" esquece a decisão gravada, forçando a
   pergunta de novo na próxima subida.
 - **scripts**: o menu `pnpm bootstrap` ganha a tecla `c` nas telas de

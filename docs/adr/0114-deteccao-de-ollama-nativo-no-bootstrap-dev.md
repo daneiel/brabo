@@ -129,14 +129,15 @@ even `config`, which `preflight.mjs` itself calls). The dependency was
 already vestigial for compose's purposes: `api` calls Ollama at agent-turn
 runtime, never at its own boot, so nothing about startup ordering was lost.
 
-**Declared, not fixed here: "Docker › Destroy" can orphan the profiled
-containers.** `docker compose down` without `--profile` ignores containers
-that belong to an inactive profile — if `ollama`/`ollama-model-loader` are
-up under `local-llm`, plain Destroy leaves them running and can leave the
-network in a "still in use" state. The request that produced this ADR only
-asked for the `up` path; Destroy was left alone deliberately, and is a real
-gap for a human to decide on (apply the same conditional `--profile`, or
-accept it as-is).
+**"Docker › Destroy" also passes through the same conditional `--profile`.**
+`docker compose down` without `--profile` ignores containers that belong to
+an inactive profile — if `ollama`/`ollama-model-loader` came up under
+`local-llm`, a plain `down` leaves them running and can leave the network in
+a "still in use" state. `CMD["1.3"]` in `bootstrap.sh` now resolves through
+the same `scripts/dev/perfil-ollama.sh` helper the `up` paths use, so Destroy
+tears down exactly what the matching `up` brought up — covered by
+`bootstrap.spec.ts`'s "Docker › Destroy também passa pelo perfil do Ollama"
+case.
 
 **Declared, not fixed here: a project's own idle `ollama` container can be
 mistaken for a native install.** If a developer switches to

@@ -174,16 +174,20 @@ ROTULO["4"]="Test";      FILHOS["4"]="4.1 4.2 4.3 4.4 4.5 4.6"
 # `$(bash scripts/dev/perfil-ollama.sh)` — ESCAPADO com `\$` de propósito, para
 # ficar gravado LITERAL no mapa (senão o `$(...)` rodaria uma vez só, aqui, na
 # hora em que este arquivo é fonteado, e nunca de novo) — decide em tempo de
-# EXECUÇÃO se o `up` sobe ollama/ollama-model-loader junto (mesmo padrão de
-# `\${POSTGRES_USER:-brabo}` no CMD["3.4"], abaixo: escapar é o que faz a
-# variável ser lida quando o comando RODA, não quando o menu é montado). Só os
-# dois itens que sobem a STACK INTEIRA (nenhum serviço específico) precisam
-# disso — Api/Engine/Web (1.1.2..4) não tocam ollama.
+# EXECUÇÃO se o comando sobe (ou derruba) ollama/ollama-model-loader junto
+# (mesmo padrão de `\${POSTGRES_USER:-brabo}` no CMD["3.4"], abaixo: escapar
+# é o que faz a variável ser lida quando o comando RODA, não quando o menu é
+# montado). Os três itens que operam a STACK INTEIRA (nenhum serviço
+# específico) precisam disso — Api/Engine/Web (1.1.2..4) não tocam ollama.
+# Destroy também precisa: `docker compose down` SEM `--profile` ignora
+# containers de um profile inativo (deixa `ollama`/`ollama-model-loader` de
+# pé, órfãos, e a rede presa) — mesmo `--profile` do `up`, para desfazer
+# exatamente o que ele fez.
 ROTULO["1.1"]="Deploy";  FILHOS["1.1"]="1.1.1 1.1.2 1.1.3 1.1.4"
 ROTULO["1.2"]="Create";  CMD["1.2"]="node scripts/dev/preflight.mjs && ${COMPOSE} \$(bash scripts/dev/perfil-ollama.sh) up -d"
-ROTULO["1.3"]="Destroy"; CMD["1.3"]="${COMPOSE} down"
+ROTULO["1.3"]="Destroy"; CMD["1.3"]="${COMPOSE} \$(bash scripts/dev/perfil-ollama.sh) down"
 NOTA["1.2"]="cria a rede, os volumes e os containers (sem reconstruir imagem)"
-NOTA["1.3"]="para e remove os containers; os volumes sobrevivem"
+NOTA["1.3"]="para e remove os containers (incl. ollama/ollama-model-loader se estiverem de pé); os volumes sobrevivem"
 
 ROTULO["1.1.1"]="All";    CMD["1.1.1"]="${COMPOSE} \$(bash scripts/dev/perfil-ollama.sh) up -d --build"
 ROTULO["1.1.2"]="Api";    CMD["1.1.2"]="${COMPOSE} up -d --build api"
