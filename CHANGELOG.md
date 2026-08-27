@@ -6,6 +6,31 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: Project/Workspace Settings ganha um navegador do Hugging
+  Face Hub para puxar modelos GGUF para dentro do Ollama local (RN-461..
+  463, ADR 0115). Busca filtra para publishers OFICIAIS por padrão
+  (allowlist curada à mão); incluir a comunidade exige ligar um toggle
+  desligado por padrão, que mostra um aviso de segurança persistente
+  enquanto ligado. Puxar um modelo exige DUAS etapas explícitas — pedir
+  (`pending_confirmation`) e confirmar (dispara o download de verdade) —
+  nunca um pull automático e silencioso; falha termina o pedido em
+  `failed` com a origem declarada (infra/modelo), e sucesso ativa o
+  modelo no catálogo só para o workspace que pediu.
+- **scripts,docker**: o bootstrap de dev detecta um Ollama nativo já
+  rodando na porta 11434 (mesmo default de uma instalação fora do
+  Docker), pergunta uma ÚNICA vez se é para usar essa instância e grava a
+  resposta em `.env` (`OLLAMA_MODE=host|container`) — nunca pergunta de
+  novo depois disso (RN-461, ADR 0114). `ollama`/`ollama-model-loader`
+  entram sob `profiles: ["local-llm"]` no compose, ligado/desligado em
+  tempo de execução por `scripts/dev/perfil-ollama.sh`. Novo item de menu
+  "Docker › Reconfigurar Ollama" esquece a decisão gravada, forçando a
+  pergunta de novo na próxima subida.
+- **scripts**: o menu `pnpm bootstrap` ganha a tecla `c` nas telas de
+  execução (comando rodando ou já concluído) para copiar o comando real
+  para a área de transferência via OSC 52, com o texto sempre também
+  gravado no log como segunda via — não há como confirmar de dentro do
+  bash que a transferência funcionou, então quem estiver num terminal sem
+  suporte a OSC 52 ainda sai com o comando para copiar à mão.
 - **engine,web**: a tela de Sessão ganha uma faixa de atividade do turno
   ACIMA do composer — narra em linguagem humana o que um agente
   conversacional (Criativo, PO, Arquiteto, Dev Lead, UX Designer, Staff)

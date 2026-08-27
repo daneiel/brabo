@@ -1,0 +1,1 @@
+{"parameters":[{"name":"q","required":true,"in":"query","description":"Search text.","schema":{"type":"string"}},{"name":"includeCommunity","required":false,"in":"query","description":"Pass `true` to also include non-official publishers.","schema":{"type":"string"}}]}

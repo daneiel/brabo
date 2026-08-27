@@ -36,6 +36,19 @@ rules:
     severity: block
     note: "deny > allow e os dois tetos são o coração do sistema."
 
+  # A confirmação em duas etapas do pull (RequestModelPull/ConfirmModelPull)
+  # e o cliente do Hub vivem fora de `domain/` — `dominio-e-regras` cobre o
+  # allowlist de publisher oficial (que É domain/), mas não estes dois
+  # diretórios. Mesmo critério de separação de `pipeline-de-acoes`, acima:
+  # regra de negócio que mora em application/use-cases fora do padrão comum.
+  - id: huggingface-model-pull
+    watch:
+      - "apps/api/src/infrastructure/huggingface/**"
+      - "apps/api/src/application/use-cases/llm/huggingface/**"
+    docs: ["docs/business-rules.md"]
+    severity: block
+    note: "A confirmação em duas etapas do pull é regra de negócio (RN-462) fora de domain/; RN alterada exige arquivo:linha atualizado e o teste que a cobre."
+
   # ------------------------------------------------------------------ dados
 
   # O arquivo mais alterado do repositório até a v0.1.0 (23 mudanças) e o que
