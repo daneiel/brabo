@@ -28,6 +28,7 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Disclosure } from './ui/Disclosure';
 import { useToast } from './ui/ToastProvider';
+import { HuggingFaceModelBrowser } from './HuggingFaceModelBrowser';
 import styles from './ModelCatalogSection.module.css';
 
 /**
@@ -492,6 +493,8 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
           </Disclosure>
         );
       })}
+
+      <HuggingFaceModelBrowser workspaceId={workspaceId} />
     </div>
   );
 }

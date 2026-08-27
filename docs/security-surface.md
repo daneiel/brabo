@@ -575,6 +575,10 @@ reason in the URL.
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
 | GET | `/workspaces/:workspaceId/credential-spend` | role:owner |
 | GET | `/workspaces/:workspaceId/spend-report` | role:owner |
+| GET | `/workspaces/:workspaceId/huggingface/models` | role:maintainer |
+| POST | `/workspaces/:workspaceId/huggingface/pull-requests` | role:maintainer |
+| POST | `/workspaces/:workspaceId/huggingface/pull-requests/:id/confirm` | role:maintainer |
+| GET | `/workspaces/:workspaceId/huggingface/pull-requests/:id` | role:maintainer |
 | POST | `/workspaces/:workspaceId/models/activate` | role:owner |
 | GET | `/workspaces/:workspaceId/models/catalog` | role:maintainer |
 | POST | `/workspaces/:workspaceId/models/sync` | role:owner |

@@ -141,6 +141,46 @@
       "belowCent": "< {{value}}"
     }
   },
+  "huggingface": {
+    "title": "Hugging Face Hub",
+    "eyebrow": "pull a GGUF model into Ollama",
+    "subtitle": "Search GGUF models on the Hub and request a pull into local Ollama. Only official publishers show up by default — nothing downloads without a second explicit confirmation.",
+    "searchLabel": "Search a model on the Hugging Face Hub",
+    "searchPlaceholder": "e.g. llama-3.1-8b",
+    "searchButton": "Search",
+    "searching": "Searching…",
+    "searchError": "Couldn't search the Hugging Face Hub right now.",
+    "noResults": "No GGUF model found for \"{{query}}\".",
+    "communityToggle": "Show community models (non-official)",
+    "communityWarning": "Community models are third-party reuploads, with no manufacturer curation. Check the publisher before pulling — a malicious repository can package tampered weights.",
+    "downloads": "{{value}} downloads",
+    "badgeOfficial": "official",
+    "badgeCommunity": "community",
+    "pullButton": "Pull",
+    "pullStatus": {
+      "pending_confirmation": "awaiting confirmation",
+      "confirmed": "confirmed",
+      "pulling": "pulling…",
+      "active": "active",
+      "failed": "failed"
+    },
+    "confirmModal": {
+      "title": "Confirm model pull",
+      "explanation": "The download runs on the server and can take minutes, depending on the model's size. The model comes in ACTIVATED for this workspace as soon as it finishes.",
+      "preparing": "Preparing request…",
+      "repoIdLabel": "Repository",
+      "sizeLabel": "Estimated size",
+      "sizeUnknown": "not reported by the Hub",
+      "cancel": "Cancel",
+      "confirm": "Confirm and pull"
+    },
+    "toasts": {
+      "requestErrorTitle": "Could not create the pull request",
+      "confirmConnectionLostTitle": "Connection lost during the pull — tracking via status",
+      "pullSuccess": "{{repoId}} pulled and activated",
+      "pullFailedTitle": "Pull of {{repoId}} failed"
+    }
+  },
   "credentialStep": {
     "hint": "Provisioning on {{provider}} requires a personal access token (PAT). Select one already registered or add a new one — the token is encrypted on save and never shown again. Verification lives in the project settings, over the token already stored.",
     "credLabel": "{{provider}} connected",

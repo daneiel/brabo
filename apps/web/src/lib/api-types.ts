@@ -1551,3 +1551,44 @@ export interface AttachLocalFolderReport {
   chunksCreated: number;
   embedding: RagIndexEmbeddingReport;
 }
+
+// ---------------------------------------------------------------------------
+// APÊNDICE — Hugging Face Hub → pull para o Ollama. Escrito no FIM do bloco
+// pelo mesmo motivo dos apêndices acima. `GET .../huggingface/models` só
+// declara `official` no allowlist curado — nunca tamanho estimado: o Hub não
+// publica isso na busca, então o cliente NUNCA inventa um palpite.
+// ---------------------------------------------------------------------------
+
+/** Uma linha de `GET /workspaces/:workspaceId/huggingface/models`. */
+export interface HuggingFaceModel {
+  /** `<publisher>/<modelo>`, ex. `meta-llama/Llama-3.1-8B-Instruct-GGUF`. */
+  repoId: string;
+  publisher: string;
+  downloads: number;
+  likes: number;
+  /** `true` quando `publisher` está no allowlist curado. `false` é qualquer reupload de terceiro. */
+  official: boolean;
+}
+
+export type ModelPullStatus =
+  | 'pending_confirmation'
+  | 'confirmed'
+  | 'pulling'
+  | 'active'
+  | 'failed';
+
+/** O pedido de pull — os dois primeiros estados SÃO a segunda confirmação explícita. */
+export interface ModelPullRequest {
+  id: string;
+  workspaceId: string;
+  requestedBy: string;
+  repoId: string;
+  /** `null` quando o Hub não publicou o tamanho — nunca estimado por palpite. */
+  estimatedSizeBytes: number | null;
+  status: ModelPullStatus;
+  confirmedAt: string | null;
+  /** Só em `failed`, prefixado pela origem (infra | modelo | código | política). */
+  failedReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
