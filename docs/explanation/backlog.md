@@ -351,6 +351,46 @@ had the right `raise` in `runtime.exs` — the real defect was the compose
 masking it with a public fallback, and the fix was just removing that
 fallback, without touching any Elixir code.
 
+~~**External review 2026-08-28, item #13 — dev containers ran as root**~~ —
+**DONE**. `docker/api/Dockerfile`, `docker/web/Dockerfile` and
+`docker/engine/Dockerfile` had no `USER` directive, so everything they
+wrote to the bind mount (`node_modules`, `apps/api/dist`, and whatever an
+agent generates inside a project in `mounted` execution mode) landed
+root-owned on the host — the README and this doc's getting-started guide
+both documented a manual `sudo chown -R $USER ...` workaround instead of
+fixing the class of problem. `Dockerfile.prod` images were already
+non-root; this was dev-only.
+
+The fix maps the container's user to the HOST's UID/GID instead of running
+as root and cleaning up after: `DEV_UID`/`DEV_GID` build args (read from
+`.env`/the environment via `docker-compose.yml`, default `1000`/`1000`),
+named `DEV_*` on purpose because `${UID}` is read-only in bash and isn't
+exported to the environment by default — reading it straight from the
+compose file would always see empty. Each Dockerfile creates a
+group/user with that UID/GID only when it doesn't already collide with
+one the base image ships (`node:24-alpine` already has `node` at 1000:1000)
+and switches with `USER <uid>:<gid>` — numeric, so it doesn't matter which
+username ends up owning that id. All root-only steps (`apk add`, `pip
+install`, the gitleaks/hadolint/actionlint downloads) stay BEFORE the
+switch; in the engine image, `_build`/`deps`/`.mix`/`.hex` — homed under
+`/root` because `mix local.hex`/`mix local.rebar` write there, mounted as
+named volumes by `docker-compose.yml` — are `mkdir`+`chown`'d to the target
+UID/GID before `USER`, so a brand-new named volume inherits the right owner
+on first mount (Docker populates a new volume from whatever already exists
+at that path in the image).
+
+Proven by running the real stack (`DEV_UID=$(id -u) DEV_GID=$(id -g)
+docker compose -f docker/docker-compose.yml up --build postgres api web
+engine`): all three containers came up with zero `EACCES`/permission
+errors, and `apps/api/dist` on the host ended up owned by the host user,
+not root. One real wrinkle, not a blocker: named volumes created by an
+environment that predates this fix (`*_node_modules`, `engine_build`,
+`engine_deps`, `engine_mix`, `engine_hex`) still hold content written by
+the old root containers — upgrading needs a one-time `chown` of that
+existing volume data (or dropping the volumes with `docker compose down
+-v` and letting the next `up` recreate them), documented in the README and
+getting-started guide alongside the `DEV_UID`/`DEV_GID` instructions.
+
 ---
 
 ## Older backlog

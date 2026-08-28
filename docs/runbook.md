@@ -37,6 +37,7 @@ Start with triage.
 | I want to add an OpenAI-compatible LLM provider | [Adding a compatible provider](#adicionando-um-provider-compativel) |
 | I want to migrate my workspaces from the Docker volume to a real folder | [Migrating workspaces to a local folder](#migrar-workspaces-pasta-local) |
 | creating a **Local** project refuses, saying the folder doesn't exist | [Project in Local mode](#projeto-no-modo-local) |
+| `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 
 Two things worth knowing before any procedure:
 
@@ -132,6 +133,43 @@ single derivation exists to prevent.
 **Don't confuse this with Container mode.** A project in Container mode
 (the default) keeps using `PROJECT_WORKSPACES_ROOT` and the migration
 procedure above; Local mode never touches that root.
+
+### Dev containers write as your user, not root {#dev-containers-nao-root}
+
+**Symptom:** something the `api`, `web` or `engine` dev container wrote to a
+bind mount — `apps/api/dist`, `node_modules`, a file an agent generated
+inside a project in `mounted` execution mode — is owned by `root` on your
+disk, and editing or deleting it without `sudo` fails.
+
+This used to be expected: the dev images (`docker/api/Dockerfile`,
+`docker/web/Dockerfile`, `docker/engine/Dockerfile` — unlike `Dockerfile.prod`,
+already non-root since [ADR 0024](adr/0024-fase5-imagens-producao-ci.md)) had
+no `USER` directive and ran as root. They now run as the **same UID/GID as
+your host user**, via `DEV_UID`/`DEV_GID` build args
+([Configuration](reference/configuration.md#dev-container-user-build-time)),
+so this class of problem shouldn't recur.
+
+**If you're still seeing it:**
+
+1. Confirm your pair with `id -u`/`id -g`. If it isn't `1000`/`1000`, set
+   `DEV_UID`/`DEV_GID` in `.env` (see `.env.example`) and rebuild:
+   `docker compose -f docker/docker-compose.yml build api web engine`.
+2. **Environment that predates this fix.** The named volumes
+   (`*_node_modules`, `engine_build`, `engine_deps`, `engine_mix`,
+   `engine_hex`) still hold content written by the old root containers — a
+   brand-new named volume inherits the right owner on first mount, but an
+   existing one doesn't get fixed retroactively. Reset it once, either by
+   dropping the volumes (`docker compose -f docker/docker-compose.yml down
+   -v` — safe for these, they're reproducible build artifacts, never source
+   of truth) or by `chown`-ing them in place:
+   ```bash
+   docker run --rm -v brabo_api_app_node_modules:/v alpine chown -R "$(id -u):$(id -g)" /v
+   # repeat for the other node_modules/_build/deps/.mix/.hex volumes
+   ```
+3. For a file already written by an agent into a **`mounted`**-mode project
+   folder on the host, the fix is the same `sudo chown -R $USER <folder>`
+   this section used to prescribe for the whole repo — it's now a one-off
+   for pre-existing files, not the standing workaround.
 
 ---
 

@@ -1,5 +1,13 @@
 FROM hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3
 
+# UID/GID do usuário que roda o container — ver docker/api/Dockerfile, mesmo
+# mecanismo (docker-compose.yml `build.args` + .env.example). Fica no TOPO
+# do arquivo por convenção, mas o grupo/usuário só é criado depois de TODAS
+# as instalações que exigem root, no fim deste Dockerfile — trocar de
+# usuário cedo demais quebraria todo `apk add`/`pip install` daqui pra baixo.
+ARG DEV_UID=1000
+ARG DEV_GID=1000
+
 # git: Engine.Actions.Workspace precisa dele pra derivar o working tree
 # do bare repo local provisionado (Fase 2) antes de rodar ações de terminal.
 RUN apk add --no-cache build-base inotify-tools git
@@ -80,6 +88,27 @@ RUN pip install --no-cache-dir --break-system-packages yamllint \
 # fora do escopo da Fase 4a.
 RUN apk add --no-cache nodejs npm
 
+# Só cria grupo/usuário quando o UID/GID pedido diverge do que a imagem já
+# tem (mesma ressalva do docker/api/Dockerfile). USER abaixo referencia o
+# par numérico, nunca o nome.
+RUN (getent group "$DEV_GID" >/dev/null 2>&1 || addgroup -g "$DEV_GID" devuser) \
+  && (getent passwd "$DEV_UID" >/dev/null 2>&1 || adduser -D -u "$DEV_UID" -G "$(getent group "$DEV_GID" | cut -d: -f1)" devuser)
+
+# `mix local.hex`/`mix local.rebar` (no CMD abaixo) escrevem em $HOME/.hex e
+# $HOME/.mix — caminhos que o docker-compose.yml monta como volumes NOMEADOS
+# em /root/.hex e /root/.mix (RW, precisam sobreviver a rebuild). `_build` e
+# `deps` são o mesmo caso dentro do WORKDIR. Um volume nomeado NOVO herda o
+# dono do que já existe naquele caminho NA IMAGEM — por isso os diretórios
+# nascem aqui, ANTES do USER, já com o dono certo: sem isso, o primeiro
+# `mix deps.get` como devuser bateria em diretório ainda dono de root.
+# ENV HOME=/root mantém os caminhos batendo com os volumes do compose em vez
+# de exigir mexer neles — devuser não é root, mas é dono de /root aqui.
+RUN mkdir -p /root/.mix /root/.hex /workspace/apps/engine/_build /workspace/apps/engine/deps \
+  && chown -R "$DEV_UID:$DEV_GID" /root /workspace/apps/engine
+ENV HOME=/root
+
 WORKDIR /workspace/apps/engine
+
+USER ${DEV_UID}:${DEV_GID}
 
 CMD ["sh", "-c", "mix local.hex --force && mix local.rebar --force && mix deps.get && mix ecto.create && mix ecto.migrate && mix phx.server"]
