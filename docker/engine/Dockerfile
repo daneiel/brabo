@@ -31,21 +31,43 @@ RUN apk add --no-cache build-base inotify-tools git
 # ActionlintDetector` degrada graciosamente (`ValidateInfraFile` segue sem
 # validar), nunca quebra o turno — ver ADR 0039. Só valida GitHub Actions;
 # não há binário offline equivalente pra `.gitlab-ci.yml` (gap documentado).
+# *_SHA256: mesmos valores do docker/engine/Dockerfile.prod (mesmo binário,
+# mesma versão) -- ver o comentário lá sobre como foram conferidos (download
+# independente + checksums.txt publicado no release). Aqui o build continua
+# BEST-EFFORT: um checksum que não bate entra no MESMO ramo `|| echo` de uma
+# falha de rede ou binário ausente -- nunca quebra o build de dev --, mas o
+# binário deixa de existir, e os detectores tratam a ausência como sempre
+# trataram. Sem isto, um release comprometido ou MITM entregaria um binário
+# diferente do esperado e o container de dev rodaria os gates contra ele, em
+# silêncio.
 ARG GITLEAKS_VERSION=8.30.1
+ARG GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
 ARG HADOLINT_VERSION=2.12.0
+ARG HADOLINT_SHA256=56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d55010
 ARG ACTIONLINT_VERSION=1.7.12
+ARG ACTIONLINT_SHA256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+# `echo "$HASH  arquivo" | sha256sum -c -` é um pipe, e o hadolint pede
+# `-o pipefail` (DL4006). Não acrescenta nada aqui: `echo` de uma string fixa
+# não falha, e se o `curl` anterior tivesse falhado o `&&` já teria pulado
+# para o `|| echo "[build] ... nao instalado"` antes de chegar neste pipe.
+# Suprimido com o motivo escrito, não por hábito (mesmo padrão do
+# docker/web/Dockerfile.prod).
+# hadolint ignore=DL4006
 RUN apk add --no-cache --virtual .binaries-build curl tar \
   && (curl -fsSL -o /tmp/gitleaks.tar.gz \
         "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+      && echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c - \
       && tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks \
       && chmod +x /usr/local/bin/gitleaks \
       || echo "[build] gitleaks nao instalado -- SecOpsAgent detecta a ausencia em runtime") \
   && (curl -fsSL -o /usr/local/bin/hadolint \
         "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64" \
+      && echo "${HADOLINT_SHA256}  /usr/local/bin/hadolint" | sha256sum -c - \
       && chmod +x /usr/local/bin/hadolint \
       || echo "[build] hadolint nao instalado -- o gate de QA de infra pula o lint de Dockerfile") \
   && (curl -fsSL -o /tmp/actionlint.tar.gz \
         "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+      && echo "${ACTIONLINT_SHA256}  /tmp/actionlint.tar.gz" | sha256sum -c - \
       && tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint \
       && chmod +x /usr/local/bin/actionlint \
       || echo "[build] actionlint nao instalado -- o Workflows segue sem validar o pipeline gerado") \

@@ -710,6 +710,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   falta pra fechar a onda por completo — ver o CLAUDE.md pro estado
   atualizado.
 
+### CI
+
+- **ci,docker**: endurece a cadeia de suprimentos do CI (achados #1 e #8 da
+  revisão externa de 2026-08-28, `docs/explanation/backlog.md`). Todo
+  binário baixado por `curl` num release do GitHub (gitleaks, hadolint,
+  actionlint, kustomize, kubeconform em `ci.yml`; gitleaks, hadolint,
+  actionlint em `docker/engine/Dockerfile`, o de DEV — o `.prod` já fazia
+  isto) passa por `sha256sum -c` antes de ser usado — sem isto, um release
+  comprometido ou MITM entregaria um binário diferente do esperado, em
+  silêncio. As 9 GitHub Actions do workflow (`actions/checkout`,
+  `pnpm/action-setup`, `actions/setup-node`, `erlef/setup-beam`,
+  `actions/cache`/`cache/restore`, `docker/setup-buildx-action`,
+  `docker/bake-action`, `aquasecurity/trivy-action`) passam de tag mutável
+  para commit SHA fixo, com a versão preservada em comentário. Um passo
+  novo e barato no job `lint` compara `GITLEAKS_VERSION`/
+  `HADOLINT_VERSION`/`ACTIONLINT_VERSION` entre `ci.yml` e
+  `docker/engine/Dockerfile.prod` e falha se divergirem — o comentário que
+  prometia isso não era garantido por nada até agora.
+
 
 ## v3.1.0 — 2026-08-13
 
