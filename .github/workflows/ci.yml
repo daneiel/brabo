@@ -221,8 +221,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Testes da api
-        run: pnpm --filter api test
+      # `-- --coverage` liga o `@vitest/coverage-v8` (provider `v8`, nativo do
+      # vitest — não é lib nova). `apps/api/vitest.config.ts` tem
+      # `coverage.thresholds` gravado no valor medido hoje, arredondado para
+      # baixo (RATCHET, não meta): o próprio vitest reprova o job se a
+      # cobertura cair abaixo disso. `pnpm --filter api test` (sem
+      # `--coverage`) continua o script que devs usam no dia a dia, sem gerar
+      # relatório — só o CI mede o piso.
+      - name: Testes da api (com piso de cobertura)
+        run: pnpm --filter api test -- --coverage
 
       # O vitest transpila por SWC, que APAGA os tipos sem verificá-los — o
       # mesmo motivo do typecheck dos scripts de CI, logo abaixo. Aqui isso
@@ -233,8 +240,10 @@ jobs:
       - name: Typecheck da api
         run: pnpm --filter api typecheck
 
-      - name: Testes do web
-        run: pnpm --filter web test
+      # Mesmo mecanismo do passo acima: `apps/web/vite.config.ts` tem
+      # `coverage.thresholds` no valor medido hoje, arredondado para baixo.
+      - name: Testes do web (com piso de cobertura)
+        run: pnpm --filter web test -- --coverage
 
       # O web NÃO tinha typecheck no CI — só `lint` e `test`, e os dois passam
       # com erro de tipo (o vitest transpila por esbuild, que apaga os tipos
@@ -301,6 +310,13 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
+      # Só para `node scripts/ci/coverage-floor.ts` logo abaixo — o script não
+      # tem dependência nenhuma (só `node:fs`/`node:url`), então não precisa
+      # de `pnpm install` aqui, ao contrário do job `test-ts`.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124  # v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
@@ -359,9 +375,14 @@ jobs:
         working-directory: apps/engine
         run: mix compile --warnings-as-errors
 
-      - name: mix test
+      # `--cover` liga o `:cover` nativo do OTP (Mix já suporta — nenhuma lib
+      # nova). `apps/engine/mix.exs` zera o threshold embutido da ferramenta
+      # (`test_coverage: [summary: [threshold: 0]]`): quem decide passa/falha
+      # é o `coverage-floor.ts` logo abaixo, não uma constante de 90% que
+      # ninguém escolheu.
+      - name: mix test --cover
         working-directory: apps/engine
-        run: mix test 2>&1 | tee /tmp/mix-test.log
+        run: mix test --cover 2>&1 | tee /tmp/mix-test.log
 
       # Guarda do falso-verde: se qualquer teste foi EXCLUÍDO, algum binário do
       # passo acima não chegou e os gates não foram exercitados. Falhar aqui é
@@ -374,6 +395,12 @@ jobs:
             exit 1
           fi
           echo "ok: nenhum teste excluído"
+
+      # Piso (ratchet) sobre a % de cobertura do engine — ver
+      # scripts/ci/coverage-floor.ts e scripts/ci/coverage-floor.json para o
+      # valor gravado e a explicação de por que é ratchet, não meta.
+      - name: Piso de cobertura do engine
+        run: node scripts/ci/coverage-floor.ts < /tmp/mix-test.log
 
   audit:
     name: Auditoria de dependências

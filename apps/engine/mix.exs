@@ -11,6 +11,13 @@ defmodule Engine.MixProject do
       aliases: aliases(),
       deps: deps(),
       releases: releases(),
+      # O `:cover` do OTP tem um piso EMBUTIDO de 90% que reprova `mix test
+      # --cover` sozinho, sem relação com o piso do produto (medido em
+      # scripts/ci/coverage-floor.ts, no valor real de hoje). Threshold 0
+      # desliga esse veredito escondido: quem decide passa/falha é o script,
+      # testável e com o número atual — não uma constante da ferramenta que
+      # ninguém escolheu.
+      test_coverage: [summary: [threshold: 0]],
       # O CodeReloader é ferramenta de DEV. Declarado sem guarda, ele ia junto
       # pro release de produção — onde não há código pra recarregar.
       listeners: listeners(Mix.env())
