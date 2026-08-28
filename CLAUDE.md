@@ -433,7 +433,7 @@ daqui e o fechamento vai para o histórico.
   arquivo:linha e o teste que a cobre.
 - TODA mudança verifica se ESTE arquivo precisa mudar — Stack, Convenções,
   "O que NÃO fazer" e o estado das fases. Não pergunte se deve: verifique.
-  O gatilho é o mesmo do docmap, e o motivo é que o CLAUDE.md é o único
+  O gatilho é o mesmo do docmap, e o motivo é que este arquivo é o único
   documento lido em TODA sessão: desatualizado, ele não é neutro, ele
   ensina errado. Ele tem regra `warn` no docmap (não `block`, porque não
   mora sob docs/ e o checker valida glob e link dentro de docs/ — promover
