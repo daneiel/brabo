@@ -154,10 +154,18 @@ a rolagem faz no log é aritmética pura, e assim ele é testável sem TTY.
 > qual modo você está; `make k8s-down` volta para este. Detalhes em
 > [Primeiros passos](docs/getting-started.md#os-dois-modos-locais-não-coexistem).
 
-> Os containers de `api` e `web` rodam como root em desenvolvimento e escrevem
-> `node_modules` e `apps/api/dist` no bind mount. Para buildar no host depois,
-> use `docker compose exec api sh` ou rode uma vez
-> `sudo chown -R $USER apps/api/dist apps/*/node_modules`.
+> Os containers de `api`, `web` e `engine` rodam com o MESMO UID/GID do seu
+> usuário do host — nunca como root — para que `apps/api/dist` e o que mais
+> o agente escrever no bind mount já nasçam com o SEU dono. Descubra o seu
+> par com `id -u` e `id -g`; se não bater com o default (1000/1000, o mais
+> comum em máquina Linux de desenvolvedor único), grave `DEV_UID`/`DEV_GID`
+> no `.env` (ver `.env.example`) antes do primeiro `docker compose up`.
+> Ambiente que já existia de antes desta mudança: os volumes nomeados de
+> `node_modules`/`_build`/`deps`/`.mix`/`.hex` ainda têm conteúdo escrito por
+> root nos containers antigos — rode uma vez
+> `sudo chown -R $USER apps/api/dist apps/*/node_modules` (ou apague os
+> volumes com `docker compose down -v` e deixe o próximo `up` recriá-los) para
+> zerar o que ficou preso.
 
 ## Como funciona um turno
 

@@ -351,6 +351,46 @@ had the right `raise` in `runtime.exs` — the real defect was the compose
 masking it with a public fallback, and the fix was just removing that
 fallback, without touching any Elixir code.
 
+~~**External review 2026-08-28, item #13 — dev containers ran as root**~~ —
+**DONE**. `docker/api/Dockerfile`, `docker/web/Dockerfile` and
+`docker/engine/Dockerfile` had no `USER` directive, so everything they
+wrote to the bind mount (`node_modules`, `apps/api/dist`, and whatever an
+agent generates inside a project in `mounted` execution mode) landed
+root-owned on the host — the README and this doc's getting-started guide
+both documented a manual `sudo chown -R $USER ...` workaround instead of
+fixing the class of problem. `Dockerfile.prod` images were already
+non-root; this was dev-only.
+
+The fix maps the container's user to the HOST's UID/GID instead of running
+as root and cleaning up after: `DEV_UID`/`DEV_GID` build args (read from
+`.env`/the environment via `docker-compose.yml`, default `1000`/`1000`),
+named `DEV_*` on purpose because `${UID}` is read-only in bash and isn't
+exported to the environment by default — reading it straight from the
+compose file would always see empty. Each Dockerfile creates a
+group/user with that UID/GID only when it doesn't already collide with
+one the base image ships (`node:24-alpine` already has `node` at 1000:1000)
+and switches with `USER <uid>:<gid>` — numeric, so it doesn't matter which
+username ends up owning that id. All root-only steps (`apk add`, `pip
+install`, the gitleaks/hadolint/actionlint downloads) stay BEFORE the
+switch; in the engine image, `_build`/`deps`/`.mix`/`.hex` — homed under
+`/root` because `mix local.hex`/`mix local.rebar` write there, mounted as
+named volumes by `docker-compose.yml` — are `mkdir`+`chown`'d to the target
+UID/GID before `USER`, so a brand-new named volume inherits the right owner
+on first mount (Docker populates a new volume from whatever already exists
+at that path in the image).
+
+Proven by running the real stack (`DEV_UID=$(id -u) DEV_GID=$(id -g)
+docker compose -f docker/docker-compose.yml up --build postgres api web
+engine`): all three containers came up with zero `EACCES`/permission
+errors, and `apps/api/dist` on the host ended up owned by the host user,
+not root. One real wrinkle, not a blocker: named volumes created by an
+environment that predates this fix (`*_node_modules`, `engine_build`,
+`engine_deps`, `engine_mix`, `engine_hex`) still hold content written by
+the old root containers — upgrading needs a one-time `chown` of that
+existing volume data (or dropping the volumes with `docker compose down
+-v` and letting the next `up` recreate them), documented in the README and
+getting-started guide alongside the `DEV_UID`/`DEV_GID` instructions.
+
 ---
 
 ## Older backlog
@@ -529,6 +569,49 @@ that was missing was the PO READING `metricas-de-produto`; closed with the
 `listar_metricas_de_produto` tool and the pure functions extracted into
 `apps/api/src/application/services/funil-metrics.ts` (RN-407) — the
 table's last pending item, closing the audit.
+
+## External review backlog (2026-08-28)
+
+An external, static-reading review (`melhorias-brabo-2026-08-28.md`,
+working tree root, no suite executed) proposed 15 items. Checked against
+this file, `architecture.md`'s
+[technical debt table](../architecture.md#divida-tecnica),
+[achados-execucao-real.md](achados-execucao-real.md), ADR 0020 and ADR
+0027, plus the working tree itself. Same rule as the rest of this
+document: **no P1/P2/P3 invented here** — cost below is the reviewer's
+own estimate (P = one session, M = one small phase, G = its own phase
+with an ADR), not a priority ranking, and the priority decision belongs
+to the user.
+
+### Genuinely new (no prior record anywhere)
+
+| item | cost | evidence | note |
+|---|---|---|---|
+| Checksum on CI-downloaded binaries (gitleaks, hadolint, actionlint, kustomize, kubeconform) + GitHub Actions pinned by commit SHA instead of tag | P | `.github/workflows/ci.yml` has zero `sha256sum`/checksum verification; every action is pinned by mutable tag (`actions/checkout@v4`, `aquasecurity/trivy-action@v0.36.0`, etc.) | the checksum discipline already exists in the repo, just scoped to `Dockerfile.prod` ([ADR 0024](../adr/0024-fase5-imagens-producao-ci.md), [ADR 0039](../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.md)) — this extends it to `ci.yml`'s own downloads |
+| Pin `ollama/ollama:latest` in both composes | P | `docker/docker-compose.yml:81,118` and `docker/docker-compose.prod.yml:328,346` — the only unpinned image in either file |
+| Generate `apps/web/src/lib/api-types.ts` from the OpenAPI export instead of hand-copying | M | `apps/api/src/scripts/export-openapi.ts` exists; no `openapi:types` script and no `openapi-typescript` dependency anywhere; `api-types.ts`'s own header states it's hand-mirrored | the underlying problem (the `ActionType` union already diverged twice in production) is already in `architecture.md`'s tech-debt table — this is the missing fix, not a new problem |
+| Real-browser E2E (Playwright) for the critical path — cookie auth, CSRF, the Phoenix socket ticket, streaming | M | no `playwright.config.*`, no `e2e/`, no `@playwright/test` dependency anywhere in the repo | closes exactly the class of bug jsdom can't reach |
+| Decompose `SessionPage.tsx` / `ProjectSettingsTab.tsx` | G | `SessionPage.tsx` is 169 KiB with 25 test files importing it; `ProjectSettingsTab.tsx` is 90 KiB | already informally called a "disputed file" in [historico-de-fases.md](historico-de-fases.md), but never promoted to a tracked debt item; per the standing rule this is its own phase, never a drive-by refactor |
+| Cross-check pinned tool versions between `ci.yml` and `Dockerfile.prod` in CI itself | P | `ci.yml:45-46` already asserts by comment that the versions must match; today they do (GITLEAKS/HADOLINT/YAMLLINT/ACTIONLINT identical on both sides), but nothing enforces it automatically |
+| Coverage floor (ratchet at the current value) in CI | P–M | no `--coverage`/`--cover` flag and no threshold configured in any `vitest.config.*` or `mix.exs` across api/web/engine |
+| Split `business-rules.md` by domain; extend `readme-version.ts`'s pattern to generate the RN/ADR counts in prose instead of hand-typing them | M | `business-rules.md` is 650 KB with **334** `RN-XXX` headers going up to RN-466 — `README.md:200` still says "the 158 RNs," a far larger drift than aging text explains; the ADR count (115) in `README.md:211` is correct by comparison, so only the RN count needs fixing today |
+| Unify `AGENTS.md`/`CLAUDE.md` (generation or symlink + check) | P | not byte-identical as assumed — same size (35043 bytes), different MD5; one line already diverges (`AGENTS.md:444` vs `CLAUDE.md:444`, each self-referencing its own filename) — manual sync already has one live gap |
+| Repo hygiene: drop the leftover `KEYCLOAK_*` block from `.env` (already absent from `.env.example`) and retire `migrate-keycloak-users.ts`; move/archive `spike/session-engine` and `design_handoff_brabo/` out of the repo root; bind Neo4j's published ports to `127.0.0.1` in `docker-compose.prod.yml` | P | Keycloak was removed since Phase 7 ([ADR 0032](../adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)); `docker-compose.prod.yml:80-82` publishes `7474`/`7687` unbound | the review's `erl_crash.dump`/`.gitignore` concern is a non-issue — already covered by `apps/engine/.gitignore:17`, confirmed with `git check-ignore` |
+| Dev containers run as root; map the host uid/gid instead of the `sudo chown -R` workaround | M | no `USER` directive in the dev Dockerfiles (api/web/engine); `README.md:160` and `getting-started.md` already document the workaround as accepted fact | production images are already non-root ([ADR 0024](../adr/0024-fase5-imagens-producao-ci.md)) — this is dev-only |
+| Give `website/` its own lockfile, outside the product's `pnpm audit` | M | `website` is a `pnpm-workspace.yaml` member sharing the single lockfile; of the 13 security overrides, 8 trace to Docusaurus/website dependencies, 3 to the product side (`js-yaml` 5.x, `lodash`, `esbuild`), 1 is mixed (`undici`, also used by `apps/web`'s own `jsdom`) | isolating `website/` shrinks the audit, it doesn't zero it — the 3-4 product-side overrides stay either way |
+
+### Already-declared debt, still uncosted
+
+These three already have a row in `architecture.md`'s
+[technical debt table](../architecture.md#divida-tecnica) — the review
+didn't discover them, it estimated a cost for something already on
+record with none:
+
+| debt | already declared at | reviewer's cost estimate |
+|---|---|---|
+| Publish images to a registry so production deploy is executable end to end | `architecture.md:552`, [ADR 0027](../adr/0027-fase5-backup-hardening-release.md) | M |
+| Split `schema.ts` by aggregate (Drizzle supports multi-file schema with re-export) | `architecture.md:546` | M |
+| Golden-set (5–10 cases, loose expected output, pinned model, allow-failure) for the gate's semantic path | `architecture.md:548`, [ADR 0020](../adr/0020-destravar-gates-qa-secops.md) | not estimated by the reviewer |
 
 ## What this triage does NOT do
 
