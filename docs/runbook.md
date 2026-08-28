@@ -1183,61 +1183,6 @@ symptom in the
 openssl rand -base64 48
 ```
 
-### Migrating Keycloak users {#migracao-dos-usuarios-do-keycloak}
-
-Runs **once**, at the cutover release. Passwords don't migrate — it's
-unfeasible and undesirable
-([ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)): what the
-script does is issue, for every user who came from Keycloak and doesn't
-yet have a credential, a single-use **password-set** token.
-
-It does **not** connect to Keycloak. Since Phase 1 the api has kept the
-row in `users` and the RBAC bindings in its own database; Keycloak was
-only the issuer.
-
-```bash
-pnpm --filter api migrate:keycloak-users
-```
-
-It prints one line per user — `issued <email> — expires at <ISO>` or
-`skipped <email> — already has an open valid link` — and the total at
-the end.
-
-It's idempotent on two layers: it skips anyone who already has a row in
-`auth_credentials`, and skips anyone who already has a live
-`set_initial_password` token — otherwise a second run would invalidate
-(by superseding) the links already sent.
-
-> **Depends on `MAIL_TRANSPORT`** ([Real SMTP in `MailSender`](#smtp-real),
-> ADR 0096). On `log` (default, including in production) `MailSender`
-> does NOT print the token by default. Application logs go to Loki and
-> are retained for weeks; a password-set token there is a plain-text
-> takeover credential. What comes out is type, recipient, and expiry.
->
-> With `MAIL_TRANSPORT=log`, the only way to extract the links is to turn
-> on `AUTH_MAIL_LOG_TOKENS=true` on the api, run the script, and **turn it
-> off right after** — the api emits a `WARN` at boot for as long as the
-> variable is on, precisely so it doesn't survive into a copied
-> environment:
->
-> ```bash
-> kubectl -n brabo logs deploy/api | grep set_initial_password
-> ```
->
-> While the links are live, treat that log as a secret: whoever reads it
-> can set the password on those accounts.
->
-> With `MAIL_TRANSPORT=smtp`, the link goes straight to each migrated
-> user's inbox — nothing shows up in the log beyond `type`/recipient, and
-> there's nothing to extract.
-
-A migrated user who tries to log in before setting a password gets **the
-same 401 as always**, indistinguishable from a wrong password or a
-nonexistent email ([RN-032](business-rules.md#rn-032)) — and, silently, a
-new password-set email, under the same throttle as reset. There's no
-response that confirms "this account is legacy": that would be the
-system's most valuable enumeration signal.
-
 ### Account locked by lockout
 
 The lockout is short (30s to 15 minutes) and resolves itself: the
