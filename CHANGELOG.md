@@ -742,6 +742,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ganham `chown` ANTES do `USER`, pra um volume nomeado novo herdar o dono
   certo já no primeiro mount. `Dockerfile.prod` não muda — já era non-root
   desde o ADR 0024.
+- **web**: `ActionType` deixa de ser cópia à mão em `lib/api-types.ts` —
+  passa a ser gerado por `openapi-typescript` a partir de
+  `docs/reference/openapi.json` (`lib/api-types.generated.ts`, novo
+  `pnpm --filter web run openapi:types`, checado no CI contra o mesmo
+  `openapi.json` já validado por `docs:check`). Fecha item de
+  `docs/explanation/backlog.md` e o débito descrito em `architecture.md`:
+  a cópia manual já divergiu duas vezes em produção sem o compilador
+  notar (os três tipos do bootstrap de Gitflow; depois
+  `parallelize`/`raise_max_parallel`) — agora `Record<ActionType, ...>`
+  em `lib/aprovacoes.ts` reprova a compilação quando um tipo novo falta
+  (ADR 0116). Só `ActionType` migrou; o resto de `api-types.ts` segue
+  manual.
 
 ## v3.1.0 — 2026-08-13
 
