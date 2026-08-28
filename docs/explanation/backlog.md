@@ -521,6 +521,25 @@ REAFFIRMED by ADR 0104: the runner's real security boundary is
 authentication + the usual approval pipeline + user consent, never
 sandboxing.
 
+## CI supply-chain hardening (external review, 2026-08-28)
+
+Two numbered findings from an external review of the CI/CD supply chain,
+both closed in the same PR. The other numbers from that review are out of
+scope for this change and aren't detailed here — recording what isn't
+known would be inventing content this document never received.
+
+| # | Severity | Item | Evidence (file:line) |
+|---|---|---|---|
+| 1 | **CLOSED** | Every binary pulled from a GitHub release via `curl` (gitleaks, hadolint, actionlint in `.github/workflows/ci.yml`'s `lint`/`test-engine`/`secrets-scan` jobs; kustomize/kubeconform in its `manifests` job; gitleaks/hadolint/actionlint again in `docker/engine/Dockerfile`, the DEV image — `Dockerfile.prod` already did this) had no checksum check, so a compromised release or a MITM would silently swap the binary | `.github/workflows/ci.yml` (`GITLEAKS_SHA256`/`HADOLINT_SHA256`/`ACTIONLINT_SHA256`/`KUSTOMIZE_SHA256`/`KUBECONFORM_SHA256` in `env`, `sha256sum -c` after every `curl`); `docker/engine/Dockerfile` (`ARG *_SHA256`, same pattern as `Dockerfile.prod`, wrapped in the existing best-effort `\|\| echo` branch so a bad hash degrades instead of breaking dev builds) |
+| 8 | **CLOSED** | The comment beside `GITLEAKS_VERSION`/`HADOLINT_VERSION`/`ACTIONLINT_VERSION` in `ci.yml` promised these match `docker/engine/Dockerfile.prod` — nothing enforced it, so the two files could silently drift and the CI scanners would stop being the same binaries production runs | `.github/workflows/ci.yml`, job `lint`, step "Versões dos scanners batem com o Dockerfile.prod do engine" (`grep`-extracts both files and fails the job on any mismatch) |
+
+Lighter-weight, same review, not independently numbered: the 9 GitHub
+Actions `ci.yml` calls (`actions/checkout`, `pnpm/action-setup`,
+`actions/setup-node`, `erlef/setup-beam`, `actions/cache`/`cache/restore`,
+`docker/setup-buildx-action`, `docker/bake-action`,
+`aquasecurity/trivy-action`) moved from a mutable tag (`@v4`) to a fixed
+commit SHA, with the tag kept as a trailing comment for readability.
+
 ## Backlog of the team model (ADR 0085) — AUDIT CLOSED
 
 Output of the `fluxo.yml` × code audit

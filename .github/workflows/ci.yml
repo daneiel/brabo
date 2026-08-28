@@ -44,6 +44,8 @@ env:
   OTP_VERSION: '27.1.2'
   # Mesmas versões pinadas do docker/engine/Dockerfile.prod. Divergir daqui
   # significa testar contra um scanner diferente do que roda em produção.
+  # O passo "Versões dos scanners batem com o Dockerfile.prod" (job `lint`)
+  # falha o build se estas três divergirem do que está lá.
   GITLEAKS_VERSION: '8.30.1'
   HADOLINT_VERSION: '2.12.0'
   YAMLLINT_VERSION: '1.38.0'
@@ -51,6 +53,20 @@ env:
   # Manifests de Kubernetes (Fase 5, sessão 2).
   KUSTOMIZE_VERSION: '5.8.1'
   KUBECONFORM_VERSION: '0.7.0'
+  # SHA-256 de cada binário baixado por `curl` neste workflow — sem isto, um
+  # `curl` que baixa release do GitHub sem checar nada é supply-chain aberta
+  # (release comprometido ou MITM entregam um binário diferente do esperado,
+  # e ninguém percebe até o scanner falhar em rodar, ou pior, "funcionar").
+  # GITLEAKS_SHA256/HADOLINT_SHA256/ACTIONLINT_SHA256 são os MESMOS valores do
+  # docker/engine/Dockerfile.prod (mesmo binário, mesma versão); conferidos
+  # aqui de novo, por download independente, contra o checksums.txt publicado
+  # em cada release. KUSTOMIZE_SHA256/KUBECONFORM_SHA256 não têm par no
+  # Dockerfile.prod (o engine não usa os dois), mas seguem o mesmo método.
+  GITLEAKS_SHA256: '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb'
+  HADOLINT_SHA256: '56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d55010'
+  ACTIONLINT_SHA256: '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'
+  KUSTOMIZE_SHA256: '029a7f0f4e1932c52a0476cf02a0fd855c0bb85694b82c338fc648dcb53a819d'
+  KUBECONFORM_SHA256: 'c31518ddd122663b3f3aa874cfe8178cb0988de944f29c74a0b9260920d115d3'
 
 jobs:
   lint:
@@ -58,13 +74,38 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
-      - uses: pnpm/action-setup@v4
+      # Barato e cedo de propósito (nenhuma dependência instalada ainda): o
+      # comentário perto de GITLEAKS_VERSION/HADOLINT_VERSION/ACTIONLINT_VERSION
+      # promete que estas versões batem com docker/engine/Dockerfile.prod, mas
+      # nada FORÇAVA isso até agora — alguém podia atualizar um dos dois
+      # arquivos e o outro ficaria mudo, silenciosamente testando um scanner
+      # diferente do que roda em produção (achado #8 da revisão de
+      # 2026-08-28, docs/explanation/backlog.md).
+      - name: Versões dos scanners batem com o Dockerfile.prod do engine
+        run: |
+          set -euo pipefail
+          falhou=0
+          for var in GITLEAKS_VERSION HADOLINT_VERSION ACTIONLINT_VERSION; do
+            do_ci="$(grep -oP "^\s*${var}: '\K[^']+" .github/workflows/ci.yml)"
+            do_dockerfile="$(grep -oP "^ARG ${var}=\K.+" docker/engine/Dockerfile.prod)"
+            if [ "${do_ci}" != "${do_dockerfile}" ]; then
+              echo "::error::${var} diverge — ci.yml='${do_ci}' Dockerfile.prod='${do_dockerfile}'"
+              falhou=1
+            fi
+          done
+          if [ "${falhou}" -ne 0 ]; then
+            echo "As versões dos scanners têm que bater entre ci.yml e docker/engine/Dockerfile.prod."
+            exit 1
+          fi
+          echo "ok: GITLEAKS_VERSION/HADOLINT_VERSION/ACTIONLINT_VERSION batem entre ci.yml e Dockerfile.prod"
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -80,7 +121,7 @@ jobs:
       - name: Oxlint (web)
         run: pnpm --filter web lint
 
-      - uses: erlef/setup-beam@v1
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124  # v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
@@ -105,7 +146,7 @@ jobs:
       # Por isso `cache/restore`: mesma key e mesmos paths do escritor, zero
       # gravação. Cache frio aqui degrada para o que já era o caminho frio —
       # `mix deps.get` pela rede.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
           path: |
             apps/engine/deps
@@ -133,8 +174,10 @@ jobs:
       # infra usa nos artefatos que o agente propõe (ADR 0021).
       - name: Hadolint nos Dockerfiles de produção
         run: |
+          set -euo pipefail
           curl -fsSL -o /tmp/hadolint \
             "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64"
+          echo "${HADOLINT_SHA256}  /tmp/hadolint" | sha256sum -c -
           chmod +x /tmp/hadolint
           /tmp/hadolint docker/api/Dockerfile.prod docker/engine/Dockerfile.prod \
             docker/web/Dockerfile.prod docker/backup/Dockerfile.prod
@@ -165,13 +208,13 @@ jobs:
       DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo
       TEST_DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -256,9 +299,9 @@ jobs:
       POSTGRES_PASSWORD: brabo
       POSTGRES_HOST: localhost
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
-      - uses: erlef/setup-beam@v1
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124  # v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
@@ -267,7 +310,7 @@ jobs:
       # Este é o único job que compila (`mix compile` + `mix test`), então é o
       # único cujo `_build` vale ser guardado. O porquê de não distribuir a
       # gravação está no comentário do `lint`.
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
           path: |
             apps/engine/deps
@@ -293,13 +336,16 @@ jobs:
           set -euxo pipefail
           curl -fsSL -o /tmp/gitleaks.tar.gz \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c -
           sudo tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
           sudo chmod 0755 /usr/local/bin/gitleaks
           sudo curl -fsSL -o /usr/local/bin/hadolint \
             "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64"
+          echo "${HADOLINT_SHA256}  /usr/local/bin/hadolint" | sha256sum -c -
           sudo chmod 0755 /usr/local/bin/hadolint
           curl -fsSL -o /tmp/actionlint.tar.gz \
             "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  /tmp/actionlint.tar.gz" | sha256sum -c -
           sudo tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint
           sudo chmod 0755 /usr/local/bin/actionlint
           pipx install "yamllint==${YAMLLINT_VERSION}"
@@ -339,13 +385,13 @@ jobs:
     # nosso ou porque uma CVE foi publicada num pacote de terceiro entre ontem
     # e hoje — que acontece sem ninguém tocar no repo.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -360,7 +406,7 @@ jobs:
       - name: pnpm audit (workspace)
         run: pnpm audit --audit-level critical
 
-      - uses: erlef/setup-beam@v1
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124  # v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
@@ -368,7 +414,7 @@ jobs:
       # Só restaura, pelo mesmo motivo detalhado no job `lint`: o escritor do
       # cache do Elixir é o `test-engine`, e gravar daqui poria um `_build`
       # vazio sob a key dele.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
           path: |
             apps/engine/deps
@@ -398,7 +444,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           # Histórico completo: um segredo removido no último commit continua
           # recuperável e precisa ser encontrado.
@@ -444,6 +490,7 @@ jobs:
           set -euxo pipefail
           curl -fsSL -o /tmp/gitleaks.tar.gz \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c -
           sudo tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
           sudo chmod 0755 /usr/local/bin/gitleaks
 
@@ -455,16 +502,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
       - name: Instalar kustomize e kubeconform
         run: |
           set -euxo pipefail
           curl -fsSL -o /tmp/kustomize.tar.gz \
             "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          echo "${KUSTOMIZE_SHA256}  /tmp/kustomize.tar.gz" | sha256sum -c -
           sudo tar -xzf /tmp/kustomize.tar.gz -C /usr/local/bin kustomize
           curl -fsSL -o /tmp/kubeconform.tar.gz \
             "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  /tmp/kubeconform.tar.gz" | sha256sum -c -
           sudo tar -xzf /tmp/kubeconform.tar.gz -C /usr/local/bin kubeconform
           sudo chmod 0755 /usr/local/bin/kustomize /usr/local/bin/kubeconform
 
@@ -592,9 +641,9 @@ jobs:
     # O paralelismo vem do `bake`, não de uma matriz de jobs — cada job da
     # matriz teria seu próprio daemon, e aí as imagens precisariam trafegar.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
       # Os quatro alvos em PARALELO num builder só. Em sequência somavam ~6
       # dos 8 minutos do job (api 130s, engine 160s, web 49s, backup 20s).
@@ -605,7 +654,7 @@ jobs:
       # O que cada alvo constrói, com que cache e com que tag está no
       # docker-bake.hcl da raiz, que também é o que se roda na mão.
       - name: Build das quatro imagens (em paralelo)
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@5be5f02ff8819ecd3092ea6b2e6261c31774f2b4  # v6
         with:
           files: docker-bake.hcl
           targets: default
@@ -626,7 +675,7 @@ jobs:
           done
 
       - name: Trivy na api
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           image-ref: brabo-api:prod
           format: table
@@ -643,7 +692,7 @@ jobs:
           exit-code: '1'
 
       - name: Trivy no engine
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           image-ref: brabo-engine:prod
           format: table
@@ -660,7 +709,7 @@ jobs:
           exit-code: '1'
 
       - name: Trivy no web
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           image-ref: brabo-web:prod
           format: table
@@ -677,7 +726,7 @@ jobs:
           exit-code: '1'
 
       - name: Trivy no backup
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           image-ref: brabo-backup:prod
           format: table
