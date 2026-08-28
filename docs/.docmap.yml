@@ -97,6 +97,11 @@ rules:
   #
   # O `docs:` aponta para os ARQUIVOS, não para o diretório: o docmap valida
   # com existsSync e um diretório passaria trivialmente.
+  # `apps/web/src/lib/api-types.generated.ts` entrou na MESMA regra, não numa
+  # nova: ele é o segundo andar do `openapi.json` (openapi-typescript rodando
+  # sobre ele), watch idêntico e mesmo remédio de "não edite à mão" — separar
+  # duplicaria o `watch` e um dia um dos dois divergiria do outro. Ver ADR
+  # 0116.
   - id: referencia-openapi
     watch:
       - "apps/api/src/**/*.controller.ts"
@@ -105,9 +110,10 @@ rules:
     docs:
       - "docs/reference/openapi.json"
       - "docs/reference/api/.openapi-manifest.json"
+      - "apps/web/src/lib/api-types.generated.ts"
     generated: true
     severity: block
-    note: "Rode `pnpm docs:generate`. O openapi.json e os MDX saem do código, nunca da mão."
+    note: "Rode `pnpm docs:generate` e `pnpm --filter web run openapi:types`. O openapi.json, os MDX e os tipos do web saem do código, nunca da mão."
 
   # O SITE era ponto cego do mapa: `website/**` não aparecia em nenhuma regra, e
   # mexer no config do Docusaurus não cobrava documentação nenhuma. Isso não é

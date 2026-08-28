@@ -2,6 +2,18 @@
 // mantidos aqui em vez de importados diretamente (apps/web não referencia
 // código server-side; packages/shared cobre só os tipos genuinamente
 // compartilhados hoje, como HealthStatus/GitProviderName).
+//
+// `ActionType`, abaixo, NÃO é mais cópia à mão: sai de
+// `./api-types.generated.ts`, gerado por `pnpm --filter web run openapi:types`
+// a partir de `docs/reference/openapi.json` (por sua vez gerado de
+// `apps/api` via `pnpm docs:generate` — ver docs/.docmap.yml, regra
+// `referencia-openapi`). É a correção estrutural para a divergência que já
+// aconteceu duas vezes em produção (os três tipos do bootstrap de Gitflow, e
+// depois `parallelize`/`raise_max_parallel`) — ver docs/architecture.md e
+// docs/adr/0116-tipos-do-web-gerados-do-openapi.md. O resto deste arquivo
+// segue manual: não é razoável nem seguro regerar as ~1600 linhas de uma vez
+// sem entender consumidor a consumidor.
+import type { components } from './api-types.generated';
 
 export type Role = 'owner' | 'maintainer' | 'developer' | 'viewer';
 
@@ -295,43 +307,29 @@ export interface Page<T> {
   nextCursor: number | null;
 }
 
-// Os 15 do backend (`apps/api/src/domain/actions/decide.ts`), na mesma ordem.
+// Os 17 do backend (`ACTION_TYPES` em `apps/api/src/domain/actions/decide.ts`),
+// via o schema OpenAPI de `ProposedActionResponseDto.actionType` — é o DTO
+// que carrega o enum completo (`propose-action.dto.ts` e
+// `create-action-internal.dto.ts` também o declaram, mas são a mesma união).
 //
-// Esta união já foi um subconjunto — só os que a UI renderiza de forma
-// dedicada —, com a nota de que "os demais caem no fallback genérico do
-// ApprovalCard". Esse fallback não existia: o `ACTION_ICON[actionType]` do
-// ApprovalCard devolvia `undefined` e derrubava a tela inteira da sessão.
-// Como o bootstrap de Gitflow propõe `git_repo_create`, `git_branch_create` e
-// `git_branch_protect`, TODO projeto criado num provider ficava com a sessão
-// impossível de abrir — e o tipo estreito impedia o compilador de ver isso.
+// Esta união já foi cópia manual, e cópia manual já divergiu duas vezes em
+// produção sem ninguém notar: primeiro os três tipos do bootstrap de Gitflow
+// (`git_repo_create`/`git_branch_create`/`git_branch_protect`), que faziam
+// TODO projeto novo ficar com a sessão impossível de abrir — o
+// `ACTION_ICON[actionType]` do ApprovalCard devolvia `undefined` e derrubava a
+// tela inteira —, depois `parallelize`/`raise_max_parallel` da FASE 14d. As
+// duas vezes o compilador não pegou nada, porque `apps/api` não é dependência
+// de `apps/web`: a lista do backend era um arquivo que o web não importava.
 //
-// Com a união completa os mapas do ApprovalCard voltam a ser exaustivos, e é o
-// compilador que cobra a entrada de qualquer tipo novo.
-//
-// E a união VOLTOU a ficar defasada: `parallelize` e `raise_max_parallel`
-// entraram no backend com a FASE 14d e ninguém as trouxe para cá, porque o
-// compilador só cobra o que ele consegue ver — a lista do backend é um arquivo
-// que o web não importa. Por isso o teste da FASE 19
-// (`aprovacoes.test.ts`) lê `ACTION_TYPES` do decide.ts e reprova quando os
-// dois lados divergem, em vez de confiar numa lista escrita à mão.
+// Agora É importado — via o gerado, nunca digitado à mão de novo — e os mapas
+// exaustivos do ApprovalCard (`Record<ActionType, ...>` em
+// `lib/aprovacoes.ts`) passam a ser cobrados pelo PRÓPRIO compilador quando um
+// tipo novo aparece no OpenAPI. `aprovacoes.test.ts` (FASE 19) continua
+// existindo: ele não cobre mais só a EXISTÊNCIA da entrada (isso o compilador
+// já cobre), mas o CONTEÚDO — toda entrada tem frase em português, não vazia,
+// terminada em ponto.
 export type ActionType =
-  | 'terminal'
-  | 'git_commit'
-  | 'git_push'
-  | 'pr_open'
-  | 'spend'
-  | 'git_repo_create'
-  | 'git_branch_create'
-  | 'git_branch_protect'
-  | 'write_file'
-  | 'open_adr_pr'
-  | 'git_merge'
-  | 'open_infra_pr'
-  | 'instruction_patch'
-  | 'parallelize'
-  | 'raise_max_parallel'
-  | 'propose_execution_plan'
-  | 'assess_implementability';
+  components['schemas']['ProposedActionResponseDto']['actionType'];
 
 export type ActionStatus =
   | 'pending'

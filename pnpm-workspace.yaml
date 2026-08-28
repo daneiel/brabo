@@ -8,7 +8,7 @@ packages:
   # sem build. Os `.mjs` ao lado não são afetados: `.mjs` é ESM sempre.
   - scripts
 
-# `website/` NÃO é membro do workspace (ADR 0116) — tem `pnpm-lock.yaml`
+# `website/` NÃO é membro do workspace (ADR 0117) — tem `pnpm-lock.yaml`
 # PRÓPRIO, instalado com `pnpm install` de dentro de `website/`, nunca com
 # `pnpm --filter website` (esse verbo exige membership). O motivo é isolar o
 # `pnpm audit` do produto da árvore de dependências do Docusaurus, que nunca
@@ -32,7 +32,7 @@ packages:
 # `pnpm audit` reprovando é o sinal de que ainda são necessárias, e o
 # `pnpm why` mostra se ainda há quem peça a antiga.
 overrides:
-  # MISTA (ADR 0116) — duplicada em `website/package.json` (`pnpm.overrides`).
+  # MISTA (ADR 0117) — duplicada em `website/package.json` (`pnpm.overrides`).
   # `pnpm why js-yaml -r` mostra DOIS pais reais, não só o `@nestjs/swagger`
   # que o comentário original citava: o `website`, via `@redocly/openapi-core`
   # (`docusaurus-plugin-openapi-docs`). As duas árvores agora têm lockfile
@@ -52,7 +52,7 @@ overrides:
   # Entrou primeiro no #70 como `js-yaml@5.2.1: 5.2.2`; virou faixa aqui pelo
   # motivo explicado na disciplina 1 acima.
   js-yaml@>=5.0.0 <5.2.2: 5.2.2
-  # MISTA (ADR 0116) — duplicada em `website/package.json`. `pnpm why -r`
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. `pnpm why -r`
   # mostra que esta faixa TAMBÉM entra por `apps/api`, via `eslint@9` →
   # `@eslint/eslintrc` (`js-yaml: ^4.1.0`) — não só pelo subárvore do
   # `docusaurus-theme-openapi-docs` que o comentário original citava. Sem a
@@ -68,7 +68,7 @@ overrides:
   # bastava: a correção saiu na 4.3.1, então o teto virou 4.3.1 e a faixa
   # cresceu para cobrir a 4.3.0 também.
   js-yaml@>=4.0.0 <4.3.1: 4.3.1
-  # MISTA (ADR 0116) — duplicada em `website/package.json`. `mermaid` é
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. `mermaid` é
   # dependência de RUNTIME do próprio `apps/web` (ADR 0068, diagrama C4), não
   # só do `website` — `pnpm why mermaid -r` mostra os dois pais.
   #
@@ -79,7 +79,7 @@ overrides:
   # a versão real. Faixa presa em `11.0.0-alpha.1` para cobrir a mais larga
   # das cinco advisories.
   mermaid@>=11.0.0-alpha.1 <11.16.1: 11.16.1
-  # MISTA (ADR 0116) — duplicada em `website/package.json`. `vite` (usado por
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. `vite` (usado por
   # `apps/web`, não só pelo `website`) declara `postcss: ^8.5.17` como
   # dependência própria — faixa que INCLUI a vulnerável. `pnpm why postcss -r`
   # confirma `web` como pai, ao lado do subárvore do
@@ -90,7 +90,7 @@ overrides:
   # docusaurus-theme-openapi-docs) — todos pedem `postcss: ^8.4`, então
   # qualquer 8.5.23 serve.
   postcss@<8.5.23: 8.5.23
-  # MISTA (ADR 0116) — duplicada em `website/package.json`. `pnpm why
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. `pnpm why
   # fast-uri -r` mostra `ajv@8.18.0` também entrando por `apps/api`, via
   # `@angular-devkit/core` → `@nestjs/schematics` → `@nestjs/cli`
   # (devDependency), não só pelo `@redocly/ajv` do `website` que o comentário
@@ -101,7 +101,7 @@ overrides:
   # desatualizada, a outra já era 3.1.5.
   fast-uri@>=3.0.0 <3.1.5: 3.1.5
   # MISTA — já era o exemplo canônico de override que serve aos dois lados
-  # (ADR 0116 mantém a duplicação em `website/package.json`).
+  # (ADR 0117 mantém a duplicação em `website/package.json`).
   #
   # HIGH + 3 MODERATE · CVE-2026-13697, -14643, -15157, -16728, -16729
   # (alertas #15-#19). Entra por `cheerio` (busca local do Docusaurus, no
@@ -109,7 +109,7 @@ overrides:
   # ambiente de teste do vitest. Ambos pedem `undici` em faixa `^7.x`, então
   # 7.29.0 satisfaz os dois sem tocar o `jsdom` em si.
   undici@>=7.0.0 <7.29.0: 7.29.0
-  # MISTA (ADR 0116) — duplicada em `website/package.json`. `@docusaurus/core`
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. `@docusaurus/core`
   # declara `lodash` DIRETO, então o `website` também precisa da correção, não
   # só a api via `@nestjs/swagger` que o comentário original citava.
   #
@@ -117,14 +117,14 @@ overrides:
   # NÃO existe no registry — a linha 4.17 parou na 4.17.23 e a correção saiu na
   # 4.18.0. Daí o alvo ser a 4.18.1, que o `@nestjs/swagger` já traz.
   lodash@<4.18.0: 4.18.1
-  # WEBSITE-EXCLUSIVA (ADR 0116) — `pnpm why serialize-javascript -r` não
+  # WEBSITE-EXCLUSIVA (ADR 0117) — `pnpm why serialize-javascript -r` não
   # mostra nenhum pai fora da árvore do `website`. Saiu daqui, entrou em
   # `website/package.json`; não é mais necessária no lockfile do produto.
   #
   # HIGH · GHSA-5c6j-r48x-rmvq e moderada GHSA-qj8w-gfj5-8c6v. Entra pelos
   # plugins de webpack do Docusaurus. A 7.x pede Node >= 20; o CI roda 24.
   # (comentário preservado em `website/package.json`, onde a entrada vive agora)
-  # WEBSITE-EXCLUSIVA (ADR 0116) — `pnpm why yaml -r` só mostra a árvore
+  # WEBSITE-EXCLUSIVA (ADR 0117) — `pnpm why yaml -r` só mostra a árvore
   # `oas-linter`/`oas-validator`/`swagger2openapi` do `website`; a 2.9.0 que o
   # resto do workspace usa direto nunca entra nesta faixa. Saiu daqui, entrou
   # em `website/package.json`.
@@ -132,7 +132,7 @@ overrides:
   # MODERATE · GHSA-48c2-rrv3-qjmp. Patch dentro da 1.x — não confundir com o
   # `yaml` 2.9.0 que o workspace usa direto, fora da faixa.
   # (comentário preservado em `website/package.json`, onde a entrada vive agora)
-  # MISTA (ADR 0116) — duplicada em `website/package.json`. `mermaid` (agora
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. `mermaid` (agora
   # dependência de `web` também, não só do `website`) é quem pede `uuid` — o
   # `pnpm why uuid -r` mostra os dois lados.
   #
@@ -146,7 +146,7 @@ overrides:
   # devolve um uuid.
   uuid@<11.1.1: 11.1.1
   # PRODUTO-EXCLUSIVA — `pnpm why esbuild -r` não mostra nenhum pai dentro da
-  # árvore do `website`; não precisa de entrada equivalente lá (ADR 0116).
+  # árvore do `website`; não precisa de entrada equivalente lá (ADR 0117).
   #
   # MODERATE · GHSA-67mh-4wv8-2f99 — o dev-server do esbuild aceita requisição
   # de qualquer origem. Entra por `@esbuild-kit/core-utils`, que o drizzle-kit
@@ -156,7 +156,7 @@ overrides:
   # drizzle-kit só usa a lib para transpilar `drizzle.config.ts`. Mesmo assim
   # vale fechar — o alerta some e a 0.25.12 já estava na árvore por outro pai.
   esbuild@<0.24.3: 0.25.12
-  # MISTA (ADR 0116) — duplicada em `website/package.json`. O `nanoid` chega
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. O `nanoid` chega
   # SÓ pelo `postcss@8.5.23` acima, e esse `postcss` agora tem pai dos dois
   # lados (`web` via `vite`, `website` via `postcss-preset-env`) — então os
   # dois lockfiles precisam da mesma trava.
@@ -170,7 +170,7 @@ overrides:
   # um override acima: os dois convivem, um fixa o pai e o outro a
   # transitiva dele.
   nanoid@>=3.0.0 <3.3.18: 3.3.18
-  # MISTA (ADR 0116) — duplicada em `website/package.json`. Chega pelo
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. Chega pelo
   # `mermaid@11.16.1` acima, que agora tem pai dos dois lados — mesma lógica
   # do `uuid`.
   #

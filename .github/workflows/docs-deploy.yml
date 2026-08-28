@@ -93,7 +93,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # `website/` NÃO é mais membro do workspace da raiz (ADR 0116) — tem
+      # `website/` NÃO é mais membro do workspace da raiz (ADR 0117) — tem
       # `pnpm-lock.yaml` PRÓPRIO, e o install acima não o alcança. Sem este
       # passo separado, `pnpm docs:build` (agora `pnpm --dir website build`)
       # falharia por `node_modules` ausente.

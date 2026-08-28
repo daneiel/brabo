@@ -94,6 +94,8 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter web lint` | `oxlint` |
 | `pnpm --filter web preview` | `vite preview` |
 | `pnpm --filter web test` | `vitest run` |
+| `pnpm --filter web openapi:types` | `openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts` |
+| `pnpm --filter web openapi:types:check` | `openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts --check` |
 
 ## website — `website/package.json`
 
@@ -134,4 +136,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-89 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+91 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
