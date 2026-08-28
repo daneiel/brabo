@@ -47,7 +47,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | pnpm bootstrap | Menu de terminal sobre comandos existentes; Reset total | histórico |
 | Faixa de atividade do turno | Narração em tempo real do turno dos 6 conversacionais; teto de iterações não termina mais calado | RN-459/460 |
 | Ollama nativo / pull de Hugging Face | Bootstrap dev pergunta uma vez e persiste o modo do Ollama em `.env`; navegador de modelos do Hub com pull em duas etapas e allowlist de publisher oficial | RN-461..463, ADR 0114–0115 |
-| Lockfile próprio do website | `website/` sai do workspace pnpm da raiz — lockfile e overrides de segurança isolados, `pnpm audit` do produto para de reportar a árvore do Docusaurus | ADR 0116 |
+| Lockfile próprio do website | `website/` sai do workspace pnpm da raiz — lockfile e overrides de segurança isolados, `pnpm audit` do produto para de reportar a árvore do Docusaurus | ADR 0117 |
 
 ## Estado atual e aberto
 
@@ -149,7 +149,7 @@ daqui e o fechamento vai para o histórico.
   resolve seu próprio addon por um `require()` de caminho COMPUTADO que o
   Bun não consegue embutir sozinho
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev.
-  `website/` NÃO é membro do workspace (ADR 0116) — lockfile próprio em
+  `website/` NÃO é membro do workspace (ADR 0117) — lockfile próprio em
   `website/pnpm-workspace.yaml`/`website/pnpm-lock.yaml`, instalado com
   `pnpm install` de DENTRO de `website/`, nunca `pnpm --filter website` (usa
   `pnpm --dir website` nos scripts `docs:*`). Isola o `pnpm audit` do

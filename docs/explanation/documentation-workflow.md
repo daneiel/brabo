@@ -332,7 +332,7 @@ The whole design, with the discarded alternatives, is in
 
 ## Running it on your machine
 
-`website/` has its own `pnpm-lock.yaml` since [ADR 0116](../adr/0116-lockfile-proprio-para-o-website.md) —
+`website/` has its own `pnpm-lock.yaml` since [ADR 0117](../adr/0117-lockfile-proprio-para-o-website.md) —
 the root `pnpm install` no longer reaches it, so the first time (or after its
 lockfile changes) needs one extra step:
 

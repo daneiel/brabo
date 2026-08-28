@@ -744,7 +744,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   desde o ADR 0024.
 
 - **ci,deps**: `website/` sai do workspace pnpm da raiz e ganha
-  `pnpm-lock.yaml` próprio (ADR 0116) — item "website lockfile" da revisão
+  `pnpm-lock.yaml` próprio (ADR 0117) — item "website lockfile" da revisão
   externa de 2026-08-28 (`docs/explanation/backlog.md`). `pnpm audit` da
   raiz para de reportar a árvore inteira do Docusaurus, que nunca chega a
   nenhuma imagem. Auditar os 13 overrides de segurança com `pnpm why

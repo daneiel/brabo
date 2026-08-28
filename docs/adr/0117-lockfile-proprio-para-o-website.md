@@ -1,4 +1,4 @@
-# ADR 0116 — `website/` gets its own lockfile, out of the product's `pnpm audit`
+# ADR 0117 — `website/` gets its own lockfile, out of the product's `pnpm audit`
 
 - **Status:** accepted
 - **Date:** 2026-08-28

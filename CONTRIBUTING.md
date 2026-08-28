@@ -81,7 +81,7 @@ Três regras que caem daí:
   teste que a cobre.
 
 Rodar o site de documentação localmente — `website/` tem lockfile próprio
-desde o [ADR 0116](docs/adr/0116-lockfile-proprio-para-o-website.md), então o
+desde o [ADR 0117](docs/adr/0117-lockfile-proprio-para-o-website.md), então o
 `pnpm install` da raiz (Setup, acima) não instala as dependências dele:
 
 ```bash

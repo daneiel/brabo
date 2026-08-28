@@ -183,7 +183,7 @@ Source: each package's \`package.json\` and the root \`Makefile\`.
     if (scripts.length === 0) continue;
     total += scripts.length;
 
-    // `website` saiu do workspace da raiz (ADR 0116): `--filter` exige
+    // `website` saiu do workspace da raiz (ADR 0117): `--filter` exige
     // membership, `--dir` não — aponta pro diretório e roda como se o pnpm
     // tivesse começado ali.
     const prefixo =
@@ -524,7 +524,7 @@ function hashesDaReferencia() {
  */
 function gerarReferenciaApi() {
   if (!CHECAR) {
-    // `website` saiu do workspace da raiz (ADR 0116): `--filter` exige
+    // `website` saiu do workspace da raiz (ADR 0117): `--filter` exige
     // membership, `--dir` não.
     for (const comando of ['clean-api-docs', 'gen-api-docs']) {
       execFileSync(
