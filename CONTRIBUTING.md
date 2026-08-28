@@ -80,9 +80,12 @@ Três regras que caem daí:
   [`docs/business-rules.md`](docs/business-rules.md), com `arquivo:linha` e o
   teste que a cobre.
 
-Rodar o site de documentação localmente:
+Rodar o site de documentação localmente — `website/` tem lockfile próprio
+desde o [ADR 0116](docs/adr/0116-lockfile-proprio-para-o-website.md), então o
+`pnpm install` da raiz (Setup, acima) não instala as dependências dele:
 
 ```bash
+cd website && pnpm install && cd ..  # só na primeira vez, ou quando o lockfile mudar
 pnpm docs:start     # servidor de desenvolvimento
 pnpm docs:build     # build de produção — link quebrado FALHA o build
 ```
@@ -101,7 +104,7 @@ cópia inteira de `docs/` que passa a envelhecer sozinha.
 Quando fizer sentido, o comando é:
 
 ```bash
-pnpm --filter website docusaurus docs:version 0.2
+pnpm --dir website docusaurus docs:version 0.2
 ```
 
 E a regra de **quando**: só em **major ou minor**, nunca em patch. `0.2`,

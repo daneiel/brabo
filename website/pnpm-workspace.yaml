@@ -1,0 +1,73 @@
+# Mesmas decisões do `allowBuilds` da raiz (comentários completos lá),
+# reproduzidas aqui porque este lockfile é isolado e o pnpm perguntou por
+# elas na primeira instalação:
+#   - `@swc/core: true` — o `@docusaurus/faster` (auto-instalado como peer)
+#     usa o binding nativo de verdade para o modo rápido do build; sem o
+#     build, cai para um binário ausente, não para um fallback silencioso.
+#   - `@parcel/watcher: false`, `core-js: false`,
+#     `postman-code-generators: false` — nenhum dos três faz nada que o
+#     build ou o `docusaurus gen-api-docs` precise (watcher de modo
+#     watch-only, mensagem de patrocínio, `npm install` aninhado por
+#     gerador). Mesmo motivo de cada um na raiz.
+allowBuilds:
+  '@parcel/watcher': false
+  '@swc/core': true
+  core-js: false
+  postman-code-generators: false
+# `website/` NÃO é membro do workspace da raiz (ADR 0116) — este arquivo faz
+# dele o PRÓPRIO root do pnpm (pacote único, sem `packages:`), com lockfile
+# independente. `pnpm install` de dentro de `website/` já resolve contra
+# ESTE arquivo, e não sobe até `../pnpm-workspace.yaml`, porque o pnpm usa o
+# mais PRÓXIMO na árvore.
+#
+# Overrides de SEGURANÇA — mesma disciplina do `pnpm-workspace.yaml` da raiz
+# (chave é a faixa vulnerável, presa à linha maior afetada). Cada entrada
+# aqui tem uma origem PRÓPRIA dentro da árvore de dependências do
+# Docusaurus — não é cópia cega da raiz. Onde a mesma faixa também protege
+# `apps/api`/`apps/web` (lockfile agora separado), a entrada existe nos dois
+# arquivos; onde é exclusiva de um lado, existe só lá. Ver ADR 0116 para o
+# levantamento completo (`pnpm why <pacote> -r`) de qual pacote resolve por
+# qual caminho.
+overrides:
+  # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/api`, via
+  # `@nestjs/swagger`, e aqui via `@redocly/openapi-core`
+  # (`docusaurus-plugin-openapi-docs`).
+  js-yaml@>=5.0.0 <5.2.2: 5.2.2
+  # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/api`, via
+  # `eslint` → `@eslint/eslintrc`, e aqui via `openapi-to-postmanv2` /
+  # `@11ty/gray-matter` (subárvore do `docusaurus-theme-openapi-docs`).
+  js-yaml@>=4.0.0 <4.3.1: 4.3.1
+  # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/web`, dependência de
+  # runtime direta (ADR 0068), e aqui via `@docusaurus/theme-mermaid`.
+  mermaid@>=11.0.0-alpha.1 <11.16.1: 11.16.1
+  # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/web`, via `vite`
+  # (`postcss: ^8.5.17`), e aqui via `postcss-preset-env` (transitivo do
+  # `docusaurus-theme-openapi-docs`).
+  postcss@<8.5.23: 8.5.23
+  # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/api`, via `ajv` →
+  # `@angular-devkit/core`, e aqui via `@redocly/ajv`.
+  fast-uri@>=3.0.0 <3.1.5: 3.1.5
+  # Ver `../pnpm-workspace.yaml` — já era o caso canônico de origem dupla:
+  # `jsdom` em `apps/web`, `cheerio` aqui
+  # (`@easyops-cn/docusaurus-search-local`).
+  undici@>=7.0.0 <7.29.0: 7.29.0
+  # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/api`, via
+  # `@nestjs/swagger`, e aqui direto via `@docusaurus/core`.
+  lodash@<4.18.0: 4.18.1
+  # WEBSITE-EXCLUSIVA (ADR 0116): `pnpm why serialize-javascript -r` (na
+  # árvore compartilhada, antes da separação) não mostrava nenhum pai fora
+  # daqui. Entra pelos plugins de webpack do Docusaurus.
+  serialize-javascript@<7.0.5: 7.0.7
+  # WEBSITE-EXCLUSIVA (ADR 0116): `pnpm why yaml -r` só mostrava a árvore
+  # `oas-linter`/`oas-validator`/`swagger2openapi`. Não confundir com a
+  # `yaml` 2.x que o Docusaurus usa direto, fora desta faixa.
+  yaml@>=1.0.0 <1.10.3: 1.10.3
+  # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/web`, via `mermaid`,
+  # e aqui via `postman-collection`/`sockjs` (dev-server do webpack).
+  uuid@<11.1.1: 11.1.1
+  # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/web` (o `nanoid` só
+  # chega pelo `postcss` acima, dos dois lados).
+  nanoid@>=3.0.0 <3.3.18: 3.3.18
+  # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/web` (o `dompurify`
+  # só chega pelo `mermaid` acima, dos dois lados).
+  dompurify@>=3.0.0 <3.4.13: 3.4.13

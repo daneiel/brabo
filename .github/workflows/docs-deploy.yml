@@ -93,6 +93,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # `website/` NÃO é mais membro do workspace da raiz (ADR 0116) — tem
+      # `pnpm-lock.yaml` PRÓPRIO, e o install acima não o alcança. Sem este
+      # passo separado, `pnpm docs:build` (agora `pnpm --dir website build`)
+      # falharia por `node_modules` ausente.
+      - name: Instalar dependências do website
+        working-directory: website
+        run: pnpm install --frozen-lockfile
+
       - name: Cache do Rspack
         uses: actions/cache@v4
         with:
@@ -100,9 +108,9 @@ jobs:
           # `dev` não serve para `main`. Sem o degrau na key os três degraus se
           # invalidariam em rodízio, e o cache viraria enfeite.
           path: website/node_modules/.cache
-          key: rspack-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
+          key: rspack-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('website/pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
           restore-keys: |
-            rspack-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            rspack-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('website/pnpm-lock.yaml') }}-
             rspack-${{ runner.os }}-${{ github.ref_name }}-
 
       # onBrokenLinks/onBrokenAnchors/onBrokenMarkdownLinks são 'throw':
