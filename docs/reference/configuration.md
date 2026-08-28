@@ -425,6 +425,33 @@ logs work without it; traces still require the cluster.
 
 ---
 
+## Dev container user (build-time)
+
+Not read by our code either, and not even a *runtime* environment variable:
+these are Docker `build.args` for the three dev images (`docker/api/Dockerfile`,
+`docker/web/Dockerfile`, `docker/engine/Dockerfile`), consulted once at
+`docker compose build` and baked into the `USER` each container runs as. They
+exist so the containers run with the **same UID/GID as your host user**
+instead of root — everything written to a bind mount (`apps/api/dist`, a
+project workspace in `mounted` execution mode) is then already yours, no
+`sudo chown` needed afterward.
+
+| variable | default | why |
+|---|---|---|
+| `DEV_UID` | `1000` | your `id -u`. NOT read from the shell's `${UID}` — it's read-only in bash and isn't exported to the environment by default, so the compose file would always see it empty |
+| `DEV_GID` | `1000` | your `id -g`, same reasoning |
+
+`1000`/`1000` matches both the most common single-developer Linux setup and
+the `node` user that `node:24-alpine` (the `api`/`web` base image) already
+ships — when your pair matches, the Dockerfiles reuse that built-in user
+instead of creating a new one. An environment that already has containers
+running as root from before this change needs a one-time `chown` of the
+`node_modules`/`_build`/`deps`/`.mix`/`.hex` named volumes (or
+`docker compose down -v` to let them be recreated) — see the note in
+[Getting started](../getting-started.md).
+
+---
+
 ## Full inventory
 
 The tables above explain **what each variable does**. This section is the

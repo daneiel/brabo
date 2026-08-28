@@ -710,6 +710,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   falta pra fechar a onda por completo — ver o CLAUDE.md pro estado
   atualizado.
 
+### Manutenção
+
+- **docker**: os containers de dev de `api`, `web` e `engine` param de rodar
+  como root — item #13 da revisão externa de 2026-08-28
+  (`docs/explanation/backlog.md`). `DEV_UID`/`DEV_GID` (build args, default
+  `1000`/`1000`, nunca `${UID}` do shell — somente-leitura e não exportado
+  por padrão no bash) mapeiam o container pro MESMO usuário do host, em vez
+  de rodar como root e corrigir depois com `sudo chown`. Grupo/usuário só é
+  criado quando o par pedido diverge do que a imagem já traz (`node:24-alpine`
+  já tem `node` em 1000:1000); no `engine`, `_build`/`deps`/`.mix`/`.hex`
+  ganham `chown` ANTES do `USER`, pra um volume nomeado novo herdar o dono
+  certo já no primeiro mount. `Dockerfile.prod` não muda — já era non-root
+  desde o ADR 0024.
 
 ## v3.1.0 — 2026-08-13
 

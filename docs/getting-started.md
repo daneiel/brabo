@@ -99,15 +99,16 @@ approval (RN-075) — the only thing that changes is that what used to be
 invisible inside the volume is now in a folder you can open with your own
 editor and `git`.
 
-The `api` and `engine` containers run as **root** in development (the same
-already-known situation as `node_modules`/`apps/api/dist` — see the
-warning at the top of this repository). Every file the agent writes to the
-local folder ends up owned by `root` on your disk — to edit/delete it
-without `sudo` afterward, run once
-`sudo chown -R $USER ~/brabo-projetos`
-(adjust the path to whatever you chose). Confirmed by execution: a
-`docker run` writing to a test bind mount left the file inaccessible to
-the regular user until a second container (running as root) removed it.
+The `api` and `engine` containers run with the **same UID/GID as your host
+user** (see the warning at the top of this repository) — never as root.
+Discover your pair with `id -u`/`id -g` and, if it doesn't match the
+default (1000/1000, the most common on a single-developer Linux machine),
+set `DEV_UID`/`DEV_GID` in `.env` (see `.env.example`) before the first
+`docker compose up`. With that in place, every file the agent writes to the
+local folder ends up owned by YOU, editable/removable without `sudo`.
+Confirmed by execution: with the UID mapped, a `docker run` writing to a
+test bind mount left the file owned by the host user and freely removable
+from the host — the exact opposite of what an earlier root-only image did.
 
 Only tested on Linux/macOS. Host bind mounts on Docker Desktop for Windows
 have known pitfalls (permission/ownership between NTFS and the container
@@ -297,9 +298,17 @@ and says at the end that recovering means `pnpm db:migrate` **and**
 Always work in `feature/*` off `dev`, with conventional commits in
 pt-BR. `CLAUDE.md` has the full conventions.
 
-> The `api` and `web` containers run as root in development and write to
-> the bind mount. If you later want to build on the host, run once
-> `sudo chown -R $USER apps/api/dist apps/*/node_modules`.
+> The `api`, `web` and `engine` containers run with the same UID/GID as your
+> host user in development — never as root — so `apps/api/dist` and
+> whatever else gets written to the bind mount are already yours. Run
+> `id -u`/`id -g` and, if the pair isn't 1000/1000, set `DEV_UID`/`DEV_GID`
+> in `.env` (see `.env.example`) before the first `docker compose up`.
+> Upgrading an environment that predates this change: the named volumes for
+> `node_modules`/`_build`/`deps`/`.mix`/`.hex` still hold content written by
+> the old root containers — run once
+> `sudo chown -R $USER apps/api/dist apps/*/node_modules` (or drop the
+> volumes with `docker compose down -v` and let the next `up` recreate them)
+> to clear what's stuck.
 
 ## Next
 
