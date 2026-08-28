@@ -183,8 +183,11 @@ Source: each package's \`package.json\` and the root \`Makefile\`.
     if (scripts.length === 0) continue;
     total += scripts.length;
 
+    // `website` saiu do workspace da raiz (ADR 0117): `--filter` exige
+    // membership, `--dir` não — aponta pro diretório e roda como se o pnpm
+    // tivesse começado ali.
     const prefixo =
-      rotulo === 'raiz' ? 'pnpm ' : rotulo === 'website' ? 'pnpm --filter website ' : `pnpm --filter ${rotulo} `;
+      rotulo === 'raiz' ? 'pnpm ' : rotulo === 'website' ? 'pnpm --dir website ' : `pnpm --filter ${rotulo} `;
 
     out += `\n## ${rotulo === 'raiz' ? 'Root' : rotulo} — \`${caminho}\`\n\n`;
     out += '| command | runs |\n|---|---|\n';
@@ -521,10 +524,12 @@ function hashesDaReferencia() {
  */
 function gerarReferenciaApi() {
   if (!CHECAR) {
+    // `website` saiu do workspace da raiz (ADR 0117): `--filter` exige
+    // membership, `--dir` não.
     for (const comando of ['clean-api-docs', 'gen-api-docs']) {
       execFileSync(
         'pnpm',
-        ['--filter', 'website', 'exec', 'docusaurus', comando, 'all'],
+        ['--dir', 'website', 'exec', 'docusaurus', comando, 'all'],
         { cwd: RAIZ, encoding: 'utf8', stdio: 'pipe' },
       );
     }

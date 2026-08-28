@@ -755,6 +755,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   (ADR 0116). Só `ActionType` migrou; o resto de `api-types.ts` segue
   manual.
 
+- **ci,deps**: `website/` sai do workspace pnpm da raiz e ganha
+  `pnpm-lock.yaml` próprio (ADR 0117) — item "website lockfile" da revisão
+  externa de 2026-08-28 (`docs/explanation/backlog.md`). `pnpm audit` da
+  raiz para de reportar a árvore inteira do Docusaurus, que nunca chega a
+  nenhuma imagem. Auditar os 13 overrides de segurança com `pnpm why
+  <pacote> -r` (em vez de reler os comentários) achou a maioria MISTA, não
+  exclusiva do `website` como a revisão original supôs: `mermaid`/
+  `dompurify`/`uuid` também resolvem por `apps/web` (dependência de
+  runtime, ADR 0068), `postcss`/`nanoid` por `apps/web` via `vite`,
+  `js-yaml`/`fast-uri`/`lodash` por `apps/api` via `eslint`/`ajv`/
+  `@nestjs/swagger` — essas ficam na raiz E são duplicadas no novo
+  `website/pnpm-workspace.yaml`; só `serialize-javascript` e a faixa
+  `yaml@1.x` eram exclusivas do `website` e saíram de vez da raiz;
+  `esbuild` ficou só na raiz, ausente da árvore do `website`. Scripts
+  `docs:*` e os workflows `docs-deploy.yml`/`docs-check.yml` trocam
+  `pnpm --filter website` (exige membership) por `pnpm --dir website`
+  (aponta o diretório); os dois workflows ganham um segundo `pnpm install`
+  escopado a `website/`
+
 ## v3.1.0 — 2026-08-13
 
 ### Novidades

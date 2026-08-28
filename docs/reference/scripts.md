@@ -35,10 +35,10 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm engine:dev` | `cd apps/engine && mix phx.server` |
 | `pnpm engine:test` | `cd apps/engine && mix test` |
 | `pnpm engine:migrate` | `cd apps/engine && mix ecto.migrate` |
-| `pnpm docs:start` | `pnpm --filter website start` |
-| `pnpm docs:build` | `pnpm --filter website build` |
-| `pnpm docs:serve` | `pnpm --filter website serve` |
-| `pnpm docs:clear` | `pnpm --filter website clear` |
+| `pnpm docs:start` | `pnpm --dir website start` |
+| `pnpm docs:build` | `pnpm --dir website build` |
+| `pnpm docs:serve` | `pnpm --dir website serve` |
+| `pnpm docs:clear` | `pnpm --dir website clear` |
 | `pnpm docs:generate` | `node scripts/docs/generate.mjs` |
 | `pnpm docs:landing` | `node scripts/docs/landing.mjs` |
 | `pnpm docs:check` | `node scripts/docs/docmap.mjs && node scripts/docs/generate.mjs --check` |
@@ -101,16 +101,16 @@ Source: each package's `package.json` and the root `Makefile`.
 
 | command | runs |
 |---|---|
-| `pnpm --filter website docusaurus` | `docusaurus` |
-| `pnpm --filter website start` | `docusaurus start` |
-| `pnpm --filter website build` | `docusaurus build` |
-| `pnpm --filter website swizzle` | `docusaurus swizzle` |
-| `pnpm --filter website deploy` | `docusaurus deploy` |
-| `pnpm --filter website clear` | `docusaurus clear` |
-| `pnpm --filter website serve` | `docusaurus serve` |
-| `pnpm --filter website write-translations` | `docusaurus write-translations` |
-| `pnpm --filter website write-heading-ids` | `docusaurus write-heading-ids` |
-| `pnpm --filter website typecheck` | `tsc` |
+| `pnpm --dir website docusaurus` | `docusaurus` |
+| `pnpm --dir website start` | `docusaurus start` |
+| `pnpm --dir website build` | `docusaurus build` |
+| `pnpm --dir website swizzle` | `docusaurus swizzle` |
+| `pnpm --dir website deploy` | `docusaurus deploy` |
+| `pnpm --dir website clear` | `docusaurus clear` |
+| `pnpm --dir website serve` | `docusaurus serve` |
+| `pnpm --dir website write-translations` | `docusaurus write-translations` |
+| `pnpm --dir website write-heading-ids` | `docusaurus write-heading-ids` |
+| `pnpm --dir website typecheck` | `tsc` |
 
 ## scripts — `scripts/package.json`
 

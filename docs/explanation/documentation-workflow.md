@@ -332,11 +332,17 @@ The whole design, with the discarded alternatives, is in
 
 ## Running it on your machine
 
+`website/` has its own `pnpm-lock.yaml` since [ADR 0117](../adr/0117-lockfile-proprio-para-o-website.md) —
+the root `pnpm install` no longer reaches it, so the first time (or after its
+lockfile changes) needs one extra step:
+
 ```bash
+cd website && pnpm install && cd ..  # only the first time, or when website/pnpm-lock.yaml changes
+
 pnpm docs:check      # validates the map + checks generated content is up to date
 pnpm docs:generate   # regenerates
 pnpm docs:drift      # simulates the PR check (origin/dev...HEAD)
-pnpm docs:build      # the build CI runs
+pnpm docs:build      # the build CI runs — pnpm --dir website build under the hood
 pnpm docs:start      # local server, with hot reload
 
 # does the API reference render? needs the build above, and isn't part

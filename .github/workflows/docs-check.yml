@@ -5,7 +5,7 @@ name: Guardião da documentação
 # do item 2 ganhar o sub-passo dos tipos do web — ver abaixo; não remedido):
 #   1. o mapa de responsabilidade está íntegro? (0s)
 #   2. o que é gerado está em dia? (10s — openapi.json/MDX da api; e, desde o
-#      ADR 0116, os tipos do web gerados dele, `pnpm --filter web run
+#      ADR 0117, os tipos do web gerados dele, `pnpm --filter web run
 #      openapi:types:check`, que reusa o mesmo openapi.json já checado acima)
 #   3. o PR atualizou a doc que deveria? (0-1s)
 #   4. o site constrói sem link quebrado? (12s)
@@ -70,6 +70,14 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # `website/` NÃO é mais membro do workspace da raiz (ADR 0117) — tem
+      # `pnpm-lock.yaml` PRÓPRIO, e o install acima não o alcança. Sem este
+      # passo separado, `pnpm docs:build` (agora `pnpm --dir website build`)
+      # abaixo falharia por `node_modules` ausente.
+      - name: Instalar dependências do website
+        working-directory: website
+        run: pnpm install --frozen-lockfile
 
       # Glob que não casa com nada é regra morta: nunca dispara e finge
       # cobertura. Falha rápido, antes de qualquer coisa cara.
@@ -165,9 +173,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: website/node_modules/.cache
-          key: rspack-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
+          key: rspack-${{ runner.os }}-${{ hashFiles('website/pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
           restore-keys: |
-            rspack-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            rspack-${{ runner.os }}-${{ hashFiles('website/pnpm-lock.yaml') }}-
             rspack-${{ runner.os }}-
 
       # onBrokenLinks / onBrokenAnchors / onBrokenMarkdownLinks são 'throw':
