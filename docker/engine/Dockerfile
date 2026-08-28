@@ -1,5 +1,13 @@
 FROM hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3
 
+# UID/GID do usuário que roda o container — ver docker/api/Dockerfile, mesmo
+# mecanismo (docker-compose.yml `build.args` + .env.example). Fica no TOPO
+# do arquivo por convenção, mas o grupo/usuário só é criado depois de TODAS
+# as instalações que exigem root, no fim deste Dockerfile — trocar de
+# usuário cedo demais quebraria todo `apk add`/`pip install` daqui pra baixo.
+ARG DEV_UID=1000
+ARG DEV_GID=1000
+
 # git: Engine.Actions.Workspace precisa dele pra derivar o working tree
 # do bare repo local provisionado (Fase 2) antes de rodar ações de terminal.
 RUN apk add --no-cache build-base inotify-tools git
@@ -31,21 +39,43 @@ RUN apk add --no-cache build-base inotify-tools git
 # ActionlintDetector` degrada graciosamente (`ValidateInfraFile` segue sem
 # validar), nunca quebra o turno — ver ADR 0039. Só valida GitHub Actions;
 # não há binário offline equivalente pra `.gitlab-ci.yml` (gap documentado).
+# *_SHA256: mesmos valores do docker/engine/Dockerfile.prod (mesmo binário,
+# mesma versão) -- ver o comentário lá sobre como foram conferidos (download
+# independente + checksums.txt publicado no release). Aqui o build continua
+# BEST-EFFORT: um checksum que não bate entra no MESMO ramo `|| echo` de uma
+# falha de rede ou binário ausente -- nunca quebra o build de dev --, mas o
+# binário deixa de existir, e os detectores tratam a ausência como sempre
+# trataram. Sem isto, um release comprometido ou MITM entregaria um binário
+# diferente do esperado e o container de dev rodaria os gates contra ele, em
+# silêncio.
 ARG GITLEAKS_VERSION=8.30.1
+ARG GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
 ARG HADOLINT_VERSION=2.12.0
+ARG HADOLINT_SHA256=56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d55010
 ARG ACTIONLINT_VERSION=1.7.12
+ARG ACTIONLINT_SHA256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+# `echo "$HASH  arquivo" | sha256sum -c -` é um pipe, e o hadolint pede
+# `-o pipefail` (DL4006). Não acrescenta nada aqui: `echo` de uma string fixa
+# não falha, e se o `curl` anterior tivesse falhado o `&&` já teria pulado
+# para o `|| echo "[build] ... nao instalado"` antes de chegar neste pipe.
+# Suprimido com o motivo escrito, não por hábito (mesmo padrão do
+# docker/web/Dockerfile.prod).
+# hadolint ignore=DL4006
 RUN apk add --no-cache --virtual .binaries-build curl tar \
   && (curl -fsSL -o /tmp/gitleaks.tar.gz \
         "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+      && echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c - \
       && tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks \
       && chmod +x /usr/local/bin/gitleaks \
       || echo "[build] gitleaks nao instalado -- SecOpsAgent detecta a ausencia em runtime") \
   && (curl -fsSL -o /usr/local/bin/hadolint \
         "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64" \
+      && echo "${HADOLINT_SHA256}  /usr/local/bin/hadolint" | sha256sum -c - \
       && chmod +x /usr/local/bin/hadolint \
       || echo "[build] hadolint nao instalado -- o gate de QA de infra pula o lint de Dockerfile") \
   && (curl -fsSL -o /tmp/actionlint.tar.gz \
         "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+      && echo "${ACTIONLINT_SHA256}  /tmp/actionlint.tar.gz" | sha256sum -c - \
       && tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint \
       && chmod +x /usr/local/bin/actionlint \
       || echo "[build] actionlint nao instalado -- o Workflows segue sem validar o pipeline gerado") \
@@ -80,6 +110,27 @@ RUN pip install --no-cache-dir --break-system-packages yamllint \
 # fora do escopo da Fase 4a.
 RUN apk add --no-cache nodejs npm
 
+# Só cria grupo/usuário quando o UID/GID pedido diverge do que a imagem já
+# tem (mesma ressalva do docker/api/Dockerfile). USER abaixo referencia o
+# par numérico, nunca o nome.
+RUN (getent group "$DEV_GID" >/dev/null 2>&1 || addgroup -g "$DEV_GID" devuser) \
+  && (getent passwd "$DEV_UID" >/dev/null 2>&1 || adduser -D -u "$DEV_UID" -G "$(getent group "$DEV_GID" | cut -d: -f1)" devuser)
+
+# `mix local.hex`/`mix local.rebar` (no CMD abaixo) escrevem em $HOME/.hex e
+# $HOME/.mix — caminhos que o docker-compose.yml monta como volumes NOMEADOS
+# em /root/.hex e /root/.mix (RW, precisam sobreviver a rebuild). `_build` e
+# `deps` são o mesmo caso dentro do WORKDIR. Um volume nomeado NOVO herda o
+# dono do que já existe naquele caminho NA IMAGEM — por isso os diretórios
+# nascem aqui, ANTES do USER, já com o dono certo: sem isso, o primeiro
+# `mix deps.get` como devuser bateria em diretório ainda dono de root.
+# ENV HOME=/root mantém os caminhos batendo com os volumes do compose em vez
+# de exigir mexer neles — devuser não é root, mas é dono de /root aqui.
+RUN mkdir -p /root/.mix /root/.hex /workspace/apps/engine/_build /workspace/apps/engine/deps \
+  && chown -R "$DEV_UID:$DEV_GID" /root /workspace/apps/engine
+ENV HOME=/root
+
 WORKDIR /workspace/apps/engine
+
+USER ${DEV_UID}:${DEV_GID}
 
 CMD ["sh", "-c", "mix local.hex --force && mix local.rebar --force && mix deps.get && mix ecto.create && mix ecto.migrate && mix phx.server"]

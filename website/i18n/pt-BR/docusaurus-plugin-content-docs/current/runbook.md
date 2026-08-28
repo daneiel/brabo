@@ -1023,56 +1023,6 @@ janela em que sobrar um pod antigo de qualquer lado — o sintoma do
 openssl rand -base64 48
 ```
 
-### Migração dos usuários do Keycloak {#migracao-dos-usuarios-do-keycloak}
-
-Roda **uma vez**, no release do corte. Senhas não migram — é inviável e
-indesejável ([ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)): o
-que o script faz é emitir, para cada usuário que veio do Keycloak e ainda não
-tem credencial, um token de **definição de senha** de uso único.
-
-Ele **não conecta no Keycloak**. Desde a Fase 1 a api já mantinha a linha em
-`users` e os vínculos de RBAC no próprio banco; o Keycloak era só o emissor.
-
-```bash
-pnpm --filter api migrate:keycloak-users
-```
-
-Ele imprime uma linha por usuário — `emitido <email> — expira em <ISO>` ou
-`pulado <email> — já tem link válido em aberto` — e o total ao fim.
-
-É idempotente em duas camadas: pula quem já tem linha em `auth_credentials` e
-pula quem já tem um token `set_initial_password` vivo — senão a segunda
-execução invalidaria (por supersede) os links já enviados.
-
-> **Depende de `MAIL_TRANSPORT`** ([SMTP real no `MailSender`](#smtp-real),
-> ADR 0096). Em `log` (default, inclusive em produção) o `MailSender` NÃO
-> imprime o token por padrão. Log de aplicação vai para o Loki e fica retido
-> por semanas; um token de definição de senha ali é credencial de takeover em
-> texto claro. O que sai é tipo, destinatário e expiração.
->
-> Com `MAIL_TRANSPORT=log`, a única forma de extrair os links é ligar
-> `AUTH_MAIL_LOG_TOKENS=true` na api, rodar o script, e **desligar em
-> seguida** — a api emite um `WARN` no boot enquanto a variável estiver ligada,
-> justamente para ela não sobreviver a um ambiente copiado:
->
-> ```bash
-> kubectl -n brabo logs deploy/api | grep set_initial_password
-> ```
->
-> Enquanto os links estiverem vivos, trate esse log como segredo: quem o lê
-> pode definir a senha daquelas contas.
->
-> Com `MAIL_TRANSPORT=smtp`, o link vai direto para a caixa de entrada de cada
-> usuário migrado — nada aparece no log além de `tipo`/destinatário, e não há
-> nada a extrair.
-
-Um usuário migrado que tentar logar antes de definir a senha recebe **o mesmo
-401 de sempre**, indistinguível de senha errada ou e-mail inexistente
-([RN-032](business-rules.md#rn-032)) — e, em silêncio, um novo e-mail de
-definição de senha, sob o mesmo throttle do reset. Não há resposta que
-confirme "esta conta é legada": seria o sinal de enumeração mais valioso do
-sistema.
-
 ### Conta travada por lockout
 
 O bloqueio é curto (30 s a 15 min) e se resolve sozinho: a janela deslizante
