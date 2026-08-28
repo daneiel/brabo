@@ -7,33 +7,36 @@ import { extrairCoberturaTotal, lerPisoGravado, verificarPiso } from './coverage
 const daRaiz = (relativo: string) => fileURLToPath(new URL(`../../${relativo}`, import.meta.url));
 
 /**
- * Recorte real de `mix test --cover` (`apps/engine`, medido em 2026-08-27):
- * a tabela por módulo, a linha `Total` e o rodapé do `:cover`. O parser só
- * precisa da última linha — o resto prova que ele ignora o ruído em volta.
+ * Recorte real de `mix test --cover` (`apps/engine`, capturado do CI em
+ * 2026-08-28, run 33139724386): a tabela por módulo, a linha `Total` e o
+ * rodapé do `:cover`. SEM pipe abrindo/fechando a linha — só um `|` entre
+ * percentual e nome, e o separador é feito de traços, não de pipes. O
+ * parser só precisa da última linha — o resto prova que ele ignora o
+ * ruído em volta.
  */
 const SAIDA_REAL = `Running ExUnit with seed: 123456, max_cases: 40
 
 .....................................................................
 
-Finished in 42.1 seconds (10.2s async, 31.9s sync)
-1234 tests, 0 failures
+Finished in 13.5 seconds (3.0s async, 10.4s sync)
+978 tests, 1 failure
 
 Generating cover results ...
 
-| Percentage | Module                                        |
-|------------|-----------------------------------------------|
-|     93.33% | Engine.Agents.TurnoAssincronoCase             |
-|     94.05% | Engine.Harness.ToolLoop.Default               |
-|    100.00% | EngineWeb.Router                              |
-|------------|-----------------------------------------------|
-|     79.88% | Total                                         |
+Percentage | Module
+-----------|--------------------------
+     0.00% | Engine.Actions.SemgrepDetector.Live
+   100.00% | EngineWeb.Router
+   100.00% | EngineWeb.SessionSocket
+-----------|--------------------------
+    80.94% | Total
 
 Generated HTML coverage results in "cover" directory
 `;
 
 describe('extrairCoberturaTotal — lê a linha `Total` do `:cover`', () => {
   it('extrai a % total de uma saída real de `mix test --cover`', () => {
-    expect(extrairCoberturaTotal(SAIDA_REAL)).toBe(79.88);
+    expect(extrairCoberturaTotal(SAIDA_REAL)).toBe(80.94);
   });
 
   it('devolve `null` quando a linha `Total` não aparece — nunca inventa número', () => {
@@ -44,11 +47,11 @@ describe('extrairCoberturaTotal — lê a linha `Total` do `:cover`', () => {
 
   it('pega a cobertura de 100%, sem casar com a linha de um módulo no meio da tabela', () => {
     const saida = `
-| Percentage | Module                                        |
-|------------|-----------------------------------------------|
-|     50.00% | Engine.Foo                                    |
-|------------|-----------------------------------------------|
-|    100.00% | Total                                         |
+Percentage | Module
+-----------|--------------------------
+    50.00% | Engine.Foo
+-----------|--------------------------
+   100.00% | Total
 `;
     expect(extrairCoberturaTotal(saida)).toBe(100);
   });

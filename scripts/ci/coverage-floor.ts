@@ -31,9 +31,10 @@
  *
  * A saída de `mix test --cover` chega pelo STDIN (`mix test --cover 2>&1 |
  * node scripts/ci/coverage-floor.ts`), e a extração procura a linha final
- * da tabela que o `:cover` imprime:
+ * da tabela que o `:cover` imprime (SEM pipe abrindo nem fechando a linha —
+ * só o separador entre percentual e nome do módulo/`Total`):
  *
- *     |     79.88% | Total                                         |
+ *         80.94% | Total
  *
  * Linha ausente (formato mudou, ou coverage não rodou) reprova — nunca
  * aprova em silêncio.
@@ -41,8 +42,12 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-/** A linha final da tabela do `:cover`: `| NN.NN% | Total |`. */
-const PADRAO_TOTAL = /\|\s*(\d+(?:\.\d+)?)%\s*\|\s*Total\s*\|/;
+/**
+ * A linha final da tabela do `:cover`: `NN.NN% | Total`. Sem exigir `|` nos
+ * dois lados — a versão do OTP que gera essa tabela não emoldura a linha,
+ * só separa percentual de nome com um `|` no meio.
+ */
+const PADRAO_TOTAL = /(\d+(?:\.\d+)?)%\s*\|\s*Total\b/;
 
 /**
  * Extrai a % de cobertura TOTAL da saída de `mix test --cover`.
