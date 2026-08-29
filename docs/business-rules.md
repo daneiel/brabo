@@ -11074,6 +11074,109 @@ ligada.
 - **ADR:** [0115](adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.md)
 - **Origem:** pedido do dono do produto
 
+## Configuração do runner pelo navegador (RN-464..466, ADR 0118)
+
+### RN-464 — Chave de dispositivo do runner: registro/revogação self-service; SEM visão de maintainer nesta rodada (corte declarado) {#rn-464}
+
+`runner_device_keys` guarda só a chave PÚBLICA Ed25519 de um dispositivo do
+runner — gerada no navegador, nunca a privada. `POST/DELETE
+.../runner-device-keys` exigem papel mínimo `developer` e são autenticadas
+pelo JWT DE SESSÃO normal (diferente de `runner-ticket`: quem chama aqui é o
+navegador já logado registrando o próprio dispositivo, não o runner rodando
+sem sessão). `RegisterRunnerDeviceKeyUseCase` valida só a FORMA mínima da
+JWK (`kty:"OKP"`, `crv:"Ed25519"`, `x` presente) — a validação profunda (é
+mesmo um ponto Ed25519 válido) fica pro `jose.importJWK` no momento de usar,
+na RN-465. `RevokeRunnerDeviceKeyUseCase` é IDEMPOTENTE e escopado ao
+`userId` chamador — mesmo desenho de `revogar()` da RN-426 — e devolve 404
+tanto para chave inexistente quanto para chave de outro usuário, mesma
+disciplina de não vazar existência.
+
+**Assimetria declarada com o PAT**: ao contrário da RN-427 (`maintainer`
+revoga o PAT de QUALQUER usuário do projeto, resposta a incidente), a chave
+de dispositivo NÃO tem hoje uma rota equivalente de `maintainer` — só
+autorevogação. O docblock de `RunnerDeviceKeysController` declara isto
+explicitamente como corte desta rodada, não esquecimento: estender o mesmo
+padrão da RN-427 para chaves de dispositivo é trabalho futuro direto, se
+vier a ser pedido.
+
+- **Onde:** `apps/api/src/db/schema.ts:2058` (`runnerDeviceKeys`),
+  `apps/api/src/application/use-cases/auth/register-runner-device-key.use-case.ts`,
+  `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts`,
+  `apps/api/src/interfaces/http/runner/runner-device-keys.controller.ts`
+- **Teste:** `apps/api/test/application/use-cases/auth/register-runner-device-key.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/auth/revoke-runner-device-key.use-case.spec.ts`
+- **ADR:** [0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+- **Origem:** pedido do dono do produto
+
+### RN-465 — `POST .../runner-ticket` aceita PAT OU chave de dispositivo (Ed25519, TTL ≤60s) — segunda forma de credencial de DISPOSITIVO, nunca dual-auth com JWT de sessão (distinção da RN-439) {#rn-465}
+
+`PatAuthGuard` ganhou um segundo caminho, ao lado do PAT (`brb_...`)
+inalterado: um bearer no formato de JWT compacto (três segmentos) é tratado
+como chave de dispositivo. O guard lê o `kid` do header (sem verificar
+assinatura ainda), busca a chave pública ATIVA correspondente em
+`runner_device_keys`, e só então verifica a assinatura EdDSA com
+`jose.importJWK`/`jwtVerify`. TTL curto e OBRIGATÓRIO: `exp - iat` não pode
+passar de 60s — checado contra a vida ASSINADA do token, não contra "agora",
+fechando a janela de replay de um JWT vazado a partir do momento em que foi
+assinado. `userId`/`projectId` usados para autorizar vêm sempre do REGISTRO
+salvo no banco, nunca de claim do JWT — o token só precisa provar posse da
+privada, nunca afirmar quem é o dono. `projectId` é conferido DUAS vezes
+(claim do JWT contra a rota, e projeto registrado da chave contra a rota) —
+mesma disciplina 401 vs 403 que o caminho PAT já usa: token/chave válida
+para o projeto ERRADO é categoria diferente de token/chave inválida. O
+runner assina esse JWT em `assinarTicketComChaveDeDispositivo`
+(`apps/runner/src/auth.ts`), com a JWK privada já CARREGADA em memória —
+nunca lendo arquivo ali, preservando a garantia "sem I/O de arquivo" de
+`auth.ts` (quem lê o arquivo é o módulo separado da RN-466).
+
+**Isto NÃO reabre a RN-439**: a RN-439 fechou a garantia de que
+`runner-ticket` nunca aceita o JWT de LOGIN como credencial — ela continua
+de pé. A chave de dispositivo é um JWT DIFERENTE, autoassinado pelo próprio
+runner com uma chave que a api nunca viu a privada, sem `sub` de usuário
+nenhum — só uma segunda forma de provar "sou o dispositivo de tal usuário
+neste projeto", tão escopada quanto o PAT que ela complementa. Aceitar o JWT
+de sessão aqui faria `RolesGuard`/`@RequireRole` autorizar esse usuário pra
+tudo que o papel dele permite no resto da api, estourando o escopo
+`runner:project:<id>` — exatamente o que a RN-439 impediu.
+
+- **Onde:** `apps/api/src/interfaces/http/auth/pat-auth.guard.ts:104-216`
+  (`autenticarChaveDeDispositivo`), `apps/runner/src/auth.ts:143-188`
+  (`assinarTicketComChaveDeDispositivo`, `obterTicketDoRunnerComCredencial`)
+- **Teste:** `apps/api/test/interfaces/pat-auth.guard.spec.ts` (describe
+  "chave de dispositivo (JWT EdDSA autoassinado, ao lado do PAT)" — caminho
+  feliz, assinatura inválida, chave revogada, `projectId` do claim não bate
+  com a rota, chave registrada em outro projeto, TTL longo demais, `kid` sem
+  chave correspondente), `apps/runner/src/auth.spec.ts` (describe
+  "assinarTicketComChaveDeDispositivo"/"obterTicketDoRunnerComCredencial")
+- **ADR:** [0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+- **Origem:** pedido do dono do produto
+
+### RN-466 — `brabo-runner` roda sem `--project`/`--dir`/`--token` quando a pasta tem config local gravada pelo navegador {#rn-466}
+
+`apps/runner/src/device-key.ts` (módulo NOVO, separado de propósito de
+`auth.ts`) lê — nunca escreve — `brabo-runner.config.json`
+(`{projectId, apiUrl}`) e `brabo-runner-device-key.jwk.json` do `cwd()`
+atual; ausência de qualquer um dos dois devolve `null`, nunca lança, porque
+essa ausência é o caso NORMAL de quem ainda usa flags explícitas. Em
+`lerArgumentos` (`apps/runner/src/index.ts`), a regra é a MESMA três vezes —
+flag explícita sempre vence o arquivo local: `--project` vence
+`configLocal.projectId`; `--dir` ausente cai para `.` (a própria pasta onde
+o comando roda) quando havia config local, em vez do erro de uso de antes;
+`--token`/`BRABO_ACCOUNT_TOKEN` vence a chave de dispositivo local quando
+ambos existem. Sem NENHUMA credencial (nem token, nem chave local), o CLI
+continua recusando com a mensagem de uso — nada aqui torna a autenticação
+opcional, só qual das duas formas é usada.
+
+- **Onde:** `apps/runner/src/device-key.ts` (`lerConfigLocal`,
+  `lerChaveDeDispositivo`), `apps/runner/src/index.ts:95-206`
+  (`lerArgumentos`)
+- **Teste:** `apps/runner/src/device-key.spec.ts` (caminho feliz de cada
+  leitura; `null` sem lançar para arquivo ausente/JSON inválido/campo
+  faltando; respeita o `cwd` recebido; módulo não importa
+  `writeFileSync`/`mkdirSync`)
+- **ADR:** [0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+- **Origem:** pedido do dono do produto
+
 ---
 
 ## Quando dá errado

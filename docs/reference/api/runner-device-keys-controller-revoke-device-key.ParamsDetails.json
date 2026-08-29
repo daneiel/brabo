@@ -1,0 +1,1 @@
+{"parameters":[{"name":"projectId","required":true,"in":"path","schema":{"type":"string"}},{"name":"deviceKeyId","required":true,"in":"path","schema":{"type":"string"}}]}

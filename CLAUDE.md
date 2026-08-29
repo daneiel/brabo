@@ -48,6 +48,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Faixa de atividade do turno | Narração em tempo real do turno dos 6 conversacionais; teto de iterações não termina mais calado | RN-459/460 |
 | Ollama nativo / pull de Hugging Face | Bootstrap dev pergunta uma vez e persiste o modo do Ollama em `.env`; navegador de modelos do Hub com pull em duas etapas e allowlist de publisher oficial | RN-461..463, ADR 0114–0115 |
 | Lockfile próprio do website | `website/` sai do workspace pnpm da raiz — lockfile e overrides de segurança isolados, `pnpm audit` do produto para de reportar a árvore do Docusaurus | ADR 0117 |
+| Configuração automática do runner pelo navegador | Chave de dispositivo Ed25519 gerada no navegador, aditiva ao PAT; proxy do binário via GitHub Releases; File System Access API grava a pasta configurada, com fallback de download fora do Chromium; `--project/--dir/--token` viram opcionais no CLI | RN-464..466, ADR 0118 |
 
 ## Estado atual e aberto
 
@@ -147,7 +148,14 @@ daqui e o fechamento vai para o histórico.
   0112) — o `.node` nativo do `node-pty` embutido por `with { type: 'file'
   }` e extraído para um diretório real em runtime, já que `node-pty`
   resolve seu próprio addon por um `require()` de caminho COMPUTADO que o
-  Bun não consegue embutir sozinho
+  Bun não consegue embutir sozinho. `--project`/`--dir`/`--token` são
+  OPCIONAIS quando a pasta tem `brabo-runner.config.json` e a chave de
+  dispositivo gravados pelo fluxo do navegador (RN-464..466, ADR 0118):
+  o navegador gera um par Ed25519 (Web Crypto), registra a chave pública
+  como `runner_device_keys` e grava os três arquivos numa pasta via File
+  System Access API (fallback de dois downloads fora do Chromium) —
+  `POST .../runner-ticket` aceita essa chave como segunda credencial de
+  dispositivo, ADITIVA ao PAT (ADR 0105), nunca um substituto
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev.
   `website/` NÃO é membro do workspace (ADR 0117) — lockfile próprio em
   `website/pnpm-workspace.yaml`/`website/pnpm-lock.yaml`, instalado com

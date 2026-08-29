@@ -28,6 +28,7 @@ import { Alert } from '../components/ui/Alert';
 import { useToast } from '../components/ui/ToastProvider';
 import { GitHubIcon, GitLabIcon, LocalRepoIcon, PlusIcon, FolderIcon } from '../components/ui/icons';
 import { FolderBrowserModal } from '../components/FolderBrowserModal';
+import { RunnerOnboardingPanel } from '../components/RunnerOnboardingPanel';
 import styles from './NewProjectWizard.module.css';
 
 type StepKey =
@@ -608,25 +609,17 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               ) : (
                 // `runner`: nada aqui trava a criação (RN-423) — o caminho só é
                 // confirmado quando o runner conectar, nunca "recusado na hora"
-                // como o aviso de `mounted` acima. Com `projetoParaNavegar` já
-                // preenchido (clicou "Procurar pasta..." — RN-437), o comando
-                // mostra o id REAL em vez do placeholder genérico.
-                <Alert tone="accent">
-                  {projetoParaNavegar
-                    ? t('workspace.runnerHint.introExisting')
-                    : t('workspace.runnerHint.intro')}
-                  <br />
-                  <code>
-                    {t('workspace.runnerHint.command', {
-                      id: projetoParaNavegar
-                        ? projetoParaNavegar.id
-                        : t('workspace.runnerHint.placeholderId'),
-                      caminho: caminhoLocal.trim() || '/sua/pasta',
-                    })}
-                  </code>
-                  <br />
-                  {t('workspace.runnerHint.note')}
-                </Alert>
+                // como o aviso de `mounted` acima. Converge para o MESMO
+                // `RunnerOnboardingPanel` de `TerminalPanel`/`FolderBrowserModal`
+                // (a divergência de antes: esta tela tinha o próprio alerta,
+                // com um comando sem `--token` e sem a opção de configuração
+                // automática). Sem `projetoParaNavegar` (usuário ainda não
+                // clicou "Procurar pasta..." — RN-437), o painel mostra só o
+                // comando manual com o placeholder do id.
+                <RunnerOnboardingPanel
+                  projectId={projetoParaNavegar?.id ?? null}
+                  caminhoSugerido={caminhoLocal}
+                />
               )}
             </div>
           )}

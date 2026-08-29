@@ -214,6 +214,12 @@ const sidebar: SidebarsConfig = {
           label: "Exposes metrics in Prometheus exposition format",
           className: "api-method get",
         },
+        {
+          type: "doc",
+          id: "docs/reference/api/runner-releases-controller-binary",
+          label: "Baixa o binário standalone do runner local pra plataforma pedida",
+          className: "api-method get",
+        },
       ],
     },
     {
@@ -1023,6 +1029,18 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/personal-access-tokens-controller-list-all-pats",
           label: "Lista TODOS os Personal Access Tokens do projeto, de qualquer usuário",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/runner-device-keys-controller-register-device-key",
+          label: "Registra a chave pública de um dispositivo do runner local",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/runner-device-keys-controller-revoke-device-key",
+          label: "Revoga uma chave de dispositivo própria",
+          className: "api-method delete",
         },
         {
           type: "doc",

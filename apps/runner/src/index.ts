@@ -9,8 +9,14 @@
  *
  * uso: brabo-runner --project <projectId> --dir <caminho-absoluto> [--api-url <url>]
  *
+ * Também roda SEM NENHUMA flag quando o diretório atual (`cwd`) contém os
+ * três arquivos que o fluxo "configurar pasta automaticamente" do navegador
+ * grava: o próprio binário, `brabo-runner.config.json` e
+ * `brabo-runner-device-key.jwk.json` — ver `device-key.ts`.
+ *
  * Ver o docblock de cada módulo para o desenho de cada parte:
- * `auth.ts` (autenticação + ticket), `channel.ts` (protocolo Phoenix),
+ * `auth.ts` (autenticação + ticket), `device-key.ts` (leitura do config/
+ * chave local do modo automático), `channel.ts` (protocolo Phoenix),
  * `exec.ts` (execução não-interativa), `pty.ts` (terminal interativo),
  * `guard.ts` (barreira best-effort de `cwd`), `fs-browser.ts` (navegação
  * de pasta local, sem a barreira de `guard.ts` — ver o docblock dele).
@@ -19,7 +25,11 @@
 import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { pathToFileURL } from 'node:url';
-import { obterToken, obterTicketDoRunner } from './auth.ts';
+import {
+  obterToken,
+  obterTicketDoRunnerComCredencial,
+  type CredencialDeAutenticacao,
+} from './auth.ts';
 import {
   conectarCanal,
   enviarExecResult,
@@ -36,6 +46,7 @@ import {
   type FsListDirMessage,
   type PtyOpenMessage,
 } from './channel.ts';
+import { lerChaveDeDispositivo, lerConfigLocal } from './device-key.ts';
 import { executarComando } from './exec.ts';
 import { diretorioInicial, listarDiretorio } from './fs-browser.ts';
 import {
@@ -55,7 +66,7 @@ interface Argumentos {
   projectId: string;
   dir: string;
   apiUrl: string;
-  token: string;
+  credencial: CredencialDeAutenticacao;
 }
 
 function uso(): never {
@@ -63,12 +74,20 @@ function uso(): never {
     'uso: brabo-runner --project <projectId> --dir <caminho-absoluto> [--api-url <url>] [--token <brb_...>]',
   );
   console.error(
+    'modo automático: rode "brabo-runner" SEM NENHUMA flag dentro da pasta que o ' +
+      'botão "Configurar pasta automaticamente" (tela do projeto) baixou — ela já ' +
+      'traz brabo-runner.config.json e a chave de dispositivo, e --project/--dir/' +
+      '--token deixam de ser necessários.',
+  );
+  console.error(
     '--dir: se a pasta ainda não existir, ela é criada automaticamente (dentro do ' +
-      '$HOME no Linux, RN-434/RN-435). Se apontar para um arquivo existente, é erro.',
+      '$HOME no Linux, RN-434/RN-435). Se apontar para um arquivo existente, é erro. ' +
+      'Omitida, a raiz é a própria pasta de onde o comando roda.',
   );
   console.error(
     'Autenticação: --token <brb_...>, ou BRABO_ACCOUNT_TOKEN no ambiente. Gere em ' +
-      'Configurações do projeto → Tokens de acesso — nunca gravado em disco por este CLI.',
+      'Configurações do projeto → Tokens de acesso — nunca gravado em disco por este ' +
+      'CLI. Sem token, a chave de dispositivo local (modo automático) é usada.',
   );
   process.exit(2);
 }
@@ -80,14 +99,47 @@ function lerArgumentos(argv: string[]): Argumentos {
     if (indice < 0) return undefined;
     return args[indice + 1];
   };
+  const flagInformado = (flag: string): boolean => args.includes(flag);
 
-  const projectId = valorDe('--project');
-  const dirBruto = valorDe('--dir');
-  const apiUrl = valorDe('--api-url') ?? process.env.BRABO_API_URL ?? 'http://localhost:3000';
+  // Pasta de onde o usuário DE FATO rodou o comando — mesma base que
+  // `resolverDir` usa para `--dir` relativo (ver docblock de guard.ts) — e
+  // também onde procuramos `brabo-runner.config.json`/
+  // `brabo-runner-device-key.jwk.json` do modo automático: eles vivem NA
+  // pasta de onde o comando roda, nunca em `$HOME`/global (ver
+  // `device-key.ts`).
+  const cwdEfetivo = process.env.INIT_CWD ?? process.cwd();
+  const configLocal = lerConfigLocal(cwdEfetivo);
+  const chaveLocal = lerChaveDeDispositivo(cwdEfetivo);
+
+  let projectId: string | undefined;
+  if (flagInformado('--project')) {
+    const valor = valorDe('--project');
+    if (!valor || valor.startsWith('--')) uso();
+    projectId = valor;
+  } else {
+    // Flag explícita sempre vence o config local — na ausência dela, o
+    // arquivo baixado pelo navegador resolve sozinho.
+    projectId = configLocal?.projectId;
+  }
+  if (!projectId) uso();
+
+  let dirBruto: string;
+  if (flagInformado('--dir')) {
+    const valor = valorDe('--dir');
+    if (!valor || valor.startsWith('--')) uso();
+    dirBruto = valor;
+  } else {
+    // `--dir` deixou de ser obrigatório: sem a flag, a raiz é a própria
+    // pasta de onde o comando roda (`cwdEfetivo`) — `resolverDir('.', ...)`
+    // resolve exatamente para lá, reusando a mesma lógica de sempre em vez
+    // de duplicá-la.
+    dirBruto = '.';
+  }
+
+  const apiUrlFlag = valorDe('--api-url');
+  const apiUrl =
+    apiUrlFlag ?? process.env.BRABO_API_URL ?? configLocal?.apiUrl ?? 'http://localhost:3000';
   const tokenFlag = valorDe('--token');
-
-  if (!projectId || projectId.startsWith('--')) uso();
-  if (!dirBruto || dirBruto.startsWith('--')) uso();
 
   // `INIT_CWD` é a pasta de onde o usuário de fato digitou o comando —
   // sem ela, `--dir` relativo resolveria contra `process.cwd()`, que
@@ -124,15 +176,33 @@ function lerArgumentos(argv: string[]): Argumentos {
     throw erro;
   }
 
-  let token: string;
-  try {
-    token = obterToken(tokenFlag);
-  } catch (erro) {
-    console.error(erro instanceof Error ? erro.message : String(erro));
-    process.exit(2);
+  // `--token`/`BRABO_ACCOUNT_TOKEN` sempre vence a chave de dispositivo
+  // local quando ambos existem — mesmo critério de "flag explícita vence
+  // arquivo local" usado acima para `--project`/`--api-url`.
+  const tokenBruto = tokenFlag ?? process.env.BRABO_ACCOUNT_TOKEN;
+  let credencial: CredencialDeAutenticacao;
+  if (tokenBruto) {
+    let token: string;
+    try {
+      token = obterToken(tokenFlag);
+    } catch (erro) {
+      console.error(erro instanceof Error ? erro.message : String(erro));
+      process.exit(2);
+    }
+    credencial = { tipo: 'token', token };
+  } else if (chaveLocal) {
+    credencial = {
+      tipo: 'chave-de-dispositivo',
+      jwkPrivada: chaveLocal.jwkPrivada,
+      deviceKeyId: chaveLocal.deviceKeyId,
+    };
+  } else {
+    // Nem token (flag/env) nem chave de dispositivo local — sem forma
+    // nenhuma de autenticar.
+    uso();
   }
 
-  return { projectId, dir, apiUrl, token };
+  return { projectId, dir, apiUrl, credencial };
 }
 
 function mensagemDeErro(erro: unknown): string {
@@ -236,21 +306,25 @@ function tratarFsHomeDir(estado: EstadoDoRunner, msg: FsHomeDirMessage): void {
 }
 
 /**
- * Uma "rodada" de conexão: pede um ticket FRESCO (o token é resolvido uma
- * vez só, em `lerArgumentos` — PAT não expira por uso, então não há razão
- * pra reobtê-lo a cada reconexão), entra no canal, e só volta quando a
- * conexão cai (ou lança se o join for recusado/não puder conectar). O
- * `while` de `main()` decide o que fazer com o retorno/erro — este helper
- * não decide política de retry.
+ * Uma "rodada" de conexão: pede um ticket FRESCO, entra no canal, e só volta
+ * quando a conexão cai (ou lança se o join for recusado/não puder
+ * conectar). A `credencial` é resolvida uma vez só, em `lerArgumentos` — mas
+ * o BEARER que ela produz não é necessariamente reaproveitado entre
+ * reconexões: para `tipo: 'token'` (PAT, não expira por uso) é o mesmo
+ * valor sempre; para `tipo: 'chave-de-dispositivo'`,
+ * `obterTicketDoRunnerComCredencial` assina um JWT NOVO a cada chamada
+ * (TTL de 30s — reaproveitar entre reconexões distantes no tempo mandaria
+ * um JWT já expirado). O `while` de `main()` decide o que fazer com o
+ * retorno/erro — este helper não decide política de retry.
  */
 async function conectarERodar(
   apiUrl: string,
   projectId: string,
-  token: string,
+  credencial: CredencialDeAutenticacao,
   estado: EstadoDoRunner,
   deveParar: () => boolean,
 ): Promise<void> {
-  const ticket = await obterTicketDoRunner(apiUrl, projectId, token);
+  const ticket = await obterTicketDoRunnerComCredencial(apiUrl, projectId, credencial);
 
   let resolverQueda: () => void;
   const queda = new Promise<void>((res) => {
@@ -368,9 +442,16 @@ async function main(): Promise<void> {
     return;
   }
 
-  const { projectId, dir, apiUrl, token } = lerArgumentos(process.argv);
+  const { projectId, dir, apiUrl, credencial } = lerArgumentos(process.argv);
 
-  console.log(`brabo-runner — projeto ${projectId}, raiz ${dir}, api ${apiUrl}`);
+  const autenticacaoDescricao =
+    credencial.tipo === 'token'
+      ? 'token de acesso'
+      : `chave de dispositivo (${credencial.deviceKeyId})`;
+  console.log(
+    `brabo-runner — projeto ${projectId}, raiz ${dir}, api ${apiUrl}, ` +
+      `autenticação: ${autenticacaoDescricao}`,
+  );
 
   // Resolvido UMA vez, antes de montar o estado — normal `import('node-pty')`
   // sob `node dist/index.cjs`/`bun run src/index.ts`; extraído do binário
@@ -417,7 +498,7 @@ async function main(): Promise<void> {
 
   while (!parando) {
     try {
-      await conectarERodar(apiUrl, projectId, token, estado, deveParar);
+      await conectarERodar(apiUrl, projectId, credencial, estado, deveParar);
       tentativasSeguidas = 0; // ficou conectado por um tempo — reseta o contador de falhas
     } catch (erro) {
       if (erro instanceof JoinRecusadoError) {

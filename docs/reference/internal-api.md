@@ -46,12 +46,18 @@ never works on `/internal/*` — the two mechanisms don't overlap
 
 **A third credential, neither service token nor user JWT**:
 `POST /projects/:projectId/runner-ticket` is `role:developer` like any
-RBAC route, but does not accept the normal session JWT — only a Personal Access
-Token (`brb_…`, `PatAuthGuard`/`@RequirePatAuth()`), scoped by construction
-to this single route ([RN-424](../business-rules.md#rn-424), ADR 0105). Worth
-noting here because it's the distinction this page exists to explain:
-"it's not `/internal/*`" doesn't mean "so it's a user JWT" — the PAT is a
-third mechanism, with no overlap with the other two.
+RBAC route, but does not accept the normal session JWT — only one of TWO
+device-scoped credentials, both handled by the same `PatAuthGuard`/
+`@RequirePatAuth()`, scoped by construction to this single route: a
+Personal Access Token (`brb_…`, [RN-424](../business-rules.md#rn-424), ADR
+0105), or a short-lived (≤60s), self-signed EdDSA JWT proving possession of
+a browser-generated Ed25519 device key registered via
+`/projects/:projectId/runner-device-keys`
+([RN-465](../business-rules.md#rn-465), ADR 0118) — additive to the PAT,
+never a replacement. Worth noting here because it's the distinction this
+page exists to explain: "it's not `/internal/*`" doesn't mean "so it's a
+user JWT" — both device credentials are a third mechanism, with no overlap
+with the other two.
 
 Also out of scope: the
 `@Public()` routes that are the actual ENTRY POINT before any session

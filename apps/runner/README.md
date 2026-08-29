@@ -19,6 +19,30 @@ docblocks de `src/channel.ts`, `src/exec.ts`, `src/pty.ts`, `src/guard.ts` e
 [ADR 0107](https://github.com/daneiel/brabo/blob/main/docs/adr/0107-navegacao-de-pasta-local-via-o-runner.md)
 para o argumento de segurança da navegação de pasta.
 
+## Modo automático (recomendado)
+
+Na tela do projeto (modo `runner`), use o botão **"Configurar pasta
+automaticamente"**: o navegador baixa, numa pasta escolhida por você, três
+arquivos já configurados — o binário (`brabo-runner`/`brabo-runner.exe`),
+`brabo-runner.config.json` (projeto + URL da api) e uma chave de dispositivo
+(`brabo-runner-device-key.jwk.json`). Com os três na mesma pasta, basta:
+
+```sh
+# Linux/macOS
+chmod +x ./brabo-runner && ./brabo-runner
+```
+
+```powershell
+# Windows
+.\brabo-runner.exe
+```
+
+Sem digitar id de projeto nem token — o CLI lê o config e a chave de
+dispositivo da própria pasta de onde ele é executado (duplo-clique no
+Windows Explorer já herda o `cwd` da pasta). `--project`, `--dir` e
+`--token` continuam existindo para os fluxos abaixo, e uma flag explícita
+sempre vence o arquivo local quando os dois aparecem.
+
 ## Instalação
 
 ### Via npm (requer Node.js ≥ 22.6)
@@ -60,12 +84,18 @@ dono do produto obter/custear uma identidade de assinatura de código.
 brabo-runner --project <projectId> --dir <caminho-absoluto> --token brb_... [--api-url <url>]
 ```
 
+Todas as flags abaixo são opcionais quando a pasta atual tem
+`brabo-runner.config.json`/`brabo-runner-device-key.jwk.json` (modo
+automático, acima) — uma flag informada explicitamente sempre vence o valor
+do arquivo local.
+
 - `--project`: o id do projeto no Brabo, com `execution_mode` = `runner`.
   Só **um** runner por projeto no cluster inteiro
   (`Engine.Runners.Registry`) — um segundo `brabo-runner` para o mesmo
   projeto é recusado no join.
 - `--dir`: a pasta absoluta onde o código do projeto vive nesta máquina —
-  raiz para os comandos (`exec`) e o terminal (PTY). Se a pasta ainda não
+  raiz para os comandos (`exec`) e o terminal (PTY). Omitida, a raiz é a
+  própria pasta de onde o comando roda (`cwd`). Se a pasta ainda não
   existir, ela é **criada automaticamente** (`mkdir -p`); se `--dir` apontar
   para um arquivo já existente, é erro — este CLI nunca sobrescreve um
   arquivo (RN-435, ADR 0104). A navegação de pasta
@@ -78,9 +108,12 @@ brabo-runner --project <projectId> --dir <caminho-absoluto> --token brb_... [--a
   mesmo quando ainda não existe.
 - `--token`: um Personal Access Token (`brb_…`), gerado em **Configurações do
   projeto → Tokens de acesso**. Também pode vir pela variável de ambiente
-  `BRABO_ACCOUNT_TOKEN` — nunca é gravado em disco por este CLI.
-- `--api-url`: default `http://localhost:3000`, ou a variável de ambiente
-  `BRABO_API_URL`.
+  `BRABO_ACCOUNT_TOKEN` — nunca é gravado em disco por este CLI. Sem
+  `--token`/`BRABO_ACCOUNT_TOKEN`, a chave de dispositivo local do modo
+  automático é usada para autenticar (JWT EdDSA de vida curta, assinado a
+  cada tentativa de conexão).
+- `--api-url`: ordem de prioridade: flag explícita → `BRABO_API_URL` →
+  `apiUrl` do `brabo-runner.config.json` local → `http://localhost:3000`.
 
 ### Rodando direto do checkout do monorepo (sem instalar via npm)
 

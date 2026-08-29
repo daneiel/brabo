@@ -24,10 +24,25 @@
   },
   "runnerOnboarding": {
     "defaultMessage": "Nenhum runner conectado a este projeto.",
+    "noProjectMessage": "Depois de criar o projeto, você pode configurar o runner aqui.",
     "instructionPrefix": "Na sua máquina, dentro do checkout do Brabo (ver",
     "instructionSuffix": "):",
-    "command": "pnpm --filter runner start -- --project {{projectId}} --dir <pasta>",
+    "command": "brabo-runner --project {{projectId}} --dir {{caminho}} --token <gere em Configurações → Tokens de acesso>",
     "detail": "O runner conecta automaticamente assim que estiver rodando — nenhuma ação nova precisa acontecer aqui.",
-    "retryButton": "Já instalei, conectar"
+    "retryButton": "Já instalei, conectar",
+    "placeholderProjectId": "<id do projeto>",
+    "placeholderPath": "<pasta>",
+    "autoConfigureButton": "Configurar pasta automaticamente",
+    "autoConfiguring": "Configurando…",
+    "autoConfigureError": "Não foi possível configurar automaticamente. Use o comando manual abaixo.",
+    "downloadKitButton": "Baixar arquivos",
+    "downloadingKit": "Baixando…",
+    "downloadKitNote": "Baixe os dois arquivos e mova os dois para a mesma pasta antes de rodar o runner.",
+    "downloadKitDone": "Downloads iniciados — confira a pasta de downloads e mova os dois arquivos juntos.",
+    "platformSelectLabel": "Plataforma",
+    "successIntro": "Pronto — dentro da pasta escolhida, rode:",
+    "copyButton": "Copiar",
+    "copiedButton": "Copiado!",
+    "manualDisclosureSummary": "Prefiro rodar manualmente"
   }
 }

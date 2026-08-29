@@ -2352,6 +2352,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/runner-device-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registra a chave pública de um dispositivo do runner local
+         * @description A chave PRIVADA nunca sai do navegador — só a JWK pública (Ed25519, RFC 8037) chega aqui. Use o `id` desta resposta como `kid` no header do JWT que o runner assina pra pedir ticket em `POST .../runner-ticket`.
+         */
+        post: operations["RunnerDeviceKeysController_registerDeviceKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/runner-device-keys/{deviceKeyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoga uma chave de dispositivo própria
+         * @description Idempotente — revogar de novo não é erro.
+         */
+        delete: operations["RunnerDeviceKeysController_revokeDeviceKey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/runner-ticket": {
         parameters: {
             query?: never;
@@ -3007,6 +3047,26 @@ export interface paths {
          * @description Mesmo socket `/runner`, mesmo tópico, papel "terminal" — quem VÊ o terminal (o comando em si só roda de verdade se houver um runner conectado). Vale para qualquer modo de projeto.
          */
         post: operations["RunnerTicketsController_terminalTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runner-releases/binary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Baixa o binário standalone do runner local pra plataforma pedida
+         * @description Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-x64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo.
+         */
+        get: operations["RunnerReleasesController_binary"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7135,6 +7195,18 @@ export interface components {
              */
             token: string;
         };
+        RegisterRunnerDeviceKeyRequestDto: {
+            /**
+             * @description Nome pra você reconhecer este dispositivo depois — não é único.
+             * @example laptop
+             */
+            name: string;
+            /**
+             * @description JWK pública Ed25519 (RFC 8037), serializada como JSON — a privada nunca sai do navegador.
+             * @example {"kty":"OKP","crv":"Ed25519","x":"…"}
+             */
+            publicKeyJwk: string;
+        };
         ReindexProjectResponseDto: {
             docs: components["schemas"]["IndexDocsReportResponseDto"];
             sessions: components["schemas"]["ReindexSessionsResponseDto"];
@@ -7380,6 +7452,17 @@ export interface components {
             tools?: {
                 [key: string]: unknown;
             }[];
+        };
+        RunnerDeviceKeyResponseDto: {
+            /** @example 01JC4Z0000CHAVE000000000001 */
+            id: string;
+            /** @example laptop */
+            name: string;
+            /**
+             * Format: date-time
+             * @example 2026-08-27T12:00:00.000Z
+             */
+            createdAt: string;
         };
         RunnerTicketResponseDto: {
             /** @description Token opaco de uso único, base64url. TTL de 30s: some depois do primeiro `connect/3` bem-sucedido no socket `/runner`, ou quando expira. */
@@ -14406,6 +14489,115 @@ export interface operations {
             };
         };
     };
+    RunnerDeviceKeysController_registerDeviceKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRunnerDeviceKeyRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunnerDeviceKeyResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Papel insuficiente no projeto. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Projeto não encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RunnerDeviceKeysController_revokeDeviceKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                deviceKeyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chave revogada. Sem corpo. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Papel insuficiente no projeto. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Projeto não encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     RunnerTicketsController_runnerTicket: {
         parameters: {
             query?: never;
@@ -16617,6 +16809,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    RunnerReleasesController_binary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description O binário do runner, em stream. Não é JSON: `Content-Type: application/octet-stream`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
             };
         };
     };
