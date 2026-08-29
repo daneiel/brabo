@@ -44,8 +44,8 @@ stays `NULL`. This matters for who executes: a git action against a remote
 provider needs a token, and "the token of whoever decided" doesn't exist on
 this path.
 
-The answer is the **workspace owner** ([RN-082](../business-rules.md#rn-082)),
-the same one as the LLM key ([RN-058](../business-rules.md#rn-058)) —
+The answer is the **workspace owner** ([RN-082](../business-rules/custo.md#rn-082)),
+the same one as the LLM key ([RN-058](../business-rules/custo.md#rn-058)) —
 whoever funds the account funds the agents, and that doesn't change based on
 who clicks.
 
@@ -92,7 +92,7 @@ or repository: it requests more AGENTS. It's at `maintainer` for the same
 reason as `spend` — whoever authorizes cost is whoever is accountable for
 the project. It only exists above the lead's cap; within it there's no
 action, because there's nothing to decide
-([RN-083](../business-rules.md#rn-083))
+([RN-083](../business-rules/custo.md#rn-083))
 ([RN-005](../business-rules.md#rn-005)).
 
 `propose_execution_plan` (ADR 0086, [RN-284](../business-rules.md#rn-284))
@@ -183,7 +183,7 @@ Activating execution writes the `DEV_TERMINAL_ALLOW_PATTERNS` patterns
 - **reading git history/remote/config** — `git branch
   -a/-r/-v/--list/--show-current`, `git remote -v`, `git remote show`, `git
   worktree list`, `git show`, `git for-each-ref`, `git ls-tree`, `git
-  rev-parse`, `git config --get` (see [RN-143](../business-rules.md#rn-143));
+  rev-parse`, `git config --get` (see [RN-143](../business-rules/custo.md#rn-143));
 - **build and test** — `pnpm install`, `pnpm test`, `npm run`, `npx
   vitest`, `mix test`, `pytest`, `go test`, `cargo test`, among others.
 
@@ -192,7 +192,7 @@ a `terminal` with `exit 0` in the history. The first exists because the
 agent **looks before it builds**: without it, every `ls -la` in a newly
 provisioned repository fell into approval, came back as `status pending` —
 and not as the command's output — and burned a ToolLoop iteration until the
-task died by limit (see [RN-068](../business-rules.md#rn-068)). The second
+task died by limit (see [RN-068](../business-rules/custo.md#rn-068)). The second
 exists because `git status`/`diff`/`log` are enough to look at the
 worktree, but not for the agent to orient itself in the history and remotes
 of a newly adopted repository — a real session spent dozens of manual
@@ -250,7 +250,7 @@ flowchart TD
 ```
 
 **Node `Z` changed position** ([RN-418](../business-rules.md#rn-418),
-revises [RN-106](../business-rules.md#rn-106)): until the introduction of
+revises [RN-106](../business-rules/autenticacao.md#rn-106)): until the introduction of
 the local runner, it sat right after IAM and returned `deny` — now it's a
 CAP, in the same final block as the other three, applied after
 `agent_autonomy` and `permissions.json` have already given their opinion.
@@ -258,7 +258,7 @@ See the section
 ["The boundary of external effect and privileged command"](#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418)
 below for why.
 
-### "Auto mode": the `agent_autonomy` wildcard ([RN-153](../business-rules.md#rn-153))
+### "Auto mode": the `agent_autonomy` wildcard ([RN-153](../business-rules/autenticacao.md#rn-153))
 
 The `agent_autonomy has an opinion?` node in the diagram above doesn't
 know, and doesn't need to know, whether the opinion came from a SPECIFIC
@@ -274,7 +274,7 @@ denies `terminal` for that agent, while freeing up the rest.
 That's why the diagram didn't get a new node, and it's proof that the
 caps, right below, apply to "auto mode" with no exception declared
 anywhere: they react to `current.policy === 'auto_approve'`, never to its
-origin ([RN-154](../business-rules.md#rn-154)).
+origin ([RN-154](../business-rules/autenticacao.md#rn-154)).
 
 "Auto mode" requires `maintainer` — the same role that already protected
 `PUT .../agent-autonomy` before the wildcard existed. Turning it off
@@ -345,17 +345,17 @@ construction, not by `permissions.json` convention.
 
 A `terminal` command is also evaluated by **where it touches**, not just
 by the verb ([ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
-[RN-075](../business-rules.md#rn-075)). The project folder —
+[RN-075](../business-rules/custo.md#rn-075)). The project folder —
 `<PROJECT_WORKSPACES_ROOT>/<workspace_dir_name>`, where `permissions.json`
 and all agent worktrees live — is the **scope**. `workspace_dir_name`
 ([ADR 0066](../adr/0066-nome-de-pasta-legivel-do-workspace.md),
-[RN-109](../business-rules.md#rn-109)) is the folder name frozen at
+[RN-109](../business-rules/autenticacao.md#rn-109)) is the folder name frozen at
 project creation — readable (`<slug>-<8 chars of the id>`) in a new
 project, the plain UUID in a project from before that change.
 
 **A project in `local` mode has a different scope, and the difference
 matters here** ([ADR 0072](../adr/0072-projeto-local-ou-container.md),
-[RN-169](../business-rules.md#rn-169)/[RN-170](../business-rules.md#rn-170)):
+[RN-169](../business-rules/autenticacao.md#rn-169)/[RN-170](../business-rules/autenticacao.md#rn-170)):
 the root becomes the **absolute path the user typed at creation**, not
 `join(PROJECT_WORKSPACES_ROOT, workspace_dir_name)`.
 
@@ -426,8 +426,8 @@ Applied **last**, after everything else:
 |---|---|---|
 | `git_merge` with destination in `dev`, `qa`, `rc` or `main` | `auto_approve` → `require_approval` | merge into a protected branch is always your decision ([RN-006](../business-rules.md#rn-006)) |
 | `instruction_patch` | `auto_approve` → `require_approval` | you need to see the diff before one agent changes another's behavior ([RN-007](../business-rules.md#rn-007)) |
-| `parallelize` and `raise_max_parallel` | `auto_approve` → `require_approval` | spending on more agents is your decision; without this cap the lead's limit would be decorative, and raising the cap itself would be the product raising its own spending limit ([RN-086](../business-rules.md#rn-086)) |
-| `terminal` with external-effect git (push/PR/deploy) or `sudo`/`doas` | `auto_approve` → `require_approval` | external-effect git and privileged commands are never auto-approvable, even with "automatic mode" on ([RN-418](../business-rules.md#rn-418), revises [RN-106](../business-rules.md#rn-106)) — see the dedicated section above |
+| `parallelize` and `raise_max_parallel` | `auto_approve` → `require_approval` | spending on more agents is your decision; without this cap the lead's limit would be decorative, and raising the cap itself would be the product raising its own spending limit ([RN-086](../business-rules/custo.md#rn-086)) |
+| `terminal` with external-effect git (push/PR/deploy) or `sudo`/`doas` | `auto_approve` → `require_approval` | external-effect git and privileged commands are never auto-approvable, even with "automatic mode" on ([RN-418](../business-rules.md#rn-418), revises [RN-106](../business-rules/autenticacao.md#rn-106)) — see the dedicated section above |
 
 A cap downgrades `auto_approve` to `require_approval`; it does **not**
 turn `deny` into something else, because `deny` would have already
@@ -475,7 +475,7 @@ already done, and the approval queue isn't asynchronous for convenience —
 it's literally what the agent is waiting for. Before this, `pending` came
 back as if it were the command's response, and the agent burned its
 iteration cap trying something else until the task died without a single
-line written ([RN-073](../business-rules.md#rn-073)).
+line written ([RN-073](../business-rules/custo.md#rn-073)).
 
 **With one exception: engine restart.** The suspended loop lives in
 memory, so a restart takes it down with it. In that case the task does
@@ -503,7 +503,7 @@ for that action. An accepted and declared gap, not a disguised one.
 
 Every proposed action and every decision about it become a **domain
 event** in `session_events`, with the real actor
-([RN-049](../business-rules.md#rn-049)):
+([RN-049](../business-rules/custo.md#rn-049)):
 
 | event | actor | when |
 |---|---|---|

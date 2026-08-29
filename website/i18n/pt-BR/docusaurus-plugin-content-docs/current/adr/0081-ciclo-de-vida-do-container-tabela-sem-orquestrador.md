@@ -189,7 +189,7 @@ adiar esta tabela.
   estados persistida (`dev_agent_states`) cujo desenho (uma linha por
   agente, `status` validado fora da coluna) esta tabela espelha para
   container.
-- [RN-105](../business-rules.md#rn-105), [RN-169](../business-rules.md#rn-169),
+- [RN-105](../business-rules/autenticacao.md#rn-105), [RN-169](../business-rules/autenticacao.md#rn-169),
   [RN-243](../business-rules.md#rn-243)–[RN-248](../business-rules.md#rn-248).
 - `docs/explanation/achados-execucao-real.md` — os achados Z e AD, que
   este documento explicitamente NÃO fecha.

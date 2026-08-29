@@ -25,7 +25,7 @@ privado. Sessão do wizard: `f15b0cc9`. Sessão saudável: `36abf7e7`.
 
 ### A. Sessão do provisionamento nasce sem processo no engine (GRAVE)
 
-> **FECHADO** — virou [RN-067](../business-rules.md#rn-067). Os quatro call
+> **FECHADO** — virou [RN-067](../business-rules/custo.md#rn-067). Os quatro call
 > sites citados abaixo passaram a criar sessão pelo `CreateSessionUseCase`
 > (`provision-repository:119` e `:125`, `adopt-repository`, `activate-execution`),
 > e a regra declara que ele é o **único** lugar que cria sessão. Fica registrado
@@ -90,7 +90,7 @@ antigas. O `token_usage` congela o preço certo; é só a tela.
 
 ### J. Psicólogo roda em sessão vazia
 
-> **FECHADO** — virou [RN-079](../business-rules.md#rn-079). A análise só roda
+> **FECHADO** — virou [RN-079](../business-rules/custo.md#rn-079). A análise só roda
 > havendo evento ANALISÁVEL, e "analisável" desconta os passos de máquina do
 > bootstrap e o rastro dos próprios analistas — sem esse segundo desconto, a
 > primeira análise tornaria a sessão povoada para sempre. Sem material, sai
@@ -103,7 +103,7 @@ invenção — mas rodar análise em sessão sem evento é gasto à toa.
 
 ### K. Regra de negócio duplicada não é deduplicada
 
-> **FECHADO PARCIALMENTE** — virou [RN-080](../business-rules.md#rn-080).
+> **FECHADO PARCIALMENTE** — virou [RN-080](../business-rules/custo.md#rn-080).
 > Duplicata EXATA (mesmo título, ignorando caixa, acento e espaço) é recusada na
 > emissão, com escopo de projeto — é entre sessões que ela nasce. Duplicata
 > **semântica** segue aberta e assim declarada: separar "Saudação com nome" de
@@ -127,7 +127,7 @@ Continua "Estou pronto para produzir" depois que o fio já passou ao PO.
 
 ### M. O ARQUITETO É CEGO AO PRÓPRIO module_map (P1 — a falha da rodada)
 
-> **FECHADO** — virou [RN-066](../business-rules.md#rn-066) e está confirmado em
+> **FECHADO** — virou [RN-066](../business-rules/custo.md#rn-066) e está confirmado em
 > produção na seção final desta página: 4 chamadas de `assign_story_modules` em
 > vez de 18, zero nome inventado, 1 module_map em vez de 4.
 
@@ -217,7 +217,7 @@ que o ADR 0020 proíbe.
 
 ### R. PO gerou histórias sobrepostas
 
-> **FECHADO PARCIALMENTE** — virou [RN-081](../business-rules.md#rn-081). Título
+> **FECHADO PARCIALMENTE** — virou [RN-081](../business-rules/custo.md#rn-081). Título
 > idêntico recusa; história que não acrescenta cobertura sobre as regras que cita
 > vira `backlog.story_overlap_warned`, aviso e não bloqueio. **O par exato deste
 > achado continua passando** — títulos e justificativas diferentes para o mesmo
@@ -441,7 +441,7 @@ achado X.
 > Criativo não precisa de 25 iterações para conversar. É um teto por tipo de
 > agente, e isso é decisão de produto: fica na triagem.
 >
-> **FECHADO na FASE 14d** ([RN-085](../business-rules.md#rn-085)). O teto virou
+> **FECHADO na FASE 14d** ([RN-085](../business-rules/custo.md#rn-085)). O teto virou
 > por tipo em `Engine.Harness.Iteracoes`: `8` para quem conversa, `60` para dev
 > agent e subagente de QA. O critério de quem sobe não é "trabalha muito" — é
 > ter `token_budget_micros` por baixo segurando o gasto, e por isso
@@ -470,7 +470,7 @@ qualquer asserção do script: a ausência de `tool.call` de terminal, e o
 
 ### AA. `pr_open` auto-aprovado não tem credencial e sempre falha em remoto (P1)
 
-> **FECHADO** — virou [RN-082](../business-rules.md#rn-082). A api passou a
+> **FECHADO** — virou [RN-082](../business-rules/custo.md#rn-082). A api passou a
 > resolver a credencial de git pelo OWNER do workspace, reusando o mesmo
 > resolvedor da RN-058 em vez de reimplementar a regra. Verificado por mutação.
 
@@ -492,7 +492,7 @@ O contraste no mesmo run é a prova:
 O push chegou ao GitHub — a branch `feature/task-d4b36a5b` existe no remoto. O
 que falhou foi só a chamada REST que abre a PR.
 
-É a mesma classe do que a [RN-058](../business-rules.md#rn-058) corrigiu para
+É a mesma classe do que a [RN-058](../business-rules/custo.md#rn-058) corrigiu para
 LLM ("a chave que o agente gasta é a do OWNER"): o caminho de git da api ainda
 resolve por "quem decidiu", e não por "de quem é o workspace".
 
@@ -554,7 +554,7 @@ no escopo? false
 1. o segmento `/dev/null` tem como "verbo" o próprio `/dev/null`, que nunca
    estará em `allow` — e comando composto exige TODO segmento liberado;
 2. `/dev/null` é token de caminho ABSOLUTO fora da pasta do projeto, então o
-   teto da [RN-075](../business-rules.md#rn-075) rebaixa `auto_approve`.
+   teto da [RN-075](../business-rules/custo.md#rn-075) rebaixa `auto_approve`.
 
 **O impacto é grande porque `2>/dev/null` é idiomático.** Modelos o usam o
 tempo todo para silenciar erro esperado. Na prática, qualquer comando com
@@ -630,7 +630,7 @@ Para escrever, ele teria de passar pelo `terminal` — e aí encontra as duas
 barreiras que já existiam por outros motivos:
 
 1. o **allowlist de verbos**, que governa o que pode rodar
-   ([RN-075](../business-rules.md#rn-075) e os achados Z/AD);
+   ([RN-075](../business-rules/custo.md#rn-075) e os achados Z/AD);
 2. o **teto de escopo de caminho**, que rebaixa para `require_approval`
    qualquer comando fora da pasta do projeto.
 
@@ -658,7 +658,7 @@ em que alguém acrescentar a ferramenta "para facilitar".
 
 Duas histórias, uma em `api` e uma em `web`, dois dev agents subindo **ao mesmo
 tempo**. Rodar assim importa porque o teto de paralelismo da
-[RN-083](../business-rules.md#rn-083) só significa alguma coisa quando há
+[RN-083](../business-rules/custo.md#rn-083) só significa alguma coisa quando há
 trabalho independente de verdade — com um módulo só, o Dev Lead recusa
 paralelizar, e com razão.
 

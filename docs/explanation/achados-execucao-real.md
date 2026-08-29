@@ -28,7 +28,7 @@ private. Wizard session: `f15b0cc9`. Healthy session: `36abf7e7`.
 
 ### A. The provisioning session is born without an engine process (SEVERE)
 
-> **CLOSED** — became [RN-067](../business-rules.md#rn-067). The four call
+> **CLOSED** — became [RN-067](../business-rules/custo.md#rn-067). The four call
 > sites cited below started creating sessions through `CreateSessionUseCase`
 > (`provision-repository:119` and `:125`, `adopt-repository`, `activate-execution`),
 > and the rule declares it the **only** place that creates a session. Kept
@@ -96,7 +96,7 @@ action cards. `token_usage` freezes the right price; it's just the screen.
 
 ### J. The Psychologist runs on an empty session
 
-> **CLOSED** — became [RN-079](../business-rules.md#rn-079). The analysis
+> **CLOSED** — became [RN-079](../business-rules/custo.md#rn-079). The analysis
 > only runs when there's an ANALYZABLE event, and "analyzable" discounts
 > the bootstrap's machine steps and the analysts' own trail — without that
 > second discount, the first analysis would make the session look
@@ -111,7 +111,7 @@ running an analysis on a session with no event is wasted spend.
 
 ### K. Duplicate business rule isn't deduplicated
 
-> **PARTIALLY CLOSED** — became [RN-080](../business-rules.md#rn-080).
+> **PARTIALLY CLOSED** — became [RN-080](../business-rules/custo.md#rn-080).
 > An EXACT duplicate (same title, ignoring case, accents and spacing) is
 > refused at emission time, scoped to the project — it's BETWEEN sessions
 > that it arises. **Semantic** duplicates remain open, and are declared as
@@ -138,7 +138,7 @@ off to the PO.
 
 ### M. THE ARCHITECT IS BLIND TO ITS OWN module_map (P1 — the run's failure)
 
-> **CLOSED** — became [RN-066](../business-rules.md#rn-066) and is
+> **CLOSED** — became [RN-066](../business-rules/custo.md#rn-066) and is
 > confirmed in production in this page's final section: 4 calls to
 > `assign_story_modules` instead of 18, zero made-up name, 1 module_map
 > instead of 4.
@@ -234,7 +234,7 @@ it's diagnosis by elimination, which ADR 0020 forbids.
 
 ### R. The PO generated overlapping stories
 
-> **PARTIALLY CLOSED** — became [RN-081](../business-rules.md#rn-081).
+> **PARTIALLY CLOSED** — became [RN-081](../business-rules/custo.md#rn-081).
 > Identical title is refused; a story that adds no coverage over the rules
 > it cites becomes `backlog.story_overlap_warned`, a warning rather than a
 > block. **This finding's exact pair still passes** — different titles and
@@ -479,7 +479,7 @@ piece of finding X.
 > the Creative agent doesn't need 25 iterations to converse. It's a cap
 > per agent type, and that's a product decision: it goes into the triage.
 >
-> **CLOSED in FASE 14d** ([RN-085](../business-rules.md#rn-085)). The cap
+> **CLOSED in FASE 14d** ([RN-085](../business-rules/custo.md#rn-085)). The cap
 > became per-type in `Engine.Harness.Iteracoes`: `8` for conversational
 > agents, `60` for the dev agent and QA subagent. The criterion for who
 > gets to go up isn't "works a lot" — it's having a
@@ -512,7 +512,7 @@ works.
 
 ### AA. Auto-approved `pr_open` has no credential and always fails on remote (P1)
 
-> **CLOSED** — became [RN-082](../business-rules.md#rn-082). The api
+> **CLOSED** — became [RN-082](../business-rules/custo.md#rn-082). The api
 > started resolving git credentials by the workspace OWNER, reusing the
 > same resolver as RN-058 instead of reimplementing the rule. Verified by
 > mutation.
@@ -537,7 +537,7 @@ The push reached GitHub — the branch `feature/task-d4b36a5b` exists on the
 remote. What failed was only the REST call that opens the PR.
 
 It's the same class of issue that
-[RN-058](../business-rules.md#rn-058) fixed for LLM ("the key the agent
+[RN-058](../business-rules/custo.md#rn-058) fixed for LLM ("the key the agent
 spends is the OWNER's"): the api's git path still resolves by "who
 decided," rather than by "whose workspace it is."
 
@@ -603,7 +603,7 @@ no escopo? false
    will never be in `allow` — and a composite command requires EVERY
    segment allowed;
 2. `/dev/null` is an ABSOLUTE path token outside the project folder, so
-   the [RN-075](../business-rules.md#rn-075) cap downgrades to
+   the [RN-075](../business-rules/custo.md#rn-075) cap downgrades to
    `auto_approve`.
 
 **The impact is large because `2>/dev/null` is idiomatic.** Models use it
@@ -682,7 +682,7 @@ The QA tool registry is
 there it runs into two barriers that already existed for other reasons:
 
 1. the **verb allowlist**, which governs what can run
-   ([RN-075](../business-rules.md#rn-075) and findings Z/AD);
+   ([RN-075](../business-rules/custo.md#rn-075) and findings Z/AD);
 2. the **path scope cap**, which downgrades any command outside the
    project folder to `require_approval`.
 
@@ -713,7 +713,7 @@ guarantee — it'll vanish the day someone adds the tool "for convenience."
 
 Two stories, one in `api` and one in `web`, two dev agents coming up
 **at the same time**. Running it this way matters because the parallelism
-cap in [RN-083](../business-rules.md#rn-083) only means something when
+cap in [RN-083](../business-rules/custo.md#rn-083) only means something when
 there's genuinely independent work — with a single module, the Dev Lead
 refuses to parallelize, and rightly so.
 

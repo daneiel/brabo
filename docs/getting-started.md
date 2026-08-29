@@ -151,7 +151,7 @@ Open <http://localhost:5173> and sign in with those credentials.
 against the **same** database the api is using — `DATABASE_URL` from
 `.env`. The response is the same for a wrong password, a nonexistent
 email, and a locked account, on purpose
-([RN-032](business-rules.md#rn-032)), so it doesn't distinguish the cases
+([RN-032](business-rules/autenticacao.md#rn-032)), so it doesn't distinguish the cases
 for you.
 
 ## 3. Configure a model
@@ -174,7 +174,7 @@ touches the database.
 
 The model is resolved in a cascade — **session > agent > project >
 workspace**, the first one that exists
-([RN-020](business-rules.md#rn-020)). You can leave the local one as the
+([RN-020](business-rules/custo.md#rn-020)). You can leave the local one as the
 default and put an API model just on QA, the role that fits worst in a
 small model.
 

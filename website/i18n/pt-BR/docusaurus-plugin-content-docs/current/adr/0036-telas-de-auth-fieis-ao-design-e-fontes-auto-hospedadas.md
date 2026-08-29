@@ -148,7 +148,7 @@ Marcar os dois afirmaria mais do que se sabe.
 
 A cópia muda de `E-mail ou senha inválidos.` para `E-mail ou senha incorretos.`.
 O caso 403 (`Confirme seu e-mail…`) segue distinto, como o ADR 0032 e a
-[RN-032](../business-rules.md#rn-032) exigem: a uniformidade é entre "não existe",
+[RN-032](../business-rules/autenticacao.md#rn-032) exigem: a uniformidade é entre "não existe",
 "senha errada" e "conta bloqueada" — não com "e-mail não verificado", que só é
 alcançável **depois** de a senha ser provada.
 

@@ -449,8 +449,15 @@ daqui e o fechamento vai para o histórico.
 - Mudança estrutural (fronteira de camada, banco, modelo de
   consistência, dependência pesada) → ADR novo com o próximo número.
   ADR aceito NUNCA é editado: o novo referencia o antigo.
-- Regra de negócio nova → RN-XXX em docs/business-rules.md com
-  arquivo:linha e o teste que a cobre.
+- Regra de negócio nova → RN-XXX com arquivo:linha e o teste que a cobre,
+  em docs/business-rules.md — EXCETO as duas famílias que saíram dele por
+  TAMANHO (não por assunto): custo/orçamento/metering vai em
+  docs/business-rules/custo.md e auth first-party em
+  docs/business-rules/autenticacao.md. As três contam para a mesma numeração
+  (nunca reinicie por arquivo) e para a mesma contagem, que o docs:check afere
+  somando os três por glob. Âncora `{#rn-NNN}` é o contrato: ela não muda
+  quando uma RN muda de arquivo, e link de fora aponta para o arquivo que a
+  hospeda hoje.
 - TODA mudança verifica se ESTE arquivo precisa mudar — Stack, Convenções,
   "O que NÃO fazer" e o estado das fases. Não pergunte se deve: verifique.
   O gatilho é o mesmo do docmap, e o motivo é que este arquivo é o único

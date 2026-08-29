@@ -163,11 +163,11 @@ protect.
 
 ## References
 
-- [RN-109](../business-rules.md#rn-109) — the folder name is frozen at
+- [RN-109](../business-rules/autenticacao.md#rn-109) — the folder name is frozen at
   creation, and an old project keeps its UUID.
-- [RN-075](../business-rules.md#rn-075) — path scope in terminal policy
+- [RN-075](../business-rules/custo.md#rn-075) — path scope in terminal policy
   (what this ADR preserves).
-- [RN-092](../business-rules.md#rn-092) — path containment in code reading
+- [RN-092](../business-rules/custo.md#rn-092) — path containment in code reading
   (ditto).
 - [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — the
   document revised here.

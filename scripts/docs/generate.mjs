@@ -596,9 +596,21 @@ const POR_EXTENSO = [
   'dezessete', 'dezoito', 'dezenove', 'vinte',
 ];
 
-/** Quantas RNs existem: uma por cabeçalho `### RN-NNN` em `business-rules.md`. */
+/**
+ * Quantas RNs existem: uma por cabeçalho `### RN-NNN`.
+ *
+ * Soma os TRÊS arquivos — `business-rules.md` e os dois que saíram dele por
+ * tamanho (`business-rules/custo.md`, `business-rules/autenticacao.md`). Quem
+ * responde é o GLOB, não uma lista escrita aqui: um quarto arquivo de RN entra
+ * na conta sozinho, em vez de deixar o número silenciosamente baixo — que é
+ * exatamente o modo de falha que esta aferição existe para pegar.
+ */
 function contarRegrasDeNegocio() {
-  return (ler('docs/business-rules.md').match(/^### RN-\d+ /gm) ?? []).length;
+  const fontes = ['docs/business-rules.md', ...arquivos('docs/business-rules/*.md')];
+  return fontes.reduce(
+    (soma, f) => soma + (ler(f).match(/^### RN-\d+ /gm) ?? []).length,
+    0,
+  );
 }
 
 /**

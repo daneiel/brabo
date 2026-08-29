@@ -51,7 +51,7 @@ ADITIVO, `run_design/3`, ao lado do `run/2` de sempre (revisão de PR):
 
 1. **`Engine.Gates.QaEstrategiaContext.fetch/3`** — contexto LEVE: só story
    (de `EngineApiClient.list_backlog/1`, a árvore que o PO já lê desde a
-   [RN-164](../business-rules.md#rn-164)) e `module_map` vigente (de
+   [RN-164](../business-rules/autenticacao.md#rn-164)) e `module_map` vigente (de
    `EngineApiClient.get_infra_context/2`, o MESMO `GetInfraContextUseCase`
    que o Infra Lead consome, aqui só pelo campo `moduleMap`) — SEM
    `dev_state`, SEM `worktree_path`. Nenhuma rota nova na api: as duas
@@ -77,7 +77,7 @@ ADITIVO, `run_design/3`, ao lado do `run/2` de sempre (revisão de PR):
    - **sem plano ainda** — dispara `Dispatcher.run_qa_estrategia/3` e
      devolve `{:error, texto}` pedindo para tentar de novo. Erro de
      ferramenta é ENTRADA do laço, não fim de linha
-     ([RN-163](../business-rules.md#rn-163)) — o Dev Lead tem 14 iterações
+     ([RN-163](../business-rules/autenticacao.md#rn-163)) — o Dev Lead tem 14 iterações
      para tentar de novo depois que o plano existir;
    - **com plano** — monta o parecer (`implementavel`/`inviavel` +
      justificativa, com o plano de teste embutido no payload) e chama
@@ -99,7 +99,7 @@ ADITIVO, `run_design/3`, ao lado do `run/2` de sempre (revisão de PR):
 `Engine.Harness.Iteracoes.tipo/1` classifica agente desconhecido como
 `:conversacional` (teto 8). `"qa-estrategia"` cai nesse default, e é a
 decisão CERTA — não uma lacuna. O critério da
-[RN-085](../business-rules.md#rn-085) não é "quem trabalha muito": é "o que
+[RN-085](../business-rules/custo.md#rn-085) não é "quem trabalha muito": é "o que
 segura o gasto além do teto de iterações". Este agente roda SEM
 `token_budget_micros` (não há task, PRE-DEV), a mesma situação de
 `infra-workflows` — que também fica em 8 mesmo usando ferramenta, porque

@@ -197,5 +197,5 @@ uma bateria de `toBeGreaterThanOrEqual`, e a razão está aqui.
   (intenção sim, mecanismo não).
 - [0058](0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md) — a política de CSP que torna o script
   inline inviável.
-- [RN-182](../business-rules.md#rn-182), [RN-183](../business-rules.md#rn-183),
-  [RN-184](../business-rules.md#rn-184), [RN-185](../business-rules.md#rn-185).
+- [RN-182](../business-rules/autenticacao.md#rn-182), [RN-183](../business-rules/autenticacao.md#rn-183),
+  [RN-184](../business-rules/autenticacao.md#rn-184), [RN-185](../business-rules/autenticacao.md#rn-185).

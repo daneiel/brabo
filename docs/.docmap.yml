@@ -24,7 +24,15 @@ rules:
       # Fase 12d: os casos de uso de backlog decidem QUEM promove uma história
       # (RN-048) — regra de negócio que não mora no diretório `domain/`.
       - "apps/api/src/application/use-cases/backlog/**"
-    docs: ["docs/business-rules.md"]
+    # A RN pode morar em QUALQUER um dos três arquivos desde que o
+    # `business-rules.md` foi partido por tamanho (Custo e Autenticação
+    # sozinhas eram metade de uma página de 640 KB). Disjunção, não
+    # conjunção: cobrar os três por uma RN que mora num só ensinaria a usar
+    # o escape hatch, e regra que ensina a ignorar check é pior que nenhuma.
+    docs_alternativos:
+      - "docs/business-rules.md"
+      - "docs/business-rules/custo.md"
+      - "docs/business-rules/autenticacao.md"
     severity: block
     note: "RN alterada exige arquivo:linha atualizado e o teste que a cobre."
 
@@ -32,7 +40,16 @@ rules:
     watch:
       - "apps/api/src/domain/actions/**"
       - "apps/api/src/application/use-cases/actions/**"
-    docs: ["docs/reference/permissions.md", "docs/business-rules.md"]
+    docs: ["docs/reference/permissions.md"]
+    # A RN pode morar em QUALQUER um dos três arquivos desde que o
+    # `business-rules.md` foi partido por tamanho (Custo e Autenticação
+    # sozinhas eram metade de uma página de 640 KB). Disjunção, não
+    # conjunção: cobrar os três por uma RN que mora num só ensinaria a usar
+    # o escape hatch, e regra que ensina a ignorar check é pior que nenhuma.
+    docs_alternativos:
+      - "docs/business-rules.md"
+      - "docs/business-rules/custo.md"
+      - "docs/business-rules/autenticacao.md"
     severity: block
     note: "deny > allow e os dois tetos são o coração do sistema."
 
@@ -59,7 +76,16 @@ rules:
       - "apps/api/src/db/schema.ts"
       - "apps/api/src/db/migrations/**"
       - "apps/engine/priv/repo/migrations/**"
-    docs: ["docs/architecture.md", "docs/business-rules.md"]
+    docs: ["docs/architecture.md"]
+    # A RN pode morar em QUALQUER um dos três arquivos desde que o
+    # `business-rules.md` foi partido por tamanho (Custo e Autenticação
+    # sozinhas eram metade de uma página de 640 KB). Disjunção, não
+    # conjunção: cobrar os três por uma RN que mora num só ensinaria a usar
+    # o escape hatch, e regra que ensina a ignorar check é pior que nenhuma.
+    docs_alternativos:
+      - "docs/business-rules.md"
+      - "docs/business-rules/custo.md"
+      - "docs/business-rules/autenticacao.md"
     severity: warn
     note: "Constraint nova costuma ser RN. Tabela nova muda o diagrama de dados."
 

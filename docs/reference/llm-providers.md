@@ -67,11 +67,11 @@ poorer than the provider, never richer.
 | capability | where it lives | used for |
 | --- | --- | --- |
 | `streaming` | provider + `models.supports_streaming` | — |
-| `toolCalling` | provider + `models.supports_tool_calling` | reject agent binding ([RN-040](../business-rules.md#rn-040)) |
-| `listModels` | provider only | enable/skip catalog sync ([RN-043](../business-rules.md#rn-043)) |
-| `embeddings` | provider + `supportsEmbeddings` on the catalog row | allow/reject the embedding call ([RN-190](../business-rules.md#rn-190)) |
+| `toolCalling` | provider + `models.supports_tool_calling` | reject agent binding ([RN-040](../business-rules/custo.md#rn-040)) |
+| `listModels` | provider only | enable/skip catalog sync ([RN-043](../business-rules/custo.md#rn-043)) |
+| `embeddings` | provider + `supportsEmbeddings` on the catalog row | allow/reject the embedding call ([RN-190](../business-rules/custo.md#rn-190)) |
 | `context_length` | `models.context_window` | context budget |
-| `vision` | `models.supports_vision` | filter the catalog ([RN-056](../business-rules.md#rn-056)) |
+| `vision` | `models.supports_vision` | filter the catalog ([RN-056](../business-rules/custo.md#rn-056)) |
 | `reasoning` | `models.supports_reasoning` | same |
 | `image output` | `models.generates_image` | same |
 
@@ -100,7 +100,7 @@ declaration of absence. That's why the screen uses the facets only as a positive
 :::caution This does NOT cover "best for code"
 No provider catalog publishes what a model is good for. That's curation
 by whoever operates it, and it lives in `workspace_models.uses`, per workspace
-([RN-057](../business-rules.md#rn-057)) — it's not a capability, and deriving it
+([RN-057](../business-rules/custo.md#rn-057)) — it's not a capability, and deriving it
 from the model's name would be a guess dressed up as data.
 :::
 
@@ -175,7 +175,7 @@ code was written:
 
 Both THROW on error, as the contract requires: returning an empty list
 would be read by reconciliation as "everything disappeared" and would make the
-whole catalog unavailable ([RN-043](../business-rules.md#rn-043)).
+whole catalog unavailable ([RN-043](../business-rules/custo.md#rn-043)).
 
 ### The two independent availability axes
 
@@ -195,7 +195,7 @@ The two axes stopped living in the same table in
 [ADR 0049](../adr/0049-curadoria-de-modelo-por-workspace.md). Curation is
 **per workspace** — `models.is_active` used to be a column for the whole
 installation, and a workspace-A owner turning on a model turned it on for B too
-([RN-052](../business-rules.md#rn-052)). What's left in `models` is provider fact: name,
+([RN-052](../business-rules/custo.md#rn-052)). What's left in `models` is provider fact: name,
 price, capabilities, and availability, the same for everyone.
 
 **Absence of a row in `workspace_models` IS "off."** There's no separate
@@ -218,7 +218,7 @@ It doesn't mix with `is_active`:
 - the list **replaces** the previous one (an empty list unmarks everything).
 
 Route: `POST /workspaces/:workspaceId/models/uses`, `owner`
-([RN-057](../business-rules.md#rn-057)).
+([RN-057](../business-rules/custo.md#rn-057)).
 
 ### The three reconciliation rules
 
@@ -239,9 +239,9 @@ Route: `POST /workspaces/:workspaceId/models/uses`, `owner`
 4. **`manual_pricing` wins over the remote catalog.** A row marked this way has a
    number someone typed in from the provider's doc, and sync doesn't touch it —
    not even when the catalog brings its own price
-   ([RN-051](../business-rules.md#rn-051)).
+   ([RN-051](../business-rules/custo.md#rn-051)).
 5. **Every price change made by sync leaves a row in `model_price_changes`**, with
-   origin `sync` and `changed_by` null ([RN-044](../business-rules.md#rn-044)).
+   origin `sync` and `changed_by` null ([RN-044](../business-rules/custo.md#rn-044)).
 
 A NEW model discovered by sync is born `manual_pricing = false` when the
 catalog reported a price — the origin is sync, and it's sync that keeps the row
@@ -254,19 +254,19 @@ catalog that happens to report a price.
 `resolveBinding` skips the unavailable candidate and follows the precedence. When
 the turn carries tools, it also skips whoever doesn't do tool calling **at every
 level** — without this, an agent's fallback would land on a chat-only model and
-would silently violate [RN-040](../business-rules.md#rn-040): the failure would
+would silently violate [RN-040](../business-rules/custo.md#rn-040): the failure would
 only show up later, in the ToolLoop, as "the agent stopped on its own." What was
 skipped comes back in `skipped`, and the UI shows it.
 
 The precedence is `session > agent > area > project > workspace`
-([RN-020](../business-rules.md#rn-020)). `area` came in during PHASE 23: it's the
+([RN-020](../business-rules/custo.md#rn-020)). `area` came in during PHASE 23: it's the
 STANDARD that a lead and its area's subagents share, and the agent's own binding
 is the divergence that overrides it — it enters the same capability revalidation
 above, including the tool calling requirement
-([RN-102](../business-rules.md#rn-102)). The `agent` and `area` scopes became
+([RN-102](../business-rules/custo.md#rn-102)). The `agent` and `area` scopes became
 PER PROJECT (`scope_id` composite, `<projectId>:<slug|chave>`) — before,
 `agent` was a global slug and the same binding held for every project
-([RN-103](../business-rules.md#rn-103), [ADR 0064](../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)).
+([RN-103](../business-rules/custo.md#rn-103), [ADR 0064](../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)).
 
 ### Who schedules and who executes
 
@@ -360,7 +360,7 @@ Ollama is also the only one that publishes the MODEL layer: `/api/tags` brings
 `capabilities: ["embedding"]` and `details.embedding_length` per row, and that's
 where `supportsEmbeddings` and `embeddingDimensions` in the catalog come from. A
 chat model asked for embedding gets a **`501`** from the daemon — the reason the
-check happens beforehand ([RN-190](../business-rules.md#rn-190)).
+check happens beforehand ([RN-190](../business-rules/custo.md#rn-190)).
 
 :::note The spend still isn't measured
 `embed` returns `inputTokens`/`estimated` to feed the metering, and

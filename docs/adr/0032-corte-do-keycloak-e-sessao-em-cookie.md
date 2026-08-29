@@ -152,7 +152,7 @@ a non-existent email, and silently fires off the "set your password" link.
 Responding with an explicit `password_pending` would be the obvious UX
 choice, and it's rejected: it would confirm both that the address exists
 **and** that it's a legacy account — the most valuable enumeration signal
-in the system, and exactly what [RN-032](../business-rules.md#rn-032)
+in the system, and exactly what [RN-032](../business-rules/autenticacao.md#rn-032)
 closes.
 
 For the cost to be the same across all three outcomes, `findByEmail` became

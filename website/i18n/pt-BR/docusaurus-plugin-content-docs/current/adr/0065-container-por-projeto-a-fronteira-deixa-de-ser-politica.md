@@ -102,7 +102,7 @@ que falta.
 409 e não 403: nada está errado com quem pediu nem com a permissão dele — o
 recurso ainda não existe neste estado. E a checagem mora no **mesmo funil** que
 a contenção de caminho (`alvo`), não nas quatro rotas, pelo motivo da
-[RN-092](../business-rules.md#rn-092): checagem duplicada em quatro chamadores é
+[RN-092](../business-rules/custo.md#rn-092): checagem duplicada em quatro chamadores é
 checagem que um dia diverge em um deles.
 
 ### 3. A fronteira: dentro é livre, fora é humano
@@ -237,8 +237,8 @@ porta ficar permanentemente aberta.
   quem responde pelo projeto; a rede segue o mesmo critério.
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — o worktree é por
   AGENTE, não por task; é ele que passa a viver dentro do container.
-- [RN-014](../business-rules.md#rn-014), [RN-092](../business-rules.md#rn-092),
-  [RN-105](../business-rules.md#rn-105), [RN-106](../business-rules.md#rn-106).
+- [RN-014](../business-rules.md#rn-014), [RN-092](../business-rules/custo.md#rn-092),
+  [RN-105](../business-rules/autenticacao.md#rn-105), [RN-106](../business-rules/autenticacao.md#rn-106).
 - `docs/explanation/achados-execucao-real.md` — os achados Z, AD e AE.
 - `apps/api/src/domain/containers/project-container.ts`,
   `apps/api/src/domain/actions/external-effect.ts`,

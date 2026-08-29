@@ -60,7 +60,7 @@ on what someone deliberately turned off.
 
 ### A discovered model comes in INACTIVE, a disappeared model is flagged and preserved
 
-Formalized in [RN-043](../business-rules.md#rn-043). Deleting is never an
+Formalized in [RN-043](../business-rules/custo.md#rn-043). Deleting is never an
 option: `model_bindings` and `token_usage` point to the row.
 
 The third rule is the one that shows up least and matters most: **a
@@ -85,7 +85,7 @@ The non-obvious point: when the turn carries tools, the
 `supports_tool_calling` filter applies to **every** candidate, not just
 the first. Without that, an agent's binding to an unavailable model would
 fall to the level below and land on a chat-only model, silently violating
-[RN-040](../business-rules.md#rn-040) — the failure would only show up
+[RN-040](../business-rules/custo.md#rn-040) — the failure would only show up
 later, in the ToolLoop, as "the agent just stopped by itself". That's
 exactly the kind of failure that cost nine executions to diagnose in
 ADR 0020.
@@ -100,7 +100,7 @@ calls for.
 `token_usage` gained `input_price_per_million_micros` and
 `output_price_per_million_micros` — the price that produced that cost.
 That's what makes an old cost reproducible, not merely immutable
-([RN-044](../business-rules.md#rn-044)).
+([RN-044](../business-rules/custo.md#rn-044)).
 
 The alternative considered was a **validity-period table** (a price with a
 validity interval, cost recalculated via join). It was discarded: it would

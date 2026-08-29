@@ -89,7 +89,7 @@ gostaríamos que ela dissesse.
   a tabela e os dois casos de uso que este documento finalmente expõe por HTTP.
 - [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md) —
   a FASE 25b, que continua cortada; este documento não a reabre.
-- [RN-105](../business-rules.md#rn-105), [RN-107](../business-rules.md#rn-107),
+- [RN-105](../business-rules/autenticacao.md#rn-105), [RN-107](../business-rules/autenticacao.md#rn-107),
   [RN-243](../business-rules.md#rn-243), [RN-267](../business-rules.md#rn-267),
   [RN-268](../business-rules.md#rn-268).
 - `apps/api/src/interfaces/http/containers/containers.controller.ts`,

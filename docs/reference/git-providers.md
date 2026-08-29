@@ -119,8 +119,8 @@ So it stays **composed at the application layer**
 files opened, and matches returned — plus a short-TTL cache
 (`domain/git/git-read-cache.ts`) so browsing and searching don't repeat the
 same calls. Who pays is the **workspace owner's** credential
-([RN-058](../business-rules.md#rn-058)/[RN-082](../business-rules.md#rn-082)),
-and the rate limit is the provider's — see [RN-095](../business-rules.md#rn-095)
+([RN-058](../business-rules/custo.md#rn-058)/[RN-082](../business-rules/custo.md#rn-082)),
+and the rate limit is the provider's — see [RN-095](../business-rules/custo.md#rn-095)
 and [ADR 0060](../adr/0060-superficie-de-leitura-de-codigo.md).
 
 ## Capabilities
@@ -331,7 +331,7 @@ would lose exactly the information someone will want later.
 
 A project can point to a repository that **already exists**, instead of
 creating one. `project_repositories.origin` says which of the two it was
-([RN-046](../business-rules.md#rn-046)).
+([RN-046](../business-rules/custo.md#rn-046)).
 
 Adoption uses **only what the contract already had**: `getRepo` validates
 access — it had existed since Phase 2 and no use case called it — and the
@@ -343,7 +343,7 @@ serialized list of what it would do, obtained by calling each step's
 `check()` — the same one that gives idempotency — without executing anything.
 The user then either approves the whole plan, or adopts as-is and dismisses
 bootstrap
-([RN-045](../business-rules.md#rn-045)).
+([RN-045](../business-rules/custo.md#rn-045)).
 
 | event | means |
 |---|---|

@@ -184,7 +184,7 @@ de UMA pessoa por sessão, como Criativo/PO/Arquiteto/Dev Lead já são.
 - [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md) — por que
   `propose_prototype` NÃO suspende (não tem efeito externo)
 - [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md),
-  [RN-149](../business-rules.md#rn-149) — o padrão de artefato sem tabela
+  [RN-149](../business-rules/autenticacao.md#rn-149) — o padrão de artefato sem tabela
   que `artifact.prototipo_navegavel` segue, e por que ele NÃO precisa do
   caso de uso dedicado que os outros dois têm
 - `apps/engine/lib/engine/agents/ux_designer_server.ex`,

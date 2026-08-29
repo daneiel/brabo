@@ -88,7 +88,7 @@ to be a `WHERE`, and a capability without a column is a capability nobody
 can query.
 
 On top of this comes a new rule
-([RN-040](../business-rules.md#rn-040)): `assertModelFitsBindingScope`
+([RN-040](../business-rules/custo.md#rn-040)): `assertModelFitsBindingScope`
 refuses to bind a model without native tool calling to an **agent**, with a
 message pointing to the filter the user needs to use. Only the `agent`
 scope validates — `workspace` and `project` are the fallback for human

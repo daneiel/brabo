@@ -51,7 +51,7 @@ The obvious alternative — one `models` row per workspace — was rejected:
 - It would split `token_usage.model_id` and `model_bindings.model_id` down
   the middle: the cost history points to one `models` row, and duplicating
   it would require rewriting the past — exactly what
-  [RN-044](../business-rules.md#rn-044) forbids.
+  [RN-044](../business-rules/custo.md#rn-044) forbids.
 - The catalog sync would go from writing once to writing N times for the
   same fact.
 
@@ -61,7 +61,7 @@ There is no third state, "never decided," separate from "off." A model the
 sync discovers simply **has no row** in `workspace_models`, and reads treat
 it as inactive.
 
-This preserves [RN-043](../business-rules.md#rn-043) ("discovered model
+This preserves [RN-043](../business-rules/custo.md#rn-043) ("discovered model
 starts off") **with no column at all in `models` for the sync to be able to
 run over** — the sync no longer has any curation field in its upsert. The
 rule went from "the sync writes `false`" to "the sync never reaches that

@@ -162,8 +162,8 @@ sendo permissão por verbo, válida em qualquer diretório.
   espera a decisão em vez de queimar iterações; este ADR ataca a causa de haver
   tanta decisão a esperar.
 - [RN-004](../business-rules.md#rn-004), [RN-005](../business-rules.md#rn-005),
-  [RN-068](../business-rules.md#rn-068),
-  [RN-073](../business-rules.md#rn-073).
+  [RN-068](../business-rules/custo.md#rn-068),
+  [RN-073](../business-rules/custo.md#rn-073).
 - `apps/api/src/domain/actions/decide.ts`,
   `apps/api/src/domain/actions/command-matcher.ts`,
   `apps/api/src/domain/actions/dev-terminal-patterns.ts`,

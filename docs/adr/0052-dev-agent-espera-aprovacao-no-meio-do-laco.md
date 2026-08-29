@@ -143,5 +143,5 @@ beats `allow` and `BUILTIN_DENY_PATTERNS` stay active.
 
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — the state
   machine and event-driven rescheduling this ADR extends
-- [RN-047](../business-rules.md#rn-047) — the dev agent's circuit breaker
+- [RN-047](../business-rules/custo.md#rn-047) — the dev agent's circuit breaker
 - Real execution: project `saudacao-local`, task `cd652d85`, 2026-08-05

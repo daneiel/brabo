@@ -372,6 +372,26 @@ Or, if you're in Claude Code, `/sync-docs` runs the whole cycle and
 delivers a report of what changed, what became a `TODO(human)`, and
 what was deliberately **left** unchanged.
 
+### Conjunction by default, disjunction when the doc was split
+
+A rule's `docs:` list is a **conjunction**: every document listed has to
+change, or the rule fires. That's the right default — it's what makes
+"changed the gate, update the gate doc AND the rules" enforceable.
+
+It became wrong exactly once, and the fix is `docs_alternativos:`, a
+**disjunction**: any one of the listed documents satisfies the rule. It
+exists because `business-rules.md` was split by size (Cost and
+Authentication alone were half of a 640 KB page), so a business rule now
+lives in one of three files. Under conjunction, changing an auth rule
+would demand the index too — a file that no longer contains that rule —
+and the way out for whoever got asked would be the `docs-not-needed`
+escape hatch. **A rule that teaches people to use the escape hatch is
+worse than no rule**: it trains them to ignore the check.
+
+`docmap.mjs` validates both lists the same way: a path that doesn't
+exist is the same silent error as a dead glob — an alternative with a
+typo could never satisfy the rule, and nobody would see it.
+
 ## When the check complains unfairly
 
 It will complain unfairly sometimes. A refactor that renames internal

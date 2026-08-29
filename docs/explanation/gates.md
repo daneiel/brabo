@@ -49,7 +49,7 @@ delegation exists, because the ceiling downgrades `auto_approve` to
 
 In the four gates the constitution declares manual, this field is
 invariant and locked by a test
-([RN-071](../business-rules.md#rn-071)).
+([RN-071](../business-rules/custo.md#rn-071)).
 
 ## Three forms of evidence, because not every proof lives in the log
 
@@ -170,7 +170,7 @@ describing what the code now does.
 `implementavel` is the example of a gate that needed new code to leave
 `planned`. `paralelismo-autorizado` is the opposite: the mechanism
 (`RequestParallelizationUseCase`,
-[RN-083](../business-rules.md#rn-083)) has been in production since
+[RN-083](../business-rules/custo.md#rn-083)) has been in production since
 PHASE 14d — it was the registry that fell behind, declaring `planned`
 over something that was already `active` in the sibling `docs/fluxo.yml`
 and in the code. The fluxo.yml × code audit (finding A1/B5,
@@ -267,4 +267,4 @@ the middle of the track would be worse than its absence.
 - [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) — the
   decision in the event log, without which there'd be nothing to
   measure
-- [RN-070](../business-rules.md#rn-070), [RN-071](../business-rules.md#rn-071)
+- [RN-070](../business-rules/custo.md#rn-070), [RN-071](../business-rules/custo.md#rn-071)

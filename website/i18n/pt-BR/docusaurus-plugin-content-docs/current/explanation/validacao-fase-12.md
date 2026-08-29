@@ -58,7 +58,7 @@ restarts" por defeito da ferramenta, não do produto.
 |---|---|---|
 | 0 | criar projeto | nasce com `story_promotion = manual` **sem ninguém configurar nada** |
 | 1 | adotar um bare repo pré-existente, com `main` e `develop`, sem `qa` nem `rc` | `origin = 'adopted'`; o plano diagnostica branch faltante **e** branch fora do template; `plan_decision` fica **nula**; nenhuma linha inserida à mão |
-| 1b | decidir "adotar como está" | o template **não** é forçado sobre o repositório do usuário ([RN-045](../business-rules.md#rn-045)) |
+| 1b | decidir "adotar como está" | o template **não** é forçado sobre o repositório do usuário ([RN-045](../business-rules/custo.md#rn-045)) |
 | 2 | o PO cria uma história completa, com 3 tarefas | a história fica `draft` + `proposed_ready`; **`claimNext` devolve `null`** |
 | 3 | o usuário promove | a história vira `ready`; a proposta sai da fila; o evento registra `user`, não `agent/po` |
 | 4 | ativar a execução e resolver 3 gates em sequência | 3 tarefas, 1 agente, **0 restarts do engine** |
@@ -165,8 +165,8 @@ explicado na [colheita](./primeiro-dogfooding.md).
 | restarts do engine por task entregue | **1, por construção** — propriedade do achado #10 (`:666`), não estimativa. Total real: **não medido** | **0** |
 | tandas | a fase inteira rodou em tandas (`:393-416`) | não existem: o agente atravessa a fila do módulo sozinho |
 | agente sem task | processo morto (`restart: :temporary`) | `idle` explícito, supervisionado, acordável por evento |
-| sequência de falhas | queimava orçamento em série | circuit breaker para em `idle_tripped` ([RN-047](../business-rules.md#rn-047)) |
-| história → `ready` | automática na criação, sem passo humano (achado #13, `:669`) | decisão do usuário, com o ator gravado no event log ([RN-048](../business-rules.md#rn-048)) |
+| sequência de falhas | queimava orçamento em série | circuit breaker para em `idle_tripped` ([RN-047](../business-rules/custo.md#rn-047)) |
+| história → `ready` | automática na criação, sem passo humano (achado #13, `:669`) | decisão do usuário, com o ator gravado no event log ([RN-048](../business-rules/custo.md#rn-048)) |
 | recusar uma história | não existia estado, evento nem botão (achado #14) | devolução ao PO com motivo fixado na sessão dele |
 | intervenções manuais totais | **não medido** — a tabela de observação ficou em branco (`:488-490`) | as do pipeline de aprovação, que a fase **não** mudou |
 | merge em branch protegida | manual, por desenho | manual, por desenho — inalterado, e o passo 6 prova |

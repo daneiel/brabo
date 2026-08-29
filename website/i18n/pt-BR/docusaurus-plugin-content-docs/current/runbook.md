@@ -79,7 +79,7 @@ existindo depois (Compose não apaga volume que saiu de uso); remova com
 **Sintoma:** ao criar o projeto escolhendo **Local**, a api responde `400`
 dizendo que a pasta *não existe do lado de dentro da api*.
 
-Isso é a guarda funcionando ([RN-170](business-rules.md#rn-170)), não um bug: o
+Isso é a guarda funcionando ([RN-170](business-rules/autenticacao.md#rn-170)), não um bug: o
 caminho que você digitou existe no seu computador e **não** dentro do container.
 Um projeto criado assim travaria depois, na primeira ferramenta do primeiro
 agente, longe da tela onde a decisão foi tomada — por isso ele não nasce.
@@ -115,7 +115,7 @@ docker compose -f docker/docker-compose.yml exec engine ls -la /home/voce/projet
 
 **Por que o mesmo caminho dos dois lados.** O caminho é gravado UMA vez em
 `projects.workspace_path` e lido pelos dois processos
-([RN-169](business-rules.md#rn-169)). Montar em lugares diferentes faria o
+([RN-169](business-rules/autenticacao.md#rn-169)). Montar em lugares diferentes faria o
 engine escrever onde a api não lê — a divergência que a derivação única existe
 para impedir.
 
@@ -426,7 +426,7 @@ ausente, com o valor de exemplo do repositório, ou curta demais.
 **Mesma causa do segredo de OAuth acima, e mesma orientação: não é regressão,
 e não contorne.** O [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md)
 já declarava esses quatro como pendência — o mesmo padrão, só ainda não
-replicado — e a [RN-114](business-rules.md#rn-114) fechou. Cada um protege
+replicado — e a [RN-114](business-rules/custo.md#rn-114) fechou. Cada um protege
 algo diferente:
 
 - `AUTH_JWT_SECRET` público = qualquer um deriva o par que assina o access
@@ -999,7 +999,7 @@ aparente e ver o link de reset "expirado".
 ### `BRABO_SERVICE_TOKEN` — rotação sem downtime, nos dois lados
 
 É o segredo compartilhado que autentica o tráfego api ↔ engine
-([RN-035](business-rules.md#rn-035)). Não tem nada a ver com sessão de usuário:
+([RN-035](business-rules/autenticacao.md#rn-035)). Não tem nada a ver com sessão de usuário:
 trocá-lo errado não desloga ninguém, derruba a comunicação interna.
 
 A dança é a mesma do `AUTH_JWT_SECRET`, com a diferença de que ela roda nas
@@ -1027,7 +1027,7 @@ openssl rand -base64 48
 
 O bloqueio é curto (30 s a 15 min) e se resolve sozinho: a janela deslizante
 drena. **Não existe endpoint de destrava**, de propósito — ver
-[RN-031](business-rules.md#rn-031). Se for preciso destravar alguém agora:
+[RN-031](business-rules/autenticacao.md#rn-031). Se for preciso destravar alguém agora:
 
 ```sql
 -- A chave é um HMAC do e-mail, não o e-mail. Encontre pelo evento recente:
@@ -1201,7 +1201,7 @@ max(sum by (project) (rate(brabo_llm_cost_micros_total[10m])) * 3600 / 1000000)
 
 O alerta é **aviso**, não freio. O freio de verdade é o `budgets` do domínio, e
 ele age por projeto/sessão, não globalmente
-([RN-019](business-rules.md#rn-019)).
+([RN-019](business-rules/custo.md#rn-019)).
 
 ### 1. Qual projeto, qual agente
 
@@ -1270,7 +1270,7 @@ select scope, scope_id, model_id from model_bindings where scope_id = '<projeto>
 
 Depois aponte o binding do projeto para um modelo `local` pela tela de
 configuração (o escopo mais específico vence: sessão > agente > projeto >
-workspace — [RN-020](business-rules.md#rn-020)).
+workspace — [RN-020](business-rules/custo.md#rn-020)).
 
 **c) Baixar o teto e garantir `block`.** Faz o próprio domínio recusar as
 próximas chamadas:
@@ -1557,8 +1557,8 @@ expostas no `docker-compose.yml`.
 | `OLLAMA_MAX_LOADED_MODELS` | com `OLLAMA_KEEP_ALIVE` alto os modelos acumulam: 15,2 GB de pesos residentes numa máquina de 15 GB, e o agente respondendo vazio por falta de memória |
 | `OLLAMA_REQUEST_TIMEOUT_MS` | timeout curto demais para um modelo grande num prompt longo |
 | `START_OUTBOX_DRAIN` / `START_ANAMNESE` | Psicólogo e Anamnese consomem turnos de LLM em paralelo com os agentes de execução e derrubam a conexão do dev no meio do ciclo |
-| `TOOL_LOOP_MAX_ITERATIONS*` | teto BAIXO demais e o agente para sem entregar, com `limite de iterações atingido` e origem `modelo` — que engana, porque o modelo não errou julgamento nenhum, ele não chegou a julgar. O teto é por TIPO ([RN-085](business-rules.md#rn-085)): `8` para quem conversa, `60` para dev agent e QA. Antes de subir, confira se o agente TEM `token_budget_micros`; sem ele o teto é a única trava de custo que existe |
-| `TERMINAL_OUTPUT_MAX_BYTES` | subir demais traz de volta o modo de falha que o teto existe para impedir: a saída de cada comando fica no histórico do laço e viaja em TODO turno seguinte. Não é janela de contexto: a maior chamada bem-sucedida da execução que primeiro revelou isso tinha só 28.993 tokens de entrada ([RN-074](business-rules.md#rn-074)) |
+| `TOOL_LOOP_MAX_ITERATIONS*` | teto BAIXO demais e o agente para sem entregar, com `limite de iterações atingido` e origem `modelo` — que engana, porque o modelo não errou julgamento nenhum, ele não chegou a julgar. O teto é por TIPO ([RN-085](business-rules/custo.md#rn-085)): `8` para quem conversa, `60` para dev agent e QA. Antes de subir, confira se o agente TEM `token_budget_micros`; sem ele o teto é a única trava de custo que existe |
+| `TERMINAL_OUTPUT_MAX_BYTES` | subir demais traz de volta o modo de falha que o teto existe para impedir: a saída de cada comando fica no histórico do laço e viaja em TODO turno seguinte. Não é janela de contexto: a maior chamada bem-sucedida da execução que primeiro revelou isso tinha só 28.993 tokens de entrada ([RN-074](business-rules/custo.md#rn-074)) |
 | `API_JSON_BODY_LIMIT` (api) / `TRANSPORT_MAX_BODY_BYTES` (engine) | o `413 request entity too large` no gate de QA/SecOps tinha causa na própria api do Brabo, nunca no provider — o Express nunca configurou limite de body e valia o default de 100 KB, contra os 8 MB que o Phoenix aceita no sentido engine→api mais pesado (`POST .../llm-turn`, que reenvia o histórico inteiro a cada iteração). `API_JSON_BODY_LIMIT` (default 10 MB) fecha essa ponta; `TRANSPORT_MAX_BODY_BYTES` (default 8 MiB) é o teto que a compactação de contexto do engine respeita ALÉM da janela do modelo, pra disparar antes do corpo estourar o limite HTTP ([RN-412](business-rules.md#rn-412), [ADR 0098](adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.md)) |
 
 > **Atenção — o guard não limpa a fila.** `START_ANAMNESE=false` impede
@@ -1666,13 +1666,13 @@ que existe.
 
 Se o provider expõe `GET /models`, **não semeie o catálogo inteiro** — deixe o
 sync descobrir. Ele grava os modelos desativados, e o owner ativa o que
-interessa pela tela de curadoria ([RN-043](business-rules.md#rn-043)).
+interessa pela tela de curadoria ([RN-043](business-rules/custo.md#rn-043)).
 
 Se o catálogo do provider publicar **modalidade** (aceita imagem, gera imagem)
 ou `reasoning`, emita-as no `parseCatalogo` dele — e só quando a doc oficial
 disser. Campo que o provider não declara fica **omitido**, nunca `false`:
 `undefined` preserva o que já estava gravado, e `false` apagaria curadoria feita
-à mão ([RN-056](business-rules.md#rn-056)).
+à mão ([RN-056](business-rules/custo.md#rn-056)).
 
 ### 6. Verifique com credencial real
 

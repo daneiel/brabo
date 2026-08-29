@@ -113,10 +113,10 @@ constante do servidor do agente, não o teto do `ToolLoop`
 Staff é o único sem `kickoff/1`: fica ocioso até a primeira `user_message`,
 porque não há artefato de sessão para sintetizar uma abertura. Entre os
 quatro que existiam à época, o Criativo foi o último a ganhar o laço, em
-[RN-163](business-rules.md#rn-163): até então ele chamava o modelo uma vez por
+[RN-163](business-rules/autenticacao.md#rn-163): até então ele chamava o modelo uma vez por
 turno e prometia uma correção que nunca acontecia. Esse teto próprio também
 deixou de ser silencioso: esgotado, emite o MESMO `toolloop.limit_reached`
-([RN-166](business-rules.md#rn-166)), porque é o mesmo fato e quem lê o event
+([RN-166](business-rules/autenticacao.md#rn-166)), porque é o mesmo fato e quem lê o event
 log não deve precisar de um segundo nome.
 
 **Handoff** — passagem explícita de trabalho de um agente para outro. Explícita
@@ -128,7 +128,7 @@ porque o destino e o motivo ficam registrados no event log, em vez de um agente
 `secops_verdict`, `infra_delegation_files`): campo faltando reprova a
 emissão. É como o parecer de um gate vira dado, não texto. `business_rule`
 reprova por um segundo motivo: título já registrado no projeto
-([RN-080](business-rules.md#rn-080)) — como artefato é evento imutável, a
+([RN-080](business-rules/custo.md#rn-080)) — como artefato é evento imutável, a
 emissão é o único momento em que dá para recusar uma duplicata.
 
 **Worktree** — `git worktree`: uma cópia de trabalho isolada por dev agent,
@@ -139,7 +139,7 @@ gate ainda vai lê-lo.
 
 **Modo de workspace** — onde o código de um projeto mora no disco, escolhido na
 criação e **congelado** depois ([ADR 0072](adr/0072-projeto-local-ou-container.md),
-[RN-169](business-rules.md#rn-169)). `container` é a pasta gerenciada sob
+[RN-169](business-rules/autenticacao.md#rn-169)). `container` é a pasta gerenciada sob
 `PROJECT_WORKSPACES_ROOT` — o default e o comportamento de sempre; `local` é um
 caminho absoluto do usuário, que só funciona se estiver montado no container.
 Não confundir com **workspace** de IAM (o agrupamento de projetos e membros):
@@ -147,10 +147,10 @@ são a mesma palavra para coisas diferentes, e o modo é sobre disco.
 
 **Estados do dev agent** — `working` (implementando), `awaiting_approval`
 (propôs commit/push/PR e alguma ficou pendente de aprovação — **sem PR não se
-abre gate**, [RN-050](business-rules.md#rn-050)), `awaiting_gate` (PR aberta,
+abre gate**, [RN-050](business-rules/custo.md#rn-050)), `awaiting_gate` (PR aberta,
 esperando o veredito), `idle` (sem task pegável, processo vivo) e
 `idle_tripped` (circuit breaker disparado, só sai por rearm explícito —
-[RN-047](business-rules.md#rn-047)). Os três primeiros retêm o worktree.
+[RN-047](business-rules/custo.md#rn-047)). Os três primeiros retêm o worktree.
 
 ---
 
@@ -242,7 +242,7 @@ sobre qual container roda o código do projeto: imagem OCI (tag explícita
 obrigatória, `latest` recusado), postura de rede (`none` por default,
 `egress` autorizado) e teto de recursos. Versionada no event log, como o
 `module_map`. Enquanto não existe, é o estado `sem_decisao` que fecha a aba
-Code ([RN-105](business-rules.md#rn-105)).
+Code ([RN-105](business-rules/autenticacao.md#rn-105)).
 
 ---
 
@@ -252,27 +252,27 @@ Code ([RN-105](business-rules.md#rn-105)).
 custo em micros, latência, modelo, agente. É **registro, não estorno**.
 
 **Budget** — teto de gasto com escopo exclusivo: projeto **ou** sessão, nunca
-ambos ([RN-017](business-rules.md#rn-017)). Notifica em 70/90/100% sem repetir.
+ambos ([RN-017](business-rules/custo.md#rn-017)). Notifica em 70/90/100% sem repetir.
 
 **`policy`** — o comportamento do budget no teto: `block` recusa a chamada,
 `allow` só registra. Um projeto em `allow` **não para sozinho** — é a causa mais
-comum de "o orçamento não segurou" ([RN-019](business-rules.md#rn-019)).
+comum de "o orçamento não segurou" ([RN-019](business-rules/custo.md#rn-019)).
 
 **Binding** — a amarração entre um escopo e um modelo de LLM. Resolve em
 cascata: **sessão > agente > área > projeto > workspace**, o primeiro que
-existir ([RN-020](business-rules.md#rn-020)). É por isso que dá para pôr um
+existir ([RN-020](business-rules/custo.md#rn-020)). É por isso que dá para pôr um
 modelo caro só no QA. `área` é o PADRÃO que lead e subagentes de uma área
-compartilham, e o agente pode divergir ([RN-102](business-rules.md#rn-102)).
+compartilham, e o agente pode divergir ([RN-102](business-rules/custo.md#rn-102)).
 
 **Faceta de capability** — o que o **provider declara** sobre um modelo: lê
 imagem, gera imagem, faz thinking, aceita `tools`. Vem do catálogo remoto no
 sync; `false` quer dizer "não declarou", nunca "não faz"
-([RN-056](business-rules.md#rn-056)).
+([RN-056](business-rules/custo.md#rn-056)).
 
 **Uso do modelo** — para que **este workspace** usa aquele modelo (`codigo`,
 `documentacao`, `analise`, `imagem`, `conversa`). É opinião de quem opera, não
 capability: nenhum catálogo publica "bom para código". Marcar uso **não liga** o
-modelo no seletor ([RN-057](business-rules.md#rn-057)).
+modelo no seletor ([RN-057](business-rules/custo.md#rn-057)).
 
 ---
 

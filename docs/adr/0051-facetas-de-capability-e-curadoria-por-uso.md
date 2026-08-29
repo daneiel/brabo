@@ -105,7 +105,7 @@ use shouldn't require a type migration.
   `is_active` column has DEFAULT `true`, so a row born from a usage flag
   is inserted with `isActive: false` explicit — without that, opining
   about a model would authorize it to spend, against
-  [RN-043](../business-rules.md#rn-043).
+  [RN-043](../business-rules/custo.md#rn-043).
 - Changing the use doesn't turn off what was already on: `is_active`
   stays out of the `ON CONFLICT`'s `SET`.
 - The screen never writes "doesn't read images." A badge only affirms
@@ -158,5 +158,5 @@ modality today; each of the rest needs to be investigated against its
 official docs, the way Phase 11 did for the quirks — inheriting one
 provider's parser for another is forbidden.
 
-The rules are in [RN-056](../business-rules.md#rn-056) and
-[RN-057](../business-rules.md#rn-057).
+The rules are in [RN-056](../business-rules/custo.md#rn-056) and
+[RN-057](../business-rules/custo.md#rn-057).
