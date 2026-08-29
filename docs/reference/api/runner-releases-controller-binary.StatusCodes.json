@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"O binário do runner, em stream. Não é JSON: `Content-Type: application/octet-stream`.","content":{"application/octet-stream":{"schema":{"type":"string","format":"binary"}}}}}}

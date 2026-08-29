@@ -6,6 +6,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web,runner**: configurar o `brabo-runner` na máquina do usuário
+  deixa de exigir juntar id do projeto, caminho da pasta e um Personal
+  Access Token à mão em três telas diferentes (RN-464..466, ADR 0118). O
+  navegador gera um par de chaves Ed25519 (Web Crypto), registra a chave
+  pública como uma nova `runner_device_keys`, baixa o binário certo
+  (proxy da api para o asset já publicado em GitHub Releases, sem build
+  nem cópia nova) e grava tudo já configurado numa pasta escolhida via
+  File System Access API (Chrome/Edge/Opera) — fora do Chromium, cai para
+  dois downloads comuns que o usuário move à mão. `POST .../runner-ticket`
+  passa a aceitar essa chave de dispositivo (JWT EdDSA de vida curtíssima,
+  ≤60s) como segunda forma de credencial, ADITIVA ao PAT — nunca o
+  substitui, e nunca vira dual-auth com o JWT de sessão (RN-439 continua
+  de pé). `--project`/`--dir`/`--token` do CLI ficam OPCIONAIS quando a
+  pasta já tem a config local: `./brabo-runner` sem flag nenhuma passa a
+  funcionar. Limitação aceita: o navegador não preserva o bit de execução,
+  então `chmod +x` em Linux/macOS continua manual (mostrado pronto pra
+  copiar). Corte de escopo explícito: o runner descobrir sozinho um
+  container Docker/Kubernetes local e conectar por SSH foi considerado e
+  REJEITADO nesta rodada — reabriria a FASE 25b, que segue cortada.
 - **api,web**: Project/Workspace Settings ganha um navegador do Hugging
   Face Hub para puxar modelos GGUF para dentro do Ollama local (RN-461..
   463, ADR 0115). Busca filtra para publishers OFICIAIS por padrão

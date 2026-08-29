@@ -24,10 +24,25 @@
   },
   "runnerOnboarding": {
     "defaultMessage": "No runner connected to this project.",
+    "noProjectMessage": "After you create the project, you'll be able to set up the runner here.",
     "instructionPrefix": "On your machine, inside the Brabo checkout (see",
     "instructionSuffix": "):",
-    "command": "pnpm --filter runner start -- --project {{projectId}} --dir <folder>",
+    "command": "brabo-runner --project {{projectId}} --dir {{caminho}} --token <generate one in Settings → Access tokens>",
     "detail": "The runner connects automatically as soon as it's running — no new action needs to happen here.",
-    "retryButton": "I already installed it, connect"
+    "retryButton": "I already installed it, connect",
+    "placeholderProjectId": "<project id>",
+    "placeholderPath": "<folder>",
+    "autoConfigureButton": "Set up folder automatically",
+    "autoConfiguring": "Setting up…",
+    "autoConfigureError": "Could not set it up automatically. Use the manual command below.",
+    "downloadKitButton": "Download files",
+    "downloadingKit": "Downloading…",
+    "downloadKitNote": "Download both files and move them into the same folder before running the runner.",
+    "downloadKitDone": "Downloads started — check your downloads folder and move both files together.",
+    "platformSelectLabel": "Platform",
+    "successIntro": "Done — inside the folder you chose, run:",
+    "copyButton": "Copy",
+    "copiedButton": "Copied!",
+    "manualDisclosureSummary": "I'd rather run it manually"
   }
 }

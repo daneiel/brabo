@@ -567,6 +567,18 @@ export interface PersonalAccessTokenAdminSummary extends PersonalAccessTokenSumm
   userEmail: string;
 }
 
+/**
+ * Chave de dispositivo do runner local (`lib/runner-bootstrap.ts`) — par
+ * Ed25519 gerado no NAVEGADOR do usuário; só a metade PÚBLICA chega até
+ * aqui, nunca a privada. Substitui o PAT digitado à mão no fluxo de
+ * onboarding "Configurar pasta automaticamente".
+ */
+export interface RunnerDeviceKeySummary {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
 export type BudgetPolicy = 'block' | 'allow';
 
 // Custo por AGENTE numa sessão (Fase 4a — painel do time). Espelha

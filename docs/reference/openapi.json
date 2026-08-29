@@ -6876,6 +6876,118 @@
         ]
       }
     },
+    "/projects/{projectId}/runner-device-keys": {
+      "post": {
+        "description": "A chave PRIVADA nunca sai do navegador — só a JWK pública (Ed25519, RFC 8037) chega aqui. Use o `id` desta resposta como `kid` no header do JWT que o runner assina pra pedir ticket em `POST .../runner-ticket`.",
+        "operationId": "RunnerDeviceKeysController_registerDeviceKey",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRunnerDeviceKeyRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunnerDeviceKeyResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registra a chave pública de um dispositivo do runner local",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
+    "/projects/{projectId}/runner-device-keys/{deviceKeyId}": {
+      "delete": {
+        "description": "Idempotente — revogar de novo não é erro.",
+        "operationId": "RunnerDeviceKeysController_revokeDeviceKey",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "deviceKeyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Chave revogada. Sem corpo."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoga uma chave de dispositivo própria",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
     "/projects/{projectId}/runner-ticket": {
       "post": {
         "description": "Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel \"runner\") — NÃO é o JWT reaproveitado, e esta rota em si só aceita um Personal Access Token no lugar do JWT de sessão (ADR 0105). TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo \"runner\" (RN-421): o runner não tem o que servir num projeto cujo código mora no container gerenciado.",
@@ -9422,6 +9534,30 @@
         "summary": "Emite um ticket de uso único para a aba Terminal da web",
         "tags": [
           "projetos"
+        ]
+      }
+    },
+    "/runner-releases/binary": {
+      "get": {
+        "description": "Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-x64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo.",
+        "operationId": "RunnerReleasesController_binary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "O binário do runner, em stream. Não é JSON: `Content-Type: application/octet-stream`.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Baixa o binário standalone do runner local pra plataforma pedida",
+        "tags": [
+          "infrastructure"
         ]
       }
     },
@@ -18279,6 +18415,25 @@
           "token"
         ]
       },
+      "RegisterRunnerDeviceKeyRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "laptop",
+            "description": "Nome pra você reconhecer este dispositivo depois — não é único."
+          },
+          "publicKeyJwk": {
+            "type": "string",
+            "example": "{\"kty\":\"OKP\",\"crv\":\"Ed25519\",\"x\":\"…\"}",
+            "description": "JWK pública Ed25519 (RFC 8037), serializada como JSON — a privada nunca sai do navegador."
+          }
+        },
+        "required": [
+          "name",
+          "publicKeyJwk"
+        ]
+      },
       "ReindexProjectResponseDto": {
         "type": "object",
         "properties": {
@@ -18747,6 +18902,29 @@
         "required": [
           "projectId",
           "messages"
+        ]
+      },
+      "RunnerDeviceKeyResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000CHAVE000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "laptop"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-27T12:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "createdAt"
         ]
       },
       "RunnerTicketResponseDto": {

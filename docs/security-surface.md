@@ -21,13 +21,13 @@ justification for the ones left open. Decisions in
 | `role:<role>` | authenticated and restricted by the domain's RBAC (`@RequireRole`) |
 | `jwt` | authenticated, no role required on the route — the scope comes from the resource itself |
 
-## The fourteen public routes
+## The fifteen public routes
 
 There were four until Phase 6. Phase 7a added eight at once — first-party
-auth — and ADR 0084 added two more, social login. Each one is justified
-below. Opening any more still requires touching the assertion in
-`route-surface.spec.ts`, which lists the public ones literally to force
-the conversation.
+auth — ADR 0084 added two more, social login, and the runner device-key
+onda added the binary proxy. Each one is justified below. Opening any more
+still requires touching the assertion in `route-surface.spec.ts`, which
+lists the public ones literally to force the conversation.
 
 ### Infrastructure
 
@@ -58,6 +58,18 @@ the repository's example key, which is public (ADR 0059,
 [RN-093](business-rules.md#rn-093)). With a known key, this route goes
 back to being unrestricted in practice — anyone can sign a `state` for
 whichever project they want.
+
+**`GET /runner-releases/binary`** — proxies the runner's standalone
+binary from GitHub Releases so the browser never talks to GitHub
+directly. Public for the same reason as `/metrics`/JWKS: the binary
+itself is not a secret, and requiring a session to download the very
+tool that lets someone authenticate would be backwards. `platform` is a
+closed allowlist (`linux-x64`/`linux-arm64`/`darwin-x64`/`darwin-arm64`/
+`win32-x64`), never interpolated raw into the GitHub URL — closing the
+SSRF/path-injection vector an open parameter would leave. The resolved
+asset URL (never the bytes) is cached in memory for a few minutes,
+purely to stay under GitHub's unauthenticated rate limit under
+concurrent downloads.
 
 ### First-party auth
 
@@ -199,19 +211,35 @@ reason in the URL.
   project isn't in `runner` mode.
 - **`POST /projects/:projectId/runner-ticket` is classified `role:developer`
   like any other route, but does NOT accept a session JWT** (ADR 0105,
-  RN-424) — only a Personal Access Token (`brb_…`). The automatic
-  classification (`route-surface.spec.ts`) doesn't distinguish the two
-  mechanisms, because the role REQUIREMENT is the same; what changes is
-  only how `request.user` gets established. `PatAuthGuard` runs in place of
+  RN-424) — only a Personal Access Token (`brb_…`) OR a runner device key
+  (Ed25519, see below). The automatic classification
+  (`route-surface.spec.ts`) doesn't distinguish the mechanisms, because
+  the role REQUIREMENT is the same; what changes is only how
+  `request.user` gets established. `PatAuthGuard` runs in place of
   `JwtAuthGuard` on this route (`@RequirePatAuth()`, the same structural
   pattern as `@ServiceRoute()`/`EngineServiceGuard` — bypass by metadata,
   never an `if` a new route could forget), and it's the ONLY place in the
-  api that accepts this token format: on any other route a `brb_...` fails
-  JWT verification normally. The five routes under
-  `/projects/:projectId/personal-access-tokens` (issue/list/revoke the PAT
-  itself, plus the two `maintainer` ones — RN-427, list/revoke of ANY
-  user in the project) remain regular session JWT — only the route the
-  TOKEN ITSELF authenticates changes mechanism.
+  api that accepts either of these credential formats: on any other route
+  a `brb_...` fails JWT verification normally, and a device-key JWT fails
+  it too (its `kid` never resolves against the session-token issuer's own
+  keys). The five routes under `/projects/:projectId/personal-access-tokens`
+  (issue/list/revoke the PAT itself, plus the two `maintainer` ones —
+  RN-427, list/revoke of ANY user in the project) remain regular session
+  JWT — only the route the TOKEN ITSELF authenticates changes mechanism.
+- **The two `/projects/:projectId/runner-device-keys` routes ARE regular
+  session JWT**, unlike `runner-ticket` above — the browser, already
+  logged in, registers the Ed25519 public key it just generated (the
+  private half never leaves it) before offering the runner binary for
+  download. `POST` persists the public key only — there's no "raw secret"
+  to hand back the way `IssuePersonalAccessTokenUseCase` does, because
+  the client already holds the only secret involved (the private key) and
+  the api never sees it. `DELETE` revokes the caller's own key,
+  idempotently, same shape as the PAT's self-service revoke. `PatAuthGuard`
+  is what LATER accepts a JWT signed by that key's private half on
+  `runner-ticket`, looked up by the `kid` header matching this table's
+  `id`; the guard checks the key hasn't been revoked but never an
+  expiry — the key itself doesn't expire, only the short-TTL (≤60s,
+  `exp - iat`) JWT the runner signs with it each time.
 - **The `engine-service` routes aren't "internal" by naming convention.**
   What protects them is `EngineServiceGuard` comparing
   `X-Brabo-Service-Token` against the shared secret in constant time, plus
@@ -404,6 +432,7 @@ reason in the URL.
 | GET | `/health` | public |
 | GET | `/live` | public |
 | GET | `/metrics` | public |
+| GET | `/runner-releases/binary` | public |
 | POST | `/internal/sessions/:sessionId/actions` | engine-service |
 | GET | `/internal/sessions/:sessionId/anamnese-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/delegations` | engine-service |
@@ -523,6 +552,8 @@ reason in the URL.
 | GET | `/projects/:projectId/personal-access-tokens/all` | role:maintainer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId/admin` | role:maintainer |
+| POST | `/projects/:projectId/runner-device-keys` | role:developer |
+| DELETE | `/projects/:projectId/runner-device-keys/:deviceKeyId` | role:developer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |
 | DELETE | `/projects/:projectId/proficiency/me` | role:viewer |
 | POST | `/projects/:projectId/proficiency/me/opt-in` | role:viewer |

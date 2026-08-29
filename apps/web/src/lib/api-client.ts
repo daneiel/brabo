@@ -75,6 +75,7 @@ import type {
   PersonalAccessTokenSummary,
   PersonalAccessTokenIssued,
   PersonalAccessTokenAdminSummary,
+  RunnerDeviceKeySummary,
   Workspace,
   WorkspaceSummary,
   WorkspaceWithRole,
@@ -370,6 +371,22 @@ export const revokePersonalAccessTokenAsMaintainer = (
   tokenId: string,
 ) =>
   del<void>(`/projects/${projectId}/personal-access-tokens/${tokenId}/admin`);
+
+/**
+ * Chave de dispositivo do runner (par Ed25519 gerado NO NAVEGADOR — ver
+ * `lib/runner-bootstrap.ts`). Substitui o PAT digitado à mão no fluxo de
+ * onboarding: só a chave PÚBLICA viaja até aqui, nunca a privada.
+ */
+export const registerRunnerDeviceKey = (
+  projectId: string,
+  input: { name: string; publicKeyJwk: string },
+) =>
+  post<RunnerDeviceKeySummary>(
+    `/projects/${projectId}/runner-device-keys`,
+    input,
+  );
+export const revokeRunnerDeviceKey = (projectId: string, deviceKeyId: string) =>
+  del<void>(`/projects/${projectId}/runner-device-keys/${deviceKeyId}`);
 
 export const getProjectPermissions = (projectId: string) =>
   get<PermissionsFile>(`/projects/${projectId}/permissions`);

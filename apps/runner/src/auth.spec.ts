@@ -1,8 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { exportJWK, generateKeyPair, jwtVerify } from 'jose';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  assinarTicketComChaveDeDispositivo,
   obterTicketDoRunner,
+  obterTicketDoRunnerComCredencial,
   obterToken,
   TokenInvalidoError,
   validarFormatoDoToken,
@@ -121,6 +124,80 @@ describe('obterTicketDoRunner', () => {
     await expect(
       obterTicketDoRunner('http://api', 'proj-1', TOKEN_VALIDO),
     ).rejects.toThrow(/fora do contrato esperado/);
+  });
+});
+
+describe('assinarTicketComChaveDeDispositivo', () => {
+  it('caminho feliz: gera um JWT EdDSA verificável, com kid no header e projectId no payload', async () => {
+    const { privateKey, publicKey } = await generateKeyPair('EdDSA', {
+      crv: 'Ed25519',
+      extractable: true,
+    });
+    const jwkPrivada = await exportJWK(privateKey);
+
+    const jwt = await assinarTicketComChaveDeDispositivo(jwkPrivada, 'device-1', 'proj-1');
+
+    const { payload, protectedHeader } = await jwtVerify(jwt, publicKey);
+    expect(protectedHeader.alg).toBe('EdDSA');
+    expect(protectedHeader.kid).toBe('device-1');
+    expect(payload.projectId).toBe('proj-1');
+    expect(typeof payload.iat).toBe('number');
+    expect(typeof payload.exp).toBe('number');
+    // TTL curto de propósito (RN-108) — 30s, não um valor grande.
+    expect((payload.exp as number) - (payload.iat as number)).toBe(30);
+  });
+
+  it('lança quando a JWK privada está corrompida/incompleta', async () => {
+    await expect(
+      assinarTicketComChaveDeDispositivo({ kty: 'OKP' }, 'device-1', 'proj-1'),
+    ).rejects.toThrow();
+  });
+});
+
+describe('obterTicketDoRunnerComCredencial', () => {
+  it('credencial tipo "token": manda o PAT direto, sem assinar nada', async () => {
+    const espiao = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ticket: 'tk-1', engineWsUrl: 'ws://engine/socket' }),
+    });
+    vi.stubGlobal('fetch', espiao);
+
+    await obterTicketDoRunnerComCredencial('http://api', 'proj-1', {
+      tipo: 'token',
+      token: TOKEN_VALIDO,
+    });
+
+    const [, opcoes] = espiao.mock.calls[0] as [string, RequestInit];
+    expect((opcoes.headers as Record<string, string>).authorization).toBe(
+      `Bearer ${TOKEN_VALIDO}`,
+    );
+  });
+
+  it('credencial tipo "chave-de-dispositivo": assina um JWT fresco e manda como Bearer', async () => {
+    const { privateKey, publicKey } = await generateKeyPair('EdDSA', {
+      crv: 'Ed25519',
+      extractable: true,
+    });
+    const jwkPrivada = await exportJWK(privateKey);
+    const espiao = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ticket: 'tk-1', engineWsUrl: 'ws://engine/socket' }),
+    });
+    vi.stubGlobal('fetch', espiao);
+
+    await obterTicketDoRunnerComCredencial('http://api', 'proj-1', {
+      tipo: 'chave-de-dispositivo',
+      jwkPrivada,
+      deviceKeyId: 'device-1',
+    });
+
+    const [, opcoes] = espiao.mock.calls[0] as [string, RequestInit];
+    const authorization = (opcoes.headers as Record<string, string>).authorization;
+    expect(authorization).toBeDefined();
+    const bearer = authorization!.replace('Bearer ', '');
+    const { payload, protectedHeader } = await jwtVerify(bearer, publicKey);
+    expect(protectedHeader.kid).toBe('device-1');
+    expect(payload.projectId).toBe('proj-1');
   });
 });
 
