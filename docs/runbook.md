@@ -260,6 +260,44 @@ It **refuses** to run with a dirty tree, instead of guessing what to do
 with your work in progress. When it finishes you're left in a detached
 HEAD; the command to go back appears in the log.
 
+### Deploying a release's images {#imagens-de-uma-release}
+
+Since [ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md) every
+final tag publishes the four production images to GHCR
+(`ghcr.io/daneiel/brabo-{api,engine,web,backup}`, public — no
+`imagePullSecret` anywhere) and records what it published, **by digest**,
+in `.release/images.json`.
+
+The overlays in this repository keep `newTag: REPLACE_WITH_DIGEST`, a
+marker. **The repository never declares which release is in production** —
+you do, at deploy time:
+
+```bash
+# 1. get the record of the release you're deploying
+gh release download v3.2.0 --pattern images.json --dir .release
+
+# 2. write its digests into the overlay
+make imagens-do-release OVERLAY=prod      # or OVERLAY=staging
+
+# 3. read the diff before applying anything
+git diff deploy/k8s/overlays/prod/kustomization.yaml
+```
+
+Three things worth knowing before you run it:
+
+- **Don't commit the result.** `kustomize edit` round-trips the YAML: it
+  reorders keys and detaches the comments. The change is meant to live in
+  your working tree long enough to `kubectl apply -k`, and no longer.
+- **`digest:` replaces `newTag:`**, which is the point — a mutable tag in
+  production means no deterministic rollback and two pods of the same
+  ReplicaSet possibly running different binaries.
+- **Rollback is the same command with the previous release's file.** There
+  is nothing else to undo: the digest is the whole state.
+
+If `make imagens-do-release` says it can't find `.release/images.json`, you
+skipped step 1. If it can't find `kustomize`, the version the CI uses is
+pinned in `KUSTOMIZE_VERSION`, in `.github/workflows/ci.yml`.
+
 ### What version is live {#que-versao-esta-no-ar}
 
 Three places say the same thing, and the answer is the version **baked

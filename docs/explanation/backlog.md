@@ -586,11 +586,12 @@ to the user.
 These three already have a row in `architecture.md`'s
 [technical debt table](../architecture.md#divida-tecnica) — the review
 didn't discover them, it estimated a cost for something already on
-record with none:
+record with none. **One of the three has since closed**, and it was the
+one the review called the most expensive:
 
 | debt | already declared at | reviewer's cost estimate |
 |---|---|---|
-| Publish images to a registry so production deploy is executable end to end | `architecture.md:552`, [ADR 0027](../adr/0027-fase5-backup-hardening-release.md) | M |
+| ~~Publish images to a registry so production deploy is executable end to end~~ | `architecture.md:552`, [ADR 0027](../adr/0027-fase5-backup-hardening-release.md) | **DONE** ([ADR 0119](../adr/0119-imagens-publicadas-no-ghcr-por-digest.md)) — the four images publish to GHCR (public) on every final tag, with what each tag published recorded BY DIGEST in `.release/images.json`; the overlay keeps the marker and `make imagens-do-release` applies it, so the repository never declares which release is in production. No third push exception: the file is a Release asset and rides the CHANGELOG PR. Found while doing it, and NOT in this estimate: the overlays listed three images, not four — the backup CronJob inherited `brabo-backup:prod`, unresolvable in any registry. Still not done and not claimed: nothing deploys automatically (`DEPLOY_ENABLED` still doesn't exist), and image signing/attestation stays out, with the runner binaries' code-signing item |
 | Split `schema.ts` by aggregate (Drizzle supports multi-file schema with re-export) | `architecture.md:546` | M |
 | Golden-set (5–10 cases, loose expected output, pinned model, allow-failure) for the gate's semantic path | `architecture.md:548`, [ADR 0020](../adr/0020-destravar-gates-qa-secops.md) | not estimated by the reviewer |
 

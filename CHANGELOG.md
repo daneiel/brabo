@@ -6,6 +6,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **ci,k8s**: as quatro imagens de produção passam a ser PUBLICADAS no GHCR
+  a cada tag final (`ghcr.io/<dono>/brabo-{api,engine,web,backup}`, públicas),
+  fechando a dívida declarada mais cara dos ADRs 0025/0027 — até aqui o
+  `release.yml` construía com `push: false` só pra provar que a tag era
+  construível, e o overlay de produção apontava pra `ghcr.io/OWNER/*` com um
+  `newTag: REPLACE_WITH_DIGEST` que nenhum passo substituía (ADR 0119). O
+  login usa o `GITHUB_TOKEN` do próprio job (`packages: write`): nenhum
+  segredo novo pra rotacionar. O que cada tag publicou fica registrado POR
+  DIGEST em `.release/images.json` — anexado à GitHub Release no mesmo
+  instante da tag e versionado pela PR do CHANGELOG que o release já abria,
+  SEM abrir uma terceira exceção de push direto. O overlay continua guardando
+  o marcador, e `make imagens-do-release OVERLAY=prod|staging` aplica o digest
+  com `kustomize edit set image` — quem faz o deploy decide qual release está
+  em produção, não a tag. Achado no caminho: os overlays listavam TRÊS
+  imagens, não quatro — o CronJob de backup herdava `brabo-backup:prod`, nome
+  que não resolve em registry nenhum, então o backup do ambiente que mais
+  precisa dele nunca subiria. Nada passa a fazer deploy sozinho: `DEPLOY_ENABLED`
+  continua não existindo, e assinatura/atestação das imagens segue de fora,
+  junto com o code-signing dos binários do runner.
 - **api,web,runner**: configurar o `brabo-runner` na máquina do usuário
   deixa de exigir juntar id do projeto, caminho da pasta e um Personal
   Access Token à mão em três telas diferentes (RN-464..466, ADR 0118). O
@@ -956,6 +975,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **ci,k8s**: as quatro imagens de produção passam a ser PUBLICADAS no GHCR
+  a cada tag final (`ghcr.io/<dono>/brabo-{api,engine,web,backup}`, públicas),
+  fechando a dívida declarada mais cara dos ADRs 0025/0027 — até aqui o
+  `release.yml` construía com `push: false` só pra provar que a tag era
+  construível, e o overlay de produção apontava pra `ghcr.io/OWNER/*` com um
+  `newTag: REPLACE_WITH_DIGEST` que nenhum passo substituía (ADR 0119). O
+  login usa o `GITHUB_TOKEN` do próprio job (`packages: write`): nenhum
+  segredo novo pra rotacionar. O que cada tag publicou fica registrado POR
+  DIGEST em `.release/images.json` — anexado à GitHub Release no mesmo
+  instante da tag e versionado pela PR do CHANGELOG que o release já abria,
+  SEM abrir uma terceira exceção de push direto. O overlay continua guardando
+  o marcador, e `make imagens-do-release OVERLAY=prod|staging` aplica o digest
+  com `kustomize edit set image` — quem faz o deploy decide qual release está
+  em produção, não a tag. Achado no caminho: os overlays listavam TRÊS
+  imagens, não quatro — o CronJob de backup herdava `brabo-backup:prod`, nome
+  que não resolve em registry nenhum, então o backup do ambiente que mais
+  precisa dele nunca subiria. Nada passa a fazer deploy sozinho: `DEPLOY_ENABLED`
+  continua não existindo, e assinatura/atestação das imagens segue de fora,
+  junto com o code-signing dos binários do runner.
 - **engine,api,web**: o Criativo pode emitir perguntas estruturadas
   (`ask_structured_questions`) quando faz várias perguntas de uma vez — o
   usuário responde por um formulário em vez de texto livre item por item
@@ -1477,6 +1515,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **ci,k8s**: as quatro imagens de produção passam a ser PUBLICADAS no GHCR
+  a cada tag final (`ghcr.io/<dono>/brabo-{api,engine,web,backup}`, públicas),
+  fechando a dívida declarada mais cara dos ADRs 0025/0027 — até aqui o
+  `release.yml` construía com `push: false` só pra provar que a tag era
+  construível, e o overlay de produção apontava pra `ghcr.io/OWNER/*` com um
+  `newTag: REPLACE_WITH_DIGEST` que nenhum passo substituía (ADR 0119). O
+  login usa o `GITHUB_TOKEN` do próprio job (`packages: write`): nenhum
+  segredo novo pra rotacionar. O que cada tag publicou fica registrado POR
+  DIGEST em `.release/images.json` — anexado à GitHub Release no mesmo
+  instante da tag e versionado pela PR do CHANGELOG que o release já abria,
+  SEM abrir uma terceira exceção de push direto. O overlay continua guardando
+  o marcador, e `make imagens-do-release OVERLAY=prod|staging` aplica o digest
+  com `kustomize edit set image` — quem faz o deploy decide qual release está
+  em produção, não a tag. Achado no caminho: os overlays listavam TRÊS
+  imagens, não quatro — o CronJob de backup herdava `brabo-backup:prod`, nome
+  que não resolve em registry nenhum, então o backup do ambiente que mais
+  precisa dele nunca subiria. Nada passa a fazer deploy sozinho: `DEPLOY_ENABLED`
+  continua não existindo, e assinatura/atestação das imagens segue de fora,
+  junto com o code-signing dos binários do runner.
 - **api,shared**: o contrato de git ganha `listTree` e `getPullRequestDiff`, a
   11ª e a 12ª operações, que a aba Code (FASE 26) vai precisar. Entram como
   capability, e são `true` nos três providers só porque a **suite de contrato
@@ -2037,6 +2094,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **ci,k8s**: as quatro imagens de produção passam a ser PUBLICADAS no GHCR
+  a cada tag final (`ghcr.io/<dono>/brabo-{api,engine,web,backup}`, públicas),
+  fechando a dívida declarada mais cara dos ADRs 0025/0027 — até aqui o
+  `release.yml` construía com `push: false` só pra provar que a tag era
+  construível, e o overlay de produção apontava pra `ghcr.io/OWNER/*` com um
+  `newTag: REPLACE_WITH_DIGEST` que nenhum passo substituía (ADR 0119). O
+  login usa o `GITHUB_TOKEN` do próprio job (`packages: write`): nenhum
+  segredo novo pra rotacionar. O que cada tag publicou fica registrado POR
+  DIGEST em `.release/images.json` — anexado à GitHub Release no mesmo
+  instante da tag e versionado pela PR do CHANGELOG que o release já abria,
+  SEM abrir uma terceira exceção de push direto. O overlay continua guardando
+  o marcador, e `make imagens-do-release OVERLAY=prod|staging` aplica o digest
+  com `kustomize edit set image` — quem faz o deploy decide qual release está
+  em produção, não a tag. Achado no caminho: os overlays listavam TRÊS
+  imagens, não quatro — o CronJob de backup herdava `brabo-backup:prod`, nome
+  que não resolve em registry nenhum, então o backup do ambiente que mais
+  precisa dele nunca subiria. Nada passa a fazer deploy sozinho: `DEPLOY_ENABLED`
+  continua não existindo, e assinatura/atestação das imagens segue de fora,
+  junto com o code-signing dos binários do runner.
 - **api,engine**: o dev agent passa a **esperar** a aprovação em vez de queimar
   iterações. Ferramenta pendente suspendia o agente em nada: o `pending` voltava
   como resultado, o modelo lia como resposta do comando, e cada tentativa

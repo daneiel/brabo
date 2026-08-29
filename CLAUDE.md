@@ -49,6 +49,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Ollama nativo / pull de Hugging Face | Bootstrap dev pergunta uma vez e persiste o modo do Ollama em `.env`; navegador de modelos do Hub com pull em duas etapas e allowlist de publisher oficial | RN-461..463, ADR 0114–0115 |
 | Lockfile próprio do website | `website/` sai do workspace pnpm da raiz — lockfile e overrides de segurança isolados, `pnpm audit` do produto para de reportar a árvore do Docusaurus | ADR 0117 |
 | Configuração automática do runner pelo navegador | Chave de dispositivo Ed25519 gerada no navegador, aditiva ao PAT; proxy do binário via GitHub Releases; File System Access API grava a pasta configurada, com fallback de download fora do Chromium; `--project/--dir/--token` viram opcionais no CLI | RN-464..466, ADR 0118 |
+| Imagens publicadas no GHCR | `release.yml` publica as quatro imagens a cada tag final e registra os digests em `.release/images.json`; overlay de produção deixa de apontar para um placeholder | ADR 0119 |
 
 ## Estado atual e aberto
 
@@ -169,7 +170,12 @@ daqui e o fechamento vai para o histórico.
   sobre node:http (timeout de inatividade, erro por `code`,
   capabilities em duas camadas — ADR 0041); catálogo com curadoria e
   preço congelado no metering (ADR 0042); 9 providers (ADR 0043)
-- Deploy: Kubernetes (k3d/kind em validação local)
+- Deploy: Kubernetes (k3d/kind em validação local). As quatro imagens de
+  produção são PUBLICADAS no GHCR a cada tag final, públicas e por digest
+  (ADR 0119) — `.release/images.json` registra o que cada tag publicou, e
+  `make imagens-do-release` aplica no overlay. O overlay do repositório
+  guarda o MARCADOR, nunca uma release congelada; nada disso faz deploy
+  sozinho (ver `DEPLOY_ENABLED` acima, que continua não existindo)
 - Docs: Docusaurus 3.x em website/ lendo de docs/; Mermaid; busca local
 - CI/CD de release: GitHub Actions com lógica em scripts testáveis
   (scripts/ci/, vitest)

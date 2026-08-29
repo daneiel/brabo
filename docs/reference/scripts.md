@@ -126,6 +126,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `make help` | Lists the available targets |
 | `make deploy-local` | Brings up the local cluster, installs everything and runs the smoke test (TAG=vX.Y.Z-qa.N optional) |
 | `make deploy-local-clean` | Same as deploy-local, but without rebuilding the images |
+| `make imagens-do-release` | Applies the digests from .release/images.json to an overlay (OVERLAY=prod|staging) |
 | `make smoke-k8s` | Runs only the smoke test against the cluster already up |
 | `make hpa-test` | Fills the Oban queue and proves the engine's HPA scales |
 | `make rollout-test` | Opens active sessions, does a rollout restart and proves none is orphaned |
@@ -136,4 +137,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-91 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+92 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
