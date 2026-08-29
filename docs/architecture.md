@@ -83,7 +83,7 @@ an engine restart between the gate's verdict and the agent's reaction must
 not lose the signal — the row survives the process that would read it, HTTP
 would not survive the death of whoever was waiting for the response.
 `dev_agent_states` gained `consecutive_blocked`/`max_consecutive_blocked`
-(the circuit breaker, [RN-047](business-rules.md#rn-047)); full decision in
+(the circuit breaker, [RN-047](business-rules/custo.md#rn-047)); full decision in
 [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md).
 
 The gate agents (`QaLeadServer`/`SecOpsAgentServer`) don't go through the
@@ -344,12 +344,12 @@ the model for an infrastructure problem.
 **8. A project's container is decided, never implicit.** The Code tab only
 unlocks after the Architect emits `artifact.project_image` — while the
 state is `sem_decisao` (no decision), reading code returns `409`
-([RN-105](business-rules.md#rn-105)). And `git push`, opening a PR, and
+([RN-105](business-rules/autenticacao.md#rn-105)). And `git push`, opening a PR, and
 deploy don't go through the terminal, even inside the project's scope:
 `decide()` recognizes them by command prefix and returns `deny` BEFORE any
 permissive stage — not `require_approval`, because "always allow" would
 write the pattern into `allow` and reopen the door
-([RN-106](business-rules.md#rn-106),
+([RN-106](business-rules/autenticacao.md#rn-106),
 [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)).
 The container's lifecycle (provision, recycle, clean up) doesn't exist yet
 — a declared cut from PHASE 25, recorded in CLAUDE.md — so this invariant
@@ -360,15 +360,15 @@ coexists, for now, with the path-scope policy from
 Both halves are the same lesson, and came from an agent that only had
 write tools: the PO built context once, at kickoff, and acted from then on
 over a stale snapshot — facing a gap, it chose between inventing and
-stopping ([RN-164](business-rules.md#rn-164),
-[RN-165](business-rules.md#rn-165)). Reading does **not** become a
+stopping ([RN-164](business-rules/autenticacao.md#rn-164),
+[RN-165](business-rules/autenticacao.md#rn-165)). Reading does **not** become a
 `proposed_action` (invariant 4 is about EXTERNAL effect, and reading isn't
 one), but it is contained in the sense of
 [ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md): scope closed by the
 route's path, constant cost per call, and a line ceiling in the text
 delivered to the model. And an agent's loop doesn't end silently — an
 iteration ceiling emits `toolloop.limit_reached`, an unmet obligation emits
-a durable outcome with an origin ([RN-166](business-rules.md#rn-166)).
+a durable outcome with an origin ([RN-166](business-rules/autenticacao.md#rn-166)).
 
 ## Cross-cutting concerns
 
@@ -527,7 +527,7 @@ had cut. It came back because the **dev** area isn't enumerable in code:
 project. The unique `(project_id, key)` is what makes seeding idempotent,
 and `max_parallel` (default 2) is the ceiling the lead uses without asking
 — above it, `proposed_action`
-(see [RN-083](business-rules.md#rn-083)). `budget_micros`/`spent_micros`
+(see [RN-083](business-rules/custo.md#rn-083)). `budget_micros`/`spent_micros`
 (ADR 0110) mirror `max_parallel` on the same row — a spend ceiling that is
 ADDITIVE to `budgets` (project/session), never a cascade: it is checked
 and incremented independently, by the same `CheckBudgetGateUseCase`/

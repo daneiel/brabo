@@ -50,7 +50,7 @@ deliberado.
 
 **O gate se fecha com um clique explícito e SEPARADO do usuário** — mesmo
 padrão interacional de "Confirmar arquitetura pronta"
-([RN-160](../business-rules.md#rn-160)): um botão dedicado em
+([RN-160](../business-rules/autenticacao.md#rn-160)): um botão dedicado em
 `SessionPage.tsx`, uma rota HTTP dedicada
 (`POST .../agents/criativo/validate-necessity`), um caso de uso dedicado
 (`ValidateNecessityUseCase`) que grava o evento de domínio
@@ -169,7 +169,7 @@ futura, não como parte desta entrega.
 - `docs/gates.yml` — gate `necessidade-validada`
 - `docs/fluxo.yml` — papel `criativo`, `gate_saida`
 - [RN-406](../business-rules.md#rn-406)
-- [RN-160](../business-rules.md#rn-160) — o padrão interacional copiado
+- [RN-160](../business-rules/autenticacao.md#rn-160) — o padrão interacional copiado
 - `docs/explanation/modelo-de-time.md` — o anti-padrão que motivou a
   decisão (removido da lista de pendências por este ADR)
 - `docs/explanation/auditoria-fluxo-vs-codigo.md` — achado B2, seção D

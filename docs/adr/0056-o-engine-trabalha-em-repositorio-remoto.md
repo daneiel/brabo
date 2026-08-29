@@ -3,7 +3,7 @@
 ## Status
 
 Accepted — implemented and proven by test in Phase B of the backlog
-([RN-076](../business-rules.md#rn-076)).
+([RN-076](../business-rules/custo.md#rn-076)).
 
 An implementation discovery, recorded because it changes the size of the
 problem: **two of the four consumers never needed a credential**.
@@ -67,7 +67,7 @@ This is the decision that matters most, and it is a direct consequence of
 The obvious path — `remote add origin
 https://x-access-token:TOKEN@github.com/…` — writes the credential **in
 plain text inside the project folder**. And
-[RN-075](../business-rules.md#rn-075) just gave the dev agent
+[RN-075](../business-rules/custo.md#rn-075) just gave the dev agent
 **auto-approved** reading inside that folder: a `cat .git/config` would
 return the token with no approval whatsoever, and it would travel to the LLM
 provider on the very next turn, inside the loop's history.
@@ -82,7 +82,7 @@ No credential in a file, not in `.git/config`, not in a persisted helper.
 
 ### 3. The credential is the workspace OWNER's
 
-Same rule that [RN-058](../business-rules.md#rn-058) already established for
+Same rule that [RN-058](../business-rules/custo.md#rn-058) already established for
 the LLM key, for the same reason: who pays and who authorizes is the
 workspace owner, not the agent nor whoever opened the session.
 
@@ -143,7 +143,7 @@ blocks PHASE 13b.
   of the [backlog](../explanation/backlog.md).
 - [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — the scope
   that makes decision 2 mandatory.
-- [RN-058](../business-rules.md#rn-058) — whose credential the agent spends.
+- [RN-058](../business-rules/custo.md#rn-058) — whose credential the agent spends.
 - `apps/engine/lib/engine/projects/project_repository.ex`,
   `apps/engine/lib/engine/actions/workspace.ex`,
   `apps/engine/lib/engine/actions/git_executor.ex`.

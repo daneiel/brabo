@@ -94,7 +94,7 @@ The ones Phase 12 closed are marked.
 | # | finding | where | prio | state |
 |---|---|---|---|---|
 | 1 | The product doesn't know how to point a project at an existing repository. `createRepo` is unconditional; `getRepo` exists and is called by no use case; the DTO has no field for `externalId` | `provision-repository.use-case.ts:144` | **P1** | **closed** — [ADR 0044](../adr/0044-adocao-de-repositorio-existente.md) |
-| 2 | GitHub's `protectBranch` applies `enforce_admins: true` + 1 reviewer over the existing protection, without reading the current state — can lock out the owner's manual merge | `github-provider.ts:170-175` | **P1** | **closed** — became a product rule ([RN-045](../business-rules.md#rn-045)) |
+| 2 | GitHub's `protectBranch` applies `enforce_admins: true` + 1 reviewer over the existing protection, without reading the current state — can lock out the owner's manual merge | `github-provider.ts:170-175` | **P1** | **closed** — became a product rule ([RN-045](../business-rules/custo.md#rn-045)) |
 | 3 | The bootstrap creates and protects an `rc` branch that Brabo's branch policy (Phase 6) doesn't use | `bootstrap-steps.ts:94,195` | P2 | **closed** — [RN-029](../business-rules.md#rn-029) |
 | 4 | `agent_areas`/`agent_area_members` don't exist; areas, leads, and members are hardcoded in two places that can diverge | `schema.ts:781-786` | P2 | Phase 8 recorded cut |
 | 5 | The six Phase 9b LLM providers didn't land, and CLAUDE.md described Phase 9 as if they had | ADR 0042:147-156 | P2 | closed in Phase 11 |
@@ -108,7 +108,7 @@ The ones Phase 12 closed are marked.
 |---|---|---|---|---|
 | 9 | **The Creative agent can't be skipped.** The claim requires a `ready` story; `ready` requires ≥1 business rule; the id is validated against a real event; and only the Creative agent has `emit_artifact` | `story-readiness.ts:46`, `po_server.ex:18` | **P1** | open |
 | 10 | **A dev agent processes ONE task and stops.** `:work` is only triggered on activation and on accepting parallelization | `dev_agent_server.ex:76-91,306-327` | **P1** | **closed** — [ADR 0045](../adr/0045-reagendamento-por-evento-do-dev-agent.md) |
-| 11 | Reactivating execution doesn't re-trigger `:work` and also creates an extra session with no linked agents | `dev_agent_supervisor.ex:33-52` | P2 | **closed** — [RN-053](../business-rules.md#rn-053) |
+| 11 | Reactivating execution doesn't re-trigger `:work` and also creates an extra session with no linked agents | `dev_agent_supervisor.ex:33-52` | P2 | **closed** — [RN-053](../business-rules/custo.md#rn-053) |
 | 12 | There's no manual handoff to an agent of choice, and ADR 0038's target validation was never implemented | `SessionPage.tsx:403-407` | P2 | **half closed** — target validation in [RN-054](../business-rules.md#rn-054); manual handoff remains open |
 | 13 | There's no "promote to ready": promotion is automatic on creation. `TransitionStoryUseCase` isn't wired to any route — it's dead code | `create-story.use-case.ts:75-78` | P2 → **P1** | **closed** — [ADR 0046](../adr/0046-promocao-de-story-com-autoridade-do-usuario.md) |
 | 14 | There's no way to return a story to the PO — no state, event, or button | — | P2 | **closed** together with #13 |

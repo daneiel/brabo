@@ -70,7 +70,7 @@ onde é barulhento e reversível.
 ### Por que uma função, e não a checagem em cada chamador
 
 Pela mesma razão que fez `projectScopeRoot()` existir
-([RN-092](../business-rules.md#rn-092)): eram duas cópias do mesmo literal, em
+([RN-092](../business-rules/custo.md#rn-092)): eram duas cópias do mesmo literal, em
 arquivos diferentes (`start-git-oauth.use-case.ts` e
 `handle-git-oauth-callback.use-case.ts`). Uma checagem duplicada é uma checagem
 que um dia diverge — e divergindo aqui, o callback recusaria todo `state`

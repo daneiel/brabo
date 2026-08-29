@@ -144,7 +144,7 @@ inexistente, e dispara em silêncio o link de "definir senha".
 Responder um `password_pending` explícito seria a UX óbvia e está descartado:
 confirmaria que o endereço existe **e** que é conta legada — o sinal de
 enumeração mais valioso do sistema, e exatamente o que a
-[RN-032](../business-rules.md#rn-032) fecha.
+[RN-032](../business-rules/autenticacao.md#rn-032) fecha.
 
 Para o custo ser igual nos três desfechos, `findByEmail` virou um LEFT JOIN de
 `users` para `auth_credentials`: uma consulta só. Duas consultas encadeadas

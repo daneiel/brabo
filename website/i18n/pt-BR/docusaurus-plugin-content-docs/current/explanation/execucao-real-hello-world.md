@@ -50,7 +50,7 @@ antes. O wizard passou a avisar na hora da escolha.
 | psicologo-leve | 1 | 1.947 | 2.039 | 542 |
 
 A Anamnese gastou **8× o Criativo e o PO somados** sem produzir nada — ela não
-tinha como dizer "não há nada a emitir" ([RN-063](../business-rules.md#rn-063)).
+tinha como dizer "não há nada a emitir" ([RN-063](../business-rules/custo.md#rn-063)).
 É o número mais importante desta tabela: o trabalho custou centavos, o
 desperdício custou o resto.
 

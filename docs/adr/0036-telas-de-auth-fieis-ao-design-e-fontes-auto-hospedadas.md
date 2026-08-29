@@ -162,7 +162,7 @@ known.
 
 The copy changes from `E-mail ou senha inválidos.` to `E-mail ou senha
 incorretos.`. The 403 case (`Confirme seu e-mail…`) stays distinct, as ADR
-0032 and [RN-032](../business-rules.md#rn-032) require: the uniformity is
+0032 and [RN-032](../business-rules/autenticacao.md#rn-032) require: the uniformity is
 between "doesn't exist," "wrong password" and "account locked" — not with
 "email not verified," which is only reachable **after** the password has
 been proven correct.

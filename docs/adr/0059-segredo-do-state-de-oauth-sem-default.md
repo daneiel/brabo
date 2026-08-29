@@ -72,7 +72,7 @@ where it is loud and reversible.
 ### Why a function, and not the check at every caller
 
 For the same reason `projectScopeRoot()` exists
-([RN-092](../business-rules.md#rn-092)): there were two copies of the same
+([RN-092](../business-rules/custo.md#rn-092)): there were two copies of the same
 literal, in different files (`start-git-oauth.use-case.ts` and
 `handle-git-oauth-callback.use-case.ts`). A duplicated check is a check that
 one day diverges — and diverging here, the callback would reject every

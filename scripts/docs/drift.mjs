@@ -79,7 +79,23 @@ for (const regra of acionadas) {
     continue;
   }
 
-  const pendentes = (regra.docs ?? []).filter((d) => !docsAlterados.has(d));
+  // `docs` é conjunção: TODOS os documentos listados precisam ter mudado.
+  // `docs_alternativos` é disjunção: QUALQUER um deles satisfaz a regra.
+  //
+  // A segunda nasceu quando o `business-rules.md` foi partido por tamanho e
+  // as RNs passaram a morar em três arquivos. Sem ela, mudar uma RN de auth
+  // cobraria o índice — que não contém mais aquela regra —, e a saída de quem
+  // fosse cobrado seria o escape hatch. Uma regra que ensina a usar o escape
+  // hatch é pior que regra nenhuma: ela treina a ignorar o check.
+  const alternativos = regra.docs_alternativos ?? [];
+  if (alternativos.length > 0 && alternativos.some((d) => docsAlterados.has(d))) {
+    continue;
+  }
+
+  const pendentes = [
+    ...(regra.docs ?? []).filter((d) => !docsAlterados.has(d)),
+    ...(alternativos.length > 0 ? [`um destes: ${alternativos.join(' | ')}`] : []),
+  ];
   if (pendentes.length === 0) continue;
 
   const item = { regra, pendentes, gatilhos: gatilhosDe(regra, alterados) };

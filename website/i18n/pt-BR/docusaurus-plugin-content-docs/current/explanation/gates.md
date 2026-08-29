@@ -44,7 +44,7 @@ delegação existe, porque o teto rebaixa `auto_approve` para `require_approval`
 mesmo com autonomia ligada.
 
 Nos quatro gates que a constituição declara manuais, esse campo é invariante e
-está travado por teste ([RN-071](../business-rules.md#rn-071)).
+está travado por teste ([RN-071](../business-rules/custo.md#rn-071)).
 
 ## Três formas de evidência, porque nem toda prova está no log
 
@@ -156,7 +156,7 @@ o que o código agora faz.
 
 `implementavel` é o exemplo de gate que precisou de código novo pra sair de
 `planned`. `paralelismo-autorizado` é o oposto: o mecanismo (`RequestParallelizationUseCase`,
-[RN-083](../business-rules.md#rn-083)) está em produção desde a FASE 14d — foi o
+[RN-083](../business-rules/custo.md#rn-083)) está em produção desde a FASE 14d — foi o
 registro que ficou pra trás, declarando `planned` sobre algo que já era `active` no
 `docs/fluxo.yml` irmão e no código. A auditoria fluxo.yml × código (achado A1/B5,
 [auditoria-fluxo-vs-codigo.md](auditoria-fluxo-vs-codigo.md)) achou a divergência;
@@ -228,4 +228,4 @@ seria pior que a ausência dela.
 - [ADR 0054](../adr/0054-gates-como-registro-declarativo.md) — a decisão
 - [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) — a decisão no
   event log, sem a qual não haveria o que medir
-- [RN-070](../business-rules.md#rn-070), [RN-071](../business-rules.md#rn-071)
+- [RN-070](../business-rules/custo.md#rn-070), [RN-071](../business-rules/custo.md#rn-071)

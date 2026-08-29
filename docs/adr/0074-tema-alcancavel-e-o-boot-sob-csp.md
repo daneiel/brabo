@@ -208,5 +208,5 @@ turn into a battery of `toBeGreaterThanOrEqual`, and the reason is here.
   outcome (intent yes, mechanism no).
 - [0058](0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md) — the CSP policy that makes the
   inline script unviable.
-- [RN-182](../business-rules.md#rn-182), [RN-183](../business-rules.md#rn-183),
-  [RN-184](../business-rules.md#rn-184), [RN-185](../business-rules.md#rn-185).
+- [RN-182](../business-rules/autenticacao.md#rn-182), [RN-183](../business-rules/autenticacao.md#rn-183),
+  [RN-184](../business-rules/autenticacao.md#rn-184), [RN-185](../business-rules/autenticacao.md#rn-185).

@@ -54,7 +54,7 @@ desligou de propósito.
 
 ### Modelo descoberto entra INATIVO, modelo sumido é marcado e preservado
 
-Formalizado na [RN-043](../business-rules.md#rn-043). Deletar nunca é opção:
+Formalizado na [RN-043](../business-rules/custo.md#rn-043). Deletar nunca é opção:
 `model_bindings` e `token_usage` apontam para a linha.
 
 A terceira regra é a que menos aparece e mais importa: **provider que falhou não
@@ -77,7 +77,7 @@ O ponto não óbvio: quando o turno carrega ferramentas, o filtro de
 `supports_tool_calling` vale para **todo** candidato, não só para o primeiro.
 Sem isso, um binding de agente para modelo indisponível cairia para o nível de
 baixo e pousaria num modelo chat-only, violando a
-[RN-040](../business-rules.md#rn-040) em silêncio — a falha só apareceria depois,
+[RN-040](../business-rules/custo.md#rn-040) em silêncio — a falha só apareceria depois,
 no ToolLoop, como "o agente parou sozinho". É exatamente o modo de falha que o
 ADR 0020 custou nove execuções para diagnosticar.
 
@@ -90,7 +90,7 @@ restringiria mais do que a regra pede.
 `token_usage` ganhou `input_price_per_million_micros` e
 `output_price_per_million_micros` — o preço que produziu aquele custo. É o que
 torna o custo antigo reproduzível, e não apenas imutável
-([RN-044](../business-rules.md#rn-044)).
+([RN-044](../business-rules/custo.md#rn-044)).
 
 A alternativa considerada era uma **tabela de vigência** (preço com intervalo de
 validade, custo recalculado por join). Foi descartada: obrigaria toda leitura de

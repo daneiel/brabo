@@ -45,7 +45,7 @@ ones** (W, X, Y, Z, AA, AB, AC, AD, AE) from the FASE 13b validation — see
 [validacao-real.md](validacao-real.md).
 
 Of these, **five closed**: W, Y, AA, AB and AC within 13b itself, and X via
-FASE 14d ([RN-085](../business-rules.md#rn-085)) — the iteration cap became
+FASE 14d ([RN-085](../business-rules/custo.md#rn-085)) — the iteration cap became
 per agent TYPE, which was the shape the triage had proposed and the product
 decision that was missing.
 
@@ -66,8 +66,8 @@ inheritance from the two lists; where there's ambiguity the text says
 "finding."
 
 Two items left the open list since the first triage: **A**
-([RN-067](../business-rules.md#rn-067)) and **M**
-([RN-066](../business-rules.md#rn-066)), both closed and confirmed in
+([RN-067](../business-rules/custo.md#rn-067)) and **M**
+([RN-066](../business-rules/custo.md#rn-066)), both closed and confirmed in
 production. And **ADR 0052**, which was half of Phase A, was implemented
 and proven by test — the wake delivery was fixed and covered end to end
 afterward.
@@ -86,8 +86,8 @@ execution, but because there was never a PR for any gate to judge.
 
 | item | what it was | how it closed |
 |---|---|---|
-| **ADR 0052** | pending approval returned `status pending` as the tool's result and burned an iteration; the agent died at the cap without writing anything | the loop SUSPENDS and resumes ([RN-073](../business-rules.md#rn-073)); the outcome delivery was fixed later — the event was born in an aggregate the engine's drain didn't read — and the path is now covered end to end |
-| **O / B** | the session and dev agents were born on local `llama3.2:1b`, which ADR 0020 forbids in the semantic step | when the cascade lands on the workspace default, the inherited model is the **Creative agent's** ([RN-072](../business-rules.md#rn-072)) |
+| **ADR 0052** | pending approval returned `status pending` as the tool's result and burned an iteration; the agent died at the cap without writing anything | the loop SUSPENDS and resumes ([RN-073](../business-rules/custo.md#rn-073)); the outcome delivery was fixed later — the event was born in an aggregate the engine's drain didn't read — and the path is now covered end to end |
+| **O / B** | the session and dev agents were born on local `llama3.2:1b`, which ADR 0020 forbids in the semantic step | when the cascade lands on the workspace default, the inherited model is the **Creative agent's** ([RN-072](../business-rules/custo.md#rn-072)) |
 
 The inheritance fills the **gap** and never overrides: session, agent or
 project binding are explicit choices and still win. And the inherited
@@ -112,7 +112,7 @@ and only knew local bare repos, so a remote project ran the conversational
 half and stalled in the build half.
 
 Closed via [ADR 0056](../adr/0056-o-engine-trabalha-em-repositorio-remoto.md)
-and [RN-076](../business-rules.md#rn-076): the engine requests the working
+and [RN-076](../business-rules/custo.md#rn-076): the engine requests the working
 remote from the api, which holds the master key, and the credential comes
 in **per invocation** — the origin recorded in `.git/config` is wiped.
 
@@ -140,8 +140,8 @@ could reach, nor on **how much** it returned.
 
 | item | what it was | how it closed |
 |---|---|---|
-| **S** | accumulated context overflowed the provider's byte limit and the call came back `413`. Every terminal output stayed in the history and traveled along in every subsequent turn | a byte cap in the executor, with a marker addressed to the model ([RN-074](../business-rules.md#rn-074)) |
-| **U** | `/workspace` inside the executor is the **Brabo monorepo itself**, and `/data/project-workspaces/*/` grants access to other projects' worktrees | path scope in the decision ([RN-075](../business-rules.md#rn-075), [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) accepted) |
+| **S** | accumulated context overflowed the provider's byte limit and the call came back `413`. Every terminal output stayed in the history and traveled along in every subsequent turn | a byte cap in the executor, with a marker addressed to the model ([RN-074](../business-rules/custo.md#rn-074)) |
+| **U** | `/workspace` inside the executor is the **Brabo monorepo itself**, and `/data/project-workspaces/*/` grants access to other projects' worktrees | path scope in the decision ([RN-075](../business-rules/custo.md#rn-075), [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) accepted) |
 
 Scope closed both sides at once: it **tightened** (an allowed verb
 pointing outward stopped auto-approving) and it **loosened** (`cd`ing
@@ -203,7 +203,7 @@ log.
 
 | item | what it was | how it closed |
 |---|---|---|
-| **D** | `Protect branches` fails on a private repo on the free plan, and the wizard **warns about it beforehand**. The only action offered afterward was "Try again," which always fails | [RN-078](../business-rules.md#rn-078) |
+| **D** | `Protect branches` fails on a private repo on the free plan, and the wizard **warns about it beforehand**. The only action offered afterward was "Try again," which always fails | [RN-078](../business-rules/custo.md#rn-078) |
 | **E** | the repository preview lied: `repo: brabo/{slug}` hardcoded, with the real owner coming from the PAT | already done (commit `4dd7a073`) — the label now shows only the slug, which is what's actually known |
 | **F** | the "Branch policy" step listed `rc` among the permanent branches | already done (commit `4dd7a073`) |
 
@@ -229,7 +229,7 @@ The same CLAUDE.md rule violated three times: **P** (`dev.blocked` with
 (a recurrence: `dev.blocked` with `"undetermined"` on a failure whose
 `diagnosis` field named the cause on the SAME line).
 
-Closed via [RN-077](../business-rules.md#rn-077), and the root-cause
+Closed via [RN-077](../business-rules/custo.md#rn-077), and the root-cause
 diagnosis is what changed the shape of the fix: **the classifier already
 existed and would already have gotten it right** —
 `FalhaDeTurno.origem/1` maps status ≥ 400 to `codigo`, which correctly
@@ -253,14 +253,14 @@ kept going until 00:56.
 
 The cause wasn't the state machine: it was **the heartbeat**. The session
 was born at 23:34:12 and closed at 23:34:42 — exactly the 30s of
-`SESSION_HEARTBEAT_TIMEOUT_MS`. [RN-064](../business-rules.md#rn-064)
+`SESSION_HEARTBEAT_TIMEOUT_MS`. [RN-064](../business-rules/custo.md#rn-064)
 already required checking for pending work before closing, but "pending
 work" only meant a **`offered` handoff** — and there was a `pending`
 action since 23:34:13, created one second after the session was born.
 
 An action awaiting a decision now counts. It's the same defect one level
 below the handoff: someone is waiting on **you**, and an agent may be
-suspended waiting on the outcome ([RN-073](../business-rules.md#rn-073)).
+suspended waiting on the outcome ([RN-073](../business-rules/custo.md#rn-073)).
 
 **The rule's earlier version said, in writing, that including agent work
 "without a test proving the interaction would be guessing."** The
@@ -294,14 +294,14 @@ whether it was worth running: it summed the bootstrap's machine steps
 and — worse — the trail the Psychologist itself leaves in the session
 while analyzing it, which made an empty session look populated starting
 from the first analysis, and more populated with every retry. Closed via
-[RN-079](../business-rules.md#rn-079), with the finding's session
+[RN-079](../business-rules/custo.md#rn-079), with the finding's session
 reproduced as a test.
 
 **K and R were the same prompt, and that's why they only closed as far as
 code can reach.** An EXACT duplicate rule is refused at emission
-([RN-080](../business-rules.md#rn-080)); a story with an identical title
+([RN-080](../business-rules/custo.md#rn-080)); a story with an identical title
 is refused and one that adds no coverage becomes a warning
-([RN-081](../business-rules.md#rn-081)) — a warning, not a block, because
+([RN-081](../business-rules/custo.md#rn-081)) — a warning, not a block, because
 a second cut of the same rule can be legitimate and it's the user who
 judges.
 
@@ -329,7 +329,7 @@ default. It's this set that keeps `qa` from receiving code that never
 went through `dev`.
 
 ~~**The four sibling secrets of the production compose**~~ — **DONE**
-([RN-114](../business-rules.md#rn-114)). `AUTH_JWT_SECRET`,
+([RN-114](../business-rules/custo.md#rn-114)). `AUTH_JWT_SECRET`,
 `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` and `SECRET_KEY_BASE` had
 development defaults in `docker/docker-compose.prod.yml`, which runs with
 `NODE_ENV=production` — the same pattern
@@ -408,8 +408,8 @@ are deferred product decisions — hence no priority here.
 | Return of `rc`/`rcfix` | [ADR 0030](../adr/0030-politica-de-branches-mecanizada.md) |
 | ~~Community mode of the approval-ladder~~ | **FIXED AND CLOSED.** The reference "becomes a change to `aprovacao_humana` in the gate registry" was imprecise — it came from a speculative sentence in ADR 0054, not from something actually missing. The `community` mode is already implemented and tested since FASE 6 (`scripts/ci/approval-ladder.ts`), just switched off by `APPROVAL_MODE=solo` (default); `aprovacao_humana` for the `aprovacoes-da-escada` gate is already `true` in both modes, with no `APPROVAL_MODE` awareness in the schema. What was genuinely missing was the `TODO(humano)` in `branching-policy.md` — the criterion for who joins each approver list —, closed by `GOVERNANCE.md` (repository root). Actually activating the mode remains an operational decision (recruiting real people for the three roles), not an engineering pending item |
 | ~~Currency preference with manual exchange rate~~ | **WON'T DO** — decision recorded. Converting would require a manually-maintained exchange rate, which ages; a wrong number is worse than an honest USD number (same principle already applied in `formatarCustoMicros`, `ProjectSettingsTab.tsx`) |
-| Reactivate the Anamnese (`ANAMNESE_ENABLED=true`) | paused by user decision on 2026-08-10 — "today it isn't bringing much-value data" ([RN-115](../business-rules.md#rn-115)). No data was erased (hypotheses, proficiency profiles and instruction patches remain intact and visible); the pause is only on the new-round PATH, awaiting future refinement of what Anamnese derives before turning it back on |
-| Reactivate the Psychologist (`PSYCHOLOGIST_ENABLED=true`) | paused by user decision on 2026-08-10, same reason and same pattern as Anamnese above ([RN-117](../business-rules.md#rn-117)). No data was erased (already-emitted analyses and hypotheses remain intact and visible); the pause is only on the new-round PATH (automatic and on-demand) |
+| Reactivate the Anamnese (`ANAMNESE_ENABLED=true`) | paused by user decision on 2026-08-10 — "today it isn't bringing much-value data" ([RN-115](../business-rules/autenticacao.md#rn-115)). No data was erased (hypotheses, proficiency profiles and instruction patches remain intact and visible); the pause is only on the new-round PATH, awaiting future refinement of what Anamnese derives before turning it back on |
+| Reactivate the Psychologist (`PSYCHOLOGIST_ENABLED=true`) | paused by user decision on 2026-08-10, same reason and same pattern as Anamnese above ([RN-117](../business-rules/autenticacao.md#rn-117)). No data was erased (already-emitted analyses and hypotheses remain intact and visible); the pause is only on the new-round PATH (automatic and on-demand) |
 | Problems/lint/tests panel in the Code tab | declared pending in FASE 26 (`CLAUDE.md`) alongside blame, PR list and branch detail — those three closed in FASE 26b, this one didn't and was never picked up again. No data source exists yet (no lint/test-runner integration in the product); recorded here so it isn't silently dropped from tracking |
 
 ## Backlog of the runner/execution_mode (ADR 0104)

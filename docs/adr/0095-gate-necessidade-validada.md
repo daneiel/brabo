@@ -50,7 +50,7 @@ mechanism.
 
 **The gate closes with an explicit click, SEPARATE from the user** — the
 same interaction pattern as "Confirm architecture ready"
-([RN-160](../business-rules.md#rn-160)): a dedicated button in
+([RN-160](../business-rules/autenticacao.md#rn-160)): a dedicated button in
 `SessionPage.tsx`, a dedicated HTTP route
 (`POST .../agents/criativo/validate-necessity`), a dedicated use case
 (`ValidateNecessityUseCase`) that writes the domain event
@@ -171,7 +171,7 @@ as a future possibility, not part of this delivery.
 - `docs/gates.yml` — gate `necessidade-validada`
 - `docs/fluxo.yml` — `criativo` role, `gate_saida`
 - [RN-406](../business-rules.md#rn-406)
-- [RN-160](../business-rules.md#rn-160) — the interaction pattern copied
+- [RN-160](../business-rules/autenticacao.md#rn-160) — the interaction pattern copied
 - `docs/explanation/modelo-de-time.md` — the anti-pattern that motivated
   the decision (removed from the pending list by this ADR)
 - `docs/explanation/auditoria-fluxo-vs-codigo.md` — finding B2, section D

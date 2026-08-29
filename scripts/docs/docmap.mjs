@@ -48,11 +48,18 @@ export function validar(docmap, arquivos) {
     }
 
     // `requires_adr` não aponta para documento específico; as demais precisam.
-    if (!regra.requires_adr && (regra.docs ?? []).length === 0) {
+    // `docs_alternativos` conta como cobertura: uma regra que exige QUALQUER
+    // um de N documentos não está sem docs (ver a disjunção em drift.mjs).
+    const documentos = [...(regra.docs ?? []), ...(regra.docs_alternativos ?? [])];
+
+    if (!regra.requires_adr && documentos.length === 0) {
       problemas.push({ tipo: 'sem-docs', regra: regra.id });
     }
 
-    for (const doc of regra.docs ?? []) {
+    // Vale para as DUAS listas: caminho que não existe é o mesmo erro
+    // silencioso do glob morto, e uma alternativa com typo nunca poderia
+    // satisfazer a regra — ela ficaria impossível de cumprir sem ninguém ver.
+    for (const doc of documentos) {
       if (!existsSync(join(RAIZ, doc))) {
         problemas.push({ tipo: 'doc-inexistente', regra: regra.id, doc });
       }

@@ -55,7 +55,7 @@ validated by HMAC (`GIT_OAUTH_STATE_SECRET`), and without a valid
 That guarantee is worth exactly as much as the key, which is why it
 stopped having a default: in production the api **refuses to boot** with
 the repository's example key, which is public (ADR 0059,
-[RN-093](business-rules.md#rn-093)). With a known key, this route goes
+[RN-093](business-rules/custo.md#rn-093)). With a known key, this route goes
 back to being unrestricted in practice — anyone can sign a `state` for
 whichever project they want.
 
@@ -88,7 +88,7 @@ with an expired access token.
 > **progressive lockout** by email and by IP, inside the use cases. It's
 > not an optional reinforcement: it's the only defense that exists here.
 > See
-> [RN-030](business-rules.md#rn-030) and [RN-031](business-rules.md#rn-031).
+> [RN-030](business-rules/autenticacao.md#rn-030) and [RN-031](business-rules/autenticacao.md#rn-031).
 
 **`POST /auth/register`** — sign-up. Responds `202` for both a new
 address and one already registered; in the second case nothing is
@@ -148,7 +148,7 @@ reason in the URL.
   registration one**
   ([ADR 0072](adr/0072-projeto-local-ou-container.md)/
   [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md),
-  [RN-169](business-rules.md#rn-169)/[RN-421](business-rules.md#rn-421)/
+  [RN-169](business-rules/autenticacao.md#rn-169)/[RN-421](business-rules.md#rn-421)/
   [RN-422](business-rules.md#rn-422)). The body gained `executionMode`
   (`container` — the default and the always-been behavior —, `mounted`, the
   old `local`, renamed, or `runner`) and `workspacePath`. In `mounted`/
@@ -185,12 +185,12 @@ reason in the URL.
   the `origin` it returns is **clean** (the credential comes in a separate
   field, never embedded in the URL), and the consumer is obligated to
   inject it per invocation, never to a file — see `Engine.Actions.GitAuth`
-  and the reasoning for that in [RN-076](business-rules.md#rn-076). If this
+  and the reasoning for that in [RN-076](business-rules/custo.md#rn-076). If this
   route ever starts returning the already-authenticated URL, the token
   would end up in `.git/config`, inside the folder where the dev agent has
   auto-approved reads.
 - **The PO's three read routes** — `GET /internal/projects/:projectId/business-rules`,
-  `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules.md#rn-164))
+  `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules/autenticacao.md#rn-164))
   and `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407)) —
   return no secret at all and **accept nothing beyond the project id**: no
   search term, no pagination, no filter. That's on purpose. A read route for
@@ -246,7 +246,7 @@ reason in the URL.
   the NetworkPolicy. The `/internal` prefix is signaling for humans. They
   sit **outside the JWT** via `@ServiceRoute()`: the user token doesn't
   work here and the service token doesn't work on any other route — the
-  two mechanisms never overlap ([RN-035](business-rules.md#rn-035)).
+  two mechanisms never overlap ([RN-035](business-rules/autenticacao.md#rn-035)).
 - **`/docs` and `/docs-json` are NOT in the table, and that's a known
   gap.** The Swagger UI is mounted by `SwaggerModule.setup()` at the
   Express level, not as a controller, and the test enumerates via
@@ -262,7 +262,7 @@ reason in the URL.
   the `agent_areas` table was never written and the route answered `[]`
   to everyone, which made the classification look lenient by accident,
   not by decision. With the area now born together with the project
-  ([RN-094](business-rules.md#rn-094)), the split goes back to what
+  ([RN-094](business-rules/custo.md#rn-094)), the split goes back to what
   PHASE 14d intended: **reading** the ceiling is work for whoever
   executes; **changing it** is deciding how much the product spends
   without asking, and that's why it requires the same role that
@@ -287,20 +287,20 @@ reason in the URL.
     Code tab is for reading, and writing is an external effect, which
     is born a `proposed_action` and belongs to a later phase. A `@Post`
     in this file is a phase change, not a route change;
-  - **the path is contained in ONE place** ([RN-095](business-rules.md#rn-095)),
-    via the same central check as [RN-092](business-rules.md#rn-092) —
+  - **the path is contained in ONE place** ([RN-095](business-rules/custo.md#rn-095)),
+    via the same central check as [RN-092](business-rules/custo.md#rn-092) —
     and containment matters here more than the role, because on remote
     providers the path becomes a URL segment of the provider's API and a
     `../` swaps the **endpoint**, not the file;
   - **the credential spent is the workspace owner's**
-    ([RN-058](business-rules.md#rn-058)/[RN-082](business-rules.md#rn-082)),
+    ([RN-058](business-rules/custo.md#rn-058)/[RN-082](business-rules/custo.md#rn-082)),
     same as with writing. Reading costs the provider's rate limit, which
     is why search has a budget: without a ceiling, a `viewer` could run
     up the owner's bill at will.
 - **`GET /workspaces/:workspaceId/spend-report` started returning the
   breakdown by provider, which is a breakdown by CREDENTIAL**
   ([ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md),
-  [RN-186](business-rules.md#rn-186)/[RN-187](business-rules.md#rn-187)).
+  [RN-186](business-rules/custo.md#rn-186)/[RN-187](business-rules/custo.md#rn-187)).
   No new route and no role change — still `role:owner`, as it already
   was — but what it GRANTS changed, which is why this note exists. ADR
   [0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md) had refused
@@ -346,7 +346,7 @@ reason in the URL.
   `Access-Control-Allow-Origin` for `WEB_ORIGIN`'s origins;
   **`/internal/*` and `/metrics` don't**, and the exclusion is the
   point. The 13 internal routes are server-to-server with a shared
-  secret ([RN-035](business-rules.md#rn-035)); CORS there wouldn't
+  secret ([RN-035](business-rules/autenticacao.md#rn-035)); CORS there wouldn't
   enable anything — the api's HTTP client ignores those headers — but it
   **would announce to a browser that it's an expected client of that
   channel**. There's a test asserting the absence, and one asserting the
@@ -372,12 +372,12 @@ reason in the URL.
   session: `findInProject(projectId, originSessionId)` silently refuses
   an id that doesn't belong to the path's OWN project, and the closing
   only happens if `GetSessionPendingWorkUseCase` (the same guard as the
-  inactivity heartbeat, [RN-073](business-rules.md#rn-073)) confirms
+  inactivity heartbeat, [RN-073](business-rules/custo.md#rn-073)) confirms
   there's no handoff, action, or turn hanging there. It never closes the
   execution session the call itself just activated.
 - **`GET /projects/:projectId/execution/session` is `role:viewer`, the
   same role as `GET /sessions/:sessionId`**
-  ([RN-139](business-rules.md#rn-139)). Returns the project's CURRENT
+  ([RN-139](business-rules/autenticacao.md#rn-139)). Returns the project's CURRENT
   execution session — `active` with `execution.activated` recorded — or
   `null`; never the project's most recent session, which is what the
   Executors tab used to read and which silently switched sessions the
@@ -385,13 +385,13 @@ reason in the URL.
 - **`POST .../llm-turn` and `POST .../llm-turn-stream` gained
   `modelName` in the response body/final frame, and the classification
   didn't change** — still `engine-service` as always
-  ([RN-146](business-rules.md#rn-146)). The model's name was already
+  ([RN-146](business-rules/autenticacao.md#rn-146)). The model's name was already
   being resolved to call the provider; it just started traveling back to
   the engine, which includes it in the `agent.response` payload. No new
   data is read, no new credential is exposed — it's the same name that
   already shows up in `token_usage`.
 - **`PUT /projects/:projectId/agent-autonomy` started accepting
-  `actionType: "*"` — "auto mode" ([RN-153](business-rules.md#rn-153))
+  `actionType: "*"` — "auto mode" ([RN-153](business-rules/autenticacao.md#rn-153))
   — and the classification didn't change:** still `role:maintainer`,
   the same as the `GET` next to it. The difference is what the body now
   AUTHORIZES, not who can call it: the wildcard grants autonomy for ANY
@@ -403,7 +403,7 @@ reason in the URL.
   exactly as before the wildcard existed. That's why the three absolute
   ceilings — merging into a protected branch, `instruction_patch`,
   `parallelize`/`raise_max_parallel` — keep blocking even with the
-  wildcard set to `auto_approve` ([RN-154](business-rules.md#rn-154)):
+  wildcard set to `auto_approve` ([RN-154](business-rules/autenticacao.md#rn-154)):
   they react to `current.policy === 'auto_approve'`, never to where it
   came from, and no exception had to enter `decide()` for that to keep
   holding. `ApprovalCard.tsx` only offers the button that writes the

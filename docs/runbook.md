@@ -80,7 +80,7 @@ with `docker volume rm` once you're sure the copy worked.
 **Symptom:** when creating the project and picking **Local**, the api
 responds `400` saying the folder *doesn't exist from inside the api*.
 
-That's the guard working ([RN-170](business-rules.md#rn-170)), not a bug:
+That's the guard working ([RN-170](business-rules/autenticacao.md#rn-170)), not a bug:
 the path you typed exists on your computer and **not** inside the
 container. A project created like that would get stuck later, on the first
 tool of the first agent, far from the screen where the decision was made —
@@ -117,7 +117,7 @@ docker compose -f docker/docker-compose.yml exec engine ls -la /home/voce/projet
 
 **Why the same path on both sides.** The path is written ONCE to
 `projects.workspace_path` and read by both processes
-([RN-169](business-rules.md#rn-169)). Mounting it in different places would
+([RN-169](business-rules/autenticacao.md#rn-169)). Mounting it in different places would
 make the engine write where the api doesn't read — the divergence that the
 single derivation exists to prevent.
 
@@ -578,7 +578,7 @@ missing, set to the repository's example value, or too short.
 regression, and don't work around it.**
 [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md) already
 declared these four as pending — the same pattern, just not replicated
-yet — and [RN-114](business-rules.md#rn-114) closed it. Each protects
+yet — and [RN-114](business-rules/custo.md#rn-114) closed it. Each protects
 something different:
 
 - `AUTH_JWT_SECRET` public = anyone can derive the pair that signs the
@@ -1194,7 +1194,7 @@ reset link say "expired".
 ### `BRABO_SERVICE_TOKEN` — zero-downtime rotation, on both sides
 
 This is the shared secret that authenticates api ↔ engine traffic
-([RN-035](business-rules.md#rn-035)). It has nothing to do with a user
+([RN-035](business-rules/autenticacao.md#rn-035)). It has nothing to do with a user
 session: getting it wrong doesn't log anyone out, it breaks internal
 communication.
 
@@ -1225,7 +1225,7 @@ openssl rand -base64 48
 
 The lockout is short (30s to 15 minutes) and resolves itself: the
 sliding window drains. **There's no unlock endpoint**, on purpose — see
-[RN-031](business-rules.md#rn-031). If you need to unlock someone right
+[RN-031](business-rules/autenticacao.md#rn-031). If you need to unlock someone right
 now:
 
 ```sql
@@ -1406,7 +1406,7 @@ max(sum by (project) (rate(brabo_llm_cost_micros_total[10m])) * 3600 / 1000000)
 
 The alert is a **warning**, not a brake. The real brake is the domain's
 `budgets`, and it acts per project/session, never globally
-([RN-019](business-rules.md#rn-019)).
+([RN-019](business-rules/custo.md#rn-019)).
 
 ### 1. Which project, which agent
 
@@ -1479,7 +1479,7 @@ select scope, scope_id, model_id from model_bindings where scope_id = '<projeto>
 
 Then point the project's binding at a `local` model through the settings
 screen (the most specific scope wins: session > agent > project >
-workspace — [RN-020](business-rules.md#rn-020)).
+workspace — [RN-020](business-rules/custo.md#rn-020)).
 
 **c) Lower the ceiling and make sure it's `block`.** Makes the domain
 itself refuse the next calls:
@@ -1786,8 +1786,8 @@ exposed in `docker-compose.yml`.
 | `OLLAMA_REQUEST_TIMEOUT_MS` | too short a timeout for a large model on a long prompt |
 | `OLLAMA_MODE` (dev bootstrap, [RN-461](business-rules.md#rn-461), ADR 0114) | stuck at `host` after the native Ollama on the developer's machine was uninstalled or stopped — every local-LLM turn fails with `ECONNREFUSED` against `http://host.docker.internal:<port>`, and the compose `ollama` service never starts to cover for it (it's gated behind `profiles: ["local-llm"]`, and this variable is what keeps that profile off). Fix: `Docker › Reconfigurar Ollama` in `pnpm bootstrap`, which clears `OLLAMA_MODE`/`OLLAMA_HOST` from `.env` and forces the detection to ask again on the next `Create`/`Reset total` |
 | `START_OUTBOX_DRAIN` / `START_ANAMNESE` | the Psychologist and Anamnesis consume LLM turns in parallel with the execution agents and drop the dev's connection mid-cycle |
-| `TOOL_LOOP_MAX_ITERATIONS*` | a ceiling that's too LOW and the agent stops without delivering, with `iteration limit reached` and origin `model` — which is misleading, because the model made no wrong judgment at all, it never got to judge. The ceiling is per TYPE ([RN-085](business-rules.md#rn-085)): `8` for conversational agents, `60` for the dev agent and QA. Before raising it, check whether the agent HAS `token_budget_micros`; without it the ceiling is the only cost guard that exists |
-| `TERMINAL_OUTPUT_MAX_BYTES` | raising it too much brings back the failure mode the ceiling exists to prevent: each command's output stays in the loop's history and travels on EVERY following turn. It's not a context-window issue: the largest successful call from the execution that first revealed this had only 28,993 input tokens ([RN-074](business-rules.md#rn-074)) |
+| `TOOL_LOOP_MAX_ITERATIONS*` | a ceiling that's too LOW and the agent stops without delivering, with `iteration limit reached` and origin `model` — which is misleading, because the model made no wrong judgment at all, it never got to judge. The ceiling is per TYPE ([RN-085](business-rules/custo.md#rn-085)): `8` for conversational agents, `60` for the dev agent and QA. Before raising it, check whether the agent HAS `token_budget_micros`; without it the ceiling is the only cost guard that exists |
+| `TERMINAL_OUTPUT_MAX_BYTES` | raising it too much brings back the failure mode the ceiling exists to prevent: each command's output stays in the loop's history and travels on EVERY following turn. It's not a context-window issue: the largest successful call from the execution that first revealed this had only 28,993 input tokens ([RN-074](business-rules/custo.md#rn-074)) |
 | `API_JSON_BODY_LIMIT` (api) / `TRANSPORT_MAX_BODY_BYTES` (engine) | the `413 request entity too large` on the QA/SecOps gate had its cause in Brabo's own api, never in the provider — Express never had a body limit configured and the default of 100 KB was in effect, against the 8 MB Phoenix accepts on the heaviest engine→api leg (`POST .../llm-turn`, which resends the entire history on every iteration). `API_JSON_BODY_LIMIT` (default 10 MB) closes that end; `TRANSPORT_MAX_BODY_BYTES` (default 8 MiB) is the ceiling the engine's context compaction respects ON TOP OF the model's window, so it fires before the body blows the HTTP limit ([RN-412](business-rules.md#rn-412), [ADR 0098](adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.md)) |
 
 > **Careful — the guard doesn't clear the queue.** `START_ANAMNESE=false`
@@ -1901,14 +1901,14 @@ catalog, the manual number is the only one that exists.
 If the provider exposes `GET /models`, **don't seed the whole catalog** —
 let the sync discover it. It writes the models in a disabled state, and
 the owner enables what matters through the curation screen
-([RN-043](business-rules.md#rn-043)).
+([RN-043](business-rules/custo.md#rn-043)).
 
 If the provider's catalog publishes **modality** (accepts image, generates
 image) or `reasoning`, emit them in its `parseCatalogo` — and only when
 the official doc says so. A field the provider doesn't declare stays
 **omitted**, never `false`: `undefined` preserves what was already
 recorded, and `false` would wipe out hand-curated data
-([RN-056](business-rules.md#rn-056)).
+([RN-056](business-rules/custo.md#rn-056)).
 
 ### 6. Verify with a real credential
 

@@ -3,7 +3,7 @@
 ## Status
 
 Aceito — implementado e provado por teste na Fase B do backlog
-([RN-076](../business-rules.md#rn-076)).
+([RN-076](../business-rules/custo.md#rn-076)).
 
 Uma descoberta da implementação, registrada porque muda o tamanho do problema:
 **dois dos quatro consumidores nunca precisaram de credencial**.
@@ -64,7 +64,7 @@ Esta é a decisão que mais importa, e ela é consequência direta do
 
 O caminho óbvio — `remote add origin https://x-access-token:TOKEN@github.com/…`
 — grava a credencial **em texto puro dentro da pasta do projeto**. E a
-[RN-075](../business-rules.md#rn-075) acabou de dar ao dev agent leitura
+[RN-075](../business-rules/custo.md#rn-075) acabou de dar ao dev agent leitura
 **auto-aprovada** dentro dessa pasta: um `cat .git/config` devolveria o token
 sem passar por aprovação nenhuma, e ele viajaria para o provider de LLM no
 turno seguinte, dentro do histórico do laço.
@@ -79,7 +79,7 @@ arquivo, nem no `.git/config`, nem em helper persistido.
 
 ### 3. A credencial é a do OWNER do workspace
 
-Mesma regra que a [RN-058](../business-rules.md#rn-058) já estabeleceu para
+Mesma regra que a [RN-058](../business-rules/custo.md#rn-058) já estabeleceu para
 chave de LLM, pelo mesmo motivo: quem paga e quem autoriza é o dono do
 workspace, não o agente nem quem abriu a sessão.
 
@@ -137,7 +137,7 @@ silenciosa quando alguém empurra direto no provider. Recusada.
   do [backlog](../explanation/backlog.md).
 - [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — o escopo que
   torna a decisão 2 obrigatória.
-- [RN-058](../business-rules.md#rn-058) — de quem é a credencial que o agente
+- [RN-058](../business-rules/custo.md#rn-058) — de quem é a credencial que o agente
   gasta.
 - `apps/engine/lib/engine/projects/project_repository.ex`,
   `apps/engine/lib/engine/actions/workspace.ex`,

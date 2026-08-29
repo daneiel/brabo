@@ -48,7 +48,7 @@ A alternativa óbvia — uma linha de `models` por workspace — foi rejeitada:
 - Partiria `token_usage.model_id` e `model_bindings.model_id` ao meio: o
   histórico de custo aponta para uma linha de `models`, e duplicá-la exigiria
   reescrever o passado — exatamente o que a
-  [RN-044](../business-rules.md#rn-044) proíbe.
+  [RN-044](../business-rules/custo.md#rn-044) proíbe.
 - O sync de catálogo passaria a escrever N vezes o que hoje escreve uma.
 
 ### Ausência de linha É o desligado
@@ -57,7 +57,7 @@ Não existe terceiro estado "nunca decidido" separado de "desligado". Modelo que
 o sync descobre simplesmente **não tem linha** em `workspace_models`, e a
 leitura o trata como inativo.
 
-Isto preserva a [RN-043](../business-rules.md#rn-043) ("modelo descoberto entra
+Isto preserva a [RN-043](../business-rules/custo.md#rn-043) ("modelo descoberto entra
 desligado") **sem coluna nenhuma em `models` para o sync poder atropelar** — o
 sync deixou de ter qualquer campo de curadoria no seu upsert. A regra passou de
 "o sync escreve `false`" para "o sync não alcança essa decisão", que é mais

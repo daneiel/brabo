@@ -86,7 +86,7 @@ the Dev Lead operates (a mandatory input of his in `docs/fluxo.yml`) —,
 the delegation is NOT recorded with a made-up id.
 `AcceptParallelizationUseCase` logs the unexpected state with
 `Logger.error` and returns, by the same lesson as
-[RN-059](../business-rules.md#rn-059): never fail silently, but also never
+[RN-059](../business-rules/custo.md#rn-059): never fail silently, but also never
 fake a justification that doesn't exist.
 
 ### A failure to record doesn't roll back the activation

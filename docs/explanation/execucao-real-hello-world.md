@@ -55,7 +55,7 @@ wizard now warns at the time of the choice.
 
 The Anamnese spent **8× the Creative and PO combined** without
 producing anything — it had no way to say "there's nothing to emit"
-([RN-063](../business-rules.md#rn-063)). It's the most important
+([RN-063](../business-rules/custo.md#rn-063)). It's the most important
 number in this table: the actual work cost pennies, the waste cost the
 rest.
 

@@ -54,7 +54,7 @@ on the roster. `Engine.Gates.QaLeadServer` gains an ADDITIVE entry point,
 
 1. **`Engine.Gates.QaEstrategiaContext.fetch/3`** — LIGHT context: just
    the story (from `EngineApiClient.list_backlog/1`, the tree the PO
-   already reads since [RN-164](../business-rules.md#rn-164)) and the
+   already reads since [RN-164](../business-rules/autenticacao.md#rn-164)) and the
    current `module_map` (from `EngineApiClient.get_infra_context/2`, the
    SAME `GetInfraContextUseCase` the Infra Lead consumes, here only via
    the `moduleMap` field) — NO `dev_state`, NO `worktree_path`. No new
@@ -82,7 +82,7 @@ on the roster. `Engine.Gates.QaLeadServer` gains an ADDITIVE entry point,
    - **no plan yet** — triggers `Dispatcher.run_qa_estrategia/3` and
      returns `{:error, text}` asking to try again. A tool error is INPUT
      to the loop, not the end of the line
-     ([RN-163](../business-rules.md#rn-163)) — the Dev Lead has 14
+     ([RN-163](../business-rules/autenticacao.md#rn-163)) — the Dev Lead has 14
      iterations to try again once the plan exists;
    - **with plan** — builds the verdict (`implementavel`/`inviavel` +
      justification, with the test plan embedded in the payload) and
@@ -105,7 +105,7 @@ on the roster. `Engine.Gates.QaLeadServer` gains an ADDITIVE entry point,
 `Engine.Harness.Iteracoes.tipo/1` classifies an unknown agent as
 `:conversacional` (cap 8). `"qa-estrategia"` falls under that default,
 and it's the RIGHT call — not a gap. The criterion in
-[RN-085](../business-rules.md#rn-085) isn't "who works a lot": it's
+[RN-085](../business-rules/custo.md#rn-085) isn't "who works a lot": it's
 "what holds the spend back beyond the iteration cap." This agent runs
 WITHOUT `token_budget_micros` (there's no task, it's PRE-DEV), the same
 situation as `infra-workflows` — which also stays at 8 even while using a

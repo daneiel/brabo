@@ -6,6 +6,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docs**: `business-rules.md` deixa de ser uma página de 644 KB — as duas
+  seções que sozinhas eram metade dela saem para arquivos próprios
+  (`business-rules/custo.md` e `business-rules/autenticacao.md`), e o índice
+  cai para 335 KB. Divisão por TAMANHO, não por assunto: nenhuma vírgula de
+  conteúdo mudou e nenhuma âncora `{#rn-NNN}` mudou de nome — só o arquivo
+  que as hospeda. Os 293 links que apontavam para as RNs movidas foram
+  reescritos, incluindo os da tradução pt-BR, e o build do Docusaurus (que
+  reprova âncora quebrada) passa nos dois idiomas. O `docs/.docmap.yml` ganha
+  `docs_alternativos`, uma DISJUNÇÃO ao lado da conjunção que já existia: uma
+  RN mora em um dos três arquivos, e cobrar os três ensinaria a usar o escape
+  hatch — regra que ensina a ignorar check é pior que regra nenhuma.
 - **docs**: o `docs:check` passa a conferir TRÊS famílias de número escrito em
   prosa, não só a de ADR: a contagem de RNs (fonte: os cabeçalhos `### RN-NNN`
   do `business-rules.md`) e a de providers de LLM (fonte: os literais
@@ -985,6 +996,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docs**: `business-rules.md` deixa de ser uma página de 644 KB — as duas
+  seções que sozinhas eram metade dela saem para arquivos próprios
+  (`business-rules/custo.md` e `business-rules/autenticacao.md`), e o índice
+  cai para 335 KB. Divisão por TAMANHO, não por assunto: nenhuma vírgula de
+  conteúdo mudou e nenhuma âncora `{#rn-NNN}` mudou de nome — só o arquivo
+  que as hospeda. Os 293 links que apontavam para as RNs movidas foram
+  reescritos, incluindo os da tradução pt-BR, e o build do Docusaurus (que
+  reprova âncora quebrada) passa nos dois idiomas. O `docs/.docmap.yml` ganha
+  `docs_alternativos`, uma DISJUNÇÃO ao lado da conjunção que já existia: uma
+  RN mora em um dos três arquivos, e cobrar os três ensinaria a usar o escape
+  hatch — regra que ensina a ignorar check é pior que regra nenhuma.
 - **docs**: o `docs:check` passa a conferir TRÊS famílias de número escrito em
   prosa, não só a de ADR: a contagem de RNs (fonte: os cabeçalhos `### RN-NNN`
   do `business-rules.md`) e a de providers de LLM (fonte: os literais
@@ -1535,6 +1557,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docs**: `business-rules.md` deixa de ser uma página de 644 KB — as duas
+  seções que sozinhas eram metade dela saem para arquivos próprios
+  (`business-rules/custo.md` e `business-rules/autenticacao.md`), e o índice
+  cai para 335 KB. Divisão por TAMANHO, não por assunto: nenhuma vírgula de
+  conteúdo mudou e nenhuma âncora `{#rn-NNN}` mudou de nome — só o arquivo
+  que as hospeda. Os 293 links que apontavam para as RNs movidas foram
+  reescritos, incluindo os da tradução pt-BR, e o build do Docusaurus (que
+  reprova âncora quebrada) passa nos dois idiomas. O `docs/.docmap.yml` ganha
+  `docs_alternativos`, uma DISJUNÇÃO ao lado da conjunção que já existia: uma
+  RN mora em um dos três arquivos, e cobrar os três ensinaria a usar o escape
+  hatch — regra que ensina a ignorar check é pior que regra nenhuma.
 - **docs**: o `docs:check` passa a conferir TRÊS famílias de número escrito em
   prosa, não só a de ADR: a contagem de RNs (fonte: os cabeçalhos `### RN-NNN`
   do `business-rules.md`) e a de providers de LLM (fonte: os literais
@@ -2124,6 +2157,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docs**: `business-rules.md` deixa de ser uma página de 644 KB — as duas
+  seções que sozinhas eram metade dela saem para arquivos próprios
+  (`business-rules/custo.md` e `business-rules/autenticacao.md`), e o índice
+  cai para 335 KB. Divisão por TAMANHO, não por assunto: nenhuma vírgula de
+  conteúdo mudou e nenhuma âncora `{#rn-NNN}` mudou de nome — só o arquivo
+  que as hospeda. Os 293 links que apontavam para as RNs movidas foram
+  reescritos, incluindo os da tradução pt-BR, e o build do Docusaurus (que
+  reprova âncora quebrada) passa nos dois idiomas. O `docs/.docmap.yml` ganha
+  `docs_alternativos`, uma DISJUNÇÃO ao lado da conjunção que já existia: uma
+  RN mora em um dos três arquivos, e cobrar os três ensinaria a usar o escape
+  hatch — regra que ensina a ignorar check é pior que regra nenhuma.
 - **docs**: o `docs:check` passa a conferir TRÊS famílias de número escrito em
   prosa, não só a de ADR: a contagem de RNs (fonte: os cabeçalhos `### RN-NNN`
   do `business-rules.md`) e a de providers de LLM (fonte: os literais

@@ -32,7 +32,7 @@ Octokit vazar.
 e o diff já têm teto no contrato (26a), mas eles limitam UMA resposta; a busca
 composta faz N chamadas, e N cresce com o tamanho do repositório e não com o
 tamanho do pedido. Quem paga é a credencial do owner do workspace
-([RN-058](../business-rules.md#rn-058)/[RN-082](../business-rules.md#rn-082)),
+([RN-058](../business-rules/custo.md#rn-058)/[RN-082](../business-rules/custo.md#rn-082)),
 e o rate limit é do provider. O produto já viu essa família de defeito de perto:
 o dashboard fazia 3.824 requisições por minuto porque cada projeto pedia a sua
 (RN-090), e o `429` resultante virava tela branca.

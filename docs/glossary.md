@@ -122,10 +122,10 @@ Staff is the only one with no `kickoff/1`: it stays idle until the first
 `user_message`, because there's no session artifact to synthesize an
 opening from. Of the four that existed at the time, the Creative agent
 was the last to get the loop, via
-[RN-163](business-rules.md#rn-163): until then it called the model once
+[RN-163](business-rules/autenticacao.md#rn-163): until then it called the model once
 per turn and promised a correction that never happened. That own ceiling
 also stopped being silent: once exhausted, it emits the SAME
-`toolloop.limit_reached` ([RN-166](business-rules.md#rn-166)), because
+`toolloop.limit_reached` ([RN-166](business-rules/autenticacao.md#rn-166)), because
 it's the same fact and whoever reads the event log shouldn't need a
 second name for it.
 
@@ -138,7 +138,7 @@ schemas (`note`, `business_rule`, `product_brief`, `task_blocked`,
 `qa_verdict`, `secops_verdict`, `infra_delegation_files`): a missing field
 fails the emission. It's how a gate's verdict becomes data, not text.
 `business_rule` fails for a second reason: a title already registered in
-the project ([RN-080](business-rules.md#rn-080)) — since an artifact is an
+the project ([RN-080](business-rules/custo.md#rn-080)) — since an artifact is an
 immutable event, emission is the only moment where a duplicate can be
 refused.
 
@@ -151,7 +151,7 @@ it while a gate still needs to read it.
 **Workspace mode** — where a project's code lives on disk, chosen at
 creation and **frozen** afterward
 ([ADR 0072](adr/0072-projeto-local-ou-container.md),
-[RN-169](business-rules.md#rn-169)). `container` is the managed folder
+[RN-169](business-rules/autenticacao.md#rn-169)). `container` is the managed folder
 under `PROJECT_WORKSPACES_ROOT` — the default and the usual behavior;
 `local` is an absolute path of the user's own, which only works if it's
 mounted into the container. Don't confuse it with IAM's **workspace**
@@ -160,10 +160,10 @@ and mode is about disk.
 
 **Dev agent states** — `working` (implementing), `awaiting_approval`
 (proposed a commit/push/PR and one is pending approval — **no gate opens
-without a PR**, [RN-050](business-rules.md#rn-050)), `awaiting_gate` (PR
+without a PR**, [RN-050](business-rules/custo.md#rn-050)), `awaiting_gate` (PR
 open, waiting for the verdict), `idle` (no claimable task, process alive),
 and `idle_tripped` (circuit breaker tripped, only exits via explicit
-rearm — [RN-047](business-rules.md#rn-047)). The first three hold the
+rearm — [RN-047](business-rules/custo.md#rn-047)). The first three hold the
 worktree.
 
 ---
@@ -263,7 +263,7 @@ required, `latest` refused), a network posture (`none` by default,
 `egress` authorized), and a resource ceiling. Versioned in the event log,
 like the `module_map`. Until it exists, the `sem_decisao` (no decision)
 state keeps the Code tab closed
-([RN-105](business-rules.md#rn-105)).
+([RN-105](business-rules/autenticacao.md#rn-105)).
 
 ---
 
@@ -274,32 +274,32 @@ tokens, cost in micros, latency, model, agent. It's a **record, not a
 refund**.
 
 **Budget** — a spending ceiling with an exclusive scope: project **or**
-session, never both ([RN-017](business-rules.md#rn-017)). Notifies at
+session, never both ([RN-017](business-rules/custo.md#rn-017)). Notifies at
 70/90/100% without repeating.
 
 **`policy`** — the budget's behavior at the ceiling: `block` refuses the
 call, `allow` only records it. A project on `allow` **doesn't stop on its
 own** — it's the most common cause of "the budget didn't hold"
-([RN-019](business-rules.md#rn-019)).
+([RN-019](business-rules/custo.md#rn-019)).
 
 **Binding** — the tie between a scope and an LLM model. Resolves in a
 cascade: **session > agent > area > project > workspace**, the first one
-that exists ([RN-020](business-rules.md#rn-020)). That's why you can put
+that exists ([RN-020](business-rules/custo.md#rn-020)). That's why you can put
 an expensive model just on QA. `area` is the DEFAULT that a lead and its
 subagents share, and the agent can diverge from it
-([RN-102](business-rules.md#rn-102)).
+([RN-102](business-rules/custo.md#rn-102)).
 
 **Capability facet** — what the **provider declares** about a model:
 reads image, generates image, does thinking, accepts `tools`. Comes from
 the remote catalog at sync time; `false` means "didn't declare it", never
 "doesn't do it"
-([RN-056](business-rules.md#rn-056)).
+([RN-056](business-rules/custo.md#rn-056)).
 
 **Model use** — what **this workspace** uses that model for (`codigo`,
 `documentacao`, `analise`, `imagem`, `conversa`). It's the operator's
 opinion, not a capability: no catalog publishes "good for code". Tagging a
 use **doesn't enable** the model in the picker
-([RN-057](business-rules.md#rn-057)).
+([RN-057](business-rules/custo.md#rn-057)).
 
 ---
 

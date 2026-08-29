@@ -195,7 +195,7 @@ already are.
 - [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md) — why
   `propose_prototype` does NOT suspend (no external effect)
 - [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md),
-  [RN-149](../business-rules.md#rn-149) — the artifact-without-table
+  [RN-149](../business-rules/autenticacao.md#rn-149) — the artifact-without-table
   pattern `artifact.prototipo_navegavel` follows, and why it does NOT
   need the dedicated use case the other two have
 - `apps/engine/lib/engine/agents/ux_designer_server.ex`,

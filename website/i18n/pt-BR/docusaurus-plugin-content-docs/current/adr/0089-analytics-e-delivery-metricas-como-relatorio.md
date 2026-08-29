@@ -69,7 +69,7 @@ decisão de mantê-las assim é permanente enquanto as pré-condições abaixo
 não mudarem — não é lacuna a fechar na próxima rodada:
 
 1. **Funil de produto completo (ideação → commit).** `sessions` não tem
-   `storyId` — [RN-230](../business-rules.md#rn-230) já declara essa
+   `storyId` — [RN-230](../business-rules/autenticacao.md#rn-230) já declara essa
    lacuna na aba Criativo (`apps/web/src/routes/ProjectSessionsTab.tsx`).
    Fechá-la exigiria schema novo (coluna nova, possivelmente migration em
    `sessions` ou tabela de vínculo), fora de escopo desta frente por
@@ -128,7 +128,7 @@ com o motivo escrito do que um número que ensina errado.
   (precedente de forma, Fase 13b)
 - `apps/api/src/domain/git/git-action-execution-result.ts`
 - `docs/gates.yml` (gate `backmerge`)
-- [RN-230](../business-rules.md#rn-230) — a lacuna ideação → commit, já
+- [RN-230](../business-rules/autenticacao.md#rn-230) — a lacuna ideação → commit, já
   declarada na aba Criativo
 - [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) —
   o princípio de nunca fingir dado que não existe

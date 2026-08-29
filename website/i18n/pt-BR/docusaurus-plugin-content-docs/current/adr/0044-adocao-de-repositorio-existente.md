@@ -47,7 +47,7 @@ operar no nível booleano.
 `project_repositories.origin` e `repo_bootstraps.origin` (`created` |
 `adopted`), gravados explicitamente por quem escreve — não pelo default
 da coluna, para que adoção seja escolha visível no código e não ausência
-([RN-046](../business-rules.md#rn-046)). O backfill da migração `0031` é
+([RN-046](../business-rules/custo.md#rn-046)). O backfill da migração `0031` é
 cego de propósito: adoção não existia antes dela, então toda linha
 pré-existente foi criada pelo Brabo por definição, e não há caso a
 classificar errado — diferente do backfill dirigido da `0026`.
@@ -71,7 +71,7 @@ decidido, **nada roda**. Não há filtro dentro do executor — o
 conferidas byte a byte) para poder ser compartilhado, e simplesmente
 não é chamado. Somado ao guard de `:112`, não existe caminho de código
 que proteja uma branch fora de plano aprovado
-([RN-045](../business-rules.md#rn-045)).
+([RN-045](../business-rules/custo.md#rn-045)).
 
 Aprovar é **tudo-ou-nada**: aprovação seletiva quebraria a cascata
 `dev←main, qa←dev, rc←qa` (aprovar `qa` sem `dev` é insatisfazível) e

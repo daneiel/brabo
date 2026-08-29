@@ -47,7 +47,7 @@ OLLAMA_EMBEDDING_SMOKE=1 pnpm --filter api test ollama-provider.embeddings
 The `501` is the finding that mattered most, and it became a test at both
 levels: it's the MODEL layer of the capability failing at the latest
 possible point, and the reason `assertCanEmbed` refuses earlier
-([RN-190](../business-rules.md#rn-190)). Real cost: **US$ 0.00** — a local
+([RN-190](../business-rules/custo.md#rn-190)). Real cost: **US$ 0.00** — a local
 model has no price, and that's why this is the only acceptance on this page
 that can be repeated freely.
 
@@ -96,7 +96,7 @@ Five micro-USD — **US$ 0.000005**, two orders of magnitude below the
 "< US$ 0.001" estimate from the section above. `estimated: false` is what
 matters here: the consumption came from the provider, not from the local
 estimator, and the recorded price is the one FROZEN at the moment of use
-([RN-044](../business-rules.md#rn-044)) — not today's price in the `models`
+([RN-044](../business-rules/custo.md#rn-044)) — not today's price in the `models`
 table.
 
 ### What the smoke found along the way
@@ -107,7 +107,7 @@ curation from `models.is_active` to `workspace_models`:
 
 - it asserted `alvo.isActive === false` against the global catalog — a
   field that no longer exists, and that came back `undefined`. The correct
-  assertion per [RN-043](../business-rules.md#rn-043) today is
+  assertion per [RN-043](../business-rules/custo.md#rn-043) today is
   `workspaceModels.isActive(...)`, because **absence of a row IS off**;
 - it assembled `SetModelsActiveUseCase` and `SetModelBindingUseCase` with the
   old signatures, missing `workspaceId`/`curatedBy` and the curation
@@ -199,7 +199,7 @@ Across all six, the final step is the same and is what matters to the
 product: a complete chat session, with no `error` or `metering_failed`
 event, with one line in `token_usage` carrying the price **frozen** at the
 moment of use
-([RN-044](../business-rules.md#rn-044)) — not today's price in the `models`
+([RN-044](../business-rules/custo.md#rn-044)) — not today's price in the `models`
 table.
 
 ## How to close a pending item

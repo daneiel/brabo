@@ -78,7 +78,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: '📐 Regras',
       collapsed: false,
-      items: ['business-rules'],
+      items: ['business-rules', 'business-rules/custo', 'business-rules/autenticacao'],
     },
     {
       type: 'category',

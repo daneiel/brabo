@@ -80,7 +80,7 @@ restart do engine entre o veredito do gate e a reação do agente não pode
 perder o sinal — a linha sobrevive ao processo que a leria, o HTTP não
 sobreviveria à queda de quem esperava a resposta.
 `dev_agent_states` ganhou `consecutive_blocked`/`max_consecutive_blocked`
-(o circuit breaker, [RN-047](business-rules.md#rn-047)); decisão completa
+(o circuit breaker, [RN-047](business-rules/custo.md#rn-047)); decisão completa
 no [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md).
 
 Os agentes de gate (`QaLeadServer`/`SecOpsAgentServer`) não passam pelo
@@ -312,11 +312,11 @@ um problema de infraestrutura.
 **8. O container do projeto é decidido, nunca implícito.** A aba Code só
 libera depois que o Arquiteto emite `artifact.project_image` — enquanto o
 estado for `sem_decisao`, a leitura de código responde `409`
-([RN-105](business-rules.md#rn-105)). E `git push`, abertura de PR e deploy
+([RN-105](business-rules/autenticacao.md#rn-105)). E `git push`, abertura de PR e deploy
 não saem pelo terminal, mesmo dentro do escopo do projeto: `decide()` os
 reconhece por prefixo de comando e retorna `deny` ANTES de qualquer estágio
 permissivo — não `require_approval`, porque "sempre permitir" gravaria o
-padrão em `allow` e reabriria a porta ([RN-106](business-rules.md#rn-106),
+padrão em `allow` e reabriria a porta ([RN-106](business-rules/autenticacao.md#rn-106),
 [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)).
 O ciclo de vida do container (provisionar, reciclar, limpar) ainda não
 existe — corte declarado da FASE 25, registrado no CLAUDE.md — então esta
@@ -327,14 +327,14 @@ invariante convive, por ora, com a política de escopo de caminho do
 metades são a mesma lição, e vieram de um agente que só tinha ferramenta de
 escrita: o PO montava contexto uma vez, no kickoff, e agia dali em diante
 sobre um retrato velho — diante de uma lacuna, escolhia entre inventar e
-parar ([RN-164](business-rules.md#rn-164),
-[RN-165](business-rules.md#rn-165)). Ler **não** vira `proposed_action` (a
+parar ([RN-164](business-rules/autenticacao.md#rn-164),
+[RN-165](business-rules/autenticacao.md#rn-165)). Ler **não** vira `proposed_action` (a
 invariante 4 é sobre efeito EXTERNO, e leitura não é um), mas é contida no
 sentido do [ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md): escopo
 fechado pelo caminho da rota, custo constante por chamada e teto de linhas no
 texto entregue ao modelo. E laço de agente não termina calado — teto de
 iterações emite `toolloop.limit_reached`, obrigação não cumprida emite
-desfecho durável com origem ([RN-166](business-rules.md#rn-166)).
+desfecho durável com origem ([RN-166](business-rules/autenticacao.md#rn-166)).
 
 ## Assuntos transversais
 
@@ -483,7 +483,7 @@ dev são um por módulo do `module_map`, decididos pelo Arquiteto e diferentes e
 cada projeto. A unique `(project_id, key)` é o que faz o seeding ser
 idempotente, e `max_parallel` (default 2) é o teto que o lead usa sem
 perguntar — acima dele, `proposed_action`
-(ver [RN-083](business-rules.md#rn-083)).
+(ver [RN-083](business-rules/custo.md#rn-083)).
 
 **Migrations:** Drizzle na api (`src/db/migrations/`, aplicadas por um Job
 one-shot — réplicas **não** migram no boot, senão competem pela mesma
