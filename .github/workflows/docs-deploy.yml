@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           # showLastUpdateTime/Author leem o git. Sem histórico completo toda
           # página fica com a data do checkout, que é pior que nenhuma data.
@@ -84,9 +84,9 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "degrau '$GITHUB_REF_NAME' → baseUrl '/brabo/$caminho/'"
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: 22
           cache: pnpm
@@ -102,7 +102,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Cache do Rspack
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
           # Chave por DEGRAU: o `baseUrl` entra no bundle, então o cache de
           # `dev` não serve para `main`. Sem o degrau na key os três degraus se
@@ -253,7 +253,7 @@ jobs:
       # O `GITHUB_TOKEN` basta — `gh-pages` não está nos rulesets das
       # permanentes. E push feito com ele NÃO dispara workflow, então não há laço.
       - name: Publicar na gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453  # v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: publicacao

@@ -41,7 +41,7 @@ jobs:
       # (sha, nome do check), e trocar a base de um PR NÃO gera sha novo. Um
       # job que se pule deixa o PASS antigo colado no sha, e a proteção de
       # branch aceita — buraco silencioso.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           # A verificação de contaminação é ancestralidade: com checkout raso
           # o merge-base não existe e a checagem viraria "não verificado".
