@@ -40,6 +40,7 @@ on:
 permissions:
   contents: write # criar a GitHub Release e a branch do corte do CHANGELOG
   pull-requests: write # abrir a PR do CHANGELOG para `dev`
+  packages: write # publicar as quatro imagens no GHCR (ADR 0119)
 
 env:
   NODE_VERSION: '24.11.1'
@@ -272,24 +273,48 @@ jobs:
       # e ao `service.version` dos spans. Fora deste workflow o default do
       # bakefile é "dev" — o `ci.yml` põe `TAG=prod`, e "prod" não é versão de
       # nada.
-      - name: Build das imagens taggeadas
+      # `GITHUB_TOKEN` com `packages: write` — nenhum segredo novo a rotacionar.
+      # O escopo morre com o job, que é a diferença entre isto e um PAT de
+      # registry guardado em `secrets`.
+      - name: Login no GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e publicação das imagens taggeadas
+        id: bake
         uses: docker/bake-action@v6
         with:
           files: docker-bake.hcl
           targets: default
-          load: true
         env:
           TAG: ${{ steps.versao.outputs.versao }}
           TAG_EXTRA: ${{ steps.versao.outputs.sha }}
           VERSION: ${{ steps.versao.outputs.versao }}
+          # O prefixo TEM barra final: o bakefile concatena direto, para que o
+          # valor vazio (default, usado pelo `ci.yml`) produza exatamente o
+          # nome curto de antes.
+          REGISTRY: ghcr.io/${{ github.repository_owner }}/
+          # `type=registry` EMPURRA — e é o único modo em que o bake devolve
+          # `containerimage.digest`. Com `type=docker` (o default, que o
+          # `ci.yml` usa) o digest não existe: ele nasce do push.
+          OUTPUT: type=registry
 
-      - name: O que foi construído
+      # O registro por DIGEST do que esta tag publicou. Reprova se qualquer um
+      # dos quatro alvos vier sem digest — três imagens novas e uma velha em
+      # produção é pior que release nenhum, e nada no arquivo diria que faltou.
+      - name: Registrar as imagens publicadas
         run: |
           set -euo pipefail
-          for app in api engine web backup; do
-            echo "construída: brabo-${app} -> ${TAG}, ${TAG_EXTRA}"
-          done
+          mkdir -p .release
+          printf '%s' "${BAKE_METADATA}" > "${RUNNER_TEMP}/bake-metadata.json"
+          node scripts/ci/images-manifest.ts \
+            "${RUNNER_TEMP}/bake-metadata.json" "${TAG}" "${TAG_EXTRA}" \
+            > .release/images.json
         env:
+          BAKE_METADATA: ${{ steps.bake.outputs.metadata }}
           TAG: ${{ steps.versao.outputs.versao }}
           TAG_EXTRA: ${{ steps.versao.outputs.sha }}
 
@@ -298,9 +323,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.alvo.outputs.tag }}
         run: |
+          # `.release/images.json` como ASSET: é a cópia autoritativa do que
+          # esta tag publicou, disponível no mesmo instante em que a tag
+          # existe. A cópia versionada entra depois, pela PR do CHANGELOG.
           gh release create "${TAG}" \
             --title "${TAG}" \
-            --notes-file RELEASE_NOTES.md
+            --notes-file RELEASE_NOTES.md \
+            .release/images.json
 
       # O CHANGELOG.md do repositório volta por PR para `dev`, não por push.
       #
@@ -342,8 +371,15 @@ jobs:
           # pode consertar sem um segundo commit à mão.
           node scripts/ci/readme-version.ts "${TAG}"
 
-          if git diff --quiet -- CHANGELOG.md README.md docs/intro.md; then
-            echo "::notice::CHANGELOG, README e docs/intro.md já contêm ${TAG} — nada a abrir."
+          # O registro por digest desta tag entra na MESMA PR: ele foi
+          # gerado antes do checkout desta branch e sobrevive a ele (o
+          # `git checkout -B` preserva arquivo não rastreado). Sem terceira
+          # exceção de push — ver branching-policy.md, "rides the same PR".
+          git add -f .release/images.json
+
+          if git diff --quiet --cached -- .release/images.json &&
+             git diff --quiet -- CHANGELOG.md README.md docs/intro.md; then
+            echo "::notice::CHANGELOG, README, docs/intro.md e images.json já contêm ${TAG} — nada a abrir."
             exit 0
           fi
 
@@ -357,7 +393,9 @@ jobs:
             --title "docs(changelog): ${TAG}" \
             --body "Corte do CHANGELOG na versão \`${TAG}\`, gerado por \`scripts/changelog.mjs\`,
           mais a versão anunciada no README e em \`docs/intro.md\`, gerada por
-          \`scripts/ci/readme-version.ts\`.
+          \`scripts/ci/readme-version.ts\`, mais \`.release/images.json\` — o registro
+          por DIGEST das quatro imagens que esta tag publicou no GHCR (ADR 0119),
+          que também está anexado à GitHub Release.
 
           Entra por PR porque \`main\` não aceita push, e commitar em \`qa\`/\`dev\`
           antes da promoção quebraria o \"range limpo\" do check de promoção.

@@ -557,6 +557,29 @@ It's not information loss: the authoritative source of the notes is the
 **GitHub Release**, published at the same moment as the tag, and the cut
 lands in the next cycle like any other change.
 
+### `.release/images.json` rides the same PR — and adds no exception
+
+Since [ADR 0119](../adr/0119-imagens-publicadas-no-ghcr-por-digest.md),
+`release.yml` publishes the four production images to GHCR and records
+what that tag published, **by digest**, in `.release/images.json`.
+
+The obvious implementation — the bot writing the digests into
+`deploy/k8s/overlays/prod/kustomization.yaml` and pushing — was rejected
+**here**, in this policy, before it was rejected in the ADR: the single
+door has exactly three exceptions, and a mechanism that needs a fourth
+every time it grows stops being a policy and becomes a habit. It would
+also let a tag decide by itself what is running in production, which is
+not the tag's decision to make.
+
+So the file takes the two paths that already exist. It is an **asset of
+the GitHub Release**, published in the same step as the notes — the
+authoritative copy, available the instant the tag exists — and it is
+`git add`ed onto the **same `chore/changelog-<tag>` PR** described above,
+which is how the versioned copy reaches `dev` and climbs the ladder like
+any other change. Same accepted consequence as the CHANGELOG's, for the
+same reason: `main`'s copy is one cycle behind, and the Release asset is
+the one to trust in the meantime.
+
 > Before this, **nothing ever wrote to the file**. The generator was only
 > ever called with `--stdout`, to build the Release's body, and
 > `CHANGELOG.md` had accumulated twelve versions inside a single
