@@ -311,7 +311,18 @@ rules:
       - ".github/workflows/tag-release.yml"
       - ".github/workflows/release.yml"
       - ".github/workflows/backmerge-gate.yml"
-      - "scripts/ci/**"
+      # NÃO é `scripts/ci/**`: era, e cobrou `branching-policy.md` duas vezes
+      # de scripts que não têm nada a ver com branch — `coverage-floor.ts`
+      # (#410, que saiu pelo escape hatch) e `actions-pinadas.ts`. É o mesmo
+      # defeito que já justificou separar `checks-e-rulesets` daqui, e a mesma
+      # consequência: regra que cobra o que não faz sentido ensina a usar o
+      # escape hatch por reflexo, e aí ele para de significar alguma coisa.
+      #
+      # O extglob EXCLUI os dois pelo nome e continua casando com todo o resto
+      # — inclusive com script de política que ainda não existe. Falha fechado:
+      # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
+      # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
+      - "scripts/ci/!(coverage-floor|actions-pinadas)*"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
@@ -349,6 +360,23 @@ rules:
       - "docs/reference/rulesets.md"
     severity: warn
     note: "Nome de job ou gatilho novo muda a lista de checks required."
+
+  # A cadeia de suprimentos do CI é a única coisa que decide QUE CÓDIGO DE
+  # TERCEIRO roda no runner que tem o checkout e, no release, as credenciais.
+  # A regra dela morava só em comentário de workflow — e foi exatamente por
+  # isso que ficou meio feita por meses (o #408 pinou o ci.yml e só ele).
+  #
+  # Vigia o CHECK, não os workflows: mudar a regra de pin exige mudar a doc;
+  # trocar um SHA por outro, não. `.github/workflows/*.yml` já é vigiado por
+  # `checks-e-rulesets`, e repetir o glob aqui cobraria esta página em toda
+  # atualização de action.
+  - id: cadeia-de-suprimentos-do-ci
+    watch:
+      - "scripts/ci/actions-pinadas.ts"
+    docs:
+      - "docs/explanation/cadeia-de-suprimentos-do-ci.md"
+    severity: block
+    note: "Regra nova sobre o que pode entrar no runner exige a regra escrita."
 
   - id: adr-trigger
     watch:

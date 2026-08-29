@@ -138,6 +138,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   já salva em `.env`, reaproveitando as MESMAS variáveis `<PROVIDER>_TEST_KEY`
   que os smokes de LLM já usam; provider sem variável definida não entra,
   sem erro.
+- **ci,k8s**: as GitHub Actions dos 15 workflows que o #408 deixou de fora
+  passam de tag mutável para commit SHA — 49 `uses:`, com a versão preservada
+  em comentário. O #408 pinou o `ci.yml` e o backlog registrou o item como
+  fechado; o que sobrou em tag foi justamente onde há credencial:
+  `release.yml` (empurra as quatro imagens no GHCR), `publish-runner.yml`
+  (publica no npm), `tag-release.yml` (cria tag) e `docs-deploy.yml` (empurra
+  na `gh-pages`). Tag é ponteiro que o dono da action move sem aviso, e quem a
+  move executa código no runner que tem o checkout e os segredos daquele
+  workflow. `scripts/ci/actions-pinadas.ts` (passo novo no job `lint`) reprova
+  qualquer `uses:` fora de SHA e qualquer SHA sem o comentário de versão — que
+  é obrigatório porque é a única coisa que diz a um humano, e ao Dependabot,
+  que versão aquele hash é. Referência local (`./.github/...`) passa. Provado
+  por mutação: devolver uma tag ao `backmerge-gate.yml` reprova com o arquivo e
+  a linha na mensagem. `ollama/ollama:latest` sobrevivia num QUINTO lugar que a
+  revisão não citou (`deploy/k8s/base/ollama/job-model-loader.yaml`), fora dos
+  quatro composes que o #401 pinou — vai para `0.33.1`, a mesma versão. O
+  mecanismo inteiro, que até aqui só existia em comentário de workflow, virou
+  `docs/explanation/cadeia-de-suprimentos-do-ci.md`, com o que segue confiado
+  na fé DECLARADO: sem Dependabot (os SHAs se atualizam à mão), sem
+  proveniência das dependências npm, sem assinatura dos artefatos que
+  publicamos, e imagem de terceiro presa por tag e não por digest.
 
 ### Correções
 

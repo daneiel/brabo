@@ -25,7 +25,7 @@ jobs:
     steps:
       # Sem `if:` no job — check required indexado por sha que não roda deixa
       # veredito velho colado, e aqui isso liberaria merge durante trava.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           # Histórico completo: a higiene do gate usa `merge-base --is-ancestor`
           # para perguntar se o hotfix JÁ desceu, e essa pergunta não tem

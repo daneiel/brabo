@@ -110,6 +110,20 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
+      # Mesma família do passo "Versões dos scanners batem com o Dockerfile.prod"
+      # lá em cima: asserção barata sobre o que o repositório já promete em
+      # comentário. O #408 trocou tag por commit SHA nas actions DESTE arquivo e
+      # só dele — os outros 15 workflows continuaram em tag mutável, entre eles
+      # `release.yml` (empurra imagem no GHCR), `publish-runner.yml` (publica no
+      # npm), `tag-release.yml` e `docs-deploy.yml`. Ou seja: sobrou justamente
+      # onde há credencial. Disciplina humana não segurou o pin uma vez, e
+      # workflow novo nasce copiando o vizinho — que estava com tag. Ver
+      # docs/explanation/cadeia-de-suprimentos-do-ci.md.
+      #
+      # Antes do `pnpm install` de propósito: o script só usa `node:fs`.
+      - name: Actions presas a commit SHA
+        run: node scripts/ci/actions-pinadas.ts
+
       - run: pnpm install --frozen-lockfile
 
       # `eslint` direto, SEM o script `lint` do package.json: ele roda com

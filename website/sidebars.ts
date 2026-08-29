@@ -111,6 +111,7 @@ const sidebars: SidebarsConfig = {
       items: [
         'explanation/documentation-workflow',
         'explanation/branching-policy',
+        'explanation/cadeia-de-suprimentos-do-ci',
         'explanation/observability',
         'explanation/primeiro-dogfooding',
         'explanation/execucao-real-hello-world',

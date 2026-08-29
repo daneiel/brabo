@@ -119,7 +119,7 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "tag a publicar: $tag"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           # O checkout é NA TAG, não no ref do evento. No push isso é o mesmo
           # commit; num dispatch é a diferença entre publicar a versão pedida e
@@ -161,11 +161,11 @@ jobs:
           fi
           echo "$TAG ainda não tem Release."
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -229,7 +229,7 @@ jobs:
           node scripts/changelog.mjs "${TAG}" ${anterior:+"${anterior}"} --stdout \
             | tee RELEASE_NOTES.md
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
       # As duas tags de cada imagem, calculadas num passo só porque agora são
       # entrada de uma action e não de um `run` — expressão de workflow não
@@ -285,7 +285,7 @@ jobs:
 
       - name: Build e publicação das imagens taggeadas
         id: bake
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@5be5f02ff8819ecd3092ea6b2e6261c31774f2b4  # v6
         with:
           files: docker-bake.hcl
           targets: default

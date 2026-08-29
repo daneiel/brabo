@@ -178,7 +178,16 @@ daqui e o fechamento vai para o histórico.
   sozinho (ver `DEPLOY_ENABLED` acima, que continua não existindo)
 - Docs: Docusaurus 3.x em website/ lendo de docs/; Mermaid; busca local
 - CI/CD de release: GitHub Actions com lógica em scripts testáveis
-  (scripts/ci/, vitest)
+  (scripts/ci/, vitest). Todo `uses:` de terceiro é preso a COMMIT SHA, com
+  a versão num comentário ao lado (`@<sha>  # v4`) — tag é ponteiro que o
+  dono da action move sem aviso, e quem move executa código no runner que
+  tem o checkout e os segredos daquele workflow. O comentário é obrigatório:
+  é o que diz a um humano, e ao Dependabot, que versão é aquele hash.
+  `scripts/ci/actions-pinadas.ts` reprova no job `lint` quem esquecer, e
+  todo `curl` de binário passa por `sha256sum -c`. Ver
+  docs/explanation/cadeia-de-suprimentos-do-ci.md, que também DECLARA o que
+  segue confiado na fé (sem Dependabot, sem proveniência de dependência npm,
+  sem assinatura dos artefatos, imagem de terceiro por tag e não por digest)
 
 ## Convenções
 - Branches permanentes: dev, qa, main — um branch, um ambiente. `rc` saiu

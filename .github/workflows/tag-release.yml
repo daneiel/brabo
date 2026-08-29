@@ -48,7 +48,7 @@ jobs:
       # é o que torna a presença do PAT testável dentro do job.
       TEM_PAT: ${{ secrets.BRABO_BOT_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           # O cálculo lê TODAS as tags e o histórico desde a última final.
           fetch-depth: 0
@@ -59,8 +59,8 @@ jobs:
           # dispara a Release — degradação visível, não silenciosa.
           token: ${{ secrets.BRABO_BOT_TOKEN || github.token }}
 
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: 24.11.1
 
@@ -121,15 +121,15 @@ jobs:
           echo "Crie o segredo (PAT com \`repo\` + \`workflow\`) e rode este job de novo." >&2
           exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           fetch-depth: 0
           # Escrever em `main` e abrir PR que NASÇA COM CHECKS exige o PAT: PR
           # aberto com o `GITHUB_TOKEN` não dispara workflow.
           token: ${{ secrets.BRABO_BOT_TOKEN }}
 
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: 24.11.1
 
@@ -181,13 +181,13 @@ jobs:
           echo "::error title=destravar-gate::sem BRABO_BOT_TOKEN o gate não pode ser atualizado em main."
           exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           fetch-depth: 0
           token: ${{ secrets.BRABO_BOT_TOKEN }}
 
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: 24.11.1
 
