@@ -43,6 +43,24 @@ site said "28 of them" and "the 29 decisions" when there were already
 30, and "next is 0030" with 0030 already done. Nothing broke, no check
 complained — it just went wrong.
 
+**The list of verified numbers grew after a third case proved the same
+point.** An external review found the README announcing "the 158 RNs"
+when 331 were written — wrong by more than double, in the table that
+introduces the repository. It was corrected by hand (PR #412), which
+only resets the clock: the next RN would put it back out of date. So the
+check stopped covering ADR counts alone and now covers **three**
+families, each read from the ARTIFACT and never from other prose:
+
+| number in prose | source of truth |
+|---|---|
+| ADR count, next ADR number | the files in `docs/adr/` |
+| RN count | the `### RN-NNN` headings in `business-rules.md` |
+| LLM provider count | the `capabilities` literals `descobrirProviders()` finds — the same source as the generated table in `llm-providers.md` |
+
+The provider one is written **in words** ("nove providers"), and the
+check compares against the word rather than forcing the prose to become
+a digit: the check exists to protect the text, not to reshape it.
+
 The most expensive case was the **version announced in prose**: the
 README announced `v0.1.0` from Phase 5 all the way to v2.1.0 — seven
 releases behind reality, in the first thing a newcomer reads. The

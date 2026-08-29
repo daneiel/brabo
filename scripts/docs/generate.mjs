@@ -363,7 +363,16 @@ function contarLinhasDeSeed(seedTs, provider) {
  * hand-typed) — nenhum arquivo de provider precisou ganhar campo novo só
  * pra alimentar doc.
  */
-function gerarProvidersDeLlm() {
+/**
+ * Os providers de LLM achados nos literais `capabilities` de
+ * `apps/api/src/infrastructure/llm/`.
+ *
+ * Extraída de `gerarProvidersDeLlm` para ter DOIS consumidores: a tabela
+ * gerada em `llm-providers.md` e a contagem em prosa que
+ * `verificarContagensEmProsa` afere. Uma fonte só — se a descoberta mudar,
+ * a tabela e a prosa mudam juntas ou nenhuma muda.
+ */
+function descobrirProviders() {
   const fontes = arquivos('apps/api/src/infrastructure/llm/*.ts');
   const achados = new Map();
 
@@ -398,10 +407,17 @@ function gerarProvidersDeLlm() {
     });
   }
 
+  return achados;
+}
+
+function gerarProvidersDeLlm() {
+  const achados = descobrirProviders();
+
   const seedTs = ler('apps/api/src/db/seed.ts');
   const quirksPorProvider = extrairQuirksResumidos(ler('docs/reference/llm-providers.md'));
 
   const marca = (v) => (v === null ? '?' : v ? 'yes' : 'no');
+
   // Every LLM credential has the SAME shape today — an API key encrypted via
   // envelope encryption (`user_credentials`); there's no different "type" per
   // provider. `ollama` runs locally, no key needed.
@@ -570,24 +586,53 @@ function verificarIndiceAdr() {
 }
 
 /**
- * As contagens de ADR escritas em prosa.
+ * Palavras que os números em prosa usam quando estão por extenso. Só até
+ * vinte: acima disso a prosa do repositório escreve algarismo, e um mapa
+ * grande seria inventar caso que não existe.
+ */
+const POR_EXTENSO = [
+  'zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito',
+  'nove', 'dez', 'onze', 'doze', 'treze', 'catorze', 'quinze', 'dezesseis',
+  'dezessete', 'dezoito', 'dezenove', 'vinte',
+];
+
+/** Quantas RNs existem: uma por cabeçalho `### RN-NNN` em `business-rules.md`. */
+function contarRegrasDeNegocio() {
+  return (ler('docs/business-rules.md').match(/^### RN-\d+ /gm) ?? []).length;
+}
+
+/**
+ * As contagens escritas em PROSA: ADRs, regras de negócio e providers de LLM.
  *
  * Elas não são geráveis — moram no meio de frases — mas são VERIFICÁVEIS, e
  * é essa a diferença que o ADR 0029 chama de `gerar > verificar > lembrar`.
  * Sem isto elas envelhecem em silêncio: encontradas no site com "28 deles" e
  * "as 29 decisões" quando já eram 30, e "o próximo é 0030" com o 0030 pronto.
  *
+ * As de ADR estavam aqui desde então; as de RN e de provider entraram depois,
+ * pelo mesmo motivo e com a mesma prova: o README anunciou "as 158 RNs" com
+ * 331 escritas — errado por mais do dobro, na tabela que apresenta o
+ * repositório —, e a correção foi manual (PR #412), o que só reinicia o
+ * relógio. Quem conta agora é este check.
+ *
+ * A fonte de cada uma é o ARTEFATO, nunca outra prosa: ADRs são arquivos em
+ * `docs/adr/`, RNs são cabeçalhos `### RN-NNN` em `business-rules.md`, e
+ * providers são os literais `capabilities` que `descobrirProviders` acha —
+ * a mesma fonte da tabela gerada em `llm-providers.md`.
+ *
  * Padrão que não casa também REPROVA. Um check cuja regex parou de encontrar
  * a frase é pior que check nenhum: ele fica verde para sempre dizendo que
  * conferiu algo que não olhou.
  */
-function verificarContagensDeAdr() {
+function verificarContagensEmProsa() {
   const numeros = arquivos('docs/adr/[0-9]*.md')
     .map((f) => Number(f.replace('docs/adr/', '').slice(0, 4)))
     .filter((n) => Number.isFinite(n));
 
   const total = String(numeros.length);
   const proximo = String(Math.max(...numeros) + 1).padStart(4, '0');
+  const regras = contarRegrasDeNegocio();
+  const providers = descobrirProviders().size;
 
   const afericoes = [
     {
@@ -614,6 +659,20 @@ function verificarContagensDeAdr() {
       esperado: total,
       oque: 'a contagem de ADRs',
     },
+    {
+      arquivo: 'README.md',
+      padrao: /as (\d+) RNs, cada uma com/,
+      esperado: String(regras),
+      oque: 'a contagem de RNs',
+    },
+    {
+      // Por EXTENSO nesta frase, e é assim que ela está escrita desde sempre —
+      // o check compara com a palavra, não força o texto a virar algarismo.
+      arquivo: 'README.md',
+      padrao: /(\w+) providers de LLM sobre uma base única/,
+      esperado: POR_EXTENSO[providers] ?? String(providers),
+      oque: 'a contagem de providers',
+    },
   ];
 
   let problemas = 0;
@@ -635,8 +694,12 @@ function verificarContagensDeAdr() {
     }
   }
 
-  if (problemas > 0) pendencias.push('contagens de ADR');
-  else console.log(`  ok        contagens de ADR (${total} ADRs, próximo ${proximo})`);
+  if (problemas > 0) pendencias.push('contagens em prosa');
+  else
+    console.log(
+      `  ok        contagens em prosa (${total} ADRs, próximo ${proximo}; ` +
+        `${regras} RNs; ${providers} providers)`,
+    );
 }
 
 /**
@@ -729,7 +792,7 @@ gerarOpenapi();
 gerarReferenciaApi();
 gerarProvidersDeLlm();
 verificarIndiceAdr();
-verificarContagensDeAdr();
+verificarContagensEmProsa();
 verificarVersaoAnunciada();
 
 if (CHECAR && pendencias.length > 0) {

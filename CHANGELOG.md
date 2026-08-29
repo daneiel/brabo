@@ -6,6 +6,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docs**: o `docs:check` passa a conferir TRÊS famílias de número escrito em
+  prosa, não só a de ADR: a contagem de RNs (fonte: os cabeçalhos `### RN-NNN`
+  do `business-rules.md`) e a de providers de LLM (fonte: os literais
+  `capabilities` que a tabela gerada de `llm-providers.md` já lê) entram na
+  mesma aferição. O gatilho foi medido, não previsto: o README anunciava "as
+  158 RNs" com 331 escritas — errado por mais do dobro, na tabela que
+  apresenta o repositório —, e corrigir à mão só reinicia o relógio. Número
+  que não bate REPROVA com o valor certo na mensagem; frase alterada reprova
+  como `CEGO`, de propósito, porque check que parou de achar a frase fica
+  verde para sempre dizendo que conferiu algo que não olhou.
 - **ci,k8s**: as quatro imagens de produção passam a ser PUBLICADAS no GHCR
   a cada tag final (`ghcr.io/<dono>/brabo-{api,engine,web,backup}`, públicas),
   fechando a dívida declarada mais cara dos ADRs 0025/0027 — até aqui o
@@ -975,6 +985,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docs**: o `docs:check` passa a conferir TRÊS famílias de número escrito em
+  prosa, não só a de ADR: a contagem de RNs (fonte: os cabeçalhos `### RN-NNN`
+  do `business-rules.md`) e a de providers de LLM (fonte: os literais
+  `capabilities` que a tabela gerada de `llm-providers.md` já lê) entram na
+  mesma aferição. O gatilho foi medido, não previsto: o README anunciava "as
+  158 RNs" com 331 escritas — errado por mais do dobro, na tabela que
+  apresenta o repositório —, e corrigir à mão só reinicia o relógio. Número
+  que não bate REPROVA com o valor certo na mensagem; frase alterada reprova
+  como `CEGO`, de propósito, porque check que parou de achar a frase fica
+  verde para sempre dizendo que conferiu algo que não olhou.
 - **ci,k8s**: as quatro imagens de produção passam a ser PUBLICADAS no GHCR
   a cada tag final (`ghcr.io/<dono>/brabo-{api,engine,web,backup}`, públicas),
   fechando a dívida declarada mais cara dos ADRs 0025/0027 — até aqui o
@@ -1515,6 +1535,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docs**: o `docs:check` passa a conferir TRÊS famílias de número escrito em
+  prosa, não só a de ADR: a contagem de RNs (fonte: os cabeçalhos `### RN-NNN`
+  do `business-rules.md`) e a de providers de LLM (fonte: os literais
+  `capabilities` que a tabela gerada de `llm-providers.md` já lê) entram na
+  mesma aferição. O gatilho foi medido, não previsto: o README anunciava "as
+  158 RNs" com 331 escritas — errado por mais do dobro, na tabela que
+  apresenta o repositório —, e corrigir à mão só reinicia o relógio. Número
+  que não bate REPROVA com o valor certo na mensagem; frase alterada reprova
+  como `CEGO`, de propósito, porque check que parou de achar a frase fica
+  verde para sempre dizendo que conferiu algo que não olhou.
 - **ci,k8s**: as quatro imagens de produção passam a ser PUBLICADAS no GHCR
   a cada tag final (`ghcr.io/<dono>/brabo-{api,engine,web,backup}`, públicas),
   fechando a dívida declarada mais cara dos ADRs 0025/0027 — até aqui o
@@ -2094,6 +2124,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docs**: o `docs:check` passa a conferir TRÊS famílias de número escrito em
+  prosa, não só a de ADR: a contagem de RNs (fonte: os cabeçalhos `### RN-NNN`
+  do `business-rules.md`) e a de providers de LLM (fonte: os literais
+  `capabilities` que a tabela gerada de `llm-providers.md` já lê) entram na
+  mesma aferição. O gatilho foi medido, não previsto: o README anunciava "as
+  158 RNs" com 331 escritas — errado por mais do dobro, na tabela que
+  apresenta o repositório —, e corrigir à mão só reinicia o relógio. Número
+  que não bate REPROVA com o valor certo na mensagem; frase alterada reprova
+  como `CEGO`, de propósito, porque check que parou de achar a frase fica
+  verde para sempre dizendo que conferiu algo que não olhou.
 - **ci,k8s**: as quatro imagens de produção passam a ser PUBLICADAS no GHCR
   a cada tag final (`ghcr.io/<dono>/brabo-{api,engine,web,backup}`, públicas),
   fechando a dívida declarada mais cara dos ADRs 0025/0027 — até aqui o
