@@ -133,6 +133,11 @@ data.
 - i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR +
   fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
   arquivo para inglês como idioma primário
+- Golden-set de regressão do julgamento semântico do QA de Automação (ADR
+  0123) existe e roda manualmente (`mix golden_set.qa`, dentro de
+  `apps/engine`) contra Ollama local — nunca em CI. Ligar em CI exige
+  segredo de LLM de API OU infra nova (runner com GPU, passo de pull do
+  Ollama): decisão de um humano, não algo que se constrói escolhendo
 
 **Backlog vivo:** `docs/explanation/backlog.md` (fonte única de priorização).
 

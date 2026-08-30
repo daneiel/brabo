@@ -1,0 +1,5 @@
+{
+  "_comment": "Piso RATCHET (>=, nunca >) do golden-set de regressão do julgamento semântico do QA de Automação — ADR 0123. Contagem, não porcentagem: 'of' documenta contra quantos casos o piso foi medido, e um golden-set que crescer de 6 para N casos não deixa uma entrada antiga mentir sobre o que quis dizer. Chave por MODELO: trocar de modelo muda legitimamente o piso alcançável. Só escrito por humano, depois de rodar `mix golden_set.qa` de verdade — o teste NUNCA se auto-escreve (mesmo não-negociável de scripts/ci/coverage-floor.ts). Medido em 2026-08-30 contra api/engine locais nativos + Ollama local (qwen2.5-coder:latest, gpt-oss:20b já puxados) — ver docs/adr/0123-golden-set-regressao-qa-automacao.md para as rodadas reais e a variância observada.",
+  "qwen2.5-coder:latest": { "passRate": 1, "of": 6 },
+  "gpt-oss:20b": { "passRate": 4, "of": 6 }
+}

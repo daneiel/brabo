@@ -398,17 +398,27 @@ jobs:
         working-directory: apps/engine
         run: mix test --cover 2>&1 | tee /tmp/mix-test.log
 
-      # Guarda do falso-verde: se qualquer teste foi EXCLUÍDO, algum binário do
-      # passo acima não chegou e os gates não foram exercitados. Falhar aqui é
-      # a diferença entre "verde" e "verde de verdade".
-      - name: Nenhum teste pode ter sido excluído
+      # Guarda do falso-verde: se algum teste foi EXCLUÍDO além do esperado,
+      # algum binário do passo acima não chegou e os gates não foram
+      # exercitados. Falhar aqui é a diferença entre "verde" e "verde de
+      # verdade".
+      #
+      # `:golden_set_qa` (ADR 0123) é a ÚNICA exclusão esperada aqui —
+      # permanente, por desenho (julga com um LLM real, custa tempo e não é
+      # determinística; roda só com `mix golden_set.qa`, nunca no CI), não
+      # por binário faltando. É sempre exatamente 1 teste (`@moduletag` em
+      # `qa_automacao_agent_golden_test.exs`), então o piso é fixo: mais que
+      # isso É o sinal real de binário ausente.
+      - name: Nenhum teste pode ter sido excluído além do golden-set
         run: |
-          if grep -qE '[1-9][0-9]* excluded' /tmp/mix-test.log; then
-            echo "::error::testes excluídos — os binários dos gates não estavam disponíveis:"
+          excluidos="$(grep -oE '[0-9]+ excluded' /tmp/mix-test.log | head -1 | grep -oE '^[0-9]+' || true)"
+          excluidos="${excluidos:-0}"
+          if [ "${excluidos}" -gt 1 ]; then
+            echo "::error::testes excluídos além do golden-set (ADR 0123, esperado 1) — os binários dos gates não estavam disponíveis:"
             grep -E 'excluded' /tmp/mix-test.log
             exit 1
           fi
-          echo "ok: nenhum teste excluído"
+          echo "ok: só o golden-set (ADR 0123, sempre excluído aqui) contribuiu para a contagem de excluídos (${excluidos})"
 
       # Piso (ratchet) sobre a % de cobertura do engine — ver
       # scripts/ci/coverage-floor.ts e scripts/ci/coverage-floor.json para o
