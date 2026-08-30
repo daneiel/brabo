@@ -196,9 +196,59 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId, agentKey] });
   }
 
+  /**
+   * Escolher o modelo de um agente — o `onSelect` do `ModelPicker` da coluna
+   * MODELO VIGENTE.
+   *
+   * ## Por que aqui o 404 NÃO tem desfecho próprio, e na função irmã tem
+   *
+   * As duas funções são irmãs e a diferença é deliberada: quem ler as duas
+   * lado a lado vai perguntar, e a resposta é o número de causas por status.
+   *
+   * O 404 do DELETE tem uma causa só, e por isso o cliente pôde nomeá-la. O
+   * PUT deste endpoint recusa por SETE caminhos, e nenhum status identifica um
+   * deles sozinho (`SetModelBindingUseCase` + `LlmBindingErrorFilter`):
+   *
+   * - **400** — `scope_id` malformado (`ScopeIdSemProjetoError`) ou `modelId`
+   *   reprovado no DTO;
+   * - **403** — papel abaixo de `developer` (`RolesGuard`);
+   * - **404** — *duas* causas indistinguíveis pelo status: "Modelo não
+   *   encontrado" e "Projeto não encontrado";
+   * - **422** — *três* causas: o modelo não faz tool calling (RN-040), o owner
+   *   desativou o modelo no workspace, ou ele sumiu do provider (RN-043) —
+   *   ver `docs/business-rules/custo.md`.
+   *
+   * Traduzir esse 404 no cliente exigiria escolher UMA das duas frases e
+   * acertar por sorte — seria a tela afirmando o que não sabe. E as recusas
+   * que uma pessoa realmente alcança daqui são as de 422: o picker mostra o
+   * modelo `unavailable` MARCADO em vez de escondê-lo (de propósito — um
+   * modelo ausente da lista deixaria o binding que aponta para ele sem
+   * explicação), e a lista é cacheada, então o modelo pode ter sido desligado
+   * no catálogo depois do último `listModels`. Nesses casos a frase da api é a
+   * informação mais útil que existe: ela nomeia o modelo e diz o que fazer.
+   *
+   * Então tudo aqui é falha de verdade e segue a gramática normal —
+   * `mensagemDaApi` + tom `danger`, como em `AreaModelsSection.handleSet`.
+   * Sem o `try/catch` isto virava `unhandled promise rejection`: a pessoa
+   * escolhia um modelo, a tela não se mexia e o erro só existia no console.
+   *
+   * A linha só é relida no SUCESSO. Na recusa nada mudou no banco, e a coluna
+   * MODELO VIGENTE continua exibindo o binding que a query trouxe — o
+   * `ModelPicker` não guarda a escolha em estado local (`selected` sai do prop
+   * `selectedModelId`), então não há valor recusado para desfazer. É o que a
+   * RN-470 exige e o teste fixa: a tela nunca exibe um modelo que a api se
+   * recusou a gravar.
+   */
   async function handleModelChange(agentKey: string, model: Model) {
-    await setAgentModelBinding(projectId, agentKey, model.id);
-    invalidarBindingDoAgente(agentKey);
+    try {
+      await setAgentModelBinding(projectId, agentKey, model.id);
+      invalidarBindingDoAgente(agentKey);
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, t('modelsSection.toast.setError')),
+        tone: 'danger',
+      });
+    }
   }
 
   /**

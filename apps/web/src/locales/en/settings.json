@@ -113,7 +113,8 @@
     "toast": {
       "reverted": "{{agent}} is back to inheriting",
       "alreadyInherits": "{{agent}} already inherited — there was no model of its own to delete",
-      "clearError": "Could not go back to inheriting"
+      "clearError": "Could not go back to inheriting",
+      "setError": "Could not change the agent's model"
     },
     "emptyMessage": "No agent configured.",
     "noModelsAvailable": "No model available yet.",

@@ -113,7 +113,8 @@
     "toast": {
       "reverted": "{{agent}} voltou a herdar",
       "alreadyInherits": "{{agent}} já herdava — não havia modelo próprio para apagar",
-      "clearError": "Não foi possível voltar a herdar"
+      "clearError": "Não foi possível voltar a herdar",
+      "setError": "Não foi possível trocar o modelo do agente"
     },
     "emptyMessage": "Nenhum agente configurado.",
     "noModelsAvailable": "Nenhum modelo disponível ainda.",
