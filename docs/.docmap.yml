@@ -71,9 +71,15 @@ rules:
   # O arquivo mais alterado do repositório até a v0.1.0 (23 mudanças) e o que
   # menos tinha cobertura de doc: as constraints do schema SÃO regra de
   # negócio (budgets_scope_check, unique(session_id, seq)).
+  #
+  # Desde o ADR 0121 o schema é um DIRETÓRIO, e o `schema.ts` que sobrou é um
+  # barrel que só muda quando nasce ou morre tabela. Sem o glob do diretório
+  # esta regra ficaria cega justamente para constraint e coluna — o que ela
+  # existe para vigiar.
   - id: schema-e-migrations
     watch:
       - "apps/api/src/db/schema.ts"
+      - "apps/api/src/db/schema/**"
       - "apps/api/src/db/migrations/**"
       - "apps/engine/priv/repo/migrations/**"
     docs: ["docs/architecture.md"]
