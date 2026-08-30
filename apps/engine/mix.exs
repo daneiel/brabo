@@ -123,7 +123,12 @@ defmodule Engine.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"],
+      # Golden-set de regressão do julgamento semântico do QA de Automação
+      # (ADR 0123) — excluído por padrão em `mix test` (ver test_helper.exs),
+      # roda de verdade contra a api/Ollama locais só quando chamado por
+      # aqui. Não entra em `precommit`/CI: exige stack de pé e LLM real.
+      "golden_set.qa": ["test --only golden_set_qa"]
     ]
   end
 end

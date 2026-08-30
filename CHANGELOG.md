@@ -6,6 +6,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine,api**: golden-set de regressão (ADR 0123) para o julgamento
+  SEMÂNTICO do QA de Automação — o item que a própria ADR 0020 já deixava
+  documentado como aberto: com modelo local, cruzar regra de negócio com
+  teste fechou só na 10ª de 11 rodadas. Seis casos rodam
+  `Engine.Gates.QaAutomacaoAgent.run/5` isolado (mesmo padrão de
+  `qa_automacao_agent_test.exs`), mas contra o cliente REAL de LLM —
+  `apps/api/scripts/seed-golden-set-qa.ts` (chamado via `System.cmd`, novo
+  neste repositório) provisiona projeto/sessão/binding de modelo reais e faz
+  o próprio checkout do worktree. `mix test --only golden_set_qa` (ou `mix
+  golden_set.qa`) roda deliberadamente, nunca em CI — excluído por tag
+  PERMANENTE em `test_helper.exs`, não por detecção de Ollama disponível.
+  Piso ratchet em `floor.json` (mesmo padrão de `coverage-floor.ts`), medido
+  de verdade contra os dois modelos Ollama já puxados nesta sessão:
+  `qwen2.5-coder:latest` fechou 1 a 4 dos 6 casos em quatro rodadas (o
+  gargalo dominante foi o modelo chamar `terminal` com o argumento de
+  comando vazio), contra `gpt-oss:20b` fechando 4-5/6 em duas rodadas
+  (~4x mais lento por caso) — `gpt-oss:20b` é o modelo recomendado daqui
+  pra frente para quem depende deste julgamento ser confiável. Wiring em
+  CI segue `TODO(humano)`: falta segredo de LLM de API ou infra nova
+  (runner com GPU, passo de pull do Ollama).
 - **api**: `apps/api/src/db/schema.ts` deixa de ser um arquivo de 2 452 linhas
   com 51 tabelas e 34 enums — o mais alterado do repositório, e uma dívida já
   DECLARADA na tabela do `architecture.md`, cuja consequência escrita era

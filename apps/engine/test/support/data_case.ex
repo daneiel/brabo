@@ -34,9 +34,27 @@ defmodule Engine.DataCase do
 
   @doc """
   Sets up the sandbox based on the test tags.
+
+  `tags[:ownership_timeout]` é opcional — sem ele, o default do próprio
+  `Ecto.Adapters.SQL.Sandbox` vale (60s). O golden-set de QA (ADR 0123,
+  `qa_automacao_agent_golden_test.exs`) precisa de um valor bem maior: ele
+  chama um LLM real, e uma chamada de ~150s (modelo grande, carregando peso
+  pela primeira vez) ficava mais tempo sem tocar o Postgres do que o padrão
+  tolera — a conexão emprestada era reclamada NO MEIO da chamada, e a
+  consulta seguinte (instruction files, dentro do ToolLoop) via `Engine.Repo`
+  morria com "owner process exited", mascarando uma variância de modelo como
+  falha de infraestrutura.
   """
   def setup_sandbox(tags) do
-    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Engine.Repo, shared: not tags[:async])
+    opts = [shared: not tags[:async]]
+
+    opts =
+      case tags[:ownership_timeout] do
+        nil -> opts
+        timeout -> Keyword.put(opts, :ownership_timeout, timeout)
+      end
+
+    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Engine.Repo, opts)
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end
 
