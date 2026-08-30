@@ -16,6 +16,7 @@ import { ModelPicker } from '../../components/ModelPicker';
 import { useToast } from '../../components/ui/ToastProvider';
 import { ORIGIN_TONE } from './shared';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
  * O modelo PADRÃO de cada área — o que o lead e os subagentes compartilham
@@ -82,7 +83,7 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="area-models">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('areaModels.title')}</h2>
         <span className={styles.eyebrow}>{t('areaModels.eyebrow')}</span>
@@ -138,6 +139,6 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
           </div>
         );
       })}
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }

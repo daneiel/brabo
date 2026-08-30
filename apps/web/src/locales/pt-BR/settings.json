@@ -1,4 +1,14 @@
 {
+  "summary": {
+    "title": "Nesta página",
+    "ariaLabel": "Sumário das configurações",
+    "groups": {
+      "projeto": "Projeto e execução",
+      "modelos": "Modelos",
+      "pessoas": "Pessoas e acesso",
+      "avancado": "Avançado"
+    }
+  },
   "matrix": {
     "title": "Quem pode aprovar o quê",
     "eyebrow": "matriz resumida",

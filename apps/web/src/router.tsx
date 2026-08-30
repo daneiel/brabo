@@ -10,6 +10,7 @@ import { Shell } from './routes/Shell';
 import { Dashboard } from './routes/Dashboard';
 import { ProjectPage } from './routes/ProjectPage';
 import { resolverChaveDeAba, type ChaveDeAba } from './routes/project-tabs';
+import { resolverChaveDeSecao, type ChaveDeSecao } from './routes/settings/sumario';
 import { SessionPage } from './routes/SessionPage';
 import { ProvisioningPage } from './routes/ProvisioningPage';
 import { AdoptionPlanPage } from './routes/AdoptionPlanPage';
@@ -197,6 +198,14 @@ const accountRoute = createRoute({
 // e ter painel para `x` eram duas decisões independentes.
 interface ProjectSearch {
   tab?: ChaveDeAba;
+  /**
+   * A SEÇÃO da aba Configurações a que o link aponta — mesma ideia de `tab`,
+   * um degrau abaixo. A lista mora em `routes/settings/sumario.ts` e é a mesma
+   * que o sumário ancorado renderiza, pelo motivo que o comentário de `tab`
+   * já registra: aceitar uma chave na URL e ter destino para ela não podem ser
+   * duas decisões independentes.
+   */
+  section?: ChaveDeSecao;
 }
 
 const projectRoute = createRoute({
@@ -212,11 +221,22 @@ const projectRoute = createRoute({
   // silencioso na Visão geral.
   validateSearch: (search: Record<string, unknown>): ProjectSearch => ({
     tab: resolverChaveDeAba(search.tab),
+    section: resolverChaveDeSecao(search.section),
   }),
   component: () => {
     const { projectId } = projectRoute.useParams();
-    const { tab } = projectRoute.useSearch();
-    return <ProjectPage projectId={projectId} initialTab={tab} />;
+    const { tab, section } = projectRoute.useSearch();
+    // `?section=` sozinho ABRE Configurações. A alternativa era abrir a Visão
+    // geral e não rolar para lugar nenhum — a mesma falha silenciosa que o
+    // registro de abas existe para não repetir: um link que a URL aceita e a
+    // tela ignora.
+    return (
+      <ProjectPage
+        projectId={projectId}
+        initialTab={tab ?? (section ? 'settings' : undefined)}
+        initialSection={section}
+      />
+    );
   },
 });
 

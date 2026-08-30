@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ROLE_ORDER } from '../../lib/roles';
 import type { Role } from '../../lib/api-types';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 // `key` resolve para `matrix.rows.<key>` — a tradução é resolvida por quem
 // consome (`MatrixSection`), como o padrão pede para dado não-React.
@@ -16,7 +17,7 @@ const MATRIX_ROWS: { key: string; minRole: Role }[] = [
 export function MatrixSection() {
   const { t } = useTranslation('settings');
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="approval-matrix">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('matrix.title')}</h2>
         <span className={styles.eyebrow}>{t('matrix.eyebrow')}</span>
@@ -60,6 +61,6 @@ export function MatrixSection() {
           <span className={styles.dash}>—</span> {t('matrix.legend.noPermission')}
         </span>
       </div>
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }

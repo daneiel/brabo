@@ -14,6 +14,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
  * Onde o código do projeto mora — `container` (padrão), `mounted` (pasta do
@@ -111,7 +112,7 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="execution-mode">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('executionMode.title')}</h2>
         <span className={styles.eyebrow}>{t('executionMode.eyebrow')}</span>
@@ -169,6 +170,6 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
       >
         {saving ? t('executionMode.saving') : t('executionMode.save')}
       </Button>
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }

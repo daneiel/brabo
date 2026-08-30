@@ -10,6 +10,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
  * O teto de paralelismo de cada lead (FASE 14d — RN-083, ADR 0053).
@@ -58,7 +59,7 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="parallelism">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('parallelism.title')}</h2>
         <span className={styles.eyebrow}>{t('parallelism.eyebrow')}</span>
@@ -116,6 +117,6 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
           );
         })
       )}
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }
