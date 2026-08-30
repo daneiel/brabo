@@ -35,6 +35,8 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm engine:dev` | `cd apps/engine && mix phx.server` |
 | `pnpm engine:test` | `cd apps/engine && mix test` |
 | `pnpm engine:migrate` | `cd apps/engine && mix ecto.migrate` |
+| `pnpm e2e` | `pnpm --dir e2e test` |
+| `pnpm e2e:navegadores` | `pnpm --dir e2e navegadores` |
 | `pnpm docs:start` | `pnpm --dir website start` |
 | `pnpm docs:build` | `pnpm --dir website build` |
 | `pnpm docs:serve` | `pnpm --dir website serve` |
@@ -137,4 +139,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-92 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+94 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

@@ -378,6 +378,24 @@ rules:
     severity: block
     note: "Regra nova sobre o que pode entrar no runner exige a regra escrita."
 
+  # O E2E de navegador é a única camada que roda contra o compose de PRODUÇÃO,
+  # e a única cujo COMO RODAR não cabe num `pnpm test`. Quem chega no
+  # repositório procura isso no getting-started, não num README de pasta.
+  #
+  # `warn`, não `block`: spec novo dentro da mesma mecânica (mesmo jeito de
+  # subir, mesmo jeito de rodar) não muda nada do que está escrito lá, e
+  # cobrar a doc a cada spec ensinaria a usar o escape hatch. O que MUDA a
+  # doc é a mecânica — e essa mora no `playwright.config.ts` e no
+  # `package.json`, não em `testes/`.
+  - id: e2e-de-navegador
+    watch:
+      - "e2e/playwright.config.ts"
+      - "e2e/package.json"
+    docs:
+      - "docs/getting-started.md"
+    severity: warn
+    note: "Mudou como o E2E sobe ou roda? O getting-started ensina o comando."
+
   - id: adr-trigger
     watch:
       - "docker/**"

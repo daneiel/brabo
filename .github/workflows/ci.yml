@@ -780,5 +780,63 @@ jobs:
 
       # SMOKE_NO_BUILD: as imagens já estão no daemon, construídas com cache
       # acima — o compose reusaria a tag e reconstruiria à toa.
+      #
+      # SMOKE_KEEP_UP: o stack fica de pé para o E2E de navegador logo abaixo.
+      # Ele roda NESTE job, e não num próprio, porque as quatro imagens levam
+      # a maior parte do tempo aqui — um job separado as construiria de novo
+      # para exercitar exatamente o mesmo compose.
       - name: Teste de fumaça (compose.prod)
-        run: SMOKE_NO_BUILD=1 bash docker/smoke.sh
+        run: SMOKE_NO_BUILD=1 SMOKE_KEEP_UP=1 bash docker/smoke.sh
+
+      # Este job é de Docker e não tinha Node nem pnpm — só o E2E precisa.
+      # Depois do build das imagens de propósito: falha de setup aqui não
+      # deve custar a construção que é o objeto principal do job.
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      # Sem `cache: pnpm`: o lockfile do `e2e/` não é o da raiz, e apontar a
+      # chave de cache para o arquivo errado guarda a árvore errada.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # `e2e/` NÃO é membro do workspace da raiz (mesmo desenho do `website/`,
+      # ADR 0117): `pnpm install` roda de DENTRO da pasta, contra o lockfile
+      # próprio. `--frozen-lockfile` porque lockfile que o CI atualiza sozinho
+      # não é lockfile.
+      - name: Dependências do E2E
+        run: pnpm install --frozen-lockfile
+        working-directory: e2e
+
+      # Só o chromium: um navegador prova o mecanismo (cookie httpOnly, CORS,
+      # handshake do socket), e os outros dois custariam download e tempo para
+      # provar de novo a mesma coisa. A VERSÃO do navegador vem presa à versão
+      # exata do `@playwright/test` no lockfile — é assim que este download se
+      # encaixa na disciplina de pin do repositório (ver
+      # docs/explanation/cadeia-de-suprimentos-do-ci.md).
+      - name: Navegador do Playwright
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: e2e
+
+      - name: E2E de navegador (compose.prod de pé)
+        run: pnpm test
+        working-directory: e2e
+
+      # `if: always()` de propósito: o relatório só interessa quando falhou, e
+      # é justamente aí que o passo anterior interrompeu o job.
+      - name: Relatório do E2E
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # O `SMOKE_KEEP_UP` acima desligou a derrubada que o smoke fazia sozinho.
+      # `always()` porque volume de banco sobrevivendo a um job que falhou é o
+      # tipo de lixo que só aparece semanas depois, no disco do runner.
+      - name: Derrubar o compose
+        if: always()
+        run: docker compose -f docker/docker-compose.prod.yml down -v

@@ -23,6 +23,8 @@
     "engine:dev": "cd apps/engine && mix phx.server",
     "engine:test": "cd apps/engine && mix test",
     "engine:migrate": "cd apps/engine && mix ecto.migrate",
+    "e2e": "pnpm --dir e2e test",
+    "e2e:navegadores": "pnpm --dir e2e navegadores",
     "docs:start": "pnpm --dir website start",
     "docs:build": "pnpm --dir website build",
     "docs:serve": "pnpm --dir website serve",

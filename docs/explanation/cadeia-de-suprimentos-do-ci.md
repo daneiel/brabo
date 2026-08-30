@@ -102,6 +102,24 @@ A reference to an action **inside this repository** (`./.github/...`)
 passes: it's our own code, reviewed by the PR that changes it, with no
 third party able to move anything.
 
+## The Playwright browser
+
+The browser E2E ([ADR 0120](../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md))
+downloads chromium at CI time from Playwright's CDN — a third download
+that isn't an action and isn't a GitHub Release asset, so neither of the
+two mechanisms above covers it.
+
+What pins it is the **exact** `@playwright/test` version in `e2e/pnpm-lock.yaml`:
+each release of the package is bound to one browser build, and
+`playwright install` fetches that one. So the pin is the lockfile, and
+`--frozen-lockfile` in the job is what makes it a pin rather than a
+suggestion.
+
+There is no `sha256sum -c` here, and that's the honest description: the
+tool downloads and verifies on its own, and reproducing its checksum
+table by hand would be a copy that ages. Weaker than the scanner
+binaries, stated rather than implied.
+
 ## Container images
 
 Third-party images are pinned by tag, not by digest: `neo4j:5.26-community`,

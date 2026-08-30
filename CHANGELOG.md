@@ -159,6 +159,41 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   na fé DECLARADO: sem Dependabot (os SHAs se atualizam à mão), sem
   proveniência das dependências npm, sem assinatura dos artefatos que
   publicamos, e imagem de terceiro presa por tag e não por digest.
+- **e2e,ci**: a pirâmide de testes ganha a camada que faltava em cima — um
+  E2E de NAVEGADOR (`e2e/`, Playwright, só chromium; ADR 0120). As três
+  camadas de baixo eram fortes (142 specs na api, 126 no engine, componente a
+  componente no web, mais o smoke HTTP das imagens de produção) e nenhuma
+  exercitava um navegador — justamente onde os últimos bugs de cookie, CORS e
+  socket apareceram, todos achados à mão. O que só existe aqui: o refresh em
+  cookie `httpOnly` (garantia do BROWSER — em jsdom o cookie seria legível e a
+  asserção passaria mentindo), o CSRF em origem cruzada `:8088`→`:3000` com
+  preflight de verdade (o `main.ts` da api já registrava "teste não faz
+  preflight"), a sessão que sobrevive ao reload (único jeito de provar que o
+  access em memória foi RECONSTRUÍDO do cookie) e o ticket de uso único do
+  socket da sessão (RN-108) num handshake real contra o engine, numa TERCEIRA
+  origem. Roda contra o compose de PRODUÇÃO que o CI já sobe (`smoke.sh` com
+  `SMOKE_KEEP_UP=1`) e no MESMO job `images`: as quatro imagens são a maior
+  parte do relógio daquele job, e um job separado as reconstruiria para chegar
+  ao mesmo stack. `e2e/` NÃO é membro do workspace — lockfile próprio, mesmo
+  desenho do `website/` (ADR 0117), porque a árvore do Playwright não chega a
+  imagem nenhuma e não tem o que fazer no `pnpm audit` do produto; da raiz é
+  `pnpm e2e`, nunca `pnpm --filter`. Seletor é ESTRUTURAL e nunca texto (o
+  idioma da interface é decisão do servidor), e a asserção é sobre MECANISMO e
+  nunca sobre tela. Provado por mutação nos dois specs: senha errada deixa a
+  autenticação vermelha, e apontar a asserção do socket para um caminho que
+  não existe falha com "nenhum WebSocket foi aberto contra o engine". NÃO
+  coberto, declarado: diferença entre navegadores, aprovação inline e
+  streaming. Achado ao rodar de verdade, e que virou desenho: a suite tem
+  ORÇAMENTO DE LOGIN. A api defende `/auth/login` com lockout progressivo por
+  IP que responde com o MESMO 401 uniforme de senha errada — distinguir os
+  dois diria ao atacante quando ele acertou o e-mail —, então repetir a suite
+  dentro da janela de 15 minutos derruba o login e a falha passa a acusar
+  justamente onde o defeito não está. O navegador entra UMA vez por execução
+  (um projeto `setup` guarda o estado; só o spec de autenticação abre mão
+  dele, porque provar login exige origem limpa), e a semeadura reconhece esse
+  401 e diz o que provavelmente é. Afrouxar o teto do compose para a suite
+  poder logar à vontade foi rejeitado: enfraqueceria o que está sendo testado
+  para deixar o teste confortável.
 
 ### Correções
 
