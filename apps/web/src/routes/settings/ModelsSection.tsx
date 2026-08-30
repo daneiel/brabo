@@ -344,6 +344,20 @@ export function ModelsSection({ projectId }: { projectId: string }) {
             selectedModelId={resolved?.modelId}
             onSelect={(model) => handleModelChange(agent.key, model)}
             variant="inline"
+            // Abre com "aptos para agentes" MARCADO. Este picker grava no
+            // escopo `agent`, o único que a RN-040 sempre exigiu — e a frase
+            // com que a api recusa manda a pessoa exatamente para este filtro
+            // ("Use o filtro 'aptos para agentes' no seletor de modelos"), que
+            // até agora nenhuma tela ligava. Oferecer o modelo chat-only aqui
+            // era oferecer um clique que só existe para ser recusado.
+            //
+            // Isto torna IMPROVÁVEL a causa mais comum de 422, nunca
+            // impossível: `SetModelBindingUseCase` recusa por outras duas
+            // (modelo desativado no workspace e sumido do provider, RN-043),
+            // que este filtro não cobre — o modelo `unavailable` continua
+            // listado, MARCADO, de propósito. O toast de `handleModelChange`
+            // continua sendo o que conta o desfecho.
+            filtroDeAgentesPadrao
           />
         ) : null;
       },

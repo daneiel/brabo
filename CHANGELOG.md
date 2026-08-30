@@ -449,6 +449,28 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: em **Configurações**, o seletor de modelo de **Modelos por agente** e
+  o de **Modelo por área** passam a abrir com o filtro **"aptos para agentes"
+  já marcado**. O filtro existe desde a Fase 9c e **nenhuma tela o ligava** — o
+  seletor abria oferecendo modelos sem *tool calling*, cujo clique a api recusa
+  com 422, e a frase da recusa manda a pessoa justamente para o filtro que
+  ninguém tinha ligado. Quem passa a ligá-lo não é escolhido por tela e sim pelo
+  **escopo do vínculo**: `assertModelFitsBindingScope` exige *tool calling* em
+  `agent` e em `area` e em mais nenhum, então as duas telas que gravam nesses
+  escopos abrem filtradas e o **seletor da sessão continua sem filtro** — ali a
+  api aceita modelo de conversa de propósito, e marcar esconderia o que o
+  domínio permite. Isto torna **improvável a causa mais comum** de recusa, nunca
+  impossível: as outras duas (modelo desativado no workspace, modelo sumido do
+  provider — RN-043) continuam alcançáveis daqui, o modelo indisponível segue
+  **listado e marcado**, e a mensagem de falha da correção anterior continua
+  sendo o que conta o desfecho. É o **estado inicial** de uma caixa de seleção,
+  não uma trava: desmarcar volta a listar o catálogo inteiro. Como consequência,
+  o seletor passa a **dizer quando o filtro esconde o modelo vigente** — o
+  vínculo herdado do projeto ou do workspace pode ser de conversa (esses dois
+  níveis nunca exigiram *tool calling*), e sem o aviso o gatilho mostrava um
+  nome que a lista aberta não continha, sem nada marcado. A causa é nomeada
+  porque só existe um filtro ali; quando a lista inteira fica vazia, quem fala
+  continua sendo o texto de lista vazia, que já manda desmarcar (RN-040)
 - **web**: em **Configurações**, escolher um modelo no seletor de uma linha de
   **Modelos por agente** e ter o pedido recusado não produzia nada na tela: a
   pessoa clicava, o dropdown fechava, a linha continuava no modelo antigo e o

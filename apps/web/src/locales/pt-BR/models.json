@@ -115,6 +115,7 @@
     "filterFitForAgents": "aptos para agentes",
     "noModelsRegistered": "Nenhum modelo cadastrado",
     "noToolCallingModels": "Nenhum modelo faz tool calling nativo. Desmarque o filtro para ver os demais.",
+    "currentHiddenByFilter": "O modelo vigente ({{model}}) não faz tool calling nativo e está fora desta lista.",
     "selectModel": "Selecionar modelo"
   },
   "spend": {

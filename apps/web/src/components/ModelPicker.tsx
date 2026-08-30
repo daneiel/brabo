@@ -39,9 +39,21 @@ interface ModelPickerProps {
   onSelect: (model: Model) => void;
   variant?: 'topbar' | 'inline' | 'standalone';
   /**
-   * Liga o filtro "aptos para agentes" JÁ MARCADO (Fase 9c). É o que a tela de
-   * binding de agente passa: a mensagem da RN-040 manda o usuário para este
-   * filtro desde a Fase 9a, e até agora ele não existia.
+   * Liga o filtro "aptos para agentes" JÁ MARCADO (Fase 9c). A mensagem da
+   * RN-040 manda o usuário para este filtro desde a Fase 9a.
+   *
+   * A régua de quem passa é o ESCOPO do binding que o picker grava, e ela tem
+   * uma fonte só do outro lado: `assertModelFitsBindingScope`
+   * (`domain/llm/model-capabilities.ts`) exige tool calling em `agent` e em
+   * `area`, e em mais nenhum. Então ligam o filtro as duas telas que gravam
+   * nesses escopos — `ModelsSection` (agente) e `AreaModelsSection` (área) —,
+   * e o seletor de SESSÃO não liga: ali a api aceita modelo chat-only de
+   * propósito (uma sessão sem ferramenta na mão é conversa), e marcar o filtro
+   * esconderia o que o domínio permite. O filtro segue o que a api RECUSA;
+   * onde ela não recusa, quem escolhe é a pessoa.
+   *
+   * Isto é o estado INICIAL de um checkbox, nunca uma trava: desmarcar volta a
+   * listar o catálogo inteiro.
    */
   filtroDeAgentesPadrao?: boolean;
   /**
@@ -81,6 +93,31 @@ export function ModelPicker({
   // Procura no conjunto INTEIRO, não no filtrado: o vigente precisa aparecer no
   // gatilho mesmo quando o filtro o esconde da lista.
   const selected = todosOsModelos.find((m) => m.id === selectedModelId);
+
+  /**
+   * O vigente que o filtro tira da LISTA — e que por isso precisa ser dito.
+   *
+   * Não é caso de borda desde que as telas de agente e de área abrem com o
+   * filtro marcado: as rotas que resolvem o binding (`GET .../agent-bindings/
+   * :slug`, `GET .../area-bindings/:key`) chamam `ResolveModelBindingUseCase`
+   * SEM `exigeToolCalling`, então um padrão chat-only de projeto ou workspace
+   * é resolvido e vira o vigente da linha. Aí o gatilho mostra um nome que a
+   * lista aberta não contém, e nenhuma opção aparece marcada — a tela
+   * afirmando um estado e o contradizendo logo abaixo, que é o que a RN-470
+   * proíbe.
+   *
+   * A causa é NOMEÁVEL porque só há um filtro aqui: `agruparModelos` também
+   * aceita facetas e usos, mas este picker não passa nenhuma das duas, então
+   * sumir da lista com `soAptos` ligado só pode ser falta de tool calling.
+   *
+   * Fica de fora quando a lista inteira está vazia: ali o `noToolCallingModels`
+   * já explica o mesmo com uma frase mais completa, e dois avisos mandando
+   * desmarcar o mesmo checkbox seriam ruído.
+   */
+  const vigenteEscondido =
+    soAptos && grupos.length > 0 && selected && !selected.supportsToolCalling
+      ? selected
+      : undefined;
 
   /**
    * O dropdown é `position: fixed` ancorado no gatilho, não `absolute` dentro
@@ -219,6 +256,14 @@ export function ModelPicker({
             />
             {t('picker.filterFitForAgents')}
           </label>
+
+          {vigenteEscondido && (
+            <div className={styles.vigenteEscondido}>
+              {t('picker.currentHiddenByFilter', {
+                model: vigenteEscondido.displayName,
+              })}
+            </div>
+          )}
 
           {todosOsModelos.length === 0 && (
             <div className={styles.groupHeader}>{t('picker.noModelsRegistered')}</div>

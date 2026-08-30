@@ -115,6 +115,7 @@
     "filterFitForAgents": "fit for agents",
     "noModelsRegistered": "No model registered",
     "noToolCallingModels": "No model does native tool calling. Uncheck the filter to see the rest.",
+    "currentHiddenByFilter": "The current model ({{model}}) doesn't do native tool calling and is out of this list.",
     "selectModel": "Select model"
   },
   "spend": {

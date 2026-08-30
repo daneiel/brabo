@@ -466,6 +466,18 @@ daqui e o fechamento vai para o histórico.
   declarado, e a ação que só importa nesse caso continua acionável. Vazio tem
   texto próprio e vazios diferentes têm textos diferentes — um traço que serve
   a três significados não é neutro, é a tela recusando nomear o que sabe.
+- Controle que oferece escolha abre oferecendo o que a api ACEITA naquele
+  escopo, e quem decide isso é o ESCOPO, nunca a tela (RN-040). O filtro
+  "aptos para agentes" do `ModelPicker` vem MARCADO nas duas telas que gravam
+  onde `assertModelFitsBindingScope` exige tool calling — `agent` e `area` — e
+  DESMARCADO no seletor de sessão, que grava num escopo livre de propósito:
+  marcar ali esconderia o que o domínio permite, que é o defeito inverso. É
+  estado INICIAL de um checkbox, nunca trava — desmarcar volta a listar tudo —,
+  e não elimina o 422: cobre UMA das três causas, e a tela continua devendo o
+  desfecho de recusa. Filtro ligado por padrão cria uma dívida própria: o
+  vigente que ele esconde da LISTA (herdado de `project`/`workspace`, níveis que
+  nunca exigiram tool calling) precisa ser DITO, com o nome do modelo e a causa
+  — o gatilho mostrando um nome que a lista não contém é a tela se contradizendo.
 - Sinal de ambiente diz o que SABE, e proxy nunca vira garantia (RN-468).
   A tela de login é PRÉ-identidade: só cabem ali os dois `/health`, que já
   são públicos nos dois serviços — presença de runner

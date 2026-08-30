@@ -181,6 +181,13 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
                   onSelect={(model) => handleSet(key, model)}
                   variant="inline"
                   disabled={!podeEditar}
+                  // Marcado aqui pelo MESMO motivo da tabela de agentes, e não
+                  // por analogia: `assertModelFitsBindingScope` exige tool
+                  // calling em `agent` E em `area`. A área entrou nessa régua
+                  // no ADR 0064 porque ela não é fallback genérico — o único
+                  // consumidor do modelo de uma área é um agente dela —, então
+                  // o 422 da RN-040 alcança quem escolhe daqui igualzinho.
+                  filtroDeAgentesPadrao
                 />
               </div>
             )}
