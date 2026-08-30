@@ -302,9 +302,22 @@
   transition: color 0.1s, border-color 0.1s;
 }
 
-.remove:hover {
+/* `:not(:disabled)` porque `:hover` CASA em elemento desabilitado (o que o
+   browser não despacha ali são os EVENTOS, não o estado de CSS) — sem isto o
+   botão inerte acendia em VERMELHO ao passar o mouse, prometendo uma remoção
+   que não acontece. Mesma correção que `.voltarHerdar` levou na #443. */
+.remove:not(:disabled):hover {
   color: var(--danger);
   border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+}
+
+/* Sem `maintainer` a ação some, a LINHA fica (ADR 0064). Mesmo par de
+   propriedades de `.voltarHerdar:disabled` e do `.trigger:disabled` do
+   `ModelPicker`: controle apagado pelo mesmo motivo não pode parecer apagado
+   por motivos diferentes de uma seção para a outra. */
+.remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /*

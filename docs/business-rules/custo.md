@@ -2392,6 +2392,17 @@ exigiria uma consulta de papel POR PROJETO que o web ainda não tem, e é a mesm
 lacuna que `AreaModelsSection` já carregava; inventar uma segunda fonte de papel
 só numa seção seria pior que a lacuna.
 
+> **Nota aditiva ([RN-471](../business-rules.md#rn-471)):** a lacuna do parágrafo
+> acima é UMA, não uma por seção, e onde a tela JÁ faz a consulta de papel por
+> projeto ela se fecha em vez de se declarar. A seção de **Membros** busca
+> `listProjectMembers`, que é `findMemberRole` para todo mundo de uma vez, e
+> compõe `projectRole ?? workspaceRole` — exatamente o que `forProject` faz.
+> Isso não é a segunda fonte de papel que este parágrafo recusa: é a MESMA
+> composição, a partir de dados que aquela seção já tem em mãos. As duas seções
+> de modelo continuam com a aproximação por não terem esses dados. Cuidado ao
+> ler "SOBREPÕE nos dois sentidos" acima: é literal, e três descrições de OpenAPI
+> afirmam o contrário — ver a RN-471.
+
 - **Onde:** `apps/api/src/domain/llm/binding-resolver.ts` (precedência),
   `apps/api/src/domain/llm/model-capabilities.ts` (capability de `area`),
   `apps/api/src/application/use-cases/llm/resolve-model-binding.use-case.ts`
@@ -2404,7 +2415,7 @@ só numa seção seria pior que a lacuna.
   mudar de mínimo),
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:195` e `:222`
   (`developer` nos dois endpoints de agente — estas linhas NÃO mudaram),
-  `apps/web/src/lib/roles.ts:41` (`roleAtLeast` — a comparação que faltava),
+  `apps/web/src/lib/roles.ts:49` (`roleAtLeast` — a comparação que faltava),
   `apps/web/src/routes/settings/ModelsSection.tsx:77` (`podeEditar`, e por que
   `developer` e não `maintainer`), `:379` (o picker desabilitado), `:446` (o
   botão desabilitado, e por que o motivo não vai em `title`), `:546` (a legenda

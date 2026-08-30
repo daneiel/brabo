@@ -150,6 +150,8 @@
     "title": "Members and roles",
     "eyebrow": "IAM · per project",
     "subtitle": "Roles define who can approve which agent actions in this project.",
+    "subtitleCascata": " The role in this table replaces the workspace one for this project, in both directions — setting viewer here demotes even a workspace owner. Whoever reaches the project through the workspace alone doesn't show up in the list.",
+    "subtitleNeedsMaintainer": " Requires the maintainer role to invite someone, change a role, or remove someone.",
     "invite": {
       "placeholder": "User ID (UUID)",
       "button": "Invite"
@@ -164,7 +166,9 @@
     },
     "toast": {
       "inviteErrorTitle": "Failed to add member",
-      "inviteErrorMessage": "Check whether the user ID exists"
+      "inviteErrorMessage": "Check whether the user ID exists",
+      "roleErrorTitle": "Could not change the role",
+      "removeErrorTitle": "Could not remove the member"
     },
     "emptyMessage": "No member besides the project owner."
   },

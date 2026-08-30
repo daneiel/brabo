@@ -150,6 +150,8 @@
     "title": "Membros e papéis",
     "eyebrow": "IAM · por projeto",
     "subtitle": "Papéis definem quem pode aprovar quais ações dos agentes neste projeto.",
+    "subtitleCascata": " O papel desta tabela substitui o do workspace neste projeto, nos dois sentidos — definir viewer aqui rebaixa até quem é owner do workspace. Quem alcança o projeto só pelo workspace não aparece na lista.",
+    "subtitleNeedsMaintainer": " Exige papel maintainer para convidar, trocar o papel ou remover alguém.",
     "invite": {
       "placeholder": "ID do usuário (UUID)",
       "button": "Convidar"
@@ -164,7 +166,9 @@
     },
     "toast": {
       "inviteErrorTitle": "Falha ao adicionar membro",
-      "inviteErrorMessage": "Verifique se o ID do usuário existe"
+      "inviteErrorMessage": "Verifique se o ID do usuário existe",
+      "roleErrorTitle": "Não foi possível trocar o papel",
+      "removeErrorTitle": "Não foi possível remover o membro"
     },
     "emptyMessage": "Nenhum membro além do dono do projeto."
   },
