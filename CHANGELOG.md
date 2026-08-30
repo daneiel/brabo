@@ -6,6 +6,33 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: um chip **"Precisa de você"** no topo do projeto abre um painel com
+  as CINCO filas de decisão num lugar só (RN-467). O que faltava não era mais
+  um número: as cinco já tinham contador próprio no trilho, e quem abria o
+  projeto via cinco números espalhados por cinco abas e nenhuma frase dizendo o
+  que espera por ele. O painel lista as cinco SEPARADAS — cabeçalho e total por
+  fila, na ordem de urgência (aprovações, merges de PR, promoções de história,
+  pendências de arquitetura, hipóteses do Psicólogo) e, dentro de cada uma,
+  quem espera há mais tempo primeiro. **Nada é somado**: nem entre filas, nem
+  no chip, que anuncia PRESENÇA com um ponto e nunca uma quantidade — somar
+  apagaria qual fila está pedindo atenção, a mesma decisão que já mantinha os
+  contadores do trilho separados (ADR 0126). Aprovações e merges são
+  DECIDÍVEIS ali mesmo, pelo `ApprovalCard` com `variant="queue"` que a aba
+  de PRs já usava fora do chat; promoções, arquitetura e hipóteses levam à aba
+  onde a decisão mora. O painel é atalho para a decisão, **nunca substituto**:
+  os botões chamam os mesmos endpoints, e o teto de merge em branch protegida
+  (`decide.ts`, `require_approval` incondicional) continua valendo inteiro —
+  "Modo automático" nem aparece aqui, porque ligar autonomia é mudar política,
+  não decidir a ação da frente. Zero requisição a mais: as cinco consultas já
+  rodavam para os contadores, e o painel lê o mesmo cache. A pendência de
+  arquitetura **não tem data nenhuma** (`ArchitecturePendency` é visão
+  derivada, nunca gravada): ela EMPRESTA a data da história relacionada e a
+  tela diz que emprestou ("história atualizada há 18 min"); sem a história
+  carregada, mostra "sem data" e vai para o fim da fila — em nenhum caso um
+  instante inventado. A gramática visual vem do `NotificationBell`, mas a
+  mecânica é nova porque lá não existia: `role="dialog"`/`aria-modal` com
+  rótulo, `aria-expanded` no chip, foco levado ao painel e devolvido ao chip,
+  `Tab` preso dentro dele, `Esc` e clique-fora fechando
 - **web**: a navegação do projeto vira um TRILHO VERTICAL à esquerda do
   painel, e a régua horizontal de dois níveis sai (ADR 0126). O motivo é um
   só: 12 abas em 3 grupos não cabem numa barra desenhada para meia dúzia de
