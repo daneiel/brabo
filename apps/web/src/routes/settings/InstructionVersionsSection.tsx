@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
  * Histórico de versões por arquivo de agente (Fase 4b), com diff de cada
@@ -70,7 +71,7 @@ export function InstructionVersionsSection({ projectId }: { projectId: string })
   }));
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="instructions">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('instructionVersions.title')}</h2>
         <span className={styles.eyebrow}>{t('instructionVersions.eyebrow')}</span>
@@ -156,6 +157,6 @@ export function InstructionVersionsSection({ projectId }: { projectId: string })
           </div>
         ))
       )}
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }

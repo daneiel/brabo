@@ -22,6 +22,7 @@ import { Modal } from '../../components/ui/Modal';
 import { TrashIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
  * Personal Access Tokens do runner local (`brb_…`, ADR 0105) — cada usuário
@@ -205,7 +206,7 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
   ];
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="access-tokens">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('personalAccessTokens.title')}</h2>
         <span className={styles.eyebrow}>{t('personalAccessTokens.eyebrow')}</span>
@@ -279,6 +280,6 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
           </Button>
         </Modal>
       )}
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }

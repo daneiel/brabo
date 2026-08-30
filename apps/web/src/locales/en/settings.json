@@ -1,4 +1,14 @@
 {
+  "summary": {
+    "title": "On this page",
+    "ariaLabel": "Settings summary",
+    "groups": {
+      "projeto": "Project and execution",
+      "modelos": "Models",
+      "pessoas": "People and access",
+      "avancado": "Advanced"
+    }
+  },
   "matrix": {
     "title": "Who can approve what",
     "eyebrow": "summary matrix",

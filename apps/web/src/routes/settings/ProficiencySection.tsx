@@ -17,6 +17,7 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 const LEVEL_TONE: Record<ProficiencyLevel, BadgeTone> = {
   iniciante: 'muted',
@@ -151,7 +152,7 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="proficiency">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('proficiency.title')}</h2>
         <span className={styles.eyebrow}>{t('proficiency.eyebrow')}</span>
@@ -243,7 +244,7 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
           </div>
         </Modal>
       )}
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }
 

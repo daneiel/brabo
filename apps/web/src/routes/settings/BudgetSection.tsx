@@ -13,6 +13,7 @@ import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import { formatarCustoMicros } from './shared';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
  * O teto de GASTO de cada área, opcional (ADR 0110, RN-443).
@@ -66,7 +67,7 @@ export function BudgetSection({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="budget">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('budget.title')}</h2>
         <span className={styles.eyebrow}>{t('budget.eyebrow')}</span>
@@ -127,6 +128,6 @@ export function BudgetSection({ projectId }: { projectId: string }) {
           );
         })
       )}
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }

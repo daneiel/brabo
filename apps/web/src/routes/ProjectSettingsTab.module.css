@@ -7,6 +7,22 @@
   margin-bottom: 44px;
 }
 
+/*
+ * Toda seção é alvo de âncora do sumário (`settings/SumarioDeConfiguracoes`).
+ *
+ * `scroll-margin-top` porque `scrollIntoView({block:'start'})` encosta o topo
+ * da seção na borda da área de rolagem, e o título nasceria colado nela; 12px
+ * é o respiro que faz a seção parecer POSICIONADA e não empurrada.
+ *
+ * A seção recebe foco programático quando o sumário navega (`tabIndex={-1}`).
+ * Nenhum navegador desenha `:focus-visible` para foco programático, então não
+ * há anel a esconder — e por isso mesmo NÃO há `outline: none` aqui: apagar o
+ * anel cegamente tiraria o de quem chegasse por teclado.
+ */
+.ancora {
+  scroll-margin-top: 12px;
+}
+
 /* Título e legenda dividem a MESMA linha de base, como no desenho. */
 .sectionHead {
   display: flex;

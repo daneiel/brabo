@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 const DEFAULT_MAX_CONSECUTIVE_BLOCKED = 3;
 
@@ -52,7 +53,7 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
   if (!project) return null;
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="execution">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('execution.title')}</h2>
         <span className={styles.eyebrow}>{t('execution.eyebrow')}</span>
@@ -83,6 +84,6 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
           {saving ? t('execution.saving') : t('execution.save')}
         </Button>
       </div>
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }

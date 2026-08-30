@@ -6,6 +6,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: a aba **Configurações** ganha um **sumário ancorado**. Ela sempre
+  teve 17 seções numa rolagem só, e nenhum mapa: sem índice, sem âncora, sem
+  nenhum sinal de onde se está — quem procurava "Teto de gasto por área"
+  rolava até achar. Agora um sumário lista as seções agrupadas em quatro
+  blocos (**projeto e execução**, **modelos**, **pessoas e acesso**,
+  **avançado**), clicar leva à seção, e a entrada da seção em que você está
+  fica marcada enquanto você rola (`IntersectionObserver` sobre a faixa
+  superior da área visível). Os grupos são uma LEITURA da ordem que a aba já
+  tinha — os quatro caem contíguos sobre ela e nenhuma seção mudou de lugar,
+  o que um teste fixa. **O sumário não cria uma quarta faixa de moldura**: ele
+  mora DENTRO da área de conteúdo, repartindo os 1040px que ela já tinha, e a
+  moldura à esquerda continua exatamente nos 444px medidos (sidebar 264 +
+  trilho do projeto 180) que o ADR 0126 deixou — uma coluna por fora custaria
+  mais 208px antes do conteúdo, e esse preço já foi pago uma vez na aba
+  Código. Abaixo de 1200px de janela o sumário não some: ele deita numa faixa
+  horizontal acima das seções. **Só aparece o que está na tela**: sete das 17
+  seções não montam em condição normal (sem repositório provisionado, sem
+  papel de `owner` — RN-060, sem catálogo), e a entrada correspondente não
+  existe — um mapa que aponta para uma sala fechada é pior que nenhum mapa.
+  Toda seção virou um `<section>` com `id` e nome acessível (uma `region` para
+  leitor de tela, com o mesmo título que a tela mostra), e a URL passou a
+  aceitar `?section=` — `?section=budget` abre Configurações já na seção, e
+  `?section=` sozinho abre Configurações em vez de cair calado na Visão geral.
+  A rolagem é INSTANTÂNEA, como a de um link de âncora, e isso foi medido:
+  dentro do container desta aba a rolagem suave é cancelada pelo próprio
+  polling da página e o `scrollTop` fica onde estava
 - **web**: um chip **"Precisa de você"** no topo do projeto abre um painel com
   as CINCO filas de decisão num lugar só (RN-467). O que faltava não era mais
   um número: as cinco já tinham contador próprio no trilho, e quem abria o

@@ -26,6 +26,8 @@ import {
   type ChaveDeAba,
   type ContagensDeAba,
 } from './project-tabs';
+import { ContextoDeSecaoInicial } from './settings/secao-inicial';
+import type { ChaveDeSecao } from './settings/sumario';
 import styles from './ProjectPage.module.css';
 
 const PROVIDER_ICON = { github: GitHubIcon, gitlab: GitLabIcon, local: LocalRepoIcon } as const;
@@ -36,9 +38,16 @@ const VISIBILIDADE_KEY = { public: 'visibility.public', private: 'visibility.pri
 interface ProjectPageProps {
   projectId: string;
   initialTab?: ChaveDeAba;
+  /**
+   * A seção de Configurações a que o deep-link `?section=` aponta. Chega por
+   * CONTEXTO até a aba, e não por prop do painel: o registro de abas declara
+   * um prop só para as doze (`project-tabs.ts`), e alargá-lo por causa de uma
+   * faria a moldura voltar a carregar dado específico de uma aba.
+   */
+  initialSection?: ChaveDeSecao;
 }
 
-export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
+export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPageProps) {
   const { t } = useTranslation('projectPage');
   const [tab, setTab] = useState<ChaveDeAba>(initialTab ?? ABA_PADRAO);
   const [painelAberto, setPainelAberto] = useState(false);
@@ -268,7 +277,9 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
             escrito aqui: a Visão geral desenha as próprias regiões até a borda
             (o feed é um trilho com divisória à esquerda, não um card solto). */}
         <div className={[styles.body, aba.semRespiro && styles.bodyRente].filter(Boolean).join(' ')}>
-          <PainelDaAba projectId={projectId} />
+          <ContextoDeSecaoInicial.Provider value={initialSection}>
+            <PainelDaAba projectId={projectId} />
+          </ContextoDeSecaoInicial.Provider>
         </div>
       </div>
     </div>

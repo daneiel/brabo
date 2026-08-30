@@ -5,6 +5,7 @@ import { divergencias } from '../../lib/adoption';
 import { Alert } from '../../components/ui/Alert';
 import { BranchIcon } from '../../components/ui/icons';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
  * Repositório do projeto e, quando ele foi ADOTADO, as divergências que
@@ -33,7 +34,7 @@ export function RepositorySection({ projectId }: { projectId: string }) {
   const avisos = planoEstado?.plan ? divergencias(planoEstado.plan) : [];
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="repository">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('repository.title')}</h2>
         <span className={styles.eyebrow}>{t('repository.eyebrow')}</span>
@@ -75,6 +76,6 @@ export function RepositorySection({ projectId }: { projectId: string }) {
           </ul>
         </Alert>
       )}
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }

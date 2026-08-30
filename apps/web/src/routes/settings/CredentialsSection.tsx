@@ -16,6 +16,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
  * A sigla de duas letras do chip do conector (handoff, seção 7 item 4).
@@ -141,7 +142,7 @@ export function CredentialsSection() {
   }
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="credentials">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('credentials.title')}</h2>
         <span className={styles.eyebrow}>{t('credentials.eyebrow')}</span>
@@ -264,6 +265,6 @@ export function CredentialsSection() {
           );
         })}
       </div>
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }

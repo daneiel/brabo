@@ -20,6 +20,7 @@ import { ModelPicker } from '../../components/ModelPicker';
 import { ClockIcon } from '../../components/ui/icons';
 import { ORIGIN_TONE, formatarCustoMicros } from './shared';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
  * Modelos por agente — a primeira seção do mockup (`design/SCREENS.md`).
@@ -290,7 +291,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   ];
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="models">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('modelsSection.title')}</h2>
         <span className={styles.eyebrow}>{t('modelsSection.eyebrow')}</span>
@@ -329,6 +330,6 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       {allModels.length === 0 && (
         <div className={styles.subtitle}>{t('modelsSection.noModelsAvailable')}</div>
       )}
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }

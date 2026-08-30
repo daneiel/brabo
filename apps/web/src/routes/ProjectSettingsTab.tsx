@@ -8,12 +8,20 @@
  * `vi.mock('./ProjectSettingsTab', …)` DO CAMINHO. Mover o arquivo ou renomear
  * um export quebraria os três sem que nada no produto tivesse mudado.
  *
- * O componente não guarda NADA — sem hook, sem query, sem `t`, sem checagem de
+ * O componente não guarda NADA de DADO — sem query, sem `t`, sem checagem de
  * papel. Cada seção recebe no máximo `projectId` e chama os próprios hooks; a
  * duplicação de `useQuery({queryKey: ['project', projectId]})`,
  * `useTranslation('settings')` e afins entre seções é DELIBERADA e o
  * react-query a deduplica em runtime. Não a "otimize" para um pai comum ou um
  * context: isso seria mudança de comportamento vestida de limpeza.
+ *
+ * O que ele passou a guardar é NAVEGAÇÃO, e só ela: `ProvedorDoSumario` mantém
+ * quais seções estão montadas, qual está vigente na rolagem e como chegar a
+ * uma delas. É o oposto do caso acima — a pergunta "que seções existem agora?"
+ * não é respondível de dentro de nenhuma seção, e sete das 17 renderizam
+ * `null` em condição normal. A ordem de render abaixo é a MESMA de
+ * `settings/sumario.ts`, e as duas não podem divergir: é ela que decide qual
+ * entrada o sumário marca enquanto o leitor rola.
  */
 import { RepositorySection } from './settings/RepositorySection';
 import { ExecutionSection } from './settings/ExecutionSection';
@@ -32,6 +40,9 @@ import { InstructionVersionsSection } from './settings/InstructionVersionsSectio
 import { MatrixSection } from './settings/MatrixSection';
 import { CredentialsSection } from './settings/CredentialsSection';
 import { GastoDasChaves } from './settings/GastoDasChaves';
+import { ProvedorDoSumario } from './settings/SecaoDeConfiguracoes';
+import { SumarioDeConfiguracoes } from './settings/SumarioDeConfiguracoes';
+import styles from './settings/sumario.module.css';
 
 // Os 11 nomes que a aba já exportava antes da divisão — a superfície pública
 // não muda com o move. As outras 6 seções continuam sem reexport aqui: são
@@ -54,24 +65,30 @@ interface ProjectSettingsTabProps {
 
 export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
   return (
-    <div>
-      <RepositorySection projectId={projectId} />
-      <ExecutionSection projectId={projectId} />
-      <ExecutionModeSection projectId={projectId} />
-      <ParallelismSection projectId={projectId} />
-      <BudgetSection projectId={projectId} />
-      <PromotionSection projectId={projectId} />
-      <MelhoresModelosPorCapacidadeSection projectId={projectId} />
-      <ModelsSection projectId={projectId} />
-      <AreaModelsSection projectId={projectId} />
-      <CatalogoDeModelos projectId={projectId} />
-      <MembersSection projectId={projectId} />
-      <PersonalAccessTokensSection projectId={projectId} />
-      <ProficiencySection projectId={projectId} />
-      <InstructionVersionsSection projectId={projectId} />
-      <MatrixSection />
-      <CredentialsSection />
-      <GastoDasChaves projectId={projectId} />
-    </div>
+    <ProvedorDoSumario>
+      <div className={styles.layout}>
+        <SumarioDeConfiguracoes />
+
+        <div className={styles.secoes}>
+          <RepositorySection projectId={projectId} />
+          <ExecutionSection projectId={projectId} />
+          <ExecutionModeSection projectId={projectId} />
+          <ParallelismSection projectId={projectId} />
+          <BudgetSection projectId={projectId} />
+          <PromotionSection projectId={projectId} />
+          <MelhoresModelosPorCapacidadeSection projectId={projectId} />
+          <ModelsSection projectId={projectId} />
+          <AreaModelsSection projectId={projectId} />
+          <CatalogoDeModelos projectId={projectId} />
+          <MembersSection projectId={projectId} />
+          <PersonalAccessTokensSection projectId={projectId} />
+          <ProficiencySection projectId={projectId} />
+          <InstructionVersionsSection projectId={projectId} />
+          <MatrixSection />
+          <CredentialsSection />
+          <GastoDasChaves projectId={projectId} />
+        </div>
+      </div>
+    </ProvedorDoSumario>
   );
 }

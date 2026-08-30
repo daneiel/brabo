@@ -1,0 +1,183 @@
+/*
+ * O sumário ancorado da aba Configurações e a coluna dupla que ele cria.
+ *
+ * A restrição que desenha este arquivo: NENHUMA faixa vertical nova. O corpo
+ * do projeto já mora à direita do trilho de 180px (ADR 0126), que mora à
+ * direita da sidebar do Shell — uma terceira coluna POR FORA custaria mais
+ * moldura antes do conteúdo, e o ADR 0126 já pagou e mediu esse preço uma vez
+ * na aba Código. Então o sumário é filho de `.body` (`ProjectPage.module.css`)
+ * e reparte a largura máxima de 1040px que já existia ali: a moldura da tela
+ * fica exatamente do tamanho que estava.
+ *
+ * A gramática visual é a do trilho do projeto (`ProjectRail.module.css`) —
+ * item de 13px em `--radius-sm`, ativo tingido com `color-mix(in srgb,
+ * var(--accent) 12%, transparent)`, cabeçalho de grupo em mono minúsculo
+ * `--text-muted`. É o mesmo gesto ("uma lista vertical de destinos, um
+ * marcado"), e dar a ele um desenho próprio só ensinaria duas gramáticas para
+ * a mesma ideia. As duas divergências são deliberadas: sem faixa `--surface-1`
+ * e sem divisória (ele está DENTRO do conteúdo, não emoldurando-o), e sem
+ * contador (seção não tem fila de decisão).
+ */
+
+.layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+/* `min-width: 0` pelo mesmo motivo do `.body`: tabela larga (Modelos por
+   agente, Catálogo) empurraria o sumário para fora em vez de rolar por dentro. */
+.secoes {
+  flex: 1;
+  min-width: 0;
+}
+
+/*
+ * `sticky` dentro de `.body`, que é quem rola (`overflow-y: auto`). Sem
+ * `align-self: flex-start` o item de flex esticaria até a altura da coluna de
+ * seções e `sticky` não teria folga nenhuma para grudar.
+ *
+ * `max-height`/`overflow-y` são o piso de honestidade: 17 entradas mais quatro
+ * cabeçalhos cabem numa janela normal, mas numa baixa o sumário rola por
+ * dentro em vez de ter o fim cortado sem aviso.
+ */
+.sumario {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  flex: 0 0 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: calc(100vh - var(--header-h, 60px) - 48px);
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+
+/* "Nesta página" — o título do sumário, na mesma gramática mono/caixa alta dos
+   cabeçalhos de grupo, só que em `--text-secondary` para ficar um degrau
+   acima deles na hierarquia. */
+.cabecalho {
+  padding: 2px 8px 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+}
+
+.grupo:first-of-type {
+  margin-top: 0;
+}
+
+.grupoLabel {
+  padding: 6px 8px 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.item {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.item:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.itemAtivo,
+.itemAtivo:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Anel INSET pelo mesmo motivo do trilho: o sumário rola por dentro, e um anel
+   para fora seria cortado na primeira e na última entrada. */
+.item:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+@media (forced-colors: active) {
+  .item:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+/*
+ * Janela estreita: o sumário NÃO some, deita.
+ *
+ * A conta que decide o corte: a 1200px de viewport sobram ~756px para `.body`
+ * depois da sidebar (264) e do trilho (180); tirados os 48 de respiro e os 208
+ * da coluna do sumário, a coluna de seções ficaria com ~500px — estreito
+ * demais para as tabelas de modelo. Abaixo disso o sumário vira uma faixa
+ * horizontal acima das seções, com as entradas quebrando linha: perde-se o
+ * "onde estou" grudado na tela, não a navegação.
+ */
+@media (max-width: 1200px) {
+  .layout {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .sumario {
+    position: static;
+    flex: none;
+    width: 100%;
+    max-height: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+
+  .secoes {
+    width: 100%;
+  }
+
+  .grupo {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 0;
+  }
+
+  .item {
+    width: auto;
+    min-height: 26px;
+  }
+}

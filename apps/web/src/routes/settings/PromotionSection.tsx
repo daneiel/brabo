@@ -6,6 +6,7 @@ import type { StoryPromotionMode } from '../../lib/api-types';
 import { Select } from '../../components/ui/Select';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
  * Quem promove história a `ready` (Fase 12c — RN-048).
@@ -46,7 +47,7 @@ export function PromotionSection({ projectId }: { projectId: string }) {
   if (!project) return null;
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="promotion">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('promotion.title')}</h2>
         <span className={styles.eyebrow}>{t('promotion.eyebrow')}</span>
@@ -80,6 +81,6 @@ export function PromotionSection({ projectId }: { projectId: string }) {
           </Select>
         </div>
       </div>
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }

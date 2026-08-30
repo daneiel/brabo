@@ -11,6 +11,7 @@ import { formatarPreco, ROTULO_DO_USO, USOS_DE_MODELO } from '../../lib/models';
 import { Table, type TableColumn } from '../../components/ui/Table';
 import { Badge, type BadgeTone } from '../../components/ui/Badge';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
  * Cor de cada uso na tabela de "melhores modelos por capacidade" — só
@@ -173,7 +174,7 @@ export function MelhoresModelosPorCapacidadeSection({
   ];
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="best-models">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('bestModels.title')}</h2>
         <span className={styles.eyebrow}>{t('bestModels.eyebrow')}</span>
@@ -189,6 +190,6 @@ export function MelhoresModelosPorCapacidadeSection({
         rowKey={(l) => l.uso}
         emptyMessage={t('bestModels.emptyMessage')}
       />
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }

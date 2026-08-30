@@ -15,6 +15,7 @@ import { Button } from '../../components/ui/Button';
 import { TrashIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
+import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /** Duas letras a partir do nome (ou do e-mail, quando não há nome). */
 function iniciaisDe(rotulo: string): string {
@@ -145,7 +146,7 @@ export function MembersSection({ projectId }: { projectId: string }) {
   ];
 
   return (
-    <div className={styles.section}>
+    <SecaoDeConfiguracoes chave="members">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('members.title')}</h2>
         <span className={styles.eyebrow}>{t('members.eyebrow')}</span>
@@ -179,6 +180,6 @@ export function MembersSection({ projectId }: { projectId: string }) {
         rowKey={(m) => m.userId}
         emptyMessage={t('members.emptyMessage')}
       />
-    </div>
+    </SecaoDeConfiguracoes>
   );
 }
