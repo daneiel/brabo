@@ -61,10 +61,11 @@ daqui e o fechamento vai para o histórico.
 - `SessionPage.tsx` (169 KiB, 25 arquivos de teste importando) está sendo
   dividido em 5 PRs mecânicos, cada um mergeado antes do próximo começar
   (arquivo sob churn ativo — não paralelizar). PR 1/5 fechou: helpers puros
-  de timeline/turno → `apps/web/src/lib/session-timeline.ts`. Restam:
-  `StorySlide.tsx`, `StructuredQuestionCard.tsx`, helpers de árvore de
-  backlog + `ContextAside.tsx`, e um hook `useSessionReadiness` (o único
-  passo que não é move mecânico). Fora de escopo do plano inteiro, decisão
+  de timeline/turno → `apps/web/src/lib/session-timeline.ts`. PR 2/5 fechou:
+  `StorySlide` → `apps/web/src/routes/StorySlide.tsx`. Restam:
+  `StructuredQuestionCard.tsx`, helpers de árvore de backlog +
+  `ContextAside.tsx`, e um hook `useSessionReadiness` (o único passo que
+  não é move mecânico). Fora de escopo do plano inteiro, decisão
   separada com ADR próprio quando for a vez: o cluster de estado do canal
   de turno (`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/
   `atividadeDoTurno`) e `ProjectSettingsTab.tsx`.
