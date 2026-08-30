@@ -1992,6 +1992,14 @@ export function SessionPage({
           </Badge>
         )}
         <div className={styles.spacer} />
+        {/* SEM `filtroDeAgentesPadrao`, ao contrário dos seletores de agente e
+            de área nas Configurações — e a omissão é decisão, não esquecimento.
+            Este picker grava no escopo `session`, e `assertModelFitsBindingScope`
+            deixa `session` livre de propósito (RN-040): quem `exigeToolCalling`
+            é o TURNO, não o escopo — `RunLlmTurnUseCase` só liga a exigência
+            quando há ferramenta na chamada. Marcar o filtro aqui esconderia
+            modelo que a api aceita, que é o inverso do defeito que ligá-lo nas
+            outras duas telas conserta. */}
         {modelsByCategory && (
           <ModelPicker
             variant="topbar"

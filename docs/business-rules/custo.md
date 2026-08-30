@@ -66,9 +66,49 @@ locking them would forbid chat-only models in the product. The
 `context-manager` agent is covered by construction: it's a slug
 **within** the `agent` scope, not its own scope.
 
-- **Where:** `apps/api/src/domain/llm/model-capabilities.ts:38`
+**Nota aditiva — o filtro passou a vir MARCADO, e quem o liga é o ESCOPO.** O
+parágrafo acima diz que a recusa aponta para o filtro "aptos para agentes",
+"senão a regra vira beco sem saída" — e por muito tempo ela foi um: o prop que
+abre o seletor com o filtro marcado existia desde a Fase 9c e **nenhuma tela de
+produção o passava**. O seletor de um agente abria oferecendo modelo chat-only
+cujo clique só existia para ser recusado. As duas telas que gravam num escopo
+validado passam a abrir filtradas — `ModelsSection` (agente) e
+`AreaModelsSection` (área) —, e a régua de quem liga não é a tela e sim
+`assertModelFitsBindingScope`: onde a api RECUSA, o filtro vem marcado; onde ela
+não recusa, quem escolhe é a pessoa. Por isso o seletor de SESSÃO continua sem
+filtro — marcar ali esconderia modelo que a api aceita. **Isto não elimina o
+422**: o filtro cobre uma das três causas, e as outras duas
+([RN-043](#rn-043) — desativado no workspace, sumido do provider) seguem
+alcançáveis, com o indisponível ainda LISTADO e marcado; o desfecho de recusa da
+[RN-470](#rn-470) continua sendo o que conta o que houve. E é estado INICIAL de
+um checkbox, não trava: desmarcar volta a listar tudo.
+
+**A consequência: o vigente que o filtro esconde é DITO.** `workspace` e
+`project` nunca exigiram tool calling, e as rotas que resolvem o binding de um
+agente ou de uma área chamam `ResolveModelBindingUseCase` **sem**
+`exigeToolCalling` — então um padrão chat-only desses níveis é resolvido
+normalmente e vira o vigente da linha. Com o filtro marcado, o gatilho mostrava
+um nome que a lista aberta não continha, sem nenhuma opção marcada. O picker
+agora nomeia o modelo e a causa; ele PODE nomear a causa porque só há um filtro
+ali. Quando a lista inteira fica vazia, quem fala continua sendo o texto de
+lista vazia, que já manda desmarcar — dois avisos sobre o mesmo checkbox seriam
+ruído.
+
+**Correção de fato, não do texto acima:** "Only `agent` validates" descreve a
+Fase 9a. Desde o [ADR 0064](../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)
+`area` entra na MESMA validação — ela não é fallback genérico, o único consumidor
+do modelo de uma área é um agente dela ([RN-102](#rn-102)) —, e é por isso que
+são DUAS as telas que ligam o filtro.
+
+- **Where:** `apps/api/src/domain/llm/model-capabilities.ts:38`;
+  `apps/web/src/components/ModelPicker.tsx` (o filtro e o aviso de vigente
+  escondido), `apps/web/src/routes/settings/ModelsSection.tsx`,
+  `apps/web/src/routes/settings/AreaModelsSection.tsx` (quem o liga)
 - **Test:** `test/domain/llm/model-capabilities.spec.ts`,
-  `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`
+  `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`;
+  `apps/web/src/routes/settings/filtro-de-aptos.test.tsx` e
+  `apps/web/src/routes/SessionPage.filtro-de-aptos.test.tsx` (as duas telas que
+  ligam, e a que não liga)
 - **Origin:** [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
 
 ### RN-041 — Token count the provider didn't give is marked as estimated {#rn-041}

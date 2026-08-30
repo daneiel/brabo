@@ -119,6 +119,18 @@
   cursor: pointer;
 }
 
+/* O aviso de que o filtro escondeu o modelo VIGENTE. Fica logo abaixo do
+   checkbox que o causa, e num tom de atenção — não é lista vazia (essa é
+   `.vazio`, com `--text-muted`), é a lista contradizendo o gatilho. */
+.vigenteEscondido {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--warning);
+}
+
 .vazio {
   padding: 12px;
   font-family: var(--font-mono);
