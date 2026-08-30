@@ -927,6 +927,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   (`StorySlide`, `StructuredQuestionCard`, helpers de árvore de backlog +
   `ContextAside`, e um hook `useSessionReadiness`), cada um mergeado antes
   do próximo começar
+- **web**: PR 2 de 5 da decomposição mecânica de `SessionPage.tsx`
+  (ADR 0122) — `StorySlide`, o slide do carrossel de histórias aguardando
+  promoção (RN-148), sai para `apps/web/src/routes/StorySlide.tsx`, sibling
+  de `SessionPage.tsx` e não subpasta (o único precedente de subpasta em
+  `routes/` é `routes/code/`, para uma feature bem maior). Primeiro
+  componente JSX a sair do arquivo, e o mais simples: um leaf sem filhos que
+  também precisassem mover. Continua importando `SessionPage.module.css`
+  direto — a única importadora do módulo CSS até aqui, decisão já escrita
+  no ADR 0122 pra não relitigar em cada uma das três PRs de componente.
+  Nenhum tipo, helper ou constante compartilhada precisou mover junto nem
+  reexportar: `StorySlide` não é importado por nome em nenhum teste (só
+  renderizado dentro de `<SessionPage>`), diferente das cinco funções da
+  PR 1. ZERO mudança de comportamento observável: os mesmos 24 arquivos
+  `SessionPage.*.test.tsx` (o `SessionPage.ponto.test.ts` da contagem
+  original da ADR já tinha migrado para `session-timeline.test.ts` na PR 1)
+  passam SEM EDIÇÃO nenhuma. Restam 3 PRs no plano declarado pelo ADR 0122
+  (`StructuredQuestionCard`, helpers de árvore de backlog + `ContextAside`,
+  e o hook `useSessionReadiness`)
 
 ## v3.1.0 — 2026-08-13
 
