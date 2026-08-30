@@ -1720,7 +1720,7 @@ depois de ler.
   `application/use-cases/execution/request-parallelization.use-case.ts`,
   `application/use-cases/execution/set-area-max-parallel.use-case.ts`,
   exposto em `interfaces/http/execution/execution.controller.ts` e configurado
-  em `apps/web/src/routes/ProjectSettingsTab.tsx` (`ParallelismSection`)
+  em `apps/web/src/routes/settings/ParallelismSection.tsx`
 - **Teste:** `apps/api/test/domain/execution/paralelismo.spec.ts`,
   `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`,
   `test/application/use-cases/execution/set-area-max-parallel.use-case.spec.ts`
@@ -2321,8 +2321,8 @@ uma vez, e escolher modelo é decidir quanto o produto gasta sem perguntar.
   banco), `apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts`,
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts`
   (`area-bindings`, `DELETE` em `agent-bindings` e `area-bindings`),
-  `apps/web/src/routes/ProjectSettingsTab.tsx` (`AreaModelsSection`, coluna
-  Origem com "voltar a herdar")
+  `apps/web/src/routes/settings/AreaModelsSection.tsx` (coluna Origem com
+  "voltar a herdar")
 - **Teste:** `test/domain/llm/binding-resolver.spec.ts`,
   `test/domain/llm/model-capabilities.spec.ts`,
   `test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`,

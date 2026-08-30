@@ -4383,8 +4383,8 @@ existência que a RN-426 já aplicava.
   (`listarDoProjeto`, `revogarComoMaintainer`),
   `apps/api/src/interfaces/http/runner/personal-access-tokens.controller.ts`
   (`listAllPats`, `revokePatAsMaintainer`),
-  `apps/web/src/routes/ProjectSettingsTab.tsx` (`PersonalAccessTokensSection`,
-  sub-lista visível só para `owner`/`maintainer`)
+  `apps/web/src/routes/settings/PersonalAccessTokensSection.tsx`
+  (sub-lista visível só para `owner`/`maintainer`)
 - **Teste:** `apps/api/test/application/use-cases/auth/list-personal-access-tokens-as-maintainer.use-case.spec.ts`,
   `apps/api/test/application/use-cases/auth/revoke-personal-access-token-as-maintainer.use-case.spec.ts`,
   `apps/api/test/infrastructure/persistence/personal-access-token.repository.spec.ts`
@@ -4990,8 +4990,7 @@ padrão de `RenameSessionDto`.
   `apps/api/src/application/use-cases/execution/set-area-budget.use-case.ts`;
   `apps/api/src/infrastructure/persistence/drizzle/agent-area.repository.ts`
   (`setBudget`/`incrementSpent`); `apps/api/src/interfaces/http/execution/execution.controller.ts`
-  (`PUT agent-areas/:key/budget`); `apps/web/src/routes/ProjectSettingsTab.tsx`
-  (`BudgetSection`)
+  (`PUT agent-areas/:key/budget`); `apps/web/src/routes/settings/BudgetSection.tsx`
 - **Teste:** `apps/api/test/application/use-cases/llm/check-budget-gate.use-case.spec.ts`
   (describe `budget de área — aditivo, não cascata`: área excedida bloqueia
   com projeto/sessão OK e vice-versa, sem teto nunca bloqueia, agente sem

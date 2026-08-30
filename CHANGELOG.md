@@ -1087,6 +1087,36 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   2 661. Fecha, especificamente, o item de canal de turno que a ADR 0122
   tinha deixado em aberto — `ProjectSettingsTab.tsx`, o outro arquivo da
   mesma linha de dívida, segue intocado, decisão de escopo separada
+- **web**: `ProjectSettingsTab.tsx` deixa de ser um arquivo de 2 532
+  linhas/89,9 KiB — a ÚLTIMA metade em aberto da linha de dívida declarada
+  em `docs/architecture.md`, que as ADRs 0122 e 0124 nomearam e adiaram
+  duas vezes de propósito. As 17 seções viram um arquivo cada sob
+  `apps/web/src/routes/settings/`, e o arquivo antigo CONTINUA no mesmo
+  caminho como entrada e barrel, com 77 linhas (ADR 0125). O barrel é
+  estrutural, não cosmético: `ProjectSettingsTab.test.tsx` importa 11 nomes
+  daquele caminho e `ProjectPage.test.tsx`/`project-tabs.test.tsx` fazem
+  `vi.mock` DO CAMINHO — mover ou renomear quebraria os três sem que nada
+  do produto mudasse. UMA PR e não cinco (como foi a decomposição do
+  `SessionPage.tsx`) porque este arquivo nunca teve aquele formato: o pai
+  não guardava NADA (17 filhos JSX, sem hook, sem query, sem `t`, sem
+  checagem de papel), nenhuma seção recebe mais que `{projectId}` (duas não
+  recebem prop nenhuma) e 11 das 17 já eram exportadas. Dos doze helpers de
+  escopo de módulo, só DOIS tinham mais de um chamador e foram para
+  `settings/shared.ts` (`ORIGIN_TONE`, `formatarCustoMicros`); os outros
+  dez foram para o arquivo do seu único chamador — a checagem por grep
+  corrigiu uma expectativa de passagem, `iniciaisDe`/`gradienteDe` são só
+  do `MembersSection`, nunca do `ProficiencySection`. As 6 seções privadas
+  ganham `export` no PRÓPRIO arquivo (consequência mecânica: o barrel
+  precisa importá-las), mas NÃO são reexportadas pelo barrel — a superfície
+  pública da aba fica idêntica em formato, porque um move mecânico não
+  alarga contrato. `ProjectSettingsTab.module.css` segue um módulo CSS
+  ÚNICO e compartilhado, agora com 15 importadoras, mesma resposta que a
+  ADR 0122 deu para `SessionPage.module.css` e pelo mesmo motivo: nunca
+  houve segunda cópia, então não há para onde derivar. ZERO mudança de
+  comportamento observável: a suíte inteira do web (142 arquivos, 1 537
+  testes) passa com ZERO arquivo de teste editado, incluindo
+  `ProficiencySection.test.tsx`, o único que renderiza as 17 seções de uma
+  vez. Fecha a linha de dívida nas DUAS metades
 
 ## v3.1.0 — 2026-08-13
 

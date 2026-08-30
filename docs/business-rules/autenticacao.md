@@ -494,7 +494,7 @@ que some (RN-088: nunca falha silenciosa ou confusa).
   `apps/api/src/domain/anamnese/anamnese-disabled.error.ts`,
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts`
   (`runAnamnese`), `apps/api/src/application/use-cases/anamnese/run-anamnese.use-case.ts`,
-  `apps/web/src/routes/ProjectSettingsTab.tsx` (`ProficiencySection`)
+  `apps/web/src/routes/settings/ProficiencySection.tsx`
 - **Teste:**
   `apps/engine/test/engine/workers/anamnese_scheduler_worker_test.exs`
   (`kickoff/0` não agenda desativado, agenda ativado, default desligado;
@@ -2619,8 +2619,7 @@ mais honesto disponível sem inventar nota. Capacidade sem nenhum modelo curado
 mostra "sem cobertura curada" — nunca esconde a linha, mesmo padrão que a
 coluna Origem de `ModelsSection` já usa para o binding pulado.
 
-- **Onde:** `apps/web/src/routes/ProjectSettingsTab.tsx`
-  (`MelhoresModelosPorCapacidadeSection`)
+- **Onde:** `apps/web/src/routes/settings/MelhoresModelosPorCapacidadeSection.tsx`
 - **Teste:** `apps/web/src/routes/ProjectSettingsTab.test.tsx`
   (describe "MelhoresModelosPorCapacidadeSection")
 - **ADR:** [0077](../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)
