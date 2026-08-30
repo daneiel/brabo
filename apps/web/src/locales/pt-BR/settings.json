@@ -65,6 +65,27 @@
     "usedByCount_other": "{{count}} agentes deste projeto",
     "emptyMessage": "Nenhuma capacidade cadastrada."
   },
+  "cascata": {
+    "niveis": {
+      "workspace": "workspace",
+      "project": "projeto",
+      "area": "área",
+      "agent": "agente",
+      "session": "sessão"
+    },
+    "modeloDesconhecido": "modelo desconhecido",
+    "titulo": {
+      "vigente": "É deste nível que sai o modelo vigente ({{modelo}}).",
+      "doStart": "Nenhum nível da cascata escolheu um modelo aqui — o produto herda o do Criativo, o agente de start, em vez de deixar cair no default do workspace. O Criativo usa {{modelo}}.",
+      "definido": "{{polo}} neste nível ({{modelo}}), mas um nível mais específico venceu.",
+      "vazio": "{{polo}} neste nível.",
+      "puladoIndisponivel": "A cascata DESCARTOU este nível: {{modelo}} sumiu do provider.",
+      "puladoSemToolCalling": "A cascata DESCARTOU este nível: {{modelo}} não faz tool calling e não serve a um agente."
+    },
+    "niveisComNome": {
+      "area": "área {{area}}"
+    }
+  },
   "modelsSection": {
     "title": "Modelos por agente",
     "eyebrow": "binding vigente por cascata",
@@ -87,14 +108,16 @@
       "fallback": "Fallback",
       "estimate": "Est. mês"
     },
-    "skippedBadge": "{{scope}} pulado",
-    "skippedTitleUnavailable": "O modelo de {{scope}} sumiu do provider — a cascata caiu para {{origin}}.",
-    "skippedTitleNoToolCalling": "O modelo de {{scope}} não faz tool calling e não serve a um agente — a cascata caiu para {{origin}}.",
-    "areaOriginTitle": "Padrão da área {{area}}.",
     "backToInheritTitleWithArea": "Apaga o modelo próprio deste agente — ele volta a usar o padrão da área {{area}}.",
     "backToInheritTitleNoArea": "Apaga o modelo próprio deste agente — ele volta a herdar do projeto ou do workspace.",
     "emptyMessage": "Nenhum agente configurado.",
-    "noModelsAvailable": "Nenhum modelo disponível ainda."
+    "noModelsAvailable": "Nenhum modelo disponível ainda.",
+    "originChainNoModel": "sem modelo em nenhum nível",
+    "originChainNoModelTitle": "Nem o agente, nem a área, nem o projeto, nem o workspace têm modelo escolhido. Uma sessão ainda pode fixar um.",
+    "fallbackNone": "não há nível abaixo",
+    "fallbackNoneTitle": "O modelo vigente já vem do último nível da cascata — não existe degrau abaixo dele para onde cair.",
+    "noEstimateYet": "sem gasto ainda",
+    "noEstimateTitle": "Este agente não registrou consumo neste projeto nos últimos 30 dias. Diferente de ter gastado zero, que aparece como US$ 0,00."
   },
   "areaModels": {
     "title": "Modelo por área",
@@ -112,7 +135,9 @@
     "toast": {
       "saveError": "Não foi possível salvar",
       "reverted": "Área {{area}} voltou a herdar"
-    }
+    },
+    "originChainNoModel": "sem padrão em nenhum nível",
+    "originChainNoModelTitle": "Nem esta área, nem o projeto, nem o workspace têm modelo escolhido — o lead e os subagentes desta área não têm padrão para herdar."
   },
   "members": {
     "title": "Membros e papéis",

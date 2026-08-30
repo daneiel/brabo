@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import {
   clearAreaModelBinding,
   getAreaModelBinding,
+  getProjectModelBinding,
+  getWorkspaceModelBinding,
   listModels,
   mensagemDaApi,
   setAreaModelBinding,
@@ -10,13 +12,12 @@ import {
 import { AREAS } from '../../lib/agents';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import type { Model } from '../../lib/api-types';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { ModelPicker } from '../../components/ModelPicker';
 import { useToast } from '../../components/ui/ToastProvider';
-import { ORIGIN_TONE } from './shared';
 import styles from '../ProjectSettingsTab.module.css';
 import { MarcaDeHeranca, useVoltarAHerdar } from './heranca';
+import { CadeiaDeCascata, montarCadeia } from './cascata';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
@@ -48,6 +49,34 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
       queryFn: () => getAreaModelBinding(projectId, key),
     })),
   });
+
+  // Os DOIS níveis acima da área, para a cadeia da cascata. As chaves são as
+  // MESMAS de `ModelsSection` — as duas seções vivem na mesma aba, e o React
+  // Query serve as duas com uma requisição por nível, não duas.
+  const { data: bindingDoProjeto } = useQuery({
+    queryKey: ['project-model-binding', projectId],
+    queryFn: () => getProjectModelBinding(projectId),
+  });
+  // O workspace sai do par que esta seção JÁ consulta para decidir o papel —
+  // buscar o projeto de novo só para ler `workspaceId` seria um round-trip a
+  // mais pela mesma informação.
+  const workspaceId = comPapel?.workspace?.id;
+  const { data: bindingDoWorkspace } = useQuery({
+    queryKey: ['workspace-model-binding', workspaceId],
+    queryFn: () => getWorkspaceModelBinding(workspaceId!),
+    enabled: Boolean(workspaceId),
+  });
+
+  // Nome de exibição para os `title` da cadeia — mesma lista que o
+  // `ModelPicker` desta seção já recebe, sem consulta a mais.
+  const nomeDoModelo = (modelId: string) =>
+    (modelsByCategory
+      ? [
+          ...Object.values(modelsByCategory.local).flat(),
+          ...Object.values(modelsByCategory.cloud).flat(),
+        ]
+      : []
+    ).find((m) => m.id === modelId)?.displayName;
 
   function invalidate(areaKey: string) {
     queryClient.invalidateQueries({ queryKey: ['area-binding', projectId, areaKey] });
@@ -105,9 +134,28 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
             <div className={styles.ajusteInfo}>
               <div className={styles.ajusteTitulo}>
                 <span>{t('areaModels.card.title', { area: area.label })}</span>
-                <Badge tone={resolved ? ORIGIN_TONE[resolved.origin] : 'muted'}>
-                  {resolved?.origin ?? '—'}
-                </Badge>
+                {/* A cadeia no lugar do enum cru (e do `—`). `origin: 'agent'`
+                    aqui só pode ser o passo pós-cascata do Criativo: a consulta
+                    de ÁREA não tem escopo de agente na cascata
+                    (`ResolveModelBindingUseCase`), então não há o caso ambíguo
+                    que a tabela de agentes tem. */}
+                <CadeiaDeCascata
+                  niveis={montarCadeia({
+                    resolvido: resolved,
+                    niveis: ['workspace', 'project', 'area'],
+                    proprios: {
+                      workspace: bindingDoWorkspace?.modelId,
+                      project: bindingDoProjeto?.modelId,
+                    },
+                    herdadoDoStart: resolved?.origin === 'agent',
+                  })}
+                  rotulos={{
+                    area: t('cascata.niveisComNome.area', { area: area.label }),
+                  }}
+                  nomeDoModelo={nomeDoModelo}
+                  rotuloSemModelo={t('areaModels.originChainNoModel')}
+                  tituloSemModelo={t('areaModels.originChainNoModelTitle')}
+                />
               </div>
               <div className={styles.ajusteHint}>
                 {t('areaModels.card.lead', { lead: area.lead })}
@@ -116,10 +164,11 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
                   : t('areaModels.card.subagentsDynamic')}
               </div>
               <div className={styles.ajusteHint}>
-                {/* Sem detalhe nos dois polos: DE ONDE o valor vem quando a
-                    área não tem o próprio é o que o Badge de origem ao lado do
-                    título diz, e torná-lo uma cadeia legível é trabalho de
-                    outra PR — a marca declara o ESTADO, não a cascata. */}
+                {/* Sem detalhe nos dois polos, e agora por um motivo mais forte
+                    que o de antes: DE ONDE o valor vem é a CADEIA ao lado do
+                    título, e a marca declara o ESTADO. A divisão é a que
+                    `heranca.tsx` já previa — as duas peças não dizem a mesma
+                    coisa de dois jeitos, dizem coisas diferentes. */}
                 <MarcaDeHeranca proprio={divergiuDoProjeto} />
               </div>
             </div>

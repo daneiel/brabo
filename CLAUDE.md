@@ -59,6 +59,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Padrão único de valor herdado | As QUATRO redações de "não tem valor próprio" da aba Configurações viram dois polos e um verbo, de uma fonte só (`routes/settings/heranca.tsx`): rótulo diz o ESTADO, detalhe diz a CONSEQUÊNCIA. Vocabulário unificado, forma não — a marca só entra onde o controle não mostra o estado sozinho | CHANGELOG |
 | Salvar por seção em Configurações | Paralelismo e Teto de gasto trocam N botões de linha por UM da seção (`settings/secao-salvavel.tsx`), com contagem de linhas pendentes e desfecho POR LINHA — salvar é N chamadas, não uma transação, e a tela nunca afirma o que não obteve. As três seções de autosave e Credenciais ficam de fora, cada uma por um motivo declarado | RN-469 |
 | Painel "precisa de você" | Chip no topo do projeto abre as CINCO filas de decisão num lugar só — separadas, ordenadas por urgência, sem soma nenhuma (nem no chip). Aprovações e merges decidem ali pelo `ApprovalCard`; as outras três levam à aba. Pendência de arquitetura empresta a data da história e DIZ que emprestou | RN-467 |
+| Cascata de modelo como cadeia visível | A coluna Origem para de imprimir o enum do banco e vira `workspace › projeto › área › agente` com quatro estados por nó (`settings/cascata.tsx`) — separando os DOIS sentidos de `origin: 'agent'` sem tocar na api. O aviso de nível descartado entra na cadeia; os três `—` ganham três textos. Fecha o canvas de melhorias de UI (7 de 7 itens tomados) | RN-470 |
 
 ## Estado atual e aberto
 
@@ -451,6 +452,20 @@ daqui e o fechamento vai para o histórico.
   uma linha suja e com cinco. E a régua de quando o botão existe é o CONTROLE,
   não a seção: campo DIGITADO precisa de confirmação, escolha de valor NOMEADO
   salva no `onChange` — não converta as seções de autosave.
+- Tela NUNCA repete o enum do banco como se fosse resposta, e não colapsa
+  dois estados por eles compartilharem um valor (RN-470). `origin: 'agent'`
+  da cascata de modelo quer dizer DUAS coisas — o agente tem binding próprio,
+  ou a cascata pousou em `workspace` e `herdarModeloDeStart` trocou o valor
+  pelo do Criativo. A api está certa em devolver `agent` nos dois (o valor
+  veio mesmo de um agente): quem separa é a TELA, e ela separa mostrando a
+  cascata inteira como cadeia — `workspace › projeto › área › agente`, com
+  `vigente`/`definido`/`vazio`/`pulado` por nó, o nível que a cascata alcançou
+  marcado como definido-e-não-vigente quando o Criativo entrou, e um nó extra
+  nomeando o Criativo. A derivação é do CLIENTE, sem endpoint novo; o que ela
+  NÃO consegue provar (agente com linha própria igual à do Criativo) fica
+  declarado, e a ação que só importa nesse caso continua acionável. Vazio tem
+  texto próprio e vazios diferentes têm textos diferentes — um traço que serve
+  a três significados não é neutro, é a tela recusando nomear o que sabe.
 - Sinal de ambiente diz o que SABE, e proxy nunca vira garantia (RN-468).
   A tela de login é PRÉ-identidade: só cabem ali os dois `/health`, que já
   são públicos nos dois serviços — presença de runner
