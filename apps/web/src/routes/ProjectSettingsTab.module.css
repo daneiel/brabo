@@ -146,6 +146,10 @@
 
 /* Fallback e estimativa: mono, como toda coluna de dado do desenho. */
 .fallback {
+  /* `block` não é cosmético: `text-overflow` só age em caixa de bloco, e num
+     `span` inline as três linhas abaixo eram decorativas — "Qwen2.5 Coder 7B
+     (local)" transbordava a célula e escrevia POR CIMA da coluna vizinha. */
+  display: block;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-secondary);
@@ -388,6 +392,60 @@
   flex-wrap: wrap;
   gap: 4px;
   align-items: center;
+}
+
+/*
+ * A cascata como CADEIA (`settings/cascata.tsx`): `workspace › projeto › área ›
+ * agente`, com o nível vigente em `Badge` e os outros em texto mono. Quebra em
+ * mais de uma linha em vez de espremer — a coluna Origem é estreita e um
+ * `nowrap` aqui truncaria justamente o nó que importa.
+ */
+.cadeia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  min-width: 0;
+}
+
+.cadeiaSeta {
+  color: color-mix(in srgb, var(--text-muted) 60%, transparent);
+}
+
+/* Nível SEM valor próprio. A cor sai do token do nível (`.nivelWorkspace` e
+   irmãs) e só a presença é atenuada — nunca um hex novo para "a versão clara
+   de" (design/COMPONENTS.md). O estado NÃO depende só disto: o `title` diz o
+   polo e o nó vigente é o único em `Badge`. 0.6 é o valor em que o nó continua
+   legível no tema CLARO, onde a mesma cor tem menos contraste com o fundo. */
+.nivelVazio {
+  opacity: 0.6;
+}
+
+/* Nível que a cascata DESCARTOU (Fase 9c). Riscado porque foi considerado e
+   recusado, o que é diferente de nunca ter existido. */
+.nivelPulado {
+  color: var(--warning);
+  text-decoration: line-through;
+}
+
+/* Vazio que TEM texto próprio: as células que mostravam `—` e diziam coisas
+   diferentes com o mesmo traço. */
+.vazioComTexto {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* O vazio da coluna EST. MÊS segue o alinhamento da coluna, não o do texto:
+   ela é de número e alinha à direita, e um texto à esquerda ali criaria uma
+   segunda margem no meio da tabela. */
+.estimativaVazia {
+  composes: vazioComTexto;
+  text-align: right;
 }
 
 /* "voltar a herdar" (RN-102) — link discreto, não botão cheio: é uma ação

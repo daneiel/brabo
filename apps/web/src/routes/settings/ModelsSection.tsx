@@ -13,14 +13,19 @@ import {
   setAgentModelBinding,
 } from '../../lib/api-client';
 import { AGENT_LIST, AREAS, areaFor } from '../../lib/agents';
-import type { Model, ResolvedBinding } from '../../lib/api-types';
+import type { Model, ModelBindingScope, ResolvedBinding } from '../../lib/api-types';
 import { Table, type TableColumn } from '../../components/ui/Table';
-import { Badge } from '../../components/ui/Badge';
 import { ModelPicker } from '../../components/ModelPicker';
 import { ClockIcon } from '../../components/ui/icons';
-import { ORIGIN_TONE, formatarCustoMicros } from './shared';
+import { formatarCustoMicros } from './shared';
 import styles from '../ProjectSettingsTab.module.css';
 import { useVoltarAHerdar } from './heranca';
+import {
+  AGENTE_DE_START,
+  CadeiaDeCascata,
+  herdouDoCriativo,
+  montarCadeia,
+} from './cascata';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
@@ -92,8 +97,51 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     ? [...Object.values(modelsByCategory.local).flat(), ...Object.values(modelsByCategory.cloud).flat()]
     : [];
 
+  // Modelo fora do catálogo do workspace ainda tem NOME: o id cru. Devolver
+  // `undefined` ali fazia a coluna Fallback afirmar "não há nível abaixo" para
+  // um nível que existe e só não é reconhecido.
   const nomeDoModelo = (modelId: string | undefined) =>
-    allModels.find((m) => m.id === modelId)?.displayName;
+    modelId
+      ? (allModels.find((m) => m.id === modelId)?.displayName ?? modelId)
+      : undefined;
+
+  // O Criativo é o agente de start (`herdarModeloDeStart`) — a resolução DELE
+  // é o que diz se algum outro agente pode ter herdado o modelo dele.
+  const resolvidoDoCriativo =
+    bindingQueries[AGENT_LIST.findIndex((a) => a.key === AGENTE_DE_START)]?.data;
+
+  /**
+   * Os níveis que a cadeia de um agente percorre. `session` fica de fora: esta
+   * tela é a configuração do agente NO PROJETO, não a de uma conversa — e o
+   * endpoint que a alimenta resolve sem sessão (`agent-bindings/:slug`).
+   */
+  function cadeiaDoAgente(agentKey: string, resolvido: ResolvedBinding | null | undefined) {
+    const areaDoAgente = areaFor(agentKey);
+    const daArea = areaDoAgente
+      ? bindingDaAreaPorChave.get(areaDoAgente.key)
+      : undefined;
+    const niveis: ModelBindingScope[] = areaDoAgente
+      ? ['workspace', 'project', 'area', 'agent']
+      : ['workspace', 'project', 'agent'];
+
+    return montarCadeia({
+      resolvido,
+      niveis,
+      proprios: {
+        workspace: bindingDoWorkspace?.modelId,
+        project: bindingDoProjeto?.modelId,
+        // Só existe padrão PRÓPRIO de área quando a área não herdou o dela.
+        area: daArea?.origin === 'area' ? daArea.modelId : undefined,
+      },
+      herdadoDoStart: herdouDoCriativo({
+        agentKey,
+        resolvido,
+        daArea,
+        doProjeto: bindingDoProjeto,
+        doCriativo: resolvidoDoCriativo,
+      }),
+    });
+  }
 
   /**
    * O que valeria se o binding vigente sumisse — a precedência é
@@ -165,7 +213,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       // exigidas por agente não existem no domínio, e prometer uma coluna que
       // não tem conteúdo é pior que não prometer.
       label: t('modelsSection.columns.agent'),
-      width: '1.4fr',
+      width: '1.3fr',
       render: (agent) => (
         <span className={styles.agentCell}>
           <span className={styles.agentAvatar} style={{ ['--agent-color' as string]: agent.color } as CSSProperties}>
@@ -183,7 +231,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     {
       key: 'model',
       label: t('modelsSection.columns.model'),
-      width: '1.9fr',
+      width: '1.7fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
         const resolved = bindingQueries[index]?.data;
@@ -199,52 +247,38 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     },
     {
       key: 'origin',
+      // Larga o suficiente para a CADEIA (`settings/cascata.tsx`) caber em uma
+      // ou duas linhas. Era `0.8fr` quando a célula tinha uma palavra só; as
+      // proporções do handoff descreviam aquela célula, não esta.
       label: t('modelsSection.columns.origin'),
-      width: '0.8fr',
+      width: '1.75fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
         const resolved = bindingQueries[index]?.data;
-        if (!resolved) return <span className={styles.dash}>—</span>;
-
-        // A cascata pode ter PULADO o binding mais específico (Fase 9c). Sem
-        // dizer isso, o modelo do agente teria trocado sozinho e em silêncio.
-        const pulado = resolved.skipped?.[0];
         const areaDoAgente = areaFor(agent.key);
         // `origin === 'agent'` é o agente DIVERGINDO — de uma área, quando ele
         // tem uma, ou do projeto/workspace, quando não tem (RN-102). Nos dois
         // casos "voltar a herdar" é apagar o binding dele, e é isso que o
         // botão faz — nunca copia o modelo do nível de baixo para cá.
-        const divergiu = resolved.origin === 'agent';
+        //
+        // Ele continua aparecendo TAMBÉM quando a cadeia diz "herdado do
+        // Criativo": é o único caso que a derivação do cliente não consegue
+        // provar (ver `cascata.tsx`), e é justamente nele que a ação ainda
+        // importa — apagar a linha faz o agente passar a acompanhar o Criativo.
+        const divergiu = resolved?.origin === 'agent';
         return (
           <span className={styles.origem}>
-            <Badge
-              tone={ORIGIN_TONE[resolved.origin]}
-              title={
-                resolved.origin === 'area' && areaDoAgente
-                  ? t('modelsSection.areaOriginTitle', { area: areaDoAgente.label })
+            <CadeiaDeCascata
+              niveis={cadeiaDoAgente(agent.key, resolved)}
+              rotulos={
+                areaDoAgente
+                  ? { area: t('cascata.niveisComNome.area', { area: areaDoAgente.label }) }
                   : undefined
               }
-            >
-              {resolved.origin}
-            </Badge>
-            {pulado && (
-              <Badge
-                tone="warning"
-                title={
-                  pulado.reason === 'unavailable'
-                    ? t('modelsSection.skippedTitleUnavailable', {
-                        scope: pulado.scope,
-                        origin: resolved.origin,
-                      })
-                    : t('modelsSection.skippedTitleNoToolCalling', {
-                        scope: pulado.scope,
-                        origin: resolved.origin,
-                      })
-                }
-              >
-                {t('modelsSection.skippedBadge', { scope: pulado.scope })}
-              </Badge>
-            )}
+              nomeDoModelo={nomeDoModelo}
+              rotuloSemModelo={t('modelsSection.originChainNoModel')}
+              tituloSemModelo={t('modelsSection.originChainNoModelTitle')}
+            />
             {divergiu && (
               <button
                 type="button"
@@ -268,27 +302,41 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     {
       key: 'fallback',
       label: t('modelsSection.columns.fallback'),
-      width: '1.4fr',
+      width: '1.15fr',
       render: (agent) => {
         const index = AGENT_LIST.indexOf(agent);
-        const nome = fallbackDe(agent.key, bindingQueries[index]?.data?.origin);
-        return nome ? (
-          <span className={styles.fallback}>{nome}</span>
-        ) : (
-          <span className={styles.dash}>—</span>
+        const resolved = bindingQueries[index]?.data;
+        const nome = fallbackDe(agent.key, resolved?.origin);
+        if (nome) return <span className={styles.fallback}>{nome}</span>;
+        // Sem binding nenhum a coluna Origem já disse tudo — repetir a ausência
+        // aqui seria um segundo enunciado do mesmo vazio.
+        if (!resolved) return null;
+        return (
+          <span
+            className={styles.vazioComTexto}
+            title={t('modelsSection.fallbackNoneTitle')}
+          >
+            {t('modelsSection.fallbackNone')}
+          </span>
         );
       },
     },
     {
       key: 'estimate',
       label: t('modelsSection.columns.estimate'),
-      width: '0.9fr',
+      width: '0.85fr',
       render: (agent) => {
         const micros = custoPorAgente.get(agent.key);
-        // Agente que nunca rodou não vem na resposta, e traço é diferente de
-        // zero: zero afirmaria um agente ativo e gratuito.
+        // Agente que nunca rodou não vem na resposta, e ausência é diferente de
+        // zero: zero afirmaria um agente ativo e gratuito. O traço dizia as duas
+        // com o mesmo símbolo; agora a ausência tem texto e o zero tem número.
         return micros === undefined ? (
-          <span className={styles.dash}>—</span>
+          <span
+            className={styles.estimativaVazia}
+            title={t('modelsSection.noEstimateTitle')}
+          >
+            {t('modelsSection.noEstimateYet')}
+          </span>
         ) : (
           <span className={styles.estimativa}>{formatarCustoMicros(micros)}</span>
         );
@@ -303,12 +351,27 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         <span className={styles.eyebrow}>{t('modelsSection.eyebrow')}</span>
       </div>
       <p className={styles.subtitle}>
+        {/* A legenda é a MESMA fonte de rótulos da cadeia da coluna Origem
+            (`cascata.niveis.*`): a frase que explica a descida e os nós que a
+            mostram linha a linha não podem chamar os níveis de nomes
+            diferentes — era isso que fazia o enum cru em inglês parecer um
+            terceiro vocabulário. */}
         {t('modelsSection.subtitle.intro')}{' '}
-        <span className={`${styles.nivel} ${styles.nivelWorkspace}`}>workspace</span> →{' '}
-        <span className={`${styles.nivel} ${styles.nivelProject}`}>project</span> →{' '}
-        <span className={`${styles.nivel} ${styles.nivelArea}`}>area</span> →{' '}
-        <span className={`${styles.nivel} ${styles.nivelAgent}`}>agent</span> →{' '}
-        <span className={`${styles.nivel} ${styles.nivelAgent}`}>session</span>.{' '}
+        <span className={`${styles.nivel} ${styles.nivelWorkspace}`}>
+          {t('cascata.niveis.workspace')}
+        </span> →{' '}
+        <span className={`${styles.nivel} ${styles.nivelProject}`}>
+          {t('cascata.niveis.project')}
+        </span> →{' '}
+        <span className={`${styles.nivel} ${styles.nivelArea}`}>
+          {t('cascata.niveis.area')}
+        </span> →{' '}
+        <span className={`${styles.nivel} ${styles.nivelAgent}`}>
+          {t('cascata.niveis.agent')}
+        </span> →{' '}
+        <span className={`${styles.nivel} ${styles.nivelAgent}`}>
+          {t('cascata.niveis.session')}
+        </span>.{' '}
         {t('modelsSection.subtitle.mostSpecificWins')}{' '}
         <strong>{t('modelsSection.subtitle.areaWord')}</strong>{' '}
         {t('modelsSection.subtitle.areaExplain')}{' '}

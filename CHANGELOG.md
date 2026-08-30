@@ -6,6 +6,34 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: em **Configurações**, a coluna **Origem** de **Modelos por agente**
+  deixa de imprimir o enum cru do banco (`agent`, `workspace`, em inglês) e
+  passa a mostrar a **cascata inteira como cadeia**: `workspace › projeto ›
+  área › agente`, com o nível vigente destacado. Não é tradução — é uma
+  distinção que a tela não fazia. `agent` significava **duas coisas
+  diferentes**: o agente tem modelo próprio, ou ninguém escolheu nada e o
+  produto herdou o do **Criativo** (o agente de start, para não deixar uma
+  sessão nova nascer no modelo local pequeno do workspace). Num projeto com
+  três linhas de agente no banco, os doze agentes mostravam a mesma palavra. Na
+  cadeia os dois casos são visivelmente diferentes: no primeiro o nó `agente` é
+  o vigente; no segundo ele fica **vazio**, o `workspace` aparece como
+  "tem valor, mas perdeu" — porque o modelo do workspace **não** é o que vale —
+  e um nó extra `↳ Criativo` fecha a cadeia. Cada nó tem `title` dizendo o
+  modelo daquele nível. **A api não mudou**: `origin: 'agent'` está certo (o
+  valor veio mesmo de um agente), e o cliente deduz o resto do que já tinha em
+  mãos, sem endpoint novo. Um caso não é dedutível — agente com modelo próprio
+  igual ao do Criativo, sem padrão de área nem de projeto — e é por isso que
+  "voltar a herdar" continua aparecendo em toda origem `agent`: a ação segue
+  disponível justamente onde a cadeia não prova, e nele ela ainda muda o futuro.
+  O aviso de **nível descartado** (modelo que sumiu do provider, ou que não faz
+  tool calling) era um segundo badge ao lado da origem, competindo com ela;
+  virou um nó **riscado dentro da cadeia**. **Modelo por área** ganhou a mesma
+  cadeia no lugar do enum — e ali `agent` só podia ser o Criativo, o que a tela
+  agora diz em vez de exibir a palavra "agente" no cartão de uma área. Por fim,
+  os **três `—`** dessas duas seções diziam três coisas com o mesmo símbolo e
+  passam a dizer cada uma a sua: `sem modelo em nenhum nível`, `sem gasto ainda`
+  (diferente de `US$ 0,00`, que é ter rodado de graça) e `sem padrão em nenhum
+  nível` (RN-470)
 - **web**: em **Configurações**, **Paralelismo por área** e **Teto de gasto por
   área** passam a ter **um botão de salvar da seção**, no lugar de um botão por
   linha. Revisar o teto de dev quase nunca é revisar só o de dev, e N botões

@@ -65,6 +65,27 @@
     "usedByCount_other": "{{count}} agents in this project",
     "emptyMessage": "No capability registered."
   },
+  "cascata": {
+    "niveis": {
+      "workspace": "workspace",
+      "project": "project",
+      "area": "area",
+      "agent": "agent",
+      "session": "session"
+    },
+    "modeloDesconhecido": "unknown model",
+    "titulo": {
+      "vigente": "This is the level the current model comes from ({{modelo}}).",
+      "doStart": "No level of the cascade chose a model here — the product inherits the Creative's, the start agent, instead of letting it fall to the workspace default. The Creative uses {{modelo}}.",
+      "definido": "{{polo}} at this level ({{modelo}}), but a more specific level won.",
+      "vazio": "{{polo}} at this level.",
+      "puladoIndisponivel": "The cascade DISCARDED this level: {{modelo}} disappeared from the provider.",
+      "puladoSemToolCalling": "The cascade DISCARDED this level: {{modelo}} doesn't do tool calling and can't serve an agent."
+    },
+    "niveisComNome": {
+      "area": "{{area}} area"
+    }
+  },
   "modelsSection": {
     "title": "Models by agent",
     "eyebrow": "current binding by cascade",
@@ -87,14 +108,16 @@
       "fallback": "Fallback",
       "estimate": "Est. month"
     },
-    "skippedBadge": "{{scope}} skipped",
-    "skippedTitleUnavailable": "The {{scope}} model disappeared from the provider — the cascade fell back to {{origin}}.",
-    "skippedTitleNoToolCalling": "The {{scope}} model doesn't do tool calling and can't serve an agent — the cascade fell back to {{origin}}.",
-    "areaOriginTitle": "Default for the {{area}} area.",
     "backToInheritTitleWithArea": "Deletes this agent's own model — it goes back to using the default of the {{area}} area.",
     "backToInheritTitleNoArea": "Deletes this agent's own model — it goes back to inheriting from the project or the workspace.",
     "emptyMessage": "No agent configured.",
-    "noModelsAvailable": "No model available yet."
+    "noModelsAvailable": "No model available yet.",
+    "originChainNoModel": "no model at any level",
+    "originChainNoModelTitle": "Neither the agent, nor the area, nor the project, nor the workspace has a model set. A session can still pin one.",
+    "fallbackNone": "no level below",
+    "fallbackNoneTitle": "The current model already comes from the last level of the cascade — there is no step below it to fall to.",
+    "noEstimateYet": "no spend yet",
+    "noEstimateTitle": "This agent recorded no spend in this project over the last 30 days. Different from having spent zero, which shows as US$ 0.00."
   },
   "areaModels": {
     "title": "Model by area",
@@ -112,7 +135,9 @@
     "toast": {
       "saveError": "Could not save",
       "reverted": "The {{area}} area went back to inheriting"
-    }
+    },
+    "originChainNoModel": "no default at any level",
+    "originChainNoModelTitle": "Neither this area, nor the project, nor the workspace has a model set — the lead and the subagents of this area have no default to inherit."
   },
   "members": {
     "title": "Members and roles",

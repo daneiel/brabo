@@ -2368,6 +2368,72 @@ inventar um projeto dono seria inventar dado que não existia.
   ("o binding de agente é POR PROJETO: o vizinho não o enxerga")
 - **Origem:** [ADR 0064](../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md) (FASE 23)
 
+### RN-470 — A origem do modelo distingue binding próprio de herança do Criativo, e nenhum vazio da cascata usa o mesmo símbolo de outro {#rn-470}
+
+`origin: 'agent'` na resposta da api significa **duas coisas diferentes**, e a
+api está certa em não separá-las: o agente tem uma linha de escopo `agent` em
+`model_bindings`, **ou** a cascata pousou em `workspace` e
+[`herdarModeloDeStart`](#rn-102) trocou o valor pelo modelo do Criativo — quem
+lê "de onde veio" precisa ver que veio de um AGENTE, não de um escopo que não
+existe no banco. Quem tem de separá-las é a **tela**, e até aqui ela não
+separava: a coluna Origem imprimia o enum cru, e num projeto com 3 linhas de
+`agent` no banco os 12 agentes mostravam a mesma palavra `agent`.
+
+**A origem é uma CADEIA, não uma palavra.** `workspace › projeto › área ›
+agente` com quatro estados por nó, e os quatro existem porque dizem coisas
+diferentes: **vigente** (é daqui que sai o modelo em uso — o único nó em
+`Badge`), **definido** (este nível tem valor próprio, mas um mais específico
+venceu), **vazio** (nenhum valor aqui) e **pulado** (tinha valor e a cascata o
+descartou por `unavailable`/`sem_tool_calling`, [RN-043](#rn-043)). Colapsar
+`definido` em `vazio` devolveria o problema do enum cru um nível abaixo.
+
+**Na herança, o nó `agente` fica VAZIO e um nó extra nomeia o Criativo.** O
+nível que a cascata alcançou (`workspace`) aparece como `definido` e **não**
+como vigente: o modelo do workspace não é o que vale, e marcá-lo vigente
+afirmaria o modelo errado. O nó do Criativo é o único que não é escopo do
+banco, de propósito — ele nomeia o passo pós-cascata. A mesma cadeia vale para
+a seção de ÁREA, onde `origin: 'agent'` **só** pode ser esse passo: a consulta
+de área não põe escopo de agente na cascata.
+
+**A derivação é do CLIENTE, e o que ela não consegue provar continua
+acionável.** Nenhum endpoint novo: a tela já busca os quatro níveis. `agent` é
+herança quando nenhum nível acima do workspace tinha valor UTILIZÁVEL (o que
+foi pulado não segura a descida) e o modelo é o mesmo do Criativo resolvido.
+Sobra um caso indistinguível: agente com linha própria apontando para o mesmo
+modelo do Criativo, sem padrão de área nem de projeto. Por isso "voltar a
+herdar" continua aparecendo em toda origem `agent` — a ação segue disponível
+justamente no caso que a cadeia não prova, e nele ela ainda muda o futuro
+(sem a linha, o agente passa a acompanhar o Criativo).
+
+**Vazio tem texto próprio, e vazios diferentes têm textos diferentes.** Os três
+`—` da tela diziam três coisas com o mesmo símbolo e agora dizem cada uma a
+sua: `sem modelo em nenhum nível` (nenhum nível tem binding para o agente),
+`sem gasto ainda` (o agente não registrou consumo — diferente de `US$ 0,00`,
+que é ter rodado de graça) e `sem padrão em nenhum nível` (a área e os dois
+níveis acima dela estão vazios). Mesma disciplina da
+[RN-180](autenticacao.md#rn-180): a tela não afirma com um traço o que não
+consegue nomear.
+
+- **Onde:** `apps/web/src/routes/settings/cascata.tsx:119` (`montarCadeia` — os
+  quatro estados e o nó do Criativo), `:178` (`herdouDoCriativo` — a dedução e
+  seu limite), `:287` (`CadeiaDeCascata`),
+  `apps/web/src/routes/settings/ModelsSection.tsx:118` (`cadeiaDoAgente`),
+  `:249` (coluna Origem), `:319` (`não há nível abaixo`), `:338`
+  (`sem gasto ainda`),
+  `apps/web/src/routes/settings/AreaModelsSection.tsx:142` (a cadeia da área),
+  `apps/api/src/domain/llm/binding-resolver.ts:140` (o `origin: 'agent'` que a
+  api devolve, e o comentário que explica por que ele está certo — este
+  arquivo NÃO mudou)
+- **Teste:** `apps/web/src/routes/settings/cascata.test.tsx` (binding próprio
+  termina no nó `agente`; herança deixa `agente` vazio e nomeia o Criativo;
+  o workspace nunca aparece vigente na herança; a seção de área idem; a
+  distinção sobrevive ao `en`; nível descartado vira nó riscado e o badge
+  concorrente sumiu; os três vazios com três textos; `montarCadeia` e
+  `herdouDoCriativo` como funções puras, incluindo o caso do padrão de área
+  DESCARTADO, que não segura a descida)
+- **Origem:** revisão de design do dono do produto (item #9 do canvas de
+  melhorias de UI — "cascata de modelo como cadeia visível")
+
 ### RN-059 — Falha de turno é evento durável com origem, e o agente fala {#rn-059}
 
 Quando um turno de LLM falha, o agente grava **`agent.error`** no event log
