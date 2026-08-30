@@ -478,6 +478,24 @@ daqui e o fechamento vai para o histórico.
   vigente que ele esconde da LISTA (herdado de `project`/`workspace`, níveis que
   nunca exigiram tool calling) precisa ser DITO, com o nome do modelo e a causa
   — o gatilho mostrando um nome que a lista não contém é a tela se contradizendo.
+- E o controle só é oferecido a QUEM a api deixa usar — a régua acima decide o
+  QUE se oferece, esta decide a QUEM. O mínimo é do ENDPOINT, nunca da seção
+  (RN-102): modelo por AGENTE pede `developer`, modelo por ÁREA pede
+  `maintainer`, e as duas seções são vizinhas na mesma tela. Copiar o gate da
+  vizinha por parecerem iguais produz o defeito INVERSO do que corrige, e o
+  inverso é PIOR — oferecer o que será recusado ao menos termina num toast,
+  enquanto trancar quem podia é invisível para quem perdeu a capacidade. A
+  comparação sai de `roleAtLeast` (`apps/web/src/lib/roles.ts`, sobre
+  `ROLE_ORDER`; mesmo nome da função do backend porque é a mesma regra dos dois
+  lados), nunca de `role === 'x' || role === 'y'` à mão: a lista à mão acerta por
+  acidente enquanto o mínimo é alto e erra calada quando é baixo. Papel AUSENTE
+  não alcança nada. O que se tira é o CONTROLE, nunca a INFORMAÇÃO (ADR 0064):
+  quem não pode editar continua vendo o valor vigente e a cadeia inteira, o
+  controle fica inerte no lugar, e o motivo é dito UMA vez em TEXTO na seção —
+  `title` em elemento `disabled` não abre no Chromium, então explicar por tooltip
+  é não explicar. Nada disso é fronteira de segurança (quem recusa é o
+  `RolesGuard`) e o papel lido é o do WORKSPACE, que `project_members` sobrepõe
+  nos dois sentidos — lacuna declarada, igual nas duas seções.
 - Sinal de ambiente diz o que SABE, e proxy nunca vira garantia (RN-468).
   A tela de login é PRÉ-identidade: só cabem ali os dois `/health`, que já
   são públicos nos dois serviços — presença de runner

@@ -2354,6 +2354,44 @@ individual — pelo mesmo motivo do teto de paralelismo
 ([RN-083](#rn-083)): o binding da área alcança o lead e TODOS os subagentes de
 uma vez, e escolher modelo é decidir quanto o produto gasta sem perguntar.
 
+**A TELA passou a honrar os DOIS mínimos, e são dois.** Até aqui
+`ModelsSection` — a tabela de modelo por agente — não checava papel nenhum: o
+`ModelPicker` da coluna MODELO VIGENTE e o "voltar a herdar" da coluna ORIGEM
+apareciam clicáveis para todo mundo, `viewer` incluído, e a api recusava com
+403. A saída NÃO foi copiar o gate da seção irmã (`owner || maintainer`): isso
+trocaria o defeito pelo INVERSO, trancando um `developer` fora de uma ação que
+`PUT`/`DELETE .../agent-bindings/:slug` aceita — e o inverso é pior, porque
+oferecer o que será recusado ao menos termina num toast, enquanto perder
+capacidade é invisível para quem a perdeu. O mínimo é do ENDPOINT, não da
+seção, e as duas seções são vizinhas na MESMA tela com mínimos diferentes. A
+comparação saiu das telas e virou `roleAtLeast` (`apps/web/src/lib/roles.ts`),
+sobre o `ROLE_ORDER` que já existia — mesmo nome da função do backend, porque é
+a mesma regra dos dois lados do fio; escrever a hierarquia à mão
+(`role === 'owner' || role === 'maintainer'`) acerta por acidente enquanto o
+mínimo é alto e erra calada quando é baixo. Papel AUSENTE (consulta em voo, ou
+que falhou) não alcança nada: errar para o lado de desabilitar se conserta
+recarregando.
+
+**Some o CONTROLE, nunca a INFORMAÇÃO** (ADR 0064). Quem não pode editar
+continua vendo o modelo vigente no gatilho e a cadeia de origem inteira
+([RN-470](#rn-470)), e o "voltar a herdar" continua na linha, inerte — ele é o
+que DIZ que aquele agente divergiu, e escondê-lo apagaria um estado que dá para
+ler sem poder mudar. O motivo de estarem apagados é dito UMA vez, em texto, na
+legenda da seção, e não por `title` em cada linha: tooltip em elemento
+`disabled` não abre no Chromium (o navegador não despacha evento de mouse em
+controle desabilitado), e uma explicação que não aparece é a mesma ausência com
+mais código.
+
+**Nada disso é fronteira de segurança, e o limite é declarado.** Quem recusa
+continua sendo o `RolesGuard`. O papel que a tela lê é o do WORKSPACE
+(`useCurrentWorkspaceWithRole`) e quem autoriza do outro lado é o papel EFETIVO
+do PROJETO (`ResolveEffectiveRoleUseCase.forProject`), que uma linha de
+`project_members` SOBREPÕE nos dois sentidos — então quem tem papel próprio no
+projeto pode ver aqui um controle desabilitado que a api aceitaria. Fechar isso
+exigiria uma consulta de papel POR PROJETO que o web ainda não tem, e é a mesma
+lacuna que `AreaModelsSection` já carregava; inventar uma segunda fonte de papel
+só numa seção seria pior que a lacuna.
+
 - **Onde:** `apps/api/src/domain/llm/binding-resolver.ts` (precedência),
   `apps/api/src/domain/llm/model-capabilities.ts` (capability de `area`),
   `apps/api/src/application/use-cases/llm/resolve-model-binding.use-case.ts`
@@ -2362,12 +2400,26 @@ uma vez, e escolher modelo é decidir quanto o produto gasta sem perguntar.
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts`
   (`area-bindings`, `DELETE` em `agent-bindings` e `area-bindings`),
   `apps/web/src/routes/settings/AreaModelsSection.tsx` (coluna Origem com
-  "voltar a herdar")
+  "voltar a herdar", e o gate de `maintainer` reescrito sobre `roleAtLeast` sem
+  mudar de mínimo),
+  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:195` e `:222`
+  (`developer` nos dois endpoints de agente — estas linhas NÃO mudaram),
+  `apps/web/src/lib/roles.ts:41` (`roleAtLeast` — a comparação que faltava),
+  `apps/web/src/routes/settings/ModelsSection.tsx:77` (`podeEditar`, e por que
+  `developer` e não `maintainer`), `:379` (o picker desabilitado), `:446` (o
+  botão desabilitado, e por que o motivo não vai em `title`), `:546` (a legenda
+  que diz o motivo)
 - **Teste:** `test/domain/llm/binding-resolver.spec.ts`,
   `test/domain/llm/model-capabilities.spec.ts`,
   `test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`,
   `test/application/use-cases/llm/clear-model-binding.use-case.spec.ts`,
-  `apps/web/src/routes/ProjectSettingsTab.test.tsx`
+  `apps/web/src/routes/ProjectSettingsTab.test.tsx`,
+  `apps/web/src/routes/settings/papel-na-tabela-de-agentes.test.tsx`
+  (`viewer` não edita e o clique não chega na api; `developer` edita e o
+  PUT/DELETE chega; papel ausente é inerte; a informação da linha sobrevive ao
+  controle apagado; e o caso que impede "uniformizar" as duas seções — o mesmo
+  `developer` vê a tabela de agentes habilitada e a de áreas desabilitada, ao
+  mesmo tempo)
 - **Origem:** [ADR 0064](../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md) (FASE 23)
 
 ### RN-103 — O binding de agente é POR PROJETO, não mais global {#rn-103}

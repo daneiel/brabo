@@ -43,6 +43,19 @@ const getWorkspaceModelBinding = vi.fn();
 const getProjectAgentCosts = vi.fn();
 const clearAgentModelBinding = vi.fn();
 
+// A seção lê o papel de quem está olhando para decidir se o "voltar a herdar" é
+// clicável — e o hook real chamaria `listWorkspaces`, que o dublê de
+// `api-client` abaixo não exporta. `developer` é o MÍNIMO que
+// `DELETE .../agent-bindings/:slug` exige: este arquivo é sobre os desfechos do
+// clique, então quem clica tem de poder clicar. Quem NÃO pode é o assunto de
+// `papel-na-tabela-de-agentes.test.tsx`.
+const useCurrentWorkspaceWithRole = vi.fn();
+
+vi.mock('../../lib/hooks', () => ({
+  useCurrentWorkspaceWithRole: (...args: unknown[]) =>
+    useCurrentWorkspaceWithRole(...args),
+}));
+
 vi.mock('../../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../../lib/api-client')>(
     '../../lib/api-client',
@@ -147,6 +160,9 @@ beforeEach(() => {
   getWorkspaceModelBinding.mockResolvedValue(null);
   getProjectAgentCosts.mockResolvedValue([]);
   clearAgentModelBinding.mockResolvedValue(undefined);
+  useCurrentWorkspaceWithRole.mockReturnValue({
+    data: { workspace: { id: 'ws-1' }, role: 'developer' },
+  });
 });
 
 describe('voltar a herdar — caminho feliz', () => {

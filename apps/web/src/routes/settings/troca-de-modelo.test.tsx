@@ -47,6 +47,20 @@ const getWorkspaceModelBinding = vi.fn();
 const getProjectAgentCosts = vi.fn();
 const setAgentModelBinding = vi.fn();
 
+// A seção lê o papel de quem está olhando para decidir se o `ModelPicker` e o
+// "voltar a herdar" são clicáveis — e o hook real chamaria `listWorkspaces`,
+// que o dublê de `api-client` abaixo não exporta. `developer` é o MÍNIMO que
+// os dois endpoints de agente exigem (`agent-bindings`,
+// `model-bindings.controller.ts`): este arquivo é sobre os desfechos do
+// clique, então quem clica tem de poder clicar. Quem NÃO pode é o assunto de
+// `papel-na-tabela-de-agentes.test.tsx`.
+const useCurrentWorkspaceWithRole = vi.fn();
+
+vi.mock('../../lib/hooks', () => ({
+  useCurrentWorkspaceWithRole: (...args: unknown[]) =>
+    useCurrentWorkspaceWithRole(...args),
+}));
+
 vi.mock('../../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../../lib/api-client')>(
     '../../lib/api-client',
@@ -191,6 +205,9 @@ beforeEach(() => {
   getWorkspaceModelBinding.mockResolvedValue(null);
   getProjectAgentCosts.mockResolvedValue([]);
   setAgentModelBinding.mockResolvedValue(undefined);
+  useCurrentWorkspaceWithRole.mockReturnValue({
+    data: { workspace: { id: 'ws-1' }, role: 'developer' },
+  });
 });
 
 describe('trocar o modelo do agente — caminho feliz', () => {

@@ -462,8 +462,21 @@
   cursor: pointer;
 }
 
-.voltarHerdar:hover {
+/* `:not(:disabled)` porque `:hover` CASA em elemento desabilitado (o que o
+   browser não despacha ali são os EVENTOS, não o estado de CSS) — sem isto o
+   botão inerte acendia ao passar o mouse, prometendo um clique que não existe. */
+.voltarHerdar:not(:disabled):hover {
   color: var(--text-secondary);
+}
+
+/* Sem `developer` a ação some, o ESTADO fica (RN-102): o botão continua na
+   linha, dizendo que este agente divergiu, e só não é clicável. Mesmo par de
+   propriedades do `.trigger:disabled` do `ModelPicker`, que é o outro controle
+   desta linha — dois controles vizinhos apagados pelo mesmo motivo não podem
+   parecer apagados por motivos diferentes. */
+.voltarHerdar:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /*
