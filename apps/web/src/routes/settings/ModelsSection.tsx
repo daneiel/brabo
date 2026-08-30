@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
+  ApiError,
   getProject,
   clearAgentModelBinding,
   getAgentModelBinding,
@@ -10,6 +11,7 @@ import {
   getProjectModelBinding,
   getWorkspaceModelBinding,
   listModels,
+  mensagemDaApi,
   setAgentModelBinding,
 } from '../../lib/api-client';
 import { AGENT_LIST, AREAS, areaFor } from '../../lib/agents';
@@ -17,6 +19,7 @@ import type { Model, ModelBindingScope, ResolvedBinding } from '../../lib/api-ty
 import { Table, type TableColumn } from '../../components/ui/Table';
 import { ModelPicker } from '../../components/ModelPicker';
 import { ClockIcon } from '../../components/ui/icons';
+import { useToast } from '../../components/ui/ToastProvider';
 import { formatarCustoMicros } from './shared';
 import styles from '../ProjectSettingsTab.module.css';
 import { useVoltarAHerdar } from './heranca';
@@ -45,6 +48,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   // duplicação que este padrão remove.
   const { rotuloInline: voltarAHerdar } = useVoltarAHerdar();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
@@ -188,19 +192,68 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     0,
   );
 
+  function invalidarBindingDoAgente(agentKey: string) {
+    queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId, agentKey] });
+  }
+
   async function handleModelChange(agentKey: string, model: Model) {
     await setAgentModelBinding(projectId, agentKey, model.id);
-    queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId, agentKey] });
+    invalidarBindingDoAgente(agentKey);
   }
 
   /**
    * "Voltar a herdar" (RN-102) — APAGA o binding do agente, nunca grava nele
    * o modelo da área: gravar viraria cópia, e a próxima mudança da área
    * deixaria este agente para trás em silêncio.
+   *
+   * ## Por que o 404 tem desfecho PRÓPRIO, e não o das outras falhas
+   *
+   * O botão aparece em TODA origem `agent` de propósito (RN-470): a cadeia do
+   * cliente não consegue separar o agente com linha própria daquele que herdou
+   * o modelo do Criativo, e continuar oferecendo a ação é o certo — no caso
+   * indistinguível ela ainda muda o futuro. O preço é que, quando não havia
+   * linha, a api responde 404 (`ClearModelBindingUseCase`), e ela está CERTA
+   * em responder: "apaguei o que não existia" e "apaguei" são respostas
+   * diferentes, e colapsá-las esconderia um `agentSlug` digitado errado.
+   *
+   * Só que, para quem clicou, esse 404 não é uma falha: o estado desejado — o
+   * agente herda — já é verdade. Chamar de erro o que se pediu e já vale seria
+   * a tela contradizendo o que ela sabe. Dois motivos para não mandar este 404
+   * por `mensagemDaApi`, como as outras falhas:
+   *
+   * 1. a frase da api é pt-BR cravada no código e o idioma default do web é
+   *    `en` (`lib/i18n.ts`) — repeti-la faria quem lê em inglês ler português;
+   * 2. este endpoint tem UMA causa de 404 (papel insuficiente é 403 no
+   *    `RolesGuard`, `scope_id` malformado não é 404), então o cliente SABE o
+   *    que este 404 significa e pode dizer na língua de quem está lendo.
+   *
+   * Qualquer outro status continua sendo falha de verdade e vai por
+   * `mensagemDaApi` + tom `danger`, como em `AreaModelsSection`. Nos DOIS
+   * desfechos a query é invalidada: se a api diz que não havia linha, quem
+   * está velha é a linha na tela, e reler é o que a conserta.
    */
-  async function handleClearAgentBinding(agentKey: string) {
-    await clearAgentModelBinding(projectId, agentKey);
-    queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId, agentKey] });
+  async function handleClearAgentBinding(agentKey: string, agentName: string) {
+    try {
+      await clearAgentModelBinding(projectId, agentKey);
+      invalidarBindingDoAgente(agentKey);
+      showToast({
+        title: t('modelsSection.toast.reverted', { agent: agentName }),
+        tone: 'success',
+      });
+    } catch (erro) {
+      if (erro instanceof ApiError && erro.status === 404) {
+        invalidarBindingDoAgente(agentKey);
+        showToast({
+          title: t('modelsSection.toast.alreadyInherits', { agent: agentName }),
+          tone: 'accent',
+        });
+        return;
+      }
+      showToast({
+        title: mensagemDaApi(erro, t('modelsSection.toast.clearError')),
+        tone: 'danger',
+      });
+    }
   }
 
   // As proporções são as do handoff (seção 7, item 6): `1.4fr 1.9fr .8fr 1.4fr
@@ -283,7 +336,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
               <button
                 type="button"
                 className={styles.voltarHerdar}
-                onClick={() => handleClearAgentBinding(agent.key)}
+                onClick={() => handleClearAgentBinding(agent.key, agent.name)}
                 title={
                   areaDoAgente
                     ? t('modelsSection.backToInheritTitleWithArea', {

@@ -110,6 +110,11 @@
     },
     "backToInheritTitleWithArea": "Deletes this agent's own model — it goes back to using the default of the {{area}} area.",
     "backToInheritTitleNoArea": "Deletes this agent's own model — it goes back to inheriting from the project or the workspace.",
+    "toast": {
+      "reverted": "{{agent}} is back to inheriting",
+      "alreadyInherits": "{{agent}} already inherited — there was no model of its own to delete",
+      "clearError": "Could not go back to inheriting"
+    },
     "emptyMessage": "No agent configured.",
     "noModelsAvailable": "No model available yet.",
     "originChainNoModel": "no model at any level",

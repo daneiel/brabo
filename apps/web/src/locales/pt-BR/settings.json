@@ -110,6 +110,11 @@
     },
     "backToInheritTitleWithArea": "Apaga o modelo próprio deste agente — ele volta a usar o padrão da área {{area}}.",
     "backToInheritTitleNoArea": "Apaga o modelo próprio deste agente — ele volta a herdar do projeto ou do workspace.",
+    "toast": {
+      "reverted": "{{agent}} voltou a herdar",
+      "alreadyInherits": "{{agent}} já herdava — não havia modelo próprio para apagar",
+      "clearError": "Não foi possível voltar a herdar"
+    },
     "emptyMessage": "Nenhum agente configurado.",
     "noModelsAvailable": "Nenhum modelo disponível ainda.",
     "originChainNoModel": "sem modelo em nenhum nível",

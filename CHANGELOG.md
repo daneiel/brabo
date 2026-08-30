@@ -449,6 +449,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: em **Configurações**, clicar em "voltar a herdar" numa linha de
+  **Modelos por agente** que já herdava não fazia nada visível — nem confirmava,
+  nem reclamava. O botão aparece em toda origem `agent` de propósito (RN-470): a
+  cadeia do cliente não consegue separar o agente com modelo próprio daquele que
+  herdou o do **Criativo**, e nesse caso não há linha para apagar, então a api
+  responde 404 — ela está certa, "apaguei o que não existia" e "apaguei" não são
+  a mesma resposta. O que faltava era do lado do cliente: a função não tinha
+  `try/catch` e era chamada de um `onClick`, então toda recusa virava *unhandled
+  promise rejection* — silêncio na tela e ruído no console. Agora os três
+  desfechos são distintos, na gramática que **Modelo por área** já usava. O 404
+  ganhou desfecho **próprio** e não o das outras falhas, porque para quem clicou
+  ele não é falha: o estado pedido — o agente herda — **já é verdade**. A tela
+  diz isso na língua de quem está lendo, em vez de repassar a frase pt-BR que a
+  api crava no código (o idioma default do web é `en`), e ela pode dizer porque
+  este endpoint tem **uma** causa de 404: papel insuficiente é 403 e `scope_id`
+  malformado não é 404. Nos dois desfechos a linha é relida — se a api diz que
+  não havia binding, quem estava desatualizada era a tela. Qualquer outro status
+  continua sendo erro de verdade, com a mensagem da api e tom de falha
 - **engine,api,web**: a aba Insights, com zero hipóteses, mostrava "Sem
   hipóteses ainda — o Psicólogo analisa cada sessão encerrada" mesmo com
   `PSYCHOLOGIST_ENABLED=false` — indistinguível de "ainda ativo, só não
