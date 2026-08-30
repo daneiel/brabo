@@ -449,6 +449,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: em **Configurações**, escolher um modelo no seletor de uma linha de
+  **Modelos por agente** e ter o pedido recusado não produzia nada na tela: a
+  pessoa clicava, o dropdown fechava, a linha continuava no modelo antigo e o
+  erro só existia no console. Mesma classe de defeito da correção logo abaixo, e
+  na função vizinha do mesmo arquivo — `handleModelChange` não tinha `try/catch`
+  e era chamada do `onSelect` do seletor, então toda recusa da api virava
+  *unhandled promise rejection*. A recusa é alcançável de dentro do próprio
+  seletor: o modelo que sumiu do provider aparece na lista **marcado** em vez de
+  escondido (senão o vínculo que aponta para ele ficaria sem explicação), e a
+  lista é cacheada, então o modelo pode ter sido desligado no catálogo depois da
+  última leitura — nos dois casos a api recusa com 422. Agora a falha aparece,
+  com a mensagem da api e tom de falha. **O 404 aqui NÃO ganha desfecho
+  próprio**, ao contrário da correção de "voltar a herdar": aquele endpoint tem
+  **uma** causa de 404 e por isso o cliente pôde nomeá-la; este recusa por sete
+  caminhos e nenhum status identifica um deles sozinho — o 404 sozinho tem duas
+  causas ("Modelo não encontrado" e "Projeto não encontrado"), e escolher uma das
+  frases seria a tela afirmando o que não sabe. O contraste está comentado no
+  código, ao lado das duas funções. Nada de otimista foi introduzido: a coluna
+  **Modelo vigente** continua exibindo o vínculo que a api confirmou, e a linha
+  só é relida no sucesso — na recusa nada mudou no banco (RN-470)
 - **web**: em **Configurações**, clicar em "voltar a herdar" numa linha de
   **Modelos por agente** que já herdava não fazia nada visível — nem confirmava,
   nem reclamava. O botão aparece em toda origem `agent` de propósito (RN-470): a

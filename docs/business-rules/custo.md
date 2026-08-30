@@ -2420,6 +2420,27 @@ status continua sendo falha de verdade, com a frase da api e tom `danger`. Nos
 **dois** desfechos a linha é relida: se a api diz que não havia binding, quem
 está velha é a tela.
 
+**E o desfecho próprio é do ENDPOINT, não da tela.** A outra ação da mesma
+linha — trocar o modelo pelo `ModelPicker` da coluna MODELO VIGENTE — recusa
+por sete caminhos, e **nenhum status identifica um deles sozinho**
+(`SetModelBindingUseCase`): 400 para `scope_id` malformado ou `modelId`
+reprovado no DTO, 403 para papel abaixo de `developer`, **404 para duas causas
+indistinguíveis** ("Modelo não encontrado" e "Projeto não encontrado") e 422
+para três ([RN-040](#rn-040) sem tool calling; [RN-043](#rn-043) desativado no
+workspace ou sumido do provider). Ali o cliente NÃO pode nomear o 404 —
+escolher uma das duas frases seria a tela afirmando o que não sabe —, então
+toda recusa segue a gramática normal, com a frase da api e tom `danger`. As
+duas funções são vizinhas e tratam o mesmo status de formas opostas de
+propósito: o que autoriza o desfecho próprio é a causa ÚNICA, não a tela.
+
+**Na recusa, a coluna MODELO VIGENTE continua exibindo o binding confirmado.**
+O `ModelPicker` não guarda a escolha em estado local (`selected` sai do prop
+`selectedModelId`, que vem da query), então uma recusa não deixa na tela um
+modelo que a api se recusou a gravar — e a linha só é relida no sucesso, já que
+na recusa nada mudou no banco. É a mesma disciplina desta RN aplicada ao
+tempo: a tela não afirma um estado que não existe, nem por traço, nem por enum,
+nem por otimismo.
+
 **Vazio tem texto próprio, e vazios diferentes têm textos diferentes.** Os três
 `—` da tela diziam três coisas com o mesmo símbolo e agora dizem cada uma a
 sua: `sem modelo em nenhum nível` (nenhum nível tem binding para o agente),
@@ -2433,9 +2454,17 @@ consegue nomear.
   quatro estados e o nó do Criativo), `:178` (`herdouDoCriativo` — a dedução e
   seu limite), `:287` (`CadeiaDeCascata`),
   `apps/web/src/routes/settings/ModelsSection.tsx:122` (`cadeiaDoAgente`),
-  `:235` (`handleClearAgentBinding` — os três desfechos, e por que o 404 tem o
-  dele), `:302` (coluna Origem), `:372` (`não há nível abaixo`), `:391`
-  (`sem gasto ainda`),
+  `:242` (`handleModelChange` — por que aqui o 404 NÃO tem desfecho próprio, e
+  por que a linha só relê no sucesso), `:285` (`handleClearAgentBinding` — os
+  três desfechos, e por que o 404 tem o dele), `:352` (coluna Origem), `:422`
+  (`não há nível abaixo`), `:441` (`sem gasto ainda`),
+  `apps/web/src/components/ModelPicker.tsx:83` (`selected` sai do prop — o
+  picker não guarda a escolha, e é por isso que a recusa não deixa valor
+  fantasma na tela),
+  `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts:38`
+  (as duas causas de 404 deste endpoint — este arquivo NÃO mudou),
+  `apps/api/src/interfaces/http/shared/llm-binding-error.filter.ts:39`
+  (400/422 das recusas de curadoria — este arquivo NÃO mudou),
   `apps/web/src/routes/settings/AreaModelsSection.tsx:142` (a cadeia da área),
   `apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts:25`
   (o 404 que a api levanta — este arquivo NÃO mudou),
@@ -2452,7 +2481,12 @@ consegue nomear.
   `apps/web/src/routes/settings/voltar-a-herdar.test.tsx` (os três desfechos do
   clique: apagou e relê; 404 não é erro, não repassa a frase pt-BR da api nem
   em `en`, e relê porque a tela é que estava velha; outro status vai por
-  `mensagemDaApi` e não relê)
+  `mensagemDaApi` e não relê),
+  `apps/web/src/routes/settings/troca-de-modelo.test.tsx` (a outra ação da
+  mesma linha: grava e relê; 422 do modelo `unavailable` — o alcançável, já
+  que o picker mostra o indisponível marcado — vai por `mensagemDaApi` e não
+  relê; a coluna MODELO VIGENTE segue no modelo antigo, nunca no recusado; e o
+  404 NÃO ganha desfecho próprio, que é o contraste com a função irmã)
 - **Origem:** revisão de design do dono do produto (item #9 do canvas de
   melhorias de UI — "cascata de modelo como cadeia visível")
 
