@@ -30,8 +30,14 @@
  * A divergência "sem botão do GitHub" do ADR 0036 FECHOU com o login social
  * (ADR 0084) — `.divisor`/`.botaoSocial` abaixo seguem o mock (`Brabo
  * Login.dc.html`), com GitLab somado ao lado do GitHub que o mock desenhava
- * sozinho. "Sem 'N agentes online'" segue valendo: continua sendo dado
- * dinâmico pré-autenticação que exigiria rota pública própria.
+ * sozinho.
+ *
+ * "Sem 'N agentes online'" SEGUE VALENDO, e agora por um motivo mais preciso
+ * do que "exigiria rota pública própria": o login ganhou um bloco de ambiente
+ * (`SinaisDoAmbiente`), mas ele mostra só o que é verdade SEM identidade — os
+ * dois `/health`, que já eram públicos nos dois serviços. Contagem de agentes
+ * é de um workspace, e antes do login não existe workspace: o problema nunca
+ * foi a rota, é que a pergunta não tem sujeito.
  */
 
 .tela {
@@ -98,6 +104,95 @@
   }
 }
 
+/*
+ * ## As duas colunas (login)
+ *
+ * Os dois invólucros existem SEMPRE no DOM e são `display: contents` por
+ * padrão — apagados do layout, com o container voltando a ser a pilha de
+ * 412px de sempre nas outras três telas de auth. `display: contents` não muda
+ * a ÁRVORE, só a caixa: a ordem do DOM (que fixa a ordem de `Tab` no login) e
+ * a vizinhança `<section>` → `<footer>` continuam exatamente como estavam.
+ */
+.colunaIdentidade,
+.colunaFormulario {
+  display: contents;
+}
+
+/*
+ * O modo duplo. Vem DEPOIS de `.container` de propósito: as duas regras têm a
+ * mesma especificidade (uma classe), então quem manda no `max-width` é a
+ * ordem no arquivo.
+ *
+ * `align-items: center` e não `start`: as duas colunas têm alturas
+ * independentes e nenhuma delas é "a régua" — encostar as duas no topo
+ * deixaria a marca alinhada com o título do card por acidente de altura, e
+ * desalinhada na primeira frase a mais.
+ */
+.containerDuplo {
+  max-width: 940px;
+  display: flex;
+  align-items: center;
+  gap: 64px;
+}
+
+.containerDuplo .colunaIdentidade {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  /* `1 1 0` com `min-width: 0`: a coluna da esquerda absorve a sobra e pode
+     ENCOLHER — sem o `min-width`, um caminho longo dentro dela empurraria o
+     card para fora da tela, que é o defeito clássico de item de flex. */
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/*
+ * A marca perde a margem de baixo aqui: no modo duplo quem dá o respiro entre
+ * ela e o texto é o `gap` da coluna, e somar os dois abriria 54px.
+ */
+.containerDuplo .marca {
+  margin-bottom: 0;
+}
+
+.containerDuplo .colunaFormulario {
+  display: block;
+  /* A coluna do formulário mantém EXATAMENTE a largura do card de sempre
+     (412px, do mock aprovado): o layout novo põe o card ao lado de outra
+     coisa, não o redesenha. */
+  flex: 0 0 412px;
+  max-width: 412px;
+}
+
+/*
+ * Abaixo de 900px não cabem duas colunas de leitura confortável, e o
+ * formulário é o que a pessoa veio fazer: o modo duplo se desfaz por completo
+ * — os dois invólucros voltam a `contents` e a pilha é a mesma das outras
+ * telas, com a identidade em cima do card.
+ */
+@media (max-width: 900px) {
+  .containerDuplo {
+    display: block;
+    max-width: 412px;
+  }
+
+  .containerDuplo .colunaIdentidade,
+  .containerDuplo .colunaFormulario {
+    display: contents;
+  }
+
+  .containerDuplo .marca {
+    margin-bottom: 26px;
+  }
+
+  /* Com os invólucros de volta a `contents`, o `gap` da coluna não existe
+     mais: o respiro entre o bloco de ambiente e o card passa a ser margem do
+     próprio bloco. `* + *` porque o primeiro filho é a marca, que já tem a
+     margem dela. */
+  .containerDuplo .colunaIdentidade > * + * {
+    margin-bottom: 22px;
+  }
+}
+
 /* Cabeçalho de marca, acima do card. */
 .marca {
   display: flex;
@@ -139,6 +234,21 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+/*
+ * A frase de identidade da coluna da esquerda: o que o produto faz, em uma
+ * respiração. Maior que o corpo do card (15px contra 13px) porque é a única
+ * prosa da tela que não é rótulo de campo — e é `<p>`, não cabeçalho, para o
+ * título do card seguir sendo o único `<h1>` da página.
+ */
+.pitch {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 42ch;
 }
 
 /* O card. `overflow: hidden` é o que faz o rodapé respeitar o raio. */

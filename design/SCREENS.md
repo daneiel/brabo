@@ -324,6 +324,15 @@ overflow:hidden`, fundo `var(--surface-0)`, padding vertical 32px / lateral
 Container `max-width:412px`, entrada `bfade .4s ease both` (zerada em
 `prefers-reduced-motion`, que mantém o estado final do keyframe).
 
+**Modo de duas colunas** (só `/login` — ver abaixo). Quando a tela entrega
+`colunaDeIdentidade`, o container vira `flex` de duas colunas (`max-width:940px`,
+gap 64px, `align-items:center`): identidade e ambiente à esquerda, o card de
+412px à direita. Abaixo de 900px de viewport o modo se desfaz por completo e
+volta a ser a pilha de 412px. Isso é CSS e não um segundo JSX: os dois
+invólucros (`.colunaIdentidade`, `.colunaFormulario`) existem **sempre** no
+DOM e são `display:contents` por padrão — a árvore, e portanto a ordem de
+`Tab` e a vizinhança `<section>` → `<footer>`, é a mesma nas quatro telas.
+
 **Cabeçalho de marca** (flex, gap 12px, `margin-bottom:26px`): selo 40×40
 radius 11px em `var(--accent)` com o glyph 23px em `var(--on-accent)`
 (`LogoMark` — barra vertical + dois chevrons, o segundo a `opacity:.58`; é o
@@ -368,11 +377,32 @@ Submit full-width com `loading` (`Entrar` → `Autenticando…`). Rodapé do car
 "Não tem acesso? **Criar uma conta**". Abaixo do card: aviso `warning` sobre
 a conta migrada.
 
-**Três coisas do mockup que a implementação não tem** (ADR 0036): o botão
-"Continuar com GitHub" (login social é backlog da fase), o divisor "ou" (que
-existia só para separar os dois botões) e o indicador "N agentes online" (dado
-dinâmico pré-autenticação). Sem o indicador, o rodapé do card fica com um item
-e o `space-between` do mockup vira alinhamento à esquerda.
+**Coluna de identidade e ambiente.** `/login` é a única das quatro que usa o
+modo de duas colunas, e é deliberado: as outras três são passagens de um fluxo
+já iniciado, e quem chega nelas já sabe onde está. À esquerda, sob o cabeçalho
+de marca: uma frase de identidade (`<p>`, IBM Plex Sans 15px
+`var(--text-secondary)`, `max-width:42ch` — **não** um `<h2>`, para o título do
+card seguir sendo o único `<h1>`) e o bloco **Ambiente**, com uma linha por
+serviço (bolinha 8px, rótulo, estado).
+
+O bloco mostra só o que é verdade **sem identidade**: os `/health` da api e do
+engine, públicos nos dois serviços. Três estados por linha e nenhum deles
+colapsado — `verificando…` (anel vazado), `respondendo` (`var(--success)`),
+`sem resposta` (`var(--danger)`) —, com teto de 6s para a sonda pendurada. A
+versão **não** se repete aqui: continua sendo renderizada uma vez, no rodapé da
+página. **Nada na coluna é focável**, e isso é contrato: ela vem antes do card
+no DOM, e um botão ali roubaria a primeira parada de `Tab` do campo de e-mail.
+
+**Duas coisas do mockup que a implementação não tem** (ADR 0036): o divisor
+"ou" existia só para separar os dois botões sociais e voltou junto com eles
+(ADR 0084, que fechou a divergência do botão do GitHub); segue faltando o
+indicador **"N agentes online"**. Ele não entrou no bloco de Ambiente de
+propósito: contagem de agentes é de um workspace, e antes do login não existe
+workspace — a pergunta não tem sujeito. Runner e modelos locais têm o mesmo
+problema (`{user_id, project_id}` e `projects/:projectId/models`) e por isso
+moram na Visão geral do projeto, não aqui; o bloco DIZ essa ausência em vez de
+omiti-la. Sem o indicador, o rodapé do card fica com um item e o
+`space-between` do mockup vira alinhamento à esquerda.
 
 ### `/registrar`, `/esqueci-senha`, `/definir-senha`
 

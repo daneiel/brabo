@@ -5776,6 +5776,77 @@ na api resolveria de verdade e é decisão à parte, fora do escopo desta.
 - **Origem:** revisão de design do dono do produto (item #3 do canvas de
   melhorias de UI)
 
+## Estado de ambiente na tela (RN-468)
+
+### RN-468 — Sinal de ambiente diz o que SABE: `workspaceVerifiedAt` é registro de confirmação, nunca garantia de que o runner está vivo {#rn-468}
+
+O produto mostra estado de ambiente em dois lugares, e o recorte de cada um é
+a regra: a tela de **login** mostra só o que é verdade SEM identidade, e a
+**Visão geral do projeto** mostra o que só é verdade COM ela.
+
+**Pré-login, o recorte é imposto pelo escopo do dado, não por escolha
+estética.** Sobram os dois `/health` — públicos nos dois serviços de propósito
+(`@Public()` na api; "Sem auth de propósito" no `router.ex`), os mesmos que
+`StatusPage` já consome sem sessão. Presença de runner é chaveada por
+`{user_id, project_id}` (`runner_device_keys`) e a lista de modelos é
+`projects/:projectId/models` com papel `viewer`: antes do login não existe
+nenhum dos dois sujeitos, então a tela **declara a ausência** ("Runner e
+modelos locais dependem da sua conta e de um projeto") em vez de omiti-la —
+omitir faria a plataforma parecer não ter o que ela tem. Os dois `/health`
+mantêm os TRÊS estados separados (RN-088 aplicada a um sinal de ambiente):
+`verificando…` não é `sem resposta`, e nenhum dos dois é `respondendo`. A
+sonda tem TETO (6s): uma api que aceita a conexão e nunca responde deixaria a
+linha em "verificando…" para sempre, o que é honesto por meio segundo e
+mentira por omissão depois de dez.
+
+**E o formulário nunca espera pela sonda.** O estado é local ao bloco, que é
+IRMÃO do card — api fora do ar muda um texto e não atrasa nem esconde um pixel
+do login. Isso importa exatamente no momento em que a api cai, que é quando
+alguém mais precisa que a tela ao menos ABRA.
+
+**Pós-login, a regra é sobre o que o dado NÃO afirma.** O sinal de runner sai
+de `projects.workspace_verified_at` — o carimbo que `ConfirmProjectWorkspaceUseCase`
+grava quando um runner conecta e confirma a pasta (RN-423), e o MESMO campo
+que o engine usa como portão (`TerminalExecutor` recusa comando em projeto
+`runner` com o campo nulo). Ele **não é batimento**, por duas razões
+independentes: não há processo sendo observado, e **reconectar reportando o
+mesmo caminho não regrava o carimbo** (decisão explícita do caso de uso), de
+modo que nem a data é "a última vez que o runner apareceu". A tela diz "pasta
+confirmada em `<data>`" com a ressalva do que isso não é, e **nunca** "de pé",
+"online" nem bolinha verde — o tom é `neutro`, e verde ali leria como uma
+garantia de liveness que o dado não sustenta. Quem sabe do AGORA é o socket
+do terminal, na aba Código (`TerminalPanel`/`RunnerOnboardingPanel`), e a
+ressalva aponta para lá. Mesma disciplina que a RN-467 usou ao tomar
+emprestado o `updatedAt` da história.
+
+A linha do runner só existe em projeto no modo `runner`: nos outros dois o
+campo é nulo por definição (a conversão de modo o zera, RN-450) e uma linha
+"nunca confirmada" ali seria uma ausência inventada.
+
+- **Onde:** `apps/web/src/components/SinaisDoAmbiente.tsx:72` (`useSaude` — a
+  sonda com teto e o `.catch` da rejeição de conexão), `:133`
+  (`SinaisDoAmbiente`, o bloco pré-login);
+  `apps/web/src/components/AmbienteDoProjeto.tsx:67` (`AmbienteDoProjeto`),
+  `:102` (linha do runner, só no modo `runner`, com tom `neutro` e ressalva);
+  `apps/web/src/routes/AuthLayout.tsx:46` (`colunaDeIdentidade` — nada focável
+  ali, ou a primeira parada de `Tab` deixa de ser o campo de e-mail);
+  `apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts:93`
+  (o carimbo NÃO é regravado quando o caminho não muda — a razão de a data não
+  ser recência)
+- **Teste:** `apps/web/src/components/SinaisDoAmbiente.test.tsx` (os três
+  estados distintos; rejeição de conexão vira "sem resposta" e não silêncio;
+  resposta não-OK idem; teto da sonda pendurada; nenhum elemento focável; a
+  ausência de runner/modelos é declarada),
+  `apps/web/src/components/AmbienteDoProjeto.test.tsx` (sem linha de runner
+  fora do modo `runner`; confirmado exige a ressalva e o bloco não contém
+  `de pé|online|conectado agora`; nunca confirmado ensina o caminho; contagem
+  de modelos locais no singular, no plural e no zero; chaves de consulta
+  reusadas), `apps/web/src/routes/LoginPage.ambiente.test.tsx` (o formulário
+  renderiza e submete com a sonda rejeitando E com a sonda pendurada; um `<h1>`
+  só; a versão continua com uma fonte)
+- **Origem:** revisão de design do dono do produto (item #6 do canvas de
+  melhorias de UI)
+
 ---
 
 ## Quando dá errado
