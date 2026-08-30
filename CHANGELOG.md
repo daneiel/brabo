@@ -6,6 +6,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: em **Configurações**, "este ajuste não tem valor próprio" passa a
+  ser dito de UM jeito só. Eram quatro: `"Sem valor próprio — usa o default
+  (3)"` na Execução, `"Sem teto"` como placeholder no Teto de gasto por área,
+  `"voltar a herdar"` em Modelos por agente e `"Voltar a herdar"` em Modelo
+  por área — quatro redações, quatro chaves de tradução independentes, e nada
+  impedindo a quinta seção de inventar a quinta. Agora há **dois polos e um
+  verbo**, de uma fonte só: **"Sem valor próprio"**, **"Valor próprio"** e
+  **"Voltar a herdar"**. O rótulo diz o ESTADO e o detalhe ao lado diz a
+  CONSEQUÊNCIA — "usa o default (3)", "sem teto" —, que é o que de fato muda
+  de seção para seção: o circuit breaker cai numa constante do produto, o teto
+  de gasto simplesmente não existe, e o modelo cai na cascata `workspace →
+  project → area → agent → session`. **Nenhum rótulo diz "Herdado"** de
+  propósito: nos dois primeiros isso afirmaria uma cascata que não existe (o
+  teto de gasto é ADITIVO aos budgets de projeto e sessão, nunca herdado
+  deles). O que se unificou é o VOCABULÁRIO, não a forma: a marca só entra
+  onde o controle não mostra o estado sozinho — o campo da Execução vem
+  pré-preenchido com o default e portanto não distingue nada —, e a tabela de
+  Modelos por agente consome só o verbo, porque a coluna **Origem** já é a
+  marca de estado daquela linha. No Teto de gasto por área o placeholder
+  deixou de ser o único enunciado do estado (ele some assim que alguém digita,
+  não se lê sem olhar dentro do campo, e não tem como dizer o polo positivo
+  "esta área TEM teto próprio") e ficou só com o trabalho de texto-fantasma.
+  O verbo aparece nos dois registros tipográficos que a aba usa — botão na
+  seção de área, link discreto em mono na célula da tabela — derivados da
+  MESMA chave, e não de duas. Nenhum ajuste mudou de comportamento: nada
+  salva, herda ou reverte diferente
 - **web**: a aba **Configurações** ganha um **sumário ancorado**. Ela sempre
   teve 17 seções numa rolagem só, e nenhum mapa: sem índice, sem âncora, sem
   nenhum sinal de onde se está — quem procurava "Teto de gasto por área"

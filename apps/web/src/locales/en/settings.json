@@ -9,6 +9,11 @@
       "avancado": "Advanced"
     }
   },
+  "heranca": {
+    "semValorProprio": "No value of its own",
+    "proprio": "Own value",
+    "voltarAHerdar": "Go back to inheriting"
+  },
   "matrix": {
     "title": "Who can approve what",
     "eyebrow": "summary matrix",
@@ -74,7 +79,6 @@
     "skippedTitleUnavailable": "The {{scope}} model disappeared from the provider — the cascade fell back to {{origin}}.",
     "skippedTitleNoToolCalling": "The {{scope}} model doesn't do tool calling and can't serve an agent — the cascade fell back to {{origin}}.",
     "areaOriginTitle": "Default for the {{area}} area.",
-    "backToInherit": "go back to inheriting",
     "backToInheritTitleWithArea": "Deletes this agent's own model — it goes back to using the default of the {{area}} area.",
     "backToInheritTitleNoArea": "Deletes this agent's own model — it goes back to inheriting from the project or the workspace.",
     "emptyMessage": "No agent configured.",
@@ -91,8 +95,7 @@
       "title": "{{area}} area",
       "lead": "Lead: {{lead}}",
       "subagents": " — subagents: {{list}}",
-      "subagentsDynamic": " — dynamic subagents (per module)",
-      "backToInherit": "Go back to inheriting"
+      "subagentsDynamic": " — dynamic subagents (per module)"
     },
     "toast": {
       "saveError": "Could not save",
@@ -139,8 +142,8 @@
     "subtitle": "Dev agents' circuit breaker — applies starting with the next execution activation, doesn't affect agents already running.",
     "card": {
       "title": "Consecutive blocked tasks before stopping",
-      "hintDefault": "No value of its own — using the default ({{default}})",
-      "hintConfigured": "Configured for this project"
+      "hintDefault": "uses the default ({{default}})",
+      "hintConfigured": "configured for this project"
     },
     "save": "Save",
     "saving": "Saving…",
@@ -211,7 +214,8 @@
     "card": {
       "title": "{{area}} area",
       "spent": "Spent: {{amount}}",
-      "capAria": "Spend cap for the {{area}} area, in dollars"
+      "capAria": "Spend cap for the {{area}} area, in dollars",
+      "noCap": "no cap"
     },
     "placeholder": "No cap",
     "save": "Save",

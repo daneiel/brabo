@@ -9,6 +9,11 @@
       "avancado": "Avançado"
     }
   },
+  "heranca": {
+    "semValorProprio": "Sem valor próprio",
+    "proprio": "Valor próprio",
+    "voltarAHerdar": "Voltar a herdar"
+  },
   "matrix": {
     "title": "Quem pode aprovar o quê",
     "eyebrow": "matriz resumida",
@@ -74,7 +79,6 @@
     "skippedTitleUnavailable": "O modelo de {{scope}} sumiu do provider — a cascata caiu para {{origin}}.",
     "skippedTitleNoToolCalling": "O modelo de {{scope}} não faz tool calling e não serve a um agente — a cascata caiu para {{origin}}.",
     "areaOriginTitle": "Padrão da área {{area}}.",
-    "backToInherit": "voltar a herdar",
     "backToInheritTitleWithArea": "Apaga o modelo próprio deste agente — ele volta a usar o padrão da área {{area}}.",
     "backToInheritTitleNoArea": "Apaga o modelo próprio deste agente — ele volta a herdar do projeto ou do workspace.",
     "emptyMessage": "Nenhum agente configurado.",
@@ -91,8 +95,7 @@
       "title": "Área {{area}}",
       "lead": "Lead: {{lead}}",
       "subagents": " — subagentes: {{list}}",
-      "subagentsDynamic": " — subagentes dinâmicos (por módulo)",
-      "backToInherit": "Voltar a herdar"
+      "subagentsDynamic": " — subagentes dinâmicos (por módulo)"
     },
     "toast": {
       "saveError": "Não foi possível salvar",
@@ -139,8 +142,8 @@
     "subtitle": "Circuit breaker dos dev agents — vale a partir da próxima ativação da execução, não afeta agentes já rodando.",
     "card": {
       "title": "Tasks blocked seguidas até parar",
-      "hintDefault": "Sem valor próprio — usa o default ({{default}})",
-      "hintConfigured": "Configurado para este projeto"
+      "hintDefault": "usa o default ({{default}})",
+      "hintConfigured": "configurado para este projeto"
     },
     "save": "Salvar",
     "saving": "Salvando…",
@@ -211,7 +214,8 @@
     "card": {
       "title": "Área {{area}}",
       "spent": "Gasto: {{amount}}",
-      "capAria": "Teto de gasto da área {{area}}, em dólares"
+      "capAria": "Teto de gasto da área {{area}}, em dólares",
+      "noCap": "sem teto"
     },
     "placeholder": "Sem teto",
     "save": "Salvar",
