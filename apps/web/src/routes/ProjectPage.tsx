@@ -12,6 +12,8 @@ import {
 } from '../lib/hooks';
 import { setLastSeenSeq } from '../lib/read-state';
 import { TokenMeter } from '../components/TokenMeter';
+import { PainelPrecisaDeVoce } from '../components/PainelPrecisaDeVoce';
+import { montarFilas } from '../lib/precisa-de-voce';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { ProjectRail, type ItemDoTrilho } from './ProjectRail';
@@ -39,6 +41,7 @@ interface ProjectPageProps {
 export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
   const { t } = useTranslation('projectPage');
   const [tab, setTab] = useState<ChaveDeAba>(initialTab ?? ABA_PADRAO);
+  const [painelAberto, setPainelAberto] = useState(false);
 
   // `initialTab` só valia no MOUNT (o nome já diz): um link `?tab=` clicado
   // de DENTRO de um `ProjectPage` já montado (ex.: "Ver arquitetura
@@ -103,6 +106,20 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
     prsPendentes,
     arquiteturaPendente,
   };
+
+  // As MESMAS cinco consultas acima, agora vistas como cinco FILAS num painel
+  // só (chip "Precisa de você", no topo). Nenhuma requisição a mais: os cinco
+  // hooks já rodam aqui para os contadores do trilho, e o painel lê o que eles
+  // devolveram. As cinco continuam SEPARADAS — não há soma nem no painel nem
+  // no chip, pelo mesmo motivo que os contadores do trilho seguem separados
+  // (ADR 0126): somar apaga qual fila está pedindo atenção.
+  const filasPrecisaDeVoce = montarFilas({
+    acoesDaSessao: pendingActionsQuery.data?.items,
+    merges: mergeActionsQuery.data,
+    epicos: backlogQuery.data,
+    pendenciasDeArquitetura: architectureQuery.data?.pendencies,
+    hipoteses: hypothesesQuery.data,
+  });
 
   useEffect(() => {
     // Literal de propósito: quem marca o projeto como lido é a Visão geral —
@@ -213,16 +230,29 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
             </div>
           </div>
 
-          {budget && (
-            <TokenMeter
-              variant="compact"
-              unitLabel="USD"
-              used={budget.spentMicros / 1_000_000}
-              limit={budget.limitMicros / 1_000_000}
-              costBRL={0}
-              costUSD={budget.spentMicros / 1_000_000}
+          <div className={styles.headerRight}>
+            <PainelPrecisaDeVoce
+              projectId={projectId}
+              filas={filasPrecisaDeVoce}
+              open={painelAberto}
+              onOpenChange={setPainelAberto}
+              // O painel não conhece `ChaveDeAba` de propósito (ver
+              // `lib/precisa-de-voce.ts`); é aqui, onde o tipo já está em mãos,
+              // que o destino vira aba de verdade.
+              onIrParaAba={(destino) => setTab(destino satisfies ChaveDeAba)}
             />
-          )}
+
+            {budget && (
+              <TokenMeter
+                variant="compact"
+                unitLabel="USD"
+                used={budget.spentMicros / 1_000_000}
+                limit={budget.limitMicros / 1_000_000}
+                costBRL={0}
+                costUSD={budget.spentMicros / 1_000_000}
+              />
+            )}
+          </div>
         </div>
 
       </header>

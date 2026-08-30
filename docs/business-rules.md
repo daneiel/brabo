@@ -5710,6 +5710,72 @@ opcional, só qual das duas formas é usada.
 - **ADR:** [0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
 - **Origem:** pedido do dono do produto
 
+## Painel "precisa de você" (RN-467)
+
+### RN-467 — O painel das cinco filas de decisão NUNCA soma e NUNCA executa: separa por fila e encaminha para a decisão {#rn-467}
+
+O chip "Precisa de você", no topo do projeto, abre um painel com as CINCO
+filas de decisão do projeto — aprovações de ação, merges de PR, promoções de
+história, pendências de arquitetura e hipóteses do Psicólogo. Duas garantias
+o definem, e nenhuma das duas é estética:
+
+**Nunca soma.** Cada fila tem cabeçalho e contagem PRÓPRIA, e não existe
+total do projeto em lugar nenhum: nem no painel, nem no chip que o abre — o
+chip anuncia PRESENÇA (um ponto, `temAlgoEsperando`, booleano por assinatura)
+e nunca quantidade. É a mesma decisão de produto que já mantém os cinco
+contadores do trilho separados (ADR 0126): somar apaga QUAL fila está pedindo
+atenção, que é justamente a pergunta de quem abre o painel. `montarFilas`
+devolve as cinco na ordem de urgência declarada (`ORDEM_DAS_FILAS`) e não
+exporta função de total — a ausência é o mecanismo, não um esquecimento.
+
+A única dedupe que existe é por IDENTIDADE, nunca entre filas: a MESMA
+`proposed_action` de `git_merge` chega pelos dois hooks (`usePendingActions` é
+da sessão e não filtra por tipo; `useProjectPendingActions` é project-wide) e
+apareceria duas vezes na mesma lista, sob dois títulos. Fica no grupo mais
+específico (`prs`).
+
+**Nunca executa.** As duas filas acionáveis no painel (`aprovacoes`, `prs`)
+renderizam o MESMO `ApprovalCard` da aba de Aprovações, com `variant="queue"`,
+e os botões chamam os mesmos endpoints de decisão — o painel é um ATALHO para
+a decisão, nunca um substituto dela. Isso importa em especial para
+`git_merge`: merge em branch protegida é rebaixado a `require_approval`
+INCONDICIONALMENTE (`apps/api/src/domain/actions/decide.ts`), teto que nem
+`agent_autonomy` nem `permissions.json` levantam, e nada no painel toca nesse
+caminho. `onActivateAutoMode` é OMITIDO nos dois cards de propósito: ligar
+"auto mode" (RN-153) é mudar POLÍTICA do agente, não decidir a ação que está
+na frente — quem quer isso decide na aba de Aprovações, onde o papel de
+workspace já é checado. As outras três filas não têm card de decisão fora do
+contexto delas e por isso LEVAM à aba onde a decisão mora.
+
+**A pendência de arquitetura não tem data própria** — nenhuma, em campo
+nenhum (`ArchitecturePendency`): ela é visão DERIVADA do cruzamento entre
+história e `module_map`, recalculada a cada leitura e nunca gravada. O painel
+EMPRESTA a data da história relacionada e DIZ que emprestou ("história
+atualizada há 18 min", `dataEmprestada`); sem a história no backlog carregado,
+mostra "sem data" e ordena o item no FIM da fila. Em nenhum caso um instante
+inventado: renderizar "agora" faria a linha mais urgente da tela ser a que
+menos se sabe, sem nada denunciando a mentira. Acrescentar coluna e migração
+na api resolveria de verdade e é decisão à parte, fora do escopo desta.
+
+- **Onde:** `apps/web/src/lib/precisa-de-voce.ts:104` (`ORDEM_DAS_FILAS`),
+  `:113` (`FILAS_ACIONAVEIS`), `:135` (`montarFilas` — a dedupe por
+  identidade e o empréstimo de data), `:241` (`temAlgoEsperando`);
+  `apps/web/src/components/PainelPrecisaDeVoce.tsx:246-248` (`role="dialog"`,
+  `aria-modal`, rótulo) e `:279-284` (grupo por fila, com a contagem dela);
+  `apps/web/src/routes/ProjectPage.tsx:116` (monta as filas a partir dos
+  cinco hooks que os contadores do trilho já usam)
+- **Teste:** `apps/web/src/lib/precisa-de-voce.test.ts` (as cinco filas
+  separadas com os itens de cada uma; nada somado e nenhuma função de total;
+  o `git_merge` duplicado aparece uma vez, na fila de PRs; ordem por espera
+  mais longa; data emprestada marcada, ausente vira `null` e vai para o fim),
+  `apps/web/src/components/PainelPrecisaDeVoce.test.tsx` (cinco cabeçalhos com
+  a contagem de cada fila; o total não aparece em lugar nenhum; frase própria
+  do vazio; `ApprovalCard` decide pela sessão da PRÓPRIA ação; "Modo
+  automático" não é oferecido; linha de arquitetura sem data renderiza sem
+  quebrar; `Esc`, clique-fora, foco e `aria-expanded`)
+- **Origem:** revisão de design do dono do produto (item #3 do canvas de
+  melhorias de UI)
+
 ---
 
 ## Quando dá errado

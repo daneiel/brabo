@@ -55,6 +55,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Hook do canal de turno do `SessionPage.tsx` | 2 661 → 2 479 linhas; PR mecânica de dedup (`iniciarTurnoDoAgente`/`finalizarTurnoDoAgente`/`cancelarTurnoOtimista`) seguida da extração de estado + efeito do canal Phoenix para o hook `useTurnoDoAgente` (`lib/session-turno.ts`) — fecha o item que a ADR 0122 deixou declarado em aberto; `ProjectSettingsTab.tsx` segue fora, decisão separada | ADR 0124 |
 | `ProjectSettingsTab.tsx` por seção | 2 532 → 77 linhas; as 17 seções viram um arquivo cada sob `routes/settings/` (+ `shared.ts` com os DOIS helpers de mais de um chamador), e o arquivo antigo fica no caminho como entrada e barrel — caminho e os 11 nomes exportados são contrato de 3 testes. Fecha a ÚLTIMA metade da linha de dívida de `docs/architecture.md` | ADR 0125 |
 | Trilho vertical de navegação do projeto | A régua horizontal de dois níveis (`GroupedTabs`) vira um trilho vertical com os TRÊS grupos abertos ao mesmo tempo; geometria do trilho do `CodeShell`, teclado portado, os 5 contadores seguem separados. Revisa a RN-201: a aba de Código não recolhe mais a sidebar sozinha | ADR 0126, RN-201 |
+| Painel "precisa de você" | Chip no topo do projeto abre as CINCO filas de decisão num lugar só — separadas, ordenadas por urgência, sem soma nenhuma (nem no chip). Aprovações e merges decidem ali pelo `ApprovalCard`; as outras três levam à aba. Pendência de arquitetura empresta a data da história e DIZ que emprestou | RN-467 |
 
 ## Estado atual e aberto
 
@@ -419,6 +420,17 @@ daqui e o fechamento vai para o histórico.
   perguntas diferentes e nenhuma é recorte da outra (RN-101/ADR 0063).
 - Métrica de execução de agentes é extraída do event log/token_usage
   por script, nunca anotada manualmente (lição da Fase 10/13).
+- As CINCO filas de decisão do projeto (aprovações, merges de PR, promoções
+  de história, pendências de arquitetura, hipóteses do Psicólogo) nunca são
+  SOMADAS — nem nos contadores do trilho (ADR 0126) nem no painel "precisa de
+  você" que as reúne (RN-467), cujo chip anuncia PRESENÇA e não quantidade.
+  Somar apaga qual fila está pedindo atenção. E o painel é ATALHO para a
+  decisão, nunca substituto: ele renderiza o mesmo `ApprovalCard` e chama os
+  mesmos endpoints, sem tocar em teto nenhum — em especial o de merge em
+  branch protegida (`decide.ts`, `require_approval` incondicional). Tela que
+  não tem a data de um registro DIZ de onde tirou a que mostra, ou não mostra
+  data: a pendência de arquitetura não tem instante gravado e a linha declara
+  que a data é da história relacionada.
 - Tela que mostra um RECORTE diz que é recorte (RN-180). Toda leitura tem
   teto — `limit: 200` nos eventos e nas ações —, e teto silencioso faz a
   tela afirmar sobre o que não leu. O número que falta sai de SUBTRAÇÃO

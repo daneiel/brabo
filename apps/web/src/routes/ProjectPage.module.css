@@ -43,6 +43,16 @@
   overflow: hidden;
 }
 
+/* A ponta direita da faixa: o chip que abre o painel "precisa de você" e o
+   medidor de orçamento, nessa ordem. O chip vem ANTES porque é ele que diz se
+   alguma coisa espera decisão — o medidor informa, o chip convoca. */
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
 .headerLeft {
   display: flex;
   align-items: center;
