@@ -64,12 +64,16 @@ daqui e o fechamento vai para o histórico.
   de timeline/turno → `apps/web/src/lib/session-timeline.ts`. PR 2/5 fechou:
   `StorySlide` → `apps/web/src/routes/StorySlide.tsx`. PR 3/5 fechou:
   `StructuredQuestionCard` (+ o helper privado `permiteOutra`) →
-  `apps/web/src/routes/StructuredQuestionCard.tsx`. Restam: helpers de
-  árvore de backlog + `ContextAside.tsx`, e um hook `useSessionReadiness`
-  (o único passo que não é move mecânico). Fora de escopo do plano
-  inteiro, decisão separada com ADR próprio quando for a vez: o cluster
-  de estado do canal de turno (`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/
-  `atividadeDoTurno`) e `ProjectSettingsTab.tsx`.
+  `apps/web/src/routes/StructuredQuestionCard.tsx`. PR 4/5 fechou: helpers
+  de árvore de backlog (`urlDaPr`/`vinculoDeBacklog`/`montarArvoreDeBacklog`/
+  `totalDeDescendentes`) → `apps/web/src/lib/session-backlog-tree.ts`, e
+  `ItemDeBacklog` + `ContextAside` (a sidebar inteira) →
+  `apps/web/src/routes/ContextAside.tsx`. Resta: um hook
+  `useSessionReadiness` (o único passo que não é move mecânico). Fora de
+  escopo do plano inteiro, decisão separada com ADR próprio quando for a
+  vez: o cluster de estado do canal de turno
+  (`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/`atividadeDoTurno`) e
+  `ProjectSettingsTab.tsx`.
 
 **Decisões de produto abertas (não são bugs; não corrigir de passagem):**
 - Z/AD: allowlist de verbos não converge (verbo/forma/invocação são espaços

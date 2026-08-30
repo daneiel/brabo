@@ -964,6 +964,33 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `SessionPage.perguntas-estruturadas.test.tsx`, que exercita o card
   ponta a ponta. Restam 2 PRs no plano declarado pelo ADR 0122 (helpers
   de árvore de backlog + `ContextAside`, e o hook `useSessionReadiness`)
+- **web**: PR 4 de 5 da decomposição mecânica de `SessionPage.tsx`
+  (ADR 0122) — a fatia maior do plano, duas peças que se movem juntas
+  porque uma depende da outra. As quatro funções PURAS de árvore de
+  backlog (`urlDaPr`, `vinculoDeBacklog`, `montarArvoreDeBacklog`,
+  `totalDeDescendentes`, com o tipo `NoDeBacklog` que várias delas usam)
+  saem para `apps/web/src/lib/session-backlog-tree.ts`, mesmo raciocínio
+  da PR 1: sem JSX, sem `styles`, natural em `lib/`. `ItemDeBacklog` (o
+  nó recursivo do backlog na tela) e `ContextAside` (a sidebar inteira —
+  banner de prontidão, painel de artefatos RN-159, árvore de backlog,
+  paginação de regra de negócio, log de eventos) saem juntos para
+  `apps/web/src/routes/ContextAside.tsx`, `ItemDeBacklog` continua
+  privado do arquivo (não exportado), consumindo os quatro helpers do
+  novo módulo de `lib/`. Continua importando `SessionPage.module.css`
+  direto, mesma decisão da PR 2. `ArtefatoGerado` e
+  `CHAVE_TITULO_PADRAO_POR_TIPO_DE_PR` — só usados dentro de
+  `ContextAside` — moveram junto pela mesma razão do sentinela da PR 3:
+  helper cujo único chamador está de saída não fica órfão em
+  `SessionPage.tsx`. Nenhuma reexportação precisou ficar: nem os quatro
+  helpers nem `ContextAside`/`ItemDeBacklog` são importados por nome em
+  teste nenhum (só renderizados dentro de `<SessionPage>`). ZERO mudança
+  de comportamento observável: os mesmos 24 arquivos
+  `SessionPage.*.test.tsx` passam SEM EDIÇÃO nenhuma, incluindo
+  `SessionPage.painel-e-agrupamento.test.tsx` e
+  `SessionPage.artefatos-gerados.test.tsx`, que exercitam este trecho
+  ponta a ponta — mais checagem visual manual da sidebar renderizada, já
+  que é a extração mais visível das cinco. Resta 1 PR no plano declarado
+  pelo ADR 0122 (o hook `useSessionReadiness`)
 
 ## v3.1.0 — 2026-08-13
 
