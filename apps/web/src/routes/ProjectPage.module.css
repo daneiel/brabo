@@ -121,14 +121,16 @@
 }
 
 /*
- * A régua. Espaçamento, box-shadow da ativa e rolagem horizontal moram na
- * primitiva agora (`components/ui/Tabs.module.css`, ADR 0078) — pendência
- * declarada desde a FASE 16 que esta onda fechou, porque a mesma frente
- * passou a ser dona dos dois arquivos. Aqui sobra só o respiro lateral, para
- * a régua alinhar com o cabeçalho acima dela.
+ * O eixo horizontal da página: trilho de navegação à esquerda
+ * (`ProjectRail.module.css`) e o painel da aba à direita (ADR 0126). Era
+ * `.wrapper` inteiro em coluna, com a régua de abas dentro do cabeçalho.
+ * `min-height: 0` é o que deixa `.body` rolar por dentro em vez de esticar
+ * a página.
  */
-.tabsRow {
-  padding: 0 24px;
+.corpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
 }
 
 /* O lugar onde a tela fala quando não há projeto para mostrar — erro de carga
@@ -143,10 +145,17 @@
    Configurações, Criativo, Chat) centralizam o conteúdo em vez de esticar
    tabela e texto pela largura inteira de um monitor largo. Algumas já tinham
    `max-width` PRÓPRIO em `ch` (prosa, formulário) — este container é mais
-   largo que todos eles, então continua sendo o de FORA, sem conflito. */
+   largo que todos eles, então continua sendo o de FORA, sem conflito.
+
+   Desde o ADR 0126 este é filho de `.corpo` (linha), não de `.wrapper`
+   (coluna): `flex: 1` passou a repartir LARGURA com o trilho, e `min-width:
+   0` é o que impede um filho largo (tabela, terminal) de empurrar o trilho
+   para fora da tela. A centralização por `margin: 0 auto` continua, agora
+   dentro do espaço que sobra à direita do trilho. */
 .body {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   width: 100%;
   max-width: 1040px;
   margin: 0 auto;

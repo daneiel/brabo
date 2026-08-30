@@ -27,7 +27,6 @@
       "instancesCount_other": "{{count}} instances"
     },
     "collapseButton": {
-      "autoCollapsed": "Auto-collapsed on this tab",
       "expand": "Expand menu",
       "collapse": "Collapse menu"
     },

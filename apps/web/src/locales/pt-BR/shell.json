@@ -27,7 +27,6 @@
       "instancesCount_other": "{{count}} instâncias"
     },
     "collapseButton": {
-      "autoCollapsed": "Recolhida automaticamente nesta aba",
       "expand": "Expandir menu",
       "collapse": "Recolher menu"
     },

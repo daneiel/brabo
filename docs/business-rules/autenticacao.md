@@ -2374,10 +2374,12 @@ quadrado de iniciais por projeto (borda na cor de identidade,
 trilha reexpande a barra, abre aquele projeto e navega para ele.
 
 A preferência é do usuário e sobrevive a reload: `brabo.sidebar.collapsed`
-(`'1'`/`'0'`) em `apps/web/src/lib/sidebar-state.ts`. Ela é **manual**
-(`colapsadoManual`) e se soma por OR a um segundo estado, **automático**
-(`autoColapsado`, [RN-201](#rn-201)) — o colapso visível é a união dos dois,
-mas só o manual é gravado.
+(`'1'`/`'0'`) em `apps/web/src/lib/sidebar-state.ts`. Ela é **só manual**
+(`colapsadoManual`): havia um segundo estado, **automático**
+(`autoColapsado`), somado por OR pela aba de Código, e ele foi removido pelo
+[ADR 0126](../adr/0126-trilho-vertical-de-navegacao-do-projeto.md) — ver
+[RN-201](#rn-201). Nenhuma tela recolhe a sidebar por conta própria; o que se
+vê recolhido foi o usuário quem pediu, e está gravado.
 
 - **Onde:** `apps/web/src/routes/Shell.tsx:340-351` (estado e toggle),
   `apps/web/src/routes/Shell.module.css` (`.sidebar`, `.colapsado .sidebar`,
@@ -2523,7 +2525,7 @@ expandida — o que sai é o item solto sem destino.
 - **Origem:** PROGRAMA 28, Onda 2, frente B —
   `design_handoff_brabo/README.md` seção "Navigation shell"
 
-### RN-201 — Projeto/aba ativos persistem entre páginas; a aba Código recolhe sem gravar preferência {#rn-201}
+### RN-201 — Projeto/aba ativos persistem entre páginas; o colapso da sidebar é SÓ do usuário {#rn-201}
 
 Duas chaves finais do handoff: `brabo.project` (o projeto ativo) e
 `brabo.tab` (a aba ativa) — gravadas quando o usuário clica um link de aba
@@ -2531,30 +2533,48 @@ NA SIDEBAR (`LinhaDeAba`/o link de nome do projeto). `?tab=` na URL só vale
 como deep-link INICIAL (`project-tabs.ts`, FASE 24) — trocar de aba dentro
 de `ProjectPage.tsx` é estado local e não escreve na URL depois do
 primeiro load, então estas chaves são o único jeito de a preferência
-sobreviver entre uma navegação e outra.
+sobreviver entre uma navegação e outra. **Esta metade nunca mudou.**
 
-**Auto-collapse do Código, sem gravar preferência.** A rota de Código
-(`ProjectCodeTab.tsx`) não é uma URL própria — é uma ABA dentro de
-`ProjectPage.tsx`, montada/desmontada por troca de `tab` (React desmonta o
-componente anterior ao trocar o `component` da aba ativa). Isso descarta a
-alternativa óbvia ("observar a URL no Shell"): a URL não muda ao trocar de
-aba, só no load inicial. A solução é um `Context` — `AutoCollapseContext`
-(`apps/web/src/lib/sidebar-state.ts`) —, porque `Shell.tsx` fica ACIMA de
-`<Outlet />` na árvore e não há como uma aba passar uma prop pra cima sem
-um canal explícito. `useAutoCollapseSidebar()` chama `registrar(true)` no
-`useEffect` de montagem e `registrar(false)` na limpeza; o Shell soma esse
-sinal (`autoColapsado`) por OR ao colapso manual, e só o manual é
-persistido — por isso o estado anterior volta sozinho ao sair do Código.
+**O auto-colapso da aba de Código SAIU (ADR 0126).** Até aqui a aba de
+Código recolhia a sidebar sozinha para dar largura ao editor, sem gravar
+preferência: `AutoCollapseContext`/`useAutoCollapseSidebar` em
+`sidebar-state.ts`, registrados por `ProjectCodeTab.tsx` (a única
+chamadora) e somados por OR ao colapso manual dentro do `Shell`. O contexto,
+o hook, o estado `autoColapsado`, o `Provider` em torno de `<Outlet />` e o
+`disabled` do botão de recolher — que existia só para proteger esse caminho
+— foram todos removidos.
 
-- **Onde:** `apps/web/src/lib/sidebar-state.ts` (`AutoCollapseContext`,
-  `useAutoCollapseSidebar`, `lerProjetoAtivo`/`gravarProjetoAtivo`,
-  `lerAbaAtiva`/`gravarAbaAtiva`), `apps/web/src/routes/Shell.tsx`
-  (`autoCollapseValue`, o `Provider` em torno de `<Outlet />`),
-  `apps/web/src/routes/ProjectCodeTab.tsx` (a única chamadora hoje)
-- **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe
-  "useAutoCollapseSidebar", "projeto e aba ativos")
+O motivo é estrutural: com o trilho vertical do projeto
+(`routes/ProjectRail.tsx`) sempre presente, manter o auto-colapso poria a
+trilha de ícones do Shell encostada no trilho do projeto — DOIS trilhos
+verticais adjacentes, permanentes, na aba mais pesada do produto.
+
+O que passa a valer: **o colapso da sidebar é uma decisão do USUÁRIO, e só
+dele.** Continua manual, continua persistido em `brabo.sidebar.collapsed`
+([RN-195](#rn-195)), e nenhuma tela recolhe a sidebar por conta própria.
+
+**O custo, aceito e declarado:** a aba de Código passa a abrir com a sidebar
+EXPANDIDA (264px) + o trilho do projeto (180px) + o trilho do próprio
+`CodeShell` (48px) — 492px de moldura antes do primeiro caractere de código,
+MEDIDOS no navegador, contra ~110px antes (62px de sidebar recolhida + 48px
+do trilho do Código). Recolher manualmente continua possível e
+ainda produz trilho do Shell ao lado do trilho do projeto — a diferença é
+que agora quem escolheu foi o usuário, não o sistema.
+
+- **Onde:** `apps/web/src/lib/sidebar-state.ts:80-105`
+  (`lerProjetoAtivo`/`gravarProjetoAtivo`, `lerAbaAtiva`/`gravarAbaAtiva`, e
+  o comentário que registra a remoção), `apps/web/src/routes/Shell.tsx:366-369`
+  (só `colapsadoManual` sobrou), `apps/web/src/routes/ProjectCodeTab.tsx`
+  (nenhuma chamada de colapso)
+- **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe "projeto e
+  aba ativos"), `apps/web/src/routes/Shell.test.tsx` (describe "Shell —
+  colapso da sidebar": a preferência só nasce de clique no botão e é sempre
+  gravada). O describe "useAutoCollapseSidebar" foi removido junto com o
+  hook.
 - **Origem:** PROGRAMA 28, Onda 2, frente B —
-  `design_handoff_brabo/CHECKLIST-CONFRONTO.md` seção 1, "Auto-collapse"
+  `design_handoff_brabo/CHECKLIST-CONFRONTO.md` seção 1; a metade do
+  auto-colapso foi revista pelo
+  [ADR 0126](../adr/0126-trilho-vertical-de-navegacao-do-projeto.md)
 ### RN-202 — A aba `sessions` continua "Chat", nunca "Chat RAG" {#rn-202}
 
 O handoff de design mais recente do PROGRAMA 28 chama a aba consultiva de

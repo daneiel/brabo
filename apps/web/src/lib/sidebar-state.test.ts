@@ -1,8 +1,5 @@
-import { render } from '@testing-library/react';
-import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  AutoCollapseContext,
   CHAVE_ABA_ATIVA,
   CHAVE_AGENTES_ABERTOS,
   CHAVE_COLAPSADO,
@@ -19,7 +16,6 @@ import {
   lerColapsado,
   lerProjetoAtivo,
   lerProjetosAbertos,
-  useAutoCollapseSidebar,
 } from './sidebar-state';
 
 /**
@@ -136,46 +132,5 @@ describe('corDoProjeto', () => {
 
   it('sempre devolve um token CSS var(--...)', () => {
     expect(corDoProjeto('qualquer-id')).toMatch(/^var\(--[\w-]+\)$/);
-  });
-});
-
-/**
- * Auto-collapse (RN-201): o hook chama `registrar(true)` ao montar e
- * `registrar(false)` ao desmontar — é essa dança que faz o Shell voltar ao
- * estado anterior quando a aba de Código some, sem gravar nada em
- * `localStorage`.
- */
-describe('useAutoCollapseSidebar', () => {
-  function Consumidor({ ativo }: { ativo?: boolean }) {
-    useAutoCollapseSidebar(ativo);
-    return null;
-  }
-
-  it('registra true ao montar e false ao desmontar', () => {
-    const chamadas: boolean[] = [];
-    const valor = { registrar: (v: boolean) => chamadas.push(v) };
-
-    const { unmount } = render(
-      createElement(AutoCollapseContext.Provider, { value: valor }, createElement(Consumidor)),
-    );
-
-    expect(chamadas).toEqual([true]);
-    unmount();
-    expect(chamadas).toEqual([true, false]);
-  });
-
-  it('fora de um Provider (Shell ausente) é NO-OP — nunca lança', () => {
-    expect(() => render(createElement(Consumidor))).not.toThrow();
-  });
-
-  it('ativo=false nunca registra nada', () => {
-    const chamadas: boolean[] = [];
-    const valor = { registrar: (v: boolean) => chamadas.push(v) };
-
-    render(
-      createElement(AutoCollapseContext.Provider, { value: valor }, createElement(Consumidor, { ativo: false })),
-    );
-
-    expect(chamadas).toEqual([]);
   });
 });

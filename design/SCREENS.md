@@ -83,12 +83,21 @@ piso AA medido em `apps/web/src/lib/contraste.test.ts`.
 `--accent`). O tingido usa um par que já está na dívida de contraste registrada
 (3,88:1), e o selo é texto de 10px.
 
-**A régua de abas foi ajustada por CSS do chamador**, em
-`ProjectPage.module.css`, e não na primitiva `components/ui/Tabs`: respiro por
-aba (11px × 14px), 2px de intervalo e a divisória da lista desligada, porque
-quem a desenha é o cabeçalho. O lugar disso é a primitiva — a régua do handoff
-é a régua do design system, não a do Projeto. Migrar para lá é mudança de outro
-dono, e continua pendente.
+**A régua horizontal de abas não existe mais** (ADR 0126). A navegação do
+Projeto é um TRILHO VERTICAL (`apps/web/src/routes/ProjectRail.tsx`), com os
+três grupos abertos ao mesmo tempo — 12 abas em 3 grupos não cabiam numa barra
+desenhada para meia dúzia de itens. A geometria é a do trilho da aba Código
+(faixa `--surface-1`, item de 32px em `--radius-sm`, ativo tingido a 12% de
+`--accent`), com uma divergência declarada: 180px de largura em vez de 48px,
+porque este trilho carrega rótulo e cabeçalho de grupo, e não ícone.
+
+A pendência que este parágrafo registrava — respiro por aba, intervalo e
+divisória ajustados por CSS do CHAMADOR (`ProjectPage.module.css`) em vez de
+na primitiva — **fechou antes disso, no ADR 0078**: os valores migraram para
+`components/ui/Tabs.module.css`, que documenta a migração no topo do arquivo,
+e no `ProjectPage.module.css` sobrou só o respiro lateral (depois removido com
+a régua). A primitiva `Tabs` continua existindo como peça do design system
+(`ds-bundle/components/primitivas/Tabs`), agora sem chamador dentro do app.
 
 ## App shell + Dashboard (`Brabo App.dc.html`)
 
