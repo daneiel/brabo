@@ -53,17 +53,12 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Schema por agregado | `db/schema.ts` vira barrel; as 51 tabelas e 34 enums viram 16 arquivos sob `db/schema/`, um por agregado de `domain/*` | ADR 0121 |
 | `SessionPage.tsx` em 5 PRs mecânicos | 3 807 → 2 661 linhas; timeline/turno, `StorySlide`, `StructuredQuestionCard`, árvore de backlog + `ContextAside`, hook `useSessionReadiness` — cluster do canal de turno e `ProjectSettingsTab.tsx` seguem fora, declarado | ADR 0122 |
 | Hook do canal de turno do `SessionPage.tsx` | 2 661 → 2 479 linhas; PR mecânica de dedup (`iniciarTurnoDoAgente`/`finalizarTurnoDoAgente`/`cancelarTurnoOtimista`) seguida da extração de estado + efeito do canal Phoenix para o hook `useTurnoDoAgente` (`lib/session-turno.ts`) — fecha o item que a ADR 0122 deixou declarado em aberto; `ProjectSettingsTab.tsx` segue fora, decisão separada | ADR 0124 |
+| `ProjectSettingsTab.tsx` por seção | 2 532 → 77 linhas; as 17 seções viram um arquivo cada sob `routes/settings/` (+ `shared.ts` com os DOIS helpers de mais de um chamador), e o arquivo antigo fica no caminho como entrada e barrel — caminho e os 11 nomes exportados são contrato de 3 testes. Fecha a ÚLTIMA metade da linha de dívida de `docs/architecture.md` | ADR 0125 |
 
 ## Estado atual e aberto
 
 O que segue é OPERATIVO — decide comportamento de sessão hoje. Fechou? Sai
 daqui e o fechamento vai para o histórico.
-
-**`ProjectSettingsTab.tsx` (ADR 0122/ADR 0124):** o cluster de estado do
-canal de turno do `SessionPage.tsx` fechou (histórico, ADR 0124) — a linha
-de dívida de `docs/architecture.md` que citava os dois arquivos agora
-descreve só este. `ProjectSettingsTab.tsx` (~90 KiB) segue intocado,
-decisão de escopo separada, sem data.
 
 **Decisões de produto abertas (não são bugs; não corrigir de passagem):**
 - Z/AD: allowlist de verbos não converge (verbo/forma/invocação são espaços
