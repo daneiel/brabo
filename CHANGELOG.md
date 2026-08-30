@@ -449,6 +449,30 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: em **Configurações**, a seção **Membros e papéis** passa a
+  **respeitar o papel de quem está olhando**, e suas duas ações caladas passam a
+  ter desfecho. Ela não checava papel nenhum: **convidar**, **trocar o papel de
+  alguém** e **remover** apareciam ativas para todo mundo, **`viewer`
+  incluído**, e a api recusava com 403 — e duas delas nem diziam isso, porque
+  não tinham tratamento de erro: a recusa virava silêncio na tela e ruído no
+  console. Remover um membro em silêncio era o pior dos três, por ser ação
+  consequente e sem volta pela tela. O mínimo **não** foi copiado da seção de
+  modelos logo acima: **Modelos por agente** exige `developer` e as três ações
+  daqui exigem `maintainer`, porque a régua é do **endpoint**, nunca da tela ao
+  lado. E o papel usado é o **efetivo do projeto**, não o do workspace — o
+  limite que a correção anterior tinha declarado. Não é uma lacuna nova nem uma
+  segunda: é a **mesma**, vista da seção que tem como fechá-la, porque esta já
+  busca a lista de membros do projeto e daí sai o papel de quem olha, composto
+  exatamente como a api o compõe. Quem não pode editar **continua lendo tudo** —
+  o papel de cada membro segue visível no seletor apagado —, e o motivo é dito
+  **uma vez, em texto**, na legenda. A legenda também passa a dizer **duas
+  coisas que a tela afirmava sem querer**: que o papel desta tabela **substitui**
+  o do workspace neste projeto, **nos dois sentidos** (pôr `viewer` aqui rebaixa
+  de verdade, inclusive quem é `owner` do workspace — o seletor não é uma
+  sugestão inofensiva), e que quem alcança o projeto **só pelo workspace não
+  aparece na lista**. **Convidar** manteve de propósito a dica fixa em vez da
+  frase da api: ali o ID é digitado à mão, e o erro que se alcança de verdade
+  responde `500`, cuja frase seria pior que a dica (RN-471)
 - **web**: em **Configurações**, a tabela **Modelos por agente** passa a
   **respeitar o papel de quem está olhando**. Ela não checava papel nenhum: o
   seletor de modelo e o "voltar a herdar" de cada linha apareciam clicáveis para

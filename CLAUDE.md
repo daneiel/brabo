@@ -494,8 +494,14 @@ daqui e o fechamento vai para o histórico.
   controle fica inerte no lugar, e o motivo é dito UMA vez em TEXTO na seção —
   `title` em elemento `disabled` não abre no Chromium, então explicar por tooltip
   é não explicar. Nada disso é fronteira de segurança (quem recusa é o
-  `RolesGuard`) e o papel lido é o do WORKSPACE, que `project_members` sobrepõe
-  nos dois sentidos — lacuna declarada, igual nas duas seções.
+  `RolesGuard`). O papel a LER é o EFETIVO do projeto — `projectRole ??
+  workspaceRole`, uma SOBREPOSIÇÃO nos dois sentidos, e nunca "o maior dos dois"
+  que três descrições de OpenAPI ainda prometem (RN-471). Onde a tela já busca
+  `project_members` ele é DERIVÁVEL e a lacuna se FECHA (a seção de Membros, que
+  compõe da lista que já carrega); onde não busca, lê-se o do WORKSPACE e a
+  lacuna se DECLARA (as duas seções de modelo). É UMA lacuna vista de dois
+  lados, não uma por seção — não a declare de novo onde os dados estão à mão,
+  nem invente uma segunda fonte de papel onde não estão.
 - Sinal de ambiente diz o que SABE, e proxy nunca vira garantia (RN-468).
   A tela de login é PRÉ-identidade: só cabem ali os dois `/health`, que já
   são públicos nos dois serviços — presença de runner

@@ -1,7 +1,15 @@
 import type { Role } from './api-types';
 
-// Hierarquia linear: viewer < developer < maintainer < owner. Papel efetivo
-// nunca é rebaixado — ver RN da cascata de papéis no backend.
+// Hierarquia linear: viewer < developer < maintainer < owner. É a ORDEM que
+// `roleAtLeast` compara, e continua valendo.
+//
+// O que NÃO vale, e este comentário afirmava: papel efetivo *é* rebaixado. A
+// cascata do backend é uma SOBREPOSIÇÃO, não "o maior dos dois" —
+// `ResolveEffectiveRoleUseCase.forProject` devolve a linha de `project_members`
+// quando ela existe, sem comparar com o workspace, então associar alguém como
+// `viewer` num projeto rebaixa ali até quem é `owner` do workspace. Ver
+// [RN-471](../../../../docs/business-rules.md#rn-471), que é a fonte; três
+// descrições de OpenAPI ainda prometem o contrário e estão erradas.
 export const ROLE_ORDER: Role[] = ['viewer', 'developer', 'maintainer', 'owner'];
 
 // Sem tradução pt-BR de propósito: são os nomes reais do RBAC, e traduzir

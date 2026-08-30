@@ -5913,6 +5913,125 @@ da linha.
 
 ---
 
+## A seção de Membros respeita o papel, e o papel é o EFETIVO do projeto (RN-471)
+
+### RN-471 — Papel na seção de Membros: `maintainer`, e derivado da linha do projeto sobre a do workspace {#rn-471}
+
+`MembersSection` não checava papel nenhum. As TRÊS ações da seção — convidar,
+trocar o papel de alguém e remover — apareciam ativas para todo mundo, `viewer`
+incluído, e a api recusava com 403. Duas delas nem chegavam a dizer isso:
+`handleRoleChange` e `handleRemove` não tinham `try/catch` e eram chamadas de um
+`onChange`/`onClick`, então toda recusa virava `unhandled promise rejection` —
+silêncio na tela e ruído no console, a mesma classe de defeito que a
+[RN-102](business-rules/custo.md#rn-102) fechou na tabela de modelos. Remover um
+membro em silêncio é o pior dos três: é ação consequente e sem volta pela tela,
+porque repor exige o UUID que a linha removida levava junto.
+
+**O mínimo é `maintainer`, e é do ENDPOINT.** Os três caminhos pedem o mesmo
+(`projects.controller.ts`), e `GET` pede `viewer` — por isso quem não edita
+continua vendo a tabela inteira:
+
+| ação | endpoint | papel |
+|---|---|---|
+| convidar | `POST :projectId/members` | `maintainer` |
+| trocar papel | `POST :projectId/members` (upsert) | `maintainer` |
+| remover | `DELETE :projectId/members/:userId` | `maintainer` |
+| ver a tabela | `GET :projectId/members` | `viewer` |
+
+Copiar o gate da seção de modelos (`developer`, e correto lá) ofereceria aqui os
+três controles a quem a api recusa. É a SEGUNDA seção seguida cujo mínimo difere
+da vizinha: a régua continua sendo o endpoint, nunca a tela ao lado.
+
+**O papel é o EFETIVO do PROJETO — e isto FECHA a lacuna que a RN-102 declarou,
+não a repete.** Lá a tela lê o papel de WORKSPACE enquanto quem autoriza é
+`ResolveEffectiveRoleUseCase.forProject`, e fechar isso exigiria uma consulta de
+papel por projeto que o web não tem. É a MESMA lacuna aqui, vista do outro lado:
+esta seção JÁ faz essa consulta. `listProjectMembers` é `findMemberRole` para
+todo mundo de uma vez, e `userIdDaSessao()` (o `sub` do access token) diz qual
+linha é a de quem olha. A composição é literalmente a do caso de uso —
+`projectRole ?? workspaceRole` —, não uma segunda fonte de papel inventada só
+nesta tela. Enquanto a lista não chegou o papel é AUSENTE, não o de workspace:
+sem ela não há como saber se existe linha própria, e errar para o lado de
+desabilitar se conserta recarregando.
+
+**A sobreposição vale nos DOIS sentidos, e QUATRO lugares diziam o contrário.**
+`forProject` devolve a linha de `project_members` quando ela existe, sem comparar
+com o workspace. Então definir `viewer` aqui rebaixa mesmo — até um `owner` de
+workspace, que depois só é restaurado por quem tenha `maintainer`. O código nunca
+fez o contrário, e o próprio `resolve-effective-role.use-case.spec.ts` fixa isso
+("papel de projeto sobrepõe o de workspace"). Onde a promessa falsa estava:
+
+| lugar | o que dizia | situação |
+|---|---|---|
+| descrição de `POST :projectId/members` | "the EFFECTIVE role is the higher of this one and what the person already has in the workspace"; "associating someone as `viewer` here doesn't downgrade a workspace `owner`" | **não corrigida** — é mudança de api |
+| descrição de `AddMemberDto.role` | a mesma frase do "higher of" | **não corrigida** — é mudança de api |
+| resumo de `GET :projectId/members` | "with their effective role"; "includes whoever inherits access from the workspace" | **não corrigida** — é mudança de api |
+| `apps/web/src/lib/roles.ts:3` | "Papel efetivo nunca é rebaixado" | **corrigida aqui** |
+
+As três da api ficam declaradas e não são tocadas de passagem: as descrições
+propagam para `api-types.generated.ts`. A do web é PIOR que as outras três e por
+isso foi corrigida junto — as da api ao menos moram numa descrição de OpenAPI,
+enquanto essa estava no módulo que `roleAtLeast` e `ROLE_ORDER` exportam, ou
+seja, no código que a próxima pessoa desta família de correções vai abrir e
+editar, lendo a regra errada antes de qualquer outra coisa. A hierarquia linear
+declarada na mesma linha continua válida — é a ordem que `roleAtLeast` compara, e
+não mudou. A tela, por sua vez, DIZ o que vale, em vez de deixar o `Select` ser
+lido como sugestão inofensiva.
+
+**Some o CONTROLE, nunca a INFORMAÇÃO** (ADR 0064). Quem não tem `maintainer`
+continua lendo o papel de cada membro no próprio `Select` apagado — é a
+informação central da tabela, e trocá-la por texto esconderia o estado junto com
+a ação. O motivo é dito UMA vez, em texto, na legenda: `title` em elemento
+`disabled` não abre no Chromium, e uma linha por membro repetiria um fato sobre
+QUEM OLHA em cima de cada pessoa da lista.
+
+**A tabela é um RECORTE, e declara
+([RN-180](business-rules/autenticacao.md#rn-180)).** `listMembers` é um
+`innerJoin` em `project_members`: quem alcança o projeto só pelo workspace não
+aparece em linha nenhuma, embora o resumo do `GET` prometa "includes whoever
+inherits access from the workspace". Esse dado NÃO está ao alcance do cliente —
+nenhuma consulta do web lista membros de workspace com papel —, então a legenda
+diz que a lista omite, em vez de deixá-la ser lida como "todo mundo que tem
+acesso". É a lacuna que sobra, e ela é declarada, não tratada.
+
+**Nada disto é fronteira de segurança:** quem recusa continua sendo o
+`RolesGuard`.
+
+**Convidar mantém a dica fixa, e é decisão.** As outras duas ações usam
+`mensagemDaApi` porque o `userId` delas veio da lista e existe — o que sobra é
+403 e rede, e a frase da api é a informação mais útil que há. No convite o
+`userId` é DIGITADO, e o erro alcançável é apontar para um usuário inexistente:
+um UUID bem formado passa pelo `@IsUUID()`, estoura a FK
+`project_members.user_id → users.id`, nenhum dos filtros globais trata isso e o
+Nest responde o 500 padrão. `mensagemDaApi` devolveria "Internal server error",
+pior que a dica — o `padrao` dela só vale para erro que não é `ApiError`.
+Uniformizar a forma pioraria o conteúdo no caminho mais provável da caixa.
+
+- **Onde:** `apps/api/src/interfaces/http/iam/projects.controller.ts:121`,
+  `:135`, `:147` (os três papéis — estas linhas NÃO mudaram),
+  `apps/api/src/application/use-cases/iam/resolve-effective-role.use-case.ts:14`
+  (`projectRole ?? workspaceRole`, a sobreposição nos dois sentidos),
+  `apps/api/src/infrastructure/persistence/drizzle/project.repository.ts:116`
+  (`listMembers` — o `innerJoin` que faz a tabela ser recorte),
+  `apps/web/src/routes/settings/MembersSection.tsx:62` (o papel efetivo e por
+  que `maintainer`), `:109` (por que convidar não usa `mensagemDaApi`), `:142` e
+  `:162` (os dois `try/catch` que faltavam),
+  `apps/web/src/lib/roles.ts:49` (`roleAtLeast`), `:3` (o comentário de
+  `ROLE_ORDER`, que afirmava "papel efetivo nunca é rebaixado" — o quarto lugar
+  da tabela acima, e o único corrigido)
+- **Teste:** `apps/web/src/routes/settings/papel-na-secao-de-membros.test.tsx`
+  (`viewer` e `developer` não editam e o clique não chega na api; `maintainer` e
+  `owner` editam e o POST/DELETE chegam; papel ausente é inerte; o papel da
+  linha sobrevive ao controle apagado; o PAR que prova a sobreposição nos dois
+  sentidos — `viewer` de workspace com linha `maintainer` EDITA, `owner` de
+  workspace com linha `viewer` NÃO edita; as duas recusas viram toast com a
+  frase da api; a tela não passa a exibir o papel que a api negou; e convidar
+  mantendo a dica fixa contra um 500)
+- **Origem:** revisão da #443 — a lacuna que ela declarou, vista da seção que
+  tem os dados para fechá-la
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
