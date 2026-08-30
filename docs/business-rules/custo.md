@@ -2405,6 +2405,21 @@ herdar" continua aparecendo em toda origem `agent` — a ação segue disponíve
 justamente no caso que a cadeia não prova, e nele ela ainda muda o futuro
 (sem a linha, o agente passa a acompanhar o Criativo).
 
+**A outra metade dessa escolha: o 404 tem desfecho próprio.** Manter o botão em
+toda origem `agent` significa oferecê-lo TAMBÉM onde não há linha para apagar —
+e ali `ClearModelBindingUseCase` responde **404**, corretamente ("apaguei o que
+não existia" e "apaguei" não são a mesma resposta; colapsá-las esconderia um
+`agentSlug` errado). Para quem clicou, porém, esse 404 não é falha: o estado
+pedido — o agente herda — **já é verdade**, e chamá-lo de erro seria a tela
+contradizendo o que ela sabe. Então ele não passa por `mensagemDaApi` como as
+demais recusas, por dois motivos: a frase da api é pt-BR cravada no código e o
+idioma default do web é `en`, e este endpoint tem **uma** causa de 404 (papel
+insuficiente é 403 no `RolesGuard`, `scope_id` malformado não é 404) — o cliente
+SABE o que este 404 significa e pode dizer na língua de quem lê. Qualquer outro
+status continua sendo falha de verdade, com a frase da api e tom `danger`. Nos
+**dois** desfechos a linha é relida: se a api diz que não havia binding, quem
+está velha é a tela.
+
 **Vazio tem texto próprio, e vazios diferentes têm textos diferentes.** Os três
 `—` da tela diziam três coisas com o mesmo símbolo e agora dizem cada uma a
 sua: `sem modelo em nenhum nível` (nenhum nível tem binding para o agente),
@@ -2417,10 +2432,13 @@ consegue nomear.
 - **Onde:** `apps/web/src/routes/settings/cascata.tsx:119` (`montarCadeia` — os
   quatro estados e o nó do Criativo), `:178` (`herdouDoCriativo` — a dedução e
   seu limite), `:287` (`CadeiaDeCascata`),
-  `apps/web/src/routes/settings/ModelsSection.tsx:118` (`cadeiaDoAgente`),
-  `:249` (coluna Origem), `:319` (`não há nível abaixo`), `:338`
+  `apps/web/src/routes/settings/ModelsSection.tsx:122` (`cadeiaDoAgente`),
+  `:235` (`handleClearAgentBinding` — os três desfechos, e por que o 404 tem o
+  dele), `:302` (coluna Origem), `:372` (`não há nível abaixo`), `:391`
   (`sem gasto ainda`),
   `apps/web/src/routes/settings/AreaModelsSection.tsx:142` (a cadeia da área),
+  `apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts:25`
+  (o 404 que a api levanta — este arquivo NÃO mudou),
   `apps/api/src/domain/llm/binding-resolver.ts:140` (o `origin: 'agent'` que a
   api devolve, e o comentário que explica por que ele está certo — este
   arquivo NÃO mudou)
@@ -2430,7 +2448,11 @@ consegue nomear.
   distinção sobrevive ao `en`; nível descartado vira nó riscado e o badge
   concorrente sumiu; os três vazios com três textos; `montarCadeia` e
   `herdouDoCriativo` como funções puras, incluindo o caso do padrão de área
-  DESCARTADO, que não segura a descida)
+  DESCARTADO, que não segura a descida),
+  `apps/web/src/routes/settings/voltar-a-herdar.test.tsx` (os três desfechos do
+  clique: apagou e relê; 404 não é erro, não repassa a frase pt-BR da api nem
+  em `en`, e relê porque a tela é que estava velha; outro status vai por
+  `mensagemDaApi` e não relê)
 - **Origem:** revisão de design do dono do produto (item #9 do canvas de
   melhorias de UI — "cascata de modelo como cadeia visível")
 
