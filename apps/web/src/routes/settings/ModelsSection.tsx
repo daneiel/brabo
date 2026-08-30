@@ -15,6 +15,8 @@ import {
   setAgentModelBinding,
 } from '../../lib/api-client';
 import { AGENT_LIST, AREAS, areaFor } from '../../lib/agents';
+import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
+import { roleAtLeast } from '../../lib/roles';
 import type { Model, ModelBindingScope, ResolvedBinding } from '../../lib/api-types';
 import { Table, type TableColumn } from '../../components/ui/Table';
 import { ModelPicker } from '../../components/ModelPicker';
@@ -49,6 +51,31 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   const { rotuloInline: voltarAHerdar } = useVoltarAHerdar();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+
+  /**
+   * `developer`, e NÃO `owner || maintainer` como na seção irmã de área
+   * (`AreaModelsSection`) — os dois endpoints desta tabela pedem `developer`
+   * (`model-bindings.controller.ts`, `PUT`/`DELETE .../agent-bindings/:slug`),
+   * e a diferença é a regra, não um descuido: o binding do agente alcança UM
+   * agente, o da área alcança o lead e todos os subagentes de uma vez
+   * ([RN-102](docs/business-rules/custo.md#rn-102)).
+   *
+   * Copiar o gate da irmã trancaria um `developer` fora de uma ação que a api
+   * aceita — o defeito inverso do que esta mudança conserta, e pior: tirar
+   * capacidade de quem tem é invisível para quem a perdeu.
+   *
+   * **Limite declarado, e é o MESMO da seção irmã:** este é o papel de
+   * WORKSPACE, e quem autoriza do outro lado é o papel EFETIVO do PROJETO
+   * (`ResolveEffectiveRoleUseCase.forProject`), que a linha de `project_members`
+   * SOBREPÕE nos dois sentidos. Quem tem papel próprio no projeto pode ver aqui
+   * um controle desabilitado que a api aceitaria (ou habilitado que ela recusa,
+   * e aí o toast conta o desfecho). Corrigir exigiria uma consulta de papel por
+   * projeto que o web ainda não tem; inventar uma segunda fonte de papel só
+   * nesta seção seria pior que a lacuna.
+   */
+  const { data: comPapel } = useCurrentWorkspaceWithRole();
+  const podeEditar = roleAtLeast(comPapel?.role, 'developer');
+
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
@@ -344,6 +371,12 @@ export function ModelsSection({ projectId }: { projectId: string }) {
             selectedModelId={resolved?.modelId}
             onSelect={(model) => handleModelChange(agent.key, model)}
             variant="inline"
+            // Desabilitar, não esconder (ADR 0064): quem não tem `developer`
+            // continua VENDO o modelo vigente do agente — e a cadeia inteira na
+            // coluna ao lado —, só não consegue trocá-lo. O `disabled` mora no
+            // picker, e não num overlay daqui, porque overlay não bloqueia o
+            // teclado.
+            disabled={!podeEditar}
             // Abre com "aptos para agentes" MARCADO. Este picker grava no
             // escopo `agent`, o único que a RN-040 sempre exigiu — e a frase
             // com que a api recusa manda a pessoa exatamente para este filtro
@@ -400,6 +433,17 @@ export function ModelsSection({ projectId }: { projectId: string }) {
               <button
                 type="button"
                 className={styles.voltarHerdar}
+                // O botão CONTINUA aparecendo sem `developer`, inerte: ele é o
+                // que diz que esta linha divergiu, e escondê-lo apagaria da tela
+                // um estado que a pessoa tem todo direito de LER. O motivo de
+                // ele estar apagado é dito UMA vez, em texto, na legenda da
+                // seção — não aqui: `title` em elemento `disabled` não é
+                // confiável (o Chromium não despacha evento de mouse em
+                // controle desabilitado, então a dica nativa não abre), e uma
+                // explicação que não aparece é a mesma ausência com mais código.
+                // Doze linhas repetindo a mesma frase sobre a PESSOA, e não
+                // sobre a linha, também não é onde ela pertence.
+                disabled={!podeEditar}
                 onClick={() => handleClearAgentBinding(agent.key, agent.name)}
                 title={
                   areaDoAgente
@@ -494,6 +538,12 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         {t('modelsSection.subtitle.areaExplain')}{' '}
         <em>{t('modelsSection.subtitle.areaLink')}</em>
         {t('modelsSection.subtitle.below')}
+        {/* O motivo dos controles apagados, dito uma vez e em TEXTO — mesma
+            forma de `AreaModelsSection`, e pelo mesmo motivo lá e aqui: o fato
+            é sobre quem está lendo, não sobre uma linha da tabela, e tooltip em
+            controle `disabled` não abre no Chromium. Nomeia as DUAS ações que
+            ficaram inertes, porque são duas e ficam em colunas diferentes. */}
+        {!podeEditar && t('modelsSection.subtitle.needsDeveloper')}
       </p>
 
       <div className={styles.custoCard}>

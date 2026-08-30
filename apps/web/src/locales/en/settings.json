@@ -95,7 +95,8 @@
       "areaWord": "area",
       "areaExplain": "is the default that the lead and subagents share (RN-102) — set it in",
       "areaLink": "Model by area",
-      "below": ", further below."
+      "below": ", further below.",
+      "needsDeveloper": " Requires the developer role to change the model or go back to inheriting."
     },
     "costCard": {
       "label": "Team's estimated monthly cost",

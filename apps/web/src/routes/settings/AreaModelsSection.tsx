@@ -11,6 +11,7 @@ import {
 } from '../../lib/api-client';
 import { AREAS } from '../../lib/agents';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
+import { roleAtLeast } from '../../lib/roles';
 import type { Model } from '../../lib/api-types';
 import { Button } from '../../components/ui/Button';
 import { ModelPicker } from '../../components/ModelPicker';
@@ -35,7 +36,12 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: comPapel } = useCurrentWorkspaceWithRole();
-  const podeEditar = comPapel?.role === 'owner' || comPapel?.role === 'maintainer';
+  // Mesmo mínimo de antes (`owner || maintainer` é exatamente `>= maintainer`
+  // em `ROLE_ORDER`), pela hierarquia em vez de por dois nomes escritos à mão:
+  // a tabela de agentes acima passou a fazer a mesma pergunta com um mínimo
+  // DIFERENTE (`developer`), e duas perguntas iguais escritas de dois jeitos é
+  // como as duas voltam a divergir.
+  const podeEditar = roleAtLeast(comPapel?.role, 'maintainer');
 
   const { data: modelsByCategory } = useQuery({
     queryKey: ['models', projectId],

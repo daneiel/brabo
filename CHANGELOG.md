@@ -449,6 +449,28 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: em **Configurações**, a tabela **Modelos por agente** passa a
+  **respeitar o papel de quem está olhando**. Ela não checava papel nenhum: o
+  seletor de modelo e o "voltar a herdar" de cada linha apareciam clicáveis para
+  todo mundo, **`viewer` incluído**, e a api recusava com 403. Desde as
+  correções acima esse 403 pelo menos vira mensagem — o que não bastava:
+  oferecer um controle que só existe para ser recusado é a tela mentindo sobre o
+  que a pessoa pode fazer. O mínimo **não** foi copiado da seção irmã logo
+  abaixo: **Modelo por área** exige `maintainer` e **Modelos por agente** exige
+  `developer`, porque o vínculo da área alcança o lead e todos os subagentes de
+  uma vez e o do agente alcança um agente (RN-102). Copiar teria trocado o
+  defeito pelo **inverso**, e o inverso é pior — oferecer o que será recusado ao
+  menos termina numa mensagem, enquanto trancar quem podia editar é invisível
+  para quem perdeu a capacidade. Quem não pode editar **continua vendo tudo**: o
+  modelo vigente no gatilho, a cadeia de origem inteira e o próprio "voltar a
+  herdar", que é o que diz que aquele agente divergiu — some o controle, nunca a
+  informação. O motivo é dito **uma vez, em texto**, na legenda da seção, e não
+  como dica em cada linha: dica de mouse em controle desabilitado não abre no
+  Chromium, e explicação que não aparece é a mesma ausência com mais código. A
+  comparação de papéis saiu das telas e virou `roleAtLeast` sobre a hierarquia
+  que já existia — **Modelo por área** passou a usá-lo com o mesmo mínimo de
+  antes. Nada disso é fronteira de segurança: quem recusa continua sendo a api
+  (RN-102)
 - **web**: em **Configurações**, o seletor de modelo de **Modelos por agente** e
   o de **Modelo por área** passam a abrir com o filtro **"aptos para agentes"
   já marcado**. O filtro existe desde a Fase 9c e **nenhuma tela o ligava** — o

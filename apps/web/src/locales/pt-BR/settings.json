@@ -95,7 +95,8 @@
       "areaWord": "área",
       "areaExplain": "é o padrão que o lead e os subagentes compartilham (RN-102) — configure em",
       "areaLink": "Modelo por área",
-      "below": ", logo abaixo."
+      "below": ", logo abaixo.",
+      "needsDeveloper": " Exige papel developer para trocar o modelo ou voltar a herdar."
     },
     "costCard": {
       "label": "Custo estimado mensal do time",
