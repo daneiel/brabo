@@ -35,6 +35,7 @@ import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { ActivityFeed } from '../components/ActivityFeed';
+import { AmbienteDoProjeto } from '../components/AmbienteDoProjeto';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
@@ -275,6 +276,14 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
       </div>
 
       <aside className={styles.aside}>
+        {/* Estado de ambiente ANTES da atividade: a atividade responde "o que
+            aconteceu", e ela só se lê direito depois de saber onde o código
+            roda e o que está de pé em volta. As duas consultas do bloco reusam
+            chaves que esta página já busca — nenhuma requisição a mais. */}
+        <div className={styles.ambiente}>
+          <AmbienteDoProjeto projectId={projectId} />
+        </div>
+
         <div className={styles.sectionRow}>
           <h2 className={styles.sectionHeader}>{t('activity.title')}</h2>
           <span className={styles.sectionCount}>

@@ -6,6 +6,48 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: a tela de **login** deixa de ser um card de 412px sozinho no meio
+  da tela e passa a ter **duas colunas**: identidade e ambiente à esquerda, o
+  formulário à direita. À esquerda, sob a marca, uma frase do que o Brabo é e
+  um bloco **Ambiente** com o estado da **api** e do **engine** — os dois
+  `/health` que já eram públicos nos dois serviços e que a página `/status` já
+  consumia; nenhuma rota nova, nenhum campo novo no payload. Cada linha tem os
+  **três estados separados** (`verificando…` num anel vazado, `respondendo` em
+  verde, `sem resposta` em vermelho) e a sonda tem **teto de 6s**, para uma api
+  que aceita a conexão e nunca responde não deixar a linha em "verificando…"
+  para sempre. A **versão continua com uma fonte só**: ela segue no rodapé da
+  página, não foi duplicada no bloco. E o **formulário nunca espera pela
+  sonda** — o estado é local ao bloco, que é irmão do card, então a api fora do
+  ar muda um texto e não atrasa nem esconde um pixel do login, que é
+  exatamente o momento em que alguém mais precisa que a tela ao menos abra
+  (dois testes cobrem os dois modos de falha: a sonda que rejeita e a que
+  nunca volta). **Runner e modelos locais NÃO aparecem aqui, e a tela diz por
+  quê**: presença de runner é chaveada por `{user_id, project_id}` e a lista
+  de modelos é `projects/:projectId/models` com papel `viewer` — antes do
+  login não existe nenhum dos dois sujeitos, e uma tela pré-identidade que
+  simplesmente os omitisse deixaria o usuário achando que a plataforma não os
+  tem. Só `/login` usa as duas colunas; as outras três telas de auth são
+  passagens de um fluxo já iniciado e ficam como estavam. Abaixo de 900px de
+  janela o modo se desfaz e volta a pilha de sempre. Nada na coluna nova é
+  focável, de propósito: ela vem antes do card no DOM, e um botão ali roubaria
+  a primeira parada de `Tab` do campo de e-mail
+- **web**: a **Visão geral do projeto** ganha, no topo da coluna lateral, o
+  bloco **Ambiente** — a metade dos sinais que só é verdade depois do login.
+  Ele diz **onde o código roda** (container gerenciado, pasta montada ou pasta
+  na sua máquina, com o caminho), quantos **modelos locais do Ollama** estão
+  ativos no workspace, e — só em projeto no modo `runner` — o estado do
+  **runner**. Esse último é o ponto: o dado é `workspaceVerifiedAt`, o carimbo
+  que o runner grava ao conectar e confirmar a pasta, e ele **não é
+  batimento**. A tela diz "pasta confirmada em `<data>`" com a ressalva de que
+  isso é o registro da confirmação e não um sinal de que o runner está rodando
+  agora — nunca "de pé", nunca "online", nunca bolinha verde. São duas razões
+  independentes: não há processo sendo observado, e reconectar reportando o
+  mesmo caminho nem regrava o carimbo, então nem a data é recência. Quem sabe
+  do agora é o socket do terminal, na aba Código, e a ressalva aponta para lá.
+  Nos modos `container`/`mounted` a linha do runner nem existe: o campo é nulo
+  por definição, e "nunca confirmada" ali seria uma ausência inventada.
+  **Nenhuma requisição a mais**: as duas consultas reusam as chaves que a
+  página já busca (`['project', id]` e `['models', id]`), então saem do cache
 - **web**: em **Configurações**, "este ajuste não tem valor próprio" passa a
   ser dito de UM jeito só. Eram quatro: `"Sem valor próprio — usa o default
   (3)"` na Execução, `"Sem teto"` como placeholder no Teto de gasto por área,

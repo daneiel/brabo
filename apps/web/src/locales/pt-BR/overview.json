@@ -35,6 +35,25 @@
     "title": "Linha do tempo do time",
     "description": "Um ramo por agente, do primeiro marco ao que ele está fazendo agora. Quem está ativo, ou entre os 5 mais recentes, abre sozinho — o resto fica a um clique, com a contagem de marcos novos no cabeçalho."
   },
+  "ambiente": {
+    "title": "Ambiente",
+    "carregando": "verificando…",
+    "codigo": "código",
+    "modos": {
+      "container": "container gerenciado",
+      "mounted": "pasta montada",
+      "runner": "pasta na sua máquina"
+    },
+    "runner": "runner",
+    "runnerConfirmado": "pasta confirmada em {{data}}",
+    "runnerNuncaConfirmado": "pasta ainda não confirmada",
+    "runnerRessalva": "É o registro da confirmação, não um sinal de que o runner está rodando agora — quem sabe do agora é o terminal, na aba Código.",
+    "runnerRessalvaNunca": "Nenhum runner conectou a este projeto ainda. Instale e rode o `brabo-runner` pela aba Código.",
+    "modelosLocais": "modelos locais",
+    "modelosLocaisNenhum": "nenhum modelo do Ollama ativo no workspace",
+    "modelosLocaisValor_one": "{{count}} do Ollama, ativo no workspace",
+    "modelosLocaisValor_other": "{{count}} do Ollama, ativos no workspace"
+  },
   "activity": {
     "title": "Atividade",
     "count": "{{count}} eventos",

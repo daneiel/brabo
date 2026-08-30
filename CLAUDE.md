@@ -439,6 +439,18 @@ daqui e o fechamento vai para o histórico.
   sobre o `seq` (gapless, por sessão), nunca de uma requisição a mais:
   é o mesmo mecanismo do sino (RN-100). Quando houver como carregar o
   resto, o controle mora onde o corte aparece.
+- Sinal de ambiente diz o que SABE, e proxy nunca vira garantia (RN-468).
+  A tela de login é PRÉ-identidade: só cabem ali os dois `/health`, que já
+  são públicos nos dois serviços — presença de runner
+  (`{user_id, project_id}`) e modelos locais (`projects/:projectId/models`)
+  não têm sujeito antes do login, e a tela DECLARA essa ausência em vez de
+  omiti-la. Sonda tem TETO, e os três estados (`verificando`/`respondendo`/
+  `sem resposta`) nunca colapsam — RN-088 vale aqui também. O formulário
+  NUNCA espera pela sonda. Pós-login, `workspaceVerifiedAt` é registro de
+  uma confirmação, não batimento: reconectar com o mesmo caminho nem
+  regrava o carimbo, então a tela diz "pasta confirmada em <data>" com a
+  ressalva, e nunca "de pé" nem bolinha verde. Quem sabe do AGORA é o
+  socket do terminal, na aba Código.
 - Evento tem DUAS classificações no cliente, e elas não se substituem:
   `ActivityKind` (assunto — decide ícone e cor) e `OrigemDeEvento`
   (camada — `eventos|sistema|llm|harness|agente|usuario`, RN-177). A
