@@ -945,6 +945,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   passam SEM EDIÇÃO nenhuma. Restam 3 PRs no plano declarado pelo ADR 0122
   (`StructuredQuestionCard`, helpers de árvore de backlog + `ContextAside`,
   e o hook `useSessionReadiness`)
+- **web**: PR 3 de 5 da decomposição mecânica de `SessionPage.tsx`
+  (ADR 0122) — `StructuredQuestionCard`, o formulário de `chat.
+  structured_question` (RN-162/RN-171), sai para `apps/web/src/routes/
+  StructuredQuestionCard.tsx`, sibling de `SessionPage.tsx`, mesmo padrão
+  da `StorySlide` na PR 2. `permiteOutra` — o predicado puro do RN-171 que
+  decide se um `select` ganha a opção "Outra (escrever)" — vai JUNTO,
+  porque quem o chama é só o próprio card: um helper cujo único chamador
+  está de saída não justifica ficar órfão em `SessionPage.tsx`. O
+  sentinela `OUTRA_RESPOSTA`, que também só o card usa, moveu pela mesma
+  razão, ainda que não estivesse nomeado no ADR. Continua importando
+  `SessionPage.module.css` direto, mesma decisão da PR 2. Nenhuma
+  reexportação precisou ficar: nem `StructuredQuestionCard` nem
+  `permiteOutra` são importados por nome em teste nenhum (só renderizados
+  dentro de `<SessionPage>`), como já valia pra `StorySlide`. ZERO mudança
+  de comportamento observável: os mesmos 24 arquivos
+  `SessionPage.*.test.tsx` passam SEM EDIÇÃO nenhuma, incluindo
+  `SessionPage.perguntas-estruturadas.test.tsx`, que exercita o card
+  ponta a ponta. Restam 2 PRs no plano declarado pelo ADR 0122 (helpers
+  de árvore de backlog + `ContextAside`, e o hook `useSessionReadiness`)
 
 ## v3.1.0 — 2026-08-13
 
