@@ -530,19 +530,39 @@ export function SessionPage({
    * `finally` da própria ação), pelo mesmo argumento do `handleSend`: a
    * chamada RESOLVER é sinal de fim de turno tão confiável quanto o
    * `agent.done` do canal, e a função é idempotente.
+   *
+   * `comStatus` (default `true`) existe só para `handleAcceptHandoff`: o
+   * kickoff do agente ali é um `GenServer.cast` ASSÍNCRONO no engine (achado
+   * B, ver o comentário do `turnoAgentRef` acima), então o handler não sabe,
+   * na hora do clique, que um turno de verdade vai começar — só sabe QUEM vai
+   * responder. `comStatus: false` reduz o arme a `turnoAgentRef`+
+   * `turnoViaCanal` (o par que `handleAcceptHandoff` sempre armou sozinho):
+   * `streaming`/`streamingText`/`statusAgent` ficam de fora, porque os três
+   * juntos (via `streaming || statusAgent`) são o que arma o timer de 5s do
+   * indicador de "pensando" (RN-131) — ligar qualquer um deles cedo demais
+   * reativaria esse timer mesmo depois de o `onAgentStatus` do canal já ter
+   * avisado `idle` (turno mais rápido que 5s, sem nunca ter mostrado nada).
+   * Os três chegam depois, pelo `onAgentStatus`/`onAgentDelta` do canal. Todo
+   * outro chamador dispara um `GenServer.call` SÍNCRONO, já sabe que o turno
+   * começou e usa o default.
    */
-  const iniciarTurnoDoAgente = useCallback((agente: string | null) => {
-    // Fixado ANTES do `await` de quem chama (mesmo motivo do achado B em
-    // `handleAcceptHandoff`): o `agent.status` do canal pode chegar primeiro,
-    // e sem o ref o indicador nasceria sem saber quem está falando.
-    turnoAgentRef.current = agente;
-    setStreaming(true);
-    setStreamingText('');
-    setTurnoViaCanal(true);
-    // `statusAgent` é o que dá NOME ao indicador antes do primeiro delta.
-    // `streaming` sozinho já o faria aparecer, mas como "agente" genérico.
-    setStatusAgent(agente);
-  }, []);
+  const iniciarTurnoDoAgente = useCallback(
+    (agente: string | null, { comStatus = true }: { comStatus?: boolean } = {}) => {
+      // Fixado ANTES do `await` de quem chama (mesmo motivo do achado B em
+      // `handleAcceptHandoff`): o `agent.status` do canal pode chegar primeiro,
+      // e sem o ref o indicador nasceria sem saber quem está falando.
+      turnoAgentRef.current = agente;
+      setTurnoViaCanal(true);
+      if (comStatus) {
+        setStreaming(true);
+        setStreamingText('');
+        // `statusAgent` é o que dá NOME ao indicador antes do primeiro delta.
+        // `streaming` sozinho já o faria aparecer, mas como "agente" genérico.
+        setStatusAgent(agente);
+      }
+    },
+    [],
+  );
 
   // Reconciliação de fim de turno do `activeAgent` — o que `onAgentDone` (canal)
   // faz, extraído pra também servir de REDE DE SEGURANÇA em `handleSend` (ver
@@ -569,6 +589,25 @@ export function SessionPage({
     queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
     queryClient.invalidateQueries({ queryKey: ['session-budget', projectId, sessionId] });
   }, [queryClient, projectId, sessionId]);
+
+  // Desfaz um arme otimista que falhou (`handleReadiness`/
+  // `handleArchitectureReadiness`, ver os dois `catch` abaixo): os mesmos 4
+  // campos que os dois ligam antes do `await` síncrono no engine, e nenhum
+  // outro. NÃO cobre `handleAcceptHandoff` — que nunca arma `streaming`/
+  // `statusAgent` (achado B), então chamar esta função ali acoplaria em
+  // silêncio um handler que nunca tocou os dois campos a uma função cujo
+  // nome promete desfazer os dois — a mesma armadilha que a ADR 0122 já
+  // apontou. Também não cobre `handleSend`, que tem `optimisticUser` como
+  // quinto campo (fora do arme, setado incondicionalmente no topo da
+  // função) — esse handler chama esta função MAIS `setOptimisticUser(null)`
+  // em separado, porque o ciclo de vida de `optimisticUser` é dele, não do
+  // par arme/desarme.
+  const cancelarTurnoOtimista = useCallback(() => {
+    setStreaming(false);
+    setTurnoViaCanal(false);
+    turnoAgentRef.current = null;
+    setStatusAgent(null);
+  }, []);
 
   // Canal Phoenix: recebe os deltas do Criativo (streaming token-a-token) e o
   // fim do turno. A persistência (agent.response + artefatos) chega pelo poll.
@@ -1624,11 +1663,7 @@ export function SessionPage({
 
   async function handleReadiness() {
     try {
-      setStreaming(true);
-      setStreamingText('');
-      setTurnoViaCanal(true);
-      turnoAgentRef.current = 'criativo';
-      setStatusAgent('criativo');
+      iniciarTurnoDoAgente('criativo');
       await confirmReadiness(projectId, sessionId);
       // O product_brief + handoff chegam via o canal (agent.done) + poll.
       //
@@ -1644,10 +1679,7 @@ export function SessionPage({
       // novo quando o canal também entrega o evento não tem efeito.
       finalizarTurnoDoAgente();
     } catch {
-      setStreaming(false);
-      setTurnoViaCanal(false);
-      turnoAgentRef.current = null;
-      setStatusAgent(null);
+      cancelarTurnoOtimista();
       showToast({ title: t('toasts.erro'), message: t('toasts.erroConfirmarProntidao'), tone: 'danger' });
     }
   }
@@ -1665,18 +1697,11 @@ export function SessionPage({
    */
   async function handleArchitectureReadiness() {
     try {
-      setStreaming(true);
-      setStreamingText('');
-      setTurnoViaCanal(true);
-      turnoAgentRef.current = 'arquiteto';
-      setStatusAgent('arquiteto');
+      iniciarTurnoDoAgente('arquiteto');
       await confirmArchitectureReadiness(projectId, sessionId);
       finalizarTurnoDoAgente();
     } catch {
-      setStreaming(false);
-      setTurnoViaCanal(false);
-      turnoAgentRef.current = null;
-      setStatusAgent(null);
+      cancelarTurnoOtimista();
       showToast({
         title: t('toasts.erro'),
         message: t('toasts.erroConfirmarArquitetura'),
@@ -1744,8 +1769,7 @@ export function SessionPage({
     // `GenServer.cast` assíncrono, e o `agent.status` "working" pode chegar
     // pelo canal antes mesmo desta chamada resolver. Sem o ref pronto agora,
     // o handler perderia a corrida e o indicador nasceria sem saber quem é.
-    turnoAgentRef.current = toAgent;
-    setTurnoViaCanal(true);
+    iniciarTurnoDoAgente(toAgent, { comStatus: false });
     try {
       await acceptHandoff(projectId, sessionId, handoffId);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
@@ -1965,12 +1989,11 @@ export function SessionPage({
       // A faixa de atividade (`turnoViaCanal`) liga AQUI, e não no `try` —
       // `statusAgent` dá nome ao avatar da faixa mesmo antes de o primeiro
       // `agent.status`/`agent.delta` do canal chegar (o mesmo argumento de
-      // `iniciarTurnoDoAgente`, que este caminho não usa porque já toggla
-      // `streaming`/`streamingText` acima, antes de `agentParaEnviar` ser
-      // conhecido).
-      turnoAgentRef.current = agentParaEnviar;
-      setStatusAgent(agentParaEnviar);
-      setTurnoViaCanal(true);
+      // `iniciarTurnoDoAgente`). `streaming`/`streamingText` já foram ligados
+      // acima, antes de `agentParaEnviar` ser conhecido — os dois também
+      // fazem parte do arme, mas religá-los aqui é reset pro mesmo valor,
+      // sem efeito observável.
+      iniciarTurnoDoAgente(agentParaEnviar);
       try {
         await sendAgentMessage(projectId, sessionId, agentParaEnviar, text);
         // Rede de segurança contra o canal perder o `agent.done` (achado da
@@ -1994,11 +2017,8 @@ export function SessionPage({
         // chamar duas vezes.
         finalizarTurnoDoAgente();
       } catch {
-        setStreaming(false);
+        cancelarTurnoOtimista();
         setOptimisticUser(null);
-        turnoAgentRef.current = null;
-        setStatusAgent(null);
-        setTurnoViaCanal(false);
         showToast({ title: t('toasts.erro'), message: t('toasts.erroEnviarMensagem'), tone: 'danger' });
       }
       return;
