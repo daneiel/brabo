@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 120 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 121 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -556,3 +556,4 @@ Derived from history's hotspots and the ADRs that record open state.
 | The Oban queue accumulates `AnamneseWorker` from previous runs; the guard only blocks **new** enqueues | [ADR 0020](adr/0020-destravar-gates-qa-secops.md) | turning off the guard isn't enough — the queue needs purging |
 | `TerminalExecutor` runs the managed project's suite **inside** the engine's image | [ADR 0024](adr/0024-fase5-imagens-producao-ci.md) | doesn't scale to arbitrary stacks; the way out is per-project sandboxing |
 | ~~Images aren't published to a registry; the production overlay points at `ghcr.io/OWNER/*`~~ | [ADR 0027](adr/0027-fase5-backup-hardening-release.md) → **closed by** [ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md) | the four images publish to GHCR on every final tag and the overlay pins by digest from `.release/images.json`. What remains is NOT this debt: nothing deploys automatically, and the images are neither signed nor attested |
+| `SessionPage.tsx` is 169 KiB with 25 test files importing it | [ADR 0122](adr/0122-sessionpage-dividido-em-cinco-prs.md) — **IN PROGRESS, 1 of 5** | declares the whole 5-PR decomposition upfront; PR 1 extracted the pure timeline/turn helpers to `apps/web/src/lib/session-timeline.ts`. Four PRs remain (`StorySlide`, `StructuredQuestionCard`, backlog-tree helpers + `ContextAside`, a `useSessionReadiness` hook), each merged before the next starts because the file is under active feature churn. Explicitly OUT of scope: the turn-channel state cluster (coupled control flow, not a mechanical move) and `ProjectSettingsTab.tsx` (separate scope) |

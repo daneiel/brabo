@@ -911,6 +911,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `pnpm --filter website` (exige membership) por `pnpm --dir website`
   (aponta o diretório); os dois workflows ganham um segundo `pnpm install`
   escopado a `website/`
+- **web**: PR 1 de 5 da decomposição mecânica de `SessionPage.tsx`
+  (ADR 0122) — arquivo de 3 807 linhas/169 KiB, o mais disputado do
+  repositório, 25 arquivos de teste importando dele, sob churn ativo (50
+  commits, zero tentativa de extração até aqui). As cinco funções PURAS de
+  timeline/turno (`aberturasDeTurno`, `turnoDoSeq`, `afundarDesfechos`,
+  `pontoDaSessao`, `ordemDaAcaoNaTimeline`, e o tipo `TimelineEntry` que
+  várias delas usam) saem para `apps/web/src/lib/session-timeline.ts`.
+  `agruparNarracoesDoTurno`, na mesma região do arquivo, FICA — produz JSX
+  e lê classes de `SessionPage.module.css`, e movê-la junto decidiria de
+  passagem que `lib/` aceita seu primeiro arquivo `.tsx`, precedente que
+  este PR não toma sozinho. ZERO mudança de comportamento observável: os
+  mesmos 25 arquivos `SessionPage.*.test.tsx` passam SEM EDIÇÃO nenhuma —
+  essa é a prova. Restam 4 PRs no plano declarado pelo ADR 0122
+  (`StorySlide`, `StructuredQuestionCard`, helpers de árvore de backlog +
+  `ContextAside`, e um hook `useSessionReadiness`), cada um mergeado antes
+  do próximo começar
 
 ## v3.1.0 — 2026-08-13
 

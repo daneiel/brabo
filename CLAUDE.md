@@ -57,6 +57,18 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 O que segue é OPERATIVO — decide comportamento de sessão hoje. Fechou? Sai
 daqui e o fechamento vai para o histórico.
 
+**Decomposição em andamento, PR a PR (ADR 0122):**
+- `SessionPage.tsx` (169 KiB, 25 arquivos de teste importando) está sendo
+  dividido em 5 PRs mecânicos, cada um mergeado antes do próximo começar
+  (arquivo sob churn ativo — não paralelizar). PR 1/5 fechou: helpers puros
+  de timeline/turno → `apps/web/src/lib/session-timeline.ts`. Restam:
+  `StorySlide.tsx`, `StructuredQuestionCard.tsx`, helpers de árvore de
+  backlog + `ContextAside.tsx`, e um hook `useSessionReadiness` (o único
+  passo que não é move mecânico). Fora de escopo do plano inteiro, decisão
+  separada com ADR próprio quando for a vez: o cluster de estado do canal
+  de turno (`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/
+  `atividadeDoTurno`) e `ProjectSettingsTab.tsx`.
+
 **Decisões de produto abertas (não são bugs; não corrigir de passagem):**
 - Z/AD: allowlist de verbos não converge (verbo/forma/invocação são espaços
   distintos) — `docs/explanation/achados-execucao-real.md`
