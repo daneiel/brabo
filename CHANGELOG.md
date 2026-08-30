@@ -6,6 +6,37 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: em **Configurações**, **Paralelismo por área** e **Teto de gasto por
+  área** passam a ter **um botão de salvar da seção**, no lugar de um botão por
+  linha. Revisar o teto de dev quase nunca é revisar só o de dev, e N botões
+  idênticos pediam N cliques para uma decisão só. Em troca a seção passa a dever
+  duas coisas. A primeira é **dizer quantas linhas estão pendentes** — "2
+  alterações não salvas nesta seção", ao lado do botão: até aqui a única pista
+  de trabalho não salvo em toda a aba era o botão desabilitado do Modo de
+  execução, um sinal por negação que some justamente quando passa a haver algo a
+  salvar. "Sujo" é comparação por **valor**, não por texto: voltar o campo a
+  `20.0` onde o servidor tem `20` limpa a marca em vez de mandar uma chamada que
+  a api trata como no-op. Valor inválido **substitui** a contagem pela mensagem
+  que explica o bloqueio, em vez de somar um segundo número sobre o mesmo
+  conjunto. A segunda é **não mentir sobre o desfecho**: salvar a seção são N
+  chamadas (uma por área — não existe endpoint transacional e nenhum foi
+  inventado), em série, na ordem da tela, e **uma falha não interrompe as
+  seguintes**. Só o rascunho que a api confirmou é descartado; o que falhou fica
+  no campo com o que você digitou, a seção continua marcada por ele, e clicar
+  Salvar de novo tenta **só** as linhas que faltaram. Os três desfechos são
+  distintos: todas passaram → sucesso; nenhuma passou → a mensagem que a API
+  deu, como antes; algumas passaram → aviso que diz **quantas de quantas** e
+  **nomeia** as que ficaram — "salvo" e "não salvo" seriam as duas mentira aí
+  (RN-469). **Três seções ficaram de fora, e por motivos diferentes**: Promoção
+  de história, Modelos por agente e Modelo por área salvam no `onChange` **de
+  propósito** e continuam assim (a confirmação existe para campo digitado, onde
+  salvar a cada tecla mandaria `1` a caminho de `12`; escolher de uma lista de
+  valores nomeados não precisa dela). E **Credenciais** mantém o botão por
+  linha apesar de parecer o mesmo problema: a chave é write-only e nunca volta
+  do servidor, então não há valor com que comparar para decidir "sujo"; o botão
+  alterna entre "Salvar" e "Trocar" conforme o provider já tenha chave, o que um
+  botão só não diz; e ele divide o card com "Testar" e "Remover", que agem sobre
+  aquele provider
 - **web**: a tela de **login** deixa de ser um card de 412px sozinho no meio
   da tela e passa a ter **duas colunas**: identidade e ambiente à esquerda, o
   formulário à direita. À esquerda, sob a marca, uma frase do que o Brabo é e

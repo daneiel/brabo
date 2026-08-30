@@ -57,6 +57,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Trilho vertical de navegação do projeto | A régua horizontal de dois níveis (`GroupedTabs`) vira um trilho vertical com os TRÊS grupos abertos ao mesmo tempo; geometria do trilho do `CodeShell`, teclado portado, os 5 contadores seguem separados. Revisa a RN-201: a aba de Código não recolhe mais a sidebar sozinha | ADR 0126, RN-201 |
 | Sumário ancorado de Configurações | As 17 seções da aba ganham `id`, `<section>` com nome acessível e um sumário em quatro grupos DENTRO da área de conteúdo — sem faixa vertical nova, moldura segue nos 444px do ADR 0126. Registro em `routes/settings/sumario.ts` (terceira lista do mesmo desenho de `project-tabs.ts`), deep-link `?section=`, spy por `IntersectionObserver`; só entra no sumário a seção que MONTOU | CHANGELOG |
 | Padrão único de valor herdado | As QUATRO redações de "não tem valor próprio" da aba Configurações viram dois polos e um verbo, de uma fonte só (`routes/settings/heranca.tsx`): rótulo diz o ESTADO, detalhe diz a CONSEQUÊNCIA. Vocabulário unificado, forma não — a marca só entra onde o controle não mostra o estado sozinho | CHANGELOG |
+| Salvar por seção em Configurações | Paralelismo e Teto de gasto trocam N botões de linha por UM da seção (`settings/secao-salvavel.tsx`), com contagem de linhas pendentes e desfecho POR LINHA — salvar é N chamadas, não uma transação, e a tela nunca afirma o que não obteve. As três seções de autosave e Credenciais ficam de fora, cada uma por um motivo declarado | RN-469 |
 | Painel "precisa de você" | Chip no topo do projeto abre as CINCO filas de decisão num lugar só — separadas, ordenadas por urgência, sem soma nenhuma (nem no chip). Aprovações e merges decidem ali pelo `ApprovalCard`; as outras três levam à aba. Pendência de arquitetura empresta a data da história e DIZ que emprestou | RN-467 |
 
 ## Estado atual e aberto
@@ -439,6 +440,17 @@ daqui e o fechamento vai para o histórico.
   sobre o `seq` (gapless, por sessão), nunca de uma requisição a mais:
   é o mesmo mecanismo do sino (RN-100). Quando houver como carregar o
   resto, o controle mora onde o corte aparece.
+- Ação de UI que vira N chamadas não é transação, e a tela DIZ isso (RN-469).
+  Salvar uma seção de Configurações é um PUT por linha suja — em série, na
+  ordem da tela, sem abortar na primeira recusa. O desfecho é POR LINHA: só o
+  rascunho que a api confirmou some, o que falhou fica no campo e a seção
+  continua marcada por ele, e os três desfechos não se disfarçam um do outro —
+  todas passaram, NENHUMA passou (a mensagem da API, nunca uma contagem),
+  ALGUMAS passaram (quantas de quantas, nomeando as que ficaram). Botão de
+  seção deve a contagem do que está pendente, senão "Salvar" diz o mesmo com
+  uma linha suja e com cinco. E a régua de quando o botão existe é o CONTROLE,
+  não a seção: campo DIGITADO precisa de confirmação, escolha de valor NOMEADO
+  salva no `onChange` — não converta as seções de autosave.
 - Sinal de ambiente diz o que SABE, e proxy nunca vira garantia (RN-468).
   A tela de login é PRÉ-identidade: só cabem ali os dois `/health`, que já
   são públicos nos dois serviços — presença de runner

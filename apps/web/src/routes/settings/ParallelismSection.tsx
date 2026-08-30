@@ -1,16 +1,12 @@
-import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import {
-  listAgentAreas,
-  mensagemDaApi,
-  setAreaMaxParallel,
-} from '../../lib/api-client';
+import { listAgentAreas, setAreaMaxParallel } from '../../lib/api-client';
+import type { AgentArea } from '../../lib/api-types';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
-import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { MarcaDeNaoSalvo, useSecaoSalvavel } from './secao-salvavel';
 
 /**
  * O teto de paralelismo de cada lead (FASE 14d — RN-083, ADR 0053).
@@ -21,6 +17,13 @@ import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
  * abaixo — é um número digitado, e salvar a cada tecla mandaria `1` a caminho
  * de `12`.
  *
+ * O botão é UM, da seção, e não um por linha (`settings/secao-salvavel.tsx`):
+ * revisar o teto de dev quase nunca é revisar só o de dev, e N botões idênticos
+ * pediam N cliques para uma decisão só. O que a seção passou a dever em troca é
+ * dizer quantas linhas estão pendentes, e nunca afirmar que salvou uma linha que
+ * a api recusou — as N chamadas não são uma transação, e o hook trata cada
+ * desfecho por linha.
+ *
  * Vazio para projeto que nunca ativou execução, e a tela DIZ isso em vez de
  * sumir: seção que desaparece parece bug, e o motivo (as áreas nascem do
  * `module_map`) não é adivinhável.
@@ -28,35 +31,28 @@ import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 export function ParallelismSection({ projectId }: { projectId: string }) {
   const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
-  const { showToast } = useToast();
   const { data: areas } = useQuery({
     queryKey: ['agent-areas', projectId],
     queryFn: () => listAgentAreas(projectId),
   });
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState<string | null>(null);
 
-  async function handleSave(key: string, valor: number) {
-    setSaving(key);
-    try {
-      await setAreaMaxParallel(projectId, key, valor);
-      await queryClient.invalidateQueries({
-        queryKey: ['agent-areas', projectId],
-      });
-      setDrafts((d) => {
-        const { [key]: _, ...resto } = d;
-        return resto;
-      });
-      showToast({ title: t('parallelism.toast.success', { area: key }), tone: 'success' });
-    } catch (erro) {
-      showToast({
-        title: mensagemDaApi(erro, t('parallelism.toast.error')),
-        tone: 'danger',
-      });
-    } finally {
-      setSaving(null);
-    }
-  }
+  const secao = useSecaoSalvavel<AgentArea, number>({
+    itens: areas,
+    chaveDe: (area) => area.key,
+    textoDoServidor: (area) => String(area.maxParallel),
+    // Zero não é "sem limite" — é configuração inválida, e a api recusa.
+    interpretar: (texto) => {
+      const numero = Number(texto);
+      return Number.isInteger(numero) && numero >= 1
+        ? { valido: true, valor: numero }
+        : { valido: false };
+    },
+    salvar: (chave, valor) => setAreaMaxParallel(projectId, chave, valor),
+    aoConcluir: () =>
+      queryClient.invalidateQueries({ queryKey: ['agent-areas', projectId] }),
+    sucessoDeUm: (chave) => t('parallelism.toast.success', { area: chave }),
+    erroGenerico: t('parallelism.toast.error'),
+  });
 
   return (
     <SecaoDeConfiguracoes chave="parallelism">
@@ -77,12 +73,8 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
           {t('parallelism.empty.after')}
         </div>
       ) : (
-        areas.map((area) => {
-          const exibido = drafts[area.key] ?? String(area.maxParallel);
-          const numero = Number(exibido);
-          const valido = Number.isInteger(numero) && numero >= 1;
-
-          return (
+        <>
+          {areas.map((area) => (
             <div key={area.key} className={styles.ajusteCard}>
               <div className={styles.ajusteInfo}>
                 <div className={styles.ajusteTitulo}>
@@ -101,21 +93,23 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
                   type="number"
                   min={1}
                   aria-label={t('parallelism.card.capAria', { area: area.key })}
-                  value={exibido}
-                  onChange={(e) =>
-                    setDrafts((d) => ({ ...d, [area.key]: e.target.value }))
-                  }
+                  value={secao.textoDe(area)}
+                  onChange={(e) => secao.editar(area.key, e.target.value)}
                 />
               </div>
-              <Button
-                onClick={() => handleSave(area.key, numero)}
-                disabled={!valido || saving === area.key}
-              >
-                {saving === area.key ? t('parallelism.saving') : t('parallelism.save')}
-              </Button>
             </div>
-          );
-        })
+          ))}
+
+          <div className={styles.acoesDaSecao}>
+            <Button
+              onClick={() => void secao.salvarSecao()}
+              disabled={!secao.podeSalvar}
+            >
+              {secao.salvando ? t('parallelism.saving') : t('parallelism.save')}
+            </Button>
+            <MarcaDeNaoSalvo sujas={secao.sujas} invalidas={secao.invalidas} />
+          </div>
+        </>
       )}
     </SecaoDeConfiguracoes>
   );

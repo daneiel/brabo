@@ -1,20 +1,15 @@
-import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import {
-  listAgentAreas,
-  mensagemDaApi,
-  setAreaBudget,
-} from '../../lib/api-client';
+import { listAgentAreas, setAreaBudget } from '../../lib/api-client';
 import type { AgentArea } from '../../lib/api-types';
 import { microsParaUsd } from '../../lib/currency';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
-import { useToast } from '../../components/ui/ToastProvider';
 import { formatarCustoMicros } from './shared';
 import styles from '../ProjectSettingsTab.module.css';
 import { MarcaDeHeranca } from './heranca';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { MarcaDeNaoSalvo, useSecaoSalvavel } from './secao-salvavel';
 
 /**
  * O teto de GASTO de cada área, opcional (ADR 0110, RN-443).
@@ -34,46 +29,38 @@ import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
  * digita, não se lê sem olhar dentro do campo, e não tem como dizer o polo
  * POSITIVO ("esta área tem teto próprio"), que é metade da informação. Ficou
  * só com o primeiro trabalho.
+ *
+ * O botão é UM, da seção, pelo mesmo motivo de `ParallelismSection` e pelo
+ * mesmo mecanismo (`settings/secao-salvavel.tsx`) — inclusive o desfecho POR
+ * LINHA quando algumas das N chamadas falham.
  */
 export function BudgetSection({ projectId }: { projectId: string }) {
   const { t } = useTranslation('settings');
   const queryClient = useQueryClient();
-  const { showToast } = useToast();
   const { data: areas } = useQuery({
     queryKey: ['agent-areas', projectId],
     queryFn: () => listAgentAreas(projectId),
   });
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState<string | null>(null);
 
-  function draftFor(area: AgentArea): string {
-    if (drafts[area.key] !== undefined) return drafts[area.key];
-    return area.budgetMicros === null
-      ? ''
-      : String(microsParaUsd(area.budgetMicros));
-  }
-
-  async function handleSave(key: string, valor: number | null) {
-    setSaving(key);
-    try {
-      await setAreaBudget(projectId, key, valor);
-      await queryClient.invalidateQueries({
-        queryKey: ['agent-areas', projectId],
-      });
-      setDrafts((d) => {
-        const { [key]: _, ...resto } = d;
-        return resto;
-      });
-      showToast({ title: t('budget.toast.success', { area: key }), tone: 'success' });
-    } catch (erro) {
-      showToast({
-        title: mensagemDaApi(erro, t('budget.toast.error')),
-        tone: 'danger',
-      });
-    } finally {
-      setSaving(null);
-    }
-  }
+  const secao = useSecaoSalvavel<AgentArea, number | null>({
+    itens: areas,
+    chaveDe: (area) => area.key,
+    textoDoServidor: (area) =>
+      area.budgetMicros === null ? '' : String(microsParaUsd(area.budgetMicros)),
+    // Vazio é um valor válido — "sem teto" — e não um erro digitando.
+    interpretar: (texto) => {
+      if (texto.trim() === '') return { valido: true, valor: null };
+      const numero = Number(texto);
+      return Number.isFinite(numero) && numero >= 0
+        ? { valido: true, valor: numero }
+        : { valido: false };
+    },
+    salvar: (chave, valor) => setAreaBudget(projectId, chave, valor),
+    aoConcluir: () =>
+      queryClient.invalidateQueries({ queryKey: ['agent-areas', projectId] }),
+    sucessoDeUm: (chave) => t('budget.toast.success', { area: chave }),
+    erroGenerico: t('budget.toast.error'),
+  });
 
   return (
     <SecaoDeConfiguracoes chave="budget">
@@ -94,14 +81,8 @@ export function BudgetSection({ projectId }: { projectId: string }) {
           {t('budget.empty.after')}
         </div>
       ) : (
-        areas.map((area) => {
-          const exibido = draftFor(area);
-          // Vazio é um valor válido — "sem teto" — e não um erro digitando.
-          const numero = exibido.trim() === '' ? null : Number(exibido);
-          const valido =
-            numero === null || (Number.isFinite(numero) && numero >= 0);
-
-          return (
+        <>
+          {areas.map((area) => (
             <div key={area.key} className={styles.ajusteCard}>
               <div className={styles.ajusteInfo}>
                 <div className={styles.ajusteTitulo}>
@@ -134,21 +115,23 @@ export function BudgetSection({ projectId }: { projectId: string }) {
                   step="any"
                   placeholder={t('budget.placeholder')}
                   aria-label={t('budget.card.capAria', { area: area.key })}
-                  value={exibido}
-                  onChange={(e) =>
-                    setDrafts((d) => ({ ...d, [area.key]: e.target.value }))
-                  }
+                  value={secao.textoDe(area)}
+                  onChange={(e) => secao.editar(area.key, e.target.value)}
                 />
               </div>
-              <Button
-                onClick={() => handleSave(area.key, numero)}
-                disabled={!valido || saving === area.key}
-              >
-                {saving === area.key ? t('budget.saving') : t('budget.save')}
-              </Button>
             </div>
-          );
-        })
+          ))}
+
+          <div className={styles.acoesDaSecao}>
+            <Button
+              onClick={() => void secao.salvarSecao()}
+              disabled={!secao.podeSalvar}
+            >
+              {secao.salvando ? t('budget.saving') : t('budget.save')}
+            </Button>
+            <MarcaDeNaoSalvo sujas={secao.sujas} invalidas={secao.invalidas} />
+          </div>
+        </>
       )}
     </SecaoDeConfiguracoes>
   );

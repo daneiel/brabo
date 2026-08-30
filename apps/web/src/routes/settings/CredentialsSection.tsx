@@ -53,7 +53,34 @@ const COR_DO_CONECTOR: Record<LlmCredentialProvider, string> = {
   vultr: 'var(--warning)',
 };
 
-// Exportada para o teste, como ExecutionSection e PromotionSection.
+/**
+ * Exportada para o teste, como ExecutionSection e PromotionSection.
+ *
+ * ## Por que esta seção salva por LINHA, e não por seção
+ *
+ * `ParallelismSection` e `BudgetSection` passaram a ter um botão só, da seção
+ * (`settings/secao-salvavel.tsx`). Esta NÃO passou, e a semelhança de fora — as
+ * três guardavam `drafts: Record<string, string>` — esconde três diferenças que
+ * são o motivo:
+ *
+ * 1. **Não há valor do servidor com que comparar.** A credencial é write-only e
+ *    nunca volta (ADR 0050) — é por isso que o card mostra a data e não a chave.
+ *    O hook decide "sujo" comparando o rascunho ao que a api tem; aqui só existe
+ *    o rascunho. Um botão por seção teria de chamar "sujo" tudo que tem texto,
+ *    o que não é a mesma pergunta.
+ * 2. **O botão da linha não é sempre "Salvar".** Ele diz "Trocar" no provider
+ *    que já tem chave, porque a consequência é outra: substituir uma credencial
+ *    em uso. Um botão só da seção não consegue dizer as duas coisas, e um botão
+ *    que diga "Salvar" para uma troca mente.
+ * 3. **Ele divide o card com "Testar" e "Remover"**, que agem sobre AQUELE
+ *    provider e não têm equivalente de seção. Tirar um dos três do card deixaria
+ *    dois botões de linha e um de seção fazendo trabalho vizinho.
+ *
+ * Somando: `upsertCredential` faz a api VERIFICAR a chave, então 422 é o
+ * desfecho comum de um paste errado, não a exceção. Agrupar oito verificações
+ * num clique transformaria o caso normal em relatório de falha parcial, no
+ * lugar do toast direto que o comentário de `handleSave` abaixo custou caro.
+ */
 export function CredentialsSection() {
   const { t, i18n } = useTranslation('settings');
   const queryClient = useQueryClient();

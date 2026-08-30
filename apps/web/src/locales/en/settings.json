@@ -14,6 +14,18 @@
     "proprio": "Own value",
     "voltarAHerdar": "Go back to inheriting"
   },
+  "secao": {
+    "naoSalvas_one": "{{count}} unsaved change in this section",
+    "naoSalvas_other": "{{count}} unsaved changes in this section",
+    "invalidas_one": "{{count}} invalid value — fix it to save",
+    "invalidas_other": "{{count}} invalid values — fix them to save",
+    "toast": {
+      "salvas_one": "{{count}} change saved",
+      "salvas_other": "{{count}} changes saved",
+      "parcial": "Saved {{salvas}} of {{total}}",
+      "parcialDetalhe": "Not saved: {{itens}}. {{motivo}}"
+    }
+  },
   "matrix": {
     "title": "Who can approve what",
     "eyebrow": "summary matrix",
