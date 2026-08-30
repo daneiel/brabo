@@ -5847,6 +5847,70 @@ campo é nulo por definição (a conversão de modo o zera, RN-450) e uma linha
 - **Origem:** revisão de design do dono do produto (item #6 do canvas de
   melhorias de UI)
 
+### RN-469 — Salvar uma seção são N chamadas, e a tela nunca afirma o desfecho que não obteve {#rn-469}
+
+Nas seções de Configurações cujas linhas são um ajuste ESCALAR por chave
+(`Paralelismo por área` e `Teto de gasto por área`, as duas por `agent_areas`),
+o botão de salvar é UM, da seção, e não um por linha. Salvar dispara **uma
+chamada por linha suja** — `PUT .../areas/:key/max-parallel` e
+`.../budget` são endpoints por ÁREA, não existe endpoint transacional para "grave
+estes N tetos", e este produto **não inventou um**. A consequência é que o
+desfecho de um clique pode ser parcial, e a regra é sobre o que a tela pode
+dizer então.
+
+**As chamadas são em SÉRIE, na ordem da tela, e uma falha não interrompe as
+seguintes.** Em série porque o relatório de falha nomeia linhas e precisa sair
+na ordem em que a pessoa as vê. Sem interromper porque quem clicou pediu as N:
+abortar na primeira recusa deixaria linhas sem tentativa nenhuma, e a tela não
+teria como distinguir "a api recusou" de "nem chegou a tentar".
+
+**O desfecho é por LINHA, e é ele que a UI mostra.** Só o rascunho que a api
+CONFIRMOU é descartado; o que falhou permanece no campo, com o que a pessoa
+digitou, e a seção continua marcada como não salva por exatamente essas linhas
+— clicar Salvar de novo tenta só elas. Os três desfechos são distintos e nenhum
+se disfarça de outro: todas passaram → sucesso; **nenhuma** passou → a mensagem
+que a API deu, nunca uma contagem; **algumas** passaram → aviso que diz quantas
+de quantas e **nomeia** as que ficaram. "Salvo" e "não salvo" seriam as duas
+mentira no terceiro caso, e é ele que esta RN existe para proteger.
+
+**A seção declara QUANTAS linhas estão pendentes antes do clique.** Um botão
+por seção diz "Salvar" igual com uma linha suja e com cinco; a contagem
+("2 alterações não salvas nesta seção") é a contrapartida de ter trocado N
+botões por um. Sujo é comparação por **valor interpretado**, não por texto:
+`20` e `20.0` são o mesmo teto, e comparar string mandaria uma chamada que a
+api trata como no-op. Rascunho inválido conta como sujo e **substitui** a
+contagem pela mensagem que explica o bloqueio — dois números sobre o mesmo
+conjunto seriam ruído, e quem tem valor inválido precisa do que trava o botão.
+
+**Onde a regra NÃO vale, e por quê.** Seção cujo controle é escolha de valor
+NOMEADO (`Promoção de história`, `Modelos por agente`, `Modelo por área`,
+papel em `Membros`) salva no `onChange`, sem botão, e continua assim: a
+confirmação existe para campo DIGITADO, onde salvar a cada tecla mandaria `1` a
+caminho de `12`. E `Credenciais` mantém botão por linha apesar de também ter
+`drafts` por chave: a credencial é write-only (ADR 0050) e nunca volta do
+servidor, então não há valor com que comparar para decidir "sujo"; o botão da
+linha alterna entre "Salvar" e "Trocar" conforme aquele provider já tenha
+chave; e ele divide o card com "Testar" e "Remover", que são irredutivelmente
+da linha.
+
+- **Onde:** `apps/web/src/routes/settings/secao-salvavel.tsx:105`
+  (`useSecaoSalvavel` — o laço em série, o desfecho por linha e os três toasts),
+  `:130` (sujo por valor interpretado), `:241` (`MarcaDeNaoSalvo` — a contagem,
+  e o inválido substituindo-a),
+  `apps/web/src/routes/settings/ParallelismSection.tsx:31`,
+  `apps/web/src/routes/settings/BudgetSection.tsx:37` (os dois consumidores),
+  `apps/web/src/routes/settings/CredentialsSection.tsx:57` (por que esta seção
+  ficou de fora)
+- **Teste:** `apps/web/src/routes/settings/secao-salvavel.test.tsx` (a contagem
+  de linhas sujas; voltar ao valor do servidor limpa a marca; inválido
+  substitui a contagem e trava o botão; um clique persiste todas as linhas
+  sujas; número e `null` na mesma leva; falha parcial diz quantas de quantas e
+  nomeia a que ficou; a seção continua marcada pelas que falharam; o segundo
+  clique tenta só elas; uma falha não interrompe as seguintes; nenhuma passando
+  mostra a mensagem da API e não a contagem)
+- **Origem:** revisão de design do dono do produto (item #7 do canvas de
+  melhorias de UI — "salvar por seção em vez de por linha")
+
 ---
 
 ## Quando dá errado

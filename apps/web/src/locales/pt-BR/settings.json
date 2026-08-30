@@ -14,6 +14,18 @@
     "proprio": "Valor próprio",
     "voltarAHerdar": "Voltar a herdar"
   },
+  "secao": {
+    "naoSalvas_one": "{{count}} alteração não salva nesta seção",
+    "naoSalvas_other": "{{count}} alterações não salvas nesta seção",
+    "invalidas_one": "{{count}} valor inválido — corrija para salvar",
+    "invalidas_other": "{{count}} valores inválidos — corrija para salvar",
+    "toast": {
+      "salvas_one": "{{count}} alteração salva",
+      "salvas_other": "{{count}} alterações salvas",
+      "parcial": "Salvou {{salvas}} de {{total}}",
+      "parcialDetalhe": "Não salvou: {{itens}}. {{motivo}}"
+    }
+  },
   "matrix": {
     "title": "Quem pode aprovar o quê",
     "eyebrow": "matriz resumida",

@@ -480,6 +480,28 @@
   width: 150px;
 }
 
+/* O rodapé de uma seção que salva por SEÇÃO (`settings/secao-salvavel.tsx`):
+   o botão e, ao lado dele, a contagem do que está pendente. Fica FORA dos
+   `.ajusteCard` de propósito — dentro de um card ele pareceria agir sobre
+   aquela linha, que é exatamente o que ele deixou de fazer. O `margin-top`
+   maior que o `margin-bottom` do card separa o rodapé da pilha sem precisar de
+   régua. */
+.acoesDaSecao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+/* A marca de "não salvo" não traz cor nem raio próprios: o chip é o `Badge` do
+   design system, e esta regra só impede que ele estique com o `align-items`
+   do flex. */
+.naoSalvo {
+  display: inline-flex;
+  align-items: center;
+}
+
 /* --- Anamnese (Fase 4b) --- */
 
 .profileGroup {
