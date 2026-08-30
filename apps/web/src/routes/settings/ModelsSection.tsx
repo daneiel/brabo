@@ -20,6 +20,7 @@ import { ModelPicker } from '../../components/ModelPicker';
 import { ClockIcon } from '../../components/ui/icons';
 import { ORIGIN_TONE, formatarCustoMicros } from './shared';
 import styles from '../ProjectSettingsTab.module.css';
+import { useVoltarAHerdar } from './heranca';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
@@ -33,6 +34,11 @@ import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 // Exportada para o teste, como as demais seções.
 export function ModelsSection({ projectId }: { projectId: string }) {
   const { t } = useTranslation('settings');
+  // Só o VERBO do padrão de valor herdado (`settings/heranca.tsx`) — não a
+  // `MarcaDeHeranca`. Nesta tabela a coluna ORIGEM já é a marca de estado da
+  // linha, e um segundo enunciado do mesmo estado na mesma célula seria a
+  // duplicação que este padrão remove.
+  const { rotuloInline: voltarAHerdar } = useVoltarAHerdar();
   const queryClient = useQueryClient();
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
@@ -252,7 +258,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
                     : t('modelsSection.backToInheritTitleNoArea')
                 }
               >
-                {t('modelsSection.backToInherit')}
+                {voltarAHerdar}
               </button>
             )}
           </span>

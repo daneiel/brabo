@@ -13,6 +13,7 @@ import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import { formatarCustoMicros } from './shared';
 import styles from '../ProjectSettingsTab.module.css';
+import { MarcaDeHeranca } from './heranca';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
@@ -25,6 +26,14 @@ import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
  * `budgetMicros: null`. Este teto é ADITIVO ao budget de projeto/sessão que
  * já existe na tela — não substitui nenhum dos dois, e não é a cascata de
  * modelo herdável do ADR 0064 (áreas diferentes, mecanismos diferentes).
+ *
+ * O estado "sem valor próprio" é dito pela `MarcaDeHeranca`
+ * (`settings/heranca.tsx`), como no resto da aba, e NÃO mais pelo placeholder
+ * sozinho. O placeholder fazia dois trabalhos: texto-fantasma do campo e
+ * único enunciado do estado. Ele é ruim no segundo — some assim que alguém
+ * digita, não se lê sem olhar dentro do campo, e não tem como dizer o polo
+ * POSITIVO ("esta área tem teto próprio"), que é metade da informação. Ficou
+ * só com o primeiro trabalho.
  */
 export function BudgetSection({ projectId }: { projectId: string }) {
   const { t } = useTranslation('settings');
@@ -102,6 +111,19 @@ export function BudgetSection({ projectId }: { projectId: string }) {
                   {t('budget.card.spent', {
                     amount: formatarCustoMicros(area.spentMicros),
                   })}
+                </div>
+                <div className={styles.ajusteHint}>
+                  {/* O polo positivo não leva detalhe: o teto próprio está no
+                      campo ao lado, e repeti-lo aqui seria a mesma duplicação
+                      que este padrão existe para remover. */}
+                  <MarcaDeHeranca
+                    proprio={area.budgetMicros !== null}
+                    detalhe={
+                      area.budgetMicros === null
+                        ? t('budget.card.noCap')
+                        : undefined
+                    }
+                  />
                 </div>
               </div>
               <div className={styles.ajusteNumero}>

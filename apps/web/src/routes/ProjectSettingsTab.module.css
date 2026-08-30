@@ -457,6 +457,23 @@
   width: 260px;
 }
 
+/* "Valor herdado" — a marca única dos dois polos (`settings/heranca.tsx`).
+   O chip é o `Badge` do design system (mono 10px, `square`), então não há cor
+   nem raio novos aqui: esta regra só resolve o ALINHAMENTO do chip com o
+   detalhe ao lado, e a quebra em tela estreita. O detalhe herda tamanho e cor
+   de `.ajusteHint`, que é sempre o container — repetir os valores criaria uma
+   segunda verdade sobre o mesmo texto. */
+.heranca {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.herancaDetalhe {
+  text-wrap: pretty;
+}
+
 /* Campo NUMÉRICO: 150px no desenho, e um `<input type=number>` de 260px é uma
    caixa quase vazia ao lado de um número de um dígito. */
 .ajusteNumero {

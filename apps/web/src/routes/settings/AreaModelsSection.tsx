@@ -16,6 +16,7 @@ import { ModelPicker } from '../../components/ModelPicker';
 import { useToast } from '../../components/ui/ToastProvider';
 import { ORIGIN_TONE } from './shared';
 import styles from '../ProjectSettingsTab.module.css';
+import { MarcaDeHeranca, useVoltarAHerdar } from './heranca';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 /**
@@ -29,6 +30,7 @@ import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
  */
 export function AreaModelsSection({ projectId }: { projectId: string }) {
   const { t } = useTranslation('settings');
+  const { rotulo: voltarAHerdar } = useVoltarAHerdar();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: comPapel } = useCurrentWorkspaceWithRole();
@@ -113,6 +115,13 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
                   ? t('areaModels.card.subagents', { list: area.members.join(', ') })
                   : t('areaModels.card.subagentsDynamic')}
               </div>
+              <div className={styles.ajusteHint}>
+                {/* Sem detalhe nos dois polos: DE ONDE o valor vem quando a
+                    área não tem o próprio é o que o Badge de origem ao lado do
+                    título diz, e torná-lo uma cadeia legível é trabalho de
+                    outra PR — a marca declara o ESTADO, não a cascata. */}
+                <MarcaDeHeranca proprio={divergiuDoProjeto} />
+              </div>
             </div>
 
             {modelsByCategory && (
@@ -133,7 +142,7 @@ export function AreaModelsSection({ projectId }: { projectId: string }) {
                 disabled={!podeEditar}
                 onClick={() => handleClear(key)}
               >
-                {t('areaModels.card.backToInherit')}
+                {voltarAHerdar}
               </Button>
             )}
           </div>

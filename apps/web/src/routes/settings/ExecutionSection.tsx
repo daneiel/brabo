@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
+import { MarcaDeHeranca } from './heranca';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 
 const DEFAULT_MAX_CONSECUTIVE_BLOCKED = 3;
@@ -18,6 +19,11 @@ const DEFAULT_MAX_CONSECUTIVE_BLOCKED = 3;
  * Primeiro campo numérico da aba — sem botão de "voltar ao default": o
  * default É o valor mostrado quando o projeto ainda não tem um próprio
  * (`null` na api), então digitar por cima e salvar já cobre os dois casos.
+ *
+ * E é exatamente por isso que esta seção precisa da `MarcaDeHeranca`
+ * (`settings/heranca.tsx`): o campo mostra `3` tendo ou não valor próprio, de
+ * modo que olhar para ele não distingue os dois estados. A marca é a única
+ * coisa na linha que distingue.
  */
 export function ExecutionSection({ projectId }: { projectId: string }) {
   const { t } = useTranslation('settings');
@@ -64,11 +70,16 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
         <div className={styles.ajusteInfo}>
           <div className={styles.ajusteTitulo}>{t('execution.card.title')}</div>
           <div className={styles.ajusteHint}>
-            {project.maxConsecutiveBlocked === null
-              ? t('execution.card.hintDefault', {
-                  default: DEFAULT_MAX_CONSECUTIVE_BLOCKED,
-                })
-              : t('execution.card.hintConfigured')}
+            <MarcaDeHeranca
+              proprio={project.maxConsecutiveBlocked !== null}
+              detalhe={
+                project.maxConsecutiveBlocked === null
+                  ? t('execution.card.hintDefault', {
+                      default: DEFAULT_MAX_CONSECUTIVE_BLOCKED,
+                    })
+                  : t('execution.card.hintConfigured')
+              }
+            />
           </div>
         </div>
         <div className={styles.ajusteNumero}>
