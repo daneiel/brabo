@@ -6,6 +6,29 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: `apps/api/src/db/schema.ts` deixa de ser um arquivo de 2 452 linhas
+  com 51 tabelas e 34 enums — o mais alterado do repositório, e uma dívida já
+  DECLARADA na tabela do `architecture.md`, cuja consequência escrita era
+  "conflito garantido com mais de uma pessoa": toda mudança de schema, de
+  qualquer área do produto, caía no mesmo arquivo. Agora são 16 arquivos sob
+  `db/schema/`, um por AGREGADO de domínio, espelhando as pastas de
+  `src/domain/*` em vez de inventar taxonomia — a que o arquivo já mantinha à
+  mão nos comentários `// --- seção ---` (ADR 0121). O caminho antigo vira um
+  barrel de `export *`, então os 144 módulos que importam de
+  `db/schema` (46 em `src/`, 98 em `test/` e `scripts/`) não mudaram uma linha, o `import * as schema` do `drizzle-client.ts` enxerga o
+  mesmo conjunto de exports e o `drizzle.config.ts` continua apontando pro
+  barrel (o `drizzle-kit` segue a cadeia de `export *` — verificado, não
+  suposto). Movimento PURAMENTE mecânico: nenhuma tabela, coluna, valor de
+  enum, nome de índice ou expressão de CHECK mudou, e a barra de aceite foi o
+  `db:generate` de diff ZERO — mais estrito que a suíte, porque o Drizzle
+  compara o SQL inferido e pegaria até um `notNull` invertido. Enum mora com a
+  tabela que o CHAMA, não com o assunto: FK entre arquivos é segura num ciclo
+  (`.references()` é callback preguiçoso), enum entre arquivos não é (roda na
+  avaliação do módulo), então `project_execution_mode`/`story_promotion` ficam
+  em `iam.ts` com seu único consumidor e `failure_origin` em `backlog.ts` — o
+  grafo de imports é um DAG. O `docs/.docmap.yml` ganha `schema/**` ao lado do
+  barrel: sem isso a regra ficaria CEGA para constraint nova, que é exatamente
+  o que ela existe pra vigiar.
 - **docs**: `business-rules.md` deixa de ser uma página de 644 KB — as duas
   seções que sozinhas eram metade dela saem para arquivos próprios
   (`business-rules/custo.md` e `business-rules/autenticacao.md`), e o índice

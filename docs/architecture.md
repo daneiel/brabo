@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 119 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 120 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -549,7 +549,7 @@ Derived from history's hotspots and the ADRs that record open state.
 
 | debt | evidence | impact |
 |---|---|---|
-| `schema.ts` is the repo's most-changed file (23 changes) and concentrates 35 tables into a single file | history | changing any aggregate touches the same file; a conflict is guaranteed with more than one person |
+| ~~`schema.ts` is the repo's most-changed file (23 changes) and concentrates 51 tables into a single file~~ | history → **closed by** [ADR 0121](adr/0121-schema-dividido-por-agregado-de-dominio.md) | the schema is now one file per domain aggregate under `apps/api/src/db/schema/`, mirroring `src/domain/*`, with the old path kept as a barrel of `export *` so all 144 consumers changed nothing. Two aggregates can now be edited at once without conflicting. What this does NOT touch: the migrations are byte-identical (the acceptance bar was a zero-diff `drizzle-kit generate`), and the api↔engine contract row below is a different, still-open debt |
 | The api↔engine contract is spread across 4 hot files (`internal-sessions.controller.ts`, `api-to-engine-client.ts`, `engine_api_client.ex`, `router.ex`) with no single source | history | a change requires editing all four in sync; nothing guarantees they agree |
 | The gates demo is **not a regression test** — it depends on a local 7B model's judgment | [ADR 0020](adr/0020-destravar-gates-qa-secops.md) | the gate's semantic path has no automated coverage |
 | Phase 4a with an acceptance criterion marked **NOT CLOSED** | [ADR 0021](adr/0021-fechamento-4a-infra-e-painel.md) | there's admittedly incomplete work with no tracking issue |

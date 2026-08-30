@@ -50,6 +50,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Lockfile próprio do website | `website/` sai do workspace pnpm da raiz — lockfile e overrides de segurança isolados, `pnpm audit` do produto para de reportar a árvore do Docusaurus | ADR 0117 |
 | Configuração automática do runner pelo navegador | Chave de dispositivo Ed25519 gerada no navegador, aditiva ao PAT; proxy do binário via GitHub Releases; File System Access API grava a pasta configurada, com fallback de download fora do Chromium; `--project/--dir/--token` viram opcionais no CLI | RN-464..466, ADR 0118 |
 | Imagens publicadas no GHCR | `release.yml` publica as quatro imagens a cada tag final e registra os digests em `.release/images.json`; overlay de produção deixa de apontar para um placeholder | ADR 0119 |
+| Schema por agregado | `db/schema.ts` vira barrel; as 51 tabelas e 34 enums viram 16 arquivos sob `db/schema/`, um por agregado de `domain/*` | ADR 0121 |
 
 ## Estado atual e aberto
 
@@ -232,6 +233,16 @@ daqui e o fechamento vai para o histórico.
 - Comunicação api ↔ engine: eventos via Postgres (transactional outbox
   na api, Oban no engine) + HTTP interno com service token para
   comandos síncronos.
+- O schema do Postgres mora em `apps/api/src/db/schema/`, UM arquivo por
+  AGREGADO de domínio, espelhando `apps/api/src/domain/*` (ADR 0121);
+  `db/schema.ts` é só o BARREL de `export *` que todo mundo importa, e é para
+  onde `drizzle.config.ts` aponta. Tabela nova entra no arquivo do agregado
+  dela — arquivo novo só quando o agregado é novo, e aí entra também no
+  barrel, na posição do ASSUNTO e não no fim. Enum mora com a tabela que o
+  CHAMA, não com o assunto: FK entre arquivos é segura num ciclo
+  (`.references()` é callback preguiçoso), enum entre arquivos NÃO é (roda na
+  avaliação do módulo) — o grafo de imports é um DAG e continuar assim é
+  invariante que ninguém testa, só quebra no boot.
 - Todo evento de domínio é imutável: nunca UPDATE em tabelas de eventos.
 - Estados de sessão são máquina de estados explícita:
   created → active → closing → closed | closed_abnormally
