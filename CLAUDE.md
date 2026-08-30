@@ -157,6 +157,16 @@ daqui e o fechamento vai para o histórico.
   System Access API (fallback de dois downloads fora do Chromium) —
   `POST .../runner-ticket` aceita essa chave como segunda credencial de
   dispositivo, ADITIVA ao PAT (ADR 0105), nunca um substituto
+- `e2e/`: E2E de NAVEGADOR (Playwright, só chromium — ADR 0120), a quarta
+  camada da pirâmide. Roda contra o compose de PRODUÇÃO (`docker/smoke.sh`
+  com `SMOKE_KEEP_UP=1`), nunca contra o `vite dev`: o que ele prova —
+  refresh em cookie `httpOnly`, CSRF em origem cruzada `:8088`→`:3000`,
+  ticket de uso único do socket (RN-108) contra o engine numa TERCEIRA
+  origem — só existe quando as três origens são distintas, e jsdom não
+  alcança nenhuma delas. NÃO é membro do workspace (mesmo desenho do
+  `website/`, ADR 0117): lockfile próprio, `pnpm --dir e2e`, nunca
+  `pnpm --filter`. Seletor é ESTRUTURAL, nunca texto (o idioma é decisão do
+  servidor), e a asserção é sobre MECANISMO, nunca sobre tela
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev.
   `website/` NÃO é membro do workspace (ADR 0117) — lockfile próprio em
   `website/pnpm-workspace.yaml`/`website/pnpm-lock.yaml`, instalado com
@@ -394,7 +404,12 @@ daqui e o fechamento vai para o histórico.
   `eventos` — nunca some nem abre categoria nova.
 - Testes: vitest (api/web/scripts de CI), ExUnit (engine). Nenhuma
   feature sem teste do caminho feliz + 1 caso de falha. Providers de
-  git e de LLM validados por suas suites de contrato únicas.
+  git e de LLM validados por suas suites de contrato únicas. A quarta
+  camada é o E2E de navegador em `e2e/` (ADR 0120) e ela responde uma
+  pergunta que as outras três NÃO respondem — "um navegador de verdade,
+  em outra origem, entra e fica dentro?". Ela não substitui nenhuma:
+  comportamento continua sendo coberto embaixo, e teste que caberia na
+  suite do web não sobe para cá.
 - Capability só é declarada quando provada pela suite; sem prova,
   declara-se false e degrada (regra dos ADRs 0041/0042, vale para git
   e LLM).

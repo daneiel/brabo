@@ -269,6 +269,24 @@ pnpm db:migrate             # applies the migrations
 pnpm dev:down               # tear everything down
 ```
 
+### The browser E2E
+
+Three layers below it already run on `pnpm test`. The fourth needs the
+**production compose up**, because what it proves — the `httpOnly` refresh
+cookie, the cross-origin CSRF, the session socket's single-use ticket —
+only exists when the web, the api and the engine sit on three different
+origins ([ADR 0120](adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md)).
+
+```bash
+pnpm e2e:navegadores                      # once: downloads chromium
+SMOKE_KEEP_UP=1 bash docker/smoke.sh      # brings the prod stack up and leaves it
+pnpm e2e                                  # runs the specs against it
+docker compose -f docker/docker-compose.prod.yml down -v
+```
+
+`e2e/` is not a workspace member — it has its own lockfile, so `pnpm --filter`
+won't find it. That's deliberate, and `e2e/README.md` says why.
+
 ### The menu, so you don't have to memorize all this
 
 ```bash

@@ -100,6 +100,24 @@ Referência a uma action DENTRO deste repositório (`./.github/...`) passa:
 é código nosso, revisado pela PR que o muda, sem terceiro nenhum podendo
 mover coisa alguma.
 
+## O navegador do Playwright
+
+O E2E de navegador ([ADR 0120](../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md))
+baixa o chromium no CI, da CDN do Playwright — um terceiro download que não
+é action e não é asset de GitHub Release, então nenhum dos dois mecanismos
+acima o cobre.
+
+Quem o prende é a versão EXATA do `@playwright/test` no
+`e2e/pnpm-lock.yaml`: cada release do pacote está amarrado a uma build de
+navegador, e `playwright install` busca aquela. O pin, portanto, é o
+lockfile — e é o `--frozen-lockfile` do job que faz dele um pin, e não uma
+sugestão.
+
+Não há `sha256sum -c` aqui, e essa é a descrição honesta: a ferramenta baixa
+e verifica por conta própria, e reproduzir a tabela de checksum dela à mão
+seria uma cópia que envelhece. Mais fraco que os binários dos scanners,
+dito em vez de subentendido.
+
 ## Imagens de container
 
 Imagem de terceiro está presa por tag, não por digest:
