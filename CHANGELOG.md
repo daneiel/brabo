@@ -1050,6 +1050,43 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   (`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/`atividadeDoTurno`) e
   `ProjectSettingsTab.tsx` seguem exatamente tão em disputa quanto antes,
   por decisão declarada no próprio ADR — nenhum dos dois é tocado aqui
+- **web**: PR final do cluster de canal de turno de `SessionPage.tsx`
+  (ADR 0124) — o item que o ADR 0122 tinha deixado declarado em aberto,
+  fecha aqui. Uma releitura linha a linha achou a própria contagem da ADR
+  0122 desatualizada (falava em quatro handlers de turno; são sete pontos
+  reais de escrita, incluindo `handleReturnStory`/RN-174, nunca citado
+  lá). Duas PRs: a primeira, mecânica, terminou uma deduplicação que tinha
+  ficado pela metade — `handleSend`/`handleReadiness`/
+  `handleArchitectureReadiness` duplicavam inline as mesmas linhas que
+  `iniciarTurnoDoAgente`/`finalizarTurnoDoAgente` (já existentes como par
+  `useCallback`) já cobriam, e ganha o parâmetro `{ comStatus }` pra
+  preservar a assimetria de `handleAcceptHandoff` (kickoff assíncrono no
+  engine); introduz `cancelarTurnoOtimista`. Esta PR, a extração de
+  verdade: o estado (`streaming`/`streamingText`/`streamingAgent`/
+  `turnoViaCanal`/`statusAgent`/`pensandoVisivel`/`atividadeDoTurno`/
+  `optimisticUser`), o efeito do canal Phoenix
+  (`connectSessionHeartbeat`, conferido por completo como 100%
+  maquinário de ciclo de vida de turno) e as três funções migram para um
+  hook novo, `useTurnoDoAgente` (`apps/web/src/lib/session-turno.ts`) —
+  primeiro hook do repositório com estado E API imperativa juntos (sem
+  precedente local: `useAutoCollapseSidebar` devolve `void`,
+  `useSessionReadiness` é função pura sem `useState`). Retorno em OBJETO,
+  não tupla (13 campos) — `SessionPage.tsx` desestrutura tudo sob o MESMO
+  nome de antes, então todo lugar que lê o estado continua igual.
+  `cancelarTurnoOtimista` cobre só dois dos cinco formatos de "desfazer o
+  arme" encontrados no arquivo (os blocos idênticos de
+  `handleReadiness`/`handleArchitectureReadiness`) — NÃO o de
+  `handleAcceptHandoff` (nunca armou `streaming`/`statusAgent`, então
+  chamá-la ali acoplaria em silêncio dois campos que o handler nunca
+  tocou — a mesma armadilha que a ADR 0122 já tinha apontado) nem os dois
+  formatos distintos de `handleSend` (`optimisticUser` pertence ao ciclo
+  de vida dele, não ao par arme/desarme). ZERO mudança de comportamento
+  observável: os mesmos 25 (24) arquivos `SessionPage.*.test.tsx` passam
+  SEM EDIÇÃO nenhuma, incluindo os nove que exercitam este cluster
+  diretamente. `SessionPage.tsx` termina em 2 479 linhas, descendo de
+  2 661. Fecha, especificamente, o item de canal de turno que a ADR 0122
+  tinha deixado em aberto — `ProjectSettingsTab.tsx`, o outro arquivo da
+  mesma linha de dívida, segue intocado, decisão de escopo separada
 
 ## v3.1.0 — 2026-08-13
 

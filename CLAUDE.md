@@ -52,23 +52,18 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Imagens publicadas no GHCR | `release.yml` publica as quatro imagens a cada tag final e registra os digests em `.release/images.json`; overlay de produção deixa de apontar para um placeholder | ADR 0119 |
 | Schema por agregado | `db/schema.ts` vira barrel; as 51 tabelas e 34 enums viram 16 arquivos sob `db/schema/`, um por agregado de `domain/*` | ADR 0121 |
 | `SessionPage.tsx` em 5 PRs mecânicos | 3 807 → 2 661 linhas; timeline/turno, `StorySlide`, `StructuredQuestionCard`, árvore de backlog + `ContextAside`, hook `useSessionReadiness` — cluster do canal de turno e `ProjectSettingsTab.tsx` seguem fora, declarado | ADR 0122 |
+| Hook do canal de turno do `SessionPage.tsx` | 2 661 → 2 479 linhas; PR mecânica de dedup (`iniciarTurnoDoAgente`/`finalizarTurnoDoAgente`/`cancelarTurnoOtimista`) seguida da extração de estado + efeito do canal Phoenix para o hook `useTurnoDoAgente` (`lib/session-turno.ts`) — fecha o item que a ADR 0122 deixou declarado em aberto; `ProjectSettingsTab.tsx` segue fora, decisão separada | ADR 0124 |
 
 ## Estado atual e aberto
 
 O que segue é OPERATIVO — decide comportamento de sessão hoje. Fechou? Sai
 daqui e o fechamento vai para o histórico.
 
-**Decomposição parcial de `SessionPage.tsx` (ADR 0122):** os 5 PRs
-mecânicos declarados pelo ADR fecharam (histórico). O que fica OPERATIVO
-daqui em diante: `SessionPage.tsx` continua um arquivo disputado — o
-cluster de estado do canal de turno
-(`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/`atividadeDoTurno`)
-segue nele, de propósito, fora de escopo do ADR 0122 (é controle de fluxo
-acoplado entre quatro handlers, não um move mecânico — precisa de ADR
-próprio, numerado à parte, quando for a vez). `ProjectSettingsTab.tsx`
-(~90 KiB, o outro arquivo da mesma linha de dívida em
-`docs/architecture.md`) segue intocado, decisão de escopo separada, sem
-data.
+**`ProjectSettingsTab.tsx` (ADR 0122/ADR 0124):** o cluster de estado do
+canal de turno do `SessionPage.tsx` fechou (histórico, ADR 0124) — a linha
+de dívida de `docs/architecture.md` que citava os dois arquivos agora
+descreve só este. `ProjectSettingsTab.tsx` (~90 KiB) segue intocado,
+decisão de escopo separada, sem data.
 
 **Decisões de produto abertas (não são bugs; não corrigir de passagem):**
 - Z/AD: allowlist de verbos não converge (verbo/forma/invocação são espaços
