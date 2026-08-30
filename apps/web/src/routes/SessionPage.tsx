@@ -103,6 +103,7 @@ import {
 import { StorySlide } from './StorySlide';
 import { StructuredQuestionCard } from './StructuredQuestionCard';
 import { ContextAside } from './ContextAside';
+import { AGENTES_DE_CHAT, useSessionReadiness } from '../lib/session-readiness';
 
 interface SessionPageProps {
   projectId: string;
@@ -211,34 +212,6 @@ export function agruparNarracoesDoTurno(
 
   return resultado;
 }
-
-/**
- * Agentes que participam do fluxo de CHAT do composer (achado 9-fix) —
- * quem tem rota de `message` wireada no engine, não só `start`.
- *
- * Conferido em `agent_command_controller.ex`: há cláusula própria pra
- * po/dev-lead/arquiteto/ux-designer/staff, e a última cláusula (sem guarda
- * de agente) trata qualquer outro valor — incluindo `"infra"` — como se
- * fosse o Criativo. Infra Lead nunca teve `message` wireada, só `start`;
- * incluí-lo aqui faria o composer mandar mensagens que o engine rotearia em
- * silêncio pro agente errado. Ele é propositivo (CLAUDE.md Fase 4), não
- * conversacional pelo composer.
- *
- * `ux-designer` e `staff` entraram aqui pelo handoff manual (ADR 0109/
- * RN-440): as duas cláusulas já existiam no engine (ADR 0087/0088) sem
- * NENHUM jeito de um humano chegar até elas pela tela — só pela rota
- * interna. `infra`/`qa` continuam de fora: são leads de ÁREA sem
- * `kickoff/1` nem cláusula de `message`, o mesmo padrão já documentado
- * acima para Infra.
- */
-const AGENTES_DE_CHAT = [
-  'criativo',
-  'po',
-  'arquiteto',
-  'dev-lead',
-  'ux-designer',
-  'staff',
-] as const;
 
 /**
  * Quantas entradas do fio ficam ABERTAS antes de o resto virar histórico
@@ -485,83 +458,34 @@ export function SessionPage({
   const handoffsQuery = useHandoffs(projectId, sessionId, 3000);
   const handoffs = handoffsQuery.data ?? [];
 
+  // As seis derivações de "prontidão" (RN-160/RN-161) — `criativoActive`,
+  // `arquitetoActive`, `hasBusinessRule`, `hasPromotedStory`,
+  // `hasProductBrief` e `activeAgent` — moraram aqui até a extração do hook
+  // `useSessionReadiness` (PR 5/5 da decomposição de `SessionPage.tsx`, ADR
+  // 0122): mesma lógica, mesmas dependências, só re-hospedadas atrás de um
+  // contrato de parâmetros explícito (`../lib/session-readiness.ts`).
+  const backlogQuery = useBacklog(projectId);
+  const {
+    criativoActive,
+    arquitetoActive,
+    hasBusinessRule,
+    hasPromotedStory,
+    hasProductBrief,
+    activeAgent,
+  } = useSessionReadiness(events, backlogQuery.data);
+
   // Um agente está ativo se houve um agent.activated pra ele nesta sessão.
   // Isto é EXISTÊNCIA histórica ("já entrou alguma vez"), não "é ele quem
-  // fala AGORA" — os dois viram perguntas diferentes logo abaixo.
+  // fala AGORA". Cópia local de uma linha da mesma checagem que o hook usa
+  // internamente pra `criativoActive`/`arquitetoActive` (`session-
+  // readiness.ts`) — o único consumidor que sobra aqui é `offeredHandoff`,
+  // logo abaixo, que não faz parte da extração do hook.
   const activeFor = (agent: string) =>
     events.some(
       (e) =>
         e.type === 'agent.activated' &&
         (e.payload as { agent?: string })?.agent === agent,
     );
-  const criativoActive = useMemo(() => activeFor('criativo'), [events]);
-  // Mesmo padrão do Criativo, para o botão de prontidão da arquitetura
-  // (achado do problema 1) — o Arquiteto não tinha NENHUM jeito de o usuário
-  // disparar `OfferInfraHandoffUseCase`: o endpoint já existia
-  // (`POST .../agents/arquiteto/handoff-infra`), mas nenhum lugar do
-  // frontend o chamava.
-  const arquitetoActive = useMemo(() => activeFor('arquiteto'), [events]);
-
-  // A garantia de VERDADE é o guardrail no engine — `CriativoServer` recusa
-  // `confirm_readiness` (e narra a recusa como `agent.error` no fio) quando
-  // a sessão não tem nenhuma `artifact.business_rule` (ver
-  // criativo_server.ex). Isto é só a UX complementar: desabilita o botão
-  // ANTES do clique, com a MESMA fonte que já alimenta o painel "Regras de
-  // negócio" em `ContextAside` — sem buscar de novo.
-  const hasBusinessRule = useMemo(
-    () => events.some((e) => e.type === 'artifact.business_rule'),
-    [events],
-  );
-
-  // RN-160: mirror do gate acima, para "Confirmar arquitetura pronta" — não
-  // basta ter regra de negócio capturada, precisa existir pelo menos 1
-  // história já PROMOVIDA (RN-048: `PromoteStoriesUseCase` move `draft` para
-  // `ready` via `TransitionStoryUseCase`; `in_progress`/`done` também contam,
-  // porque só se chega lá tendo passado por `ready`). A fonte é a MESMA que a
-  // aba Backlog já usa (`useBacklog`, `ProjectBacklogTab.tsx`, mesma
-  // queryKey `['backlog', projectId]`) — sem round-trip novo.
-  const backlogQuery = useBacklog(projectId);
-  const hasPromotedStory = useMemo(
-    () =>
-      (backlogQuery.data ?? []).some((epic) =>
-        epic.stories.some((s) => s.status !== 'draft'),
-      ),
-    [backlogQuery.data],
-  );
-
-  // Gate `necessidade-validada` (Criativo → PO — auditoria fluxo.yml x
-  // código, achado B2, RN-406/ADR 0095): só faz sentido "validar" um
-  // `product_brief` que já existe — a consolidação que `confirm_readiness`
-  // já produziu. Por isso o botão de validação só habilita DEPOIS que o de
-  // "Estou pronto para produzir" já rodou, nunca antes dele.
-  const hasProductBrief = useMemo(
-    () => events.some((e) => e.type === 'artifact.product_brief'),
-    [events],
-  );
-
-  // O agente que recebe as mensagens do composer: o de `agent.activated`
-  // mais RECENTE (por `seq`) entre os `AGENTES_DE_CHAT` (achado 9-fix).
-  // Antes era uma cadeia de PRECEDÊNCIA fixa (arquiteto > po > criativo) que
-  // nunca "desligava" — uma vez que o Arquiteto atuasse, ele ficava com
-  // prioridade PARA SEMPRE, então mesmo depois de aceitar um handoff pro Dev
-  // Lead a mensagem seguinte continuava indo pro Arquiteto. `dev-lead` nem
-  // estava na cadeia; acrescentar mais um nome no fim só adiaria o mesmo bug
-  // pro próximo agente. "Mais recente vence" não precisa de ordem nenhuma.
-  const activeAgent = useMemo(() => {
-    let maisRecente: { agent: string; seq: number } | null = null;
-    for (const e of events) {
-      if (e.type !== 'agent.activated') continue;
-      const agent = (e.payload as { agent?: string })?.agent;
-      if (
-        !agent ||
-        !(AGENTES_DE_CHAT as readonly string[]).includes(agent)
-      ) {
-        continue;
-      }
-      if (!maisRecente || e.seq > maisRecente.seq) maisRecente = { agent, seq: e.seq };
-    }
-    return maisRecente?.agent ?? null;
-  }, [events]);
 
   // Handoff oferecido ainda não aceito → botão de aceitar, restrito a quem
   // CONVERSA nesta tela (RN-136). `handoffs` vem ordenado por `createdAt`

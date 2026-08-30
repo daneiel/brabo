@@ -51,29 +51,24 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Configuração automática do runner pelo navegador | Chave de dispositivo Ed25519 gerada no navegador, aditiva ao PAT; proxy do binário via GitHub Releases; File System Access API grava a pasta configurada, com fallback de download fora do Chromium; `--project/--dir/--token` viram opcionais no CLI | RN-464..466, ADR 0118 |
 | Imagens publicadas no GHCR | `release.yml` publica as quatro imagens a cada tag final e registra os digests em `.release/images.json`; overlay de produção deixa de apontar para um placeholder | ADR 0119 |
 | Schema por agregado | `db/schema.ts` vira barrel; as 51 tabelas e 34 enums viram 16 arquivos sob `db/schema/`, um por agregado de `domain/*` | ADR 0121 |
+| `SessionPage.tsx` em 5 PRs mecânicos | 3 807 → 2 661 linhas; timeline/turno, `StorySlide`, `StructuredQuestionCard`, árvore de backlog + `ContextAside`, hook `useSessionReadiness` — cluster do canal de turno e `ProjectSettingsTab.tsx` seguem fora, declarado | ADR 0122 |
 
 ## Estado atual e aberto
 
 O que segue é OPERATIVO — decide comportamento de sessão hoje. Fechou? Sai
 daqui e o fechamento vai para o histórico.
 
-**Decomposição em andamento, PR a PR (ADR 0122):**
-- `SessionPage.tsx` (169 KiB, 25 arquivos de teste importando) está sendo
-  dividido em 5 PRs mecânicos, cada um mergeado antes do próximo começar
-  (arquivo sob churn ativo — não paralelizar). PR 1/5 fechou: helpers puros
-  de timeline/turno → `apps/web/src/lib/session-timeline.ts`. PR 2/5 fechou:
-  `StorySlide` → `apps/web/src/routes/StorySlide.tsx`. PR 3/5 fechou:
-  `StructuredQuestionCard` (+ o helper privado `permiteOutra`) →
-  `apps/web/src/routes/StructuredQuestionCard.tsx`. PR 4/5 fechou: helpers
-  de árvore de backlog (`urlDaPr`/`vinculoDeBacklog`/`montarArvoreDeBacklog`/
-  `totalDeDescendentes`) → `apps/web/src/lib/session-backlog-tree.ts`, e
-  `ItemDeBacklog` + `ContextAside` (a sidebar inteira) →
-  `apps/web/src/routes/ContextAside.tsx`. Resta: um hook
-  `useSessionReadiness` (o único passo que não é move mecânico). Fora de
-  escopo do plano inteiro, decisão separada com ADR próprio quando for a
-  vez: o cluster de estado do canal de turno
-  (`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/`atividadeDoTurno`) e
-  `ProjectSettingsTab.tsx`.
+**Decomposição parcial de `SessionPage.tsx` (ADR 0122):** os 5 PRs
+mecânicos declarados pelo ADR fecharam (histórico). O que fica OPERATIVO
+daqui em diante: `SessionPage.tsx` continua um arquivo disputado — o
+cluster de estado do canal de turno
+(`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/`atividadeDoTurno`)
+segue nele, de propósito, fora de escopo do ADR 0122 (é controle de fluxo
+acoplado entre quatro handlers, não um move mecânico — precisa de ADR
+próprio, numerado à parte, quando for a vez). `ProjectSettingsTab.tsx`
+(~90 KiB, o outro arquivo da mesma linha de dívida em
+`docs/architecture.md`) segue intocado, decisão de escopo separada, sem
+data.
 
 **Decisões de produto abertas (não são bugs; não corrigir de passagem):**
 - Z/AD: allowlist de verbos não converge (verbo/forma/invocação são espaços

@@ -991,6 +991,45 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ponta a ponta — mais checagem visual manual da sidebar renderizada, já
   que é a extração mais visível das cinco. Resta 1 PR no plano declarado
   pelo ADR 0122 (o hook `useSessionReadiness`)
+- **web**: PR 5 de 5, e ÚLTIMO, da decomposição mecânica de `SessionPage.tsx`
+  (ADR 0122) — a única fatia do plano que não é um move de arquivo. As seis
+  derivações de "prontidão" (RN-160/RN-161) — `criativoActive`,
+  `arquitetoActive`, `hasBusinessRule`, `hasPromotedStory`,
+  `hasProductBrief` e `activeAgent`, cada uma um `useMemo` lendo direto do
+  closure do componente — viram um hook com contrato explícito de
+  parâmetros, `useSessionReadiness(events, backlogData)` em
+  `apps/web/src/lib/session-readiness.ts`: `events` no mesmo tipo que
+  `SessionPage.tsx` já usa (`SessionEvent[]`), `backlogData` já
+  DESEMBRULHADO (`backlogQuery.data`, `Epic[] | undefined`) — `SessionPage.
+  tsx` continua sendo o único dono da chamada `useBacklog(projectId)`, o
+  hook fica função pura dos dois parâmetros, sem acoplar a nenhum client de
+  query. `AGENTES_DE_CHAT` move junto (só ela era usada dentro do loop de
+  `activeAgent`) e `SessionPage.tsx` importa de volta o mesmo símbolo para
+  o único outro consumidor que sobrava, `offeredHandoff` — fonte única, sem
+  cópia. `activeFor`, o helper de uma linha que alimentava
+  `criativoActive`/`arquitetoActive`, virou uma cópia local dentro do hook
+  E continua, também local, em `SessionPage.tsx`: o original já alimentava
+  DOIS outros pontos fora desta extração (`offeredHandoff` e o filtro do
+  seletor de handoff manual), então duplicar uma linha pura evitou
+  acoplar esses dois ao hook por um parâmetro que não precisariam do resto
+  do contrato. Corpo dos seis `useMemo` movido VERBATIM — mesmas dependências,
+  mesma lógica. Primeiro hook do repositório testado isolado
+  (`renderHook`, `@testing-library/react`, sem `QueryClientProvider`
+  porque o hook não usa `useQuery`) — `apps/web/src/lib/
+  session-readiness.test.ts`, caminho feliz + 1 caso de borda por grupo.
+  ZERO mudança de comportamento observável: os mesmos 24 arquivos
+  `SessionPage.*.test.tsx` passam SEM EDIÇÃO nenhuma, incluindo
+  os quatro que exercitam prontidão diretamente
+  (`SessionPage.readiness-exige-regra`,
+  `SessionPage.readiness-arquitetura-exige-historia`,
+  `SessionPage.validar-necessidade`,
+  `SessionPage.readiness-turno-preso`). `SessionPage.tsx` termina o plano
+  em 2 661 linhas, descendo de 3 807 antes da PR 1. Fecha o plano de 5 PRs
+  do ADR 0122 — PARCIALMENTE: as cinco extrações nomeadas fecham, mas o
+  cluster de estado do canal de turno
+  (`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/`atividadeDoTurno`) e
+  `ProjectSettingsTab.tsx` seguem exatamente tão em disputa quanto antes,
+  por decisão declarada no próprio ADR — nenhum dos dois é tocado aqui
 
 ## v3.1.0 — 2026-08-13
 
