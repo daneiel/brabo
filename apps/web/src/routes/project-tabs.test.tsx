@@ -168,17 +168,16 @@ describe('abas do projeto derivam de um registro só', () => {
   // que o singleton tinha ANTES de `changeLanguage('pt-BR')`. O rótulo certo
   // só existe depois, dentro do corpo do teste.
   it.each(ABAS_DO_PROJETO.map((aba) => aba.key))(
-    'a aba %s tem botão na régua (eventualmente dentro do grupo) E painel que renderiza',
+    'a aba %s tem botão no trilho E painel que renderiza',
     async (key) => {
       const label = abaPorChave(key)!.label;
       montar(key as never);
 
-      // Ponto 3: a régua. Se a chave é filha de um grupo, montar com essa
-      // chave como `active` é o que faz `GroupedTabs` abrir o grupo e
-      // revelar a segunda linha — é ali que o rótulo da FILHA aparece; o
-      // rótulo que aparece SEMPRE no topo, para abas soltas, é o dela
-      // mesma. O regex é ANCORADO (início e fim): sem âncora, "Chat"
-      // bateria por SUBSTRING dentro de rótulos maiores.
+      // Ponto 3: o trilho. Desde o ADR 0126 toda aba — solta ou filha de
+      // grupo — tem botão visível o tempo todo, então o rótulo não depende
+      // mais de nenhum grupo estar aberto. O regex é ANCORADO (início e
+      // fim): sem âncora, "Chat" bateria por SUBSTRING dentro de rótulos
+      // maiores.
       const escapado = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       expect(
         await screen.findByRole('tab', { name: new RegExp(`^${escapado}$`) }),
@@ -189,18 +188,37 @@ describe('abas do projeto derivam de um registro só', () => {
     },
   );
 
-  it('a régua de TOPO mostra os grupos e as abas soltas, na ordem declarada — nunca as 12 chaves achatadas', async () => {
+  // ADR 0126: este caso afirmava o contrário — que a régua mostrava só os 6
+  // itens de TOPO (`['Visão geral','Agentes','Dev','Documentação','Gastos',
+  // 'Configurações']`), com as filhas escondidas até o grupo ser escolhido.
+  // Essa era a garantia da régua horizontal de dois níveis (`GroupedTabs`,
+  // removida na mesma mudança); o trilho vertical existe justamente para
+  // deixar os TRÊS grupos abertos ao mesmo tempo. A asserção continua sendo
+  // sobre a ORDEM DECLARADA que sai do registro — só que agora achatada, com
+  // os cabeçalhos de grupo pontuando a lista sem serem selecionáveis.
+  it('o trilho mostra as 12 abas juntas, na ordem declarada, com os três grupos abertos', async () => {
     montar();
 
     const botoes = await screen.findAllByRole('tab');
     expect(botoes.map((b) => b.textContent)).toEqual([
       'Visão geral',
-      'Agentes',
-      'Dev',
-      'Documentação',
+      'Executores',
+      'Criativo',
+      'Chat',
+      'Insights',
+      'Código',
+      'PRs',
+      'Aprovações',
+      'Backlog',
+      'Arquitetura',
       'Gastos',
       'Configurações',
     ]);
+    // Os cabeçalhos existem e nomeiam a seção — mas não são abas.
+    for (const grupo of ['Agentes', 'Dev', 'Documentação']) {
+      expect(screen.getByText(grupo)).toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: grupo })).toBeNull();
+    }
   });
 
   it('toda chave do registro é aceita pelo guarda do deep-link', () => {
@@ -238,10 +256,10 @@ describe('abas do projeto derivam de um registro só', () => {
     });
     useBacklog.mockReturnValue({ data: [] });
 
-    // Aprovações e Insights são filhas de grupo — mostrar o selo delas
-    // exige o grupo aberto. Backlog também é filha (Documentação), e ela
-    // fica vazia neste teste — é o caso "aba sem contador" verificado logo
-    // abaixo, dentro do grupo.
+    // Aprovações e Insights são filhas de grupo, e no trilho isso não muda
+    // nada: as duas estão visíveis desde o primeiro paint. Backlog também é
+    // filha (Documentação) e fica vazia neste teste — é o caso "aba sem
+    // contador" verificado logo abaixo.
     montar('approvals' as never);
 
     expect(
@@ -251,7 +269,13 @@ describe('abas do projeto derivam de um registro só', () => {
     expect(screen.getByRole('tab', { name: 'Código' })).toBeInTheDocument();
   });
 
-  it('o selo do GRUPO é a SOMA dos selos das filhas, e some quando a soma é zero', async () => {
+  // ADR 0126: este caso afirmava o contrário — que o grupo FECHADO exibia a
+  // SOMA das filhas (`/^Dev\s*1$/`), o resumo de que a régua horizontal
+  // precisava porque escondia as filhas. Com os três grupos abertos ao mesmo
+  // tempo, a soma não tem o que resumir e apagaria QUAL fila está pedindo
+  // atenção — a separação das cinco filas é decisão de produto, e agora ela
+  // vale sem exceção nenhuma.
+  it('cada fila mantém o selo PRÓPRIO, e o cabeçalho do grupo nunca soma as filhas', async () => {
     usePendingActions.mockReturnValue({
       data: { items: [{ status: 'pending' }] },
     });
@@ -260,17 +284,18 @@ describe('abas do projeto derivam de um registro só', () => {
     });
     useBacklog.mockReturnValue({ data: [] });
 
-    // `active` de fora de todo grupo (Visão geral): a régua de topo mostra
-    // só os selos AGREGADOS.
     montar();
 
-    // "Dev" soma só Aprovações (1) — Código e PRs não têm contador.
-    expect(await screen.findByRole('tab', { name: /^Dev\s*1$/ })).toBeInTheDocument();
-    // "Agentes" soma só Insights (1) — Executores/Criativo/Chat não têm.
-    expect(screen.getByRole('tab', { name: /^Agentes\s*1$/ })).toBeInTheDocument();
-    // "Documentação" soma Backlog (0) e Arquitetura (0, placeholder): zero
-    // é ruído, não selo.
-    expect(screen.getByRole('tab', { name: 'Documentação' })).toBeInTheDocument();
+    // Aprovações (1) e Insights (1) mostram cada uma o seu, lado a lado.
+    expect(await screen.findByRole('tab', { name: /^Aprovações\s*1$/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^Insights\s*1$/ })).toBeInTheDocument();
+    // Fila vazia continua sem selo: zero é ruído, não informação.
+    expect(screen.getByRole('tab', { name: 'Backlog' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Código' })).toBeInTheDocument();
+    // E o cabeçalho do grupo é só o nome — nenhum número junto dele.
+    expect(screen.getByText('Dev').textContent).toBe('Dev');
+    expect(screen.getByText('Agentes').textContent).toBe('Agentes');
+    expect(screen.getByText('Documentação').textContent).toBe('Documentação');
   });
 
   /**

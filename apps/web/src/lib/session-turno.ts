@@ -25,7 +25,8 @@ import { fraseDaFerramenta } from './narracao-de-ferramentas';
  * hook.
  *
  * Não existe precedente de hook com estado + API imperativa neste código
- * antes deste (`useAutoCollapseSidebar` devolve `void`; `useSessionReadiness`
+ * antes deste (`useAutoCollapseSidebar`, removido depois pelo ADR 0126,
+ * devolvia `void`; `useSessionReadiness`
  * é função pura de dois parâmetros, sem `useState`/efeito nenhum) — dito
  * aqui explicitamente, não fingido como "seguindo um padrão que já existe".
  *

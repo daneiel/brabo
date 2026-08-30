@@ -40,8 +40,9 @@ import { ProjectSettingsTab } from './ProjectSettingsTab';
  * hipóteses do Psicólogo), e FICAM: o handoff é referência de fidelidade
  * visual, não teto de produto (RN-203).
  *
- * PROGRAMA de abas agrupadas — Onda 1: a régua ganhou um segundo nível
- * (`grupo`, abaixo) e duas chaves novas ainda em placeholder (`prs`,
+ * PROGRAMA de abas agrupadas — Onda 1: a navegação ganhou um segundo nível
+ * (`grupo`, abaixo — desde o ADR 0126 os três grupos ficam abertos ao mesmo
+ * tempo num trilho vertical, `routes/ProjectRail.tsx`) e duas chaves novas ainda em placeholder (`prs`,
  * `arquitetura` — Ondas 2/3 entregam o conteúdo real). A fusão mais visível
  * desta onda: `sessions` ("Chat") e `rag` ("Chat RAG") viraram UMA aba só,
  * `chat`, com um controle segmentado por dentro (`ProjectChatShell.tsx`) —
@@ -418,7 +419,7 @@ export function resolverChaveDeAba(valor: unknown): ChaveDeAba | undefined {
  * `AbaDoProjeto`); `ordem` de uma aba solta é a dela mesma.
  *
  * Só a ESTRUTURA sai daqui — quem resolve `count` contra `ContagensDeAba` e
- * monta os `TabItem` que `GroupedTabs` consome é `ProjectPage.tsx`, mesma
+ * monta os itens que `ProjectRail` consome é `ProjectPage.tsx`, mesma
  * divisão de responsabilidade que já existia entre este arquivo e
  * `ABAS_DO_PROJETO`.
  */

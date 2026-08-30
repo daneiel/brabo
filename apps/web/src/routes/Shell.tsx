@@ -25,7 +25,6 @@ import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
 import { alternarTema, observarTema, temaAtual, type Tema } from '../lib/tema';
 import { useTranslation } from 'react-i18next';
 import {
-  AutoCollapseContext,
   corDoProjeto,
   gravarAbaAtiva,
   gravarAgentesAbertos,
@@ -365,10 +364,10 @@ export function Shell() {
   const email = emailDaSessao();
 
   // --- Colapso (RN-195) ---------------------------------------------------
+  // Só o colapso MANUAL desde o ADR 0126 — o sinal automático da aba de
+  // Código (`autoColapsado`, RN-201) saiu junto com `AutoCollapseContext`.
   const [colapsadoManual, setColapsadoManual] = useState(lerColapsado);
-  const [autoColapsado, setAutoColapsado] = useState(false);
-  const colapsado = colapsadoManual || autoColapsado;
-  const autoCollapseValue = useMemo(() => ({ registrar: setAutoColapsado }), []);
+  const colapsado = colapsadoManual;
 
   function alternarColapso() {
     setColapsadoManual((atual) => {
@@ -639,25 +638,15 @@ export function Shell() {
             type="button"
             className={styles.footerButton}
             aria-expanded={!colapsado}
-            // Desabilitado enquanto o AUTO-colapso está ativo (RN-201): sem
-            // isto, clicar aqui gravaria `colapsadoManual = true` mesmo sem
-            // efeito visível (o OR com `autoColapsado` já mostra recolhida) —
-            // e ao sair da aba de Código o estado voltaria COLAPSADO em vez
-            // do que o usuário tinha antes, quebrando a garantia da RN-201.
-            disabled={autoColapsado}
             title={
-              autoColapsado
-                ? t('sidebar.collapseButton.autoCollapsed')
-                : colapsado
-                  ? t('sidebar.collapseButton.expand')
-                  : t('sidebar.collapseButton.collapse')
+              colapsado
+                ? t('sidebar.collapseButton.expand')
+                : t('sidebar.collapseButton.collapse')
             }
             aria-label={
-              autoColapsado
-                ? t('sidebar.collapseButton.autoCollapsed')
-                : colapsado
-                  ? t('sidebar.collapseButton.expand')
-                  : t('sidebar.collapseButton.collapse')
+              colapsado
+                ? t('sidebar.collapseButton.expand')
+                : t('sidebar.collapseButton.collapse')
             }
             onClick={alternarColapso}
           >
@@ -690,9 +679,7 @@ export function Shell() {
       </aside>
 
       <main className={styles.main}>
-        <AutoCollapseContext.Provider value={autoCollapseValue}>
-          <Outlet />
-        </AutoCollapseContext.Provider>
+        <Outlet />
       </main>
 
       {wizardOpen && workspace && (

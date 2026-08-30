@@ -54,6 +54,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | `SessionPage.tsx` em 5 PRs mecânicos | 3 807 → 2 661 linhas; timeline/turno, `StorySlide`, `StructuredQuestionCard`, árvore de backlog + `ContextAside`, hook `useSessionReadiness` — cluster do canal de turno e `ProjectSettingsTab.tsx` seguem fora, declarado | ADR 0122 |
 | Hook do canal de turno do `SessionPage.tsx` | 2 661 → 2 479 linhas; PR mecânica de dedup (`iniciarTurnoDoAgente`/`finalizarTurnoDoAgente`/`cancelarTurnoOtimista`) seguida da extração de estado + efeito do canal Phoenix para o hook `useTurnoDoAgente` (`lib/session-turno.ts`) — fecha o item que a ADR 0122 deixou declarado em aberto; `ProjectSettingsTab.tsx` segue fora, decisão separada | ADR 0124 |
 | `ProjectSettingsTab.tsx` por seção | 2 532 → 77 linhas; as 17 seções viram um arquivo cada sob `routes/settings/` (+ `shared.ts` com os DOIS helpers de mais de um chamador), e o arquivo antigo fica no caminho como entrada e barrel — caminho e os 11 nomes exportados são contrato de 3 testes. Fecha a ÚLTIMA metade da linha de dívida de `docs/architecture.md` | ADR 0125 |
+| Trilho vertical de navegação do projeto | A régua horizontal de dois níveis (`GroupedTabs`) vira um trilho vertical com os TRÊS grupos abertos ao mesmo tempo; geometria do trilho do `CodeShell`, teclado portado, os 5 contadores seguem separados. Revisa a RN-201: a aba de Código não recolhe mais a sidebar sozinha | ADR 0126, RN-201 |
 
 ## Estado atual e aberto
 
@@ -88,6 +89,16 @@ daqui e o fechamento vai para o histórico.
 **Lacunas aceitas e declaradas:**
 - Restart do engine com Dev Lead suspenso perde a inscrição no Wake (decisão
   segue visível em Aprovações) — ADR 0086
+- A aba de Código abre com 492px de moldura à esquerda (sidebar 264 + trilho
+  do projeto 180 + trilho do `CodeShell` 48), contra ~110px antes do ADR
+  0126 — preço MEDIDO e aceito por remover o auto-colapso da RN-201.
+  Recolher manualmente continua funcionando e ainda produz trilho do Shell
+  ao lado do trilho do projeto: essa é uma escolha do USUÁRIO, não do
+  sistema, e é a diferença que o ADR compra
+- A navegação por abas do projeto existe em DOIS lugares — o trilho e a
+  lista por projeto da sidebar (`LinhaDeAba`, RN-196). Pré-existente (a
+  régua horizontal duplicava a mesma lista), só ficou visualmente paralela;
+  reconciliar é decisão de produto à parte, não tomada no ADR 0126
 - `gatesEverOpened` sofre da classe de defeito da janela de 200 eventos —
   declarado, não corrigido (exigiria mudar assinatura de `deriveAgentRoster`)
 - Conversão de `execution_mode` nunca migra diff NÃO commitado — órfão no

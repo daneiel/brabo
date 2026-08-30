@@ -6,6 +6,35 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: a navegação do projeto vira um TRILHO VERTICAL à esquerda do
+  painel, e a régua horizontal de dois níveis sai (ADR 0126). O motivo é um
+  só: 12 abas em 3 grupos não cabem numa barra desenhada para meia dúzia de
+  itens — agrupar comprava espaço ESCONDENDO 9 das 12 atrás de um clique, e
+  em janela estreita a linha de topo já rolava na horizontal. Os TRÊS grupos
+  ficam abertos ao mesmo tempo: é isso que a mudança compra, e é por isso que
+  o grupo deixou de ser botão selecionável para virar CABEÇALHO. Os cinco
+  contadores (Insights, PRs, Aprovações, Backlog, Arquitetura) continuam
+  SEPARADOS e o grupo não soma mais nada — com as filhas todas visíveis a
+  soma não teria o que resumir, e somar filas diferentes esconde qual delas
+  pede atenção. A geometria é a do trilho da aba Código (`CodeShell`, o único
+  trilho do repositório com estado ativo desenhado), não a da trilha da
+  sidebar, que não tem item ativo nem teclado; a única divergência declarada
+  é a largura (180px em vez de 48px, porque este carrega rótulo e cabeçalho,
+  não ícone). A navegação por seta foi PORTADA, não descartada:
+  `ArrowUp`/`ArrowDown`/`Home`/`End` com volta, agora sobre refs próprias em
+  vez da correlação posicional por `[role="tab"]` que a régua antiga
+  precisava usar. **A aba Código deixa de recolher a sidebar sozinha**
+  (revisão da RN-201): com um trilho de projeto sempre presente, o
+  auto-colapso poria a trilha de ícones do Shell encostada nele — dois
+  trilhos verticais adjacentes, permanentes, na aba mais pesada do produto.
+  O custo é real e está declarado: o Código passa a abrir com 492px de
+  moldura à esquerda (sidebar 264 + trilho do projeto 180 + trilho do
+  `CodeShell` 48), medidos no navegador, contra ~110px antes. O que se compra é que recolher volta a
+  ser decisão do USUÁRIO — o colapso manual continua funcionando e continua
+  persistido. `components/ui/GroupedTabs` é apagado com o teste dele;
+  `components/ui/Tabs` FICA, sem chamador no app, porque é primitiva
+  publicada do design system (`ds-bundle/components/primitivas/Tabs`) e uma
+  peça de DS sem consumidor é estoque, não código morto
 - **engine,api**: golden-set de regressão (ADR 0123) para o julgamento
   SEMÂNTICO do QA de Automação — o item que a própria ADR 0020 já deixava
   documentado como aberto: com modelo local, cruzar regra de negócio com

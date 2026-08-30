@@ -14,7 +14,7 @@ import { setLastSeenSeq } from '../lib/read-state';
 import { TokenMeter } from '../components/TokenMeter';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
-import { GroupedTabs, type ItemDeRegua } from '../components/ui/GroupedTabs';
+import { ProjectRail, type ItemDoTrilho } from './ProjectRail';
 import { BranchIcon, GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
 import { aguardandoPromocao } from './ProjectBacklogTab';
 import {
@@ -149,7 +149,7 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
   // contra `contagens` continua sendo trabalho DESTA página, mesma divisão
   // que já existia para `ABAS_DO_PROJETO` — o registro nunca viu um evento
   // de domínio, só sabe de ONDE tirar o número.
-  const itensDaRegua: ItemDeRegua[] = GRUPOS_DO_PROJETO.map((item) =>
+  const itensDoTrilho: ItemDoTrilho[] = GRUPOS_DO_PROJETO.map((item) =>
     item.tipo === 'grupo'
       ? {
           tipo: 'grupo' as const,
@@ -173,10 +173,9 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
 
   return (
     <div className={styles.wrapper}>
-      {/* A régua vive DENTRO do cabeçalho, e o cabeçalho é uma faixa
-          `surface-1` com uma única divisória embaixo (handoff, seção 4). Eram
-          dois blocos com `border-bottom` cada um, e a régua no fundo da
-          página: duas linhas de 1px separadas por 40px de nada. */}
+      {/* O cabeçalho é uma faixa `surface-1` com uma única divisória embaixo
+          (handoff, seção 4), e agora atravessa a largura inteira: a navegação
+          saiu de dentro dele para o trilho vertical à esquerda (ADR 0126). */}
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <div className={styles.headerLeft}>
@@ -226,20 +225,21 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
           )}
         </div>
 
-        <div className={styles.tabsRow}>
-          <GroupedTabs
-            active={tab}
-            onChange={(key) => setTab(key as ChaveDeAba)}
-            itens={itensDaRegua}
-          />
-        </div>
       </header>
 
-      {/* Quem manda no respiro é o REGISTRO, não um `tab === 'overview'`
-          escrito aqui: a Visão geral desenha as próprias regiões até a borda
-          (o feed é um trilho com divisória à esquerda, não um card solto). */}
-      <div className={[styles.body, aba.semRespiro && styles.bodyRente].filter(Boolean).join(' ')}>
-        <PainelDaAba projectId={projectId} />
+      <div className={styles.corpo}>
+        <ProjectRail
+          active={tab}
+          onChange={(key) => setTab(key as ChaveDeAba)}
+          itens={itensDoTrilho}
+        />
+
+        {/* Quem manda no respiro é o REGISTRO, não um `tab === 'overview'`
+            escrito aqui: a Visão geral desenha as próprias regiões até a borda
+            (o feed é um trilho com divisória à esquerda, não um card solto). */}
+        <div className={[styles.body, aba.semRespiro && styles.bodyRente].filter(Boolean).join(' ')}>
+          <PainelDaAba projectId={projectId} />
+        </div>
       </div>
     </div>
   );
