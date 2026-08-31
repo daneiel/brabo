@@ -517,7 +517,7 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "docs/reference/api/projects-controller-list-members",
-          label: "Lists the project's members with their effective role",
+          label: "Lists the project's members",
           className: "api-method get",
         },
         {

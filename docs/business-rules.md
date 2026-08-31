@@ -6029,6 +6029,102 @@ Uniformizar a forma pioraria o conteúdo no caminho mais provável da caixa.
   mantendo a dica fixa contra um 500)
 - **Origem:** revisão da #443 — a lacuna que ela declarou, vista da seção que
   tem os dados para fechá-la
+- **Adendo (aditivo, o texto acima não mudou):** as três descrições de OpenAPI
+  que a tabela marca como "não corrigida" FORAM corrigidas depois, pela
+  [RN-472](#rn-472) / [ADR 0127](adr/0127-tetos-de-rebaixamento-em-project-members.md),
+  na mesma mudança que pôs os dois tetos de rebaixamento na api. Não reabra
+  essa linha da tabela.
+
+---
+
+## Os dois tetos de rebaixamento em `project_members` (RN-472)
+
+### RN-472 — Ninguém rebaixa o `owner` do workspace, e ninguém rebaixa a si mesmo {#rn-472}
+
+A [RN-471](#rn-471) registrou que `ResolveEffectiveRoleUseCase.forProject` é
+`projectRole ?? workspaceRole` — a linha de projeto SOBREPÕE a de workspace, nos
+dois sentidos. O que ela não guardou é a consequência:
+`AddProjectMemberUseCase` era um passthrough de uma linha para o upsert, e
+nenhum dos dois caminhos de escrita olhava para QUEM é o alvo. Qualquer
+`maintainer` podia (a) rebaixar o **`owner` do workspace** a `viewer` num
+projeto, tirando o dono do próprio projeto, e (b) **se rebaixar sem poder
+desfazer**, porque desfazer é a mesma rota, que pede `maintainer`.
+
+**A sobreposição FICA nos dois sentidos.** `forProject` não muda. Restringir
+alguém num projeto sensível (workspace `developer` → `viewer` no projeto X) é
+capacidade deliberada, e "o maior dos dois" a eliminaria — o
+`resolve-effective-role.use-case.spec.ts` fixa a metade de subir desde a Fase 1.
+O que entra são DOIS tetos, e só eles:
+
+| teto | o que recusa | status |
+|---|---|---|
+| 1 | papel abaixo de `owner` para quem é `owner` do WORKSPACE | 403 |
+| 2 | papel abaixo do que o CHAMADOR tem hoje, quando o alvo é ele mesmo | 403 |
+
+**O `owner` é `workspace_members.role`, nunca `workspaces.created_by`.** Os dois
+existem em `db/schema/iam.ts` e não são a mesma coisa: `created_by` é fato
+histórico, e é o `role` que a autorização usa em todo o resto do sistema
+(`forWorkspace` é `workspaces.findMemberRole`; `created_by` não aparece em
+caminho de autorização nenhum). Ler `created_by` blindaria o criador que já
+transferiu a propriedade e deixaria descoberto o `owner` corrente que não criou
+nada — o buraco que o teto existe para fechar.
+
+**O teto 2 é "a si mesmo", sem limiar** — não "abaixo de `maintainer`". A versão
+com limiar copiaria um número do `@RequireRole` do controller para dentro do
+domínio e envelheceria calada se a rota mudasse de mínimo. O preço, declarado: o
+`owner` que quisesse se pôr como `maintainer` no próprio projeto (movimento
+reversível) também é recusado, e passa a precisar de outro `maintainer`. **Subir**
+o próprio papel não é rebaixamento e continua passando.
+
+**Os tetos moram no CASO DE USO, com a regra no domínio — não no `RolesGuard`.**
+O guard autoriza o CHAMADOR contra o `@RequireRole` da rota e não vê corpo
+(`dto.role`) nem alvo (`dto.userId`); os dois tetos são sobre o ALVO e sobre a
+relação ator↔alvo. A FORMA é a de `domain/actions/decide.ts` (RN-154/RN-418):
+função pura, mensagem ao lado da condição, sem chave de configuração. O que não
+se transporta é o desfecho — lá o teto vira `require_approval` sobre uma
+`proposed_action` de agente, aqui a chamada já é humana e síncrona e não há fila
+para onde mandá-la.
+
+**403, não 409 nem 400:** é recusa de autorização — o chamador tem o papel da
+rota e não tem autoridade para este movimento. Esperar não muda nada (não é
+conflito de estado) e o corpo é válido (o mesmo corpo com outro alvo passaria).
+
+**O que os tetos NÃO cobrem, e segue possível:** rebaixar outro `maintainer` que
+não é `owner` de workspace; **auto-rebaixamento pela REMOÇÃO** —
+`RemoveProjectMemberUseCase` não ganhou teto, e remover a própria linha derruba
+o efetivo para o papel de workspace, que é benigno quando o workspace segura e
+irreversível quando não segura (`maintainer` só pela linha de projeto, `viewer`
+no workspace); auto-PROMOÇÃO, que já era possível antes; e rebaixar o `owner`
+NO WORKSPACE (`POST workspaces/:workspaceId/members` segue sem teto). Os dois
+casos da remoção estão FIXADOS em teste, inclusive o aberto.
+
+**A tela fica para depois, e a recusa aparece.** `MembersSection` calcula o teto
+2 sozinha, mas não o teto 1: `listProjectMembers` devolve o papel da LINHA DE
+PROJETO, e o papel de workspace do alvo não está ao alcance do cliente. Meio
+gate seria um `Select` honesto sobre uma recusa e calado sobre a outra — a
+segunda fonte de papel contra a qual a RN-471 escreve. Enquanto isso,
+`handleRoleChange` já mostra `mensagemDaApi(erro, …)` num toast (RN-471), e é a
+frase da api que diz qual teto bateu.
+
+- **Onde:** `apps/api/src/domain/iam/tetos-de-rebaixamento.ts`
+  (`rebaixaOwnerDoWorkspace`, `ehAutoRebaixamento` e as duas mensagens),
+  `apps/api/src/application/use-cases/iam/add-project-member.use-case.ts`
+  (onde os dois são aplicados, antes do upsert),
+  `apps/api/src/interfaces/http/iam/projects.controller.ts` (o `@CurrentUser()`
+  que dá o ator, e as duas descrições corrigidas),
+  `apps/api/src/interfaces/http/iam/dto/add-member.dto.ts` (a terceira),
+  `apps/api/src/application/use-cases/iam/resolve-effective-role.use-case.ts`
+  (INTOCADO — `projectRole ?? workspaceRole` segue como está),
+  `apps/api/src/db/schema/iam.ts` (`workspaces.created_by` × `workspace_members.role`)
+- **Teste:** `apps/api/test/application/use-cases/iam/tetos-de-rebaixamento.use-case.spec.ts`
+  (os dois tetos recusando; `owner` de workspace recebendo `owner` de projeto
+  passa; auto-rebaixamento também quando o papel do ator vem da linha de
+  projeto; auto-promoção passa; as DUAS capacidades legítimas preservadas —
+  rebaixar outra pessoa, e `viewer` de workspace virando `maintainer` no
+  projeto; auto-remoção permitida; e a remoção que ainda rebaixa quem a chamou,
+  fixada como lacuna declarada)
+- **Origem:** [ADR 0127](adr/0127-tetos-de-rebaixamento-em-project-members.md),
+  sobre o achado da revisão da #444 registrado na RN-471
 
 ---
 

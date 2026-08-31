@@ -60,6 +60,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Salvar por seção em Configurações | Paralelismo e Teto de gasto trocam N botões de linha por UM da seção (`settings/secao-salvavel.tsx`), com contagem de linhas pendentes e desfecho POR LINHA — salvar é N chamadas, não uma transação, e a tela nunca afirma o que não obteve. As três seções de autosave e Credenciais ficam de fora, cada uma por um motivo declarado | RN-469 |
 | Painel "precisa de você" | Chip no topo do projeto abre as CINCO filas de decisão num lugar só — separadas, ordenadas por urgência, sem soma nenhuma (nem no chip). Aprovações e merges decidem ali pelo `ApprovalCard`; as outras três levam à aba. Pendência de arquitetura empresta a data da história e DIZ que emprestou | RN-467 |
 | Cascata de modelo como cadeia visível | A coluna Origem para de imprimir o enum do banco e vira `workspace › projeto › área › agente` com quatro estados por nó (`settings/cascata.tsx`) — separando os DOIS sentidos de `origin: 'agent'` sem tocar na api. O aviso de nível descartado entra na cadeia; os três `—` ganham três textos. Fecha o canvas de melhorias de UI (7 de 7 itens tomados) | RN-470 |
+| Tetos de rebaixamento em `project_members` | A sobreposição `projectRole ?? workspaceRole` FICA nos dois sentidos (é capacidade, não bug); o que entra são dois tetos de 403 no caso de uso — ninguém rebaixa o `owner` do workspace, ninguém rebaixa a si mesmo. As três descrições de OpenAPI que a RN-471 declarou falsas passam a descrever o código; o gate do `Select` é PR à parte, por a tela não ter como calcular o primeiro teto | ADR 0127, RN-472 |
 
 ## Estado atual e aberto
 
@@ -297,6 +298,22 @@ daqui e o fechamento vai para o histórico.
   garantia de nunca ser auto-aprovável; "sempre permitir" foi fechado na
   fonte pra esse teto não virar decorativo (`ApproveAlwaysActionUseCase`
   recusa gravar padrão pra esses comandos).
+- O papel de PROJETO sobrepõe o de workspace nos DOIS sentidos —
+  `ResolveEffectiveRoleUseCase.forProject` é `projectRole ?? workspaceRole`, e
+  NÃO é "o maior dos dois" (RN-471). Restringir alguém num projeto sensível é
+  capacidade deliberada; não "corrija" isso. O que a sobreposição não pode
+  fazer são DOIS movimentos, e eles são teto (ADR 0127, RN-472): ninguém
+  rebaixa quem é `owner` do WORKSPACE, e ninguém rebaixa a SI MESMO — 403 nos
+  dois, sem chave de configuração. `owner` aqui é `workspace_members.role`,
+  NUNCA `workspaces.created_by`: criador não é dono corrente, e o papel é o que
+  a autorização usa em todo o resto do sistema. Os tetos moram no CASO DE USO
+  com a regra pura em `domain/iam/tetos-de-rebaixamento.ts`, não no
+  `RolesGuard` — o guard autoriza o CHAMADOR contra o `@RequireRole` da rota e
+  não vê corpo nem alvo, e estes tetos são sobre o ALVO e sobre a relação
+  ator↔alvo. Segue possível e declarado: rebaixar outro `maintainer`,
+  auto-PROMOÇÃO, o `POST workspaces/:id/members` (sem teto nenhum) e o
+  auto-rebaixamento pela REMOÇÃO — remover a própria linha é benigno quando o
+  papel de workspace segura a queda e irreversível quando não segura.
 - O projeto escolhe ONDE o código mora, na criação (RN-169/RN-421/RN-422,
   ADR 0072/0104) — e pode CONVERTER depois, sem recriar o projeto, por
   `PUT projects/:projectId/execution-mode` (`maintainer`, RN-447..450, ADR

@@ -39,7 +39,16 @@ agent is who effectively calls through them. The same is true of the four
 `/workspaces/:workspaceId/huggingface/*`
 ([RN-462](../business-rules.md#rn-462), [RN-463](../business-rules.md#rn-463),
 ADR 0115): `role:maintainer`, a human's own direct action from Project/Workspace
-Settings, never called by the engine. The
+Settings, never called by the engine. The same goes for the two membership
+routes, `POST`/`DELETE /projects/:projectId/members`
+([RN-471](../business-rules.md#rn-471),
+[RN-472](../business-rules.md#rn-472), ADR 0127) — and there the fact is
+load-bearing rather than merely true: the two downgrade caps that route now
+enforces (nobody downgrades a workspace `owner`, nobody downgrades themselves)
+live INSIDE `AddProjectMemberUseCase`, so they would be bypassable by any
+second door into `project_members`. There is none — no `/internal/*` route
+writes that table, and the use case has exactly one caller, the RBAC route
+itself. The
 shared service token NEVER serves as credential on these routes, and the user's JWT
 never works on `/internal/*` — the two mechanisms don't overlap
 ([RN-035](../business-rules/autenticacao.md#rn-035)).
