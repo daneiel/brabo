@@ -6233,6 +6233,86 @@ antes seria anunciado como recém-conectado no instante em que a tela abrisse.
 - **ADR:** [0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
 - **Origem:** pedido do dono do produto
 
+## O `kid` é o vínculo, e a recusa tem nome (RN-475)
+
+### RN-475 — A JWK privada gravada pelo navegador carrega o `kid` do registro; e o CLI distingue "não há chave" de "há chave e ela não serve" {#rn-475}
+
+O modo automático do [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+([RN-464](#rn-464)..[466](#rn-466)) **nunca autenticou nenhuma vez** desde que
+nasceu. As duas metades desta RN são o defeito e o que o escondeu.
+
+**O `kid` não é decoração — é o único vínculo entre os dois lados.** O `id` que
+`POST projects/:projectId/runner-device-keys` devolve identifica o registro
+`runner_device_keys` que guarda a chave PÚBLICA. Ele precisa chegar ao disco
+DENTRO da JWK privada, no campo `kid` (RFC 7517), porque é assim que a cadeia
+inteira o carrega: `lerChaveDeDispositivo` só REPASSA `jwk.kid` (nunca inventa
+nem deriva um id),
+`assinarTicketComChaveDeDispositivo` o põe no header protegido do JWT de
+ticket, e o `PatAuthGuard` usa exatamente esse `kid` para achar a pública e
+verificar a assinatura ([RN-465](#rn-465)).
+
+O navegador **descartava o retorno** de `registerRunnerDeviceKey` nos DOIS
+caminhos (`configurarPastaAutomaticamente` e `baixarKitManual`), e
+`crypto.subtle.exportKey` exporta a JWK CRUA, sem `kid` nenhum. O produtor
+gravava um arquivo que o consumidor recusa **sempre** — e o defeito era
+invisível dos dois lados: cada função estava certa sozinha. A prova está no
+banco: as chaves registradas pelo fluxo tinham `last_used_at` nulo, todas.
+
+A correção é estrutural, não uma linha: o passo 3 da [RN-473](#rn-473) (exportar
+a pública, registrar, exportar a privada) vira UMA função
+(`registrarChaveEExportarPrivada`), com o `id` fluindo dentro dela. Descartá-lo
+de novo passa a exigir apagar código, não esquecer uma atribuição. O `kid` vai
+só na PRIVADA: a pública não o leva, porque é o registro dela que o produz.
+
+**A recusa tem nome.** `lerChaveDeDispositivo` devolve `null` sem lançar — de
+propósito, e isso não muda: a ausência dos arquivos é o caminho NORMAL de quem
+roda com `--project`/`--dir`/`--token`. Mas `null` respondia a duas perguntas
+diferentes, e o CLI imprimia o MESMO bloco de `uso()` — que fala de flags e não
+menciona o arquivo — tanto para "você não configurou nada" quanto para "sua
+pasta está configurada e a chave não serve". Uma pessoa com
+`brabo-runner.config.json` perfeito era mandada investigar justamente o lado
+que estava certo.
+
+| estado | quem responde | saída do CLI |
+|---|---|---|
+| `ausente` | caminho normal | o bloco de `uso()`, inalterado |
+| `json-invalido` | recusa | `explicacaoDaChaveRecusada` — nomeia o arquivo, o motivo, e as duas saídas (regravar a pasta pelo navegador, ou `--token` enquanto isso) |
+| `sem-kid` | recusa | idem, nomeando o campo que falta e para que ele serve |
+| `valida` | segue o fluxo | — |
+
+`estadoDaChaveDeDispositivo` e `explicacaoDaChaveRecusada` vivem em
+`device-key.ts` porque falam do ARQUIVO; o que FAZER com a recusa (sair, com
+qual código, com ou sem o bloco de uso) continua sendo do `index.ts`, como o
+docblock do módulo já dizia. O tipo de `explicacaoDaChaveRecusada` exclui
+`ausente` e `valida`: não existe explicação para o caso normal nem para o
+sucesso, e um texto vago cobrindo os quatro estados seria o mesmo defeito de
+novo.
+
+**O que deixou passar:** o teste do web afirmava que o arquivo tinha sido
+ABERTO (`getFileHandle` chamado com o nome certo), nunca o que havia DENTRO
+dele. Um teste que prova a criação de um arquivo sem provar seu conteúdo deixa
+gravar qualquer coisa. O dublê passou a amarrar nome → conteúdo, e as duas
+asserções antigas ganharam a metade que faltava.
+
+- **Onde:** `apps/web/src/lib/runner-bootstrap.ts`
+  (`registrarChaveEExportarPrivada`, `exportarJwkPrivada`),
+  `apps/runner/src/device-key.ts` (`estadoDaChaveDeDispositivo`,
+  `explicacaoDaChaveRecusada`, `EstadoDaChaveLocal`),
+  `apps/runner/src/index.ts` (o ramo de credencial em `lerArgumentos`)
+- **Teste:** `apps/web/src/lib/runner-bootstrap.test.ts` (o `kid` gravado É o
+  `id` devolvido, provado com um id diferente do padrão; os dois caminhos —
+  pasta e kit manual; a pública SEM `kid`; a chave útil sobrevivendo ao binário
+  em 502), `apps/runner/src/device-key.spec.ts` (os quatro estados, um a um;
+  ausente ≠ sem-kid enquanto `lerChaveDeDispositivo` colapsa os dois em `null`;
+  as duas frases de recusa diferentes entre si),
+  `apps/runner/src/index.spec.ts` (o CLI DE VERDADE, em processo separado: a
+  pasta sem chave cai no bloco de uso, a pasta com chave sem `kid` cai na
+  recusa nomeada, e as duas saídas não são iguais — o defeito era elas serem)
+- **ADR:** [0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+  — esta RN não revisa o mecanismo dele, fecha o contrato que ele deixou
+  implícito entre as duas pontas
+- **Origem:** uso real do fluxo contra o ambiente local pelo dono do produto
+
 ---
 
 ## Quando dá errado
@@ -6266,6 +6346,7 @@ antes seria anunciado como recém-conectado no instante em que a tela abrisse.
 | Pull de modelo Hugging Face falha no Ollama | pedido termina `failed` com a origem declarada (infra/modelo), nada é ativado no catálogo (RN-462) |
 | Binário do runner indisponível (release sem asset, GitHub fora) durante a configuração pelo navegador | a pasta escolhida e os dois arquivos de configuração FICAM; a tela diz o motivo e troca a instrução pelo caminho `npm install -g @brabo/runner` (RN-473) |
 | Runner não conecta dentro do teto da espera | a tela diz que não viu, declara que isso não é prova de ausência e aponta a aba Código — nunca "verificando" para sempre (RN-474) |
+| Pasta do runner com chave de dispositivo presente e inválida (JSON quebrado, ou sem `kid`) | o CLI recusa NOMEANDO o arquivo e o motivo, e oferece as duas saídas — nunca o bloco de uso, que é a resposta de quem não configurou nada (RN-475) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

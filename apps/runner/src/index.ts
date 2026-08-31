@@ -46,7 +46,12 @@ import {
   type FsListDirMessage,
   type PtyOpenMessage,
 } from './channel.ts';
-import { lerChaveDeDispositivo, lerConfigLocal } from './device-key.ts';
+import {
+  estadoDaChaveDeDispositivo,
+  explicacaoDaChaveRecusada,
+  lerChaveDeDispositivo,
+  lerConfigLocal,
+} from './device-key.ts';
 import { executarComando } from './exec.ts';
 import { diretorioInicial, listarDiretorio } from './fs-browser.ts';
 import {
@@ -198,7 +203,17 @@ function lerArgumentos(argv: string[]): Argumentos {
     };
   } else {
     // Nem token (flag/env) nem chave de dispositivo local — sem forma
-    // nenhuma de autenticar.
+    // nenhuma de autenticar. Mas os dois motivos de não haver chave não são
+    // o mesmo problema (RN-475): arquivo AUSENTE é o caso normal de quem
+    // roda com flags, e o bloco de `uso()` responde; arquivo PRESENTE e
+    // recusado é uma pasta configurada que não serve, e imprimir ali um
+    // texto sobre flags manda a pessoa investigar o lado certo do problema
+    // (a config) pelo motivo errado.
+    const estadoDaChave = estadoDaChaveDeDispositivo(cwdEfetivo);
+    if (estadoDaChave === 'json-invalido' || estadoDaChave === 'sem-kid') {
+      console.error(explicacaoDaChaveRecusada(estadoDaChave));
+      process.exit(2);
+    }
     uso();
   }
 

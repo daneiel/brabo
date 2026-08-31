@@ -61,6 +61,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Painel "precisa de você" | Chip no topo do projeto abre as CINCO filas de decisão num lugar só — separadas, ordenadas por urgência, sem soma nenhuma (nem no chip). Aprovações e merges decidem ali pelo `ApprovalCard`; as outras três levam à aba. Pendência de arquitetura empresta a data da história e DIZ que emprestou | RN-467 |
 | Cascata de modelo como cadeia visível | A coluna Origem para de imprimir o enum do banco e vira `workspace › projeto › área › agente` com quatro estados por nó (`settings/cascata.tsx`) — separando os DOIS sentidos de `origin: 'agent'` sem tocar na api. O aviso de nível descartado entra na cadeia; os três `—` ganham três textos. Fecha o canvas de melhorias de UI (7 de 7 itens tomados) | RN-470 |
 | Pasta antes do runner | A configuração do runner pelo navegador (ADR 0118) inverte a ordem: `showDirectoryPicker` é o PRIMEIRO passo e o binário o ÚLTIMO, best-effort — a release sem asset devolvia 502 antes do seletor abrir, e a pasta ficava inalcançável. Falha do binário mantém os dois arquivos gravados e troca a instrução pelo caminho `npm install -g @brabo/runner`. Depois da instrução, `EsperaDoRunner` sonda `workspaceVerifiedAt` com três estados e teto | RN-473/474 |
+| O `kid` na chave de dispositivo | O modo automático do ADR 0118 NUNCA autenticou: o navegador descartava o `id` que o registro devolvia, e a JWK gravada nascia sem `kid` — o CLI a recusava sempre. Registro e exportação viram UMA função (`registrarChaveEExportarPrivada`), nos DOIS caminhos; e a recusa do CLI deixa de ser indistinguível de "não há chave". O teste que deixou passar afirmava que o arquivo fora ABERTO, nunca o conteúdo | RN-475 |
 | Tetos de rebaixamento em `project_members` | A sobreposição `projectRole ?? workspaceRole` FICA nos dois sentidos (é capacidade, não bug); o que entra são dois tetos de 403 no caso de uso — ninguém rebaixa o `owner` do workspace, ninguém rebaixa a si mesmo. As três descrições de OpenAPI que a RN-471 declarou falsas passam a descrever o código; o gate do `Select` é PR à parte, por a tela não ter como calcular o primeiro teto | ADR 0127, RN-472 |
 
 ## Estado atual e aberto
@@ -192,7 +193,15 @@ daqui e o fechamento vai para o histórico.
   como `runner_device_keys` e grava os três arquivos numa pasta via File
   System Access API (fallback de dois downloads fora do Chromium) —
   `POST .../runner-ticket` aceita essa chave como segunda credencial de
-  dispositivo, ADITIVA ao PAT (ADR 0105), nunca um substituto
+  dispositivo, ADITIVA ao PAT (ADR 0105), nunca um substituto. O `id` do
+  registro vai gravado DENTRO da JWK privada, no `kid` (RN-475): é o único
+  vínculo entre o arquivo em disco e a pública do servidor, e a cadeia
+  inteira só o REPASSA — o runner lê `jwk.kid`, o JWT de ticket o leva no
+  header, o `PatAuthGuard` acha a pública por ele. Ninguém deriva esse id
+  de outra coisa. E o CLI distingue chave AUSENTE (caminho normal de quem
+  usa flags, cai no bloco de uso) de chave PRESENTE e recusada (mensagem
+  própria, nomeando arquivo e motivo) — colapsar os dois é o que fez um
+  bug de uma linha custar uma caçada
 - `e2e/`: E2E de NAVEGADOR (Playwright, só chromium — ADR 0120), a quarta
   camada da pirâmide. Roda contra o compose de PRODUÇÃO (`docker/smoke.sh`
   com `SMOKE_KEEP_UP=1`), nunca contra o `vite dev`: o que ele prova —

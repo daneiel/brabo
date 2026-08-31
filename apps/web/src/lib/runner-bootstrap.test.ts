@@ -186,17 +186,52 @@ describe('configurarPastaAutomaticamente', () => {
     const write = vi.fn().mockResolvedValue(undefined);
     const close = vi.fn().mockResolvedValue(undefined);
     const createWritable = vi.fn().mockResolvedValue({ write, close });
-    const getFileHandle = vi.fn().mockResolvedValue({ createWritable });
+
+    // Este dublê só sabia QUE um arquivo foi aberto, nunca o que foi escrito
+    // NELE — `write` era um spy só, compartilhado pelos três arquivos, sem
+    // vínculo com o nome. Foi essa lacuna que deixou passar uma chave de
+    // dispositivo gravada sem `kid` (RN-475) com a suíte verde. `gravados`
+    // amarra nome → conteúdo, delegando ao mesmo `write`/`createWritable` de
+    // antes para as contagens já afirmadas continuarem valendo.
+    const gravados: { nome: string; conteudo: unknown }[] = [];
+    const getFileHandle = vi.fn((nome: string) =>
+      Promise.resolve({
+        createWritable: async () => {
+          const writable = await createWritable();
+          return {
+            write: (conteudo: unknown) => {
+              gravados.push({ nome, conteudo });
+              return writable.write(conteudo);
+            },
+            close: writable.close,
+          };
+        },
+      }),
+    );
     // `name` é o que a File System Access API expõe da pasta escolhida — o
     // caminho absoluto ela NUNCA dá, e é o runner quem o reporta depois.
     const showDirectoryPicker = vi.fn().mockResolvedValue({ name: 'minha-pasta', getFileHandle });
     vi.stubGlobal('window', { showDirectoryPicker });
 
-    return { showDirectoryPicker, getFileHandle, createWritable, write, close };
+    return { showDirectoryPicker, getFileHandle, createWritable, write, close, gravados };
+  }
+
+  /** O conteúdo escrito no arquivo `nome` — falha alto se ele não foi escrito. */
+  function conteudoDe(
+    gravados: { nome: string; conteudo: unknown }[],
+    nome: string,
+  ): string {
+    const registro = gravados.find((g) => g.nome === nome);
+    if (!registro) {
+      throw new Error(
+        `nenhum conteúdo escrito em "${nome}" — escritos: ${gravados.map((g) => g.nome).join(', ') || '(nenhum)'}`,
+      );
+    }
+    return String(registro.conteudo);
   }
 
   it('caminho feliz: registra a chave, baixa o binário, grava os três arquivos e devolve a instrução final (Linux)', async () => {
-    const { getFileHandle, write } = stubAmbienteFeliz();
+    const { getFileHandle, write, gravados } = stubAmbienteFeliz();
 
     const resultado = await configurarPastaAutomaticamente({
       projectId: 'proj-1',
@@ -212,6 +247,17 @@ describe('configurarPastaAutomaticamente', () => {
     expect(getFileHandle).toHaveBeenCalledWith('brabo-runner.config.json', { create: true });
     expect(getFileHandle).toHaveBeenCalledWith('brabo-runner-device-key.jwk.json', { create: true });
     expect(write).toHaveBeenCalledTimes(3);
+
+    // Abrir o arquivo não é gravar a chave certa (RN-475): a JWK privada tem
+    // de sair com o `kid` do registro, senão o CLI a recusa sempre.
+    expect(JSON.parse(conteudoDe(gravados, 'brabo-runner-device-key.jwk.json'))).toMatchObject({
+      kid: 'device-1',
+    });
+    expect(JSON.parse(conteudoDe(gravados, 'brabo-runner.config.json'))).toEqual({
+      projectId: 'proj-1',
+      apiUrl: 'https://api.brabo.example',
+    });
+
     expect(resultado.instrucaoFinal).toBe('chmod +x ./brabo-runner && ./brabo-runner');
     expect(resultado.falhaDoBinario).toBeNull();
     expect(resultado.pasta).toBe('minha-pasta');
@@ -322,7 +368,7 @@ describe('configurarPastaAutomaticamente', () => {
   // ------------------------------- a degradação do binário (RN-473, o pedido)
 
   it('binário 502: NÃO derruba o fluxo — grava os outros dois arquivos e devolve o comando alternativo', async () => {
-    const { getFileHandle, write } = stubAmbienteFeliz();
+    const { getFileHandle, write, gravados } = stubAmbienteFeliz();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(502, null)));
 
     const resultado = await configurarPastaAutomaticamente({
@@ -337,6 +383,12 @@ describe('configurarPastaAutomaticamente', () => {
     expect(getFileHandle).toHaveBeenCalledWith('brabo-runner-device-key.jwk.json', { create: true });
     expect(getFileHandle).not.toHaveBeenCalledWith('brabo-runner', { create: true });
     expect(write).toHaveBeenCalledTimes(2);
+
+    // E os dois arquivos que sobraram são ÚTEIS, não só presentes: sem o
+    // `kid`, "a configuração sobreviveu" seria uma afirmação falsa (RN-475).
+    expect(JSON.parse(conteudoDe(gravados, 'brabo-runner-device-key.jwk.json'))).toMatchObject({
+      kid: 'device-1',
+    });
 
     expect(registerRunnerDeviceKeyMock).toHaveBeenCalledTimes(1);
     expect(resultado.pasta).toBe('minha-pasta');
@@ -362,6 +414,47 @@ describe('configurarPastaAutomaticamente', () => {
     expect(resultado.falhaDoBinario).toBe('disco cheio');
     expect(resultado.instrucaoFinal).toBe(COMANDO_VIA_NPM);
   });
+
+  // ------------------------------------------- o `kid` da chave (RN-475)
+
+  it('o `kid` gravado é o `id` que a api DEVOLVEU — não um valor fixo, nem derivado do projeto', async () => {
+    const { gravados } = stubAmbienteFeliz();
+    registerRunnerDeviceKeyMock.mockResolvedValue({
+      id: 'outro-id-qualquer-7c3f',
+      name: 'navegador',
+      createdAt: '2026-08-30T00:00:00.000Z',
+    });
+
+    await configurarPastaAutomaticamente({
+      projectId: 'proj-1',
+      apiUrl: 'https://api.brabo.example',
+      platform: 'linux-x64',
+    });
+
+    // Se alguém voltar a DESCARTAR o retorno de `registerRunnerDeviceKey`,
+    // este `kid` some (ou congela) e esta asserção cai — que é exatamente o
+    // defeito que passou despercebido enquanto o teste só afirmava que o
+    // arquivo tinha sido ABERTO.
+    expect(JSON.parse(conteudoDe(gravados, 'brabo-runner-device-key.jwk.json')).kid).toBe(
+      'outro-id-qualquer-7c3f',
+    );
+  });
+
+  it('a chave PÚBLICA registrada não leva `kid` — ele nasce do registro, não vai para ele', async () => {
+    stubAmbienteFeliz();
+
+    await configurarPastaAutomaticamente({
+      projectId: 'proj-1',
+      apiUrl: 'https://api.brabo.example',
+      platform: 'linux-x64',
+    });
+
+    const [, corpo] = registerRunnerDeviceKeyMock.mock.calls[0] as [
+      string,
+      { publicKeyJwk: string },
+    ];
+    expect(JSON.parse(corpo.publicKeyJwk)).not.toHaveProperty('kid');
+  });
 });
 
 describe('baixarKitManual', () => {
@@ -377,6 +470,20 @@ describe('baixarKitManual', () => {
     const revokeObjectURL = vi.fn();
     vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
 
+    // Mesma lacuna do dublê da pasta: os downloads eram CONTADOS, nunca
+    // lidos. `Blob` vira um recorder para o conteúdo do kit poder ser
+    // afirmado (RN-475) — determinístico, sem depender de `Blob.text()` do
+    // jsdom.
+    const baixados: unknown[] = [];
+    vi.stubGlobal(
+      'Blob',
+      class {
+        constructor(partes: unknown[]) {
+          baixados.push(partes[0]);
+        }
+      },
+    );
+
     const click = vi.fn();
     const anchor = { click, remove: vi.fn(), href: '', download: '' };
     const createElementSpy = vi
@@ -384,7 +491,15 @@ describe('baixarKitManual', () => {
       .mockReturnValue(anchor as unknown as HTMLAnchorElement);
     const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
 
-    return { click, createObjectURL, revokeObjectURL, anchor, createElementSpy, appendChildSpy };
+    return {
+      click,
+      createObjectURL,
+      revokeObjectURL,
+      anchor,
+      createElementSpy,
+      appendChildSpy,
+      baixados,
+    };
   }
 
   it('dispara dois downloads (kit + binário) via link temporário, sem chamar showDirectoryPicker', async () => {
@@ -425,6 +540,34 @@ describe('baixarKitManual', () => {
     expect(anchor.download).toBe('brabo-runner-kit.json');
     expect(resultado.falhaDoBinario).toMatch(/502/);
     expect(resultado.instrucaoFinal).toBe(COMANDO_VIA_NPM);
+
+    createElementSpy.mockRestore();
+    appendChildSpy.mockRestore();
+  });
+
+  // ------------------------------------------- o `kid` da chave (RN-475)
+
+  it('o kit baixado leva a JWK privada JÁ com o `kid` do registro — o caminho manual tem o mesmo contrato', async () => {
+    const { baixados, createElementSpy, appendChildSpy } = stubDownloads();
+    registerRunnerDeviceKeyMock.mockResolvedValue({
+      id: 'device-manual-9a1',
+      name: 'navegador',
+      createdAt: '2026-08-30T00:00:00.000Z',
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(502, null)));
+
+    await baixarKitManual({
+      projectId: 'proj-1',
+      apiUrl: 'https://api.brabo.example',
+      platform: 'darwin-arm64',
+    });
+
+    // O kit é UM json com a privada embutida como string; quem separa os dois
+    // arquivos é o usuário, à mão — e a JWK que ele move para a pasta precisa
+    // já trazer o `kid`, pelo mesmo motivo do caminho automático.
+    const kit = JSON.parse(String(baixados[0]));
+    expect(kit).toMatchObject({ projectId: 'proj-1', apiUrl: 'https://api.brabo.example' });
+    expect(JSON.parse(kit.privateKeyJwk).kid).toBe('device-manual-9a1');
 
     createElementSpy.mockRestore();
     appendChildSpy.mockRestore();

@@ -39,6 +39,20 @@ import { API_URL, registerRunnerDeviceKey } from './api-client';
  * Pôr `showDirectoryPicker` na primeira linha também é mais correto do lado
  * do navegador: ele exige ativação transitória do usuário, e três `await` de
  * rede/cripto antes dele consomem essa janela em alguns Chromium.
+ *
+ * ## A JWK privada é gravada com `kid` (RN-475)
+ *
+ * O `id` que `registerRunnerDeviceKey` devolve é o vínculo — o único — entre
+ * o arquivo que fica na pasta e a chave PÚBLICA que a api guarda. Ele vai
+ * gravado DENTRO da JWK privada, no campo `kid` (RFC 7517), porque é de lá
+ * que o runner o lê (`lerChaveDeDispositivo`, `apps/runner/src/device-key.ts`)
+ * e é com ele que o `PatAuthGuard` acha a chave pública para verificar a
+ * assinatura do JWT de ticket.
+ *
+ * Os dois caminhos deste módulo passam por `registrarChaveEExportarPrivada`
+ * justamente para o `id` não ter como se perder: enquanto o registro e a
+ * exportação eram chamadas soltas, o retorno era descartado nos DOIS e toda
+ * chave gravada nascia sem `kid` — inútil, e recusada pelo CLI sempre.
  */
 
 export type RunnerPlatform =
@@ -156,9 +170,52 @@ export async function exportarJwkPublica(par: CryptoKeyPair): Promise<string> {
   return JSON.stringify(jwk);
 }
 
-export async function exportarJwkPrivada(par: CryptoKeyPair): Promise<string> {
+/**
+ * JWK PRIVADA serializada, opcionalmente CARIMBADA com `kid` (RN-475).
+ *
+ * O `kid` é campo padrão de JWK (RFC 7517) e aqui ele carrega o id do
+ * registro `runner_device_keys` que a api acabou de criar. Ele NÃO é
+ * decoração: é o único vínculo entre o arquivo em disco e a chave pública do
+ * servidor. O runner só repassa `jwk.kid` (`lerChaveDeDispositivo`,
+ * `apps/runner/src/device-key.ts`) — nunca inventa nem deriva um id —, o CLI
+ * assina o JWT de ticket com ele no header protegido
+ * (`assinarTicketComChaveDeDispositivo`) e o `PatAuthGuard` da api usa
+ * exatamente esse `kid` para achar a chave pública e verificar a assinatura.
+ *
+ * O Web Crypto exporta a JWK CRUA, sem `kid` nenhum — por isso o carimbo é
+ * um passo explícito deste módulo. Sem ele, o arquivo gravado é uma chave que
+ * o CLI recusa SEMPRE.
+ *
+ * Nenhum caminho de gravação chama esta função direto: os dois passam por
+ * `registrarChaveEExportarPrivada`, que garante que o `kid` venha do registro
+ * recém-criado, e não de lugar nenhum.
+ */
+export async function exportarJwkPrivada(par: CryptoKeyPair, kid?: string): Promise<string> {
   const jwk = await crypto.subtle.exportKey('jwk', par.privateKey);
-  return JSON.stringify(jwk);
+  return JSON.stringify(kid ? { ...jwk, kid } : jwk);
+}
+
+/**
+ * O passo 3 da RN-473 inteiro, numa função só: exporta a PÚBLICA, registra
+ * ela no projeto e devolve a PRIVADA já carimbada com o `kid` do registro.
+ *
+ * As três metades ficam juntas de propósito. Antes elas eram três chamadas
+ * soltas nos dois caminhos de bootstrap, e o retorno de
+ * `registerRunnerDeviceKey` — que é justamente onde o `id` chega — era
+ * DESCARTADO nos dois: a JWK gravada saía sem `kid`, e o CLI a recusava
+ * sempre (RN-475). Com o `id` fluindo dentro de uma função só, esquecer de
+ * usá-lo deixa de ser possível sem apagar código.
+ */
+async function registrarChaveEExportarPrivada(
+  opts: ConfigurarPastaOpts,
+  par: CryptoKeyPair,
+): Promise<string> {
+  const publicKeyJwk = await exportarJwkPublica(par);
+  const registro = await registerRunnerDeviceKey(opts.projectId, {
+    name: nomeDoDispositivo(opts.platform),
+    publicKeyJwk,
+  });
+  return exportarJwkPrivada(par, registro.id);
 }
 
 /** Bytes do binário do runner para `platform`, direto da api (rota pública). */
@@ -280,16 +337,8 @@ export async function configurarPastaAutomaticamente(
   // ordem lógica (uma privada em disco sem contraparte no servidor não
   // autentica nada); a janela entre as duas é a menor possível.
   const par = await gerarParDeChaves();
-  const publicKeyJwk = await exportarJwkPublica(par);
-  await registerRunnerDeviceKey(opts.projectId, {
-    name: nomeDoDispositivo(opts.platform),
-    publicKeyJwk,
-  });
-  await escreverArquivo(
-    dirHandle,
-    'brabo-runner-device-key.jwk.json',
-    await exportarJwkPrivada(par),
-  );
+  const jwkPrivadaComKid = await registrarChaveEExportarPrivada(opts, par);
+  await escreverArquivo(dirHandle, 'brabo-runner-device-key.jwk.json', jwkPrivadaComKid);
 
   // PASSO 4 — o binário. É o ÚNICO passo que depende de uma release
   // publicada, e por isso é o único que não derruba o fluxo.
@@ -339,14 +388,9 @@ export interface ResultadoDoKit {
  */
 export async function baixarKitManual(opts: ConfigurarPastaOpts): Promise<ResultadoDoKit> {
   const par = await gerarParDeChaves();
-  const publicKeyJwk = await exportarJwkPublica(par);
-
-  await registerRunnerDeviceKey(opts.projectId, {
-    name: nomeDoDispositivo(opts.platform),
-    publicKeyJwk,
-  });
-
-  const privateKeyJwk = await exportarJwkPrivada(par);
+  // Mesmo passo 3 do caminho automático, mesma garantia de `kid` (RN-475):
+  // o kit baixado aqui vira, à mão, os mesmos arquivos que o CLI lê.
+  const privateKeyJwk = await registrarChaveEExportarPrivada(opts, par);
   dispararDownload(
     JSON.stringify({ projectId: opts.projectId, apiUrl: opts.apiUrl, privateKeyJwk }),
     'brabo-runner-kit.json',
