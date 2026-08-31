@@ -7,17 +7,38 @@ import { API_URL, registerRunnerDeviceKey } from './api-client';
  * Hoje configurar o `brabo-runner` na máquina do usuário exigia juntar à mão
  * três coisas espalhadas em telas diferentes: o id do projeto, o caminho da
  * pasta (digitado, nunca gravado) e um Personal Access Token (emitido numa
- * terceira tela). Este módulo junta os três num fluxo só: gera um par de
- * chaves Ed25519 NO PRÓPRIO NAVEGADOR (Web Crypto nativo — sem PAT nenhum
- * pra digitar), registra a chave pública no projeto, baixa o binário do
- * runner certo para a plataforma detectada e grava tudo já configurado
- * numa pasta real escolhida pelo usuário (File System Access API, só
- * Chromium) — ou, fora do Chromium/sem suporte, dispara dois downloads
- * comuns pro usuário mover pra mesma pasta manualmente.
+ * terceira tela). Este módulo junta os três num fluxo só: escolhe a PASTA,
+ * gera um par de chaves Ed25519 NO PRÓPRIO NAVEGADOR (Web Crypto nativo —
+ * sem PAT nenhum pra digitar), registra a chave pública no projeto e grava
+ * tudo já configurado ali dentro (File System Access API, só Chromium) — ou,
+ * fora do Chromium/sem suporte, dispara dois downloads comuns pro usuário
+ * mover pra mesma pasta manualmente.
  *
  * A chave PRIVADA nunca sai do navegador por rede: só a pública vai para a
  * api (`registerRunnerDeviceKey`); a privada é escrita local (arquivo na
  * pasta, ou download) para o runner ler ao subir.
+ *
+ * ## A pasta vem PRIMEIRO, e o binário é o ÚLTIMO passo (RN-473)
+ *
+ * A ordem original era `chave → registro → binário → pasta`, e ela tinha um
+ * defeito de consequência desproporcional: o download do binário é o único
+ * passo que depende de uma release publicada no GitHub, e quando ele falha
+ * (hoje, 502 "plataforma ainda não publicada nesta release") a exceção subia
+ * ANTES de `showDirectoryPicker` — o seletor de pasta nunca chegava a abrir,
+ * e o fluxo inteiro terminava sem nada gravado.
+ *
+ * A ordem de agora é `pasta → chave → registro → config → chave privada →
+ * binário`, e o último passo é BEST-EFFORT: falhar ali devolve
+ * `falhaDoBinario` preenchido, nunca lança. Os dois arquivos que o runner
+ * REALMENTE precisa (`brabo-runner.config.json` e
+ * `brabo-runner-device-key.jwk.json`, RN-466) já estão na pasta, e o binário
+ * tem outros dois caminhos de distribuição documentados — `npm install -g
+ * @brabo/runner` e o checkout do monorepo — que `instrucaoFinal` passa a
+ * oferecer nesse caso.
+ *
+ * Pôr `showDirectoryPicker` na primeira linha também é mais correto do lado
+ * do navegador: ele exige ativação transitória do usuário, e três `await` de
+ * rede/cripto antes dele consomem essa janela em alguns Chromium.
  */
 
 export type RunnerPlatform =
@@ -187,45 +208,104 @@ export interface ConfigurarPastaOpts {
   platform: string;
 }
 
+export interface ResultadoDaConfiguracao {
+  /**
+   * Nome da pasta escolhida (`FileSystemDirectoryHandle.name`). O navegador
+   * NUNCA expõe o caminho absoluto — quem sabe dele é o runner, que o
+   * reporta ao conectar e SOBRESCREVE `workspacePath`
+   * (`ConfirmProjectWorkspaceUseCase`). A tela mostra este nome só para a
+   * pessoa reconhecer a pasta, nunca como se fosse o caminho.
+   */
+  pasta: string;
+  /** UM comando, copiável de uma vez, para a pessoa colar no terminal DELA. */
+  instrucaoFinal: string;
+  /**
+   * `null` quando o binário foi gravado na pasta. Preenchido com o motivo
+   * quando o download (ou a gravação) falhou — e nesse caso a configuração
+   * NÃO é descartada: os outros dois arquivos já estão lá, e
+   * `instrucaoFinal` passa a ser o caminho de distribuição alternativo.
+   */
+  falhaDoBinario: string | null;
+}
+
 /**
- * Fluxo automático: gera a chave, registra a pública, baixa o binário e
- * grava os três arquivos já configurados numa pasta escolhida pelo usuário.
+ * Comando único do caminho alternativo, quando o binário standalone não veio
+ * (release sem asset para a plataforma, GitHub fora do ar, disco cheio). É um
+ * dos TRÊS caminhos de distribuição do runner que o `CLAUDE.md` declara, e o
+ * único que não depende nem da release nem de um checkout do monorepo.
  *
- * A File System Access API NÃO preserva o bit de execução — limitação do
- * navegador, não deste código — então o passo `chmod +x` (Linux/macOS)
- * continua sendo manual, e é o que `instrucaoFinal` devolve para a UI
- * destacar.
+ * Funciona sem flag nenhuma porque `brabo-runner.config.json` e a chave de
+ * dispositivo já estão na pasta, e o CLI lê os dois do `cwd` de onde o
+ * comando roda (RN-466) — é o mesmo modo automático do binário.
+ */
+export const COMANDO_VIA_NPM = 'npm install -g @brabo/runner && brabo-runner';
+
+function comandoDoBinario(platform: string): string {
+  // A File System Access API NÃO preserva o bit de execução — limitação do
+  // navegador, não deste código — então `chmod +x` (Linux/macOS) continua
+  // sendo parte do comando. Uma página web não executa binário na máquina de
+  // ninguém: este passo é humano em qualquer desenho, e o que dá para fazer
+  // é encolhê-lo a UMA linha copiável.
+  return platform.startsWith('win32')
+    ? '.\\brabo-runner.exe'
+    : 'chmod +x ./brabo-runner && ./brabo-runner';
+}
+
+/**
+ * Fluxo automático, na ordem do docblock do módulo: **pasta primeiro**, e o
+ * binário por último, best-effort.
+ *
+ * Rejeita só quando falta o essencial — sem pasta escolhida (inclusive
+ * cancelamento do seletor, que chega como `AbortError`) ou sem chave
+ * registrada não existe configuração nenhuma para salvar. A falha do binário
+ * volta em `falhaDoBinario`, nunca como exceção.
  */
 export async function configurarPastaAutomaticamente(
   opts: ConfigurarPastaOpts,
-): Promise<{ instrucaoFinal: string }> {
-  const par = await gerarParDeChaves();
-  const publicKeyJwk = await exportarJwkPublica(par);
-
-  await registerRunnerDeviceKey(opts.projectId, {
-    name: nomeDoDispositivo(opts.platform),
-    publicKeyJwk,
-  });
-
-  const bytes = await baixarBinario(opts.platform);
-  const privateKeyJwk = await exportarJwkPrivada(par);
-
+): Promise<ResultadoDaConfiguracao> {
+  // PASSO 1 — a pasta, antes de qualquer rede ou cripto.
   const showDirectoryPicker = obterShowDirectoryPicker();
-  const dirHandle = await showDirectoryPicker();
+  const dirHandle = await showDirectoryPicker({ id: 'brabo-runner', mode: 'readwrite' });
 
-  await escreverArquivo(dirHandle, nomeDoExecutavel(opts.platform), bytes);
+  // PASSO 2 — a config, que não depende de chave nenhuma: se a pessoa fechar
+  // a aba daqui em diante, a pasta já sabe a que projeto pertence.
   await escreverArquivo(
     dirHandle,
     'brabo-runner.config.json',
     JSON.stringify({ projectId: opts.projectId, apiUrl: opts.apiUrl }),
   );
-  await escreverArquivo(dirHandle, 'brabo-runner-device-key.jwk.json', privateKeyJwk);
 
-  const instrucaoFinal = opts.platform.startsWith('win32')
-    ? '.\\brabo-runner.exe'
-    : 'chmod +x ./brabo-runner && ./brabo-runner';
+  // PASSO 3 — o par de chaves e o registro da PÚBLICA, seguido de imediato
+  // pela gravação da PRIVADA. Registrar antes de gravar é obrigatório na
+  // ordem lógica (uma privada em disco sem contraparte no servidor não
+  // autentica nada); a janela entre as duas é a menor possível.
+  const par = await gerarParDeChaves();
+  const publicKeyJwk = await exportarJwkPublica(par);
+  await registerRunnerDeviceKey(opts.projectId, {
+    name: nomeDoDispositivo(opts.platform),
+    publicKeyJwk,
+  });
+  await escreverArquivo(
+    dirHandle,
+    'brabo-runner-device-key.jwk.json',
+    await exportarJwkPrivada(par),
+  );
 
-  return { instrucaoFinal };
+  // PASSO 4 — o binário. É o ÚNICO passo que depende de uma release
+  // publicada, e por isso é o único que não derruba o fluxo.
+  let falhaDoBinario: string | null = null;
+  try {
+    const bytes = await baixarBinario(opts.platform);
+    await escreverArquivo(dirHandle, nomeDoExecutavel(opts.platform), bytes);
+  } catch (erro) {
+    falhaDoBinario = erro instanceof Error ? erro.message : String(erro);
+  }
+
+  return {
+    pasta: dirHandle.name,
+    instrucaoFinal: falhaDoBinario ? COMANDO_VIA_NPM : comandoDoBinario(opts.platform),
+    falhaDoBinario,
+  };
 }
 
 function dispararDownload(conteudo: BlobPart, nomeArquivo: string, tipo: string): void {
@@ -240,14 +320,24 @@ function dispararDownload(conteudo: BlobPart, nomeArquivo: string, tipo: string)
   URL.revokeObjectURL(url);
 }
 
+export interface ResultadoDoKit {
+  instrucaoFinal: string;
+  /** Mesma semântica de `ResultadoDaConfiguracao.falhaDoBinario`. */
+  falhaDoBinario: string | null;
+}
+
 /**
  * Fallback fora do Chromium (ou sem suporte a Ed25519/File System Access):
- * mesmos três primeiros passos (chave, registro, download do binário), mas
- * em vez de gravar direto na pasta, dispara DOIS downloads comuns do
- * navegador — o binário e um kit com a configuração e a chave privada — que
- * o usuário move pra mesma pasta à mão.
+ * não há pasta a escolher — `showDirectoryPicker` não existe —, então em vez
+ * de gravar direto, dispara downloads comuns do navegador que o usuário move
+ * pra mesma pasta à mão.
+ *
+ * A mesma régua da RN-473 vale aqui: o KIT (configuração + chave privada) é
+ * baixado PRIMEIRO e o binário é o último passo, best-effort. Antes, a falha
+ * do binário abortava antes do kit e a pessoa terminava sem arquivo nenhum,
+ * com a chave pública já registrada no projeto.
  */
-export async function baixarKitManual(opts: ConfigurarPastaOpts): Promise<void> {
+export async function baixarKitManual(opts: ConfigurarPastaOpts): Promise<ResultadoDoKit> {
   const par = await gerarParDeChaves();
   const publicKeyJwk = await exportarJwkPublica(par);
 
@@ -256,13 +346,23 @@ export async function baixarKitManual(opts: ConfigurarPastaOpts): Promise<void> 
     publicKeyJwk,
   });
 
-  const bytes = await baixarBinario(opts.platform);
   const privateKeyJwk = await exportarJwkPrivada(par);
-
-  dispararDownload(bytes, nomeDoExecutavel(opts.platform), 'application/octet-stream');
   dispararDownload(
     JSON.stringify({ projectId: opts.projectId, apiUrl: opts.apiUrl, privateKeyJwk }),
     'brabo-runner-kit.json',
     'application/json',
   );
+
+  let falhaDoBinario: string | null = null;
+  try {
+    const bytes = await baixarBinario(opts.platform);
+    dispararDownload(bytes, nomeDoExecutavel(opts.platform), 'application/octet-stream');
+  } catch (erro) {
+    falhaDoBinario = erro instanceof Error ? erro.message : String(erro);
+  }
+
+  return {
+    instrucaoFinal: falhaDoBinario ? COMANDO_VIA_NPM : comandoDoBinario(opts.platform),
+    falhaDoBinario,
+  };
 }

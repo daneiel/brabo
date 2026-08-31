@@ -15,6 +15,7 @@ vi.mock('./api-client', () => ({
 }));
 
 import {
+  COMANDO_VIA_NPM,
   baixarBinario,
   baixarKitManual,
   configurarPastaAutomaticamente,
@@ -186,7 +187,9 @@ describe('configurarPastaAutomaticamente', () => {
     const close = vi.fn().mockResolvedValue(undefined);
     const createWritable = vi.fn().mockResolvedValue({ write, close });
     const getFileHandle = vi.fn().mockResolvedValue({ createWritable });
-    const showDirectoryPicker = vi.fn().mockResolvedValue({ getFileHandle });
+    // `name` é o que a File System Access API expõe da pasta escolhida — o
+    // caminho absoluto ela NUNCA dá, e é o runner quem o reporta depois.
+    const showDirectoryPicker = vi.fn().mockResolvedValue({ name: 'minha-pasta', getFileHandle });
     vi.stubGlobal('window', { showDirectoryPicker });
 
     return { showDirectoryPicker, getFileHandle, createWritable, write, close };
@@ -210,6 +213,8 @@ describe('configurarPastaAutomaticamente', () => {
     expect(getFileHandle).toHaveBeenCalledWith('brabo-runner-device-key.jwk.json', { create: true });
     expect(write).toHaveBeenCalledTimes(3);
     expect(resultado.instrucaoFinal).toBe('chmod +x ./brabo-runner && ./brabo-runner');
+    expect(resultado.falhaDoBinario).toBeNull();
+    expect(resultado.pasta).toBe('minha-pasta');
   });
 
   it('Windows: usa o nome .exe e a instrução final sem chmod', async () => {
@@ -225,12 +230,11 @@ describe('configurarPastaAutomaticamente', () => {
     expect(resultado.instrucaoFinal).toBe('.\\brabo-runner.exe');
   });
 
-  it('falha (ex.: geração de chave rejeitada) propaga o erro sem gravar nada', async () => {
+  it('falha (ex.: geração de chave rejeitada) propaga o erro sem registrar chave nenhuma — depois de a pasta já ter sido escolhida', async () => {
+    const { showDirectoryPicker } = stubAmbienteFeliz();
     vi.stubGlobal('crypto', {
       subtle: { generateKey: vi.fn().mockRejectedValue(new Error('sem suporte')) },
     });
-    const showDirectoryPicker = vi.fn();
-    vi.stubGlobal('window', { showDirectoryPicker });
 
     await expect(
       configurarPastaAutomaticamente({
@@ -240,20 +244,134 @@ describe('configurarPastaAutomaticamente', () => {
       }),
     ).rejects.toThrow(/não suporta/i);
 
+    // A asserção anterior desta prova era `showDirectoryPicker` NÃO ter sido
+    // chamado — ela encodava a ordem ANTIGA (o seletor por último). Com a
+    // RN-473 a pasta é o primeiro passo, então o que se prova aqui é o outro
+    // lado: falhar depois do seletor não registra chave de dispositivo.
+    expect(showDirectoryPicker).toHaveBeenCalledTimes(1);
     expect(registerRunnerDeviceKeyMock).not.toHaveBeenCalled();
-    expect(showDirectoryPicker).not.toHaveBeenCalled();
+  });
+
+  // ------------------------------------------------------ a ordem (RN-473)
+
+  it('A PASTA É O PRIMEIRO PASSO: `showDirectoryPicker` abre antes da chave, do registro e do binário', async () => {
+    const ordem: string[] = [];
+    const { showDirectoryPicker } = stubAmbienteFeliz();
+    showDirectoryPicker.mockImplementation(() => {
+      ordem.push('pasta');
+      return Promise.resolve({
+        name: 'minha-pasta',
+        getFileHandle: vi.fn().mockResolvedValue({
+          createWritable: vi
+            .fn()
+            .mockResolvedValue({ write: vi.fn(), close: vi.fn() }),
+        }),
+      });
+    });
+    vi.stubGlobal('crypto', {
+      subtle: {
+        generateKey: vi.fn().mockImplementation(() => {
+          ordem.push('chave');
+          return Promise.resolve(PAR_FAKE);
+        }),
+        exportKey: vi.fn().mockResolvedValue({ kty: 'OKP' }),
+      },
+    });
+    registerRunnerDeviceKeyMock.mockImplementation(() => {
+      ordem.push('registro');
+      return Promise.resolve({ id: 'device-1' });
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => {
+        ordem.push('binario');
+        return Promise.resolve(fakeResponse(200));
+      }),
+    );
+
+    await configurarPastaAutomaticamente({
+      projectId: 'proj-1',
+      apiUrl: 'https://api.brabo.example',
+      platform: 'linux-x64',
+    });
+
+    expect(ordem).toEqual(['pasta', 'chave', 'registro', 'binario']);
+  });
+
+  it('cancelar o seletor de pasta não registra chave nem baixa binário nenhum', async () => {
+    stubAmbienteFeliz();
+    const cancelamento = new Error('The user aborted a request.');
+    cancelamento.name = 'AbortError';
+    const showDirectoryPicker = vi.fn().mockRejectedValue(cancelamento);
+    vi.stubGlobal('window', { showDirectoryPicker });
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse(200));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      configurarPastaAutomaticamente({
+        projectId: 'proj-1',
+        apiUrl: 'https://api.brabo.example',
+        platform: 'linux-x64',
+      }),
+    ).rejects.toThrow(/aborted/i);
+
+    expect(registerRunnerDeviceKeyMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // ------------------------------- a degradação do binário (RN-473, o pedido)
+
+  it('binário 502: NÃO derruba o fluxo — grava os outros dois arquivos e devolve o comando alternativo', async () => {
+    const { getFileHandle, write } = stubAmbienteFeliz();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(502, null)));
+
+    const resultado = await configurarPastaAutomaticamente({
+      projectId: 'proj-1',
+      apiUrl: 'https://api.brabo.example',
+      platform: 'linux-x64',
+    });
+
+    // A escolha da pasta e a configuração sobrevivem: os DOIS arquivos que o
+    // runner precisa (RN-466) estão lá, e só o executável ficou de fora.
+    expect(getFileHandle).toHaveBeenCalledWith('brabo-runner.config.json', { create: true });
+    expect(getFileHandle).toHaveBeenCalledWith('brabo-runner-device-key.jwk.json', { create: true });
+    expect(getFileHandle).not.toHaveBeenCalledWith('brabo-runner', { create: true });
+    expect(write).toHaveBeenCalledTimes(2);
+
+    expect(registerRunnerDeviceKeyMock).toHaveBeenCalledTimes(1);
+    expect(resultado.pasta).toBe('minha-pasta');
+    expect(resultado.falhaDoBinario).toMatch(/502/);
+    expect(resultado.instrucaoFinal).toBe(COMANDO_VIA_NPM);
+  });
+
+  it('falha ao GRAVAR o binário (disco cheio) degrada igual — a configuração fica de pé', async () => {
+    const { getFileHandle } = stubAmbienteFeliz();
+    getFileHandle.mockImplementation((nome: string) => {
+      if (nome === 'brabo-runner') return Promise.reject(new Error('disco cheio'));
+      return Promise.resolve({
+        createWritable: vi.fn().mockResolvedValue({ write: vi.fn(), close: vi.fn() }),
+      });
+    });
+
+    const resultado = await configurarPastaAutomaticamente({
+      projectId: 'proj-1',
+      apiUrl: 'https://api.brabo.example',
+      platform: 'linux-x64',
+    });
+
+    expect(resultado.falhaDoBinario).toBe('disco cheio');
+    expect(resultado.instrucaoFinal).toBe(COMANDO_VIA_NPM);
   });
 });
 
 describe('baixarKitManual', () => {
-  it('dispara dois downloads (binário + kit) via link temporário, sem chamar showDirectoryPicker', async () => {
+  function stubDownloads() {
     vi.stubGlobal('crypto', {
       subtle: {
         generateKey: vi.fn().mockResolvedValue(PAR_FAKE),
         exportKey: vi.fn().mockResolvedValue({ kty: 'OKP' }),
       },
     });
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(200)));
 
     const createObjectURL = vi.fn().mockReturnValue('blob:fake');
     const revokeObjectURL = vi.fn();
@@ -266,7 +384,15 @@ describe('baixarKitManual', () => {
       .mockReturnValue(anchor as unknown as HTMLAnchorElement);
     const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
 
-    await baixarKitManual({
+    return { click, createObjectURL, revokeObjectURL, anchor, createElementSpy, appendChildSpy };
+  }
+
+  it('dispara dois downloads (kit + binário) via link temporário, sem chamar showDirectoryPicker', async () => {
+    const { click, createObjectURL, revokeObjectURL, createElementSpy, appendChildSpy } =
+      stubDownloads();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(200)));
+
+    const resultado = await baixarKitManual({
       projectId: 'proj-1',
       apiUrl: 'https://api.brabo.example',
       platform: 'darwin-arm64',
@@ -276,6 +402,29 @@ describe('baixarKitManual', () => {
     expect(click).toHaveBeenCalledTimes(2);
     expect(createObjectURL).toHaveBeenCalledTimes(2);
     expect(revokeObjectURL).toHaveBeenCalledTimes(2);
+    expect(resultado.falhaDoBinario).toBeNull();
+    expect(resultado.instrucaoFinal).toBe('chmod +x ./brabo-runner && ./brabo-runner');
+
+    createElementSpy.mockRestore();
+    appendChildSpy.mockRestore();
+  });
+
+  it('binário 502 no fallback: o KIT ainda é baixado, e a instrução vira o caminho alternativo', async () => {
+    const { click, anchor, createElementSpy, appendChildSpy } = stubDownloads();
+    // O nome do último `download` atribuído prova QUAL arquivo saiu.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(502, null)));
+
+    const resultado = await baixarKitManual({
+      projectId: 'proj-1',
+      apiUrl: 'https://api.brabo.example',
+      platform: 'darwin-arm64',
+    });
+
+    expect(registerRunnerDeviceKeyMock).toHaveBeenCalledTimes(1);
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(anchor.download).toBe('brabo-runner-kit.json');
+    expect(resultado.falhaDoBinario).toMatch(/502/);
+    expect(resultado.instrucaoFinal).toBe(COMANDO_VIA_NPM);
 
     createElementSpy.mockRestore();
     appendChildSpy.mockRestore();

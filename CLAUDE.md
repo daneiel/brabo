@@ -60,6 +60,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Salvar por seção em Configurações | Paralelismo e Teto de gasto trocam N botões de linha por UM da seção (`settings/secao-salvavel.tsx`), com contagem de linhas pendentes e desfecho POR LINHA — salvar é N chamadas, não uma transação, e a tela nunca afirma o que não obteve. As três seções de autosave e Credenciais ficam de fora, cada uma por um motivo declarado | RN-469 |
 | Painel "precisa de você" | Chip no topo do projeto abre as CINCO filas de decisão num lugar só — separadas, ordenadas por urgência, sem soma nenhuma (nem no chip). Aprovações e merges decidem ali pelo `ApprovalCard`; as outras três levam à aba. Pendência de arquitetura empresta a data da história e DIZ que emprestou | RN-467 |
 | Cascata de modelo como cadeia visível | A coluna Origem para de imprimir o enum do banco e vira `workspace › projeto › área › agente` com quatro estados por nó (`settings/cascata.tsx`) — separando os DOIS sentidos de `origin: 'agent'` sem tocar na api. O aviso de nível descartado entra na cadeia; os três `—` ganham três textos. Fecha o canvas de melhorias de UI (7 de 7 itens tomados) | RN-470 |
+| Pasta antes do runner | A configuração do runner pelo navegador (ADR 0118) inverte a ordem: `showDirectoryPicker` é o PRIMEIRO passo e o binário o ÚLTIMO, best-effort — a release sem asset devolvia 502 antes do seletor abrir, e a pasta ficava inalcançável. Falha do binário mantém os dois arquivos gravados e troca a instrução pelo caminho `npm install -g @brabo/runner`. Depois da instrução, `EsperaDoRunner` sonda `workspaceVerifiedAt` com três estados e teto | RN-473/474 |
 | Tetos de rebaixamento em `project_members` | A sobreposição `projectRole ?? workspaceRole` FICA nos dois sentidos (é capacidade, não bug); o que entra são dois tetos de 403 no caso de uso — ninguém rebaixa o `owner` do workspace, ninguém rebaixa a si mesmo. As três descrições de OpenAPI que a RN-471 declarou falsas passam a descrever o código; o gate do `Select` é PR à parte, por a tela não ter como calcular o primeiro teto | ADR 0127, RN-472 |
 
 ## Estado atual e aberto
@@ -111,6 +112,15 @@ daqui e o fechamento vai para o histórico.
   disco antigo (RN-447..450, ADR 0111)
 - Mirror web de `SOLO_CONVERSATIONAL_AGENTS` sem teste cruzado com a api
   (pior caso: opção velha que o backend recusa com 400)
+- `ExecutionModeSection` (converter projeto existente para modo `runner`) é o
+  ÚNICO dos cinco lugares sem `RunnerOnboardingPanel` nem navegador de pastas —
+  digita-se o caminho no escuro. Ficou fora da RN-473 de propósito: onboardar
+  ANTES de a conversão salvar registra chave num projeto que ainda não é
+  `runner`, e `ConfirmProjectWorkspaceUseCase` recusa a confirmação com 400 —
+  a ordem "converte, depois onboarda" é decisão de produto à parte
+- Chave de dispositivo órfã (aba fechada no meio do fluxo da RN-473) é INERTE,
+  mas invisível: `RunnerDeviceKeysController` tem `POST`/`DELETE` e nenhuma
+  rota de LISTAGEM, então não há tela onde revogá-la
 - `guard.ts` do runner é best-effort por invariante, não lacuna
 - Exclusividade por `{project_id, machine_id}` adiada até segundo dev
   simultâneo real

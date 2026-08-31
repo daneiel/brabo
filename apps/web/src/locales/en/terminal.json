@@ -41,8 +41,22 @@
     "downloadKitDone": "Downloads started — check your downloads folder and move both files together.",
     "platformSelectLabel": "Platform",
     "successIntro": "Done — inside the folder you chose, run:",
+    "pastaConfigurada": "Folder \"{{pasta}}\" is set up — the runner files are already in it.",
+    "binarioIndisponivel": "The prebuilt binary could not be downloaded right now ({{motivo}}) — the folder setup is still valid, and the command below installs the runner another way.",
+    "successIntroSemBinario": "In your terminal, inside the folder you chose, run:",
+    "successIntroKit": "After moving both files into the same folder, run this inside it:",
+    "passoHumano": "This step is yours: the browser does not run programs on your machine.",
     "copyButton": "Copy",
     "copiedButton": "Copied!",
     "manualDisclosureSummary": "I'd rather run it manually"
+  },
+  "esperaDoRunner": {
+    "esperando": "Looking for the runner…",
+    "esperandoDetalhe": "This screen updates on its own as soon as it connects. We stop looking after {{minutos}} minutes.",
+    "confirmado": "Runner connected — folder confirmed on {{data}}.",
+    "caminhoDoRunner": "This is the path the runner reported from your machine; it replaces whatever was typed before.",
+    "semResposta": "We did not see the runner connect within {{minutos}} minutes.",
+    "semRespostaRessalva": "That is not proof it is not running: check the terminal where you pasted the command, and if this project had already been confirmed with the same folder, the stamp is not rewritten — the Code tab is what knows about right now.",
+    "procurarDeNovo": "Look again"
   }
 }
