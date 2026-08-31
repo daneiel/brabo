@@ -449,6 +449,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: associar alguém a um projeto (`POST projects/:projectId/members`)
+  passa a recusar com **403** os **dois movimentos de rebaixamento** que
+  produziam estado sem volta. Um `maintainer` podia (1) rebaixar o **`owner` do
+  workspace** a `viewer` num projeto — o dono perdia o próprio projeto, e
+  restaurar exigia o `maintainer` que ele acabara de perder ali — e (2) **se
+  rebaixar sem poder desfazer**, porque desfazer é a mesma rota, que pede
+  `maintainer`. Agora: **ninguém rebaixa quem é `owner` do workspace** (lido de
+  `workspace_members.role`, nunca de `workspaces.created_by`) e **ninguém
+  rebaixa a si mesmo** (sem limiar; **subir** o próprio papel segue passando).
+  A **sobreposição continua valendo nos dois sentidos** — restringir um
+  `developer` de workspace a `viewer` num projeto sensível é capacidade
+  deliberada e não foi tocada. As **três descrições de OpenAPI** que prometiam
+  "the higher of this one and what the person already has" e "includes whoever
+  inherits access from the workspace" passam a descrever o que o código faz.
+  A tela ainda oferece o rebaixamento que a api recusa (ela não tem como
+  calcular o primeiro teto), mas **a recusa aparece** no toast, com a frase da
+  api — o gate do `Select` é PR à parte.
+  Ver [ADR 0127](docs/adr/0127-tetos-de-rebaixamento-em-project-members.md) e
+  RN-472.
 - **web**: em **Configurações**, a seção **Membros e papéis** passa a
   **respeitar o papel de quem está olhando**, e suas duas ações caladas passam a
   ter desfecho. Ela não checava papel nenhum: **convidar**, **trocar o papel de

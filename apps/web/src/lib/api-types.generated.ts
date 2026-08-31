@@ -1987,14 +1987,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lists the project's members with their effective role
-         * @description Includes whoever inherits access from the workspace, not just who was associated here.
+         * Lists the project's members
+         * @description Only who was associated HERE, with the role of that association — whoever reaches the project through the workspace alone has no row and doesn't show up.
          */
         get: operations["ProjectsController_listMembers"];
         put?: never;
         /**
          * Associates a user with the project
-         * @description The EFFECTIVE role is the higher of this one and what the person already has in the workspace — associating someone as `viewer` here doesn't downgrade a workspace `owner`.
+         * @description This role OVERRIDES whatever the person has in the workspace, in both directions: associating someone as `viewer` here really does restrict a workspace `developer` on this project. Two movements are refused with 403 and cannot be enabled anywhere: downgrading a workspace `owner`, and downgrading yourself.
          */
         post: operations["ProjectsController_addMember"];
         delete?: never;
@@ -3692,7 +3692,7 @@ export interface components {
              */
             userId: string;
             /**
-             * @description Role in this association. Someone's EFFECTIVE role in a project is the higher of this one and what they have in the workspace.
+             * @description Role in this association. On a PROJECT it OVERRIDES the workspace role in both directions — the effective role is this one whenever the association exists, higher OR lower — and two downgrades are refused with 403: a workspace `owner`, and yourself. On a WORKSPACE it is simply the role, with no cap.
              * @example developer
              * @enum {string}
              */
@@ -13440,7 +13440,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Insufficient role on the project. */
+            /** @description Insufficient role on the project, OR one of the two downgrade caps (the target is a workspace `owner`; the target is the caller and the role is lower than the caller's current one). */
             403: {
                 headers: {
                     [name: string]: unknown;
