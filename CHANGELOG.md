@@ -6,6 +6,40 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: configurar o runner local pelo navegador passa a começar pela
+  **pasta**. A ordem era `chave → registro → binário → pasta`, e o download do
+  binário — o único passo que depende de uma release publicada no GitHub — vinha
+  ANTES do seletor de pastas. Com a release atual sem asset para nenhuma
+  plataforma, esse passo devolve 502, a exceção subia, e o seletor **nunca
+  chegava a abrir**: o botão parecia não fazer nada, e a pasta ficava
+  inalcançável. Agora `showDirectoryPicker` é a primeira linha (o que também é
+  mais correto do lado do navegador, que exige ativação transitória do usuário e
+  não sobrevive a três `await` de rede antes dela), e o binário é o **último**
+  passo e **best-effort**: quando ele falha, os dois arquivos de que o runner
+  realmente precisa — `brabo-runner.config.json` e a chave de dispositivo — já
+  estão gravados na pasta escolhida, a tela **diz o motivo** e a instrução final
+  troca para o caminho de distribuição alternativo (`npm install -g
+  @brabo/runner && brabo-runner`, que roda sem flag nenhuma porque lê a config
+  do `cwd`). Antes, uma falha ali descartava tudo, inclusive a escolha da pasta.
+  O fallback fora do Chromium ganhou a mesma régua: o **kit** (configuração +
+  chave privada) é baixado primeiro, e a falha do binário não impede mais que
+  ele saia. Cancelar o seletor voltou a ser o que é — mudar de ideia, não erro:
+  nada é registrado e o botão fica pronto de novo, sem alerta vermelho. O passo
+  do terminal continua **humano e declarado**: uma página web não executa
+  binário na máquina de ninguém, e a File System Access API não preserva o bit
+  de execução — o que dá para fazer é encolhê-lo a UMA linha copiável em um
+  clique, e é isso que a tela faz (RN-473)
+- **web**: depois da instrução, a tela **espera o runner aparecer** em vez de
+  deixar a pessoa adivinhar se deu certo. O sinal é o que já existia —
+  `workspaceVerifiedAt`, o carimbo que o `ConfirmProjectWorkspaceUseCase` grava
+  quando o runner conecta e que o engine usa como portão —, e quando ele chega a
+  tela mostra o **caminho que o runner reportou**, que é o que passa a valer
+  (ele sobrescreve o que foi digitado). São **três estados que não colapsam**:
+  procurando, conectado e sem resposta. E a espera **não é eterna**: para em 3
+  minutos dizendo o que faz falta e o que ela **não** sabe — reconectar com uma
+  pasta já confirmada não regrava o carimbo, então ausência aqui não é prova de
+  ausência, e quem sabe do agora é a aba **Código**. Um botão recomeça a busca
+  sem refazer a configuração (RN-474)
 - **web**: em **Configurações**, a coluna **Origem** de **Modelos por agente**
   deixa de imprimir o enum cru do banco (`agent`, `workspace`, em inglês) e
   passa a mostrar a **cascata inteira como cadeia**: `workspace › projeto ›

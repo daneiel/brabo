@@ -4,6 +4,7 @@ import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import terminalPtBR from '../locales/pt-BR/terminal.json';
 import { RunnerOnboardingPanel } from './RunnerOnboardingPanel';
 
@@ -30,8 +31,22 @@ function novaInstanciaI18n() {
   return instancia;
 }
 
+/**
+ * `QueryClientProvider` entrou junto com a `EsperaDoRunner` (RN-474), que o
+ * painel passa a montar depois de configurar a pasta: ela sonda
+ * `['project', id]` para saber se o runner apareceu. Completar o dublê aqui é
+ * o mínimo — o que a espera decide tem prova PRÓPRIA em
+ * `EsperaDoRunner.test.tsx`; aqui ela só precisa montar sem estourar.
+ */
 function renderComI18n(ui: ReactElement) {
-  return render(<I18nextProvider i18n={novaInstanciaI18n()}>{ui}</I18nextProvider>);
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <I18nextProvider i18n={novaInstanciaI18n()}>{ui}</I18nextProvider>
+    </QueryClientProvider>,
+  );
 }
 
 const {
@@ -56,6 +71,10 @@ vi.mock('../lib/runner-bootstrap', () => ({
 
 vi.mock('../lib/api-client', () => ({
   API_URL: 'https://api.brabo.example',
+  // A `EsperaDoRunner` sonda o projeto; sem runner nenhum, o carimbo fica
+  // nulo e ela permanece em "procurando" — que é o estado certo aqui.
+  getProject: () =>
+    Promise.resolve({ id: 'proj-1', workspaceVerifiedAt: null, workspacePath: null }),
 }));
 
 beforeEach(() => {
@@ -72,6 +91,8 @@ describe('RunnerOnboardingPanel', () => {
     detectarPlataformaMock.mockResolvedValue('linux-x64');
     configurarPastaAutomaticamenteMock.mockResolvedValue({
       instrucaoFinal: 'chmod +x ./brabo-runner && ./brabo-runner',
+      pasta: 'minha-pasta',
+      falhaDoBinario: null,
     });
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
@@ -96,6 +117,58 @@ describe('RunnerOnboardingPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Copiar' }));
     expect(writeText).toHaveBeenCalledWith('chmod +x ./brabo-runner && ./brabo-runner');
     expect(await screen.findByRole('button', { name: 'Copiado!' })).toBeInTheDocument();
+
+    cleanup();
+  });
+
+  it('binário indisponível: a pasta configurada é ANUNCIADA mesmo assim, com o motivo e o comando alternativo (RN-473)', async () => {
+    const user = userEvent.setup();
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    configurarPastaAutomaticamenteMock.mockResolvedValue({
+      instrucaoFinal: 'npm install -g @brabo/runner && brabo-runner',
+      pasta: 'meu-projeto',
+      falhaDoBinario:
+        'Não foi possível baixar o binário do runner para "linux-x64" (HTTP 502).',
+    });
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Configurar pasta automaticamente' }),
+    );
+
+    // A escolha da pasta NÃO foi descartada — é o coração do pedido.
+    expect(await screen.findByText(/Pasta "meu-projeto" configurada/)).toBeInTheDocument();
+    // O motivo aparece, e a saída também.
+    expect(screen.getByText(/HTTP 502/)).toBeInTheDocument();
+    expect(
+      screen.getByText('npm install -g @brabo/runner && brabo-runner'),
+    ).toBeInTheDocument();
+    // E a espera já está rodando, sem a pessoa clicar em nada.
+    expect(screen.getByText('Procurando o runner…')).toBeInTheDocument();
+
+    cleanup();
+  });
+
+  it('cancelar o seletor de pasta volta ao estado inicial, sem alerta de erro', async () => {
+    const user = userEvent.setup();
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    const cancelamento = new Error('The user aborted a request.');
+    cancelamento.name = 'AbortError';
+    configurarPastaAutomaticamenteMock.mockRejectedValue(cancelamento);
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    const botao = await screen.findByRole('button', { name: 'Configurar pasta automaticamente' });
+    await user.click(botao);
+
+    await waitFor(() => expect(configurarPastaAutomaticamenteMock).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Configurar pasta automaticamente' }),
+    ).toBeInTheDocument();
 
     cleanup();
   });
@@ -125,7 +198,10 @@ describe('RunnerOnboardingPanel', () => {
     const user = userEvent.setup();
     suportaEscritaDeArquivosMock.mockReturnValue(false);
     detectarPlataformaMock.mockResolvedValue('darwin-x64');
-    baixarKitManualMock.mockResolvedValue(undefined);
+    baixarKitManualMock.mockResolvedValue({
+      instrucaoFinal: 'chmod +x ./brabo-runner && ./brabo-runner',
+      falhaDoBinario: null,
+    });
 
     renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
 

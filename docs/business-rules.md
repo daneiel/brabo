@@ -6128,6 +6128,113 @@ frase da api que diz qual teto bateu.
 
 ---
 
+## A pasta vem primeiro, e o binário não é bloqueio (RN-473/474)
+
+### RN-473 — A configuração do runner pelo navegador começa pela PASTA, e a falha do binário nunca descarta o que já foi configurado {#rn-473}
+
+O fluxo da [RN-464](#rn-464)..[466](#rn-466) rodava na ordem `chave → registro
+→ binário → pasta` (`configurarPastaAutomaticamente`,
+`apps/web/src/lib/runner-bootstrap.ts`). Os quatro passos não têm o mesmo risco:
+o download do binário é o ÚNICO que depende de uma release publicada no GitHub
+(`RunnerReleasesController`, proxy de `releases/latest`), e com a release
+corrente sem asset para plataforma nenhuma ele devolve **502**. A exceção subia
+antes de `showDirectoryPicker`, então **o seletor de pastas nunca chegava a
+abrir** — o botão parecia inerte e a pasta ficava inalcançável, com a
+configuração inteira perdida por causa do passo mais frágil.
+
+A ordem passa a ser `pasta → config → chave → registro → chave privada →
+binário`, e o último passo é **best-effort**:
+
+| passo | falha derruba o fluxo? | por quê |
+|---|---|---|
+| 1. `showDirectoryPicker` | **sim** | sem pasta não há onde gravar nada. Cancelar (`AbortError`/`NotAllowedError`) NÃO é falha — volta ao estado inicial, sem alerta |
+| 2. `brabo-runner.config.json` | **sim** | é metade do par que a [RN-466](#rn-466) lê |
+| 3. par Ed25519 + `registerRunnerDeviceKey` + `…device-key.jwk.json` | **sim** | privada em disco sem contraparte no servidor não autentica; por isso o registro vem ANTES da gravação, e as duas são adjacentes |
+| 4. binário | **não** | devolve `falhaDoBinario` preenchido; a instrução final vira `npm install -g @brabo/runner && brabo-runner` |
+
+O caminho alternativo funciona **sem flag nenhuma** exatamente porque os passos
+2 e 3 já rodaram: o CLI lê os dois arquivos do `cwd` (RN-466). É um dos TRÊS
+caminhos de distribuição que o `CLAUDE.md` declara, e o único que não depende
+nem da release nem de um checkout do monorepo. O `baixarKitManual` (fora do
+Chromium) segue a mesma régua invertendo a ordem dos dois downloads: o **kit**
+sai primeiro, o binário por último.
+
+**O passo do terminal é humano, e a tela nunca finge o contrário.** Uma página
+web não executa binário na máquina de ninguém, e a File System Access API não
+preserva o bit de execução — daí o `chmod +x` continuar no comando. O que o
+produto faz é encolher esse passo a UMA linha copiável em um clique; nenhum
+texto de UI diz "instalação automática".
+
+**Lacuna declarada:** fechar a aba entre o passo 3 e o fim deixa uma chave de
+dispositivo **órfã** no projeto. Ela é inerte — a privada correspondente só
+existiu na memória daquela aba, e sem ela a chave não autentica nada — mas hoje
+é invisível: `RunnerDeviceKeysController` tem `POST` e `DELETE`, e nenhuma rota
+de LISTAGEM, então não há tela onde revogá-la. Refazer o fluxo registra uma
+chave nova, que funciona. Uma listagem é trabalho direto sobre o `DELETE` que já
+existe, quando for pedido.
+
+- **Onde:** `apps/web/src/lib/runner-bootstrap.ts`
+  (`configurarPastaAutomaticamente`, `baixarKitManual`, `COMANDO_VIA_NPM`),
+  `apps/web/src/components/RunnerOnboardingPanel.tsx`
+  (`ehCancelamentoDoSeletor`, o bloco de desfecho)
+- **Teste:** `apps/web/src/lib/runner-bootstrap.test.ts` (a ordem dos quatro
+  passos afirmada como lista; binário 502 e falha de GRAVAÇÃO do binário
+  gravando os outros dois arquivos e devolvendo o comando alternativo;
+  cancelamento do seletor sem registrar chave nem baixar nada; o kit saindo
+  mesmo com o binário em 502),
+  `apps/web/src/components/RunnerOnboardingPanel.test.tsx` (a pasta é anunciada
+  com o motivo da falha ao lado; cancelar não vira alerta)
+- **ADR:** [0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+  — esta RN revisa a ORDEM do fluxo que ele estabeleceu, não o mecanismo
+- **Origem:** pedido do dono do produto
+
+### RN-474 — Depois da instrução, a tela ESPERA o runner: três estados, teto, e o caminho que vale é o que o runner reportou {#rn-474}
+
+Configurar a pasta e mostrar o comando deixava a pessoa sem saber se tinha dado
+certo. O quarto passo é uma espera que resolve sozinha
+(`apps/web/src/components/EsperaDoRunner.tsx`), montada pelo
+`RunnerOnboardingPanel` assim que a configuração termina — nos dois caminhos
+(pasta gravada e kit baixado).
+
+**O mecanismo é o que já existia.** O sinal é `project.workspaceVerifiedAt`, o
+carimbo que `ConfirmProjectWorkspaceUseCase` grava quando o runner conecta
+([RN-423](#rn-423)) e que o engine usa como PORTÃO (`terminal_executor.ex`
+recusa executar em projeto `runner` com `workspace_verified_at` nulo) — a
+definição do próprio produto de "este projeto tem runner". É o mesmo dado que
+`AmbienteDoProjeto` já lê ([RN-468](#rn-468)), na mesma chave de cache
+`['project', id]` que a página inteira mantém. A alternativa considerada foi
+sondar `connectFsBrowserChannel` (cujo erro `'Nenhum runner conectado'` o
+`FolderBrowserModal` detecta): ela sabe do AGORA, que é mais forte, mas o canal
+grava `erroDeConexao` de forma permanente por instância, então cada sondagem
+custaria ticket + socket NOVOS — dezenas ao longo da espera — e ela ainda não
+responderia a segunda metade do que a tela deve dizer: QUAL caminho o runner
+reportou.
+
+**Confirmado é o carimbo MUDAR, nunca "existir".** A espera tira uma linha de
+base no primeiro `GET` e compara contra ela. Sem isso, um projeto já confirmado
+antes seria anunciado como recém-conectado no instante em que a tela abrisse.
+
+**Os três estados não colapsam, e nenhum é eterno** ([RN-088](#rn-088),
+[RN-468](#rn-468)):
+
+| estado | o que a tela diz |
+|---|---|
+| `esperando` | "procurando o runner", com o teto DECLARADO ("paramos depois de 3 minutos") |
+| `confirmado` | a data do carimbo E o `workspacePath` que o runner reportou, dizendo que ele substitui o que foi digitado — a tela não compete com quem roda no host de verdade |
+| `semResposta` | o teto estourou, e a tela declara o que NÃO sabe: reconectar com uma pasta já confirmada não regrava o carimbo, então ausência aqui não é prova de ausência, e quem sabe do agora é a aba Código. Um botão recomeça a busca sem refazer a configuração |
+
+- **Onde:** `apps/web/src/components/EsperaDoRunner.tsx` (`INTERVALO_MS`,
+  `TETO_MS`, a linha de base em `base`),
+  `apps/web/src/components/RunnerOnboardingPanel.tsx` (quem a monta)
+- **Teste:** `apps/web/src/components/EsperaDoRunner.test.tsx` (os três
+  estados, um a um, cada um afirmando que os outros dois NÃO estão na tela; o
+  carimbo preexistente que não conta como conexão nova; o teto estourando com
+  temporizador falso e o botão que recomeça)
+- **ADR:** [0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+- **Origem:** pedido do dono do produto
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -6157,6 +6264,8 @@ frase da api que diz qual teto bateu.
 | Arquivo individual da pasta local é grande demais ou de extensão não reconhecida | só PULADO (`filesSkipped`), nunca derruba o upload inteiro (RN-456) |
 | Confirmar um pedido de pull de modelo que já não está `pending_confirmation` | recusado (409) — a confirmação não é reexecutável (RN-462) |
 | Pull de modelo Hugging Face falha no Ollama | pedido termina `failed` com a origem declarada (infra/modelo), nada é ativado no catálogo (RN-462) |
+| Binário do runner indisponível (release sem asset, GitHub fora) durante a configuração pelo navegador | a pasta escolhida e os dois arquivos de configuração FICAM; a tela diz o motivo e troca a instrução pelo caminho `npm install -g @brabo/runner` (RN-473) |
+| Runner não conecta dentro do teto da espera | a tela diz que não viu, declara que isso não é prova de ausência e aponta a aba Código — nunca "verificando" para sempre (RN-474) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar
