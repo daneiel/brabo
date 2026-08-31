@@ -483,6 +483,34 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web, runner**: o **modo automático** do runner local — configurar a pasta
+  pelo navegador e rodar `brabo-runner` sem flag nenhuma — **nunca funcionou**,
+  desde que nasceu. O navegador gerava o par de chaves, registrava a metade
+  pública no projeto e gravava a privada na pasta, mas **descartava o `id` que
+  a api devolvia no registro** — nos dois caminhos, o automático e o kit
+  manual. Esse `id` é o **`kid`** da JWK, e é o único vínculo entre o arquivo
+  em disco e a chave pública guardada no servidor: sem ele, o CLI recusa a
+  chave (ele só repassa `jwk.kid`, nunca inventa um id) e a api não teria como
+  achar a pública para verificar a assinatura. O resultado era uma pasta com
+  aparência de configurada, uma chave inerte no projeto, e o CLI caindo no
+  modo manual sem dizer por quê. Agora o registro e a exportação da privada
+  acontecem **numa função só**, com o `id` fluindo dentro dela — descartá-lo
+  de novo exigiria apagar código, não esquecer uma linha. E o teste que
+  deixou isso passar mudou de pergunta: ele afirmava que o arquivo tinha sido
+  **aberto**, e passa a afirmar **o que foi escrito nele** (RN-475)
+- **runner**: a recusa da chave de dispositivo **diz o que houve**. Um arquivo
+  `brabo-runner-device-key.jwk.json` **presente e inválido** produzia
+  exatamente a mesma saída de um arquivo **ausente** — o bloco de uso, que
+  fala de `--project`/`--dir`/`--token` e não menciona o arquivo —, porque a
+  leitura devolve `null` nos dois casos (de propósito: ela nunca lança, e a
+  ausência é o caminho normal de quem usa flags). Quem tinha uma pasta
+  configurada era mandado investigar a configuração, que estava certa. A
+  leitura continua não lançando; o que mudou é que o CLI passa a **distinguir
+  os quatro estados** (ausente, JSON inválido, sem `kid`, válida) e a imprimir
+  a recusa **nomeada** — o arquivo, o motivo e as duas saídas (regravar a
+  pasta pelo navegador, ou usar `--token` enquanto isso) — em vez do texto
+  sobre flags. Ausente segue caindo no bloco de uso, que é a resposta certa
+  para quem não configurou nada (RN-475)
 - **api**: associar alguém a um projeto (`POST projects/:projectId/members`)
   passa a recusar com **403** os **dois movimentos de rebaixamento** que
   produziam estado sem volta. Um `maintainer` podia (1) rebaixar o **`owner` do
