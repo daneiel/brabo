@@ -324,6 +324,31 @@ reason in the URL.
   Today no real path asks for `scope: "terminal"` (the interactive
   terminal socket is PHASE 25); the value is already born correct for
   when it exists.
+- **`POST /projects/:projectId/members` is `role:maintainer` in the table,
+  and that role is NECESSARY but not SUFFICIENT**
+  ([ADR 0127](adr/0127-tetos-de-rebaixamento-em-project-members.md),
+  [RN-472](business-rules.md#rn-472)). The mirror image of the
+  `socket-ticket` note above: there the table's role is the floor and the
+  body can raise it; here the table's role is the whole gate the
+  `RolesGuard` applies, and the use case then refuses **two movements with
+  403 even for a caller who has it** — downgrading someone who is `owner` of
+  the WORKSPACE, and downgrading YOURSELF. No new route and no role change
+  (`RequireRole('maintainer')`, as it already was); what changed is that the
+  classification stopped being the complete answer to "who can do what
+  here". The reason it can't live in `RolesGuard` is the same one the
+  `socket-ticket` note gives — the decision depends on the request's BODY
+  (`dto.role`) and on its TARGET (`dto.userId`), which the guard doesn't
+  see — so the rule is a pure function in
+  `domain/iam/tetos-de-rebaixamento.ts` applied by
+  `AddProjectMemberUseCase`, in the FORM of the absolute caps in
+  `domain/actions/decide.ts` ([RN-418](business-rules.md#rn-418)): no
+  configuration key, nothing that can enable them. The `owner` being
+  protected is `workspace_members.role`, never `workspaces.created_by`.
+  What the caps do NOT cover is written down in the ADR and in the RN, and
+  the shortest one to know here is that `DELETE
+  /projects/:projectId/members/:userId` gained NO cap: removing your own row
+  drops you to your workspace role, which is benign when that role catches
+  the fall and an irreversible self-downgrade when it doesn't.
 - **`jwt` with no role doesn't mean without authorization.** On
   `/users/me/*` the scope is the user themselves; on `GET /workspaces`
   the listing is already filtered by the caller's membership.
