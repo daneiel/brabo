@@ -12483,7 +12483,7 @@ export interface operations {
                     "application/json": components["schemas"]["ExecucaoAtivadaResponseDto"];
                 };
             };
-            /** @description No current `module_map` (the Architect has to define the modules first), or the project's stored workspace location is incoherent — the `permissions.json` seeded here cannot be derived from it (RN-478). */
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12511,7 +12511,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The origin session is `consultiva` and refuses `execution.activated` (RN-097). Activating twice is NOT a conflict: it is idempotent by `findActiveExecutionSession`, and reactivates inside the same session. */
+            /** @description No current module_map, or execution already active. */
             409: {
                 headers: {
                     [name: string]: unknown;
