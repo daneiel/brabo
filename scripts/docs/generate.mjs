@@ -220,6 +220,21 @@ function gerarEnv() {
     ['engine', [...arquivos('apps/engine/lib/**/*.ex'), ...arquivos('apps/engine/config/*.exs')],
       /System\.(?:get_env|fetch_env!?)\("([A-Z_0-9]{3,})"/g],
     ['web', arquivos('apps/web/src/**/*.ts*'), /import\.meta\.env\.(VITE_[A-Z_0-9]+)/g],
+    // O broker (ADR 0130) entra porque é SERVIÇO da instalação: o que ele lê
+    // do ambiente é configuração de quem opera, igual à da api e à do engine.
+    // `apps/runner` continua de FORA de propósito — ele roda na máquina do
+    // usuário e é configurado por flag e por arquivo na pasta do projeto, não
+    // pelo `.env` do deploy.
+    // DOIS globs, e não um: o `**/` do pathspec do git exige PELO MENOS um
+    // nível de diretório, então `apps/broker/src/**/*.ts` devolve VAZIO
+    // enquanto todos os arquivos do broker moram direto em `src/`. (O mesmo
+    // vale para a api, onde os 6 arquivos de `src/` também escapam do glob
+    // acima — pré-existente, não mexido aqui.) Um inventário que nasce vazio
+    // não avisa: ele passa verde.
+    ['broker',
+      [...arquivos('apps/broker/src/*.ts'), ...arquivos('apps/broker/src/**/*.ts')]
+        .filter((f) => !f.includes('.spec.')),
+      /env\.([A-Z_0-9]{3,})/g],
   ];
 
   // Sem `semBlocoGerado` o check se auto-satisfaz: a variável nova entra no

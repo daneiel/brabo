@@ -264,6 +264,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-containers-controller-container-spec",
+          label: "What the broker needs to compose the container spec itself",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-projects-controller-git-remote",
           label: "The project's working remote, to fetch and push",
           className: "api-method get",

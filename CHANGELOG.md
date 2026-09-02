@@ -128,6 +128,43 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   quais **pesos** apareceram na janela, para que a mistura fique visível quando
   a calibração começar (RN-479/480,
   [ADR 0129](docs/adr/0129-telemetria-de-busca-do-rag-como-tabela.md))
+- **broker,api,docker**: nasce o **broker de container** (`apps/broker`) — o
+  único processo do produto que fala com um daemon Docker no servidor, e a api
+  continua sem receber o socket. O que o torna não-arbitrário não é allowlist
+  nenhum, é a FORMA da entrada: ele recebe um `projectId` e uma das cinco
+  operações da porta (`start`/`stop`/`remove`/`inspect`/`exec`), vai à api LER a
+  decisão do Arquiteto (`GET /internal/projects/:projectId/container-spec`) e
+  **compõe** imagem, rede, recursos e o único mount ele mesmo. Não existe campo
+  em que se escreva `privileged`, `cap_add`, `network: host` ou um `-v` livre —
+  porque não existe campo, e se a especificação viajasse no corpo a contenção de
+  um processo root-equivalente no host dependeria de o CHAMADOR estar correto.
+  Ele revalida o que a api devolveu, e as duas validações não são a mesma
+  regra em dois lugares: a da api pergunta se a decisão de arquitetura é
+  revisável, a daqui é o parse de um JSON não confiável para dentro do tipo
+  fechado — com uma checagem que só existe deste lado, referência de imagem que
+  começa com `-`, porque `execFile` sem shell resolve injeção de COMANDO e não
+  de ARGUMENTO. A api não manda **caminho nenhum**: o `-v` é resolvido pelo
+  DAEMON contra o filesystem do HOST, e um caminho de dentro do container da api
+  faria ele montar uma pasta VAZIA — o broker compõe com
+  `PROJECT_WORKSPACES_HOST_ROOT`, configuração dele, e recusa `start` nomeando a
+  variável quando ela falta, em vez de adivinhar. Contido por cinco camadas
+  independentes: sem porta publicada, rede `internal: true` que só a api alcança,
+  token de serviço em tempo constante, cinco operações, e a spec computada. Sobe
+  sob `profiles: ["container-broker"]` nos dois composes e portanto **não sobe
+  por padrão** (RN-485, ADR 0130)
+- **api**: a rota de ciclo de vida do container passa a devolver o estado
+  **observado** ao lado do **registrado**, e os dois nunca se fundem. Antes a
+  tabela não tinha como mentir — `container_id` era sempre `NULL`; agora tem, e
+  a leitura diz isso: container morto por fora aparece como registrado `running`
+  e observado `exited`. `observado: null` sozinho não é resposta, porque
+  significa duas coisas: a observação ACONTECEU e voltou vazia ("olhei e não há
+  container"), ou não deu para olhar — e aí `naoObservado` diz qual dos três
+  motivos foi (`broker-nao-configurado`, `broker-sem-resposta`,
+  `broker-recusou`), cada um com um conserto diferente. Herdar o registrado
+  nesses casos é exatamente o que a RN-468 proíbe. Nenhuma recusa do broker
+  derruba a leitura do registrado, que é informação legítima por si só
+  (RN-486, ADR 0130)
+
 - **web**: a seção **Modelos por agente** ganha uma barra que aplica **um
   modelo a todos os agentes de uma vez**. Escolher o mesmo modelo para os 17
   era percorrer 17 dropdowns, e o custo disso não é o tempo — é que ninguém
@@ -1694,6 +1731,31 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   testes) passa com ZERO arquivo de teste editado, incluindo
   `ProficiencySection.test.tsx`, o único que renderiza as 17 seções de uma
   vez. Fecha a linha de dívida nas DUAS metades
+
+### Mudanças internas
+
+- **runner,broker**: a porta de Docker do ADR 0128 **muda de casa** —
+  `docker-port.ts` e `docker-cli.ts` (com os dois `.spec.ts`) saem de
+  `apps/runner/src/` para o pacote de workspace `packages/docker-port`,
+  consumido pelos dois lados. É o que o próprio ADR 0128 já escrevia que
+  aconteceria, e o motivo está lá: *"um segundo arquivo com as mesmas cinco
+  operações e uma sexta 'só no broker' é o começo do fim da contenção"*.
+  `packages/shared` foi recusado pelo invariante que ele declara e um teste da
+  api mantém honesto — ele é 100% tipo, e a imagem de produção da api morre no
+  boot com `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING` se algo de runtime
+  sobreviver ao `tsc`. O pacote novo não tem passo de build e é EMPACOTADO pelos
+  dois consumidores (`tsup`, `bun build --compile`), o que também explica por que
+  a api não pode consumi-lo e por que `validarDecisaoDeImagem` **não** se move.
+  O binário standalone sobreviveu ao movimento, medido: `build`, `build:bin`,
+  `smoke` e `smoke:bin` verdes, bundle do Bun de 79 para 83 módulos,
+  `npm pack --dry-run` inalterado (ADR 0130)
+- **runner,broker**: `pidsLimit` entra na `EspecificacaoDeContainer` e vira
+  `--pids-limit` ao lado de `--cap-drop ALL`. O artefato do Arquiteto sempre
+  carregou três números, e descartar o terceiro faria ele prometer um teto de
+  processos que o container não recebe — o "artefato que promete mais do que o
+  container recebe mente para quem o audita" que o próprio domínio da api nomeia.
+  Acrescentar campo à porta merece nota porque a régua deste desenho é não
+  acrescentar parâmetro; a régua vale para o que AFROUXA, e este aperta (ADR 0130)
 
 ## v3.1.0 — 2026-08-13
 

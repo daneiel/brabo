@@ -381,6 +381,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/projects/{projectId}/container-spec": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the broker needs to compose the container spec itself
+         * @description Project identity, execution mode and the Architect's current image decision. The broker revalidates all of it before handing anything to the daemon — reading from here is not the same as trusting it, and the refusal names the field. No path is returned: the bind source is resolved by the daemon against the HOST filesystem, and a path from inside the api container would silently mount an empty folder.
+         */
+        get: operations["InternalContainersController_containerSpec"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/projects/{projectId}/git-remote": {
         parameters: {
             query?: never;
@@ -1611,7 +1631,7 @@ export interface paths {
         };
         /**
          * Lifecycle of the project's container (recorded state)
-         * @description `null` when the project was never provisioned — the common case today, because no real orchestrator transitions this table yet (RN-243/RN-267). The returned state is what was RECORDED, never confirmed against a Docker daemon: the product has no Docker client.
+         * @description `null` when the project was never provisioned — the common case today, because no real orchestrator transitions this table yet (RN-243/RN-267). `status`/`imageVersion`/`resources` are what was RECORDED; `observado` is what the Docker daemon reports right now, asked through the broker (ADR 0130). The two are never fused: a container killed from the outside reads as recorded `running` and observed `exited`. When there was no way to look, `observado` is `null` and `naoObservado` says why — it never inherits the recorded state (RN-468).
          */
         get: operations["ContainersController_cicloDeVida"];
         put?: never;
@@ -4329,6 +4349,19 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             statusChangedAt: string;
+            /** @description What the Docker daemon reports RIGHT NOW, asked through the broker (ADR 0130) — never fused with the fields above, which are what was RECORDED. A container killed from the outside shows up as recorded `running` and observed `exited`, and that is the point. `null` means either "there is no container" or "I could not look" — read `naoObservado` to tell them apart. */
+            observado: components["schemas"]["ObservacaoDeContainerResponseDto"] | null;
+            /**
+             * @description `null` when the observation actually HAPPENED — including when it came back empty, which is the positive statement "I looked and there is no container". Filled in when there was no way to look, saying why. Inheriting the recorded state here is exactly what RN-468 forbids.
+             * @example broker-nao-configurado
+             * @enum {string|null}
+             */
+            naoObservado: "broker-nao-configurado" | "broker-sem-resposta" | "broker-recusou" | null;
+            /**
+             * @description The broker's own message, when there was one.
+             * @example null
+             */
+            detalheDaObservacao: Record<string, never> | null;
         };
         ClaimTaskInternalDto: {
             /**
@@ -4627,6 +4660,32 @@ export interface components {
              * @example true
              */
             changed: boolean;
+        };
+        ContainerSpecInternalResponseDto: {
+            /** @example f52be111-0000-4000-8000-000000000000 */
+            projectId: string;
+            /** @example exp002 */
+            projectSlug: string;
+            /** @example aaaaaaaa-0000-4000-8000-000000000000 */
+            workspaceId: string;
+            /**
+             * @description Folder name FROZEN at project creation (RN-109). It is the single source of the container name (`brabo-<workspaceDirName>`), and the broker joins it with its OWN host root to get the bind source — the api never sends a path, because a path from inside the api container is not a path the Docker daemon can resolve.
+             * @example exp002-f52be111
+             */
+            workspaceDirName: string;
+            /**
+             * @description Where the code lives. The broker refuses `mounted`/`runner`: that folder is on the user's machine and this host cannot see it — there, the runner is what brings a container up.
+             * @example container
+             * @enum {string}
+             */
+            executionMode: "container" | "mounted" | "runner";
+            /** @description `null` while the Architect has not decided (RN-105) — `start` is then refused with 409 on the broker side, and the other four operations still work. */
+            imagem: components["schemas"]["ImagemParaOBrokerResponseDto"] | null;
+            /**
+             * @description Version of the current artifact; 0 when there is no decision. It ends up on the container as the `brabo.image.version` label.
+             * @example 3
+             */
+            imagemVersao: number;
         };
         ConvertExecutionModeDto: {
             /**
@@ -5508,6 +5567,19 @@ export interface components {
             /** @example 1 */
             version: number;
         };
+        ImagemParaOBrokerResponseDto: {
+            /**
+             * @description OCI reference with an explicit tag or digest.
+             * @example node:22-bookworm-slim
+             */
+            image: string;
+            /**
+             * @example none
+             * @enum {string}
+             */
+            network: "none" | "egress";
+            resources: components["schemas"]["RecursosDoContainerResponseDto"];
+        };
         IndexDocsReportResponseDto: {
             filesScanned: number;
             docsChunks: number;
@@ -6111,6 +6183,25 @@ export interface components {
             chamadas: number;
             porSessao: components["schemas"]["SpendLinhaResponseDto"][];
             porDia: components["schemas"]["SpendPorDiaResponseDto"][];
+        };
+        ObservacaoDeContainerResponseDto: {
+            /** @example c0ffeebabe... */
+            containerId: string;
+            /** @example brabo-exp002-f52be111 */
+            nome: string;
+            /**
+             * @description The daemon's own state, with no translation and no collapse.
+             * @example running
+             * @enum {string}
+             */
+            estado: "created" | "running" | "paused" | "restarting" | "removing" | "exited" | "dead";
+            /** @example node:22-bookworm-slim */
+            imagem: string;
+            /**
+             * Format: date-time
+             * @description `null` when the container has never started.
+             */
+            iniciadoEm: Record<string, never> | null;
         };
         OkResponseDto: {
             /**
@@ -8992,6 +9083,41 @@ export interface operations {
             };
             /** @description Service token missing or different from the shared one. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalContainersController_containerSpec: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContainerSpecInternalResponseDto"];
+                };
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

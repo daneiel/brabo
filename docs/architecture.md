@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 128 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 129 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -43,12 +43,14 @@ graph TB
     W["web<br/>nginx serves the SPA"]
     A["api · NestJS 11<br/>domain, RBAC, approval, metering"]
     E["engine · Elixir/OTP<br/>agents, harness, gates"]
+    K["broker · Node/TS<br/>the only one that talks to Docker<br/>(off by default, ADR 0130)"]
   end
 
   subgraph externo[" "]
     P[("PostgreSQL 16<br/>state + event log + queue")]
     L["LLM<br/>Ollama · Anthropic · OpenAI"]
     G["GitHub / GitLab<br/>or local repo"]
+    D["Docker daemon<br/>on the host"]
   end
 
   B -->|"HTTPS"| W
@@ -56,6 +58,9 @@ graph TB
   B -->|"WebSocket (channels)"| E
   A -->|"SQL"| P
   A -->|"internal HTTP<br/>sync command"| E
+  A -->|"internal HTTP<br/>five operations"| K
+  K -->|"reads the Architect's decision"| A
+  K -->|"docker CLI over the socket"| D
   A -->|"LLM turn"| L
   A -->|"git"| G
   E -->|"Ecto + Oban"| P
@@ -134,6 +139,22 @@ top, so a call written between imports would run too late).
 
 **Entrypoint:** `lib/engine/application.ex` — the whole supervision tree is
 there, and it's the best file to understand what's running.
+
+### `apps/broker` — Node/TS, 8 files
+
+The only process in the product with access to a Docker daemon
+([ADR 0130](adr/0130-broker-de-container.md)), and the smallest service here:
+no framework, `node:http`, six routes.
+
+| file | what it is |
+|---|---|
+| `src/operacoes.ts` | the FIVE operations, and the composition of the spec. Nothing that becomes a `docker run` comes from outside |
+| `src/servidor.ts` | the closed route list, the token check, and the failure table (status + `origem`) |
+| `src/api-client.ts` | how it READS the Architect's decision from the api — the call that makes it not accept a spec |
+| `src/config.ts` | four env variables, and the refusal to boot in production with the repository's public token |
+
+**Entrypoint:** `src/index.ts`. Docker access itself is not here: it comes from
+`packages/docker-port`, the same file the runner uses.
 
 ### `apps/web` — React 19, 70 files
 
@@ -248,6 +269,7 @@ that only resolves when the Architect acts.
 | directory | what it is |
 |---|---|
 | `packages/shared/` | the `GitProviderContract` — fifteen operations, **types and nothing else**: a value that survives `tsc` breaks the api's boot (locked by a test), so the constant lives in the consumer |
+| `packages/docker-port/` | the Docker PORT (five operations) and its CLI adapter, shared by `apps/runner` and `apps/broker` — [ADR 0130](adr/0130-broker-de-container.md). It is runtime code, which is exactly why it is NOT in `packages/shared`; it has no build step and both consumers BUNDLE it, so no image ever resolves it from `node_modules` |
 | `docker/` | dev and production images; `smoke.sh` |
 | `deploy/k8s/` | Kustomize base + overlays (local, staging, prod) |
 | `design/` | design system: tokens, typography, components |

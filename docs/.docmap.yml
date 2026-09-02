@@ -284,6 +284,22 @@ rules:
     severity: block
     note: "Vars do ambiente de inferência (ADR 0020) vivem no runbook."
 
+  # O broker (ADR 0130) é o único processo do produto com acesso a um daemon
+  # Docker. Operação nova, campo novo na especificação ou mudança na composição
+  # alteram o contrato api ↔ broker E o que fazer quando ele recusa — as duas
+  # docs abaixo são as que dizem isso. `warn` e não `block` porque a superfície
+  # é pequena e fechada: uma sexta operação é decisão de produto com ADR, e é o
+  # `adr-trigger` que a cobra.
+  - id: broker-de-container
+    watch:
+      - "apps/broker/**"
+      - "packages/docker-port/**"
+    docs:
+      - "docs/reference/internal-api.md"
+      - "docs/runbook.md"
+    severity: warn
+    note: "Cinco operações, e a especificação é COMPUTADA — mudar isso muda o contrato e o runbook."
+
   - id: deploy-e-runbook
     watch:
       - "deploy/k8s/**"

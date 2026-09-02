@@ -1,0 +1,24 @@
+{
+  // Mesmo desenho de `apps/runner/tsconfig.json` e de
+  // `packages/docker-port/tsconfig.json`: o Node executa os `.ts` deste pacote
+  // por type stripping (que APAGA os tipos, não os verifica), e este
+  // `tsc --noEmit` é o único lugar que os verifica. A imagem NÃO roda assim —
+  // ela roda o bundle do `tsup` (ver `tsup.config.ts` e
+  // `docker/broker/Dockerfile.prod`), e o porquê está no docblock de
+  // `packages/docker-port/src/docker-port.ts`.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"]
+}

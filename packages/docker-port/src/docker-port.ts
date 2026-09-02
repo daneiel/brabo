@@ -47,7 +47,13 @@
  *
  * ## Onde este arquivo MORA, e por que aqui
  *
- * `apps/runner/src/` porque o runner é o ÚNICO consumidor que existe hoje.
+ * `packages/docker-port/src/`, desde que o broker nasceu (ADR 0130). Ele
+ * COMEÇOU em `apps/runner/src/` — o runner era o único consumidor — e o ADR
+ * 0128 já escrevia que ele MOVERIA, não seria copiado, quando o segundo
+ * consumidor aparecesse. O motivo está uma seção acima: um segundo arquivo com
+ * as mesmas cinco operações e uma sexta "só no broker" é o começo do fim da
+ * contenção.
+ *
  * `packages/shared` foi considerado e recusado por um invariante que o próprio
  * pacote declara e um teste da api mantém honesto
  * (`packages-shared-so-tipos.spec.ts`): ele é 100% TIPO, nada ali pode
@@ -56,10 +62,13 @@
  * criaria duas fontes para uma coisa só, que é o defeito que a porta existe
  * para evitar.
  *
- * Quando `apps/broker` nascer (PR 1.2), este arquivo MOVE para um pacote de
- * workspace — ele não é COPIADO. Está escrito aqui porque é a única salvaguarda
- * possível: um segundo arquivo com as mesmas cinco operações e uma sexta
- * "só no broker" é o começo do fim da contenção acima.
+ * O pacote novo NÃO tem passo de build, e isso é o que o mantém consumível: os
+ * dois consumidores o EMPACOTAM (o runner por `tsup`/`bun build --compile`, o
+ * broker por `tsup`), nenhum dos dois o resolve de `node_modules` em runtime
+ * dentro de uma imagem. É por isso que a api não o consome — ela resolveria
+ * (`pnpm deploy` copia o pacote de verdade, sem symlink) e morreria no boot com
+ * `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`, o mesmo erro que o teste do
+ * `packages/shared` existe para prevenir.
  */
 
 import { resolve } from 'node:path';
@@ -247,6 +256,19 @@ export interface EspecificacaoDeContainer {
   readonly raizDoProjeto: RaizDeProjeto;
   readonly cpus: number;
   readonly memoriaMb: number;
+  /**
+   * Teto de processos (`--pids-limit`) — o que contém fork bomb sem depender de
+   * allowlist de comando, e o terceiro número que a decisão do Arquiteto já
+   * declara (`RecursosDoContainer.pidsLimit`, do lado da api).
+   *
+   * Entrou no ADR 0130, quando o broker passou a LER aquele artefato: sem o
+   * campo, o artefato prometia um teto de processos que o container não
+   * recebia — exatamente o "artefato que promete mais do que o container
+   * recebe mente para quem o audita" que o domínio da api já nomeia. É um
+   * campo de CONTENÇÃO, não de flexibilidade; a régua de "não acrescente
+   * parâmetro" vale para o que AFROUXA.
+   */
+  readonly pidsLimit: number;
 }
 
 export interface ContainerIniciado {

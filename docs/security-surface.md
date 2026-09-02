@@ -209,6 +209,26 @@ reason in the URL.
   (`caminhoDeWorkspaceLocalValido`) — system root and overlap with the
   Brabo checkout remain forbidden even coming from the runner. `400` if the
   project isn't in `runner` mode.
+- **`GET /internal/projects/:projectId/container-spec`** ([ADR 0130](adr/0130-broker-de-container.md),
+  [RN-485](business-rules.md#rn-485)) is the only `engine-service` route whose
+  caller is NOT the engine — it is the container **broker**, the single process
+  in the product with access to a Docker daemon. The classification names the
+  MECHANISM (`BRABO_SERVICE_TOKEN` in its own header, compared in constant
+  time), not the sender, and the secret is deliberately the same one: the three
+  services run in the same cluster and read the same Secret, so a second secret
+  would give the impression of compartmentalising without compartmentalising
+  anything (the full reasoning is in `service-token.ts`). What makes the route
+  worth its existence is the direction of the call: the broker does not RECEIVE
+  a container spec, it comes here to READ project identity, execution mode and
+  the Architect's current image decision, and composes the spec itself. A spec
+  travelling in a request body would make the containment of a root-equivalent
+  process depend on its caller being correct. It returns **no path at all** —
+  the bind source is resolved by the daemon against the HOST filesystem, so a
+  path from inside the api container would silently mount an empty folder; the
+  broker joins `workspaceDirName` with its own `PROJECT_WORKSPACES_HOST_ROOT`,
+  and refuses `start` when that is not configured. It also drops `rationale`,
+  which exists so a human can review the decision and has no consumer in a
+  `docker run`.
 - **`POST /projects/:projectId/runner-ticket` is classified `role:developer`
   like any other route, but does NOT accept a session JWT** (ADR 0105,
   RN-424) — only a Personal Access Token (`brb_…`) OR a runner device key
@@ -499,6 +519,7 @@ reason in the URL.
 | GET | `/internal/projects/:projectId/backlog` | engine-service |
 | GET | `/internal/projects/:projectId/product-metrics` | engine-service |
 | POST | `/internal/projects/:projectId/workspace-verification` | engine-service |
+| GET | `/internal/projects/:projectId/container-spec` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
