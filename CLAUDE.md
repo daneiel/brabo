@@ -62,7 +62,9 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Cascata de modelo como cadeia visível | A coluna Origem para de imprimir o enum do banco e vira `workspace › projeto › área › agente` com quatro estados por nó (`settings/cascata.tsx`) — separando os DOIS sentidos de `origin: 'agent'` sem tocar na api. O aviso de nível descartado entra na cadeia; os três `—` ganham três textos. Fecha o canvas de melhorias de UI (7 de 7 itens tomados) | RN-470 |
 | Pasta antes do runner | A configuração do runner pelo navegador (ADR 0118) inverte a ordem: `showDirectoryPicker` é o PRIMEIRO passo e o binário o ÚLTIMO, best-effort — a release sem asset devolvia 502 antes do seletor abrir, e a pasta ficava inalcançável. Falha do binário mantém os dois arquivos gravados e troca a instrução pelo caminho `npm install -g @brabo/runner`. Depois da instrução, `EsperaDoRunner` sonda `workspaceVerifiedAt` com três estados e teto | RN-473/474 |
 | O `kid` na chave de dispositivo | O modo automático do ADR 0118 NUNCA autenticou: o navegador descartava o `id` que o registro devolvia, e a JWK gravada nascia sem `kid` — o CLI a recusava sempre. Registro e exportação viram UMA função (`registrarChaveEExportarPrivada`), nos DOIS caminhos; e a recusa do CLI deixa de ser indistinguível de "não há chave". O teste que deixou passar afirmava que o arquivo fora ABERTO, nunca o conteúdo | RN-475 |
-| Tetos de rebaixamento em `project_members` | A sobreposição `projectRole ?? workspaceRole` FICA nos dois sentidos (é capacidade, não bug); o que entra são dois tetos de 403 no caso de uso — ninguém rebaixa o `owner` do workspace, ninguém rebaixa a si mesmo. As três descrições de OpenAPI que a RN-471 declarou falsas passam a descrever o código; o gate do `Select` é PR à parte, por a tela não ter como calcular o primeiro teto | ADR 0127, RN-472 |
+| Provisionamento que não fica calado | Duas falhas não viravam estado nenhum — `step.check` fora do `try` e a recusa de `createRepo` ANTES de a linha de bootstrap existir —, e a tela pollava "Iniciando…" para sempre sem botão. Causa raiz de tudo: `/data/git-repos` e `/data/project-workspaces` nasciam `root` nas imagens de DEV, que o `Dockerfile.prod` já sabia criar antes do `USER` | RN-477 |
+| Aviso do passo humano antes do clique | O passo de terminal do runner era anunciado só no estado de sucesso; passa a ser dito também no inicial, e o comando final ganha `cd <caminho>` quando dá para afirmar que a pasta escolhida é a do projeto. Rótulo do botão NÃO muda — ele fala da pasta, que é automática mesmo | RN-473/477 |
+| Um modelo para todos os agentes | A tabela `Modelos por agente` ganha uma barra que aplica UM modelo aos 17 de uma vez, gravando no nível do AGENTE (pelo projeto seria `maintainer`, e mexeria no default de sessão). Primeira EXCEÇÃO à régua "valor nomeado salva no `onChange`" da RN-469 — o seletor é argumento de ação, não configuração —, com o desfecho em três estados da própria RN-469 | RN-476 |
 
 ## Estado atual e aberto
 
@@ -277,6 +279,19 @@ daqui e o fechamento vai para o histórico.
   do OAuth nasceu em bugfix/, e um patch diz "atualize sem pensar".
   Versão não se corrige à mão depois: o valor de ela ser calculada vem de
   não ser negociada caso a caso.
+- Volume nomeado do Docker nasce com o dono do caminho que existir NA IMAGEM;
+  quando o caminho NÃO existe, ele nasce `root` e o processo non-root fica de
+  fora. Por isso `/data/git-repos` e `/data/project-workspaces` são criados e
+  `chown`-ados ANTES do `USER` nos QUATRO Dockerfiles — os dois de produção e
+  os dois de dev (`docker/api/Dockerfile`, `docker/engine/Dockerfile`). Só a
+  produção fazia isso, e o preço foi medido: em dev, `git init --bare` do
+  `LocalGitProvider` morria com `permissão negada: /data/git-repos/<slug>.git`
+  e o `permissions.json` de cada projeto não tinha onde ser escrito — ou seja,
+  provisionar repositório era impossível na máquina de quem desenvolve o
+  produto. Ao acrescentar volume nomeado novo, crie o diretório na imagem;
+  esquecer não dá erro de build, dá 403 em runtime. Volume JÁ criado continua
+  com o dono antigo: a correção vale para volume novo, e destravar um ambiente
+  existente exige `docker volume rm` (ou um `chown` pontual como root).
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   únicas exceções de push: tags (bot de release) e .release/gate.json
   (bot do gate).
@@ -502,7 +517,16 @@ daqui e o fechamento vai para o histórico.
   seção deve a contagem do que está pendente, senão "Salvar" diz o mesmo com
   uma linha suja e com cinco. E a régua de quando o botão existe é o CONTROLE,
   não a seção: campo DIGITADO precisa de confirmação, escolha de valor NOMEADO
-  salva no `onChange` — não converta as seções de autosave.
+  salva no `onChange` — não converta as seções de autosave. O que essa régua
+  mede é de QUEM é o valor, e há UMA exceção, declarada (RN-476): o seletor que
+  aplica um modelo a TODOS os agentes tem botão, porque o valor dele não é
+  configuração de nada — é o ARGUMENTO de uma ação sobre 17 linhas que a pessoa
+  não estava editando, e no `onChange` um clique exploratório num dropdown as
+  reescreveria. Ela grava no nível do AGENTE de propósito: pelo projeto os 17
+  herdariam, mas o endpoint de projeto pede `maintainer` onde o de agente pede
+  `developer`, e o binding de projeto é também o default de SESSÃO, que a RN-040
+  deixa livre. O preço — as 17 linhas divergem, com origem `agent` — é
+  declarado, não escondido.
 - Tela NUNCA repete o enum do banco como se fosse resposta, e não colapsa
   dois estados por eles compartilharem um valor (RN-470). `origin: 'agent'`
   da cascata de modelo quer dizer DUAS coisas — o agente tem binding próprio,

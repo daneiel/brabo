@@ -4,7 +4,73 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Correções
+
+- **docker**: as imagens de DESENVOLVIMENTO passam a criar `/data/git-repos` e
+  `/data/project-workspaces` com o dono certo **antes** do `USER`. Sem isso o
+  volume nomeado nascia `root:root` (o Docker copia dono e conteúdo do caminho
+  que existir NA IMAGEM; quando não existe, ele nasce root) e os containers de
+  `api` e `engine`, que rodam como uid 1000, não conseguiam escrever em
+  nenhum dos dois. O efeito era o provisionamento de repositório `local`
+  falhando com `permissão negada: /data/git-repos/<slug>.git` — e o
+  `permissions.json` de cada projeto sem onde ser gravado. O `Dockerfile.prod`
+  já fazia exatamente isto, **com o comentário que explica o mecanismo**, desde
+  que o modo produção existe: a lição estava aprendida e nunca tinha
+  atravessado para o desenvolvimento, que é justamente onde alguém provisiona
+  um repositório pela primeira vez. Volume já criado continua `root` — a
+  correção vale para volume novo
+- **api,web**: provisionamento que falha **diz que falhou**, e a espera por ele
+  tem teto. Havia dois caminhos em que a falha não virava estado nenhum:
+  `step.check()` ficava fora de todo `try/catch` no `BootstrapRunner` e faz IO
+  de rede (um 401, um 403 ou um timeout subiam deixando a linha `pending` com
+  `lastError` nulo); e a recusa em `createRepo` acontece **antes de a linha
+  existir**, porque `repo_bootstraps` só nasce depois de o provider confirmar o
+  repositório. Nos dois casos o endpoint devolvia `{status: null}` e a tela
+  mostrava "Iniciando provisionamento…" pollando de segundo em segundo **para
+  sempre, sem botão nenhum**. Agora: a falha de etapa vira `failed` +
+  `lastError` num lugar só e emite `bootstrap.step_failed`; a falha de criação
+  é lida da `proposed_action` que falhou, com `failedStep` **nulo** (nenhum
+  passo do Gitflow foi tentado, e nomear um seria inventar); o `.catch(() => {})`
+  de corpo vazio da tela — cujo comentário afirmava que a falha apareceria pelo
+  status, o que era falso nos dois casos — passa a mostrar a mensagem da api; o
+  "Tentar novamente" deixa de depender de um status de falha que nunca chegava;
+  a espera para em 3 minutos declarando que isso **não** prova fracasso; e o
+  card do dashboard volta a levar de volta à tela (RN-477)
+- **web**: o passo de terminal do onboarding do runner é anunciado **antes** do
+  clique, não só depois. A frase existia, mas só era renderizada no estado de
+  sucesso — depois de escolher a pasta, esperar o registro da chave e o
+  download do binário. Quem clica em "Configurar pasta automaticamente" e só
+  então descobre que ainda precisa abrir um terminal foi surpreendido, mesmo
+  sem nenhuma frase ter mentido. O rótulo do botão **não** mudou: ele fala da
+  PASTA, que é de fato configurada automaticamente. E o comando final passa a
+  dizer **em que pasta rodar** — `cd <caminho> && …` — usando o
+  `workspace_path` do projeto quando o basename dele bate com a pasta
+  escolhida; quando não bate, sai sem prefixo, porque um `cd` para o lugar
+  errado seria a tela afirmando o que não sabe (RN-473, RN-477)
+
 ### Novidades
+
+- **web**: a seção **Modelos por agente** ganha uma barra que aplica **um
+  modelo a todos os agentes de uma vez**. Escolher o mesmo modelo para os 17
+  era percorrer 17 dropdowns, e o custo disso não é o tempo — é que ninguém
+  confere 17 linhas e a tela não tinha como dizer se sobrou uma para trás. A
+  ação grava no nível do **agente**, e não no do projeto: gravar no projeto e
+  apagar o resto faria os 17 herdarem — o idioma da própria cascata —, mas
+  exigiria `maintainer`, quando trocar linha a linha exige só `developer`, e
+  mudaria também o default de **sessão**, que é livre de propósito. O preço da
+  escolha está declarado: as 17 linhas passam a divergir, com origem `agent`.
+  Há **botão**, apesar de o valor ser nomeado: o seletor da barra não é
+  configuração de nada, é o argumento de uma ação sobre linhas que a pessoa não
+  estava editando, e aplicar no `onChange` faria um clique exploratório
+  reescrever as 17. E o desfecho segue inteiro a régua da RN-469 — uma chamada
+  por agente, em série, na ordem da tela, **sem abortar na primeira recusa**,
+  com os três estados que não se disfarçam: todas passaram, **nenhuma** passou
+  (a mensagem da api, nunca uma contagem) e **algumas** passaram (quantas de
+  quantas, nomeando as que ficaram pelo nome do agente). Só as linhas que a api
+  confirmou são relidas — invalidar as 17 apagaria da tela justamente a
+  diferença que o aviso acabou de contar. O botão fica inerte abaixo de
+  `developer`, que é o mínimo do endpoint que ele chama, e o motivo continua
+  dito uma vez em texto na legenda (RN-476)
 
 - **web**: configurar o runner local pelo navegador passa a começar pela
   **pasta**. A ordem era `chave → registro → binário → pasta`, e o download do

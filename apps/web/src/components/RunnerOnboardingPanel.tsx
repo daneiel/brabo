@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { API_URL } from '../lib/api-client';
+import { useQuery } from '@tanstack/react-query';
+import { API_URL, getProject } from '../lib/api-client';
 import {
   baixarKitManual,
   configurarPastaAutomaticamente,
@@ -31,8 +32,13 @@ interface RunnerOnboardingPanelProps {
   className?: string;
   /**
    * Caminho já digitado pelo usuário (só o `NewProjectWizard` passa isto,
-   * antes de o runner confirmar nada) — usado só para deixar o comando
-   * manual mais fiel ao que a pessoa já escreveu.
+   * antes de o projeto existir) — deixa o comando manual mais fiel ao que a
+   * pessoa escreveu, e o comando final capaz de dizer em que pasta rodar.
+   *
+   * Quando NÃO vem e há `projectId`, o painel busca o caminho do próprio
+   * projeto (abaixo). É por isso que `TerminalPanel` e `FolderBrowserModal`
+   * não precisam passá-lo: a busca mora num lugar só, e não em cada um dos
+   * três pontos de montagem.
    */
   caminhoSugerido?: string;
 }
@@ -94,6 +100,23 @@ export function RunnerOnboardingPanel({
   caminhoSugerido,
 }: RunnerOnboardingPanelProps) {
   const { t } = useTranslation('terminal');
+
+  /**
+   * O caminho do projeto, quando quem montou o painel não o passou.
+   *
+   * Mesma `queryKey` que as telas de projeto já mantêm — no `TerminalPanel`
+   * (aba Código) ela costuma estar quente, então isto raramente custa uma ida
+   * à rede. `enabled` só quando falta: no `NewProjectWizard` o projeto pode
+   * nem existir ainda, e lá o caminho chega por prop.
+   */
+  const projetoQuery = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => getProject(projectId!),
+    enabled: Boolean(projectId) && caminhoSugerido === undefined,
+  });
+  const caminhoDoProjeto =
+    caminhoSugerido ?? projetoQuery.data?.workspacePath ?? undefined;
+
   const [suportaFS] = useState(() => suportaEscritaDeArquivos());
   const [plataforma, setPlataforma] = useState<RunnerPlatform | null>(null);
   const [detectandoPlataforma, setDetectandoPlataforma] = useState(true);
@@ -124,6 +147,13 @@ export function RunnerOnboardingPanel({
         projectId,
         apiUrl: API_URL,
         platform: plataformaEfetiva,
+        // Só o fluxo AUTOMÁTICO recebe o caminho: nele o navegador grava os
+        // arquivos DENTRO da pasta escolhida, então `cd <caminho>` leva a
+        // pessoa a um lugar onde o comando funciona. O kit manual (abaixo)
+        // NÃO recebe, e não é esquecimento — lá os arquivos caem na pasta de
+        // downloads, e prefixar `cd` mandaria para uma pasta onde eles ainda
+        // não estão.
+        caminhoDoProjeto,
       });
       setCopiado(false);
       setEstado({ fase: 'sucesso', instrucaoFinal, pasta, falhaDoBinario });
@@ -171,7 +201,7 @@ export function RunnerOnboardingPanel({
 
   const comandoManual = t('runnerOnboarding.command', {
     projectId: projectId ?? t('runnerOnboarding.placeholderProjectId'),
-    caminho: caminhoSugerido?.trim() || t('runnerOnboarding.placeholderPath'),
+    caminho: caminhoDoProjeto?.trim() || t('runnerOnboarding.placeholderPath'),
   });
 
   return (
@@ -180,6 +210,24 @@ export function RunnerOnboardingPanel({
       <p className={styles.mensagem}>
         {mensagem || (projectId ? t('runnerOnboarding.defaultMessage') : t('runnerOnboarding.noProjectMessage'))}
       </p>
+
+      {/* O passo humano é anunciado ANTES do clique, não só no fim.
+          `passoHumano` já existia — mas só era renderizado no estado de
+          SUCESSO, depois de a pessoa escolher a pasta e esperar. Quem clica
+          num botão chamado "Configurar pasta automaticamente" e só então
+          descobre que ainda vai ter de abrir um terminal foi surpreendido,
+          mesmo que nenhuma frase tenha mentido. A RN-473 diz que a tela nunca
+          finge que o passo não existe; anunciá-lo no fim é o mais tarde
+          possível para não ser fingimento.
+
+          O texto do sucesso CONTINUA lá: aqui ele avisa que o passo VAI
+          existir, lá ele explica POR QUE existe. São duas perguntas
+          diferentes, feitas em momentos diferentes. */}
+      {projectId && estado.fase === 'idle' && (
+        <p className={styles.avisoPassoHumano}>
+          {t('runnerOnboarding.avisoTerminalAntes')}
+        </p>
+      )}
 
       {projectId && (
         <div className={styles.acoesAutomaticas}>

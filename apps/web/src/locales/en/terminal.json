@@ -46,6 +46,7 @@
     "successIntroSemBinario": "In your terminal, inside the folder you chose, run:",
     "successIntroKit": "After moving both files into the same folder, run this inside it:",
     "passoHumano": "This step is yours: the browser does not run programs on your machine.",
+    "avisoTerminalAntes": "Heads up: this ends in your terminal. The browser prepares the folder, and the last step — one command, ready to copy — you run yourself.",
     "copyButton": "Copy",
     "copiedButton": "Copied!",
     "manualDisclosureSummary": "I'd rather run it manually"

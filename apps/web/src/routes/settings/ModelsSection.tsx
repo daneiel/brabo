@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,6 +20,7 @@ import { roleAtLeast } from '../../lib/roles';
 import type { Model, ModelBindingScope, ResolvedBinding } from '../../lib/api-types';
 import { Table, type TableColumn } from '../../components/ui/Table';
 import { ModelPicker } from '../../components/ModelPicker';
+import { Button } from '../../components/ui/Button';
 import { ClockIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/ToastProvider';
 import { formatarCustoMicros } from './shared';
@@ -32,6 +33,7 @@ import {
   montarCadeia,
 } from './cascata';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
+import { useAplicacaoEmLote } from './aplicar-a-todos';
 
 /**
  * Modelos por agente — a primeira seção do mockup (`design/SCREENS.md`).
@@ -222,6 +224,40 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   function invalidarBindingDoAgente(agentKey: string) {
     queryClient.invalidateQueries({ queryKey: ['agent-binding', projectId, agentKey] });
   }
+
+  /**
+   * Um modelo só para os 19 agentes de uma vez.
+   *
+   * O seletor abaixo NÃO é a configuração de nada — ele é o argumento da ação
+   * ao lado. Por isso guarda o escolhido em estado local (o único estado local
+   * desta seção) e não grava no `onSelect`: ver `aplicar-a-todos.tsx`, que
+   * explica por que a régua de "valor NOMEADO salva no onChange" (RN-469) não
+   * alcança um controle cujo valor reescreve N linhas alheias.
+   *
+   * `filtroDeAgentesPadrao` pelo mesmo motivo do picker da coluna MODELO
+   * VIGENTE, e com mais força: aqui uma escolha chat-only não seria UM 422,
+   * seriam 19 — o relatório parcial contaria a mesma recusa dezenove vezes.
+   */
+  const [modeloEmLote, setModeloEmLote] = useState<Model | undefined>();
+
+  const loteDeAgentes = useAplicacaoEmLote({
+    alvos: AGENT_LIST.map((a) => ({ chave: a.key, nome: a.name })),
+    aplicar: (agentKey) =>
+      setAgentModelBinding(projectId, agentKey, modeloEmLote!.id),
+    // Uma invalidação por agente CONFIRMADO — nunca a chave inteira
+    // `['agent-binding', projectId]`: reler as 19 apagaria da tela a diferença
+    // entre a linha que a api gravou e a que ela recusou, que é justamente o
+    // que o relatório parcial acabou de contar.
+    aoConcluir: (chaves) => {
+      for (const chave of chaves) invalidarBindingDoAgente(chave);
+    },
+    sucessoDeTodos: (total) =>
+      t('modelsSection.bulk.toast.applied', {
+        model: modeloEmLote?.displayName ?? '',
+        count: total,
+      }),
+    erroGenerico: t('modelsSection.bulk.toast.error'),
+  });
 
   /**
    * Escolher o modelo de um agente — o `onSelect` do `ModelPicker` da coluna
@@ -556,6 +592,49 @@ export function ModelsSection({ projectId }: { projectId: string }) {
           {custos === undefined ? '—' : formatarCustoMicros(custoTotalMicros)}
         </span>
       </div>
+
+      {/* Aplicar um modelo aos 19 agentes de uma vez. Fica ACIMA da tabela, e
+          não numa coluna: a ação é sobre a tabela inteira, e uma célula a
+          faria parecer da linha. O `disabled` do botão é o MESMO `podeEditar`
+          dos controles de linha porque é o MESMO endpoint
+          (`PUT .../agent-bindings/:slug`, `developer`) — copiar o gate de
+          `maintainer` da seção irmã de área trancaria quem a api aceita
+          (RN-102). O motivo de estar apagado é dito uma vez, em texto, na
+          legenda acima. */}
+      {modelsByCategory && (
+        // `role="group"` com nome acessível: a barra é UM controle composto
+        // (seletor + botão), e sem o nome o seu picker fica indistinguível dos
+        // 18 pickers de linha que ainda não têm modelo — todos se anunciam
+        // como "Selecionar modelo". O nome é a mesma frase que a pessoa lê.
+        <div
+          role="group"
+          aria-label={t('modelsSection.bulk.label')}
+          className={styles.loteCard}
+        >
+          <span className={styles.loteTexto}>
+            {t('modelsSection.bulk.label')}{' '}
+            <span className={styles.loteDetalhe}>
+              {t('modelsSection.bulk.detail')}
+            </span>
+          </span>
+          <ModelPicker
+            models={modelsByCategory}
+            selectedModelId={modeloEmLote?.id}
+            onSelect={setModeloEmLote}
+            variant="inline"
+            disabled={!podeEditar}
+            filtroDeAgentesPadrao
+          />
+          <Button
+            onClick={() => void loteDeAgentes.aplicarATodos()}
+            disabled={!podeEditar || !modeloEmLote || loteDeAgentes.aplicando}
+          >
+            {loteDeAgentes.aplicando
+              ? t('modelsSection.bulk.applying')
+              : t('modelsSection.bulk.apply', { count: AGENT_LIST.length })}
+          </Button>
+        </div>
+      )}
 
       <Table
         columns={columns}

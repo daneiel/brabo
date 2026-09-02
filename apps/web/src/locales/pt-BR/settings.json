@@ -96,7 +96,7 @@
       "areaExplain": "é o padrão que o lead e os subagentes compartilham (RN-102) — configure em",
       "areaLink": "Modelo por área",
       "below": ", logo abaixo.",
-      "needsDeveloper": " Exige papel developer para trocar o modelo ou voltar a herdar."
+      "needsDeveloper": " Exige papel developer para trocar o modelo, aplicar um a todos os agentes ou voltar a herdar."
     },
     "costCard": {
       "label": "Custo estimado mensal do time",
@@ -124,7 +124,19 @@
     "fallbackNone": "não há nível abaixo",
     "fallbackNoneTitle": "O modelo vigente já vem do último nível da cascata — não existe degrau abaixo dele para onde cair.",
     "noEstimateYet": "sem gasto ainda",
-    "noEstimateTitle": "Este agente não registrou consumo neste projeto nos últimos 30 dias. Diferente de ter gastado zero, que aparece como US$ 0,00."
+    "noEstimateTitle": "Este agente não registrou consumo neste projeto nos últimos 30 dias. Diferente de ter gastado zero, que aparece como US$ 0,00.",
+    "bulk": {
+      "label": "Aplicar um modelo a todos os agentes",
+      "detail": "· sobrescreve o modelo próprio de cada agente, uma chamada por agente",
+      "apply_one": "Aplicar a {{count}} agente",
+      "apply_other": "Aplicar aos {{count}} agentes",
+      "applying": "Aplicando…",
+      "toast": {
+        "applied_one": "{{model}} aplicado a {{count}} agente",
+        "applied_other": "{{model}} aplicado aos {{count}} agentes",
+        "error": "Não foi possível aplicar o modelo aos agentes"
+      }
+    }
   },
   "areaModels": {
     "title": "Modelo por área",

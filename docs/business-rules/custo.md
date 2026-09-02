@@ -18,7 +18,7 @@ keywords: [regras de negócio, custo, orçamento, metering, token]
 A `budget` references a project or a session, never both — guaranteed by
 a `check` in the database, not just in code.
 
-- **Where:** `apps/api/src/db/schema.ts` (`budgets_scope_check`)
+- **Where:** `apps/api/src/db/schema/llm.ts` (`budgets_scope_check`)
 - **Test:** the constraint is the guarantee
 
 ### RN-018 — Budget notification at 70%, 90%, and 100%, without repeating {#rn-018}
@@ -395,7 +395,7 @@ Migration `0031`'s backfill marks everything that already existed as
 `created`, and can be blind about it: adoption didn't exist before it,
 so there's no adopted row to misclassify.
 
-- **Where:** `apps/api/src/db/schema.ts`, `apps/api/src/db/migrations/0031_special_winter_soldier.sql`,
+- **Where:** `apps/api/src/db/schema/git.ts`, `apps/api/src/db/migrations/0031_special_winter_soldier.sql`,
   `apps/api/src/domain/git/repo-bootstrap.entity.ts`
 - **Test:** `test/application/use-cases/git/adopt-repository.use-case.spec.ts`
 - **Origin:** [ADR 0044](../adr/0044-adocao-de-repositorio-existente.md)
@@ -436,7 +436,7 @@ cycle itself produces a real `blocked`.
 
 - **Where:** `apps/engine/lib/engine/dev/dev_agent_server.ex` (`finish_task/2`,
   `resume_state/2`), `apps/api/src/application/use-cases/execution/rearm-dev-agent.use-case.ts`,
-  `apps/api/src/db/schema.ts` (`projects.max_consecutive_blocked`)
+  `apps/api/src/db/schema/iam.ts` (`projects.max_consecutive_blocked`)
 - **Test:** `apps/engine/test/engine/dev/dev_agent_server_test.exs`
   (describe `circuit breaker`), `apps/engine/test/engine/dev/dev_rehydrator_test.exs`
   (describe `the four rehydrated states`), `test/application/use-cases/execution/rearm-dev-agent.use-case.spec.ts`
@@ -656,7 +656,7 @@ to type one, and flagging it already protects that number from the
 first catalog that decides to report a price.
 
 - **Where:** `apps/api/src/application/use-cases/llm/sync-model-catalog.use-case.ts`
-  (`resolverPreco`), `apps/api/src/db/schema.ts:507`
+  (`resolverPreco`), `apps/api/src/db/schema/llm.ts:137`
 - **Test:** `test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts`
   (`manually typed price beats a catalog that REPORTS a price`)
 - **Origin:** [ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
@@ -689,7 +689,7 @@ Three derived rules:
    receives `null` and only checks availability, leaving the gap
    explicit instead of guessing a workspace.
 
-- **Where:** `apps/api/src/db/schema.ts` (`workspace_models`),
+- **Where:** `apps/api/src/db/schema/llm.ts` (`workspace_models`),
   `apps/api/src/application/use-cases/llm/set-models-active.use-case.ts`,
   `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts`
   (`workspaceDoEscopo`)
@@ -2747,7 +2747,7 @@ local. Por isso a tela usa as facetas só como filtro POSITIVO e nunca escreve
 - **Onde:** `apps/api/src/infrastructure/llm/openrouter-provider.ts`
   (`temModalidade`, `parseCatalogoOpenRouter`),
   `apps/api/src/application/use-cases/llm/sync-model-catalog.use-case.ts`,
-  `apps/api/src/db/schema.ts` (`models`)
+  `apps/api/src/db/schema/llm.ts` (`models`)
 - **Teste:**
   `test/infrastructure/llm/openrouter-provider.contract.spec.ts`
   (`modalidade não declarada OMITE o campo em vez de afirmar false`);
@@ -2778,7 +2778,7 @@ A lista de usos **substitui** a anterior, não soma: lista vazia é como se
 desmarca tudo, e é um estado legítimo — "ninguém opinou" não é "não serve".
 
 - **Onde:** `apps/api/src/domain/llm/model-uses.ts`,
-  `apps/api/src/db/schema.ts` (`workspace_models.uses`),
+  `apps/api/src/db/schema/llm.ts` (`workspace_models.uses`),
   `apps/api/src/infrastructure/persistence/drizzle/workspace-model.repository.ts`
   (`setUses`),
   `apps/api/src/application/use-cases/llm/set-model-uses.use-case.ts`

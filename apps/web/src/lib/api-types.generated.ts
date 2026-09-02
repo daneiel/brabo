@@ -1732,8 +1732,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Creates the repository and triggers the Gitflow bootstrap
-         * @description The response comes back as soon as the repository exists; the bootstrap (permanent branches, protections, templates) continues in the background and is IDEMPOTENT AND RESUMABLE. Track it via `GET /projects/:id/git/bootstrap`.
+         * Creates the repository and runs the Gitflow bootstrap
+         * @description SYNCHRONOUS: the response only comes back after the whole bootstrap (permanent branches, protections, templates) has run — there is no worker and no queue behind this. It is IDEMPOTENT AND RESUMABLE, so calling it again after a failure resumes from the step that failed. Track progress and read the failure reason via `GET /projects/:id/git/bootstrap`.
          */
         post: operations["GitController_provision"];
         delete?: never;

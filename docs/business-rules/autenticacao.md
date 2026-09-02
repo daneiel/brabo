@@ -610,7 +610,7 @@ reconnect nativo do `Phoenix.Socket` reusaria o mesmo `params` da construção
 (`reconnectAfterMs` que praticamente nunca dispara) e a reconexão passa a ser
 inteiramente manual, com busca de ticket fresco a cada tentativa.
 
-- **Onde:** `apps/api/src/db/schema.ts` (`sessionSocketTickets`),
+- **Onde:** `apps/api/src/db/schema/sessions.ts` (`sessionSocketTickets`),
   `apps/api/src/domain/sessions/socket-ticket-scope.ts`,
   `apps/api/src/application/use-cases/sessions/create-socket-ticket.use-case.ts`,
   `apps/api/src/interfaces/http/sessions/sessions.controller.ts` (rota
@@ -671,7 +671,7 @@ leitura contra o mesmo banco — é o que garante que RN-075 (escopo de
 terminal) e RN-092 (leitura de código) continuam apontando para a MESMA
 pasta que o engine realmente usa.
 
-- **Onde:** `apps/api/src/db/schema.ts` (`projects.workspaceDirName`),
+- **Onde:** `apps/api/src/db/schema/iam.ts` (`projects.workspaceDirName`),
   `apps/api/src/db/migrations/0042_tough_captain_midlands.sql`,
   `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
   (`workspaceDirNameFor`, `projectScopeRoot`),
@@ -1237,7 +1237,7 @@ Confiar amplamente num agente exigia uma linha por tipo — `terminal`,
 "Auto mode" é o valor especial `actionType: "*"` na MESMA tabela e no MESMO
 endpoint (`PUT /projects/:projectId/agent-autonomy`) — não é mecanismo novo,
 é a coluna existente (`agent_autonomy.action_type`, `text` livre, sem enum
-nem FK — `apps/api/src/db/schema.ts`) aceitando um valor a mais. A curinga
+nem FK — `apps/api/src/db/schema/agents.ts`) aceitando um valor a mais. A curinga
 significa "autonomia pra qualquer tipo de ação DESTE agente" e é resolvida
 em `DrizzleAgentAutonomyRepository.findMode`
 (`apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts`):
@@ -1345,7 +1345,7 @@ sessão). Para ações, é o `seq` do evento `proposed_action.created` correlato
 `action.seq`, que é `bigserial` único e global de toda a tabela
 `proposed_actions`, compartilhado por todas as sessões e projetos do
 sistema, e portanto incomparável com `event.seq` (contraste deliberado, ver
-`apps/api/src/db/schema.ts`). Comparar os dois direto produzia ordem
+`apps/api/src/db/schema/actions.ts`). Comparar os dois direto produzia ordem
 imprevisível toda vez que um `ApprovalCard` entrava na mistura com eventos
 normais. Ações sem esse vínculo (só o bootstrap de Gitflow —
 `git_repo_create`/`git_branch_create`, que gravam apenas outbox) degradam
@@ -1629,7 +1629,7 @@ Duas consequências explícitas do modo `local`:
 CÓDIGO mora em disco, o outro onde o REPOSITÓRIO git vive, e as duas escolhas
 são ortogonais.
 
-- **Onde:** `apps/api/src/db/schema.ts` (`projects`),
+- **Onde:** `apps/api/src/db/schema/iam.ts` (`projects`),
   `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
   (`projectScopeRoot`), `apps/api/src/domain/iam/project.entity.ts`,
   `apps/api/src/application/use-cases/git/read-project-code.use-case.ts`
@@ -2139,8 +2139,8 @@ lista, e um `useEffect` renderizaria uma vez com a página inválida antes de
 corrigir. Com 5 ou menos, o paginador **não existe** — controle que não pagina
 nada é ruído ocupando altura.
 
-- **Onde:** `apps/web/src/routes/SessionPage.tsx:2988` (`REGRAS_POR_PAGINA`) e
-  a ordenação das quatro seções em `ContextAside`;
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:98` (`REGRAS_POR_PAGINA`) e
+  a ordenação das quatro seções no mesmo arquivo;
   `apps/web/src/components/ActivityFeed.tsx:98` (o `sort` decrescente)
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   (describe "RN-178"), `apps/web/src/components/ActivityFeed.test.tsx`
@@ -2170,9 +2170,9 @@ ambíguo. O contador do cabeçalho da seção conta a árvore INTEIRA, não só 
 raízes: dizer "3" com dezoito tarefas dentro seria o mesmo tipo de número que
 não corresponde a nada que a [RN-151](#rn-151) tirou da sidebar.
 
-- **Onde:** `apps/web/src/routes/SessionPage.tsx:2904`
-  (`montarArvoreDeBacklog`), `:3097` (as raízes viram item), `:3114` (a
-  contagem da árvore)
+- **Onde:** `apps/web/src/lib/session-backlog-tree.ts:68`
+  (`montarArvoreDeBacklog`), `apps/web/src/routes/ContextAside.tsx:210` (as
+  raízes viram item), `:225` (a contagem da árvore)
 - **Teste:** `apps/web/src/routes/SessionPage.artefatos-gerados.test.tsx`
   (casos "épico/história/tarefa do PO viram árvore" e "nó sem pai carregado
   aparece na raiz")
@@ -2214,9 +2214,9 @@ tela pausa durante o turno — e com ele a duplicata visual da bolha em
 streaming.
 
 - **Onde:** `apps/web/src/lib/hooks.ts:246` (o `pausarPoll` do histórico),
-  `:325` (`baixados`); `apps/web/src/routes/SessionPage.tsx:3032`
-  (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim de
-  `ContextAside`
+  `:325` (`baixados`); `apps/web/src/routes/ContextAside.tsx:143`
+  (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim do mesmo
+  arquivo
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   (describe "RN-180")
 - **Origem:** revisão da própria rodada — o teto de 200 existia em silêncio nas
@@ -2776,7 +2776,7 @@ padrão de `projects.workspace_mode`/`workspace_path` (ADR 0072): `scope =
 escrever esta tabela é um pipeline (Onda 4) que não necessariamente passa
 pelo mesmo caso de uso toda vez.
 
-- **Onde:** `apps/api/src/db/schema.ts` (`chunkScopeEnum` e os dois CHECK
+- **Onde:** `apps/api/src/db/schema/rag.ts` (`chunkScopeEnum` e os dois CHECK
   da tabela `chunks`)
 - **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
   ("recusa chunk de docs sem source_path — o CHECK da migração 0045, não
@@ -2792,7 +2792,7 @@ para as duas divergirem — um trecho com vetor mas sem entrada léxica, ou
 vice-versa — sem nenhum mecanismo do banco impedindo. Uma linha, uma fonte
 de verdade para as duas metades da busca.
 
-- **Onde:** `apps/api/src/db/schema.ts` (tabela `chunks`)
+- **Onde:** `apps/api/src/db/schema/rag.ts` (tabela `chunks`)
 - **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
   (as três specs escrevem e leem as duas colunas na mesma linha)
 - **ADR:** [0079](../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
@@ -2806,7 +2806,7 @@ transação do `INSERT`, sem depender de nenhum provider de LLM responder
 (diferente de `embedding`, que só chega quando um pipeline de indexação
 existir).
 
-- **Onde:** `apps/api/src/db/schema.ts` (coluna `search_vector`)
+- **Onde:** `apps/api/src/db/schema/rag.ts` (coluna `search_vector`)
 - **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
   ("grava um chunk de docs com vetor e devolve o search_vector gerado pela
   GENERATED ALWAYS AS")
@@ -2824,7 +2824,7 @@ não existe (Onda 4) — sem isso, chunking teria que esperar embedding,
 misturando duas falhas de natureza diferente (parsing de documento contra
 chamada de rede a um provider) numa escrita atômica só.
 
-- **Onde:** `apps/api/src/db/schema.ts` (coluna `embedding`)
+- **Onde:** `apps/api/src/db/schema/rag.ts` (coluna `embedding`)
 - **Teste:** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
   ("grava um chunk de docs com vetor..." grava com `embedding` preenchido;
   as outras duas specs gravam sem ele, confirmando a nulabilidade)

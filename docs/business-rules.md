@@ -77,7 +77,7 @@ stateDiagram-v2
 There's never an `UPDATE` on `session_events`. `seq` is unique per session
 (`unique(session_id, seq)`) and has no gaps: it starts at 1 and is contiguous.
 
-- **Where:** `apps/api/src/db/schema.ts` (table `session_events`)
+- **Where:** `apps/api/src/db/schema/sessions.ts` (table `session_events`)
 - **Test:** verified on restore — `docker/backup/restore.sh` fails if
   `count(*) ≠ max(seq) − min(seq) + 1` or `min(seq) ≠ 1`
 - **Why:** it's what makes the Psychologist's evidence traceable and the
@@ -127,7 +127,7 @@ make reactivating an in-progress project fail without anyone having decided
 anything.
 
 - **Where:** `apps/api/src/domain/sessions/session-kind.ts:50`
-  (`podeAtivarExecucao`), `apps/api/src/db/schema.ts:392` (the column),
+  (`podeAtivarExecucao`), `apps/api/src/db/schema/sessions.ts:68` (the column),
   `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:53`
   (the guard)
 - **Test:** `apps/api/test/application/use-cases/sessions/session-kind-e-nome.spec.ts`
@@ -652,7 +652,7 @@ record separately.
 - **Where:** `apps/engine/lib/engine/gates/qa_lead.ex` (`consolidar/1`,
   `rnf_de_performance?/1`), `qa_lead_server.ex` (the wiring);
   `apps/api/src/application/use-cases/execution/record-delegation.use-case.ts`;
-  `apps/api/src/db/schema.ts` (table `delegations`, enum `failure_origin`)
+  `apps/api/src/db/schema/agents.ts` (table `delegations`, enum `failure_origin`)
 - **Test:** `apps/engine/test/engine/gates/qa_lead_test.exs` (the pure
   decision tree), `qa_lead_server_test.exs` (the wiring: decision →
   delegation → recording → consolidation → the SAME call as always), and —
@@ -2070,7 +2070,7 @@ enquanto a tabela não mentir sobre APLICAR (nenhuma tela ou resposta de
 API hoje afirma "o container está limitado a X" — só "a intenção
 registrada era X").
 
-- **Onde:** `apps/api/src/db/schema.ts` (`projectContainers`)
+- **Onde:** `apps/api/src/db/schema/containers.ts` (`projectContainers`)
 - **Teste:** `apps/api/test/infrastructure/persistence/drizzle/container.repository.spec.ts`
   — "create nasce em `provisioning`, com a versão e os recursos passados"
 - **ADR:** [0081](adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)
@@ -4135,7 +4135,7 @@ muda entre `mounted` e `runner` não é ONDE a raiz fica — é QUANDO/QUEM
 confirma que ela existe de verdade ([RN-422](#rn-422)/[RN-423](#rn-423)).
 
 - **Onde:** `apps/api/src/db/migrations/0048_quiet_iron_fist.sql`,
-  `apps/api/src/db/schema.ts` (`projectExecutionModeEnum`),
+  `apps/api/src/db/schema/iam.ts` (`projectExecutionModeEnum`),
   `apps/api/src/domain/iam/project.entity.ts` (`PROJECT_EXECUTION_MODES`),
   `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
   (`projectScopeRoot`), `apps/engine/lib/engine/projects/project.ex`
@@ -4983,7 +4983,7 @@ sessão pra gravar — mesmo raciocínio já registrado em
 aceita `null` como valor válido (`ValidateIf`, não `IsOptional`), mesmo
 padrão de `RenameSessionDto`.
 
-- **Onde:** `apps/api/src/db/schema.ts` (`agentAreas`, colunas
+- **Onde:** `apps/api/src/db/schema/agents.ts` (`agentAreas`, colunas
   `budgetMicros`/`spentMicros` e os dois CHECK); `apps/api/src/domain/llm/area-budget.ts`
   (`isAreaBudgetExceeded`); `apps/api/src/application/use-cases/llm/check-budget-gate.use-case.ts`;
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts`;
@@ -5351,7 +5351,7 @@ não precisou de nenhum ramo novo: um chunk `local` carrega `sourcePath`
 exatamente como `docs`/`adr`, então cai no `kind: 'file'` que a citação já
 sabia renderizar.
 
-- **Onde:** `apps/api/src/db/schema.ts` (`chunkScopeEnum`),
+- **Onde:** `apps/api/src/db/schema/rag.ts` (`chunkScopeEnum`),
   `apps/api/src/db/migrations/0052_chunks_local_scope.sql`,
   `apps/api/src/application/ports/chunk-repository.port.ts` (`ChunkScope`),
   `apps/api/src/application/use-cases/rag/index-local-folder.use-case.ts`
@@ -5632,7 +5632,7 @@ explicitamente como corte desta rodada, não esquecimento: estender o mesmo
 padrão da RN-427 para chaves de dispositivo é trabalho futuro direto, se
 vier a ser pedido.
 
-- **Onde:** `apps/api/src/db/schema.ts:2058` (`runnerDeviceKeys`),
+- **Onde:** `apps/api/src/db/schema/auth.ts:318` (`runnerDeviceKeys`),
   `apps/api/src/application/use-cases/auth/register-runner-device-key.use-case.ts`,
   `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts`,
   `apps/api/src/interfaces/http/runner/runner-device-keys.controller.ts`
@@ -5886,7 +5886,10 @@ conjunto seriam ruído, e quem tem valor inválido precisa do que trava o botão
 NOMEADO (`Promoção de história`, `Modelos por agente`, `Modelo por área`,
 papel em `Membros`) salva no `onChange`, sem botão, e continua assim: a
 confirmação existe para campo DIGITADO, onde salvar a cada tecla mandaria `1` a
-caminho de `12`. E `Credenciais` mantém botão por linha apesar de também ter
+caminho de `12`. O que essa frase mede é de quem é o valor: ela vale para o
+controle que grava o PRÓPRIO valor, e não alcança um seletor cujo valor é o
+ARGUMENTO de uma ação sobre outras linhas — ver
+[RN-476](#rn-476), que é a exceção e diz por quê. E `Credenciais` mantém botão por linha apesar de também ter
 `drafts` por chave: a credencial é write-only (ADR 0050) e nunca volta do
 servidor, então não há valor com que comparar para decidir "sujo"; o botão da
 linha alterna entre "Salvar" e "Trocar" conforme aquele provider já tenha
@@ -5910,6 +5913,67 @@ da linha.
   mostra a mensagem da API e não a contagem)
 - **Origem:** revisão de design do dono do produto (item #7 do canvas de
   melhorias de UI — "salvar por seção em vez de por linha")
+
+### RN-476 — Aplicar um modelo a TODOS os agentes: um valor, N chamadas, e um botão apesar do valor ser nomeado {#rn-476}
+
+A tabela `Modelos por agente` tem uma linha por agente e um seletor em cada
+uma. Escolher o mesmo modelo para os 17 era percorrer as 17 linhas, e o custo
+disso não é o tempo: é que ninguém confere 17 dropdowns e a tela não tem como
+dizer se sobrou um para trás. A seção ganha uma barra ACIMA da tabela — um
+seletor e um botão — que aplica UM modelo a todos os agentes de uma vez.
+
+**A ação grava no nível do AGENTE, nas 17 linhas — não no projeto.** As duas
+leituras de "um modelo para todos" existem e produzem estados diferentes:
+gravar no projeto e apagar os bindings de agente e de área faria os 17
+HERDAREM, e é o idioma da própria cascata. Não foi o escolhido, por dois preços
+concretos: `PUT projects/:id/model-binding` e os endpoints de área exigem
+`maintainer`, enquanto o binding de agente exige `developer` — a mesma pessoa
+que pode trocar linha a linha passaria a não poder fazê-lo de uma vez —, e o
+binding de projeto é também o default da SESSÃO, que a
+[RN-040](business-rules/custo.md#rn-040) deixa livre de propósito. A escolha
+tem preço declarado: as 17 linhas passam a divergir, com origem `agent` na
+coluna Origem, e voltar a herdar continua sendo linha a linha.
+
+**Há botão, apesar de o valor ser NOMEADO.** A régua da
+[RN-469](#rn-469) diz que escolha de valor nomeado salva no `onChange`, e ela
+continua valendo para o seletor de CADA LINHA, que grava o próprio valor. O
+seletor da barra não é configuração de nada: ele é o argumento da ação ao lado.
+Aplicar no `onChange` faria um clique exploratório num dropdown reescrever 17
+linhas que a pessoa não estava editando, e desfazer isso são 17 cliques. O
+botão NOMEIA quantas linhas vai alcançar, porque esse número é a consequência.
+
+**O desfecho segue a RN-469 inteira, e é a razão de a barra não inventar
+nada.** Uma chamada por agente, em SÉRIE, na ordem da tela, sem abortar na
+primeira recusa — abortar deixaria 16 linhas sem tentativa e a tela não
+distinguiria "recusou" de "nem tentou". Os três desfechos não se disfarçam:
+todas passaram → sucesso nomeando o modelo; **nenhuma** passou → a mensagem da
+api, nunca uma contagem; **algumas** passaram → aviso com quantas de quantas,
+nomeando as que ficaram pelo NOME do agente, que é o que a pessoa lê na
+primeira coluna. Só as linhas que a api CONFIRMOU são relidas: invalidar as 17
+apagaria da tela a diferença que o relatório parcial acabou de contar.
+
+**O gate é o do ENDPOINT, e o endpoint é o mesmo dos controles de linha.**
+`developer`, por `PUT projects/:projectId/agent-bindings/:agentSlug` — não o
+`maintainer` da seção vizinha de área ([RN-102](business-rules/custo.md#rn-102)).
+O botão fica inerte para quem não alcança, e o motivo é dito UMA vez, em TEXTO,
+na legenda da seção, junto com as outras duas ações que ficam inertes: `title`
+em elemento `disabled` não abre no Chromium (ADR 0064). O filtro "aptos para
+agentes" do seletor abre MARCADO, como no picker de linha e pelo mesmo motivo
+([RN-040](business-rules/custo.md#rn-040)) — com mais força aqui, porque um
+modelo chat-only escolhido na barra não produziria um 422, e sim 17, e o
+relatório parcial contaria a mesma recusa dezessete vezes.
+
+- **Onde:** `apps/web/src/routes/settings/aplicar-a-todos.tsx:66`
+  (`useAplicacaoEmLote` — o laço em série e os três desfechos),
+  `apps/web/src/routes/settings/ModelsSection.tsx` (a barra, o estado local do
+  modelo escolhido e a invalidação só das linhas confirmadas)
+- **Teste:** `apps/web/src/routes/settings/aplicar-a-todos.test.tsx` (grava o
+  mesmo modelo em todos os agentes, na ordem da tela; nenhuma passando mostra a
+  mensagem da api e NÃO a contagem, e ainda assim tenta todas; falha parcial diz
+  quantas de quantas e nomeia a que ficou; papel abaixo de `developer` deixa o
+  botão inerte e o motivo continua em texto)
+- **Origem:** pedido do dono do produto ao configurar um ambiente zerado com um
+  provider só — todos os agentes precisavam do mesmo modelo
 
 ---
 
@@ -6165,6 +6229,34 @@ preserva o bit de execução — daí o `chmod +x` continuar no comando. O que o
 produto faz é encolher esse passo a UMA linha copiável em um clique; nenhum
 texto de UI diz "instalação automática".
 
+**E ele é anunciado ANTES do clique, não só depois.** A frase que explica o
+passo existia desde o início, mas era renderizada apenas no estado de SUCESSO —
+depois de a pessoa escolher a pasta, esperar o registro da chave e o download
+do binário. Quem clica num botão chamado "Configurar pasta automaticamente" e
+só então descobre que ainda precisa abrir um terminal foi surpreendido, mesmo
+sem nenhuma frase ter mentido: anunciar no fim é o mais tarde possível para
+ainda não ser fingimento. Agora há um aviso no estado inicial, ao lado do
+botão, e o do fim CONTINUA — as duas dizem coisas diferentes (uma avisa que o
+passo virá, a outra explica por que ele existe). O rótulo do botão **não**
+mudou: ele fala da PASTA, que é de fato configurada automaticamente, e trocá-lo
+descreveria pior o que ele faz.
+
+**O comando final diz em que pasta rodar, quando dá para afirmar qual é.** A
+instrução dizia "dentro da pasta escolhida, rode: …" sem nunca dizer onde essa
+pasta fica — a File System Access API expõe só o basename (`dirHandle.name`),
+nunca o caminho absoluto. O caminho existe do outro lado: é o
+`projects.workspace_path` que a pessoa digitou ao criar o projeto. Quando o
+basename dele bate com a pasta escolhida, a instrução ganha um prefixo
+`cd <caminho> && `; quando NÃO bate, sai sem prefixo — nada obriga a pessoa a
+escolher no seletor a mesma pasta que digitou, e um `cd` para o lugar errado
+seria a tela afirmando o que não sabe. O basename é o máximo que se prova
+daqui, e o caso raro em que ele coincide para pastas diferentes falha ALTO
+(`cd` não acha o caminho, ou `./brabo-runner` não está lá), nunca em silêncio —
+que é a régua que decide se uma heurística pode entrar. O kit manual (fallback
+fora do Chromium) **não** recebe o prefixo, e não é esquecimento: lá os
+arquivos caem na pasta de downloads, e `cd` mandaria para onde eles ainda não
+estão.
+
 **Lacuna declarada:** fechar a aba entre o passo 3 e o fim deixa uma chave de
 dispositivo **órfã** no projeto. Ela é inerte — a privada correspondente só
 existiu na memória daquela aba, e sem ela a chave não autentica nada — mas hoje
@@ -6313,7 +6405,71 @@ asserções antigas ganharam a metade que faltava.
   implícito entre as duas pontas
 - **Origem:** uso real do fluxo contra o ambiente local pelo dono do produto
 
----
+### RN-477 — Provisionamento que falha DIZ que falhou, e a espera por ele tem teto {#rn-477}
+
+O provisionamento de repositório roda **inteiro dentro do POST** — não há
+worker nem fila atrás dele (a descrição de OpenAPI que prometia "continues in
+the background" estava errada e foi corrigida). Uma falha, portanto, já
+aconteceu quando a resposta chega. Esta RN é sobre a tela nunca afirmar
+"provisionando" sobre um trabalho que já terminou mal.
+
+**Toda falha vira estado DURÁVEL, e há dois caminhos que não viravam.** O
+primeiro é `step.check()`, que ficava fora de todo `try/catch` no
+`BootstrapRunner` e faz IO de rede: um 401 de token expirado, um 403 ou um
+timeout subiam sem tocar a linha, que continuava `pending` com
+`lastError: NULL`. O segundo é a recusa em `createRepo`, que acontece **antes
+de a linha existir** — `repo_bootstraps` só nasce depois de o provider
+confirmar o repositório, então o projeto ficava com ZERO linha. Agora o
+primeiro grava `status: 'failed'` + `lastError` num lugar só (o `catch` da
+etapa) e emite `bootstrap.step_failed`; e o segundo é lido pelo endpoint de
+status a partir da `proposed_action` de `git_repo_create` que falhou.
+
+**A falha de criação NÃO inventa um passo.** `failedStep` fica `null`: o
+repositório não chegou a existir, então nenhum dos seis passos do Gitflow foi
+tentado, e nomear um para preencher a frase seria trocar um silêncio por uma
+informação errada. A tela tem um título próprio para esse caso, sem `{{step}}`.
+
+**A tela mostra o motivo e oferece saída.** O `.catch(() => {})` de corpo vazio
+da `ProvisioningPage` — cujo comentário afirmava que "a falha aparece via
+bootstrapQuery", o que era falso nos dois caminhos acima — passa a guardar a
+mensagem da api e exibi-la. O botão "Tentar novamente" deixa de depender de
+`status === 'provision_failed'`: ele aparece também quando o POST recusou,
+que é justamente quando não há status de falha para depender.
+
+**A espera tem TETO e três estados que não colapsam**, exatamente como a
+[RN-474](#rn-474) e pelo mesmo motivo: o poll de 1s era infinito. Passados 3
+minutos sem convergir, a tela diz que parou de acompanhar, **declara que isso
+não prova fracasso** (o provisionamento roda dentro da requisição, e um
+provider lento pode ainda estar trabalhando) e oferece "procurar de novo" —
+que rearma a espera **sem** disparar um segundo POST, porque um segundo POST
+criaria mais uma sessão de bootstrap.
+
+**O card do dashboard sabe.** O read model consulta as ações `git_repo_create`
+falhadas junto com as linhas de bootstrap, então um projeto que falhou antes de
+existir cursor deixa de aparecer sem badge nenhum — e o clique volta a levar
+para a tela de provisionamento, que só desviava em `provision_failed`.
+
+- **Onde:** `apps/api/src/application/use-cases/git/bootstrap-runner.ts:181`
+  (o `catch` da etapa, único lugar que declara o fracasso),
+  `apps/api/src/domain/git/repo-bootstrap-status.ts:29` (o segundo argumento),
+  `apps/api/src/application/use-cases/git/get-repo-bootstrap-status.use-case.ts:59`
+  (a falha de criação lida da `proposed_action`),
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`
+  (o badge do card), `apps/web/src/routes/ProvisioningPage.tsx` (motivo, retry
+  e teto)
+- **Teste:**
+  `apps/api/test/application/use-cases/git/provision-repository.use-case.spec.ts`
+  (falha no CHECK vira `failed` com motivo e evento; falha ao CRIAR não deixa
+  linha mas o status reporta, com `failedStep` nulo),
+  `apps/api/test/domain/git/repo-bootstrap-status.spec.ts` (sem linha com falha
+  de criação; com linha a falha antiga é ignorada; `pending` puro),
+  `apps/web/src/routes/ProvisioningPage.test.tsx` (o motivo aparece; o retry
+  existe sem `provision_failed`; a espera para e diz o que não sabe; título sem
+  passo não inventa um)
+- **Origem:** uso real do dono do produto — o provisionamento ficou "Pendente"
+  para sempre, e a causa (`permissão negada: /data/git-repos/exp001.git`, um
+  volume Docker de desenvolvimento que nascia `root`) estava gravada só em
+  `proposed_actions.execution_result`, que nenhuma tela lê
 
 ## Quando dá errado
 
@@ -6347,6 +6503,10 @@ asserções antigas ganharam a metade que faltava.
 | Binário do runner indisponível (release sem asset, GitHub fora) durante a configuração pelo navegador | a pasta escolhida e os dois arquivos de configuração FICAM; a tela diz o motivo e troca a instrução pelo caminho `npm install -g @brabo/runner` (RN-473) |
 | Runner não conecta dentro do teto da espera | a tela diz que não viu, declara que isso não é prova de ausência e aponta a aba Código — nunca "verificando" para sempre (RN-474) |
 | Pasta do runner com chave de dispositivo presente e inválida (JSON quebrado, ou sem `kid`) | o CLI recusa NOMEANDO o arquivo e o motivo, e oferece as duas saídas — nunca o bloco de uso, que é a resposta de quem não configurou nada (RN-475) |
+| Criar o repositório falha antes de existir linha de bootstrap | o endpoint de status reporta `provision_failed` com o motivo lido da `proposed_action`, e `failedStep` fica NULO — nenhum passo do Gitflow foi tentado, e nomear um seria inventar (RN-477) |
+| `step.check` do bootstrap falha (token expirado, 403, timeout) | vira `status: 'failed'` + `lastError` na linha e `bootstrap.step_failed` no event log — antes subia sem tocar em nada e a tela pollava para sempre (RN-477) |
+| Provisionamento não converge dentro do teto da tela | a espera PARA em 3 minutos, declara que isso não prova fracasso e oferece procurar de novo — sem disparar um segundo POST (RN-477) |
+| Aplicar um modelo a todos os agentes e a api recusar PARTE deles | as linhas que passaram ficam gravadas e são relidas; o aviso diz quantas de quantas e NOMEIA as que ficaram — nunca "salvo" nem "não salvo", que seriam as duas mentira (RN-476) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar
