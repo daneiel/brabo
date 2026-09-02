@@ -65,6 +65,8 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Provisionamento que não fica calado | Duas falhas não viravam estado nenhum — `step.check` fora do `try` e a recusa de `createRepo` ANTES de a linha de bootstrap existir —, e a tela pollava "Iniciando…" para sempre sem botão. Causa raiz de tudo: `/data/git-repos` e `/data/project-workspaces` nasciam `root` nas imagens de DEV, que o `Dockerfile.prod` já sabia criar antes do `USER` | RN-477 |
 | Aviso do passo humano antes do clique | O passo de terminal do runner era anunciado só no estado de sucesso; passa a ser dito também no inicial, e o comando final ganha `cd <caminho>` quando dá para afirmar que a pasta escolhida é a do projeto. Rótulo do botão NÃO muda — ele fala da pasta, que é automática mesmo | RN-473/477 |
 | Um modelo para todos os agentes | A tabela `Modelos por agente` ganha uma barra que aplica UM modelo aos 17 de uma vez, gravando no nível do AGENTE (pelo projeto seria `maintainer`, e mexeria no default de sessão). Primeira EXCEÇÃO à régua "valor nomeado salva no `onChange`" da RN-469 — o seletor é argumento de ação, não configuração —, com o desfecho em três estados da própria RN-469 | RN-476 |
+| O arquivo de política e o escopo do terminal | `projectScopeRoot` tinha DOIS consumidores com necessidades opostas, e o modo `runner` (sem bind-mount) os separou: o escopo segue apontando para o HOST, o `permissions.json` passa a morar na raiz GERENCIADA. A ativação da execução devolvia 500 (`mkdir '/home/<usuario>'`), e a LEITURA degradava calada — em projeto `runner` o arquivo nunca existiu. Junto: erro tipado com 400 em vez de `Error` cru, a Visão geral parando de engolir a mensagem da api, e a anotação de OpenAPI que prometia 409 para dois casos que nunca foram 409 | RN-478 |
+| Tetos de rebaixamento em `project_members` | A sobreposição `projectRole ?? workspaceRole` FICA nos dois sentidos (é capacidade, não bug); o que entra são dois tetos de 403 no caso de uso — ninguém rebaixa o `owner` do workspace, ninguém rebaixa a si mesmo. As três descrições de OpenAPI que a RN-471 declarou falsas passam a descrever o código; o gate do `Select` é PR à parte, por a tela não ter como calcular o primeiro teto | ADR 0127, RN-472 |
 
 ## Estado atual e aberto
 
@@ -115,6 +117,13 @@ daqui e o fechamento vai para o histórico.
   reconciliar é decisão de produto à parte, não tomada no ADR 0126
 - `gatesEverOpened` sofre da classe de defeito da janela de 200 eventos —
   declarado, não corrigido (exigiria mudar assinatura de `deriveAgentRoster`)
+- O ENGINE tem o mesmo defeito que a RN-478 fechou na api, e ele segue ABERTO:
+  `Engine.Actions.Workspace.ensure!/4` faz `File.mkdir_p!` do caminho do HOST
+  em projeto `runner`, e o working tree do dev agent não tem onde nascer. Não
+  vira 500 (o `rescue` de `ensure_remoto/2` devolve `{:error, …}`), vira dev
+  agent que não trabalha — a mensagem NOMEIA a causa desde a RN-478. Corrigir
+  isolado seria materializar worktree no host por um caminho que a execução em
+  container substitui; a decisão é esperar por ela
 - Conversão de `execution_mode` nunca migra diff NÃO commitado — órfão no
   disco antigo (RN-447..450, ADR 0111)
 - Mirror web de `SOLO_CONVERSATIONAL_AGENTS` sem teste cruzado com a api
@@ -326,6 +335,25 @@ daqui e o fechamento vai para o histórico.
   ele que `findActiveExecutionSession` procura. `execution.activated` em
   sessão consultiva é 409, nunca conversão silenciosa (ADR 0061, RN-097).
   Não faça a derivação por evento olhar `kind`
+- O `permissions.json` mora onde a API ALCANÇA, e o ESCOPO do terminal aponta
+  para o HOST — são DUAS derivações desde a RN-478, não uma. Elas nasceram
+  como uma só (`projectScopeRoot`), e isso estava certo enquanto os dois modos
+  com pasta de usuário eram bind-mount; deixou de estar quando o `runner`
+  nasceu, deliberadamente SEM bind-mount. O escopo do ADR 0055 quer o caminho
+  do HOST (é lá que o comando roda, pelo runner); o arquivo de política quer um
+  caminho que a api ALCANCE, porque ela o lê e o ESCREVE de dentro do container
+  dela — daí o 500 da ativação (`mkdir '/home/<usuario>'`) e, pior, o arquivo
+  que NUNCA existiu em projeto `runner`, com `decide()` caindo sempre em
+  `require_approval`. `permissionsFilePath` mora ao lado de `projectScopeRoot`,
+  no MESMO arquivo, porque a fonte continua única: o que se separou foi a
+  pergunta, não a autoridade. No modo `runner` o arquivo vai para a raiz
+  GERENCIADA, chaveado pelo `workspace_dir_name` da RN-109 — política é da api,
+  não do disco do usuário: guardá-la lá a tornaria editável por quem ela
+  restringe e ilegível com o runner desconectado. `container` e `mounted` não
+  mudam (em `mounted` a pasta É bind-mount). NÃO "unifique" as duas de volta:
+  há teste de não-regressão, e escopo apontando para a raiz gerenciada
+  autorizaria comando numa pasta que não é a do projeto. O ENGINE não lê nem
+  escreve esse arquivo em ponto nenhum — todas as menções nele são comentário
 - Toda ação com efeito externo (git, terminal, gasto) nasce como
   proposed_action e respeita permissions.json; deny sempre vence allow.
   LER não é efeito externo e NÃO vira proposed_action — encheria a fila de

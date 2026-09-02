@@ -6471,6 +6471,94 @@ para a tela de provisionamento, que só desviava em `provision_failed`.
   volume Docker de desenvolvimento que nascia `root`) estava gravada só em
   `proposed_actions.execution_result`, que nenhuma tela lê
 
+### RN-478 — O `permissions.json` mora onde a api ALCANÇA, o escopo do terminal aponta para o HOST {#rn-478}
+
+A raiz do projeto tinha **uma** derivação (`projectScopeRoot`) e **dois**
+consumidores com necessidades opostas. Isso estava certo enquanto os dois modos
+com pasta de usuário eram bind-mount; deixou de estar quando o modo `runner`
+nasceu ([RN-423](#rn-423), [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)),
+porque ele é deliberadamente **sem** bind-mount.
+
+| consumidor | precisa de | por quê |
+|---|---|---|
+| escopo de terminal ([ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md)) | o caminho **do host** | é lá que o comando roda — na máquina do usuário, pelo runner |
+| `permissions.json` (a api lê **e escreve**) | um caminho **que a api alcance** | ela o escreve de dentro do container dela |
+
+**São duas derivações, e as duas moram no mesmo arquivo** — a fonte continua
+única, o que se separou foi a pergunta. `projectScopeRoot` fica **inalterada**;
+`permissionsFilePath` é nova e diverge dela em um único ponto: no modo
+`runner` o arquivo vai para
+`<PROJECT_WORKSPACES_ROOT>/<workspace_dir_name>/permissions.json`, a raiz
+gerenciada, chaveada pelo nome que a [RN-109](business-rules/autenticacao.md#rn-109) congela na criação.
+`container` e `mounted` não mudam — em `mounted` a pasta **é** bind-mount, e
+mover o arquivo quebraria projetos que já o têm em disco sem ganhar nada.
+
+**Por que a raiz gerenciada e não o disco do usuário**, já que o código está
+lá: `permissions.json` é **política**, não código do projeto. Quem a lê é a
+api; o runner nunca a lê (recebe comando já aprovado) e o engine não a toca em
+ponto nenhum — todas as menções a ela em `apps/engine/lib` são comentário.
+Guardá-la na máquina do usuário a tornaria editável por quem ela restringe, e
+ilegível justamente quando o runner está desconectado, que é quando a decisão
+precisa continuar valendo.
+
+**O que isso corrigiu.** A ativação da execução é a primeira **escrita** do
+arquivo, e ela fazia `mkdir -p` de um caminho do host dentro do container da
+api: `EACCES: permission denied, mkdir '/home/<usuario>'` → **500**. A
+**leitura** degradava calada (ENOENT → `EMPTY_PERMISSIONS_FILE`), e é por isso
+que o efeito maior atravessou sem ser visto: **em projeto `runner` o
+`permissions.json` nunca existiu**, e `decide()` sempre caiu em
+`require_approval` por um arquivo que não estava lá.
+
+**Custo declarado:** para projeto `runner`, o arquivo de política deixa de
+morar ao lado do código — quem o procurar na pasta do projeto não vai achar.
+
+**Recusa tipada, e 400 em vez de 500.** Os dois `throw new Error(...)` da
+derivação viram `LocalizacaoDeProjetoInvalidaError`, no molde de
+`CaminhoLocalInvalidoError`: `motivo` legível em pt-BR, e
+`ActivateExecutionUseCase` o mapeia para **400**. Uma linha de projeto
+incoerente (o par (modo, caminho) só se torna inválido sendo gravado por fora
+da criação) passa a dizer o que corrigir em vez de virar 500 sem corpo. A tela
+da Visão geral passa a mostrar essa mensagem — ela imprimia a constante
+"Não foi possível ativar a execução" enquanto o botão gêmeo do chat da sessão
+já usava `mensagemDaApi`: mesmo botão, dois diagnósticos.
+
+**A lacuna que FICA, declarada:** o engine tem o **mesmo** defeito e ele não
+foi corrigido aqui. `Engine.Actions.Workspace.ensure!/4` faz
+`File.mkdir_p!(workspace_dir(project_id))`, que em projeto `runner` é o
+caminho do host — o working tree do dev agent não tem onde nascer. Não vira
+500 (o `rescue` de `ensure_remoto/2` devolve `{:error, …}`), vira dev agent que
+não trabalha. Corrigi-lo isolado seria materializar worktree no host por um
+caminho que a execução em container substitui; o que muda agora é só a
+**mensagem**, que nomeia a causa em vez de repassar "permissão negada" cru.
+
+- **Onde:**
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:114`
+  (`projectScopeRoot`, inalterada) e `:202` (`permissionsFilePath`, a segunda
+  derivação), com `LocalizacaoDeProjetoInvalidaError` em `:219`,
+  `apps/api/src/infrastructure/filesystem/fs-permissions-file-store.ts:77`
+  (o único chamador do caminho do arquivo),
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:172`
+  (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
+  (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:394`
+  (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
+  (a mensagem da lacuna que fica)
+- **Teste:**
+  `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (`permissionsFilePath` nos três modos; e a **não-regressão** de
+  `projectScopeRoot` continuar devolvendo o caminho do host em
+  `runner`/`mounted` — unificar as duas de volta quebraria o ADR 0055),
+  `apps/api/test/application/use-cases/execution/activate-execution.use-case.spec.ts`
+  (com o `FsPermissionsFileStore` DE VERDADE: o arquivo cai na raiz gerenciada
+  e a pasta do host fica intocada; linha incoerente vira 400 que ensina),
+  `apps/web/src/routes/ProjectOverviewTab.test.tsx` (a mensagem da api na
+  tela), `apps/engine/test/engine/actions/workspace_runner_test.exs` (a falha
+  nomeia a causa em projeto `runner`, e passa intacta nos outros modos)
+- **Origem:** uso real do dono do produto — "Ativar execução" respondendo 500
+  no projeto `exp002`
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -6492,6 +6580,7 @@ para a tela de provisionamento, que só desviava em `provision_failed`.
 | Preço do modelo muda | vale daqui em diante; o custo gravado e o preço que o produziu ficam intocados (RN-042) |
 | Criar o handoff falha (Criativo→PO, Arquiteto→Infra/Dev Lead) | `agent.error` durável, o processo do agente CONTINUA vivo; o que já foi gravado antes (product_brief, regras) não se perde (RN-116) |
 | Caminho de projeto **Local** não montado no container | a criação é **recusada** (400) com a linha de compose a acrescentar — o projeto não nasce para travar depois (RN-170) |
+| Localização de projeto incoerente no banco (par modo/caminho gravado por fora da criação) | a ativação da execução recusa com **400** e o motivo em pt-BR, nunca 500 sem corpo (RN-478) |
 | Login social: e-mail do provider bate com conta existente mas NÃO verificado | recusado com 403, nenhum vínculo gravado — e-mail não verificado não é prova de identidade (RN-274) |
 | Login social: `state` inválido/expirado, ou de outro PROPÓSITO (fluxo de conexão de git) | recusado, nenhuma chamada ao provider nem escrita no banco (RN-273) |
 | Validar a necessidade sem `product_brief` nenhum na sessão | recusado (400) ANTES de gravar qualquer evento — não há o que validar ainda (RN-406) |
