@@ -38,6 +38,7 @@ Start with triage.
 | I want to migrate my workspaces from the Docker volume to a real folder | [Migrating workspaces to a local folder](#migrar-workspaces-pasta-local) |
 | creating a **Local** project refuses, saying the folder doesn't exist | [Project in Local mode](#projeto-no-modo-local) |
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
+| provisioning a repository fails with `permission denied: /data/git-repos/<slug>.git`, or `permissions.json` can't be written | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 
 Two things worth knowing before any procedure:
 
@@ -170,6 +171,29 @@ so this class of problem shouldn't recur.
    folder on the host, the fix is the same `sudo chown -R $USER <folder>`
    this section used to prescribe for the whole repo — it's now a one-off
    for pre-existing files, not the standing workaround.
+
+4. **The two DATA volumes are a different case, and `down -v` is NOT safe for
+   them.** `/data/git-repos` and `/data/project-workspaces` are mounted into
+   `api` and `engine` as named volumes. A named volume is born owned by
+   whatever exists at that path **in the image** — and when the path doesn't
+   exist, it is born `root`, leaving the non-root process out. The dev images
+   only started creating and `chown`-ing them before `USER` recently; the
+   production images always did. The symptom is not a file you can't edit on
+   your disk: it is `git init --bare` of the `LocalGitProvider` dying with
+   `permission denied: /data/git-repos/<slug>.git`, and each project's
+   `permissions.json` having nowhere to be written — that is, **provisioning
+   a repository is impossible**.
+
+   Unlike the build-artifact volumes above, these two hold source of truth
+   (local bare repos, per-project worktrees), so dropping them loses data.
+   Fix them in place:
+   ```bash
+   docker run --rm -v brabo_git_local_repos:/v alpine chown -R "$(id -u):$(id -g)" /v
+   docker run --rm -v brabo_project_workspaces:/v alpine chown -R "$(id -u):$(id -g)" /v
+   ```
+   A volume created after the fix already comes up with the right owner. When
+   you add a **new** named volume, create the directory in the image:
+   forgetting it is not a build error, it is a runtime `permission denied`.
 
 ---
 
