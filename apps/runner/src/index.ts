@@ -52,6 +52,8 @@ import {
   lerChaveDeDispositivo,
   lerConfigLocal,
 } from './device-key.ts';
+import { DockerCliAusenteError, DockerViaCli } from './docker-cli.ts';
+import { DockerIndisponivelError } from './docker-port.ts';
 import { executarComando } from './exec.ts';
 import { diretorioInicial, listarDiretorio } from './fs-browser.ts';
 import {
@@ -451,9 +453,56 @@ async function rodarAutoTestePty(): Promise<void> {
   }
 }
 
+/**
+ * Segunda flag INTERNA, mesma família de `--self-test-pty` e pelo mesmo motivo
+ * estrutural: prova, NO ARTEFATO, o que nenhum teste de unidade prova.
+ *
+ * Foi ela que respondeu a pergunta do ADR 0128 — `dockerode` sobrevive ao
+ * empacotamento? Não sobrevive: com ele no grafo, o `bun build --compile`
+ * reprovava resolvendo um `.node` da árvore `ssh2` que `docker-modem` arrasta
+ * (o erro está colado por inteiro no docblock de `docker-cli.ts`). E a
+ * pergunta só se responde EXECUTANDO: bundler apaga import cujo resultado
+ * ninguém usa, e o Bun chega a trocar por um stub que só lança AO RODAR um
+ * módulo que não conseguiu resolver (achado do ADR 0112, com `node-pty`). Por
+ * isso este auto-teste INSTANCIA a porta e FALA com o daemon.
+ *
+ * Fica valendo depois da troca para `execFile('docker', …)`, com a mesma
+ * pergunta e um alvo a mais: a porta chega inteira no `dist` e no binário, e
+ * Docker fora do ar vira erro NOMEADO em vez de stack trace cru.
+ *
+ * TRÊS desfechos, e dois deles são sucesso — porque a afirmação é sobre o
+ * ARTEFATO, não sobre esta máquina. Daemon respondeu; daemon/CLI ausentes (as
+ * duas recusas nomeadas, e a máquina de CI legitimamente não tem Docker); e
+ * qualquer outra falha, que é a única que reprova. Exigir daemon faria este
+ * teste parar de rodar exatamente onde ele mais precisa rodar.
+ */
+async function rodarAutoTesteDocker(): Promise<void> {
+  const docker = new DockerViaCli();
+  console.log('porta de docker carregada com sucesso');
+  try {
+    await docker.ping();
+    console.log('SELF_TEST_DOCKER_OK: daemon respondeu ao ping');
+  } catch (erro) {
+    if (erro instanceof DockerIndisponivelError) {
+      console.log(`SELF_TEST_DOCKER_OK: daemon não atendeu (${erro.causa})`);
+      return;
+    }
+    if (erro instanceof DockerCliAusenteError) {
+      console.log('SELF_TEST_DOCKER_OK: não há `docker` no PATH desta máquina');
+      return;
+    }
+    throw erro;
+  }
+}
+
 async function main(): Promise<void> {
   if (process.argv.includes('--self-test-pty')) {
     await rodarAutoTestePty();
+    return;
+  }
+
+  if (process.argv.includes('--self-test-docker')) {
+    await rodarAutoTesteDocker();
     return;
   }
 

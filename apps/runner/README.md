@@ -15,7 +15,11 @@ privilégios de quem a executa, ela:
 
 Não decide política nenhuma: só faz o que o produto já aprovou. Ver os
 docblocks de `src/channel.ts`, `src/exec.ts`, `src/pty.ts`, `src/guard.ts` e
-`src/fs-browser.ts` para o desenho de cada parte, e a
+`src/fs-browser.ts` para o desenho de cada parte. `src/docker-port.ts` e
+`src/docker-cli.ts` são o alicerce da execução em container (ADR 0128) e
+**ainda não são chamados por nada** — nenhuma mensagem do canal os alcança, e
+nenhum container sobe; o docblock dos dois explica a porta de cinco operações e
+a prova de empacotamento que escolheu a implementação. Ver também a
 [ADR 0107](https://github.com/daneiel/brabo/blob/main/docs/adr/0107-navegacao-de-pasta-local-via-o-runner.md)
 para o argumento de segurança da navegação de pasta.
 

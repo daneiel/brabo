@@ -481,6 +481,43 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   poder logar à vontade foi rejeitado: enfraqueceria o que está sendo testado
   para deixar o teste confortável.
 
+- **runner**: o acesso a Docker passa a existir atrás de uma **porta** com
+  exatamente **cinco operações** (`start`, `stop`, `remove`, `inspect`, `exec`),
+  e **nada sobe container ainda** — este é o alicerce, não a feature. O que
+  decidiu a implementação foi uma **prova de empacotamento** que **falhou**:
+  `dockerode` foi instalado, importado, instanciado e exercitado (`ping()`) por
+  uma flag de auto-teste rodada contra os artefatos de verdade — nunca por um
+  `import` que o bundler pudesse apagar. O `tsup` passou (ele deixa
+  `dependencies` como `require` externo, então `dockerode` nem entrava no
+  bundle); o `bun build --compile` do binário standalone **reprovou**, com
+  `Could not resolve: "../build/Release/cpufeatures.node"`. A cadeia é
+  obrigatória e foi lida no código, não suposta: `docker-modem` faz
+  `require('./ssh')` na primeira linha do módulo, `ssh2` pede `cpu-features`, e
+  esse binding nativo opcional é envolvido por um `try/catch` que existe em
+  **runtime** e não no **bundler**. Mesma classe do achado do ADR 0112 com
+  `node-pty`, com a diferença que decide: lá o binding é essencial, aqui ele
+  acelera um transporte **SSH que este runner nunca usa** (ele fala com o socket
+  unix local). Então o runner usa `execFile('docker', …)`, e `dockerode` saiu do
+  lockfile. Medido e **não** adotado, para ninguém refazer a investigação:
+  `--external cpu-features` compila e funciona, ao custo de +1,7 MB por binário
+  vezes cinco plataformas — é exatamente o workaround que a decisão excluía de
+  antemão. **A contenção é o tipo, não a disciplina de quem chama**: não existe
+  campo para `privileged` nem `cap_add`, a rede é a união `'none' | 'egress'`
+  (então `network: host` não é uma frase que se possa dizer), e não há **lista**
+  de mounts — há UMA pasta, com destino constante (`/work`) e um tipo de
+  **marca** que só uma função de validação produz, recusando caminho relativo,
+  `..`, NUL, a raiz do filesystem e as pastas de sistema. Nenhuma operação
+  recebe id de container: todas derivam `brabo-<workspace_dir_name>` e resolvem
+  filtrando por nome **e** pelo rótulo `brabo.managed=true` — homônimo sem o
+  rótulo **recusa**, em vez de ler como ausente. Falha é **nomeada**: daemon
+  fora e executável `docker` ausente são erros **diferentes** (instalar o Docker
+  e subir o daemon são consertos diferentes — a lição da RN-475 um andar
+  abaixo), e o erro de comando recusado **não** declara origem, porque escolher
+  uma para "No such image" seria o diagnóstico por eliminação que o ADR 0020
+  proíbe. Tamanhos medidos: `dist/index.cjs` 91 843 → 106 221 bytes, binário
+  82 777 288 → 82 789 576 bytes — o crescimento é código, não dependência
+  (ADR 0128)
+
 ### Correções
 
 - **web, runner**: o **modo automático** do runner local — configurar a pasta
