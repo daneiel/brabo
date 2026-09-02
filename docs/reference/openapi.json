@@ -851,6 +851,50 @@
         ]
       }
     },
+    "/internal/rag/feedback": {
+      "post": {
+        "description": "Same use case as the human route — no second judgement path. An unknown `searchId`/`chunkId` is a 400 that the engine turns into an error tool-result for the model to correct (RN-061), never a crash.",
+        "operationId": "InternalRagController_votar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagFeedbackInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagFeedbackInternalResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown `searchId` for this project, or a `chunkId` that was not among that search hits."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "The agent's vote on one retrieved chunk (RN-480)",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/rag/search": {
       "post": {
         "description": "Same engine as `POST /projects/:projectId/rag/search` (human route), projected into the format the engine's `rag_search` tool expects.",
@@ -6698,6 +6742,68 @@
           }
         ],
         "summary": "Index coverage: indexed files/sessions against the real total",
+        "tags": [
+          "rag"
+        ]
+      }
+    },
+    "/projects/{projectId}/rag/feedback": {
+      "post": {
+        "description": "The only signal of TRUTH the RAG measurement has: latency and degradation rate say whether the search RAN, never whether it was RIGHT. Same role as `search` — whoever can read the result is who can judge it. Re-voting the same chunk of the same search overwrites your own vote rather than adding a second one (unique per actor), so the metric measures accuracy and not enthusiasm.",
+        "operationId": "RagController_votar",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagFeedbackRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagFeedbackResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown `searchId` for this project, or a `chunkId` that was not among that search hits — a vote without a rank would be a number without meaning."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role on the project."
+          },
+          "404": {
+            "description": "Project does not exist."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Judges one hit of one search as useful or irrelevant (RN-480)",
         "tags": [
           "rag"
         ]
@@ -14749,6 +14855,12 @@
           "query": {
             "type": "string"
           },
+          "searchId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "The `rag_searches` row this search left (RN-479) — the id a vote attaches to. `null` means the telemetry row was NOT written (the insert failed), which is not the same as \"no results\": there is nothing to attach a vote to, and the UI needs the two apart so it does not offer a control the api will refuse."
+          },
           "hits": {
             "type": "array",
             "items": {
@@ -14765,6 +14877,7 @@
         },
         "required": [
           "query",
+          "searchId",
           "hits",
           "vectorAvailable"
         ]
@@ -17965,6 +18078,130 @@
           "chunksWithoutVector"
         ]
       },
+      "RagFeedbackInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "searchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chunkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "util",
+              "irrelevante"
+            ]
+          },
+          "agent": {
+            "type": "string",
+            "example": "qa",
+            "description": "Agent slug — the voter."
+          }
+        },
+        "required": [
+          "projectId",
+          "searchId",
+          "chunkId",
+          "verdict",
+          "agent"
+        ]
+      },
+      "RagFeedbackInternalResponseDto": {
+        "type": "object",
+        "properties": {
+          "searchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chunkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "util",
+              "irrelevante"
+            ]
+          },
+          "rank": {
+            "type": "number",
+            "description": "The 1-based position the judged chunk held in THAT search."
+          }
+        },
+        "required": [
+          "searchId",
+          "chunkId",
+          "verdict",
+          "rank"
+        ]
+      },
+      "RagFeedbackRequestDto": {
+        "type": "object",
+        "properties": {
+          "searchId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The `searchId` returned by the search that produced this hit — never invented by the client."
+          },
+          "chunkId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The chunk being judged. Must be one of the hits THAT search returned, otherwise 400."
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "util",
+              "irrelevante"
+            ],
+            "description": "Two values, not a 1-5 scale: a finer scale invites per-voter differences in ruler that no aggregation recovers later."
+          }
+        },
+        "required": [
+          "searchId",
+          "chunkId",
+          "verdict"
+        ]
+      },
+      "RagFeedbackResponseDto": {
+        "type": "object",
+        "properties": {
+          "searchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chunkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "util",
+              "irrelevante"
+            ]
+          },
+          "rank": {
+            "type": "number",
+            "description": "The 1-based position the judged chunk held in THAT search — the number that separates \"the index is poor\" from \"the weights are wrong\"."
+          }
+        },
+        "required": [
+          "searchId",
+          "chunkId",
+          "verdict",
+          "rank"
+        ]
+      },
       "RagFileCoverageResponseDto": {
         "type": "object",
         "properties": {
@@ -18020,6 +18257,16 @@
           "topK": {
             "type": "number",
             "example": 5
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The session the agent is running in. Absent means the caller had no session — the telemetry row is still written (RN-479), only the `rag.search` timeline narration is skipped. Never invented by the api: a session it did not receive is a session that did not exist."
+          },
+          "agent": {
+            "type": "string",
+            "example": "dev-lead",
+            "description": "Agent slug, recorded as the telemetry actor (`actor_kind: agent`). Absent falls back to the `system` actor rather than inventing a user."
           }
         },
         "required": [
@@ -18030,6 +18277,11 @@
       "RagSearchInternalHitResponseDto": {
         "type": "object",
         "properties": {
+          "chunkId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The chunk id — half of the reference a `rag_feedback` vote needs (RN-480). Without it the agent could read a hit and have no way to say it was useful."
+          },
           "path": {
             "type": "string",
             "example": "docs/adr/0080-chat-rag-pipeline-indexacao.md",
@@ -18049,6 +18301,7 @@
           }
         },
         "required": [
+          "chunkId",
           "path",
           "chunk",
           "score",
@@ -18058,6 +18311,12 @@
       "RagSearchInternalResponseDto": {
         "type": "object",
         "properties": {
+          "searchId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "The `rag_searches` row this search left (RN-479) — the other half of the vote reference. `null` when the telemetry row was not written; the tool then omits the ids instead of offering the model a reference that would be refused."
+          },
           "hits": {
             "type": "array",
             "items": {
@@ -18070,6 +18329,7 @@
           }
         },
         "required": [
+          "searchId",
           "hits",
           "degraded"
         ]

@@ -267,7 +267,7 @@ reason in the URL.
   executes; **changing it** is deciding how much the product spends
   without asking, and that's why it requires the same role that
   activates execution.
-- **The four `/projects/:projectId/rag/*` routes split the role by the
+- **The five `/projects/:projectId/rag/*` routes split the role by the
   same criterion as the area parallelism ceiling (RN-083)** (PROGRAM 28,
   Wave 4 — RN-231..234, ADR 0080): `search` and `coverage` are
   `role:viewer` (pure reading over what's already indexed), and
@@ -278,6 +278,14 @@ reason in the URL.
   `role:maintainer` too, same reasoning: it calls the embedding provider
   and replaces what the project has indexed for that scope. Its body is
   browser-read TEXT, never a host path.
+  `feedback` (RN-480) is `role:viewer`, the **same** role as `search`,
+  and the criterion above is why: voting spends nothing and configures
+  nothing — it is observation, and it is the only signal of truth the
+  RAG measurement has (`medir:rag`). Raising it to `maintainer` would
+  empty that signal to protect nothing. The vote is still bounded on the
+  server: a `searchId` from another project, or a `chunkId` that was not
+  among that search's hits, is a 400 — a vote without a rank measures
+  nothing.
 - **The four `/projects/:projectId/code/*` routes are `role:viewer` and
   READ-ONLY** (PHASE 26b). Seeing a project's code is the same
   permission as seeing the project — the same cut as
@@ -484,6 +492,7 @@ reason in the URL.
 | GET | `/internal/graph/prompt-templates/:name` | engine-service |
 | POST | `/internal/graph/prompt-templates` | engine-service |
 | POST | `/internal/rag/search` | engine-service |
+| POST | `/internal/rag/feedback` | engine-service |
 | GET | `/internal/gates` | engine-service |
 | GET | `/internal/projects/:projectId/git-remote` | engine-service |
 | GET | `/internal/projects/:projectId/business-rules` | engine-service |
@@ -544,6 +553,7 @@ reason in the URL.
 | POST | `/projects/:projectId/rag/search` | role:viewer |
 | POST | `/projects/:projectId/rag/reindex` | role:maintainer |
 | POST | `/projects/:projectId/rag/local` | role:maintainer |
+| POST | `/projects/:projectId/rag/feedback` | role:viewer |
 | GET | `/projects/:projectId/rag/coverage` | role:viewer |
 | GET | `/projects/:projectId/container` | role:viewer |
 | GET | `/projects/:projectId/container/lifecycle` | role:viewer |

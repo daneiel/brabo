@@ -6471,6 +6471,8 @@ para a tela de provisionamento, que só desviava em `provision_failed`.
   volume Docker de desenvolvimento que nascia `root`) estava gravada só em
   `proposed_actions.execution_result`, que nenhuma tela lê
 
+## A busca do RAG deixa rastro, e o rastro congela os pesos (RN-479..481)
+
 ### RN-478 — O `permissions.json` mora onde a api ALCANÇA, o escopo do terminal aponta para o HOST {#rn-478}
 
 A raiz do projeto tinha **uma** derivação (`projectScopeRoot`) e **dois**
@@ -6559,6 +6561,148 @@ caminho que a execução em container substitui; o que muda agora é só a
 
 ---
 
+### RN-479 — Toda busca híbrida grava uma linha em `rag_searches`, com os pesos CONGELADOS; e a telemetria nunca derruba a busca {#rn-479}
+
+`apps/api/src/domain/rag/rag-search-limits.ts` declara, no próprio comentário,
+que **nenhum** dos quatro números da busca híbrida (os dois pesos, o limiar e o
+número de candidatos) vem de calibração com dado real. Não vinha porque não
+havia como: a busca não deixava rastro nenhum — nem linha de tabela, nem evento.
+Calibrar sem medir seria trocar um chute por outro.
+
+`HybridSearchUseCase` passa a gravar, a cada busca, o que ela devolveu
+(`hits`, com o **rank** 1-based de cada trecho), sob que condições
+(`degraded`/`vector_available`), quanto demorou (`latency_ms`), quem buscou
+(`actor_kind`/`actor_id`) e em que sessão — ou em NENHUMA.
+
+**Por que TABELA e não só evento de sessão.** `session_events.session_id` é
+`NOT NULL`, e uma busca vinda da aba de RAG é de PROJETO: não tem sessão.
+Registrar só como evento perderia exatamente as buscas em que um humano olhou
+os scores e julgou, que são as que carregam o sinal de verdade. É a mesma
+classe de problema que forçou o corte do metering de embedding
+([ADR 0075](adr/0075-embeddings-no-contrato-de-llm-provider.md),
+`token_usage.session_id NOT NULL`), e a saída é a mesma: tabela própria, com
+`session_id` NULLABLE.
+
+**`pesos` congelado na linha é o ponto.** `pesosVigentes()` copia os valores do
+momento para dentro do registro — mesma disciplina do preço congelado no
+metering ([ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md))
+e da `image_version` em `project_containers`. Sem a cópia, a primeira
+calibração que mexer em `RAG_SEARCH_WEIGHT_VECTOR` faria toda a medição
+anterior passar a significar outra coisa, calada — e "melhorou depois da
+mudança?", a única pergunta que a telemetria existe para responder, ficaria
+impossível de fazer.
+
+**Gravar telemetria NUNCA derruba a busca, e também não falha CALADA.** Quem
+pergunta não deveria perder a resposta porque o instrumento de medição caiu; e
+o repositório é explícito sobre falha que vira silêncio ([RN-059](business-rules/custo.md#rn-059)).
+Então o INSERT que falha vira log com a origem classificada (`infra`,
+[RN-023](#rn-023)) e `searchId: null` na resposta — que não é o mesmo que "não
+houve resultado": é "não há a que anexar voto", e a tela precisa dos dois
+separados para não oferecer um controle que a api recusaria
+([RN-088](#rn-088)).
+
+`degraded` e `vector_available` são duas colunas de propósito, e a redundância
+de hoje (`degraded = !vector_available`) está declarada no schema em vez de
+escondida: `vector_available` é um fato sobre o PROVIDER — é ele que faz
+`medir:rag` reprovar —, e `degraded` é a palavra do CONTRATO com o engine, cuja
+definição pode crescer.
+
+- **Onde:** `apps/api/src/domain/rag/rag-telemetry.ts` (`pesosVigentes`,
+  `RagSearchHitTelemetry`), `apps/api/src/db/schema/rag.ts` (`ragSearches`),
+  `apps/api/src/application/use-cases/rag/hybrid-search.use-case.ts`
+  (`registrarBusca`),
+  `apps/api/src/infrastructure/persistence/drizzle/rag-telemetry.repository.ts`
+- **Teste:**
+  `apps/api/test/application/use-cases/rag/hybrid-search.use-case.spec.ts`
+  (a linha gravada com rank e pesos; os pesos serem CÓPIA e não o mesmo objeto;
+  a busca da aba sem sessão; e o CASO DE FALHA — insert que falha não derruba a
+  busca e devolve `searchId: null`)
+- **ADR:** [0129](adr/0129-telemetria-de-busca-do-rag-como-tabela.md) — por que
+  é TABELA e não evento, e por que os pesos vão congelados;
+  [0080](adr/0080-busca-hibrida-pesos-limiar-e-citacao.md), cujos números esta
+  RN **não** revisa: ela dá o instrumento para revisá-los depois
+- **Origem:** plano do dono do produto, Parte 2 / Etapa 1
+
+### RN-480 — O voto sobre um trecho é o único sinal de VERDADE da medição, e ele exige a referência que a busca devolveu {#rn-480}
+
+Latência e taxa de degradação dizem se a busca RODOU; só o voto diz se ela
+ACERTOU. `rag_feedback` guarda esse voto — dois valores (`util`/`irrelevante`)
+e não uma escala de 1 a 5, porque escala fina convida a diferenças de régua
+entre quem vota que nenhuma agregação recupera depois.
+
+**A referência é obrigatória, e as duas recusas são 400 que ENSINAM.**
+`searchId` que não existe naquele projeto, e `chunkId` que não estava entre os
+hits daquela busca, são recusados antes de qualquer escrita. Não é rigor
+decorativo: o **rank** do trecho votado é o que separa dois diagnósticos que a
+`precision@1` confunde — índice pobre não devolve o trecho certo em posição
+nenhuma, peso errado devolve o trecho certo em rank 7. Voto sem rank produz
+número sem significado, que é pior que número nenhum.
+
+A recusa vale nos dois caminhos: pela aba vira 400 na tela; pelo agente vira
+**tool-result de erro** que o modelo pode corrigir na iteração seguinte
+([RN-061](business-rules/custo.md#rn-061)/[RN-163](business-rules/autenticacao.md#rn-163)), nunca crash.
+
+**Um voto por ator por trecho por busca** (`unique (search_id, chunk_id,
+actor_id)`, com `onConflictDoUpdate`): mudar de ideia sobrescreve o próprio
+voto. Sem a trava, quem clicasse duas vezes pesaria o dobro na `precision@k` e
+a métrica passaria a medir entusiasmo.
+
+O papel é `viewer`, o MESMO de `search` — quem pode ler o resultado é quem pode
+julgá-lo ([RN-102](business-rules/custo.md#rn-102): o mínimo é do endpoint, e votar não gasta nem
+configura nada). A ferramenta do agente é `:direct`, nunca `proposed_action`:
+dar nota a um trecho não é efeito externo, e transformá-la em ação a aprovar
+encheria a fila de ruído.
+
+- **Onde:** `apps/api/src/db/schema/rag.ts` (`ragFeedback`, `ragVerdictEnum`),
+  `apps/api/src/application/use-cases/rag/record-rag-feedback.use-case.ts`,
+  `apps/engine/lib/engine/harness/tools/rag_feedback.ex`,
+  `apps/web/src/components/rag/RagCitationCard.tsx` (os dois controles, onde o
+  score já está)
+- **Teste:**
+  `apps/api/test/application/use-cases/rag/record-rag-feedback.use-case.spec.ts`
+  (o rank devolvido; e os três CASOS DE FALHA — `searchId` desconhecido,
+  `chunkId` fora dos hits, busca de outro projeto),
+  `apps/engine/test/engine/harness/tools/rag_feedback_test.exs` (a recusa
+  voltando como tool-result com a mensagem da api, nunca crash; `:direct`; e o
+  registro nos seis agentes que já tinham `rag_search`),
+  `apps/web/src/components/rag/RagCitationCard.test.tsx` (os três estados do
+  controle, e a ausência dele sem `searchId`),
+  `apps/api/test/scripts/medir-rag.spec.ts` (`precision@k` sobre o julgado)
+- **ADR:** [0129](adr/0129-telemetria-de-busca-do-rag-como-tabela.md)
+- **Origem:** plano do dono do produto, Parte 2 / Etapa 1
+
+### RN-481 — `rag.search`/`rag.feedback` são NARRAÇÃO da timeline, e só existem quando há sessão {#rn-481}
+
+Os dois eventos entram no event log **apenas no caminho do agente** — a busca
+da aba é de projeto e não tem sessão onde narrar. Isso é assimetria declarada,
+não lacuna: **a tabela é a fonte da medição, o evento é narração**. Medir pelo
+event log perderia metade das buscas, e justamente a metade com julgamento
+humano.
+
+Falha de narração não derruba nem a busca nem o voto: a linha da tabela já está
+gravada, e é ela que a medição lê. A falha vira log com origem `infra`, nunca
+silêncio.
+
+`'rag'` entra em `PREFIXOS_DE_EVENTO` (`scripts/docs/generate.mjs`) no mesmo
+commit — sem isso o inventário gerado de `docs/reference/events.md` não enxerga
+os dois tipos, e `pnpm docs:check` ficaria verde sobre uma lista incompleta:
+uma doc que passa mentindo é pior que uma doc que reprova.
+
+- **Onde:** `apps/api/src/domain/rag/rag-telemetry.ts`
+  (`EVENTO_RAG_SEARCH`/`EVENTO_RAG_FEEDBACK`),
+  `apps/api/src/application/use-cases/rag/hybrid-search.use-case.ts`,
+  `apps/api/src/application/use-cases/rag/record-rag-feedback.use-case.ts`,
+  `scripts/docs/generate.mjs` (`PREFIXOS_DE_EVENTO`)
+- **Teste:**
+  `apps/api/test/application/use-cases/rag/hybrid-search.use-case.spec.ts`
+  (narra com sessão; NÃO narra sem sessão),
+  `apps/api/test/application/use-cases/rag/record-rag-feedback.use-case.spec.ts`
+  (o mesmo par, para o voto)
+- **ADR:** [0129](adr/0129-telemetria-de-busca-do-rag-como-tabela.md)
+- **Origem:** plano do dono do produto, Parte 2 / Etapa 1
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -6596,6 +6740,9 @@ caminho que a execução em container substitui; o que muda agora é só a
 | `step.check` do bootstrap falha (token expirado, 403, timeout) | vira `status: 'failed'` + `lastError` na linha e `bootstrap.step_failed` no event log — antes subia sem tocar em nada e a tela pollava para sempre (RN-477) |
 | Provisionamento não converge dentro do teto da tela | a espera PARA em 3 minutos, declara que isso não prova fracasso e oferece procurar de novo — sem disparar um segundo POST (RN-477) |
 | Aplicar um modelo a todos os agentes e a api recusar PARTE deles | as linhas que passaram ficam gravadas e são relidas; o aviso diz quantas de quantas e NOMEIA as que ficaram — nunca "salvo" nem "não salvo", que seriam as duas mentira (RN-476) |
+| INSERT da telemetria de busca do RAG falha | a busca **responde assim mesmo**, com `searchId: null`, e a falha vira log com origem `infra` — o instrumento de medição não derruba o que ele mede, e também não some calado (RN-479) |
+| Voto num `searchId`/`chunkId` que aquela busca não devolveu | 400 que ensina, nada gravado — voto sem rank não distingue "índice pobre" de "pesos errados", e número sem significado é pior que número nenhum (RN-480) |
+| `medir:rag` numa janela em que `vector_available` foi `false` o tempo todo | **reprova (exit 1)**: o que foi medido não é a busca híbrida, é a metade léxica dela, e calibrar peso de vetor contra isso seria calibrar contra outro sistema (RN-479) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

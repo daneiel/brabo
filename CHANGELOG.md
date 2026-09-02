@@ -78,6 +78,56 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api, engine, web**: a busca do RAG passa a **deixar rastro**. Os quatro
+  números da busca híbrida — os dois pesos (0.6/0.4), o limiar (0.2) e o número
+  de candidatos — estão declarados no próprio código como chute inicial:
+  *"NENHUM dos quatro números abaixo vem de calibração com dado real"*. E não
+  vinha mesmo, porque não havia como: a busca não deixava rastro nenhum, nem
+  linha de tabela nem evento, então calibrar seria trocar um chute por outro.
+  Esta entrega **não calibra nada** — ela dá os olhos. Toda busca grava uma
+  linha em `rag_searches` com o que devolveu (cada trecho com o **rank** que
+  ocupou), sob que condições (`degraded`/`vector_available`), quanto demorou e
+  quem buscou; e os **pesos vão CONGELADOS na linha**, pela mesma disciplina do
+  preço congelado no metering — sem a cópia, a primeira calibração faria toda a
+  medição anterior passar a significar outra coisa, calada, e "melhorou depois
+  da mudança?" viraria pergunta impossível. É **tabela**, e não só evento de
+  sessão, por um motivo concreto: `session_events.session_id` é `NOT NULL` e a
+  busca vinda da aba de RAG é de projeto, sem sessão — medir pelo event log
+  perderia justamente as buscas em que um humano olhou os scores. Gravar
+  telemetria **nunca derruba a busca** (o INSERT que falha vira log com origem
+  `infra` e `searchId: null` na resposta, que não é o mesmo que "não achei
+  nada") (RN-479)
+- **api, engine, web**: cada trecho recuperado pode ser julgado — **útil** ou
+  **irrelevante** —, e esse voto é o único sinal de **verdade** da medição:
+  latência e taxa de degradação dizem se a busca *rodou*, nunca se ela
+  *acertou*. Na tela, os dois controles nascem no `RagCitationCard`, o único
+  lugar da UI que já mostra `score`, `vectorScore` e `lexicalScore` — o
+  julgamento nasce onde o número já está —, com os três estados sem colapsar
+  (registrando / registrado, dizendo o rank / recusado, com a mensagem da api).
+  Do lado dos agentes é a ferramenta nova `rag_feedback`, `:direct` (dar nota a
+  um trecho não é efeito externo e não vira `proposed_action`), registrada nos
+  **seis** agentes que já tinham `rag_search` — que agora devolve o `searchId` e
+  o `id` de cada trecho, sem quebrar nem o aviso de degradação nem o teto de
+  bytes. Votar exige a referência que a busca devolveu: `searchId` desconhecido
+  ou `chunkId` que não estava entre os hits é **400 que ensina** (e, pelo
+  agente, tool-result de erro que o modelo corrige, nunca crash) — porque o
+  **rank** do que foi votado útil é o que separa "o índice está pobre" de "os
+  pesos estão errados", e voto sem rank é número sem significado. Um voto por
+  ator por trecho por busca: mudar de ideia sobrescreve, nunca soma (RN-480)
+- **api**: `pnpm --filter api medir:rag -- --projeto <uuid>` lê esse rastro no
+  molde de `medir:execucao` — tabelas Markdown para colar no documento, `--json`
+  e helpers puros testados. Mede `precision@k` **só sobre o que foi julgado**
+  (o denominador é o que recebeu voto, nunca `k`: um hit sem voto é
+  *desconhecido*, não irrelevante, e contá-lo como irrelevante mediria a
+  disposição de votar, não a qualidade da busca), taxa de `degraded`, buscas sem
+  nenhum hit acima do limiar, latência p50/p95, e a **distribuição de rank do
+  que foi votado útil** — a métrica que distingue índice pobre de peso errado,
+  que a `precision@1` confunde. Ele **reprova (exit 1)** por uma coisa só:
+  `vector_available: false` na janela inteira, porque aí o que foi medido não é
+  a busca híbrida. O resto é medição: sai na tabela, não reprova. E ele imprime
+  quais **pesos** apareceram na janela, para que a mistura fique visível quando
+  a calibração começar (RN-479/480,
+  [ADR 0129](docs/adr/0129-telemetria-de-busca-do-rag-como-tabela.md))
 - **web**: a seção **Modelos por agente** ganha uma barra que aplica **um
   modelo a todos os agentes de uma vez**. Escolher o mesmo modelo para os 17
   era percorrer 17 dropdowns, e o custo disso não é o tempo — é que ninguém

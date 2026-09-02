@@ -1,0 +1,69 @@
+---
+id: internal-rag-controller-votar
+title: "The agent's vote on one retrieved chunk (RN-480)"
+description: "Same use case as the human route — no second judgement path. An unknown `searchId`/`chunkId` is a 400 that the engine turns into an error tool-result for the model to correct (RN-061), never a crash."
+sidebar_label: "The agent's vote on one retrieved chunk (RN-480)"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"The agent's vote on one retrieved chunk (RN-480)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/rag/feedback"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Same use case as the human route — no second judgement path. An unknown `searchId`/`chunkId` is a 400 that the engine turns into an error tool-result for the model to correct (RN-061), never a crash.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-rag-controller-votar.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-rag-controller-votar.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-rag-controller-votar.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

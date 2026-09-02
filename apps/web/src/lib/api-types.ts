@@ -1457,8 +1457,26 @@ export interface RagSearchHit {
   origin: RagChunkOrigin;
 }
 
+/** O veredito sobre um trecho (RN-480) — dois valores, nunca uma escala. */
+export type RagVerdict = 'util' | 'irrelevante';
+
+export interface RagFeedbackReport {
+  searchId: string;
+  chunkId: string;
+  verdict: RagVerdict;
+  /** A posição (1-based) que o trecho votado tinha NAQUELA busca. */
+  rank: number;
+}
+
 export interface RagSearchResult {
   query: string;
+  /**
+   * A linha de `rag_searches` que esta busca deixou (RN-479) — o id a que um
+   * voto se anexa. `null` quando a telemetria NÃO foi gravada, que não é o
+   * mesmo que "não houve resultado": não há a que anexar voto, e a tela usa
+   * os dois separados para não oferecer um controle que a api recusaria.
+   */
+  searchId: string | null;
   hits: RagSearchHit[];
   /**
    * `false` quando o provider de embedding não respondeu (RN-233) — a busca

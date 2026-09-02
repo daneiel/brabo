@@ -122,6 +122,39 @@ defmodule Engine.Harness.Tools.RagSearchTest do
     assert texto =~ "resposta inesperada"
   end
 
+  test "RN-480: com `searchId`, o texto carrega o par de ids que `rag_feedback` exige", %{
+    ctx: ctx
+  } do
+    Process.put(:fake_rag_search, %{
+      "searchId" => "b-1",
+      "hits" => [%{"path" => "docs/x.md", "chunkId" => "c-9", "excerpt" => "trecho"}],
+      "degraded" => false
+    })
+
+    assert {:ok, texto} = RagSearch.run(%{"query" => "x"}, ctx)
+
+    assert texto =~ "busca b-1"
+    assert texto =~ "rag_feedback"
+    assert texto =~ "id: c-9"
+  end
+
+  test "RN-479: SEM `searchId` (telemetria não gravada), nem convite nem ids aparecem", %{
+    ctx: ctx
+  } do
+    # Oferecer ao modelo uma referência que a api vai recusar é pior que não
+    # oferecer nenhuma — a busca em si continua respondendo normalmente.
+    Process.put(:fake_rag_search, %{
+      "hits" => [%{"path" => "docs/x.md", "chunkId" => "c-9", "excerpt" => "trecho"}],
+      "degraded" => false
+    })
+
+    assert {:ok, texto} = RagSearch.run(%{"query" => "x"}, ctx)
+
+    assert texto =~ "docs/x.md"
+    refute texto =~ "rag_feedback"
+    refute texto =~ "id: c-9"
+  end
+
   test "sem `query`, recusa dizendo o que falta", %{ctx: ctx} do
     assert {:error, texto} = RagSearch.run(%{}, ctx)
     assert texto =~ "exige o argumento `query`"

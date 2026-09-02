@@ -1150,6 +1150,23 @@ export const searchRag = (
   },
 ) => post<import('./api-types').RagSearchResult>(`/projects/${projectId}/rag/search`, body);
 
+// O voto sobre um trecho (RN-480) — `viewer`, o MESMO papel de `search`: quem
+// pode ler o resultado é quem pode julgá-lo. Votar de novo no mesmo trecho da
+// mesma busca SOBRESCREVE o próprio voto (unique por ator), nunca soma um
+// segundo — a métrica mede acerto, não entusiasmo.
+export const sendRagFeedback = (
+  projectId: string,
+  body: {
+    searchId: string;
+    chunkId: string;
+    verdict: import('./api-types').RagVerdict;
+  },
+) =>
+  post<import('./api-types').RagFeedbackReport>(
+    `/projects/${projectId}/rag/feedback`,
+    body,
+  );
+
 export const getRagCoverage = (projectId: string) =>
   get<import('./api-types').RagCoverage>(`/projects/${projectId}/rag/coverage`);
 

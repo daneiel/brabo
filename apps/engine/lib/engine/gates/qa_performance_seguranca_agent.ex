@@ -20,14 +20,17 @@ defmodule Engine.Gates.QaPerformanceSegurancaAgent do
 
   alias Engine.Gates.Hooks.Termination
   alias Engine.Gates.Tools.EmitPerfSegurancaVerdict
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch}
+  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch, RagFeedback}
   alias Engine.Harness.{Hooks, ToolLoop}
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
 
   # RagSearch entrou aqui (frente rag_search): mesma classe de leitura de
   # ReadFile/SearchWorkspace, só que sobre docs/ADRs indexados — útil para
   # achar convenção de performance/segurança já registrada no projeto.
-  @registry [ReadFile, SearchWorkspace, RagSearch, EmitPerfSegurancaVerdict]
+  # RagFeedback anda junto de RagSearch (RN-480): buscar sem poder dizer se o
+  # trecho serviu deixa a calibração dos pesos sem sinal de verdade nenhum.
+  # `:direct` como a busca — votar não é efeito externo.
+  @registry [ReadFile, SearchWorkspace, RagSearch, RagFeedback, EmitPerfSegurancaVerdict]
 
   @doc "Registro de ferramentas — sem `Terminal`, de propósito (ver moduledoc)."
   def tools, do: @registry

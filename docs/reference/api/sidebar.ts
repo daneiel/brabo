@@ -282,6 +282,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-rag-controller-votar",
+          label: "The agent's vote on one retrieved chunk (RN-480)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-rag-controller-buscar",
           label: "Hybrid search over the project's RAG index, for the engine's tool",
           className: "api-method post",
@@ -1065,6 +1071,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/rag-controller-obter-cobertura",
           label: "Index coverage: indexed files/sessions against the real total",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/rag-controller-votar",
+          label: "Judges one hit of one search as useful or irrelevant (RN-480)",
+          className: "api-method post",
         },
         {
           type: "doc",

@@ -33,6 +33,14 @@ defmodule Engine.Harness.Tools.RagSearch do
   (`:rag_search_max_bytes`, menor que o de `search_workspace`/`read_file` de
   propósito: um hit de RAG já é chunk+excerpt inteiros, não uma linha de
   caminho — acumula bytes mais rápido por hit).
+
+  ## O par de ids, e por que ele pode não vir (RN-479/480)
+
+  O resultado carrega o `searchId` da busca e o `id` de cada trecho — é a
+  referência que `rag_feedback` exige para votar. Quando a api não devolve
+  `searchId` (a telemetria não foi gravada, e a busca respondeu assim mesmo),
+  o convite e os ids somem INTEIROS: oferecer ao modelo uma referência que a
+  api vai recusar é pior que não oferecer nenhuma.
   """
 
   @behaviour Engine.Harness.Tool
@@ -75,9 +83,20 @@ defmodule Engine.Harness.Tools.RagSearch do
   def run(%{"query" => query} = args, ctx) when is_binary(query) and query != "" do
     top_k = clamp_top_k(Map.get(args, "top_k"))
 
-    case EngineApiClient.rag_search(ctx.project_id, query, top_k) do
+    # Sessão e agente vão para a api porque ela não tem como deduzi-los: são
+    # o ator e a sessão da TELEMETRIA (RN-479), e é a presença da sessão que
+    # decide se a busca também vira narração na timeline (RN-481).
+    opts = [session_id: Map.get(ctx, :session_id), agent: Map.get(ctx, :agent)]
+
+    case EngineApiClient.rag_search(ctx.project_id, query, top_k, opts) do
       {:ok, %{"hits" => hits} = resp} when is_list(hits) ->
-        {:ok, montar_resposta(query, hits, Map.get(resp, "degraded", false))}
+        {:ok,
+         montar_resposta(
+           query,
+           hits,
+           Map.get(resp, "degraded", false),
+           Map.get(resp, "searchId")
+         )}
 
       {:ok, outro} ->
         {:error, "resposta inesperada do rag_search: #{inspect(outro)}"}
@@ -97,29 +116,46 @@ defmodule Engine.Harness.Tools.RagSearch do
 
   # --- Renderização ---
 
-  defp montar_resposta(query, [], degraded?) do
+  defp montar_resposta(query, [], degraded?, _search_id) do
     aviso_degradado(degraded?) <>
       "nenhum resultado no RAG para \"#{query}\" — refine o termo ou " <>
       "considere que o índice pode não cobrir o que você procura ainda."
   end
 
-  defp montar_resposta(_query, hits, degraded?) do
+  defp montar_resposta(_query, hits, degraded?, search_id) do
     corpo =
       hits
       |> Enum.with_index(1)
-      |> Enum.map_join("\n\n", fn {hit, i} -> formatar_hit(hit, i) end)
+      |> Enum.map_join("\n\n", fn {hit, i} -> formatar_hit(hit, i, search_id) end)
 
-    cabecalho = "#{length(hits)} trecho(s) encontrado(s):"
+    cabecalho = "#{length(hits)} trecho(s) encontrado(s)#{convite_de_voto(search_id)}:"
 
     truncate(aviso_degradado(degraded?) <> cabecalho <> "\n\n" <> corpo, length(hits))
   end
 
-  defp formatar_hit(hit, i) do
+  # O par `search_id`/`chunk_id` é a REFERÊNCIA que `rag_feedback` exige
+  # (RN-480). Quando a api não devolve `searchId` — a telemetria não foi
+  # gravada, e a busca respondeu assim mesmo —, o convite e os ids somem
+  # inteiros: oferecer ao modelo uma referência que a api vai recusar é pior
+  # que não oferecer nenhuma.
+  defp convite_de_voto(nil), do: ""
+
+  defp convite_de_voto(search_id),
+    do:
+      " (busca #{search_id} — depois de usar um trecho, diga se ele serviu " <>
+        "com `rag_feedback`, usando o `id` dele)"
+
+  defp formatar_hit(hit, i, search_id) do
     path = Map.get(hit, "path", "?")
     trecho = Map.get(hit, "excerpt") || Map.get(hit, "chunk") || ""
 
-    "[#{i}] fonte: #{path}#{score_txt(Map.get(hit, "score"))}\n#{trecho}"
+    "[#{i}] fonte: #{path}#{score_txt(Map.get(hit, "score"))}" <>
+      id_txt(search_id, Map.get(hit, "chunkId")) <> "\n" <> trecho
   end
+
+  defp id_txt(nil, _chunk_id), do: ""
+  defp id_txt(_search_id, nil), do: ""
+  defp id_txt(_search_id, chunk_id), do: " id: #{chunk_id}"
 
   defp score_txt(score) when is_number(score), do: " (score #{score})"
   defp score_txt(_), do: ""

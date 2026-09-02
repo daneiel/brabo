@@ -469,6 +469,20 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def rag_feedback(project_id, search_id, chunk_id, verdict, agent) do
+    notify({:rag_feedback, project_id, search_id, chunk_id, verdict, agent})
+
+    # Mesma chave única de `rag_search`: `Process.put(:fake_rag_feedback,
+    # {:error, {400, ...}})` simula a recusa da api por id desconhecido.
+    reply(:fake_rag_feedback, %{
+      "searchId" => search_id,
+      "chunkId" => chunk_id,
+      "verdict" => verdict,
+      "rank" => 1
+    })
+  end
+
+  @impl true
   def get_prompt_template(name, version \\ nil) do
     notify({:prompt_template_fetched, name, version})
 

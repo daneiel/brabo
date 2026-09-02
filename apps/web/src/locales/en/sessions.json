@@ -69,7 +69,20 @@
     "signals": "vector {{vector}} · lexical {{lexical}}",
     "collapse": "collapse",
     "expand": "view full excerpt",
-    "viewInSession": "View in session"
+    "viewInSession": "View in session",
+    "feedback": {
+      "groupLabel": "Did this excerpt help?",
+      "question": "Did this excerpt help?",
+      "useful": "useful",
+      "irrelevant": "irrelevant",
+      "sending": "recording…",
+      "recorded": "recorded as {{verdict}} — it came in at #{{rank}} in this search",
+      "errorDefault": "Could not record your vote",
+      "verdicts": {
+        "util": "useful",
+        "irrelevante": "irrelevant"
+      }
+    }
   },
   "ragCoverage": {
     "noFilesInRepo": "no files in the repository",
