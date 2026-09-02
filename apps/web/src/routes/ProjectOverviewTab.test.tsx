@@ -1,11 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import overviewPtBR from '../locales/pt-BR/overview.json';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
+import { ApiError } from '../lib/api-client';
 import { ToastProvider } from '../components/ui/ToastProvider';
 
 // Instância isolada de i18next em pt-BR (mesmo padrão de
@@ -52,6 +54,7 @@ const getAgentModelBinding = vi.fn();
 const listAgentAutonomy = vi.fn();
 const listWorkspaces = vi.fn();
 const getProjectsSummary = vi.fn();
+const activateExecutionMock = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
@@ -70,7 +73,7 @@ vi.mock('../lib/api-client', async () => {
     listAgentAutonomy: (...args: unknown[]) => listAgentAutonomy(...args),
     listWorkspaces: (...args: unknown[]) => listWorkspaces(...args),
     getProjectsSummary: (...args: unknown[]) => getProjectsSummary(...args),
-    activateExecution: vi.fn(),
+    activateExecution: (...args: unknown[]) => activateExecutionMock(...args),
     requestParallelization: vi.fn(),
     rearmDevAgent: vi.fn(),
     setAgentAutonomy: vi.fn(),
@@ -238,6 +241,7 @@ beforeEach(() => {
     },
   ]);
   getProjectsSummary.mockResolvedValue([resumo()]);
+  activateExecutionMock.mockResolvedValue({ sessionId: 'sess-1', modules: [] });
 });
 
 /**
@@ -315,5 +319,52 @@ describe('ProjectOverviewTab — executionActivated vem do resumo, não da janel
     montar();
 
     expect(await screen.findByText('Ativar execução')).toBeInTheDocument();
+  });
+});
+
+/**
+ * RN-478 — o mesmo botão tinha DOIS diagnósticos: o chat da sessão
+ * (`SessionPage.tsx`) já mostrava a causa por `mensagemDaApi`, e a Visão
+ * geral imprimia a constante `activateError`. O 400 que ensina ("o Arquiteto
+ * precisa definir os módulos", "a pasta do projeto está incoerente") morria
+ * aqui, e quem clicava ficava com "Não foi possível ativar a execução".
+ */
+describe('ProjectOverviewTab — a causa da recusa de ativar chega à tela', () => {
+  it('mostra a mensagem da api, e não a constante genérica', async () => {
+    getProjectsSummary.mockResolvedValue([
+      resumo({ executionActivated: false, gatesEverOpened: false }),
+    ]);
+    activateExecutionMock.mockRejectedValue(
+      new ApiError(400, {
+        message:
+          'workspacePath inválido para projeto no modo runner: "/home/voce/../../etc".',
+      }),
+    );
+
+    montar();
+
+    await userEvent.click(await screen.findByText('Ativar execução'));
+
+    expect(
+      await screen.findByText(/workspacePath inválido para projeto no modo runner/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Não foi possível ativar a execução'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('erro sem corpo da api cai no texto padrão — o fallback continua existindo', async () => {
+    getProjectsSummary.mockResolvedValue([
+      resumo({ executionActivated: false, gatesEverOpened: false }),
+    ]);
+    activateExecutionMock.mockRejectedValue({ nao: 'e um Error' });
+
+    montar();
+
+    await userEvent.click(await screen.findByText('Ativar execução'));
+
+    expect(
+      await screen.findByText('Não foi possível ativar a execução'),
+    ).toBeInTheDocument();
   });
 });

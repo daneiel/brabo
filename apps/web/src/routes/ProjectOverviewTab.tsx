@@ -16,6 +16,7 @@ import {
 } from '../lib/hooks';
 import {
   activateExecution,
+  mensagemDaApi,
   requestParallelization,
   getAgentModelBinding,
   listAgentAutonomy,
@@ -382,10 +383,15 @@ function ExecutionSection({
     try {
       await activateExecution(projectId);
       await queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
-    } catch {
+    } catch (erro) {
+      // A causa REAL, e não a constante — o mesmo `mensagemDaApi` que o
+      // botão gêmeo do chat da sessão já usava (`SessionPage.tsx`). Mesmo
+      // botão com dois diagnósticos era o que fazia um 400 que ensina
+      // ("o Arquiteto precisa definir os módulos", "a pasta do projeto está
+      // incoerente" — RN-478) chegar à tela como "não foi possível".
       showToast({
         title: t('executionSection.errorTitle'),
-        message: t('executionSection.activateError'),
+        message: mensagemDaApi(erro, t('executionSection.activateError')),
         tone: 'danger',
       });
     }

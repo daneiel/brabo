@@ -6,6 +6,34 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api,web,engine**: o `permissions.json` de um projeto no modo `runner` passa
+  a morar onde a api **alcança** — a raiz gerenciada
+  (`<PROJECT_WORKSPACES_ROOT>/<workspace_dir_name>/`) —, enquanto o escopo do
+  terminal continua apontando para a pasta do **host**. Eram uma derivação só
+  (`projectScopeRoot`) com dois consumidores de necessidades opostas, o que
+  estava certo enquanto os dois modos com pasta de usuário eram bind-mount e
+  deixou de estar quando o `runner` nasceu, deliberadamente **sem**
+  bind-mount: a api tentava `mkdir -p` de um caminho do host de dentro do
+  próprio container e "Ativar execução" respondia **500**
+  (`EACCES: permission denied, mkdir '/home/<usuario>'`). O efeito maior era
+  invisível porque a LEITURA degradava calada (ENOENT →
+  `EMPTY_PERMISSIONS_FILE`): em projeto `runner` o arquivo **nunca existiu**, e
+  `decide()` sempre caiu em `require_approval` por um arquivo que não estava
+  lá. As duas derivações continuam no mesmo arquivo, pelo mesmo motivo de
+  sempre; o que se separou foi a pergunta, e um teste de não-regressão impede
+  unificá-las de volta (isso quebraria o ADR 0055). `container` e `mounted` não
+  mudam. Custo declarado: no modo `runner`, o arquivo de política deixa de
+  morar ao lado do código. Junto: os dois `Error` crus da derivação viram erro
+  tipado com motivo em pt-BR e **400** em vez de 500; a Visão geral passa a
+  mostrar a mensagem da api ao ativar a execução (o botão gêmeo do chat da
+  sessão já mostrava — mesmo botão, dois diagnósticos); e a anotação de OpenAPI
+  da rota, que prometia 409 para "sem `module_map`" (é 400) e para "execução já
+  ativa" (nunca foi 409 — a ativação é idempotente), passa a descrever o
+  código. **Lacuna que fica, declarada:** o engine tem o MESMO defeito ao
+  materializar o working tree do dev agent, e ele não foi corrigido aqui —
+  corrigi-lo isolado seria construir materialização de worktree no host por um
+  caminho que a execução em container substitui. O que muda é a mensagem, que
+  nomeia a causa em vez de repassar "permissão negada" cru (RN-478)
 - **docker**: as imagens de DESENVOLVIMENTO passam a criar `/data/git-repos` e
   `/data/project-workspaces` com o dono certo **antes** do `USER`. Sem isso o
   volume nomeado nascia `root:root` (o Docker copia dono e conteúdo do caminho
