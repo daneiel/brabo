@@ -1732,8 +1732,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Creates the repository and triggers the Gitflow bootstrap
-         * @description The response comes back as soon as the repository exists; the bootstrap (permanent branches, protections, templates) continues in the background and is IDEMPOTENT AND RESUMABLE. Track it via `GET /projects/:id/git/bootstrap`.
+         * Creates the repository and runs the Gitflow bootstrap
+         * @description SYNCHRONOUS: the response only comes back after the whole bootstrap (permanent branches, protections, templates) has run — there is no worker and no queue behind this. It is IDEMPOTENT AND RESUMABLE, so calling it again after a failure resumes from the step that failed. Track progress and read the failure reason via `GET /projects/:id/git/bootstrap`.
          */
         post: operations["GitController_provision"];
         delete?: never;
@@ -12483,7 +12483,7 @@ export interface operations {
                     "application/json": components["schemas"]["ExecucaoAtivadaResponseDto"];
                 };
             };
-            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            /** @description No current `module_map` (the Architect has to define the modules first), or the project's stored workspace location is incoherent — the `permissions.json` seeded here cannot be derived from it (RN-478). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12511,7 +12511,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No current module_map, or execution already active. */
+            /** @description The origin session is `consultiva` and refuses `execution.activated` (RN-097). Activating twice is NOT a conflict: it is idempotent by `findActiveExecutionSession`, and reactivates inside the same session. */
             409: {
                 headers: {
                     [name: string]: unknown;

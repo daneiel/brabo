@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "3e6212362d8c01f3cd0d9c6c24d08bf11e17b1507ed0536e2519478e6091dcc7",
+  "openapiSha256": "19ef198ed7265554aa432c47ab008044e4cecde5f0f754015bc85874909675b2",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -314,7 +314,7 @@
     "git-controller-provision.ParamsDetails.json": "386a9237e05fd1810fa3e309353fa8153c8e323008540d10084bfeb725ce33ea",
     "git-controller-provision.RequestSchema.json": "92aaa3df2d0d64448033254add3e08b8e57d9f9c7ae69aa7e6f3461e6714453d",
     "git-controller-provision.StatusCodes.json": "2b332f506940201d25d517f4707335380e7571f0527f48084edb3199520edd29",
-    "git-controller-provision.api.mdx": "5c824ce25ff015b5aef94a8d94aa96f92727ff6dfeb71f96f04e13c9df07e4d5",
+    "git-controller-provision.api.mdx": "5f2964f28c5509ca97b11ebe0f6dba2d31e3a7ce9c3df850a9aca89a3b14a169",
     "git-controller-reconhecer-falha-de-protecao.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "git-controller-reconhecer-falha-de-protecao.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "git-controller-reconhecer-falha-de-protecao.StatusCodes.json": "7817b2ea26314b34fb5a7d79a26ce96f5422954efd0be082a95b42a13be23f0f",
@@ -755,7 +755,7 @@
     "sessions-controller-transition.RequestSchema.json": "0b3fdadba6baf76eed16149b3e3603a9eece3025c94505b52141d733f32da248",
     "sessions-controller-transition.StatusCodes.json": "bac29893341373baad1228e2c1d4f2b90f0191796538e73e36010c2202898646",
     "sessions-controller-transition.api.mdx": "44678ecd7ea93a5ebe598abe3dd1a73773a2483cebfcd55c5ef953f4908945b8",
-    "sidebar.ts": "d6c89be1b16d665866a0081367751cecfb72fcd592a81f586d96178dee03f191",
+    "sidebar.ts": "2301c56d5b2e21a91cdfadf60cc9187fe70b68ceb37c995b03b1b7eaa97f96e5",
     "spend-controller-get-my-spend.ParamsDetails.json": "e45ac28a1c400c6a9ca93fc8413c1917113f32cca6e1b229e552ed1fe4e45f31",
     "spend-controller-get-my-spend.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "spend-controller-get-my-spend.StatusCodes.json": "edb168dd12843168011cf3d731fd24fd339c015693dd2fdcf8e0941921b875b5",

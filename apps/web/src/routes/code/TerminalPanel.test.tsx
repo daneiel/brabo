@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, cleanup, act } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import terminalPtBR from '../../locales/pt-BR/terminal.json';
 import { TerminalPanel } from './TerminalPanel';
 import type { TerminalChannelHandlers } from '../../lib/terminal-channel';
@@ -19,6 +20,18 @@ import type { TerminalChannelHandlers } from '../../lib/terminal-channel';
  * português que este teste já fazia antes da extração.
  */
 
+/**
+ * `RunnerOnboardingPanel` — renderizado por este componente quando não há
+ * runner — busca o caminho do projeto (`workspace_path`) para prefixar `cd`
+ * na instrução final. Daí o dublê e o `QueryClientProvider` abaixo: sem eles
+ * o painel nem chega a renderizar, e a mensagem que este arquivo afirma
+ * desaparece junto.
+ */
+vi.mock('../../lib/api-client', () => ({
+  API_URL: 'https://api.brabo.example',
+  getProject: () => Promise.resolve({ id: 'proj-1', workspacePath: null }),
+}));
+
 function novaInstanciaI18n() {
   const instancia = i18next.createInstance();
   void instancia.use(initReactI18next).init({
@@ -34,7 +47,13 @@ function novaInstanciaI18n() {
 }
 
 function renderComI18n(ui: ReactElement) {
-  return render(<I18nextProvider i18n={novaInstanciaI18n()}>{ui}</I18nextProvider>);
+  return render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <I18nextProvider i18n={novaInstanciaI18n()}>{ui}</I18nextProvider>
+    </QueryClientProvider>,
+  );
 }
 
 const {

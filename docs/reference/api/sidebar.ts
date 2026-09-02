@@ -145,7 +145,7 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "docs/reference/api/git-controller-provision",
-          label: "Creates the repository and triggers the Gitflow bootstrap",
+          label: "Creates the repository and runs the Gitflow bootstrap",
           className: "api-method post",
         },
         {

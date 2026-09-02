@@ -263,6 +263,20 @@ export interface ConfigurarPastaOpts {
   projectId: string;
   apiUrl: string;
   platform: string;
+  /**
+   * O caminho ABSOLUTO que o projeto declara (`projects.workspace_path`, o que
+   * a pessoa digitou ao criar o projeto no modo `runner`), quando conhecido.
+   *
+   * Serve a UMA coisa: prefixar a instrução final com `cd`. A tela dizia
+   * "dentro da pasta escolhida, rode: …" sem nunca dizer ONDE ela fica — e não
+   * tinha como dizer, porque a File System Access API só expõe
+   * `dirHandle.name`, o basename. O caminho inteiro existe, só que do outro
+   * lado: veio do formulário de criação, não do navegador.
+   *
+   * Opcional de propósito. Onde não houver, a instrução fica exatamente como
+   * era — nunca se inventa um caminho.
+   */
+  caminhoDoProjeto?: string;
 }
 
 export interface ResultadoDaConfiguracao {
@@ -296,6 +310,37 @@ export interface ResultadoDaConfiguracao {
  * comando roda (RN-466) — é o mesmo modo automático do binário.
  */
 export const COMANDO_VIA_NPM = 'npm install -g @brabo/runner && brabo-runner';
+
+/**
+ * Prefixa o comando com `cd <caminho>` — mas SÓ quando dá para afirmar que a
+ * pasta escolhida no seletor é a pasta do projeto.
+ *
+ * O navegador conhece o basename (`dirHandle.name`); o caminho absoluto vem do
+ * registro do projeto. Eles podem divergir: nada obriga a pessoa a escolher no
+ * seletor a mesma pasta que digitou na criação. Comparar o basename é o máximo
+ * que se pode provar daqui, e é o que se faz — quando não bate, o comando sai
+ * sem `cd`, como antes.
+ *
+ * Mesmo no caso raro em que o basename bate e a pasta é outra (duas pastas de
+ * mesmo nome em pais diferentes), o comando FALHA ALTO: ou `cd` não acha o
+ * caminho, ou `./brabo-runner` não existe lá. Nenhum desfecho silencioso —
+ * que é a régua que decide se uma heurística pode entrar.
+ */
+function comandoNaPasta(
+  comando: string,
+  pasta: string,
+  caminhoDoProjeto: string | undefined,
+): string {
+  if (!caminhoDoProjeto) return comando;
+  const limpo = caminhoDoProjeto.trim().replace(/[/\\]+$/, '');
+  if (limpo.length === 0) return comando;
+  const base = limpo.split(/[/\\]/).pop();
+  if (base !== pasta) return comando;
+  // Aspas só quando precisa: um caminho sem espaço fica mais legível cru, e
+  // esta linha existe para ser lida antes de ser colada.
+  const alvo = /\s/.test(limpo) ? `"${limpo}"` : limpo;
+  return `cd ${alvo} && ${comando}`;
+}
 
 function comandoDoBinario(platform: string): string {
   // A File System Access API NÃO preserva o bit de execução — limitação do
@@ -352,7 +397,11 @@ export async function configurarPastaAutomaticamente(
 
   return {
     pasta: dirHandle.name,
-    instrucaoFinal: falhaDoBinario ? COMANDO_VIA_NPM : comandoDoBinario(opts.platform),
+    instrucaoFinal: comandoNaPasta(
+      falhaDoBinario ? COMANDO_VIA_NPM : comandoDoBinario(opts.platform),
+      dirHandle.name,
+      opts.caminhoDoProjeto,
+    ),
     falhaDoBinario,
   };
 }

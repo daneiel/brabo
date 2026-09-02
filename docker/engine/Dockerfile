@@ -125,8 +125,21 @@ RUN (getent group "$DEV_GID" >/dev/null 2>&1 || addgroup -g "$DEV_GID" devuser) 
 # `mix deps.get` como devuser bateria em diretório ainda dono de root.
 # ENV HOME=/root mantém os caminhos batendo com os volumes do compose em vez
 # de exigir mexer neles — devuser não é root, mas é dono de /root aqui.
+#
+# `/data/git-repos` e `/data/project-workspaces` entram na MESMA linha e pelo
+# MESMO motivo — são volumes nomeados do compose (`docker-compose.yml`, serviço
+# `engine`), e sem existirem aqui nasciam dono de root. O engine não escreve em
+# git-repos, mas ESCREVE em project-workspaces: é ali que ele materializa o
+# working tree e os worktrees por dev agent (`Engine.Actions.Workspace.
+# workspace_dir/2`). NÃO é o permissions.json — esse é lido e escrito só pela
+# api (`decide.ts`); no engine, todas as menções a ele são comentário. Os dois
+# caminhos ficam juntos porque são o mesmo par montado nos dois serviços, e
+# separá-los faria a próxima pessoa consertar um e esquecer o outro. O
+# Dockerfile.prod da api já fazia isto desde sempre — a lição existia e não
+# tinha atravessado para o dev.
 RUN mkdir -p /root/.mix /root/.hex /workspace/apps/engine/_build /workspace/apps/engine/deps \
-  && chown -R "$DEV_UID:$DEV_GID" /root /workspace/apps/engine
+      /data/git-repos /data/project-workspaces \
+  && chown -R "$DEV_UID:$DEV_GID" /root /workspace/apps/engine /data
 ENV HOME=/root
 
 WORKDIR /workspace/apps/engine

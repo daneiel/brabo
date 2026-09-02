@@ -84,6 +84,67 @@ beforeEach(() => {
   baixarKitManualMock.mockReset();
 });
 
+/**
+ * O aviso do passo de terminal, dito ANTES do clique (RN-473, revisada).
+ *
+ * A frase `passoHumano` já existia, mas só era renderizada no estado de
+ * SUCESSO — depois de a pessoa escolher a pasta, esperar o registro da chave e
+ * o download do binário. Quem clica num botão chamado "Configurar pasta
+ * automaticamente" e só então descobre que ainda precisa abrir um terminal foi
+ * surpreendido, mesmo sem nenhuma frase ter mentido.
+ */
+describe('RunnerOnboardingPanel — o passo humano é anunciado antes', () => {
+  it('mostra o aviso de terminal já no estado inicial, junto do botão', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+
+    const aviso = await screen.findByText(/isto termina no seu terminal/i);
+    expect(aviso).toBeTruthy();
+    // E ele está lá ao lado do botão que ainda não foi clicado — não depois.
+    expect(
+      screen.getByRole('button', { name: /Configurar pasta automaticamente/i }),
+    ).toBeTruthy();
+  });
+
+  it('sem projeto não há o que avisar — o fluxo nem começa aqui', async () => {
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+
+    renderComI18n(<RunnerOnboardingPanel projectId={null} />);
+
+    await waitFor(() =>
+      expect(screen.queryByText(/isto termina no seu terminal/i)).toBeNull(),
+    );
+  });
+
+  it('depois de configurar, o aviso inicial sai e a explicação do fim entra', async () => {
+    const user = userEvent.setup();
+    suportaEscritaDeArquivosMock.mockReturnValue(true);
+    detectarPlataformaMock.mockResolvedValue('linux-x64');
+    configurarPastaAutomaticamenteMock.mockResolvedValue({
+      pasta: 'exp001',
+      instrucaoFinal: 'cd /home/alguem/dev/exp001 && ./brabo-runner',
+      falhaDoBinario: null,
+    });
+
+    renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
+    await user.click(
+      await screen.findByRole('button', { name: /Configurar pasta automaticamente/i }),
+    );
+
+    // A frase do FIM explica POR QUE o passo existe; a do início avisava que
+    // ele VIRIA. Duas perguntas diferentes, e a segunda já foi respondida.
+    expect(
+      await screen.findByText(/o navegador não executa programas na sua máquina/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/isto termina no seu terminal/i)).toBeNull();
+    // E o comando agora diz em que pasta rodar.
+    expect(screen.getByText('cd /home/alguem/dev/exp001 && ./brabo-runner')).toBeTruthy();
+  });
+});
+
 describe('RunnerOnboardingPanel', () => {
   it('Chromium com plataforma detectada: caminho feliz da configuração automática', async () => {
     const user = userEvent.setup();

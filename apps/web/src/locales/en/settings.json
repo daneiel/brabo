@@ -96,7 +96,7 @@
       "areaExplain": "is the default that the lead and subagents share (RN-102) — set it in",
       "areaLink": "Model by area",
       "below": ", further below.",
-      "needsDeveloper": " Requires the developer role to change the model or go back to inheriting."
+      "needsDeveloper": " Requires the developer role to change the model, apply one to every agent, or go back to inheriting."
     },
     "costCard": {
       "label": "Team's estimated monthly cost",
@@ -124,7 +124,19 @@
     "fallbackNone": "no level below",
     "fallbackNoneTitle": "The current model already comes from the last level of the cascade — there is no step below it to fall to.",
     "noEstimateYet": "no spend yet",
-    "noEstimateTitle": "This agent recorded no spend in this project over the last 30 days. Different from having spent zero, which shows as US$ 0.00."
+    "noEstimateTitle": "This agent recorded no spend in this project over the last 30 days. Different from having spent zero, which shows as US$ 0.00.",
+    "bulk": {
+      "label": "Apply one model to every agent",
+      "detail": "· overwrites each agent’s own model, one call per agent",
+      "apply_one": "Apply to {{count}} agent",
+      "apply_other": "Apply to {{count}} agents",
+      "applying": "Applying…",
+      "toast": {
+        "applied_one": "{{model}} applied to {{count}} agent",
+        "applied_other": "{{model}} applied to all {{count}} agents",
+        "error": "Could not apply the model to the agents"
+      }
+    }
   },
   "areaModels": {
     "title": "Model by area",

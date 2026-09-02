@@ -879,3 +879,31 @@
   border-top: 1px solid var(--border);
   padding-top: 10px;
 }
+
+/* A barra de "aplicar um modelo a todos os agentes". Mesma moldura do
+   `.custoCard` logo acima dela — as duas são faixas de contexto sobre a tabela
+   inteira —, com classes próprias porque o assunto é outro: reaproveitar o
+   nome `custo*` para uma barra de ação faria a próxima mudança de uma delas
+   mexer calada na outra. */
+.loteCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.loteTexto {
+  font-size: 13px;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 220px;
+}
+
+.loteDetalhe {
+  color: var(--text-muted);
+}

@@ -298,6 +298,79 @@ describe('configurarPastaAutomaticamente', () => {
     expect(registerRunnerDeviceKeyMock).not.toHaveBeenCalled();
   });
 
+  // ------------------------------------- o comando diz ONDE rodar (RN-477)
+
+  /**
+   * A instrução final dizia "dentro da pasta escolhida, rode: …" sem nunca
+   * dizer onde essa pasta fica — e não tinha como: a File System Access API
+   * expõe só `dirHandle.name`, o basename. O caminho absoluto existe do outro
+   * lado (o que a pessoa digitou ao criar o projeto), e é ele que entra aqui.
+   */
+  it('prefixa `cd <caminho>` quando a pasta escolhida é a do projeto', async () => {
+    stubAmbienteFeliz();
+
+    const resultado = await configurarPastaAutomaticamente({
+      projectId: 'proj-1',
+      apiUrl: 'https://api.brabo.example',
+      platform: 'linux-x64',
+      caminhoDoProjeto: '/home/alguem/dev/minha-pasta',
+    });
+
+    expect(resultado.instrucaoFinal).toBe(
+      'cd /home/alguem/dev/minha-pasta && chmod +x ./brabo-runner && ./brabo-runner',
+    );
+  });
+
+  /**
+   * O basename é o ÚNICO vínculo verificável entre a pasta escolhida no
+   * seletor e o caminho que o projeto declara — nada obriga a pessoa a
+   * escolher a mesma. Quando eles divergem, o comando sai SEM `cd`: um `cd`
+   * para a pasta errada seria a tela afirmando o que não sabe.
+   */
+  it('NÃO prefixa quando a pasta escolhida não é a do projeto', async () => {
+    stubAmbienteFeliz();
+
+    const resultado = await configurarPastaAutomaticamente({
+      projectId: 'proj-1',
+      apiUrl: 'https://api.brabo.example',
+      platform: 'linux-x64',
+      caminhoDoProjeto: '/home/alguem/dev/OUTRA-pasta',
+    });
+
+    expect(resultado.instrucaoFinal).toBe(
+      'chmod +x ./brabo-runner && ./brabo-runner',
+    );
+  });
+
+  it('sem caminho conhecido, a instrução fica exatamente como era', async () => {
+    stubAmbienteFeliz();
+
+    const resultado = await configurarPastaAutomaticamente({
+      projectId: 'proj-1',
+      apiUrl: 'https://api.brabo.example',
+      platform: 'linux-x64',
+    });
+
+    expect(resultado.instrucaoFinal).toBe(
+      'chmod +x ./brabo-runner && ./brabo-runner',
+    );
+  });
+
+  it('caminho com espaço sai entre aspas, e barra final não atrapalha', async () => {
+    stubAmbienteFeliz();
+
+    const resultado = await configurarPastaAutomaticamente({
+      projectId: 'proj-1',
+      apiUrl: 'https://api.brabo.example',
+      platform: 'linux-x64',
+      caminhoDoProjeto: '/home/alguem/meus projetos/minha-pasta/',
+    });
+
+    expect(resultado.instrucaoFinal).toBe(
+      'cd "/home/alguem/meus projetos/minha-pasta" && chmod +x ./brabo-runner && ./brabo-runner',
+    );
+  });
+
   // ------------------------------------------------------ a ordem (RN-473)
 
   it('A PASTA É O PRIMEIRO PASSO: `showDirectoryPicker` abre antes da chave, do registro e do binário', async () => {

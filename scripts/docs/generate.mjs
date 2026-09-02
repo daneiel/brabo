@@ -672,6 +672,17 @@ function verificarContagensEmProsa() {
       oque: 'a contagem de ADRs',
     },
     {
+      // `CONTRIBUTING.md` ficou de FORA quando as aferições nasceram, e o
+      // preço apareceu: a frase dizia "68 ADRs" com 126 escritos — quase o
+      // dobro, e no parágrafo que pede a alguém de fora que não contradiga uma
+      // delas. É o mesmo modo de falha do "as 158 RNs" do README, no arquivo
+      // que mais gente de fora lê primeiro.
+      arquivo: 'CONTRIBUTING.md',
+      padrao: /registradas em \[(\d+) ADRs\]/,
+      esperado: total,
+      oque: 'a contagem de ADRs',
+    },
+    {
       arquivo: 'README.md',
       padrao: /as (\d+) RNs, cada uma com/,
       esperado: String(regras),

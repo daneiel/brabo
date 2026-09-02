@@ -5,12 +5,17 @@
     "subtitle": "{{name}} · bootstrap de Gitflow",
     "successBanner": "Repositório provisionado com sucesso.",
     "failedBannerTitle": "Falhou em: {{step}}",
+    "failedBannerTitleNoStep": "Não foi possível criar o repositório",
     "protectionFailureNote": "Proteger branches costuma falhar em repositório privado no plano gratuito. Você pode seguir sem ela — a trava de merge do Brabo não depende da proteção do provider e continua valendo.",
     "starting": "Iniciando provisionamento…",
     "goToProject": "Ir para o projeto",
     "retry": "Tentar novamente",
     "proceedWithoutProtection": "Seguir sem proteger as branches",
-    "working": "Trabalhando…"
+    "working": "Trabalhando…",
+    "timedOut": "Paramos de acompanhar depois de {{minutes}} minutos.",
+    "timedOutDetail": "Isso não prova que falhou — o provisionamento roda dentro da requisição, e um provider lento pode ainda estar trabalhando. Tentar de novo é seguro: o bootstrap é idempotente e retoma do passo que parou.",
+    "watchAgain": "Procurar de novo",
+    "genericError": "Não foi possível provisionar o repositório."
   },
   "bootstrapSteps": {
     "stepLabel": {

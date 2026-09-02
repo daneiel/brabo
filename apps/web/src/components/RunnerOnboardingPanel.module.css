@@ -78,3 +78,17 @@
 .manual .instrucao {
   margin-top: 8px;
 }
+
+/* O aviso do passo de terminal, dito ANTES do clique.
+   Deliberadamente mais legível que `.detalhe` (11px, muted), que é a mesma
+   frase dita DEPOIS: no fim ela explica um passo que a pessoa já está vendo;
+   aqui ela precisa competir com um botão e ser lida antes dele. Continua
+   secundária ao botão — é um aviso, não um alerta de erro. */
+.avisoPassoHumano {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
