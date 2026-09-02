@@ -164,4 +164,40 @@ async function executarComArgumentosValidos(dirTemporario) {
 
 await verificarNodePtyCarrega();
 
+/**
+ * A porta de Docker (ADR 0128) exercitada DENTRO do artefato empacotado, pelo
+ * mesmo motivo que `verificarNodePtyCarrega` existe: nenhum teste de unidade
+ * toca o `dist/index.cjs` que vai pro registry, e um `import` que ninguém
+ * executa não prova nada — bundler apaga o que não é usado. `--self-test-docker`
+ * INSTANCIA a porta e fala com o daemon.
+ *
+ * Este smoke nasceu como a PROVA de empacotamento do `dockerode`, e foi ele
+ * que reprovou a biblioteca no `build:bin` (ver o docblock de
+ * `src/docker-cli.ts` para o erro exato). Fica valendo depois da troca por
+ * `execFile('docker', …)` porque a pergunta que ele responde continua de pé:
+ * a porta chega inteira no artefato publicável, e a ausência de Docker vira o
+ * erro NOMEADO em vez de um stack trace cru.
+ *
+ * Passa nos DOIS desfechos que o auto-teste imprime — daemon respondeu, ou
+ * daemon não atendeu —, porque a pergunta é sobre o ARTEFATO e não sobre a
+ * máquina: exigir daemon faria o smoke parar de rodar exatamente onde ele mais
+ * precisa rodar (CI).
+ */
+function verificarPortaDeDocker() {
+  const ALVO = 'SELF_TEST_DOCKER_OK:';
+  const saida = execFileSync(process.execPath, [dist, '--self-test-docker'], {
+    encoding: 'utf8',
+    timeout: 20_000,
+  });
+  if (!saida.includes('porta de docker carregada com sucesso')) {
+    throw new Error(`stdout não contém a linha de carga da porta.\nstdout:\n${saida}`);
+  }
+  if (!saida.includes(ALVO)) {
+    throw new Error(`stdout não contém "${ALVO}".\nstdout:\n${saida}`);
+  }
+  console.log(`ok: a porta de docker carrega e consulta o daemon via \`node dist/index.cjs\``);
+}
+
+verificarPortaDeDocker();
+
 console.log('smoke ok');

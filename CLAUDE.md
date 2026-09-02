@@ -80,7 +80,11 @@ daqui e o fechamento vai para o histórico.
 
 **Cortes e pausas vigentes:**
 - FASE 25b segue cortada: NENHUM serviço chama Docker; `project_containers`
-  só grava estado; worktree fora do container; ADR 0055 vale como está
+  só grava estado; worktree fora do container; ADR 0055 vale como está. O que
+  mudou é só o ALICERCE: o runner tem uma `DockerPort` de CINCO operações e um
+  adaptador sobre `execFile('docker', …)` (ADR 0128), e nada os chama — sem
+  mensagem no canal, sem `proposed_action`, sem container. Só o `ping` do
+  auto-teste (`--self-test-docker`, nos dois smokes) toca um daemon de verdade
 - Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
   aguardando spec; Staff dormente para disparo automático (acionável manual)
 - `appsec run_design/2` acionável, nada aciona sozinho (gatilho:
@@ -201,7 +205,18 @@ daqui e o fechamento vai para o histórico.
   de outra coisa. E o CLI distingue chave AUSENTE (caminho normal de quem
   usa flags, cai no bloco de uso) de chave PRESENTE e recusada (mensagem
   própria, nomeando arquivo e motivo) — colapsar os dois é o que fez um
-  bug de uma linha custar uma caçada
+  bug de uma linha custar uma caçada. Docker mora atrás de uma PORTA de
+  CINCO operações (`docker-port.ts`: `start`/`stop`/`remove`/`inspect`/
+  `exec`), implementada sobre `execFile('docker', …)` do `node:child_process`
+  — ZERO dependência nova, e por decisão medida, não por gosto (ADR 0128):
+  `dockerode` foi instalado e provado contra os artefatos, e o
+  `bun build --compile` reprovou resolvendo o `.node` de `cpu-features`, que
+  a árvore SSH de `docker-modem` arrasta mesmo quando só se fala com o
+  socket unix. O broker do lado servidor NÃO herda a escolha (ele nunca vira
+  binário standalone), e é por isso que a porta existe. A contenção é o
+  TIPO: sem campo para `privileged`/`cap_add`, rede é a união
+  `'none' | 'egress'`, e o bind é UMA pasta de tipo MARCADO com destino
+  constante — não há lista de mounts. Nada chama a porta ainda
 - `e2e/`: E2E de NAVEGADOR (Playwright, só chromium — ADR 0120), a quarta
   camada da pirâmide. Roda contra o compose de PRODUÇÃO (`docker/smoke.sh`
   com `SMOKE_KEEP_UP=1`), nunca contra o `vite dev`: o que ele prova —
