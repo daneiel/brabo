@@ -709,6 +709,49 @@
         ]
       }
     },
+    "/internal/projects/{projectId}/container-spec": {
+      "get": {
+        "description": "Project identity, execution mode and the Architect's current image decision. The broker revalidates all of it before handing anything to the daemon — reading from here is not the same as trusting it, and the refusal names the field. No path is returned: the bind source is resolved by the daemon against the HOST filesystem, and a path from inside the api container would silently mount an empty folder.",
+        "operationId": "InternalContainersController_containerSpec",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContainerSpecInternalResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Project not found."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "What the broker needs to compose the container spec itself",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/projects/{projectId}/git-remote": {
       "get": {
         "description": "Returns the clean origin (no credential embedded) and, for a remote provider, the workspace OWNER's token (RN-058) decrypted on the fly. Whoever consumes it injects the token per invocation and NEVER writes it to a file — `.git/config` sits inside the folder where RN-075 grants the dev agent auto-approved read access.",
@@ -4594,7 +4637,7 @@
     },
     "/projects/{projectId}/container/lifecycle": {
       "get": {
-        "description": "`null` when the project was never provisioned — the common case today, because no real orchestrator transitions this table yet (RN-243/RN-267). The returned state is what was RECORDED, never confirmed against a Docker daemon: the product has no Docker client.",
+        "description": "`null` when the project was never provisioned — the common case today, because no real orchestrator transitions this table yet (RN-243/RN-267). `status`/`imageVersion`/`resources` are what was RECORDED; `observado` is what the Docker daemon reports right now, asked through the broker (ADR 0130). The two are never fused: a container killed from the outside reads as recorded `running` and observed `exited`. When there was no way to look, `observado` is `null` and `naoObservado` says why — it never inherits the recorded state (RN-468).",
         "operationId": "ContainersController_cicloDeVida",
         "parameters": [
           {
@@ -12732,6 +12775,34 @@
           "statusChangedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "observado": {
+            "nullable": true,
+            "description": "What the Docker daemon reports RIGHT NOW, asked through the broker (ADR 0130) — never fused with the fields above, which are what was RECORDED. A container killed from the outside shows up as recorded `running` and observed `exited`, and that is the point. `null` means either \"there is no container\" or \"I could not look\" — read `naoObservado` to tell them apart.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ObservacaoDeContainerResponseDto"
+              }
+            ]
+          },
+          "naoObservado": {
+            "type": "string",
+            "enum": [
+              "broker-nao-configurado",
+              "broker-sem-resposta",
+              "broker-recusou",
+              null
+            ],
+            "nullable": true,
+            "example": "broker-nao-configurado",
+            "description": "`null` when the observation actually HAPPENED — including when it came back empty, which is the positive statement \"I looked and there is no container\". Filled in when there was no way to look, saying why. Inheriting the recorded state here is exactly what RN-468 forbids."
+          },
+          "detalheDaObservacao": {
+            "type": "object",
+            "nullable": true,
+            "example": null,
+            "description": "The broker's own message, when there was one."
           }
         },
         "required": [
@@ -12740,7 +12811,10 @@
           "resources",
           "failureReason",
           "createdAt",
-          "statusChangedAt"
+          "statusChangedAt",
+          "observado",
+          "naoObservado",
+          "detalheDaObservacao"
         ]
       },
       "ClaimTaskInternalDto": {
@@ -13318,6 +13392,62 @@
           "verified",
           "workspacePath",
           "changed"
+        ]
+      },
+      "ContainerSpecInternalResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "example": "f52be111-0000-4000-8000-000000000000"
+          },
+          "projectSlug": {
+            "type": "string",
+            "example": "exp002"
+          },
+          "workspaceId": {
+            "type": "string",
+            "example": "aaaaaaaa-0000-4000-8000-000000000000"
+          },
+          "workspaceDirName": {
+            "type": "string",
+            "example": "exp002-f52be111",
+            "description": "Folder name FROZEN at project creation (RN-109). It is the single source of the container name (`brabo-<workspaceDirName>`), and the broker joins it with its OWN host root to get the bind source — the api never sends a path, because a path from inside the api container is not a path the Docker daemon can resolve."
+          },
+          "executionMode": {
+            "type": "string",
+            "enum": [
+              "container",
+              "mounted",
+              "runner"
+            ],
+            "example": "container",
+            "description": "Where the code lives. The broker refuses `mounted`/`runner`: that folder is on the user's machine and this host cannot see it — there, the runner is what brings a container up."
+          },
+          "imagem": {
+            "nullable": true,
+            "description": "`null` while the Architect has not decided (RN-105) — `start` is then refused with 409 on the broker side, and the other four operations still work.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImagemParaOBrokerResponseDto"
+              }
+            ]
+          },
+          "imagemVersao": {
+            "type": "number",
+            "example": 3,
+            "description": "Version of the current artifact; 0 when there is no decision. It ends up on the container as the `brabo.image.version` label."
+          }
+        },
+        "required": [
+          "projectId",
+          "projectSlug",
+          "workspaceId",
+          "workspaceDirName",
+          "executionMode",
+          "imagem",
+          "imagemVersao"
         ]
       },
       "ConvertExecutionModeDto": {
@@ -15089,6 +15219,32 @@
           "version"
         ]
       },
+      "ImagemParaOBrokerResponseDto": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "type": "string",
+            "example": "node:22-bookworm-slim",
+            "description": "OCI reference with an explicit tag or digest."
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "none",
+              "egress"
+            ],
+            "example": "none"
+          },
+          "resources": {
+            "$ref": "#/components/schemas/RecursosDoContainerResponseDto"
+          }
+        },
+        "required": [
+          "image",
+          "network",
+          "resources"
+        ]
+      },
       "IndexDocsReportResponseDto": {
         "type": "object",
         "properties": {
@@ -16240,6 +16396,50 @@
           "chamadas",
           "porSessao",
           "porDia"
+        ]
+      },
+      "ObservacaoDeContainerResponseDto": {
+        "type": "object",
+        "properties": {
+          "containerId": {
+            "type": "string",
+            "example": "c0ffeebabe..."
+          },
+          "nome": {
+            "type": "string",
+            "example": "brabo-exp002-f52be111"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "created",
+              "running",
+              "paused",
+              "restarting",
+              "removing",
+              "exited",
+              "dead"
+            ],
+            "example": "running",
+            "description": "The daemon's own state, with no translation and no collapse."
+          },
+          "imagem": {
+            "type": "string",
+            "example": "node:22-bookworm-slim"
+          },
+          "iniciadoEm": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time",
+            "description": "`null` when the container has never started."
+          }
+        },
+        "required": [
+          "containerId",
+          "nome",
+          "estado",
+          "imagem",
+          "iniciadoEm"
         ]
       },
       "OkResponseDto": {

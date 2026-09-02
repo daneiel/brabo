@@ -1,5 +1,10 @@
 packages:
   - apps/api
+  # Serviço que fala com o daemon Docker do SERVIDOR (ADR 0130). Membro do
+  # workspace pelo mesmo motivo que `apps/runner`: ele consome
+  # `packages/docker-port`, e o link do workspace é o que faz os dois
+  # implementadores da porta compartilharem UM arquivo em vez de dois.
+  - apps/broker
   - apps/runner
   - apps/web
   - packages/*

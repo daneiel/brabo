@@ -1,6 +1,12 @@
 /**
- * A implementação da `DockerPort` no runner, sobre o CLI `docker` — e ela é o
- * FALLBACK do ADR 0128, escolhido por uma prova que falhou, não por preferência.
+ * A implementação da `DockerPort` sobre o CLI `docker` — e ela é o FALLBACK do
+ * ADR 0128, escolhido por uma prova que falhou, não por preferência.
+ *
+ * Nasceu como "a implementação do runner" e virou a implementação dos DOIS
+ * lados no ADR 0130: o broker usa esta mesma classe, e o `RodarDocker` que ela
+ * recebe no construtor é a única coisa que muda entre um e outro (nada muda,
+ * hoje — os dois falam com um socket unix local). Ver o docblock de
+ * `docker-port.ts` sobre por que o arquivo mora num pacote e não numa app.
  *
  * ## O que foi provado, e o erro exato que decidiu
  *
@@ -52,10 +58,16 @@
  *     `rm`, `inspect` e `exec` com opções que existem desde muito antes das
  *     versões que alguém possa ter.
  *
- * O broker do lado servidor (PR 1.2) NÃO herda esta decisão: ele roda numa
- * imagem que nós construímos e não vira binário standalone, então `dockerode`
- * segue candidato lá. É justamente por isso que a `DockerPort` existe — dois
- * implementadores, um contrato, nenhuma reescrita de quem chama.
+ * O broker do lado servidor NÃO herdava esta decisão pela mesma prova — ele
+ * roda numa imagem que nós construímos e nunca vira binário standalone, então
+ * `dockerode` seguia tecnicamente possível lá. O ADR 0130 resolveu ao
+ * contrário, e por uma razão que não é técnica: DOIS mecanismos para a mesma
+ * operação significam dois modos de falhar, duas superfícies de erro para
+ * classificar e duas versões da tradução spec → daemon. O preço é a imagem do
+ * broker precisar do binário `docker` dentro dela — e ele está pago em
+ * `docker/broker/Dockerfile.prod`, com o erro nomeado
+ * (`DockerCliAusenteError`) para o dia em que alguém montar o socket sem
+ * instalar o cliente.
  */
 
 import { execFile } from 'node:child_process';
@@ -484,6 +496,12 @@ export class DockerViaCli extends DockerPort {
       String(spec.cpus),
       '--memory',
       `${spec.memoriaMb}m`,
+      // Fork bomb não precisa de comando "perigoso" — `:(){ :|:& };:` é shell
+      // puro. O teto de processos é a contenção que não depende de reconhecer
+      // o comando, que é a mesma razão de a rede ser decidida na fronteira e
+      // não por allowlist de verbo (ADR 0065).
+      '--pids-limit',
+      String(spec.pidsLimit),
       '--cap-drop',
       'ALL',
       spec.imagem,

@@ -66,9 +66,9 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | O arquivo de política e o escopo do terminal | `projectScopeRoot` tinha DOIS consumidores com necessidades opostas, e o modo `runner` (sem bind-mount) os separou: o escopo segue apontando para o HOST, o `permissions.json` passa a morar na raiz GERENCIADA. A ativação da execução devolvia 500 (`mkdir '/home/<usuario>'`), e a LEITURA degradava calada — em projeto `runner` o arquivo nunca existiu. Junto: erro tipado com 400 em vez de `Error` cru, a Visão geral parando de engolir a mensagem da api, e a anotação de OpenAPI que prometia 409 para dois casos que nunca foram 409 | RN-478 |
 | Aviso do passo humano antes do clique | O passo de terminal do runner era anunciado só no estado de sucesso; passa a ser dito também no inicial, e o comando final ganha `cd <caminho>` quando dá para afirmar que a pasta escolhida é a do projeto. Rótulo do botão NÃO muda — ele fala da pasta, que é automática mesmo | RN-473/477 |
 | Um modelo para todos os agentes | A tabela `Modelos por agente` ganha uma barra que aplica UM modelo aos 17 de uma vez, gravando no nível do AGENTE (pelo projeto seria `maintainer`, e mexeria no default de sessão). Primeira EXCEÇÃO à régua "valor nomeado salva no `onChange`" da RN-469 — o seletor é argumento de ação, não configuração —, com o desfecho em três estados da própria RN-469 | RN-476 |
-| O arquivo de política e o escopo do terminal | `projectScopeRoot` tinha DOIS consumidores com necessidades opostas, e o modo `runner` (sem bind-mount) os separou: o escopo segue apontando para o HOST, o `permissions.json` passa a morar na raiz GERENCIADA. A ativação da execução devolvia 500 (`mkdir '/home/<usuario>'`), e a LEITURA degradava calada — em projeto `runner` o arquivo nunca existiu. Junto: erro tipado com 400 em vez de `Error` cru, a Visão geral parando de engolir a mensagem da api, e a anotação de OpenAPI que prometia 409 para dois casos que nunca foram 409 | RN-478 |
 | Tetos de rebaixamento em `project_members` | A sobreposição `projectRole ?? workspaceRole` FICA nos dois sentidos (é capacidade, não bug); o que entra são dois tetos de 403 no caso de uso — ninguém rebaixa o `owner` do workspace, ninguém rebaixa a si mesmo. As três descrições de OpenAPI que a RN-471 declarou falsas passam a descrever o código; o gate do `Select` é PR à parte, por a tela não ter como calcular o primeiro teto | ADR 0127, RN-472 |
 | Telemetria de busca do RAG | A busca híbrida deixa rastro: `rag_searches` (com os pesos CONGELADOS na linha) e `rag_feedback` (o voto útil/irrelevante, o único sinal de verdade). TABELA e não só evento, porque `session_events.session_id` é `NOT NULL` e a busca da aba não tem sessão — o evento `rag.search`/`rag.feedback` é NARRAÇÃO, só quando há sessão. Ferramenta `rag_feedback` (`:direct`) nos seis agentes que já tinham `rag_search`, e `medir:rag` para ler. NADA calibrado — esta etapa só instrumenta | RN-479..481 |
+| Broker de container | Nasce `apps/broker`, o ÚNICO processo que fala com um daemon Docker no servidor — e ele NÃO aceita especificação: recebe `projectId` + operação, LÊ a decisão do Arquiteto da api e COMPÕE imagem, rede, recursos e o único mount. A porta do ADR 0128 MOVE de `apps/runner/src/` para `packages/docker-port` (os dois consumidores a empacotam; a api não pode consumi-la). A rota de ciclo de vida passa a devolver observado ao lado de registrado, sem fundir | ADR 0130, RN-485/486 |
 
 ## Estado atual e aberto
 
@@ -85,12 +85,16 @@ daqui e o fechamento vai para o histórico.
   `dev-<modulo>` fechou (ADR 0094); a execução segue no caminho atual
 
 **Cortes e pausas vigentes:**
-- FASE 25b segue cortada: NENHUM serviço chama Docker; `project_containers`
-  só grava estado; worktree fora do container; ADR 0055 vale como está. O que
-  mudou é só o ALICERCE: o runner tem uma `DockerPort` de CINCO operações e um
-  adaptador sobre `execFile('docker', …)` (ADR 0128), e nada os chama — sem
-  mensagem no canal, sem `proposed_action`, sem container. Só o `ping` do
-  auto-teste (`--self-test-docker`, nos dois smokes) toca um daemon de verdade
+- FASE 25b segue cortada NO QUE IMPORTA: **nenhum container sobe**. Não há
+  laço, fila nem `proposed_action` de `container_start`; `project_containers` só
+  grava estado, o worktree segue fora do container e o ADR 0055 vale como está.
+  O que mudou é que já EXISTE quem chame Docker: o broker (`apps/broker`, ADR
+  0130), o único processo do produto com o socket, sobre a mesma `DockerPort` de
+  cinco operações do ADR 0128 — hoje movida para `packages/docker-port`. Das
+  cinco, só `inspect` tem chamador (a rota de ciclo de vida, que passou a mostrar
+  o observado ao lado do registrado); as outras quatro são efeito externo e
+  esperam o `proposed_action` que o Infra Lead vai propor. O broker sobe sob
+  `profiles: ["container-broker"]` e portanto não sobe por padrão
 - Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
   aguardando spec; Staff dormente para disparo automático (acionável manual)
 - `appsec run_design/2` acionável, nada aciona sozinho (gatilho:
@@ -223,17 +227,48 @@ daqui e o fechamento vai para o histórico.
   usa flags, cai no bloco de uso) de chave PRESENTE e recusada (mensagem
   própria, nomeando arquivo e motivo) — colapsar os dois é o que fez um
   bug de uma linha custar uma caçada. Docker mora atrás de uma PORTA de
-  CINCO operações (`docker-port.ts`: `start`/`stop`/`remove`/`inspect`/
-  `exec`), implementada sobre `execFile('docker', …)` do `node:child_process`
+  CINCO operações (`packages/docker-port`, ADR 0130 — ela NASCEU em
+  `apps/runner/src/` e MOVEU quando o broker virou o segundo consumidor:
+  `start`/`stop`/`remove`/`inspect`/`exec`), implementada sobre
+  `execFile('docker', …)` do `node:child_process`
   — ZERO dependência nova, e por decisão medida, não por gosto (ADR 0128):
   `dockerode` foi instalado e provado contra os artefatos, e o
   `bun build --compile` reprovou resolvendo o `.node` de `cpu-features`, que
   a árvore SSH de `docker-modem` arrasta mesmo quando só se fala com o
-  socket unix. O broker do lado servidor NÃO herda a escolha (ele nunca vira
-  binário standalone), e é por isso que a porta existe. A contenção é o
+  socket unix. O broker NÃO herdou a escolha por herança técnica (ele nunca
+  vira binário) e sim por decisão: um mecanismo, não dois. A contenção é o
   TIPO: sem campo para `privileged`/`cap_add`, rede é a união
   `'none' | 'egress'`, e o bind é UMA pasta de tipo MARCADO com destino
-  constante — não há lista de mounts. Nada chama a porta ainda
+  constante — não há lista de mounts. `pidsLimit` entrou na spec no ADR 0130,
+  porque o artefato do Arquiteto sempre teve três números e descartar um faria
+  ele prometer um teto que o container não recebe
+- `apps/broker`: workspace novo, Node/TS — o ÚNICO processo do produto que
+  fala com um daemon Docker no SERVIDOR (ADR 0130), e o único serviço com
+  `/var/run/docker.sock` montado. Não monte esse socket em mais nenhum. Sem
+  framework web (são seis rotas, `node:http` puro), imagem própria em
+  `docker/broker/`, e o binário `docker` DENTRO da imagem (`docker-cli`, só o
+  cliente) — preço declarado da decisão de usar um mecanismo só dos dois lados.
+  **Ele não aceita especificação de container**: recebe um `projectId` e uma
+  das cinco operações da `DockerPort`, vai à api LER a decisão do Arquiteto
+  (`GET /internal/projects/:projectId/container-spec`) e COMPÕE imagem, rede,
+  recursos e o único mount. Não existe campo em que se escreva `privileged`,
+  `cap_add`, `network: host` ou um `-v` livre — se a spec viajasse no corpo, a
+  contenção de um processo root-equivalente no host dependeria de o CHAMADOR
+  estar correto. A api NÃO manda caminho nenhum (o `-v` é resolvido pelo daemon
+  contra o filesystem do HOST; um caminho de dentro do container da api montaria
+  uma pasta VAZIA): o broker compõe com `PROJECT_WORKSPACES_HOST_ROOT`, e recusa
+  `start` nomeando a variável quando ela falta. Contenção em cinco camadas
+  independentes — sem porta publicada, rede `internal: true` que só a api
+  alcança, `BRABO_SERVICE_TOKEN` em tempo constante, cinco operações, spec
+  computada. Sobe sob `profiles: ["container-broker"]` nos dois composes e
+  NÃO sobe por padrão; a imagem dele NÃO é publicada no GHCR (as quatro do ADR
+  0119 seguem sendo quatro)
+- `packages/docker-port`: a porta de Docker e o adaptador de CLI, consumidos
+  por `apps/runner` e `apps/broker`. Runtime, e por isso NÃO cabe em
+  `packages/shared` (100% tipo, invariante travado por teste). Sem passo de
+  build: os dois consumidores o EMPACOTAM (`tsup`, `bun build --compile`), e é
+  por isso que a api não pode consumi-lo — `pnpm deploy` copia o pacote de
+  verdade e o Node recusa type stripping dentro de `node_modules`
 - `e2e/`: E2E de NAVEGADOR (Playwright, só chromium — ADR 0120), a quarta
   camada da pirâmide. Roda contra o compose de PRODUÇÃO (`docker/smoke.sh`
   com `SMOKE_KEEP_UP=1`), nunca contra o `vite dev`: o que ele prova —
@@ -433,10 +468,13 @@ daqui e o fechamento vai para o histórico.
   "sempre permitir", que foi fechado na fonte pra não reabrir a porta).
   `sudo`/`doas` entram na MESMA régua. O ciclo de vida do container tem
   TABELA de estado desde a Onda 4/frente F1 do PROGRAMA 28
-  (`project_containers`, ADR 0081, RN-243..248) — mas nenhuma linha dela
-  chama Docker: provisionar/reciclar/limpar DE VERDADE ainda não existe,
+  (`project_containers`, ADR 0081, RN-243..248) — e quem ESCREVE nela continua
+  sem chamar Docker: provisionar/reciclar/limpar DE VERDADE ainda não existe,
   então a política de terminal do ADR 0055 (escopo de caminho, allowlist
-  estreito) segue valendo como está até o container subir de verdade.
+  estreito) segue valendo como está até o container subir de verdade. O que a
+  leitura ganhou (ADR 0130) foi o estado OBSERVADO ao lado do registrado,
+  perguntado ao broker — os dois nunca se fundem, e "não consegui olhar" tem
+  motivo próprio em vez de herdar o registrado (RN-486).
 - O diagrama C4 (Context + Container) também é ARTEFATO do ARQUITETO
   (`artifact.c4_diagram`, versionado, sem tabela — RN-149, ADR 0068),
   mesmo desenho do `artifact.project_image`. O Container level é DERIVADO

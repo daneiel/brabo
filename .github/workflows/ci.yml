@@ -194,7 +194,8 @@ jobs:
           echo "${HADOLINT_SHA256}  /tmp/hadolint" | sha256sum -c -
           chmod +x /tmp/hadolint
           /tmp/hadolint docker/api/Dockerfile.prod docker/engine/Dockerfile.prod \
-            docker/web/Dockerfile.prod docker/backup/Dockerfile.prod
+            docker/web/Dockerfile.prod docker/backup/Dockerfile.prod \
+            docker/broker/Dockerfile.prod
 
   test-ts:
     name: Testes TS (api + web)
@@ -281,6 +282,28 @@ jobs:
       # tipos sem verificá-los. Sem este passo, a anotação seria enfeite.
       - name: Typecheck dos scripts de CI
         run: pnpm --filter @brabo/scripts typecheck
+
+      # A porta de Docker (ADR 0128) saiu de `apps/runner/src/` para um pacote
+      # de workspace quando o broker virou o segundo consumidor (ADR 0130).
+      # Nada auto-descobre membro novo: sem estes dois passos, os testes do
+      # pacote simplesmente não rodariam.
+      - name: Testes da porta de Docker
+        run: pnpm --filter @brabo/docker-port test
+
+      - name: Typecheck da porta de Docker
+        run: pnpm --filter @brabo/docker-port typecheck
+
+      # O broker de container (ADR 0130) — mesmo trio do runner, menos o smoke
+      # do artefato: o `dist/index.cjs` dele não vai para registry nenhum, vai
+      # para dentro da imagem, e quem o exercita é o build da imagem.
+      - name: Testes do broker
+        run: pnpm --filter @brabo/broker test
+
+      - name: Typecheck do broker
+        run: pnpm --filter @brabo/broker typecheck
+
+      - name: Build do broker (tsup)
+        run: pnpm --filter @brabo/broker build
 
       # `apps/runner` nunca rodou aqui até o ADR 0106 — buraco pré-existente,
       # mais grave agora que este código é publicado no npm pra terceiros.

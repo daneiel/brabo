@@ -6560,6 +6560,115 @@ caminho que a execução em container substitui; o que muda agora é só a
   no projeto `exp002`
 
 ---
+### RN-485 — O broker de container não aceita especificação: ele recebe um projeto e COMPÕE {#rn-485}
+
+O broker (`apps/broker`) é o único processo do produto com acesso a um daemon
+Docker no servidor. A regra que o torna não-arbitrário não é um allowlist: é a
+**forma da entrada**.
+
+**Ele recebe `projectId` e uma das cinco operações — nada mais.** As cinco são as
+da `DockerPort` do [ADR 0128](adr/0128-porta-de-docker-e-a-prova-de-empacotamento.md)
+(`start`, `stop`, `remove`, `inspect`, `exec`), e uma sexta é decisão de produto
+com ADR, nunca um parâmetro a mais. `start`, `stop` e `remove` têm corpo VAZIO;
+`exec` leva comando e `cwd`, e mais nada.
+
+**A especificação é lida da api e COMPOSTA aqui.** O broker chama
+`GET /internal/projects/:projectId/container-spec`, que devolve identidade do
+projeto, modo de execução e a decisão de imagem vigente do Arquiteto. Imagem,
+rede, recursos e o único mount saem daí. Não existe campo em que se escreva
+`privileged`, `cap_add`, `network: host` ou um `-v` livre — porque não existe
+campo. Se a especificação viajasse no corpo, a contenção de um processo
+root-equivalente no host dependeria de o CHAMADOR estar correto, e contenção que
+depende do chamador não é contenção.
+
+**Ele revalida o que a api devolveu, e as duas validações não são a mesma.**
+`validarDecisaoDeImagem` (api) pergunta "esta decisão de arquitetura é
+revisável?" — exige `rationale`, recusa `latest`, aplica `RECURSOS_MAXIMOS` e
+devolve a recusa ao MODELO pelo tool-result (RN-061). `especificacaoValidada`
+(broker) pergunta "posso entregar isto ao daemon?" — é o PARSE de um JSON não
+confiável para dentro do tipo fechado. Os tetos daqui são os do BROKER, o último
+recurso que ele nunca ultrapassa venha o pedido de onde vier; hoje os números
+coincidem com os da api de propósito, e se um dia divergirem o menor vence sem
+nada quebrar, porque nenhum dos dois afirma ser o outro. Uma checagem existe só
+deste lado: referência de imagem que começa com `-` seria lida pelo CLI como
+FLAG, e `execFile` sem shell resolve injeção de COMANDO, não de ARGUMENTO.
+
+**A api não manda CAMINHO nenhum.** O `-v` de um `docker run` é resolvido pelo
+DAEMON, contra o filesystem do HOST — um caminho de dentro do container da api
+faria o daemon criar e montar uma pasta VAZIA, com o dev agent trabalhando num
+diretório sem código e nada indicando por quê. O broker compõe o caminho com
+`PROJECT_WORKSPACES_HOST_ROOT`, configuração DELE, mais o `workspaceDirName`
+congelado na criação (RN-109). Sem essa variável, `start` RECUSA nomeando-a; as
+outras quatro operações continuam funcionando. Recusar é a regra: adivinhar
+produziria o mount vazio em silêncio.
+
+**Projeto `mounted`/`runner` é recusado com 409**, porque a pasta deles mora na
+máquina do usuário e o host do broker não a enxerga — lá quem sobe container é o
+runner. É a mesma política que `RegistrarTransicaoDeContainerUseCase` já aplica
+na api, dita onde o broker consegue dizê-la.
+
+**Nada dispara subida.** Não há laço, não há fila, não há `proposed_action` de
+`container_start`: o broker age quando chamado, e o único chamador que existe
+hoje faz LEITURA. Efeito externo continua exigindo aprovação.
+
+- **Onde:** `apps/broker/src/operacoes.ts` (as cinco, e a composição em
+  `especificacaoDoProjeto`), `apps/broker/src/servidor.ts` (a lista fechada de
+  rotas e a tabela de status),
+  `packages/docker-port/src/spec-de-container.ts` (o parse e os tetos),
+  `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts`
+  (o que a api devolve, e o caminho que ela não devolve),
+  `apps/api/src/interfaces/http/internal/internal-containers.controller.ts`
+- **Teste:** `apps/broker/src/servidor.spec.ts` (imagem, rede, recursos e mount
+  mandados no corpo são IGNORADOS; artefato com imagem que começa com `-` é 422
+  e nada é tocado; uma sexta operação é 404; `cwd` fora de `/work` é recusado,
+  inclusive `/workspace`; sem `PROJECT_WORKSPACES_HOST_ROOT` o `start` recusa
+  dizendo qual variável falta),
+  `packages/docker-port/src/spec-de-container.spec.ts` (o parse campo a campo),
+  `apps/api/test/application/use-cases/containers/spec-e-observacao-de-container.use-case.spec.ts`
+  (a api não devolve caminho nenhum, nem `rationale`),
+  `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts`
+  (`start` manda corpo vazio)
+- **ADR:** [0130](adr/0130-broker-de-container.md)
+
+### RN-486 — Estado REGISTRADO e estado OBSERVADO nunca se fundem, e "não olhei" tem motivo próprio {#rn-486}
+
+`project_containers` guarda o que foi REGISTRADO. O daemon responde o que é
+OBSERVADO. Antes do broker a tabela não tinha como mentir (`container_id` era
+sempre `NULL`); agora tem, e a leitura diz isso em vez de escondê-lo.
+
+**A rota de ciclo de vida devolve os dois, separados.** Container morto por fora
+aparece como registrado `running` e observado `exited`, e é assim que tem de
+aparecer. A reconciliação é NA LEITURA, não um daemon de fundo.
+
+**`observado: null` sozinho não é resposta.** Ele significa duas coisas
+diferentes, e `naoObservado` é o que as separa: `null` ali quer dizer que a
+observação ACONTECEU e voltou vazia — a afirmação positiva "olhei e não há
+container" —, enquanto `broker-nao-configurado`, `broker-sem-resposta` e
+`broker-recusou` querem dizer que não deu para olhar, cada um com um conserto
+diferente. Herdar o estado registrado nesses três casos é exatamente o que a
+[RN-468](#rn-468) proíbe: sinal de ambiente diz o que SABE, e proxy não vira
+garantia.
+
+**Nenhuma recusa do broker derruba a leitura.** O ciclo de vida registrado é
+informação legítima por si só e existia antes do broker; perdê-lo porque o
+broker está fora trocaria um dado que temos por um que não temos.
+
+**Lacuna declarada:** container órfão de projeto que nunca teve linha de ciclo
+de vida não aparece nessa rota — ela lê o registrado primeiro. Quem acha órfão é
+a varredura por `brabo.managed=true`, e a página que a consome ainda não existe.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/containers/obter-estado-observado-do-container.use-case.ts`
+  (os três motivos e o `null` que não é motivo),
+  `apps/api/src/interfaces/http/containers/containers.controller.ts` (a rota que
+  devolve os dois),
+  `apps/api/src/application/ports/container-broker.port.ts` (o `null` de
+  `inspect` é ausência; a falha LANÇA)
+- **Teste:**
+  `apps/api/test/application/use-cases/containers/spec-e-observacao-de-container.use-case.spec.ts`
+  ("olhei e não há" e "não consegui olhar" não colapsam; sem `BROKER_URL` o
+  broker nem é chamado; recusa vira motivo com detalhe, nunca exceção)
+- **ADR:** [0130](adr/0130-broker-de-container.md)
 
 ### RN-479 — Toda busca híbrida grava uma linha em `rag_searches`, com os pesos CONGELADOS; e a telemetria nunca derruba a busca {#rn-479}
 

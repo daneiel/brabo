@@ -52,8 +52,17 @@ import {
   lerChaveDeDispositivo,
   lerConfigLocal,
 } from './device-key.ts';
-import { DockerCliAusenteError, DockerViaCli } from './docker-cli.ts';
-import { DockerIndisponivelError } from './docker-port.ts';
+// A porta de Docker MUDOU de casa no ADR 0130 — de `./docker-*.ts` para o
+// pacote `@brabo/docker-port`, quando o broker virou o segundo consumidor. Ela
+// é `devDependency` de propósito, na mesma prateleira que `phoenix`: o `tsup`
+// deixa `dependencies` como `require` externo e EMBUTE devDependency, e o
+// pacote publicado no npm não pode carregar um `workspace:*` que ninguém fora
+// deste repositório resolve.
+import {
+  DockerCliAusenteError,
+  DockerIndisponivelError,
+  DockerViaCli,
+} from '@brabo/docker-port';
 import { executarComando } from './exec.ts';
 import { diretorioInicial, listarDiretorio } from './fs-browser.ts';
 import {

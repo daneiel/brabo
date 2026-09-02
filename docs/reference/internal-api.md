@@ -81,7 +81,7 @@ every HTTP route, internal or not, is in
 
 ## Authentication
 
-Neither end trusts the private network. Both present the **same
+No end trusts the private network. All of them present the **same
 service token** — a secret shared via env, rotatable, in the
 `X-Brabo-Service-Token` header:
 
@@ -89,6 +89,14 @@ service token** — a secret shared via env, rotatable, in the
 |---|---|---|
 | engine → api | `EngineServiceGuard` | `comparaEmTempoConstante` |
 | api → engine | `EngineWeb.Plugs.VerifyServiceToken` | `Plug.Crypto.secure_compare/2` |
+| broker → api | `EngineServiceGuard` | `comparaEmTempoConstante` |
+| api → broker | `tokenConfere` (`apps/broker/src/config.ts`) | `timingSafeEqual` |
+
+The broker ([ADR 0130](../adr/0130-broker-de-container.md)) joined this table
+without changing it: same header, same secret, same rotation. It answers `401`
+where the api answers `403`, matching the engine — what is missing is
+authentication of the caller, and the api's `403` is a documented compatibility
+constraint rather than a disagreement.
 
 > **This traffic does not go through the JWT.** The `/internal/*` routes are annotated with
 > `@ServiceRoute()`, which takes them out of the `JwtAuthGuard` and exempts them from the
@@ -133,7 +141,11 @@ new call to this contract, use the funnel: it's what guarantees it won't be born
 ## engine → api
 
 Twenty-eight routes, all under `/internal/sessions/:sessionId/` unless noted otherwise.
-Grouped by what they do:
+Grouped by what they do.
+
+One route in this family has a caller that is **not** the engine — see
+[broker → api](#broker--api), below. The classification names the mechanism, not
+the sender.
 
 ### Event log and actions
 
@@ -695,6 +707,67 @@ memory's WRITE path** — handoff, hypothesis, profile and session close
 reach the graph via `GraphProjector`, on the api side, draining a
 second line of the transactional outbox; the engine never writes to the graph directly
 ([RN-416](../business-rules.md#rn-416)).
+
+## broker → api
+
+Since [ADR 0130](../adr/0130-broker-de-container.md) there is a THIRD service,
+and it speaks the same internal protocol: the container **broker**
+(`apps/broker`), the only process in the product with access to a Docker daemon
+on the server.
+
+| method | path |
+|---|---|
+| GET | `/internal/projects/:projectId/container-spec` (**not** session-scoped) |
+
+Same authentication as everything above (`X-Brabo-Service-Token`, constant-time
+comparison, `BRABO_SERVICE_TOKEN_PREVIOUS` accepted during rotation) and the
+same shared secret. A second secret was considered and refused: the three
+services run in the same cluster and read the same Secret, so it would give the
+impression of compartmentalising without compartmentalising anything, at the
+cost of doubling what has to be rotated in lockstep — the full reasoning lives
+in `apps/api/src/infrastructure/security/service-token.ts`.
+
+**The direction of this call is the whole point** ([RN-485](../business-rules.md#rn-485)).
+The broker does not RECEIVE a container spec — it receives a `projectId` plus one
+of five operations and comes here to read:
+
+1. project identity (`projectId`, `projectSlug`, `workspaceId`) and
+   `workspaceDirName`, the folder name frozen at creation ([RN-109](../business-rules/autenticacao.md#rn-109));
+2. `executionMode`, because `mounted`/`runner` projects are refused with `409` on
+   the broker side — their folder is on the user's machine and this host cannot
+   see it;
+3. the Architect's current image decision, or `null` while there is none
+   ([RN-105](../business-rules/autenticacao.md#rn-105)), in which case only `start` is refused
+   and the other four operations still work.
+
+From that the broker COMPOSES image, network, resources and the single mount, and
+revalidates all of it before handing anything to the daemon. There is no field in
+which a caller writes `privileged`, `cap_add`, `network: host` or a free `-v`,
+because there is no field.
+
+**Two things this route deliberately does not return.** `rationale`, which exists
+so a human can review the decision and has no consumer in a `docker run`; and
+**any path at all** — the bind source is resolved by the daemon against the HOST
+filesystem, so `/data/project-workspaces/<x>` (a path inside the api container)
+would make the daemon create and mount an EMPTY folder. The broker joins
+`workspaceDirName` with its own `PROJECT_WORKSPACES_HOST_ROOT`, and refuses
+`start` naming that variable when it is not configured.
+
+There is no write route in this direction. Whoever WRITES the container lifecycle
+is still `RegistrarTransicaoDeContainerUseCase`, through the route that already
+exists; giving the broker authority over the state it produces would move the
+authority out of the api.
+
+### api → broker
+
+The other direction is not `/internal/*` on this side — it is the broker's own
+surface, five operations plus `/health`, reachable only from the api (an
+`internal: true` Compose network, no published port). The api's port is
+`ContainerBrokerPort`, and today exactly **one** of the five has a caller:
+`inspect`, used by `GET /projects/:projectId/container/lifecycle` to return the
+OBSERVED state beside the RECORDED one ([RN-486](../business-rules.md#rn-486)).
+The other four are external effect and do not happen without a
+`proposed_action`.
 
 ## api → engine
 

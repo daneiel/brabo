@@ -38,6 +38,7 @@ Start with triage.
 | I want to migrate my workspaces from the Docker volume to a real folder | [Migrating workspaces to a local folder](#migrar-workspaces-pasta-local) |
 | creating a **Local** project refuses, saying the folder doesn't exist | [Project in Local mode](#projeto-no-modo-local) |
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
+| I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
 | provisioning a repository fails with `permission denied: /data/git-repos/<slug>.git`, or `permissions.json` can't be written | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 
 Two things worth knowing before any procedure:
@@ -47,6 +48,63 @@ Two things worth knowing before any procedure:
   Grafana being down means no warning, not no problem.
 - **Killing the pod doesn't close a session.** `kubectl delete pod` without
   draining creates an orphan. The path is always the normal transition.
+
+### The container broker {#broker-de-container}
+
+The broker ([ADR 0130](adr/0130-broker-de-container.md)) is the only process in
+the product that talks to a Docker daemon, and the only service with
+`/var/run/docker.sock` mounted. **Do not mount that socket anywhere else.**
+
+It ships under a compose profile and therefore **does not come up with
+`pnpm dev`**. That is deliberate: nothing calls it to WRITE yet (whoever
+proposes starting a container is the Infra Lead, through a `proposed_action`),
+so having it up by default would hand every development machine access to the
+host's Docker in exchange for nothing.
+
+To bring it up:
+
+```bash
+# 1. the gid of your host's docker group — the default (999) is the most
+#    common one and is wrong on several distributions
+getent group docker | cut -d: -f3
+
+# 2. in .env
+#    DOCKER_GID=<the number above>
+#    BROKER_URL=http://broker:8090
+#    PROJECT_WORKSPACES_HOST_ROOT=/home/you/brabo-projects   # ALREADY EXPANDED
+
+docker compose -f docker/docker-compose.yml --env-file .env \
+  --profile container-broker up -d broker
+```
+
+To check that it is up — from the api, which is the ONLY service that reaches
+it (the `broker` network is `internal: true` and the service publishes no port,
+so `curl` from your host will not work, and that is the point):
+
+```bash
+docker compose -f docker/docker-compose.yml --env-file .env exec -T api \
+  node -e "fetch('http://broker:8090/health').then(r=>r.text()).then(console.log)"
+# expected: {"status":"ok","servico":"broker"}
+```
+
+`/health` speaks about the PROCESS, never about the daemon. Restarting the
+broker does not fix a Docker that is down, and a healthcheck that failed for
+that reason would produce a restart loop that resolves nothing.
+
+**Symptoms and what each one means:**
+
+| what you see | what it is |
+|---|---|
+| `permission denied` on `/var/run/docker.sock` | wrong `DOCKER_GID`. The socket is `root:docker` and the broker runs non-root; redo step 1 above and recreate the container (`up -d --force-recreate broker`) |
+| `não encontrei o executável docker no PATH` | the image was built without `docker-cli`. Rebuild it (`--build`). This error is deliberately SEPARATE from "daemon down": installing and starting are different fixes |
+| `PROJECT_WORKSPACES_HOST_ROOT não está definida` on `start` | expected, and the refusal is the correct behaviour. `-v` is resolved by the DAEMON against the HOST filesystem; guessing would mount an EMPTY folder and the dev agent would work in a directory with no code. The other four operations keep working without it |
+| the lifecycle route says `naoObservado: "broker-nao-configurado"` | `BROKER_URL` is empty on the **api**. That is a normal state, not a failure — the read declares that it did not look instead of inheriting the recorded state ([RN-486](business-rules.md#rn-486)) |
+| the lifecycle route says `naoObservado: "broker-sem-resposta"` | `BROKER_URL` is set and nothing answered: the profile is probably off, or the api is not on the `broker` network |
+| the broker answers `409` for a project | it is in `mounted`/`runner` mode. Their folder lives on the user's machine and this host cannot see it — there, the runner is what brings a container up |
+
+**The broker never brings a container up on its own.** There is no loop, no
+queue and no `container_start` proposed_action yet: it acts when called, and the
+only caller today performs a READ.
 
 ### Migrating workspaces to a local folder {#migrar-workspaces-pasta-local}
 

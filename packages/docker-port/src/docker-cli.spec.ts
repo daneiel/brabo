@@ -40,6 +40,7 @@ const SPEC: EspecificacaoDeContainer = {
   raizDoProjeto: raizDeProjetoValidada('/home/alguem/dev/exp002'),
   cpus: 2,
   memoriaMb: 2048,
+  pidsLimit: 512,
 };
 
 const OK: ResultadoDoCli = { exitCode: 0, stdout: '', stderr: '', timedOut: false };
@@ -103,6 +104,9 @@ describe('DockerViaCli.start', () => {
     expect(args.join(' ')).toContain('--network bridge');
     expect(args.join(' ')).toContain('--cpus 2');
     expect(args.join(' ')).toContain('--memory 2048m');
+    // Fork bomb é shell puro e não precisa de comando reconhecível — o teto de
+    // processos é a contenção que não depende de reconhecer nada (ADR 0130).
+    expect(args.join(' ')).toContain('--pids-limit 512');
     // Nada disto pode aparecer — e como o TIPO não deixa escrevê-los, este
     // teste tranca a única forma que sobra de eles entrarem: alguém somar a
     // opção à mão aqui dentro.
