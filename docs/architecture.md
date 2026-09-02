@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 127 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 128 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -502,13 +502,29 @@ erDiagram
   agent_instructions ||--o{ agent_instruction_versions : versions
   sessions ||--o{ psychologist_analyses : analyzes
   psychologist_analyses ||--o{ psychologist_hypotheses : produces
+  projects ||--o{ rag_searches : "every hybrid search leaves a row (RN-479)"
+  rag_searches ||--o{ rag_feedback : "was this excerpt useful? (RN-480)"
+  chunks ||--o{ rag_feedback : "the judged excerpt"
 ```
 
-45 tables in total (the most recent, `session_socket_tickets`, is the
-single-use ticket that authenticates the session's socket — RN-108; kept
-off the diagram for the same reason as `refresh_tokens`/`account_tokens`:
-an auth mechanism, not a domain relation). **The constraints are business
-rules**: the event log's unique `(session_id, seq)`, the `check` requiring
+53 tables in total. The two most recent are `rag_searches`/`rag_feedback`
+(RN-479/480): the trail of the hybrid search and the vote on what it
+returned, added because `rag-search-limits.ts` declares in its own comment
+that none of the four numbers of the hybrid search comes from calibration
+with real data — and there was no way to calibrate while the search left no
+trace. They are TABLES and not just session events for a concrete reason:
+`session_events.session_id` is `NOT NULL`, and a search coming from the RAG
+tab is a *project* search with no session, so the event log would silently
+drop exactly the searches a human ran while looking at the scores (the same
+class of problem that forced the embedding-metering cut of
+[ADR 0075](adr/0075-embeddings-no-contrato-de-llm-provider.md)).
+`rag_searches.pesos` freezes the weights of each search on its own row —
+same discipline as the frozen price in metering
+([ADR 0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)) — so that a later
+calibration does not silently change what every earlier measurement meant.
+`session_socket_tickets` is kept off the diagram for the same reason as
+`refresh_tokens`/`account_tokens`: an auth mechanism, not a domain relation.
+**The constraints are business rules**: the event log's unique `(session_id, seq)`, the `check` requiring
 exactly one scope in `budgets` (project **or** session, never both), the
 partial indexes that guarantee analysis idempotency — and, since Phase 8b,
 `delegations`'s three `check`s that lock which field is required per

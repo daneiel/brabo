@@ -424,6 +424,26 @@ defmodule Engine.Sessions.EngineApiClient do
             ) :: {:ok, map()} | {:error, term()}
 
   @doc """
+  Vota num trecho que a busca devolveu — `POST /internal/rag/feedback`
+  (RN-480). É o único sinal de VERDADE da medição do RAG: latência e taxa de
+  degradação dizem se a busca RODOU, nunca se ela ACERTOU.
+
+  `search_id`/`chunk_id` vêm do resultado da PRÓPRIA `rag_search`; a api
+  recusa (400) id que ela não reconheça, e a ferramenta converte essa recusa
+  em tool-result de erro para o modelo corrigir (RN-061), nunca em crash.
+
+  Retorna `{:ok, %{"searchId"=>, "chunkId"=>, "verdict"=>, "rank"=>}}` ou
+  `{:error, motivo}`.
+  """
+  @callback rag_feedback(
+              project_id :: String.t(),
+              search_id :: String.t(),
+              chunk_id :: String.t(),
+              verdict :: String.t(),
+              agent :: String.t()
+            ) :: {:ok, map()} | {:error, term()}
+
+  @doc """
   Lê um prompt template versionado do grafo de prompts (ADR pendente da
   frente N2) — `GET /internal/graph/prompt-templates/:name`, com
   `?version=` quando `version` não é `nil` (sem parâmetro busca a versão
@@ -483,6 +503,9 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def rag_search(project_id, query, top_k, opts \\ []),
     do: impl().rag_search(project_id, query, top_k, opts)
+
+  def rag_feedback(project_id, search_id, chunk_id, verdict, agent),
+    do: impl().rag_feedback(project_id, search_id, chunk_id, verdict, agent)
 
   def get_prompt_template(name, version \\ nil),
     do: impl().get_prompt_template(name, version)
@@ -1279,12 +1302,37 @@ defmodule Engine.Sessions.EngineApiClient.Live do
 
   @impl true
   def rag_search(project_id, query, top_k, opts \\ []) do
-    post_returning(
-      "/internal/rag/search",
-      %{projectId: project_id, query: query, topK: top_k},
-      opts
-    )
+    # `:session_id`/`:agent` são de DOMÍNIO — entram no CORPO, e é o que
+    # permite a api gravar o ator da telemetria e narrar `rag.search` na
+    # timeline (RN-479/481). O resto de `opts` continua indo para o `Req`,
+    # como sempre foi. Separá-los aqui evita um quinto parâmetro posicional
+    # que todo chamador teria de passar mesmo sem ter o que dizer.
+    {session_id, opts} = Keyword.pop(opts, :session_id)
+    {agent, opts} = Keyword.pop(opts, :agent)
+
+    corpo =
+      %{projectId: project_id, query: query, topK: top_k}
+      |> por_se_presente(:sessionId, session_id)
+      |> por_se_presente(:agent, agent)
+
+    post_returning("/internal/rag/search", corpo, opts)
   end
+
+  @impl true
+  def rag_feedback(project_id, search_id, chunk_id, verdict, agent) do
+    post_returning("/internal/rag/feedback", %{
+      projectId: project_id,
+      searchId: search_id,
+      chunkId: chunk_id,
+      verdict: verdict,
+      agent: agent
+    })
+  end
+
+  # A api distingue campo AUSENTE de campo NULO: mandar `sessionId: null` faria
+  # o DTO recusar o corpo pela validação de UUID. Ausente é o contrato.
+  defp por_se_presente(mapa, _chave, nil), do: mapa
+  defp por_se_presente(mapa, chave, valor), do: Map.put(mapa, chave, valor)
 
   @impl true
   def get_prompt_template(name, version \\ nil) do

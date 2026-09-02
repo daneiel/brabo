@@ -63,10 +63,12 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Pasta antes do runner | A configuração do runner pelo navegador (ADR 0118) inverte a ordem: `showDirectoryPicker` é o PRIMEIRO passo e o binário o ÚLTIMO, best-effort — a release sem asset devolvia 502 antes do seletor abrir, e a pasta ficava inalcançável. Falha do binário mantém os dois arquivos gravados e troca a instrução pelo caminho `npm install -g @brabo/runner`. Depois da instrução, `EsperaDoRunner` sonda `workspaceVerifiedAt` com três estados e teto | RN-473/474 |
 | O `kid` na chave de dispositivo | O modo automático do ADR 0118 NUNCA autenticou: o navegador descartava o `id` que o registro devolvia, e a JWK gravada nascia sem `kid` — o CLI a recusava sempre. Registro e exportação viram UMA função (`registrarChaveEExportarPrivada`), nos DOIS caminhos; e a recusa do CLI deixa de ser indistinguível de "não há chave". O teste que deixou passar afirmava que o arquivo fora ABERTO, nunca o conteúdo | RN-475 |
 | Provisionamento que não fica calado | Duas falhas não viravam estado nenhum — `step.check` fora do `try` e a recusa de `createRepo` ANTES de a linha de bootstrap existir —, e a tela pollava "Iniciando…" para sempre sem botão. Causa raiz de tudo: `/data/git-repos` e `/data/project-workspaces` nasciam `root` nas imagens de DEV, que o `Dockerfile.prod` já sabia criar antes do `USER` | RN-477 |
+| O arquivo de política e o escopo do terminal | `projectScopeRoot` tinha DOIS consumidores com necessidades opostas, e o modo `runner` (sem bind-mount) os separou: o escopo segue apontando para o HOST, o `permissions.json` passa a morar na raiz GERENCIADA. A ativação da execução devolvia 500 (`mkdir '/home/<usuario>'`), e a LEITURA degradava calada — em projeto `runner` o arquivo nunca existiu. Junto: erro tipado com 400 em vez de `Error` cru, a Visão geral parando de engolir a mensagem da api, e a anotação de OpenAPI que prometia 409 para dois casos que nunca foram 409 | RN-478 |
 | Aviso do passo humano antes do clique | O passo de terminal do runner era anunciado só no estado de sucesso; passa a ser dito também no inicial, e o comando final ganha `cd <caminho>` quando dá para afirmar que a pasta escolhida é a do projeto. Rótulo do botão NÃO muda — ele fala da pasta, que é automática mesmo | RN-473/477 |
 | Um modelo para todos os agentes | A tabela `Modelos por agente` ganha uma barra que aplica UM modelo aos 17 de uma vez, gravando no nível do AGENTE (pelo projeto seria `maintainer`, e mexeria no default de sessão). Primeira EXCEÇÃO à régua "valor nomeado salva no `onChange`" da RN-469 — o seletor é argumento de ação, não configuração —, com o desfecho em três estados da própria RN-469 | RN-476 |
 | O arquivo de política e o escopo do terminal | `projectScopeRoot` tinha DOIS consumidores com necessidades opostas, e o modo `runner` (sem bind-mount) os separou: o escopo segue apontando para o HOST, o `permissions.json` passa a morar na raiz GERENCIADA. A ativação da execução devolvia 500 (`mkdir '/home/<usuario>'`), e a LEITURA degradava calada — em projeto `runner` o arquivo nunca existiu. Junto: erro tipado com 400 em vez de `Error` cru, a Visão geral parando de engolir a mensagem da api, e a anotação de OpenAPI que prometia 409 para dois casos que nunca foram 409 | RN-478 |
 | Tetos de rebaixamento em `project_members` | A sobreposição `projectRole ?? workspaceRole` FICA nos dois sentidos (é capacidade, não bug); o que entra são dois tetos de 403 no caso de uso — ninguém rebaixa o `owner` do workspace, ninguém rebaixa a si mesmo. As três descrições de OpenAPI que a RN-471 declarou falsas passam a descrever o código; o gate do `Select` é PR à parte, por a tela não ter como calcular o primeiro teto | ADR 0127, RN-472 |
+| Telemetria de busca do RAG | A busca híbrida deixa rastro: `rag_searches` (com os pesos CONGELADOS na linha) e `rag_feedback` (o voto útil/irrelevante, o único sinal de verdade). TABELA e não só evento, porque `session_events.session_id` é `NOT NULL` e a busca da aba não tem sessão — o evento `rag.search`/`rag.feedback` é NARRAÇÃO, só quando há sessão. Ferramenta `rag_feedback` (`:direct`) nos seis agentes que já tinham `rag_search`, e `medir:rag` para ler. NADA calibrado — esta etapa só instrumenta | RN-479..481 |
 
 ## Estado atual e aberto
 
@@ -149,8 +151,12 @@ daqui e o fechamento vai para o histórico.
   FASE 26 — nunca entrou (terminal, blame, lista de PRs e virtualização já
   fecharam depois)
 - Chunking do RAG (1200 caracteres/150 de sobreposição) e pesos da busca
-  híbrida (0.6/0.4, limiar 0.2) são PONTO DE PARTIDA — nunca calibrados
-  contra um corpo real de perguntas rodado contra o índice (ADR 0080)
+  híbrida (0.6/0.4, limiar 0.2) seguem sendo PONTO DE PARTIDA — ainda NÃO
+  calibrados (ADR 0080). O que mudou é que agora dá para calibrar: a busca
+  deixa rastro (`rag_searches`/`rag_feedback`, RN-479/480) e `pnpm --filter api
+  medir:rag` lê esse rastro. Falta o corpo real de perguntas rodado contra o
+  índice — e mexer nos números antes de acumular medição destruiria a linha de
+  base que a telemetria existe para criar
 - `rc/rcfix` (ADR 0030) e preferência de moeda com taxa manual seguem no
   backlog original da FASE 13c, sem revisão desde então
 - Pull de modelo Hugging Face roda o download inteiro de forma SÍNCRONA
@@ -517,7 +523,18 @@ daqui e o fechamento vai para o histórico.
   NUNCA quebrado por provider ou credencial — as duas leituras respondem
   perguntas diferentes e nenhuma é recorte da outra (RN-101/ADR 0063).
 - Métrica de execução de agentes é extraída do event log/token_usage
-  por script, nunca anotada manualmente (lição da Fase 10/13).
+  por script, nunca anotada manualmente (lição da Fase 10/13). A busca do RAG
+  segue a mesma régua e acrescenta uma (RN-479..481): quando o instrumento de
+  medição não cabe no event log, ele vira TABELA, e a tabela — nunca o evento —
+  é a fonte. `session_events.session_id` é `NOT NULL`, e a busca vinda da aba é
+  de PROJETO: medir pelo evento perderia justamente as buscas com julgamento
+  humano. O evento (`rag.search`/`rag.feedback`, só quando há sessão) é
+  NARRAÇÃO da timeline. E o que o instrumento mede vai CONGELADO na linha — os
+  pesos da busca, como o preço no metering (ADR 0042) e a `image_version` em
+  `project_containers` —, senão a primeira calibração reescreve calada o
+  significado de toda medição anterior. Gravar medição NUNCA derruba o que ela
+  mede, e também não falha calada: origem `infra` no log e um `null` explícito
+  na resposta, que a tela distingue de "não achei nada".
 - As CINCO filas de decisão do projeto (aprovações, merges de PR, promoções
   de história, pendências de arquitetura, hipóteses do Psicólogo) nunca são
   SOMADAS — nem nos contadores do trilho (ADR 0126) nem no painel "precisa de

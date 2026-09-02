@@ -667,6 +667,7 @@ by the backfill migration.
 | GET | `/internal/graph/prompt-templates/:name` |
 | POST | `/internal/graph/prompt-templates` |
 | POST | `/internal/rag/search` |
+| POST | `/internal/rag/feedback` |
 
 The two template routes write/read prompt versions in Neo4j, idempotent
 by hash — `Engine.Harness.InstructionFiles` (source `:graph`) and the
@@ -677,7 +678,19 @@ to inline text on any failure ([RN-413](../business-rules.md#rn-413)/[RN-417](..
 same vector+lexical hybrid search the "Chat RAG" tab already uses) — service
 token instead of user JWT, same response format with explicit `degraded`
 when embedding was not available
-([RN-414](../business-rules.md#rn-414)). **None of the three is the relational
+([RN-414](../business-rules.md#rn-414)). Since [RN-479](../business-rules.md#rn-479)
+its body also carries the OPTIONAL `sessionId`/`agent`: the api cannot deduce
+either, and they are what let it record the telemetry actor and — only when
+there is a session — narrate `rag.search` on the timeline. Its response gained
+`searchId` plus a `chunkId` per hit, which together form the reference the
+agent's vote needs.
+
+`/internal/rag/feedback` is that vote ([RN-480](../business-rules.md#rn-480)),
+the tool `rag_feedback` on the engine side. It reuses the SAME use case as the
+human route — there is no second judgement path — and an unknown
+`searchId`/`chunkId` comes back as a **400 that the tool turns into an error
+tool-result** for the model to correct ([RN-061](../business-rules/custo.md#rn-061)),
+never a crash. **None of the four is the relational
 memory's WRITE path** — handoff, hypothesis, profile and session close
 reach the graph via `GraphProjector`, on the api side, draining a
 second line of the transactional outbox; the engine never writes to the graph directly

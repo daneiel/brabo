@@ -24,14 +24,17 @@ defmodule Engine.Gates.AppSecAgent do
 
   alias Engine.Gates.Hooks.AppSecTermination
   alias Engine.Gates.Tools.EmitThreatModel
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch}
+  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch, RagFeedback}
   alias Engine.Harness.{Hooks, ToolLoop}
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
 
   # RagSearch entrou aqui (frente rag_search): threat model se beneficia de
   # achar ADR/regra de negócio de segurança já registrada sobre o módulo em
   # questão, em vez de reconstruir o raciocínio do zero a cada story.
-  @registry [ReadFile, SearchWorkspace, RagSearch, EmitThreatModel]
+  # RagFeedback anda junto de RagSearch (RN-480): buscar sem poder dizer se o
+  # trecho serviu deixa a calibração dos pesos sem sinal de verdade nenhum.
+  # `:direct` como a busca — votar não é efeito externo.
+  @registry [ReadFile, SearchWorkspace, RagSearch, RagFeedback, EmitThreatModel]
 
   @doc "Registro de ferramentas — sem `Terminal`, de propósito (ver moduledoc)."
   def tools, do: @registry

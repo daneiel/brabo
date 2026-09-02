@@ -441,6 +441,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/rag/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The agent's vote on one retrieved chunk (RN-480)
+         * @description Same use case as the human route — no second judgement path. An unknown `searchId`/`chunkId` is a 400 that the engine turns into an error tool-result for the model to correct (RN-061), never a crash.
+         */
+        post: operations["InternalRagController_votar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/rag/search": {
         parameters: {
             query?: never;
@@ -2286,6 +2306,26 @@ export interface paths {
         get: operations["RagController_obterCobertura"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/rag/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Judges one hit of one search as useful or irrelevant (RN-480)
+         * @description The only signal of TRUTH the RAG measurement has: latency and degradation rate say whether the search RAN, never whether it was RIGHT. Same role as `search` — whoever can read the result is who can judge it. Re-voting the same chunk of the same search overwrites your own vote rather than adding a second one (unique per actor), so the metric measures accuracy and not enthusiasm.
+         */
+        post: operations["RagController_votar"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5358,6 +5398,11 @@ export interface components {
         };
         HybridSearchResponseDto: {
             query: string;
+            /**
+             * Format: uuid
+             * @description The `rag_searches` row this search left (RN-479) — the id a vote attaches to. `null` means the telemetry row was NOT written (the insert failed), which is not the same as "no results": there is nothing to attach a vote to, and the UI needs the two apart so it does not offer a control the api will refuse.
+             */
+            searchId: string | null;
             hits: components["schemas"]["HybridSearchHitResponseDto"][];
             /** @description `false` when the embedding provider did not respond — the search ran with only the lexical signal (RN-233). */
             vectorAvailable: boolean;
@@ -6966,6 +7011,58 @@ export interface components {
             chunksTotal: number;
             chunksWithoutVector: number;
         };
+        RagFeedbackInternalDto: {
+            /** Format: uuid */
+            projectId: string;
+            /** Format: uuid */
+            searchId: string;
+            /** Format: uuid */
+            chunkId: string;
+            /** @enum {string} */
+            verdict: "util" | "irrelevante";
+            /**
+             * @description Agent slug — the voter.
+             * @example qa
+             */
+            agent: string;
+        };
+        RagFeedbackInternalResponseDto: {
+            /** Format: uuid */
+            searchId: string;
+            /** Format: uuid */
+            chunkId: string;
+            /** @enum {string} */
+            verdict: "util" | "irrelevante";
+            /** @description The 1-based position the judged chunk held in THAT search. */
+            rank: number;
+        };
+        RagFeedbackRequestDto: {
+            /**
+             * Format: uuid
+             * @description The `searchId` returned by the search that produced this hit — never invented by the client.
+             */
+            searchId: string;
+            /**
+             * Format: uuid
+             * @description The chunk being judged. Must be one of the hits THAT search returned, otherwise 400.
+             */
+            chunkId: string;
+            /**
+             * @description Two values, not a 1-5 scale: a finer scale invites per-voter differences in ruler that no aggregation recovers later.
+             * @enum {string}
+             */
+            verdict: "util" | "irrelevante";
+        };
+        RagFeedbackResponseDto: {
+            /** Format: uuid */
+            searchId: string;
+            /** Format: uuid */
+            chunkId: string;
+            /** @enum {string} */
+            verdict: "util" | "irrelevante";
+            /** @description The 1-based position the judged chunk held in THAT search — the number that separates "the index is poor" from "the weights are wrong". */
+            rank: number;
+        };
         RagFileCoverageResponseDto: {
             filesInRepo: number;
             filesIndexed: number;
@@ -6984,8 +7081,23 @@ export interface components {
             query: string;
             /** @example 5 */
             topK?: number;
+            /**
+             * Format: uuid
+             * @description The session the agent is running in. Absent means the caller had no session — the telemetry row is still written (RN-479), only the `rag.search` timeline narration is skipped. Never invented by the api: a session it did not receive is a session that did not exist.
+             */
+            sessionId?: string;
+            /**
+             * @description Agent slug, recorded as the telemetry actor (`actor_kind: agent`). Absent falls back to the `system` actor rather than inventing a user.
+             * @example dev-lead
+             */
+            agent?: string;
         };
         RagSearchInternalHitResponseDto: {
+            /**
+             * Format: uuid
+             * @description The chunk id — half of the reference a `rag_feedback` vote needs (RN-480). Without it the agent could read a hit and have no way to say it was useful.
+             */
+            chunkId: string;
             /**
              * @description File path (`docs`/`adr` scopes) or `session:<id>` (`session` scope, no real file path).
              * @example docs/adr/0080-chat-rag-pipeline-indexacao.md
@@ -6999,6 +7111,11 @@ export interface components {
             excerpt: string;
         };
         RagSearchInternalResponseDto: {
+            /**
+             * Format: uuid
+             * @description The `rag_searches` row this search left (RN-479) — the other half of the vote reference. `null` when the telemetry row was not written; the tool then omits the ids instead of offering the model a reference that would be refused.
+             */
+            searchId: string | null;
             hits: components["schemas"]["RagSearchInternalHitResponseDto"][];
             /** @description `true` when the QUERY embedding was not available and the search fell back to lexical-only (same semantics as `vectorAvailable: false` from `HybridSearchUseCase`). */
             degraded: boolean;
@@ -8991,6 +9108,43 @@ export interface operations {
             };
             /** @description Project does not exist. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalRagController_votar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RagFeedbackInternalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RagFeedbackInternalResponseDto"];
+                };
+            };
+            /** @description Unknown `searchId` for this project, or a `chunkId` that was not among that search hits. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14289,6 +14443,66 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RagCoverageResponseDto"];
                 };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RagController_votar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RagFeedbackRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RagFeedbackResponseDto"];
+                };
+            };
+            /** @description Unknown `searchId` for this project, or a `chunkId` that was not among that search hits — a vote without a rank would be a number without meaning. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description No token, expired token, or invalid signature. */
             401: {

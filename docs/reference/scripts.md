@@ -78,6 +78,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter api validacao:real` | `ts-node scripts/validacao-real.ts` |
 | `pnpm --filter api validacao:gates` | `ts-node scripts/validacao-gates.ts` |
 | `pnpm --filter api medir:execucao` | `ts-node scripts/medir-execucao.ts` |
+| `pnpm --filter api medir:rag` | `ts-node scripts/medir-rag.ts` |
 | `pnpm --filter api analise:funil` | `ts-node scripts/analise-funil.ts` |
 | `pnpm --filter api relatorio:seguranca-runtime` | `ts-node scripts/relatorio-seguranca-runtime.ts` |
 | `pnpm --filter api relatorio:telemetria` | `ts-node scripts/relatorio-telemetria.ts` |
@@ -140,4 +141,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-95 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+96 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
