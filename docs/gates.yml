@@ -319,3 +319,23 @@ gates:
     aprovacao_humana: false
     status: planned
     backlog: deploy (DEPLOY_ENABLED + Environments)
+
+  - id: rag-acertivo # Parte 2/Etapa 2 do programa de RAG mensurável — ADR 0132, RN-490
+    fluxo: transversal # o RAG serve todos os fluxos, mesmo reuso de acao-aprovada
+    dono: usuario
+    entrada: [golden-set-rag]
+    entregavel: taxa-de-acerto-acima-do-piso
+    verificacao: script
+    # warn é obrigatório aqui, não estilístico: não há CI com LLM (mesma
+    # decisão já registrada para o golden-set do QA, ADR 0123) — o gate roda
+    # MANUAL (`mix golden_set.rag`), e `block` prometeria um travamento
+    # automático que não existe.
+    severidade: warn
+    aprovacao_humana: false
+    status: active
+    evidencia:
+      # teste, não event_log: o que prova este gate é o golden-set em si —
+      # não há proposed_action nem evento de domínio associado à passagem
+      # (mesmo padrão do gate merge-protegida).
+      tipo: teste
+      arquivo: apps/engine/test/engine/rag/rag_golden_test.exs

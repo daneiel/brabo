@@ -69,6 +69,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Tetos de rebaixamento em `project_members` | A sobreposição `projectRole ?? workspaceRole` FICA nos dois sentidos (é capacidade, não bug); o que entra são dois tetos de 403 no caso de uso — ninguém rebaixa o `owner` do workspace, ninguém rebaixa a si mesmo. As três descrições de OpenAPI que a RN-471 declarou falsas passam a descrever o código; o gate do `Select` é PR à parte, por a tela não ter como calcular o primeiro teto | ADR 0127, RN-472 |
 | Telemetria de busca do RAG | A busca híbrida deixa rastro: `rag_searches` (com os pesos CONGELADOS na linha) e `rag_feedback` (o voto útil/irrelevante, o único sinal de verdade). TABELA e não só evento, porque `session_events.session_id` é `NOT NULL` e a busca da aba não tem sessão — o evento `rag.search`/`rag.feedback` é NARRAÇÃO, só quando há sessão. Ferramenta `rag_feedback` (`:direct`) nos seis agentes que já tinham `rag_search`, e `medir:rag` para ler. NADA calibrado — esta etapa só instrumenta | RN-479..481 |
 | Broker de container | Nasce `apps/broker`, o ÚNICO processo que fala com um daemon Docker no servidor — e ele NÃO aceita especificação: recebe `projectId` + operação, LÊ a decisão do Arquiteto da api e COMPÕE imagem, rede, recursos e o único mount. A porta do ADR 0128 MOVE de `apps/runner/src/` para `packages/docker-port` (os dois consumidores a empacotam; a api não pode consumi-la). A rota de ciclo de vida passa a devolver observado ao lado de registrado, sem fundir | ADR 0130, RN-485/486 |
+| Golden-set de acerto do RAG | Molde do golden-set do QA (ADR 0123) aplicado à busca híbrida: como o julgamento não mora no engine (é `HybridSearchUseCase`, na api), `seed-golden-set-rag.ts` provisiona UM projeto com corpus real curado (22 arquivos de `docs/`) E roda a busca para 17 perguntas compostas de RNs/ADRs reais; `rag_golden_test.exs` só invoca o script e aplica o piso. Critério de acerto — caminho de arquivo, top-5, nunca chunk exato/rank 1 — é função pura testada. Gate novo `rag-acertivo`, `warn` (sem CI com LLM). Medido de verdade, duas vezes, deterministicamente: 17/17 no top-5 | ADR 0132, RN-490 |
 
 ## Estado atual e aberto
 
@@ -156,11 +157,15 @@ daqui e o fechamento vai para o histórico.
   fecharam depois)
 - Chunking do RAG (1200 caracteres/150 de sobreposição) e pesos da busca
   híbrida (0.6/0.4, limiar 0.2) seguem sendo PONTO DE PARTIDA — ainda NÃO
-  calibrados (ADR 0080). O que mudou é que agora dá para calibrar: a busca
-  deixa rastro (`rag_searches`/`rag_feedback`, RN-479/480) e `pnpm --filter api
-  medir:rag` lê esse rastro. Falta o corpo real de perguntas rodado contra o
-  índice — e mexer nos números antes de acumular medição destruiria a linha de
-  base que a telemetria existe para criar
+  calibrados (ADR 0080). O que mudou desde a Etapa 1 é que agora dá para
+  calibrar: a busca deixa rastro (`rag_searches`/`rag_feedback`, RN-479/480) e
+  `pnpm --filter api medir:rag` lê esse rastro. O que mudou desde a Etapa 2
+  (ADR 0132) é que existe um corpo de 17 perguntas medindo ACERTO de
+  retrieval — mas é um corpus CURADO (22 arquivos, não os 130+ ADRs reais) e
+  mede se o arquivo certo aparece, não se os PESOS estão certos; mexer nos
+  quatro números antes de acumular medição de verdade continuaria destruindo
+  a linha de base que os dois instrumentos juntos existem para criar (Etapa 5
+  é a única que calibra, e só se a medição comprovar que ajuda)
 - `rc/rcfix` (ADR 0030) e preferência de moeda com taxa manual seguem no
   backlog original da FASE 13c, sem revisão desde então
 - Pull de modelo Hugging Face roda o download inteiro de forma SÍNCRONA
@@ -181,6 +186,13 @@ daqui e o fechamento vai para o histórico.
   `apps/engine`) contra Ollama local — nunca em CI. Ligar em CI exige
   segredo de LLM de API OU infra nova (runner com GPU, passo de pull do
   Ollama): decisão de um humano, não algo que se constrói escolhendo
+- Golden-set de acerto do RAG (ADR 0132, RN-490) — mesma régua do de cima,
+  mesmo motivo: roda manualmente (`mix golden_set.rag`) contra Ollama local
+  (`nomic-embed-text`), nunca em CI. Medido de verdade nesta sessão (17/17,
+  duas rodadas, determinístico), piso gravado em `floor.json` — mas contra um
+  corpus CURADO (22 arquivos), não os 130+ ADRs reais do produto; ampliar o
+  corpus é decisão de custo de embedding numa rodada manual, não escolhida
+  aqui
 
 **Backlog vivo:** `docs/explanation/backlog.md` (fonte única de priorização).
 
