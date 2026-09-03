@@ -506,6 +506,7 @@ reason in the URL.
 | POST | `/internal/sessions/:sessionId/llm-turn-stream` | engine-service |
 | POST | `/internal/sessions/:sessionId/c4-diagram` | engine-service |
 | POST | `/internal/sessions/:sessionId/module-map` | engine-service |
+| POST | `/internal/sessions/:sessionId/module-routing` | engine-service |
 | POST | `/internal/sessions/:sessionId/project-image` | engine-service |
 | POST | `/internal/sessions/:sessionId/proficiency` | engine-service |
 | POST | `/internal/models/sync` | engine-service |

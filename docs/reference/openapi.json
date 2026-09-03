@@ -2047,6 +2047,62 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/module-routing": {
+      "post": {
+        "description": "The artifact IS the `artifact.module_routing` event: immutable, versioned, and with an author, alongside `artifact.module_map`/`artifact.project_image`/`artifact.c4_diagram`. Each item is validated with the same rule as `choose_project_image` (explicit tag/digest, `latest` rejected, non-trivial `rationale`); a module name outside the current module_map, an empty list, or a repeated module are all rejected with 400.",
+        "operationId": "InternalSessionsController_moduleRouting",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RouteModulesToInfraInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoteamentoDeModulosGeradoResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty list, repeated module, module outside the current module_map, or a candidate image that fails `choose_project_image`'s rule (no explicit tag, `latest`, or short `rationale`)."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Session, project, or resource not found."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Routes each module of the current module_map to a candidate image",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/pending-work": {
       "get": {
         "description": "Queried by the engine's `SessionServer` on heartbeat timeout. `pending: true` makes the timeout get rescheduled instead of closing, and the `motivo` goes into the engine's log — a session that doesn't close without saying why is undiagnosable.",
@@ -19289,6 +19345,92 @@
           "infraActive",
           "uxDesignerActive",
           "staffActive"
+        ]
+      },
+      "RoteamentoDeModuloInternalDto": {
+        "type": "object",
+        "properties": {
+          "modulo": {
+            "type": "string",
+            "example": "checkout-api",
+            "description": "Nome do módulo — precisa existir no module_map vigente."
+          },
+          "imagemCandidata": {
+            "type": "string",
+            "example": "node:22-bookworm-slim",
+            "description": "OCI reference with an explicit TAG or digest for this module. `latest` is REFUSED with 400 — the rule is domain-level."
+          },
+          "porque": {
+            "type": "string",
+            "example": "This module is TypeScript on Node 22; the slim variant has the runtime and nothing else.",
+            "description": "Why THIS image for THIS module. Minimum of 10 characters."
+          }
+        },
+        "required": [
+          "modulo",
+          "imagemCandidata",
+          "porque"
+        ]
+      },
+      "RoteamentoDeModuloResponseDto": {
+        "type": "object",
+        "properties": {
+          "modulo": {
+            "type": "string",
+            "example": "checkout-api"
+          },
+          "imagemCandidata": {
+            "type": "string",
+            "example": "node:22-bookworm-slim"
+          },
+          "porque": {
+            "type": "string",
+            "example": "This module is TypeScript on Node 22; the slim variant has the runtime and nothing else."
+          }
+        },
+        "required": [
+          "modulo",
+          "imagemCandidata",
+          "porque"
+        ]
+      },
+      "RoteamentoDeModulosGeradoResponseDto": {
+        "type": "object",
+        "properties": {
+          "roteamento": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoteamentoDeModuloResponseDto"
+            }
+          },
+          "version": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "roteamento",
+          "version"
+        ]
+      },
+      "RouteModulesToInfraInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roteamento": {
+            "description": "One item per module of the current module_map. The candidate image is the Architect proposing, not deciding — Infra elects among the candidates in a later step.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoteamentoDeModuloInternalDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "roteamento"
         ]
       },
       "RuleCoverageResponseDto": {

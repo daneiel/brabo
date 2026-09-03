@@ -14,9 +14,9 @@ afterAll(() => {
   void i18n.changeLanguage('en');
 });
 
-describe('fraseDaFerramenta — cobertura das 19 ferramentas conhecidas', () => {
+describe('fraseDaFerramenta — cobertura das 20 ferramentas conhecidas', () => {
   it('a lista não veio vazia', () => {
-    expect(FERRAMENTAS_CONHECIDAS.length).toBe(19);
+    expect(FERRAMENTAS_CONHECIDAS.length).toBe(20);
   });
 
   it.each(FERRAMENTAS_CONHECIDAS)('%s tem frase própria, não o fallback', (tool) => {

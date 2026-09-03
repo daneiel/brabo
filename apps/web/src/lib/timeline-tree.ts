@@ -121,6 +121,7 @@ const TRADUCAO: Record<string, Traducao> = {
   'artifact.product_brief': { tipo: 'artefato', rotulo: 'emitiu o brief' },
   'artifact.business_rule': { tipo: 'artefato', rotulo: 'emitiu regra de negócio' },
   'artifact.module_map': { tipo: 'artefato', rotulo: 'emitiu o module_map' },
+  'artifact.module_routing': { tipo: 'artefato', rotulo: 'roteou módulos para infra' },
   'artifact.insight': { tipo: 'artefato', rotulo: 'emitiu hipótese' },
   'delegation.completed': {
     tipo: 'delegacao',
