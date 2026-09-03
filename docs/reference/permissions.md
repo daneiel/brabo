@@ -126,6 +126,19 @@ calibration exactly — it CAN be configured `auto_approve` (never seeded).
 reprovision, and is in the absolute-caps block below, same treatment as
 external-effect git/privileged commands.
 
+**None of the three cares WHERE the container comes up.** `decide()` and
+every rule above are agnostic of `executionMode` — the branch only exists
+in EXECUTION, after approval (`ExecuteContainerStartUseCase`/
+`ExecuteContainerStopUseCase`/`ExecuteContainerRemoveUseCase`): a
+`container` project's approved action still goes to the broker
+(`ContainerBrokerPort`, unchanged); a `mounted`/`runner` project's goes to
+the RUNNER connected to the project instead, over the Phoenix channel it
+already keeps ([RN-497](../business-rules.md#rn-497),
+[ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)). "No
+runner connected" and "the runner tried and refused" are both ordinary
+`failed` outcomes, same discipline as a broker refusal — never an
+uncaught exception.
+
 ## How a pattern matches a command
 
 Not by substring. The command is tokenized with shell rules and the pattern

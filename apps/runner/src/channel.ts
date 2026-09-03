@@ -105,6 +105,68 @@ export interface WorkspaceConfirmMessage {
   path: string;
 }
 
+/**
+ * O runner sobe o container do projeto (ADR 0137) — MESMO par exec/
+ * exec_result, três vezes: `container_start`/`_result`, `container_stop`/
+ * `_result`, `container_remove`/`_result`. Só a api (via engine) origina;
+ * este runner só responde.
+ *
+ * `spec` são os mesmos campos de `EntradaDeEspecificacao`
+ * (`@brabo/docker-port`) MENOS `raizDoProjeto` — este runner enche esse
+ * campo sozinho, com a raiz já confirmada e validada no startup da CLI
+ * (RN-434/435). Ninguém do lado servidor manda caminho de host nenhum pra
+ * cá, pelo mesmo motivo que o broker nunca manda um pro daemon: quem sabe o
+ * caminho de VERDADE é quem está na máquina.
+ */
+export interface ContainerSpecPayload {
+  workspaceDirName: unknown;
+  projectId: unknown;
+  projectSlug: unknown;
+  workspaceId: unknown;
+  imagem: unknown;
+  imagemVersao: unknown;
+  rede: unknown;
+  cpus: unknown;
+  memoriaMb: unknown;
+  pidsLimit: unknown;
+}
+
+export interface ContainerStartMessage {
+  ref: string;
+  spec: ContainerSpecPayload;
+}
+
+export interface ContainerStartResultMessage {
+  ref: string;
+  sucesso: boolean;
+  containerId?: string;
+  nome?: string;
+  jaEstavaDePe?: boolean;
+  erro?: string;
+}
+
+export interface ContainerStopMessage {
+  ref: string;
+  workspaceDirName: string;
+}
+
+export interface ContainerStopResultMessage {
+  ref: string;
+  sucesso: boolean;
+  erro?: string;
+}
+
+export interface ContainerRemoveMessage {
+  ref: string;
+  workspaceDirName: string;
+}
+
+export interface ContainerRemoveResultMessage {
+  ref: string;
+  sucesso: boolean;
+  erro?: string;
+}
+
 export interface RunnerChannelHandlers {
   onExec: (msg: ExecMessage) => void;
   onPtyOpen: (msg: PtyOpenMessage) => void;
@@ -113,6 +175,9 @@ export interface RunnerChannelHandlers {
   onPtyClose: (msg: PtyCloseMessage) => void;
   onFsListDir: (msg: FsListDirMessage) => void;
   onFsHomeDir: (msg: FsHomeDirMessage) => void;
+  onContainerStart: (msg: ContainerStartMessage) => void;
+  onContainerStop: (msg: ContainerStopMessage) => void;
+  onContainerRemove: (msg: ContainerRemoveMessage) => void;
   /** Chamado quando a conexão cai DEPOIS de já ter entrado no canal. */
   onDisconnected?: () => void;
 }
@@ -312,6 +377,27 @@ function registrarHandlers(canal: ChannelLike, handlers: RunnerChannelHandlers):
       handlers.onFsHomeDir({ ref: msg.ref });
     }
   });
+
+  canal.on('container_start', (payload: unknown) => {
+    const msg = payload as Partial<ContainerStartMessage>;
+    if (typeof msg?.ref === 'string' && msg.spec !== undefined && msg.spec !== null) {
+      handlers.onContainerStart({ ref: msg.ref, spec: msg.spec as ContainerSpecPayload });
+    }
+  });
+
+  canal.on('container_stop', (payload: unknown) => {
+    const msg = payload as Partial<ContainerStopMessage>;
+    if (typeof msg?.ref === 'string' && typeof msg.workspaceDirName === 'string') {
+      handlers.onContainerStop({ ref: msg.ref, workspaceDirName: msg.workspaceDirName });
+    }
+  });
+
+  canal.on('container_remove', (payload: unknown) => {
+    const msg = payload as Partial<ContainerRemoveMessage>;
+    if (typeof msg?.ref === 'string' && typeof msg.workspaceDirName === 'string') {
+      handlers.onContainerRemove({ ref: msg.ref, workspaceDirName: msg.workspaceDirName });
+    }
+  });
 }
 
 export function enviarExecResult(canal: ChannelLike, msg: ExecResultMessage): void {
@@ -349,4 +435,25 @@ export function enviarFsListDirReply(canal: ChannelLike, msg: FsListDirReplyMess
 
 export function enviarFsHomeDirReply(canal: ChannelLike, msg: FsHomeDirReplyMessage): void {
   canal.push('fs_home_dir_reply', msg);
+}
+
+export function enviarContainerStartResult(
+  canal: ChannelLike,
+  msg: ContainerStartResultMessage,
+): void {
+  canal.push('container_start_result', msg);
+}
+
+export function enviarContainerStopResult(
+  canal: ChannelLike,
+  msg: ContainerStopResultMessage,
+): void {
+  canal.push('container_stop_result', msg);
+}
+
+export function enviarContainerRemoveResult(
+  canal: ChannelLike,
+  msg: ContainerRemoveResultMessage,
+): void {
+  canal.push('container_remove_result', msg);
 }

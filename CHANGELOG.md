@@ -103,6 +103,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **runner, engine, api**: o `brabo-runner` sobe o container do projeto NA
+  MÁQUINA DO USUÁRIO, com o Docker DELE (ADR 0137, RN-497) — a metade que a
+  RN-494 (ADR 0135) tinha deixado declarada: `mounted`/`runner` passaram a
+  exigir imagem decidida, mas continuavam sem subir container nenhum, porque
+  o broker do servidor (`apps/broker`) nunca sobe container pra esses dois
+  modos. `container_start`/`container_stop`/`container_remove` ganham um
+  segundo caminho de execução, ramificado pelo `executionMode` do projeto —
+  `container` continua pelo broker, `mounted`/`runner` passam a pedir ao
+  runner conectado, via TRÊS pares novos de evento no canal Phoenix que ele
+  já mantém (`container_start`/`_result`, `container_stop`/`_result`,
+  `container_remove`/`_result`), mesmo molde de `exec`/`exec_result`. A
+  imagem que sobe é a JÁ decidida (lida, nunca reeleita); "sem runner
+  conectado" e "o runner recusou" viram `failed` nomeado, nunca exceção
+  genérica. `Engine.Actions.TerminalExecutor` não ganhou saída nova — ele já
+  roteava todo comando de projeto `runner` conectado pro canal
+  incondicionalmente; a decisão host-vs-container passou a ser INTERNA ao
+  runner (`tratarExec` roteia via `docker exec` quando há container ativo).
+  `guard.ts`/RN-434 (contenção em `$HOME` no Linux) passa a cobrir o
+  bind-mount sem nenhuma validação nova — o mount É a raiz já confirmada no
+  startup da CLI
 - **api, web**: página global de containers (`/containers`, ADR 0136,
   RN-495/496) — cross-projeto, do workspace inteiro: imagem+versão
   (CONGELADA, não a vigente), estado REGISTRADO, estado OBSERVADO (pedido

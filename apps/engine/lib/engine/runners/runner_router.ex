@@ -25,6 +25,12 @@ defmodule Engine.Runners.RunnerRouter do
 
   alias Engine.Runners.Registry
 
+  # Teto default das TRÊS operações de container abaixo — não reusa
+  # `terminal_action_timeout_ms` de propósito: aquela config é do terminal, e
+  # um `docker start`/`pull` implícito de imagem pode legitimamente levar
+  # mais tempo que um comando de terminal comum.
+  @timeout_padrao_ms 60_000
+
   @doc """
   Executa `command` no runner conectado a `project_id`, com `cwd` (pode ser
   `nil`) e `timeout_ms`. Devolve `{:ok, payload}` (o mapa cru do
@@ -42,6 +48,69 @@ defmodule Engine.Runners.RunnerRouter do
 
         receive do
           {:runner_exec_result, ^ref, payload} -> {:ok, payload}
+        after
+          timeout_ms -> {:error, :timeout}
+        end
+    end
+  end
+
+  @doc """
+  Pede ao runner conectado a `project_id` para SUBIR o container do projeto
+  (`spec`, o mapa que `EngineWeb.ContainerCommandController` recebeu da api —
+  os mesmos campos de `EntradaDeEspecificacao` de `packages/docker-port`,
+  menos `raizDoProjeto`, que o runner enche sozinho com a raiz confirmada no
+  startup). Mesmo par exec/exec_result, evento `container_start`/
+  `container_start_result`. Devolve `{:ok, payload}` (o mapa cru de
+  `"container_start_result"`) | `{:error, :not_connected}` |
+  `{:error, :timeout}` — mesmo contrato de `exec/4`.
+  """
+  def start_container(project_id, spec, timeout_ms \\ @timeout_padrao_ms) do
+    dispatch(
+      project_id,
+      :dispatch_container_start,
+      spec,
+      timeout_ms,
+      :runner_container_start_result
+    )
+  end
+
+  @doc "Espelho de `start_container/3` para `container_stop` — `workspace_dir_name` é o payload."
+  def stop_container(project_id, workspace_dir_name, timeout_ms \\ @timeout_padrao_ms) do
+    dispatch(
+      project_id,
+      :dispatch_container_stop,
+      workspace_dir_name,
+      timeout_ms,
+      :runner_container_stop_result
+    )
+  end
+
+  @doc "Espelho de `start_container/3` para `container_remove`."
+  def remove_container(project_id, workspace_dir_name, timeout_ms \\ @timeout_padrao_ms) do
+    dispatch(
+      project_id,
+      :dispatch_container_remove,
+      workspace_dir_name,
+      timeout_ms,
+      :runner_container_remove_result
+    )
+  end
+
+  # O molde comum das TRÊS operações de container acima — mesmo desenho de
+  # `exec/4` (`Registry.whereis` -> `send` correlacionado por `ref` -> espera
+  # bloqueada por `receive ... after`), fatorado porque três cópias quase
+  # idênticas divergiam só no átomo de evento e no de resultado.
+  defp dispatch(project_id, evento_tag, payload, timeout_ms, resultado_tag) do
+    case Registry.whereis(project_id) do
+      nil ->
+        {:error, :not_connected}
+
+      pid ->
+        ref = Ecto.UUID.generate()
+        send(pid, {evento_tag, ref, payload, self(), timeout_ms})
+
+        receive do
+          {^resultado_tag, ^ref, resultado} -> {:ok, resultado}
         after
           timeout_ms -> {:error, :timeout}
         end
