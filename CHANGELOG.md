@@ -4,6 +4,31 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### ⚠ Mudanças incompatíveis
+
+- **api,web**: o portão da imagem do Arquiteto (RN-105) passa a valer nos
+  **TRÊS** modos de execução — `container`, `mounted` e `runner`. Até aqui,
+  `mounted`/`runner` eram dispensados (RN-169/RN-421, ADR 0072/0104): como
+  esses dois modos não sobem container próprio, a regra original abria a
+  aba Code sem esperar decisão nenhuma do Arquiteto. Isso confundia "este
+  projeto sobe container no servidor?" (não, para `mounted`/`runner`, e
+  isso não muda) com "faz sentido exigir uma decisão de imagem antes de
+  abrir a leitura de código?" (sim, nos três modos). **Custo aceito, com
+  todas as letras:** todo projeto `mounted`/`runner` **EXISTENTE** sem
+  `artifact.project_image` decidido — inclusive projetos reais de
+  dogfooding deste repositório (`exp001`/`exp002`) — **perde acesso à aba
+  Code** no instante em que este release for deployado, até que o
+  Arquiteto (ou a Infra, elegendo entre candidatas — ADR 0133) decida uma
+  imagem para ele. É uma ação do operador exigida **depois** do deploy, por
+  isso a mudança nasce em `breaking/` e a versão sobe **MAJOR** — mecânico,
+  não escolhido caso a caso. `RegistrarTransicaoDeContainerUseCase` também
+  para de recusar (400) `mounted`/`runner` por modo; `project_containers`
+  pode registrar linha para os três modos agora, mas chegar em `running` de
+  verdade continua impossível para `mounted`/`runner` — enforçado só pelo
+  broker (`ModoDeExecucaoNaoSuportadoError`), que já falha alto e nomeado
+  em vez de calado. Ver [ADR 0135](docs/adr/0135-portao-de-imagem-nos-tres-modos.md)
+  e RN-494 (revisa RN-169/RN-421)
+
 ### Correções
 
 - **api,web,engine**: o `permissions.json` de um projeto no modo `runner` passa

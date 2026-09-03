@@ -24,14 +24,16 @@ import styles from './ProjectCodeTab.module.css';
  * — extraída daqui para a aba PRs (`code/PrListAndDiff.tsx`) reusar a mesma
  * cara quando o mesmo 409 vaza de `getCodePullRequests`/`getCodeDiff`.
  *
- * ## O modo Local não passa pelo gate (RN-169, ADR 0072)
+ * ## Os três modos passam pelo MESMO gate agora (RN-494, revisa RN-169/421)
  *
- * Projeto no modo `local` não sobe container, então a decisão do Arquiteto
- * nunca vai acontecer e a api já libera a leitura para ele. A tela precisa
- * concordar: sem isto, a aba ficaria eternamente na tela de bloqueio de uma
- * decisão que não existe — o mesmo defeito do lado do servidor, com outra
- * cara. A pergunta é feita ao MESMO `queryKey: ['project', projectId]` que a
- * tela de projeto já usa, então não custa requisição nova.
+ * Até a RN-494/ADR 0135, projeto `mounted`/`runner` (então chamado `local`)
+ * era DISPENSADO do gate — a api liberava a leitura sem exigir decisão de
+ * imagem, e esta tela precisava concordar, senão ficaria eternamente na
+ * tela de bloqueio de uma decisão que a api nunca ia cobrar. Isso mudou: a
+ * api agora exige a decisão do Arquiteto/Infra para os TRÊS modos (mesmo
+ * 409/`sem_decisao`), e a tela não precisa mais de um caso à parte — todo
+ * projeto pergunta `GET /projects/:id/container` e trata o resultado do
+ * mesmo jeito, `container`, `mounted` ou `runner`.
  *
  * ## A sidebar não recolhe mais sozinha (ADR 0126)
  *
@@ -57,12 +59,6 @@ export function ProjectCodeTab({ projectId }: { projectId: string }) {
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
   });
-  // `false` enquanto `projectQuery.data` ainda não chegou — `undefined !==
-  // 'container'` seria `true` e abriria o shell ANTES de saber o modo real
-  // (bug achado pelo teste de "carregando" desta mesma tela).
-  const modoLocal = projectQuery.data
-    ? projectQuery.data.executionMode !== 'container'
-    : false;
 
   const containerQuery = useQuery({
     queryKey: ['container', projectId],
@@ -72,12 +68,10 @@ export function ProjectCodeTab({ projectId }: { projectId: string }) {
     // estável seria só tráfego (a mesma família de defeito da PÓS-FASE 15).
     refetchInterval: (query) =>
       query.state.data?.status === 'sem_decisao' ? 15_000 : false,
-    // Projeto Local não tem o que perguntar: não há container a decidir.
-    enabled: projectQuery.isSuccess && !modoLocal,
+    // Os três modos perguntam agora (RN-494) — não há mais um modo que
+    // "não tem o que perguntar".
+    enabled: projectQuery.isSuccess,
   });
-
-  // A leitura já está liberada — o gate inteiro abaixo é sobre o container.
-  if (modoLocal) return <CodeShell projectId={projectId} />;
 
   if (projectQuery.isError) {
     return (
