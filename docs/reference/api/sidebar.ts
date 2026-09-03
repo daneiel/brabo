@@ -568,6 +568,12 @@ const sidebar: SidebarsConfig = {
           label: "Rewrites the project's permissions.json",
           className: "api-method put",
         },
+        {
+          type: "doc",
+          id: "docs/reference/api/containers-overview-controller-list",
+          label: "Lists the container of every project in the workspace that already has one",
+          className: "api-method get",
+        },
       ],
     },
     {

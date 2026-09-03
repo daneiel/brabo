@@ -8,7 +8,7 @@ processo funciona de verdade.
 
 **Com todas as letras: PR grande sem issue prévia provavelmente será
 recusado.** Não por burocracia — por respeito ao seu tempo. Este projeto tem
-decisões arquiteturais registradas em [134 ADRs](docs/adr/index.md), e uma
+decisões arquiteturais registradas em [135 ADRs](docs/adr/index.md), e uma
 mudança que contradiz uma delas custa muito trabalho para depois ser
 rejeitada.
 

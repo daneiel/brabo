@@ -6,7 +6,15 @@ import { SEM_FRASE, descreverAcao } from '../lib/aprovacoes';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Disclosure } from './ui/Disclosure';
-import { AlertIcon, ChevronRightIcon, DiffIcon, PrIcon, TerminalIcon } from './ui/icons';
+import {
+  AlertIcon,
+  ChevronRightIcon,
+  DiffIcon,
+  PrIcon,
+  StopSquareIcon,
+  TerminalIcon,
+  TrashIcon,
+} from './ui/icons';
 import styles from './ApprovalCard.module.css';
 
 export type ApprovalUrgency = 'critico' | 'alta' | 'normal';
@@ -47,6 +55,9 @@ const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   // Efeito externo de verdade — gasta infra (ADR 0130/0133), mesmo calibre
   // visual de `spend`/`parallelize`.
   container_start: AlertIcon,
+  // ADR 0136 (RN-495) — a página global de containers.
+  container_stop: StopSquareIcon,
+  container_remove: TrashIcon,
 };
 
 /**
@@ -158,7 +169,13 @@ export function ApprovalCard({
   // React trata isso como componente inválido e derruba a ÁRVORE, não o card.
   const Icon = ACTION_ICON[action.actionType] ?? AlertIcon;
   const isPending = action.status === 'pending';
-  const podeSemprePermitir = action.actionType !== 'instruction_patch';
+  // `container_remove` entrou no MESMO teto absoluto de `instruction_patch`
+  // (ADR 0136, RN-495) — a api recusa (400) gravar o padrão de "sempre
+  // permitir" pra ele, então mostrar o botão prometeria um efeito que o
+  // clique não produz.
+  const podeSemprePermitir =
+    action.actionType !== 'instruction_patch' &&
+    action.actionType !== 'container_remove';
   const isCritical = urgency === 'critico';
 
   const payload = action.payload;

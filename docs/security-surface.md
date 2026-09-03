@@ -690,3 +690,4 @@ reason in the URL.
 | GET | `/workspaces/:workspaceId/projects-summary` | role:viewer |
 | GET | `/workspaces/:workspaceId/summary` | role:viewer |
 | POST | `/workspaces/:workspaceId/unread-events` | role:viewer |
+| GET | `/workspaces/:workspaceId/containers` | role:viewer |

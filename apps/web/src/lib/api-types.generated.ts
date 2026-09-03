@@ -3324,6 +3324,26 @@ export interface paths {
         patch: operations["WorkspacesController_update"];
         trace?: never;
     };
+    "/workspaces/{workspaceId}/containers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the container of every project in the workspace that already has one
+         * @description One row per project with a `project_containers` row — a project that never provisioned a container is simply absent, not shown empty. The observed state is asked of the broker only for rows `provisioning`/`running`, and only up to a per-load budget — see `naoVerificado` on rows that were skipped, and ADR 0136 for the reasoning.
+         */
+        get: operations["ContainersOverviewController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/credential-spend": {
         parameters: {
             query?: never;
@@ -4745,6 +4765,48 @@ export interface components {
              */
             motivo?: string;
         };
+        ContainerOverviewItemResponseDto: {
+            /** @example 01JC4Z0000PROJETO000001 */
+            projectId: string;
+            /** @example exp002 */
+            projectName: string;
+            /** @example exp002 */
+            projectSlug: string;
+            /**
+             * @description What was RECORDED (project_containers.status).
+             * @example running
+             * @enum {string}
+             */
+            status: "provisioning" | "running" | "stopped" | "failed" | "removed";
+            /** @example 1 */
+            imageVersion: number;
+            /**
+             * @description The image FROZEN at `imageVersion`, resolved from the `artifact.project_image` event at that exact version — never the current one, which may have been revised since. `null` when that version's event could not be found.
+             * @example node:22-bookworm-slim
+             */
+            imagem: Record<string, never> | null;
+            resources: components["schemas"]["RecursosDoContainerResponseDto"];
+            /** @example null */
+            failureReason: Record<string, never> | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            statusChangedAt: string;
+            /** @description What the broker reports right now — `null` either because there is no container, because it could not be asked (`naoObservado`), or because this row was not asked this load (`naoVerificado`). */
+            observado: components["schemas"]["ObservacaoDeContainerResponseDto"] | null;
+            /** @enum {string|null} */
+            naoObservado: "broker-nao-configurado" | "broker-sem-resposta" | "broker-recusou" | null;
+            /** @example null */
+            detalheDaObservacao: Record<string, never> | null;
+            /**
+             * @description Non-null when this row was NOT asked of the broker this load — never confused with `naoObservado`, which means it WAS asked and failed. `fora_do_escopo_da_verificacao`: status is `stopped`/`failed`/`removed`, where daemon confirmation does not matter. `teto_de_verificacoes_atingido`: eligible, but the per-load broker call budget was already spent by other rows.
+             * @example null
+             * @enum {string|null}
+             */
+            naoVerificado: "fora_do_escopo_da_verificacao" | "teto_de_verificacoes_atingido" | null;
+            /** @description The pending `container_start`/`container_stop`/`container_remove` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab. */
+            acaoPendente: components["schemas"]["ProposedActionResponseDto"] | null;
+        };
         ContainerSpecInternalResponseDto: {
             /** @example f52be111-0000-4000-8000-000000000000 */
             projectId: string;
@@ -4802,7 +4864,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove";
             /** @description Always an agent on this route. */
             actor: components["schemas"]["ActorDto"];
             /**
@@ -6873,7 +6935,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove";
             /** @description Who is proposing it. */
             actor: components["schemas"]["ActorDto"];
             /**
@@ -6906,7 +6968,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove";
             /**
              * @description Parameters of the action, specific to the `actionType`.
              * @example {
@@ -7971,7 +8033,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "*";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "*";
             /**
              * @description This agent's autonomy for this type. Does NOT override `permissions.json`: a pattern in `deny` stays blocked no matter how much autonomy the agent has.
              * @example auto_approve
@@ -17931,6 +17993,55 @@ export interface operations {
             };
             /** @description A workspace with this slug already exists. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ContainersOverviewController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContainerOverviewItemResponseDto"][];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace doesn't exist or is invisible to the caller. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

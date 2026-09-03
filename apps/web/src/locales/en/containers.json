@@ -1,0 +1,47 @@
+{
+  "title": "Containers",
+  "subtitle": "Every project in this workspace that already has a container — image, state, resources, and the actions to stop, remove, or start it again.",
+  "loadError": "Could not load the containers.",
+  "loading": "Loading…",
+  "empty": "No project in this workspace has provisioned a container yet.",
+  "table": {
+    "project": "Project",
+    "image": "Image",
+    "imageUnresolved": "(image unavailable)",
+    "registered": "Registered",
+    "observed": "Observed",
+    "resources": "Resources",
+    "resourcesValue": "{{cpus}} CPU · {{memoryMb}} MB · {{pidsLimit}} pids",
+    "since": "Since",
+    "actions": "Actions"
+  },
+  "status": {
+    "provisioning": "provisioning",
+    "running": "running",
+    "stopped": "stopped",
+    "failed": "failed",
+    "removed": "removed"
+  },
+  "observed": {
+    "none": "not observed",
+    "naoVerificado": {
+      "fora_do_escopo_da_verificacao": "not checked — registered state doesn't need daemon confirmation",
+      "teto_de_verificacoes_atingido": "not checked — per-load broker budget reached"
+    },
+    "naoObservado": {
+      "broker-nao-configurado": "no broker configured",
+      "broker-sem-resposta": "broker did not respond",
+      "broker-recusou": "broker refused"
+    }
+  },
+  "actions": {
+    "stop": "Stop",
+    "remove": "Remove",
+    "startAgain": "Start again",
+    "noSession": "This project has no session yet — the action needs one to be proposed.",
+    "errorTitle": "Could not propose the action",
+    "startAgainNoDecisionTitle": "No image decision for this project",
+    "startAgainNoDecisionMessage": "The Architect (or Infra) hasn't decided an image for this project — there is nothing to restart with.",
+    "startAgainRationale": "Reprovisioning with the project's current image decision."
+  }
+}

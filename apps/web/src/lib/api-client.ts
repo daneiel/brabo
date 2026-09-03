@@ -23,6 +23,7 @@ import type {
   Budget,
   BudgetPolicy,
   CicloDeVidaDoContainer,
+  ContainerOverviewItem,
   CodeBlame,
   CodeBranchDetailList,
   CodeDiff,
@@ -476,6 +477,14 @@ export const getContainerState = (projectId: string) =>
 // orquestrador real transiciona `project_containers` hoje.
 export const getContainerLifecycle = (projectId: string) =>
   get<CicloDeVidaDoContainer | null>(`/projects/${projectId}/container/lifecycle`);
+
+// --- Página global de containers (ADR 0136, RN-495) ---
+//
+// Cross-projeto, do WORKSPACE inteiro — ao lado (não dentro) das rotas de
+// container por projeto acima.
+
+export const getContainersOverview = (workspaceId: string) =>
+  get<ContainerOverviewItem[]>(`/workspaces/${workspaceId}/containers`);
 
 // --- Aba Code, só leitura (FASE 26) ---
 //

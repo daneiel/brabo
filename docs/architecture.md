@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 134 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 135 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -263,6 +263,26 @@ presentation, `ContainerImageGateNotice`
 use: before this, the `prs` tab surfaced that 409 as a generic transient
 error with a "try again" button, which is the wrong affordance for a state
 that only resolves when the Architect acts.
+
+**The global containers page (`/containers`, ADR 0136/RN-495) is a WORKSPACE
+read**, not a project one — `getContainersOverview` in `lib/api-client.ts`
+calls `GET workspaces/:workspaceId/containers`, and `ContainerOverviewItem`
+in `lib/api-types.ts` mirrors `ContainerOverviewItemResponseDto`. The api
+side is a dedicated read model, `ContainersOverviewRepository`/
+`DrizzleContainersOverviewRepository`, same "no N+1 across projects"
+discipline as `ProjectsSummaryRepository` — three constant queries (the
+container rows joined to `projects`, the `artifact.project_image` events in
+batch, the pending container `proposed_actions` in batch), never one per
+project. What CAN'T be batched — asking the broker for the observed state —
+gets an explicit per-load budget instead
+(`ObterVisaoGeralDeContainersUseCase.TETO_DE_VERIFICACOES_POR_CARGA`, only
+`provisioning`/`running` rows are asked, capped at 20): a row outside the
+budget says `naoVerificado`, never silently reusing another row's answer or
+inheriting the registered state. The three actions (stop/remove/start
+again) are `proposed_action`s like everywhere else — the page never calls
+the broker directly — and each row's pending action (if any) rides along in
+the same batched read, rendered as an inline `ApprovalCard`, the same
+pattern `ProjectPrsTab.tsx` already uses for merge proposals.
 
 ### Outside the applications
 
