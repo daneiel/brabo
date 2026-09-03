@@ -7164,6 +7164,137 @@ decidido), sem `modoLocal` nem `enabled` condicional por modo.
   plano original ("Portão RN-105 passa a valer nos TRÊS modos"), já aceita
   antes deste PR existir
 
+### RN-495 — `container_stop`/`container_remove` nascem como `proposed_action`, e só `container_remove` entra no teto absoluto {#rn-495}
+
+Fecha a lacuna que o comentário de `ContainerBrokerPort` (ADR 0130) e o
+CLAUDE.md declaravam desde o PR 1.5: `stop`/`remove` tinham CLIENTE HTTP
+pronto (`HttpContainerBrokerClient.stop`/`.remove`) e ZERO chamador — a
+página global de containers (`/containers`, RN-496) é o primeiro. Os dois
+NUNCA são ação de agente: só um humano clicando "Parar"/"Remover" numa linha
+da tela propõe.
+
+**`container_stop` segue o calibre EXATO de `container_start`** (RN-491):
+`maintainer`, `require_approval` por padrão, PODE ser configurado
+`auto_approve` (nunca semeado) — `ExecuteContainerStopUseCase` pede ao broker
+para parar e, só quando o registrado ainda dizia `running`, registra a
+transição `running -> stopped` (`container-lifecycle.ts`). Registrado já
+`stopped`/`provisioning`/`failed`: o broker é chamado mesmo assim (é
+idempotente — parar o que já não está rodando é no-op do lado do Docker),
+mas NENHUMA transição é gravada — inventar uma que a máquina de estados não
+descreveu de verdade seria o mesmo defeito que a RN-486 já nomeou para o
+observado.
+
+**`container_remove` é o MAIS destrutivo dos três — descarta o container e
+exige reprovisionar do zero (`container-lifecycle.ts`: `removed` só sai
+provisionando de novo, nunca "voltando à vida") — e por isso entra no MESMO
+teto absoluto de `decide.ts` que git push/comando privilegiado (RN-418):
+nunca auto-aprovável, nem por `agent_autonomy` nem por `permissions.json`,
+mesmo com "modo automático" ligado.** A fresta de "sempre permitir" é
+fechada NA FONTE, pelo mesmo mecanismo de RN-418: `ApproveAlwaysActionUseCase`
+recusa (400) gravar o padrão para `container_remove` — o clique inteiro é
+recusado, e quem quer remover aprova a instância pelo fluxo normal
+(`POST .../approve`). No web, `ApprovalCard.podeSemprePermitir` esconde o
+botão "sempre permitir" para `container_remove`, mesma régua que já vale
+para `instruction_patch`.
+
+**`ContainerBrokerPort.remove` é `docker rm --force`** — remove mesmo um
+container `running`, numa chamada só. A máquina de estados NÃO tem
+`running -> removed` direto (só `running -> stopped/failed`, e só DAÍ para
+`removed`): `ExecuteContainerRemoveUseCase` registra os DOIS hops quando o
+registrado ainda dizia `running` (`stopped`, depois `removed`), refletindo o
+que aconteceu de verdade do lado do Docker sem alargar a máquina de estados
+por um atalho que só existiria aqui.
+
+**Nenhum dos dois decide imagem** — ao contrário de `container_start`, que
+reusa `DecidirImagemDoProjetoUseCase` para emitir uma nova versão de
+`artifact.project_image`. `stop`/`remove` só pedem ao broker para agir sobre
+o container que já existe.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts` (`ACTION_TYPES`,
+  `MIN_ROLE_FOR_ACTION_TYPE`, teto absoluto de `container_remove`),
+  `apps/api/src/domain/actions/command-matcher.ts` (`ACTION_TYPE_LABELS`),
+  `apps/api/src/domain/containers/container-stop-remove-execution-result.ts`,
+  `apps/api/src/application/use-cases/actions/execute-container-stop.use-case.ts`,
+  `apps/api/src/application/use-cases/actions/execute-container-remove.use-case.ts`,
+  `apps/api/src/application/use-cases/actions/approve-action.use-case.ts`,
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts`,
+  `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts`,
+  `apps/web/src/lib/aprovacoes.ts`, `apps/web/src/components/ApprovalCard.tsx`
+  (`podeSemprePermitir`)
+- **Teste:**
+  `apps/api/test/domain/actions/decide.spec.ts` ("container_stop, a página
+  global de containers" — CONSEGUE auto_approve; "teto de container_remove" —
+  NUNCA consegue),
+  `apps/api/test/application/use-cases/actions/execute-container-stop.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/actions/execute-container-remove.use-case.spec.ts`
+  (os dois hops a partir de `running`; um hop só a partir de `stopped`/
+  `failed`; idempotência; `BrokerRecusouError`/`BrokerIndisponivelError`
+  nunca propagam),
+  `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts`,
+  `apps/web/src/lib/aprovacoes.test.ts`,
+  `apps/web/src/routes/ContainersPage.test.tsx`
+- **Decisão arquitetural:** [ADR 0136](adr/0136-pagina-global-de-containers.md)
+- **Origem:** plano do dono do produto, Parte 1 / PR 1.8
+
+### RN-496 — A página global de containers pergunta ao broker com TETO, e nunca funde registrado com observado {#rn-496}
+
+Mesma família da RN-486/RN-468, aplicada a uma tela NOVA: `GET
+workspaces/:workspaceId/containers` (`/containers`, cross-projeto) devolve
+uma linha por projeto do workspace que já tem `project_containers`
+(`ContainersOverviewRepository`, TRÊS consultas em lote, nunca uma por
+projeto — mesmo espírito de `ProjectsSummaryRepository`), mas perguntar ao
+broker o estado OBSERVADO é uma chamada de REDE por projeto, e não cabe
+numa consulta SQL.
+
+**O teto (ADR 0060) é por DUAS réguas, não uma.** Primeiro, só linhas
+`provisioning`/`running` são ELEGÍVEIS — um container `stopped`/`failed`/
+`removed` não precisa de confirmação do daemon para a tela fazer sentido
+(ninguém espera que ele esteja de pé). Segundo, entre as elegíveis, no
+máximo `TETO_DE_VERIFICACOES_POR_CARGA` (20, revisável) são perguntadas ao
+broker POR CARREGAMENTO — em paralelo, nunca em série. O que sobra de fora
+de qualquer uma das duas réguas carrega `naoVerificado`
+(`fora_do_escopo_da_verificacao` | `teto_de_verificacoes_atingido`), um
+campo PRÓPRIO da tela — nunca confundido com `naoObservado`
+(`broker-nao-configurado`/`broker-sem-resposta`/`broker-recusou`), que é
+sobre o broker TER SIDO perguntado e não ter respondido. Uma linha fora do
+teto tem `observado`/`naoObservado`/`detalheDaObservacao` todos `null`: a
+tela nunca inventa uma resposta que o broker não deu.
+
+**A leitura da imagem é a CONGELADA, não a vigente.** `imageVersion` em
+`project_containers` aponta para a versão de `artifact.project_image` que
+estava vigente quando a linha nasceu — o Arquiteto pode ter revisado a
+decisão DEPOIS. A tela resolve a imagem-texto buscando o evento
+`artifact.project_image` cuja versão bate com `imageVersion`
+(`decisaoNaVersao`, `domain/containers/project-container.ts`), nunca a
+decisão mais recente — mostrar a mais recente mentiria sobre qual imagem o
+container que subiu de verdade usa. `null` quando o evento daquela versão
+não é encontrado (nunca inventada).
+
+**A `proposed_action` pendente de container (se houver) viaja na MESMA
+leitura em lote**, batida por `projectId IN (...)` como as outras duas — é
+o que permite a tela trocar os três botões de ação pelo `ApprovalCard`
+inline sem uma quarta consulta por projeto.
+
+- **Onde:** `apps/api/src/application/ports/containers-overview-repository.port.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/containers-overview.repository.ts`,
+  `apps/api/src/application/use-cases/containers/obter-visao-geral-de-containers.use-case.ts`,
+  `apps/api/src/domain/containers/project-container.ts` (`decisaoNaVersao`,
+  `versaoDoPayload`), `apps/api/src/interfaces/http/containers/containers-overview.controller.ts`,
+  `apps/web/src/routes/ContainersPage.tsx`, `apps/web/src/lib/hooks.ts`
+  (`useContainersOverview`)
+- **Teste:**
+  `apps/api/test/infrastructure/persistence/drizzle/containers-overview.repository.spec.ts`
+  (só entra projeto com `project_containers`; imagem CONGELADA, não a
+  vigente; `acaoPendente` cross-sessão; número de consultas não cresce com a
+  quantidade de projetos),
+  `apps/api/test/application/use-cases/containers/obter-visao-geral-de-containers.use-case.spec.ts`
+  (elegibilidade por status; teto por carga; `naoObservado` nunca confundido
+  com `naoVerificado`),
+  `apps/api/test/interfaces/http/containers/containers-overview.controller.spec.ts`,
+  `apps/web/src/routes/ContainersPage.test.tsx`
+- **Decisão arquitetural:** [ADR 0136](adr/0136-pagina-global-de-containers.md)
+- **Origem:** plano do dono do produto, Parte 1 / PR 1.8
+
 ---
 
 ## Quando dá errado

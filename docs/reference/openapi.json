@@ -10371,6 +10371,58 @@
         ]
       }
     },
+    "/workspaces/{workspaceId}/containers": {
+      "get": {
+        "description": "One row per project with a `project_containers` row — a project that never provisioned a container is simply absent, not shown empty. The observed state is asked of the broker only for rows `provisioning`/`running`, and only up to a per-load budget — see `naoVerificado` on rows that were skipped, and ADR 0136 for the reasoning.",
+        "operationId": "ContainersOverviewController_list",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContainerOverviewItemResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role in the workspace."
+          },
+          "404": {
+            "description": "Workspace doesn't exist or is invisible to the caller."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lists the container of every project in the workspace that already has one",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/workspaces/{workspaceId}/credential-spend": {
       "get": {
         "description": "Exists because the key agents spend is the workspace OWNER's (RN-058) — whoever pays the bill needs to see the bill. Groups by provider because that is the unit of the credential, and separates what went out by AGENT from what went out by a person in chat: the two come out of the same key and answer different questions. Returns no secret at all.",
@@ -13559,6 +13611,124 @@
           "sucesso"
         ]
       },
+      "ContainerOverviewItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO000001"
+          },
+          "projectName": {
+            "type": "string",
+            "example": "exp002"
+          },
+          "projectSlug": {
+            "type": "string",
+            "example": "exp002"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "provisioning",
+              "running",
+              "stopped",
+              "failed",
+              "removed"
+            ],
+            "example": "running",
+            "description": "What was RECORDED (project_containers.status)."
+          },
+          "imageVersion": {
+            "type": "number",
+            "example": 1
+          },
+          "imagem": {
+            "type": "object",
+            "nullable": true,
+            "example": "node:22-bookworm-slim",
+            "description": "The image FROZEN at `imageVersion`, resolved from the `artifact.project_image` event at that exact version — never the current one, which may have been revised since. `null` when that version's event could not be found."
+          },
+          "resources": {
+            "$ref": "#/components/schemas/RecursosDoContainerResponseDto"
+          },
+          "failureReason": {
+            "type": "object",
+            "nullable": true,
+            "example": null
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "statusChangedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "observado": {
+            "nullable": true,
+            "description": "What the broker reports right now — `null` either because there is no container, because it could not be asked (`naoObservado`), or because this row was not asked this load (`naoVerificado`).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ObservacaoDeContainerResponseDto"
+              }
+            ]
+          },
+          "naoObservado": {
+            "type": "string",
+            "enum": [
+              "broker-nao-configurado",
+              "broker-sem-resposta",
+              "broker-recusou",
+              null
+            ],
+            "nullable": true
+          },
+          "detalheDaObservacao": {
+            "type": "object",
+            "nullable": true,
+            "example": null
+          },
+          "naoVerificado": {
+            "type": "string",
+            "enum": [
+              "fora_do_escopo_da_verificacao",
+              "teto_de_verificacoes_atingido",
+              null
+            ],
+            "nullable": true,
+            "example": null,
+            "description": "Non-null when this row was NOT asked of the broker this load — never confused with `naoObservado`, which means it WAS asked and failed. `fora_do_escopo_da_verificacao`: status is `stopped`/`failed`/`removed`, where daemon confirmation does not matter. `teto_de_verificacoes_atingido`: eligible, but the per-load broker call budget was already spent by other rows."
+          },
+          "acaoPendente": {
+            "nullable": true,
+            "description": "The pending `container_start`/`container_stop`/`container_remove` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProposedActionResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "projectId",
+          "projectName",
+          "projectSlug",
+          "status",
+          "imageVersion",
+          "imagem",
+          "resources",
+          "failureReason",
+          "createdAt",
+          "statusChangedAt",
+          "observado",
+          "naoObservado",
+          "detalheDaObservacao",
+          "naoVerificado",
+          "acaoPendente"
+        ]
+      },
       "ContainerSpecInternalResponseDto": {
         "type": "object",
         "properties": {
@@ -13686,7 +13856,9 @@
               "raise_max_parallel",
               "propose_execution_plan",
               "assess_implementability",
-              "container_start"
+              "container_start",
+              "container_stop",
+              "container_remove"
             ],
             "example": "terminal"
           },
@@ -17865,7 +18037,9 @@
               "raise_max_parallel",
               "propose_execution_plan",
               "assess_implementability",
-              "container_start"
+              "container_start",
+              "container_stop",
+              "container_remove"
             ],
             "example": "terminal",
             "description": "Action type. Each type has its own minimum role: `git_push`, `git_merge`, and `git_branch_protect` require `maintainer`, the rest `developer`."
@@ -17934,7 +18108,9 @@
               "raise_max_parallel",
               "propose_execution_plan",
               "assess_implementability",
-              "container_start"
+              "container_start",
+              "container_stop",
+              "container_remove"
             ],
             "example": "terminal",
             "description": "What the action would do. `git_push` and `git_merge` require `maintainer`."
@@ -19963,6 +20139,8 @@
               "propose_execution_plan",
               "assess_implementability",
               "container_start",
+              "container_stop",
+              "container_remove",
               "*"
             ],
             "example": "terminal",

@@ -1214,6 +1214,66 @@ export interface CicloDeVidaDoContainer {
   statusChangedAt: string;
 }
 
+/** O que o daemon reportou, sem tradução nem colapso — ADR 0130. */
+export type EstadoObservadoDeContainer =
+  | 'created'
+  | 'running'
+  | 'paused'
+  | 'restarting'
+  | 'removing'
+  | 'exited'
+  | 'dead';
+
+export interface ObservacaoDeContainer {
+  containerId: string;
+  nome: string;
+  estado: EstadoObservadoDeContainer;
+  imagem: string;
+  iniciadoEm: string | null;
+}
+
+export type MotivoDeNaoObservacao =
+  | 'broker-nao-configurado'
+  | 'broker-sem-resposta'
+  | 'broker-recusou';
+
+/**
+ * Por que uma linha da página global de containers não foi perguntada ao
+ * broker NESTE carregamento — nunca confundido com `MotivoDeNaoObservacao`
+ * (esse é sobre o broker ter sido perguntado e ter falhado; este é sobre a
+ * linha nem ter entrado na pergunta). Ver ADR 0136/RN-495.
+ */
+export type MotivoDeNaoVerificacao =
+  | 'fora_do_escopo_da_verificacao'
+  | 'teto_de_verificacoes_atingido';
+
+/**
+ * Uma linha da página global `/containers` (ADR 0136, RN-495) — espelha
+ * `ContainerOverviewItemResponseDto`. `registrado` e `observado` nunca se
+ * fundem (RN-468/486): o segundo é `null` tanto quando não há container
+ * quanto quando não deu para perguntar — `naoObservado`/`naoVerificado`
+ * distinguem os dois motivos de ausência.
+ */
+export interface ContainerOverviewItem {
+  projectId: string;
+  projectName: string;
+  projectSlug: string;
+  status: ContainerLifecycleStatus;
+  imageVersion: number;
+  /** A imagem CONGELADA em `imageVersion` — `null` quando não foi possível resolver. */
+  imagem: string | null;
+  resources: RecursosDoContainer;
+  failureReason: string | null;
+  createdAt: string;
+  statusChangedAt: string;
+  observado: ObservacaoDeContainer | null;
+  naoObservado: MotivoDeNaoObservacao | null;
+  detalheDaObservacao: string | null;
+  naoVerificado: MotivoDeNaoVerificacao | null;
+  /** A `proposed_action` pendente de `container_start`/`container_stop`/`container_remove` deste projeto, se houver. */
+  acaoPendente: ProposedAction | null;
+}
+
 // --- Aba Code, só leitura (FASE 26) — espelha
 // apps/api/src/application/use-cases/git/read-project-code.use-case.ts +
 // interfaces/http/git/dto/code.response.dto.ts ---

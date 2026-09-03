@@ -1,0 +1,69 @@
+---
+id: containers-overview-controller-list
+title: "Lists the container of every project in the workspace that already has one"
+description: "One row per project with a `project_containers` row — a project that never provisioned a container is simply absent, not shown empty. The observed state is asked of the broker only for rows `provisioning`/`running`, and only up to a per-load budget — see `naoVerificado` on rows that were skipped, and ADR 0136 for the reasoning."
+sidebar_label: "Lists the container of every project in the workspace that already has one"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lists the container of every project in the workspace that already has one"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/workspaces/{workspaceId}/containers"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+One row per project with a `project_containers` row — a project that never provisioned a container is simply absent, not shown empty. The observed state is asked of the broker only for rows `provisioning`/`running`, and only up to a per-load budget — see `naoVerificado` on rows that were skipped, and ADR 0136 for the reasoning.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./containers-overview-controller-list.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./containers-overview-controller-list.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./containers-overview-controller-list.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

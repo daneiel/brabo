@@ -22,6 +22,7 @@ import { ForgotPasswordPage } from './routes/ForgotPasswordPage';
 import { SetPasswordPage } from './routes/SetPasswordPage';
 import { VerifyEmailPage } from './routes/VerifyEmailPage';
 import { AccountPage } from './routes/AccountPage';
+import { ContainersPage } from './routes/ContainersPage';
 import {
   definirSenha,
   entrar,
@@ -193,6 +194,14 @@ const accountRoute = createRoute({
   component: AccountPage,
 });
 
+// A página global de containers (ADR 0136, RN-495) — mesmo nível hierárquico
+// de `/account`: cross-projeto, não uma aba dentro de um projeto.
+const containersRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/containers',
+  component: ContainersPage,
+});
+
 // A lista de abas mora em `routes/project-tabs.ts` — aqui só se pergunta se a
 // chave existe. Enquanto a lista era copiada neste arquivo, aceitar `?tab=x`
 // e ter painel para `x` eram duas decisões independentes.
@@ -347,6 +356,7 @@ const routeTree = rootRoute.addChildren([
   appLayout.addChildren([
     indexRoute,
     accountRoute,
+    containersRoute,
     projectRoute,
     sessionRoute,
     provisioningRoute,

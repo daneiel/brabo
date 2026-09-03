@@ -83,6 +83,8 @@ matches any push, and `GitPush(algo)` matches nothing.
 | `propose_execution_plan` | `ProposeExecutionPlan` | maintainer |
 | `assess_implementability` | `AssessImplementability` | maintainer |
 | `container_start` | `ContainerStart` | maintainer |
+| `container_stop` | `ContainerStop` | maintainer |
+| `container_remove` | `ContainerRemove` | maintainer |
 | `spend` | `Spend` | **owner** |
 
 The minimum role is checked **before** the file. Without it, `deny` —
@@ -112,6 +114,17 @@ is the implementability assessment of a story (gate `implementavel`,
 `propose_execution_plan`: an initial session decision, not a cap overrun,
 and therefore also outside the absolute-caps block. It suspends the Dev
 Lead's turn the same way while `pending`.
+
+`container_stop` and `container_remove` (ADR 0136,
+[RN-495](../business-rules.md#rn-495)) are the two actions the global
+containers page (`/containers`) proposes when someone clicks "Stop" or
+"Remove" on a project's row — always a human, never an agent. Both are
+`maintainer`, same as `container_start`: whoever is accountable for the
+project's infra decides. `container_stop` follows `container_start`'s
+calibration exactly — it CAN be configured `auto_approve` (never seeded).
+`container_remove` cannot: it discards the container and forces a full
+reprovision, and is in the absolute-caps block below, same treatment as
+external-effect git/privileged commands.
 
 ## How a pattern matches a command
 
@@ -378,6 +391,16 @@ own privileges — it's exactly the scenario where a legitimate `sudo` (or
 an attempt to escape via `sudo`) needs a human stop guaranteed by
 construction, not by `permissions.json` convention.
 
+**`container_remove` (ADR 0136, [RN-495](../business-rules.md#rn-495))
+joins the same "always allow" refusal**, by a simpler mechanism than the
+one above: it isn't a `terminal` command matched by token, it's its own
+`actionType`, so `ApproveAlwaysActionUseCase` refuses the click outright
+for that type — no pattern is ever written, and the user approves the
+specific instance through the normal flow instead. `container_start` and
+`container_stop` are NOT refused this way: they can be configured
+`auto_approve` (never seeded), same calibre as `open_adr_pr`/
+`open_infra_pr`.
+
 ## Path scope
 
 A `terminal` command is also evaluated by **where it touches**, not just
@@ -465,6 +488,7 @@ Applied **last**, after everything else:
 | `instruction_patch` | `auto_approve` → `require_approval` | you need to see the diff before one agent changes another's behavior ([RN-007](../business-rules.md#rn-007)) |
 | `parallelize` and `raise_max_parallel` | `auto_approve` → `require_approval` | spending on more agents is your decision; without this cap the lead's limit would be decorative, and raising the cap itself would be the product raising its own spending limit ([RN-086](../business-rules/custo.md#rn-086)) |
 | `terminal` with external-effect git (push/PR/deploy) or `sudo`/`doas` | `auto_approve` → `require_approval` | external-effect git and privileged commands are never auto-approvable, even with "automatic mode" on ([RN-418](../business-rules.md#rn-418), revises [RN-106](../business-rules/autenticacao.md#rn-106)) — see the dedicated section above |
+| `container_remove` | `auto_approve` → `require_approval` | discarding a container forces a full reprovision — the same caliber as merging into a protected branch, decided every time, never configured once ([RN-495](../business-rules.md#rn-495)) |
 
 A cap downgrades `auto_approve` to `require_approval`; it does **not**
 turn `deny` into something else, because `deny` would have already

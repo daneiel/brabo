@@ -103,6 +103,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api, web**: página global de containers (`/containers`, ADR 0136,
+  RN-495/496) — cross-projeto, do workspace inteiro: imagem+versão
+  (CONGELADA, não a vigente), estado REGISTRADO, estado OBSERVADO (pedido
+  ao broker só para linhas `provisioning`/`running`, com um teto explícito
+  de 20 chamadas por carregamento — registrado e observado nunca se fundem,
+  RN-468/486), recursos e desde quando de todo projeto que já tem um
+  container. Três ações — parar, remover, subir de novo —, todas
+  `proposed_action`, nenhuma direta. `container_stop` (novo tipo) segue o
+  calibre de `container_start` (`maintainer`, pode ser configurado
+  auto-aprovável); `container_remove` (novo tipo, o mais destrutivo dos
+  três — descarta o container e exige reprovisionar do zero) entra no MESMO
+  teto absoluto de git push/comando privilegiado (RN-418): nunca
+  auto-aprovável, e "sempre permitir" é recusado na fonte. "Subir de novo"
+  REUSA `container_start` sem mudança de backend — a tela monta o payload
+  a partir da decisão de imagem VIGENTE do projeto
 - **api, engine**: dev agents passam a executar comando de terminal **DENTRO
   do container real do projeto** (ADR 0134, RN-492/493), quando há um. Antes
   desta entrega, mesmo com um container de pé (`container_start`, ADR 0133),

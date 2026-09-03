@@ -47,6 +47,7 @@ import {
   LogoutIcon,
   MoonIcon,
   PlusIcon,
+  ServerIcon,
   SunIcon,
   UserIcon,
 } from '../components/ui/icons';
@@ -161,6 +162,22 @@ function LinkDeConta({ colapsado }: { colapsado: boolean }) {
   return (
     <Link to="/account" className={styles.footerButton} title={rotulo} aria-label={rotulo}>
       <UserIcon size={15} />
+      {!colapsado && <span>{rotulo}</span>}
+    </Link>
+  );
+}
+
+/**
+ * Link para a página global de containers (ADR 0136, RN-495) — mesmo lugar e
+ * mesmo tratamento de `LinkDeConta`: é GLOBAL (cross-projeto), mesmo nível
+ * hierárquico de `/account`, não uma aba dentro de um projeto.
+ */
+function LinkDeContainers({ colapsado }: { colapsado: boolean }) {
+  const { t } = useTranslation();
+  const rotulo = t('sidebar.containers');
+  return (
+    <Link to="/containers" className={styles.footerButton} title={rotulo} aria-label={rotulo}>
+      <ServerIcon size={15} />
       {!colapsado && <span>{rotulo}</span>}
     </Link>
   );
@@ -633,6 +650,7 @@ export function Shell() {
 
         <div className={styles.footer}>
           <BotaoDeTema colapsado={colapsado} />
+          <LinkDeContainers colapsado={colapsado} />
           <LinkDeConta colapsado={colapsado} />
           <button
             type="button"

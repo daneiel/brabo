@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { getActiveExecutionSession, getArchitecture, getCoverage, getProjectPendingActions, getProjectsStatus, getProjectsSummary, getPsychologistStatus, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
+import { getActiveExecutionSession, getArchitecture, getContainersOverview, getCoverage, getProjectPendingActions, getProjectsStatus, getProjectsSummary, getPsychologistStatus, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
 import type { ActionType, SessionEvent } from './api-types';
 // Todo poll deste arquivo passa por aqui: um `refetchInterval` numérico não
 // sabe parar, e a api limita 300 req/min por usuário (ver `query-policy.ts`).
@@ -81,6 +81,23 @@ export function useProjectsSummary(
   return useQuery({
     queryKey: ['projects-summary', workspaceId],
     queryFn: () => getProjectsSummary(workspaceId!),
+    enabled: !!workspaceId,
+    refetchInterval: pollQueParaNoErro(intervalMs),
+  });
+}
+
+/**
+ * A página global `/containers` (ADR 0136, RN-495) — cross-projeto, do
+ * WORKSPACE inteiro. Mesma cadência de `useProjectsSummary` (5s): leitura
+ * periférica de painel, não algo que precisa de segundo a segundo.
+ */
+export function useContainersOverview(
+  workspaceId: string | undefined,
+  intervalMs = 5000,
+) {
+  return useQuery({
+    queryKey: ['containers-overview', workspaceId],
+    queryFn: () => getContainersOverview(workspaceId!),
     enabled: !!workspaceId,
     refetchInterval: pollQueParaNoErro(intervalMs),
   });

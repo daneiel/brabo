@@ -62,6 +62,8 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   propose_execution_plan: 'propõe o plano de execução',
   assess_implementability: 'avalia a implementabilidade de uma story',
   container_start: 'quer subir o container do projeto',
+  container_stop: 'quer parar o container do projeto',
+  container_remove: 'quer remover o container do projeto',
 };
 
 type Payload = Record<string, unknown>;
@@ -290,6 +292,17 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     // não faz.
     return `Sobe o container${qual}${specs}${rede}, montando a pasta do projeto.`;
   },
+
+  // ADR 0136 (RN-495) — a página global de containers propõe estas duas.
+  // Nenhuma decide imagem: só pedem ao broker para agir sobre o que já
+  // existe.
+  container_stop: () =>
+    'Para o container do projeto — a pasta e o disco continuam intactos, ' +
+    'e o container pode voltar a subir sem reprovisionar.',
+
+  container_remove: () =>
+    'Remove o container do projeto de vez — descarta o que existe. Para ' +
+    'voltar a ter um, é preciso subir de novo do zero.',
 };
 
 /** O verbo do tipo, ou um verbo neutro quando o web ainda não o conhece. */

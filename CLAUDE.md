@@ -74,6 +74,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | A Infra elege, e a eleição sobe o container de verdade (PR 1.5) | Fecha a metade que a RN-487 e o comentário do `ContainerBrokerPort` (ADR 0130) deixaram pendurada: `propose_container_start` elege UMA `imagemCandidata` do roteamento vigente do Arquiteto (`get_infra_context` passa a ler `artifact.module_routing`, primeiro consumidor HTTP de `GetModuleRoutingUseCase`) e vira `container_start` (`proposed_action`, `maintainer`, deliberadamente fora do bloco de tetos absolutos de `decide.ts` — mesmo raciocínio de `propose_execution_plan`/`assess_implementability`, nunca seedada em auto-aprovação). Aprovada, `ExecuteContainerStartUseCase` REUSA `DecidirImagemDoProjetoUseCase` inteiro (`decidedBy: 'infra-lead'`) — sem isso a eleição seria inerte, já que o broker lê `artifact.project_image`, nunca o roteamento — e só então chama `ContainerBrokerPort.start` de verdade, transicionando `provisioning → running` (ou direto para `running` a partir de `stopped`) pela máquina de estados do ADR 0081. Dev agents NÃO passam a trabalhar dentro do container que sobe — declarado, PR posterior | ADR 0130/0133, RN-491 |
 | Dev agents executam DENTRO do container real (PR 1.6) | Fecha o que a RN-491 declarou pendente: `Engine.Actions.TerminalExecutor` ganha a QUINTA saída, `:executar_no_container` — projeto `execution_mode: container` com uma linha REGISTRADA `running` (`Engine.Containers.ProjectContainerLifecycle`, leitura direta, mesmo padrão de `Engine.Projects.Project`) — e o comando atravessa engine → api (`POST internal/projects/:projectId/container-exec`, `ExecutarComandoNoContainerUseCase`) → broker (`ContainerBrokerPort.exec`, o PRIMEIRO chamador real da última das cinco operações do ADR 0128/0130), rodando via `docker exec` em vez de `System.cmd` local. `cwd` é traduzido do caminho de HOST pra dentro de `/work` no engine, ANTES da chamada — confirmado em código que é o MESMO diretório físico que `Workspace.ensure!/4` já escreve (o worktree do dev agent não muda de lugar nem de mecanismo). `BrokerRecusouError`/`BrokerIndisponivelError`/falha de transporte viram `failed_result` normal, nunca crash nem fallback silencioso pra fora do container (RN-486: `running` registrado nunca garante container de pé). Terminal DENTRO do container ganha PISO de auto-aprovação (`ProposeActionUseCase`/`decide.ts`, `containerExecutionActive`) — os cinco tetos absolutos e o escopo léxico de sempre continuam rodando por cima, byte a byte | ADR 0134, RN-492/493 |
 | O portão da imagem nos três modos (PR 1.7, BREAKING) | Executa a decisão #5 do plano original, já aceita antes deste PR existir: a dispensa do portão RN-105 (409 sem imagem decidida) para `mounted`/`runner` (RN-169/RN-421, ADR 0072/0104) é REVOGADA — `ReadProjectCodeUseCase.portaoDoContainer` deixa de checar `executionMode`, e `ProjectCodeTab` (web) SIMPLIFICA: os três modos seguem o mesmo `useQuery`, `modoLocal` sai. `RegistrarTransicaoDeContainerUseCase` também para de recusar (400) por modo — `project_containers` pode nascer nos três, mas chegar em `running` de verdade CONTINUA impossível para `mounted`/`runner`, aplicado só no broker (`ModoDeExecucaoNaoSuportadoError`), que `ExecuteContainerStartUseCase` já trata sem crash nem silêncio, ANTES de qualquer transição ser chamada — por isso nenhuma checagem de modo foi duplicada na api. Custo aceito, declarado: `exp001`/`exp002` e qualquer outro projeto `mounted`/`runner` existente sem imagem decidida perdem a aba Code até o Arquiteto (ou a Infra) decidir uma — ação de operador exigida DEPOIS do deploy, por isso a branch nasce `breaking/` e a versão sobe MAJOR | ADR 0135, RN-494 |
+| Página global de containers (PR 1.8, fecha a Parte 1) | `/containers`, cross-projeto: uma linha por projeto do workspace com `project_containers` — imagem CONGELADA (`imageVersion`, não a vigente), estado REGISTRADO, estado OBSERVADO e recursos, via `ContainersOverviewRepository` (TRÊS consultas em lote, mesmo molde de `ProjectsSummaryRepository`, nunca N+1). Perguntar o observado ao broker é chamada de rede por projeto — só `provisioning`/`running` são elegíveis, com teto de 20 chamadas por carregamento (`TETO_DE_VERIFICACOES_POR_CARGA`); o que fica de fora diz por quê (`naoVerificado`), nunca confundido com o broker ter recusado (`naoObservado`). Dois tipos de ação NOVOS fecham as cinco operações do ADR 0128/0130 (todas com chamador agora): `container_stop` segue o calibre de `container_start` (`maintainer`, pode auto-aprovar); `container_remove` — descarta o container, exige reprovisionar do zero — entra no MESMO teto absoluto de git push/comando privilegiado (RN-418), nunca auto-aprovável, "sempre permitir" recusado na fonte. `ContainerBrokerPort.remove` já era `docker rm --force`; a máquina de estados não ganhou atalho `running → removed` — o caso de uso registra os dois hops. "Subir de novo" REUSA `container_start` sem mudança de backend, montando o payload a partir da decisão de imagem vigente do projeto | ADR 0136, RN-495/496 |
 
 ## Estado atual e aberto
 
@@ -102,18 +103,35 @@ daqui e o fechamento vai para o histórico.
   emite nova versão de `artifact.project_image` (reusando
   `DecidirImagemDoProjetoUseCase`, `decidedBy: 'infra-lead'`), porque o
   broker compõe a partir DESSE artefato, nunca do roteamento. Das cinco
-  operações do ADR 0128/0130, agora TRÊS têm chamador — `inspect` (a rota de
-  ciclo de vida, observado ao lado do registrado), `start` e, desde o ADR
-  0134 (RN-492), `exec`: quando há um container `running` REGISTRADO, o
-  comando de terminal do dev agent atravessa engine → api → broker e roda
+  operações do ADR 0128/0130, agora as CINCO têm chamador — `inspect` (a
+  rota de ciclo de vida, observado ao lado do registrado), `start` e, desde
+  o ADR 0134 (RN-492), `exec`: quando há um container `running` REGISTRADO,
+  o comando de terminal do dev agent atravessa engine → api → broker e roda
   DENTRO dele, via `docker exec`, em vez de `System.cmd` local — a lacuna
   que a RN-491 tinha deixado declarada ("dev agents NÃO passam a trabalhar
-  dentro do container") fechou. `stop`/`remove` seguem sem chamador —
-  nenhuma `proposed_action` própria existe pra eles ainda.
+  dentro do container") fechou. Desde o ADR 0136 (RN-495, PR 1.8), `stop` e
+  `remove` também têm chamador: a página global de containers
+  (`/containers`) propõe `container_stop`/`container_remove` — dois tipos
+  novos, sempre um HUMANO clicando "Parar"/"Remover" numa linha da tela,
+  nunca um agente. `container_stop` segue o MESMO calibre de
+  `container_start` (`maintainer`, pode ser configurado auto-aprovável,
+  nunca seedado); `container_remove` — o mais destrutivo dos três, descarta
+  o container e exige reprovisionar do zero — entra no MESMO teto absoluto
+  de git push/comando privilegiado (RN-418): nunca auto-aprovável, "sempre
+  permitir" recusado na fonte. A tela em si tem seu próprio teto: perguntar
+  o OBSERVADO ao broker é uma chamada de rede por projeto, então só linhas
+  `provisioning`/`running` são elegíveis, com um teto explícito de 20
+  chamadas por carregamento (`TETO_DE_VERIFICACOES_POR_CARGA`) — o que fica
+  de fora diz por quê (`naoVerificado`), nunca confundido com o broker ter
+  sido perguntado e recusado (`naoObservado`).
   `RegistrarTransicaoDeContainerUseCase` ganhou o primeiro chamador fora de
   teste, transicionando `provisioning → running` (ou direto para `running`
   a partir de `stopped`, que a máquina de estados do ADR 0081 não deixa
-  reprovisionar). O que segue cortado, declarado: `mounted`/`runner`
+  reprovisionar) — `container_remove` acrescenta o segundo hop real,
+  `running → stopped → removed`, refletindo que `ContainerBrokerPort.remove`
+  já era `docker rm --force` (remove mesmo `running`, numa chamada só) sem
+  alargar a máquina de estados com um atalho `running → removed` que só
+  existiria para este caso. O que segue cortado, declarado: `mounted`/`runner`
   continuam sem container nenhum subindo NO SERVIDOR — o portão dos três
   modos fechou (RN-494/ADR 0135, PR 1.7: os três modos agora exigem imagem
   decidida para a aba Code, e `RegistrarTransicaoDeContainerUseCase` não
@@ -531,9 +549,13 @@ daqui e o fechamento vai para o histórico.
   ADR 0130/0133, PODE chamar Docker de verdade: `container_start`
   (`proposed_action`, `maintainer`, RN-491) é o primeiro chamador real de
   `ContainerBrokerPort.start`, e transiciona `provisioning → running` pela
-  máquina de estados. `stop`/`remove` seguem sem `proposed_action` própria —
-  a política de terminal do ADR 0055 (escopo de caminho, allowlist estreito)
-  segue valendo como está para `mounted`/`runner` e para `container` SEM um
+  máquina de estados. Desde o ADR 0136 (RN-495), `container_stop`
+  (mesmo calibre de `container_start`) e `container_remove` (o mais
+  destrutivo — no MESMO teto absoluto de git push/comando privilegiado,
+  nunca auto-aprovável) também são `proposed_action`, propostas pela
+  página global de containers (`/containers`) — sempre um humano, nunca um
+  agente. A política de terminal do ADR 0055 (escopo de caminho, allowlist
+  estreito) segue valendo como está para `mounted`/`runner` e para `container` SEM um
   `running` registrado. Com um `running` registrado, o comando de terminal
   passa a rodar DENTRO do container de verdade (`ContainerBrokerPort.exec`,
   ADR 0134, RN-492) e ganha um PISO de auto-aprovação por cima do escopo

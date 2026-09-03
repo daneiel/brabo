@@ -1,6 +1,7 @@
 {
   "sidebar": {
-    "account": "Account"
+    "account": "Account",
+    "containers": "Containers"
   },
   "account": {
     "title": "Account",
