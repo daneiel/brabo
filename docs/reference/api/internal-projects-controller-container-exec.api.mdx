@@ -1,0 +1,69 @@
+---
+id: internal-projects-controller-container-exec
+title: "Runs a terminal command INSIDE the project real container (RN-492)"
+description: "Called only by the engine, when `Engine.Actions.TerminalExecutor` decided the command belongs inside the real container (`execution_mode: container` with a REGISTERED `running` row). Proxies to `ContainerBrokerPort.exec` (ADR 0130/0134) — the last of the broker's five operations to gain a real caller. `sucesso: false` in the response — never a thrown error — is the NORMAL shape for a refused or unreachable broker: the container may have died or been removed from outside between the registered `running` row and this call (RN-486, registered and observed never merge), and that is a command failure, not a transport error."
+sidebar_label: "Runs a terminal command INSIDE the project real container (RN-492)"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Runs a terminal command INSIDE the project real container (RN-492)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/projects/{projectId}/container-exec"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Called only by the engine, when `Engine.Actions.TerminalExecutor` decided the command belongs inside the real container (`execution_mode: container` with a REGISTERED `running` row). Proxies to `ContainerBrokerPort.exec` (ADR 0130/0134) — the last of the broker's five operations to gain a real caller. `sucesso: false` in the response — never a thrown error — is the NORMAL shape for a refused or unreachable broker: the container may have died or been removed from outside between the registered `running` row and this call (RN-486, registered and observed never merge), and that is a command failure, not a transport error.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-projects-controller-container-exec.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-projects-controller-container-exec.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-projects-controller-container-exec.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

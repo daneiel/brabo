@@ -543,6 +543,42 @@ a runner connected right now; missing either of the two, it rejects
 explicitly — never falling back to `mounted`'s `System.cmd`/bind-mount, which does not
 exist for a `runner` project.
 
+### Terminal command execution inside the real container — a new route ([RN-492](../business-rules.md#rn-492), [ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md))
+
+| method | path |
+|---|---|
+| POST | `/internal/projects/:projectId/container-exec` |
+
+The fifth outcome of `decisao_de_execucao/1`, `:executar_no_container`: when
+the project is `execution_mode: container` AND has a container REGISTERED
+`running` in `project_containers` (read directly,
+`Engine.Containers.ProjectContainerLifecycle.running?/1` — same pattern as
+the workspace-locator read above, no route needed for that check either),
+the command no longer runs via `System.cmd` inside the engine process. It
+crosses this route (`Engine.Sessions.EngineApiClient.executar_comando_no_container/4`),
+which proxies to `ContainerBrokerPort.exec` (`ExecutarComandoNoContainerUseCase`)
+and runs it inside the real container via `docker exec`.
+
+This route lives in `InternalProjectsController`, not
+`InternalContainersController` (the one the BROKER reads to compose a
+spec) — the direction is the opposite: here it's the ENGINE calling the
+api, and the call doesn't write `project_containers` at all, so it doesn't
+fall under that controller's "no `@Post` here" rule (that rule is about who
+has authority to WRITE the lifecycle state, which this route never
+touches).
+
+`cwd`, when present, arrives ALREADY translated from the HOST path (inside
+`PROJECT_WORKSPACES_ROOT`) to inside `/work` — the engine does that
+translation (`cwd_para_container/2`) before calling this route; the api
+never sees a host path here.
+
+The response body never throws for a broker refusal or a dead/removed
+container (`RN-486`: registered and observed never merge — a `running`
+row doesn't guarantee the container is up right now). `{ sucesso: false,
+motivo }` is the NORMAL shape for that; the engine turns it into an
+ordinary `failed_result`, same as any other failed command — never a
+crash, never a silent fallback back to `System.cmd` outside the container.
+
 ### Per-agent context
 
 | method | path |

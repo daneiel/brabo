@@ -506,6 +506,30 @@ defmodule Engine.Sessions.EngineApiClient do
             ) ::
               {:ok, map()} | {:error, term()}
 
+  @doc """
+  Roda um comando de terminal DENTRO do container real do projeto (ADR
+  0134, RN-492) — proxy síncrono até o broker, via
+  `POST internal/projects/:projectId/container-exec`. Só chamado por
+  `Engine.Actions.TerminalExecutor` quando `decisao_de_execucao/1` resolveu
+  `:executar_no_container`; `cwd`, quando presente, já chega TRADUZIDO para
+  dentro de `/work` — este cliente não traduz nada.
+
+  `{:ok, %{"sucesso" => true, "exitCode" => _, "output" => _, "timedOut" =>
+  _}}` no caminho feliz; `{:ok, %{"sucesso" => false, "motivo" => _}}` é a
+  forma NORMAL de "o broker recusou ou não respondeu" (RN-486: container
+  registrado `running` não garante que está de pé agora) — não é
+  `{:error, _}`. `{:error, reason}` sobra só para falha de TRANSPORTE
+  (a api não respondeu, ou respondeu um status que não é 2xx por um motivo
+  que não é o broker).
+  """
+  @callback executar_comando_no_container(
+              project_id :: String.t(),
+              comando :: String.t(),
+              cwd :: String.t() | nil,
+              timeout_ms :: pos_integer() | nil
+            ) ::
+              {:ok, map()} | {:error, term()}
+
   def llm_turn(project_id, session_id, agent, messages, tools),
     do: impl().llm_turn(project_id, session_id, agent, messages, tools)
 
@@ -514,6 +538,9 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def confirm_workspace(project_id, session_id, path, user_id),
     do: impl().confirm_workspace(project_id, session_id, path, user_id)
+
+  def executar_comando_no_container(project_id, comando, cwd, timeout_ms),
+    do: impl().executar_comando_no_container(project_id, comando, cwd, timeout_ms)
 
   def rag_search(project_id, query, top_k, opts \\ []),
     do: impl().rag_search(project_id, query, top_k, opts)
@@ -1323,6 +1350,16 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       path: path,
       actorId: user_id
     })
+  end
+
+  @impl true
+  def executar_comando_no_container(project_id, comando, cwd, timeout_ms) do
+    corpo =
+      %{comando: comando}
+      |> por_se_presente(:cwd, cwd)
+      |> por_se_presente(:timeoutMs, timeout_ms)
+
+    post_returning("/internal/projects/#{project_id}/container-exec", corpo)
   end
 
   @impl true

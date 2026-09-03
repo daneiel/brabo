@@ -426,4 +426,180 @@ defmodule Engine.Actions.TerminalExecutorTest do
       refute_receive {:runner_foi_chamado, _, _}, 200
     end
   end
+
+  # Execução DENTRO do container real do projeto (ADR 0134, RN-492). Ver o
+  # moduledoc do módulo pra o raciocínio completo — aqui só a quinta saída
+  # de `decisao_de_execucao/1` e o mapeamento do resultado do broker.
+  describe "execução dentro do container real do projeto" do
+    setup do
+      Application.put_env(:engine, :engine_api_client, Engine.Sessions.FakeEngineApiClient)
+      Application.put_env(:engine, :test_pid, self())
+
+      on_exit(fn ->
+        Application.delete_env(:engine, :engine_api_client)
+        Application.delete_env(:engine, :test_pid)
+        Process.delete(:fake_container_exec)
+      end)
+
+      :ok
+    end
+
+    defp insert_container_project!(project_id, workspace_dir_name) do
+      Repo.query!(
+        "INSERT INTO public.projects " <>
+          "(id, name, slug, execution_mode, workspace_dir_name) " <>
+          "VALUES ($1, 'proj', 'proj', 'container', $2)",
+        [Ecto.UUID.dump!(project_id), workspace_dir_name]
+      )
+    end
+
+    defp insert_container_lifecycle!(project_id, status) do
+      Repo.query!(
+        "INSERT INTO public.project_containers " <>
+          "(id, project_id, status, image_version, cpus, memory_mb, pids_limit) " <>
+          "VALUES ($1, $2, #{status}, 1, 1.0, 512, 128)",
+        [Ecto.UUID.dump!(Ecto.UUID.generate()), Ecto.UUID.dump!(project_id)]
+      )
+    end
+
+    test "container running: comando atravessa pro broker, sem tocar System.cmd" do
+      project_id = unique_project_id()
+      dir_name = unique_tmp_name("ws")
+      insert_container_project!(project_id, dir_name)
+      insert_container_lifecycle!(project_id, "'running'")
+
+      Process.put(
+        :fake_container_exec,
+        {:ok,
+         %{
+           "sucesso" => true,
+           "exitCode" => 0,
+           "output" => "ok do container\n",
+           "timedOut" => false
+         }}
+      )
+
+      result = TerminalExecutor.run(project_id, "npm test")
+
+      assert result.exit_code == 0
+      assert result.stdout == "ok do container\n"
+      assert_receive {:container_exec, ^project_id, "npm test", nil, _timeout}
+    end
+
+    test "cwd na raiz do workspace é traduzido para /work" do
+      project_id = unique_project_id()
+      dir_name = unique_tmp_name("ws")
+      insert_container_project!(project_id, dir_name)
+      insert_container_lifecycle!(project_id, "'running'")
+
+      root = Application.fetch_env!(:engine, :project_workspaces_root)
+      workspace_dir = Path.join(root, dir_name)
+
+      Process.put(
+        :fake_container_exec,
+        {:ok, %{"sucesso" => true, "exitCode" => 0, "output" => "", "timedOut" => false}}
+      )
+
+      TerminalExecutor.run(project_id, "pwd", cwd: workspace_dir)
+
+      assert_receive {:container_exec, ^project_id, "pwd", "/work", _timeout}
+    end
+
+    test "cwd de um worktree de dev agent é traduzido para dentro de /work, preservando o sufixo" do
+      project_id = unique_project_id()
+      dir_name = unique_tmp_name("ws")
+      insert_container_project!(project_id, dir_name)
+      insert_container_lifecycle!(project_id, "'running'")
+
+      root = Application.fetch_env!(:engine, :project_workspaces_root)
+      worktree = Path.join([root, dir_name, ".worktrees", "dev-api"])
+
+      Process.put(
+        :fake_container_exec,
+        {:ok, %{"sucesso" => true, "exitCode" => 0, "output" => "", "timedOut" => false}}
+      )
+
+      TerminalExecutor.run(project_id, "pwd", cwd: worktree)
+
+      assert_receive {:container_exec, ^project_id, "pwd", "/work/.worktrees/dev-api", _timeout}
+    end
+
+    test "broker recusou (sucesso: false): vira failed_result normal, nunca crash" do
+      project_id = unique_project_id()
+      dir_name = unique_tmp_name("ws")
+      insert_container_project!(project_id, dir_name)
+      insert_container_lifecycle!(project_id, "'running'")
+
+      Process.put(
+        :fake_container_exec,
+        {:ok, %{"sucesso" => false, "motivo" => "container morreu por fora"}}
+      )
+
+      result = TerminalExecutor.run(project_id, "npm test")
+
+      assert result.exit_code == nil
+      assert result.stdout == ""
+      assert result.stderr =~ "container morreu por fora"
+    end
+
+    test "falha de transporte engine->api: vira failed_result normal, nunca crash" do
+      project_id = unique_project_id()
+      dir_name = unique_tmp_name("ws")
+      insert_container_project!(project_id, dir_name)
+      insert_container_lifecycle!(project_id, "'running'")
+
+      Process.put(:fake_container_exec, {:error, :timeout})
+
+      result = TerminalExecutor.run(project_id, "npm test")
+
+      assert result.exit_code == nil
+      assert result.stdout == ""
+      assert result.stderr =~ "não foi possível executar no container"
+    end
+
+    test "container SEM linha running (nunca subiu): cai no caminho de sempre, nunca chama o broker" do
+      force_rtk_unavailable!()
+      bare = create_bare_repo_with_commit!()
+      project_id = unique_project_id()
+      insert_project_repository!(project_id, bare)
+      insert_container_project!(project_id, unique_tmp_name("ws"))
+      # SEM insert_container_lifecycle! — nenhuma linha em project_containers.
+
+      test_pid = self()
+
+      Process.put(
+        :fake_container_exec,
+        {:ok,
+         %{
+           "sucesso" => true,
+           "exitCode" => 0,
+           "output" => "não deveria chegar aqui",
+           "timedOut" => false
+         }}
+      )
+
+      result = TerminalExecutor.run(project_id, "echo oi")
+
+      assert result.exit_code == 0
+      assert result.stdout =~ "oi"
+      refute_receive {:container_exec, _, _, _, _}, 200
+      # A afirmação que importa: rodou pelo System.cmd de sempre, não pelo broker.
+      _ = test_pid
+    end
+
+    test "container com linha 'stopped' (já subiu, mas não está de pé agora): cai no caminho de sempre" do
+      force_rtk_unavailable!()
+      bare = create_bare_repo_with_commit!()
+      project_id = unique_project_id()
+      insert_project_repository!(project_id, bare)
+      insert_container_project!(project_id, unique_tmp_name("ws"))
+      insert_container_lifecycle!(project_id, "'stopped'")
+
+      result = TerminalExecutor.run(project_id, "echo oi")
+
+      assert result.exit_code == 0
+      assert result.stdout =~ "oi"
+      refute_receive {:container_exec, _, _, _, _}, 200
+    end
+  end
 end

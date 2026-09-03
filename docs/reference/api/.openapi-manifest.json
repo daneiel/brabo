@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "f955e78f59240abd12be8a6681ab116d6484ebf4ae1febf07515f2fdeb9fcfde",
+  "openapiSha256": "25f3da362d9a8378fabf2411766ea8bd5deff9aeaedc6280dedefd1df36eab24",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -383,6 +383,10 @@
     "internal-projects-controller-confirm-workspace-verification.RequestSchema.json": "7591416c9f9998034ee71fe9fb938f65269b01d1576be7adbeba7c64139b89a6",
     "internal-projects-controller-confirm-workspace-verification.StatusCodes.json": "ed0ed86eba957b78092a6e3d191be6be53d1a5d29d9c2f28bf8c4946a6cc9cf6",
     "internal-projects-controller-confirm-workspace-verification.api.mdx": "198c851d4cbc97ba40535642b7630c5e3dd2d599b5f864e2bf9359595020afc4",
+    "internal-projects-controller-container-exec.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
+    "internal-projects-controller-container-exec.RequestSchema.json": "dab1a5221eae4aed920606cf34f8c74344c209513781e2d494e4462cc7adac0a",
+    "internal-projects-controller-container-exec.StatusCodes.json": "3211ff427c3c9ba97b3d188458282d9d11317ef6a210a76736daab4e07bd0858",
+    "internal-projects-controller-container-exec.api.mdx": "be5105d7d460e8ec093f60aa7265dd656fbbb8de4df49840fee8ddf52c7ac13b",
     "internal-projects-controller-git-remote.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "internal-projects-controller-git-remote.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "internal-projects-controller-git-remote.StatusCodes.json": "f2644d35c8a90962215914f88641a05efc711995720994172393e2cd812bf92b",
@@ -771,7 +775,7 @@
     "sessions-controller-transition.RequestSchema.json": "0b3fdadba6baf76eed16149b3e3603a9eece3025c94505b52141d733f32da248",
     "sessions-controller-transition.StatusCodes.json": "bac29893341373baad1228e2c1d4f2b90f0191796538e73e36010c2202898646",
     "sessions-controller-transition.api.mdx": "44678ecd7ea93a5ebe598abe3dd1a73773a2483cebfcd55c5ef953f4908945b8",
-    "sidebar.ts": "e2ade02fb02cd30161f81b4d5371df6262fe867b45da40677efeb9cf8bf920dd",
+    "sidebar.ts": "104db076d266a5567e81251b4db2c8bec2f9f31cd43b45dbbcf440ab1a4b91a1",
     "spend-controller-get-my-spend.ParamsDetails.json": "e45ac28a1c400c6a9ca93fc8413c1917113f32cca6e1b229e552ed1fe4e45f31",
     "spend-controller-get-my-spend.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "spend-controller-get-my-spend.StatusCodes.json": "edb168dd12843168011cf3d731fd24fd339c015693dd2fdcf8e0941921b875b5",

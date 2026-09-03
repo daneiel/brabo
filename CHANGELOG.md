@@ -78,6 +78,31 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api, engine**: dev agents passam a executar comando de terminal **DENTRO
+  do container real do projeto** (ADR 0134, RN-492/493), quando há um. Antes
+  desta entrega, mesmo com um container de pé (`container_start`, ADR 0133),
+  todo comando ainda rodava via `System.cmd` no processo do engine — o
+  container ficava ocioso. `Engine.Actions.TerminalExecutor` ganha uma
+  quinta saída, `:executar_no_container` (projeto `execution_mode: container`
+  com uma linha `running` REGISTRADA em `project_containers`), e o comando
+  atravessa engine → api (`POST internal/projects/:projectId/container-exec`,
+  rota nova) → broker (`ContainerBrokerPort.exec`, a última das cinco
+  operações do ADR 0128/0130 a ganhar um chamador real) e roda via
+  `docker exec`. `cwd`, quando presente, é traduzido do caminho de HOST pra
+  dentro de `/work` no engine — o worktree do dev agent (`Workspace.ensure!/4`,
+  inalterado) já é o MESMO diretório físico que o broker monta lá, verificado
+  em código. Falha do broker (recusou, não respondeu, ou o container morreu/
+  foi removido por fora — RN-486: registrado nunca garante de pé) vira
+  `failed_result` normal, nunca crash, nunca fallback silencioso de volta
+  pro `System.cmd` fora do container. Terminal cujo escopo é a pasta do
+  projeto DENTRO do container ganha um PISO de auto-aprovação
+  (`containerExecutionActive` em `decide()`) — os cinco tetos absolutos
+  (git push/comando privilegiado, merge protegido, `instruction_patch`,
+  paralelismo) e o escopo léxico de terminal (ADR 0055) continuam rodando
+  por cima, sem exceção nenhuma: dentro do container a fronteira REAL é o
+  mount namespace do Docker, e o escopo léxico vira defesa em profundidade,
+  não é substituído. `mounted`/`runner` continuam sem container nenhum
+  subindo — fora de escopo, PR posterior (1.7)
 - **api, engine**: golden-set de ACERTO do RAG (Parte 2/Etapa 2 — ADR 0132,
   RN-490), molde do golden-set do QA de Automação (ADR 0123) aplicado a um
   domínio onde não há LLM de chat no caminho medido: a busca híbrida inteira

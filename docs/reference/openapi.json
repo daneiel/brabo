@@ -709,6 +709,59 @@
         ]
       }
     },
+    "/internal/projects/{projectId}/container-exec": {
+      "post": {
+        "description": "Called only by the engine, when `Engine.Actions.TerminalExecutor` decided the command belongs inside the real container (`execution_mode: container` with a REGISTERED `running` row). Proxies to `ContainerBrokerPort.exec` (ADR 0130/0134) — the last of the broker's five operations to gain a real caller. `sucesso: false` in the response — never a thrown error — is the NORMAL shape for a refused or unreachable broker: the container may have died or been removed from outside between the registered `running` row and this call (RN-486, registered and observed never merge), and that is a command failure, not a transport error.",
+        "operationId": "InternalProjectsController_containerExec",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContainerExecInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContainerExecInternalResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Runs a terminal command INSIDE the project real container (RN-492)",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/projects/{projectId}/container-spec": {
       "get": {
         "description": "Project identity, execution mode and the Architect's current image decision. The broker revalidates all of it before handing anything to the daemon — reading from here is not the same as trusting it, and the refusal names the field. No path is returned: the bind source is resolved by the daemon against the HOST filesystem, and a path from inside the api container would silently mount an empty folder.",
@@ -13448,6 +13501,62 @@
           "verified",
           "workspacePath",
           "changed"
+        ]
+      },
+      "ContainerExecInternalDto": {
+        "type": "object",
+        "properties": {
+          "comando": {
+            "type": "string",
+            "example": "npm test",
+            "description": "The shell command, interpreted by `sh -c` INSIDE the container — same convention as the terminal action run outside one."
+          },
+          "cwd": {
+            "type": "string",
+            "example": "/work/.worktrees/dev-api",
+            "description": "Working directory INSIDE the container. Already translated from the host path by the engine (RN-492) — this DTO doesn't repeat that translation. Omitted runs at `/work`, the project root. The broker re-validates it is inside `/work` and refuses (`DiretorioForaDoEscopoError`) otherwise."
+          },
+          "timeoutMs": {
+            "type": "number",
+            "example": 300000,
+            "description": "Timeout in milliseconds. Omitted uses the broker default."
+          }
+        },
+        "required": [
+          "comando"
+        ]
+      },
+      "ContainerExecInternalResponseDto": {
+        "type": "object",
+        "properties": {
+          "sucesso": {
+            "type": "boolean",
+            "example": true,
+            "description": "`false` quando o broker recusou ou não respondeu — os outros campos ficam ausentes e `motivo` explica."
+          },
+          "exitCode": {
+            "type": "number",
+            "example": 0,
+            "description": "Presente só quando `sucesso: true`."
+          },
+          "output": {
+            "type": "string",
+            "example": "ok\n",
+            "description": "Presente só quando `sucesso: true`."
+          },
+          "timedOut": {
+            "type": "boolean",
+            "example": false,
+            "description": "Presente só quando `sucesso: true`."
+          },
+          "motivo": {
+            "type": "string",
+            "example": "o broker de container não respondeu em http://broker:8090: timeout",
+            "description": "Presente só quando `sucesso: false`."
+          }
+        },
+        "required": [
+          "sucesso"
         ]
       },
       "ContainerSpecInternalResponseDto": {

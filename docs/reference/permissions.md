@@ -230,8 +230,11 @@ with no file in the middle.
 flowchart TD
   A[proposed_action] --> B{role >= minimum?}
   B -->|no| D1[deny: insufficient IAM]
-  B -->|yes| C[base: require_approval]
-  C --> D{agent_autonomy has an opinion?}
+  B -->|yes| C0{terminal, and project's<br/>real container running?}
+  C0 -->|yes| C1[base: auto_approve — RN-492/493]
+  C0 -->|no| C[base: require_approval]
+  C1 --> D{agent_autonomy has an opinion?}
+  C --> D
   D -->|deny| D2[deny]
   D -->|other| E[adopts the opinion]
   D -->|none| E2[keeps the base]
@@ -283,6 +286,39 @@ reuses the manual/auto toggle the agent card already had in
 Overview/Executors: with the wildcard written, the toggle switches to
 editing IT instead of the usual representative type, and "manual" on it is
 the same wildcard rewritten as `require_approval`.
+
+### The container floor ([RN-492](../business-rules.md#rn-492)/[RN-493](../business-rules.md#rn-493), [ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md))
+
+Node `C0` in the diagram above is new: when the action is `terminal` AND the
+project has a container REGISTERED as `running` in `project_containers`
+(`execution_mode: container` — checked by `ProposeActionUseCase`, which
+already reads the same container lifecycle the execution side reads), the
+BASE value stops being `require_approval` and starts as `auto_approve`.
+
+This is a floor, not a new cap, and the distinction matters: every stage
+that follows (`agent_autonomy`, `permissions.json`) already REPLACES the
+base value when it has an explicit opinion — that's the same mechanism
+that already let a `deny` rule or an `ask` pattern override the default
+`require_approval` today. Starting from `auto_approve` instead of
+`require_approval` doesn't change that property: an explicit `deny` or a
+matching `ask` pattern still wins over the floor exactly like it already
+won over the default. And the four caps below (`S`, `Z`, `H`, and the
+compound-command rule) keep applying on top, unconditionally, whether the
+`auto_approve` came from the floor or from an explicit rule — `git push`
+inside a running container is still `require_approval`, same as always.
+
+**Why this is safe: a second, stronger boundary, not the absence of one.**
+Outside a container, the LEXICAL path scope below (`comandoNoEscopo`
+against `projectScopeRoot`, a HOST path) is what makes auto-approving via
+`permissions.json allow` safe. Inside the real container, the command
+physically cannot see anything outside `/work` — Docker's mount namespace
+— and the broker independently re-validates `cwd` is inside `/work`
+before running anything (`DiretorioForaDoEscopoError`). **The lexical path
+scope still runs on top of the floor, unchanged**: `cwd`/`command` reaching
+`decide()` are never translated to `/work` (that translation happens later,
+on the engine side, right before calling the broker), so a command that
+would be flagged out-of-scope today is still flagged out-of-scope with the
+floor on — it's redundant defense-in-depth, not a replacement.
 
 ## The boundary of external effect and privileged command (RN-418) {#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418}
 
