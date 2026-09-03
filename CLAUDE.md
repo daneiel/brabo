@@ -72,6 +72,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Roteamento de módulos para infra (PR 1.4) | Sétima ferramenta do Arquiteto, `route_modules_to_infra`: um item `{modulo, imagemCandidata, porque}` por módulo do `module_map` vigente, gravado como `artifact.module_routing` (sem tabela, mesmo desenho de `artifact.project_image`/`artifact.c4_diagram`). Ele CANDIDATA — a imagem de cada item passa pela mesma `validarDecisaoDeImagem` de `choose_project_image` —, e quem ELEGE entre as candidatas é a Infra, num PR à parte (1.5, fechado logo abaixo) | ADR 0131, RN-487 |
 | Golden-set de acerto do RAG | Molde do golden-set do QA (ADR 0123) aplicado à busca híbrida: como o julgamento não mora no engine (é `HybridSearchUseCase`, na api), `seed-golden-set-rag.ts` provisiona UM projeto com corpus real curado (22 arquivos de `docs/`) E roda a busca para 17 perguntas compostas de RNs/ADRs reais; `rag_golden_test.exs` só invoca o script e aplica o piso. Critério de acerto — caminho de arquivo, top-5, nunca chunk exato/rank 1 — é função pura testada. Gate novo `rag-acertivo`, `warn` (sem CI com LLM). Medido de verdade, duas vezes, deterministicamente: 17/17 no top-5 | ADR 0132, RN-490 |
 | A Infra elege, e a eleição sobe o container de verdade (PR 1.5) | Fecha a metade que a RN-487 e o comentário do `ContainerBrokerPort` (ADR 0130) deixaram pendurada: `propose_container_start` elege UMA `imagemCandidata` do roteamento vigente do Arquiteto (`get_infra_context` passa a ler `artifact.module_routing`, primeiro consumidor HTTP de `GetModuleRoutingUseCase`) e vira `container_start` (`proposed_action`, `maintainer`, deliberadamente fora do bloco de tetos absolutos de `decide.ts` — mesmo raciocínio de `propose_execution_plan`/`assess_implementability`, nunca seedada em auto-aprovação). Aprovada, `ExecuteContainerStartUseCase` REUSA `DecidirImagemDoProjetoUseCase` inteiro (`decidedBy: 'infra-lead'`) — sem isso a eleição seria inerte, já que o broker lê `artifact.project_image`, nunca o roteamento — e só então chama `ContainerBrokerPort.start` de verdade, transicionando `provisioning → running` (ou direto para `running` a partir de `stopped`) pela máquina de estados do ADR 0081. Dev agents NÃO passam a trabalhar dentro do container que sobe — declarado, PR posterior | ADR 0130/0133, RN-491 |
+| Dev agents executam DENTRO do container real (PR 1.6) | Fecha o que a RN-491 declarou pendente: `Engine.Actions.TerminalExecutor` ganha a QUINTA saída, `:executar_no_container` — projeto `execution_mode: container` com uma linha REGISTRADA `running` (`Engine.Containers.ProjectContainerLifecycle`, leitura direta, mesmo padrão de `Engine.Projects.Project`) — e o comando atravessa engine → api (`POST internal/projects/:projectId/container-exec`, `ExecutarComandoNoContainerUseCase`) → broker (`ContainerBrokerPort.exec`, o PRIMEIRO chamador real da última das cinco operações do ADR 0128/0130), rodando via `docker exec` em vez de `System.cmd` local. `cwd` é traduzido do caminho de HOST pra dentro de `/work` no engine, ANTES da chamada — confirmado em código que é o MESMO diretório físico que `Workspace.ensure!/4` já escreve (o worktree do dev agent não muda de lugar nem de mecanismo). `BrokerRecusouError`/`BrokerIndisponivelError`/falha de transporte viram `failed_result` normal, nunca crash nem fallback silencioso pra fora do container (RN-486: `running` registrado nunca garante container de pé). Terminal DENTRO do container ganha PISO de auto-aprovação (`ProposeActionUseCase`/`decide.ts`, `containerExecutionActive`) — os cinco tetos absolutos e o escopo léxico de sempre continuam rodando por cima, byte a byte | ADR 0134, RN-492/493 |
 
 ## Estado atual e aberto
 
@@ -100,14 +101,21 @@ daqui e o fechamento vai para o histórico.
   emite nova versão de `artifact.project_image` (reusando
   `DecidirImagemDoProjetoUseCase`, `decidedBy: 'infra-lead'`), porque o
   broker compõe a partir DESSE artefato, nunca do roteamento. Das cinco
-  operações do ADR 0128/0130, agora DUAS têm chamador — `inspect` (a rota de
-  ciclo de vida, observado ao lado do registrado) e `start` —; `stop`/
-  `remove`/`exec` seguem sem um. `RegistrarTransicaoDeContainerUseCase`
-  ganhou o primeiro chamador fora de teste, transicionando
-  `provisioning → running` (ou direto para `running` a partir de `stopped`,
-  que a máquina de estados do ADR 0081 não deixa reprovisionar). O que segue
-  cortado, declarado: os dev agents NÃO passam a trabalhar dentro do
-  container que sobe — isso é uma PR posterior
+  operações do ADR 0128/0130, agora TRÊS têm chamador — `inspect` (a rota de
+  ciclo de vida, observado ao lado do registrado), `start` e, desde o ADR
+  0134 (RN-492), `exec`: quando há um container `running` REGISTRADO, o
+  comando de terminal do dev agent atravessa engine → api → broker e roda
+  DENTRO dele, via `docker exec`, em vez de `System.cmd` local — a lacuna
+  que a RN-491 tinha deixado declarada ("dev agents NÃO passam a trabalhar
+  dentro do container") fechou. `stop`/`remove` seguem sem chamador —
+  nenhuma `proposed_action` própria existe pra eles ainda.
+  `RegistrarTransicaoDeContainerUseCase` ganhou o primeiro chamador fora de
+  teste, transicionando `provisioning → running` (ou direto para `running`
+  a partir de `stopped`, que a máquina de estados do ADR 0081 não deixa
+  reprovisionar). O que segue cortado, declarado: `mounted`/`runner`
+  continuam sem container nenhum subindo (o portão dos três modos é PR
+  posterior, 1.7); a pergunta "quantos módulos, um container só" segue como
+  está, `project_id UNIQUE` em `project_containers`, sem mudança aqui
 - Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
   aguardando spec; Staff dormente para disparo automático (acionável manual)
 - `appsec run_design/2` acionável, nada aciona sozinho (gatilho:
@@ -503,7 +511,11 @@ daqui e o fechamento vai para o histórico.
   `ContainerBrokerPort.start`, e transiciona `provisioning → running` pela
   máquina de estados. `stop`/`remove` seguem sem `proposed_action` própria —
   a política de terminal do ADR 0055 (escopo de caminho, allowlist estreito)
-  segue valendo como está para o que ainda não sobe de verdade. O que a
+  segue valendo como está para `mounted`/`runner` e para `container` SEM um
+  `running` registrado. Com um `running` registrado, o comando de terminal
+  passa a rodar DENTRO do container de verdade (`ContainerBrokerPort.exec`,
+  ADR 0134, RN-492) e ganha um PISO de auto-aprovação por cima do escopo
+  léxico — não no lugar dele (RN-493). O que a
   leitura ganhou primeiro (ADR 0130) foi o estado OBSERVADO ao lado do
   registrado, perguntado ao broker — os dois nunca se fundem, e "não
   consegui olhar" tem motivo próprio em vez de herdar o registrado (RN-486).

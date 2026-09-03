@@ -209,6 +209,16 @@ reason in the URL.
   (`caminhoDeWorkspaceLocalValido`) — system root and overlap with the
   Brabo checkout remain forbidden even coming from the runner. `400` if the
   project isn't in `runner` mode.
+- **`POST /internal/projects/:projectId/container-exec`** ([RN-492](business-rules.md#rn-492),
+  [ADR 0134](adr/0134-dev-agents-executam-dentro-do-container.md)) is called
+  only by the engine, when `Engine.Actions.TerminalExecutor` decided a
+  terminal command belongs inside the project's real container. It proxies
+  to `ContainerBrokerPort.exec` — the api never runs the command itself.
+  Unlike `container-spec` below, this is the ENGINE calling the api, not
+  the broker; the response body never throws for a broker refusal or an
+  unreachable one (`{ sucesso: false, motivo }` is the normal shape, per
+  RN-486 — a `running` row never guarantees the container is up right
+  now), so a dead container is a regular failed command, not a 5xx.
 - **`GET /internal/projects/:projectId/container-spec`** ([ADR 0130](adr/0130-broker-de-container.md),
   [RN-485](business-rules.md#rn-485)) is the only `engine-service` route whose
   caller is NOT the engine — it is the container **broker**, the single process
@@ -520,6 +530,7 @@ reason in the URL.
 | GET | `/internal/projects/:projectId/backlog` | engine-service |
 | GET | `/internal/projects/:projectId/product-metrics` | engine-service |
 | POST | `/internal/projects/:projectId/workspace-verification` | engine-service |
+| POST | `/internal/projects/:projectId/container-exec` | engine-service |
 | GET | `/internal/projects/:projectId/container-spec` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |

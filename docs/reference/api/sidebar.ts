@@ -264,6 +264,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-projects-controller-container-exec",
+          label: "Runs a terminal command INSIDE the project real container (RN-492)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-containers-controller-container-spec",
           label: "What the broker needs to compose the container spec itself",
           className: "api-method get",

@@ -6994,6 +6994,102 @@ antes de prometer isso.
 - **ADR:** [0130](adr/0130-broker-de-container.md), [0133](adr/0133-infra-elege-imagem-do-roteamento.md)
 - **Origem:** plano do dono do produto, Parte 1 / PR 1.5
 
+### RN-492 — O comando de terminal do dev agent roda DENTRO do container real, quando há um {#rn-492}
+
+`Engine.Actions.TerminalExecutor.decisao_de_execucao/1` ganha a QUINTA saída
+(`:executar_no_container`): projeto em `execution_mode: container` com uma
+linha REGISTRADA `running` em `project_containers`
+(`Engine.Containers.ProjectContainerLifecycle.running?/1`, leitura read-only
+direta da tabela, mesmo padrão de `Engine.Projects.Project`). Antes desta
+regra, mesmo com um container de pé (RN-491), TODO comando de terminal
+rodava via `System.cmd` no processo do engine, contra a pasta compartilhada
+— o container ficava ocioso.
+
+O comando atravessa engine → api → broker
+(`POST internal/projects/:projectId/container-exec`,
+`ExecutarComandoNoContainerUseCase`, `ContainerBrokerPort.exec`) e roda via
+`docker exec`. `cwd`, quando presente, é TRADUZIDO do caminho de HOST (dentro
+de `PROJECT_WORKSPACES_ROOT`) para dentro de `/work` — o único diretório que
+o container enxerga — trocando o prefixo `<project_workspaces_root>/
+<workspace_dir_name>` por `/work` e preservando o sufixo (o worktree
+individual de um dev agent, `.worktrees/<agent_id>`, incluso). O worktree em
+si não muda de lugar nem de mecanismo de criação: `Workspace.ensure!/4`
+continua escrevendo no MESMO diretório físico que o broker monta em `/work`
+(verificado em código: `raizDoProjeto` do broker e `PROJECT_WORKSPACES_ROOT`
+do engine resolvem a mesma pasta, via `workspace_dir_name`, RN-109) — o
+container é só mais um observador dela.
+
+**`running` REGISTRADO nunca confirma que o container está de pé DE VERDADE
+agora (RN-486).** Se ele morreu ou foi removido por fora entre o registro e
+esta chamada, `broker.exec` falha e vira `failed_result` NORMAL — exit_code
+`nil`, mensagem nomeando o motivo — nunca crash, nunca fallback silencioso de
+volta pro `System.cmd` fora do container (isso reabriria o vetor de
+isolamento que esta regra existe para fechar). `mounted` nunca cai nesta
+saída: o broker recusa subir container pra esse modo
+(`ModoDeExecucaoNaoSuportadoError`).
+
+- **Onde:** `apps/engine/lib/engine/actions/terminal_executor.ex`
+  (`decisao_de_execucao/1`, `run_no_container/4`, `cwd_para_container/2`),
+  `apps/engine/lib/engine/containers/project_container_lifecycle.ex`,
+  `apps/engine/lib/engine/sessions/engine_api_client.ex`
+  (`executar_comando_no_container/4`),
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts`
+  (`POST :projectId/container-exec`),
+  `apps/api/src/application/use-cases/containers/executar-comando-no-container.use-case.ts`,
+  `apps/api/src/application/ports/container-broker.port.ts` (`exec`,
+  `timeoutMs`)
+- **Teste:** `apps/engine/test/engine/actions/terminal_executor_test.exs`
+  (as cinco saídas de `decisao_de_execucao/1`; tradução de `cwd` na raiz e
+  num worktree; `sucesso: false` e falha de transporte viram `failed_result`;
+  container sem linha `running`/em `stopped` cai no caminho de sempre),
+  `apps/api/test/application/use-cases/containers/executar-comando-no-container.use-case.spec.ts`
+  (`BrokerRecusouError`/`BrokerIndisponivelError` nunca propagam; outro erro
+  propaga),
+  `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts`
+- **ADR:** [0130](adr/0130-broker-de-container.md), [0134](adr/0134-dev-agents-executam-dentro-do-container.md)
+- **Origem:** plano do dono do produto, Parte 1 / PR 1.6
+
+### RN-493 — Terminal dentro do container real ganha PISO de auto-aprovação, sem tocar nos tetos absolutos {#rn-493}
+
+Quando `containerExecutionActive` é verdadeiro (o mesmo `running` REGISTRADO
+da RN-492, consultado por `ProposeActionUseCase` só para `actionType ===
+'terminal'` em projeto `execution_mode: container`), o valor INICIAL de
+`current` dentro de `decide()` deixa de ser `require_approval` e passa a ser
+`auto_approve` — um PISO, não um teto novo: os estágios que seguem
+(`agent_autonomy`, `permissions.json`) continuam podendo REBAIXAR esse piso
+exatamente como já rebaixavam o `require_approval` default (um `deny`
+explícito ou um `ask` casando o comando vencem do mesmo jeito), e os CINCO
+tetos absolutos de `decide.ts` (escopo, git push/comando privilegiado, merge
+protegido, `instruction_patch`, paralelismo) continuam rodando por CIMA,
+byte a byte como estavam — inclusive quando o `auto_approve` veio do piso, e
+não de uma regra explícita.
+
+**A justificativa é uma SEGUNDA fronteira, não a ausência da primeira.** O
+escopo léxico de terminal (`terminalNoEscopo`, ADR 0055) continua rodando
+sobre os MESMOS caminhos de HOST de sempre — o `cwd`/`command` que chegam em
+`decide()` NUNCA são traduzidos pra `/work` (essa tradução acontece só
+depois, no engine — RN-492). Dentro do container real, some uma
+fronteira MAIS forte por cima da léxica: o mount namespace do Docker, que o
+processo fisicamente não atravessa, somado à validação de `/work` que o
+broker já faz (`DiretorioForaDoEscopoError`). É defesa em profundidade — o
+escopo léxico não é substituído, é redundante.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts`
+  (`DecideContext.containerExecutionActive`, o `current` inicial
+  condicional), `apps/api/src/application/use-cases/actions/propose-action.use-case.ts`
+- **Teste:** `apps/api/test/domain/actions/decide.spec.ts` (describe "decide
+  — piso do container ativo do projeto": auto-aprova sem regra nenhuma;
+  inalterado sem `containerExecutionActive`; não afeta ação não-terminal;
+  `agent_autonomy`/`permissions.json` explícitos rebaixam o piso; IAM
+  insuficiente nega antes do piso; escopo continua vencendo por cima;
+  git push/sudo continuam `require_approval`),
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts`
+  (describe "piso do container ativo": terminal auto-aprova e EXECUTA com
+  container running; não afeta `container_start`; sem linha `running`,
+  inalterado; deny embutido/git push/sudo continuam vencendo)
+- **ADR:** [0134](adr/0134-dev-agents-executam-dentro-do-container.md)
+- **Origem:** plano do dono do produto, Parte 1 / PR 1.6
+
 ---
 
 ## Quando dá errado

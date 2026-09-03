@@ -661,6 +661,22 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  # ADR 0134, RN-492 — scriptável via `:fake_container_exec`
+  # (`{:ok, %{"sucesso" => ...}}` ou `{:error, reason}`); default devolve
+  # sucesso com exit 0 e output vazio, como um comando trivial que passou.
+  @impl true
+  def executar_comando_no_container(project_id, comando, cwd, timeout_ms) do
+    notify({:container_exec, project_id, comando, cwd, timeout_ms})
+
+    case Process.get(:fake_container_exec) do
+      nil ->
+        {:ok, %{"sucesso" => true, "exitCode" => 0, "output" => "", "timedOut" => false}}
+
+      resultado ->
+        resultado
+    end
+  end
+
   @doc """
   Resposta que só devolve texto final, sem tool calls (encerra o loop).
 
