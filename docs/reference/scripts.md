@@ -70,6 +70,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter api demo:pr-gates` | `ts-node scripts/demo-pr-gates.ts` |
 | `pnpm --filter api demo:pr-gates-area-qa` | `ts-node scripts/demo-pr-gates-area-qa.ts` |
 | `pnpm --filter api golden-set:qa-seed` | `ts-node scripts/seed-golden-set-qa.ts` |
+| `pnpm --filter api golden-set:rag-seed` | `ts-node scripts/seed-golden-set-rag.ts` |
 | `pnpm --filter api demo:infra-agent` | `ts-node scripts/demo-infra-agent.ts` |
 | `pnpm --filter api demo:infra-workflows-github` | `ts-node scripts/demo-infra-workflows-github.ts` |
 | `pnpm --filter api demo:psicologo` | `ts-node scripts/demo-psicologo.ts` |
@@ -141,4 +142,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-96 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+97 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

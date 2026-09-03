@@ -28,7 +28,12 @@ binary_exclusions =
 # gastando tokens sem aviso e introduzindo flake de verdade numa suíte que
 # hoje é 100% determinística. Só roda com `mix test --only golden_set_qa`
 # (ou `mix golden_set.qa`) — decisão deliberada, nunca automática.
-ExUnit.start(exclude: [:golden_set_qa | binary_exclusions])
+#
+# `:golden_set_rag` (ADR 0132) é a MESMA exclusão permanente, para o
+# golden-set de acerto da busca híbrida do RAG — mesmo motivo, mesma
+# máquina com Ollama de pé o tempo todo. Só roda com
+# `mix test --only golden_set_rag` (ou `mix golden_set.rag`).
+ExUnit.start(exclude: [:golden_set_qa, :golden_set_rag | binary_exclusions])
 Ecto.Adapters.SQL.Sandbox.mode(Engine.Repo, :manual)
 
 # outbox_events é gerenciada pela api (Drizzle, schema "public") — o banco

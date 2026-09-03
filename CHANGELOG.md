@@ -78,6 +78,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api, engine**: golden-set de ACERTO do RAG (Parte 2/Etapa 2 — ADR 0132,
+  RN-490), molde do golden-set do QA de Automação (ADR 0123) aplicado a um
+  domínio onde não há LLM de chat no caminho medido: a busca híbrida inteira
+  roda na api (`HybridSearchUseCase`), então `apps/api/scripts/seed-golden-set-rag.ts`
+  faz as duas coisas — provisiona um projeto com um corpus REAL curado (22
+  arquivos deste próprio `docs/`, copiados verbatim e indexados pelo mesmo
+  `IndexProjectDocsUseCase` de qualquer projeto) e roda a busca de verdade
+  para 17 perguntas COMPOSTAS a partir de RNs/ADRs reais (não extraídas — este
+  é projeto solo, `gh issue list` devolve "No Issues", e isso é dito, não
+  escondido) — e `apps/engine/test/engine/rag/rag_golden_test.exs` só chama o
+  script (`System.cmd`, mesmo mecanismo do lado QA) e aplica o piso ratchet
+  sobre o JSON que volta. Critério de acerto — caminho de ARQUIVO, nunca chunk
+  exato, no TOP-5, nunca só rank 1 — é função pura e testada
+  (`apps/api/src/domain/rag/golden-set-criterio.ts`): o chunking é justamente
+  o parâmetro que este programa existe para poder revisar, e o Chat RAG cita
+  vários trechos por resposta, não só o primeiro. Excluído por tag PERMANENTE
+  (`:golden_set_rag`) em `test_helper.exs`, roda só por `mix golden_set.rag`
+  — mesma decisão do QA: sem segredo de LLM de API ou infra nova, CI não roda
+  Ollama de verdade. Novo gate `docs/gates.yml`: `rag-acertivo`, `warn`
+  (obrigatório — não há CI que verifique), `evidencia.tipo: teste` (o que
+  prova é o golden-set em si, não um evento no log)
 - **api, engine, web**: a busca do RAG passa a **deixar rastro**. Os quatro
   números da busca híbrida — os dois pesos (0.6/0.4), o limiar (0.2) e o número
   de candidatos — estão declarados no próprio código como chute inicial:

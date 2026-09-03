@@ -6810,6 +6810,48 @@ uma doc que passa mentindo é pior que uma doc que reprova.
 - **ADR:** [0129](adr/0129-telemetria-de-busca-do-rag-como-tabela.md)
 - **Origem:** plano do dono do produto, Parte 2 / Etapa 1
 
+### RN-490 — O golden-set de acerto do RAG mede por CAMINHO DE ARQUIVO, no TOP-5, nunca por chunk exato ou rank 1 {#rn-490}
+
+O gate `rag-acertivo` (`docs/gates.yml`) mede se a busca híbrida devolve o
+arquivo certo para 17 perguntas compostas a partir de RNs/ADRs reais deste
+repositório (golden-set, molde do ADR 0123 aplicado ao RAG). O critério de
+"acertou" tem duas decisões deliberadas, e as duas evitam medir a pergunta
+errada:
+
+- **Caminho de arquivo, nunca chunk exato.** O chunking (1200/150) é
+  justamente um dos parâmetros que este programa existe para poder revisar
+  (ADR 0080) — travar o golden-set no chunk faria QUALQUER ajuste de
+  chunking quebrar os 17 casos, mesmo quando o arquivo certo continuasse
+  sendo recuperado.
+- **TOP-5, nunca só a primeira posição.** É assim que o produto usa o
+  resultado: o Chat RAG cita VÁRIOS trechos por resposta
+  (`RagCitationCard`, plural), não só o primeiro. Medir contra rank 1
+  mediria uma pergunta que a UI não faz. `5`, e não o `RAG_SEARCH_RESULT_LIMIT`
+  (10) da rota real, para não testar um k mais folgado que a maioria das
+  buscas reais usa.
+
+O critério é função PURA (`acertouCaminhoEsperado`/`rankDoCaminhoEsperado`),
+consumida pelo seed (`seed-golden-set-rag.ts`) e testada isolada — a mesma
+disciplina de `gate-registry.ts`: a decisão de "isto bateu" não depende de
+como o resultado chegou.
+
+O golden-set roda **manual** (`mix golden_set.rag`), nunca em CI — mesma
+decisão já registrada para o golden-set do QA (ADR 0123): sem segredo de LLM
+de API ou infra nova, não há como rodar Ollama de verdade em CI. Excluído
+por tag PERMANENTE (`:golden_set_rag`) em `test_helper.exs`, nunca por
+detecção de "Ollama alcançável" — mesmo motivo do lado QA: esta máquina já
+tem Ollama de pé o tempo todo. O piso é RATCHET (`>=`, nunca `>`), contagem e
+não porcentagem, chaveado pelo modelo de EMBEDDING (`nomic-embed-text`, hoje
+o único que o produto suporta) e escrito só por humano.
+
+- **Onde:** `apps/api/src/domain/rag/golden-set-criterio.ts`,
+  `apps/api/scripts/seed-golden-set-rag.ts`,
+  `apps/engine/test/engine/rag/rag_golden_test.exs`,
+  `apps/engine/test/fixtures/golden_set_rag/floor.json`
+- **Teste:** `apps/api/test/domain/rag/golden-set-criterio.spec.ts`
+- **ADR:** [0132](adr/0132-golden-set-de-acerto-do-rag.md)
+- **Origem:** plano do dono do produto, Parte 2 / Etapa 2
+
 ---
 
 ## Quando dá errado
