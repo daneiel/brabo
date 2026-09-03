@@ -381,6 +381,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/projects/{projectId}/container-exec": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Runs a terminal command INSIDE the project real container (RN-492)
+         * @description Called only by the engine, when `Engine.Actions.TerminalExecutor` decided the command belongs inside the real container (`execution_mode: container` with a REGISTERED `running` row). Proxies to `ContainerBrokerPort.exec` (ADR 0130/0134) — the last of the broker's five operations to gain a real caller. `sucesso: false` in the response — never a thrown error — is the NORMAL shape for a refused or unreachable broker: the container may have died or been removed from outside between the registered `running` row and this call (RN-486, registered and observed never merge), and that is a command failure, not a transport error.
+         */
+        post: operations["InternalProjectsController_containerExec"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/projects/{projectId}/container-spec": {
         parameters: {
             query?: never;
@@ -4680,6 +4700,50 @@ export interface components {
              * @example true
              */
             changed: boolean;
+        };
+        ContainerExecInternalDto: {
+            /**
+             * @description The shell command, interpreted by `sh -c` INSIDE the container — same convention as the terminal action run outside one.
+             * @example npm test
+             */
+            comando: string;
+            /**
+             * @description Working directory INSIDE the container. Already translated from the host path by the engine (RN-492) — this DTO doesn't repeat that translation. Omitted runs at `/work`, the project root. The broker re-validates it is inside `/work` and refuses (`DiretorioForaDoEscopoError`) otherwise.
+             * @example /work/.worktrees/dev-api
+             */
+            cwd?: string;
+            /**
+             * @description Timeout in milliseconds. Omitted uses the broker default.
+             * @example 300000
+             */
+            timeoutMs?: number;
+        };
+        ContainerExecInternalResponseDto: {
+            /**
+             * @description `false` quando o broker recusou ou não respondeu — os outros campos ficam ausentes e `motivo` explica.
+             * @example true
+             */
+            sucesso: boolean;
+            /**
+             * @description Presente só quando `sucesso: true`.
+             * @example 0
+             */
+            exitCode?: number;
+            /**
+             * @description Presente só quando `sucesso: true`.
+             * @example ok
+             */
+            output?: string;
+            /**
+             * @description Presente só quando `sucesso: true`.
+             * @example false
+             */
+            timedOut?: boolean;
+            /**
+             * @description Presente só quando `sucesso: false`.
+             * @example o broker de container não respondeu em http://broker:8090: timeout
+             */
+            motivo?: string;
         };
         ContainerSpecInternalResponseDto: {
             /** @example f52be111-0000-4000-8000-000000000000 */
@@ -9152,6 +9216,45 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProjectBusinessRulesResponseDto"];
                 };
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalProjectsController_containerExec: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContainerExecInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContainerExecInternalResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Service token missing or different from the shared one. */
             403: {
