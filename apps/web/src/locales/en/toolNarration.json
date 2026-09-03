@@ -13,6 +13,7 @@
     "assign_story_modules": "Linking stories to modules",
     "choose_project_image": "Choosing the project image",
     "create_c4_diagram": "Drawing the C4 diagram",
+    "route_modules_to_infra": "Routing modules to candidate images",
     "propose_adr": "Drafting an ADR",
     "emit_insight": "Recording an insight",
     "propose_execution_plan": "Putting together the execution plan",

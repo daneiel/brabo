@@ -572,6 +572,7 @@ agent" pattern — see [RN-037](../business-rules.md#rn-037)). It is **not**
 | POST | `/story-modules` |
 | POST | `/module-map` |
 | POST | `/c4-diagram` |
+| POST | `/module-routing` |
 | POST | `/project-image` |
 | POST | `/tasks/claim` |
 | POST | `/tasks/:taskId/status` |
@@ -606,6 +607,20 @@ module_map, `400` (there is no Container level without modules). `GET
 /projects/:projectId/architecture` (public route, `role:viewer`) returns the
 current diagram in `c4Diagram`, in the same object that already carries `moduleMap`
 and `adrs`.
+
+`/module-routing` is the Architect's `route_modules_to_infra` tool
+([RN-487](../business-rules.md#rn-487),
+[ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)): one candidate
+image per module of the CURRENT `module_map`, each with a `porque`. Same
+caliber as `/module-map`/`/c4-diagram`/`/project-image` — the artifact IS the
+`artifact.module_routing` event, with no table, versioned. The body carries
+`roteamento: [{modulo, imagemCandidata, porque}, ...]`; each item's image is
+validated by the SAME rule `/project-image` uses (explicit tag/digest,
+`latest` rejected, non-trivial `rationale`), and `modulo` must name a module
+that exists in the current `module_map` — an unknown name, an empty list, or
+a repeated module all return `400` naming what's wrong. The Architect only
+CANDIDATES: electing among the candidates (or refusing all of them) is a
+later step, owned by Infra.
 
 **With no claimable task, the response is `201` with an EMPTY body**, not `null` in the
 body: the use case returns `null` and NestJS serializes that as `content-length: 0`.

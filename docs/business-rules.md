@@ -6810,6 +6810,68 @@ uma doc que passa mentindo é pior que uma doc que reprova.
 - **ADR:** [0129](adr/0129-telemetria-de-busca-do-rag-como-tabela.md)
 - **Origem:** plano do dono do produto, Parte 2 / Etapa 1
 
+### RN-487 — O Arquiteto roteia módulo por módulo, mas só CANDIDATA — quem elege é a Infra {#rn-487}
+
+`route_modules_to_infra` produz UMA lista — um item `{modulo, imagemCandidata,
+porque}` por módulo do `module_map` vigente — e ela vira o evento
+`artifact.module_routing`, sem tabela: mesmo desenho de `artifact.module_map`/
+`artifact.project_image`/`artifact.c4_diagram`, o evento É o artefato.
+
+**A imagem candidata passa pela MESMA regra de `choose_project_image`,
+aplicada por item.** `validarDecisaoDeImagem` já recusa imagem sem tag/digest
+explícito, `latest`, e `rationale` com menos de 10 caracteres — reimplementar
+essa regra por módulo criaria uma segunda versão dela para divergir da
+primeira cedo ou tarde. `validarRoteamento`
+(`domain/architecture/module-routing.ts`) delega, e só acrescenta o que é
+PRÓPRIO da lista: vazia é recusada (não é uma decisão), e módulo repetido
+também (duas imagens para o mesmo módulo são ambíguas — qual vale?).
+
+**Módulo fora do `module_map` vigente é recusado nomeando os módulos
+VÁLIDOS**, mesma régua de `AssignStoryModulesUseCase` (`missingModules`):
+listar só o que está errado obrigaria o modelo a adivinhar contra um mapa que
+ele não pode reler; listar os nomes certos encerra a busca na primeira
+recusa.
+
+**Sem `module_map` vigente, não há módulo — recusado com 400, nunca
+inventado.** É a mesma recusa de `create_c4_diagram` quando falta module_map,
+e pelo mesmo motivo: não há módulo, não há infra para rotear. O
+`build_kickoff/1` do `ArquitetoServer` — o ÚNICO lugar de onde o modelo
+aprende a ORDEM das ferramentas — lista `route_modules_to_infra` como o passo
+que segue `create_module_map`.
+
+**`:direct`, nunca `proposed_action`.** Rotear não tem efeito externo — não
+sobe container, não muda nada fora do event log — e é decisão INTERNA de
+arquitetura, do mesmo calibre de `choose_project_image`/`create_c4_diagram`.
+Colocar isto na fila de aprovação misturaria um rascunho que a Infra ainda
+vai revisar com decisões que já têm efeito real.
+
+**Arquiteto candidata, Infra elege — e esta entrega é só a metade que
+candidata.** A metade que ELEGE entre as candidaturas (ou recusa todas) é do
+Infra Lead, com `proposed_action` própria, num PR à parte. O que existe aqui
+é a lista auditável no event log, antes de a Infra ter ferramenta para agir
+sobre ela — mesmo sequenciamento que já valeu para o `module_map` existir
+antes de `create_c4_diagram` precisar dele.
+
+- **Onde:** `apps/api/src/domain/architecture/module-routing.ts`
+  (`validarRoteamento`, `EVENTO_MODULE_ROUTING`),
+  `apps/api/src/application/use-cases/architecture/route-modules-to-infra.use-case.ts`,
+  `apps/api/src/application/use-cases/architecture/get-module-routing.use-case.ts`,
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts`
+  (`POST .../module-routing`),
+  `apps/engine/lib/engine/harness/tools/route_modules_to_infra.ex`,
+  `apps/engine/lib/engine/agents/arquiteto_server.ex` (`build_kickoff/1`, passo 4)
+- **Teste:**
+  `apps/api/test/domain/architecture/module-routing.spec.ts` (lista vazia,
+  módulo repetido, e a delegação a `validarDecisaoDeImagem` — `latest` e
+  `rationale` curto),
+  `apps/api/test/application/use-cases/architecture/route-modules-to-infra.use-case.spec.ts`
+  (caminho feliz com dois módulos; sem module_map vigente; módulo fora do
+  mapa; versionamento ao rotear de novo),
+  `apps/engine/test/engine/harness/tools/route_modules_to_infra_test.exs`
+  (`:direct`; normalização das chaves do tool call; recusa da api virando
+  tool-result de erro, nunca crash — RN-061)
+- **ADR:** [0131](adr/0131-roteamento-de-modulos-para-infra.md)
+- **Origem:** plano do dono do produto, Parte 1 / PR 1.4
 ### RN-490 — O golden-set de acerto do RAG mede por CAMINHO DE ARQUIVO, no TOP-5, nunca por chunk exato ou rank 1 {#rn-490}
 
 O gate `rag-acertivo` (`docs/gates.yml`) mede se a busca híbrida devolve o
@@ -6894,6 +6956,7 @@ o único que o produto suporta) e escrito só por humano.
 | INSERT da telemetria de busca do RAG falha | a busca **responde assim mesmo**, com `searchId: null`, e a falha vira log com origem `infra` — o instrumento de medição não derruba o que ele mede, e também não some calado (RN-479) |
 | Voto num `searchId`/`chunkId` que aquela busca não devolveu | 400 que ensina, nada gravado — voto sem rank não distingue "índice pobre" de "pesos errados", e número sem significado é pior que número nenhum (RN-480) |
 | `medir:rag` numa janela em que `vector_available` foi `false` o tempo todo | **reprova (exit 1)**: o que foi medido não é a busca híbrida, é a metade léxica dela, e calibrar peso de vetor contra isso seria calibrar contra outro sistema (RN-479) |
+| `route_modules_to_infra` chamado sem `module_map` vigente, com lista vazia, módulo repetido, módulo fora do mapa, ou imagem inválida (`latest`/sem tag/`rationale` curto) | 400 nomeando o que falta ou o que está errado — pelo agente, tool-result de erro que o modelo corrige, nunca crash (RN-487) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

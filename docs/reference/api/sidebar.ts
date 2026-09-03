@@ -414,6 +414,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-module-routing",
+          label: "Routes each module of the current module_map to a candidate image",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-pending-work",
           label: "Does the session have pending work that blocks closing it?",
           className: "api-method get",

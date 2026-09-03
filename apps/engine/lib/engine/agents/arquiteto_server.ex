@@ -22,6 +22,7 @@ defmodule Engine.Agents.ArquitetoServer do
     AssignStoryModules,
     ChooseProjectImage,
     CreateC4Diagram,
+    RouteModulesToInfra,
     ProposeAdr,
     EmitInsight
   }
@@ -82,6 +83,7 @@ defmodule Engine.Agents.ArquitetoServer do
          AssignStoryModules.spec(),
          ChooseProjectImage.spec(),
          CreateC4Diagram.spec(),
+         RouteModulesToInfra.spec(),
          ProposeAdr.spec(),
          EmitInsight.spec()
        ],
@@ -279,6 +281,7 @@ defmodule Engine.Agents.ArquitetoServer do
   defp run_tool("assign_story_modules", args, state), do: AssignStoryModules.run(args, state)
   defp run_tool("choose_project_image", args, state), do: ChooseProjectImage.run(args, state)
   defp run_tool("create_c4_diagram", args, state), do: CreateC4Diagram.run(args, state)
+  defp run_tool("route_modules_to_infra", args, state), do: RouteModulesToInfra.run(args, state)
   defp run_tool("propose_adr", args, state), do: ProposeAdr.run(args, state)
   defp run_tool("emit_insight", args, state), do: EmitInsight.run(args, state)
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
@@ -330,13 +333,16 @@ defmodule Engine.Agents.ArquitetoServer do
        coerente com a stack que você acabou de definir. Enquanto você não escolher, o
        container do projeto não sobe e a aba Code fica fechada — é decisão sua, e ninguém
        a toma no seu lugar.
-    4. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
+    4. route_modules_to_infra: depois do module_map, roteie CADA módulo para uma imagem de
+       container CANDIDATA, com o porquê — um item por módulo. Você candidata; a Infra
+       elege entre as candidatas depois.
+    5. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
        pro usuário aprovar.
-    5. create_c4_diagram: gere o diagrama C4 (Context + Container) desta arquitetura —
+    6. create_c4_diagram: gere o diagrama C4 (Context + Container) desta arquitetura —
        depois do module_map, porque o Container level é derivado dele. Descreva só o nome
        do sistema e os atores externos (ex.: o usuário, um provedor de Git); os módulos e
        as dependências entram sozinhos.
-    6. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
+    7. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
        módulo que o atenda).
 
     PRODUCT BRIEF:

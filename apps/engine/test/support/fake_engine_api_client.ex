@@ -225,6 +225,30 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def route_modules_to_infra(_project_id, _session_id, roteamento) do
+    notify({:module_routing_created, roteamento})
+
+    case Process.get(:fake_module_routing_error) do
+      nil ->
+        reply(:fake_module_routing, %{
+          "version" => 1,
+          "roteamento" =>
+            Enum.map(roteamento, fn r ->
+              %{
+                "modulo" => Map.get(r, :modulo) || Map.get(r, "modulo"),
+                "imagemCandidata" =>
+                  Map.get(r, :imagemCandidata) || Map.get(r, "imagemCandidata"),
+                "porque" => Map.get(r, :porque) || Map.get(r, "porque")
+              }
+            end)
+        })
+
+      reason ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
   def claim_task(_project_id, _session_id, module, agent_id) do
     # Atraso opcional via Application env (NÃO dicionário de processo): o
     # agente reidratado roda no processo DELE, então `Process.put` do teste

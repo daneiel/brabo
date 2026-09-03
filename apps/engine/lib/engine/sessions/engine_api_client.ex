@@ -170,6 +170,20 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Ferramenta `route_modules_to_infra` do Arquiteto (ADR 0131): roteia CADA
+  módulo do module_map vigente para uma imagem CANDIDATA, com o porquê.
+  `roteamento` é a lista `[%{modulo, imagemCandidata, porque}, ...]`. Módulo
+  fora do module_map vigente, lista vazia, módulo repetido, ou imagem que
+  falha a mesma regra de `choose_project_image` voltam como `{:error, _}`.
+  """
+  @callback route_modules_to_infra(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              roteamento :: [map()]
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Ciclo de task dos dev agents (Fase 4a). `claim_task` pega a próxima task
   pegável do módulo (atômico na api) — retorna `{:ok, task_map}` ou `{:ok, nil}`
   se não há. `mark_task` atualiza o status.
@@ -559,6 +573,9 @@ defmodule Engine.Sessions.EngineApiClient do
   def decide_project_image(project_id, session_id, decisao),
     do: impl().decide_project_image(project_id, session_id, decisao)
 
+  def route_modules_to_infra(project_id, session_id, roteamento),
+    do: impl().route_modules_to_infra(project_id, session_id, roteamento)
+
   def claim_task(project_id, session_id, module, agent_id),
     do: impl().claim_task(project_id, session_id, module, agent_id)
 
@@ -811,6 +828,14 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       "/internal/sessions/#{session_id}/project-image",
       Map.put(decisao, :projectId, project_id)
     )
+  end
+
+  @impl true
+  def route_modules_to_infra(project_id, session_id, roteamento) do
+    post_returning("/internal/sessions/#{session_id}/module-routing", %{
+      projectId: project_id,
+      roteamento: roteamento
+    })
   end
 
   @impl true

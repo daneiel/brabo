@@ -185,6 +185,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   nesses casos é exatamente o que a RN-468 proíbe. Nenhuma recusa do broker
   derruba a leitura do registrado, que é informação legítima por si só
   (RN-486, ADR 0130)
+- **engine,api,web**: o Arquiteto ganha a ferramenta **`route_modules_to_infra`**
+  — um item `{modulo, imagemCandidata, porque}` por módulo do `module_map`
+  vigente, gravado como `artifact.module_routing` (sem tabela, mesmo desenho
+  de `artifact.module_map`/`artifact.project_image`/`artifact.c4_diagram`: o
+  evento É o artefato). **Ele CANDIDATA, a Infra ELEGE** — a escolha final
+  entre as candidatas é um PR à parte; esta entrega só produz a lista
+  auditável. A imagem de cada item passa pela **mesma** regra de
+  `choose_project_image`: tag/digest explícito, `latest` recusado, `rationale`
+  com motivo real — reusada, nunca reimplementada. `validarRoteamento`
+  acrescenta o que é próprio da lista (vazia é recusada, módulo repetido
+  também), e cada `modulo` citado precisa existir no `module_map` vigente —
+  fora dele, a recusa nomeia os módulos VÁLIDOS, mesma régua de
+  `assign_story_modules`. `:direct`, nunca `proposed_action`: rotear não tem
+  efeito externo. `build_kickoff/1` — o único lugar de onde o modelo aprende a
+  ORDEM das ferramentas — passa a listar o passo logo depois de
+  `create_module_map` (RN-487, [ADR 0131](docs/adr/0131-roteamento-de-modulos-para-infra.md))
 
 - **web**: a seção **Modelos por agente** ganha uma barra que aplica **um
   modelo a todos os agentes de uma vez**. Escolher o mesmo modelo para os 17

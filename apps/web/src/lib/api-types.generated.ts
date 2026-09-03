@@ -862,6 +862,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/sessions/{sessionId}/module-routing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Routes each module of the current module_map to a candidate image
+         * @description The artifact IS the `artifact.module_routing` event: immutable, versioned, and with an author, alongside `artifact.module_map`/`artifact.project_image`/`artifact.c4_diagram`. Each item is validated with the same rule as `choose_project_image` (explicit tag/digest, `latest` rejected, non-trivial `rationale`); a module name outside the current module_map, an empty list, or a repeated module are all rejected with 400.
+         */
+        post: operations["InternalSessionsController_moduleRouting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/sessions/{sessionId}/pending-work": {
         parameters: {
             query?: never;
@@ -7619,6 +7639,42 @@ export interface components {
              */
             staffActive: boolean;
         };
+        RoteamentoDeModuloInternalDto: {
+            /**
+             * @description Nome do módulo — precisa existir no module_map vigente.
+             * @example checkout-api
+             */
+            modulo: string;
+            /**
+             * @description OCI reference with an explicit TAG or digest for this module. `latest` is REFUSED with 400 — the rule is domain-level.
+             * @example node:22-bookworm-slim
+             */
+            imagemCandidata: string;
+            /**
+             * @description Why THIS image for THIS module. Minimum of 10 characters.
+             * @example This module is TypeScript on Node 22; the slim variant has the runtime and nothing else.
+             */
+            porque: string;
+        };
+        RoteamentoDeModuloResponseDto: {
+            /** @example checkout-api */
+            modulo: string;
+            /** @example node:22-bookworm-slim */
+            imagemCandidata: string;
+            /** @example This module is TypeScript on Node 22; the slim variant has the runtime and nothing else. */
+            porque: string;
+        };
+        RoteamentoDeModulosGeradoResponseDto: {
+            roteamento: components["schemas"]["RoteamentoDeModuloResponseDto"][];
+            /** @example 1 */
+            version: number;
+        };
+        RouteModulesToInfraInternalDto: {
+            /** Format: uuid */
+            projectId: string;
+            /** @description One item per module of the current module_map. The candidate image is the Architect proposing, not deciding — Infra elects among the candidates in a later step. */
+            roteamento: components["schemas"]["RoteamentoDeModuloInternalDto"][];
+        };
         RuleCoverageResponseDto: {
             /** @example RN-014 */
             ruleId: string;
@@ -10163,6 +10219,52 @@ export interface operations {
                 };
             };
             /** @description Dependency cycle between modules. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session, project, or resource not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalSessionsController_moduleRouting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RouteModulesToInfraInternalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoteamentoDeModulosGeradoResponseDto"];
+                };
+            };
+            /** @description Empty list, repeated module, module outside the current module_map, or a candidate image that fails `choose_project_image`'s rule (no explicit tag, `latest`, or short `rationale`). */
             400: {
                 headers: {
                     [name: string]: unknown;
