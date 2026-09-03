@@ -564,6 +564,14 @@ agent" pattern — see [RN-037](../business-rules.md#rn-037)). It is **not**
 `capabilities` of the `GitProvider`: GitHub and GitLab have the SAME capabilities
 (`{protectBranch: true, pullRequests: true}`) — only `provider.name` distinguishes them.
 
+`/infra-context` also gained `moduleRouting` (ADR 0131/0133, [RN-491](../business-rules.md#rn-491))
+— the Architect's routed candidates (`artifact.module_routing`,
+`GetModuleRoutingUseCase`'s first HTTP consumer), `{status, roteamento,
+version, eventId, createdAt}`, `SEM_ROTEAMENTO` when the Architect hasn't
+run `route_modules_to_infra` yet. It's what `InfraLeadServer.build_kickoff/1`
+lists so the model can elect one candidate via `propose_container_start`
+instead of inventing an image outside it.
+
 ### Backlog and architecture
 
 | method | path |

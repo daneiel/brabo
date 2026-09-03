@@ -1667,7 +1667,7 @@
     },
     "/internal/sessions/{sessionId}/infra-context": {
       "get": {
-        "description": "The current module_map plus the relevant infrastructure ADRs.",
+        "description": "The current module_map plus the relevant infrastructure ADRs, plus the Architect's module routing (ADR 0131) — the candidates the Infra Lead elects among when proposing container_start.",
         "operationId": "InternalSessionsController_infraContext",
         "parameters": [
           {
@@ -13576,7 +13576,8 @@
               "parallelize",
               "raise_max_parallel",
               "propose_execution_plan",
-              "assess_implementability"
+              "assess_implementability",
+              "container_start"
             ],
             "example": "terminal"
           },
@@ -14562,6 +14563,46 @@
           "decidedAt"
         ]
       },
+      "EstadoDoRoteamentoResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "sem_roteamento",
+              "roteado"
+            ],
+            "example": "roteado"
+          },
+          "roteamento": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoteamentoDeModuloResponseDto"
+            }
+          },
+          "version": {
+            "type": "number",
+            "example": 1
+          },
+          "eventId": {
+            "type": "object",
+            "example": "01JC4Z0000EVENTOROTEAMENTO01",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "object",
+            "example": "2026-08-30T12:00:00.000Z",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "roteamento",
+          "version",
+          "eventId",
+          "createdAt"
+        ]
+      },
       "ExecucaoAtivadaResponseDto": {
         "type": "object",
         "properties": {
@@ -15467,12 +15508,21 @@
             "nullable": true,
             "example": "github",
             "description": "null when the project hasn't provisioned a repository yet. The Workflows subagent (Phase 8c) decides the CI pipeline format from this: \"gitlab\" generates .gitlab-ci.yml, any other value generates GitHub Actions."
+          },
+          "moduleRouting": {
+            "description": "The Architect-routed candidates (route_modules_to_infra, ADR 0131) — what the Infra Lead elects among when proposing container_start (ADR 0130/0133). \"sem_roteamento\" when the Architect has not routed anything yet.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EstadoDoRoteamentoResponseDto"
+              }
+            ]
           }
         },
         "required": [
           "moduleMap",
           "adrs",
-          "gitProvider"
+          "gitProvider",
+          "moduleRouting"
         ]
       },
       "InfraGateVerdictResponseDto": {
@@ -17705,7 +17755,8 @@
               "parallelize",
               "raise_max_parallel",
               "propose_execution_plan",
-              "assess_implementability"
+              "assess_implementability",
+              "container_start"
             ],
             "example": "terminal",
             "description": "Action type. Each type has its own minimum role: `git_push`, `git_merge`, and `git_branch_protect` require `maintainer`, the rest `developer`."
@@ -17773,7 +17824,8 @@
               "parallelize",
               "raise_max_parallel",
               "propose_execution_plan",
-              "assess_implementability"
+              "assess_implementability",
+              "container_start"
             ],
             "example": "terminal",
             "description": "What the action would do. `git_push` and `git_merge` require `maintainer`."
@@ -19801,6 +19853,7 @@
               "raise_max_parallel",
               "propose_execution_plan",
               "assess_implementability",
+              "container_start",
               "*"
             ],
             "example": "terminal",

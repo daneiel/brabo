@@ -69,8 +69,9 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Tetos de rebaixamento em `project_members` | A sobreposição `projectRole ?? workspaceRole` FICA nos dois sentidos (é capacidade, não bug); o que entra são dois tetos de 403 no caso de uso — ninguém rebaixa o `owner` do workspace, ninguém rebaixa a si mesmo. As três descrições de OpenAPI que a RN-471 declarou falsas passam a descrever o código; o gate do `Select` é PR à parte, por a tela não ter como calcular o primeiro teto | ADR 0127, RN-472 |
 | Telemetria de busca do RAG | A busca híbrida deixa rastro: `rag_searches` (com os pesos CONGELADOS na linha) e `rag_feedback` (o voto útil/irrelevante, o único sinal de verdade). TABELA e não só evento, porque `session_events.session_id` é `NOT NULL` e a busca da aba não tem sessão — o evento `rag.search`/`rag.feedback` é NARRAÇÃO, só quando há sessão. Ferramenta `rag_feedback` (`:direct`) nos seis agentes que já tinham `rag_search`, e `medir:rag` para ler. NADA calibrado — esta etapa só instrumenta | RN-479..481 |
 | Broker de container | Nasce `apps/broker`, o ÚNICO processo que fala com um daemon Docker no servidor — e ele NÃO aceita especificação: recebe `projectId` + operação, LÊ a decisão do Arquiteto da api e COMPÕE imagem, rede, recursos e o único mount. A porta do ADR 0128 MOVE de `apps/runner/src/` para `packages/docker-port` (os dois consumidores a empacotam; a api não pode consumi-la). A rota de ciclo de vida passa a devolver observado ao lado de registrado, sem fundir | ADR 0130, RN-485/486 |
-| Roteamento de módulos para infra (PR 1.4) | Sétima ferramenta do Arquiteto, `route_modules_to_infra`: um item `{modulo, imagemCandidata, porque}` por módulo do `module_map` vigente, gravado como `artifact.module_routing` (sem tabela, mesmo desenho de `artifact.project_image`/`artifact.c4_diagram`). Ele CANDIDATA — a imagem de cada item passa pela mesma `validarDecisaoDeImagem` de `choose_project_image` —, e quem ELEGE entre as candidatas é a Infra, num PR à parte (1.5, ainda não construído: `get_infra_context` não lê este artefato) | ADR 0131, RN-487 |
+| Roteamento de módulos para infra (PR 1.4) | Sétima ferramenta do Arquiteto, `route_modules_to_infra`: um item `{modulo, imagemCandidata, porque}` por módulo do `module_map` vigente, gravado como `artifact.module_routing` (sem tabela, mesmo desenho de `artifact.project_image`/`artifact.c4_diagram`). Ele CANDIDATA — a imagem de cada item passa pela mesma `validarDecisaoDeImagem` de `choose_project_image` —, e quem ELEGE entre as candidatas é a Infra, num PR à parte (1.5, fechado logo abaixo) | ADR 0131, RN-487 |
 | Golden-set de acerto do RAG | Molde do golden-set do QA (ADR 0123) aplicado à busca híbrida: como o julgamento não mora no engine (é `HybridSearchUseCase`, na api), `seed-golden-set-rag.ts` provisiona UM projeto com corpus real curado (22 arquivos de `docs/`) E roda a busca para 17 perguntas compostas de RNs/ADRs reais; `rag_golden_test.exs` só invoca o script e aplica o piso. Critério de acerto — caminho de arquivo, top-5, nunca chunk exato/rank 1 — é função pura testada. Gate novo `rag-acertivo`, `warn` (sem CI com LLM). Medido de verdade, duas vezes, deterministicamente: 17/17 no top-5 | ADR 0132, RN-490 |
+| A Infra elege, e a eleição sobe o container de verdade (PR 1.5) | Fecha a metade que a RN-487 e o comentário do `ContainerBrokerPort` (ADR 0130) deixaram pendurada: `propose_container_start` elege UMA `imagemCandidata` do roteamento vigente do Arquiteto (`get_infra_context` passa a ler `artifact.module_routing`, primeiro consumidor HTTP de `GetModuleRoutingUseCase`) e vira `container_start` (`proposed_action`, `maintainer`, deliberadamente fora do bloco de tetos absolutos de `decide.ts` — mesmo raciocínio de `propose_execution_plan`/`assess_implementability`, nunca seedada em auto-aprovação). Aprovada, `ExecuteContainerStartUseCase` REUSA `DecidirImagemDoProjetoUseCase` inteiro (`decidedBy: 'infra-lead'`) — sem isso a eleição seria inerte, já que o broker lê `artifact.project_image`, nunca o roteamento — e só então chama `ContainerBrokerPort.start` de verdade, transicionando `provisioning → running` (ou direto para `running` a partir de `stopped`) pela máquina de estados do ADR 0081. Dev agents NÃO passam a trabalhar dentro do container que sobe — declarado, PR posterior | ADR 0130/0133, RN-491 |
 
 ## Estado atual e aberto
 
@@ -87,16 +88,26 @@ daqui e o fechamento vai para o histórico.
   `dev-<modulo>` fechou (ADR 0094); a execução segue no caminho atual
 
 **Cortes e pausas vigentes:**
-- FASE 25b segue cortada NO QUE IMPORTA: **nenhum container sobe**. Não há
-  laço, fila nem `proposed_action` de `container_start`; `project_containers` só
-  grava estado, o worktree segue fora do container e o ADR 0055 vale como está.
-  O que mudou é que já EXISTE quem chame Docker: o broker (`apps/broker`, ADR
-  0130), o único processo do produto com o socket, sobre a mesma `DockerPort` de
-  cinco operações do ADR 0128 — hoje movida para `packages/docker-port`. Das
-  cinco, só `inspect` tem chamador (a rota de ciclo de vida, que passou a mostrar
-  o observado ao lado do registrado); as outras quatro são efeito externo e
-  esperam o `proposed_action` que o Infra Lead vai propor. O broker sobe sob
-  `profiles: ["container-broker"]` e portanto não sobe por padrão
+- FASE 25b segue cortada NO QUE IMPORTA POR PADRÃO: o broker sobe sob
+  `profiles: ["container-broker"]` e portanto não sobe por padrão — sem ele
+  de pé, `container_start` termina `failed` com `BrokerIndisponivelError`. O
+  que mudou (ADR 0133, RN-491) é que o MECANISMO deixou de ser corte:
+  `container_start` é `proposed_action` de verdade, decidida caso a caso pelo
+  `ApprovalCard` (`maintainer`, nunca seedada em auto-aprovação), e
+  `ExecuteContainerStartUseCase` chama `ContainerBrokerPort.start` de
+  verdade quando aprovada — o Infra Lead elege uma das candidatas do
+  roteamento do Arquiteto (`artifact.module_routing`, ADR 0131) e a eleição
+  emite nova versão de `artifact.project_image` (reusando
+  `DecidirImagemDoProjetoUseCase`, `decidedBy: 'infra-lead'`), porque o
+  broker compõe a partir DESSE artefato, nunca do roteamento. Das cinco
+  operações do ADR 0128/0130, agora DUAS têm chamador — `inspect` (a rota de
+  ciclo de vida, observado ao lado do registrado) e `start` —; `stop`/
+  `remove`/`exec` seguem sem um. `RegistrarTransicaoDeContainerUseCase`
+  ganhou o primeiro chamador fora de teste, transicionando
+  `provisioning → running` (ou direto para `running` a partir de `stopped`,
+  que a máquina de estados do ADR 0081 não deixa reprovisionar). O que segue
+  cortado, declarado: os dev agents NÃO passam a trabalhar dentro do
+  container que sobe — isso é uma PR posterior
 - Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
   aguardando spec; Staff dormente para disparo automático (acionável manual)
 - `appsec run_design/2` acionável, nada aciona sozinho (gatilho:
@@ -470,10 +481,15 @@ daqui e o fechamento vai para o histórico.
   local, não a fronteira de segurança (essa continua sendo autenticação +
   pipeline de aprovação, ver `apps/runner/src/guard.ts`); fora do Linux a
   restrição não se aplica.
-- A imagem de container de um projeto é ARTEFATO do ARQUITETO
-  (`artifact.project_image`, versionado, sem tabela), nunca configuração
-  escondida. Enquanto ele não decide, a aba Code responde 409 (RN-105) —
-  exceto em projeto nos modos `mounted`/`runner` (RN-169/RN-421).
+- A imagem de container de um projeto é ARTEFATO — `artifact.project_image`,
+  versionado, sem tabela, nunca configuração escondida —, e desde o ADR 0133
+  (RN-491) tem DOIS emissores possíveis, distinguidos por `decidedBy`: o
+  ARQUITETO decidindo do zero (`choose_project_image`, `'arquiteto'`) e a
+  INFRA elegendo entre as candidatas do próprio roteamento do Arquiteto
+  (`container_start`, `'infra-lead'`) — nunca um caminho paralelo, os dois
+  passam por `DecidirImagemDoProjetoUseCase`/`validarDecisaoDeImagem`.
+  Enquanto NENHUM dos dois decide, a aba Code responde 409 (RN-105) — exceto
+  em projeto nos modos `mounted`/`runner` (RN-169/RN-421).
   `git push`, abertura de PR e deploy NÃO saem pelo terminal — a regra é
   `require_approval` INCONDICIONAL (teto absoluto, revisado de `deny` pela
   RN-418/ADR 0102 — decisão GLOBAL do dono do produto: nunca auto-aprovável,
@@ -481,13 +497,16 @@ daqui e o fechamento vai para o histórico.
   "sempre permitir", que foi fechado na fonte pra não reabrir a porta).
   `sudo`/`doas` entram na MESMA régua. O ciclo de vida do container tem
   TABELA de estado desde a Onda 4/frente F1 do PROGRAMA 28
-  (`project_containers`, ADR 0081, RN-243..248) — e quem ESCREVE nela continua
-  sem chamar Docker: provisionar/reciclar/limpar DE VERDADE ainda não existe,
-  então a política de terminal do ADR 0055 (escopo de caminho, allowlist
-  estreito) segue valendo como está até o container subir de verdade. O que a
-  leitura ganhou (ADR 0130) foi o estado OBSERVADO ao lado do registrado,
-  perguntado ao broker — os dois nunca se fundem, e "não consegui olhar" tem
-  motivo próprio em vez de herdar o registrado (RN-486).
+  (`project_containers`, ADR 0081, RN-243..248) — e quem ESCREVE nela, desde o
+  ADR 0130/0133, PODE chamar Docker de verdade: `container_start`
+  (`proposed_action`, `maintainer`, RN-491) é o primeiro chamador real de
+  `ContainerBrokerPort.start`, e transiciona `provisioning → running` pela
+  máquina de estados. `stop`/`remove` seguem sem `proposed_action` própria —
+  a política de terminal do ADR 0055 (escopo de caminho, allowlist estreito)
+  segue valendo como está para o que ainda não sobe de verdade. O que a
+  leitura ganhou primeiro (ADR 0130) foi o estado OBSERVADO ao lado do
+  registrado, perguntado ao broker — os dois nunca se fundem, e "não
+  consegui olhar" tem motivo próprio em vez de herdar o registrado (RN-486).
 - O diagrama C4 (Context + Container) também é ARTEFATO do ARQUITETO
   (`artifact.c4_diagram`, versionado, sem tabela — RN-149, ADR 0068),
   mesmo desenho do `artifact.project_image`. O Container level é DERIVADO

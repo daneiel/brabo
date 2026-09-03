@@ -6872,6 +6872,7 @@ antes de `create_c4_diagram` precisar dele.
   tool-result de erro, nunca crash — RN-061)
 - **ADR:** [0131](adr/0131-roteamento-de-modulos-para-infra.md)
 - **Origem:** plano do dono do produto, Parte 1 / PR 1.4
+
 ### RN-490 — O golden-set de acerto do RAG mede por CAMINHO DE ARQUIVO, no TOP-5, nunca por chunk exato ou rank 1 {#rn-490}
 
 O gate `rag-acertivo` (`docs/gates.yml`) mede se a busca híbrida devolve o
@@ -6913,6 +6914,85 @@ o único que o produto suporta) e escrito só por humano.
 - **Teste:** `apps/api/test/domain/rag/golden-set-criterio.spec.ts`
 - **ADR:** [0132](adr/0132-golden-set-de-acerto-do-rag.md)
 - **Origem:** plano do dono do produto, Parte 2 / Etapa 2
+
+### RN-491 — A Infra elege entre as candidatas do Arquiteto, e a eleição vira uma NOVA versão de `artifact.project_image` {#rn-491}
+
+`propose_container_start` fecha a metade que a RN-487 deixou declarada em
+aberto: a Infra elege UMA das `imagemCandidata` do roteamento vigente do
+Arquiteto (`artifact.module_routing`) e propõe subir o container REAL do
+projeto. A eleição só tem efeito porque `ExecuteContainerStartUseCase` REUSA
+`DecidirImagemDoProjetoUseCase` para emitir uma nova versão de
+`artifact.project_image` com `decidedBy: 'infra-lead'` — sem isso a eleição
+seria auditável e INERTE: o broker compõe o container lendo `GET
+.../container-spec`, que lê `artifact.project_image` (RN-105), nunca
+`artifact.module_routing`.
+
+**A imagem eleita precisa estar na lista de candidatas, sempre — validado
+ANTES de tocar no artefato.** Fora da lista, a ação falha nomeando a imagem
+recusada e listando as candidatas válidas, e nem `DecidirImagemDoProjetoUseCase`
+nem o broker chegam a ser chamados: a Infra elege, nunca inventa.
+
+**Novo `container_start` (`maintainer`, mesmo calibre de `open_infra_pr`/
+`parallelize`), deliberadamente FORA do bloco de tetos absolutos de
+`decide.ts`** — mesmo raciocínio já registrado ali para
+`propose_execution_plan`/`assess_implementability`: é a PRIMEIRA vez que este
+container sobe de verdade para esta eleição, não uma ultrapassagem de um teto
+já autorizado. Diferente de `open_infra_pr`, esta ação NÃO é seedada em
+`INFRA_AUTONOMY_SEEDS` — o Infra Lead nunca aplica nada com `open_infra_pr`
+(só propõe uma PR que um humano ainda mergeia), mas subir um container é
+efeito externo real, então fica `require_approval` por padrão, decidido caso a
+caso pelo `ApprovalCard`. Um `maintainer` PODE configurar auto-aprovação
+depois, e por isso `ProposeActionUseCase` também executa no caminho
+`auto_approved`, mesma lição do comentário sobre `parallelize` nesse arquivo
+("sem isto a ação nascia, era aprovada — e nada subia").
+
+**Depois do broker confirmar, a transição de ciclo de vida segue a máquina de
+estados do ADR 0081, nunca reprovisiona à toa.** Sem linha ainda, ou linha em
+`failed`/`removed`: `provisioning` (a que lê a imagem recém-decidida e
+congela `imageVersion`) e só então `running`. Linha em `stopped`: direto para
+`running` — a máquina de estados nem permite `stopped -> provisioning`, e
+reprovisionar reemitiria uma imagem que já está gravada na linha. Linha já
+`provisioning`/`running`: completa a transição pendente ou não faz nada,
+apoiado no `start` idempotente do broker (`jaEstavaDePe`).
+
+**Revisa a RN-485.** "Nada dispara subida... o único chamador que existe hoje
+faz LEITURA" deixa de ser verdade: `container_start` é o primeiro chamador
+real de `ContainerBrokerPort.start`, das cinco operações que o ADR 0128/0130
+declarou. `RegistrarTransicaoDeContainerUseCase` ganha o primeiro chamador
+fora de teste também. Continua valendo que NADA dispara sozinho — é sempre uma
+`proposed_action`, decidida por um humano ou por política explícita.
+
+**Dev agents NÃO passam a trabalhar dentro do container que sobe aqui.** Essa
+etapa é uma PR posterior, declarada em aberto no CLAUDE.md — a frase que a
+tela de aprovação mostra (`apps/web/src/lib/aprovacoes.ts`) para de propósito
+antes de prometer isso.
+
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts`,
+  `apps/api/src/domain/actions/decide.ts` (`ACTION_TYPES`,
+  `MIN_ROLE_FOR_ACTION_TYPE`), `apps/api/src/domain/containers/container-start-execution-result.ts`,
+  `apps/api/src/application/use-cases/actions/approve-action.use-case.ts`,
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts`,
+  `apps/api/src/application/use-cases/execution/get-infra-context.use-case.ts`
+  (`moduleRouting`, primeiro consumidor HTTP de `GetModuleRoutingUseCase`),
+  `apps/web/src/lib/aprovacoes.ts`,
+  `apps/engine/lib/engine/infra/tools/propose_container_start.ex`,
+  `apps/engine/lib/engine/infra/infra_lead_server.ex`
+- **Teste:**
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
+  (caminho feliz elegendo candidata; imagem fora das candidatas recusa sem
+  chamar `DecidirImagemDoProjetoUseCase` nem o broker; `BrokerRecusouError`/
+  `BrokerIndisponivelError` viram `failed`, nunca propagam; `stopped` pula
+  direto para `running`),
+  `apps/api/test/domain/actions/decide.spec.ts` (`container_start` exige
+  `maintainer`; CONSEGUE chegar a `auto_approve` quando configurado — ao
+  contrário de `parallelize`/merge protegido/`instruction_patch`),
+  `apps/api/test/application/use-cases/execution/get-infra-context.use-case.spec.ts`
+  (`moduleRouting` presente e ausente),
+  `apps/web/src/lib/aprovacoes.test.ts` (frase não promete dev agent dentro
+  do container),
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs`
+- **ADR:** [0130](adr/0130-broker-de-container.md), [0133](adr/0133-infra-elege-imagem-do-roteamento.md)
+- **Origem:** plano do dono do produto, Parte 1 / PR 1.5
 
 ---
 
@@ -6957,6 +7037,8 @@ o único que o produto suporta) e escrito só por humano.
 | Voto num `searchId`/`chunkId` que aquela busca não devolveu | 400 que ensina, nada gravado — voto sem rank não distingue "índice pobre" de "pesos errados", e número sem significado é pior que número nenhum (RN-480) |
 | `medir:rag` numa janela em que `vector_available` foi `false` o tempo todo | **reprova (exit 1)**: o que foi medido não é a busca híbrida, é a metade léxica dela, e calibrar peso de vetor contra isso seria calibrar contra outro sistema (RN-479) |
 | `route_modules_to_infra` chamado sem `module_map` vigente, com lista vazia, módulo repetido, módulo fora do mapa, ou imagem inválida (`latest`/sem tag/`rationale` curto) | 400 nomeando o que falta ou o que está errado — pelo agente, tool-result de erro que o modelo corrige, nunca crash (RN-487) |
+| `container_start` elege uma imagem fora das candidatas do roteamento vigente do Arquiteto | ação vira `failed` nomeando a imagem recusada e listando as candidatas válidas — nem a imagem é decidida nem o broker é chamado (RN-491) |
+| Broker recusa ou está indisponível ao subir o container (`BrokerRecusouError`/`BrokerIndisponivelError`) | ação vira `failed` com a mensagem do broker — nunca propaga, nunca fica pendente (RN-491) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar
