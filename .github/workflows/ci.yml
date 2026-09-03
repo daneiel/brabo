@@ -426,22 +426,27 @@ jobs:
       # exercitados. Falhar aqui é a diferença entre "verde" e "verde de
       # verdade".
       #
-      # `:golden_set_qa` (ADR 0123) é a ÚNICA exclusão esperada aqui —
-      # permanente, por desenho (julga com um LLM real, custa tempo e não é
-      # determinística; roda só com `mix golden_set.qa`, nunca no CI), não
-      # por binário faltando. É sempre exatamente 1 teste (`@moduletag` em
-      # `qa_automacao_agent_golden_test.exs`), então o piso é fixo: mais que
-      # isso É o sinal real de binário ausente.
-      - name: Nenhum teste pode ter sido excluído além do golden-set
+      # DUAS exclusões são esperadas aqui, cada uma permanente e por desenho,
+      # nunca por binário faltando:
+      #   - `:golden_set_qa` (ADR 0123) — julga com um LLM real, custa tempo e
+      #     não é determinística; roda só com `mix golden_set.qa`.
+      #   - `:golden_set_rag` (ADR 0132) — mede a busca híbrida contra um
+      #     corpus real, precisa de embedding de verdade; roda só com
+      #     `mix golden_set.rag`.
+      # Cada uma é sempre exatamente 1 teste (`@moduletag` no módulo golden
+      # correspondente), então o piso é fixo em 2 — mais que isso É o sinal
+      # real de binário ausente. Uma terceira família de golden-set soma mais
+      # 1 ao piso, nunca o afrouxa por margem.
+      - name: Nenhum teste pode ter sido excluído além dos golden-sets
         run: |
           excluidos="$(grep -oE '[0-9]+ excluded' /tmp/mix-test.log | head -1 | grep -oE '^[0-9]+' || true)"
           excluidos="${excluidos:-0}"
-          if [ "${excluidos}" -gt 1 ]; then
-            echo "::error::testes excluídos além do golden-set (ADR 0123, esperado 1) — os binários dos gates não estavam disponíveis:"
+          if [ "${excluidos}" -gt 2 ]; then
+            echo "::error::testes excluídos além dos golden-sets (ADR 0123/0132, esperado 2) — os binários dos gates não estavam disponíveis:"
             grep -E 'excluded' /tmp/mix-test.log
             exit 1
           fi
-          echo "ok: só o golden-set (ADR 0123, sempre excluído aqui) contribuiu para a contagem de excluídos (${excluidos})"
+          echo "ok: só os golden-sets (ADR 0123/0132, sempre excluídos aqui) contribuíram para a contagem de excluídos (${excluidos})"
 
       # Piso (ratchet) sobre a % de cobertura do engine — ver
       # scripts/ci/coverage-floor.ts e scripts/ci/coverage-floor.json para o
