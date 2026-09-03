@@ -17372,7 +17372,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: unknown;
+                provider: string;
             };
             cookie?: never;
         };
@@ -17407,7 +17407,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: unknown;
+                provider: string;
             };
             cookie?: never;
         };
