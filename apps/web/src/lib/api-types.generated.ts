@@ -731,7 +731,7 @@ export interface paths {
         };
         /**
          * Assembles the InfraAgent's initial context
-         * @description The current module_map plus the relevant infrastructure ADRs.
+         * @description The current module_map plus the relevant infrastructure ADRs, plus the Architect's module routing (ADR 0131) — the candidates the Infra Lead elects among when proposing container_start.
          */
         get: operations["InternalSessionsController_infraContext"];
         put?: never;
@@ -4738,7 +4738,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start";
             /** @description Always an agent on this route. */
             actor: components["schemas"]["ActorDto"];
             /**
@@ -5249,6 +5249,20 @@ export interface components {
             /** Format: date-time */
             decidedAt: Record<string, never> | null;
         };
+        EstadoDoRoteamentoResponseDto: {
+            /**
+             * @example roteado
+             * @enum {string}
+             */
+            status: "sem_roteamento" | "roteado";
+            roteamento: components["schemas"]["RoteamentoDeModuloResponseDto"][];
+            /** @example 1 */
+            version: number;
+            /** @example 01JC4Z0000EVENTOROTEAMENTO01 */
+            eventId: Record<string, never> | null;
+            /** @example 2026-08-30T12:00:00.000Z */
+            createdAt: Record<string, never> | null;
+        };
         ExecucaoAtivadaResponseDto: {
             /**
              * @description Execution session created.
@@ -5669,6 +5683,8 @@ export interface components {
              * @enum {string|null}
              */
             gitProvider: "local" | "github" | "gitlab" | null;
+            /** @description The Architect-routed candidates (route_modules_to_infra, ADR 0131) — what the Infra Lead elects among when proposing container_start (ADR 0130/0133). "sem_roteamento" when the Architect has not routed anything yet. */
+            moduleRouting: components["schemas"]["EstadoDoRoteamentoResponseDto"];
         };
         InfraGateVerdictResponseDto: {
             /**
@@ -6793,7 +6809,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start";
             /** @description Who is proposing it. */
             actor: components["schemas"]["ActorDto"];
             /**
@@ -6826,7 +6842,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start";
             /**
              * @description Parameters of the action, specific to the `actionType`.
              * @example {
@@ -7891,7 +7907,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "*";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "*";
             /**
              * @description This agent's autonomy for this type. Does NOT override `permissions.json`: a pattern in `deny` stays blocked no matter how much autonomy the agent has.
              * @example auto_approve

@@ -61,6 +61,7 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   raise_max_parallel: 'propõe subir o teto de paralelismo',
   propose_execution_plan: 'propõe o plano de execução',
   assess_implementability: 'avalia a implementabilidade de uma story',
+  container_start: 'quer subir o container do projeto',
 };
 
 type Payload = Record<string, unknown>;
@@ -263,6 +264,31 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     // Lead, a partir do plano de teste da QA-estratégia. Aprovar registra o
     // parecer; não sobe agente nenhum.
     return `Registra a story como ${rotulo}${porque}.`;
+  },
+
+  container_start: (p) => {
+    const imagem = texto(p, 'imagem');
+    const network = texto(p, 'network');
+    const resources = p.resources as
+      | { cpus?: unknown; memoryMb?: unknown }
+      | undefined;
+    const cpus = typeof resources?.cpus === 'number' ? resources.cpus : undefined;
+    const memoriaMb =
+      typeof resources?.memoryMb === 'number' ? resources.memoryMb : undefined;
+
+    const qual = imagem ? ` de ${imagem}` : '';
+    const specs =
+      cpus !== undefined && memoriaMb !== undefined
+        ? ` com ${cpus} CPU e ${memoriaMb} MB de memória`
+        : '';
+    const rede = network ? `, rede ${network}` : '';
+    // A Infra elege entre as candidatas do roteamento do Arquiteto (ADR
+    // 0130/0133) — o container sobe com esta imagem/rede/recursos, montando
+    // a pasta do projeto. NÃO diz que os dev agents passam a trabalhar
+    // dentro dele: essa etapa ainda não existe (CLAUDE.md, "Estado atual e
+    // aberto") — prometer isso aqui seria a tela afirmando o que o código
+    // não faz.
+    return `Sobe o container${qual}${specs}${rede}, montando a pasta do projeto.`;
   },
 };
 

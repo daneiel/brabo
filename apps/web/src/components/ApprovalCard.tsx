@@ -44,6 +44,9 @@ const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   raise_max_parallel: AlertIcon,
   propose_execution_plan: AlertIcon,
   assess_implementability: AlertIcon,
+  // Efeito externo de verdade — gasta infra (ADR 0130/0133), mesmo calibre
+  // visual de `spend`/`parallelize`.
+  container_start: AlertIcon,
 };
 
 /**

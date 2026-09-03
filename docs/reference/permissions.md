@@ -82,6 +82,7 @@ matches any push, and `GitPush(algo)` matches nothing.
 | `raise_max_parallel` | `RaiseMaxParallel` | maintainer |
 | `propose_execution_plan` | `ProposeExecutionPlan` | maintainer |
 | `assess_implementability` | `AssessImplementability` | maintainer |
+| `container_start` | `ContainerStart` | maintainer |
 | `spend` | `Spend` | **owner** |
 
 The minimum role is checked **before** the file. Without it, `deny` —
