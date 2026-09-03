@@ -73,6 +73,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Golden-set de acerto do RAG | Molde do golden-set do QA (ADR 0123) aplicado à busca híbrida: como o julgamento não mora no engine (é `HybridSearchUseCase`, na api), `seed-golden-set-rag.ts` provisiona UM projeto com corpus real curado (22 arquivos de `docs/`) E roda a busca para 17 perguntas compostas de RNs/ADRs reais; `rag_golden_test.exs` só invoca o script e aplica o piso. Critério de acerto — caminho de arquivo, top-5, nunca chunk exato/rank 1 — é função pura testada. Gate novo `rag-acertivo`, `warn` (sem CI com LLM). Medido de verdade, duas vezes, deterministicamente: 17/17 no top-5 | ADR 0132, RN-490 |
 | A Infra elege, e a eleição sobe o container de verdade (PR 1.5) | Fecha a metade que a RN-487 e o comentário do `ContainerBrokerPort` (ADR 0130) deixaram pendurada: `propose_container_start` elege UMA `imagemCandidata` do roteamento vigente do Arquiteto (`get_infra_context` passa a ler `artifact.module_routing`, primeiro consumidor HTTP de `GetModuleRoutingUseCase`) e vira `container_start` (`proposed_action`, `maintainer`, deliberadamente fora do bloco de tetos absolutos de `decide.ts` — mesmo raciocínio de `propose_execution_plan`/`assess_implementability`, nunca seedada em auto-aprovação). Aprovada, `ExecuteContainerStartUseCase` REUSA `DecidirImagemDoProjetoUseCase` inteiro (`decidedBy: 'infra-lead'`) — sem isso a eleição seria inerte, já que o broker lê `artifact.project_image`, nunca o roteamento — e só então chama `ContainerBrokerPort.start` de verdade, transicionando `provisioning → running` (ou direto para `running` a partir de `stopped`) pela máquina de estados do ADR 0081. Dev agents NÃO passam a trabalhar dentro do container que sobe — declarado, PR posterior | ADR 0130/0133, RN-491 |
 | Dev agents executam DENTRO do container real (PR 1.6) | Fecha o que a RN-491 declarou pendente: `Engine.Actions.TerminalExecutor` ganha a QUINTA saída, `:executar_no_container` — projeto `execution_mode: container` com uma linha REGISTRADA `running` (`Engine.Containers.ProjectContainerLifecycle`, leitura direta, mesmo padrão de `Engine.Projects.Project`) — e o comando atravessa engine → api (`POST internal/projects/:projectId/container-exec`, `ExecutarComandoNoContainerUseCase`) → broker (`ContainerBrokerPort.exec`, o PRIMEIRO chamador real da última das cinco operações do ADR 0128/0130), rodando via `docker exec` em vez de `System.cmd` local. `cwd` é traduzido do caminho de HOST pra dentro de `/work` no engine, ANTES da chamada — confirmado em código que é o MESMO diretório físico que `Workspace.ensure!/4` já escreve (o worktree do dev agent não muda de lugar nem de mecanismo). `BrokerRecusouError`/`BrokerIndisponivelError`/falha de transporte viram `failed_result` normal, nunca crash nem fallback silencioso pra fora do container (RN-486: `running` registrado nunca garante container de pé). Terminal DENTRO do container ganha PISO de auto-aprovação (`ProposeActionUseCase`/`decide.ts`, `containerExecutionActive`) — os cinco tetos absolutos e o escopo léxico de sempre continuam rodando por cima, byte a byte | ADR 0134, RN-492/493 |
+| O portão da imagem nos três modos (PR 1.7, BREAKING) | Executa a decisão #5 do plano original, já aceita antes deste PR existir: a dispensa do portão RN-105 (409 sem imagem decidida) para `mounted`/`runner` (RN-169/RN-421, ADR 0072/0104) é REVOGADA — `ReadProjectCodeUseCase.portaoDoContainer` deixa de checar `executionMode`, e `ProjectCodeTab` (web) SIMPLIFICA: os três modos seguem o mesmo `useQuery`, `modoLocal` sai. `RegistrarTransicaoDeContainerUseCase` também para de recusar (400) por modo — `project_containers` pode nascer nos três, mas chegar em `running` de verdade CONTINUA impossível para `mounted`/`runner`, aplicado só no broker (`ModoDeExecucaoNaoSuportadoError`), que `ExecuteContainerStartUseCase` já trata sem crash nem silêncio, ANTES de qualquer transição ser chamada — por isso nenhuma checagem de modo foi duplicada na api. Custo aceito, declarado: `exp001`/`exp002` e qualquer outro projeto `mounted`/`runner` existente sem imagem decidida perdem a aba Code até o Arquiteto (ou a Infra) decidir uma — ação de operador exigida DEPOIS do deploy, por isso a branch nasce `breaking/` e a versão sobe MAJOR | ADR 0135, RN-494 |
 
 ## Estado atual e aberto
 
@@ -113,8 +114,13 @@ daqui e o fechamento vai para o histórico.
   teste, transicionando `provisioning → running` (ou direto para `running`
   a partir de `stopped`, que a máquina de estados do ADR 0081 não deixa
   reprovisionar). O que segue cortado, declarado: `mounted`/`runner`
-  continuam sem container nenhum subindo (o portão dos três modos é PR
-  posterior, 1.7); a pergunta "quantos módulos, um container só" segue como
+  continuam sem container nenhum subindo NO SERVIDOR — o portão dos três
+  modos fechou (RN-494/ADR 0135, PR 1.7: os três modos agora exigem imagem
+  decidida para a aba Code, e `RegistrarTransicaoDeContainerUseCase` não
+  recusa mais por modo), mas quem impede `mounted`/`runner` de chegar em
+  `running` continua sendo só o broker
+  (`ModoDeExecucaoNaoSuportadoError`), por decisão deliberada, não por
+  lacuna; a pergunta "quantos módulos, um container só" segue como
   está, `project_id UNIQUE` em `project_containers`, sem mudança aqui
 - Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
   aguardando spec; Staff dormente para disparo automático (acionável manual)
@@ -130,6 +136,15 @@ daqui e o fechamento vai para o histórico.
   alcance, declarado (ADR 0087/0089)
 
 **Lacunas aceitas e declaradas:**
+- Nem `propose_container_start` (ferramenta do Infra Lead) nem
+  `GetInfraContextUseCase` restringem por `executionMode` — o Infra Lead
+  PODE propor `container_start` para um projeto `mounted`/`runner`, e a
+  proposta só falha quando alguém aprova e o broker recusa
+  (`ModoDeExecucaoNaoSuportadoError`). Pré-existente ao ADR 0135 (RN-494),
+  investigado e confirmado nesse PR: gasta um ciclo de aprovação humana
+  numa ação destinada a falhar, mas a falha é nomeada, nunca silenciosa —
+  corrigir exigiria tocar o prompt/instrução do Infra Lead no engine, fora
+  do escopo de API/domínio
 - Restart do engine com Dev Lead suspenso perde a inscrição no Wake (decisão
   segue visível em Aprovações) — ADR 0086
 - A aba de Código abre com 492px de moldura à esquerda (sidebar 264 + trilho
@@ -481,10 +496,14 @@ daqui e o fechamento vai para o histórico.
   checkout do Brabo. `runner` valida só o LÉXICO na criação (sem I/O) e
   nasce `workspaceVerifiedAt: null` — o runner confirma o caminho de verdade
   quando conecta, sobrescrevendo o que foi digitado. O portão da imagem
-  (RN-105) NÃO vale para projeto `mounted`/`runner`, que não sobem
-  container. Consequência declarada no ADR: a contenção estrutural do `join`
-  some para esses projetos, e o vetor de symlink do ADR 0055 continua
-  aberto. No LINUX, o próprio CLI `brabo-runner` recusa `--dir` fora do
+  (RN-105) VALE para os TRÊS modos desde a RN-494/ADR 0135 — projeto
+  `mounted`/`runner` sem `artifact.project_image` decidido também responde
+  409 na aba Code; a dispensa antiga foi REVOGADA, não é mais o
+  comportamento. O que não sobe é o container em si: `mounted`/`runner`
+  continuam sem container PRÓPRIO no servidor. Consequência declarada no
+  ADR: a contenção estrutural do `join` some para esses projetos, e o vetor
+  de symlink do ADR 0055 continua aberto. No LINUX, o próprio CLI
+  `brabo-runner` recusa `--dir` fora do
   `$HOME` do usuário (RN-434, ADR 0104) — checagem de startup do processo
   local, não a fronteira de segurança (essa continua sendo autenticação +
   pipeline de aprovação, ver `apps/runner/src/guard.ts`); fora do Linux a
@@ -496,8 +515,11 @@ daqui e o fechamento vai para o histórico.
   INFRA elegendo entre as candidatas do próprio roteamento do Arquiteto
   (`container_start`, `'infra-lead'`) — nunca um caminho paralelo, os dois
   passam por `DecidirImagemDoProjetoUseCase`/`validarDecisaoDeImagem`.
-  Enquanto NENHUM dos dois decide, a aba Code responde 409 (RN-105) — exceto
-  em projeto nos modos `mounted`/`runner` (RN-169/RN-421).
+  Enquanto NENHUM dos dois decide, a aba Code responde 409 (RN-105) — nos
+  TRÊS modos de execução desde a RN-494/ADR 0135, que revogou a dispensa
+  que `mounted`/`runner` tinham (RN-169/RN-421). `mounted`/`runner`
+  continuam sem subir container PRÓPRIO no servidor — o que mudou é só a
+  exigência de alguém ter decidido a imagem antes de abrir a leitura.
   `git push`, abertura de PR e deploy NÃO saem pelo terminal — a regra é
   `require_approval` INCONDICIONAL (teto absoluto, revisado de `deny` pela
   RN-418/ADR 0102 — decisão GLOBAL do dono do produto: nunca auto-aprovável,

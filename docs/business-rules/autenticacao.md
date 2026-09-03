@@ -1615,12 +1615,16 @@ inicial, que é inequívoca porque o nome de pasta é validado contra
 
 Duas consequências explícitas do modo `local`:
 
-1. **O portão da imagem do Arquiteto ([RN-105](#rn-105)) NÃO vale.** Projeto
-   Local não sobe container, então a aba Code libera sem esperar decisão que
-   nunca vai acontecer. A dispensa mora no mesmo funil do portão na api, e a
-   tela concorda: `ProjectCodeTab` nem chega a perguntar o estado do container
-   ([RN-107](#rn-107)) quando o projeto é Local — se só a api dispensasse, a
-   aba continuaria bloqueada na tela por uma decisão inexistente.
+1. **O portão da imagem do Arquiteto ([RN-105](#rn-105)) NÃO vale.**
+   **REVOGADO pela [RN-494](../business-rules.md#rn-494) (ADR 0135)**: a
+   dispensa terminou — os três modos passam a exigir a decisão de imagem
+   antes de abrir a aba Code. O resto deste item é histórico. Projeto
+   Local não sobe container, então a aba Code liberava sem esperar decisão
+   que nunca ia acontecer. A dispensa morava no mesmo funil do portão na
+   api, e a tela concordava: `ProjectCodeTab` nem chegava a perguntar o
+   estado do container ([RN-107](#rn-107)) quando o projeto era Local — se
+   só a api dispensasse, a aba continuaria bloqueada na tela por uma
+   decisão inexistente.
 2. **O `permissions.json` mora na pasta do usuário**, junto com o código —
    porque a política tem que ser lida da MESMA raiz que o escopo de terminal
    autoriza.
