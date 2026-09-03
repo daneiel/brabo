@@ -11,8 +11,12 @@ import {
   BrokerIndisponivelError,
   BrokerRecusouError,
   ContainerBrokerPort,
+  type ContainerIniciadoPeloBroker,
 } from '../../ports/container-broker.port';
-import type { PosturaDeRede, RecursosDoContainer } from '../../../domain/containers/project-container';
+import type {
+  PosturaDeRede,
+  RecursosDoContainer,
+} from '../../../domain/containers/project-container';
 import type { ContainerStartExecutionResult } from '../../../domain/containers/container-start-execution-result';
 import type { ProposedAction } from '../../../domain/actions/proposed-action.entity';
 
@@ -89,7 +93,7 @@ export class ExecuteContainerStartUseCase {
         'infra-lead',
       );
 
-      let iniciado;
+      let iniciado: ContainerIniciadoPeloBroker;
       try {
         iniciado = await this.brokerPort.start(projectId);
       } catch (erro) {
