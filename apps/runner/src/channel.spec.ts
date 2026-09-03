@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   conectarCanal,
+  enviarContainerRemoveResult,
+  enviarContainerStartResult,
+  enviarContainerStopResult,
   enviarExecResult,
   enviarWorkspaceConfirm,
   JoinRecusadoError,
@@ -98,6 +101,9 @@ const handlersVazios = {
   onPtyClose: vi.fn(),
   onFsListDir: vi.fn(),
   onFsHomeDir: vi.fn(),
+  onContainerStart: vi.fn(),
+  onContainerStop: vi.fn(),
+  onContainerRemove: vi.fn(),
 };
 
 describe('conectarCanal', () => {
@@ -135,6 +141,94 @@ describe('conectarCanal', () => {
     });
     expect(canal.pushes).toEqual([
       { event: 'exec_result', payload: { ref: 'r1', exitCode: 0, output: 'ok', timedOut: false } },
+    ]);
+  });
+
+  it('entra no canal e faz roundtrip de container_start -> container_start_result (ADR 0137)', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const canalHolder: { atual: ChannelLike | null } = { atual: null };
+    const onContainerStart = vi.fn((msg: { ref: string; spec: unknown }) => {
+      enviarContainerStartResult(canalHolder.atual!, {
+        ref: msg.ref,
+        sucesso: true,
+        containerId: 'container-1',
+        nome: 'brabo-proj-abc12345',
+        jaEstavaDePe: false,
+      });
+    });
+
+    const conectado = await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: { ...handlersVazios, onContainerStart },
+      criarSocket: fabricaFalsa(canal),
+    });
+    canalHolder.atual = conectado.channel;
+
+    const spec = { workspaceDirName: 'proj-abc12345', imagem: 'node:22-bookworm-slim' };
+    canal.simularRecebimento('container_start', { ref: 'r1', spec });
+
+    expect(onContainerStart).toHaveBeenCalledWith({ ref: 'r1', spec });
+    expect(canal.pushes).toEqual([
+      {
+        event: 'container_start_result',
+        payload: {
+          ref: 'r1',
+          sucesso: true,
+          containerId: 'container-1',
+          nome: 'brabo-proj-abc12345',
+          jaEstavaDePe: false,
+        },
+      },
+    ]);
+  });
+
+  it('entra no canal e faz roundtrip de container_stop -> container_stop_result', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const canalHolder: { atual: ChannelLike | null } = { atual: null };
+    const onContainerStop = vi.fn((msg: { ref: string; workspaceDirName: string }) => {
+      enviarContainerStopResult(canalHolder.atual!, { ref: msg.ref, sucesso: true });
+    });
+
+    const conectado = await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: { ...handlersVazios, onContainerStop },
+      criarSocket: fabricaFalsa(canal),
+    });
+    canalHolder.atual = conectado.channel;
+
+    canal.simularRecebimento('container_stop', { ref: 'r2', workspaceDirName: 'proj-abc12345' });
+
+    expect(onContainerStop).toHaveBeenCalledWith({ ref: 'r2', workspaceDirName: 'proj-abc12345' });
+    expect(canal.pushes).toEqual([
+      { event: 'container_stop_result', payload: { ref: 'r2', sucesso: true } },
+    ]);
+  });
+
+  it('entra no canal e faz roundtrip de container_remove -> container_remove_result', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const canalHolder: { atual: ChannelLike | null } = { atual: null };
+    const onContainerRemove = vi.fn((msg: { ref: string; workspaceDirName: string }) => {
+      enviarContainerRemoveResult(canalHolder.atual!, { ref: msg.ref, sucesso: true });
+    });
+
+    const conectado = await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: { ...handlersVazios, onContainerRemove },
+      criarSocket: fabricaFalsa(canal),
+    });
+    canalHolder.atual = conectado.channel;
+
+    canal.simularRecebimento('container_remove', { ref: 'r3', workspaceDirName: 'proj-abc12345' });
+
+    expect(onContainerRemove).toHaveBeenCalledWith({ ref: 'r3', workspaceDirName: 'proj-abc12345' });
+    expect(canal.pushes).toEqual([
+      { event: 'container_remove_result', payload: { ref: 'r3', sucesso: true } },
     ]);
   });
 

@@ -32,6 +32,9 @@ import {
 } from './auth.ts';
 import {
   conectarCanal,
+  enviarContainerRemoveResult,
+  enviarContainerStartResult,
+  enviarContainerStopResult,
   enviarExecResult,
   enviarFsHomeDirReply,
   enviarFsListDirReply,
@@ -41,6 +44,9 @@ import {
   enviarWorkspaceConfirm,
   JoinRecusadoError,
   type ChannelLike,
+  type ContainerRemoveMessage,
+  type ContainerStartMessage,
+  type ContainerStopMessage,
   type ExecMessage,
   type FsHomeDirMessage,
   type FsListDirMessage,
@@ -62,11 +68,16 @@ import {
   DockerCliAusenteError,
   DockerIndisponivelError,
   DockerViaCli,
+  especificacaoValidada,
+  nomeDeWorkspaceValidado,
+  PONTO_DE_MONTAGEM,
+  type DockerPort,
 } from '@brabo/docker-port';
 import { executarComando } from './exec.ts';
 import { diretorioInicial, listarDiretorio } from './fs-browser.ts';
 import {
   CwdForaDaRaizError,
+  cwdParaContainer,
   DirForaDoHomeError,
   DirNaoEUmaPastaError,
   garantirDiretorio,
@@ -256,13 +267,23 @@ const TETO_DE_TENTATIVAS_SEGUIDAS = 10;
 /** Handlers de `exec`/PTY — dependem do canal ATUAL, guardado num holder mutável
  * porque `conectarCanal` só devolve o canal DEPOIS de já ter passado os
  * handlers (o mesmo problema resolvido no teste de `channel.spec.ts`). */
-interface EstadoDoRunner {
+/**
+ * `containerAtivo` (ADR 0137) — o NOME do container que ESTE runner subiu
+ * (`brabo-<workspaceDirName>`), ou `null` sem container. É o que decide, em
+ * `tratarExec`, se um comando roda direto no host (comportamento de sempre)
+ * ou via `docker exec` — a decisão é INTERNA ao runner, o engine não sabe
+ * disso e não precisa saber (`Engine.Actions.TerminalExecutor` já roteia todo
+ * comando de projeto `runner` conectado pra cá incondicionalmente).
+ */
+export interface EstadoDoRunner {
   canalAtual: ChannelLike | null;
   dir: string;
   gerenciadorPty: GerenciadorDePty;
+  docker: DockerPort;
+  containerAtivo: string | null;
 }
 
-async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Promise<void> {
+export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Promise<void> {
   const canal = estado.canalAtual;
   if (!canal) return; // conexão caiu entre o recebimento e o tratamento — nada a responder
 
@@ -285,7 +306,9 @@ async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Promise<voi
   }
 
   console.log(`exec ${msg.ref}: ${msg.command} (cwd=${cwd})`);
-  const resultado = await executarComando(msg.command, cwd);
+  const resultado = estado.containerAtivo
+    ? await executarComandoNoContainer(estado, estado.containerAtivo, msg.command, cwd)
+    : await executarComando(msg.command, cwd);
   console.log(
     `exec ${msg.ref}: exit=${resultado.exitCode} timedOut=${resultado.timedOut} ` +
       `bytes=${resultado.output.length}`,
@@ -298,6 +321,24 @@ async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Promise<voi
     return;
   }
   enviarExecResult(canal, { ref: msg.ref, ...resultado });
+}
+
+/**
+ * `cwd` chega aqui já validado por `validarCwdDentroDaRaiz` — sempre um
+ * caminho de HOST dentro de `estado.dir`. Traduzido pra dentro de
+ * `PONTO_DE_MONTAGEM` (`cwdParaContainer`, `guard.ts`) ANTES de sair pro
+ * `docker exec`: o container nunca vê um caminho de host.
+ */
+async function executarComandoNoContainer(
+  estado: EstadoDoRunner,
+  nomeDoContainer: string,
+  command: string,
+  cwd: string,
+): Promise<{ exitCode: number; output: string; timedOut: boolean }> {
+  return estado.docker.exec(nomeDoContainer, {
+    comando: command,
+    cwd: cwdParaContainer(estado.dir, cwd, PONTO_DE_MONTAGEM),
+  });
 }
 
 function tratarPtyOpen(estado: EstadoDoRunner, msg: PtyOpenMessage): void {
@@ -329,6 +370,100 @@ function tratarFsHomeDir(estado: EstadoDoRunner, msg: FsHomeDirMessage): void {
   if (!canal) return;
 
   enviarFsHomeDirReply(canal, { ref: msg.ref, path: diretorioInicial() });
+}
+
+/**
+ * `container_start` (ADR 0137) — sobe o container do projeto NA MÁQUINA DO
+ * USUÁRIO, com o Docker DELE. `msg.spec` é o que a api compôs
+ * (`EspecificacaoDeContainerParaRunner`) MENOS `raizDoProjeto`: este runner
+ * enche esse campo sozinho, com `estado.dir` — a raiz JÁ confirmada e
+ * validada no startup da CLI (RN-434/435, `guard.ts`); não há segunda
+ * validação de "caminho de mount válido" porque o mount É `estado.dir`,
+ * ponto (mesmo raciocínio do docblock de `guard.ts`).
+ *
+ * Qualquer falha — `EspecificacaoInvalidaError` (spec mal formada),
+ * `DockerIndisponivelError`/`DockerCliAusenteError` (sem Docker nesta
+ * máquina), ou qualquer outra — vira `container_start_result` com
+ * `sucesso: false`, nunca uma exceção não tratada que derruba o runner.
+ */
+export async function tratarContainerStart(
+  estado: EstadoDoRunner,
+  msg: ContainerStartMessage,
+): Promise<void> {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+
+  try {
+    const spec = especificacaoValidada({ ...msg.spec, raizDoProjeto: estado.dir });
+    console.log(`container_start ${msg.ref}: subindo ${spec.imagem} em ${estado.dir}`);
+    const resultado = await estado.docker.start(spec);
+
+    if (estado.canalAtual !== canal) return; // canal caiu enquanto o Docker subia
+
+    estado.containerAtivo = resultado.nome;
+    console.log(
+      `container_start ${msg.ref}: container ${resultado.nome} de pé ` +
+        `(jaEstavaDePe=${resultado.jaEstavaDePe})`,
+    );
+    enviarContainerStartResult(canal, {
+      ref: msg.ref,
+      sucesso: true,
+      containerId: resultado.containerId,
+      nome: resultado.nome,
+      jaEstavaDePe: resultado.jaEstavaDePe,
+    });
+  } catch (erro) {
+    if (estado.canalAtual !== canal) return;
+    const explicacao = mensagemDeErro(erro);
+    console.warn(`container_start ${msg.ref}: recusado — ${explicacao}`);
+    enviarContainerStartResult(canal, { ref: msg.ref, sucesso: false, erro: explicacao });
+  }
+}
+
+/** `container_stop` (ADR 0137) — espelho de `tratarContainerStart`. */
+export async function tratarContainerStop(
+  estado: EstadoDoRunner,
+  msg: ContainerStopMessage,
+): Promise<void> {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+
+  try {
+    const nome = nomeDeWorkspaceValidado(msg.workspaceDirName);
+    await estado.docker.stop(nome);
+
+    if (estado.canalAtual !== canal) return;
+    estado.containerAtivo = null;
+    enviarContainerStopResult(canal, { ref: msg.ref, sucesso: true });
+  } catch (erro) {
+    if (estado.canalAtual !== canal) return;
+    const explicacao = mensagemDeErro(erro);
+    console.warn(`container_stop ${msg.ref}: recusado — ${explicacao}`);
+    enviarContainerStopResult(canal, { ref: msg.ref, sucesso: false, erro: explicacao });
+  }
+}
+
+/** `container_remove` (ADR 0137) — espelho de `tratarContainerStart`. */
+export async function tratarContainerRemove(
+  estado: EstadoDoRunner,
+  msg: ContainerRemoveMessage,
+): Promise<void> {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+
+  try {
+    const nome = nomeDeWorkspaceValidado(msg.workspaceDirName);
+    await estado.docker.remove(nome);
+
+    if (estado.canalAtual !== canal) return;
+    estado.containerAtivo = null;
+    enviarContainerRemoveResult(canal, { ref: msg.ref, sucesso: true });
+  } catch (erro) {
+    if (estado.canalAtual !== canal) return;
+    const explicacao = mensagemDeErro(erro);
+    console.warn(`container_remove ${msg.ref}: recusado — ${explicacao}`);
+    enviarContainerRemoveResult(canal, { ref: msg.ref, sucesso: false, erro: explicacao });
+  }
 }
 
 /**
@@ -370,6 +505,9 @@ async function conectarERodar(
       onPtyClose: (msg) => estado.gerenciadorPty.fechar(msg.sessionRef),
       onFsListDir: (msg) => void tratarFsListDir(estado, msg),
       onFsHomeDir: (msg) => tratarFsHomeDir(estado, msg),
+      onContainerStart: (msg) => void tratarContainerStart(estado, msg),
+      onContainerStop: (msg) => void tratarContainerStop(estado, msg),
+      onContainerRemove: (msg) => void tratarContainerRemove(estado, msg),
       onDisconnected: () => resolverQueda(),
     },
   });
@@ -536,6 +674,8 @@ async function main(): Promise<void> {
   const estado: EstadoDoRunner = {
     canalAtual: null,
     dir,
+    docker: new DockerViaCli(),
+    containerAtivo: null,
     gerenciadorPty: new GerenciadorDePty(
       dir,
       (sessionRef, dataBase64) => {

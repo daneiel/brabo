@@ -830,7 +830,7 @@ The other four are external effect and do not happen without a
 
 ## api → engine
 
-Sixteen command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
+Nineteen command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
 
 | method | path | what it triggers |
 |---|---|---|
@@ -850,6 +850,17 @@ Sixteen command routes, plus the health ones. Under `/internal` with `VerifyServ
 | POST | `/projects/:id/anamnese/run` | Anamnese run |
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalidates the instruction cache |
 | POST | `/actions/execute` · `/actions/execute-git` | executes an **already approved** action |
+| POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | asks the RUNNER connected to the project to start/stop/remove its container ([RN-497](../business-rules.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — only for `mounted`/`runner` projects; `container` still goes through the broker, never here |
+
+**The three `containers/*` routes are the mirror of `container-exec` below, in
+the opposite direction.** `container-exec` is the ENGINE asking the api to run
+a command inside the SERVER's container (via the broker); `containers/*` is
+the API asking the ENGINE to run an operation on the container that lives on
+the USER's machine (via the runner, over the `terminal:<projectId>` channel).
+The response is always `200`, `{ sucesso: false, motivoCodigo, motivo }` for
+"no runner connected"/"timeout", `{ sucesso: false, motivo }` for "the runner
+tried and refused" — never an HTTP error status for either, same discipline
+as `container-exec`.
 
 The two handoff offers come from the **same** confirmation of architecture
 ready, and they are separate routes on purpose: Infra and Dev are areas with independent

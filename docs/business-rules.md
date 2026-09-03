@@ -7295,6 +7295,102 @@ inline sem uma quarta consulta por projeto.
 - **Decisão arquitetural:** [ADR 0136](adr/0136-pagina-global-de-containers.md)
 - **Origem:** plano do dono do produto, Parte 1 / PR 1.8
 
+### RN-497 — O `brabo-runner` sobe o container do projeto NA MÁQUINA DO USUÁRIO, com o Docker DELE {#rn-497}
+
+Fecha a metade que a RN-494 (ADR 0135) deixou declarada: `mounted`/`runner`
+passaram a EXIGIR imagem decidida (o portão da RN-105 vale nos três modos),
+mas continuavam sem subir container NENHUM — só `execution_mode: container`
+tinha alguém (o broker, `apps/broker`) capaz de chamar Docker de verdade.
+`container_start`/`container_stop`/`container_remove` (RN-491/495) agora têm
+um SEGUNDO caminho de execução, ramificado pelo `executionMode` do projeto
+dentro de `ExecuteContainerStartUseCase`/`ExecuteContainerStopUseCase`/
+`ExecuteContainerRemoveUseCase` — nunca na PROPOSTA nem na APROVAÇÃO da
+ação, que continuam agnósticas de modo (`decide.ts` não muda).
+
+**`container` segue pelo broker, sem mudança nenhuma.** `mounted`/`runner`
+pedem ao ENGINE (`ApiToEngineClient.startContainerViaRunner`/
+`stopContainerViaRunner`/`removeContainerViaRunner`, síncrono como
+`executeTerminalAction`) para repassar ao RUNNER conectado — o CLI que já
+mantém o canal `terminal:<projectId>` (ADR 0103/0104) ganha TRÊS pares de
+evento novos, `container_start`/`_result`, `container_stop`/`_result`,
+`container_remove`/`_result` (`apps/runner/src/channel.ts`), no MESMO molde
+de `exec`/`exec_result`: `Engine.Runners.RunnerRouter` despacha pro canal
+correlacionado por `ref` e fica bloqueado em `receive`, o runner chama
+`DockerViaCli.start/stop/remove` (`@brabo/docker-port`, ADR 0128) com o
+DOCKER DO USUÁRIO — não o do servidor — e responde. `EngineWeb.
+ContainerCommandController` (rotas `POST internal/projects/:projectId/
+containers/{start,stop,remove}`) é o único chamador; nenhum outro caminho
+alcança essas três operações do lado engine.
+
+**A imagem que sobe não é ELEITA de novo** — ao contrário do caminho
+`container`, que reusa `DecidirImagemDoProjetoUseCase` para gravar uma nova
+versão de `artifact.project_image`. O caminho `mounted`/`runner` só LÊ a
+decisão VIGENTE (`ObterSpecDeContainerUseCase`, o MESMO caso de uso que já
+compõe `GET .../container-spec` para o broker — chamado direto, sem HTTP,
+porque os dois rodam no processo da api) e a manda ao runner; sem imagem
+decidida (RN-105), falha ANTES de perguntar ao engine.
+
+**"Sem runner conectado" é FALHA NORMAL, nunca exceção genérica** — mesma
+disciplina de `BrokerIndisponivelError`/`BrokerRecusouError` do caminho
+`container`. `RunnerNaoConectadoError` (sem runner, ou timeout) e
+`RunnerRecusouContainerError` (o runner respondeu e RECUSOU — Docker
+indisponível na máquina do usuário, especificação inválida) são as duas
+classes que `HttpApiToEngineClient` lança; os três casos de uso as capturam
+e gravam `failed` com o motivo, nunca deixam propagar. Do lado engine, a
+resposta é SEMPRE 200 — `sucesso: false` no corpo, com `motivoCodigo`
+("not_connected"/"timeout") só quando o engine NEM CHEGOU a perguntar ao
+runner (`RunnerRouter` devolveu `{:error, _}`), nunca um status HTTP de erro
+para o que é falha normal do comando.
+
+**`Engine.Actions.TerminalExecutor` NÃO ganhou saída nova.** A decisão
+"rodar o comando no host ou dentro do container que este runner subiu" é
+INTERNA ao runner — `decisao_de_execucao/1` já roteia INCONDICIONALMENTE
+todo comando de projeto `runner` conectado para `RunnerRouter.exec/4`
+(RN-423). O que muda é só `apps/runner/src/index.ts`: `EstadoDoRunner` ganha
+`containerAtivo` (o NOME do container que ESTE runner subiu, ou `null`), e
+`tratarExec` passa a rotear pra `DockerViaCli.exec` (via `docker exec`)
+quando há container ativo, ou pro caminho de sempre (`executarComando`
+direto no host) quando não há — o `cwd`, já validado por
+`validarCwdDentroDaRaiz` contra a raiz do projeto, é traduzido pra dentro de
+`/work` por troca de PREFIXO (`cwdParaContainer`, `guard.ts`), mesmo
+raciocínio de `cwd_para_container/2` do lado engine (RN-492).
+
+**`guard.ts` (contenção em `$HOME` no Linux, RN-434) passa a cobrir também o
+caminho montado, sem NENHUMA validação nova.** O bind-mount do container É
+`estado.dir` — a mesma raiz que `validarDirDentroDoHomeNoLinux` já validou
+no startup da CLI, antes de qualquer container subir. Não existe uma
+segunda checagem de "caminho de mount válido" porque não precisa existir: o
+mount É a raiz confirmada, ponto.
+
+- **Onde:** `apps/runner/src/channel.ts`, `apps/runner/src/index.ts`
+  (`EstadoDoRunner.containerAtivo`, `tratarContainerStart/Stop/Remove`,
+  `tratarExec`), `apps/runner/src/guard.ts` (`cwdParaContainer`),
+  `apps/engine/lib/engine/runners/runner_router.ex`
+  (`start_container/stop_container/remove_container`),
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex`,
+  `apps/engine/lib/engine_web/controllers/container_command_controller.ex`,
+  `apps/engine/lib/engine_web/router.ex`,
+  `apps/api/src/application/ports/api-to-engine-client.port.ts`
+  (`RunnerNaoConectadoError`, `RunnerRecusouContainerError`),
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts`,
+  `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts`,
+  `apps/api/src/application/use-cases/actions/execute-container-stop.use-case.ts`,
+  `apps/api/src/application/use-cases/actions/execute-container-remove.use-case.ts`
+- **Teste:**
+  `apps/runner/src/channel.spec.ts` (roundtrip dos três pares novos),
+  `apps/runner/src/index-handlers.spec.ts` (`tratarExec` roteia host vs.
+  container; `tratarContainerStart/Stop/Remove` nunca lançam),
+  `apps/runner/src/guard.spec.ts` (`cwdParaContainer`),
+  `apps/engine/test/engine/runners/runner_router_test.exs`,
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`,
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts`,
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/actions/execute-container-stop.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/actions/execute-container-remove.use-case.spec.ts`
+  (os três com describe "mounted/runner (ADR 0137)")
+- **Decisão arquitetural:** [ADR 0137](adr/0137-o-runner-sobe-o-container-do-projeto.md)
+- **Origem:** plano do dono do produto, Parte 1 / PR 1.3
+
 ---
 
 ## Quando dá errado

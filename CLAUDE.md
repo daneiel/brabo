@@ -75,6 +75,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Dev agents executam DENTRO do container real (PR 1.6) | Fecha o que a RN-491 declarou pendente: `Engine.Actions.TerminalExecutor` ganha a QUINTA saída, `:executar_no_container` — projeto `execution_mode: container` com uma linha REGISTRADA `running` (`Engine.Containers.ProjectContainerLifecycle`, leitura direta, mesmo padrão de `Engine.Projects.Project`) — e o comando atravessa engine → api (`POST internal/projects/:projectId/container-exec`, `ExecutarComandoNoContainerUseCase`) → broker (`ContainerBrokerPort.exec`, o PRIMEIRO chamador real da última das cinco operações do ADR 0128/0130), rodando via `docker exec` em vez de `System.cmd` local. `cwd` é traduzido do caminho de HOST pra dentro de `/work` no engine, ANTES da chamada — confirmado em código que é o MESMO diretório físico que `Workspace.ensure!/4` já escreve (o worktree do dev agent não muda de lugar nem de mecanismo). `BrokerRecusouError`/`BrokerIndisponivelError`/falha de transporte viram `failed_result` normal, nunca crash nem fallback silencioso pra fora do container (RN-486: `running` registrado nunca garante container de pé). Terminal DENTRO do container ganha PISO de auto-aprovação (`ProposeActionUseCase`/`decide.ts`, `containerExecutionActive`) — os cinco tetos absolutos e o escopo léxico de sempre continuam rodando por cima, byte a byte | ADR 0134, RN-492/493 |
 | O portão da imagem nos três modos (PR 1.7, BREAKING) | Executa a decisão #5 do plano original, já aceita antes deste PR existir: a dispensa do portão RN-105 (409 sem imagem decidida) para `mounted`/`runner` (RN-169/RN-421, ADR 0072/0104) é REVOGADA — `ReadProjectCodeUseCase.portaoDoContainer` deixa de checar `executionMode`, e `ProjectCodeTab` (web) SIMPLIFICA: os três modos seguem o mesmo `useQuery`, `modoLocal` sai. `RegistrarTransicaoDeContainerUseCase` também para de recusar (400) por modo — `project_containers` pode nascer nos três, mas chegar em `running` de verdade CONTINUA impossível para `mounted`/`runner`, aplicado só no broker (`ModoDeExecucaoNaoSuportadoError`), que `ExecuteContainerStartUseCase` já trata sem crash nem silêncio, ANTES de qualquer transição ser chamada — por isso nenhuma checagem de modo foi duplicada na api. Custo aceito, declarado: `exp001`/`exp002` e qualquer outro projeto `mounted`/`runner` existente sem imagem decidida perdem a aba Code até o Arquiteto (ou a Infra) decidir uma — ação de operador exigida DEPOIS do deploy, por isso a branch nasce `breaking/` e a versão sobe MAJOR | ADR 0135, RN-494 |
 | Página global de containers (PR 1.8, fecha a Parte 1) | `/containers`, cross-projeto: uma linha por projeto do workspace com `project_containers` — imagem CONGELADA (`imageVersion`, não a vigente), estado REGISTRADO, estado OBSERVADO e recursos, via `ContainersOverviewRepository` (TRÊS consultas em lote, mesmo molde de `ProjectsSummaryRepository`, nunca N+1). Perguntar o observado ao broker é chamada de rede por projeto — só `provisioning`/`running` são elegíveis, com teto de 20 chamadas por carregamento (`TETO_DE_VERIFICACOES_POR_CARGA`); o que fica de fora diz por quê (`naoVerificado`), nunca confundido com o broker ter recusado (`naoObservado`). Dois tipos de ação NOVOS fecham as cinco operações do ADR 0128/0130 (todas com chamador agora): `container_stop` segue o calibre de `container_start` (`maintainer`, pode auto-aprovar); `container_remove` — descarta o container, exige reprovisionar do zero — entra no MESMO teto absoluto de git push/comando privilegiado (RN-418), nunca auto-aprovável, "sempre permitir" recusado na fonte. `ContainerBrokerPort.remove` já era `docker rm --force`; a máquina de estados não ganhou atalho `running → removed` — o caso de uso registra os dois hops. "Subir de novo" REUSA `container_start` sem mudança de backend, montando o payload a partir da decisão de imagem vigente do projeto | ADR 0136, RN-495/496 |
+| O runner sobe o container do projeto (PR 1.3, Parte 1 fora de ordem — fecha a metade que a RN-494/PR 1.7 tinha deixado declarada) | `container_start`/`container_stop`/`container_remove` ganham SEGUNDO caminho de execução, ramificado por `executionMode`: `container` segue pelo broker (inalterado); `mounted`/`runner` passam a pedir ao RUNNER conectado, via TRÊS pares novos no canal Phoenix (`container_start`/`_result`, `container_stop`/`_result`, `container_remove`/`_result`, mesmo molde de `exec`/`exec_result`) — `EngineWeb.ContainerCommandController` repassa pro `RunnerRouter`, que o runner atende com `DockerViaCli` (o Docker DELE, `@brabo/docker-port`, que ganha uso real além de `--self-test-docker`). A imagem é LIDA (`ObterSpecDeContainerUseCase`, o mesmo caso de uso do broker), nunca reeleita. "Sem runner"/"timeout" (`RunnerNaoConectadoError`) e "runner recusou" (`RunnerRecusouContainerError`) viram `failed` nomeado, nunca exceção. `Engine.Actions.TerminalExecutor` não ganhou saída nova — ele já roteava todo comando de projeto `runner` conectado pro canal incondicionalmente; a escolha host-vs-container é INTERNA ao runner (`EstadoDoRunner.containerAtivo`, `tratarExec` roteia via `docker exec` com `cwd` traduzido por troca de prefixo, `cwdParaContainer`). `guard.ts`/RN-434 passa a cobrir o bind-mount sem NENHUMA validação nova — o mount É a raiz já confirmada no startup da CLI | ADR 0137, RN-497 |
 
 ## Estado atual e aberto
 
@@ -131,15 +132,19 @@ daqui e o fechamento vai para o histórico.
   `running → stopped → removed`, refletindo que `ContainerBrokerPort.remove`
   já era `docker rm --force` (remove mesmo `running`, numa chamada só) sem
   alargar a máquina de estados com um atalho `running → removed` que só
-  existiria para este caso. O que segue cortado, declarado: `mounted`/`runner`
-  continuam sem container nenhum subindo NO SERVIDOR — o portão dos três
-  modos fechou (RN-494/ADR 0135, PR 1.7: os três modos agora exigem imagem
-  decidida para a aba Code, e `RegistrarTransicaoDeContainerUseCase` não
-  recusa mais por modo), mas quem impede `mounted`/`runner` de chegar em
-  `running` continua sendo só o broker
-  (`ModoDeExecucaoNaoSuportadoError`), por decisão deliberada, não por
-  lacuna; a pergunta "quantos módulos, um container só" segue como
-  está, `project_id UNIQUE` em `project_containers`, sem mudança aqui
+  existiria para este caso. O que seguia cortado até o ADR 0137 (RN-497,
+  PR 1.3): `mounted`/`runner` continuavam sem container nenhum subindo NO
+  SERVIDOR — o portão dos três modos fechou (RN-494/ADR 0135, PR 1.7: os
+  três modos agora exigem imagem decidida para a aba Code, e
+  `RegistrarTransicaoDeContainerUseCase` não recusa mais por modo), mas quem
+  impedia `mounted`/`runner` de chegar em `running` era só o broker
+  (`ModoDeExecucaoNaoSuportadoError`). O ADR 0137 fecha essa metade DO OUTRO
+  LADO: `mounted`/`runner` sobem container de verdade, só que NA MÁQUINA DO
+  USUÁRIO, pelo `brabo-runner` — o broker (e o servidor) continuam sem
+  enxergar essa pasta, e `container` continua sendo o único modo que sobe
+  container NO SERVIDOR. A pergunta "quantos módulos, um container só"
+  segue como está, `project_id UNIQUE` em `project_containers`, sem mudança
+  aqui
 - Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
   aguardando spec; Staff dormente para disparo automático (acionável manual)
 - `appsec run_design/2` acionável, nada aciona sozinho (gatilho:
@@ -156,13 +161,15 @@ daqui e o fechamento vai para o histórico.
 **Lacunas aceitas e declaradas:**
 - Nem `propose_container_start` (ferramenta do Infra Lead) nem
   `GetInfraContextUseCase` restringem por `executionMode` — o Infra Lead
-  PODE propor `container_start` para um projeto `mounted`/`runner`, e a
-  proposta só falha quando alguém aprova e o broker recusa
-  (`ModoDeExecucaoNaoSuportadoError`). Pré-existente ao ADR 0135 (RN-494),
-  investigado e confirmado nesse PR: gasta um ciclo de aprovação humana
-  numa ação destinada a falhar, mas a falha é nomeada, nunca silenciosa —
-  corrigir exigiria tocar o prompt/instrução do Infra Lead no engine, fora
-  do escopo de API/domínio
+  PODE propor `container_start` para um projeto `mounted`/`runner` sem saber
+  se há sequer um runner conectado. Pré-existente ao ADR 0135 (RN-494),
+  investigado e confirmado nesse PR; o ADR 0137 (RN-497) mudou o QUE
+  acontece quando alguém aprova — deixou de ser SEMPRE falha (o broker
+  recusando com `ModoDeExecucaoNaoSuportadoError`) e passou a poder ter
+  sucesso de verdade, via o runner — mas a lacuna em si (o Infra Lead propor
+  às cegas, sem saber se há runner conectado ou imagem decidida) continua a
+  mesma: corrigir exigiria tocar o prompt/instrução do Infra Lead no
+  engine, fora do escopo de API/domínio
 - Restart do engine com Dev Lead suspenso perde a inscrição no Wake (decisão
   segue visível em Aprovações) — ADR 0086
 - A aba de Código abre com 492px de moldura à esquerda (sidebar 264 + trilho
@@ -306,7 +313,15 @@ daqui e o fechamento vai para o histórico.
   `'none' | 'egress'`, e o bind é UMA pasta de tipo MARCADO com destino
   constante — não há lista de mounts. `pidsLimit` entrou na spec no ADR 0130,
   porque o artefato do Arquiteto sempre teve três números e descartar um faria
-  ele prometer um teto que o container não recebe
+  ele prometer um teto que o container não recebe. Do lado do RUNNER, essa
+  porta deixou de ser só provada por `--self-test-docker` (ADR 0112/0128) e
+  ganhou uso real:
+  `container_start`/`container_stop`/`container_remove` (ADR 0137,
+  RN-497), três pares novos no canal Phoenix (mesmo molde de
+  `exec`/`exec_result`), fazem `DockerViaCli.start/stop/exec` de
+  verdade, com o Docker do PRÓPRIO usuário — para projeto
+  `mounted`/`runner`, que o broker nunca alcança (a pasta mora numa
+  máquina que o servidor não enxerga)
 - `apps/broker`: workspace novo, Node/TS — o ÚNICO processo do produto que
   fala com um daemon Docker no SERVIDOR (ADR 0130), e o único serviço com
   `/var/run/docker.sock` montado. Não monte esse socket em mais nenhum. Sem
@@ -517,8 +532,9 @@ daqui e o fechamento vai para o histórico.
   (RN-105) VALE para os TRÊS modos desde a RN-494/ADR 0135 — projeto
   `mounted`/`runner` sem `artifact.project_image` decidido também responde
   409 na aba Code; a dispensa antiga foi REVOGADA, não é mais o
-  comportamento. O que não sobe é o container em si: `mounted`/`runner`
-  continuam sem container PRÓPRIO no servidor. Consequência declarada no
+  comportamento. `mounted`/`runner` continuam sem container PRÓPRIO no
+  SERVIDOR — quem sobe container pra eles é o `brabo-runner`, na máquina do
+  USUÁRIO, com o Docker dela (ADR 0137, RN-497). Consequência declarada no
   ADR: a contenção estrutural do `join` some para esses projetos, e o vetor
   de symlink do ADR 0055 continua aberto. No LINUX, o próprio CLI
   `brabo-runner` recusa `--dir` fora do
@@ -536,8 +552,10 @@ daqui e o fechamento vai para o histórico.
   Enquanto NENHUM dos dois decide, a aba Code responde 409 (RN-105) — nos
   TRÊS modos de execução desde a RN-494/ADR 0135, que revogou a dispensa
   que `mounted`/`runner` tinham (RN-169/RN-421). `mounted`/`runner`
-  continuam sem subir container PRÓPRIO no servidor — o que mudou é só a
-  exigência de alguém ter decidido a imagem antes de abrir a leitura.
+  continuam sem subir container PRÓPRIO no SERVIDOR — quem sobe pra eles é
+  o `brabo-runner`, na máquina do usuário (ADR 0137, RN-497). O que mudou
+  aqui foi só a exigência de alguém ter decidido a imagem antes de abrir a
+  leitura.
   `git push`, abertura de PR e deploy NÃO saem pelo terminal — a regra é
   `require_approval` INCONDICIONAL (teto absoluto, revisado de `deny` pela
   RN-418/ADR 0102 — decisão GLOBAL do dono do produto: nunca auto-aprovável,
@@ -559,7 +577,13 @@ daqui e o fechamento vai para o histórico.
   `running` registrado. Com um `running` registrado, o comando de terminal
   passa a rodar DENTRO do container de verdade (`ContainerBrokerPort.exec`,
   ADR 0134, RN-492) e ganha um PISO de auto-aprovação por cima do escopo
-  léxico — não no lugar dele (RN-493). O que a
+  léxico — não no lugar dele (RN-493). Esse PISO é ESPECÍFICO de
+  `execution_mode: container` (`ProposeActionUseCase` só o calcula quando
+  `project.executionMode === 'container'`): projeto `mounted`/`runner` com
+  um container REAL de pé pelo `brabo-runner` (ADR 0137, RN-497) continua
+  sob a política de terminal de sempre, sem piso — a decisão host-vs-container
+  ali é INTERNA ao runner, o engine não sabe dela, e `decide()` nunca viu
+  motivo pra tratar os dois casos como o mesmo. O que a
   leitura ganhou primeiro (ADR 0130) foi o estado OBSERVADO ao lado do
   registrado, perguntado ao broker — os dois nunca se fundem, e "não
   consegui olhar" tem motivo próprio em vez de herdar o registrado (RN-486).

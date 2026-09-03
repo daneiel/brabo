@@ -76,5 +76,12 @@ defmodule EngineWeb.Router do
 
     # Runner local + terminal interativo — ver EngineWeb.RunnerTicketCommandController.
     post "/projects/:projectId/runner-tickets", RunnerTicketCommandController, :create
+
+    # O runner sobe o container do projeto na máquina do usuário (ADR 0137) —
+    # ver EngineWeb.ContainerCommandController. Só para projeto
+    # mounted/runner; container vai pelo broker, que nunca chama isto.
+    post "/projects/:projectId/containers/start", ContainerCommandController, :start
+    post "/projects/:projectId/containers/stop", ContainerCommandController, :stop
+    post "/projects/:projectId/containers/remove", ContainerCommandController, :remove
   end
 end

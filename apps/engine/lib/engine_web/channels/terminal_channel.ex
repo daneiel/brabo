@@ -14,6 +14,15 @@ defmodule EngineWeb.TerminalChannel do
      container. Correlacionado por `ref` e respondido de volta a quem
      pediu — ver `Engine.Runners.RunnerRouter`, que é quem dispara
      `handle_info({:dispatch_exec, ...})` aqui.
+  1b. **`container_start`/`_result`, `container_stop`/`_result`,
+     `container_remove`/`_result`** (ADR 0137) — MESMO mecanismo do item 1,
+     três vezes: `Engine.Runners.RunnerRouter.start_container/stop_container/
+     remove_container` disparam `handle_info({:dispatch_container_*, ...})`
+     aqui, que empurra o evento pro runner e guarda `{ref, from}` no MESMO
+     `pending_execs` (o mapa é genérico — ref -> quem pediu, não importa QUE
+     pedido); `handle_in("container_*_result", ...)` responde de volta. Só a
+     api chama isto, e só para projeto `mounted`/`runner` (`container` sobe
+     pelo broker, `apps/broker`, que nunca fala com este canal).
   2. **PTY interativo** (`pty_*`) — RELAY puro entre `:web` e `:runner`; o
      engine NUNCA interpreta os bytes do PTY (`data` é base64 opaco pra
      ele). Eventos que o `:runner` origina (`pty_data`, `pty_opened`,
@@ -162,20 +171,26 @@ defmodule EngineWeb.TerminalChannel do
   # despachou via handle_info({:dispatch_exec, ...}) — ver mais abaixo.
   @impl true
   def handle_in("exec_result", payload, socket) do
-    ref = Map.get(payload, "ref")
+    responder_pedido_pendente(socket, payload, :runner_exec_result)
+  end
 
-    case Map.pop(socket.assigns.pending_execs, ref) do
-      {nil, _} ->
-        # Sem `from` pendente pra este ref — resposta atrasada (já expirou,
-        # ver `handle_info({:expire_pending_exec, ...})`) ou runner
-        # respondendo a um ref que não é dele. Descarta, não é erro do
-        # protocolo.
-        {:noreply, socket}
+  # container_start_result/container_stop_result/container_remove_result:
+  # MESMO mecanismo de exec_result (item 1b do moduledoc) — só o átomo de
+  # resultado muda, porque é ele que `Engine.Runners.RunnerRouter` está
+  # bloqueado esperando em `receive`.
+  @impl true
+  def handle_in("container_start_result", payload, socket) do
+    responder_pedido_pendente(socket, payload, :runner_container_start_result)
+  end
 
-      {from, restante} ->
-        send(from, {:runner_exec_result, ref, payload})
-        {:noreply, assign(socket, :pending_execs, restante)}
-    end
+  @impl true
+  def handle_in("container_stop_result", payload, socket) do
+    responder_pedido_pendente(socket, payload, :runner_container_stop_result)
+  end
+
+  @impl true
+  def handle_in("container_remove_result", payload, socket) do
+    responder_pedido_pendente(socket, payload, :runner_container_remove_result)
   end
 
   # workspace_confirm: só o :runner pode originar — o caminho que ele
@@ -352,12 +367,35 @@ defmodule EngineWeb.TerminalChannel do
   # esperando {:runner_exec_result, ref, payload} — ver handle_in("exec_result", ...).
   @impl true
   def handle_info({:dispatch_exec, ref, command, cwd, from, timeout_ms}, socket) do
-    push(socket, "exec", %{ref: ref, command: command, cwd: cwd})
-    # Autolimpeza: se o runner nunca responder, `Engine.Runners.RunnerRouter`
-    # já desiste depois de `timeout_ms` (o `receive ... after` dele) — isto
-    # só evita que `pending_execs` cresça sem teto num socket de vida longa.
-    Process.send_after(self(), {:expire_pending_exec, ref}, timeout_ms + 1_000)
-    {:noreply, assign(socket, :pending_execs, Map.put(socket.assigns.pending_execs, ref, from))}
+    despachar_pedido(socket, ref, from, timeout_ms, "exec", %{command: command, cwd: cwd})
+  end
+
+  # container_start/container_stop/container_remove: MESMO mecanismo de
+  # dispatch_exec acima (item 1b do moduledoc) — `RunnerRouter.start_container/
+  # stop_container/remove_container` mandam isto pro pid do canal :runner.
+  @impl true
+  def handle_info({:dispatch_container_start, ref, spec, from, timeout_ms}, socket) do
+    despachar_pedido(socket, ref, from, timeout_ms, "container_start", %{spec: spec})
+  end
+
+  @impl true
+  def handle_info(
+        {:dispatch_container_stop, ref, workspace_dir_name, from, timeout_ms},
+        socket
+      ) do
+    despachar_pedido(socket, ref, from, timeout_ms, "container_stop", %{
+      workspaceDirName: workspace_dir_name
+    })
+  end
+
+  @impl true
+  def handle_info(
+        {:dispatch_container_remove, ref, workspace_dir_name, from, timeout_ms},
+        socket
+      ) do
+    despachar_pedido(socket, ref, from, timeout_ms, "container_remove", %{
+      workspaceDirName: workspace_dir_name
+    })
   end
 
   @impl true
@@ -375,6 +413,39 @@ defmodule EngineWeb.TerminalChannel do
   end
 
   # --- privadas ---
+
+  # Molde comum dos QUATRO `handle_info` de dispatch acima (`dispatch_exec` e
+  # os três `dispatch_container_*`): empurra `evento` pro cliente runner com
+  # `ref` embutido, guarda `{ref, from}` em `pending_execs` para
+  # `responder_pedido_pendente/3` achar depois, e agenda a autolimpeza — se o
+  # runner nunca responder, o CHAMADOR (`RunnerRouter`) já desiste sozinho
+  # depois de `timeout_ms` (o `receive ... after` dele); isto só evita que
+  # `pending_execs` cresça sem teto num socket de vida longa.
+  defp despachar_pedido(socket, ref, from, timeout_ms, evento, payload_extra) do
+    push(socket, evento, Map.put(payload_extra, :ref, ref))
+    Process.send_after(self(), {:expire_pending_exec, ref}, timeout_ms + 1_000)
+    {:noreply, assign(socket, :pending_execs, Map.put(socket.assigns.pending_execs, ref, from))}
+  end
+
+  # Pop no `pending_execs` pelo `ref` e responde pro `from` que estava
+  # esperando, com a tag de resultado que o CHAMADOR (`RunnerRouter`) sabe
+  # casar no próprio `receive`. Usado pelos QUATRO `handle_in("*_result", ...)`
+  # acima (`exec_result` e os três `container_*_result`). Sem `from` pendente
+  # pra este ref — resposta atrasada (já expirou, ver
+  # `handle_info({:expire_pending_exec, ...})`) ou runner respondendo a um
+  # ref que não é dele: descarta, não é erro do protocolo.
+  defp responder_pedido_pendente(socket, payload, resultado_tag) do
+    ref = Map.get(payload, "ref")
+
+    case Map.pop(socket.assigns.pending_execs, ref) do
+      {nil, _} ->
+        {:noreply, socket}
+
+      {from, restante} ->
+        send(from, {resultado_tag, ref, payload})
+        {:noreply, assign(socket, :pending_execs, restante)}
+    end
+  end
 
   defp relay_para_runner(socket, event, payload) do
     case Registry.whereis(socket.assigns.project_id) do
