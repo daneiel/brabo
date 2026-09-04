@@ -2,6 +2,30 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### CI
+
+- **ci**: o workflow dos binários do runner passa a **esperar** pela GitHub
+  Release em vez de exigir que ela já exista. Na estreia dele (v4.0.0, a
+  primeira tag final desde que nasceu) as **cinco** plataformas construíram o
+  binário e passaram no `smoke:bin`, e as cinco morreram no passo de anexo com
+  `a Release de v4.0.0 não existe ainda` — binário pronto às 13:10:56, Release
+  publicada às 13:14:23, uma perda por **3m25s**. A corrida não era rara, como
+  o comentário do arquivo supunha: era o caso normal, e estrutural —
+  `release.yml` publica a Release **depois** de construir e empurrar as quatro
+  imagens do GHCR (~3min), enquanto o binário fica pronto em ~45s, então quem
+  chega primeiro é sempre o binário. Trocar o gatilho por `on: release:
+  published` seria pior: `release.yml` cria a Release com o `GITHUB_TOKEN`, e
+  evento gerado com esse token não dispara workflow — a mesma armadilha que o
+  `tag-release.yml` documenta sobre a tag da v0.2.0. Então: espera **limitada**
+  (teto de 10min, sondagem a cada 15s). O desfecho de uma ausência
+  **permanente** não muda — dispatch manual numa tag sem Release, ou
+  `release.yml` reprovado, continuam sendo erro explícito, e este workflow
+  nunca cria Release por conta própria; o que muda é que a ausência precisa
+  **persistir pelo teto** para ser declarada, em vez de ser lida no primeiro
+  instante, quando ainda não significa nada
+
 ## v4.0.0 — 2026-09-04
 
 ### ⚠ Mudanças incompatíveis
