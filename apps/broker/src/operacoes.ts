@@ -42,7 +42,7 @@ export interface DependenciasDoBroker {
 }
 
 /**
- * O projeto não sobe container do SERVIDOR. Desde a RN-501 isso quer dizer
+ * O projeto não sobe container do SERVIDOR. Desde a RN-503 isso quer dizer
  * `runner`, e só ele: a pasta de um projeto `runner` mora na máquina do
  * usuário, SEM bind-mount, e quem sobe container ali é o `brabo-runner`, do
  * lado de lá (ADR 0137).
@@ -395,7 +395,7 @@ async function especificacaoDoProjeto(
 
   // O nome da pasta é validado DUAS vezes: aqui, porque ele vira NOME de
   // container, e dentro de `especificacaoValidada`. Ele NÃO é mais o segmento
-  // de caminho (RN-501) — quem responde "onde fica a pasta" é `localizacao`,
+  // de caminho (RN-503) — quem responde "onde fica a pasta" é `localizacao`,
   // e as duas perguntas passaram a ter respostas diferentes em `mounted`.
   const nome = nomeDeWorkspaceValidado(contexto.workspaceDirName);
 
@@ -415,7 +415,7 @@ async function especificacaoDoProjeto(
 }
 
 /**
- * `container` e `mounted` passam; `runner` não (RN-501).
+ * `container` e `mounted` passam; `runner` não (RN-503).
  *
  * A lista é de PERMITIDOS e não de recusados, e isso é deliberado: um modo
  * novo no enum da api nasceria RECUSADO aqui, com mensagem, em vez de nascer

@@ -482,14 +482,14 @@ repeat the same path here, ALREADY EXPANDED (`~` is not expanded by Compose).
 `BRABO_PROJECTS_HOST_BASE` is the broker's SECOND root — the base of **Mounted**
 projects, also on the host
 ([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md),
-[ADR 0142](../adr/0142-a-segunda-raiz-do-broker.md)). Unlike the one above it
+[ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md)). Unlike the one above it
 does not need to be filled in: the compose derives it from
 `BRABO_PROJECTS_BASE`, which is already a host path by definition (it is what
 `api` and `engine` mount by identity). Set it explicitly only if the Docker
 daemon reaches that folder by a different path.
 
 It is what makes a **Mounted** project able to have a container at all
-([RN-501](../business-rules.md#rn-501)): the api sends a discriminated locator
+([RN-503](../business-rules.md#rn-503)): the api sends a discriminated locator
 (`localizacao.tipo` — `gerenciada` or `montada`) plus the relative segment, and
 the broker resolves it against the matching root. The two roots never stand in
 for each other. Missing this one makes `start` of a `mounted` project refuse

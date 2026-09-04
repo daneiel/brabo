@@ -56,7 +56,7 @@ describe('raizDeProjetoValidada', () => {
 });
 
 /**
- * O SEGMENTO relativo (RN-501) é a única metade do caminho que atravessa a
+ * O SEGMENTO relativo (RN-503) é a única metade do caminho que atravessa a
  * rede — a outra é a raiz, que mora na configuração do broker. O que se prova
  * aqui é que a concatenação `<raiz>/<segmento>` não consegue sair da raiz.
  */

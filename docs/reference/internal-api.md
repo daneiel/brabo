@@ -807,7 +807,7 @@ of five operations and comes here to read:
    `workspaceDirName`, the folder name frozen at creation ([RN-109](../business-rules/autenticacao.md#rn-109));
 2. `executionMode`. The broker serves `container` **and** `mounted`, and refuses
    `runner` with `409` — a runner project's folder is on the user's machine and
-   this host cannot see it ([RN-501](../business-rules.md#rn-501));
+   this host cannot see it ([RN-503](../business-rules.md#rn-503));
 3. `localizacao`, the discriminated locator of the project folder — see below;
 4. the Architect's current image decision, or `null` while there is none
    ([RN-105](../business-rules/autenticacao.md#rn-105)), in which case only `start` is refused
@@ -825,8 +825,8 @@ the HOST filesystem, so `/data/project-workspaces/<x>` (a path inside the api
 container) would make the daemon create and mount an EMPTY folder.
 
 **`localizacao`: which root, plus the piece that root does not cover**
-([RN-501](../business-rules.md#rn-501),
-[ADR 0142](../adr/0142-a-segunda-raiz-do-broker.md)). The broker has TWO roots
+([RN-503](../business-rules.md#rn-503),
+[ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md)). The broker has TWO roots
 of its own, and the spec says which one a segment belongs to instead of the
 broker guessing:
 
@@ -872,7 +872,7 @@ types ([ADR 0133](../adr/0133-infra-elege-imagem-do-roteamento.md),
 [ADR 0136](../adr/0136-pagina-global-de-containers.md)) and `exec` behind a
 dev agent's terminal command inside a running container
 ([ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md)). Since
-[RN-501](../business-rules.md#rn-501) those callers reach the broker for
+[RN-503](../business-rules.md#rn-503) those callers reach the broker for
 `container` **and** `mounted` projects; only `runner` goes to the runner
 instead.
 

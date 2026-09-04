@@ -328,7 +328,7 @@ describe('classificação de falha', () => {
     expect(docker.chamadas).toHaveLength(0);
   });
 
-  it('projeto `mounted` NÃO é mais recusado — a pasta dele passou a ser alcançável (RN-501)', async () => {
+  it('projeto `mounted` NÃO é mais recusado — a pasta dele passou a ser alcançável (RN-503)', async () => {
     const { deps, docker } = montar({
       contexto: {
         executionMode: 'mounted',

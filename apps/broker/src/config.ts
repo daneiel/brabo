@@ -52,7 +52,7 @@ export interface ConfiguracaoDoBroker {
    * projeto de outra pessoa, com nada no schema impedindo.
    *
    * Qual das duas resolve um projeto NÃO é decidido aqui e nem é adivinhado:
-   * a api manda um localizador discriminado (`localizacao.tipo`, RN-501), e
+   * a api manda um localizador discriminado (`localizacao.tipo`, RN-503), e
    * a spec diz contra qual raiz o segmento vale. O broker continua sem
    * receber caminho absoluto nenhum.
    *

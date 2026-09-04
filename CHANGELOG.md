@@ -23,7 +23,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **api,broker**: projeto no modo **Pasta montada** passa a ter container de
   verdade, e ele sobe **no servidor**, pelo broker — como o modo Container já
-  fazia (RN-501, ADR 0142). Até aqui `mounted` não conseguia container nenhum,
+  fazia (RN-503, ADR 0144). Até aqui `mounted` não conseguia container nenhum,
   por dois bloqueios independentes: `ExecuteContainerStartUseCase` mandava todo
   modo diferente de `container` para o RUNNER (que exige um `brabo-runner`
   conectado), e o broker recusava não-`container` na fonte. Os dois existiam

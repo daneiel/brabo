@@ -38,7 +38,7 @@ export interface DecisaoDeImagemDaApi {
 
 /**
  * ONDE a pasta do projeto fica, dita pela api sem nenhum caminho absoluto
- * (RN-501). O broker resolve `tipo` contra uma das raízes DELE e concatena o
+ * (RN-503). O broker resolve `tipo` contra uma das raízes DELE e concatena o
  * `segmento` — ver `raizDoProjetoNoHost` em `operacoes.ts`.
  *
  * Tipado como `string` e não como união fechada de propósito: isto é JSON de
@@ -60,7 +60,7 @@ export interface ContextoDoProjeto {
   workspaceId: string;
   workspaceDirName: string;
   executionMode: string;
-  /** O localizador discriminado da pasta (RN-501). */
+  /** O localizador discriminado da pasta (RN-503). */
   localizacao?: LocalizacaoDoProjeto | null;
   /** `null` enquanto o Arquiteto não decidiu (RN-105). */
   imagem: DecisaoDeImagemDaApi | null;

@@ -81,8 +81,8 @@ docker compose -f docker/docker-compose.yml --env-file .env \
 ```
 
 **The broker has TWO roots, and neither stands in for the other**
-([RN-501](business-rules.md#rn-501),
-[ADR 0142](adr/0142-a-segunda-raiz-do-broker.md)).
+([RN-503](business-rules.md#rn-503),
+[ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)).
 `PROJECT_WORKSPACES_HOST_ROOT` is where **Container**-mode projects live;
 `BRABO_PROJECTS_HOST_BASE` is where **Mounted**-mode projects live, and the
 compose derives it from `BRABO_PROJECTS_BASE`, so setting the base is normally
@@ -114,9 +114,9 @@ that reason would produce a restart loop that resolves nothing.
 | `PROJECT_WORKSPACES_HOST_ROOT não está definida` on `start` | expected, and the refusal is the correct behaviour. `-v` is resolved by the DAEMON against the HOST filesystem; guessing would mount an EMPTY folder and the dev agent would work in a directory with no code. The other four operations keep working without it |
 | the lifecycle route says `naoObservado: "broker-nao-configurado"` | `BROKER_URL` is empty on the **api**. That is a normal state, not a failure — the read declares that it did not look instead of inheriting the recorded state ([RN-486](business-rules.md#rn-486)) |
 | the lifecycle route says `naoObservado: "broker-sem-resposta"` | `BROKER_URL` is set and nothing answered: the profile is probably off, or the api is not on the `broker` network |
-| `BRABO_PROJECTS_HOST_BASE não está definida` on `start` of a **Mounted** project | same shape as the row above, other root. Set `BRABO_PROJECTS_BASE` in `.env` and recreate the broker; the compose derives this one from it ([RN-501](business-rules.md#rn-501)) |
+| `BRABO_PROJECTS_HOST_BASE não está definida` on `start` of a **Mounted** project | same shape as the row above, other root. Set `BRABO_PROJECTS_BASE` in `.env` and recreate the broker; the compose derives this one from it ([RN-503](business-rules.md#rn-503)) |
 | the broker answers `409` for a project in `runner` mode | expected. That folder lives on the user's machine and this host cannot see it — there, the runner is what brings a container up ([ADR 0137](adr/0137-o-runner-sobe-o-container-do-projeto.md)) |
-| the broker answers `409` saying it doesn't know where the project folder is | a LEGACY **Mounted** project, created before the base existed and living outside it. The fix is to move the folder under `BRABO_PROJECTS_BASE`, not to change the project's mode — the message names the base and the path it saw ([RN-501](business-rules.md#rn-501)) |
+| the broker answers `409` saying it doesn't know where the project folder is | a LEGACY **Mounted** project, created before the base existed and living outside it. The fix is to move the folder under `BRABO_PROJECTS_BASE`, not to change the project's mode — the message names the base and the path it saw ([RN-503](business-rules.md#rn-503)) |
 
 **The broker never brings a container up on its own.** There is no loop and no
 queue: it acts when called, and every write call originates from a
@@ -180,8 +180,8 @@ That's it. From here on, a project in Mounted mode goes somewhere under
 `/home/voce/brabo` and needs no further setup.
 
 **Mounted projects get a real container, and it runs on the SERVER**
-([RN-501](business-rules.md#rn-501),
-[ADR 0142](adr/0142-a-segunda-raiz-do-broker.md)). Because the base is
+([RN-503](business-rules.md#rn-503),
+[ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)). Because the base is
 reachable by the host's Docker daemon, `container_start` for a Mounted project
 goes to the [broker](#broker-de-container), exactly like Container mode — it no
 longer requires a `brabo-runner` connected. Only **Runner** mode still goes to

@@ -25,7 +25,7 @@ describe('lerConfiguracao — desenvolvimento', () => {
     expect(config.baseDeProjetosNoHost).toBeNull();
   });
 
-  it('lê as DUAS raízes de variáveis separadas, e nenhuma cai na outra (RN-501)', () => {
+  it('lê as DUAS raízes de variáveis separadas, e nenhuma cai na outra (RN-503)', () => {
     const config = lerConfiguracao({
       PROJECT_WORKSPACES_HOST_ROOT: '/srv/brabo/project-workspaces',
       BRABO_PROJECTS_HOST_BASE: '/home/voce/brabo',

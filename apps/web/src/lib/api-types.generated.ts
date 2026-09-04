@@ -410,7 +410,7 @@ export interface paths {
         };
         /**
          * What the broker needs to compose the container spec itself
-         * @description Project identity, execution mode and the Architect's current image decision. The broker revalidates all of it before handing anything to the daemon — reading from here is not the same as trusting it, and the refusal names the field. No ABSOLUTE path is returned: the bind source is resolved by the daemon against the HOST filesystem, and a path from inside the api container would silently mount an empty folder. What travels is `localizacao` (RN-501) — which of the two broker roots to use, plus the relative segment that root does not cover.
+         * @description Project identity, execution mode and the Architect's current image decision. The broker revalidates all of it before handing anything to the daemon — reading from here is not the same as trusting it, and the refusal names the field. No ABSOLUTE path is returned: the bind source is resolved by the daemon against the HOST filesystem, and a path from inside the api container would silently mount an empty folder. What travels is `localizacao` (RN-503) — which of the two broker roots to use, plus the relative segment that root does not cover.
          */
         get: operations["InternalContainersController_containerSpec"];
         put?: never;
@@ -4835,17 +4835,17 @@ export interface components {
             /** @example aaaaaaaa-0000-4000-8000-000000000000 */
             workspaceId: string;
             /**
-             * @description Folder name FROZEN at project creation (RN-109). It is the single source of the container name (`brabo-<workspaceDirName>`) in ALL three modes. Where the FOLDER is is a different question, answered by `localizacao` (RN-501) — the api still never sends an absolute path, because a path from inside the api container is not a path the Docker daemon can resolve.
+             * @description Folder name FROZEN at project creation (RN-109). It is the single source of the container name (`brabo-<workspaceDirName>`) in ALL three modes. Where the FOLDER is is a different question, answered by `localizacao` (RN-503) — the api still never sends an absolute path, because a path from inside the api container is not a path the Docker daemon can resolve.
              * @example exp002-f52be111
              */
             workspaceDirName: string;
             /**
-             * @description Where the code lives. The broker serves `container` AND `mounted` (RN-501): since ADR 0141 the mounted folder lives under one base this server mounts by identity, so the daemon reaches it. It still refuses `runner`: that folder is on the user's machine and no root here sees it — there, the runner is what brings a container up (ADR 0137).
+             * @description Where the code lives. The broker serves `container` AND `mounted` (RN-503): since ADR 0141 the mounted folder lives under one base this server mounts by identity, so the daemon reaches it. It still refuses `runner`: that folder is on the user's machine and no root here sees it — there, the runner is what brings a container up (ADR 0137).
              * @example container
              * @enum {string}
              */
             executionMode: "container" | "mounted" | "runner";
-            /** @description The discriminated locator of the project folder (RN-501): which of the broker's two roots resolves it, and the relative segment to join to that root. */
+            /** @description The discriminated locator of the project folder (RN-503): which of the broker's two roots resolves it, and the relative segment to join to that root. */
             localizacao: components["schemas"]["LocalizacaoDoProjetoResponseDto"];
             /** @description `null` while the Architect has not decided (RN-105) — `start` is then refused with 409 on the broker side, and the other four operations still work. */
             imagem: components["schemas"]["ImagemParaOBrokerResponseDto"] | null;

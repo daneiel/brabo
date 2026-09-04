@@ -19,7 +19,7 @@ import {
 } from './operacoes.ts';
 
 /**
- * A resolução das DUAS raízes (RN-501) — o teste da composição, sem HTTP no
+ * A resolução das DUAS raízes (RN-503) — o teste da composição, sem HTTP no
  * meio. `servidor.spec.ts` prova a tabela de status; este prova a aritmética
  * do `-v`, que é onde a contenção mora.
  *
@@ -90,7 +90,7 @@ function montar(
   };
 }
 
-describe('as duas raízes do broker (RN-501)', () => {
+describe('as duas raízes do broker (RN-503)', () => {
   it('`gerenciada` resolve contra PROJECT_WORKSPACES_HOST_ROOT', async () => {
     const { deps, docker } = montar();
 

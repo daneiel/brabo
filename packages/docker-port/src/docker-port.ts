@@ -224,7 +224,7 @@ export function raizDeProjetoValidada(caminho: string): RaizDeProjeto {
 
 /**
  * O SEGMENTO relativo que se concatena a uma raiz de host para chegar à pasta
- * do projeto — a metade que a api manda pela rede (RN-501), e a única metade
+ * do projeto — a metade que a api manda pela rede (RN-503), e a única metade
  * que ela manda.
  *
  * Existe porque o broker passou a ter DUAS raízes (a gerenciada e a base dos

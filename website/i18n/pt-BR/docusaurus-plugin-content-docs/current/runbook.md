@@ -104,8 +104,8 @@ Pronto. Daqui em diante, um projeto no modo Pasta montada vai para algum lugar
 dentro de `/home/voce/brabo` e não precisa de mais nada.
 
 **Projeto montado ganha container de verdade, e ele roda NO SERVIDOR**
-([ADR 0142](adr/0142-a-segunda-raiz-do-broker.md),
-RN-501). Como a base é alcançável
+([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md),
+RN-503). Como a base é alcançável
 pelo daemon Docker do host, o `container_start` de um projeto montado vai para
 o **broker**, exatamente como no modo Container — ele deixou de exigir um
 `brabo-runner` conectado. Só o modo **Runner** continua indo pelo runner, na

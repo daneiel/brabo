@@ -255,8 +255,8 @@ reason in the URL.
   all** — the bind source is resolved by the daemon against the HOST
   filesystem, so a path from inside the api container would silently mount an
   empty folder. What travels instead is `localizacao`
-  ([RN-501](business-rules.md#rn-501),
-  [ADR 0142](adr/0142-a-segunda-raiz-do-broker.md)): a discriminated locator
+  ([RN-503](business-rules.md#rn-503),
+  [ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)): a discriminated locator
   saying which of the broker's TWO roots resolves the folder (`gerenciada` →
   `PROJECT_WORKSPACES_HOST_ROOT`, `montada` → `BRABO_PROJECTS_HOST_BASE`, or
   `indisponivel` with a reason) plus the RELATIVE segment that root does not
