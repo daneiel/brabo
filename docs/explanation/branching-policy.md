@@ -758,6 +758,67 @@ To look with your own eyes at what a tag stamped:
 make deploy-local TAG=v0.2.0-qa.1
 ```
 
+### Squash on a conveyor merge, and the alarm that has an addressee
+
+Promotion is `--no-ff`, and this is the rule that has been broken the most:
+**three times** (#367, #394, #464). It deserves its own section because the
+damage is invisible at the moment it happens and only surfaces one cycle
+later.
+
+A squash produces a commit with **one parent**. On a promotion, the second
+parent was the only thing tying the two steps together: without it, `qa`'s
+history no longer contains `dev`'s commits, the stage's tag points at a commit
+that is not in this history anymore, and — the symptom people actually meet —
+**the next promotion PR opens with files in "conflict" that are not conflicts
+at all**, just lost ancestry. Merging that "conflict" by taking either side is
+how content silently diverges between steps.
+
+**Where this is enforced, and why it cannot be earlier.** The merge method is
+chosen at the click, after every PR check has already run. No pre-merge check
+can observe it: `promotion-check` reads the repository's *configuration* at
+best, and often lacks permission even for that. The verification that counts
+looks at the accomplished fact, in `tag-release` (`conferirMergeDeEsteira`,
+`scripts/ci/version.ts`), and the rule differs per branch because the base rate
+does:
+
+| branch | what enters | rule |
+|---|---|---|
+| `qa`, `main` | only conveyor traffic | one parent is always a defect |
+| `dev` | work, all day, by squash **on purpose** | a defect only when the PR carried a **new edge** — its head was a merge whose second parent was not already in the base |
+
+That `dev` distinction is narrow on purpose. A work PR that pulled `dev` into
+itself before merging also has a merge for a head — but its second parent is
+already in the base, so a squash loses nothing. The PR that must not be
+squashed is the one whose *whole delivery is the edge*, like #464: it existed
+only to restore ancestry, was squashed, and delivered nothing while looking
+merged. An alarm that fired on every work PR would be an alarm nobody reads,
+which is the failure mode this section exists to prevent.
+
+**Detection was never the gap — the addressee was.** The `qa` check has existed
+since 2026-07-27 and fired correctly on both #367 and #394. Nothing came of it:
+a `push`-triggered workflow failing on a permanent branch has no PR to turn
+red — the merge already happened — so it leaves a red run in the Actions tab
+and nothing else. The repository had zero issues in its whole history; there
+was no channel. So `tag-release` now has an `avisar` job that **opens an issue**
+naming the branch, the commit, the run, and the fix, and comments on the
+existing one instead of opening a second for the same branch. It authenticates
+with `github.token`, never the PAT — an invalid `BRABO_BOT_TOKEN` is itself one
+of the failures it has to report, and an alarm that depends on what may be
+broken is an alarm that goes quiet exactly when it is needed.
+
+**Fixing it after the fact.** The content is already correct on both sides; what
+is missing is one edge in the graph. A merge with strategy `ours` restores it
+without changing a line:
+
+```bash
+git checkout -b chore/reconciliar-<algo> origin/dev
+git merge -s ours origin/qa -m "chore: reconcilia ancestralidade"
+```
+
+And that PR **also** has to enter as a merge commit. Squashing it is
+mathematically guaranteed not to work: the correction *is* the second parent.
+That is precisely how #464 failed.
+
 ## The back-merge gate
 
 `hotfix` solves the incident and creates a new problem: the fix is in
