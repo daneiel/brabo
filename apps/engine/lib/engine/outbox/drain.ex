@@ -1,14 +1,21 @@
 defmodule Engine.Outbox.Drain do
   @moduledoc """
-  Drena outbox_events (aggregate_type IN "session"/"task", processed_at IS
-  NULL) com FOR UPDATE SKIP LOCKED — permite múltiplos consumidores
-  concorrentes sem processar a mesma linha duas vezes. Pra cada linha,
-  roteia pros handlers apropriados (ver handlers_for/1) e marca
+  Drena outbox_events (aggregate_type IN "session"/"task"/"container",
+  processed_at IS NULL) com FOR UPDATE SKIP LOCKED — permite múltiplos
+  consumidores concorrentes sem processar a mesma linha duas vezes. Pra cada
+  linha, roteia pros handlers apropriados (ver handlers_for/1) e marca
   processed_at, tudo na mesma transação.
 
   `aggregate_type = "task"` entrou na Fase 12b — reagendamento do dev agent
   por evento (`task.gate_resolved`, `task.became_claimable`), ver
   `Engine.Workers.DevAgentWakeWorker`.
+
+  `aggregate_type = "container"` entrou com a RN-502/ADR 0143 — o container
+  do projeto chegando em `running` solta os dev agents que a guarda de
+  `AgentIo.try_claim/2` tinha parado em `:idle`. Agregado próprio, e não
+  `"task"`, porque o evento não é sobre task nenhuma; o `aggregate_type` do
+  `GraphProjector` (`"graph_projection"`) continua fora desta query, pelo
+  mesmo motivo de sempre.
   """
 
   import Ecto.Query
@@ -20,7 +27,7 @@ defmodule Engine.Outbox.Drain do
     Repo.transaction(fn ->
       query =
         from e in Event,
-          where: e.aggregate_type in ["session", "task"] and is_nil(e.processed_at),
+          where: e.aggregate_type in ["session", "task", "container"] and is_nil(e.processed_at),
           order_by: e.created_at,
           limit: 50,
           lock: "FOR UPDATE SKIP LOCKED"
@@ -83,7 +90,12 @@ defmodule Engine.Outbox.Drain do
               # ADR 0052: solta o dev agent que parou esperando a decisão de
               # uma ação. Sem esta linha o evento é emitido, fica no outbox e
               # nunca vira job — o agente espera para sempre.
-              "task.action_settled"
+              "task.action_settled",
+              # RN-502/ADR 0143: o container do projeto chegou em `running`, e
+              # com ele a pré-condição de claim. Agregado `container` (e não
+              # `task`) porque o evento não é sobre task nenhuma — é o único
+              # motivo de a query acima drenar um terceiro `aggregate_type`.
+              "container.running"
             ],
        do: [Engine.Workers.DevAgentWakeWorker]
 

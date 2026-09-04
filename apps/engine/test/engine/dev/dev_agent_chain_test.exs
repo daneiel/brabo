@@ -45,6 +45,9 @@ defmodule Engine.Dev.DevAgentChainTest do
     project_id = Ecto.UUID.generate()
     session_id = Ecto.UUID.generate()
 
+    # RN-502/ADR 0143 — pré-condição de todo claim.
+    container_running!(project_id)
+
     {:ok, state} =
       DevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, 3, nil})
 
