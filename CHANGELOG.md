@@ -1606,6 +1606,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### CI
 
+- **ci**: timeout repetido do `pnpm audit` passa a ser **risco assumido**
+  (ADR 0140). O endpoint de advisories do npm ficou intermitente em
+  2026-09-04 e reprovou o job em quatro PRs seguidas, sempre com a mesma
+  assinatura (`advisories/bulk error (503)` + `TimeoutError`) — reproduzido
+  fora do CI, batendo direto nele. O job agora distingue **"não consegui
+  perguntar" de "encontrei vulnerabilidade"**: três tentativas sem resposta
+  do registry seguem verdes com aviso alto dizendo que a árvore **não foi
+  auditada** (nunca que está limpa), enquanto vulnerabilidade reportada
+  continua reprovando na PRIMEIRA tentativa, sem retentativa, e saída
+  desconhecida reprova também (fail closed). A precedência é o ponto: as
+  marcas de achado são testadas ANTES das de rede, então um relatório que
+  mencione `timeout` nunca é perdoado como indisponibilidade. Só o lado
+  pnpm muda — `mix hex.audit`/`mix deps.audit` seguem como estavam
+
 - **ci**: o alarme de merge de esteira ganha **destinatário** (ADR 0139). A
   verificação já existia e já funcionava — o `tag-release` reprovou as duas
   promoções squashadas (#367 e #394) com a mensagem certa —, mas workflow de
