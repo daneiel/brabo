@@ -17,5 +17,6 @@
     "agentes": { "label": "Agentes" },
     "dev": { "label": "Dev" },
     "documentacao": { "label": "Documentação" }
-  }
+  },
+  "rail": { "ariaLabel": "Abas do projeto" }
 }

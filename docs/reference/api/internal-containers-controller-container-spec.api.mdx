@@ -1,0 +1,69 @@
+---
+id: internal-containers-controller-container-spec
+title: "What the broker needs to compose the container spec itself"
+description: "Project identity, execution mode and the Architect's current image decision. The broker revalidates all of it before handing anything to the daemon — reading from here is not the same as trusting it, and the refusal names the field. No path is returned: the bind source is resolved by the daemon against the HOST filesystem, and a path from inside the api container would silently mount an empty folder."
+sidebar_label: "What the broker needs to compose the container spec itself"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"What the broker needs to compose the container spec itself"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/internal/projects/{projectId}/container-spec"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Project identity, execution mode and the Architect's current image decision. The broker revalidates all of it before handing anything to the daemon — reading from here is not the same as trusting it, and the refusal names the field. No path is returned: the bind source is resolved by the daemon against the HOST filesystem, and a path from inside the api container would silently mount an empty folder.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-containers-controller-container-spec.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-containers-controller-container-spec.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-containers-controller-container-spec.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

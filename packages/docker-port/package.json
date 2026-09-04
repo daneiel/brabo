@@ -1,0 +1,19 @@
+{
+  "name": "@brabo/docker-port",
+  "version": "0.0.1",
+  "license": "MIT",
+  "private": true,
+  "description": "A porta de acesso a Docker (ADR 0128) e a composição da especificação de container — o mecanismo ÚNICO compartilhado pelos dois implementadores previstos, o runner (Docker da máquina do usuário) e o broker (Docker do servidor).",
+  "type": "module",
+  "types": "./src/index.ts",
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.10"
+  }
+}

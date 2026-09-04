@@ -37,6 +37,9 @@ Start with triage.
 | I want to add an OpenAI-compatible LLM provider | [Adding a compatible provider](#adicionando-um-provider-compativel) |
 | I want to migrate my workspaces from the Docker volume to a real folder | [Migrating workspaces to a local folder](#migrar-workspaces-pasta-local) |
 | creating a **Local** project refuses, saying the folder doesn't exist | [Project in Local mode](#projeto-no-modo-local) |
+| `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
+| I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
+| provisioning a repository fails with `permission denied: /data/git-repos/<slug>.git`, or `permissions.json` can't be written | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 
 Two things worth knowing before any procedure:
 
@@ -45,6 +48,63 @@ Two things worth knowing before any procedure:
   Grafana being down means no warning, not no problem.
 - **Killing the pod doesn't close a session.** `kubectl delete pod` without
   draining creates an orphan. The path is always the normal transition.
+
+### The container broker {#broker-de-container}
+
+The broker ([ADR 0130](adr/0130-broker-de-container.md)) is the only process in
+the product that talks to a Docker daemon, and the only service with
+`/var/run/docker.sock` mounted. **Do not mount that socket anywhere else.**
+
+It ships under a compose profile and therefore **does not come up with
+`pnpm dev`**. That is deliberate: nothing calls it to WRITE yet (whoever
+proposes starting a container is the Infra Lead, through a `proposed_action`),
+so having it up by default would hand every development machine access to the
+host's Docker in exchange for nothing.
+
+To bring it up:
+
+```bash
+# 1. the gid of your host's docker group — the default (999) is the most
+#    common one and is wrong on several distributions
+getent group docker | cut -d: -f3
+
+# 2. in .env
+#    DOCKER_GID=<the number above>
+#    BROKER_URL=http://broker:8090
+#    PROJECT_WORKSPACES_HOST_ROOT=/home/you/brabo-projects   # ALREADY EXPANDED
+
+docker compose -f docker/docker-compose.yml --env-file .env \
+  --profile container-broker up -d broker
+```
+
+To check that it is up — from the api, which is the ONLY service that reaches
+it (the `broker` network is `internal: true` and the service publishes no port,
+so `curl` from your host will not work, and that is the point):
+
+```bash
+docker compose -f docker/docker-compose.yml --env-file .env exec -T api \
+  node -e "fetch('http://broker:8090/health').then(r=>r.text()).then(console.log)"
+# expected: {"status":"ok","servico":"broker"}
+```
+
+`/health` speaks about the PROCESS, never about the daemon. Restarting the
+broker does not fix a Docker that is down, and a healthcheck that failed for
+that reason would produce a restart loop that resolves nothing.
+
+**Symptoms and what each one means:**
+
+| what you see | what it is |
+|---|---|
+| `permission denied` on `/var/run/docker.sock` | wrong `DOCKER_GID`. The socket is `root:docker` and the broker runs non-root; redo step 1 above and recreate the container (`up -d --force-recreate broker`) |
+| `não encontrei o executável docker no PATH` | the image was built without `docker-cli`. Rebuild it (`--build`). This error is deliberately SEPARATE from "daemon down": installing and starting are different fixes |
+| `PROJECT_WORKSPACES_HOST_ROOT não está definida` on `start` | expected, and the refusal is the correct behaviour. `-v` is resolved by the DAEMON against the HOST filesystem; guessing would mount an EMPTY folder and the dev agent would work in a directory with no code. The other four operations keep working without it |
+| the lifecycle route says `naoObservado: "broker-nao-configurado"` | `BROKER_URL` is empty on the **api**. That is a normal state, not a failure — the read declares that it did not look instead of inheriting the recorded state ([RN-486](business-rules.md#rn-486)) |
+| the lifecycle route says `naoObservado: "broker-sem-resposta"` | `BROKER_URL` is set and nothing answered: the profile is probably off, or the api is not on the `broker` network |
+| the broker answers `409` for a project | it is in `mounted`/`runner` mode. Their folder lives on the user's machine and this host cannot see it — there, the runner is what brings a container up |
+
+**The broker never brings a container up on its own.** There is no loop, no
+queue and no `container_start` proposed_action yet: it acts when called, and the
+only caller today performs a READ.
 
 ### Migrating workspaces to a local folder {#migrar-workspaces-pasta-local}
 
@@ -79,7 +139,7 @@ with `docker volume rm` once you're sure the copy worked.
 **Symptom:** when creating the project and picking **Local**, the api
 responds `400` saying the folder *doesn't exist from inside the api*.
 
-That's the guard working ([RN-170](business-rules.md#rn-170)), not a bug:
+That's the guard working ([RN-170](business-rules/autenticacao.md#rn-170)), not a bug:
 the path you typed exists on your computer and **not** inside the
 container. A project created like that would get stuck later, on the first
 tool of the first agent, far from the screen where the decision was made —
@@ -116,7 +176,7 @@ docker compose -f docker/docker-compose.yml exec engine ls -la /home/voce/projet
 
 **Why the same path on both sides.** The path is written ONCE to
 `projects.workspace_path` and read by both processes
-([RN-169](business-rules.md#rn-169)). Mounting it in different places would
+([RN-169](business-rules/autenticacao.md#rn-169)). Mounting it in different places would
 make the engine write where the api doesn't read — the divergence that the
 single derivation exists to prevent.
 
@@ -132,6 +192,66 @@ single derivation exists to prevent.
 **Don't confuse this with Container mode.** A project in Container mode
 (the default) keeps using `PROJECT_WORKSPACES_ROOT` and the migration
 procedure above; Local mode never touches that root.
+
+### Dev containers write as your user, not root {#dev-containers-nao-root}
+
+**Symptom:** something the `api`, `web` or `engine` dev container wrote to a
+bind mount — `apps/api/dist`, `node_modules`, a file an agent generated
+inside a project in `mounted` execution mode — is owned by `root` on your
+disk, and editing or deleting it without `sudo` fails.
+
+This used to be expected: the dev images (`docker/api/Dockerfile`,
+`docker/web/Dockerfile`, `docker/engine/Dockerfile` — unlike `Dockerfile.prod`,
+already non-root since [ADR 0024](adr/0024-fase5-imagens-producao-ci.md)) had
+no `USER` directive and ran as root. They now run as the **same UID/GID as
+your host user**, via `DEV_UID`/`DEV_GID` build args
+([Configuration](reference/configuration.md#dev-container-user-build-time)),
+so this class of problem shouldn't recur.
+
+**If you're still seeing it:**
+
+1. Confirm your pair with `id -u`/`id -g`. If it isn't `1000`/`1000`, set
+   `DEV_UID`/`DEV_GID` in `.env` (see `.env.example`) and rebuild:
+   `docker compose -f docker/docker-compose.yml build api web engine`.
+2. **Environment that predates this fix.** The named volumes
+   (`*_node_modules`, `engine_build`, `engine_deps`, `engine_mix`,
+   `engine_hex`) still hold content written by the old root containers — a
+   brand-new named volume inherits the right owner on first mount, but an
+   existing one doesn't get fixed retroactively. Reset it once, either by
+   dropping the volumes (`docker compose -f docker/docker-compose.yml down
+   -v` — safe for these, they're reproducible build artifacts, never source
+   of truth) or by `chown`-ing them in place:
+   ```bash
+   docker run --rm -v brabo_api_app_node_modules:/v alpine chown -R "$(id -u):$(id -g)" /v
+   # repeat for the other node_modules/_build/deps/.mix/.hex volumes
+   ```
+3. For a file already written by an agent into a **`mounted`**-mode project
+   folder on the host, the fix is the same `sudo chown -R $USER <folder>`
+   this section used to prescribe for the whole repo — it's now a one-off
+   for pre-existing files, not the standing workaround.
+
+4. **The two DATA volumes are a different case, and `down -v` is NOT safe for
+   them.** `/data/git-repos` and `/data/project-workspaces` are mounted into
+   `api` and `engine` as named volumes. A named volume is born owned by
+   whatever exists at that path **in the image** — and when the path doesn't
+   exist, it is born `root`, leaving the non-root process out. The dev images
+   only started creating and `chown`-ing them before `USER` recently; the
+   production images always did. The symptom is not a file you can't edit on
+   your disk: it is `git init --bare` of the `LocalGitProvider` dying with
+   `permission denied: /data/git-repos/<slug>.git`, and each project's
+   `permissions.json` having nowhere to be written — that is, **provisioning
+   a repository is impossible**.
+
+   Unlike the build-artifact volumes above, these two hold source of truth
+   (local bare repos, per-project worktrees), so dropping them loses data.
+   Fix them in place:
+   ```bash
+   docker run --rm -v brabo_git_local_repos:/v alpine chown -R "$(id -u):$(id -g)" /v
+   docker run --rm -v brabo_project_workspaces:/v alpine chown -R "$(id -u):$(id -g)" /v
+   ```
+   A volume created after the fix already comes up with the right owner. When
+   you add a **new** named volume, create the directory in the image:
+   forgetting it is not a build error, it is a runtime `permission denied`.
 
 ---
 
@@ -221,6 +341,44 @@ detached checkout of the tag and builds the images from that commit.
 It **refuses** to run with a dirty tree, instead of guessing what to do
 with your work in progress. When it finishes you're left in a detached
 HEAD; the command to go back appears in the log.
+
+### Deploying a release's images {#imagens-de-uma-release}
+
+Since [ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md) every
+final tag publishes the four production images to GHCR
+(`ghcr.io/daneiel/brabo-{api,engine,web,backup}`, public — no
+`imagePullSecret` anywhere) and records what it published, **by digest**,
+in `.release/images.json`.
+
+The overlays in this repository keep `newTag: REPLACE_WITH_DIGEST`, a
+marker. **The repository never declares which release is in production** —
+you do, at deploy time:
+
+```bash
+# 1. get the record of the release you're deploying
+gh release download v3.2.0 --pattern images.json --dir .release
+
+# 2. write its digests into the overlay
+make imagens-do-release OVERLAY=prod      # or OVERLAY=staging
+
+# 3. read the diff before applying anything
+git diff deploy/k8s/overlays/prod/kustomization.yaml
+```
+
+Three things worth knowing before you run it:
+
+- **Don't commit the result.** `kustomize edit` round-trips the YAML: it
+  reorders keys and detaches the comments. The change is meant to live in
+  your working tree long enough to `kubectl apply -k`, and no longer.
+- **`digest:` replaces `newTag:`**, which is the point — a mutable tag in
+  production means no deterministic rollback and two pods of the same
+  ReplicaSet possibly running different binaries.
+- **Rollback is the same command with the previous release's file.** There
+  is nothing else to undo: the digest is the whole state.
+
+If `make imagens-do-release` says it can't find `.release/images.json`, you
+skipped step 1. If it can't find `kustomize`, the version the CI uses is
+pinned in `KUSTOMIZE_VERSION`, in `.github/workflows/ci.yml`.
 
 ### What version is live {#que-versao-esta-no-ar}
 
@@ -502,7 +660,7 @@ missing, set to the repository's example value, or too short.
 regression, and don't work around it.**
 [ADR 0059](adr/0059-segredo-do-state-de-oauth-sem-default.md) already
 declared these four as pending — the same pattern, just not replicated
-yet — and [RN-114](business-rules.md#rn-114) closed it. Each protects
+yet — and [RN-114](business-rules/custo.md#rn-114) closed it. Each protects
 something different:
 
 - `AUTH_JWT_SECRET` public = anyone can derive the pair that signs the
@@ -1118,7 +1276,7 @@ reset link say "expired".
 ### `BRABO_SERVICE_TOKEN` — zero-downtime rotation, on both sides
 
 This is the shared secret that authenticates api ↔ engine traffic
-([RN-035](business-rules.md#rn-035)). It has nothing to do with a user
+([RN-035](business-rules/autenticacao.md#rn-035)). It has nothing to do with a user
 session: getting it wrong doesn't log anyone out, it breaks internal
 communication.
 
@@ -1145,66 +1303,11 @@ symptom in the
 openssl rand -base64 48
 ```
 
-### Migrating Keycloak users {#migracao-dos-usuarios-do-keycloak}
-
-Runs **once**, at the cutover release. Passwords don't migrate — it's
-unfeasible and undesirable
-([ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)): what the
-script does is issue, for every user who came from Keycloak and doesn't
-yet have a credential, a single-use **password-set** token.
-
-It does **not** connect to Keycloak. Since Phase 1 the api has kept the
-row in `users` and the RBAC bindings in its own database; Keycloak was
-only the issuer.
-
-```bash
-pnpm --filter api migrate:keycloak-users
-```
-
-It prints one line per user — `issued <email> — expires at <ISO>` or
-`skipped <email> — already has an open valid link` — and the total at
-the end.
-
-It's idempotent on two layers: it skips anyone who already has a row in
-`auth_credentials`, and skips anyone who already has a live
-`set_initial_password` token — otherwise a second run would invalidate
-(by superseding) the links already sent.
-
-> **Depends on `MAIL_TRANSPORT`** ([Real SMTP in `MailSender`](#smtp-real),
-> ADR 0096). On `log` (default, including in production) `MailSender`
-> does NOT print the token by default. Application logs go to Loki and
-> are retained for weeks; a password-set token there is a plain-text
-> takeover credential. What comes out is type, recipient, and expiry.
->
-> With `MAIL_TRANSPORT=log`, the only way to extract the links is to turn
-> on `AUTH_MAIL_LOG_TOKENS=true` on the api, run the script, and **turn it
-> off right after** — the api emits a `WARN` at boot for as long as the
-> variable is on, precisely so it doesn't survive into a copied
-> environment:
->
-> ```bash
-> kubectl -n brabo logs deploy/api | grep set_initial_password
-> ```
->
-> While the links are live, treat that log as a secret: whoever reads it
-> can set the password on those accounts.
->
-> With `MAIL_TRANSPORT=smtp`, the link goes straight to each migrated
-> user's inbox — nothing shows up in the log beyond `type`/recipient, and
-> there's nothing to extract.
-
-A migrated user who tries to log in before setting a password gets **the
-same 401 as always**, indistinguishable from a wrong password or a
-nonexistent email ([RN-032](business-rules.md#rn-032)) — and, silently, a
-new password-set email, under the same throttle as reset. There's no
-response that confirms "this account is legacy": that would be the
-system's most valuable enumeration signal.
-
 ### Account locked by lockout
 
 The lockout is short (30s to 15 minutes) and resolves itself: the
 sliding window drains. **There's no unlock endpoint**, on purpose — see
-[RN-031](business-rules.md#rn-031). If you need to unlock someone right
+[RN-031](business-rules/autenticacao.md#rn-031). If you need to unlock someone right
 now:
 
 ```sql
@@ -1385,7 +1488,7 @@ max(sum by (project) (rate(brabo_llm_cost_micros_total[10m])) * 3600 / 1000000)
 
 The alert is a **warning**, not a brake. The real brake is the domain's
 `budgets`, and it acts per project/session, never globally
-([RN-019](business-rules.md#rn-019)).
+([RN-019](business-rules/custo.md#rn-019)).
 
 ### 1. Which project, which agent
 
@@ -1458,7 +1561,7 @@ select scope, scope_id, model_id from model_bindings where scope_id = '<projeto>
 
 Then point the project's binding at a `local` model through the settings
 screen (the most specific scope wins: session > agent > project >
-workspace — [RN-020](business-rules.md#rn-020)).
+workspace — [RN-020](business-rules/custo.md#rn-020)).
 
 **c) Lower the ceiling and make sure it's `block`.** Makes the domain
 itself refuse the next calls:
@@ -1763,9 +1866,10 @@ exposed in `docker-compose.yml`.
 | `OLLAMA_CONTEXT_LENGTH` | the default of 4096 **silently** truncates a prompt built for 128k. The agent loses its own instructions and starts imitating the tools' schema, which is what's left at the end of the context |
 | `OLLAMA_MAX_LOADED_MODELS` | with `OLLAMA_KEEP_ALIVE` set high, models pile up: 15.2 GB of resident weights on a 15 GB machine, and the agent responds empty for lack of memory |
 | `OLLAMA_REQUEST_TIMEOUT_MS` | too short a timeout for a large model on a long prompt |
+| `OLLAMA_MODE` (dev bootstrap, [RN-461](business-rules.md#rn-461), ADR 0114) | stuck at `host` after the native Ollama on the developer's machine was uninstalled or stopped — every local-LLM turn fails with `ECONNREFUSED` against `http://host.docker.internal:<port>`, and the compose `ollama` service never starts to cover for it (it's gated behind `profiles: ["local-llm"]`, and this variable is what keeps that profile off). Fix: `Docker › Reconfigurar Ollama` in `pnpm bootstrap`, which clears `OLLAMA_MODE`/`OLLAMA_HOST` from `.env` and forces the detection to ask again on the next `Create`/`Reset total` |
 | `START_OUTBOX_DRAIN` / `START_ANAMNESE` | the Psychologist and Anamnesis consume LLM turns in parallel with the execution agents and drop the dev's connection mid-cycle |
-| `TOOL_LOOP_MAX_ITERATIONS*` | a ceiling that's too LOW and the agent stops without delivering, with `iteration limit reached` and origin `model` — which is misleading, because the model made no wrong judgment at all, it never got to judge. The ceiling is per TYPE ([RN-085](business-rules.md#rn-085)): `8` for conversational agents, `60` for the dev agent and QA. Before raising it, check whether the agent HAS `token_budget_micros`; without it the ceiling is the only cost guard that exists |
-| `TERMINAL_OUTPUT_MAX_BYTES` | raising it too much brings back the failure mode the ceiling exists to prevent: each command's output stays in the loop's history and travels on EVERY following turn. It's not a context-window issue: the largest successful call from the execution that first revealed this had only 28,993 input tokens ([RN-074](business-rules.md#rn-074)) |
+| `TOOL_LOOP_MAX_ITERATIONS*` | a ceiling that's too LOW and the agent stops without delivering, with `iteration limit reached` and origin `model` — which is misleading, because the model made no wrong judgment at all, it never got to judge. The ceiling is per TYPE ([RN-085](business-rules/custo.md#rn-085)): `8` for conversational agents, `60` for the dev agent and QA. Before raising it, check whether the agent HAS `token_budget_micros`; without it the ceiling is the only cost guard that exists |
+| `TERMINAL_OUTPUT_MAX_BYTES` | raising it too much brings back the failure mode the ceiling exists to prevent: each command's output stays in the loop's history and travels on EVERY following turn. It's not a context-window issue: the largest successful call from the execution that first revealed this had only 28,993 input tokens ([RN-074](business-rules/custo.md#rn-074)) |
 | `API_JSON_BODY_LIMIT` (api) / `TRANSPORT_MAX_BODY_BYTES` (engine) | the `413 request entity too large` on the QA/SecOps gate had its cause in Brabo's own api, never in the provider — Express never had a body limit configured and the default of 100 KB was in effect, against the 8 MB Phoenix accepts on the heaviest engine→api leg (`POST .../llm-turn`, which resends the entire history on every iteration). `API_JSON_BODY_LIMIT` (default 10 MB) closes that end; `TRANSPORT_MAX_BODY_BYTES` (default 8 MiB) is the ceiling the engine's context compaction respects ON TOP OF the model's window, so it fires before the body blows the HTTP limit ([RN-412](business-rules.md#rn-412), [ADR 0098](adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.md)) |
 
 > **Careful — the guard doesn't clear the queue.** `START_ANAMNESE=false`
@@ -1879,14 +1983,14 @@ catalog, the manual number is the only one that exists.
 If the provider exposes `GET /models`, **don't seed the whole catalog** —
 let the sync discover it. It writes the models in a disabled state, and
 the owner enables what matters through the curation screen
-([RN-043](business-rules.md#rn-043)).
+([RN-043](business-rules/custo.md#rn-043)).
 
 If the provider's catalog publishes **modality** (accepts image, generates
 image) or `reasoning`, emit them in its `parseCatalogo` — and only when
 the official doc says so. A field the provider doesn't declare stays
 **omitted**, never `false`: `undefined` preserves what was already
 recorded, and `false` would wipe out hand-curated data
-([RN-056](business-rules.md#rn-056)).
+([RN-056](business-rules/custo.md#rn-056)).
 
 ### 6. Verify with a real credential
 

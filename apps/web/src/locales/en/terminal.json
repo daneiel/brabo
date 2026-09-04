@@ -24,10 +24,40 @@
   },
   "runnerOnboarding": {
     "defaultMessage": "No runner connected to this project.",
+    "noProjectMessage": "After you create the project, you'll be able to set up the runner here.",
     "instructionPrefix": "On your machine, inside the Brabo checkout (see",
     "instructionSuffix": "):",
-    "command": "pnpm --filter runner start -- --project {{projectId}} --dir <folder>",
+    "command": "brabo-runner --project {{projectId}} --dir {{caminho}} --token <generate one in Settings → Access tokens>",
     "detail": "The runner connects automatically as soon as it's running — no new action needs to happen here.",
-    "retryButton": "I already installed it, connect"
+    "retryButton": "I already installed it, connect",
+    "placeholderProjectId": "<project id>",
+    "placeholderPath": "<folder>",
+    "autoConfigureButton": "Set up folder automatically",
+    "autoConfiguring": "Setting up…",
+    "autoConfigureError": "Could not set it up automatically. Use the manual command below.",
+    "downloadKitButton": "Download files",
+    "downloadingKit": "Downloading…",
+    "downloadKitNote": "Download both files and move them into the same folder before running the runner.",
+    "downloadKitDone": "Downloads started — check your downloads folder and move both files together.",
+    "platformSelectLabel": "Platform",
+    "successIntro": "Done — inside the folder you chose, run:",
+    "pastaConfigurada": "Folder \"{{pasta}}\" is set up — the runner files are already in it.",
+    "binarioIndisponivel": "The prebuilt binary could not be downloaded right now ({{motivo}}) — the folder setup is still valid, and the command below installs the runner another way.",
+    "successIntroSemBinario": "In your terminal, inside the folder you chose, run:",
+    "successIntroKit": "After moving both files into the same folder, run this inside it:",
+    "passoHumano": "This step is yours: the browser does not run programs on your machine.",
+    "avisoTerminalAntes": "Heads up: this ends in your terminal. The browser prepares the folder, and the last step — one command, ready to copy — you run yourself.",
+    "copyButton": "Copy",
+    "copiedButton": "Copied!",
+    "manualDisclosureSummary": "I'd rather run it manually"
+  },
+  "esperaDoRunner": {
+    "esperando": "Looking for the runner…",
+    "esperandoDetalhe": "This screen updates on its own as soon as it connects. We stop looking after {{minutos}} minutes.",
+    "confirmado": "Runner connected — folder confirmed on {{data}}.",
+    "caminhoDoRunner": "This is the path the runner reported from your machine; it replaces whatever was typed before.",
+    "semResposta": "We did not see the runner connect within {{minutos}} minutes.",
+    "semRespostaRessalva": "That is not proof it is not running: check the terminal where you pasted the command, and if this project had already been confirmed with the same folder, the stamp is not rewritten — the Code tab is what knows about right now.",
+    "procurarDeNovo": "Look again"
   }
 }

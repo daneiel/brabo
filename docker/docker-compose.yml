@@ -65,8 +65,25 @@ services:
 
   # Ollama local — baixa um modelo pequeno (llama3.2:1b) automaticamente
   # no primeiro start, pra o chat funcionar via curl sem passo manual.
+  #
+  # `profiles: ["local-llm"]` (mesmo padrão já usado para os dois serviços
+  # `ollama`/`ollama-model-loader` em docker-compose.prod.yml, lá sob o nome
+  # `llm`): um `docker compose up` sem `--profile` NÃO sobe este serviço.
+  # Existe porque a porta publicada abaixo (OLLAMA_PORT, default 11434) é o
+  # MESMO default de uma instalação nativa de Ollama na máquina do
+  # desenvolvedor — com os dois de pé, o `up` falhava com "port is already
+  # allocated". scripts/dev/preflight.mjs detecta o Ollama nativo e escolhe
+  # o modo certo em `.env` (OLLAMA_MODE=host|container); quem sobe a stack
+  # (scripts/dev/reset-total.sh e o bootstrap.sh, via
+  # scripts/dev/perfil-ollama.sh) passa `--profile local-llm` só quando o
+  # modo atual NÃO é `host`.
   ollama:
-    image: ollama/ollama:latest
+    # Pin deliberado (mesmo motivo do pgvector/pg16 e do neo4j:5.26 acima):
+    # `latest` muda sob o pé sem aviso, e um upgrade silencioso de Ollama já
+    # quebrou build antes (mudança de rota da API). Atualizar é decisão
+    # manual — subir o número aqui, não seguir `latest`.
+    image: ollama/ollama:0.33.1
+    profiles: ["local-llm"]
     entrypoint: ["sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:1b; wait"]
     volumes:
       - ollama_data:/root/.ollama
@@ -102,7 +119,11 @@ services:
   # A lógica mora em docker/ollama/pull-models.sh (montado read-only) em vez
   # de inline, para poder ser lida/testada fora do compose.
   ollama-model-loader:
-    image: ollama/ollama:latest
+    # MESMA tag do serviço `ollama` acima, de propósito: os dois falam o
+    # mesmo protocolo HTTP, e divergir a versão entre daemon e CLI é o tipo
+    # de coisa que só aparece em produção.
+    image: ollama/ollama:0.33.1
+    profiles: ["local-llm"]
     depends_on:
       ollama:
         condition: service_started
@@ -118,7 +139,25 @@ services:
     build:
       context: ..
       dockerfile: docker/api/Dockerfile
+      args:
+        # UID/GID do usuário do container — casam com o dono do bind mount
+        # no host, pra ele nunca escrever como root (ver .env.example e
+        # docs/getting-started.md). NÃO leia ${UID} do shell aqui: é
+        # somente-leitura no bash e não é exportado ao ambiente por padrão,
+        # então o Compose sempre veria vazio. `DEV_UID`/`DEV_GID` são
+        # variáveis PRÓPRIAS, definidas no `.env` ou exportadas antes do
+        # `docker compose up`.
+        DEV_UID: ${DEV_UID:-1000}
+        DEV_GID: ${DEV_GID:-1000}
     working_dir: /workspace
+    # `host.docker.internal` resolve de graça no Docker Desktop, mas NÃO no
+    # Docker Engine nativo do Linux — precisa deste mapeamento explícito para
+    # o gateway da bridge. É o que permite OLLAMA_HOST=http://host.docker.
+    # internal:<porta> (OLLAMA_MODE=host, ver scripts/dev/preflight.mjs)
+    # alcançar um Ollama nativo rodando no HOST a partir de dentro do
+    # container.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       PORT: 3000
       DATABASE_URL: ${DATABASE_URL:-postgres://brabo:brabo@postgres:5432/brabo}
@@ -182,8 +221,21 @@ services:
       # o engine (mesmo path, mesmo volume) onde mora o permissions.json
       # de cada projeto.
       PROJECT_WORKSPACES_ROOT: /data/project-workspaces
+      # Broker de container (ADR 0130) — o único processo com acesso ao daemon
+      # Docker. A api é a ÚNICA que o alcança (rede `broker`, `internal: true`,
+      # sem porta publicada). Vazia é estado NORMAL: sem o profile
+      # `container-broker`, o serviço nem sobe, e quem lê o estado observado
+      # DIZ "não observado" em vez de herdar o registrado (RN-468).
+      BROKER_URL: ${BROKER_URL:-}
     ports:
       - "${API_PORT:-3000}:3000"
+    networks:
+      # Explícito porque a api participa de DUAS redes: a default (postgres,
+      # engine, web) e a interna do broker. Declarar `networks` num serviço
+      # tira dele a default implícita — omitir `default` aqui desligaria a api
+      # de todo o resto.
+      - default
+      - broker
     volumes:
       - ..:/workspace
       - api_root_node_modules:/workspace/node_modules
@@ -211,17 +263,31 @@ services:
       # primeira ferramenta do primeiro agente. Ver docs/runbook.md, seção
       # "Projeto no modo Local". Não é variável de ambiente de propósito: o
       # caminho é dado do PROJETO, não da instalação.
+    # SEM depends_on de `ollama` aqui, de propósito: desde que ele entrou em
+    # `profiles: ["local-llm"]` (ver o comentário no serviço, acima), um
+    # `docker compose up`/`config`/`ps` SEM `--profile` recusa o arquivo
+    # inteiro com "depends on undefined service" quando um serviço FORA do
+    # profile depende de um DENTRO dele — confirmado testando: quebrava até
+    # o `preflight.mjs`, que lê `docker compose config`. A api já não
+    # precisa da ordem de boot: o Ollama só é chamado quando um agente pede
+    # um turno de LLM, nunca no startup dela.
     depends_on:
       postgres:
         condition: service_healthy
-      ollama:
-        condition: service_started
 
   engine:
     build:
       context: ..
       dockerfile: docker/engine/Dockerfile
+      args:
+        DEV_UID: ${DEV_UID:-1000}
+        DEV_GID: ${DEV_GID:-1000}
     working_dir: /workspace/apps/engine
+    # Mesmo motivo do serviço `api`, acima: `host.docker.internal` não
+    # resolve por padrão no Docker Engine nativo do Linux (só no Docker
+    # Desktop).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       # Mesmo segredo dos dois lados — ver EngineServiceGuard e
       # EngineWeb.Plugs.VerifyServiceToken.
@@ -322,10 +388,82 @@ services:
       postgres:
         condition: service_healthy
 
+  # Broker de container (ADR 0130) — o ÚNICO serviço com `/var/run/docker.sock`
+  # montado, e o único que precisa dele. Não monte esse socket em nenhum outro.
+  #
+  # `profiles: ["container-broker"]`, mesmo mecanismo do `local-llm` acima: um
+  # `docker compose up` sem `--profile` NÃO sobe este serviço. A escolha é
+  # deliberada — dar acesso ao Docker do host a um processo que nada chama
+  # ainda seria uma mudança de postura para toda máquina de desenvolvimento, em
+  # troca de nada. Para ligar:
+  #
+  #   docker compose -f docker/docker-compose.yml --env-file .env \
+  #     --profile container-broker up -d broker
+  #
+  # e, no `.env`, `BROKER_URL=http://broker:8090` mais
+  # `PROJECT_WORKSPACES_HOST_DIR` (ver .env.example).
+  #
+  # NENHUM serviço tem `depends_on` dele, e isso é obrigatório: um serviço FORA
+  # do profile dependendo de um DENTRO faz o Compose recusar o arquivo inteiro
+  # com "depends on undefined service" — o mesmo achado registrado no serviço
+  # `ollama`, acima.
+  broker:
+    build:
+      context: ..
+      dockerfile: docker/broker/Dockerfile
+      args:
+        DEV_UID: ${DEV_UID:-1000}
+        DEV_GID: ${DEV_GID:-1000}
+    profiles: ["container-broker"]
+    working_dir: /workspace
+    environment:
+      BROKER_PORT: 8090
+      # Mesmo segredo dos outros dois serviços — ver EngineServiceGuard,
+      # EngineWeb.Plugs.VerifyServiceToken e `apps/broker/src/config.ts`.
+      BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-dev-service-token-change-me}
+      # De onde o broker LÊ a decisão do Arquiteto. Ele não recebe
+      # especificação de container: recebe `projectId` e vem buscar aqui.
+      API_URL: ${API_URL:-http://api:3000}
+      # A raiz das pastas de projeto **NO HOST** — não dentro de container
+      # nenhum. O `-v` de um `docker run` é resolvido pelo DAEMON, que enxerga
+      # o filesystem do host; um caminho de dentro da api faria o daemon criar
+      # e montar uma pasta VAZIA. Sem esta variável, `start` recusa dizendo
+      # exatamente isso, e as outras quatro operações continuam funcionando.
+      #
+      # Deriva de PROJECT_WORKSPACES_HOST_DIR (a mesma variável que troca o
+      # volume nomeado por uma pasta real, ver .env.example): com volume
+      # gerenciado não há caminho de host que sirva, e o broker prefere recusar
+      # a adivinhar.
+      PROJECT_WORKSPACES_HOST_ROOT: ${PROJECT_WORKSPACES_HOST_ROOT:-${PROJECT_WORKSPACES_HOST_DIR:-}}
+    # SEM `ports:`. É a primeira camada da contenção: quem alcança este processo
+    # alcança o Docker do host por procuração, e nada no host precisa alcançá-lo.
+    networks:
+      - broker
+    volumes:
+      - ..:/workspace
+      - broker_root_node_modules:/workspace/node_modules
+      - broker_app_node_modules:/workspace/apps/broker/node_modules
+      - broker_port_node_modules:/workspace/packages/docker-port/node_modules
+      # O socket. `:ro` é COSMÉTICO aqui e não vale nada como contenção — o
+      # protocolo do Docker é HTTP sobre o socket, e escrever no socket é o que
+      # toda operação faz. A contenção real é a de cima (sem porta), a
+      # autenticação por token e o fato de a especificação ser computada.
+      - /var/run/docker.sock:/var/run/docker.sock
+    # O socket é `root:docker` no host, e o processo aqui roda como DEV_UID.
+    # `DOCKER_GID` é o gid do grupo `docker` da SUA máquina
+    # (`getent group docker | cut -d: -f3`) — o default 999 é o mais comum e
+    # está errado em várias distribuições. Errar aqui dá "permission denied" no
+    # socket, que o `DockerIndisponivelError` nomeia com a dica do grupo.
+    group_add:
+      - "${DOCKER_GID:-999}"
+
   web:
     build:
       context: ..
       dockerfile: docker/web/Dockerfile
+      args:
+        DEV_UID: ${DEV_UID:-1000}
+        DEV_GID: ${DEV_GID:-1000}
     working_dir: /workspace
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
@@ -341,6 +479,16 @@ services:
     depends_on:
       - api
       - engine
+
+networks:
+  # Rede PRÓPRIA do broker, `internal: true` (ADR 0130). Duas consequências, e
+  # as duas são o ponto: o engine e o web NÃO alcançam o broker (eles não estão
+  # nela), e o broker não alcança a internet. Só a api está dos dois lados.
+  #
+  # Isto não substitui o token de serviço — é a camada de baixo dele. Um
+  # processo que fala com o Docker do host merece as duas.
+  broker:
+    internal: true
 
 volumes:
   pgdata:
@@ -359,3 +507,6 @@ volumes:
   engine_mix:
   engine_hex:
   project_workspaces:
+  broker_root_node_modules:
+  broker_app_node_modules:
+  broker_port_node_modules:

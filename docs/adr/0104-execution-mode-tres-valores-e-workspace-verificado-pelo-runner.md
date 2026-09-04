@@ -12,7 +12,7 @@ the SAME field name, and nobody had reconciled the two until now.
 
 [ADR 0072](0072-projeto-local-ou-container.md) created
 `projects.workspace_mode` (`'container'|'local'`) + `workspace_path`. In
-`local` mode, [RN-170](../business-rules.md#rn-170) validates at CREATION
+`local` mode, [RN-170](../business-rules/autenticacao.md#rn-170) validates at CREATION
 time that the folder is **mounted via bind-mount** inside both the api's AND
 the engine's containers — `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
 (`validarCaminhoDeWorkspaceLocal`) runs `access(W_OK|X_OK)` **inside the

@@ -46,7 +46,7 @@ OLLAMA_EMBEDDING_SMOKE=1 pnpm --filter api test ollama-provider.embeddings
 
 O `501` é o achado que mais valeu, e virou teste nos dois níveis: é a camada de
 MODELO da capability falhando no lugar mais tarde possível, e a razão de
-`assertCanEmbed` recusar antes ([RN-190](../business-rules.md#rn-190)). Custo
+`assertCanEmbed` recusar antes ([RN-190](../business-rules/custo.md#rn-190)). Custo
 real: **US$ 0,00** — modelo local não tem preço, e por isso este é o único
 aceite desta página que dá para repetir à vontade.
 
@@ -94,7 +94,7 @@ execução do hello-limpo).
 Cinco micro-USD — **US$ 0,000005**, duas ordens de grandeza abaixo da
 estimativa de "< US$ 0,001" da seção acima. `estimated: false` é o que importa
 aqui: o consumo veio do provider, não do estimador local, e o preço gravado é o
-congelado no momento do uso ([RN-044](../business-rules.md#rn-044)) — não o da
+congelado no momento do uso ([RN-044](../business-rules/custo.md#rn-044)) — não o da
 tabela `models` de hoje.
 
 ### O que o smoke encontrou no caminho
@@ -105,7 +105,7 @@ curadoria de `models.is_active` para `workspace_models`:
 
 - afirmava `alvo.isActive === false` sobre o catálogo global — campo que não
   existe mais, e que vinha `undefined`. A afirmação certa da
-  [RN-043](../business-rules.md#rn-043) hoje é `workspaceModels.isActive(...)`,
+  [RN-043](../business-rules/custo.md#rn-043) hoje é `workspaceModels.isActive(...)`,
   porque **ausência de linha é o desligado**;
 - montava `SetModelsActiveUseCase` e `SetModelBindingUseCase` com as assinaturas
   antigas, sem `workspaceId`/`curatedBy` e sem o repositório de curadoria.
@@ -192,7 +192,7 @@ explícita.
 Nos seis, o passo final é o mesmo e é o que interessa ao produto: uma sessão de
 chat completa, sem evento `error` nem `metering_failed`, com uma linha em
 `token_usage` carregando o preço **congelado** no momento do uso
-([RN-044](../business-rules.md#rn-044)) — não o preço de hoje da tabela
+([RN-044](../business-rules/custo.md#rn-044)) — não o preço de hoje da tabela
 `models`.
 
 ## Como fechar uma pendência

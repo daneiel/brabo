@@ -50,7 +50,7 @@ irrestrita: o parâmetro `state` é validado por HMAC
 
 Essa garantia vale exatamente o quanto vale a chave, e por isso ela deixou de
 ter default: em produção a api **não sobe** com a chave de exemplo do
-repositório, que é pública (ADR 0059, [RN-093](business-rules.md#rn-093)). Com
+repositório, que é pública (ADR 0059, [RN-093](business-rules/custo.md#rn-093)). Com
 a chave conhecida, esta rota volta a ser irrestrita na prática — qualquer um
 assina um `state` para o projeto que quiser.
 
@@ -69,7 +69,7 @@ funcionar mesmo com o access token expirado.
 > reiniciar o pod. Quem segura esta superfície é o **lockout progressivo** por
 > e-mail e por IP, dentro dos casos de uso. Não é reforço opcional: é a única
 > defesa que existe aqui. Ver
-> [RN-030](business-rules.md#rn-030) e [RN-031](business-rules.md#rn-031).
+> [RN-030](business-rules/autenticacao.md#rn-030) e [RN-031](business-rules/autenticacao.md#rn-031).
 
 **`POST /auth/register`** — cadastro. Responde `202` tanto para endereço novo
 quanto para já cadastrado; no segundo caso nada é criado e o dono do endereço
@@ -122,7 +122,7 @@ motivo na URL.
 - **`POST /workspaces/:workspaceId/projects` decide onde o agente vai escrever,
   e por isso é rota de superfície de segurança, não só de cadastro**
   ([ADR 0072](adr/0072-projeto-local-ou-container.md),
-  [RN-169](business-rules.md#rn-169)/[RN-170](business-rules.md#rn-170)). O
+  [RN-169](business-rules/autenticacao.md#rn-169)/[RN-170](business-rules/autenticacao.md#rn-170)). O
   corpo ganhou `workspaceMode` (`container` — o default e o comportamento de
   sempre — ou `local`) e `workspacePath`. No modo `local` o caminho absoluto
   informado vira a **raiz do escopo de terminal** do ADR 0055: o que se digita
@@ -151,11 +151,11 @@ motivo na URL.
   **limpo** (a credencial vem em campo separado, e nunca embutida na URL), e
   quem consome tem a obrigação de injetá-la por invocação, nunca em arquivo —
   ver `Engine.Actions.GitAuth` e o porquê disso na
-  [RN-076](business-rules.md#rn-076). Se algum dia esta rota passar a devolver
+  [RN-076](business-rules/custo.md#rn-076). Se algum dia esta rota passar a devolver
   a URL já autenticada, o token vai parar no `.git/config`, dentro da pasta
   onde o dev agent tem leitura auto-aprovada.
 - **As três rotas de leitura do PO** — `GET /internal/projects/:projectId/business-rules`,
-  `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules.md#rn-164))
+  `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules/autenticacao.md#rn-164))
   e `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407)) —
   não devolvem segredo nenhum e **não aceitam nada além do id do projeto**:
   sem termo de busca, sem paginação, sem filtro. É de propósito. Uma rota de
@@ -170,7 +170,7 @@ motivo na URL.
   `/internal` é sinalização para humanos. Elas ficam **fora do JWT** por
   `@ServiceRoute()`: o token de usuário não serve aqui e o de serviço não serve
   em nenhuma outra rota — os dois mecanismos nunca se sobrepõem
-  ([RN-035](business-rules.md#rn-035)).
+  ([RN-035](business-rules/autenticacao.md#rn-035)).
 - **`/docs` e `/docs-json` NÃO estão na tabela, e isso é uma lacuna
   conhecida.** O Swagger UI é montado por `SwaggerModule.setup()` no nível do
   Express, não como controller, e o teste enumera por `DiscoveryService` — ele
@@ -183,7 +183,7 @@ motivo na URL.
   do teto continua `role:maintainer`. Até a FASE 18 a tabela `agent_areas`
   nunca era gravada e a rota respondia `[]` a todo mundo, o que fazia a
   classificação parecer folgada por acidente e não por decisão. Com a área
-  nascendo junto com o projeto ([RN-094](business-rules.md#rn-094)), o corte
+  nascendo junto com o projeto ([RN-094](business-rules/custo.md#rn-094)), o corte
   volta a ser o que a FASE 14d quis: **ler** o teto é trabalho de quem executa;
   **mudá-lo** é decidir quanto o produto gasta sem perguntar, e por isso exige
   o mesmo papel de ativar a execução.
@@ -201,19 +201,19 @@ motivo na URL.
   - **não há verbo de escrita no controller**, e não pode haver: a aba Code é de
     leitura, e escrita é efeito externo, que nasce `proposed_action` e é fase
     seguinte. Um `@Post` neste arquivo é mudança de fase, não de rota;
-  - **o caminho é contido em UM lugar** ([RN-095](business-rules.md#rn-095)),
-    pela mesma checagem central da [RN-092](business-rules.md#rn-092) — e a
+  - **o caminho é contido em UM lugar** ([RN-095](business-rules/custo.md#rn-095)),
+    pela mesma checagem central da [RN-092](business-rules/custo.md#rn-092) — e a
     contenção importa aqui mais que o papel, porque nos providers remotos o
     caminho vira segmento de URL da API do provider e um `../` troca de
     **endpoint**, não de arquivo;
   - **a credencial gasta é a do owner do workspace**
-    ([RN-058](business-rules.md#rn-058)/[RN-082](business-rules.md#rn-082)),
+    ([RN-058](business-rules/custo.md#rn-058)/[RN-082](business-rules/custo.md#rn-082)),
     como na escrita. Ler custa rate limit do provider, e é por isso que a busca
     tem orçamento: sem teto, um `viewer` pagaria a conta do owner à vontade.
 - **`GET /workspaces/:workspaceId/spend-report` passou a devolver a quebra por
   provider, que é quebra por CREDENCIAL** ([ADR
   0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md),
-  [RN-186](business-rules.md#rn-186)/[RN-187](business-rules.md#rn-187)). Nenhuma
+  [RN-186](business-rules/custo.md#rn-186)/[RN-187](business-rules/custo.md#rn-187)). Nenhuma
   rota nova e nenhuma mudança de papel — continua `role:owner`, como já era —,
   mas o que ela CONCEDE mudou, e é por isso que a nota existe. O ADR
   [0063](adr/0063-duas-audiencias-para-o-mesmo-gasto.md) tinha recusado o eixo
@@ -252,7 +252,7 @@ motivo na URL.
   `/ready` respondem `Access-Control-Allow-Origin` para as origens de
   `WEB_ORIGIN`; **`/internal/*` e `/metrics` não**, e a exclusão é o ponto. As 13
   rotas internas são server-to-server com segredo compartilhado
-  ([RN-035](business-rules.md#rn-035)); CORS ali não habilitaria nada — o cliente
+  ([RN-035](business-rules/autenticacao.md#rn-035)); CORS ali não habilitaria nada — o cliente
   HTTP da api ignora esses cabeçalhos — mas **anunciaria a um navegador que ele é
   um cliente esperado daquele canal**. Há teste afirmando a ausência, e um sobre a
   lista de caminhos ter exatamente três entradas, para mover a fronteira aparecer
@@ -275,24 +275,24 @@ motivo na URL.
   sessão alheia: `findInProject(projectId, originSessionId)` recusa silenciosamente
   um id que não pertença ao PRÓPRIO projeto do path, e o fechamento só acontece
   se `GetSessionPendingWorkUseCase` (a mesma trava do heartbeat de inatividade,
-  [RN-073](business-rules.md#rn-073)) confirmar que não há handoff, ação ou
+  [RN-073](business-rules/custo.md#rn-073)) confirmar que não há handoff, ação ou
   turno pendurado ali. Nunca fecha a sessão de execução que a própria chamada
   acabou de ativar.
 - **`GET /projects/:projectId/execution/session` é `role:viewer`, o mesmo
-  papel de `GET /sessions/:sessionId`** ([RN-139](business-rules.md#rn-139)).
+  papel de `GET /sessions/:sessionId`** ([RN-139](business-rules/autenticacao.md#rn-139)).
   Devolve a sessão de execução VIGENTE do projeto — `active` com
   `execution.activated` gravado — ou `null`; nunca a sessão mais recente do
   projeto, que é o que a aba Executores lia antes e que muda de sessão em
   silêncio assim que outra sessão nasce depois dela.
 - **`POST .../llm-turn` e `POST .../llm-turn-stream` ganharam `modelName` no
   corpo de resposta/frame final, e a classificação não mudou** — continuam
-  `engine-service` como sempre ([RN-146](business-rules.md#rn-146)). O nome
+  `engine-service` como sempre ([RN-146](business-rules/autenticacao.md#rn-146)). O nome
   do modelo já era resolvido para chamar o provider; só passou a viajar de
   volta ao engine, que o inclui no payload de `agent.response`. Nenhum dado
   novo é lido, nenhuma credencial nova é exposta — é o mesmo nome que já sai
   em `token_usage`.
 - **`PUT /projects/:projectId/agent-autonomy` passou a aceitar `actionType:
-  "*"` — "auto mode" ([RN-153](business-rules.md#rn-153)) —, e a
+  "*"` — "auto mode" ([RN-153](business-rules/autenticacao.md#rn-153)) —, e a
   classificação não mudou:** continua `role:maintainer`, o mesmo do `GET`
   ao lado. A diferença é o que o corpo agora AUTORIZA, não quem pode
   chamar: a curinga concede autonomia pra QUALQUER tipo de ação do agente
@@ -303,7 +303,7 @@ motivo na URL.
   antes da curinga existir. É por isso que os três tetos absolutos —
   merge em branch protegida, `instruction_patch`,
   `parallelize`/`raise_max_parallel` — continuam bloqueando mesmo com a
-  curinga em `auto_approve` ([RN-154](business-rules.md#rn-154)): eles
+  curinga em `auto_approve` ([RN-154](business-rules/autenticacao.md#rn-154)): eles
   reagem a `current.policy === 'auto_approve'`, nunca à origem dela, e
   nenhuma exceção precisou entrar em `decide()` pra isso continuar
   valendo. `ApprovalCard.tsx` só oferece o botão que grava a curinga a

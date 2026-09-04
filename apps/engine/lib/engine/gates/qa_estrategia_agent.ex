@@ -38,14 +38,17 @@ defmodule Engine.Gates.QaEstrategiaAgent do
   alias Engine.Gates.Tools.EmitPlanoDeTeste
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
   alias Engine.Gates.Hooks.TerminationPlanoDeTeste
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch}
+  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch, RagFeedback}
   alias Engine.Harness.{ArtifactEmitter, Hooks, ToolLoop}
   alias Engine.Sessions.EngineApiClient
 
   # RagSearch entrou aqui (frente rag_search): o prompt já pede "padrões de
   # teste do projeto" — é exatamente o que docs/ADRs indexados no RAG
   # respondem melhor do que vasculhar o worktree às cegas.
-  @registry [ReadFile, SearchWorkspace, RagSearch, EmitPlanoDeTeste]
+  # RagFeedback anda junto de RagSearch (RN-480): buscar sem poder dizer se o
+  # trecho serviu deixa a calibração dos pesos sem sinal de verdade nenhum.
+  # `:direct` como a busca — votar não é efeito externo.
+  @registry [ReadFile, SearchWorkspace, RagSearch, RagFeedback, EmitPlanoDeTeste]
 
   @doc "Registro de ferramentas — sem Terminal, de propósito (ver moduledoc)."
   def tools, do: @registry

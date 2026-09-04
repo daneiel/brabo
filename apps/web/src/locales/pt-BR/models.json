@@ -115,6 +115,7 @@
     "filterFitForAgents": "aptos para agentes",
     "noModelsRegistered": "Nenhum modelo cadastrado",
     "noToolCallingModels": "Nenhum modelo faz tool calling nativo. Desmarque o filtro para ver os demais.",
+    "currentHiddenByFilter": "O modelo vigente ({{model}}) não faz tool calling nativo e está fora desta lista.",
     "selectModel": "Selecionar modelo"
   },
   "spend": {
@@ -139,6 +140,46 @@
     "callsCount_other": "({{count}} chamadas)",
     "currency": {
       "belowCent": "< {{value}}"
+    }
+  },
+  "huggingface": {
+    "title": "Hugging Face Hub",
+    "eyebrow": "puxar modelo GGUF para o Ollama",
+    "subtitle": "Busca modelos GGUF no Hub e pede o pull para dentro do Ollama local. Só publishers oficiais aparecem por padrão — nada baixa sem uma segunda confirmação explícita.",
+    "searchLabel": "Buscar modelo no Hugging Face Hub",
+    "searchPlaceholder": "ex.: llama-3.1-8b",
+    "searchButton": "Buscar",
+    "searching": "Buscando…",
+    "searchError": "Não consegui buscar no Hugging Face Hub agora.",
+    "noResults": "Nenhum modelo GGUF encontrado para \"{{query}}\".",
+    "communityToggle": "Mostrar modelos da comunidade (não oficiais)",
+    "communityWarning": "Modelos da comunidade são reuploads de terceiros, sem curadoria do fabricante. Confira o publisher antes de puxar — um repositório malicioso pode empacotar pesos adulterados.",
+    "downloads": "{{value}} downloads",
+    "badgeOfficial": "oficial",
+    "badgeCommunity": "comunidade",
+    "pullButton": "Puxar",
+    "pullStatus": {
+      "pending_confirmation": "aguardando confirmação",
+      "confirmed": "confirmado",
+      "pulling": "puxando…",
+      "active": "ativo",
+      "failed": "falhou"
+    },
+    "confirmModal": {
+      "title": "Confirmar pull do modelo",
+      "explanation": "O download roda no servidor e pode levar minutos, dependendo do tamanho do modelo. O modelo entra ATIVADO neste workspace assim que terminar.",
+      "preparing": "Preparando pedido…",
+      "repoIdLabel": "Repositório",
+      "sizeLabel": "Tamanho estimado",
+      "sizeUnknown": "não informado pelo Hub",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar e puxar"
+    },
+    "toasts": {
+      "requestErrorTitle": "Não foi possível criar o pedido de pull",
+      "confirmConnectionLostTitle": "Conexão perdida durante o pull — acompanhando pelo status",
+      "pullSuccess": "{{repoId}} puxado e ativado",
+      "pullFailedTitle": "Pull de {{repoId}} falhou"
     }
   },
   "credentialStep": {

@@ -299,6 +299,98 @@ defmodule EngineWeb.TerminalChannelTest do
     end
   end
 
+  # container_start/container_stop/container_remove (ADR 0137) — MESMO
+  # mecanismo de dispatch_exec/exec_result (`Engine.Runners.RunnerRouterTest`
+  # já cobre o roundtrip completo via `RunnerRouter`); aqui o que importa é
+  # só que o CANAL empurra o evento certo com `ref` embutido e que
+  # `handle_in("container_*_result", ...)` devolve pro `from` — testado
+  # diretamente com `send/2`/`handle_info`, sem passar por `RunnerRouter`.
+  describe "container_start/container_stop/container_remove (ADR 0137)" do
+    test "dispatch_container_start empurra \"container_start\" com ref e spec pro runner" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      spec = %{"workspaceDirName" => "proj-abc12345", "imagem" => "node:22"}
+      send(joined.channel_pid, {:dispatch_container_start, "ref-1", spec, self(), 5_000})
+
+      assert_push "container_start", %{ref: "ref-1", spec: ^spec}
+    end
+
+    test "container_start_result responde pro from com :runner_container_start_result" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      send(joined.channel_pid, {:dispatch_container_start, "ref-2", %{}, self(), 5_000})
+      assert_push "container_start", %{ref: "ref-2"}
+
+      push(joined, "container_start_result", %{
+        "ref" => "ref-2",
+        "sucesso" => true,
+        "containerId" => "c-1"
+      })
+
+      assert_receive {:runner_container_start_result, "ref-2",
+                      %{"sucesso" => true, "containerId" => "c-1"}}
+    end
+
+    test "dispatch_container_stop/container_stop_result — mesmo roundtrip, workspaceDirName" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      send(
+        joined.channel_pid,
+        {:dispatch_container_stop, "ref-3", "proj-abc12345", self(), 5_000}
+      )
+
+      assert_push "container_stop", %{ref: "ref-3", workspaceDirName: "proj-abc12345"}
+
+      push(joined, "container_stop_result", %{"ref" => "ref-3", "sucesso" => true})
+
+      assert_receive {:runner_container_stop_result, "ref-3", %{"sucesso" => true}}
+    end
+
+    test "dispatch_container_remove/container_remove_result — mesmo roundtrip" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      send(
+        joined.channel_pid,
+        {:dispatch_container_remove, "ref-4", "proj-abc12345", self(), 5_000}
+      )
+
+      assert_push "container_remove", %{ref: "ref-4", workspaceDirName: "proj-abc12345"}
+
+      push(joined, "container_remove_result", %{"ref" => "ref-4", "sucesso" => true})
+
+      assert_receive {:runner_container_remove_result, "ref-4", %{"sucesso" => true}}
+    end
+
+    test "container_start_result com ref desconhecido é descartado — canal segue vivo" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      push(joined, "container_start_result", %{"ref" => "ref-desconhecido", "sucesso" => true})
+
+      refute_receive {:runner_container_start_result, _, _}, 200
+      assert Process.alive?(joined.channel_pid)
+    end
+  end
+
   defp wait_until(fun, tentativas \\ 50)
 
   defp wait_until(_fun, 0), do: flunk("condição não ficou verdadeira a tempo")

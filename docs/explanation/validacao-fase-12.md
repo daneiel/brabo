@@ -61,7 +61,7 @@ product.
 |---|---|---|
 | 0 | create project | born with `story_promotion = manual` **without anyone configuring anything** |
 | 1 | adopt a pre-existing bare repo, with `main` and `develop`, without `qa` or `rc` | `origin = 'adopted'`; the plan diagnoses a missing branch **and** a branch outside the template; `plan_decision` stays **null**; no row inserted by hand |
-| 1b | decide "adopt as is" | the template is **not** forced onto the user's repository ([RN-045](../business-rules.md#rn-045)) |
+| 1b | decide "adopt as is" | the template is **not** forced onto the user's repository ([RN-045](../business-rules/custo.md#rn-045)) |
 | 2 | the PO creates a complete story, with 3 tasks | the story becomes `draft` + `proposed_ready`; **`claimNext` returns `null`** |
 | 3 | the user promotes | the story becomes `ready`; the proposal leaves the queue; the event records `user`, not `agent/po` |
 | 4 | activate execution and resolve 3 gates in sequence | 3 tasks, 1 agent, **0 engine restarts** |
@@ -173,8 +173,8 @@ down. Everything that would depend on a live count appears as
 | engine restarts per delivered task | **1, by construction** — a property of finding #10 (`:666`), not an observed estimate. Real total: **not measured** | **0** |
 | batches | the entire phase ran in batches (`:393-416`) | don't exist: the agent works through the module's queue on its own |
 | agent with no task | dead process (`restart: :temporary`) | explicit `idle`, supervised, event-wakeable |
-| sequence of failures | burned budget in a row | circuit breaker stops at `idle_tripped` ([RN-047](../business-rules.md#rn-047)) |
-| story → `ready` | automatic on creation, no human step (finding #13, `:669`) | user decision, actor recorded in the event log ([RN-048](../business-rules.md#rn-048)) |
+| sequence of failures | burned budget in a row | circuit breaker stops at `idle_tripped` ([RN-047](../business-rules/custo.md#rn-047)) |
+| story → `ready` | automatic on creation, no human step (finding #13, `:669`) | user decision, actor recorded in the event log ([RN-048](../business-rules/custo.md#rn-048)) |
 | declining a story | no state, event, or button existed (finding #14) | returned to the PO with the reason pinned to their session |
 | total manual interventions | **not measured** — the observation table stayed blank (`:488-490`) | those from the approval pipeline, which the phase did **not** change |
 | merge into a protected branch | manual, by design | manual, by design — unchanged, and step 6 proves it |

@@ -5,10 +5,10 @@
 - **Revisa:** [ADR 0063](0063-duas-audiencias-para-o-mesmo-gasto.md) (as duas
   audiências do mesmo gasto), que excluiu `provider` das dimensões de
   propósito
-- **Contexto anterior:** [RN-058](../business-rules.md#rn-058) (a chave que o
-  agente gasta é a do owner), [RN-060](../business-rules.md#rn-060) (o gasto
+- **Contexto anterior:** [RN-058](../business-rules/custo.md#rn-058) (a chave que o
+  agente gasta é a do owner), [RN-060](../business-rules/custo.md#rn-060) (o gasto
   das chaves é do owner, e só ele vê) e
-  [RN-101](../business-rules.md#rn-101) (as duas audiências)
+  [RN-101](../business-rules/custo.md#rn-101) (as duas audiências)
 
 ## Contexto
 
@@ -37,7 +37,7 @@ O que a decisão de 2026-08-09 não separava, e o uso pediu:
 ## Decisão
 
 **`provider` volta a ser `SpendDimension`, e o relatório do owner ganha
-`porProvider`** ([RN-186](../business-rules.md#rn-186)). O eixo mora numa rota
+`porProvider`** ([RN-186](../business-rules/custo.md#rn-186)). O eixo mora numa rota
 que já exigia `owner` — a mesma régua da RN-060 —, e o membro não ganha campo
 nenhum. `credential-spend` fica **intocada**: ela responde a fatura por mês, com
 o vínculo à chave que existe hoje (`temCredencial`), e o eixo novo responde o
@@ -46,7 +46,7 @@ recorte uma da outra, pelo mesmo critério que o 0063 usou para separar as duas
 audiências.
 
 **A contenção da privacidade muda de forma, não de força: quem contém agora é o
-TIPO** ([RN-187](../business-rules.md#rn-187)). `sumGroupedBy` tem duas
+TIPO** ([RN-187](../business-rules/custo.md#rn-187)). `sumGroupedBy` tem duas
 sobrecargas, e o que as separa é o escopo:
 
 ```ts
@@ -77,7 +77,7 @@ alternativa (duas listas independentes) tem um modo de falha conhecido: a lista
 restrita envelhece calada.
 
 **Pessoa e agente viram dois blocos, derivados e não consultados**
-([RN-188](../business-rules.md#rn-188)). `porOwner` e `porAgente` são partição
+([RN-188](../business-rules/custo.md#rn-188)). `porOwner` e `porAgente` são partição
 de `porAtor` por `actor_kind`, feita no caso de uso; `porAtor` continua inteira
 para quem já a consumia. O 0063 mediu que o custo destas consultas cresce com o
 tamanho de `token_usage` e não com o do pedido — varrer a janela duas vezes a

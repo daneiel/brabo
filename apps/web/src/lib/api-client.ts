@@ -23,6 +23,7 @@ import type {
   Budget,
   BudgetPolicy,
   CicloDeVidaDoContainer,
+  ContainerOverviewItem,
   CodeBlame,
   CodeBranchDetailList,
   CodeDiff,
@@ -75,6 +76,7 @@ import type {
   PersonalAccessTokenSummary,
   PersonalAccessTokenIssued,
   PersonalAccessTokenAdminSummary,
+  RunnerDeviceKeySummary,
   Workspace,
   WorkspaceSummary,
   WorkspaceWithRole,
@@ -371,6 +373,22 @@ export const revokePersonalAccessTokenAsMaintainer = (
 ) =>
   del<void>(`/projects/${projectId}/personal-access-tokens/${tokenId}/admin`);
 
+/**
+ * Chave de dispositivo do runner (par Ed25519 gerado NO NAVEGADOR — ver
+ * `lib/runner-bootstrap.ts`). Substitui o PAT digitado à mão no fluxo de
+ * onboarding: só a chave PÚBLICA viaja até aqui, nunca a privada.
+ */
+export const registerRunnerDeviceKey = (
+  projectId: string,
+  input: { name: string; publicKeyJwk: string },
+) =>
+  post<RunnerDeviceKeySummary>(
+    `/projects/${projectId}/runner-device-keys`,
+    input,
+  );
+export const revokeRunnerDeviceKey = (projectId: string, deviceKeyId: string) =>
+  del<void>(`/projects/${projectId}/runner-device-keys/${deviceKeyId}`);
+
 export const getProjectPermissions = (projectId: string) =>
   get<PermissionsFile>(`/projects/${projectId}/permissions`);
 export const setProjectPermissions = (projectId: string, file: PermissionsFile) =>
@@ -459,6 +477,14 @@ export const getContainerState = (projectId: string) =>
 // orquestrador real transiciona `project_containers` hoje.
 export const getContainerLifecycle = (projectId: string) =>
   get<CicloDeVidaDoContainer | null>(`/projects/${projectId}/container/lifecycle`);
+
+// --- Página global de containers (ADR 0136, RN-495) ---
+//
+// Cross-projeto, do WORKSPACE inteiro — ao lado (não dentro) das rotas de
+// container por projeto acima.
+
+export const getContainersOverview = (workspaceId: string) =>
+  get<ContainerOverviewItem[]>(`/workspaces/${workspaceId}/containers`);
 
 // --- Aba Code, só leitura (FASE 26) ---
 //
@@ -1133,6 +1159,23 @@ export const searchRag = (
   },
 ) => post<import('./api-types').RagSearchResult>(`/projects/${projectId}/rag/search`, body);
 
+// O voto sobre um trecho (RN-480) — `viewer`, o MESMO papel de `search`: quem
+// pode ler o resultado é quem pode julgá-lo. Votar de novo no mesmo trecho da
+// mesma busca SOBRESCREVE o próprio voto (unique por ator), nunca soma um
+// segundo — a métrica mede acerto, não entusiasmo.
+export const sendRagFeedback = (
+  projectId: string,
+  body: {
+    searchId: string;
+    chunkId: string;
+    verdict: import('./api-types').RagVerdict;
+  },
+) =>
+  post<import('./api-types').RagFeedbackReport>(
+    `/projects/${projectId}/rag/feedback`,
+    body,
+  );
+
 export const getRagCoverage = (projectId: string) =>
   get<import('./api-types').RagCoverage>(`/projects/${projectId}/rag/coverage`);
 
@@ -1148,4 +1191,46 @@ export const attachLocalFolder = (
   post<import('./api-types').AttachLocalFolderReport>(
     `/projects/${projectId}/rag/local`,
     body,
+  );
+
+// --- Hugging Face Hub → pull para o Ollama ---
+//
+// Ancoradas no workspace, mesmo padrão da curadoria de catálogo acima:
+// `maintainer` é o papel que o `RolesGuard` resolve a partir de `:workspaceId`.
+// `repoId` vai no CORPO do POST de criação, nunca em segmento de path — o
+// formato real do Hub (`<publisher>/<modelo>`) contém `/`, que quebraria o
+// casamento de rota (mesma razão de `getCodeFile` para caminho de arquivo).
+
+export const searchHuggingFaceModels = (
+  workspaceId: string,
+  params: { q: string; includeCommunity?: boolean },
+) =>
+  get<import('./api-types').HuggingFaceModel[]>(
+    `/workspaces/${workspaceId}/huggingface/models${qs({
+      q: params.q,
+      includeCommunity: params.includeCommunity || undefined,
+    })}`,
+  );
+
+export const requestModelPull = (
+  workspaceId: string,
+  body: { repoId: string; estimatedSizeBytes?: number },
+) =>
+  post<import('./api-types').ModelPullRequest>(
+    `/workspaces/${workspaceId}/huggingface/pull-requests`,
+    body,
+  );
+
+// Roda o pull inteiro SINCRONAMENTE no servidor (sem fila própria na api
+// ainda) — a chamada pode demorar minutos e um proxy no meio pode fechar a
+// conexão antes do fim. `getModelPullRequest` (poll) é a fonte de verdade
+// de status, independente de esta promise resolver ou rejeitar.
+export const confirmModelPull = (workspaceId: string, id: string) =>
+  post<import('./api-types').ModelPullRequest>(
+    `/workspaces/${workspaceId}/huggingface/pull-requests/${id}/confirm`,
+  );
+
+export const getModelPullRequest = (workspaceId: string, id: string) =>
+  get<import('./api-types').ModelPullRequest>(
+    `/workspaces/${workspaceId}/huggingface/pull-requests/${id}`,
   );

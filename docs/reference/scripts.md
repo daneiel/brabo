@@ -35,10 +35,12 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm engine:dev` | `cd apps/engine && mix phx.server` |
 | `pnpm engine:test` | `cd apps/engine && mix test` |
 | `pnpm engine:migrate` | `cd apps/engine && mix ecto.migrate` |
-| `pnpm docs:start` | `pnpm --filter website start` |
-| `pnpm docs:build` | `pnpm --filter website build` |
-| `pnpm docs:serve` | `pnpm --filter website serve` |
-| `pnpm docs:clear` | `pnpm --filter website clear` |
+| `pnpm e2e` | `pnpm --dir e2e test` |
+| `pnpm e2e:navegadores` | `pnpm --dir e2e navegadores` |
+| `pnpm docs:start` | `pnpm --dir website start` |
+| `pnpm docs:build` | `pnpm --dir website build` |
+| `pnpm docs:serve` | `pnpm --dir website serve` |
+| `pnpm docs:clear` | `pnpm --dir website clear` |
 | `pnpm docs:generate` | `node scripts/docs/generate.mjs` |
 | `pnpm docs:landing` | `node scripts/docs/landing.mjs` |
 | `pnpm docs:check` | `node scripts/docs/docmap.mjs && node scripts/docs/generate.mjs --check` |
@@ -61,13 +63,14 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter api test:watch` | `vitest` |
 | `pnpm --filter api test:cov` | `vitest run --coverage` |
 | `pnpm --filter api seed` | `ts-node src/db/seed.ts` |
-| `pnpm --filter api migrate:keycloak-users` | `ts-node src/scripts/migrate-keycloak-users.ts` |
 | `pnpm --filter api openapi:export` | `ts-node src/scripts/export-openapi.ts` |
 | `pnpm --filter api demo:repo-bootstrap` | `ts-node scripts/demo-repo-bootstrap.ts` |
 | `pnpm --filter api demo:noop-execution` | `ts-node scripts/demo-noop-execution.ts` |
 | `pnpm --filter api demo:dev-agent-real` | `ts-node scripts/demo-dev-agent-real.ts` |
 | `pnpm --filter api demo:pr-gates` | `ts-node scripts/demo-pr-gates.ts` |
 | `pnpm --filter api demo:pr-gates-area-qa` | `ts-node scripts/demo-pr-gates-area-qa.ts` |
+| `pnpm --filter api golden-set:qa-seed` | `ts-node scripts/seed-golden-set-qa.ts` |
+| `pnpm --filter api golden-set:rag-seed` | `ts-node scripts/seed-golden-set-rag.ts` |
 | `pnpm --filter api demo:infra-agent` | `ts-node scripts/demo-infra-agent.ts` |
 | `pnpm --filter api demo:infra-workflows-github` | `ts-node scripts/demo-infra-workflows-github.ts` |
 | `pnpm --filter api demo:psicologo` | `ts-node scripts/demo-psicologo.ts` |
@@ -76,6 +79,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter api validacao:real` | `ts-node scripts/validacao-real.ts` |
 | `pnpm --filter api validacao:gates` | `ts-node scripts/validacao-gates.ts` |
 | `pnpm --filter api medir:execucao` | `ts-node scripts/medir-execucao.ts` |
+| `pnpm --filter api medir:rag` | `ts-node scripts/medir-rag.ts` |
 | `pnpm --filter api analise:funil` | `ts-node scripts/analise-funil.ts` |
 | `pnpm --filter api relatorio:seguranca-runtime` | `ts-node scripts/relatorio-seguranca-runtime.ts` |
 | `pnpm --filter api relatorio:telemetria` | `ts-node scripts/relatorio-telemetria.ts` |
@@ -95,21 +99,23 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter web lint` | `oxlint` |
 | `pnpm --filter web preview` | `vite preview` |
 | `pnpm --filter web test` | `vitest run` |
+| `pnpm --filter web openapi:types` | `openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts` |
+| `pnpm --filter web openapi:types:check` | `openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts --check` |
 
 ## website — `website/package.json`
 
 | command | runs |
 |---|---|
-| `pnpm --filter website docusaurus` | `docusaurus` |
-| `pnpm --filter website start` | `docusaurus start` |
-| `pnpm --filter website build` | `docusaurus build` |
-| `pnpm --filter website swizzle` | `docusaurus swizzle` |
-| `pnpm --filter website deploy` | `docusaurus deploy` |
-| `pnpm --filter website clear` | `docusaurus clear` |
-| `pnpm --filter website serve` | `docusaurus serve` |
-| `pnpm --filter website write-translations` | `docusaurus write-translations` |
-| `pnpm --filter website write-heading-ids` | `docusaurus write-heading-ids` |
-| `pnpm --filter website typecheck` | `tsc` |
+| `pnpm --dir website docusaurus` | `docusaurus` |
+| `pnpm --dir website start` | `docusaurus start` |
+| `pnpm --dir website build` | `docusaurus build` |
+| `pnpm --dir website swizzle` | `docusaurus swizzle` |
+| `pnpm --dir website deploy` | `docusaurus deploy` |
+| `pnpm --dir website clear` | `docusaurus clear` |
+| `pnpm --dir website serve` | `docusaurus serve` |
+| `pnpm --dir website write-translations` | `docusaurus write-translations` |
+| `pnpm --dir website write-heading-ids` | `docusaurus write-heading-ids` |
+| `pnpm --dir website typecheck` | `tsc` |
 
 ## scripts — `scripts/package.json`
 
@@ -125,6 +131,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `make help` | Lists the available targets |
 | `make deploy-local` | Brings up the local cluster, installs everything and runs the smoke test (TAG=vX.Y.Z-qa.N optional) |
 | `make deploy-local-clean` | Same as deploy-local, but without rebuilding the images |
+| `make imagens-do-release` | Applies the digests from .release/images.json to an overlay (OVERLAY=prod|staging) |
 | `make smoke-k8s` | Runs only the smoke test against the cluster already up |
 | `make hpa-test` | Fills the Oban queue and proves the engine's HPA scales |
 | `make rollout-test` | Opens active sessions, does a rollout restart and proves none is orphaned |
@@ -135,4 +142,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-90 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+97 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

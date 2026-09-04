@@ -1,0 +1,92 @@
+/* Página global de containers (`/containers`, ADR 0136) — layout PRÓPRIO,
+   mesmo espírito de AccountPage.module.css: fora de escopo de projeto,
+   sem importar o módulo de nenhuma aba de projeto. */
+
+.page {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.loading {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.projectLink {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.projectLink:hover {
+  text-decoration: underline;
+}
+
+.imagemCelula {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.imagemTexto {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.versao {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.recursos {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.desde {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.naoVerificado {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: 420px;
+}

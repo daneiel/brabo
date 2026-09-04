@@ -29,5 +29,20 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      // Piso (ratchet), não meta: o valor medido em 2026-08-27 foi statements
+      // 84,39% / branches 79,27% / functions 74,4% / lines 85,9%, com a suite
+      // inteira passando (1504 testes). Os números abaixo são esse valor
+      // arredondado ~2 pontos PARA BAIXO — margem de segurança contra
+      // variação normal de ambiente, nunca uma meta aspiracional. Ver
+      // CHANGELOG e a PR que introduziu este piso para os números exatos.
+      thresholds: {
+        statements: 82,
+        branches: 77,
+        functions: 72,
+        lines: 83,
+      },
+    },
   },
 })

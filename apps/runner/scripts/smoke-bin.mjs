@@ -123,4 +123,37 @@ async function verificarPtyReal() {
 
 await verificarPtyReal();
 
+/**
+ * A porta de Docker (ADR 0128) exercitada DENTRO do binário compilado — e este
+ * é o smoke que DECIDIU a implementação. Com `dockerode`, o
+ * `bun build --compile` nem chegava aqui: reprovava no build, resolvendo o
+ * `.node` do `cpu-features` que a árvore `ssh2` de `docker-modem` arrasta (o
+ * erro está colado por inteiro no docblock de `src/docker-cli.ts`). Com
+ * `execFile('docker', …)` não há árvore a embutir, e o que sobra a provar é o
+ * que este teste prova: a porta chega inteira no binário e a ausência de
+ * Docker vira erro NOMEADO em vez de stack trace cru.
+ *
+ * Precisa RODAR, não só compilar — o achado do ADR 0112 com `node-pty` é
+ * exatamente esse: o Bun troca por um stub que só lança em runtime o módulo
+ * que não conseguiu resolver, e o build termina verde. Os dois desfechos do
+ * auto-teste (daemon respondeu / não atendeu) passam, porque a pergunta é
+ * sobre o BINÁRIO e não sobre a máquina.
+ */
+function verificarPortaDeDockerNoBinario() {
+  const ALVO = 'SELF_TEST_DOCKER_OK:';
+  const saida = execFileSync(binario, ['--self-test-docker'], {
+    encoding: 'utf8',
+    timeout: 20_000,
+  });
+  if (!saida.includes('porta de docker carregada com sucesso')) {
+    throw new Error(`stdout não contém a linha de carga da porta.\nstdout:\n${saida}`);
+  }
+  if (!saida.includes(ALVO)) {
+    throw new Error(`stdout não contém "${ALVO}".\nstdout:\n${saida}`);
+  }
+  console.log('ok: a porta de docker carrega e consulta o daemon dentro do binário compilado');
+}
+
+verificarPortaDeDockerNoBinario();
+
 console.log('smoke (binário) ok');

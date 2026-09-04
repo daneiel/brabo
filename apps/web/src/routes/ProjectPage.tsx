@@ -12,9 +12,11 @@ import {
 } from '../lib/hooks';
 import { setLastSeenSeq } from '../lib/read-state';
 import { TokenMeter } from '../components/TokenMeter';
+import { PainelPrecisaDeVoce } from '../components/PainelPrecisaDeVoce';
+import { montarFilas } from '../lib/precisa-de-voce';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
-import { GroupedTabs, type ItemDeRegua } from '../components/ui/GroupedTabs';
+import { ProjectRail, type ItemDoTrilho } from './ProjectRail';
 import { BranchIcon, GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
 import { aguardandoPromocao } from './ProjectBacklogTab';
 import {
@@ -24,6 +26,8 @@ import {
   type ChaveDeAba,
   type ContagensDeAba,
 } from './project-tabs';
+import { ContextoDeSecaoInicial } from './settings/secao-inicial';
+import type { ChaveDeSecao } from './settings/sumario';
 import styles from './ProjectPage.module.css';
 
 const PROVIDER_ICON = { github: GitHubIcon, gitlab: GitLabIcon, local: LocalRepoIcon } as const;
@@ -34,11 +38,19 @@ const VISIBILIDADE_KEY = { public: 'visibility.public', private: 'visibility.pri
 interface ProjectPageProps {
   projectId: string;
   initialTab?: ChaveDeAba;
+  /**
+   * A seção de Configurações a que o deep-link `?section=` aponta. Chega por
+   * CONTEXTO até a aba, e não por prop do painel: o registro de abas declara
+   * um prop só para as doze (`project-tabs.ts`), e alargá-lo por causa de uma
+   * faria a moldura voltar a carregar dado específico de uma aba.
+   */
+  initialSection?: ChaveDeSecao;
 }
 
-export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
+export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPageProps) {
   const { t } = useTranslation('projectPage');
   const [tab, setTab] = useState<ChaveDeAba>(initialTab ?? ABA_PADRAO);
+  const [painelAberto, setPainelAberto] = useState(false);
 
   // `initialTab` só valia no MOUNT (o nome já diz): um link `?tab=` clicado
   // de DENTRO de um `ProjectPage` já montado (ex.: "Ver arquitetura
@@ -104,6 +116,20 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
     arquiteturaPendente,
   };
 
+  // As MESMAS cinco consultas acima, agora vistas como cinco FILAS num painel
+  // só (chip "Precisa de você", no topo). Nenhuma requisição a mais: os cinco
+  // hooks já rodam aqui para os contadores do trilho, e o painel lê o que eles
+  // devolveram. As cinco continuam SEPARADAS — não há soma nem no painel nem
+  // no chip, pelo mesmo motivo que os contadores do trilho seguem separados
+  // (ADR 0126): somar apaga qual fila está pedindo atenção.
+  const filasPrecisaDeVoce = montarFilas({
+    acoesDaSessao: pendingActionsQuery.data?.items,
+    merges: mergeActionsQuery.data,
+    epicos: backlogQuery.data,
+    pendenciasDeArquitetura: architectureQuery.data?.pendencies,
+    hipoteses: hypothesesQuery.data,
+  });
+
   useEffect(() => {
     // Literal de propósito: quem marca o projeto como lido é a Visão geral —
     // não "a aba padrão, seja ela qual for".
@@ -149,7 +175,7 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
   // contra `contagens` continua sendo trabalho DESTA página, mesma divisão
   // que já existia para `ABAS_DO_PROJETO` — o registro nunca viu um evento
   // de domínio, só sabe de ONDE tirar o número.
-  const itensDaRegua: ItemDeRegua[] = GRUPOS_DO_PROJETO.map((item) =>
+  const itensDoTrilho: ItemDoTrilho[] = GRUPOS_DO_PROJETO.map((item) =>
     item.tipo === 'grupo'
       ? {
           tipo: 'grupo' as const,
@@ -173,10 +199,9 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
 
   return (
     <div className={styles.wrapper}>
-      {/* A régua vive DENTRO do cabeçalho, e o cabeçalho é uma faixa
-          `surface-1` com uma única divisória embaixo (handoff, seção 4). Eram
-          dois blocos com `border-bottom` cada um, e a régua no fundo da
-          página: duas linhas de 1px separadas por 40px de nada. */}
+      {/* O cabeçalho é uma faixa `surface-1` com uma única divisória embaixo
+          (handoff, seção 4), e agora atravessa a largura inteira: a navegação
+          saiu de dentro dele para o trilho vertical à esquerda (ADR 0126). */}
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <div className={styles.headerLeft}>
@@ -214,32 +239,48 @@ export function ProjectPage({ projectId, initialTab }: ProjectPageProps) {
             </div>
           </div>
 
-          {budget && (
-            <TokenMeter
-              variant="compact"
-              unitLabel="USD"
-              used={budget.spentMicros / 1_000_000}
-              limit={budget.limitMicros / 1_000_000}
-              costBRL={0}
-              costUSD={budget.spentMicros / 1_000_000}
+          <div className={styles.headerRight}>
+            <PainelPrecisaDeVoce
+              projectId={projectId}
+              filas={filasPrecisaDeVoce}
+              open={painelAberto}
+              onOpenChange={setPainelAberto}
+              // O painel não conhece `ChaveDeAba` de propósito (ver
+              // `lib/precisa-de-voce.ts`); é aqui, onde o tipo já está em mãos,
+              // que o destino vira aba de verdade.
+              onIrParaAba={(destino) => setTab(destino satisfies ChaveDeAba)}
             />
-          )}
+
+            {budget && (
+              <TokenMeter
+                variant="compact"
+                unitLabel="USD"
+                used={budget.spentMicros / 1_000_000}
+                limit={budget.limitMicros / 1_000_000}
+                costBRL={0}
+                costUSD={budget.spentMicros / 1_000_000}
+              />
+            )}
+          </div>
         </div>
 
-        <div className={styles.tabsRow}>
-          <GroupedTabs
-            active={tab}
-            onChange={(key) => setTab(key as ChaveDeAba)}
-            itens={itensDaRegua}
-          />
-        </div>
       </header>
 
-      {/* Quem manda no respiro é o REGISTRO, não um `tab === 'overview'`
-          escrito aqui: a Visão geral desenha as próprias regiões até a borda
-          (o feed é um trilho com divisória à esquerda, não um card solto). */}
-      <div className={[styles.body, aba.semRespiro && styles.bodyRente].filter(Boolean).join(' ')}>
-        <PainelDaAba projectId={projectId} />
+      <div className={styles.corpo}>
+        <ProjectRail
+          active={tab}
+          onChange={(key) => setTab(key as ChaveDeAba)}
+          itens={itensDoTrilho}
+        />
+
+        {/* Quem manda no respiro é o REGISTRO, não um `tab === 'overview'`
+            escrito aqui: a Visão geral desenha as próprias regiões até a borda
+            (o feed é um trilho com divisória à esquerda, não um card solto). */}
+        <div className={[styles.body, aba.semRespiro && styles.bodyRente].filter(Boolean).join(' ')}>
+          <ContextoDeSecaoInicial.Provider value={initialSection}>
+            <PainelDaAba projectId={projectId} />
+          </ContextoDeSecaoInicial.Provider>
+        </div>
       </div>
     </div>
   );

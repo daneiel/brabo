@@ -92,7 +92,7 @@ Fase 12 fechou estão marcados.
 | # | achado | onde | prio | estado |
 |---|---|---|---|---|
 | 1 | O produto não sabe apontar um projeto para repositório existente. `createRepo` é incondicional; `getRepo` existe e não é chamado por nenhum caso de uso; o DTO não tem campo para `externalId` | `provision-repository.use-case.ts:144` | **P1** | **fechado** — [ADR 0044](../adr/0044-adocao-de-repositorio-existente.md) |
-| 2 | `protectBranch` no GitHub aplica `enforce_admins: true` + 1 revisor sobre proteção existente, sem ler o estado atual — pode travar o merge manual do dono | `github-provider.ts:170-175` | **P1** | **fechado** — virou regra de produto ([RN-045](../business-rules.md#rn-045)) |
+| 2 | `protectBranch` no GitHub aplica `enforce_admins: true` + 1 revisor sobre proteção existente, sem ler o estado atual — pode travar o merge manual do dono | `github-provider.ts:170-175` | **P1** | **fechado** — virou regra de produto ([RN-045](../business-rules/custo.md#rn-045)) |
 | 3 | O bootstrap cria e protege uma branch `rc` que a política de branches do Brabo (Fase 6) não usa | `bootstrap-steps.ts:94,195` | P2 | **fechado** — [RN-029](../business-rules.md#rn-029) |
 | 4 | `agent_areas`/`agent_area_members` não existem; áreas, leads e membros são hardcoded em dois lugares que podem divergir | `schema.ts:781-786` | P2 | corte registrado da Fase 8 |
 | 5 | Os seis providers de LLM da Fase 9b não entraram, e o CLAUDE.md descrevia a Fase 9 como se tivessem entrado | ADR 0042:147-156 | P2 | fechado na Fase 11 |
@@ -106,7 +106,7 @@ Fase 12 fechou estão marcados.
 |---|---|---|---|---|
 | 9 | **O Criativo não pode ser dispensado.** O claim exige story `ready`; `ready` exige ≥1 regra de negócio; o id é validado contra evento real; e só o Criativo tem `emit_artifact` | `story-readiness.ts:46`, `po_server.ex:18` | **P1** | aberto |
 | 10 | **Um dev agent processa UMA task e para.** `:work` só é disparado na ativação e no aceite de paralelização | `dev_agent_server.ex:76-91,306-327` | **P1** | **fechado** — [ADR 0045](../adr/0045-reagendamento-por-evento-do-dev-agent.md) |
-| 11 | Reativar a execução não redispara `:work` e ainda cria uma sessão a mais sem agentes vinculados | `dev_agent_supervisor.ex:33-52` | P2 | **fechado** — [RN-053](../business-rules.md#rn-053) |
+| 11 | Reativar a execução não redispara `:work` e ainda cria uma sessão a mais sem agentes vinculados | `dev_agent_supervisor.ex:33-52` | P2 | **fechado** — [RN-053](../business-rules/custo.md#rn-053) |
 | 12 | Não existe handoff manual para um agente à escolha, e a validação de alvo do ADR 0038 nunca foi implementada | `SessionPage.tsx:403-407` | P2 | **metade fechada** — validação de alvo em [RN-054](../business-rules.md#rn-054); handoff manual segue aberto |
 | 13 | Não existe "promover a ready": a promoção é automática na criação. `TransitionStoryUseCase` não está ligado a rota nenhuma — é código morto | `create-story.use-case.ts:75-78` | P2 → **P1** | **fechado** — [ADR 0046](../adr/0046-promocao-de-story-com-autoridade-do-usuario.md) |
 | 14 | Não existe devolução ao PO — nenhum estado, evento ou botão | — | P2 | **fechado** junto com o #13 |

@@ -24,7 +24,7 @@ tipo de resposta.
 
 **2. A camada de modelo aqui é EXCLUSÃO, não gradiente.** Tool calling admite
 degradação: um modelo que não pede ferramentas ainda responde texto, e é por
-isso que a [RN-040](../business-rules.md#rn-040) só recusa o binding de agente
+isso que a [RN-040](../business-rules/custo.md#rn-040) só recusa o binding de agente
 em vez de proibir o modelo. Embedding não admite: `nomic-embed-text` não
 responde uma pergunta e `llama3.2` não devolve vetor. São dois conjuntos
 disjuntos de modelos, e a pergunta "este modelo é de embedding?" não cabia em
@@ -65,8 +65,8 @@ indetectável depois, porque o i-ésimo vetor passa a ser de outra frase e o
 | --- | --- |
 | `vectors` | o resultado, na ordem das entradas |
 | `dimensions` | conferido contra o que VEIO, não copiado do catálogo — índice vetorial tem dimensão fixa, e gravar tamanho diferente falha longe da causa |
-| `model` | o que o provider DIZ ter usado, que nem sempre é o pedido (alias resolve para versão datada) — é ele que vai ao metering, pelo mesmo motivo do preço congelado ([RN-044](../business-rules.md#rn-044)) |
-| `inputTokens` + `estimated` | embedding gasta, e a distinção "disse zero" × "não disse nada" é a mesma da [RN-041](../business-rules.md#rn-041) |
+| `model` | o que o provider DIZ ter usado, que nem sempre é o pedido (alias resolve para versão datada) — é ele que vai ao metering, pelo mesmo motivo do preço congelado ([RN-044](../business-rules/custo.md#rn-044)) |
+| `inputTokens` + `estimated` | embedding gasta, e a distinção "disse zero" × "não disse nada" é a mesma da [RN-041](../business-rules/custo.md#rn-041) |
 
 **O erro LANÇA, normalizado por `code`**, em vez de virar chunk como no `chat`.
 A razão do chunk é preservar o gasto de um turno que já aconteceu; aqui não há

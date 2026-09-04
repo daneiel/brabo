@@ -31,7 +31,7 @@ centavo** — é a fase `--ate backlog`.
 | adoção remota (`getRepo` de verdade) | `origin: adopted`, branch padrão `main` |
 | plano em dry-run | 6 mutações, 6 diagnósticos, **decisão nula** |
 | repositório intocado até a decisão | verificado pela API: **zero branches, zero conteúdo** |
-| readoção converge | 6 mutações na 1ª passada, **3 na 2ª** ([RN-046](../business-rules.md#rn-046)) |
+| readoção converge | 6 mutações na 1ª passada, **3 na 2ª** ([RN-046](../business-rules/custo.md#rn-046)) |
 | story única fica `draft` + proposta | sim, sem promoção automática |
 | `claimNext` antes da promoção | `null` — nada pegável |
 | promoção | registrada com o **usuário** como ator |
@@ -46,7 +46,7 @@ O bootstrap parou em `protect_branches` com
 plano gratuito. É exatamente o cenário que a Fase D documentou, agora observado
 fora de teste.
 
-E a premissa da [RN-078](../business-rules.md#rn-078) se confirmou: conferido o
+E a premissa da [RN-078](../business-rules/custo.md#rn-078) se confirmou: conferido o
 repositório logo depois, `dev`, `main` e `qa` existiam e os arquivos estavam
 commitados. É o **último** passo, e o único cuja falha deixa um repositório
 utilizável. O script reconhece a falha e segue, que é a saída desenhada para
@@ -252,7 +252,7 @@ injeta a credencial do owner (RN-076).
 
 ## A sexta execução: a PR abriu no GitHub
 
-Com a [RN-082](../business-rules.md#rn-082) no lugar, a cadeia fechou até a PR:
+Com a [RN-082](../business-rules/custo.md#rn-082) no lugar, a cadeia fechou até a PR:
 
 > **PR #1 — "Rota pública de saudação — Expor GET /saudacao"**,
 > de `feature/task-636ef1aa`, aberta em `daneiel/test`.
@@ -372,7 +372,7 @@ PR real. É a diferença exata que esta validação existe para cobrir em relaç
 As dez primeiras rodaram com **um módulo**. Isso basta para provar a cadeia, e
 não basta para provar o paralelismo: com uma história só, o Dev Lead **recusa**
 paralelizar — "esbarrariam nos mesmos arquivos" — e está certo. O teto da
-[RN-083](../business-rules.md#rn-083) nunca chegava a ser consultado por
+[RN-083](../business-rules/custo.md#rn-083) nunca chegava a ser consultado por
 trabalho real.
 
 Vieram então três rodadas com `--modulos 2` (uma história em `api`, uma em

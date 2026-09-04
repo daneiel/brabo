@@ -81,7 +81,7 @@ acontecer, já que o Arquiteto sempre entrega module_map antes do Dev Lead
 operar (entrada obrigatória dele em `docs/fluxo.yml`) —, a delegação NÃO é
 gravada com um id inventado. `AcceptParallelizationUseCase` loga o estado
 inesperado com `Logger.error` e retorna, pela mesma lição da
-[RN-059](../business-rules.md#rn-059): nunca falha silenciosa, mas também
+[RN-059](../business-rules/custo.md#rn-059): nunca falha silenciosa, mas também
 nunca finge uma justificativa que não existe.
 
 ### Falha ao registrar não derruba a ativação

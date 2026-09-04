@@ -100,7 +100,7 @@ não deve exigir migração de tipo.
 - Marcar uso **não liga** o modelo no seletor. A coluna `is_active` tem DEFAULT
   `true`, então a linha nascida de uma marcação de uso é inserida com
   `isActive: false` explícito — sem isso, opinar sobre um modelo o autorizaria a
-  gastar, contra a [RN-043](../business-rules.md#rn-043).
+  gastar, contra a [RN-043](../business-rules/custo.md#rn-043).
 - Trocar o uso não desliga o que estava ligado: `is_active` fica fora do `SET`
   do `ON CONFLICT`.
 - A tela nunca escreve "não lê imagem". Selo só afirma o que é verdade, porque
@@ -147,5 +147,5 @@ ordenaria por lista vazia.
 hoje; cada um dos demais precisa ser investigado contra a doc oficial, como a
 Fase 11 fez com os quirks — herdar o parser de um no outro é proibido.
 
-As regras estão em [RN-056](../business-rules.md#rn-056) e
-[RN-057](../business-rules.md#rn-057).
+As regras estão em [RN-056](../business-rules/custo.md#rn-056) e
+[RN-057](../business-rules/custo.md#rn-057).

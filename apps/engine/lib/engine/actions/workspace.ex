@@ -55,7 +55,49 @@ defmodule Engine.Actions.Workspace do
   def ensure_remoto(project_id, remoto) do
     {:ok, ensure!(project_id, remoto.origin, remoto.default_branch || "main", remoto)}
   rescue
-    e -> {:error, Exception.message(e)}
+    e -> {:error, motivo_da_falha(project_id, e)}
+  end
+
+  # A MESMA lacuna que a RN-478 fechou do lado da api, e que aqui continua
+  # ABERTA de propósito: num projeto `runner` (RN-423, ADR 0104)
+  # `workspace_dir/2` devolve o caminho do HOST, e o `File.mkdir_p!` de
+  # `ensure!/4` roda dentro do container do engine, que não tem bind-mount
+  # nenhum para lá. Corrigir isso agora seria materializar worktree no host por
+  # um caminho que a execução em container substitui — então o que muda é a
+  # MENSAGEM: "permissão negada: /home/voce" manda procurar dono de pasta, que
+  # é o diagnóstico errado.
+  #
+  # `Project.get/1` só é consultado no caminho de FALHA (nunca no feliz), e com
+  # as mesmas duas guardas de `Project.workspace_dir_name/1`: id malformado
+  # levanta `Ecto.Query.CastError` e processo sem conexão do Sandbox levanta
+  # `DBConnection.OwnershipError` — as duas viram "não deu para saber", e a
+  # mensagem original passa intacta.
+  defp motivo_da_falha(project_id, erro) do
+    original = Exception.message(erro)
+
+    case projeto_runner(project_id) do
+      nil ->
+        original
+
+      pasta ->
+        "o projeto está no modo `runner`: #{pasta} é uma pasta do HOST, e o " <>
+          "engine roda em container sem bind-mount para ela, então o working " <>
+          "tree do dev agent não tem onde nascer (não é permissão de arquivo a " <>
+          "corrigir — é a execução em container na máquina do usuário que " <>
+          "resolve). Falha original: #{original}"
+    end
+  end
+
+  defp projeto_runner(project_id) do
+    case Project.get(project_id) do
+      %{execution_mode: "runner", workspace_path: path} when is_binary(path) -> path
+      %{execution_mode: "runner"} -> "a pasta do projeto"
+      _ -> nil
+    end
+  rescue
+    _ -> nil
+  catch
+    :exit, _ -> nil
   end
 
   def ensure!(project_id, bare_repo_path, default_branch \\ "main", remoto \\ %{}) do

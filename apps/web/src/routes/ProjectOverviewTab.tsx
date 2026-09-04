@@ -16,6 +16,7 @@ import {
 } from '../lib/hooks';
 import {
   activateExecution,
+  mensagemDaApi,
   requestParallelization,
   getAgentModelBinding,
   listAgentAutonomy,
@@ -35,6 +36,7 @@ import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { ActivityFeed } from '../components/ActivityFeed';
+import { AmbienteDoProjeto } from '../components/AmbienteDoProjeto';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
@@ -275,6 +277,14 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
       </div>
 
       <aside className={styles.aside}>
+        {/* Estado de ambiente ANTES da atividade: a atividade responde "o que
+            aconteceu", e ela só se lê direito depois de saber onde o código
+            roda e o que está de pé em volta. As duas consultas do bloco reusam
+            chaves que esta página já busca — nenhuma requisição a mais. */}
+        <div className={styles.ambiente}>
+          <AmbienteDoProjeto projectId={projectId} />
+        </div>
+
         <div className={styles.sectionRow}>
           <h2 className={styles.sectionHeader}>{t('activity.title')}</h2>
           <span className={styles.sectionCount}>
@@ -373,10 +383,15 @@ function ExecutionSection({
     try {
       await activateExecution(projectId);
       await queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
-    } catch {
+    } catch (erro) {
+      // A causa REAL, e não a constante — o mesmo `mensagemDaApi` que o
+      // botão gêmeo do chat da sessão já usava (`SessionPage.tsx`). Mesmo
+      // botão com dois diagnósticos era o que fazia um 400 que ensina
+      // ("o Arquiteto precisa definir os módulos", "a pasta do projeto está
+      // incoerente" — RN-478) chegar à tela como "não foi possível".
       showToast({
         title: t('executionSection.errorTitle'),
-        message: t('executionSection.activateError'),
+        message: mensagemDaApi(erro, t('executionSection.activateError')),
         tone: 'danger',
       });
     }

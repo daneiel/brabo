@@ -170,6 +170,37 @@ export function validarCwdDentroDaRaiz(cwdRecebido: string, raiz: string): strin
 }
 
 /**
+ * Traduz um `cwd` de HOST (já validado por `validarCwdDentroDaRaiz`, portanto
+ * SEMPRE dentro de `raiz`) para dentro de `PONTO_DE_MONTAGEM` (`/work`,
+ * `@brabo/docker-port`) — o caminho que `docker exec` recebe quando este
+ * runner tem um container ativo (ADR 0137). Mesmo raciocínio de
+ * `cwd_para_container/2` do lado engine (`terminal_executor.ex`): troca de
+ * PREFIXO, nunca reconstrução — `raiz` vira `pontoDeMontagem`, o resto do
+ * caminho segue igual.
+ *
+ * `raiz` e `cwd` chegam JÁ normalizados (sem barra final, exceto se `raiz`
+ * for `/`) por quem chama — `estado.dir` (resolvido por `resolverDir`) e o
+ * retorno de `validarCwdDentroDaRaiz` respectivamente. Sem normalização
+ * própria aqui: duplicar `semBarraFinal`/`dentroDoEscopo` criaria uma
+ * segunda fonte da mesma comparação de caminho.
+ */
+export function cwdParaContainer(
+  raiz: string,
+  cwd: string,
+  pontoDeMontagem: string,
+): string {
+  if (cwd === raiz) return pontoDeMontagem;
+  if (cwd.startsWith(raiz.endsWith('/') ? raiz : `${raiz}/`)) {
+    return pontoDeMontagem + cwd.slice(raiz.length);
+  }
+  // Não deveria acontecer — `cwd` já passou por `validarCwdDentroDaRaiz`
+  // contra a MESMA `raiz` antes de chegar aqui. Defesa em profundidade, sem
+  // adivinhar: devolve como veio, e o container recusa se não fizer sentido
+  // (mesma postura de `cwd_para_container/2` do lado engine).
+  return cwd;
+}
+
+/**
  * Resolve `--dir` para caminho absoluto, contra `initCwd` quando presente
  * (a pasta ORIGINAL de invocação, via `INIT_CWD`) e contra `cwdDoProcesso`
  * quando não — ver o docblock do módulo. Se `dirBruto` já é absoluto,

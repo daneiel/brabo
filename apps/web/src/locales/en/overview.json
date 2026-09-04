@@ -35,6 +35,25 @@
     "title": "Team timeline",
     "description": "One branch per agent, from the first milestone to what it's doing right now. Whoever is active, or among the 5 most recent, opens on its own — the rest is one click away, with a count of new milestones in the header."
   },
+  "ambiente": {
+    "title": "Environment",
+    "carregando": "checking…",
+    "codigo": "code",
+    "modos": {
+      "container": "managed container",
+      "mounted": "mounted folder",
+      "runner": "folder on your machine"
+    },
+    "runner": "runner",
+    "runnerConfirmado": "folder confirmed on {{data}}",
+    "runnerNuncaConfirmado": "folder not confirmed yet",
+    "runnerRessalva": "This is the record of that confirmation, not a sign that the runner is running right now — the terminal on the Code tab is what knows about now.",
+    "runnerRessalvaNunca": "No runner has connected to this project yet. Install and run `brabo-runner` from the Code tab.",
+    "modelosLocais": "local models",
+    "modelosLocaisNenhum": "no Ollama model active in the workspace",
+    "modelosLocaisValor_one": "{{count}} from Ollama, active in the workspace",
+    "modelosLocaisValor_other": "{{count}} from Ollama, active in the workspace"
+  },
   "activity": {
     "title": "Activity",
     "count": "{{count}} events",

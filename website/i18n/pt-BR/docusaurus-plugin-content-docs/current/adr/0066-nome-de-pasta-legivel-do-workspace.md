@@ -163,11 +163,11 @@ protegem.
 
 ## Referências
 
-- [RN-109](../business-rules.md#rn-109) — o nome de pasta é congelado na
+- [RN-109](../business-rules/autenticacao.md#rn-109) — o nome de pasta é congelado na
   criação, e projeto antigo mantém o UUID.
-- [RN-075](../business-rules.md#rn-075) — escopo de caminho na política de
+- [RN-075](../business-rules/custo.md#rn-075) — escopo de caminho na política de
   terminal (o que este ADR preserva).
-- [RN-092](../business-rules.md#rn-092) — contenção de caminho na leitura de
+- [RN-092](../business-rules/custo.md#rn-092) — contenção de caminho na leitura de
   código (idem).
 - [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — o
   documento revisado.

@@ -31,9 +31,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "jose": "^6.2.4",
     "node-pty": "^1.1.0"
   },
   "devDependencies": {
+    "@brabo/docker-port": "workspace:*",
     "@types/node": "^24.0.0",
     "@types/phoenix": "^1.6.7",
     "phoenix": "^1.8.9",

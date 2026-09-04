@@ -49,7 +49,7 @@ delegation exists, because the ceiling downgrades `auto_approve` to
 
 In the four gates the constitution declares manual, this field is
 invariant and locked by a test
-([RN-071](../business-rules.md#rn-071)).
+([RN-071](../business-rules/custo.md#rn-071)).
 
 ## Three forms of evidence, because not every proof lives in the log
 
@@ -170,7 +170,7 @@ describing what the code now does.
 `implementavel` is the example of a gate that needed new code to leave
 `planned`. `paralelismo-autorizado` is the opposite: the mechanism
 (`RequestParallelizationUseCase`,
-[RN-083](../business-rules.md#rn-083)) has been in production since
+[RN-083](../business-rules/custo.md#rn-083)) has been in production since
 PHASE 14d — it was the registry that fell behind, declaring `planned`
 over something that was already `active` in the sibling `docs/fluxo.yml`
 and in the code. The fluxo.yml × code audit (finding A1/B5,
@@ -221,6 +221,28 @@ would describe a lock that already exists somewhere else, the same way
 `necessidade-validada` would have lied about one that doesn't exist
 anywhere.
 
+`rag-acertivo` ([RN-490](../business-rules.md#rn-490)/[RN-498](../business-rules.md#rn-498),
+[ADR 0132](../adr/0132-golden-set-de-acerto-do-rag.md)/[ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md))
+is the fifth example, and the reason it stays `warn` changed shape once,
+which is worth telling in full. It was born `warn` for the plainest
+reason of the five: there was no CI that ran a real LLM — the golden-set
+it measures (17 questions composed from real RNs/ADRs, checked against a
+curated real corpus through the actual `HybridSearchUseCase`) only ran by
+hand (`mix golden_set.rag`), the same posture the QA Automation golden-set
+([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)) still
+carries today. That stopped being true: `.github/workflows/golden-set-rag.yml`
+now runs `mix golden_set.rag` for real, against a real Ollama service —
+tractable here (and still not for the QA golden-set) because this one only
+calls the **embedding** model, CPU, deterministic, never a chat model doing
+judgment. What kept `severidade: warn` from becoming stale isn't that the
+gate stayed manual — it's that the workflow is **scheduled** (nightly cron
+plus `workflow_dispatch`), never triggered by `pull_request`. `block` would
+still promise a check that gates a merge, and a scheduled run gates
+nothing: a regression becomes visible within a day, never at PR time. The
+reason moved from "no CI can run this" to "this CI doesn't sit on the merge
+path" — `warn` keeps describing exactly what's true, just not the same
+truth it described before.
+
 ## Consumption: the screen derives, it doesn't repeat
 
 The PR track on the panel — Dev → QA → SecOps → You — used to be a
@@ -267,4 +289,4 @@ the middle of the track would be worse than its absence.
 - [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) — the
   decision in the event log, without which there'd be nothing to
   measure
-- [RN-070](../business-rules.md#rn-070), [RN-071](../business-rules.md#rn-071)
+- [RN-070](../business-rules/custo.md#rn-070), [RN-071](../business-rules/custo.md#rn-071)

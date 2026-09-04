@@ -465,7 +465,9 @@ describe('ExecutionSection', () => {
     montar();
 
     expect(await screen.findByDisplayValue('5')).toBeTruthy();
-    expect(screen.getByText('Configurado para este projeto')).toBeTruthy();
+    // Minúscula desde o padrão único de valor herdado: o texto virou o
+    // DETALHE que segue a marca "Valor próprio" (`settings/heranca.tsx`).
+    expect(screen.getByText('configurado para este projeto')).toBeTruthy();
   });
 
   it('salvar envia o número digitado e invalida a query do projeto', async () => {

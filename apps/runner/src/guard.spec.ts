@@ -15,6 +15,7 @@ import {
   DirForaDoHomeError,
   DirNaoEUmaPastaError,
   NaoConsegiuCriarDiretorioError,
+  cwdParaContainer,
   garantirDiretorio,
   resolverDir,
   validarCwdDentroDaRaiz,
@@ -180,5 +181,37 @@ describe('resolverDir', () => {
 
   it('caminho já absoluto ignora as duas bases', () => {
     expect(resolverDir('/abs/pasta', '/qualquer', '/outro/qualquer')).toBe('/abs/pasta');
+  });
+});
+
+describe('cwdParaContainer (ADR 0137)', () => {
+  it('cwd igual à raiz vira o ponto de montagem, sem sobra', () => {
+    expect(cwdParaContainer('/home/user/projetos/loja', '/home/user/projetos/loja', '/work')).toBe(
+      '/work',
+    );
+  });
+
+  it('cwd dentro da raiz vira /work + o que sobra, trocando só o prefixo', () => {
+    expect(
+      cwdParaContainer(
+        '/home/user/projetos/loja',
+        '/home/user/projetos/loja/src/api',
+        '/work',
+      ),
+    ).toBe('/work/src/api');
+  });
+
+  it('não confunde raiz com prefixo textual parecido (ex.: "loja" vs "loja-2")', () => {
+    // Sem o separador `/` na comparação, "loja" seria prefixo textual de
+    // "loja-2" — mesmo cuidado de `dentroDoEscopo` acima.
+    expect(cwdParaContainer('/home/user/projetos/loja', '/home/user/projetos/loja-2', '/work')).toBe(
+      '/home/user/projetos/loja-2',
+    );
+  });
+
+  it('cwd fora da raiz (não deveria acontecer) devolve como veio — defesa em profundidade', () => {
+    expect(cwdParaContainer('/home/user/projetos/loja', '/etc/passwd', '/work')).toBe(
+      '/etc/passwd',
+    );
   });
 });

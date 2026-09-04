@@ -34,19 +34,39 @@ ADR 0105) — including the two `maintainer` routes
 (`GET .../personal-access-tokens/all`,
 `DELETE .../personal-access-tokens/:tokenId/admin`,
 [RN-427](../business-rules.md#rn-427)) — are not "internal" in the sense of this document, even when an
-agent is who effectively calls through them. The
+agent is who effectively calls through them. The same is true of the four
+`HuggingFaceModelsController` routes under
+`/workspaces/:workspaceId/huggingface/*`
+([RN-462](../business-rules.md#rn-462), [RN-463](../business-rules.md#rn-463),
+ADR 0115): `role:maintainer`, a human's own direct action from Project/Workspace
+Settings, never called by the engine. The same goes for the two membership
+routes, `POST`/`DELETE /projects/:projectId/members`
+([RN-471](../business-rules.md#rn-471),
+[RN-472](../business-rules.md#rn-472), ADR 0127) — and there the fact is
+load-bearing rather than merely true: the two downgrade caps that route now
+enforces (nobody downgrades a workspace `owner`, nobody downgrades themselves)
+live INSIDE `AddProjectMemberUseCase`, so they would be bypassable by any
+second door into `project_members`. There is none — no `/internal/*` route
+writes that table, and the use case has exactly one caller, the RBAC route
+itself. The
 shared service token NEVER serves as credential on these routes, and the user's JWT
 never works on `/internal/*` — the two mechanisms don't overlap
-([RN-035](../business-rules.md#rn-035)).
+([RN-035](../business-rules/autenticacao.md#rn-035)).
 
 **A third credential, neither service token nor user JWT**:
 `POST /projects/:projectId/runner-ticket` is `role:developer` like any
-RBAC route, but does not accept the normal session JWT — only a Personal Access
-Token (`brb_…`, `PatAuthGuard`/`@RequirePatAuth()`), scoped by construction
-to this single route ([RN-424](../business-rules.md#rn-424), ADR 0105). Worth
-noting here because it's the distinction this page exists to explain:
-"it's not `/internal/*`" doesn't mean "so it's a user JWT" — the PAT is a
-third mechanism, with no overlap with the other two.
+RBAC route, but does not accept the normal session JWT — only one of TWO
+device-scoped credentials, both handled by the same `PatAuthGuard`/
+`@RequirePatAuth()`, scoped by construction to this single route: a
+Personal Access Token (`brb_…`, [RN-424](../business-rules.md#rn-424), ADR
+0105), or a short-lived (≤60s), self-signed EdDSA JWT proving possession of
+a browser-generated Ed25519 device key registered via
+`/projects/:projectId/runner-device-keys`
+([RN-465](../business-rules.md#rn-465), ADR 0118) — additive to the PAT,
+never a replacement. Worth noting here because it's the distinction this
+page exists to explain: "it's not `/internal/*`" doesn't mean "so it's a
+user JWT" — both device credentials are a third mechanism, with no overlap
+with the other two.
 
 Also out of scope: the
 `@Public()` routes that are the actual ENTRY POINT before any session
@@ -61,7 +81,7 @@ every HTTP route, internal or not, is in
 
 ## Authentication
 
-Neither end trusts the private network. Both present the **same
+No end trusts the private network. All of them present the **same
 service token** — a secret shared via env, rotatable, in the
 `X-Brabo-Service-Token` header:
 
@@ -69,13 +89,21 @@ service token** — a secret shared via env, rotatable, in the
 |---|---|---|
 | engine → api | `EngineServiceGuard` | `comparaEmTempoConstante` |
 | api → engine | `EngineWeb.Plugs.VerifyServiceToken` | `Plug.Crypto.secure_compare/2` |
+| broker → api | `EngineServiceGuard` | `comparaEmTempoConstante` |
+| api → broker | `tokenConfere` (`apps/broker/src/config.ts`) | `timingSafeEqual` |
+
+The broker ([ADR 0130](../adr/0130-broker-de-container.md)) joined this table
+without changing it: same header, same secret, same rotation. It answers `401`
+where the api answers `403`, matching the engine — what is missing is
+authentication of the caller, and the api's `403` is a documented compatibility
+constraint rather than a disagreement.
 
 > **This traffic does not go through the JWT.** The `/internal/*` routes are annotated with
 > `@ServiceRoute()`, which takes them out of the `JwtAuthGuard` and exempts them from the
 > `RateLimitGuard` (which runs before the controller guard, so the exemption
 > needs to come from the metadata). A user access token, even from an `owner`,
 > does not open any of them; and the service token does not open any other route. See
-> [RN-035](../business-rules.md#rn-035).
+> [RN-035](../business-rules/autenticacao.md#rn-035).
 
 > **Rotation without downtime.** `BRABO_SERVICE_TOKEN` is the value sent;
 > `BRABO_SERVICE_TOKEN_PREVIOUS` is accepted **only during verification**. Since both
@@ -113,7 +141,11 @@ new call to this contract, use the funnel: it's what guarantees it won't be born
 ## engine → api
 
 Twenty-eight routes, all under `/internal/sessions/:sessionId/` unless noted otherwise.
-Grouped by what they do:
+Grouped by what they do.
+
+One route in this family has a caller that is **not** the engine — see
+[broker → api](#broker--api), below. The classification names the mechanism, not
+the sender.
 
 ### Event log and actions
 
@@ -137,7 +169,7 @@ happens **before** `incrementSeq`, so a rejected attempt does not open a gap
 in `seq`.
 
 `ActivateExecutionUseCase` gained a second side effect that does **not** go
-through any route in this document ([RN-135](../business-rules.md#rn-135)): at the
+through any route in this document ([RN-135](../business-rules/custo.md#rn-135)): at the
 end of activation, if the user's route provides `originSessionId` (the CHAT
 session the click came from), it closes that session via
 `TransitionSessionUseCase` — the same path that `POST /termination` on this
@@ -145,7 +177,7 @@ page uses for the engine to report termination, but triggered by the api, with n
 at all to the engine. No new route, no change to the existing `engine → api`
 contract.
 
-`GET /projects/:projectId/execution/session` ([RN-139](../business-rules.md#rn-139))
+`GET /projects/:projectId/execution/session` ([RN-139](../business-rules/autenticacao.md#rn-139))
 is the same story in reverse: it exposes via external HTTP a read
 (`findActiveExecutionSession`) that previously existed only inside
 `ActivateExecutionUseCase`. No new `engine → api` path, no side
@@ -178,7 +210,7 @@ conversational agents — which use only the streamed one — would fail at 15s 
 `%Req.TransportError{reason: :timeout}`, classified as origin `infra`. With
 a local model the turn fit within 15s and the defect didn't show up.
 
-#### The final frame carries the model name ([RN-146](../business-rules.md#rn-146))
+#### The final frame carries the model name ([RN-146](../business-rules/autenticacao.md#rn-146))
 
 `RunLlmTurnResult` and the `final` frame of `LlmTurnStreamEvent` gain
 `modelName: string | null` — the name of the model the api resolved
@@ -202,7 +234,7 @@ classified in [security-surface.md](../security-surface.md).
 
 This is not an organizational detail: these three routes branch by **person's
 role** — `owner` for the invoice, `viewer` for one's own consumption
-([RN-101](../business-rules.md#rn-101)). The `X-Brabo-Service-Token` doesn't carry
+([RN-101](../business-rules/custo.md#rn-101)). The `X-Brabo-Service-Token` doesn't carry
 a person at all, so an internal counterpart would have to choose between not
 distinguishing the audiences or receiving the actor's id as a parameter — which is
 exactly what [ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
@@ -215,7 +247,7 @@ but what the owner's route RETURNS did change, and that's why the boundary is wo
 here: `porProvider` exists only in the workspace report (`owner`), and the member's
 consumption remains without provider and without credential. What really changed is the
 guarantee mechanism: the dimension requested with an actor scope **does not compile**
-([RN-187](../business-rules.md#rn-187)), instead of relying on the route not
+([RN-187](../business-rules/custo.md#rn-187)), instead of relying on the route not
 offering the parameter. The argument in the paragraph above still stands — it's what
 explains why this read never comes down here.
 
@@ -229,7 +261,7 @@ The `SessionServer` asks before closing on heartbeat. The timeout measures
 TAB inactivity — 30 seconds — and closing a session is about WORK having
 finished, not about who's still watching. In a real execution this held on to
 an `offered` handoff for the Architect inside a closed session
-([RN-064](../business-rules.md#rn-064)).
+([RN-064](../business-rules/custo.md#rn-064)).
 
 Response: `{ pending, motivo }`. `motivo` goes to the engine log — a session that
 refuses to close without saying why is undiagnosable. And the api being down
@@ -298,7 +330,7 @@ one provider: each row carries `descobertos`, `reencontrados`,
 (`sem_capability` | `sem_credencial` | `falha`) with `origemDaFalha`
 (`infra` | `modelo`) and `detalhe`. A skipped provider **does not deactivate anything**:
 "I don't know what's there" is not "there's nothing there"
-([RN-043](../business-rules.md#rn-043)). The full body is in the
+([RN-043](../business-rules/custo.md#rn-043)). The full body is in the
 [generated OpenAPI](api/brabo-api) under the `internal` tag.
 
 Two things this route does **not** do, and that used to be different:
@@ -306,11 +338,11 @@ Two things this route does **not** do, and that used to be different:
 - **It does not turn a model on or off in any workspace.** `descobertos` counts
   new rows in `models`; none of them gain curation. A discovered model
   has no row in `workspace_models`, and the absence of a row is the off state
-  ([RN-052](../business-rules.md#rn-052)).
+  ([RN-052](../business-rules/custo.md#rn-052)).
 - **It does not change price silently.** A price marked `manual_pricing` is preserved
   as is, and every change the sync makes writes a row to
   `model_price_changes` with origin `sync` — within the same transaction as the write
-  ([RN-044](../business-rules.md#rn-044), [RN-051](../business-rules.md#rn-051)).
+  ([RN-044](../business-rules/custo.md#rn-044), [RN-051](../business-rules/custo.md#rn-051)).
 
 ### Project working remote
 
@@ -334,16 +366,16 @@ remote provider, `token` and `username` separately. The separation is not cosmet
 
 > **The `origin` never carries a credential.** This is the value stored in
 > the workspace's `.git/config`, **inside the folder where the dev agent has
-> auto-approved read access** ([RN-075](../business-rules.md#rn-075)). A URL like
+> auto-approved read access** ([RN-075](../business-rules/custo.md#rn-075)). A URL like
 > `https://x-access-token:TOKEN@…` there would be a `cat .git/config` away
 > from becoming LLM context.
 
 Whoever consumes it has the symmetric obligation: inject the token **per invocation**, into
 the environment of each git call's child process, and never in argv or in a
-file ([RN-076](../business-rules.md#rn-076), `Engine.Actions.GitAuth`).
+file ([RN-076](../business-rules/custo.md#rn-076), `Engine.Actions.GitAuth`).
 
 The credential is the **workspace owner's**, via the same resolver as
-[RN-058](../business-rules.md#rn-058). The `local` provider **does not reach here**: it
+[RN-058](../business-rules/custo.md#rn-058). The `local` provider **does not reach here**: it
 is resolved directly from the database by the engine, has no token and does not depend on the api
 being up — it's the path `pnpm dev` and the entire test suite exercise.
 
@@ -387,7 +419,7 @@ The other two routes outside `/internal/sessions/:sessionId/`, and by the
 same criterion as the previous ones: the resource belongs to the **project**, and a
 session segment here would be decorative — worse, it would be misleading, because it's
 exactly the session scope that caused the defect these routes fix
-([RN-164](../business-rules.md#rn-164)).
+([RN-164](../business-rules/autenticacao.md#rn-164)).
 
 The PO had **four tools and all of them writes** (`create_epic`,
 `create_story`, `create_task`, `offer_handoff`). Its context was assembled
@@ -455,7 +487,7 @@ omission that there is no gap.
 
 The project's `execution_mode` ([ADR 0072](../adr/0072-projeto-local-ou-container.md)/
 [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md),
-[RN-169](../business-rules.md#rn-169)/[RN-421](../business-rules.md#rn-421))
+[RN-169](../business-rules/autenticacao.md#rn-169)/[RN-421](../business-rules.md#rn-421))
 follows the same split. From it a project can be `container` (the
 managed folder in `PROJECT_WORKSPACES_ROOT`, the default), `mounted` (an
 absolute path of the user's, mounted via bind-mount) or `runner` (an absolute
@@ -511,6 +543,42 @@ a runner connected right now; missing either of the two, it rejects
 explicitly — never falling back to `mounted`'s `System.cmd`/bind-mount, which does not
 exist for a `runner` project.
 
+### Terminal command execution inside the real container — a new route ([RN-492](../business-rules.md#rn-492), [ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md))
+
+| method | path |
+|---|---|
+| POST | `/internal/projects/:projectId/container-exec` |
+
+The fifth outcome of `decisao_de_execucao/1`, `:executar_no_container`: when
+the project is `execution_mode: container` AND has a container REGISTERED
+`running` in `project_containers` (read directly,
+`Engine.Containers.ProjectContainerLifecycle.running?/1` — same pattern as
+the workspace-locator read above, no route needed for that check either),
+the command no longer runs via `System.cmd` inside the engine process. It
+crosses this route (`Engine.Sessions.EngineApiClient.executar_comando_no_container/4`),
+which proxies to `ContainerBrokerPort.exec` (`ExecutarComandoNoContainerUseCase`)
+and runs it inside the real container via `docker exec`.
+
+This route lives in `InternalProjectsController`, not
+`InternalContainersController` (the one the BROKER reads to compose a
+spec) — the direction is the opposite: here it's the ENGINE calling the
+api, and the call doesn't write `project_containers` at all, so it doesn't
+fall under that controller's "no `@Post` here" rule (that rule is about who
+has authority to WRITE the lifecycle state, which this route never
+touches).
+
+`cwd`, when present, arrives ALREADY translated from the HOST path (inside
+`PROJECT_WORKSPACES_ROOT`) to inside `/work` — the engine does that
+translation (`cwd_para_container/2`) before calling this route; the api
+never sees a host path here.
+
+The response body never throws for a broker refusal or a dead/removed
+container (`RN-486`: registered and observed never merge — a `running`
+row doesn't guarantee the container is up right now). `{ sucesso: false,
+motivo }` is the NORMAL shape for that; the engine turns it into an
+ordinary `failed_result`, same as any other failed command — never a
+crash, never a silent fallback back to `System.cmd` outside the container.
+
 ### Per-agent context
 
 | method | path |
@@ -532,6 +600,14 @@ agent" pattern — see [RN-037](../business-rules.md#rn-037)). It is **not**
 `capabilities` of the `GitProvider`: GitHub and GitLab have the SAME capabilities
 (`{protectBranch: true, pullRequests: true}`) — only `provider.name` distinguishes them.
 
+`/infra-context` also gained `moduleRouting` (ADR 0131/0133, [RN-491](../business-rules.md#rn-491))
+— the Architect's routed candidates (`artifact.module_routing`,
+`GetModuleRoutingUseCase`'s first HTTP consumer), `{status, roteamento,
+version, eventId, createdAt}`, `SEM_ROTEAMENTO` when the Architect hasn't
+run `route_modules_to_infra` yet. It's what `InfraLeadServer.build_kickoff/1`
+lists so the model can elect one candidate via `propose_container_start`
+instead of inventing an image outside it.
+
 ### Backlog and architecture
 
 | method | path |
@@ -540,6 +616,7 @@ agent" pattern — see [RN-037](../business-rules.md#rn-037)). It is **not**
 | POST | `/story-modules` |
 | POST | `/module-map` |
 | POST | `/c4-diagram` |
+| POST | `/module-routing` |
 | POST | `/project-image` |
 | POST | `/tasks/claim` |
 | POST | `/tasks/:taskId/status` |
@@ -555,13 +632,13 @@ artifact IS the `artifact.project_image` event, with no table of its own, versio
 (the current one is the one with the highest `version`). An image with no explicit tag
 (`latest` rejected), a short `rationale`, or a resource above the cap return `400`, with
 the full reason in the body — that's what lets the model correct itself via the
-tool-result instead of re-emitting the same thing ([RN-061](../business-rules.md#rn-061)).
+tool-result instead of re-emitting the same thing ([RN-061](../business-rules/custo.md#rn-061)).
 While no version exists, `GET /projects/:projectId/container` (public route,
 `role:viewer`) returns `status: "sem_decisao"`, and it's the same state that
-makes the Code tab return `409` ([RN-105](../business-rules.md#rn-105)).
+makes the Code tab return `409` ([RN-105](../business-rules/autenticacao.md#rn-105)).
 
 `/c4-diagram` is the Architect's `create_c4_diagram` tool
-([RN-149](../business-rules.md#rn-149),
+([RN-149](../business-rules/autenticacao.md#rn-149),
 [ADR 0068](../adr/0068-diagrama-c4-do-arquiteto.md)): generates the Mermaid
 syntax for the Context and Container levels of the C4 diagram (Simon
 Brown's model). Same caliber as `/module-map`/`/project-image` — the artifact IS the
@@ -574,6 +651,20 @@ module_map, `400` (there is no Container level without modules). `GET
 /projects/:projectId/architecture` (public route, `role:viewer`) returns the
 current diagram in `c4Diagram`, in the same object that already carries `moduleMap`
 and `adrs`.
+
+`/module-routing` is the Architect's `route_modules_to_infra` tool
+([RN-487](../business-rules.md#rn-487),
+[ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)): one candidate
+image per module of the CURRENT `module_map`, each with a `porque`. Same
+caliber as `/module-map`/`/c4-diagram`/`/project-image` — the artifact IS the
+`artifact.module_routing` event, with no table, versioned. The body carries
+`roteamento: [{modulo, imagemCandidata, porque}, ...]`; each item's image is
+validated by the SAME rule `/project-image` uses (explicit tag/digest,
+`latest` rejected, non-trivial `rationale`), and `modulo` must name a module
+that exists in the current `module_map` — an unknown name, an empty list, or
+a repeated module all return `400` naming what's wrong. The Architect only
+CANDIDATES: electing among the candidates (or refusing all of them) is a
+later step, owned by Infra.
 
 **With no claimable task, the response is `201` with an EMPTY body**, not `null` in the
 body: the use case returns `null` and NestJS serializes that as `content-length: 0`.
@@ -629,14 +720,14 @@ evidence nor profile a competency outside the catalog, even if the model asks fo
 raising an area's parallelism cap, and it's the **api** that rejects a proposal
 that doesn't raise anything — the Anamnese runs periodically, and without this
 rejection it would re-propose the same thing on every round. The action born from this
-is **never auto-approvable** ([RN-086](../business-rules.md#rn-086)): automating the adjustment
+is **never auto-approvable** ([RN-086](../business-rules/custo.md#rn-086)): automating the adjustment
 would be the product raising its own spending limit.
 
 This route **responded with `400` on every project** until FASE 18, and nothing in the contract
 gave it away: the validation `área "<key>" não existe neste projeto` is the
 first thing it does, and `agent_areas` was never written — the repository's `upsert`
 had no caller at all. Now the area is created with the project
-([RN-094](../business-rules.md#rn-094)) and the rejection once again means what it
+([RN-094](../business-rules/custo.md#rn-094)) and the rejection once again means what it
 says: nonexistent area key. Projects predating the fix are covered
 by the backfill migration.
 
@@ -647,6 +738,7 @@ by the backfill migration.
 | GET | `/internal/graph/prompt-templates/:name` |
 | POST | `/internal/graph/prompt-templates` |
 | POST | `/internal/rag/search` |
+| POST | `/internal/rag/feedback` |
 
 The two template routes write/read prompt versions in Neo4j, idempotent
 by hash — `Engine.Harness.InstructionFiles` (source `:graph`) and the
@@ -657,15 +749,88 @@ to inline text on any failure ([RN-413](../business-rules.md#rn-413)/[RN-417](..
 same vector+lexical hybrid search the "Chat RAG" tab already uses) — service
 token instead of user JWT, same response format with explicit `degraded`
 when embedding was not available
-([RN-414](../business-rules.md#rn-414)). **None of the three is the relational
+([RN-414](../business-rules.md#rn-414)). Since [RN-479](../business-rules.md#rn-479)
+its body also carries the OPTIONAL `sessionId`/`agent`: the api cannot deduce
+either, and they are what let it record the telemetry actor and — only when
+there is a session — narrate `rag.search` on the timeline. Its response gained
+`searchId` plus a `chunkId` per hit, which together form the reference the
+agent's vote needs.
+
+`/internal/rag/feedback` is that vote ([RN-480](../business-rules.md#rn-480)),
+the tool `rag_feedback` on the engine side. It reuses the SAME use case as the
+human route — there is no second judgement path — and an unknown
+`searchId`/`chunkId` comes back as a **400 that the tool turns into an error
+tool-result** for the model to correct ([RN-061](../business-rules/custo.md#rn-061)),
+never a crash. **None of the four is the relational
 memory's WRITE path** — handoff, hypothesis, profile and session close
 reach the graph via `GraphProjector`, on the api side, draining a
 second line of the transactional outbox; the engine never writes to the graph directly
 ([RN-416](../business-rules.md#rn-416)).
 
+## broker → api
+
+Since [ADR 0130](../adr/0130-broker-de-container.md) there is a THIRD service,
+and it speaks the same internal protocol: the container **broker**
+(`apps/broker`), the only process in the product with access to a Docker daemon
+on the server.
+
+| method | path |
+|---|---|
+| GET | `/internal/projects/:projectId/container-spec` (**not** session-scoped) |
+
+Same authentication as everything above (`X-Brabo-Service-Token`, constant-time
+comparison, `BRABO_SERVICE_TOKEN_PREVIOUS` accepted during rotation) and the
+same shared secret. A second secret was considered and refused: the three
+services run in the same cluster and read the same Secret, so it would give the
+impression of compartmentalising without compartmentalising anything, at the
+cost of doubling what has to be rotated in lockstep — the full reasoning lives
+in `apps/api/src/infrastructure/security/service-token.ts`.
+
+**The direction of this call is the whole point** ([RN-485](../business-rules.md#rn-485)).
+The broker does not RECEIVE a container spec — it receives a `projectId` plus one
+of five operations and comes here to read:
+
+1. project identity (`projectId`, `projectSlug`, `workspaceId`) and
+   `workspaceDirName`, the folder name frozen at creation ([RN-109](../business-rules/autenticacao.md#rn-109));
+2. `executionMode`, because `mounted`/`runner` projects are refused with `409` on
+   the broker side — their folder is on the user's machine and this host cannot
+   see it;
+3. the Architect's current image decision, or `null` while there is none
+   ([RN-105](../business-rules/autenticacao.md#rn-105)), in which case only `start` is refused
+   and the other four operations still work.
+
+From that the broker COMPOSES image, network, resources and the single mount, and
+revalidates all of it before handing anything to the daemon. There is no field in
+which a caller writes `privileged`, `cap_add`, `network: host` or a free `-v`,
+because there is no field.
+
+**Two things this route deliberately does not return.** `rationale`, which exists
+so a human can review the decision and has no consumer in a `docker run`; and
+**any path at all** — the bind source is resolved by the daemon against the HOST
+filesystem, so `/data/project-workspaces/<x>` (a path inside the api container)
+would make the daemon create and mount an EMPTY folder. The broker joins
+`workspaceDirName` with its own `PROJECT_WORKSPACES_HOST_ROOT`, and refuses
+`start` naming that variable when it is not configured.
+
+There is no write route in this direction. Whoever WRITES the container lifecycle
+is still `RegistrarTransicaoDeContainerUseCase`, through the route that already
+exists; giving the broker authority over the state it produces would move the
+authority out of the api.
+
+### api → broker
+
+The other direction is not `/internal/*` on this side — it is the broker's own
+surface, five operations plus `/health`, reachable only from the api (an
+`internal: true` Compose network, no published port). The api's port is
+`ContainerBrokerPort`, and today exactly **one** of the five has a caller:
+`inspect`, used by `GET /projects/:projectId/container/lifecycle` to return the
+OBSERVED state beside the RECORDED one ([RN-486](../business-rules.md#rn-486)).
+The other four are external effect and do not happen without a
+`proposed_action`.
+
 ## api → engine
 
-Sixteen command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
+Nineteen command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
 
 | method | path | what it triggers |
 |---|---|---|
@@ -676,7 +841,7 @@ Sixteen command routes, plus the health ones. Under `/internal` with `VerifyServ
 | POST | `/sessions/:id/agent/readiness` | readiness confirmation |
 | POST | `/sessions/:id/agent/revise` | returns to the PO a story the user declined to promote (FASE 12c — RN-048); **404 if the PO is not up**, and that is not an error for the api |
 | POST | `/sessions/:id/agent/offer-infra-handoff` | handoff offer to Infra |
-| POST | `/sessions/:id/agent/offer-dev-handoff` | handoff offer to the **Dev Lead** (FASE 14d — [RN-087](../business-rules.md#rn-087)) |
+| POST | `/sessions/:id/agent/offer-dev-handoff` | handoff offer to the **Dev Lead** (FASE 14d — [RN-087](../business-rules/custo.md#rn-087)) |
 | POST | `/sessions/:id/execution/start` | activates the execution phase |
 | POST | `/sessions/:id/execution/parallelize` | creates subagents — **executes, does not decide** (see below) |
 | POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearms a stuck dev agent (FASE 12b — RN-047); 404 if it doesn't exist, **409 if it isn't `idle_tripped`** |
@@ -685,6 +850,17 @@ Sixteen command routes, plus the health ones. Under `/internal` with `VerifyServ
 | POST | `/projects/:id/anamnese/run` | Anamnese run |
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalidates the instruction cache |
 | POST | `/actions/execute` · `/actions/execute-git` | executes an **already approved** action |
+| POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | asks the RUNNER connected to the project to start/stop/remove its container ([RN-497](../business-rules.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — only for `mounted`/`runner` projects; `container` still goes through the broker, never here |
+
+**The three `containers/*` routes are the mirror of `container-exec` below, in
+the opposite direction.** `container-exec` is the ENGINE asking the api to run
+a command inside the SERVER's container (via the broker); `containers/*` is
+the API asking the ENGINE to run an operation on the container that lives on
+the USER's machine (via the runner, over the `terminal:<projectId>` channel).
+The response is always `200`, `{ sucesso: false, motivoCodigo, motivo }` for
+"no runner connected"/"timeout", `{ sucesso: false, motivo }` for "the runner
+tried and refused" — never an HTTP error status for either, same discipline
+as `container-exec`.
 
 The two handoff offers come from the **same** confirmation of architecture
 ready, and they are separate routes on purpose: Infra and Dev are areas with independent
@@ -698,7 +874,7 @@ a back door.
 
 **`execution/parallelize` is the same case, and since FASE 14d this is visible.**
 The PUBLIC route with the same name (`POST /projects/:projectId/sessions/:sessionId/execution/parallelize`)
-first goes through the area cap ([RN-083](../business-rules.md#rn-083)): within
+first goes through the area cap ([RN-083](../business-rules/custo.md#rn-083)): within
 it the agent comes up right away; above it the api creates a `proposed_action` and does **not
 call the engine**. By the time the engine receives this command, the decision has already been made
 — by cap or by you.

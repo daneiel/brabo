@@ -78,9 +78,9 @@ const SEM_DECISAO: EstadoDoContainer = {
 };
 
 /**
- * O projeto no modo de sempre. A aba pergunta o modo (RN-169/RN-421) porque
- * projeto `mounted`/`runner` não passa pelo gate do container — nenhum dos
- * dois sobe container nenhum.
+ * O projeto no modo de sempre. Desde a RN-494 (revisa RN-169/RN-421) os TRÊS
+ * modos passam pelo mesmo gate — a função aceita o modo só para os testes
+ * abaixo provarem isso, não porque a tela ainda precise saber qual é.
  */
 function projeto(executionMode: 'container' | 'mounted' | 'runner' = 'container') {
   return {
@@ -151,30 +151,36 @@ describe('ProjectCodeTab — o gate (RN-107)', () => {
   });
 
   /**
-   * Projeto mounted (RN-169/RN-421, ADR 0072/0104): a api já libera a
-   * leitura, e a tela tem de concordar. Sem isto a aba ficaria bloqueada
-   * para sempre esperando uma decisão que ninguém vai tomar — e nem sequer
-   * há o que perguntar, por isso `getContainerState` não é chamado.
+   * RN-494 (revisa RN-169/RN-421): `mounted`/`runner` deixaram de ser
+   * dispensados do gate — a tela pergunta e bloqueia IGUAL a `container`
+   * enquanto não há decisão de imagem.
    */
-  it('projeto mounted: abre o shell sem sequer perguntar do container', async () => {
-    getProject.mockResolvedValue(projeto('mounted'));
-    getContainerState.mockResolvedValue(SEM_DECISAO);
+  it.each(['mounted', 'runner'] as const)(
+    'projeto %s sem decisão: bloqueia igual a container, perguntando do container',
+    async (executionMode) => {
+      getProject.mockResolvedValue(projeto(executionMode));
+      getContainerState.mockResolvedValue(SEM_DECISAO);
 
-    montar();
+      montar();
 
-    expect(await screen.findByText('shell aberto para proj-1')).toBeInTheDocument();
-    expect(screen.queryByText(/ainda não está liberada/)).not.toBeInTheDocument();
-    expect(getContainerState).not.toHaveBeenCalled();
-  });
+      expect(
+        await screen.findByText('A aba Code ainda não está liberada'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/shell aberto/)).not.toBeInTheDocument();
+      expect(getContainerState).toHaveBeenCalledWith('proj-1');
+    },
+  );
 
-  it('projeto runner: mesma régua — abre o shell sem perguntar do container', async () => {
-    getProject.mockResolvedValue(projeto('runner'));
-    getContainerState.mockResolvedValue(SEM_DECISAO);
+  it.each(['mounted', 'runner'] as const)(
+    'projeto %s decidido: abre o shell igual a container',
+    async (executionMode) => {
+      getProject.mockResolvedValue(projeto(executionMode));
+      getContainerState.mockResolvedValue(DECIDIDO);
 
-    montar();
+      montar();
 
-    expect(await screen.findByText('shell aberto para proj-1')).toBeInTheDocument();
-    expect(screen.queryByText(/ainda não está liberada/)).not.toBeInTheDocument();
-    expect(getContainerState).not.toHaveBeenCalled();
-  });
+      expect(await screen.findByText('shell aberto para proj-1')).toBeInTheDocument();
+      expect(screen.queryByText(/ainda não está liberada/)).not.toBeInTheDocument();
+    },
+  );
 });

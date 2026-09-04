@@ -154,10 +154,18 @@ a rolagem faz no log é aritmética pura, e assim ele é testável sem TTY.
 > qual modo você está; `make k8s-down` volta para este. Detalhes em
 > [Primeiros passos](docs/getting-started.md#os-dois-modos-locais-não-coexistem).
 
-> Os containers de `api` e `web` rodam como root em desenvolvimento e escrevem
-> `node_modules` e `apps/api/dist` no bind mount. Para buildar no host depois,
-> use `docker compose exec api sh` ou rode uma vez
-> `sudo chown -R $USER apps/api/dist apps/*/node_modules`.
+> Os containers de `api`, `web` e `engine` rodam com o MESMO UID/GID do seu
+> usuário do host — nunca como root — para que `apps/api/dist` e o que mais
+> o agente escrever no bind mount já nasçam com o SEU dono. Descubra o seu
+> par com `id -u` e `id -g`; se não bater com o default (1000/1000, o mais
+> comum em máquina Linux de desenvolvedor único), grave `DEV_UID`/`DEV_GID`
+> no `.env` (ver `.env.example`) antes do primeiro `docker compose up`.
+> Ambiente que já existia de antes desta mudança: os volumes nomeados de
+> `node_modules`/`_build`/`deps`/`.mix`/`.hex` ainda têm conteúdo escrito por
+> root nos containers antigos — rode uma vez
+> `sudo chown -R $USER apps/api/dist apps/*/node_modules` (ou apague os
+> volumes com `docker compose down -v` e deixe o próximo `up` recriá-los) para
+> zerar o que ficou preso.
 
 ## Como funciona um turno
 
@@ -197,7 +205,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Introdução](docs/intro.md) | o panorama |
 | [Primeiros passos](docs/getting-started.md) | do clone ao primeiro turno de agente |
 | [Arquitetura](docs/architecture.md) | code map, fronteiras, invariantes, dívida técnica |
-| [Regras de negócio](docs/business-rules.md) | as 158 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
+| [Regras de negócio](docs/business-rules.md) | as 361 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
 | [Runbook](docs/runbook.md) | deploy, rollout, restore, rotação de chave, incidente de custo |
 | [Glossário](docs/glossary.md) | harness, gate, handoff, DEK, outbox, ciclo K |
 | [Observabilidade](docs/explanation/observability.md) | como se segue uma ação pelos três processos: trace, log e o caminho entre camadas |
@@ -208,7 +216,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Artefatos](docs/reference/artifacts.md) | os nove schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de quinze operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 112 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 138 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Governança](GOVERNANCE.md) | modelo hoje (mantenedor único), os três papéis do modo `community` e o critério de quem entra em cada um |

@@ -32,9 +32,9 @@ failure mode in production.
 > production they need to be changed — and for six of them the process
 > **refuses** to boot without changing them (api or engine, marked with 🔒).
 > Five follow the pattern of
-> [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md)/[RN-093](../business-rules.md#rn-093):
+> [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md)/[RN-093](../business-rules/custo.md#rn-093):
 > missing, set to the public example literal, or too short brings the boot
-> down. See [RN-114](../business-rules.md#rn-114) for the four that joined the
+> down. See [RN-114](../business-rules/custo.md#rn-114) for the four that joined the
 > original `GIT_OAUTH_STATE_SECRET`.
 
 ## api
@@ -58,7 +58,7 @@ failure mode in production.
 |---|---|---|
 | `CREDENTIALS_MASTER_KEY` 🔒 | `dev-master-key-change-me` **only outside production** | wraps the DEKs. **In production the api refuses to boot** if it's missing, set to the default above (public — it's in `.env.example`), or shorter than 16 characters (RN-114). This is only the BOOT check: swapping it for a **valid but different** key without re-wrapping still makes every credential unreadable with no error at all — the failure shows up on first use. See [rotation](../runbook.md#rotacao-da-chave-mestra) |
 | `CREDENTIALS_MASTER_KEY_PREVIOUS` | — | only during rotation. Present = the api tries the previous key when the current one fails |
-| `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` **only outside production** | signs the OAuth `state`; weak = CSRF in the git connection flow. **In production the api refuses to boot** without it, with the default above (which is public — it's in `.env.example`), or with fewer than 16 characters. Generate with `openssl rand -base64 32`. See [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) and [RN-093](../business-rules.md#rn-093) |
+| `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` **only outside production** | signs the OAuth `state`; weak = CSRF in the git connection flow. **In production the api refuses to boot** without it, with the default above (which is public — it's in `.env.example`), or with fewer than 16 characters. Generate with `openssl rand -base64 32`. See [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) and [RN-093](../business-rules/custo.md#rn-093) |
 | `WEB_ORIGIN` 🔒 | `http://localhost:${WEB_PORT}` | **in production the api refuses to boot** if it's missing or is `*`. CORS is strict per environment. **The port is part of the value**: the web on `:5174` is a different origin and gets blocked — see [ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md). In the composes, the default **derives from `WEB_PORT`**, so changing the port carries CORS with it; setting `WEB_ORIGIN` by hand overrides the derivation and it becomes your responsibility to keep it consistent again |
 | `WEB_PORT` | `5173` (dev) · `8088` (prod) | published port of the web on the host. Not read by any service — it **feeds the default of `WEB_ORIGIN`** in the composes, and that's what keeps port and CORS from diverging |
 
@@ -155,7 +155,7 @@ Sliding window in Postgres — there's no Redis
 
 The shared secret that authenticates api ↔ engine. **The same variable on both
 sides** — each one sends the current value and accepts both, and that's what
-makes rotation possible without downtime ([RN-035](../business-rules.md#rn-035)).
+makes rotation possible without downtime ([RN-035](../business-rules/autenticacao.md#rn-035)).
 
 | variable | default | what it does |
 |---|---|---|
@@ -197,7 +197,7 @@ both the `api` and `engine` containers:
 
 Mounting on only one of the two produces a project the api accepts and the
 engine can't see: creation validation
-([RN-170](../business-rules.md#rn-170)) checks what the **api** sees, and it
+([RN-170](../business-rules/autenticacao.md#rn-170)) checks what the **api** sees, and it
 has no way to know what's mounted in the other container. With no mount at
 all, creation is refused with a 400 and the message carries the line above —
 see the [runbook](../runbook.md#projeto-no-modo-local).
@@ -267,10 +267,10 @@ see the [runbook](../runbook.md#projeto-no-modo-local).
 | `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | fraction of the window that triggers compaction |
 | `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min per turn |
 | `TERMINAL_ACTION_TIMEOUT_MS` | `15000` | ceiling for a terminal command |
-| `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | BYTE ceiling of a command's output ([RN-074](../business-rules.md#rn-074)). The output stays in the loop's history and travels on every following turn; without a ceiling, a `find` over a large tree brings down the entire execution with a `413` from the provider |
-| `READ_FILE_MAX_BYTES` | `32768` | BYTE ceiling of the content read by `read_file` ([RN-141](../business-rules.md#rn-141)) — same class of overflow as RN-074, through the `read_file` door instead of the terminal; independent variable, same value by coincidence of context |
-| `SEARCH_WORKSPACE_MAX_BYTES` | `32768` | BYTE ceiling of `search_workspace`'s final text ([RN-150](../business-rules.md#rn-150)) — same class of overflow as RN-074/RN-141, through the search door; independent variable |
-| `SEARCH_WORKSPACE_MAX_HITS` | `500` | ceiling on the NUMBER of hits `search_workspace` collects before assembling the response ([RN-150](../business-rules.md#rn-150)) — stops scanning/reading content as soon as it hits the ceiling, avoiding paying I/O for a tree with too many hits only to truncate by bytes afterward |
+| `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | BYTE ceiling of a command's output ([RN-074](../business-rules/custo.md#rn-074)). The output stays in the loop's history and travels on every following turn; without a ceiling, a `find` over a large tree brings down the entire execution with a `413` from the provider |
+| `READ_FILE_MAX_BYTES` | `32768` | BYTE ceiling of the content read by `read_file` ([RN-141](../business-rules/autenticacao.md#rn-141)) — same class of overflow as RN-074, through the `read_file` door instead of the terminal; independent variable, same value by coincidence of context |
+| `SEARCH_WORKSPACE_MAX_BYTES` | `32768` | BYTE ceiling of `search_workspace`'s final text ([RN-150](../business-rules/autenticacao.md#rn-150)) — same class of overflow as RN-074/RN-141, through the search door; independent variable |
+| `SEARCH_WORKSPACE_MAX_HITS` | `500` | ceiling on the NUMBER of hits `search_workspace` collects before assembling the response ([RN-150](../business-rules/autenticacao.md#rn-150)) — stops scanning/reading content as soon as it hits the ceiling, avoiding paying I/O for a tree with too many hits only to truncate by bytes afterward |
 | `SECOPS_SCAN_TIMEOUT_MS` | `180000` | 3 min for the SecOps scanner |
 | `TRANSPORT_MAX_BODY_BYTES` | `8388608` (8 MiB) | TRANSPORT ceiling that context compaction respects on top of the model's window ([RN-412](../business-rules.md#rn-412)) — the effective window is `min(context_window, this ceiling converted to tokens)`, so compaction fires BEFORE the body overflows the api's HTTP limit, not only when the model would "forget" |
 | `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` | `false` | turns on the `:graph` source of `InstructionFiles` — today only the ux-designer identity resolves a template from the graph before the inline text (RN-413). Its OWN name, not `GRAPH_TEMPLATES_ENABLED` below — the two would collide with opposite defaults if they shared the key |
@@ -279,7 +279,7 @@ see the [runbook](../runbook.md#projeto-no-modo-local).
 
 | variable | default | note |
 |---|---|---|
-| `PSYCHOLOGIST_ENABLED` | `false` | GLOBAL pause of NEW rounds (automatic and on-demand) — the user's product decision on 2026-08-10, not a bug, same pattern as `ANAMNESE_ENABLED` below. Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-117](../business-rules.md#rn-117)) |
+| `PSYCHOLOGIST_ENABLED` | `false` | GLOBAL pause of NEW rounds (automatic and on-demand) — the user's product decision on 2026-08-10, not a bug, same pattern as `ANAMNESE_ENABLED` below. Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-117](../business-rules/autenticacao.md#rn-117)) |
 | `PSYCHOLOGIST_TRIAGE_THRESHOLD` | `20` | events in the session that separate a **light** analysis from a **heavy** one |
 | `PSYCHOLOGIST_MAX_ITERATIONS_LEVE` / `_PESADA` | `4` / `8` | — |
 | `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` | `50000` / `300000` | USD 0.05 and USD 0.30 per analysis |
@@ -292,7 +292,7 @@ see the [runbook](../runbook.md#projeto-no-modo-local).
 
 | variable | default | note |
 |---|---|---|
-| `ANAMNESE_ENABLED` | `false` | GLOBAL pause of NEW rounds (periodic and on-demand) — the user's product decision on 2026-08-10, not a bug. Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-115](../business-rules.md#rn-115)) |
+| `ANAMNESE_ENABLED` | `false` | GLOBAL pause of NEW rounds (periodic and on-demand) — the user's product decision on 2026-08-10, not a bug. Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-115](../business-rules/autenticacao.md#rn-115)) |
 | `ANAMNESE_INTERVAL_SECONDS` | `900` | 15 min between runs |
 | `ANAMNESE_MIN_EVENTS` | `10` | below this it doesn't run — avoids profiling on noise |
 | `ANAMNESE_INITIAL_WINDOW_DAYS` | `30` | window of the first run |
@@ -307,7 +307,7 @@ see the [runbook](../runbook.md#projeto-no-modo-local).
 |---|---|---|
 | `START_OUTBOX_DRAIN` | `true` | — |
 | `START_ANAMNESE` | `true` | test/dev LOAD guard: prevents `kickoff/0` from even being called on boot, but doesn't decide anything about product — not to be confused with `ANAMNESE_ENABLED` (product: GLOBAL pause, survives any value of this one). Turning it off prevents **new** enqueues, **it doesn't clear the queue**. Accumulated jobs run on the next boot — the queue needs to be purged. See [inference environment](../runbook.md#ambiente-de-inferencia) |
-| `START_MODEL_SYNC` | `true` | periodic tick of the model catalog sync. Turning it off doesn't freeze anything: the "Update catalog" button on the settings screen calls the same use case ([RN-043](../business-rules.md#rn-043)) |
+| `START_MODEL_SYNC` | `true` | periodic tick of the model catalog sync. Turning it off doesn't freeze anything: the "Update catalog" button on the settings screen calls the same use case ([RN-043](../business-rules/custo.md#rn-043)) |
 | `MODEL_SYNC_INTERVAL_SECONDS` | `21600` (6h) | a provider's catalog changes on a scale of days, and each round spends one API call per provider — hence the generous default |
 | `START_GATE_RESCUE` | `true` | periodic tick of the gate-cycle rescue (`Engine.Gates.GateRescuer`, [RN-140](../business-rules.md#rn-140)). Turning it off doesn't change the boot: the rescue runs once there regardless |
 | `GATE_RESCUE_INTERVAL_SECONDS` | `300` (5 min) | a stuck gate blocks the user's entire PR — a much shorter interval than Anamnese/model sync, and each tick costs only a query that's almost always empty |
@@ -425,6 +425,64 @@ logs work without it; traces still require the cluster.
 
 ---
 
+## Container broker
+
+The broker ([ADR 0130](../adr/0130-broker-de-container.md)) is the only process
+in the product that talks to a Docker daemon on the server, and the only service
+with `/var/run/docker.sock` mounted. It ships under
+`profiles: ["container-broker"]` in both compose files, so **it does not come up
+by default** — giving every development machine access to the host's Docker in
+exchange for nothing would be a posture change with no counterpart. Bring it up
+with:
+
+```bash
+docker compose -f docker/docker-compose.yml --env-file .env \
+  --profile container-broker up -d broker
+```
+
+| variable | default | when it fails |
+|---|---|---|
+| `BROKER_URL` | empty (read by the **api**) | Empty is a NORMAL state: whoever reads a container's observed state then says "not observed" instead of inheriting the recorded one ([RN-486](../business-rules.md#rn-486)). Point it at `http://broker:8090` when the profile is on |
+| `BROKER_PORT` | `8090` | Port the broker listens on. It publishes NOTHING to the host — only the api reaches it, through the `internal: true` compose network |
+| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` in development | The SAME secret as api ↔ engine, in the same header. With `NODE_ENV=production` the broker refuses to boot when it is empty, when it is the repository's public literal, or under 16 characters — the RN-114 rule, which here guards a process that talks to the host's Docker |
+| `API_URL` | `http://api:3000` | Where the broker READS the Architect's decision. It does not receive a container spec; it comes and gets one ([RN-485](../business-rules.md#rn-485)) |
+| `PROJECT_WORKSPACES_HOST_ROOT` | — | The project folders' root **on the HOST**, not inside any container. Without it, `start` refuses naming this variable and the other four operations keep working. Do not confuse it with `PROJECT_WORKSPACES_ROOT`, which is the path inside the containers: `-v` is resolved by the DAEMON against the host filesystem, and a path from inside the api would make it create and mount an EMPTY folder |
+| `DOCKER_GID` | `999` (compose) | The gid of the host's `docker` group (`getent group docker \| cut -d: -f3`). The socket is `root:docker` and the broker runs non-root, so compose uses `group_add`. The default is the most common one and is wrong on several distributions — getting it wrong produces "permission denied" on the socket, which `DockerIndisponivelError` names with the group hint |
+
+`PROJECT_WORKSPACES_HOST_ROOT` has no default and cannot be derived from a
+managed Docker volume — pair it with `PROJECT_WORKSPACES_HOST_DIR` (above) and
+repeat the same path here, ALREADY EXPANDED (`~` is not expanded by Compose).
+
+
+---
+
+## Dev container user (build-time)
+
+Not read by our code either, and not even a *runtime* environment variable:
+these are Docker `build.args` for the three dev images (`docker/api/Dockerfile`,
+`docker/web/Dockerfile`, `docker/engine/Dockerfile`), consulted once at
+`docker compose build` and baked into the `USER` each container runs as. They
+exist so the containers run with the **same UID/GID as your host user**
+instead of root — everything written to a bind mount (`apps/api/dist`, a
+project workspace in `mounted` execution mode) is then already yours, no
+`sudo chown` needed afterward.
+
+| variable | default | why |
+|---|---|---|
+| `DEV_UID` | `1000` | your `id -u`. NOT read from the shell's `${UID}` — it's read-only in bash and isn't exported to the environment by default, so the compose file would always see it empty |
+| `DEV_GID` | `1000` | your `id -g`, same reasoning |
+
+`1000`/`1000` matches both the most common single-developer Linux setup and
+the `node` user that `node:24-alpine` (the `api`/`web` base image) already
+ships — when your pair matches, the Dockerfiles reuse that built-in user
+instead of creating a new one. An environment that already has containers
+running as root from before this change needs a one-time `chown` of the
+`node_modules`/`_build`/`deps`/`.mix`/`.hex` named volumes (or
+`docker compose down -v` to let them be recreated) — see the note in
+[Getting started](../getting-started.md).
+
+---
+
 ## Full inventory
 
 The tables above explain **what each variable does**. This section is the
@@ -436,9 +494,9 @@ anyone noticing.
 
 > ⚠️ Block generated by `pnpm docs:generate`. Do not edit by hand — the next build overwrites it.
 
-Inventory extracted from the code: **120 variables** read at runtime. All have a description in the tables above.
+Inventory extracted from the code: **129 variables** read at runtime. **2** still have no description in the tables above.
 
-**api** — 54 variables
+**api** — 57 variables
 
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
 - `AUTH_ACCESS_TOKEN_TTL_MS` <sub>(apps/api/src/infrastructure/security/ed25519-access-token-issuer.ts)</sub>
@@ -461,6 +519,7 @@ Inventory extracted from the code: **120 variables** read at runtime. All have a
 - `BRABO_SEED_PASSWORD` <sub>(apps/api/src/db/seed.ts)</sub>
 - `BRABO_SERVICE_TOKEN` <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub>
 - `BRABO_SERVICE_TOKEN_PREVIOUS` <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub>
+- `BROKER_URL` <sub>(apps/api/src/infrastructure/http-clients/container-broker.client.ts)</sub>
 - `CREDENTIALS_MASTER_KEY` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `CREDENTIALS_MASTER_KEY_PREVIOUS` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `DATABASE_URL` <sub>(apps/api/src/db/migrate.ts)</sub>
@@ -473,6 +532,8 @@ Inventory extracted from the code: **120 variables** read at runtime. All have a
 - `GITLAB_OAUTH_CLIENT_ID` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
 - `GITLAB_OAUTH_CLIENT_SECRET` <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub>
 - `GRAPH_PROJECTOR_INTERVAL_MS` <sub>(apps/api/src/application/graph-projection/graph-projector.ts)</sub>
+- `HUGGINGFACE_API_TOKEN` — ⚠️ **no description above** <sub>(apps/api/src/infrastructure/huggingface/huggingface-client.ts)</sub>
+- `HUGGINGFACE_HUB_URL` — ⚠️ **no description above** <sub>(apps/api/src/infrastructure/huggingface/huggingface-client.ts)</sub>
 - `LOG_LEVEL` <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub>
 - `MAIL_TRANSPORT` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
 - `METRICS_GAUGE_INTERVAL_MS` <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub>
@@ -566,6 +627,15 @@ Inventory extracted from the code: **120 variables** read at runtime. All have a
 - `VITE_BRABO_VERSION` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
+
+**broker** — 6 variables
+
+- `API_URL` <sub>(apps/broker/src/config.ts)</sub>
+- `BRABO_SERVICE_TOKEN` <sub>(apps/broker/src/config.ts)</sub>
+- `BRABO_SERVICE_TOKEN_PREVIOUS` <sub>(apps/broker/src/config.ts)</sub>
+- `BROKER_PORT` <sub>(apps/broker/src/config.ts)</sub>
+- `NODE_ENV` <sub>(apps/broker/src/config.ts)</sub>
+- `PROJECT_WORKSPACES_HOST_ROOT` <sub>(apps/broker/src/config.ts)</sub>
 <!-- END:GENERATED:env-inventario -->
 
 ---

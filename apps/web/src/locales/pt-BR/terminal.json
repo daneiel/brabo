@@ -24,10 +24,40 @@
   },
   "runnerOnboarding": {
     "defaultMessage": "Nenhum runner conectado a este projeto.",
+    "noProjectMessage": "Depois de criar o projeto, você pode configurar o runner aqui.",
     "instructionPrefix": "Na sua máquina, dentro do checkout do Brabo (ver",
     "instructionSuffix": "):",
-    "command": "pnpm --filter runner start -- --project {{projectId}} --dir <pasta>",
+    "command": "brabo-runner --project {{projectId}} --dir {{caminho}} --token <gere em Configurações → Tokens de acesso>",
     "detail": "O runner conecta automaticamente assim que estiver rodando — nenhuma ação nova precisa acontecer aqui.",
-    "retryButton": "Já instalei, conectar"
+    "retryButton": "Já instalei, conectar",
+    "placeholderProjectId": "<id do projeto>",
+    "placeholderPath": "<pasta>",
+    "autoConfigureButton": "Configurar pasta automaticamente",
+    "autoConfiguring": "Configurando…",
+    "autoConfigureError": "Não foi possível configurar automaticamente. Use o comando manual abaixo.",
+    "downloadKitButton": "Baixar arquivos",
+    "downloadingKit": "Baixando…",
+    "downloadKitNote": "Baixe os dois arquivos e mova os dois para a mesma pasta antes de rodar o runner.",
+    "downloadKitDone": "Downloads iniciados — confira a pasta de downloads e mova os dois arquivos juntos.",
+    "platformSelectLabel": "Plataforma",
+    "successIntro": "Pronto — dentro da pasta escolhida, rode:",
+    "pastaConfigurada": "Pasta \"{{pasta}}\" configurada — os arquivos do runner já estão nela.",
+    "binarioIndisponivel": "O binário pronto não pôde ser baixado agora ({{motivo}}) — a configuração da pasta continua válida, e o comando abaixo instala o runner por outro caminho.",
+    "successIntroSemBinario": "No seu terminal, dentro da pasta escolhida, rode:",
+    "successIntroKit": "Depois de mover os dois arquivos para a mesma pasta, rode ali dentro:",
+    "passoHumano": "Este passo é seu: o navegador não executa programas na sua máquina.",
+    "avisoTerminalAntes": "Aviso: isto termina no seu terminal. O navegador prepara a pasta, e o último passo — um comando, pronto para copiar — quem roda é você.",
+    "copyButton": "Copiar",
+    "copiedButton": "Copiado!",
+    "manualDisclosureSummary": "Prefiro rodar manualmente"
+  },
+  "esperaDoRunner": {
+    "esperando": "Procurando o runner…",
+    "esperandoDetalhe": "Esta tela avisa sozinha assim que ele conectar. Paramos de procurar depois de {{minutos}} minutos.",
+    "confirmado": "Runner conectado — pasta confirmada em {{data}}.",
+    "caminhoDoRunner": "Este é o caminho que o runner reportou da sua máquina; ele substitui o que tiver sido digitado antes.",
+    "semResposta": "Não vimos o runner conectar em {{minutos}} minutos.",
+    "semRespostaRessalva": "Isso não prova que ele não está rodando: confira o terminal onde você colou o comando e, se este projeto já tinha sido confirmado antes com a mesma pasta, o carimbo não é reescrito — quem sabe do agora é a aba Código.",
+    "procurarDeNovo": "Procurar de novo"
   }
 }

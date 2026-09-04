@@ -45,7 +45,7 @@ ones** (W, X, Y, Z, AA, AB, AC, AD, AE) from the FASE 13b validation — see
 [validacao-real.md](validacao-real.md).
 
 Of these, **five closed**: W, Y, AA, AB and AC within 13b itself, and X via
-FASE 14d ([RN-085](../business-rules.md#rn-085)) — the iteration cap became
+FASE 14d ([RN-085](../business-rules/custo.md#rn-085)) — the iteration cap became
 per agent TYPE, which was the shape the triage had proposed and the product
 decision that was missing.
 
@@ -66,8 +66,8 @@ inheritance from the two lists; where there's ambiguity the text says
 "finding."
 
 Two items left the open list since the first triage: **A**
-([RN-067](../business-rules.md#rn-067)) and **M**
-([RN-066](../business-rules.md#rn-066)), both closed and confirmed in
+([RN-067](../business-rules/custo.md#rn-067)) and **M**
+([RN-066](../business-rules/custo.md#rn-066)), both closed and confirmed in
 production. And **ADR 0052**, which was half of Phase A, was implemented
 and proven by test — the wake delivery was fixed and covered end to end
 afterward.
@@ -86,8 +86,8 @@ execution, but because there was never a PR for any gate to judge.
 
 | item | what it was | how it closed |
 |---|---|---|
-| **ADR 0052** | pending approval returned `status pending` as the tool's result and burned an iteration; the agent died at the cap without writing anything | the loop SUSPENDS and resumes ([RN-073](../business-rules.md#rn-073)); the outcome delivery was fixed later — the event was born in an aggregate the engine's drain didn't read — and the path is now covered end to end |
-| **O / B** | the session and dev agents were born on local `llama3.2:1b`, which ADR 0020 forbids in the semantic step | when the cascade lands on the workspace default, the inherited model is the **Creative agent's** ([RN-072](../business-rules.md#rn-072)) |
+| **ADR 0052** | pending approval returned `status pending` as the tool's result and burned an iteration; the agent died at the cap without writing anything | the loop SUSPENDS and resumes ([RN-073](../business-rules/custo.md#rn-073)); the outcome delivery was fixed later — the event was born in an aggregate the engine's drain didn't read — and the path is now covered end to end |
+| **O / B** | the session and dev agents were born on local `llama3.2:1b`, which ADR 0020 forbids in the semantic step | when the cascade lands on the workspace default, the inherited model is the **Creative agent's** ([RN-072](../business-rules/custo.md#rn-072)) |
 
 The inheritance fills the **gap** and never overrides: session, agent or
 project binding are explicit choices and still win. And the inherited
@@ -112,7 +112,7 @@ and only knew local bare repos, so a remote project ran the conversational
 half and stalled in the build half.
 
 Closed via [ADR 0056](../adr/0056-o-engine-trabalha-em-repositorio-remoto.md)
-and [RN-076](../business-rules.md#rn-076): the engine requests the working
+and [RN-076](../business-rules/custo.md#rn-076): the engine requests the working
 remote from the api, which holds the master key, and the credential comes
 in **per invocation** — the origin recorded in `.git/config` is wiped.
 
@@ -140,8 +140,8 @@ could reach, nor on **how much** it returned.
 
 | item | what it was | how it closed |
 |---|---|---|
-| **S** | accumulated context overflowed the provider's byte limit and the call came back `413`. Every terminal output stayed in the history and traveled along in every subsequent turn | a byte cap in the executor, with a marker addressed to the model ([RN-074](../business-rules.md#rn-074)) |
-| **U** | `/workspace` inside the executor is the **Brabo monorepo itself**, and `/data/project-workspaces/*/` grants access to other projects' worktrees | path scope in the decision ([RN-075](../business-rules.md#rn-075), [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) accepted) |
+| **S** | accumulated context overflowed the provider's byte limit and the call came back `413`. Every terminal output stayed in the history and traveled along in every subsequent turn | a byte cap in the executor, with a marker addressed to the model ([RN-074](../business-rules/custo.md#rn-074)) |
+| **U** | `/workspace` inside the executor is the **Brabo monorepo itself**, and `/data/project-workspaces/*/` grants access to other projects' worktrees | path scope in the decision ([RN-075](../business-rules/custo.md#rn-075), [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) accepted) |
 
 Scope closed both sides at once: it **tightened** (an allowed verb
 pointing outward stopped auto-approving) and it **loosened** (`cd`ing
@@ -203,7 +203,7 @@ log.
 
 | item | what it was | how it closed |
 |---|---|---|
-| **D** | `Protect branches` fails on a private repo on the free plan, and the wizard **warns about it beforehand**. The only action offered afterward was "Try again," which always fails | [RN-078](../business-rules.md#rn-078) |
+| **D** | `Protect branches` fails on a private repo on the free plan, and the wizard **warns about it beforehand**. The only action offered afterward was "Try again," which always fails | [RN-078](../business-rules/custo.md#rn-078) |
 | **E** | the repository preview lied: `repo: brabo/{slug}` hardcoded, with the real owner coming from the PAT | already done (commit `4dd7a073`) — the label now shows only the slug, which is what's actually known |
 | **F** | the "Branch policy" step listed `rc` among the permanent branches | already done (commit `4dd7a073`) |
 
@@ -229,7 +229,7 @@ The same CLAUDE.md rule violated three times: **P** (`dev.blocked` with
 (a recurrence: `dev.blocked` with `"undetermined"` on a failure whose
 `diagnosis` field named the cause on the SAME line).
 
-Closed via [RN-077](../business-rules.md#rn-077), and the root-cause
+Closed via [RN-077](../business-rules/custo.md#rn-077), and the root-cause
 diagnosis is what changed the shape of the fix: **the classifier already
 existed and would already have gotten it right** —
 `FalhaDeTurno.origem/1` maps status ≥ 400 to `codigo`, which correctly
@@ -253,14 +253,14 @@ kept going until 00:56.
 
 The cause wasn't the state machine: it was **the heartbeat**. The session
 was born at 23:34:12 and closed at 23:34:42 — exactly the 30s of
-`SESSION_HEARTBEAT_TIMEOUT_MS`. [RN-064](../business-rules.md#rn-064)
+`SESSION_HEARTBEAT_TIMEOUT_MS`. [RN-064](../business-rules/custo.md#rn-064)
 already required checking for pending work before closing, but "pending
 work" only meant a **`offered` handoff** — and there was a `pending`
 action since 23:34:13, created one second after the session was born.
 
 An action awaiting a decision now counts. It's the same defect one level
 below the handoff: someone is waiting on **you**, and an agent may be
-suspended waiting on the outcome ([RN-073](../business-rules.md#rn-073)).
+suspended waiting on the outcome ([RN-073](../business-rules/custo.md#rn-073)).
 
 **The rule's earlier version said, in writing, that including agent work
 "without a test proving the interaction would be guessing."** The
@@ -294,14 +294,14 @@ whether it was worth running: it summed the bootstrap's machine steps
 and — worse — the trail the Psychologist itself leaves in the session
 while analyzing it, which made an empty session look populated starting
 from the first analysis, and more populated with every retry. Closed via
-[RN-079](../business-rules.md#rn-079), with the finding's session
+[RN-079](../business-rules/custo.md#rn-079), with the finding's session
 reproduced as a test.
 
 **K and R were the same prompt, and that's why they only closed as far as
 code can reach.** An EXACT duplicate rule is refused at emission
-([RN-080](../business-rules.md#rn-080)); a story with an identical title
+([RN-080](../business-rules/custo.md#rn-080)); a story with an identical title
 is refused and one that adds no coverage becomes a warning
-([RN-081](../business-rules.md#rn-081)) — a warning, not a block, because
+([RN-081](../business-rules/custo.md#rn-081)) — a warning, not a block, because
 a second cut of the same rule can be legitimate and it's the user who
 judges.
 
@@ -329,7 +329,7 @@ default. It's this set that keeps `qa` from receiving code that never
 went through `dev`.
 
 ~~**The four sibling secrets of the production compose**~~ — **DONE**
-([RN-114](../business-rules.md#rn-114)). `AUTH_JWT_SECRET`,
+([RN-114](../business-rules/custo.md#rn-114)). `AUTH_JWT_SECRET`,
 `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` and `SECRET_KEY_BASE` had
 development defaults in `docker/docker-compose.prod.yml`, which runs with
 `NODE_ENV=production` — the same pattern
@@ -351,6 +351,46 @@ had the right `raise` in `runtime.exs` — the real defect was the compose
 masking it with a public fallback, and the fix was just removing that
 fallback, without touching any Elixir code.
 
+~~**External review 2026-08-28, item #13 — dev containers ran as root**~~ —
+**DONE**. `docker/api/Dockerfile`, `docker/web/Dockerfile` and
+`docker/engine/Dockerfile` had no `USER` directive, so everything they
+wrote to the bind mount (`node_modules`, `apps/api/dist`, and whatever an
+agent generates inside a project in `mounted` execution mode) landed
+root-owned on the host — the README and this doc's getting-started guide
+both documented a manual `sudo chown -R $USER ...` workaround instead of
+fixing the class of problem. `Dockerfile.prod` images were already
+non-root; this was dev-only.
+
+The fix maps the container's user to the HOST's UID/GID instead of running
+as root and cleaning up after: `DEV_UID`/`DEV_GID` build args (read from
+`.env`/the environment via `docker-compose.yml`, default `1000`/`1000`),
+named `DEV_*` on purpose because `${UID}` is read-only in bash and isn't
+exported to the environment by default — reading it straight from the
+compose file would always see empty. Each Dockerfile creates a
+group/user with that UID/GID only when it doesn't already collide with
+one the base image ships (`node:24-alpine` already has `node` at 1000:1000)
+and switches with `USER <uid>:<gid>` — numeric, so it doesn't matter which
+username ends up owning that id. All root-only steps (`apk add`, `pip
+install`, the gitleaks/hadolint/actionlint downloads) stay BEFORE the
+switch; in the engine image, `_build`/`deps`/`.mix`/`.hex` — homed under
+`/root` because `mix local.hex`/`mix local.rebar` write there, mounted as
+named volumes by `docker-compose.yml` — are `mkdir`+`chown`'d to the target
+UID/GID before `USER`, so a brand-new named volume inherits the right owner
+on first mount (Docker populates a new volume from whatever already exists
+at that path in the image).
+
+Proven by running the real stack (`DEV_UID=$(id -u) DEV_GID=$(id -g)
+docker compose -f docker/docker-compose.yml up --build postgres api web
+engine`): all three containers came up with zero `EACCES`/permission
+errors, and `apps/api/dist` on the host ended up owned by the host user,
+not root. One real wrinkle, not a blocker: named volumes created by an
+environment that predates this fix (`*_node_modules`, `engine_build`,
+`engine_deps`, `engine_mix`, `engine_hex`) still hold content written by
+the old root containers — upgrading needs a one-time `chown` of that
+existing volume data (or dropping the volumes with `docker compose down
+-v` and letting the next `up` recreate them), documented in the README and
+getting-started guide alongside the `DEV_UID`/`DEV_GID` instructions.
+
 ---
 
 ## Older backlog
@@ -368,8 +408,8 @@ are deferred product decisions — hence no priority here.
 | Return of `rc`/`rcfix` | [ADR 0030](../adr/0030-politica-de-branches-mecanizada.md) |
 | ~~Community mode of the approval-ladder~~ | **FIXED AND CLOSED.** The reference "becomes a change to `aprovacao_humana` in the gate registry" was imprecise — it came from a speculative sentence in ADR 0054, not from something actually missing. The `community` mode is already implemented and tested since FASE 6 (`scripts/ci/approval-ladder.ts`), just switched off by `APPROVAL_MODE=solo` (default); `aprovacao_humana` for the `aprovacoes-da-escada` gate is already `true` in both modes, with no `APPROVAL_MODE` awareness in the schema. What was genuinely missing was the `TODO(humano)` in `branching-policy.md` — the criterion for who joins each approver list —, closed by `GOVERNANCE.md` (repository root). Actually activating the mode remains an operational decision (recruiting real people for the three roles), not an engineering pending item |
 | ~~Currency preference with manual exchange rate~~ | **WON'T DO** — decision recorded. Converting would require a manually-maintained exchange rate, which ages; a wrong number is worse than an honest USD number (same principle already applied in `formatarCustoMicros`, `ProjectSettingsTab.tsx`) |
-| Reactivate the Anamnese (`ANAMNESE_ENABLED=true`) | paused by user decision on 2026-08-10 — "today it isn't bringing much-value data" ([RN-115](../business-rules.md#rn-115)). No data was erased (hypotheses, proficiency profiles and instruction patches remain intact and visible); the pause is only on the new-round PATH, awaiting future refinement of what Anamnese derives before turning it back on |
-| Reactivate the Psychologist (`PSYCHOLOGIST_ENABLED=true`) | paused by user decision on 2026-08-10, same reason and same pattern as Anamnese above ([RN-117](../business-rules.md#rn-117)). No data was erased (already-emitted analyses and hypotheses remain intact and visible); the pause is only on the new-round PATH (automatic and on-demand) |
+| Reactivate the Anamnese (`ANAMNESE_ENABLED=true`) | paused by user decision on 2026-08-10 — "today it isn't bringing much-value data" ([RN-115](../business-rules/autenticacao.md#rn-115)). No data was erased (hypotheses, proficiency profiles and instruction patches remain intact and visible); the pause is only on the new-round PATH, awaiting future refinement of what Anamnese derives before turning it back on |
+| Reactivate the Psychologist (`PSYCHOLOGIST_ENABLED=true`) | paused by user decision on 2026-08-10, same reason and same pattern as Anamnese above ([RN-117](../business-rules/autenticacao.md#rn-117)). No data was erased (already-emitted analyses and hypotheses remain intact and visible); the pause is only on the new-round PATH (automatic and on-demand) |
 | Problems/lint/tests panel in the Code tab | declared pending in FASE 26 (`CLAUDE.md`) alongside blame, PR list and branch detail — those three closed in FASE 26b, this one didn't and was never picked up again. No data source exists yet (no lint/test-runner integration in the product); recorded here so it isn't silently dropped from tracking |
 
 ## Backlog of the runner/execution_mode (ADR 0104)
@@ -510,6 +550,50 @@ that was missing was the PO READING `metricas-de-produto`; closed with the
 `listar_metricas_de_produto` tool and the pure functions extracted into
 `apps/api/src/application/services/funil-metrics.ts` (RN-407) — the
 table's last pending item, closing the audit.
+
+## External review backlog (2026-08-28)
+
+An external, static-reading review (`melhorias-brabo-2026-08-28.md`,
+working tree root, no suite executed) proposed 15 items. Checked against
+this file, `architecture.md`'s
+[technical debt table](../architecture.md#divida-tecnica),
+[achados-execucao-real.md](achados-execucao-real.md), ADR 0020 and ADR
+0027, plus the working tree itself. Same rule as the rest of this
+document: **no P1/P2/P3 invented here** — cost below is the reviewer's
+own estimate (P = one session, M = one small phase, G = its own phase
+with an ADR), not a priority ranking, and the priority decision belongs
+to the user.
+
+### Genuinely new (no prior record anywhere)
+
+| item | cost | evidence | note |
+|---|---|---|---|
+| ~~Checksum on CI-downloaded binaries (gitleaks, hadolint, actionlint, kustomize, kubeconform) + GitHub Actions pinned by commit SHA instead of tag~~ | P | `.github/workflows/ci.yml` had zero `sha256sum`/checksum verification; every action was pinned by mutable tag | **DONE** ([#408](https://github.com/daneiel/brabo/pull/408) + [#419](https://github.com/daneiel/brabo/pull/419)) — `sha256sum -c` after every `curl` in `ci.yml` and in `docker/engine/Dockerfile` (the dev image; `Dockerfile.prod` already did this). The pins took two PRs, and the reason is the finding: #408 moved the 9 actions **of `ci.yml`** to commit SHA and this row read as if that were all of them — the other 15 workflows stayed on mutable tags, including the four that carry credentials (`release.yml` → GHCR, `publish-runner.yml` → npm, `tag-release.yml`, `docs-deploy.yml` → `gh-pages`). #419 pinned the remaining 49 `uses:` and added the mechanism that was missing: `scripts/ci/actions-pinadas.ts` fails the `lint` job on any tag-pinned action, or any SHA without its version comment. Documented in [cadeia-de-suprimentos-do-ci.md](cadeia-de-suprimentos-do-ci.md), which also declares what is still trusted on faith (no Dependabot, no dependency provenance, no artifact signing) |
+| ~~Pin `ollama/ollama:latest` in both composes~~ | P | `docker/docker-compose.yml:81,118` and `docker/docker-compose.prod.yml:328,346` were the only unpinned image in either file | **DONE** ([#401](https://github.com/daneiel/brabo/pull/401) + [#419](https://github.com/daneiel/brabo/pull/419)) — pinned to `ollama/ollama:0.33.1` in the 4 compose places; a **fifth** one, `deploy/k8s/base/ollama/job-model-loader.yaml`, was outside the reviewer's evidence (which only named the composes) and stayed on `latest` until #419 |
+| ~~Generate `apps/web/src/lib/api-types.ts` from the OpenAPI export instead of hand-copying~~ | M | `apps/api/src/scripts/export-openapi.ts` exists; no `openapi:types` script and no `openapi-typescript` dependency anywhere; `api-types.ts`'s own header states it's hand-mirrored | **DONE** ([ADR 0116](../adr/0116-tipos-do-web-gerados-do-openapi.md)) — only `ActionType` migrated (the type with a proven, repeated production cost), not the whole file: `lib/api-types.generated.ts` is now generated by `openapi-typescript` from `docs/reference/openapi.json`, and `lib/api-types.ts` re-exports `ActionType` from it. `lib/aprovacoes.test.ts` stays, narrowed to content assertions the compiler can't make (exhaustiveness is now `tsc`-checked via `Record<ActionType, ...>`) |
+| ~~Real-browser E2E (Playwright) for the critical path — cookie auth, CSRF, the Phoenix socket ticket, streaming~~ | M | no `playwright.config.*`, no `e2e/`, no `@playwright/test` dependency anywhere in the repo | **DONE** ([#420](https://github.com/daneiel/brabo/pull/420), [ADR 0120](../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md)) — `e2e/`, chromium only, running against the PRODUCTION compose `docker/smoke.sh` already brings up (`SMOKE_KEEP_UP=1`) and inside the same `images` job, since the four images are most of that job's wall clock. Two specs, both proven by mutation: the cookie/CSRF/cross-origin path (including survival across a reload, the only way to prove the in-memory access token was REBUILT from the cookie) and RN-108's single-use socket ticket, asserted on the observed WebSocket URL rather than on a status indicator. `e2e/` is not a workspace member — own lockfile, same shape as ADR 0117, for the same audit reason. Declared as NOT covered: cross-browser differences, inline approval and streaming |
+| ~~Decompose `SessionPage.tsx` / `ProjectSettingsTab.tsx`~~ | G | `SessionPage.tsx` was 169 KiB with 25 test files importing it; `ProjectSettingsTab.tsx` was 90 KiB | **DONE** ([ADR 0122](../adr/0122-sessionpage-dividido-em-cinco-prs.md) + [ADR 0124](../adr/0124-hook-do-canal-de-turno-do-sessionpage.md) + [ADR 0125](../adr/0125-projectsettingstab-dividido-por-secao.md)) — the `SessionPage.tsx` half of this row is now COMPLETE across seven PRs total. ADR 0122's 5-PR mechanical decomposition merged one at a time (each before the next started, since the file was under active churn): PR 1 — pure timeline/turn helpers → `apps/web/src/lib/session-timeline.ts`. PR 2 — `StorySlide` → `apps/web/src/routes/StorySlide.tsx`. PR 3 — `StructuredQuestionCard` (plus its private helper `permiteOutra`) → `apps/web/src/routes/StructuredQuestionCard.tsx`. PR 4 — backlog-tree helpers (`urlDaPr`/`vinculoDeBacklog`/`montarArvoreDeBacklog`/`totalDeDescendentes`) → `apps/web/src/lib/session-backlog-tree.ts`, and `ItemDeBacklog` + `ContextAside` (the whole right-hand sidebar) → `apps/web/src/routes/ContextAside.tsx`. PR 5 — the six readiness derivations (`criativoActive`/`arquitetoActive`/`hasBusinessRule`/`hasPromotedStory`/`hasProductBrief`/`activeAgent`) → a `useSessionReadiness` hook in `apps/web/src/lib/session-readiness.ts`, the only PR of the five that wasn't a mechanical file move — declaring the turn-channel state cluster (`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/`atividadeDoTurno`) explicitly out of scope, for its own future ADR. ADR 0124 is that ADR, two more PRs: a mechanical dedup PR (not itself ADR'd) that made `handleSend`/`handleReadiness`/`handleArchitectureReadiness` call the pre-existing `iniciarTurnoDoAgente`/`finalizarTurnoDoAgente` instead of duplicating their arm inline, then the extraction PR that moved the state, the `connectSessionHeartbeat` channel effect, and the three lifecycle functions into a `useTurnoDoAgente` hook in `apps/web/src/lib/session-turno.ts`. `SessionPage.tsx` went from 3 807 to 2 479 lines across all seven PRs; all 25 (now 24, one migrated to a `lib/` test in PR 1) `SessionPage.*.test.tsx` files passed unedited throughout. **ADR 0125 closes the row**, in ONE PR rather than five: `ProjectSettingsTab.tsx` (2 532 lines) splits into one file per section under `apps/web/src/routes/settings/` — 17 sections plus a two-symbol `settings/shared.ts` (`ORIGIN_TONE`, `formatarCustoMicros`; the other ten module-scope helpers had exactly one caller each and went into that caller's file) — and STAYS at its path as the entry and barrel, at 77 lines. The barrel is load-bearing, not cosmetic: `ProjectSettingsTab.test.tsx` imports 11 names from the path and `ProjectPage.test.tsx`/`project-tabs.test.tsx` both `vi.mock` it BY PATH. One PR and not five because the file was never shaped like `SessionPage.tsx` — the parent held nothing (17 JSX children, no hook, no query, no `t`, no role check), no section took more than `{projectId}` (two take no props), and 11 of the 17 were already exported. The 6 private sections gained an `export` on their own module (mechanical — the barrel has to import them) but are deliberately NOT re-exported by the barrel, so the tab's public surface is byte-identical in shape. Full web suite green — 142 files, 1 537 tests — with ZERO test files edited |
+| ~~Cross-check pinned tool versions between `ci.yml` and `Dockerfile.prod` in CI itself~~ | P | `ci.yml:45-46` already asserted by comment that the versions must match, but nothing enforced it | **DONE** ([#408](https://github.com/daneiel/brabo/pull/408)) — new step in the `lint` job greps both files and fails on any `GITLEAKS_VERSION`/`HADOLINT_VERSION`/`ACTIONLINT_VERSION` mismatch |
+| ~~Coverage floor (ratchet at the current value) in CI~~ | P–M | no `--coverage`/`--cover` flag and no threshold configured in any `vitest.config.*` or `mix.exs` across api/web/engine | **DONE** ([#410](https://github.com/daneiel/brabo/pull/410)) — floor set at the measured value (api 80/69/74/81, web 82/77/72/83, engine 78%, all vitest/`mix test --cover`); no `excoveralls` added, per the no-new-libs-without-justification rule |
+| ~~Split `business-rules.md` by domain; extend `readme-version.ts`'s pattern to generate the RN/ADR counts in prose instead of hand-typing them~~ | M | `business-rules.md` is 650 KB with **334** `RN-XXX` headers going up to RN-466 — `README.md:200` still says "the 158 RNs," a far larger drift than aging text explains; the ADR count (115) in `README.md:211` is correct by comparison, so only the RN count needs fixing today | **DONE** ([#417](https://github.com/daneiel/brabo/pull/417) + [#418](https://github.com/daneiel/brabo/pull/418)) — in that order, and the order is the point: #417 taught `docs:check` to read the COUNT off the artifact (ADRs from the files in `docs/adr/`, RNs from the `### RN-NNN` headers, providers from the `capabilities` literals) and compare it against the prose, which is what stops the drift from coming back. #418 then split by **SIZE, not by subject** — Cost and Authentication alone were half the page — into `docs/business-rules/custo.md` and `docs/business-rules/autenticacao.md`, with not one comma of content changed and no `{#rn-NNN}` anchor renamed; 293 links were rewritten by script and the count still reads 334. The numbering never restarts per file, and the check sums the three by glob |
+| ~~Unify `AGENTS.md`/`CLAUDE.md` (generation or symlink + check)~~ | P | not byte-identical as assumed — same size (35043 bytes), different MD5; one line already diverged (`AGENTS.md:444` vs `CLAUDE.md:444`, each self-referencing its own filename) | **DONE** ([#402](https://github.com/daneiel/brabo/pull/402)) — the self-referencing line was made neutral in both, then `AGENTS.md` became a symlink to `CLAUDE.md`; divergence is now impossible at the filesystem level, not just detected |
+| ~~Repo hygiene: drop the leftover `KEYCLOAK_*` block from `.env` (already absent from `.env.example`) and retire `migrate-keycloak-users.ts`; move/archive `spike/session-engine` and `design_handoff_brabo/` out of the repo root; bind Neo4j's published ports to `127.0.0.1` in `docker-compose.prod.yml`~~ | P | Keycloak was removed since Phase 7 ([ADR 0032](../adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)); `docker-compose.prod.yml:80-82` published `7474`/`7687` unbound | **DONE** ([#403](https://github.com/daneiel/brabo/pull/403)) — script and its runbook section removed, `spike/`/`design_handoff_brabo/` removed from the tree (recoverable at commit `f5f771ac6`), Neo4j bound to `127.0.0.1` in prod. The `.env` `KEYCLOAK_*` cleanup itself is local/gitignored, not a repo change — still the user's to do |
+| ~~Dev containers run as root; map the host uid/gid instead of the `sudo chown -R` workaround~~ | M | no `USER` directive in the dev Dockerfiles (api/web/engine); `README.md:160` and `getting-started.md` documented the workaround as accepted fact | **DONE** ([#406](https://github.com/daneiel/brabo/pull/406)) — see the detailed note in [Standalone](#standalone) above; `DEV_UID`/`DEV_GID` map the container to the host user, proven by running the real stack |
+| ~~Give `website/` its own lockfile, outside the product's `pnpm audit`~~ | M | `website` is a `pnpm-workspace.yaml` member sharing the single lockfile; of the 13 security overrides, 8 trace to Docusaurus/website dependencies, 3 to the product side (`js-yaml` 5.x, `lodash`, `esbuild`), 1 is mixed (`undici`, also used by `apps/web`'s own `jsdom`) | **DONE** ([#414](https://github.com/daneiel/brabo/pull/414), [ADR 0117](../adr/0117-lockfile-proprio-para-o-website.md)) — auditing all 13 with `pnpm why <pkg> -r` found the split messier than this estimate: only 2 (`serialize-javascript`, `yaml@1.x`) were website-exclusive; 10, not 1, turned out mixed (`mermaid`/`dompurify`/`uuid`/`postcss`/`nanoid` also resolve through `apps/web`, `js-yaml`/`fast-uri`/`lodash` through `apps/api`) and stay duplicated in both `pnpm-workspace.yaml` and the new `website/pnpm-workspace.yaml`; `esbuild` was the only pure product-side one |
+
+### Already-declared debt, still uncosted
+
+These three already have a row in `architecture.md`'s
+[technical debt table](../architecture.md#divida-tecnica) — the review
+didn't discover them, it estimated a cost for something already on
+record with none. **One of the three has since closed**, and it was the
+one the review called the most expensive:
+
+| debt | already declared at | reviewer's cost estimate |
+|---|---|---|
+| ~~Publish images to a registry so production deploy is executable end to end~~ | `architecture.md:552`, [ADR 0027](../adr/0027-fase5-backup-hardening-release.md) | **DONE** ([ADR 0119](../adr/0119-imagens-publicadas-no-ghcr-por-digest.md)) — the four images publish to GHCR (public) on every final tag, with what each tag published recorded BY DIGEST in `.release/images.json`; the overlay keeps the marker and `make imagens-do-release` applies it, so the repository never declares which release is in production. No third push exception: the file is a Release asset and rides the CHANGELOG PR. Found while doing it, and NOT in this estimate: the overlays listed three images, not four — the backup CronJob inherited `brabo-backup:prod`, unresolvable in any registry. Still not done and not claimed: nothing deploys automatically (`DEPLOY_ENABLED` still doesn't exist), and image signing/attestation stays out, with the runner binaries' code-signing item |
+| Split `schema.ts` by aggregate (Drizzle supports multi-file schema with re-export) | `architecture.md:546` | M |
+| Golden-set (5–10 cases, loose expected output, pinned model, allow-failure) for the gate's semantic path | `architecture.md:548`, [ADR 0020](../adr/0020-destravar-gates-qa-secops.md) | not estimated by the reviewer |
 
 ## What this triage does NOT do
 

@@ -445,6 +445,99 @@ export function explicarParInvalido(par: ParDaEsteira): string {
   );
 }
 
+// ------------------------------------------------- o merge de esteira e seus pais
+
+/** O que se sabe do commit que acabou de entrar numa permanente. */
+export interface CommitDeEsteira {
+  /** A permanente que recebeu o commit. */
+  branch: string;
+  /** Quantos pais o commit tem. Promoção e retropropagação têm dois. */
+  pais: number;
+  /**
+   * O PR que produziu este commit trazia uma ARESTA NOVA no grafo — isto é,
+   * o head dele era um merge cujo segundo pai ainda não estava na base?
+   *
+   * Só faz sentido em `dev`, e é o que separa os dois merges que parecem
+   * iguais: um PR de trabalho que puxou `dev` para dentro de si (segundo pai
+   * JÁ contido na base — squash não perde nada) de um PR de reconciliação que
+   * carregava a ponta de `qa` (segundo pai FORA da base — squash apaga a
+   * única coisa que o PR existia para entregar).
+   *
+   * `null` é resposta: não deu para saber. Nunca vira defeito.
+   */
+  trazAresta: boolean | null;
+}
+
+export interface VereditoDeEsteira {
+  ok: boolean;
+  motivo: string;
+}
+
+/**
+ * Um merge que carrega ancestralidade tem que ter DOIS pais depois de entrar.
+ *
+ * Esta é a verificação que vale, e ela só pode acontecer DEPOIS do merge: o
+ * método é escolhido no clique, e nenhum check de PR — nem o `promotion-check`,
+ * que no máximo lê a configuração do repositório — observa um clique que ainda
+ * não houve. Aqui se olha o fato consumado.
+ *
+ * Com squash, o commit novo tem um pai só. O segundo pai era a única coisa que
+ * ligava os dois degraus: sem ele a tag do degrau de baixo aponta para um
+ * commit fora deste histórico, e a promoção seguinte nasce com arquivos em
+ * "conflito" que não são conflito nenhum. Aconteceu três vezes — #367, #394 e
+ * #464.
+ *
+ * **A regra muda por branch, e o que a muda é a taxa-base:**
+ *
+ * - `qa` e `main` só recebem esteira. Um pai só é sempre defeito.
+ * - `dev` recebe TRABALHO o tempo todo, e trabalho entra por squash de
+ *   propósito (é a convenção do repositório, e o `changelog.mjs` conta com
+ *   ela). Reprovar um pai só aqui faria o alarme tocar em todo PR — e alarme
+ *   que sempre toca é alarme desligado. O que é defeito em `dev` é estreito e
+ *   específico: o PR trazia uma aresta que a base não tinha, e o squash a
+ *   apagou. Foi a #464, que existia só para entregar essa aresta.
+ */
+export function conferirMergeDeEsteira(commit: CommitDeEsteira): VereditoDeEsteira {
+  const { branch, pais, trazAresta } = commit;
+
+  if (pais >= 2) {
+    return { ok: true, motivo: `merge commit com ${pais} pais — a ancestralidade ficou registrada` };
+  }
+
+  if (branch === 'dev') {
+    if (trazAresta !== true) {
+      return {
+        ok: true,
+        motivo:
+          trazAresta === null
+            ? 'em `dev` sem saber se o PR trazia aresta nova — nada a exigir'
+            : 'em `dev`, PR sem aresta nova — squash é a convenção do repositório',
+      };
+    }
+
+    return {
+      ok: false,
+      motivo:
+        'o PR trazia uma ARESTA NOVA e entrou por squash em `dev` (1 pai).\n' +
+        '  O head dele era um merge cujo segundo pai não estava em `dev`, e era\n' +
+        '  ISSO que o PR entregava. O squash apagou exatamente a correção que\n' +
+        '  ele carregava — foi o que aconteceu com a #464.\n' +
+        '  Refaça com "Create a merge commit".',
+    };
+  }
+
+  return {
+    ok: false,
+    motivo:
+      `o merge em \`${branch}\` não é merge commit (${pais} pai).\n` +
+      '  Esteira é `--no-ff`. Com squash, o commit novo perde o segundo pai, e\n' +
+      '  com ele a única coisa que ligava os dois degraus: a tag do degrau de\n' +
+      '  baixo passa a apontar para um commit fora deste histórico, e a próxima\n' +
+      '  promoção nasce em conflito que não é conflito.\n' +
+      '  Desfaça e refaça com "Create a merge commit".',
+  };
+}
+
 // ------------------------------------------------------------- adaptador CLI
 
 async function principal(): Promise<void> {

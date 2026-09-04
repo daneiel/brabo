@@ -4,8 +4,8 @@
 - **Data:** 2026-08-09
 - **Contexto anterior:** [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
   (o preço congelado em `token_usage`, que é o que torna qualquer relatório
-  reproduzível), [RN-058](../business-rules.md#rn-058) (a chave que o agente
-  gasta é a do owner) e [RN-060](../business-rules.md#rn-060) (o gasto das
+  reproduzível), [RN-058](../business-rules/custo.md#rn-058) (a chave que o agente
+  gasta é a do owner) e [RN-060](../business-rules/custo.md#rn-060) (o gasto das
   chaves é do owner, e só ele vê)
 
 ## Contexto

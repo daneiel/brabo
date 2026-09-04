@@ -215,7 +215,12 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
             ) : (
               <div className={styles.listaResultados}>
                 {searchQuery.data.hits.map((hit) => (
-                  <RagCitationCard key={hit.chunkId} hit={hit} projectId={projectId} />
+                  <RagCitationCard
+                    key={hit.chunkId}
+                    hit={hit}
+                    projectId={projectId}
+                    searchId={searchQuery.data.searchId}
+                  />
                 ))}
               </div>
             )}

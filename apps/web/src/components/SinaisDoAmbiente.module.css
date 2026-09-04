@@ -1,0 +1,146 @@
+/*
+ * Estado de ambiente — a folha compartilhada entre o bloco pré-login
+ * (`SinaisDoAmbiente`) e o do projeto (`AmbienteDoProjeto`).
+ *
+ * Cor sempre de token semântico (regra do `design/README.md`), e os três tons
+ * saem dos mesmos `--success`/`--danger`/`--text-muted` que `StatusPage` já
+ * usa para as duas mesmas linhas — a tela de status e a de login não podem
+ * pintar "de pé" de verdes diferentes.
+ *
+ * ## Nenhum texto em `--text-muted`, e o motivo é medido
+ *
+ * Esta folha serve DOIS fundos: `--surface-0` no login e `--surface-1` na
+ * coluna lateral da Visão geral. `--text-muted` dá 4,81:1 sobre `--surface-0`
+ * (passa) e **3,89:1 sobre `--surface-1` no tema escuro** (reprova o 4,5:1 do
+ * AA) — é o par que `design-contraste.test.ts` já documentava como o motivo
+ * de `.hint` usar `--text-secondary`. Como o componente não sabe em qual dos
+ * dois fundo ele caiu, todo TEXTO aqui é `--text-secondary` ou
+ * `--text-primary`; `--text-muted` fica só na bolinha `neutro`, que é
+ * componente gráfico (piso de 3:1, WCAG 1.4.11).
+ *
+ * A mesma aritmética é o que mantém o ESTADO em `--text-primary` e não na cor
+ * da bolinha: `--danger` sobre `--surface-1` no escuro dá 3,88:1 — suficiente
+ * para um ponto de 8px, insuficiente para a palavra "sem resposta". Cor aqui é
+ * reforço, nunca o único portador da informação.
+ */
+
+.bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/*
+ * Rótulo do bloco. Mesma régua TIPOGRÁFICA da `.tagline` da marca (mono, 10px,
+ * versalete): é etiqueta, não cabeçalho — e não é `<h2>` por decisão de
+ * acessibilidade, explicada no componente. A cor é a exceção, pelo motivo
+ * medido no topo desta folha.
+ */
+.titulo {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.linha {
+  display: grid;
+  /* Bolinha fixa, rótulo pelo conteúdo, valor tomando o resto — assim os
+     valores de linhas vizinhas ficam alinhados entre si. */
+  grid-template-columns: 8px auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 10px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.ponto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  /*
+   * A bolinha acompanha a PRIMEIRA linha do valor, não o centro da célula.
+   * `baseline` não serve (um elemento sem texto usa a borda de baixo como
+   * baseline) e `center` também não: quando a linha tem ressalva, a célula
+   * fica alta e a bolinha desce para o meio do parágrafo — flagrado no
+   * navegador, na linha de runner. `start` mais meio entrelinha põe ela onde
+   * o olho a procura.
+   */
+  align-self: start;
+  margin-top: calc((1.45em - 8px) / 2);
+  background: var(--text-muted);
+}
+
+.ok {
+  background: var(--success);
+}
+
+.erro {
+  background: var(--danger);
+}
+
+.neutro {
+  background: var(--text-muted);
+}
+
+/*
+ * "Ainda não sei" tem forma PRÓPRIA, e não é o cinza de `neutro`: é um anel
+ * vazado. Sem isso, "verificando" e "nada a dizer" viram o mesmo pixel, que é
+ * exatamente o colapso de estados que a RN-088 existe para evitar.
+ */
+.aguardando {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--text-muted);
+}
+
+.rotulo {
+  color: var(--text-secondary);
+}
+
+.valorEnvolto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.valor {
+  color: var(--text-primary);
+  font-weight: 500;
+  /* Quebra caminho absoluto longo (`workspacePath`) em vez de esticar a
+     coluna inteira. */
+  overflow-wrap: anywhere;
+}
+
+/*
+ * A ressalva de um sinal que é PROXY. Menor que o valor, mas presente na mesma
+ * linha dele — separá-la em rodapé faria o valor ser lido sozinho, que é
+ * justamente o que ela previne. E por isso mesmo ela não é o texto a
+ * apagar: 11px já é pequeno, e `--text-muted` por cima disso é o que
+ * transforma uma ressalva em letra miúda que ninguém lê.
+ */
+.ressalva {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.nota {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}

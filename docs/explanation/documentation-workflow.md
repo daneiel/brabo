@@ -43,6 +43,24 @@ site said "28 of them" and "the 29 decisions" when there were already
 30, and "next is 0030" with 0030 already done. Nothing broke, no check
 complained — it just went wrong.
 
+**The list of verified numbers grew after a third case proved the same
+point.** An external review found the README announcing "the 158 RNs"
+when 331 were written — wrong by more than double, in the table that
+introduces the repository. It was corrected by hand (PR #412), which
+only resets the clock: the next RN would put it back out of date. So the
+check stopped covering ADR counts alone and now covers **three**
+families, each read from the ARTIFACT and never from other prose:
+
+| number in prose | source of truth |
+|---|---|
+| ADR count, next ADR number | the files in `docs/adr/` |
+| RN count | the `### RN-NNN` headings in `business-rules.md` |
+| LLM provider count | the `capabilities` literals `descobrirProviders()` finds — the same source as the generated table in `llm-providers.md` |
+
+The provider one is written **in words** ("nove providers"), and the
+check compares against the word rather than forcing the prose to become
+a digit: the check exists to protect the text, not to reshape it.
+
 The most expensive case was the **version announced in prose**: the
 README announced `v0.1.0` from Phase 5 all the way to v2.1.0 — seven
 releases behind reality, in the first thing a newcomer reads. The
@@ -332,11 +350,17 @@ The whole design, with the discarded alternatives, is in
 
 ## Running it on your machine
 
+`website/` has its own `pnpm-lock.yaml` since [ADR 0117](../adr/0117-lockfile-proprio-para-o-website.md) —
+the root `pnpm install` no longer reaches it, so the first time (or after its
+lockfile changes) needs one extra step:
+
 ```bash
+cd website && pnpm install && cd ..  # only the first time, or when website/pnpm-lock.yaml changes
+
 pnpm docs:check      # validates the map + checks generated content is up to date
 pnpm docs:generate   # regenerates
 pnpm docs:drift      # simulates the PR check (origin/dev...HEAD)
-pnpm docs:build      # the build CI runs
+pnpm docs:build      # the build CI runs — pnpm --dir website build under the hood
 pnpm docs:start      # local server, with hot reload
 
 # does the API reference render? needs the build above, and isn't part
@@ -347,6 +371,26 @@ node scripts/docs/api-render-check.mjs
 Or, if you're in Claude Code, `/sync-docs` runs the whole cycle and
 delivers a report of what changed, what became a `TODO(human)`, and
 what was deliberately **left** unchanged.
+
+### Conjunction by default, disjunction when the doc was split
+
+A rule's `docs:` list is a **conjunction**: every document listed has to
+change, or the rule fires. That's the right default — it's what makes
+"changed the gate, update the gate doc AND the rules" enforceable.
+
+It became wrong exactly once, and the fix is `docs_alternativos:`, a
+**disjunction**: any one of the listed documents satisfies the rule. It
+exists because `business-rules.md` was split by size (Cost and
+Authentication alone were half of a 640 KB page), so a business rule now
+lives in one of three files. Under conjunction, changing an auth rule
+would demand the index too — a file that no longer contains that rule —
+and the way out for whoever got asked would be the `docs-not-needed`
+escape hatch. **A rule that teaches people to use the escape hatch is
+worse than no rule**: it trains them to ignore the check.
+
+`docmap.mjs` validates both lists the same way: a path that doesn't
+exist is the same silent error as a dead glob — an alternative with a
+typo could never satisfy the rule, and nobody would see it.
 
 ## When the check complains unfairly
 

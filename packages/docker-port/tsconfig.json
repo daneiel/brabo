@@ -1,0 +1,25 @@
+{
+  // Cópia deliberada de `apps/runner/tsconfig.json`, e não uma herança: os
+  // dois consumidores deste pacote (`apps/runner`, `apps/broker`) executam os
+  // `.ts` por type stripping do Node (que APAGA os tipos, não os verifica), e
+  // este `tsc --noEmit` é o único lugar que verifica o que está aqui dentro.
+  // Herdar de um `tsconfig.base.json` que não existe hoje seria inventar uma
+  // peça de build para um repositório que decidiu não ter uma.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    // Reprova enum/namespace/parameter property — o que o type stripping do
+    // Node não sabe apagar.
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"]
+}

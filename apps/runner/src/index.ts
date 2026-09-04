@@ -9,8 +9,14 @@
  *
  * uso: brabo-runner --project <projectId> --dir <caminho-absoluto> [--api-url <url>]
  *
+ * Também roda SEM NENHUMA flag quando o diretório atual (`cwd`) contém os
+ * três arquivos que o fluxo "configurar pasta automaticamente" do navegador
+ * grava: o próprio binário, `brabo-runner.config.json` e
+ * `brabo-runner-device-key.jwk.json` — ver `device-key.ts`.
+ *
  * Ver o docblock de cada módulo para o desenho de cada parte:
- * `auth.ts` (autenticação + ticket), `channel.ts` (protocolo Phoenix),
+ * `auth.ts` (autenticação + ticket), `device-key.ts` (leitura do config/
+ * chave local do modo automático), `channel.ts` (protocolo Phoenix),
  * `exec.ts` (execução não-interativa), `pty.ts` (terminal interativo),
  * `guard.ts` (barreira best-effort de `cwd`), `fs-browser.ts` (navegação
  * de pasta local, sem a barreira de `guard.ts` — ver o docblock dele).
@@ -19,9 +25,16 @@
 import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { pathToFileURL } from 'node:url';
-import { obterToken, obterTicketDoRunner } from './auth.ts';
+import {
+  obterToken,
+  obterTicketDoRunnerComCredencial,
+  type CredencialDeAutenticacao,
+} from './auth.ts';
 import {
   conectarCanal,
+  enviarContainerRemoveResult,
+  enviarContainerStartResult,
+  enviarContainerStopResult,
   enviarExecResult,
   enviarFsHomeDirReply,
   enviarFsListDirReply,
@@ -31,15 +44,40 @@ import {
   enviarWorkspaceConfirm,
   JoinRecusadoError,
   type ChannelLike,
+  type ContainerRemoveMessage,
+  type ContainerStartMessage,
+  type ContainerStopMessage,
   type ExecMessage,
   type FsHomeDirMessage,
   type FsListDirMessage,
   type PtyOpenMessage,
 } from './channel.ts';
+import {
+  estadoDaChaveDeDispositivo,
+  explicacaoDaChaveRecusada,
+  lerChaveDeDispositivo,
+  lerConfigLocal,
+} from './device-key.ts';
+// A porta de Docker MUDOU de casa no ADR 0130 — de `./docker-*.ts` para o
+// pacote `@brabo/docker-port`, quando o broker virou o segundo consumidor. Ela
+// é `devDependency` de propósito, na mesma prateleira que `phoenix`: o `tsup`
+// deixa `dependencies` como `require` externo e EMBUTE devDependency, e o
+// pacote publicado no npm não pode carregar um `workspace:*` que ninguém fora
+// deste repositório resolve.
+import {
+  DockerCliAusenteError,
+  DockerIndisponivelError,
+  DockerViaCli,
+  especificacaoValidada,
+  nomeDeWorkspaceValidado,
+  PONTO_DE_MONTAGEM,
+  type DockerPort,
+} from '@brabo/docker-port';
 import { executarComando } from './exec.ts';
 import { diretorioInicial, listarDiretorio } from './fs-browser.ts';
 import {
   CwdForaDaRaizError,
+  cwdParaContainer,
   DirForaDoHomeError,
   DirNaoEUmaPastaError,
   garantirDiretorio,
@@ -55,7 +93,7 @@ interface Argumentos {
   projectId: string;
   dir: string;
   apiUrl: string;
-  token: string;
+  credencial: CredencialDeAutenticacao;
 }
 
 function uso(): never {
@@ -63,12 +101,20 @@ function uso(): never {
     'uso: brabo-runner --project <projectId> --dir <caminho-absoluto> [--api-url <url>] [--token <brb_...>]',
   );
   console.error(
+    'modo automático: rode "brabo-runner" SEM NENHUMA flag dentro da pasta que o ' +
+      'botão "Configurar pasta automaticamente" (tela do projeto) baixou — ela já ' +
+      'traz brabo-runner.config.json e a chave de dispositivo, e --project/--dir/' +
+      '--token deixam de ser necessários.',
+  );
+  console.error(
     '--dir: se a pasta ainda não existir, ela é criada automaticamente (dentro do ' +
-      '$HOME no Linux, RN-434/RN-435). Se apontar para um arquivo existente, é erro.',
+      '$HOME no Linux, RN-434/RN-435). Se apontar para um arquivo existente, é erro. ' +
+      'Omitida, a raiz é a própria pasta de onde o comando roda.',
   );
   console.error(
     'Autenticação: --token <brb_...>, ou BRABO_ACCOUNT_TOKEN no ambiente. Gere em ' +
-      'Configurações do projeto → Tokens de acesso — nunca gravado em disco por este CLI.',
+      'Configurações do projeto → Tokens de acesso — nunca gravado em disco por este ' +
+      'CLI. Sem token, a chave de dispositivo local (modo automático) é usada.',
   );
   process.exit(2);
 }
@@ -80,14 +126,47 @@ function lerArgumentos(argv: string[]): Argumentos {
     if (indice < 0) return undefined;
     return args[indice + 1];
   };
+  const flagInformado = (flag: string): boolean => args.includes(flag);
 
-  const projectId = valorDe('--project');
-  const dirBruto = valorDe('--dir');
-  const apiUrl = valorDe('--api-url') ?? process.env.BRABO_API_URL ?? 'http://localhost:3000';
+  // Pasta de onde o usuário DE FATO rodou o comando — mesma base que
+  // `resolverDir` usa para `--dir` relativo (ver docblock de guard.ts) — e
+  // também onde procuramos `brabo-runner.config.json`/
+  // `brabo-runner-device-key.jwk.json` do modo automático: eles vivem NA
+  // pasta de onde o comando roda, nunca em `$HOME`/global (ver
+  // `device-key.ts`).
+  const cwdEfetivo = process.env.INIT_CWD ?? process.cwd();
+  const configLocal = lerConfigLocal(cwdEfetivo);
+  const chaveLocal = lerChaveDeDispositivo(cwdEfetivo);
+
+  let projectId: string | undefined;
+  if (flagInformado('--project')) {
+    const valor = valorDe('--project');
+    if (!valor || valor.startsWith('--')) uso();
+    projectId = valor;
+  } else {
+    // Flag explícita sempre vence o config local — na ausência dela, o
+    // arquivo baixado pelo navegador resolve sozinho.
+    projectId = configLocal?.projectId;
+  }
+  if (!projectId) uso();
+
+  let dirBruto: string;
+  if (flagInformado('--dir')) {
+    const valor = valorDe('--dir');
+    if (!valor || valor.startsWith('--')) uso();
+    dirBruto = valor;
+  } else {
+    // `--dir` deixou de ser obrigatório: sem a flag, a raiz é a própria
+    // pasta de onde o comando roda (`cwdEfetivo`) — `resolverDir('.', ...)`
+    // resolve exatamente para lá, reusando a mesma lógica de sempre em vez
+    // de duplicá-la.
+    dirBruto = '.';
+  }
+
+  const apiUrlFlag = valorDe('--api-url');
+  const apiUrl =
+    apiUrlFlag ?? process.env.BRABO_API_URL ?? configLocal?.apiUrl ?? 'http://localhost:3000';
   const tokenFlag = valorDe('--token');
-
-  if (!projectId || projectId.startsWith('--')) uso();
-  if (!dirBruto || dirBruto.startsWith('--')) uso();
 
   // `INIT_CWD` é a pasta de onde o usuário de fato digitou o comando —
   // sem ela, `--dir` relativo resolveria contra `process.cwd()`, que
@@ -124,15 +203,43 @@ function lerArgumentos(argv: string[]): Argumentos {
     throw erro;
   }
 
-  let token: string;
-  try {
-    token = obterToken(tokenFlag);
-  } catch (erro) {
-    console.error(erro instanceof Error ? erro.message : String(erro));
-    process.exit(2);
+  // `--token`/`BRABO_ACCOUNT_TOKEN` sempre vence a chave de dispositivo
+  // local quando ambos existem — mesmo critério de "flag explícita vence
+  // arquivo local" usado acima para `--project`/`--api-url`.
+  const tokenBruto = tokenFlag ?? process.env.BRABO_ACCOUNT_TOKEN;
+  let credencial: CredencialDeAutenticacao;
+  if (tokenBruto) {
+    let token: string;
+    try {
+      token = obterToken(tokenFlag);
+    } catch (erro) {
+      console.error(erro instanceof Error ? erro.message : String(erro));
+      process.exit(2);
+    }
+    credencial = { tipo: 'token', token };
+  } else if (chaveLocal) {
+    credencial = {
+      tipo: 'chave-de-dispositivo',
+      jwkPrivada: chaveLocal.jwkPrivada,
+      deviceKeyId: chaveLocal.deviceKeyId,
+    };
+  } else {
+    // Nem token (flag/env) nem chave de dispositivo local — sem forma
+    // nenhuma de autenticar. Mas os dois motivos de não haver chave não são
+    // o mesmo problema (RN-475): arquivo AUSENTE é o caso normal de quem
+    // roda com flags, e o bloco de `uso()` responde; arquivo PRESENTE e
+    // recusado é uma pasta configurada que não serve, e imprimir ali um
+    // texto sobre flags manda a pessoa investigar o lado certo do problema
+    // (a config) pelo motivo errado.
+    const estadoDaChave = estadoDaChaveDeDispositivo(cwdEfetivo);
+    if (estadoDaChave === 'json-invalido' || estadoDaChave === 'sem-kid') {
+      console.error(explicacaoDaChaveRecusada(estadoDaChave));
+      process.exit(2);
+    }
+    uso();
   }
 
-  return { projectId, dir, apiUrl, token };
+  return { projectId, dir, apiUrl, credencial };
 }
 
 function mensagemDeErro(erro: unknown): string {
@@ -160,13 +267,23 @@ const TETO_DE_TENTATIVAS_SEGUIDAS = 10;
 /** Handlers de `exec`/PTY — dependem do canal ATUAL, guardado num holder mutável
  * porque `conectarCanal` só devolve o canal DEPOIS de já ter passado os
  * handlers (o mesmo problema resolvido no teste de `channel.spec.ts`). */
-interface EstadoDoRunner {
+/**
+ * `containerAtivo` (ADR 0137) — o NOME do container que ESTE runner subiu
+ * (`brabo-<workspaceDirName>`), ou `null` sem container. É o que decide, em
+ * `tratarExec`, se um comando roda direto no host (comportamento de sempre)
+ * ou via `docker exec` — a decisão é INTERNA ao runner, o engine não sabe
+ * disso e não precisa saber (`Engine.Actions.TerminalExecutor` já roteia todo
+ * comando de projeto `runner` conectado pra cá incondicionalmente).
+ */
+export interface EstadoDoRunner {
   canalAtual: ChannelLike | null;
   dir: string;
   gerenciadorPty: GerenciadorDePty;
+  docker: DockerPort;
+  containerAtivo: string | null;
 }
 
-async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Promise<void> {
+export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Promise<void> {
   const canal = estado.canalAtual;
   if (!canal) return; // conexão caiu entre o recebimento e o tratamento — nada a responder
 
@@ -189,7 +306,9 @@ async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Promise<voi
   }
 
   console.log(`exec ${msg.ref}: ${msg.command} (cwd=${cwd})`);
-  const resultado = await executarComando(msg.command, cwd);
+  const resultado = estado.containerAtivo
+    ? await executarComandoNoContainer(estado, estado.containerAtivo, msg.command, cwd)
+    : await executarComando(msg.command, cwd);
   console.log(
     `exec ${msg.ref}: exit=${resultado.exitCode} timedOut=${resultado.timedOut} ` +
       `bytes=${resultado.output.length}`,
@@ -202,6 +321,24 @@ async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Promise<voi
     return;
   }
   enviarExecResult(canal, { ref: msg.ref, ...resultado });
+}
+
+/**
+ * `cwd` chega aqui já validado por `validarCwdDentroDaRaiz` — sempre um
+ * caminho de HOST dentro de `estado.dir`. Traduzido pra dentro de
+ * `PONTO_DE_MONTAGEM` (`cwdParaContainer`, `guard.ts`) ANTES de sair pro
+ * `docker exec`: o container nunca vê um caminho de host.
+ */
+async function executarComandoNoContainer(
+  estado: EstadoDoRunner,
+  nomeDoContainer: string,
+  command: string,
+  cwd: string,
+): Promise<{ exitCode: number; output: string; timedOut: boolean }> {
+  return estado.docker.exec(nomeDoContainer, {
+    comando: command,
+    cwd: cwdParaContainer(estado.dir, cwd, PONTO_DE_MONTAGEM),
+  });
 }
 
 function tratarPtyOpen(estado: EstadoDoRunner, msg: PtyOpenMessage): void {
@@ -236,21 +373,119 @@ function tratarFsHomeDir(estado: EstadoDoRunner, msg: FsHomeDirMessage): void {
 }
 
 /**
- * Uma "rodada" de conexão: pede um ticket FRESCO (o token é resolvido uma
- * vez só, em `lerArgumentos` — PAT não expira por uso, então não há razão
- * pra reobtê-lo a cada reconexão), entra no canal, e só volta quando a
- * conexão cai (ou lança se o join for recusado/não puder conectar). O
- * `while` de `main()` decide o que fazer com o retorno/erro — este helper
- * não decide política de retry.
+ * `container_start` (ADR 0137) — sobe o container do projeto NA MÁQUINA DO
+ * USUÁRIO, com o Docker DELE. `msg.spec` é o que a api compôs
+ * (`EspecificacaoDeContainerParaRunner`) MENOS `raizDoProjeto`: este runner
+ * enche esse campo sozinho, com `estado.dir` — a raiz JÁ confirmada e
+ * validada no startup da CLI (RN-434/435, `guard.ts`); não há segunda
+ * validação de "caminho de mount válido" porque o mount É `estado.dir`,
+ * ponto (mesmo raciocínio do docblock de `guard.ts`).
+ *
+ * Qualquer falha — `EspecificacaoInvalidaError` (spec mal formada),
+ * `DockerIndisponivelError`/`DockerCliAusenteError` (sem Docker nesta
+ * máquina), ou qualquer outra — vira `container_start_result` com
+ * `sucesso: false`, nunca uma exceção não tratada que derruba o runner.
+ */
+export async function tratarContainerStart(
+  estado: EstadoDoRunner,
+  msg: ContainerStartMessage,
+): Promise<void> {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+
+  try {
+    const spec = especificacaoValidada({ ...msg.spec, raizDoProjeto: estado.dir });
+    console.log(`container_start ${msg.ref}: subindo ${spec.imagem} em ${estado.dir}`);
+    const resultado = await estado.docker.start(spec);
+
+    if (estado.canalAtual !== canal) return; // canal caiu enquanto o Docker subia
+
+    estado.containerAtivo = resultado.nome;
+    console.log(
+      `container_start ${msg.ref}: container ${resultado.nome} de pé ` +
+        `(jaEstavaDePe=${resultado.jaEstavaDePe})`,
+    );
+    enviarContainerStartResult(canal, {
+      ref: msg.ref,
+      sucesso: true,
+      containerId: resultado.containerId,
+      nome: resultado.nome,
+      jaEstavaDePe: resultado.jaEstavaDePe,
+    });
+  } catch (erro) {
+    if (estado.canalAtual !== canal) return;
+    const explicacao = mensagemDeErro(erro);
+    console.warn(`container_start ${msg.ref}: recusado — ${explicacao}`);
+    enviarContainerStartResult(canal, { ref: msg.ref, sucesso: false, erro: explicacao });
+  }
+}
+
+/** `container_stop` (ADR 0137) — espelho de `tratarContainerStart`. */
+export async function tratarContainerStop(
+  estado: EstadoDoRunner,
+  msg: ContainerStopMessage,
+): Promise<void> {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+
+  try {
+    const nome = nomeDeWorkspaceValidado(msg.workspaceDirName);
+    await estado.docker.stop(nome);
+
+    if (estado.canalAtual !== canal) return;
+    estado.containerAtivo = null;
+    enviarContainerStopResult(canal, { ref: msg.ref, sucesso: true });
+  } catch (erro) {
+    if (estado.canalAtual !== canal) return;
+    const explicacao = mensagemDeErro(erro);
+    console.warn(`container_stop ${msg.ref}: recusado — ${explicacao}`);
+    enviarContainerStopResult(canal, { ref: msg.ref, sucesso: false, erro: explicacao });
+  }
+}
+
+/** `container_remove` (ADR 0137) — espelho de `tratarContainerStart`. */
+export async function tratarContainerRemove(
+  estado: EstadoDoRunner,
+  msg: ContainerRemoveMessage,
+): Promise<void> {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+
+  try {
+    const nome = nomeDeWorkspaceValidado(msg.workspaceDirName);
+    await estado.docker.remove(nome);
+
+    if (estado.canalAtual !== canal) return;
+    estado.containerAtivo = null;
+    enviarContainerRemoveResult(canal, { ref: msg.ref, sucesso: true });
+  } catch (erro) {
+    if (estado.canalAtual !== canal) return;
+    const explicacao = mensagemDeErro(erro);
+    console.warn(`container_remove ${msg.ref}: recusado — ${explicacao}`);
+    enviarContainerRemoveResult(canal, { ref: msg.ref, sucesso: false, erro: explicacao });
+  }
+}
+
+/**
+ * Uma "rodada" de conexão: pede um ticket FRESCO, entra no canal, e só volta
+ * quando a conexão cai (ou lança se o join for recusado/não puder
+ * conectar). A `credencial` é resolvida uma vez só, em `lerArgumentos` — mas
+ * o BEARER que ela produz não é necessariamente reaproveitado entre
+ * reconexões: para `tipo: 'token'` (PAT, não expira por uso) é o mesmo
+ * valor sempre; para `tipo: 'chave-de-dispositivo'`,
+ * `obterTicketDoRunnerComCredencial` assina um JWT NOVO a cada chamada
+ * (TTL de 30s — reaproveitar entre reconexões distantes no tempo mandaria
+ * um JWT já expirado). O `while` de `main()` decide o que fazer com o
+ * retorno/erro — este helper não decide política de retry.
  */
 async function conectarERodar(
   apiUrl: string,
   projectId: string,
-  token: string,
+  credencial: CredencialDeAutenticacao,
   estado: EstadoDoRunner,
   deveParar: () => boolean,
 ): Promise<void> {
-  const ticket = await obterTicketDoRunner(apiUrl, projectId, token);
+  const ticket = await obterTicketDoRunnerComCredencial(apiUrl, projectId, credencial);
 
   let resolverQueda: () => void;
   const queda = new Promise<void>((res) => {
@@ -270,6 +505,9 @@ async function conectarERodar(
       onPtyClose: (msg) => estado.gerenciadorPty.fechar(msg.sessionRef),
       onFsListDir: (msg) => void tratarFsListDir(estado, msg),
       onFsHomeDir: (msg) => tratarFsHomeDir(estado, msg),
+      onContainerStart: (msg) => void tratarContainerStart(estado, msg),
+      onContainerStop: (msg) => void tratarContainerStop(estado, msg),
+      onContainerRemove: (msg) => void tratarContainerRemove(estado, msg),
       onDisconnected: () => resolverQueda(),
     },
   });
@@ -362,15 +600,69 @@ async function rodarAutoTestePty(): Promise<void> {
   }
 }
 
+/**
+ * Segunda flag INTERNA, mesma família de `--self-test-pty` e pelo mesmo motivo
+ * estrutural: prova, NO ARTEFATO, o que nenhum teste de unidade prova.
+ *
+ * Foi ela que respondeu a pergunta do ADR 0128 — `dockerode` sobrevive ao
+ * empacotamento? Não sobrevive: com ele no grafo, o `bun build --compile`
+ * reprovava resolvendo um `.node` da árvore `ssh2` que `docker-modem` arrasta
+ * (o erro está colado por inteiro no docblock de `docker-cli.ts`). E a
+ * pergunta só se responde EXECUTANDO: bundler apaga import cujo resultado
+ * ninguém usa, e o Bun chega a trocar por um stub que só lança AO RODAR um
+ * módulo que não conseguiu resolver (achado do ADR 0112, com `node-pty`). Por
+ * isso este auto-teste INSTANCIA a porta e FALA com o daemon.
+ *
+ * Fica valendo depois da troca para `execFile('docker', …)`, com a mesma
+ * pergunta e um alvo a mais: a porta chega inteira no `dist` e no binário, e
+ * Docker fora do ar vira erro NOMEADO em vez de stack trace cru.
+ *
+ * TRÊS desfechos, e dois deles são sucesso — porque a afirmação é sobre o
+ * ARTEFATO, não sobre esta máquina. Daemon respondeu; daemon/CLI ausentes (as
+ * duas recusas nomeadas, e a máquina de CI legitimamente não tem Docker); e
+ * qualquer outra falha, que é a única que reprova. Exigir daemon faria este
+ * teste parar de rodar exatamente onde ele mais precisa rodar.
+ */
+async function rodarAutoTesteDocker(): Promise<void> {
+  const docker = new DockerViaCli();
+  console.log('porta de docker carregada com sucesso');
+  try {
+    await docker.ping();
+    console.log('SELF_TEST_DOCKER_OK: daemon respondeu ao ping');
+  } catch (erro) {
+    if (erro instanceof DockerIndisponivelError) {
+      console.log(`SELF_TEST_DOCKER_OK: daemon não atendeu (${erro.causa})`);
+      return;
+    }
+    if (erro instanceof DockerCliAusenteError) {
+      console.log('SELF_TEST_DOCKER_OK: não há `docker` no PATH desta máquina');
+      return;
+    }
+    throw erro;
+  }
+}
+
 async function main(): Promise<void> {
   if (process.argv.includes('--self-test-pty')) {
     await rodarAutoTestePty();
     return;
   }
 
-  const { projectId, dir, apiUrl, token } = lerArgumentos(process.argv);
+  if (process.argv.includes('--self-test-docker')) {
+    await rodarAutoTesteDocker();
+    return;
+  }
 
-  console.log(`brabo-runner — projeto ${projectId}, raiz ${dir}, api ${apiUrl}`);
+  const { projectId, dir, apiUrl, credencial } = lerArgumentos(process.argv);
+
+  const autenticacaoDescricao =
+    credencial.tipo === 'token'
+      ? 'token de acesso'
+      : `chave de dispositivo (${credencial.deviceKeyId})`;
+  console.log(
+    `brabo-runner — projeto ${projectId}, raiz ${dir}, api ${apiUrl}, ` +
+      `autenticação: ${autenticacaoDescricao}`,
+  );
 
   // Resolvido UMA vez, antes de montar o estado — normal `import('node-pty')`
   // sob `node dist/index.cjs`/`bun run src/index.ts`; extraído do binário
@@ -382,6 +674,8 @@ async function main(): Promise<void> {
   const estado: EstadoDoRunner = {
     canalAtual: null,
     dir,
+    docker: new DockerViaCli(),
+    containerAtivo: null,
     gerenciadorPty: new GerenciadorDePty(
       dir,
       (sessionRef, dataBase64) => {
@@ -417,7 +711,7 @@ async function main(): Promise<void> {
 
   while (!parando) {
     try {
-      await conectarERodar(apiUrl, projectId, token, estado, deveParar);
+      await conectarERodar(apiUrl, projectId, credencial, estado, deveParar);
       tentativasSeguidas = 0; // ficou conectado por um tempo — reseta o contador de falhas
     } catch (erro) {
       if (erro instanceof JoinRecusadoError) {

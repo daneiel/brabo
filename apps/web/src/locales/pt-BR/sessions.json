@@ -69,7 +69,20 @@
     "signals": "vetor {{vector}} · léxico {{lexical}}",
     "collapse": "recolher",
     "expand": "ver trecho completo",
-    "viewInSession": "Ver na sessão"
+    "viewInSession": "Ver na sessão",
+    "feedback": {
+      "groupLabel": "Este trecho ajudou?",
+      "question": "Este trecho ajudou?",
+      "useful": "útil",
+      "irrelevant": "irrelevante",
+      "sending": "registrando…",
+      "recorded": "registrado como {{verdict}} — ele veio em {{rank}}º nesta busca",
+      "errorDefault": "Não foi possível registrar seu voto",
+      "verdicts": {
+        "util": "útil",
+        "irrelevante": "irrelevante"
+      }
+    }
   },
   "ragCoverage": {
     "noFilesInRepo": "nenhum arquivo no repositório",

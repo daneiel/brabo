@@ -15,6 +15,7 @@ import { UserCredentialRepository } from '../../../application/ports/user-creden
 import { TokenUsageRepository } from '../../../application/ports/token-usage-repository.port';
 import { BudgetRepository } from '../../../application/ports/budget-repository.port';
 import { ProposedActionRepository } from '../../../application/ports/proposed-action-repository.port';
+import { ModelPullRequestRepository } from '../../../application/ports/model-pull-request-repository.port';
 import { AgentAutonomyRepository } from '../../../application/ports/agent-autonomy-repository.port';
 import { GitConnectionRepository } from '../../../application/ports/git-connection-repository.port';
 import { ProvisionedRepositoryRepository } from '../../../application/ports/provisioned-repository-repository.port';
@@ -29,6 +30,8 @@ import {
 } from '../../../application/ports/backlog-repository.port';
 import { ModuleMapRepository } from '../../../application/ports/module-map-repository.port';
 import { ChunkRepository } from '../../../application/ports/chunk-repository.port';
+import { RagTelemetryRepository } from '../../../application/ports/rag-telemetry-repository.port';
+import { ContainersOverviewRepository } from '../../../application/ports/containers-overview-repository.port';
 import { ContainerRepository } from '../../../application/ports/container-repository.port';
 import { ProjectsSummaryRepository } from '../../../application/ports/projects-summary-repository.port';
 import { DevAgentActivityPort } from '../../../application/ports/dev-agent-activity.port';
@@ -49,6 +52,7 @@ import { AuthCredentialRepository } from '../../../application/ports/auth-creden
 import { RefreshTokenRepository } from '../../../application/ports/refresh-token-repository.port';
 import { AccountTokenRepository } from '../../../application/ports/account-token-repository.port';
 import { PersonalAccessTokenRepository } from '../../../application/ports/personal-access-token-repository.port';
+import { RunnerDeviceKeyRepository } from '../../../application/ports/runner-device-key-repository.port';
 import { AuthEventRecorder } from '../../../application/ports/auth-event-recorder.port';
 import { LoginThrottle } from '../../../application/ports/login-throttle.port';
 import { SocialIdentityRepository } from '../../../application/ports/social-identity-repository.port';
@@ -57,6 +61,7 @@ import { DrizzleSocialIdentityRepository } from './social-identity.repository';
 import { DrizzleRefreshTokenRepository } from './refresh-token.repository';
 import { DrizzleAccountTokenRepository } from './account-token.repository';
 import { DrizzlePersonalAccessTokenRepository } from './personal-access-token.repository';
+import { DrizzleRunnerDeviceKeyRepository } from './runner-device-key.repository';
 import { DrizzleAuthEventRepository } from './auth-event.repository';
 import { DrizzleLoginThrottle } from './drizzle-login-throttle';
 import { createDrizzleClient, DRIZZLE } from './drizzle-client';
@@ -78,6 +83,7 @@ import { DrizzleUserCredentialRepository } from './user-credential.repository';
 import { DrizzleTokenUsageRepository } from './token-usage.repository';
 import { DrizzleBudgetRepository } from './budget.repository';
 import { DrizzleProposedActionRepository } from './proposed-action.repository';
+import { DrizzleModelPullRequestRepository } from './model-pull-request.repository';
 import { DrizzleAgentAutonomyRepository } from './agent-autonomy.repository';
 import { DrizzleGitConnectionRepository } from './git-connection.repository';
 import { DrizzleProvisionedRepositoryRepository } from './provisioned-repository.repository';
@@ -92,7 +98,9 @@ import {
 } from './backlog.repository';
 import { DrizzleModuleMapRepository } from './module-map.repository';
 import { DrizzleChunkRepository } from './chunk.repository';
+import { DrizzleRagTelemetryRepository } from './rag-telemetry.repository';
 import { DrizzleContainerRepository } from './container.repository';
+import { DrizzleContainersOverviewRepository } from './containers-overview.repository';
 import { DrizzleAgentAreaRepository } from './agent-area.repository';
 import { DrizzleInfraArtifactRepository } from './infra-artifact.repository';
 import { DrizzlePsychologistAnalysisRepository } from './psychologist-analysis.repository';
@@ -132,6 +140,10 @@ const { db, pool } = createDrizzleClient();
     {
       provide: PersonalAccessTokenRepository,
       useClass: DrizzlePersonalAccessTokenRepository,
+    },
+    {
+      provide: RunnerDeviceKeyRepository,
+      useClass: DrizzleRunnerDeviceKeyRepository,
     },
     { provide: AuthEventRecorder, useClass: DrizzleAuthEventRepository },
     { provide: LoginThrottle, useClass: DrizzleLoginThrottle },
@@ -175,6 +187,10 @@ const { db, pool } = createDrizzleClient();
       useClass: DrizzleProposedActionRepository,
     },
     {
+      provide: ModelPullRequestRepository,
+      useClass: DrizzleModelPullRequestRepository,
+    },
+    {
       provide: AgentAutonomyRepository,
       useClass: DrizzleAgentAutonomyRepository,
     },
@@ -209,7 +225,15 @@ const { db, pool } = createDrizzleClient();
     },
     { provide: ModuleMapRepository, useClass: DrizzleModuleMapRepository },
     { provide: ChunkRepository, useClass: DrizzleChunkRepository },
+    {
+      provide: RagTelemetryRepository,
+      useClass: DrizzleRagTelemetryRepository,
+    },
     { provide: ContainerRepository, useClass: DrizzleContainerRepository },
+    {
+      provide: ContainersOverviewRepository,
+      useClass: DrizzleContainersOverviewRepository,
+    },
     { provide: AgentAreaRepository, useClass: DrizzleAgentAreaRepository },
     {
       provide: InfraArtifactRepository,
@@ -249,6 +273,7 @@ const { db, pool } = createDrizzleClient();
     RefreshTokenRepository,
     AccountTokenRepository,
     PersonalAccessTokenRepository,
+    RunnerDeviceKeyRepository,
     AuthEventRecorder,
     LoginThrottle,
     SocialIdentityRepository,
@@ -266,6 +291,7 @@ const { db, pool } = createDrizzleClient();
     TokenUsageRepository,
     BudgetRepository,
     ProposedActionRepository,
+    ModelPullRequestRepository,
     AgentAutonomyRepository,
     GitConnectionRepository,
     ProvisionedRepositoryRepository,
@@ -281,7 +307,9 @@ const { db, pool } = createDrizzleClient();
     AgentAreaRepository,
     ModuleMapRepository,
     ChunkRepository,
+    RagTelemetryRepository,
     ContainerRepository,
+    ContainersOverviewRepository,
     InfraArtifactRepository,
     PsychologistAnalysisRepository,
     PsychologistHypothesisRepository,

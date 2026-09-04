@@ -10,6 +10,7 @@ import { Shell } from './routes/Shell';
 import { Dashboard } from './routes/Dashboard';
 import { ProjectPage } from './routes/ProjectPage';
 import { resolverChaveDeAba, type ChaveDeAba } from './routes/project-tabs';
+import { resolverChaveDeSecao, type ChaveDeSecao } from './routes/settings/sumario';
 import { SessionPage } from './routes/SessionPage';
 import { ProvisioningPage } from './routes/ProvisioningPage';
 import { AdoptionPlanPage } from './routes/AdoptionPlanPage';
@@ -21,6 +22,7 @@ import { ForgotPasswordPage } from './routes/ForgotPasswordPage';
 import { SetPasswordPage } from './routes/SetPasswordPage';
 import { VerifyEmailPage } from './routes/VerifyEmailPage';
 import { AccountPage } from './routes/AccountPage';
+import { ContainersPage } from './routes/ContainersPage';
 import {
   definirSenha,
   entrar,
@@ -192,11 +194,27 @@ const accountRoute = createRoute({
   component: AccountPage,
 });
 
+// A página global de containers (ADR 0136, RN-495) — mesmo nível hierárquico
+// de `/account`: cross-projeto, não uma aba dentro de um projeto.
+const containersRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/containers',
+  component: ContainersPage,
+});
+
 // A lista de abas mora em `routes/project-tabs.ts` — aqui só se pergunta se a
 // chave existe. Enquanto a lista era copiada neste arquivo, aceitar `?tab=x`
 // e ter painel para `x` eram duas decisões independentes.
 interface ProjectSearch {
   tab?: ChaveDeAba;
+  /**
+   * A SEÇÃO da aba Configurações a que o link aponta — mesma ideia de `tab`,
+   * um degrau abaixo. A lista mora em `routes/settings/sumario.ts` e é a mesma
+   * que o sumário ancorado renderiza, pelo motivo que o comentário de `tab`
+   * já registra: aceitar uma chave na URL e ter destino para ela não podem ser
+   * duas decisões independentes.
+   */
+  section?: ChaveDeSecao;
 }
 
 const projectRoute = createRoute({
@@ -212,11 +230,22 @@ const projectRoute = createRoute({
   // silencioso na Visão geral.
   validateSearch: (search: Record<string, unknown>): ProjectSearch => ({
     tab: resolverChaveDeAba(search.tab),
+    section: resolverChaveDeSecao(search.section),
   }),
   component: () => {
     const { projectId } = projectRoute.useParams();
-    const { tab } = projectRoute.useSearch();
-    return <ProjectPage projectId={projectId} initialTab={tab} />;
+    const { tab, section } = projectRoute.useSearch();
+    // `?section=` sozinho ABRE Configurações. A alternativa era abrir a Visão
+    // geral e não rolar para lugar nenhum — a mesma falha silenciosa que o
+    // registro de abas existe para não repetir: um link que a URL aceita e a
+    // tela ignora.
+    return (
+      <ProjectPage
+        projectId={projectId}
+        initialTab={tab ?? (section ? 'settings' : undefined)}
+        initialSection={section}
+      />
+    );
   },
 });
 
@@ -327,6 +356,7 @@ const routeTree = rootRoute.addChildren([
   appLayout.addChildren([
     indexRoute,
     accountRoute,
+    containersRoute,
     projectRoute,
     sessionRoute,
     provisioningRoute,

@@ -263,10 +263,12 @@ describe('NewProjectWizard — onde o código vai morar', () => {
       target: { value: '/home/voce/projetos/loja' },
     });
 
+    // Converge para o MESMO `RunnerOnboardingPanel` de `TerminalPanel`/
+    // `FolderBrowserModal` — o comando manual (colapsado atrás de "Prefiro
+    // rodar manualmente") agora inclui `--token`, o que a divergência de
+    // antes não fazia.
     expect(screen.getByText(/brabo-runner --project/)).toBeTruthy();
-    expect(
-      screen.getByText(/runner confirma o caminho ao conectar/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/--token/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));

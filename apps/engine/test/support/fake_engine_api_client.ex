@@ -225,6 +225,30 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def route_modules_to_infra(_project_id, _session_id, roteamento) do
+    notify({:module_routing_created, roteamento})
+
+    case Process.get(:fake_module_routing_error) do
+      nil ->
+        reply(:fake_module_routing, %{
+          "version" => 1,
+          "roteamento" =>
+            Enum.map(roteamento, fn r ->
+              %{
+                "modulo" => Map.get(r, :modulo) || Map.get(r, "modulo"),
+                "imagemCandidata" =>
+                  Map.get(r, :imagemCandidata) || Map.get(r, "imagemCandidata"),
+                "porque" => Map.get(r, :porque) || Map.get(r, "porque")
+              }
+            end)
+        })
+
+      reason ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
   def claim_task(_project_id, _session_id, module, agent_id) do
     # Atraso opcional via Application env (NÃO dicionário de processo): o
     # agente reidratado roda no processo DELE, então `Process.put` do teste
@@ -469,6 +493,20 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def rag_feedback(project_id, search_id, chunk_id, verdict, agent) do
+    notify({:rag_feedback, project_id, search_id, chunk_id, verdict, agent})
+
+    # Mesma chave única de `rag_search`: `Process.put(:fake_rag_feedback,
+    # {:error, {400, ...}})` simula a recusa da api por id desconhecido.
+    reply(:fake_rag_feedback, %{
+      "searchId" => search_id,
+      "chunkId" => chunk_id,
+      "verdict" => verdict,
+      "rank" => 1
+    })
+  end
+
+  @impl true
   def get_prompt_template(name, version \\ nil) do
     notify({:prompt_template_fetched, name, version})
 
@@ -620,6 +658,22 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     case Process.get(:fake_confirm_workspace) do
       nil -> {:ok, %{"verified" => true, "workspacePath" => path}}
       resultado -> resultado
+    end
+  end
+
+  # ADR 0134, RN-492 — scriptável via `:fake_container_exec`
+  # (`{:ok, %{"sucesso" => ...}}` ou `{:error, reason}`); default devolve
+  # sucesso com exit 0 e output vazio, como um comando trivial que passou.
+  @impl true
+  def executar_comando_no_container(project_id, comando, cwd, timeout_ms) do
+    notify({:container_exec, project_id, comando, cwd, timeout_ms})
+
+    case Process.get(:fake_container_exec) do
+      nil ->
+        {:ok, %{"sucesso" => true, "exitCode" => 0, "output" => "", "timedOut" => false}}
+
+      resultado ->
+        resultado
     end
   end
 

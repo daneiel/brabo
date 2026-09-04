@@ -49,7 +49,7 @@ can only operate at the boolean level.
 `project_repositories.origin` and `repo_bootstraps.origin` (`created` |
 `adopted`), written explicitly by whoever writes them — not by the
 column default, so adoption is a visible choice in the code and not an
-absence ([RN-046](../business-rules.md#rn-046)). Migration `0031`'s
+absence ([RN-046](../business-rules/custo.md#rn-046)). Migration `0031`'s
 backfill is deliberately blind: adoption didn't exist before it, so
 every pre-existing row was created by Brabo by definition, and there's
 no case to misclassify — unlike `0026`'s directed backfill.
@@ -73,7 +73,7 @@ executor — the `BootstrapRunner` is the one from Phase 2, extracted
 verbatim (128 lines checked byte by byte) to be shareable, and simply
 isn't called. Combined with the `:112` guard, there is no code path
 that protects a branch outside an approved plan
-([RN-045](../business-rules.md#rn-045)).
+([RN-045](../business-rules/custo.md#rn-045)).
 
 Approval is **all-or-nothing**: selective approval would break the
 `dev←main, qa←dev, rc←qa` cascade (approving `qa` without `dev` is

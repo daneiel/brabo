@@ -1,4 +1,31 @@
 {
+  "summary": {
+    "title": "Nesta página",
+    "ariaLabel": "Sumário das configurações",
+    "groups": {
+      "projeto": "Projeto e execução",
+      "modelos": "Modelos",
+      "pessoas": "Pessoas e acesso",
+      "avancado": "Avançado"
+    }
+  },
+  "heranca": {
+    "semValorProprio": "Sem valor próprio",
+    "proprio": "Valor próprio",
+    "voltarAHerdar": "Voltar a herdar"
+  },
+  "secao": {
+    "naoSalvas_one": "{{count}} alteração não salva nesta seção",
+    "naoSalvas_other": "{{count}} alterações não salvas nesta seção",
+    "invalidas_one": "{{count}} valor inválido — corrija para salvar",
+    "invalidas_other": "{{count}} valores inválidos — corrija para salvar",
+    "toast": {
+      "salvas_one": "{{count}} alteração salva",
+      "salvas_other": "{{count}} alterações salvas",
+      "parcial": "Salvou {{salvas}} de {{total}}",
+      "parcialDetalhe": "Não salvou: {{itens}}. {{motivo}}"
+    }
+  },
   "matrix": {
     "title": "Quem pode aprovar o quê",
     "eyebrow": "matriz resumida",
@@ -38,6 +65,27 @@
     "usedByCount_other": "{{count}} agentes deste projeto",
     "emptyMessage": "Nenhuma capacidade cadastrada."
   },
+  "cascata": {
+    "niveis": {
+      "workspace": "workspace",
+      "project": "projeto",
+      "area": "área",
+      "agent": "agente",
+      "session": "sessão"
+    },
+    "modeloDesconhecido": "modelo desconhecido",
+    "titulo": {
+      "vigente": "É deste nível que sai o modelo vigente ({{modelo}}).",
+      "doStart": "Nenhum nível da cascata escolheu um modelo aqui — o produto herda o do Criativo, o agente de start, em vez de deixar cair no default do workspace. O Criativo usa {{modelo}}.",
+      "definido": "{{polo}} neste nível ({{modelo}}), mas um nível mais específico venceu.",
+      "vazio": "{{polo}} neste nível.",
+      "puladoIndisponivel": "A cascata DESCARTOU este nível: {{modelo}} sumiu do provider.",
+      "puladoSemToolCalling": "A cascata DESCARTOU este nível: {{modelo}} não faz tool calling e não serve a um agente."
+    },
+    "niveisComNome": {
+      "area": "área {{area}}"
+    }
+  },
   "modelsSection": {
     "title": "Modelos por agente",
     "eyebrow": "binding vigente por cascata",
@@ -47,7 +95,8 @@
       "areaWord": "área",
       "areaExplain": "é o padrão que o lead e os subagentes compartilham (RN-102) — configure em",
       "areaLink": "Modelo por área",
-      "below": ", logo abaixo."
+      "below": ", logo abaixo.",
+      "needsDeveloper": " Exige papel developer para trocar o modelo, aplicar um a todos os agentes ou voltar a herdar."
     },
     "costCard": {
       "label": "Custo estimado mensal do time",
@@ -60,15 +109,34 @@
       "fallback": "Fallback",
       "estimate": "Est. mês"
     },
-    "skippedBadge": "{{scope}} pulado",
-    "skippedTitleUnavailable": "O modelo de {{scope}} sumiu do provider — a cascata caiu para {{origin}}.",
-    "skippedTitleNoToolCalling": "O modelo de {{scope}} não faz tool calling e não serve a um agente — a cascata caiu para {{origin}}.",
-    "areaOriginTitle": "Padrão da área {{area}}.",
-    "backToInherit": "voltar a herdar",
     "backToInheritTitleWithArea": "Apaga o modelo próprio deste agente — ele volta a usar o padrão da área {{area}}.",
     "backToInheritTitleNoArea": "Apaga o modelo próprio deste agente — ele volta a herdar do projeto ou do workspace.",
+    "toast": {
+      "reverted": "{{agent}} voltou a herdar",
+      "alreadyInherits": "{{agent}} já herdava — não havia modelo próprio para apagar",
+      "clearError": "Não foi possível voltar a herdar",
+      "setError": "Não foi possível trocar o modelo do agente"
+    },
     "emptyMessage": "Nenhum agente configurado.",
-    "noModelsAvailable": "Nenhum modelo disponível ainda."
+    "noModelsAvailable": "Nenhum modelo disponível ainda.",
+    "originChainNoModel": "sem modelo em nenhum nível",
+    "originChainNoModelTitle": "Nem o agente, nem a área, nem o projeto, nem o workspace têm modelo escolhido. Uma sessão ainda pode fixar um.",
+    "fallbackNone": "não há nível abaixo",
+    "fallbackNoneTitle": "O modelo vigente já vem do último nível da cascata — não existe degrau abaixo dele para onde cair.",
+    "noEstimateYet": "sem gasto ainda",
+    "noEstimateTitle": "Este agente não registrou consumo neste projeto nos últimos 30 dias. Diferente de ter gastado zero, que aparece como US$ 0,00.",
+    "bulk": {
+      "label": "Aplicar um modelo a todos os agentes",
+      "detail": "· sobrescreve o modelo próprio de cada agente, uma chamada por agente",
+      "apply_one": "Aplicar a {{count}} agente",
+      "apply_other": "Aplicar aos {{count}} agentes",
+      "applying": "Aplicando…",
+      "toast": {
+        "applied_one": "{{model}} aplicado a {{count}} agente",
+        "applied_other": "{{model}} aplicado aos {{count}} agentes",
+        "error": "Não foi possível aplicar o modelo aos agentes"
+      }
+    }
   },
   "areaModels": {
     "title": "Modelo por área",
@@ -81,18 +149,21 @@
       "title": "Área {{area}}",
       "lead": "Lead: {{lead}}",
       "subagents": " — subagentes: {{list}}",
-      "subagentsDynamic": " — subagentes dinâmicos (por módulo)",
-      "backToInherit": "Voltar a herdar"
+      "subagentsDynamic": " — subagentes dinâmicos (por módulo)"
     },
     "toast": {
       "saveError": "Não foi possível salvar",
       "reverted": "Área {{area}} voltou a herdar"
-    }
+    },
+    "originChainNoModel": "sem padrão em nenhum nível",
+    "originChainNoModelTitle": "Nem esta área, nem o projeto, nem o workspace têm modelo escolhido — o lead e os subagentes desta área não têm padrão para herdar."
   },
   "members": {
     "title": "Membros e papéis",
     "eyebrow": "IAM · por projeto",
     "subtitle": "Papéis definem quem pode aprovar quais ações dos agentes neste projeto.",
+    "subtitleCascata": " O papel desta tabela substitui o do workspace neste projeto, nos dois sentidos — definir viewer aqui rebaixa até quem é owner do workspace. Quem alcança o projeto só pelo workspace não aparece na lista.",
+    "subtitleNeedsMaintainer": " Exige papel maintainer para convidar, trocar o papel ou remover alguém.",
     "invite": {
       "placeholder": "ID do usuário (UUID)",
       "button": "Convidar"
@@ -107,7 +178,9 @@
     },
     "toast": {
       "inviteErrorTitle": "Falha ao adicionar membro",
-      "inviteErrorMessage": "Verifique se o ID do usuário existe"
+      "inviteErrorMessage": "Verifique se o ID do usuário existe",
+      "roleErrorTitle": "Não foi possível trocar o papel",
+      "removeErrorTitle": "Não foi possível remover o membro"
     },
     "emptyMessage": "Nenhum membro além do dono do projeto."
   },
@@ -129,8 +202,8 @@
     "subtitle": "Circuit breaker dos dev agents — vale a partir da próxima ativação da execução, não afeta agentes já rodando.",
     "card": {
       "title": "Tasks blocked seguidas até parar",
-      "hintDefault": "Sem valor próprio — usa o default ({{default}})",
-      "hintConfigured": "Configurado para este projeto"
+      "hintDefault": "usa o default ({{default}})",
+      "hintConfigured": "configurado para este projeto"
     },
     "save": "Salvar",
     "saving": "Salvando…",
@@ -201,7 +274,8 @@
     "card": {
       "title": "Área {{area}}",
       "spent": "Gasto: {{amount}}",
-      "capAria": "Teto de gasto da área {{area}}, em dólares"
+      "capAria": "Teto de gasto da área {{area}}, em dólares",
+      "noCap": "sem teto"
     },
     "placeholder": "Sem teto",
     "save": "Salvar",

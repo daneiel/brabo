@@ -72,7 +72,7 @@ artifact" and listed the types. In a real execution the model — conversing in
 Portuguese — guessed `titulo`/`descricao`/`comportamento`, and the **four
 business rules from that conversation were silently rejected**. `origin` as
 free text also fails: it has to be a list, and the description says so in plain
-terms ([RN-061](../business-rules.md#rn-061)).
+terms ([RN-061](../business-rules/custo.md#rn-061)).
 :::
 
 ### `product_brief` — server
@@ -215,7 +215,8 @@ because they are emitted by the **api**, not by the engine:
 |---|---|
 | `artifact.module_map` | the Architect, via a use case in the api |
 | `artifact.insight` | analysis, via a use case in the api |
-| `artifact.project_image` | the Architect, via a use case in the api ([ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md), [RN-105](../business-rules.md#rn-105)) |
+| `artifact.project_image` | the Architect, via a use case in the api ([ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md), [RN-105](../business-rules/autenticacao.md#rn-105)) |
+| `artifact.module_routing` | the Architect, via a use case in the api — one candidate image per module of the current `module_map`; the Architect CANDIDATES, Infra ELECTS in a later step ([ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md), [RN-487](../business-rules.md#rn-487)) |
 
 They have their own validations in the api's domain. The asymmetry is
 historical, and is noted as

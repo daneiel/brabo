@@ -166,8 +166,8 @@ folder" — it would still be permission by verb, valid in any directory.
   waits for the decision instead of burning iterations; this ADR attacks the
   root cause of there being so many decisions to wait for.
 - [RN-004](../business-rules.md#rn-004), [RN-005](../business-rules.md#rn-005),
-  [RN-068](../business-rules.md#rn-068),
-  [RN-073](../business-rules.md#rn-073).
+  [RN-068](../business-rules/custo.md#rn-068),
+  [RN-073](../business-rules/custo.md#rn-073).
 - `apps/api/src/domain/actions/decide.ts`,
   `apps/api/src/domain/actions/command-matcher.ts`,
   `apps/api/src/domain/actions/dev-terminal-patterns.ts`,

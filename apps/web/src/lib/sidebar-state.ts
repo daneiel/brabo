@@ -1,5 +1,3 @@
-import { createContext, useContext, useEffect } from 'react';
-
 /**
  * Persistência da sidebar (PROGRAMA 28, Onda 2 — RN-195..201).
  *
@@ -147,36 +145,15 @@ export function corDoProjeto(projectId: string): string {
   return PALETA_IDENTIDADE_PROJETO[indice];
 }
 
-/**
- * Auto-collapse SEM gravar preferência (RN-201) — a aba de Código monta a
- * sidebar recolhida para dar largura ao editor, mas isso não é uma escolha
- * do usuário: ao sair do Código, o estado (colapsado ou não) que ele tinha
- * escolhido antes volta.
+/*
+ * O auto-colapso da aba de Código SAIU daqui (ADR 0126).
  *
- * `Shell.tsx` fica ACIMA de `<Outlet />` na árvore — não há como uma aba
- * (`ProjectCodeTab.tsx`, dentro do Outlet) passar uma prop pra cima. Um
- * Context resolve isso sem estado global: o Shell fornece um `registrar`
- * que qualquer tela pode chamar enquanto estiver montada, e SÓ enquanto
- * estiver montada — o `useEffect` de limpeza é o que faz o estado anterior
- * voltar automaticamente ao trocar de aba ou sair do projeto.
+ * `AutoCollapseContext`/`useAutoCollapseSidebar` existiam para a aba de
+ * Código montar a sidebar recolhida sem gravar preferência. Com o trilho
+ * vertical do projeto (`routes/ProjectRail.tsx`) sempre presente, manter isso
+ * poria a trilha de ícones do Shell (62px) encostada no trilho do projeto —
+ * dois trilhos verticais adjacentes, permanentes, na aba mais pesada. O
+ * colapso passa a ser só o MANUAL, do usuário, e esse continua persistido em
+ * `brabo.sidebar.collapsed`: o que se removeu foi a decisão do SISTEMA, não a
+ * do usuário. A RN-201 registra o custo aceito.
  */
-export interface AutoCollapseContextValue {
-  registrar: (ativo: boolean) => void;
-}
-
-export const AutoCollapseContext = createContext<AutoCollapseContextValue | null>(null);
-
-/**
- * Chamado por uma tela (hoje só `ProjectCodeTab.tsx`) para pedir que a
- * sidebar fique recolhida enquanto ela estiver na tela. Fora de um
- * `<Shell>` (testes isolados de uma aba, por exemplo) é NO-OP — nunca
- * lança.
- */
-export function useAutoCollapseSidebar(ativo = true): void {
-  const ctx = useContext(AutoCollapseContext);
-  useEffect(() => {
-    if (!ctx || !ativo) return undefined;
-    ctx.registrar(true);
-    return () => ctx.registrar(false);
-  }, [ctx, ativo]);
-}

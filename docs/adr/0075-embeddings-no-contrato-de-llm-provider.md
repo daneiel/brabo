@@ -24,7 +24,7 @@ different endpoint, a different body, and a different response type.
 
 **2. The model layer here is EXCLUSION, not a gradient.** Tool calling
 admits degradation: a model that doesn't request tools still answers with
-text, which is why [RN-040](../business-rules.md#rn-040) only blocks agent
+text, which is why [RN-040](../business-rules/custo.md#rn-040) only blocks agent
 binding rather than banning the model outright. Embedding admits none:
 `nomic-embed-text` doesn't answer a question and `llama3.2` doesn't return a
 vector. They are two disjoint sets of models, and the question "is this
@@ -65,8 +65,8 @@ belong to a different sentence and the index would be silently wrong.
 | --- | --- |
 | `vectors` | the result, in the order of the inputs |
 | `dimensions` | checked against what CAME BACK, not copied from the catalog — a vector index has a fixed dimension, and writing a different size fails far from the cause |
-| `model` | what the provider SAYS it used, which isn't always the one requested (an alias resolves to a dated version) — this is what goes to metering, for the same reason as the frozen price ([RN-044](../business-rules.md#rn-044)) |
-| `inputTokens` + `estimated` | embedding costs money, and the distinction "said zero" × "said nothing" is the same one from [RN-041](../business-rules.md#rn-041) |
+| `model` | what the provider SAYS it used, which isn't always the one requested (an alias resolves to a dated version) — this is what goes to metering, for the same reason as the frozen price ([RN-044](../business-rules/custo.md#rn-044)) |
+| `inputTokens` + `estimated` | embedding costs money, and the distinction "said zero" × "said nothing" is the same one from [RN-041](../business-rules/custo.md#rn-041) |
 
 **The error THROWS, normalized by `code`**, instead of turning into a chunk
 like in `chat`. The reason for the chunk pattern is to preserve the spend of

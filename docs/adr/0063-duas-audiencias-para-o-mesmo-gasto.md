@@ -4,8 +4,8 @@
 - **Date:** 2026-08-09
 - **Prior context:** [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
   (the price frozen into `token_usage`, which is what makes any report
-  reproducible), [RN-058](../business-rules.md#rn-058) (the key an agent
-  spends is the owner's) and [RN-060](../business-rules.md#rn-060) (spend on
+  reproducible), [RN-058](../business-rules/custo.md#rn-058) (the key an agent
+  spends is the owner's) and [RN-060](../business-rules/custo.md#rn-060) (spend on
   those keys belongs to the owner, and only they see it)
 
 ## Context

@@ -78,7 +78,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: '📐 Regras',
       collapsed: false,
-      items: ['business-rules'],
+      items: ['business-rules', 'business-rules/custo', 'business-rules/autenticacao'],
     },
     {
       type: 'category',
@@ -111,6 +111,7 @@ const sidebars: SidebarsConfig = {
       items: [
         'explanation/documentation-workflow',
         'explanation/branching-policy',
+        'explanation/cadeia-de-suprimentos-do-ci',
         'explanation/observability',
         'explanation/primeiro-dogfooding',
         'explanation/execucao-real-hello-world',

@@ -4,8 +4,683 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### ⚠ Mudanças incompatíveis
+
+- **api,web**: o portão da imagem do Arquiteto (RN-105) passa a valer nos
+  **TRÊS** modos de execução — `container`, `mounted` e `runner`. Até aqui,
+  `mounted`/`runner` eram dispensados (RN-169/RN-421, ADR 0072/0104): como
+  esses dois modos não sobem container próprio, a regra original abria a
+  aba Code sem esperar decisão nenhuma do Arquiteto. Isso confundia "este
+  projeto sobe container no servidor?" (não, para `mounted`/`runner`, e
+  isso não muda) com "faz sentido exigir uma decisão de imagem antes de
+  abrir a leitura de código?" (sim, nos três modos). **Custo aceito, com
+  todas as letras:** todo projeto `mounted`/`runner` **EXISTENTE** sem
+  `artifact.project_image` decidido — inclusive projetos reais de
+  dogfooding deste repositório (`exp001`/`exp002`) — **perde acesso à aba
+  Code** no instante em que este release for deployado, até que o
+  Arquiteto (ou a Infra, elegendo entre candidatas — ADR 0133) decida uma
+  imagem para ele. É uma ação do operador exigida **depois** do deploy, por
+  isso a mudança nasce em `breaking/` e a versão sobe **MAJOR** — mecânico,
+  não escolhido caso a caso. `RegistrarTransicaoDeContainerUseCase` também
+  para de recusar (400) `mounted`/`runner` por modo; `project_containers`
+  pode registrar linha para os três modos agora, mas chegar em `running` de
+  verdade continua impossível para `mounted`/`runner` — enforçado só pelo
+  broker (`ModoDeExecucaoNaoSuportadoError`), que já falha alto e nomeado
+  em vez de calado. Ver [ADR 0135](docs/adr/0135-portao-de-imagem-nos-tres-modos.md)
+  e RN-494 (revisa RN-169/RN-421)
+
+### Correções
+
+- **api,web,engine**: o `permissions.json` de um projeto no modo `runner` passa
+  a morar onde a api **alcança** — a raiz gerenciada
+  (`<PROJECT_WORKSPACES_ROOT>/<workspace_dir_name>/`) —, enquanto o escopo do
+  terminal continua apontando para a pasta do **host**. Eram uma derivação só
+  (`projectScopeRoot`) com dois consumidores de necessidades opostas, o que
+  estava certo enquanto os dois modos com pasta de usuário eram bind-mount e
+  deixou de estar quando o `runner` nasceu, deliberadamente **sem**
+  bind-mount: a api tentava `mkdir -p` de um caminho do host de dentro do
+  próprio container e "Ativar execução" respondia **500**
+  (`EACCES: permission denied, mkdir '/home/<usuario>'`). O efeito maior era
+  invisível porque a LEITURA degradava calada (ENOENT →
+  `EMPTY_PERMISSIONS_FILE`): em projeto `runner` o arquivo **nunca existiu**, e
+  `decide()` sempre caiu em `require_approval` por um arquivo que não estava
+  lá. As duas derivações continuam no mesmo arquivo, pelo mesmo motivo de
+  sempre; o que se separou foi a pergunta, e um teste de não-regressão impede
+  unificá-las de volta (isso quebraria o ADR 0055). `container` e `mounted` não
+  mudam. Custo declarado: no modo `runner`, o arquivo de política deixa de
+  morar ao lado do código. Junto: os dois `Error` crus da derivação viram erro
+  tipado com motivo em pt-BR e **400** em vez de 500; a Visão geral passa a
+  mostrar a mensagem da api ao ativar a execução (o botão gêmeo do chat da
+  sessão já mostrava — mesmo botão, dois diagnósticos); e a anotação de OpenAPI
+  da rota, que prometia 409 para "sem `module_map`" (é 400) e para "execução já
+  ativa" (nunca foi 409 — a ativação é idempotente), passa a descrever o
+  código. **Lacuna que fica, declarada:** o engine tem o MESMO defeito ao
+  materializar o working tree do dev agent, e ele não foi corrigido aqui —
+  corrigi-lo isolado seria construir materialização de worktree no host por um
+  caminho que a execução em container substitui. O que muda é a mensagem, que
+  nomeia a causa em vez de repassar "permissão negada" cru (RN-478)
+- **docker**: as imagens de DESENVOLVIMENTO passam a criar `/data/git-repos` e
+  `/data/project-workspaces` com o dono certo **antes** do `USER`. Sem isso o
+  volume nomeado nascia `root:root` (o Docker copia dono e conteúdo do caminho
+  que existir NA IMAGEM; quando não existe, ele nasce root) e os containers de
+  `api` e `engine`, que rodam como uid 1000, não conseguiam escrever em
+  nenhum dos dois. O efeito era o provisionamento de repositório `local`
+  falhando com `permissão negada: /data/git-repos/<slug>.git` — e o
+  `permissions.json` de cada projeto sem onde ser gravado. O `Dockerfile.prod`
+  já fazia exatamente isto, **com o comentário que explica o mecanismo**, desde
+  que o modo produção existe: a lição estava aprendida e nunca tinha
+  atravessado para o desenvolvimento, que é justamente onde alguém provisiona
+  um repositório pela primeira vez. Volume já criado continua `root` — a
+  correção vale para volume novo
+- **api,web**: provisionamento que falha **diz que falhou**, e a espera por ele
+  tem teto. Havia dois caminhos em que a falha não virava estado nenhum:
+  `step.check()` ficava fora de todo `try/catch` no `BootstrapRunner` e faz IO
+  de rede (um 401, um 403 ou um timeout subiam deixando a linha `pending` com
+  `lastError` nulo); e a recusa em `createRepo` acontece **antes de a linha
+  existir**, porque `repo_bootstraps` só nasce depois de o provider confirmar o
+  repositório. Nos dois casos o endpoint devolvia `{status: null}` e a tela
+  mostrava "Iniciando provisionamento…" pollando de segundo em segundo **para
+  sempre, sem botão nenhum**. Agora: a falha de etapa vira `failed` +
+  `lastError` num lugar só e emite `bootstrap.step_failed`; a falha de criação
+  é lida da `proposed_action` que falhou, com `failedStep` **nulo** (nenhum
+  passo do Gitflow foi tentado, e nomear um seria inventar); o `.catch(() => {})`
+  de corpo vazio da tela — cujo comentário afirmava que a falha apareceria pelo
+  status, o que era falso nos dois casos — passa a mostrar a mensagem da api; o
+  "Tentar novamente" deixa de depender de um status de falha que nunca chegava;
+  a espera para em 3 minutos declarando que isso **não** prova fracasso; e o
+  card do dashboard volta a levar de volta à tela (RN-477)
+- **web**: o passo de terminal do onboarding do runner é anunciado **antes** do
+  clique, não só depois. A frase existia, mas só era renderizada no estado de
+  sucesso — depois de escolher a pasta, esperar o registro da chave e o
+  download do binário. Quem clica em "Configurar pasta automaticamente" e só
+  então descobre que ainda precisa abrir um terminal foi surpreendido, mesmo
+  sem nenhuma frase ter mentido. O rótulo do botão **não** mudou: ele fala da
+  PASTA, que é de fato configurada automaticamente. E o comando final passa a
+  dizer **em que pasta rodar** — `cd <caminho> && …` — usando o
+  `workspace_path` do projeto quando o basename dele bate com a pasta
+  escolhida; quando não bate, sai sem prefixo, porque um `cd` para o lugar
+  errado seria a tela afirmando o que não sabe (RN-473, RN-477)
+
 ### Novidades
 
+- **runner, engine, api**: o `brabo-runner` sobe o container do projeto NA
+  MÁQUINA DO USUÁRIO, com o Docker DELE (ADR 0137, RN-497) — a metade que a
+  RN-494 (ADR 0135) tinha deixado declarada: `mounted`/`runner` passaram a
+  exigir imagem decidida, mas continuavam sem subir container nenhum, porque
+  o broker do servidor (`apps/broker`) nunca sobe container pra esses dois
+  modos. `container_start`/`container_stop`/`container_remove` ganham um
+  segundo caminho de execução, ramificado pelo `executionMode` do projeto —
+  `container` continua pelo broker, `mounted`/`runner` passam a pedir ao
+  runner conectado, via TRÊS pares novos de evento no canal Phoenix que ele
+  já mantém (`container_start`/`_result`, `container_stop`/`_result`,
+  `container_remove`/`_result`), mesmo molde de `exec`/`exec_result`. A
+  imagem que sobe é a JÁ decidida (lida, nunca reeleita); "sem runner
+  conectado" e "o runner recusou" viram `failed` nomeado, nunca exceção
+  genérica. `Engine.Actions.TerminalExecutor` não ganhou saída nova — ele já
+  roteava todo comando de projeto `runner` conectado pro canal
+  incondicionalmente; a decisão host-vs-container passou a ser INTERNA ao
+  runner (`tratarExec` roteia via `docker exec` quando há container ativo).
+  `guard.ts`/RN-434 (contenção em `$HOME` no Linux) passa a cobrir o
+  bind-mount sem nenhuma validação nova — o mount É a raiz já confirmada no
+  startup da CLI
+- **api, web**: página global de containers (`/containers`, ADR 0136,
+  RN-495/496) — cross-projeto, do workspace inteiro: imagem+versão
+  (CONGELADA, não a vigente), estado REGISTRADO, estado OBSERVADO (pedido
+  ao broker só para linhas `provisioning`/`running`, com um teto explícito
+  de 20 chamadas por carregamento — registrado e observado nunca se fundem,
+  RN-468/486), recursos e desde quando de todo projeto que já tem um
+  container. Três ações — parar, remover, subir de novo —, todas
+  `proposed_action`, nenhuma direta. `container_stop` (novo tipo) segue o
+  calibre de `container_start` (`maintainer`, pode ser configurado
+  auto-aprovável); `container_remove` (novo tipo, o mais destrutivo dos
+  três — descarta o container e exige reprovisionar do zero) entra no MESMO
+  teto absoluto de git push/comando privilegiado (RN-418): nunca
+  auto-aprovável, e "sempre permitir" é recusado na fonte. "Subir de novo"
+  REUSA `container_start` sem mudança de backend — a tela monta o payload
+  a partir da decisão de imagem VIGENTE do projeto
+- **api, engine**: dev agents passam a executar comando de terminal **DENTRO
+  do container real do projeto** (ADR 0134, RN-492/493), quando há um. Antes
+  desta entrega, mesmo com um container de pé (`container_start`, ADR 0133),
+  todo comando ainda rodava via `System.cmd` no processo do engine — o
+  container ficava ocioso. `Engine.Actions.TerminalExecutor` ganha uma
+  quinta saída, `:executar_no_container` (projeto `execution_mode: container`
+  com uma linha `running` REGISTRADA em `project_containers`), e o comando
+  atravessa engine → api (`POST internal/projects/:projectId/container-exec`,
+  rota nova) → broker (`ContainerBrokerPort.exec`, a última das cinco
+  operações do ADR 0128/0130 a ganhar um chamador real) e roda via
+  `docker exec`. `cwd`, quando presente, é traduzido do caminho de HOST pra
+  dentro de `/work` no engine — o worktree do dev agent (`Workspace.ensure!/4`,
+  inalterado) já é o MESMO diretório físico que o broker monta lá, verificado
+  em código. Falha do broker (recusou, não respondeu, ou o container morreu/
+  foi removido por fora — RN-486: registrado nunca garante de pé) vira
+  `failed_result` normal, nunca crash, nunca fallback silencioso de volta
+  pro `System.cmd` fora do container. Terminal cujo escopo é a pasta do
+  projeto DENTRO do container ganha um PISO de auto-aprovação
+  (`containerExecutionActive` em `decide()`) — os cinco tetos absolutos
+  (git push/comando privilegiado, merge protegido, `instruction_patch`,
+  paralelismo) e o escopo léxico de terminal (ADR 0055) continuam rodando
+  por cima, sem exceção nenhuma: dentro do container a fronteira REAL é o
+  mount namespace do Docker, e o escopo léxico vira defesa em profundidade,
+  não é substituído. `mounted`/`runner` continuam sem container nenhum
+  subindo — fora de escopo, PR posterior (1.7)
+- **api, engine**: golden-set de ACERTO do RAG (Parte 2/Etapa 2 — ADR 0132,
+  RN-490), molde do golden-set do QA de Automação (ADR 0123) aplicado a um
+  domínio onde não há LLM de chat no caminho medido: a busca híbrida inteira
+  roda na api (`HybridSearchUseCase`), então `apps/api/scripts/seed-golden-set-rag.ts`
+  faz as duas coisas — provisiona um projeto com um corpus REAL curado (22
+  arquivos deste próprio `docs/`, copiados verbatim e indexados pelo mesmo
+  `IndexProjectDocsUseCase` de qualquer projeto) e roda a busca de verdade
+  para 17 perguntas COMPOSTAS a partir de RNs/ADRs reais (não extraídas — este
+  é projeto solo, `gh issue list` devolve "No Issues", e isso é dito, não
+  escondido) — e `apps/engine/test/engine/rag/rag_golden_test.exs` só chama o
+  script (`System.cmd`, mesmo mecanismo do lado QA) e aplica o piso ratchet
+  sobre o JSON que volta. Critério de acerto — caminho de ARQUIVO, nunca chunk
+  exato, no TOP-5, nunca só rank 1 — é função pura e testada
+  (`apps/api/src/domain/rag/golden-set-criterio.ts`): o chunking é justamente
+  o parâmetro que este programa existe para poder revisar, e o Chat RAG cita
+  vários trechos por resposta, não só o primeiro. Excluído por tag PERMANENTE
+  (`:golden_set_rag`) em `test_helper.exs`, roda só por `mix golden_set.rag`
+  — mesma decisão do QA: sem segredo de LLM de API ou infra nova, CI não roda
+  Ollama de verdade. Novo gate `docs/gates.yml`: `rag-acertivo`, `warn`
+  (obrigatório — não há CI que verifique), `evidencia.tipo: teste` (o que
+  prova é o golden-set em si, não um evento no log)
+- **api, engine, web**: a busca do RAG passa a **deixar rastro**. Os quatro
+  números da busca híbrida — os dois pesos (0.6/0.4), o limiar (0.2) e o número
+  de candidatos — estão declarados no próprio código como chute inicial:
+  *"NENHUM dos quatro números abaixo vem de calibração com dado real"*. E não
+  vinha mesmo, porque não havia como: a busca não deixava rastro nenhum, nem
+  linha de tabela nem evento, então calibrar seria trocar um chute por outro.
+  Esta entrega **não calibra nada** — ela dá os olhos. Toda busca grava uma
+  linha em `rag_searches` com o que devolveu (cada trecho com o **rank** que
+  ocupou), sob que condições (`degraded`/`vector_available`), quanto demorou e
+  quem buscou; e os **pesos vão CONGELADOS na linha**, pela mesma disciplina do
+  preço congelado no metering — sem a cópia, a primeira calibração faria toda a
+  medição anterior passar a significar outra coisa, calada, e "melhorou depois
+  da mudança?" viraria pergunta impossível. É **tabela**, e não só evento de
+  sessão, por um motivo concreto: `session_events.session_id` é `NOT NULL` e a
+  busca vinda da aba de RAG é de projeto, sem sessão — medir pelo event log
+  perderia justamente as buscas em que um humano olhou os scores. Gravar
+  telemetria **nunca derruba a busca** (o INSERT que falha vira log com origem
+  `infra` e `searchId: null` na resposta, que não é o mesmo que "não achei
+  nada") (RN-479)
+- **api, engine, web**: cada trecho recuperado pode ser julgado — **útil** ou
+  **irrelevante** —, e esse voto é o único sinal de **verdade** da medição:
+  latência e taxa de degradação dizem se a busca *rodou*, nunca se ela
+  *acertou*. Na tela, os dois controles nascem no `RagCitationCard`, o único
+  lugar da UI que já mostra `score`, `vectorScore` e `lexicalScore` — o
+  julgamento nasce onde o número já está —, com os três estados sem colapsar
+  (registrando / registrado, dizendo o rank / recusado, com a mensagem da api).
+  Do lado dos agentes é a ferramenta nova `rag_feedback`, `:direct` (dar nota a
+  um trecho não é efeito externo e não vira `proposed_action`), registrada nos
+  **seis** agentes que já tinham `rag_search` — que agora devolve o `searchId` e
+  o `id` de cada trecho, sem quebrar nem o aviso de degradação nem o teto de
+  bytes. Votar exige a referência que a busca devolveu: `searchId` desconhecido
+  ou `chunkId` que não estava entre os hits é **400 que ensina** (e, pelo
+  agente, tool-result de erro que o modelo corrige, nunca crash) — porque o
+  **rank** do que foi votado útil é o que separa "o índice está pobre" de "os
+  pesos estão errados", e voto sem rank é número sem significado. Um voto por
+  ator por trecho por busca: mudar de ideia sobrescreve, nunca soma (RN-480)
+- **api**: `pnpm --filter api medir:rag -- --projeto <uuid>` lê esse rastro no
+  molde de `medir:execucao` — tabelas Markdown para colar no documento, `--json`
+  e helpers puros testados. Mede `precision@k` **só sobre o que foi julgado**
+  (o denominador é o que recebeu voto, nunca `k`: um hit sem voto é
+  *desconhecido*, não irrelevante, e contá-lo como irrelevante mediria a
+  disposição de votar, não a qualidade da busca), taxa de `degraded`, buscas sem
+  nenhum hit acima do limiar, latência p50/p95, e a **distribuição de rank do
+  que foi votado útil** — a métrica que distingue índice pobre de peso errado,
+  que a `precision@1` confunde. Ele **reprova (exit 1)** por uma coisa só:
+  `vector_available: false` na janela inteira, porque aí o que foi medido não é
+  a busca híbrida. O resto é medição: sai na tabela, não reprova. E ele imprime
+  quais **pesos** apareceram na janela, para que a mistura fique visível quando
+  a calibração começar (RN-479/480,
+  [ADR 0129](docs/adr/0129-telemetria-de-busca-do-rag-como-tabela.md))
+- **broker,api,docker**: nasce o **broker de container** (`apps/broker`) — o
+  único processo do produto que fala com um daemon Docker no servidor, e a api
+  continua sem receber o socket. O que o torna não-arbitrário não é allowlist
+  nenhum, é a FORMA da entrada: ele recebe um `projectId` e uma das cinco
+  operações da porta (`start`/`stop`/`remove`/`inspect`/`exec`), vai à api LER a
+  decisão do Arquiteto (`GET /internal/projects/:projectId/container-spec`) e
+  **compõe** imagem, rede, recursos e o único mount ele mesmo. Não existe campo
+  em que se escreva `privileged`, `cap_add`, `network: host` ou um `-v` livre —
+  porque não existe campo, e se a especificação viajasse no corpo a contenção de
+  um processo root-equivalente no host dependeria de o CHAMADOR estar correto.
+  Ele revalida o que a api devolveu, e as duas validações não são a mesma
+  regra em dois lugares: a da api pergunta se a decisão de arquitetura é
+  revisável, a daqui é o parse de um JSON não confiável para dentro do tipo
+  fechado — com uma checagem que só existe deste lado, referência de imagem que
+  começa com `-`, porque `execFile` sem shell resolve injeção de COMANDO e não
+  de ARGUMENTO. A api não manda **caminho nenhum**: o `-v` é resolvido pelo
+  DAEMON contra o filesystem do HOST, e um caminho de dentro do container da api
+  faria ele montar uma pasta VAZIA — o broker compõe com
+  `PROJECT_WORKSPACES_HOST_ROOT`, configuração dele, e recusa `start` nomeando a
+  variável quando ela falta, em vez de adivinhar. Contido por cinco camadas
+  independentes: sem porta publicada, rede `internal: true` que só a api alcança,
+  token de serviço em tempo constante, cinco operações, e a spec computada. Sobe
+  sob `profiles: ["container-broker"]` nos dois composes e portanto **não sobe
+  por padrão** (RN-485, ADR 0130)
+- **api**: a rota de ciclo de vida do container passa a devolver o estado
+  **observado** ao lado do **registrado**, e os dois nunca se fundem. Antes a
+  tabela não tinha como mentir — `container_id` era sempre `NULL`; agora tem, e
+  a leitura diz isso: container morto por fora aparece como registrado `running`
+  e observado `exited`. `observado: null` sozinho não é resposta, porque
+  significa duas coisas: a observação ACONTECEU e voltou vazia ("olhei e não há
+  container"), ou não deu para olhar — e aí `naoObservado` diz qual dos três
+  motivos foi (`broker-nao-configurado`, `broker-sem-resposta`,
+  `broker-recusou`), cada um com um conserto diferente. Herdar o registrado
+  nesses casos é exatamente o que a RN-468 proíbe. Nenhuma recusa do broker
+  derruba a leitura do registrado, que é informação legítima por si só
+  (RN-486, ADR 0130)
+- **engine,api,web**: o Arquiteto ganha a ferramenta **`route_modules_to_infra`**
+  — um item `{modulo, imagemCandidata, porque}` por módulo do `module_map`
+  vigente, gravado como `artifact.module_routing` (sem tabela, mesmo desenho
+  de `artifact.module_map`/`artifact.project_image`/`artifact.c4_diagram`: o
+  evento É o artefato). **Ele CANDIDATA, a Infra ELEGE** — a escolha final
+  entre as candidatas é um PR à parte; esta entrega só produz a lista
+  auditável. A imagem de cada item passa pela **mesma** regra de
+  `choose_project_image`: tag/digest explícito, `latest` recusado, `rationale`
+  com motivo real — reusada, nunca reimplementada. `validarRoteamento`
+  acrescenta o que é próprio da lista (vazia é recusada, módulo repetido
+  também), e cada `modulo` citado precisa existir no `module_map` vigente —
+  fora dele, a recusa nomeia os módulos VÁLIDOS, mesma régua de
+  `assign_story_modules`. `:direct`, nunca `proposed_action`: rotear não tem
+  efeito externo. `build_kickoff/1` — o único lugar de onde o modelo aprende a
+  ORDEM das ferramentas — passa a listar o passo logo depois de
+  `create_module_map` (RN-487, [ADR 0131](docs/adr/0131-roteamento-de-modulos-para-infra.md))
+
+- **web**: a seção **Modelos por agente** ganha uma barra que aplica **um
+  modelo a todos os agentes de uma vez**. Escolher o mesmo modelo para os 17
+  era percorrer 17 dropdowns, e o custo disso não é o tempo — é que ninguém
+  confere 17 linhas e a tela não tinha como dizer se sobrou uma para trás. A
+  ação grava no nível do **agente**, e não no do projeto: gravar no projeto e
+  apagar o resto faria os 17 herdarem — o idioma da própria cascata —, mas
+  exigiria `maintainer`, quando trocar linha a linha exige só `developer`, e
+  mudaria também o default de **sessão**, que é livre de propósito. O preço da
+  escolha está declarado: as 17 linhas passam a divergir, com origem `agent`.
+  Há **botão**, apesar de o valor ser nomeado: o seletor da barra não é
+  configuração de nada, é o argumento de uma ação sobre linhas que a pessoa não
+  estava editando, e aplicar no `onChange` faria um clique exploratório
+  reescrever as 17. E o desfecho segue inteiro a régua da RN-469 — uma chamada
+  por agente, em série, na ordem da tela, **sem abortar na primeira recusa**,
+  com os três estados que não se disfarçam: todas passaram, **nenhuma** passou
+  (a mensagem da api, nunca uma contagem) e **algumas** passaram (quantas de
+  quantas, nomeando as que ficaram pelo nome do agente). Só as linhas que a api
+  confirmou são relidas — invalidar as 17 apagaria da tela justamente a
+  diferença que o aviso acabou de contar. O botão fica inerte abaixo de
+  `developer`, que é o mínimo do endpoint que ele chama, e o motivo continua
+  dito uma vez em texto na legenda (RN-476)
+
+- **web**: configurar o runner local pelo navegador passa a começar pela
+  **pasta**. A ordem era `chave → registro → binário → pasta`, e o download do
+  binário — o único passo que depende de uma release publicada no GitHub — vinha
+  ANTES do seletor de pastas. Com a release atual sem asset para nenhuma
+  plataforma, esse passo devolve 502, a exceção subia, e o seletor **nunca
+  chegava a abrir**: o botão parecia não fazer nada, e a pasta ficava
+  inalcançável. Agora `showDirectoryPicker` é a primeira linha (o que também é
+  mais correto do lado do navegador, que exige ativação transitória do usuário e
+  não sobrevive a três `await` de rede antes dela), e o binário é o **último**
+  passo e **best-effort**: quando ele falha, os dois arquivos de que o runner
+  realmente precisa — `brabo-runner.config.json` e a chave de dispositivo — já
+  estão gravados na pasta escolhida, a tela **diz o motivo** e a instrução final
+  troca para o caminho de distribuição alternativo (`npm install -g
+  @brabo/runner && brabo-runner`, que roda sem flag nenhuma porque lê a config
+  do `cwd`). Antes, uma falha ali descartava tudo, inclusive a escolha da pasta.
+  O fallback fora do Chromium ganhou a mesma régua: o **kit** (configuração +
+  chave privada) é baixado primeiro, e a falha do binário não impede mais que
+  ele saia. Cancelar o seletor voltou a ser o que é — mudar de ideia, não erro:
+  nada é registrado e o botão fica pronto de novo, sem alerta vermelho. O passo
+  do terminal continua **humano e declarado**: uma página web não executa
+  binário na máquina de ninguém, e a File System Access API não preserva o bit
+  de execução — o que dá para fazer é encolhê-lo a UMA linha copiável em um
+  clique, e é isso que a tela faz (RN-473)
+- **web**: depois da instrução, a tela **espera o runner aparecer** em vez de
+  deixar a pessoa adivinhar se deu certo. O sinal é o que já existia —
+  `workspaceVerifiedAt`, o carimbo que o `ConfirmProjectWorkspaceUseCase` grava
+  quando o runner conecta e que o engine usa como portão —, e quando ele chega a
+  tela mostra o **caminho que o runner reportou**, que é o que passa a valer
+  (ele sobrescreve o que foi digitado). São **três estados que não colapsam**:
+  procurando, conectado e sem resposta. E a espera **não é eterna**: para em 3
+  minutos dizendo o que faz falta e o que ela **não** sabe — reconectar com uma
+  pasta já confirmada não regrava o carimbo, então ausência aqui não é prova de
+  ausência, e quem sabe do agora é a aba **Código**. Um botão recomeça a busca
+  sem refazer a configuração (RN-474)
+- **web**: em **Configurações**, a coluna **Origem** de **Modelos por agente**
+  deixa de imprimir o enum cru do banco (`agent`, `workspace`, em inglês) e
+  passa a mostrar a **cascata inteira como cadeia**: `workspace › projeto ›
+  área › agente`, com o nível vigente destacado. Não é tradução — é uma
+  distinção que a tela não fazia. `agent` significava **duas coisas
+  diferentes**: o agente tem modelo próprio, ou ninguém escolheu nada e o
+  produto herdou o do **Criativo** (o agente de start, para não deixar uma
+  sessão nova nascer no modelo local pequeno do workspace). Num projeto com
+  três linhas de agente no banco, os doze agentes mostravam a mesma palavra. Na
+  cadeia os dois casos são visivelmente diferentes: no primeiro o nó `agente` é
+  o vigente; no segundo ele fica **vazio**, o `workspace` aparece como
+  "tem valor, mas perdeu" — porque o modelo do workspace **não** é o que vale —
+  e um nó extra `↳ Criativo` fecha a cadeia. Cada nó tem `title` dizendo o
+  modelo daquele nível. **A api não mudou**: `origin: 'agent'` está certo (o
+  valor veio mesmo de um agente), e o cliente deduz o resto do que já tinha em
+  mãos, sem endpoint novo. Um caso não é dedutível — agente com modelo próprio
+  igual ao do Criativo, sem padrão de área nem de projeto — e é por isso que
+  "voltar a herdar" continua aparecendo em toda origem `agent`: a ação segue
+  disponível justamente onde a cadeia não prova, e nele ela ainda muda o futuro.
+  O aviso de **nível descartado** (modelo que sumiu do provider, ou que não faz
+  tool calling) era um segundo badge ao lado da origem, competindo com ela;
+  virou um nó **riscado dentro da cadeia**. **Modelo por área** ganhou a mesma
+  cadeia no lugar do enum — e ali `agent` só podia ser o Criativo, o que a tela
+  agora diz em vez de exibir a palavra "agente" no cartão de uma área. Por fim,
+  os **três `—`** dessas duas seções diziam três coisas com o mesmo símbolo e
+  passam a dizer cada uma a sua: `sem modelo em nenhum nível`, `sem gasto ainda`
+  (diferente de `US$ 0,00`, que é ter rodado de graça) e `sem padrão em nenhum
+  nível` (RN-470)
+- **web**: em **Configurações**, **Paralelismo por área** e **Teto de gasto por
+  área** passam a ter **um botão de salvar da seção**, no lugar de um botão por
+  linha. Revisar o teto de dev quase nunca é revisar só o de dev, e N botões
+  idênticos pediam N cliques para uma decisão só. Em troca a seção passa a dever
+  duas coisas. A primeira é **dizer quantas linhas estão pendentes** — "2
+  alterações não salvas nesta seção", ao lado do botão: até aqui a única pista
+  de trabalho não salvo em toda a aba era o botão desabilitado do Modo de
+  execução, um sinal por negação que some justamente quando passa a haver algo a
+  salvar. "Sujo" é comparação por **valor**, não por texto: voltar o campo a
+  `20.0` onde o servidor tem `20` limpa a marca em vez de mandar uma chamada que
+  a api trata como no-op. Valor inválido **substitui** a contagem pela mensagem
+  que explica o bloqueio, em vez de somar um segundo número sobre o mesmo
+  conjunto. A segunda é **não mentir sobre o desfecho**: salvar a seção são N
+  chamadas (uma por área — não existe endpoint transacional e nenhum foi
+  inventado), em série, na ordem da tela, e **uma falha não interrompe as
+  seguintes**. Só o rascunho que a api confirmou é descartado; o que falhou fica
+  no campo com o que você digitou, a seção continua marcada por ele, e clicar
+  Salvar de novo tenta **só** as linhas que faltaram. Os três desfechos são
+  distintos: todas passaram → sucesso; nenhuma passou → a mensagem que a API
+  deu, como antes; algumas passaram → aviso que diz **quantas de quantas** e
+  **nomeia** as que ficaram — "salvo" e "não salvo" seriam as duas mentira aí
+  (RN-469). **Três seções ficaram de fora, e por motivos diferentes**: Promoção
+  de história, Modelos por agente e Modelo por área salvam no `onChange` **de
+  propósito** e continuam assim (a confirmação existe para campo digitado, onde
+  salvar a cada tecla mandaria `1` a caminho de `12`; escolher de uma lista de
+  valores nomeados não precisa dela). E **Credenciais** mantém o botão por
+  linha apesar de parecer o mesmo problema: a chave é write-only e nunca volta
+  do servidor, então não há valor com que comparar para decidir "sujo"; o botão
+  alterna entre "Salvar" e "Trocar" conforme o provider já tenha chave, o que um
+  botão só não diz; e ele divide o card com "Testar" e "Remover", que agem sobre
+  aquele provider
+- **web**: a tela de **login** deixa de ser um card de 412px sozinho no meio
+  da tela e passa a ter **duas colunas**: identidade e ambiente à esquerda, o
+  formulário à direita. À esquerda, sob a marca, uma frase do que o Brabo é e
+  um bloco **Ambiente** com o estado da **api** e do **engine** — os dois
+  `/health` que já eram públicos nos dois serviços e que a página `/status` já
+  consumia; nenhuma rota nova, nenhum campo novo no payload. Cada linha tem os
+  **três estados separados** (`verificando…` num anel vazado, `respondendo` em
+  verde, `sem resposta` em vermelho) e a sonda tem **teto de 6s**, para uma api
+  que aceita a conexão e nunca responde não deixar a linha em "verificando…"
+  para sempre. A **versão continua com uma fonte só**: ela segue no rodapé da
+  página, não foi duplicada no bloco. E o **formulário nunca espera pela
+  sonda** — o estado é local ao bloco, que é irmão do card, então a api fora do
+  ar muda um texto e não atrasa nem esconde um pixel do login, que é
+  exatamente o momento em que alguém mais precisa que a tela ao menos abra
+  (dois testes cobrem os dois modos de falha: a sonda que rejeita e a que
+  nunca volta). **Runner e modelos locais NÃO aparecem aqui, e a tela diz por
+  quê**: presença de runner é chaveada por `{user_id, project_id}` e a lista
+  de modelos é `projects/:projectId/models` com papel `viewer` — antes do
+  login não existe nenhum dos dois sujeitos, e uma tela pré-identidade que
+  simplesmente os omitisse deixaria o usuário achando que a plataforma não os
+  tem. Só `/login` usa as duas colunas; as outras três telas de auth são
+  passagens de um fluxo já iniciado e ficam como estavam. Abaixo de 900px de
+  janela o modo se desfaz e volta a pilha de sempre. Nada na coluna nova é
+  focável, de propósito: ela vem antes do card no DOM, e um botão ali roubaria
+  a primeira parada de `Tab` do campo de e-mail
+- **web**: a **Visão geral do projeto** ganha, no topo da coluna lateral, o
+  bloco **Ambiente** — a metade dos sinais que só é verdade depois do login.
+  Ele diz **onde o código roda** (container gerenciado, pasta montada ou pasta
+  na sua máquina, com o caminho), quantos **modelos locais do Ollama** estão
+  ativos no workspace, e — só em projeto no modo `runner` — o estado do
+  **runner**. Esse último é o ponto: o dado é `workspaceVerifiedAt`, o carimbo
+  que o runner grava ao conectar e confirmar a pasta, e ele **não é
+  batimento**. A tela diz "pasta confirmada em `<data>`" com a ressalva de que
+  isso é o registro da confirmação e não um sinal de que o runner está rodando
+  agora — nunca "de pé", nunca "online", nunca bolinha verde. São duas razões
+  independentes: não há processo sendo observado, e reconectar reportando o
+  mesmo caminho nem regrava o carimbo, então nem a data é recência. Quem sabe
+  do agora é o socket do terminal, na aba Código, e a ressalva aponta para lá.
+  Nos modos `container`/`mounted` a linha do runner nem existe: o campo é nulo
+  por definição, e "nunca confirmada" ali seria uma ausência inventada.
+  **Nenhuma requisição a mais**: as duas consultas reusam as chaves que a
+  página já busca (`['project', id]` e `['models', id]`), então saem do cache
+- **web**: em **Configurações**, "este ajuste não tem valor próprio" passa a
+  ser dito de UM jeito só. Eram quatro: `"Sem valor próprio — usa o default
+  (3)"` na Execução, `"Sem teto"` como placeholder no Teto de gasto por área,
+  `"voltar a herdar"` em Modelos por agente e `"Voltar a herdar"` em Modelo
+  por área — quatro redações, quatro chaves de tradução independentes, e nada
+  impedindo a quinta seção de inventar a quinta. Agora há **dois polos e um
+  verbo**, de uma fonte só: **"Sem valor próprio"**, **"Valor próprio"** e
+  **"Voltar a herdar"**. O rótulo diz o ESTADO e o detalhe ao lado diz a
+  CONSEQUÊNCIA — "usa o default (3)", "sem teto" —, que é o que de fato muda
+  de seção para seção: o circuit breaker cai numa constante do produto, o teto
+  de gasto simplesmente não existe, e o modelo cai na cascata `workspace →
+  project → area → agent → session`. **Nenhum rótulo diz "Herdado"** de
+  propósito: nos dois primeiros isso afirmaria uma cascata que não existe (o
+  teto de gasto é ADITIVO aos budgets de projeto e sessão, nunca herdado
+  deles). O que se unificou é o VOCABULÁRIO, não a forma: a marca só entra
+  onde o controle não mostra o estado sozinho — o campo da Execução vem
+  pré-preenchido com o default e portanto não distingue nada —, e a tabela de
+  Modelos por agente consome só o verbo, porque a coluna **Origem** já é a
+  marca de estado daquela linha. No Teto de gasto por área o placeholder
+  deixou de ser o único enunciado do estado (ele some assim que alguém digita,
+  não se lê sem olhar dentro do campo, e não tem como dizer o polo positivo
+  "esta área TEM teto próprio") e ficou só com o trabalho de texto-fantasma.
+  O verbo aparece nos dois registros tipográficos que a aba usa — botão na
+  seção de área, link discreto em mono na célula da tabela — derivados da
+  MESMA chave, e não de duas. Nenhum ajuste mudou de comportamento: nada
+  salva, herda ou reverte diferente
+- **web**: a aba **Configurações** ganha um **sumário ancorado**. Ela sempre
+  teve 17 seções numa rolagem só, e nenhum mapa: sem índice, sem âncora, sem
+  nenhum sinal de onde se está — quem procurava "Teto de gasto por área"
+  rolava até achar. Agora um sumário lista as seções agrupadas em quatro
+  blocos (**projeto e execução**, **modelos**, **pessoas e acesso**,
+  **avançado**), clicar leva à seção, e a entrada da seção em que você está
+  fica marcada enquanto você rola (`IntersectionObserver` sobre a faixa
+  superior da área visível). Os grupos são uma LEITURA da ordem que a aba já
+  tinha — os quatro caem contíguos sobre ela e nenhuma seção mudou de lugar,
+  o que um teste fixa. **O sumário não cria uma quarta faixa de moldura**: ele
+  mora DENTRO da área de conteúdo, repartindo os 1040px que ela já tinha, e a
+  moldura à esquerda continua exatamente nos 444px medidos (sidebar 264 +
+  trilho do projeto 180) que o ADR 0126 deixou — uma coluna por fora custaria
+  mais 208px antes do conteúdo, e esse preço já foi pago uma vez na aba
+  Código. Abaixo de 1200px de janela o sumário não some: ele deita numa faixa
+  horizontal acima das seções. **Só aparece o que está na tela**: sete das 17
+  seções não montam em condição normal (sem repositório provisionado, sem
+  papel de `owner` — RN-060, sem catálogo), e a entrada correspondente não
+  existe — um mapa que aponta para uma sala fechada é pior que nenhum mapa.
+  Toda seção virou um `<section>` com `id` e nome acessível (uma `region` para
+  leitor de tela, com o mesmo título que a tela mostra), e a URL passou a
+  aceitar `?section=` — `?section=budget` abre Configurações já na seção, e
+  `?section=` sozinho abre Configurações em vez de cair calado na Visão geral.
+  A rolagem é INSTANTÂNEA, como a de um link de âncora, e isso foi medido:
+  dentro do container desta aba a rolagem suave é cancelada pelo próprio
+  polling da página e o `scrollTop` fica onde estava
+- **web**: um chip **"Precisa de você"** no topo do projeto abre um painel com
+  as CINCO filas de decisão num lugar só (RN-467). O que faltava não era mais
+  um número: as cinco já tinham contador próprio no trilho, e quem abria o
+  projeto via cinco números espalhados por cinco abas e nenhuma frase dizendo o
+  que espera por ele. O painel lista as cinco SEPARADAS — cabeçalho e total por
+  fila, na ordem de urgência (aprovações, merges de PR, promoções de história,
+  pendências de arquitetura, hipóteses do Psicólogo) e, dentro de cada uma,
+  quem espera há mais tempo primeiro. **Nada é somado**: nem entre filas, nem
+  no chip, que anuncia PRESENÇA com um ponto e nunca uma quantidade — somar
+  apagaria qual fila está pedindo atenção, a mesma decisão que já mantinha os
+  contadores do trilho separados (ADR 0126). Aprovações e merges são
+  DECIDÍVEIS ali mesmo, pelo `ApprovalCard` com `variant="queue"` que a aba
+  de PRs já usava fora do chat; promoções, arquitetura e hipóteses levam à aba
+  onde a decisão mora. O painel é atalho para a decisão, **nunca substituto**:
+  os botões chamam os mesmos endpoints, e o teto de merge em branch protegida
+  (`decide.ts`, `require_approval` incondicional) continua valendo inteiro —
+  "Modo automático" nem aparece aqui, porque ligar autonomia é mudar política,
+  não decidir a ação da frente. Zero requisição a mais: as cinco consultas já
+  rodavam para os contadores, e o painel lê o mesmo cache. A pendência de
+  arquitetura **não tem data nenhuma** (`ArchitecturePendency` é visão
+  derivada, nunca gravada): ela EMPRESTA a data da história relacionada e a
+  tela diz que emprestou ("história atualizada há 18 min"); sem a história
+  carregada, mostra "sem data" e vai para o fim da fila — em nenhum caso um
+  instante inventado. A gramática visual vem do `NotificationBell`, mas a
+  mecânica é nova porque lá não existia: `role="dialog"`/`aria-modal` com
+  rótulo, `aria-expanded` no chip, foco levado ao painel e devolvido ao chip,
+  `Tab` preso dentro dele, `Esc` e clique-fora fechando
+- **web**: a navegação do projeto vira um TRILHO VERTICAL à esquerda do
+  painel, e a régua horizontal de dois níveis sai (ADR 0126). O motivo é um
+  só: 12 abas em 3 grupos não cabem numa barra desenhada para meia dúzia de
+  itens — agrupar comprava espaço ESCONDENDO 9 das 12 atrás de um clique, e
+  em janela estreita a linha de topo já rolava na horizontal. Os TRÊS grupos
+  ficam abertos ao mesmo tempo: é isso que a mudança compra, e é por isso que
+  o grupo deixou de ser botão selecionável para virar CABEÇALHO. Os cinco
+  contadores (Insights, PRs, Aprovações, Backlog, Arquitetura) continuam
+  SEPARADOS e o grupo não soma mais nada — com as filhas todas visíveis a
+  soma não teria o que resumir, e somar filas diferentes esconde qual delas
+  pede atenção. A geometria é a do trilho da aba Código (`CodeShell`, o único
+  trilho do repositório com estado ativo desenhado), não a da trilha da
+  sidebar, que não tem item ativo nem teclado; a única divergência declarada
+  é a largura (180px em vez de 48px, porque este carrega rótulo e cabeçalho,
+  não ícone). A navegação por seta foi PORTADA, não descartada:
+  `ArrowUp`/`ArrowDown`/`Home`/`End` com volta, agora sobre refs próprias em
+  vez da correlação posicional por `[role="tab"]` que a régua antiga
+  precisava usar. **A aba Código deixa de recolher a sidebar sozinha**
+  (revisão da RN-201): com um trilho de projeto sempre presente, o
+  auto-colapso poria a trilha de ícones do Shell encostada nele — dois
+  trilhos verticais adjacentes, permanentes, na aba mais pesada do produto.
+  O custo é real e está declarado: o Código passa a abrir com 492px de
+  moldura à esquerda (sidebar 264 + trilho do projeto 180 + trilho do
+  `CodeShell` 48), medidos no navegador, contra ~110px antes. O que se compra é que recolher volta a
+  ser decisão do USUÁRIO — o colapso manual continua funcionando e continua
+  persistido. `components/ui/GroupedTabs` é apagado com o teste dele;
+  `components/ui/Tabs` FICA, sem chamador no app, porque é primitiva
+  publicada do design system (`ds-bundle/components/primitivas/Tabs`) e uma
+  peça de DS sem consumidor é estoque, não código morto
+- **engine,api**: golden-set de regressão (ADR 0123) para o julgamento
+  SEMÂNTICO do QA de Automação — o item que a própria ADR 0020 já deixava
+  documentado como aberto: com modelo local, cruzar regra de negócio com
+  teste fechou só na 10ª de 11 rodadas. Seis casos rodam
+  `Engine.Gates.QaAutomacaoAgent.run/5` isolado (mesmo padrão de
+  `qa_automacao_agent_test.exs`), mas contra o cliente REAL de LLM —
+  `apps/api/scripts/seed-golden-set-qa.ts` (chamado via `System.cmd`, novo
+  neste repositório) provisiona projeto/sessão/binding de modelo reais e faz
+  o próprio checkout do worktree. `mix test --only golden_set_qa` (ou `mix
+  golden_set.qa`) roda deliberadamente, nunca em CI — excluído por tag
+  PERMANENTE em `test_helper.exs`, não por detecção de Ollama disponível.
+  Piso ratchet em `floor.json` (mesmo padrão de `coverage-floor.ts`), medido
+  de verdade contra os dois modelos Ollama já puxados nesta sessão:
+  `qwen2.5-coder:latest` fechou 1 a 4 dos 6 casos em quatro rodadas (o
+  gargalo dominante foi o modelo chamar `terminal` com o argumento de
+  comando vazio), contra `gpt-oss:20b` fechando 4-5/6 em duas rodadas
+  (~4x mais lento por caso) — `gpt-oss:20b` é o modelo recomendado daqui
+  pra frente para quem depende deste julgamento ser confiável. Wiring em
+  CI segue `TODO(humano)`: falta segredo de LLM de API ou infra nova
+  (runner com GPU, passo de pull do Ollama).
+- **api**: `apps/api/src/db/schema.ts` deixa de ser um arquivo de 2 452 linhas
+  com 51 tabelas e 34 enums — o mais alterado do repositório, e uma dívida já
+  DECLARADA na tabela do `architecture.md`, cuja consequência escrita era
+  "conflito garantido com mais de uma pessoa": toda mudança de schema, de
+  qualquer área do produto, caía no mesmo arquivo. Agora são 16 arquivos sob
+  `db/schema/`, um por AGREGADO de domínio, espelhando as pastas de
+  `src/domain/*` em vez de inventar taxonomia — a que o arquivo já mantinha à
+  mão nos comentários `// --- seção ---` (ADR 0121). O caminho antigo vira um
+  barrel de `export *`, então os 144 módulos que importam de
+  `db/schema` (46 em `src/`, 98 em `test/` e `scripts/`) não mudaram uma linha, o `import * as schema` do `drizzle-client.ts` enxerga o
+  mesmo conjunto de exports e o `drizzle.config.ts` continua apontando pro
+  barrel (o `drizzle-kit` segue a cadeia de `export *` — verificado, não
+  suposto). Movimento PURAMENTE mecânico: nenhuma tabela, coluna, valor de
+  enum, nome de índice ou expressão de CHECK mudou, e a barra de aceite foi o
+  `db:generate` de diff ZERO — mais estrito que a suíte, porque o Drizzle
+  compara o SQL inferido e pegaria até um `notNull` invertido. Enum mora com a
+  tabela que o CHAMA, não com o assunto: FK entre arquivos é segura num ciclo
+  (`.references()` é callback preguiçoso), enum entre arquivos não é (roda na
+  avaliação do módulo), então `project_execution_mode`/`story_promotion` ficam
+  em `iam.ts` com seu único consumidor e `failure_origin` em `backlog.ts` — o
+  grafo de imports é um DAG. O `docs/.docmap.yml` ganha `schema/**` ao lado do
+  barrel: sem isso a regra ficaria CEGA para constraint nova, que é exatamente
+  o que ela existe pra vigiar.
+- **docs**: `business-rules.md` deixa de ser uma página de 644 KB — as duas
+  seções que sozinhas eram metade dela saem para arquivos próprios
+  (`business-rules/custo.md` e `business-rules/autenticacao.md`), e o índice
+  cai para 335 KB. Divisão por TAMANHO, não por assunto: nenhuma vírgula de
+  conteúdo mudou e nenhuma âncora `{#rn-NNN}` mudou de nome — só o arquivo
+  que as hospeda. Os 293 links que apontavam para as RNs movidas foram
+  reescritos, incluindo os da tradução pt-BR, e o build do Docusaurus (que
+  reprova âncora quebrada) passa nos dois idiomas. O `docs/.docmap.yml` ganha
+  `docs_alternativos`, uma DISJUNÇÃO ao lado da conjunção que já existia: uma
+  RN mora em um dos três arquivos, e cobrar os três ensinaria a usar o escape
+  hatch — regra que ensina a ignorar check é pior que regra nenhuma.
+- **docs**: o `docs:check` passa a conferir TRÊS famílias de número escrito em
+  prosa, não só a de ADR: a contagem de RNs (fonte: os cabeçalhos `### RN-NNN`
+  do `business-rules.md`) e a de providers de LLM (fonte: os literais
+  `capabilities` que a tabela gerada de `llm-providers.md` já lê) entram na
+  mesma aferição. O gatilho foi medido, não previsto: o README anunciava "as
+  158 RNs" com 331 escritas — errado por mais do dobro, na tabela que
+  apresenta o repositório —, e corrigir à mão só reinicia o relógio. Número
+  que não bate REPROVA com o valor certo na mensagem; frase alterada reprova
+  como `CEGO`, de propósito, porque check que parou de achar a frase fica
+  verde para sempre dizendo que conferiu algo que não olhou.
+- **ci,k8s**: as quatro imagens de produção passam a ser PUBLICADAS no GHCR
+  a cada tag final (`ghcr.io/<dono>/brabo-{api,engine,web,backup}`, públicas),
+  fechando a dívida declarada mais cara dos ADRs 0025/0027 — até aqui o
+  `release.yml` construía com `push: false` só pra provar que a tag era
+  construível, e o overlay de produção apontava pra `ghcr.io/OWNER/*` com um
+  `newTag: REPLACE_WITH_DIGEST` que nenhum passo substituía (ADR 0119). O
+  login usa o `GITHUB_TOKEN` do próprio job (`packages: write`): nenhum
+  segredo novo pra rotacionar. O que cada tag publicou fica registrado POR
+  DIGEST em `.release/images.json` — anexado à GitHub Release no mesmo
+  instante da tag e versionado pela PR do CHANGELOG que o release já abria,
+  SEM abrir uma terceira exceção de push direto. O overlay continua guardando
+  o marcador, e `make imagens-do-release OVERLAY=prod|staging` aplica o digest
+  com `kustomize edit set image` — quem faz o deploy decide qual release está
+  em produção, não a tag. Achado no caminho: os overlays listavam TRÊS
+  imagens, não quatro — o CronJob de backup herdava `brabo-backup:prod`, nome
+  que não resolve em registry nenhum, então o backup do ambiente que mais
+  precisa dele nunca subiria. Nada passa a fazer deploy sozinho: `DEPLOY_ENABLED`
+  continua não existindo, e assinatura/atestação das imagens segue de fora,
+  junto com o code-signing dos binários do runner.
+- **api,web,runner**: configurar o `brabo-runner` na máquina do usuário
+  deixa de exigir juntar id do projeto, caminho da pasta e um Personal
+  Access Token à mão em três telas diferentes (RN-464..466, ADR 0118). O
+  navegador gera um par de chaves Ed25519 (Web Crypto), registra a chave
+  pública como uma nova `runner_device_keys`, baixa o binário certo
+  (proxy da api para o asset já publicado em GitHub Releases, sem build
+  nem cópia nova) e grava tudo já configurado numa pasta escolhida via
+  File System Access API (Chrome/Edge/Opera) — fora do Chromium, cai para
+  dois downloads comuns que o usuário move à mão. `POST .../runner-ticket`
+  passa a aceitar essa chave de dispositivo (JWT EdDSA de vida curtíssima,
+  ≤60s) como segunda forma de credencial, ADITIVA ao PAT — nunca o
+  substitui, e nunca vira dual-auth com o JWT de sessão (RN-439 continua
+  de pé). `--project`/`--dir`/`--token` do CLI ficam OPCIONAIS quando a
+  pasta já tem a config local: `./brabo-runner` sem flag nenhuma passa a
+  funcionar. Limitação aceita: o navegador não preserva o bit de execução,
+  então `chmod +x` em Linux/macOS continua manual (mostrado pronto pra
+  copiar). Corte de escopo explícito: o runner descobrir sozinho um
+  container Docker/Kubernetes local e conectar por SSH foi considerado e
+  REJEITADO nesta rodada — reabriria a FASE 25b, que segue cortada.
+- **api,web**: Project/Workspace Settings ganha um navegador do Hugging
+  Face Hub para puxar modelos GGUF para dentro do Ollama local (RN-461..
+  463, ADR 0115). Busca filtra para publishers OFICIAIS por padrão
+  (allowlist curada à mão); incluir a comunidade exige ligar um toggle
+  desligado por padrão, que mostra um aviso de segurança persistente
+  enquanto ligado. Puxar um modelo exige DUAS etapas explícitas — pedir
+  (`pending_confirmation`) e confirmar (dispara o download de verdade) —
+  nunca um pull automático e silencioso; falha termina o pedido em
+  `failed` com a origem declarada (infra/modelo), e sucesso ativa o
+  modelo no catálogo só para o workspace que pediu.
+- **scripts,docker**: o bootstrap de dev detecta um Ollama nativo já
+  rodando na porta 11434 (mesmo default de uma instalação fora do
+  Docker), pergunta uma ÚNICA vez se é para usar essa instância e grava a
+  resposta em `.env` (`OLLAMA_MODE=host|container`) — nunca pergunta de
+  novo depois disso (RN-461, ADR 0114). `ollama`/`ollama-model-loader`
+  entram sob `profiles: ["local-llm"]` no compose, ligado/desligado em
+  tempo de execução por `scripts/dev/perfil-ollama.sh` — inclusive em
+  "Docker › Destroy", que agora derruba exatamente o que o `up`
+  correspondente subiu, sem deixar container ou rede órfãos. Novo item de menu
+  "Docker › Reconfigurar Ollama" esquece a decisão gravada, forçando a
+  pergunta de novo na próxima subida.
+- **scripts**: o menu `pnpm bootstrap` ganha a tecla `c` nas telas de
+  execução (comando rodando ou já concluído) para copiar o comando real
+  para a área de transferência via OSC 52, com o texto sempre também
+  gravado no log como segunda via — não há como confirmar de dentro do
+  bash que a transferência funcionou, então quem estiver num terminal sem
+  suporte a OSC 52 ainda sai com o comando para copiar à mão.
 - **engine,web**: a tela de Sessão ganha uma faixa de atividade do turno
   ACIMA do composer — narra em linguagem humana o que um agente
   conversacional (Criativo, PO, Arquiteto, Dev Lead, UX Designer, Staff)
@@ -52,9 +727,255 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   já salva em `.env`, reaproveitando as MESMAS variáveis `<PROVIDER>_TEST_KEY`
   que os smokes de LLM já usam; provider sem variável definida não entra,
   sem erro.
+- **ci,k8s**: as GitHub Actions dos 15 workflows que o #408 deixou de fora
+  passam de tag mutável para commit SHA — 49 `uses:`, com a versão preservada
+  em comentário. O #408 pinou o `ci.yml` e o backlog registrou o item como
+  fechado; o que sobrou em tag foi justamente onde há credencial:
+  `release.yml` (empurra as quatro imagens no GHCR), `publish-runner.yml`
+  (publica no npm), `tag-release.yml` (cria tag) e `docs-deploy.yml` (empurra
+  na `gh-pages`). Tag é ponteiro que o dono da action move sem aviso, e quem a
+  move executa código no runner que tem o checkout e os segredos daquele
+  workflow. `scripts/ci/actions-pinadas.ts` (passo novo no job `lint`) reprova
+  qualquer `uses:` fora de SHA e qualquer SHA sem o comentário de versão — que
+  é obrigatório porque é a única coisa que diz a um humano, e ao Dependabot,
+  que versão aquele hash é. Referência local (`./.github/...`) passa. Provado
+  por mutação: devolver uma tag ao `backmerge-gate.yml` reprova com o arquivo e
+  a linha na mensagem. `ollama/ollama:latest` sobrevivia num QUINTO lugar que a
+  revisão não citou (`deploy/k8s/base/ollama/job-model-loader.yaml`), fora dos
+  quatro composes que o #401 pinou — vai para `0.33.1`, a mesma versão. O
+  mecanismo inteiro, que até aqui só existia em comentário de workflow, virou
+  `docs/explanation/cadeia-de-suprimentos-do-ci.md`, com o que segue confiado
+  na fé DECLARADO: sem Dependabot (os SHAs se atualizam à mão), sem
+  proveniência das dependências npm, sem assinatura dos artefatos que
+  publicamos, e imagem de terceiro presa por tag e não por digest.
+- **e2e,ci**: a pirâmide de testes ganha a camada que faltava em cima — um
+  E2E de NAVEGADOR (`e2e/`, Playwright, só chromium; ADR 0120). As três
+  camadas de baixo eram fortes (142 specs na api, 126 no engine, componente a
+  componente no web, mais o smoke HTTP das imagens de produção) e nenhuma
+  exercitava um navegador — justamente onde os últimos bugs de cookie, CORS e
+  socket apareceram, todos achados à mão. O que só existe aqui: o refresh em
+  cookie `httpOnly` (garantia do BROWSER — em jsdom o cookie seria legível e a
+  asserção passaria mentindo), o CSRF em origem cruzada `:8088`→`:3000` com
+  preflight de verdade (o `main.ts` da api já registrava "teste não faz
+  preflight"), a sessão que sobrevive ao reload (único jeito de provar que o
+  access em memória foi RECONSTRUÍDO do cookie) e o ticket de uso único do
+  socket da sessão (RN-108) num handshake real contra o engine, numa TERCEIRA
+  origem. Roda contra o compose de PRODUÇÃO que o CI já sobe (`smoke.sh` com
+  `SMOKE_KEEP_UP=1`) e no MESMO job `images`: as quatro imagens são a maior
+  parte do relógio daquele job, e um job separado as reconstruiria para chegar
+  ao mesmo stack. `e2e/` NÃO é membro do workspace — lockfile próprio, mesmo
+  desenho do `website/` (ADR 0117), porque a árvore do Playwright não chega a
+  imagem nenhuma e não tem o que fazer no `pnpm audit` do produto; da raiz é
+  `pnpm e2e`, nunca `pnpm --filter`. Seletor é ESTRUTURAL e nunca texto (o
+  idioma da interface é decisão do servidor), e a asserção é sobre MECANISMO e
+  nunca sobre tela. Provado por mutação nos dois specs: senha errada deixa a
+  autenticação vermelha, e apontar a asserção do socket para um caminho que
+  não existe falha com "nenhum WebSocket foi aberto contra o engine". NÃO
+  coberto, declarado: diferença entre navegadores, aprovação inline e
+  streaming. Achado ao rodar de verdade, e que virou desenho: a suite tem
+  ORÇAMENTO DE LOGIN. A api defende `/auth/login` com lockout progressivo por
+  IP que responde com o MESMO 401 uniforme de senha errada — distinguir os
+  dois diria ao atacante quando ele acertou o e-mail —, então repetir a suite
+  dentro da janela de 15 minutos derruba o login e a falha passa a acusar
+  justamente onde o defeito não está. O navegador entra UMA vez por execução
+  (um projeto `setup` guarda o estado; só o spec de autenticação abre mão
+  dele, porque provar login exige origem limpa), e a semeadura reconhece esse
+  401 e diz o que provavelmente é. Afrouxar o teto do compose para a suite
+  poder logar à vontade foi rejeitado: enfraqueceria o que está sendo testado
+  para deixar o teste confortável.
+
+- **runner**: o acesso a Docker passa a existir atrás de uma **porta** com
+  exatamente **cinco operações** (`start`, `stop`, `remove`, `inspect`, `exec`),
+  e **nada sobe container ainda** — este é o alicerce, não a feature. O que
+  decidiu a implementação foi uma **prova de empacotamento** que **falhou**:
+  `dockerode` foi instalado, importado, instanciado e exercitado (`ping()`) por
+  uma flag de auto-teste rodada contra os artefatos de verdade — nunca por um
+  `import` que o bundler pudesse apagar. O `tsup` passou (ele deixa
+  `dependencies` como `require` externo, então `dockerode` nem entrava no
+  bundle); o `bun build --compile` do binário standalone **reprovou**, com
+  `Could not resolve: "../build/Release/cpufeatures.node"`. A cadeia é
+  obrigatória e foi lida no código, não suposta: `docker-modem` faz
+  `require('./ssh')` na primeira linha do módulo, `ssh2` pede `cpu-features`, e
+  esse binding nativo opcional é envolvido por um `try/catch` que existe em
+  **runtime** e não no **bundler**. Mesma classe do achado do ADR 0112 com
+  `node-pty`, com a diferença que decide: lá o binding é essencial, aqui ele
+  acelera um transporte **SSH que este runner nunca usa** (ele fala com o socket
+  unix local). Então o runner usa `execFile('docker', …)`, e `dockerode` saiu do
+  lockfile. Medido e **não** adotado, para ninguém refazer a investigação:
+  `--external cpu-features` compila e funciona, ao custo de +1,7 MB por binário
+  vezes cinco plataformas — é exatamente o workaround que a decisão excluía de
+  antemão. **A contenção é o tipo, não a disciplina de quem chama**: não existe
+  campo para `privileged` nem `cap_add`, a rede é a união `'none' | 'egress'`
+  (então `network: host` não é uma frase que se possa dizer), e não há **lista**
+  de mounts — há UMA pasta, com destino constante (`/work`) e um tipo de
+  **marca** que só uma função de validação produz, recusando caminho relativo,
+  `..`, NUL, a raiz do filesystem e as pastas de sistema. Nenhuma operação
+  recebe id de container: todas derivam `brabo-<workspace_dir_name>` e resolvem
+  filtrando por nome **e** pelo rótulo `brabo.managed=true` — homônimo sem o
+  rótulo **recusa**, em vez de ler como ausente. Falha é **nomeada**: daemon
+  fora e executável `docker` ausente são erros **diferentes** (instalar o Docker
+  e subir o daemon são consertos diferentes — a lição da RN-475 um andar
+  abaixo), e o erro de comando recusado **não** declara origem, porque escolher
+  uma para "No such image" seria o diagnóstico por eliminação que o ADR 0020
+  proíbe. Tamanhos medidos: `dist/index.cjs` 91 843 → 106 221 bytes, binário
+  82 777 288 → 82 789 576 bytes — o crescimento é código, não dependência
+  (ADR 0128)
 
 ### Correções
 
+- **web, runner**: o **modo automático** do runner local — configurar a pasta
+  pelo navegador e rodar `brabo-runner` sem flag nenhuma — **nunca funcionou**,
+  desde que nasceu. O navegador gerava o par de chaves, registrava a metade
+  pública no projeto e gravava a privada na pasta, mas **descartava o `id` que
+  a api devolvia no registro** — nos dois caminhos, o automático e o kit
+  manual. Esse `id` é o **`kid`** da JWK, e é o único vínculo entre o arquivo
+  em disco e a chave pública guardada no servidor: sem ele, o CLI recusa a
+  chave (ele só repassa `jwk.kid`, nunca inventa um id) e a api não teria como
+  achar a pública para verificar a assinatura. O resultado era uma pasta com
+  aparência de configurada, uma chave inerte no projeto, e o CLI caindo no
+  modo manual sem dizer por quê. Agora o registro e a exportação da privada
+  acontecem **numa função só**, com o `id` fluindo dentro dela — descartá-lo
+  de novo exigiria apagar código, não esquecer uma linha. E o teste que
+  deixou isso passar mudou de pergunta: ele afirmava que o arquivo tinha sido
+  **aberto**, e passa a afirmar **o que foi escrito nele** (RN-475)
+- **runner**: a recusa da chave de dispositivo **diz o que houve**. Um arquivo
+  `brabo-runner-device-key.jwk.json` **presente e inválido** produzia
+  exatamente a mesma saída de um arquivo **ausente** — o bloco de uso, que
+  fala de `--project`/`--dir`/`--token` e não menciona o arquivo —, porque a
+  leitura devolve `null` nos dois casos (de propósito: ela nunca lança, e a
+  ausência é o caminho normal de quem usa flags). Quem tinha uma pasta
+  configurada era mandado investigar a configuração, que estava certa. A
+  leitura continua não lançando; o que mudou é que o CLI passa a **distinguir
+  os quatro estados** (ausente, JSON inválido, sem `kid`, válida) e a imprimir
+  a recusa **nomeada** — o arquivo, o motivo e as duas saídas (regravar a
+  pasta pelo navegador, ou usar `--token` enquanto isso) — em vez do texto
+  sobre flags. Ausente segue caindo no bloco de uso, que é a resposta certa
+  para quem não configurou nada (RN-475)
+- **api**: associar alguém a um projeto (`POST projects/:projectId/members`)
+  passa a recusar com **403** os **dois movimentos de rebaixamento** que
+  produziam estado sem volta. Um `maintainer` podia (1) rebaixar o **`owner` do
+  workspace** a `viewer` num projeto — o dono perdia o próprio projeto, e
+  restaurar exigia o `maintainer` que ele acabara de perder ali — e (2) **se
+  rebaixar sem poder desfazer**, porque desfazer é a mesma rota, que pede
+  `maintainer`. Agora: **ninguém rebaixa quem é `owner` do workspace** (lido de
+  `workspace_members.role`, nunca de `workspaces.created_by`) e **ninguém
+  rebaixa a si mesmo** (sem limiar; **subir** o próprio papel segue passando).
+  A **sobreposição continua valendo nos dois sentidos** — restringir um
+  `developer` de workspace a `viewer` num projeto sensível é capacidade
+  deliberada e não foi tocada. As **três descrições de OpenAPI** que prometiam
+  "the higher of this one and what the person already has" e "includes whoever
+  inherits access from the workspace" passam a descrever o que o código faz.
+  A tela ainda oferece o rebaixamento que a api recusa (ela não tem como
+  calcular o primeiro teto), mas **a recusa aparece** no toast, com a frase da
+  api — o gate do `Select` é PR à parte.
+  Ver [ADR 0127](docs/adr/0127-tetos-de-rebaixamento-em-project-members.md) e
+  RN-472.
+- **web**: em **Configurações**, a seção **Membros e papéis** passa a
+  **respeitar o papel de quem está olhando**, e suas duas ações caladas passam a
+  ter desfecho. Ela não checava papel nenhum: **convidar**, **trocar o papel de
+  alguém** e **remover** apareciam ativas para todo mundo, **`viewer`
+  incluído**, e a api recusava com 403 — e duas delas nem diziam isso, porque
+  não tinham tratamento de erro: a recusa virava silêncio na tela e ruído no
+  console. Remover um membro em silêncio era o pior dos três, por ser ação
+  consequente e sem volta pela tela. O mínimo **não** foi copiado da seção de
+  modelos logo acima: **Modelos por agente** exige `developer` e as três ações
+  daqui exigem `maintainer`, porque a régua é do **endpoint**, nunca da tela ao
+  lado. E o papel usado é o **efetivo do projeto**, não o do workspace — o
+  limite que a correção anterior tinha declarado. Não é uma lacuna nova nem uma
+  segunda: é a **mesma**, vista da seção que tem como fechá-la, porque esta já
+  busca a lista de membros do projeto e daí sai o papel de quem olha, composto
+  exatamente como a api o compõe. Quem não pode editar **continua lendo tudo** —
+  o papel de cada membro segue visível no seletor apagado —, e o motivo é dito
+  **uma vez, em texto**, na legenda. A legenda também passa a dizer **duas
+  coisas que a tela afirmava sem querer**: que o papel desta tabela **substitui**
+  o do workspace neste projeto, **nos dois sentidos** (pôr `viewer` aqui rebaixa
+  de verdade, inclusive quem é `owner` do workspace — o seletor não é uma
+  sugestão inofensiva), e que quem alcança o projeto **só pelo workspace não
+  aparece na lista**. **Convidar** manteve de propósito a dica fixa em vez da
+  frase da api: ali o ID é digitado à mão, e o erro que se alcança de verdade
+  responde `500`, cuja frase seria pior que a dica (RN-471)
+- **web**: em **Configurações**, a tabela **Modelos por agente** passa a
+  **respeitar o papel de quem está olhando**. Ela não checava papel nenhum: o
+  seletor de modelo e o "voltar a herdar" de cada linha apareciam clicáveis para
+  todo mundo, **`viewer` incluído**, e a api recusava com 403. Desde as
+  correções acima esse 403 pelo menos vira mensagem — o que não bastava:
+  oferecer um controle que só existe para ser recusado é a tela mentindo sobre o
+  que a pessoa pode fazer. O mínimo **não** foi copiado da seção irmã logo
+  abaixo: **Modelo por área** exige `maintainer` e **Modelos por agente** exige
+  `developer`, porque o vínculo da área alcança o lead e todos os subagentes de
+  uma vez e o do agente alcança um agente (RN-102). Copiar teria trocado o
+  defeito pelo **inverso**, e o inverso é pior — oferecer o que será recusado ao
+  menos termina numa mensagem, enquanto trancar quem podia editar é invisível
+  para quem perdeu a capacidade. Quem não pode editar **continua vendo tudo**: o
+  modelo vigente no gatilho, a cadeia de origem inteira e o próprio "voltar a
+  herdar", que é o que diz que aquele agente divergiu — some o controle, nunca a
+  informação. O motivo é dito **uma vez, em texto**, na legenda da seção, e não
+  como dica em cada linha: dica de mouse em controle desabilitado não abre no
+  Chromium, e explicação que não aparece é a mesma ausência com mais código. A
+  comparação de papéis saiu das telas e virou `roleAtLeast` sobre a hierarquia
+  que já existia — **Modelo por área** passou a usá-lo com o mesmo mínimo de
+  antes. Nada disso é fronteira de segurança: quem recusa continua sendo a api
+  (RN-102)
+- **web**: em **Configurações**, o seletor de modelo de **Modelos por agente** e
+  o de **Modelo por área** passam a abrir com o filtro **"aptos para agentes"
+  já marcado**. O filtro existe desde a Fase 9c e **nenhuma tela o ligava** — o
+  seletor abria oferecendo modelos sem *tool calling*, cujo clique a api recusa
+  com 422, e a frase da recusa manda a pessoa justamente para o filtro que
+  ninguém tinha ligado. Quem passa a ligá-lo não é escolhido por tela e sim pelo
+  **escopo do vínculo**: `assertModelFitsBindingScope` exige *tool calling* em
+  `agent` e em `area` e em mais nenhum, então as duas telas que gravam nesses
+  escopos abrem filtradas e o **seletor da sessão continua sem filtro** — ali a
+  api aceita modelo de conversa de propósito, e marcar esconderia o que o
+  domínio permite. Isto torna **improvável a causa mais comum** de recusa, nunca
+  impossível: as outras duas (modelo desativado no workspace, modelo sumido do
+  provider — RN-043) continuam alcançáveis daqui, o modelo indisponível segue
+  **listado e marcado**, e a mensagem de falha da correção anterior continua
+  sendo o que conta o desfecho. É o **estado inicial** de uma caixa de seleção,
+  não uma trava: desmarcar volta a listar o catálogo inteiro. Como consequência,
+  o seletor passa a **dizer quando o filtro esconde o modelo vigente** — o
+  vínculo herdado do projeto ou do workspace pode ser de conversa (esses dois
+  níveis nunca exigiram *tool calling*), e sem o aviso o gatilho mostrava um
+  nome que a lista aberta não continha, sem nada marcado. A causa é nomeada
+  porque só existe um filtro ali; quando a lista inteira fica vazia, quem fala
+  continua sendo o texto de lista vazia, que já manda desmarcar (RN-040)
+- **web**: em **Configurações**, escolher um modelo no seletor de uma linha de
+  **Modelos por agente** e ter o pedido recusado não produzia nada na tela: a
+  pessoa clicava, o dropdown fechava, a linha continuava no modelo antigo e o
+  erro só existia no console. Mesma classe de defeito da correção logo abaixo, e
+  na função vizinha do mesmo arquivo — `handleModelChange` não tinha `try/catch`
+  e era chamada do `onSelect` do seletor, então toda recusa da api virava
+  *unhandled promise rejection*. A recusa é alcançável de dentro do próprio
+  seletor: o modelo que sumiu do provider aparece na lista **marcado** em vez de
+  escondido (senão o vínculo que aponta para ele ficaria sem explicação), e a
+  lista é cacheada, então o modelo pode ter sido desligado no catálogo depois da
+  última leitura — nos dois casos a api recusa com 422. Agora a falha aparece,
+  com a mensagem da api e tom de falha. **O 404 aqui NÃO ganha desfecho
+  próprio**, ao contrário da correção de "voltar a herdar": aquele endpoint tem
+  **uma** causa de 404 e por isso o cliente pôde nomeá-la; este recusa por sete
+  caminhos e nenhum status identifica um deles sozinho — o 404 sozinho tem duas
+  causas ("Modelo não encontrado" e "Projeto não encontrado"), e escolher uma das
+  frases seria a tela afirmando o que não sabe. O contraste está comentado no
+  código, ao lado das duas funções. Nada de otimista foi introduzido: a coluna
+  **Modelo vigente** continua exibindo o vínculo que a api confirmou, e a linha
+  só é relida no sucesso — na recusa nada mudou no banco (RN-470)
+- **web**: em **Configurações**, clicar em "voltar a herdar" numa linha de
+  **Modelos por agente** que já herdava não fazia nada visível — nem confirmava,
+  nem reclamava. O botão aparece em toda origem `agent` de propósito (RN-470): a
+  cadeia do cliente não consegue separar o agente com modelo próprio daquele que
+  herdou o do **Criativo**, e nesse caso não há linha para apagar, então a api
+  responde 404 — ela está certa, "apaguei o que não existia" e "apaguei" não são
+  a mesma resposta. O que faltava era do lado do cliente: a função não tinha
+  `try/catch` e era chamada de um `onClick`, então toda recusa virava *unhandled
+  promise rejection* — silêncio na tela e ruído no console. Agora os três
+  desfechos são distintos, na gramática que **Modelo por área** já usava. O 404
+  ganhou desfecho **próprio** e não o das outras falhas, porque para quem clicou
+  ele não é falha: o estado pedido — o agente herda — **já é verdade**. A tela
+  diz isso na língua de quem está lendo, em vez de repassar a frase pt-BR que a
+  api crava no código (o idioma default do web é `en`), e ela pode dizer porque
+  este endpoint tem **uma** causa de 404: papel insuficiente é 403 e `scope_id`
+  malformado não é 404. Nos dois desfechos a linha é relida — se a api diz que
+  não havia binding, quem estava desatualizada era a tela. Qualquer outro status
+  continua sendo erro de verdade, com a mensagem da api e tom de falha
 - **engine,api,web**: a aba Insights, com zero hipóteses, mostrava "Sem
   hipóteses ainda — o Psicólogo analisa cada sessão encerrada" mesmo com
   `PSYCHOLOGIST_ENABLED=false` — indistinguível de "ainda ativo, só não
@@ -683,6 +1604,309 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   falta pra fechar a onda por completo — ver o CLAUDE.md pro estado
   atualizado.
 
+### CI
+
+- **ci**: o alarme de merge de esteira ganha **destinatário** (ADR 0139). A
+  verificação já existia e já funcionava — o `tag-release` reprovou as duas
+  promoções squashadas (#367 e #394) com a mensagem certa —, mas workflow de
+  `push` que falha numa permanente não tem PR onde ficar vermelho: sobrava um
+  run na aba Actions que nada apontava, e o repositório tinha zero issues na
+  história inteira. Agora `tag-release` tem um job `avisar` que **abre uma
+  issue** com branch, commit, run e o conserto, e **comenta na já aberta** em
+  vez de abrir uma segunda para a mesma branch. Autentica com `github.token`,
+  nunca com o PAT — um `BRABO_BOT_TOKEN` inválido é uma das falhas que ele
+  precisa reportar. A regra passa a cobrir `dev` de forma ESTREITA: lá trabalho
+  entra por squash de propósito, então só é defeito o PR que trazia uma
+  **aresta nova** (head era merge cujo segundo pai não estava na base) — o caso
+  da #464, cuja entrega inteira era essa aresta. Verificado contra os três
+  commits reais que o motivaram, sem falso positivo
+
+- **ci,docker**: endurece a cadeia de suprimentos do CI (achados #1 e #8 da
+  revisão externa de 2026-08-28, `docs/explanation/backlog.md`). Todo
+  binário baixado por `curl` num release do GitHub (gitleaks, hadolint,
+  actionlint, kustomize, kubeconform em `ci.yml`; gitleaks, hadolint,
+  actionlint em `docker/engine/Dockerfile`, o de DEV — o `.prod` já fazia
+  isto) passa por `sha256sum -c` antes de ser usado — sem isto, um release
+  comprometido ou MITM entregaria um binário diferente do esperado, em
+  silêncio. As 9 GitHub Actions do workflow (`actions/checkout`,
+  `pnpm/action-setup`, `actions/setup-node`, `erlef/setup-beam`,
+  `actions/cache`/`cache/restore`, `docker/setup-buildx-action`,
+  `docker/bake-action`, `aquasecurity/trivy-action`) passam de tag mutável
+  para commit SHA fixo, com a versão preservada em comentário. Um passo
+  novo e barato no job `lint` compara `GITLEAKS_VERSION`/
+  `HADOLINT_VERSION`/`ACTIONLINT_VERSION` entre `ci.yml` e
+  `docker/engine/Dockerfile.prod` e falha se divergirem — o comentário que
+  prometia isso não era garantido por nada até agora.
+- **engine,api,ci**: o golden-set de acerto do RAG (ADR 0132, RN-490) passa
+  a rodar em CI de verdade — Etapa 3 do programa de RAG mensurável (ADR
+  0138, RN-498). Workflow novo, `.github/workflows/golden-set-rag.yml`,
+  separado de `ci.yml` de propósito: roda AGENDADO (`schedule` noturno +
+  `workflow_dispatch`), nunca por `pull_request` — sobe `postgres` e
+  `ollama` (mesma versão `0.33.1` pinada do resto do produto) como
+  serviços, puxa `nomic-embed-text` e roda `mix golden_set.rag` contra um
+  Ollama real. O gate `rag-acertivo` (`docs/gates.yml`) CONTINUA `warn`: um
+  workflow agendado não bloqueia PR nenhum, então `block` prometeria um
+  travamento que não existe — o motivo do `warn` mudou (de "sem CI com
+  LLM" para "cadência de custo"), a severidade não. Tratável só pra este
+  golden-set, não pro do QA (ADR 0123, sem mudança nenhuma): aqui só o
+  modelo de EMBEDDING roda, CPU, determinístico — nunca um modelo de chat
+  fazendo julgamento.
+
+### Manutenção
+
+- **docker**: os containers de dev de `api`, `web` e `engine` param de rodar
+  como root — item #13 da revisão externa de 2026-08-28
+  (`docs/explanation/backlog.md`). `DEV_UID`/`DEV_GID` (build args, default
+  `1000`/`1000`, nunca `${UID}` do shell — somente-leitura e não exportado
+  por padrão no bash) mapeiam o container pro MESMO usuário do host, em vez
+  de rodar como root e corrigir depois com `sudo chown`. Grupo/usuário só é
+  criado quando o par pedido diverge do que a imagem já traz (`node:24-alpine`
+  já tem `node` em 1000:1000); no `engine`, `_build`/`deps`/`.mix`/`.hex`
+  ganham `chown` ANTES do `USER`, pra um volume nomeado novo herdar o dono
+  certo já no primeiro mount. `Dockerfile.prod` não muda — já era non-root
+  desde o ADR 0024.
+- **web**: `ActionType` deixa de ser cópia à mão em `lib/api-types.ts` —
+  passa a ser gerado por `openapi-typescript` a partir de
+  `docs/reference/openapi.json` (`lib/api-types.generated.ts`, novo
+  `pnpm --filter web run openapi:types`, checado no CI contra o mesmo
+  `openapi.json` já validado por `docs:check`). Fecha item de
+  `docs/explanation/backlog.md` e o débito descrito em `architecture.md`:
+  a cópia manual já divergiu duas vezes em produção sem o compilador
+  notar (os três tipos do bootstrap de Gitflow; depois
+  `parallelize`/`raise_max_parallel`) — agora `Record<ActionType, ...>`
+  em `lib/aprovacoes.ts` reprova a compilação quando um tipo novo falta
+  (ADR 0116). Só `ActionType` migrou; o resto de `api-types.ts` segue
+  manual.
+
+- **ci,deps**: `website/` sai do workspace pnpm da raiz e ganha
+  `pnpm-lock.yaml` próprio (ADR 0117) — item "website lockfile" da revisão
+  externa de 2026-08-28 (`docs/explanation/backlog.md`). `pnpm audit` da
+  raiz para de reportar a árvore inteira do Docusaurus, que nunca chega a
+  nenhuma imagem. Auditar os 13 overrides de segurança com `pnpm why
+  <pacote> -r` (em vez de reler os comentários) achou a maioria MISTA, não
+  exclusiva do `website` como a revisão original supôs: `mermaid`/
+  `dompurify`/`uuid` também resolvem por `apps/web` (dependência de
+  runtime, ADR 0068), `postcss`/`nanoid` por `apps/web` via `vite`,
+  `js-yaml`/`fast-uri`/`lodash` por `apps/api` via `eslint`/`ajv`/
+  `@nestjs/swagger` — essas ficam na raiz E são duplicadas no novo
+  `website/pnpm-workspace.yaml`; só `serialize-javascript` e a faixa
+  `yaml@1.x` eram exclusivas do `website` e saíram de vez da raiz;
+  `esbuild` ficou só na raiz, ausente da árvore do `website`. Scripts
+  `docs:*` e os workflows `docs-deploy.yml`/`docs-check.yml` trocam
+  `pnpm --filter website` (exige membership) por `pnpm --dir website`
+  (aponta o diretório); os dois workflows ganham um segundo `pnpm install`
+  escopado a `website/`
+- **web**: PR 1 de 5 da decomposição mecânica de `SessionPage.tsx`
+  (ADR 0122) — arquivo de 3 807 linhas/169 KiB, o mais disputado do
+  repositório, 25 arquivos de teste importando dele, sob churn ativo (50
+  commits, zero tentativa de extração até aqui). As cinco funções PURAS de
+  timeline/turno (`aberturasDeTurno`, `turnoDoSeq`, `afundarDesfechos`,
+  `pontoDaSessao`, `ordemDaAcaoNaTimeline`, e o tipo `TimelineEntry` que
+  várias delas usam) saem para `apps/web/src/lib/session-timeline.ts`.
+  `agruparNarracoesDoTurno`, na mesma região do arquivo, FICA — produz JSX
+  e lê classes de `SessionPage.module.css`, e movê-la junto decidiria de
+  passagem que `lib/` aceita seu primeiro arquivo `.tsx`, precedente que
+  este PR não toma sozinho. ZERO mudança de comportamento observável: os
+  mesmos 25 arquivos `SessionPage.*.test.tsx` passam SEM EDIÇÃO nenhuma —
+  essa é a prova. Restam 4 PRs no plano declarado pelo ADR 0122
+  (`StorySlide`, `StructuredQuestionCard`, helpers de árvore de backlog +
+  `ContextAside`, e um hook `useSessionReadiness`), cada um mergeado antes
+  do próximo começar
+- **web**: PR 2 de 5 da decomposição mecânica de `SessionPage.tsx`
+  (ADR 0122) — `StorySlide`, o slide do carrossel de histórias aguardando
+  promoção (RN-148), sai para `apps/web/src/routes/StorySlide.tsx`, sibling
+  de `SessionPage.tsx` e não subpasta (o único precedente de subpasta em
+  `routes/` é `routes/code/`, para uma feature bem maior). Primeiro
+  componente JSX a sair do arquivo, e o mais simples: um leaf sem filhos que
+  também precisassem mover. Continua importando `SessionPage.module.css`
+  direto — a única importadora do módulo CSS até aqui, decisão já escrita
+  no ADR 0122 pra não relitigar em cada uma das três PRs de componente.
+  Nenhum tipo, helper ou constante compartilhada precisou mover junto nem
+  reexportar: `StorySlide` não é importado por nome em nenhum teste (só
+  renderizado dentro de `<SessionPage>`), diferente das cinco funções da
+  PR 1. ZERO mudança de comportamento observável: os mesmos 24 arquivos
+  `SessionPage.*.test.tsx` (o `SessionPage.ponto.test.ts` da contagem
+  original da ADR já tinha migrado para `session-timeline.test.ts` na PR 1)
+  passam SEM EDIÇÃO nenhuma. Restam 3 PRs no plano declarado pelo ADR 0122
+  (`StructuredQuestionCard`, helpers de árvore de backlog + `ContextAside`,
+  e o hook `useSessionReadiness`)
+- **web**: PR 3 de 5 da decomposição mecânica de `SessionPage.tsx`
+  (ADR 0122) — `StructuredQuestionCard`, o formulário de `chat.
+  structured_question` (RN-162/RN-171), sai para `apps/web/src/routes/
+  StructuredQuestionCard.tsx`, sibling de `SessionPage.tsx`, mesmo padrão
+  da `StorySlide` na PR 2. `permiteOutra` — o predicado puro do RN-171 que
+  decide se um `select` ganha a opção "Outra (escrever)" — vai JUNTO,
+  porque quem o chama é só o próprio card: um helper cujo único chamador
+  está de saída não justifica ficar órfão em `SessionPage.tsx`. O
+  sentinela `OUTRA_RESPOSTA`, que também só o card usa, moveu pela mesma
+  razão, ainda que não estivesse nomeado no ADR. Continua importando
+  `SessionPage.module.css` direto, mesma decisão da PR 2. Nenhuma
+  reexportação precisou ficar: nem `StructuredQuestionCard` nem
+  `permiteOutra` são importados por nome em teste nenhum (só renderizados
+  dentro de `<SessionPage>`), como já valia pra `StorySlide`. ZERO mudança
+  de comportamento observável: os mesmos 24 arquivos
+  `SessionPage.*.test.tsx` passam SEM EDIÇÃO nenhuma, incluindo
+  `SessionPage.perguntas-estruturadas.test.tsx`, que exercita o card
+  ponta a ponta. Restam 2 PRs no plano declarado pelo ADR 0122 (helpers
+  de árvore de backlog + `ContextAside`, e o hook `useSessionReadiness`)
+- **web**: PR 4 de 5 da decomposição mecânica de `SessionPage.tsx`
+  (ADR 0122) — a fatia maior do plano, duas peças que se movem juntas
+  porque uma depende da outra. As quatro funções PURAS de árvore de
+  backlog (`urlDaPr`, `vinculoDeBacklog`, `montarArvoreDeBacklog`,
+  `totalDeDescendentes`, com o tipo `NoDeBacklog` que várias delas usam)
+  saem para `apps/web/src/lib/session-backlog-tree.ts`, mesmo raciocínio
+  da PR 1: sem JSX, sem `styles`, natural em `lib/`. `ItemDeBacklog` (o
+  nó recursivo do backlog na tela) e `ContextAside` (a sidebar inteira —
+  banner de prontidão, painel de artefatos RN-159, árvore de backlog,
+  paginação de regra de negócio, log de eventos) saem juntos para
+  `apps/web/src/routes/ContextAside.tsx`, `ItemDeBacklog` continua
+  privado do arquivo (não exportado), consumindo os quatro helpers do
+  novo módulo de `lib/`. Continua importando `SessionPage.module.css`
+  direto, mesma decisão da PR 2. `ArtefatoGerado` e
+  `CHAVE_TITULO_PADRAO_POR_TIPO_DE_PR` — só usados dentro de
+  `ContextAside` — moveram junto pela mesma razão do sentinela da PR 3:
+  helper cujo único chamador está de saída não fica órfão em
+  `SessionPage.tsx`. Nenhuma reexportação precisou ficar: nem os quatro
+  helpers nem `ContextAside`/`ItemDeBacklog` são importados por nome em
+  teste nenhum (só renderizados dentro de `<SessionPage>`). ZERO mudança
+  de comportamento observável: os mesmos 24 arquivos
+  `SessionPage.*.test.tsx` passam SEM EDIÇÃO nenhuma, incluindo
+  `SessionPage.painel-e-agrupamento.test.tsx` e
+  `SessionPage.artefatos-gerados.test.tsx`, que exercitam este trecho
+  ponta a ponta — mais checagem visual manual da sidebar renderizada, já
+  que é a extração mais visível das cinco. Resta 1 PR no plano declarado
+  pelo ADR 0122 (o hook `useSessionReadiness`)
+- **web**: PR 5 de 5, e ÚLTIMO, da decomposição mecânica de `SessionPage.tsx`
+  (ADR 0122) — a única fatia do plano que não é um move de arquivo. As seis
+  derivações de "prontidão" (RN-160/RN-161) — `criativoActive`,
+  `arquitetoActive`, `hasBusinessRule`, `hasPromotedStory`,
+  `hasProductBrief` e `activeAgent`, cada uma um `useMemo` lendo direto do
+  closure do componente — viram um hook com contrato explícito de
+  parâmetros, `useSessionReadiness(events, backlogData)` em
+  `apps/web/src/lib/session-readiness.ts`: `events` no mesmo tipo que
+  `SessionPage.tsx` já usa (`SessionEvent[]`), `backlogData` já
+  DESEMBRULHADO (`backlogQuery.data`, `Epic[] | undefined`) — `SessionPage.
+  tsx` continua sendo o único dono da chamada `useBacklog(projectId)`, o
+  hook fica função pura dos dois parâmetros, sem acoplar a nenhum client de
+  query. `AGENTES_DE_CHAT` move junto (só ela era usada dentro do loop de
+  `activeAgent`) e `SessionPage.tsx` importa de volta o mesmo símbolo para
+  o único outro consumidor que sobrava, `offeredHandoff` — fonte única, sem
+  cópia. `activeFor`, o helper de uma linha que alimentava
+  `criativoActive`/`arquitetoActive`, virou uma cópia local dentro do hook
+  E continua, também local, em `SessionPage.tsx`: o original já alimentava
+  DOIS outros pontos fora desta extração (`offeredHandoff` e o filtro do
+  seletor de handoff manual), então duplicar uma linha pura evitou
+  acoplar esses dois ao hook por um parâmetro que não precisariam do resto
+  do contrato. Corpo dos seis `useMemo` movido VERBATIM — mesmas dependências,
+  mesma lógica. Primeiro hook do repositório testado isolado
+  (`renderHook`, `@testing-library/react`, sem `QueryClientProvider`
+  porque o hook não usa `useQuery`) — `apps/web/src/lib/
+  session-readiness.test.ts`, caminho feliz + 1 caso de borda por grupo.
+  ZERO mudança de comportamento observável: os mesmos 24 arquivos
+  `SessionPage.*.test.tsx` passam SEM EDIÇÃO nenhuma, incluindo
+  os quatro que exercitam prontidão diretamente
+  (`SessionPage.readiness-exige-regra`,
+  `SessionPage.readiness-arquitetura-exige-historia`,
+  `SessionPage.validar-necessidade`,
+  `SessionPage.readiness-turno-preso`). `SessionPage.tsx` termina o plano
+  em 2 661 linhas, descendo de 3 807 antes da PR 1. Fecha o plano de 5 PRs
+  do ADR 0122 — PARCIALMENTE: as cinco extrações nomeadas fecham, mas o
+  cluster de estado do canal de turno
+  (`turnoViaCanal`/`statusAgent`/`pensandoVisivel`/`atividadeDoTurno`) e
+  `ProjectSettingsTab.tsx` seguem exatamente tão em disputa quanto antes,
+  por decisão declarada no próprio ADR — nenhum dos dois é tocado aqui
+- **web**: PR final do cluster de canal de turno de `SessionPage.tsx`
+  (ADR 0124) — o item que o ADR 0122 tinha deixado declarado em aberto,
+  fecha aqui. Uma releitura linha a linha achou a própria contagem da ADR
+  0122 desatualizada (falava em quatro handlers de turno; são sete pontos
+  reais de escrita, incluindo `handleReturnStory`/RN-174, nunca citado
+  lá). Duas PRs: a primeira, mecânica, terminou uma deduplicação que tinha
+  ficado pela metade — `handleSend`/`handleReadiness`/
+  `handleArchitectureReadiness` duplicavam inline as mesmas linhas que
+  `iniciarTurnoDoAgente`/`finalizarTurnoDoAgente` (já existentes como par
+  `useCallback`) já cobriam, e ganha o parâmetro `{ comStatus }` pra
+  preservar a assimetria de `handleAcceptHandoff` (kickoff assíncrono no
+  engine); introduz `cancelarTurnoOtimista`. Esta PR, a extração de
+  verdade: o estado (`streaming`/`streamingText`/`streamingAgent`/
+  `turnoViaCanal`/`statusAgent`/`pensandoVisivel`/`atividadeDoTurno`/
+  `optimisticUser`), o efeito do canal Phoenix
+  (`connectSessionHeartbeat`, conferido por completo como 100%
+  maquinário de ciclo de vida de turno) e as três funções migram para um
+  hook novo, `useTurnoDoAgente` (`apps/web/src/lib/session-turno.ts`) —
+  primeiro hook do repositório com estado E API imperativa juntos (sem
+  precedente local: `useAutoCollapseSidebar` devolve `void`,
+  `useSessionReadiness` é função pura sem `useState`). Retorno em OBJETO,
+  não tupla (13 campos) — `SessionPage.tsx` desestrutura tudo sob o MESMO
+  nome de antes, então todo lugar que lê o estado continua igual.
+  `cancelarTurnoOtimista` cobre só dois dos cinco formatos de "desfazer o
+  arme" encontrados no arquivo (os blocos idênticos de
+  `handleReadiness`/`handleArchitectureReadiness`) — NÃO o de
+  `handleAcceptHandoff` (nunca armou `streaming`/`statusAgent`, então
+  chamá-la ali acoplaria em silêncio dois campos que o handler nunca
+  tocou — a mesma armadilha que a ADR 0122 já tinha apontado) nem os dois
+  formatos distintos de `handleSend` (`optimisticUser` pertence ao ciclo
+  de vida dele, não ao par arme/desarme). ZERO mudança de comportamento
+  observável: os mesmos 25 (24) arquivos `SessionPage.*.test.tsx` passam
+  SEM EDIÇÃO nenhuma, incluindo os nove que exercitam este cluster
+  diretamente. `SessionPage.tsx` termina em 2 479 linhas, descendo de
+  2 661. Fecha, especificamente, o item de canal de turno que a ADR 0122
+  tinha deixado em aberto — `ProjectSettingsTab.tsx`, o outro arquivo da
+  mesma linha de dívida, segue intocado, decisão de escopo separada
+- **web**: `ProjectSettingsTab.tsx` deixa de ser um arquivo de 2 532
+  linhas/89,9 KiB — a ÚLTIMA metade em aberto da linha de dívida declarada
+  em `docs/architecture.md`, que as ADRs 0122 e 0124 nomearam e adiaram
+  duas vezes de propósito. As 17 seções viram um arquivo cada sob
+  `apps/web/src/routes/settings/`, e o arquivo antigo CONTINUA no mesmo
+  caminho como entrada e barrel, com 77 linhas (ADR 0125). O barrel é
+  estrutural, não cosmético: `ProjectSettingsTab.test.tsx` importa 11 nomes
+  daquele caminho e `ProjectPage.test.tsx`/`project-tabs.test.tsx` fazem
+  `vi.mock` DO CAMINHO — mover ou renomear quebraria os três sem que nada
+  do produto mudasse. UMA PR e não cinco (como foi a decomposição do
+  `SessionPage.tsx`) porque este arquivo nunca teve aquele formato: o pai
+  não guardava NADA (17 filhos JSX, sem hook, sem query, sem `t`, sem
+  checagem de papel), nenhuma seção recebe mais que `{projectId}` (duas não
+  recebem prop nenhuma) e 11 das 17 já eram exportadas. Dos doze helpers de
+  escopo de módulo, só DOIS tinham mais de um chamador e foram para
+  `settings/shared.ts` (`ORIGIN_TONE`, `formatarCustoMicros`); os outros
+  dez foram para o arquivo do seu único chamador — a checagem por grep
+  corrigiu uma expectativa de passagem, `iniciaisDe`/`gradienteDe` são só
+  do `MembersSection`, nunca do `ProficiencySection`. As 6 seções privadas
+  ganham `export` no PRÓPRIO arquivo (consequência mecânica: o barrel
+  precisa importá-las), mas NÃO são reexportadas pelo barrel — a superfície
+  pública da aba fica idêntica em formato, porque um move mecânico não
+  alarga contrato. `ProjectSettingsTab.module.css` segue um módulo CSS
+  ÚNICO e compartilhado, agora com 15 importadoras, mesma resposta que a
+  ADR 0122 deu para `SessionPage.module.css` e pelo mesmo motivo: nunca
+  houve segunda cópia, então não há para onde derivar. ZERO mudança de
+  comportamento observável: a suíte inteira do web (142 arquivos, 1 537
+  testes) passa com ZERO arquivo de teste editado, incluindo
+  `ProficiencySection.test.tsx`, o único que renderiza as 17 seções de uma
+  vez. Fecha a linha de dívida nas DUAS metades
+
+### Mudanças internas
+
+- **runner,broker**: a porta de Docker do ADR 0128 **muda de casa** —
+  `docker-port.ts` e `docker-cli.ts` (com os dois `.spec.ts`) saem de
+  `apps/runner/src/` para o pacote de workspace `packages/docker-port`,
+  consumido pelos dois lados. É o que o próprio ADR 0128 já escrevia que
+  aconteceria, e o motivo está lá: *"um segundo arquivo com as mesmas cinco
+  operações e uma sexta 'só no broker' é o começo do fim da contenção"*.
+  `packages/shared` foi recusado pelo invariante que ele declara e um teste da
+  api mantém honesto — ele é 100% tipo, e a imagem de produção da api morre no
+  boot com `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING` se algo de runtime
+  sobreviver ao `tsc`. O pacote novo não tem passo de build e é EMPACOTADO pelos
+  dois consumidores (`tsup`, `bun build --compile`), o que também explica por que
+  a api não pode consumi-lo e por que `validarDecisaoDeImagem` **não** se move.
+  O binário standalone sobreviveu ao movimento, medido: `build`, `build:bin`,
+  `smoke` e `smoke:bin` verdes, bundle do Bun de 79 para 83 módulos,
+  `npm pack --dry-run` inalterado (ADR 0130)
+- **runner,broker**: `pidsLimit` entra na `EspecificacaoDeContainer` e vira
+  `--pids-limit` ao lado de `--cap-drop ALL`. O artefato do Arquiteto sempre
+  carregou três números, e descartar o terceiro faria ele prometer um teto de
+  processos que o container não recebe — o "artefato que promete mais do que o
+  container recebe mente para quem o audita" que o próprio domínio da api nomeia.
+  Acrescentar campo à porta merece nota porque a régua deste desenho é não
+  acrescentar parâmetro; a régua vale para o que AFROUXA, e este aperta (ADR 0130)
 
 ## v3.1.0 — 2026-08-13
 
@@ -847,6 +2071,46 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docs**: `business-rules.md` deixa de ser uma página de 644 KB — as duas
+  seções que sozinhas eram metade dela saem para arquivos próprios
+  (`business-rules/custo.md` e `business-rules/autenticacao.md`), e o índice
+  cai para 335 KB. Divisão por TAMANHO, não por assunto: nenhuma vírgula de
+  conteúdo mudou e nenhuma âncora `{#rn-NNN}` mudou de nome — só o arquivo
+  que as hospeda. Os 293 links que apontavam para as RNs movidas foram
+  reescritos, incluindo os da tradução pt-BR, e o build do Docusaurus (que
+  reprova âncora quebrada) passa nos dois idiomas. O `docs/.docmap.yml` ganha
+  `docs_alternativos`, uma DISJUNÇÃO ao lado da conjunção que já existia: uma
+  RN mora em um dos três arquivos, e cobrar os três ensinaria a usar o escape
+  hatch — regra que ensina a ignorar check é pior que regra nenhuma.
+- **docs**: o `docs:check` passa a conferir TRÊS famílias de número escrito em
+  prosa, não só a de ADR: a contagem de RNs (fonte: os cabeçalhos `### RN-NNN`
+  do `business-rules.md`) e a de providers de LLM (fonte: os literais
+  `capabilities` que a tabela gerada de `llm-providers.md` já lê) entram na
+  mesma aferição. O gatilho foi medido, não previsto: o README anunciava "as
+  158 RNs" com 331 escritas — errado por mais do dobro, na tabela que
+  apresenta o repositório —, e corrigir à mão só reinicia o relógio. Número
+  que não bate REPROVA com o valor certo na mensagem; frase alterada reprova
+  como `CEGO`, de propósito, porque check que parou de achar a frase fica
+  verde para sempre dizendo que conferiu algo que não olhou.
+- **ci,k8s**: as quatro imagens de produção passam a ser PUBLICADAS no GHCR
+  a cada tag final (`ghcr.io/<dono>/brabo-{api,engine,web,backup}`, públicas),
+  fechando a dívida declarada mais cara dos ADRs 0025/0027 — até aqui o
+  `release.yml` construía com `push: false` só pra provar que a tag era
+  construível, e o overlay de produção apontava pra `ghcr.io/OWNER/*` com um
+  `newTag: REPLACE_WITH_DIGEST` que nenhum passo substituía (ADR 0119). O
+  login usa o `GITHUB_TOKEN` do próprio job (`packages: write`): nenhum
+  segredo novo pra rotacionar. O que cada tag publicou fica registrado POR
+  DIGEST em `.release/images.json` — anexado à GitHub Release no mesmo
+  instante da tag e versionado pela PR do CHANGELOG que o release já abria,
+  SEM abrir uma terceira exceção de push direto. O overlay continua guardando
+  o marcador, e `make imagens-do-release OVERLAY=prod|staging` aplica o digest
+  com `kustomize edit set image` — quem faz o deploy decide qual release está
+  em produção, não a tag. Achado no caminho: os overlays listavam TRÊS
+  imagens, não quatro — o CronJob de backup herdava `brabo-backup:prod`, nome
+  que não resolve em registry nenhum, então o backup do ambiente que mais
+  precisa dele nunca subiria. Nada passa a fazer deploy sozinho: `DEPLOY_ENABLED`
+  continua não existindo, e assinatura/atestação das imagens segue de fora,
+  junto com o code-signing dos binários do runner.
 - **engine,api,web**: o Criativo pode emitir perguntas estruturadas
   (`ask_structured_questions`) quando faz várias perguntas de uma vez — o
   usuário responde por um formulário em vez de texto livre item por item
@@ -1368,6 +2632,46 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docs**: `business-rules.md` deixa de ser uma página de 644 KB — as duas
+  seções que sozinhas eram metade dela saem para arquivos próprios
+  (`business-rules/custo.md` e `business-rules/autenticacao.md`), e o índice
+  cai para 335 KB. Divisão por TAMANHO, não por assunto: nenhuma vírgula de
+  conteúdo mudou e nenhuma âncora `{#rn-NNN}` mudou de nome — só o arquivo
+  que as hospeda. Os 293 links que apontavam para as RNs movidas foram
+  reescritos, incluindo os da tradução pt-BR, e o build do Docusaurus (que
+  reprova âncora quebrada) passa nos dois idiomas. O `docs/.docmap.yml` ganha
+  `docs_alternativos`, uma DISJUNÇÃO ao lado da conjunção que já existia: uma
+  RN mora em um dos três arquivos, e cobrar os três ensinaria a usar o escape
+  hatch — regra que ensina a ignorar check é pior que regra nenhuma.
+- **docs**: o `docs:check` passa a conferir TRÊS famílias de número escrito em
+  prosa, não só a de ADR: a contagem de RNs (fonte: os cabeçalhos `### RN-NNN`
+  do `business-rules.md`) e a de providers de LLM (fonte: os literais
+  `capabilities` que a tabela gerada de `llm-providers.md` já lê) entram na
+  mesma aferição. O gatilho foi medido, não previsto: o README anunciava "as
+  158 RNs" com 331 escritas — errado por mais do dobro, na tabela que
+  apresenta o repositório —, e corrigir à mão só reinicia o relógio. Número
+  que não bate REPROVA com o valor certo na mensagem; frase alterada reprova
+  como `CEGO`, de propósito, porque check que parou de achar a frase fica
+  verde para sempre dizendo que conferiu algo que não olhou.
+- **ci,k8s**: as quatro imagens de produção passam a ser PUBLICADAS no GHCR
+  a cada tag final (`ghcr.io/<dono>/brabo-{api,engine,web,backup}`, públicas),
+  fechando a dívida declarada mais cara dos ADRs 0025/0027 — até aqui o
+  `release.yml` construía com `push: false` só pra provar que a tag era
+  construível, e o overlay de produção apontava pra `ghcr.io/OWNER/*` com um
+  `newTag: REPLACE_WITH_DIGEST` que nenhum passo substituía (ADR 0119). O
+  login usa o `GITHUB_TOKEN` do próprio job (`packages: write`): nenhum
+  segredo novo pra rotacionar. O que cada tag publicou fica registrado POR
+  DIGEST em `.release/images.json` — anexado à GitHub Release no mesmo
+  instante da tag e versionado pela PR do CHANGELOG que o release já abria,
+  SEM abrir uma terceira exceção de push direto. O overlay continua guardando
+  o marcador, e `make imagens-do-release OVERLAY=prod|staging` aplica o digest
+  com `kustomize edit set image` — quem faz o deploy decide qual release está
+  em produção, não a tag. Achado no caminho: os overlays listavam TRÊS
+  imagens, não quatro — o CronJob de backup herdava `brabo-backup:prod`, nome
+  que não resolve em registry nenhum, então o backup do ambiente que mais
+  precisa dele nunca subiria. Nada passa a fazer deploy sozinho: `DEPLOY_ENABLED`
+  continua não existindo, e assinatura/atestação das imagens segue de fora,
+  junto com o code-signing dos binários do runner.
 - **api,shared**: o contrato de git ganha `listTree` e `getPullRequestDiff`, a
   11ª e a 12ª operações, que a aba Code (FASE 26) vai precisar. Entram como
   capability, e são `true` nos três providers só porque a **suite de contrato
@@ -1928,6 +3232,46 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docs**: `business-rules.md` deixa de ser uma página de 644 KB — as duas
+  seções que sozinhas eram metade dela saem para arquivos próprios
+  (`business-rules/custo.md` e `business-rules/autenticacao.md`), e o índice
+  cai para 335 KB. Divisão por TAMANHO, não por assunto: nenhuma vírgula de
+  conteúdo mudou e nenhuma âncora `{#rn-NNN}` mudou de nome — só o arquivo
+  que as hospeda. Os 293 links que apontavam para as RNs movidas foram
+  reescritos, incluindo os da tradução pt-BR, e o build do Docusaurus (que
+  reprova âncora quebrada) passa nos dois idiomas. O `docs/.docmap.yml` ganha
+  `docs_alternativos`, uma DISJUNÇÃO ao lado da conjunção que já existia: uma
+  RN mora em um dos três arquivos, e cobrar os três ensinaria a usar o escape
+  hatch — regra que ensina a ignorar check é pior que regra nenhuma.
+- **docs**: o `docs:check` passa a conferir TRÊS famílias de número escrito em
+  prosa, não só a de ADR: a contagem de RNs (fonte: os cabeçalhos `### RN-NNN`
+  do `business-rules.md`) e a de providers de LLM (fonte: os literais
+  `capabilities` que a tabela gerada de `llm-providers.md` já lê) entram na
+  mesma aferição. O gatilho foi medido, não previsto: o README anunciava "as
+  158 RNs" com 331 escritas — errado por mais do dobro, na tabela que
+  apresenta o repositório —, e corrigir à mão só reinicia o relógio. Número
+  que não bate REPROVA com o valor certo na mensagem; frase alterada reprova
+  como `CEGO`, de propósito, porque check que parou de achar a frase fica
+  verde para sempre dizendo que conferiu algo que não olhou.
+- **ci,k8s**: as quatro imagens de produção passam a ser PUBLICADAS no GHCR
+  a cada tag final (`ghcr.io/<dono>/brabo-{api,engine,web,backup}`, públicas),
+  fechando a dívida declarada mais cara dos ADRs 0025/0027 — até aqui o
+  `release.yml` construía com `push: false` só pra provar que a tag era
+  construível, e o overlay de produção apontava pra `ghcr.io/OWNER/*` com um
+  `newTag: REPLACE_WITH_DIGEST` que nenhum passo substituía (ADR 0119). O
+  login usa o `GITHUB_TOKEN` do próprio job (`packages: write`): nenhum
+  segredo novo pra rotacionar. O que cada tag publicou fica registrado POR
+  DIGEST em `.release/images.json` — anexado à GitHub Release no mesmo
+  instante da tag e versionado pela PR do CHANGELOG que o release já abria,
+  SEM abrir uma terceira exceção de push direto. O overlay continua guardando
+  o marcador, e `make imagens-do-release OVERLAY=prod|staging` aplica o digest
+  com `kustomize edit set image` — quem faz o deploy decide qual release está
+  em produção, não a tag. Achado no caminho: os overlays listavam TRÊS
+  imagens, não quatro — o CronJob de backup herdava `brabo-backup:prod`, nome
+  que não resolve em registry nenhum, então o backup do ambiente que mais
+  precisa dele nunca subiria. Nada passa a fazer deploy sozinho: `DEPLOY_ENABLED`
+  continua não existindo, e assinatura/atestação das imagens segue de fora,
+  junto com o code-signing dos binários do runner.
 - **api,engine**: o dev agent passa a **esperar** a aprovação em vez de queimar
   iterações. Ferramenta pendente suspendia o agente em nada: o `pending` voltava
   como resultado, o modelo lia como resposta do comando, e cada tentativa

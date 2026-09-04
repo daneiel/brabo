@@ -91,6 +91,9 @@ describe('ProjectRagTab', () => {
   it('caminho feliz: busca um termo e mostra o resultado com a citação', async () => {
     const resultado: RagSearchResult = {
       query: 'gate de pr',
+      // A linha de telemetria que a busca deixou (RN-479) — é o que faz os
+      // controles de voto aparecerem no card da citação.
+      searchId: 'b-1',
       vectorAvailable: true,
       hits: [
         {
@@ -123,6 +126,7 @@ describe('ProjectRagTab', () => {
   it('CASO DE FALHA (degradação honesta): vectorAvailable false avisa em vez de fingir busca híbrida completa (RN-233/252)', async () => {
     searchRag.mockResolvedValue({
       query: 'x',
+      searchId: 'b-1',
       vectorAvailable: false,
       vectorUnavailableReason: 'provider fora do ar',
       hits: [],

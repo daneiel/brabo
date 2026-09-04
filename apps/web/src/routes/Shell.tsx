@@ -25,7 +25,6 @@ import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
 import { alternarTema, observarTema, temaAtual, type Tema } from '../lib/tema';
 import { useTranslation } from 'react-i18next';
 import {
-  AutoCollapseContext,
   corDoProjeto,
   gravarAbaAtiva,
   gravarAgentesAbertos,
@@ -48,6 +47,7 @@ import {
   LogoutIcon,
   MoonIcon,
   PlusIcon,
+  ServerIcon,
   SunIcon,
   UserIcon,
 } from '../components/ui/icons';
@@ -162,6 +162,22 @@ function LinkDeConta({ colapsado }: { colapsado: boolean }) {
   return (
     <Link to="/account" className={styles.footerButton} title={rotulo} aria-label={rotulo}>
       <UserIcon size={15} />
+      {!colapsado && <span>{rotulo}</span>}
+    </Link>
+  );
+}
+
+/**
+ * Link para a página global de containers (ADR 0136, RN-495) — mesmo lugar e
+ * mesmo tratamento de `LinkDeConta`: é GLOBAL (cross-projeto), mesmo nível
+ * hierárquico de `/account`, não uma aba dentro de um projeto.
+ */
+function LinkDeContainers({ colapsado }: { colapsado: boolean }) {
+  const { t } = useTranslation();
+  const rotulo = t('sidebar.containers');
+  return (
+    <Link to="/containers" className={styles.footerButton} title={rotulo} aria-label={rotulo}>
+      <ServerIcon size={15} />
       {!colapsado && <span>{rotulo}</span>}
     </Link>
   );
@@ -365,10 +381,10 @@ export function Shell() {
   const email = emailDaSessao();
 
   // --- Colapso (RN-195) ---------------------------------------------------
+  // Só o colapso MANUAL desde o ADR 0126 — o sinal automático da aba de
+  // Código (`autoColapsado`, RN-201) saiu junto com `AutoCollapseContext`.
   const [colapsadoManual, setColapsadoManual] = useState(lerColapsado);
-  const [autoColapsado, setAutoColapsado] = useState(false);
-  const colapsado = colapsadoManual || autoColapsado;
-  const autoCollapseValue = useMemo(() => ({ registrar: setAutoColapsado }), []);
+  const colapsado = colapsadoManual;
 
   function alternarColapso() {
     setColapsadoManual((atual) => {
@@ -634,30 +650,21 @@ export function Shell() {
 
         <div className={styles.footer}>
           <BotaoDeTema colapsado={colapsado} />
+          <LinkDeContainers colapsado={colapsado} />
           <LinkDeConta colapsado={colapsado} />
           <button
             type="button"
             className={styles.footerButton}
             aria-expanded={!colapsado}
-            // Desabilitado enquanto o AUTO-colapso está ativo (RN-201): sem
-            // isto, clicar aqui gravaria `colapsadoManual = true` mesmo sem
-            // efeito visível (o OR com `autoColapsado` já mostra recolhida) —
-            // e ao sair da aba de Código o estado voltaria COLAPSADO em vez
-            // do que o usuário tinha antes, quebrando a garantia da RN-201.
-            disabled={autoColapsado}
             title={
-              autoColapsado
-                ? t('sidebar.collapseButton.autoCollapsed')
-                : colapsado
-                  ? t('sidebar.collapseButton.expand')
-                  : t('sidebar.collapseButton.collapse')
+              colapsado
+                ? t('sidebar.collapseButton.expand')
+                : t('sidebar.collapseButton.collapse')
             }
             aria-label={
-              autoColapsado
-                ? t('sidebar.collapseButton.autoCollapsed')
-                : colapsado
-                  ? t('sidebar.collapseButton.expand')
-                  : t('sidebar.collapseButton.collapse')
+              colapsado
+                ? t('sidebar.collapseButton.expand')
+                : t('sidebar.collapseButton.collapse')
             }
             onClick={alternarColapso}
           >
@@ -690,9 +697,7 @@ export function Shell() {
       </aside>
 
       <main className={styles.main}>
-        <AutoCollapseContext.Provider value={autoCollapseValue}>
-          <Outlet />
-        </AutoCollapseContext.Provider>
+        <Outlet />
       </main>
 
       {wizardOpen && workspace && (

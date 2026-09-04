@@ -95,6 +95,8 @@ camada_decisao_tecnica:
       - { artefato: module_map, destino: [dev-lead, area-dev] }     # RN-159
       - { artefato: artifact.project_image, destino: aba-code }     # RN-105
       - { artefato: artifact.c4_diagram, destino: visao-geral }     # RN-149
+      - { artefato: artifact.module_routing, destino: area-infra,
+          nota: "candidata; quem elege é a Infra, PR à parte" }     # RN-487
       - { artefato: handoff-duplo, destino: [dev-lead, area-infra],
           pre_condicao: RN-160 } # "Confirmar arquitetura pronta" exige história promovida
       - { artefato: nfrs-mensuraveis, destino: [dev-lead, qa-estrategia,
@@ -235,7 +237,10 @@ camada_plataforma:
     status: active
     estrutura: infra-lead + infra-workflows (CI por provider, ADR 0039)
     entradas: [{ artefato: handoff, origem: arquiteto },
-               { artefato: threat-model, origem: appsec, status: proposto }]
+               { artefato: threat-model, origem: appsec, status: proposto },
+               { artefato: artifact.module_routing, origem: arquiteto,
+                 status: proposto,
+                 nota: "roteamento existe (ADR 0131); elege-e-propõe é PR à parte" }]
     saidas: [{ artefato: ci-workflows, destino: repositorio },
              { artefato: proposta-de-infra, destino: usuario },
              { artefato: pipeline-verde, destino: platform, status: planned }]

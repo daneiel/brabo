@@ -145,7 +145,7 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "docs/reference/api/git-controller-provision",
-          label: "Creates the repository and triggers the Gitflow bootstrap",
+          label: "Creates the repository and runs the Gitflow bootstrap",
           className: "api-method post",
         },
         {
@@ -214,6 +214,12 @@ const sidebar: SidebarsConfig = {
           label: "Exposes metrics in Prometheus exposition format",
           className: "api-method get",
         },
+        {
+          type: "doc",
+          id: "docs/reference/api/runner-releases-controller-binary",
+          label: "Baixa o binário standalone do runner local pra plataforma pedida",
+          className: "api-method get",
+        },
       ],
     },
     {
@@ -258,6 +264,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-projects-controller-container-exec",
+          label: "Runs a terminal command INSIDE the project real container (RN-492)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-containers-controller-container-spec",
+          label: "What the broker needs to compose the container spec itself",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-projects-controller-git-remote",
           label: "The project's working remote, to fetch and push",
           className: "api-method get",
@@ -272,6 +290,12 @@ const sidebar: SidebarsConfig = {
           type: "doc",
           id: "docs/reference/api/internal-projects-controller-confirm-workspace-verification",
           label: "The runner confirms the path of a 'runner' project (RN-423)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/internal-rag-controller-votar",
+          label: "The agent's vote on one retrieved chunk (RN-480)",
           className: "api-method post",
         },
         {
@@ -396,6 +420,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-sessions-controller-module-routing",
+          label: "Routes each module of the current module_map to a candidate image",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-sessions-controller-pending-work",
           label: "Does the session have pending work that blocks closing it?",
           className: "api-method get",
@@ -511,7 +541,7 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "docs/reference/api/projects-controller-list-members",
-          label: "Lists the project's members with their effective role",
+          label: "Lists the project's members",
           className: "api-method get",
         },
         {
@@ -537,6 +567,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/projects-controller-set-permissions",
           label: "Rewrites the project's permissions.json",
           className: "api-method put",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/containers-overview-controller-list",
+          label: "Lists the container of every project in the workspace that already has one",
+          className: "api-method get",
         },
       ],
     },
@@ -774,6 +810,30 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/hugging-face-models-controller-search",
+          label: "Searches GGUF models on the Hugging Face Hub",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/hugging-face-models-controller-create-pull-request",
+          label: "Creates a PENDING pull request — nothing downloads yet",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/hugging-face-models-controller-get-status",
+          label: "Status of a pull request, for the frontend to poll",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/hugging-face-models-controller-confirm",
+          label: "The second confirmation — actually runs the pull",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/model-bindings-controller-get-workspace-binding",
           label: "Reads the workspace model binding",
           className: "api-method get",
@@ -1002,6 +1062,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/runner-device-keys-controller-register-device-key",
+          label: "Registra a chave pública de um dispositivo do runner local",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/runner-device-keys-controller-revoke-device-key",
+          label: "Revoga uma chave de dispositivo própria",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/runner-tickets-controller-runner-ticket",
           label: "Emite um ticket de uso único para o runner local conectar",
           className: "api-method post",
@@ -1023,6 +1095,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/rag-controller-obter-cobertura",
           label: "Index coverage: indexed files/sessions against the real total",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/rag-controller-votar",
+          label: "Judges one hit of one search as useful or irrelevant (RN-480)",
+          className: "api-method post",
         },
         {
           type: "doc",

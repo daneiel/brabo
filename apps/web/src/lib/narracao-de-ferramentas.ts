@@ -31,7 +31,7 @@ import i18n from './i18n';
 const NS = 'toolNarration';
 
 /**
- * As 19 ferramentas dos seis agentes conversacionais (Criativo, PO,
+ * As 20 ferramentas dos seis agentes conversacionais (Criativo, PO,
  * Arquiteto, Dev Lead, UX Designer, Staff) que têm frase própria em
  * `toolNarration.json`. `confirm_readiness`/`confirm_architecture` NÃO
  * entram: são rota HTTP/`GenServer.call` disparada por clique do usuário,
@@ -51,6 +51,7 @@ export const FERRAMENTAS_CONHECIDAS = [
   'assign_story_modules',
   'choose_project_image',
   'create_c4_diagram',
+  'route_modules_to_infra',
   'propose_adr',
   'emit_insight',
   'propose_execution_plan',

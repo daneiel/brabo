@@ -14,6 +14,9 @@ import { ResolveEffectiveRoleUseCase } from '../iam/resolve-effective-role.use-c
 import { ExecuteTerminalActionUseCase } from './execute-terminal-action.use-case';
 import { ExecuteGitActionUseCase } from './execute-git-action.use-case';
 import { ExecuteInfraPrUseCase } from './execute-infra-pr.use-case';
+import { ExecuteContainerStartUseCase } from './execute-container-start.use-case';
+import { ExecuteContainerStopUseCase } from './execute-container-stop.use-case';
+import { ObterCicloDeVidaDoContainerUseCase } from '../containers/obter-ciclo-de-vida-do-container.use-case';
 import {
   decide,
   ACTION_TYPES,
@@ -52,7 +55,10 @@ export class ProposeActionUseCase {
     private readonly executeTerminalAction: ExecuteTerminalActionUseCase,
     private readonly executeGitAction: ExecuteGitActionUseCase,
     private readonly executeInfraPr: ExecuteInfraPrUseCase,
+    private readonly executeContainerStart: ExecuteContainerStartUseCase,
+    private readonly executeContainerStop: ExecuteContainerStopUseCase,
     private readonly appendSessionEvent: AppendSessionEventUseCase,
+    private readonly obterCicloDeVidaDoContainer: ObterCicloDeVidaDoContainerUseCase,
   ) {}
 
   @Traced('application')
@@ -71,12 +77,27 @@ export class ProposeActionUseCase {
 
     // Contexto todo buscado ANTES de chamar decide() — a função em si é
     // pura (ver domain/actions/decide.ts), zero IO.
-    const [effectiveRole, autonomyMode, permissionsFile] = await Promise.all([
+    //
+    // `containerExecutionActive` (ADR 0134/RN-492) só consulta o ciclo de
+    // vida do container quando a pergunta pode fazer diferença — terminal
+    // num projeto `container` — poupando a query em todo o resto (git_push,
+    // container_start, projeto `mounted`/`runner`, etc.).
+    const [
+      effectiveRole,
+      autonomyMode,
+      permissionsFile,
+      containerExecutionActive,
+    ] = await Promise.all([
       this.resolveEffectiveRole.forProject(session.createdBy, projectId),
       input.actor.kind === 'agent'
         ? this.agentAutonomy.findMode(projectId, input.actor.id, actionType)
         : Promise.resolve(null as PermissionPolicy | null),
       this.permissionsFileStore.read(project),
+      actionType === 'terminal' && project.executionMode === 'container'
+        ? this.obterCicloDeVidaDoContainer
+            .execute(projectId)
+            .then((ciclo) => ciclo?.status === 'running')
+        : Promise.resolve(false),
     ]);
 
     const command =
@@ -104,6 +125,7 @@ export class ProposeActionUseCase {
         // desde o ADR 0072: pasta gerenciada no `container`, a pasta do usuário
         // no `local` (RN-169).
         projectScopeRoot: projectScopeRoot(project),
+        containerExecutionActive,
       },
     );
 
@@ -169,6 +191,28 @@ export class ProposeActionUseCase {
 
     if (status === 'auto_approved' && actionType === 'open_infra_pr') {
       return this.executeInfraPr.execute(projectId, sessionId, action);
+    }
+
+    // `container_start` nunca é semeado para auto-aprovação
+    // (`INFRA_AUTONOMY_SEEDS`, accept-handoff.use-case.ts) — mas um
+    // `maintainer` PODE configurar `permissions.json` para auto-aprovar
+    // mesmo assim, e sem este branch a ação nasceria `auto_approved` e nunca
+    // chamaria o broker: mesma lição do comentário de `parallelize` em
+    // `approve-action.use-case.ts` — "sem isto a ação nascia, era aprovada —
+    // e nada subia. Pior que não ter a feature".
+    if (status === 'auto_approved' && actionType === 'container_start') {
+      return this.executeContainerStart.execute(projectId, sessionId, action);
+    }
+
+    // `container_stop` nunca é semeado (mesma régua de `container_start`),
+    // mas PODE ser configurado em `permissions.json` — sem este branch a
+    // ação nasceria `auto_approved` e nunca pararia nada de verdade.
+    // `container_remove` NÃO precisa do branch gêmeo: o teto absoluto de
+    // `decide.ts` garante que ele nunca resolve `auto_approve`, então este
+    // `status === 'auto_approved'` nunca é `true` para ele — um branch aqui
+    // seria código morto que a suíte não teria como exercitar.
+    if (status === 'auto_approved' && actionType === 'container_stop') {
+      return this.executeContainerStop.execute(projectId, sessionId, action);
     }
 
     return action;

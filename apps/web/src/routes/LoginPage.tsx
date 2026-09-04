@@ -4,6 +4,7 @@ import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { GitHubIcon, GitLabIcon } from '../components/ui/icons';
+import { SinaisDoAmbiente } from '../components/SinaisDoAmbiente';
 import { runtimeConfig } from '../lib/runtime-config';
 import { AuthLayout } from './AuthLayout';
 import styles from './AuthLayout.module.css';
@@ -55,6 +56,20 @@ interface LoginPageProps {
  * individualmente malformados, e a api não diz qual dos dois errou. Marcar os
  * dois como inválidos afirmaria mais do que se sabe. O erro é do formulário, e é
  * onde ele aparece.
+ *
+ * ## Duas colunas: identidade à esquerda, formulário à direita
+ *
+ * O login é a ÚNICA das quatro telas de auth que entrega `colunaDeIdentidade`
+ * — as outras três (registro, esqueci-senha, definir-senha) continuam na
+ * coluna única. É deliberado: elas são passagens de um fluxo já iniciado, e
+ * quem chega nelas já sabe onde está. O login é a primeira tela do produto, e
+ * é a única que precisa dizer o que o produto é antes de pedir credencial.
+ *
+ * O que a coluna mostra é só o que é verdade SEM identidade — `SinaisDoAmbiente`
+ * explica por que runner e modelos locais não cabem aqui. E o formulário não
+ * depende dela em nada: a coluna é irmã do card, com estado próprio, então
+ * uma api fora do ar muda uma linha de texto ali e não atrasa nem esconde o
+ * campo de e-mail.
  */
 export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
   const { t } = useTranslation('auth');
@@ -92,6 +107,12 @@ export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
       titulo={t('loginPage.title')}
       subtitulo={t('loginPage.subtitle')}
       irPara={irPara}
+      colunaDeIdentidade={
+        <>
+          <p className={styles.pitch}>{t('loginPage.identity.pitch')}</p>
+          <SinaisDoAmbiente />
+        </>
+      }
       rodapeDoCartao={
         <>
           {t('loginPage.footer.noAccessPrompt')}{' '}

@@ -148,3 +148,40 @@ describe('contraste — regressão dos pares já documentados (não deste task, 
     expect(contraste(ESCURO.accentHover, ESCURO.surface1)).toBeGreaterThanOrEqual(AA_TEXTO);
   });
 });
+
+/**
+ * O bloco de estado de ambiente (`components/SinaisDoAmbiente.module.css`) é o
+ * primeiro componente do repositório que serve os DOIS fundos: `--surface-0`
+ * no login e `--surface-1` na coluna lateral da Visão geral. Como ele não sabe
+ * onde caiu, ele não pode escolher a cor do texto por fundo — e o par que
+ * reprova (`--text-muted` sobre `--surface-1` no escuro) é o mesmo que o
+ * `describe` acima já documentava.
+ *
+ * Os dois casos abaixo travam a escolha que saiu daí: TEXTO em
+ * `--text-secondary`, cor de estado só na bolinha.
+ */
+describe('contraste — estado de ambiente, que serve --surface-0 E --surface-1', () => {
+  it('o texto do bloco passa AA nos dois fundos e nos dois temas', () => {
+    for (const tema of [ESCURO, CLARO]) {
+      for (const fundo of [tema.surface0, tema.surface1]) {
+        expect(contraste(tema.textSecondary, fundo)).toBeGreaterThanOrEqual(AA_TEXTO);
+        expect(contraste(tema.textPrimary, fundo)).toBeGreaterThanOrEqual(AA_TEXTO);
+      }
+    }
+  });
+
+  it('as bolinhas passam o piso de componente gráfico — e é por isso que a PALAVRA do estado não é colorida', () => {
+    // `--danger` sobre `--surface-1` no escuro dá 3,88:1: serve para um ponto
+    // de 8px (WCAG 1.4.11, piso de 3:1) e NÃO serve para "sem resposta". Se um
+    // dia alguém colorir o texto do estado com o mesmo token, é aqui que a
+    // conta aparece.
+    for (const tema of [ESCURO, CLARO]) {
+      for (const fundo of [tema.surface0, tema.surface1]) {
+        expect(contraste(tema.success, fundo)).toBeGreaterThanOrEqual(AA_GRANDE_OU_UI);
+        expect(contraste(tema.danger, fundo)).toBeGreaterThanOrEqual(AA_GRANDE_OU_UI);
+        expect(contraste(tema.textMuted, fundo)).toBeGreaterThanOrEqual(AA_GRANDE_OU_UI);
+      }
+    }
+    expect(contraste(ESCURO.danger, ESCURO.surface1)).toBeLessThan(AA_TEXTO);
+  });
+});

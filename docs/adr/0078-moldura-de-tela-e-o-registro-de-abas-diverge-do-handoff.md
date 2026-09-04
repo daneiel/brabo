@@ -2,7 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-08-15
-- **Prior context:** [RN-048](../business-rules.md#rn-048)
+- **Prior context:** [RN-048](../business-rules/custo.md#rn-048)
   (pending story promotion), [RN-104](../business-rules.md#rn-104) (Chat and
   Creative as places, with the `sessions` key), [RN-121](../business-rules.md#rn-121)
   (Executors tab, dev agent and QA kept out of the mixed "agent team"),

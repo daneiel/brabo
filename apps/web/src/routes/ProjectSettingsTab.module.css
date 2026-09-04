@@ -7,6 +7,22 @@
   margin-bottom: 44px;
 }
 
+/*
+ * Toda seção é alvo de âncora do sumário (`settings/SumarioDeConfiguracoes`).
+ *
+ * `scroll-margin-top` porque `scrollIntoView({block:'start'})` encosta o topo
+ * da seção na borda da área de rolagem, e o título nasceria colado nela; 12px
+ * é o respiro que faz a seção parecer POSICIONADA e não empurrada.
+ *
+ * A seção recebe foco programático quando o sumário navega (`tabIndex={-1}`).
+ * Nenhum navegador desenha `:focus-visible` para foco programático, então não
+ * há anel a esconder — e por isso mesmo NÃO há `outline: none` aqui: apagar o
+ * anel cegamente tiraria o de quem chegasse por teclado.
+ */
+.ancora {
+  scroll-margin-top: 12px;
+}
+
 /* Título e legenda dividem a MESMA linha de base, como no desenho. */
 .sectionHead {
   display: flex;
@@ -130,6 +146,10 @@
 
 /* Fallback e estimativa: mono, como toda coluna de dado do desenho. */
 .fallback {
+  /* `block` não é cosmético: `text-overflow` só age em caixa de bloco, e num
+     `span` inline as três linhas abaixo eram decorativas — "Qwen2.5 Coder 7B
+     (local)" transbordava a célula e escrevia POR CIMA da coluna vizinha. */
+  display: block;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-secondary);
@@ -282,9 +302,22 @@
   transition: color 0.1s, border-color 0.1s;
 }
 
-.remove:hover {
+/* `:not(:disabled)` porque `:hover` CASA em elemento desabilitado (o que o
+   browser não despacha ali são os EVENTOS, não o estado de CSS) — sem isto o
+   botão inerte acendia em VERMELHO ao passar o mouse, prometendo uma remoção
+   que não acontece. Mesma correção que `.voltarHerdar` levou na #443. */
+.remove:not(:disabled):hover {
   color: var(--danger);
   border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+}
+
+/* Sem `maintainer` a ação some, a LINHA fica (ADR 0064). Mesmo par de
+   propriedades de `.voltarHerdar:disabled` e do `.trigger:disabled` do
+   `ModelPicker`: controle apagado pelo mesmo motivo não pode parecer apagado
+   por motivos diferentes de uma seção para a outra. */
+.remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /*
@@ -374,6 +407,60 @@
   align-items: center;
 }
 
+/*
+ * A cascata como CADEIA (`settings/cascata.tsx`): `workspace › projeto › área ›
+ * agente`, com o nível vigente em `Badge` e os outros em texto mono. Quebra em
+ * mais de uma linha em vez de espremer — a coluna Origem é estreita e um
+ * `nowrap` aqui truncaria justamente o nó que importa.
+ */
+.cadeia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  min-width: 0;
+}
+
+.cadeiaSeta {
+  color: color-mix(in srgb, var(--text-muted) 60%, transparent);
+}
+
+/* Nível SEM valor próprio. A cor sai do token do nível (`.nivelWorkspace` e
+   irmãs) e só a presença é atenuada — nunca um hex novo para "a versão clara
+   de" (design/COMPONENTS.md). O estado NÃO depende só disto: o `title` diz o
+   polo e o nó vigente é o único em `Badge`. 0.6 é o valor em que o nó continua
+   legível no tema CLARO, onde a mesma cor tem menos contraste com o fundo. */
+.nivelVazio {
+  opacity: 0.6;
+}
+
+/* Nível que a cascata DESCARTOU (Fase 9c). Riscado porque foi considerado e
+   recusado, o que é diferente de nunca ter existido. */
+.nivelPulado {
+  color: var(--warning);
+  text-decoration: line-through;
+}
+
+/* Vazio que TEM texto próprio: as células que mostravam `—` e diziam coisas
+   diferentes com o mesmo traço. */
+.vazioComTexto {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* O vazio da coluna EST. MÊS segue o alinhamento da coluna, não o do texto:
+   ela é de número e alinha à direita, e um texto à esquerda ali criaria uma
+   segunda margem no meio da tabela. */
+.estimativaVazia {
+  composes: vazioComTexto;
+  text-align: right;
+}
+
 /* "voltar a herdar" (RN-102) — link discreto, não botão cheio: é uma ação
    secundária que só aparece quando o agente DIVERGIU, e não deve competir
    visualmente com o ModelPicker da linha. */
@@ -388,8 +475,21 @@
   cursor: pointer;
 }
 
-.voltarHerdar:hover {
+/* `:not(:disabled)` porque `:hover` CASA em elemento desabilitado (o que o
+   browser não despacha ali são os EVENTOS, não o estado de CSS) — sem isto o
+   botão inerte acendia ao passar o mouse, prometendo um clique que não existe. */
+.voltarHerdar:not(:disabled):hover {
   color: var(--text-secondary);
+}
+
+/* Sem `developer` a ação some, o ESTADO fica (RN-102): o botão continua na
+   linha, dizendo que este agente divergiu, e só não é clicável. Mesmo par de
+   propriedades do `.trigger:disabled` do `ModelPicker`, que é o outro controle
+   desta linha — dois controles vizinhos apagados pelo mesmo motivo não podem
+   parecer apagados por motivos diferentes. */
+.voltarHerdar:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /*
@@ -441,10 +541,49 @@
   width: 260px;
 }
 
+/* "Valor herdado" — a marca única dos dois polos (`settings/heranca.tsx`).
+   O chip é o `Badge` do design system (mono 10px, `square`), então não há cor
+   nem raio novos aqui: esta regra só resolve o ALINHAMENTO do chip com o
+   detalhe ao lado, e a quebra em tela estreita. O detalhe herda tamanho e cor
+   de `.ajusteHint`, que é sempre o container — repetir os valores criaria uma
+   segunda verdade sobre o mesmo texto. */
+.heranca {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.herancaDetalhe {
+  text-wrap: pretty;
+}
+
 /* Campo NUMÉRICO: 150px no desenho, e um `<input type=number>` de 260px é uma
    caixa quase vazia ao lado de um número de um dígito. */
 .ajusteNumero {
   width: 150px;
+}
+
+/* O rodapé de uma seção que salva por SEÇÃO (`settings/secao-salvavel.tsx`):
+   o botão e, ao lado dele, a contagem do que está pendente. Fica FORA dos
+   `.ajusteCard` de propósito — dentro de um card ele pareceria agir sobre
+   aquela linha, que é exatamente o que ele deixou de fazer. O `margin-top`
+   maior que o `margin-bottom` do card separa o rodapé da pilha sem precisar de
+   régua. */
+.acoesDaSecao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+/* A marca de "não salvo" não traz cor nem raio próprios: o chip é o `Badge` do
+   design system, e esta regra só impede que ele estique com o `align-items`
+   do flex. */
+.naoSalvo {
+  display: inline-flex;
+  align-items: center;
 }
 
 /* --- Anamnese (Fase 4b) --- */
@@ -739,4 +878,32 @@
   gap: 8px;
   border-top: 1px solid var(--border);
   padding-top: 10px;
+}
+
+/* A barra de "aplicar um modelo a todos os agentes". Mesma moldura do
+   `.custoCard` logo acima dela — as duas são faixas de contexto sobre a tabela
+   inteira —, com classes próprias porque o assunto é outro: reaproveitar o
+   nome `custo*` para uma barra de ação faria a próxima mudança de uma delas
+   mexer calada na outra. */
+.loteCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.loteTexto {
+  font-size: 13px;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 220px;
+}
+
+.loteDetalhe {
+  color: var(--text-muted);
 }

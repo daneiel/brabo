@@ -131,5 +131,5 @@ vencendo `allow` e os `BUILTIN_DENY_PATTERNS` seguem ativos.
 
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — a máquina de
   estados e o reagendamento por evento que este ADR estende
-- [RN-047](../business-rules.md#rn-047) — circuit breaker do dev agent
+- [RN-047](../business-rules/custo.md#rn-047) — circuit breaker do dev agent
 - Execução real: projeto `saudacao-local`, task `cd652d85`, 2026-08-05

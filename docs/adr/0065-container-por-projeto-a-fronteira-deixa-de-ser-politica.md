@@ -111,7 +111,7 @@ missing.
 resource simply doesn't exist yet in this state. And the check lives in the
 **same funnel** as the path containment (`alvo`), not in the four routes,
 for the reason stated in
-[RN-092](../business-rules.md#rn-092): a check duplicated across four
+[RN-092](../business-rules/custo.md#rn-092): a check duplicated across four
 callers is a check that one day diverges in one of them.
 
 ### 3. The boundary: inside is free, outside is human
@@ -259,8 +259,8 @@ enough for the second door to stay permanently open.
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — the worktree
   is per AGENT, not per task; it's the one that will live inside the
   container.
-- [RN-014](../business-rules.md#rn-014), [RN-092](../business-rules.md#rn-092),
-  [RN-105](../business-rules.md#rn-105), [RN-106](../business-rules.md#rn-106).
+- [RN-014](../business-rules.md#rn-014), [RN-092](../business-rules/custo.md#rn-092),
+  [RN-105](../business-rules/autenticacao.md#rn-105), [RN-106](../business-rules/autenticacao.md#rn-106).
 - `docs/explanation/achados-execucao-real.md` — findings Z, AD and AE.
 - `apps/api/src/domain/containers/project-container.ts`,
   `apps/api/src/domain/actions/external-effect.ts`,

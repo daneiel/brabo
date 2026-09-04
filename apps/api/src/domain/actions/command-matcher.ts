@@ -24,6 +24,9 @@ export const ACTION_TYPE_LABELS: Record<ActionType, string> = {
   raise_max_parallel: 'RaiseMaxParallel',
   propose_execution_plan: 'ProposeExecutionPlan',
   assess_implementability: 'AssessImplementability',
+  container_start: 'ContainerStart',
+  container_stop: 'ContainerStop',
+  container_remove: 'ContainerRemove',
 };
 
 /**

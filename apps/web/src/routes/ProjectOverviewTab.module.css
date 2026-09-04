@@ -29,6 +29,18 @@
   padding: 16px 18px;
 }
 
+/*
+ * Estado de ambiente, no topo da coluna lateral. Divisória embaixo e não um
+ * card: ele é subordinado ao painel, não uma seção irmã de "Atividade" — e a
+ * mesma divisória é o que dá o respiro sem somar mais uma borda arredondada
+ * numa coluna que já tem várias.
+ */
+.ambiente {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
 .sectionHeader {
   font-family: var(--font-heading);
   font-weight: 600;

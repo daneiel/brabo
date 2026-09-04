@@ -2,6 +2,18 @@
 // mantidos aqui em vez de importados diretamente (apps/web não referencia
 // código server-side; packages/shared cobre só os tipos genuinamente
 // compartilhados hoje, como HealthStatus/GitProviderName).
+//
+// `ActionType`, abaixo, NÃO é mais cópia à mão: sai de
+// `./api-types.generated.ts`, gerado por `pnpm --filter web run openapi:types`
+// a partir de `docs/reference/openapi.json` (por sua vez gerado de
+// `apps/api` via `pnpm docs:generate` — ver docs/.docmap.yml, regra
+// `referencia-openapi`). É a correção estrutural para a divergência que já
+// aconteceu duas vezes em produção (os três tipos do bootstrap de Gitflow, e
+// depois `parallelize`/`raise_max_parallel`) — ver docs/architecture.md e
+// docs/adr/0116-tipos-do-web-gerados-do-openapi.md. O resto deste arquivo
+// segue manual: não é razoável nem seguro regerar as ~1600 linhas de uma vez
+// sem entender consumidor a consumidor.
+import type { components } from './api-types.generated';
 
 export type Role = 'owner' | 'maintainer' | 'developer' | 'viewer';
 
@@ -295,43 +307,29 @@ export interface Page<T> {
   nextCursor: number | null;
 }
 
-// Os 15 do backend (`apps/api/src/domain/actions/decide.ts`), na mesma ordem.
+// Os 17 do backend (`ACTION_TYPES` em `apps/api/src/domain/actions/decide.ts`),
+// via o schema OpenAPI de `ProposedActionResponseDto.actionType` — é o DTO
+// que carrega o enum completo (`propose-action.dto.ts` e
+// `create-action-internal.dto.ts` também o declaram, mas são a mesma união).
 //
-// Esta união já foi um subconjunto — só os que a UI renderiza de forma
-// dedicada —, com a nota de que "os demais caem no fallback genérico do
-// ApprovalCard". Esse fallback não existia: o `ACTION_ICON[actionType]` do
-// ApprovalCard devolvia `undefined` e derrubava a tela inteira da sessão.
-// Como o bootstrap de Gitflow propõe `git_repo_create`, `git_branch_create` e
-// `git_branch_protect`, TODO projeto criado num provider ficava com a sessão
-// impossível de abrir — e o tipo estreito impedia o compilador de ver isso.
+// Esta união já foi cópia manual, e cópia manual já divergiu duas vezes em
+// produção sem ninguém notar: primeiro os três tipos do bootstrap de Gitflow
+// (`git_repo_create`/`git_branch_create`/`git_branch_protect`), que faziam
+// TODO projeto novo ficar com a sessão impossível de abrir — o
+// `ACTION_ICON[actionType]` do ApprovalCard devolvia `undefined` e derrubava a
+// tela inteira —, depois `parallelize`/`raise_max_parallel` da FASE 14d. As
+// duas vezes o compilador não pegou nada, porque `apps/api` não é dependência
+// de `apps/web`: a lista do backend era um arquivo que o web não importava.
 //
-// Com a união completa os mapas do ApprovalCard voltam a ser exaustivos, e é o
-// compilador que cobra a entrada de qualquer tipo novo.
-//
-// E a união VOLTOU a ficar defasada: `parallelize` e `raise_max_parallel`
-// entraram no backend com a FASE 14d e ninguém as trouxe para cá, porque o
-// compilador só cobra o que ele consegue ver — a lista do backend é um arquivo
-// que o web não importa. Por isso o teste da FASE 19
-// (`aprovacoes.test.ts`) lê `ACTION_TYPES` do decide.ts e reprova quando os
-// dois lados divergem, em vez de confiar numa lista escrita à mão.
+// Agora É importado — via o gerado, nunca digitado à mão de novo — e os mapas
+// exaustivos do ApprovalCard (`Record<ActionType, ...>` em
+// `lib/aprovacoes.ts`) passam a ser cobrados pelo PRÓPRIO compilador quando um
+// tipo novo aparece no OpenAPI. `aprovacoes.test.ts` (FASE 19) continua
+// existindo: ele não cobre mais só a EXISTÊNCIA da entrada (isso o compilador
+// já cobre), mas o CONTEÚDO — toda entrada tem frase em português, não vazia,
+// terminada em ponto.
 export type ActionType =
-  | 'terminal'
-  | 'git_commit'
-  | 'git_push'
-  | 'pr_open'
-  | 'spend'
-  | 'git_repo_create'
-  | 'git_branch_create'
-  | 'git_branch_protect'
-  | 'write_file'
-  | 'open_adr_pr'
-  | 'git_merge'
-  | 'open_infra_pr'
-  | 'instruction_patch'
-  | 'parallelize'
-  | 'raise_max_parallel'
-  | 'propose_execution_plan'
-  | 'assess_implementability';
+  components['schemas']['ProposedActionResponseDto']['actionType'];
 
 export type ActionStatus =
   | 'pending'
@@ -567,6 +565,18 @@ export interface PersonalAccessTokenIssued extends PersonalAccessTokenSummary {
 export interface PersonalAccessTokenAdminSummary extends PersonalAccessTokenSummary {
   userId: string;
   userEmail: string;
+}
+
+/**
+ * Chave de dispositivo do runner local (`lib/runner-bootstrap.ts`) — par
+ * Ed25519 gerado no NAVEGADOR do usuário; só a metade PÚBLICA chega até
+ * aqui, nunca a privada. Substitui o PAT digitado à mão no fluxo de
+ * onboarding "Configurar pasta automaticamente".
+ */
+export interface RunnerDeviceKeySummary {
+  id: string;
+  name: string;
+  createdAt: string;
 }
 
 export type BudgetPolicy = 'block' | 'allow';
@@ -1204,6 +1214,66 @@ export interface CicloDeVidaDoContainer {
   statusChangedAt: string;
 }
 
+/** O que o daemon reportou, sem tradução nem colapso — ADR 0130. */
+export type EstadoObservadoDeContainer =
+  | 'created'
+  | 'running'
+  | 'paused'
+  | 'restarting'
+  | 'removing'
+  | 'exited'
+  | 'dead';
+
+export interface ObservacaoDeContainer {
+  containerId: string;
+  nome: string;
+  estado: EstadoObservadoDeContainer;
+  imagem: string;
+  iniciadoEm: string | null;
+}
+
+export type MotivoDeNaoObservacao =
+  | 'broker-nao-configurado'
+  | 'broker-sem-resposta'
+  | 'broker-recusou';
+
+/**
+ * Por que uma linha da página global de containers não foi perguntada ao
+ * broker NESTE carregamento — nunca confundido com `MotivoDeNaoObservacao`
+ * (esse é sobre o broker ter sido perguntado e ter falhado; este é sobre a
+ * linha nem ter entrado na pergunta). Ver ADR 0136/RN-495.
+ */
+export type MotivoDeNaoVerificacao =
+  | 'fora_do_escopo_da_verificacao'
+  | 'teto_de_verificacoes_atingido';
+
+/**
+ * Uma linha da página global `/containers` (ADR 0136, RN-495) — espelha
+ * `ContainerOverviewItemResponseDto`. `registrado` e `observado` nunca se
+ * fundem (RN-468/486): o segundo é `null` tanto quando não há container
+ * quanto quando não deu para perguntar — `naoObservado`/`naoVerificado`
+ * distinguem os dois motivos de ausência.
+ */
+export interface ContainerOverviewItem {
+  projectId: string;
+  projectName: string;
+  projectSlug: string;
+  status: ContainerLifecycleStatus;
+  imageVersion: number;
+  /** A imagem CONGELADA em `imageVersion` — `null` quando não foi possível resolver. */
+  imagem: string | null;
+  resources: RecursosDoContainer;
+  failureReason: string | null;
+  createdAt: string;
+  statusChangedAt: string;
+  observado: ObservacaoDeContainer | null;
+  naoObservado: MotivoDeNaoObservacao | null;
+  detalheDaObservacao: string | null;
+  naoVerificado: MotivoDeNaoVerificacao | null;
+  /** A `proposed_action` pendente de `container_start`/`container_stop`/`container_remove` deste projeto, se houver. */
+  acaoPendente: ProposedAction | null;
+}
+
 // --- Aba Code, só leitura (FASE 26) — espelha
 // apps/api/src/application/use-cases/git/read-project-code.use-case.ts +
 // interfaces/http/git/dto/code.response.dto.ts ---
@@ -1447,8 +1517,26 @@ export interface RagSearchHit {
   origin: RagChunkOrigin;
 }
 
+/** O veredito sobre um trecho (RN-480) — dois valores, nunca uma escala. */
+export type RagVerdict = 'util' | 'irrelevante';
+
+export interface RagFeedbackReport {
+  searchId: string;
+  chunkId: string;
+  verdict: RagVerdict;
+  /** A posição (1-based) que o trecho votado tinha NAQUELA busca. */
+  rank: number;
+}
+
 export interface RagSearchResult {
   query: string;
+  /**
+   * A linha de `rag_searches` que esta busca deixou (RN-479) — o id a que um
+   * voto se anexa. `null` quando a telemetria NÃO foi gravada, que não é o
+   * mesmo que "não houve resultado": não há a que anexar voto, e a tela usa
+   * os dois separados para não oferecer um controle que a api recusaria.
+   */
+  searchId: string | null;
   hits: RagSearchHit[];
   /**
    * `false` quando o provider de embedding não respondeu (RN-233) — a busca
@@ -1550,4 +1638,45 @@ export interface AttachLocalFolderReport {
   filesSkipped: number;
   chunksCreated: number;
   embedding: RagIndexEmbeddingReport;
+}
+
+// ---------------------------------------------------------------------------
+// APÊNDICE — Hugging Face Hub → pull para o Ollama. Escrito no FIM do bloco
+// pelo mesmo motivo dos apêndices acima. `GET .../huggingface/models` só
+// declara `official` no allowlist curado — nunca tamanho estimado: o Hub não
+// publica isso na busca, então o cliente NUNCA inventa um palpite.
+// ---------------------------------------------------------------------------
+
+/** Uma linha de `GET /workspaces/:workspaceId/huggingface/models`. */
+export interface HuggingFaceModel {
+  /** `<publisher>/<modelo>`, ex. `meta-llama/Llama-3.1-8B-Instruct-GGUF`. */
+  repoId: string;
+  publisher: string;
+  downloads: number;
+  likes: number;
+  /** `true` quando `publisher` está no allowlist curado. `false` é qualquer reupload de terceiro. */
+  official: boolean;
+}
+
+export type ModelPullStatus =
+  | 'pending_confirmation'
+  | 'confirmed'
+  | 'pulling'
+  | 'active'
+  | 'failed';
+
+/** O pedido de pull — os dois primeiros estados SÃO a segunda confirmação explícita. */
+export interface ModelPullRequest {
+  id: string;
+  workspaceId: string;
+  requestedBy: string;
+  repoId: string;
+  /** `null` quando o Hub não publicou o tamanho — nunca estimado por palpite. */
+  estimatedSizeBytes: number | null;
+  status: ModelPullStatus;
+  confirmedAt: string | null;
+  /** Só em `failed`, prefixado pela origem (infra | modelo | código | política). */
+  failedReason: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

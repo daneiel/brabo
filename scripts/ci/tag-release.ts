@@ -17,6 +17,7 @@
 import type { Permanente } from './pr-police.ts';
 import {
   CicloVazioError,
+  conferirMergeDeEsteira,
   extrairNumerosDePr,
   identificarCaminho,
   lerVersaoFinal,
@@ -77,6 +78,105 @@ async function principal(): Promise<void> {
     emitir('tag', '');
     return;
   }
+
+  // --- esteira sem segundo pai: o alarme que só pode tocar DEPOIS do merge.
+  //
+  // O método de merge é escolhido no clique, então nenhum check de PR alcança
+  // isto — o `promotion-check` no máximo lê a configuração do repositório, e
+  // nem sempre tem permissão. Aqui se olha o fato consumado, e por isso este
+  // é o lugar da verdade.
+  //
+  // Vem ANTES de tudo (só depois da isenção do commit do gate, que é o único
+  // commit de um pai legítimo numa permanente): falhar cedo dá a mensagem
+  // certa em vez de um sintoma três etapas adiante — foi assim que um squash
+  // em `main` aparecia como "âncora inválida", que não ensina nada a quem lê.
+  //
+  // A regra difere por branch e quem decide é `conferirMergeDeEsteira`: em
+  // `qa`/`main` só entra esteira, então um pai é sempre defeito; em `dev`
+  // entra trabalho por squash o tempo todo, então só é defeito quando o PR
+  // veio de uma permanente.
+  // `trazAresta` só importa em `dev`, e responder exige três passos — por isso
+  // fica atrás do `branch === 'dev'`: em `qa`/`main` a regra não depende disto
+  // e gastar três chamadas de rede seria pagar por uma resposta ignorada.
+  const trazAresta = ((): boolean | null => {
+    if (branch !== 'dev' || !repo || paisDoCommit.length >= 2) return null;
+
+    try {
+      // 1. QUAL PR produziu este commit. Filtrar por `merge_commit_sha` é
+      //    obrigatório, não estilo: `commits/{sha}/pulls` devolve TODO PR
+      //    associado ao commit, e como `dev` é o head do PR de promoção
+      //    aberto, todo commit de `dev` vem associado a ELE. Ler `.[0]`
+      //    devolveria "dev" para qualquer squash de PR de trabalho — e a
+      //    regra reprovaria o repositório inteiro.
+      const headSha = execFileSync(
+        'gh',
+        [
+          'api',
+          `repos/${repo}/commits/${sha}/pulls`,
+          '--jq',
+          `.[] | select(.merge_commit_sha == "${sha}") | .head.sha`,
+        ],
+        { encoding: 'utf8' },
+      )
+        .trim()
+        .split('\n')[0];
+
+      if (!headSha) return null;
+
+      // 2. O head do PR era um merge? Se não, não havia aresta a perder.
+      const paisDoHead = execFileSync(
+        'gh',
+        ['api', `repos/${repo}/commits/${headSha}`, '--jq', '.parents[].sha'],
+        { encoding: 'utf8' },
+      )
+        .trim()
+        .split('\n')
+        .filter(Boolean);
+
+      if (paisDoHead.length < 2) return false;
+
+      // 3. A aresta era NOVA? O segundo pai do head já estava na base antes
+      //    deste merge (primeiro pai do commit que entrou)? Se já estava, o
+      //    PR só puxou `dev` para dentro de si — caso comum e benigno, e o
+      //    squash não perde nada. Se não estava, o PR carregava ancestralidade
+      //    que só existia nele.
+      const base = paisDoCommit[0];
+      if (!base) return null;
+
+      try {
+        execFileSync('git', ['merge-base', '--is-ancestor', paisDoHead[1]!, base], {
+          stdio: 'ignore',
+        });
+        return false;
+      } catch (erro) {
+        // 1 = não é ancestral, e aí a aresta era nova mesmo. Qualquer outro
+        // código é ERRO de execução (objeto ausente no clone, por exemplo), e
+        // erro não é resposta.
+        return (erro as { status?: number }).status === 1 ? true : null;
+      }
+    } catch {
+      return null;
+    }
+  })();
+
+  const esteira = conferirMergeDeEsteira({
+    branch,
+    pais: paisDoCommit.length,
+    trazAresta,
+  });
+
+  if (!esteira.ok) {
+    console.error(`[tag-release] ${esteira.motivo}`);
+    console.log(`::error title=tag-release::${esteira.motivo.split('\n')[0]}`);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      appendFileSync(
+        process.env.GITHUB_STEP_SUMMARY,
+        `### tag-release: merge de esteira sem segundo pai\n\n\`\`\`\n${esteira.motivo}\n\`\`\`\n`,
+      );
+    }
+    process.exit(1);
+  }
+  console.log(`[tag-release] esteira: ${esteira.motivo.split('\n')[0]}`);
 
   // --- retropropagação não carimba.
   //
@@ -281,28 +381,6 @@ async function principal(): Promise<void> {
       `${versao} — final do ciclo, ancorada em ${ancora.tagEsperada} (${prs.length} PRs).`,
     );
     return;
-  }
-
-  // --- qa e main só recebem PROMOÇÃO, e promoção é `--no-ff`.
-  //
-  // Esta é a verificação que VALE: o `promotion-check` só consegue olhar a
-  // configuração do repositório, e nem sempre tem permissão para isso. Aqui se
-  // olha o fato consumado — um commit de promoção tem DOIS pais. Se tiver um
-  // só, alguém usou squash e os commits do degrau de baixo foram achatados:
-  // a tag apontaria para um commit que não existe mais lá embaixo.
-  if (branch === 'qa') {
-    if (paisDoCommit.length < 2) {
-      const titulo = `o merge em \`qa\` não é merge commit (${paisDoCommit.length} pai)`;
-      console.error(`[tag-release] ${titulo}`);
-      console.error(
-        '  Promoção precisa de `--no-ff`. Com squash, os commits que vieram de\n' +
-          '  `dev` são achatados num só, e a tag `-dev.N` passa a apontar para um\n' +
-          '  commit que não está mais no histórico de `qa`.\n' +
-          '  Desfaça o merge e refaça com "Create a merge commit".',
-      );
-      console.log(`::error title=tag-release::${titulo}`);
-      process.exit(1);
-    }
   }
 
   // --- dev e qa: o carimbo do estágio.

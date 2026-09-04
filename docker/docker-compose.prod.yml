@@ -78,8 +78,8 @@ services:
       - neo4j_data:/data
       - neo4j_logs:/logs
     ports:
-      - "${NEO4J_BOLT_PORT:-7687}:7687"
-      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "127.0.0.1:${NEO4J_BOLT_PORT:-7687}:7687"
+      - "127.0.0.1:${NEO4J_HTTP_PORT:-7474}:7474"
     healthcheck:
       test: ["CMD-SHELL", "cypher-shell -u ${NEO4J_USER:-neo4j} -p ${NEO4J_PASSWORD:-} 'RETURN 1' || exit 1"]
       interval: 10s
@@ -210,8 +210,18 @@ services:
       # dois Dockerfile.prod.
       GIT_LOCAL_REPOS_ROOT: /data/git-repos
       PROJECT_WORKSPACES_ROOT: /data/project-workspaces
+      # Broker de container (ADR 0130). Vazia é o default e é estado NORMAL:
+      # sem o profile `container-broker` o serviço nem sobe, e quem lê o estado
+      # observado declara "não observado" em vez de herdar o registrado.
+      BROKER_URL: ${BROKER_URL:-}
     ports:
       - "${API_PORT:-3000}:3000"
+    networks:
+      # A api participa de DUAS redes. Declarar `networks` num serviço tira
+      # dele a default implícita — omitir `default` aqui a desligaria do
+      # postgres, do neo4j e do engine.
+      - default
+      - broker
     volumes:
       - git_local_repos:/data/git-repos
       - project_workspaces:/data/project-workspaces
@@ -277,6 +287,59 @@ services:
       migrate-engine:
         condition: service_completed_successfully
 
+  # Broker de container (ADR 0130) — o ÚNICO serviço com `/var/run/docker.sock`
+  # montado, aqui como no compose de desenvolvimento. Não monte esse socket em
+  # nenhum outro.
+  #
+  # Sob `profiles`, pelo mesmo motivo do `llm` abaixo e um a mais: nada o chama
+  # para ESCREVER ainda (quem propõe subir container é o Infra Lead, por
+  # `proposed_action`, e isso é outro PR), então tê-lo de pé por padrão daria
+  # acesso ao Docker do host em troca de nada. `docker/smoke.sh` roda sem
+  # profile e portanto não o levanta — o smoke continua provando as MESMAS
+  # três imagens.
+  #
+  #   docker compose -f docker/docker-compose.prod.yml \
+  #     --profile container-broker up -d broker
+  broker:
+    image: brabo-broker:prod
+    build:
+      context: ..
+      dockerfile: docker/broker/Dockerfile.prod
+    profiles: ["container-broker"]
+    <<: *app-hardening
+    # O CLI do docker escreve arquivo temporário; o resto do rootfs é
+    # read-only, como nos outros três.
+    tmpfs:
+      - /tmp
+    environment:
+      NODE_ENV: production
+      BROKER_PORT: 8090
+      # Sem default de desenvolvimento, mesma regra dos segredos da api
+      # (ADR 0059/RN-114): com NODE_ENV=production o broker RECUSA subir com a
+      # variável vazia, com o literal público do repositório ou com menos de 16
+      # caracteres. A linha fica aqui, vazia, porque omiti-la esconderia que a
+      # variável existe.
+      BRABO_SERVICE_TOKEN: ${BRABO_SERVICE_TOKEN:-}
+      API_URL: ${API_URL:-http://api:3000}
+      # A raiz das pastas de projeto NO HOST. Não tem como derivar do volume
+      # nomeado `project_workspaces` — o caminho que o daemon resolve é o do
+      # host, e um caminho de dentro de um container faria ele montar uma pasta
+      # VAZIA. Sem esta variável, `start` recusa dizendo isso; as outras quatro
+      # operações continuam.
+      PROJECT_WORKSPACES_HOST_ROOT: ${PROJECT_WORKSPACES_HOST_ROOT:-}
+    # SEM `ports:` — a primeira camada da contenção. Só a api o alcança, pela
+    # rede `broker` (`internal: true`), e nada no host precisa dele.
+    networks:
+      - broker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # O gid do grupo `docker` do HOST (`getent group docker | cut -d: -f3`). O
+    # default 999 é o mais comum e está errado em várias distribuições — errar
+    # aqui dá "permission denied" no socket, que `DockerIndisponivelError`
+    # nomeia com a dica do grupo.
+    group_add:
+      - "${DOCKER_GID:-999}"
+
   web:
     image: brabo-web:prod
     build:
@@ -325,7 +388,12 @@ services:
   #   docker compose -f docker/docker-compose.prod.yml --profile llm up -d
   # -------------------------------------------------------------------------
   ollama:
-    image: ollama/ollama:latest
+    # Pin deliberado (mesma tag do docker-compose.yml de dev, de propósito —
+    # dev e prod não podem divergir de versão aqui): `latest` muda sob o pé
+    # sem aviso, e um upgrade silencioso de Ollama já quebrou build antes
+    # (mudança de rota da API). Atualizar é decisão manual — subir o número
+    # aqui, não seguir `latest`.
+    image: ollama/ollama:0.33.1
     profiles: ["llm"]
     entrypoint: ["sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:1b; wait"]
     volumes:
@@ -343,7 +411,10 @@ services:
   # que puxar. Ver docker/ollama/pull-models.sh e o comentário equivalente no
   # docker-compose.yml de dev para o desenho completo.
   ollama-model-loader:
-    image: ollama/ollama:latest
+    # MESMA tag do serviço `ollama` acima, de propósito: os dois falam o
+    # mesmo protocolo HTTP, e divergir a versão entre daemon e CLI é o tipo
+    # de coisa que só aparece em produção.
+    image: ollama/ollama:0.33.1
     profiles: ["llm"]
     depends_on:
       ollama:
@@ -355,6 +426,13 @@ services:
     volumes:
       - ./ollama/pull-models.sh:/pull-models.sh:ro
     restart: "no"
+
+networks:
+  # Rede PRÓPRIA do broker, `internal: true` (ADR 0130): o engine e o web não a
+  # alcançam (não estão nela), e o broker não alcança a internet. Só a api está
+  # dos dois lados. Camada de baixo do token de serviço, nunca substituta dele.
+  broker:
+    internal: true
 
 volumes:
   pgdata:

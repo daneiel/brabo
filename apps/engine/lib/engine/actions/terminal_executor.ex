@@ -27,15 +27,44 @@ defmodule Engine.Actions.TerminalExecutor do
 
   Faltando qualquer uma das duas, o comando é RECUSADO explicitamente — NUNCA
   cai no `System.cmd`/bind-mount de `mounted`, que não existe pra um projeto
-  `runner`. O fallback de container só continua valendo para
-  `container`/`mounted`, que nunca tiveram essa pré-condição.
+  `runner`. O caminho de sempre (`System.cmd` local) só continua valendo, sem
+  checagem nova nenhuma, para `mounted` e para `container` SEM container real
+  de pé (ver seção abaixo).
+
+  ## Execução DENTRO do container real do projeto (`container`, com um
+  ## container REGISTRADO `running` — RN-492, ADR 0134)
+
+  Quando o projeto está em `execution_mode: container` (ADR 0072) e há uma
+  linha `running` em `project_containers` (ADR 0081/0130/0133 —
+  `Engine.Containers.ProjectContainerLifecycle.running?/1`), o comando NÃO
+  roda mais via `System.cmd` no processo do engine: ele atravessa
+  engine -> api -> broker (`ContainerBrokerPort.exec`) e roda DENTRO do
+  container, via `docker exec`. `cwd`, quando presente, é traduzido do
+  caminho de HOST (dentro de `project_workspaces_root`) para dentro de
+  `/work` — o único diretório que o container enxerga.
+
+  `running` REGISTRADO nunca confirma que o container está de pé DE VERDADE
+  agora (RN-486: registrado e observado nunca se fundem). Se ele morreu ou
+  foi removido por fora, a chamada ao broker falha e vira `failed_result`
+  normal — nunca crash, nunca fallback silencioso de volta pro `System.cmd`
+  fora do container, que reabriria o vetor de isolamento que este PR existe
+  para fechar. `mounted` nunca passa por este caminho: o broker recusa subir
+  container pra esse modo (`ModoDeExecucaoNaoSuportadoError`).
   """
 
   alias Engine.Actions.Workspace
+  alias Engine.Containers.ProjectContainerLifecycle
   alias Engine.Projects.{Project, ProjectRepository}
   alias Engine.Runners.{Registry, RunnerRouter}
+  alias Engine.Sessions.EngineApiClient
 
   @bytes_per_token 4
+
+  # Mesmo valor de `PONTO_DE_MONTAGEM` em
+  # `packages/docker-port/src/docker-port.ts` (travado por teste lá — o
+  # engine não importa pacote TS, então o literal aqui é a cópia, não a
+  # fonte). ADR 0134/RN-492.
+  @ponto_de_montagem "/work"
 
   @doc """
   `opts[:cwd]` sobrescreve o diretório de execução (ex.: o worktree de um dev
@@ -67,6 +96,9 @@ defmodule Engine.Actions.TerminalExecutor do
             "--dir <pasta>` na sua máquina e tente de novo."
         )
 
+      :executar_no_container ->
+        run_no_container(project_id, command, cwd, timeout)
+
       :caminho_de_sempre ->
         case cwd do
           nil -> run_in_project_workspace(project_id, command, timeout)
@@ -79,11 +111,23 @@ defmodule Engine.Actions.TerminalExecutor do
   # devolve `nil` pra projeto inexistente/id malformado — degrada pro
   # caminho de sempre, nunca propaga erro daqui.
   #
-  # QUATRO saídas, não duas (RN-423, ADR 0104): um projeto `runner` NUNCA cai
-  # no fallback de container — ele não tem bind-mount nenhum, e "cair pro
-  # caminho de sempre" seria rodar às cegas numa pasta que não existe pro
-  # processo do engine. `container`/`mounted` continuam indo pro caminho de
-  # sempre, sem checagem nova nenhuma.
+  # CINCO saídas, não quatro (RN-423/ADR 0104 + RN-492/ADR 0134):
+  #
+  #   - `runner` sem workspace verificado: recusa (nunca roteia às cegas);
+  #   - `runner` verificado, sem runner conectado: recusa (idem);
+  #   - `runner` verificado e conectado: roteia pro canal Phoenix;
+  #   - `container` com um container REGISTRADO `running` (ADR 0130/0133):
+  #     executa DENTRO dele, via broker (`:executar_no_container`) — nova
+  #     nesta entrega. `true` aqui é só o REGISTRADO (RN-486: registrado e
+  #     observado nunca se fundem); se o container morreu por fora, a falha
+  #     aparece em `run_no_container/4`, como falha normal de comando;
+  #   - qualquer outro caso (`container` sem container `running`, `mounted`,
+  #     projeto inexistente/id malformado) — caminho de sempre
+  #     (`System.cmd` local, comportamento anterior a este PR).
+  #
+  # `mounted` NUNCA cai em `:executar_no_container`: o broker recusa subir
+  # container pra esse modo (`ModoDeExecucaoNaoSuportadoError`,
+  # `apps/broker/src/operacoes.ts`), então não faz sentido nem perguntar.
   defp decisao_de_execucao(project_id) do
     case Project.get(project_id) do
       %{execution_mode: "runner", workspace_verified_at: nil} ->
@@ -93,6 +137,11 @@ defmodule Engine.Actions.TerminalExecutor do
         if Registry.connected?(project_id),
           do: :rotear_runner,
           else: :recusar_runner_desconectado
+
+      %{execution_mode: "container"} ->
+        if ProjectContainerLifecycle.running?(project_id),
+          do: :executar_no_container,
+          else: :caminho_de_sempre
 
       _ ->
         :caminho_de_sempre
@@ -132,6 +181,70 @@ defmodule Engine.Actions.TerminalExecutor do
     case Project.get(project_id) do
       %{workspace_path: path} when is_binary(path) -> path
       _ -> nil
+    end
+  end
+
+  # ADR 0134/RN-492 — a nova perna: engine -> api -> broker.exec.
+  #
+  # `cwd` chega aqui como caminho ABSOLUTO DO HOST (dentro de
+  # `project_workspaces_root`, o mesmo que `run_in_project_workspace/3` usa
+  # pro caminho de sempre) ou `nil` (roda na raiz do workspace). É traduzido
+  # pra dentro de `/work` ANTES de sair pro `EngineApiClient` — o broker
+  # nunca vê um caminho de host.
+  #
+  # Falha do broker (recusou, não respondeu, ou o container morreu/foi
+  # removido por fora entre o `running` registrado e agora — RN-486) é
+  # FALHA NORMAL do comando: `failed_result`, nunca crash, nunca fallback
+  # silencioso pro `System.cmd` fora do container — isso reabriria o vetor
+  # de isolamento que este PR existe para fechar.
+  defp run_no_container(project_id, command, cwd, timeout) do
+    container_cwd = cwd_para_container(project_id, cwd)
+
+    case EngineApiClient.executar_comando_no_container(
+           project_id,
+           command,
+           container_cwd,
+           timeout
+         ) do
+      {:ok, %{"sucesso" => false} = payload} ->
+        motivo = Map.get(payload, "motivo") || "motivo não informado"
+        failed_result("execução no container do projeto recusada: #{motivo}")
+
+      {:ok, payload} ->
+        build_result(
+          Map.get(payload, "output") || "",
+          Map.get(payload, "exitCode"),
+          Map.get(payload, "timedOut") || false
+        )
+
+      {:error, reason} ->
+        failed_result(
+          "não foi possível executar no container do projeto (comunicação " <>
+            "engine -> api -> broker): #{inspect(reason)}"
+        )
+    end
+  end
+
+  defp cwd_para_container(_project_id, nil), do: nil
+
+  defp cwd_para_container(project_id, cwd) do
+    raiz = Workspace.workspace_dir(project_id)
+
+    cond do
+      cwd == raiz ->
+        @ponto_de_montagem
+
+      String.starts_with?(cwd, raiz <> "/") ->
+        @ponto_de_montagem <> String.trim_leading(cwd, raiz)
+
+      true ->
+        # `cwd` fora da raiz do workspace deste projeto — não deveria
+        # acontecer pra `execution_mode: container` (todo cwd nasce dentro
+        # dela, worktree de dev agent incluso), mas não adivinha: manda como
+        # veio, e o broker recusa com `DiretorioForaDoEscopoError` se não
+        # estiver dentro de `/work` — defesa em profundidade, nunca um
+        # caminho fabricado silenciosamente.
+        cwd
     end
   end
 

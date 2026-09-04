@@ -709,6 +709,102 @@
         ]
       }
     },
+    "/internal/projects/{projectId}/container-exec": {
+      "post": {
+        "description": "Called only by the engine, when `Engine.Actions.TerminalExecutor` decided the command belongs inside the real container (`execution_mode: container` with a REGISTERED `running` row). Proxies to `ContainerBrokerPort.exec` (ADR 0130/0134) — the last of the broker's five operations to gain a real caller. `sucesso: false` in the response — never a thrown error — is the NORMAL shape for a refused or unreachable broker: the container may have died or been removed from outside between the registered `running` row and this call (RN-486, registered and observed never merge), and that is a command failure, not a transport error.",
+        "operationId": "InternalProjectsController_containerExec",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContainerExecInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContainerExecInternalResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Runs a terminal command INSIDE the project real container (RN-492)",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/projects/{projectId}/container-spec": {
+      "get": {
+        "description": "Project identity, execution mode and the Architect's current image decision. The broker revalidates all of it before handing anything to the daemon — reading from here is not the same as trusting it, and the refusal names the field. No path is returned: the bind source is resolved by the daemon against the HOST filesystem, and a path from inside the api container would silently mount an empty folder.",
+        "operationId": "InternalContainersController_containerSpec",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContainerSpecInternalResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Project not found."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "What the broker needs to compose the container spec itself",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/projects/{projectId}/git-remote": {
       "get": {
         "description": "Returns the clean origin (no credential embedded) and, for a remote provider, the workspace OWNER's token (RN-058) decrypted on the fly. Whoever consumes it injects the token per invocation and NEVER writes it to a file — `.git/config` sits inside the folder where RN-075 grants the dev agent auto-approved read access.",
@@ -846,6 +942,50 @@
           }
         ],
         "summary": "The runner confirms the path of a \"runner\" project (RN-423)",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/rag/feedback": {
+      "post": {
+        "description": "Same use case as the human route — no second judgement path. An unknown `searchId`/`chunkId` is a 400 that the engine turns into an error tool-result for the model to correct (RN-061), never a crash.",
+        "operationId": "InternalRagController_votar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagFeedbackInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagFeedbackInternalResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown `searchId` for this project, or a `chunkId` that was not among that search hits."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "The agent's vote on one retrieved chunk (RN-480)",
         "tags": [
           "internal"
         ]
@@ -1580,7 +1720,7 @@
     },
     "/internal/sessions/{sessionId}/infra-context": {
       "get": {
-        "description": "The current module_map plus the relevant infrastructure ADRs.",
+        "description": "The current module_map plus the relevant infrastructure ADRs, plus the Architect's module routing (ADR 0131) — the candidates the Infra Lead elects among when proposing container_start.",
         "operationId": "InternalSessionsController_infraContext",
         "parameters": [
           {
@@ -1955,6 +2095,62 @@
           }
         ],
         "summary": "Publishes a new version of the module_map",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/module-routing": {
+      "post": {
+        "description": "The artifact IS the `artifact.module_routing` event: immutable, versioned, and with an author, alongside `artifact.module_map`/`artifact.project_image`/`artifact.c4_diagram`. Each item is validated with the same rule as `choose_project_image` (explicit tag/digest, `latest` rejected, non-trivial `rationale`); a module name outside the current module_map, an empty list, or a repeated module are all rejected with 400.",
+        "operationId": "InternalSessionsController_moduleRouting",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RouteModulesToInfraInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoteamentoDeModulosGeradoResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty list, repeated module, module outside the current module_map, or a candidate image that fails `choose_project_image`'s rule (no explicit tag, `latest`, or short `rationale`)."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Session, project, or resource not found."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Routes each module of the current module_map to a candidate image",
         "tags": [
           "internal"
         ]
@@ -4550,7 +4746,7 @@
     },
     "/projects/{projectId}/container/lifecycle": {
       "get": {
-        "description": "`null` when the project was never provisioned — the common case today, because no real orchestrator transitions this table yet (RN-243/RN-267). The returned state is what was RECORDED, never confirmed against a Docker daemon: the product has no Docker client.",
+        "description": "`null` when the project was never provisioned — the common case today, because no real orchestrator transitions this table yet (RN-243/RN-267). `status`/`imageVersion`/`resources` are what was RECORDED; `observado` is what the Docker daemon reports right now, asked through the broker (ADR 0130). The two are never fused: a container killed from the outside reads as recorded `running` and observed `exited`. When there was no way to look, `observado` is `null` and `naoObservado` says why — it never inherits the recorded state (RN-468).",
         "operationId": "ContainersController_cicloDeVida",
         "parameters": [
           {
@@ -4801,7 +4997,7 @@
             }
           },
           "400": {
-            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+            "description": "No current `module_map` (the Architect has to define the modules first), or the project's stored workspace location is incoherent — the `permissions.json` seeded here cannot be derived from it (RN-478)."
           },
           "401": {
             "description": "No token, expired token, or invalid signature."
@@ -4813,7 +5009,7 @@
             "description": "Project, session, or task not found."
           },
           "409": {
-            "description": "No current module_map, or execution already active."
+            "description": "The origin session is `consultiva` and refuses `execution.activated` (RN-097). Activating twice is NOT a conflict: it is idempotent by `findActiveExecutionSession`, and reactivates inside the same session."
           },
           "429": {
             "description": "Rate limit per user or per IP."
@@ -4945,7 +5141,7 @@
     },
     "/projects/{projectId}/git/{provider}/repository": {
       "post": {
-        "description": "The response comes back as soon as the repository exists; the bootstrap (permanent branches, protections, templates) continues in the background and is IDEMPOTENT AND RESUMABLE. Track it via `GET /projects/:id/git/bootstrap`.",
+        "description": "SYNCHRONOUS: the response only comes back after the whole bootstrap (permanent branches, protections, templates) has run — there is no worker and no queue behind this. It is IDEMPOTENT AND RESUMABLE, so calling it again after a failure resumes from the step that failed. Track progress and read the failure reason via `GET /projects/:id/git/bootstrap`.",
         "operationId": "GitController_provision",
         "parameters": [
           {
@@ -5012,7 +5208,7 @@
             "bearer": []
           }
         ],
-        "summary": "Creates the repository and triggers the Gitflow bootstrap",
+        "summary": "Creates the repository and runs the Gitflow bootstrap",
         "tags": [
           "git"
         ]
@@ -5699,7 +5895,7 @@
     },
     "/projects/{projectId}/members": {
       "get": {
-        "description": "Includes whoever inherits access from the workspace, not just who was associated here.",
+        "description": "Only who was associated HERE, with the role of that association — whoever reaches the project through the workspace alone has no row and doesn't show up.",
         "operationId": "ProjectsController_listMembers",
         "parameters": [
           {
@@ -5743,13 +5939,13 @@
             "bearer": []
           }
         ],
-        "summary": "Lists the project's members with their effective role",
+        "summary": "Lists the project's members",
         "tags": [
           "projects"
         ]
       },
       "post": {
-        "description": "The EFFECTIVE role is the higher of this one and what the person already has in the workspace — associating someone as `viewer` here doesn't downgrade a workspace `owner`.",
+        "description": "This role OVERRIDES whatever the person has in the workspace, in both directions: associating someone as `viewer` here really does restrict a workspace `developer` on this project. Two movements are refused with 403 and cannot be enabled anywhere: downgrading a workspace `owner`, and downgrading yourself.",
         "operationId": "ProjectsController_addMember",
         "parameters": [
           {
@@ -5789,7 +5985,7 @@
             "description": "No token, expired token, or invalid signature."
           },
           "403": {
-            "description": "Insufficient role on the project."
+            "description": "Insufficient role on the project, OR one of the two downgrade caps (the target is a workspace `owner`; the target is the caller and the role is lower than the caller's current one)."
           },
           "404": {
             "description": "Project doesn't exist or is invisible to the caller."
@@ -6703,6 +6899,68 @@
         ]
       }
     },
+    "/projects/{projectId}/rag/feedback": {
+      "post": {
+        "description": "The only signal of TRUTH the RAG measurement has: latency and degradation rate say whether the search RAN, never whether it was RIGHT. Same role as `search` — whoever can read the result is who can judge it. Re-voting the same chunk of the same search overwrites your own vote rather than adding a second one (unique per actor), so the metric measures accuracy and not enthusiasm.",
+        "operationId": "RagController_votar",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagFeedbackRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagFeedbackResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown `searchId` for this project, or a `chunkId` that was not among that search hits — a vote without a rank would be a number without meaning."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role on the project."
+          },
+          "404": {
+            "description": "Project does not exist."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Judges one hit of one search as useful or irrelevant (RN-480)",
+        "tags": [
+          "rag"
+        ]
+      }
+    },
     "/projects/{projectId}/rag/local": {
       "post": {
         "description": "Text content already read by the browser (`<input webkitdirectory>`), never a host path — that distinction is the whole point of ADR 0113. Idempotent full rebuild of the `local` scope: every call deletes and recreates it from the files sent THIS time, so re-uploading is the resync mechanism. Rejects (400) over the file-count/total-bytes caps instead of truncating silently — this is a one-shot user gesture with a folder picker in front of it, not a background scan. An individual oversized or unrecognized-extension file is only skipped, never fails the batch.",
@@ -6873,6 +7131,118 @@
         "summary": "Hybrid search (vector + lexical) over the project's indexed chunks",
         "tags": [
           "rag"
+        ]
+      }
+    },
+    "/projects/{projectId}/runner-device-keys": {
+      "post": {
+        "description": "A chave PRIVADA nunca sai do navegador — só a JWK pública (Ed25519, RFC 8037) chega aqui. Use o `id` desta resposta como `kid` no header do JWT que o runner assina pra pedir ticket em `POST .../runner-ticket`.",
+        "operationId": "RunnerDeviceKeysController_registerDeviceKey",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRunnerDeviceKeyRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunnerDeviceKeyResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registra a chave pública de um dispositivo do runner local",
+        "tags": [
+          "projetos"
+        ]
+      }
+    },
+    "/projects/{projectId}/runner-device-keys/{deviceKeyId}": {
+      "delete": {
+        "description": "Idempotente — revogar de novo não é erro.",
+        "operationId": "RunnerDeviceKeysController_revokeDeviceKey",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "deviceKeyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Chave revogada. Sem corpo."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoga uma chave de dispositivo própria",
+        "tags": [
+          "projetos"
         ]
       }
     },
@@ -9425,6 +9795,30 @@
         ]
       }
     },
+    "/runner-releases/binary": {
+      "get": {
+        "description": "Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-x64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo.",
+        "operationId": "RunnerReleasesController_binary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "O binário do runner, em stream. Não é JSON: `Content-Type: application/octet-stream`.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Baixa o binário standalone do runner local pra plataforma pedida",
+        "tags": [
+          "infrastructure"
+        ]
+      }
+    },
     "/users/me/credentials": {
       "get": {
         "description": "No role required: a credential is about whoever called, not about a workspace or project. Covers LLM keys and git tokens in the same listing.",
@@ -9977,6 +10371,58 @@
         ]
       }
     },
+    "/workspaces/{workspaceId}/containers": {
+      "get": {
+        "description": "One row per project with a `project_containers` row — a project that never provisioned a container is simply absent, not shown empty. The observed state is asked of the broker only for rows `provisioning`/`running`, and only up to a per-load budget — see `naoVerificado` on rows that were skipped, and ADR 0136 for the reasoning.",
+        "operationId": "ContainersOverviewController_list",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContainerOverviewItemResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role in the workspace."
+          },
+          "404": {
+            "description": "Workspace doesn't exist or is invisible to the caller."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lists the container of every project in the workspace that already has one",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/workspaces/{workspaceId}/credential-spend": {
       "get": {
         "description": "Exists because the key agents spend is the workspace OWNER's (RN-058) — whoever pays the bill needs to see the bill. Groups by provider because that is the unit of the credential, and separates what went out by AGENT from what went out by a person in chat: the two come out of the same key and answer different questions. Returns no secret at all.",
@@ -10029,6 +10475,237 @@
           }
         ],
         "summary": "How much the owner's keys spent, by provider and by month",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/huggingface/models": {
+      "get": {
+        "description": "Filters to OFFICIAL publishers only by default (the allowlist in `domain/llm/huggingface-official-publishers.ts`) — same \"manual curation always\" spirit as the LLM catalog (ADR 0042), applied to the \"official\" badge instead of to activation. `includeCommunity=true` brings in every publisher, each one tagged `official: false` for the screen to render the security warning — never hidden.",
+        "operationId": "HuggingFaceModelsController_search",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Search text.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeCommunity",
+            "required": false,
+            "in": "query",
+            "description": "Pass `true` to also include non-official publishers.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HuggingFaceModelResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Requires `maintainer` on the workspace."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Searches GGUF models on the Hugging Face Hub",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/huggingface/pull-requests": {
+      "post": {
+        "description": "First of two explicit steps: this call only records the intent, in `pending_confirmation`. Nothing is pulled until a separate call to `POST .../pull-requests/:id/confirm` — the product never runs an automatic, silent pull.",
+        "operationId": "HuggingFaceModelsController_createPullRequest",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestModelPullDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelPullRequestResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Requires `maintainer` on the workspace."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Creates a PENDING pull request — nothing downloads yet",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/huggingface/pull-requests/{id}": {
+      "get": {
+        "operationId": "HuggingFaceModelsController_getStatus",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelPullRequestResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Requires `maintainer` on the workspace."
+          },
+          "404": {
+            "description": "Pull request not found."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Status of a pull request, for the frontend to poll",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/huggingface/pull-requests/{id}/confirm": {
+      "post": {
+        "description": "Moves `pending_confirmation` → `confirmed` → `pulling`, calls the Ollama daemon, and on success upserts the model into the catalog (`models`) and activates it for THIS workspace. On failure the request ends in `failed` with a reason declaring its origin (infra | model | code | policy) — never a silent failure. This call runs SYNCHRONOUSLY for the whole pull (see the use case for why); use the GET route below to poll instead of holding this connection open.",
+        "operationId": "HuggingFaceModelsController_confirm",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelPullRequestResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Requires `maintainer` on the workspace."
+          },
+          "404": {
+            "description": "Pull request not found."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The second confirmation — actually runs the pull",
         "tags": [
           "llm"
         ]
@@ -11099,7 +11776,7 @@
               "owner"
             ],
             "example": "developer",
-            "description": "Role in this association. Someone's EFFECTIVE role in a project is the higher of this one and what they have in the workspace."
+            "description": "Role in this association. On a PROJECT it OVERRIDES the workspace role in both directions — the effective role is this one whenever the association exists, higher OR lower — and two downgrades are refused with 403: a workspace `owner`, and yourself. On a WORKSPACE it is simply the role, with no cap."
           }
         },
         "required": [
@@ -12259,6 +12936,34 @@
           "statusChangedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "observado": {
+            "nullable": true,
+            "description": "What the Docker daemon reports RIGHT NOW, asked through the broker (ADR 0130) — never fused with the fields above, which are what was RECORDED. A container killed from the outside shows up as recorded `running` and observed `exited`, and that is the point. `null` means either \"there is no container\" or \"I could not look\" — read `naoObservado` to tell them apart.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ObservacaoDeContainerResponseDto"
+              }
+            ]
+          },
+          "naoObservado": {
+            "type": "string",
+            "enum": [
+              "broker-nao-configurado",
+              "broker-sem-resposta",
+              "broker-recusou",
+              null
+            ],
+            "nullable": true,
+            "example": "broker-nao-configurado",
+            "description": "`null` when the observation actually HAPPENED — including when it came back empty, which is the positive statement \"I looked and there is no container\". Filled in when there was no way to look, saying why. Inheriting the recorded state here is exactly what RN-468 forbids."
+          },
+          "detalheDaObservacao": {
+            "type": "object",
+            "nullable": true,
+            "example": null,
+            "description": "The broker's own message, when there was one."
           }
         },
         "required": [
@@ -12267,7 +12972,10 @@
           "resources",
           "failureReason",
           "createdAt",
-          "statusChangedAt"
+          "statusChangedAt",
+          "observado",
+          "naoObservado",
+          "detalheDaObservacao"
         ]
       },
       "ClaimTaskInternalDto": {
@@ -12847,6 +13555,236 @@
           "changed"
         ]
       },
+      "ContainerExecInternalDto": {
+        "type": "object",
+        "properties": {
+          "comando": {
+            "type": "string",
+            "example": "npm test",
+            "description": "The shell command, interpreted by `sh -c` INSIDE the container — same convention as the terminal action run outside one."
+          },
+          "cwd": {
+            "type": "string",
+            "example": "/work/.worktrees/dev-api",
+            "description": "Working directory INSIDE the container. Already translated from the host path by the engine (RN-492) — this DTO doesn't repeat that translation. Omitted runs at `/work`, the project root. The broker re-validates it is inside `/work` and refuses (`DiretorioForaDoEscopoError`) otherwise."
+          },
+          "timeoutMs": {
+            "type": "number",
+            "example": 300000,
+            "description": "Timeout in milliseconds. Omitted uses the broker default."
+          }
+        },
+        "required": [
+          "comando"
+        ]
+      },
+      "ContainerExecInternalResponseDto": {
+        "type": "object",
+        "properties": {
+          "sucesso": {
+            "type": "boolean",
+            "example": true,
+            "description": "`false` quando o broker recusou ou não respondeu — os outros campos ficam ausentes e `motivo` explica."
+          },
+          "exitCode": {
+            "type": "number",
+            "example": 0,
+            "description": "Presente só quando `sucesso: true`."
+          },
+          "output": {
+            "type": "string",
+            "example": "ok\n",
+            "description": "Presente só quando `sucesso: true`."
+          },
+          "timedOut": {
+            "type": "boolean",
+            "example": false,
+            "description": "Presente só quando `sucesso: true`."
+          },
+          "motivo": {
+            "type": "string",
+            "example": "o broker de container não respondeu em http://broker:8090: timeout",
+            "description": "Presente só quando `sucesso: false`."
+          }
+        },
+        "required": [
+          "sucesso"
+        ]
+      },
+      "ContainerOverviewItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO000001"
+          },
+          "projectName": {
+            "type": "string",
+            "example": "exp002"
+          },
+          "projectSlug": {
+            "type": "string",
+            "example": "exp002"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "provisioning",
+              "running",
+              "stopped",
+              "failed",
+              "removed"
+            ],
+            "example": "running",
+            "description": "What was RECORDED (project_containers.status)."
+          },
+          "imageVersion": {
+            "type": "number",
+            "example": 1
+          },
+          "imagem": {
+            "type": "object",
+            "nullable": true,
+            "example": "node:22-bookworm-slim",
+            "description": "The image FROZEN at `imageVersion`, resolved from the `artifact.project_image` event at that exact version — never the current one, which may have been revised since. `null` when that version's event could not be found."
+          },
+          "resources": {
+            "$ref": "#/components/schemas/RecursosDoContainerResponseDto"
+          },
+          "failureReason": {
+            "type": "object",
+            "nullable": true,
+            "example": null
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "statusChangedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "observado": {
+            "nullable": true,
+            "description": "What the broker reports right now — `null` either because there is no container, because it could not be asked (`naoObservado`), or because this row was not asked this load (`naoVerificado`).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ObservacaoDeContainerResponseDto"
+              }
+            ]
+          },
+          "naoObservado": {
+            "type": "string",
+            "enum": [
+              "broker-nao-configurado",
+              "broker-sem-resposta",
+              "broker-recusou",
+              null
+            ],
+            "nullable": true
+          },
+          "detalheDaObservacao": {
+            "type": "object",
+            "nullable": true,
+            "example": null
+          },
+          "naoVerificado": {
+            "type": "string",
+            "enum": [
+              "fora_do_escopo_da_verificacao",
+              "teto_de_verificacoes_atingido",
+              null
+            ],
+            "nullable": true,
+            "example": null,
+            "description": "Non-null when this row was NOT asked of the broker this load — never confused with `naoObservado`, which means it WAS asked and failed. `fora_do_escopo_da_verificacao`: status is `stopped`/`failed`/`removed`, where daemon confirmation does not matter. `teto_de_verificacoes_atingido`: eligible, but the per-load broker call budget was already spent by other rows."
+          },
+          "acaoPendente": {
+            "nullable": true,
+            "description": "The pending `container_start`/`container_stop`/`container_remove` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProposedActionResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "projectId",
+          "projectName",
+          "projectSlug",
+          "status",
+          "imageVersion",
+          "imagem",
+          "resources",
+          "failureReason",
+          "createdAt",
+          "statusChangedAt",
+          "observado",
+          "naoObservado",
+          "detalheDaObservacao",
+          "naoVerificado",
+          "acaoPendente"
+        ]
+      },
+      "ContainerSpecInternalResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "example": "f52be111-0000-4000-8000-000000000000"
+          },
+          "projectSlug": {
+            "type": "string",
+            "example": "exp002"
+          },
+          "workspaceId": {
+            "type": "string",
+            "example": "aaaaaaaa-0000-4000-8000-000000000000"
+          },
+          "workspaceDirName": {
+            "type": "string",
+            "example": "exp002-f52be111",
+            "description": "Folder name FROZEN at project creation (RN-109). It is the single source of the container name (`brabo-<workspaceDirName>`), and the broker joins it with its OWN host root to get the bind source — the api never sends a path, because a path from inside the api container is not a path the Docker daemon can resolve."
+          },
+          "executionMode": {
+            "type": "string",
+            "enum": [
+              "container",
+              "mounted",
+              "runner"
+            ],
+            "example": "container",
+            "description": "Where the code lives. The broker refuses `mounted`/`runner`: that folder is on the user's machine and this host cannot see it — there, the runner is what brings a container up."
+          },
+          "imagem": {
+            "nullable": true,
+            "description": "`null` while the Architect has not decided (RN-105) — `start` is then refused with 409 on the broker side, and the other four operations still work.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImagemParaOBrokerResponseDto"
+              }
+            ]
+          },
+          "imagemVersao": {
+            "type": "number",
+            "example": 3,
+            "description": "Version of the current artifact; 0 when there is no decision. It ends up on the container as the `brabo.image.version` label."
+          }
+        },
+        "required": [
+          "projectId",
+          "projectSlug",
+          "workspaceId",
+          "workspaceDirName",
+          "executionMode",
+          "imagem",
+          "imagemVersao"
+        ]
+      },
       "ConvertExecutionModeDto": {
         "type": "object",
         "properties": {
@@ -12917,7 +13855,10 @@
               "parallelize",
               "raise_max_parallel",
               "propose_execution_plan",
-              "assess_implementability"
+              "assess_implementability",
+              "container_start",
+              "container_stop",
+              "container_remove"
             ],
             "example": "terminal"
           },
@@ -13903,6 +14844,46 @@
           "decidedAt"
         ]
       },
+      "EstadoDoRoteamentoResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "sem_roteamento",
+              "roteado"
+            ],
+            "example": "roteado"
+          },
+          "roteamento": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoteamentoDeModuloResponseDto"
+            }
+          },
+          "version": {
+            "type": "number",
+            "example": 1
+          },
+          "eventId": {
+            "type": "object",
+            "example": "01JC4Z0000EVENTOROTEAMENTO01",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "object",
+            "example": "2026-08-30T12:00:00.000Z",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "roteamento",
+          "version",
+          "eventId",
+          "createdAt"
+        ]
+      },
       "ExecucaoAtivadaResponseDto": {
         "type": "object",
         "properties": {
@@ -14263,6 +15244,40 @@
           "timestamp"
         ]
       },
+      "HuggingFaceModelResponseDto": {
+        "type": "object",
+        "properties": {
+          "repoId": {
+            "type": "string",
+            "example": "meta-llama/Llama-3.1-8B-Instruct-GGUF",
+            "description": "`<publisher>/<modelo>` no Hugging Face Hub."
+          },
+          "publisher": {
+            "type": "string",
+            "example": "meta-llama"
+          },
+          "downloads": {
+            "type": "number",
+            "example": 182034
+          },
+          "likes": {
+            "type": "number",
+            "example": 210
+          },
+          "official": {
+            "type": "boolean",
+            "example": true,
+            "description": "O publisher está no allowlist curado de fabricantes conhecidos (`domain/llm/huggingface-official-publishers.ts`). `false` é qualquer reupload de terceiro — a tela mostra o aviso de segurança quando `includeCommunity=true` trouxe este resultado."
+          }
+        },
+        "required": [
+          "repoId",
+          "publisher",
+          "downloads",
+          "likes",
+          "official"
+        ]
+      },
       "HybridSearchHitResponseDto": {
         "type": "object",
         "properties": {
@@ -14348,6 +15363,12 @@
           "query": {
             "type": "string"
           },
+          "searchId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "The `rag_searches` row this search left (RN-479) — the id a vote attaches to. `null` means the telemetry row was NOT written (the insert failed), which is not the same as \"no results\": there is nothing to attach a vote to, and the UI needs the two apart so it does not offer a control the api will refuse."
+          },
           "hits": {
             "type": "array",
             "items": {
@@ -14364,6 +15385,7 @@
         },
         "required": [
           "query",
+          "searchId",
           "hits",
           "vectorAvailable"
         ]
@@ -14575,6 +15597,32 @@
           "version"
         ]
       },
+      "ImagemParaOBrokerResponseDto": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "type": "string",
+            "example": "node:22-bookworm-slim",
+            "description": "OCI reference with an explicit tag or digest."
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "none",
+              "egress"
+            ],
+            "example": "none"
+          },
+          "resources": {
+            "$ref": "#/components/schemas/RecursosDoContainerResponseDto"
+          }
+        },
+        "required": [
+          "image",
+          "network",
+          "resources"
+        ]
+      },
       "IndexDocsReportResponseDto": {
         "type": "object",
         "properties": {
@@ -14741,12 +15789,21 @@
             "nullable": true,
             "example": "github",
             "description": "null when the project hasn't provisioned a repository yet. The Workflows subagent (Phase 8c) decides the CI pipeline format from this: \"gitlab\" generates .gitlab-ci.yml, any other value generates GitHub Actions."
+          },
+          "moduleRouting": {
+            "description": "The Architect-routed candidates (route_modules_to_infra, ADR 0131) — what the Infra Lead elects among when proposing container_start (ADR 0130/0133). \"sem_roteamento\" when the Architect has not routed anything yet.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EstadoDoRoteamentoResponseDto"
+              }
+            ]
           }
         },
         "required": [
           "moduleMap",
           "adrs",
-          "gitProvider"
+          "gitProvider",
+          "moduleRouting"
         ]
       },
       "InfraGateVerdictResponseDto": {
@@ -15404,6 +16461,80 @@
           "createdAt"
         ]
       },
+      "ModelPullRequestResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b"
+          },
+          "workspaceId": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b"
+          },
+          "requestedBy": {
+            "type": "string",
+            "example": "9b1c2d3e-4f50-4a61-8b72-0c3d4e5f6a7b"
+          },
+          "repoId": {
+            "type": "string",
+            "example": "meta-llama/Llama-3.1-8B-Instruct-GGUF"
+          },
+          "estimatedSizeBytes": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Só presente quando o Hub publicou `usedStorage` na busca — nunca estimado por palpite."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending_confirmation",
+              "confirmed",
+              "pulling",
+              "active",
+              "failed"
+            ],
+            "example": "pending_confirmation",
+            "description": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. Os dois primeiros estados SÃO a segunda confirmação explícita que o produto exige antes de qualquer download rodar."
+          },
+          "confirmedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "format": "date-time",
+            "description": "Quando o clique de confirmação aconteceu."
+          },
+          "failedReason": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Só em `failed`, prefixado pela origem (infra | modelo | código | política) — nunca falha calada."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-26T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-08-26T12:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "requestedBy",
+          "repoId",
+          "estimatedSizeBytes",
+          "status",
+          "confirmedAt",
+          "failedReason",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "ModelResponseDto": {
         "type": "object",
         "properties": {
@@ -15652,6 +16783,50 @@
           "chamadas",
           "porSessao",
           "porDia"
+        ]
+      },
+      "ObservacaoDeContainerResponseDto": {
+        "type": "object",
+        "properties": {
+          "containerId": {
+            "type": "string",
+            "example": "c0ffeebabe..."
+          },
+          "nome": {
+            "type": "string",
+            "example": "brabo-exp002-f52be111"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "created",
+              "running",
+              "paused",
+              "restarting",
+              "removing",
+              "exited",
+              "dead"
+            ],
+            "example": "running",
+            "description": "The daemon's own state, with no translation and no collapse."
+          },
+          "imagem": {
+            "type": "string",
+            "example": "node:22-bookworm-slim"
+          },
+          "iniciadoEm": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time",
+            "description": "`null` when the container has never started."
+          }
+        },
+        "required": [
+          "containerId",
+          "nome",
+          "estado",
+          "imagem",
+          "iniciadoEm"
         ]
       },
       "OkResponseDto": {
@@ -16861,7 +18036,10 @@
               "parallelize",
               "raise_max_parallel",
               "propose_execution_plan",
-              "assess_implementability"
+              "assess_implementability",
+              "container_start",
+              "container_stop",
+              "container_remove"
             ],
             "example": "terminal",
             "description": "Action type. Each type has its own minimum role: `git_push`, `git_merge`, and `git_branch_protect` require `maintainer`, the rest `developer`."
@@ -16929,7 +18107,10 @@
               "parallelize",
               "raise_max_parallel",
               "propose_execution_plan",
-              "assess_implementability"
+              "assess_implementability",
+              "container_start",
+              "container_stop",
+              "container_remove"
             ],
             "example": "terminal",
             "description": "What the action would do. `git_push` and `git_merge` require `maintainer`."
@@ -17490,6 +18671,130 @@
           "chunksWithoutVector"
         ]
       },
+      "RagFeedbackInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "searchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chunkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "util",
+              "irrelevante"
+            ]
+          },
+          "agent": {
+            "type": "string",
+            "example": "qa",
+            "description": "Agent slug — the voter."
+          }
+        },
+        "required": [
+          "projectId",
+          "searchId",
+          "chunkId",
+          "verdict",
+          "agent"
+        ]
+      },
+      "RagFeedbackInternalResponseDto": {
+        "type": "object",
+        "properties": {
+          "searchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chunkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "util",
+              "irrelevante"
+            ]
+          },
+          "rank": {
+            "type": "number",
+            "description": "The 1-based position the judged chunk held in THAT search."
+          }
+        },
+        "required": [
+          "searchId",
+          "chunkId",
+          "verdict",
+          "rank"
+        ]
+      },
+      "RagFeedbackRequestDto": {
+        "type": "object",
+        "properties": {
+          "searchId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The `searchId` returned by the search that produced this hit — never invented by the client."
+          },
+          "chunkId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The chunk being judged. Must be one of the hits THAT search returned, otherwise 400."
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "util",
+              "irrelevante"
+            ],
+            "description": "Two values, not a 1-5 scale: a finer scale invites per-voter differences in ruler that no aggregation recovers later."
+          }
+        },
+        "required": [
+          "searchId",
+          "chunkId",
+          "verdict"
+        ]
+      },
+      "RagFeedbackResponseDto": {
+        "type": "object",
+        "properties": {
+          "searchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chunkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "util",
+              "irrelevante"
+            ]
+          },
+          "rank": {
+            "type": "number",
+            "description": "The 1-based position the judged chunk held in THAT search — the number that separates \"the index is poor\" from \"the weights are wrong\"."
+          }
+        },
+        "required": [
+          "searchId",
+          "chunkId",
+          "verdict",
+          "rank"
+        ]
+      },
       "RagFileCoverageResponseDto": {
         "type": "object",
         "properties": {
@@ -17545,6 +18850,16 @@
           "topK": {
             "type": "number",
             "example": 5
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The session the agent is running in. Absent means the caller had no session — the telemetry row is still written (RN-479), only the `rag.search` timeline narration is skipped. Never invented by the api: a session it did not receive is a session that did not exist."
+          },
+          "agent": {
+            "type": "string",
+            "example": "dev-lead",
+            "description": "Agent slug, recorded as the telemetry actor (`actor_kind: agent`). Absent falls back to the `system` actor rather than inventing a user."
           }
         },
         "required": [
@@ -17555,6 +18870,11 @@
       "RagSearchInternalHitResponseDto": {
         "type": "object",
         "properties": {
+          "chunkId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The chunk id — half of the reference a `rag_feedback` vote needs (RN-480). Without it the agent could read a hit and have no way to say it was useful."
+          },
           "path": {
             "type": "string",
             "example": "docs/adr/0080-chat-rag-pipeline-indexacao.md",
@@ -17574,6 +18894,7 @@
           }
         },
         "required": [
+          "chunkId",
           "path",
           "chunk",
           "score",
@@ -17583,6 +18904,12 @@
       "RagSearchInternalResponseDto": {
         "type": "object",
         "properties": {
+          "searchId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "The `rag_searches` row this search left (RN-479) — the other half of the vote reference. `null` when the telemetry row was not written; the tool then omits the ids instead of offering the model a reference that would be refused."
+          },
           "hits": {
             "type": "array",
             "items": {
@@ -17595,6 +18922,7 @@
           }
         },
         "required": [
+          "searchId",
           "hits",
           "degraded"
         ]
@@ -17940,6 +19268,25 @@
           "token"
         ]
       },
+      "RegisterRunnerDeviceKeyRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "laptop",
+            "description": "Nome pra você reconhecer este dispositivo depois — não é único."
+          },
+          "publicKeyJwk": {
+            "type": "string",
+            "example": "{\"kty\":\"OKP\",\"crv\":\"Ed25519\",\"x\":\"…\"}",
+            "description": "JWK pública Ed25519 (RFC 8037), serializada como JSON — a privada nunca sai do navegador."
+          }
+        },
+        "required": [
+          "name",
+          "publicKeyJwk"
+        ]
+      },
       "ReindexProjectResponseDto": {
         "type": "object",
         "properties": {
@@ -18089,6 +19436,24 @@
         },
         "required": [
           "toAgent"
+        ]
+      },
+      "RequestModelPullDto": {
+        "type": "object",
+        "properties": {
+          "repoId": {
+            "type": "string",
+            "example": "meta-llama/Llama-3.1-8B-Instruct-GGUF",
+            "description": "`<publisher>/<modelo>` no Hugging Face Hub."
+          },
+          "estimatedSizeBytes": {
+            "type": "number",
+            "example": 4900000000,
+            "description": "Vem da busca quando o Hub publicou o tamanho — nunca estimado por palpite no cliente."
+          }
+        },
+        "required": [
+          "repoId"
         ]
       },
       "RequestPasswordResetDto": {
@@ -18319,6 +19684,92 @@
           "staffActive"
         ]
       },
+      "RoteamentoDeModuloInternalDto": {
+        "type": "object",
+        "properties": {
+          "modulo": {
+            "type": "string",
+            "example": "checkout-api",
+            "description": "Nome do módulo — precisa existir no module_map vigente."
+          },
+          "imagemCandidata": {
+            "type": "string",
+            "example": "node:22-bookworm-slim",
+            "description": "OCI reference with an explicit TAG or digest for this module. `latest` is REFUSED with 400 — the rule is domain-level."
+          },
+          "porque": {
+            "type": "string",
+            "example": "This module is TypeScript on Node 22; the slim variant has the runtime and nothing else.",
+            "description": "Why THIS image for THIS module. Minimum of 10 characters."
+          }
+        },
+        "required": [
+          "modulo",
+          "imagemCandidata",
+          "porque"
+        ]
+      },
+      "RoteamentoDeModuloResponseDto": {
+        "type": "object",
+        "properties": {
+          "modulo": {
+            "type": "string",
+            "example": "checkout-api"
+          },
+          "imagemCandidata": {
+            "type": "string",
+            "example": "node:22-bookworm-slim"
+          },
+          "porque": {
+            "type": "string",
+            "example": "This module is TypeScript on Node 22; the slim variant has the runtime and nothing else."
+          }
+        },
+        "required": [
+          "modulo",
+          "imagemCandidata",
+          "porque"
+        ]
+      },
+      "RoteamentoDeModulosGeradoResponseDto": {
+        "type": "object",
+        "properties": {
+          "roteamento": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoteamentoDeModuloResponseDto"
+            }
+          },
+          "version": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "roteamento",
+          "version"
+        ]
+      },
+      "RouteModulesToInfraInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roteamento": {
+            "description": "One item per module of the current module_map. The candidate image is the Architect proposing, not deciding — Infra elects among the candidates in a later step.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoteamentoDeModuloInternalDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "roteamento"
+        ]
+      },
       "RuleCoverageResponseDto": {
         "type": "object",
         "properties": {
@@ -18390,6 +19841,29 @@
         "required": [
           "projectId",
           "messages"
+        ]
+      },
+      "RunnerDeviceKeyResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000CHAVE000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "laptop"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-27T12:00:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "createdAt"
         ]
       },
       "RunnerTicketResponseDto": {
@@ -18664,6 +20138,9 @@
               "raise_max_parallel",
               "propose_execution_plan",
               "assess_implementability",
+              "container_start",
+              "container_stop",
+              "container_remove",
               "*"
             ],
             "example": "terminal",

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import type { RagSearchHit } from '../../lib/api-types';
+import { mensagemDaApi, sendRagFeedback } from '../../lib/api-client';
+import type { RagSearchHit, RagVerdict } from '../../lib/api-types';
 import { Badge, type BadgeTone } from '../ui/Badge';
 import { FileIcon, SessionIcon } from '../ui/icons';
 import styles from './RagCitationCard.module.css';
@@ -38,17 +40,40 @@ function formatarSinal(valor: number | null): string {
  * origem de arquivo mostra caminho/seção como texto: a aba Código não tem
  * hoje como abrir num arquivo específico por deep-link (não é escopo desta
  * frente construir essa navegação).
+ *
+ * ## O voto nasce onde o número já está (RN-480)
+ *
+ * Este é o único lugar da UI que mostra `score`, `vectorScore` e
+ * `lexicalScore` — então é aqui que o julgamento cabe. Os dois controles
+ * (útil / irrelevante) são o único sinal de VERDADE da medição do RAG:
+ * latência e taxa de degradação dizem se a busca RODOU, nunca se ela ACERTOU.
+ *
+ * Os três estados não colapsam (RN-088): enviando, registrado e recusado são
+ * textos diferentes, e a recusa mostra a mensagem da api em vez de uma
+ * constante — se o voto não foi gravado, a tela não pode dizer que foi.
+ *
+ * Sem `searchId` (a telemetria não foi gravada) os controles NÃO aparecem: o
+ * voto seria recusado pela api, e oferecer um botão que não funciona é pior
+ * que não oferecer nenhum.
  */
 export function RagCitationCard({
   hit,
   projectId,
+  searchId,
 }: {
   hit: RagSearchHit;
   projectId: string;
+  /** `null` = a busca não deixou linha de telemetria; não há a que anexar voto. */
+  searchId?: string | null;
 }) {
   const { t } = useTranslation('sessions');
   const [expandido, setExpandido] = useState(false);
   const navigate = useNavigate();
+
+  const voto = useMutation({
+    mutationFn: (verdict: RagVerdict) =>
+      sendRagFeedback(projectId, { searchId: searchId!, chunkId: hit.chunkId, verdict }),
+  });
 
   function irParaSessao() {
     if (hit.origin.kind !== 'session') return;
@@ -100,6 +125,48 @@ export function RagCitationCard({
           </button>
         )}
       </div>
+
+      {searchId && (
+        <div className={styles.voto} role="group" aria-label={t('ragCitation.feedback.groupLabel')}>
+          <span className={styles.votoPergunta}>{t('ragCitation.feedback.question')}</span>
+          <button
+            type="button"
+            className={styles.votoBotao}
+            disabled={voto.isPending}
+            onClick={() => voto.mutate('util')}
+          >
+            {t('ragCitation.feedback.useful')}
+          </button>
+          <button
+            type="button"
+            className={styles.votoBotao}
+            disabled={voto.isPending}
+            onClick={() => voto.mutate('irrelevante')}
+          >
+            {t('ragCitation.feedback.irrelevant')}
+          </button>
+
+          {/* Os três estados, cada um com texto próprio (RN-088). */}
+          {voto.isPending && (
+            <span className={styles.votoEstado} role="status">
+              {t('ragCitation.feedback.sending')}
+            </span>
+          )}
+          {voto.isSuccess && !voto.isPending && (
+            <span className={styles.votoEstado} role="status">
+              {t('ragCitation.feedback.recorded', {
+                verdict: t(`ragCitation.feedback.verdicts.${voto.data.verdict}`),
+                rank: voto.data.rank,
+              })}
+            </span>
+          )}
+          {voto.isError && !voto.isPending && (
+            <span className={styles.votoErro} role="alert">
+              {mensagemDaApi(voto.error, t('ragCitation.feedback.errorDefault'))}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -90,7 +90,7 @@ jobs:
           echo "versao=${tag#v}" >> "$GITHUB_OUTPUT"
           echo "tag a publicar: $tag"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           # Checkout NA TAG, nunca no ref do evento — no push é o mesmo
           # commit; num dispatch é a diferença entre publicar a versão pedida
@@ -102,12 +102,12 @@ jobs:
         run: |
           echo "::warning::sem NPM_TOKEN — publicação do @brabo/runner pulada para ${{ steps.alvo.outputs.tag }}. Gere um Automation Token para o escopo @brabo em npmjs.com e configure o segredo NPM_TOKEN para publicar de verdade."
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
         if: env.TEM_NPM_TOKEN == 'true'
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         if: env.TEM_NPM_TOKEN == 'true'
         with:
           node-version: ${{ env.NODE_VERSION }}

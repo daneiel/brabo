@@ -30,6 +30,20 @@ interface AuthLayoutProps {
    * formulário. Dentro do card competiria com o que a pessoa veio fazer.
    */
   abaixoDoCartao?: ReactNode;
+  /**
+   * Conteúdo da COLUNA DE IDENTIDADE, abaixo do cabeçalho de marca.
+   *
+   * Entregar isto é o que liga o layout de DUAS colunas: identidade e
+   * ambiente à esquerda, formulário à direita. Ausente (o caso das outras três
+   * telas de auth), a moldura fica na coluna única de sempre, com o mesmo
+   * empilhamento e as mesmas medidas — as duas colunas são um MODO, não uma
+   * reescrita.
+   *
+   * Nada aqui pode ser focável: este bloco vem ANTES do card no DOM, e um
+   * botão aqui roubaria a primeira parada de `Tab` do primeiro campo do
+   * formulário (ordem fixada por `auth-teclado.test.tsx`).
+   */
+  colunaDeIdentidade?: ReactNode;
   /** Navegação, para o "Status" do rodapé da página. */
   irPara: (rota: string) => void;
 }
@@ -56,6 +70,21 @@ interface AuthLayoutProps {
  * `background` do `<main>`, mas são duas camadas com opacidades diferentes, e
  * empilhá-las num `background-image` só amarraria a ordem delas à ordem dos
  * gradientes — mais frágil de ler do que dois elementos com nome.
+ *
+ * ## As duas colunas são CSS, não um segundo JSX
+ *
+ * Com `colunaDeIdentidade`, a moldura passa a ler identidade+ambiente à
+ * esquerda e formulário à direita. O que muda é só a folha: os dois invólucros
+ * (`.colunaIdentidade`, `.colunaFormulario`) existem SEMPRE no DOM e são
+ * `display: contents` por padrão, o que os apaga do layout e deixa a coluna
+ * única byte a byte como era. No modo duplo eles viram caixas de verdade e o
+ * `flex` do container os põe lado a lado.
+ *
+ * Isso não é preciosismo: a alternativa — ramificar o JSX em dois desenhos —
+ * duplicaria o card, o rodapé e as quatro telas que os herdam, e a ORDEM do
+ * DOM é contrato aqui (a ordem de `Tab` no login e a vizinhança
+ * `<section>`→`<footer>` que a moldura garante quando não há bloco abaixo do
+ * card). Um só DOM, duas apresentações, nenhum dos dois contratos em risco.
  */
 export function AuthLayout({
   titulo,
@@ -63,68 +92,83 @@ export function AuthLayout({
   children,
   rodapeDoCartao,
   abaixoDoCartao,
+  colunaDeIdentidade,
   irPara,
 }: AuthLayoutProps) {
   const { t } = useTranslation('auth');
+  const classesDoContainer = [
+    styles.container,
+    colunaDeIdentidade ? styles.containerDuplo : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <main className={styles.tela}>
       <div className={styles.grade} aria-hidden="true" />
       <div className={styles.brilho} aria-hidden="true" />
 
-      <div className={styles.container}>
-        <header className={styles.marca}>
-          <span className={styles.selo} aria-hidden="true">
-            <LogoMark size={23} />
-          </span>
-          <span className={styles.nomes}>
-            <span className={styles.nome}>Brabo</span>
-            <span className={styles.tagline}>{t('authLayout.tagline')}</span>
-          </span>
-        </header>
+      <div className={classesDoContainer}>
+        <div className={styles.colunaIdentidade}>
+          <header className={styles.marca}>
+            <span className={styles.selo} aria-hidden="true">
+              <LogoMark size={23} />
+            </span>
+            <span className={styles.nomes}>
+              <span className={styles.nome}>Brabo</span>
+              <span className={styles.tagline}>{t('authLayout.tagline')}</span>
+            </span>
+          </header>
+          {colunaDeIdentidade}
+        </div>
 
-        <section className={styles.cartao}>
-          <div className={styles.cabeca}>
-            <h1 className={styles.titulo}>{titulo}</h1>
-            <p className={styles.subtitulo}>{subtitulo}</p>
-          </div>
-          <div className={styles.corpo}>{children}</div>
-          {rodapeDoCartao && (
-            <div className={styles.rodapeCartao}>{rodapeDoCartao}</div>
+        <div className={styles.colunaFormulario}>
+          <section className={styles.cartao}>
+            <div className={styles.cabeca}>
+              <h1 className={styles.titulo}>{titulo}</h1>
+              <p className={styles.subtitulo}>{subtitulo}</p>
+            </div>
+            <div className={styles.corpo}>{children}</div>
+            {rodapeDoCartao && (
+              <div className={styles.rodapeCartao}>{rodapeDoCartao}</div>
+            )}
+          </section>
+
+          {abaixoDoCartao && (
+            <div className={styles.abaixoDoCartao}>{abaixoDoCartao}</div>
           )}
-        </section>
 
-        {abaixoDoCartao && (
-          <div className={styles.abaixoDoCartao}>{abaixoDoCartao}</div>
-        )}
-
-        <footer className={styles.rodapePagina}>
-          {/*
-            A versão vem crua do artefato: fora de um release ela é "dev", e isso
-            é informação verdadeira — este build não nasceu de uma tag.
-          */}
-          <span>{runtimeConfig.version}</span>
-          <span className={styles.separador} aria-hidden="true">
-            ·
-          </span>
-          <button
-            type="button"
-            className={styles.linkRodape}
-            onClick={() => irPara('/status')}
-          >
-            {t('authLayout.statusLink')}
-          </button>
-          <span className={styles.separador} aria-hidden="true">
-            ·
-          </span>
-          <a
-            className={styles.linkRodape}
-            href={URL_DOCUMENTACAO}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t('authLayout.docsLink')}
-          </a>
-        </footer>
+          <footer className={styles.rodapePagina}>
+            {/*
+              A versão vem crua do artefato: fora de um release ela é "dev", e
+              isso é informação verdadeira — este build não nasceu de uma tag.
+              Ela é renderizada UMA vez, aqui: o bloco de ambiente da coluna da
+              esquerda de propósito NÃO a repete.
+            */}
+            <span>{runtimeConfig.version}</span>
+            <span className={styles.separador} aria-hidden="true">
+              ·
+            </span>
+            <button
+              type="button"
+              className={styles.linkRodape}
+              onClick={() => irPara('/status')}
+            >
+              {t('authLayout.statusLink')}
+            </button>
+            <span className={styles.separador} aria-hidden="true">
+              ·
+            </span>
+            <a
+              className={styles.linkRodape}
+              href={URL_DOCUMENTACAO}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t('authLayout.docsLink')}
+            </a>
+          </footer>
+        </div>
       </div>
     </main>
   );
