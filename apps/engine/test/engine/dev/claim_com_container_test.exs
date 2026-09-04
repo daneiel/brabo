@@ -1,6 +1,6 @@
 defmodule Engine.Dev.ClaimComContainerTest do
   @moduledoc """
-  A guarda de container antes do claim (RN-501, ADR 0142).
+  A guarda de container antes do claim (RN-502, ADR 0143).
 
   Fica em arquivo próprio, e não dentro de `dev_agent_server_test.exs`, por
   uma diferença de PRÉ-CONDIÇÃO: todas as outras specs de dev agent agora

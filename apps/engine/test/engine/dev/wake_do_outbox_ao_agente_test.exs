@@ -41,7 +41,7 @@ defmodule Engine.Dev.WakeDoOutboxAoAgenteTest do
     project_id = Ecto.UUID.generate()
     session_id = Ecto.UUID.generate()
 
-    # RN-501/ADR 0142 — pré-condição de todo claim.
+    # RN-502/ADR 0143 — pré-condição de todo claim.
     container_running!(project_id)
 
     # `init/1` assina o tópico do agente com o processo de teste como

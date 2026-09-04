@@ -1,4 +1,4 @@
-# 0142 — Agentes de dev só depois do container
+# 0143 — Agentes de dev só depois do container
 
 ## Status
 
@@ -168,4 +168,4 @@ chamada de rede por claim, e a RN-486 é explícita em não fundi-los.
   passou a valer nos três modos
 - [ADR 0137](0137-o-runner-sobe-o-container-do-projeto.md) — `mounted`/`runner`
   subindo container na máquina do usuário
-- [RN-501](../business-rules.md#rn-501)
+- [RN-502](../business-rules.md#rn-502)

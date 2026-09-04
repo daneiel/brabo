@@ -276,7 +276,7 @@ defmodule Engine.Actions.TerminalExecutorTest do
     end
 
     # Modo `mounted` (ADR 0072/0104): segue o MESMO ramo de `container` desde a
-    # RN-501/ADR 0142 — com container REGISTRADO `running`,
+    # RN-502/ADR 0143 — com container REGISTRADO `running`,
     # `:executar_no_container`; sem ele, `:recusar_container_ausente`. Nunca
     # `:caminho_de_sempre`, que era o comportamento até esta entrega.
     #
@@ -381,7 +381,7 @@ defmodule Engine.Actions.TerminalExecutorTest do
       assert result.stderr =~ "nenhum runner está conectado"
     end
 
-    # RN-501/ADR 0142 — este teste afirmava o contrário até aqui ("cai no
+    # RN-502/ADR 0143 — este teste afirmava o contrário até aqui ("cai no
     # caminho de sempre"), e era essa a degradação calada: projeto `mounted`
     # sem container executava `System.cmd` DENTRO do processo do engine, e
     # nada na saída dizia isso. `mounted` entrou no mesmo ramo de `container`.
@@ -562,7 +562,7 @@ defmodule Engine.Actions.TerminalExecutorTest do
       assert result.stderr =~ "não foi possível executar no container"
     end
 
-    # RN-501/ADR 0142 — os dois testes abaixo afirmavam "cai no caminho de
+    # RN-502/ADR 0143 — os dois testes abaixo afirmavam "cai no caminho de
     # sempre" e passaram a afirmar a recusa. É a mesma mudança vista de dois
     # ângulos: nunca ter subido e ter subido e caído.
     test "container SEM linha running (nunca subiu): RECUSA, e nunca chama o broker" do

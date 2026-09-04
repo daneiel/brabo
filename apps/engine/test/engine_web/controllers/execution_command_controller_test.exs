@@ -37,7 +37,7 @@ defmodule EngineWeb.ExecutionCommandControllerTest do
 
     project_id = Ecto.UUID.generate()
 
-    # RN-501/ADR 0142 — a rota sobe/acorda dev agents, e todo claim exige
+    # RN-502/ADR 0143 — a rota sobe/acorda dev agents, e todo claim exige
     # container REGISTRADO `running`.
     Engine.DataCase.container_running!(project_id)
 

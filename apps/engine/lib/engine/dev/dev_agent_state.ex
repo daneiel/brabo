@@ -114,7 +114,7 @@ defmodule Engine.Dev.DevAgentState do
   end
 
   @doc """
-  TODOS os agentes do projeto, de qualquer módulo (RN-501 — `container.running`
+  TODOS os agentes do projeto, de qualquer módulo (RN-502 — `container.running`
   não fala de módulo nenhum: o container é do PROJETO, e quando ele sobe, todo
   agente parado pela guarda de `AgentIo.try_claim/2` volta a poder claimar).
 

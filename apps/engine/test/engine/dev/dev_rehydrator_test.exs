@@ -33,7 +33,7 @@ defmodule Engine.Dev.DevRehydratorTest do
 
     project_id = Ecto.UUID.generate()
 
-    # RN-501/ADR 0142 — o caminho de reidratação PASSA por `try_claim/2`
+    # RN-502/ADR 0143 — o caminho de reidratação PASSA por `try_claim/2`
     # (`init/1` -> `finish_restart_recovery/1`), então a guarda de container
     # vale para ele também. As specs daqui são sobre reidratar COM ambiente;
     # a que prova a guarda no caminho reidratado mora em

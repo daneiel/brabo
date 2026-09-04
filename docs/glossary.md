@@ -168,7 +168,7 @@ worktree.
 
 `idle` covers **three** different reasons, on purpose: the queue was empty,
 the claim failed, and — since
-[RN-501](business-rules.md#rn-501) — the project has no container
+[RN-502](business-rules.md#rn-502) — the project has no container
 REGISTERED `running`, which stops the claim before it happens. There is no
 fourth status for that last one: `idle` is the only state a wake still
 rescues, and every `handle_info/2` guard is keyed to it. What tells the three

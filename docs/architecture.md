@@ -83,8 +83,8 @@ need an immediate response.
 The outbox drains three `aggregate_type`s: `session` (since Phase 5),
 `task` (Phase 12b — `task.gate_resolved`/`task.became_claimable`, the dev
 agent's rescheduling after a gate resolves or a new task becomes claimable)
-and `container` ([ADR 0142](adr/0142-agentes-de-dev-so-depois-do-container.md)
-/[RN-501](business-rules.md#rn-501) — `container.running`, appended in the
+and `container` ([ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
+/[RN-502](business-rules.md#rn-502) — `container.running`, appended in the
 same transaction that records the project's container reaching `running`, so
 the dev agents its absence had parked in `:idle` wake up on their own; its
 own aggregate rather than a borrowed `task`, because the event is about no
@@ -404,8 +404,8 @@ The container's lifecycle (provision, recycle, clean up) doesn't exist yet
 coexists, for now, with the path-scope policy from
 [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md).
 
-And since [ADR 0142](adr/0142-agentes-de-dev-so-depois-do-container.md)
-/[RN-501](business-rules.md#rn-501), a decided image is no longer the only
+And since [ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
+/[RN-502](business-rules.md#rn-502), a decided image is no longer the only
 precondition: **a dev agent does not claim a task at all until the project's
 container is REGISTERED `running`**. The guard lives in
 `Engine.Dev.AgentIo.try_claim/2` — the single claim point — and not only in

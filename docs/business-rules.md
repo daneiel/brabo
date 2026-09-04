@@ -7504,7 +7504,7 @@ aceite.
   antes dos dev agents" (D0) — o bloqueador que tornava o requisito "dev agent
   só depois do container de pé" equivalente a "dev agent nunca começa"
 
-### RN-501 — Dev agent só reivindica task com container `running`, e o terminal não cai mais fora dele {#rn-501}
+### RN-502 — Dev agent só reivindica task com container `running`, e o terminal não cai mais fora dele {#rn-502}
 
 Duas metades da mesma regra: **sem ambiente de execução, o dev agent não
 começa**, e **sem ambiente de execução, o comando não roda em lugar nenhum**.
@@ -7583,7 +7583,7 @@ que ela só pode entrar DEPOIS das mudanças que dão container ao modo
   `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`
   — `running` publica `container.running` no agregado `container`; os outros
   destinos e a criação da linha não publicam nada
-- **ADR:** [0142](adr/0142-agentes-de-dev-so-depois-do-container.md)
+- **ADR:** [0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
 - **Origem:** plano "Nome e local na mesma tela, e container antes dos dev
   agents" (PR 7) — dez tasks do `exp001` travaram de uma vez porque nada
   ordenava container antes de dev agent

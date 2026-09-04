@@ -22,7 +22,7 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
     project_id = Ecto.UUID.generate()
     session_id = Ecto.UUID.generate()
 
-    # RN-501/ADR 0142 — o Noop passa pelo MESMO `AgentIo.try_claim/2`, então a
+    # RN-502/ADR 0143 — o Noop passa pelo MESMO `AgentIo.try_claim/2`, então a
     # guarda de container vale para ele igual: sem esta linha ele não claima.
     container_running!(project_id)
 

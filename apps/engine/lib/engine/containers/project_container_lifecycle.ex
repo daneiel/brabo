@@ -6,11 +6,11 @@ defmodule Engine.Containers.ProjectContainerLifecycle do
 
   A ÚNICA pergunta que o engine faz aqui é "há um container REGISTRADO como
   `running` para este projeto?" (ADR 0134, RN-492) — uma pergunta só, com
-  DOIS chamadores desde a RN-501 (ADR 0142), respondendo coisas diferentes:
+  DOIS chamadores desde a RN-502 (ADR 0143), respondendo coisas diferentes:
 
   - `Engine.Actions.TerminalExecutor` decide ONDE o comando roda — `true`
     atravessa pro container real via broker; `false` RECUSA
-    (`:recusar_container_ausente`). Até a RN-501, `false` caía no
+    (`:recusar_container_ausente`). Até a RN-502, `false` caía no
     `System.cmd` local, e era essa a degradação calada que ela eliminou;
   - `Engine.Dev.AgentIo.try_claim/2` decide se o dev agent PODE COMEÇAR —
     `false` para o claim antes de ele acontecer, em `:idle`, com
@@ -50,7 +50,7 @@ defmodule Engine.Containers.ProjectContainerLifecycle do
   (mesmas duas guardas de `Engine.Projects.Project.workspace_dir_name/1`:
   nunca propaga a falha pra quem só queria uma resposta).
 
-  O que `false` PRODUZ mudou com a RN-501, e é o que importa saber aqui: em
+  O que `false` PRODUZ mudou com a RN-502, e é o que importa saber aqui: em
   vez de degradar pro `System.cmd` local, ele agora RECUSA — o comando não
   roda, e o dev agent não claima. Erro de consulta cai no mesmo lugar que
   "não há container", de propósito: nos dois casos o engine não pode

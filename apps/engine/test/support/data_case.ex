@@ -63,7 +63,7 @@ defmodule Engine.DataCase do
   (tabela da api, ADR 0081 — o engine só a LÊ).
 
   Existe porque `Engine.Dev.AgentIo.try_claim/2` passou a exigir essa linha
-  antes de reivindicar task nenhuma (RN-501, ADR 0142): sem ela o agente cai
+  antes de reivindicar task nenhuma (RN-502, ADR 0143): sem ela o agente cai
   em `:idle` com `dev.blocked_by_container`, que é o comportamento CERTO e
   o que quase toda spec de dev agent anterior a esta guarda não esperava.
 

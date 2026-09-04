@@ -7,7 +7,7 @@ defmodule Engine.Workers.DevAgentWakeWorker do
   UM agente específico (`payload["agentId"]`); entrega `{:gate_resolved,
   ...}` só pra ele.
 
-  `container.running` — o container do PROJETO subiu (RN-501, ADR 0142);
+  `container.running` — o container do PROJETO subiu (RN-502, ADR 0143);
   entrega `{:wake, :became_claimable}` a TODOS os agentes do projeto
   (`DevAgentState.list_by_project/1`), porque a guarda de container em
   `AgentIo.try_claim/2` é por PROJETO, não por módulo.
@@ -164,7 +164,7 @@ defmodule Engine.Workers.DevAgentWakeWorker do
 
   # `container.running` — o container do PROJETO chegou em `running` na api
   # (`RegistrarTransicaoDeContainerUseCase`), e com ele a pré-condição que
-  # `Engine.Dev.AgentIo.try_claim/2` passou a exigir (RN-501, ADR 0142).
+  # `Engine.Dev.AgentIo.try_claim/2` passou a exigir (RN-502, ADR 0143).
   #
   # Entrega `{:wake, :became_claimable}` — a MESMA mensagem, e não uma nova —
   # porque a semântica dela já é "pode haver trabalho agora", como o

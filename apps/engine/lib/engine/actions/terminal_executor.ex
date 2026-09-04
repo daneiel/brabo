@@ -27,12 +27,12 @@ defmodule Engine.Actions.TerminalExecutor do
 
   Faltando qualquer uma das duas, o comando é RECUSADO explicitamente — NUNCA
   cai no `System.cmd`/bind-mount de `mounted`, que não existe pra um projeto
-  `runner`. Desde a RN-501 (ADR 0142), o caminho de sempre (`System.cmd`
+  `runner`. Desde a RN-502 (ADR 0143), o caminho de sempre (`System.cmd`
   local) não vale mais para modo de execução NENHUM: ele sobrou só para
   projeto inexistente ou `project_id` malformado (ver a seção abaixo).
 
   ## Execução DENTRO do container real do projeto (`container`/`mounted`, com
-  ## um container REGISTRADO `running` — RN-492/RN-501, ADR 0134/0142)
+  ## um container REGISTRADO `running` — RN-492/RN-502, ADR 0134/0143)
 
   Quando o projeto está em `execution_mode: container`/`mounted` (ADR 0072) e
   há uma linha `running` em `project_containers` (ADR 0081/0130/0133 —
@@ -51,7 +51,7 @@ defmodule Engine.Actions.TerminalExecutor do
   para fechar.
 
   E SEM container `running` a recusa é a mesma coisa vista do outro lado
-  (RN-501, ADR 0142): `:recusar_container_ausente`, `failed_result` com o
+  (RN-502, ADR 0143): `:recusar_container_ausente`, `failed_result` com o
   motivo nomeado. Era exatamente aqui que o ADR 0134 pousava só pela metade
   — a ausência de container não recusava, caía no `System.cmd` do processo
   do engine, e o isolamento que o ADR existe para criar valia só no caminho
@@ -105,7 +105,7 @@ defmodule Engine.Actions.TerminalExecutor do
       :recusar_container_ausente ->
         failed_result(
           "o projeto não tem container REGISTRADO como `running` — o comando " <>
-            "NÃO roda fora do container (RN-501). Suba o container do projeto " <>
+            "NÃO roda fora do container (RN-502). Suba o container do projeto " <>
             "(a Infra propõe `container_start`) e tente de novo."
         )
 
@@ -124,7 +124,7 @@ defmodule Engine.Actions.TerminalExecutor do
   # devolve `nil` pra projeto inexistente/id malformado — degrada pro
   # caminho de sempre, nunca propaga erro daqui.
   #
-  # SEIS saídas (RN-423/ADR 0104 + RN-492/ADR 0134 + RN-501/ADR 0142):
+  # SEIS saídas (RN-423/ADR 0104 + RN-492/ADR 0134 + RN-502/ADR 0143):
   #
   #   - `runner` sem workspace verificado: recusa (nunca roteia às cegas);
   #   - `runner` verificado, sem runner conectado: recusa (idem);
@@ -139,7 +139,7 @@ defmodule Engine.Actions.TerminalExecutor do
   #     (`:recusar_container_ausente`) — ver abaixo;
   #   - projeto inexistente ou id malformado: caminho de sempre.
   #
-  # ## O fallback silencioso que sumiu (RN-501, ADR 0142)
+  # ## O fallback silencioso que sumiu (RN-502, ADR 0143)
   #
   # Até aqui, `container` sem container `running` caía em
   # `:caminho_de_sempre`, isto é, `System.cmd` DENTRO do processo do engine —

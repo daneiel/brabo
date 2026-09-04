@@ -41,7 +41,7 @@ defmodule Engine.Gates.GateRescuerTest do
 
     project_id = Ecto.UUID.generate()
 
-    # RN-501/ADR 0142 — o resgate solta o agente para o próximo claim, e todo
+    # RN-502/ADR 0143 — o resgate solta o agente para o próximo claim, e todo
     # claim exige container REGISTRADO `running`.
     container_running!(project_id)
 

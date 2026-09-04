@@ -22,7 +22,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Novidades
 
 - **engine,api**: dev agent só reivindica task com o container do projeto
-  `running` (ADR 0142, RN-501). Antes não havia ordem nenhuma: numa execução
+  `running` (ADR 0143, RN-502). Antes não havia ordem nenhuma: numa execução
   real do `exp001` nenhum `container_start` chegou a ser proposto, e os dez
   dev agents começaram assim mesmo — para travar dez vezes. A guarda mora em
   `AgentIo.try_claim/2`, o ponto **único** de claim, e usa o predicado que já
@@ -44,7 +44,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Correções
 
 - **engine**: o comando de terminal do dev agent **não cai mais fora do
-  container** em silêncio (RN-501). `container` sem container `running` caía
+  container** em silêncio (RN-502). `container` sem container `running` caía
   em `:caminho_de_sempre`, isto é, `System.cmd` dentro do processo do engine —
   o mesmo processo que fala com o banco, com a api e com todos os outros
   projetos —, então o isolamento do ADR 0134 valia só no caminho feliz e a

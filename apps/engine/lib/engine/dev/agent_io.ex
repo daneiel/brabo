@@ -110,7 +110,7 @@ defmodule Engine.Dev.AgentIo do
 
   `run_task` recebe `{state_em_working, task}` e devolve o novo state.
 
-  ## A guarda do container (RN-501, ADR 0142)
+  ## A guarda do container (RN-502, ADR 0143)
 
   ANTES de qualquer chamada à api: sem um container REGISTRADO `running`
   para o projeto (`Engine.Containers.ProjectContainerLifecycle.running?/1`,
@@ -161,7 +161,7 @@ defmodule Engine.Dev.AgentIo do
       module: state.module,
       reason:
         "o projeto não tem container REGISTRADO como `running` — o dev agent " <>
-          "não reivindica task antes de o ambiente de execução existir (RN-501). " <>
+          "não reivindica task antes de o ambiente de execução existir (RN-502). " <>
           "Suba o container do projeto (a Infra propõe `container_start`) e o " <>
           "agente volta a tentar sozinho."
     })

@@ -10,7 +10,7 @@ defmodule Engine.Outbox.Drain do
   por evento (`task.gate_resolved`, `task.became_claimable`), ver
   `Engine.Workers.DevAgentWakeWorker`.
 
-  `aggregate_type = "container"` entrou com a RN-501/ADR 0142 — o container
+  `aggregate_type = "container"` entrou com a RN-502/ADR 0143 — o container
   do projeto chegando em `running` solta os dev agents que a guarda de
   `AgentIo.try_claim/2` tinha parado em `:idle`. Agregado próprio, e não
   `"task"`, porque o evento não é sobre task nenhuma; o `aggregate_type` do
@@ -91,7 +91,7 @@ defmodule Engine.Outbox.Drain do
               # uma ação. Sem esta linha o evento é emitido, fica no outbox e
               # nunca vira job — o agente espera para sempre.
               "task.action_settled",
-              # RN-501/ADR 0142: o container do projeto chegou em `running`, e
+              # RN-502/ADR 0143: o container do projeto chegou em `running`, e
               # com ele a pré-condição de claim. Agregado `container` (e não
               # `task`) porque o evento não é sobre task nenhuma — é o único
               # motivo de a query acima drenar um terceiro `aggregate_type`.
