@@ -2,6 +2,21 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v4.0.1 — 2026-09-04
+
+### Correções
+
+- **ci**: o anexo do binário espera a Release em vez de ler a ausência dela (35ba788ac)
+
+### Documentação
+
+- **ci**: o comentário do audit descreve o que os dois auditores fazem (aaf84ae04)
+- **changelog**: v4.0.0 (48dc81813)
+
+### Manutenção
+
+- **engine**: mint 1.10.0 fecha duas advisories de DoS (a71b984fb)
+
 ## Unreleased
 
 ### Correções
