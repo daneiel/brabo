@@ -103,6 +103,21 @@ docker compose -f docker/docker-compose.yml --env-file .env up -d api engine
 Pronto. Daqui em diante, um projeto no modo Pasta montada vai para algum lugar
 dentro de `/home/voce/brabo` e não precisa de mais nada.
 
+**Projeto montado ganha container de verdade, e ele roda NO SERVIDOR**
+([ADR 0142](adr/0142-a-segunda-raiz-do-broker.md),
+RN-501). Como a base é alcançável
+pelo daemon Docker do host, o `container_start` de um projeto montado vai para
+o **broker**, exatamente como no modo Container — ele deixou de exigir um
+`brabo-runner` conectado. Só o modo **Runner** continua indo pelo runner, na
+máquina do próprio usuário, porque aquela pasta está num lugar que este
+servidor não enxerga. Subir o broker (`--profile container-broker`) passa a
+fazer parte da preparação, se você quer container para projetos montados. Ele
+tem DUAS raízes e nenhuma substitui a outra: `PROJECT_WORKSPACES_HOST_ROOT`
+(modo Container) e `BRABO_PROJECTS_HOST_BASE` (modo Pasta montada, derivada de
+`BRABO_PROJECTS_BASE` no compose). A que faltar é NOMEADA na recusa, sem tocar
+container nenhum — cair na outra montaria a pasta de outro projeto, porque a
+raiz gerenciada é nomeada por `workspace_dir_name` e a base é nomeada por você.
+
 **Por que o assistente esconde o modo Pasta montada.** Sem
 `BRABO_PROJECTS_BASE`, a api reporta `projectsBase: null` e a opção não é
 oferecida. É deliberado: oferecer um modo que a instalação não honra produz um
