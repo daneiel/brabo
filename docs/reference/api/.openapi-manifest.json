@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "f1aa9fd137b054862b47bd12631e83d2930f0cb6afb3aaca00b07b1aab915f9d",
+  "openapiSha256": "70d6b049af8aa3df3019887b767fc312539e19e7d4a9f236f706131d45d628db",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -357,8 +357,8 @@
     "hugging-face-models-controller-search.api.mdx": "e1be7fb8ac70235f5f616e25ce675c8698dab851e1e00222db21f65d26bfb21c",
     "internal-containers-controller-container-spec.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "internal-containers-controller-container-spec.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
-    "internal-containers-controller-container-spec.StatusCodes.json": "3e41ae5a4622f8cef316d214b03752052d1712e4fca23a7d3bd27c1ace978f01",
-    "internal-containers-controller-container-spec.api.mdx": "c732a326ee00bf6237d9980b6a024652150853eec36380759878a8641d030eb9",
+    "internal-containers-controller-container-spec.StatusCodes.json": "c74e2eb764b729582aa75d0f94cce2d412c52ce6f08c3eb0097edda9bbb9a609",
+    "internal-containers-controller-container-spec.api.mdx": "e652f46a6524eaef5695fe66cfe98136f91a33169d8078eb19450ce1dac8c193",
     "internal-gates-controller-ler.ParamsDetails.json": "c7c69ffea7e3e6af99994c9347a2f29c4a558bdf8854ac3b61df817cbadcd1f7",
     "internal-gates-controller-ler.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "internal-gates-controller-ler.StatusCodes.json": "efbe42511acb071ad0e3c9e862ddbe0d21babab72c55a96d0ed3f5203abe553e",

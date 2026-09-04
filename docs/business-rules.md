@@ -7576,6 +7576,110 @@ na RN seguinte.
 
 ---
 
+### RN-501 — Projeto `mounted` sobe container pelo BROKER, e o que atravessa a rede é um localizador discriminado — nunca um caminho absoluto {#rn-501}
+
+Um projeto no modo Pasta montada **não conseguia container nenhum** até aqui, e
+por dois bloqueios independentes: `ExecuteContainerStartUseCase` mandava todo
+modo diferente de `container` para o RUNNER (que exige um `brabo-runner`
+conectado), e o broker recusava na fonte qualquer modo que não fosse
+`container`, com `ModoDeExecucaoNaoSuportadoError`.
+
+Os dois existiam pela mesma razão de GEOMETRIA, não pelo nome do modo: a pasta
+de um projeto montado ficava num lugar arbitrário do disco do operador, que o
+daemon Docker do servidor não tinha por que enxergar. O ADR 0141 (RN-500)
+mudou essa geometria — todo projeto montado passa a morar sob **uma** base
+montada por identidade —, e é isso, e só isso, que esta regra colhe.
+
+**A ramificação passa a ser por DESTINO, não por modo.** `container` **e**
+`mounted` vão ao BROKER; só `runner` vai ao runner, porque a pasta dele
+continua numa máquina que este servidor não alcança (ADR 0137). Vale igual para
+as três ações de ciclo de vida — `container_start`, `container_stop` e
+`container_remove`: elas TÊM de mudar juntas, senão o container de um projeto
+montado sobe no servidor e o pedido de parar vai procurá-lo na máquina do
+usuário, deixando de pé, sem forma de parar, o que está de pé.
+
+**O invariante do ADR 0130 não se mexe: nenhum caminho absoluto atravessa a
+rede.** O broker é root-equivalente no host e COMPÕE o `-v` a partir das raízes
+DELE; se a api mandasse `/home/voce/brabo/loja`, a contenção do bind-mount
+passaria a depender de a api estar correta, que é exatamente a dependência que
+o broker existe para não ter. O que muda é que agora existem DUAS raízes do
+lado de lá, então a spec precisa DIZER contra qual delas o pedaço relativo
+vale — e diz, num localizador discriminado:
+
+| `localizacao.tipo` | segmento | raiz do broker |
+|---|---|---|
+| `gerenciada` | `workspace_dir_name` (RN-109) | `PROJECT_WORKSPACES_HOST_ROOT` |
+| `montada` | o caminho RELATIVO sob a base | `BRABO_PROJECTS_HOST_BASE` |
+| `indisponivel` | — (há `motivo`) | nenhuma |
+
+**Três estados e não dois**, porque o terceiro existe de verdade e tem dois
+consertos diferentes: projeto `runner` (a pasta está noutra máquina — o
+conserto é o runner, do lado de lá) e projeto `mounted` LEGADO criado fora da
+base (o conserto é mover a pasta). Colapsá-los num `null` faria a mesma
+ausência mandar quem opera para o lugar errado. A pasta que É a própria base
+também cai aqui, e não vira segmento vazio: `<raiz>/` montaria a base inteira
+— a pasta de TODOS os projetos montados — dentro do container de um só.
+
+**A falta de uma raiz nunca é suprida pela outra.** Sem
+`BRABO_PROJECTS_HOST_BASE`, um `start` de projeto montado recusa **nomeando a
+variável** (`BaseDeProjetosNaoConfiguradaError`, origem `infra`, 503) e não
+toca container nenhum — mesmo molde de `RaizDeWorkspacesNaoConfiguradaError`.
+Cair na outra raiz por omissão seria o pior desfecho possível: a raiz
+gerenciada é nomeada por `workspace_dir_name` e a base é nomeada pelo usuário,
+então o mesmo nome aponta para pastas diferentes e o container subiria com a
+pasta de OUTRO projeto, sem nada indicando por quê. Pelo mesmo motivo, a lista
+de modos que o broker atende é de PERMITIDOS: um modo novo no enum nasce
+recusado, com mensagem, em vez de aceito por omissão.
+
+**A composição continua passando por três barreiras, não uma.** A api recusa o
+que não está sob a base (`segmentoSobABaseDeProjetos`); o broker recusa o
+segmento que não é relativo (`segmentoDeProjetoValidado` — `..`, absoluto,
+vazio, barra dupla, NUL); e o resultado da concatenação ainda passa por
+`raizDeProjetoValidada` antes de virar `-v`. Validar o segmento e não validar a
+concatenação seria confiar na aritmética de strings.
+
+**`mounted` ELEGE a imagem, como `container` — não lê a vigente como o runner.**
+Não é simetria estética: é o único desenho que funciona. O broker compõe a
+partir de `artifact.project_image`, indo BUSCÁ-LO na api. Uma eleição da Infra
+que não fosse gravada nesse artefato seria inerte — o container subiria com a
+imagem que o Arquiteto decidiu, o payload que o humano aprovou diria outra, e
+nada no registro denunciaria a diferença. O caminho do runner pode ler a
+vigente justamente porque ali a api MANDA os campos da spec pelo canal; lá o
+artefato não é a fonte que o outro lado consulta.
+
+**O que esta regra NÃO faz:** não materializa pasta nenhuma (é a validação
+diferida, RN-500 e a PR vizinha), não toca o portão da imagem (RN-105 já vale
+para os três modos desde a RN-494) e não muda quem PROPÕE `container_start` — o
+Infra Lead segue podendo propor para um projeto sem runner conectado e sem
+imagem decidida, a lacuna declarada desde a RN-494.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts`
+  (`LocalizacaoDoProjeto`, `localizacaoDoProjeto`);
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`segmentoSobABaseDeProjetos`);
+  `apps/api/src/interfaces/http/internal/dto/container-spec-internal.response.dto.ts`;
+  `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts`,
+  `…/execute-container-stop.use-case.ts`, `…/execute-container-remove.use-case.ts`
+  (a ramificação `!== 'runner'`);
+  `packages/docker-port/src/docker-port.ts` (`segmentoDeProjetoValidado`);
+  `apps/broker/src/config.ts` (`baseDeProjetosNoHost`) e
+  `apps/broker/src/operacoes.ts` (`raizDoProjetoNoHost`,
+  `garantirModoSuportado`, `BaseDeProjetosNaoConfiguradaError`,
+  `LocalizacaoIndisponivelError`)
+- **Teste:**
+  `apps/api/test/application/use-cases/containers/spec-e-observacao-de-container.use-case.spec.ts`
+  (`describe('… o localizador discriminado (RN-501)')`);
+  `apps/api/test/application/use-cases/actions/execute-container-{start,stop,remove}.use-case.spec.ts`;
+  `packages/docker-port/src/docker-port.spec.ts`
+  (`describe('segmentoDeProjetoValidado')`); `apps/broker/src/operacoes.spec.ts`
+  e `apps/broker/src/config.spec.ts`
+- **ADR:** [0130](adr/0130-broker-de-container.md),
+  [0141](adr/0141-base-unica-dos-projetos-montados.md)
+- **Origem:** plano do dono do produto, PR 3
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -7599,6 +7703,9 @@ na RN seguinte.
 | Caminho de projeto **Local** não montado no container | a criação é **recusada** (400) com a linha de compose a acrescentar — o projeto não nasce para travar depois (RN-170) |
 | `BRABO_PROJECTS_BASE` ausente | a api responde `projectsBase: null` e a criação de projeto **não oferece** o modo Pasta montada — nunca oferecer um modo que a instalação não honra (RN-500) |
 | `BRABO_PROJECTS_BASE` sobreposta ao checkout do Brabo (nos dois sentidos) | `pnpm dev` **recusa subir**, nomeando os dois caminhos. Nenhuma validação da api pega isso: ela compara contra `process.cwd()`, que dentro do container dela é `/workspace` (RN-500) |
+| `BRABO_PROJECTS_HOST_BASE` ausente no broker e `container_start` de projeto `mounted` | recusa **nomeando a variável** (503, origem `infra`), sem tocar container nenhum — nunca cai na outra raiz, que apontaria para a pasta de outro projeto (RN-501) |
+| Projeto `mounted` LEGADO, com a pasta fora da base | a spec devolve `localizacao.tipo: 'indisponivel'` com o motivo nomeando a base e o caminho; o broker recusa com 409 e o conserto é **mover a pasta**, não trocar de modo (RN-501) |
+| Broker fora do ar (ele sobe sob `profiles` e NÃO sobe por padrão) e `container_start` de projeto `mounted` | a ação termina `failed` com o motivo do `BrokerIndisponivelError`, nunca exceção — e nada transiciona no ciclo de vida (RN-501) |
 | Localização de projeto incoerente no banco (par modo/caminho gravado por fora da criação) | a ativação da execução recusa com **400** e o motivo em pt-BR, nunca 500 sem corpo (RN-478) |
 | Login social: e-mail do provider bate com conta existente mas NÃO verificado | recusado com 403, nenhum vínculo gravado — e-mail não verificado não é prova de identidade (RN-274) |
 | Login social: `state` inválido/expirado, ou de outro PROPÓSITO (fluxo de conexão de git) | recusado, nenhuma chamada ao provider nem escrita no banco (RN-273) |

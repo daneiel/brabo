@@ -805,10 +805,11 @@ of five operations and comes here to read:
 
 1. project identity (`projectId`, `projectSlug`, `workspaceId`) and
    `workspaceDirName`, the folder name frozen at creation ([RN-109](../business-rules/autenticacao.md#rn-109));
-2. `executionMode`, because `mounted`/`runner` projects are refused with `409` on
-   the broker side — their folder is on the user's machine and this host cannot
-   see it;
-3. the Architect's current image decision, or `null` while there is none
+2. `executionMode`. The broker serves `container` **and** `mounted`, and refuses
+   `runner` with `409` — a runner project's folder is on the user's machine and
+   this host cannot see it ([RN-501](../business-rules.md#rn-501));
+3. `localizacao`, the discriminated locator of the project folder — see below;
+4. the Architect's current image decision, or `null` while there is none
    ([RN-105](../business-rules/autenticacao.md#rn-105)), in which case only `start` is refused
    and the other four operations still work.
 
@@ -819,21 +820,38 @@ because there is no field.
 
 **Two things this route deliberately does not return.** `rationale`, which exists
 so a human can review the decision and has no consumer in a `docker run`; and
-**any path at all** — the bind source is resolved by the daemon against the HOST
-filesystem, so `/data/project-workspaces/<x>` (a path inside the api container)
-would make the daemon create and mount an EMPTY folder. The broker joins
-`workspaceDirName` with its own `PROJECT_WORKSPACES_HOST_ROOT`, and refuses
-`start` naming that variable when it is not configured.
+**any absolute path at all** — the bind source is resolved by the daemon against
+the HOST filesystem, so `/data/project-workspaces/<x>` (a path inside the api
+container) would make the daemon create and mount an EMPTY folder.
 
-The broker now declares a **second** root of its own,
-`BRABO_PROJECTS_HOST_BASE` — the base of `mounted` projects, also on the host,
-derived in the composes from `BRABO_PROJECTS_BASE`
-([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md)). **Nothing
-consumes it yet**, and this route's payload does not change because of it:
-resolving a `mounted` project against that root is the PR that gives Mounted
-mode a container, and it is there that item 2 above (the `409` for
-`mounted`/`runner`) gets revisited. The variable is declared alongside the base
-so it doesn't appear half a release later, far from the file that explains it.
+**`localizacao`: which root, plus the piece that root does not cover**
+([RN-501](../business-rules.md#rn-501),
+[ADR 0142](../adr/0142-a-segunda-raiz-do-broker.md)). The broker has TWO roots
+of its own, and the spec says which one a segment belongs to instead of the
+broker guessing:
+
+| `localizacao.tipo` | `segmento` | root it resolves against |
+|---|---|---|
+| `gerenciada` | `workspaceDirName` ([RN-109](../business-rules/autenticacao.md#rn-109)) | `PROJECT_WORKSPACES_HOST_ROOT` |
+| `montada` | the RELATIVE path under the base (may contain `/`) | `BRABO_PROJECTS_HOST_BASE` |
+| `indisponivel` | absent — there is a `motivo` instead | none |
+
+`BRABO_PROJECTS_HOST_BASE` is derived in the composes from
+`BRABO_PROJECTS_BASE` ([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md)),
+and the broker refuses `start` NAMING whichever of the two is missing, without
+touching a container. It never falls back to the other one: the managed root is
+named by `workspace_dir_name` and the base is named by the user, so the same
+name points at different folders and the container would come up with someone
+else's code inside it.
+
+**Three variants, not two.** `indisponivel` is not a disguised `null`: it is
+"no root on this server reaches that folder", and it has two different fixes —
+a `runner` project (fix: the runner, on the other side) and a LEGACY `mounted`
+project created outside the base (fix: move the folder). Collapsing them would
+send whoever operates to the wrong place half the time. A folder that IS the
+base itself lands here too rather than becoming an empty segment: `<root>/`
+would mount the whole base — every mounted project — inside one project's
+container.
 
 There is no write route in this direction. Whoever WRITES the container lifecycle
 is still `RegistrarTransicaoDeContainerUseCase`, through the route that already
@@ -845,11 +863,18 @@ authority out of the api.
 The other direction is not `/internal/*` on this side — it is the broker's own
 surface, five operations plus `/health`, reachable only from the api (an
 `internal: true` Compose network, no published port). The api's port is
-`ContainerBrokerPort`, and today exactly **one** of the five has a caller:
-`inspect`, used by `GET /projects/:projectId/container/lifecycle` to return the
+`ContainerBrokerPort`, and today all **five** have callers. `inspect` is the
+only read: `GET /projects/:projectId/container/lifecycle` uses it to return the
 OBSERVED state beside the RECORDED one ([RN-486](../business-rules.md#rn-486)).
 The other four are external effect and do not happen without a
-`proposed_action`.
+`proposed_action` — `start`/`stop`/`remove` behind the three lifecycle action
+types ([ADR 0133](../adr/0133-infra-elege-imagem-do-roteamento.md),
+[ADR 0136](../adr/0136-pagina-global-de-containers.md)) and `exec` behind a
+dev agent's terminal command inside a running container
+([ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md)). Since
+[RN-501](../business-rules.md#rn-501) those callers reach the broker for
+`container` **and** `mounted` projects; only `runner` goes to the runner
+instead.
 
 ## api → engine
 

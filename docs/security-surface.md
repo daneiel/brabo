@@ -251,13 +251,22 @@ reason in the URL.
   a container spec, it comes here to READ project identity, execution mode and
   the Architect's current image decision, and composes the spec itself. A spec
   travelling in a request body would make the containment of a root-equivalent
-  process depend on its caller being correct. It returns **no path at all** —
-  the bind source is resolved by the daemon against the HOST filesystem, so a
-  path from inside the api container would silently mount an empty folder; the
-  broker joins `workspaceDirName` with its own `PROJECT_WORKSPACES_HOST_ROOT`,
-  and refuses `start` when that is not configured. It also drops `rationale`,
-  which exists so a human can review the decision and has no consumer in a
-  `docker run`.
+  process depend on its caller being correct. It returns **no absolute path at
+  all** — the bind source is resolved by the daemon against the HOST
+  filesystem, so a path from inside the api container would silently mount an
+  empty folder. What travels instead is `localizacao`
+  ([RN-501](business-rules.md#rn-501),
+  [ADR 0142](adr/0142-a-segunda-raiz-do-broker.md)): a discriminated locator
+  saying which of the broker's TWO roots resolves the folder (`gerenciada` →
+  `PROJECT_WORKSPACES_HOST_ROOT`, `montada` → `BRABO_PROJECTS_HOST_BASE`, or
+  `indisponivel` with a reason) plus the RELATIVE segment that root does not
+  cover. The api never learns where those roots are on the host, and the broker
+  never learns anything about the project — neither side alone can write an
+  arbitrary path, which is the containment. The broker refuses `start` naming
+  whichever root is missing, never falling back to the other, and revalidates
+  the segment (`..`, absolute, empty, `NUL` all refused) plus the concatenated
+  result before it becomes a `-v`. It also drops `rationale`, which exists so a
+  human can review the decision and has no consumer in a `docker run`.
 - **`POST /projects/:projectId/runner-ticket` is classified `role:developer`
   like any other route, but does NOT accept a session JWT** (ADR 0105,
   RN-424) — only a Personal Access Token (`brb_…`) OR a runner device key

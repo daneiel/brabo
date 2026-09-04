@@ -32,6 +32,7 @@ const CONTEXTO: ContextoDoProjeto = {
   workspaceId: 'aaaaaaaa-0000-4000-8000-000000000000',
   workspaceDirName: 'exp002-f52be111',
   executionMode: 'container',
+  localizacao: { tipo: 'gerenciada', segmento: 'exp002-f52be111' },
   imagem: {
     image: 'node:22-bookworm-slim',
     network: 'egress',
@@ -312,14 +313,34 @@ describe('classificação de falha', () => {
     expect((r.corpo as { origem: string }).origem).toBe('infra');
   });
 
-  it('projeto `runner`/`mounted` é 409 — quem sobe container lá é o runner', async () => {
-    const { deps, docker } = montar({ contexto: { executionMode: 'runner' } });
+  it('projeto `runner` é 409 — quem sobe container lá é o runner, na máquina do usuário', async () => {
+    const { deps, docker } = montar({
+      contexto: {
+        executionMode: 'runner',
+        localizacao: { tipo: 'indisponivel', motivo: 'modo runner' },
+      },
+    });
 
     const r = await tratar(deps, pedido('POST', '/containers/p/start', {}));
 
     expect(r.status).toBe(409);
     expect((r.corpo as { origem: string }).origem).toBe('politica');
     expect(docker.chamadas).toHaveLength(0);
+  });
+
+  it('projeto `mounted` NÃO é mais recusado — a pasta dele passou a ser alcançável (RN-501)', async () => {
+    const { deps, docker } = montar({
+      contexto: {
+        executionMode: 'mounted',
+        localizacao: { tipo: 'montada', segmento: 'loja' },
+      },
+      env: { BRABO_PROJECTS_HOST_BASE: '/home/voce/brabo' },
+    });
+
+    const r = await tratar(deps, pedido('POST', '/containers/p/start', {}));
+
+    expect(r.status).toBe(200);
+    expect(docker.chamadas).toHaveLength(1);
   });
 
   it('sem PROJECT_WORKSPACES_HOST_ROOT, `start` recusa dizendo o que falta', async () => {

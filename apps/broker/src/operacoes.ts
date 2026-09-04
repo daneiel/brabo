@@ -23,6 +23,7 @@
 import {
   especificacaoValidada,
   nomeDeWorkspaceValidado,
+  segmentoDeProjetoValidado,
   PONTO_DE_MONTAGEM,
   type ContainerIniciado,
   type DockerPort,
@@ -41,15 +42,20 @@ export interface DependenciasDoBroker {
 }
 
 /**
- * O projeto não sobe container do SERVIDOR. Hoje isso quer dizer
- * `mounted`/`runner`: o código deles mora numa pasta do usuário que o host
- * deste broker não enxerga, e quem sobe container nesse caso é o runner, na
- * máquina de quem tem a pasta.
+ * O projeto não sobe container do SERVIDOR. Desde a RN-501 isso quer dizer
+ * `runner`, e só ele: a pasta de um projeto `runner` mora na máquina do
+ * usuário, SEM bind-mount, e quem sobe container ali é o `brabo-runner`, do
+ * lado de lá (ADR 0137).
  *
- * Origem `politica`: é a mesma regra que `RegistrarTransicaoDeContainerUseCase`
- * já aplica do lado da api, dita onde o broker consegue dizê-la. O PR do portão
- * nos três modos (1.7) revisita as duas ao mesmo tempo — mudar só uma delas
- * agora deixaria a api e o broker discordando sobre o que existe.
+ * `mounted` SAIU desta recusa. Ele estava aqui porque a pasta dele era
+ * inalcançável pelo daemon deste host — e deixou de ser: o ADR 0141 fez todo
+ * projeto montado morar sob UMA base (`BRABO_PROJECTS_BASE`), montada por
+ * identidade, e o broker resolve essa base pela raiz própria dele
+ * (`BRABO_PROJECTS_HOST_BASE`). A recusa era sobre a GEOMETRIA, não sobre o
+ * nome do modo, e a geometria mudou.
+ *
+ * Origem `politica`: é a mesma regra que a api aplica do lado dela, dita onde o
+ * broker consegue dizê-la.
  */
 export class ModoDeExecucaoNaoSuportadoError extends Error {
   readonly origem = 'politica';
@@ -58,12 +64,34 @@ export class ModoDeExecucaoNaoSuportadoError extends Error {
   constructor(projectId: string, executionMode: string) {
     super(
       `o projeto ${projectId} está no modo "${executionMode}" e não sobe ` +
-        'container no servidor. Em `mounted`/`runner` o código mora numa ' +
-        'pasta do usuário que esta máquina não enxerga — quem sobe o ' +
-        'container é o runner, do lado de lá.',
+        'container no servidor. Em `runner` o código mora numa pasta da ' +
+        'máquina do usuário, sem bind-mount, que este host não enxerga — ' +
+        'quem sobe o container é o brabo-runner, do lado de lá.',
     );
     this.name = 'ModoDeExecucaoNaoSuportadoError';
     this.executionMode = executionMode;
+  }
+}
+
+/**
+ * A api mandou `localizacao.tipo: 'indisponivel'` — ela mesma disse que
+ * nenhuma raiz deste servidor alcança a pasta, e o `motivo` veio junto.
+ *
+ * Erro PRÓPRIO, e não `ModoDeExecucaoNaoSuportadoError` reaproveitado, porque
+ * a causa não é o modo: um projeto `mounted` LEGADO, criado antes do ADR 0141
+ * e fora da base, cai aqui com o modo certo e a pasta no lugar errado. O
+ * conserto é mover a pasta para dentro da base, não trocar de modo — e um erro
+ * que dissesse "modo não suportado" mandaria quem opera para o lugar errado.
+ */
+export class LocalizacaoIndisponivelError extends Error {
+  readonly origem = 'politica';
+
+  constructor(projectId: string, motivo: string) {
+    super(
+      `não sei onde fica a pasta do projeto ${projectId}: ${motivo}. ` +
+        'Nenhum container foi tocado.',
+    );
+    this.name = 'LocalizacaoIndisponivelError';
   }
 }
 
@@ -105,6 +133,32 @@ export class RaizDeWorkspacesNaoConfiguradaError extends Error {
         'saberia por quê, então recuso. Nenhum container foi tocado.',
     );
     this.name = 'RaizDeWorkspacesNaoConfiguradaError';
+  }
+}
+
+/**
+ * `BRABO_PROJECTS_HOST_BASE` não está configurada, e o projeto é `mounted`.
+ * Mesmo molde da de cima, e pelo mesmo motivo exato: origem `infra`, a
+ * mensagem NOMEIA a variável, e nada é adivinhado.
+ *
+ * Duas classes e não uma com um parâmetro: quem lê o erro precisa saber QUAL
+ * das duas raízes falta, e as duas têm conserto diferente — a de cima pareia
+ * com `PROJECT_WORKSPACES_HOST_DIR`, esta deriva de `BRABO_PROJECTS_BASE`
+ * (ADR 0141). Um erro genérico obrigaria a ler a spec para descobrir qual.
+ */
+export class BaseDeProjetosNaoConfiguradaError extends Error {
+  readonly origem = 'infra';
+
+  constructor() {
+    super(
+      'BRABO_PROJECTS_HOST_BASE não está definida neste broker. Ela é a base ' +
+        'dos projetos MONTADOS no HOST (não dentro deste container) — no ' +
+        'compose ela deriva de `BRABO_PROJECTS_BASE`, que é o caminho que a ' +
+        'api e o engine montam por identidade (ADR 0141). Sem ela eu montaria ' +
+        'uma pasta vazia e ninguém saberia por quê, então recuso. Nenhum ' +
+        'container foi tocado.',
+    );
+    this.name = 'BaseDeProjetosNaoConfiguradaError';
   }
 }
 
@@ -246,8 +300,79 @@ async function nomeDaPasta(
   projectId: string,
 ): Promise<string> {
   const contexto = await deps.buscarContexto(projectId);
-  garantirModoContainer(projectId, contexto);
+  garantirModoSuportado(projectId, contexto);
   return nomeDeWorkspaceValidado(contexto.workspaceDirName);
+}
+
+/**
+ * O `-v`, composto: raiz do BROKER + segmento da api.
+ *
+ * As duas metades vêm de lados diferentes de propósito, e é essa separação que
+ * é o invariante do ADR 0130. A api sabe QUAL raiz (`localizacao.tipo`) e sabe
+ * o pedaço relativo; ela não sabe — e nunca manda — onde essa raiz fica no
+ * HOST. Este processo sabe as duas raízes e não sabe nada sobre o projeto.
+ * Nenhum dos dois lados sozinho consegue escrever um caminho arbitrário, e é
+ * por isso que a contenção não depende de o chamador estar correto.
+ *
+ * O resultado ainda passa por `raizDeProjetoValidada` antes de virar `-v` —
+ * a terceira barreira, a que recusa `/`, pasta de sistema e `..`. Validar o
+ * segmento e não validar a concatenação seria confiar na aritmética de
+ * strings.
+ */
+function raizDoProjetoNoHost(
+  deps: DependenciasDoBroker,
+  projectId: string,
+  contexto: ContextoDoProjeto,
+): string {
+  const localizacao = contexto.localizacao;
+  if (localizacao === null || localizacao === undefined) {
+    throw new LocalizacaoIndisponivelError(
+      projectId,
+      'a api não mandou `localizacao` nenhuma nesta spec',
+    );
+  }
+
+  if (localizacao.tipo === 'indisponivel') {
+    throw new LocalizacaoIndisponivelError(
+      projectId,
+      localizacao.motivo ?? 'a api não disse por quê',
+    );
+  }
+
+  const raiz = raizPara(deps, projectId, localizacao.tipo);
+  const segmento = segmentoDeProjetoValidado(localizacao.segmento);
+  return `${semBarraFinal(raiz)}/${segmento}`;
+}
+
+function raizPara(
+  deps: DependenciasDoBroker,
+  projectId: string,
+  tipo: string,
+): string {
+  if (tipo === 'gerenciada') {
+    const raiz = deps.config.raizDeWorkspacesNoHost;
+    if (raiz === null) throw new RaizDeWorkspacesNaoConfiguradaError();
+    return raiz;
+  }
+  if (tipo === 'montada') {
+    const base = deps.config.baseDeProjetosNoHost;
+    if (base === null) throw new BaseDeProjetosNaoConfiguradaError();
+    return base;
+  }
+  // Tipo que este broker não conhece. Recusa NOMEANDO o valor em vez de cair
+  // numa raiz default: uma raiz escolhida por omissão é a única forma de a
+  // composição errar em silêncio.
+  throw new LocalizacaoIndisponivelError(
+    projectId,
+    `a api mandou \`localizacao.tipo\` ${JSON.stringify(tipo)}, que este ` +
+      'broker não sabe resolver contra raiz nenhuma',
+  );
+}
+
+/** `/a/b/` → `/a/b`. Sem regex: `\/+$/` é a forma de ReDoS que o CodeQL já apontou neste produto. */
+function semBarraFinal(caminho: string): string {
+  const partes = caminho.split('/').filter((p) => p.length > 0);
+  return `/${partes.join('/')}`;
 }
 
 /**
@@ -262,19 +387,16 @@ async function especificacaoDoProjeto(
   projectId: string,
 ): Promise<EspecificacaoDeContainer> {
   const contexto = await deps.buscarContexto(projectId);
-  garantirModoContainer(projectId, contexto);
+  garantirModoSuportado(projectId, contexto);
 
   if (contexto.imagem === null || contexto.imagem === undefined) {
     throw new SemDecisaoDeImagemError(projectId);
   }
 
-  const raiz = deps.config.raizDeWorkspacesNoHost;
-  if (raiz === null) throw new RaizDeWorkspacesNaoConfiguradaError();
-
-  // O nome da pasta é validado DUAS vezes: aqui, para não virar segmento de
-  // caminho antes de ser conferido, e dentro de `especificacaoValidada`. A
-  // primeira é a que importa — concatenar antes de validar tornaria a segunda
-  // uma checagem sobre um caminho já montado.
+  // O nome da pasta é validado DUAS vezes: aqui, porque ele vira NOME de
+  // container, e dentro de `especificacaoValidada`. Ele NÃO é mais o segmento
+  // de caminho (RN-501) — quem responde "onde fica a pasta" é `localizacao`,
+  // e as duas perguntas passaram a ter respostas diferentes em `mounted`.
   const nome = nomeDeWorkspaceValidado(contexto.workspaceDirName);
 
   return especificacaoValidada({
@@ -285,18 +407,28 @@ async function especificacaoDoProjeto(
     imagem: contexto.imagem.image,
     imagemVersao: contexto.imagemVersao,
     rede: contexto.imagem.network,
-    raizDoProjeto: `${raiz.replace(/\/+$/, '')}/${nome}`,
+    raizDoProjeto: raizDoProjetoNoHost(deps, projectId, contexto),
     cpus: contexto.imagem.resources?.cpus,
     memoriaMb: contexto.imagem.resources?.memoryMb,
     pidsLimit: contexto.imagem.resources?.pidsLimit,
   });
 }
 
-function garantirModoContainer(
+/**
+ * `container` e `mounted` passam; `runner` não (RN-501).
+ *
+ * A lista é de PERMITIDOS e não de recusados, e isso é deliberado: um modo
+ * novo no enum da api nasceria RECUSADO aqui, com mensagem, em vez de nascer
+ * silenciosamente aceito e cair na composição sem raiz que o resolva.
+ */
+function garantirModoSuportado(
   projectId: string,
   contexto: ContextoDoProjeto,
 ): void {
-  if (contexto.executionMode !== 'container') {
+  if (
+    contexto.executionMode !== 'container' &&
+    contexto.executionMode !== 'mounted'
+  ) {
     throw new ModoDeExecucaoNaoSuportadoError(
       projectId,
       String(contexto.executionMode),
