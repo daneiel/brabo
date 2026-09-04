@@ -36,7 +36,8 @@ Start with triage.
 | agent stopping with `iteration limit reached` without delivering | [Inference environment](#ambiente-de-inferencia) |
 | I want to add an OpenAI-compatible LLM provider | [Adding a compatible provider](#adicionando-um-provider-compativel) |
 | I want to migrate my workspaces from the Docker volume to a real folder | [Migrating workspaces to a local folder](#migrar-workspaces-pasta-local) |
-| the project wizard doesn't offer **Mounted** mode, or creating a mounted project refuses saying the folder doesn't exist | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
+| the project wizard doesn't offer **Mounted** mode, or creating a mounted project refuses saying the path must sit inside the base | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
+| approving `container_start` on a mounted project fails saying the api couldn't create or reach the folder | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | `pnpm dev` refuses to start, saying `BRABO_PROJECTS_BASE` overlaps the Brabo checkout | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
@@ -164,6 +165,25 @@ docker compose -f docker/docker-compose.yml --env-file .env up -d api engine
 That's it. From here on, a project in Mounted mode goes somewhere under
 `/home/voce/brabo` and needs no further setup.
 
+**The folder itself does not need to exist yet**
+([ADR 0142](adr/0142-validacao-de-workspace-montado-adiada.md),
+[RN-501](business-rules.md#rn-501)). Creating a Mounted project validates
+only the path FORMAT plus "is it under the base"; the folder is created
+later, when Infra starts the project's container — which is what makes the
+wizard able to SUGGEST `<base>/<project slug>` in the first place. Between
+those two moments `workspacePath` points at a folder that isn't there yet,
+and the project's `workspaceVerifiedAt` is `null`; converting an existing
+project to Mounted is the one exception and creates the folder right away,
+because it moves `permissions.json` into it.
+
+So a `400` at creation now means one of two things only, and both name what
+they mean: the path is not under the base (the message names the base and
+suggests `<base>/<name>`), or `BRABO_PROJECTS_BASE` isn't configured at all
+(the message says the MODE is unavailable on this installation). A folder
+the api cannot create or reach shows up later instead, as a NAMED `failed`
+on the `container_start` action — never a 500, and the container lifecycle
+is not marked `provisioning` when that happens.
+
 **Why the wizard hides Mounted mode.** Without `BRABO_PROJECTS_BASE`, the
 api reports `projectsBase: null` and the option is not offered at all. That
 is deliberate: offering a mode the installation cannot honor produces a
@@ -207,7 +227,10 @@ don't point it at a folder that holds other secrets of yours.
 | the message says | what to do |
 |---|---|
 | Mounted mode isn't offered at all | `BRABO_PROJECTS_BASE` isn't set — set it and `up -d api engine` |
-| *doesn't exist from inside the api* | the folder isn't under the base, or the base isn't mounted; check with the `exec ls` above |
+| *Mounted mode is not available on this installation* (at creation) | same cause, said by the api: `BRABO_PROJECTS_BASE` isn't set (RN-501) |
+| *the folder must sit inside `<base>`* (at creation) | the path is outside the base; use the `<base>/<name>` the message suggests, or change the base and `up -d api engine` |
+| *I couldn't create/reach `<path>` from inside the api* (on `container_start`) | the base isn't actually mounted, or the folder's owner on the host blocks it. Check with the `exec ls` above, fix it, and approve `container_start` again (RN-501) |
+| *doesn't exist from inside the api* | the base isn't mounted into the containers; check with the `exec ls` above |
 | *exists but isn't a folder* | the path points to a file; use a folder |
 | *the process can't write to it* | owner/permission of the folder on the host. Images run non-root ([ADR 0024](adr/0024-fase5-imagens-producao-ci.md)); adjust the folder's owner or mode |
 | *Invalid path for a Local project* | it's a filesystem root, a system folder, relative, has `..`, or overlaps Brabo's own checkout — pick your own folder, outside those ([ADR 0072](adr/0072-projeto-local-ou-container.md)) |

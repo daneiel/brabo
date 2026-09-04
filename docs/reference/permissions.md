@@ -139,6 +139,23 @@ runner connected" and "the runner tried and refused" are both ordinary
 `failed` outcomes, same discipline as a broker refusal — never an
 uncaught exception.
 
+**One more thing happens in `container_start` execution, and only for
+`mounted`** ([RN-501](../business-rules.md#rn-501),
+[ADR 0142](../adr/0142-validacao-de-workspace-montado-adiada.md)): the
+project's folder is MATERIALIZED there. Creating a `mounted` project no
+longer requires the folder to exist — creation validates only the path
+format plus `BRABO_PROJECTS_BASE` — because the product owner's requirement
+is that the bind-mount be created AFTER the architect's decision, and
+`container_start` is the first moment that qualifies. So the executor
+`mkdir -p`s the folder, proves it writable from inside the api, and stamps
+`workspace_verified_at`, all BEFORE any lifecycle transition. A folder the
+api cannot create or reach is a NAMED `failed` — it names the variable, the
+path, the likely cause (folder ownership on the host; images run non-root,
+ADR 0024) and the next step — and the lifecycle row is **not** marked
+`provisioning`: marking it and only then finding out you cannot write would
+leave `project_containers` asserting a state that never existed. None of
+this touches `decide()`, the caps, or who may approve.
+
 ## How a pattern matches a command
 
 Not by substring. The command is tokenized with shell rules and the pattern

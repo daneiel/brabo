@@ -28,7 +28,7 @@
     },
     "mounted": {
       "label": "Pasta montada",
-      "desc": "O código mora numa pasta SUA. Ela precisa estar montada dentro dos containers da api e do engine, no mesmo caminho."
+      "desc": "O código mora numa pasta SUA, dentro da base de projetos da instalação (BRABO_PROJECTS_BASE). Ela é criada quando a Infra subir o container."
     },
     "runner": {
       "label": "Runner local",
@@ -78,7 +78,7 @@
     "preparing": "Preparando…",
     "hintMounted": "caminho absoluto, como ele aparece DENTRO do container",
     "hintRunner": "caminho absoluto, como ele aparece na SUA máquina",
-    "mountedWarning": "A pasta precisa estar <strong>montada nos containers</strong> da api e do engine, no <strong>mesmo caminho absoluto</strong> — os dois escrevem no mesmo lugar. No <code>docker/docker-compose.yml</code>, acrescente <code>- {{caminho}}:{{caminho}}</code> aos serviços <code>api</code> e <code>engine</code>. Se não estiver, a criação é <strong>recusada</strong> aqui mesmo — o projeto não nasce quebrado.",
+    "mountedWarning": "A pasta precisa ficar <strong>dentro da base de projetos</strong> configurada pelo operador (<code>BRABO_PROJECTS_BASE</code>) — é a única pasta do seu computador que os containers da api e do engine enxergam. Ela <strong>não precisa existir ainda</strong>: é criada quando a Infra subir o container do projeto.",
     "runnerHint": {
       "intro": "Depois de criar o projeto, rode na sua máquina:",
       "introExisting": "O projeto já existe — rode na sua máquina:",
