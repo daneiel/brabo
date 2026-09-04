@@ -78,7 +78,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | O runner sobe o container do projeto (PR 1.3, Parte 1 fora de ordem — fecha a metade que a RN-494/PR 1.7 tinha deixado declarada) | `container_start`/`container_stop`/`container_remove` ganham SEGUNDO caminho de execução, ramificado por `executionMode`: `container` segue pelo broker (inalterado); `mounted`/`runner` passam a pedir ao RUNNER conectado, via TRÊS pares novos no canal Phoenix (`container_start`/`_result`, `container_stop`/`_result`, `container_remove`/`_result`, mesmo molde de `exec`/`exec_result`) — `EngineWeb.ContainerCommandController` repassa pro `RunnerRouter`, que o runner atende com `DockerViaCli` (o Docker DELE, `@brabo/docker-port`, que ganha uso real além de `--self-test-docker`). A imagem é LIDA (`ObterSpecDeContainerUseCase`, o mesmo caso de uso do broker), nunca reeleita. "Sem runner"/"timeout" (`RunnerNaoConectadoError`) e "runner recusou" (`RunnerRecusouContainerError`) viram `failed` nomeado, nunca exceção. `Engine.Actions.TerminalExecutor` não ganhou saída nova — ele já roteava todo comando de projeto `runner` conectado pro canal incondicionalmente; a escolha host-vs-container é INTERNA ao runner (`EstadoDoRunner.containerAtivo`, `tratarExec` roteia via `docker exec` com `cwd` traduzido por troca de prefixo, `cwdParaContainer`). `guard.ts`/RN-434 passa a cobrir o bind-mount sem NENHUMA validação nova — o mount É a raiz já confirmada no startup da CLI | ADR 0137, RN-497 |
 | Golden-set do RAG em CI, agendado (Parte 2/Etapa 3) | Fecha a metade que a RN-490/ADR 0132 tinha deixado como `TODO(humano)` — só para o RAG, nunca para o QA (ADR 0123, sem mudança nenhuma). Workflow novo (`.github/workflows/golden-set-rag.yml`, `schedule` noturno + `workflow_dispatch`, separado de `ci.yml` de propósito) sobe `postgres`+`ollama` como serviços e roda `mix golden_set.rag` de verdade — tratável porque este golden-set só chama o modelo de EMBEDDING (CPU, determinístico), nunca um modelo de chat fazendo julgamento como o do QA exige. `rag-acertivo` CONTINUA `warn`: agendado nunca bloqueia PR, então `block` prometeria um travamento que não existe — o motivo mudou (de "sem CI" para "cadência"), a severidade não. Achado que dispensou geração de segredo: `seed-golden-set-rag.ts` nunca define `NODE_ENV`, então os quatro segredos de RN-114 caem no literal de dev sem reclamar | ADR 0138, RN-498 |
 
-| Alarme de merge de esteira com destinatário | A regra "promoção é `--no-ff`" foi quebrada TRÊS vezes (#367, #394, #464 — a terceira era o PR que consertava as duas primeiras). O achado: a detecção JÁ existia e JÁ funcionou (o `tag-release` reprovou as duas primeiras com a mensagem certa) — faltava para QUEM tocar, porque workflow de `push` que falha numa permanente não tem PR onde ficar vermelho e o repo tinha zero issues. `tag-release` ganha o job `avisar`, que abre issue (e comenta na já aberta, nunca duplica) com `github.token` e nunca com o PAT — PAT inválido é uma das falhas que ele reporta. A regra passa a cobrir `dev` de forma ESTREITA: só é defeito o PR que trazia ARESTA NOVA (head era merge cujo segundo pai não estava na base), nunca o squash de PR de trabalho, que é a convenção. Desligar squash no repo foi MEDIDO e recusado (taxaria todo PR e mexeria no `changelog.mjs`, que roda `--no-merges`) | ADR 0139 |
+| Alarme de merge de esteira com destinatário | A regra "promoção é `--no-ff`" foi quebrada TRÊS vezes (#367, #394, #464 — a terceira era o PR que consertava as duas primeiras). O achado: a detecção JÁ existia e JÁ funcionou (o `tag-release` reprovou as duas primeiras com a mensagem certa) — faltava para QUEM tocar, porque workflow de `push` que falha numa permanente não tem PR onde ficar vermelho e o repo tinha zero issues. `tag-release` ganha o job `avisar`, que abre issue (e comenta na já aberta, nunca duplica) com `github.token` e nunca com o PAT — PAT inválido é uma das falhas que ele reporta — e isso deixou de ser hipotético: o `BRABO_BOT_TOKEN` expirou em 2026-09-03 à noite, reprovou duas runs do `tag-release`, e foi rotacionado em 2026-09-04; a v4.0.0 carimbou e DISPAROU a Release, o que só acontece com PAT válido (tag criada com `GITHUB_TOKEN` não dispara workflow). A regra passa a cobrir `dev` de forma ESTREITA: só é defeito o PR que trazia ARESTA NOVA (head era merge cujo segundo pai não estava na base), nunca o squash de PR de trabalho, que é a convenção. Desligar squash no repo foi MEDIDO e recusado (taxaria todo PR e mexeria no `changelog.mjs`, que roda `--no-merges`) | ADR 0139 |
 
 ## Estado atual e aberto
 
@@ -242,13 +242,14 @@ daqui e o fechamento vai para o histórico.
 - Smokes de LLM: 5 de 6 providers sem credencial no ambiente (só OpenRouter
   rodou real); `GITHUB_TEST_TOKEN`/`GITLAB_TEST_TOKEN` idem para git
 - `NPM_TOKEN` não configurado — `publish-runner.yml` avisa e pula
-- `BRABO_BOT_TOKEN` inválido ou expirado desde 2026-09-03 à noite: o `checkout`
-  do `tag-release` falha com `could not read Username for 'https://github.com'`
-  e **nenhuma tag está sendo carimbada em branch nenhuma**. O `||
-  github.token` do workflow não salva — ele cobre segredo AUSENTE, e este está
-  presente e inválido. Só a rotação do segredo resolve (ADR 0139)
-- Binário standalone: só `linux-x64` executado de verdade; as outras 4
-  plataformas estreiam na próxima tag
+- Binário standalone: a estreia das 5 plataformas ACONTECEU (v4.0.0,
+  2026-09-04) e provou a metade que faltava — as CINCO construíram e passaram
+  no `smoke:bin` no runner nativo de cada uma. O que NÃO aconteceu foi o
+  ANEXO: as cinco reprovaram no passo de upload por uma corrida com
+  `release.yml`, e nenhuma Release tem binário até hoje. `darwin-x64`
+  (`macos-13`) não chegou nem a começar — ficou na fila por mais de 40min, e
+  se `macos-13` estiver saindo do catálogo de runners hospedados isso é um
+  segundo problema, ainda não investigado
 - i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR +
   fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
   arquivo para inglês como idioma primário

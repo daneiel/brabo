@@ -455,7 +455,7 @@ fonte de sistema, e título e corpo ficavam indistinguíveis.
 
 ## Estado
 
-**Fases 1 a 26 concluídas**, versão **v3.1.0** ([CHANGELOG](CHANGELOG.md)).
+**Fases 1 a 26 concluídas**, versão **v4.0.0** ([CHANGELOG](CHANGELOG.md)).
 Esteira de release exercitada de ponta a ponta, auth first-party sem Keycloak,
 nove providers de LLM sobre uma base única, e a cadeia inteira provada contra um
 GitHub real — adoção do repositório, promoção de história, dev agent escrevendo
