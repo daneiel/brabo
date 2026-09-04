@@ -152,3 +152,16 @@ Declared, not fixed:
 - **Third-party images are tag-pinned, not digest-pinned** (above).
 - **The workflows' own permissions** aren't covered here; that's the
   `permissions:` block per workflow, and it's a separate audit.
+- **A repeated `pnpm audit` timeout is an ACCEPTED RISK, by decision.**
+  When the npm advisories endpoint fails to answer three times in a row,
+  the job goes green with a loud warning instead of red — see
+  [ADR 0140](../adr/0140-timeout-do-audit-como-risco-assumido.md). What
+  this costs is stated plainly: on those runs the dependency tree is
+  **not** audited, and the run says so rather than implying a clean
+  result. What it does not touch: a vulnerability that is actually
+  reported still fails on the first attempt, with no retry, and an
+  unrecognized failure fails too (fail closed). The alternative —
+  staying red on third-party downtime — was measured on the day it
+  happened (four PRs blocked by the same 503) and refused, because a
+  gate that cries wolf teaches people to re-run until green, and that
+  habit does not distinguish a real red from a fake one.
