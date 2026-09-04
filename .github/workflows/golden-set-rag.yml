@@ -1,0 +1,145 @@
+name: Golden-set do RAG (agendado)
+
+# Etapa 3 do programa de RAG mensurável (ADR 0138, RN-498) — liga
+# `mix golden_set.rag` (ADR 0132, RN-490) em CI, mas AGENDADO, nunca por PR:
+# puxar `nomic-embed-text` e rodar a busca híbrida contra o corpus curado
+# soma alguns minutos, e o gate `rag-acertivo` (docs/gates.yml) continua
+# `warn` de propósito — uma regressão aqui é sinal de tendência, não trava
+# nenhum merge. Por isso este workflow é SEPARADO de `ci.yml`: aquele é
+# deliberadamente só `pull_request` (comentário no topo do arquivo), e
+# `schedule` misturado ali afetaria todo job existente, não só este.
+#
+# `workflow_dispatch` existe para não depender só da janela noturna — útil
+# pra validar esta própria mudança e pra rodar sob demanda depois de mexer
+# em peso/limiar da busca (ADR 0080) ou no corpus curado.
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Mesmas versões do ci.yml — arquivo separado, sem `env:` compartilhado
+  # entre workflows.
+  NODE_VERSION: '24.11.1'
+  PNPM_VERSION: '11.3.0'
+  ELIXIR_VERSION: '1.17.3'
+  OTP_VERSION: '27.1.2'
+
+jobs:
+  golden-set-rag:
+    name: Golden-set do RAG (ExUnit, contra Ollama real)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        # pgvector, não `postgres:16` puro — mesmo motivo do `test-engine` em
+        # ci.yml: as migrations criam a extensão e o corpus indexado depende
+        # dela pra busca vetorial.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: brabo
+          POSTGRES_PASSWORD: brabo
+          POSTGRES_DB: brabo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U brabo -d brabo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      ollama:
+        # MESMA versão pinada de docker/docker-compose.yml — paridade de
+        # embedding com o que roda em dev é o que faz `floor.json` (chaveado
+        # por MODELO, não por ambiente) continuar válido aqui.
+        image: ollama/ollama:0.33.1
+        ports:
+          - 11434:11434
+        # `ollama list` como health-cmd, não `curl` — `curl` roda DENTRO do
+        # container (não é o `curl` do runner), e a imagem oficial não
+        # garante tê-lo. `ollama` é o único binário que a imagem certamente
+        # tem, e é o MESMO comando que `docker/ollama/pull-models.sh` já usa
+        # pra esperar o daemon (`until ollama list >/dev/null 2>&1`) —
+        # padrão já validado neste repositório, não inventado aqui.
+        options: >-
+          --health-cmd "ollama list || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+          --health-start-period 15s
+    env:
+      DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo
+      OLLAMA_HOST: http://localhost:11434
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124  # v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      # SÓ RESTAURA, nunca grava — mesma disciplina do `lint`/`audit` em
+      # ci.yml: quem grava esta key é o `test-engine` de lá. Cache do Actions
+      # é por REPOSITÓRIO, não por workflow, então a key bate mesmo vinda de
+      # outro arquivo.
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            apps/engine/deps
+            apps/engine/_build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('apps/engine/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      # node_modules completo da api: `seed-golden-set-rag.ts` roda por
+      # `ts-node`, dentro de `mix golden_set.rag` (System.cmd), e precisa do
+      # NestFactory + Drizzle + todo o resto que o AppModule importa.
+      - run: pnpm install --frozen-lockfile
+
+      # `/api/pull` com `stream:false` bloqueia até completar e devolve o
+      # JSON final — sem loop de polling. ~274MB; --max-time generoso pra
+      # não flakar num runner com rede mais lenta num dia ruim.
+      - name: Puxar nomic-embed-text no Ollama do job
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 300 -X POST http://localhost:11434/api/pull \
+            -d '{"name":"nomic-embed-text","stream":false}'
+          echo
+          curl -fsS http://localhost:11434/api/tags | grep -q nomic-embed-text \
+            || { echo "::error::nomic-embed-text não apareceu em /api/tags depois do pull"; exit 1; }
+
+      # AppModule não migra sozinho no boot (main.ts/app.module.ts não
+      # chamam migration nenhuma) — confirmado lendo db/migrate.ts, que é
+      # script separado.
+      - name: Migrations da api
+        run: pnpm --filter api db:migrate
+
+      - name: mix deps.get
+        working-directory: apps/engine
+        run: mix deps.get
+
+      - name: Compilar com --warnings-as-errors
+        working-directory: apps/engine
+        run: mix compile --warnings-as-errors
+
+      # Só o `:golden_set_rag` — não a suíte inteira (isso é o `test-engine`
+      # de ci.yml, que continua excluindo esta tag por permanência, RN-490).
+      # `seed-golden-set-rag.ts` não define NODE_ENV, então os quatro
+      # segredos que a api recusaria em produção (AUTH_JWT_SECRET,
+      # BRABO_SERVICE_TOKEN, CREDENTIALS_MASTER_KEY, GIT_OAUTH_STATE_SECRET —
+      # RN-114) tomam o literal de dev sem reclamar: nenhum segredo precisa
+      # ser gerado aqui, ao contrário de docker/smoke.sh (que sobe com
+      # NODE_ENV=production de propósito).
+      - name: mix golden_set.rag
+        working-directory: apps/engine
+        run: mix golden_set.rag

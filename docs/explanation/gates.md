@@ -221,20 +221,27 @@ would describe a lock that already exists somewhere else, the same way
 `necessidade-validada` would have lied about one that doesn't exist
 anywhere.
 
-`rag-acertivo` ([RN-490](../business-rules.md#rn-490),
-[ADR 0132](../adr/0132-golden-set-de-acerto-do-rag.md)) is the fifth
-example, and it's for the plainest reason of the five: **there is no CI
-that runs a real LLM.** The golden-set it measures — 17 questions composed
-from real RNs/ADRs, checked against a curated real corpus through the
-actual `HybridSearchUseCase` — only runs by hand
-(`mix golden_set.rag`), the same posture already recorded for the QA
-Automation golden-set ([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)).
-`block` would promise a check that gates a merge or a deploy; nothing in
-the pipeline ever calls this gate automatically, and nothing should — until
-an API LLM secret or new infrastructure (a GPU runner, an Ollama pull step)
-exists, which is the same `TODO(humano)` the QA golden-set already carries.
-`warn` says exactly what's true: a human ran a measurement, by hand, and
-recorded whether it held.
+`rag-acertivo` ([RN-490](../business-rules.md#rn-490)/[RN-498](../business-rules.md#rn-498),
+[ADR 0132](../adr/0132-golden-set-de-acerto-do-rag.md)/[ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md))
+is the fifth example, and the reason it stays `warn` changed shape once,
+which is worth telling in full. It was born `warn` for the plainest
+reason of the five: there was no CI that ran a real LLM — the golden-set
+it measures (17 questions composed from real RNs/ADRs, checked against a
+curated real corpus through the actual `HybridSearchUseCase`) only ran by
+hand (`mix golden_set.rag`), the same posture the QA Automation golden-set
+([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)) still
+carries today. That stopped being true: `.github/workflows/golden-set-rag.yml`
+now runs `mix golden_set.rag` for real, against a real Ollama service —
+tractable here (and still not for the QA golden-set) because this one only
+calls the **embedding** model, CPU, deterministic, never a chat model doing
+judgment. What kept `severidade: warn` from becoming stale isn't that the
+gate stayed manual — it's that the workflow is **scheduled** (nightly cron
+plus `workflow_dispatch`), never triggered by `pull_request`. `block` would
+still promise a check that gates a merge, and a scheduled run gates
+nothing: a regression becomes visible within a day, never at PR time. The
+reason moved from "no CI can run this" to "this CI doesn't sit on the merge
+path" — `warn` keeps describing exactly what's true, just not the same
+truth it described before.
 
 ## Consumption: the screen derives, it doesn't repeat
 

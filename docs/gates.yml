@@ -320,22 +320,28 @@ gates:
     status: planned
     backlog: deploy (DEPLOY_ENABLED + Environments)
 
-  - id: rag-acertivo # Parte 2/Etapa 2 do programa de RAG mensurável — ADR 0132, RN-490
+  - id: rag-acertivo # Parte 2/Etapa 2-3 do programa de RAG mensurável — ADR 0132/0138, RN-490/498
     fluxo: transversal # o RAG serve todos os fluxos, mesmo reuso de acao-aprovada
     dono: usuario
     entrada: [golden-set-rag]
     entregavel: taxa-de-acerto-acima-do-piso
     verificacao: script
-    # warn é obrigatório aqui, não estilístico: não há CI com LLM (mesma
-    # decisão já registrada para o golden-set do QA, ADR 0123) — o gate roda
-    # MANUAL (`mix golden_set.rag`), e `block` prometeria um travamento
-    # automático que não existe.
+    # warn continua warn depois da Etapa 3 (ADR 0138) — mas o motivo MUDOU.
+    # Não é mais "não há CI com LLM" (o golden-set do QA, ADR 0123, segue
+    # assim, mas este é só embedding, CPU, determinístico, e RODA em CI
+    # desde a Etapa 3). É cadência: `.github/workflows/golden-set-rag.yml`
+    # é AGENDADO (noturno + workflow_dispatch), nunca por PR — `block`
+    # continuaria prometendo um travamento que não existe, agora por
+    # decisão de custo/cadência, não por impossibilidade técnica. Uma
+    # regressão vira sinal de tendência visível em até 24h, nunca um gate
+    # que travaria o PR.
     severidade: warn
     aprovacao_humana: false
     status: active
     evidencia:
-      # teste, não event_log: o que prova este gate é o golden-set em si —
-      # não há proposed_action nem evento de domínio associado à passagem
-      # (mesmo padrão do gate merge-protegida).
-      tipo: teste
+      # tipo `ci`, não `teste` puro, desde a Etapa 3 — há workflow de
+      # verdade rodando isto, mesmo shape do gate `backmerge`.
+      tipo: ci
+      workflow: .github/workflows/golden-set-rag.yml
       arquivo: apps/engine/test/engine/rag/rag_golden_test.exs
+      onde: apps/api/scripts/seed-golden-set-rag.ts
