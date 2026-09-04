@@ -275,8 +275,14 @@ defmodule Engine.Actions.TerminalExecutorTest do
       )
     end
 
-    # Modo `mounted` (ADR 0072/0104): sempre `:caminho_de_sempre` — nunca
-    # checa runner conectado, porque não HÁ roteamento pra ele nesse modo.
+    # Modo `mounted` (ADR 0072/0104): segue o MESMO ramo de `container` desde a
+    # RN-501/ADR 0142 — com container REGISTRADO `running`,
+    # `:executar_no_container`; sem ele, `:recusar_container_ausente`. Nunca
+    # `:caminho_de_sempre`, que era o comportamento até esta entrega.
+    #
+    # O que CONTINUA valendo: `mounted` nunca checa runner conectado, porque
+    # não HÁ roteamento pro runner nesse modo — a checagem de `Registry` é
+    # exclusiva do modo `runner`.
     defp insert_mounted_project!(project_id, workspace_path) do
       Repo.query!(
         "INSERT INTO public.projects (id, name, slug, execution_mode, workspace_path) " <>
