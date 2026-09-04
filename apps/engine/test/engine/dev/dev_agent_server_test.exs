@@ -27,6 +27,11 @@ defmodule Engine.Dev.DevAgentServerTest do
     project_id = Ecto.UUID.generate()
     session_id = Ecto.UUID.generate()
 
+    # RN-501/ADR 0142: `try_claim/2` só reivindica com um container REGISTRADO
+    # `running`. Estas specs são sobre o ciclo do agente COM ambiente de
+    # execução; a guarda em si tem specs próprias (`agent_io_test.exs`).
+    container_running!(project_id)
+
     {:ok, state} =
       DevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, nil, nil})
 

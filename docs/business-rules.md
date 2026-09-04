@@ -7504,6 +7504,90 @@ aceite.
   antes dos dev agents" (D0) — o bloqueador que tornava o requisito "dev agent
   só depois do container de pé" equivalente a "dev agent nunca começa"
 
+### RN-501 — Dev agent só reivindica task com container `running`, e o terminal não cai mais fora dele {#rn-501}
+
+Duas metades da mesma regra: **sem ambiente de execução, o dev agent não
+começa**, e **sem ambiente de execução, o comando não roda em lugar nenhum**.
+
+**A guarda do claim.** `Engine.Dev.AgentIo.try_claim/2` — o ponto ÚNICO de
+claim — consulta
+`Engine.Containers.ProjectContainerLifecycle.running?/1` ANTES de chamar
+`claim_task/1`. Sem uma linha REGISTRADA `running` em `project_containers`
+([RN-243](#rn-243)/ADR 0081), o agente cai em `:idle`, persiste, emite
+`dev.blocked_by_container` e **não chama a api**. A guarda vem antes do claim
+de propósito: reivindicar para devolver logo em seguida deixaria a task
+marcada e sem dono vivo, que é o estado que `block_task/4` existe para nunca
+produzir.
+
+**`:idle`, e não um status novo.** É o único estado do qual um wake ainda
+resgata — os guards de `handle_info/2` são todos casados com ele
+(`{:wake, :became_claimable}` exige `:idle`, `:rearm` exige `:idle_tripped`,
+`gate_resolved` exige `task_id` batendo,
+[RN-047](business-rules/custo.md#rn-047)). Um
+`:blocked_by_container` inventado seria um estado do qual nada resgata.
+
+**No ENGINE e não só no `activate-execution` da api**, porque o claim tem um
+caminho que nenhuma rota cobre: a REIDRATAÇÃO. `Engine.Dev.DevRehydrator` não
+faz cast `:work`; quem claima depois de um restart é `DevAgentServer.init/1`
+→ `finish_restart_recovery/1` → `try_claim/2`. Um gate só na fronteira HTTP
+deixaria todo agente reidratado voltar a trabalhar sem container.
+
+**O wake.** Leitura não avisa ninguém: um agente já parado continuaria parado
+até um evento não relacionado passar por perto. Então a chegada em `running`
+PUBLICA — `RegistrarTransicaoDeContainerUseCase` grava a linha e o evento na
+MESMA transação, `aggregateType: 'container'` (o terceiro agregado que
+`Engine.Outbox.Drain` passou a drenar, ao lado de `session` e `task`),
+`aggregateId` = o PROJETO. `Engine.Workers.DevAgentWakeWorker` entrega
+`{:wake, :became_claimable}` a TODOS os agentes do projeto
+(`DevAgentState.list_by_project/1` — o container é do projeto, não de um
+módulo). É a MESMA mensagem que já existia, e não uma nova: a semântica dela
+já é "pode haver trabalho agora", e uma mensagem própria exigiria cláusula
+nova de `handle_info/2` nos dois servers com guard idêntico ao que já existe.
+Só `running` publica; `provisioning`/`stopped`/`failed`/`removed` não soltam
+ninguém.
+
+**A segunda metade: o terminal.** `Engine.Actions.TerminalExecutor`
+degradava calado — `container` sem container `running` caía em
+`:caminho_de_sempre`, isto é, `System.cmd` DENTRO do processo do engine, o
+mesmo que fala com o banco, com a api e com todos os outros projetos. O ADR
+0134 ([RN-492](#rn-492)) tinha fechado o isolamento só no caminho feliz.
+Agora recusa (`:recusar_container_ausente`), espelhando o
+`:recusar_nao_verificado`/`:recusar_runner_desconectado` que o modo `runner`
+já tinha ([RN-423](#rn-423)), e como `failed_result` normal — nunca crash.
+`mounted` entra no MESMO ramo: com container `running` atravessa pro broker
+igual a `container`; sem ele, recusa. O catch-all `:caminho_de_sempre`
+encolhe para o que sempre deveria ter sido sozinho — **projeto inexistente ou
+`project_id` malformado**. Nenhum modo de execução cai nele.
+
+**Consequência declarada:** projeto sem container de pé para de trabalhar, e
+diz por quê. É deliberado — é o que a regra existe para fazer — e é por isso
+que ela só pode entrar DEPOIS das mudanças que dão container ao modo
+`mounted`.
+
+- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex` (`try_claim/2`),
+  `apps/engine/lib/engine/actions/terminal_executor.ex`
+  (`decisao_de_execucao/1`),
+  `apps/engine/lib/engine/outbox/drain.ex`,
+  `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex`,
+  `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts`
+- **Teste:** `apps/engine/test/engine/dev/claim_com_container_test.exs` —
+  `:work` inicial sem container cai em `:idle`, persiste, emite e **não**
+  chama a api; o Noop passa pela mesma guarda; agente REIDRATADO para em
+  `:idle` sem claimar; `container.running` na outbox percorre
+  drain → worker → wake → agente e ele re-claima; e o caminho de sempre
+  segue intacto com container `running`.
+  `apps/engine/test/engine/actions/terminal_executor_test.exs` — recusa para
+  `container` (sem linha e com `stopped`) e para `mounted`; `mounted` com
+  `running` atravessa pro broker; só projeto inexistente cai em
+  `:caminho_de_sempre`.
+  `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`
+  — `running` publica `container.running` no agregado `container`; os outros
+  destinos e a criação da linha não publicam nada
+- **ADR:** [0142](adr/0142-agentes-de-dev-so-depois-do-container.md)
+- **Origem:** plano "Nome e local na mesma tela, e container antes dos dev
+  agents" (PR 7) — dez tasks do `exp001` travaram de uma vez porque nada
+  ordenava container antes de dev agent
+
 ---
 
 ## A base única dos projetos montados (RN-500)

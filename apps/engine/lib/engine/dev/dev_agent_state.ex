@@ -113,6 +113,20 @@ defmodule Engine.Dev.DevAgentState do
     )
   end
 
+  @doc """
+  TODOS os agentes do projeto, de qualquer módulo (RN-501 — `container.running`
+  não fala de módulo nenhum: o container é do PROJETO, e quando ele sobe, todo
+  agente parado pela guarda de `AgentIo.try_claim/2` volta a poder claimar).
+
+  Separada de `list_by_module/2` de propósito: aquela responde "quem cuida
+  deste módulo", esta responde "quem depende deste ambiente de execução".
+  Colapsar as duas faria o wake de container ter que inventar uma lista de
+  módulos que a api não tem como saber.
+  """
+  def list_by_project(project_id) do
+    Repo.all(from(s in __MODULE__, where: s.project_id == ^project_id))
+  end
+
   @doc "Agentes de um módulo do projeto num status específico."
   def list_by_status(project_id, module, status) do
     Repo.all(

@@ -166,6 +166,15 @@ and `idle_tripped` (circuit breaker tripped, only exits via explicit
 rearm — [RN-047](business-rules/custo.md#rn-047)). The first three hold the
 worktree.
 
+`idle` covers **three** different reasons, on purpose: the queue was empty,
+the claim failed, and — since
+[RN-501](business-rules.md#rn-501) — the project has no container
+REGISTERED `running`, which stops the claim before it happens. There is no
+fourth status for that last one: `idle` is the only state a wake still
+rescues, and every `handle_info/2` guard is keyed to it. What tells the three
+apart is the EVENT (`dev.idle`, `dev.error`, `dev.blocked_by_container`),
+which is durable, never the status.
+
 ---
 
 ## Approval

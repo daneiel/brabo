@@ -27,15 +27,15 @@ defmodule Engine.Actions.TerminalExecutor do
 
   Faltando qualquer uma das duas, o comando é RECUSADO explicitamente — NUNCA
   cai no `System.cmd`/bind-mount de `mounted`, que não existe pra um projeto
-  `runner`. O caminho de sempre (`System.cmd` local) só continua valendo, sem
-  checagem nova nenhuma, para `mounted` e para `container` SEM container real
-  de pé (ver seção abaixo).
+  `runner`. Desde a RN-501 (ADR 0142), o caminho de sempre (`System.cmd`
+  local) não vale mais para modo de execução NENHUM: ele sobrou só para
+  projeto inexistente ou `project_id` malformado (ver a seção abaixo).
 
-  ## Execução DENTRO do container real do projeto (`container`, com um
-  ## container REGISTRADO `running` — RN-492, ADR 0134)
+  ## Execução DENTRO do container real do projeto (`container`/`mounted`, com
+  ## um container REGISTRADO `running` — RN-492/RN-501, ADR 0134/0142)
 
-  Quando o projeto está em `execution_mode: container` (ADR 0072) e há uma
-  linha `running` em `project_containers` (ADR 0081/0130/0133 —
+  Quando o projeto está em `execution_mode: container`/`mounted` (ADR 0072) e
+  há uma linha `running` em `project_containers` (ADR 0081/0130/0133 —
   `Engine.Containers.ProjectContainerLifecycle.running?/1`), o comando NÃO
   roda mais via `System.cmd` no processo do engine: ele atravessa
   engine -> api -> broker (`ContainerBrokerPort.exec`) e roda DENTRO do
@@ -48,8 +48,14 @@ defmodule Engine.Actions.TerminalExecutor do
   foi removido por fora, a chamada ao broker falha e vira `failed_result`
   normal — nunca crash, nunca fallback silencioso de volta pro `System.cmd`
   fora do container, que reabriria o vetor de isolamento que este PR existe
-  para fechar. `mounted` nunca passa por este caminho: o broker recusa subir
-  container pra esse modo (`ModoDeExecucaoNaoSuportadoError`).
+  para fechar.
+
+  E SEM container `running` a recusa é a mesma coisa vista do outro lado
+  (RN-501, ADR 0142): `:recusar_container_ausente`, `failed_result` com o
+  motivo nomeado. Era exatamente aqui que o ADR 0134 pousava só pela metade
+  — a ausência de container não recusava, caía no `System.cmd` do processo
+  do engine, e o isolamento que o ADR existe para criar valia só no caminho
+  feliz.
   """
 
   alias Engine.Actions.Workspace
@@ -96,6 +102,13 @@ defmodule Engine.Actions.TerminalExecutor do
             "--dir <pasta>` na sua máquina e tente de novo."
         )
 
+      :recusar_container_ausente ->
+        failed_result(
+          "o projeto não tem container REGISTRADO como `running` — o comando " <>
+            "NÃO roda fora do container (RN-501). Suba o container do projeto " <>
+            "(a Infra propõe `container_start`) e tente de novo."
+        )
+
       :executar_no_container ->
         run_no_container(project_id, command, cwd, timeout)
 
@@ -111,23 +124,43 @@ defmodule Engine.Actions.TerminalExecutor do
   # devolve `nil` pra projeto inexistente/id malformado — degrada pro
   # caminho de sempre, nunca propaga erro daqui.
   #
-  # CINCO saídas, não quatro (RN-423/ADR 0104 + RN-492/ADR 0134):
+  # SEIS saídas (RN-423/ADR 0104 + RN-492/ADR 0134 + RN-501/ADR 0142):
   #
   #   - `runner` sem workspace verificado: recusa (nunca roteia às cegas);
   #   - `runner` verificado, sem runner conectado: recusa (idem);
-  #   - `runner` verificado e conectado: roteia pro canal Phoenix;
-  #   - `container` com um container REGISTRADO `running` (ADR 0130/0133):
-  #     executa DENTRO dele, via broker (`:executar_no_container`) — nova
-  #     nesta entrega. `true` aqui é só o REGISTRADO (RN-486: registrado e
-  #     observado nunca se fundem); se o container morreu por fora, a falha
-  #     aparece em `run_no_container/4`, como falha normal de comando;
-  #   - qualquer outro caso (`container` sem container `running`, `mounted`,
-  #     projeto inexistente/id malformado) — caminho de sempre
-  #     (`System.cmd` local, comportamento anterior a este PR).
+  #   - `runner` verificado e conectado: roteia pro canal Phoenix — e a
+  #     escolha host-vs-container ali é INTERNA ao runner (ADR 0137);
+  #   - `container`/`mounted` com um container REGISTRADO `running` (ADR
+  #     0130/0133): executa DENTRO dele, via broker. `true` aqui é só o
+  #     REGISTRADO (RN-486: registrado e observado nunca se fundem); se o
+  #     container morreu por fora, a falha aparece em `run_no_container/4`,
+  #     como falha normal de comando;
+  #   - `container`/`mounted` SEM container `running`: RECUSA
+  #     (`:recusar_container_ausente`) — ver abaixo;
+  #   - projeto inexistente ou id malformado: caminho de sempre.
   #
-  # `mounted` NUNCA cai em `:executar_no_container`: o broker recusa subir
-  # container pra esse modo (`ModoDeExecucaoNaoSuportadoError`,
-  # `apps/broker/src/operacoes.ts`), então não faz sentido nem perguntar.
+  # ## O fallback silencioso que sumiu (RN-501, ADR 0142)
+  #
+  # Até aqui, `container` sem container `running` caía em
+  # `:caminho_de_sempre`, isto é, `System.cmd` DENTRO do processo do engine —
+  # o mesmo processo que fala com o banco, com a api e com todos os outros
+  # projetos. O ADR 0134 tinha fechado o isolamento só pro caminho feliz: a
+  # ausência de container não recusava, degradava, e degradava calada. Um
+  # projeto que nunca subiu container executava comando de dev agent
+  # exatamente como antes do broker existir, e nada na saída dizia isso.
+  #
+  # Agora recusa, espelhando `:recusar_nao_verificado`/
+  # `:recusar_runner_desconectado`: a mesma disciplina que o modo `runner`
+  # já tinha ("faltou a pré-condição, então não executa em lugar nenhum"),
+  # aplicada ao modo `container`. `mounted` entra no MESMO ramo — ele
+  # também tem container próprio desde que o `mounted` passou a subir pelo
+  # broker; sem ele, `System.cmd` no engine seria a mesma degradação calada.
+  # A recusa é `failed_result` normal no chamador, nunca crash: é o mesmo
+  # contrato de falha das outras duas recusas deste módulo.
+  #
+  # O catch-all sobrou pro que ele sempre deveria ter coberto sozinho:
+  # projeto inexistente / `project_id` malformado. Nenhum modo de execução
+  # cai nele mais.
   defp decisao_de_execucao(project_id) do
     case Project.get(project_id) do
       %{execution_mode: "runner", workspace_verified_at: nil} ->
@@ -138,10 +171,10 @@ defmodule Engine.Actions.TerminalExecutor do
           do: :rotear_runner,
           else: :recusar_runner_desconectado
 
-      %{execution_mode: "container"} ->
+      %{execution_mode: modo} when modo in ["container", "mounted"] ->
         if ProjectContainerLifecycle.running?(project_id),
           do: :executar_no_container,
-          else: :caminho_de_sempre
+          else: :recusar_container_ausente
 
       _ ->
         :caminho_de_sempre

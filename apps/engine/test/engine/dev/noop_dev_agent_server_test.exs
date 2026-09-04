@@ -22,6 +22,10 @@ defmodule Engine.Dev.NoopDevAgentServerTest do
     project_id = Ecto.UUID.generate()
     session_id = Ecto.UUID.generate()
 
+    # RN-501/ADR 0142 — o Noop passa pelo MESMO `AgentIo.try_claim/2`, então a
+    # guarda de container vale para ele igual: sem esta linha ele não claima.
+    container_running!(project_id)
+
     {:ok, state} =
       NoopDevAgentServer.init({project_id, "dev-api", "api", session_id, 500_000, 2, nil, nil})
 

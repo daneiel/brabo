@@ -19,7 +19,43 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Novidades
+
+- **engine,api**: dev agent só reivindica task com o container do projeto
+  `running` (ADR 0142, RN-501). Antes não havia ordem nenhuma: numa execução
+  real do `exp001` nenhum `container_start` chegou a ser proposto, e os dez
+  dev agents começaram assim mesmo — para travar dez vezes. A guarda mora em
+  `AgentIo.try_claim/2`, o ponto **único** de claim, e usa o predicado que já
+  existia (`ProjectContainerLifecycle.running?/1`, ADR 0134). No **engine** e
+  não só no `activate-execution` da api porque o claim tem um caminho que
+  rota nenhuma cobre: a **reidratação** não faz cast `:work` — quem claima
+  depois de um restart é `init/1` → `finish_restart_recovery/1` →
+  `try_claim/2` —, e um gate só na fronteira HTTP deixaria todo agente
+  reidratado voltar a trabalhar sem container. Sem container o agente cai em
+  `:idle` (**não** um status novo: é o único estado do qual um wake ainda
+  resgata, e todos os guards de `handle_info/2` já se apoiam nisso), persiste
+  e emite `dev.blocked_by_container` — quem distingue "a fila esvaziou" de
+  "não há container" é o EVENTO, nunca o status. Quando o container sobe, a
+  api publica `container.running` na MESMA transação que grava a transição,
+  num agregado `container` novo que o dreno do engine passa a ler, e todo
+  agente `:idle` do projeto recebe o `{:wake, :became_claimable}` que já
+  existia e re-tenta sozinho
+
 ### Correções
+
+- **engine**: o comando de terminal do dev agent **não cai mais fora do
+  container** em silêncio (RN-501). `container` sem container `running` caía
+  em `:caminho_de_sempre`, isto é, `System.cmd` dentro do processo do engine —
+  o mesmo processo que fala com o banco, com a api e com todos os outros
+  projetos —, então o isolamento do ADR 0134 valia só no caminho feliz e a
+  ausência dele não recusava: degradava, e degradava calada. Agora recusa
+  (`failed_result` com o motivo nomeado), espelhando o
+  `:recusar_nao_verificado`/`:recusar_runner_desconectado` que o modo `runner`
+  já tinha. `mounted` entra no mesmo ramo — com container `running` atravessa
+  pro broker igual a `container`, sem ele recusa — e o catch-all
+  `:caminho_de_sempre` encolhe para o que sempre deveria ter sido sozinho:
+  projeto inexistente ou id malformado. Consequência declarada: projeto sem
+  container de pé para de trabalhar, e diz por quê
 
 - **web**: o handoff para a **Infra** volta a ser aceitável — por um card
   próprio, fora do fio (RN-499). O filtro `AGENTES_DE_CHAT` de

@@ -36,6 +36,9 @@ defmodule Engine.Dev.DevAgentConcurrencyTest do
     project_id = Ecto.UUID.generate()
     session_id = Ecto.UUID.generate()
 
+    # RN-501/ADR 0142 — pré-condição de todo claim.
+    container_running!(project_id)
+
     {:ok, base} =
       DevAgentServer.init({project_id, "dev-api", "api", session_id, nil, nil, 3, nil})
 
