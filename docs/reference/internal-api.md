@@ -510,6 +510,19 @@ the locator: folder name in `container`, absolute path in
 changes between them is WHEN/WHO confirms that the path actually exists (see the
 next section).
 
+**The projects base changes where `mounted` folders live, and deliberately
+changes nothing here** ([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md),
+[RN-500](../business-rules.md#rn-500)). Since that ADR, `mounted` projects live
+under a single operator-configured base — `BRABO_PROJECTS_BASE` — instead of
+each one needing a hand-written bind-mount line in both services. The base is
+mounted by **identity** (`$X:$X`) into `api` and `engine`, and that is exactly
+why this contract is untouched: the absolute path stored in
+`projects.workspace_path` means the same thing in both containers and on the
+host, so the leading-slash discriminator above keeps working, `projectScopeRoot`
+(api) and `Engine.Actions.Workspace.workspace_dir/2` (engine) keep agreeing, and
+**no route was added in either direction**. A fixed mountpoint would have
+forced a translation into this contract; identity is what buys its absence.
+
 ### Workspace confirmation by the runner — the WRITE, which is a new route ([RN-423](../business-rules.md#rn-423))
 
 | method | path |
@@ -811,6 +824,16 @@ filesystem, so `/data/project-workspaces/<x>` (a path inside the api container)
 would make the daemon create and mount an EMPTY folder. The broker joins
 `workspaceDirName` with its own `PROJECT_WORKSPACES_HOST_ROOT`, and refuses
 `start` naming that variable when it is not configured.
+
+The broker now declares a **second** root of its own,
+`BRABO_PROJECTS_HOST_BASE` — the base of `mounted` projects, also on the host,
+derived in the composes from `BRABO_PROJECTS_BASE`
+([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md)). **Nothing
+consumes it yet**, and this route's payload does not change because of it:
+resolving a `mounted` project against that root is the PR that gives Mounted
+mode a container, and it is there that item 2 above (the `409` for
+`mounted`/`runner`) gets revisited. The variable is declared alongside the base
+so it doesn't appear half a release later, far from the file that explains it.
 
 There is no write route in this direction. Whoever WRITES the container lifecycle
 is still `RegistrarTransicaoDeContainerUseCase`, through the route that already

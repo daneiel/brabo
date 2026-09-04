@@ -74,63 +74,101 @@ Compose (`name: brabo` em `docker/docker-compose.yml`) — confirme com
 existindo depois (Compose não apaga volume que saiu de uso); remova com
 `docker volume rm` se tiver certeza de que a cópia funcionou.
 
-### Projeto no modo Local {#projeto-no-modo-local}
+### Projeto no modo Pasta montada: a base de projetos {#projeto-no-modo-local}
 
-**Sintoma:** ao criar o projeto escolhendo **Local**, a api responde `400`
-dizendo que a pasta *não existe do lado de dentro da api*.
+**Sintoma:** o assistente de criação não oferece **Pasta montada**; ou oferece,
+e a api responde `400` dizendo que a pasta *não existe do lado de dentro da
+api*.
 
-Isso é a guarda funcionando ([RN-170](business-rules/autenticacao.md#rn-170)), não um bug: o
-caminho que você digitou existe no seu computador e **não** dentro do container.
-Um projeto criado assim travaria depois, na primeira ferramenta do primeiro
-agente, longe da tela onde a decisão foi tomada — por isso ele não nasce.
+Os dois vêm do mesmo fato: um projeto no modo Pasta montada guarda o código
+numa pasta **sua**, e a api e o engine só a alcançam se ela estiver montada nos
+containers deles. O que mudou
+([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md),
+RN-500) é quem faz essa montagem, e com que
+frequência: agora existe **uma base**, configurada uma vez pelo operador, e
+todo projeto montado mora dentro dela. Você nunca mais edita o compose por
+projeto.
 
-**O que fazer.** Montar a pasta nos **dois** serviços, no **mesmo caminho
-absoluto** dos dois lados:
+**O que fazer — uma vez, para a instalação inteira:**
 
-```yaml
-# docker/docker-compose.yml
-services:
-  api:
-    volumes:
-      # ... as linhas que já existem
-      - /home/voce/projetos/loja:/home/voce/projetos/loja
-
-  engine:
-    volumes:
-      # ... as linhas que já existem
-      - /home/voce/projetos/loja:/home/voce/projetos/loja
+```bash
+# .env — caminho ABSOLUTO. O `~` NÃO é expandido pelo Compose.
+BRABO_PROJECTS_BASE=/home/voce/brabo
 ```
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d api engine
+docker compose -f docker/docker-compose.yml --env-file .env up -d api engine
 ```
 
-Confira antes de tentar de novo — a api valida o que **ela** vê, e não tem como
-saber o que está montado no outro container:
+Pronto. Daqui em diante, um projeto no modo Pasta montada vai para algum lugar
+dentro de `/home/voce/brabo` e não precisa de mais nada.
+
+**Por que o assistente esconde o modo Pasta montada.** Sem
+`BRABO_PROJECTS_BASE`, a api reporta `projectsBase: null` e a opção não é
+oferecida. É deliberado: oferecer um modo que a instalação não honra produz um
+projeto que trava depois, na primeira ferramenta do primeiro agente, longe da
+tela onde a decisão foi tomada. Os modos Container (o default) e Runner não são
+afetados e continuam funcionando sem esta variável.
+
+**Por que o mesmo caminho dos dois lados.** A base é montada por
+**identidade** — `/home/voce/brabo:/home/voce/brabo` — tanto na `api` quanto no
+`engine`. O caminho é gravado UMA vez em `projects.workspace_path` e lido pelos
+dois processos ([RN-169](business-rules/autenticacao.md#rn-169)); ele também é a
+string que a tela mostra de volta para você. Montar em outro lugar faria o
+engine escrever onde a api não lê, e faria a tela mostrar um caminho que não
+existe nem na sua máquina nem na deles.
+
+**Confira o que os containers realmente enxergam:**
 
 ```bash
-docker compose -f docker/docker-compose.yml exec api  ls -la /home/voce/projetos/loja
-docker compose -f docker/docker-compose.yml exec engine ls -la /home/voce/projetos/loja
+docker compose -f docker/docker-compose.yml exec api    ls -la /home/voce/brabo
+docker compose -f docker/docker-compose.yml exec engine ls -la /home/voce/brabo
 ```
 
-**Por que o mesmo caminho dos dois lados.** O caminho é gravado UMA vez em
-`projects.workspace_path` e lido pelos dois processos
-([RN-169](business-rules/autenticacao.md#rn-169)). Montar em lugares diferentes faria o
-engine escrever onde a api não lê — a divergência que a derivação única existe
-para impedir.
+**Não aponte a base para o checkout do próprio Brabo.** O `pnpm dev` recusa
+subir quando `BRABO_PROJECTS_BASE` contém, ou está contida por, o repositório
+que você clonou — ele nomeia os dois caminhos e para. Essa checagem mora no
+preflight e em nenhum outro lugar, de propósito: a api compara o caminho de um
+projeto contra `process.cwd()`, que dentro do container dela é `/workspace`, e
+não tem como enxergar o seu checkout de verdade. Sem a guarda, clonar o Brabo
+em `$HOME/brabo` e apontar a base para a mesma pasta passa por toda validação e
+faz os agentes de dev rodarem dentro da árvore do próprio produto — a falha que
+o [ADR 0055](adr/0055-escopo-de-caminho-em-comando-de-agente.md) existe para
+impedir.
+
+**Escolha uma pasta dedicada.** Tudo que estiver sob a base é alcançável de
+dentro dos containers do produto. Não aponte para o seu `$HOME` inteiro, nem
+para uma pasta que guarde outros segredos seus.
 
 **Outros modos de recusa, e o que cada um quer dizer:**
 
 | a mensagem diz | o que fazer |
 |---|---|
-| *não existe do lado de dentro da api* | montar, como acima |
+| o modo Pasta montada nem aparece | `BRABO_PROJECTS_BASE` não está definida — defina e rode `up -d api engine` |
+| *não existe do lado de dentro da api* | a pasta não está sob a base, ou a base não está montada; confira com o `exec ls` acima |
 | *existe mas não é uma pasta* | o caminho aponta para um arquivo; use a pasta |
 | *o processo não pode escrever nela* | dono/permissão da pasta no host. As imagens rodam non-root ([ADR 0024](adr/0024-fase5-imagens-producao-ci.md)); ajuste o dono ou o modo da pasta |
 | *Caminho inválido para um projeto Local* | é raiz do sistema, pasta de sistema, relativo, tem `..`, ou se sobrepõe ao checkout do Brabo — escolha uma pasta sua, fora dessas ([ADR 0072](adr/0072-projeto-local-ou-container.md)) |
 
+**Limites conhecidos, declarados em vez de escondidos.** Um symlink sob a base
+apontando para fora dela resolve diferente dentro dos containers, porque o alvo
+não está montado — o navegador de pastas recusa descer em symlink, e a checagem
+de disco pega a divergência como uma falha nomeada. E esta versão suporta
+**uma** base: código que more em outro lugar precisa ser movido para dentro
+dela.
+
+**Migrando dos mounts por projeto.** Se você tem linhas
+`- /home/voce/projetos/loja:/home/voce/projetos/loja` escritas à mão na `api` e
+no `engine`, elas continuam funcionando e nada as remove — nenhum projeto
+existente quebra com esta mudança. O caminho suportado daqui em diante é a
+base; mova essas pastas para dentro dela e apague as linhas quando puder.
+
 **Não confunda com o modo Container.** Projeto no modo Container (o default)
-continua usando `PROJECT_WORKSPACES_ROOT` e o procedimento de migração acima;
-o modo Local não passa por essa raiz em momento nenhum.
+continua usando `PROJECT_WORKSPACES_ROOT` e o procedimento de migração acima; o
+modo Pasta montada não passa por essa raiz em momento nenhum, e a base nunca é
+a mesma pasta que essa raiz — o
+[ADR 0141](adr/0141-base-unica-dos-projetos-montados.md) explica por que
+conflá-las deixaria dois projetos caírem na mesma pasta.
 
 ---
 

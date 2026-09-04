@@ -11348,6 +11348,46 @@
         ]
       }
     },
+    "/workspaces/{workspaceId}/projects-base": {
+      "get": {
+        "description": "The single folder on the operator machine that the api and engine containers can see, mounted by identity (ADR 0141). `null` — a normal state, never an error — means this installation has no `BRABO_PROJECTS_BASE`, so the project wizard must not offer Mounted mode at all. The same value for every workspace: it is installation configuration, and `workspaceId` only scopes the authorization.",
+        "operationId": "WorkspacesController_getProjectsBase",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectsBaseResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role in the workspace."
+          },
+          "404": {
+            "description": "Workspace doesn't exist or is invisible to the caller."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The base folder for projects in Mounted mode",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
     "/workspaces/{workspaceId}/projects-status": {
       "get": {
         "description": "One row per workspace project with a blocked task — feeds the dashboard sidebar's status dot with a single query instead of N calls to the backlog.",
@@ -17867,6 +17907,20 @@
           "storyPromotion",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "ProjectsBaseResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectsBase": {
+            "type": "object",
+            "example": "/home/voce/brabo",
+            "nullable": true,
+            "description": "The single folder on the operator's computer that the Brabo containers can see, mounted by IDENTITY (`$X:$X`) into `api` and `engine` (ADR 0141). `null` means `BRABO_PROJECTS_BASE` is not set: the installation offers no Mounted mode, and the project wizard must not offer it. Never a failure — absent is a normal state."
+          }
+        },
+        "required": [
+          "projectsBase"
         ]
       },
       "ProjectUnreadEventsResponseDto": {

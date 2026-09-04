@@ -175,32 +175,58 @@ makes rotation possible without downtime ([RN-035](../business-rules/autenticaca
 |---|---|---|
 | `GIT_LOCAL_REPOS_ROOT` | `/tmp/brabo-git-repos` | Local provider. In `/tmp`, repos disappear on reboot |
 | `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` | project agent worktrees in **Container** mode. **Needs to be the same path on the engine**, and the same volume |
+| `BRABO_PROJECTS_BASE` | empty | the single host folder under which **Mounted**-mode projects live, mounted by identity into `api` and `engine`. Empty is a NORMAL state: the api reports `projectsBase: null` and the project wizard doesn't offer Mounted mode at all |
 | `GITHUB_OAUTH_CLIENT_ID` / `_SECRET` | empty | empty = GitHub OAuth connection unavailable (PAT still works) |
 | `GITLAB_OAUTH_CLIENT_ID` / `_SECRET` | empty | same |
 
-#### Project in Local mode: not a variable, a mount
+#### Project in Mounted mode: one base, mounted by identity
 
 Since [ADR 0072](../adr/0072-projeto-local-ou-container.md), a project can be
-born in **Local** mode — the code lives in a user folder, at a free absolute
-path, and `PROJECT_WORKSPACES_ROOT` **doesn't participate** in its root.
+born in **Mounted** mode (the old `local`, renamed by
+[ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md))
+— the code lives in a user folder and `PROJECT_WORKSPACES_ROOT` **doesn't
+participate** in its root.
 
-This has NO environment variable: the path is a project-level datum
-(`projects.workspace_path`), chosen at creation. What the ENVIRONMENT needs to
-provide is the mount — the same folder, at the **same absolute path**, inside
-both the `api` and `engine` containers:
+The path of a given project is a project-level datum
+(`projects.workspace_path`), chosen at creation and never an environment
+variable. What the ENVIRONMENT provides is the **base** those folders live
+under — `BRABO_PROJECTS_BASE`, one per installation
+([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md),
+[RN-500](../business-rules.md#rn-500)):
 
-```yaml
-# docker/docker-compose.yml — on BOTH services
-    volumes:
-      - /home/voce/projetos/loja:/home/voce/projetos/loja
+```bash
+# .env — ABSOLUTE. `~` is not expanded by Compose.
+BRABO_PROJECTS_BASE=/home/voce/brabo
 ```
 
-Mounting on only one of the two produces a project the api accepts and the
-engine can't see: creation validation
-([RN-170](../business-rules/autenticacao.md#rn-170)) checks what the **api** sees, and it
-has no way to know what's mounted in the other container. With no mount at
-all, creation is refused with a 400 and the message carries the line above —
-see the [runbook](../runbook.md#projeto-no-modo-local).
+```yaml
+# docker/docker-compose.yml — on BOTH `api` and `engine`, already written
+    volumes:
+      - ${BRABO_PROJECTS_BASE:-brabo_projects_base}:${BRABO_PROJECTS_BASE:-/data/brabo-projects-base}
+```
+
+The operator sets this **once** and restarts `api` + `engine`; nothing is
+edited per project, ever. Before this, every mounted project needed a
+hand-written bind-mount line in both services plus a restart — which kills
+every in-flight agent turn, terminal socket and LLM call in the installation.
+
+The mount is by **identity** (`$X:$X`): the same absolute path on the host and
+inside both containers. That is what keeps honest the string the user types and
+the screen shows back, and it is why `projectScopeRoot` (api) and
+`Engine.Actions.Workspace.workspace_dir/2` (engine) need no translation layer.
+
+**It is not `PROJECT_WORKSPACES_HOST_DIR`, and must never point at the same
+folder.** A managed workspace is named by `workspace_dir_name` (UNIQUE) and a
+mounted project is named by the user, so `<base>/loja` and a container project
+whose folder name is `loja` would collide, with the repo bootstrap running
+`git init` inside someone else's project. The ADR has the other two reasons.
+
+With the variable **unset**, Mounted mode isn't offered — never offer a mode
+the installation can't honor. And `pnpm dev` **refuses to start** when the base
+overlaps the Brabo checkout in either direction; that check lives in the
+preflight because it runs on the host, and the api can only compare against
+`process.cwd()` (`/workspace` inside its own container). See the
+[runbook](../runbook.md#projeto-no-modo-local).
 
 ### LLM
 
@@ -453,6 +479,17 @@ docker compose -f docker/docker-compose.yml --env-file .env \
 managed Docker volume — pair it with `PROJECT_WORKSPACES_HOST_DIR` (above) and
 repeat the same path here, ALREADY EXPANDED (`~` is not expanded by Compose).
 
+`BRABO_PROJECTS_HOST_BASE` is the broker's SECOND root — the base of **Mounted**
+projects, also on the host
+([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md)). Unlike the one
+above it does not need to be filled in: the compose derives it from
+`BRABO_PROJECTS_BASE`, which is already a host path by definition (it is what
+`api` and `engine` mount by identity). Set it explicitly only if the Docker
+daemon reaches that folder by a different path. **Nothing consumes it yet** —
+resolving a `mounted` project against this root is the PR that gives Mounted
+mode a container; the variable is declared alongside the base so it doesn't
+appear half a release later, far from the file that explains it.
+
 
 ---
 
@@ -494,9 +531,9 @@ anyone noticing.
 
 > ⚠️ Block generated by `pnpm docs:generate`. Do not edit by hand — the next build overwrites it.
 
-Inventory extracted from the code: **129 variables** read at runtime. **2** still have no description in the tables above.
+Inventory extracted from the code: **130 variables** read at runtime. **2** still have no description in the tables above.
 
-**api** — 57 variables
+**api** — 58 variables
 
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
 - `AUTH_ACCESS_TOKEN_TTL_MS` <sub>(apps/api/src/infrastructure/security/ed25519-access-token-issuer.ts)</sub>
@@ -516,6 +553,7 @@ Inventory extracted from the code: **129 variables** read at runtime. **2** stil
 - `AUTH_SET_PASSWORD_TTL_MS` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
 - `AUTH_TOKEN_PEPPER` <sub>(apps/api/src/infrastructure/security/auth-key-material.ts)</sub>
 - `BRABO_FORCE_SEED` <sub>(apps/api/src/scripts/provisionar-usuario.ts)</sub>
+- `BRABO_PROJECTS_BASE` <sub>(apps/api/src/infrastructure/filesystem/project-workspaces-root.ts)</sub>
 - `BRABO_SEED_PASSWORD` <sub>(apps/api/src/db/seed.ts)</sub>
 - `BRABO_SERVICE_TOKEN` <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub>
 - `BRABO_SERVICE_TOKEN_PREVIOUS` <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub>

@@ -79,6 +79,8 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Golden-set do RAG em CI, agendado (Parte 2/Etapa 3) | Fecha a metade que a RN-490/ADR 0132 tinha deixado como `TODO(humano)` — só para o RAG, nunca para o QA (ADR 0123, sem mudança nenhuma). Workflow novo (`.github/workflows/golden-set-rag.yml`, `schedule` noturno + `workflow_dispatch`, separado de `ci.yml` de propósito) sobe `postgres`+`ollama` como serviços e roda `mix golden_set.rag` de verdade — tratável porque este golden-set só chama o modelo de EMBEDDING (CPU, determinístico), nunca um modelo de chat fazendo julgamento como o do QA exige. `rag-acertivo` CONTINUA `warn`: agendado nunca bloqueia PR, então `block` prometeria um travamento que não existe — o motivo mudou (de "sem CI" para "cadência"), a severidade não. Achado que dispensou geração de segredo: `seed-golden-set-rag.ts` nunca define `NODE_ENV`, então os quatro segredos de RN-114 caem no literal de dev sem reclamar | ADR 0138, RN-498 |
 
 | O handoff da Infra podia ser aceito por tela nenhuma (D0) | `offeredHandoff` filtra o card do fio por `AGENTES_DE_CHAT`, que exclui `infra` — e o filtro está CERTO (o engine não tem cláusula de `message` pro Infra Lead; alargá-lo faria a tela oferecer um fio que não existe e o composer mandar mensagem pro Criativo). O defeito era a consequência, que o comentário do próprio código registrava como aceita: `acceptHandoff` tinha UM consumidor só, atrás desse filtro, então o handoff de `OfferInfraHandoffUseCase` ficava `offered` para sempre, o Infra Lead nunca era ativado, `propose_container_start` nunca era chamado e NENHUM projeto de nenhum modo chegava a ter container de pé. Correção: card acionável PRÓPRIO, fora do fio, na faixa fixa entre a área que rola e o composer — a mesma que já hospeda o handoff manual e se declara o lugar das ações de handoff que não são conversa —, chamando o `acceptHandoff` que já existia, fechado pelo mesmo `activeFor`. O `handoff.offered` da Infra continua NARRADO no fio como divisor mudo | RN-499 |
+| A base única dos projetos montados (PR 1, BREAKING) | Criar projeto `mounted` exigia uma linha de bind-mount escrita À MÃO em `api` E `engine` mais um restart dos dois — que mata todo turno de agente, socket de terminal e chamada de LLM em voo da instalação, para onboardar UM projeto. Nasce `BRABO_PROJECTS_BASE`: UMA base, configurada uma vez pelo operador, montada por IDENTIDADE (`$X:$X`) nos dois serviços, com todos os projetos montados dentro dela e NADA editado por projeto. Identidade e não mountpoint fixo porque `workspace_path` é digitado pelo usuário e mostrado de volta a ele — e é o que faz `projectScopeRoot`/`workspace_dir/2` continuarem certos sem código novo. Variável PRÓPRIA (colisão de namespace com `workspace_dir_name` UNIQUE faria `git init` na pasta de outro projeto; dono oposto; a base é navegável e a raiz gerenciada não deve ser). AUSENTE é normal: `projectsBase: null` (`GET workspaces/:id/projects-base`, `maintainer`) e o modo não é oferecido. E `pnpm dev` RECUSA subir com a base sobreposta ao checkout — a única checagem possível, porque a api compara contra `/workspace`. Dois custos declarados: symlink sob a base e uma base só | ADR 0141, RN-500 |
+
 | Alarme de merge de esteira com destinatário | A regra "promoção é `--no-ff`" foi quebrada TRÊS vezes (#367, #394, #464 — a terceira era o PR que consertava as duas primeiras). O achado: a detecção JÁ existia e JÁ funcionou (o `tag-release` reprovou as duas primeiras com a mensagem certa) — faltava para QUEM tocar, porque workflow de `push` que falha numa permanente não tem PR onde ficar vermelho e o repo tinha zero issues. `tag-release` ganha o job `avisar`, que abre issue (e comenta na já aberta, nunca duplica) com `github.token` e nunca com o PAT — PAT inválido é uma das falhas que ele reporta — e isso deixou de ser hipotético: o `BRABO_BOT_TOKEN` expirou em 2026-09-03 à noite, reprovou duas runs do `tag-release`, e foi rotacionado em 2026-09-04; a v4.0.0 carimbou e DISPAROU a Release, o que só acontece com PAT válido (tag criada com `GITHUB_TOKEN` não dispara workflow). A regra passa a cobrir `dev` de forma ESTREITA: só é defeito o PR que trazia ARESTA NOVA (head era merge cujo segundo pai não estava na base), nunca o squash de PR de trabalho, que é a convenção. Desligar squash no repo foi MEDIDO e recusado (taxaria todo PR e mexeria no `changelog.mjs`, que roda `--no-merges`) | ADR 0139 |
 
 ## Estado atual e aberto
@@ -352,7 +354,12 @@ daqui e o fechamento vai para o histórico.
   estar correto. A api NÃO manda caminho nenhum (o `-v` é resolvido pelo daemon
   contra o filesystem do HOST; um caminho de dentro do container da api montaria
   uma pasta VAZIA): o broker compõe com `PROJECT_WORKSPACES_HOST_ROOT`, e recusa
-  `start` nomeando a variável quando ela falta. Contenção em cinco camadas
+  `start` nomeando a variável quando ela falta. Desde o ADR 0141 (RN-500) ele
+  tem uma SEGUNDA raiz declarada, `BRABO_PROJECTS_HOST_BASE` — a base dos
+  projetos MONTADOS, também no host, derivada de `BRABO_PROJECTS_BASE` no
+  compose. Ela ainda NÃO tem consumidor: quem resolve `mounted` contra ela é o
+  PR que dá container ao modo Pasta montada; a linha nasce junto com a base para
+  não aparecer meia release depois, longe do arquivo que a explica. Contenção em cinco camadas
   independentes — sem porta publicada, rede `internal: true` que só a api
   alcança, `BRABO_SERVICE_TOKEN` em tempo constante, cinco operações, spec
   computada. Sobe sob `profiles: ["container-broker"]` nos dois composes e
@@ -535,7 +542,25 @@ daqui e o fechamento vai para o histórico.
   `local`, renomeado — uma pasta do USUÁRIO montada por bind-mount, caminho
   absoluto livre em `projects.workspace_path`) ou `runner` (uma pasta do
   USUÁRIO SEM bind-mount, confirmada por um CLI — `brabo-runner` — rodando na
-  máquina dela, RN-423). O par (modo, caminho) é amarrado por CHECK no banco
+  máquina dela, RN-423). Desde o ADR 0141 (RN-500), o bind-mount de `mounted`
+  deixa de ser uma linha de compose POR PROJETO e passa a ser UMA base da
+  INSTALAÇÃO — `BRABO_PROJECTS_BASE`, montada por IDENTIDADE (`$X:$X`) em `api`
+  e `engine`, com todos os projetos montados morando dentro dela. Identidade e
+  não mountpoint fixo porque `workspace_path` é digitado pelo usuário e mostrado
+  de volta a ele, e é isso que faz `projectScopeRoot` e
+  `Engine.Actions.Workspace.workspace_dir/2` continuarem certos sem código novo.
+  Variável PRÓPRIA, NUNCA `PROJECT_WORKSPACES_HOST_DIR`: a raiz gerenciada é
+  nomeada por `workspace_dir_name` (UNIQUE) e a base é nomeada pelo usuário, e
+  apontar as duas para o mesmo lugar faria `init_from_bare!` dar `git init` na
+  pasta de outro projeto. `baseDeProjetos()` NUNCA lança e AUSENTE é estado
+  normal — `GET workspaces/:workspaceId/projects-base` (`maintainer`) devolve
+  `projectsBase: null`, e é assim que a criação aprende a NÃO oferecer o modo.
+  A base NÃO entra em `caminhoDeWorkspaceLocalValido` (que roda em toda LEITURA
+  e faria projeto montado legado explodir ao ser lido): é regra de criação e
+  conversão. E `pnpm dev` RECUSA subir com a base sobreposta ao checkout do
+  Brabo, nos dois sentidos — checagem que só o preflight pode fazer, porque a
+  api compara contra `process.cwd()` (`/workspace` dentro do container dela) e
+  nunca enxerga o checkout real. O par (modo, caminho) é amarrado por CHECK no banco
   (`execution_mode <> 'container'`), e `projectScopeRoot` continua sendo a
   derivação ÚNICA da raiz — não duplique validação nos chamadores. Caminho
   `mounted` é validado na CRIAÇÃO e RECUSADO com mensagem que ensina a montar

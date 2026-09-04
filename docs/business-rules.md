@@ -7506,6 +7506,76 @@ aceite.
 
 ---
 
+## A base única dos projetos montados (RN-500)
+
+### RN-500 — Existe UMA base para os projetos montados, ela é montada por identidade, e ausente quer dizer "não ofereça o modo" {#rn-500}
+
+`BRABO_PROJECTS_BASE` é a **única** pasta do computador do operador que os
+containers do Brabo enxergam. Ela é montada por **identidade** (`$X:$X`) nos
+serviços `api` e `engine`, o que significa que o caminho é o MESMO no host e
+dentro dos dois containers.
+
+A identidade não é preferência de estilo. A string de `projects.workspace_path`
+é digitada pelo usuário e mostrada de volta a ele; com host ≠ container o
+produto teria que escolher qual das duas guardar, e qualquer escolha faz a tela
+mentir para alguém. E é ela que faz `projectScopeRoot` (api) e
+`Engine.Actions.Workspace.workspace_dir/2` (engine) continuarem corretos **sem
+uma linha de código nova** — o discriminador da barra inicial segue valendo, e o
+escopo de terminal do ADR 0055 continua autorizando exatamente a pasta que o
+usuário vê.
+
+**Ausente é estado NORMAL, não erro.** `baseDeProjetos()` devolve `null` quando
+a variável não está definida ou está vazia, e NUNCA lança. `null` viaja até o
+cliente por `GET /workspaces/:workspaceId/projects-base` (`maintainer`, o mesmo
+mínimo de `POST .../projects`, porque é para decidir o que aquela rota oferece
+que o valor existe) e é assim que a criação de projeto aprende a **não oferecer**
+o modo Pasta montada. Oferecer um modo que a instalação não honra produz um
+projeto que trava depois, na primeira ferramenta do primeiro agente, longe da
+tela onde a decisão foi tomada — é a mesma lição da RN-170.
+
+`dentroDaBaseDeProjetos` reusa `dentroDoEscopo`, a mesma função do escopo de
+terminal, e não uma comparação de prefixo escrita de novo: a armadilha é
+exatamente a que ela já resolve — `/home/voce/brabo2` **não** está dentro de
+`/home/voce/brabo`, embora a string comece igual. A própria base conta como
+dentro; com base `null`, nada está dentro.
+
+**A base é variável PRÓPRIA**, nunca `PROJECT_WORKSPACES_HOST_DIR`. Os três
+motivos estão no ADR, e o primeiro tem consequência de dados: workspace
+gerenciado é nomeado por `workspace_dir_name` (UNIQUE) e projeto montado é
+nomeado pelo usuário, então `<base>/loja` e um projeto `container` com
+`workspace_dir_name = loja` cairiam na MESMA pasta física, com
+`init_from_bare!` dando `git init` dentro do projeto do outro.
+
+**A guarda do checkout mora no preflight, e é o único lugar onde ela é
+possível.** `pnpm dev` **recusa subir** quando a base se sobrepõe ao checkout do
+Brabo, nos dois sentidos. A api não consegue fazer essa checagem: ela compara
+contra `process.cwd()`, que dentro do container dela é `/workspace`, e nunca vê
+o caminho real no disco. Sem essa guarda, quem clona o Brabo em `$HOME/brabo` e
+aponta a base para lá passa por toda validação existente e faz os dev agents
+executarem dentro da árvore do próprio produto — a falha do ADR 0055 entrando
+por uma porta que ele não vigia.
+
+**O que esta RN NÃO faz:** ela não exige que um projeto `mounted` esteja dentro
+da base. `caminhoDeWorkspaceLocalValido` e `projectScopeRoot` ficam intactos —
+aquele predicado roda em toda LEITURA, e projeto montado legado fora da base
+passaria a explodir ao ser lido. A base é regra de CRIAÇÃO e CONVERSÃO, e entra
+na RN seguinte.
+
+- **Onde:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:67`
+  (`baseDeProjetos`) e `:92` (`dentroDaBaseDeProjetos`);
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts:197`
+  (`GET :workspaceId/projects-base`); `scripts/dev/base-de-projetos.mjs` e a
+  chamada em `scripts/dev/preflight.mjs`; `docker/docker-compose.yml` e
+  `docker/docker-compose.prod.yml` (serviços `api`, `engine`, `broker`)
+- **Teste:**
+  `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (`describe('baseDeProjetos / dentroDaBaseDeProjetos')`) e
+  `scripts/dev/base-de-projetos.spec.ts`
+- **ADR:** [0141](adr/0141-base-unica-dos-projetos-montados.md)
+- **Origem:** plano do dono do produto, PR 1
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -7527,6 +7597,8 @@ aceite.
 | Preço do modelo muda | vale daqui em diante; o custo gravado e o preço que o produziu ficam intocados (RN-042) |
 | Criar o handoff falha (Criativo→PO, Arquiteto→Infra/Dev Lead) | `agent.error` durável, o processo do agente CONTINUA vivo; o que já foi gravado antes (product_brief, regras) não se perde (RN-116) |
 | Caminho de projeto **Local** não montado no container | a criação é **recusada** (400) com a linha de compose a acrescentar — o projeto não nasce para travar depois (RN-170) |
+| `BRABO_PROJECTS_BASE` ausente | a api responde `projectsBase: null` e a criação de projeto **não oferece** o modo Pasta montada — nunca oferecer um modo que a instalação não honra (RN-500) |
+| `BRABO_PROJECTS_BASE` sobreposta ao checkout do Brabo (nos dois sentidos) | `pnpm dev` **recusa subir**, nomeando os dois caminhos. Nenhuma validação da api pega isso: ela compara contra `process.cwd()`, que dentro do container dela é `/workspace` (RN-500) |
 | Localização de projeto incoerente no banco (par modo/caminho gravado por fora da criação) | a ativação da execução recusa com **400** e o motivo em pt-BR, nunca 500 sem corpo (RN-478) |
 | Login social: e-mail do provider bate com conta existente mas NÃO verificado | recusado com 403, nenhum vínculo gravado — e-mail não verificado não é prova de identidade (RN-274) |
 | Login social: `state` inválido/expirado, ou de outro PROPÓSITO (fluxo de conexão de git) | recusado, nenhuma chamada ao provider nem escrita no banco (RN-273) |

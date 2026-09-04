@@ -36,7 +36,8 @@ Start with triage.
 | agent stopping with `iteration limit reached` without delivering | [Inference environment](#ambiente-de-inferencia) |
 | I want to add an OpenAI-compatible LLM provider | [Adding a compatible provider](#adicionando-um-provider-compativel) |
 | I want to migrate my workspaces from the Docker volume to a real folder | [Migrating workspaces to a local folder](#migrar-workspaces-pasta-local) |
-| creating a **Local** project refuses, saying the folder doesn't exist | [Project in Local mode](#projeto-no-modo-local) |
+| the project wizard doesn't offer **Mounted** mode, or creating a mounted project refuses saying the folder doesn't exist | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
+| `pnpm dev` refuses to start, saying `BRABO_PROJECTS_BASE` overlaps the Brabo checkout | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
 | provisioning a repository fails with `permission denied: /data/git-repos/<slug>.git`, or `permissions.json` can't be written | [Dev containers write as your user, not root](#dev-containers-nao-root) |
@@ -134,64 +135,102 @@ volume ls` if you renamed the project. The old volume keeps existing
 afterward (Compose doesn't delete a volume that fell out of use); remove it
 with `docker volume rm` once you're sure the copy worked.
 
-### Project in Local mode {#projeto-no-modo-local}
+### Project in Mounted mode: the projects base {#projeto-no-modo-local}
 
-**Symptom:** when creating the project and picking **Local**, the api
-responds `400` saying the folder *doesn't exist from inside the api*.
+**Symptom:** the project wizard doesn't offer **Mounted** at all; or it
+does, and the api responds `400` saying the folder *doesn't exist from
+inside the api*.
 
-That's the guard working ([RN-170](business-rules/autenticacao.md#rn-170)), not a bug:
-the path you typed exists on your computer and **not** inside the
-container. A project created like that would get stuck later, on the first
-tool of the first agent, far from the screen where the decision was made —
-that's why it isn't allowed to be born.
+Both come from the same fact: a project in Mounted mode keeps its code in a
+folder of **yours**, and the api and the engine can only reach it if it is
+mounted into their containers. What changed
+([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md),
+[RN-500](business-rules.md#rn-500)) is who arranges that, and how often:
+there is now **one base**, configured once by the operator, and every
+mounted project lives underneath it. You never edit compose per project
+again.
 
-**What to do.** Mount the folder in **both** services, at the **same
-absolute path** on both sides:
+**What to do — once, for the whole installation:**
 
-```yaml
-# docker/docker-compose.yml
-services:
-  api:
-    volumes:
-      # ... the lines that already exist
-      - /home/voce/projetos/loja:/home/voce/projetos/loja
-
-  engine:
-    volumes:
-      # ... the lines that already exist
-      - /home/voce/projetos/loja:/home/voce/projetos/loja
+```bash
+# .env — an ABSOLUTE path. `~` is NOT expanded by Compose.
+BRABO_PROJECTS_BASE=/home/voce/brabo
 ```
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d api engine
+docker compose -f docker/docker-compose.yml --env-file .env up -d api engine
 ```
 
-Check before trying again — the api validates what **it** sees, and has no
-way to know what's mounted in the other container:
+That's it. From here on, a project in Mounted mode goes somewhere under
+`/home/voce/brabo` and needs no further setup.
+
+**Why the wizard hides Mounted mode.** Without `BRABO_PROJECTS_BASE`, the
+api reports `projectsBase: null` and the option is not offered at all. That
+is deliberate: offering a mode the installation cannot honor produces a
+project that gets stuck later, on the first tool of the first agent, far
+from the screen where the decision was made. Container mode (the default)
+and Runner mode are unaffected and keep working without this variable.
+
+**Why the same path on both sides.** The base is mounted by **identity** —
+`/home/voce/brabo:/home/voce/brabo` — in `api` and `engine` alike. The path
+is written ONCE to `projects.workspace_path` and read by both processes
+([RN-169](business-rules/autenticacao.md#rn-169)); it is also the string
+the screen shows back to you. Mounting it somewhere else would make the
+engine write where the api doesn't read, and would make the screen show a
+path that exists on neither your machine nor theirs.
+
+**Check what the containers actually see:**
 
 ```bash
-docker compose -f docker/docker-compose.yml exec api  ls -la /home/voce/projetos/loja
-docker compose -f docker/docker-compose.yml exec engine ls -la /home/voce/projetos/loja
+docker compose -f docker/docker-compose.yml exec api    ls -la /home/voce/brabo
+docker compose -f docker/docker-compose.yml exec engine ls -la /home/voce/brabo
 ```
 
-**Why the same path on both sides.** The path is written ONCE to
-`projects.workspace_path` and read by both processes
-([RN-169](business-rules/autenticacao.md#rn-169)). Mounting it in different places would
-make the engine write where the api doesn't read — the divergence that the
-single derivation exists to prevent.
+**Don't point the base at Brabo's own checkout.** `pnpm dev` refuses to
+bring the stack up when `BRABO_PROJECTS_BASE` contains, or is contained by,
+the repository you cloned — it names both paths and stops. This check lives
+in the preflight and nowhere else on purpose: the api compares a project
+path against `process.cwd()`, which inside its container is `/workspace`,
+so it has no way to see your real checkout. Without the preflight guard,
+cloning Brabo into `$HOME/brabo` and setting the base to the same folder
+passes every validation and has dev agents running inside the product's own
+tree — the failure
+[ADR 0055](adr/0055-escopo-de-caminho-em-comando-de-agente.md) exists to
+prevent.
+
+**Pick a dedicated folder.** Everything under the base is reachable from
+inside the product's containers. Don't point it at your whole `$HOME`, and
+don't point it at a folder that holds other secrets of yours.
 
 **Other refusal modes, and what each one means:**
 
 | the message says | what to do |
 |---|---|
-| *doesn't exist from inside the api* | mount it, as above |
+| Mounted mode isn't offered at all | `BRABO_PROJECTS_BASE` isn't set — set it and `up -d api engine` |
+| *doesn't exist from inside the api* | the folder isn't under the base, or the base isn't mounted; check with the `exec ls` above |
 | *exists but isn't a folder* | the path points to a file; use a folder |
 | *the process can't write to it* | owner/permission of the folder on the host. Images run non-root ([ADR 0024](adr/0024-fase5-imagens-producao-ci.md)); adjust the folder's owner or mode |
 | *Invalid path for a Local project* | it's a filesystem root, a system folder, relative, has `..`, or overlaps Brabo's own checkout — pick your own folder, outside those ([ADR 0072](adr/0072-projeto-local-ou-container.md)) |
 
+**Known limits, stated rather than hidden.** A symlink under the base
+pointing outside it resolves differently inside the containers, since the
+target isn't mounted — the folder browser refuses to descend into symlinks,
+and the disk check catches the divergence as a named failure. And this
+version supports **one** base: code living somewhere else has to be moved
+under it.
+
+**Migrating from the old per-project mounts.** If you have hand-written
+`- /home/voce/projetos/loja:/home/voce/projetos/loja` lines in `api` and
+`engine`, they keep working and nothing removes them — existing projects
+are not broken by this change. The supported path from here on is the base;
+move those folders under it and drop the hand-written lines when you get
+the chance.
+
 **Don't confuse this with Container mode.** A project in Container mode
 (the default) keeps using `PROJECT_WORKSPACES_ROOT` and the migration
-procedure above; Local mode never touches that root.
+procedure above; Mounted mode never touches that root, and the base is
+never the same folder as that root ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)
+explains why conflating them would let two projects land in one folder).
 
 ### Dev containers write as your user, not root {#dev-containers-nao-root}
 
