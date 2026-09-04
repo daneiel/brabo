@@ -190,6 +190,45 @@ reason in the URL.
   doesn't enter the computation: the base is **installation**
   configuration, identical for every workspace, and the parameter is there
   only to give the `RolesGuard` a scope.
+- **`GET /workspaces/:workspaceId/project-folders` serves directory
+  listings from a client-supplied path, and its whole safety is ONE
+  containment** ([RN-504](business-rules.md#rn-504),
+  [ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)). It exists
+  because the project wizard lost both of its "browse for a folder"
+  mechanisms at once: `FolderBrowserModal` used to navigate through the
+  RUNNER's websocket, and `RunnerOnboardingPanel` used
+  `showDirectoryPicker`, which hands back a browser handle and never an
+  absolute path. With the runner leaving project creation, the browser has
+  no way to list a filesystem — so the api lists it, and the api only sees
+  one folder: the mounted-projects base.
+
+  The containment is that base and nothing else. `path` is optional and
+  defaults to `BRABO_PROJECTS_BASE`; every supplied `path` must satisfy
+  `dentroDaBaseDeProjetos` — the same `dentroDoEscopo` the ADR 0055
+  terminal scope uses, so `/home/you/brabo2` is NOT inside `/home/you/brabo`
+  even though the string starts the same. Leaving the base is a **400**, not
+  a 403: 403 would suggest some other role would see it, and none does. The
+  request is malformed, not under-authorized. `..` and `.` are refused
+  outright rather than resolved, for the same reason the creation predicate
+  refuses them — resolving accepts that the path read is not the path asked
+  for.
+
+  The caps are part of the contract, not an implementation detail:
+  directories only, at most 500 of them (sorted BEFORE the cut), never
+  recursive, dot-prefixed entries excluded, and symlinks reported but never
+  descended into — so a link pointing outside the base is not a way out of
+  it. What is excluded is COUNTED (`arquivos`, `simbolicos`, `truncado`), so
+  a folder full of code never comes back looking empty
+  ([RN-180](business-rules/autenticacao.md#rn-180)). There is no POST companion:
+  creating a folder belongs to materializing the mounted workspace, never to
+  the picker.
+
+  The minimum is `maintainer`, the same as `POST
+  /workspaces/:workspaceId/projects` and `projects-base` above, and for the
+  same reason one step further: `projects-base` reveals ONE path on the
+  operator's machine, this route reveals the TOPOLOGY under it. Whoever
+  can't create a project has nothing to do with the list of folders a
+  project could be created in.
 - **`GET /`** is the NestJS scaffold's "Hello World!"
   (`src/app.controller.ts`). It's behind the guard and leaks nothing, but
   serves no purpose — a removal candidate. It stayed recorded here instead
@@ -706,6 +745,7 @@ reason in the URL.
 | GET | `/workspaces/:workspaceId/projects` | role:viewer |
 | POST | `/workspaces/:workspaceId/projects` | role:maintainer |
 | GET | `/workspaces/:workspaceId/projects-base` | role:maintainer |
+| GET | `/workspaces/:workspaceId/project-folders` | role:maintainer |
 | GET | `/workspaces/:workspaceId/projects-status` | role:viewer |
 | GET | `/workspaces/:workspaceId/projects-summary` | role:viewer |
 | GET | `/workspaces/:workspaceId/summary` | role:viewer |

@@ -42,6 +42,50 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `handoff.offered` da Infra continua **narrado** no fio como divisor mudo, e
   nenhum handoff conversacional muda de forma
 
+### Adicionado
+
+- **feat(api,web)**: **"Procurar pasta" passa a ser servido pela api**, escopado
+  à base de projetos montados — `GET /workspaces/:workspaceId/project-folders`,
+  `maintainer` (RN-504). O assistente de criação de projeto perde, de uma vez,
+  os DOIS mecanismos de navegar pasta que tinha, e os dois dependiam do runner:
+  `FolderBrowserModal` navegava pelo **websocket do runner**
+  (`fs_list_dir`/`fs_home_dir`, lendo o disco da máquina do usuário) e o
+  `RunnerOnboardingPanel` usava `showDirectoryPicker`, que devolve um handle do
+  navegador e **nunca um caminho absoluto** — que é o que
+  `projects.workspace_path` guarda. Sem runner, o navegador não tem como listar
+  filesystem nenhum; quem passa a responder é a api, que enxerga exatamente uma
+  pasta: a base do ADR 0141.
+
+  Efeito visível imediato: no modo **Pasta montada** o botão "Procurar pasta"
+  deixa de abrir um estado declarado ("depois que o projeto existir…") e navega
+  de verdade, **sem criar projeto nenhum** — a base não depende de projeto
+  algum existir.
+
+  **A contenção é uma só, e é dura.** `path` é opcional e omitido quer dizer a
+  base; todo `path` fornecido tem que satisfazer `dentroDaBaseDeProjetos`
+  (RN-500), que reusa o `dentroDoEscopo` do escopo de terminal (ADR 0055) e por
+  isso pega a armadilha de prefixo — `/home/voce/brabo2` **não** está dentro de
+  `/home/voce/brabo`, embora a string comece igual. Sair da base é **400**, e
+  não 403: 403 sugeriria que outro papel veria, e nenhum vê — o pedido está
+  malformado, não subautorizado. `..` e `.` são recusados em vez de resolvidos.
+
+  **Os tetos são contrato**: só diretório em `entries`, no máximo **500**
+  (ordenados **antes** do corte, para o corte ser determinístico), sem recursão,
+  entradas começadas com `.` fora, e symlink **reportado e nunca descido** — um
+  link para fora da base não é porta de saída. E o que fica de fora é
+  **contado** (`arquivos`, `simbolicos`, `truncado`), com a tela dizendo: sem
+  isso uma pasta cheia de código voltaria como lista vazia e apareceria como
+  "pasta vazia", que é a tela afirmando sobre o que não leu (RN-180). **Não há
+  POST** — criar pasta é da materialização do workspace montado, nunca do
+  seletor.
+
+  No cliente, o transporte vira uma das duas implementações de uma interface
+  nova (`lib/fs-browser.ts`, `FsBrowser`), e `FolderBrowserModal` escolhe por
+  `origem: { tipo: 'api'; workspaceId } | { tipo: 'runner'; projectId }`. O
+  transporte via runner fica **sem chamador no web** a partir daqui e continua
+  no repositório por decisão declarada; o protocolo em
+  `apps/runner/src/channel.ts` não é tocado. Ver RN-504.
+
 ### BREAKING
 
 - **feat(config)**: nasce `BRABO_PROJECTS_BASE` — **uma base única**, definida

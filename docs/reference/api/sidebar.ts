@@ -1344,6 +1344,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/workspaces-controller-list-project-folders",
+          label: "Lists the subfolders of a folder inside the projects base",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/workspaces-controller-list-projects",
           label: "Lists the workspace's projects",
           className: "api-method get",

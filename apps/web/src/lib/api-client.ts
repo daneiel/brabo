@@ -50,6 +50,7 @@ import type {
   Project,
   ProjectBlockedStatus,
   ProjectCardSummary,
+  ProjectFolders,
   ProjectMemberWithUser,
   ProjectUnreadEvents,
   ProposedAction,
@@ -273,6 +274,15 @@ export const getWorkspace = (workspaceId: string) =>
 
 export const listProjects = (workspaceId: string) =>
   get<Project[]>(`/workspaces/${workspaceId}/projects`);
+/**
+ * O navegador de pastas servido pela api (RN-504), escopado à base de
+ * projetos montados. `path` omitido é a base.
+ *
+ * Um consumidor só, `criarFsBrowserViaApi` — o `FolderBrowserModal` fala com
+ * a interface `FsBrowser`, nunca com esta função.
+ */
+export const listProjectFolders = (workspaceId: string, path?: string) =>
+  get<ProjectFolders>(`/workspaces/${workspaceId}/project-folders${qs({ path })}`);
 export const getWorkspaceSummary = (workspaceId: string) =>
   get<WorkspaceSummary>(`/workspaces/${workspaceId}/summary`);
 export const getProjectsStatus = (workspaceId: string) =>

@@ -7576,6 +7576,82 @@ na RN seguinte.
 
 ---
 
+## O navegador de pastas servido pela api (RN-504)
+
+### RN-504 — O navegador de pastas é escopado à base de projetos e NUNCA sai dela {#rn-504}
+
+`GET /workspaces/:workspaceId/project-folders` lista as **subpastas** de um
+caminho, e existe porque o assistente de criação de projeto perde, de uma vez,
+os DOIS mecanismos de "procurar pasta" que tinha: `FolderBrowserModal` navegava
+pelo **websocket do runner** (`fs_list_dir`/`fs_home_dir`) e o
+`RunnerOnboardingPanel` usava `showDirectoryPicker`, que devolve um handle do
+navegador e nunca um caminho absoluto. Sem runner, o navegador não tem como
+listar filesystem nenhum — e é caminho absoluto que `projects.workspace_path`
+guarda.
+
+**A contenção é UMA, e é dura.** `path` é opcional e omitido quer dizer a base
+(`baseDeProjetos()`); todo `path` fornecido tem que satisfazer
+`dentroDaBaseDeProjetos` (RN-500), que reusa `dentroDoEscopo` — a mesma função
+do escopo de terminal do ADR 0055 — e por isso pega a armadilha de prefixo:
+`/home/voce/brabo2` **não** está dentro de `/home/voce/brabo`, embora a string
+comece igual. `..` e `.` são **recusados** em vez de resolvidos, pela mesma
+razão de `caminhoDeWorkspaceLocalValido`: resolver aceitaria que o caminho lido
+não é o caminho pedido.
+
+**Sair da base é 400, e não 403.** 403 diria "você não tem permissão para ver
+isto" e sugeriria que outro papel veria — não é o caso. Não existe papel nenhum
+que navegue fora da base, porque fora da base não é uma área mais privilegiada,
+é uma área que esta rota simplesmente não endereça. O pedido está MALFORMADO.
+
+**Os tetos são contrato, não detalhe de implementação:** só diretório em
+`entries`; no máximo **500**, ordenados **antes** do corte (senão "as 500
+primeiras" seria a ordem que o filesystem devolveu, que muda entre máquinas);
+sem recursão; entradas começadas com `.` fora; e symlink **reportado, nunca
+descido** — `readdirSync(withFileTypes)` tem semântica de `lstat`, então um
+link apontando para fora da base não é porta de saída. **O que fica de fora é
+CONTADO** (`arquivos`, `simbolicos`, `truncado`): sem isso uma pasta cheia de
+código voltaria como lista vazia e a tela diria "pasta vazia", afirmando sobre
+o que não leu (RN-180).
+
+**Não há POST.** Criar pasta é da materialização do workspace montado, no
+momento em que o container sobe — nunca do seletor.
+
+**O mínimo é `maintainer`**, o mesmo de `POST .../projects` e de
+`.../projects-base`, e pelo mesmo raciocínio um passo adiante: `projects-base`
+revela UM caminho da máquina do operador, esta rota revela a TOPOLOGIA abaixo
+dele. Herdar o `viewer` das rotas vizinhas por elas serem vizinhas é o defeito
+que a RN-102 nomeia — o mínimo é do ENDPOINT, nunca da seção. `workspaceId` não
+entra no cálculo: a base é da INSTALAÇÃO, e ele está na rota porque é o que dá
+escopo ao `RolesGuard`.
+
+**No cliente**, o transporte vira uma das DUAS implementações da interface
+`FsBrowser` (`apps/web/src/lib/fs-browser.ts`): `criarFsBrowserViaApi` (nova) e
+`connectFsBrowserChannel` (o canal do runner, re-tipada). `FolderBrowserModal`
+escolhe por `origem: { tipo: 'api'; workspaceId } | { tipo: 'runner'; projectId }`
+— união discriminada, e não duas props opcionais, porque "nenhuma das duas" e
+"as duas" seriam estados representáveis que o componente teria de tratar em
+runtime. O transporte via runner fica **sem chamador no web** a partir daqui, e
+continua no repositório por decisão declarada do dono do produto (o runner sai
+da interface, o binário segue sendo refinado); o protocolo em
+`apps/runner/src/channel.ts` não é tocado de qualquer forma.
+
+- **Onde:** `apps/api/src/infrastructure/filesystem/project-folders-browser.ts`
+  (`listarPastasDeProjeto`, `TETO_DE_ENTRADAS`, `PastaForaDaBaseError`,
+  `PastaNaoLegivelError`);
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts`
+  (`listProjectFolders`); `apps/web/src/lib/fs-browser.ts`;
+  `apps/web/src/components/FolderBrowserModal.tsx`
+- **Teste:**
+  `apps/api/test/infrastructure/filesystem/project-folders-browser.spec.ts`,
+  `apps/api/test/interfaces/http/iam/workspaces-project-folders.controller.spec.ts`,
+  `apps/web/src/lib/fs-browser.test.ts`,
+  `apps/web/src/components/FolderBrowserModal.test.tsx`
+- **ADR:** [0141](adr/0141-base-unica-dos-projetos-montados.md) (a base que
+  esta rota escopa)
+- **Origem:** plano do dono do produto, PR 4
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -7598,6 +7674,9 @@ na RN seguinte.
 | Criar o handoff falha (Criativo→PO, Arquiteto→Infra/Dev Lead) | `agent.error` durável, o processo do agente CONTINUA vivo; o que já foi gravado antes (product_brief, regras) não se perde (RN-116) |
 | Caminho de projeto **Local** não montado no container | a criação é **recusada** (400) com a linha de compose a acrescentar — o projeto não nasce para travar depois (RN-170) |
 | `BRABO_PROJECTS_BASE` ausente | a api responde `projectsBase: null` e a criação de projeto **não oferece** o modo Pasta montada — nunca oferecer um modo que a instalação não honra (RN-500) |
+| Navegador de pastas recebe um `path` fora da base (inclusive a armadilha de prefixo `<base>2`) | **400** que nomeia a base — malformado, e não 403: nenhum papel navega fora dela (RN-504) |
+| Navegador de pastas recebe um `path` dentro da base que a api não consegue abrir | **404** dizendo QUAL dos dois é (não existe / existe e não dá para ler) — nunca 500 com mensagem de `fs` (RN-504) |
+| Pasta navegada só tem arquivos, symlinks, ou mais de 500 subpastas | a listagem volta com `arquivos`/`simbolicos`/`truncado` e a tela DIZ o que ficou de fora — pasta cheia de código nunca se apresenta como vazia (RN-504) |
 | `BRABO_PROJECTS_BASE` sobreposta ao checkout do Brabo (nos dois sentidos) | `pnpm dev` **recusa subir**, nomeando os dois caminhos. Nenhuma validação da api pega isso: ela compara contra `process.cwd()`, que dentro do container dela é `/workspace` (RN-500) |
 | Localização de projeto incoerente no banco (par modo/caminho gravado por fora da criação) | a ativação da execução recusa com **400** e o motivo em pt-BR, nunca 500 sem corpo (RN-478) |
 | Login social: e-mail do provider bate com conta existente mas NÃO verificado | recusado com 403, nenhum vínculo gravado — e-mail não verificado não é prova de identidade (RN-274) |

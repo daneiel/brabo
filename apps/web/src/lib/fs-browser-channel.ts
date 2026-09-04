@@ -1,6 +1,11 @@
 import { Socket } from 'phoenix';
 import { logger } from './logger';
 import { getTerminalTicket } from './api-client';
+import type {
+  DiretorioInicialResultado,
+  FsBrowser,
+  ListagemResultado,
+} from './fs-browser';
 
 /**
  * Canal Phoenix `terminal:<projectId>` — MESMO tópico/ticket de
@@ -21,29 +26,24 @@ import { getTerminalTicket } from './api-client';
  * pequeno.
  */
 
-export interface FsEntrada {
-  nome: string;
-  isDir: boolean;
-}
-
-export interface ListagemResultado {
-  path: string;
-  entradas: FsEntrada[];
-  erro?: string;
-}
-
-export interface DiretorioInicialResultado {
-  path?: string;
-  erro?: string;
-}
-
-export interface FsBrowserChannel {
-  /** Lista o conteúdo de `path` no runner. Nunca rejeita — falha vira `{erro}`. */
-  listarDiretorio(path: string): Promise<ListagemResultado>;
-  /** `os.homedir()` do runner — ponto de partida sem exigir digitação. */
-  diretorioInicial(): Promise<DiretorioInicialResultado>;
-  fechar(): void;
-}
+/**
+ * A interface e os tipos MORAM em `fs-browser.ts` desde a RN-504 — este
+ * módulo passou a ser UMA das duas implementações dela, e o tipo não pode
+ * morar dentro de uma delas. `diretorioInicial()` aqui é `os.homedir()` do
+ * RUNNER; no transporte de api é a base de projetos montados.
+ *
+ * Os campos `arquivos`/`simbolicos`/`truncado` de `ListagemResultado` são
+ * opcionais e este transporte NÃO os preenche: o protocolo do runner
+ * (`FsEntrada` em `apps/runner/src/channel.ts`) devolve pasta e arquivo
+ * misturados na mesma lista e não conta nada. Preencher com `0` seria
+ * afirmar que não há nada de fora, que é diferente de não saber.
+ */
+export type {
+  DiretorioInicialResultado,
+  FsBrowser,
+  FsEntrada,
+  ListagemResultado,
+} from './fs-browser';
 
 /** Generoso de propósito: cobre o pior caso de um runner ocupado, sem travar a UI para sempre. */
 const TIMEOUT_REQUISICAO_MS = 20_000;
@@ -63,7 +63,7 @@ interface PendenteInicial {
 
 type Pendente = PendenteListagem | PendenteInicial;
 
-export function connectFsBrowserChannel(projectId: string): FsBrowserChannel {
+export function connectFsBrowserChannel(projectId: string): FsBrowser {
   let socket: Socket | null = null;
   let channel: ReturnType<Socket['channel']> | null = null;
   let fechado = false;
