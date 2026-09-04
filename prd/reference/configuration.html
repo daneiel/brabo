@@ -1,34 +1,35 @@
-<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/configuration" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Configuração | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/prd/reference/configuration /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Configuração | Brabo"/><meta data-rh=true name=description content="Todas as variáveis de ambiente da api, do engine e da web, com default e o que quebra quando estão erradas."/><meta data-rh=true property=og:description content="Todas as variáveis de ambiente da api, do engine e da web, com default e o que quebra quando estão erradas."/><meta data-rh=true name=keywords content="configuração,variáveis de ambiente,env,deploy"/><link data-rh=true rel=icon href=/brabo/prd/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/prd/reference/configuration /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/reference/configuration hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/reference/configuration hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/prd/reference/configuration","name":"Configuração","position":1}]}</script><link rel=stylesheet href=/brabo/prd/assets/css/styles.bae5b9bf.css /><script src=/brabo/prd/assets/js/runtime~main.920b8ab4.js defer></script><script src=/brabo/prd/assets/js/main.ccb99ccd.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/configuration" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Configuration | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/prd/reference/configuration /><meta data-rh=true property=og:locale content=en /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Configuration | Brabo"/><meta data-rh=true name=description content="All environment variables for the api, engine and web, with defaults and what breaks when they're wrong."/><meta data-rh=true property=og:description content="All environment variables for the api, engine and web, with defaults and what breaks when they're wrong."/><meta data-rh=true name=keywords content="configuration,environment variables,env,deploy"/><link data-rh=true rel=icon href=/brabo/prd/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/prd/reference/configuration /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/reference/configuration hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/pt-BR/reference/configuration hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/reference/configuration hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/prd/reference/configuration","name":"Configuration","position":1}]}</script><link rel=stylesheet href=/brabo/prd/assets/css/styles.4b02629e.css /><script src=/brabo/prd/assets/js/runtime~main.c6c94236.js defer></script><script src=/brabo/prd/assets/js/main.05fd9739.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-fb6")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/prd/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_aRZD href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/prd/><div class=navbar__logo><img src=/brabo/prd/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--light_TNiM"/><img src=/brabo/prd/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--dark__fCd"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/prd/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/prd/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/prd/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>main</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>main — estável ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><div class="toggle_B7FD colorModeToggle_i51f"><button class="clean-btn toggleButton_iBXZ toggleButtonDisabled_g7aN" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f lightToggleIcon_IoAw"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f darkToggleIcon_CFpV"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f systemToggleIcon_FD32"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_H1qa><div class="navbar__search searchBarContainer_E7mJ" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_Fmbc" value="" /><div class="loadingRing_yYGt searchBarLoadingRing_TCpJ"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_sSUF"><div class=docsWrapper__5pg><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_woZa" type=button></button><div class=docRoot_jND2><aside class="theme-doc-sidebar-container docSidebarContainer_tVYW"><div class=sidebarViewport_gVXc><div class=sidebar_vRsD><nav aria-label="Painel lateral de documentos" class="menu thin-scrollbar menu_IacH"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/><span class=categoryLinkLabel_U9or>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/><span class=linkLabel_pWVb>Introdução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/getting-started><span class=linkLabel_pWVb>Primeiros passos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/architecture><span class=categoryLinkLabel_U9or>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/architecture><span class=linkLabel_pWVb>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist" tabindex=0 href=/brabo/prd/adr><span class=categoryLinkLabel_U9or>Decisões (ADR)</span></a><button aria-label="Expandir a categoria 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/business-rules><span class=categoryLinkLabel_U9or>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/business-rules><span class=linkLabel_pWVb>Regras de negócio</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/prd/reference/configuration><span class=categoryLinkLabel_U9or>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/prd/reference/configuration><span class=linkLabel_pWVb>Configuração</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/events><span class=linkLabel_pWVb>Eventos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/permissions><span class=linkLabel_pWVb>Permissões</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/artifacts><span class=linkLabel_pWVb>Artefatos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/git-providers><span class=linkLabel_pWVb>Providers de git</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/internal-api><span class=linkLabel_pWVb>API interna</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/scripts><span class=linkLabel_pWVb>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/rulesets><span class=linkLabel_pWVb>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/security-surface><span class=linkLabel_pWVb>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/prd/reference/api/brabo-api><span class=categoryLinkLabel_U9or>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/explanation/documentation-workflow><span class=categoryLinkLabel_U9or>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/documentation-workflow><span class=linkLabel_pWVb>Sincronização de docs</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/branching-policy><span class=linkLabel_pWVb>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/observability><span class=linkLabel_pWVb>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/primeiro-dogfooding><span class=linkLabel_pWVb>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/execucao-real-hello-world><span class=linkLabel_pWVb>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/achados-execucao-real><span class=linkLabel_pWVb>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/backlog><span class=linkLabel_pWVb>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/validacao-fase-12><span class=linkLabel_pWVb>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/validacao-real><span class=linkLabel_pWVb>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/aceite-providers><span class=linkLabel_pWVb>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/gates><span class=linkLabel_pWVb>Os gates, e como eles são medidos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/runbook><span class=categoryLinkLabel_U9or>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/runbook><span class=linkLabel_pWVb>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/glossary><span class=categoryLinkLabel_U9or>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/glossary><span class=linkLabel_pWVb>Glossário</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_U9or>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_SmZv><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_XH1Q"><div class=docItemContainer_uk13><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_g2_L" aria-label=Trilha><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Página Inicial" class=breadcrumbs__link href=/brabo/prd/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_ILC1><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Referência</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Configuração</span></ul></nav><div class="tocCollapsible_sC5p theme-doc-toc-mobile tocMobile_jNpd"><button type=button class="clean-btn tocCollapsibleButton_sMs7">Nesta página</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Configuração</h1></header>
-<p>Toda a configuração é por <strong>variável de ambiente</strong>. Não há arquivo de config da
-aplicação — o que existe é o <code>permissions.json</code>, que é política de projeto, não
-configuração de processo.</p>
-<p>Dois arquivos versionados são lidos em runtime e não são configuração, embora
-seja fácil confundi-los com ela: o <code>permissions.json</code> acima, e <code>docs/gates.yml</code>
-(<a class="" href=/brabo/prd/adr/0054-gates-como-registro-declarativo>ADR 0054</a>), o registro
-declarativo de gates. Nenhum dos dois tem variável de ambiente para apontar
-caminho — o registro é encontrado subindo de <code>__dirname</code> — e nenhum muda
-comportamento por edição em produção: o registro DESCREVE os gates, não os
-aplica. Ele viaja dentro da imagem da api; ver
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-c21")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/prd/img/logo.svg /><div role=region aria-label="Skip to main content"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/prd/><div class=navbar__logo><img src=/brabo/prd/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/prd/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/prd/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/prd/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/prd/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>prd</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/><span class=categoryLinkLabel_jKch>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/><span class=linkLabel_CzBh>Introduction</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/getting-started><span class=linkLabel_CzBh>Getting Started</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/architecture><span class=categoryLinkLabel_jKch>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/architecture><span class=linkLabel_CzBh>Architecture</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/prd/adr><span class=categoryLinkLabel_jKch>Decisões (ADR)</span></a><button aria-label="Expand sidebar category 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/business-rules><span class=categoryLinkLabel_jKch>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/prd/reference/configuration><span class=categoryLinkLabel_jKch>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/prd/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/security-surface><span class=linkLabel_CzBh>Api's Exposed Surface</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/prd/reference/api/brabo-api><span class=categoryLinkLabel_jKch>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/documentation-workflow><span class=linkLabel_CzBh>Docs sync</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/branching-policy><span class=linkLabel_CzBh>Branching policy</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI supply chain</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/observability><span class=linkLabel_CzBh>Observability</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>First dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Real execution (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/achados-execucao-real><span class=linkLabel_CzBh>Findings from the real execution of the pipeline</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/backlog><span class=linkLabel_CzBh>Triaged backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/validacao-fase-12><span class=linkLabel_CzBh>Phase 12 validation</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/validacao-real><span class=linkLabel_CzBh>Real validation (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/aceite-providers><span class=linkLabel_CzBh>Provider acceptance</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/gates><span class=linkLabel_CzBh>The gates, and how they're measured</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Audit: fluxo.yml × code (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/historico-de-fases><span class=linkLabel_CzBh>Histórico de fases</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/runbook><span class=categoryLinkLabel_jKch>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/runbook><span class=linkLabel_CzBh>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/glossary><span class=categoryLinkLabel_jKch>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/glossary><span class=linkLabel_CzBh>Glossary</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_JmCf"><div class=docItemContainer_GUvW><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=Breadcrumbs><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Home page" class=breadcrumbs__link href=/brabo/prd/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Referência</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Configuration</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">On this page</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Configuration</h1></header>
+<p>All configuration is via <strong>environment variable</strong>. There is no application
+config file — what exists is <code>permissions.json</code>, which is project policy, not
+process configuration.</p>
+<p>Two versioned files are read at runtime and are not configuration, although
+they're easy to confuse with it: <code>permissions.json</code> above, and
+<code>docs/gates.yml</code> (<a class="" href=/brabo/prd/adr/0054-gates-como-registro-declarativo>ADR 0054</a>),
+the declarative gate registry. Neither has an environment variable to point to
+a path — the registry is found by walking up from <code>__dirname</code> — and neither
+changes behavior by being edited in production: the registry DESCRIBES the
+gates, it doesn't apply them. It travels inside the api image; see the
 <a class="" href=/brabo/prd/runbook#registro-de-gates>runbook</a>.</p>
-<p>Os defaults abaixo foram extraídos do código, não de documentação anterior. A
-coluna <strong>quando dá errado</strong> é a parte que economiza tempo: quase toda variável
-tem um default que funciona em desenvolvimento e um modo de falha específico em
-produção.</p>
+<p>The defaults below were extracted from the code, not from prior
+documentation. The <strong>when it fails</strong> column is the part that saves time:
+almost every variable has a default that works in development and a specific
+failure mode in production.</p>
 <blockquote>
-<p><strong>Defaults de desenvolvimento são inseguros de propósito.</strong> Valores como
-<code>dev-master-key-change-me</code> existem para o <code>pnpm dev</code> subir sem cerimônia. Em
-produção eles precisam ser trocados — e seis deles o processo <strong>recusa</strong>
-subir sem trocar (api ou engine, marcados com 🔒). Cinco seguem o padrão do
-<a class="" href=/brabo/prd/adr/0059-segredo-do-state-de-oauth-sem-default>ADR 0059</a>/<a class="" href=/brabo/prd/business-rules#rn-093>RN-093</a>:
-ausente, com o literal público de exemplo, ou curto demais derruba o boot.
-Ver <a class="" href=/brabo/prd/business-rules#rn-114>RN-114</a> para os quatro que se juntaram ao
-<code>GIT_OAUTH_STATE_SECRET</code> original.</p>
+<p><strong>Development defaults are insecure on purpose.</strong> Values like
+<code>dev-master-key-change-me</code> exist so <code>pnpm dev</code> comes up without ceremony. In
+production they need to be changed — and for six of them the process
+<strong>refuses</strong> to boot without changing them (api or engine, marked with 🔒).
+Five follow the pattern of
+<a class="" href=/brabo/prd/adr/0059-segredo-do-state-de-oauth-sem-default>ADR 0059</a>/<a class="" href=/brabo/prd/business-rules/custo#rn-093>RN-093</a>:
+missing, set to the public example literal, or too short brings the boot
+down. See <a class="" href=/brabo/prd/business-rules/custo#rn-114>RN-114</a> for the four that joined the
+original <code>GIT_OAUTH_STATE_SECRET</code>.</p>
 </blockquote>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=api>api<a href=#api class=hash-link aria-label="Link direto para api" title="Link direto para api" translate=no>​</a></h2>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=essenciais>Essenciais<a href=#essenciais class=hash-link aria-label="Link direto para Essenciais" title="Link direto para Essenciais" translate=no>​</a></h3>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=api>api<a href=#api class=hash-link aria-label="Direct link to api" title="Direct link to api" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=essentials>Essentials<a href=#essentials class=hash-link aria-label="Direct link to Essentials" title="Direct link to Essentials" translate=no>​</a></h3>
 
 
 
@@ -74,13 +75,13 @@ Ver <a class="" href=/brabo/prd/business-rules#rn-114>RN-114</a> para os quatro 
 
 
 
-<table><thead><tr><th>variável<th>default<th>quando dá errado<tbody><tr><td><code>DATABASE_URL</code><td><code>postgres://brabo:brabo@localhost:5432/brabo</code><td>sem ela nada sobe<tr><td><code>PORT</code><td><code>3000</code><td>—<tr><td><code>NODE_ENV</code><td>—<td><code>production</code> liga as validações estritas de CORS e chave<tr><td><code>API_PUBLIC_URL</code><td><code>http://localhost:3000</code><td>usada nos callbacks de OAuth de git; errada = callback quebrado<tr><td><code>ENGINE_URL</code><td><code>http://localhost:4000</code><td>comandos síncronos api→engine falham<tr><td><code>BRABO_VERSION</code><td><code>dev</code><td>vira <code>service.version</code> no recurso OpenTelemetry — é como se sabe qual build gerou um trace. A imagem de release injeta a tag via <code>ARG</code> do <code>docker-bake.hcl</code>; fora do release fica <code>dev</code>. <strong>Não</strong> aparece no <code>/health</code>, que não devolve versão de propósito (ver o <code>description</code> da rota)<tr><td><code>MIGRATIONS_FOLDER</code><td><code>./src/db/migrations</code><td>—</table>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=segurança->Segurança 🔒<a href=#segurança- class=hash-link aria-label="Link direto para Segurança 🔒" title="Link direto para Segurança 🔒" translate=no>​</a></h3>
 
 
 
 
 
+<table><thead><tr><th>variable<th>default<th>when it fails<tbody><tr><td><code>DATABASE_URL</code><td><code>postgres://brabo:brabo@localhost:5432/brabo</code><td>without it, nothing comes up<tr><td><code>PORT</code><td><code>3000</code><td>—<tr><td><code>NODE_ENV</code><td>—<td><code>production</code> turns on strict CORS and key validation<tr><td><code>API_PUBLIC_URL</code><td><code>http://localhost:3000</code><td>used in git OAuth callbacks; wrong = broken callback<tr><td><code>ENGINE_URL</code><td><code>http://localhost:4000</code> in code, <code>http://engine:4000</code> in Compose<td>synchronous api→engine commands fail. <strong>Leave it empty in <code>.env</code></strong>: set there, it wins over the Compose default and the api tries to talk to <code>localhost:4000</code> from inside its own container — every session activation dies with <code>ECONNREFUSED</code> and the frontend never moves. Each environment already has the right default without the line<tr><td><code>ENGINE_PUBLIC_URL</code><td>same as <code>ENGINE_URL</code><td>used only to build the <code>engineWsUrl</code> (WebSocket) returned in <code>POST .../runner-ticket</code>/<code>.../terminal-ticket</code> — the runner and the web can be OUTSIDE the cluster, so the internal address (<code>http://engine:4000</code>) doesn't work; <code>ENGINE_URL</code> remains the one used for the usual synchronous api→engine calls (RN-419)<tr><td><code>BRABO_VERSION</code><td><code>dev</code><td>becomes <code>service.version</code> in the OpenTelemetry resource — it's how you know which build generated a trace. The release image injects the tag via a <code>docker-bake.hcl</code> <code>ARG</code>; outside of a release it stays <code>dev</code>. It does <strong>not</strong> appear in <code>/health</code>, which deliberately doesn't return the version (see the route's <code>description</code>)<tr><td><code>MIGRATIONS_FOLDER</code><td><code>./src/db/migrations</code><td>—</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=security->Security 🔒<a href=#security- class=hash-link aria-label="Direct link to Security 🔒" title="Direct link to Security 🔒" translate=no>​</a></h3>
 
 
 
@@ -111,10 +112,16 @@ Ver <a class="" href=/brabo/prd/business-rules#rn-114>RN-114</a> para os quatro 
 
 
 
-<table><thead><tr><th>variável<th>default<th>quando dá errado<tbody><tr><td><code>CREDENTIALS_MASTER_KEY</code> 🔒<td><code>dev-master-key-change-me</code> <strong>só fora de produção</strong><td>embrulha os DEKs. <strong>Em produção a api recusa subir</strong> ausente, com o default acima (público — está no <code>.env.example</code>) ou com menos de 16 caracteres (RN-114). Isso é só a checagem de BOOT: trocar por uma chave <strong>válida, mas diferente</strong>, sem re-embrulhar, ainda torna toda credencial ilegível sem erro nenhum — a falha aparece no primeiro uso. Ver <a class="" href=/brabo/prd/runbook#rotacao-da-chave-mestra>rotação</a><tr><td><code>CREDENTIALS_MASTER_KEY_PREVIOUS</code><td>—<td>só durante a rotação. Presente = a api tenta a chave anterior quando a atual falha<tr><td><code>GIT_OAUTH_STATE_SECRET</code> 🔒<td><code>dev-oauth-state-secret-change-me</code> <strong>só fora de produção</strong><td>assina o <code>state</code> do OAuth; fraco = CSRF no fluxo de conexão de git. <strong>Em produção a api recusa subir</strong> sem ela, com o default acima (que é público — está no <code>.env.example</code>) ou com menos de 16 caracteres. Gere com <code>openssl rand -base64 32</code>. Ver <a class="" href=/brabo/prd/adr/0059-segredo-do-state-de-oauth-sem-default>ADR 0059</a> e <a class="" href=/brabo/prd/business-rules#rn-093>RN-093</a><tr><td><code>WEB_ORIGIN</code> 🔒<td><code>http://localhost:${WEB_PORT}</code><td><strong>em produção a api recusa subir</strong> se estiver ausente ou for <code>*</code>. CORS é estrito por ambiente. <strong>A porta faz parte do valor</strong>: a web em <code>:5174</code> é outra origem e é barrada — ver <a class="" href=/brabo/prd/adr/0037-cors-do-engine-e-a-porta-como-contrato>ADR 0037</a>. Nos composes o default <strong>deriva de <code>WEB_PORT</code></strong>, então mudar a porta leva o CORS junto; definir <code>WEB_ORIGIN</code> à mão sobrepõe a derivação e volta a ser sua responsabilidade mantê-la coerente<tr><td><code>WEB_PORT</code><td><code>5173</code> (dev) · <code>8088</code> (prod)<td>porta publicada do web no host. Não é lida por nenhum serviço — ela <strong>alimenta o default de <code>WEB_ORIGIN</code></strong> nos composes, e é isso que impede porta e CORS de divergirem</table>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=auth-first-party>Auth first-party<a href=#auth-first-party class=hash-link aria-label="Link direto para Auth first-party" title="Link direto para Auth first-party" translate=no>​</a></h3>
-<p>O auth no domínio da api, que desde o corte é também o único emissor. Decisões
-em <a class="" href=/brabo/prd/adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh>ADR 0031</a> e
+
+
+
+
+
+<table><thead><tr><th>variable<th>default<th>when it fails<tbody><tr><td><code>CREDENTIALS_MASTER_KEY</code> 🔒<td><code>dev-master-key-change-me</code> <strong>only outside production</strong><td>wraps the DEKs. <strong>In production the api refuses to boot</strong> if it's missing, set to the default above (public — it's in <code>.env.example</code>), or shorter than 16 characters (RN-114). This is only the BOOT check: swapping it for a <strong>valid but different</strong> key without re-wrapping still makes every credential unreadable with no error at all — the failure shows up on first use. See <a class="" href=/brabo/prd/runbook#rotacao-da-chave-mestra>rotation</a><tr><td><code>CREDENTIALS_MASTER_KEY_PREVIOUS</code><td>—<td>only during rotation. Present = the api tries the previous key when the current one fails<tr><td><code>GIT_OAUTH_STATE_SECRET</code> 🔒<td><code>dev-oauth-state-secret-change-me</code> <strong>only outside production</strong><td>signs the OAuth <code>state</code>; weak = CSRF in the git connection flow. <strong>In production the api refuses to boot</strong> without it, with the default above (which is public — it's in <code>.env.example</code>), or with fewer than 16 characters. Generate with <code>openssl rand -base64 32</code>. See <a class="" href=/brabo/prd/adr/0059-segredo-do-state-de-oauth-sem-default>ADR 0059</a> and <a class="" href=/brabo/prd/business-rules/custo#rn-093>RN-093</a><tr><td><code>WEB_ORIGIN</code> 🔒<td><code>http://localhost:${WEB_PORT}</code><td><strong>in production the api refuses to boot</strong> if it's missing or is <code>*</code>. CORS is strict per environment. <strong>The port is part of the value</strong>: the web on <code>:5174</code> is a different origin and gets blocked — see <a class="" href=/brabo/prd/adr/0037-cors-do-engine-e-a-porta-como-contrato>ADR 0037</a>. In the composes, the default <strong>derives from <code>WEB_PORT</code></strong>, so changing the port carries CORS with it; setting <code>WEB_ORIGIN</code> by hand overrides the derivation and it becomes your responsibility to keep it consistent again<tr><td><code>WEB_PORT</code><td><code>5173</code> (dev) · <code>8088</code> (prod)<td>published port of the web on the host. Not read by any service — it <strong>feeds the default of <code>WEB_ORIGIN</code></strong> in the composes, and that's what keeps port and CORS from diverging</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=first-party-auth>First-party auth<a href=#first-party-auth class=hash-link aria-label="Direct link to First-party auth" title="Direct link to First-party auth" translate=no>​</a></h3>
+<p>Auth lives in the api's domain, and since the cutover it's also the sole
+issuer. Decisions in
+<a class="" href=/brabo/prd/adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh>ADR 0031</a> and
 <a class="" href=/brabo/prd/adr/0032-corte-do-keycloak-e-sessao-em-cookie>ADR 0032</a>.</p>
 
 
@@ -206,22 +213,25 @@ em <a class="" href=/brabo/prd/adr/0031-auth-first-party-argon2id-e-rotacao-de-r
 
 
 
-<table><thead><tr><th>variável<th>default<th>o que faz<tbody><tr><td><code>AUTH_JWT_SECRET</code> 🔒<td><code>dev-auth-jwt-secret-change-me</code> <strong>só fora de produção</strong><td>passphrase de onde o par Ed25519 do access token é <strong>derivado</strong> por scrypt — nenhuma chave privada é commitada. <strong>Em produção a api recusa subir</strong> ausente, com o default acima (público — está no <code>.env.example</code>) ou com menos de 16 caracteres (RN-114)<tr><td><code>AUTH_JWT_SECRET_PREVIOUS</code><td>—<td>aceita <strong>só na verificação</strong>, durante a rotação; entra no JWKS e nunca assina<tr><td><code>AUTH_TOKEN_PEPPER</code><td><code>AUTH_JWT_SECRET</code><td>chave HMAC do hash dos tokens opacos e da chave do balde de lockout<tr><td><code>AUTH_ACCESS_TOKEN_TTL_MS</code><td><code>900000</code><td>15 min<tr><td><code>AUTH_REFRESH_TOKEN_TTL_MS</code><td><code>1209600000</code><td>14 dias<tr><td><code>AUTH_REFRESH_ABSOLUTE_TTL_MS</code><td><code>2592000000</code><td>teto absoluto da família, contado do login — sem ele a rotação dá sessão eterna<tr><td><code>AUTH_REGISTRATION_ENABLED</code><td><code>true</code><td>qualquer valor diferente de <code>"false"</code> mantém o cadastro aberto<tr><td><code>AUTH_LOCKOUT_ENABLED</code><td><code>true</code><td>mesma convenção<tr><td><code>AUTH_LOCKOUT_WINDOW_MS</code><td><code>900000</code><td>janela deslizante da contagem<tr><td><code>AUTH_LOCKOUT_THRESHOLDS</code><td><code>5:30,8:300,12:900</code><td>escada do balde de e-mail, <code>falhas:segundos</code><tr><td><code>AUTH_LOCKOUT_IP_THRESHOLDS</code><td><code>20:30,30:120</code><td>escada do balde de IP, mais permissiva e com teto curto<tr><td><code>AUTH_EMAIL_TOKEN_TTL_MS</code><td><code>172800000</code><td>verificação de e-mail, 48 h<tr><td><code>AUTH_RESET_TOKEN_TTL_MS</code><td><code>3600000</code><td>reset de senha, 1 h<tr><td><code>AUTH_SET_PASSWORD_TTL_MS</code><td><code>604800000</code><td>definição da primeira senha (usuário migrado), 7 dias — mais longo que o reset porque quem recebe não pediu<tr><td><code>AUTH_IP_ATTEMPT_THRESHOLD</code><td><code>60</code><td>teto de tentativas por IP nas rotas de auth<tr><td><code>AUTH_MAIL_LOG_TOKENS</code><td><code>false</code><td><strong>só em dev</strong>: imprime o token de verificação/reset no log</table>
+<table><thead><tr><th>variable<th>default<th>what it does<tbody><tr><td><code>AUTH_JWT_SECRET</code> 🔒<td><code>dev-auth-jwt-secret-change-me</code> <strong>only outside production</strong><td>passphrase the access token's Ed25519 pair is <strong>derived</strong> from via scrypt — no private key is committed. <strong>In production the api refuses to boot</strong> if it's missing, set to the default above (public — it's in <code>.env.example</code>), or shorter than 16 characters (RN-114)<tr><td><code>AUTH_JWT_SECRET_PREVIOUS</code><td>—<td>accepted <strong>only for verification</strong>, during rotation; enters the JWKS and never signs<tr><td><code>AUTH_TOKEN_PEPPER</code><td><code>AUTH_JWT_SECRET</code><td>HMAC key for hashing opaque tokens and the lockout bucket key<tr><td><code>AUTH_ACCESS_TOKEN_TTL_MS</code><td><code>900000</code><td>15 min<tr><td><code>AUTH_REFRESH_TOKEN_TTL_MS</code><td><code>1209600000</code><td>14 days<tr><td><code>AUTH_REFRESH_ABSOLUTE_TTL_MS</code><td><code>2592000000</code><td>absolute ceiling of the family, counted from login — without it rotation grants an eternal session<tr><td><code>AUTH_REGISTRATION_ENABLED</code><td><code>true</code><td>any value other than <code>"false"</code> keeps registration open<tr><td><code>AUTH_LOCKOUT_ENABLED</code><td><code>true</code><td>same convention<tr><td><code>AUTH_LOCKOUT_WINDOW_MS</code><td><code>900000</code><td>sliding window of the count<tr><td><code>AUTH_LOCKOUT_THRESHOLDS</code><td><code>5:30,8:300,12:900</code><td>email bucket ladder, <code>failures:seconds</code><tr><td><code>AUTH_LOCKOUT_IP_THRESHOLDS</code><td><code>20:30,30:120</code><td>IP bucket ladder, more permissive and with a short ceiling<tr><td><code>AUTH_EMAIL_TOKEN_TTL_MS</code><td><code>172800000</code><td>email verification, 48 h<tr><td><code>AUTH_RESET_TOKEN_TTL_MS</code><td><code>3600000</code><td>password reset, 1 h<tr><td><code>AUTH_SET_PASSWORD_TTL_MS</code><td><code>604800000</code><td>setting the first password (migrated user), 7 days — longer than the reset because the recipient didn't ask for it<tr><td><code>AUTH_IP_ATTEMPT_THRESHOLD</code><td><code>60</code><td>ceiling of attempts per IP on the auth routes<tr><td><code>AUTH_MAIL_LOG_TOKENS</code><td><code>false</code><td><strong>dev only</strong>: prints the verification/reset token to the log</table>
 <blockquote>
-<p><strong>O teto da escada de e-mail é igual à janela de propósito.</strong> Com janela
-deslizante, quem insiste empurra a janela junto e fica bloqueado enquanto
-insistir; quem parou volta com a janela limpa. Um teto <strong>maior</strong> que a janela
-criaria um bloqueio que ela não consegue representar, e exigiria uma coluna
-<code>locked_until</code> persistente com fila de destrava. Não mexa em um sem o outro.</p>
+<p><strong>The email ladder's ceiling equals the window on purpose.</strong> With a sliding
+window, whoever keeps insisting pushes the window along and stays blocked
+for as long as they keep it up; whoever stopped comes back with a clean
+window. A ceiling <strong>larger</strong> than the window would create a lockout the
+window can't represent, and would require a persistent <code>locked_until</code>
+column with an unlock queue. Don't touch one without the other.</p>
 </blockquote>
 <blockquote>
-<p><strong>Rotacionar <code>AUTH_TOKEN_PEPPER</code> desloga todo mundo</strong> e invalida os tokens de
-verificação e reset em aberto. Diferente das chaves, o pepper <strong>não</strong> tem
-<code>_PREVIOUS</code>. Ver o <a class="" href=/brabo/prd/runbook>runbook</a>.</p>
+<p><strong>Rotating <code>AUTH_TOKEN_PEPPER</code> logs everyone out</strong> and invalidates
+outstanding verification and reset tokens. Unlike the keys, the pepper does
+<strong>not</strong> have a <code>_PREVIOUS</code>. See the <a class="" href=/brabo/prd/runbook>runbook</a>.</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=seed-de-desenvolvimento>Seed de desenvolvimento<a href=#seed-de-desenvolvimento class=hash-link aria-label="Link direto para Seed de desenvolvimento" title="Link direto para Seed de desenvolvimento" translate=no>​</a></h3>
-<p>Consumidas por <code>pnpm --filter api seed</code>, não pela api em execução. Sem IdP
-externo, é daqui que sai a credencial para entrar na web local e para o smoke.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=real-smtp-mailsender>Real SMTP (MailSender)<a href=#real-smtp-mailsender class=hash-link aria-label="Direct link to Real SMTP (MailSender)" title="Direct link to Real SMTP (MailSender)" translate=no>​</a></h3>
+<p><code>MailSender</code> sends real email only when <code>MAIL_TRANSPORT=smtp</code> — the default
+is <code>log</code> (link/token go to the api's log, <code>AUTH_MAIL_LOG_TOKENS</code> above),
+including in production: sending email is the operator's opt-in. Decision in
+<a class="" href=/brabo/prd/adr/0096-smtp-real-no-mailsender>ADR 0096</a>.</p>
 
 
 
@@ -242,13 +252,69 @@ externo, é daqui que sai a credencial para entrar na web local e para o smoke.<
 
 
 
-<table><thead><tr><th>variável<th>default<th>o que faz<tbody><tr><td><code>BRABO_SEED_PASSWORD</code><td><code>brabo12345678</code><td>senha dos usuários semeados (<code>owner@brabo.dev</code>, <code>dev@brabo.dev</code>), criados com e-mail <strong>já verificado</strong><tr><td><code>BRABO_FORCE_SEED</code><td>—<td>destrava o seed com <code>NODE_ENV=production</code>, onde ele <strong>recusa rodar</strong> por default. Não defina em ambiente real: a conta nasce com senha conhecida e verificada</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>variable<th>default<th>what it does<tbody><tr><td><code>MAIL_TRANSPORT</code><td><code>log</code><td><code>log</code> (default) or <code>smtp</code>. Any other value falls back to <code>log</code><tr><td><code>SMTP_HOST</code> 🔒<td>—<td>SMTP provider host. <strong>Only when <code>MAIL_TRANSPORT=smtp</code></strong>: in production the api refuses to boot if it's missing, whitespace-only, or set to the example value published in <code>.env.example</code> (RN-114)<tr><td><code>SMTP_PORT</code><td><code>587</code><td>provider port — <code>587</code> is STARTTLS, <code>465</code> is implicit TLS (<code>SMTP_SECURE=true</code>)<tr><td><code>SMTP_SECURE</code><td><code>false</code><td><code>true</code> turns on implicit TLS on the connection (typically port 465)<tr><td><code>SMTP_USER</code> 🔒<td>—<td>SMTP auth username. Same requirement as <code>SMTP_HOST</code> in production<tr><td><code>SMTP_PASSWORD</code> 🔒<td>—<td>SMTP auth password/token. Same requirement as <code>SMTP_HOST</code> in production — <strong>never appears in logs</strong><tr><td><code>SMTP_FROM</code><td>—<td>sender, format <code>"Name &lt;email@domain>"</code> (or just the email). Same requirement as <code>SMTP_HOST</code> in production, plus format validation</table>
 <blockquote>
-<p>O seed é idempotente e <strong>não mexe na senha</strong> de quem já existe. Rodar de novo
-depois de alguém ter trocado a própria senha não a reverte.</p>
+<p>The email body is <strong>plain text</strong>, no HTML — the <code>MailSender</code> port doesn't
+carry structure for rich bodies, and a template engine would be an
+injection surface with no upside. The link uses <code>WEB_ORIGIN</code> (above).</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=rate-limit>Rate limit<a href=#rate-limit class=hash-link aria-label="Link direto para Rate limit" title="Link direto para Rate limit" translate=no>​</a></h3>
-<p>Janela deslizante em Postgres — não há Redis
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=development-seed>Development seed<a href=#development-seed class=hash-link aria-label="Direct link to Development seed" title="Direct link to Development seed" translate=no>​</a></h3>
+<p>Consumed by <code>pnpm --filter api seed</code>, not by the running api. Without an
+external IdP, this is where the credential to log into the local web and the
+smoke test comes from.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>variable<th>default<th>what it does<tbody><tr><td><code>BRABO_SEED_PASSWORD</code><td><code>brabo12345678</code><td>password of the seeded users (<code>owner@brabo.dev</code>, <code>dev@brabo.dev</code>), created with email <strong>already verified</strong><tr><td><code>BRABO_FORCE_SEED</code><td>—<td>unlocks the seed with <code>NODE_ENV=production</code>, where it <strong>refuses to run</strong> by default. Do not set it in a real environment: the account is born with a known, verified password</table>
+<blockquote>
+<p>The seed is idempotent and <strong>doesn't touch the password</strong> of anyone who
+already exists. Running it again after someone has changed their own
+password doesn't revert it.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rate-limit>Rate limit<a href=#rate-limit class=hash-link aria-label="Direct link to Rate limit" title="Direct link to Rate limit" translate=no>​</a></h3>
+<p>Sliding window in Postgres — there's no Redis
 (<a class="" href=/brabo/prd/adr/0027-fase5-backup-hardening-release>ADR 0027</a>).</p>
 
 
@@ -280,16 +346,16 @@ depois de alguém ter trocado a própria senha não a reverte.</p>
 
 
 
-<table><thead><tr><th>variável<th>default<th>o que faz<tbody><tr><td><code>RATE_LIMIT_ENABLED</code><td><code>true</code><td>qualquer valor diferente de <code>"false"</code> mantém ligado<tr><td><code>RATE_LIMIT_WINDOW_MS</code><td><code>60000</code><td>tamanho da janela<tr><td><code>RATE_LIMIT_USER</code><td><code>300</code><td>requisições por usuário por janela<tr><td><code>RATE_LIMIT_IP</code><td><code>600</code><td>requisições por IP por janela</table>
+<table><thead><tr><th>variable<th>default<th>what it does<tbody><tr><td><code>RATE_LIMIT_ENABLED</code><td><code>true</code><td>any value other than <code>"false"</code> keeps it on<tr><td><code>RATE_LIMIT_WINDOW_MS</code><td><code>60000</code><td>window size<tr><td><code>RATE_LIMIT_USER</code><td><code>300</code><td>requests per user per window<tr><td><code>RATE_LIMIT_IP</code><td><code>600</code><td>requests per IP per window</table>
 <blockquote>
-<p>Se a tabela de rate limit estiver indisponível, a requisição <strong>passa</strong>. O
-guard protege contra abuso, não contra acesso indevido — quem faz isso é o
-guard de autenticação, que roda antes.</p>
+<p>If the rate limit table is unavailable, the request <strong>goes through</strong>. The
+guard protects against abuse, not unauthorized access — that's the job of
+the authentication guard, which runs first.</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=tráfego-interno->Tráfego interno 🔒<a href=#tráfego-interno- class=hash-link aria-label="Link direto para Tráfego interno 🔒" title="Link direto para Tráfego interno 🔒" translate=no>​</a></h3>
-<p>O segredo compartilhado que autentica api ↔ engine. <strong>A mesma variável nos dois
-lados</strong> — cada um envia o atual e aceita ambos, e é isso que torna a rotação
-possível sem downtime (<a class="" href=/brabo/prd/business-rules#rn-035>RN-035</a>).</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=internal-traffic->Internal traffic 🔒<a href=#internal-traffic- class=hash-link aria-label="Direct link to Internal traffic 🔒" title="Direct link to Internal traffic 🔒" translate=no>​</a></h3>
+<p>The shared secret that authenticates api ↔ engine. <strong>The same variable on both
+sides</strong> — each one sends the current value and accepts both, and that's what
+makes rotation possible without downtime (<a class="" href=/brabo/prd/business-rules/autenticacao#rn-035>RN-035</a>).</p>
 
 
 
@@ -310,16 +376,16 @@ possível sem downtime (<a class="" href=/brabo/prd/business-rules#rn-035>RN-035
 
 
 
-<table><thead><tr><th>variável<th>default<th>o que faz<tbody><tr><td><code>BRABO_SERVICE_TOKEN</code> 🔒<td><code>dev-service-token-change-me</code> <strong>só fora de produção</strong><td>vai no cabeçalho <code>X-Brabo-Service-Token</code> e é o que o <code>EngineServiceGuard</code> compara em tempo constante. <strong>Em produção a api recusa subir</strong> ausente, com o default acima (público — está no <code>.env.example</code>) ou com menos de 16 caracteres (RN-114)<tr><td><code>BRABO_SERVICE_TOKEN_PREVIOUS</code><td>—<td>aceito <strong>só na verificação</strong>, durante a rotação</table>
+<table><thead><tr><th>variable<th>default<th>what it does<tbody><tr><td><code>BRABO_SERVICE_TOKEN</code> 🔒<td><code>dev-service-token-change-me</code> <strong>only outside production</strong><td>goes in the <code>X-Brabo-Service-Token</code> header and is what <code>EngineServiceGuard</code> compares in constant time. <strong>In production the api refuses to boot</strong> if it's missing, set to the default above (public — it's in <code>.env.example</code>), or shorter than 16 characters (RN-114)<tr><td><code>BRABO_SERVICE_TOKEN_PREVIOUS</code><td>—<td>accepted <strong>only for verification</strong>, during rotation</table>
 <blockquote>
-<p>Definir só o valor NOVO de um lado (sem passar pela dança do <code>_PREVIOUS</code>)
-não quebra o boot de ninguém: o sintoma é <code>403</code> no <code>/internal/*</code> e <code>401</code> nas
-chamadas da api para o engine. Procedimento no
-<a class="" href=/brabo/prd/runbook#rotacao-das-chaves-do-auth>runbook</a>. A checagem de BOOT
-acima (RN-114) é outra coisa: ela reprova só o default público ou uma
-variável ausente/curta, não uma divergência entre os dois lados.</p>
+<p>Setting only the NEW value on one side (without going through the
+<code>_PREVIOUS</code> dance) doesn't break anyone's boot: the symptom is <code>403</code> on
+<code>/internal/*</code> and <code>401</code> on api-to-engine calls. Procedure in the
+<a class="" href=/brabo/prd/runbook#rotacao-das-chaves-do-auth>runbook</a>. The BOOT check above
+(RN-114) is a different thing: it only fails on the public default or a
+missing/short variable, not on a mismatch between the two sides.</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=git>Git<a href=#git class=hash-link aria-label="Link direto para Git" title="Link direto para Git" translate=no>​</a></h3>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=git>Git<a href=#git class=hash-link aria-label="Direct link to Git" title="Direct link to Git" translate=no>​</a></h3>
 
 
 
@@ -350,8 +416,23 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
-<table><thead><tr><th>variável<th>default<th>nota<tbody><tr><td><code>GIT_LOCAL_REPOS_ROOT</code><td><code>/tmp/brabo-git-repos</code><td>provider Local. Em <code>/tmp</code> os repos somem no reboot<tr><td><code>PROJECT_WORKSPACES_ROOT</code><td><code>/tmp/brabo-project-workspaces</code><td>worktrees dos agentes. <strong>Precisa ser o mesmo caminho no engine</strong>, e o mesmo volume<tr><td><code>GITHUB_OAUTH_CLIENT_ID</code> / <code>_SECRET</code><td>vazio<td>vazio = conexão GitHub por OAuth indisponível (PAT continua)<tr><td><code>GITLAB_OAUTH_CLIENT_ID</code> / <code>_SECRET</code><td>vazio<td>idem</table>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=llm>LLM<a href=#llm class=hash-link aria-label="Link direto para LLM" title="Link direto para LLM" translate=no>​</a></h3>
+<table><thead><tr><th>variable<th>default<th>note<tbody><tr><td><code>GIT_LOCAL_REPOS_ROOT</code><td><code>/tmp/brabo-git-repos</code><td>Local provider. In <code>/tmp</code>, repos disappear on reboot<tr><td><code>PROJECT_WORKSPACES_ROOT</code><td><code>/tmp/brabo-project-workspaces</code><td>project agent worktrees in <strong>Container</strong> mode. <strong>Needs to be the same path on the engine</strong>, and the same volume<tr><td><code>GITHUB_OAUTH_CLIENT_ID</code> / <code>_SECRET</code><td>empty<td>empty = GitHub OAuth connection unavailable (PAT still works)<tr><td><code>GITLAB_OAUTH_CLIENT_ID</code> / <code>_SECRET</code><td>empty<td>same</table>
+<h4 class="anchor anchorTargetStickyNavbar_PEh0" id=project-in-local-mode-not-a-variable-a-mount>Project in Local mode: not a variable, a mount<a href=#project-in-local-mode-not-a-variable-a-mount class=hash-link aria-label="Direct link to Project in Local mode: not a variable, a mount" title="Direct link to Project in Local mode: not a variable, a mount" translate=no>​</a></h4>
+<p>Since <a class="" href=/brabo/prd/adr/0072-projeto-local-ou-container>ADR 0072</a>, a project can be
+born in <strong>Local</strong> mode — the code lives in a user folder, at a free absolute
+path, and <code>PROJECT_WORKSPACES_ROOT</code> <strong>doesn't participate</strong> in its root.</p>
+<p>This has NO environment variable: the path is a project-level datum
+(<code>projects.workspace_path</code>), chosen at creation. What the ENVIRONMENT needs to
+provide is the mount — the same folder, at the <strong>same absolute path</strong>, inside
+both the <code>api</code> and <code>engine</code> containers:</p>
+<div class="language-yaml codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-yaml codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token comment" style="color:rgb(98, 114, 164)"># docker/docker-compose.yml — on BOTH services</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">    </span><span class="token key atrule">volumes</span><span class="token punctuation" style="color:rgb(248, 248, 242)">:</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">      </span><span class="token punctuation" style="color:rgb(248, 248, 242)">-</span><span class="token plain"> /home/voce/projetos/loja</span><span class="token punctuation" style="color:rgb(248, 248, 242)">:</span><span class="token plain">/home/voce/projetos/loja</span><br/></div></code></pre></div></div>
+<p>Mounting on only one of the two produces a project the api accepts and the
+engine can't see: creation validation
+(<a class="" href=/brabo/prd/business-rules/autenticacao#rn-170>RN-170</a>) checks what the <strong>api</strong> sees, and it
+has no way to know what's mounted in the other container. With no mount at
+all, creation is refused with a 400 and the message carries the line above —
+see the <a class="" href=/brabo/prd/runbook#projeto-no-modo-local>runbook</a>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=llm>LLM<a href=#llm class=hash-link aria-label="Direct link to LLM" title="Direct link to LLM" translate=no>​</a></h3>
 
 
 
@@ -377,8 +458,8 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
-<table><thead><tr><th>variável<th>default<th>nota<tbody><tr><td><code>OLLAMA_HOST</code><td><code>http://localhost:11434</code><td>—<tr><td><code>OLLAMA_REQUEST_TIMEOUT_MS</code><td><code>300000</code><td>teto de <strong>inatividade</strong> do socket do Ollama, não de duração total. Modelo local tem outra ordem de grandeza de latência até o primeiro token, por isso env própria; ver <a class="" href=/brabo/prd/runbook#ambiente-de-inferencia>ambiente de inferência</a><tr><td><code>LLM_REQUEST_TIMEOUT_MS</code><td><code>300000</code><td>o mesmo teto de inatividade para os providers de API (OpenAI e compatíveis, Anthropic). Vale para "não mandou nem os headers" e para "parou de mandar chunks no meio do stream" — ver <a class="" href=/brabo/prd/reference/llm-providers#teto-de-inatividade>providers de LLM</a></table>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=observabilidade>Observabilidade<a href=#observabilidade class=hash-link aria-label="Link direto para Observabilidade" title="Link direto para Observabilidade" translate=no>​</a></h3>
+<table><thead><tr><th>variable<th>default<th>note<tbody><tr><td><code>OLLAMA_HOST</code><td><code>http://localhost:11434</code><td>—<tr><td><code>OLLAMA_REQUEST_TIMEOUT_MS</code><td><code>300000</code><td><strong>inactivity</strong> ceiling of the Ollama socket, not total duration. A local model has a different order of magnitude of latency to the first token, hence its own env var; see <a class="" href=/brabo/prd/runbook#ambiente-de-inferencia>inference environment</a><tr><td><code>LLM_REQUEST_TIMEOUT_MS</code><td><code>300000</code><td>the same inactivity ceiling for the API providers (OpenAI and compatible, Anthropic). Applies to "didn't even send the headers" and to "stopped sending chunks mid-stream" — see <a class="" href=/brabo/prd/reference/llm-providers#inactivity-ceiling>LLM providers</a></table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=knowledge-graph-adr-0099>Knowledge graph (ADR 0099)<a href=#knowledge-graph-adr-0099 class=hash-link aria-label="Direct link to Knowledge graph (ADR 0099)" title="Direct link to Knowledge graph (ADR 0099)" translate=no>​</a></h3>
 
 
 
@@ -409,15 +490,47 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
+<table><thead><tr><th>variable<th>default<th>note<tbody><tr><td><code>NEO4J_URI</code><td>—<td>e.g. <code>bolt://localhost:7687</code>. Missing or partial (together with <code>NEO4J_USER</code>/<code>NEO4J_PASSWORD</code>) outside production = graph OFF, dependent routes degrade (<code>GraphUnavailableError</code>/503) — nobody needs a local Neo4j just to run the suite. In production, the absence of any of the three brings the boot down<tr><td><code>NEO4J_USER</code><td>—<td>see <code>NEO4J_URI</code><tr><td><code>NEO4J_PASSWORD</code> 🔒<td>—<td>see <code>NEO4J_URI</code>. No public default on purpose — there's no plausible "example value" for a database password<tr><td><code>GRAPH_PROJECTOR_INTERVAL_MS</code><td><code>2000</code><td>period of the poller that drains the outbox's <code>graph_projection</code> queue and writes handoffs/hypotheses/profiles/interactions to the graph (RN-416)</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=observability>Observability<a href=#observability class=hash-link aria-label="Direct link to Observability" title="Direct link to Observability" translate=no>​</a></h3>
 
 
 
 
 
-<table><thead><tr><th>variável<th>default<th>nota<tbody><tr><td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code><td>—<td><strong>ausente desliga a EXPORTAÇÃO, não a instrumentação</strong> (ADR 0035). Span continua sendo criada e o <code>trace_id</code> continua no log — é o que dá correlação em desenvolvimento, sem coletor. Sem ela, a span é descartada no fim em vez de sair do processo<tr><td><code>OTEL_SERVICE_NAME</code><td><code>brabo-api</code><td>—<tr><td><code>OTEL_DIAG_LOG</code><td>—<td><code>1</code> liga o log de diagnóstico do próprio OTel<tr><td><code>LOG_LEVEL</code><td><code>info</code> em produção, <code>debug</code> fora<td>também decide o FORMATO junto com <code>NODE_ENV</code>: fora de produção o log sai legível (pino-pretty em processo, com a árvore de camadas); em produção, uma linha de JSON por evento<tr><td><code>METRICS_GAUGE_INTERVAL_MS</code><td><code>15000</code><td>período de coleta dos gauges de domínio</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>variable<th>default<th>note<tbody><tr><td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code><td>—<td><strong>missing turns off EXPORT, not instrumentation</strong> (ADR 0035). The span is still created and <code>trace_id</code> still shows up in the log — that's what gives correlation in development, without a collector. Without it, the span is discarded at the end instead of leaving the process<tr><td><code>OTEL_SERVICE_NAME</code><td><code>brabo-api</code><td>—<tr><td><code>OTEL_DIAG_LOG</code><td>—<td><code>1</code> turns on OTel's own diagnostic log<tr><td><code>LOG_LEVEL</code><td><code>info</code> in production, <code>debug</code> outside<td>also decides the FORMAT together with <code>NODE_ENV</code>: outside production the log comes out readable (pino-pretty in-process, with the layer tree); in production, one JSON line per event<tr><td><code>METRICS_GAUGE_INTERVAL_MS</code><td><code>15000</code><td>collection period of the domain gauges</table>
 <hr/>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=engine>engine<a href=#engine class=hash-link aria-label="Link direto para engine" title="Link direto para engine" translate=no>​</a></h2>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=essenciais-1>Essenciais<a href=#essenciais-1 class=hash-link aria-label="Link direto para Essenciais" title="Link direto para Essenciais" translate=no>​</a></h3>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=engine>engine<a href=#engine class=hash-link aria-label="Direct link to engine" title="Direct link to engine" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=essentials-1>Essentials<a href=#essentials-1 class=hash-link aria-label="Direct link to Essentials" title="Direct link to Essentials" translate=no>​</a></h3>
 
 
 
@@ -473,8 +586,8 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
-<table><thead><tr><th>variável<th>default<th>quando dá errado<tbody><tr><td><code>DATABASE_URL</code><td><code>ecto://brabo:brabo@localhost:5432/brabo</code><td>note o esquema <code>ecto://</code>, não <code>postgres://</code><tr><td><code>POSTGRES_HOST</code> / <code>_USER</code> / <code>_PASSWORD</code><td><code>localhost</code> / <code>brabo</code> / <code>brabo</code><td>usados quando a <code>DATABASE_URL</code> não é montada<tr><td><code>POOL_SIZE</code><td>—<td>pool esgotado trava o Oban e a fila para de ser consumida<tr><td><code>PORT</code><td><code>4000</code><td>—<tr><td><code>PHX_HOST</code> / <code>PHX_SERVER</code><td>—<td><code>PHX_SERVER=true</code> é o que faz o release servir HTTP<tr><td><code>SECRET_KEY_BASE</code> 🔒<td>—<td>obrigatória no release (<code>runtime.exs</code>, bloco <code>:prod</code>, <code>raise</code> padrão do Phoenix). Até RN-114, o <code>docker-compose.prod.yml</code> supria um literal público como fallback e mascarava esse <code>raise</code> — a variável chegava sempre DEFINIDA. O <code>raise</code> em si não mudou<tr><td><code>API_URL</code><td><code>http://localhost:3000</code><td>o engine chama a api de volta por aqui<tr><td><code>ECTO_IPV6</code><td>—<td>—<tr><td><code>SKIP_MIGRATIONS</code><td>—<td>usada pelo Job de migração</table>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=cluster-e-shutdown>Cluster e shutdown<a href=#cluster-e-shutdown class=hash-link aria-label="Link direto para Cluster e shutdown" title="Link direto para Cluster e shutdown" translate=no>​</a></h3>
+<table><thead><tr><th>variable<th>default<th>when it fails<tbody><tr><td><code>DATABASE_URL</code><td><code>ecto://brabo:brabo@localhost:5432/brabo</code><td>note the <code>ecto://</code> scheme, not <code>postgres://</code><tr><td><code>POSTGRES_HOST</code> / <code>_USER</code> / <code>_PASSWORD</code><td><code>localhost</code> / <code>brabo</code> / <code>brabo</code><td>used when <code>DATABASE_URL</code> isn't assembled<tr><td><code>POOL_SIZE</code><td>—<td>an exhausted pool jams Oban and the queue stops being consumed<tr><td><code>PORT</code><td><code>4000</code><td>—<tr><td><code>PHX_HOST</code> / <code>PHX_SERVER</code><td>—<td><code>PHX_SERVER=true</code> is what makes the release serve HTTP<tr><td><code>SECRET_KEY_BASE</code> 🔒<td>—<td>required in the release (<code>runtime.exs</code>, <code>:prod</code> block, Phoenix's default <code>raise</code>). Until RN-114, <code>docker-compose.prod.yml</code> supplied a public literal as a fallback and masked that <code>raise</code> — the variable always arrived SET. The <code>raise</code> itself didn't change<tr><td><code>API_URL</code><td><code>http://localhost:3000</code><td>the engine calls the api back through here<tr><td><code>ECTO_IPV6</code><td>—<td>—<tr><td><code>SKIP_MIGRATIONS</code><td>—<td>used by the migration Job</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=cluster-and-shutdown>Cluster and shutdown<a href=#cluster-and-shutdown class=hash-link aria-label="Direct link to Cluster and shutdown" title="Direct link to Cluster and shutdown" translate=no>​</a></h3>
 
 
 
@@ -505,8 +618,8 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
-<table><thead><tr><th>variável<th>default<th>nota<tbody><tr><td><code>DNS_CLUSTER_QUERY</code><td>—<td>o Service headless que forma o cluster Erlang. <strong>Sem ele cada réplica é uma ilha</strong> e todo rollout drena tudo<tr><td><code>SHUTDOWN_DRAIN_TIMEOUT_MS</code><td><code>45000</code><td>janela do <code>preStop</code>. Sobe <strong>junto</strong> com <code>terminationGracePeriodSeconds</code>, nunca sozinha<tr><td><code>SESSION_HEARTBEAT_TIMEOUT_MS</code><td><code>30000</code><td>—<tr><td><code>RELEASE_NAME</code> / <code>RELEASE_NODE</code><td>—<td>identidade do nó na distribuição</table>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=harness>Harness<a href=#harness class=hash-link aria-label="Link direto para Harness" title="Link direto para Harness" translate=no>​</a></h3>
+<table><thead><tr><th>variable<th>default<th>note<tbody><tr><td><code>DNS_CLUSTER_QUERY</code><td>—<td>the headless Service that forms the Erlang cluster. <strong>Without it each replica is an island</strong> and every rollout drains everything<tr><td><code>SHUTDOWN_DRAIN_TIMEOUT_MS</code><td><code>45000</code><td><code>preStop</code> window. Goes up <strong>together</strong> with <code>terminationGracePeriodSeconds</code>, never alone<tr><td><code>SESSION_HEARTBEAT_TIMEOUT_MS</code><td><code>30000</code><td>—<tr><td><code>RELEASE_NAME</code> / <code>RELEASE_NODE</code><td>—<td>node identity in the distribution</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=harness>Harness<a href=#harness class=hash-link aria-label="Direct link to Harness" title="Direct link to Harness" translate=no>​</a></h3>
 
 
 
@@ -577,8 +690,6 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
-<table><thead><tr><th>variável<th>default<th>nota<tbody><tr><td><code>TOOL_LOOP_MAX_ITERATIONS</code><td><code>8</code><td>teto de voltas do laço para o agente <strong>conversacional</strong>. Esgotado, o agente encerra com artefato de bloqueio<tr><td><code>TOOL_LOOP_MAX_ITERATIONS_EXECUCAO</code><td><code>60</code><td>teto dos <strong>dev agents</strong>. Maior porque eles exploram o repositório antes de escrever — e porque o <code>task_budget_micros</code> segura o gasto por baixo<tr><td><code>TOOL_LOOP_MAX_ITERATIONS_GATE</code><td><code>60</code><td>teto dos subagentes de <strong>QA</strong>, pelo mesmo motivo<tr><td><code>DEFAULT_CONTEXT_WINDOW</code><td><code>8192</code><td>usado quando o modelo não declara a janela<tr><td><code>CONTEXT_COMPACTION_THRESHOLD</code><td><code>0.7</code><td>fração da janela que dispara compactação<tr><td><code>LLM_TURN_TIMEOUT_MS</code><td><code>300000</code><td>5 min por turno<tr><td><code>TERMINAL_ACTION_TIMEOUT_MS</code><td><code>15000</code><td>teto de um comando de terminal<tr><td><code>TERMINAL_OUTPUT_MAX_BYTES</code><td><code>32768</code><td>teto de BYTES da saída de um comando (<a class="" href=/brabo/prd/business-rules#rn-074>RN-074</a>). A saída fica no histórico do laço e viaja em todo turno seguinte; sem teto, um <code>find</code> numa árvore grande derruba a execução inteira com <code>413</code> do provider<tr><td><code>READ_FILE_MAX_BYTES</code><td><code>32768</code><td>teto de BYTES do conteúdo lido por <code>read_file</code> (<a class="" href=/brabo/prd/business-rules#rn-141>RN-141</a>) — mesma classe de estouro da RN-074, pela porta do <code>read_file</code> em vez do terminal; variável independente, mesmo valor por coincidência de contexto<tr><td><code>SEARCH_WORKSPACE_MAX_BYTES</code><td><code>32768</code><td>teto de BYTES do texto final de <code>search_workspace</code> (<a class="" href=/brabo/prd/business-rules#rn-150>RN-150</a>) — mesma classe de estouro da RN-074/RN-141, pela porta da busca; variável independente<tr><td><code>SEARCH_WORKSPACE_MAX_HITS</code><td><code>500</code><td>teto de QUANTIDADE de hits que <code>search_workspace</code> coleta antes de montar a resposta (<a class="" href=/brabo/prd/business-rules#rn-150>RN-150</a>) — para de escanear/ler conteúdo assim que atinge o teto, evitando pagar I/O de uma árvore com hit demais só para depois truncar por bytes<tr><td><code>SECOPS_SCAN_TIMEOUT_MS</code><td><code>180000</code><td>3 min para o scanner do SecOps</table>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=psicólogo>Psicólogo<a href=#psicólogo class=hash-link aria-label="Link direto para Psicólogo" title="Link direto para Psicólogo" translate=no>​</a></h3>
 
 
 
@@ -589,6 +700,8 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
+<table><thead><tr><th>variable<th>default<th>note<tbody><tr><td><code>TOOL_LOOP_MAX_ITERATIONS</code><td><code>8</code><td>ceiling of loop turns for the <strong>conversational</strong> agent. Once exhausted, the agent ends with a blocking artifact<tr><td><code>TOOL_LOOP_MAX_ITERATIONS_EXECUCAO</code><td><code>60</code><td>ceiling for <strong>dev agents</strong>. Higher because they explore the repository before writing — and because <code>task_budget_micros</code> keeps spend in check underneath<tr><td><code>TOOL_LOOP_MAX_ITERATIONS_GATE</code><td><code>60</code><td>ceiling for <strong>QA</strong> subagents, for the same reason<tr><td><code>DEFAULT_CONTEXT_WINDOW</code><td><code>8192</code><td>used when the model doesn't declare its window<tr><td><code>CONTEXT_COMPACTION_THRESHOLD</code><td><code>0.7</code><td>fraction of the window that triggers compaction<tr><td><code>LLM_TURN_TIMEOUT_MS</code><td><code>300000</code><td>5 min per turn<tr><td><code>TERMINAL_ACTION_TIMEOUT_MS</code><td><code>15000</code><td>ceiling for a terminal command<tr><td><code>TERMINAL_OUTPUT_MAX_BYTES</code><td><code>32768</code><td>BYTE ceiling of a command's output (<a class="" href=/brabo/prd/business-rules/custo#rn-074>RN-074</a>). The output stays in the loop's history and travels on every following turn; without a ceiling, a <code>find</code> over a large tree brings down the entire execution with a <code>413</code> from the provider<tr><td><code>READ_FILE_MAX_BYTES</code><td><code>32768</code><td>BYTE ceiling of the content read by <code>read_file</code> (<a class="" href=/brabo/prd/business-rules/autenticacao#rn-141>RN-141</a>) — same class of overflow as RN-074, through the <code>read_file</code> door instead of the terminal; independent variable, same value by coincidence of context<tr><td><code>SEARCH_WORKSPACE_MAX_BYTES</code><td><code>32768</code><td>BYTE ceiling of <code>search_workspace</code>'s final text (<a class="" href=/brabo/prd/business-rules/autenticacao#rn-150>RN-150</a>) — same class of overflow as RN-074/RN-141, through the search door; independent variable<tr><td><code>SEARCH_WORKSPACE_MAX_HITS</code><td><code>500</code><td>ceiling on the NUMBER of hits <code>search_workspace</code> collects before assembling the response (<a class="" href=/brabo/prd/business-rules/autenticacao#rn-150>RN-150</a>) — stops scanning/reading content as soon as it hits the ceiling, avoiding paying I/O for a tree with too many hits only to truncate by bytes afterward<tr><td><code>SECOPS_SCAN_TIMEOUT_MS</code><td><code>180000</code><td>3 min for the SecOps scanner<tr><td><code>TRANSPORT_MAX_BODY_BYTES</code><td><code>8388608</code> (8 MiB)<td>TRANSPORT ceiling that context compaction respects on top of the model's window (<a class="" href=/brabo/prd/business-rules#rn-412>RN-412</a>) — the effective window is <code>min(context_window, this ceiling converted to tokens)</code>, so compaction fires BEFORE the body overflows the api's HTTP limit, not only when the model would "forget"<tr><td><code>GRAPH_INSTRUCTION_TEMPLATES_ENABLED</code><td><code>false</code><td>turns on the <code>:graph</code> source of <code>InstructionFiles</code> — today only the ux-designer identity resolves a template from the graph before the inline text (RN-413). Its OWN name, not <code>GRAPH_TEMPLATES_ENABLED</code> below — the two would collide with opposite defaults if they shared the key</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=psychologist>Psychologist<a href=#psychologist class=hash-link aria-label="Direct link to Psychologist" title="Direct link to Psychologist" translate=no>​</a></h3>
 
 
 
@@ -619,8 +732,6 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
-<table><thead><tr><th>variável<th>default<th>nota<tbody><tr><td><code>PSYCHOLOGIST_ENABLED</code><td><code>false</code><td>pausa GLOBAL de rodada NOVA (automática e sob demanda) — decisão de produto do usuário em 2026-08-10, não bug, mesmo padrão de <code>ANAMNESE_ENABLED</code> abaixo. Não apaga nada do que já existe. Ligar exige reiniciar o engine (<a class="" href=/brabo/prd/business-rules#rn-117>RN-117</a>)<tr><td><code>PSYCHOLOGIST_TRIAGE_THRESHOLD</code><td><code>20</code><td>eventos na sessão que separam análise <strong>leve</strong> de <strong>pesada</strong><tr><td><code>PSYCHOLOGIST_MAX_ITERATIONS_LEVE</code> / <code>_PESADA</code><td><code>4</code> / <code>8</code><td>—<tr><td><code>PSYCHOLOGIST_BUDGET_MICROS_LEVE</code> / <code>_PESADA</code><td><code>50000</code> / <code>300000</code><td>USD 0,05 e USD 0,30 por análise<tr><td><code>PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE</code> / <code>_PESADA</code><td><code>50</code> / <code>400</code><td>quantos eventos entram no prompt<tr><td><code>PSYCHOLOGIST_MAX_PAYLOAD_CHARS</code><td><code>600</code><td>truncagem do payload de cada evento</table>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=anamnese>Anamnese<a href=#anamnese class=hash-link aria-label="Link direto para Anamnese" title="Link direto para Anamnese" translate=no>​</a></h3>
 
 
 
@@ -641,6 +752,8 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
+<table><thead><tr><th>variable<th>default<th>note<tbody><tr><td><code>PSYCHOLOGIST_ENABLED</code><td><code>false</code><td>GLOBAL pause of NEW rounds (automatic and on-demand) — the user's product decision on 2026-08-10, not a bug, same pattern as <code>ANAMNESE_ENABLED</code> below. Doesn't erase anything that already exists. Turning it on requires restarting the engine (<a class="" href=/brabo/prd/business-rules/autenticacao#rn-117>RN-117</a>)<tr><td><code>PSYCHOLOGIST_TRIAGE_THRESHOLD</code><td><code>20</code><td>events in the session that separate a <strong>light</strong> analysis from a <strong>heavy</strong> one<tr><td><code>PSYCHOLOGIST_MAX_ITERATIONS_LEVE</code> / <code>_PESADA</code><td><code>4</code> / <code>8</code><td>—<tr><td><code>PSYCHOLOGIST_BUDGET_MICROS_LEVE</code> / <code>_PESADA</code><td><code>50000</code> / <code>300000</code><td>USD 0.05 and USD 0.30 per analysis<tr><td><code>PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE</code> / <code>_PESADA</code><td><code>50</code> / <code>400</code><td>how many events go into the prompt<tr><td><code>PSYCHOLOGIST_MAX_PAYLOAD_CHARS</code><td><code>600</code><td>truncation of each event's payload<tr><td><code>PSYCHOLOGIST_RAG_TOP_K</code><td><code>3</code><td>how many relevant <code>rag_search</code> snippets go into the context, deducted from the recent-events ceiling above (<a class="" href=/brabo/prd/business-rules#rn-417>RN-417</a>)<tr><td><code>GRAPH_TEMPLATES_ENABLED</code><td><code>false</code><td>turns on resolving <code>psychologist-kickoff</code>/<code>anamnese-kickoff</code> as a graph template — key SHARED between Psychologist and Anamnese (RN-417), not to be confused with <code>GRAPH_INSTRUCTION_TEMPLATES_ENABLED</code> above</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=anamnese>Anamnese<a href=#anamnese class=hash-link aria-label="Direct link to Anamnese" title="Direct link to Anamnese" translate=no>​</a></h3>
 
 
 
@@ -671,8 +784,6 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
-<table><thead><tr><th>variável<th>default<th>nota<tbody><tr><td><code>ANAMNESE_ENABLED</code><td><code>false</code><td>pausa GLOBAL de rodada NOVA (periódica e sob demanda) — decisão de produto do usuário em 2026-08-10, não bug. Não apaga nada do que já existe. Ligar exige reiniciar o engine (<a class="" href=/brabo/prd/business-rules#rn-115>RN-115</a>)<tr><td><code>ANAMNESE_INTERVAL_SECONDS</code><td><code>900</code><td>15 min entre execuções<tr><td><code>ANAMNESE_MIN_EVENTS</code><td><code>10</code><td>abaixo disso não roda — evita perfilar com ruído<tr><td><code>ANAMNESE_INITIAL_WINDOW_DAYS</code><td><code>30</code><td>janela da primeira execução<tr><td><code>ANAMNESE_MAX_ITERATIONS</code><td><code>6</code><td>—<tr><td><code>ANAMNESE_BUDGET_MICROS</code><td><code>200000</code><td>USD 0,20 por execução<tr><td><code>ANAMNESE_MAX_PROMPT_EVENTS</code><td><code>500</code><td>—<tr><td><code>ANAMNESE_MAX_PAYLOAD_CHARS</code><td><code>600</code><td>—</table>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=guards-de-carga>Guards de carga<a href=#guards-de-carga class=hash-link aria-label="Link direto para Guards de carga" title="Link direto para Guards de carga" translate=no>​</a></h3>
 
 
 
@@ -693,6 +804,8 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
+<table><thead><tr><th>variable<th>default<th>note<tbody><tr><td><code>ANAMNESE_ENABLED</code><td><code>false</code><td>GLOBAL pause of NEW rounds (periodic and on-demand) — the user's product decision on 2026-08-10, not a bug. Doesn't erase anything that already exists. Turning it on requires restarting the engine (<a class="" href=/brabo/prd/business-rules/autenticacao#rn-115>RN-115</a>)<tr><td><code>ANAMNESE_INTERVAL_SECONDS</code><td><code>900</code><td>15 min between runs<tr><td><code>ANAMNESE_MIN_EVENTS</code><td><code>10</code><td>below this it doesn't run — avoids profiling on noise<tr><td><code>ANAMNESE_INITIAL_WINDOW_DAYS</code><td><code>30</code><td>window of the first run<tr><td><code>ANAMNESE_MAX_ITERATIONS</code><td><code>6</code><td>—<tr><td><code>ANAMNESE_BUDGET_MICROS</code><td><code>200000</code><td>USD 0.20 per run<tr><td><code>ANAMNESE_MAX_PROMPT_EVENTS</code><td><code>500</code><td>—<tr><td><code>ANAMNESE_MAX_PAYLOAD_CHARS</code><td><code>600</code><td>—</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=load-guards>Load guards<a href=#load-guards class=hash-link aria-label="Direct link to Load guards" title="Direct link to Load guards" translate=no>​</a></h3>
 
 
 
@@ -718,8 +831,6 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
-<table><thead><tr><th>variável<th>default<th>nota<tbody><tr><td><code>START_OUTBOX_DRAIN</code><td><code>true</code><td>—<tr><td><code>START_ANAMNESE</code><td><code>true</code><td>guard de CARGA de teste/dev: impede o <code>kickoff/0</code> de sequer ser chamado no boot, mas não decide nada de produto — não confundir com <code>ANAMNESE_ENABLED</code> (produto: pausa GLOBAL, sobrevive a qualquer valor deste). Desligar impede <strong>novos</strong> enfileiramentos, <strong>não limpa a fila</strong>. Jobs acumulados rodam no boot seguinte — a fila precisa ser purgada. Ver <a class="" href=/brabo/prd/runbook#ambiente-de-inferencia>ambiente de inferência</a><tr><td><code>START_MODEL_SYNC</code><td><code>true</code><td>tick periódico do sync de catálogo de modelos. Desligá-lo não congela nada: o botão "Atualizar catálogo" da tela de configurações chama o mesmo caso de uso (<a class="" href=/brabo/prd/business-rules#rn-043>RN-043</a>)<tr><td><code>MODEL_SYNC_INTERVAL_SECONDS</code><td><code>21600</code> (6h)<td>catálogo de provider muda em escala de dias, e cada rodada gasta uma chamada de API por provider — daí o default folgado<tr><td><code>START_GATE_RESCUE</code><td><code>true</code><td>tick periódico do resgate de ciclos de gate (<code>Engine.Gates.GateRescuer</code>, <a class="" href=/brabo/prd/business-rules#rn-140>RN-140</a>). Desligá-lo não muda o boot: o resgate roda uma vez lá de qualquer forma<tr><td><code>GATE_RESCUE_INTERVAL_SECONDS</code><td><code>300</code> (5 min)<td>um gate preso trava a PR inteira do usuário — intervalo bem menor que o de Anamnese/model sync, e cada tick custa só uma query quase sempre vazia<tr><td><code>GATE_RESCUE_STALE_AFTER_SECONDS</code><td><code>900</code> (15 min)<td>generoso de propósito: o ToolLoop de um subagente de QA pode rodar legitimamente até <code>TOOL_LOOP_MAX_ITERATIONS_GATE</code> (60) iterações, e um limiar curto resgataria — e duplicaria — um ciclo só lento</table>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=tráfego-interno-e-observabilidade>Tráfego interno e observabilidade<a href=#tráfego-interno-e-observabilidade class=hash-link aria-label="Link direto para Tráfego interno e observabilidade" title="Link direto para Tráfego interno e observabilidade" translate=no>​</a></h3>
 
 
 
@@ -740,6 +851,8 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
+<table><thead><tr><th>variable<th>default<th>note<tbody><tr><td><code>START_OUTBOX_DRAIN</code><td><code>true</code><td>—<tr><td><code>START_ANAMNESE</code><td><code>true</code><td>test/dev LOAD guard: prevents <code>kickoff/0</code> from even being called on boot, but doesn't decide anything about product — not to be confused with <code>ANAMNESE_ENABLED</code> (product: GLOBAL pause, survives any value of this one). Turning it off prevents <strong>new</strong> enqueues, <strong>it doesn't clear the queue</strong>. Accumulated jobs run on the next boot — the queue needs to be purged. See <a class="" href=/brabo/prd/runbook#ambiente-de-inferencia>inference environment</a><tr><td><code>START_MODEL_SYNC</code><td><code>true</code><td>periodic tick of the model catalog sync. Turning it off doesn't freeze anything: the "Update catalog" button on the settings screen calls the same use case (<a class="" href=/brabo/prd/business-rules/custo#rn-043>RN-043</a>)<tr><td><code>MODEL_SYNC_INTERVAL_SECONDS</code><td><code>21600</code> (6h)<td>a provider's catalog changes on a scale of days, and each round spends one API call per provider — hence the generous default<tr><td><code>START_GATE_RESCUE</code><td><code>true</code><td>periodic tick of the gate-cycle rescue (<code>Engine.Gates.GateRescuer</code>, <a class="" href=/brabo/prd/business-rules#rn-140>RN-140</a>). Turning it off doesn't change the boot: the rescue runs once there regardless<tr><td><code>GATE_RESCUE_INTERVAL_SECONDS</code><td><code>300</code> (5 min)<td>a stuck gate blocks the user's entire PR — a much shorter interval than Anamnese/model sync, and each tick costs only a query that's almost always empty<tr><td><code>GATE_RESCUE_STALE_AFTER_SECONDS</code><td><code>900</code> (15 min)<td>generous on purpose: a QA subagent's ToolLoop can legitimately run up to <code>TOOL_LOOP_MAX_ITERATIONS_GATE</code> (60) iterations, and a short threshold would rescue — and duplicate — a merely slow cycle</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=internal-traffic-and-observability>Internal traffic and observability<a href=#internal-traffic-and-observability class=hash-link aria-label="Direct link to Internal traffic and observability" title="Direct link to Internal traffic and observability" translate=no>​</a></h3>
 
 
 
@@ -749,15 +862,36 @@ variável ausente/curta, não uma divergência entre os dois lados.</p>
 
 
 
-<table><thead><tr><th>variável<th>default<tbody><tr><td><code>BRABO_SERVICE_TOKEN</code> 🔒<td><code>dev-service-token-change-me</code> — <strong>o mesmo valor da api</strong>. A checagem de BOOT (RN-114) roda do lado da api; o engine em si sobe com qualquer valor (inclusive vazio), mas nesse cenário a api já recusou subir primeiro<tr><td><code>BRABO_SERVICE_TOKEN_PREVIOUS</code> 🔒<td>— aceito só na verificação, durante a rotação<tr><td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code><td>— o exporter do Elixir fala <strong>HTTP/protobuf na 4318</strong>, não gRPC na 4317. Ausente desliga só a exportação (<code>traces_exporter: :none</code>), não a instrumentação — ver ADR 0035<tr><td><code>WEB_ORIGIN</code><td>— <strong>a mesma variável da api</strong>, e ela alimenta DUAS coisas aqui: o <code>check_origin</code> do socket Phoenix (o painel do time ao vivo) e o CORS HTTP das rotas de health, que o navegador precisa para ler <code>/health</code> (<a class="" href=/brabo/prd/adr/0037-cors-do-engine-e-a-porta-como-contrato>ADR 0037</a>). Ausente em produção fecha o CORS e mantém o <code>check_origin</code> no default estrito do Phoenix — o engine <strong>sobe</strong> de qualquer forma, diferente da api<tr><td><code>PROJECT_WORKSPACES_ROOT</code><td><code>/tmp/brabo-project-workspaces</code> — <strong>igual ao da api, no mesmo volume</strong></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>variable<th>default<tbody><tr><td><code>BRABO_SERVICE_TOKEN</code> 🔒<td><code>dev-service-token-change-me</code> — <strong>the same value as the api</strong>. The BOOT check (RN-114) runs on the api side; the engine itself boots with any value (including empty), but in that scenario the api has already refused to boot first<tr><td><code>BRABO_SERVICE_TOKEN_PREVIOUS</code> 🔒<td>— accepted only for verification, during rotation<tr><td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code><td>— the Elixir exporter speaks <strong>HTTP/protobuf on 4318</strong>, not gRPC on 4317. Missing turns off only the export (<code>traces_exporter: :none</code>), not instrumentation — see ADR 0035<tr><td><code>WEB_ORIGIN</code><td>— <strong>the same variable as the api</strong>, and it feeds TWO things here: the Phoenix socket's <code>check_origin</code> (the live team panel) and the HTTP CORS of the health routes, which the browser needs to read <code>/health</code> (<a class="" href=/brabo/prd/adr/0037-cors-do-engine-e-a-porta-como-contrato>ADR 0037</a>). Missing in production closes CORS and keeps <code>check_origin</code> at Phoenix's strict default — the engine <strong>still boots</strong> regardless, unlike the api<tr><td><code>PROJECT_WORKSPACES_ROOT</code><td><code>/tmp/brabo-project-workspaces</code> — <strong>same as the api's, on the same volume</strong></table>
 <blockquote>
-<p><code>SOME_APP_SSL_CERT_PATH</code>, <code>SOME_APP_SSL_KEY_PATH</code> e <code>MIX_TEST_PARTITION</code> são
-restos do scaffold do Phoenix e da configuração de teste. Não configure.</p>
+<p><code>SOME_APP_SSL_CERT_PATH</code>, <code>SOME_APP_SSL_KEY_PATH</code> and <code>MIX_TEST_PARTITION</code>
+are leftovers from the Phoenix scaffold and test configuration. Do not
+configure them.</p>
 </blockquote>
 <hr/>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=web>web<a href=#web class=hash-link aria-label="Link direto para web" title="Link direto para web" translate=no>​</a></h2>
-<p>A web é estática, servida por nginx. Ela lê a configuração de <strong>duas</strong> fontes,
-e a distinção importa:</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=web>web<a href=#web class=hash-link aria-label="Direct link to web" title="Direct link to web" translate=no>​</a></h2>
+<p>The web is static, served by nginx. It reads its configuration from <strong>two</strong>
+sources, and the distinction matters:</p>
 
 
 
@@ -778,9 +912,9 @@ e a distinção importa:</p>
 
 
 
-<table><thead><tr><th>fonte<th>quando<th>como<tbody><tr><td><code>import.meta.env.VITE_*</code><td><strong>build</strong><td>assado no bundle. Mudar exige rebuild<tr><td><code>window.__BRABO_CONFIG__</code><td><strong>runtime</strong><td>servido em <code>/config.js</code>, gerado pelo entrypoint do container</table>
-<p>É por isso que a mesma imagem serve todos os ambientes: o <code>/config.js</code> é
-reescrito no boot. As <code>VITE_*</code> são o fallback de desenvolvimento.</p>
+<table><thead><tr><th>source<th>when<th>how<tbody><tr><td><code>import.meta.env.VITE_*</code><td><strong>build</strong><td>baked into the bundle. Changing it requires a rebuild<tr><td><code>window.__BRABO_CONFIG__</code><td><strong>runtime</strong><td>served at <code>/config.js</code>, generated by the container's entrypoint</table>
+<p>That's why the same image serves every environment: <code>/config.js</code> is rewritten
+at boot. The <code>VITE_*</code> vars are the development fallback.</p>
 
 
 
@@ -806,25 +940,27 @@ reescrito no boot. As <code>VITE_*</code> são o fallback de desenvolvimento.</p
 
 
 
-<table><thead><tr><th>variável<th>serve para<tbody><tr><td><code>VITE_API_URL</code><td>endereço da api<tr><td><code>VITE_ENGINE_URL</code><td>endereço do engine (canal Phoenix)<tr><td><code>VITE_LOG_LEVEL</code><td>nível do logger JSON do browser (default <code>info</code>). Em cluster quem manda é a chave <code>WEB_LOG_LEVEL</code> do <code>brabo-config</code>, que o entrypoint escreve em <code>/config.js</code> — <code>VITE_*</code> só vale em build local<tr><td><code>VITE_BRABO_VERSION</code><td>versão mostrada no rodapé das telas de auth (default <code>dev</code>). <strong>A única que é build-time por escolha, não por limitação</strong> — ver abaixo</table>
-<p>Página em branco depois do deploy é quase sempre <code>/config.js</code> apontando para
-<code>localhost</code> — o smoke de deploy verifica exatamente isso.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=por-que-a-versão-não-passa-pelo-configjs>Por que a versão não passa pelo <code>/config.js</code><a href=#por-que-a-versão-não-passa-pelo-configjs class=hash-link aria-label="Link direto para por-que-a-versão-não-passa-pelo-configjs" title="Link direto para por-que-a-versão-não-passa-pelo-configjs" translate=no>​</a></h3>
-<p>As URLs são propriedade do <strong>ambiente</strong>: a mesma imagem precisa falar com a api
-de staging e com a de produção, e é para isso que o <code>/config.js</code> existe (ADR
-0024). A versão é propriedade do <strong>artefato</strong> — a imagem <code>brabo-web:1.1.2</code> não
-deve poder reportar outra coisa. Se ela viesse do <code>/config.js</code>, o rodapé passaria
-a ser um campo editável em vez de uma identidade, e um ConfigMap errado faria a
-tela mentir sobre qual build está no ar.</p>
-<p>O caminho completo, do commit à tela: <code>release.yml</code> calcula <code>versao=${TAG#v}</code> →
-passa como <code>VERSION</code> para o <code>docker buildx bake</code> → o alvo <code>web</code> do
-<code>docker-bake.hcl</code> converte em <code>VITE_BRABO_VERSION</code> → o <code>ARG</code>/<code>ENV</code> do
-<code>docker/web/Dockerfile.prod</code> o expõe ao <code>pnpm build</code> → o Vite inlina em
-<code>import.meta.env</code> → <code>runtime-config.ts</code> o lê → <code>AuthLayout</code> o mostra. O mesmo
-<code>VERSION</code> alimenta o <code>BRABO_VERSION</code> da imagem da api (ADR 0036).</p>
+<table><thead><tr><th>variable<th>serves for<tbody><tr><td><code>VITE_API_URL</code><td>api address<tr><td><code>VITE_ENGINE_URL</code><td>engine address (Phoenix channel)<tr><td><code>VITE_LOG_LEVEL</code><td>level of the browser's JSON logger (default <code>info</code>). In a cluster the <code>WEB_LOG_LEVEL</code> key of <code>brabo-config</code> is in charge, which the entrypoint writes to <code>/config.js</code> — <code>VITE_*</code> only counts in a local build<tr><td><code>VITE_BRABO_VERSION</code><td>version shown in the footer of the auth screens (default <code>dev</code>). <strong>The only one that's build-time by choice, not by limitation</strong> — see below</table>
+<p>A blank page after deploy is almost always <code>/config.js</code> pointing to
+<code>localhost</code> — the deploy smoke test checks exactly that.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=why-the-version-doesnt-go-through-configjs>Why the version doesn't go through <code>/config.js</code><a href=#why-the-version-doesnt-go-through-configjs class=hash-link aria-label="Direct link to why-the-version-doesnt-go-through-configjs" title="Direct link to why-the-version-doesnt-go-through-configjs" translate=no>​</a></h3>
+<p>URLs belong to the <strong>environment</strong>: the same image needs to talk to the
+staging api and to the production api, and that's what <code>/config.js</code> exists
+for (ADR 0024). The version belongs to the <strong>artifact</strong> — the image
+<code>brabo-web:1.1.2</code> shouldn't be able to report anything else. If it came from
+<code>/config.js</code>, the footer would become an editable field instead of an
+identity, and a wrong ConfigMap would make the screen lie about which build
+is running.</p>
+<p>The full path, from commit to screen: <code>release.yml</code> computes
+<code>versao=${TAG#v}</code> → passes it as <code>VERSION</code> to <code>docker buildx bake</code> → the
+<code>web</code> target of <code>docker-bake.hcl</code> converts it into <code>VITE_BRABO_VERSION</code> → the
+<code>ARG</code>/<code>ENV</code> of <code>docker/web/Dockerfile.prod</code> exposes it to <code>pnpm build</code> → Vite
+inlines it into <code>import.meta.env</code> → <code>runtime-config.ts</code> reads it →
+<code>AuthLayout</code> shows it. The same <code>VERSION</code> feeds the api image's
+<code>BRABO_VERSION</code> (ADR 0036).</p>
 <hr/>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=backup>Backup<a href=#backup class=hash-link aria-label="Link direto para Backup" title="Link direto para Backup" translate=no>​</a></h2>
-<p>Consumidas pelo CronJob, não pelos apps. Detalhes em
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=backup>Backup<a href=#backup class=hash-link aria-label="Direct link to Backup" title="Direct link to Backup" translate=no>​</a></h2>
+<p>Consumed by the CronJob, not by the apps. Details in
 <a class="" href=/brabo/prd/runbook#restore>Restore</a>.</p>
 
 
@@ -871,12 +1007,12 @@ passa como <code>VERSION</code> para o <code>docker buildx bake</code> → o alv
 
 
 
-<table><thead><tr><th>variável<th>default<th>nota<tbody><tr><td><code>BACKUP_S3_ENDPOINT</code> / <code>BACKUP_S3_BUCKET</code><td>—<td>destino S3-compatível<tr><td><code>AWS_ACCESS_KEY_ID</code> / <code>AWS_SECRET_ACCESS_KEY</code><td>—<td>credencial do bucket<tr><td><code>BACKUP_KEEP_DAILY</code><td><code>7</code><td>retenção por <strong>contagem</strong>, não por idade<tr><td><code>BACKUP_KEEP_WEEKLY</code><td><code>4</code><td>—<tr><td><code>RESTORE_DB</code><td>—<td>nome da database de destino do restore<tr><td><code>RESTORE_PREFIX</code><td><code>daily/</code><td><code>weekly/</code> para restaurar de uma cópia semanal<tr><td><code>RESTORE_ADMIN_URL</code><td>—<td>conexão com permissão de <code>CREATEDB</code>; em produção é separada da <code>DATABASE_URL</code></table>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=inferência-local-containers>Inferência local (containers)<a href=#inferência-local-containers class=hash-link aria-label="Link direto para Inferência local (containers)" title="Link direto para Inferência local (containers)" translate=no>​</a></h2>
-<p>Estas não são lidas pelo nosso código — são do container <code>ollama</code>, e estão
-aqui porque são a causa mais frequente de agente com comportamento estranho.
-A tabela de sintomas está em
-<a class="" href=/brabo/prd/runbook#ambiente-de-inferencia>ambiente de inferência</a>.</p>
+<table><thead><tr><th>variable<th>default<th>note<tbody><tr><td><code>BACKUP_S3_ENDPOINT</code> / <code>BACKUP_S3_BUCKET</code><td>—<td>S3-compatible destination<tr><td><code>AWS_ACCESS_KEY_ID</code> / <code>AWS_SECRET_ACCESS_KEY</code><td>—<td>bucket credential<tr><td><code>BACKUP_KEEP_DAILY</code><td><code>7</code><td>retention by <strong>count</strong>, not by age<tr><td><code>BACKUP_KEEP_WEEKLY</code><td><code>4</code><td>—<tr><td><code>RESTORE_DB</code><td>—<td>name of the restore's destination database<tr><td><code>RESTORE_PREFIX</code><td><code>daily/</code><td><code>weekly/</code> to restore from a weekly copy<tr><td><code>RESTORE_ADMIN_URL</code><td>—<td>connection with <code>CREATEDB</code> permission; in production it's separate from <code>DATABASE_URL</code></table>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=local-inference-containers>Local inference (containers)<a href=#local-inference-containers class=hash-link aria-label="Direct link to Local inference (containers)" title="Direct link to Local inference (containers)" translate=no>​</a></h2>
+<p>These are not read by our code — they belong to the <code>ollama</code> container, and
+they're here because they're the most frequent cause of an agent behaving
+strangely. The symptom table is in
+<a class="" href=/brabo/prd/runbook#ambiente-de-inferencia>inference environment</a>.</p>
 
 
 
@@ -902,13 +1038,13 @@ A tabela de sintomas está em
 
 
 
-<table><thead><tr><th>variável<th>por quê<tbody><tr><td><code>OLLAMA_CONTEXT_LENGTH</code><td>o default de 4096 trunca <strong>em silêncio</strong> um prompt montado para 128k<tr><td><code>OLLAMA_MAX_LOADED_MODELS</code><td>com <code>OLLAMA_KEEP_ALIVE</code> alto, os modelos acumulam até estourar a memória<tr><td><code>OLLAMA_KEEP_ALIVE</code><td>quanto tempo o modelo fica residente<tr><td><code>DEMO_QA_MODEL</code><td>aponta o gate de QA para um modelo de API — o binding por agente vence o do projeto</table>
+<table><thead><tr><th>variable<th>why<tbody><tr><td><code>OLLAMA_CONTEXT_LENGTH</code><td>the default of 4096 <strong>silently</strong> truncates a prompt built for 128k<tr><td><code>OLLAMA_MAX_LOADED_MODELS</code><td>with a high <code>OLLAMA_KEEP_ALIVE</code>, models pile up until memory overflows<tr><td><code>OLLAMA_KEEP_ALIVE</code><td>how long the model stays resident<tr><td><code>DEMO_QA_MODEL</code><td>points the QA gate to an API model — the per-agent binding wins over the project's</table>
 <hr/>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=observabilidade-local-containers>Observabilidade local (containers)<a href=#observabilidade-local-containers class=hash-link aria-label="Link direto para Observabilidade local (containers)" title="Link direto para Observabilidade local (containers)" translate=no>​</a></h2>
-<p>Também não são lidas pelo nosso código: são as portas do overlay
-<code>docker/docker-compose.observability.yml</code>, que sobe Prometheus, Loki e Grafana
-ao lado do stack de desenvolvimento (<code>pnpm dev:obs</code>). O mecanismo está em
-<a class="" href=/brabo/prd/runbook#observabilidade-local>observabilidade local</a>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=local-observability-containers>Local observability (containers)<a href=#local-observability-containers class=hash-link aria-label="Direct link to Local observability (containers)" title="Direct link to Local observability (containers)" translate=no>​</a></h2>
+<p>Also not read by our code: these are the ports of the
+<code>docker/docker-compose.observability.yml</code> overlay, which brings up
+Prometheus, Loki and Grafana alongside the development stack (<code>pnpm dev:obs</code>).
+The mechanism is in <a class="" href=/brabo/prd/runbook#observabilidade-local>local observability</a>.</p>
 
 
 
@@ -934,25 +1070,120 @@ ao lado do stack de desenvolvimento (<code>pnpm dev:obs</code>). O mecanismo est
 
 
 
-<table><thead><tr><th>variável<th>default<th>por quê<tbody><tr><td><code>GRAFANA_PORT</code><td><code>3001</code><td>mesma porta que o Grafana do cluster usa; os dois <strong>não coexistem</strong>, pela mesma razão que <code>pnpm dev</code> e <code>make deploy-local</code> não coexistem<tr><td><code>PROMETHEUS_PORT</code><td><code>9090</code><td>a porta que o runbook já usa no <code>kubectl port-forward</code> do cluster<tr><td><code>LOKI_PORT</code><td><code>3100</code><td>só para consultar direto; o caminho normal é pelo Grafana</table>
-<p>O overlay <strong>não</strong> define <code>OTEL_EXPORTER_OTLP_ENDPOINT</code>: sem Collector no meio,
-apontar as apps para um endereço que não existe só produz erro de exportação a
-cada turno (<a class="" href=/brabo/prd/adr/0035-observabilidade-legivel-e-trace-sem-coletor>ADR 0035</a>
-separou instrumentar de exportar exatamente por isso). Métrica e log funcionam
-sem ele; trace continua sendo o cluster.</p>
+<table><thead><tr><th>variable<th>default<th>why<tbody><tr><td><code>GRAFANA_PORT</code><td><code>3001</code><td>same port the cluster's Grafana uses; the two <strong>don't coexist</strong>, for the same reason <code>pnpm dev</code> and <code>make deploy-local</code> don't coexist<tr><td><code>PROMETHEUS_PORT</code><td><code>9090</code><td>the port the runbook already uses in the cluster's <code>kubectl port-forward</code><tr><td><code>LOKI_PORT</code><td><code>3100</code><td>only for querying directly; the normal path is through Grafana</table>
+<p>The overlay does <strong>not</strong> define <code>OTEL_EXPORTER_OTLP_ENDPOINT</code>: without a
+Collector in between, pointing the apps at an address that doesn't exist just
+produces an export error on every turn
+(<a class="" href=/brabo/prd/adr/0035-observabilidade-legivel-e-trace-sem-coletor>ADR 0035</a>
+separated instrumenting from exporting exactly for this reason). Metrics and
+logs work without it; traces still require the cluster.</p>
 <hr/>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=inventário-completo>Inventário completo<a href=#inventário-completo class=hash-link aria-label="Link direto para Inventário completo" title="Link direto para Inventário completo" translate=no>​</a></h2>
-<p>As tabelas acima explicam <strong>o que cada variável faz</strong>. Esta seção é o
-<strong>inventário</strong>: extraído do código a cada <code>pnpm docs:generate</code>, ele existe para
-que uma variável nova não fique documentada em lugar nenhum sem ninguém notar.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=container-broker>Container broker<a href=#container-broker class=hash-link aria-label="Direct link to Container broker" title="Direct link to Container broker" translate=no>​</a></h2>
+<p>The broker (<a class="" href=/brabo/prd/adr/0130-broker-de-container>ADR 0130</a>) is the only process
+in the product that talks to a Docker daemon on the server, and the only service
+with <code>/var/run/docker.sock</code> mounted. It ships under
+<code>profiles: ["container-broker"]</code> in both compose files, so <strong>it does not come up
+by default</strong> — giving every development machine access to the host's Docker in
+exchange for nothing would be a posture change with no counterpart. Bring it up
+with:</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token function" style="color:rgb(80, 250, 123)">docker</span><span class="token plain"> compose </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">-f</span><span class="token plain"> docker/docker-compose.yml --env-file .env </span><span class="token punctuation" style="color:rgb(248, 248, 242)">\</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">--profile</span><span class="token plain"> container-broker up </span><span class="token parameter variable" style="color:rgb(189, 147, 249);font-style:italic">-d</span><span class="token plain"> broker</span><br/></div></code></pre></div></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>variable<th>default<th>when it fails<tbody><tr><td><code>BROKER_URL</code><td>empty (read by the <strong>api</strong>)<td>Empty is a NORMAL state: whoever reads a container's observed state then says "not observed" instead of inheriting the recorded one (<a class="" href=/brabo/prd/business-rules#rn-486>RN-486</a>). Point it at <code>http://broker:8090</code> when the profile is on<tr><td><code>BROKER_PORT</code><td><code>8090</code><td>Port the broker listens on. It publishes NOTHING to the host — only the api reaches it, through the <code>internal: true</code> compose network<tr><td><code>BRABO_SERVICE_TOKEN</code> 🔒<td><code>dev-service-token-change-me</code> in development<td>The SAME secret as api ↔ engine, in the same header. With <code>NODE_ENV=production</code> the broker refuses to boot when it is empty, when it is the repository's public literal, or under 16 characters — the RN-114 rule, which here guards a process that talks to the host's Docker<tr><td><code>API_URL</code><td><code>http://api:3000</code><td>Where the broker READS the Architect's decision. It does not receive a container spec; it comes and gets one (<a class="" href=/brabo/prd/business-rules#rn-485>RN-485</a>)<tr><td><code>PROJECT_WORKSPACES_HOST_ROOT</code><td>—<td>The project folders' root <strong>on the HOST</strong>, not inside any container. Without it, <code>start</code> refuses naming this variable and the other four operations keep working. Do not confuse it with <code>PROJECT_WORKSPACES_ROOT</code>, which is the path inside the containers: <code>-v</code> is resolved by the DAEMON against the host filesystem, and a path from inside the api would make it create and mount an EMPTY folder<tr><td><code>DOCKER_GID</code><td><code>999</code> (compose)<td>The gid of the host's <code>docker</code> group (<code>getent group docker | cut -d: -f3</code>). The socket is <code>root:docker</code> and the broker runs non-root, so compose uses <code>group_add</code>. The default is the most common one and is wrong on several distributions — getting it wrong produces "permission denied" on the socket, which <code>DockerIndisponivelError</code> names with the group hint</table>
+<p><code>PROJECT_WORKSPACES_HOST_ROOT</code> has no default and cannot be derived from a
+managed Docker volume — pair it with <code>PROJECT_WORKSPACES_HOST_DIR</code> (above) and
+repeat the same path here, ALREADY EXPANDED (<code>~</code> is not expanded by Compose).</p>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=dev-container-user-build-time>Dev container user (build-time)<a href=#dev-container-user-build-time class=hash-link aria-label="Direct link to Dev container user (build-time)" title="Direct link to Dev container user (build-time)" translate=no>​</a></h2>
+<p>Not read by our code either, and not even a <em>runtime</em> environment variable:
+these are Docker <code>build.args</code> for the three dev images (<code>docker/api/Dockerfile</code>,
+<code>docker/web/Dockerfile</code>, <code>docker/engine/Dockerfile</code>), consulted once at
+<code>docker compose build</code> and baked into the <code>USER</code> each container runs as. They
+exist so the containers run with the <strong>same UID/GID as your host user</strong>
+instead of root — everything written to a bind mount (<code>apps/api/dist</code>, a
+project workspace in <code>mounted</code> execution mode) is then already yours, no
+<code>sudo chown</code> needed afterward.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>variable<th>default<th>why<tbody><tr><td><code>DEV_UID</code><td><code>1000</code><td>your <code>id -u</code>. NOT read from the shell's <code>${UID}</code> — it's read-only in bash and isn't exported to the environment by default, so the compose file would always see it empty<tr><td><code>DEV_GID</code><td><code>1000</code><td>your <code>id -g</code>, same reasoning</table>
+<p><code>1000</code>/<code>1000</code> matches both the most common single-developer Linux setup and
+the <code>node</code> user that <code>node:24-alpine</code> (the <code>api</code>/<code>web</code> base image) already
+ships — when your pair matches, the Dockerfiles reuse that built-in user
+instead of creating a new one. An environment that already has containers
+running as root from before this change needs a one-time <code>chown</code> of the
+<code>node_modules</code>/<code>_build</code>/<code>deps</code>/<code>.mix</code>/<code>.hex</code> named volumes (or
+<code>docker compose down -v</code> to let them be recreated) — see the note in
+<a class="" href=/brabo/prd/getting-started>Getting started</a>.</p>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=full-inventory>Full inventory<a href=#full-inventory class=hash-link aria-label="Direct link to Full inventory" title="Direct link to Full inventory" translate=no>​</a></h2>
+<p>The tables above explain <strong>what each variable does</strong>. This section is the
+<strong>inventory</strong>: extracted from the code on every <code>pnpm docs:generate</code>, it
+exists so that a new variable doesn't go undocumented anywhere without
+anyone noticing.</p>
 <!-- -->
 <blockquote>
-<p>⚠️ Bloco gerado por <code>pnpm docs:generate</code>. Não edite à mão — o próximo build sobrescreve.</p>
+<p>⚠️ Block generated by <code>pnpm docs:generate</code>. Do not edit by hand — the next build overwrites it.</p>
 </blockquote>
-<p>Inventário extraído do código: <strong>104 variáveis</strong> lidas em tempo de execução. Todas têm descrição nas tabelas acima.</p>
-<p><strong>api</strong> — 42 variáveis</p>
+<p>Inventory extracted from the code: <strong>129 variables</strong> read at runtime. <strong>2</strong> still have no description in the tables above.</p>
+<p><strong>api</strong> — 57 variables</p>
 <ul>
-<li class=""><code>API_PUBLIC_URL</code> <sub>(apps/api/src/application/use-cases/git/start-git-oauth.use-case.ts)</sub></li>
+<li class=""><code>API_PUBLIC_URL</code> <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub></li>
 <li class=""><code>AUTH_ACCESS_TOKEN_TTL_MS</code> <sub>(apps/api/src/infrastructure/security/ed25519-access-token-issuer.ts)</sub></li>
 <li class=""><code>AUTH_EMAIL_TOKEN_TTL_MS</code> <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub></li>
 <li class=""><code>AUTH_IP_ATTEMPT_THRESHOLD</code> <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub></li>
@@ -973,29 +1204,44 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 <li class=""><code>BRABO_SEED_PASSWORD</code> <sub>(apps/api/src/db/seed.ts)</sub></li>
 <li class=""><code>BRABO_SERVICE_TOKEN</code> <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub></li>
 <li class=""><code>BRABO_SERVICE_TOKEN_PREVIOUS</code> <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub></li>
+<li class=""><code>BROKER_URL</code> <sub>(apps/api/src/infrastructure/http-clients/container-broker.client.ts)</sub></li>
 <li class=""><code>CREDENTIALS_MASTER_KEY</code> <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub></li>
 <li class=""><code>CREDENTIALS_MASTER_KEY_PREVIOUS</code> <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub></li>
 <li class=""><code>DATABASE_URL</code> <sub>(apps/api/src/db/migrate.ts)</sub></li>
-<li class=""><code>ENGINE_URL</code> <sub>(apps/api/src/infrastructure/http-clients/api-to-engine-client.ts)</sub></li>
+<li class=""><code>ENGINE_PUBLIC_URL</code> <sub>(apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts)</sub></li>
+<li class=""><code>ENGINE_URL</code> <sub>(apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts)</sub></li>
 <li class=""><code>GIT_LOCAL_REPOS_ROOT</code> <sub>(apps/api/src/infrastructure/git/local-git-provider.ts)</sub></li>
 <li class=""><code>GIT_OAUTH_STATE_SECRET</code> <sub>(apps/api/src/infrastructure/security/oauth-state-secret.ts)</sub></li>
 <li class=""><code>GITHUB_OAUTH_CLIENT_ID</code> <sub>(apps/api/src/infrastructure/git/github-oauth-client.ts)</sub></li>
 <li class=""><code>GITHUB_OAUTH_CLIENT_SECRET</code> <sub>(apps/api/src/infrastructure/git/github-oauth-client.ts)</sub></li>
 <li class=""><code>GITLAB_OAUTH_CLIENT_ID</code> <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub></li>
 <li class=""><code>GITLAB_OAUTH_CLIENT_SECRET</code> <sub>(apps/api/src/infrastructure/git/gitlab-oauth-client.ts)</sub></li>
+<li class=""><code>GRAPH_PROJECTOR_INTERVAL_MS</code> <sub>(apps/api/src/application/graph-projection/graph-projector.ts)</sub></li>
+<li class=""><code>HUGGINGFACE_API_TOKEN</code> — ⚠️ <strong>no description above</strong> <sub>(apps/api/src/infrastructure/huggingface/huggingface-client.ts)</sub></li>
+<li class=""><code>HUGGINGFACE_HUB_URL</code> — ⚠️ <strong>no description above</strong> <sub>(apps/api/src/infrastructure/huggingface/huggingface-client.ts)</sub></li>
 <li class=""><code>LOG_LEVEL</code> <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub></li>
+<li class=""><code>MAIL_TRANSPORT</code> <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub></li>
 <li class=""><code>METRICS_GAUGE_INTERVAL_MS</code> <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub></li>
 <li class=""><code>MIGRATIONS_FOLDER</code> <sub>(apps/api/src/db/migrate.ts)</sub></li>
-<li class=""><code>NODE_ENV</code> <sub>(apps/api/src/infrastructure/observability/logger.config.ts)</sub></li>
+<li class=""><code>NEO4J_PASSWORD</code> <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub></li>
+<li class=""><code>NEO4J_URI</code> <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub></li>
+<li class=""><code>NEO4J_USER</code> <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub></li>
+<li class=""><code>NODE_ENV</code> <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub></li>
 <li class=""><code>OLLAMA_HOST</code> <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub></li>
 <li class=""><code>PROJECT_WORKSPACES_ROOT</code> <sub>(apps/api/src/infrastructure/filesystem/project-workspaces-root.ts)</sub></li>
 <li class=""><code>RATE_LIMIT_ENABLED</code> <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub></li>
 <li class=""><code>RATE_LIMIT_IP</code> <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub></li>
 <li class=""><code>RATE_LIMIT_USER</code> <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub></li>
 <li class=""><code>RATE_LIMIT_WINDOW_MS</code> <sub>(apps/api/src/infrastructure/observability/domain-gauges.collector.ts)</sub></li>
-<li class=""><code>WEB_ORIGIN</code> <sub>(apps/api/src/infrastructure/security/cors-origins.ts)</sub></li>
+<li class=""><code>SMTP_FROM</code> <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub></li>
+<li class=""><code>SMTP_HOST</code> <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub></li>
+<li class=""><code>SMTP_PASSWORD</code> <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub></li>
+<li class=""><code>SMTP_PORT</code> <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub></li>
+<li class=""><code>SMTP_SECURE</code> <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub></li>
+<li class=""><code>SMTP_USER</code> <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub></li>
+<li class=""><code>WEB_ORIGIN</code> <sub>(apps/api/src/infrastructure/mail/smtp-mail-sender.ts)</sub></li>
 </ul>
-<p><strong>engine</strong> — 58 variáveis</p>
+<p><strong>engine</strong> — 62 variables</p>
 <ul>
 <li class=""><code>ANAMNESE_BUDGET_MICROS</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>ANAMNESE_ENABLED</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
@@ -1015,6 +1261,8 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 <li class=""><code>ECTO_IPV6</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>GATE_RESCUE_INTERVAL_SECONDS</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>GATE_RESCUE_STALE_AFTER_SECONDS</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
+<li class=""><code>GRAPH_INSTRUCTION_TEMPLATES_ENABLED</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
+<li class=""><code>GRAPH_TEMPLATES_ENABLED</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>LLM_TURN_TIMEOUT_MS</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>MIX_TEST_PARTITION</code> <sub>(apps/engine/config/test.exs)</sub></li>
 <li class=""><code>MODEL_SYNC_INTERVAL_SECONDS</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
@@ -1035,6 +1283,7 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 <li class=""><code>PSYCHOLOGIST_MAX_PAYLOAD_CHARS</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>PSYCHOLOGIST_MAX_PROMPT_EVENTS_PESADA</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
+<li class=""><code>PSYCHOLOGIST_RAG_TOP_K</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>PSYCHOLOGIST_TRIAGE_THRESHOLD</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>READ_FILE_MAX_BYTES</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>SEARCH_WORKSPACE_MAX_BYTES</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
@@ -1054,21 +1303,31 @@ que uma variável nova não fique documentada em lugar nenhum sem ninguém notar
 <li class=""><code>TOOL_LOOP_MAX_ITERATIONS</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>TOOL_LOOP_MAX_ITERATIONS_EXECUCAO</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>TOOL_LOOP_MAX_ITERATIONS_GATE</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
+<li class=""><code>TRANSPORT_MAX_BODY_BYTES</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 <li class=""><code>WEB_ORIGIN</code> <sub>(apps/engine/config/runtime.exs)</sub></li>
 </ul>
-<p><strong>web</strong> — 4 variáveis</p>
+<p><strong>web</strong> — 4 variables</p>
 <ul>
 <li class=""><code>VITE_API_URL</code> <sub>(apps/web/src/lib/runtime-config.ts)</sub></li>
 <li class=""><code>VITE_BRABO_VERSION</code> <sub>(apps/web/src/lib/runtime-config.ts)</sub></li>
 <li class=""><code>VITE_ENGINE_URL</code> <sub>(apps/web/src/lib/runtime-config.ts)</sub></li>
 <li class=""><code>VITE_LOG_LEVEL</code> <sub>(apps/web/src/lib/runtime-config.ts)</sub></li>
 </ul>
+<p><strong>broker</strong> — 6 variables</p>
+<ul>
+<li class=""><code>API_URL</code> <sub>(apps/broker/src/config.ts)</sub></li>
+<li class=""><code>BRABO_SERVICE_TOKEN</code> <sub>(apps/broker/src/config.ts)</sub></li>
+<li class=""><code>BRABO_SERVICE_TOKEN_PREVIOUS</code> <sub>(apps/broker/src/config.ts)</sub></li>
+<li class=""><code>BROKER_PORT</code> <sub>(apps/broker/src/config.ts)</sub></li>
+<li class=""><code>NODE_ENV</code> <sub>(apps/broker/src/config.ts)</sub></li>
+<li class=""><code>PROJECT_WORKSPACES_HOST_ROOT</code> <sub>(apps/broker/src/config.ts)</sub></li>
+</ul>
 <!-- -->
 <hr/>
 <blockquote>
-<p><strong>TODO(humano):</strong> não há validação de schema das variáveis no boot (tipo
-<code>zod</code>/<code>envalid</code> na api ou <code>NimbleOptions</code> no engine). Hoje um valor numérico
-inválido vira <code>NaN</code> silenciosamente e um typo em nome de variável cai no
-default sem aviso. As únicas exceções são as marcadas 🔒, que falham
-explicitamente em produção.</p>
-</blockquote></div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_M5Wn"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/configuration.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_eJZs aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_y3Pe"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-08-14T00:39:50.000Z itemprop=dateModified>14 de ago. de 2026</time></b> por <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/prd/business-rules><div class=pagination-nav__sublabel>Anterior</div><div class=pagination-nav__label>Regras de negócio</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/prd/reference/events><div class=pagination-nav__sublabel>Próxima</div><div class=pagination-nav__label>Eventos</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_P_6G thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#api class="table-of-contents__link toc-highlight">api</a><ul><li><a href=#essenciais class="table-of-contents__link toc-highlight">Essenciais</a><li><a href=#segurança- class="table-of-contents__link toc-highlight">Segurança 🔒</a><li><a href=#auth-first-party class="table-of-contents__link toc-highlight">Auth first-party</a><li><a href=#seed-de-desenvolvimento class="table-of-contents__link toc-highlight">Seed de desenvolvimento</a><li><a href=#rate-limit class="table-of-contents__link toc-highlight">Rate limit</a><li><a href=#tráfego-interno- class="table-of-contents__link toc-highlight">Tráfego interno 🔒</a><li><a href=#git class="table-of-contents__link toc-highlight">Git</a><li><a href=#llm class="table-of-contents__link toc-highlight">LLM</a><li><a href=#observabilidade class="table-of-contents__link toc-highlight">Observabilidade</a></ul><li><a href=#engine class="table-of-contents__link toc-highlight">engine</a><ul><li><a href=#essenciais-1 class="table-of-contents__link toc-highlight">Essenciais</a><li><a href=#cluster-e-shutdown class="table-of-contents__link toc-highlight">Cluster e shutdown</a><li><a href=#harness class="table-of-contents__link toc-highlight">Harness</a><li><a href=#psicólogo class="table-of-contents__link toc-highlight">Psicólogo</a><li><a href=#anamnese class="table-of-contents__link toc-highlight">Anamnese</a><li><a href=#guards-de-carga class="table-of-contents__link toc-highlight">Guards de carga</a><li><a href=#tráfego-interno-e-observabilidade class="table-of-contents__link toc-highlight">Tráfego interno e observabilidade</a></ul><li><a href=#web class="table-of-contents__link toc-highlight">web</a><ul><li><a href=#por-que-a-versão-não-passa-pelo-configjs class="table-of-contents__link toc-highlight">Por que a versão não passa pelo <code>/config.js</code></a></ul><li><a href=#backup class="table-of-contents__link toc-highlight">Backup</a><li><a href=#inferência-local-containers class="table-of-contents__link toc-highlight">Inferência local (containers)</a><li><a href=#observabilidade-local-containers class="table-of-contents__link toc-highlight">Observabilidade local (containers)</a><li><a href=#inventário-completo class="table-of-contents__link toc-highlight">Inventário completo</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/prd/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
+<p><strong>TODO(humano):</strong> there is no schema validation of the variables at boot
+(something like <code>zod</code>/<code>envalid</code> in the api or <code>NimbleOptions</code> in the
+engine). Today an invalid numeric value silently becomes <code>NaN</code> and a typo
+in a variable name falls back to the default without warning. The only
+exceptions are the ones marked 🔒, which fail explicitly in production.</p>
+</blockquote></div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/configuration.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Last updated<!-- --> on <b><time datetime=2026-09-02T19:42:35.000Z itemprop=dateModified>Sep 2, 2026</time></b> by <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/prd/business-rules/autenticacao><div class=pagination-nav__sublabel>Previous</div><div class=pagination-nav__label>Autenticação</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/prd/reference/events><div class=pagination-nav__sublabel>Next</div><div class=pagination-nav__label>Events</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#api class="table-of-contents__link toc-highlight">api</a><ul><li><a href=#essentials class="table-of-contents__link toc-highlight">Essentials</a><li><a href=#security- class="table-of-contents__link toc-highlight">Security 🔒</a><li><a href=#first-party-auth class="table-of-contents__link toc-highlight">First-party auth</a><li><a href=#real-smtp-mailsender class="table-of-contents__link toc-highlight">Real SMTP (MailSender)</a><li><a href=#development-seed class="table-of-contents__link toc-highlight">Development seed</a><li><a href=#rate-limit class="table-of-contents__link toc-highlight">Rate limit</a><li><a href=#internal-traffic- class="table-of-contents__link toc-highlight">Internal traffic 🔒</a><li><a href=#git class="table-of-contents__link toc-highlight">Git</a><li><a href=#llm class="table-of-contents__link toc-highlight">LLM</a><li><a href=#knowledge-graph-adr-0099 class="table-of-contents__link toc-highlight">Knowledge graph (ADR 0099)</a><li><a href=#observability class="table-of-contents__link toc-highlight">Observability</a></ul><li><a href=#engine class="table-of-contents__link toc-highlight">engine</a><ul><li><a href=#essentials-1 class="table-of-contents__link toc-highlight">Essentials</a><li><a href=#cluster-and-shutdown class="table-of-contents__link toc-highlight">Cluster and shutdown</a><li><a href=#harness class="table-of-contents__link toc-highlight">Harness</a><li><a href=#psychologist class="table-of-contents__link toc-highlight">Psychologist</a><li><a href=#anamnese class="table-of-contents__link toc-highlight">Anamnese</a><li><a href=#load-guards class="table-of-contents__link toc-highlight">Load guards</a><li><a href=#internal-traffic-and-observability class="table-of-contents__link toc-highlight">Internal traffic and observability</a></ul><li><a href=#web class="table-of-contents__link toc-highlight">web</a><ul><li><a href=#why-the-version-doesnt-go-through-configjs class="table-of-contents__link toc-highlight">Why the version doesn't go through <code>/config.js</code></a></ul><li><a href=#backup class="table-of-contents__link toc-highlight">Backup</a><li><a href=#local-inference-containers class="table-of-contents__link toc-highlight">Local inference (containers)</a><li><a href=#local-observability-containers class="table-of-contents__link toc-highlight">Local observability (containers)</a><li><a href=#container-broker class="table-of-contents__link toc-highlight">Container broker</a><li><a href=#dev-container-user-build-time class="table-of-contents__link toc-highlight">Dev container user (build-time)</a><li><a href=#full-inventory class="table-of-contents__link toc-highlight">Full inventory</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/prd/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>

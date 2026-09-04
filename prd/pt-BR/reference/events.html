@@ -1,0 +1,860 @@
+<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/events" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Events | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/prd/pt-BR/reference/events /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Events | Brabo"/><meta data-rh=true name=description content="The event types in the immutable log, the channel broadcasts, and the trace spans — three different things with similar names."/><meta data-rh=true property=og:description content="The event types in the immutable log, the channel broadcasts, and the trace spans — three different things with similar names."/><meta data-rh=true name=keywords content="events,event log,session_events,broadcast,span,outbox"/><link data-rh=true rel=icon href=/brabo/prd/pt-BR/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/prd/pt-BR/reference/events /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/reference/events hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/pt-BR/reference/events hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/reference/events hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/prd/pt-BR/reference/events","name":"Events","position":1}]}</script><link rel=stylesheet href=/brabo/prd/pt-BR/assets/css/styles.4b02629e.css /><script src=/brabo/prd/pt-BR/assets/js/runtime~main.2624966a.js defer></script><script src=/brabo/prd/pt-BR/assets/js/main.c11da5a0.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-e6a")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/prd/pt-BR/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/prd/pt-BR/><div class=navbar__logo><img src=/brabo/prd/pt-BR/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/prd/pt-BR/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/prd/pt-BR/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/prd/pt-BR/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/prd/pt-BR/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>prd</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Painel lateral de documentos" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/pt-BR/><span class=categoryLinkLabel_jKch>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/><span class=linkLabel_CzBh>Introdução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/getting-started><span class=linkLabel_CzBh>Primeiros passos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/pt-BR/architecture><span class=categoryLinkLabel_jKch>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/architecture><span class=linkLabel_CzBh>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/prd/pt-BR/adr><span class=categoryLinkLabel_jKch>Decisões (ADR)</span></a><button aria-label="Expandir a categoria 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/pt-BR/business-rules><span class=categoryLinkLabel_jKch>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/prd/pt-BR/reference/configuration><span class=categoryLinkLabel_jKch>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/prd/pt-BR/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/security-surface><span class=linkLabel_CzBh>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/prd/pt-BR/reference/api/brabo-api><span class=categoryLinkLabel_jKch>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/pt-BR/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/documentation-workflow><span class=linkLabel_CzBh>Sincronização de docs</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/branching-policy><span class=linkLabel_CzBh>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Cadeia de suprimentos do CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/observability><span class=linkLabel_CzBh>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/achados-execucao-real><span class=linkLabel_CzBh>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/backlog><span class=linkLabel_CzBh>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/validacao-fase-12><span class=linkLabel_CzBh>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/validacao-real><span class=linkLabel_CzBh>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/aceite-providers><span class=linkLabel_CzBh>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/gates><span class=linkLabel_CzBh>Os gates, e como eles são medidos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Auditoria: fluxo.yml × código (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/explanation/historico-de-fases><span class=linkLabel_CzBh>Histórico de fases</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/pt-BR/runbook><span class=categoryLinkLabel_jKch>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/runbook><span class=linkLabel_CzBh>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/pt-BR/glossary><span class=categoryLinkLabel_jKch>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/pt-BR/glossary><span class=linkLabel_CzBh>Glossário</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_JmCf"><div class=docItemContainer_GUvW><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=Trilha><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Página Inicial" class=breadcrumbs__link href=/brabo/prd/pt-BR/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Referência</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Events</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">Nesta página</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Events</h1></header>
+<p>Three name families coexist in Brabo, and they're easy to confuse because all
+of them use <code>subject.verb</code>:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>family<th>where it lives<th>durability<tbody><tr><td><strong>Domain event</strong><td>row in <code>session_events</code><td><strong>permanent and immutable</strong><tr><td><strong>Broadcast</strong><td>Phoenix channel → browser<td>ephemeral, not persisted<tr><td><strong>Span</strong><td>OpenTelemetry trace<td>Tempo retention (24 h locally)</table>
+<p>Only the first is a contract. The other two are transport and observation.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=domain-event>Domain event<a href=#domain-event class=hash-link aria-label="Link direto para Domain event" title="Link direto para Domain event" translate=no>​</a></h2>
+<p>A row in <code>session_events</code>, append-only, with a <code>seq</code> that's dense per session
+(<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-002 target=_blank rel="noopener noreferrer" class="">RN-002</a>). Columns:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>column<th>what<tbody><tr><td><code>id</code><td>uuid<tr><td><code>session_id</code><td>the owning session<tr><td><code>seq</code><td>order within the session, starting at 1, no gaps<tr><td><code>type</code><td>the identifier below<tr><td><code>actor</code><td>who caused it: <code>{kind, id}</code> — user, agent or system<tr><td><code>payload</code><td>jsonb, format specific to each type<tr><td><code>created_at</code><td>—</table>
+<blockquote>
+<p><strong><code>type</code> is a free-form <code>string</code> in the code</strong> — there's no TypeScript union
+or database enum listing the valid types. The list below was extracted from
+the emission points, which is why it can go stale without breaking
+anything. See the note at the end of this page.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=session>Session<a href=#session class=hash-link aria-label="Link direto para Session" title="Link direto para Session" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>session.created</code><td>session is born in <code>created</code><tr><td><code>session.activated</code><td>moved to <code>active</code><tr><td><code>session.draining</code><td>the node hosting it is draining<tr><td><code>session.closed</code><td>normal termination<tr><td><code>session.closed_abnormally</code><td>termination with a cause — <code>node_shutdown</code> is the most common</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=chat-and-agents>Chat and agents<a href=#chat-and-agents class=hash-link aria-label="Link direto para Chat and agents" title="Link direto para Chat and agents" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>chat.message</code><td>message in the session thread, from the user or the agent<tr><td><code>chat.structured_question</code><td>the Creative agent asked for SEVERAL answers at once, via a form — <code>ask_structured_questions</code> tool (RN-162). Each question carries <code>id</code>, <code>label</code>, <code>type</code>, <code>options</code> and <code>allowOther</code> — the latter is the <code>select</code>'s free-text output, and defaults to <code>true</code> when the model declares nothing (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/autenticacao#rn-171 target=_blank rel="noopener noreferrer" class="">RN-171</a>)<tr><td><code>chat.structured_question_answered</code><td>the user answered the form; the answers also come back as <code>chat.message</code> for the agent to read<tr><td><code>agent.activated</code><td>an agent took on work in the session<tr><td><code>agent.response</code><td>the agent's complete, consolidated response. <code>modelName</code> says WHICH model generated it, across the three producers (the five conversational agents, the <code>ToolLoop</code> of every execution/gate agent, and the api chat with no active agent) — <code>null</code> when the turn failed before resolving the binding, and absent in events recorded before the rule existed (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/autenticacao#rn-175 target=_blank rel="noopener noreferrer" class="">RN-175</a>)<tr><td><code>agent.error</code><td>agent failure, with <code>origem</code> (<code>infra</code>/<code>modelo</code>/<code>codigo</code>/<code>politica</code>) and the <code>mensagem</code> it states in the thread (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-059 target=_blank rel="noopener noreferrer" class="">RN-059</a>). Covers the whole turn as well as the failure of a SINGLE tool mid-loop, with <code>tool</code> and <code>retentativa</code> in the payload (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/autenticacao#rn-163 target=_blank rel="noopener noreferrer" class="">RN-163</a>)<tr><td><code>tool.result</code><td>result of a tool execution, recorded by the <code>Engine.Harness.Hooks.EventLog</code> hook<tr><td><code>handoff.offered</code><td>one agent offered the work to another<tr><td><code>handoff.accepted</code><td>the recipient accepted</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=proposed-actions>Proposed actions<a href=#proposed-actions class=hash-link aria-label="Link direto para Proposed actions" title="Link direto para Proposed actions" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>proposed_action.created</code><td>the action was born — before any execution. <code>payload.status</code> says how it was born (<code>pending</code>, <code>auto_approved</code> or <code>denied</code>), and that's what distinguishes a human decision from policy (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-049 target=_blank rel="noopener noreferrer" class="">RN-049</a>)<tr><td><code>proposed_action.approved</code><td>decided by the user — <code>actor</code> is <strong>whoever clicked</strong>. Auto-approval does NOT go through here: it shows up in <code>created</code> with <code>status: auto_approved</code> and an agent actor<tr><td><code>proposed_action.denied</code><td>denied — terminal state. <code>actor</code> is whoever refused it, and <code>payload.reason</code> is the reason<tr><td><code>proposed_action.executed</code><td>executed successfully<tr><td><code>action.failed</code><td>executed and failed<tr><td><code>permission.granted</code><td>grant recorded in the policy</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=backlog>Backlog<a href=#backlog class=hash-link aria-label="Link direto para Backlog" title="Link direto para Backlog" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>backlog.epic_created</code><td>—<tr><td><code>backlog.story_created</code><td>—<tr><td><code>backlog.story_transitioned</code><td>story state change. <code>actor</code> says who promoted it: <code>agent/po</code> in <code>auto</code> mode, <code>user</code> in <code>manual</code> mode (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-048 target=_blank rel="noopener noreferrer" class="">RN-048</a>)<tr><td><code>backlog.story_promotion_proposed</code><td>the PO finished a COMPLETE story in a project running <code>manual</code> mode: it stays <code>draft</code> awaiting the user's decision, and none of its tasks is claimable until then (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-048 target=_blank rel="noopener noreferrer" class="">RN-048</a>)<tr><td><code>backlog.story_promotion_returned</code><td>the user REFUSED to promote it and returned the story to the PO with a reason — which becomes a pinned message in its session, the same as a gate being returned to a dev (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-048 target=_blank rel="noopener noreferrer" class="">RN-048</a>)<tr><td><code>backlog.story_demoted</code><td>a module disappeared from <code>module_map</code>; the story went back to <code>draft</code> (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-012 target=_blank rel="noopener noreferrer" class="">RN-012</a>)<tr><td><code>backlog.story_overlap_warned</code><td>the story was created, but ALL the rules it cites were already covered by another one — a warning, not a block: the user is the one who judges whether it's overlap (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-081 target=_blank rel="noopener noreferrer" class="">RN-081</a>)<tr><td><code>backlog.story_modules_assigned</code><td>story ↔ module link<tr><td><code>backlog.task_created</code><td>—<tr><td><code>backlog.task_claimed</code><td>a dev agent claimed the task<tr><td><code>backlog.task_status_changed</code><td>—<tr><td><code>backlog.task_blocked</code><td>fix-attempt cap exhausted, or an impediment was recorded<tr><td><code>backlog.task_unblocked</code><td>—<tr><td><code>backlog.epic_without_story</code><td>the PO ended a turn having created an epic and NO story for it. An epic doesn't generate a task — a story does —, so this is the state that stalls execution with no visible error. An explicit outcome in the <a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-059 target=_blank rel="noopener noreferrer" class="">RN-059</a> pattern: a durable event with <code>origem</code>, <code>epicIds</code>/<code>epicTitles</code> and the message, plus the <code>agent.error</code> broadcast. Reported ONCE per occurrence, never in a loop (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/autenticacao#rn-165 target=_blank rel="noopener noreferrer" class="">RN-165</a>)</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=execution-and-gates>Execution and gates<a href=#execution-and-gates class=hash-link aria-label="Link direto para Execution and gates" title="Link direto para Execution and gates" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>execution.plan_proposed</code><td><strong>DISCONTINUED since ADR 0086</strong> (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-284 target=_blank rel="noopener noreferrer" class="">RN-284</a>) — older sessions may still have this type in the log; new sessions use a <code>proposed_action</code> of type <code>propose_execution_plan</code> (see <code>docs/reference/permissions.md</code>), because the Dev Lead's plan became a real decision, approved or refused in Approvals, no longer a plain event<tr><td><code>execution.activated</code><td>the execution phase began. <strong>Only enters on a <code>criativa</code> session</strong> — on a <code>consultiva</code> one the append responds 409 (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-097 target=_blank rel="noopener noreferrer" class="">RN-097</a>). It's still this event, not the <code>sessions.kind</code> column, that says whether a session IS executing<tr><td><code>execution.parallelization_suggested</code><td>the system proposed parallelizing<tr><td><code>execution.parallelization_accepted</code><td>accepted — the subagent inherits the base agent's cap<tr><td><code>dev.started</code><td>the dev agent began the cycle (activation, parallelization — NOT rehydration, which never re-fires)<tr><td><code>dev.working</code><td>claimed a task and set up the worktree<tr><td><code>dev.idle</code><td>the module's queue is empty — no task claimable right now<tr><td><code>dev.awaiting_approval</code><td>the git actions became pending approval (Phase 12e): <strong>the gate does NOT open</strong> — with no PR there's nothing to judge — and the worktree stays held until <code>task.pr_settled</code> (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-050 target=_blank rel="noopener noreferrer" class="">RN-050</a>)<tr><td><code>dev.awaiting_gate</code><td>PR open, waiting on the gate (Phase 12b) — <code>task_id</code>/<code>worktree</code> remain held<tr><td><code>dev.blocked</code><td>the task was returned with a diagnosis (iteration limit, budget exceeded, <code>report_blocked</code>, worktree/context failure)<tr><td><code>dev.idle_tripped</code><td>circuit breaker tripped (RN-047) — N consecutive blocked tasks stop the agent<tr><td><code>dev.rearmed</code><td>the user re-armed a stuck agent (Phase 12b) — <code>actor</code> is the USER who clicked, not the agent<tr><td><code>pr.gate_changed</code><td>the PR moved to a new gate (<code>awaiting_qa</code> → <code>awaiting_secops</code> → <code>awaiting_user</code>)<tr><td><code>infra.gate_changed</code><td>Infra's gate<tr><td><code>infra.artifact_blocked</code><td>Infra's artifact was rejected</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=delegation-phase-8b-adr-0038>Delegation (Phase 8b, ADR 0038)<a href=#delegation-phase-8b-adr-0038 class=hash-link aria-label="Link direto para Delegation (Phase 8b, ADR 0038)" title="Link direto para Delegation (Phase 8b, ADR 0038)" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>delegation.completed</code><td>the subspecialty finished; <code>payload.parecerArtifactId</code> references its INTERNAL <code>artifact.qa_verdict</code> — never the one that reaches the gate<tr><td><code>delegation.failed</code><td>the subspecialty didn't finish; <code>payload.failureOrigin</code> is the ORIGIN (<code>infra</code>|<code>modelo</code>|<code>codigo</code>|<code>politica</code>, never by elimination — ADR 0020)<tr><td><code>delegation.dispensed</code><td>the lead decided NOT to delegate; <code>payload.justification</code> explains why — dispensing is never silent</table>
+<p>All three are emitted by <code>QaLeadServer</code>, one per subspecialty, SEPARATE from
+the call to <code>record_gate_verdict</code> — the <code>pr.gate_changed</code> event above remains
+the only event that describes the gate itself; these describe the area
+behind it.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=tool-loop>Tool loop<a href=#tool-loop class=hash-link aria-label="Link direto para Tool loop" title="Link direto para Tool loop" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>toolloop.limit_reached</code><td>the loop hit its iteration cap. <code>payload</code> carries <code>iteration</code> and <code>max_iterations</code> — the cap is per agent TYPE (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-085 target=_blank rel="noopener noreferrer" class="">RN-085</a>)<tr><td><code>toolloop.budget_exceeded</code><td>that loop's token budget ran out before the work did; <code>payload</code> carries <code>tokens_spent_micros</code> and <code>token_budget_micros</code></table>
+<p>Emitted by <code>Engine.Harness.ToolLoop</code> and — since
+<a href=/brabo/prd/pt-BR/pt-BR/business-rules/autenticacao#rn-166 target=_blank rel="noopener noreferrer" class="">RN-166</a> — also by <code>PoServer</code>, which has its OWN
+loop and, until then, exhausted its cap <strong>silently</strong>. Same type and same
+payload on purpose: it's the same fact, and whoever reads the log shouldn't
+have to learn a second name just because the conversational agent doesn't use
+<code>ToolLoop</code>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=artifacts>Artifacts<a href=#artifacts class=hash-link aria-label="Link direto para Artifacts" title="Link direto para Artifacts" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>schema<tbody><tr><td><code>artifact.product_brief</code><td><code>title</code>, <code>summary</code>, <code>rules</code><tr><td><code>artifact.business_rule</code><td><code>title</code>, <code>description</code>, <code>origin</code><tr><td><code>artifact.module_map</code><td>the Architect's module map<tr><td><code>artifact.module_routing</code><td>the Architect's candidate image per module, one item per module of the current <code>module_map</code> — the Architect CANDIDATES, Infra ELECTS (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-487 target=_blank rel="noopener noreferrer" class="">RN-487</a>, <a class="" href=/brabo/prd/pt-BR/adr/0131-roteamento-de-modulos-para-infra>ADR 0131</a>)<tr><td><code>artifact.insight</code><td>—<tr><td><code>artifact.prototipo_navegavel</code><td><code>personas</code>, <code>jornadas</code>, <code>prototipo</code> (<code>telas</code>, <code>anotacoes</code>), <code>resumo</code> — the UX Designer's prototype (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-286 target=_blank rel="noopener noreferrer" class="">RN-286</a>, ADR 0087)<tr><td><code>artifact.rfc_staff</code><td>— (validated in <code>Engine.Agents.StaffTools</code>, not by <code>ArtifactSchemas</code> — same case as <code>artifact.insight</code>): <code>problema</code>, <code>opcoes</code> (list of <code>descricao</code>/<code>tradeoffs</code>), <code>recomendacao</code>, <code>poc</code> (<code>escopo</code>, <code>descartavel: true</code> fixed). The Staff's RFC (ADR 0088), returned to the Architect via handoff in the same tool call<tr><td><code>artifact.plano_de_teste</code><td><code>storyId</code>, <code>planoDeTeste</code>, <code>criteriosExecutaveis</code>, <code>estrategiaDeAutomacao</code> — the QA-strategy deliverable (ADR 0090), PRE-DEV<tr><td><code>artifact.threat_model</code><td><code>storyId</code>, <code>threatModel</code>, <code>requisitosDeSeguranca</code> — SecOps' "second moment" over a story's DESIGN (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-360 target=_blank rel="noopener noreferrer" class="">RN-360</a>, ADR 0090)</table>
+<p>The schemas are closed: a missing field rejects the emission
+(<code>Engine.Harness.ArtifactSchemas</code>).</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=architecture-and-readiness>Architecture and readiness<a href=#architecture-and-readiness class=hash-link aria-label="Link direto para Architecture and readiness" title="Link direto para Architecture and readiness" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>architecture.readiness_confirmed</code><td>—<tr><td><code>readiness.confirmed</code><td>—<tr><td><code>necessity.validated</code><td><code>necessidade-validada</code> gate (Creative → PO): the user confirms that the <code>product_brief</code> the Creative agent consolidated reflects the actual business need — a click separate from <code>readiness.confirmed</code>, never a model inference (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-406 target=_blank rel="noopener noreferrer" class="">RN-406</a>, ADR 0095). <code>payload.productBriefId</code> references the validated <code>artifact.product_brief</code></table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=git-and-bootstrap>Git and bootstrap<a href=#git-and-bootstrap class=hash-link aria-label="Link direto para Git and bootstrap" title="Link direto para Git and bootstrap" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>project.git_connected</code><td>git credential linked to the project<tr><td><code>project.repository_provisioned</code><td>repository <strong>created</strong> by Brabo<tr><td><code>project.repository_adopted</code><td>a repository that <strong>already existed</strong> became the project's (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-046 target=_blank rel="noopener noreferrer" class="">RN-046</a>)<tr><td><code>bootstrap.repository_adopted</code><td>the same fact in the dedicated session, with the <code>defaultBranch</code> observed from the provider<tr><td><code>bootstrap.step_started</code><td>one of the six Gitflow steps began<tr><td><code>bootstrap.step_completed</code><td>completed<tr><td><code>bootstrap.step_skipped</code><td>it was already done — <strong>that's a success</strong>, not an error (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-029 target=_blank rel="noopener noreferrer" class="">RN-029</a>)<tr><td><code>bootstrap.step_degraded</code><td>completed without one of the provider's capabilities (e.g. branch protection on Local)<tr><td><code>bootstrap.step_failed</code><td>failed; the bootstrap is resumable from this point<tr><td><code>bootstrap.plan_approved</code><td>the user approved the adoption plan — <strong>only from here does bootstrap run on an adopted repo</strong> (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-045 target=_blank rel="noopener noreferrer" class="">RN-045</a>)<tr><td><code>bootstrap.adopted_as_is</code><td>the user dismissed the bootstrap; no step ran, and the plan is kept as evidence of what wasn't applied</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=cost>Cost<a href=#cost class=hash-link aria-label="Link direto para Cost" title="Link direto para Cost" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>budget.threshold_crossed</code><td>70%, 90% or 100% — <strong>once per threshold</strong> (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-018 target=_blank rel="noopener noreferrer" class="">RN-018</a>)</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rag-telemetry-rn-479480481>RAG telemetry (RN-479/480/481)<a href=#rag-telemetry-rn-479480481 class=hash-link aria-label="Link direto para RAG telemetry (RN-479/480/481)" title="Link direto para RAG telemetry (RN-479/480/481)" translate=no>​</a></h3>
+<p>These two are <strong>narration, never the source of the measurement</strong>, and they only
+exist when there is a session — that is, on the agent path. A search coming from
+the RAG tab is a <em>project</em> search and has no session at all, and
+<code>session_events.session_id</code> is <code>NOT NULL</code>, so measuring from the event log would
+silently drop exactly the searches a human ran while looking at the scores. The
+source of the measurement is the <code>rag_searches</code>/<code>rag_feedback</code> pair of tables
+(read by <code>pnpm --filter api medir:rag</code>); the event only puts the same fact on the
+session timeline.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>rag.search</code><td>an agent ran a hybrid search inside a session — payload carries the <code>searchId</code> of the telemetry row, the query, <code>topK</code>, how many hits passed the threshold, whether the search was <code>degraded</code>, and the chunk ids (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-479 target=_blank rel="noopener noreferrer" class="">RN-479</a>, <a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-481 target=_blank rel="noopener noreferrer" class="">RN-481</a>)<tr><td><code>rag.feedback</code><td>an agent judged one retrieved chunk as <code>util</code>/<code>irrelevante</code> — payload carries <code>searchId</code>, <code>chunkId</code>, the verdict and the <strong>rank</strong> that chunk held in that search (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-480 target=_blank rel="noopener noreferrer" class="">RN-480</a>)</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=local-runner-adr-01030104>Local runner (ADR 0103/0104)<a href=#local-runner-adr-01030104 class=hash-link aria-label="Link direto para Local runner (ADR 0103/0104)" title="Link direto para Local runner (ADR 0103/0104)" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>project.workspace_verified</code><td><code>brabo-runner</code> connected and confirmed the path for a project with <code>execution_mode: runner</code> — the runner is the source of truth for the path, overwriting whatever was typed at creation (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-423 target=_blank rel="noopener noreferrer" class="">RN-423</a>)</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=psychologist>Psychologist<a href=#psychologist class=hash-link aria-label="Link direto para Psychologist" title="Link direto para Psychologist" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>psychologist.analysis_completed</code><td>—<tr><td><code>psychologist.analysis_failed</code><td>with a classified cause: <code>infra</code>, <code>modelo</code>, <code>código</code> or <code>política</code><tr><td><code>psychologist.analysis_skipped</code><td>the session had no ANALYZABLE event and the analysis didn't run — <code>payload.analisaveis</code> and <code>payload.eventCount</code> show the difference (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-079 target=_blank rel="noopener noreferrer" class="">RN-079</a>)<tr><td><code>psychologist.hypothesis_proposed</code><td>a hypothesis with valid <code>evidenceEventIds</code> (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-021 target=_blank rel="noopener noreferrer" class="">RN-021</a>)<tr><td><code>psychologist.hypothesis_accepted</code><td>—<tr><td><code>psychologist.hypothesis_dismissed</code><td>—<tr><td><code>psychologist.hypothesis_accepted_for_anamnese</code><td>accepted and forwarded — the link that closes the loop with the Anamnesis</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=anamnesis-and-instructions>Anamnesis and instructions<a href=#anamnesis-and-instructions class=hash-link aria-label="Link direto para Anamnesis and instructions" title="Link direto para Anamnesis and instructions" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>type<th>when<tbody><tr><td><code>anamnese.run_completed</code><td>—<tr><td><code>anamnese.run_failed</code><td>—<tr><td><code>anamnese.run_skipped</code><td>the round ended WITHOUT a profile, on purpose — <code>payload.motivo</code> says why (<a href=/brabo/prd/pt-BR/pt-BR/business-rules/custo#rn-063 target=_blank rel="noopener noreferrer" class="">RN-063</a>)<tr><td><code>anamnese.profile_updated</code><td>the <code>proficiency_profile</code> changed<tr><td><code>instruction.rolled_back</code><td>rollback of an instruction version — creates a new version, doesn't delete (<a href=/brabo/prd/pt-BR/pt-BR/business-rules#rn-027 target=_blank rel="noopener noreferrer" class="">RN-027</a>)</table>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=broadcast>Broadcast<a href=#broadcast class=hash-link aria-label="Link direto para Broadcast" title="Link direto para Broadcast" translate=no>​</a></h2>
+<p>Phoenix channel messages to the browser. They are <strong>not</strong> persisted: whoever
+reloads the page doesn't get them back — they get the event log back instead.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>broadcast<th>what<tbody><tr><td><code>agent.delta</code><td>chunk of text from the model's streaming<tr><td><code>agent.status</code><td>visible agent state change<tr><td><code>agent.done</code><td>turn ended<tr><td><code>agent.error</code><td>turn failed<tr><td><code>event.appended</code><td>a new event entered the log — the panel's refresh trigger</table>
+<p>A domain event almost always produces an <code>event.appended</code>; the reverse doesn't hold.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=who-can-listen-rn-108>Who can listen (RN-108)<a href=#who-can-listen-rn-108 class=hash-link aria-label="Link direto para Who can listen (RN-108)" title="Link direto para Who can listen (RN-108)" translate=no>​</a></h3>
+<p>Joining the <code>session:&lt;id></code> channel — and therefore receiving any of these
+broadcasts — requires a single-use opaque ticket issued by
+<code>POST /projects/:projectId/sessions/:sessionId/socket-ticket</code> (30s TTL).
+Before RN-108, the Phoenix socket's <code>connect/3</code> checked nothing beyond the
+<code>session_id</code> existing: anyone who discovered the UUID could join and listen
+to everything. The ticket isn't persisted/read in the event log — it lives in
+<code>session_socket_tickets</code>, verified and consumed by the engine itself — so it
+doesn't show up in the domain-event inventory below. See
+<a href=/brabo/prd/pt-BR/pt-BR/business-rules/autenticacao#rn-108 target=_blank rel="noopener noreferrer" class="">RN-108</a>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=span>Span<a href=#span class=hash-link aria-label="Link direto para Span" title="Link direto para Span" translate=no>​</a></h2>
+<p>OpenTelemetry span names. A session is a <strong>root trace</strong> spanning both the api
+and the engine (<a href=/brabo/prd/pt-BR/pt-BR/adr/0026-fase5-observabilidade-e-graceful-shutdown target=_blank rel="noopener noreferrer" class="">ADR 0026</a>).</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=domain-names>Domain names<a href=#domain-names class=hash-link aria-label="Link direto para Domain names" title="Link direto para Domain names" translate=no>​</a></h3>
+<p>Named by hand, one per operation that matters. These are the ones you look up in Tempo:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>span<th>where<tbody><tr><td><code>session.create</code><td>api — the root<tr><td><code>agent.turn</code><td>engine — one pass of the ToolLoop<tr><td><code>llm.turn</code><td>engine — the call to the model<tr><td><code>tool.call</code><td>engine — a tool execution<tr><td><code>gate.scanner</code><td>engine — a SecOps scanner, with the scanner name in an attribute<tr><td><code>outbox.session_lifecycle</code><td>engine — Oban job, attached to the session's trace<tr><td><code>outbox.psychologist</code><td>engine — same, the Psychologist's analysis</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=code-derived-names>Code-derived names<a href=#code-derived-names class=hash-link aria-label="Link direto para Code-derived names" title="Link direto para Code-derived names" translate=no>​</a></h3>
+<p>The api's <code>@Traced</code> decorator
+(<a href=/brabo/prd/pt-BR/pt-BR/adr/0035-observabilidade-legivel-e-trace-sem-coletor target=_blank rel="noopener noreferrer" class="">ADR 0035</a>) names
+the span as <strong><code>Class.method</code></strong> — for example <code>TransitionSessionUseCase.execute</code>,
+<code>DrizzleOutboxRepository.append</code>. They can't be enumerated here: they're born
+and die with the code, and the list would go stale the first time something
+gets renamed.</p>
+<p>The distinction matters when querying: a domain name is stable and can go
+into a saved query or a dashboard; a code-derived name can't.</p>
+<p>The attributes these spans carry — <code>brabo.layer</code>, <code>code.namespace</code>,
+<code>code.function</code> — are for searching in Tempo and <strong>are not a contract</strong>,
+unlike <code>trace_id</code>. They can be renamed without breaking anything outside Tempo.</p>
+<p>How to navigate from a session to a <code>tool.call</code> is documented in the
+<a href=/brabo/prd/pt-BR/pt-BR/runbook#observabilidade target=_blank rel="noopener noreferrer" class="">runbook</a>; the whole model is documented in
+<a href=/brabo/prd/pt-BR/pt-BR/explanation/observability target=_blank rel="noopener noreferrer" class="">observability</a>.</p>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=how-the-event-reaches-the-engine>How the event reaches the engine<a href=#how-the-event-reaches-the-engine class=hash-link aria-label="Link direto para How the event reaches the engine" title="Link direto para How the event reaches the engine" translate=no>​</a></h2>
+<p>Not through an external queue. The api writes the event and the intent to
+publish it <strong>in the same transaction</strong> (transactional outbox); Oban consumes
+straight from Postgres. That's what prevents "the event was written but the
+engine never knew."</p>
+<!-- -->
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=complete-inventory>Complete inventory<a href=#complete-inventory class=hash-link aria-label="Link direto para Complete inventory" title="Link direto para Complete inventory" translate=no>​</a></h2>
+<p>The sections above say <strong>when</strong> each event happens. This is the mechanical
+scan of the emission points, redone on every <code>pnpm docs:generate</code> — it's what
+makes a new identifier show up here even if nobody wrote about it.</p>
+<!-- -->
+<blockquote>
+<p>⚠️ Block generated by <code>pnpm docs:generate</code>. Do not edit by hand — the next build overwrites it.</p>
+</blockquote>
+<p>Extracted from the emission points: <strong>90 identifiers</strong>, of which <strong>2</strong> are not described above.</p>
+<ul>
+<li class=""><code>action.failed</code> <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub></li>
+<li class=""><code>agent.activated</code> <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub></li>
+<li class=""><code>agent.delta</code> <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub></li>
+<li class=""><code>agent.done</code> <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub></li>
+<li class=""><code>agent.error</code> <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub></li>
+<li class=""><code>agent.response</code> <sub>(apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts)</sub></li>
+<li class=""><code>agent.status</code> <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub></li>
+<li class=""><code>agent.turn</code> <sub>(apps/engine/lib/engine/harness/tool_loop.ex)</sub></li>
+<li class=""><code>anamnese.profile_updated</code> <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub></li>
+<li class=""><code>anamnese.run_completed</code> <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub></li>
+<li class=""><code>anamnese.run_failed</code> <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub></li>
+<li class=""><code>anamnese.run_skipped</code> <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub></li>
+<li class=""><code>architecture.module_map_created</code> — ⚠️ <strong>not described above</strong> <sub>(apps/engine/lib/engine/agents/dev_lead_server.ex)</sub></li>
+<li class=""><code>architecture.readiness_confirmed</code> <sub>(apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts)</sub></li>
+<li class=""><code>artifact.business_rule</code> <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub></li>
+<li class=""><code>artifact.insight</code> <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub></li>
+<li class=""><code>artifact.module_map</code> <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub></li>
+<li class=""><code>artifact.plano_de_teste</code> <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub></li>
+<li class=""><code>artifact.product_brief</code> <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub></li>
+<li class=""><code>artifact.prototipo_navegavel</code> <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub></li>
+<li class=""><code>artifact.rfc_staff</code> <sub>(apps/engine/lib/engine/agents/staff_tools.ex)</sub></li>
+<li class=""><code>backlog.epic_created</code> <sub>(apps/api/src/application/use-cases/backlog/create-epic.use-case.ts)</sub></li>
+<li class=""><code>backlog.epic_without_story</code> <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub></li>
+<li class=""><code>backlog.story_created</code> <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_demoted</code> <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_modules_assigned</code> <sub>(apps/api/src/application/use-cases/architecture/assign-story-modules.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_overlap_warned</code> <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_promotion_proposed</code> <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_promotion_returned</code> <sub>(apps/api/src/application/use-cases/backlog/return-story.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_transitioned</code> <sub>(apps/api/src/application/use-cases/backlog/transition-story.use-case.ts)</sub></li>
+<li class=""><code>backlog.task_blocked</code> <sub>(apps/api/src/application/use-cases/execution/mark-task-blocked.use-case.ts)</sub></li>
+<li class=""><code>backlog.task_claimed</code> <sub>(apps/api/src/application/use-cases/execution/claim-next-task.use-case.ts)</sub></li>
+<li class=""><code>backlog.task_created</code> <sub>(apps/api/src/application/use-cases/backlog/create-task.use-case.ts)</sub></li>
+<li class=""><code>backlog.task_status_changed</code> <sub>(apps/api/src/application/use-cases/execution/mark-task.use-case.ts)</sub></li>
+<li class=""><code>backlog.task_unblocked</code> <sub>(apps/api/src/application/use-cases/execution/unblock-task.use-case.ts)</sub></li>
+<li class=""><code>bootstrap.adopted_as_is</code> <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub></li>
+<li class=""><code>bootstrap.plan_approved</code> <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub></li>
+<li class=""><code>bootstrap.repository_adopted</code> <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub></li>
+<li class=""><code>bootstrap.step_acknowledged</code> — ⚠️ <strong>not described above</strong> <sub>(apps/api/src/application/use-cases/git/acknowledge-protection-failure.use-case.ts)</sub></li>
+<li class=""><code>bootstrap.step_completed</code> <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub></li>
+<li class=""><code>bootstrap.step_degraded</code> <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub></li>
+<li class=""><code>bootstrap.step_failed</code> <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub></li>
+<li class=""><code>bootstrap.step_skipped</code> <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub></li>
+<li class=""><code>bootstrap.step_started</code> <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub></li>
+<li class=""><code>budget.threshold_crossed</code> <sub>(apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts)</sub></li>
+<li class=""><code>chat.message</code> <sub>(apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts)</sub></li>
+<li class=""><code>chat.structured_question</code> <sub>(apps/engine/lib/engine/harness/tools/ask_structured_questions.ex)</sub></li>
+<li class=""><code>chat.structured_question_answered</code> <sub>(apps/api/src/application/use-cases/agents/answer-structured-question.use-case.ts)</sub></li>
+<li class=""><code>delegation.completed</code> <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub></li>
+<li class=""><code>delegation.dispensed</code> <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub></li>
+<li class=""><code>delegation.failed</code> <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub></li>
+<li class=""><code>event.appended</code> <sub>(apps/engine/lib/engine/sessions/live_broadcast.ex)</sub></li>
+<li class=""><code>execution.activated</code> <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub></li>
+<li class=""><code>execution.parallelization_accepted</code> <sub>(apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts)</sub></li>
+<li class=""><code>execution.parallelization_suggested</code> <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub></li>
+<li class=""><code>gate.scanner</code> <sub>(apps/engine/lib/engine/gates/scanner.ex)</sub></li>
+<li class=""><code>handoff.accepted</code> <sub>(apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts)</sub></li>
+<li class=""><code>handoff.offered</code> <sub>(apps/api/src/application/use-cases/agents/create-handoff.use-case.ts)</sub></li>
+<li class=""><code>infra.artifact_blocked</code> <sub>(apps/api/src/application/use-cases/execution/mark-infra-artifact-blocked.use-case.ts)</sub></li>
+<li class=""><code>infra.gate_changed</code> <sub>(apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts)</sub></li>
+<li class=""><code>instruction.rolled_back</code> <sub>(apps/api/src/application/use-cases/instructions/rollback-instruction.use-case.ts)</sub></li>
+<li class=""><code>llm.turn</code> <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub></li>
+<li class=""><code>necessity.validated</code> <sub>(apps/api/src/application/use-cases/agents/validate-necessity.use-case.ts)</sub></li>
+<li class=""><code>permission.granted</code> <sub>(apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts)</sub></li>
+<li class=""><code>pr.gate_changed</code> <sub>(apps/api/src/application/use-cases/execution/open-gate.use-case.ts)</sub></li>
+<li class=""><code>project.git_connected</code> <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub></li>
+<li class=""><code>project.repository_adopted</code> <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub></li>
+<li class=""><code>project.repository_provisioned</code> <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub></li>
+<li class=""><code>project.workspace_verified</code> <sub>(apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts)</sub></li>
+<li class=""><code>proposed_action.approved</code> <sub>(apps/api/src/application/use-cases/actions/approve-action.use-case.ts)</sub></li>
+<li class=""><code>proposed_action.created</code> <sub>(apps/api/src/application/use-cases/actions/propose-action.use-case.ts)</sub></li>
+<li class=""><code>proposed_action.denied</code> <sub>(apps/api/src/application/use-cases/actions/deny-action.use-case.ts)</sub></li>
+<li class=""><code>proposed_action.executed</code> <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub></li>
+<li class=""><code>psychologist.analysis_completed</code> <sub>(apps/api/src/application/use-cases/execution/propose-hypotheses.use-case.ts)</sub></li>
+<li class=""><code>psychologist.analysis_failed</code> <sub>(apps/engine/lib/engine/workers/psychologist_worker.ex)</sub></li>
+<li class=""><code>psychologist.analysis_skipped</code> <sub>(apps/engine/lib/engine/workers/psychologist_worker.ex)</sub></li>
+<li class=""><code>psychologist.hypothesis_accepted</code> <sub>(apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts)</sub></li>
+<li class=""><code>psychologist.hypothesis_accepted_for_anamnese</code> <sub>(apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts)</sub></li>
+<li class=""><code>psychologist.hypothesis_dismissed</code> <sub>(apps/api/src/application/use-cases/execution/dismiss-hypothesis.use-case.ts)</sub></li>
+<li class=""><code>psychologist.hypothesis_proposed</code> <sub>(apps/api/src/application/use-cases/execution/propose-hypotheses.use-case.ts)</sub></li>
+<li class=""><code>rag.feedback</code> <sub>(apps/api/src/application/use-cases/rag/record-rag-feedback.use-case.ts)</sub></li>
+<li class=""><code>rag.search</code> <sub>(apps/api/src/application/use-cases/rag/hybrid-search.use-case.ts)</sub></li>
+<li class=""><code>readiness.confirmed</code> <sub>(apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts)</sub></li>
+<li class=""><code>session.activated</code> <sub>(apps/api/src/db/seed.ts)</sub></li>
+<li class=""><code>session.closed</code> <sub>(apps/engine/lib/engine/outbox/drain.ex)</sub></li>
+<li class=""><code>session.closed_abnormally</code> <sub>(apps/engine/lib/engine/outbox/drain.ex)</sub></li>
+<li class=""><code>session.created</code> <sub>(apps/api/src/application/use-cases/sessions/create-session.use-case.ts)</sub></li>
+<li class=""><code>session.draining</code> <sub>(apps/engine/lib/engine/shutdown.ex)</sub></li>
+<li class=""><code>tool.call</code> <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub></li>
+<li class=""><code>tool.result</code> <sub>(apps/engine/lib/engine/agents/criativo_server.ex)</sub></li>
+</ul>
+<!-- -->
+<hr/>
+<blockquote>
+<p><strong>TODO(human):</strong> <code>type</code> is a free-form <code>string</code> in
+<code>application/ports/session-event-repository.port.ts</code> — nothing prevents a
+typo from silently creating a new type, and nothing guarantees this page
+covers all of them. A TypeScript union exported from <code>packages/shared</code>
+would solve both problems and would let this list be <strong>generated</strong> instead
+of maintained by hand. Until that exists, the list above is a dated
+extraction of the emission points.</p>
+</blockquote></div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/events.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-09-03T02:16:58.000Z itemprop=dateModified>3 de set. de 2026</time></b> por <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/prd/pt-BR/reference/configuration><div class=pagination-nav__sublabel>Anterior</div><div class=pagination-nav__label>Configuration</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/prd/pt-BR/reference/permissions><div class=pagination-nav__sublabel>Próxima</div><div class=pagination-nav__label>Permissions</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#domain-event class="table-of-contents__link toc-highlight">Domain event</a><ul><li><a href=#session class="table-of-contents__link toc-highlight">Session</a><li><a href=#chat-and-agents class="table-of-contents__link toc-highlight">Chat and agents</a><li><a href=#proposed-actions class="table-of-contents__link toc-highlight">Proposed actions</a><li><a href=#backlog class="table-of-contents__link toc-highlight">Backlog</a><li><a href=#execution-and-gates class="table-of-contents__link toc-highlight">Execution and gates</a><li><a href=#delegation-phase-8b-adr-0038 class="table-of-contents__link toc-highlight">Delegation (Phase 8b, ADR 0038)</a><li><a href=#tool-loop class="table-of-contents__link toc-highlight">Tool loop</a><li><a href=#artifacts class="table-of-contents__link toc-highlight">Artifacts</a><li><a href=#architecture-and-readiness class="table-of-contents__link toc-highlight">Architecture and readiness</a><li><a href=#git-and-bootstrap class="table-of-contents__link toc-highlight">Git and bootstrap</a><li><a href=#cost class="table-of-contents__link toc-highlight">Cost</a><li><a href=#rag-telemetry-rn-479480481 class="table-of-contents__link toc-highlight">RAG telemetry (RN-479/480/481)</a><li><a href=#local-runner-adr-01030104 class="table-of-contents__link toc-highlight">Local runner (ADR 0103/0104)</a><li><a href=#psychologist class="table-of-contents__link toc-highlight">Psychologist</a><li><a href=#anamnesis-and-instructions class="table-of-contents__link toc-highlight">Anamnesis and instructions</a></ul><li><a href=#broadcast class="table-of-contents__link toc-highlight">Broadcast</a><ul><li><a href=#who-can-listen-rn-108 class="table-of-contents__link toc-highlight">Who can listen (RN-108)</a></ul><li><a href=#span class="table-of-contents__link toc-highlight">Span</a><ul><li><a href=#domain-names class="table-of-contents__link toc-highlight">Domain names</a><li><a href=#code-derived-names class="table-of-contents__link toc-highlight">Code-derived names</a></ul><li><a href=#how-the-event-reaches-the-engine class="table-of-contents__link toc-highlight">How the event reaches the engine</a><li><a href=#complete-inventory class="table-of-contents__link toc-highlight">Complete inventory</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/prd/pt-BR/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/pt-BR/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/pt-BR/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/pt-BR/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>

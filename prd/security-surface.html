@@ -1,19 +1,20 @@
-<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-security-surface" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Superfície exposta da api | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/prd/security-surface /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Superfície exposta da api | Brabo"/><meta data-rh=true name=description content="Toda rota registrada, com a classificação de autenticação e a justificativa das"/><meta data-rh=true property=og:description content="Toda rota registrada, com a classificação de autenticação e a justificativa das"/><link data-rh=true rel=icon href=/brabo/prd/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/prd/security-surface /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/security-surface hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/security-surface hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/prd/security-surface","name":"Superfície exposta da api","position":1}]}</script><link rel=stylesheet href=/brabo/prd/assets/css/styles.bae5b9bf.css /><script src=/brabo/prd/assets/js/runtime~main.920b8ab4.js defer></script><script src=/brabo/prd/assets/js/main.ccb99ccd.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-security-surface" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Api's Exposed Surface | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/prd/security-surface /><meta data-rh=true property=og:locale content=en /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Api's Exposed Surface | Brabo"/><meta data-rh=true name=description content="Every registered route, with its authentication classification and the"/><meta data-rh=true property=og:description content="Every registered route, with its authentication classification and the"/><link data-rh=true rel=icon href=/brabo/prd/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/prd/security-surface /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/security-surface hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/pt-BR/security-surface hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/security-surface hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/prd/security-surface","name":"Api's Exposed Surface","position":1}]}</script><link rel=stylesheet href=/brabo/prd/assets/css/styles.4b02629e.css /><script src=/brabo/prd/assets/js/runtime~main.c6c94236.js defer></script><script src=/brabo/prd/assets/js/main.05fd9739.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-fb6")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/prd/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_aRZD href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/prd/><div class=navbar__logo><img src=/brabo/prd/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--light_TNiM"/><img src=/brabo/prd/img/logo.svg alt=Brabo class="themedComponent_BSiW themedComponent--dark__fCd"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/prd/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/prd/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/prd/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>main</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>main — estável ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><div class="toggle_B7FD colorModeToggle_i51f"><button class="clean-btn toggleButton_iBXZ toggleButtonDisabled_g7aN" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f lightToggleIcon_IoAw"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f darkToggleIcon_CFpV"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_NE6f systemToggleIcon_FD32"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_H1qa><div class="navbar__search searchBarContainer_E7mJ" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_Fmbc" value="" /><div class="loadingRing_yYGt searchBarLoadingRing_TCpJ"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_sSUF"><div class=docsWrapper__5pg><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_woZa" type=button></button><div class=docRoot_jND2><aside class="theme-doc-sidebar-container docSidebarContainer_tVYW"><div class=sidebarViewport_gVXc><div class=sidebar_vRsD><nav aria-label="Painel lateral de documentos" class="menu thin-scrollbar menu_IacH"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/><span class=categoryLinkLabel_U9or>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/><span class=linkLabel_pWVb>Introdução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/getting-started><span class=linkLabel_pWVb>Primeiros passos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/architecture><span class=categoryLinkLabel_U9or>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/architecture><span class=linkLabel_pWVb>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist" tabindex=0 href=/brabo/prd/adr><span class=categoryLinkLabel_U9or>Decisões (ADR)</span></a><button aria-label="Expandir a categoria 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/business-rules><span class=categoryLinkLabel_U9or>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/business-rules><span class=linkLabel_pWVb>Regras de negócio</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/prd/reference/configuration><span class=categoryLinkLabel_U9or>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/configuration><span class=linkLabel_pWVb>Configuração</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/events><span class=linkLabel_pWVb>Eventos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/permissions><span class=linkLabel_pWVb>Permissões</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/artifacts><span class=linkLabel_pWVb>Artefatos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/git-providers><span class=linkLabel_pWVb>Providers de git</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/internal-api><span class=linkLabel_pWVb>API interna</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/scripts><span class=linkLabel_pWVb>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/rulesets><span class=linkLabel_pWVb>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/prd/security-surface><span class=linkLabel_pWVb>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/prd/reference/api/brabo-api><span class=categoryLinkLabel_U9or>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/explanation/documentation-workflow><span class=categoryLinkLabel_U9or>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/documentation-workflow><span class=linkLabel_pWVb>Sincronização de docs</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/branching-policy><span class=linkLabel_pWVb>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/observability><span class=linkLabel_pWVb>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/primeiro-dogfooding><span class=linkLabel_pWVb>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/execucao-real-hello-world><span class=linkLabel_pWVb>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/achados-execucao-real><span class=linkLabel_pWVb>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/backlog><span class=linkLabel_pWVb>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/validacao-fase-12><span class=linkLabel_pWVb>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/validacao-real><span class=linkLabel_pWVb>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/aceite-providers><span class=linkLabel_pWVb>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/gates><span class=linkLabel_pWVb>Os gates, e como eles são medidos</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/runbook><span class=categoryLinkLabel_U9or>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/runbook><span class=linkLabel_pWVb>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/glossary><span class=categoryLinkLabel_U9or>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/glossary><span class=linkLabel_pWVb>Glossário</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_IUOB menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_U9or>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_HSqD" tabindex=0><span class=linkLabel_pWVb>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_SmZv><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_XH1Q"><div class=docItemContainer_uk13><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_g2_L" aria-label=Trilha><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Página Inicial" class=breadcrumbs__link href=/brabo/prd/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_ILC1><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Referência</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Superfície exposta da api</span></ul></nav><div class="tocCollapsible_sC5p theme-doc-toc-mobile tocMobile_jNpd"><button type=button class="clean-btn tocCollapsibleButton_sMs7">Nesta página</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Superfície exposta da api</h1></header>
-<p>Toda rota registrada, com a classificação de autenticação e a justificativa das
-que ficam abertas. Decisões em
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-c21")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/prd/img/logo.svg /><div role=region aria-label="Skip to main content"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/prd/><div class=navbar__logo><img src=/brabo/prd/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/prd/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/prd/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/prd/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/prd/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>prd</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/><span class=categoryLinkLabel_jKch>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/><span class=linkLabel_CzBh>Introduction</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/getting-started><span class=linkLabel_CzBh>Getting Started</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/architecture><span class=categoryLinkLabel_jKch>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/architecture><span class=linkLabel_CzBh>Architecture</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/prd/adr><span class=categoryLinkLabel_jKch>Decisões (ADR)</span></a><button aria-label="Expand sidebar category 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/business-rules><span class=categoryLinkLabel_jKch>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/prd/reference/configuration><span class=categoryLinkLabel_jKch>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/prd/security-surface><span class=linkLabel_CzBh>Api's Exposed Surface</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/prd/reference/api/brabo-api><span class=categoryLinkLabel_jKch>Referência da API</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/documentation-workflow><span class=linkLabel_CzBh>Docs sync</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/branching-policy><span class=linkLabel_CzBh>Branching policy</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI supply chain</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/observability><span class=linkLabel_CzBh>Observability</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>First dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Real execution (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/achados-execucao-real><span class=linkLabel_CzBh>Findings from the real execution of the pipeline</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/backlog><span class=linkLabel_CzBh>Triaged backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/validacao-fase-12><span class=linkLabel_CzBh>Phase 12 validation</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/validacao-real><span class=linkLabel_CzBh>Real validation (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/aceite-providers><span class=linkLabel_CzBh>Provider acceptance</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/gates><span class=linkLabel_CzBh>The gates, and how they're measured</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Audit: fluxo.yml × code (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/explanation/historico-de-fases><span class=linkLabel_CzBh>Histórico de fases</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/runbook><span class=categoryLinkLabel_jKch>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/runbook><span class=linkLabel_CzBh>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/glossary><span class=categoryLinkLabel_jKch>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/glossary><span class=linkLabel_CzBh>Glossary</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_JmCf"><div class=docItemContainer_GUvW><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=Breadcrumbs><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Home page" class=breadcrumbs__link href=/brabo/prd/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Referência</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Api's Exposed Surface</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">On this page</button></div><div class="theme-doc-markdown markdown"><div class=row><div class="col col--12 markdown"><header><h1>Api's Exposed Surface</h1></header>
+<p>Every registered route, with its authentication classification and the
+justification for the ones left open. Decisions in
 <a class="" href=/brabo/prd/adr/0027-fase5-backup-hardening-release>ADR 0027</a>.</p>
 <blockquote>
-<p><strong>Este documento é a fonte de verdade de um teste</strong>, não uma cópia dele.
-<code>apps/api/test/interfaces/route-surface.spec.ts</code> sobe a aplicação, enumera as
-rotas <strong>registradas em runtime</strong> e compara com a tabela abaixo. Rota nova sem
-linha aqui <strong>quebra o teste</strong>; linha com classificação diferente da anotação
-real <strong>quebra o teste</strong>; linha órfã (que não corresponde a rota nenhuma)
-<strong>quebra o teste</strong>. Não dá para a documentação envelhecer em silêncio.</p>
+<p><strong>This document is the source of truth for a test</strong>, not a copy of one.
+<code>apps/api/test/interfaces/route-surface.spec.ts</code> boots the application,
+enumerates the routes <strong>registered at runtime</strong>, and compares them
+against the table below. A new route with no row here <strong>fails the
+test</strong>; a row whose classification differs from the real annotation
+<strong>fails the test</strong>; an orphan row (matching no route at all) <strong>fails
+the test</strong>. The documentation can't go stale in silence.</p>
 </blockquote>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=classificações>Classificações<a href=#classificações class=hash-link aria-label="Link direto para Classificações" title="Link direto para Classificações" translate=no>​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=classifications>Classifications<a href=#classifications class=hash-link aria-label="Direct link to Classifications" title="Direct link to Classifications" translate=no>​</a></h2>
 
 
 
@@ -39,215 +40,496 @@ real <strong>quebra o teste</strong>; linha órfã (que não corresponde a rota 
 
 
 
-<table><thead><tr><th>valor<th>o que significa<tbody><tr><td><code>public</code><td><code>@Public()</code> — sem token. Cada uma justificada abaixo<tr><td><code>engine-service</code><td><code>EngineServiceGuard</code>: <code>X-Brabo-Service-Token</code> igual ao segredo compartilhado. É a superfície interna api↔engine, fora do JWT<tr><td><code>role:&lt;papel></code><td>autenticada e restrita pelo RBAC do domínio (<code>@RequireRole</code>)<tr><td><code>jwt</code><td>autenticada, sem papel exigido na rota — o escopo vem do próprio recurso</table>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=as-doze-rotas-públicas>As doze rotas públicas<a href=#as-doze-rotas-públicas class=hash-link aria-label="Link direto para As doze rotas públicas" title="Link direto para As doze rotas públicas" translate=no>​</a></h2>
-<p>Eram quatro até a Fase 6. A Fase 7a acrescentou oito de uma vez — o auth
-first-party — e cada uma está justificada abaixo. Abrir mais alguma continua
-exigindo mexer na asserção de <code>route-surface.spec.ts</code>, que lista as públicas
-literalmente para forçar a conversa.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=infraestrutura>Infraestrutura<a href=#infraestrutura class=hash-link aria-label="Link direto para Infraestrutura" title="Link direto para Infraestrutura" translate=no>​</a></h3>
-<p><strong><code>GET /live</code></strong> — liveness. Não toca no banco de propósito: responde enquanto o
-processo estiver vivo. Exigir token aqui faria o kubelet reiniciar o pod ao
-primeiro problema no caminho de autenticação, transformando degradação em queda
-total.</p>
-<p><strong><code>GET /health</code></strong> — readiness, com <code>select 1</code>. Mesmo raciocínio: é o kubelet
-quem chama, e ele não carrega token. Revela apenas se o banco responde.</p>
-<p><strong><code>GET /metrics</code></strong> — scrape do Prometheus, que também não carrega token nenhum.
-Exposição controlada por REDE, não por auth: a NetworkPolicy só
-libera o namespace <code>monitoring</code>, e o Ingress de produção bloqueia o caminho.
-Sem <code>@Public()</code> o alvo apareceria como <code>down</code> com todo o resto verde.</p>
-<p><strong><code>GET /git/oauth/:provider/callback</code></strong> — o retorno do OAuth de GitHub/GitLab.
-O browser do usuário chega aqui vindo do provider, sem sessão da api. Não é
-irrestrita: o parâmetro <code>state</code> é validado por HMAC
-(<code>GIT_OAUTH_STATE_SECRET</code>), e sem <code>state</code> válido a chamada é recusada.</p>
-<p>Essa garantia vale exatamente o quanto vale a chave, e por isso ela deixou de
-ter default: em produção a api <strong>não sobe</strong> com a chave de exemplo do
-repositório, que é pública (ADR 0059, <a class="" href=/brabo/prd/business-rules#rn-093>RN-093</a>). Com
-a chave conhecida, esta rota volta a ser irrestrita na prática — qualquer um
-assina um <code>state</code> para o projeto que quiser.</p>
-<h3 class="anchor anchorTargetStickyNavbar_URsz" id=auth-first-party>Auth first-party<a href=#auth-first-party class=hash-link aria-label="Link direto para Auth first-party" title="Link direto para Auth first-party" translate=no>​</a></h3>
-<p>As sete rotas de <code>/auth/*</code> mais o JWKS. <strong>Todas precisam ser públicas pela
-mesma razão estrutural:</strong> são o caminho por onde se OBTÉM um access token, e o
-<code>JwtAuthGuard</code> global exige um. Uma rota de auth atrás do guard pediria a
-credencial que ela mesma emite. O <code>logout</code> é a única que poderia ser
-autenticada, e não é de propósito: ele já carrega a credencial que lhe
-interessa — o refresh no cookie, com o par de CSRF — e deslogar precisa
-funcionar mesmo com o access token expirado.</p>
+<table><thead><tr><th>value<th>what it means<tbody><tr><td><code>public</code><td><code>@Public()</code> — no token. Each one justified below<tr><td><code>engine-service</code><td><code>EngineServiceGuard</code>: <code>X-Brabo-Service-Token</code> matching the shared secret. This is the internal api↔engine surface, outside the JWT<tr><td><code>role:&lt;role></code><td>authenticated and restricted by the domain's RBAC (<code>@RequireRole</code>)<tr><td><code>jwt</code><td>authenticated, no role required on the route — the scope comes from the resource itself</table>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-fifteen-public-routes>The fifteen public routes<a href=#the-fifteen-public-routes class=hash-link aria-label="Direct link to The fifteen public routes" title="Direct link to The fifteen public routes" translate=no>​</a></h2>
+<p>There were four until Phase 6. Phase 7a added eight at once — first-party
+auth — ADR 0084 added two more, social login, and the runner device-key
+onda added the binary proxy. Each one is justified below. Opening any more
+still requires touching the assertion in <code>route-surface.spec.ts</code>, which
+lists the public ones literally to force the conversation.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=infrastructure>Infrastructure<a href=#infrastructure class=hash-link aria-label="Direct link to Infrastructure" title="Direct link to Infrastructure" translate=no>​</a></h3>
+<p><strong><code>GET /live</code></strong> — liveness. Doesn't touch the database on purpose:
+responds as long as the process is alive. Requiring a token here would
+make kubelet restart the pod at the first hiccup in the auth path,
+turning a degradation into a full outage.</p>
+<p><strong><code>GET /health</code></strong> — readiness, with <code>select 1</code>. Same reasoning: kubelet
+is the caller, and it carries no token. Reveals only whether the
+database responds.</p>
+<p><strong><code>GET /metrics</code></strong> — Prometheus scrape, which also carries no token at
+all. Exposure controlled by NETWORK, not by auth: the NetworkPolicy only
+opens it to the <code>monitoring</code> namespace, and the production Ingress
+blocks the path. Without <code>@Public()</code> the target would show as <code>down</code>
+while everything else stays green.</p>
+<p><strong><code>GET /git/oauth/:provider/callback</code></strong> — the GitHub/GitLab OAuth
+return. The user's browser lands here coming from the provider, with no
+api session. It isn't unrestricted, though: the <code>state</code> parameter is
+validated by HMAC (<code>GIT_OAUTH_STATE_SECRET</code>), and without a valid
+<code>state</code> the call is refused.</p>
+<p>That guarantee is worth exactly as much as the key, which is why it
+stopped having a default: in production the api <strong>refuses to boot</strong> with
+the repository's example key, which is public (ADR 0059,
+<a class="" href=/brabo/prd/business-rules/custo#rn-093>RN-093</a>). With a known key, this route goes
+back to being unrestricted in practice — anyone can sign a <code>state</code> for
+whichever project they want.</p>
+<p><strong><code>GET /runner-releases/binary</code></strong> — proxies the runner's standalone
+binary from GitHub Releases so the browser never talks to GitHub
+directly. Public for the same reason as <code>/metrics</code>/JWKS: the binary
+itself is not a secret, and requiring a session to download the very
+tool that lets someone authenticate would be backwards. <code>platform</code> is a
+closed allowlist (<code>linux-x64</code>/<code>linux-arm64</code>/<code>darwin-x64</code>/<code>darwin-arm64</code>/
+<code>win32-x64</code>), never interpolated raw into the GitHub URL — closing the
+SSRF/path-injection vector an open parameter would leave. The resolved
+asset URL (never the bytes) is cached in memory for a few minutes,
+purely to stay under GitHub's unauthenticated rate limit under
+concurrent downloads.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=first-party-auth>First-party auth<a href=#first-party-auth class=hash-link aria-label="Direct link to First-party auth" title="Direct link to First-party auth" translate=no>​</a></h3>
+<p>The seven <code>/auth/*</code> routes plus JWKS. <strong>All of them need to be public for
+the same structural reason:</strong> they're the path through which an access
+token is OBTAINED, and the global <code>JwtAuthGuard</code> requires one. An auth
+route behind the guard would ask for the credential it itself issues.
+<code>logout</code> is the only one that could be authenticated, and isn't, on
+purpose: it already carries the credential it cares about — the refresh
+in the cookie, with its CSRF pair — and logging out needs to work even
+with an expired access token.</p>
 <blockquote>
-<p><strong>O que protege estas rotas não é o rate limit.</strong> O <code>RateLimitGuard</code> libera
-rota <code>@Public()</code> — de propósito, para não estrangular <code>/health</code> até o kubelet
-reiniciar o pod. Quem segura esta superfície é o <strong>lockout progressivo</strong> por
-e-mail e por IP, dentro dos casos de uso. Não é reforço opcional: é a única
-defesa que existe aqui. Ver
-<a class="" href=/brabo/prd/business-rules#rn-030>RN-030</a> e <a class="" href=/brabo/prd/business-rules#rn-031>RN-031</a>.</p>
+<p><strong>What protects these routes isn't the rate limit.</strong> <code>RateLimitGuard</code>
+exempts <code>@Public()</code> routes — on purpose, so as not to strangle
+<code>/health</code> until kubelet restarts the pod. What holds this surface is
+<strong>progressive lockout</strong> by email and by IP, inside the use cases. It's
+not an optional reinforcement: it's the only defense that exists here.
+See
+<a class="" href=/brabo/prd/business-rules/autenticacao#rn-030>RN-030</a> and <a class="" href=/brabo/prd/business-rules/autenticacao#rn-031>RN-031</a>.</p>
 </blockquote>
-<p><strong><code>POST /auth/register</code></strong> — cadastro. Responde <code>202</code> tanto para endereço novo
-quanto para já cadastrado; no segundo caso nada é criado e o dono do endereço
-recebe um aviso. Um <code>409 Conflict</code>, que é o que o bom senso REST pediria,
-entregaria a lista de usuários a quem tiver uma wordlist.</p>
-<p><strong><code>POST /auth/login</code></strong> — autenticação. E-mail inexistente, senha errada e conta
-bloqueada devolvem a <strong>mesma</strong> resposta 401, e gastam o <strong>mesmo</strong> tempo (o ramo
-sem conta verifica contra um hash dummy de parâmetros idênticos).</p>
-<p><strong><code>POST /auth/refresh</code></strong> — rotação. O próprio refresh token é a credencial, e
-por isso a rota não pode exigir outra.</p>
-<p><strong><code>POST /auth/logout</code></strong> — revoga a família do token apresentado. Sempre <code>204</code>,
-inclusive para token desconhecido: responder 401 aqui seria um oráculo de
-validade de token.</p>
+<p><strong><code>POST /auth/register</code></strong> — sign-up. Responds <code>202</code> for both a new
+address and one already registered; in the second case nothing is
+created and the address's owner gets a notice. A <code>409 Conflict</code>, which is
+what good REST sense would ask for, would hand the user list to anyone
+with a wordlist.</p>
+<p><strong><code>POST /auth/login</code></strong> — authentication. A nonexistent email, a wrong
+password, and a locked account all return the <strong>same</strong> 401 response, and
+take the <strong>same</strong> time (the no-account branch checks against a dummy
+hash with identical parameters).</p>
+<p><strong><code>POST /auth/refresh</code></strong> — rotation. The refresh token itself is the
+credential, so the route can't require another one.</p>
+<p><strong><code>POST /auth/logout</code></strong> — revokes the presented token's family. Always
+<code>204</code>, even for an unknown token: answering 401 here would be a
+token-validity oracle.</p>
 <p><strong><code>POST /auth/verify-email</code></strong>, <strong><code>POST /auth/request-password-reset</code></strong>,
-<strong><code>POST /auth/reset-password</code></strong> — fluxos de conta. Quem chega neles ainda não
-tem sessão, por definição. A credencial é o token de uso único que veio por
-e-mail; link inválido, expirado e já usado têm resposta idêntica.</p>
-<p><strong><code>GET /.well-known/jwks.json</code></strong> — a metade <strong>pública</strong> do par Ed25519 que
-assina os access tokens. Mesmo raciocínio de <code>/metrics</code>: quem consome não tem
-token, e exigir um seria pedir credencial para poder validar credencial.
-Publicar chave pública é o propósito do formato — o que não pode sair daqui é
-o componente <code>d</code> da JWK, travado por teste.</p>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=notas>Notas<a href=#notas class=hash-link aria-label="Link direto para Notas" title="Link direto para Notas" translate=no>​</a></h2>
+<strong><code>POST /auth/reset-password</code></strong> — account flows. Whoever reaches them has
+no session yet, by definition. The credential is the single-use token
+that came by email; an invalid, expired, or already-used link all get an
+identical response.</p>
+<p><strong><code>GET /.well-known/jwks.json</code></strong> — the <strong>public</strong> half of the Ed25519
+pair that signs access tokens. Same reasoning as <code>/metrics</code>: the
+consumer has no token, and requiring one would mean asking for a
+credential in order to validate a credential. Publishing the public key
+is the format's whole purpose — what can never leave here is the JWK's
+<code>d</code> component, locked down by a test.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=social-login-adr-0084>Social login (ADR 0084)<a href=#social-login-adr-0084 class=hash-link aria-label="Direct link to Social login (ADR 0084)" title="Direct link to Social login (ADR 0084)" translate=no>​</a></h3>
+<p><strong><code>GET /auth/oauth/:provider/start</code></strong> — redirects straight to the
+provider (GitHub/GitLab). Public for the same structural reason as the
+other seven: it's the entry point itself, before any session exists. The
+<code>state</code> it generates is HMAC-signed with its OWN purpose
+(<code>signSocialOauthState</code>/<a class="" href=/brabo/prd/business-rules#rn-273>RN-273</a>) — never the
+same <code>state</code> as <code>GET /git/oauth/:provider/callback</code> above, even though
+both routes sign with the SAME <code>GIT_OAUTH_STATE_SECRET</code> key. The
+<code>purpose</code> field in the payload is what keeps a <code>state</code> from one flow
+being accepted by the other's verifier.</p>
+<p><strong><code>GET /auth/oauth/:provider/callback</code></strong> — receives the provider's
+return. Same reasoning as the git-connection callback: the browser
+arrives with no session, <code>state</code> is HMAC-verified, and the route never
+returns JSON — it always redirects, to <code>WEB_ORIGIN/</code> on success (with
+the session cookies already written) and to
+<code>WEB_ORIGIN/login?oauth_error=1</code> on failure, without detailing the
+reason in the URL.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=notes>Notes<a href=#notes class=hash-link aria-label="Direct link to Notes" title="Direct link to Notes" translate=no>​</a></h2>
 <ul>
-<li class=""><strong><code>GET /</code></strong> é o "Hello World!" do scaffold do NestJS
-(<code>src/app.controller.ts</code>). Está atrás do guard e não vaza nada, mas não serve
-a nada — candidata a remoção. Ficou registrada aqui em vez de removida por
-ser decisão de produto, fora do escopo desta sessão.</li>
-<li class=""><strong><code>GET /internal/projects/:projectId/git-remote</code> é a única rota do produto que
-devolve um segredo DECIFRADO</strong> — o token de git do owner do workspace
-(<a class="" href=/brabo/prd/adr/0056-o-engine-trabalha-em-repositorio-remoto>ADR 0056</a>). Ela existe
-porque o engine trabalha no sistema de arquivos e não tem a chave mestra;
-replicá-la no engine dobraria o raio de explosão do segredo mais sensível do
-produto. Duas propriedades a mantêm defensável: o <code>origin</code> que ela devolve é
-<strong>limpo</strong> (a credencial vem em campo separado, e nunca embutida na URL), e
-quem consome tem a obrigação de injetá-la por invocação, nunca em arquivo —
-ver <code>Engine.Actions.GitAuth</code> e o porquê disso na
-<a class="" href=/brabo/prd/business-rules#rn-076>RN-076</a>. Se algum dia esta rota passar a devolver
-a URL já autenticada, o token vai parar no <code>.git/config</code>, dentro da pasta
-onde o dev agent tem leitura auto-aprovada.</li>
-<li class=""><strong>As rotas <code>engine-service</code> não são "internas" por convenção de nome.</strong> O que
-as protege é o <code>EngineServiceGuard</code> comparando o <code>X-Brabo-Service-Token</code> com
-o segredo compartilhado em tempo constante, mais a NetworkPolicy. O prefixo
-<code>/internal</code> é sinalização para humanos. Elas ficam <strong>fora do JWT</strong> por
-<code>@ServiceRoute()</code>: o token de usuário não serve aqui e o de serviço não serve
-em nenhuma outra rota — os dois mecanismos nunca se sobrepõem
-(<a class="" href=/brabo/prd/business-rules#rn-035>RN-035</a>).</li>
-<li class=""><strong><code>/docs</code> e <code>/docs-json</code> NÃO estão na tabela, e isso é uma lacuna
-conhecida.</strong> O Swagger UI é montado por <code>SwaggerModule.setup()</code> no nível do
-Express, não como controller, e o teste enumera por <code>DiscoveryService</code> — ele
-estruturalmente não as vê. As duas só existem com <code>NODE_ENV !== 'production'</code>
-(<code>main.ts</code>), são públicas, e servem o mesmo documento que a
-<a class="" href=/brabo/prd/reference/api/brabo-api>referência gerada</a> publica. Registrado aqui em vez
-de omitido: o que o teste não alcança precisa estar na prosa.</li>
-<li class=""><strong><code>GET /projects/:projectId/agent-areas</code> passou a devolver dados de verdade,
-e a classificação não mudou</strong> — continua <code>role:developer</code>, enquanto o <code>PATCH</code>
-do teto continua <code>role:maintainer</code>. Até a FASE 18 a tabela <code>agent_areas</code>
-nunca era gravada e a rota respondia <code>[]</code> a todo mundo, o que fazia a
-classificação parecer folgada por acidente e não por decisão. Com a área
-nascendo junto com o projeto (<a class="" href=/brabo/prd/business-rules#rn-094>RN-094</a>), o corte
-volta a ser o que a FASE 14d quis: <strong>ler</strong> o teto é trabalho de quem executa;
-<strong>mudá-lo</strong> é decidir quanto o produto gasta sem perguntar, e por isso exige
-o mesmo papel de ativar a execução.</li>
-<li class=""><strong>As quatro rotas <code>/projects/:projectId/code/*</code> são <code>role:viewer</code> e SÓ
-LEITURA</strong> (FASE 26b). Ver o código do projeto é a mesma permissão que ver o
-projeto — o mesmo corte de <code>GET /projects/:id/git/repository</code>. Três coisas
-fazem essa folga aparente ser decisão e não descuido:
+<li class="">
+<p><strong><code>POST /workspaces/:workspaceId/projects</code> decides where the agent will
+write, and that's why it's a security-surface route, not just a
+registration one</strong>
+(<a class="" href=/brabo/prd/adr/0072-projeto-local-ou-container>ADR 0072</a>/
+<a class="" href=/brabo/prd/adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner>ADR 0104</a>,
+<a class="" href=/brabo/prd/business-rules/autenticacao#rn-169>RN-169</a>/<a class="" href=/brabo/prd/business-rules#rn-421>RN-421</a>/
+<a class="" href=/brabo/prd/business-rules#rn-422>RN-422</a>). The body gained <code>executionMode</code>
+(<code>container</code> — the default and the always-been behavior —, <code>mounted</code>, the
+old <code>local</code>, renamed, or <code>runner</code>) and <code>workspacePath</code>. In <code>mounted</code>/
+<code>runner</code> the absolute path supplied becomes the <strong>terminal scope root</strong>
+of ADR 0055: what's typed here is what the agent can read and write. No
+new route, and no role change (<code>RequireRole('maintainer')</code>, as it already
+was) — what changed is the reach of what the route grants.</p>
+<p>Validation diverges across the TWO modes that aren't <code>container</code>
+(RN-422): <code>mounted</code> still touches disk at creation time (absolute, no
+<code>..</code>, existing, writable from inside the container, never root or a
+system folder, never overlapping the Brabo checkout in either direction),
+with a <code>400</code> refusal and the compose line that resolves it; <code>runner</code>
+validates only the LEXICAL form — the same list of prohibitions, without
+touching disk — because only the runner, running on the real host, has
+the authority to confirm the folder exists (RN-423, see
+<code>POST /internal/projects/:projectId/workspace-verification</code> below). The
+mode is <strong>frozen</strong> afterward: <code>UpdateProjectDto</code> deliberately omits both
+fields, otherwise <code>PartialType(CreateProjectDto)</code> would expose them on a
+<code>PATCH</code> with no guard at all. The lexical predicate still runs on every
+derivation of the root — on READS too, not just on creation — because the
+only way to bypass creation is to write straight to the database.</p>
+</li>
+<li class="">
+<p><strong><code>GET /</code></strong> is the NestJS scaffold's "Hello World!"
+(<code>src/app.controller.ts</code>). It's behind the guard and leaks nothing, but
+serves no purpose — a removal candidate. It stayed recorded here instead
+of being removed, since that's a product decision, out of scope for this
+session.</p>
+</li>
+<li class="">
+<p><strong><code>GET /internal/projects/:projectId/git-remote</code> is the only route in the
+product that returns a DECRYPTED secret</strong> — the workspace owner's git
+token (<a class="" href=/brabo/prd/adr/0056-o-engine-trabalha-em-repositorio-remoto>ADR 0056</a>).
+It exists because the engine works on the filesystem and doesn't hold the
+master key; replicating it in the engine would double the blast radius of
+the product's most sensitive secret. Two properties keep it defensible:
+the <code>origin</code> it returns is <strong>clean</strong> (the credential comes in a separate
+field, never embedded in the URL), and the consumer is obligated to
+inject it per invocation, never to a file — see <code>Engine.Actions.GitAuth</code>
+and the reasoning for that in <a class="" href=/brabo/prd/business-rules/custo#rn-076>RN-076</a>. If this
+route ever starts returning the already-authenticated URL, the token
+would end up in <code>.git/config</code>, inside the folder where the dev agent has
+auto-approved reads.</p>
+</li>
+<li class="">
+<p><strong>The PO's three read routes</strong> — <code>GET /internal/projects/:projectId/business-rules</code>,
+<code>GET /internal/projects/:projectId/backlog</code> (<a class="" href=/brabo/prd/business-rules/autenticacao#rn-164>RN-164</a>)
+and <code>GET /internal/projects/:projectId/product-metrics</code> (<a class="" href=/brabo/prd/business-rules#rn-407>RN-407</a>) —
+return no secret at all and <strong>accept nothing beyond the project id</strong>: no
+search term, no pagination, no filter. That's on purpose. A read route for
+an agent is a surface the model chooses to call, and a parameter is where
+the model writes whatever it wants; here there's nowhere to write. The
+scope is closed to the project by the path, and the cost per call is
+constant (three reads in the backlog, two in the rules, one query against
+<code>proposed_actions</code> filtered by index in the product metrics).</p>
+</li>
+<li class="">
+<p><strong><code>POST /internal/projects/:projectId/workspace-verification</code></strong> (RN-423,
+ADR 0104) is called only by the engine, after a runner connects and sends
+<code>workspace_confirm</code> over the channel — never directly by the runner,
+which doesn't hold the service token. The runner is the SOURCE OF TRUTH
+for the path (it OVERWRITES <code>workspacePath</code>, without requiring it to
+match what was typed at creation), but the reported path still goes
+through the SAME lexical check as creation
+(<code>caminhoDeWorkspaceLocalValido</code>) — system root and overlap with the
+Brabo checkout remain forbidden even coming from the runner. <code>400</code> if the
+project isn't in <code>runner</code> mode.</p>
+</li>
+<li class="">
+<p><strong><code>POST /internal/projects/:projectId/container-exec</code></strong> (<a class="" href=/brabo/prd/business-rules#rn-492>RN-492</a>,
+<a class="" href=/brabo/prd/adr/0134-dev-agents-executam-dentro-do-container>ADR 0134</a>) is called
+only by the engine, when <code>Engine.Actions.TerminalExecutor</code> decided a
+terminal command belongs inside the project's real container. It proxies
+to <code>ContainerBrokerPort.exec</code> — the api never runs the command itself.
+Unlike <code>container-spec</code> below, this is the ENGINE calling the api, not
+the broker; the response body never throws for a broker refusal or an
+unreachable one (<code>{ sucesso: false, motivo }</code> is the normal shape, per
+RN-486 — a <code>running</code> row never guarantees the container is up right
+now), so a dead container is a regular failed command, not a 5xx.</p>
+</li>
+<li class="">
+<p><strong><code>GET /internal/projects/:projectId/container-spec</code></strong> (<a class="" href=/brabo/prd/adr/0130-broker-de-container>ADR 0130</a>,
+<a class="" href=/brabo/prd/business-rules#rn-485>RN-485</a>) is the only <code>engine-service</code> route whose
+caller is NOT the engine — it is the container <strong>broker</strong>, the single process
+in the product with access to a Docker daemon. The classification names the
+MECHANISM (<code>BRABO_SERVICE_TOKEN</code> in its own header, compared in constant
+time), not the sender, and the secret is deliberately the same one: the three
+services run in the same cluster and read the same Secret, so a second secret
+would give the impression of compartmentalising without compartmentalising
+anything (the full reasoning is in <code>service-token.ts</code>). What makes the route
+worth its existence is the direction of the call: the broker does not RECEIVE
+a container spec, it comes here to READ project identity, execution mode and
+the Architect's current image decision, and composes the spec itself. A spec
+travelling in a request body would make the containment of a root-equivalent
+process depend on its caller being correct. It returns <strong>no path at all</strong> —
+the bind source is resolved by the daemon against the HOST filesystem, so a
+path from inside the api container would silently mount an empty folder; the
+broker joins <code>workspaceDirName</code> with its own <code>PROJECT_WORKSPACES_HOST_ROOT</code>,
+and refuses <code>start</code> when that is not configured. It also drops <code>rationale</code>,
+which exists so a human can review the decision and has no consumer in a
+<code>docker run</code>.</p>
+</li>
+<li class="">
+<p><strong><code>POST /projects/:projectId/runner-ticket</code> is classified <code>role:developer</code>
+like any other route, but does NOT accept a session JWT</strong> (ADR 0105,
+RN-424) — only a Personal Access Token (<code>brb_…</code>) OR a runner device key
+(Ed25519, see below). The automatic classification
+(<code>route-surface.spec.ts</code>) doesn't distinguish the mechanisms, because
+the role REQUIREMENT is the same; what changes is only how
+<code>request.user</code> gets established. <code>PatAuthGuard</code> runs in place of
+<code>JwtAuthGuard</code> on this route (<code>@RequirePatAuth()</code>, the same structural
+pattern as <code>@ServiceRoute()</code>/<code>EngineServiceGuard</code> — bypass by metadata,
+never an <code>if</code> a new route could forget), and it's the ONLY place in the
+api that accepts either of these credential formats: on any other route
+a <code>brb_...</code> fails JWT verification normally, and a device-key JWT fails
+it too (its <code>kid</code> never resolves against the session-token issuer's own
+keys). The five routes under <code>/projects/:projectId/personal-access-tokens</code>
+(issue/list/revoke the PAT itself, plus the two <code>maintainer</code> ones —
+RN-427, list/revoke of ANY user in the project) remain regular session
+JWT — only the route the TOKEN ITSELF authenticates changes mechanism.</p>
+</li>
+<li class="">
+<p><strong>The two <code>/projects/:projectId/runner-device-keys</code> routes ARE regular
+session JWT</strong>, unlike <code>runner-ticket</code> above — the browser, already
+logged in, registers the Ed25519 public key it just generated (the
+private half never leaves it) before offering the runner binary for
+download. <code>POST</code> persists the public key only — there's no "raw secret"
+to hand back the way <code>IssuePersonalAccessTokenUseCase</code> does, because
+the client already holds the only secret involved (the private key) and
+the api never sees it. <code>DELETE</code> revokes the caller's own key,
+idempotently, same shape as the PAT's self-service revoke. <code>PatAuthGuard</code>
+is what LATER accepts a JWT signed by that key's private half on
+<code>runner-ticket</code>, looked up by the <code>kid</code> header matching this table's
+<code>id</code>; the guard checks the key hasn't been revoked but never an
+expiry — the key itself doesn't expire, only the short-TTL (≤60s,
+<code>exp - iat</code>) JWT the runner signs with it each time.</p>
+</li>
+<li class="">
+<p><strong>The <code>engine-service</code> routes aren't "internal" by naming convention.</strong>
+What protects them is <code>EngineServiceGuard</code> comparing
+<code>X-Brabo-Service-Token</code> against the shared secret in constant time, plus
+the NetworkPolicy. The <code>/internal</code> prefix is signaling for humans. They
+sit <strong>outside the JWT</strong> via <code>@ServiceRoute()</code>: the user token doesn't
+work here and the service token doesn't work on any other route — the
+two mechanisms never overlap (<a class="" href=/brabo/prd/business-rules/autenticacao#rn-035>RN-035</a>).</p>
+</li>
+<li class="">
+<p><strong><code>/docs</code> and <code>/docs-json</code> are NOT in the table, and that's a known
+gap.</strong> The Swagger UI is mounted by <code>SwaggerModule.setup()</code> at the
+Express level, not as a controller, and the test enumerates via
+<code>DiscoveryService</code> — it structurally can't see them. Both only exist
+with <code>NODE_ENV !== 'production'</code> (<code>main.ts</code>), are public, and serve
+the same document the
+<a class="" href=/brabo/prd/reference/api/brabo-api>generated reference</a> publishes. Recorded
+here instead of left out: what the test can't reach needs to be in
+the prose.</p>
+</li>
+<li class="">
+<p><strong><code>GET /projects/:projectId/agent-areas</code> started returning real data,
+and the classification didn't change</strong> — it's still <code>role:developer</code>,
+while the ceiling's <code>PATCH</code> remains <code>role:maintainer</code>. Until PHASE 18
+the <code>agent_areas</code> table was never written and the route answered <code>[]</code>
+to everyone, which made the classification look lenient by accident,
+not by decision. With the area now born together with the project
+(<a class="" href=/brabo/prd/business-rules/custo#rn-094>RN-094</a>), the split goes back to what
+PHASE 14d intended: <strong>reading</strong> the ceiling is work for whoever
+executes; <strong>changing it</strong> is deciding how much the product spends
+without asking, and that's why it requires the same role that
+activates execution.</p>
+</li>
+<li class="">
+<p><strong>The five <code>/projects/:projectId/rag/*</code> routes split the role by the
+same criterion as the area parallelism ceiling (RN-083)</strong> (PROGRAM 28,
+Wave 4 — RN-231..234, ADR 0080): <code>search</code> and <code>coverage</code> are
+<code>role:viewer</code> (pure reading over what's already indexed), and
+<code>reindex</code> is <code>role:maintainer</code> — it triggers N calls to the project's
+repository and to the embedding provider, the same "changes what the
+product spends without asking" that already justifies the higher role
+on other expensive-trigger routes. <code>local</code> (RN-455, ADR 0113) is
+<code>role:maintainer</code> too, same reasoning: it calls the embedding provider
+and replaces what the project has indexed for that scope. Its body is
+browser-read TEXT, never a host path.
+<code>feedback</code> (RN-480) is <code>role:viewer</code>, the <strong>same</strong> role as <code>search</code>,
+and the criterion above is why: voting spends nothing and configures
+nothing — it is observation, and it is the only signal of truth the
+RAG measurement has (<code>medir:rag</code>). Raising it to <code>maintainer</code> would
+empty that signal to protect nothing. The vote is still bounded on the
+server: a <code>searchId</code> from another project, or a <code>chunkId</code> that was not
+among that search's hits, is a 400 — a vote without a rank measures
+nothing.</p>
+</li>
+<li class="">
+<p><strong>The four <code>/projects/:projectId/code/*</code> routes are <code>role:viewer</code> and
+READ-ONLY</strong> (PHASE 26b). Seeing a project's code is the same
+permission as seeing the project — the same cut as
+<code>GET /projects/:id/git/repository</code>. Three things make this apparent
+looseness a decision rather than an oversight:</p>
 <ul>
-<li class=""><strong>não há verbo de escrita no controller</strong>, e não pode haver: a aba Code é de
-leitura, e escrita é efeito externo, que nasce <code>proposed_action</code> e é fase
-seguinte. Um <code>@Post</code> neste arquivo é mudança de fase, não de rota;</li>
-<li class=""><strong>o caminho é contido em UM lugar</strong> (<a class="" href=/brabo/prd/business-rules#rn-095>RN-095</a>),
-pela mesma checagem central da <a class="" href=/brabo/prd/business-rules#rn-092>RN-092</a> — e a
-contenção importa aqui mais que o papel, porque nos providers remotos o
-caminho vira segmento de URL da API do provider e um <code>../</code> troca de
-<strong>endpoint</strong>, não de arquivo;</li>
-<li class=""><strong>a credencial gasta é a do owner do workspace</strong>
-(<a class="" href=/brabo/prd/business-rules#rn-058>RN-058</a>/<a class="" href=/brabo/prd/business-rules#rn-082>RN-082</a>),
-como na escrita. Ler custa rate limit do provider, e é por isso que a busca
-tem orçamento: sem teto, um <code>viewer</code> pagaria a conta do owner à vontade.</li>
+<li class=""><strong>there's no write verb on the controller</strong>, and there can't be: the
+Code tab is for reading, and writing is an external effect, which
+is born a <code>proposed_action</code> and belongs to a later phase. A <code>@Post</code>
+in this file is a phase change, not a route change;</li>
+<li class=""><strong>the path is contained in ONE place</strong> (<a class="" href=/brabo/prd/business-rules/custo#rn-095>RN-095</a>),
+via the same central check as <a class="" href=/brabo/prd/business-rules/custo#rn-092>RN-092</a> —
+and containment matters here more than the role, because on remote
+providers the path becomes a URL segment of the provider's API and a
+<code>../</code> swaps the <strong>endpoint</strong>, not the file;</li>
+<li class=""><strong>the credential spent is the workspace owner's</strong>
+(<a class="" href=/brabo/prd/business-rules/custo#rn-058>RN-058</a>/<a class="" href=/brabo/prd/business-rules/custo#rn-082>RN-082</a>),
+same as with writing. Reading costs the provider's rate limit, which
+is why search has a budget: without a ceiling, a <code>viewer</code> could run
+up the owner's bill at will.</li>
 </ul>
 </li>
-<li class=""><strong><code>POST /projects/:projectId/sessions/:sessionId/socket-ticket</code> é
-<code>role:viewer</code> na tabela, mas isso é o PISO, não o teto</strong> (RN-108). O
-<code>@RequireRole('viewer')</code> cobre <code>scope: "heartbeat"</code> — o socket de
-heartbeat/eventos ao vivo que já existe; <code>scope: "terminal"</code> exige
-<code>developer</code>, checado DENTRO do <code>CreateSocketTicketUseCase</code> contra
-<code>request.effectiveRole</code> (o mesmo que o <code>RolesGuard</code> já resolveu), porque o
-papel mínimo depende do CORPO da requisição, não só da rota — o mesmo padrão
-de <code>MIN_ROLE_FOR_ACTION_TYPE.terminal</code> em <code>domain/actions/decide.ts</code>. Hoje
-nenhum caminho pede <code>scope: "terminal"</code> de verdade (o socket de terminal
-interativo é FASE 25); o valor já nasce certo para quando existir.</li>
-<li class=""><strong><code>jwt</code> sem papel não significa sem autorização.</strong> Em <code>/users/me/*</code> o escopo é
-o próprio usuário; em <code>GET /workspaces</code> a listagem já é filtrada pela
-associação de quem chamou.</li>
-<li class=""><strong>O <code>X-Brabo-Service-Token</code> passou a ser redigido no log</strong> (<a class="" href=/brabo/prd/adr/0035-observabilidade-legivel-e-trace-sem-coletor>ADR
-0035</a>). Ele é o bearer
-de todo o tráfego api↔engine e <strong>não</strong> constava da lista de <code>redact</code> do pino: se
-caísse num corpo de erro logado, iria para o Loki em texto claro e com retenção.
-Entraram junto <code>serviceToken</code>, <code>privateKey</code>, <code>encryptedDek</code> e <code>dek</code>. A lista
-completa está em <code>apps/api/src/infrastructure/observability/logger.config.ts</code>, e
-há teste afirmando cada caminho — a lista é contrato, não conveniência.</li>
-<li class=""><strong><code>allowedHeaders</code> do CORS é explícito</strong>, e a lista precisa conter todo header
-que a web manda: <code>Content-Type</code>, <code>Authorization</code>, <code>X-CSRF-Token</code> e <code>traceparent</code>.
-Faltar um não quebra teste nenhum (teste não faz preflight) e quebra o browser.</li>
-<li class=""><strong>O engine tem CORS só nas rotas de health</strong> (<a class="" href=/brabo/prd/adr/0037-cors-do-engine-e-a-porta-como-contrato>ADR
-0037</a>). <code>/health</code>, <code>/live</code> e
-<code>/ready</code> respondem <code>Access-Control-Allow-Origin</code> para as origens de
-<code>WEB_ORIGIN</code>; <strong><code>/internal/*</code> e <code>/metrics</code> não</strong>, e a exclusão é o ponto. As 13
-rotas internas são server-to-server com segredo compartilhado
-(<a class="" href=/brabo/prd/business-rules#rn-035>RN-035</a>); CORS ali não habilitaria nada — o cliente
-HTTP da api ignora esses cabeçalhos — mas <strong>anunciaria a um navegador que ele é
-um cliente esperado daquele canal</strong>. Há teste afirmando a ausência, e um sobre a
-lista de caminhos ter exatamente três entradas, para mover a fronteira aparecer
-no diff.</li>
-<li class=""><strong>Origem desconhecida recebe resposta, não <code>403</code>.</strong> Nos dois serviços, o pedido
-é atendido e sai sem o cabeçalho; quem barra a leitura é o navegador, que é de
-quem a decisão é. Responder <code>403</code> quebraria todo cliente que não manda <code>Origin</code>
-— probe do kubelet, <code>curl</code>, o <code>docker/smoke.sh</code>.</li>
-<li class=""><strong><code>POST .../delegations</code> é engine-service como as demais rotas internas</strong>
-(Fase 8b QA, Fase 8c Infra — ADR 0038) — o lead de cada área registra o
-desfecho de cada delegado (<code>completed</code>/<code>failed</code>/<code>dispensed</code>) SEPARADO da
-chamada que a área usa pra reportar o resultado consolidado pra fora
-(<code>gates/verdict</code> pro QA, <code>open_infra_pr</code> pro Infra). Session-scoped, não
-task-scoped — <code>taskId</code> é opcional no corpo. Delegação nunca é visível como
-handoff.</li>
-<li class=""><strong><code>POST /projects/:projectId/execution/activate</code> ganhou <code>originSessionId</code>
-opcional no corpo, e a classificação não mudou</strong> — continua <code>role:maintainer</code>
-(RN-135). O campo deixa quem já tem esse papel fechar a sessão de CHAT que
-originou o pedido, mas com duas contenções que impedem usá-lo pra fechar
-sessão alheia: <code>findInProject(projectId, originSessionId)</code> recusa silenciosamente
-um id que não pertença ao PRÓPRIO projeto do path, e o fechamento só acontece
-se <code>GetSessionPendingWorkUseCase</code> (a mesma trava do heartbeat de inatividade,
-<a class="" href=/brabo/prd/business-rules#rn-073>RN-073</a>) confirmar que não há handoff, ação ou
-turno pendurado ali. Nunca fecha a sessão de execução que a própria chamada
-acabou de ativar.</li>
-<li class=""><strong><code>GET /projects/:projectId/execution/session</code> é <code>role:viewer</code>, o mesmo
-papel de <code>GET /sessions/:sessionId</code></strong> (<a class="" href=/brabo/prd/business-rules#rn-139>RN-139</a>).
-Devolve a sessão de execução VIGENTE do projeto — <code>active</code> com
-<code>execution.activated</code> gravado — ou <code>null</code>; nunca a sessão mais recente do
-projeto, que é o que a aba Executores lia antes e que muda de sessão em
-silêncio assim que outra sessão nasce depois dela.</li>
-<li class=""><strong><code>POST .../llm-turn</code> e <code>POST .../llm-turn-stream</code> ganharam <code>modelName</code> no
-corpo de resposta/frame final, e a classificação não mudou</strong> — continuam
-<code>engine-service</code> como sempre (<a class="" href=/brabo/prd/business-rules#rn-146>RN-146</a>). O nome
-do modelo já era resolvido para chamar o provider; só passou a viajar de
-volta ao engine, que o inclui no payload de <code>agent.response</code>. Nenhum dado
-novo é lido, nenhuma credencial nova é exposta — é o mesmo nome que já sai
-em <code>token_usage</code>.</li>
-<li class=""><strong><code>PUT /projects/:projectId/agent-autonomy</code> passou a aceitar <code>actionType: "*"</code> — "auto mode" (<a class="" href=/brabo/prd/business-rules#rn-153>RN-153</a>) —, e a
-classificação não mudou:</strong> continua <code>role:maintainer</code>, o mesmo do <code>GET</code>
-ao lado. A diferença é o que o corpo agora AUTORIZA, não quem pode
-chamar: a curinga concede autonomia pra QUALQUER tipo de ação do agente
-de uma vez, em vez de um tipo por vez como antes. A resolução (uma regra
-ESPECÍFICA sempre vence a curinga) mora inteira no repositório
-(<code>DrizzleAgentAutonomyRepository.findMode</code>), nunca em <code>decide()</code> — que
-segue recebendo só o <code>PermissionPolicy</code> já resolvido, exatamente como
-antes da curinga existir. É por isso que os três tetos absolutos —
-merge em branch protegida, <code>instruction_patch</code>,
-<code>parallelize</code>/<code>raise_max_parallel</code> — continuam bloqueando mesmo com a
-curinga em <code>auto_approve</code> (<a class="" href=/brabo/prd/business-rules#rn-154>RN-154</a>): eles
-reagem a <code>current.policy === 'auto_approve'</code>, nunca à origem dela, e
-nenhuma exceção precisou entrar em <code>decide()</code> pra isso continuar
-valendo. <code>ApprovalCard.tsx</code> só oferece o botão que grava a curinga a
-quem o cliente já sabe ter <code>maintainer</code>/<code>owner</code> — mas quem garante o
-papel de verdade é este mesmo <code>@RequireRole('maintainer')</code>, inalterado.</li>
+<li class="">
+<p><strong><code>GET /workspaces/:workspaceId/spend-report</code> started returning the
+breakdown by provider, which is a breakdown by CREDENTIAL</strong>
+(<a class="" href=/brabo/prd/adr/0076-provider-volta-a-ser-dimensao-de-gasto>ADR 0076</a>,
+<a class="" href=/brabo/prd/business-rules/custo#rn-186>RN-186</a>/<a class="" href=/brabo/prd/business-rules/custo#rn-187>RN-187</a>).
+No new route and no role change — still <code>role:owner</code>, as it already
+was — but what it GRANTS changed, which is why this note exists. ADR
+<a class="" href=/brabo/prd/adr/0063-duas-audiencias-para-o-mesmo-gasto>0063</a> had refused
+that axis for exactly this reason; 0076 revises it by the product
+owner's decision. What now holds the boundary is TWO independent
+barriers: <code>GET /projects/:projectId/spend/me</code> (<code>role:viewer</code>) has no
+dimension parameter at all, and the TYPE refuses the combination — a
+scope with <code>actor</code> only accepts
+<code>Exclude&lt;SpendDimension, 'provider'></code>, so asking for provider in the
+member's view doesn't compile. The second is weaker than the previous
+guarantee ("the dimension didn't exist"), which is why there are two.</p>
+</li>
+<li class="">
+<p><strong><code>POST /projects/:projectId/sessions/:sessionId/socket-ticket</code> is
+<code>role:viewer</code> in the table, but that's the FLOOR, not the ceiling</strong>
+(RN-108). The <code>@RequireRole('viewer')</code> covers <code>scope: "heartbeat"</code> —
+the existing heartbeat/live-events socket; <code>scope: "terminal"</code>
+requires <code>developer</code>, checked INSIDE <code>CreateSocketTicketUseCase</code>
+against <code>request.effectiveRole</code> (the same one <code>RolesGuard</code> already
+resolved), because the minimum role depends on the request's BODY, not
+just the route — the same pattern as
+<code>MIN_ROLE_FOR_ACTION_TYPE.terminal</code> in <code>domain/actions/decide.ts</code>.
+Today no real path asks for <code>scope: "terminal"</code> (the interactive
+terminal socket is PHASE 25); the value is already born correct for
+when it exists.</p>
+</li>
+<li class="">
+<p><strong><code>POST /projects/:projectId/members</code> is <code>role:maintainer</code> in the table,
+and that role is NECESSARY but not SUFFICIENT</strong>
+(<a class="" href=/brabo/prd/adr/0127-tetos-de-rebaixamento-em-project-members>ADR 0127</a>,
+<a class="" href=/brabo/prd/business-rules#rn-472>RN-472</a>). The mirror image of the
+<code>socket-ticket</code> note above: there the table's role is the floor and the
+body can raise it; here the table's role is the whole gate the
+<code>RolesGuard</code> applies, and the use case then refuses <strong>two movements with
+403 even for a caller who has it</strong> — downgrading someone who is <code>owner</code> of
+the WORKSPACE, and downgrading YOURSELF. No new route and no role change
+(<code>RequireRole('maintainer')</code>, as it already was); what changed is that the
+classification stopped being the complete answer to "who can do what
+here". The reason it can't live in <code>RolesGuard</code> is the same one the
+<code>socket-ticket</code> note gives — the decision depends on the request's BODY
+(<code>dto.role</code>) and on its TARGET (<code>dto.userId</code>), which the guard doesn't
+see — so the rule is a pure function in
+<code>domain/iam/tetos-de-rebaixamento.ts</code> applied by
+<code>AddProjectMemberUseCase</code>, in the FORM of the absolute caps in
+<code>domain/actions/decide.ts</code> (<a class="" href=/brabo/prd/business-rules#rn-418>RN-418</a>): no
+configuration key, nothing that can enable them. The <code>owner</code> being
+protected is <code>workspace_members.role</code>, never <code>workspaces.created_by</code>.
+What the caps do NOT cover is written down in the ADR and in the RN, and
+the shortest one to know here is that <code>DELETE /projects/:projectId/members/:userId</code> gained NO cap: removing your own row
+drops you to your workspace role, which is benign when that role catches
+the fall and an irreversible self-downgrade when it doesn't.</p>
+</li>
+<li class="">
+<p><strong><code>jwt</code> with no role doesn't mean without authorization.</strong> On
+<code>/users/me/*</code> the scope is the user themselves; on <code>GET /workspaces</code>
+the listing is already filtered by the caller's membership.</p>
+</li>
+<li class="">
+<p><strong><code>X-Brabo-Service-Token</code> started getting redacted in the log</strong>
+(<a class="" href=/brabo/prd/adr/0035-observabilidade-legivel-e-trace-sem-coletor>ADR 0035</a>).
+It's the bearer for all api↔engine traffic and was <strong>not</strong> on pino's
+<code>redact</code> list: if it landed in a logged error body, it would go to
+Loki in plain text and with retention. <code>serviceToken</code>, <code>privateKey</code>,
+<code>encryptedDek</code>, and <code>dek</code> were added at the same time. The full list is
+in <code>apps/api/src/infrastructure/observability/logger.config.ts</code>, and
+there's a test asserting each path — the list is a contract, not a
+convenience.</p>
+</li>
+<li class="">
+<p><strong>CORS's <code>allowedHeaders</code> is explicit</strong>, and the list needs to contain
+every header the web sends: <code>Content-Type</code>, <code>Authorization</code>,
+<code>X-CSRF-Token</code>, and <code>traceparent</code>. Missing one breaks no test at all
+(no test does a preflight) and breaks the browser.</p>
+</li>
+<li class="">
+<p><strong>The engine has CORS only on its health routes</strong>
+(<a class="" href=/brabo/prd/adr/0037-cors-do-engine-e-a-porta-como-contrato>ADR 0037</a>).
+<code>/health</code>, <code>/live</code>, and <code>/ready</code> return
+<code>Access-Control-Allow-Origin</code> for <code>WEB_ORIGIN</code>'s origins;
+<strong><code>/internal/*</code> and <code>/metrics</code> don't</strong>, and the exclusion is the
+point. The 13 internal routes are server-to-server with a shared
+secret (<a class="" href=/brabo/prd/business-rules/autenticacao#rn-035>RN-035</a>); CORS there wouldn't
+enable anything — the api's HTTP client ignores those headers — but it
+<strong>would announce to a browser that it's an expected client of that
+channel</strong>. There's a test asserting the absence, and one asserting the
+path list has exactly three entries, so moving the boundary shows up
+in the diff.</p>
+</li>
+<li class="">
+<p><strong>An unknown origin gets a response, not a <code>403</code>.</strong> On both services,
+the request is served and goes out without the header; what blocks the
+read is the browser, which is whose decision it is. Answering <code>403</code>
+would break every client that doesn't send <code>Origin</code> — kubelet's probe,
+<code>curl</code>, <code>docker/smoke.sh</code>.</p>
+</li>
+<li class="">
+<p><strong><code>POST .../delegations</code> is engine-service like the other internal
+routes</strong> (Phase 8b QA, Phase 8c Infra — ADR 0038) — each area's lead
+records each delegate's outcome (<code>completed</code>/<code>failed</code>/<code>dispensed</code>)
+SEPARATELY from the call the area uses to report its consolidated
+result to the outside (<code>gates/verdict</code> for QA, <code>open_infra_pr</code> for
+Infra). Session-scoped, not task-scoped — <code>taskId</code> is optional in the
+body. Delegation is never visible as a handoff.</p>
+</li>
+<li class="">
+<p><strong><code>POST /projects/:projectId/execution/activate</code> gained an optional
+<code>originSessionId</code> in the body, and the classification didn't change</strong>
+— still <code>role:maintainer</code> (RN-135). The field lets whoever already has
+that role close the CHAT session that originated the request, but with
+two containments that prevent using it to close someone else's
+session: <code>findInProject(projectId, originSessionId)</code> silently refuses
+an id that doesn't belong to the path's OWN project, and the closing
+only happens if <code>GetSessionPendingWorkUseCase</code> (the same guard as the
+inactivity heartbeat, <a class="" href=/brabo/prd/business-rules/custo#rn-073>RN-073</a>) confirms
+there's no handoff, action, or turn hanging there. It never closes the
+execution session the call itself just activated.</p>
+</li>
+<li class="">
+<p><strong><code>GET /projects/:projectId/execution/session</code> is <code>role:viewer</code>, the
+same role as <code>GET /sessions/:sessionId</code></strong>
+(<a class="" href=/brabo/prd/business-rules/autenticacao#rn-139>RN-139</a>). Returns the project's CURRENT
+execution session — <code>active</code> with <code>execution.activated</code> recorded — or
+<code>null</code>; never the project's most recent session, which is what the
+Executors tab used to read and which silently switched sessions the
+moment another session was born after it.</p>
+</li>
+<li class="">
+<p><strong><code>POST .../llm-turn</code> and <code>POST .../llm-turn-stream</code> gained
+<code>modelName</code> in the response body/final frame, and the classification
+didn't change</strong> — still <code>engine-service</code> as always
+(<a class="" href=/brabo/prd/business-rules/autenticacao#rn-146>RN-146</a>). The model's name was already
+being resolved to call the provider; it just started traveling back to
+the engine, which includes it in the <code>agent.response</code> payload. No new
+data is read, no new credential is exposed — it's the same name that
+already shows up in <code>token_usage</code>.</p>
+</li>
+<li class="">
+<p><strong><code>PUT /projects/:projectId/agent-autonomy</code> started accepting
+<code>actionType: "*"</code> — "auto mode" (<a class="" href=/brabo/prd/business-rules/autenticacao#rn-153>RN-153</a>)
+— and the classification didn't change:</strong> still <code>role:maintainer</code>,
+the same as the <code>GET</code> next to it. The difference is what the body now
+AUTHORIZES, not who can call it: the wildcard grants autonomy for ANY
+agent action type at once, instead of one type at a time like before.
+The resolution (a SPECIFIC rule always beats the wildcard) lives
+entirely in the repository
+(<code>DrizzleAgentAutonomyRepository.findMode</code>), never in <code>decide()</code> —
+which keeps receiving only the already-resolved <code>PermissionPolicy</code>,
+exactly as before the wildcard existed. That's why the three absolute
+ceilings — merging into a protected branch, <code>instruction_patch</code>,
+<code>parallelize</code>/<code>raise_max_parallel</code> — keep blocking even with the
+wildcard set to <code>auto_approve</code> (<a class="" href=/brabo/prd/business-rules/autenticacao#rn-154>RN-154</a>):
+they react to <code>current.policy === 'auto_approve'</code>, never to where it
+came from, and no exception had to enter <code>decide()</code> for that to keep
+holding. <code>ApprovalCard.tsx</code> only offers the button that writes the
+wildcard to a client that already knows it has <code>maintainer</code>/<code>owner</code> —
+but what actually guarantees the role is this same
+<code>@RequireRole('maintainer')</code>, unchanged.</p>
+</li>
 </ul>
-<h2 class="anchor anchorTargetStickyNavbar_URsz" id=tabela>Tabela<a href=#tabela class=hash-link aria-label="Link direto para Tabela" title="Link direto para Tabela" translate=no>​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=table>Table<a href=#table class=hash-link aria-label="Direct link to Table" title="Direct link to Table" translate=no>​</a></h2>
 <!-- -->
 
 
@@ -1104,4 +1386,214 @@ papel de verdade é este mesmo <code>@RequireRole('maintainer')</code>, inaltera
 
 
 
-<table><thead><tr><th>método<th>caminho<th>classificação<tbody><tr><td>GET<td><code>/.well-known/jwks.json</code><td>public<tr><td>POST<td><code>/auth/login</code><td>public<tr><td>POST<td><code>/auth/logout</code><td>public<tr><td>POST<td><code>/auth/refresh</code><td>public<tr><td>POST<td><code>/auth/register</code><td>public<tr><td>POST<td><code>/auth/request-password-reset</code><td>public<tr><td>POST<td><code>/auth/reset-password</code><td>public<tr><td>POST<td><code>/auth/verify-email</code><td>public<tr><td>GET<td><code>/gates</code><td>jwt<tr><td>GET<td><code>/git/oauth/:provider/callback</code><td>public<tr><td>GET<td><code>/health</code><td>public<tr><td>GET<td><code>/live</code><td>public<tr><td>GET<td><code>/metrics</code><td>public<tr><td>POST<td><code>/internal/sessions/:sessionId/actions</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/anamnese-context</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/delegations</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/dev-context</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/epics</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/events</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/pending-work</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/events</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/gates/verdict</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/handoffs</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/hypotheses</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/infra-artifacts/:prActionId/files</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/infra-context</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/infra-gates/verdict</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/instruction-patches</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/max-parallel-proposals</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/llm-turn</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/llm-turn-stream</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/c4-diagram</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/module-map</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/project-image</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/proficiency</code><td>engine-service<tr><td>POST<td><code>/internal/models/sync</code><td>engine-service<tr><td>GET<td><code>/internal/gates</code><td>engine-service<tr><td>GET<td><code>/internal/projects/:projectId/git-remote</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/psychologist-context</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/stories</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/story-modules</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/tasks</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/tasks/:taskId/block</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/tasks/:taskId/gate/open</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/tasks/:taskId/status</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/tasks/claim</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/termination</code><td>engine-service<tr><td>GET<td><code>/</code><td>jwt<tr><td>GET<td><code>/users/me/credentials</code><td>jwt<tr><td>POST<td><code>/users/me/credentials</code><td>jwt<tr><td>POST<td><code>/users/me/credentials/:provider/test</code><td>jwt<tr><td>DELETE<td><code>/users/me/credentials/:provider</code><td>jwt<tr><td>POST<td><code>/users/me/git-credentials</code><td>jwt<tr><td>GET<td><code>/workspaces</code><td>jwt<tr><td>POST<td><code>/workspaces</code><td>jwt<tr><td>DELETE<td><code>/projects/:projectId</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId</code><td>role:viewer<tr><td>PATCH<td><code>/projects/:projectId</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/models</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/agent-autonomy</code><td>role:maintainer<tr><td>PUT<td><code>/projects/:projectId/agent-autonomy</code><td>role:maintainer<tr><td>DELETE<td><code>/projects/:projectId/agent-bindings/:agentSlug</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/agent-bindings/:agentSlug</code><td>role:viewer<tr><td>PUT<td><code>/projects/:projectId/agent-bindings/:agentSlug</code><td>role:developer<tr><td>DELETE<td><code>/projects/:projectId/area-bindings/:areaKey</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/area-bindings/:areaKey</code><td>role:viewer<tr><td>PUT<td><code>/projects/:projectId/area-bindings/:areaKey</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/agent-costs</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/agents/:agent/instruction-versions</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/agents/:agent/instruction-versions/:version/rollback</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/anamnese/run</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/architecture</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/backlog</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/budget</code><td>role:maintainer<tr><td>PUT<td><code>/projects/:projectId/budget</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/agent-areas</code><td>role:developer<tr><td>PATCH<td><code>/projects/:projectId/agent-areas/:key/max-parallel</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/code/blame</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/code/branches</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/code/file</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/code/pull-requests</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/code/pull-requests/:pullRequestId/diff</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/code/search</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/code/tree</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/container</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/coverage</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/events/:eventId</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/execution/activate</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/execution/session</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/git/:provider/connect</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/git/:provider/repository</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/git/:provider/repository/adopt</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/git/bootstrap</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/git/bootstrap/plan</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/git/bootstrap/plan/approve</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/git/bootstrap/plan/skip</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/git/bootstrap/acknowledge-protection-failure</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/git/repository</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/hypotheses</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/hypotheses/:hypothesisId/accept</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/hypotheses/:hypothesisId/dismiss</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/infra-artifacts</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/instruction-versions</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/members</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/members</code><td>role:maintainer<tr><td>DELETE<td><code>/projects/:projectId/members/:userId</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/model-binding</code><td>role:viewer<tr><td>PUT<td><code>/projects/:projectId/model-binding</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/permissions</code><td>role:maintainer<tr><td>PUT<td><code>/projects/:projectId/permissions</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/proficiency</code><td>role:viewer<tr><td>DELETE<td><code>/projects/:projectId/proficiency/me</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/proficiency/me/opt-in</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/psychologist/analyses</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/sessions</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/sessions</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId</code><td>role:viewer<tr><td>PATCH<td><code>/projects/:projectId/sessions/:sessionId</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/actions</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/actions</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/actions/:actionId/approve</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/actions/:actionId/approve_always</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/actions/:actionId/deny</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/:agent/cancel</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/:agent/message</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/:agent/start</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/arquiteto/handoff-infra</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/budget</code><td>role:developer<tr><td>PUT<td><code>/projects/:projectId/sessions/:sessionId/budget</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/chat</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/events</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/events</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/events/:eventId</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/execution/parallelize</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/handoffs</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/handoffs/:handoffId/accept</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/model-binding</code><td>role:viewer<tr><td>PUT<td><code>/projects/:projectId/sessions/:sessionId/model-binding</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/psychologist/reanalyze</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/readiness</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/socket-ticket</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/tasks/:taskId/unblock</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/token-usage</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/transition</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/spend/me</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/stories/:storyId/return</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/stories/promote</code><td>role:developer<tr><td>DELETE<td><code>/workspaces/:workspaceId</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId</code><td>role:viewer<tr><td>PATCH<td><code>/workspaces/:workspaceId</code><td>role:maintainer<tr><td>POST<td><code>/workspaces/:workspaceId/members</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId/model-binding</code><td>role:viewer<tr><td>PUT<td><code>/workspaces/:workspaceId/model-binding</code><td>role:maintainer<tr><td>GET<td><code>/workspaces/:workspaceId/credential-spend</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId/spend-report</code><td>role:owner<tr><td>POST<td><code>/workspaces/:workspaceId/models/activate</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId/models/catalog</code><td>role:maintainer<tr><td>POST<td><code>/workspaces/:workspaceId/models/sync</code><td>role:owner<tr><td>POST<td><code>/workspaces/:workspaceId/models/uses</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId/models/:modelId/price-changes</code><td>role:maintainer<tr><td>PATCH<td><code>/workspaces/:workspaceId/models/:modelId/pricing</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId/projects</code><td>role:viewer<tr><td>POST<td><code>/workspaces/:workspaceId/projects</code><td>role:maintainer<tr><td>GET<td><code>/workspaces/:workspaceId/projects-status</code><td>role:viewer<tr><td>GET<td><code>/workspaces/:workspaceId/projects-summary</code><td>role:viewer<tr><td>GET<td><code>/workspaces/:workspaceId/summary</code><td>role:viewer<tr><td>POST<td><code>/workspaces/:workspaceId/unread-events</code><td>role:viewer</table></div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_M5Wn"><a href=https://github.com/daneiel/brabo/blob/dev/docs/security-surface.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_eJZs aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_y3Pe"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-08-13T06:18:55.000Z itemprop=dateModified>13 de ago. de 2026</time></b> por <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/prd/reference/rulesets><div class=pagination-nav__sublabel>Anterior</div><div class=pagination-nav__label>Rulesets</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/prd/reference/api/brabo-api><div class=pagination-nav__sublabel>Próxima</div><div class=pagination-nav__label>Introduction</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_P_6G thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#classificações class="table-of-contents__link toc-highlight">Classificações</a><li><a href=#as-doze-rotas-públicas class="table-of-contents__link toc-highlight">As doze rotas públicas</a><ul><li><a href=#infraestrutura class="table-of-contents__link toc-highlight">Infraestrutura</a><li><a href=#auth-first-party class="table-of-contents__link toc-highlight">Auth first-party</a></ul><li><a href=#notas class="table-of-contents__link toc-highlight">Notas</a><li><a href=#tabela class="table-of-contents__link toc-highlight">Tabela</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/prd/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_lgoI><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>method<th>path<th>classification<tbody><tr><td>GET<td><code>/.well-known/jwks.json</code><td>public<tr><td>POST<td><code>/auth/login</code><td>public<tr><td>POST<td><code>/auth/logout</code><td>public<tr><td>GET<td><code>/auth/oauth/:provider/callback</code><td>public<tr><td>GET<td><code>/auth/oauth/:provider/start</code><td>public<tr><td>POST<td><code>/auth/refresh</code><td>public<tr><td>POST<td><code>/auth/register</code><td>public<tr><td>POST<td><code>/auth/request-password-reset</code><td>public<tr><td>POST<td><code>/auth/reset-password</code><td>public<tr><td>POST<td><code>/auth/verify-email</code><td>public<tr><td>GET<td><code>/gates</code><td>jwt<tr><td>GET<td><code>/git/oauth/:provider/callback</code><td>public<tr><td>GET<td><code>/health</code><td>public<tr><td>GET<td><code>/live</code><td>public<tr><td>GET<td><code>/metrics</code><td>public<tr><td>GET<td><code>/runner-releases/binary</code><td>public<tr><td>POST<td><code>/internal/sessions/:sessionId/actions</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/anamnese-context</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/delegations</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/dev-context</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/epics</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/events</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/pending-work</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/events</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/gates/verdict</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/handoffs</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/hypotheses</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/infra-artifacts/:prActionId/files</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/infra-context</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/infra-gates/verdict</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/instruction-patches</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/max-parallel-proposals</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/llm-turn</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/llm-turn-stream</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/c4-diagram</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/module-map</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/module-routing</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/project-image</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/proficiency</code><td>engine-service<tr><td>POST<td><code>/internal/models/sync</code><td>engine-service<tr><td>GET<td><code>/internal/graph/prompt-templates/:name</code><td>engine-service<tr><td>POST<td><code>/internal/graph/prompt-templates</code><td>engine-service<tr><td>POST<td><code>/internal/rag/search</code><td>engine-service<tr><td>POST<td><code>/internal/rag/feedback</code><td>engine-service<tr><td>GET<td><code>/internal/gates</code><td>engine-service<tr><td>GET<td><code>/internal/projects/:projectId/git-remote</code><td>engine-service<tr><td>GET<td><code>/internal/projects/:projectId/business-rules</code><td>engine-service<tr><td>GET<td><code>/internal/projects/:projectId/backlog</code><td>engine-service<tr><td>GET<td><code>/internal/projects/:projectId/product-metrics</code><td>engine-service<tr><td>POST<td><code>/internal/projects/:projectId/workspace-verification</code><td>engine-service<tr><td>POST<td><code>/internal/projects/:projectId/container-exec</code><td>engine-service<tr><td>GET<td><code>/internal/projects/:projectId/container-spec</code><td>engine-service<tr><td>GET<td><code>/internal/sessions/:sessionId/psychologist-context</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/stories</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/story-modules</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/tasks</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/tasks/:taskId/block</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/tasks/:taskId/gate/open</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/tasks/:taskId/status</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/tasks/claim</code><td>engine-service<tr><td>POST<td><code>/internal/sessions/:sessionId/termination</code><td>engine-service<tr><td>GET<td><code>/</code><td>jwt<tr><td>GET<td><code>/users/me/credentials</code><td>jwt<tr><td>POST<td><code>/users/me/credentials</code><td>jwt<tr><td>POST<td><code>/users/me/credentials/:provider/test</code><td>jwt<tr><td>DELETE<td><code>/users/me/credentials/:provider</code><td>jwt<tr><td>POST<td><code>/users/me/git-credentials</code><td>jwt<tr><td>GET<td><code>/users/me/preferences</code><td>jwt<tr><td>PATCH<td><code>/users/me/preferences</code><td>jwt<tr><td>GET<td><code>/workspaces</code><td>jwt<tr><td>POST<td><code>/workspaces</code><td>jwt<tr><td>DELETE<td><code>/projects/:projectId</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId</code><td>role:viewer<tr><td>PATCH<td><code>/projects/:projectId</code><td>role:maintainer<tr><td>PUT<td><code>/projects/:projectId/execution-mode</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/models</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/actions</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/agent-autonomy</code><td>role:maintainer<tr><td>PUT<td><code>/projects/:projectId/agent-autonomy</code><td>role:maintainer<tr><td>DELETE<td><code>/projects/:projectId/agent-bindings/:agentSlug</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/agent-bindings/:agentSlug</code><td>role:viewer<tr><td>PUT<td><code>/projects/:projectId/agent-bindings/:agentSlug</code><td>role:developer<tr><td>DELETE<td><code>/projects/:projectId/area-bindings/:areaKey</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/area-bindings/:areaKey</code><td>role:viewer<tr><td>PUT<td><code>/projects/:projectId/area-bindings/:areaKey</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/agent-costs</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/agents/:agent/instruction-versions</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/agents/:agent/instruction-versions/:version/rollback</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/anamnese/run</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/architecture</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/backlog</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/budget</code><td>role:maintainer<tr><td>PUT<td><code>/projects/:projectId/budget</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/agent-areas</code><td>role:developer<tr><td>PATCH<td><code>/projects/:projectId/agent-areas/:key/max-parallel</code><td>role:maintainer<tr><td>PUT<td><code>/projects/:projectId/agent-areas/:key/budget</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/code/blame</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/code/branches</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/code/file</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/code/pull-requests</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/code/pull-requests/:pullRequestId/diff</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/code/search</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/code/tree</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/rag/search</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/rag/reindex</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/rag/local</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/rag/feedback</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/rag/coverage</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/container</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/container/lifecycle</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/coverage</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/events/:eventId</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/execution/activate</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/execution/session</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/git/:provider/connect</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/git/:provider/repository</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/git/:provider/repository/adopt</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/git/bootstrap</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/git/bootstrap/plan</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/git/bootstrap/plan/approve</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/git/bootstrap/plan/skip</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/git/bootstrap/acknowledge-protection-failure</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/git/repository</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/hypotheses</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/hypotheses/:hypothesisId/accept</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/hypotheses/:hypothesisId/dismiss</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/infra-artifacts</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/instruction-versions</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/members</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/members</code><td>role:maintainer<tr><td>DELETE<td><code>/projects/:projectId/members/:userId</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/model-binding</code><td>role:viewer<tr><td>PUT<td><code>/projects/:projectId/model-binding</code><td>role:maintainer<tr><td>GET<td><code>/projects/:projectId/permissions</code><td>role:maintainer<tr><td>PUT<td><code>/projects/:projectId/permissions</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/personal-access-tokens</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/personal-access-tokens</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/personal-access-tokens/all</code><td>role:maintainer<tr><td>DELETE<td><code>/projects/:projectId/personal-access-tokens/:tokenId</code><td>role:developer<tr><td>DELETE<td><code>/projects/:projectId/personal-access-tokens/:tokenId/admin</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/runner-device-keys</code><td>role:developer<tr><td>DELETE<td><code>/projects/:projectId/runner-device-keys/:deviceKeyId</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/proficiency</code><td>role:viewer<tr><td>DELETE<td><code>/projects/:projectId/proficiency/me</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/proficiency/me/opt-in</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/psychologist/analyses</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/psychologist/status</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/runner-ticket</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/terminal-ticket</code><td>role:viewer<tr><td>GET<td><code>/projects/:projectId/sessions</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/sessions</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId</code><td>role:viewer<tr><td>PATCH<td><code>/projects/:projectId/sessions/:sessionId</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/actions</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/actions</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/actions/:actionId/approve</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/actions/:actionId/approve_always</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/actions/:actionId/deny</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/:agent/cancel</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/:agent/message</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/:agent/start</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/arquiteto/handoff-infra</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/agents/criativo/validate-necessity</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/budget</code><td>role:developer<tr><td>PUT<td><code>/projects/:projectId/sessions/:sessionId/budget</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/chat</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/events</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/events</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/events/:eventId</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/execution/parallelize</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/handoffs</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/handoffs</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/handoffs/:handoffId/accept</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/model-binding</code><td>role:viewer<tr><td>PUT<td><code>/projects/:projectId/sessions/:sessionId/model-binding</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/psychologist/reanalyze</code><td>role:maintainer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/readiness</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/socket-ticket</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/tasks/:taskId/unblock</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/sessions/:sessionId/token-usage</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/sessions/:sessionId/transition</code><td>role:developer<tr><td>GET<td><code>/projects/:projectId/spend/me</code><td>role:viewer<tr><td>POST<td><code>/projects/:projectId/stories/:storyId/return</code><td>role:developer<tr><td>POST<td><code>/projects/:projectId/stories/promote</code><td>role:developer<tr><td>DELETE<td><code>/workspaces/:workspaceId</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId</code><td>role:viewer<tr><td>PATCH<td><code>/workspaces/:workspaceId</code><td>role:maintainer<tr><td>POST<td><code>/workspaces/:workspaceId/members</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId/model-binding</code><td>role:viewer<tr><td>PUT<td><code>/workspaces/:workspaceId/model-binding</code><td>role:maintainer<tr><td>GET<td><code>/workspaces/:workspaceId/credential-spend</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId/spend-report</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId/huggingface/models</code><td>role:maintainer<tr><td>POST<td><code>/workspaces/:workspaceId/huggingface/pull-requests</code><td>role:maintainer<tr><td>POST<td><code>/workspaces/:workspaceId/huggingface/pull-requests/:id/confirm</code><td>role:maintainer<tr><td>GET<td><code>/workspaces/:workspaceId/huggingface/pull-requests/:id</code><td>role:maintainer<tr><td>POST<td><code>/workspaces/:workspaceId/models/activate</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId/models/catalog</code><td>role:maintainer<tr><td>POST<td><code>/workspaces/:workspaceId/models/sync</code><td>role:owner<tr><td>POST<td><code>/workspaces/:workspaceId/models/uses</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId/models/:modelId/price-changes</code><td>role:maintainer<tr><td>PATCH<td><code>/workspaces/:workspaceId/models/:modelId/pricing</code><td>role:owner<tr><td>GET<td><code>/workspaces/:workspaceId/projects</code><td>role:viewer<tr><td>POST<td><code>/workspaces/:workspaceId/projects</code><td>role:maintainer<tr><td>GET<td><code>/workspaces/:workspaceId/projects-status</code><td>role:viewer<tr><td>GET<td><code>/workspaces/:workspaceId/projects-summary</code><td>role:viewer<tr><td>GET<td><code>/workspaces/:workspaceId/summary</code><td>role:viewer<tr><td>POST<td><code>/workspaces/:workspaceId/unread-events</code><td>role:viewer<tr><td>GET<td><code>/workspaces/:workspaceId/containers</code><td>role:viewer</table></div></div></div><div class=row><div class="col col--12"><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/security-surface.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Last updated<!-- --> on <b><time datetime=2026-09-03T17:12:36.000Z itemprop=dateModified>Sep 3, 2026</time></b> by <b>Daniel Souza</b></span></div></div></footer></div></div></article><div class=row><div class="col col--12"><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/prd/reference/rulesets><div class=pagination-nav__sublabel>Previous</div><div class=pagination-nav__label>Rulesets</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/prd/reference/api/brabo-api><div class=pagination-nav__sublabel>Next</div><div class=pagination-nav__label>Introduction</div></a></nav></div></div></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#classifications class="table-of-contents__link toc-highlight">Classifications</a><li><a href=#the-fifteen-public-routes class="table-of-contents__link toc-highlight">The fifteen public routes</a><ul><li><a href=#infrastructure class="table-of-contents__link toc-highlight">Infrastructure</a><li><a href=#first-party-auth class="table-of-contents__link toc-highlight">First-party auth</a><li><a href=#social-login-adr-0084 class="table-of-contents__link toc-highlight">Social login (ADR 0084)</a></ul><li><a href=#notes class="table-of-contents__link toc-highlight">Notes</a><li><a href=#table class="table-of-contents__link toc-highlight">Table</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/prd/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
