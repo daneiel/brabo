@@ -80,6 +80,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 
 | O handoff da Infra podia ser aceito por tela nenhuma (D0) | `offeredHandoff` filtra o card do fio por `AGENTES_DE_CHAT`, que exclui `infra` — e o filtro está CERTO (o engine não tem cláusula de `message` pro Infra Lead; alargá-lo faria a tela oferecer um fio que não existe e o composer mandar mensagem pro Criativo). O defeito era a consequência, que o comentário do próprio código registrava como aceita: `acceptHandoff` tinha UM consumidor só, atrás desse filtro, então o handoff de `OfferInfraHandoffUseCase` ficava `offered` para sempre, o Infra Lead nunca era ativado, `propose_container_start` nunca era chamado e NENHUM projeto de nenhum modo chegava a ter container de pé. Correção: card acionável PRÓPRIO, fora do fio, na faixa fixa entre a área que rola e o composer — a mesma que já hospeda o handoff manual e se declara o lugar das ações de handoff que não são conversa —, chamando o `acceptHandoff` que já existia, fechado pelo mesmo `activeFor`. O `handoff.offered` da Infra continua NARRADO no fio como divisor mudo | RN-499 |
 | A base única dos projetos montados (PR 1, BREAKING) | Criar projeto `mounted` exigia uma linha de bind-mount escrita À MÃO em `api` E `engine` mais um restart dos dois — que mata todo turno de agente, socket de terminal e chamada de LLM em voo da instalação, para onboardar UM projeto. Nasce `BRABO_PROJECTS_BASE`: UMA base, configurada uma vez pelo operador, montada por IDENTIDADE (`$X:$X`) nos dois serviços, com todos os projetos montados dentro dela e NADA editado por projeto. Identidade e não mountpoint fixo porque `workspace_path` é digitado pelo usuário e mostrado de volta a ele — e é o que faz `projectScopeRoot`/`workspace_dir/2` continuarem certos sem código novo. Variável PRÓPRIA (colisão de namespace com `workspace_dir_name` UNIQUE faria `git init` na pasta de outro projeto; dono oposto; a base é navegável e a raiz gerenciada não deve ser). AUSENTE é normal: `projectsBase: null` (`GET workspaces/:id/projects-base`, `maintainer`) e o modo não é oferecido. E `pnpm dev` RECUSA subir com a base sobreposta ao checkout — a única checagem possível, porque a api compara contra `/workspace`. Dois custos declarados: symlink sob a base e uma base só | ADR 0141, RN-500 |
+| A pasta montada nasce quando o container sobe (PR 2) | Fecha a metade que o ADR 0141 deixou declarada. `mounted` validava DISCO na criação (existe? é pasta? é gravável de dentro da api?), o que tornava impossível o requisito literal do dono do produto — *"se for Pasta montada, o bind-mount deve ser criado APÓS a decisão do arquiteto"* —, porque a criação é a PRIMEIRA tela e a decisão do Arquiteto acontece muitas sessões depois; e era o que impedia `mounted` de ser escolha de primeira classe, já que um caminho SUGERIDO pelo assistente é por construção um caminho que ainda não existe. Passa a validar só o LÉXICO (a mesma disciplina de `runner` desde a RN-423) mais estar dentro de `BRABO_PROJECTS_BASE`; a pasta é MATERIALIZADA por `materializarWorkspaceMontado` (`mkdir -p` + as três perguntas de disco, com a recusa por estar fora da base ANTES do `mkdir`), chamada de DOIS lugares: `ExecuteContainerStartUseCase` (o normal — cria, prova gravável e carimba `workspace_verified_at` ANTES de qualquer transição; falha vira `failed` NOMEADO e o ciclo de vida NÃO chega a `provisioning`) e `ConvertProjectExecutionModeUseCase` (a exceção declarada — não tem passo de container onde pendurar o trabalho e move o `permissions.json` para dentro da pasta logo em seguida). A regra da base NÃO entra em `caminhoDeWorkspaceLocalValido`, que roda em toda LEITURA — projeto `mounted` legado fora da base explodiria ao ser lido —, com teste de não-regressão. Sem migration: `mounted` segue gravando `workspace_path` não-nulo, e adiar a VERIFICAÇÃO nunca toca o invariante de PAREAMENTO do CHECK | ADR 0142, RN-501 |
 
 | Alarme de merge de esteira com destinatário | A regra "promoção é `--no-ff`" foi quebrada TRÊS vezes (#367, #394, #464 — a terceira era o PR que consertava as duas primeiras). O achado: a detecção JÁ existia e JÁ funcionou (o `tag-release` reprovou as duas primeiras com a mensagem certa) — faltava para QUEM tocar, porque workflow de `push` que falha numa permanente não tem PR onde ficar vermelho e o repo tinha zero issues. `tag-release` ganha o job `avisar`, que abre issue (e comenta na já aberta, nunca duplica) com `github.token` e nunca com o PAT — PAT inválido é uma das falhas que ele reporta — e isso deixou de ser hipotético: o `BRABO_BOT_TOKEN` expirou em 2026-09-03 à noite, reprovou duas runs do `tag-release`, e foi rotacionado em 2026-09-04; a v4.0.0 carimbou e DISPAROU a Release, o que só acontece com PAT válido (tag criada com `GITHUB_TOKEN` não dispara workflow). A regra passa a cobrir `dev` de forma ESTREITA: só é defeito o PR que trazia ARESTA NOVA (head era merge cujo segundo pai não estava na base), nunca o squash de PR de trabalho, que é a convenção. Desligar squash no repo foi MEDIDO e recusado (taxaria todo PR e mexeria no `changelog.mjs`, que roda `--no-merges`) | ADR 0139 |
 
@@ -562,13 +563,22 @@ daqui e o fechamento vai para o histórico.
   api compara contra `process.cwd()` (`/workspace` dentro do container dela) e
   nunca enxerga o checkout real. O par (modo, caminho) é amarrado por CHECK no banco
   (`execution_mode <> 'container'`), e `projectScopeRoot` continua sendo a
-  derivação ÚNICA da raiz — não duplique validação nos chamadores. Caminho
-  `mounted` é validado na CRIAÇÃO e RECUSADO com mensagem que ensina a montar
-  (RN-422/histórico RN-170): absoluto, sem `..`, existente, gravável de
-  dentro do container, nunca raiz/pasta de sistema nem sobreposto ao
-  checkout do Brabo. `runner` valida só o LÉXICO na criação (sem I/O) e
-  nasce `workspaceVerifiedAt: null` — o runner confirma o caminho de verdade
-  quando conecta, sobrescrevendo o que foi digitado. O portão da imagem
+  derivação ÚNICA da raiz — não duplique validação nos chamadores. Desde a
+  RN-501 (ADR 0142), `mounted` e `runner` validam na criação a MESMA coisa: só
+  o LÉXICO, sem I/O (absoluto, sem `..`, nunca raiz/pasta de sistema nem
+  sobreposto ao checkout do Brabo — RN-422/RN-423/histórico RN-170), com
+  `mounted` acrescentando estar dentro de `BRABO_PROJECTS_BASE`. Os DOIS
+  nascem `workspaceVerifiedAt: null`, e a diferença entre eles é QUANDO/QUEM
+  confirma o disco: no `runner` é o CLI conectando (sobrescrevendo o que foi
+  digitado); no `mounted` é `materializarWorkspaceMontado` — `mkdir -p` mais
+  as três perguntas de disco —, chamada por `ExecuteContainerStartUseCase`
+  quando a Infra sobe o container (o requisito "após a decisão do Arquiteto"
+  cumprido literalmente; falha vira `failed` NOMEADO e o ciclo de vida NÃO
+  chega a `provisioning`) e, como EXCEÇÃO declarada, pela conversão de modo,
+  que não tem passo de container onde pendurar o trabalho e move o
+  `permissions.json` para dentro da pasta. Adiar a VERIFICAÇÃO não toca o
+  invariante de PAREAMENTO: `mounted` segue gravando `workspace_path`
+  não-nulo e o CHECK fica intacto, sem migration. O portão da imagem
   (RN-105) VALE para os TRÊS modos desde a RN-494/ADR 0135 — projeto
   `mounted`/`runner` sem `artifact.project_image` decidido também responde
   409 na aba Code; a dispensa antiga foi REVOGADA, não é mais o

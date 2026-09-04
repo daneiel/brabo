@@ -42,6 +42,47 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `handoff.offered` da Infra continua **narrado** no fio como divisor mudo, e
   nenhum handoff conversacional muda de forma
 
+### Funcionalidades
+
+- **api**: a pasta de um projeto no modo **Pasta montada** deixa de precisar
+  existir na criação — ela é **materializada quando a Infra sobe o container**
+  (RN-501, ADR 0142). O requisito do dono do produto é literal, *"se for Pasta
+  montada, o bind-mount deve ser criado APÓS a decisão do arquiteto"*, e a
+  validação de disco na criação o tornava impossível: a criação é a PRIMEIRA
+  tela do fluxo e a decisão do Arquiteto acontece muitas sessões depois. Era
+  também o que impedia `mounted` de ser escolha de primeira classe — um caminho
+  SUGERIDO pelo assistente (`<base>/<slug>`) é, por construção, um caminho que
+  ainda não existe.
+
+  **O que a criação passa a exigir** é só o LÉXICO — a mesma disciplina que o
+  modo `runner` já tinha (RN-423) — mais estar dentro de `BRABO_PROJECTS_BASE`
+  (RN-500). A diferença entre os dois modos nunca foi *o que conta como caminho
+  válido*, e sim **quando e quem** confirma o disco: no `runner` é o CLI
+  conectando; no `mounted` passa a ser a materialização. Sem base configurada, a
+  recusa diz que o **modo** não está disponível nesta instalação, em vez de
+  fingir que o caminho é que estava errado; fora da base, ela **nomeia a base** e
+  **sugere** `<base>/<nome pedido>`.
+
+  **Quem materializa** é `container_start`, na execução: `mkdir -p`, as três
+  perguntas de disco de sempre (existe? é pasta? dá para escrever?) e o carimbo
+  de `workspace_verified_at`, tudo ANTES de qualquer transição de ciclo de vida.
+  Pasta inalcançável vira `failed` **NOMEADO** — variável, caminho, causa
+  provável (dono da pasta no host; as imagens rodam non-root) e o próximo passo
+  —, nunca throw nem 500, e a linha de `project_containers` **não** chega a ser
+  marcada `provisioning`. A conversão de modo é a única exceção e cria a pasta na
+  hora, porque não tem passo de container onde pendurar o trabalho e move o
+  `permissions.json` para dentro dela logo em seguida.
+
+  **Sem migration, e o CHECK do banco fica intacto:** `mounted` continua
+  gravando `workspace_path` não-nulo, então
+  `(execution_mode <> 'container') = (workspace_path IS NOT NULL)` segue
+  satisfeito — adiar a *verificação* nunca toca o invariante de *pareamento*. A
+  regra da base **não** entrou em `caminhoDeWorkspaceLocalValido`, que roda em
+  toda LEITURA: um projeto `mounted` legado, fora da base, passaria a explodir ao
+  ser lido, e há teste de não-regressão para isso. A mensagem que ensinava a
+  acrescentar `- <caminho>:<caminho>` ao `docker-compose.yml` morreu junto (ADR
+  0141), e há asserção sobre a ausência dela
+
 ### BREAKING
 
 - **feat(config)**: nasce `BRABO_PROJECTS_BASE` — **uma base única**, definida
