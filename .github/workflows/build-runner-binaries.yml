@@ -6,12 +6,17 @@ name: Build runner binaries
 # disciplina do ADR 0030 ("workflow PRÓPRIO disparado pela tag... nada a
 # religar aqui"). Cinco binários (um por plataforma do backlog), cada um
 # construído no seu runner NATIVO — nunca cross-compila addon nativo — e
-# anexado à MESMA GitHub Release que `release.yml` já criou (`gh release
-# upload`, nunca `create`: a Release já existe quando este job termina).
+# anexado à MESMA GitHub Release que `release.yml` cria (`gh release
+# upload`, nunca `create`).
 #
 # Roda em PARALELO a `release.yml`/`publish-runner.yml`, sem `needs:` — a
-# única dependência real é a Release EXISTIR, e o passo de upload trata a
-# ausência dela como erro explícito (nunca cria uma por conta própria).
+# única dependência real é a Release EXISTIR, e o passo de upload ESPERA por
+# ela com teto antes de declarar ausência (nunca cria uma por conta própria).
+#
+# Este arquivo já afirmou o contrário — "a Release já existe quando este job
+# termina" — e a v4.0.0 provou que não: era a PRIMEIRA tag final desde que o
+# workflow nasceu, e a afirmação nunca tinha sido exercitada. Ver o comentário
+# do passo "Anexar à GitHub Release", onde a corrida está medida.
 on:
   push:
     tags:
@@ -167,6 +172,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.alvo.outputs.tag }}
+          # Teto da espera pela Release. 10min contra os ~4min que
+          # `release.yml` levou na v4.0.0 — folga para um build de imagem sem
+          # cache, e ainda dentro do `timeout-minutes: 20` do job somado ao
+          # build mais lento da matriz (macOS).
+          ESPERA_MAXIMA_SEGUNDOS: '600'
+          INTERVALO_SEGUNDOS: '15'
         run: |
           set -euo pipefail
 
@@ -177,15 +188,37 @@ jobs:
           fi
           nome="$(basename "$arquivo")"
 
-          # A Release já existe quando este job roda — publicada por
-          # `release.yml`, que corre em PARALELO sem `needs:` entre os dois
-          # (mesma tag, mesmo evento). Se não existir ainda (corrida rara,
-          # ou dispatch manual apontando pra tag sem Release), falha
-          # EXPLÍCITO — este workflow nunca cria Release por conta própria.
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            echo "::error::a Release de $TAG não existe ainda — este workflow só ANEXA a uma Release existente, nunca cria uma."
-            exit 1
-          fi
+          # A Release NÃO existe quando este job termina de construir, e a
+          # corrida não é rara: é o caso NORMAL. Na v4.0.0 as CINCO
+          # plataformas construíram o binário e passaram no smoke, e as cinco
+          # morreram aqui — binário pronto às 13:10:56, Release publicada às
+          # 13:14:23, uma perda por 3m25s. O motivo é estrutural, não de
+          # carga: `release.yml` publica a Release DEPOIS de construir e
+          # empurrar as quatro imagens do GHCR (~3min), enquanto este job
+          # constrói o binário em ~45s. Quem chega primeiro é sempre este.
+          #
+          # Por que não `on: release: published`, que dispensaria a espera:
+          # `release.yml` cria a Release com o `GITHUB_TOKEN`, e evento
+          # gerado com esse token NÃO dispara workflow (regra do GitHub
+          # contra recursão) — a MESMA armadilha que `tag-release.yml`
+          # documenta sobre a tag da v0.2.0, que por isso nunca publicou.
+          # Trocaríamos uma corrida perdida por um gatilho que nunca dispara.
+          #
+          # Então: espera LIMITADA. O que NÃO muda é o desfecho de uma
+          # ausência PERMANENTE — dispatch manual numa tag sem Release, ou
+          # `release.yml` reprovado — que continua sendo erro explícito, e
+          # nunca uma Release criada por aqui. O que muda é que a ausência
+          # precisa PERSISTIR pelo teto para ser declarada, em vez de ser
+          # lida no primeiro instante, quando ela ainda não significa nada.
+          limite=$(( SECONDS + ESPERA_MAXIMA_SEGUNDOS ))
+          until gh release view "$TAG" >/dev/null 2>&1; do
+            if [ "$SECONDS" -ge "$limite" ]; then
+              echo "::error::a Release de $TAG não existe depois de ${ESPERA_MAXIMA_SEGUNDOS}s de espera — este workflow só ANEXA a uma Release existente, nunca cria uma."
+              exit 1
+            fi
+            echo "a Release de $TAG ainda não existe; nova tentativa em ${INTERVALO_SEGUNDOS}s."
+            sleep "$INTERVALO_SEGUNDOS"
+          done
 
           ja_anexado="$(gh release view "$TAG" --json assets --jq ".assets[].name" | grep -qx "$nome" && echo true || echo false)"
           if [ "$ja_anexado" = 'true' ]; then
