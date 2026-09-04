@@ -700,6 +700,23 @@ password; an empty `NEO4J_AUTH` brings down the `neo4j` container first).
 export NEO4J_PASSWORD="$(openssl rand -hex 24)"
 ```
 
+**In development the switch is `NEO4J_URI`, and it is empty by default.** The
+`neo4j` service runs in the dev compose's default profile, so the server is up
+whether or not anything talks to it; the api only connects when `NEO4J_URI` is
+set. Uncomment it in `.env` (`bolt://neo4j:7687`) and recreate the api —
+`GraphStore` then logs `Neo4j conectado — constraints do grafo garantidas`
+instead of `NEO4J_URI/NEO4J_USER/NEO4J_PASSWORD ausentes`. User and password
+reach the container with the same defaults the `neo4j` service uses for
+`NEO4J_AUTH`, so set them only to CHANGE the password, and changing it there
+changes both sides at once.
+
+Until this was wired, `docker-compose.yml` did not pass the three variables to
+the `api` service at all and the service has no `env_file` — so the block
+`.env.example` has documented since the graph was born reached nothing, and
+uncommenting it turned nothing on. `docker-compose.prod.yml` had supplied them
+since day one (that is why only development was affected): a healthy Neo4j sat
+next to an api reporting the variables absent, indefinitely.
+
 **HEX, not base64.** Neo4j's entrypoint reads `NEO4J_AUTH` as
 `user/password` and splits on the FIRST slash — a base64 password can
 contain `/` (the alphabet has `/` and `+`), and that breaks the parse with

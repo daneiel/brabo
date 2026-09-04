@@ -214,9 +214,9 @@ see the [runbook](../runbook.md#projeto-no-modo-local).
 
 | variable | default | note |
 |---|---|---|
-| `NEO4J_URI` | — | e.g. `bolt://localhost:7687`. Missing or partial (together with `NEO4J_USER`/`NEO4J_PASSWORD`) outside production = graph OFF, dependent routes degrade (`GraphUnavailableError`/503) — nobody needs a local Neo4j just to run the suite. In production, the absence of any of the three brings the boot down |
-| `NEO4J_USER` | — | see `NEO4J_URI` |
-| `NEO4J_PASSWORD` 🔒 | — | see `NEO4J_URI`. No public default on purpose — there's no plausible "example value" for a database password |
+| `NEO4J_URI` | — | e.g. `bolt://neo4j:7687`. **This one is the switch**: empty = graph OFF, dependent routes degrade (`GraphUnavailableError`/503) — nobody needs a local Neo4j just to run the suite. In production, the absence of any of the three brings the boot down. Turning the graph on in development is this one line in `.env` and a restart of the api; until 2026-09-04 that did nothing, because the dev compose did not pass the three variables to the `api` service at all and the service has no `env_file` — `docker-compose.prod.yml` had supplied them since day one, which is why only development was affected |
+| `NEO4J_USER` | `neo4j` (dev) | reaches the container with the same default the `neo4j` service uses for `NEO4J_AUTH`, so set it only to CHANGE the user — changing it there changes both sides at once. Two independent defaults would leave the api authenticating with credentials the server no longer has |
+| `NEO4J_PASSWORD` 🔒 | `dev-neo4j-password-change-me` (dev only) | same pairing rule as `NEO4J_USER`. **No public default in production** on purpose — there's no plausible "example value" for a database password, and `docker-compose.prod.yml` keeps `NEO4J_AUTH` empty so the official image's own entrypoint refuses to start rather than booting with a guessable one |
 | `GRAPH_PROJECTOR_INTERVAL_MS` | `2000` | period of the poller that drains the outbox's `graph_projection` queue and writes handoffs/hypotheses/profiles/interactions to the graph (RN-416) |
 
 ### Observability
