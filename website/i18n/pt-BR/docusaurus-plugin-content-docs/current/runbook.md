@@ -463,6 +463,24 @@ próprio Neo4j recusar subir (o entrypoint da imagem oficial exige senha com
 export NEO4J_PASSWORD="$(openssl rand -base64 32)"
 ```
 
+**Em desenvolvimento o interruptor é `NEO4J_URI`, e ele é vazio por padrão.**
+O serviço `neo4j` sobe no profile default do compose de dev, então o servidor
+fica de pé converse alguém com ele ou não; a api só conecta quando `NEO4J_URI`
+está definida. Descomente no `.env` (`bolt://neo4j:7687`) e recrie a api — o
+`GraphStore` passa a registrar `Neo4j conectado — constraints do grafo
+garantidas` em vez de `NEO4J_URI/NEO4J_USER/NEO4J_PASSWORD ausentes`. Usuário e
+senha chegam ao container com os mesmos defaults que o serviço `neo4j` usa no
+`NEO4J_AUTH`, então defina os dois só para TROCAR a senha — e trocando ali você
+troca dos dois lados de uma vez.
+
+Até isto ser ligado, o `docker-compose.yml` não repassava as três variáveis ao
+serviço `api` de forma nenhuma, e o serviço não tem `env_file` — então o bloco
+que o `.env.example` documenta desde que o grafo nasceu não alcançava nada, e
+descomentar não ligava coisa alguma. O `docker-compose.prod.yml` as supria
+desde o primeiro dia (é por isso que só desenvolvimento era afetado): um Neo4j
+saudável ficava ao lado de uma api relatando as variáveis ausentes,
+indefinidamente.
+
 `docker/smoke.sh` já gera as cinco variáveis efêmeras acima (as quatro
 irmãs e `NEO4J_PASSWORD`) a cada execução — é assim que o job "Build, scan e
 smoke das imagens de produção" do CI sobe o `docker-compose.prod.yml` sem
