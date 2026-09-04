@@ -77,9 +77,11 @@ export type StoryPromotionMode = 'manual' | 'auto';
  *
  * `container` é a pasta gerenciada pelo produto em PROJECT_WORKSPACES_ROOT —
  * o default e o comportamento de sempre. `mounted` (antigo `local`) é uma
- * pasta do usuário que só funciona montada dentro dos containers da api e do
- * engine. `runner` é uma pasta do usuário sem bind-mount, confirmada por um
- * CLI (`brabo-runner`) rodando na máquina dela.
+ * pasta do usuário DENTRO da base única da instalação (`BRABO_PROJECTS_BASE`,
+ * ADR 0141), que é a única pasta da máquina montada nos containers da api e do
+ * engine; ela não precisa existir na criação — é materializada quando a Infra
+ * sobe o container (RN-501, ADR 0142). `runner` é uma pasta do usuário sem
+ * bind-mount, confirmada por um CLI (`brabo-runner`) rodando na máquina dela.
  *
  * Cuidado com o homônimo: nenhum destes valores tem relação com o
  * `GitProviderName` `'local'`, que fala de onde o REPOSITÓRIO vive.
