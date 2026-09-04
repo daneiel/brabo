@@ -1,0 +1,59 @@
+{
+  "statusLabel": {
+    "draft": "rascunho",
+    "ready": "pronta",
+    "inProgress": "em progresso",
+    "done": "concluída"
+  },
+  "sectionLabel": {
+    "backlog": "Backlog",
+    "traceability": "Rastreabilidade",
+    "promotionQueue": "Aguardando sua promoção"
+  },
+  "empty": {
+    "epics": "Nenhum épico ainda. Aceite o handoff do Criativo numa sessão para o PO gerar o backlog.",
+    "rules": "Sem regras de negócio ainda."
+  },
+  "coverage": {
+    "uncoveredBadge": "{{count}} descoberta(s)",
+    "coveredBy": "coberta por {{count}} história(s)",
+    "uncovered": "descoberta — sem história"
+  },
+  "ruleRefs": "{{count}} regra(s) de negócio vinculada(s)",
+  "promotionQueue": {
+    "hint": "O PO terminou estas histórias e elas estão completas. Até você promover, nenhuma tarefa delas é pegável por um dev agent.",
+    "selectedCount": "{{count}} selecionada(s)",
+    "promoteSelected": "Promover selecionadas",
+    "selectAria": "Selecionar {{title}}",
+    "taskRefsSuffix": " · {{count}} tarefa(s) que ficam pegáveis",
+    "promote": "Promover",
+    "reject": "Recusar",
+    "returnModalTitle": "Devolver \"{{title}}\" ao PO?",
+    "reasonLabel": "Motivo",
+    "reasonHint": "Vai como mensagem fixada na sessão do PO. Diga o que falta — é com isto que ele reescreve a história.",
+    "reasonPlaceholder": "Ex.: os critérios de aceite não cobrem a recusa do pagamento.",
+    "returnConfirm": "Devolver ao PO",
+    "cancel": "Cancelar",
+    "toast": {
+      "promoted": "{{count}} história(s) promovida(s)",
+      "partial": "{{promoted}} promovida(s), {{failed}} recusada(s) pelo domínio",
+      "promoteError": "Não foi possível promover",
+      "returnedSuccess": "História devolvida ao PO",
+      "returnError": "Não foi possível devolver"
+    }
+  },
+  "epicNode": {
+    "storyCount": "{{count}} história(s)"
+  },
+  "storyNode": {
+    "awaitingYou": "aguardando você",
+    "returned": "devolvida",
+    "youReturned": "Você devolveu ao PO:"
+  },
+  "fieldLabels": {
+    "rf": "RF",
+    "rnf": "RNF",
+    "dor": "DoR",
+    "dod": "DoD"
+  }
+}

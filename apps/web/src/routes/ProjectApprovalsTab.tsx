@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   approveAction,
@@ -54,7 +55,7 @@ interface EstadoDaQuery<T> {
 function BlocoDeDados<T>({
   query,
   titulo,
-  carregando = 'Carregando…',
+  carregando,
   children,
 }: {
   query: EstadoDaQuery<T>;
@@ -62,6 +63,8 @@ function BlocoDeDados<T>({
   carregando?: string;
   children: (dado: T) => ReactNode;
 }) {
+  const { t } = useTranslation('approvals');
+  const textoCarregando = carregando ?? t('approvalsTab.genericLoading');
   if (query.isError) {
     return (
       <ErroDeCarregamento
@@ -72,7 +75,7 @@ function BlocoDeDados<T>({
     );
   }
   if (query.data === undefined) {
-    return <div className={styles.clean}>{carregando}</div>;
+    return <div className={styles.clean}>{textoCarregando}</div>;
   }
   return <>{children(query.data)}</>;
 }
@@ -87,6 +90,7 @@ interface ProjectApprovalsTabProps {
 }
 
 export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
+  const { t } = useTranslation('approvals');
   const sessionsQuery = useLatestSession(projectId);
   const latestSession = sessionsQuery.latest;
   const actionsQuery = usePendingActions(projectId, latestSession?.id);
@@ -307,10 +311,10 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
         mode: 'auto_approve',
       });
       await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
-      showToast({ title: 'Modo automático ligado', message: agentId, tone: 'success' });
+      showToast({ title: t('approvalsTab.toast.autoModeOnTitle'), message: agentId, tone: 'success' });
     } catch {
       showToast({
-        title: 'Não foi possível ligar o modo automático',
+        title: t('approvalsTab.toast.autoModeOnErrorTitle'),
         message: agentId,
         tone: 'danger',
       });
@@ -351,10 +355,15 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   const filteredRows = rows.filter((r) => r.pattern.toLowerCase().includes(search.toLowerCase()) || r.list.includes(search.toLowerCase()));
 
   const columns: TableColumn<PermissionRow>[] = [
-    { key: 'pattern', label: 'Padrão', width: '2.4fr', render: (r) => <span className={styles.pattern}>{r.pattern}</span> },
+    {
+      key: 'pattern',
+      label: t('approvalsTab.permissions.columnPattern'),
+      width: '2.4fr',
+      render: (r) => <span className={styles.pattern}>{r.pattern}</span>,
+    },
     {
       key: 'type',
-      label: 'Tipo',
+      label: t('approvalsTab.permissions.columnType'),
       width: '0.9fr',
       render: (r) => (
         <Badge square tone={r.list === 'deny' ? 'danger' : r.list === 'allow' ? 'success' : 'warning'}>
@@ -364,7 +373,7 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
     },
     {
       key: 'action',
-      label: 'Ação',
+      label: t('approvalsTab.permissions.columnAction'),
       width: '64px',
       // Botão QUADRADO só de ícone, como no desenho — o rótulo "revogar" ao
       // lado do ícone comia a largura de uma coluna inteira. O nome acessível
@@ -374,8 +383,8 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
         <button
           type="button"
           className={styles.revoke}
-          title="Revogar"
-          aria-label={`Revogar ${r.pattern}`}
+          title={t('approvalsTab.permissions.revoke')}
+          aria-label={t('approvalsTab.permissions.revokeAriaLabel', { pattern: r.pattern })}
           onClick={() => revokeRule(r)}
         >
           <TrashIcon size={14} />
@@ -388,18 +397,20 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
     <div>
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.title}>Pendentes</h2>
-          <span className={styles.eyebrow}>ordenadas por urgência</span>
+          <h2 className={styles.title}>{t('approvalsTab.pending.title')}</h2>
+          <span className={styles.eyebrow}>{t('approvalsTab.pending.eyebrow')}</span>
           <span className={styles.espacador} />
           {selected.size > 0 && (
             <div className={styles.selectionBar}>
-              <span className={styles.selectionCount}>{selected.size} selecionadas</span>
+              <span className={styles.selectionCount}>
+                {t('approvalsTab.pending.selectedCount', { count: selected.size })}
+              </span>
               <Button variant="success" onClick={approveSelected}>
                 <CheckIcon size={15} />
-                Aprovar selecionados
+                {t('approvalsTab.pending.approveSelected')}
               </Button>
               <Button variant="secondary" onClick={() => setSelected(new Set())}>
-                Limpar
+                {t('approvalsTab.pending.clear')}
               </Button>
             </div>
           )}
@@ -407,19 +418,17 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
 
         <BlocoDeDados
           query={sessionsQuery}
-          titulo="Não foi possível abrir as sessões do projeto."
-          carregando="Procurando a sessão do projeto…"
+          titulo={t('approvalsTab.pending.sessionsError')}
+          carregando={t('approvalsTab.pending.findingSession')}
         >
           {() =>
             !latestSession ? (
-              <div className={styles.clean}>
-                Nenhuma sessão ainda — as aprovações nascem do que os agentes propõem numa sessão.
-              </div>
+              <div className={styles.clean}>{t('approvalsTab.pending.noSession')}</div>
             ) : (
               <BlocoDeDados
                 query={actionsQuery}
-                titulo="Não foi possível carregar a fila de aprovações."
-                carregando="Carregando a fila…"
+                titulo={t('approvalsTab.pending.queueError')}
+                carregando={t('approvalsTab.pending.loadingQueue')}
               >
                 {() =>
                   pending.length === 0 ? (
@@ -427,9 +436,7 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                       <span className={styles.vazioIcone}>
                         <CheckIcon size={24} />
                       </span>
-                      <p className={styles.vazioTexto}>
-                        Nenhuma aprovação pendente. O time está fluindo.
-                      </p>
+                      <p className={styles.vazioTexto}>{t('approvalsTab.pending.empty')}</p>
                     </div>
                   ) : (
                     <div className={styles.queue}>
@@ -462,20 +469,20 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
 
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.title}>PRs em revisão</h2>
+          <h2 className={styles.title}>{t('approvalsTab.devPrs.title')}</h2>
           <span className={styles.eyebrow}>
-            {gateTasks.length} de dev agents nos gates de QA/SecOps
+            {t('approvalsTab.devPrs.eyebrow', { count: gateTasks.length })}
           </span>
         </div>
 
         <BlocoDeDados
           query={backlogQuery}
-          titulo="Não foi possível carregar o backlog."
-          carregando="Carregando as PRs em revisão…"
+          titulo={t('approvalsTab.devPrs.backlogError')}
+          carregando={t('approvalsTab.devPrs.loading')}
         >
           {() =>
             gateTasks.length === 0 ? (
-              <div className={styles.clean}>Nenhuma PR de dev agent em revisão ainda.</div>
+              <div className={styles.clean}>{t('approvalsTab.devPrs.empty')}</div>
             ) : (
               <div className={styles.queue}>
                 {gateTasks.map((task) => (
@@ -495,20 +502,20 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
 
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.title}>PRs de infra em revisão</h2>
+          <h2 className={styles.title}>{t('approvalsTab.infraPrs.title')}</h2>
           <span className={styles.eyebrow}>
-            {(infraQuery.data ?? []).length} de infra nos gates de QA/SecOps
+            {t('approvalsTab.infraPrs.eyebrow', { count: (infraQuery.data ?? []).length })}
           </span>
         </div>
 
         <BlocoDeDados
           query={infraQuery}
-          titulo="Não foi possível carregar as PRs de infra."
-          carregando="Carregando as PRs de infra…"
+          titulo={t('approvalsTab.infraPrs.error')}
+          carregando={t('approvalsTab.infraPrs.loading')}
         >
           {(infraArtifacts) =>
             infraArtifacts.length === 0 ? (
-              <div className={styles.clean}>Nenhuma PR de infra em revisão ainda.</div>
+              <div className={styles.clean}>{t('approvalsTab.infraPrs.empty')}</div>
             ) : (
               <div className={styles.queue}>
                 {infraArtifacts.map((artifact) => (
@@ -527,23 +534,22 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
 
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.title}>Permissões do projeto</h2>
+          <h2 className={styles.title}>{t('approvalsTab.permissions.title')}</h2>
           <span className={styles.eyebrow}>.brabo/permissions.json</span>
         </div>
-        <p className={styles.subtitle}>
-          Regras aplicadas antes de cada ação dos agentes. Revogue por linha.
-        </p>
+        <p className={styles.subtitle}>{t('approvalsTab.permissions.subtitle')}</p>
         <div className={styles.banner}>
           <AlertCircleIcon size={15} className={styles.bannerIcone} />
           <span>
-            Ordem de avaliação: <b className={styles.deny}>deny</b> sempre vence{' '}
-            <b className={styles.allow}>allow</b>, independente da ordem no arquivo.
+            {t('approvalsTab.permissions.bannerPrefix')} <b className={styles.deny}>deny</b>{' '}
+            {t('approvalsTab.permissions.bannerMiddle')} <b className={styles.allow}>allow</b>
+            {t('approvalsTab.permissions.bannerSuffix')}
           </span>
         </div>
         <div className={styles.searchRow}>
           <Input
             mono
-            placeholder="Buscar regra ou padrão…"
+            placeholder={t('approvalsTab.permissions.searchPlaceholder')}
             icon={<SearchIcon size={15} />}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -551,8 +557,8 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
         </div>
         <BlocoDeDados
           query={permissionsQuery}
-          titulo="Não foi possível carregar as permissões do projeto."
-          carregando="Lendo o permissions.json…"
+          titulo={t('approvalsTab.permissions.error')}
+          carregando={t('approvalsTab.permissions.loading')}
         >
           {() => (
             <Table
@@ -561,8 +567,8 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
               rowKey={(r) => `${r.list}:${r.pattern}`}
               emptyMessage={
                 rows.length === 0
-                  ? 'Nenhuma regra configurada ainda.'
-                  : 'Nenhuma regra corresponde à busca.'
+                  ? t('approvalsTab.permissions.emptyNoRules')
+                  : t('approvalsTab.permissions.emptyNoMatch')
               }
             />
           )}

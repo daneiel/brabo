@@ -37,6 +37,7 @@ import {
   garantirQueryEscalar,
 } from '../../../infrastructure/filesystem/project-workspaces-root';
 import { ObterContainerDoProjetoUseCase } from '../containers/obter-container-do-projeto.use-case';
+import type { Project } from '../../../domain/iam/project.entity';
 
 /**
  * A superfície de LEITURA de código de um projeto (FASE 26b).
@@ -489,12 +490,15 @@ export class ReadProjectCodeUseCase {
     ref: string | undefined,
     path: string | undefined,
   ): Promise<Alvo> {
-    await this.portaoDoContainer(projectId);
-
     const project = await this.projects.findById(projectId);
     if (!project) {
       throw new NotFoundException(`Projeto não encontrado: ${projectId}`);
     }
+
+    // O projeto é buscado ANTES do portão porque o portão depende dele: um
+    // projeto Local não sobe container nenhum, e portanto não espera decisão
+    // do Arquiteto (RN-169).
+    await this.portaoDoContainer(project);
 
     const repo = await this.repositories.findByProjectId(projectId);
     if (!repo) {
@@ -523,7 +527,7 @@ export class ReadProjectCodeUseCase {
 
     let contido = '';
     try {
-      contido = caminhoDeRepositorioContido(project.workspaceDirName, path);
+      contido = caminhoDeRepositorioContido(project, path);
     } catch (erro) {
       if (erro instanceof CaminhoForaDoEscopoError) {
         // 400 e não 404: dizer "não encontrado" a um caminho que escapa
@@ -562,11 +566,13 @@ export class ReadProjectCodeUseCase {
   }
 
   /**
-   * O portão da FASE 25 (RN-105).
+   * O portão da FASE 25 (RN-105), revisado pela RN-494/ADR 0135 para valer
+   * nos TRÊS modos de execução.
    *
-   * A aba Code só libera depois que o Arquiteto decide QUAL IMAGEM sobe para o
-   * projeto. A ordem é do usuário, e a razão dela é de produto: o container é o
-   * que dá sentido a ler o código ali — ler para depois rodar, buildar,
+   * A aba Code só libera depois que o Arquiteto (ou a Infra, elegendo entre
+   * as candidatas do roteamento — ADR 0133) decide QUAL IMAGEM sobe para o
+   * projeto. A ordem é do usuário, e a razão dela é de produto: o container é
+   * o que dá sentido a ler o código ali — ler para depois rodar, buildar,
    * corrigir. Liberar a leitura antes de existir onde executar seria entregar
    * meia aba e ensinar que o portão é decorativo.
    *
@@ -577,9 +583,28 @@ export class ReadProjectCodeUseCase {
    * 409 e não 403: nada está errado com quem pediu nem com a permissão dele —
    * o recurso ainda não existe neste estado. E a mensagem diz o que falta, para
    * a tela poder mostrar o motivo em vez de um erro mudo.
+   *
+   * ## Por que `mounted`/`runner` PASSAM por aqui agora (RN-494, revisa
+   * RN-169/421)
+   *
+   * A dispensa original (RN-169/RN-421, ADR 0072/0104) argumentava que
+   * `mounted`/`runner` não sobem container PRÓPRIO — o código mora numa pasta
+   * do usuário — logo o portão nunca teria como abrir para eles. Isso
+   * confundia duas perguntas: "este projeto sobe container no SERVIDOR?" (não,
+   * nos dois modos, e isso não muda aqui) e "faz sentido exigir que o
+   * Arquiteto tenha decidido uma imagem antes de liberar a leitura de
+   * código?" (sim, nos três modos — a decisão de imagem é sobre o que o
+   * projeto EXECUTA, não sobre onde o container físico sobe; `mounted`/
+   * `runner` executam dentro dos containers que já existem hoje, ou por um
+   * runner que um dia poderá espelhar essa decisão). Manter a dispensa
+   * deixava a aba Code de `mounted`/`runner` abrir mesmo sem NINGUÉM ter
+   * pensado na imagem do projeto — a regra uniforme fecha essa lacuna.
+   * Custo aceito e declarado no ADR 0135: projeto `mounted`/`runner`
+   * EXISTENTE sem `artifact.project_image` decidido perde a aba Code até o
+   * Arquiteto decidir — inclusive projetos reais de dogfooding.
    */
-  private async portaoDoContainer(projectId: string): Promise<void> {
-    const estado = await this.container.execute(projectId);
+  private async portaoDoContainer(project: Project): Promise<void> {
+    const estado = await this.container.execute(project.id);
     if (estado.status === 'sem_decisao') {
       throw new ConflictException(
         'A aba Code ainda não está liberada: o Arquiteto não decidiu qual ' +

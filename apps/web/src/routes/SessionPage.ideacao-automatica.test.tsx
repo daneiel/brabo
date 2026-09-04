@@ -1,8 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Session } from '../lib/api-types';
+import { historicoFalso } from '../test/historico-de-eventos';
+// Instância REAL do app (mesmo padrão de SessionPage.arquiteto-modelo-icone.test.tsx):
+// as asserções abaixo esperam texto em pt-BR, e `en` é o idioma DEFAULT.
+import i18n from '../lib/i18n';
 
 /**
  * Achado 3: sessão criativa deve iniciar ideação sozinha, sem exigir o
@@ -35,6 +39,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('../lib/hooks', () => ({
   useSessionEvents: () => ({ data: eventos() }),
+  useSessionEventHistory: () => historicoFalso(eventos().items),
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: [] }),
@@ -110,12 +115,17 @@ async function mandarMensagem(texto: string) {
   fireEvent.keyDown(campo, { key: 'Enter' });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
   eventos.mockReturnValue({ items: [] });
   getSession.mockResolvedValue(sessao());
   startAgent.mockResolvedValue({ agent: 'criativo', status: 'active' });
   sendAgentMessage.mockResolvedValue({ ok: true });
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('SessionPage — a primeira mensagem de uma sessão criativa ativa o Criativo sozinha', () => {

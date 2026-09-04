@@ -1,0 +1,19 @@
+{
+  "name": "@brabo/e2e",
+  "private": true,
+  "license": "MIT",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "relatorio": "playwright show-report",
+    "navegadores": "playwright install --with-deps chromium",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/node": "^26.1.1",
+    "typescript": "^5.7.3"
+  }
+}

@@ -5,9 +5,29 @@ defmodule Engine.Harness.Tools do
   lista os módulos.
   """
 
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, WriteFile, Terminal, EmitArtifact}
+  alias Engine.Harness.Tools.{
+    ReadFile,
+    SearchWorkspace,
+    WriteFile,
+    Terminal,
+    EmitArtifact,
+    RagSearch,
+    RagFeedback
+  }
 
-  @registry [ReadFile, SearchWorkspace, WriteFile, Terminal, EmitArtifact]
+  # `RagFeedback` anda sempre junto de `RagSearch` (RN-480): buscar sem poder
+  # dizer se o trecho serviu deixa a calibração dos pesos da busca híbrida sem
+  # sinal de verdade nenhum. `:direct` como a busca — votar não é efeito
+  # externo e não vira `proposed_action`.
+  @registry [
+    ReadFile,
+    SearchWorkspace,
+    WriteFile,
+    Terminal,
+    EmitArtifact,
+    RagSearch,
+    RagFeedback
+  ]
 
   @doc "Módulos de ferramenta registrados (default — usado por EchoAgent/testes)."
   def registry, do: @registry

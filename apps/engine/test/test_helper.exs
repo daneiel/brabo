@@ -18,7 +18,22 @@ binary_exclusions =
     &is_nil/1
   )
 
-ExUnit.start(exclude: binary_exclusions)
+# `:golden_set_qa` (ADR 0123) é uma exclusão PERMANENTE, nunca detectada
+# como os quatro binários acima. A diferença é deliberada: gitleaks/
+# hadolint/yamllint/actionlint são grátis e determinísticos — ausência é o
+# único motivo de pular. O golden-set chama um LLM real (Ollama, já de pé
+# nesta e em outras máquinas de desenvolvimento) e o julgamento que ele mede
+# é o que NÃO é determinístico — incluir automaticamente por "Ollama
+# alcançável" faria este módulo disparar dentro de QUALQUER `mix test`,
+# gastando tokens sem aviso e introduzindo flake de verdade numa suíte que
+# hoje é 100% determinística. Só roda com `mix test --only golden_set_qa`
+# (ou `mix golden_set.qa`) — decisão deliberada, nunca automática.
+#
+# `:golden_set_rag` (ADR 0132) é a MESMA exclusão permanente, para o
+# golden-set de acerto da busca híbrida do RAG — mesmo motivo, mesma
+# máquina com Ollama de pé o tempo todo. Só roda com
+# `mix test --only golden_set_rag` (ou `mix golden_set.rag`).
+ExUnit.start(exclude: [:golden_set_qa, :golden_set_rag | binary_exclusions])
 Ecto.Adapters.SQL.Sandbox.mode(Engine.Repo, :manual)
 
 # outbox_events é gerenciada pela api (Drizzle, schema "public") — o banco
@@ -112,6 +127,47 @@ CREATE TABLE IF NOT EXISTS public.projects (
 # `Engine.Projects.Project.workspace_dir_name/1` já degrada pra `nil` (que
 # quem chama trata como "usa o project_id cru").
 Engine.Repo.query!("ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workspace_dir_name text")
+
+# RN-169/RN-421 (ADR 0072/0104): o localizador da pasta deixou de ser só o
+# nome. As colunas são lidas pela MESMA consulta que resolve
+# `workspace_dir_name/1`, e sem elas o fixture reprovaria com "column does
+# not exist". Nullable e sem default de propósito, como a de cima:
+# `case when execution_mode <> 'container'` com a coluna nula cai no ramo
+# `container`, que é o comportamento que as dezenas de specs que inserem em
+# "projects" sempre tiveram. `text` solto, e não o enum real da api — o
+# fixture nunca precisou do CHECK/enum, só do valor lido de volta.
+Engine.Repo.query!("ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS execution_mode text")
+Engine.Repo.query!("ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workspace_path text")
+# `nil` = não verificado (RN-423) — só ganha sentido em `execution_mode:
+# "runner"`, checado por `Engine.Actions.TerminalExecutor` antes de rotear.
+Engine.Repo.query!(
+  "ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workspace_verified_at timestamptz"
+)
+
+# Mesmo motivo dos fixtures acima — project_containers também é gerenciada
+# pela api (Drizzle, schema "public", ADR 0081/0130/0134). O engine lê só
+# `status` (`Engine.Containers.ProjectContainerLifecycle.running?/1`, RN-492)
+# pra decidir se o comando de terminal de um dev agent atravessa pro
+# container real; as demais colunas existem pra os testes conseguirem
+# inserir uma linha completa, como a api faria. `image_version`/`cpus`/
+# `memory_mb`/`pids_limit` são NOT NULL na api — mantidos NOT NULL aqui
+# também, sem default: um teste que esquecer de informá-los reprova alto,
+# não silenciosamente com uma linha incompleta.
+Engine.Repo.query!("""
+CREATE TABLE IF NOT EXISTS public.project_containers (
+  id uuid PRIMARY KEY,
+  project_id uuid NOT NULL UNIQUE,
+  status text NOT NULL DEFAULT 'provisioning',
+  image_version integer NOT NULL,
+  container_id text,
+  cpus double precision NOT NULL,
+  memory_mb integer NOT NULL,
+  pids_limit integer NOT NULL,
+  failure_reason text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  status_changed_at timestamptz NOT NULL DEFAULT now()
+)
+""")
 
 # sessions: lida pela Anamnese (Fase 4b) — pra achar a sessão do projeto
 # onde narrar a rodada, e pra filtrar a janela de eventos por projeto

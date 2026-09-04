@@ -1,7 +1,18 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ModelPicker } from './ModelPicker';
+// A instância REAL do app: o componente usa `useTranslation('models')` sem
+// `I18nextProvider` próprio — mesmo padrão de `ProjectExecutorsTab.test.tsx`.
+import i18n from '../lib/i18n';
 import type { Model, ModelsByCategory } from '../lib/api-types';
+
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
 
 /**
  * O picker vive dentro de uma `Table` com `overflow: hidden`, e o dropdown era

@@ -323,4 +323,135 @@ defmodule Engine.Infra.InfraLeadServerTest do
     roles = Enum.map(state.messages, & &1["role"])
     assert roles == ["system", "user", "assistant"]
   end
+
+  # --- Regressão: `{:ok, %{"error" => erro}}` não crasha o GenServer ---
+
+  test "api narra erro no próprio frame final: NÃO crasha, turno conclui, agent.error é gravado",
+       %{state: state} do
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_llm_turns, [%{"error" => "budget excedido"}])
+
+    # Antes da correção, `run_turn/2` devolvia `{state, ""}` — um 2-tuple com
+    # MAPA na primeira posição — que não casava com NENHUMA cláusula de
+    # `conclude/1` (só `{:proposed, _, _, _}` e `{:done, _}`), e o
+    # `FunctionClauseError` matava o processo `:temporary` pra sempre.
+    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "agent.error", payload: %{mensagem: mensagem}}}
+
+    assert mensagem =~ "budget excedido"
+
+    refute_received {:propose_action, _, _, _}
+  end
+
+  # --- `propose_container_start` (ADR 0131/RN-487) ---
+
+  test "propose_container_start é interceptada, chama propose_action com container_start, e NÃO halts",
+       %{state: state} do
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_propose_action, %{"id" => "pa-cs-1", "status" => "pending"})
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_container_start", %{
+        "imagem" => "node:22-bookworm-slim",
+        "network" => "none",
+        "resources" => %{"cpus" => 1},
+        "rationale" => "candidata roteada pelo Arquiteto para o módulo api"
+      }),
+      # Só é consumida se `dispatch_calls/2` NÃO fez halt — prova que o loop
+      # continuou (diferente de `propose_infra_pr`, que consolida e para).
+      FakeEngineApiClient.final_response("pronto-cs")
+    ])
+
+    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    assert_received {:propose_action, "container_start", %{kind: "agent", id: "infra"}, payload}
+    assert payload.imagem == "node:22-bookworm-slim"
+    assert payload.network == "none"
+    assert payload.resources == %{"cpus" => 1}
+    assert payload.rationale == "candidata roteada pelo Arquiteto para o módulo api"
+
+    # Diferente de propose_infra_pr, nenhuma PR consolidada foi aberta.
+    refute_received {:propose_action, "open_infra_pr", _, _}
+
+    # A segunda resposta scriptada só é alcançada se o loop CONTINUOU.
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "agent.response", payload: %{content: "pronto-cs"}}}
+  end
+
+  # --- `build_kickoff/1`: bloco ROTEAMENTO DE MÓDULOS ---
+
+  test "kickoff inclui o roteamento de módulos quando o Arquiteto roteou", %{state: state} do
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github",
+      "moduleRouting" => %{
+        "status" => "roteado",
+        "roteamento" => [
+          %{
+            "modulo" => "api",
+            "imagemCandidata" => "node:22-bookworm-slim",
+            "porque" => "estabilidade e LTS"
+          }
+        ],
+        "version" => 2,
+        "eventId" => "evt-routing-1",
+        "createdAt" => "2026-01-01T00:00:00Z"
+      }
+    })
+
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    user_msg = Enum.find(new_state.messages, &(&1["role"] == "user"))
+    assert user_msg["content"] =~ "api: node:22-bookworm-slim — estabilidade e LTS"
+  end
+
+  test "kickoff degrada quando não há roteamento vigente", %{state: state} do
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github",
+      "moduleRouting" => %{"status" => "sem_roteamento", "roteamento" => [], "version" => 0}
+    })
+
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    user_msg = Enum.find(new_state.messages, &(&1["role"] == "user"))
+
+    assert user_msg["content"] =~
+             "(sem roteamento vigente — o Arquiteto não rodou route_modules_to_infra nesta sessão)"
+  end
+
+  test "kickoff degrada quando o contexto não traz moduleRouting nenhum", %{state: state} do
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    user_msg = Enum.find(new_state.messages, &(&1["role"] == "user"))
+
+    assert user_msg["content"] =~
+             "(sem roteamento vigente — o Arquiteto não rodou route_modules_to_infra nesta sessão)"
+  end
 end

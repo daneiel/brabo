@@ -1,190 +1,198 @@
 ---
 id: validacao-fase-12
-title: A validação de que os três achados morreram
-sidebar_label: Validação da Fase 12
+title: The validation that the three findings died
+sidebar_label: Phase 12 validation
 sidebar_position: 5
-description: O roteiro auditável que exercita adoção, promoção manual e reagendamento numa execução só — com os event ids extraídos do banco, e o que a validação deliberadamente não prova.
-keywords: [validação, Fase 12, dogfooding, adoção, reagendamento, promoção]
+description: The auditable script that exercises adoption, manual promotion, and rescheduling in a single execution — with event ids extracted from the database, and what the validation deliberately doesn't prove.
+keywords: [validation, Phase 12, dogfooding, adoption, rescheduling, promotion]
 ---
 
-# A validação de que os três achados morreram
+# The validation that the three findings died
 
-A [colheita do primeiro dogfooding](./primeiro-dogfooding.md) deixou três
-achados P1 de operabilidade. A Fase 12 os endereçou um a um; este documento é a
-prova de que os três morreram **na mesma execução**, e não só em testes
-unitários que cada fatia escreveu para si.
+The [first dogfooding harvest](./primeiro-dogfooding.md) left three P1
+operability findings. Phase 12 addressed them one by one; this document is
+the proof that all three died **in the same execution**, and not only in
+unit tests each slice wrote for itself.
 
-A validação é um script: `pnpm --filter api validacao:fase-12`. Ele sai com
-código diferente de zero quando o critério não fecha — é critério de aceite, não
-relatório — e ao final imprime a tabela de evidência **lida do banco**. Os ids
-abaixo não são transcritos à mão.
+The validation is a script: `pnpm --filter api validacao:fase-12`. It exits
+with a nonzero code when a criterion isn't met — it's an acceptance
+criterion, not a report — and at the end it prints the evidence table
+**read from the database**. The ids below aren't transcribed by hand.
 
-## O que ela NÃO prova
+## What it does NOT prove
 
-Isto vem primeiro, e não em rodapé, porque uma validação que esconde os próprios
-limites vale menos que nenhuma.
+This comes first, not as a footnote, because a validation that hides its own
+limits is worth less than none.
 
-**Não prova GitHub remoto.** A adoção roda contra o `LocalGitProvider`. O motivo
-não é conveniência: o fork usado na Fase 10 **nunca foi nomeado** — a linha 135
-da missão continua sendo um `TODO(humano): qual owner/repo do fork?` —, então
-não existe alvo para readotar. O caminho exercitado é o mesmo nos dois
-providers (`getRepo` → plano → `origin: 'adopted'`); o que muda é a rede, e essa
-diferença está coberta pelo smoke `adopt-repository.smoke.spec.ts`, que só roda
-com `ADOPT_TEST_REPO` e `GITHUB_TEST_TOKEN` reais.
+**It doesn't prove remote GitHub.** Adoption runs against the
+`LocalGitProvider`. The reason isn't convenience: the fork used in Phase 10
+was **never named** — line 135 of the mission is still a
+`TODO(humano): which owner/repo of the fork?` — so there's no target to
+re-adopt. The path exercised is the same in both providers (`getRepo` →
+plan → `origin: 'adopted'`); what changes is the network, and that
+difference is covered by the `adopt-repository.smoke.spec.ts` smoke test,
+which only runs with real `ADOPT_TEST_REPO` and `GITHUB_TEST_TOKEN`.
 
-**Não prova o julgamento dos gates.** QA e SecOps são agentes de LLM. Aqui o
-veredito entra pelo `RecordGateVerdictUseCase` — que é o funil **real** por onde
-o parecer deles passa, e onde nasce a linha de outbox `task.gate_resolved`. O
-que a Fase 12b precisa provar é a cadeia veredito → outbox → wake → claim, não
-se o modelo sabe ler uma suite. O julgamento continua coberto pelos aceites da
-Fase 4a, que o [ADR 0020](../adr/0020-destravar-gates-qa-secops.md) declara
-explicitamente **não determinísticos** com modelo local.
+**It doesn't prove the gates' judgment.** QA and SecOps are LLM agents. Here
+the verdict enters through `RecordGateVerdictUseCase` — which is the
+**real** funnel their opinion goes through, and where the
+`task.gate_resolved` outbox line is born. What Phase 12b needs to prove is
+the chain verdict → outbox → wake → claim, not whether the model can read a
+test suite. The judgment itself remains covered by Phase 4a's acceptance
+tests, which [ADR 0020](../adr/0020-destravar-gates-qa-secops.md) explicitly
+declares **non-deterministic** with a local model.
 
-**Não faz merge.** Merge em branch protegida é decisão do usuário, por desenho
-([RN-014](../business-rules.md#rn-014)). O passo 6 do roteiro mostra a trava
-recusando exatamente isso, com autonomia `auto_approve` e `permissions.json`
-liberando.
+**It doesn't merge.** Merging into a protected branch is the user's
+decision, by design ([RN-014](../business-rules.md#rn-014)). Step 6 of the
+script shows the lock refusing exactly that, with `auto_approve` autonomy
+and `permissions.json` allowing it.
 
-**Não usa LLM em lugar nenhum.** O dev é o `NoopDevAgentServer`. Ele não
-escreve código de verdade — mas desde a Fase 12d ele exercita a **mesma máquina
-de estados** do agente real (`Engine.Dev.AgentIo`), e é isso que está sob teste
-aqui. Antes disso o Noop processava uma task e parava: o achado #10 sobrevivia
-dentro do próprio instrumento de medida, o que teria reprovado o critério "zero
-restarts" por defeito da ferramenta, não do produto.
+**It doesn't use an LLM anywhere.** The dev is the `NoopDevAgentServer`. It
+doesn't write real code — but since Phase 12d it exercises the **same state
+machine** as the real agent (`Engine.Dev.AgentIo`), and that's what's under
+test here. Before that, the Noop would process one task and stop: finding
+#10 survived inside the measuring instrument itself, which would have
+failed the "zero restarts" criterion due to a defect in the tool, not the
+product.
 
-## O roteiro
+## The script
 
-| # | passo | o que é afirmado |
+| # | step | what is asserted |
 |---|---|---|
-| 0 | criar projeto | nasce com `story_promotion = manual` **sem ninguém configurar nada** |
-| 1 | adotar um bare repo pré-existente, com `main` e `develop`, sem `qa` nem `rc` | `origin = 'adopted'`; o plano diagnostica branch faltante **e** branch fora do template; `plan_decision` fica **nula**; nenhuma linha inserida à mão |
-| 1b | decidir "adotar como está" | o template **não** é forçado sobre o repositório do usuário ([RN-045](../business-rules.md#rn-045)) |
-| 2 | o PO cria uma história completa, com 3 tarefas | a história fica `draft` + `proposed_ready`; **`claimNext` devolve `null`** |
-| 3 | o usuário promove | a história vira `ready`; a proposta sai da fila; o evento registra `user`, não `agent/po` |
-| 4 | ativar a execução e resolver 3 gates em sequência | 3 tarefas, 1 agente, **0 restarts do engine** |
-| 5 | fila vazia | `dev.idle` explícito, processo vivo |
-| 6 | propor merge em branch protegida com tudo liberado | `pending` — continua sendo sua decisão |
+| 0 | create project | born with `story_promotion = manual` **without anyone configuring anything** |
+| 1 | adopt a pre-existing bare repo, with `main` and `develop`, without `qa` or `rc` | `origin = 'adopted'`; the plan diagnoses a missing branch **and** a branch outside the template; `plan_decision` stays **null**; no row inserted by hand |
+| 1b | decide "adopt as is" | the template is **not** forced onto the user's repository ([RN-045](../business-rules/custo.md#rn-045)) |
+| 2 | the PO creates a complete story, with 3 tasks | the story becomes `draft` + `proposed_ready`; **`claimNext` returns `null`** |
+| 3 | the user promotes | the story becomes `ready`; the proposal leaves the queue; the event records `user`, not `agent/po` |
+| 4 | activate execution and resolve 3 gates in sequence | 3 tasks, 1 agent, **0 engine restarts** |
+| 5 | empty queue | explicit `dev.idle`, process alive |
+| 6 | propose a merge into a protected branch with everything allowed | `pending` — still your decision |
 
-O passo 2 é o que mata o achado #13 de forma verificável: não basta a história
-ficar `draft`, é preciso que **nada seja pegável**. Por isso o script chama
-`claimNext` diretamente e exige `null`. O passo 4 é o que mata o #10: da segunda
-volta em diante ninguém dispara `:work` — o agente reivindica sozinho, acordado
-pelo `task.gate_resolved` da volta anterior.
+Step 2 is what kills finding #13 in a verifiable way: it's not enough for
+the story to become `draft`, it also has to be true that **nothing is
+claimable**. That's why the script calls `claimNext` directly and requires
+`null`. Step 4 is what kills #10: from the second round on, nobody triggers
+`:work` — the agent claims on its own, woken by the previous round's
+`task.gate_resolved`.
 
-## A evidência
+## The evidence
 
-Cole aqui a tabela que o script imprime. Cada linha é um `session_events.id`
-(ULID) que existe no banco e pode ser consultado depois.
+Paste here the table the script prints. Each line is a `session_events.id`
+(ULID) that exists in the database and can be queried later.
 
-Executada em **2026-08-07**, saída `0`, com a stack de dev de pé e o script
-rodando de dentro do container da api. Os ids abaixo saíram do banco na própria
-corrida — projeto `f84f7226`, sessão de backlog `680ab9e9`, sessão de execução
-`91f384fa`.
+Run on **2026-08-07**, exit `0`, with the dev stack up and the script
+running from inside the api container. The ids below came out of the
+database during the run itself — project `f84f7226`, backlog session
+`680ab9e9`, execution session `91f384fa`.
 
-| etapa | evento | id | seq |
+| step | event | id | seq |
 |---|---|---|---|
-| 1. adoção | `bootstrap.repository_adopted` | `01KZCW6SBGZZ5J2DTNKR35EQPC` | 1 |
-| 1. adoção (como está) | `bootstrap.adopted_as_is` | `01KZCW6SETRNVJEX5V018GY5Q0` | 2 |
-| 2. o PO propõe | `backlog.story_promotion_proposed` | `01KZCW6SGJJQX623FW4TQ28ZV3` | 3 |
-| 3. você promove | `backlog.story_transitioned` | `01KZCW6SH7F14Y1QCJQHNJNF50` | 4 |
-| 4. dev reivindica | `dev.working` | `01KZCW6SWFY33TF8DDX9MYHG40` | 5 |
-| 4. PR aberta, esperando o gate | `dev.awaiting_gate` | `01KZCW6TB712EMZCC29WDK7YJC` | 14 |
-| 4. dev reivindica | `dev.working` | `01KZCW6VAYQD1R0XH6J3VKKKJ9` | 18 |
-| 4. PR aberta, esperando o gate | `dev.awaiting_gate` | `01KZCW6VQ3TZSH72CHAECBHZSX` | 27 |
-| 4. dev reivindica | `dev.working` | `01KZCW6XA40AVK9N71PPRWKG4N` | 31 |
-| 4. PR aberta, esperando o gate | `dev.awaiting_gate` | `01KZCW6XKXYTNW6ARDWF4VRW42` | 40 |
-| 5. fila vazia, agente ocioso | `dev.idle` | `01KZCW6Y812HAPVG3ZYS2CM6WA` | 43 |
+| 1. adoption | `bootstrap.repository_adopted` | `01KZCW6SBGZZ5J2DTNKR35EQPC` | 1 |
+| 1. adoption (as is) | `bootstrap.adopted_as_is` | `01KZCW6SETRNVJEX5V018GY5Q0` | 2 |
+| 2. the PO proposes | `backlog.story_promotion_proposed` | `01KZCW6SGJJQX623FW4TQ28ZV3` | 3 |
+| 3. you promote | `backlog.story_transitioned` | `01KZCW6SH7F14Y1QCJQHNJNF50` | 4 |
+| 4. dev claims | `dev.working` | `01KZCW6SWFY33TF8DDX9MYHG40` | 5 |
+| 4. PR opened, waiting on the gate | `dev.awaiting_gate` | `01KZCW6TB712EMZCC29WDK7YJC` | 14 |
+| 4. dev claims | `dev.working` | `01KZCW6VAYQD1R0XH6J3VKKKJ9` | 18 |
+| 4. PR opened, waiting on the gate | `dev.awaiting_gate` | `01KZCW6VQ3TZSH72CHAECBHZSX` | 27 |
+| 4. dev claims | `dev.working` | `01KZCW6XA40AVK9N71PPRWKG4N` | 31 |
+| 4. PR opened, waiting on the gate | `dev.awaiting_gate` | `01KZCW6XKXYTNW6ARDWF4VRW42` | 40 |
+| 5. empty queue, agent idle | `dev.idle` | `01KZCW6Y812HAPVG3ZYS2CM6WA` | 43 |
 
-Os três pares `dev.working` → `dev.awaiting_gate` são as três tasks, **com um
-agente só e sem restart do engine entre elas** — o achado #10, provado por
-execução em vez de por teste unitário. O `dev.idle` final é o passo 5: fila
-vazia com o processo vivo, não morto.
+The three `dev.working` → `dev.awaiting_gate` pairs are the three tasks,
+**with a single agent and no engine restart between them** — finding #10,
+proven by execution instead of by unit test. The final `dev.idle` is step
+5: an empty queue with the process alive, not dead.
 
-## O que a primeira execução custou
+## What the first run cost
 
-A tabela acima levou **quatro correções** para existir, e vale registrar quais,
-porque três delas eram do INSTRUMENTO e uma era do PRODUTO — a distinção é o
-ponto.
+The table above took **four fixes** to exist, and it's worth recording
+which, because three were in the INSTRUMENT and one was in the PRODUCT —
+the distinction is the point.
 
-**No instrumento** (o script e o `NoopDevAgentServer`):
+**In the instrument** (the script and the `NoopDevAgentServer`):
 
-1. A cobaia nascia em `os.tmpdir()`, local ao container. Quem adota é a api;
-   quem clona para montar o worktree é o dev agent, que roda no engine. O bare
-   ficava em `/tmp` da api e o engine não o enxergava. Passou a nascer em
-   `GIT_LOCAL_REPOS_ROOT`, que é o volume compartilhado — e que o cabeçalho do
-   próprio script já declarava como pré-requisito.
-2. O Noop marcava a task `in_review` e parava aí, sem chamar `open_gate`:
-   `tasks.gate_status` ficava NULL. `awaiting_gate` sem gate aberto, e nada
-   para julgar.
-3. `{:pr_settled, %{opened: true}}` chegando com o agente já em
-   `:awaiting_gate` não tinha cláusula no Noop. `FunctionClauseError`, e como o
-   server é `restart: :temporary`, o processo morria de vez.
+1. The test fixture was born in `os.tmpdir()`, local to the container. The
+   api is who adopts; the dev agent, which runs in the engine, is who
+   clones to set up the worktree. The bare repo sat in the api's `/tmp` and
+   the engine couldn't see it. It now gets created in
+   `GIT_LOCAL_REPOS_ROOT`, the shared volume — which the script's own
+   header already declared as a prerequisite.
+2. The Noop marked the task `in_review` and stopped there, without calling
+   `open_gate`: `tasks.gate_status` stayed NULL. `awaiting_gate` with no
+   gate open, and nothing to judge.
+3. `{:pr_settled, %{opened: true}}` arriving while the agent was already in
+   `:awaiting_gate` had no matching clause in the Noop. `FunctionClauseError`,
+   and since the server is `restart: :temporary`, the process died for
+   good.
 
-As três são a mesma história: o Noop foi alinhado ao agente real na Fase 12d,
-mas não acompanhou o que veio depois. É exatamente o risco que este documento
-já nomeava — *"o achado #10 sobrevivia dentro do próprio instrumento de
-medida"* — agora em três instâncias novas.
+All three are the same story: the Noop was aligned with the real agent in
+Phase 12d, but didn't keep up with what came after. It's exactly the risk
+this document already named — *"finding #10 survived inside the measuring
+instrument itself"* — now in three new instances.
 
-**No produto**, e este é o achado que só execução real encontra:
+**In the product**, and this is the finding that only a real execution
+finds:
 
-4. Com a fila vazia, `POST /internal/sessions/:id/tasks/claim` responde `201`
-   com `content-length: 0`. O caso de uso devolve `null`, mas o NestJS
-   serializa isso como corpo VAZIO; o `Req` entrega `""`, que não é `nil`, e o
-   `AgentIo.try_claim/2` casava com a cláusula de task encontrada — chamando
-   `run_task("")` e estourando `BadMapError`.
+4. With the queue empty, `POST /internal/sessions/:id/tasks/claim` responds
+   `201` with `content-length: 0`. The use case returns `null`, but NestJS
+   serializes that as an EMPTY body; `Req` delivers `""`, which isn't
+   `nil`, and `AgentIo.try_claim/2` matched the "task found" clause —
+   calling `run_task("")` and throwing `BadMapError`.
 
-   `try_claim/2` mora no `AgentIo`, **compartilhado com o `DevAgentServer`
-   real**: todo dev agent morria no momento em que a fila do módulo esvaziava,
-   que é o desfecho mais comum que existe. E morria de vez — server
-   `restart: :temporary`, com o `Monitor` apagando a linha de estado atrás. O
-   oposto exato do que a Fase 12b entregou: em vez de `dev.idle` supervisionado
-   e acordável por evento, processo morto.
+   `try_claim/2` lives in `AgentIo`, **shared with the real
+   `DevAgentServer`**: every dev agent would die the moment its module's
+   queue emptied, which is the most common outcome there is. And it died
+   for good — server `restart: :temporary`, with `Monitor` wiping the
+   state row behind it. The exact opposite of what Phase 12b delivered:
+   instead of supervised, event-wakeable `dev.idle`, a dead process.
 
-   A suite nunca pegou porque o fake devolve `nil` corretamente. Está corrigido
-   na fronteira (`claim_task/4`) e guardado no contrato (`try_claim/2`), sem
-   mexer no status HTTP da rota.
+   The suite never caught this because the fake correctly returns `nil`.
+   It's fixed at the boundary (`claim_task/4`) and guarded in the contract
+   (`try_claim/2`), without touching the route's HTTP status.
 
-O achado 4 é a resposta empírica à pergunta que esta fase existe para fazer: o
-que a execução real prova que o teste não prova.
+Finding 4 is the empirical answer to the question this phase exists to ask:
+what does a real execution prove that a test doesn't.
 
-O script se recusa a terminar com sucesso se alguma etapa que ele afirmou ter
-exercitado não deixar evidência no event log — sem essa checagem, uma consulta
-errada produziria uma tabela curta e a validação passaria mesmo assim, que é o
-modo de falha clássico de relatório gerado.
+The script refuses to end successfully if any step it claimed to exercise
+leaves no evidence in the event log — without that check, a wrong query
+would produce a short table and the validation would pass anyway, which is
+the classic failure mode of a generated report.
 
-## Antes × agora
+## Before × now
 
-A coluna **Fase 10** cita apenas o que é derivável do que ficou escrito. Tudo
-que dependeria de uma contagem ao vivo aparece como `não medido`, pelo motivo
-explicado na [colheita](./primeiro-dogfooding.md).
+The **Phase 10** column cites only what's derivable from what was written
+down. Everything that would depend on a live count appears as
+`not measured`, for the reason explained in the
+[harvest](./primeiro-dogfooding.md).
 
-| | Fase 10 | Agora |
+| | Phase 10 | Now |
 |---|---|---|
-| apontar o projeto para um repositório existente | seed manual em duas tabelas, **antes da primeira sessão** (`dogfooding-mission.md:104-134`) | rota de adoção; `origin = 'adopted'`; zero escrita à mão |
-| política divergente do repositório | não havia diagnóstico — o bootstrap era a única via, e ela impunha o template | plano em dry-run que **descreve** a divergência e não aplica nada sem aprovação |
-| restarts do engine por task entregue | **1, por construção** — propriedade do achado #10 (`:666`), não estimativa. Total real: **não medido** | **0** |
-| tandas | a fase inteira rodou em tandas (`:393-416`) | não existem: o agente atravessa a fila do módulo sozinho |
-| agente sem task | processo morto (`restart: :temporary`) | `idle` explícito, supervisionado, acordável por evento |
-| sequência de falhas | queimava orçamento em série | circuit breaker para em `idle_tripped` ([RN-047](../business-rules.md#rn-047)) |
-| história → `ready` | automática na criação, sem passo humano (achado #13, `:669`) | decisão do usuário, com o ator gravado no event log ([RN-048](../business-rules.md#rn-048)) |
-| recusar uma história | não existia estado, evento nem botão (achado #14) | devolução ao PO com motivo fixado na sessão dele |
-| intervenções manuais totais | **não medido** — a tabela de observação ficou em branco (`:488-490`) | as do pipeline de aprovação, que a fase **não** mudou |
-| merge em branch protegida | manual, por desenho | manual, por desenho — inalterado, e o passo 6 prova |
+| pointing the project at an existing repository | manual seed in two tables, **before the first session** (`dogfooding-mission.md:104-134`) | adoption route; `origin = 'adopted'`; zero hand-written data |
+| repository policy diverging | no diagnosis existed — bootstrap was the only path, and it forced the template | dry-run plan that **describes** the divergence and applies nothing without approval |
+| engine restarts per delivered task | **1, by construction** — a property of finding #10 (`:666`), not an observed estimate. Real total: **not measured** | **0** |
+| batches | the entire phase ran in batches (`:393-416`) | don't exist: the agent works through the module's queue on its own |
+| agent with no task | dead process (`restart: :temporary`) | explicit `idle`, supervised, event-wakeable |
+| sequence of failures | burned budget in a row | circuit breaker stops at `idle_tripped` ([RN-047](../business-rules/custo.md#rn-047)) |
+| story → `ready` | automatic on creation, no human step (finding #13, `:669`) | user decision, actor recorded in the event log ([RN-048](../business-rules/custo.md#rn-048)) |
+| declining a story | no state, event, or button existed (finding #14) | returned to the PO with the reason pinned to their session |
+| total manual interventions | **not measured** — the observation table stayed blank (`:488-490`) | those from the approval pipeline, which the phase did **not** change |
+| merge into a protected branch | manual, by design | manual, by design — unchanged, and step 6 proves it |
 
-A última linha importa tanto quanto as outras. A Fase 12 é sobre o agente não
-morrer entre tarefas e sobre a decisão voltar para o usuário; ela **não** amplia
-autonomia nenhuma. O pipeline de aprovações está exatamente como estava.
+The last row matters as much as the others. Phase 12 is about the agent not
+dying between tasks and about the decision returning to the user; it does
+**not** expand autonomy at all. The approval pipeline is exactly as it was.
 
-## Como rodar
+## How to run it
 
 ```bash
-# a stack de dev de pé (api e engine compartilhando /data)
+# the dev stack up (api and engine sharing /data)
 pnpm dev
 
-# de dentro do container da api
+# from inside the api container
 docker compose -f docker/docker-compose.yml exec api \
   pnpm --filter api validacao:fase-12
 ```
 
-Se algum critério não fechar, o script diz qual — a mensagem começa com
-`CRITÉRIO NÃO FECHOU:` e nomeia a afirmação que falhou.
+If a criterion isn't met, the script says which — the message starts with
+`CRITÉRIO NÃO FECHOU:` and names the failed assertion.

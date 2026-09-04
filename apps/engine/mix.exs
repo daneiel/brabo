@@ -11,6 +11,13 @@ defmodule Engine.MixProject do
       aliases: aliases(),
       deps: deps(),
       releases: releases(),
+      # O `:cover` do OTP tem um piso EMBUTIDO de 90% que reprova `mix test
+      # --cover` sozinho, sem relação com o piso do produto (medido em
+      # scripts/ci/coverage-floor.ts, no valor real de hoje). Threshold 0
+      # desliga esse veredito escondido: quem decide passa/falha é o script,
+      # testável e com o número atual — não uma constante da ferramenta que
+      # ninguém escolheu.
+      test_coverage: [summary: [threshold: 0]],
       # O CodeReloader é ferramenta de DEV. Declarado sem guarda, ele ia junto
       # pro release de produção — onde não há código pra recarregar.
       listeners: listeners(Mix.env())
@@ -116,7 +123,17 @@ defmodule Engine.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"],
+      # Golden-set de regressão do julgamento semântico do QA de Automação
+      # (ADR 0123) — excluído por padrão em `mix test` (ver test_helper.exs),
+      # roda de verdade contra a api/Ollama locais só quando chamado por
+      # aqui. Não entra em `precommit`/CI: exige stack de pé e LLM real.
+      "golden_set.qa": ["test --only golden_set_qa"],
+      # Golden-set de ACERTO da busca híbrida do RAG (ADR 0132, RN-490) —
+      # mesmo molde do de cima, aplicado a um domínio onde a busca inteira
+      # roda na api: também excluído por padrão (ver test_helper.exs), também
+      # fora de `precommit`/CI.
+      "golden_set.rag": ["test --only golden_set_rag"]
     ]
   end
 end

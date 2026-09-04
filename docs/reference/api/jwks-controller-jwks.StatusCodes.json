@@ -1,1 +1,1 @@
-{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"type":"object","properties":{"keys":{"description":"Chaves públicas Ed25519 ativas. Durante uma rotação, duas.","type":"array","items":{"type":"object"}}},"required":["keys"],"title":"JwksResponseDto"}}}}}}
+{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"type":"object","properties":{"keys":{"description":"Active public Ed25519 keys. Two during a rotation.","type":"array","items":{"type":"object"}}},"required":["keys"],"title":"JwksResponseDto"}}}}}}

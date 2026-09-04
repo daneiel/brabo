@@ -1,288 +1,316 @@
-# ADR 0024 — Fase 5 (sessão 1): imagens de produção, compose.prod, CI e teste de fumaça
+# ADR 0024 — Phase 5 (session 1): production images, compose.prod, CI, and smoke test
 
-- Status: aceito
-- Data: 2026-07-26
-- Fase: 5 (sessão 1 — itens 1 a 5 do enunciado)
+- Status: accepted
+- Date: 2026-07-26
+- Phase: 5 (session 1 — items 1 through 5 of the spec)
 
-## Contexto
+## Context
 
-Até aqui, tudo que existia de Docker no repositório era **exclusivamente de
-desenvolvimento**. As três imagens eram single-stage, rodavam como **root**, sem
-`USER`, `EXPOSE` ou `HEALTHCHECK`, e nenhuma delas copiava código: todas
-dependiam de bind mount do repositório e instalavam dependências no start do
-container. O `web` era um `vite dev` — não havia nginx nem build estático em
-lugar nenhum. O engine não tinha configuração de `mix release`.
+Up to this point, everything Docker-related in the repository was
+**development-only**. The three images were single-stage, ran as **root**,
+with no `USER`, `EXPOSE`, or `HEALTHCHECK`, and none of them copied code:
+all depended on a bind mount of the repository and installed dependencies
+on container start. The `web` one was a `vite dev` — there was no nginx or
+static build anywhere. The engine had no `mix release` configuration.
 
-E **não havia CI**: os dois workflows em `.github/workflows/` são helpers do
-Claude Code, nenhum roda teste, lint ou build.
+And **there was no CI**: the two workflows under `.github/workflows/` are
+Claude Code helpers, none of them run tests, lint, or build.
 
-Esta sessão entrega os itens 1–5 da Fase 5. Fora do escopo (itens 6+):
-Kubernetes/Helm, graceful shutdown com preStop, OpenTelemetry/Prometheus,
-backup/restore, rate limit.
+This session delivers items 1–5 of Phase 5. Out of scope (items 6+):
+Kubernetes/Helm, graceful shutdown with preStop, OpenTelemetry/Prometheus,
+backup/restore, rate limiting.
 
-## Decisões
+## Decisions
 
-### 1. `.dockerignore` antes de qualquer imagem: 742 MB → 5,2 MB de contexto
+### 1. `.dockerignore` before any image: 742 MB → 5.2 MB of context
 
-Não existia `.dockerignore` nenhum, e os dois contextos de build eram a raiz do
-repositório. Todo build mandava `node_modules` (543 MB), `.pnpm-store` (220 MB),
-`.git` e os `.env` para o daemon.
+There was no `.dockerignore` at all, and both build contexts were the
+repository root. Every build sent `node_modules` (543 MB), `.pnpm-store`
+(220 MB), `.git`, and the `.env` files to the daemon.
 
-Medido com uma imagem-sonda (`FROM alpine` + `COPY . /ctx`), porque script de
-estimativa erra: as duas primeiras medições que fiz estavam erradas por bugs
-meus de prefixo, não por bug do `.dockerignore`. Com o arquivo: **5,2 MB**.
+Measured with a probe image (`FROM alpine` + `COPY . /ctx`), because an
+estimation script gets it wrong: my first two measurements were wrong due
+to my own prefix bugs, not a `.dockerignore` bug. With the file:
+**5.2 MB**.
 
-Duas exceções que o build quebrou até serem descobertas, e que valem registro
-porque contradizem o que os nomes sugerem:
+Two exceptions the build broke on before being discovered, worth recording
+because they contradict what the names suggest:
 
-- **`design/tokens.css` é input de build, não documentação.** O
-  `apps/web/src/index.css` faz `@import '../../../design/tokens.css'` e o Vite
-  resolve no filesystem. Excluir `design/` inteiro quebra o `vite build`. Só os
-  `.md` de lá são documentação.
-- **`docker/web/` precisa entrar no contexto.** A imagem do web copia dali o
-  `nginx.conf` e o entrypoint, ao contrário das outras duas.
+- **`design/tokens.css` is a build input, not documentation.**
+  `apps/web/src/index.css` does `@import '../../../design/tokens.css'` and
+  Vite resolves it on the filesystem. Excluding the whole `design/`
+  directory breaks `vite build`. Only the `.md` files in there are
+  documentation.
+- **`docker/web/` needs to be in the context.** The web image copies the
+  `nginx.conf` and the entrypoint from there, unlike the other two.
 
-### 2. Um bug latente na build da api que nunca tinha sido exercitado
+### 2. A latent bug in the api build that had never been exercised
 
-`apps/api/tsconfig.build.json` não tinha `include`. Sem ele o `tsc` também
-compilava `drizzle.config.ts`, `vitest.config.ts` e `scripts/`, inferia a raiz
-do pacote como `rootDir` e emitia **`dist/src/main.js`** — enquanto
-`start:prod` é `node dist/main`. O comando de produção estava quebrado desde
-sempre e ninguém viu, porque desenvolvimento usa `start:dev`. A primeira imagem
-de produção foi o que expôs.
+`apps/api/tsconfig.build.json` had no `include`. Without it, `tsc` also
+compiled `drizzle.config.ts`, `vitest.config.ts`, and `scripts/`, inferred
+the package root as `rootDir`, and emitted **`dist/src/main.js`** — while
+`start:prod` is `node dist/main`. The production command was broken from
+the very start and nobody noticed, because development uses `start:dev`.
+The first production image is what exposed it.
 
-### 3. Migração é serviço one-shot, não passo de boot
+### 3. Migration is a one-shot service, not a boot step
 
-Se cada réplica migrasse ao subir, duas subindo juntas competiriam pela mesma
-migration. No `docker-compose.prod.yml` são dois serviços que rodam uma vez e
-terminam, com os apps dependendo por `service_completed_successfully`.
+If every replica migrated on startup, two coming up together would compete
+for the same migration. In `docker-compose.prod.yml` there are two
+services that run once and terminate, with the apps depending on them via
+`service_completed_successfully`.
 
-São dois porque são dois donos de schema em imagens diferentes:
+There are two because there are two schema owners in different images:
 
-- **api**: `drizzle-kit` é `devDependency` e a imagem de produção não carrega
-  nenhuma. Criamos `src/db/migrate.ts`, que usa o migrador programático do
-  `drizzle-orm` (dependência de runtime) — o mesmo mecanismo que o
-  `globalSetup` do vitest já usava.
-- **engine**: um release não tem Mix; `mix ecto.migrate` não existe na imagem.
-  `Engine.Release` (padrão canônico do Ecto) é chamado com
+- **api**: `drizzle-kit` is a `devDependency` and the production image
+  carries none. We created `src/db/migrate.ts`, which uses
+  `drizzle-orm`'s programmatic migrator (a runtime dependency) — the same
+  mechanism vitest's `globalSetup` already used.
+- **engine**: a release has no Mix; `mix ecto.migrate` doesn't exist in
+  the image. `Engine.Release` (the canonical Ecto pattern) is called via
   `bin/engine eval "Engine.Release.migrate()"`.
 
-Verificado que não há referência cruzada entre as migrations dos dois, então
-rodam em paralelo.
+Verified that there's no cross-reference between the two's migrations, so
+they run in parallel.
 
-### 4. Na imagem de produção, instalar scanner é FAIL-HARD
+### 4. In the production image, installing a scanner is FAIL-HARD
 
-Em desenvolvimento a instalação de gitleaks/hadolint/semgrep é best-effort
-(`|| echo`) de propósito: o detector percebe a ausência e o gate pula. Em
-produção isso é inaceitável, e o motivo está escrito nos próprios ADRs
-anteriores: **sem hadolint o gate de QA de infra aprova qualquer Dockerfile**
-(ADR 0021) e **sem gitleaks o gate de SecOps roda sem verificação de segredo**
-(ADR 0020). Uma falha de rede no build produziria uma imagem verde cujo gate de
-segurança é no-op.
+In development, installing gitleaks/hadolint/semgrep is best-effort
+(`|| echo`) on purpose: the detector notices the absence and the gate
+skips. In production this is unacceptable, and the reason is written in
+the earlier ADRs themselves: **without hadolint the infra QA gate approves
+any Dockerfile** (ADR 0021) and **without gitleaks the SecOps gate runs
+with no secret check** (ADR 0020). A network failure during the build
+would produce a green image whose security gate is a no-op.
 
-Então: sem `|| echo`, com **checksum SHA256 verificado** (o checksum garante que
-o binário é o esperado, não só que baixou), versões pinadas em `ARG`, e um passo
-final de verificação que executa cada binário — inclusive um `semgrep scan` de
-verdade, não só `--version`. Esse passo pagou por si: ver decisão 8.
+So: no `|| echo`, with a **verified SHA256 checksum** (the checksum
+guarantees the binary is the expected one, not just that it downloaded),
+pinned versions in `ARG`, and a final verification step that executes each
+binary — including a real `semgrep scan`, not just `--version`. That step
+paid for itself: see decision 8.
 
-### 5. Volumes graváveis do engine (item 2 do enunciado)
+### 5. Writable engine volumes (item 2 of the spec)
 
-Dois mount points declarados com `VOLUME` e com dono ajustado no build:
+Two mount points declared with `VOLUME` and with ownership adjusted at
+build time:
 
-| caminho | o que grava |
+| path | what writes to it |
 |---|---|
-| `/data/project-workspaces` | working tree por projeto e os worktrees por agente em `<workspace>/.worktrees/<agent_id>`; também o `permissions.json` |
-| `/data/git-repos` | bare repos locais, escritos pelo `git push` do dev agent |
+| `/data/project-workspaces` | per-project working tree and the per-agent worktrees at `<workspace>/.worktrees/<agent_id>`; also `permissions.json` |
+| `/data/git-repos` | local bare repos, written by the dev agent's `git push` |
 
-Mais `/tmp` (4 detectors e a árvore temporária do `InfraGateRunner`) e `$HOME`
-(o semgrep baixa e cacheia regras do registry na primeira execução) — esses dois
-como `tmpfs`, já que o rootfs é read-only.
+Plus `/tmp` (4 detectors and `InfraGateRunner`'s temp tree) and `$HOME`
+(semgrep downloads and caches rules from the registry on first run) —
+these two as `tmpfs`, since the rootfs is read-only.
 
-**Os dois caminhos precisam ser IDÊNTICOS na api e no engine.** A api persiste o
-path absoluto do bare repo no banco e o engine o usa literalmente; montar em
-lugares diferentes quebra o push com `remote unpack failed`.
+**The two paths need to be IDENTICAL in the api and the engine.** The api
+persists the bare repo's absolute path in the database and the engine uses
+it literally; mounting them at different locations breaks the push with
+`remote unpack failed`.
 
-Corolário que só aparece rodando: os diretórios precisam **existir nas duas
-imagens, com o dono certo**. Quando um volume nomeado nasce vazio, o Docker
-copia conteúdo e ownership do caminho na imagem — se o caminho não existir, o
-volume nasce root e o processo non-root não escreve. Por isso a imagem da api
-também cria `/data` e faz `chown node:node`; `node` e `engine` são ambos uid
-1000, então os dois containers compartilham os volumes sem conflito
-(verificado nos dois sentidos).
+A corollary that only shows up while running things: the directories need
+to **exist in both images, with the right owner**. When a named volume is
+born empty, Docker copies content and ownership from the path in the
+image — if the path doesn't exist, the volume is born root-owned and the
+non-root process can't write to it. That's why the api's image also
+creates `/data` and does `chown node:node`; `node` and `engine` are both
+uid 1000, so the two containers share the volumes with no conflict
+(verified both ways).
 
-### 6. `check_origin` do Phoenix quebrava o painel do time em produção
+### 6. Phoenix's `check_origin` was breaking the team panel in production
 
-Em `:prod` o default do Phoenix é comparar a origem do websocket com
-`url: [host: ...]`, que é `PHX_HOST`. O painel do time ao vivo (Fase 4a item 7)
-fala por canal Phoenix a partir do web, servido de **outra** origem — o
-handshake seria recusado e o painel ficaria mudo, sem erro visível no servidor.
+In `:prod` Phoenix's default is to compare the websocket's origin against
+`url: [host: ...]`, which is `PHX_HOST`. The live team panel (Phase 4a item
+7) talks over a Phoenix channel from the web, served from **a different**
+origin — the handshake would be rejected and the panel would go silent,
+with no error visible on the server.
 
-`runtime.exs` passou a aceitar `WEB_ORIGIN` (lista separada por vírgula, a mesma
-variável que a api já usa pro CORS). Sem ela, mantém o default estrito.
+`runtime.exs` now accepts `WEB_ORIGIN` (a comma-separated list, the same
+variable the api already uses for CORS). Without it, it keeps the strict
+default.
 
-### 7. nginx: os headers de segurança sumiam na rota que serve o app
+### 7. nginx: the security headers disappeared on the route serving the app
 
-O `add_header` do nginx **descarta todos os headers herdados** quando o bloco
-filho declara qualquer `add_header`. Como a política de cache exigia um
-`add_header Cache-Control` dentro de `location = /index.html`, os headers de
-segurança do `server` desapareciam exatamente em `/` — o CSP existia no arquivo
-e não chegava no browser. Encontrado com `curl -D-`, não por leitura.
+nginx's `add_header` **discards all inherited headers** when the child
+block declares any `add_header`. Since the cache policy required an
+`add_header Cache-Control` inside `location = /index.html`, the `server`
+block's security headers disappeared exactly on `/` — the CSP existed in
+the file and never reached the browser. Found with `curl -D-`, not by
+reading.
 
-Correção: a política de cache virou um `map $uri`, os headers ficam declarados
-**uma vez** no `server`, e nenhum bloco filho usa `add_header`. O `/healthz` usa
-`default_type` em vez de `add_header Content-Type` pelo mesmo motivo.
+Fix: the cache policy became a `map $uri`, the headers are declared
+**once** in `server`, and no child block uses `add_header`. `/healthz`
+uses `default_type` instead of `add_header Content-Type` for the same
+reason.
 
-Verificado por rota: `/`, rota do router (fallback), `/assets/<hash>.js`,
-`/healthz` e 404 de asset inexistente (que precisa ser 404 e não `index.html`,
-senão um asset faltando chega no browser como HTML e o erro aparece como
-sintaxe inválida).
+Verified per route: `/`, a router route (fallback), `/assets/<hash>.js`,
+`/healthz`, and a 404 for a nonexistent asset (which needs to be a 404 and
+not `index.html`, otherwise a missing asset reaches the browser as HTML
+and the error shows up as invalid syntax).
 
-Além disso, o entrypoint oficial da imagem nginx **não serve** aqui: ele só roda
-os scripts de `/docker-entrypoint.d` quando o processo é root (rodando como
-`nginx` ele imprime "skipping auto-configuration" e a substituição de variáveis
-nunca acontece) e escreve o conf renderizado em `/etc/nginx`, que é read-only.
-Daí `docker/web/entrypoint.sh`, que renderiza para `/tmp` e valida com
-`nginx -t` antes de subir.
+Beyond that, the official nginx image's entrypoint **doesn't work here**:
+it only runs the scripts in `/docker-entrypoint.d` when the process is
+root (running as `nginx` it prints "skipping auto-configuration" and
+variable substitution never happens) and writes the rendered conf into
+`/etc/nginx`, which is read-only. Hence `docker/web/entrypoint.sh`, which
+renders into `/tmp` and validates with `nginx -t` before starting.
 
-### 8. Segurança das imagens: o que foi corrigido e o que foi aceito
+### 8. Image security: what was fixed and what was accepted
 
-O `trivy` com `--severity HIGH,CRITICAL --ignore-unfixed` começou reportando
-achados nas três imagens. Um `exit-code: 1` no CI teria nascido vermelho; a
-resposta **não** foi afrouxar o gate, foi corrigir:
+`trivy` with `--severity HIGH,CRITICAL --ignore-unfixed` started out
+reporting findings on all three images. An `exit-code: 1` in CI would have
+been born red; the response was **not** to loosen the gate, it was to
+fix things:
 
-| correção | efeito |
+| fix | effect |
 |---|---|
-| `apk upgrade --no-cache` nas três (a tag pinada congela também os patches do Alpine) | zerou os CVEs de pacote de sistema; o **web ficou com 0 achados** |
-| remover o npm/npx/corepack empacotados na imagem base do Node | zerou os **24 achados** da api — todos vinham de `/usr/local/lib/node_modules/npm`, **nenhum das nossas dependências**. O runtime executa `node main.js`; gerenciador de pacote ali é só superfície de ataque |
-| pin do gitleaks 8.21.2 → **8.30.1** | o binário do 8.21.2 é compilado com Go 1.23.2 e carregava 15 CVEs de stdlib, 1 CRITICAL. Verificado que `mix test --only gitleaks` continua passando |
+| `apk upgrade --no-cache` on all three (the pinned tag also freezes Alpine's patches) | zeroed the system-package CVEs; the **web ended up with 0 findings** |
+| removing the npm/npx/corepack bundled in the Node base image | zeroed the api's **24 findings** — all of them came from `/usr/local/lib/node_modules/npm`, **none from our own dependencies**. The runtime runs `node main.js`; a package manager in there is just attack surface |
+| pinning gitleaks 8.21.2 → **8.30.1** | the 8.21.2 binary was compiled with Go 1.23.2 and carried 15 stdlib CVEs, 1 CRITICAL. Verified that `mix test --only gitleaks` still passes |
 
-Restou o que **não é corrigível por nós**, aceito em `.trivyignore.yaml` com três
-condições obrigatórias por entrada — binário de terceiro que não compilamos, já
-no último release publicado, e **`expired_at`** (2026-10-31), para a dívida
-voltar a quebrar o CI em vez de apodrecer em silêncio:
+What's left is what **we can't fix ourselves**, accepted in
+`.trivyignore.yaml` with three mandatory conditions per entry — a
+third-party binary we don't compile, already in the latest published
+release, and an **`expired_at`** (2026-10-31), so the debt goes back to
+breaking CI instead of rotting silently:
 
-- Go stdlib e `golang.org/x/crypto` dentro do binário oficial do gitleaks;
-- `mcp` 1.23.3, dependência **fixa** (`mcp==1.23.3`, não range) do semgrep
-  1.171.0, que já é o último release. Tentamos remover o pacote, já que os gates
-  só chamam `semgrep scan` e nunca `semgrep mcp`: **não funciona** — o
-  `semgrep/cli.py` importa `semgrep.commands.mcp` incondicionalmente e o binário
-  morre em `ModuleNotFoundError`. Quem pegou isso foi o `semgrep scan` de
-  verdade no passo de verificação do Dockerfile (decisão 4), não a suite.
+- Go stdlib and `golang.org/x/crypto` inside gitleaks's official binary;
+- `mcp` 1.23.3, a **fixed** dependency (`mcp==1.23.3`, not a range) of
+  semgrep 1.171.0, which is already the latest release. We tried removing
+  the package, since the gates only call `semgrep scan` and never
+  `semgrep mcp`: **it doesn't work** — `semgrep/cli.py` unconditionally
+  imports `semgrep.commands.mcp`, and the binary dies with
+  `ModuleNotFoundError`. What caught this was the real `semgrep scan` in
+  the Dockerfile's verification step (decision 4), not the suite.
 
-### 9. Lint em modo verificação expôs 31 erros acumulados
+### 9. Lint in check mode exposed 31 accumulated errors
 
-Os scripts de lint do repositório rodam com `--fix`/`--write`, então ninguém
-nunca tinha visto o modo verificação. Em check mode: 31 erros. Trinta eram
-formatação (auto-corrigidos) e um era `no-unnecessary-type-assertion`. Restaram
-dois `no-unused-vars`: um import morto (removido) e um `_modules` de
-rest-destructuring onde **a variável existir sem uso é o ponto** — resolvido
-configurando `argsIgnorePattern: '^_'` no eslint, que é a convenção já usada no
-repositório. Suite da api re-rodada depois: 508 passando.
+The repository's lint scripts run with `--fix`/`--write`, so nobody had
+ever seen check mode. In check mode: 31 errors. Thirty were formatting
+(auto-fixed) and one was `no-unnecessary-type-assertion`. Two
+`no-unused-vars` remained: one dead import (removed) and one `_modules`
+from a rest-destructure where **the variable existing unused is the whole
+point** — resolved by configuring `argsIgnorePattern: '^_'` in eslint,
+which is the convention already used in the repository. The api suite was
+rerun afterward: 508 passing.
 
-### 10. O formatador do host não era o formatador do projeto
+### 10. The host's formatter wasn't the project's formatter
 
-`mix format --check-formatted` sob o Elixir **1.17.3** pinado (Dockerfiles e CI)
-reprovou **11 arquivos já commitados**. Não era drift de descuido: as regras do
-formatador mudaram entre versões, e o código estava formatado por um Elixir mais
-novo — o do host de desenvolvimento (1.20.2 nesta máquina). Rodar `mix format`
-no host "consertava" os arquivos para uma versão e quebrava para a outra, em
-looping.
+`mix format --check-formatted` under the pinned Elixir **1.17.3**
+(Dockerfiles and CI) rejected **11 already-committed files**. It wasn't
+drift from carelessness: the formatter's rules changed between versions,
+and the code had been formatted by a newer Elixir — the one on the
+development host (1.20.2 on this machine). Running `mix format` on the
+host would "fix" the files for one version and break them for the other,
+in a loop.
 
-Como a versão pinada é a declarada em toda a infraestrutura, ela é a fonte de
-verdade: os 11 arquivos foram formatados **dentro do container 1.17.3**, e o
-README passou a instruir a formatar por lá quando o host divergir. Foi o
-primeiro achado do CI antes mesmo de ele existir remotamente.
+Since the pinned version is the one declared throughout the
+infrastructure, it's the source of truth: the 11 files were formatted
+**inside the 1.17.3 container**, and the README now instructs formatting
+there when the host diverges. It was the first finding CI produced before
+it even existed remotely.
 
-Nota de método: a primeira leitura desse check me pareceu verde, porque o
-wrapper mascarou o exit code e o `grep | head` truncou a lista de arquivos.
-Só um `echo $?` explícito mostrou o que estava acontecendo.
+Method note: my first reading of this check looked green, because the
+wrapper masked the exit code and `grep | head` truncated the file list.
+Only an explicit `echo $?` showed what was really happening.
 
-### 11. O guard de falso-verde no CI
+### 11. The false-green guard in CI
 
-`test_helper.exs` exclui as tags `:gitleaks`/`:hadolint`/`:yamllint` quando o
-binário falta na máquina — e esses três módulos são exatamente as regressões que
-provam que os gates não aprovam vazio (ADR 0020/0021). Num runner pelado eles
-somem em silêncio e o CI fica verde sem nunca ter testado os gates de segurança.
+`test_helper.exs` excludes the `:gitleaks`/`:hadolint`/`:yamllint` tags
+when the binary is missing on the machine — and these three modules are
+exactly the regressions that prove the gates don't approve empty
+findings (ADR 0020/0021). On a bare runner they silently disappear and CI
+goes green without ever having tested the security gates.
 
-O job `test-engine` instala os três nas **mesmas versões pinadas do
-Dockerfile.prod** e, depois do `mix test`, falha explicitamente se a saída
-contiver qualquer teste excluído. Localmente, antes: `254 passed, 9 excluded`.
-Com os binários presentes: **`263 passed`, 0 excluded**.
+The `test-engine` job installs all three at the **same pinned versions as
+Dockerfile.prod** and, after `mix test`, fails explicitly if the output
+contains any excluded test. Locally, before: `254 passed, 9 excluded`.
+With the binaries present: **`263 passed`, 0 excluded**.
 
-Pelo mesmo motivo o `gitleaks` do repositório roda com histórico completo
-(`fetch-depth: 0`): um segredo removido no último commit continua recuperável.
-Os 3 achados eram dois PATs sintéticos que existem **para serem encontrados**
-(os fixtures das regressões) e um placeholder do boilerplate do NestJS —
-allowlistados em `.gitleaks.toml` escopados por **regra e caminho exato**, nunca
-por padrão amplo, porque allowlist larga é o mesmo no-op que os ADRs anteriores
-descrevem.
+For the same reason, the repository's `gitleaks` run scans full history
+(`fetch-depth: 0`): a secret removed in the last commit is still
+recoverable. The 3 findings were two synthetic PATs that exist **to be
+found** (the regression fixtures) and a NestJS boilerplate placeholder —
+allowlisted in `.gitleaks.toml` scoped by **rule and exact path**, never
+by a broad pattern, because a broad allowlist is the same no-op the
+earlier ADRs describe.
 
-### 12. Build, scan e smoke no mesmo job
+### 12. Build, scan, and smoke in the same job
 
-As três imagens somam ~1,3 GB; passá-las entre jobs por artifact custaria mais
-tempo de upload/download do que o build inteiro. Ficam no daemon local do
-runner. Cache de camadas via `type=gha` com escopo por imagem.
+The three images add up to ~1.3 GB; passing them between jobs via artifact
+would cost more upload/download time than the entire build. They stay on
+the runner's local daemon. Layer caching via `type=gha`, scoped per image.
 
-## Limitações conhecidas (registradas, não resolvidas)
+## Known limitations (recorded, not resolved)
 
-1. **`VITE_*` é compile-time.** O Vite inlina `import.meta.env.VITE_*` no bundle,
-   então as URLs de api/engine/Keycloak ficam assadas na imagem do web: é **uma
-   imagem por ambiente**, não a mesma imagem promovida entre eles. Resolver isso
-   (injeção em runtime) é pré-requisito para o Kubernetes da sessão seguinte.
-   O `CSP_CONNECT_SRC` do nginx, esse sim, é runtime.
-2. **Node continua na imagem do engine**, porque o DevAgent roda a suite do
-   projeto gerido lá dentro (`TerminalExecutor`). Não escala para stacks
-   arbitrárias; a saída real é um sandbox por projeto, fora do escopo da Fase 5.
-3. **`rtk` ficou de fora** da imagem — sem origem verificável para pinar por
-   checksum. O detector já degrada e a métrica segue `nil`.
-4. **O `docker-compose.prod.yml` não endurece terceiros.** Keycloak segue em
-   `start-dev` com realm de desenvolvimento (segredo hardcoded, `admin123`) e
-   Postgres em container com senha default. O alvo daquele arquivo são **as
-   nossas três imagens**; endurecer Keycloak e Postgres é trabalho de outra
-   sessão, e está dito no topo do arquivo.
-5. **Proteção de branch não é aplicável neste repositório hoje.** A API do
-   GitHub responde 403: *"Upgrade to GitHub Pro or make this repository public
-   to enable this feature"*. A configuração alvo está documentada abaixo;
-   aplicá-la é passo manual do usuário quando o plano permitir.
+1. **`VITE_*` is compile-time.** Vite inlines `import.meta.env.VITE_*`
+   into the bundle, so the api/engine/Keycloak URLs get baked into the web
+   image: it's **one image per environment**, not the same image promoted
+   between them. Solving this (runtime injection) is a prerequisite for
+   the following session's Kubernetes work. nginx's `CSP_CONNECT_SRC`,
+   on the other hand, IS runtime.
+2. **Node stays in the engine image**, because the DevAgent runs the
+   managed project's suite inside it (`TerminalExecutor`). It doesn't
+   scale to arbitrary stacks; the real solution is a per-project sandbox,
+   out of scope for Phase 5.
+3. **`rtk` was left out** of the image — no verifiable origin to pin by
+   checksum. The detector already degrades and the metric stays `nil`.
+4. **`docker-compose.prod.yml` doesn't harden third parties.** Keycloak
+   stays on `start-dev` with a development realm (hardcoded secret,
+   `admin123`) and Postgres runs in a container with the default
+   password. That file's target is **our three images**; hardening
+   Keycloak and Postgres is work for another session, and it's stated at
+   the top of the file.
+5. **Branch protection isn't applicable on this repository today.** The
+   GitHub API responds 403: *"Upgrade to GitHub Pro or make this
+   repository public to enable this feature"*. The target configuration
+   is documented below; applying it is a manual step for the user once
+   the plan allows it.
 
-## Configuração alvo da proteção da branch `dev`
+## Target configuration for `dev` branch protection
 
-Aplicar em *Settings → Branches → Add branch protection rule*, `dev`:
+Apply under *Settings → Branches → Add branch protection rule*, `dev`:
 
-- **Require a pull request before merging** — sem push direto.
-- **Require status checks to pass before merging**, com *Require branches to be
-  up to date*: `Lint`, `Testes TS (api + web)`, `Testes do engine (ExUnit)`,
-  `Gitleaks no repositório`, `Build, scan e smoke das imagens de produção`.
+- **Require a pull request before merging** — no direct push.
+- **Require status checks to pass before merging**, with *Require
+  branches to be up to date*: `Lint`, `Testes TS (api + web)`, `Testes do
+  engine (ExUnit)`, `Gitleaks no repositório`, `Build, scan e smoke das
+  imagens de produção`.
 - **Require conversation resolution before merging**.
-- **Do not allow bypassing the above settings** (inclusive administradores).
-- **NÃO** habilitar auto-merge nem merge queue: o CLAUDE.md determina que merge
-  em branch protegida é sempre manual do usuário, sem opção de automatizar.
+- **Do not allow bypassing the above settings** (including
+  administrators).
+- **Do NOT** enable auto-merge or a merge queue: CLAUDE.md mandates that
+  merging into a protected branch is always manual by the user, with no
+  option to automate.
 
-## Consequências
+## Consequences
 
-- Existe caminho de produção real para os três apps, validável localmente com
-  um comando, e a diferença entre "a suite passa" e "a imagem sobe" deixou de
-  ser invisível.
-- O CI cobre lint, testes, build, scan de imagem e segredo, e teste de fumaça —
-  e **testa os gates de segurança de verdade**, que era o buraco maior.
-- As imagens rodam non-root com rootfs read-only, o que também elimina uma
-  classe de atrito que já tinha aparecido em desenvolvimento (o `dist/`
-  root-owned que precisou de container para remover).
-- Fica dívida explícita e datada: `.trivyignore.yaml` expira em 2026-10-31, e as
-  cinco limitações acima são entrada da próxima sessão.
+- A real production path now exists for the three apps, verifiable
+  locally with a single command, and the gap between "the suite passes"
+  and "the image comes up" is no longer invisible.
+- CI covers lint, tests, build, image and secret scanning, and a smoke
+  test — and **it actually tests the security gates**, which was the
+  biggest hole.
+- The images run non-root with a read-only rootfs, which also eliminates
+  a class of friction that had already shown up in development (the
+  root-owned `dist/` that needed a container to remove).
+- Explicit, dated debt remains: `.trivyignore.yaml` expires on
+  2026-10-31, and the five limitations above are input for the next
+  session.
 
-## Números
+## Numbers
 
-| | antes (dev) | depois (prod) |
+| | before (dev) | after (prod) |
 |---|---|---|
-| contexto de build | 742 MB | **5,2 MB** |
-| imagem api | 274 MB | 457 MB¹ |
-| imagem engine | 1,17 GB | **796 MB** |
-| imagem web | 255 MB | **93,5 MB** |
-| suite do engine | 254 passed, **9 excluded** | **263 passed, 0 excluded** |
-| trivy HIGH/CRITICAL corrigíveis | — | **0** nas três |
+| build context | 742 MB | **5.2 MB** |
+| api image | 274 MB | 457 MB¹ |
+| engine image | 1.17 GB | **796 MB** |
+| web image | 255 MB | **93.5 MB** |
+| engine suite | 254 passed, **9 excluded** | **263 passed, 0 excluded** |
+| trivy HIGH/CRITICAL fixable | — | **0** across all three |
 
-¹ A imagem de produção da api é maior porque a de desenvolvimento **não carrega
-código nem dependências**: usa bind mount e volumes. Não são comparáveis como
-"antes e depois" da mesma coisa. Dos 457 MB, 165 MB são `node_modules` de
-produção (dos quais 51,7 MB é o `gpt-tokenizer`).
+¹ The api's production image is larger because the development one
+**carries no code or dependencies at all**: it uses a bind mount and
+volumes. They aren't comparable as "before and after" of the same thing.
+Of the 457 MB, 165 MB is production `node_modules` (of which 51.7 MB is
+`gpt-tokenizer`).

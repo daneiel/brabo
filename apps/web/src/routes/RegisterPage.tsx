@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -38,6 +39,7 @@ const MINIMO_DE_SENHA = 12;
  * no mesmo lugar obrigaria a ler a mensagem para saber onde mexer.
  */
 export function RegisterPage({ onRegistrar, irPara }: RegisterPageProps) {
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [nome, setNome] = useState('');
   const [senha, setSenha] = useState('');
@@ -53,7 +55,7 @@ export function RegisterPage({ onRegistrar, irPara }: RegisterPageProps) {
 
     if (senha.length < MINIMO_DE_SENHA) {
       setErroDeSenha(
-        `A senha precisa de pelo menos ${MINIMO_DE_SENHA} caracteres.`,
+        t('registerPage.errors.passwordTooShort', { minimo: MINIMO_DE_SENHA }),
       );
       return;
     }
@@ -67,11 +69,11 @@ export function RegisterPage({ onRegistrar, irPara }: RegisterPageProps) {
       }
       setErro(
         r.status === 403
-          ? 'O cadastro está fechado nesta instalação.'
-          : 'Não foi possível criar a conta. Confira os dados e tente de novo.',
+          ? t('registerPage.errors.registrationClosed')
+          : t('registerPage.errors.generic'),
       );
     } catch {
-      setErro('Não foi possível falar com o servidor. Tente de novo.');
+      setErro(t('registerPage.errors.network'));
     } finally {
       setEnviando(false);
     }
@@ -80,8 +82,8 @@ export function RegisterPage({ onRegistrar, irPara }: RegisterPageProps) {
   if (enviado) {
     return (
       <AuthLayout
-        titulo="Confira seu e-mail"
-        subtitulo="Falta um clique para a conta ficar ativa."
+        titulo={t('registerPage.success.title')}
+        subtitulo={t('registerPage.success.subtitle')}
         irPara={irPara}
       >
         {/*
@@ -90,11 +92,12 @@ export function RegisterPage({ onRegistrar, irPara }: RegisterPageProps) {
           notícia é grosseria de software.
         */}
         <Alert tone="success" role="status">
-          Se o endereço estiver disponível, enviamos um link de confirmação para{' '}
-          <strong>{email}</strong>.
+          {t('registerPage.success.messagePrefix')}
+          <strong>{email}</strong>
+          {t('registerPage.success.messageSuffix')}
         </Alert>
         <Button variant="secondary" fullWidth onClick={() => irPara('/login')}>
-          Voltar para o login
+          {t('registerPage.success.backToLogin')}
         </Button>
       </AuthLayout>
     );
@@ -102,18 +105,18 @@ export function RegisterPage({ onRegistrar, irPara }: RegisterPageProps) {
 
   return (
     <AuthLayout
-      titulo="Criar conta"
-      subtitulo="Enviamos um link de confirmação para o e-mail informado."
+      titulo={t('registerPage.form.title')}
+      subtitulo={t('registerPage.form.subtitle')}
       irPara={irPara}
       rodapeDoCartao={
         <>
-          Já tem conta?{' '}
+          {t('registerPage.form.alreadyHaveAccountPrompt')}{' '}
           <button
             type="button"
             className={styles.link}
             onClick={() => irPara('/login')}
           >
-            Entrar
+            {t('registerPage.form.login')}
           </button>
         </>
       }
@@ -126,9 +129,9 @@ export function RegisterPage({ onRegistrar, irPara }: RegisterPageProps) {
 
       <form className={styles.form} onSubmit={submeter}>
         <Input
-          label="E-mail"
+          label={t('registerPage.form.emailLabel')}
           type="email"
-          placeholder="voce@empresa.com"
+          placeholder={t('registerPage.form.emailPlaceholder')}
           autoComplete="username"
           required
           preenchido
@@ -136,15 +139,15 @@ export function RegisterPage({ onRegistrar, irPara }: RegisterPageProps) {
           onChange={(e) => setEmail(e.target.value)}
         />
         <Input
-          label="Nome"
+          label={t('registerPage.form.nameLabel')}
           autoComplete="name"
           preenchido
           value={nome}
           onChange={(e) => setNome(e.target.value)}
-          hint="Opcional."
+          hint={t('registerPage.form.nameHint')}
         />
         <Input
-          label="Senha"
+          label={t('registerPage.form.passwordLabel')}
           type="password"
           autoComplete="new-password"
           required
@@ -154,11 +157,11 @@ export function RegisterPage({ onRegistrar, irPara }: RegisterPageProps) {
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
           error={erroDeSenha}
-          hint={`Pelo menos ${MINIMO_DE_SENHA} caracteres. Uma frase longa vale mais que símbolos.`}
+          hint={t('registerPage.form.passwordHint', { minimo: MINIMO_DE_SENHA })}
         />
         <div className={styles.acoes}>
           <Button type="submit" fullWidth size="lg" loading={enviando}>
-            {enviando ? 'Criando…' : 'Criar conta'}
+            {enviando ? t('registerPage.form.submitting') : t('registerPage.form.submit')}
           </Button>
         </div>
       </form>

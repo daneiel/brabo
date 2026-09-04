@@ -1,0 +1,445 @@
+{
+  "summary": {
+    "title": "On this page",
+    "ariaLabel": "Settings summary",
+    "groups": {
+      "projeto": "Project and execution",
+      "modelos": "Models",
+      "pessoas": "People and access",
+      "avancado": "Advanced"
+    }
+  },
+  "heranca": {
+    "semValorProprio": "No value of its own",
+    "proprio": "Own value",
+    "voltarAHerdar": "Go back to inheriting"
+  },
+  "secao": {
+    "naoSalvas_one": "{{count}} unsaved change in this section",
+    "naoSalvas_other": "{{count}} unsaved changes in this section",
+    "invalidas_one": "{{count}} invalid value — fix it to save",
+    "invalidas_other": "{{count}} invalid values — fix them to save",
+    "toast": {
+      "salvas_one": "{{count}} change saved",
+      "salvas_other": "{{count}} changes saved",
+      "parcial": "Saved {{salvas}} of {{total}}",
+      "parcialDetalhe": "Not saved: {{itens}}. {{motivo}}"
+    }
+  },
+  "matrix": {
+    "title": "Who can approve what",
+    "eyebrow": "summary matrix",
+    "subtitle": "Informational table — reflects the minimum roles per action type applied today in the backend; some rows still don't have their own granular check and use the closest approximation.",
+    "columns": {
+      "action": "Action"
+    },
+    "rows": {
+      "mergeOpenPr": "Merge / open PR",
+      "deployProduction": "Deploy to production",
+      "privilegedCommand": "Privileged command",
+      "schemaMigration": "Change schema/migration",
+      "editPermissions": "Edit permissions.json"
+    },
+    "legend": {
+      "canApprove": "can approve",
+      "noPermission": "no permission"
+    }
+  },
+  "bestModels": {
+    "title": "Best models by capability",
+    "eyebrow": "curation · real usage · cost",
+    "subtitle": {
+      "before": "\"Recommended\" is the model most agents in this project already use, among the ones this workspace's curation marked for the capability — cost breaks ties. No quality score is calculated (ADR 0042: curation is always manual); mark the uses in the ",
+      "link": "Model catalog",
+      "after": ", further below."
+    },
+    "columns": {
+      "capability": "Capability",
+      "recommended": "Recommended",
+      "alternative": "Alternative",
+      "usedBy": "Used by"
+    },
+    "noCuratedCoverage": "no curated coverage",
+    "noAgentYet": "no agent yet",
+    "usedByCount_one": "{{count}} agent in this project",
+    "usedByCount_other": "{{count}} agents in this project",
+    "emptyMessage": "No capability registered."
+  },
+  "cascata": {
+    "niveis": {
+      "workspace": "workspace",
+      "project": "project",
+      "area": "area",
+      "agent": "agent",
+      "session": "session"
+    },
+    "modeloDesconhecido": "unknown model",
+    "titulo": {
+      "vigente": "This is the level the current model comes from ({{modelo}}).",
+      "doStart": "No level of the cascade chose a model here — the product inherits the Creative's, the start agent, instead of letting it fall to the workspace default. The Creative uses {{modelo}}.",
+      "definido": "{{polo}} at this level ({{modelo}}), but a more specific level won.",
+      "vazio": "{{polo}} at this level.",
+      "puladoIndisponivel": "The cascade DISCARDED this level: {{modelo}} disappeared from the provider.",
+      "puladoSemToolCalling": "The cascade DISCARDED this level: {{modelo}} doesn't do tool calling and can't serve an agent."
+    },
+    "niveisComNome": {
+      "area": "{{area}} area"
+    }
+  },
+  "modelsSection": {
+    "title": "Models by agent",
+    "eyebrow": "current binding by cascade",
+    "subtitle": {
+      "intro": "Origin shows where the value is resolved:",
+      "mostSpecificWins": "The most specific wins.",
+      "areaWord": "area",
+      "areaExplain": "is the default that the lead and subagents share (RN-102) — set it in",
+      "areaLink": "Model by area",
+      "below": ", further below.",
+      "needsDeveloper": " Requires the developer role to change the model, apply one to every agent, or go back to inheriting."
+    },
+    "costCard": {
+      "label": "Team's estimated monthly cost",
+      "detail": "· based on the last 30 days"
+    },
+    "columns": {
+      "agent": "Agent",
+      "model": "Current model",
+      "origin": "Origin",
+      "fallback": "Fallback",
+      "estimate": "Est. month"
+    },
+    "backToInheritTitleWithArea": "Deletes this agent's own model — it goes back to using the default of the {{area}} area.",
+    "backToInheritTitleNoArea": "Deletes this agent's own model — it goes back to inheriting from the project or the workspace.",
+    "toast": {
+      "reverted": "{{agent}} is back to inheriting",
+      "alreadyInherits": "{{agent}} already inherited — there was no model of its own to delete",
+      "clearError": "Could not go back to inheriting",
+      "setError": "Could not change the agent's model"
+    },
+    "emptyMessage": "No agent configured.",
+    "noModelsAvailable": "No model available yet.",
+    "originChainNoModel": "no model at any level",
+    "originChainNoModelTitle": "Neither the agent, nor the area, nor the project, nor the workspace has a model set. A session can still pin one.",
+    "fallbackNone": "no level below",
+    "fallbackNoneTitle": "The current model already comes from the last level of the cascade — there is no step below it to fall to.",
+    "noEstimateYet": "no spend yet",
+    "noEstimateTitle": "This agent recorded no spend in this project over the last 30 days. Different from having spent zero, which shows as US$ 0.00.",
+    "bulk": {
+      "label": "Apply one model to every agent",
+      "detail": "· overwrites each agent’s own model, one call per agent",
+      "apply_one": "Apply to {{count}} agent",
+      "apply_other": "Apply to {{count}} agents",
+      "applying": "Applying…",
+      "toast": {
+        "applied_one": "{{model}} applied to {{count}} agent",
+        "applied_other": "{{model}} applied to all {{count}} agents",
+        "error": "Could not apply the model to the agents"
+      }
+    }
+  },
+  "areaModels": {
+    "title": "Model by area",
+    "eyebrow": "inheritable default · lead + subagents",
+    "subtitle": {
+      "main": "The model that applies to the lead and every subagent of the area that hasn't diverged — diverging means picking a different model ON THE AGENT'S ROW, above. \"Go back to inheriting\" clears the area's default; it doesn't change what each agent has already diverged to.",
+      "needsMaintainer": " Requires the maintainer role to change."
+    },
+    "card": {
+      "title": "{{area}} area",
+      "lead": "Lead: {{lead}}",
+      "subagents": " — subagents: {{list}}",
+      "subagentsDynamic": " — dynamic subagents (per module)"
+    },
+    "toast": {
+      "saveError": "Could not save",
+      "reverted": "The {{area}} area went back to inheriting"
+    },
+    "originChainNoModel": "no default at any level",
+    "originChainNoModelTitle": "Neither this area, nor the project, nor the workspace has a model set — the lead and the subagents of this area have no default to inherit."
+  },
+  "members": {
+    "title": "Members and roles",
+    "eyebrow": "IAM · per project",
+    "subtitle": "Roles define who can approve which agent actions in this project.",
+    "subtitleCascata": " The role in this table replaces the workspace one for this project, in both directions — setting viewer here demotes even a workspace owner. Whoever reaches the project through the workspace alone doesn't show up in the list.",
+    "subtitleNeedsMaintainer": " Requires the maintainer role to invite someone, change a role, or remove someone.",
+    "invite": {
+      "placeholder": "User ID (UUID)",
+      "button": "Invite"
+    },
+    "table": {
+      "member": "Member",
+      "role": "Project role",
+      "status": "Status",
+      "active": "active",
+      "removeAria": "Remove {{name}}",
+      "removeTitle": "Remove"
+    },
+    "toast": {
+      "inviteErrorTitle": "Failed to add member",
+      "inviteErrorMessage": "Check whether the user ID exists",
+      "roleErrorTitle": "Could not change the role",
+      "removeErrorTitle": "Could not remove the member"
+    },
+    "emptyMessage": "No member besides the project owner."
+  },
+  "repository": {
+    "title": "Repository",
+    "eyebrow": "git · provider and policy",
+    "adopted": "Adopted — it already existed before the project, and the branch policy is its own.",
+    "created": "Created by Brabo, with the Gitflow bootstrap applied.",
+    "dismissed": {
+      "before": "The bootstrap was ",
+      "strong": "skipped",
+      "after": " on adoption: no branch or protection was changed by us."
+    },
+    "divergesTitle": "This repository diverges from the template:"
+  },
+  "execution": {
+    "title": "Execution",
+    "eyebrow": "dev agent circuit breaker",
+    "subtitle": "Dev agents' circuit breaker — applies starting with the next execution activation, doesn't affect agents already running.",
+    "card": {
+      "title": "Consecutive blocked tasks before stopping",
+      "hintDefault": "uses the default ({{default}})",
+      "hintConfigured": "configured for this project"
+    },
+    "save": "Save",
+    "saving": "Saving…",
+    "toast": {
+      "success": "Circuit breaker threshold saved",
+      "error": "Could not save"
+    }
+  },
+  "executionMode": {
+    "title": "Where the code lives",
+    "eyebrow": "convert execution mode",
+    "subtitle": "Changes WHERE this project's commands execute — the managed folder, a folder of yours mounted via bind-mount, or a folder of yours connected through the runner.",
+    "needsMaintainer": "Only a maintainer or owner can convert.",
+    "warning": "This migrates the agent's working folder. If any dev agent is working or stuck right now, the conversion is refused — wait for it to finish (or unblock the stuck task) and try again.",
+    "card": {
+      "title": "Execution mode"
+    },
+    "selectAria": "New execution mode",
+    "pathAria": "New folder path",
+    "save": "Convert",
+    "saving": "Converting…",
+    "toast": {
+      "success": "Execution mode converted",
+      "error": "Could not convert"
+    }
+  },
+  "parallelism": {
+    "title": "Parallelism by area",
+    "eyebrow": "how many agents without asking",
+    "subtitle": {
+      "before": "How many agents the lead of each area can have ",
+      "strong": "in the session",
+      "after": " without asking your authorization. Above the threshold it doesn't spin up anything: the request becomes an action in Approvals, with the reason, and waits for you. The threshold is for the whole session, not per module — counting per module would let many agents spin up with no authorization at all."
+    },
+    "empty": {
+      "before": "No area yet. They're born when you activate execution, because the members of the dev area come from the ",
+      "code": "module_map",
+      "after": " from the Architect."
+    },
+    "card": {
+      "title": "{{area}} area",
+      "lead": "Lead: {{lead}}",
+      "membersCount_one": " — {{count}} member",
+      "membersCount_other": " — {{count}} members",
+      "noMembersYet": " — no members yet",
+      "capAria": "Agent threshold for the {{area}} area"
+    },
+    "save": "Save",
+    "saving": "Saving…",
+    "toast": {
+      "success": "{{area}} area's threshold saved",
+      "error": "Could not save"
+    }
+  },
+  "budget": {
+    "title": "Spend cap by area",
+    "eyebrow": "optional ceiling",
+    "subtitle": {
+      "before": "An optional spend cap for each area, ",
+      "strong": "additive",
+      "after": " to the project and session budgets — whichever of the three hits its cap first blocks the call. Leave it blank for no cap, which is also the default."
+    },
+    "empty": {
+      "before": "No area yet. They're born when you activate execution, because the members of the dev area come from the ",
+      "code": "module_map",
+      "after": " from the Architect."
+    },
+    "card": {
+      "title": "{{area}} area",
+      "spent": "Spent: {{amount}}",
+      "capAria": "Spend cap for the {{area}} area, in dollars",
+      "noCap": "no cap"
+    },
+    "placeholder": "No cap",
+    "save": "Save",
+    "saving": "Saving…",
+    "toast": {
+      "success": "{{area}} area's spend cap saved",
+      "error": "Could not save"
+    }
+  },
+  "promotion": {
+    "title": "Story promotion",
+    "eyebrow": "who takes the step",
+    "subtitle": {
+      "before": "A story only becomes pickable work once it's ",
+      "em": "ready",
+      "after": ". This sets who takes that step. The validations are the SAME in both modes — what changes is who triggers it, never what's required. Applies to upcoming stories; the ones already proposed keep waiting for you."
+    },
+    "card": {
+      "title": "Who promotes",
+      "hintManual": "The PO leaves the completed story waiting for you in the Backlog. None of its tasks are pickable until then.",
+      "hintAuto": "The PO promotes on its own once a story is complete — this was the previous behavior before Phase 12c, kept as an option."
+    },
+    "selectAria": "Who promotes stories",
+    "optionManual": "Manual — I promote",
+    "optionAuto": "Automatic — the PO promotes",
+    "toast": {
+      "manual": "Manual promotion: you decide what's done",
+      "auto": "Automatic promotion: the PO promotes on its own",
+      "error": "Could not save"
+    }
+  },
+  "credentials": {
+    "title": "Provider credentials",
+    "eyebrow": "write-only · per user",
+    "subtitle": {
+      "before": "Write-only keys — never shown again once saved. Since there's no way to check what's stored, what's offered is ",
+      "swap": "swap",
+      "middle": " and ",
+      "test": "test",
+      "after": ": the test runs on the server against the encrypted key and returns only the verdict."
+    },
+    "connector": {
+      "hub": "provider hub",
+      "provider": "provider credential",
+      "configured": "configured",
+      "missing": "no key",
+      "configuredNote": "Configured on {{date}} · never shown again",
+      "noneSaved": "No credential saved",
+      "newKeyAria": "New key for {{label}}",
+      "apiKeyAria": "API key for {{label}}",
+      "swapPlaceholder": "Swap key",
+      "apiKeyPlaceholder": "API key",
+      "swapKeyAria": "Swap key for {{label}}",
+      "saveKeyAria": "Save key for {{label}}",
+      "swap": "Swap",
+      "save": "Save",
+      "testKeyAria": "Test key for {{label}}",
+      "test": "Test",
+      "removeKeyAria": "Remove key for {{label}}",
+      "remove": "Remove"
+    },
+    "toast": {
+      "saved": "Credential saved",
+      "saveErrorTitle": "Couldn't save",
+      "testOk": "The provider accepted the key",
+      "testRefused": "The provider refused the key",
+      "testUnsupportedTitle": "No verification for this provider",
+      "testUnsupportedMessage": "The key is still saved — this provider has no test endpoint.",
+      "testErrorTitle": "Couldn't test",
+      "removed": "Credential removed",
+      "removeErrorTitle": "Couldn't remove"
+    }
+  },
+  "proficiency": {
+    "title": "Proficiency profile",
+    "eyebrow": "anamnesis · derived",
+    "subtitle": "Derived by the Anamnesis from your interactions. Only technical and process competencies — never personal traits.",
+    "emptyMessage": "Nothing yet — the Anamnesis runs periodically over the project's log.",
+    "deleteButton": "Delete my profile",
+    "reactivateButton": "Go back to being profiled",
+    "runNowButton": "Run now",
+    "runNowDisabledTitle": "The Anamnesis is paused globally",
+    "pausedNotice": "The Anamnesis is paused globally by team decision — no new round for now. What's already been derived stays here.",
+    "modal": {
+      "title": "Delete my proficiency profile?",
+      "body": "The rows of your profile are actually deleted, and the Anamnesis stops profiling you until you reactivate it. What's already been deleted doesn't come back.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "deleted": "Profile deleted",
+      "deletedMessage": "The Anamnesis will no longer profile you until you reactivate it.",
+      "deleteErrorTitle": "Error",
+      "deleteErrorMessage": "Could not delete the profile",
+      "reactivated": "Reactivated",
+      "reactivatedMessage": "The Anamnesis will go back to profiling you.",
+      "reactivateErrorTitle": "Error",
+      "reactivateErrorMessage": "Could not reactivate",
+      "queued": "Round queued",
+      "queuedMessage": "The Anamnesis will analyze the window now.",
+      "pausedTitle": "Anamnesis paused",
+      "pausedFallback": "The Anamnesis is disabled globally.",
+      "genericErrorTitle": "Error",
+      "genericErrorMessage": "Could not queue the round",
+      "evidenceUnavailableTitle": "Evidence unavailable",
+      "evidenceUnavailableMessage": "The cited event was not found in this project."
+    }
+  },
+  "personalAccessTokens": {
+    "title": "Access tokens",
+    "eyebrow": "Local runner · ADR 0105",
+    "subtitle": {
+      "before": "A Personal Access Token authenticates ",
+      "after": " on this machine, scoped to just this project — revocable at any time, and the raw value never shows up again once issued."
+    },
+    "namePlaceholder": "Name (e.g. laptop)",
+    "expiresPlaceholder": "Expires in N days (optional)",
+    "generateButton": "Generate token",
+    "toast": {
+      "issueErrorTitle": "Failed to generate token",
+      "issueErrorMessage": "Try again.",
+      "copyErrorTitle": "Couldn't copy",
+      "copyErrorMessage": "Copy the value manually."
+    },
+    "table": {
+      "name": "Name",
+      "created": "Created",
+      "expires": "Expires",
+      "expiresNever": "never",
+      "lastUsed": "Last used",
+      "lastUsedNever": "never used",
+      "status": "Status",
+      "statusRevoked": "revoked",
+      "statusActive": "active",
+      "removeAria": "Revoke {{name}}",
+      "removeTitle": "Revoke"
+    },
+    "emptyMessage": "No access token issued for this project.",
+    "modal": {
+      "title": "Token generated",
+      "bodyBefore": "Copy it now — this token can't be recovered after closing this window. Use it in ",
+      "bodyMiddle": " or ",
+      "bodyAfter": " of ",
+      "bodyEnd": ".",
+      "copyButton": "Copy",
+      "copiedButton": "Copied"
+    }
+  },
+  "instructionVersions": {
+    "title": "Instruction history",
+    "eyebrow": "per-agent versioning",
+    "subtitle": "Every approved patch becomes a version. Reverting writes a new version with the old content — nothing is deleted.",
+    "emptyMessage": "No agent has had its instructions changed yet.",
+    "current": "current",
+    "hypothesis": "hypothesis {{id}}",
+    "hideDiff": "hide diff",
+    "showDiff": "diff +{{additions}} −{{deletions}}",
+    "revert": "Revert",
+    "reverting": "Reverting…",
+    "toast": {
+      "revertedTitle": "Reverted",
+      "revertedMessage": "{{agent}} went back to v{{version}}'s content.",
+      "errorTitle": "Error",
+      "errorMessage": "Could not revert"
+    }
+  }
+}

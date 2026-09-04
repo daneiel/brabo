@@ -1,5 +1,70 @@
 import type { TerminalExecutionResult } from '../../domain/actions/terminal-execution-result';
 import type { DevAgentImpl } from '../../domain/execution/dev-agent-impl';
+import type { PosturaDeRede } from '../../domain/containers/project-container';
+
+/**
+ * O que o RUNNER precisa para compor a `EspecificacaoDeContainer` dele mesmo
+ * (`packages/docker-port`, `especificacaoValidada`) — os MESMOS campos de
+ * `EntradaDeEspecificacao` menos `raizDoProjeto` (o runner enche esse campo
+ * sozinho, com `estado.dir` — a raiz já confirmada e validada no startup da
+ * CLI, RN-434/435; ninguém do lado servidor manda caminho de host nenhum
+ * para o runner, pelo mesmo motivo que o broker nunca manda pro daemon: quem
+ * sabe o caminho de VERDADE é quem está na máquina). Nomes de campo em
+ * pt-BR de propósito — é o vocabulário que atravessa engine/runner desde o
+ * ADR 0128/0130, e esta é só mais uma parada da mesma composição, não um
+ * contrato novo.
+ */
+export interface EspecificacaoDeContainerParaRunner {
+  workspaceDirName: string;
+  projectSlug: string;
+  workspaceId: string;
+  imagem: string;
+  imagemVersao: number;
+  rede: PosturaDeRede;
+  cpus: number;
+  memoriaMb: number;
+  pidsLimit: number;
+}
+
+export interface ContainerIniciadoViaRunner {
+  containerId: string;
+  nome: string;
+  /** `true` quando o container já estava de pé — `start` é idempotente do lado do runner também. */
+  jaEstavaDePe: boolean;
+}
+
+/**
+ * O runner não respondeu — nunca conectado, ou caiu no meio da espera
+ * (`RunnerRouter.exec/4` já devolve o mesmo par `{:error, :not_connected}` |
+ * `{:error, :timeout}` para o caminho de terminal; esta classe é o espelho
+ * do lado api para o caminho de container). Origem `infra`: falta uma peça
+ * de AMBIENTE (o CLI rodando na máquina do usuário), nunca defeito de quem
+ * chamou.
+ */
+export class RunnerNaoConectadoError extends Error {
+  readonly origem = 'infra';
+  readonly motivo: 'not_connected' | 'timeout';
+
+  constructor(motivo: 'not_connected' | 'timeout', detalhe: string) {
+    super(detalhe);
+    this.name = 'RunnerNaoConectadoError';
+    this.motivo = motivo;
+  }
+}
+
+/**
+ * O runner respondeu, mas RECUSOU (Docker indisponível na máquina do
+ * usuário, especificação inválida, etc.) — `sucesso: false` na resposta do
+ * engine. Mesmo raciocínio de `BrokerRecusouError` do lado do broker: a
+ * mensagem já vem pronta do runner (`mensagemDeErro`), nunca uma exceção
+ * genérica.
+ */
+export class RunnerRecusouContainerError extends Error {
+  constructor(mensagem: string) {
+    super(mensagem);
+    this.name = 'RunnerRecusouContainerError';
+  }
+}
 
 export abstract class ApiToEngineClient {
   abstract startSession(
@@ -147,6 +212,15 @@ export abstract class ApiToEngineClient {
     sessionId: string,
   ): Promise<void>;
 
+  /**
+   * Leitura da flag global `PSYCHOLOGIST_ENABLED` (RN-454) — sem efeito
+   * colateral nenhum, ao contrário de `reanalyzeSession`. Existe porque a
+   * aba Insights, com zero hipóteses ainda, nunca chega perto do botão
+   * "Reanalisar" (só aparece quando há uma rodada de análise para
+   * reprocessar) e por isso nunca esbarrava no 503 que denunciava a pausa.
+   */
+  abstract getPsychologistStatus(): Promise<{ enabled: boolean }>;
+
   // Descarta o cache de instruções do agente no engine (Fase 4b) —
   // depois de um instruction_patch aprovado ou de um rollback, senão os
   // agentes seguem servindo o conteúdo antigo em memória. Best-effort:
@@ -165,5 +239,53 @@ export abstract class ApiToEngineClient {
   abstract invalidateInstructions(
     projectId: string,
     agent: string,
+  ): Promise<void>;
+
+  /**
+   * Pede ao engine um ticket opaco de uso único pro socket `/runner`
+   * (`terminal:<projectId>`) — INVERSO do ticket de sessão (RN-108): lá a
+   * api insere direto em `session_socket_tickets` (dela, Drizzle); aqui é o
+   * engine quem gera e guarda `runner_socket_tickets` (dele, schema
+   * "engine"), porque é ele quem PRECISA ler a tabela em `connect/3` e a api
+   * não tem acesso de escrita ao schema do engine.
+   *
+   * `kind: "runner"` é pro CLI na máquina do usuário (no máximo um
+   * conectado por projeto); `kind: "terminal"` é pra aba Terminal da web.
+   */
+  abstract requestRunnerTicket(
+    projectId: string,
+    userId: string,
+    kind: 'runner' | 'terminal',
+  ): Promise<{ ticket: string; expiresAt: Date }>;
+
+  /**
+   * Pede ao engine para mandar o runner conectado SUBIR o container do
+   * projeto (`container_start` num projeto `mounted`/`runner` — PR "o
+   * runner sobe o container do projeto na máquina do usuário", ADR 0137).
+   * Síncrono, como `executeTerminalAction`: espera a resposta do runner (ou
+   * o timeout dele) antes de retornar.
+   *
+   * Lança `RunnerNaoConectadoError` (sem runner conectado, ou timeout) ou
+   * `RunnerRecusouContainerError` (o runner tentou e o Docker DELE recusou)
+   * — nunca uma exceção genérica de transporte para esses dois casos, mesma
+   * disciplina de `BrokerIndisponivelError`/`BrokerRecusouError` do lado do
+   * broker. Qualquer outra falha (HTTP fora do ar, engine derrubado) segue
+   * lançando `Error` comum, como o resto deste client.
+   */
+  abstract startContainerViaRunner(
+    projectId: string,
+    spec: EspecificacaoDeContainerParaRunner,
+  ): Promise<ContainerIniciadoViaRunner>;
+
+  /** Espelho de `startContainerViaRunner` para `container_stop`. */
+  abstract stopContainerViaRunner(
+    projectId: string,
+    workspaceDirName: string,
+  ): Promise<void>;
+
+  /** Espelho de `startContainerViaRunner` para `container_remove`. */
+  abstract removeContainerViaRunner(
+    projectId: string,
+    workspaceDirName: string,
   ): Promise<void>;
 }

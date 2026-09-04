@@ -328,6 +328,242 @@ describe('decide — teto do paralelismo (FASE 14d)', () => {
   });
 });
 
+describe('decide — plano de execução do Dev Lead (ADR 0086, RN-284)', () => {
+  // Diferente do teto de paralelismo: este tipo NÃO entra no bloco de tetos
+  // absolutos — o objetivo é provar o contrário do que os testes acima
+  // provam, que auto_approve SOBREVIVE quando o usuário configura.
+  const plano = { actionType: 'propose_execution_plan' as const };
+
+  it('minRole: maintainer — developer é insuficiente e nega mesmo antes de olhar autonomy/permissions.json', () => {
+    const result = decide(
+      plano,
+      ctx({
+        effectiveRole: 'developer',
+        autonomyMode: 'auto_approve',
+        permissionsFile: {
+          ...EMPTY_PERMISSIONS_FILE,
+          allow: ['ProposeExecutionPlan()'],
+        },
+      }),
+    );
+    expect(result.policy).toBe('deny');
+  });
+
+  it('sem regra nenhuma, default é require_approval', () => {
+    const result = decide(plano, ctx({ effectiveRole: 'maintainer' }));
+    expect(result.policy).toBe('require_approval');
+  });
+
+  it('agent_autonomy auto_approve PERMANECE auto_approve — não é um teto absoluto', () => {
+    const result = decide(
+      plano,
+      ctx({ effectiveRole: 'maintainer', autonomyMode: 'auto_approve' }),
+    );
+    expect(result.policy).toBe('auto_approve');
+  });
+
+  it('permissions.json allow também PERMANECE auto_approve', () => {
+    const result = decide(
+      plano,
+      ctx({
+        effectiveRole: 'maintainer',
+        permissionsFile: {
+          ...EMPTY_PERMISSIONS_FILE,
+          allow: ['ProposeExecutionPlan()'],
+        },
+      }),
+    );
+    expect(result.policy).toBe('auto_approve');
+  });
+});
+
+describe('decide — parecer de implementabilidade do Dev Lead (ADR 0090)', () => {
+  // Mesmo raciocínio de `propose_execution_plan`: NÃO entra no bloco de
+  // tetos absolutos — o objetivo é provar que auto_approve SOBREVIVE quando
+  // o usuário configura, ao contrário de parallelize/raise_max_parallel.
+  const parecer = { actionType: 'assess_implementability' as const };
+
+  it('minRole: maintainer — developer é insuficiente e nega mesmo antes de olhar autonomy/permissions.json', () => {
+    const result = decide(
+      parecer,
+      ctx({
+        effectiveRole: 'developer',
+        autonomyMode: 'auto_approve',
+        permissionsFile: {
+          ...EMPTY_PERMISSIONS_FILE,
+          allow: ['AssessImplementability()'],
+        },
+      }),
+    );
+    expect(result.policy).toBe('deny');
+  });
+
+  it('sem regra nenhuma, default é require_approval', () => {
+    const result = decide(parecer, ctx({ effectiveRole: 'maintainer' }));
+    expect(result.policy).toBe('require_approval');
+  });
+
+  it('agent_autonomy auto_approve PERMANECE auto_approve — não é um teto absoluto', () => {
+    const result = decide(
+      parecer,
+      ctx({ effectiveRole: 'maintainer', autonomyMode: 'auto_approve' }),
+    );
+    expect(result.policy).toBe('auto_approve');
+  });
+
+  it('permissions.json allow também PERMANECE auto_approve', () => {
+    const result = decide(
+      parecer,
+      ctx({
+        effectiveRole: 'maintainer',
+        permissionsFile: {
+          ...EMPTY_PERMISSIONS_FILE,
+          allow: ['AssessImplementability()'],
+        },
+      }),
+    );
+    expect(result.policy).toBe('auto_approve');
+  });
+});
+
+describe('decide — eleição de container pela Infra (ADR 0130/0133)', () => {
+  // Mesmo raciocínio de `propose_execution_plan`/`assess_implementability`:
+  // NÃO entra no bloco de tetos absolutos — decisão INICIAL desta eleição,
+  // não ultrapassagem de um teto já autorizado. O objetivo aqui é provar
+  // exatamente isso: `container_start` CONSEGUE chegar em auto_approve
+  // quando `agent_autonomy`/`permissions.json` autorizam, ao contrário de
+  // `parallelize`/`git_merge` com branch protegida/`instruction_patch`, que
+  // NUNCA conseguem.
+  const subir = { actionType: 'container_start' as const };
+
+  it('minRole: maintainer — developer é insuficiente e nega mesmo antes de olhar autonomy/permissions.json', () => {
+    const result = decide(
+      subir,
+      ctx({
+        effectiveRole: 'developer',
+        autonomyMode: 'auto_approve',
+        permissionsFile: {
+          ...EMPTY_PERMISSIONS_FILE,
+          allow: ['ContainerStart()'],
+        },
+      }),
+    );
+    expect(result.policy).toBe('deny');
+  });
+
+  it('sem regra nenhuma, default é require_approval', () => {
+    const result = decide(subir, ctx({ effectiveRole: 'maintainer' }));
+    expect(result.policy).toBe('require_approval');
+  });
+
+  it('agent_autonomy auto_approve CONSEGUE chegar a auto_approve — não é um teto absoluto', () => {
+    const result = decide(
+      subir,
+      ctx({ effectiveRole: 'maintainer', autonomyMode: 'auto_approve' }),
+    );
+    expect(result.policy).toBe('auto_approve');
+  });
+
+  it('permissions.json allow também CONSEGUE chegar a auto_approve', () => {
+    const result = decide(
+      subir,
+      ctx({
+        effectiveRole: 'maintainer',
+        permissionsFile: {
+          ...EMPTY_PERMISSIONS_FILE,
+          allow: ['ContainerStart()'],
+        },
+      }),
+    );
+    expect(result.policy).toBe('auto_approve');
+  });
+});
+
+describe('decide — container_stop, a página global de containers (ADR 0136)', () => {
+  // MESMO calibre de container_start: pode chegar a auto_approve, nunca
+  // seedado, mas configurável.
+  const parar = { actionType: 'container_stop' as const };
+
+  it('minRole: maintainer — developer nega', () => {
+    const result = decide(
+      parar,
+      ctx({
+        effectiveRole: 'developer',
+        autonomyMode: 'auto_approve',
+      }),
+    );
+    expect(result.policy).toBe('deny');
+  });
+
+  it('sem regra nenhuma, default é require_approval', () => {
+    const result = decide(parar, ctx({ effectiveRole: 'maintainer' }));
+    expect(result.policy).toBe('require_approval');
+  });
+
+  it('agent_autonomy auto_approve CONSEGUE chegar a auto_approve — não é um teto absoluto', () => {
+    const result = decide(
+      parar,
+      ctx({ effectiveRole: 'maintainer', autonomyMode: 'auto_approve' }),
+    );
+    expect(result.policy).toBe('auto_approve');
+  });
+
+  it('permissions.json allow também CONSEGUE chegar a auto_approve', () => {
+    const result = decide(
+      parar,
+      ctx({
+        effectiveRole: 'maintainer',
+        permissionsFile: {
+          ...EMPTY_PERMISSIONS_FILE,
+          allow: ['ContainerStop()'],
+        },
+      }),
+    );
+    expect(result.policy).toBe('auto_approve');
+  });
+});
+
+describe('decide — teto de container_remove (ADR 0136, RN-495)', () => {
+  // MESMO calibre de merge protegido/instruction_patch: nunca consegue
+  // auto_approve, nem por agent_autonomy nem por permissions.json — é a
+  // ação mais destrutiva das três (descarta o container, exige
+  // reprovisionar do zero).
+  const remover = { actionType: 'container_remove' as const };
+
+  it('minRole: maintainer — developer nega', () => {
+    const result = decide(remover, ctx({ effectiveRole: 'developer' }));
+    expect(result.policy).toBe('deny');
+  });
+
+  it('sem regra nenhuma, default é require_approval', () => {
+    const result = decide(remover, ctx({ effectiveRole: 'maintainer' }));
+    expect(result.policy).toBe('require_approval');
+  });
+
+  it('agent_autonomy auto_approve NÃO consegue auto-aprovar remover', () => {
+    const result = decide(
+      remover,
+      ctx({ effectiveRole: 'maintainer', autonomyMode: 'auto_approve' }),
+    );
+    expect(result.policy).toBe('require_approval');
+    expect(result.reason).toMatch(/nunca é auto-aprovável/);
+  });
+
+  it('permissions.json allow NÃO consegue auto-aprovar remover', () => {
+    const result = decide(
+      remover,
+      ctx({
+        effectiveRole: 'maintainer',
+        permissionsFile: {
+          ...EMPTY_PERMISSIONS_FILE,
+          allow: ['ContainerRemove()'],
+        },
+      }),
+    );
+    expect(result.policy).toBe('require_approval');
+  });
+});
+
 describe('decide — teto do patch de instrução (Fase 4b)', () => {
   // Mesma classe de garantia da trava de merge, e por isso testada do mesmo
   // jeito: o valor da feature está no humano ver o diff. Auto-aprovar seria o
@@ -519,40 +755,46 @@ describe('decide — escopo de caminho', () => {
 });
 
 /**
- * A fronteira do container (FASE 25c, ADR 0065, RN-106).
+ * A fronteira do container (FASE 25c, ADR 0065, RN-106 — revisada nesta
+ * entrega: `deny` incondicional virou TETO ABSOLUTO, `require_approval` que
+ * vence qualquer estágio permissivo, exatamente como merge protegido/
+ * instruction_patch/paralelismo).
  *
  * O que estes testes travam é a metade que NÃO é isolamento: dentro do
  * container o agente é livre, mas três efeitos atravessam a parede e chegam no
- * mundo — push, PR e deploy —, e a constituição do produto os declara humanos.
+ * mundo — push, PR e deploy —, e a constituição do produto os declara SEMPRE
+ * humanos, mesmo com "modo automático" ligado.
  *
- * **Mutação que os mata**: apagar o bloco "FRONTEIRA DO CONTAINER" de
- * `decide()`. Sem ele, o primeiro caso volta a `require_approval` e o segundo
- * — o que importa — vira `auto_approve`, porque `Terminal(git)` em `allow`
- * passa a cobrir `git push`.
+ * **Mutação que os mata**: apagar o bloco do teto de `decide()`. Sem ele, o
+ * `Terminal(git)` em `allow`/o curinga `"*"` de `agent_autonomy` passam a
+ * cobrir `git push` normalmente, e o segundo/terceiro caso — o que importa —
+ * viram `auto_approve`.
  */
 describe('decide — a fronteira do container (RN-106)', () => {
   const RAIZ_CONTAINER = '/data/project-workspaces/proj-1';
 
-  it('`git push` pelo terminal é NEGADO, mesmo dentro do escopo do projeto', () => {
+  it('`git push` com agent_autonomy curinga em auto_approve resolve para require_approval — o teto vence', () => {
     const result = decide(
       {
         actionType: 'terminal',
         command: 'git push origin feature/x',
         cwd: `${RAIZ_CONTAINER}/.worktrees/dev-api`,
       },
-      ctx({ projectScopeRoot: RAIZ_CONTAINER }),
+      ctx({ autonomyMode: 'auto_approve', projectScopeRoot: RAIZ_CONTAINER }),
     );
 
-    expect(result.policy).toBe('deny');
+    expect(result.policy).toBe('require_approval');
     // A mensagem redireciona: o efeito continua existindo, pela ação tipada
     // `git_push`, que nasce proposed_action.
     expect(result.reason).toMatch(/`git_push`/);
     expect(result.reason).toMatch(/proposed_action/);
   });
 
-  it('nem um `allow` largo abre a segunda porta — `deny` vence sempre', () => {
+  it('nem um `allow` largo abre a segunda porta — o teto vence sempre', () => {
     // É este o caso que "sempre permitir" criaria: um clique gravando
-    // `Terminal(git)` faria o push passar direto para sempre.
+    // `Terminal(git)` faria o push passar direto para sempre — se a OUTRA
+    // metade do teto (ApproveAlwaysActionUseCase recusando gravar o padrão)
+    // não existisse.
     const result = decide(
       {
         actionType: 'terminal',
@@ -570,7 +812,26 @@ describe('decide — a fronteira do container (RN-106)', () => {
       }),
     );
 
-    expect(result.policy).toBe('deny');
+    expect(result.policy).toBe('require_approval');
+  });
+
+  it('permissions.json allow SOZINHO (sem agent_autonomy) também não promove git push — o teto vence', () => {
+    const result = decide(
+      {
+        actionType: 'terminal',
+        command: 'git push origin main',
+        cwd: `${RAIZ_CONTAINER}/.worktrees/dev-api`,
+      },
+      ctx({
+        permissionsFile: {
+          ...EMPTY_PERMISSIONS_FILE,
+          allow: ['Terminal(git push)'],
+        },
+        projectScopeRoot: RAIZ_CONTAINER,
+      }),
+    );
+
+    expect(result.policy).toBe('require_approval');
   });
 
   it('o push escondido num composto derruba o comando inteiro', () => {
@@ -589,7 +850,7 @@ describe('decide — a fronteira do container (RN-106)', () => {
       }),
     );
 
-    expect(result.policy).toBe('deny');
+    expect(result.policy).toBe('require_approval');
   });
 
   it('a ação TIPADA `git_push` continua existindo — a fronteira redireciona, não bloqueia', () => {
@@ -616,5 +877,176 @@ describe('decide — a fronteira do container (RN-106)', () => {
     );
 
     expect(result.policy).toBe('auto_approve');
+  });
+});
+
+/**
+ * Comando privilegiado — `sudo`/`doas` (RN-106, revisão desta entrega).
+ *
+ * Mesmo calibre da fronteira do container, mas SEM ação tipada equivalente:
+ * não há "para onde redirecionar", o comando privilegiado é sempre humano,
+ * mesmo com "modo automático" ligado.
+ */
+describe('decide — comando privilegiado (sudo/doas)', () => {
+  it('`sudo` nunca é auto-aprovável, mesmo com agent_autonomy curinga em auto_approve', () => {
+    const result = decide(
+      { actionType: 'terminal', command: 'sudo apt install htop' },
+      ctx({ autonomyMode: 'auto_approve' }),
+    );
+    expect(result.policy).toBe('require_approval');
+    expect(result.reason).toMatch(/comando privilegiado/);
+    expect(result.reason).toMatch(/sudo/);
+  });
+
+  it('`doas` segue a mesma régua do `sudo`', () => {
+    const result = decide(
+      { actionType: 'terminal', command: 'doas pkg_add htop' },
+      ctx({ autonomyMode: 'auto_approve' }),
+    );
+    expect(result.policy).toBe('require_approval');
+  });
+
+  it('permissions.json allow largo não abre a porta pro sudo', () => {
+    const result = decide(
+      { actionType: 'terminal', command: 'sudo systemctl restart nginx' },
+      ctx({
+        permissionsFile: {
+          ...EMPTY_PERMISSIONS_FILE,
+          allow: ['Terminal(sudo)'],
+        },
+      }),
+    );
+    expect(result.policy).toBe('require_approval');
+  });
+
+  it('sudo escondido num composto derruba o comando inteiro', () => {
+    const result = decide(
+      { actionType: 'terminal', command: 'echo oi && sudo rm -rf /tmp/x' },
+      ctx({
+        permissionsFile: {
+          ...EMPTY_PERMISSIONS_FILE,
+          allow: ['Terminal(echo oi)', 'Terminal(sudo)'],
+        },
+      }),
+    );
+    expect(result.policy).toBe('require_approval');
+  });
+
+  it('regressão: comando comum (sem sudo, sem efeito externo) continua auto-aprovando com modo automático ligado', () => {
+    const result = decide(
+      { actionType: 'terminal', command: 'pnpm test' },
+      ctx({ autonomyMode: 'auto_approve' }),
+    );
+    expect(result.policy).toBe('auto_approve');
+  });
+});
+
+/**
+ * O piso do container REAL do projeto (ADR 0134, RN-492) — não confundir
+ * com "decide — a fronteira do container (RN-106)" acima, que é sobre git
+ * push/comando privilegiado escapando do PROCESSO do agente, nada a ver com
+ * `containerExecutionActive`. `decide()` continua puro: quem decide SE o
+ * projeto tem um container `running` é `ProposeActionUseCase`, e este
+ * arquivo só afirma o que `decide()` faz com o booleano já resolvido.
+ */
+describe('decide — piso do container ativo do projeto', () => {
+  const RAIZ = '/data/project-workspaces/proj-1';
+
+  it('terminal auto-aprova SEM regra nenhuma quando o container está ativo', () => {
+    const result = decide(
+      { actionType: 'terminal', command: 'npm test', cwd: RAIZ },
+      ctx({ projectScopeRoot: RAIZ, containerExecutionActive: true }),
+    );
+    expect(result.policy).toBe('auto_approve');
+    expect(result.reason).toMatch(/container/);
+  });
+
+  it('sem containerExecutionActive, comportamento de hoje inalterado (require_approval por padrão)', () => {
+    const result = decide(
+      { actionType: 'terminal', command: 'npm test', cwd: RAIZ },
+      ctx({ projectScopeRoot: RAIZ, containerExecutionActive: false }),
+    );
+    expect(result.policy).toBe('require_approval');
+  });
+
+  it('containerExecutionActive NÃO afeta ação que não é terminal', () => {
+    const result = decide(
+      { actionType: 'container_start' },
+      ctx({ effectiveRole: 'maintainer', containerExecutionActive: true }),
+    );
+    expect(result.policy).toBe('require_approval');
+  });
+
+  it('o piso NÃO é um teto: agent_autonomy deny explícito rebaixa (nega) mesmo com container ativo', () => {
+    const result = decide(
+      { actionType: 'terminal', command: 'npm test', cwd: RAIZ },
+      ctx({
+        projectScopeRoot: RAIZ,
+        containerExecutionActive: true,
+        autonomyMode: 'deny',
+      }),
+    );
+    expect(result.policy).toBe('deny');
+  });
+
+  it('o piso NÃO é um teto: permissions.json ask explícito rebaixa para require_approval mesmo com container ativo', () => {
+    const result = decide(
+      { actionType: 'terminal', command: 'npm test', cwd: RAIZ },
+      ctx({
+        projectScopeRoot: RAIZ,
+        containerExecutionActive: true,
+        permissionsFile: {
+          ...EMPTY_PERMISSIONS_FILE,
+          ask: ['Terminal(npm test)'],
+        },
+      }),
+    );
+    expect(result.policy).toBe('require_approval');
+  });
+
+  it('IAM insuficiente nega mesmo com container ativo — o piso só se aplica DEPOIS do IAM', () => {
+    const result = decide(
+      { actionType: 'terminal', command: 'npm test', cwd: RAIZ },
+      ctx({
+        effectiveRole: 'viewer',
+        projectScopeRoot: RAIZ,
+        containerExecutionActive: true,
+      }),
+    );
+    expect(result.policy).toBe('deny');
+  });
+
+  it('escopo continua sendo teto por cima do piso: caminho fora da raiz do HOST não auto-aprova', () => {
+    // O `cwd`/`command` que chegam em decide() NUNCA são traduzidos pra
+    // `/work` — essa tradução acontece só depois, no engine. Aqui o teto
+    // de escopo continua rodando sobre os MESMOS caminhos de host de
+    // sempre, como defesa em profundidade.
+    const result = decide(
+      { actionType: 'terminal', command: 'cat /etc/passwd', cwd: RAIZ },
+      ctx({ projectScopeRoot: RAIZ, containerExecutionActive: true }),
+    );
+    expect(result.policy).toBe('require_approval');
+    expect(result.reason).toContain('fora da pasta do projeto');
+  });
+
+  it('git push continua require_approval mesmo com container ativo — teto absoluto (RN-418/ADR 0102)', () => {
+    const result = decide(
+      {
+        actionType: 'terminal',
+        command: 'git push origin feature/x',
+        cwd: RAIZ,
+      },
+      ctx({ projectScopeRoot: RAIZ, containerExecutionActive: true }),
+    );
+    expect(result.policy).toBe('require_approval');
+    expect(result.reason).toMatch(/`git_push`/);
+  });
+
+  it('sudo continua require_approval mesmo com container ativo — teto absoluto (RN-418/ADR 0102)', () => {
+    const result = decide(
+      { actionType: 'terminal', command: 'sudo apt-get update', cwd: RAIZ },
+      ctx({ projectScopeRoot: RAIZ, containerExecutionActive: true }),
+    );
+    expect(result.policy).toBe('require_approval');
   });
 });

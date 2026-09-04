@@ -1,0 +1,254 @@
+.wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* O chip que abre o painel — mesma família visual do `.repoChip` do cabeçalho
+   do projeto (mono, 11px, borda de 1px), mas clicável e com estado aberto. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.chipAberto {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+
+/* PONTO, nunca número: presença, não quantidade — os totais por fila ficam
+   nos contadores do trilho, um por aba, e continuam separados. */
+.ponto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+/*
+ * O painel é de VIEWPORT, não uma gaveta ancorada no gatilho (a diferença
+ * para o `NotificationBell`, que é `position: absolute` sob o próprio botão):
+ * são cinco filas com cards de aprovação inteiros dentro, e um dropdown de
+ * 380px preso ao topo direito não tem onde caber sem virar rolagem dupla.
+ *
+ * O scrim também é o mecanismo de clique-fora — e é o que impede o resto da
+ * página de receber clique enquanto o diálogo está aberto, coerente com o
+ * `aria-modal="true"` que o painel declara.
+ */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: color-mix(in srgb, var(--surface-0) 55%, transparent);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.painel {
+  width: min(440px, 100vw);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--surface-1);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: var(--shadow);
+}
+
+.painel:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.cabecalho {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+}
+
+.titulo {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.subtitulo {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.fechar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.fechar:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.grupo {
+  border-top: 1px solid var(--border);
+}
+
+/* Cabeçalho por fila, com a contagem DELA — a gramática do `NotificationBell`,
+   que já agrupa por projeto com contagem própria. */
+.grupoCabecalho {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  background: var(--surface-2);
+  padding: 7px 16px;
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.grupoPonto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.grupoContagem {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.lista {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.linhaDeCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rodapeDoCard {
+  padding-left: 2px;
+}
+
+/* Linha que LINKA para a aba onde a decisão mora — promoções, arquitetura e
+   hipóteses não têm card de decisão fora do contexto delas. */
+.linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.linha:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.linhaTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.linhaTitulo {
+  font-size: 12px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linhaDetalhe {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tempo {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* A data EMPRESTADA da história relacionada é dita com outra cor e outra
+   frase: a pendência de arquitetura não tem data própria, e a tela não
+   finge que tem. */
+.tempoEmprestado {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.tempoAusente {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.vazio {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}

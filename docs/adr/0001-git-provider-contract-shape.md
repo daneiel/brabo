@@ -1,95 +1,93 @@
-# 0001 — Formato do contrato normalizado do GitProvider
+# 0001 — Shape of the normalized GitProvider contract
 
-## Contexto
+## Context
 
-A Fase 2 (CLAUDE.md) pede uma interface `GitProvider` normalizada em
-`packages/shared` cobrindo 8 operações (`createRepo`, `getRepo`,
+Phase 2 (CLAUDE.md) calls for a normalized `GitProvider` interface in
+`packages/shared` covering 8 operations (`createRepo`, `getRepo`,
 `createBranch`, `protectBranch`, `commitFiles`, `listBranches`,
-`openPullRequest`, `mergePullRequest`), com tipos que nunca vazem o
-shape de Octokit (GitHub) ou do cliente REST do GitLab (`@gitbeaker`),
-e um objeto `capabilities` por onde o domínio degrada quando uma
-operação não é suportada por um provider.
+`openPullRequest`, `mergePullRequest`), with types that never leak the
+shape of Octokit (GitHub) or the GitLab REST client (`@gitbeaker`),
+plus a `capabilities` object through which the domain degrades when an
+operation isn't supported by a provider.
 
-Antes desta sessão, `apps/api` já tinha uma `GitProvider` — mas como
-`abstract class` usada como token de injeção de dependência do NestJS,
-com uma única operação (`createRepository`), consumida pelo pipeline de
-provisionamento de repositório já em produção
+Before this session, `apps/api` already had a `GitProvider` — but as an
+`abstract class` used as a NestJS dependency-injection token, with a
+single operation (`createRepository`), consumed by the repository
+provisioning pipeline already in production
 (`ProvisionRepositoryUseCase`, `GitProviderRegistry`,
-`GitInfrastructureModule`). Essa sessão está escopada só à "fundação"
-(tipos + suite de contrato + `LocalGitProvider` completo) — completar
-`GithubProvider`/`GitlabProvider` pras 8 operações fica pra uma sessão
-futura.
+`GitInfrastructureModule`). This session is scoped only to the
+"foundation" (types + contract suite + complete `LocalGitProvider`) —
+finishing `GithubProvider`/`GitlabProvider` for the 8 operations is
+left for a future session.
 
-## Decisão
+## Decision
 
-**Dois contratos coexistem deliberadamente por agora**:
+**Two contracts deliberately coexist for now**:
 
-1. `GitProvider` (inalterada, `apps/api/src/application/ports/git-provider.port.ts`)
-   — continua sendo o token de DI do Nest, com `createRepository`. Nada
-   nela muda nesta sessão; `GithubProvider`/`GitlabProvider`/o registry/
-   o use-case de provisionamento não são tocados.
-2. `GitProviderContract` (nova, `packages/shared/src/index.ts`) — a
-   interface normalizada de 8 operações + `capabilities`, tipos `GitRepo`/
-   `GitBranch`/`GitPullRequest`/`GitCommitResult`. Não está ligada a
-   nenhum token de DI ainda. Só `LocalGitProvider` a implementa por
-   enquanto (além de continuar implementando a `GitProvider` antiga,
-   inalterada).
+1. `GitProvider` (unchanged, `apps/api/src/application/ports/git-provider.port.ts`)
+   — remains the Nest DI token, with `createRepository`. Nothing in it
+   changes this session; `GithubProvider`/`GitlabProvider`/the registry/
+   the provisioning use case are not touched.
+2. `GitProviderContract` (new, `packages/shared/src/index.ts`) — the
+   normalized interface with 8 operations + `capabilities`, types
+   `GitRepo`/`GitBranch`/`GitPullRequest`/`GitCommitResult`. Not wired to
+   any DI token yet. Only `LocalGitProvider` implements it for now
+   (in addition to continuing to implement the old, unchanged
+   `GitProvider`).
 
-Nomeada `GitProviderContract` em vez de reaproveitar o identificador
-`GitProvider` — evita colisão de nome no arquivo que implementa as duas
-(`LocalGitProvider`) e casa com o vocabulário "suite de CONTRATO" que o
-próprio CLAUDE.md já usa pra descrever os testes.
+Named `GitProviderContract` instead of reusing the `GitProvider`
+identifier — this avoids a name collision in the file that implements
+both (`LocalGitProvider`) and matches the "contract suite" vocabulary
+that CLAUDE.md itself already uses to describe the tests.
 
-Todo campo de identificação de repositório usa `externalId` (não `id`
-nem `repoId`) — mesmo nome já usado por `CreateRepositoryResult`/
-`ProvisionedRepository`, pra ficar consistente com o que já é
-persistido.
+Every repository identification field uses `externalId` (not `id` or
+`repoId`) — the same name already used by `CreateRepositoryResult`/
+`ProvisionedRepository`, to stay consistent with what's already
+persisted.
 
 **`capabilities`**: `{ protectBranch: boolean; pullRequests: boolean }`
-— duas flags booleanas, introspectáveis em tempo de execução
-(`provider.capabilities.protectBranch`), sem granularidade por-operação
-além disso (ex.: não existe "protectBranch parcial"). `LocalGitProvider`
-declara as duas como `false` — um bare repo local não tem plataforma por
-trás pra hospedar proteção de branch ou pull requests. Quando uma
-operação gated por uma capability ausente é chamada, o provider lança
-`GitNotSupportedError` (nunca um crash cru) — ver 0002.
+— two boolean flags, introspectable at runtime
+(`provider.capabilities.protectBranch`), with no per-operation
+granularity beyond that (e.g. there's no "partial protectBranch").
+`LocalGitProvider` declares both as `false` — a local bare repo has no
+platform behind it to host branch protection or pull requests. When an
+operation gated by a missing capability is called, the provider throws
+`GitNotSupportedError` (never a raw crash) — see 0002.
 
-**Merge/PR no local**: `openPullRequest` e `mergePullRequest` no
-`LocalGitProvider` lançam `GitNotSupportedError` incondicionalmente —
-não existe simulação de PR via branch+merge direto nesta sessão. Uma
-sessão futura de bootstrap de Gitflow provavelmente vai precisar de uma
-operação de merge direto (não uma "PR falsa") pra providers sem
-`pullRequests` — essa operação ainda não está modelada aqui, de
-propósito, pra não inventar uma superfície de API que ninguém consome
-ainda.
+**Merge/PR on local**: `openPullRequest` and `mergePullRequest` on
+`LocalGitProvider` throw `GitNotSupportedError` unconditionally — there
+is no simulated PR via branch+direct merge in this session. A future
+Gitflow bootstrap session will likely need a direct-merge operation
+(not a "fake PR") for providers without `pullRequests` — that operation
+is deliberately not modeled here yet, so as not to invent an API
+surface nobody consumes yet.
 
-## Consequências
+## Consequences
 
-- Zero risco de regressão no pipeline de provisionamento já em
-  produção — `GitProvider`/`GithubProvider`/`GitlabProvider` continuam
-  exatamente como estavam.
-- Dívida explícita: os dois contratos (`GitProvider` e
-  `GitProviderContract`) precisam convergir numa sessão futura, quando
-  `GithubProvider`/`GitlabProvider` também implementarem
-  `GitProviderContract` — nesse ponto faz sentido `GitProvider` (a
-  antiga) ser aposentada em favor da nova, ou uma delas passar a
-  estender a outra.
-- A suite de contrato (`apps/api/test/contract/git-provider.contract.ts`)
-  já é escrita de um jeito reaproveitável — ramifica em
-  `provider.capabilities.*` pra decidir a asserção certa — então não
-  precisa mudar quando Github/Gitlab entrarem, só o harness que a
-  invoca muda.
+- Zero regression risk in the provisioning pipeline already in
+  production — `GitProvider`/`GithubProvider`/`GitlabProvider` remain
+  exactly as they were.
+- Explicit debt: the two contracts (`GitProvider` and
+  `GitProviderContract`) need to converge in a future session, once
+  `GithubProvider`/`GitlabProvider` also implement `GitProviderContract`
+  — at that point it makes sense to retire `GitProvider` (the old one)
+  in favor of the new one, or have one of them extend the other.
+- The contract suite (`apps/api/test/contract/git-provider.contract.ts`)
+  is already written in a reusable way — it branches on
+  `provider.capabilities.*` to decide the right assertion — so it won't
+  need to change when Github/Gitlab come in, only the harness that
+  invokes it changes.
 
-## Atualização (Fase 2, sessão 3 — bootstrap de Gitflow)
+## Update (Phase 2, session 3 — Gitflow bootstrap)
 
-A "dívida explícita" da seção anterior foi paga: `GithubProvider` e
-`GitlabProvider` já implementavam `GitProviderContract` por completo
-desde a sessão de credenciais de git (com suite de contrato mockada
-passando nos 3 providers). Nesta sessão, `GitProviderRegistry.get()`
-passou a retornar `GitProviderContract` em vez da `GitProvider` legada
-— `createRepository`/`CreateRepositoryInput`/`CreateRepositoryResult`
-foram removidos (confirmado por grep: `ProvisionRepositoryUseCase` era
-o único consumidor). O contrato também ganhou uma 9ª operação,
-`getFileContent`, necessária pro bootstrap verificar "arquivo já
-commitado com mesmo conteúdo" antes de recommitar — ver
+The "explicit debt" from the previous section has been paid: `GithubProvider`
+and `GitlabProvider` already fully implemented `GitProviderContract` since
+the git credentials session (with the mocked contract suite passing on
+all 3 providers). In this session, `GitProviderRegistry.get()` started
+returning `GitProviderContract` instead of the legacy `GitProvider` —
+`createRepository`/`CreateRepositoryInput`/`CreateRepositoryResult`
+were removed (confirmed by grep: `ProvisionRepositoryUseCase` was the
+only consumer). The contract also gained a 9th operation,
+`getFileContent`, needed for the bootstrap to verify "file already
+committed with the same content" before recommitting — see
 docs/adr/0005-repo-bootstrap-idempotent-steps.md.

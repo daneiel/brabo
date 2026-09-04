@@ -10,16 +10,22 @@
     "typecheck": "tsc -b --force",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "openapi:types": "openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts",
+    "openapi:types:check": "openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts --check"
   },
   "dependencies": {
     "@brabo/shared": "workspace:*",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-router": "^1.170.18",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "i18next": "^26.3.6",
     "mermaid": "^11.16.1",
     "phoenix": "^1.8.9",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.11"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.0",
@@ -30,8 +36,10 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "@vitest/coverage-v8": "4.1.10",
     "axe-core": "^4.12.1",
     "jsdom": "^29.1.1",
+    "openapi-typescript": "^7.13.0",
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",

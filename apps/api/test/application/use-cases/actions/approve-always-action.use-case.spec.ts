@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { createTestDb, truncateAll } from '../../../support/test-db';
 import {
   projects,
@@ -19,10 +19,12 @@ import { DrizzleProposedActionRepository } from '../../../../src/infrastructure/
 import { DrizzleAgentAutonomyRepository } from '../../../../src/infrastructure/persistence/drizzle/agent-autonomy.repository';
 import { DrizzleOutboxRepository } from '../../../../src/infrastructure/persistence/drizzle/outbox.repository';
 import { DrizzleSessionEventRepository } from '../../../../src/infrastructure/persistence/drizzle/session-event.repository';
+import { DrizzleContainerRepository } from '../../../../src/infrastructure/persistence/drizzle/container.repository';
 import { FsPermissionsFileStore } from '../../../../src/infrastructure/filesystem/fs-permissions-file-store';
 import { ResolveEffectiveRoleUseCase } from '../../../../src/application/use-cases/iam/resolve-effective-role.use-case';
 import { AppendSessionEventUseCase } from '../../../../src/application/use-cases/sessions/append-session-event.use-case';
 import { ExecuteTerminalActionUseCase } from '../../../../src/application/use-cases/actions/execute-terminal-action.use-case';
+import { ObterCicloDeVidaDoContainerUseCase } from '../../../../src/application/use-cases/containers/obter-ciclo-de-vida-do-container.use-case';
 import { ProposeActionUseCase } from '../../../../src/application/use-cases/actions/propose-action.use-case';
 import { ApproveActionUseCase } from '../../../../src/application/use-cases/actions/approve-action.use-case';
 import { ApproveAlwaysActionUseCase } from '../../../../src/application/use-cases/actions/approve-always-action.use-case';
@@ -39,6 +41,10 @@ const proposedActionRepo = new DrizzleProposedActionRepository(db);
 const agentAutonomyRepo = new DrizzleAgentAutonomyRepository(db);
 const outboxRepo = new DrizzleOutboxRepository(db);
 const sessionEventRepo = new DrizzleSessionEventRepository(db);
+const containerRepo = new DrizzleContainerRepository(db);
+const obterCicloDeVidaDoContainer = new ObterCicloDeVidaDoContainerUseCase(
+  containerRepo,
+);
 const permissionsFileStore = new FsPermissionsFileStore();
 const resolveEffectiveRole = new ResolveEffectiveRoleUseCase(
   projectRepo,
@@ -77,8 +83,14 @@ class FakeApiToEngineClient implements ApiToEngineClient {
   async reviseStory(): Promise<void> {}
   async offerInfraHandoff(): Promise<void> {}
   async reanalyzeSession(): Promise<void> {}
+  async getPsychologistStatus(): Promise<{ enabled: boolean }> {
+    return { enabled: true };
+  }
   async runAnamnese(): Promise<void> {}
   async invalidateInstructions(): Promise<void> {}
+  async requestRunnerTicket(): Promise<{ ticket: string; expiresAt: Date }> {
+    return { ticket: 'fake-ticket', expiresAt: new Date() };
+  }
   executeTerminalAction(): Promise<TerminalExecutionResult> {
     this.callCount += 1;
     return Promise.resolve(EXEC_RESULT);
@@ -106,7 +118,10 @@ const proposeAction = new ProposeActionUseCase(
   executeTerminalAction,
   undefined as never, // executeGitAction — não exercitado aqui
   undefined as never, // executeInfraPr — não exercitado aqui
+  undefined as never, // executeContainerStart — não exercitado aqui
+  undefined as never, // executeContainerStop — não exercitado aqui
   appendSessionEvent,
+  obterCicloDeVidaDoContainer,
 );
 const approveAction = new ApproveActionUseCase(
   unitOfWork,
@@ -116,6 +131,9 @@ const approveAction = new ApproveActionUseCase(
   executeTerminalAction,
   undefined as never, // executeAdrPr
   undefined as never, // executeInfraPr
+  undefined as never, // executeContainerStart
+  undefined as never, // executeContainerStop
+  undefined as never, // executeContainerRemove
   {
     execute: (_p: string, _s: string, a: unknown) => Promise.resolve(a),
   } as unknown as never, // executeGitAction: passthrough
@@ -203,7 +221,7 @@ describe('ApproveAlwaysActionUseCase', () => {
     expect(approved.status).toBe('executed');
     expect(fakeEngineClient.callCount).toBe(1);
 
-    const file = await permissionsFileStore.read(project.id);
+    const file = await permissionsFileStore.read(project);
     expect(file.allow).toEqual(['Terminal(echo oi)']);
   });
 
@@ -238,5 +256,61 @@ describe('ApproveAlwaysActionUseCase', () => {
         user.id,
       ),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  // A OUTRA metade do teto absoluto de decide.ts (RN-106): sem isto, um
+  // clique aqui gravaria `Terminal(git push)`/`Terminal(sudo)` em
+  // permissions.json/allow e reabriria pra sempre a porta que o teto de
+  // decide() existe pra manter fechada.
+  it('"sempre permitir" sobre `git push` recusa gravar padrão e NÃO aprova a ação', async () => {
+    const { project, session, user, action } = await setupPendingTerminalAction(
+      'git push origin main',
+    );
+    expect(action.status).toBe('pending');
+
+    await expect(
+      approveAlwaysAction.execute(project.id, session.id, action.id, user.id),
+    ).rejects.toThrow(BadRequestException);
+
+    const file = await permissionsFileStore.read(project);
+    expect(file.allow).toEqual([]);
+
+    // A ação instância continua pendente — não foi aprovada por este
+    // caminho. O usuário aprova ela pelo fluxo normal (approve simples).
+    const stillPending = await proposedActionRepo.findInSessionForUpdate(
+      session.id,
+      action.id,
+    );
+    expect(stillPending?.status).toBe('pending');
+  });
+
+  it('"sempre permitir" sobre comando privilegiado (`sudo`) recusa gravar padrão e NÃO aprova a ação', async () => {
+    const { project, session, user, action } = await setupPendingTerminalAction(
+      'sudo apt install htop',
+    );
+    expect(action.status).toBe('pending');
+
+    await expect(
+      approveAlwaysAction.execute(project.id, session.id, action.id, user.id),
+    ).rejects.toThrow(BadRequestException);
+
+    const file = await permissionsFileStore.read(project);
+    expect(file.allow).toEqual([]);
+  });
+
+  it('regressão: "sempre permitir" sobre comando comum (sem efeito externo, sem sudo) continua gravando o padrão normalmente', async () => {
+    const { project, session, user, action } =
+      await setupPendingTerminalAction('pnpm test');
+
+    const approved = await approveAlwaysAction.execute(
+      project.id,
+      session.id,
+      action.id,
+      user.id,
+    );
+
+    expect(approved.status).toBe('executed');
+    const file = await permissionsFileStore.read(project);
+    expect(file.allow).toEqual(['Terminal(pnpm test)']);
   });
 });

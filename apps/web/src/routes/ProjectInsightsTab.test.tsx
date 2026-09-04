@@ -1,13 +1,37 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import insightsEn from '../locales/en/insights.json';
+import insightsPtBR from '../locales/pt-BR/insights.json';
 import { ProjectInsightsTab } from './ProjectInsightsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import { ApiError } from '../lib/api-client';
 import type { PsychologistAnalysis, PsychologistHypothesis } from '../lib/api-types';
 
+// Instância REAL de i18next, com os recursos do namespace "insights" — mesmo
+// padrão de AccountPage.test.tsx/HypothesisCard.test.tsx.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      en: { insights: insightsEn },
+      'pt-BR': { insights: insightsPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'insights',
+    ns: ['insights'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
 const listHypotheses = vi.fn();
 const listPsychologistAnalyses = vi.fn();
+const getPsychologistStatus = vi.fn();
 const reanalyzeSession = vi.fn();
 
 // Mesmo idioma do HypothesisCard.test: o roteador entra como stub, porque o
@@ -26,6 +50,8 @@ vi.mock('../lib/api-client', async (importOriginal) => {
     listHypotheses: (...args: unknown[]) => listHypotheses(...args),
     listPsychologistAnalyses: (...args: unknown[]) =>
       listPsychologistAnalyses(...args),
+    getPsychologistStatus: (...args: unknown[]) =>
+      getPsychologistStatus(...args),
     acceptHypothesis: vi.fn(),
     dismissHypothesis: vi.fn(),
     reanalyzeSession: (...args: unknown[]) => reanalyzeSession(...args),
@@ -76,19 +102,25 @@ function montar() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  const i18n = novaInstanciaI18n();
 
   return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <ProjectInsightsTab projectId="proj-1" />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ProjectInsightsTab projectId="proj-1" />
+        </ToastProvider>
+      </QueryClientProvider>
+    </I18nextProvider>,
   );
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   listPsychologistAnalyses.mockResolvedValue([]);
+  // Ativo por default: preserva o comportamento dos testes que não são
+  // sobre a pausa (RN-454 é uma seção própria, abaixo).
+  getPsychologistStatus.mockResolvedValue({ enabled: true });
   reanalyzeSession.mockResolvedValue({ ok: true });
 });
 
@@ -207,5 +239,54 @@ describe('ProjectInsightsTab — Psicólogo pausado globalmente', () => {
 
     expect(await screen.findByText('Erro')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Reanalisar' })).not.toBeDisabled();
+  });
+});
+
+/**
+ * RN-454: antes desta leitura, a tela SEM hipóteses nunca chegava perto do
+ * botão "Reanalisar" (só existe com `runs.length > 0`) e por isso nunca
+ * descobria a pausa — mostrava a mesma frase de "ainda não analisou nada"
+ * mesmo com o Psicólogo desativado por decisão do produto.
+ */
+describe('ProjectInsightsTab — a pausa se sabe ANTES de clicar (RN-454)', () => {
+  it('sem hipóteses e pausado: diz que está pausado, não "ainda não analisou"', async () => {
+    listHypotheses.mockResolvedValue([]);
+    getPsychologistStatus.mockResolvedValue({ enabled: false });
+    montar();
+
+    expect(
+      await screen.findByText(/nenhuma sessão é analisada até ser reativado/),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(/o Psicólogo analisa cada sessão encerrada/),
+    ).toBeNull();
+  });
+
+  it('sem hipóteses e ATIVO: mantém a frase original, que aqui é honesta', async () => {
+    listHypotheses.mockResolvedValue([]);
+    getPsychologistStatus.mockResolvedValue({ enabled: true });
+    montar();
+
+    expect(
+      await screen.findByText(/o Psicólogo analisa cada sessão encerrada/),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(/nenhuma sessão é analisada até ser reativado/),
+    ).toBeNull();
+  });
+
+  it('com hipóteses e pausado: o botão nasce desabilitado, sem precisar de um clique que falha', async () => {
+    listHypotheses.mockResolvedValue([hipotese()]);
+    listPsychologistAnalyses.mockResolvedValue([analise()]);
+    getPsychologistStatus.mockResolvedValue({ enabled: false });
+    montar();
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Reanalisar' })).toBeDisabled(),
+    );
+    expect(
+      screen.getByText(/O Psicólogo está pausado globalmente por decisão do time/),
+    ).toBeTruthy();
+    expect(reanalyzeSession).not.toHaveBeenCalled();
   });
 });

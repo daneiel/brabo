@@ -1,0 +1,134 @@
+/*
+ * O trilho vertical de navegação do projeto (ADR 0126).
+ *
+ * A geometria é a do trilho da aba Código (`routes/code/CodeShell.module.css`,
+ * `.rail`/`.railItem`/`.railItemAtivo`) — o único trilho do repositório com
+ * estado ATIVO desenhado: faixa `--surface-1` com divisória à direita, item de
+ * 32px em `--radius-sm`, e o ativo tingido com `color-mix(in srgb,
+ * var(--accent) 12%, transparent)` sobre texto em `--accent`. A trilha da
+ * sidebar (`Shell.module.css`, `.trilha`) NÃO serviu de modelo: ela não tem
+ * item ativo nem navegação por teclado.
+ *
+ * A única divergência declarada é a LARGURA. O trilho do Código é de ícones
+ * (48px, itens 32×32); este carrega RÓTULO de aba e CABEÇALHO de grupo, que é
+ * o que faz os três grupos ficarem abertos ao mesmo tempo. 180px é o que cabe
+ * "Configurações"/"Documentação" a 13px sem reticências.
+ */
+.trilho {
+  flex-shrink: 0;
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 8px 16px;
+  background: var(--surface-1);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+}
+
+.grupo:first-child {
+  margin-top: 0;
+}
+
+/* Uma aba SOLTA logo depois de um grupo respira igual ao grupo seguinte —
+   senão "Gastos" nasceria colado na última filha de "Documentação". */
+.grupo + .solta {
+  margin-top: 10px;
+}
+
+/* Cabeçalho de grupo: mesma gramática do rótulo "PROJETOS" da sidebar
+   (mono, minúsculo em caixa alta, `--text-muted`) — o que declara "isto
+   nomeia uma seção", e não "isto é clicável". */
+.grupoLabel {
+  padding: 6px 8px 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.item:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.itemAtivo,
+.itemAtivo:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/*
+ * `:focus-visible` no mesmo desenho da régua que este trilho substitui
+ * (`Tabs.module.css`, frente H1 de acessibilidade): `outline` transparente
+ * reserva o espaço e o anel visível é `box-shadow` INSET — o trilho rola por
+ * dentro (`overflow-y: auto`), e um anel para fora seria cortado.
+ */
+.item:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+@media (forced-colors: active) {
+  .item:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+.itemLabel {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/*
+ * O selo continua SÓLIDO (`--accent` com `--on-accent`), e não tingido a 18%
+ * como o handoff pede — a divergência é deliberada e já está registrada em
+ * `design/SCREENS.md`: o par tingido cai na dívida de contraste de 3,88:1, e
+ * isto é texto de 10px.
+ */
+.contador {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--on-accent);
+  background: var(--accent);
+  border-radius: var(--radius-full);
+}

@@ -11,7 +11,12 @@
 // O `404.html` é a outra metade, e é ele que evita quebrar a internet: todo
 // link antigo para `/brabo/architecture` deixaria de existir. O GitHub Pages
 // serve o `404.html` da raiz para caminho desconhecido, então ele reencaminha
-// `/brabo/<algo>` para `/brabo/main/<algo>` sem manter uma cópia do site.
+// `/brabo/<algo>` para `/brabo/prd/<algo>` sem manter uma cópia do site.
+//
+// DESDE O ADR 0073 o degrau estável é endereçado por `prd`, e não pelo nome da
+// branch. Aqui isso aparece em dois lugares que não podem discordar: o
+// diretório na árvore (`caminho`) e a branch de onde sai a TAG da versão
+// (`branch`). Eram a mesma string; deixaram de ser.
 //
 // Sem dependência nova: só `node:fs` e `node:child_process`.
 //
@@ -23,20 +28,26 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+// `caminho` é o diretório publicado (e o que aparece na URL); `branch` é de
+// onde vem a TAG que carimba a versão daquele degrau. Para `qa` e `dev` os dois
+// coincidem; para o estável, não — `/prd/` é construído da `main`.
 const DEGRAUS = [
   {
+    caminho: 'prd',
     branch: 'main',
-    titulo: 'main',
+    titulo: 'prd',
     selo: 'estável',
     descricao: 'A documentação publicada. É esta que o Google indexa.',
   },
   {
+    caminho: 'qa',
     branch: 'qa',
     titulo: 'qa',
     selo: 'candidata',
     descricao: 'O que está em validação, a caminho da próxima release.',
   },
   {
+    caminho: 'dev',
     branch: 'dev',
     titulo: 'dev',
     selo: 'em desenvolvimento',
@@ -44,12 +55,23 @@ const DEGRAUS = [
   },
 ];
 
+// O caminho do degrau estável, num lugar só: a raiz canoniza para ele, o 404
+// reencaminha para ele, e o diretório aposentado (`main`) é reescrito para ele.
+const ESTAVEL = 'prd';
+
+// O diretório que o degrau estável ocupava antes do ADR 0073. Ele deixa de
+// existir na árvore montada, então todo link salvo para `/brabo/main/…`
+// precisa ser reescrito — não basta cair no reencaminhamento genérico, porque
+// senão `/brabo/main/architecture` viraria `/brabo/prd/main/architecture`.
+const CAMINHO_APOSENTADO = 'main';
+
 /**
  * A versão publicada num degrau, lida das tags do próprio repositório.
  *
- * `main` carimba `vX.Y.Z`; `dev` e `qa` carimbam `vX.Y.Z-<estagio>.N`
- * (ver scripts/ci/tag-release.ts). Sem tag ainda, devolve null — e a página
- * diz "sem versão carimbada" em vez de inventar uma.
+ * Recebe a BRANCH, não o caminho: quem carimba tag é a esteira, que só conhece
+ * `main`/`qa`/`dev`. `main` carimba `vX.Y.Z`; `dev` e `qa` carimbam
+ * `vX.Y.Z-<estagio>.N` (ver scripts/ci/tag-release.ts). Sem tag ainda, devolve
+ * null — e a página diz "sem versão carimbada" em vez de inventar uma.
  */
 function versaoDoDegrau(branch) {
   const padrao = branch === 'main' ? 'v[0-9]*.[0-9]*.[0-9]*' : `v*-${branch}.*`;
@@ -86,7 +108,7 @@ function paginaIndice(degraus) {
 
   const cartoes = publicados
     .map(
-      (d) => `      <a class="degrau" href="./${d.branch}/">
+      (d) => `      <a class="degrau" href="./${d.caminho}/">
         <span class="nome">${escapar(d.titulo)}</span>
         <span class="selo">${escapar(d.selo)}</span>
         <span class="versao">${escapar(d.versao ?? 'sem versão carimbada')}</span>
@@ -109,10 +131,10 @@ function paginaIndice(degraus) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Brabo — documentação</title>
-<meta name="description" content="Documentação do Brabo, publicada por degrau da esteira: main, qa e dev.">
-<!-- A raiz não é conteúdo: é um índice. Quem indexa é /main/. -->
+<meta name="description" content="Documentação do Brabo, publicada por degrau da esteira: prd, qa e dev.">
+<!-- A raiz não é conteúdo: é um índice. Quem indexa é /prd/. -->
 <meta name="robots" content="noindex, follow">
-<link rel="canonical" href="https://daneiel.github.io/brabo/main/">
+<link rel="canonical" href="https://daneiel.github.io/brabo/${ESTAVEL}/">
 <style>
   :root {
     color-scheme: dark;
@@ -187,10 +209,20 @@ ${corpo}
 function pagina404() {
   // Sem framework e sem dependência: o Pages serve este arquivo para qualquer
   // caminho desconhecido sob /brabo/, e o script reencaminha para o mesmo
-  // caminho dentro de /brabo/main/.
+  // caminho dentro de /brabo/prd/.
   //
-  // A guarda `main|qa|dev` evita o laço: um 404 DENTRO de um degrau (página que
-  // realmente não existe) não pode ser reencaminhado para /main/ de novo.
+  // São DOIS casos, e confundi-los quebra um dos dois:
+  //
+  // 1. `/brabo/main/<algo>` — link salvo para o caminho que o ADR 0073
+  //    aposentou. O diretório não existe mais na árvore publicada, então ele é
+  //    REESCRITO: o prefixo `main/` sai e `prd/` entra. Cair no
+  //    reencaminhamento genérico produziria `/brabo/prd/main/<algo>`.
+  //
+  // 2. `/brabo/{prd,qa,dev}/<algo>` — 404 DENTRO de um degrau que existe: a
+  //    página realmente não existe, e reencaminhar giraria o navegador em
+  //    laço. A guarda cobre exatamente os caminhos publicados, e é por isso
+  //    que `main` saiu dela ao deixar de ser publicado.
+  const guarda = DEGRAUS.map((d) => d.caminho).join('|');
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -203,17 +235,22 @@ function pagina404() {
     var caminho = window.location.pathname;
     if (caminho.indexOf(raiz) !== 0) return;
     var resto = caminho.slice(raiz.length);
-    // Já está dentro de um degrau: a página realmente não existe.
-    if (/^(main|qa|dev)(\\/|$)/.test(resto)) return;
-    window.location.replace(
-      raiz + 'main/' + resto + window.location.search + window.location.hash
-    );
+    var cauda = window.location.search + window.location.hash;
+    // O caminho aposentado: /brabo/main/<algo> -> /brabo/${ESTAVEL}/<algo>.
+    var aposentado = /^${CAMINHO_APOSENTADO}(?:\\/(.*))?$/.exec(resto);
+    if (aposentado) {
+      window.location.replace(raiz + '${ESTAVEL}/' + (aposentado[1] || '') + cauda);
+      return;
+    }
+    // Já está dentro de um degrau publicado: a página realmente não existe.
+    if (/^(${guarda})(\\/|$)/.test(resto)) return;
+    window.location.replace(raiz + '${ESTAVEL}/' + resto + cauda);
   })();
 </script>
 </head>
 <body>
   <p>Esta página mudou de endereço. Indo para
-     <a href="/brabo/main/">a documentação estável</a>…</p>
+     <a href="/brabo/${ESTAVEL}/">a documentação estável</a>…</p>
 </body>
 </html>
 `;
@@ -229,7 +266,9 @@ function principal() {
   mkdirSync(destino, { recursive: true });
 
   const degraus = DEGRAUS.map((d) => {
-    const dir = join(destino, d.branch);
+    // O diretório é o CAMINHO; a tag é da BRANCH. É a única linha onde os dois
+    // aparecem juntos, e trocá-los faria `/prd/` parecer nunca publicado.
+    const dir = join(destino, d.caminho);
     // "Publicado" é o diretório EXISTIR com conteúdo na árvore que vai ao ar —
     // não uma lista fixa. Assim a página nunca oferece um link que dá 404.
     const publicado = existsSync(dir) && readdirSync(dir).length > 0;
@@ -243,7 +282,7 @@ function principal() {
   writeFileSync(join(destino, '.nojekyll'), '');
 
   const resumo = degraus
-    .map((d) => `${d.branch}${d.publicado ? ` (${d.versao ?? 'sem tag'})` : ' — ausente'}`)
+    .map((d) => `${d.caminho}${d.publicado ? ` (${d.versao ?? 'sem tag'})` : ' — ausente'}`)
     .join(', ');
   console.log(`[landing] ${destino}: ${resumo}`);
 }

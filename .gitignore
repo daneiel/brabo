@@ -1,6 +1,7 @@
 node_modules/
 .pnpm-store/
 dist/
+dist-bin/
 coverage/
 .env
 .env.local
@@ -25,3 +26,10 @@ corpo-da-promocao.md
 # (ADR 0071). São ~2 mil arquivos gerados; um `git add -A` distraído os
 # commitaria.
 publicacao/
+
+# Artefatos do E2E de navegador. O relatório HTML e os rastros/screenshots de
+# falha são de UMA execução — o do CI vira artifact do job, não commit.
+e2e/playwright-report/
+e2e/test-results/
+e2e/blob-report/
+e2e/suporte/.estado-autenticado.json

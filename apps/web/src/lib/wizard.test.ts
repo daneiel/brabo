@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  caminhoLocalParecePlausivel,
   canAdvanceFromCredential,
   canAdvanceFromDetails,
   canAdvanceFromMode,
+  canAdvanceFromWorkspace,
   providerNeedsCredential,
   slugify,
 } from './wizard';
@@ -48,6 +50,50 @@ describe('canAdvanceFromMode', () => {
   it('qualquer um dos dois modos avança', () => {
     expect(canAdvanceFromMode('create')).toBe(true);
     expect(canAdvanceFromMode('adopt')).toBe(true);
+  });
+});
+
+/**
+ * A checagem BARATA do caminho Local (ADR 0072).
+ *
+ * O veredito que vale é o da api, que enxerga o sistema de arquivos de dentro
+ * do container (RN-170). Isto aqui só evita a viagem ao servidor para o que já
+ * se sabe errado — e é por isso que os casos abaixo são todos LÉXICOS.
+ */
+describe('caminhoLocalParecePlausivel', () => {
+  it('caminho absoluto de pasta passa', () => {
+    expect(caminhoLocalParecePlausivel('/home/voce/projetos/loja')).toBe(true);
+    expect(caminhoLocalParecePlausivel('  /home/voce/loja  ')).toBe(true);
+  });
+
+  it.each([
+    ['projetos/loja', 'relativo: dependeria do cwd de quem resolve'],
+    ['/', 'a raiz do sistema'],
+    ['/home/voce/../../etc', '`..` no meio: o caminho gravado não é o que se lê'],
+    ['', 'vazio'],
+  ])('recusa %j — %s', (caminho) => {
+    expect(caminhoLocalParecePlausivel(caminho)).toBe(false);
+  });
+});
+
+describe('canAdvanceFromWorkspace', () => {
+  it('Container avança sem digitar nada — é o modo de sempre', () => {
+    expect(canAdvanceFromWorkspace('container', '')).toBe(true);
+  });
+
+  it('Pasta montada só avança com caminho plausível', () => {
+    expect(canAdvanceFromWorkspace('mounted', '')).toBe(false);
+    expect(canAdvanceFromWorkspace('mounted', 'projetos/loja')).toBe(false);
+    expect(canAdvanceFromWorkspace('mounted', '/home/voce/loja')).toBe(true);
+  });
+
+  // RN-423 (ADR 0104): `runner` usa o MESMO predicado léxico de `mounted` —
+  // a diferença entre os dois é QUEM/QUANDO verifica o disco, não o que
+  // conta como caminho plausível.
+  it('Runner só avança com caminho plausível', () => {
+    expect(canAdvanceFromWorkspace('runner', '')).toBe(false);
+    expect(canAdvanceFromWorkspace('runner', 'projetos/loja')).toBe(false);
+    expect(canAdvanceFromWorkspace('runner', '/home/voce/loja')).toBe(true);
   });
 });
 

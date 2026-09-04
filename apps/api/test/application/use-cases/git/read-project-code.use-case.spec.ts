@@ -264,6 +264,8 @@ function montar(
     provider?: GitProviderName;
     semRepositorio?: boolean;
     container?: EstadoDoContainer;
+    /** Onde o código mora (RN-169/RN-421). Default `container`, como todo projeto. */
+    executionMode?: 'container' | 'mounted' | 'runner';
     /** Tasks por prefixo do id (8 chars, minúsculo) — RN-152. */
     tasksPorPrefixo?: Record<string, Task>;
     moduleMap?: ModuleMap | null;
@@ -279,6 +281,12 @@ function montar(
         name: 'checkout',
         slug: 'checkout',
         workspaceDirName: PROJETO,
+        executionMode: opcoes.executionMode ?? ('container' as const),
+        workspacePath:
+          opcoes.executionMode && opcoes.executionMode !== 'container'
+            ? '/home/voce/projetos/loja'
+            : null,
+        workspaceVerifiedAt: null,
         createdBy: 'user-1',
         taskBudgetMicros: null,
         maxConsecutiveBlocked: null,
@@ -599,7 +607,10 @@ describe('ReadProjectCodeUseCase — lista de PRs (FASE 26b)', () => {
     const { useCase } = montar(new ProviderFalso(REPO));
     const lista = await useCase.pullRequests(PROJETO);
     expect(lista.items).toHaveLength(1);
-    expect(lista.items[0]).toMatchObject({ id: 'pr-1', sourceBranch: 'feature' });
+    expect(lista.items[0]).toMatchObject({
+      id: 'pr-1',
+      sourceBranch: 'feature',
+    });
   });
 
   it('caso de falha: provider sem a capability propaga 501', async () => {
@@ -775,7 +786,9 @@ describe('ReadProjectCodeUseCase — producedBy da branch de task (RN-152)', () 
     ]);
     const { useCase } = montar(provider, {
       // Módulo do agente não existe (mais) no module_map vigente.
-      tasksPorPrefixo: { [PREFIXO]: tarefaFalsa({ assignedTo: 'dev-removido' }) },
+      tasksPorPrefixo: {
+        [PREFIXO]: tarefaFalsa({ assignedTo: 'dev-removido' }),
+      },
       moduleMap: MODULE_MAP_PIECES,
     });
 
@@ -912,7 +925,10 @@ describe('ReadProjectCodeUseCase — o portão do container (FASE 25, RN-105)', 
       (u: ReadProjectCodeUseCase) => u.search(PROJETO, { query: 'agulha' }),
     ],
     ['diff', (u: ReadProjectCodeUseCase) => u.pullRequestDiff(PROJETO, 'pr-1')],
-    ['blame', (u: ReadProjectCodeUseCase) => u.blame(PROJETO, 'src/a.ts', 'dev')],
+    [
+      'blame',
+      (u: ReadProjectCodeUseCase) => u.blame(PROJETO, 'src/a.ts', 'dev'),
+    ],
     ['pullRequests', (u: ReadProjectCodeUseCase) => u.pullRequests(PROJETO)],
     ['branches', (u: ReadProjectCodeUseCase) => u.branches(PROJETO)],
   ])(
@@ -945,4 +961,48 @@ describe('ReadProjectCodeUseCase — o portão do container (FASE 25, RN-105)', 
 
     expect(arvore.entries.map((e) => e.name)).toEqual(['a.ts', 'b.ts', 'deep']);
   });
+
+  /**
+   * `mounted`/`runner` passam pelo MESMO portão agora (RN-494, revisa
+   * RN-169/RN-421, ADR 0135).
+   *
+   * A dispensa original respondia 409 para sempre num projeto onde a decisão
+   * do Arquiteto nunca ia acontecer — a regra uniforme fecha essa lacuna
+   * exigindo a decisão nos três modos, em vez de fechar a aba por efeito
+   * colateral.
+   */
+  it.each(['mounted', 'runner'] as const)(
+    'projeto %s também responde 409 sem decisão de imagem',
+    async (executionMode) => {
+      const provider = new ProviderFalso(REPO);
+      const { useCase } = montar(provider, {
+        container: SEM_DECISAO,
+        executionMode,
+      });
+
+      await expect(useCase.tree(PROJETO, 'dev')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(provider.chamadas).toEqual([]);
+    },
+  );
+
+  it.each(['mounted', 'runner'] as const)(
+    'projeto %s lê normalmente uma vez decidida a imagem',
+    async (executionMode) => {
+      const provider = new ProviderFalso(REPO);
+      const { useCase } = montar(provider, {
+        container: CONTAINER_DECIDIDO,
+        executionMode,
+      });
+
+      const arvore = await useCase.tree(PROJETO, 'dev', 'src');
+
+      expect(arvore.entries.map((e) => e.name)).toEqual([
+        'a.ts',
+        'b.ts',
+        'deep',
+      ]);
+    },
+  );
 });

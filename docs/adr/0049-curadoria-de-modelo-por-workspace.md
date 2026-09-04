@@ -1,118 +1,127 @@
-# 0049 — Curadoria de modelo por workspace
+# 0049 — Model curation per workspace
 
-## Contexto
+## Context
 
-O [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
-registrou o problema com todas as letras e não o resolveu:
+[ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
+spelled out the problem plainly and did not solve it:
 
-> **Catálogo por workspace.** Hoje a curadoria é global e o `:workspaceId` da
-> rota é só âncora de RBAC — um owner do workspace A ativando um modelo o ativa
-> para o B.
+> **Catalog per workspace.** Today curation is global and the `:workspaceId`
+> in the route is just an RBAC anchor — an owner of workspace A activating a
+> model activates it for B too.
 
-Não era teoria. `models.is_active` era **uma coluna para a instalação inteira**.
-As rotas de curadoria já eram `/workspaces/:workspaceId/models/*` — mas o
-`:workspaceId` nunca entrava na consulta; servia só para o `RolesGuard` ter de
-onde tirar o papel efetivo. Quem clicasse "ativar" numa tela decidia por todos
-os workspaces da instalação, e a tela não dava nenhum sinal disso.
+It wasn't theory. `models.is_active` was **one column for the entire
+installation**. The curation routes were already
+`/workspaces/:workspaceId/models/*` — but `:workspaceId` never entered the
+query; it only served so `RolesGuard` had somewhere to pull the effective
+role from. Whoever clicked "activate" on a screen decided for every
+workspace in the installation, and the screen gave no sign of that.
 
-Três consequências, em ordem de gravidade:
+Three consequences, in order of severity:
 
-1. **Um workspace liga um modelo caro para o vizinho.** O seletor do outro
-   passa a oferecê-lo, e o gasto aparece no orçamento de quem não decidiu nada.
-2. **Desligar é igualmente contagioso.** Um owner tirando do seletor um modelo
-   que não confia tira também de quem dependia dele.
-3. **Não havia como saber quem decidiu.** `is_active` é um booleano sem autor e
-   sem data própria.
+1. **One workspace turns on an expensive model for its neighbor.** The
+   other workspace's picker starts offering it, and the spend shows up in
+   the budget of someone who decided nothing.
+2. **Turning off is just as contagious.** An owner removing a model they
+   don't trust from the picker also removes it for anyone who depended on
+   it.
+3. **There was no way to know who decided.** `is_active` is a boolean with
+   no author and no timestamp of its own.
 
-## Decisão
+## Decision
 
-**O catálogo continua global; a curadoria passa a ser por workspace.**
+**The catalog stays global; curation becomes per workspace.**
 
-A separação é a resposta à pergunta "de quem é este dado?":
+The split answers the question "who owns this data?":
 
-| dado | dono | onde |
+| data | owner | where |
 | --- | --- | --- |
-| nome, preço, janela, capabilities | o **provider** | `models` (global) |
-| `availability` | o **provider**, observado pelo sync | `models` (global) |
-| `is_active` — aparece no seletor? | o **workspace** | `workspace_models` |
+| name, price, window, capabilities | the **provider** | `models` (global) |
+| `availability` | the **provider**, observed by sync | `models` (global) |
+| `is_active` — does it show in the picker? | the **workspace** | `workspace_models` |
 
-`workspace_models` é `(workspace_id, model_id)` como chave primária, mais
-`is_active` e `curated_by`.
+`workspace_models` has `(workspace_id, model_id)` as primary key, plus
+`is_active` and `curated_by`.
 
-### Por que NÃO duplicar `models` por workspace
+### Why NOT duplicate `models` per workspace
 
-A alternativa óbvia — uma linha de `models` por workspace — foi rejeitada:
+The obvious alternative — one `models` row per workspace — was rejected:
 
-- Criaria **N verdades sobre o mesmo modelo**. O preço do `gpt-4o` é o mesmo
-  para todo mundo; mantê-lo em N linhas garante que elas divirjam.
-- Partiria `token_usage.model_id` e `model_bindings.model_id` ao meio: o
-  histórico de custo aponta para uma linha de `models`, e duplicá-la exigiria
-  reescrever o passado — exatamente o que a
-  [RN-044](../business-rules.md#rn-044) proíbe.
-- O sync de catálogo passaria a escrever N vezes o que hoje escreve uma.
+- It would create **N truths about the same model**. `gpt-4o`'s price is
+  the same for everyone; keeping it in N rows guarantees they diverge.
+- It would split `token_usage.model_id` and `model_bindings.model_id` down
+  the middle: the cost history points to one `models` row, and duplicating
+  it would require rewriting the past — exactly what
+  [RN-044](../business-rules/custo.md#rn-044) forbids.
+- The catalog sync would go from writing once to writing N times for the
+  same fact.
 
-### Ausência de linha É o desligado
+### Absence of a row IS "off"
 
-Não existe terceiro estado "nunca decidido" separado de "desligado". Modelo que
-o sync descobre simplesmente **não tem linha** em `workspace_models`, e a
-leitura o trata como inativo.
+There is no third state, "never decided," separate from "off." A model the
+sync discovers simply **has no row** in `workspace_models`, and reads treat
+it as inactive.
 
-Isto preserva a [RN-043](../business-rules.md#rn-043) ("modelo descoberto entra
-desligado") **sem coluna nenhuma em `models` para o sync poder atropelar** — o
-sync deixou de ter qualquer campo de curadoria no seu upsert. A regra passou de
-"o sync escreve `false`" para "o sync não alcança essa decisão", que é mais
-forte.
+This preserves [RN-043](../business-rules/custo.md#rn-043) ("discovered model
+starts off") **with no column at all in `models` for the sync to be able to
+run over** — the sync no longer has any curation field in its upsert. The
+rule went from "the sync writes `false`" to "the sync never reaches that
+decision," which is stronger.
 
-Desligar, porém, é `UPDATE` e não `DELETE`: apagar a linha apagaria junto quem
-decidiu e quando. A leitura trata os dois casos como inativo; o registro existe
-para quem for auditar.
+Turning off, however, is `UPDATE`, not `DELETE`: deleting the row would
+also erase who decided and when. Reads treat both cases as inactive; the
+record exists for whoever needs to audit it.
 
-### A rota do seletor pende do PROJETO
+### The picker route hangs off the PROJECT
 
-`GET /models` virou `GET /projects/:projectId/models`, e não
-`/workspaces/:workspaceId/models`. As três telas que consomem a lista (visão
-geral, ajustes e a sessão) estão todas dentro de um projeto e **nenhuma tinha
-um workspace na mão**; o `RolesGuard` resolve papel a partir de `:projectId`
-igualmente bem. O workspace sai do projeto dentro do caso de uso — uma
-tradução, num lugar só, em vez de espalhada pela UI.
+`GET /models` became `GET /projects/:projectId/models`, not
+`/workspaces/:workspaceId/models`. The three screens that consume the list
+(overview, settings, and the session) are all inside a project and **none
+had a workspace at hand**; `RolesGuard` resolves the role from
+`:projectId` just as well. The workspace comes out of the project inside
+the use case — one translation, in one place, instead of scattered across
+the UI.
 
-### `isActive` saiu da entidade `Model`
+### `isActive` left the `Model` entity
 
-`Model` não tem mais `isActive`; quem precisa dele usa `ModelComCuradoria`, um
-tipo que **só existe quando há workspace na mão**. O mesmo vale no wire:
-`ModelResponseDto` (seletor) e `ModelComCuradoriaResponseDto` (curadoria).
+`Model` no longer has `isActive`; whoever needs it uses
+`ModelComCuradoria`, a type that **only exists when a workspace is at
+hand**. The same holds on the wire: `ModelResponseDto` (picker) and
+`ModelComCuradoriaResponseDto` (curation).
 
-É deliberado que a versão sem workspace não compile: era justamente a
-existência de uma leitura global de curadoria que produzia o defeito, e um tipo
-é mais confiável que um comentário pedindo cuidado.
+It's deliberate that the workspace-less version doesn't compile: it was
+precisely the existence of a global curation read that produced the
+defect, and a type is more reliable than a comment asking for care.
 
-## Consequências
+## Consequences
 
-- **Migração de dados antes do `DROP`.** A `0034` faz o produto cartesiano de
-  `workspaces × models WHERE is_active` e só então derruba a coluna: cada
-  workspace existente recebe exatamente o que enxergava até então. `curated_by`
-  fica nulo nessas linhas — a decisão veio de uma curadoria global que nunca
-  registrou dono, e nulo é mais honesto que atribuí-la ao criador do workspace.
-- **Quebra de contrato HTTP.** `GET /models` não existe mais. É a única rota
-  movida, e está no CHANGELOG como mudança incompatível.
-- **O seed passou a curar.** Sem uma chamada explícita de ativação, os modelos
-  existiriam no catálogo e o seletor nasceria vazio — e o binding do workspace,
-  logo abaixo no mesmo seed, seria recusado por "modelo desativado".
-- **Escopos `agent` e `session` não verificam curadoria.** Os dois não têm
-  âncora de workspace: binding de agente é por SLUG global (o `:projectId` da
-  rota é explicitamente ignorado hoje). `assertModelIsBindable` recebe `null`
-  nesses casos e checa só a disponibilidade. A lacuna é antiga e fica
-  **explícita** em vez de ser preenchida com um workspace chutado.
+- **Data migration before the `DROP`.** Migration `0034` does the
+  cartesian product of `workspaces × models WHERE is_active` and only then
+  drops the column: every existing workspace receives exactly what it saw
+  before. `curated_by` is left null on those rows — the decision came from
+  a global curation that never recorded an owner, and null is more honest
+  than attributing it to the workspace's creator.
+- **HTTP contract break.** `GET /models` no longer exists. It's the only
+  route that moved, and it's in the CHANGELOG as a breaking change.
+- **The seed had to start curating.** Without an explicit activation call,
+  the models would exist in the catalog and the picker would come up
+  empty — and the workspace binding, right below in the same seed, would
+  be rejected for "model deactivated."
+- **`agent` and `session` scopes don't check curation.** Neither has a
+  workspace anchor: agent binding is by global SLUG (the route's
+  `:projectId` is explicitly ignored today). `assertModelIsBindable`
+  receives `null` in those cases and checks only availability. The gap is
+  old and is now **explicit** instead of being papered over with a guessed
+  workspace.
 
-## O que fica para depois
+## What's left for later
 
-- **Binding de agente por projeto.** Enquanto o escopo `agent` for um slug
-  global, a curadoria não tem como alcançá-lo. Resolver isso é mudar a
-  semântica do binding, não a da curadoria — e merece decisão própria.
-- **Herança de curadoria.** Um workspace novo nasce sem nenhum modelo ligado, e
-  hoje alguém precisa ligá-los um a um. Um default de instalação, ou copiar do
-  primeiro workspace, resolveria — mas é política de produto, não consequência
-  técnica desta decisão.
-- **Orçamento por workspace amarrado à curadoria.** Ligar um modelo caro
-  continua sendo uma decisão sem teto próprio; os tetos reais seguem sendo
-  projeto, sessão e task.
+- **Per-project agent binding.** As long as the `agent` scope is a global
+  slug, curation has no way to reach it. Fixing this changes the semantics
+  of binding, not of curation — and deserves its own decision.
+- **Curation inheritance.** A new workspace is born with no model linked
+  at all, and today someone has to link them one by one. An installation
+  default, or copying from the first workspace, would fix this — but it's
+  product policy, not a technical consequence of this decision.
+- **Per-workspace budget tied to curation.** Turning on an expensive model
+  is still a decision with no cap of its own; the real caps remain
+  project, session, and task.

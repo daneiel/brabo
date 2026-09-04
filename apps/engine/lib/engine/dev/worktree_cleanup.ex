@@ -28,8 +28,18 @@ defmodule Engine.Dev.WorktreeCleanup do
   ler o disco antes — e devolve `{id, workspace_dir_name}` prontos: nem esta
   função nem `WorktreeManager` precisam mais chamar `Workspace.workspace_dir/1`
   (que faria SUA PRÓPRIA consulta por projeto) para descobrir a pasta.
+
+  ## Por que a JUNÇÃO é `Workspace.workspace_dir/2`, e não `Path.join` daqui (RN-169)
+
+  Era `Path.join(root, dir_name)` escrito à mão — uma segunda derivação da
+  mesma raiz, e o ADR 0072 a fez divergir: num projeto no modo `local` o
+  localizador é o CAMINHO ABSOLUTO da pasta do usuário, e juntá-lo com a raiz
+  gerenciada produz `/data/project-workspaces/home/voce/...`, que não existe.
+  O efeito seria silencioso — `File.dir?` falso, projeto pulado, worktree
+  órfão nunca podado. A junção passou a ser a MESMA de todo mundo.
   """
 
+  alias Engine.Actions.Workspace
   alias Engine.Dev.DevAgentState
   alias Engine.Dev.WorktreeManager
   alias Engine.Projects.Project
@@ -42,7 +52,7 @@ defmodule Engine.Dev.WorktreeCleanup do
 
       Project.all_workspace_dirs()
       |> Enum.each(fn %{id: project_id, workspace_dir_name: dir_name} ->
-        work_dir = Path.join(root, dir_name)
+        work_dir = Workspace.workspace_dir(project_id, dir_name)
 
         if File.dir?(work_dir) do
           WorktreeManager.cleanup_orphans_at(work_dir, Map.get(live, project_id, []))

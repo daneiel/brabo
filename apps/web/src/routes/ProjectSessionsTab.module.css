@@ -70,11 +70,16 @@
 
 /* `.rowId` é um `button` — renomear direto da lista, sem abrir a sessão.
    Reset de botão junto, senão o navegador aplica fundo e borda dele e a
-   linha muda de cara (mesma lição do `.title` de `SessionPage.module.css`). */
+   linha muda de cara (mesma lição do `.title` de `SessionPage.module.css`).
+   `min-height: 24px` fecha o piso de alvo de toque da WCAG 2.2 AA (2.5.8)
+   que `scripts/dev/validacao-visual.js` cobra (PROGRAMA 28, Onda 5/H5) —
+   sem `padding` vertical o botão encolhia para a altura da fonte (12px),
+   ~15px efetivo. */
 .rowId {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-height: 24px;
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-primary);
@@ -151,6 +156,43 @@
   font-size: 11px;
   color: var(--text-muted);
   margin-bottom: 16px;
+}
+
+/* Os 4 KPIs da aba Criativo (handoff: `auto-fit minmax(190px,1fr)`). */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* Filtros pill (todas/ativas/fechadas/abortadas), acima da lista. */
+.filtros {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pill {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.pill:hover {
+  border-color: var(--border-strong);
+}
+
+.pillAtivo {
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border-color: var(--accent);
+  font-weight: 600;
 }
 
 .empty {

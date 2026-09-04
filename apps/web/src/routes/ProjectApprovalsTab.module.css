@@ -147,11 +147,12 @@
   white-space: nowrap;
 }
 
-/* Botão quadrado só de ícone, como em `ProjectSettingsTab` — 28px, acima do
-   piso de 24px que a validação visual cobra. */
+/* Botão quadrado só de ícone, como em `ProjectSettingsTab` — 32px, o piso de
+   alvo de toque para ícone de ação PRIMÁRIA (PROGRAMA 28, Onda 5/H5; era
+   28px). Ação destrutiva, ganha o mesmo piso do `.close` de `Modal`. */
 .revoke {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 7px;
   background: transparent;
   border: 1px solid var(--border);

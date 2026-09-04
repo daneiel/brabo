@@ -1,75 +1,90 @@
-# ADR 0011 — Infraestrutura dos dev agents: worktrees, executores git e trava de merge
+# ADR 0011 — Dev agent infrastructure: worktrees, git executors and the merge lock
 
-- Status: aceito
-- Data: 2026-07-24
-- Fase: 4a (sessão 1 — infraestrutura de execução)
+- Status: accepted
+- Date: 2026-07-24
+- Phase: 4a (session 1 — execution infrastructure)
 
-## Contexto
+## Context
 
-Início da Fase 4 (agentes de execução). Antes dos devs reais, esta sessão constrói a
-INFRAESTRUTURA e a valida com um **NoopDevAgent** (sem LLM): instanciação dinâmica de um dev
-por módulo do module_map, worktrees git isolados, identidade de commit `dev-<modulo>[bot]`,
-a trava de merge em branch protegida, sugestão de paralelização com aceite de um clique, e
-limpeza de worktrees órfãos. Decisão do usuário: fluxo git **100% local self-contained**.
+Start of Phase 4 (execution agents). Before the real devs, this session
+builds the INFRASTRUCTURE and validates it with a **NoopDevAgent** (no LLM):
+dynamic instantiation of one dev per module_map module, isolated git
+worktrees, `dev-<module>[bot]` commit identity, the protected-branch merge
+lock, one-click parallelization suggestions, and orphan worktree cleanup.
+User decision: **100% local, self-contained** git flow.
 
-## Decisões
+## Decisions
 
-### 1. Trava de merge como TETO no domínio (decide.ts)
-Novo `ActionType git_merge` (payload `{sourceBranch, targetBranch}`). `decide()` avalia IAM →
-agent_autonomy → permissions (cada estágio só SOBE a permissividade); ao final, um **teto**:
-se `git_merge` com `targetBranch ∈ {dev,qa,rc,main}` (branches protegidas), a policy NUNCA é
-`auto_approve` — rebaixa pra `require_approval`, independente de agent_autonomy e
-permissions.json. Deny ainda vence. Teste prova que nem autonomy nem permissions
-sobrescrevem. Merge em branch protegida é SEMPRE manual (CLAUDE.md).
+### 1. Merge lock as a domain-level CEILING (decide.ts)
+New `ActionType git_merge` (payload `{sourceBranch, targetBranch}`).
+`decide()` evaluates IAM → agent_autonomy → permissions (each stage only
+RAISES permissiveness); at the end, a **ceiling**: if `git_merge` targets
+`targetBranch ∈ {dev,qa,rc,main}` (protected branches), the policy is NEVER
+`auto_approve` — it's downgraded to `require_approval`, regardless of
+agent_autonomy and permissions.json. Deny still wins. A test proves that
+neither autonomy nor permissions can override it. Merging into a protected
+branch is ALWAYS manual (CLAUDE.md).
 
-### 2. Executores git via pipeline; commit local no worktree
-`git_commit`/`git_push`/`pr_open`/`git_merge` ganham executores (antes só `terminal`/
-`open_adr_pr`). `git_commit`/`git_push` rodam NO ENGINE (`GitExecutor`, `System.cmd git` no
-worktree — commit com `--author=dev-<modulo>[bot]` + `Co-authored-by`), via um endpoint
-interno espelhando o terminal. `pr_open`/`git_merge` rodam na api via `GitProvider`.
-`ExecuteGitActionUseCase` roteia; `ApproveAction`/`ProposeAction` (auto_approved) chamam-no.
-Toda operação git nasce como proposed_action (item 3), respeitando autonomia/permissions.
+### 2. Git executors via the pipeline; local commit in the worktree
+`git_commit`/`git_push`/`pr_open`/`git_merge` gain executors (previously
+only `terminal`/`open_adr_pr` had one). `git_commit`/`git_push` run IN THE
+ENGINE (`GitExecutor`, `System.cmd git` in the worktree — commit with
+`--author=dev-<module>[bot]` + `Co-authored-by`), via an internal endpoint
+mirroring the terminal one. `pr_open`/`git_merge` run in the api via
+`GitProvider`. `ExecuteGitActionUseCase` routes them; `ApproveAction`/
+`ProposeAction` (auto_approved) call it. Every git operation is born as a
+proposed_action (item 3), respecting autonomy/permissions.
 
-### 3. LocalGitProvider ganha PR local (self-contained)
-`openPullRequest`/`mergePullRequest` implementados com um store leve (sidecar JSON no bare
-repo) + merge via git; `capabilities.pullRequests` vira `true`. Reverte (aditivamente) a
-decisão da Fase 2 de não suportar PR no local — necessário pro demo rodar sem GitHub. A
-suite de contrato única passa a cobrir PR no local.
+### 3. LocalGitProvider gains local PRs (self-contained)
+`openPullRequest`/`mergePullRequest` implemented with a lightweight store
+(sidecar JSON in the bare repo) + a git-based merge; `capabilities.pullRequests`
+becomes `true`. This (additively) reverts the Phase 2 decision not to
+support PRs locally — needed for the demo to run without GitHub. The single
+contract suite now covers local PRs too.
 
-### 4. Worktrees off o working tree local; 1 por agente; limpeza de órfãos
-`WorktreeManager` cria worktrees em `<workspace>/.worktrees/<agent_id>` (branch
-`feature/<task>`) a partir do working tree que `Engine.Actions.Workspace` já monta do bare
-repo. 1 worktree por agente (o dir por agent_id garante); `WorktreeCleanupWorker` (Oban
-auto-reagendado) poda os órfãos (worktree sem agente vivo no `Engine.Dev.Registry`).
+### 4. Worktrees off the local working tree; 1 per agent; orphan cleanup
+`WorktreeManager` creates worktrees under `<workspace>/.worktrees/<agent_id>`
+(branch `feature/<task>`) from the working tree that `Engine.Actions.Workspace`
+already builds from the bare repo. 1 worktree per agent (guaranteed by the
+per-agent_id directory); `WorktreeCleanupWorker` (a self-rescheduling Oban
+job) prunes the orphans (a worktree with no live agent in
+`Engine.Dev.Registry`).
 
-### 5. Dev agents dinâmicos: supervisão + rehydration
-`DevAgentSupervisor` (DynamicSupervisor) + `Engine.Dev.Registry` (chave `{project_id,
-agent_id}`), um `DevAgentServer` por módulo. Estado durável em `dev_agent_states` (schema
-`engine`); `DevRehydrator` recria os agentes no boot (mesmo idioma do `SessionServer`/
-`Rehydrator`) — rehydration NÃO redispara o ciclo `:work`. O NoopDevAgent (`:work`): pega
-task (claim atômico `FOR UPDATE SKIP LOCKED`) → worktree → arquivo trivial → propõe
-commit/push/pr_open. A `ActivateExecutionUseCase` semeia instruções + autonomia
-`auto_approve` (git ops) por módulo e manda o engine subir os agentes.
+### 5. Dynamic dev agents: supervision + rehydration
+`DevAgentSupervisor` (DynamicSupervisor) + `Engine.Dev.Registry` (key
+`{project_id, agent_id}`), one `DevAgentServer` per module. Durable state in
+`dev_agent_states` (`engine` schema); `DevRehydrator` recreates the agents on
+boot (same idiom as `SessionServer`/`Rehydrator`) — rehydration does NOT
+re-trigger the `:work` cycle. The NoopDevAgent (`:work`): claims a task
+(atomic claim, `FOR UPDATE SKIP LOCKED`) → worktree → trivial file → proposes
+commit/push/pr_open. `ActivateExecutionUseCase` seeds instructions +
+`auto_approve` autonomy (git ops) per module and tells the engine to spin up
+the agents.
 
-### 6. Paralelização sugerida; aceite de um clique
-Na ativação, módulos com ≥2 tasks pegáveis (ramos independentes disponíveis — grafo de deps
-de tasks simplificado por ora) emitem `execution.parallelization_suggested`. O aceite (botão
-na UI → engine) sobe um `dev-<modulo>-2` com worktree próprio.
+### 6. Suggested parallelization; one-click acceptance
+On activation, modules with ≥2 claimable tasks (independent, available
+branches — a simplified task-dependency graph for now) emit
+`execution.parallelization_suggested`. Acceptance (a button in the UI →
+engine) spins up a `dev-<module>-2` with its own worktree.
 
-## Consequências
+## Consequences
 
-- A visão geral do projeto ganha a seção **Execução**: botão "Ativar execução" (quando há
-  module_map), os dev agents com branch/task, a sugestão de paralelização com "Aceitar", e
-  as PRs abertas. O feed narra `dev.*`/`execution.*`.
-- Testes: `decide` (trava de merge — nem autonomy nem permissions auto-aprovam merge em
-  protegida); `ClaimNextTaskUseCase` (claim atômico, distinto por agente); LocalGitProvider
-  PR (contrato); `worktree_manager` (2 worktrees paralelos sem conflito + limpeza de
-  órfãos); `dev_agent_server` (ciclo Noop + persistência/rehydration).
+- The project overview gains an **Execution** section: an "Activate
+  execution" button (when a module_map exists), the dev agents with their
+  branch/task, the parallelization suggestion with "Accept", and the open
+  PRs. The feed narrates `dev.*`/`execution.*`.
+- Tests: `decide` (merge lock — neither autonomy nor permissions
+  auto-approve a merge into a protected branch); `ClaimNextTaskUseCase`
+  (atomic claim, distinct per agent); LocalGitProvider PR (contract);
+  `worktree_manager` (2 parallel worktrees without conflict + orphan
+  cleanup); `dev_agent_server` (Noop cycle + persistence/rehydration).
 
-## Escopo & assunções
+## Scope & assumptions
 
-Só o **NoopDevAgent** (sem LLM) — os devs reais (harness + LLM) são a próxima sessão. O
-painel de time ao vivo completo (canais Phoenix) e o QA/SecOps/Infra vêm depois. `git_merge`
-executa (GitProvider) só na aprovação manual — o demo exercita a REJEIÇÃO do auto-merge.
-**Assunção do dev-env:** api e engine compartilham o FS dos bare repos (`GIT_LOCAL_REPOS_ROOT`)
-e dos workspaces (`PROJECT_WORKSPACES_ROOT`) — volumes no Compose.
+Only the **NoopDevAgent** (no LLM) — the real devs (harness + LLM) are the
+next session. The full live team panel (Phoenix channels) and QA/SecOps/
+Infra come later. `git_merge` executes (via GitProvider) only on manual
+approval — the demo exercises REJECTING auto-merge. **Dev-env assumption:**
+the api and engine share the FS of the bare repos
+(`GIT_LOCAL_REPOS_ROOT`) and of the workspaces (`PROJECT_WORKSPACES_ROOT`) —
+volumes in Compose.

@@ -1,5 +1,6 @@
 import type { BadgeTone } from '../components/ui/Badge';
 import type { SessionKind } from './api-types';
+import i18n from './i18n';
 
 /**
  * Como o tipo da sessão se apresenta (FASE 20, RN-097).
@@ -11,6 +12,13 @@ import type { SessionKind } from './api-types';
  *
  * Uma entrada por tipo, sem `default`: tipo novo passa a exigir uma decisão de
  * copy aqui em vez de aparecer na tela como o slug cru do banco.
+ *
+ * `rotulo`/`explicacao` são GETTERS, não valores fixados na criação do
+ * objeto: módulo não-React só é reavaliado uma vez, no import — um valor
+ * fixo congelaria a tradução no idioma vigente no boot. O getter resolve via
+ * `i18n.t()` a cada ACESSO, então componentes que leem `tipo.explicacao` a
+ * cada render (inclusive fora do escopo desta extração, como
+ * `SessionPage.tsx`) acompanham a troca de idioma sem precisar de `useTranslation`.
  */
 export const TIPOS_DE_SESSAO: Record<
   SessionKind,
@@ -23,17 +31,21 @@ export const TIPOS_DE_SESSAO: Record<
   }
 > = {
   consultiva: {
-    rotulo: 'Consultiva',
-    explicacao:
-      'Só conversa: perguntas, contexto, tirar dúvidas. Nenhum agente é ' +
-      'ativado sozinho e ela não entra em execução.',
+    get rotulo() {
+      return i18n.t('sessionKind.consultiva.label', { ns: 'sessions' });
+    },
+    get explicacao() {
+      return i18n.t('sessionKind.consultiva.description', { ns: 'sessions' });
+    },
     tom: 'muted',
   },
   criativa: {
-    rotulo: 'Criativa',
-    explicacao:
-      'Para produzir: abre a ideação com o Criativo, que registra as regras ' +
-      'de negócio e passa a bola ao PO. É a única que entra em execução.',
+    get rotulo() {
+      return i18n.t('sessionKind.criativa.label', { ns: 'sessions' });
+    },
+    get explicacao() {
+      return i18n.t('sessionKind.criativa.description', { ns: 'sessions' });
+    },
     tom: 'accent',
   },
 };

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { UserCredentialMetadata } from '../../lib/api-types';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -39,16 +40,14 @@ export function CredentialStep({
   registering,
   error,
 }: CredentialStepProps) {
+  const { t } = useTranslation('models');
   const [adding, setAdding] = useState(credentials.length === 0);
   const [token, setToken] = useState('');
 
   return (
     <div className={styles.root} data-testid="credential-step">
       <p className={styles.hint}>
-        Provisionar no {PROVIDER_LABEL[provider]} exige um token de acesso
-        pessoal (PAT). Selecione um já cadastrado ou adicione um novo — o
-        token é cifrado ao salvar e nunca é reexibido. A verificação fica nas
-        configurações do projeto, sobre o token já guardado.
+        {t('credentialStep.hint', { provider: PROVIDER_LABEL[provider] })}
       </p>
 
       {credentials.length > 0 && (
@@ -70,10 +69,12 @@ export function CredentialStep({
                   {selected ? <CheckIcon size={14} /> : <LockIcon size={14} />}
                 </span>
                 <span className={styles.credLabel}>
-                  {PROVIDER_LABEL[provider]} conectado
+                  {t('credentialStep.credLabel', { provider: PROVIDER_LABEL[provider] })}
                 </span>
                 <span className={styles.credMeta}>
-                  desde {formatRelativeTime(cred.createdAt)}
+                  {t('credentialStep.credMeta', {
+                    time: formatRelativeTime(cred.createdAt),
+                  })}
                 </span>
               </button>
             );
@@ -84,14 +85,14 @@ export function CredentialStep({
       {adding ? (
         <div className={styles.addForm}>
           <label className={styles.fieldLabel} htmlFor="git-token">
-            Novo token do {PROVIDER_LABEL[provider]}
+            {t('credentialStep.fieldLabel', { provider: PROVIDER_LABEL[provider] })}
           </label>
           <Input
             id="git-token"
             type="password"
             mono
             autoComplete="off"
-            placeholder="ghp_… / glpat-…"
+            placeholder={t('credentialStep.placeholder')}
             value={token}
             onChange={(e) => setToken(e.target.value)}
             icon={<LockIcon size={14} />}
@@ -111,14 +112,14 @@ export function CredentialStep({
                 }}
                 disabled={registering}
               >
-                Cancelar
+                {t('credentialStep.cancel')}
               </Button>
             )}
             <Button
               onClick={() => onRegister(token.trim())}
               disabled={registering || token.trim().length === 0}
             >
-              {registering ? 'Salvando…' : 'Salvar'}
+              {registering ? t('credentialStep.saving') : t('credentialStep.save')}
             </Button>
           </div>
         </div>
@@ -128,7 +129,7 @@ export function CredentialStep({
           className={styles.addToggle}
           onClick={() => setAdding(true)}
         >
-          <PlusIcon size={14} /> Adicionar novo token
+          <PlusIcon size={14} /> {t('credentialStep.addNewToken')}
         </button>
       )}
     </div>

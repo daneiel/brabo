@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import authEn from '../locales/en/auth.json';
+import authPtBR from '../locales/pt-BR/auth.json';
 import { ForgotPasswordPage } from './ForgotPasswordPage';
 
 /**
@@ -19,9 +23,33 @@ import { ForgotPasswordPage } from './ForgotPasswordPage';
  * `set_initial_password` é emitido por aqui. Daí o aviso fora do card falar em
  * definir a primeira senha, e não só em redefinir.
  */
+// Instância REAL de i18next, com os recursos do namespace "auth" — mesmo
+// padrão de AccountPage.test.tsx: o que se prova aqui é o texto que a tela
+// mostra, não a mecânica de i18next em si.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      en: { auth: authEn },
+      'pt-BR': { auth: authPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'auth',
+    ns: ['auth'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
 function montar(onPedir = vi.fn().mockResolvedValue({ ok: true })) {
   const irPara = vi.fn();
-  render(<ForgotPasswordPage onPedir={onPedir} irPara={irPara} />);
+  render(
+    <I18nextProvider i18n={novaInstanciaI18n()}>
+      <ForgotPasswordPage onPedir={onPedir} irPara={irPara} />
+    </I18nextProvider>,
+  );
   return { onPedir, irPara };
 }
 

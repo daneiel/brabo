@@ -9,7 +9,8 @@ import type { GitProviderName } from './lib/api-types';
 import { Shell } from './routes/Shell';
 import { Dashboard } from './routes/Dashboard';
 import { ProjectPage } from './routes/ProjectPage';
-import { ehChaveDeAba, type ChaveDeAba } from './routes/project-tabs';
+import { resolverChaveDeAba, type ChaveDeAba } from './routes/project-tabs';
+import { resolverChaveDeSecao, type ChaveDeSecao } from './routes/settings/sumario';
 import { SessionPage } from './routes/SessionPage';
 import { ProvisioningPage } from './routes/ProvisioningPage';
 import { AdoptionPlanPage } from './routes/AdoptionPlanPage';
@@ -19,12 +20,16 @@ import { LoginPage } from './routes/LoginPage';
 import { RegisterPage } from './routes/RegisterPage';
 import { ForgotPasswordPage } from './routes/ForgotPasswordPage';
 import { SetPasswordPage } from './routes/SetPasswordPage';
+import { VerifyEmailPage } from './routes/VerifyEmailPage';
+import { AccountPage } from './routes/AccountPage';
+import { ContainersPage } from './routes/ContainersPage';
 import {
   definirSenha,
   entrar,
   pedirRedefinicao,
   registrar,
   temSessao,
+  verificarEmail,
 } from './lib/auth';
 
 /**
@@ -88,10 +93,36 @@ const irPara = (rota: string) => {
   void router.navigate({ to: rota });
 };
 
+/**
+ * `oauthError` vem de `?oauth_error=1` — o callback de login social (ADR
+ * 0084) redireciona para cá em QUALQUER falha, sem detalhar o motivo na URL
+ * (RN-283). A comparação por STRING `'1'` é de propósito: query param é
+ * sempre string, e `Boolean('0')` seria `true`.
+ *
+ * `proxima` já existia (o `beforeLoad` do `appLayout` a escreve ao redirecionar
+ * pro login) e continua sem consumidor — `validateSearch` precisa conhecer a
+ * chave só para o `redirect({ search: { proxima } })` daquele `beforeLoad`
+ * continuar tipando; usá-la de verdade (voltar pra rota de origem depois do
+ * login) é fora do escopo desta mudança.
+ */
+interface LoginSearch {
+  oauthError?: boolean;
+  proxima?: string;
+}
+
 const loginRoute = createRoute({
   getParentRoute: () => authLayout,
   path: '/login',
-  component: () => <LoginPage onEntrar={entrar} irPara={irPara} />,
+  validateSearch: (search: Record<string, unknown>): LoginSearch => ({
+    oauthError: search.oauth_error === '1',
+    proxima: typeof search.proxima === 'string' ? search.proxima : undefined,
+  }),
+  component: () => {
+    const { oauthError } = loginRoute.useSearch();
+    return (
+      <LoginPage onEntrar={entrar} irPara={irPara} erroOAuth={oauthError} />
+    );
+  },
 });
 
 const registerRoute = createRoute({
@@ -126,10 +157,49 @@ const setPasswordRoute = createRoute({
   },
 });
 
+interface VerifyEmailSearch {
+  token?: string;
+}
+
+/**
+ * Confirmação de e-mail a partir do link do `email_verification` (backlog
+ * "SMTP real no MailSender" — ver ADR 0096). Mesmo padrão de
+ * `setPasswordRoute`: token só na query string, sem estado de rota.
+ */
+const verifyEmailRoute = createRoute({
+  getParentRoute: () => authLayout,
+  path: '/verificar-email',
+  validateSearch: (search: Record<string, unknown>): VerifyEmailSearch => ({
+    token: typeof search.token === 'string' ? search.token : undefined,
+  }),
+  component: () => {
+    const { token } = verifyEmailRoute.useSearch();
+    return (
+      <VerifyEmailPage token={token} onVerificar={verificarEmail} irPara={irPara} />
+    );
+  },
+});
+
 const indexRoute = createRoute({
   getParentRoute: () => appLayout,
   path: '/',
   component: Dashboard,
+});
+
+// Fora do escopo de projeto de propósito (fundação de i18n, Onda 6a):
+// idioma é preferência do USUÁRIO, não de um projeto — ver AccountPage.
+const accountRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/account',
+  component: AccountPage,
+});
+
+// A página global de containers (ADR 0136, RN-495) — mesmo nível hierárquico
+// de `/account`: cross-projeto, não uma aba dentro de um projeto.
+const containersRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/containers',
+  component: ContainersPage,
 });
 
 // A lista de abas mora em `routes/project-tabs.ts` — aqui só se pergunta se a
@@ -137,6 +207,14 @@ const indexRoute = createRoute({
 // e ter painel para `x` eram duas decisões independentes.
 interface ProjectSearch {
   tab?: ChaveDeAba;
+  /**
+   * A SEÇÃO da aba Configurações a que o link aponta — mesma ideia de `tab`,
+   * um degrau abaixo. A lista mora em `routes/settings/sumario.ts` e é a mesma
+   * que o sumário ancorado renderiza, pelo motivo que o comentário de `tab`
+   * já registra: aceitar uma chave na URL e ter destino para ela não podem ser
+   * duas decisões independentes.
+   */
+  section?: ChaveDeSecao;
 }
 
 const projectRoute = createRoute({
@@ -145,13 +223,29 @@ const projectRoute = createRoute({
   // `tab` só existe pra deep-link (ex.: CTA "Definir orçamento" do card do
   // dashboard indo direto pra Configurações) — a navegação normal entre
   // abas continua em estado local, sem escrever na URL a cada clique.
+  //
+  // `resolverChaveDeAba` (não `ehChaveDeAba` sozinho) porque também aceita
+  // os aliases aposentados pela fusão Chat/RAG (`?tab=sessions`,
+  // `?tab=rag`) e os resolve pra `chat` — sem isso, um link antigo caía
+  // silencioso na Visão geral.
   validateSearch: (search: Record<string, unknown>): ProjectSearch => ({
-    tab: ehChaveDeAba(search.tab) ? search.tab : undefined,
+    tab: resolverChaveDeAba(search.tab),
+    section: resolverChaveDeSecao(search.section),
   }),
   component: () => {
     const { projectId } = projectRoute.useParams();
-    const { tab } = projectRoute.useSearch();
-    return <ProjectPage projectId={projectId} initialTab={tab} />;
+    const { tab, section } = projectRoute.useSearch();
+    // `?section=` sozinho ABRE Configurações. A alternativa era abrir a Visão
+    // geral e não rolar para lugar nenhum — a mesma falha silenciosa que o
+    // registro de abas existe para não repetir: um link que a URL aceita e a
+    // tela ignora.
+    return (
+      <ProjectPage
+        projectId={projectId}
+        initialTab={tab ?? (section ? 'settings' : undefined)}
+        initialSection={section}
+      />
+    );
   },
 });
 
@@ -261,6 +355,8 @@ const statusRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   appLayout.addChildren([
     indexRoute,
+    accountRoute,
+    containersRoute,
     projectRoute,
     sessionRoute,
     provisioningRoute,
@@ -276,6 +372,7 @@ const routeTree = rootRoute.addChildren([
     registerRoute,
     forgotRoute,
     setPasswordRoute,
+    verifyEmailRoute,
   ]),
   publicLayout.addChildren([statusRoute]),
 ]);

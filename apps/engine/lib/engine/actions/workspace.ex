@@ -12,7 +12,9 @@ defmodule Engine.Actions.Workspace do
   `workspace_dir_name` (RN-109) é o nome de pasta legível
   (`<slug>-<8 chars do id>` pra projeto novo, o UUID puro pra projeto de
   antes dessa coluna existir) — a MESMA coluna que a api lê em
-  `project-workspaces-root.ts`. `workspace_dir/1` resolve o nome a partir do
+  `project-workspaces-root.ts`. Num projeto no modo `local` (RN-169, ADR 0072)
+  a pasta não é essa: é o caminho absoluto do usuário, e o localizador vem
+  pronto da consulta. `workspace_dir/1` resolve o localizador a partir do
   `project_id` via `Engine.Projects.Project.workspace_dir_name/1` (uma
   consulta), e é por isso que esta função NÃO é hot path: quem chama por
   ferramenta de agente (search/read/write_file) já recebe `ctx[:workspace_root]`
@@ -53,7 +55,49 @@ defmodule Engine.Actions.Workspace do
   def ensure_remoto(project_id, remoto) do
     {:ok, ensure!(project_id, remoto.origin, remoto.default_branch || "main", remoto)}
   rescue
-    e -> {:error, Exception.message(e)}
+    e -> {:error, motivo_da_falha(project_id, e)}
+  end
+
+  # A MESMA lacuna que a RN-478 fechou do lado da api, e que aqui continua
+  # ABERTA de propósito: num projeto `runner` (RN-423, ADR 0104)
+  # `workspace_dir/2` devolve o caminho do HOST, e o `File.mkdir_p!` de
+  # `ensure!/4` roda dentro do container do engine, que não tem bind-mount
+  # nenhum para lá. Corrigir isso agora seria materializar worktree no host por
+  # um caminho que a execução em container substitui — então o que muda é a
+  # MENSAGEM: "permissão negada: /home/voce" manda procurar dono de pasta, que
+  # é o diagnóstico errado.
+  #
+  # `Project.get/1` só é consultado no caminho de FALHA (nunca no feliz), e com
+  # as mesmas duas guardas de `Project.workspace_dir_name/1`: id malformado
+  # levanta `Ecto.Query.CastError` e processo sem conexão do Sandbox levanta
+  # `DBConnection.OwnershipError` — as duas viram "não deu para saber", e a
+  # mensagem original passa intacta.
+  defp motivo_da_falha(project_id, erro) do
+    original = Exception.message(erro)
+
+    case projeto_runner(project_id) do
+      nil ->
+        original
+
+      pasta ->
+        "o projeto está no modo `runner`: #{pasta} é uma pasta do HOST, e o " <>
+          "engine roda em container sem bind-mount para ela, então o working " <>
+          "tree do dev agent não tem onde nascer (não é permissão de arquivo a " <>
+          "corrigir — é a execução em container na máquina do usuário que " <>
+          "resolve). Falha original: #{original}"
+    end
+  end
+
+  defp projeto_runner(project_id) do
+    case Project.get(project_id) do
+      %{execution_mode: "runner", workspace_path: path} when is_binary(path) -> path
+      %{execution_mode: "runner"} -> "a pasta do projeto"
+      _ -> nil
+    end
+  rescue
+    _ -> nil
+  catch
+    :exit, _ -> nil
   end
 
   def ensure!(project_id, bare_repo_path, default_branch \\ "main", remoto \\ %{}) do
@@ -118,13 +162,29 @@ defmodule Engine.Actions.Workspace do
   end
 
   @doc """
-  A pasta do workspace, com `workspace_dir_name` JÁ resolvido — sem consulta
-  nenhuma. `nil` degrada para o `project_id` cru (mesmo comportamento de
-  antes da RN-109), o que só acontece se o projeto não existir mais no banco.
+  A pasta do workspace, com o localizador JÁ resolvido — sem consulta nenhuma.
+  `nil` degrada para o `project_id` cru (mesmo comportamento de antes da
+  RN-109), o que só acontece se o projeto não existir mais no banco.
+
+  O localizador é uma de duas coisas (RN-169, ADR 0072), e a barra inicial
+  distingue sem ambiguidade — o nome de pasta do modo `container` é validado
+  na api contra `^[A-Za-z0-9_-]{1,64}$`, que não admite `/`:
+
+  - ABSOLUTO: é a pasta do usuário de um projeto `local`, e ela É a raiz.
+    Juntar com `project_workspaces_root` produziria
+    `/data/project-workspaces/home/voce/projetos/loja`, que não existe — e o
+    engine escreveria num lugar que a api não enxerga, que é exatamente a
+    divergência que a derivação única existe para impedir;
+  - relativo: é o nome de pasta da RN-109, dentro da raiz gerenciada.
   """
   def workspace_dir(project_id, workspace_dir_name) do
-    nome = workspace_dir_name || project_id
-    Path.join(Application.fetch_env!(:engine, :project_workspaces_root), nome)
+    localizador = workspace_dir_name || project_id
+
+    if String.starts_with?(localizador, "/") do
+      Path.expand(localizador)
+    else
+      Path.join(Application.fetch_env!(:engine, :project_workspaces_root), localizador)
+    end
   end
 
   defp init_from_bare!(dir, bare_repo_path, default_branch, remoto) do

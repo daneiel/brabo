@@ -1,8 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Session } from '../lib/api-types';
+import { historicoFalso } from '../test/historico-de-eventos';
+// Instância REAL do app (mesmo padrão de SessionPage.arquiteto-modelo-icone.test.tsx):
+// as asserções abaixo esperam texto em pt-BR, e `en` é o idioma DEFAULT.
+import i18n from '../lib/i18n';
 
 /**
  * A garantia de VERDADE é o guardrail no engine: `CriativoServer` recusa
@@ -49,6 +53,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('../lib/hooks', () => ({
   useSessionEvents: () => ({ data: eventos(), isPending: false }),
+  useSessionEventHistory: () => historicoFalso(eventos().items),
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: [] }),
@@ -124,10 +129,15 @@ function montar() {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
   eventos.mockReturnValue({ items: [EVENTO_CRIATIVO_ATIVO] });
   getSession.mockResolvedValue(sessao());
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('SessionPage — "Estou pronto para produzir" exige regra de negócio', () => {

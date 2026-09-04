@@ -1,9 +1,12 @@
 name: Guardião da documentação
 
 # Roda em todo PR. Cinco perguntas, nesta ordem de custo — medida, não estimada
-# (execuções 30313457222, 30313191242, 30312381170; job inteiro em 51-53s):
+# (execuções 30313457222, 30313191242, 30312381170; job inteiro em 51-53s, ANTES
+# do item 2 ganhar o sub-passo dos tipos do web — ver abaixo; não remedido):
 #   1. o mapa de responsabilidade está íntegro? (0s)
-#   2. o que é gerado está em dia? (10s)
+#   2. o que é gerado está em dia? (10s — openapi.json/MDX da api; e, desde o
+#      ADR 0117, os tipos do web gerados dele, `pnpm --filter web run
+#      openapi:types:check`, que reusa o mesmo openapi.json já checado acima)
 #   3. o PR atualizou a doc que deveria? (0-1s)
 #   4. o site constrói sem link quebrado? (12s)
 #   5. a referência de API RENDERIZA? (0s — e ver o comentário do passo)
@@ -54,19 +57,27 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           # O drift check compara com a branch base; sem histórico o range
           # `origin/<base>...HEAD` não resolve.
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: 22
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # `website/` NÃO é mais membro do workspace da raiz (ADR 0117) — tem
+      # `pnpm-lock.yaml` PRÓPRIO, e o install acima não o alcança. Sem este
+      # passo separado, `pnpm docs:build` (agora `pnpm --dir website build`)
+      # abaixo falharia por `node_modules` ausente.
+      - name: Instalar dependências do website
+        working-directory: website
+        run: pnpm install --frozen-lockfile
 
       # Glob que não casa com nada é regra morta: nunca dispara e finge
       # cobertura. Falha rápido, antes de qualquer coisa cara.
@@ -79,6 +90,20 @@ jobs:
         run: |
           node scripts/docs/generate.mjs --check || {
             echo '::error::Documentação gerada fora de dia. Rode `pnpm docs:generate` e commite.'
+            exit 1
+          }
+
+      # `apps/web/src/lib/api-types.generated.ts` é o segundo andar da mesma
+      # cadeia: `docs/reference/openapi.json` (checado acima) → tipos do web.
+      # PRECISA rodar DEPOIS do passo anterior — é ele que garante que o
+      # `openapi.json` no disco é o de verdade antes de gerar os tipos a
+      # partir dele. `--check` é o mecanismo nativo do openapi-typescript
+      # (mesma ideia do `escrever()`/CHECAR de generate.mjs): recalcula e
+      # compara, nunca escreve. Ver docs/adr/0116-tipos-do-web-gerados-do-openapi.md.
+      - name: Tipos do web gerados do OpenAPI estão em dia
+        run: |
+          pnpm --filter web run openapi:types:check || {
+            echo '::error::apps/web/src/lib/api-types.generated.ts fora de dia. Rode `pnpm --filter web run openapi:types` e commite.'
             exit 1
           }
 
@@ -145,12 +170,12 @@ jobs:
           node scripts/docs/drift.mjs "origin/$BASE_REF...HEAD"
 
       - name: Cache do Rspack
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
           path: website/node_modules/.cache
-          key: rspack-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
+          key: rspack-${{ runner.os }}-${{ hashFiles('website/pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
           restore-keys: |
-            rspack-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            rspack-${{ runner.os }}-${{ hashFiles('website/pnpm-lock.yaml') }}-
             rspack-${{ runner.os }}-
 
       # onBrokenLinks / onBrokenAnchors / onBrokenMarkdownLinks são 'throw':
@@ -185,8 +210,8 @@ jobs:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: lycheeverse/lychee-action@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8  # v2
         with:
           args: --no-progress --exclude-mail --accept 200,206,429 './docs/**/*.md' './*.md'
           fail: false

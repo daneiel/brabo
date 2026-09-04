@@ -104,6 +104,7 @@ export class SendChatMessageUseCase {
     const gate = await this.checkBudgetGate.execute(
       input.projectId,
       input.sessionId,
+      input.agentId,
     );
     if (gate.blocked) {
       yield { type: 'error', message: gate.reason ?? 'Budget excedido' };
@@ -208,7 +209,17 @@ export class SendChatMessageUseCase {
             seq,
             type: 'agent.response',
             actor: assistantActor,
-            payload: { text: fullText, estimated, error: streamError },
+            // RN-175: `modelName` no payload, como nos `agent.response` do
+            // engine. Aqui o `actor.id` JÁ é o nome do modelo (chat sem agente
+            // ativo: quem responde é o modelo), mas a tela lê o modelo do
+            // PAYLOAD — depender do ator seria uma segunda regra, e ela
+            // deixaria de valer no dia em que este caminho ganhasse um agente.
+            payload: {
+              text: fullText,
+              estimated,
+              error: streamError,
+              modelName: model.name,
+            },
           });
           await this.outbox.append({
             aggregateType: 'session',

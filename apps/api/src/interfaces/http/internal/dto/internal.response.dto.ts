@@ -12,6 +12,7 @@ import {
   ModuleMapResponseDto,
   StoryResponseDto,
   TaskResponseDto,
+  RoteamentoDeModuloResponseDto,
 } from '../../backlog/dto/backlog.response.dto';
 import { InfraArtifactResponseDto } from '../../backlog/dto/backlog.response.dto';
 import { HypothesisResponseDto } from '../../psychologist/dto/psychologist.response.dto';
@@ -24,6 +25,7 @@ import type {
   InfraContext,
   InfraContextAdr,
 } from '../../../../application/use-cases/execution/get-infra-context.use-case';
+import type { EstadoDoRoteamento } from '../../../../domain/architecture/module-routing';
 import type {
   PsychologistContext,
   PsychologistContextBusinessRule,
@@ -50,6 +52,10 @@ import type {
   InfraPrFile,
   InfraPrFiles,
 } from '../../../../application/use-cases/execution/get-infra-pr-files.use-case';
+import type {
+  BusinessRuleWithCoverage,
+  ProjectBusinessRules,
+} from '../../../../application/use-cases/backlog/list-business-rules.use-case';
 
 /**
  * Respostas da superfície interna api ↔ engine (Fase 7b, item 6).
@@ -67,13 +73,13 @@ import type {
 
 const GATE_NEXT_ACTIONS = ['correct', 'run_secops', 'done', 'blocked'] as const;
 
-// ---------------------------------------------------------------- contexto do dev
+// ---------------------------------------------------------------- dev context
 
 export class DevContextBusinessRuleResponseDto implements Wire<DevContextBusinessRule> {
-  @ApiProperty({ example: 'Carrinho aceita no máximo 50 itens' })
+  @ApiProperty({ example: 'Cart accepts at most 50 items' })
   title!: string;
 
-  @ApiProperty({ example: 'Acima disso, a adição é recusada com 409.' })
+  @ApiProperty({ example: 'Above that, the addition is refused with 409.' })
   description!: string;
 }
 export const _chavesRegraDev: MesmasChaves<
@@ -82,18 +88,18 @@ export const _chavesRegraDev: MesmasChaves<
 > = true;
 
 export class DevContextAdrResponseDto implements Wire<DevContextAdr> {
-  @ApiProperty({ example: '0007 — Fila no Postgres em vez de Redis' })
+  @ApiProperty({ example: '0007 — Postgres queue instead of Redis' })
   title!: string;
 
-  @ApiProperty({ example: '## Contexto\n\n…' })
+  @ApiProperty({ example: '## Context\n\n…' })
   content!: string;
 
   @ApiProperty({
     example: false,
     description:
-      'Marcado pelo Arquiteto. Vira checklist informativo no parecer do SecOps — ' +
-      'não há correlação linha a linha, e afirmar que haveria seria mentir sobre a ' +
-      'profundidade da checagem.',
+      "Flagged by the Architect. Becomes an informative checklist in SecOps's " +
+      "verdict — there's no line-by-line correlation, and claiming there were " +
+      'would misrepresent the depth of the check.',
   })
   securityRelevant!: boolean;
 }
@@ -115,8 +121,8 @@ export class DevTaskContextResponseDto implements Wire<DevTaskContext> {
   @ApiProperty({
     type: [DevContextAdrResponseDto],
     description:
-      'ADRs que se aplicam: as transversais (sem módulo declarado) mais as que citam ' +
-      'o módulo deste agente.',
+      'ADRs that apply: the cross-cutting ones (no module declared) plus the ' +
+      "ones that cite this agent's module.",
   })
   adrs!: DevContextAdrResponseDto[];
 }
@@ -125,18 +131,46 @@ export const _chavesCtxDev: MesmasChaves<
   DevTaskContext
 > = true;
 
-// -------------------------------------------------------------- contexto da infra
+// -------------------------------------------------------------- infra context
 
 export class InfraContextAdrResponseDto implements Wire<InfraContextAdr> {
-  @ApiProperty({ example: '0025 — Deploy Kubernetes com Kustomize' })
+  @ApiProperty({ example: '0025 — Kubernetes deploy with Kustomize' })
   title!: string;
 
-  @ApiProperty({ example: '## Contexto\n\n…' })
+  @ApiProperty({ example: '## Context\n\n…' })
   content!: string;
 }
 export const _chavesAdrInfra: MesmasChaves<
   InfraContextAdrResponseDto,
   InfraContextAdr
+> = true;
+
+/**
+ * Espelha `EstadoDoRoteamento` (domain/architecture/module-routing.ts) — o
+ * roteamento de módulos que o Arquiteto candidatou (`route_modules_to_infra`,
+ * ADR 0131). Reusa `RoteamentoDeModuloResponseDto`
+ * (backlog.response.dto.ts) para os itens: mesmo tipo de domínio, sem
+ * duplicar a classe.
+ */
+export class EstadoDoRoteamentoResponseDto implements Wire<EstadoDoRoteamento> {
+  @ApiProperty({ enum: ['sem_roteamento', 'roteado'], example: 'roteado' })
+  status!: 'sem_roteamento' | 'roteado';
+
+  @ApiProperty({ type: [RoteamentoDeModuloResponseDto] })
+  roteamento!: RoteamentoDeModuloResponseDto[];
+
+  @ApiProperty({ example: 1 })
+  version!: number;
+
+  @ApiProperty({ example: '01JC4Z0000EVENTOROTEAMENTO01', nullable: true })
+  eventId!: string | null;
+
+  @ApiProperty({ example: '2026-08-30T12:00:00.000Z', nullable: true })
+  createdAt!: string | null;
+}
+export const _chavesEstadoDoRoteamento: MesmasChaves<
+  EstadoDoRoteamentoResponseDto,
+  EstadoDoRoteamento
 > = true;
 
 export class InfraContextResponseDto implements Wire<InfraContext> {
@@ -151,24 +185,35 @@ export class InfraContextResponseDto implements Wire<InfraContext> {
     nullable: true,
     example: 'github',
     description:
-      'null quando o projeto ainda não provisionou repositório. O subagente Workflows ' +
-      '(Fase 8c) decide o formato do pipeline de CI por isto: "gitlab" gera .gitlab-ci.yml, ' +
-      'qualquer outro valor gera GitHub Actions.',
+      "null when the project hasn't provisioned a repository yet. The " +
+      'Workflows subagent (Phase 8c) decides the CI pipeline format from ' +
+      'this: "gitlab" generates .gitlab-ci.yml, any other value generates ' +
+      'GitHub Actions.',
   })
   gitProvider!: GitProviderName | null;
+
+  @ApiProperty({
+    type: EstadoDoRoteamentoResponseDto,
+    description:
+      'The Architect-routed candidates (route_modules_to_infra, ADR 0131) — ' +
+      'what the Infra Lead elects among when proposing container_start ' +
+      '(ADR 0130/0133). "sem_roteamento" when the Architect has not routed ' +
+      'anything yet.',
+  })
+  moduleRouting!: EstadoDoRoteamentoResponseDto;
 }
 export const _chavesCtxInfra: MesmasChaves<
   InfraContextResponseDto,
   InfraContext
 > = true;
 
-// ----------------------------------------------------------- contexto do psicólogo
+// ----------------------------------------------------------- psychologist context
 
 export class PsychologistContextBusinessRuleResponseDto implements Wire<PsychologistContextBusinessRule> {
   @ApiProperty({ example: 'RN-014' })
   id!: string;
 
-  @ApiProperty({ example: 'Carrinho aceita no máximo 50 itens' })
+  @ApiProperty({ example: 'Cart accepts at most 50 items' })
   title!: string;
 }
 export const _chavesRegraPsi: MesmasChaves<
@@ -181,11 +226,11 @@ export class PriorHypothesisResponseDto implements Wire<PsychologistContextPrior
   agenteAlvo!: string;
 
   @ApiProperty({
-    example: 'As instruções não dizem quando a tarefa está pronta.',
+    example: "The instructions don't say when the task is done.",
   })
   hipotese!: string;
 
-  @ApiProperty({ example: 'Acrescentar um critério de pronto explícito.' })
+  @ApiProperty({ example: 'Add an explicit definition-of-done criterion.' })
   sugestao!: string;
 
   @ApiProperty({ example: 72 })
@@ -200,8 +245,9 @@ export class PsychologistContextResponseDto implements Wire<PsychologistContext>
   @ApiProperty({
     example: false,
     description:
-      'Já existe análise CURRENT para esta sessão. É o que dá idempotência ao ' +
-      'caminho automático: com `true` o worker curto-circuita sem gastar nada.',
+      'A CURRENT analysis already exists for this session. This is what makes ' +
+      'the automatic path idempotent: with `true` the worker short-circuits ' +
+      'without spending anything.',
   })
   alreadyAnalyzed!: boolean;
 
@@ -220,7 +266,7 @@ export class PsychologistContextResponseDto implements Wire<PsychologistContext>
   @ApiProperty({
     type: [PriorHypothesisResponseDto],
     description:
-      'O que já foi proposto antes, para a rodada não repetir a si mesma.',
+      "What was already proposed before, so the round doesn't repeat itself.",
   })
   priorHypotheses!: PriorHypothesisResponseDto[];
 }
@@ -229,13 +275,13 @@ export const _chavesCtxPsi: MesmasChaves<
   PsychologistContext
 > = true;
 
-// ------------------------------------------------------------ contexto da anamnese
+// ------------------------------------------------------------ anamnese context
 
 export class AnamneseMemberResponseDto implements Wire<AnamneseContextMember> {
   @ApiProperty({ example: '01JC4Z0000USUARIO0000000002' })
   userId!: string;
 
-  @ApiProperty({ example: 'Dev Sênior', nullable: true })
+  @ApiProperty({ example: 'Senior Dev', nullable: true })
   name!: string | null;
 
   @ApiProperty({ example: 'dev@brabo.dev' })
@@ -260,11 +306,11 @@ export class AnamneseQueuedResponseDto implements Wire<AnamneseContextQueued> {
   agenteAlvo!: string;
 
   @ApiProperty({
-    example: 'As instruções não dizem quando a tarefa está pronta.',
+    example: "The instructions don't say when the task is done.",
   })
   hipotese!: string;
 
-  @ApiProperty({ example: 'Acrescentar um critério de pronto explícito.' })
+  @ApiProperty({ example: 'Add an explicit definition-of-done criterion.' })
   sugestao!: string;
 
   @ApiProperty({ example: 72 })
@@ -282,11 +328,11 @@ export class AnamneseProfileResponseDto implements Wire<AnamneseContextProfile> 
   @ApiProperty({ example: 'TypeScript' })
   competency!: string;
 
-  @ApiProperty({ example: 'avancado' })
+  @ApiProperty({ example: 'advanced' })
   level!: string;
 
   @ApiProperty({
-    example: 'Corrigiu três erros de tipagem genérica sem ajuda.',
+    example: 'Fixed three generic typing errors without help.',
   })
   rationale!: string;
 }
@@ -302,7 +348,10 @@ export class AnamneseDecisionResponseDto implements Wire<AnamneseContextDecision
   @ApiProperty({ example: 'denied' })
   status!: string;
 
-  @ApiProperty({ example: 'Comando apagaria o diretório.', nullable: true })
+  @ApiProperty({
+    example: 'Command would delete the directory.',
+    nullable: true,
+  })
   rejectionReason!: string | null;
 
   @ApiProperty({ example: '01JC4Z0000USUARIO0000000001', nullable: true })
@@ -335,21 +384,21 @@ export class AnamneseContextResponseDto implements Wire<AnamneseContext> {
   @ApiProperty({
     example: ['TypeScript', 'Elixir', 'Kubernetes'],
     description:
-      'Catálogo FECHADO. O modelo não pode emitir competência fora daqui — a ' +
-      'validação rejeita —, então ele vai no prompt como lista.',
+      'CLOSED catalog. The model cannot emit a competency outside of this — ' +
+      'validation rejects it — so it goes into the prompt as a list.',
   })
   competencyCatalog!: string[];
 
   @ApiProperty({
     type: [AnamneseMemberResponseDto],
-    description: 'Já EXCLUI quem optou por não ser perfilado.',
+    description: 'Already EXCLUDES whoever opted out of being profiled.',
   })
   members!: AnamneseMemberResponseDto[];
 
   @ApiProperty({
     type: [AnamneseQueuedResponseDto],
     description:
-      'Hipóteses ACEITAS do Psicólogo esperando virar input priorizado.',
+      "The Psychologist's ACCEPTED hypotheses waiting to become prioritized input.",
   })
   queuedHypotheses!: AnamneseQueuedResponseDto[];
 
@@ -362,8 +411,8 @@ export class AnamneseContextResponseDto implements Wire<AnamneseContext> {
   @ApiProperty({
     type: [AnamneseDecisionResponseDto],
     description:
-      'Aprovações e negações do usuário dentro da janela. Vêm por aqui porque NÃO ' +
-      'estão no event log.',
+      "The user's approvals and denials within the window. They come through " +
+      'here because they are NOT in the event log.',
   })
   decisions!: AnamneseDecisionResponseDto[];
 
@@ -371,9 +420,10 @@ export class AnamneseContextResponseDto implements Wire<AnamneseContext> {
     example: '2026-07-27T12:00:00.000Z',
     nullable: true,
     description:
-      'Início da janela a analisar (fim da última rodada). `null` na primeira. Os ' +
-      'eventos em si o engine lê direto do Postgres — trafegá-los por HTTP seria ' +
-      'mais caro sem ser mais correto.',
+      'Start of the window to analyze (end of the last round). `null` on the ' +
+      'first one. The engine reads the events themselves straight from ' +
+      'Postgres — carrying them over HTTP would be more expensive without ' +
+      'being more correct.',
   })
   windowFrom!: string | null;
 }
@@ -382,13 +432,13 @@ export const _chavesCtxAnamnese: MesmasChaves<
   AnamneseContext
 > = true;
 
-// -------------------------------------------------------------------- turno de LLM
+// -------------------------------------------------------------------- LLM turn
 
 export class ToolCallResponseDto {
   @ApiProperty({ example: 'call_01' })
   id!: string;
 
-  @ApiProperty({ example: 'ler_arquivo' })
+  @ApiProperty({ example: 'read_file' })
   name!: string;
 
   @ApiProperty({
@@ -396,7 +446,7 @@ export class ToolCallResponseDto {
     additionalProperties: true,
     example: { path: 'src/index.ts' },
     description:
-      'Já desserializado; o engine despacha para a ferramenta por `name`.',
+      'Already deserialized; the engine dispatches to the tool by `name`.',
   })
   arguments!: Record<string, unknown>;
 }
@@ -405,7 +455,7 @@ export class LlmMessageResponseDto {
   @ApiProperty({ example: 'assistant', enum: ['assistant'] })
   role!: 'assistant';
 
-  @ApiProperty({ example: 'Vou ler o arquivo antes de responder.' })
+  @ApiProperty({ example: "I'll read the file before answering." })
   content!: string;
 
   @ApiProperty({ type: [ToolCallResponseDto] })
@@ -419,14 +469,15 @@ export class LlmUsageResponseDto {
   @ApiProperty({ example: 340 })
   outputTokens!: number;
 
-  @ApiProperty({ example: 52700, description: 'Custo em micro-USD.' })
+  @ApiProperty({ example: 52700, description: 'Cost in micro-USD.' })
   costMicros!: number;
 
   @ApiProperty({
     example: false,
     description:
-      '`true` quando o provider não devolveu contagem e o custo foi ESTIMADO. O ' +
-      'número vale menos, e quem consome precisa poder dizer isso.',
+      '`true` when the provider did not return a count and the cost was ' +
+      'ESTIMATED. The number is worth less, and whoever consumes it needs to ' +
+      'be able to say so.',
   })
   estimated!: boolean;
 }
@@ -442,8 +493,9 @@ export class LlmTurnResponseDto implements Wire<RunLlmTurnResult> {
     example: null,
     nullable: true,
     description:
-      'Falha do provider. Vem no CORPO com 200, e não como erro HTTP, porque a ' +
-      'contabilidade em `usage` continua válida — o turno gastou, mesmo falhando.',
+      "The provider's failure. Comes in the BODY with 200, not as an HTTP " +
+      'error, because the accounting in `usage` remains valid — the turn ' +
+      'spent, even while failing.',
   })
   error!: string | null;
 
@@ -451,32 +503,32 @@ export class LlmTurnResponseDto implements Wire<RunLlmTurnResult> {
     example: 'llama3.2:3b',
     nullable: true,
     description:
-      'Nome do modelo que gerou a resposta (achado do problema 2) — `null` quando ' +
-      'o turno falhou antes de resolver um modelo (sem binding, ou binding para ' +
-      'modelo inexistente).',
+      'Name of the model that generated the response (finding from problem 2) ' +
+      '— `null` when the turn failed before resolving a model (no binding, ' +
+      'or binding to a non-existent model).',
   })
   modelName!: string | null;
 }
 export const _chavesTurno: MesmasChaves<LlmTurnResponseDto, RunLlmTurnResult> =
   true;
 
-/** Um quadro do stream de turno de LLM (`llm-turn-stream`). */
+/** A frame of the LLM turn stream (`llm-turn-stream`). */
 export class LlmTurnStreamEventResponseDto {
   @ApiProperty({
     enum: ['delta', 'done', 'error'],
     example: 'delta',
     description:
-      '`delta` traz `text`; `done` fecha com `usage`; `error` traz `message`.',
+      '`delta` carries `text`; `done` closes with `usage`; `error` carries `message`.',
   })
   type!: 'delta' | 'done' | 'error';
 
-  @ApiProperty({ example: 'Vou ler o', required: false })
+  @ApiProperty({ example: "I'll read the", required: false })
   text?: string;
 
   @ApiProperty({ type: LlmUsageResponseDto, required: false })
   usage?: LlmUsageResponseDto;
 
-  @ApiProperty({ example: 'provider indisponível', required: false })
+  @ApiProperty({ example: 'provider unavailable', required: false })
   message?: string;
 
   @ApiProperty({
@@ -484,9 +536,9 @@ export class LlmTurnStreamEventResponseDto {
     required: false,
     nullable: true,
     description:
-      'Só no quadro `done`/`final` — nome do modelo que gerou a resposta ' +
-      '(achado do problema 2). `null` quando o turno falhou antes de resolver ' +
-      'um modelo.',
+      'Only on the `done`/`final` frame — name of the model that generated ' +
+      'the response (finding from problem 2). `null` when the turn failed ' +
+      'before resolving a model.',
   })
   modelName?: string | null;
 }
@@ -498,9 +550,9 @@ export class GateVerdictResponseDto implements Wire<RecordGateVerdictResult> {
     enum: GATE_NEXT_ACTIONS,
     example: 'run_secops',
     description:
-      'O que acontece a seguir. `correct` devolve ao dev; `run_secops` avança o ' +
-      'gate; `done` libera para o usuário; `blocked` significa que o teto de ' +
-      'correções estourou e só um humano destrava.',
+      'What happens next. `correct` returns to dev; `run_secops` advances ' +
+      'the gate; `done` releases it to the user; `blocked` means the ' +
+      'correction cap ran out and only a human can unblock it.',
   })
   nextAction!: Wire<RecordGateVerdictResult>['nextAction'];
 
@@ -537,14 +589,14 @@ export const _chavesArquivoPr: MesmasChaves<
 > = true;
 
 export class InfraPrFilesResponseDto implements Wire<InfraPrFiles> {
-  @ApiProperty({ example: 'Dockerfile de produção da api' })
+  @ApiProperty({ example: "api's production Dockerfile" })
   title!: string;
 
   @ApiProperty({
     type: [InfraPrFileResponseDto],
     description:
-      'O conteúdo vem do payload da própria `proposed_action`: artefato de infra ' +
-      'NUNCA toca um worktree, igual às ADRs.',
+      "The content comes from the `proposed_action`'s own payload: an infra " +
+      'artifact NEVER touches a worktree, same as ADRs.',
   })
   files!: InfraPrFileResponseDto[];
 }
@@ -553,12 +605,13 @@ export const _chavesArquivosPr: MesmasChaves<
   InfraPrFiles
 > = true;
 
-// -------------------------------------------------------------- hipóteses e perfis
+// -------------------------------------------------------------- hypotheses and profiles
 
 export class ProposeHypothesesResponseDto implements Wire<ProposeHypothesesResult> {
   @ApiProperty({
     example: '01JC4Z0000ANALISE0000000001',
-    description: 'A rodada criada. A anterior desta sessão vira superseded.',
+    description:
+      "The created round. This session's previous one becomes superseded.",
   })
   analysisId!: string;
 
@@ -577,12 +630,12 @@ export class RecordProficiencyResponseDto {
   @ApiProperty({
     type: 'array',
     items: { type: 'object', additionalProperties: true },
-    description: 'Os perfis gravados nesta rodada.',
+    description: 'The profiles recorded in this round.',
   })
   profiles!: unknown[];
 }
 
-/** Um estágio do gate, como ele é aberto pelo engine. */
+/** A gate stage, as opened by the engine. */
 export class GateAbertoResponseDto {
   @ApiProperty({ enum: PR_GATE_STATUSES, example: 'awaiting_qa' })
   gateStatus!: (typeof PR_GATE_STATUSES)[number];
@@ -590,7 +643,7 @@ export class GateAbertoResponseDto {
 
 const DELEGATION_STATUSES = ['completed', 'failed', 'dispensed'] as const;
 
-/** Uma delegação da área de QA, como registrada (Fase 8b, ADR 0038). */
+/** A QA area delegation, as recorded (Phase 8b, ADR 0038). */
 export class DelegationResponseDto implements Wire<Delegation> {
   @ApiProperty({ format: 'uuid', example: '01JC4Z0000DELEGACAO00000001' })
   id!: string;
@@ -606,7 +659,7 @@ export class DelegationResponseDto implements Wire<Delegation> {
     nullable: true,
     example: '01JC4Z0000TAREFA00000000001',
     description:
-      'null quando a área não tem task de backlog por trás (Infra, Fase 8c).',
+      'null when the area has no backlog task behind it (Infra, Phase 8c).',
   })
   taskId!: string | null;
 
@@ -640,4 +693,60 @@ export class DelegationResponseDto implements Wire<Delegation> {
 export const _chavesDelegation: MesmasChaves<
   DelegationResponseDto,
   Delegation
+> = true;
+
+// ------------------------------------------------------- PO reading (RN-164)
+
+export class ProjectBusinessRuleResponseDto implements Wire<BusinessRuleWithCoverage> {
+  @ApiProperty({
+    example: 'evt_01jc4z0000regra0000000001',
+    description:
+      "The `artifact.business_rule` EVENT's id. This is the value that goes " +
+      'into `business_rule_ids` when creating the story — there is no rules table.',
+  })
+  id!: string;
+
+  @ApiProperty({ example: 'Cart accepts at most 50 items' })
+  title!: string;
+
+  @ApiProperty({
+    example: 'Above that, the addition is refused with 409.',
+    description:
+      "The rule's content, not just the statement: the story's requirement " +
+      'comes from it. This is the field that distinguishes this reading from ' +
+      "the screen's coverage.",
+  })
+  description!: string;
+
+  @ApiProperty({
+    type: [String],
+    example: ['01JC4Z0000HISTORIA000000001'],
+    description: 'Stories that already cite this rule.',
+  })
+  coveredByStoryIds!: string[];
+
+  @ApiProperty({ example: true })
+  covered!: boolean;
+}
+export const _chavesRegraDoProjeto: MesmasChaves<
+  ProjectBusinessRuleResponseDto,
+  BusinessRuleWithCoverage
+> = true;
+
+export class ProjectBusinessRulesResponseDto implements Wire<ProjectBusinessRules> {
+  @ApiProperty({ type: [ProjectBusinessRuleResponseDto] })
+  rules!: ProjectBusinessRuleResponseDto[];
+
+  @ApiProperty({
+    example: 2,
+    description:
+      "How many rules no story covers. This is the PO's pending item, and " +
+      'the number that the `listar_regras_de_negocio` tool puts in front of ' +
+      'the model.',
+  })
+  uncoveredCount!: number;
+}
+export const _chavesRegrasDoProjeto: MesmasChaves<
+  ProjectBusinessRulesResponseDto,
+  ProjectBusinessRules
 > = true;

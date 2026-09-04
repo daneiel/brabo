@@ -34,6 +34,27 @@
   color: var(--text-primary);
 }
 
+/*
+ * `:focus-visible` calibrado igual `Input.module.css` (ADR 0036): estas abas
+ * são implementação PRÓPRIA (botões, não o `Tabs` do design system), então
+ * não herdam o `:focus-visible` que a Onda 2/frente C já deu a `Tabs.module.css`
+ * — auditado e achado sem indicação de foco alcançável só por teclado.
+ * `outline` transparente reserva o espaço que `forced-colors` pinta; `:focus`
+ * puro acenderia também ao clicar com o mouse, que não é o que a indicação
+ * existe para resolver.
+ */
+.aba:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+@media (forced-colors: active) {
+  .aba:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
 .conteudo {
   flex: 1;
   min-height: 0;
@@ -57,4 +78,44 @@
   max-width: 440px;
   font-size: 12px;
   line-height: 1.5;
+}
+
+/* A aba Terminal ganhou dado real (runner local + PTY): uma faixa fina com
+   o estado do CONTAINER gerido pelo produto (outra informação, RN-267/268)
+   sobre a área do terminal interativo em si, que ocupa o resto do espaço. */
+.terminalAba {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.cicloDeVidaFaixa {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.terminalArea {
+  flex: 1;
+  min-height: 0;
+}
+
+.cicloDeVida {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cicloDeVidaDetalhe {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.cicloDeVidaFalha {
+  margin: 0;
+  max-width: 440px;
+  font-size: 11px;
+  color: var(--danger);
+  width: 100%;
 }

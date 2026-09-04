@@ -15,6 +15,8 @@
 #                                              # imprime a árvore inteira e sai
 #   bash scripts/dev/bootstrap.sh --print-commands --path 1.1
 #                                              # só a subárvore de um caminho
+#   bash scripts/dev/bootstrap.sh --print-window <log> <linhas> <deslocamento>
+#                                              # recorta a janela do log (teste)
 #
 # Variáveis de ambiente:
 #   NO_COLOR=1          desliga a cor (o script também desliga sozinho sem TTY)
@@ -22,7 +24,12 @@
 #   POSTGRES_DB         banco do Postgres    (default: brabo, igual ao compose)
 #
 # Teclas: dígito escolhe (sem Enter), `v` volta, `q` sai, `↓`/`↑` mostram e
-# escondem a saída de um comando em execução. Todas aparecem no rodapé.
+# escondem a saída de um comando em execução. Com a saída à mostra, a roda do
+# mouse, `j`/`k` e PageUp/PageDown rolam o log inteiro e `G` volta ao fim (ao
+# vivo). Na tela de um comando (rodando ou já concluído), `c` copia o comando
+# real para a área de transferência (OSC 52) e também imprime a mesma linha
+# no log, como segunda via — não há como confirmar de dentro do bash que a
+# transferência funcionou. Todas aparecem no rodapé.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -154,25 +161,56 @@ COMPOSE="docker compose -f docker/docker-compose.yml --env-file .env"
 
 ROTULO["."]="Brabo";     FILHOS["."]="1 2 3 4"
 
-ROTULO["1"]="Docker";    FILHOS["1"]="1.1 1.2 1.3"
+ROTULO["1"]="Docker";    FILHOS["1"]="1.1 1.2 1.3 1.4 1.5"
 ROTULO["2"]="K8s";       FILHOS["2"]="2.1 2.2 2.3"
-ROTULO["3"]="Database";  FILHOS["3"]="3.1 3.2 3.3"
+ROTULO["3"]="Database";  FILHOS["3"]="3.1 3.2 3.3 3.4"
 ROTULO["4"]="Test";      FILHOS["4"]="4.1 4.2 4.3 4.4 4.5 4.6"
 
 # -- 1. Docker --------------------------------------------------------------
 # Deploy publica código num ambiente que JÁ existe (por isso é o granular).
 # Create provisiona do zero — e passa pelo preflight, que confere as portas
 # 3000/4000/8080 e é o que evita o choque conhecido com `make deploy-local`.
+#
+# `$(bash scripts/dev/perfil-ollama.sh)` — ESCAPADO com `\$` de propósito, para
+# ficar gravado LITERAL no mapa (senão o `$(...)` rodaria uma vez só, aqui, na
+# hora em que este arquivo é fonteado, e nunca de novo) — decide em tempo de
+# EXECUÇÃO se o comando sobe (ou derruba) ollama/ollama-model-loader junto
+# (mesmo padrão de `\${POSTGRES_USER:-brabo}` no CMD["3.4"], abaixo: escapar
+# é o que faz a variável ser lida quando o comando RODA, não quando o menu é
+# montado). Os três itens que operam a STACK INTEIRA (nenhum serviço
+# específico) precisam disso — Api/Engine/Web (1.1.2..4) não tocam ollama.
+# Destroy também precisa: `docker compose down` SEM `--profile` ignora
+# containers de um profile inativo (deixa `ollama`/`ollama-model-loader` de
+# pé, órfãos, e a rede presa) — mesmo `--profile` do `up`, para desfazer
+# exatamente o que ele fez.
 ROTULO["1.1"]="Deploy";  FILHOS["1.1"]="1.1.1 1.1.2 1.1.3 1.1.4"
-ROTULO["1.2"]="Create";  CMD["1.2"]="node scripts/dev/preflight.mjs && ${COMPOSE} up -d"
-ROTULO["1.3"]="Destroy"; CMD["1.3"]="${COMPOSE} down"
+ROTULO["1.2"]="Create";  CMD["1.2"]="node scripts/dev/preflight.mjs && ${COMPOSE} \$(bash scripts/dev/perfil-ollama.sh) up -d"
+ROTULO["1.3"]="Destroy"; CMD["1.3"]="${COMPOSE} \$(bash scripts/dev/perfil-ollama.sh) down"
 NOTA["1.2"]="cria a rede, os volumes e os containers (sem reconstruir imagem)"
-NOTA["1.3"]="para e remove os containers; os volumes sobrevivem"
+NOTA["1.3"]="para e remove os containers (incl. ollama/ollama-model-loader se estiverem de pé); os volumes sobrevivem"
 
-ROTULO["1.1.1"]="All";    CMD["1.1.1"]="${COMPOSE} up -d --build"
+ROTULO["1.1.1"]="All";    CMD["1.1.1"]="${COMPOSE} \$(bash scripts/dev/perfil-ollama.sh) up -d --build"
 ROTULO["1.1.2"]="Api";    CMD["1.1.2"]="${COMPOSE} up -d --build api"
 ROTULO["1.1.3"]="Engine"; CMD["1.1.3"]="${COMPOSE} up -d --build engine"
 ROTULO["1.1.4"]="Web";    CMD["1.1.4"]="${COMPOSE} up -d --build web"
+
+# Reset total: rebuild + apaga o banco + sobe até saudável + migra + semeia,
+# numa tacada só — ver scripts/dev/reset-total.sh. É a única folha de Docker
+# que também mexe no banco, e por isso pede confirmação PRÓPRIA
+# (`confirmar_reset`, não `confirmar` — essa é só do Database › Delete) e não
+# exige o Postgres já de pé: o próprio comando sobe o compose do zero.
+ROTULO["1.4"]="Reset total"; CMD["1.4"]="bash scripts/dev/reset-total.sh"
+ESTADO["1.4"]="confirmar_reset"
+NOTA["1.4"]="rebuild + apaga o banco + sobe até saudável + migra + semeia (credenciais de .env inclusas)"
+
+# Reconfigurar Ollama: esquece a decisão host/container gravada em `.env` por
+# scripts/dev/preflight.mjs (RN de detecção de Ollama nativo), forçando a
+# pergunta de novo na próxima subida. NÃO mexe em dado nenhum (só três chaves
+# de `.env`) — segue o idioma predominante dos itens não-triviais-mas-não-
+# destrutivos deste menu (Generate, Migrate, Seed...) e executa direto, sem
+# tela de confirmação: essa régua é só para o que apaga banco.
+ROTULO["1.5"]="Reconfigurar Ollama"; CMD["1.5"]="bash scripts/dev/reconfigurar-ollama.sh"
+NOTA["1.5"]="remove OLLAMA_MODE/OLLAMA_HOST de .env — a próxima subida pergunta de novo"
 
 # -- 2. K8s -----------------------------------------------------------------
 # Só `All` existe: o bootstrap do cluster instala api, engine e web juntos, e
@@ -195,21 +233,33 @@ NOTA["2.1.4"]="${NOTA["2.1.2"]}"
 # -- 3. Database ------------------------------------------------------------
 ROTULO["3.1"]="Generate"; CMD["3.1"]="pnpm db:generate"
 ROTULO["3.2"]="Migrate";  CMD["3.2"]="pnpm db:migrate"
+ROTULO["3.3"]="Seed";     CMD["3.3"]="pnpm --filter api seed"
 NOTA["3.1"]="drizzle-kit gera a migration a partir do schema"
 NOTA["3.2"]="aplica as migrations pendentes da api"
+NOTA["3.3"]="popula dados de demonstração (workspace, usuários, projeto, sessão)"
 
-# Delete zera o SCHEMA e mantém container e volume de pé. Duas armadilhas
-# reais, confirmadas no código, e não suposições:
+# Delete zera o SCHEMA e mantém container e volume de pé. TRÊS armadilhas
+# reais, confirmadas no código (a terceira, rodando o reset de ponta a ponta
+# — só um DROP SCHEMA public não bastava), e não suposições:
 #
 # 1. `docker/postgres/init.sql` cria a extensão pgvector e roda SÓ na primeira
 #    inicialização do volume. Um DROP SCHEMA puro levaria o pgvector junto, e a
 #    migration seguinte falharia — por isso a extensão é recriada aqui.
-# 2. O engine (Ecto/Oban) divide o MESMO banco: as tabelas dele também somem.
-#    Recuperar exige `pnpm db:migrate` E `pnpm engine:migrate`.
-ROTULO["3.3"]="Delete"
-ESTADO["3.3"]="confirmar"
-NOTA["3.3"]="apaga TODAS as tabelas (api e engine); containers seguem de pé"
-CMD["3.3"]="${COMPOSE} exec -T postgres psql -v ON_ERROR_STOP=1 -U \"\${POSTGRES_USER:-brabo}\" -d \"\${POSTGRES_DB:-brabo}\" -c 'DROP SCHEMA public CASCADE;' -c 'CREATE SCHEMA public;' -c 'CREATE EXTENSION IF NOT EXISTS vector;'"
+# 2. O engine (Ecto/Oban) divide o MESMO banco, mas em schema PRÓPRIO
+#    (`engine`, não `public`) — dropar só `public` não apaga `engine.*`
+#    (dev_agent_states, session_states, oban_jobs...). `mix ecto.migrate`
+#    então tenta recriar tabela que já existe e falha com `duplicate_table`.
+# 3. drizzle-kit guarda o PRÓPRIO controle de migration em `drizzle.
+#    __drizzle_migrations` — schema à parte, também sobrevivendo a um DROP de
+#    só `public`. Sem apagá-lo junto, `pnpm db:migrate` acha que já rodou tudo
+#    (pelo controle intacto) e não recria NENHUMA tabela em `public` — a api
+#    fica com o banco vazio, silenciosamente, sem erro nenhum.
+# Por isso os DOIS schemas de controle são dropados ANTES do `public`, e
+# recuperar exige `pnpm db:migrate` E `pnpm engine:migrate`, nesta ordem.
+ROTULO["3.4"]="Delete"
+ESTADO["3.4"]="confirmar"
+NOTA["3.4"]="apaga TODAS as tabelas (api, engine e o controle de migration dos dois); containers seguem de pé"
+CMD["3.4"]="${COMPOSE} exec -T postgres psql -v ON_ERROR_STOP=1 -U \"\${POSTGRES_USER:-brabo}\" -d \"\${POSTGRES_DB:-brabo}\" -c 'DROP SCHEMA IF EXISTS engine CASCADE;' -c 'DROP SCHEMA IF EXISTS drizzle CASCADE;' -c 'DROP SCHEMA public CASCADE;' -c 'CREATE SCHEMA public;' -c 'CREATE EXTENSION IF NOT EXISTS vector;'"
 
 # -- 4. Test ----------------------------------------------------------------
 # `All` soma engine e scripts ao `pnpm test` da raiz, que cobre só api e web.
@@ -300,7 +350,25 @@ limpar_corpo() {
 
 definir_regiao() { printf '\033[%d;%dr' "$(( ALTURA_BANNER + 1 ))" "${LINHAS}"; }
 
+# ---------------------------------------------------------------------------
+# Roda do mouse
+#
+# `?1000` liga o rastreio de botão (a roda entra nele como botão 64/65) e
+# `?1006` pede o relato em SGR — `ESC [ < Cb ; Cx ; Cy M`, tudo em ASCII
+# imprimível. O modo X10 original relata a posição como BYTES CRUS somados a
+# 32, e coluna > 95 vira byte fora do ASCII: sob locale UTF-8 o `read` do bash
+# junta esse byte ao seguinte e a sequência chega quebrada. Por isso SGR, e não
+# o modo antigo.
+#
+# Ligar é local à tela de execução (é a única onde rolar significa algo), mas
+# DESLIGAR é incondicional em `restaurar_terminal`: um terminal que sai daqui
+# ainda relatando mouse enche o shell de lixo a cada clique.
+# ---------------------------------------------------------------------------
+ligar_mouse()    { printf '\033[?1000h\033[?1006h'; }
+desligar_mouse() { printf '\033[?1006l\033[?1000l'; }
+
 restaurar_terminal() {
+  desligar_mouse       # antes de tudo: sair relatando mouse quebra o shell
   printf '\033[r'      # solta a região de rolagem
   printf '\033[?25h'   # cursor de volta
   printf '%s' "${C_RESET}"
@@ -365,26 +433,60 @@ regua() {
 # ---------------------------------------------------------------------------
 # Leitura de tecla
 #
-# Seta é sequência de escape: chega `ESC` e mais dois bytes. O timeout curto
-# no segundo `read` é o que separa uma seta de um ESC solto.
+# Seta é sequência de escape, e o timeout curto no segundo `read` é o que
+# separa uma seta de um ESC solto.
+#
+# O parser é GENÉRICO de propósito. Ler dois bytes fixos depois do ESC — o que
+# havia aqui — cobre `↑`/`↓` (`\e[A`/`\e[B`) e mais nada: PageUp é `\e[5~`
+# (quatro bytes) e a roda do mouse em SGR é `\e[<64;12;34M` (comprimento
+# variável). E o estrago não é perder a tecla: os bytes que sobram voltam como
+# teclas SOLTAS na leitura seguinte — como o menu trata `[1-9]` como escolha,
+# um giro de roda dispararia itens do menu. Por isso a leitura vai até o byte
+# FINAL da sequência CSI (0x40–0x7E), qualquer que seja o tamanho dela.
 # ---------------------------------------------------------------------------
+BYTES_DE_PARAMETRO='^[0-9;:<=>?]$'   # 0x30–0x3F: o miolo de uma sequência CSI
+
 ler_tecla() {
-  local tempo="${1:-}" k resto
+  local tempo="${1:-}" k introdutor corpo byte botao
   if [[ -n "${tempo}" ]]; then
     IFS= read -rsn1 -t "${tempo}" k || { printf ''; return 0; }
   else
     IFS= read -rsn1 k || { printf 'q'; return 0; }
   fi
-  if [[ "${k}" == $'\033' ]]; then
-    IFS= read -rsn2 -t 0.05 resto || resto=''
-    case "${resto}" in
-      '[A') printf 'cima' ;;
-      '[B') printf 'baixo' ;;
-      *)    printf 'esc' ;;
+  if [[ "${k}" != $'\033' ]]; then printf '%s' "${k}"; return 0; fi
+
+  # Só `[` (CSI) e `O` (SS3, as setas em modo de aplicação) abrem sequência.
+  IFS= read -rsn1 -t 0.05 introdutor || introdutor=''
+  if [[ "${introdutor}" != '[' && "${introdutor}" != 'O' ]]; then
+    printf 'esc'; return 0
+  fi
+
+  corpo=''
+  while IFS= read -rsn1 -t 0.05 byte; do
+    corpo+="${byte}"
+    [[ "${byte}" =~ ${BYTES_DE_PARAMETRO} ]] || break
+  done
+
+  # Mouse em SGR: `<botão;coluna;linha` e `M` (pressão) ou `m` (soltura). Só a
+  # roda interessa — clique e arraste não têm significado neste menu, e devolver
+  # vazio para eles é o que impede um clique de virar tecla.
+  if [[ "${corpo}" == '<'* ]]; then
+    botao="${corpo#<}"; botao="${botao%%;*}"
+    case "${botao}" in
+      64) printf 'roda_cima' ;;
+      65) printf 'roda_baixo' ;;
+      *)  printf '' ;;
     esac
     return 0
   fi
-  printf '%s' "${k}"
+
+  case "${corpo}" in
+    'A')  printf 'cima' ;;
+    'B')  printf 'baixo' ;;
+    '5~') printf 'pagina_cima' ;;
+    '6~') printf 'pagina_baixo' ;;
+    *)    printf '' ;;
+  esac
 }
 
 # ---------------------------------------------------------------------------
@@ -421,7 +523,7 @@ desenhar_menu() {
         "${C_MUTED}${C_DIM}" "(indisponível — ${nota})" "${C_RESET}"
     else
       marcador=''
-      [[ "${estado}" == "confirmar" ]] && marcador="${C_WARNING}!${C_RESET} "
+      [[ "${estado}" == "confirmar" || "${estado}" == "confirmar_reset" ]] && marcador="${C_WARNING}!${C_RESET} "
       printf '   %s%s.%s %s%-9s%s %s%s%s%s' \
         "${C_ACCENT}" "${digito}" "${C_RESET}" \
         "${C_TEXT}" "${rotulo}" "${C_RESET}" \
@@ -447,8 +549,8 @@ confirmar_delete() {
   local linha=$(( ALTURA_BANNER + 2 )) resposta banco="${POSTGRES_DB:-brabo}"
   limpar_corpo
   mover "${linha}" 1;       printf '  %s%sIsto apaga TODAS as tabelas do banco "%s".%s' "${C_BOLD}" "${C_WARNING}" "${banco}" "${C_RESET}"
-  mover $(( linha + 2 )) 1; printf '  %sO schema public é derrubado e recriado, com a extensão pgvector.%s' "${C_MUTED}" "${C_RESET}"
-  mover $(( linha + 3 )) 1; printf '  %sO engine divide o mesmo banco: as tabelas dele somem também.%s' "${C_MUTED}" "${C_RESET}"
+  mover $(( linha + 2 )) 1; printf '  %sOs schemas engine, drizzle e public são derrubados e o public recriado, com pgvector.%s' "${C_MUTED}" "${C_RESET}"
+  mover $(( linha + 3 )) 1; printf '  %sO engine divide o mesmo banco (schema próprio): as tabelas dele somem também.%s' "${C_MUTED}" "${C_RESET}"
   mover $(( linha + 5 )) 1; printf '  %sContainers e volume seguem de pé. Recuperar:%s' "${C_MUTED}" "${C_RESET}"
   mover $(( linha + 6 )) 1; printf '    %spnpm db:migrate  &&  pnpm engine:migrate%s' "${C_TEXT}" "${C_RESET}"
   rodape "$(( LINHAS - 4 ))" "digite ${C_TEXT}${banco}${C_MUTED} e Enter para confirmar — qualquer outra coisa cancela"
@@ -459,6 +561,25 @@ confirmar_delete() {
   printf '\033[?25l'
 
   [[ "${resposta}" == "${banco}" ]]
+}
+
+# Confirmação do Reset total — mesma régua da Delete (só Enter não conta),
+# mas a frase digitada é fixa: este item não gira em torno do NOME do banco,
+# gira em torno de rebuild + apagar + subir + migrar + semear numa tacada só.
+confirmar_reset_total() {
+  local linha=$(( ALTURA_BANNER + 2 )) resposta
+  limpar_corpo
+  mover "${linha}" 1;       printf '  %s%sIsto reconstrói as imagens, apaga TODAS as tabelas e semeia de novo.%s' "${C_BOLD}" "${C_WARNING}" "${C_RESET}"
+  mover $(( linha + 2 )) 1; printf '  %sOrdem: preflight, build + up --wait, DROP SCHEMA (api e engine), migrate, seed.%s' "${C_MUTED}" "${C_RESET}"
+  mover $(( linha + 3 )) 1; printf '  %sCredenciais de provider em .env (*_TEST_KEY) entram já ativas no owner.%s' "${C_MUTED}" "${C_RESET}"
+  rodape "$(( LINHAS - 4 ))" "digite ${C_TEXT}RESET${C_MUTED} e Enter para confirmar — qualquer outra coisa cancela"
+
+  mover "$(( LINHAS - 1 ))" 1; printf '\033[2K  '
+  printf '\033[?25h'
+  IFS= read -r resposta || resposta=''
+  printf '\033[?25l'
+
+  [[ "${resposta}" == "RESET" ]]
 }
 
 # O `</dev/null` não é decoração: sem ele o `docker compose` herda o terminal e
@@ -477,6 +598,61 @@ postgres_de_pe() {
 # ---------------------------------------------------------------------------
 PID_ATUAL=0
 ABORTADO=0
+
+# Quantas linhas a janela do log está deslocada para TRÁS. Zero significa colada
+# no fim — o comportamento antigo, acompanhando a saída ao vivo.
+DESLOCAMENTO=0
+
+rolar() {
+  local log="$1" delta="$2" total teto
+  total="$(contar_linhas "${log}")"
+  # Rolar além do começo do arquivo mostraria tela vazia e daria a impressão de
+  # que o log sumiu; o teto é o que sobra depois do que já cabe na tela.
+  teto=$(( total - $(altura_janela) ))
+  (( teto < 0 )) && teto=0
+  DESLOCAMENTO=$(( DESLOCAMENTO + delta ))
+  (( DESLOCAMENTO < 0 )) && DESLOCAMENTO=0
+  (( DESLOCAMENTO > teto )) && DESLOCAMENTO="${teto}"
+  return 0
+}
+
+# Devolve 0 quando a tecla era de rolagem (e já a aplicou), 1 quando não era.
+# Quem chama usa a resposta para ABRIR a saída: rolar com ela escondida não teria
+# efeito visível nenhum, e o usuário concluiria que a roda não funciona.
+#
+# A roda anda 3 linhas (o passo que os terminais usam), `j`/`k` andam uma e
+# PageUp/PageDown andam uma tela cheia menos uma linha — a linha repetida é o
+# que dá a costura entre uma página e a seguinte.
+tratar_rolagem() {
+  local tecla="$1" log="$2" pagina
+  pagina=$(( $(altura_janela) - 1 )); (( pagina < 1 )) && pagina=1
+  case "${tecla}" in
+    roda_cima)    rolar "${log}" 3 ;;
+    roda_baixo)   rolar "${log}" -3 ;;
+    k)            rolar "${log}" 1 ;;
+    j)            rolar "${log}" -1 ;;
+    pagina_cima)  rolar "${log}" "${pagina}" ;;
+    pagina_baixo) rolar "${log}" "-${pagina}" ;;
+    G)            DESLOCAMENTO=0 ;;
+    *)            return 1 ;;
+  esac
+  return 0
+}
+
+# O rodapé precisa dizer que a janela CONGELOU, senão o log parado no meio de um
+# comando que ainda escreve parece o comando ter travado.
+dicas_rolagem() {
+  if (( DESLOCAMENTO > 0 )); then
+    printf '%scongelado%s em -%s linhas   %sG%s ao vivo' \
+      "${C_WARNING}" "${C_MUTED}" "${DESLOCAMENTO}" "${C_TEXT}" "${C_MUTED}"
+  else
+    # Com o rastreio de mouse ligado, arrastar não seleciona mais texto: o
+    # terminal manda o arrasto para cá. Segurar Shift devolve a seleção nativa —
+    # e quem não souber disso vai achar que o menu quebrou o copiar e colar.
+    printf '%sroda/jk/PgUp%s rolar   %sShift%s p/ selecionar' \
+      "${C_TEXT}" "${C_MUTED}" "${C_TEXT}" "${C_MUTED}"
+  fi
+}
 
 matar_arvore() {
   local p="$1"
@@ -502,29 +678,89 @@ desenhar_execucao_compacta() {
   mover $(( linha + 2 )) 1; printf '\033[2K      %sexecutando… %ss%s' "${C_MUTED}" "${decorrido}" "${C_RESET}"
 }
 
+# ---------------------------------------------------------------------------
+# A janela do log
+#
+# `tail -n` só sabe mostrar o FIM do arquivo — e é por isso que rolar não era
+# questão de ler a roda do mouse melhor: não existia DESLOCAMENTO nenhum para
+# onde rolar. A janela é o recorte `[fim - altura - deslocamento, ...]`, com
+# `sed -n 'a,bp'` (já usado no `--help` deste mesmo script), sem ferramenta nova.
+#
+# Extraída em função própria porque é a única parte disto que se testa sem TTY,
+# pelo modo `--print-window`.
+# ---------------------------------------------------------------------------
+contar_linhas() {
+  local n
+  n="$(wc -l < "$1" 2>/dev/null || printf '0')"
+  n="${n//[^0-9]/}"          # o `wc` do BSD alinha o número com espaços
+  printf '%s' "${n:-0}"
+}
+
+janela_log() {
+  local log="$1" altura="$2" deslocamento="$3" total inicio
+  (( altura < 1 )) && return 0
+  (( deslocamento < 0 )) && deslocamento=0
+  total="$(contar_linhas "${log}")"
+  inicio=$(( total - altura - deslocamento + 1 ))
+  (( inicio < 1 )) && inicio=1
+  sed -n "${inicio},$(( inicio + altura - 1 ))p" "${log}" 2>/dev/null || true
+}
+
+# Quantas linhas do log cabem na tela. Uma conta só, porque quem desenha e quem
+# rola (o passo de página, o teto do deslocamento) precisam do MESMO número.
+altura_janela() { printf '%s' "$(( LINHAS - 3 - (ALTURA_BANNER + 2) ))"; }
+
 desenhar_execucao_expandida() {
   local rotulo="$1" log="$2"
   local topo=$(( ALTURA_BANNER + 2 )) base=$(( LINHAS - 3 ))
-  local disponiveis=$(( base - topo )) l=0 texto
+  local disponiveis l=0 texto
+  disponiveis="$(altura_janela)"
   mover "${topo}" 1; printf '\033[2K   %s%s%s' "${C_TEXT}" "${rotulo}" "${C_RESET}"
   l=$(( topo + 1 ))
   while IFS= read -r texto; do
+    (( l > base )) && break
     mover "${l}" 1
     printf '\033[2K   %s%s%s' "${C_MUTED}" "${texto:0:$(( COLUNAS - 5 ))}" "${C_RESET}"
     l=$(( l + 1 ))
-  done < <(tail -n "${disponiveis}" "${log}" 2>/dev/null || true)
+  done < <(janela_log "${log}" "${disponiveis}" "${DESLOCAMENTO}")
   while (( l <= base )); do mover "${l}" 1; printf '\033[2K'; l=$(( l + 1 )); done
+}
+
+# ---------------------------------------------------------------------------
+# Copiar comando (tecla `c`, nas duas telas de execução — rodando e já
+# concluída)
+#
+# OSC 52 é a única forma de um processo escrever na área de transferência do
+# LADO DO CLIENTE a partir do bash — funciona local e sobre SSH, na maioria
+# dos terminais modernos —, mas não há como confirmar sucesso: o terminal não
+# devolve nada de volta. Por isso o texto puro do comando SEMPRE também vai
+# para a janela de log (o mecanismo que já existe e sempre funciona), como
+# segunda via — quem estiver num terminal sem suporte a OSC 52 ainda sai
+# daqui com o comando para copiar à mão.
+# ---------------------------------------------------------------------------
+copiar_comando() {
+  local comando="$1" log="$2"
+  printf '\033]52;c;%s\033\\' "$(base64 -w0 <<< "${comando}")" > /dev/tty 2>/dev/null || true
+  {
+    printf '%s\n' "${comando}"
+    printf 'Comando copiado (ou copie a linha acima manualmente).\n'
+  } >> "${log}"
 }
 
 executar() {
   local caminho="$1"
   local rotulo comando log pid modo modo_anterior inicio quadro tecla codigo decorrido
+  local total_agora total_anterior=0
   rotulo="$(trilha "${caminho}")"
   comando="${CMD[$caminho]}"
   log="$(mktemp "${TMPDIR:-/tmp}/brabo-bootstrap.XXXXXX")"
   LOGS+=("${log}")
 
   modo=compacto; modo_anterior=compacto; quadro=0; inicio="${SECONDS}"; ABORTADO=0
+  DESLOCAMENTO=0
+  # A roda só é ligada aqui: esta é a única tela onde rolar significa algo, e
+  # rastrear mouse no menu custaria a seleção de texto por nada.
+  ligar_mouse
   limpar_corpo
 
   # stdin vem de /dev/null de propósito: o comando roda em background enquanto
@@ -547,16 +783,43 @@ executar() {
     fi
     if [[ "${modo}" == "compacto" ]]; then
       desenhar_execucao_compacta "${rotulo}" "${quadro}" "${decorrido}"
-      rodape "$(( LINHAS - 2 ))" "${C_TEXT}↓${C_MUTED} ver a saída   ${C_TEXT}Ctrl+C${C_MUTED} abortar"
+      rodape "$(( LINHAS - 2 ))" "${C_TEXT}↓${C_MUTED} ver a saída   ${C_TEXT}c${C_MUTED} copiar comando   ${C_TEXT}Ctrl+C${C_MUTED} abortar"
     else
+      # Congelar de verdade exige compensar o CRESCIMENTO do log: o
+      # deslocamento conta linhas a partir do FIM, e o fim anda enquanto o
+      # comando escreve. Sem somar o que entrou desde o quadro anterior, a
+      # janela escorregaria uma linha a cada linha nova — e "congelado" que
+      # anda cinco vezes por segundo é pior que não congelar.
+      total_agora="$(contar_linhas "${log}")"
+      if (( DESLOCAMENTO > 0 && total_agora > total_anterior )); then
+        DESLOCAMENTO=$(( DESLOCAMENTO + total_agora - total_anterior ))
+      fi
+      total_anterior="${total_agora}"
       desenhar_execucao_expandida "${rotulo}" "${log}"
-      rodape "$(( LINHAS - 2 ))" "${C_TEXT}↑${C_MUTED} esconder a saída   ${C_TEXT}Ctrl+C${C_MUTED} abortar"
+      rodape "$(( LINHAS - 2 ))" "${C_TEXT}↑${C_MUTED} esconder   $(dicas_rolagem)   ${C_TEXT}c${C_MUTED} copiar comando   ${C_TEXT}Ctrl+C${C_MUTED} abortar"
     fi
     quadro=$(( quadro + 1 ))
     tecla="$(ler_tecla 0.2)"
+    if tratar_rolagem "${tecla}" "${log}"; then
+      if [[ "${modo}" == "compacto" ]]; then
+        modo=expandido
+        # A âncora do congelamento começa AGORA: herdar a contagem de antes de
+        # a saída ser escondida faria a compensação somar de uma vez tudo que o
+        # comando escreveu enquanto ninguém olhava.
+        total_anterior="$(contar_linhas "${log}")"
+      fi
+      continue
+    fi
     case "${tecla}" in
       baixo) modo=expandido ;;
-      cima)  modo=compacto ;;
+      # Recolher volta a acompanhar o fim: reabrir a saída no ponto em que se
+      # parou de olhar, minutos depois, mostraria um trecho que já não é o que
+      # está acontecendo.
+      cima)  modo=compacto; DESLOCAMENTO=0 ;;
+      # Não é destrutiva e não precisa de Enter — mesmo idioma de tecla única
+      # do resto do menu. Funciona também com o comando ainda RODANDO: é o
+      # texto do comando que se copia, não a saída dele.
+      c)     copiar_comando "${comando}" "${log}" ;;
     esac
   done
 
@@ -578,31 +841,38 @@ executar() {
 
   # A dica do banco só aparece quando o Delete de fato rodou: o engine divide
   # o mesmo banco, e migrar só a api deixaria o Oban sem tabela.
-  if [[ "${caminho}" == "3.3" ]] && (( codigo == 0 )) && (( ! ABORTADO )); then
+  if [[ "${caminho}" == "3.4" ]] && (( codigo == 0 )) && (( ! ABORTADO )); then
     mover $(( linha + 2 )) 1; printf '   %spara recuperar:%s %spnpm db:migrate  &&  pnpm engine:migrate%s' \
       "${C_MUTED}" "${C_RESET}" "${C_TEXT}" "${C_RESET}"
   fi
 
   ULTIMO_CODIGO="${codigo}"
 
-  modo=compacto
+  modo=compacto; DESLOCAMENTO=0
   while true; do
     if [[ "${modo}" == "expandido" ]]; then
       desenhar_execucao_expandida "${rotulo}" "${log}"
-      rodape "$(( LINHAS - 2 ))" "${C_TEXT}↑${C_MUTED} esconder   ${C_TEXT}v${C_MUTED} voltar   ${C_TEXT}q${C_MUTED} sair"
+      rodape "$(( LINHAS - 2 ))" "${C_TEXT}↑${C_MUTED} esconder   $(dicas_rolagem)   ${C_TEXT}c${C_MUTED} copiar comando   ${C_TEXT}v${C_MUTED} voltar   ${C_TEXT}q${C_MUTED} sair"
     else
-      rodape "$(( LINHAS - 2 ))" "${C_TEXT}↓${C_MUTED} ver a saída   ${C_TEXT}v${C_MUTED} voltar   ${C_TEXT}q${C_MUTED} sair"
+      rodape "$(( LINHAS - 2 ))" "${C_TEXT}↓${C_MUTED} ver a saída   ${C_TEXT}c${C_MUTED} copiar comando   ${C_TEXT}v${C_MUTED} voltar   ${C_TEXT}q${C_MUTED} sair"
     fi
     tecla="$(ler_tecla)"
+    # Depois que o comando termina o log está parado, então aqui não há o que
+    # congelar — mas é justamente aqui que se rola de verdade: ler o erro que
+    # passou voando é o motivo de a rolagem existir.
+    if tratar_rolagem "${tecla}" "${log}"; then modo=expandido; continue; fi
     case "${tecla}" in
       baixo) modo=expandido ;;
-      cima)  modo=compacto; limpar_corpo; mover "${linha}" 1
+      cima)  modo=compacto; DESLOCAMENTO=0; limpar_corpo; mover "${linha}" 1
              if (( codigo == 0 )); then
                printf '   %sok%s  %s%s%s' "${C_SUCCESS}" "${C_RESET}" "${C_TEXT}" "${rotulo}" "${C_RESET}"
              else
                printf '   %sfalhou%s  %s%s%s  %s(exit %s)%s' "${C_DANGER}" "${C_RESET}" "${C_TEXT}" "${rotulo}" "${C_RESET}" "${C_MUTED}" "${codigo}" "${C_RESET}"
              fi ;;
-      v)     return 0 ;;
+      c)     copiar_comando "${comando}" "${log}" ;;
+      # Voltar ao menu desliga o mouse na mesma volta em que ele deixa de ter
+      # uso; sair não precisa, porque o trap de EXIT desliga de qualquer jeito.
+      v)     desligar_mouse; return 0 ;;
       q)     exit "${codigo}" ;;
     esac
   done
@@ -663,13 +933,21 @@ principal() {
           continue
         fi
         if eh_folha "${escolhido}"; then
-          if [[ "${ESTADO[$escolhido]:-ok}" == "confirmar" ]]; then
-            if ! postgres_de_pe; then
-              avisar "o container postgres não está de pé — suba com Docker › Create"
-              continue
-            fi
-            confirmar_delete || { avisar "cancelado — nada foi apagado"; continue; }
-          fi
+          case "${ESTADO[$escolhido]:-ok}" in
+            confirmar)
+              # Só a Delete: ela roda `${COMPOSE} exec postgres`, então precisa
+              # do container já de pé — ao contrário do Reset total, que sobe
+              # o compose sozinho.
+              if ! postgres_de_pe; then
+                avisar "o container postgres não está de pé — suba com Docker › Create"
+                continue
+              fi
+              confirmar_delete || { avisar "cancelado — nada foi apagado"; continue; }
+              ;;
+            confirmar_reset)
+              confirmar_reset_total || { avisar "cancelado — nada foi alterado"; continue; }
+              ;;
+          esac
           executar "${escolhido}"
         else
           caminho="${escolhido}"
@@ -684,18 +962,41 @@ principal() {
 # ---------------------------------------------------------------------------
 modo_impressao=0
 caminho_impressao='.'
+# `--print-window <log> <altura> <deslocamento>` existe pelo mesmo motivo do
+# `--print-commands`: um TUI não se testa por unidade, mas o RECORTE do log é
+# aritmética pura e é o que erra na prática (a borda do começo do arquivo, o
+# deslocamento maior que o log). Sem TTY e sem desenhar nada.
+janela_argumentos=()
 while (( $# > 0 )); do
   case "$1" in
     --print-commands) modo_impressao=1; shift ;;
+    --print-window)
+      shift
+      if (( $# < 3 )); then
+        printf 'uso: --print-window <log> <altura> <deslocamento>\n' >&2
+        exit 2
+      fi
+      janela_argumentos=("$1" "$2" "$3"); shift 3 ;;
     --path) caminho_impressao="${2:-}"; shift 2 ;;
     -h|--help)
-      sed -n '2,28p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      # 2,32 é EXATAMENTE o bloco de comentário do topo. O intervalo era maior
+      # que ele e o --help imprimia `set -euo pipefail` junto com a ajuda.
+      sed -n '2,32p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *) printf 'argumento desconhecido: %s\n' "$1" >&2; exit 2 ;;
   esac
 done
 
 configurar_cores
+
+if (( ${#janela_argumentos[@]} == 3 )); then
+  if [[ ! -r "${janela_argumentos[0]}" ]]; then
+    printf 'log ilegível: %s\n' "${janela_argumentos[0]}" >&2
+    exit 2
+  fi
+  janela_log "${janela_argumentos[@]}"
+  exit 0
+fi
 
 if (( modo_impressao )); then
   imprimir_comandos "${caminho_impressao}"

@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import type { Handoff } from '../lib/api-types';
+import { historicoFalso } from '../test/historico-de-eventos';
 
 /**
  * RN-158 — `agent.response` renderizava texto PURO no fio: `#`/`**`/fence de
@@ -20,6 +21,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('../lib/hooks', () => ({
   useSessionEvents: () => ({ data: eventos() }),
+  useSessionEventHistory: () => historicoFalso(eventos().items),
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: [] as Handoff[] }),

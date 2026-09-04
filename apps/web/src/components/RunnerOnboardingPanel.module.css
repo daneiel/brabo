@@ -1,0 +1,94 @@
+.painel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.mensagem {
+  margin: 0;
+  max-width: 440px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.instrucao {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 480px;
+}
+
+.instrucao p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.comando {
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--code-bg);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  user-select: all;
+  word-break: break-all;
+}
+
+.detalhe {
+  color: var(--text-muted);
+  font-size: 11px !important;
+}
+
+.acoesAutomaticas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.selecaoPlataforma {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.manual {
+  max-width: 480px;
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.manual summary {
+  cursor: pointer;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.manual .instrucao {
+  margin-top: 8px;
+}
+
+/* O aviso do passo de terminal, dito ANTES do clique.
+   Deliberadamente mais legível que `.detalhe` (11px, muted), que é a mesma
+   frase dita DEPOIS: no fim ela explica um passo que a pessoa já está vendo;
+   aqui ela precisa competir com um botão e ser lida antes dele. Continua
+   secundária ao botão — é um aviso, não um alerta de erro. */
+.avisoPassoHumano {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}

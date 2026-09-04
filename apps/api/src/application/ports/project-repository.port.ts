@@ -1,5 +1,6 @@
 import type {
   Project,
+  ProjectExecutionMode,
   StoryPromotionMode,
 } from '../../domain/iam/project.entity';
 import type {
@@ -20,6 +21,18 @@ export interface ProjectInput {
   // Quem promove story a `ready` (Fase 12c — RN-048). Omitido na criação usa
   // o default da coluna (`manual`).
   storyPromotion?: StoryPromotionMode;
+  // ONDE o comando executa (RN-169/RN-421, ADR 0072/0104). Omitido na
+  // criação usa o default da coluna (`container`) — o comportamento de
+  // sempre.
+  executionMode?: ProjectExecutionMode;
+  // Caminho absoluto da pasta do usuário; com `executionMode: 'mounted'` ou
+  // `'runner'`, validado pelo CreateProjectUseCase antes de chegar aqui
+  // (RN-170/RN-422/RN-423).
+  workspacePath?: string | null;
+  // Quando o runner confirmou o caminho pela primeira vez (RN-423) — nunca
+  // enviado na CRIAÇÃO (nasce implícito NULL, default da coluna); só
+  // `ConfirmProjectWorkspaceUseCase` escreve aqui, via `update`.
+  workspaceVerifiedAt?: Date | null;
 }
 
 export abstract class ProjectRepository {

@@ -1,0 +1,26 @@
+{
+  "loadErrorTitle": "Não foi possível abrir este projeto.",
+  "visibility": {
+    "public": "público",
+    "private": "privado"
+  },
+  "adopted": "adotado",
+  "repositoryNotProvisioned": "repositório não provisionado",
+  "precisaDeVoce": {
+    "chip": "Precisa de você",
+    "titulo": "Precisa de você",
+    "subtitulo": "As cinco filas de decisão, separadas — o total de cada uma continua na aba dela.",
+    "fechar": "Fechar o painel",
+    "vazio": "Nada esperando decisão sua.",
+    "semData": "sem data",
+    "tempoEmprestado": "história atualizada {{tempo}}",
+    "notaDeArquitetura": "A pendência de arquitetura é uma visão derivada e não tem data própria — a data mostrada é a da última atualização da história relacionada.",
+    "filas": {
+      "aprovacoes": "Aprovações de ação",
+      "prs": "Merges de PR",
+      "promocoes": "Promoções de história",
+      "arquitetura": "Pendências de arquitetura",
+      "hipoteses": "Hipóteses do Psicólogo"
+    }
+  }
+}

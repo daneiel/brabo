@@ -1,7 +1,12 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { useHypotheses, usePsychologistAnalyses } from '../lib/hooks';
+import {
+  useHypotheses,
+  usePsychologistAnalyses,
+  usePsychologistStatus,
+} from '../lib/hooks';
 import {
   acceptHypothesis,
   ApiError,
@@ -35,18 +40,27 @@ import styles from './ProjectOverviewTab.module.css';
  * duas filas de decisão do projeto (backlog e aprovações).
  */
 export function ProjectInsightsTab({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('insights');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const hypothesesQuery = useHypotheses(projectId);
   const { data: analyses } = usePsychologistAnalyses(projectId);
   // O Psicólogo pode estar pausado GLOBALMENTE (decisão do usuário em
-  // 2026-08-10, não bug — ver docs/explanation/backlog.md). Não há hoje um
-  // jeito de saber isso ANTES de clicar (o estado é do engine, não vem em
-  // nenhuma leitura desta tela); "Reanalisar" descobre no primeiro clique e
-  // os botões ficam desabilitados dali em diante, com a explicação
-  // PERSISTENTE na tela — não só um toast que some (RN-088: nunca falha
-  // silenciosa ou confusa). Mesmo padrão de `ProficiencySection` (Anamnese).
+  // 2026-08-10, não bug — ver docs/explanation/backlog.md). RN-454: a
+  // leitura de `usePsychologistStatus` sabe disso de ANTEMÃO — antes desta
+  // rodada, o único jeito de descobrir era o 503 do primeiro clique em
+  // "Reanalisar", e esse botão só existe quando já há uma rodada de análise
+  // (`runs.length > 0`); a tela com ZERO hipóteses nunca chegava perto dele,
+  // então nunca conseguia distinguir "pausado por decisão" de "ainda não
+  // analisou nada". `psicologoDesativado` continua existindo como reforço
+  // do 503 em si — a flag pode mudar EM VOO entre a leitura de status e o
+  // clique — com a explicação PERSISTENTE na tela, não só um toast que some
+  // (RN-088: nunca falha silenciosa ou confusa). Mesmo padrão de
+  // `ProficiencySection` (Anamnese).
+  const { data: status } = usePsychologistStatus(projectId);
   const [psicologoDesativado, setPsicologoDesativado] = useState(false);
+  const pausadoConhecido = status?.enabled === false;
+  const psicologoBloqueado = psicologoDesativado || pausadoConhecido;
 
   const all = hypothesesQuery.data ?? [];
   const pending = all.filter((h) => h.status === 'proposed');
@@ -76,8 +90,11 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
       await queryClient.invalidateQueries({ queryKey: ['hypotheses', projectId] });
     } catch {
       showToast({
-        title: 'Erro',
-        message: `Não foi possível ${action === 'accept' ? 'aceitar' : 'descartar'} a hipótese`,
+        title: t('projectInsightsTab.toasts.genericErrorTitle'),
+        message:
+          action === 'accept'
+            ? t('projectInsightsTab.toasts.acceptError')
+            : t('projectInsightsTab.toasts.dismissError'),
         tone: 'danger',
       });
     }
@@ -90,8 +107,8 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
     try {
       await reanalyzeSession(projectId, sessionId);
       showToast({
-        title: 'Reanálise enfileirada',
-        message: 'O Psicólogo vai analisar esta sessão de novo.',
+        title: t('projectInsightsTab.toasts.reanalyzeQueuedTitle'),
+        message: t('projectInsightsTab.toasts.reanalyzeQueuedMessage'),
       });
     } catch (erro) {
       if (erro instanceof ApiError && erro.status === 503) {
@@ -100,14 +117,17 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
         // ReanalyzeSessionUseCase).
         setPsicologoDesativado(true);
         showToast({
-          title: 'Psicólogo pausado',
-          message: mensagemDaApi(erro, 'O Psicólogo está desativado globalmente.'),
+          title: t('projectInsightsTab.toasts.psychologistPausedTitle'),
+          message: mensagemDaApi(
+            erro,
+            t('projectInsightsTab.toasts.psychologistPausedFallback'),
+          ),
           tone: 'warning',
         });
       } else {
         showToast({
-          title: 'Erro',
-          message: 'Não foi possível enfileirar a reanálise',
+          title: t('projectInsightsTab.toasts.genericErrorTitle'),
+          message: t('projectInsightsTab.toasts.reanalyzeError'),
           tone: 'danger',
         });
       }
@@ -116,27 +136,36 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.arch}>
-      <div className={styles.sectionHeader}>Insights</div>
+      <div className={styles.sectionHeader}>{t('projectInsightsTab.header')}</div>
       {/* Os três estados da RN-088, com o ERRO antes do vazio: `data ?? []`
           seguido de `length === 0` fazia a api respondendo 429 dizer "sem
           hipóteses ainda", que é indistinguível de um projeto que o Psicólogo
-          nunca analisou. */}
+          nunca analisou. RN-454: o estado vazio TAMBÉM se divide em dois —
+          pausado por decisão (sabido) vs. genuinamente ainda sem análise —
+          e cada um tem a frase que É verdade para ele. */}
       {hypothesesQuery.isError ? (
         <ErroDeCarregamento
-          titulo="Não foi possível carregar as hipóteses."
+          titulo={t('projectInsightsTab.errorTitle')}
           erro={hypothesesQuery.error}
           onTentarDeNovo={() => void hypothesesQuery.refetch()}
         />
       ) : hypothesesQuery.data === undefined ? (
-        <div className={styles.sectionSub}>Carregando as hipóteses…</div>
+        <div className={styles.sectionSub}>{t('projectInsightsTab.loading')}</div>
       ) : all.length === 0 ? (
         <div className={styles.sectionSub}>
-          Sem hipóteses ainda — o Psicólogo analisa cada sessão encerrada.
+          {t(
+            pausadoConhecido
+              ? 'projectInsightsTab.emptyPaused'
+              : 'projectInsightsTab.empty',
+          )}
         </div>
       ) : (
         <>
           <div className={styles.sectionSub}>
-            {all.length} hipótese(s) · {pending.length} aguardando decisão
+            {t('projectInsightsTab.summary', {
+              total: all.length,
+              pending: pending.length,
+            })}
           </div>
 
           {/* Faixa de análises: é aqui que o custo distinto entre triagem
@@ -146,18 +175,22 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
               {runs.map((run) => (
                 <div key={run.id} className={styles.analysisRow}>
                   <Badge tone={run.tier === 'pesada' ? 'accent' : 'muted'}>
-                    triagem {run.tier}
+                    {t('projectInsightsTab.analysisStrip.tier', { tier: run.tier })}
                   </Badge>
                   <Link
                     to="/projects/$projectId/sessions/$sessionId"
                     params={{ projectId, sessionId: run.sessionId }}
                     className={styles.analysisSession}
                   >
-                    sessão {idCurtoDaSessao(run.sessionId)}
+                    {t('projectInsightsTab.analysisStrip.sessionLabel', {
+                      id: idCurtoDaSessao(run.sessionId),
+                    })}
                   </Link>
                   <span className={styles.analysisMeta}>
-                    {run.eventCountAtAnalysis} evento(s) · {run.hypothesisCount}{' '}
-                    hipótese(s)
+                    {t('projectInsightsTab.analysisStrip.meta', {
+                      events: run.eventCountAtAnalysis,
+                      hypotheses: run.hypothesisCount,
+                    })}
                   </span>
                   <span className={styles.analysisCost}>
                     {formatMicros(run.costMicros)}
@@ -166,14 +199,14 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
                     type="button"
                     className={styles.analysisReanalyze}
                     onClick={() => reanalyze(run.sessionId)}
-                    disabled={psicologoDesativado}
+                    disabled={psicologoBloqueado}
                     title={
-                      psicologoDesativado
-                        ? 'O Psicólogo está pausado globalmente'
-                        : 'Roda a análise de novo e gasta orçamento; a anterior fica no histórico'
+                      psicologoBloqueado
+                        ? t('projectInsightsTab.analysisStrip.reanalyzeTitleDisabled')
+                        : t('projectInsightsTab.analysisStrip.reanalyzeTitleEnabled')
                     }
                   >
-                    Reanalisar
+                    {t('projectInsightsTab.analysisStrip.reanalyzeButton')}
                   </button>
                 </div>
               ))}
@@ -183,11 +216,9 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
           {/* Pausa GLOBAL — decisão do usuário em 2026-08-10, aguardando
               refinamento futuro. Fica visível de propósito, não só um toast
               que some (RN-088). */}
-          {psicologoDesativado && (
+          {psicologoBloqueado && (
             <div className={styles.sectionSub} style={{ marginTop: 8 }}>
-              O Psicólogo está pausado globalmente por decisão do time — sem
-              reanálise nova por enquanto. As hipóteses já emitidas continuam
-              aqui.
+              {t('projectInsightsTab.pausedNotice')}
             </div>
           )}
 

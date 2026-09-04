@@ -221,6 +221,31 @@ defmodule Engine.Harness.ToolLoopTest do
                      %{type: "agent.response", payload: %{content: "pronto"}}}
   end
 
+  # RN-175 — "todos os agentes devem apresentar o seu modelo ao lado do nome".
+  # Os quatro conversacionais gravam `modelName` desde a RN-146; o `ToolLoop`,
+  # que é o caminho de TODO agente de execução e de gate, nunca gravou — e a
+  # tela mostrava o rótulo de desconhecido para todos eles.
+  test "agent.response carrega o modelo que gerou a resposta", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("pronto", "llama3.2:3b")])
+
+    assert {:ok, _out} = ToolLoop.run(ctx)
+
+    assert_received {:event_appended, _, _,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "pronto", modelName: "llama3.2:3b"}
+                     }}
+  end
+
+  test "sem modelo no frame (api antiga/falha antes do binding), o payload traz nil — nunca inventa",
+       %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("pronto")])
+
+    assert {:ok, _out} = ToolLoop.run(ctx)
+
+    assert_received {:event_appended, _, _, %{type: "agent.response", payload: %{modelName: nil}}}
+  end
+
   test "modelo termina o turno sem texto e sem tool call: nenhum agent.response vazio, ctx segue {:ok, _} para o chamador decidir o desfecho",
        %{ctx: ctx} do
     Process.put(:fake_llm_turns, [

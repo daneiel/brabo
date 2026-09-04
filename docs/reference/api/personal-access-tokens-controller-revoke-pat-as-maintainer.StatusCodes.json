@@ -1,0 +1,1 @@
+{"responses":{"204":{"description":"Token revogado. Sem corpo."},"401":{"description":"No token, expired token, or invalid signature."},"403":{"description":"Papel insuficiente no projeto."},"404":{"description":"Projeto não encontrado."},"429":{"description":"Rate limit per user or per IP."}}}

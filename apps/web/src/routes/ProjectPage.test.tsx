@@ -1,6 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
+// A instância REAL (não uma isolada): `ErroDeCarregamento` (namespace `ui`)
+// é filho de `ProjectPage` e usa `useTranslation('ui')` — sem uma instância
+// de i18next inicializada no módulo, o hook nem renderiza (mesmo padrão de
+// `project-tabs.test.tsx`).
+import i18n from '../lib/i18n';
 import { ProjectPage } from './ProjectPage';
 import { ApiError } from '../lib/api-client';
 import type { Project } from '../lib/api-types';
@@ -25,10 +31,12 @@ vi.mock('../lib/api-client', async () => {
 });
 
 vi.mock('../lib/hooks', () => ({
+  useArchitecture: () => ({ data: undefined }),
   useBacklog: () => ({ data: [] }),
   useHypotheses: () => ({ data: [] }),
   useLatestSession: () => ({ latest: undefined }),
   usePendingActions: () => ({ data: undefined }),
+  useProjectPendingActions: () => ({ data: undefined }),
 }));
 
 // As abas são inteiras demais para montar aqui, e nenhuma delas é o assunto:
@@ -54,6 +62,9 @@ const PROJETO: Project = {
   createdBy: 'user-1',
   maxConsecutiveBlocked: null,
   storyPromotion: 'manual',
+  executionMode: 'container',
+  workspacePath: null,
+  workspaceVerifiedAt: null,
   createdAt: '2026-08-01T10:00:00.000Z',
   updatedAt: '2026-08-01T10:00:00.000Z',
 };
@@ -63,16 +74,25 @@ function montar() {
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={client}>
-      <ProjectPage projectId="proj-1" />
-    </QueryClientProvider>,
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ProjectPage projectId="proj-1" />
+      </QueryClientProvider>
+    </I18nextProvider>,
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
   getRepository.mockResolvedValue(null);
   getProjectBudget.mockResolvedValue(null);
+});
+
+// Restaura o default do app: o singleton é compartilhado entre arquivos de
+// teste no mesmo worker do vitest.
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 /**

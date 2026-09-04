@@ -15,6 +15,12 @@ defmodule Engine.Infra.InfraLeadServer do
   fresco. Tools NUNCA incluem `Terminal` — restrição estrutural (defesa em
   profundidade: `agent_autonomy (infra, terminal) = deny`, ver ADR 0014).
 
+  Também elege, entre as imagens candidatas que o Arquiteto roteou por módulo
+  (`route_modules_to_infra`, ADR 0131), qual sobe como o container real do
+  projeto — `propose_container_start` (ADR 0131/RN-487, PR 1.5), independente
+  da PR de infra: nunca inventa candidata fora da lista, e vira
+  `proposed_action` que SEMPRE exige aprovação humana.
+
   ## Por que este continua sendo um GenServer conversacional e o Workflows não
 
   O QA (Fase 8b) reconstruiu seus subagentes sobre `ToolLoop`
@@ -42,7 +48,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Infra.{InfraLead, WorkflowsAgent}
-  alias Engine.Infra.Tools.{ValidateInfraFile, ProposeInfraPr}
+  alias Engine.Infra.Tools.{ValidateInfraFile, ProposeInfraPr, ProposeContainerStart}
   alias Engine.Gates.Dispatcher
   alias Engine.Harness.ArtifactEmitter
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
@@ -87,7 +93,7 @@ defmodule Engine.Infra.InfraLeadServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [ValidateInfraFile.spec(), ProposeInfraPr.spec()]
+       tool_specs: [ValidateInfraFile.spec(), ProposeInfraPr.spec(), ProposeContainerStart.spec()]
      }}
   end
 
@@ -174,7 +180,7 @@ defmodule Engine.Infra.InfraLeadServer do
       # turno terminava em silêncio absoluto, pior que o balão vazio.
       {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
         emit_falha(state, {:final, erro})
-        {state, ""}
+        {:done, state}
 
       {:ok, %{"message" => message}} ->
         content = Map.get(message, "content", "")
@@ -199,29 +205,78 @@ defmodule Engine.Infra.InfraLeadServer do
   defp dispatch_calls(calls, state, remaining) do
     calls
     |> Enum.reduce_while({:cont, state}, fn call, {:cont, st} ->
-      if Map.get(call, "name") == "propose_infra_pr" do
-        args = Map.get(call, "arguments", %{})
-        title = Map.get(args, "title", "Dockerfiles e compose de dev")
-        files = Map.get(args, "files", [])
+      case Map.get(call, "name") do
+        "propose_infra_pr" ->
+          args = Map.get(call, "arguments", %{})
+          title = Map.get(args, "title", "Dockerfiles e compose de dev")
+          files = Map.get(args, "files", [])
 
-        st =
-          append(st, %{
-            "role" => "tool",
-            "content" => "arquivos recebidos, consolidando com o Workflows antes de propor.",
-            "toolCallId" => Map.get(call, "id"),
-            "name" => "propose_infra_pr",
-            :pinned => false
-          })
+          st =
+            append(st, %{
+              "role" => "tool",
+              "content" => "arquivos recebidos, consolidando com o Workflows antes de propor.",
+              "toolCallId" => Map.get(call, "id"),
+              "name" => "propose_infra_pr",
+              :pinned => false
+            })
 
-        {:halt, {:proposed, title, files, st}}
-      else
-        {:cont, {:cont, dispatch_tool(call, st)}}
+          {:halt, {:proposed, title, files, st}}
+
+        "propose_container_start" ->
+          {:cont, {:cont, dispatch_container_start(call, st)}}
+
+        _ ->
+          {:cont, {:cont, dispatch_tool(call, st)}}
       end
     end)
     |> case do
       {:proposed, _title, _files, _state} = result -> result
       {:cont, state} -> run_turn(state, remaining - 1)
     end
+  end
+
+  # `propose_container_start` NÃO halts como `propose_infra_pr` — é ação
+  # independente (elege candidata do roteamento do Arquiteto, ADR 0131), sem
+  # consolidação com o Workflows. Despacha inline, direto pra api, e deixa o
+  # loop continuar: o modelo pode chamar `propose_infra_pr` antes/depois, ou
+  # nunca chamar esta.
+  defp dispatch_container_start(call, state) do
+    args = Map.get(call, "arguments", %{})
+    id = Map.get(call, "id")
+
+    payload = %{
+      imagem: Map.get(args, "imagem", ""),
+      network: Map.get(args, "network", "none"),
+      resources: Map.get(args, "resources", %{}),
+      rationale: Map.get(args, "rationale", "")
+    }
+
+    emit(state, "tool.call", %{tool: "propose_container_start", args: payload})
+
+    actor = %{kind: "agent", id: @agent}
+
+    text =
+      case EngineApiClient.propose_action(
+             state.project_id,
+             state.session_id,
+             "container_start",
+             actor,
+             payload
+           ) do
+        {:ok, %{"id" => _id, "status" => status}} ->
+          "container_start proposto (status #{status}) — decisão final do usuário."
+
+        {:error, reason} ->
+          "container_start recusado: #{inspect(reason)}"
+      end
+
+    append(state, %{
+      "role" => "tool",
+      "content" => text,
+      "toolCallId" => id,
+      "name" => "propose_container_start",
+      :pinned => false
+    })
   end
 
   defp dispatch_tool(call, state) do
@@ -392,6 +447,7 @@ defmodule Engine.Infra.InfraLeadServer do
   defp build_kickoff(ctx) do
     module_map = Map.get(ctx, "moduleMap")
     adrs = Map.get(ctx, "adrs", [])
+    routing = Map.get(ctx, "moduleRouting")
 
     modules_text =
       case module_map do
@@ -415,6 +471,17 @@ defmodule Engine.Infra.InfraLeadServer do
           end)
       end
 
+    routing_text =
+      case routing do
+        %{"status" => "roteado", "roteamento" => rotas} when is_list(rotas) and rotas != [] ->
+          Enum.map_join(rotas, "\n", fn r ->
+            "- #{Map.get(r, "modulo")}: #{Map.get(r, "imagemCandidata")} — #{Map.get(r, "porque")}"
+          end)
+
+        _ ->
+          "(sem roteamento vigente — o Arquiteto não rodou route_modules_to_infra nesta sessão)"
+      end
+
     """
     Você recebeu o handoff do Arquiteto. Proponha os artefatos de INFRA que são
     SEUS — Dockerfiles e compose de dev. O pipeline de CI é responsabilidade de
@@ -426,14 +493,23 @@ defmodule Engine.Infra.InfraLeadServer do
     3. Valide CADA arquivo com `validate_infra_file` (path + content) antes de propor.
     4. Chame `propose_infra_pr` (title + files) com o que é seu — a consolidação
        com o pipeline de CI acontece depois, automaticamente.
+    5. Se houver roteamento de módulos abaixo, ELEJA uma das imagens candidatas
+       para o container do projeto e chame `propose_container_start` (imagem +
+       network + resources + rationale dizendo por que ESTA candidata, nunca
+       inventando uma imagem fora da lista). Este passo é INDEPENDENTE dos
+       anteriores — pode acontecer antes, depois, ou nunca (sem roteamento
+       vigente, pule-o; o container do projeto segue como está).
 
-    Você NUNCA aplica nada em ambiente — só propõe a PR. Sem acesso a terminal.
+    Você NUNCA aplica nada em ambiente — só propõe. Sem acesso a terminal.
 
     MÓDULOS:
     #{modules_text}
 
     ADRs DE INFRA:
     #{adrs_text}
+
+    ROTEAMENTO DE MÓDULOS (candidatas do Arquiteto — você ELEGE):
+    #{routing_text}
     """
   end
 

@@ -1,0 +1,196 @@
+{
+  "groupLabel": {
+    "local": "Local",
+    "direct": "Direct APIs",
+    "hub": "Hubs"
+  },
+  "upstreamLabel": {
+    "outros": "No declared manufacturer"
+  },
+  "facets": {
+    "toolCalling": {
+      "label": "tool calling",
+      "help": "Only the ones an agent can use (RN-040)."
+    },
+    "vision": {
+      "label": "reads image",
+      "help": "Accepts image as INPUT — screenshot, diagram, rendered PDF."
+    },
+    "reasoning": {
+      "label": "thinking",
+      "help": "Exposes explicit reasoning before the response."
+    },
+    "imagem": {
+      "label": "generates image",
+      "help": "PRODUCES image — a different axis from reading one."
+    }
+  },
+  "uses": {
+    "codigo": "code",
+    "documentacao": "documentation",
+    "analise": "analysis",
+    "imagem": "image",
+    "conversa": "conversation"
+  },
+  "providerLabel": {
+    "ollama": "Ollama (local)",
+    "anthropic": "Anthropic",
+    "openai": "OpenAI",
+    "openrouter": "OpenRouter",
+    "nvidia-nim": "NVIDIA NIM",
+    "together": "Together AI",
+    "deepinfra": "DeepInfra",
+    "bitdeer": "Bitdeer",
+    "vultr": "Vultr"
+  },
+  "price": {
+    "free": "free",
+    "per1m": "per 1M"
+  },
+  "contextWindow": {
+    "thousands": "{{value}}k ctx",
+    "exact": "{{value}} ctx"
+  },
+  "badges": {
+    "active": "active",
+    "inactive": "inactive",
+    "unavailable": "unavailable at provider",
+    "toolCalling": "tool calling",
+    "readsImage": "reads image",
+    "thinking": "thinking",
+    "generatesImage": "generates image",
+    "manualPricing": "manual pricing"
+  },
+  "catalog": {
+    "title": "Model catalog",
+    "eyebrow": "curation per workspace",
+    "subtitle": "What the sync discovers comes in disabled. Only what you activate shows up in the model picker.",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "syncing": "Syncing…",
+    "updateButton": "Update catalog",
+    "usesFilterTitle": "Models this workspace marked as \"{{use}}\"",
+    "countOfTotal": "{{visible}} of {{total}}",
+    "filteredEmpty": {
+      "prefix": "No model matches everything marked. A capability the provider doesn't declare counts as absent, and use is what ",
+      "thisWorkspace": "this workspace",
+      "suffix": " marked — turn off a filter to see the rest."
+    },
+    "missingCatalog": {
+      "prefix": "You have a credential for ",
+      "middle_one": " and no model of it is in the catalog. Registering the key doesn't discover models — click ",
+      "middle_other": " and no models of them are in the catalog. Registering the key doesn't discover models — click ",
+      "suffix": " to fetch them from the provider."
+    },
+    "toasts": {
+      "syncSuccess": "Catalog synced",
+      "syncErrorTitle": "Sync failed",
+      "syncErrorMessage": "The api didn't respond. Nothing was changed in the catalog.",
+      "activated": "Models activated",
+      "deactivated": "Models deactivated",
+      "saveError": "Could not save",
+      "usesUpdated": "Uses updated"
+    },
+    "empty": "No model in the catalog. Register a provider credential and update.",
+    "markedHidden_one": "{{count}} marked",
+    "markedHidden_other": "{{count}} marked",
+    "batchBar": {
+      "selectedCount_one": "{{count}} selected",
+      "selectedCount_other": "{{count}} selected",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "markAs": "mark as",
+      "applyUsesTitle": "Replaces the uses of the marked models — doesn't add to what they already had",
+      "applyUses": "Apply uses",
+      "clearUses": "Clear uses"
+    },
+    "syncReport": {
+      "skippedNoCapability": "no catalog listing",
+      "skippedNoCredential": "no credential registered",
+      "failed": "failed · origin {{origin}}",
+      "summary": "{{discovered}} new · {{reencountered}} back · {{missing}} gone"
+    }
+  },
+  "picker": {
+    "filterFitForAgents": "fit for agents",
+    "noModelsRegistered": "No model registered",
+    "noToolCallingModels": "No model does native tool calling. Uncheck the filter to see the rest.",
+    "currentHiddenByFilter": "The current model ({{model}}) doesn't do native tool calling and is out of this list.",
+    "selectModel": "Select model"
+  },
+  "spend": {
+    "title": "Spend on your keys",
+    "eyebrow": "only you see this",
+    "subtitlePrefix": "The agents of every project in this workspace spend ",
+    "subtitleYours": "your",
+    "subtitleSuffix": " credentials. Here's what went out of each one, per month.",
+    "loading": "Adding up…",
+    "error": "Couldn't load the spend right now. The consumption is still recorded — this is just the reading.",
+    "empty": "No LLM call recorded in the last {{months}} months.",
+    "totalLabel": "Total in the last {{months}} months",
+    "headers": {
+      "provider": "PROVIDER",
+      "agents": "AGENTS",
+      "youInChat": "YOU IN CHAT",
+      "calls": "CALLS",
+      "total": "TOTAL"
+    },
+    "credentialNotRegistered": "credential not registered",
+    "callsCount_one": "({{count}} call)",
+    "callsCount_other": "({{count}} calls)",
+    "currency": {
+      "belowCent": "< {{value}}"
+    }
+  },
+  "huggingface": {
+    "title": "Hugging Face Hub",
+    "eyebrow": "pull a GGUF model into Ollama",
+    "subtitle": "Search GGUF models on the Hub and request a pull into local Ollama. Only official publishers show up by default — nothing downloads without a second explicit confirmation.",
+    "searchLabel": "Search a model on the Hugging Face Hub",
+    "searchPlaceholder": "e.g. llama-3.1-8b",
+    "searchButton": "Search",
+    "searching": "Searching…",
+    "searchError": "Couldn't search the Hugging Face Hub right now.",
+    "noResults": "No GGUF model found for \"{{query}}\".",
+    "communityToggle": "Show community models (non-official)",
+    "communityWarning": "Community models are third-party reuploads, with no manufacturer curation. Check the publisher before pulling — a malicious repository can package tampered weights.",
+    "downloads": "{{value}} downloads",
+    "badgeOfficial": "official",
+    "badgeCommunity": "community",
+    "pullButton": "Pull",
+    "pullStatus": {
+      "pending_confirmation": "awaiting confirmation",
+      "confirmed": "confirmed",
+      "pulling": "pulling…",
+      "active": "active",
+      "failed": "failed"
+    },
+    "confirmModal": {
+      "title": "Confirm model pull",
+      "explanation": "The download runs on the server and can take minutes, depending on the model's size. The model comes in ACTIVATED for this workspace as soon as it finishes.",
+      "preparing": "Preparing request…",
+      "repoIdLabel": "Repository",
+      "sizeLabel": "Estimated size",
+      "sizeUnknown": "not reported by the Hub",
+      "cancel": "Cancel",
+      "confirm": "Confirm and pull"
+    },
+    "toasts": {
+      "requestErrorTitle": "Could not create the pull request",
+      "confirmConnectionLostTitle": "Connection lost during the pull — tracking via status",
+      "pullSuccess": "{{repoId}} pulled and activated",
+      "pullFailedTitle": "Pull of {{repoId}} failed"
+    }
+  },
+  "credentialStep": {
+    "hint": "Provisioning on {{provider}} requires a personal access token (PAT). Select one already registered or add a new one — the token is encrypted on save and never shown again. Verification lives in the project settings, over the token already stored.",
+    "credLabel": "{{provider}} connected",
+    "credMeta": "since {{time}}",
+    "fieldLabel": "New {{provider}} token",
+    "placeholder": "ghp_… / glpat-…",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "addNewToken": "Add new token"
+  }
+}

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -26,6 +27,7 @@ export function ForgotPasswordPage({
   onPedir,
   irPara,
 }: ForgotPasswordPageProps) {
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -41,7 +43,7 @@ export function ForgotPasswordPage({
       // existência da conta, e a tela não tem nada melhor a dizer.
       setEnviado(true);
     } catch {
-      setErro('Não foi possível falar com o servidor. Tente de novo.');
+      setErro(t('forgotPasswordPage.networkError'));
     } finally {
       setEnviando(false);
     }
@@ -50,16 +52,17 @@ export function ForgotPasswordPage({
   if (enviado) {
     return (
       <AuthLayout
-        titulo="Confira seu e-mail"
-        subtitulo="O link vale por tempo limitado e só pode ser usado uma vez."
+        titulo={t('forgotPasswordPage.success.title')}
+        subtitulo={t('forgotPasswordPage.success.subtitle')}
         irPara={irPara}
       >
         <Alert tone="success" role="status">
-          Se houver uma conta com <strong>{email}</strong>, enviamos um link para
-          definir uma senha nova.
+          {t('forgotPasswordPage.success.messagePrefix')}
+          <strong>{email}</strong>
+          {t('forgotPasswordPage.success.messageSuffix')}
         </Alert>
         <Button variant="secondary" fullWidth onClick={() => irPara('/login')}>
-          Voltar para o login
+          {t('forgotPasswordPage.success.backToLogin')}
         </Button>
       </AuthLayout>
     );
@@ -67,26 +70,26 @@ export function ForgotPasswordPage({
 
   return (
     <AuthLayout
-      titulo="Definir uma senha nova"
-      subtitulo="Informe seu e-mail e enviamos um link para criar a senha."
+      titulo={t('forgotPasswordPage.form.title')}
+      subtitulo={t('forgotPasswordPage.form.subtitle')}
       irPara={irPara}
       rodapeDoCartao={
         <>
-          Lembrou a senha?{' '}
+          {t('forgotPasswordPage.form.rememberedPrompt')}{' '}
           <button
             type="button"
             className={styles.link}
             onClick={() => irPara('/login')}
           >
-            Voltar para o login
+            {t('forgotPasswordPage.form.backToLogin')}
           </button>
         </>
       }
       abaixoDoCartao={
         <Alert tone="warning">
-          Serve também para quem já tinha conta antes desta versão — nesse caso,{' '}
-          <strong>a senha antiga não foi migrada</strong> e este é o caminho para
-          criar a primeira.
+          {t('forgotPasswordPage.form.migrationNoticePrefix')}
+          <strong>{t('forgotPasswordPage.form.migrationNoticeStrong')}</strong>
+          {t('forgotPasswordPage.form.migrationNoticeSuffix')}
         </Alert>
       }
     >
@@ -98,9 +101,9 @@ export function ForgotPasswordPage({
 
       <form className={styles.form} onSubmit={submeter}>
         <Input
-          label="E-mail"
+          label={t('forgotPasswordPage.form.emailLabel')}
           type="email"
-          placeholder="voce@empresa.com"
+          placeholder={t('forgotPasswordPage.form.emailPlaceholder')}
           autoComplete="username"
           required
           preenchido
@@ -109,7 +112,9 @@ export function ForgotPasswordPage({
         />
         <div className={styles.acoes}>
           <Button type="submit" fullWidth size="lg" loading={enviando}>
-            {enviando ? 'Enviando…' : 'Enviar link'}
+            {enviando
+              ? t('forgotPasswordPage.form.submitting')
+              : t('forgotPasswordPage.form.submit')}
           </Button>
         </div>
       </form>

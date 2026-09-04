@@ -42,8 +42,20 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   @impl true
   def append_event_returning(project_id, session_id, event) do
     notify({:event_appended, project_id, session_id, event})
-    id = "evt-#{System.unique_integer([:positive])}"
-    {:ok, %{"id" => id, "seq" => 0, "type" => Map.get(event, :type)}}
+
+    # Mesmo scriptável de `append_event/3` (`:fake_append_event_error`) — as
+    # duas expressam a MESMA falha ("a api recusou o append"), só com forma
+    # de retorno diferente. Introduzido pelo UX Designer (ADR 0087), que
+    # precisa do id de volta (`propose_prototype`) e também precisa exercitar
+    # "gravar o artefato falhou, então nenhum handoff é ofertado".
+    case Process.get(:fake_append_event_error) do
+      nil ->
+        id = "evt-#{System.unique_integer([:positive])}"
+        {:ok, %{"id" => id, "seq" => 0, "type" => Map.get(event, :type)}}
+
+      reason ->
+        {:error, reason}
+    end
   end
 
   @impl true
@@ -96,6 +108,38 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   def create_task(_project_id, _session_id, fields) do
     notify({:task_created, fields})
     reply(:fake_task, %{"id" => "tk-#{unique()}"})
+  end
+
+  @impl true
+  def list_business_rules(project_id) do
+    notify({:business_rules_listed, project_id})
+
+    reply(:fake_business_rules, %{"rules" => [], "uncoveredCount" => 0})
+  end
+
+  @impl true
+  def list_backlog(project_id) do
+    notify({:backlog_listed, project_id})
+
+    reply(:fake_backlog, [])
+  end
+
+  @impl true
+  def list_product_metrics(project_id) do
+    notify({:product_metrics_listed, project_id})
+
+    reply(:fake_product_metrics, %{
+      "project" => %{"id" => project_id, "name" => "projeto"},
+      "totalActionsConsidered" => 0,
+      "funnel" => %{
+        "etapas" => [],
+        "sessoesComCommit" => [],
+        "sessoesComPr" => [],
+        "sessoesComMerge" => []
+      },
+      "leadTimes" => %{"perSession" => [], "averageMs" => nil},
+      "deploymentFrequency" => []
+    })
   end
 
   @impl true
@@ -173,6 +217,30 @@ defmodule Engine.Sessions.FakeEngineApiClient do
             "image" => Map.get(decisao, :image),
             "network" => Map.get(decisao, :network, "none")
           }
+        })
+
+      reason ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def route_modules_to_infra(_project_id, _session_id, roteamento) do
+    notify({:module_routing_created, roteamento})
+
+    case Process.get(:fake_module_routing_error) do
+      nil ->
+        reply(:fake_module_routing, %{
+          "version" => 1,
+          "roteamento" =>
+            Enum.map(roteamento, fn r ->
+              %{
+                "modulo" => Map.get(r, :modulo) || Map.get(r, "modulo"),
+                "imagemCandidata" =>
+                  Map.get(r, :imagemCandidata) || Map.get(r, "imagemCandidata"),
+                "porque" => Map.get(r, :porque) || Map.get(r, "porque")
+              }
+            end)
         })
 
       reason ->
@@ -415,6 +483,39 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  @impl true
+  def rag_search(project_id, query, top_k, _opts \\ []) do
+    notify({:rag_search, project_id, query, top_k})
+
+    # Mesmo idioma de `list_backlog`/`reply`: `Process.put(:fake_rag_search,
+    # {:error, motivo})` simula a api do RAG fora do ar, sem chave separada.
+    reply(:fake_rag_search, %{"hits" => [], "degraded" => false})
+  end
+
+  @impl true
+  def rag_feedback(project_id, search_id, chunk_id, verdict, agent) do
+    notify({:rag_feedback, project_id, search_id, chunk_id, verdict, agent})
+
+    # Mesma chave única de `rag_search`: `Process.put(:fake_rag_feedback,
+    # {:error, {400, ...}})` simula a recusa da api por id desconhecido.
+    reply(:fake_rag_feedback, %{
+      "searchId" => search_id,
+      "chunkId" => chunk_id,
+      "verdict" => verdict,
+      "rank" => 1
+    })
+  end
+
+  @impl true
+  def get_prompt_template(name, version \\ nil) do
+    notify({:prompt_template_fetched, name, version})
+
+    reply(
+      :fake_prompt_template,
+      %{"name" => name, "version" => version || "v1", "body" => "", "hash" => "fake"}
+    )
+  end
+
   # Um valor scriptado já em forma de `{:error, _}` passa direto — assim um
   # teste consegue simular "a api está fora" no MESMO idioma dos scripts de
   # sucesso, sem uma chave separada por endpoint.
@@ -545,6 +646,35 @@ defmodule Engine.Sessions.FakeEngineApiClient do
         Process.get(:fake_propose_action, %{"id" => "pa-1", "status" => "auto_approved"})
 
     {:ok, resposta}
+  end
+
+  # RN-423 (ADR 0104) — scriptável via `:fake_confirm_workspace` (padrão
+  # `{:error, motivo}` pra exercitar recusa) ou `{:ok, resp}`; default aceita
+  # e devolve o path recebido, como a api faria numa confirmação bem-sucedida.
+  @impl true
+  def confirm_workspace(project_id, session_id, path, user_id) do
+    notify({:confirm_workspace, project_id, session_id, path, user_id})
+
+    case Process.get(:fake_confirm_workspace) do
+      nil -> {:ok, %{"verified" => true, "workspacePath" => path}}
+      resultado -> resultado
+    end
+  end
+
+  # ADR 0134, RN-492 — scriptável via `:fake_container_exec`
+  # (`{:ok, %{"sucesso" => ...}}` ou `{:error, reason}`); default devolve
+  # sucesso com exit 0 e output vazio, como um comando trivial que passou.
+  @impl true
+  def executar_comando_no_container(project_id, comando, cwd, timeout_ms) do
+    notify({:container_exec, project_id, comando, cwd, timeout_ms})
+
+    case Process.get(:fake_container_exec) do
+      nil ->
+        {:ok, %{"sucesso" => true, "exitCode" => 0, "output" => "", "timedOut" => false}}
+
+      resultado ->
+        resultado
+    end
   end
 
   @doc """

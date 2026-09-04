@@ -1,0 +1,22 @@
+{
+  "tabs": {
+    "overview": { "label": "Overview" },
+    "executors": { "label": "Executors" },
+    "criativo": { "label": "Creative" },
+    "chat": { "label": "Chat" },
+    "insights": { "label": "Insights" },
+    "code": { "label": "Code" },
+    "prs": { "label": "PRs" },
+    "approvals": { "label": "Approvals" },
+    "backlog": { "label": "Backlog" },
+    "architecture": { "label": "Architecture" },
+    "spend": { "label": "Spend" },
+    "settings": { "label": "Settings" }
+  },
+  "groups": {
+    "agentes": { "label": "Agents" },
+    "dev": { "label": "Dev" },
+    "documentacao": { "label": "Documentation" }
+  },
+  "rail": { "ariaLabel": "Project tabs" }
+}

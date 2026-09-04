@@ -1,245 +1,267 @@
-# 0065 — Container por projeto: a fronteira deixa de ser política
+# 0065 — Container per project: the boundary stops being policy
 
 ## Status
 
-Aceito, **com corte declarado**. A metade que este ADR entrega — o artefato do
-Arquiteto, o portão e a fronteira de efeito externo — está implementada e
-provada por teste. A metade que ele **não** entrega — provisionar, parar,
-reciclar e limpar o container — está declarada em "O que este ADR NÃO faz", com
-o motivo. O corte é do escopo, não do argumento: a decisão de arquitetura vale
-inteira e é ela que dita o que a fase seguinte constrói.
+Accepted, **with a declared cut**. The half this ADR delivers — the
+Architect's artifact, the gate, and the external-effect boundary — is
+implemented and proven by test. The half it does **not** deliver —
+provisioning, stopping, recycling and cleaning up the container — is
+declared in "What this ADR does NOT do," with the reason. The cut is of
+scope, not of the argument: the architecture decision stands whole, and it's
+what dictates what the next phase builds.
 
-Este ADR **revisa o [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md)**,
-que continua aceito e não é editado. O 0055 diz de si, na seção de
-consequências, que é *política, não isolamento*, e registra o container por
-projeto como pendência explícita. É essa pendência que este documento endereça.
+This ADR **revises [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md)**,
+which stays accepted and is not edited. 0055 says of itself, in the
+consequences section, that it is *policy, not isolation*, and records the
+per-project container as an explicit pending item. That's the pending item
+this document addresses.
 
-## Contexto
+## Context
 
-### A dívida, nas palavras do documento que a criou
+### The debt, in the words of the document that created it
 
-> **O que este ADR NÃO resolve.** Escopo é **política**, não isolamento.
-> Enquanto o monorepo do Brabo estiver montado em `/workspace` dentro do
-> container que executa os comandos, a fronteira depende da política acertar.
+> **What this ADR does NOT resolve.** Scope is **policy**, not isolation.
+> As long as the Brabo monorepo is mounted at `/workspace` inside the
+> container that runs the commands, the boundary depends on the policy
+> getting it right.
 > — ADR 0055
 
-E a nota de aceite do mesmo documento, que mede o buraco que sobrou: a
-normalização de caminho é **léxica**, `..` reprova, e **symlink de dentro do
-projeto apontando para fora não é detectado**. Fechar isso não é escrever uma
-regra melhor — é ter uma parede.
+And the same document's acceptance note, which measures the gap that was
+left: path normalization is **lexical**, `..` is rejected, and a **symlink
+from inside the project pointing outward is not detected**. Closing that
+isn't a matter of writing a better rule — it's about having a wall.
 
-Hoje o agente executa no **mesmo container que o monorepo do Brabo**. O que o
-separa do código da plataforma que o executa é uma comparação de string em
+Today the agent runs in the **same container as the Brabo monorepo**. What
+separates it from the platform's own code is a string comparison in
 `decide.ts`.
 
-### Os achados que não convergem
+### The findings that don't converge
 
-A FASE 13b deixou dois achados abertos, e o argumento deles vale mais que a
-lista de execuções que os produziu (`docs/explanation/achados-execucao-real.md`):
+PHASE 13b left two findings open, and their argument matters more than the
+list of runs that produced them (`docs/explanation/achados-execucao-real.md`):
 
-- **Z e AD** — o allowlist de verbos **não converge**. Verbo, forma e invocação
-  são espaços distintos: `curl`, `wget`, `python -c "urllib..."` e um script
-  `.sh` que faz qualquer um dos três são o mesmo egresso escrito de quatro
-  maneiras. As execuções 6, 7 e 8 travaram em um de cada.
-- **AE** — o agente de QA tenta consertar o código que julga, contra o próprio
-  prompt, contido por duas barreiras independentes (allowlist e escopo).
+- **Z and AD** — the verb allowlist **doesn't converge**. Verb, form, and
+  invocation are distinct spaces: `curl`, `wget`, `python -c
+  "urllib..."` and a `.sh` script doing any of the three are the same
+  egress written four different ways. Runs 6, 7 and 8 got stuck on one of
+  each.
+- **AE** — the QA agent tries to fix the code it's judging, against its own
+  prompt, contained by two independent barriers (allowlist and scope).
 
-A conclusão da FASE 13, escrita antes desta fase existir, é a mesma a que este
-ADR chega: **o caminho para autonomia não passa por afrouxar política**.
+PHASE 13's conclusion, written before this phase existed, is the same one
+this ADR arrives at: **the path to autonomy doesn't go through loosening
+policy.**
 
-### O que o usuário decidiu
+### What the user decided
 
-> "Cada projeto tenha sua própria infra apartada, ou seja, subirá via container
-> por cada projeto, isolando assim o terminal e dando permissão total a ele; o
-> code somente é liberado após definição do arquiteto, pois ele que definirá
-> qual tipo de container subirá aquele código, pois será o decisor de melhor
-> oportunidade para qual imagem ser a melhor."
+> "Each project should have its own separate infrastructure, meaning it will
+> spin up via a per-project container, isolating the terminal that way and
+> giving it full permission; Code is only unlocked after the architect's
+> definition, since they will decide which type of container will run that
+> code, being the one who decides the best fit for which image to use."
 
-E, sobre o alcance da permissão total:
+And, about the extent of "full permission":
 
-> "Agente livre para o que quiser desde que não seja comandos de git ligado ao
-> deploy e ao PR — estas ações ainda devem ser humanas."
+> "The agent is free to do whatever it wants as long as it isn't git
+> commands related to deploy and PR — those actions still have to be
+> human."
 
-Duas frases, três decisões: **quem** escolhe a imagem, **quando** o Code libera,
-e **onde** a liberdade termina.
+Two sentences, three decisions: **who** chooses the image, **when** Code
+unlocks, and **where** the freedom ends.
 
-## Decisão
+## Decision
 
-### 1. A imagem do projeto é ARTEFATO do Arquiteto
+### 1. The project's image is the ARCHITECT's ARTIFACT
 
-`artifact.project_image` no event log, com `image`, `rationale`, `network` e
-`resources`. Versionado — revisar é emitir uma versão nova, e o vigente é o de
-maior `version`.
+`artifact.project_image` in the event log, with `image`, `rationale`,
+`network` and `resources`. Versioned — revising it means emitting a new
+version, and the current one is whichever has the highest `version`.
 
-Artefato e não configuração porque **quem escolhe a imagem escolhe o que o
-agente consegue fazer**: qual runtime existe, qual gerenciador de pacotes, qual
-compilador. Isso é decisão de arquitetura, do mesmo calibre do `module_map`, e
-decisão de arquitetura tem autor, data e porquê. Uma variável de ambiente não
-tem nenhum dos três.
+It's an artifact and not configuration because **whoever chooses the image
+chooses what the agent can do**: which runtime exists, which package
+manager, which compiler. That's an architecture decision, of the same
+caliber as `module_map`, and an architecture decision has an author, a
+date, and a reason. An environment variable has none of the three.
 
-**Sem tabela, e não por economia.** O event log já dá as três propriedades que a
-decisão precisa ter — imutável, versionada, com autor — e é onde
-`artifact.module_map` e `artifact.business_rule` já moram. Uma tabela daria a
-mesma coisa com um `UPDATE` possível, e `UPDATE` em decisão de arquitetura é
-como ela deixa de ser auditável.
+**No table, and not for economy's sake.** The event log already provides
+the three properties this decision needs to have — immutable, versioned,
+with an author — and it's where `artifact.module_map` and
+`artifact.business_rule` already live. A table would give the same thing
+with a possible `UPDATE`, and `UPDATE` on an architecture decision is how
+it stops being auditable.
 
-**Tag explícita, `latest` recusado.** Um artefato que diz `node:latest` não
-descreve nada: o container de março e o de hoje são imagens diferentes com o
-mesmo nome, e a auditoria passa a mentir.
+**An explicit tag, `latest` rejected.** An artifact that says `node:latest`
+describes nothing: March's container and today's are different images with
+the same name, and the audit trail ends up lying.
 
-**Teto de recursos que recusa em vez de rebaixar.** Pedido acima do máximo é
-400 com o motivo, nunca um corte silencioso — um artefato que promete mais do
-que o container recebe mente para quem o audita.
+**A resource cap that rejects instead of downgrading.** A request above the
+maximum is a 400 with the reason, never a silent trim — an artifact that
+promises more than the container gets lies to whoever audits it.
 
-### 2. Enquanto o Arquiteto não decidir, o Code não libera
+### 2. While the Architect hasn't decided, Code doesn't unlock
 
-O portão é a ordem literal do usuário, e a razão dele é de produto: o container
-é o que dá sentido a ler código ali — ler para depois rodar, buildar, corrigir.
-A superfície de leitura da [ADR 0060](0060-superficie-de-leitura-de-codigo.md)
-responde **409** enquanto o estado for `sem_decisao`, com a mensagem dizendo o
-que falta.
+The gate is the user's literal order, and its reason is about the product:
+the container is what gives reading code there any meaning — reading it in
+order to later run, build, or fix it. The reading surface from
+[ADR 0060](0060-superficie-de-leitura-de-codigo.md) responds **409** while
+the state is `sem_decisao` (no decision), with the message saying what's
+missing.
 
-409 e não 403: nada está errado com quem pediu nem com a permissão dele — o
-recurso ainda não existe neste estado. E a checagem mora no **mesmo funil** que
-a contenção de caminho (`alvo`), não nas quatro rotas, pelo motivo da
-[RN-092](../business-rules.md#rn-092): checagem duplicada em quatro chamadores é
-checagem que um dia diverge em um deles.
+409, not 403: nothing is wrong with the requester or their permission — the
+resource simply doesn't exist yet in this state. And the check lives in the
+**same funnel** as the path containment (`alvo`), not in the four routes,
+for the reason stated in
+[RN-092](../business-rules/custo.md#rn-092): a check duplicated across four
+callers is a check that one day diverges in one of them.
 
-### 3. A fronteira: dentro é livre, fora é humano
+### 3. The boundary: inside is free, outside is human
 
-**Dentro** do container o agente é livre — ler, escrever, instalar, buildar,
-testar, rodar. É isto que fecha Z e AD, e é o único jeito conhecido de fechá-los:
-a parede substitui a enumeração.
+**Inside** the container the agent is free — read, write, install, build,
+test, run. This is what closes Z and AD, and it's the only known way to
+close them: the wall replaces the enumeration.
 
-**Fora** continua humano. Três efeitos atravessam a parede e chegam no mundo —
-`git push`, abertura de PR e deploy — e comando de terminal que os invoca é
-**negado**, com a mensagem dizendo qual ação **tipada** usar.
+**Outside** stays human. Three effects cross the wall and reach the world —
+`git push`, opening a PR, and deploy — and a terminal command that invokes
+them is **denied**, with the message saying which **typed** action to use
+instead.
 
-**`deny` e não `require_approval`**, e esta é a parte que exige argumento. Cada
-um desses efeitos já tem caminho tipado (`git_push`, `pr_open`, `git_merge`) que
-nasce `proposed_action`, tem papel mínimo próprio, é executado pela plataforma e
-deixa no event log **o que foi empurrado e para onde**. O terminal seria uma
-segunda porta para o mesmo efeito, sem nenhuma dessas garantias: o log diria
-"um comando rodou". E `require_approval` não bastaria porque existe "sempre
-permitir" — um clique gravaria o padrão em `allow` e a segunda porta ficaria
-aberta para sempre. `deny` vence `allow` em qualquer estágio, e é por isso que
-ele é a forma certa desta regra: não é preferência configurável, é onde o
-container termina.
+**`deny`, not `require_approval`**, and this is the part that needs an
+argument. Each of those effects already has a typed path (`git_push`,
+`pr_open`, `git_merge`) that's born as a `proposed_action`, has its own
+minimum role, is executed by the platform, and leaves in the event log
+**what was pushed and where**. The terminal would be a second door to the
+same effect, with none of those guarantees: the log would just say "a
+command ran." And `require_approval` wouldn't be enough because "always
+allow" exists — one click would write the pattern to `allow` and the
+second door would stay open forever. `deny` beats `allow` at every stage,
+and that's why it's the right shape for this rule: it's not a configurable
+preference, it's where the container ends.
 
-Negar não tira poder do agente — **redireciona**. Foi assim que o dev agent
-sempre fez (`agent_io.ex` propõe `git_push`); o que muda é que agora está
-garantido, e não só combinado. E merge em branch protegida segue manual pela
-[RN-014](../business-rules.md#rn-014), intocada.
+Denying doesn't take power away from the agent — it **redirects**. That's
+how the dev agent always worked (`agent_io.ex` proposes `git_push`); what
+changes is that it's now guaranteed, not just agreed upon. And merging into
+a protected branch stays manual per
+[RN-014](../business-rules.md#rn-014), unchanged.
 
-### 4. Rede é postura do CONTAINER, decidida uma vez — não comando a comando
+### 4. Networking is a CONTAINER posture, decided once — not command by command
 
-Esta é a decisão que o veredito próprio pedido sobre rede produz, e ela é o
-contrário do que a intuição sugere.
+This is the decision the requested "own verdict" on networking produces,
+and it's the opposite of what intuition suggests.
 
-A tentação seria acrescentar egresso ao allowlist: proibir `curl`, `wget`,
-`npm install`. **É exatamente a tentativa que Z e AD provaram não convergir.**
-Um allowlist de egresso teria a mesma forma, o mesmo tamanho e o mesmo destino
-do allowlist de verbos.
+The temptation would be to add egress rules to the allowlist: block `curl`,
+`wget`, `npm install`. **That's exactly the attempt Z and AD proved doesn't
+converge.** An egress allowlist would have the same shape, the same size,
+and the same fate as the verb allowlist.
 
-Então a rede é decidida **uma vez**, no artefato, na fronteira que o kernel
-entende: `network: none` é o default, e é o que torna "dentro o agente é livre"
-uma frase segura — livre num lugar sem saída. `egress` é pedido legítimo (uma
-stack que baixa dependências não funciona sem ele), o Arquiteto declara com
-justificativa, e **quem autoriza é o usuário**, no provisionamento — pelo mesmo
-motivo que autoriza o teto de paralelismo ([ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md)):
-sair para a internet é gasto e é superfície.
+So networking is decided **once**, in the artifact, at the boundary the
+kernel understands: `network: none` is the default, and it's what makes
+"inside the agent is free" a safe sentence — free in a place with no way
+out. `egress` is a legitimate request (a stack that downloads dependencies
+doesn't work without it), the Architect declares it with a justification,
+and **the user is the one who authorizes it**, at provisioning time — the
+same reason authorizing the parallelism cap works
+([ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md)): reaching the
+internet is spend and it's surface area.
 
-**Gasto** tem o mesmo tratamento: `cpus`, `memoryMb` e `pidsLimit` no artefato,
-com teto duro. `pidsLimit` merece nota — é o que contém fork bomb sem depender
-de allowlist de verbo nenhum, e é o exemplo mais limpo do que muda quando a
-fronteira deixa de ser léxica.
+**Spend** gets the same treatment: `cpus`, `memoryMb` and `pidsLimit` in
+the artifact, with a hard cap. `pidsLimit` deserves a note — it's what
+contains a fork bomb without depending on any verb allowlist, and it's the
+cleanest example of what changes once the boundary stops being lexical.
 
-Os tetos de **token** não mudam: continuam sendo projeto, sessão e task.
+The **token** caps don't change: they stay project, session, and task.
 
-## O que este ADR NÃO faz
+## What this ADR does NOT do
 
-**O ciclo de vida do container (25b).** Provisionar, parar, reciclar, limpar; o
-que acontece quando a imagem muda; o que sobrevive a restart; o worktree do
-agente passando a viver dentro do container.
+**The container's lifecycle (25b).** Provisioning, stopping, recycling,
+cleaning up; what happens when the image changes; what survives a restart;
+the agent's worktree moving to live inside the container.
 
-O motivo é concreto e não é falta de desenho: **estado de container precisa de
-tabela**. Id do container, status, imagem em uso, quando subiu, a qual versão do
-artefato corresponde — nada disso é evento, é estado mutável, e forçá-lo no
-event log seria usar a ferramenta errada porque a certa estava ocupada. O slot
-único de migration desta onda pertence a outra fase.
+The reason is concrete and isn't a lack of design: **container state needs
+a table.** Container id, status, image in use, when it came up, which
+version of the artifact it corresponds to — none of that is an event, it's
+mutable state, and forcing it into the event log would be using the wrong
+tool because the right one was busy. This wave's single migration slot
+belongs to another phase.
 
-Entregar meio provisionamento seria pior que não entregar: **um container que
-sobe e não recicla é pior que nenhum** — ele acumula, ninguém sabe de quem é, e
-a primeira imagem decidida vira permanente na prática.
+Delivering half a provisioning flow would be worse than not delivering it:
+**a container that comes up and never recycles is worse than none** — it
+accumulates, nobody knows whose it is, and the first decided image becomes
+permanent in practice.
 
-**Consequência honesta do corte:** a metade "dentro o agente é livre" **ainda
-não valeu**. A política de terminal do ADR 0055 continua exatamente como está —
-escopo de caminho, allowlist estreito, `cd` afrouxado dentro do escopo. Afrouxar
-antes de a parede existir seria repetir o erro que este documento veio corrigir,
-e a FASE 13 já escreveu a conclusão: o caminho para autonomia não passa por
-afrouxar política. O que esta fase entrega é a **metade FORA** da fronteira — a
-que precisa valer antes, não depois.
+**Honest consequence of the cut:** the "inside the agent is free" half
+**hasn't taken effect yet**. The ADR 0055 terminal policy stays exactly as
+it is — path scope, narrow allowlist, `cd` loosened within scope. Loosening
+it before the wall exists would repeat the mistake this document came to
+correct, and PHASE 13 already wrote the conclusion: the path to autonomy
+doesn't go through loosening policy. What this phase delivers is the half
+**outside** the boundary — the one that needs to hold true first, not
+after.
 
-## Consequências
+## Consequences
 
-**O que melhora agora.** A decisão de imagem existe, tem dono, versão e
-justificativa; o portão do Code é real e testado nas quatro rotas; e a segunda
-porta para push/PR/deploy fechou — antes dela existir de fato, que é a hora
-certa de fechar uma porta.
+**What gets better now.** The image decision exists, has an owner, a
+version and a justification; Code's gate is real and tested across the four
+routes; and the second door for push/PR/deploy closed — before it ever
+existed, which is the right time to close a door.
 
-**O que muda para o operador.** Projeto existente **não tem** decisão de imagem,
-então a aba Code passa a responder 409 até o Arquiteto rodar. É mudança de
-comportamento observável de uma superfície que acabou de entrar (ADR 0060), e é
-por isso que esta mudança nasce em `breaking/`: quem já usava a aba precisa
-saber por que ela fechou.
+**What changes for the operator.** An existing project **has no** image
+decision, so the Code tab starts responding 409 until the Architect runs.
+It's an observable behavior change on a surface that just arrived (ADR
+0060), and that's why this change is born under `breaking/`: whoever was
+already using the tab needs to know why it closed.
 
-**O que se perde.** Nada de execução: nenhum comando que funcionava deixa de
-funcionar, porque `git push` pelo terminal nunca foi como o dev agent empurra.
-O que se perde é a *possibilidade* de configurar um atalho por terminal para
-push/PR/deploy — e perder isso é o ponto.
+**What's lost.** Nothing about execution: no command that worked stops
+working, because `git push` through the terminal was never how the dev
+agent pushes. What's lost is the *possibility* of configuring a terminal
+shortcut for push/PR/deploy — and losing that is the point.
 
-**O que fica devendo, medido.** O symlink de dentro apontando para fora
-**continua não detectado**. Este ADR não fecha esse vetor; ele decide como
-fechá-lo (parede) e entrega a decisão de imagem que a parede precisa. Enquanto o
-container não subir, a fraqueza do 0055 segue valendo, e está escrito aqui em
-vez de ser confundido com resolvida.
+**What's still owed, measured.** A symlink from inside pointing outward
+**is still not detected**. This ADR doesn't close that vector; it decides
+how to close it (a wall) and delivers the image decision the wall needs.
+Until the container comes up, the weak point in 0055 keeps holding, and
+it's written here instead of being mistaken for resolved.
 
-## Alternativas consideradas
+## Alternatives considered
 
-**Afrouxar a política agora e subir o container depois.** Recusada com o
-argumento mais forte que o projeto tem: é literalmente a conclusão da FASE 13 ao
-contrário. Liberdade sem parede é o buraco, não a solução.
+**Loosen the policy now and bring up the container later.** Rejected with
+the strongest argument the project has: it's literally PHASE 13's
+conclusion in reverse. Freedom without a wall is the hole, not the
+solution.
 
-**Um allowlist de egresso de rede.** Recusada por Z e AD: teria a mesma forma e o
-mesmo destino do allowlist de verbos. Rede é propriedade do container.
+**A network-egress allowlist.** Rejected by Z and AD: it would have the
+same shape and the same fate as the verb allowlist. Networking is a
+property of the container.
 
-**A imagem como configuração do projeto (coluna, `.env`, tela de Configurações).**
-Recusada porque tira do Arquiteto a decisão que o usuário deu a ele, e porque
-configuração não tem porquê. O `rationale` obrigatório é o que faz a decisão ser
-revisável em vez de arqueológica.
+**The image as project configuration (a column, `.env`, a Settings
+screen).** Rejected because it takes away from the Architect the decision
+the user gave them, and because configuration has no rationale. The
+required `rationale` is what makes the decision reviewable instead of
+archaeological.
 
-**Uma tabela `project_containers` agora.** É o desenho certo para o **estado**
-do container, e é justamente por isso que ele fica para a onda com slot de
-migration. Improvisar o estado no event log para não esperar produziria a
-migration de correção logo em seguida.
+**A `project_containers` table now.** It's the right design for the
+container's **state**, and that's exactly why it's left for the wave with a
+migration slot. Improvising the state in the event log just to avoid
+waiting would produce the corrective migration right after.
 
-**`require_approval` no terminal em vez de `deny`.** Recusada pelo "sempre
-permitir": ele grava o padrão em `allow`, e um clique bastaria para a segunda
-porta ficar permanentemente aberta.
+**`require_approval` on the terminal instead of `deny`.** Rejected because
+of "always allow": it writes the pattern to `allow`, and one click would be
+enough for the second door to stay permanently open.
 
-## Referências
+## References
 
-- [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — a política que
-  este documento revisa, e que declarou esta pendência de si mesma.
-- [ADR 0060](0060-superficie-de-leitura-de-codigo.md) — a aba Code, cujo portão
-  esta decisão fecha.
-- [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) — quem autoriza gasto é
-  quem responde pelo projeto; a rede segue o mesmo critério.
-- [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — o worktree é por
-  AGENTE, não por task; é ele que passa a viver dentro do container.
-- [RN-014](../business-rules.md#rn-014), [RN-092](../business-rules.md#rn-092),
-  [RN-105](../business-rules.md#rn-105), [RN-106](../business-rules.md#rn-106).
-- `docs/explanation/achados-execucao-real.md` — os achados Z, AD e AE.
+- [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — the
+  policy this document revises, which declared this pending item itself.
+- [ADR 0060](0060-superficie-de-leitura-de-codigo.md) — the Code tab, whose
+  gate this decision closes.
+- [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) — whoever
+  authorizes spend is whoever answers for the project; networking follows
+  the same criterion.
+- [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — the worktree
+  is per AGENT, not per task; it's the one that will live inside the
+  container.
+- [RN-014](../business-rules.md#rn-014), [RN-092](../business-rules/custo.md#rn-092),
+  [RN-105](../business-rules/autenticacao.md#rn-105), [RN-106](../business-rules/autenticacao.md#rn-106).
+- `docs/explanation/achados-execucao-real.md` — findings Z, AD and AE.
 - `apps/api/src/domain/containers/project-container.ts`,
   `apps/api/src/domain/actions/external-effect.ts`,
   `apps/api/src/application/use-cases/containers/`,

@@ -1,0 +1,26 @@
+{
+  "loadErrorTitle": "Could not open this project.",
+  "visibility": {
+    "public": "public",
+    "private": "private"
+  },
+  "adopted": "adopted",
+  "repositoryNotProvisioned": "repository not provisioned",
+  "precisaDeVoce": {
+    "chip": "Needs you",
+    "titulo": "Needs you",
+    "subtitulo": "The five decision queues, kept apart — each one's total stays on its own tab.",
+    "fechar": "Close the panel",
+    "vazio": "Nothing waiting on a decision from you.",
+    "semData": "no date",
+    "tempoEmprestado": "story updated {{tempo}}",
+    "notaDeArquitetura": "An architecture pendency is a derived view and carries no date of its own — the date shown is the related story's last update.",
+    "filas": {
+      "aprovacoes": "Action approvals",
+      "prs": "PR merges",
+      "promocoes": "Story promotions",
+      "arquitetura": "Architecture pendencies",
+      "hipoteses": "Psychologist hypotheses"
+    }
+  }
+}

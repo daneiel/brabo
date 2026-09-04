@@ -42,4 +42,24 @@ defmodule Engine.Harness.Tools.CreateEpic do
   end
 
   def run(_args, _ctx), do: {:error, "create_epic exige `title`"}
+
+  @doc """
+  O id do épico dentro do texto que `run/2` devolveu, ou `nil`.
+
+  O contrato de `Engine.Harness.Tool` só permite devolver STRING, e o id já
+  viaja nela porque o modelo precisa dele para encadear as histórias. Quem
+  também precisa dele é o PoServer, para cobrar o épico que ficou sem história
+  (RN-165) — e é melhor ler o formato aqui, no módulo que o escreve, do que
+  repetir a expressão do outro lado e deixá-la divergir na primeira mudança de
+  frase.
+  """
+  @spec id_no_resultado(String.t()) :: String.t() | nil
+  def id_no_resultado(texto) when is_binary(texto) do
+    case Regex.run(~r/\bid=([^\s,]+)/, texto) do
+      [_, id] -> id
+      _ -> nil
+    end
+  end
+
+  def id_no_resultado(_), do: nil
 end

@@ -1,9 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
 import { ProjectBacklogTab } from './ProjectBacklogTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import type { Epic, Story } from '../lib/api-types';
+import backlogEn from '../locales/en/backlog.json';
+import backlogPtBR from '../locales/pt-BR/backlog.json';
 
 const listBacklog = vi.fn();
 const getCoverage = vi.fn();
@@ -54,16 +58,40 @@ function epic(stories: Story[]): Epic {
   };
 }
 
+// Instância própria de i18next, isolada da global (mesmo padrão do
+// AccountPage.test.tsx) — `lng: 'pt-BR'` porque as asserções abaixo checam
+// o texto ATUAL em português, que é o que já estava hardcoded antes da
+// extração.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      en: { backlog: backlogEn },
+      'pt-BR': { backlog: backlogPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'en',
+    defaultNS: 'backlog',
+    ns: ['backlog'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
 function montar() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  const i18n = novaInstanciaI18n();
   return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <ProjectBacklogTab projectId="proj-1" />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ProjectBacklogTab projectId="proj-1" />
+        </ToastProvider>
+      </QueryClientProvider>
+    </I18nextProvider>,
   );
 }
 

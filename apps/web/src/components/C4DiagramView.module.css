@@ -12,13 +12,58 @@
   min-width: 0;
 }
 
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .cardTitulo {
   font-family: var(--font-mono);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
-  margin-bottom: 8px;
+}
+
+/* Botão de ampliar (ONDA 3 — aba Arquitetura, lightbox): mesmo tratamento
+   de foco calibrado de `Modal.module.css` `.close` — outline transparente +
+   box-shadow, com o par `forced-colors` (ADR 0036). 24px é o piso de alvo de
+   toque; a barra do título já é compacta, e um botão maior a empurraria. */
+.expandButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.expandButton:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.expandButton:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+@media (forced-colors: active) {
+  .expandButton:focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 .svgWrap {
@@ -30,6 +75,24 @@
 }
 
 .svgWrap :global(svg) {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+/* O mesmo wrap, mas dentro do lightbox: sem teto de largura próprio — o
+   `Modal` (`size="full"`) já é quem decide o teto, e o SVG deve usar o
+   espaço todo que ganhou. */
+.svgWrapAmpliado {
+  width: 100%;
+  overflow: auto;
+  background: var(--surface-0);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.svgWrapAmpliado :global(svg) {
   max-width: 100%;
   height: auto;
   display: block;

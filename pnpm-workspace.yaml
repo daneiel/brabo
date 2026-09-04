@@ -1,12 +1,24 @@
 packages:
   - apps/api
+  # Serviço que fala com o daemon Docker do SERVIDOR (ADR 0130). Membro do
+  # workspace pelo mesmo motivo que `apps/runner`: ele consome
+  # `packages/docker-port`, e o link do workspace é o que faz os dois
+  # implementadores da porta compartilharem UM arquivo em vez de dois.
+  - apps/broker
+  - apps/runner
   - apps/web
   - packages/*
-  - website
   # scripts/ é pacote do workspace só para carregar vitest e `type: module` —
   # este último é o que faz o Node 24 executar os `.ts` de scripts/ci/ direto,
   # sem build. Os `.mjs` ao lado não são afetados: `.mjs` é ESM sempre.
   - scripts
+
+# `website/` NÃO é membro do workspace (ADR 0117) — tem `pnpm-lock.yaml`
+# PRÓPRIO, instalado com `pnpm install` de dentro de `website/`, nunca com
+# `pnpm --filter website` (esse verbo exige membership). O motivo é isolar o
+# `pnpm audit` do produto da árvore de dependências do Docusaurus, que nunca
+# chega a nenhuma imagem. Scripts que hoje leem `docs:*` usam `pnpm --dir
+# website <script>`.
 
 # Overrides de SEGURANÇA — cada linha fecha um alerta do Dependabot sobre uma
 # dependência TRANSITIVA, onde subir o pai não resolve porque o pai não tem
@@ -25,6 +37,13 @@ packages:
 # `pnpm audit` reprovando é o sinal de que ainda são necessárias, e o
 # `pnpm why` mostra se ainda há quem peça a antiga.
 overrides:
+  # MISTA (ADR 0117) — duplicada em `website/package.json` (`pnpm.overrides`).
+  # `pnpm why js-yaml -r` mostra DOIS pais reais, não só o `@nestjs/swagger`
+  # que o comentário original citava: o `website`, via `@redocly/openapi-core`
+  # (`docusaurus-plugin-openapi-docs`). As duas árvores agora têm lockfile
+  # separado — a entrada precisa existir dos dois lados ou o lado que perder
+  # o override volta a resolver a faixa vulnerável em silêncio.
+  #
   # HIGH · GHSA-pm4m-ph32-ghv5 — parsing exponencial em flow collections (DoS).
   # Entra por `@nestjs/swagger@11.4.6`, que fixa `js-yaml` em 5.2.1 EXATO — não
   # é faixa, é pino — e é a última versão publicada, então não há bump de
@@ -38,6 +57,13 @@ overrides:
   # Entrou primeiro no #70 como `js-yaml@5.2.1: 5.2.2`; virou faixa aqui pelo
   # motivo explicado na disciplina 1 acima.
   js-yaml@>=5.0.0 <5.2.2: 5.2.2
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. `pnpm why -r`
+  # mostra que esta faixa TAMBÉM entra por `apps/api`, via `eslint@9` →
+  # `@eslint/eslintrc` (`js-yaml: ^4.1.0`) — não só pelo subárvore do
+  # `docusaurus-theme-openapi-docs` que o comentário original citava. Sem a
+  # entrada nos dois `package.json`, um dos dois lockfiles volta a resolver a
+  # faixa vulnerável quando o outro for o único a manter a proteção.
+  #
   # HIGH · GHSA-52cp-r559-cp3m (mais duas moderadas na mesma linha). Entra por
   # `openapi-to-postmanv2`, do subárvore de geração de snippets do
   # docusaurus-theme-openapi-docs. A 4.3.0 já estava na árvore.
@@ -47,37 +73,74 @@ overrides:
   # bastava: a correção saiu na 4.3.1, então o teto virou 4.3.1 e a faixa
   # cresceu para cobrir a 4.3.0 também.
   js-yaml@>=4.0.0 <4.3.1: 4.3.1
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. `mermaid` é
+  # dependência de RUNTIME do próprio `apps/web` (ADR 0068, diagrama C4), não
+  # só do `website` — `pnpm why mermaid -r` mostra os dois pais.
+  #
   # MODERATE/LOW · alertas #22-#26 (CVE-2026-71436, -71437, -71438, -71439,
   # -50159). Entra por `@docusaurus/theme-mermaid`, que o `website` declara
-  # direto — mas o `theme-mermaid` fixa a faixa dele (`>=11.6.0`, sem teto) e
-  # é quem resolve a versão real. Faixa presa em `11.0.0-alpha.1` para cobrir
-  # a mais larga das cinco advisories.
+  # direto, e por `web`, que declara `mermaid` direto também — mas o
+  # `theme-mermaid` fixa a faixa dele (`>=11.6.0`, sem teto) e é quem resolve
+  # a versão real. Faixa presa em `11.0.0-alpha.1` para cobrir a mais larga
+  # das cinco advisories.
   mermaid@>=11.0.0-alpha.1 <11.16.1: 11.16.1
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. `vite` (usado por
+  # `apps/web`, não só pelo `website`) declara `postcss: ^8.5.17` como
+  # dependência própria — faixa que INCLUI a vulnerável. `pnpm why postcss -r`
+  # confirma `web` como pai, ao lado do subárvore do
+  # `docusaurus-theme-openapi-docs` que o comentário original citava sozinho.
+  #
   # MODERATE · CVE-2026-69153 (alerta #21). Entra pela árvore inteira de
   # plugins `@csstools/postcss-*` do `postcss-preset-env` (transitivo do
   # docusaurus-theme-openapi-docs) — todos pedem `postcss: ^8.4`, então
   # qualquer 8.5.23 serve.
   postcss@<8.5.23: 8.5.23
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. `pnpm why
+  # fast-uri -r` mostra `ajv@8.18.0` também entrando por `apps/api`, via
+  # `@angular-devkit/core` → `@nestjs/schematics` → `@nestjs/cli`
+  # (devDependency), não só pelo `@redocly/ajv` do `website` que o comentário
+  # original citava.
+  #
   # HIGH · CVE-2026-18446 (alerta #20). Entra por `ajv`/`@redocly/ajv`
   # (`fast-uri: ^3.0.1` nos dois) — só uma das duas versões na árvore estava
   # desatualizada, a outra já era 3.1.5.
   fast-uri@>=3.0.0 <3.1.5: 3.1.5
+  # MISTA — já era o exemplo canônico de override que serve aos dois lados
+  # (ADR 0117 mantém a duplicação em `website/package.json`).
+  #
   # HIGH + 3 MODERATE · CVE-2026-13697, -14643, -15157, -16728, -16729
-  # (alertas #15-#19). Entra por `cheerio` (busca local do Docusaurus) e por
-  # `jsdom` — devDependency direta de `apps/web` para o ambiente de teste do
-  # vitest. Ambos pedem `undici` em faixa `^7.x`, então 7.29.0 satisfaz os
-  # dois sem tocar o `jsdom` em si.
+  # (alertas #15-#19). Entra por `cheerio` (busca local do Docusaurus, no
+  # `website`) e por `jsdom` — devDependency direta de `apps/web` para o
+  # ambiente de teste do vitest. Ambos pedem `undici` em faixa `^7.x`, então
+  # 7.29.0 satisfaz os dois sem tocar o `jsdom` em si.
   undici@>=7.0.0 <7.29.0: 7.29.0
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. `@docusaurus/core`
+  # declara `lodash` DIRETO, então o `website` também precisa da correção, não
+  # só a api via `@nestjs/swagger` que o comentário original citava.
+  #
   # HIGH · GHSA-r5fr-rjxr-66jc. A versão corrigida que o aviso cita (4.17.24)
   # NÃO existe no registry — a linha 4.17 parou na 4.17.23 e a correção saiu na
   # 4.18.0. Daí o alvo ser a 4.18.1, que o `@nestjs/swagger` já traz.
   lodash@<4.18.0: 4.18.1
+  # WEBSITE-EXCLUSIVA (ADR 0117) — `pnpm why serialize-javascript -r` não
+  # mostra nenhum pai fora da árvore do `website`. Saiu daqui, entrou em
+  # `website/package.json`; não é mais necessária no lockfile do produto.
+  #
   # HIGH · GHSA-5c6j-r48x-rmvq e moderada GHSA-qj8w-gfj5-8c6v. Entra pelos
   # plugins de webpack do Docusaurus. A 7.x pede Node >= 20; o CI roda 24.
-  serialize-javascript@<7.0.5: 7.0.7
+  # (comentário preservado em `website/package.json`, onde a entrada vive agora)
+  # WEBSITE-EXCLUSIVA (ADR 0117) — `pnpm why yaml -r` só mostra a árvore
+  # `oas-linter`/`oas-validator`/`swagger2openapi` do `website`; a 2.9.0 que o
+  # resto do workspace usa direto nunca entra nesta faixa. Saiu daqui, entrou
+  # em `website/package.json`.
+  #
   # MODERATE · GHSA-48c2-rrv3-qjmp. Patch dentro da 1.x — não confundir com o
   # `yaml` 2.9.0 que o workspace usa direto, fora da faixa.
-  yaml@>=1.0.0 <1.10.3: 1.10.3
+  # (comentário preservado em `website/package.json`, onde a entrada vive agora)
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. `mermaid` (agora
+  # dependência de `web` também, não só do `website`) é quem pede `uuid` — o
+  # `pnpm why uuid -r` mostra os dois lados.
+  #
   # MODERATE · GHSA-w5hq-g745-h8pq. Entra por `postman-collection` e por
   # `sockjs` (o dev-server do webpack), os dois com `require('uuid').v4`.
   #
@@ -87,6 +150,9 @@ overrides:
   # instalando-a num diretório à parte e chamando `require('uuid').v4()`, que
   # devolve um uuid.
   uuid@<11.1.1: 11.1.1
+  # PRODUTO-EXCLUSIVA — `pnpm why esbuild -r` não mostra nenhum pai dentro da
+  # árvore do `website`; não precisa de entrada equivalente lá (ADR 0117).
+  #
   # MODERATE · GHSA-67mh-4wv8-2f99 — o dev-server do esbuild aceita requisição
   # de qualquer origem. Entra por `@esbuild-kit/core-utils`, que o drizzle-kit
   # ainda arrasta (e a 0.31.10 já é a última publicada).
@@ -95,6 +161,11 @@ overrides:
   # drizzle-kit só usa a lib para transpilar `drizzle.config.ts`. Mesmo assim
   # vale fechar — o alerta some e a 0.25.12 já estava na árvore por outro pai.
   esbuild@<0.24.3: 0.25.12
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. O `nanoid` chega
+  # SÓ pelo `postcss@8.5.23` acima, e esse `postcss` agora tem pai dos dois
+  # lados (`web` via `vite`, `website` via `postcss-preset-env`) — então os
+  # dois lockfiles precisam da mesma trava.
+  #
   # HIGH · CVE-2026-67213 (alerta #29, revisado como #32) — gerador
   # customizado entra em laço infinito quando `size` é zero (DoS). Entra por
   # `postcss@8.5.23`, que pede `nanoid: ^3.3.16`. O fix original saiu na
@@ -104,6 +175,10 @@ overrides:
   # um override acima: os dois convivem, um fixa o pai e o outro a
   # transitiva dele.
   nanoid@>=3.0.0 <3.3.18: 3.3.18
+  # MISTA (ADR 0117) — duplicada em `website/package.json`. Chega pelo
+  # `mermaid@11.16.1` acima, que agora tem pai dos dois lados — mesma lógica
+  # do `uuid`.
+  #
   # MODERATE · GHSA (alerta #28) — o `IN_PLACE` remove o hook e deixa a
   # subárvore destacada executável, o que reabre XSS. Entra por
   # `mermaid@11.16.1` (ele próprio um override acima), que pede
@@ -139,6 +214,11 @@ allowBuilds:
   # ignorado que ninguém decidiu.
   core-js: false
   unrs-resolver: true
+  # `node-pty` (apps/runner) é binding NATIVO de verdade — compila C++ com
+  # node-gyp no postinstall para abrir PTY de verdade (o mesmo binding que o
+  # VS Code usa). Diferente dos `false` abaixo, este build faz algo que o
+  # produto precisa: sem ele, o modo terminal interativo do runner não existe.
+  'node-pty': true
   # false pelo mesmo critério dos dois acima: o @scarf/scarf entra como
   # transitiva do @nestjs/swagger (Fase 7) e o postinstall dele só reporta
   # telemetria de instalação para um servidor de terceiros. Não gera nem

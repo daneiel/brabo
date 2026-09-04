@@ -1,8 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, afterEach, afterAll, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { PromoteStoriesResult, Session } from '../lib/api-types';
+import { historicoFalso } from '../test/historico-de-eventos';
+// Instância REAL do app (mesmo padrão de SessionPage.arquiteto-modelo-icone.test.tsx):
+// as asserções abaixo esperam texto em pt-BR, e `en` é o idioma DEFAULT.
+import i18n from '../lib/i18n';
 
 /**
  * Dois itens que colidiriam se fossem agentes separados (ambos em
@@ -57,6 +61,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('../lib/hooks', () => ({
   useSessionEvents: () => ({ data: eventos() }),
+  useSessionEventHistory: () => historicoFalso(eventos().items),
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: [] }),
@@ -126,10 +131,15 @@ function montar() {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
   eventos.mockReturnValue({ items: [] });
   getSession.mockResolvedValue(sessao());
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('SessionPage — item 1: "Voltar" leva ao projeto, não ao dashboard', () => {
@@ -256,5 +266,70 @@ describe('SessionPage — item 2: promoção de história inline no fio (RN-126)
     expect(
       screen.getByText('"Login com e-mail e senha": faltam critérios de aceite'),
     ).toBeInTheDocument();
+  });
+
+  /**
+   * RN-174 — devolver não é só gravar a recusa: `ReturnStoryUseCase` chama
+   * `reviseStory`, que é `handle_call({:revise, …})` no `po_server`, e a
+   * chamada só resolve depois de o PO reescrever a história. A tela ficava
+   * MUDA esse tempo inteiro.
+   */
+  describe('devolver arma o indicador de turno (RN-174)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    async function devolver() {
+      eventos.mockReturnValue({ items: [PROPOSTA] });
+      montar();
+      fireEvent.click(await screen.findByRole('button', { name: 'Devolver' }));
+      fireEvent.change(screen.getByLabelText('Motivo'), {
+        target: { value: 'faltam critérios de aceite' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Devolver ao PO' }));
+      await waitFor(() => expect(returnStory).toHaveBeenCalled());
+    }
+
+    it('mostra que o PO está trabalhando enquanto a revisão não volta', async () => {
+      let resolver: () => void = () => {};
+      returnStory.mockImplementation(
+        () =>
+          new Promise<{ ok: true }>((resolve) => {
+            resolver = () => resolve({ ok: true });
+          }),
+      );
+
+      await devolver();
+
+      expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+      expect(screen.getByText('Pensando…')).toBeInTheDocument();
+
+      await act(async () => {
+        resolver();
+      });
+      await waitFor(() =>
+        expect(screen.queryByText('Pensando…')).not.toBeInTheDocument(),
+      );
+    });
+
+    it('CASO DE FALHA: erro ao devolver não deixa o indicador preso', async () => {
+      returnStory.mockRejectedValue(new Error('rede caiu'));
+
+      await devolver();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+
+      expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
+    });
   });
 });

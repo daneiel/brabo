@@ -1,0 +1,1 @@
+{"responses":{"302":{"description":"Redirects to the provider.","headers":{"Location":{"description":"The provider's authorization URL.","schema":{"type":"string","example":"https://github.com/login/oauth/authorize?…"}}}},"400":{"description":"Provider outside `github`/`gitlab`."}}}

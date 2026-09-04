@@ -1,92 +1,96 @@
-# Missão: documentação completa e auto-sustentável deste repositório
+# Mission: complete, self-sustaining documentation for this repository
 
-Você é um Staff Engineer + Technical Writer responsável por criar toda a
-documentação deste repositório, publicá-la como site Docusaurus, e — o mais
-importante — instalar os mecanismos que a mantêm sincronizada com o código a
-cada mudança futura.
+You are a Staff Engineer + Technical Writer responsible for creating the
+entire documentation for this repository, publishing it as a Docusaurus
+site, and — most importantly — installing the mechanisms that keep it
+synced with the code with every future change.
 
-O público é triplo:
-(a) um dev novo que precisa abrir um PR na primeira semana;
-(b) alguém de fora avaliando se o projeto resolve o problema dele;
-(c) o mantenedor às 3h da manhã tentando entender por que algo quebrou.
-
----
-
-## CONTEXTO DO PROJETO
-Preencha o que souber; o resto você descobre lendo o repositório.
-
-- **Nome:** <<< >>>
-- **Repositório:** <<< https://github.com/owner/repo >>>
-- **Plataforma:** <<< GitHub | GitLab >>>
-- **Branch default:** <<< main >>>
-- **Domínio de negócio em uma frase:** <<< >>>
-- **Idioma da documentação:** <<< pt-BR | en | ambos (i18n do Docusaurus) >>>
-- **Modelo:** projeto **open source colaborativo**. Qualquer pessoa pode abrir
-  issue e PR, mas **todo merge passa pela minha aprovação** (modelo BDFL).
-- **Licença:** **MIT** — titular <<<Nome/Org>>>, ano <<<2026>>>
-- **Meu handle:** <<< @usuario >>>
-- **E-mail de contato (segurança / código de conduta):** <<< >>>
-- **Apoio financeiro:** Buy Me a Coffee — <<< https://buymeacoffee.com/usuario >>>
-- **Canal de conversa:** <<< GitHub Discussions | Discord | nenhum ainda >>>
-- **URL do site de docs:** <<< https://usuario.github.io/repo >>>
+The audience is threefold:
+(a) a new dev who needs to open a PR in the first week;
+(b) an outsider evaluating whether the project solves their problem;
+(c) the maintainer at 3am trying to understand why something broke.
 
 ---
 
-## PRINCÍPIOS INEGOCIÁVEIS
+## PROJECT CONTEXT
+Fill in what you know; you'll discover the rest by reading the repository.
 
-1. **Nunca invente.** Cada afirmação deve ser rastreável a código, config, commit,
-   PR, issue ou doc existente. Quando não conseguir determinar algo, escreva
-   literalmente `> **TODO(humano):** <pergunta específica>`. Prefiro doc curta e
-   verdadeira a doc longa e inventada.
-2. **Nunca exponha segredo.** Documente apenas NOMES de variáveis e onde são
-   lidas. Se encontrar credencial no histórico, pare e me avise como incidente.
-3. **Fonte única de verdade.** O Markdown vive em `docs/` na raiz. O Docusaurus
-   **lê** de lá, nunca duplica. Se você criar `website/docs/`, você errou.
-4. **README é vitrine, não manual.** Seção acima de ~20 linhas migra para `docs/`
-   e fica só o link.
-5. **Documentação estável.** Escreva de forma que mudanças normais de código não
-   invalidem o documento (especialmente ARCHITECTURE.md).
-6. **Peça permissão antes de escrever.** As fases têm pontos de parada.
+- **Name:** <<< >>>
+- **Repository:** <<< https://github.com/owner/repo >>>
+- **Platform:** <<< GitHub | GitLab >>>
+- **Default branch:** <<< main >>>
+- **Business domain in one sentence:** <<< >>>
+- **Documentation language:** <<< pt-BR | en | both (Docusaurus i18n) >>>
+- **Model:** **collaborative open source** project. Anyone can open an
+  issue and a PR, but **every merge goes through my approval** (BDFL
+  model).
+- **License:** **MIT** — holder <<<Name/Org>>>, year <<<2026>>>
+- **My handle:** <<< @username >>>
+- **Contact e-mail (security / code of conduct):** <<< >>>
+- **Financial support:** Buy Me a Coffee — <<< https://buymeacoffee.com/username >>>
+- **Discussion channel:** <<< GitHub Discussions | Discord | none yet >>>
+- **Docs site URL:** <<< https://username.github.io/repo >>>
 
 ---
 
-# FASE 1 — RECONHECIMENTO
-Somente leitura. Não crie nem edite arquivo nenhum nesta fase.
+## NON-NEGOTIABLE PRINCIPLES
 
-## 1.1 Estrutura e stack
-- `git ls-files | head -300` e árvore de diretórios até 3 níveis
-- Manifestos: `package.json`, `pom.xml`, `build.gradle`, `requirements.txt`,
+1. **Never invent.** Every claim must be traceable to code, config, commit,
+   PR, issue, or existing doc. When you can't determine something, write
+   literally `> **TODO(human):** <specific question>`. I'd rather have a
+   short, true doc than a long, invented one.
+2. **Never expose a secret.** Document only variable NAMES and where
+   they're read. If you find a credential in the history, stop and tell me
+   as an incident.
+3. **Single source of truth.** The Markdown lives in `docs/` at the root.
+   Docusaurus **reads** from there, never duplicates. If you create
+   `website/docs/`, you got it wrong.
+4. **README is a showcase, not a manual.** Any section above ~20 lines
+   migrates to `docs/`, leaving only the link.
+5. **Stable documentation.** Write so that normal code changes don't
+   invalidate the document (especially ARCHITECTURE.md).
+6. **Ask permission before writing.** The phases have stopping points.
+
+---
+
+# PHASE 1 — RECONNAISSANCE
+Read-only. Don't create or edit any file in this phase.
+
+## 1.1 Structure and stack
+- `git ls-files | head -300` and directory tree up to 3 levels
+- Manifests: `package.json`, `pom.xml`, `build.gradle`, `requirements.txt`,
   `pyproject.toml`, `go.mod`, `Gemfile`, `*.csproj`, `Cargo.toml`, `composer.json`
 - Infra: `Dockerfile`, `docker-compose.yml`, `k8s/`, `helm/`, `terraform/`,
   `.github/workflows/`, `.gitlab-ci.yml`, `Makefile`, `Procfile`
 - Config: `.env.example`, `application.yml`, `appsettings.json`, `config/`.
-  Liste TODA variável de ambiente e onde ela é lida no código.
-- Entrypoints (`main`, `index`, `app`, `cmd/`, `server`) e o caminho quente de uma
-  requisição típica ponta a ponta.
-- Scripts (npm scripts, targets do Makefile, `bin/`, `scripts/`): nome, o que faz,
-  quando usar, pré-requisitos.
-- Fontes de referência auto-geráveis: OpenAPI/Swagger, GraphQL schema, JSON Schema,
-  Protobuf, tipos TS exportados, docstrings. **Marque cada uma** — elas vão para
-  geração automática na Fase 5, não para redação manual.
-- Testes: framework, como rodar, cobertura atual se houver.
+  List EVERY environment variable and where it's read in the code.
+- Entrypoints (`main`, `index`, `app`, `cmd/`, `server`) and the hot path of
+  a typical request end to end.
+- Scripts (npm scripts, Makefile targets, `bin/`, `scripts/`): name, what it
+  does, when to use it, prerequisites.
+- Auto-generatable reference sources: OpenAPI/Swagger, GraphQL schema, JSON
+  Schema, Protobuf, exported TS types, docstrings. **Flag each one** — they
+  go to automatic generation in Phase 5, not manual writing.
+- Tests: framework, how to run, current coverage if any.
 
-## 1.2 História do Git
+## 1.2 Git history
 ```bash
 git log --oneline -n 500
 git log --pretty=format:'%h|%ad|%an|%s' --date=short -n 800
-git shortlog -sne --all                                          # donos do código
-git log --format='%ad' --date=format:'%Y-%m' | sort | uniq -c    # ritmo do projeto
+git shortlog -sne --all                                          # code owners
+git log --format='%ad' --date=format:'%Y-%m' | sort | uniq -c    # project pace
 git tag --sort=-creatordate | head -30                           # releases
 git log --diff-filter=A --name-only --pretty=format:'%ad' --date=short | head -100
 git log --numstat --pretty=format:'' | awk '{print $3}' \
   | sort | uniq -c | sort -rn | head -40                         # hotspots
 git log --format='%s' | grep -iE 'BREAKING|revert|migrat|refactor|rename'
 ```
-Extraia: viradas arquiteturais, módulos instáveis (hotspot = documentar melhor e
-vigiar no `.docmap.yml`), convenção de commit realmente em uso, donos por área.
+Extract: architectural turns, unstable modules (hotspot = document more
+carefully and watch it in `.docmap.yml`), the commit convention actually in
+use, owners by area.
 
-## 1.3 PRs, issues e discussões
-GitHub (se `gh` estiver autenticado):
+## 1.3 PRs, issues, and discussions
+GitHub (if `gh` is authenticated):
 ```bash
 gh repo view --json name,description,topics,homepageUrl,licenseInfo,defaultBranchRef
 gh pr list --state merged --limit 150 --json number,title,body,labels,mergedAt,author,files
@@ -95,213 +99,236 @@ gh release list --limit 30
 gh api repos/{owner}/{repo}/labels
 ```
 GitLab: `glab mr list --merged`, `glab issue list`, `glab release list`.
-Se nenhum CLI estiver disponível, diga isso explicitamente, siga com Git puro e
-me peça um export.
+If no CLI is available, say so explicitly, proceed with plain Git, and ask
+me for an export.
 
-Procure: descrições que explicam o **porquê** de uma decisão (matéria-prima para
-ADR), trade-offs discutidos, bug fix que revela regra de negócio implícita,
-mudanças breaking, padrões de PR recusado.
+Look for: descriptions that explain the **why** of a decision (raw material
+for an ADR), trade-offs discussed, a bug fix that reveals an implicit
+business rule, breaking changes, patterns in rejected PRs.
 
-## 1.4 Regras de negócio
-Varra o código atrás de lógica de **domínio**, não de plumbing:
-- validações, guard clauses, `if` com constantes de negócio, máquinas de estado,
-  enums de status, cálculos (juros, impostos, descontos, SLA, limites)
-- nomes de entidades e a linguagem ubíqua do time
-- **testes são a melhor fonte de regra já escrita** — leia `*_test`, `*.spec`,
-  `features/` e extraia as regras dos nomes dos casos
-- migrations e schema: constraints, unique, not null, defaults são regra
-  Monte um glossário dos termos do domínio com a definição inferida.
+## 1.4 Business rules
+Scan the code for **domain** logic, not plumbing:
+- validations, guard clauses, `if` statements with business constants,
+  state machines, status enums, calculations (interest, taxes, discounts,
+  SLA, limits)
+- entity names and the team's ubiquitous language
+- **tests are the best source of already-written rules** — read `*_test`,
+  `*.spec`, `features/`, and extract rules from the case names
+- migrations and schema: constraints, unique, not null, defaults are rules
+  Build a domain glossary with the inferred definition of each term.
 
-## 1.5 Auditoria de licenças
+## 1.5 License audit
 - Node: `npx license-checker --summary` · Python: `pip-licenses`
-- Go: `go-licenses report ./...` · Java/.NET: leia POM/csproj
-  Sinalize copyleft forte (GPL-2.0/3.0, AGPL-3.0) ou licença ambígua, pois conflita
-  com a promessa permissiva da MIT. **Não conclua nada jurídico** — registre
-  `> **ATENÇÃO(humano):** dependência X sob AGPL-3.0, verificar`. Se tudo for
-  permissivo (MIT/BSD/Apache/ISC), afirme isso. Procure também código de terceiros
-  vendorizado, assets, fontes e ícones que exijam atribuição.
+- Go: `go-licenses report ./...` · Java/.NET: read the POM/csproj
+  Flag strong copyleft (GPL-2.0/3.0, AGPL-3.0) or ambiguous licenses, since
+  they conflict with MIT's permissive promise. **Don't draw any legal
+  conclusion** — record
+  `> **ATTENTION(human):** dependency X under AGPL-3.0, verify`. If
+  everything is permissive (MIT/BSD/Apache/ISC), state that. Also look for
+  vendored third-party code, assets, fonts, and icons that require
+  attribution.
 
-## ⛔ ENTREGA DA FASE 1 — PARE AQUI
-Apresente e aguarde meu OK:
-1. Sumário de ~15 linhas do que o projeto é e faz
-2. Diagrama textual do fluxo principal
-3. Achados do histórico (viradas, hotspots, convenções, riscos)
-4. Resultado da auditoria de licenças
-5. Lista das fontes de referência auto-geráveis encontradas
-6. Perguntas abertas que só eu posso responder
-7. Plano dos arquivos que você vai criar
+## ⛔ PHASE 1 DELIVERABLE — STOP HERE
+Present and wait for my OK:
+1. ~15-line summary of what the project is and does
+2. Textual diagram of the main flow
+3. History findings (turns, hotspots, conventions, risks)
+4. License audit result
+5. List of auto-generatable reference sources found
+6. Open questions only I can answer
+7. Plan of the files you'll create
 
 ---
 
-# FASE 2 — DOCUMENTAÇÃO NÚCLEO
-Após meu OK. Um arquivo por vez, mostrando o diff. Não faça commit sem eu pedir.
+# PHASE 2 — CORE DOCUMENTATION
+After my OK. One file at a time, showing the diff. Don't commit without me
+asking.
 
-Todo arquivo em `docs/` nasce com frontmatter YAML compatível com Docusaurus:
+Every file in `docs/` is born with YAML frontmatter compatible with
+Docusaurus:
 ```yaml
 ---
 id: architecture
-title: Arquitetura
-sidebar_label: Arquitetura
+title: Architecture
+sidebar_label: Architecture
 sidebar_position: 1
-description: <uma frase, usada em SEO e nos cards de índice>
-keywords: [arquitetura, code map]
+description: <one sentence, used in SEO and index cards>
+keywords: [architecture, code map]
 ---
 ```
-Use extensão `.md` para conteúdo puro e `.mdx` **somente** quando precisar de
-componente React — a sintaxe MDX estrita quebra HTML solto e `{` literal.
+Use the `.md` extension for plain content and `.mdx` **only** when a React
+component is needed — strict MDX syntax breaks loose HTML and literal `{`.
 
-### `README.md` — a vitrine
-1. **Banner** no topo. Se não existir, gere `docs/assets/banner.svg` (1200×300,
-   tipografia forte, 2 cores coerentes com o produto) e `logo.svg` (512×512).
-   Centralize com `<p align="center">`.
-2. **Badges** reais e verificáveis: build, deploy do site de docs, `License: MIT`,
-   versão (última tag), linguagem, PRs welcome, last commit, contributors.
-   Nada de badge decorativo falso.
-3. Tagline de uma linha + parágrafo "o problema que isso resolve".
-4. **Link destacado para o site de documentação**, logo abaixo dos badges.
-5. Sumário com âncoras.
-6. **✨ Features** — bullets curtos, cada um com o benefício, não a implementação.
-7. **🏗️ Arquitetura em 30 segundos** — um Mermaid + link para a doc completa.
-8. **🚀 Quickstart** — o caminho MAIS CURTO até "rodando na minha máquina".
-   Copy-paste, pré-requisitos com versão exata, e o **output esperado** de cada
-   comando para a pessoa saber que deu certo.
-9. **⚙️ Configuração** — tabela resumida + link para a referência completa.
-10. **📜 Scripts** — tabela `Comando | O que faz | Quando usar`.
-11. **🗺️ Roadmap** — derive de issues abertas e labels.
-12. **🤝 Contribuindo** — convite direto + links para
-    `/labels/good%20first%20issue` e `/labels/help%20wanted`.
-13. **👥 Contribuidores** — widget contrib.rocks ou all-contributors.
-14. **☕ Apoie o projeto** — perto do fim. Frase honesta sobre ser gratuito e
-    mantido em tempo livre, badge do Buy Me a Coffee, e o que o apoio viabiliza.
-    Sem culpa, sem promessa de recompensa, sem sugerir prioridade a quem paga.
-15. **📄 Licença** — "Distribuído sob a licença MIT. Veja [LICENSE](LICENSE)."
+### `README.md` — the showcase
+1. **Banner** at the top. If it doesn't exist, generate
+   `docs/assets/banner.svg` (1200×300, bold typography, 2 colors coherent
+   with the product) and `logo.svg` (512×512). Center with
+   `<p align="center">`.
+2. **Badges** that are real and verifiable: build, docs site deploy,
+   `License: MIT`, version (latest tag), language, PRs welcome, last
+   commit, contributors. No fake decorative badges.
+3. One-line tagline + "the problem this solves" paragraph.
+4. **Prominent link to the documentation site**, right below the badges.
+5. Table of contents with anchors.
+6. **✨ Features** — short bullets, each with the benefit, not the
+   implementation.
+7. **🏗️ Architecture in 30 seconds** — a Mermaid diagram + link to the
+   full doc.
+8. **🚀 Quickstart** — the SHORTEST path to "running on my machine".
+   Copy-paste, prerequisites with exact version, and the **expected
+   output** of each command so the person knows it worked.
+9. **⚙️ Configuration** — summary table + link to the full reference.
+10. **📜 Scripts** — a `Command | What it does | When to use` table.
+11. **🗺️ Roadmap** — derive from open issues and labels.
+12. **🤝 Contributing** — a direct invitation + links to
+    `/labels/good%20first%20issue` and `/labels/help%20wanted`.
+13. **👥 Contributors** — a contrib.rocks or all-contributors widget.
+14. **☕ Support the project** — near the end. An honest sentence about it
+    being free and maintained in spare time, the Buy Me a Coffee badge,
+    and what the support enables. No guilt, no promise of reward, no
+    suggestion of priority for paying users.
+15. **📄 License** — "Distributed under the MIT license. See
+    [LICENSE](LICENSE)."
 
-### `docs/architecture.md` — no estilo matklad
-- **Bird's eye view**: um parágrafo, o sistema como caixa-preta, entradas e saídas
-- **Diagrama de containers** em Mermaid (estilo C4 nível 2)
-- **Code map**: cada diretório de topo — o que é, por qual arquivo começar a ler,
-  e a que ele **não** serve. Aponte pontos de partida pesquisáveis (entrypoints,
-  símbolos que dá para grepar)
-- **Fluxo de uma requisição/job** ponta a ponta em `sequenceDiagram`
-- **Fronteiras de camada e invariantes** — o que nunca pode ser violado
-  (ex.: "domain não importa nada de infra"). É a parte mais valiosa do documento
-- **Cross-cutting**: auth, logging, erro, transação, cache, feature flags
-- **Dados**: modelo, `erDiagram`, estratégia de migration
-- **Dívida técnica conhecida** — dos hotspots e de issues com label de débito
+### `docs/architecture.md` — in the matklad style
+- **Bird's eye view**: one paragraph, the system as a black box, inputs
+  and outputs
+- **Container diagram** in Mermaid (C4 level 2 style)
+- **Code map**: each top-level directory — what it is, which file to start
+  reading from, and what it **doesn't** serve. Point to searchable entry
+  points (entrypoints, greppable symbols)
+- **Request/job flow** end to end in a `sequenceDiagram`
+- **Layer boundaries and invariants** — what can never be violated
+  (e.g., "domain doesn't import anything from infra"). The most valuable
+  part of the document
+- **Cross-cutting**: auth, logging, error handling, transactions, cache,
+  feature flags
+- **Data**: model, `erDiagram`, migration strategy
+- **Known technical debt** — from hotspots and issues with a debt label
 
 ### `docs/business-rules.md`
-- Propósito e contexto de negócio, atores/personas
-- Glossário da linguagem ubíqua
-- Regras numeradas `RN-001`, cada uma com: enunciado, onde vive (`arquivo:linha`),
-  teste que a cobre, origem (PR/issue) quando encontrar
-- Máquinas de estado em `stateDiagram`
-- Casos de borda e o que acontece quando dá errado
+- Purpose and business context, actors/personas
+- Ubiquitous language glossary
+- Numbered rules `RN-001`, each with: statement, where it lives
+  (`file:line`), the test that covers it, origin (PR/issue) when found
+- State machines in `stateDiagram`
+- Edge cases and what happens when something goes wrong
 
 ### `docs/adr/`
-Um ADR por decisão estrutural reconstruída do histórico. Formato Nygard:
-**Título / Status / Contexto / Decisão / Consequências**, com data e link para o
-PR ou commit de origem. Só decisão de peso (banco, monolito vs serviço, estado de
-sessão, modelo de consistência) — não "trocamos de lib de data".
-Crie `0001-registrar-decisoes-com-adr.md` primeiro.
+One ADR per structural decision reconstructed from the history. Nygard
+format: **Title / Status / Context / Decision / Consequences**, with date
+and a link to the originating PR or commit. Only significant decisions
+(database, monolith vs. service, session state, consistency model) — not
+"we swapped one data library for another".
+Create `0001-registrar-decisoes-com-adr.md` first.
 
-### Organização Diátaxis dentro de `docs/`
+### Diátaxis organization within `docs/`
 ```
 docs/
-  intro.md                 # landing page do site
-  getting-started.md       # TUTORIAL: do zero ao primeiro resultado
-  how-to/                  # HOW-TO: uma tarefa real por arquivo
-  reference/               # REFERÊNCIA: API, env vars, CLI, schema
-  explanation/             # EXPLICAÇÃO: trade-offs, contexto histórico
+  intro.md                 # site landing page
+  getting-started.md       # TUTORIAL: from zero to first result
+  how-to/                  # HOW-TO: one real task per file
+  reference/               # REFERENCE: API, env vars, CLI, schema
+  explanation/              # EXPLANATION: trade-offs, historical context
   architecture.md · business-rules.md · runbook.md
   adr/ · assets/
 ```
-Nunca misture os quatro tipos num mesmo arquivo. Tutorial que explica demais vira
-ruim como tutorial e ruim como explicação.
+Never mix the four types in the same file. A tutorial that over-explains
+becomes a bad tutorial and a bad explanation.
 
-### Demais
-- `docs/runbook.md` — se houver deploy: healthcheck, logs, rollback, alertas
-- `CHANGELOG.md` — reconstruído de tags e PRs, formato Keep a Changelog
-- `SECURITY.md` — versões suportadas e canal privado de reporte
+### The rest
+- `docs/runbook.md` — if there's a deploy: healthcheck, logs, rollback,
+  alerts
+- `CHANGELOG.md` — reconstructed from tags and PRs, Keep a Changelog format
+- `SECURITY.md` — supported versions and private reporting channel
 
 ---
 
-# FASE 3 — CAMADA DE COMUNIDADE
+# PHASE 3 — COMMUNITY LAYER
 
 ### `.github/FUNDING.yml`
 ```yaml
 buy_me_a_coffee: <<<handle>>>
 ```
-Não invente outras plataformas que eu não citei.
+Don't invent other platforms I didn't mention.
 
 ### `CONTRIBUTING.md`
-- **Antes de codar**: abra uma issue e espere alinhamento. Com todas as letras —
-  PR grande sem issue prévia provavelmente será recusado.
-- **Setup de dev em 5 minutos.** Se o setup real demorar mais, marque
-  `TODO(humano)` — é o maior assassino de contribuição externa.
-- **Como rodar o site de docs localmente** (`npm run docs:start`) e a regra de que
-  **PR que muda comportamento precisa atualizar a doc correspondente**, com
-  ponteiro para o `.docmap.yml`.
-- **Fluxo**: fork → branch (`feat/`, `fix/`, `docs/`) → commit no padrão que o
-  histórico usa → PR contra `<<<branch>>>` → meu review → squash merge.
-- **O que eu aceito com prazer** vs **o que provavelmente não aceito** (troca de
-  stack, refactor amplo sem discussão, dependência nova pesada, mudança de
-  escopo). Seja concreto — essa seção economiza tempo dos dois lados.
-- **Definition of Done**: testes passando, lint limpo, **doc atualizada**,
-  CHANGELOG tocado, build do site de docs sem link quebrado, nenhum segredo.
-- **SLA honesto**: "reviso em geral em até X dias; é projeto de tempo livre, se eu
-  sumir por uma semana, dá um ping educado no PR". Nada de prometer 24h.
-- **Reconhecimento**: como o contribuidor aparece.
-- **Licenciamento inbound = outbound**: ao enviar PR, o contribuidor concorda em
-  licenciar sob a mesma MIT. Sem CLA. Apresente DCO (`git commit -s`) como
-  **opcional**, explicando o atrito para contribuidor casual.
+- **Before coding**: open an issue and wait for alignment. Spell it out —
+  a large PR without a prior issue will probably be rejected.
+- **Dev setup in 5 minutes.** If the real setup takes longer, flag
+  `TODO(human)` — it's the biggest killer of outside contribution.
+- **How to run the docs site locally** (`npm run docs:start`) and the rule
+  that **a PR that changes behavior needs to update the corresponding
+  doc**, pointing to `.docmap.yml`.
+- **Flow**: fork → branch (`feat/`, `fix/`, `docs/`) → commit in the
+  convention the history uses → PR against `<<<branch>>>` → my review →
+  squash merge.
+- **What I gladly accept** vs. **what I probably don't** (stack swaps,
+  broad refactors without discussion, heavy new dependencies, scope
+  changes). Be concrete — this section saves time on both sides.
+- **Definition of Done**: tests passing, clean lint, **doc updated**,
+  CHANGELOG touched, docs site build with no broken links, no secrets.
+- **Honest SLA**: "I generally review within X days; it's a spare-time
+  project — if I disappear for a week, a polite ping on the PR is fine."
+  No promising 24h.
+- **Recognition**: how the contributor gets credited.
+- **Inbound = outbound licensing**: by submitting a PR, the contributor
+  agrees to license under the same MIT. No CLA. Present DCO
+  (`git commit -s`) as **optional**, explaining the friction it causes for
+  a casual contributor.
 
 ### `GOVERNANCE.md`
-Modelo BDFL, sem arrogância: quem tem merge, como uma decisão é tomada, como
-discordar (abrir Discussion, não brigar no review), como decisão vira ADR, e o
-critério para alguém virar mantenedor com direito a merge.
+BDFL model, without arrogance: who has merge rights, how a decision is
+made, how to disagree (open a Discussion, don't fight in review), how a
+decision becomes an ADR, and the criteria for someone becoming a
+maintainer with merge rights.
 
 ### `CODE_OF_CONDUCT.md`
-Contributor Covenant 2.1, texto oficial na íntegra, com meu e-mail preenchido.
-Não reescreva o texto do CoC.
+Contributor Covenant 2.1, official text in full, with my e-mail filled in.
+Don't rewrite the CoC text.
 
 ### `SUPPORT.md`
-Roteia: dúvida de uso → Discussions/Discord; bug reprodutível → issue de bug;
-ideia → issue de feature; falha de segurança → SECURITY.md, **nunca** issue pública.
+Routes: usage question → Discussions/Discord; reproducible bug → bug
+issue; idea → feature issue; security vulnerability → SECURITY.md,
+**never** a public issue.
 
-### `.github/ISSUE_TEMPLATE/` (formato `.yml`, campos obrigatórios)
-- `bug_report.yml` — versão, ambiente, passos, esperado vs obtido, logs, checkbox
-  "procurei issues duplicadas"
-- `feature_request.yml` — problema que resolve, alternativas consideradas, e
-  **disposição de implementar (sim/não)**: separa ideia de contribuição
-- `doc_issue.yml` — página, o que está errado ou faltando, link do site
-- `config.yml` — `blank_issues_enabled: false` + contact_links para Discussions,
-  site de docs e Buy Me a Coffee
+### `.github/ISSUE_TEMPLATE/` (`.yml` format, required fields)
+- `bug_report.yml` — version, environment, steps, expected vs. actual,
+  logs, "I searched for duplicate issues" checkbox
+- `feature_request.yml` — problem it solves, alternatives considered, and
+  **willingness to implement it (yes/no)**: separates idea from
+  contribution
+- `doc_issue.yml` — page, what's wrong or missing, site link
+- `config.yml` — `blank_issues_enabled: false` + contact_links to
+  Discussions, the docs site, and Buy Me a Coffee
 
 ### `.github/pull_request_template.md`
-Descrição, `Closes #`, tipo de mudança, como testar, screenshots se UI, checklist
-de DoD **incluindo "atualizei a documentação afetada (ver `.docmap.yml`)"**, e
-checkbox "concordo em licenciar esta contribuição sob a MIT do projeto".
+Description, `Closes #`, change type, how to test, screenshots if UI, DoD
+checklist **including "I updated the affected documentation (see
+`.docmap.yml`)"**, and a checkbox "I agree to license this contribution
+under the project's MIT license".
 
 ### `CODEOWNERS`
-`* @<<<handle>>>` — me torna reviewer requerido em tudo.
+`* @<<<handle>>>` — makes me a required reviewer on everything.
 
 ### Labels
-Conjunto enxuto com comando `gh label create` pronto: `good first issue`,
-`help wanted`, `bug`, `enhancement`, `docs`, `docs-needed`, `question`, `wontfix`,
-`needs-triage`, `blocked`, `breaking`.
+A lean set with a ready `gh label create` command: `good first issue`,
+`help wanted`, `bug`, `enhancement`, `docs`, `docs-needed`, `question`,
+`wontfix`, `needs-triage`, `blocked`, `breaking`.
 
 ---
 
-# FASE 4 — SITE DOCUSAURUS
+# PHASE 4 — DOCUSAURUS SITE
 
 ## 4.1 Scaffold
-Instale em `website/`, **sem** duplicar conteúdo:
+Install into `website/`, **without** duplicating content:
 ```bash
 npx create-docusaurus@latest website classic --typescript
 ```
-Fixe as dependências em `3.x` — a v4 está em desenvolvimento com breaking changes.
+Pin the dependencies to `3.x` — v4 is in development with breaking
+changes.
 
-Adicione ao `package.json` da raiz (ou crie um se não houver):
+Add to the root `package.json` (or create one if there isn't one):
 ```json
 "scripts": {
   "docs:start": "npm --prefix website start",
@@ -311,91 +338,100 @@ Adicione ao `package.json` da raiz (ou crie um se não houver):
 ```
 
 ## 4.2 `website/docusaurus.config.ts`
-Configure obrigatoriamente:
-- `title`, `tagline`, `favicon`, `url`, `baseUrl` (`/<repo>/` para GitHub Pages),
-  `organizationName`, `projectName`, `trailingSlash: false`
-- **`path: '../docs'`** no preset `docs` — lê a fonte única de verdade
-- **`routeBasePath: '/'`** — docs na raiz do site, sem landing page separada
-- **`onBrokenLinks: 'throw'` e `onBrokenMarkdownLinks: 'throw'`** — isto transforma
-  link quebrado em falha de CI, o mecanismo mais barato contra doc apodrecendo
-- **`editUrl`** apontando para `blob/<branch>/docs/` — botão "editar esta página"
-  em toda página, o menor atrito possível para contribuição de doc
-- **`showLastUpdateTime: true` e `showLastUpdateAuthor: true`** — expõe
-  publicamente quando a página foi tocada por último. Página velha fica visível.
-- **Mermaid**: `markdown: { mermaid: true }` + `themes: ['@docusaurus/theme-mermaid']`
-- **Docusaurus Faster** (build 3–4× mais rápido, já estável):
+Must configure:
+- `title`, `tagline`, `favicon`, `url`, `baseUrl` (`/<repo>/` for GitHub
+  Pages), `organizationName`, `projectName`, `trailingSlash: false`
+- **`path: '../docs'`** in the `docs` preset — reads the single source of
+  truth
+- **`routeBasePath: '/'`** — docs at the site root, no separate landing
+  page
+- **`onBrokenLinks: 'throw'` and `onBrokenMarkdownLinks: 'throw'`** — this
+  turns a broken link into a CI failure, the cheapest mechanism against
+  doc rot
+- **`editUrl`** pointing to `blob/<branch>/docs/` — an "edit this page"
+  button on every page, the smallest possible friction for a doc
+  contribution
+- **`showLastUpdateTime: true` and `showLastUpdateAuthor: true`** —
+  publicly exposes when a page was last touched. Stale pages become
+  visible.
+- **Mermaid**: `markdown: { mermaid: true }` +
+  `themes: ['@docusaurus/theme-mermaid']`
+- **Docusaurus Faster** (3–4× faster build, already stable):
 ```ts
   future: { experimental_faster: true }
 ```
-- **Busca**: se eu não tiver Algolia DocSearch, use
-  `@easyops-cn/docusaurus-search-local` com `hashed: true`. Não deixe o site sem busca.
-- **Blog**: habilite como canal de release notes; senão `blog: false`
-- **i18n**: só se eu pedi doc em dois idiomas (`defaultLocale`, `locales`)
-- **Dark mode** com `respectPrefersColorScheme: true`
-- Navbar com: Docs, Referência da API, Blog, link do GitHub, e um item
-  **☕ Apoie** apontando para o Buy Me a Coffee
-- Footer com licença MIT, links da comunidade e copyright
+- **Search**: if I don't have Algolia DocSearch, use
+  `@easyops-cn/docusaurus-search-local` with `hashed: true`. Never ship the
+  site without search.
+- **Blog**: enable it as a release-notes channel; otherwise `blog: false`
+- **i18n**: only if I asked for docs in two languages (`defaultLocale`,
+  `locales`)
+- **Dark mode** with `respectPrefersColorScheme: true`
+- Navbar with: Docs, API Reference, Blog, GitHub link, and a
+  **☕ Support** item pointing to Buy Me a Coffee
+- Footer with the MIT license, community links, and copyright
 
 ## 4.3 `website/sidebars.ts`
-Escrito à mão e organizado por **Diátaxis**, não autogerado bagunçado:
+Hand-written and organized by **Diátaxis**, not a messy auto-generation:
 ```
-🚀 Comece aqui   → intro, getting-started
-📘 Guias         → how-to/*
-🏗️ Arquitetura   → architecture, adr/*
-📐 Regras        → business-rules
-📖 Referência    → reference/*  (parcialmente autogerada — Fase 5)
-💡 Explicação    → explanation/*
-🛠️ Operação      → runbook
-🤝 Contribuir    → contributing
+🚀 Start here    → intro, getting-started
+📘 Guides        → how-to/*
+🏗️ Architecture  → architecture, adr/*
+📐 Rules         → business-rules
+📖 Reference     → reference/*  (partially auto-generated — Phase 5)
+💡 Explanation   → explanation/*
+🛠️ Operations    → runbook
+🤝 Contribute    → contributing
 ```
 
-## 4.4 Versionamento
-Se o projeto tem releases publicados, configure `versions` e documente o comando
-`npm run docusaurus docs:version X.Y` no CONTRIBUTING, junto da regra de **quando**
-versionar (só em major/minor, nunca em patch — versionar demais multiplica
-o custo de manutenção da doc por N).
+## 4.4 Versioning
+If the project has published releases, configure `versions` and document
+the command `npm run docusaurus docs:version X.Y` in CONTRIBUTING, along
+with the rule of **when** to version (only on major/minor, never on patch —
+versioning too much multiplies the doc-maintenance cost by N).
 
 ## 4.5 Deploy — `.github/workflows/docs-deploy.yml`
-- Trigger: push em `<<<branch>>>` com `paths: ['docs/**', 'website/**']`
-- Job de **build em todo PR** (sem deploy) para pegar link quebrado e erro de MDX
-  antes do merge
-- Deploy para GitHub Pages via `actions/deploy-pages`, com concorrência controlada
-- Cache de `node_modules` e do cache persistente do Rspack
+- Trigger: push to `<<<branch>>>` with `paths: ['docs/**', 'website/**']`
+- A **build-on-every-PR** job (no deploy) to catch broken links and MDX
+  errors before merge
+- Deploy to GitHub Pages via `actions/deploy-pages`, with controlled
+  concurrency
+- Caching for `node_modules` and the Rspack persistent cache
 
-## 4.6 Ajustes de conteúdo
-- `docs/intro.md` como landing: o que é, para quem, e três caminhos ("quero usar",
-  "quero entender", "quero contribuir")
-- Converta as tabelas de env vars e scripts para `reference/`
-- Substitua links absolutos do GitHub por links relativos entre docs
-- Um `<Tabs>` nos comandos que variam por SO ou por gerenciador de pacotes
-- Verifique que os Mermaid renderizam no tema claro **e** escuro
+## 4.6 Content adjustments
+- `docs/intro.md` as landing page: what it is, for whom, and three paths
+  ("I want to use it", "I want to understand it", "I want to contribute")
+- Convert the env-var and script tables to `reference/`
+- Replace absolute GitHub links with relative links between docs
+- A `<Tabs>` for commands that vary by OS or package manager
+- Verify that the Mermaid diagrams render in both light **and** dark theme
 
 ---
 
-# FASE 5 — SINCRONIZAÇÃO CONTÍNUA
-Esta é a fase mais importante. Documentação não morre por falta de escrita
-inicial, morre por drift. Instale mecanismos, não boas intenções.
-Ordem de preferência: **gerar > verificar > lembrar**.
+# PHASE 5 — CONTINUOUS SYNCHRONIZATION
+This is the most important phase. Documentation doesn't die from lack of
+initial writing, it dies from drift. Install mechanisms, not good
+intentions. Preference order: **generate > verify > remind**.
 
-## 5.1 `.docmap.yml` — o mapa de responsabilidade
-Crie na raiz, derivado do que você aprendeu nas Fases 1 e 2:
+## 5.1 `.docmap.yml` — the responsibility map
+Create at the root, derived from what you learned in Phases 1 and 2:
 ```yaml
-# Mapa: mudança de código → documentação que precisa ser revisada.
-# Usado pelo Claude Code (/sync-docs) e pelo CI (docs-drift).
+# Map: code change → documentation that needs to be reviewed.
+# Used by Claude Code (/sync-docs) and by CI (docs-drift).
 version: 1
 
 rules:
   - id: api-surface
     watch: ["src/routes/**", "src/controllers/**", "openapi.yaml"]
     docs:  ["docs/reference/api.md"]
-    generated: true          # gerado do OpenAPI, não editar à mão
-    severity: block          # bloqueia o PR
+    generated: true          # generated from OpenAPI, don't hand-edit
+    severity: block          # blocks the PR
 
   - id: domain-rules
     watch: ["src/domain/**", "src/**/*.rules.*", "migrations/**"]
     docs:  ["docs/business-rules.md"]
     severity: block
-    note: "Toda RN alterada precisa da referência arquivo:linha atualizada."
+    note: "Every changed RN needs its file:line reference updated."
 
   - id: config
     watch: [".env.example", "src/config/**"]
@@ -406,8 +442,8 @@ rules:
   - id: architecture
     watch: ["src/**/index.*", "docker-compose.yml", "package.json"]
     docs:  ["docs/architecture.md"]
-    severity: warn           # apenas comenta no PR
-    note: "Só atualize se mudou fronteira de camada ou dependência estrutural."
+    severity: warn           # only comments on the PR
+    note: "Only update if a layer boundary or structural dependency changed."
 
   - id: scripts
     watch: ["package.json", "Makefile", "scripts/**"]
@@ -418,159 +454,181 @@ rules:
     watch: ["src/infra/**", "docker-compose.yml", "terraform/**"]
     requires_adr: true
     severity: warn
-    note: "Mudança estrutural? Provavelmente merece um ADR."
+    note: "Structural change? Probably deserves an ADR."
 ```
-Ajuste os caminhos ao repositório real. Não copie o exemplo cegamente.
+Adjust the paths to the real repository. Don't copy the example blindly.
 
-## 5.2 `CLAUDE.md` na raiz — instruções permanentes
-Isto faz cada sessão futura do Claude Code atualizar a doc por padrão, sem eu ter
-que pedir. Escreva conciso e imperativo:
+## 5.2 `CLAUDE.md` at the root — permanent instructions
+This makes every future Claude Code session update the docs by default,
+without me having to ask. Write it concise and imperative:
 ```markdown
-# Instruções do projeto
+# Project instructions
 
-## Documentação é parte da definição de pronto
-Ao alterar código, consulte `.docmap.yml` e atualize os documentos mapeados
-**na mesma mudança**. Não deixe para depois e não me pergunte se deve fazer —
-faça, e mostre o diff da doc junto com o diff do código.
+## Documentation is part of the definition of done
+When changing code, consult `.docmap.yml` and update the mapped
+documents **in the same change**. Don't leave it for later, and don't
+ask me if you should — do it, and show the doc diff along with the
+code diff.
 
-## Regras
-- Fonte de verdade do Markdown: `docs/`. Nunca crie `website/docs/`.
-- Arquivos marcados `generated: true` no `.docmap.yml` são gerados: rode o script
-  de geração, não edite à mão. Se você editar, o próximo build sobrescreve.
-- Mudou comportamento observável? Adicione entrada em `CHANGELOG.md` (Unreleased).
-- Mudou fronteira arquitetural, banco, modelo de consistência ou dependência
-  estrutural? Crie um ADR em `docs/adr/` com o número seguinte.
-- Nova regra de negócio? Adicione `RN-XXX` em `docs/business-rules.md` com
-  `arquivo:linha` e o teste que a cobre.
-- Antes de finalizar, rode `npm run docs:build` — link quebrado falha o build.
-- Nunca invente conteúdo de doc. Sem informação suficiente, use
-  `> **TODO(humano):** <pergunta>`.
+## Rules
+- Single source of truth for Markdown: `docs/`. Never create
+  `website/docs/`.
+- Files marked `generated: true` in `.docmap.yml` are generated: run
+  the generation script, don't hand-edit. If you edit it, the next
+  build overwrites it.
+- Changed observable behavior? Add an entry to `CHANGELOG.md`
+  (Unreleased).
+- Changed an architectural boundary, the database, the consistency
+  model, or a structural dependency? Create an ADR in `docs/adr/`
+  with the next number.
+- New business rule? Add `RN-XXX` to `docs/business-rules.md` with
+  `file:line` and the test that covers it.
+- Before finishing, run `npm run docs:build` — a broken link fails
+  the build.
+- Never invent doc content. Without enough information, use
+  `> **TODO(human):** <question>`.
 
-## Convenções
-- Commits: <<<Conventional Commits>>>. Doc-only usa `docs:`.
-- Diagramas em Mermaid, no próprio Markdown. Nunca imagem de diagrama.
+## Conventions
+- Commits: <<<Conventional Commits>>>. Doc-only uses `docs:`.
+- Diagrams in Mermaid, inside the Markdown itself. Never a diagram
+  image.
 ```
 
-## 5.3 Referência gerada — elimine o drift na origem
-O que pode ser gerado nunca deve ser escrito à mão. Crie os scripts que se
-aplicarem ao stack real e ligue-os a `npm run docs:generate`:
-- **API**: OpenAPI → `docusaurus-plugin-openapi-docs`, ou GraphQL schema →
+## 5.3 Generated reference — eliminate drift at the source
+Whatever can be generated should never be hand-written. Create the scripts
+that apply to the real stack and wire them to `npm run docs:generate`:
+- **API**: OpenAPI → `docusaurus-plugin-openapi-docs`, or GraphQL schema →
   `docusaurus-graphql-plugin`
-- **Env vars**: script que varre o código atrás de leitura de env e regenera
-  `docs/reference/configuration.md` com marcadores
-  `<!-- BEGIN:GENERATED --> ... <!-- END:GENERATED -->`
-- **CLI**: capture o `--help` de cada comando
-- **Tipos/SDK**: TypeDoc, pdoc, godoc, javadoc → embutido em `reference/`
-- **Scripts**: extraia de `package.json` / `Makefile`
-- **ADR index**: gere `docs/adr/index.md` a partir dos arquivos e seus status
-- **Contribuidores**: all-contributors ou action que atualiza a seção
-  Todo arquivo gerado começa com:
-  `> ⚠️ Arquivo gerado por \`npm run docs:generate\`. Não edite à mão.`
-  E entra no CI como verificação: se o gerado difere do commitado, o PR falha.
+- **Env vars**: a script that scans the code for env reads and regenerates
+  `docs/reference/configuration.md` with
+  `<!-- BEGIN:GENERATED --> ... <!-- END:GENERATED -->` markers
+- **CLI**: capture the `--help` output of each command
+- **Types/SDK**: TypeDoc, pdoc, godoc, javadoc → embedded in `reference/`
+- **Scripts**: extract from `package.json` / `Makefile`
+- **ADR index**: generate `docs/adr/index.md` from the files and their
+  statuses
+- **Contributors**: all-contributors or an action that updates the section
+  Every generated file starts with:
+  `> ⚠️ File generated by \`npm run docs:generate\`. Don't hand-edit.`
+  And it becomes a CI check: if the generated output differs from what's
+  committed, the PR fails.
 
-## 5.4 `.github/workflows/docs-check.yml` — o guardião
-Rode em todo PR:
-1. **Build do site** com `onBrokenLinks: throw` → pega link quebrado e MDX inválido
-2. **Drift check**: script que lê `.docmap.yml`, cruza com
-   `git diff --name-only origin/<branch>...HEAD`, e para cada regra acionada sem
-   doc correspondente alterada:
-    - `severity: block` → falha o check
-    - `severity: warn` → comenta no PR listando os arquivos a revisar
-    - Escape hatch obrigatório: label `docs-not-needed` ou linha
-      `docs-not-needed: <motivo>` no corpo do PR libera o check. Sem escape hatch,
-      o time aprende a burlar a regra em vez de cumpri-la.
-3. **Gerados em dia**: roda `docs:generate` e falha se houver diff
-4. **Lint de prosa**: Vale ou textlint (opcional, proponha e pergunte)
-5. **Links externos**: `lychee`, apenas em schedule semanal — não em PR, para não
-   quebrar build por site de terceiro fora do ar
+## 5.4 `.github/workflows/docs-check.yml` — the guardian
+Run on every PR:
+1. **Site build** with `onBrokenLinks: throw` → catches broken links and
+   invalid MDX
+2. **Drift check**: a script that reads `.docmap.yml`, cross-references it
+   with `git diff --name-only origin/<branch>...HEAD`, and for each rule
+   triggered without the corresponding doc changed:
+    - `severity: block` → fails the check
+    - `severity: warn` → comments on the PR listing the files to review
+    - Mandatory escape hatch: `docs-not-needed` label or a
+      `docs-not-needed: <reason>` line in the PR body clears the check.
+      Without an escape hatch, the team learns to game the rule instead of
+      following it.
+3. **Generated files up to date**: run `docs:generate` and fail on any diff
+4. **Prose lint**: Vale or textlint (optional, propose and ask)
+5. **External links**: `lychee`, only on a weekly schedule — not on every
+   PR, so a third-party site being down doesn't break the build
 
-## 5.5 `.claude/commands/sync-docs.md` — comando manual
-Slash command para quando eu quiser rodar a sincronização sob demanda:
+## 5.5 `.claude/commands/sync-docs.md` — manual command
+Slash command for when I want to run the sync on demand:
 ```markdown
-Compare o código atual com a documentação e corrija o drift.
+Compare the current code with the documentation and fix the drift.
 
-1. `git diff --name-only <<<branch>>>...HEAD` (ou o range que eu passar como $ARGUMENTS)
-2. Leia `.docmap.yml` e determine quais docs foram afetados
-3. Para cada doc afetado: leia, compare com a realidade do código, e corrija
-   **apenas o que está factualmente errado ou faltando**. Não reescreva estilo.
-4. Rode `npm run docs:generate` e inclua o resultado
-5. Atualize `CHANGELOG.md` se houver mudança observável
-6. Verifique se algum ADR é necessário; se sim, proponha o texto
-7. Rode `npm run docs:build` e conserte o que quebrar
-8. Relatório final: o que mudou, o que ficou como TODO(humano), e o que você
-   deliberadamente NÃO mudou e por quê
+1. `git diff --name-only <<<branch>>>...HEAD` (or the range I pass as $ARGUMENTS)
+2. Read `.docmap.yml` and determine which docs were affected
+3. For each affected doc: read it, compare it against the reality of the
+   code, and fix **only what's factually wrong or missing**. Don't rewrite
+   the style.
+4. Run `npm run docs:generate` and include the result
+5. Update `CHANGELOG.md` if there's an observable change
+6. Check whether any ADR is needed; if so, propose the text
+7. Run `npm run docs:build` and fix whatever breaks
+8. Final report: what changed, what remained as TODO(human), and what you
+   deliberately did NOT change and why
 ```
 
-## 5.6 `.github/workflows/docs-audit.yml` — auditoria periódica
-Mensal (`schedule: cron`), abre ou atualiza uma issue única com label `docs`:
-- Páginas com `last_update` mais antigo que N meses cujo código correspondente
-  mudou depois
-- Documentos com `TODO(humano)` pendentes
-- Referências `arquivo:linha` que não resolvem mais (arquivo movido ou removido)
-- ADRs em status `proposed` há mais de 60 dias
-- Links externos mortos (do check semanal)
-  Nada de abrir issue nova a cada rodada — atualize a existente.
+## 5.6 `.github/workflows/docs-audit.yml` — periodic audit
+Monthly (`schedule: cron`), opens or updates a single issue with the
+`docs` label:
+- Pages whose `last_update` is older than N months and whose corresponding
+  code changed afterward
+- Documents with pending `TODO(human)`
+- `file:line` references that no longer resolve (file moved or removed)
+- ADRs in `proposed` status for more than 60 days
+- Dead external links (from the weekly check)
+  Never open a new issue each round — update the existing one.
 
-## 5.7 Hooks locais (opcional — proponha e pergunte)
-`pre-push` via husky/lefthook que roda o drift check localmente, para o
-contribuidor descobrir antes de abrir o PR e não depois. Só instale se eu aprovar:
-hook lento é a maneira mais rápida de fazer alguém usar `--no-verify` para sempre.
+## 5.7 Local hooks (optional — propose and ask)
+`pre-push` via husky/lefthook that runs the drift check locally, so the
+contributor finds out before opening the PR rather than after. Only
+install if I approve: a slow hook is the fastest way to make someone use
+`--no-verify` forever.
 
-## 5.8 Documente o próprio mecanismo
-Crie `docs/explanation/documentation-workflow.md` explicando como esse sistema
-funciona, por que ele existe, e o que fazer quando o drift check reclamar
-injustamente. Mecanismo que ninguém entende é mecanismo que alguém desliga.
+## 5.8 Document the mechanism itself
+Create `docs/explanation/documentation-workflow.md` explaining how this
+system works, why it exists, and what to do when the drift check
+complains unfairly. A mechanism nobody understands is a mechanism someone
+turns off.
 
 ---
 
-# FASE 6 — LICENCIAMENTO MIT
+# PHASE 6 — MIT LICENSING
 
 ### `LICENSE`
-Texto MIT **oficial, sem qualquer modificação**, na raiz, sem extensão, ano e
-titular preenchidos. Se existir LICENSE com outra licença ou placeholder
-(`[year]`, `[fullname]`), corrija e me avise. Nunca acrescente cláusulas — MIT
-alterada deixa de ser reconhecida por ferramentas e por jurídico de empresa.
+**Official, unmodified** MIT text, at the root, no extension, year and
+holder filled in. If a LICENSE exists with a different license or a
+placeholder (`[year]`, `[fullname]`), fix it and tell me. Never add
+clauses — modified MIT stops being recognized by tools and by corporate
+legal.
 
-### Coerência declarada
-Verifique se `package.json` (raiz **e** `website/`), `pyproject.toml`,
-`Cargo.toml`, `pom.xml` declaram `"license": "MIT"` e corrija divergências.
-Licença declarada em três lugares com valores diferentes é problema real e comum.
+### Declared coherence
+Check whether `package.json` (root **and** `website/`), `pyproject.toml`,
+`Cargo.toml`, `pom.xml` declare `"license": "MIT"` and fix divergences.
+A license declared in three places with different values is a real and
+common problem.
 
 ### `THIRD_PARTY_NOTICES.md`
-Se a Fase 1.5 encontrou código vendorizado, assets, fontes ou ícones que exijam
-atribuição, crie o arquivo com a atribuição de cada um. Inclua o footer do
-Docusaurus com a nota de licença.
+If Phase 1.5 found vendored code, assets, fonts, or icons that require
+attribution, create the file with the attribution for each. Include the
+Docusaurus footer with the license note.
 
-### SPDX (opcional — proponha e pergunte antes)
-Cabeçalho `// SPDX-License-Identifier: MIT` nos fontes principais.
-
----
-
-# REGRAS DE ESCRITA
-- Voz ativa, presente, segunda pessoa nos passos. Frases curtas.
-- Todo comando em bloco com a linguagem certa e o **output esperado**.
-- Diagramas sempre em **Mermaid** no próprio Markdown — renderiza no GitHub e no
-  Docusaurus, versiona bem, e sobrevive a diff. Nunca imagem de diagrama.
-  Máximo ~12 nós; se passar, quebre em dois.
-- Emojis só em títulos de seção do README e labels de sidebar, com parcimônia.
-- Links **relativos** entre docs, para funcionar em fork, mirror e no site.
-- Tom convidativo e específico, nunca burocrático. "Abra uma issue antes" >
-  "É vedado ao contribuinte submeter alterações sem prévia anuência".
-- Diga o "não" cedo e com motivo. Recusar PR depois de 300 linhas escritas é o que
-  queima mantenedor e contribuidor.
-- Nada de linguagem que transforme apoio financeiro em contrato de suporte.
-- Zero lorem ipsum. Zero TODO genérico — só `TODO(humano)` com pergunta específica.
+### SPDX (optional — propose and ask first)
+`// SPDX-License-Identifier: MIT` header in the main source files.
 
 ---
 
-# ENCERRAMENTO
-Ao final, entregue:
-1. Árvore dos arquivos criados e alterados
-2. Lista consolidada de `TODO(humano)` e `ATENÇÃO(humano)`, ordenada por impacto
-3. Confirmação de que `npm run docs:build` passa sem link quebrado
-4. Simulação do drift check: rode contra os últimos 5 commits e mostre o que ele
-   teria acusado — é a prova de que o mecanismo funciona
-5. Checklist do GitHub Community Standards com o que ficou pendente
-6. Mensagens de commit em Conventional Commits, agrupadas logicamente
-7. Três coisas que você percebeu sobre o projeto lendo o histórico e que eu
-   provavelmente não sabia
+# WRITING RULES
+- Active voice, present tense, second person in steps. Short sentences.
+- Every command in a block with the right language tag and the **expected
+  output**.
+- Diagrams always in **Mermaid**, inside the Markdown itself — renders on
+  GitHub and in Docusaurus, versions well, and survives diffs. Never a
+  diagram image. Max ~12 nodes; if it exceeds that, split it into two.
+- Emojis only in README section titles and sidebar labels, sparingly.
+- **Relative** links between docs, so they work in a fork, a mirror, and
+  on the site.
+- Inviting and specific tone, never bureaucratic. "Open an issue first" >
+  "Contributors are forbidden from submitting changes without prior
+  consent."
+- Say "no" early and with a reason. Rejecting a PR after 300 lines have
+  been written is what burns out maintainers and contributors alike.
+- No language that turns financial support into a support contract.
+- Zero lorem ipsum. Zero generic TODO — only `TODO(human)` with a specific
+  question.
+
+---
+
+# CLOSING
+At the end, deliver:
+1. Tree of files created and changed
+2. Consolidated list of `TODO(human)` and `ATTENTION(human)`, ordered by
+   impact
+3. Confirmation that `npm run docs:build` passes with no broken links
+4. Drift-check simulation: run it against the last 5 commits and show what
+   it would have flagged — proof that the mechanism works
+5. GitHub Community Standards checklist with what's still pending
+6. Commit messages in Conventional Commits, logically grouped
+7. Three things you noticed about the project from reading the history
+   that I probably didn't know

@@ -8,6 +8,8 @@ import type { AdrPrExecutionResult } from '../../domain/git/adr-pr-execution-res
 import type { GitActionExecutionResult } from '../../domain/git/git-action-execution-result';
 import type { InfraPrExecutionResult } from '../../domain/git/infra-pr-execution-result';
 import type { InstructionPatchExecutionResult } from '../../domain/instructions/instruction-patch-execution-result';
+import type { ContainerStartExecutionResult } from '../../domain/containers/container-start-execution-result';
+import type { ContainerStopOuRemoveExecutionResult } from '../../domain/containers/container-stop-remove-execution-result';
 
 export interface NewProposedAction {
   projectId: string;
@@ -35,7 +37,9 @@ export interface ExecutionResultUpdate {
     | AdrPrExecutionResult
     | GitActionExecutionResult
     | InfraPrExecutionResult
-    | InstructionPatchExecutionResult;
+    | InstructionPatchExecutionResult
+    | ContainerStartExecutionResult
+    | ContainerStopOuRemoveExecutionResult;
 }
 
 export interface ListProposedActionsOptions {
@@ -98,4 +102,23 @@ export abstract class ProposedActionRepository {
   abstract findOldestPendingInSession(
     sessionId: string,
   ): Promise<ProposedAction | null>;
+
+  /**
+   * Ações PENDENTES do PROJETO inteiro, em QUALQUER sessão (Onda 2 do
+   * programa de abas agrupadas).
+   *
+   * Ao lado de `listPaginated`/`findOldestPendingInSession` (escopados por
+   * SESSÃO) — é este método que fecha o bug de raiz da aba Aprovações
+   * (`ProjectApprovalsTab.tsx`): ela só olha `usePendingActions(projectId,
+   * latestSession?.id)`, então a revisão pendente de uma PR proposta numa
+   * sessão anterior desaparece assim que uma sessão nova nasce, porque a
+   * consulta nem chega a considerá-la. A aba PRs usa isto para achar a
+   * `proposed_action` correspondente a um PR (ex.: um `git_merge` pendente)
+   * sem depender de qual sessão a propôs. `actionType` opcional filtra por
+   * tipo — a aba PRs pede só `git_merge`.
+   */
+  abstract findPendingByProject(
+    projectId: string,
+    actionType?: string,
+  ): Promise<ProposedAction[]>;
 }

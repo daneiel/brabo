@@ -5,22 +5,52 @@
   min-height: 0;
 }
 
-/* Faixa `surface-1` com UMA divisória embaixo — cabeçalho e régua são o mesmo
-   bloco no handoff (seção 4), e eram dois blocos separados aqui, cada um com
-   sua linha de 1px. */
+/* Faixa `surface-1` agrupando o cabeçalho e a régua — eram dois blocos
+   separados aqui, cada um com sua própria linha de 1px 40px distantes um do
+   outro; agora ficam ADJACENTES, cada um com a SUA divisória (`.headerTop`
+   aqui, `.list` em `Tabs.module.css`), como o handoff literalmente desenha
+   (cada `<div>` do handoff declara o próprio `border-bottom`). */
 .header {
   flex-shrink: 0;
   background: var(--surface-1);
-  border-bottom: 1px solid var(--border);
 }
 
+/*
+ * "Header de 60px" (checklist "moldura de tela", ADR 0078) — `--header-h`.
+ *
+ * `min-height`, não `height`: o conteúdo desta faixa é mais rico do que o
+ * cabeçalho genérico do handoff (título 18/600 + subtítulo mono + chip +
+ * indicador). Esta é a identidade do PROJETO — ícone do provider, nome,
+ * branch/adotado — mais o `TokenMeter` compacto, e as duas peças somadas
+ * passam de 60px mesmo no caso mínimo (o card do TokenMeter sozinho já
+ * soma ~70px com o próprio padding interno). Forçar `height: 60px` cortaria
+ * o alerta de orçamento — exatamente o "overflow escondido" que a RN-088
+ * proíbe (falha/estado nunca vira invisível). `min-height` honra o token
+ * como PISO e deixa a faixa crescer quando o conteúdo pede; `overflow:
+ * hidden` continua aqui (pedido do handoff) e não corta nada porque não há
+ * altura fixa para transbordar — só protege contra um filho posicionado que
+ * escape da caixa.
+ */
 .headerTop {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   flex-wrap: wrap;
+  min-height: var(--header-h, 60px);
   padding: 16px 24px 14px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* A ponta direita da faixa: o chip que abre o painel "precisa de você" e o
+   medidor de orçamento, nessa ordem. O chip vem ANTES porque é ele que diz se
+   alguma coisa espera decisão — o medidor informa, o chip convoca. */
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .headerLeft {
@@ -101,29 +131,16 @@
 }
 
 /*
- * A régua, adaptada ao handoff sem tocar na primitiva `Tabs`.
- *
- * O desenho pede aba com respiro PRÓPRIO (11px × 14px) e 2px entre elas, com o
- * sublinhado da ativa cobrindo a aba inteira; a primitiva desenha texto solto
- * com 20px de intervalo e um sublinhado do tamanho do rótulo. E a divisória é
- * uma só, a do cabeçalho — a da lista fica logo acima e as duas apareciam
- * empilhadas.
- *
- * Está aqui por CSS de descendente, e não em `components/ui/Tabs.module.css`,
- * porque a primitiva é de outro dono nesta onda. Quando ela puder mudar, o
- * lugar disto é lá — está na PR como pendência declarada.
+ * O eixo horizontal da página: trilho de navegação à esquerda
+ * (`ProjectRail.module.css`) e o painel da aba à direita (ADR 0126). Era
+ * `.wrapper` inteiro em coluna, com a régua de abas dentro do cabeçalho.
+ * `min-height: 0` é o que deixa `.body` rolar por dentro em vez de esticar
+ * a página.
  */
-.tabsRow {
-  padding: 0 24px;
-}
-
-.tabsRow [role='tablist'] {
-  gap: 2px;
-  border-bottom: none;
-}
-
-.tabsRow [role='tab'] {
-  padding: 11px 14px;
+.corpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
 }
 
 /* O lugar onde a tela fala quando não há projeto para mostrar — erro de carga
@@ -133,17 +150,37 @@
   padding: 24px;
 }
 
+/* Largura máxima 960–1040px (checklist "moldura de tela", ADR 0078): as abas
+   em forma de documento (Backlog, Aprovações, Insights, Gastos,
+   Configurações, Criativo, Chat) centralizam o conteúdo em vez de esticar
+   tabela e texto pela largura inteira de um monitor largo. Algumas já tinham
+   `max-width` PRÓPRIO em `ch` (prosa, formulário) — este container é mais
+   largo que todos eles, então continua sendo o de FORA, sem conflito.
+
+   Desde o ADR 0126 este é filho de `.corpo` (linha), não de `.wrapper`
+   (coluna): `flex: 1` passou a repartir LARGURA com o trilho, e `min-width:
+   0` é o que impede um filho largo (tabela, terminal) de empurrar o trilho
+   para fora da tela. A centralização por `margin: 0 auto` continua, agora
+   dentro do espaço que sobra à direita do trilho. */
 .body {
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
   overflow-y: auto;
   padding: 24px;
 }
 
 /* Aba que desenha até a borda (`semRespiro` no registro): quem rola é ela, e
    por região — a Visão geral rola a coluna do time e o trilho de atividade
-   separadamente, como o handoff mostra. */
+   separadamente, como o handoff mostra. Sem largura máxima: essas abas usam
+   a tela inteira de propósito (a Visão geral tem um trilho lateral; o Código
+   é a aba mais custosa do programa e precisa do espaço). */
 .body.bodyRente {
+  max-width: none;
+  margin: 0;
   padding: 0;
   overflow: hidden;
   display: flex;

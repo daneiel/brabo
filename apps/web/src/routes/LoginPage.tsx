@@ -1,7 +1,11 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { GitHubIcon, GitLabIcon } from '../components/ui/icons';
+import { SinaisDoAmbiente } from '../components/SinaisDoAmbiente';
+import { runtimeConfig } from '../lib/runtime-config';
 import { AuthLayout } from './AuthLayout';
 import styles from './AuthLayout.module.css';
 
@@ -11,6 +15,13 @@ interface LoginPageProps {
     senha: string,
   ) => Promise<{ ok: true } | { ok: false; status: number }>;
   irPara: (rota: string) => void;
+  /**
+   * `true` quando a página abriu vinda de `?oauth_error=1` — o callback de
+   * login social (ADR 0084) redireciona para cá em QUALQUER falha, sem
+   * detalhar o motivo na URL (RN-283), pelo mesmo raciocínio da RN-032: o
+   * 401 uniforme do login por senha.
+   */
+  erroOAuth?: boolean;
 }
 
 /**
@@ -45,11 +56,28 @@ interface LoginPageProps {
  * individualmente malformados, e a api não diz qual dos dois errou. Marcar os
  * dois como inválidos afirmaria mais do que se sabe. O erro é do formulário, e é
  * onde ele aparece.
+ *
+ * ## Duas colunas: identidade à esquerda, formulário à direita
+ *
+ * O login é a ÚNICA das quatro telas de auth que entrega `colunaDeIdentidade`
+ * — as outras três (registro, esqueci-senha, definir-senha) continuam na
+ * coluna única. É deliberado: elas são passagens de um fluxo já iniciado, e
+ * quem chega nelas já sabe onde está. O login é a primeira tela do produto, e
+ * é a única que precisa dizer o que o produto é antes de pedir credencial.
+ *
+ * O que a coluna mostra é só o que é verdade SEM identidade — `SinaisDoAmbiente`
+ * explica por que runner e modelos locais não cabem aqui. E o formulário não
+ * depende dela em nada: a coluna é irmã do card, com estado próprio, então
+ * uma api fora do ar muda uma linha de texto ali e não atrasa nem esconde o
+ * campo de e-mail.
  */
-export function LoginPage({ onEntrar, irPara }: LoginPageProps) {
+export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(
+    erroOAuth ? t('loginPage.oauthError') : null,
+  );
   const [enviando, setEnviando] = useState(false);
 
   async function submeter(evento: FormEvent) {
@@ -64,11 +92,11 @@ export function LoginPage({ onEntrar, irPara }: LoginPageProps) {
       }
       setErro(
         r.status === 403
-          ? 'Confirme seu e-mail antes de entrar. Procure a mensagem de verificação.'
-          : 'E-mail ou senha incorretos.',
+          ? t('loginPage.errors.unverifiedEmail')
+          : t('loginPage.errors.invalidCredentials'),
       );
     } catch {
-      setErro('Não foi possível falar com o servidor. Tente de novo.');
+      setErro(t('loginPage.errors.network'));
     } finally {
       setEnviando(false);
     }
@@ -76,25 +104,32 @@ export function LoginPage({ onEntrar, irPara }: LoginPageProps) {
 
   return (
     <AuthLayout
-      titulo="Entrar"
-      subtitulo="Acesse seu workspace e retome as sessões em andamento."
+      titulo={t('loginPage.title')}
+      subtitulo={t('loginPage.subtitle')}
       irPara={irPara}
+      colunaDeIdentidade={
+        <>
+          <p className={styles.pitch}>{t('loginPage.identity.pitch')}</p>
+          <SinaisDoAmbiente />
+        </>
+      }
       rodapeDoCartao={
         <>
-          Não tem acesso?{' '}
+          {t('loginPage.footer.noAccessPrompt')}{' '}
           <button
             type="button"
             className={styles.link}
             onClick={() => irPara('/registrar')}
           >
-            Criar uma conta
+            {t('loginPage.footer.createAccount')}
           </button>
         </>
       }
       abaixoDoCartao={
         <Alert tone="warning">
-          Sua conta existia antes desta versão? Peça o link em{' '}
-          <strong>Esqueci minha senha</strong> — a senha antiga não foi migrada.
+          {t('loginPage.migrationNotice.prefix')}
+          <strong>{t('loginPage.migrationNotice.strong')}</strong>
+          {t('loginPage.migrationNotice.suffix')}
         </Alert>
       }
     >
@@ -106,9 +141,9 @@ export function LoginPage({ onEntrar, irPara }: LoginPageProps) {
 
       <form className={styles.form} onSubmit={submeter}>
         <Input
-          label="E-mail"
+          label={t('loginPage.form.emailLabel')}
           type="email"
-          placeholder="voce@empresa.com"
+          placeholder={t('loginPage.form.emailPlaceholder')}
           autoComplete="username"
           required
           preenchido
@@ -116,7 +151,7 @@ export function LoginPage({ onEntrar, irPara }: LoginPageProps) {
           onChange={(e) => setEmail(e.target.value)}
         />
         <Input
-          label="Senha"
+          label={t('loginPage.form.passwordLabel')}
           type="password"
           placeholder="••••••••••"
           autoComplete="current-password"
@@ -132,14 +167,37 @@ export function LoginPage({ onEntrar, irPara }: LoginPageProps) {
               className={`${styles.link} ${styles.linkPequeno}`}
               onClick={() => irPara('/esqueci-senha')}
             >
-              Esqueci minha senha
+              {t('loginPage.form.forgotPassword')}
             </button>
           }
         />
         <div className={styles.acoes}>
           <Button type="submit" fullWidth size="lg" loading={enviando}>
-            {enviando ? 'Autenticando…' : 'Entrar'}
+            {enviando ? t('loginPage.form.submitting') : t('loginPage.form.submit')}
           </Button>
+        </div>
+
+        <div className={styles.divisor}>
+          <span className={styles.linhaDivisor} aria-hidden="true" />
+          <span className={styles.textoDivisor}>{t('loginPage.form.divider')}</span>
+          <span className={styles.linhaDivisor} aria-hidden="true" />
+        </div>
+
+        <div className={styles.botoesSociais}>
+          <a
+            className={styles.botaoSocial}
+            href={`${runtimeConfig.apiUrl}/auth/oauth/github/start`}
+          >
+            <GitHubIcon size={17} />
+            {t('loginPage.form.githubButton')}
+          </a>
+          <a
+            className={styles.botaoSocial}
+            href={`${runtimeConfig.apiUrl}/auth/oauth/gitlab/start`}
+          >
+            <GitLabIcon size={17} />
+            {t('loginPage.form.gitlabButton')}
+          </a>
         </div>
       </form>
     </AuthLayout>

@@ -1,172 +1,180 @@
-# 0044 — Adoção de repositório existente, e o plano como portão
+# 0044 — Adoption of an existing repository, and the plan as a gate
 
-## Contexto
+## Context
 
-O primeiro dogfooding (Fase 10) só rodou porque alguém inseriu linhas à
-mão. O achado P1 #1, verbatim de
+The first dogfooding (Phase 10) only ran because someone inserted rows
+by hand. P1 finding #1, verbatim from
 `docs/missions/dogfooding-mission.md:638`:
 
-> O produto não sabe apontar um projeto para repositório existente.
-> `createRepo` é incondicional; `getRepo` existe e não é chamado por
-> nenhum caso de uso; o DTO não tem campo para `externalId`.
+> The product doesn't know how to point a project at an existing
+> repository. `createRepo` is unconditional; `getRepo` exists and is
+> called by no use case; the DTO has no field for `externalId`.
 
-O procedimento da missão (`:102-134`) descreve o contorno: `INSERT` em
-`project_repositories` e em `repo_bootstraps`, esta última "marcada como
-convergida — para o produto não tentar retomar bootstrap nenhum". Ou
-seja: para usar o Brabo num repositório que já existia, era preciso
-mentir para o banco sobre um bootstrap que nunca rodou.
+The mission procedure (`:102-134`) describes the workaround: an
+`INSERT` into `project_repositories` and into `repo_bootstraps`, the
+latter "marked as converged — so the product doesn't try to resume a
+bootstrap that never ran." In other words: using Brabo on a repository
+that already existed required lying to the database about a bootstrap
+that never happened.
 
-Três coisas do que já existia moldaram a solução:
+Three things that already existed shaped the solution:
 
-1. **O dry-run já estava escrito, sem ninguém ter chamado assim.**
-   `BootstrapStep.check(ctx)` (Fase 2,
-   [ADR 0005](0005-repo-bootstrap-idempotent-steps.md)) relê o estado
-   REMOTO e devolve as mutações ainda pendentes. É chamado a cada
-   execução, e é isso que dá idempotência e retomada. Um plano é essa
-   mesma lista **sem** chamar `run()`.
-2. **Proteção de branch, no contrato, é um booleano.** O
+1. **The dry-run was already written, nobody had just called it that
+   way.** `BootstrapStep.check(ctx)` (Phase 2,
+   [ADR 0005](0005-repo-bootstrap-idempotent-steps.md)) re-reads the
+   REMOTE state and returns the mutations still pending. It's called
+   on every run, and that's what gives idempotency and resumability. A
+   plan is that same list **without** calling `run()`.
+2. **Branch protection, in the contract, is a boolean.**
    [ADR 0028](0028-protecao-de-branch-divergencia-entre-providers.md)
-   recusou deliberadamente dar configuração a `ProtectBranchInput`
-   ("criaria um vocabulário que só um dos providers sabe honrar, e o
-   outro teria de ignorar em silêncio"), deixando um `ProtectionPolicy`
-   normalizado para quando houvesse necessidade real. O contrato promete
-   só o observável: `listBranches` devolve `protected: true`.
-3. **O bootstrap já não sobrescrevia proteção.**
-   `bootstrap-steps.ts:112` pula branch com `protected: true` desde a
-   Fase 2. O que faltava não era a guarda — era **tornar visível e
-   explicitamente aprovado** o que ele faria.
+   deliberately refused to give `ProtectBranchInput` configuration
+   ("it would create a vocabulary that only one of the providers knows
+   how to honor, and the other would have to silently ignore"), leaving
+   a normalized `ProtectionPolicy` for when there was real need. The
+   contract only promises the observable: `listBranches` returns
+   `protected: true`.
+3. **The bootstrap already didn't overwrite protection.**
+   `bootstrap-steps.ts:112` skips a branch with `protected: true` since
+   Phase 2. What was missing wasn't the guard — it was **making what
+   it would do visible and explicitly approved**.
 
-Vale registrar que o ADR 0028 **não** diz "nunca sobrescrever proteção
-existente". Essa regra nasce aqui; 0028 é a razão de ela só conseguir
-operar no nível booleano.
+It's worth noting that ADR 0028 does **not** say "never overwrite
+existing protection." That rule is born here; 0028 is the reason it
+can only operate at the boolean level.
 
-## Decisão
+## Decision
 
-### `origin` como eixo, nas duas tabelas
+### `origin` as an axis, on both tables
 
-`project_repositories.origin` e `repo_bootstraps.origin` (`created` |
-`adopted`), gravados explicitamente por quem escreve — não pelo default
-da coluna, para que adoção seja escolha visível no código e não ausência
-([RN-046](../business-rules.md#rn-046)). O backfill da migração `0031` é
-cego de propósito: adoção não existia antes dela, então toda linha
-pré-existente foi criada pelo Brabo por definição, e não há caso a
-classificar errado — diferente do backfill dirigido da `0026`.
+`project_repositories.origin` and `repo_bootstraps.origin` (`created` |
+`adopted`), written explicitly by whoever writes them — not by the
+column default, so adoption is a visible choice in the code and not an
+absence ([RN-046](../business-rules/custo.md#rn-046)). Migration `0031`'s
+backfill is deliberately blind: adoption didn't exist before it, so
+every pre-existing row was created by Brabo by definition, and there's
+no case to misclassify — unlike `0026`'s directed backfill.
 
-### O plano mora no cursor, não em tabela nova
+### The plan lives on the cursor, not on a new table
 
-`repo_bootstraps` ganha `plan` (jsonb), `plan_generated_at`,
+`repo_bootstraps` gains `plan` (jsonb), `plan_generated_at`,
 `plan_decision`, `plan_decided_at`, `plan_decided_by`.
 
-O plano é **snapshot**, não log: mesmo dono, mesma chave e mesmo tempo
-de vida do cursor que o ADR 0005 já definiu. Uma tabela própria
-sugeriria histórico consultável de planos antigos — e o histórico já
-mora em `session_events` e `proposed_actions`, em duas narrativas que
-não precisam de uma terceira.
+The plan is a **snapshot**, not a log: same owner, same key and same
+lifetime as the cursor ADR 0005 already defined. A dedicated table
+would suggest a queryable history of old plans — and the history
+already lives in `session_events` and `proposed_actions`, in two
+narratives that don't need a third.
 
-### O portão fica ANTES do runner
+### The gate sits BEFORE the runner
 
-`plan_decision` nulo é o estado que importa: plano gerado, nada
-decidido, **nada roda**. Não há filtro dentro do executor — o
-`BootstrapRunner` é o da Fase 2, extraído verbatim (128 linhas
-conferidas byte a byte) para poder ser compartilhado, e simplesmente
-não é chamado. Somado ao guard de `:112`, não existe caminho de código
-que proteja uma branch fora de plano aprovado
-([RN-045](../business-rules.md#rn-045)).
+A null `plan_decision` is the state that matters: plan generated,
+nothing decided, **nothing runs**. There's no filter inside the
+executor — the `BootstrapRunner` is the one from Phase 2, extracted
+verbatim (128 lines checked byte by byte) to be shareable, and simply
+isn't called. Combined with the `:112` guard, there is no code path
+that protects a branch outside an approved plan
+([RN-045](../business-rules/custo.md#rn-045)).
 
-Aprovar é **tudo-ou-nada**: aprovação seletiva quebraria a cascata
-`dev←main, qa←dev, rc←qa` (aprovar `qa` sem `dev` é insatisfazível) e
-exigiria reescrever o runner. O que roda é o plano **re-derivado** pelo
-`check()` no momento da execução — igual ou menor que o exibido.
+Approval is **all-or-nothing**: selective approval would break the
+`dev←main, qa←dev, rc←qa` cascade (approving `qa` without `dev` is
+unsatisfiable) and would require rewriting the runner. What runs is
+the plan **re-derived** by `check()` at execution time — equal to or
+smaller than what was displayed.
 
-**Correção durante a implementação:** a primeira versão prometia MENOS
-do que executaria. `protect_branches.check()` lê o estado de agora, e
-uma branch que o próprio plano vai criar (`rc`, no fork da Fase 10)
-ainda não existe para ser listada como desprotegida — mas existiria na
-execução, e seria protegida. O plano ganhou uma passada que projeta as
-proteções das branches planejadas. Prometer a mais é aceitável (o runner
-pula o que já estiver protegido); prometer a menos anularia a regra
-justamente no caso mais comum de adoção.
+**Correction made during implementation:** the first version promised
+LESS than it would execute. `protect_branches.check()` reads the
+current state, and a branch the plan itself is about to create (`rc`,
+in the Phase 10 fork) doesn't exist yet to be listed as unprotected —
+but it would exist at execution time, and would get protected. The
+plan gained a pass that projects the protections of the planned
+branches. Promising more is acceptable (the runner skips whatever is
+already protected); promising less would nullify the rule precisely in
+the most common adoption case.
 
-### "Adotar como está" não adultera o cursor
+### "Adopt as-is" doesn't tamper with the cursor
 
-Dispensar o bootstrap registra `plan_decision = 'as_is'` e um evento —
-e deixa o cursor onde está. Mover o cursor para "último passo, done"
-seria transformar o seed manual da Fase 10 em comportamento oficial: o
-cursor diria que seis passos rodaram quando nenhum rodou. Quem torna o
-projeto operável é a decisão registrada, que `deriveProvisioningStatus`
-respeita. O plano fica guardado como evidência do que deliberadamente
-não foi aplicado.
+Dismissing the bootstrap records `plan_decision = 'as_is'` and an
+event — and leaves the cursor where it is. Moving the cursor to "last
+step, done" would turn Phase 10's manual seed into official behavior:
+the cursor would say six steps ran when none did. What makes the
+project operable is the recorded decision, which
+`deriveProvisioningStatus` respects. The plan stays stored as evidence
+of what was deliberately not applied.
 
-Daí também o status novo `awaiting_plan_decision`: sem ele, um projeto
-adotado ficaria `provisioning` para sempre, com a UI fazendo poll de um
-trabalho que não existe.
+Hence also the new `awaiting_plan_decision` status: without it, an
+adopted project would stay `provisioning` forever, with the UI polling
+for work that doesn't exist.
 
-### Rota separada, não `mode` no DTO
+### A separate route, not `mode` in the DTO
 
-`POST .../repository/adopt` em vez de um DTO discriminado:
-`@RequireRole` e OpenAPI são por rota, `route-surface.spec.ts` classifica
-por rota, e as respostas diferem de fato (criar devolve o cursor do
-bootstrap; adotar devolve o plano). Um DTO com `@ValidateIf` produziria
-esquema fraco no documento gerado — exatamente o que aquele spec existe
-para pegar.
+`POST .../repository/adopt` instead of a discriminated DTO:
+`@RequireRole` and OpenAPI are per route, `route-surface.spec.ts`
+classifies by route, and the responses actually differ (creating
+returns the bootstrap's cursor; adopting returns the plan). A DTO with
+`@ValidateIf` would produce a weak schema in the generated document —
+exactly what that spec exists to catch.
 
-### Por que NÃO passa pelo `decide()`/`ProposeActionUseCase`
+### Why it does NOT go through `decide()`/`ProposeActionUseCase`
 
-O pipeline genérico de aprovação decide **por mutação**. Aqui a decisão
-é **por plano**: o usuário aprova um conjunto coerente, não catorze
-ações uma a uma. Além disso o bootstrap, desde a Fase 2, nasce
-`auto_approved` e narra numa sessão dedicada, fora do `decide()` — e
-cada mutação aprovada continua virando `proposed_action` quando o runner
-roda, então a rastreabilidade não muda de lugar.
+The generic approval pipeline decides **per mutation**. Here the
+decision is **per plan**: the user approves a coherent set, not
+fourteen actions one by one. Besides, the bootstrap, since Phase 2, is
+born `auto_approved` and narrates in a dedicated session, outside
+`decide()` — and each approved mutation still becomes a
+`proposed_action` when the runner runs, so traceability doesn't move
+elsewhere.
 
-## Consequências
+## Consequences
 
-- `getRepo` sai de órfão a carga: existia desde a Fase 2, coberto pela
-  suite de contrato, e nunca tinha sido chamado por caso de uso nenhum.
-- Os erros do provider (404 vs 403) já chegavam distintos; o que faltava
-  era a **mensagem dizer o que fazer**, que é oposta em cada caso —
-  conferir o identificador contra trocar a credencial. Colapsar os dois
-  num "falhou ao adotar" seria o diagnóstico por eliminação que o
-  [ADR 0020](0020-destravar-gates-qa-secops.md) proíbe repetir.
-- **A suite de contrato dos GitProviders ficou intocada**, e nenhum
-  método novo entrou no contrato. Foi critério de aceite explícito, e é
-  o que mantém a divergência entre providers no lugar onde o ADR 0028 a
-  deixou.
-- **Buraco fechado de passagem:** `ProvisionRepositoryUseCase.execute`
-  num projeto adotado caía no ramo "os dois já existem" e rodaria o
-  bootstrap num repositório de terceiro sem plano. Agora recusa com 409.
-- O wizard ganha um passo antes de tudo, e a adoção **pula** o passo de
-  política de branches: prometer o template para um repositório que já
-  tem política própria seria mentir. Nenhum componente novo de UI além
-  da tela do plano.
-- A tela do plano renderiza `BootstrapSteps` ela mesma em vez de navegar
-  para a `ProvisioningPage` — aquela dispara `provisionRepository` ao
-  montar, o que **criaria** um repositório.
+- `getRepo` stops being an unused import: it existed since Phase 2,
+  covered by the contract suite, and had never been called by any use
+  case.
+- Provider errors (404 vs 403) already arrived distinct; what was
+  missing was for the **message to say what to do**, which is
+  opposite in each case — checking the identifier vs. swapping the
+  credential. Collapsing both into "adoption failed" would be the
+  diagnosis-by-elimination [ADR 0020](0020-destravar-gates-qa-secops.md)
+  forbids repeating.
+- **The GitProvider contract suite stayed untouched**, and no new
+  method entered the contract. It was an explicit acceptance criterion,
+  and it's what keeps the divergence between providers where ADR 0028
+  left it.
+- **A hole closed along the way:** `ProvisionRepositoryUseCase.execute`
+  on an adopted project used to fall into the "both already exist"
+  branch and would run the bootstrap on a third party's repository
+  without a plan. Now it refuses with 409.
+- The wizard gains a step before everything, and adoption **skips**
+  the branch-policy step: promising the template for a repository that
+  already has its own policy would be a lie. No UI component beyond the
+  plan screen.
+- The plan screen renders `BootstrapSteps` itself instead of navigating
+  to `ProvisioningPage` — that one dispatches `provisionRepository` on
+  mount, which would **create** a repository.
 
-## O que fica para depois
+## What's left for later
 
-- **`ProtectionPolicy` normalizada** (adiada pelo ADR 0028). Enquanto
-  não existir, divergência de CONFIGURAÇÃO de proteção é invisível: uma
-  branch com proteção parcial conta como desprotegida e pode ser
-  sobrescrita — dentro de um plano aprovado. É o achado P1 #2 do
-  dogfooding, **não corrigido aqui**.
-- **O `rc` que a política da Fase 6 não usa** (achado #3, P2): o
-  template continua criando e protegendo `rc`. Fora do escopo da 12a.
-- **O aceite contra o fork real**: `adopt-repository.smoke.spec.ts`
-  existe, é SOMENTE LEITURA e roda gated por `ADOPT_TEST_REPO` +
-  `GITHUB_TEST_TOKEN`. Nunca aprova — aprovar mutaria um repositório de
-  verdade, e essa decisão é o portão humano, não um teste. "Projeto
-  operável depois" segue como checklist manual.
-- **A colheita do dogfooding não existe.**
-  `docs/explanation/primeiro-dogfooding.md` é citado pelo CLAUDE.md e
-  nunca foi escrito; o que existe é o esqueleto
-  `docs/missions/colheita-esqueleto.md`. A fonte citada aqui é
-  `docs/missions/dogfooding-mission.md`. O ADR da Fase 10 também segue
-  em aberto.
-- **Adoção não migra dado nenhum** (issues, PRs históricas) — é acesso e
-  política, e só (CLAUDE.md, Fase 12).
+- **Normalized `ProtectionPolicy`** (deferred by ADR 0028). While it
+  doesn't exist, divergence in protection CONFIGURATION is invisible: a
+  branch with partial protection counts as unprotected and can be
+  overwritten — within an approved plan. It's dogfooding's P1 finding
+  #2, **not fixed here**.
+- **The `rc` that Phase 6's policy doesn't use** (finding #3, P2): the
+  template still creates and protects `rc`. Out of scope for 12a.
+- **Acceptance against the real fork**: `adopt-repository.smoke.spec.ts`
+  exists, is READ-ONLY and runs gated by `ADOPT_TEST_REPO` +
+  `GITHUB_TEST_TOKEN`. It never approves — approving would mutate a
+  real repository, and that decision is the human gate, not a test.
+  "Project operable afterward" remains a manual checklist.
+- **The dogfooding harvest doesn't exist.**
+  `docs/explanation/primeiro-dogfooding.md` is cited by CLAUDE.md and
+  was never written; what exists is the skeleton
+  `docs/missions/colheita-esqueleto.md`. The source cited here is
+  `docs/missions/dogfooding-mission.md`. Phase 10's ADR is also still
+  open.
+- **Adoption doesn't migrate any data** (issues, historical PRs) — it's
+  access and policy, only (CLAUDE.md, Phase 12).
 
-Referencia [ADR 0005](0005-repo-bootstrap-idempotent-steps.md), de onde
-vem o `check()` que virou dry-run, e
-[ADR 0028](0028-protecao-de-branch-divergencia-entre-providers.md), que
-define por que "proteção divergente" aqui só pode ser booleana.
+References [ADR 0005](0005-repo-bootstrap-idempotent-steps.md), where
+the `check()` that became a dry-run comes from, and
+[ADR 0028](0028-protecao-de-branch-divergencia-entre-providers.md),
+which defines why "divergent protection" here can only be boolean.

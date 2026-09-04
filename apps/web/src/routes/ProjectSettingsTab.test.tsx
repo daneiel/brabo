@@ -2,12 +2,28 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import settingsPtBR from '../locales/pt-BR/settings.json';
+// `ModelPicker`/`ModelCatalogSection` (namespace `models`) são filhos de
+// `AreaModelsSection`/`ModelsSection` — sem o namespace aqui, o gatilho do
+// picker cai na chave crua (`picker.selectModel`).
+import modelsPtBR from '../locales/pt-BR/models.json';
+// `ExecutionModeSection` reusa os rótulos dos três modos e o placeholder do
+// caminho do wizard de criação (`newProject:workspaceMode.*`/
+// `newProject:workspace.pathPlaceholder`) — sem o namespace aqui, esses
+// textos caem na chave crua.
+import newProjectPtBR from '../locales/pt-BR/newProject.json';
 import {
   AreaModelsSection,
+  BudgetSection,
   CredentialsSection,
+  ExecutionModeSection,
   ExecutionSection,
+  MelhoresModelosPorCapacidadeSection,
   ModelsSection,
   ParallelismSection,
+  PersonalAccessTokensSection,
   ProficiencySection,
   PromotionSection,
 } from './ProjectSettingsTab';
@@ -18,11 +34,13 @@ import type { Project, UserCredentialMetadata } from '../lib/api-types';
 
 const getProject = vi.fn();
 const updateProject = vi.fn();
+const convertProjectExecutionMode = vi.fn();
 const listCredentials = vi.fn();
 const upsertCredential = vi.fn();
 const deleteCredential = vi.fn();
 const testCredential = vi.fn();
 const listModels = vi.fn();
+const listModelCatalog = vi.fn();
 const getAgentModelBinding = vi.fn();
 const clearAgentModelBinding = vi.fn();
 const getProjectModelBinding = vi.fn();
@@ -34,8 +52,14 @@ const getProjectAgentCosts = vi.fn();
 const setAgentModelBinding = vi.fn();
 const listAgentAreas = vi.fn();
 const setAreaMaxParallel = vi.fn();
+const setAreaBudget = vi.fn();
 const useCurrentWorkspaceWithRole = vi.fn();
 const runAnamnese = vi.fn();
+const listPersonalAccessTokens = vi.fn();
+const issuePersonalAccessToken = vi.fn();
+const revokePersonalAccessToken = vi.fn();
+const listAllPersonalAccessTokens = vi.fn();
+const revokePersonalAccessTokenAsMaintainer = vi.fn();
 
 vi.mock('../lib/hooks', () => ({
   useCurrentWorkspaceWithRole: (...args: unknown[]) =>
@@ -54,11 +78,14 @@ vi.mock('../lib/api-client', async () => {
     mensagemDaApi: real.mensagemDaApi,
     getProject: (...args: unknown[]) => getProject(...args),
     updateProject: (...args: unknown[]) => updateProject(...args),
+    convertProjectExecutionMode: (...args: unknown[]) =>
+      convertProjectExecutionMode(...args),
     listCredentials: (...args: unknown[]) => listCredentials(...args),
     upsertCredential: (...args: unknown[]) => upsertCredential(...args),
     deleteCredential: (...args: unknown[]) => deleteCredential(...args),
     testCredential: (...args: unknown[]) => testCredential(...args),
     listModels: (...args: unknown[]) => listModels(...args),
+    listModelCatalog: (...args: unknown[]) => listModelCatalog(...args),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
     clearAgentModelBinding: (...args: unknown[]) =>
       clearAgentModelBinding(...args),
@@ -74,7 +101,18 @@ vi.mock('../lib/api-client', async () => {
     setAgentModelBinding: (...args: unknown[]) => setAgentModelBinding(...args),
     listAgentAreas: (...args: unknown[]) => listAgentAreas(...args),
     setAreaMaxParallel: (...args: unknown[]) => setAreaMaxParallel(...args),
+    setAreaBudget: (...args: unknown[]) => setAreaBudget(...args),
     runAnamnese: (...args: unknown[]) => runAnamnese(...args),
+    listPersonalAccessTokens: (...args: unknown[]) =>
+      listPersonalAccessTokens(...args),
+    issuePersonalAccessToken: (...args: unknown[]) =>
+      issuePersonalAccessToken(...args),
+    revokePersonalAccessToken: (...args: unknown[]) =>
+      revokePersonalAccessToken(...args),
+    listAllPersonalAccessTokens: (...args: unknown[]) =>
+      listAllPersonalAccessTokens(...args),
+    revokePersonalAccessTokenAsMaintainer: (...args: unknown[]) =>
+      revokePersonalAccessTokenAsMaintainer(...args),
   };
 });
 
@@ -87,19 +125,51 @@ function project(over: Partial<Project> = {}): Project {
     createdBy: 'user-1',
     maxConsecutiveBlocked: null,
     storyPromotion: 'manual',
+    executionMode: 'container',
+    workspacePath: null,
+    workspaceVerifiedAt: null,
     createdAt: '2026-08-02T00:00:00.000Z',
     updatedAt: '2026-08-02T00:00:00.000Z',
     ...over,
   };
 }
 
+/**
+ * Instância própria de i18next para o teste, como `AccountPage.test.tsx` já
+ * faz — só o namespace "settings" que este arquivo precisa, em pt-BR: é o
+ * idioma que as asserções existentes já esperavam antes da extração, e trocar
+ * de idioma não é o que este arquivo prova (isso é `idioma.test.ts`).
+ */
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      'pt-BR': {
+        settings: settingsPtBR,
+        models: modelsPtBR,
+        newProject: newProjectPtBR,
+      },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'settings',
+    ns: ['settings', 'models', 'newProject'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
 function montarSecao(secao: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  const i18n = novaInstanciaI18n();
   return render(
     <QueryClientProvider client={client}>
-      <ToastProvider>{secao}</ToastProvider>
+      <I18nextProvider i18n={i18n}>
+        <ToastProvider>{secao}</ToastProvider>
+      </I18nextProvider>
     </QueryClientProvider>,
   );
 }
@@ -111,8 +181,10 @@ function montar() {
 beforeEach(() => {
   vi.clearAllMocks();
   updateProject.mockResolvedValue(project({ maxConsecutiveBlocked: 3 }));
+  convertProjectExecutionMode.mockResolvedValue(project({ executionMode: 'mounted' }));
   listCredentials.mockResolvedValue([]);
   listModels.mockResolvedValue({ local: {}, cloud: {} });
+  listModelCatalog.mockResolvedValue({ local: {}, cloud: {} });
   getAgentModelBinding.mockResolvedValue(null);
   clearAgentModelBinding.mockResolvedValue(undefined);
   getProjectModelBinding.mockResolvedValue(null);
@@ -125,8 +197,14 @@ beforeEach(() => {
   deleteCredential.mockResolvedValue({ ok: true });
   listAgentAreas.mockResolvedValue([]);
   setAreaMaxParallel.mockResolvedValue({});
+  setAreaBudget.mockResolvedValue({});
   useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'maintainer' } });
   runAnamnese.mockResolvedValue(undefined);
+  listPersonalAccessTokens.mockResolvedValue([]);
+  issuePersonalAccessToken.mockResolvedValue(undefined);
+  revokePersonalAccessToken.mockResolvedValue(undefined);
+  listAllPersonalAccessTokens.mockResolvedValue([]);
+  revokePersonalAccessTokenAsMaintainer.mockResolvedValue(undefined);
 });
 
 function credencial(over: Partial<UserCredentialMetadata> = {}): UserCredentialMetadata {
@@ -151,6 +229,8 @@ function area(over: Record<string, unknown> = {}) {
     key: 'dev',
     leadAgentId: 'dev-lead',
     maxParallel: 2,
+    budgetMicros: null,
+    spentMicros: 0,
     members: ['dev-api', 'dev-web'],
     ...over,
   };
@@ -235,6 +315,142 @@ describe('ParallelismSection', () => {
   });
 });
 
+describe('BudgetSection (ADR 0110, RN-443)', () => {
+  it('sem áreas: explica DE ONDE elas vêm em vez de sumir', async () => {
+    listAgentAreas.mockResolvedValue([]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    expect(
+      await screen.findByText(/nascem quando você ativa a execução/i),
+    ).toBeInTheDocument();
+  });
+
+  it('sem teto configurado, o campo nasce VAZIO — não zero', async () => {
+    listAgentAreas.mockResolvedValue([area({ budgetMicros: null })]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    expect(campo).toHaveValue(null);
+  });
+
+  it('com teto configurado, mostra o valor em DÓLAR, convertido de micro-USD', async () => {
+    listAgentAreas.mockResolvedValue([area({ budgetMicros: 20_000_000 })]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    expect(campo).toHaveValue(20);
+  });
+
+  it('mostra o gasto acumulado da área', async () => {
+    listAgentAreas.mockResolvedValue([area({ spentMicros: 4_300_000 })]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    expect(await screen.findByText(/Gasto: US\$ 4,30/)).toBeInTheDocument();
+  });
+
+  it('salva o teto novo, convertido pra micro-USD pelo backend (envia em dólar)', async () => {
+    listAgentAreas.mockResolvedValue([area()]);
+    setAreaBudget.mockResolvedValue(area({ budgetMicros: 30_000_000 }));
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    fireEvent.change(campo, { target: { value: '30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() =>
+      expect(setAreaBudget).toHaveBeenCalledWith('proj-1', 'dev', 30),
+    );
+  });
+
+  it('campo vazio salva null — LIMPA o teto, não é erro', async () => {
+    listAgentAreas.mockResolvedValue([area({ budgetMicros: 20_000_000 })]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    fireEvent.change(campo, { target: { value: '' } });
+
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() =>
+      expect(setAreaBudget).toHaveBeenCalledWith('proj-1', 'dev', null),
+    );
+  });
+
+  it('negativo NÃO salva: o botão fica desabilitado', async () => {
+    listAgentAreas.mockResolvedValue([area()]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    fireEvent.change(campo, { target: { value: '-5' } });
+
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+    expect(setAreaBudget).not.toHaveBeenCalled();
+  });
+
+  it('zero é válido — é um teto de verdade, não erro', async () => {
+    listAgentAreas.mockResolvedValue([area()]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    fireEvent.change(campo, { target: { value: '0' } });
+
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+  });
+
+  it('cada área tem o seu campo, e editar uma não mexe na outra', async () => {
+    listAgentAreas.mockResolvedValue([
+      area(),
+      area({
+        id: 'area-2',
+        key: 'qa',
+        leadAgentId: 'qa-lead',
+        budgetMicros: 5_000_000,
+      }),
+    ]);
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const devInput = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    fireEvent.change(devInput, { target: { value: '99' } });
+
+    expect(
+      screen.getByLabelText('Teto de gasto da área qa, em dólares'),
+    ).toHaveValue(5);
+  });
+
+  it('a api recusando mostra a mensagem DELA, não uma genérica', async () => {
+    listAgentAreas.mockResolvedValue([area()]);
+    setAreaBudget.mockRejectedValue(
+      new ApiError(400, { message: 'budgetMicros precisa ser null ou >= 0' }),
+    );
+    montarSecao(<BudgetSection projectId="proj-1" />);
+
+    const campo = await screen.findByLabelText(
+      'Teto de gasto da área dev, em dólares',
+    );
+    fireEvent.change(campo, { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(
+      await screen.findByText(/budgetMicros precisa ser null/i),
+    ).toBeInTheDocument();
+  });
+});
+
 describe('ExecutionSection', () => {
   it('sem valor próprio: mostra o default (3), pré-preenchido no campo', async () => {
     getProject.mockResolvedValue(project({ maxConsecutiveBlocked: null }));
@@ -249,7 +465,9 @@ describe('ExecutionSection', () => {
     montar();
 
     expect(await screen.findByDisplayValue('5')).toBeTruthy();
-    expect(screen.getByText('Configurado para este projeto')).toBeTruthy();
+    // Minúscula desde o padrão único de valor herdado: o texto virou o
+    // DETALHE que segue a marca "Valor próprio" (`settings/heranca.tsx`).
+    expect(screen.getByText('configurado para este projeto')).toBeTruthy();
   });
 
   it('salvar envia o número digitado e invalida a query do projeto', async () => {
@@ -280,6 +498,117 @@ describe('ExecutionSection', () => {
 
     fireEvent.click(screen.getByText('Salvar'));
     expect(updateProject).not.toHaveBeenCalled();
+  });
+});
+
+describe('ExecutionModeSection (RN-447..450, ADR 0111)', () => {
+  function montarModo() {
+    return montarSecao(<ExecutionModeSection projectId="proj-1" />);
+  }
+
+  it('mostra o modo atual (container) e não pede caminho', async () => {
+    getProject.mockResolvedValue(project({ executionMode: 'container' }));
+    montarModo();
+
+    expect(await screen.findByDisplayValue('Container')).toBeTruthy();
+    expect(screen.queryByLabelText('Novo caminho da pasta')).toBeNull();
+    // Nada mudou ainda — Converter fica desabilitado.
+    expect(screen.getByText('Converter').closest('button')?.disabled).toBe(
+      true,
+    );
+  });
+
+  it('trocar para `mounted` mostra o campo de caminho, vazio', async () => {
+    getProject.mockResolvedValue(project({ executionMode: 'container' }));
+    montarModo();
+
+    const select = await screen.findByLabelText('Novo modo de execução');
+    fireEvent.change(select, { target: { value: 'mounted' } });
+
+    const campo = await screen.findByLabelText('Novo caminho da pasta');
+    expect(campo).toHaveValue('');
+    // Sem caminho digitado, Converter continua desabilitado.
+    expect(screen.getByText('Converter').closest('button')?.disabled).toBe(
+      true,
+    );
+  });
+
+  it('converte com o modo e o caminho digitados', async () => {
+    getProject.mockResolvedValue(project({ executionMode: 'container' }));
+    convertProjectExecutionMode.mockResolvedValue(
+      project({ executionMode: 'mounted', workspacePath: '/home/voce/loja' }),
+    );
+    montarModo();
+
+    const select = await screen.findByLabelText('Novo modo de execução');
+    fireEvent.change(select, { target: { value: 'mounted' } });
+    const campo = await screen.findByLabelText('Novo caminho da pasta');
+    fireEvent.change(campo, { target: { value: '/home/voce/loja' } });
+    fireEvent.click(screen.getByText('Converter'));
+
+    await waitFor(() =>
+      expect(convertProjectExecutionMode).toHaveBeenCalledWith('proj-1', {
+        executionMode: 'mounted',
+        workspacePath: '/home/voce/loja',
+      }),
+    );
+    expect(await screen.findByText('Modo de execução convertido')).toBeTruthy();
+  });
+
+  it('projeto já `runner`: voltar para `container` não exige caminho', async () => {
+    getProject.mockResolvedValue(
+      project({ executionMode: 'runner', workspacePath: '/home/voce/loja' }),
+    );
+    convertProjectExecutionMode.mockResolvedValue(
+      project({ executionMode: 'container', workspacePath: null }),
+    );
+    montarModo();
+
+    const select = await screen.findByLabelText('Novo modo de execução');
+    fireEvent.change(select, { target: { value: 'container' } });
+
+    expect(screen.queryByLabelText('Novo caminho da pasta')).toBeNull();
+    fireEvent.click(screen.getByText('Converter'));
+
+    await waitFor(() =>
+      expect(convertProjectExecutionMode).toHaveBeenCalledWith('proj-1', {
+        executionMode: 'container',
+      }),
+    );
+  });
+
+  it('quem não é maintainer/owner: controles desabilitados, com aviso', async () => {
+    useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'developer' } });
+    getProject.mockResolvedValue(project({ executionMode: 'container' }));
+    montarModo();
+
+    expect(
+      await screen.findByText(/Só quem é maintainer ou owner pode converter/),
+    ).toBeTruthy();
+    expect(screen.getByLabelText('Novo modo de execução')).toBeDisabled();
+    expect(screen.getByText('Converter').closest('button')?.disabled).toBe(
+      true,
+    );
+  });
+
+  it('dev agent ativo: a api recusa (409) e a mensagem DELA aparece, não uma genérica', async () => {
+    getProject.mockResolvedValue(project({ executionMode: 'container' }));
+    convertProjectExecutionMode.mockRejectedValue(
+      new ApiError(409, {
+        message: 'Este projeto tem dev agent trabalhando ou travado agora',
+      }),
+    );
+    montarModo();
+
+    const select = await screen.findByLabelText('Novo modo de execução');
+    fireEvent.change(select, { target: { value: 'runner' } });
+    const campo = await screen.findByLabelText('Novo caminho da pasta');
+    fireEvent.change(campo, { target: { value: '/home/voce/loja' } });
+    fireEvent.click(screen.getByText('Converter'));
+
+    expect(
+      await screen.findByText(/dev agent trabalhando ou travado agora/),
+    ).toBeTruthy();
   });
 });
 
@@ -456,6 +785,107 @@ describe('CredentialsSection (ADR 0050)', () => {
       .map((el) => el.textContent);
     expect(siglas).toHaveLength(CREDENCIAIS_DE_LLM.length);
     expect(new Set(siglas).size).toBe(siglas.length);
+  });
+});
+
+/**
+ * "Melhores modelos por capacidade" (handoff, item 5 — ADR 0077). Sem coluna
+ * de nota de qualidade: só custo real do catálogo e uso real dos agentes
+ * deste projeto, sobre a curadoria (`uses`) que o workspace já marcou.
+ */
+describe('MelhoresModelosPorCapacidadeSection', () => {
+  function modeloCurado(
+    over: Partial<{
+      id: string;
+      displayName: string;
+      isActive: boolean;
+      uses: string[];
+      inputPricePerMillionMicros: number;
+    }> = {},
+  ) {
+    return {
+      id: 'm-1',
+      provider: 'ollama',
+      name: 'modelo',
+      displayName: 'Modelo',
+      inputPricePerMillionMicros: 0,
+      outputPricePerMillionMicros: 0,
+      contextWindow: null,
+      supportsToolCalling: true,
+      supportsStreaming: true,
+      supportsVision: false,
+      supportsReasoning: false,
+      generatesImage: false,
+      manualPricing: true,
+      availability: 'available',
+      lastSeenAt: null,
+      isActive: true,
+      uses: ['codigo'],
+      ...over,
+    };
+  }
+
+  beforeEach(() => {
+    getProject.mockResolvedValue(project());
+  });
+
+  it('recomenda o modelo curado para a capacidade que MAIS agentes deste projeto usam, custo desempatando', async () => {
+    listModelCatalog.mockResolvedValue({
+      local: {
+        ollama: [
+          modeloCurado({
+            id: 'barato-sem-uso',
+            displayName: 'Barato sem uso',
+            uses: ['codigo'],
+            inputPricePerMillionMicros: 0,
+          }),
+        ],
+      },
+      cloud: {
+        anthropic: [
+          modeloCurado({
+            id: 'caro-usado',
+            displayName: 'Caro mas usado',
+            uses: ['codigo'],
+            inputPricePerMillionMicros: 3_000_000,
+          }),
+        ],
+      },
+    });
+    // Um agente do projeto resolve, pela cascata, para o modelo caro — é
+    // esse sinal de uso real que deve vencer o desempate de custo.
+    getAgentModelBinding.mockImplementation((_projectId: string, slug: string) =>
+      Promise.resolve(
+        slug === 'dev-backend'
+          ? { modelId: 'caro-usado', origin: 'agent', skipped: [] }
+          : null,
+      ),
+    );
+
+    montarSecao(<MelhoresModelosPorCapacidadeSection projectId="proj-1" />);
+
+    await screen.findByText('Melhores modelos por capacidade');
+    expect(await screen.findAllByText('Caro mas usado')).not.toHaveLength(0);
+    expect(screen.getByText('Barato sem uso')).toBeInTheDocument();
+    expect(screen.getByText('1 agente deste projeto')).toBeInTheDocument();
+  });
+
+  it('capacidade sem modelo curado mostra "sem cobertura curada", nunca esconde a linha', async () => {
+    // Catálogo com um modelo curado só para "imagem" — as outras quatro
+    // capacidades (código, documentação, análise, conversa) ficam sem
+    // cobertura, e a linha continua aparecendo.
+    listModelCatalog.mockResolvedValue({
+      local: {},
+      cloud: {
+        openai: [modeloCurado({ id: 'so-imagem', displayName: 'Só imagem', uses: ['imagem'] })],
+      },
+    });
+
+    montarSecao(<MelhoresModelosPorCapacidadeSection projectId="proj-1" />);
+
+    await screen.findByText('Melhores modelos por capacidade');
+    expect(await screen.findAllByText('sem cobertura curada')).toHaveLength(4);
+    expect(screen.getByText('Só imagem')).toBeInTheDocument();
   });
 });
 
@@ -793,5 +1223,136 @@ describe('ProficiencySection — Anamnese pausada globalmente', () => {
 
     expect(await screen.findByText('Erro')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Rodar agora' })).not.toBeDisabled();
+  });
+});
+
+/**
+ * Personal Access Tokens do runner (`brb_…`, ADR 0105). O token bruto só
+ * existe na resposta de EMISSÃO — nunca na listagem, e o modal de "mostrar
+ * uma vez" precisa exibir exatamente o que a api devolveu, sem refazer
+ * fetch nenhum pra buscá-lo de novo (ele não é recuperável).
+ */
+describe('PersonalAccessTokensSection (ADR 0105)', () => {
+  function montarTokens() {
+    return montarSecao(<PersonalAccessTokensSection projectId="proj-1" />);
+  }
+
+  function token(over: Record<string, unknown> = {}) {
+    return {
+      id: 'pat-1',
+      name: 'laptop',
+      projectId: 'proj-1',
+      createdAt: '2026-08-10T00:00:00.000Z',
+      expiresAt: null,
+      revokedAt: null,
+      lastUsedAt: null,
+      ...over,
+    };
+  }
+
+  it('lista renderiza uma linha por token', async () => {
+    listPersonalAccessTokens.mockResolvedValue([
+      token({ id: 'pat-1', name: 'laptop' }),
+      token({ id: 'pat-2', name: 'ci' }),
+    ]);
+    montarTokens();
+
+    expect(await screen.findByText('laptop')).toBeInTheDocument();
+    expect(screen.getByText('ci')).toBeInTheDocument();
+  });
+
+  it('gerar token abre o modal com o valor exato da resposta, sem refazer fetch dele', async () => {
+    issuePersonalAccessToken.mockResolvedValue({
+      ...token({ id: 'pat-novo', name: 'laptop' }),
+      token: 'brb_valorquesoexisteumavez',
+    });
+    montarTokens();
+
+    fireEvent.change(screen.getByPlaceholderText('Nome (ex.: laptop)'), {
+      target: { value: 'laptop' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Gerar token' }));
+
+    expect(
+      await screen.findByDisplayValue('brb_valorquesoexisteumavez'),
+    ).toBeInTheDocument();
+    expect(issuePersonalAccessToken).toHaveBeenCalledWith('proj-1', {
+      name: 'laptop',
+      expiresInDays: undefined,
+    });
+    // O valor só existe na resposta da emissão — a listagem não é
+    // reconsultada pra exibir o modal.
+    expect(listPersonalAccessTokens).toHaveBeenCalledTimes(1);
+  });
+
+  it('revogar chama o DELETE e invalida a listagem', async () => {
+    listPersonalAccessTokens.mockResolvedValueOnce([token({ id: 'pat-1', name: 'laptop' })]);
+    listPersonalAccessTokens.mockResolvedValueOnce([
+      token({ id: 'pat-1', name: 'laptop', revokedAt: '2026-08-11T00:00:00.000Z' }),
+    ]);
+    montarTokens();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Revogar laptop' }));
+
+    await waitFor(() =>
+      expect(revokePersonalAccessToken).toHaveBeenCalledWith('proj-1', 'pat-1'),
+    );
+    expect(listPersonalAccessTokens).toHaveBeenCalledTimes(2);
+  });
+
+  function tokenDeOutro(over: Record<string, unknown> = {}) {
+    return {
+      ...token(over),
+      userId: 'user-2',
+      userEmail: 'outro@brabo.dev',
+      ...over,
+    };
+  }
+
+  it('maintainer vê a sub-lista com TODOS os tokens do projeto, com o dono de cada um (RN-427)', async () => {
+    useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'maintainer' } });
+    listAllPersonalAccessTokens.mockResolvedValue([
+      tokenDeOutro({ id: 'pat-2', name: 'ci', userEmail: 'outro@brabo.dev' }),
+    ]);
+    montarTokens();
+
+    expect(await screen.findByText('Todos os tokens do projeto')).toBeInTheDocument();
+    expect(await screen.findByText('outro@brabo.dev')).toBeInTheDocument();
+    expect(listAllPersonalAccessTokens).toHaveBeenCalledWith('proj-1');
+  });
+
+  it('developer NÃO vê a sub-lista de admin nem dispara a listagem de todos', async () => {
+    useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'developer' } });
+    listPersonalAccessTokens.mockResolvedValue([token({ id: 'pat-1', name: 'laptop' })]);
+    montarTokens();
+
+    expect(await screen.findByText('laptop')).toBeInTheDocument();
+    expect(screen.queryByText('Todos os tokens do projeto')).not.toBeInTheDocument();
+    expect(listAllPersonalAccessTokens).not.toHaveBeenCalled();
+  });
+
+  it('revogar como maintainer chama o DELETE de admin e invalida só a listagem de admin (RN-427)', async () => {
+    listPersonalAccessTokens.mockResolvedValue([token({ id: 'pat-1', name: 'laptop' })]);
+    listAllPersonalAccessTokens.mockResolvedValueOnce([
+      tokenDeOutro({ id: 'pat-2', name: 'ci' }),
+    ]);
+    listAllPersonalAccessTokens.mockResolvedValueOnce([
+      tokenDeOutro({ id: 'pat-2', name: 'ci', revokedAt: '2026-08-11T00:00:00.000Z' }),
+    ]);
+    montarTokens();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Revogar ci (outro@brabo.dev)' }),
+    );
+
+    await waitFor(() =>
+      expect(revokePersonalAccessTokenAsMaintainer).toHaveBeenCalledWith(
+        'proj-1',
+        'pat-2',
+      ),
+    );
+    expect(listAllPersonalAccessTokens).toHaveBeenCalledTimes(2);
+    // Revogar de admin não mexe na listagem própria — são queries separadas.
+    expect(revokePersonalAccessToken).not.toHaveBeenCalled();
   });
 });

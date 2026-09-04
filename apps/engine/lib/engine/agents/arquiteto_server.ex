@@ -22,6 +22,7 @@ defmodule Engine.Agents.ArquitetoServer do
     AssignStoryModules,
     ChooseProjectImage,
     CreateC4Diagram,
+    RouteModulesToInfra,
     ProposeAdr,
     EmitInsight
   }
@@ -82,6 +83,7 @@ defmodule Engine.Agents.ArquitetoServer do
          AssignStoryModules.spec(),
          ChooseProjectImage.spec(),
          CreateC4Diagram.spec(),
+         RouteModulesToInfra.spec(),
          ProposeAdr.spec(),
          EmitInsight.spec()
        ],
@@ -187,7 +189,17 @@ defmodule Engine.Agents.ArquitetoServer do
 
   # --- Turno com loop bounded de tool use ---
 
-  defp run_turn(state, remaining) when remaining <= 0, do: state
+  # O teto de iterações deixou de ser SILENCIOSO — mesma correção da RN-166
+  # já aplicada ao PO: um Arquiteto que esgotasse as 14 iterações terminava
+  # sem evento nenhum, indistinguível de um turno que simplesmente acabou.
+  defp run_turn(state, remaining) when remaining <= 0 do
+    emit(state, "toolloop.limit_reached", %{
+      iteration: @max_iterations,
+      max_iterations: @max_iterations
+    })
+
+    state
+  end
 
   defp run_turn(state, remaining) do
     # Ver o comentário em `criativo_server.ex`: quem fala é o agente (achado C).
@@ -205,9 +217,17 @@ defmodule Engine.Agents.ArquitetoServer do
       # A api narra a falha no PRÓPRIO frame final (budget, credencial, binding).
       # Isto não caía no `{:error, _}` abaixo e não emitia evento nenhum: o
       # turno terminava em silêncio absoluto, pior que o balão vazio.
+      #
+      # Devolve `state` (mapa), e NÃO `{state, ""}` (tupla): quem recebe o
+      # retorno de `run_turn/2` é `TurnoAssincrono.tratar_resultado/2`, que faz
+      # `Map.put(resultado, :turno_assincrono, nil)`. `Map.put/3` numa tupla
+      # levanta `BadMapError` DENTRO do `handle_info` do agente e, como o
+      # servidor é `restart: :temporary`, ele morria e não voltava — a correção
+      # de uma falha silenciosa tinha virado uma QUEDA, com o gatilho mais
+      # corriqueiro que existe (acabar o orçamento).
       {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
         emit_falha(state, {:final, erro})
-        {state, ""}
+        state
 
       {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
@@ -240,6 +260,7 @@ defmodule Engine.Agents.ArquitetoServer do
     id = Map.get(call, "id")
 
     emit(state, "tool.call", %{tool: name, args: args})
+    broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
     text =
       case run_tool(name, args, state) do
@@ -260,6 +281,7 @@ defmodule Engine.Agents.ArquitetoServer do
   defp run_tool("assign_story_modules", args, state), do: AssignStoryModules.run(args, state)
   defp run_tool("choose_project_image", args, state), do: ChooseProjectImage.run(args, state)
   defp run_tool("create_c4_diagram", args, state), do: CreateC4Diagram.run(args, state)
+  defp run_tool("route_modules_to_infra", args, state), do: RouteModulesToInfra.run(args, state)
   defp run_tool("propose_adr", args, state), do: ProposeAdr.run(args, state)
   defp run_tool("emit_insight", args, state), do: EmitInsight.run(args, state)
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
@@ -311,13 +333,16 @@ defmodule Engine.Agents.ArquitetoServer do
        coerente com a stack que você acabou de definir. Enquanto você não escolher, o
        container do projeto não sobe e a aba Code fica fechada — é decisão sua, e ninguém
        a toma no seu lugar.
-    4. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
+    4. route_modules_to_infra: depois do module_map, roteie CADA módulo para uma imagem de
+       container CANDIDATA, com o porquê — um item por módulo. Você candidata; a Infra
+       elege entre as candidatas depois.
+    5. propose_adr: proponha ao menos 1 ADR (decisão arquitetural relevante) — vira uma PR
        pro usuário aprovar.
-    5. create_c4_diagram: gere o diagrama C4 (Context + Container) desta arquitetura —
+    6. create_c4_diagram: gere o diagrama C4 (Context + Container) desta arquitetura —
        depois do module_map, porque o Container level é derivado dele. Descreva só o nome
        do sistema e os atores externos (ex.: o usuário, um provedor de Git); os módulos e
        as dependências entram sozinhos.
-    6. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
+    7. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
        módulo que o atenda).
 
     PRODUCT BRIEF:

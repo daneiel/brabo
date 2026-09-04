@@ -22,10 +22,12 @@ import { DrizzleProposedActionRepository } from '../../../../src/infrastructure/
 import { DrizzleAgentAutonomyRepository } from '../../../../src/infrastructure/persistence/drizzle/agent-autonomy.repository';
 import { DrizzleOutboxRepository } from '../../../../src/infrastructure/persistence/drizzle/outbox.repository';
 import { DrizzleSessionEventRepository } from '../../../../src/infrastructure/persistence/drizzle/session-event.repository';
+import { DrizzleContainerRepository } from '../../../../src/infrastructure/persistence/drizzle/container.repository';
 import { FsPermissionsFileStore } from '../../../../src/infrastructure/filesystem/fs-permissions-file-store';
 import { ResolveEffectiveRoleUseCase } from '../../../../src/application/use-cases/iam/resolve-effective-role.use-case';
 import { AppendSessionEventUseCase } from '../../../../src/application/use-cases/sessions/append-session-event.use-case';
 import { ExecuteTerminalActionUseCase } from '../../../../src/application/use-cases/actions/execute-terminal-action.use-case';
+import { ObterCicloDeVidaDoContainerUseCase } from '../../../../src/application/use-cases/containers/obter-ciclo-de-vida-do-container.use-case';
 import { ProposeActionUseCase } from '../../../../src/application/use-cases/actions/propose-action.use-case';
 import { ApproveActionUseCase } from '../../../../src/application/use-cases/actions/approve-action.use-case';
 import { DenyActionUseCase } from '../../../../src/application/use-cases/actions/deny-action.use-case';
@@ -42,6 +44,10 @@ const proposedActionRepo = new DrizzleProposedActionRepository(db);
 const agentAutonomyRepo = new DrizzleAgentAutonomyRepository(db);
 const outboxRepo = new DrizzleOutboxRepository(db);
 const sessionEventRepo = new DrizzleSessionEventRepository(db);
+const containerRepo = new DrizzleContainerRepository(db);
+const obterCicloDeVidaDoContainer = new ObterCicloDeVidaDoContainerUseCase(
+  containerRepo,
+);
 const permissionsFileStore = new FsPermissionsFileStore();
 const resolveEffectiveRole = new ResolveEffectiveRoleUseCase(
   projectRepo,
@@ -68,8 +74,14 @@ class FakeApiToEngineClient implements ApiToEngineClient {
   async reviseStory(): Promise<void> {}
   async offerInfraHandoff(): Promise<void> {}
   async reanalyzeSession(): Promise<void> {}
+  async getPsychologistStatus(): Promise<{ enabled: boolean }> {
+    return { enabled: true };
+  }
   async runAnamnese(): Promise<void> {}
   async invalidateInstructions(): Promise<void> {}
+  async requestRunnerTicket(): Promise<{ ticket: string; expiresAt: Date }> {
+    return { ticket: 'fake-ticket', expiresAt: new Date() };
+  }
   executeTerminalAction(): Promise<TerminalExecutionResult> {
     return Promise.resolve({
       stdout: '',
@@ -104,7 +116,10 @@ const proposeAction = new ProposeActionUseCase(
   executeTerminalAction,
   undefined as never, // executeGitAction — não exercitado aqui
   undefined as never, // executeInfraPr — não exercitado aqui
+  undefined as never, // executeContainerStart — não exercitado aqui
+  undefined as never, // executeContainerStop — não exercitado aqui
   appendSessionEvent,
+  obterCicloDeVidaDoContainer,
 );
 const approveAction = new ApproveActionUseCase(
   unitOfWork,
@@ -114,6 +129,9 @@ const approveAction = new ApproveActionUseCase(
   executeTerminalAction,
   undefined as never, // executeAdrPr — não exercitado aqui
   undefined as never, // executeInfraPr — não exercitado aqui
+  undefined as never, // executeContainerStart — não exercitado aqui
+  undefined as never, // executeContainerStop — não exercitado aqui
+  undefined as never, // executeContainerRemove — não exercitado aqui
   // executeGitAction: passthrough (o executor git de verdade é testado à parte).
   {
     execute: (_p: string, _s: string, a: unknown) => Promise.resolve(a),

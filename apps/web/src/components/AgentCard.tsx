@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AgentDef } from '../lib/agents';
 import { BranchIcon, ModelIcon } from './ui/icons';
 import styles from './AgentCard.module.css';
@@ -9,12 +10,14 @@ import styles from './AgentCard.module.css';
 // status.
 export type AgentStatus = 'trabalhando' | 'aguardando' | 'ocioso' | 'falhou' | 'travado';
 
-const STATUS_LABEL: Record<AgentStatus, string> = {
-  trabalhando: 'trabalhando',
-  aguardando: 'aguardando',
-  ocioso: 'ocioso',
-  falhou: 'falhou',
-  travado: 'travado',
+// A CHAVE (namespace `executors`, `agentCard.status.<status>`) resolvida no
+// render — texto de STATUS_COLOR é só cor, nunca precisa de tradução.
+const STATUS_LABEL_KEY: Record<AgentStatus, string> = {
+  trabalhando: 'agentCard.status.trabalhando',
+  aguardando: 'agentCard.status.aguardando',
+  ocioso: 'agentCard.status.ocioso',
+  falhou: 'agentCard.status.falhou',
+  travado: 'agentCard.status.travado',
 };
 
 const STATUS_COLOR: Record<AgentStatus, string> = {
@@ -66,6 +69,7 @@ export function AgentCard({
   compact,
   onRearm,
 }: AgentCardProps) {
+  const { t } = useTranslation('executors');
   const Icon = agent.icon;
   const style = { ['--agent-color' as string]: agent.color } as CSSProperties;
   const statusStyle = { ['--status-color' as string]: STATUS_COLOR[status] } as CSSProperties;
@@ -84,7 +88,7 @@ export function AgentCard({
           <div className={styles.role}>{agent.role}</div>
           <span className={styles.status} style={statusStyle}>
             <span className={[styles.statusDot, status === 'trabalhando' && styles.pulsing].filter(Boolean).join(' ')} />
-            {STATUS_LABEL[status]}
+            {t(STATUS_LABEL_KEY[status])}
           </span>
         </div>
       </div>
@@ -126,14 +130,14 @@ export function AgentCard({
             className={[styles.autonomyOption, autonomy === 'manual' && styles.active].filter(Boolean).join(' ')}
             onClick={() => onAutonomyChange('manual')}
           >
-            manual
+            {t('agentCard.autonomy.manual')}
           </button>
           <button
             type="button"
             className={[styles.autonomyOption, autonomy === 'auto' && styles.active].filter(Boolean).join(' ')}
             onClick={() => onAutonomyChange('auto')}
           >
-            auto
+            {t('agentCard.autonomy.auto')}
           </button>
         </div>
       )}
@@ -141,7 +145,7 @@ export function AgentCard({
       {status === 'travado' && onRearm && (
         <div className={styles.autonomy}>
           <button type="button" className={styles.autonomyOption} onClick={onRearm}>
-            rearmar
+            {t('agentCard.rearm')}
           </button>
         </div>
       )}

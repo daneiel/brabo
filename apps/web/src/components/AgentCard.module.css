@@ -184,7 +184,18 @@
   align-self: flex-start;
 }
 
+/*
+ * `min-height: 24px` — piso de alvo de toque da WCAG 2.2 AA (2.5.8) que
+ * `scripts/dev/validacao-visual.js` cobra (PROGRAMA 28, Onda 5/H5). Era
+ * 19px de altura efetiva (`padding: 3px` + `font-size: 10px`); o `padding`
+ * horizontal não muda, só ganha `display: inline-flex` para centralizar o
+ * texto na altura nova.
+ */
 .autonomyOption {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
   border: none;
   background: none;
   font-family: var(--font-mono);

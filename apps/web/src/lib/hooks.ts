@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { getActiveExecutionSession, getArchitecture, getCoverage, getProjectsStatus, getProjectsSummary, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
-import type { SessionEvent } from './api-types';
+import { getActiveExecutionSession, getArchitecture, getContainersOverview, getCoverage, getProjectPendingActions, getProjectsStatus, getProjectsSummary, getPsychologistStatus, getSessionEvent, getWorkspaceSummary, listActions, listBacklog, listHandoffs, listHypotheses, listInfraArtifacts, listProficiency, listProjects, listPsychologistAnalyses, listSessionEvents, listSessions, listWorkspaces, getSessionTokenUsage } from './api-client';
+import type { ActionType, SessionEvent } from './api-types';
 // Todo poll deste arquivo passa por aqui: um `refetchInterval` numérico não
 // sabe parar, e a api limita 300 req/min por usuário (ver `query-policy.ts`).
 import { pollQueParaNoErro } from './query-policy';
@@ -81,6 +81,23 @@ export function useProjectsSummary(
   return useQuery({
     queryKey: ['projects-summary', workspaceId],
     queryFn: () => getProjectsSummary(workspaceId!),
+    enabled: !!workspaceId,
+    refetchInterval: pollQueParaNoErro(intervalMs),
+  });
+}
+
+/**
+ * A página global `/containers` (ADR 0136, RN-495) — cross-projeto, do
+ * WORKSPACE inteiro. Mesma cadência de `useProjectsSummary` (5s): leitura
+ * periférica de painel, não algo que precisa de segundo a segundo.
+ */
+export function useContainersOverview(
+  workspaceId: string | undefined,
+  intervalMs = 5000,
+) {
+  return useQuery({
+    queryKey: ['containers-overview', workspaceId],
+    queryFn: () => getContainersOverview(workspaceId!),
     enabled: !!workspaceId,
     refetchInterval: pollQueParaNoErro(intervalMs),
   });
@@ -181,6 +198,18 @@ export const EVENTOS_POR_PAGINA = 100;
 export interface HistoricoDeEventos {
   /** A janela visível, em ordem crescente de `seq` (o mais novo por último). */
   events: SessionEvent[];
+  /**
+   * TUDO que já foi baixado — a cauda mais as páginas antigas já pedidas —,
+   * sem o recorte da janela (RN-180).
+   *
+   * A janela existe para o FEED, que pagina item a item. As seções derivadas
+   * do painel de contexto (regras de negócio, artefatos, arquivos tocados) não
+   * paginam: elas somam sobre o que a sessão trouxe, e cortá-las na janela de
+   * 100 mostraria MENOS regra do que o painel já mostrava antes de existir
+   * paginação. `carregarMaisAntigos` aumenta as duas, e é isso que faz o
+   * botão do feed valer também para elas.
+   */
+  baixados: SessionEvent[];
   /** Quantos eventos CRUS a janela tem — o `M` do "N de M carregados". */
   carregados: number;
   /** Há sessão anterior à janela, seja já baixada ou ainda por baixar. */
@@ -231,10 +260,16 @@ export function useSessionEventHistory(
   projectId: string | undefined,
   sessionId: string | undefined,
   intervalMs = 3000,
+  pausarPoll = false,
 ): HistoricoDeEventos {
   // A cauda ao vivo. Mesma `queryKey` de `useSessionEvents`: quando os dois
   // estão montados na mesma tela, o React Query serve os dois com UMA busca.
-  const cauda = useSessionEvents(projectId, sessionId, intervalMs);
+  //
+  // `pausarPoll` PRECISA descer até aqui (achados 2/7): o intervalo é de cada
+  // OBSERVADOR, não da query. Um segundo observador desta mesma chave com
+  // intervalo ligado ressuscitaria o poll que `SessionPage` pausa durante o
+  // turno — e com ele a duplicata visual da bolha em streaming.
+  const cauda = useSessionEvents(projectId, sessionId, intervalMs, pausarPoll);
 
   // Cursores das páginas antigas já pedidas, do mais novo para o mais velho.
   const [cursores, setCursores] = useState<number[]>([]);
@@ -304,6 +339,7 @@ export function useSessionEventHistory(
 
   return {
     events,
+    baixados: todos,
     carregados: events.length,
     temMaisAntigos,
     carregarMaisAntigos,
@@ -341,6 +377,27 @@ export function usePendingActions(projectId: string | undefined, sessionId: stri
     queryKey: ['session-actions', projectId, sessionId],
     queryFn: () => listActions(projectId!, sessionId!, { limit: 200 }),
     enabled: !!projectId && !!sessionId,
+    refetchInterval: pollQueParaNoErro(intervalMs),
+  });
+}
+
+/**
+ * Ações PENDENTES do PROJETO inteiro, em qualquer sessão (Onda 2 — aba PRs).
+ *
+ * Irmã de `usePendingActions` (escopada por SESSÃO): esta é a consulta que
+ * resolve o bug de visibilidade — a aba PRs usa isto para achar a
+ * `proposed_action` correspondente a um PR (ex.: a proposta de `git_merge`
+ * do botão "Merge") sem saber de antemão qual sessão a propôs.
+ */
+export function useProjectPendingActions(
+  projectId: string | undefined,
+  actionType?: ActionType,
+  intervalMs = 3000,
+) {
+  return useQuery({
+    queryKey: ['project-pending-actions', projectId, actionType],
+    queryFn: () => getProjectPendingActions(projectId!, { actionType }),
+    enabled: !!projectId,
     refetchInterval: pollQueParaNoErro(intervalMs),
   });
 }
@@ -429,6 +486,21 @@ export function usePsychologistAnalyses(
   return useQuery({
     queryKey: ['psychologist-analyses', projectId],
     queryFn: () => listPsychologistAnalyses(projectId!),
+    enabled: !!projectId,
+    refetchInterval: pollQueParaNoErro(intervalMs),
+  });
+}
+
+// Flag global PSYCHOLOGIST_ENABLED (RN-454) — leitura pura, sem efeito
+// colateral. Poll lento: só muda por reinício do engine com a env var
+// diferente, não por ação de usuário nenhuma.
+export function usePsychologistStatus(
+  projectId: string | undefined,
+  intervalMs = 30000,
+) {
+  return useQuery({
+    queryKey: ['psychologist-status', projectId],
+    queryFn: () => getPsychologistStatus(projectId!),
     enabled: !!projectId,
     refetchInterval: pollQueParaNoErro(intervalMs),
   });

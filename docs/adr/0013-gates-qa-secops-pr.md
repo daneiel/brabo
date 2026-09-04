@@ -1,126 +1,131 @@
-# ADR 0013 — Gates de PR: QAAgent e SecOpsAgent
+# ADR 0013 — PR gates: QAAgent and SecOpsAgent
 
-- Status: aceito
-- Data: 2026-07-24
-- Fase: 4a (sessão 3 — gates de QA e SecOps)
+- Status: accepted
+- Date: 2026-07-24
+- Phase: 4a (session 3 — QA and SecOps gates)
 
-## Contexto
+## Context
 
-O DevAgent real (sessão anterior) implementa a task e abre PR, mas a PR não
-passa por nenhuma revisão automatizada — vai direto pra `in_review`. Esta
-sessão adiciona os dois gates que faltavam: **QA** (roda a suite, monta a
-matriz regra→teste, aponta regras sem cobertura) e **SecOps** (roda
-semgrep/gitleaks, cruza com ADRs de segurança) — cada um com parecer
-registrado como artefato + comentário na PR, devolução pro dev na MESMA
-branch quando reprova, e um limite de correções antes de virar `blocked`.
+The real DevAgent (previous session) implements the task and opens a PR, but
+the PR doesn't go through any automated review — it goes straight to
+`in_review`. This session adds the two missing gates: **QA** (runs the
+suite, builds the rule→test matrix, points out rules without coverage) and
+**SecOps** (runs semgrep/gitleaks, cross-references security ADRs) — each
+with a verdict recorded as an artifact + a PR comment, returned to the dev
+on the SAME branch when it fails, and a limit on corrections before it
+becomes `blocked`.
 
-Critério de aceite: task com (a) uma regra sem teste e (b) um segredo
-hardcoded → QA devolve a primeira, dev corrige, SecOps barra o segundo, dev
-corrige, PR chega a `awaiting_user` com os 4 pareceres na linha do tempo.
+Acceptance criterion: a task with (a) a rule without a test and (b) a
+hardcoded secret → QA returns the first, the dev fixes it, SecOps blocks the
+second, the dev fixes it, the PR reaches `awaiting_user` with all 4 verdicts
+on the timeline.
 
-## Decisões
+## Decisions
 
-### 1. Máquina de estados do gate como teto puro
+### 1. Gate state machine as a pure ceiling
 
-`domain/execution/pr-gate-state-machine.ts` (mesmo padrão de
+`domain/execution/pr-gate-state-machine.ts` (same pattern as
 `action-state-machine.ts`/`story-state-machine.ts`): `PrGateStatus =
 'awaiting_qa' | 'awaiting_secops' | 'awaiting_user'`. `nextGateStatus`
-recebe o gate ATUAL + o veredito e devolve o próximo status (ou `'blocked'`
-se o teto de correções estourou) — cada gate só pode agir sobre o SEU
-status (`InvalidGateActionError` se QA tenta decidir sobre `awaiting_secops`
-ou vice-versa), garantindo a ORDEM imutável (aprovar QA nunca pula direto
-pra `awaiting_user`). `tasks` ganha `gate_status`/`gate_correction_count`
-(migração `0015`) — sem tabela nova pra pareceres: eles são
-`session_events` `artifact.qa_verdict`/`artifact.secops_verdict`, mesmo
-padrão de `EmitArtifact`.
+takes the CURRENT gate + the verdict and returns the next status (or
+`'blocked'` if the correction ceiling was exceeded) — each gate can only act
+on ITS OWN status (`InvalidGateActionError` if QA tries to decide on
+`awaiting_secops` or vice versa), guaranteeing the immutable ORDER
+(approving QA never jumps straight to `awaiting_user`). `tasks` gains
+`gate_status`/`gate_correction_count` (migration `0015`) — no new table for
+verdicts: they are `session_events`
+`artifact.qa_verdict`/`artifact.secops_verdict`, the same pattern as
+`EmitArtifact`.
 
-`RecordGateVerdictUseCase` é o ÚNICO lugar que aplica a máquina, posta
-comentário na PR (`GitProvider.commentOnPullRequest`, 10ª operação do
-contrato — best-effort, nunca trava a decisão do gate) e devolve pro engine
-a próxima ação (`correct`/`run_secops`/`done`/`blocked`) — mesmo princípio
-de sempre: api decide, engine executa.
+`RecordGateVerdictUseCase` is the ONLY place that applies the machine, posts
+a comment on the PR (`GitProvider.commentOnPullRequest`, the 10th operation
+of the contract — best-effort, never blocks the gate decision) and returns
+the next action to the engine (`correct`/`run_secops`/`done`/`blocked`) —
+same principle as always: the api decides, the engine executes.
 
-### 2. Handoff conversacional NÃO reaproveitado
+### 2. Conversational handoff NOT reused
 
-`domain/sessions/handoff.entity.ts` é modelado pra ativação de agente
-CONVERSACIONAL (`offered/accepted`), sem noção de branch/worktree/task —
-forçar esse encaixe teria sido pior do que criar um caminho novo. A
-devolução "QA/SecOps reprovou → volta pro dev na MESMA branch" é uma
-chamada direta engine→engine: `DevAgentServer.correct/3` (distinto de
-`work/2`, que reivindica task NOVA) reaproveita `state.worktree`/
-`state.branch`/`state.task_id` já guardados — NUNCA chama
-`worktree_manager().create/3` de novo. No `report_done` da correção, só
-`propose_commit`/`propose_push` (a PR já existe, mesma branch) — nunca
-`propose_pr` de novo.
+`domain/sessions/handoff.entity.ts` is modeled for CONVERSATIONAL agent
+activation (`offered/accepted`), with no notion of branch/worktree/task —
+forcing that fit would have been worse than creating a new path. The
+"QA/SecOps rejected → back to the dev on the SAME branch" return is a
+direct engine→engine call: `DevAgentServer.correct/3` (distinct from
+`work/2`, which claims a NEW task) reuses the already-stored
+`state.worktree`/`state.branch`/`state.task_id` — it NEVER calls
+`worktree_manager().create/3` again. In the `report_done` of the
+correction, only `propose_commit`/`propose_push` (the PR already exists,
+same branch) — never `propose_pr` again.
 
-### 3. QA usa ToolLoop/LLM; SecOps é determinístico — assimetria intencional
+### 3. QA uses ToolLoop/LLM; SecOps is deterministic — intentional asymmetry
 
-Cruzar a descrição de uma regra de negócio com o nome/conteúdo de um teste
-é julgamento SEMÂNTICO — o `QaAgentServer` usa o `ToolLoop` real (mesmo
-harness do DevAgent), com `Engine.Gates.Tools.EmitQaVerdict` ENFORÇADO
-exatamente como `ReportDone`: só aceita `veredito: "approved"` se o último
-`terminal` no histórico saiu com `exit 0`.
+Cross-referencing a business rule's description with a test's name/content
+is SEMANTIC judgment — `QaAgentServer` uses the real `ToolLoop` (same
+harness as DevAgent), with `Engine.Gates.Tools.EmitQaVerdict` ENFORCED
+exactly like `ReportDone`: it only accepts `veredito: "approved"` if the
+last `terminal` in the history exited with `exit 0`.
 
-Achar um segredo hardcoded ou uma vulnerabilidade é checagem ESTRUTURADA
-sobre saída de scanner — um SecOps DETERMINÍSTICO (sem LLM) é mais
-confiável do que um modelo resumindo achado de segurança (risco de
-alucinação/omissão numa checagem que deveria ser binária). O
-`SecOpsAgentServer` roda `gitleaks`+`semgrep` (`Engine.Actions.
-GitleaksDetector`/`SemgrepDetector`, mesmo padrão de detecção opcional do
-`RtkDetector` — `System.find_executable/1`, nunca assume instalado) e lista
-os ADRs `securityRelevant` (campo novo, opcional, no payload de
-`open_adr_pr` — checklist informativo, sem correlação profunda linha-a-
-linha). Achado zero → `approved`; qualquer achado → `changes_requested`.
+Finding a hardcoded secret or a vulnerability is a STRUCTURED check over
+scanner output — a DETERMINISTIC SecOps (no LLM) is more reliable than a
+model summarizing a security finding (risk of hallucination/omission in a
+check that should be binary). `SecOpsAgentServer` runs
+`gitleaks`+`semgrep` (`Engine.Actions.GitleaksDetector`/`SemgrepDetector`,
+same optional-detection pattern as `RtkDetector` —
+`System.find_executable/1`, never assumes it's installed) and lists the
+`securityRelevant` ADRs (new, optional field, in the `open_adr_pr` payload —
+an informative checklist, without deep line-by-line correlation). Zero
+findings → `approved`; any finding → `changes_requested`.
 
-**Ambos scanners foram testados no Dockerfile real do engine (Alpine) e
-instalam/rodam sem problema** (`gitleaks` via binário estático do release
-do GitHub; `semgrep` via pip) — a preocupação inicial de instabilidade em
-musl/Alpine não se confirmou nesta sessão. A detecção opcional continua
-como defesa em profundidade (ambiente sem os binários não quebra o gate).
+**Both scanners were tested against the engine's real Dockerfile (Alpine)
+and install/run without issue** (`gitleaks` via the GitHub release's static
+binary; `semgrep` via pip) — the initial concern about instability on
+musl/Alpine did not materialize in this session. Optional detection remains
+as defense in depth (an environment without the binaries doesn't break the
+gate).
 
-### 4. QA/SecOps compartilham o worktree do dev
+### 4. QA/SecOps share the dev's worktree
 
-Nenhum dos dois cria worktree próprio — acham o do dev via
-`DevAgentState.find_by_task_id/2` (nova consulta) — já que só leem/rodam
-comando, nunca escrevem código. `Engine.Gates.Diff.compute/2` calcula
-`git diff <default_branch>...HEAD` (não existia cálculo de diff nenhum no
-engine antes disso) — usado pro resumo do parecer (contagem de arquivos
-mudados), não como filtro linha-a-linha dos achados de scanner
-(simplificação documentada: correlacionar path de scanner ↔ diff de forma
-confiável é frágil o bastante pra não valer o esforço nesta sessão).
+Neither creates its own worktree — they find the dev's via
+`DevAgentState.find_by_task_id/2` (new query) — since they only
+read/run commands, never write code. `Engine.Gates.Diff.compute/2`
+computes `git diff <default_branch>...HEAD` (no diff computation existed
+in the engine before this) — used for the verdict summary (count of
+changed files), not as a line-by-line filter of scanner findings
+(documented simplification: reliably correlating scanner path ↔ diff is
+fragile enough not to be worth the effort in this session).
 
-### 5. Indireção de disparo (Dispatcher) — testabilidade
+### 5. Trigger indirection (Dispatcher) — testability
 
-`Engine.Gates.Dispatcher` (`.run_qa/2`, `.run_secops/2`) é o único ponto
-onde o `DevAgentServer`/`QaAgentServer` disparam o PRÓXIMO gate — trocável
-em teste (`Engine.Gates.FakeGateDispatcher`) pelo mesmo motivo de
-`worktree_manager()`: sem essa indireção, os testes do `DevAgentServer`
-subiriam um `QaAgentServer` REAL fora do sandbox Ecto do processo de teste
-(descoberto rodando a suite — o GenServer crashava tentando `DevAgentState.
-find_by_task_id` sem dono da conexão). A devolução gate→dev
-(`DevAgentServer.correct/3`) NÃO passa pela indireção — é um `GenServer.
-cast` via `:via`/`Registry`, que já é fire-and-forget por natureza do OTP
-(silencioso se o processo não existir, nunca derruba o chamador).
+`Engine.Gates.Dispatcher` (`.run_qa/2`, `.run_secops/2`) is the single
+point where `DevAgentServer`/`QaAgentServer` trigger the NEXT gate —
+swappable in tests (`Engine.Gates.FakeGateDispatcher`) for the same reason
+as `worktree_manager()`: without this indirection, `DevAgentServer` tests
+would spin up a REAL `QaAgentServer` outside the test process's Ecto
+sandbox (discovered while running the suite — the GenServer crashed trying
+`DevAgentState.find_by_task_id` without owning the connection). The
+gate→dev return (`DevAgentServer.correct/3`) does NOT go through the
+indirection — it's a `GenServer.cast` via `:via`/`Registry`, which is
+already fire-and-forget by OTP's nature (silent if the process doesn't
+exist, never crashes the caller).
 
-## Consequências
+## Consequences
 
-- UI: `ProjectApprovalsTab` ganha a seção "PRs em revisão" — stepper
-  horizontal dev→qa→secops→você (`PrGateTimeline`, novo componente) por
-  task com gate aberto, pareceres expansíveis, e a `coverageMatrix` do QA
-  renderizada com `ui/Table`. `activity.ts` narra `pr.gate_changed`/
-  `artifact.qa_verdict`/`artifact.secops_verdict`.
-- Testes: máquina de estados (ordem imutável, teto de correções),
-  `RecordGateVerdictUseCase` (comentário best-effort, K excedido bloqueia),
-  `DevAgentServer.correct/3` (mesma branch/worktree, sem PR nova),
-  `QaAgentServer` (enforcement do `emit_qa_verdict`), `SecOpsAgentServer`
-  (segredo plantado → changes_requested; scanner ausente → pula sem
-  quebrar).
+- UI: `ProjectApprovalsTab` gains the "PRs under review" section — a
+  horizontal stepper dev→qa→secops→you (`PrGateTimeline`, new component)
+  per task with an open gate, expandable verdicts, and the QA
+  `coverageMatrix` rendered with `ui/Table`. `activity.ts` narrates
+  `pr.gate_changed`/`artifact.qa_verdict`/`artifact.secops_verdict`.
+- Tests: state machine (immutable order, correction ceiling),
+  `RecordGateVerdictUseCase` (best-effort comment, exceeding K blocks),
+  `DevAgentServer.correct/3` (same branch/worktree, no new PR),
+  `QaAgentServer` (`emit_qa_verdict` enforcement), `SecOpsAgentServer`
+  (planted secret → changes_requested; missing scanner → skips without
+  breaking).
 
-## Escopo & assunções
+## Scope & assumptions
 
-QA/SecOps só pra PRs do DevAgent — Infra e o painel de time completo via
-canais Phoenix continuam fora. `securityRelevant` em ADRs é só um flag
-informativo (Arquiteto da Fase 3b não muda além de aceitar o campo
-opcional). Sem correlação profunda diff↔achado de scanner. `in_review →
-done` (aprovação final do usuário) continua fora desta sessão — o gate
-termina em `awaiting_user`, e a ação humana de merge já é sempre manual.
+QA/SecOps only for DevAgent PRs — Infra and the full team panel via
+Phoenix channels remain out of scope. `securityRelevant` on ADRs is just an
+informative flag (the Phase 3b Architect changes only to accept the new
+optional field). No deep diff↔scanner-finding correlation. `in_review →
+done` (final user approval) remains out of this session — the gate ends at
+`awaiting_user`, and the human merge action is already always manual.

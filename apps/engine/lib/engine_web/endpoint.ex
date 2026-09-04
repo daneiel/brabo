@@ -17,6 +17,11 @@ defmodule EngineWeb.Endpoint do
 
   socket "/socket", EngineWeb.SessionSocket, websocket: true, longpoll: false
 
+  # Runner local + terminal interativo (separado de "/socket" de propósito —
+  # ver o moduledoc de EngineWeb.RunnerSocket): dois papéis SEM sessão de
+  # chat associada, escopados por projeto.
+  socket "/runner", EngineWeb.RunnerSocket, websocket: true, longpoll: false
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # When code reloading is disabled (e.g., in production),

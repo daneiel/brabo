@@ -1,0 +1,117 @@
+{
+  "modal": {
+    "title": "New project"
+  },
+  "steps": {
+    "mode": "Create new or adopt existing",
+    "provider": "Where to host",
+    "credential": "Access credential",
+    "details": "Name and visibility",
+    "workspace": "Where the code will live",
+    "policy": "Branch policy",
+    "confirm": "Confirm"
+  },
+  "mode": {
+    "create": {
+      "label": "Create new",
+      "desc": "Brabo creates the repository on the provider and runs the Gitflow bootstrap."
+    },
+    "adopt": {
+      "label": "Adopt existing",
+      "desc": "Points the project to a repository that already exists. Nothing is created, and nothing is changed without your approval."
+    }
+  },
+  "workspaceMode": {
+    "container": {
+      "label": "Container",
+      "desc": "Brabo manages the folder, inside the volume shared with the engine. It's the default, and requires nothing from you."
+    },
+    "mounted": {
+      "label": "Mounted folder",
+      "desc": "The code lives in a folder of YOURS. It needs to be mounted inside the api and engine containers, at the same path."
+    },
+    "runner": {
+      "label": "Local runner",
+      "desc": "The code lives in a folder of YOURS, with no bind-mount at all. You run the brabo-runner CLI on your machine, and it confirms the path when it connects."
+    }
+  },
+  "provider": {
+    "github": { "label": "GitHub", "desc": "Repository via the GitHub API" },
+    "gitlab": { "label": "GitLab", "desc": "Repository via the GitLab API" },
+    "local": { "label": "Local", "desc": "Local git repository, no external provider" }
+  },
+  "credential": {
+    "tokenValidated": "Token validated",
+    "errors": {
+      "invalidToken": "Invalid token or insufficient scope. Check it and try again.",
+      "generic": "Could not validate the token right now."
+    }
+  },
+  "toasts": {
+    "createFailedWithReason": "Could not create the project",
+    "createFailedGeneric": "Failed to create project",
+    "folderNavigationPrepareFailed": "Could not prepare folder navigation right now"
+  },
+  "details": {
+    "adopt": {
+      "repoLabel": "Existing repository",
+      "placeholderLocal": "/path/to/repo.git",
+      "placeholderRemote": "acme/checkout",
+      "hintLocal": "absolute path to the bare repo",
+      "hintRemote": "in owner/repository format, as it appears in the URL",
+      "note": "Nothing is created and nothing is changed now. The next step shows a <strong>plan</strong> of what the bootstrap would do to this repository — and you decide whether to apply it or adopt it as-is."
+    },
+    "create": {
+      "nameLabel": "Project name",
+      "namePlaceholder": "E.g.: Online Store",
+      "repoPreview": "repo: {{slug}}",
+      "visibilityLabel": "Visibility",
+      "visibilityPrivate": "Private",
+      "visibilityPublic": "Public",
+      "githubPrivateWarning": "On GitHub's free plan, <strong>private repositories don't support branch protection</strong>. The project works and the branches are created, but the \"Protect branches\" step will fail, and GitHub won't block direct pushes to <code>main</code>, <code>qa</code>, and <code>dev</code> — Brabo's own merge lock still applies, GitHub's doesn't."
+    }
+  },
+  "workspace": {
+    "pathLabel": "Folder path",
+    "pathPlaceholder": "/home/you/projects/store",
+    "browseButton": "Browse folder...",
+    "preparing": "Preparing…",
+    "hintMounted": "absolute path, as it appears INSIDE the container",
+    "hintRunner": "absolute path, as it appears on YOUR machine",
+    "mountedWarning": "The folder needs to be <strong>mounted in the api and engine containers</strong>, at the <strong>same absolute path</strong> — the two write to the same place. In <code>docker/docker-compose.yml</code>, add <code>- {{caminho}}:{{caminho}}</code> to the <code>api</code> and <code>engine</code> services. If it isn't, creation is <strong>refused</strong> right here — the project doesn't come out broken.",
+    "runnerHint": {
+      "intro": "After creating the project, run this on your machine:",
+      "introExisting": "The project already exists — run this on your machine:",
+      "command": "brabo-runner --project {{id}} --dir {{caminho}}",
+      "placeholderId": "<project id>",
+      "note": "The runner confirms the path when it connects — no command runs before that."
+    }
+  },
+  "policy": {
+    "intro": "On provisioning, the Gitflow bootstrap runs these steps on the repo:",
+    "note": "Promotion cascade: <code>dev ← main</code>, <code>qa ← dev</code>. The permanent branches get protection",
+    "noteSuffixLocal": " — except on Local, which has no branch protection (the step is skipped with a warning).",
+    "noteSuffixDefault": " (main, qa, dev)."
+  },
+  "confirm": {
+    "modeLabel": "Mode",
+    "providerLabel": "Provider",
+    "codeAtLabel": "Code at",
+    "repoLabel": "Repository",
+    "bootstrapLabel": "Bootstrap",
+    "visibilityLabel": "Visibility",
+    "managedFolder": "folder managed by Brabo",
+    "bootstrapAdoptValue": "nothing runs without your approval",
+    "bootstrapStepsValue_one": "{{count}} Gitflow step",
+    "bootstrapStepsValue_other": "{{count}} Gitflow steps",
+    "unknownProvider": "—"
+  },
+  "footer": {
+    "back": "Back",
+    "stepLabel": "step {{atual}} of {{total}}",
+    "continue": "Continue",
+    "submitting": "Creating…",
+    "viewPlan": "View the plan",
+    "provision": "Provision"
+  }
+}

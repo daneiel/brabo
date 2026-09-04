@@ -27,8 +27,17 @@
  * O padding vertical da página é 32px (`--space-5`), não os 40px do handoff —
  * 40 não é token, e a diferença só aparece em viewport curta.
  *
- * As outras divergências (sem botão do GitHub, sem "N agentes online") estão no
- * ADR 0036 e seguem valendo: as duas são COMPORTAMENTO, não pintura.
+ * A divergência "sem botão do GitHub" do ADR 0036 FECHOU com o login social
+ * (ADR 0084) — `.divisor`/`.botaoSocial` abaixo seguem o mock (`Brabo
+ * Login.dc.html`), com GitLab somado ao lado do GitHub que o mock desenhava
+ * sozinho.
+ *
+ * "Sem 'N agentes online'" SEGUE VALENDO, e agora por um motivo mais preciso
+ * do que "exigiria rota pública própria": o login ganhou um bloco de ambiente
+ * (`SinaisDoAmbiente`), mas ele mostra só o que é verdade SEM identidade — os
+ * dois `/health`, que já eram públicos nos dois serviços. Contagem de agentes
+ * é de um workspace, e antes do login não existe workspace: o problema nunca
+ * foi a rota, é que a pergunta não tem sujeito.
  */
 
 .tela {
@@ -95,6 +104,95 @@
   }
 }
 
+/*
+ * ## As duas colunas (login)
+ *
+ * Os dois invólucros existem SEMPRE no DOM e são `display: contents` por
+ * padrão — apagados do layout, com o container voltando a ser a pilha de
+ * 412px de sempre nas outras três telas de auth. `display: contents` não muda
+ * a ÁRVORE, só a caixa: a ordem do DOM (que fixa a ordem de `Tab` no login) e
+ * a vizinhança `<section>` → `<footer>` continuam exatamente como estavam.
+ */
+.colunaIdentidade,
+.colunaFormulario {
+  display: contents;
+}
+
+/*
+ * O modo duplo. Vem DEPOIS de `.container` de propósito: as duas regras têm a
+ * mesma especificidade (uma classe), então quem manda no `max-width` é a
+ * ordem no arquivo.
+ *
+ * `align-items: center` e não `start`: as duas colunas têm alturas
+ * independentes e nenhuma delas é "a régua" — encostar as duas no topo
+ * deixaria a marca alinhada com o título do card por acidente de altura, e
+ * desalinhada na primeira frase a mais.
+ */
+.containerDuplo {
+  max-width: 940px;
+  display: flex;
+  align-items: center;
+  gap: 64px;
+}
+
+.containerDuplo .colunaIdentidade {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  /* `1 1 0` com `min-width: 0`: a coluna da esquerda absorve a sobra e pode
+     ENCOLHER — sem o `min-width`, um caminho longo dentro dela empurraria o
+     card para fora da tela, que é o defeito clássico de item de flex. */
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/*
+ * A marca perde a margem de baixo aqui: no modo duplo quem dá o respiro entre
+ * ela e o texto é o `gap` da coluna, e somar os dois abriria 54px.
+ */
+.containerDuplo .marca {
+  margin-bottom: 0;
+}
+
+.containerDuplo .colunaFormulario {
+  display: block;
+  /* A coluna do formulário mantém EXATAMENTE a largura do card de sempre
+     (412px, do mock aprovado): o layout novo põe o card ao lado de outra
+     coisa, não o redesenha. */
+  flex: 0 0 412px;
+  max-width: 412px;
+}
+
+/*
+ * Abaixo de 900px não cabem duas colunas de leitura confortável, e o
+ * formulário é o que a pessoa veio fazer: o modo duplo se desfaz por completo
+ * — os dois invólucros voltam a `contents` e a pilha é a mesma das outras
+ * telas, com a identidade em cima do card.
+ */
+@media (max-width: 900px) {
+  .containerDuplo {
+    display: block;
+    max-width: 412px;
+  }
+
+  .containerDuplo .colunaIdentidade,
+  .containerDuplo .colunaFormulario {
+    display: contents;
+  }
+
+  .containerDuplo .marca {
+    margin-bottom: 26px;
+  }
+
+  /* Com os invólucros de volta a `contents`, o `gap` da coluna não existe
+     mais: o respiro entre o bloco de ambiente e o card passa a ser margem do
+     próprio bloco. `* + *` porque o primeiro filho é a marca, que já tem a
+     margem dela. */
+  .containerDuplo .colunaIdentidade > * + * {
+    margin-bottom: 22px;
+  }
+}
+
 /* Cabeçalho de marca, acima do card. */
 .marca {
   display: flex;
@@ -136,6 +234,21 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+/*
+ * A frase de identidade da coluna da esquerda: o que o produto faz, em uma
+ * respiração. Maior que o corpo do card (15px contra 13px) porque é a única
+ * prosa da tela que não é rótulo de campo — e é `<p>`, não cabeçalho, para o
+ * título do card seguir sendo o único `<h1>` da página.
+ */
+.pitch {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 42ch;
 }
 
 /* O card. `overflow: hidden` é o que faz o rodapé respeitar o raio. */
@@ -191,6 +304,76 @@
 }
 
 /*
+ * Divisor "ou" entre o submit e os botões de login social (ADR 0084) —
+ * existe só enquanto houver um botão social depois dele; a lição do ADR 0036
+ * (item "consequência derivada da nº 1") era o inverso: sem botão nenhum, o
+ * divisor saía junto, porque um "ou" apontando para nada é pior que a
+ * assimetria.
+ */
+.divisor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 2px 0;
+}
+
+.linhaDivisor {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.textoDivisor {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.botoesSociais {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/*
+ * `<a>`, não `<button>`: é navegação de página inteira para
+ * `GET /auth/oauth/:provider/start`, que redireciona 302 direto pro
+ * provider — sem `fetch`, sem estado de carregamento (o próprio browser
+ * mostra o progresso da navegação).
+ */
+.botaoSocial {
+  height: 42px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 13.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  text-decoration: none;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.botaoSocial:hover {
+  background: var(--border);
+  border-color: var(--text-muted);
+}
+
+.botaoSocial:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/*
  * Faixa inferior do card, em `--surface-0`: é um degrau ABAIXO do card, o que a
  * separa do formulário sem precisar de mais uma linha.
  *
@@ -230,6 +413,14 @@
   color: var(--text-muted);
 }
 
+/*
+ * Alvo abaixo de 24px por design (PROGRAMA 28, Onda 5/H5, auditado): a linha
+ * "vX.Y.Z · Status · Documentação" é texto corrido com separadores de gap
+ * uniforme (ver comentário de `.rodapePagina`) — cai na exceção "constrained
+ * by the line-height of non-target text" da WCAG 2.2 2.5.8, o mesmo motivo
+ * que isenta um link dentro de frase. Impor 24px quebraria o alinhamento dos
+ * "·" com o texto ao redor.
+ */
 .linkRodape {
   color: var(--text-muted);
   text-decoration: none;
@@ -268,6 +459,13 @@
  * qualquer forma, porque não depende de enxergar cor. Ver
  * `design-contraste.test.ts`.
  */
+/*
+ * "Criar uma conta" mede 19px de altura (PROGRAMA 28, Onda 5/H5, auditado) —
+ * abaixo do piso de 24px, mas ISENTO: é link DENTRO de frase ("Não tem
+ * acesso? Criar uma conta"), a exceção "target is in a sentence" da WCAG 2.2
+ * 2.5.8. Mesmo raciocínio isenta `.linkPequeno` abaixo — lá o texto vizinho é
+ * o rótulo do campo, não uma frase, mas a régua de baseline é a mesma.
+ */
 .link {
   color: var(--accent-hover);
   text-decoration: none;
@@ -286,7 +484,12 @@
 
 /*
  * Variante menor do `.link`, para a ação que acompanha um rótulo de campo. Vai
- * SOMADA a `.link` no `className`, não no lugar dele.
+ * SOMADA a `.link` no `className`, não no lugar dele. 17px de altura, abaixo
+ * do piso de 24px — ISENTO (WCAG 2.2 2.5.8, "constrained by the line-height
+ * of non-target text"): `.linhaLabel` de `Input.module.css` alinha este link
+ * pelo `baseline` com o rótulo do campo DE PROPÓSITO ("alinhar pelo centro
+ * deixaria as duas linhas de base desencontradas"), então dar `min-height`
+ * aqui quebraria exatamente o alinhamento que aquele comentário defende.
  */
 .linkPequeno {
   font-size: 11.5px;

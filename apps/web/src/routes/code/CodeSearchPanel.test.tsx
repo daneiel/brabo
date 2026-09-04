@@ -1,8 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CodeSearchPanel } from './CodeSearchPanel';
+// Instância REAL do app — `CodeSearchPanel` não tem `I18nextProvider` próprio
+// (mesmo padrão de `Dashboard.test.tsx`/`ProjectExecutorsTab.test.tsx`).
+import i18n from '../../lib/i18n';
 import type { CodeSearchResult } from '../../lib/api-types';
 
 const searchCode = vi.fn();
@@ -27,8 +30,13 @@ function montar() {
   return { ...utils, onOpenFile };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
   vi.clearAllMocks();
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('CodeSearchPanel', () => {
@@ -63,7 +71,9 @@ describe('CodeSearchPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Buscar' }));
 
     expect(await screen.findByText('apps/api/src/user.ts')).toBeInTheDocument();
-    expect(screen.getByText('40 arquivo(s) verificado(s)')).toBeInTheDocument();
+    // `filesScanned_other` pluraliza de verdade agora — "(s)" era o
+    // placeholder do texto fixo antigo, sem regra de plural nenhuma.
+    expect(screen.getByText('40 arquivos verificados')).toBeInTheDocument();
     expect(searchCode).toHaveBeenCalledWith('p-1', { q: 'fetchUser', ref: 'dev' });
 
     await user.click(screen.getByText('apps/api/src/user.ts'));

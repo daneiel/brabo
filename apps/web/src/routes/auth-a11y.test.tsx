@@ -1,6 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import axe from 'axe-core';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import type { ReactElement } from 'react';
+import authEn from '../locales/en/auth.json';
+import authPtBR from '../locales/pt-BR/auth.json';
+import uiEn from '../locales/en/ui.json';
+import uiPtBR from '../locales/pt-BR/ui.json';
 import { LoginPage } from './LoginPage';
 import { RegisterPage } from './RegisterPage';
 import { ForgotPasswordPage } from './ForgotPasswordPage';
@@ -48,10 +55,34 @@ async function semViolacoes(no: HTMLElement) {
 
 const naoImporta = () => {};
 
+// Instância REAL de i18next, com os recursos do namespace "auth" — mesmo
+// padrão de LoginPage.test.tsx/AuthLayout.test.tsx: as quatro telas usam
+// `useTranslation('auth')`, e nenhuma vem com provider próprio.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      en: { auth: authEn, ui: uiEn },
+      'pt-BR': { auth: authPtBR, ui: uiPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'auth',
+    ns: ['auth', 'ui'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
+function renderar(no: ReactElement) {
+  return render(<I18nextProvider i18n={novaInstanciaI18n()}>{no}</I18nextProvider>);
+}
+
 describe('a11y das telas de auth', () => {
   describe('login', () => {
     it('estado vazio', async () => {
-      const { container } = render(
+      const { container } = renderar(
         <LoginPage
           onEntrar={vi.fn().mockResolvedValue({ ok: true })}
           irPara={naoImporta}
@@ -64,7 +95,7 @@ describe('a11y das telas de auth', () => {
       // Os dois estados juntos de propósito: é a combinação em que existem, ao
       // mesmo tempo, uma live region, um `aria-pressed` e um campo cujo `type`
       // mudou depois da montagem.
-      const { container } = render(
+      const { container } = renderar(
         <LoginPage
           onEntrar={vi.fn().mockResolvedValue({ ok: false, status: 401 })}
           irPara={naoImporta}
@@ -87,7 +118,7 @@ describe('a11y das telas de auth', () => {
 
   describe('registro', () => {
     it('estado vazio', async () => {
-      const { container } = render(
+      const { container } = renderar(
         <RegisterPage
           onRegistrar={vi.fn().mockResolvedValue({ ok: true, status: 202 })}
           irPara={naoImporta}
@@ -97,7 +128,7 @@ describe('a11y das telas de auth', () => {
     });
 
     it('com erro de campo na senha', async () => {
-      const { container } = render(
+      const { container } = renderar(
         <RegisterPage
           onRegistrar={vi.fn().mockResolvedValue({ ok: true, status: 202 })}
           irPara={naoImporta}
@@ -115,7 +146,7 @@ describe('a11y das telas de auth', () => {
     });
 
     it('estado de sucesso', async () => {
-      const { container } = render(
+      const { container } = renderar(
         <RegisterPage
           onRegistrar={vi.fn().mockResolvedValue({ ok: true, status: 202 })}
           irPara={naoImporta}
@@ -135,7 +166,7 @@ describe('a11y das telas de auth', () => {
 
   describe('esqueci-senha', () => {
     it('estado vazio', async () => {
-      const { container } = render(
+      const { container } = renderar(
         <ForgotPasswordPage
           onPedir={vi.fn().mockResolvedValue({ ok: true })}
           irPara={naoImporta}
@@ -145,7 +176,7 @@ describe('a11y das telas de auth', () => {
     });
 
     it('estado de sucesso', async () => {
-      const { container } = render(
+      const { container } = renderar(
         <ForgotPasswordPage
           onPedir={vi.fn().mockResolvedValue({ ok: true })}
           irPara={naoImporta}
@@ -162,7 +193,7 @@ describe('a11y das telas de auth', () => {
 
   describe('definir-senha', () => {
     it('estado vazio', async () => {
-      const { container } = render(
+      const { container } = renderar(
         <SetPasswordPage
           token="t"
           onDefinir={vi.fn().mockResolvedValue({ ok: true, status: 200 })}
@@ -175,7 +206,7 @@ describe('a11y das telas de auth', () => {
     it('com os dois campos de senha revelados', async () => {
       // Duas instâncias do mesmo toggle na mesma tela: é o caso em que rótulo
       // acessível duplicado apareceria, se `aria-label` fosse de estado.
-      const { container } = render(
+      const { container } = renderar(
         <SetPasswordPage
           token="t"
           onDefinir={vi.fn().mockResolvedValue({ ok: true, status: 200 })}
@@ -189,7 +220,7 @@ describe('a11y das telas de auth', () => {
     });
 
     it('estado de sucesso', async () => {
-      const { container } = render(
+      const { container } = renderar(
         <SetPasswordPage
           token="t"
           onDefinir={vi.fn().mockResolvedValue({ ok: true, status: 200 })}

@@ -1,5 +1,6 @@
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { EyeIcon, EyeOffIcon } from './icons';
 import styles from './Input.module.css';
 
@@ -70,6 +71,7 @@ export function Input({
   type,
   ...rest
 }: InputProps) {
+  const { t } = useTranslation('ui');
   const gerado = useId();
   const inputId = id ?? gerado;
   const descricaoId = `${inputId}-desc`;
@@ -115,7 +117,7 @@ export function Input({
             // Rótulo diz a AÇÃO, não o estado: é o que o leitor de tela anuncia
             // ao focar, e "senha visível" deixaria a pessoa sem saber o que o
             // botão faz.
-            aria-label={revelado ? 'Esconder senha' : 'Mostrar senha'}
+            aria-label={revelado ? t('input.hidePassword') : t('input.showPassword')}
             aria-pressed={revelado}
             onClick={() => setRevelado((v) => !v)}
           >

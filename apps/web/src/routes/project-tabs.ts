@@ -1,9 +1,13 @@
 import type { ComponentType } from 'react';
+import i18n from '../lib/i18n';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
-import { ProjectChatTab, ProjectCriativoTab } from './ProjectSessionsTab';
+import { ProjectCriativoTab } from './ProjectSessionsTab';
+import { ProjectChatShell } from './ProjectChatShell';
 import { ProjectCodeTab } from './ProjectCodeTab';
+import { ProjectPrsTab } from './ProjectPrsTab';
 import { ProjectExecutorsTab } from './ProjectExecutorsTab';
 import { ProjectBacklogTab } from './ProjectBacklogTab';
+import { ProjectArchitectureTab } from './ProjectArchitectureTab';
 import { ProjectApprovalsTab } from './ProjectApprovalsTab';
 import { ProjectInsightsTab } from './ProjectInsightsTab';
 import { ProjectSpendTab } from './ProjectSpendTab';
@@ -28,6 +32,28 @@ import { ProjectSettingsTab } from './ProjectSettingsTab';
  *
  * O que NÃO muda: `?tab=` continua sendo só deep-link inicial, e a aba
  * continua estado local da página. Este arquivo é o registro, não roteamento.
+ *
+ * PROGRAMA 28 — moldura de tela (ADR 0078): o handoff de design prevê 7 abas
+ * (Visão geral, Criativo, Código, Chat, Gastos, Aprovações, Configurações);
+ * este registro tem mais. `executores`, `backlog` e `insights` nasceram
+ * DEPOIS do handoff, com dado real e RN própria (RN-121, RN-048, e as
+ * hipóteses do Psicólogo), e FICAM: o handoff é referência de fidelidade
+ * visual, não teto de produto (RN-203).
+ *
+ * PROGRAMA de abas agrupadas — Onda 1: a navegação ganhou um segundo nível
+ * (`grupo`, abaixo — desde o ADR 0126 os três grupos ficam abertos ao mesmo
+ * tempo num trilho vertical, `routes/ProjectRail.tsx`) e duas chaves novas ainda em placeholder (`prs`,
+ * `arquitetura` — Ondas 2/3 entregam o conteúdo real). A fusão mais visível
+ * desta onda: `sessions` ("Chat") e `rag` ("Chat RAG") viraram UMA aba só,
+ * `chat`, com um controle segmentado por dentro (`ProjectChatShell.tsx`) —
+ * fusão de CONTÊINER DE UI, não de lógica. `ProjectChatTab` (ativa agente,
+ * gasta a chave do owner — RN-058) e `ProjectRagTab` (busca read-only sobre
+ * o índice, sem agente — RN-202/ADR 0082) continuam os dois caminhos de
+ * dados de sempre, intocados, só remontados dentro do mesmo painel. Os links
+ * antigos `?tab=sessions` e `?tab=rag` continuam abrindo alguma coisa —
+ * `resolverChaveDeAba`, abaixo, é o alias que os dois passaram a precisar
+ * (a chave `sessions` não existe mais para virar ela mesma, como nas fases
+ * anteriores).
  */
 
 /**
@@ -43,11 +69,29 @@ export interface ContagensDeAba {
   aprovacoesPendentes: number;
   /** Hipóteses do Psicólogo esperando aceitar/descartar. */
   hipotesesPendentes: number;
+  /**
+   * PRs abertas com um `git_merge` PENDENTE de decisão (Onda 2 do programa
+   * de abas agrupadas) — cruzamento project-wide (`useProjectPendingActions`,
+   * `ProjectPrsTab.tsx`), não escopado a nenhuma sessão específica.
+   */
+  prsPendentes: number;
+  /**
+   * Idem, para a aba `arquitetura` — placeholder até a Onda 3.
+   */
+  arquiteturaPendente: number;
 }
 
 export interface AbaDoProjeto {
   /** O valor que aparece em `?tab=` e o que a régua usa como identidade. */
   key: string;
+  /**
+   * `REGISTRO`, abaixo, preenche isto com um GETTER (`get label()`), não um
+   * valor fixo — módulo não-React só é reavaliado uma vez, no import; um
+   * valor fixo congelaria a tradução no idioma vigente no boot. O getter
+   * resolve via `i18n.t()` a cada ACESSO (mesmo padrão de
+   * `lib/session-kind.ts`), então o consumidor acompanha a troca de idioma
+   * sem precisar de `useTranslation` aqui, que não é componente React.
+   */
   label: string;
   /** O painel. Toda aba recebe o mesmo e único prop. */
   component: ComponentType<{ projectId: string }>;
@@ -72,6 +116,19 @@ export interface AbaDoProjeto {
    * aba, e uma condição escrita na moldura envelhece calada.
    */
   semRespiro?: boolean;
+  /**
+   * O grupo da régua a que esta aba pertence (PROGRAMA de abas agrupadas,
+   * Onda 1). Ausente = aba SOLTA no nível do topo, junto dos grupos.
+   *
+   * `ordem` aqui é a posição do GRUPO entre os itens de topo — grupos e abas
+   * soltas compartilham o mesmo espaço de ordenação (ver `GRUPOS_DO_PROJETO`)
+   * — nunca a posição desta aba DENTRO do grupo, que continua sendo o
+   * `ordem` de fora deste campo. Toda aba do mesmo `grupo.chave` declara o
+   * MESMO `label`/`ordem` de grupo; é redundante por design (o registro
+   * continua sendo uma lista plana, sem árvore para editar à mão) e a
+   * derivação usa o primeiro valor que encontrar.
+   */
+  grupo?: { chave: string; label: string; ordem: number };
 }
 
 /**
@@ -82,98 +139,207 @@ export interface AbaDoProjeto {
 const REGISTRO = [
   {
     key: 'overview',
-    label: 'Visão geral',
+    get label() {
+      return i18n.t('tabs.overview.label', { ns: 'nav' });
+    },
     component: ProjectOverviewTab,
     semRespiro: true,
     ordem: 10,
   },
-  // FASE 27 — dev agent e QA saem do grid misturado da Visão geral para uma
-  // aba própria (RN-121). Logo depois da Visão geral, e antes de
-  // Criativo/Chat/Code: quem olha "como está a execução" vem daqui primeiro,
-  // e só desce para conversar com um agente ou ler código depois.
+  // Grupo "Agentes" — as quatro abas que giram em torno de conversar com um
+  // agente ou acompanhar o que ele fez: acompanhamento de execução
+  // (Executores), os dois lugares de sessão (Criativo e o Chat fundido,
+  // ver `ProjectChatShell.tsx`) e as hipóteses do Psicólogo (Insights).
   {
     key: 'executores',
-    label: 'Executores',
+    get label() {
+      return i18n.t('tabs.executors.label', { ns: 'nav' });
+    },
     component: ProjectExecutorsTab,
-    ordem: 12,
+    ordem: 21,
+    grupo: {
+      chave: 'agentes',
+      get label() {
+        return i18n.t('groups.agentes.label', { ns: 'nav' });
+      },
+      ordem: 20,
+    },
   },
-  // FASE 24 — o tipo da sessão vira LUGAR (RN-104). Era uma aba só, "Sessões",
-  // listando os dois tipos misturados; o tipo é imutável depois de criado
-  // (RN-097), então ele serve como coordenada de navegação e não como campo
-  // escondido num passo de criação.
-  //
   // Criativo vem antes de Chat pelo mesmo motivo que `KIND_PRE_SELECIONADO` é
   // `criativa`: é o caminho que produz, e o outro é o de tirar dúvidas.
   {
     key: 'criativo',
-    label: 'Criativo',
+    get label() {
+      return i18n.t('tabs.criativo.label', { ns: 'nav' });
+    },
     component: ProjectCriativoTab,
-    ordem: 20,
+    ordem: 22,
+    grupo: {
+      chave: 'agentes',
+      get label() {
+        return i18n.t('groups.agentes.label', { ns: 'nav' });
+      },
+      ordem: 20,
+    },
   },
   {
-    // A CHAVE continua `sessions`, e o rótulo é que mudou para "Chat". É isto
-    // que faz um `?tab=sessions` guardado num link antigo abrir no Chat — com
-    // a aba MARCADA na régua, não só com o painel certo.
+    // A CHAVE virou `chat` nesta onda — antes era `sessions` (o rótulo já
+    // tinha virado "Chat" na FASE 24, RN-104). A aba agora é a FUSÃO de
+    // "Chat" e "Chat RAG": um controle segmentado por dentro do painel
+    // alterna entre conversar com um agente (`ProjectChatTab`, RN-058) e
+    // buscar no índice sem agente nenhum (`ProjectRagTab`, RN-202/ADR
+    // 0082) — os dois caminhos de dados continuam INTOCADOS, só o
+    // contêiner de UI fundiu.
     //
-    // A alternativa seria `key: 'chat'` com `sessions` resolvido como alias em
-    // `abaPorChave`. Ela abre o painel certo e deixa a régua SEM seleção
-    // nenhuma: `Tabs` compara `active` com `key`, e quem escreve `active` é o
-    // `ProjectPage`, que recebe a chave crua do `validateSearch`. Corrigir por
-    // ali exigiria normalizar em `router.tsx`/`ProjectPage.tsx` — os dois
-    // arquivos que esta onda mantém fechados, e cuja disputa é a razão de a
-    // FASE 16 ter criado este registro.
-    //
-    // Chat é a aba consultiva: uma entrada por tipo, e nenhuma terceira
-    // listando os dois de novo.
-    key: 'sessions',
-    label: 'Chat',
-    component: ProjectChatTab,
-    ordem: 25,
-  },
-  // FASE 26 — a aba Code, só leitura. Fica logo depois do Chat, antes do
-  // Backlog: é onde o código que os agentes escreveram vira leitura navegável,
-  // e o "quarto estado" (RN-107, bloqueado por decisão pendente do Arquiteto)
-  // mora dentro do próprio painel — não no registro.
-  {
-    key: 'code',
-    label: 'Code',
-    component: ProjectCodeTab,
-    semRespiro: true,
-    ordem: 27,
-  },
-  {
-    key: 'backlog',
-    label: 'Backlog',
-    component: ProjectBacklogTab,
-    count: (c: ContagensDeAba) => c.promocoesPendentes || undefined,
-    ordem: 30,
-  },
-  {
-    key: 'approvals',
-    label: 'Aprovações',
-    component: ProjectApprovalsTab,
-    count: (c: ContagensDeAba) => c.aprovacoesPendentes || undefined,
-    ordem: 40,
+    // Trocar a chave quebraria o deep-link `?tab=sessions`/`?tab=rag`
+    // antigos se nada mais fizesse nada — é para isso que existe
+    // `resolverChaveDeAba` (abaixo): os dois aliases resolvem para `chat`,
+    // e o segmento inicial (conversar/buscar) é decidido dentro do próprio
+    // `ProjectChatShell`, lendo a URL uma vez no mount (mesmo contrato de
+    // "?tab= só vale como deep-link inicial" que o resto do registro já
+    // segue).
+    key: 'chat',
+    get label() {
+      return i18n.t('tabs.chat.label', { ns: 'nav' });
+    },
+    component: ProjectChatShell,
+    ordem: 23,
+    grupo: {
+      chave: 'agentes',
+      get label() {
+        return i18n.t('groups.agentes.label', { ns: 'nav' });
+      },
+      ordem: 20,
+    },
   },
   {
     key: 'insights',
-    label: 'Insights',
+    get label() {
+      return i18n.t('tabs.insights.label', { ns: 'nav' });
+    },
     component: ProjectInsightsTab,
     count: (c: ContagensDeAba) => c.hipotesesPendentes || undefined,
-    ordem: 50,
+    ordem: 24,
+    grupo: {
+      chave: 'agentes',
+      get label() {
+        return i18n.t('groups.agentes.label', { ns: 'nav' });
+      },
+      ordem: 20,
+    },
+  },
+  // Grupo "Dev" — o que sai do trabalho de desenvolvimento: código
+  // (só leitura, FASE 26), PRs (Onda 2 — listagem project-wide + merge) e as
+  // ações propostas que pedem decisão (Aprovações).
+  {
+    // O rótulo era "Code" (inglês, sobrado da FASE 26); o handoff pede
+    // "Código", e nenhum outro ponto compara pela STRING do rótulo — a chave
+    // de deep-link e de registro continua `code` (ADR 0078).
+    key: 'code',
+    get label() {
+      return i18n.t('tabs.code.label', { ns: 'nav' });
+    },
+    component: ProjectCodeTab,
+    semRespiro: true,
+    ordem: 31,
+    grupo: {
+      chave: 'dev',
+      get label() {
+        return i18n.t('groups.dev.label', { ns: 'nav' });
+      },
+      ordem: 30,
+    },
+  },
+  {
+    // Onda 2 do programa de abas agrupadas: listagem de PRs do PROJETO
+    // inteiro (direto do provider de git, não escopada a sessão nenhuma —
+    // ver `ProjectPrsTab.tsx`) com merge propondo `git_merge` inline.
+    key: 'prs',
+    get label() {
+      return i18n.t('tabs.prs.label', { ns: 'nav' });
+    },
+    component: ProjectPrsTab,
+    count: (c: ContagensDeAba) => c.prsPendentes || undefined,
+    ordem: 32,
+    grupo: {
+      chave: 'dev',
+      get label() {
+        return i18n.t('groups.dev.label', { ns: 'nav' });
+      },
+      ordem: 30,
+    },
+  },
+  {
+    key: 'approvals',
+    get label() {
+      return i18n.t('tabs.approvals.label', { ns: 'nav' });
+    },
+    component: ProjectApprovalsTab,
+    count: (c: ContagensDeAba) => c.aprovacoesPendentes || undefined,
+    ordem: 33,
+    grupo: {
+      chave: 'dev',
+      get label() {
+        return i18n.t('groups.dev.label', { ns: 'nav' });
+      },
+      ordem: 30,
+    },
+  },
+  // Grupo "Documentação" — o que registra intenção e conhecimento do
+  // produto: Backlog (histórias/épicos) e Arquitetura (Onda 3 — hoje
+  // placeholder; é onde o C4 do Arquiteto e o Mapa de Módulos devem
+  // aterrissar, hoje espalhados pela Visão geral).
+  {
+    key: 'backlog',
+    get label() {
+      return i18n.t('tabs.backlog.label', { ns: 'nav' });
+    },
+    component: ProjectBacklogTab,
+    count: (c: ContagensDeAba) => c.promocoesPendentes || undefined,
+    ordem: 41,
+    grupo: {
+      chave: 'documentacao',
+      get label() {
+        return i18n.t('groups.documentacao.label', { ns: 'nav' });
+      },
+      ordem: 40,
+    },
+  },
+  {
+    // Placeholder da Onda 1 — ver comentário de `prs` acima; mesma razão.
+    // TODO: substituído pela Onda 3 do programa (abas agrupadas).
+    key: 'arquitetura',
+    get label() {
+      return i18n.t('tabs.architecture.label', { ns: 'nav' });
+    },
+    component: ProjectArchitectureTab,
+    count: (c: ContagensDeAba) => c.arquiteturaPendente || undefined,
+    ordem: 42,
+    grupo: {
+      chave: 'documentacao',
+      get label() {
+        return i18n.t('groups.documentacao.label', { ns: 'nav' });
+      },
+      ordem: 40,
+    },
   },
   // FASE 22 — o mesmo gasto para duas audiências (ADR 0063): o owner vê a
   // conta do workspace, o membro vê o que ele consumiu. Antes de Configurações
-  // porque é leitura, não ajuste.
+  // porque é leitura, não ajuste. Solta — não é conversa com agente nem
+  // documentação, e não vale abrir grupo de uma aba só.
   {
     key: 'spend',
-    label: 'Gastos',
+    get label() {
+      return i18n.t('tabs.spend.label', { ns: 'nav' });
+    },
     component: ProjectSpendTab,
     ordem: 55,
   },
   {
     key: 'settings',
-    label: 'Configurações',
+    get label() {
+      return i18n.t('tabs.settings.label', { ns: 'nav' });
+    },
     component: ProjectSettingsTab,
     ordem: 60,
   },
@@ -214,3 +380,113 @@ export function abaPorChave(chave: string | undefined): AbaDoProjeto {
     ABAS_DO_PROJETO.find((aba) => aba.key === ABA_PADRAO)!
   );
 }
+
+/**
+ * Chaves de deep-link aposentadas pela fusão da Onda 1 — `sessions`
+ * (FASE 24, RN-104) e `rag` (Onda 5, frente G3) viraram segmentos de UMA
+ * aba (`chat`), não duas abas. Um link antigo continua abrindo alguma
+ * coisa em vez de cair silencioso na Visão geral — mesma garantia que
+ * RN-104 já dava, só que agora precisa de um mapa em vez de a chave já
+ * ser ela mesma (a chave não é mais a mesma).
+ */
+const ALIASES_DE_ABA: Readonly<Record<string, ChaveDeAba>> = {
+  sessions: 'chat',
+  rag: 'chat',
+};
+
+/**
+ * O guarda ESTENDIDO: aceita a chave atual OU um alias aposentado, sempre
+ * resolvendo para o valor de hoje. É esta função, e não `ehChaveDeAba`
+ * sozinha, que o `validateSearch` do router usa — `ehChaveDeAba` continua
+ * validando só contra o registro atual, e é o que os testes usam para
+ * provar que toda `ChaveDeAba` bate com uma aba de verdade.
+ */
+export function resolverChaveDeAba(valor: unknown): ChaveDeAba | undefined {
+  if (ehChaveDeAba(valor)) return valor;
+  if (typeof valor === 'string' && valor in ALIASES_DE_ABA) {
+    return ALIASES_DE_ABA[valor];
+  }
+  return undefined;
+}
+
+/**
+ * A estrutura agrupada da régua (PROGRAMA de abas agrupadas — Onda 1),
+ * derivada do `REGISTRO` — nunca escrita à mão em paralelo a ele. Um item é
+ * um GRUPO (com as abas-filhas, ordenadas pelo `ordem` de cada uma) ou uma
+ * aba SOLTA (sem `grupo`). Os dois tipos de item compartilham o mesmo espaço
+ * de ordenação de topo: `ordem` de um grupo é a de qualquer uma das suas
+ * abas-membro (`grupo.ordem`, redundante por design — ver o campo em
+ * `AbaDoProjeto`); `ordem` de uma aba solta é a dela mesma.
+ *
+ * Só a ESTRUTURA sai daqui — quem resolve `count` contra `ContagensDeAba` e
+ * monta os itens que `ProjectRail` consome é `ProjectPage.tsx`, mesma
+ * divisão de responsabilidade que já existia entre este arquivo e
+ * `ABAS_DO_PROJETO`.
+ */
+export interface GrupoDoProjeto {
+  tipo: 'grupo';
+  chave: string;
+  label: string;
+  ordem: number;
+  abas: readonly AbaDoProjeto[];
+}
+
+export interface AbaSoltaDoProjeto {
+  tipo: 'aba';
+  aba: AbaDoProjeto;
+}
+
+export type ItemDaReguaDoProjeto = GrupoDoProjeto | AbaSoltaDoProjeto;
+
+function agruparRegistro(
+  registro: readonly AbaDoProjeto[],
+): readonly ItemDaReguaDoProjeto[] {
+  const grupos = new Map<
+    string,
+    { grupo: NonNullable<AbaDoProjeto['grupo']>; abas: AbaDoProjeto[] }
+  >();
+  const soltas: AbaDoProjeto[] = [];
+
+  for (const aba of registro) {
+    if (!aba.grupo) {
+      soltas.push(aba);
+      continue;
+    }
+    const existente = grupos.get(aba.grupo.chave);
+    if (existente) {
+      existente.abas.push(aba);
+    } else {
+      grupos.set(aba.grupo.chave, { grupo: aba.grupo, abas: [aba] });
+    }
+  }
+
+  // `label` continua GETTER até aqui — copiar `g.grupo.label` pra um campo
+  // fixo congelaria a tradução no idioma vigente na única vez em que
+  // `GRUPOS_DO_PROJETO` é avaliado (módulo não-React, import único). Manter
+  // a referência a `g.grupo` (o mesmo objeto de `REGISTRO`) é o que faz o
+  // grupo acompanhar troca de idioma, igual toda aba já fazia.
+  const itensDeGrupo: ItemDaReguaDoProjeto[] = [...grupos.entries()].map(
+    ([chave, g]) => ({
+      tipo: 'grupo',
+      chave,
+      get label() {
+        return g.grupo.label;
+      },
+      ordem: g.grupo.ordem,
+      abas: [...g.abas].sort((a, b) => a.ordem - b.ordem),
+    }),
+  );
+  const itensSoltos: ItemDaReguaDoProjeto[] = soltas.map((aba) => ({
+    tipo: 'aba',
+    aba,
+  }));
+
+  return [...itensDeGrupo, ...itensSoltos].sort((a, b) => {
+    const ordemA = a.tipo === 'grupo' ? a.ordem : a.aba.ordem;
+    const ordemB = b.tipo === 'grupo' ? b.ordem : b.aba.ordem;
+    return ordemA - ordemB;
+  });
+}
+
+export const GRUPOS_DO_PROJETO: readonly ItemDaReguaDoProjeto[] =
+  agruparRegistro(REGISTRO);

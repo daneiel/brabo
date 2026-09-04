@@ -1,201 +1,223 @@
-# 0027 — Backup/restore, hardening da api, superfície exposta e release
+# 0027 — Backup/restore, api hardening, exposed surface and release
 
-## Contexto
+## Context
 
-As sessões 1–3 da Fase 5 (ADRs [0024](0024-fase5-imagens-producao-ci.md),
-[0025](0025-fase5-deploy-kubernetes-kustomize.md) e
-[0026](0026-fase5-observabilidade-e-graceful-shutdown.md)) entregaram imagens de
-produção, CI, deploy Kubernetes e observabilidade. Restavam os itens **6**
-(backup e restore com runbook testado) e **7** (hardening da api) do escopo.
+Phase 5 sessions 1–3 (ADRs [0024](0024-fase5-imagens-producao-ci.md),
+[0025](0025-fase5-deploy-kubernetes-kustomize.md) and
+[0026](0026-fase5-observabilidade-e-graceful-shutdown.md)) delivered
+production images, CI, Kubernetes deploy and observability. What remained
+were scope items **6** (backup and restore with a tested runbook) and **7**
+(api hardening).
 
-Esta sessão fecha os dois e acrescenta o que faltava para chamar o sistema de
-"pronto para produção": runbooks operacionais, revisão da superfície exposta e
-versionamento.
+This session closes both and adds what was still missing to call the system
+"production ready": operational runbooks, a review of the exposed surface,
+and versioning.
 
-## Decisões
+## Decisions
 
-### 1. Retenção do backup por CONTAGEM, não por idade
+### 1. Backup retention by COUNT, not by age
 
-Apagar por idade (`--older-than 7d`, ou uma regra de lifecycle no bucket) apaga
-backup bom quando o CronJob passa dias sem rodar — exatamente a situação em que
-ele mais importa. Manter os N mais recentes degrada bem: sem execução nova, nada
-é apagado. `BACKUP_KEEP_DAILY=7` e `BACKUP_KEEP_WEEKLY=4`.
+Deleting by age (`--older-than 7d`, or a lifecycle rule on the bucket)
+deletes a good backup when the CronJob goes days without running — exactly
+the situation where it matters most. Keeping the N most recent degrades
+gracefully: with no new run, nothing gets deleted. `BACKUP_KEEP_DAILY=7`
+and `BACKUP_KEEP_WEEKLY=4`.
 
-### 1b. Imagem de backup: Alpine + `aws-cli` do apk, não `postgres:16-alpine` + `mc`
+### 1b. Backup image: Alpine + apk's `aws-cli`, not `postgres:16-alpine` + `mc`
 
-A primeira versão usava `postgres:16-alpine` com o `mc` (cliente do MinIO),
-justificado por ser um binário estático único, sem arrastar runtime Python. O
-trivy do CI reprovou com **48 achados HIGH/CRITICAL corrigíveis**, e nenhum
-corrigível por nós:
+The first version used `postgres:16-alpine` with `mc` (the MinIO client),
+justified as a single static binary with no Python runtime to drag along.
+CI's trivy rejected it with **48 fixable HIGH/CRITICAL findings**, none of
+them fixable by us:
 
-- 33 do binário do `mc`: Go estático, com CVEs da stdlib embutida. O último
-  release do mc é de setembro/2025 — o projeto parou, e sem release novo não há
-  patch;
-- 15 do `gosu`, que a imagem `postgres` traz para trocar de usuário no
-  entrypoint — recurso que esta imagem nem usa, porque roda direto como non-root.
+- 33 from the `mc` binary: static Go, with CVEs from the embedded stdlib.
+  The last mc release is from September/2025 — the project stalled, and
+  with no new release there's no patch;
+- 15 from `gosu`, which the `postgres` image carries to switch users in the
+  entrypoint — a feature this image doesn't even use, since it runs
+  directly as non-root.
 
-Os dois casos cabiam no `.trivyignore.yaml`, mas a convenção daquele arquivo
-exige `expired_at` justamente para a dívida reaparecer e ser paga. Aqui ela
-**nunca poderia ser paga**: o resultado seria um gate permanentemente vermelho
-numa imagem que carrega credencial de leitura do banco inteiro.
+Both cases fit `.trivyignore.yaml`, but that file's convention requires
+`expired_at` precisely so the debt resurfaces and gets paid. Here it
+**could never be paid**: the result would be a permanently red gate on an
+image that carries the credential to read the entire database.
 
-Trocamos por `alpine` + `postgresql16-client` + `aws-cli` + `jq`, todos do apk e
-portanto atualizados pelo `apk upgrade` a cada rebuild. **Medido: 48 → 0.** O
-runtime Python que era o argumento contra o aws-cli custa alguns MB; o scan
-mostrou que o custo real estava do outro lado.
+We swapped in `alpine` + `postgresql16-client` + `aws-cli` + `jq`, all from
+apk and therefore updated by `apk upgrade` on every rebuild.
+**Measured: 48 → 0.** The Python runtime that was the argument against
+aws-cli costs a few MB; the scan showed the real cost was on the other
+side.
 
-A tag da base fica presa à MAJOR do Postgres (`postgresql16-client` existe no
-Alpine 3.20): subir uma sem a outra reintroduz o "server version mismatch" da
-decisão 4.
+The base tag stays pinned to Postgres's MAJOR version
+(`postgresql16-client` exists on Alpine 3.20): bumping one without the
+other reintroduces the "server version mismatch" from decision 4.
 
-### 2. Métrica de backup vem de uma TABELA, não de um Pushgateway
+### 2. Backup metric comes from a TABLE, not a Pushgateway
 
-O CronJob grava o resultado em `backup_runs`, e o `DomainGaugesCollector` da
-api — que já roda num timer e já é scrapeado — publica
+The CronJob writes its result to `backup_runs`, and the
+`DomainGaugesCollector` in the api — which already runs on a timer and is
+already scraped — publishes
 `brabo_backup_{last_success_timestamp_seconds,age_seconds,last_status,size_bytes}`.
 
-Pushgateway seria um componente a mais, uma segunda fonte de verdade, e um lugar
-onde a métrica **sobrevive ao fato que ela descreve** (a série continua
-publicada depois que o job sumiu). A tabela ainda dá histórico consultável, que
-é o que o runbook de restore usa para responder "quando foi o último backup bom".
+A Pushgateway would be one more component, a second source of truth, and a
+place where the metric **outlives the fact it describes** (the series keeps
+being published after the job is gone). The table also gives a queryable
+history, which is what the restore runbook uses to answer "when was the
+last good backup".
 
-Consequência: `-1` é usado para "nunca houve backup", distinguindo-o de "backup
-de 1970" — sem isso o alerta de idade dispararia no primeiro dia de qualquer
-ambiente novo.
+Consequence: `-1` is used for "there has never been a backup", to
+distinguish it from "backup from 1970" — without this the age alert would
+fire on day one of any new environment.
 
-### 3. Retentativa DENTRO do processo, não recriando o pod
+### 3. Retry INSIDE the process, not by recreating the pod
 
-O k3s programa as regras de NetworkPolicy **depois** de o pod ganhar IP. Um Job
-que fala na primeira instrução recebe `connection refused` (REJECT, não
-timeout) de uma regra que vai existir um segundo depois. Recriar o pod recria a
-janela — seis tentativas seguidas falharam identicamente até isso ficar claro.
+k3s programs NetworkPolicy rules **after** the pod gets an IP. A Job that
+speaks on its first instruction gets `connection refused` (REJECT, not a
+timeout) from a rule that will exist a second later. Recreating the pod
+recreates the window — six consecutive attempts failed identically before
+that became clear.
 
-Backup, restore e a criação do bucket no bootstrap retentam de dentro do mesmo
-container. Serve também em produção: object storage tem indisponibilidade
-transitória, e um backup diário que desiste no primeiro erro de rede vira um dia
-sem backup.
+Backup, restore and bucket creation in the bootstrap retry from inside the
+same container. This also serves production: object storage has transient
+unavailability, and a daily backup that gives up on the first network error
+becomes a day with no backup.
 
-### 4. PostgreSQL 16 pinado no CloudNativePG
+### 4. PostgreSQL 16 pinned on CloudNativePG
 
-O cluster local subia a major default do operador (17.4) enquanto o CLAUDE.md
-decide PostgreSQL 16 e o compose usa `pgvector/pgvector:pg16`. A divergência era
-invisível até o backup: `pg_dump` 16 recusa servidor 17 com "server version
-mismatch", e dump gerado num ambiente não restaura no outro.
+The local cluster was coming up on the operator's default major (17.4)
+while CLAUDE.md decides on PostgreSQL 16 and compose uses
+`pgvector/pgvector:pg16`. The divergence was invisible until backup:
+`pg_dump` 16 refuses a version 17 server with "server version mismatch",
+and a dump generated in one environment doesn't restore in the other.
 
-`imageName: ghcr.io/cloudnative-pg/postgresql:16.10`, com minor pinada — deixá-la
-flutuar reintroduz o problema no dia em que o operador mudar de default.
+`imageName: ghcr.io/cloudnative-pg/postgresql:16.10`, with the minor
+pinned too — letting it float would reintroduce the problem the day the
+operator changes its default.
 
-### 5. Rate limit com janela deslizante no Postgres
+### 5. Rate limit with a sliding window in Postgres
 
-O CLAUDE.md proíbe Redis (as filas ficam no Postgres via Oban). A janela vive em
-`rate_limit_hits`, com INSERT e contagem no mesmo statement por CTE.
+CLAUDE.md forbids Redis (queues live in Postgres via Oban). The window
+lives in `rate_limit_hits`, with the INSERT and the count in the same
+statement via a CTE.
 
-**Custo assumido: um INSERT por request contado.** Redis resolveria melhor;
-`RATE_LIMIT_ENABLED=false` desliga. A poda entra no timer do collector que já
-existe, em vez de um CronJob próprio.
+**Accepted cost: one INSERT per counted request.** Redis would do better;
+`RATE_LIMIT_ENABLED=false` turns it off. Pruning runs on the timer the
+collector already has, instead of its own CronJob.
 
-Detalhe que só aparece na borda: em Postgres, a linha inserida por uma CTE de
-escrita **não é visível** ao resto do mesmo statement. Contar apenas a tabela
-devolveria os hits anteriores a este, e o limite valeria um a mais do que o
-configurado. Daí a soma explícita do `(select count(*) from novo)`.
+A detail that only shows up at the edge: in Postgres, the row inserted by a
+write CTE **isn't visible** to the rest of the same statement. Counting
+only the table would return the hits before this one, and the limit would
+be worth one more than configured. Hence the explicit sum
+`(select count(*) from novo)`.
 
-Isentos: rotas `@Public()` (estrangular `/health` faz o kubelet reiniciar o pod,
-transformando pico em queda) e o client `engine-service` (o engine chama a api a
-cada evento de agente; limitá-lo é o sistema se auto-estrangulando).
+Exempt: `@Public()` routes (throttling `/health` makes the kubelet restart
+the pod, turning a spike into an outage) and the `engine-service` client
+(the engine calls the api on every agent event; limiting it would be the
+system throttling itself).
 
-Falha do banco **libera** a requisição: este guard protege contra abuso, não
-contra acesso indevido — quem autoriza é o `JwtAuthGuard`, que já rodou.
+A database failure **releases** the request: this guard protects against
+abuse, not against unauthorized access — that's what the `JwtAuthGuard`,
+which already ran, is for.
 
-### 6. CORS falha fechado em produção
+### 6. CORS fails closed in production
 
-`WEB_ORIGIN` passa a aceitar lista separada por vírgula. Sem ela, ou com `*`,
-com `NODE_ENV=production` o **boot falha**. Antes o default silencioso era
-`http://localhost:5173`: esquecer a variável num deploy não quebrava nada
-visível, só deixava a api permissiva. Erro no start é barulhento e reversível;
-api permissiva é silenciosa e não é.
+`WEB_ORIGIN` now accepts a comma-separated list. Without it, or with `*`,
+with `NODE_ENV=production` the **boot fails**. Before, the silent default
+was `http://localhost:5173`: forgetting the variable on a deploy broke
+nothing visible, it just left the api permissive. A noisy start-up error
+is reversible; a permissive api is silent and isn't.
 
-### 7. helmet na api, CSP só na web
+### 7. helmet on the api, CSP only on the web
 
-A api não emitia cabeçalho de segurança nenhum. `helmet` entra com
-`contentSecurityPolicy: false`: ela serve JSON, e o CSP é da web, onde já existe
-desde a sessão 1 e é mais específico (`connect-src` montado por ambiente).
-`crossOriginResourcePolicy: false` porque a web é outra origem — o default
-`same-origin` bloquearia o app inteiro, com sintoma confundível com CORS.
+The api wasn't emitting any security header at all. `helmet` comes in with
+`contentSecurityPolicy: false`: it serves JSON, and CSP belongs to the web,
+where it already existed since session 1 and is more specific
+(`connect-src` built per environment). `crossOriginResourcePolicy: false`
+because the web is a different origin — the `same-origin` default would
+block the whole app, with a symptom easily mistaken for CORS.
 
-### 8. `mix_audit` além do `mix hex.audit`
+### 8. `mix_audit` in addition to `mix hex.audit`
 
-`mix hex.audit` reporta pacote **aposentado**, não vulnerabilidade. Sozinho, o
-gate do engine seria decorativo: nenhuma CVE reprovaria o build. `mix_audit` lê
-a base de advisories do Elixir e é o que de fato detecta CVE. Os dois rodam; são
-perguntas diferentes. O gate é em **crítica**, como o escopo pede — reprovar em
-`moderate` num monorepo desta árvore viraria bloqueio permanente, e a reação
-seria desligar o gate inteiro.
+`mix hex.audit` reports **retired** packages, not vulnerabilities. Alone,
+the engine's gate would be decorative: no CVE would ever fail the build.
+`mix_audit` reads the Elixir advisory database and is what actually
+detects CVEs. Both run; they answer different questions. The gate is set
+at **critical**, as the scope asks — failing at `moderate` in a monorepo
+this size would become a permanent block, and the reaction would be to
+disable the gate entirely.
 
-### 9. O documento de superfície é a FONTE do teste
+### 9. The surface document is the test's SOURCE
 
-`docs/security-surface.md` lista as 110 rotas com sua classificação.
-`route-surface.spec.ts` sobe o `AppModule`, enumera as rotas **registradas em
-runtime** (via `DiscoveryService`, não grep) e compara com a tabela parseada do
-markdown: rota sem linha reprova, classificação divergente reprova, linha órfã
-reprova.
+`docs/security-surface.md` lists the 110 routes with their classification.
+`route-surface.spec.ts` boots `AppModule`, enumerates the routes
+**registered at runtime** (via `DiscoveryService`, not grep) and compares
+against the parsed table from the markdown: a route with no line fails, a
+diverging classification fails, an orphan line fails.
 
-No engine o teste é **comportamental**: cada rota registrada recebe uma
-requisição sem token e o que se afirma é o que o cliente veria (401 para tudo
-fora da lista de quatro exceções). A primeira versão lia `pipe_through` e foi
-descartada por duas razões — o `__routes__/0` desta versão do Phoenix não expõe
-pipeline, e mesmo que expusesse ela afirmaria sobre a ANOTAÇÃO: um pipeline
-`:internal` esvaziado por engano continuaria "correto".
+On the engine the test is **behavioral**: every registered route receives
+a request with no token, and what's asserted is what the client would see
+(401 for everything outside the four-item exception list). The first
+version read `pipe_through` and was discarded for two reasons — this
+version of Phoenix's `__routes__/0` doesn't expose the pipeline, and even
+if it did it would be asserting about the ANNOTATION: an `:internal`
+pipeline emptied out by mistake would still be "correct".
 
-### 10. Rotação da chave mestra exigiu mudar o serviço
+### 10. Rotating the master key required changing the service
 
-`EnvelopeEncryptionService` derivava UMA chave e nenhuma linha registra qual
-chave a embrulhou. Trocar a variável tornava ilegível toda credencial existente,
-sem erro no boot — a falha só aparecia no primeiro uso. Um runbook sobre isso
-seria ficção.
+`EnvelopeEncryptionService` derived ONE key and no record tracks which key
+wrapped what. Rotating the variable made every existing credential
+unreadable, with no boot-time error — the failure would only show up on
+first use. A runbook about this would be fiction.
 
-Decisão: `CREDENTIALS_MASTER_KEY_PREVIOUS`, tentada quando a atual falha, mais
-`src/scripts/rewrap-deks.ts` re-embrulhando o acervo. O script vive em `src/`
-(e não em `apps/api/scripts/`, que está no `.dockerignore`) porque precisa estar
-dentro da imagem de produção. Só o envelope muda; o texto cifrado do segredo
-permanece byte a byte o mesmo, então interromper no meio deixa o acervo
-consistente.
+Decision: `CREDENTIALS_MASTER_KEY_PREVIOUS`, tried when the current one
+fails, plus `src/scripts/rewrap-deks.ts` re-wrapping the whole collection.
+The script lives in `src/` (and not in `apps/api/scripts/`, which is in
+`.dockerignore`) because it needs to be inside the production image. Only
+the envelope changes; the secret's ciphertext stays byte-for-byte the
+same, so interrupting midway leaves the collection consistent.
 
-### 11. Release por tag, changelog por script próprio
+### 11. Release by tag, changelog by our own script
 
-`.github/workflows/release.yml` dispara em `v*` e valida que os quatro
-manifests declaram a versão da tag — taggear `v0.2.0` com os `package.json` em
-`0.1.0` produziria imagens rotuladas com uma versão que o código não declara.
+`.github/workflows/release.yml` triggers on `v*` and validates that the
+four manifests declare the tag's version — tagging `v0.2.0` with the
+`package.json` files still at `0.1.0` would produce images labeled with a
+version the code doesn't declare.
 
-`scripts/changelog.mjs` (~140 linhas) em vez de `standard-version`/`changesets`:
-essas trazem opinião sobre bump, commit e tag — três coisas que aqui são decisão
-do usuário. O script só gera texto.
+`scripts/changelog.mjs` (~140 lines) instead of
+`standard-version`/`changesets`: those bring opinions about bump, commit
+and tag — three things that here are the user's decision. The script only
+generates text.
 
-## Consequências
+## Consequences
 
-**Aceitas:**
+**Accepted:**
 
-- Um INSERT por request no caminho autenticado (decisão 5).
-- Uma quarta imagem para manter (`brabo-backup`), nos mesmos gates das outras:
-  non-root, trivy e hadolint.
-- MinIO no overlay local — componente a mais no cluster de desenvolvimento, em
-  troca de o caminho S3 ser exercitado em todo ambiente em vez de só em produção.
-- Duas chaves mestras aceitas durante a janela de rotação dobram a superfície de
-  uma chave vazada. A api avisa no log a cada boot enquanto isso durar.
-- `ALTER ROLE brabo CREATEDB` no cluster **local** para o teste de restore. Em
-  produção não se faz: o restore usa credencial administrativa própria via
-  `RESTORE_ADMIN_URL`.
+- One INSERT per request on the authenticated path (decision 5).
+- A fourth image to maintain (`brabo-backup`), under the same gates as the
+  others: non-root, trivy and hadolint.
+- MinIO in the local overlay — one more component in the development
+  cluster, in exchange for the S3 path being exercised in every
+  environment instead of only in production.
+- Accepting two master keys during the rotation window doubles the
+  exposure of a leaked key. The api warns in the log on every boot while
+  that lasts.
+- `ALTER ROLE brabo CREATEDB` on the **local** cluster for the restore
+  test. This isn't done in production: restore uses its own administrative
+  credential via `RESTORE_ADMIN_URL`.
 
-**Fora de escopo, registrado:**
+**Out of scope, recorded:**
 
-- **Publicar imagem em registry.** O overlay de produção ainda aponta para
-  `ghcr.io/OWNER/*`. O workflow de release constrói e tagueia, mas não publica.
-- **Criar a tag `v0.1.0`** — é ato do usuário, coerente com a regra do CLAUDE.md
-  sobre branch protegida.
-- **PITR.** A granularidade é o último dump. WAL archiving no CloudNativePG
-  resolveria e não foi feito.
-- **Backup do Keycloak e dos PVCs.** O escopo pede Postgres.
-- **`GET /`**, o "Hello World!" do scaffold do NestJS, continua registrado e
-  autenticado. Documentado como candidato a remoção; apagá-lo é decisão de
-  produto.
-- **Alertas continuam sendo regras do Grafana**, não do Prometheus — desvio já
-  registrado no ADR 0026 e mantido aqui pelos dois alertas novos de backup.
+- **Publishing the image to a registry.** The production overlay still
+  points at `ghcr.io/OWNER/*`. The release workflow builds and tags it,
+  but doesn't publish it.
+- **Creating the `v0.1.0` tag** — that's an act of the user, consistent
+  with CLAUDE.md's rule about protected branches.
+- **PITR.** The granularity is the last dump. WAL archiving on CloudNativePG
+  would solve this and wasn't done.
+- **Backing up Keycloak and the PVCs.** The scope asks for Postgres.
+- **`GET /`**, the NestJS scaffold's "Hello World!", remains registered and
+  authenticated. Documented as a candidate for removal; removing it is a
+  product decision.
+- **Alerts remain Grafana rules**, not Prometheus rules — a deviation
+  already recorded in ADR 0026 and kept here because of the two new backup
+  alerts.

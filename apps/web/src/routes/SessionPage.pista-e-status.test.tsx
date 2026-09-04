@@ -1,9 +1,13 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Handoff, Session } from '../lib/api-types';
 import type { SessionChannelHandlers } from '../lib/session-channel';
+import { historicoFalso } from '../test/historico-de-eventos';
+// Instância REAL do app (mesmo padrão de SessionPage.arquiteto-modelo-icone.test.tsx):
+// as asserções abaixo esperam texto em pt-BR, e `en` é o idioma DEFAULT.
+import i18n from '../lib/i18n';
 
 /**
  * Dois achados confirmados por investigação real, ambos em `SessionPage.tsx`:
@@ -64,6 +68,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('../lib/hooks', () => ({
   useSessionEvents: () => ({ data: eventos() }),
+  useSessionEventHistory: () => historicoFalso(eventos().items),
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: handoffsMock() }),
@@ -140,12 +145,17 @@ function montar() {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
   canalHandlers = undefined;
   eventos.mockReturnValue({ items: [] });
   handoffsMock.mockReturnValue([]);
   getSession.mockResolvedValue(sessao());
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('SessionPage — achado A: pista no botão pelado da topbar', () => {
@@ -272,19 +282,19 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
 
     // Nenhum delta chegou ainda, e ainda não passaram 5s: nada aparece —
     // é exatamente o ruído que RN-131 elimina.
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
 
     // Passa dos 5s sem nenhum delta: agora sim o indicador aparece — texto
     // FIXO (RN-156), sem interpolar o nome do agente.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
-    expect(screen.getByText('Reunindo informações...')).toBeInTheDocument();
+    expect(screen.getByText('Pensando…')).toBeInTheDocument();
 
     // O primeiro delta chega — o indicador cede lugar ao streaming normal,
     // na hora, sem esperar timer nenhum.
     act(() => canalHandlers!.onAgentDelta!('Olá', 'po'));
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
     expect(screen.getByText('Olá')).toBeInTheDocument();
 
     resolverAceite();
@@ -305,7 +315,7 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
 
     await waitFor(() => expect(canalHandlers?.onAgentStatus).toBeTypeOf('function'));
     act(() => canalHandlers!.onAgentStatus!({ status: 'working' }));
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
 
     // O turno acaba ANTES dos 5s (resposta rápida, sem texto nenhum) — o
     // timer é desarmado e o indicador NUNCA chega a aparecer.
@@ -314,7 +324,7 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
   });
 
   it('CASO DE FALHA: erro ao aceitar o handoff não deixa indicador nenhum preso', async () => {
@@ -338,6 +348,6 @@ describe('SessionPage — achado B: indicador entre aceitar o handoff e o primei
     // Mesmo que um "working" tardio chegasse depois da falha, não há mais
     // agente esperado (`turnoAgentRef` foi limpo) — mas o teste garante o
     // caminho direto: nenhum indicador aparece, mesmo depois dos 5s.
-    expect(screen.queryByText('Reunindo informações...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pensando…')).not.toBeInTheDocument();
   });
 });

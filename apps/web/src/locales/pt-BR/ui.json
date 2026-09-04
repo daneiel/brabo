@@ -1,0 +1,39 @@
+{
+  "carousel": {
+    "roleDescription": "carrossel",
+    "counter": "{{current}} de {{total}}",
+    "previousLabel": "História anterior",
+    "nextLabel": "Próxima história",
+    "dotsGroupLabel": "Ir para história",
+    "slideLabel": "Slide {{index}}",
+    "slideLabelNamed": "Slide {{index}}: {{label}}",
+    "dotLabel": "História {{index}}",
+    "dotLabelNamed": "História {{index}}: {{label}}"
+  },
+  "input": {
+    "showPassword": "Mostrar senha",
+    "hidePassword": "Esconder senha"
+  },
+  "modal": {
+    "closeLabel": "Fechar"
+  },
+  "markdownMessage": {
+    "codeFence": {
+      "defaultLanguage": "texto"
+    },
+    "table": {
+      "emptyMessage": "Tabela sem linhas."
+    }
+  },
+  "table": {
+    "emptyMessage": "Nada por aqui ainda."
+  },
+  "toast": {
+    "closeLabel": "Fechar notificação"
+  },
+  "erroDeCarregamento": {
+    "defaultMessage": "Não foi possível falar com a api.",
+    "trace": "trace {{traceId}}",
+    "retry": "Tentar de novo"
+  }
+}

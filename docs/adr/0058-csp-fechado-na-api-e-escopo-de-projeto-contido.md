@@ -1,137 +1,146 @@
-# ADR 0058 — CSP fechado na api, e o escopo de projeto contido na raiz
+# ADR 0058 — Closed CSP on the api, and project scope contained at the root
 
-- **Status:** aceito
-- **Data:** 2026-08-08
-- **Contexto:** alertas abertos do CodeQL (varredura de 2026-08-04)
-- **Revisa:** [ADR 0027](0027-fase5-backup-hardening-release.md), item 7
-- **Toca:** [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md)
+- **Status:** accepted
+- **Date:** 2026-08-08
+- **Context:** open CodeQL alerts (2026-08-04 scan)
+- **Revises:** [ADR 0027](0027-fase5-backup-hardening-release.md), item 7
+- **Touches:** [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md)
 
-## Contexto
+## Context
 
-A varredura de código do CodeQL deixou dez alertas HIGH abertos. Sete deles são
-falso positivo e foram dispensados com razão escrita no próprio GitHub (a lista
-está no fim deste documento, porque a razão de dispensar também é decisão). Os
-outros três são reais e mudam desenho, que é o que este ADR registra.
+The CodeQL code scan left ten HIGH alerts open. Seven of them are false
+positives and were dismissed with a written reason directly in GitHub (the
+list is at the end of this document, because the reason for dismissing is
+also a decision). The other three are real and change the design, which is
+what this ADR records.
 
 ### 1. `contentSecurityPolicy: false` (`js/insecure-helmet-configuration`)
 
-O [ADR 0027](0027-fase5-backup-hardening-release.md), item 7, decidiu "helmet na
-api, CSP só na web", com `contentSecurityPolicy: false`. O argumento era: a api
-serve JSON, quem executa script é a web, e o CSP da web já existe e é mais
-específico (`docker/web/nginx.conf`, com o `connect-src` montado por ambiente).
-Ligar um CSP **genérico** na api daria impressão de cobertura sem acrescentar
-defesa.
+[ADR 0027](0027-fase5-backup-hardening-release.md), item 7, decided "helmet
+on the api, CSP only on the web", with `contentSecurityPolicy: false`. The
+argument was: the api serves JSON, whoever runs script is the web, and the
+web's CSP already exists and is more specific
+(`docker/web/nginx.conf`, with `connect-src` assembled per environment).
+Turning on a **generic** CSP on the api would give the impression of
+coverage without adding any real defense.
 
-Esse argumento continua correto no que afirma, e é por isso que ele sobreviveu
-uma fase inteira. O que ele não considerou é que a alternativa a um CSP genérico
-não é cabeçalho nenhum — é um CSP **específico**. E para uma api que só serve
-JSON, o específico é o mais fechado que existe: `default-src 'none'`. Ela não
-carrega script, folha de estilo, imagem, fonte nem frame, então negar tudo custa
-zero comportamento.
+That argument remains correct in what it claims, and that is why it survived
+a whole phase. What it did not consider is that the alternative to a generic
+CSP is not no header at all — it is a **specific** one. And for an api that
+only serves JSON, the specific one is the most closed possible:
+`default-src 'none'`. It never loads script, stylesheet, image, font, or
+frame, so denying everything costs zero behavior.
 
-E há dois caminhos concretos em que uma resposta da api vira superfície de
-execução, nos quais o CSP da web não está presente porque a web não está no
-caminho:
+And there are two concrete paths where an api response becomes an execution
+surface, in which the web's CSP is not present because the web is not in the
+path:
 
-- **navegação direta** a uma rota da api — link colado, redirect, aba aberta
-  pelo usuário. O browser renderiza a resposta na ORIGEM DA API, onde o CSP do
-  nginx da web não vale;
-- **`frame-ancestors`**, que só tem efeito sobre o documento emoldurado. Nenhum
-  CSP da web impede um terceiro de emoldurar uma rota da api.
+- **direct navigation** to an api route — a pasted link, a redirect, a tab
+  the user opened. The browser renders the response at the API's ORIGIN,
+  where the web nginx's CSP does not apply;
+- **`frame-ancestors`**, which only has an effect on the framed document. No
+  CSP from the web stops a third party from framing an api route.
 
-### 2. `join(raiz, projectId)` sem validar o `projectId` (`js/path-injection`)
+### 2. `join(root, projectId)` without validating `projectId` (`js/path-injection`)
 
-O `projectId` chega em `@Param('projectId')` sem pipe de validação, e o Express
-**decodifica o percent-encoding do segmento antes de entregá-lo**: um
-`..%2F..%2Fetc` chega como `../../etc`, e o `join` resolve para fora da raiz sem
-reclamar.
+`projectId` arrives in `@Param('projectId')` with no validation pipe, and
+Express **decodes the segment's percent-encoding before delivering it**: a
+`..%2F..%2Fetc` arrives as `../../etc`, and `join` resolves outside the root
+without complaint.
 
-O alcance é maior do que "lê o arquivo errado". `projectScopeRoot` tem dois
-consumidores, e o segundo é o que dói:
+The reach is bigger than "reads the wrong file". `projectScopeRoot` has two
+consumers, and the second one hurts:
 
-- o `permissions.json` seria lido **e escrito** em caminho arbitrário
+- `permissions.json` would be read **and written** at an arbitrary path
   (`fs-permissions-file-store.ts`);
-- o escopo de caminho do [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md)
-  autoriza comando de terminal sob essa pasta
-  (`propose-action.use-case.ts` → `decide.ts`). Um escopo que escapa da raiz é a
-  política de aprovação apontando para o lugar errado — falha de SEGURANÇA, não
-  de arquivo não encontrado.
+- the path scope from
+  [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) authorizes
+  terminal commands under that folder
+  (`propose-action.use-case.ts` → `decide.ts`). A scope that escapes the
+  root is the approval policy pointing at the wrong place — a SECURITY
+  failure, not a file-not-found one.
 
-### 3. Escape de célula de tabela incompleto (`js/incomplete-sanitization`)
+### 3. Incomplete table cell escaping (`js/incomplete-sanitization`)
 
-No corpo do PR de promoção (`scripts/ci/promote.ts`), o título do PR era
-escapado com `.replace(/\|/g, '\\|')`. Escapar só o pipe deixa passar um título
-terminado em contrabarra: `a\` seguido de `|` vira `a\\|`, que o parser de
-tabela do GFM lê como contrabarra escapada seguida de um DELIMITADOR de coluna.
+In the promotion PR body (`scripts/ci/promote.ts`), the PR title was escaped
+with `.replace(/\|/g, '\\|')`. Escaping only the pipe lets through a title
+ending in a backslash: `a\` followed by `|` becomes `a\\|`, which the GFM
+table parser reads as an escaped backslash followed by a column DELIMITER.
 
-## Decisão
+## Decision
 
-**1. A api manda CSP, e ele é fechado.** As opções do helmet saem do literal no
-`main.ts` para `infrastructure/security/security-headers.ts` — o mesmo movimento
-que `cors-origins.ts` já tinha feito, e pela mesma razão: no literal do boot elas
-não eram testáveis, e nenhum teste via qual cabeçalho a api mandava de verdade.
+**1. The api sends a CSP, and it is closed.** The helmet options move out of
+the literal in `main.ts` into
+`infrastructure/security/security-headers.ts` — the same move `cors-origins.ts`
+had already made, and for the same reason: in the boot literal they weren't
+testable, and no test saw which header the api actually sent.
 
-Em produção:
+In production:
 
 ```
 default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'
 ```
 
-Fora de produção o `main.ts` monta o Swagger UI em `/docs`, que é HTML de verdade
-e precisa de script, estilo e imagem próprios — sob `default-src 'none'` a página
-abriria em branco. O perfil de desenvolvimento afrouxa o necessário para o
-Swagger e nada além. A condição é EXATAMENTE a mesma que monta o Swagger
-(`NODE_ENV !== 'production'`), e isso é deliberado: se um dia o Swagger passar a
-subir em produção, o CSP acompanha em vez de barrá-lo em silêncio.
+Outside production, `main.ts` mounts the Swagger UI at `/docs`, which is
+real HTML and needs its own script, style, and image — under
+`default-src 'none'` the page would open blank. The development profile
+loosens exactly what's needed for Swagger and nothing beyond that. The
+condition is EXACTLY the same one that mounts Swagger
+(`NODE_ENV !== 'production'`), and that is deliberate: if Swagger ever
+starts being mounted in production, the CSP follows suit instead of silently
+blocking it.
 
-`'unsafe-inline'` aparece só no perfil de desenvolvimento, e é limitação do
-Swagger UI (ele injeta o inicializador inline), não escolha nossa.
+`'unsafe-inline'` only appears in the development profile, and it is a
+Swagger UI limitation (it injects an inline initializer), not our choice.
 
-`crossOriginResourcePolicy` deixa de ser `false` e passa a ser
-`{ policy: 'cross-origin' }`. O efeito no browser é o mesmo — a web é outra
-origem e precisa consumir estas respostas — mas a intenção passa a estar DITA no
-cabeçalho em vez de omitida na ausência dele.
+`crossOriginResourcePolicy` stops being `false` and becomes
+`{ policy: 'cross-origin' }`. The effect on the browser is the same — the
+web is a different origin and needs to consume these responses — but the
+intent is now STATED in the header instead of implied by its absence.
 
-**2. O `projectId` é validado onde a raiz é derivada**, e não em cada chamador.
-`projectScopeRoot` recusa o que não for segmento de caminho simples
-(`^[A-Za-z0-9_-]{1,64}$`), lançando. A checagem é deliberadamente mais larga que
-UUID para não amarrar o formato do id, e estreita o bastante para que o resultado
-nunca escape da raiz.
+**2. `projectId` is validated where the root is derived**, not at each
+caller. `projectScopeRoot` rejects anything that is not a simple path
+segment (`^[A-Za-z0-9_-]{1,64}$`), throwing. The check is deliberately wider
+than a UUID so as not to lock down the id format, and narrow enough that the
+result can never escape the root.
 
-Validar num lugar só é a mesma razão que fez essa função existir: as duas
-derivações têm que concordar, e uma checagem duplicada é uma checagem que um dia
-diverge.
+Validating in a single place is the same reason this function exists in the
+first place: the two derivations have to agree, and a duplicated check is a
+check that one day diverges.
 
-**3. O escape de célula escapa a contrabarra antes do pipe**, em
-`celulaDeTabela`. Vale para célula de TEXTO; numa célula que é code span a
-contrabarra é literal e escapá-la renderizaria `\\` visível — por isso a função
-não é usada nas colunas entre crases.
+**3. Cell escaping escapes the backslash before the pipe**, in
+`celulaDeTabela`. This applies to a TEXT cell; in a cell that is a code span
+the backslash is literal and escaping it would render a visible `\\` — which
+is why the function is not used in columns between backticks.
 
-## Consequências
+## Consequences
 
-- A api passa a mandar `Content-Security-Policy` em toda resposta. Quem depender
-  de abrir uma rota da api direto no browser e ver algo além de JSON cru não
-  depende mais — e não havia esse caso.
-- Um `projectId` malformado agora FALHA em vez de resolver para fora da raiz. O
-  caminho feliz não muda: todo id real é UUID vindo do banco.
-- Os cabeçalhos deixaram de ser invisíveis ao teste. A prova é uma requisição de
-  verdade contra o middleware, não uma afirmação sobre o objeto de configuração —
-  `false` e um objeto de diretivas são os dois "configuração válida", e a
-  diferença entre eles só aparece na resposta HTTP.
+- The api now sends `Content-Security-Policy` on every response. Anyone
+  relying on opening an api route directly in the browser and seeing
+  something more than raw JSON no longer can — and there was no such case.
+- A malformed `projectId` now FAILS instead of resolving outside the root.
+  The happy path does not change: every real id is a UUID coming from the
+  database.
+- The headers stopped being invisible to testing. The proof is a real
+  request against the middleware, not an assertion about the config object —
+  `false` and a directives object are both "valid configuration", and the
+  difference between them only shows up in the HTTP response.
 
-## O que foi dispensado, e por quê
+## What was dismissed, and why
 
-Dispensar com razão escrita é resposta; deixar aberto calado não é. Os sete:
+Dismissing with a written reason is a response; leaving it open silently is
+not. The seven:
 
-| alerta | regra | razão |
+| alert | rule | reason |
 |---|---|---|
-| #5 | `js/insufficient-password-hash` | Não há senha. O `secret` é `GIT_OAUTH_STATE_SECRET`, chave HMAC de servidor, e HMAC-SHA256 é o primitivo CERTO para assinar um `state` de OAuth. Hash lento ali seria erro. Senha de usuário no produto usa argon2id, em `argon2-password-hasher.ts`. |
-| #4 | `js/loop-bound-injection` | O laço termina. `b` é resultado de `String.prototype.split` — array de verdade, `.length` não forjável, e `j` incrementa a cada volta. A premissa da regra (objeto controlado com `.length` falso) não vale aqui. |
-| #7, #8 | `js/incomplete-sanitization` | Em `scripts/docs/generate.mjs` as duas células são **code span** (entre crases), onde a contrabarra é literal: escapá-la renderizaria `\\` visível: o "conserto" quebraria a saída. Entradas são conteúdo do próprio repositório (scripts do `package.json`, rótulos de seção da doc), em gerador de build. |
-| #9 | `js/incomplete-multi-character-sanitization` | É arquivo de TESTE. O `replace` tira comentários de um `index.html` versionado NESTE repositório para afirmar que ele não referencia CDN de fonte. Não é fronteira de sanitização de entrada não confiável. |
-| #1, #2, #3 | `js/path-injection` | Fechados pela decisão 2 acima; a dispensa não se aplica — entram aqui só para a lista dos dez fechar. |
+| #5 | `js/insufficient-password-hash` | There is no password. The `secret` is `GIT_OAUTH_STATE_SECRET`, a server-side HMAC key, and HMAC-SHA256 is the RIGHT primitive for signing an OAuth `state`. A slow hash here would be a mistake. User passwords in the product use argon2id, in `argon2-password-hasher.ts`. |
+| #4 | `js/loop-bound-injection` | The loop terminates. `b` is the result of `String.prototype.split` — a real array, `.length` cannot be forged, and `j` increments every round. The rule's premise (a controlled object with a fake `.length`) does not hold here. |
+| #7, #8 | `js/incomplete-sanitization` | In `scripts/docs/generate.mjs` both cells are **code spans** (between backticks), where the backslash is literal: escaping it would render a visible `\\` — the "fix" would break the output. Inputs are content from this very repository (scripts from `package.json`, doc section labels), in a build generator. |
+| #9 | `js/incomplete-multi-character-sanitization` | It is a TEST file. The `replace` strips comments from an `index.html` versioned IN THIS repository to assert it doesn't reference a font CDN. It is not an untrusted-input sanitization boundary. |
+| #1, #2, #3 | `js/path-injection` | Closed by decision 2 above; the dismissal doesn't apply to them — they're listed here only so the ten close out. |
 
-Sobrou aberto, no Dependabot: `image-size` (dois alertas HIGH). Não há versão
-corrigida publicada — a 2.0.2 é a última do registry e é a vulnerável. Entra por
-`@docusaurus/mdx-loader`, build da doc, lendo imagens versionadas neste
-repositório; não há entrada não confiável no caminho.
+Left open, in Dependabot: `image-size` (two HIGH alerts). There is no fixed
+version published — 2.0.2 is the latest on the registry and it is the
+vulnerable one. It comes in through `@docusaurus/mdx-loader`, the doc build,
+reading images versioned in this repository; there is no untrusted input in
+the path.

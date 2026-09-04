@@ -64,10 +64,24 @@ defmodule EngineWeb.Router do
          PsychologistCommandController,
          :reanalyze
 
+    # RN-454: leitura da flag global — a aba Insights precisa saber que a
+    # pausa é DECISÃO sem esbarrar no 503 de "/reanalyze" primeiro.
+    get "/psychologist/status", PsychologistCommandController, :status
+
     post "/projects/:projectId/anamnese/run", AnamneseCommandController, :run
 
     post "/projects/:projectId/agents/:agent/instructions/invalidate",
          InstructionCommandController,
          :invalidate
+
+    # Runner local + terminal interativo — ver EngineWeb.RunnerTicketCommandController.
+    post "/projects/:projectId/runner-tickets", RunnerTicketCommandController, :create
+
+    # O runner sobe o container do projeto na máquina do usuário (ADR 0137) —
+    # ver EngineWeb.ContainerCommandController. Só para projeto
+    # mounted/runner; container vai pelo broker, que nunca chama isto.
+    post "/projects/:projectId/containers/start", ContainerCommandController, :start
+    post "/projects/:projectId/containers/stop", ContainerCommandController, :stop
+    post "/projects/:projectId/containers/remove", ContainerCommandController, :remove
   end
 end

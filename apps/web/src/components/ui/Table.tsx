@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './Table.module.css';
 
 export interface TableColumn<T> {
@@ -15,7 +16,9 @@ interface TableProps<T> {
   emptyMessage?: string;
 }
 
-export function Table<T>({ columns, rows, rowKey, emptyMessage = 'Nada por aqui ainda.' }: TableProps<T>) {
+export function Table<T>({ columns, rows, rowKey, emptyMessage }: TableProps<T>) {
+  const { t } = useTranslation('ui');
+  const mensagemVazia = emptyMessage ?? t('table.emptyMessage');
   const gridTemplateColumns = columns.map((c) => c.width ?? '1fr').join(' ');
 
   return (
@@ -30,7 +33,7 @@ export function Table<T>({ columns, rows, rowKey, emptyMessage = 'Nada por aqui 
         </div>
       </div>
       <div className={styles.body}>
-        {rows.length === 0 && <div className={styles.empty}>{emptyMessage}</div>}
+        {rows.length === 0 && <div className={styles.empty}>{mensagemVazia}</div>}
         {rows.map((row) => (
           <div key={rowKey(row)} className={styles.row} style={{ gridTemplateColumns }}>
             {columns.map((column) => (

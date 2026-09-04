@@ -35,6 +35,24 @@ defmodule Engine.Agents.TurnoAssincrono do
 
   Sem turno em curso, `cancelar/1` é NO-OP idempotente — não existe task
   para matar nem `from` pendente para responder.
+
+  ## Suspensão em aprovação (ADR 0086, RN-284)
+
+  A função de turno (`fun`, passada a `iniciar/3`) continua tendo o MESMO
+  contrato — devolve o `state` (mapa) — mas o `state` pode agora carregar,
+  com valor não-nulo, a chave `:aguardando_aprovacao` quando o turno parou
+  no meio de um tool call que virou `proposed_action` `pending` (hoje só o
+  Dev Lead faz isso, para `propose_execution_plan`). A checagem é pelo
+  VALOR (`Map.get/2`, truthy), não pela presença da chave: o Dev Lead
+  carrega `aguardando_aprovacao: nil` desde o `init/1`, então a chave em si
+  está sempre presente. `tratar_resultado/2` continua
+  respondendo ao `from` na mesma hora — é o que rompe o bloqueio síncrono de
+  até 180s do `handle_call` original —, mas em vez de `finalizar/1` (que
+  emite `agent.done` e `agent.status: idle`, dizendo que o agente terminou
+  e está livre) chama `suspender/1`: só `agent.status: awaiting_approval`,
+  sem `agent.done`. O turno NÃO terminou — está esperando
+  `{:action_settled, ...}` (a mesma entrega da `Engine.Dev.Wake`/outbox que
+  o dev agent já consome desde o ADR 0052) para retomar de onde parou.
   """
 
   require Logger
@@ -100,17 +118,67 @@ defmodule Engine.Agents.TurnoAssincrono do
   sucesso, `{:DOWN, ...}` de crash) dentro do `handle_info` de cada agente.
   Devolve `{:ok, state}` quando tratou, ou `:ignorado` quando a mensagem não
   era desta task — o chamador cai no seu próprio `handle_info`.
+
+  O CONTRATO da função de turno é devolver o `state` (um mapa). Resultado de
+  outra forma vira falha narrada, nunca queda — ver a segunda cláusula.
+
+  Desde o ADR 0086 (RN-284), o `state` devolvido pode carregar a chave
+  OPCIONAL `:aguardando_aprovacao` — usada pelo Dev Lead quando um tool call
+  virou `proposed_action` e ficou `pending`: o `GenServer.reply/2` acontece
+  do MESMO jeito e na MESMA hora (é o que rompe o bloqueio de até 180s do
+  `handle_call` original), mas o turno NÃO terminou. Presente a chave, quem
+  fecha é `suspender/1` (sem `agent.done`, `agent.status` vira
+  `"awaiting_approval"`); ausente, o caminho de sempre (`finalizar/1`).
   """
   @spec tratar_resultado(term(), map()) :: {:ok, map()} | :ignorado
   def tratar_resultado(
         {ref, resultado},
         %{turno_assincrono: %{task: %Task{ref: ref}, from: from}} = _state
       )
-      when is_reference(ref) do
+      when is_reference(ref) and is_map(resultado) do
     Process.demonitor(ref, [:flush])
     if from, do: GenServer.reply(from, :ok)
 
     novo_state = Map.put(resultado, :turno_assincrono, nil)
+
+    # `Map.get/2` (valor), não `Map.has_key?/2` (chave): o Dev Lead carrega
+    # `aguardando_aprovacao: nil` no state DESDE O INÍCIO (é o default do
+    # `init/1`), então a CHAVE está sempre presente — inclusive num turno que
+    # nunca suspendeu. Checar só a chave suspenderia TODO turno do Dev Lead,
+    # sempre.
+    if Map.get(novo_state, :aguardando_aprovacao) do
+      {:ok, suspender(novo_state)}
+    else
+      {:ok, finalizar(novo_state)}
+    end
+  end
+
+  # Segunda barreira, e ela existe por uma queda REAL: o ramo do erro narrado
+  # no frame final devolvia `{state, ""}` (tupla) onde todos os outros ramos de
+  # `run_turn` devolvem `state` (mapa), e o `Map.put/3` da cláusula acima
+  # levantava `BadMapError` DENTRO do `handle_info` do agente. Como os quatro
+  # conversacionais são `restart: :temporary`, o agente morria e não voltava —
+  # e os gatilhos eram os mais corriqueiros que existem (orçamento estourado,
+  # credencial ausente, binding inexistente).
+  #
+  # Os três ramos foram corrigidos, mas a sobrevivência do agente não pode
+  # depender de todo ramo futuro lembrar do formato: um erro de código nosso
+  # vira desfecho NARRADO com origem `codigo` (é lacuna nossa, ADR 0020) e o
+  # state ANTERIOR ao turno é preservado — perder o histórico do turno é caro,
+  # perder o agente é pior.
+  def tratar_resultado(
+        {ref, resultado},
+        %{turno_assincrono: %{task: %Task{ref: ref}, from: from}} = state
+      )
+      when is_reference(ref) do
+    Process.demonitor(ref, [:flush])
+    if from, do: GenServer.reply(from, {:error, :resultado_invalido})
+
+    novo_state =
+      state
+      |> Map.put(:turno_assincrono, nil)
+      |> emitir_falha_de_formato(resultado)
+
     {:ok, finalizar(novo_state)}
   end
 
@@ -177,6 +245,18 @@ defmodule Engine.Agents.TurnoAssincrono do
     state
   end
 
+  # O turno NÃO terminou — só está suspenso esperando a decisão de uma
+  # `proposed_action` (ADR 0086, RN-284). Sem `agent.done` e sem
+  # `agent.status: idle`: os dois diriam ao painel que o agente está livre
+  # para uma mensagem nova, e `DevLeadServer` recusa exatamente essa
+  # mensagem enquanto `aguardando_aprovacao` estiver setado no state. Só o
+  # status muda, para `"awaiting_approval"` — o mesmo vocabulário que o dev
+  # agent já usa para o laço suspenso do ADR 0052.
+  defp suspender(state) do
+    broadcast(state, "agent.status", %{status: "awaiting_approval"})
+    state
+  end
+
   # A origem "política" é a que mais se aproxima: cancelar é uma decisão do
   # USUÁRIO para não gastar mais token — o mesmo motivo que já classifica
   # orçamento/credencial/binding como política em `FalhaDeTurno`. Não é um
@@ -202,6 +282,41 @@ defmodule Engine.Agents.TurnoAssincrono do
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
     state
   end
+
+  # Origem `codigo` pelo mesmo critério do `FalhaDeTurno`: quem não soube
+  # produzir o formato combinado foi o NOSSO código, e é essa origem que aponta
+  # a ação certa (corrigir o ramo que devolveu errado). A FORMA do resultado vai
+  # junto porque sem ela quem tria a ocorrência não tem por onde começar — é o
+  # mesmo raciocínio do diagnóstico verbatim.
+  defp emitir_falha_de_formato(state, resultado) do
+    origem = "codigo"
+    forma = descrever(resultado)
+
+    Logger.error(
+      "turno de #{inspect(state[:agent])}/#{state.session_id} devolveu resultado fora do " <>
+        "contrato (esperado o state, um mapa): #{forma}"
+    )
+
+    mensagem =
+      "O turno terminou num formato que o engine não sabe incorporar — é uma " <>
+        "falha do nosso código, não da sua mensagem. Nada além do já registrado " <>
+        "foi gasto. Você pode tentar de novo."
+
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: "resultado_de_turno_invalido: #{forma}"
+    })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+    state
+  end
+
+  # `inspect/1` cru aqui despejaria o state inteiro (histórico de mensagens e
+  # specs de ferramenta) no log E no event log — o caso real, `{state, ""}`,
+  # rendia milhares de caracteres. O que se precisa saber é a FORMA, então os
+  # limites são apertados de propósito.
+  defp descrever(resultado), do: inspect(resultado, limit: 3, printable_limit: 120)
 
   defp emitir_falha_crash(state, reason) do
     origem = FalhaDeTurno.origem(reason)

@@ -10,6 +10,7 @@ import { AcceptParallelizationUseCase } from './accept-parallelization.use-case'
 import { RequestParallelizationUseCase } from './request-parallelization.use-case';
 import { ListAgentAreasUseCase } from './list-agent-areas.use-case';
 import { SetAreaMaxParallelUseCase } from './set-area-max-parallel.use-case';
+import { SetAreaBudgetUseCase } from './set-area-budget.use-case';
 import { ExecuteParallelizationUseCase } from './execute-parallelization.use-case';
 import { ProposeMaxParallelUseCase } from './propose-max-parallel.use-case';
 import { ExecuteMaxParallelRaiseUseCase } from './execute-max-parallel-raise.use-case';
@@ -34,9 +35,13 @@ import { AcceptHypothesisUseCase } from './accept-hypothesis.use-case';
 import { DismissHypothesisUseCase } from './dismiss-hypothesis.use-case';
 import { ListHypothesesUseCase } from './list-hypotheses.use-case';
 import { ReanalyzeSessionUseCase } from './reanalyze-session.use-case';
+import { GetPsychologistStatusUseCase } from './get-psychologist-status.use-case';
 import { GetPsychologistAnalysisCostUseCase } from './get-psychologist-analysis-cost.use-case';
 import { ListPsychologistAnalysesUseCase } from './list-psychologist-analyses.use-case';
 import { AnamneseUseCasesModule } from '../anamnese/anamnese-use-cases.module';
+// GetInfraContextUseCase passa a ler o roteamento de módulos do Arquiteto
+// (ADR 0131/0133) — primeiro consumidor HTTP de GetModuleRoutingUseCase.
+import { ArchitectureUseCasesModule } from '../architecture/architecture-use-cases.module';
 // Mesmo provider que o IAM registra na criação do projeto (RN-094): aqui ele
 // volta para dizer QUEM são os membros da área de dev, que só a ativação sabe.
 import { SeedAgentAreasUseCase } from '../agents/seed-agent-areas.use-case';
@@ -49,6 +54,7 @@ const USE_CASES = [
   RequestParallelizationUseCase,
   ListAgentAreasUseCase,
   SetAreaMaxParallelUseCase,
+  SetAreaBudgetUseCase,
   ExecuteParallelizationUseCase,
   ProposeMaxParallelUseCase,
   ExecuteMaxParallelRaiseUseCase,
@@ -72,6 +78,7 @@ const USE_CASES = [
   DismissHypothesisUseCase,
   ListHypothesesUseCase,
   ReanalyzeSessionUseCase,
+  GetPsychologistStatusUseCase,
   GetPsychologistAnalysisCostUseCase,
   ListPsychologistAnalysesUseCase,
 ];
@@ -84,6 +91,7 @@ const USE_CASES = [
     GitInfrastructureModule,
     FilesystemModule,
     AnamneseUseCasesModule,
+    ArchitectureUseCasesModule,
     // FASE 14d: o pedido de paralelismo acima do teto vira proposed_action.
     forwardRef(() => ActionsUseCasesModule),
   ],

@@ -163,40 +163,92 @@ defmodule Engine.Workers.AnamneseWorker do
     |> Hooks.register(:post_tool_use, Termination)
   end
 
+  # Grafo de conhecimento (ADR 0099/0100): resolve o template `anamnese-kickoff`
+  # do grafo quando a flag está ligada; qualquer falha (api fora do ar,
+  # template ainda não semeado — {:error, :not_found} —, ou flag desligada)
+  # cai no FALLBACK inline abaixo, que nunca sai do código. As DUAS trilhas
+  # renderizam com as MESMAS funções de formatação (`queued_instruction`,
+  # `format_list` etc.) — só o "molde" ao redor delas muda —, pra o texto não
+  # divergir entre os dois caminhos além da forma do template.
   defp initial_message(context) do
+    content =
+      if graph_templates_enabled?() do
+        case EngineApiClient.get_prompt_template("anamnese-kickoff") do
+          {:ok, %{"body" => body}} when is_binary(body) and body != "" ->
+            render_from_template(body, context)
+
+          _ ->
+            inline_content(context)
+        end
+      else
+        inline_content(context)
+      end
+
+    %{"role" => "user", "content" => content, :pinned => true}
+  end
+
+  # MESMA flag `:graph_templates_enabled?` que `Engine.Workers.
+  # PsychologistWorker.render_kickoff/4` já usa pro kickoff dele (ver
+  # `config/runtime.exs`, achado ao conciliar com a frente que consome o
+  # grafo pro Psicólogo em paralelo) — rollout de "consumo de template do
+  # grafo" é decisão por PRODUTO, compartilhada entre os agentes, não um
+  # nome por agente. Default DESLIGADO (mesmo critério de segurança de
+  # `psychologist_enabled?`/`anamnese_enabled?`): mesmo ligado, falha/
+  # ausência do template degrada pro inline sem erro.
+  defp graph_templates_enabled?,
+    do: Application.get_env(:engine, :graph_templates_enabled?, false)
+
+  defp render_from_template(body, context) do
     %{
-      "role" => "user",
-      "content" => """
-      Analise a janela do log abaixo e mantenha o perfil de proficiência dos
-      membros deste projeto. Observe as INTERAÇÕES DO USUÁRIO: a linguagem que
-      usa, as correções que faz nos agentes, o que aprova ou nega, e o nível das
-      perguntas que faz.
-
-      REGRAS INEGOCIÁVEIS:
-      - Só competências do catálogo abaixo. NUNCA infira saúde, traços de
-        personalidade, idade, gênero ou qualquer característica pessoal — perfis
-        com competência fora do catálogo são rejeitados.
-      - Toda entrada precisa de evidência apontando para ids de eventos REAIS
-        da janela, e de um `rationale` explicando o porquê do nível.
-      - Feche a rodada com UMA chamada de `emit_proficiency`.
-      #{queued_instruction(context.queued_hypotheses)}
-
-      CATÁLOGO DE COMPETÊNCIAS PERMITIDAS:
-      #{format_list(context.competency_catalog)}
-
-      MEMBROS ELEGÍVEIS:
-      #{format_members(context.members)}
-
-      PERFIS ATUAIS (revise, não duplique):
-      #{format_profiles(context.current_profiles)}
-
-      #{format_instructions(context.instructions)}
-      #{format_decisions(context.decisions)}
-      JANELA DO LOG (#{DateTime.to_iso8601(context.window_from)} → #{DateTime.to_iso8601(context.window_to)})#{omission_note(context)}:
-      #{format_events(context.events)}
-      """,
-      :pinned => true
+      "{{queued_instruction}}" => queued_instruction(context.queued_hypotheses),
+      "{{competency_catalog}}" => format_list(context.competency_catalog),
+      "{{members}}" => format_members(context.members),
+      "{{current_profiles}}" => format_profiles(context.current_profiles),
+      "{{instructions}}" => format_instructions(context.instructions),
+      "{{decisions}}" => format_decisions(context.decisions),
+      "{{relevant_snippets}}" =>
+        format_relevant_snippets(context.relevant_snippets, context.relevant_snippets_degraded),
+      "{{window_from}}" => DateTime.to_iso8601(context.window_from),
+      "{{window_to}}" => DateTime.to_iso8601(context.window_to),
+      "{{omission_note}}" => omission_note(context),
+      "{{events}}" => format_events(context.events)
     }
+    |> Enum.reduce(body, fn {placeholder, valor}, acc ->
+      String.replace(acc, placeholder, valor)
+    end)
+  end
+
+  defp inline_content(context) do
+    """
+    Analise a janela do log abaixo e mantenha o perfil de proficiência dos
+    membros deste projeto. Observe as INTERAÇÕES DO USUÁRIO: a linguagem que
+    usa, as correções que faz nos agentes, o que aprova ou nega, e o nível das
+    perguntas que faz.
+
+    REGRAS INEGOCIÁVEIS:
+    - Só competências do catálogo abaixo. NUNCA infira saúde, traços de
+      personalidade, idade, gênero ou qualquer característica pessoal — perfis
+      com competência fora do catálogo são rejeitados.
+    - Toda entrada precisa de evidência apontando para ids de eventos REAIS
+      da janela, e de um `rationale` explicando o porquê do nível.
+    - Feche a rodada com UMA chamada de `emit_proficiency`.
+    #{queued_instruction(context.queued_hypotheses)}
+
+    CATÁLOGO DE COMPETÊNCIAS PERMITIDAS:
+    #{format_list(context.competency_catalog)}
+
+    MEMBROS ELEGÍVEIS:
+    #{format_members(context.members)}
+
+    PERFIS ATUAIS (revise, não duplique):
+    #{format_profiles(context.current_profiles)}
+
+    #{format_instructions(context.instructions)}
+    #{format_decisions(context.decisions)}
+    #{format_relevant_snippets(context.relevant_snippets, context.relevant_snippets_degraded)}
+    JANELA DO LOG (#{DateTime.to_iso8601(context.window_from)} → #{DateTime.to_iso8601(context.window_to)})#{omission_note(context)}:
+    #{format_events(context.events)}
+    """
   end
 
   defp queued_instruction([]), do: ""
@@ -284,6 +336,58 @@ defmodule Engine.Workers.AnamneseWorker do
       """
     else
       ""
+    end
+  end
+
+  # Trechos relevantes do RAG (ContextBuilder.fetch_relevant_snippets/3) — EM
+  # COMPOSIÇÃO com a janela temporal, nunca substituindo. `nil` é o
+  # comportamento ATUAL (RAG não consultado ou fora do ar): some do prompt,
+  # sem marca nenhuma — degradação silenciosa de propósito, é exatamente o
+  # que "cair pro comportamento atual" significa. `degraded: true` (ADR
+  # 0080 — busca léxico-only, sem embedding) é o único caso que precisa
+  # aparecer explícito, senão o modelo confiaria num resultado que pode ter
+  # perdido correspondência semântica.
+  defp format_relevant_snippets(nil, _degraded?), do: ""
+
+  defp format_relevant_snippets([], degraded?) do
+    "TRECHOS RELEVANTES DO PROJETO (RAG, sobre código/docs — nunca sobre a pessoa):\n" <>
+      aviso_rag_degradado(degraded?) <>
+      "(nenhum trecho relevante encontrado para as competências ainda sem perfil)\n"
+  end
+
+  defp format_relevant_snippets(hits, degraded?) do
+    corpo =
+      hits
+      |> Enum.with_index(1)
+      |> Enum.map_join("\n", fn {hit, i} -> format_snippet(hit, i) end)
+
+    "TRECHOS RELEVANTES DO PROJETO (RAG, sobre código/docs — nunca sobre a pessoa):\n" <>
+      aviso_rag_degradado(degraded?) <> corpo <> "\n"
+  end
+
+  defp aviso_rag_degradado(true),
+    do:
+      "[AVISO: busca RAG DEGRADADA — embedding indisponível, resultado é só " <>
+        "léxico, sem similaridade semântica. Trate como menos preciso.]\n"
+
+  defp aviso_rag_degradado(false), do: ""
+
+  defp format_snippet(hit, i) do
+    path = Map.get(hit, "path", "?")
+    trecho = Map.get(hit, "excerpt") || Map.get(hit, "chunk") || ""
+    "[#{i}] fonte: #{path}\n#{format_payload_snippet(trecho)}"
+  end
+
+  # Mesmo teto de `format_payload/1` (max_payload_chars) — o trecho do RAG
+  # entra no MESMO orçamento por item que o payload de um evento, não por um
+  # teto à parte.
+  defp format_payload_snippet(texto) do
+    teto = Triage.max_payload_chars()
+
+    if String.length(texto) > teto do
+      String.slice(texto, 0, teto) <> "… (trecho truncado)"
+    else
+      texto
     end
   end
 

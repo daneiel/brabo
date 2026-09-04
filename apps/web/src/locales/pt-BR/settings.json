@@ -1,0 +1,445 @@
+{
+  "summary": {
+    "title": "Nesta página",
+    "ariaLabel": "Sumário das configurações",
+    "groups": {
+      "projeto": "Projeto e execução",
+      "modelos": "Modelos",
+      "pessoas": "Pessoas e acesso",
+      "avancado": "Avançado"
+    }
+  },
+  "heranca": {
+    "semValorProprio": "Sem valor próprio",
+    "proprio": "Valor próprio",
+    "voltarAHerdar": "Voltar a herdar"
+  },
+  "secao": {
+    "naoSalvas_one": "{{count}} alteração não salva nesta seção",
+    "naoSalvas_other": "{{count}} alterações não salvas nesta seção",
+    "invalidas_one": "{{count}} valor inválido — corrija para salvar",
+    "invalidas_other": "{{count}} valores inválidos — corrija para salvar",
+    "toast": {
+      "salvas_one": "{{count}} alteração salva",
+      "salvas_other": "{{count}} alterações salvas",
+      "parcial": "Salvou {{salvas}} de {{total}}",
+      "parcialDetalhe": "Não salvou: {{itens}}. {{motivo}}"
+    }
+  },
+  "matrix": {
+    "title": "Quem pode aprovar o quê",
+    "eyebrow": "matriz resumida",
+    "subtitle": "Tabela informativa — reflete os papéis mínimos por tipo de ação hoje aplicados no backend; algumas linhas ainda não têm checagem granular própria e usam a aproximação mais próxima.",
+    "columns": {
+      "action": "Ação"
+    },
+    "rows": {
+      "mergeOpenPr": "Merge / abrir PR",
+      "deployProduction": "Deploy em produção",
+      "privilegedCommand": "Comando privilegiado",
+      "schemaMigration": "Alterar schema/migração",
+      "editPermissions": "Editar permissions.json"
+    },
+    "legend": {
+      "canApprove": "pode aprovar",
+      "noPermission": "sem permissão"
+    }
+  },
+  "bestModels": {
+    "title": "Melhores modelos por capacidade",
+    "eyebrow": "curadoria · uso real · custo",
+    "subtitle": {
+      "before": "\"Recomendado\" é o modelo que mais agentes deste projeto já usam, entre os que a curadoria deste workspace marcou para a capacidade — custo desempata. Nenhuma nota de qualidade é calculada (ADR 0042: curadoria é sempre manual); marque os usos no ",
+      "link": "Catálogo de modelos",
+      "after": ", mais abaixo."
+    },
+    "columns": {
+      "capability": "Capacidade",
+      "recommended": "Recomendado",
+      "alternative": "Alternativa",
+      "usedBy": "Usado por"
+    },
+    "noCuratedCoverage": "sem cobertura curada",
+    "noAgentYet": "nenhum agente ainda",
+    "usedByCount_one": "{{count}} agente deste projeto",
+    "usedByCount_other": "{{count}} agentes deste projeto",
+    "emptyMessage": "Nenhuma capacidade cadastrada."
+  },
+  "cascata": {
+    "niveis": {
+      "workspace": "workspace",
+      "project": "projeto",
+      "area": "área",
+      "agent": "agente",
+      "session": "sessão"
+    },
+    "modeloDesconhecido": "modelo desconhecido",
+    "titulo": {
+      "vigente": "É deste nível que sai o modelo vigente ({{modelo}}).",
+      "doStart": "Nenhum nível da cascata escolheu um modelo aqui — o produto herda o do Criativo, o agente de start, em vez de deixar cair no default do workspace. O Criativo usa {{modelo}}.",
+      "definido": "{{polo}} neste nível ({{modelo}}), mas um nível mais específico venceu.",
+      "vazio": "{{polo}} neste nível.",
+      "puladoIndisponivel": "A cascata DESCARTOU este nível: {{modelo}} sumiu do provider.",
+      "puladoSemToolCalling": "A cascata DESCARTOU este nível: {{modelo}} não faz tool calling e não serve a um agente."
+    },
+    "niveisComNome": {
+      "area": "área {{area}}"
+    }
+  },
+  "modelsSection": {
+    "title": "Modelos por agente",
+    "eyebrow": "binding vigente por cascata",
+    "subtitle": {
+      "intro": "A origem indica onde o valor é resolvido:",
+      "mostSpecificWins": "O mais específico vence.",
+      "areaWord": "área",
+      "areaExplain": "é o padrão que o lead e os subagentes compartilham (RN-102) — configure em",
+      "areaLink": "Modelo por área",
+      "below": ", logo abaixo.",
+      "needsDeveloper": " Exige papel developer para trocar o modelo, aplicar um a todos os agentes ou voltar a herdar."
+    },
+    "costCard": {
+      "label": "Custo estimado mensal do time",
+      "detail": "· com base no histórico de 30 dias"
+    },
+    "columns": {
+      "agent": "Agente",
+      "model": "Modelo vigente",
+      "origin": "Origem",
+      "fallback": "Fallback",
+      "estimate": "Est. mês"
+    },
+    "backToInheritTitleWithArea": "Apaga o modelo próprio deste agente — ele volta a usar o padrão da área {{area}}.",
+    "backToInheritTitleNoArea": "Apaga o modelo próprio deste agente — ele volta a herdar do projeto ou do workspace.",
+    "toast": {
+      "reverted": "{{agent}} voltou a herdar",
+      "alreadyInherits": "{{agent}} já herdava — não havia modelo próprio para apagar",
+      "clearError": "Não foi possível voltar a herdar",
+      "setError": "Não foi possível trocar o modelo do agente"
+    },
+    "emptyMessage": "Nenhum agente configurado.",
+    "noModelsAvailable": "Nenhum modelo disponível ainda.",
+    "originChainNoModel": "sem modelo em nenhum nível",
+    "originChainNoModelTitle": "Nem o agente, nem a área, nem o projeto, nem o workspace têm modelo escolhido. Uma sessão ainda pode fixar um.",
+    "fallbackNone": "não há nível abaixo",
+    "fallbackNoneTitle": "O modelo vigente já vem do último nível da cascata — não existe degrau abaixo dele para onde cair.",
+    "noEstimateYet": "sem gasto ainda",
+    "noEstimateTitle": "Este agente não registrou consumo neste projeto nos últimos 30 dias. Diferente de ter gastado zero, que aparece como US$ 0,00.",
+    "bulk": {
+      "label": "Aplicar um modelo a todos os agentes",
+      "detail": "· sobrescreve o modelo próprio de cada agente, uma chamada por agente",
+      "apply_one": "Aplicar a {{count}} agente",
+      "apply_other": "Aplicar aos {{count}} agentes",
+      "applying": "Aplicando…",
+      "toast": {
+        "applied_one": "{{model}} aplicado a {{count}} agente",
+        "applied_other": "{{model}} aplicado aos {{count}} agentes",
+        "error": "Não foi possível aplicar o modelo aos agentes"
+      }
+    }
+  },
+  "areaModels": {
+    "title": "Modelo por área",
+    "eyebrow": "padrão herdável · lead + subagentes",
+    "subtitle": {
+      "main": "O modelo que vale para o lead e para todo subagente da área que não tenha divergido — divergir é escolher outro modelo NA LINHA do agente, acima. \"Voltar a herdar\" apaga o padrão da área; não muda o que cada agente já divergiu.",
+      "needsMaintainer": " Exige papel maintainer para alterar."
+    },
+    "card": {
+      "title": "Área {{area}}",
+      "lead": "Lead: {{lead}}",
+      "subagents": " — subagentes: {{list}}",
+      "subagentsDynamic": " — subagentes dinâmicos (por módulo)"
+    },
+    "toast": {
+      "saveError": "Não foi possível salvar",
+      "reverted": "Área {{area}} voltou a herdar"
+    },
+    "originChainNoModel": "sem padrão em nenhum nível",
+    "originChainNoModelTitle": "Nem esta área, nem o projeto, nem o workspace têm modelo escolhido — o lead e os subagentes desta área não têm padrão para herdar."
+  },
+  "members": {
+    "title": "Membros e papéis",
+    "eyebrow": "IAM · por projeto",
+    "subtitle": "Papéis definem quem pode aprovar quais ações dos agentes neste projeto.",
+    "subtitleCascata": " O papel desta tabela substitui o do workspace neste projeto, nos dois sentidos — definir viewer aqui rebaixa até quem é owner do workspace. Quem alcança o projeto só pelo workspace não aparece na lista.",
+    "subtitleNeedsMaintainer": " Exige papel maintainer para convidar, trocar o papel ou remover alguém.",
+    "invite": {
+      "placeholder": "ID do usuário (UUID)",
+      "button": "Convidar"
+    },
+    "table": {
+      "member": "Membro",
+      "role": "Papel no projeto",
+      "status": "Status",
+      "active": "ativo",
+      "removeAria": "Remover {{name}}",
+      "removeTitle": "Remover"
+    },
+    "toast": {
+      "inviteErrorTitle": "Falha ao adicionar membro",
+      "inviteErrorMessage": "Verifique se o ID do usuário existe",
+      "roleErrorTitle": "Não foi possível trocar o papel",
+      "removeErrorTitle": "Não foi possível remover o membro"
+    },
+    "emptyMessage": "Nenhum membro além do dono do projeto."
+  },
+  "repository": {
+    "title": "Repositório",
+    "eyebrow": "git · provider e política",
+    "adopted": "Adotado — já existia antes do projeto, e a política de branches é dele.",
+    "created": "Criado pelo Brabo, com o bootstrap de Gitflow aplicado.",
+    "dismissed": {
+      "before": "O bootstrap foi ",
+      "strong": "dispensado",
+      "after": " na adoção: nenhuma branch ou proteção foi alterada por nós."
+    },
+    "divergesTitle": "Este repositório diverge do template:"
+  },
+  "execution": {
+    "title": "Execução",
+    "eyebrow": "circuit breaker do dev agent",
+    "subtitle": "Circuit breaker dos dev agents — vale a partir da próxima ativação da execução, não afeta agentes já rodando.",
+    "card": {
+      "title": "Tasks blocked seguidas até parar",
+      "hintDefault": "usa o default ({{default}})",
+      "hintConfigured": "configurado para este projeto"
+    },
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "toast": {
+      "success": "Teto do circuit breaker salvo",
+      "error": "Não foi possível salvar"
+    }
+  },
+  "executionMode": {
+    "title": "Onde o código mora",
+    "eyebrow": "converter modo de execução",
+    "subtitle": "Muda ONDE o comando deste projeto executa — a pasta gerenciada, uma pasta sua montada por bind-mount, ou uma pasta sua conectada pelo runner.",
+    "needsMaintainer": "Só quem é maintainer ou owner pode converter.",
+    "warning": "Isto migra a pasta de trabalho do agente. Se algum dev agent estiver trabalhando ou travado agora, a conversão é recusada — espere terminar (ou desbloqueie a task travada) e tente de novo.",
+    "card": {
+      "title": "Modo de execução"
+    },
+    "selectAria": "Novo modo de execução",
+    "pathAria": "Novo caminho da pasta",
+    "save": "Converter",
+    "saving": "Convertendo…",
+    "toast": {
+      "success": "Modo de execução convertido",
+      "error": "Não foi possível converter"
+    }
+  },
+  "parallelism": {
+    "title": "Paralelismo por área",
+    "eyebrow": "quantos agentes sem perguntar",
+    "subtitle": {
+      "before": "Quantos agentes o lead de cada área pode ter ",
+      "strong": "na sessão",
+      "after": " sem pedir sua autorização. Acima do teto ele não sobe nada: o pedido vira uma ação em Aprovações, com o motivo, e espera você. O teto é da sessão inteira e não de cada módulo — contar por módulo deixaria muitos agentes subirem sem autorização nenhuma."
+    },
+    "empty": {
+      "before": "Nenhuma área ainda. Elas nascem quando você ativa a execução, porque os membros da área de dev vêm do ",
+      "code": "module_map",
+      "after": " do Arquiteto."
+    },
+    "card": {
+      "title": "Área {{area}}",
+      "lead": "Lead: {{lead}}",
+      "membersCount_one": " — {{count}} membro",
+      "membersCount_other": " — {{count}} membros",
+      "noMembersYet": " — sem membros ainda",
+      "capAria": "Teto de agentes da área {{area}}"
+    },
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "toast": {
+      "success": "Teto da área {{area}} salvo",
+      "error": "Não foi possível salvar"
+    }
+  },
+  "budget": {
+    "title": "Teto de gasto por área",
+    "eyebrow": "teto opcional",
+    "subtitle": {
+      "before": "Um teto de gasto opcional para cada área, ",
+      "strong": "aditivo",
+      "after": " aos budgets de projeto e sessão — qualquer um dos três que atingir o limite primeiro bloqueia a chamada. Deixe em branco para sem teto, que também é o padrão."
+    },
+    "empty": {
+      "before": "Nenhuma área ainda. Elas nascem quando você ativa a execução, porque os membros da área de dev vêm do ",
+      "code": "module_map",
+      "after": " do Arquiteto."
+    },
+    "card": {
+      "title": "Área {{area}}",
+      "spent": "Gasto: {{amount}}",
+      "capAria": "Teto de gasto da área {{area}}, em dólares",
+      "noCap": "sem teto"
+    },
+    "placeholder": "Sem teto",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "toast": {
+      "success": "Teto de gasto da área {{area}} salvo",
+      "error": "Não foi possível salvar"
+    }
+  },
+  "promotion": {
+    "title": "Promoção de histórias",
+    "eyebrow": "quem dá o passo",
+    "subtitle": {
+      "before": "Uma história só vira trabalho pegável quando está ",
+      "em": "pronta",
+      "after": ". Isto define quem dá esse passo. As validações são as MESMAS nos dois modos — o que muda é quem dispara, nunca o que é exigido. Vale para as próximas histórias; as que já estão propostas continuam esperando você."
+    },
+    "card": {
+      "title": "Quem promove",
+      "hintManual": "O PO deixa a história completa e ela aguarda você no Backlog. Nenhuma tarefa dela é pegável até lá.",
+      "hintAuto": "O PO promove sozinho ao terminar uma história completa — era o comportamento anterior à Fase 12c, mantido como opção."
+    },
+    "selectAria": "Quem promove histórias",
+    "optionManual": "Manual — eu promovo",
+    "optionAuto": "Automática — o PO promove",
+    "toast": {
+      "manual": "Promoção manual: você decide o que fica pronto",
+      "auto": "Promoção automática: o PO promove sozinho",
+      "error": "Não foi possível salvar"
+    }
+  },
+  "credentials": {
+    "title": "Credenciais de provider",
+    "eyebrow": "write-only · por usuário",
+    "subtitle": {
+      "before": "Chaves write-only — nunca reexibidas após salvas. Como não há como conferir o que está guardado, o que se oferece é ",
+      "swap": "trocar",
+      "middle": " e ",
+      "test": "testar",
+      "after": ": o teste roda no servidor sobre a chave cifrada e devolve só o veredito."
+    },
+    "connector": {
+      "hub": "hub de providers",
+      "provider": "credencial de provider",
+      "configured": "configurada",
+      "missing": "sem chave",
+      "configuredNote": "Configurada em {{date}} · nunca reexibida",
+      "noneSaved": "Nenhuma credencial salva",
+      "newKeyAria": "Nova chave de {{label}}",
+      "apiKeyAria": "API key de {{label}}",
+      "swapPlaceholder": "Trocar chave",
+      "apiKeyPlaceholder": "API key",
+      "swapKeyAria": "Trocar chave de {{label}}",
+      "saveKeyAria": "Salvar chave de {{label}}",
+      "swap": "Trocar",
+      "save": "Salvar",
+      "testKeyAria": "Testar chave de {{label}}",
+      "test": "Testar",
+      "removeKeyAria": "Remover chave de {{label}}",
+      "remove": "Remover"
+    },
+    "toast": {
+      "saved": "Credencial salva",
+      "saveErrorTitle": "Não deu para salvar",
+      "testOk": "O provider aceitou a chave",
+      "testRefused": "O provider recusou a chave",
+      "testUnsupportedTitle": "Sem verificação para este provider",
+      "testUnsupportedMessage": "A chave continua salva — este provider não tem endpoint de teste.",
+      "testErrorTitle": "Não deu para testar",
+      "removed": "Credencial removida",
+      "removeErrorTitle": "Não deu para remover"
+    }
+  },
+  "proficiency": {
+    "title": "Perfil de proficiência",
+    "eyebrow": "anamnese · derivado",
+    "subtitle": "Derivado pela Anamnese a partir das suas interações. Só competências técnicas e de processo — nunca características pessoais.",
+    "emptyMessage": "Nada ainda — a Anamnese roda periodicamente sobre o log do projeto.",
+    "deleteButton": "Apagar meu perfil",
+    "reactivateButton": "Voltar a ser perfilado",
+    "runNowButton": "Rodar agora",
+    "runNowDisabledTitle": "A Anamnese está pausada globalmente",
+    "pausedNotice": "A Anamnese está pausada globalmente por decisão do time — sem rodada nova por enquanto. O que já foi derivado continua aqui.",
+    "modal": {
+      "title": "Apagar meu perfil de proficiência?",
+      "body": "As linhas do seu perfil são apagadas de verdade, e a Anamnese para de te perfilar até você reativar. O que já foi apagado não volta.",
+      "confirm": "Apagar",
+      "cancel": "Cancelar"
+    },
+    "toast": {
+      "deleted": "Perfil apagado",
+      "deletedMessage": "A Anamnese não vai mais te perfilar até você reativar.",
+      "deleteErrorTitle": "Erro",
+      "deleteErrorMessage": "Não foi possível apagar o perfil",
+      "reactivated": "Reativado",
+      "reactivatedMessage": "A Anamnese voltará a perfilar você.",
+      "reactivateErrorTitle": "Erro",
+      "reactivateErrorMessage": "Não foi possível reativar",
+      "queued": "Rodada enfileirada",
+      "queuedMessage": "A Anamnese vai analisar a janela agora.",
+      "pausedTitle": "Anamnese pausada",
+      "pausedFallback": "A Anamnese está desativada globalmente.",
+      "genericErrorTitle": "Erro",
+      "genericErrorMessage": "Não foi possível enfileirar a rodada",
+      "evidenceUnavailableTitle": "Evidência indisponível",
+      "evidenceUnavailableMessage": "O evento citado não foi encontrado neste projeto."
+    }
+  },
+  "personalAccessTokens": {
+    "title": "Tokens de acesso",
+    "eyebrow": "Runner local · ADR 0105",
+    "subtitle": {
+      "before": "Um Personal Access Token autentica o ",
+      "after": " nesta máquina, escopado só a este projeto — revogável a qualquer hora, e o valor bruto nunca aparece de novo depois de emitido."
+    },
+    "namePlaceholder": "Nome (ex.: laptop)",
+    "expiresPlaceholder": "Expira em N dias (opcional)",
+    "generateButton": "Gerar token",
+    "toast": {
+      "issueErrorTitle": "Falha ao gerar token",
+      "issueErrorMessage": "Tente novamente.",
+      "copyErrorTitle": "Não consegui copiar",
+      "copyErrorMessage": "Copie o valor manualmente."
+    },
+    "table": {
+      "name": "Nome",
+      "created": "Criado",
+      "expires": "Expira",
+      "expiresNever": "nunca",
+      "lastUsed": "Último uso",
+      "lastUsedNever": "nunca usado",
+      "status": "Status",
+      "statusRevoked": "revogado",
+      "statusActive": "ativo",
+      "removeAria": "Revogar {{name}}",
+      "removeTitle": "Revogar"
+    },
+    "emptyMessage": "Nenhum token de acesso emitido para este projeto.",
+    "modal": {
+      "title": "Token gerado",
+      "bodyBefore": "Copie agora — este token não é recuperável depois de fechar esta janela. Use em ",
+      "bodyMiddle": " ou ",
+      "bodyAfter": " do ",
+      "bodyEnd": ".",
+      "copyButton": "Copiar",
+      "copiedButton": "Copiado"
+    }
+  },
+  "instructionVersions": {
+    "title": "Histórico de instruções",
+    "eyebrow": "versionamento por agente",
+    "subtitle": "Cada patch aprovado vira uma versão. Reverter grava uma versão nova com o conteúdo antigo — nada é apagado.",
+    "emptyMessage": "Nenhum agente teve a instrução alterada ainda.",
+    "current": "atual",
+    "hypothesis": "hipótese {{id}}",
+    "hideDiff": "ocultar diff",
+    "showDiff": "diff +{{additions}} −{{deletions}}",
+    "revert": "Reverter",
+    "reverting": "Revertendo…",
+    "toast": {
+      "revertedTitle": "Revertido",
+      "revertedMessage": "{{agent}} voltou ao conteúdo da v{{version}}.",
+      "errorTitle": "Erro",
+      "errorMessage": "Não foi possível reverter"
+    }
+  }
+}

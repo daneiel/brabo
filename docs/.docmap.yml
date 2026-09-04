@@ -24,7 +24,15 @@ rules:
       # Fase 12d: os casos de uso de backlog decidem QUEM promove uma história
       # (RN-048) — regra de negócio que não mora no diretório `domain/`.
       - "apps/api/src/application/use-cases/backlog/**"
-    docs: ["docs/business-rules.md"]
+    # A RN pode morar em QUALQUER um dos três arquivos desde que o
+    # `business-rules.md` foi partido por tamanho (Custo e Autenticação
+    # sozinhas eram metade de uma página de 640 KB). Disjunção, não
+    # conjunção: cobrar os três por uma RN que mora num só ensinaria a usar
+    # o escape hatch, e regra que ensina a ignorar check é pior que nenhuma.
+    docs_alternativos:
+      - "docs/business-rules.md"
+      - "docs/business-rules/custo.md"
+      - "docs/business-rules/autenticacao.md"
     severity: block
     note: "RN alterada exige arquivo:linha atualizado e o teste que a cobre."
 
@@ -32,21 +40,58 @@ rules:
     watch:
       - "apps/api/src/domain/actions/**"
       - "apps/api/src/application/use-cases/actions/**"
-    docs: ["docs/reference/permissions.md", "docs/business-rules.md"]
+    docs: ["docs/reference/permissions.md"]
+    # A RN pode morar em QUALQUER um dos três arquivos desde que o
+    # `business-rules.md` foi partido por tamanho (Custo e Autenticação
+    # sozinhas eram metade de uma página de 640 KB). Disjunção, não
+    # conjunção: cobrar os três por uma RN que mora num só ensinaria a usar
+    # o escape hatch, e regra que ensina a ignorar check é pior que nenhuma.
+    docs_alternativos:
+      - "docs/business-rules.md"
+      - "docs/business-rules/custo.md"
+      - "docs/business-rules/autenticacao.md"
     severity: block
     note: "deny > allow e os dois tetos são o coração do sistema."
+
+  # A confirmação em duas etapas do pull (RequestModelPull/ConfirmModelPull)
+  # e o cliente do Hub vivem fora de `domain/` — `dominio-e-regras` cobre o
+  # allowlist de publisher oficial (que É domain/), mas não estes dois
+  # diretórios. Mesmo critério de separação de `pipeline-de-acoes`, acima:
+  # regra de negócio que mora em application/use-cases fora do padrão comum.
+  - id: huggingface-model-pull
+    watch:
+      - "apps/api/src/infrastructure/huggingface/**"
+      - "apps/api/src/application/use-cases/llm/huggingface/**"
+    docs: ["docs/business-rules.md"]
+    severity: block
+    note: "A confirmação em duas etapas do pull é regra de negócio (RN-462) fora de domain/; RN alterada exige arquivo:linha atualizado e o teste que a cobre."
 
   # ------------------------------------------------------------------ dados
 
   # O arquivo mais alterado do repositório até a v0.1.0 (23 mudanças) e o que
   # menos tinha cobertura de doc: as constraints do schema SÃO regra de
   # negócio (budgets_scope_check, unique(session_id, seq)).
+  #
+  # Desde o ADR 0121 o schema é um DIRETÓRIO, e o `schema.ts` que sobrou é um
+  # barrel que só muda quando nasce ou morre tabela. Sem o glob do diretório
+  # esta regra ficaria cega justamente para constraint e coluna — o que ela
+  # existe para vigiar.
   - id: schema-e-migrations
     watch:
       - "apps/api/src/db/schema.ts"
+      - "apps/api/src/db/schema/**"
       - "apps/api/src/db/migrations/**"
       - "apps/engine/priv/repo/migrations/**"
-    docs: ["docs/architecture.md", "docs/business-rules.md"]
+    docs: ["docs/architecture.md"]
+    # A RN pode morar em QUALQUER um dos três arquivos desde que o
+    # `business-rules.md` foi partido por tamanho (Custo e Autenticação
+    # sozinhas eram metade de uma página de 640 KB). Disjunção, não
+    # conjunção: cobrar os três por uma RN que mora num só ensinaria a usar
+    # o escape hatch, e regra que ensina a ignorar check é pior que nenhuma.
+    docs_alternativos:
+      - "docs/business-rules.md"
+      - "docs/business-rules/custo.md"
+      - "docs/business-rules/autenticacao.md"
     severity: warn
     note: "Constraint nova costuma ser RN. Tabela nova muda o diagrama de dados."
 
@@ -84,6 +129,11 @@ rules:
   #
   # O `docs:` aponta para os ARQUIVOS, não para o diretório: o docmap valida
   # com existsSync e um diretório passaria trivialmente.
+  # `apps/web/src/lib/api-types.generated.ts` entrou na MESMA regra, não numa
+  # nova: ele é o segundo andar do `openapi.json` (openapi-typescript rodando
+  # sobre ele), watch idêntico e mesmo remédio de "não edite à mão" — separar
+  # duplicaria o `watch` e um dia um dos dois divergiria do outro. Ver ADR
+  # 0116.
   - id: referencia-openapi
     watch:
       - "apps/api/src/**/*.controller.ts"
@@ -92,9 +142,10 @@ rules:
     docs:
       - "docs/reference/openapi.json"
       - "docs/reference/api/.openapi-manifest.json"
+      - "apps/web/src/lib/api-types.generated.ts"
     generated: true
     severity: block
-    note: "Rode `pnpm docs:generate`. O openapi.json e os MDX saem do código, nunca da mão."
+    note: "Rode `pnpm docs:generate` e `pnpm --filter web run openapi:types`. O openapi.json, os MDX e os tipos do web saem do código, nunca da mão."
 
   # O SITE era ponto cego do mapa: `website/**` não aparecia em nenhuma regra, e
   # mexer no config do Docusaurus não cobrava documentação nenhuma. Isso não é
@@ -180,6 +231,21 @@ rules:
     docs: ["docs/explanation/gates.md", "docs/business-rules.md"]
     severity: block
 
+  # O fluxo (ADR 0085) declara as RELAÇÕES entre papéis — quem entrega o
+  # quê a quem — a terceira peça ao lado do catálogo (agent-areas.ts) e do
+  # controle (gates.yml, ADR 0054). `warn`, não `block`: ainda não existe
+  # teste de cruzamento fluxo.yml × gates.yml × agent-areas.ts que prove
+  # que uma mudança no catálogo ou no registro de gates quebrou uma
+  # relação declarada — promover para `block` fica para quando esse teste
+  # existir (backlog).
+  - id: modelo-de-time
+    watch:
+      - "apps/api/src/domain/agents/**"
+      - "docs/gates.yml"
+    docs: ["docs/fluxo.yml", "docs/explanation/modelo-de-time.md"]
+    severity: warn
+    note: "Fluxo declara as relações entre papéis; catálogo (agent-areas.ts) ou controle (gates.yml) mudando pode desalinhar docs/fluxo.yml."
+
   # -------------------------------------------------------- infra e operação
 
   - id: boot-e-supervisao
@@ -218,6 +284,22 @@ rules:
     severity: block
     note: "Vars do ambiente de inferência (ADR 0020) vivem no runbook."
 
+  # O broker (ADR 0130) é o único processo do produto com acesso a um daemon
+  # Docker. Operação nova, campo novo na especificação ou mudança na composição
+  # alteram o contrato api ↔ broker E o que fazer quando ele recusa — as duas
+  # docs abaixo são as que dizem isso. `warn` e não `block` porque a superfície
+  # é pequena e fechada: uma sexta operação é decisão de produto com ADR, e é o
+  # `adr-trigger` que a cobra.
+  - id: broker-de-container
+    watch:
+      - "apps/broker/**"
+      - "packages/docker-port/**"
+    docs:
+      - "docs/reference/internal-api.md"
+      - "docs/runbook.md"
+    severity: warn
+    note: "Cinco operações, e a especificação é COMPUTADA — mudar isso muda o contrato e o runbook."
+
   - id: deploy-e-runbook
     watch:
       - "deploy/k8s/**"
@@ -251,7 +333,23 @@ rules:
       - ".github/workflows/tag-release.yml"
       - ".github/workflows/release.yml"
       - ".github/workflows/backmerge-gate.yml"
-      - "scripts/ci/**"
+      # NÃO é `scripts/ci/**`: era, e cobrou `branching-policy.md` duas vezes
+      # de scripts que não têm nada a ver com branch — `coverage-floor.ts`
+      # (#410, que saiu pelo escape hatch) e `actions-pinadas.ts`. É o mesmo
+      # defeito que já justificou separar `checks-e-rulesets` daqui, e a mesma
+      # consequência: regra que cobra o que não faz sentido ensina a usar o
+      # escape hatch por reflexo, e aí ele para de significar alguma coisa.
+      #
+      # `auditoria-de-dependencias.ts` (ADR 0140) entrou pelo MESMO critério: o
+      # que ele decide é quando um timeout do endpoint de advisories do npm
+      # vira risco assumido, e isso não toca degrau, destino nem versão. A doc
+      # dele é `cadeia-de-suprimentos-do-ci.md`, onde o risco está declarado.
+      #
+      # O extglob EXCLUI os três pelo nome e continua casando com todo o resto
+      # — inclusive com script de política que ainda não existe. Falha fechado:
+      # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
+      # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
+      - "scripts/ci/!(coverage-floor|actions-pinadas|auditoria-de-dependencias)*"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
@@ -259,6 +357,20 @@ rules:
       - "docs/explanation/branching-policy.md"
     severity: block
     note: "Regra nova no mecanismo exige a regra escrita na política."
+
+  # SEPARADA da regra acima de propósito, mesmo motivo de checks-e-rulesets
+  # logo abaixo: `politica-de-branches` cobre o MECANISMO da escada
+  # (approval-ladder.ts muda → branching-policy.md muda); esta cobre o
+  # CRITÉRIO de quem ocupa cada papel dela, que é decisão humana, não
+  # decorre do código — daí `warn`, não `block`.
+  - id: governanca
+    watch:
+      - "scripts/ci/approval-ladder.ts"
+      - "docs/explanation/branching-policy.md"
+    docs:
+      - "GOVERNANCE.md"
+    severity: warn
+    note: "Papel novo na escada ou mudança na exigência por destino pode exigir revisão do critério de quem entra em cada lista."
 
   # SEPARADA da regra acima de propósito. O rulesets.md documenta a
   # configuração do GitHub e a lista de checks required — ele fica velho quando
@@ -275,6 +387,41 @@ rules:
       - "docs/reference/rulesets.md"
     severity: warn
     note: "Nome de job ou gatilho novo muda a lista de checks required."
+
+  # A cadeia de suprimentos do CI é a única coisa que decide QUE CÓDIGO DE
+  # TERCEIRO roda no runner que tem o checkout e, no release, as credenciais.
+  # A regra dela morava só em comentário de workflow — e foi exatamente por
+  # isso que ficou meio feita por meses (o #408 pinou o ci.yml e só ele).
+  #
+  # Vigia o CHECK, não os workflows: mudar a regra de pin exige mudar a doc;
+  # trocar um SHA por outro, não. `.github/workflows/*.yml` já é vigiado por
+  # `checks-e-rulesets`, e repetir o glob aqui cobraria esta página em toda
+  # atualização de action.
+  - id: cadeia-de-suprimentos-do-ci
+    watch:
+      - "scripts/ci/actions-pinadas.ts"
+    docs:
+      - "docs/explanation/cadeia-de-suprimentos-do-ci.md"
+    severity: block
+    note: "Regra nova sobre o que pode entrar no runner exige a regra escrita."
+
+  # O E2E de navegador é a única camada que roda contra o compose de PRODUÇÃO,
+  # e a única cujo COMO RODAR não cabe num `pnpm test`. Quem chega no
+  # repositório procura isso no getting-started, não num README de pasta.
+  #
+  # `warn`, não `block`: spec novo dentro da mesma mecânica (mesmo jeito de
+  # subir, mesmo jeito de rodar) não muda nada do que está escrito lá, e
+  # cobrar a doc a cada spec ensinaria a usar o escape hatch. O que MUDA a
+  # doc é a mecânica — e essa mora no `playwright.config.ts` e no
+  # `package.json`, não em `testes/`.
+  - id: e2e-de-navegador
+    watch:
+      - "e2e/playwright.config.ts"
+      - "e2e/package.json"
+    docs:
+      - "docs/getting-started.md"
+    severity: warn
+    note: "Mudou como o E2E sobe ou roda? O getting-started ensina o comando."
 
   - id: adr-trigger
     watch:
@@ -299,6 +446,27 @@ rules:
   #
   # O watch são os gatilhos que HISTORICAMENTE o desatualizam: dependência nova
   # (Stack), ADR novo (Convenções e proibições) e gate novo.
+  # Onda 6a (i18n): `docs/` na raiz virou a árvore em INGLÊS (fonte), e o
+  # snapshot pt-BR foi preservado em
+  # `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` no momento da
+  # migração. Ninguém garante que a tradução acompanha toda mudança de prosa
+  # depois disso — `warn`, não `block`, MESMO padrão não-bloqueante que a
+  # regra `governanca` acima usa: traduzir tudo de uma vez não significa que
+  # toda PR futura tenha que manter as duas árvores sincronizadas sob pena de
+  # vermelho no CI. `docs/reference/**` fica de fora do watch de propósito —
+  # é gerado (`pnpm docs:generate`) e nunca entrou na tradução (RN pendente:
+  # localizar o gerador é gap maior, fora desta entrega).
+  - id: traducao-pt-br
+    watch:
+      - "docs/*.md"
+      - "docs/adr/**"
+      - "docs/explanation/**"
+      - "docs/missions/**"
+    docs:
+      - "website/i18n/pt-BR/docusaurus-plugin-content-docs/current/"
+    severity: warn
+    note: "docs/ (inglês, fonte) mudou — confira se a tradução pt-BR em website/i18n/pt-BR/... precisa acompanhar."
+
   - id: claude-md
     watch:
       - "package.json"

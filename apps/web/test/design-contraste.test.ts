@@ -30,9 +30,11 @@ import { fileURLToPath } from 'node:url';
  *
  * ## Tema claro
  *
- * `[data-theme='light']` existe nos tokens e **nada o define** em nenhum lugar da
- * app. Os pares dele são verificados como registro do que se herda, não como
- * garantia do que se renderiza — e três reprovam. Ver o `it` do fim.
+ * Até o ADR 0074, `[data-theme='light']` existia nos tokens e **nada o definia**
+ * em lugar nenhum da app: os pares do claro eram registro do que se herdava, e
+ * três reprovavam. Agora `public/theme-boot.js` escreve o atributo (RN-182) e o
+ * tema claro é uma tela de verdade — então os MESMOS pares de auth são cobrados
+ * nos dois temas, com o mesmo piso. Ver o `describe.each` abaixo.
  */
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const TOKENS = readFileSync(join(RAIZ, 'design', 'tokens.css'), 'utf8');
@@ -95,7 +97,10 @@ const AA = 4.5;
 /** 3:1 — ícone, borda e outro componente gráfico (WCAG 1.4.11). */
 const AA_GRAFICO = 3;
 
-describe('contraste dos tokens usados nas telas de auth (tema dark)', () => {
+describe.each<[string, Record<string, string>]>([
+  ['dark', DARK],
+  ['light', LIGHT],
+])('contraste dos tokens usados nas telas de auth (tema %s)', (_nome, tema) => {
   describe('texto', () => {
     it.each<[string, string, string]>([
       // Título e subtítulo do card, texto do alerta de erro.
@@ -114,7 +119,7 @@ describe('contraste dos tokens usados nas telas de auth (tema dark)', () => {
       ['--accent-hover', '--surface-1', 'link sobre o corpo do card'],
       ['--accent-hover', '--surface-0', 'link no rodapé do card'],
     ])('%s sobre %s (%s) passa AA', (frente, fundo) => {
-      expect(contraste(frente, fundo)).toBeGreaterThanOrEqual(AA);
+      expect(contraste(frente, fundo, tema)).toBeGreaterThanOrEqual(AA);
     });
   });
 
@@ -126,35 +131,27 @@ describe('contraste dos tokens usados nas telas de auth (tema dark)', () => {
       ['--text-muted', '--surface-2', 'ícone do botão de revelar senha'],
       ['--accent', '--surface-1', 'anel de foco do campo'],
     ])('%s sobre %s (%s) passa 3:1', (frente, fundo) => {
-      expect(contraste(frente, fundo)).toBeGreaterThanOrEqual(AA_GRAFICO);
-    });
-  });
-
-  describe('exceção conhecida do design system', () => {
-    it('o botão primário reprova o AA, e o valor está travado onde está', () => {
-      // 3.20:1 para texto de 14px/600, que exige 4.5. Consertar é escurecer
-      // `--accent` (terracota-500 daria 5.27) — muda a marca em toda a UI, e é
-      // decisão de design. O teste existe para o número não PIORAR em silêncio.
-      const atual = contraste('--on-accent', '--accent');
-      expect(atual).toBeCloseTo(3.2, 1);
-      expect(atual).toBeGreaterThanOrEqual(AA_GRAFICO);
+      expect(contraste(frente, fundo, tema)).toBeGreaterThanOrEqual(AA_GRAFICO);
     });
   });
 });
 
-describe('tema claro — registro, não garantia', () => {
-  it('nada na app define data-theme=light, e três pares reprovariam', () => {
-    // Não é `expect(...).toBeGreaterThan(AA)` de propósito: afirmar que passa
-    // seria falso, e afirmar que reprova é o que documenta a dívida. Se alguém
-    // ligar o tema claro, é este teste que diz o que consertar primeiro.
-    const reprovam = (
-      [
-        ['--text-muted', '--surface-0'],
-        ['--text-muted', '--surface-2'],
-        ['--accent', '--surface-0'],
-      ] as const
-    ).filter(([f, b]) => contraste(f, b, LIGHT) < AA);
+describe('exceção conhecida do design system — o botão primário', () => {
+  it('no tema DARK reprova o AA, e o valor está travado onde está', () => {
+    // 3.20:1 para texto de 14px/600, que exige 4.5. Consertar é escurecer
+    // `--accent` (terracota-500 daria 5.27) — muda a marca em toda a UI, e é
+    // decisão de design. O teste existe para o número não PIORAR em silêncio.
+    const atual = contraste('--on-accent', '--accent', DARK);
+    expect(atual).toBeCloseTo(3.2, 1);
+    expect(atual).toBeGreaterThanOrEqual(AA_GRAFICO);
+  });
 
-    expect(reprovam).toHaveLength(3);
+  it('no tema LIGHT a exceção não existe: o accent JÁ é o terracota-500', () => {
+    // O ADR 0074 escureceu o accent do claro até `--terracota-500` — a mesma
+    // saída que o comentário acima descreve como "muda a marca em toda a UI".
+    // No claro ela foi tomada, e o motivo é que lá o accent precisa servir de
+    // TEXTO sobre `--code-bg` (keyword do realce de sintaxe), o que no escuro
+    // o fundo quase preto já dava de graça. O dark segue com a exceção.
+    expect(contraste('--on-accent', '--accent', LIGHT)).toBeGreaterThanOrEqual(AA);
   });
 });

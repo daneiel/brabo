@@ -44,6 +44,46 @@ export function canAdvanceFromMode(
   return modo !== undefined;
 }
 
+// --- Onde o comando executa (ADR 0072/0104) ---
+
+/**
+ * `container` é a pasta GERENCIADA pelo produto (o comportamento de
+ * sempre); `mounted` (antigo `local`) é uma pasta DO USUÁRIO montada por
+ * bind-mount; `runner` é uma pasta DO USUÁRIO sem bind-mount, confirmada
+ * por um CLI (`brabo-runner`) rodando na máquina dela.
+ *
+ * Não confunda com o `GitProviderName` `'local'`, que é outra pergunta do
+ * mesmo wizard: aquele diz onde o REPOSITÓRIO git vive, este diz onde o
+ * COMANDO executa. As duas escolhas são ortogonais.
+ */
+export type ModoDeWorkspace = 'container' | 'mounted' | 'runner';
+
+/**
+ * O que a tela consegue julgar sozinha sobre o caminho, e só isso.
+ *
+ * O veredito que vale é o da API — para `mounted`, ela é a única que
+ * enxerga o sistema de arquivos de dentro do container (RN-422); para
+ * `runner`, a verificação de disco não acontece agora nenhuma, nem no
+ * navegador nem na api (RN-423), só a forma. Esta função é a checagem
+ * BARATA que evita mandar ao servidor o que já se sabe errado, e a
+ * mensagem de recusa de verdade continua vindo do backend.
+ */
+export function caminhoLocalParecePlausivel(caminho: string): boolean {
+  const limpo = caminho.trim();
+  if (!limpo.startsWith('/')) return false;
+  if (limpo === '/') return false;
+  return !limpo.split('/').some((s) => s === '..' || s === '.');
+}
+
+/** Container avança sempre; mounted/runner só com um caminho plausível digitado. */
+export function canAdvanceFromWorkspace(
+  modo: ModoDeWorkspace | undefined,
+  caminho: string,
+): boolean {
+  if (modo === undefined) return false;
+  return modo === 'container' || caminhoLocalParecePlausivel(caminho);
+}
+
 /**
  * Na adoção, o identificador é obrigatório e é a única entrada — o nome
  * e a visibilidade vêm do provider, não do usuário.

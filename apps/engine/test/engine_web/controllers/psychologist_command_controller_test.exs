@@ -56,4 +56,24 @@ defmodule EngineWeb.PsychologistCommandControllerTest do
       )
     end
   end
+
+  describe "status/2 (RN-454)" do
+    test "reporta enabled: false quando a flag está desligada", %{conn: conn} do
+      Application.put_env(:engine, :psychologist_enabled?, false)
+
+      conn = PsychologistCommandController.status(conn, %{})
+
+      assert conn.status == 200
+      assert %{"enabled" => false} = json_response(conn, 200)
+    end
+
+    test "reporta enabled: true quando a flag está ligada", %{conn: conn} do
+      Application.put_env(:engine, :psychologist_enabled?, true)
+
+      conn = PsychologistCommandController.status(conn, %{})
+
+      assert conn.status == 200
+      assert %{"enabled" => true} = json_response(conn, 200)
+    end
+  end
 end

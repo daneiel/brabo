@@ -6,6 +6,8 @@ import { comandoNoEscopo } from './path-scope';
 import {
   efeitoExternoNoComando,
   mensagemDeEfeitoExterno,
+  comandoPrivilegiadoNoComando,
+  mensagemDeComandoPrivilegiado,
 } from './external-effect';
 
 export type ActionType =
@@ -23,7 +25,12 @@ export type ActionType =
   | 'open_infra_pr'
   | 'instruction_patch'
   | 'parallelize'
-  | 'raise_max_parallel';
+  | 'raise_max_parallel'
+  | 'propose_execution_plan'
+  | 'assess_implementability'
+  | 'container_start'
+  | 'container_stop'
+  | 'container_remove';
 
 export const ACTION_TYPES: readonly ActionType[] = [
   'terminal',
@@ -43,6 +50,24 @@ export const ACTION_TYPES: readonly ActionType[] = [
   // Anamnese propondo subir o próprio teto.
   'parallelize',
   'raise_max_parallel',
+  // ADR 0086 (RN-284): o plano de execução do Dev Lead — antes um evento
+  // simples, sem aprovação nenhuma no meio (achado A2 da auditoria
+  // fluxo.yml x código). Ver o comentário no teto do paralelismo, abaixo,
+  // sobre por que este tipo NÃO entra naquele bloco.
+  'propose_execution_plan',
+  // ADR 0090: o parecer de implementabilidade do Dev Lead (gate
+  // `implementavel`, docs/gates.yml, ativo). Mesmo calibre e o mesmo
+  // raciocínio de `propose_execution_plan` — decisão INICIAL, não
+  // ultrapassagem de teto.
+  'assess_implementability',
+  // ADR 0130/0133: a Infra elege uma das imagens candidatas do roteamento do
+  // Arquiteto e propõe subir o container REAL do projeto, pelo broker.
+  'container_start',
+  // ADR 0136 (RN-495): a página global de containers propõe estas duas —
+  // nunca ação de agente, sempre um humano clicando "Parar"/"Remover" numa
+  // linha da tela. Mesmo broker, mesma tabela `project_containers`.
+  'container_stop',
+  'container_remove',
 ];
 
 /**
@@ -107,6 +132,30 @@ const MIN_ROLE_FOR_ACTION_TYPE: Record<ActionType, Role> = {
   // autoriza custo é quem responde pelo projeto.
   parallelize: 'maintainer',
   raise_max_parallel: 'maintainer',
+  // O plano decide QUANTOS agentes sobem por módulo — mesmo calibre de
+  // `parallelize`: é decisão de QUANTO o produto vai gastar com
+  // paralelismo, só que na largada em vez de numa ultrapassagem de teto
+  // (ADR 0086, RN-284).
+  propose_execution_plan: 'maintainer',
+  // Gate `implementavel` (ADR 0090): quem decide se uma story é
+  // implementável é o mesmo calibre de quem decide o plano de execução —
+  // `maintainer`, e DELIBERADAMENTE fora do bloco de tetos absolutos
+  // abaixo (ver o comentário lá) pelo MESMO raciocínio de
+  // `propose_execution_plan`: é uma decisão inicial da sessão, não uma
+  // ultrapassagem de teto já autorizado.
+  assess_implementability: 'maintainer',
+  // ADR 0130/0133: a Infra elege uma das imagens candidatas do roteamento do
+  // Arquiteto (`route_modules_to_infra`) e propõe subir o container REAL do
+  // projeto, pelo broker — efeito externo de verdade (gasta infra), mesmo
+  // calibre de `open_infra_pr`/`parallelize`. `maintainer` porque é quem
+  // responde pelo projeto que autoriza o gasto.
+  container_start: 'maintainer',
+  // ADR 0136 (RN-495): mesma pergunta ("quem responde pelo projeto que
+  // autoriza mexer na infra dele") — `maintainer` para as duas. A diferença
+  // entre elas não é o PAPEL mínimo, é o teto absoluto logo abaixo: só
+  // `container_remove` entra nele.
+  container_stop: 'maintainer',
+  container_remove: 'maintainer',
 };
 
 // Rede de segurança padrão, sempre ativa, independente do permissions.json
@@ -138,6 +187,35 @@ export interface DecideContext {
    * chamador que não sabe a raiz sem mudar o veredito dele.
    */
   projectScopeRoot?: string;
+  /**
+   * `true` quando o projeto está em `execution_mode: container` com uma
+   * linha REGISTRADA em `project_containers` como `running` (ADR 0134,
+   * RN-492) — `ProposeActionUseCase` é quem consulta
+   * `ObterCicloDeVidaDoContainerUseCase` e monta este campo; `decide()`
+   * continua puro, só lê o resultado. `true` NÃO confirma que o container
+   * está de pé DE VERDADE agora (RN-486: registrado e observado nunca se
+   * fundem) — é só o PISO inicial de `terminal`.
+   *
+   * Muda o valor INICIAL de `current` (abaixo) de `require_approval` para
+   * `auto_approve` só para `actionType === 'terminal'`. Isso não é um teto
+   * novo nem um atalho que pula estágio nenhum: é o mesmo `current` que já
+   * existia, com um valor de partida diferente — `agent_autonomy` e
+   * `permissions.json` continuam podendo REBAIXAR (ou manter) esse piso do
+   * jeito que já rebaixam o default de hoje, e os tetos absolutos (escopo,
+   * git push/comando privilegiado, merge protegido, instruction_patch,
+   * paralelismo) continuam se aplicando por cima, byte a byte como estavam.
+   * A justificativa de segurança de auto-aprovar aqui é que, DENTRO do
+   * container, a fronteira real deixa de ser a checagem léxica de
+   * `terminalNoEscopo` contra `projectScopeRoot` — vira o mount namespace do
+   * Docker somado à validação de `/work` que o BROKER já faz
+   * (`DiretorioForaDoEscopoError`, `apps/broker/src/operacoes.ts`) — e o
+   * teto de escopo abaixo continua rodando por cima, como defesa em
+   * profundidade, sobre os MESMOS caminhos de host de sempre (o `cwd`/
+   * `command` que chegam aqui nunca são traduzidos para `/work` — essa
+   * tradução acontece só depois, no engine, ao montar a chamada pro
+   * broker).
+   */
+  containerExecutionActive?: boolean;
 }
 
 export interface Decision {
@@ -163,27 +241,31 @@ export function decide(action: DecideAction, ctx: DecideContext): Decision {
     };
   }
 
-  // FRONTEIRA DO CONTAINER (ADR 0065, RN-106). Aplicada ANTES de qualquer
-  // estágio permissivo porque não é uma preferência: é onde o container
-  // termina. `git push`, abertura de PR e deploy atravessam a parede e chegam
-  // no mundo, e a constituição do produto os declara humanos.
-  //
-  // `deny` e não `require_approval` porque existe "sempre permitir": um clique
-  // gravaria o padrão em `allow` e a segunda porta ficaria aberta para sempre.
-  // Negar aqui não tira poder do agente — a mensagem diz qual ação TIPADA usar,
-  // e é ela que nasce `proposed_action`, registra no event log o que foi
-  // empurrado e para onde, e passa pela decisão do usuário.
-  if (action.actionType === 'terminal' && action.command) {
-    const efeito = efeitoExternoNoComando(parseCommand(action.command));
-    if (efeito) {
-      return { policy: 'deny', reason: mensagemDeEfeitoExterno(efeito) };
-    }
-  }
+  // A FRONTEIRA DO CONTAINER e o COMANDO PRIVILEGIADO (ADR 0065, RN-106 —
+  // revisados nesta entrega) DEIXARAM de ser barrados aqui, logo após o IAM.
+  // Viraram teto absoluto, no bloco final junto dos outros (escopo, merge
+  // protegido, instruction_patch, paralelismo) — ver o comentário lá embaixo
+  // pra saber por que a mudança de `deny` pra `require_approval` incondicional
+  // é segura.
 
-  let current: Decision = {
-    policy: 'require_approval',
-    reason: 'default (sem regra aplicável)',
-  };
+  // O PISO de `terminal` DENTRO do container real do projeto (ADR 0134,
+  // RN-492) — ver o docblock de `containerExecutionActive` em
+  // `DecideContext` pra o raciocínio completo. Os estágios que seguem
+  // (agent_autonomy, permissions.json, os tetos absolutos) tratam este
+  // valor exatamente como tratavam o `require_approval` fixo de sempre:
+  // podem rebaixá-lo, mantê-lo ou (não, no caso dos tetos) subi-lo.
+  let current: Decision =
+    action.actionType === 'terminal' && ctx.containerExecutionActive
+      ? {
+          policy: 'auto_approve',
+          reason:
+            'container: comando roda dentro do container real do projeto (ADR 0134) — ' +
+            'a fronteira é o mount namespace do Docker, não o escopo léxico',
+        }
+      : {
+          policy: 'require_approval',
+          reason: 'default (sem regra aplicável)',
+        };
 
   if (ctx.autonomyMode) {
     current = {
@@ -203,6 +285,42 @@ export function decide(action: DecideAction, ctx: DecideContext): Decision {
   if (fileVerdict) {
     if (fileVerdict.policy === 'deny') return fileVerdict;
     current = fileVerdict;
+  }
+
+  // TETO DA FRONTEIRA DO CONTAINER + COMANDO PRIVILEGIADO (ADR 0065, RN-106
+  // — revisado nesta entrega). `git push`, abertura de PR, deploy e
+  // `sudo`/`doas` nunca são auto-aprováveis — nem por `agent_autonomy`
+  // (inclusive o curinga `"*"` de "modo automático") nem por
+  // `permissions.json`.
+  //
+  // Antes disto era `deny` incondicional logo após o IAM (ver o comentário
+  // que sobrava lá em cima). Virou teto absoluto — `require_approval`, não
+  // `deny` — pelo MESMO motivo que os tetos vizinhos já são assim: o produto
+  // prefere que a ação exista como `proposed_action` pendente, auditável no
+  // event log, decidida caso a caso, a recusá-la sem deixar rastro. Isso só é
+  // seguro porque a fresta que o `deny` original tapava à força — "sempre
+  // permitir" gravando o padrão em `allow` e abrindo a porta pra sempre — foi
+  // fechada na FONTE: `ApproveAlwaysActionUseCase`/`patternForAction` recusam
+  // gravar padrão pra ação com efeito externo git ou comando privilegiado
+  // (ver approve-always-action.use-case.ts). Sem essa fresta fechada, este
+  // teto viraria decorativo do mesmo jeito que os outros tetos alertam: um
+  // clique bastaria pra reabrir a porta que ele diz fechar.
+  //
+  // git com efeito externo continua tendo ação TIPADA pra redirecionar
+  // (`git_push`/`pr_open`/`git_merge`/`deploy`); `sudo`/`doas` não têm — a
+  // mensagem só explica por que aquele comando pede decisão humana.
+  if (action.actionType === 'terminal' && action.command) {
+    const tokens = parseCommand(action.command);
+    const efeito = efeitoExternoNoComando(tokens);
+    const privilegiado = comandoPrivilegiadoNoComando(tokens);
+    if ((efeito || privilegiado) && current.policy === 'auto_approve') {
+      return {
+        policy: 'require_approval',
+        reason: efeito
+          ? mensagemDeEfeitoExterno(efeito)
+          : mensagemDeComandoPrivilegiado(privilegiado!),
+      };
+    }
   }
 
   // TETO DO ESCOPO DE CAMINHO (ADR 0055). Comando de terminal que toca
@@ -263,6 +381,33 @@ export function decide(action: DecideAction, ctx: DecideContext): Decision {
   // a regra que existe para exigir sua decisão passaria a dispensá-la. O
   // `raise_max_parallel` é pior ainda — seria o produto elevando o próprio
   // teto, que é exatamente o que o pipeline de aprovação existe para impedir.
+  //
+  // `propose_execution_plan` (ADR 0086) foi CONSIDERADO para este bloco e
+  // DELIBERADAMENTE deixado fora — não é esquecimento. Os três tetos
+  // absolutos que o CLAUDE.md enumera (merge protegido, instruction_patch,
+  // parallelize/raise_max_parallel) são os pontos em que o produto recusa
+  // deixar o usuário automatizar a própria decisão, mesmo com "sempre
+  // permitir" configurado. O plano do Dev Lead é diferente: é a PRIMEIRA
+  // vez que o usuário decide quantos agentes sobem numa sessão, não uma
+  // ultrapassagem de um teto já autorizado — e nada nesta feature pede um
+  // quarto absoluto. Fica `require_approval` por padrão (via IAM +
+  // ausência de regra em `permissions.json`), mas o usuário PODE configurar
+  // auto-aprovação explícita, como já vale para `open_adr_pr`/
+  // `open_infra_pr`.
+  //
+  // `assess_implementability` (ADR 0090) segue o MESMO raciocínio de
+  // `propose_execution_plan`, pelo mesmo motivo: é um parecer inicial
+  // sobre uma story, não uma ultrapassagem de teto já autorizado.
+  //
+  // `container_start` (ADR 0130/0133) segue o MESMO raciocínio pela MESMA
+  // razão, com uma nuance: não é a Infra ultrapassando um teto já
+  // autorizado, é a PRIMEIRA vez que um container sobe de verdade para esta
+  // eleição — decisão inicial, não reincidência. Fica `require_approval`
+  // por padrão (não está semeado em `INFRA_AUTONOMY_SEEDS`, ao contrário de
+  // `open_infra_pr`: aqui o efeito é real, gasta infra, e a Infra nunca
+  // recebe auto-aprovação de propósito), mas nada o impede de ser
+  // configurado como auto-aprovável, como `open_adr_pr`/`open_infra_pr` já
+  // são.
   if (
     (action.actionType === 'parallelize' ||
       action.actionType === 'raise_max_parallel') &&
@@ -272,6 +417,30 @@ export function decide(action: DecideAction, ctx: DecideContext): Decision {
       policy: 'require_approval',
       reason:
         'gastar com mais agentes nunca é auto-aprovável: quem decide subir o teto é você',
+    };
+  }
+
+  // TETO de `container_remove` (ADR 0136, RN-495) — no MESMO calibre do teto
+  // de git push/comando privilegiado (RN-418): nunca auto-aprovável, nem por
+  // agent_autonomy nem por permissions.json, e `ApproveAlwaysActionUseCase`
+  // recusa gravar o padrão pra ele (mesma fechadura da fonte que RN-418 já
+  // usa). A diferença de `container_start`/`container_stop` — que PODEM ser
+  // configurados como auto-aprováveis, mesmo nunca semeados — não é o papel
+  // mínimo (os três são `maintainer`), é o que a ação FAZ: descartar o
+  // container é a única das três que joga fora o que existe e exige
+  // reprovisionar do zero (container-lifecycle.ts, `removed` só sai
+  // provisionando de novo). O produto trata isso como o mesmo calibre de
+  // merge em branch protegida — decisão que o usuário toma a cada vez, nunca
+  // uma vez só configurando o arquivo.
+  if (
+    action.actionType === 'container_remove' &&
+    current.policy === 'auto_approve'
+  ) {
+    return {
+      policy: 'require_approval',
+      reason:
+        'remover o container nunca é auto-aprovável: descarta o que existe e ' +
+        'exige reprovisionar do zero — decisão do usuário a cada vez',
     };
   }
 

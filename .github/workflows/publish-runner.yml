@@ -1,0 +1,203 @@
+name: Publish runner
+
+# ADR 0106. Workflow PRÓPRIO, disparado pela mesma tag final de
+# `release.yml` — mesma disciplina do `tag-release.yml` (ADR 0030): "workflow
+# PRÓPRIO disparado pela tag... nada a religar aqui". Publicar imagem Docker
+# e publicar pacote npm são dois produtos independentes do mesmo evento, cada
+# um com seu próprio modo de falhar; bolar isto dentro do `release.yml`
+# faria uma falha de npm derrubar a GitHub Release, ou vice-versa.
+#
+# Roda em PARALELO a `release.yml`, sem `needs:` — não há dependência real
+# (este workflow não lê a GitHub Release nem o CHANGELOG que o outro gera), e
+# o Actions não garante ordem entre workflows distintos reagindo ao mesmo
+# push de tag de qualquer forma.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag final a (re)publicar (ex.: v1.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write # exigido por `npm publish --provenance`
+
+env:
+  NODE_VERSION: '24.11.1'
+  PNPM_VERSION: '11.3.0'
+
+concurrency:
+  # Evita duas publicações da MESMA tag em paralelo (push e dispatch manual
+  # coincidindo) — publicar a mesma versão duas vezes ao mesmo tempo falha
+  # numa delas de forma confusa (409 do registry).
+  group: publish-runner-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publicar @brabo/runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # `secrets` não existe no `if:` de um step — só em `env`. Mesmo padrão
+      # do `TEM_PAT` em `release.yml`/`tag-release.yml`. Sem o secret, este
+      # workflow AVISA e pula — nunca falha — porque o operador pode
+      # configurar o npm depois do merge, sem coordenar nada com este código.
+      TEM_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
+    steps:
+      # Mesma restrição de `release.yml`: quem republica manualmente é o
+      # responsável nomeado, não qualquer um com escrita no repo.
+      - name: Quem pode (re)publicar
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          ATOR: ${{ github.actor }}
+          MODO: ${{ vars.APPROVAL_MODE || 'solo' }}
+          OWNER: ${{ vars.OWNER_HANDLE }}
+        run: |
+          set -euo pipefail
+          if [ "$MODO" != 'solo' ]; then
+            echo "::notice::APPROVAL_MODE=$MODO — a restrição de dispatch por owner vale no modo solo."
+            exit 0
+          fi
+          if [ -z "${OWNER:-}" ] || [ "$ATOR" != "$OWNER" ]; then
+            echo "::error::'$ATOR' não pode disparar publicação manual."
+            exit 1
+          fi
+          echo "ator autorizado: $ATOR"
+
+      # Mesmo motivo de `release.yml`: num dispatch, `github.ref_name` é a
+      # branch padrão, não a tag pedida. Um lugar só resolve e valida.
+      - name: Qual tag publicar
+        id: alvo
+        env:
+          ENTRADA: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+            tag="$ENTRADA"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+          if ! printf '%s' "$tag" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::'$tag' não é tag final. O formato é vX.Y.Z, sem sufixo -dev.N nem -qa.N."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "versao=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "tag a publicar: $tag"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          # Checkout NA TAG, nunca no ref do evento — no push é o mesmo
+          # commit; num dispatch é a diferença entre publicar a versão pedida
+          # e publicar o topo da branch padrão.
+          ref: ${{ steps.alvo.outputs.tag }}
+
+      - name: O NPM_TOKEN está configurado?
+        if: env.TEM_NPM_TOKEN != 'true'
+        run: |
+          echo "::warning::sem NPM_TOKEN — publicação do @brabo/runner pulada para ${{ steps.alvo.outputs.tag }}. Gere um Automation Token para o escopo @brabo em npmjs.com e configure o segredo NPM_TOKEN para publicar de verdade."
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        if: env.TEM_NPM_TOKEN == 'true'
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        if: env.TEM_NPM_TOKEN == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          # `registry-url` é o que faz o `actions/setup-node` escrever o
+          # `~/.npmrc` que lê `NODE_AUTH_TOKEN` — sem isto, `NODE_AUTH_TOKEN`
+          # sozinho no ambiente NÃO autentica `npm publish`. Gotcha comum o
+          # bastante pra registrar aqui: este é o primeiro workflow do repo
+          # que precisa publicar em algum registry.
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@brabo'
+
+      - name: Essa versão já está publicada?
+        id: check
+        if: env.TEM_NPM_TOKEN == 'true'
+        env:
+          VERSAO: ${{ steps.alvo.outputs.versao }}
+        run: |
+          set -euo pipefail
+          # `npm view` de versão inexistente sai != 0 — inclusive na PRIMEIRA
+          # publicação de todas, quando o pacote inteiro ainda não existe no
+          # registry. Os dois casos tratam-se igual: "não publicada ainda".
+          if publicada="$(npm view "@brabo/runner@${VERSAO}" version 2>/dev/null)" && [ -n "$publicada" ]; then
+            echo "::notice::@brabo/runner@${VERSAO} já está no npm — nada a fazer (idempotência)."
+            echo "pular=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "pular=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: pnpm install
+        if: env.TEM_NPM_TOKEN == 'true' && steps.check.outputs.pular != 'true'
+        run: pnpm install --frozen-lockfile
+
+      # NUNCA commitado de volta — checkout descartável. Mesma filosofia do
+      # resto do projeto: a versão mora só na tag, nunca em arquivo (a Fase 6
+      # já tirou o bump de versão manual do fluxo normal; isto não reabre
+      # aquilo, só satisfaz a exigência do próprio `npm publish` de que
+      # `package.json` carregue a versão sendo publicada).
+      - name: Injetar a versão da tag
+        if: env.TEM_NPM_TOKEN == 'true' && steps.check.outputs.pular != 'true'
+        working-directory: apps/runner
+        env:
+          VERSAO: ${{ steps.alvo.outputs.versao }}
+        run: npm pkg set version="${VERSAO}"
+
+      - name: Build (tsup)
+        if: env.TEM_NPM_TOKEN == 'true' && steps.check.outputs.pular != 'true'
+        run: pnpm --filter runner build
+
+      # Cinto e suspensório: o mesmo smoke que `ci.yml` roda em todo PR,
+      # repetido aqui sobre o artefato que está prestes a ir pro registro
+      # público — nunca confiar num build de PR antigo.
+      - name: Smoke do artefato empacotado
+        if: env.TEM_NPM_TOKEN == 'true' && steps.check.outputs.pular != 'true'
+        run: pnpm --filter runner smoke
+
+      # `latest` no npm é o que `npm install`/`npm install -g` sem versão
+      # pega — e `npm publish` MOVE essa dist-tag pro que acabou de publicar
+      # por padrão, SEM checar ordem semver. O `workflow_dispatch` existe
+      # (mesmo motivo do `release.yml`) pra republicar tag ÓRFÃ — e este
+      # repo JÁ TEM seis tags finais órfãs (`v0.2.0`…`v1.1.0`, ver
+      # docs/reference/rulesets.md). Republicar uma delas depois de uma
+      # versão mais nova já estar publicada moveria `latest` pra TRÁS em
+      # silêncio. Publica normal só quando a versão é >= o `latest` atual;
+      # do contrário, marca com uma dist-tag própria.
+      - name: Publicar no npm
+        if: env.TEM_NPM_TOKEN == 'true' && steps.check.outputs.pular != 'true'
+        working-directory: apps/runner
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSAO: ${{ steps.alvo.outputs.versao }}
+        run: |
+          set -euo pipefail
+          latest_atual="$(npm view @brabo/runner version 2>/dev/null || true)"
+          maior_ou_igual() {
+            [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" ]
+          }
+          if [ -z "$latest_atual" ] || maior_ou_igual "$VERSAO" "$latest_atual"; then
+            npm publish --access public --provenance
+          else
+            echo "::warning::${VERSAO} é anterior ao latest atual (${latest_atual}) — publicando sem mover a dist-tag 'latest'."
+            npm publish --access public --provenance --tag "antiga-${VERSAO}"
+          fi
+
+      - name: Resumo
+        if: env.TEM_NPM_TOKEN == 'true' && steps.check.outputs.pular != 'true'
+        env:
+          VERSAO: ${{ steps.alvo.outputs.versao }}
+        run: |
+          {
+            echo "### publish-runner"
+            echo
+            echo "\`@brabo/runner@${VERSAO}\` publicado."
+          } >> "$GITHUB_STEP_SUMMARY"

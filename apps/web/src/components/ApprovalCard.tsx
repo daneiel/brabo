@@ -1,11 +1,20 @@
 import { useState, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ActionType, ProposedAction } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
 import { SEM_FRASE, descreverAcao } from '../lib/aprovacoes';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Disclosure } from './ui/Disclosure';
-import { AlertIcon, ChevronRightIcon, DiffIcon, PrIcon, TerminalIcon } from './ui/icons';
+import {
+  AlertIcon,
+  ChevronRightIcon,
+  DiffIcon,
+  PrIcon,
+  StopSquareIcon,
+  TerminalIcon,
+  TrashIcon,
+} from './ui/icons';
 import styles from './ApprovalCard.module.css';
 
 export type ApprovalUrgency = 'critico' | 'alta' | 'normal';
@@ -41,6 +50,14 @@ const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   instruction_patch: DiffIcon,
   parallelize: AlertIcon,
   raise_max_parallel: AlertIcon,
+  propose_execution_plan: AlertIcon,
+  assess_implementability: AlertIcon,
+  // Efeito externo de verdade — gasta infra (ADR 0130/0133), mesmo calibre
+  // visual de `spend`/`parallelize`.
+  container_start: AlertIcon,
+  // ADR 0136 (RN-495) — a página global de containers.
+  container_stop: StopSquareIcon,
+  container_remove: TrashIcon,
 };
 
 /**
@@ -55,6 +72,9 @@ const COM_CORPO_PROPRIO: ReadonlySet<string> = new Set<ActionType>([
   'git_commit',
   'git_push',
   'write_file',
+  // Onda 2 (aba PRs): antes caía no despejo de JSON cru — o mesmo defeito
+  // que a RN-096 já tinha corrigido pros outros tipos.
+  'git_merge',
 ]);
 
 interface DiffFile {
@@ -140,6 +160,7 @@ export function ApprovalCard({
   onAlwaysAllow,
   onActivateAutoMode,
 }: ApprovalCardProps) {
+  const { t } = useTranslation('approvals');
   const [expandedFile, setExpandedFile] = useState<string | null>(null);
 
   const actor = AGENTS[action.actor.id as keyof typeof AGENTS];
@@ -148,7 +169,13 @@ export function ApprovalCard({
   // React trata isso como componente inválido e derruba a ÁRVORE, não o card.
   const Icon = ACTION_ICON[action.actionType] ?? AlertIcon;
   const isPending = action.status === 'pending';
-  const podeSemprePermitir = action.actionType !== 'instruction_patch';
+  // `container_remove` entrou no MESMO teto absoluto de `instruction_patch`
+  // (ADR 0136, RN-495) — a api recusa (400) gravar o padrão de "sempre
+  // permitir" pra ele, então mostrar o botão prometeria um efeito que o
+  // clique não produz.
+  const podeSemprePermitir =
+    action.actionType !== 'instruction_patch' &&
+    action.actionType !== 'container_remove';
   const isCritical = urgency === 'critico';
 
   const payload = action.payload;
@@ -182,7 +209,7 @@ export function ApprovalCard({
             className={styles.checkbox}
             checked={!!selected}
             onChange={onToggleSelect}
-            aria-label="Selecionar para aprovação em lote"
+            aria-label={t('approvalCard.batchSelectAriaLabel')}
           />
         )}
         <span className={styles.headerIcon}>
@@ -213,11 +240,15 @@ export function ApprovalCard({
       <p className={styles.frase}>{frase ?? `${verbo} — ${SEM_FRASE}.`}</p>
 
       <Disclosure
-        titulo={temCorpoProprio ? 'Detalhes' : 'Payload cru'}
+        titulo={temCorpoProprio ? t('approvalCard.details.title') : t('approvalCard.details.rawPayloadTitle')}
         padraoAberto={detalheAberto}
         className={styles.detalhes}
         classNameCabecalho={styles.detalhesCabecalho}
-        trailing={temCorpoProprio ? undefined : `${Object.keys(payload).length} campo(s)`}
+        trailing={
+          temCorpoProprio
+            ? undefined
+            : t('approvalCard.details.fieldCount', { count: Object.keys(payload).length })
+        }
       >
         <ApprovalBody
           actionType={action.actionType}
@@ -232,17 +263,17 @@ export function ApprovalCard({
         <>
           <div className={styles.actions}>
             <Button variant="success" onClick={onApprove}>
-              Aprovar
+              {t('approvalCard.actions.approve')}
             </Button>
             <Button variant="danger" onClick={() => onDeny()}>
-              Negar
+              {t('approvalCard.actions.deny')}
             </Button>
             {/* Patch de instrução NUNCA é auto-aprovável (teto em decide.ts):
                 gravar a regra em permissions.json não muda nada, então o botão
                 prometia um efeito que não existe. */}
             {podeSemprePermitir && (
               <Button variant="secondary" onClick={onAlwaysAllow}>
-                Sempre permitir
+                {t('approvalCard.actions.alwaysAllow')}
               </Button>
             )}
             {/* "Auto mode" (RN-153) — só quando quem chama já confirmou papel
@@ -251,22 +282,20 @@ export function ApprovalCard({
                 cai aqui: não há AGENTE pra confiar). */}
             {onActivateAutoMode && (
               <Button variant="ghost" onClick={onActivateAutoMode}>
-                Modo automático
+                {t('approvalCard.actions.autoMode')}
               </Button>
             )}
           </div>
           {variant === 'chat' && podeSemprePermitir && (
             <span className={styles.note}>
               <AlertIcon size={12} />
-              &quot;Sempre permitir&quot; grava a regra em .brabo/permissions.json
+              {t('approvalCard.notes.alwaysAllow')}
             </span>
           )}
           {variant === 'chat' && onActivateAutoMode && (
             <span className={styles.note}>
               <AlertIcon size={12} />
-              &quot;Modo automático&quot; libera TODA ação futura de {actorLabel} sem perguntar —
-              exceto merge em branch protegida, patch de instrução e paralelismo, que continuam
-              sempre pedindo sua decisão. Dá pra desligar depois no card do agente.
+              {t('approvalCard.notes.autoMode', { actor: actorLabel })}
             </span>
           )}
         </>
@@ -278,11 +307,15 @@ export function ApprovalCard({
 }
 
 function DecidedLine({ action }: { action: ProposedAction }) {
+  const { t } = useTranslation('approvals');
   if (action.status === 'denied') {
     return (
       <div className={styles.decided} style={{ ['--decided-color' as string]: 'var(--danger)' } as CSSProperties}>
         <span className={styles.decidedDot} />
-        <span className={styles.decidedText}>Negado{action.rejectionReason ? ` · ${action.rejectionReason}` : ''}</span>
+        <span className={styles.decidedText}>
+          {t('approvalCard.decided.denied')}
+          {action.rejectionReason ? ` · ${action.rejectionReason}` : ''}
+        </span>
       </div>
     );
   }
@@ -290,7 +323,7 @@ function DecidedLine({ action }: { action: ProposedAction }) {
     return (
       <div className={styles.decided} style={{ ['--decided-color' as string]: 'var(--accent)' } as CSSProperties}>
         <span className={styles.decidedDot} />
-        <span className={styles.decidedText}>Sempre permitido · gravado em permissions.json</span>
+        <span className={styles.decidedText}>{t('approvalCard.decided.alwaysAllowed')}</span>
       </div>
     );
   }
@@ -298,11 +331,14 @@ function DecidedLine({ action }: { action: ProposedAction }) {
     return (
       <div className={styles.decided} style={{ ['--decided-color' as string]: 'var(--danger)' } as CSSProperties}>
         <span className={styles.decidedDot} />
-        <span className={styles.decidedText}>Falhou</span>
+        <span className={styles.decidedText}>{t('approvalCard.decided.failed')}</span>
       </div>
     );
   }
-  const text = action.actionType === 'terminal' ? 'Aprovado · comando em execução' : 'Aprovado';
+  const text =
+    action.actionType === 'terminal'
+      ? t('approvalCard.decided.approvedTerminal')
+      : t('approvalCard.decided.approved');
   return (
     <div className={styles.decided} style={{ ['--decided-color' as string]: 'var(--success)' } as CSSProperties}>
       <span className={styles.decidedDot} />
@@ -353,6 +389,7 @@ interface ApprovalBodyProps {
 }
 
 function ApprovalBody({ actionType, payload, executionResult, expandedFile, onToggleFile }: ApprovalBodyProps) {
+  const { t } = useTranslation('approvals');
   if (actionType === 'terminal') {
     const command = readString(payload, 'command');
     const comandoValido = eValido(command);
@@ -373,16 +410,20 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
             // sem `command`) — um prompt "$ " em branco lia como bug de
             // renderização, não como o que era: a ferramenta não recebeu
             // argumento nenhum.
-            <span className={styles.vazio}>O modelo não produziu um comando válido para esta ação.</span>
+            <span className={styles.vazio}>{t('approvalCard.body.terminal.invalidCommand')}</span>
           )}
         </div>
         {executionResult && (
           <div className={styles.outputBlock}>
             <div className={styles.outputHeader}>
-              <span>terminal · output</span>
-              {compressionPct !== null && compressionPct > 0 && <span>rtk −{compressionPct}%</span>}
+              <span>{t('approvalCard.body.terminal.outputHeader')}</span>
+              {compressionPct !== null && compressionPct > 0 && (
+                <span>{t('approvalCard.body.terminal.compression', { percent: compressionPct })}</span>
+              )}
             </div>
-            <div className={styles.outputBody}>{executionResult.stdout || executionResult.stderr || '(sem saída)'}</div>
+            <div className={styles.outputBody}>
+              {executionResult.stdout || executionResult.stderr || t('approvalCard.body.terminal.emptyOutput')}
+            </div>
           </div>
         )}
       </div>
@@ -402,10 +443,10 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
     if (!caminhoValido || !conteudoValido) {
       const mensagem =
         !caminhoValido && !conteudoValido
-          ? 'O modelo não produziu um caminho e um conteúdo válidos para esta ação.'
+          ? t('approvalCard.body.writeFile.invalidBoth')
           : !caminhoValido
-            ? 'O modelo não produziu um caminho válido para esta ação.'
-            : 'O modelo não produziu um conteúdo válido para esta ação.';
+            ? t('approvalCard.body.writeFile.invalidPath')
+            : t('approvalCard.body.writeFile.invalidContent');
       return (
         <div className={`${styles.body} ${styles.bodyCode}`}>
           <div className={styles.commandLine}>
@@ -422,10 +463,10 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
         <div className={styles.commandLine}>{path}</div>
         <div className={styles.outputBlock}>
           <div className={styles.outputHeader}>
-            <span>preview do conteúdo</span>
+            <span>{t('approvalCard.body.writeFile.previewHeader')}</span>
             {truncado && (
               <span>
-                {linhasMostradas} de {totalLinhas} linha(s)
+                {t('approvalCard.body.writeFile.linesTruncated', { shown: linhasMostradas, count: totalLinhas })}
               </span>
             )}
           </div>
@@ -439,7 +480,7 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
   }
 
   if (actionType === 'pr_open') {
-    const title = readString(payload, 'title') ?? 'Pull request';
+    const title = readString(payload, 'title') ?? t('approvalCard.body.prOpen.defaultTitle');
     const source = readString(payload, 'sourceBranch') ?? '?';
     const target = readString(payload, 'targetBranch') ?? '?';
     const summary = readString(payload, 'summary');
@@ -455,6 +496,31 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
           <span className={styles.branchPill}>{target}</span>
         </div>
         {summary && <div className={styles.prSummary}>{summary}</div>}
+      </div>
+    );
+  }
+
+  if (actionType === 'git_merge') {
+    const pr = readString(payload, 'pullRequestId');
+    const source = readString(payload, 'sourceBranch');
+    const target = readString(payload, 'targetBranch');
+    const title = readString(payload, 'title');
+
+    return (
+      <div className={styles.body}>
+        <div className={styles.prTitle}>
+          {title ??
+            (pr
+              ? t('approvalCard.body.gitMerge.prTitle', { pr })
+              : t('approvalCard.body.gitMerge.defaultTitle'))}
+        </div>
+        <div className={styles.prBranches}>
+          <span className={styles.branchPill}>{source ?? '?'}</span>
+          <span className={styles.arrow} aria-hidden="true">
+            →
+          </span>
+          <span className={styles.branchPill}>{target ?? '?'}</span>
+        </div>
       </div>
     );
   }
@@ -485,7 +551,7 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
         {hypothesisId && (
           <div className={styles.prSummary}>
             <Badge tone="accent">
-              origem: hipótese {hypothesisId.slice(-8)}
+              {t('approvalCard.body.instructionPatch.hypothesisOrigin', { id: hypothesisId.slice(-8) })}
             </Badge>
           </div>
         )}
@@ -509,6 +575,19 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
         <div className={styles.body}>
           {files.map((file) => {
             const open = expandedFile === file.path;
+            // Não migrado para o `Disclosure` do design system, de propósito
+            // (Onda 4/frente H4): esta faixa gira o chevron com
+            // `transform: rotate(90deg)` + transição (`.chevron.open`,
+            // ApprovalCard.module.css) — o `Disclosure` genérico TROCA o
+            // ícone (Right→Down), sem animação nenhuma. Forçar a migração
+            // aqui apagaria a micro-interação sem ganho nenhum, já que a
+            // exclusividade (só um arquivo aberto por vez) já vem de fora
+            // (`expandedFile`), a mesma coisa que o `Disclosure` controlado
+            // faria. O que ESTAVA faltando, e que não é peculiaridade
+            // nenhuma — é o mesmo defeito que o `Disclosure` existe para
+            // fechar —, era `aria-controls`/região nomeada: corrigido aqui
+            // sem trocar de componente (RN-250).
+            const idDiff = `arquivo-diff-${encodeURIComponent(file.path)}`;
             return (
               <div key={file.path}>
                 {/* `<button>` e não `<div onClick>`: a faixa abre e fecha o
@@ -518,6 +597,7 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
                   type="button"
                   className={styles.fileRow}
                   aria-expanded={open}
+                  aria-controls={idDiff}
                   onClick={() => onToggleFile(file.path)}
                 >
                   <span className={[styles.chevron, open && styles.open].filter(Boolean).join(' ')}>
@@ -529,7 +609,12 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
                     <span className={styles.diffDel}>−{file.deletions}</span>
                   </span>
                 </button>
-                {open && file.lines && <DiffLines lines={file.lines} />}
+                {/* A região existe mesmo fechada — mesma razão do
+                    `Disclosure`: `aria-controls` apontando para um id morto
+                    é pior que não ter o atributo. */}
+                <div id={idDiff} role="region" aria-label={file.path} hidden={!open}>
+                  {open && file.lines && <DiffLines lines={file.lines} />}
+                </div>
               </div>
             );
           })}
@@ -539,7 +624,7 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
     const message = readString(payload, 'message') ?? readString(payload, 'branch') ?? '';
     return (
       <div className={`${styles.body} ${styles.bodyCode}`}>
-        <div className={styles.commandLine}>{message || 'Sem detalhes adicionais.'}</div>
+        <div className={styles.commandLine}>{message || t('approvalCard.body.gitCommitPush.noDetails')}</div>
       </div>
     );
   }
@@ -561,7 +646,7 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
   if (chaves.length === 0) {
     return (
       <div className={styles.body}>
-        <div className={styles.semPayload}>Esta ação não carrega payload.</div>
+        <div className={styles.semPayload}>{t('approvalCard.body.empty')}</div>
       </div>
     );
   }

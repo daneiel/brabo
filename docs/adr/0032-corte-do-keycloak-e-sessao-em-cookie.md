@@ -1,228 +1,245 @@
-# 0032 — O corte do Keycloak: emissor próprio, service token e sessão em cookie
+# 0032 — Cutting Keycloak: our own issuer, service token and cookie-based session
 
-## Contexto
+## Context
 
-O [ADR 0031](0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) construiu
-o auth first-party **em paralelo** ao Keycloak: argon2id, access token EdDSA,
-rotação de refresh com detecção de reuso, lockout, tokens de conta. Ficou
-pronto, testado e sem nenhum consumidor — o `JwtAuthGuard` global continuava
-validando token do Keycloak, e as rotas de `/auth/*` existiam sem que ninguém
-as usasse.
+[ADR 0031](0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) built
+first-party auth **in parallel** with Keycloak: argon2id, an EdDSA access
+token, refresh rotation with reuse detection, lockout, account tokens. It
+was finished, tested, and had no consumer at all — the global `JwtAuthGuard`
+was still validating Keycloak tokens, and the `/auth/*` routes existed
+without anyone using them.
 
-Este ADR registra o corte: a troca do emissor, a substituição do
-client-credentials no tráfego interno, o login próprio na web e a remoção do
-Keycloak de compose, manifests, scripts e docs.
+This ADR records the cut: swapping the issuer, replacing client-credentials
+in internal traffic, first-party login on the web app, and removing
+Keycloak from compose, manifests, scripts and docs.
 
-Três descobertas da exploração redefiniram o desenho, e vale registrá-las
-porque cada uma invalidava um plano razoável:
+Three discoveries from the exploration reshaped the design, and they're
+worth recording because each one invalidated a reasonable plan:
 
-1. **Nenhuma decisão de RBAC lê claim de token.** `RolesGuard`,
-   `ResolveEffectiveRoleUseCase` e `decide()` dependem de `request.user.id` e
-   de linhas no banco; `realm_access` e `resource_access` nunca foram
-   consumidos. A matriz de permissões é estruturalmente imune à troca de
-   emissor — o que transformou o critério "matriz idêntica" de um trabalho de
-   auditoria numa verificação barata.
-2. **`request.clientId` era o único claim que sobrevivia até a autorização.**
-   Ele vinha do `azp` do Keycloak e governava duas coisas: o
-   `EngineServiceGuard` das 26 rotas `/internal/*` e a isenção de rate limit do
-   engine. O token first-party não tem `azp`, e sem tratar isso o corte
-   fecharia as 26 rotas de uma vez.
-3. **Reaproveitar o `SyncUserUseCase` daria 500, não 401.** O `sub` do token
-   novo é o próprio `users.id`, mas `upsertFromKeycloak` faz conflito em
-   `keycloak_sub` — a inserção violaria `users_email_lower_idx`, e o throw
-   acontece FORA do `try/catch` que envolve só a verificação do token.
+1. **No RBAC decision reads a token claim.** `RolesGuard`,
+   `ResolveEffectiveRoleUseCase` and `decide()` depend on `request.user.id`
+   and rows in the database; `realm_access` and `resource_access` were never
+   consumed. The permission matrix is structurally immune to swapping the
+   issuer — which turned the "identical matrix" criterion from an audit job
+   into a cheap check.
+2. **`request.clientId` was the only claim that survived through to
+   authorization.** It came from Keycloak's `azp` and governed two things:
+   the `EngineServiceGuard` on the 26 `/internal/*` routes, and the engine's
+   rate-limit exemption. The first-party token has no `azp`, and leaving
+   this unhandled would close all 26 routes at once.
+3. **Reusing `SyncUserUseCase` would produce a 500, not a 401.** The new
+   token's `sub` is the `users.id` itself, but `upsertFromKeycloak` conflicts
+   on `keycloak_sub` — the insert would violate `users_email_lower_idx`, and
+   the throw happens OUTSIDE the `try/catch` that wraps only token
+   verification.
 
-## Decisão
+## Decision
 
-### O corte é atômico: não há período de coexistência
+### The cut is atomic: there's no coexistence period
 
-Num único release o emissor troca e o Keycloak sai. Todo mundo é deslogado;
-quem já tinha conta define senha pela primeira vez.
+In a single release the issuer swaps and Keycloak is gone. Everyone is
+logged out; anyone who already had an account sets a password for the first
+time.
 
-A alternativa — o guard aceitando os dois emissores por algumas semanas —
-custaria dois caminhos de sessão na web, duas configurações de rede e dois
-conjuntos de teste, todos precisando funcionar todo dia até alguém decidir
-encerrar. O custo do corte é um logout coletivo anunciado, uma vez; o da
-coexistência é uma dívida sem prazo. Vai como **breaking change** no
-CHANGELOG.
+The alternative — the guard accepting both issuers for a few weeks — would
+cost two session paths on the web app, two network configurations and two
+test suites, all needing to work every single day until someone decides to
+end it. The cost of the cut is one announced, one-time collective logout;
+the cost of coexistence is a debt with no deadline. It goes into the
+CHANGELOG as a **breaking change**.
 
-### O guard lê, não sincroniza
+### The guard reads, it doesn't sync
 
-`FirstPartyTokenVerifier` delega ao `Ed25519AccessTokenIssuer` e devolve
-`{ sub: userId, email }`. O `JwtAuthGuard` passa a `UserRepository.findById`,
-com **401** quando não encontra — um token válido cujo `sub` sumiu é sessão
-órfã (conta apagada dentro da janela de 15 min), e 401 manda o cliente para o
-login em vez de virar alerta de infraestrutura.
+`FirstPartyTokenVerifier` delegates to `Ed25519AccessTokenIssuer` and
+returns `{ sub: userId, email }`. `JwtAuthGuard` now calls
+`UserRepository.findById`, with a **401** when it finds nothing — a valid
+token whose `sub` disappeared is an orphaned session (account deleted
+within the 15-minute window), and 401 sends the client to login instead of
+turning into an infrastructure alert.
 
-`SyncUserUseCase`, `upsertFromKeycloak` e `KeycloakTokenVerifier` foram
-**removidos**. Some uma escrita no banco por requisição autenticada.
+`SyncUserUseCase`, `upsertFromKeycloak` and `KeycloakTokenVerifier` were
+**removed**. One database write per authenticated request goes away.
 
-`users.keycloak_sub` **fica** nesta entrega. É a única evidência de
-procedência que resta, e é o que o script de migração usa para distinguir
-"conta migrada esperando senha" de "registro abandonado". A migração que a
-remove vem depois de o corte assentar.
+`users.keycloak_sub` **stays** in this delivery. It's the only remaining
+evidence of provenance, and it's what the migration script uses to tell
+"migrated account waiting for a password" apart from "abandoned record."
+The migration that removes it comes after the cut has settled.
 
-### `/internal/*` sai do JWT
+### `/internal/*` moves off the JWT
 
-Novo decorator `@ServiceRoute()`, honrado pelo `JwtAuthGuard` (não exige
-Bearer) e pelo `RateLimitGuard` (isenta). A isenção precisa vir do **metadado**
-e não de um guard: `RateLimitGuard` é `APP_GUARD` e roda antes de qualquer
-guard de controller, então quando ele decide o `EngineServiceGuard` ainda não
-rodou.
+New `@ServiceRoute()` decorator, honored by `JwtAuthGuard` (no Bearer
+required) and by `RateLimitGuard` (exempted). The exemption has to come from
+the **metadata**, not from a guard: `RateLimitGuard` is `APP_GUARD` and runs
+before any controller guard, so by the time it decides, `EngineServiceGuard`
+hasn't run yet.
 
-`EngineServiceGuard` **manteve o nome da classe** e trocou o corpo: valida
-`X-Brabo-Service-Token` em tempo constante. Manter o nome não é apego — é o
-que faz o `route-surface.spec.ts` continuar classificando as 26 rotas como
-`engine-service`, e o que evita 26 linhas de churn em
-`docs/security-surface.md` escondendo, no meio do diff, qualquer mudança real
-de exposição.
+`EngineServiceGuard` **kept the class name** and swapped the body: it now
+validates `X-Brabo-Service-Token` in constant time. Keeping the name isn't
+sentimentality — it's what keeps `route-surface.spec.ts` classifying the 26
+routes as `engine-service`, and what avoids 26 lines of churn in
+`docs/security-surface.md` hiding, in the middle of the diff, any real
+change in exposure.
 
-`request.clientId` foi **removido** de `AuthenticatedRequest`. Sem `azp` e sem
-consumidor, um campo de identidade que nunca vale nada é um convite a alguém
-reintroduzi-lo numa checagem de autorização.
+`request.clientId` was **removed** from `AuthenticatedRequest`. Without
+`azp` and without a consumer, an identity field that's never worth anything
+is an invitation for someone to reintroduce it into an authorization check.
 
-**Um segredo, `BRABO_SERVICE_TOKEN`, nos dois sentidos.** Dois segredos
-separados limitariam o estrago de um vazamento a uma direção — mas as duas
-pontas rodam no mesmo cluster, são implantadas juntas e leem o mesmo Secret:
-quem lê um lê o outro. O segundo daria a impressão de compartimentar sem
-compartimentar nada, dobrando o que precisa ser rotacionado em sincronia.
-`BRABO_SERVICE_TOKEN_PREVIOUS` é aceito só na verificação, então as duas
-pontas podem ser atualizadas em qualquer ordem.
+**One secret, `BRABO_SERVICE_TOKEN`, in both directions.** Two separate
+secrets would limit the blast radius of a leak to one direction — but both
+ends run in the same cluster, are deployed together, and read the same
+Secret: whoever reads one reads the other. A second secret would give the
+impression of compartmentalizing without actually compartmentalizing
+anything, while doubling what needs to be rotated in sync.
+`BRABO_SERVICE_TOKEN_PREVIOUS` is accepted only during verification, so both
+ends can be updated in any order.
 
-Cabeçalho próprio em vez de `Authorization: Bearer` porque naquele cabeçalho
-"JWT de usuário" é o significado estabelecido no resto da api, e a ambiguidade
-levaria alguém a mandar o token de serviço para uma rota de usuário.
+A dedicated header instead of `Authorization: Bearer` because in the rest of
+the api that header's established meaning is "user JWT," and the ambiguity
+would lead someone to send the service token to a user route.
 
-Do lado Elixir: `VerifyServiceToken` substitui `VerifyApiToken` **preservando o
-contrato de 401 + JSON + `halt()`** (três asserções de `route_surface_test.exs`
-dependem disso), as oito montagens de header viram uma, e caem `joken`,
-`joken_jwks`, `jose` e `tesla`.
+On the Elixir side: `VerifyServiceToken` replaces `VerifyApiToken`
+**preserving the 401 + JSON + `halt()` contract** (three assertions in
+`route_surface_test.exs` depend on it), the eight header-building call sites
+collapse into one, and `joken`, `joken_jwks`, `jose` and `tesla` are
+dropped.
 
-### A sessão da web vive em cookie httpOnly
+### The web session lives in an httpOnly cookie
 
-`POST /auth/login` deixa de devolver `refreshToken` no corpo. O refresh vai
-num cookie `httpOnly`, `SameSite=Strict`, `Path=/auth`, `Secure` em produção;
-o access token continua em memória JS e no `Authorization: Bearer`.
+`POST /auth/login` no longer returns `refreshToken` in the body. The
+refresh token travels in an `httpOnly` cookie, `SameSite=Strict`,
+`Path=/auth`, `Secure` in production; the access token stays in JS memory
+and in the `Authorization: Bearer` header.
 
-Devolver o refresh **também** no corpo anularia a proteção inteira: bastaria
-um XSS ler a resposta do login. E era o que aconteceria com a alternativa
-óbvia — `localStorage` —, com o agravante de que o XSS levaria a sessão longa
-(30 dias de família), não os 15 minutos do access.
+Returning the refresh token in the body **too** would void the whole
+protection: a single XSS reading the login response would be enough. And
+that's exactly what would happen with the obvious alternative —
+`localStorage` — with the aggravating factor that the XSS would grab the
+long session (30-day family), not the access token's 15 minutes.
 
-Manter o access token FORA do cookie é o que evita exigir CSRF em toda rota
-autenticada: só as de `/auth/*` precisam.
+Keeping the access token OUT of the cookie is what avoids requiring CSRF
+protection on every authenticated route — only the `/auth/*` ones need it.
 
-**CSRF por double-submit, mesmo com `SameSite=Strict`.** O atributo sozinho já
-impede o browser de anexar o cookie numa requisição partindo de outro site, o
-que fecha o CSRF nestas rotas. A segunda camada paga por três coisas que ele
-não cobre: browser que ignora o atributo, um subdomínio comprometido (que é
-"same site" para efeito de cookie), e o dia em que alguém precisar afrouxar
-para `Lax` por causa de um fluxo de redirect. O par é um cookie legível por JS
-(`brabo_csrf`) ecoado em `X-CSRF-Token`: quem está em outra origem não
-consegue LER o cookie, então não consegue montar o cabeçalho.
+**CSRF via double-submit, even with `SameSite=Strict`.** The attribute
+alone already stops the browser from attaching the cookie to a request
+originating from another site, which closes CSRF on these routes. The
+second layer pays for three things it doesn't cover: a browser that ignores
+the attribute, a compromised subdomain (which counts as "same site" for
+cookie purposes), and the day someone needs to relax it to `Lax` because of
+a redirect flow. The pair is a JS-readable cookie (`brabo_csrf`) echoed
+back in `X-CSRF-Token`: anyone on a different origin can't READ the cookie,
+so they can't build the header.
 
-A falha de CSRF é **403, não 401**: 401 diria "sua credencial não serve" e o
-cliente tentaria renovar a sessão, entrando em laço.
+A CSRF failure is **403, not 401**: 401 would say "your credential is no
+good" and the client would try to refresh the session, entering a loop.
 
-### Refresh em single-flight é requisito, não otimização
+### Single-flight refresh is a requirement, not an optimization
 
-O ADR 0031 já havia registrado isso, e aqui ele foi implementado: uma única
-promessa em voo compartilhada por todos os chamadores.
+ADR 0031 had already flagged this, and here it was implemented: a single
+in-flight promise shared by every caller.
 
-Sem ele o sistema desloga o usuário pelo uso normal. Duas chamadas que levem
-401 ao mesmo tempo disparariam dois refreshes; o segundo apresentaria um token
-que o primeiro já consumiu — que, do lado do servidor, é a assinatura EXATA de
-um roubo. A família é revogada e o usuário volta para o login por ter aberto
-duas requisições em paralelo.
+Without it the system logs the user out through normal use. Two calls
+hitting 401 at the same time would trigger two refreshes; the second one
+would present a token the first one had already consumed — which, on the
+server side, is the EXACT signature of theft. The family gets revoked and
+the user is sent back to login for having opened two requests in parallel.
 
-### O usuário migrado não é distinguível
+### The migrated user isn't distinguishable
 
-O login de uma conta importada do Keycloak (existe em `users`, sem linha em
-`auth_credentials`) responde o **401 uniforme**, idêntico ao de e-mail
-inexistente, e dispara em silêncio o link de "definir senha".
+Logging in with an account imported from Keycloak (exists in `users`, no
+row in `auth_credentials`) responds with the **uniform 401**, identical to
+a non-existent email, and silently fires off the "set your password" link.
 
-Responder um `password_pending` explícito seria a UX óbvia e está descartado:
-confirmaria que o endereço existe **e** que é conta legada — o sinal de
-enumeração mais valioso do sistema, e exatamente o que a
-[RN-032](../business-rules.md#rn-032) fecha.
+Responding with an explicit `password_pending` would be the obvious UX
+choice, and it's rejected: it would confirm both that the address exists
+**and** that it's a legacy account — the most valuable enumeration signal
+in the system, and exactly what [RN-032](../business-rules/autenticacao.md#rn-032)
+closes.
 
-Para o custo ser igual nos três desfechos, `findByEmail` virou um LEFT JOIN de
-`users` para `auth_credentials`: uma consulta só. Duas consultas encadeadas
-fariam o ramo pendente pagar uma ida a mais ao banco, e o relógio distinguiria
-conta migrada de e-mail que não existe.
+For the cost to be the same across all three outcomes, `findByEmail` became
+a LEFT JOIN from `users` to `auth_credentials`: a single query. Two
+chained queries would make the pending branch pay for one extra database
+round trip, and the clock would tell a migrated account apart from an email
+that doesn't exist.
 
-"Pendente" é estado **derivado**, não coluna: não há `password_pending` para
-dessincronizar, e a idempotência do script de migração sai de graça.
+"Pending" is a **derived** state, not a column: there's no
+`password_pending` to fall out of sync, and the migration script's
+idempotency comes for free.
 
-### A migração não conecta no Keycloak
+### The migration doesn't connect to Keycloak
 
-Porque não há o que importar. O `JwtAuthGuard` fazia upsert de todo usuário em
-`users` a cada requisição desde a Fase 1 — id, e-mail e os vínculos de RBAC
-sempre estiveram no banco da api. O Keycloak nunca foi a fonte da verdade do
-RBAC; era o emissor do token. O que falta a essas contas é uma senha, que ele
-também não daria (hash de senha não migra, decisão do CLAUDE.md).
+Because there's nothing to import. `JwtAuthGuard` had been upserting every
+user into `users` on every single request since Phase 1 — id, email, and
+RBAC bindings had always lived in the api's database. Keycloak was never
+the source of truth for RBAC; it was the token issuer. What these accounts
+are missing is a password, which Keycloak wouldn't provide either (password
+hashes don't migrate, per CLAUDE.md).
 
-## Consequências
+## Consequences
 
-**Todo mundo é deslogado no release.** É o preço declarado do corte atômico, e
-está no CHANGELOG como mudança incompatível.
+**Everyone gets logged out on release.** It's the declared price of the
+atomic cut, and it's in the CHANGELOG as a breaking change.
 
-**Os links de "definir senha" saem no log da api, não em caixa de entrada.** O
-`MailSender` segue log-only, e SMTP real continua sendo config futura. Para a
-instalação de dono único isso basta; o runbook explica como extraí-los com
-`AUTH_MAIL_LOG_TOKENS=true`. É a limitação mais visível desta entrega.
+**"Set your password" links go out to the api's log, not to an inbox.**
+`MailSender` stays log-only, and real SMTP remains future configuration.
+For a single-owner install this is enough; the runbook explains how to
+extract them with `AUTH_MAIL_LOG_TOKENS=true`. It's the most visible
+limitation of this delivery.
 
-**Rotacionar `AUTH_TOKEN_PEPPER` ou `BRABO_SERVICE_TOKEN` tem efeitos opostos e
-igualmente abruptos.** O primeiro desloga todo mundo e invalida os links em
-aberto; o segundo, se feito só de um lado, corta o tráfego interno. Os dois
-estão no runbook, com o `_PREVIOUS` documentado como a forma de fazer sem
-downtime.
+**Rotating `AUTH_TOKEN_PEPPER` or `BRABO_SERVICE_TOKEN` has opposite and
+equally abrupt effects.** The first logs everyone out and invalidates any
+open links; the second, if done on only one side, cuts internal traffic.
+Both are in the runbook, with `_PREVIOUS` documented as the way to do it
+without downtime.
 
-**A web não pode dizer "esse e-mail já está em uso".** Consequência herdada do
-ADR 0031, agora com tela: o formulário diz "se o endereço estiver disponível".
+**The web app can't say "that email is already in use."** A consequence
+inherited from ADR 0031, now with a screen behind it: the form says "if the
+address is available."
 
-**O smoke test depende de um usuário provisionado.** Sem IdP externo não existe
-mais credencial pronta, e registrar pela API esbarra na verificação de e-mail.
-O `bootstrap.sh` roda o seed, que cria uma conta com senha conhecida e e-mail
-já verificado — e `provisionarUsuario` **recusa rodar com
-`NODE_ENV=production`** sem override explícito. É ferramenta de
-desenvolvimento, e está marcada como tal no código.
+**The smoke test depends on a provisioned user.** Without an external IdP
+there's no longer a ready-made credential, and registering through the API
+runs into email verification. `bootstrap.sh` runs the seed, which creates
+an account with a known password and an already-verified email — and
+`provisionarUsuario` **refuses to run with `NODE_ENV=production`** without
+an explicit override. It's a development tool, and is marked as such in the
+code.
 
-**`users.keycloak_sub` continua no schema** sem nenhum emissor por trás. É
-dívida consciente, com propósito (§ decisão) e com prazo: a migração que a
-remove entra depois de o corte assentar.
+**`users.keycloak_sub` stays in the schema** with no issuer behind it
+anymore. It's conscious debt, with a purpose (§ decision) and a deadline:
+the migration that removes it lands after the cut has settled.
 
-**A superfície pública não mudou.** Continuam 12 rotas, e as 26
-`engine-service` continuam 26 — `route-surface.spec.ts` fechou com diff vazio,
-que era o resultado esperado e a prova de que o contrato dos controllers não
-foi tocado.
+**The public surface hasn't changed.** Still 12 routes, and the 26
+`engine-service` ones are still 26 — `route-surface.spec.ts` closed with an
+empty diff, which was the expected result and the proof that the
+controllers' contract wasn't touched.
 
-### O que foi verificado, e o que não foi
+### What was verified, and what wasn't
 
-A matriz de RBAC é provada por três travas: `decide.spec.ts` (24 casos) e
-`resolve-effective-role.use-case.spec.ts` seguiram **inalterados e verdes**;
-`route-surface.spec.ts` fechou com diff vazio; e dois specs novos —
-`roles.guard.spec.ts`, com a matriz 4×4 escrita por extensão, e
-`jwt-auth.guard.spec.ts`, que afirma que nenhuma linha nova aparece em `users`
-— cobrem o salto identidade → `user.id`, que não tinha teste nenhum antes e é
-o único ponto que o corte mexe.
+The RBAC matrix is proven by three locks: `decide.spec.ts` (24 cases) and
+`resolve-effective-role.use-case.spec.ts` stayed **unchanged and green**;
+`route-surface.spec.ts` closed with an empty diff; and two new specs —
+`roles.guard.spec.ts`, with the 4×4 matrix written out by extension, and
+`jwt-auth.guard.spec.ts`, which asserts no new row appears in `users` —
+cover the identity → `user.id` jump, which had no test at all before and is
+the only point the cut touches.
 
-**A suíte do engine não foi executada nesta entrega.** O ambiente de
-desenvolvimento usado não alcança `hex.pm` (bloqueio de política de rede), e
-sem `mix deps.get` não há `mix compile` nem `mix test`. O código Elixir foi
-escrito e verificado por análise sintática de cada arquivo alterado; a
-execução real acontece no CI, que tem rede. Está registrado aqui em vez de
-omitido porque é exatamente o tipo de lacuna que o ADR 0020 mandou nunca
-diagnosticar por eliminação.
+**The engine's test suite wasn't run in this delivery.** The development
+environment used can't reach `hex.pm` (network policy block), and without
+`mix deps.get` there's no `mix compile` or `mix test`. The Elixir code was
+written and verified by syntactic analysis of every changed file; the real
+run happens in CI, which has network access. It's recorded here instead of
+omitted because it's exactly the kind of gap ADR 0020 said never to
+diagnose by elimination.
 
-### Backlog consciente (reafirmado)
+### Conscious backlog (reaffirmed)
 
-Segue fora de escopo, agora com o corte feito: **MFA** (TOTP, WebAuthn),
-**login social**, **federação OIDC** e a **api como provedor OIDC**. Somam-se:
-SMTP real, dicionário de senhas vazadas, re-hash oportunista do argon2, a
-poda das tabelas de auth e a migração que remove `users.keycloak_sub`.
+Still out of scope, now with the cut done: **MFA** (TOTP, WebAuthn),
+**social login**, **OIDC federation** and the **api as an OIDC provider**.
+Added to that: real SMTP, a breached-password dictionary, opportunistic
+argon2 re-hashing, pruning the auth tables, and the migration that removes
+`users.keycloak_sub`.
 
-A claim de versão de credencial — que tornaria o access token revogável — fica
-anotada com um detalhe novo: o `JwtAuthGuard` **deixou** de fazer escrita por
-requisição neste corte, então o argumento "já vai ao banco mesmo" que a
-tornaria barata não vale mais. Se voltar à mesa, volta pelo próprio mérito.
+The credential-version claim — which would make the access token revocable
+— stays noted with a new detail: `JwtAuthGuard` **stopped** writing on
+every request as part of this cut, so the argument "it already hits the
+database anyway," which would have made it cheap, no longer holds. If it
+comes back to the table, it comes back on its own merits.

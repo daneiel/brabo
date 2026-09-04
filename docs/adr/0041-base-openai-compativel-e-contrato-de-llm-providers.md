@@ -1,181 +1,191 @@
-# 0041 — Uma base OpenAI-compatível, um contrato de LLM providers e capabilities que recusam binding
+# 0041 — An OpenAI-compatible base, an LLM provider contract, and capabilities that refuse a binding
 
-## Contexto
+## Context
 
-A Fase 9 vai acrescentar seis providers de LLM (NVIDIA NIM, Deep Infra,
-Together AI, Bitdeer AI, Vultr e OpenRouter). Antes de escrever o primeiro, a
-exploração do que já existia mostrou que a fundação não sustentava nem os três
-atuais:
+Phase 9 will add six new LLM providers (NVIDIA NIM, Deep Infra, Together
+AI, Bitdeer AI, Vultr and OpenRouter). Before writing the first one,
+exploring what already existed showed the foundation didn't even hold up
+the three current ones:
 
-1. **O `OpenAIProvider` descartava `options.tools` em silêncio.** Cinquenta e
-   quatro linhas, o SDK `openai`, e um comentário no próprio arquivo admitindo
-   que tool calling "não é suportado neste provider ainda". Quem vinculasse um
-   modelo da OpenAI a um agente veria o ToolLoop terminar sem conclusão — o
-   mesmo sintoma que o [ADR 0020](0020-destravar-gates-qa-secops.md) levou nove
-   execuções para diagnosticar.
-2. **Não existia teste nenhum de `OpenAIProvider` nem de `AnthropicProvider`.**
-   O único provider testado era o Ollama, e só no transporte.
-3. **Não existia taxonomia de erro de LLM.** Os três providers faziam
-   `yield { type: 'error', message: (error as Error).message }`. Chave expirada,
-   rate limit e modelo inexistente chegavam ao usuário como a mesma string
-   opaca do vendor. O lado git resolveu isso no
-   [ADR 0002](0002-git-error-normalization.md) e a lição nunca atravessou.
-4. **`models` não tinha capabilities e `LLMProvider` não tinha `capabilities`**
-   — diferente do `GitProviderContract`, que carrega as suas desde a Fase 2.
-   Qualquer modelo podia ser vinculado a qualquer agente.
-5. **Não existia suite de contrato de LLM**, embora a de git
-   (`test/contract/git-provider.contract.ts`) esteja no CLAUDE.md como
-   convenção do projeto desde o [ADR 0001](0001-git-provider-contract-shape.md).
+1. **`OpenAIProvider` silently dropped `options.tools`.** Fifty-four lines,
+   the `openai` SDK, and a comment in the file itself admitting that tool
+   calling "isn't supported by this provider yet". Whoever bound an OpenAI
+   model to an agent would see the ToolLoop end without a conclusion — the
+   same symptom that took nine executions to diagnose in
+   [ADR 0020](0020-destravar-gates-qa-secops.md).
+2. **There was no test at all for `OpenAIProvider` or `AnthropicProvider`.**
+   The only tested provider was Ollama, and only at the transport level.
+3. **There was no LLM error taxonomy.** All three providers did
+   `yield { type: 'error', message: (error as Error).message }`. An expired
+   key, a rate limit and a nonexistent model all reached the user as the
+   same opaque vendor string. The git side solved this in
+   [ADR 0002](0002-git-error-normalization.md) and the lesson never crossed
+   over.
+4. **`models` had no capabilities and `LLMProvider` had no `capabilities`**
+   — unlike `GitProviderContract`, which has carried its own since Phase 2.
+   Any model could be bound to any agent.
+5. **There was no LLM contract suite**, even though the git one
+   (`test/contract/git-provider.contract.ts`) has been in CLAUDE.md as a
+   project convention since [ADR 0001](0001-git-provider-contract-shape.md).
 
-Seis providers novos sobre essa base multiplicariam os cinco problemas por seis.
+Six new providers on top of that foundation would multiply the five
+problems by six.
 
-## Decisão
+## Decision
 
-### A base fala `node:http`, não o SDK
+### The base speaks `node:http`, not the SDK
 
-`OpenAICompatibleProvider` implementa o dialeto `/chat/completions` uma vez, e
-implementa sobre `node:http` cru — não sobre o SDK `openai`, que sai do
-`package.json`.
+`OpenAICompatibleProvider` implements the `/chat/completions` dialect once,
+and implements it over raw `node:http` — not over the `openai` SDK, which
+leaves `package.json`.
 
-O motivo é o item que o escopo da fase pede e o SDK não entrega: **timeout de
-inatividade**. O SDK fala `fetch`, cujo timeout é da requisição inteira; o que
-precisamos é derrubar o socket quando ele fica QUIETO, valendo tanto para
-"ainda não mandou os headers" quanto para "parou de mandar chunks no meio do
-stream". É exatamente a distinção que o ADR 0020 caçou, e o `postStream` que
-ele escreveu para o Ollama foi extraído para `infrastructure/llm/http-stream.ts`
-e passou a servir os dois.
+The reason is the item the phase scope requires and the SDK doesn't
+deliver: **idle timeout**. The SDK speaks `fetch`, whose timeout is for the
+whole request; what we need is to drop the socket when it goes QUIET,
+whether that means "hasn't sent the headers yet" or "stopped sending
+chunks midstream". That's exactly the distinction ADR 0020 hunted down,
+and the `postStream` it wrote for Ollama was extracted into
+`infrastructure/llm/http-stream.ts` and now serves both.
 
-O ganho colateral é que as particularidades por provider viram flags de
-configuração (`baseUrl`, header de auth, `streamOptionsIncludeUsage`,
-`maxTokensField`) em vez de esbarrarem no que o SDK deixa configurar. Cada flag
-existe porque um provider real diverge — a regra é não acrescentar flag sem um
-provider que precise dela, e a Fase 9b confirma cada uma na doc oficial durante
-a implementação.
+The side benefit is that per-provider quirks become config flags
+(`baseUrl`, auth header, `streamOptionsIncludeUsage`, `maxTokensField`)
+instead of running into what the SDK lets you configure. Each flag exists
+because a real provider diverges — the rule is: don't add a flag without a
+provider that needs it, and Phase 9b confirms each one against the
+official docs while implementing it.
 
-### O erro normalizado vai no chunk, com `code` obrigatório
+### The normalized error goes in the chunk, with a mandatory `code`
 
-`ChatErrorChunk` ganhou `code: LLMErrorCode`, e a taxonomia virou classes em
-`domain/llm/llm-provider-errors.ts`. O campo é **obrigatório**, não opcional:
-com campo opcional, um provider novo esquece de classificar e o erro dele volta
-a ser string opaca sem ninguém perceber.
+`ChatErrorChunk` gained `code: LLMErrorCode`, and the taxonomy became
+classes in `domain/llm/llm-provider-errors.ts`. The field is
+**mandatory**, not optional: with an optional field, a new provider
+forgets to classify and its error goes back to being an opaque string
+without anyone noticing.
 
 | status | `code` |
 | --- | --- |
 | 401, 403 | `auth` |
 | 404 | `model_not_found` |
 | 429 | `rate_limit` |
-| 413, ou 400 com marcador de contexto | `context_length` |
-| socket mudo | `timeout` |
-| não conectou | `connection` |
-| resto | `upstream` |
+| 413, or 400 with a context marker | `context_length` |
+| mute socket | `timeout` |
+| didn't connect | `connection` |
+| everything else | `upstream` |
 
-Diferente de `git-errors.ts`, que é um conjunto de classes avulsas, aqui há uma
-classe-base: o destino do erro não é um filtro HTTP com status por tipo, é a
-conversão para `ChatErrorChunk`. Quem converte precisa de um ponto único que
-sempre expõe `code` e `message`.
+Unlike `git-errors.ts`, which is a set of standalone classes, here there's
+a base class: the error's destination isn't an HTTP filter with a status
+per type, it's the conversion to `ChatErrorChunk`. Whoever converts needs a
+single point that always exposes `code` and `message`.
 
-### Capabilities em duas camadas, e um binding que é recusado
+### Capabilities in two layers, and a binding that gets rejected
 
-`LLMProvider` ganhou `capabilities` (o TETO do backend) e `models` ganhou três
-colunas `supports_*` (o que aquele modelo específico sabe). Um modelo pode ser
-mais pobre que o provider, nunca mais rico.
+`LLMProvider` gained `capabilities` (the backend's CEILING) and `models`
+gained three `supports_*` columns (what that specific model knows). A
+model can be poorer than the provider, never richer.
 
-Colunas discretas, não um `jsonb`: o filtro "aptos para agentes" da Fase 9c
-precisa ser um `WHERE`, e uma capability sem coluna é uma capability que
-ninguém consegue consultar.
+Discrete columns, not a `jsonb`: Phase 9c's "fit for agents" filter needs
+to be a `WHERE`, and a capability without a column is a capability nobody
+can query.
 
-Sobre isso vem a regra nova ([RN-040](../business-rules.md#rn-040)):
-`assertModelFitsBindingScope` recusa vincular a um **agente** um modelo sem
-tool calling nativo, com mensagem que aponta o filtro que o usuário precisa
-usar. Só o escopo `agent` valida — `workspace` e `project` são o fallback do
-chat humano, e travá-los proibiria modelo chat-only no produto inteiro.
+On top of this comes a new rule
+([RN-040](../business-rules/custo.md#rn-040)): `assertModelFitsBindingScope`
+refuses to bind a model without native tool calling to an **agent**, with a
+message pointing to the filter the user needs to use. Only the `agent`
+scope validates — `workspace` and `project` are the fallback for human
+chat, and locking them down would ban chat-only models from the whole
+product.
 
-O `ToolCallRecovery` do engine continua existindo e continua sendo **resgate,
-não licença**: ele depende de o modelo acertar o formato por acaso e falha em
-silêncio quando não acerta. Escolher esse acaso de propósito é o que a regra
-recusa.
+The engine's `ToolCallRecovery` keeps existing and keeps being a
+**rescue, not a license**: it depends on the model getting the format
+right by chance and fails silently when it doesn't. Choosing that chance
+on purpose is what the rule refuses.
 
-**Correção de premissa do escopo:** `context-manager` não é um escopo de
-binding — é um slug de agente sob `scope='agent'` (ADR 0007). A regra o cobre
-por construção, sem enum novo.
+**A scope premise correction:** `context-manager` isn't a binding scope —
+it's an agent slug under `scope='agent'` (ADR 0007). The rule covers it by
+construction, with no new enum.
 
-### O contrato é dono das asserções; o harness, do dialeto
+### The contract owns the assertions; the harness owns the dialect
 
-`test/contract/llm-provider.contract.ts` roda a mesma bateria contra qualquer
-`LLMProvider`. O harness de cada provider traduz nove cenários para o seu
-formato de fio, e herda os testes: stream com frame partido entre dois
-`res.write`, usage presente e ausente, tool calling, os quatro erros, e o
-servidor mudo.
+`test/contract/llm-provider.contract.ts` runs the same battery against any
+`LLMProvider`. Each provider's harness translates nine scenarios into its
+own wire format, and inherits the tests: a stream with a frame split
+across two `res.write`s, usage present and absent, tool calling, the four
+errors, and the mute server.
 
-O servidor falso é um `node:http` de verdade em porta efêmera — o molde do
-teste do Ollama da Fase 4 — e não um mock de `fetch`. O que está sob teste é
-justamente o comportamento de socket; um mock responderia bonitinho e não
-provaria nada.
+The fake server is a real `node:http` on an ephemeral port — the mold from
+Ollama's Phase 4 test — not a `fetch` mock. What's under test is precisely
+socket behavior; a mock would respond nicely and prove nothing.
 
-Um provider da Fase 9b passa a nascer com trinta asserções sem escrever
-nenhuma.
+A Phase 9b provider now gets born with thirty assertions without writing a
+single one.
 
-### O Anthropic ganhou tool calling e ficou no SDK
+### Anthropic gained tool calling and stayed on the SDK
 
-O Anthropic não fala `/chat/completions`, então não deriva da base. Ganhou tool
-calling nativo (blocos `tool_use`, e mensagens `role: 'tool'` viram
-`tool_result` agrupados num turno de `user` — o formato exige que resultados de
-chamadas paralelas venham no mesmo turno), erros normalizados por status, e o
-teto de inatividade via `withIdleTimeout`, que envolve o gerador do SDK e
-rearma um relógio a cada evento.
+Anthropic doesn't speak `/chat/completions`, so it doesn't derive from the
+base. It gained native tool calling (`tool_use` blocks, and `role: 'tool'`
+messages become grouped `tool_result`s in a `user` turn — the format
+requires that results of parallel calls arrive in the same turn),
+normalized status-based errors, and the idle-timeout ceiling via
+`withIdleTimeout`, which wraps the SDK's generator and rearms a clock on
+every event.
 
-## Consequências
+## Consequences
 
-### Divergências que ficaram documentadas em vez de escondidas
+### Divergences that stayed documented instead of hidden
 
-O contrato tem um eixo parametrizado por harness — `usageFallback` — porque os
-três dialetos respondem coisas diferentes à mesma pergunta:
+The contract has an axis parameterized by harness — `usageFallback` —
+because the three dialects answer the same question differently:
 
-- a **base compatível** conta com o tokenizer local e marca `estimated: true`;
-- o **Ollama** não emite `usage` nenhum (sem a linha `done` não há o que reportar);
-- o **Anthropic** não sabe omitir contagem — `usage` é obrigatório no
-  `message_start`, e um cenário "sem usage" ali seria protocolo inválido.
+- the **compatible base** relies on the local tokenizer and marks
+  `estimated: true`;
+- **Ollama** emits no `usage` at all (without the `done` line there's
+  nothing to report);
+- **Anthropic** can't omit the count — `usage` is mandatory in
+  `message_start`, and a "no usage" scenario there would be invalid
+  protocol.
 
-Esconder isso num teste único que só verifica "tem ou não tem usage" custaria a
-distinção entre "o provider disse zero" e "o provider não disse nada" — que é
-exatamente o que a marca `estimated` existe para carregar.
+Hiding this in a single test that only checks "has usage or not" would
+cost the distinction between "the provider said zero" and "the provider
+said nothing" — which is exactly what the `estimated` flag exists to
+carry.
 
-### Custos aceitos
+### Accepted costs
 
-- **O `OpenAIProvider` trocou de transporte.** Não é "só mover código": saiu do
-  SDK e passou a fazer parsing de SSE próprio. Como não havia teste nenhum dele
-  antes, a migração foi validada pela suite de contrato nova, não por testes
-  preexistentes. Em compensação, o parsing agora é exercitado por trinta
-  asserções e por uma mutação verificada: derrubar o envio de `tools` faz o
-  contrato falhar.
-- **Uma asserção de teste existente mudou.** O
-  `ollama-provider.spec.ts` comparava o chunk de erro com `toEqual` exato; a
-  chave `code` a mais quebra isso. Uma linha.
-- **Quatro fakes de teste ganharam `capabilities`.** `capabilities` no port é
-  abstrato, então os `FakeProvider`/`ThrowingProvider` das use-cases precisaram
-  declarar. Sem isso ficariam com tipo inválido e passando — o `tsconfig.build`
-  exclui `test/` e o vitest usa SWC sem typecheck, ou seja, o erro seria mudo.
-- **O backfill da migração é uma lista literal de sete modelos.** Um `UPDATE`
-  cego seria mais simples e mentiria sobre qualquer modelo que o operador tenha
-  inserido por SQL — o default `false` precisa continuar valendo para quem não
-  foi verificado.
+- **`OpenAIProvider` changed transport.** It's not "just moving code": it
+  left the SDK and did its own SSE parsing. Since there was no test for it
+  before, the migration was validated by the new contract suite, not by
+  pre-existing tests. In exchange, the parsing is now exercised by thirty
+  assertions and by a verified mutation: dropping the `tools` payload
+  makes the contract fail.
+- **One existing test assertion changed.** `ollama-provider.spec.ts`
+  compared the error chunk with an exact `toEqual`; the extra `code` key
+  breaks that. One line.
+- **Four test fakes gained `capabilities`.** `capabilities` on the port is
+  abstract, so `FakeProvider`/`ThrowingProvider` in the use cases needed
+  to declare it. Without it they'd have an invalid type and still pass —
+  `tsconfig.build` excludes `test/` and vitest uses SWC without
+  typechecking, meaning the error would be silent.
+- **The migration backfill is a literal list of seven models.** A blind
+  `UPDATE` would be simpler and would lie about any model the operator
+  inserted via SQL — the `false` default needs to keep holding for
+  whatever hasn't been verified.
 
-### O que continua aberto
+### What remains open
 
-- **`brabo_llm_call_errors_total` praticamente não dispara.** O
-  `TracedLLMProvider` só incrementa em exceção *lançada*, e os providers
-  *yieldam* chunk de erro em vez de lançar. Agora que o erro tem `code`, o
-  contador poderia ganhar um rótulo de motivo e passar a contar de verdade —
-  mas isso é mexer em observabilidade de fase concluída sem pedido, e fica
-  registrado aqui em vez de feito de passagem.
-- **`supports_vision` está na tabela e não é usado por ninguém.** Entrou porque
-  o escopo da fase o lista nas capabilities; ganha consumidor no ModelPicker da
-  Fase 9c.
-- **Os seis providers, o `list_models`, o sync de preços e o ModelPicker
-  reagrupado** são 9b e 9c. Esta fase é fundação: nenhum valor novo em
-  `llm_provider` ou `credential_provider`.
+- **`brabo_llm_call_errors_total` barely fires.** `TracedLLMProvider` only
+  increments on a *thrown* exception, and the providers *yield* an error
+  chunk instead of throwing. Now that the error has a `code`, the counter
+  could gain a reason label and start actually counting — but that's
+  touching observability in a phase already closed without being asked to,
+  and it's recorded here instead of done in passing.
+- **`supports_vision` is in the table and nobody uses it.** It went in
+  because the phase scope lists it among the capabilities; it gets a
+  consumer in the ModelPicker in Phase 9c.
+- **The six providers, `list_models`, the price sync and the regrouped
+  ModelPicker** are 9b and 9c. This phase is the foundation: no new value
+  in `llm_provider` or `credential_provider`.
 
-Referencia [ADR 0020](0020-destravar-gates-qa-secops.md), de onde vêm o
-`postStream` e a regra de sempre registrar a origem da falha, e
-[ADR 0002](0002-git-error-normalization.md), cuja normalização de erro este ADR
-finalmente replica do lado do LLM.
+References [ADR 0020](0020-destravar-gates-qa-secops.md), where
+`postStream` and the rule of always recording the origin of a failure come
+from, and [ADR 0002](0002-git-error-normalization.md), whose error
+normalization this ADR finally replicates on the LLM side.

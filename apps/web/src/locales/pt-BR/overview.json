@@ -1,0 +1,99 @@
+{
+  "architectureTab": {
+    "title": "Arquitetura",
+    "emptyState": "Sem arquitetura ainda — o Arquiteto gera o module_map e os ADRs.",
+    "modulesLabel": "Módulos",
+    "modulesLabelVersioned": "Módulos · v{{version}}",
+    "noModules": "Nenhum módulo ainda.",
+    "c4Label": "Diagrama C4",
+    "c4LabelVersioned": "Diagrama C4 · v{{version}}",
+    "c4Empty": "Sem diagrama ainda — o Arquiteto gera o Context + Container a partir do module_map (create_c4_diagram).",
+    "adrsLabel": "ADRs",
+    "noAdrs": "Nenhum ADR proposto ainda.",
+    "pendenciesLabel": "Pendências de validação cruzada",
+    "reasonNoModule": "sem módulo vinculado",
+    "reasonMissingModule": "módulo inexistente: {{missing}}"
+  },
+  "c4": {
+    "titleContext": "Contexto",
+    "titleContainer": "Container",
+    "expandLabel": "Ampliar diagrama {{titulo}}",
+    "expandTitle": "Ampliar",
+    "renderErrorTitle": "Não foi possível desenhar este diagrama.",
+    "viewRawSyntax": "Ver sintaxe Mermaid",
+    "emptyDiagram": "Diagrama vazio.",
+    "invalidSyntax": "Sintaxe Mermaid inválida."
+  },
+  "team": {
+    "title": "Time de agentes",
+    "summary": "{{count}} agentes · {{working}} trabalhando · {{waiting}} aguardando",
+    "autonomyErrorTitle": "Não foi possível mudar a autonomia",
+    "rearmSuccess": "Agente rearmado",
+    "rearmErrorTitle": "Não foi possível rearmar o agente"
+  },
+  "timeline": {
+    "title": "Linha do tempo do time",
+    "description": "Um ramo por agente, do primeiro marco ao que ele está fazendo agora. Quem está ativo, ou entre os 5 mais recentes, abre sozinho — o resto fica a um clique, com a contagem de marcos novos no cabeçalho."
+  },
+  "ambiente": {
+    "title": "Ambiente",
+    "carregando": "verificando…",
+    "codigo": "código",
+    "modos": {
+      "container": "container gerenciado",
+      "mounted": "pasta montada",
+      "runner": "pasta na sua máquina"
+    },
+    "runner": "runner",
+    "runnerConfirmado": "pasta confirmada em {{data}}",
+    "runnerNuncaConfirmado": "pasta ainda não confirmada",
+    "runnerRessalva": "É o registro da confirmação, não um sinal de que o runner está rodando agora — quem sabe do agora é o terminal, na aba Código.",
+    "runnerRessalvaNunca": "Nenhum runner conectou a este projeto ainda. Instale e rode o `brabo-runner` pela aba Código.",
+    "modelosLocais": "modelos locais",
+    "modelosLocaisNenhum": "nenhum modelo do Ollama ativo no workspace",
+    "modelosLocaisValor_one": "{{count}} do Ollama, ativo no workspace",
+    "modelosLocaisValor_other": "{{count}} do Ollama, ativos no workspace"
+  },
+  "activity": {
+    "title": "Atividade",
+    "count": "{{count}} eventos",
+    "loadErrorTitle": "Não foi possível carregar a atividade."
+  },
+  "executionSection": {
+    "title": "Execução",
+    "activationErrorTitle": "Não foi possível saber se a execução já foi ativada.",
+    "introReady": "Ative a execução para os dev agents implementarem o backlog em paralelo.",
+    "introNeedsModuleMap": "Defina o module_map (Arquiteto) antes de ativar a execução.",
+    "activate": "Ativar execução",
+    "devAgentsLabel": "Dev agents",
+    "spinningUp": "Subindo os agentes…",
+    "devAgentModule": "módulo: {{module}}",
+    "devAgentTask": "task: {{task}}",
+    "devAgentProgress": "iteração {{iteration}} · custo {{cost}}",
+    "blockedTasksLabel": "Tasks bloqueadas",
+    "noDiagnosis": "sem diagnóstico",
+    "unblock": "Desbloquear",
+    "suggestionBefore": "Há tarefas independentes em ",
+    "suggestionAfter": " — subir um dev extra?",
+    "accept": "Aceitar",
+    "pullRequestsLabel": "Pull requests",
+    "noPullRequests": "Nenhuma PR aberta ainda.",
+    "pullRequestFallback": "PR",
+    "errorTitle": "Erro",
+    "activateError": "Não foi possível ativar a execução",
+    "unblockError": "Não foi possível desbloquear a task",
+    "authorizationNeededTitle": "Precisa da sua autorização",
+    "authorizationNeededMessage": "A sessão já tem {{count}} agente(s), o teto do lead é {{max}}. O pedido está em Aprovações.",
+    "requestDeniedTitle": "Pedido recusado",
+    "requestError": "Não foi possível pedir"
+  },
+  "architectureSummary": {
+    "title": "Arquitetura",
+    "emptyState": "Sem arquitetura ainda — o Arquiteto gera o module_map e os ADRs.",
+    "summary_one": "{{count}} módulo mapeado, diagrama C4 {{status}}.",
+    "summary_other": "{{count}} módulos mapeados, diagrama C4 {{status}}.",
+    "statusGenerated": "gerado",
+    "statusPending": "pendente",
+    "link": "Ver arquitetura completa →"
+  }
+}

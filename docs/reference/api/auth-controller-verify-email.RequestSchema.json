@@ -1,1 +1,1 @@
-{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"token":{"type":"string","description":"Token de uso único recebido por e-mail."}},"required":["token"],"title":"VerifyEmailDto"}}}}}
+{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"token":{"type":"string","description":"Single-use token received by email."}},"required":["token"],"title":"VerifyEmailDto"}}}}}

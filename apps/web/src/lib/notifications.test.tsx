@@ -66,6 +66,9 @@ const projeto: Project = {
   createdBy: 'user-1',
   maxConsecutiveBlocked: null,
   storyPromotion: 'manual',
+  executionMode: 'container',
+  workspacePath: null,
+  workspaceVerifiedAt: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -81,12 +84,15 @@ function resumo(latestSeq: number): ProjectCardSummary {
     lastEvent: null,
     storiesAwaitingPromotion: 0,
     pendingApprovalsCount: 0,
+    onlineAgentCount: 0,
     roster: {
       executionActivated: false,
       moduleNames: [],
       gatesEverOpened: false,
       delegatedSubagents: [],
       infraActive: false,
+      uxDesignerActive: false,
+      staffActive: false,
     },
   };
 }

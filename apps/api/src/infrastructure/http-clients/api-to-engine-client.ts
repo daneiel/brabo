@@ -3,7 +3,13 @@ import { CABECALHO_SERVICE_TOKEN } from '../../interfaces/http/auth/engine-servi
 import { tokenDeServicoAtual } from '../security/service-token';
 import { injectTraceHeaders } from '../observability/trace-context';
 import { Traced } from '../observability/traced.decorator';
-import { ApiToEngineClient } from '../../application/ports/api-to-engine-client.port';
+import {
+  ApiToEngineClient,
+  RunnerNaoConectadoError,
+  RunnerRecusouContainerError,
+  type ContainerIniciadoViaRunner,
+  type EspecificacaoDeContainerParaRunner,
+} from '../../application/ports/api-to-engine-client.port';
 import type { TerminalExecutionResult } from '../../domain/actions/terminal-execution-result';
 import type { DevAgentImpl } from '../../domain/execution/dev-agent-impl';
 import { AnamneseDisabledError } from '../../domain/anamnese/anamnese-disabled.error';
@@ -28,6 +34,43 @@ function garantirSegmentoDeUrlInterna(valor: string, nome: string): string {
     );
   }
   return valor;
+}
+
+/**
+ * Forma da resposta (SEMPRE 200) de `POST .../containers/{start,stop,remove}`
+ * do engine — ver `EngineWeb.ContainerCommandController`. `motivoCodigo` só
+ * vem preenchido quando o engine nem chegou a perguntar ao runner
+ * (`RunnerRouter.start_container/2` devolveu `{:error, _}`); sucesso falso
+ * SEM `motivoCodigo` é o runner tendo respondido e recusado.
+ */
+interface RespostaDeContainerViaRunner {
+  sucesso: boolean;
+  motivo?: string;
+  motivoCodigo?: 'not_connected' | 'timeout';
+  containerId?: string;
+  nome?: string;
+  jaEstavaDePe?: boolean;
+}
+
+function lancarSeFalhou(
+  corpo: RespostaDeContainerViaRunner,
+  verbo: string,
+): void {
+  if (corpo.sucesso) return;
+
+  if (
+    corpo.motivoCodigo === 'not_connected' ||
+    corpo.motivoCodigo === 'timeout'
+  ) {
+    throw new RunnerNaoConectadoError(
+      corpo.motivoCodigo,
+      corpo.motivo ?? 'nenhum runner conectado a este projeto',
+    );
+  }
+
+  throw new RunnerRecusouContainerError(
+    corpo.motivo ?? `o runner recusou ${verbo} o container`,
+  );
 }
 
 /**
@@ -181,6 +224,29 @@ export class HttpApiToEngineClient implements ApiToEngineClient {
   }
 
   /**
+   * Leitura pura (RN-454) — sem `postCommand` porque é GET e a única deste
+   * client que devolve corpo em toda resposta de sucesso (sem `sessionId`/
+   * `projectId` de segmento de URL: a flag é GLOBAL).
+   */
+  async getPsychologistStatus(): Promise<{ enabled: boolean }> {
+    const engineUrl = process.env.ENGINE_URL ?? 'http://localhost:4000';
+
+    const res = await fetch(`${engineUrl}/internal/psychologist/status`, {
+      method: 'GET',
+      headers: this.buildHeaders(),
+    });
+
+    if (!res.ok) {
+      throw new Error(
+        `Falha no comando ao engine (psychologist/status): ${res.status} ${await res.text()}`,
+      );
+    }
+
+    const corpo = (await res.json()) as { enabled: boolean };
+    return { enabled: corpo.enabled };
+  }
+
+  /**
    * Não usa `postCommand`: precisa distinguir o 503 ("Anamnese desativada
    * globalmente", RN — ver `AnamneseDisabledError`) de qualquer outra falha
    * de transporte, e `postCommand` colapsa todo `!res.ok` num `Error`
@@ -222,6 +288,38 @@ export class HttpApiToEngineClient implements ApiToEngineClient {
         ['agent', agent],
       ],
     );
+  }
+
+  /**
+   * Diferente do resto deste client, não usa `postCommand`: precisa do
+   * CORPO da resposta (o ticket bruto só existe aqui, uma vez — o engine
+   * grava só o hash), e `postCommand` descarta o corpo em sucesso.
+   */
+  async requestRunnerTicket(
+    projectId: string,
+    userId: string,
+    kind: 'runner' | 'terminal',
+  ): Promise<{ ticket: string; expiresAt: Date }> {
+    projectId = garantirSegmentoDeUrlInterna(projectId, 'projectId');
+    const engineUrl = process.env.ENGINE_URL ?? 'http://localhost:4000';
+
+    const res = await fetch(
+      `${engineUrl}/internal/projects/${projectId}/runner-tickets`,
+      {
+        method: 'POST',
+        headers: this.buildHeaders(),
+        body: JSON.stringify({ userId, kind }),
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        `Falha ao pedir ticket de runner ao engine: ${res.status} ${await res.text()}`,
+      );
+    }
+
+    const corpo = (await res.json()) as { ticket: string; expiresAt: string };
+    return { ticket: corpo.ticket, expiresAt: new Date(corpo.expiresAt) };
   }
 
   async startExecution(
@@ -309,6 +407,98 @@ export class HttpApiToEngineClient implements ApiToEngineClient {
       );
     }
     return (await res.json()) as Record<string, unknown>;
+  }
+
+  /**
+   * `container_start` num projeto `mounted`/`runner` (ADR 0137) — pede ao
+   * engine para repassar ao runner conectado via canal (`container_start`/
+   * `container_start_result`, mesmo par de `exec`/`exec_result`). A resposta
+   * do engine é SEMPRE 200: `sucesso: false` com `motivoCodigo` distingue
+   * "sem runner"/"timeout" (`RunnerNaoConectadoError`) de "o runner tentou e
+   * recusou" (`RunnerRecusouContainerError`) — nunca um status HTTP de erro
+   * pra essas duas causas, o mesmo raciocínio do broker.
+   */
+  async startContainerViaRunner(
+    projectId: string,
+    spec: EspecificacaoDeContainerParaRunner,
+  ): Promise<ContainerIniciadoViaRunner> {
+    projectId = garantirSegmentoDeUrlInterna(projectId, 'projectId');
+    const engineUrl = process.env.ENGINE_URL ?? 'http://localhost:4000';
+
+    const res = await fetch(
+      `${engineUrl}/internal/projects/${projectId}/containers/start`,
+      {
+        method: 'POST',
+        headers: this.buildHeaders(),
+        body: JSON.stringify({ spec }),
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        `Falha ao pedir ao engine para subir o container via runner: ${res.status} ${await res.text()}`,
+      );
+    }
+
+    const corpo = (await res.json()) as RespostaDeContainerViaRunner;
+    lancarSeFalhou(corpo, 'subir');
+
+    return {
+      containerId: corpo.containerId ?? '',
+      nome: corpo.nome ?? '',
+      jaEstavaDePe: corpo.jaEstavaDePe ?? false,
+    };
+  }
+
+  /** Espelho de `startContainerViaRunner` para `container_stop`. */
+  async stopContainerViaRunner(
+    projectId: string,
+    workspaceDirName: string,
+  ): Promise<void> {
+    await this.pedirOperacaoDeContainerAoRunner(
+      projectId,
+      'stop',
+      workspaceDirName,
+    );
+  }
+
+  /** Espelho de `startContainerViaRunner` para `container_remove`. */
+  async removeContainerViaRunner(
+    projectId: string,
+    workspaceDirName: string,
+  ): Promise<void> {
+    await this.pedirOperacaoDeContainerAoRunner(
+      projectId,
+      'remove',
+      workspaceDirName,
+    );
+  }
+
+  private async pedirOperacaoDeContainerAoRunner(
+    projectId: string,
+    operacao: 'stop' | 'remove',
+    workspaceDirName: string,
+  ): Promise<void> {
+    projectId = garantirSegmentoDeUrlInterna(projectId, 'projectId');
+    const engineUrl = process.env.ENGINE_URL ?? 'http://localhost:4000';
+
+    const res = await fetch(
+      `${engineUrl}/internal/projects/${projectId}/containers/${operacao}`,
+      {
+        method: 'POST',
+        headers: this.buildHeaders(),
+        body: JSON.stringify({ workspaceDirName }),
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        `Falha ao pedir ao engine para ${operacao === 'stop' ? 'parar' : 'remover'} o container via runner: ${res.status} ${await res.text()}`,
+      );
+    }
+
+    const corpo = (await res.json()) as RespostaDeContainerViaRunner;
+    lancarSeFalhou(corpo, operacao === 'stop' ? 'parar' : 'remover');
   }
 
   /**

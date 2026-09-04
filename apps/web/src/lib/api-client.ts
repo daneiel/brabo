@@ -17,10 +17,13 @@ import type {
   InfraArtifact,
   PsychologistHypothesis,
   PsychologistAnalysis,
+  PsychologistStatus,
   ProficiencyProfile,
   AgentInstructionVersion,
   Budget,
   BudgetPolicy,
+  CicloDeVidaDoContainer,
+  ContainerOverviewItem,
   CodeBlame,
   CodeBranchDetailList,
   CodeDiff,
@@ -63,14 +66,22 @@ import type {
   SessionKind,
   SocketTicket,
   SocketTicketScope,
+  TerminalTicket,
   CredentialProviderName,
   CredentialTestResult,
   UnreadCursor,
   UserCredentialMetadata,
+  UserLocale,
+  UserPreferences,
+  PersonalAccessTokenSummary,
+  PersonalAccessTokenIssued,
+  PersonalAccessTokenAdminSummary,
+  RunnerDeviceKeySummary,
   Workspace,
   WorkspaceSummary,
   WorkspaceWithRole,
   RegistroDeGates,
+  ExecutionMode,
 } from './api-types';
 
 export const API_URL = runtimeConfig.apiUrl;
@@ -112,6 +123,24 @@ export function mensagemDaApi(erro: unknown, padrao = 'Erro inesperado'): string
     return `A api respondeu ${erro.status}.`;
   }
   return erro instanceof Error ? erro.message : padrao;
+}
+
+/**
+ * `true` quando `erro` é o portão do container (RN-105) — o Arquiteto ainda
+ * não decidiu qual imagem sobe para o projeto. `ReadProjectCodeUseCase.alvo`
+ * é o funil ÚNICO por onde as sete leituras de código passam (árvore,
+ * arquivo, busca, diff, blame, lista de PRs, branches), e o 409 que ele
+ * levanta (`portaoDoContainer`) é a ÚNICA causa de `ConflictException` nesse
+ * caso de uso — o status sozinho já basta para identificar o estado, sem
+ * casar texto de mensagem (que muda de idioma e um dia diverge).
+ *
+ * Achado de uso: a aba PRs chamava `getCodePullRequests`/`getCodeDiff` sem
+ * saber disto, e mostrava esse 409 como erro transitório genérico com
+ * "Tentar de novo" — a mesma classe de erro que `ContainerImageGateNotice`
+ * (`components/ContainerImageGate.tsx`) resolve para a aba Code.
+ */
+export function isContainerImageGateError(erro: unknown): boolean {
+  return erro instanceof ApiError && erro.status === 409;
 }
 
 /**
@@ -267,9 +296,20 @@ export const getUnreadEvents = (
   post<ProjectUnreadEvents[]>(`/workspaces/${workspaceId}/unread-events`, {
     cursors,
   });
+// `executionMode`/`workspacePath` (ADR 0072/0104): onde o comando do projeto
+// executa. Omitidos, a api usa `container` — o comportamento de sempre. Com
+// `mounted`, o caminho é OBRIGATÓRIO e a api RECUSA a criação (400) quando
+// ele não existe ou não é gravável de dentro do container, com a instrução
+// de como montar (RN-422). Com `runner`, só o FORMATO do caminho é validado
+// agora — a existência é confirmada depois, pelo runner (RN-423).
 export const createProject = (
   workspaceId: string,
-  input: { name: string; slug: string },
+  input: {
+    name: string;
+    slug: string;
+    executionMode?: ExecutionMode;
+    workspacePath?: string;
+  },
 ) => post<Project>(`/workspaces/${workspaceId}/projects`, input);
 export const getProject = (projectId: string) =>
   get<Project>(`/projects/${projectId}`);
@@ -287,6 +327,18 @@ export const updateProject = (
   },
 ) => patch<Project>(`/projects/${projectId}`, input);
 
+/**
+ * Converte o `execution_mode` de um projeto EXISTENTE (RN-447..450, ADR
+ * 0111) — rota DEDICADA, separada de `updateProject`: a api orquestra a
+ * migração do `permissions.json`, o encerramento do ciclo de vida do
+ * container (saindo de `container`) e recusa com 409 se algum dev agent do
+ * projeto estiver trabalhando ou travado agora.
+ */
+export const convertProjectExecutionMode = (
+  projectId: string,
+  input: { executionMode: ExecutionMode; workspacePath?: string },
+) => put<Project>(`/projects/${projectId}/execution-mode`, input);
+
 export const listProjectMembers = (projectId: string) =>
   get<ProjectMemberWithUser[]>(`/projects/${projectId}/members`);
 export const addProjectMember = (
@@ -295,6 +347,47 @@ export const addProjectMember = (
 ) => post<void>(`/projects/${projectId}/members`, input);
 export const removeProjectMember = (projectId: string, userId: string) =>
   del<void>(`/projects/${projectId}/members/${userId}`);
+
+/** Personal Access Tokens do runner (`brb_…`, ADR 0105) — próprios do usuário logado. */
+export const listPersonalAccessTokens = (projectId: string) =>
+  get<PersonalAccessTokenSummary[]>(`/projects/${projectId}/personal-access-tokens`);
+export const issuePersonalAccessToken = (
+  projectId: string,
+  input: { name: string; expiresInDays?: number },
+) =>
+  post<PersonalAccessTokenIssued>(
+    `/projects/${projectId}/personal-access-tokens`,
+    input,
+  );
+export const revokePersonalAccessToken = (projectId: string, tokenId: string) =>
+  del<void>(`/projects/${projectId}/personal-access-tokens/${tokenId}`);
+
+/** Visão de `maintainer` (RN-427) — todos os tokens do projeto, de qualquer usuário. */
+export const listAllPersonalAccessTokens = (projectId: string) =>
+  get<PersonalAccessTokenAdminSummary[]>(
+    `/projects/${projectId}/personal-access-tokens/all`,
+  );
+export const revokePersonalAccessTokenAsMaintainer = (
+  projectId: string,
+  tokenId: string,
+) =>
+  del<void>(`/projects/${projectId}/personal-access-tokens/${tokenId}/admin`);
+
+/**
+ * Chave de dispositivo do runner (par Ed25519 gerado NO NAVEGADOR — ver
+ * `lib/runner-bootstrap.ts`). Substitui o PAT digitado à mão no fluxo de
+ * onboarding: só a chave PÚBLICA viaja até aqui, nunca a privada.
+ */
+export const registerRunnerDeviceKey = (
+  projectId: string,
+  input: { name: string; publicKeyJwk: string },
+) =>
+  post<RunnerDeviceKeySummary>(
+    `/projects/${projectId}/runner-device-keys`,
+    input,
+  );
+export const revokeRunnerDeviceKey = (projectId: string, deviceKeyId: string) =>
+  del<void>(`/projects/${projectId}/runner-device-keys/${deviceKeyId}`);
 
 export const getProjectPermissions = (projectId: string) =>
   get<PermissionsFile>(`/projects/${projectId}/permissions`);
@@ -378,6 +471,20 @@ export const registerGitCredential = (input: {
 
 export const getContainerState = (projectId: string) =>
   get<EstadoDoContainer>(`/projects/${projectId}/container`);
+
+// O ciclo de vida (provisioning/running/stopped/failed/removed), distinto da
+// decisão de imagem acima (ADR 0081/0083, RN-267). `null` é honesto: nenhum
+// orquestrador real transiciona `project_containers` hoje.
+export const getContainerLifecycle = (projectId: string) =>
+  get<CicloDeVidaDoContainer | null>(`/projects/${projectId}/container/lifecycle`);
+
+// --- Página global de containers (ADR 0136, RN-495) ---
+//
+// Cross-projeto, do WORKSPACE inteiro — ao lado (não dentro) das rotas de
+// container por projeto acima.
+
+export const getContainersOverview = (workspaceId: string) =>
+  get<ContainerOverviewItem[]>(`/workspaces/${workspaceId}/containers`);
 
 // --- Aba Code, só leitura (FASE 26) ---
 //
@@ -486,6 +593,17 @@ export const createSocketTicket = (
     { scope },
   );
 
+/**
+ * Ticket de uso único pro canal `terminal:<projectId>` — runner local +
+ * PTY interativo (a aba Terminal da FASE 26). Rota própria (`role: viewer`+),
+ * não escopada a sessão: o terminal é do PROJETO, não de uma conversa com
+ * agente. `terminal-channel.ts` chama isto antes de todo `socket.connect()`,
+ * mesmo desenho do `createSocketTicket` acima (RN-108) — ticket é de uso
+ * único, nunca reusado numa reconexão.
+ */
+export const getTerminalTicket = (projectId: string) =>
+  post<TerminalTicket>(`/projects/${projectId}/terminal-ticket`);
+
 // --- Agentes conversacionais / handoffs (Fase 3b) ---
 
 export const startAgent = (projectId: string, sessionId: string, agent: string) =>
@@ -527,6 +645,15 @@ export const confirmArchitectureReadiness = (
   post<{ ok: true }>(
     `/projects/${projectId}/sessions/${sessionId}/agents/arquiteto/handoff-infra`,
   );
+// Gate `necessidade-validada` (RN-406, ADR 0095) — confirmação humana de
+// que o `product_brief` do Criativo reflete a necessidade de negócio.
+// Endpoint dedicado: não reaproveita `confirmReadiness` (que só exige
+// regra capturada, RN-142) nem o aceite do handoff pelo PO (estrutural,
+// sem julgar conteúdo).
+export const validateNecessity = (projectId: string, sessionId: string) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/criativo/validate-necessity`,
+  );
 // RN-162: submissão do formulário de `chat.structured_question` — grava
 // `chat.structured_question_answered` e reenvia as respostas ao `agent` (o
 // que fez as perguntas) pelo mesmo caminho de `sendAgentMessage`. Um
@@ -552,6 +679,19 @@ export const acceptHandoff = (
   post<Handoff>(
     `/projects/${projectId}/sessions/${sessionId}/handoffs/${handoffId}/accept`,
   );
+// Handoff manual a agente à escolha (ADR 0109/RN-440): `toAgent` tem de
+// estar no catálogo `addressableAgents()` do backend — lead de área ou
+// agente conversacional solo. Nasce `offered`, do mesmo jeito que um
+// handoff automático; `acceptHandoff` acima continua sendo o único caminho
+// de aceite.
+export const requestManualHandoff = (
+  projectId: string,
+  sessionId: string,
+  toAgent: string,
+) =>
+  post<Handoff>(`/projects/${projectId}/sessions/${sessionId}/handoffs`, {
+    toAgent,
+  });
 
 // --- Backlog (Fase 3b) ---
 
@@ -598,6 +738,10 @@ export const dismissHypothesis = (projectId: string, hypothesisId: string) =>
   );
 export const listPsychologistAnalyses = (projectId: string) =>
   get<PsychologistAnalysis[]>(`/projects/${projectId}/psychologist/analyses`);
+// Leitura pura (RN-454) — ver reanalyzeSession abaixo, que é o que faz
+// efeito (cria job) e o `/reanalyze` que devolve 503 quando desativado.
+export const getPsychologistStatus = (projectId: string) =>
+  get<PsychologistStatus>(`/projects/${projectId}/psychologist/status`);
 // --- Anamnese (Fase 4b) ---
 
 // Um evento pelo id resolvendo a SESSÃO dele. A janela da Anamnese é de
@@ -690,6 +834,19 @@ export const setAreaMaxParallel = (
   patch<AgentArea>(`/projects/${projectId}/agent-areas/${key}/max-parallel`, {
     maxParallel,
   });
+
+/**
+ * `limitUsd: null` limpa o teto (ADR 0110) — a conversão dólar→micro-USD é
+ * feita no servidor, mesma convenção de `setProjectBudget`/`setSessionBudget`.
+ */
+export const setAreaBudget = (
+  projectId: string,
+  key: string,
+  limitUsd: number | null,
+) =>
+  put<AgentArea>(`/projects/${projectId}/agent-areas/${key}/budget`, {
+    limitUsd,
+  });
 // Libera uma task que o dev agent devolveu bloqueada, depois de o usuário ler
 // o diagnóstico. Enquanto `blocked`, ela é excluída do claim atômico — sem
 // isto uma task impossível ficaria parada pra sempre.
@@ -748,6 +905,20 @@ export const denyAction = (
   post<ProposedAction>(
     `/projects/${projectId}/sessions/${sessionId}/actions/${actionId}/deny`,
     { reason },
+  );
+
+// Ações PENDENTES do PROJETO inteiro, em qualquer sessão (Onda 2 — aba PRs).
+// Ao lado de `listActions` (escopado por SESSÃO): esta é a consulta que a
+// aba PRs usa para achar a `proposed_action` correspondente a um PR (ex.: um
+// `git_merge` pendente) sem depender de qual sessão a propôs — o bug de raiz
+// que escondia revisão de sessão antiga em `ProjectApprovalsTab`. Só
+// `status=pending` é suportado hoje.
+export const getProjectPendingActions = (
+  projectId: string,
+  opts: { actionType?: ActionType } = {},
+) =>
+  get<ProposedAction[]>(
+    `/projects/${projectId}/actions${qs({ status: 'pending', actionType: opts.actionType })}`,
   );
 
 // --- LLM: modelos, bindings, credenciais, budgets ---
@@ -869,6 +1040,15 @@ export const setAreaModelBinding = (
 export const clearAreaModelBinding = (projectId: string, areaKey: string) =>
   del<void>(`/projects/${projectId}/area-bindings/${areaKey}`);
 
+// Preferências do próprio usuário (fundação de i18n, Onda 6a). A leitura
+// aqui é redundante com `locale` no corpo de `/auth/login` e `/auth/refresh`
+// (ver `lib/auth.ts`) — de propósito: serve só para reafirmar o valor sem
+// esperar o próximo refresh, nunca como fonte primária.
+export const getMyPreferences = () =>
+  get<UserPreferences>('/users/me/preferences');
+export const updateMyPreferences = (input: { locale: UserLocale }) =>
+  patch<UserPreferences>('/users/me/preferences', input);
+
 export const listCredentials = () =>
   get<UserCredentialMetadata[]>('/users/me/credentials');
 // `LlmCredentialProvider`, e não o par fechado que estava aqui: um provider
@@ -933,4 +1113,124 @@ export const getWorkspaceSpendReport = (workspaceId: string, dias?: number) =>
 export const getMySpend = (projectId: string, dias?: number) =>
   get<MySpend>(
     `/projects/${projectId}/spend/me${dias ? `?dias=${dias}` : ''}`,
+  );
+
+// ---------------------------------------------------------------------------
+// APÊNDICE DA FRENTE D0 (ADR 0076). Escrito no fim pelo mesmo motivo do
+// apêndice de `api-types.ts`: a onda tem outras frentes editando este arquivo.
+// A integração recolhe isto para cima, dentro de `getWorkspaceSpendReport`.
+// ---------------------------------------------------------------------------
+
+/**
+ * A MESMA rota de `getWorkspaceSpendReport`, com o tipo já ciente dos três
+ * blocos novos (provider, owner e agente — RN-186/RN-188).
+ *
+ * Não há função nova do lado do membro, e não é esquecimento: `getMySpend`
+ * continua sem qualquer parâmetro de dimensão. Uma função que aceitasse
+ * "dimensão" na visão do membro seria a porta que o ADR 0063 mandou não abrir,
+ * e a api recusaria de qualquer forma — a rota dela não lê esse parâmetro.
+ */
+export const getWorkspaceSpendReportComProvider = (
+  workspaceId: string,
+  dias?: number,
+) =>
+  get<
+    WorkspaceSpendReport & import('./api-types').WorkspaceSpendPorProvider
+  >(`/workspaces/${workspaceId}/spend-report${dias ? `?dias=${dias}` : ''}`);
+
+// ---------------------------------------------------------------------------
+// APÊNDICE DA FRENTE G3 (PROGRAMA 28, Onda 5) — a tela do Chat RAG.
+//
+// As três rotas de `rag.controller.ts` (RN-231..238, ADR 0080). Escrito no
+// FIM do arquivo pelo mesmo motivo do apêndice da frente D0 — outras frentes
+// da Onda 5 editam este arquivo em paralelo. Tipos importados INLINE (sem
+// entrar na lista grande do topo) pela mesma razão.
+//
+// `search` e `coverage` são `role:viewer`; `reindex` é `role:maintainer`
+// (RN-238) — a tela gate o botão, mas quem garante é a api.
+// ---------------------------------------------------------------------------
+
+export const searchRag = (
+  projectId: string,
+  body: {
+    query: string;
+    scopes?: import('./api-types').RagChunkScope[];
+    limit?: number;
+  },
+) => post<import('./api-types').RagSearchResult>(`/projects/${projectId}/rag/search`, body);
+
+// O voto sobre um trecho (RN-480) — `viewer`, o MESMO papel de `search`: quem
+// pode ler o resultado é quem pode julgá-lo. Votar de novo no mesmo trecho da
+// mesma busca SOBRESCREVE o próprio voto (unique por ator), nunca soma um
+// segundo — a métrica mede acerto, não entusiasmo.
+export const sendRagFeedback = (
+  projectId: string,
+  body: {
+    searchId: string;
+    chunkId: string;
+    verdict: import('./api-types').RagVerdict;
+  },
+) =>
+  post<import('./api-types').RagFeedbackReport>(
+    `/projects/${projectId}/rag/feedback`,
+    body,
+  );
+
+export const getRagCoverage = (projectId: string) =>
+  get<import('./api-types').RagCoverage>(`/projects/${projectId}/rag/coverage`);
+
+export const reindexRag = (projectId: string) =>
+  post<import('./api-types').RagReindexReport>(`/projects/${projectId}/rag/reindex`);
+
+// A pasta local anexada (RN-455, ADR 0113) — texto já lido pelo NAVEGADOR,
+// nunca um caminho de host. `maintainer`, mesma régua de `reindex`.
+export const attachLocalFolder = (
+  projectId: string,
+  body: import('./api-types').AttachLocalFolderRequest,
+) =>
+  post<import('./api-types').AttachLocalFolderReport>(
+    `/projects/${projectId}/rag/local`,
+    body,
+  );
+
+// --- Hugging Face Hub → pull para o Ollama ---
+//
+// Ancoradas no workspace, mesmo padrão da curadoria de catálogo acima:
+// `maintainer` é o papel que o `RolesGuard` resolve a partir de `:workspaceId`.
+// `repoId` vai no CORPO do POST de criação, nunca em segmento de path — o
+// formato real do Hub (`<publisher>/<modelo>`) contém `/`, que quebraria o
+// casamento de rota (mesma razão de `getCodeFile` para caminho de arquivo).
+
+export const searchHuggingFaceModels = (
+  workspaceId: string,
+  params: { q: string; includeCommunity?: boolean },
+) =>
+  get<import('./api-types').HuggingFaceModel[]>(
+    `/workspaces/${workspaceId}/huggingface/models${qs({
+      q: params.q,
+      includeCommunity: params.includeCommunity || undefined,
+    })}`,
+  );
+
+export const requestModelPull = (
+  workspaceId: string,
+  body: { repoId: string; estimatedSizeBytes?: number },
+) =>
+  post<import('./api-types').ModelPullRequest>(
+    `/workspaces/${workspaceId}/huggingface/pull-requests`,
+    body,
+  );
+
+// Roda o pull inteiro SINCRONAMENTE no servidor (sem fila própria na api
+// ainda) — a chamada pode demorar minutos e um proxy no meio pode fechar a
+// conexão antes do fim. `getModelPullRequest` (poll) é a fonte de verdade
+// de status, independente de esta promise resolver ou rejeitar.
+export const confirmModelPull = (workspaceId: string, id: string) =>
+  post<import('./api-types').ModelPullRequest>(
+    `/workspaces/${workspaceId}/huggingface/pull-requests/${id}/confirm`,
+  );
+
+export const getModelPullRequest = (workspaceId: string, id: string) =>
+  get<import('./api-types').ModelPullRequest>(
+    `/workspaces/${workspaceId}/huggingface/pull-requests/${id}`,
   );

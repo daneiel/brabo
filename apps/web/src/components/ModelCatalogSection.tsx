@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   listCredentials,
@@ -23,10 +24,11 @@ import {
   type Faceta,
 } from '../lib/models';
 import { Alert } from './ui/Alert';
-import { ChevronDownIcon, ChevronRightIcon } from './ui/icons';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { Disclosure } from './ui/Disclosure';
 import { useToast } from './ui/ToastProvider';
+import { HuggingFaceModelBrowser } from './HuggingFaceModelBrowser';
 import styles from './ModelCatalogSection.module.css';
 
 /**
@@ -41,6 +43,7 @@ import styles from './ModelCatalogSection.module.css';
  * afetado sem explicação.
  */
 export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
+  const { t } = useTranslation('models');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
@@ -195,13 +198,13 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
     mutationFn: () => syncModelCatalog(workspaceId),
     onSuccess: (resultado) => {
       invalidar();
-      showToast({ title: 'Catálogo sincronizado', tone: 'success' });
+      showToast({ title: t('catalog.toasts.syncSuccess'), tone: 'success' });
       return resultado;
     },
     onError: () =>
       showToast({
-        title: 'Sync falhou',
-        message: 'A api não respondeu. Nada foi alterado no catálogo.',
+        title: t('catalog.toasts.syncErrorTitle'),
+        message: t('catalog.toasts.syncErrorMessage'),
         tone: 'danger',
       }),
   });
@@ -213,12 +216,14 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
       invalidar();
       setMarcados(new Set());
       showToast({
-        title: isActive ? 'Modelos ativados' : 'Modelos desativados',
+        title: isActive
+          ? t('catalog.toasts.activated')
+          : t('catalog.toasts.deactivated'),
         tone: 'success',
       });
     },
     onError: () =>
-      showToast({ title: 'Não foi possível salvar', tone: 'danger' }),
+      showToast({ title: t('catalog.toasts.saveError'), tone: 'danger' }),
   });
 
   const marcarUsos = useMutation({
@@ -231,10 +236,10 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
       invalidar();
       setMarcados(new Set());
       setUsosDoLote(new Set());
-      showToast({ title: 'Usos atualizados', tone: 'success' });
+      showToast({ title: t('catalog.toasts.usesUpdated'), tone: 'success' });
     },
     onError: () =>
-      showToast({ title: 'Não foi possível salvar', tone: 'danger' }),
+      showToast({ title: t('catalog.toasts.saveError'), tone: 'danger' }),
   });
 
   function alternar(id: string) {
@@ -250,22 +255,19 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
       <div className={styles.header}>
         <div>
           <div className={styles.tituloLinha}>
-            <h2 className={styles.title}>Catálogo de modelos</h2>
-            <span className={styles.eyebrow}>curadoria por workspace</span>
+            <h2 className={styles.title}>{t('catalog.title')}</h2>
+            <span className={styles.eyebrow}>{t('catalog.eyebrow')}</span>
           </div>
-          <div className={styles.subtitle}>
-            O que o sync descobre entra desativado. Só o que você ativar aparece
-            no seletor de modelos.
-          </div>
+          <div className={styles.subtitle}>{t('catalog.subtitle')}</div>
         </div>
         <div className={styles.acoes}>
           {grupos.length > 0 && (
             <Button variant="ghost" onClick={alternarTudo}>
-              {tudoMinimizado ? 'Expandir tudo' : 'Minimizar tudo'}
+              {tudoMinimizado ? t('catalog.expandAll') : t('catalog.collapseAll')}
             </Button>
           )}
           <Button onClick={() => sync.mutate()} disabled={sync.isPending}>
-            {sync.isPending ? 'Sincronizando…' : 'Atualizar catálogo'}
+            {sync.isPending ? t('catalog.syncing') : t('catalog.updateButton')}
           </Button>
         </div>
       </div>
@@ -297,7 +299,7 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
             <button
               key={u}
               type="button"
-              title={`Modelos que este workspace marcou como "${ROTULO_DO_USO[u]}"`}
+              title={t('catalog.usesFilterTitle', { use: ROTULO_DO_USO[u] })}
               aria-pressed={usosFiltrados.has(u)}
               className={[
                 styles.faceta,
@@ -315,7 +317,7 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
               um catálogo vazio — e a saída (desligar a faceta) fica escondida. */}
           {filtrando && (
             <span className={styles.facetaContagem}>
-              {totalVisivel} de {totalSemFiltro}
+              {t('catalog.countOfTotal', { visible: totalVisivel, total: totalSemFiltro })}
             </span>
           )}
         </div>
@@ -323,22 +325,21 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
 
       {filtrando && totalVisivel === 0 && (
         <Alert tone="accent">
-          Nenhum modelo atende a tudo que está marcado. Capability não declarada
-          pelo provider conta como ausente, e uso é o que{' '}
-          <strong>este workspace</strong> marcou — desligue um filtro para ver o
-          resto.
+          {t('catalog.filteredEmpty.prefix')}
+          <strong>{t('catalog.filteredEmpty.thisWorkspace')}</strong>
+          {t('catalog.filteredEmpty.suffix')}
         </Alert>
       )}
 
       {semCatalogo.length > 0 && (
         <Alert tone="warning">
-          Você tem credencial de{' '}
+          {t('catalog.missingCatalog.prefix')}
           <strong>
             {semCatalogo.map((p) => ROTULO_DO_PROVIDER[p]).join(', ')}
-          </strong>{' '}
-          e nenhum modelo {semCatalogo.length > 1 ? 'deles' : 'dele'} no
-          catálogo. Cadastrar a chave não descobre modelo — clique em{' '}
-          <strong>Atualizar catálogo</strong> para buscá-los no provider.
+          </strong>
+          {t('catalog.missingCatalog.middle', { count: semCatalogo.length })}
+          <strong>{t('catalog.updateButton')}</strong>
+          {t('catalog.missingCatalog.suffix')}
         </Alert>
       )}
 
@@ -347,23 +348,23 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
       {marcados.size > 0 && (
         <div className={styles.barraDeLote}>
           <span className={styles.contagem}>
-            {marcados.size} selecionado{marcados.size > 1 ? 's' : ''}
+            {t('catalog.batchBar.selectedCount', { count: marcados.size })}
           </span>
           <Button onClick={() => ativar.mutate(true)} disabled={ativar.isPending}>
-            Ativar
+            {t('catalog.batchBar.activate')}
           </Button>
           <Button
             variant="danger"
             onClick={() => ativar.mutate(false)}
             disabled={ativar.isPending}
           >
-            Desativar
+            {t('catalog.batchBar.deactivate')}
           </Button>
           <span className={styles.divisorDeFiltro} aria-hidden="true" />
           {/* Marcar uso é operação SEPARADA de ativar: os dois eixos não se
               misturam num botão só, para ninguém ligar um modelo achando que
               só estava opinando sobre ele. */}
-          <span className={styles.rotuloDoLote}>marcar como</span>
+          <span className={styles.rotuloDoLote}>{t('catalog.batchBar.markAs')}</span>
           {USOS_DE_MODELO.map((u) => (
             <button
               key={u}
@@ -385,9 +386,11 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
             variant="ghost"
             onClick={() => marcarUsos.mutate()}
             disabled={marcarUsos.isPending}
-            title="Substitui os usos dos modelos marcados — não soma aos que já tinham"
+            title={t('catalog.batchBar.applyUsesTitle')}
           >
-            {usosDoLote.size > 0 ? 'Aplicar usos' : 'Limpar usos'}
+            {usosDoLote.size > 0
+              ? t('catalog.batchBar.applyUses')
+              : t('catalog.batchBar.clearUses')}
           </Button>
         </div>
       )}
@@ -396,82 +399,79 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
           cadastrar credencial seria mentira — a credencial existe e o modelo
           também, quem escondeu foi a faceta. */}
       {totalSemFiltro === 0 && (
-        <div className={styles.vazio}>
-          Nenhum modelo no catálogo. Cadastre uma credencial de provider e
-          atualize.
-        </div>
+        <div className={styles.vazio}>{t('catalog.empty')}</div>
       )}
 
-      {grupos.map((grupo) => (
-        <div key={grupo.kind} className={styles.grupo}>
-          <button
-            type="button"
-            className={styles.grupoTitulo}
-            aria-expanded={!gruposFechados.has(grupo.kind)}
-            onClick={() => alternarGrupo(grupo.kind)}
+      {/* Migrado para o `Disclosure` do design system na Onda 4/frente H4 —
+          era a implementação de REFERÊNCIA que ditou a semântica do
+          componente (grupos, subgrupos, `aria-expanded`, "minimizar tudo"),
+          mas nunca tinha sido convertida para consumi-lo. Os dois `Set`s
+          (`gruposFechados`/`subgruposAbertos`) continuam sendo a fonte de
+          verdade — `Disclosure` só fica CONTROLADO por eles via `aberto`/
+          `onAlternar`, sem duplicar estado. */}
+      {grupos.map((grupo) => {
+        const abertoGrupo = !gruposFechados.has(grupo.kind);
+        return (
+          <Disclosure
+            key={grupo.kind}
+            className={styles.grupo}
+            classNameCabecalho={styles.grupoTitulo}
+            aberto={abertoGrupo}
+            onAlternar={() => alternarGrupo(grupo.kind)}
+            titulo={
+              <>
+                {grupo.rotulo}
+                {/* "Hubs" sozinho não diz de QUEM é o catálogo — e preço,
+                    disponibilidade e credencial pertencem ao hub, não ao
+                    fabricante do modelo. Nos outros grupos o provider já é
+                    evidente na linha. */}
+                {grupo.kind === 'hub' && (
+                  <span className={styles.grupoProvedores}>
+                    ·{' '}
+                    {grupo.provedores
+                      .map((p) => ROTULO_DO_PROVIDER[p] ?? p)
+                      .join(', ')}
+                  </span>
+                )}
+              </>
+            }
+            trailing={grupo.modelos.length}
           >
-            <span className={styles.chevron}>
-              {gruposFechados.has(grupo.kind) ? (
-                <ChevronRightIcon size={13} />
-              ) : (
-                <ChevronDownIcon size={13} />
-              )}
-            </span>
-            {grupo.rotulo}
-            {/* "Hubs" sozinho não diz de QUEM é o catálogo — e preço,
-                disponibilidade e credencial pertencem ao hub, não ao fabricante
-                do modelo. Nos outros grupos o provider já é evidente na linha. */}
-            {grupo.kind === 'hub' && (
-              <span className={styles.grupoProvedores}>
-                ·{' '}
-                {grupo.provedores
-                  .map((p) => ROTULO_DO_PROVIDER[p] ?? p)
-                  .join(', ')}
-              </span>
-            )}
-            <span className={styles.grupoContagem}>{grupo.modelos.length}</span>
-          </button>
-
-          {/* Um hub serve o catálogo de dezenas de fabricantes numa lista só —
-              338, no caso do OpenRouter. Repartir por quem serve por baixo é o
-              que torna a lista navegável; sem isso, achar o Claude é rolagem. */}
-          {!gruposFechados.has(grupo.kind) &&
-            (grupo.subgrupos
-            ? grupo.subgrupos.map((sub) => {
-                const aberto = subgruposAbertos.has(sub.upstream);
-                const marcadosAqui = sub.modelos.filter((m) =>
-                  marcados.has(m.id),
-                ).length;
-                return (
-                  <div key={sub.upstream} className={styles.subgrupo}>
-                    <button
-                      type="button"
-                      className={styles.subgrupoTitulo}
-                      aria-expanded={aberto}
-                      onClick={() => alternarSubgrupo(sub.upstream)}
+            {/* Um hub serve o catálogo de dezenas de fabricantes numa lista só
+                — 338, no caso do OpenRouter. Repartir por quem serve por baixo
+                é o que torna a lista navegável; sem isso, achar o Claude é
+                rolagem. */}
+            {grupo.subgrupos
+              ? grupo.subgrupos.map((sub) => {
+                  const aberto = subgruposAbertos.has(sub.upstream);
+                  const marcadosAqui = sub.modelos.filter((m) =>
+                    marcados.has(m.id),
+                  ).length;
+                  return (
+                    <Disclosure
+                      key={sub.upstream}
+                      className={styles.subgrupo}
+                      classNameCabecalho={styles.subgrupoTitulo}
+                      aberto={aberto}
+                      onAlternar={() => alternarSubgrupo(sub.upstream)}
+                      titulo={sub.rotulo}
+                      trailing={
+                        <>
+                          <span className={styles.grupoContagem}>
+                            {sub.modelos.length}
+                          </span>
+                          {/* Fechado com itens marcados: sem este selo, a
+                              barra diria "12 selecionados" e você não teria
+                              como ver QUAIS — ativaria em lote às cegas. */}
+                          {!aberto && marcadosAqui > 0 && (
+                            <span className={styles.marcadosOcultos}>
+                              {t('catalog.markedHidden', { count: marcadosAqui })}
+                            </span>
+                          )}
+                        </>
+                      }
                     >
-                      <span className={styles.chevron}>
-                        {aberto ? (
-                          <ChevronDownIcon size={12} />
-                        ) : (
-                          <ChevronRightIcon size={12} />
-                        )}
-                      </span>
-                      {sub.rotulo}
-                      <span className={styles.grupoContagem}>
-                        {sub.modelos.length}
-                      </span>
-                      {/* Fechado com itens marcados: sem este selo, a barra
-                          diria "12 selecionados" e você não teria como ver
-                          QUAIS — ativaria em lote às cegas. */}
-                      {!aberto && marcadosAqui > 0 && (
-                        <span className={styles.marcadosOcultos}>
-                          {marcadosAqui} marcado{marcadosAqui > 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </button>
-                    {aberto &&
-                      sub.modelos.map((model) => (
+                      {sub.modelos.map((model) => (
                         <LinhaDoCatalogo
                           key={model.id}
                           model={model}
@@ -479,19 +479,22 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
                           onToggle={() => alternar(model.id)}
                         />
                       ))}
-                  </div>
-                );
-              })
-            : grupo.modelos.map((model) => (
-                <LinhaDoCatalogo
-                  key={model.id}
-                  model={model}
-                  marcado={marcados.has(model.id)}
-                  onToggle={() => alternar(model.id)}
-                />
-              )))}
-        </div>
-      ))}
+                    </Disclosure>
+                  );
+                })
+              : grupo.modelos.map((model) => (
+                  <LinhaDoCatalogo
+                    key={model.id}
+                    model={model}
+                    marcado={marcados.has(model.id)}
+                    onToggle={() => alternar(model.id)}
+                  />
+                ))}
+          </Disclosure>
+        );
+      })}
+
+      <HuggingFaceModelBrowser workspaceId={workspaceId} />
     </div>
   );
 }
@@ -502,6 +505,7 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
  * vocabulário do ADR 0020) é o que evita diagnóstico por eliminação.
  */
 function RelatorioDoSync({ resultados }: { resultados: ResultadoDoSync[] }) {
+  const { t } = useTranslation('models');
   return (
     <div className={styles.relatorio}>
       {resultados.map((r) => (
@@ -509,14 +513,18 @@ function RelatorioDoSync({ resultados }: { resultados: ResultadoDoSync[] }) {
           <span className={styles.relatorioProvider}>{r.provider}</span>
           {r.pulado ? (
             <Badge tone={r.pulado === 'falha' ? 'danger' : 'muted'}>
-              {r.pulado === 'sem_capability' && 'sem listagem de catálogo'}
-              {r.pulado === 'sem_credencial' && 'sem credencial cadastrada'}
-              {r.pulado === 'falha' && `falhou · origem ${r.origemDaFalha}`}
+              {r.pulado === 'sem_capability' && t('catalog.syncReport.skippedNoCapability')}
+              {r.pulado === 'sem_credencial' && t('catalog.syncReport.skippedNoCredential')}
+              {r.pulado === 'falha' &&
+                t('catalog.syncReport.failed', { origin: r.origemDaFalha })}
             </Badge>
           ) : (
             <span className={styles.relatorioNumeros}>
-              {r.descobertos} novo(s) · {r.reencontrados} de volta ·{' '}
-              {r.indisponibilizados} sumido(s)
+              {t('catalog.syncReport.summary', {
+                discovered: r.descobertos,
+                reencountered: r.reencontrados,
+                missing: r.indisponibilizados,
+              })}
             </span>
           )}
         </div>
@@ -534,6 +542,7 @@ function LinhaDoCatalogo({
   marcado: boolean;
   onToggle: () => void;
 }) {
+  const { t } = useTranslation('models');
   const janela = formatarJanela(model);
   const indisponivel = model.availability === 'unavailable';
 
@@ -550,20 +559,22 @@ function LinhaDoCatalogo({
       </span>
       <span className={styles.selos}>
         <Badge tone={model.isActive ? 'success' : 'muted'}>
-          {model.isActive ? 'ativo' : 'desativado'}
+          {model.isActive ? t('badges.active') : t('badges.inactive')}
         </Badge>
-        {indisponivel && (
-          <Badge tone="warning">indisponível no provider</Badge>
-        )}
+        {indisponivel && <Badge tone="warning">{t('badges.unavailable')}</Badge>}
         <Badge tone="muted">{formatarPreco(model)}</Badge>
         {janela && <Badge tone="muted">{janela}</Badge>}
-        {model.supportsToolCalling && <Badge tone="accent">tool calling</Badge>}
+        {model.supportsToolCalling && (
+          <Badge tone="accent">{t('badges.toolCalling')}</Badge>
+        )}
         {/* Só o que é VERDADE aparece: um selo "não lê imagem" afirmaria uma
             ausência que o catálogo não prova. */}
-        {model.supportsVision && <Badge tone="accent">lê imagem</Badge>}
-        {model.supportsReasoning && <Badge tone="accent">thinking</Badge>}
-        {model.generatesImage && <Badge tone="accent">gera imagem</Badge>}
-        {model.manualPricing && <Badge tone="muted">preço manual</Badge>}
+        {model.supportsVision && <Badge tone="accent">{t('badges.readsImage')}</Badge>}
+        {model.supportsReasoning && <Badge tone="accent">{t('badges.thinking')}</Badge>}
+        {model.generatesImage && (
+          <Badge tone="accent">{t('badges.generatesImage')}</Badge>
+        )}
+        {model.manualPricing && <Badge tone="muted">{t('badges.manualPricing')}</Badge>}
         {/* Uso vem depois das capabilities e com tom próprio: uma é o que o
             provider prova, a outra é o que este workspace decidiu. */}
         {model.uses.map((u) => (

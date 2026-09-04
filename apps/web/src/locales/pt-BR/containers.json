@@ -1,0 +1,47 @@
+{
+  "title": "Containers",
+  "subtitle": "Todo projeto deste workspace que já tem um container — imagem, estado, recursos e as ações de parar, remover ou subir de novo.",
+  "loadError": "Não foi possível carregar os containers.",
+  "loading": "Carregando…",
+  "empty": "Nenhum projeto deste workspace provisionou um container ainda.",
+  "table": {
+    "project": "Projeto",
+    "image": "Imagem",
+    "imageUnresolved": "(imagem indisponível)",
+    "registered": "Registrado",
+    "observed": "Observado",
+    "resources": "Recursos",
+    "resourcesValue": "{{cpus}} CPU · {{memoryMb}} MB · {{pidsLimit}} pids",
+    "since": "Desde",
+    "actions": "Ações"
+  },
+  "status": {
+    "provisioning": "provisionando",
+    "running": "rodando",
+    "stopped": "parado",
+    "failed": "falhou",
+    "removed": "removido"
+  },
+  "observed": {
+    "none": "não observado",
+    "naoVerificado": {
+      "fora_do_escopo_da_verificacao": "não verificado — estado registrado não precisa de confirmação do daemon",
+      "teto_de_verificacoes_atingido": "não verificado — teto de verificações da carga foi atingido"
+    },
+    "naoObservado": {
+      "broker-nao-configurado": "sem broker configurado",
+      "broker-sem-resposta": "broker não respondeu",
+      "broker-recusou": "broker recusou"
+    }
+  },
+  "actions": {
+    "stop": "Parar",
+    "remove": "Remover",
+    "startAgain": "Subir de novo",
+    "noSession": "Este projeto ainda não tem sessão — a ação precisa de uma para ser proposta.",
+    "errorTitle": "Não foi possível propor a ação",
+    "startAgainNoDecisionTitle": "Sem decisão de imagem para este projeto",
+    "startAgainNoDecisionMessage": "O Arquiteto (ou a Infra) ainda não decidiu uma imagem para este projeto — não há com o que reprovisionar.",
+    "startAgainRationale": "Reprovisiona com a decisão de imagem vigente do projeto."
+  }
+}

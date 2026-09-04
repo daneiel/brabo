@@ -10,12 +10,20 @@ defmodule Engine.Harness.Tokenizer do
 
   @callback estimate(text :: binary()) :: non_neg_integer()
   @callback estimated?() :: boolean()
+  @callback bytes_per_token() :: pos_integer()
 
   @doc "Estimativa de tokens do texto, pelo tokenizer configurado."
   def estimate(text), do: impl().estimate(text)
 
   @doc "Se o tokenizer configurado é aproximado (sempre true por ora)."
   def estimated?, do: impl().estimated?()
+
+  @doc """
+  Heurística de bytes-por-token do tokenizer configurado — exposta pra quem
+  precisa converter um teto em BYTES (ex.: limite de transporte HTTP) pra
+  tokens sem duplicar a constante (`Engine.Harness.ContextManager.Default`).
+  """
+  def bytes_per_token, do: impl().bytes_per_token()
 
   defp impl do
     Application.get_env(:engine, :tokenizer, Engine.Harness.Tokenizer.Approximate)
@@ -44,4 +52,7 @@ defmodule Engine.Harness.Tokenizer.Approximate do
 
   @impl true
   def estimated?, do: true
+
+  @impl true
+  def bytes_per_token, do: @bytes_per_token
 end

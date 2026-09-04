@@ -59,6 +59,11 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   instruction_patch: 'propõe ajustar a instrução de um agente',
   parallelize: 'quer mais um agente em paralelo',
   raise_max_parallel: 'propõe subir o teto de paralelismo',
+  propose_execution_plan: 'propõe o plano de execução',
+  assess_implementability: 'avalia a implementabilidade de uma story',
+  container_start: 'quer subir o container do projeto',
+  container_stop: 'quer parar o container do projeto',
+  container_remove: 'quer remover o container do projeto',
 };
 
 type Payload = Record<string, unknown>;
@@ -236,6 +241,68 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const salto = atual !== undefined && proposto !== undefined ? ` de ${atual} para ${proposto}` : '';
     return `Sobe o teto de agentes em paralelo${qual}${salto} — muda quanto o produto gasta sem perguntar.`;
   },
+
+  propose_execution_plan: (p) => {
+    const total = numero(p, 'totalAgentes');
+    const modulos = quantidade(p, 'modulos');
+    const resumo = texto(p, 'resumo');
+    const quantos =
+      total !== undefined && modulos !== undefined
+        ? ` — ${plural(total, 'agente', 'agentes')} em ${plural(modulos, 'módulo', 'módulos')}`
+        : '';
+    const porque = resumo ? `: "${curto(resumo)}"` : '';
+    // Aprovar aqui NÃO sobe agente nenhum — só aceita o plano. Quem sobe é
+    // uma ação separada (ativar execução), depois. Ver o comentário de
+    // `DevLeadTools.classificar/4`.
+    return `Aprova o plano de execução do Dev Lead${quantos}${porque}. Você ainda decide quando ativar a execução.`;
+  },
+
+  assess_implementability: (p) => {
+    const parecer = texto(p, 'parecer');
+    const justificativa = texto(p, 'justificativa');
+    const rotulo = parecer === 'inviavel' ? 'INVIÁVEL' : 'implementável';
+    const porque = justificativa ? `: "${curto(justificativa)}"` : '';
+    // Gate `implementavel` (docs/gates.yml, ADR 0090) — o parecer do Dev
+    // Lead, a partir do plano de teste da QA-estratégia. Aprovar registra o
+    // parecer; não sobe agente nenhum.
+    return `Registra a story como ${rotulo}${porque}.`;
+  },
+
+  container_start: (p) => {
+    const imagem = texto(p, 'imagem');
+    const network = texto(p, 'network');
+    const resources = p.resources as
+      | { cpus?: unknown; memoryMb?: unknown }
+      | undefined;
+    const cpus = typeof resources?.cpus === 'number' ? resources.cpus : undefined;
+    const memoriaMb =
+      typeof resources?.memoryMb === 'number' ? resources.memoryMb : undefined;
+
+    const qual = imagem ? ` de ${imagem}` : '';
+    const specs =
+      cpus !== undefined && memoriaMb !== undefined
+        ? ` com ${cpus} CPU e ${memoriaMb} MB de memória`
+        : '';
+    const rede = network ? `, rede ${network}` : '';
+    // A Infra elege entre as candidatas do roteamento do Arquiteto (ADR
+    // 0130/0133) — o container sobe com esta imagem/rede/recursos, montando
+    // a pasta do projeto. NÃO diz que os dev agents passam a trabalhar
+    // dentro dele: essa etapa ainda não existe (CLAUDE.md, "Estado atual e
+    // aberto") — prometer isso aqui seria a tela afirmando o que o código
+    // não faz.
+    return `Sobe o container${qual}${specs}${rede}, montando a pasta do projeto.`;
+  },
+
+  // ADR 0136 (RN-495) — a página global de containers propõe estas duas.
+  // Nenhuma decide imagem: só pedem ao broker para agir sobre o que já
+  // existe.
+  container_stop: () =>
+    'Para o container do projeto — a pasta e o disco continuam intactos, ' +
+    'e o container pode voltar a subir sem reprovisionar.',
+
+  container_remove: () =>
+    'Remove o container do projeto de vez — descarta o que existe. Para ' +
+    'voltar a ter um, é preciso subir de novo do zero.',
 };
 
 /** O verbo do tipo, ou um verbo neutro quando o web ainda não o conhece. */

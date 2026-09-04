@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { GitProviderName } from '../lib/api-types';
@@ -38,6 +39,7 @@ export function AdoptionPlanPage({
   provider,
   externalId,
 }: AdoptionPlanPageProps) {
+  const { t } = useTranslation('adoptionPlan');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const firedRef = useRef(false);
@@ -82,9 +84,7 @@ export function AdoptionPlanPage({
     adoptRepository(projectId, provider, { externalId })
       .catch((e: unknown) => {
         setErro(
-          e instanceof ApiError
-            ? e.message
-            : 'Não foi possível ler o repositório agora.',
+          e instanceof ApiError ? e.message : t('genericAdoptError'),
         );
       })
       .finally(() => {
@@ -112,8 +112,8 @@ export function AdoptionPlanPage({
     } catch (e: unknown) {
       setErro(
         e instanceof ApiError && e.status === 409
-          ? 'O plano mudou desde que esta tela carregou. Recarregue para decidir sobre o plano atual.'
-          : 'Não foi possível registrar a decisão agora.',
+          ? t('planChangedError')
+          : t('decisionError'),
       );
     } finally {
       setDecidindo(false);
@@ -128,9 +128,9 @@ export function AdoptionPlanPage({
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Adotar repositório existente</h1>
+        <h1 className={styles.title}>{t('title')}</h1>
         <p className={styles.subtitle}>
-          {projectQuery.data ? projectQuery.data.name : 'Projeto'} ·{' '}
+          {projectQuery.data ? projectQuery.data.name : t('fallbackProjectName')} ·{' '}
           <code>{externalId}</code>
         </p>
       </div>
@@ -138,22 +138,19 @@ export function AdoptionPlanPage({
       {erro && <Alert tone="danger" role="alert">{erro}</Alert>}
 
       {!plan && !erro && (
-        <div className={styles.starting}>Lendo o repositório…</div>
+        <div className={styles.starting}>{t('readingRepo')}</div>
       )}
 
       {plan && decision === null && (
         <>
           <Alert tone="accent">
-            Nada foi alterado no repositório. Isto é o que o bootstrap{' '}
-            <strong>faria</strong> — nenhuma proteção existente é sobrescrita
-            sem a sua aprovação.
+            {t('introBefore')}
+            <strong>{t('introStrong')}</strong>
+            {t('introAfter')}
           </Alert>
 
           {nadaAFazer ? (
-            <p className={styles.starting}>
-              O repositório já está como o template espera. Não há nada a
-              aplicar.
-            </p>
+            <p className={styles.starting}>{t('nothingToDo')}</p>
           ) : (
             grupos.map((g) => (
               <section key={g.secao} className={styles.planSection}>
@@ -169,7 +166,7 @@ export function AdoptionPlanPage({
 
           {avisos.length > 0 && (
             <section className={styles.planSection}>
-              <h2 className={styles.planTitle}>Divergências</h2>
+              <h2 className={styles.planTitle}>{t('divergencesTitle')}</h2>
               <ul className={styles.planList}>
                 {avisos.map((a) => (
                   <li key={a}>{a}</li>
@@ -184,14 +181,14 @@ export function AdoptionPlanPage({
               onClick={() => void decidir('approve')}
               disabled={decidindo || nadaAFazer}
             >
-              Aprovar plano
+              {t('approvePlan')}
             </Button>
             <Button
               variant="ghost"
               onClick={() => void decidir('skip')}
               disabled={decidindo}
             >
-              Adotar como está
+              {t('adoptAsIs')}
             </Button>
           </div>
         </>
@@ -199,10 +196,7 @@ export function AdoptionPlanPage({
 
       {decision === 'as_is' && (
         <>
-          <Alert tone="success">
-            Repositório adotado como está. O bootstrap foi dispensado — nada foi
-            alterado.
-          </Alert>
+          <Alert tone="success">{t('adoptedAsIsAlert')}</Alert>
           <div className={styles.actions}>
             <Button
               variant="success"
@@ -210,7 +204,7 @@ export function AdoptionPlanPage({
                 navigate({ to: '/projects/$projectId', params: { projectId } })
               }
             >
-              Ir para o projeto
+              {t('goToProject')}
             </Button>
           </div>
         </>
@@ -230,10 +224,10 @@ export function AdoptionPlanPage({
                   navigate({ to: '/projects/$projectId', params: { projectId } })
                 }
               >
-                Ir para o projeto
+                {t('goToProject')}
               </Button>
             ) : (
-              <span className={styles.working}>Aplicando o plano…</span>
+              <span className={styles.working}>{t('applyingPlan')}</span>
             )}
           </div>
         </>

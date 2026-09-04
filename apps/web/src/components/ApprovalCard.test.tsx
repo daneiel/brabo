@@ -1,7 +1,20 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ApprovalCard } from './ApprovalCard';
 import type { ActionType, ProposedAction } from '../lib/api-types';
+// Instância REAL do app (mesmo motivo de `AgentCard.test.tsx`): sem
+// `I18nextProvider` no teste, o hook `useTranslation` cai no singleton
+// global de `lib/i18n.ts` — as asserções abaixo checam o texto ATUAL em
+// português.
+import i18n from '../lib/i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
 
 /**
  * Os 15 tipos do backend (`apps/api/src/domain/actions/decide.ts`).
@@ -304,6 +317,63 @@ describe('ApprovalCard', () => {
   });
 
   /**
+   * Onda 2 do programa de abas agrupadas (aba PRs) — `git_merge` tinha corpo
+   * genérico até aqui e caía no despejo de JSON cru (`COM_CORPO_PROPRIO` não
+   * o listava), o mesmo defeito que a RN-096 já tinha corrigido para
+   * `pr_open`/`instruction_patch`/etc. A aba PRs é a primeira produtora real
+   * de `git_merge` pela UI.
+   */
+  describe('git_merge (Onda 2 — aba PRs)', () => {
+    function mergeAction(payload: Record<string, unknown> = {}) {
+      return makeAction({
+        actionType: 'git_merge',
+        payload: {
+          pullRequestId: '218',
+          sourceBranch: 'feature/task-a1b2c3d4',
+          targetBranch: 'dev',
+          title: 'feat: aba de PRs',
+          ...payload,
+        },
+      });
+    }
+
+    it('mostra branches e título — não o payload cru', () => {
+      render(
+        <ApprovalCard
+          action={mergeAction()}
+          variant="queue"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      // Corpo próprio nasce colapsado na variante "queue" — abre para ler.
+      fireEvent.click(screen.getByRole('button', { name: 'Detalhes' }));
+
+      expect(screen.getByText('feat: aba de PRs')).toBeTruthy();
+      expect(screen.getByText('feature/task-a1b2c3d4')).toBeTruthy();
+      expect(screen.getByText('dev')).toBeTruthy();
+      expect(screen.queryByText(/"pullRequestId"/)).toBeNull();
+    });
+
+    it('sem título no payload, degrada para "Pull request #<id>"', () => {
+      render(
+        <ApprovalCard
+          action={mergeAction({ title: undefined })}
+          variant="queue"
+          onApprove={vi.fn()}
+          onDeny={vi.fn()}
+          onAlwaysAllow={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Detalhes' }));
+      expect(screen.getByText('Pull request #218')).toBeTruthy();
+    });
+  });
+
+  /**
    * A regressão que isto existe para pegar: a união `ActionType` do web era um
    * subconjunto da do backend, e `ACTION_ICON[actionType]` devolvia `undefined`
    * para o resto — o que o React trata como componente inválido e derruba a
@@ -547,6 +617,61 @@ describe('ApprovalCard', () => {
       expect(screen.getByText(/propõe uma ação — ver detalhes\./)).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Aprovar' })).toBeTruthy();
       expect(screen.queryByText(/prod-1/)).toBeNull();
+    });
+  });
+
+  /**
+   * A faixa por arquivo (`git_commit`/`git_push`) NÃO migrou para o
+   * `Disclosure` do design system (Onda 4/frente H4) — ela gira o chevron
+   * com `transform: rotate(90deg)`, e o `Disclosure` genérico troca de ícone
+   * sem animação. O defeito real que valia corrigir era outro: faltava
+   * `aria-controls` apontando para uma região que existe mesmo fechada —
+   * exatamente o que o `Disclosure` sempre garantiu para os colapsos que já
+   * o usam (RN-250).
+   */
+  describe('faixa de arquivo do diff (git_commit/git_push)', () => {
+    function acaoComArquivos() {
+      return makeAction({
+        actionType: 'git_commit',
+        payload: {
+          files: [
+            { path: 'apps/api/src/a.ts', additions: 2, deletions: 0, lines: [{ kind: 'add', content: 'x', lineNo: 1 }] },
+            { path: 'apps/api/src/b.ts', additions: 0, deletions: 1, lines: [{ kind: 'del', content: 'y', lineNo: 3 }] },
+          ],
+        },
+      });
+    }
+
+    it('nasce fechada, com aria-controls apontando pra uma região que existe mesmo escondida', () => {
+      render(
+        <ApprovalCard action={acaoComArquivos()} variant="chat" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+      );
+
+      const faixaA = screen.getByRole('button', { name: /a\.ts/ });
+      expect(faixaA.getAttribute('aria-expanded')).toBe('false');
+      const idRegiao = faixaA.getAttribute('aria-controls');
+      expect(idRegiao).toBeTruthy();
+      const regiao = document.getElementById(idRegiao!);
+      expect(regiao).not.toBeNull();
+      expect(regiao).toHaveAttribute('role', 'region');
+      expect(regiao).not.toBeVisible();
+    });
+
+    it('clicar abre o diff daquele arquivo, e abrir outro fecha o anterior (exclusivo)', () => {
+      render(
+        <ApprovalCard action={acaoComArquivos()} variant="chat" onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />,
+      );
+
+      const faixaA = screen.getByRole('button', { name: /a\.ts/ });
+      const faixaB = screen.getByRole('button', { name: /b\.ts/ });
+
+      fireEvent.click(faixaA);
+      expect(faixaA.getAttribute('aria-expanded')).toBe('true');
+      expect(faixaB.getAttribute('aria-expanded')).toBe('false');
+
+      fireEvent.click(faixaB);
+      expect(faixaA.getAttribute('aria-expanded')).toBe('false');
+      expect(faixaB.getAttribute('aria-expanded')).toBe('true');
     });
   });
 });

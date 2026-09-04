@@ -1,304 +1,330 @@
-# ADR 0022 — Fechamento da Fase 4b (sessão 1): evidência que chega, custo que aparece, análise que sobrevive ao kill
+# ADR 0022 — Closing Phase 4b (session 1): evidence that arrives, cost that shows up, analysis that survives a kill
 
-- Status: aceito
-- Data: 2026-07-25
-- Fase: 4b (fechamento da sessão 1 — o Psicólogo real em si é o ADR 0015)
+- Status: accepted
+- Date: 2026-07-25
+- Phase: 4b (closing session 1 — the real Psychologist itself is ADR 0015)
 
-## Contexto
+## Context
 
-O ADR 0015 entregou o Psicólogo real: consumer de `session.closed`,
-contexto montado, hipóteses estruturadas via ToolLoop, evidência validada no
-domínio, idempotência por índice parcial único, triagem de custo por tier.
-Nada disso foi desfeito aqui.
+ADR 0015 delivered the real Psychologist: a `session.closed` consumer,
+assembled context, structured hypotheses via ToolLoop, evidence validated
+in the domain, idempotency via a unique partial index, cost triage by
+tier. None of that is undone here.
 
-O que faltava era o passo que os ADRs 0019/0020/0021 deram pra Fase 4a:
-rodar o critério de aceite e descobrir o que só aparece rodando. Uma
-auditoria dos três apps contra o enunciado achou desvios concretos — três
-deles quebravam o critério de aceite ao pé da letra, e o critério nunca
-tinha sido executado (todas as fases anteriores têm um `demo:*`; o Psicólogo
-não tinha).
+What was missing was the step ADRs 0019/0020/0021 took for Phase 4a: run
+the acceptance criterion and find out what only shows up while running it.
+An audit of the three apps against the spec found concrete deviations —
+three of them broke the acceptance criterion to the letter, and the
+criterion had never actually been run (every previous phase has a
+`demo:*`; the Psychologist didn't).
 
-## Decisões
+## Decisions
 
-### 1. Evidência navegável exige buscar o evento por ID
+### 1. Navigable evidence requires fetching the event by ID
 
-O chip de evidência navegava pra `/projects/:id/sessions/:sid?highlightEvent=:eid`
-e o `SessionPage` rolava até `#event-<id>`. Duas coisas faziam esse destino
-não existir:
+The evidence chip navigated to
+`/projects/:id/sessions/:sid?highlightEvent=:eid` and `SessionPage` would
+scroll to `#event-<id>`. Two things made that destination not exist:
 
-- `ActivityFeed` esconde ruído de máquina (`agent.response`, `tool.call`,
-  `tool.result`, `agent.status`, `agent.delta`, `context.compacted`) e ainda
-  aplica filtros de agente/tipo. São EXATAMENTE os eventos que o Psicólogo
-  mais cita — é onde está o comportamento dos agentes. O chip navegava e a
-  tela não mostrava nada.
-- `useSessionEvents` busca `{ limit: 200, latest: true }`. Evidência fora
-  dos últimos 200 eventos era inalcançável — e o comentário do próprio
-  `activity.ts` registra um log real com 193 eventos.
+- `ActivityFeed` hides machine noise (`agent.response`, `tool.call`,
+  `tool.result`, `agent.status`, `agent.delta`, `context.compacted`) and
+  also applies agent/type filters. These are EXACTLY the events the
+  Psychologist cites the most — it's where agent behavior lives. The chip
+  would navigate and the screen would show nothing.
+- `useSessionEvents` fetches `{ limit: 200, latest: true }`. Evidence
+  outside the last 200 events was unreachable — and `activity.ts`'s own
+  comment records a real log with 193 events.
 
-Duas correções, deliberadamente diferentes em natureza:
+Two fixes, deliberately different in nature:
 
-**`GET /projects/:projectId/sessions/:sessionId/events/:eventId`** (novo,
-`viewer`) sobre `GetSessionEventUseCase`, que reusa
-`SessionEventRepository.findById` com a MESMA checagem de pertencimento de
-`ProposeHypothesesUseCase.resolveKnownEventIds` (existe E é desta sessão;
-id de outra sessão é 404). O `SessionPage` renderiza o evento citado
-**fixado no topo** do painel de log. Isso é independente de paginação e de
-filtro — é a garantia estrutural de que a evidência chega.
+**`GET /projects/:projectId/sessions/:sessionId/events/:eventId`** (new,
+`viewer`) over `GetSessionEventUseCase`, which reuses
+`SessionEventRepository.findById` with the SAME membership check as
+`ProposeHypothesesUseCase.resolveKnownEventIds` (exists AND belongs to
+this session; an id from another session is 404). `SessionPage` renders
+the cited event **pinned at the top** of the log panel. This is
+independent of pagination and of filters — it's the structural guarantee
+that the evidence arrives.
 
-**`ActivityFeed` nunca esconde o evento destacado**, mesmo sendo ruído de
-máquina, mesmo com filtro ativo. Um destaque invisível é uma navegação que
-não chega em nada.
+**`ActivityFeed` never hides the highlighted event**, even if it's machine
+noise, even with an active filter. An invisible highlight is a navigation
+that leads nowhere.
 
-Por que os dois e não só um: o evento fixado resolve o caso geral; a exceção
-no filtro mantém o destaque coerente quando o evento TAMBÉM está na janela —
-sem ela o usuário veria o evento no topo e não veria o realce no log.
+Why both and not just one: the pinned event solves the general case; the
+filter exception keeps the highlight coherent when the event is ALSO
+inside the window — without it the user would see the event at the top and
+not see it highlighted in the log.
 
-### 2. O custo por análise existia e não aparecia em lugar nenhum
+### 2. Per-analysis cost existed and showed up nowhere
 
-`GetPsychologistAnalysisCostUseCase` estava registrado no módulo de DI e
-**nenhum controller o injetava**. O docstring dele afirmava ser "o número
-que a UI mostra no card de Insight" — não havia rota, não havia UI, não
-havia teste. "Custos distintos entre triagem leve e pesada visíveis no
-metering" não era verificável por ninguém.
+`GetPsychologistAnalysisCostUseCase` was registered in the DI module and
+**no controller injected it**. Its docstring claimed to be "the number the
+UI shows on the Insight card" — there was no route, no UI, no test.
+"Distinct costs between light and heavy triage visible in the metering"
+was unverifiable by anyone.
 
-`GET /projects/:projectId/psychologist/analyses` (`viewer`) sobre
-`ListPsychologistAnalysesUseCase`, que combina as análises current com a
-contagem de hipóteses (uma query agrupada, não N) e o custo somado de
-`token_usage`. A UI ganhou uma faixa de análises no topo da seção Insights:
-tier, contagem de eventos, hipóteses, custo e link pra sessão.
+`GET /projects/:projectId/psychologist/analyses` (`viewer`) over
+`ListPsychologistAnalysesUseCase`, which combines the current analyses with
+the hypothesis count (one grouped query, not N) and the summed cost from
+`token_usage`. The UI gained a strip of analyses at the top of the
+Insights section: tier, event count, hypotheses, cost, and a link to the
+session.
 
-O custo é por SESSÃO analisada, não por linha de análise — `token_usage`
-grava por sessão + ator, sem referência à análise. Numa sessão reanalisada
-o número é o acumulado das passadas, o que é o certo pra "quanto o
-Psicólogo gastou nesta sessão"; daí o campo se chamar `costMicros` e não
+The cost is per ANALYZED session, not per analysis row — `token_usage`
+records per session + actor, with no reference to the analysis. In a
+re-analyzed session the number is the accumulated total across passes,
+which is the right thing for "how much the Psychologist spent on this
+session"; hence the field being named `costMicros` and not
 `analysisCostMicros`.
 
-### 3. Sem Lifeline, "análise pós-restart" era impossível
+### 3. Without Lifeline, "post-restart analysis" was impossible
 
-`config :engine, Oban` tinha `plugins: [Oban.Plugins.Pruner]`. Com o
-`Oban.Engines.Basic`, um job SIGKILLado enquanto estava `executing` não
-volta: o nó morreu sem marcar desfecho, a linha fica órfã em `executing`
-para sempre, e o `max_attempts: 5` do worker nunca é exercido. O requisito
-"kill do engine gerando análise pós-restart" não tinha como valer.
+`config :engine, Oban` had `plugins: [Oban.Plugins.Pruner]`. With
+`Oban.Engines.Basic`, a job SIGKILLed while `executing` doesn't come back:
+the node died without marking an outcome, the row stays orphaned in
+`executing` forever, and the worker's `max_attempts: 5` never gets
+exercised. The requirement "kill the engine while generating a
+post-restart analysis" had no way to hold.
 
-`{Oban.Plugins.Lifeline, rescue_after: :timer.minutes(5)}` entrou nos
-plugins. Vale pra TODOS os workers de propósito (Psicólogo, Anamnese, drain
-do outbox) — a orfandade é do mecanismo, não de um worker.
+`{Oban.Plugins.Lifeline, rescue_after: :timer.minutes(5)}` was added to the
+plugins. This applies to ALL general-purpose workers (Psychologist,
+Anamnesis, outbox drain) — the orphaning is a mechanism-level problem, not
+one worker's.
 
-O teste que guarda isso (`Engine.ObanDurabilityTest`) afirma a config, não o
-comportamento: todo teste de worker chama `perform/1` direto, então o
-cenário de orfandade só existe rodando o engine de verdade. Um teste de
-config é o que impede a regressão silenciosa; o cenário real fica no
-runbook de verificação.
+The test that guards this (`Engine.ObanDurabilityTest`) asserts the config,
+not the behavior: every worker test calls `perform/1` directly, so the
+orphaning scenario only exists when actually running the engine. A config
+test is what prevents silent regression; the real scenario stays in the
+verification runbook.
 
-### 4. `:ok` num branch de falha matava a retentativa
+### 4. `:ok` on a failure branch was killing the retry
 
-`PsychologistWorker.perform/1` devolvia `:ok` quando o contexto não vinha,
-com um comentário dizendo "deixa o Oban retentar". No Oban, `:ok` marca o
-job `completed`. Se a api estivesse fora no momento do drain, a análise
-sumia em silêncio.
+`PsychologistWorker.perform/1` returned `:ok` when the context didn't
+come through, with a comment saying "let Oban retry". In Oban, `:ok` marks
+the job `completed`. If the api was down at drain time, the analysis
+disappeared silently.
 
-Agora devolve `{:error, reason}`. Sem narrar `analysis_failed` nesse branch
-de propósito: o caminho de narração é a própria api, que é justamente quem
-está fora — quem registra o desfecho enquanto isso é a linha do job.
+It now returns `{:error, reason}`. Deliberately no `analysis_failed`
+narration on that branch: the narration path is the api itself, which is
+precisely the thing that's down — what records the outcome in the meantime
+is the job's row.
 
-`reason_for/1` também passou a olhar `ctx.last_error`, que o ToolLoop
-preenche em falha de provider. Sem isso, timeout de provider era narrado
-como "encerrou sem emitir hipóteses" — a mesma armadilha já fechada no QA e
-no Dev (ADR 0019), que são código mais novo que o Psicólogo.
+`reason_for/1` also started looking at `ctx.last_error`, which the
+ToolLoop fills on a provider failure. Without this, a provider timeout was
+narrated as "ended without emitting hypotheses" — the same trap already
+closed for QA and Dev (ADR 0019), which are newer code than the
+Psychologist.
 
-### 5. A causa de término vem do MOTIVO, não do status
+### 5. Termination cause comes from the REASON, not the status
 
-`Monitor.classify/1` manda `heartbeat_timeout` fechar como `"closed"` de
-propósito (ninguém do outro lado é um jeito normal de a sessão acabar, não
-uma falha do engine). Mas `TerminationClassifier.classify(_, "closed")`
-devolvia `:normal`, então:
+`Monitor.classify/1` deliberately makes `heartbeat_timeout` close as
+`"closed"` (nobody being on the other end is a normal way for the session
+to end, not an engine failure). But `TerminationClassifier.classify(_,
+"closed")` returned `:normal`, so:
 
-- a causa `:timeout` era **inalcançável em produção**, apesar de o enunciado
-  nomear timeout ao lado de crash e kill;
-- sessão morta por timeout aparecia no prompt como "encerramento normal" e
-  nunca ganhava a seção de análise de término;
-- o teste do classificador travava o comportamento errado
+- the `:timeout` cause was **unreachable in production**, even though the
+  spec names timeout alongside crash and kill;
+- a session dead from timeout showed up in the prompt as "normal
+  closing" and never got the termination-analysis section;
+- the classifier's test was pinning the wrong behavior
   (`classify("heartbeat_timeout", "closed") == :normal`).
 
-O classificador passou a ler o motivo primeiro. Descartamos mudar
-`Monitor.classify/1` pra `heartbeat_timeout` fechar como
-`closed_abnormally`: resolveria na origem, mas mexe na máquina de estados da
-Fase 1/4a e nos testes dela, fora do escopo desta sessão — e a decisão de
-que timeout é um fecho *não-anormal do ponto de vista do engine* continua
-correta. Quem precisa de outra opinião é o Psicólogo, e é ele que a expressa.
+The classifier now reads the reason first. We ruled out changing
+`Monitor.classify/1` so `heartbeat_timeout` closes as `closed_abnormally`:
+it would fix it at the source, but it touches the Phase 1/4a state machine
+and its tests, out of scope for this session — and the decision that
+timeout is a *non-abnormal close from the engine's point of view* remains
+correct. Who needs a different opinion is the Psychologist, and it's the
+Psychologist that expresses it.
 
-Consequência de contrato: o engine passa a mandar `cause` no payload de
-`emit_hypotheses`, e a api exige `terminationAnalysis` quando
-`cause !== 'normal'` (`requiresTerminationAnalysis`) em vez de olhar
-`session.status === 'closed_abnormally'`. `cause` é opcional no DTO — sem
-ela, cai no comportamento anterior, então um engine mais antigo não quebra
-em rolling deploy.
+Contract consequence: the engine now sends `cause` in the
+`emit_hypotheses` payload, and the api requires `terminationAnalysis` when
+`cause !== 'normal'` (`requiresTerminationAnalysis`) instead of looking at
+`session.status === 'closed_abnormally'`. `cause` is optional in the DTO —
+without it, it falls back to the previous behavior, so an older engine
+doesn't break during a rolling deploy.
 
-Também nasceu uma causa honesta pra `{"normal", "closed_abnormally"}` (o
-processo saiu limpo mas a api não esperava a parada): `:unknown`, com o
-rótulo "parada inesperada, sem causa identificada". Antes cairia em
-`:crash`, que mentiria sobre haver exceção.
+An honest cause was also born for `{"normal", "closed_abnormally"}` (the
+process exited cleanly but the api wasn't expecting the stop): `:unknown`,
+labeled "unexpected stop, no cause identified". Before, it would fall
+into `:crash`, which would lie about there being an exception.
 
-### 6. O log do prompt precisa de teto — pinned não compacta
+### 6. The prompt's log needs a cap — pinned doesn't compact
 
-O event log inteiro ia numa única mensagem `:pinned`, e o `ContextManager`
-nunca compacta pinned. Isso é CORRETO (um resumo não preserva os event ids
-que a evidência tem que citar), mas significa que o corte tem que acontecer
-antes: com `Event.list/1` sem `LIMIT` e `inspect(payload)` por evento, uma
-sessão longa estourava a janela de 128k e a análise morria em erro de
-provider.
+The entire event log went into a single `:pinned` message, and the
+`ContextManager` never compacts pinned content. This is CORRECT (a
+summary doesn't preserve the event ids that evidence has to cite), but it
+means the cut has to happen before that: with `Event.list/1` having no
+`LIMIT` and `inspect(payload)` per event, a long session would overflow
+the 128k window and the analysis would die on a provider error.
 
-Três mudanças:
+Three changes:
 
-- `Event.count/1` (COUNT no banco) e `Event.list_recent/2`. A triagem passou
-  a decidir sobre a contagem real sem carregar o log; só depois, já sabendo
-  o tier, os eventos são lidos com o teto daquele tier.
-- Teto de eventos por tier (`max_prompt_events`) e de tamanho de payload por
-  evento (`max_payload_chars`). A CAUDA é o que entra: é onde está o estado
-  da sessão no momento do término, que é justamente o que a seção de término
-  precisa descrever. Mesmo raciocínio do `latest: true` do feed.
-- O corte é **visível pro modelo**: o prompt diz quantos eventos foram
-  omitidos e manda citar só ids presentes. Sem isso o modelo concluiria que
-  leu a sessão inteira, e citaria ids que não viu — que a api rejeitaria,
-  queimando iteração.
+- `Event.count/1` (a COUNT in the database) and `Event.list_recent/2`.
+  Triage now decides based on the real count without loading the log;
+  only afterward, already knowing the tier, are the events read up to
+  that tier's cap.
+- A per-tier event cap (`max_prompt_events`) and a per-event payload size
+  cap (`max_payload_chars`). The TAIL is what gets in: that's where the
+  session's state at the moment of termination lives, which is exactly
+  what the termination section needs to describe. Same reasoning as the
+  feed's `latest: true`.
+- The cut is **visible to the model**: the prompt says how many events
+  were omitted and instructs it to only cite ids that are present.
+  Without this, the model would conclude it had read the whole session,
+  and would cite ids it never saw — which the api would reject, burning
+  an iteration.
 
-### 7. Ciclo de vida da hipótese vira compare-and-swap
+### 7. Hypothesis lifecycle becomes compare-and-swap
 
-`updateStatus` não tinha `WHERE status = 'proposed'` — a proteção contra
-double-accept era só a checagem read-then-write do use case, então dois
-cliques simultâneos passavam os dois e o segundo sobrescrevia a decisão do
-primeiro. Virou `updateStatusIfProposed`, que devolve `null` quando não casa
-e o use case traduz em 400.
+`updateStatus` had no `WHERE status = 'proposed'` — the protection against
+a double accept was only the use case's read-then-write check, so two
+simultaneous clicks both passed and the second overwrote the first's
+decision. It became `updateStatusIfProposed`, which returns `null` when it
+doesn't match and the use case translates into a 400.
 
-A checagem de domínio (`assertHypothesisTransition`) continua antes do CAS,
-de propósito: é ela que dá a mensagem boa pro caso comum ("já foi aceita").
-O CAS é a exclusão mútua, não a explicação.
+The domain check (`assertHypothesisTransition`) still runs before the CAS,
+on purpose: it's what gives the good message for the common case
+("already accepted"). The CAS is the mutual exclusion, not the
+explanation.
 
-`AcceptHypothesisUseCase` também passou a rodar em UMA transação. Eram
-quatro (update, dois eventos, enqueue da Anamnese): um crash no meio deixava
-uma hipótese `accepted` que nunca chegou na fila — quebrando exatamente o
-loop fechado que o accept existe pra alimentar.
+`AcceptHypothesisUseCase` also started running in ONE transaction. It used
+to be four (update, two events, Anamnesis enqueue): a crash in the middle
+would leave a hypothesis `accepted` that never reached the queue —
+breaking exactly the closed loop the accept exists to feed.
 
-### 8. Corrida de análise concorrente é conflito, não 500
+### 8. Concurrent-analysis race is a conflict, not a 500
 
-`findCurrentBySession` não toma lock, então dois runs `auto` simultâneos veem
-"sem análise current" e inserem os dois. O índice parcial único sempre foi a
-rede de segurança certa — o que faltava era traduzir a violação (23505 no
-índice nomeado) num `ConflictException` em vez de deixar escapar como 500.
-Não pusemos `SELECT ... FOR UPDATE`: quem perde a corrida não perde trabalho
-(a análise vencedora já está gravada), então bloquear seria custo sem ganho.
+`findCurrentBySession` takes no lock, so two simultaneous `auto` runs both
+see "no current analysis" and both insert. The unique partial index was
+always the right safety net — what was missing was translating the
+violation (23505 on the named index) into a `ConflictException` instead of
+letting it leak out as a 500. We didn't add `SELECT ... FOR UPDATE`:
+whoever loses the race doesn't lose work (the winning analysis is already
+recorded), so locking would be cost with no benefit.
 
-`superseded_at` (migração `0020`) responde QUANDO a análise foi substituída.
-A cadeia `supersedes` já respondia por quem, mas "substitui a versão anterior
-com histórico" não é auditável sem a data.
+`superseded_at` (migration `0020`) answers WHEN an analysis was
+superseded. The `supersedes` chain already answered by whom, but
+"replaces the previous version, with history" isn't auditable without the
+date.
 
-### 9. Triagem virou knob de operador
+### 9. Triage became an operator knob
 
-Limiar, tetos de iteração, orçamento por tier e os tetos de prompt eram
-atributos de módulo. Foram pra `config/runtime.exs` com os valores do ADR
-0015 como default, alinhados aos outros knobs do harness — controle de custo
-é coisa que se aperta por ambiente, não recompilando.
+Threshold, iteration caps, per-tier budget, and the prompt caps were
+module attributes. They moved to `config/runtime.exs` with the ADR 0015
+values as defaults, aligned with the other harness knobs — cost control is
+something you tune per environment, not by recompiling.
 
-### 10. Limpeza
+### 10. Cleanup
 
-`ActionPipeline` estava registrado como `:pre_tool_use` nos hooks do
-Psicólogo, mas o registry tem uma tool só, `emit_hypotheses`, que é
-`:direct` (o Psicólogo é read-only, nunca propõe ação com efeito externo) —
-no-op permanente, removido. `listCurrentByProject`/
-`listNonDismissedByProject` ganharam `ORDER BY created_at DESC` (sem isso o
-Postgres não promete ordem e o agrupamento do Insights trocava de ordem
-entre polls). O `reanalyzeSession` do `api-client` existia sem chamador
-nenhum: ganhou botão na faixa de análises. E o comentário do
-`internal-sessions.controller` que ainda falava do "PsychologistWorker
-(placeholder, fase 3+ traz a análise real)" foi corrigido.
+`ActionPipeline` was registered as `:pre_tool_use` in the Psychologist's
+hooks, but the registry has just one tool, `emit_hypotheses`, which is
+`:direct` (the Psychologist is read-only, it never proposes an action
+with external effect) — a permanent no-op, removed.
+`listCurrentByProject`/`listNonDismissedByProject` gained `ORDER BY
+created_at DESC` (without it Postgres doesn't guarantee order and the
+Insights grouping would swap order between polls). `api-client`'s
+`reanalyzeSession` existed with no caller at all: it gained a button on
+the analyses strip. And the `internal-sessions.controller` comment that
+still talked about the "PsychologistWorker (placeholder, phase 3+ brings
+the real analysis)" was corrected.
 
-## Consequências
+## Consequences
 
-- **Critério de aceite executável**: `apps/api/scripts/demo-psicologo.ts`
-  (`pnpm --filter api demo:psicologo`) encerra 3 sessões — normal com log
-  curto (triagem leve), kill (`closed_abnormally`, causa `kill`), e erro com
-  log longo (triagem pesada) — e verifica estruturalmente: uma análise
-  current por sessão, o tier esperado, ao menos uma hipótese, TODA evidência
-  resolvendo pelo endpoint por id na própria sessão, `terminationAnalysis`
-  nas duas anormais, custo da leve abaixo do da pesada, e reprocessamento
-  que supersede sem apagar (com data). Sai com código 1 e lista as falhas se
-  algo não bate. O TEXTO das hipóteses não é verificado — sai de um LLM.
+- **Executable acceptance criterion**: `apps/api/scripts/demo-psicologo.ts`
+  (`pnpm --filter api demo:psicologo`) closes 3 sessions — normal with a
+  short log (light triage), kill (`closed_abnormally`, cause `kill`), and
+  error with a long log (heavy triage) — and verifies structurally: one
+  current analysis per session, the expected tier, at least one
+  hypothesis, ALL evidence resolving via the by-id endpoint within its own
+  session, `terminationAnalysis` on both abnormal ones, the light tier's
+  cost below the heavy tier's, and reprocessing that supersedes without
+  deleting (with a date). It exits with code 1 and lists failures if
+  something doesn't match. The hypotheses' TEXT isn't verified — it comes
+  from an LLM.
 
-- **Os dois modelos ollama são semeados com preço ZERO**, e custo zero nos
-  dois tiers não provaria nada sobre "custos distintos". O script atribui
-  preços nominais distintos a eles (o seed diz explicitamente que preço é
-  editável) e liga cada tier a um. O custo continua saindo do caminho real
-  (`RunLlmTurnUseCase` grava `token_usage.cost_micros` do preço do modelo) —
-  sem nenhum mecanismo de custo paralelo. Rodando contra provider pago,
-  `DEMO_MODEL_LEVE`/`DEMO_MODEL_PESADO` dispensam isso.
+- **Both ollama models are seeded with ZERO price**, and zero cost in both
+  tiers wouldn't prove anything about "distinct costs". The script
+  assigns them distinct nominal prices (the seed explicitly says price is
+  editable) and binds each tier to one of them. The cost still comes from
+  the real path (`RunLlmTurnUseCase` records `token_usage.cost_micros`
+  from the model's price) — no parallel cost mechanism at all. When
+  running against a paid provider, `DEMO_MODEL_LEVE`/`DEMO_MODEL_PESADO`
+  make this unnecessary.
 
-- **O kill do script é o report do Monitor**, não um SIGKILL de processo: o
-  que o Psicólogo consome é `sessions.termination_reason` + status, e é
-  exatamente isso que um kill real produziria. Matar o container do engine
-  no meio de uma análise é o OUTRO cenário (resgate do job órfão pelo
-  Lifeline) e se verifica à mão: com o job em `executing`, `docker kill` no
-  engine, subir de novo, e a análise conclui depois do `rescue_after`.
+- **The script's "kill" is the Monitor's report**, not a process SIGKILL:
+  what the Psychologist consumes is `sessions.termination_reason` +
+  status, and that's exactly what a real kill would produce. Killing the
+  engine's container mid-analysis is the OTHER scenario (rescue of the
+  orphaned job by Lifeline) and is verified by hand: with the job
+  `executing`, `docker kill` on the engine, bring it back up, and the
+  analysis completes after `rescue_after`.
 
-- **Primeiros testes de web da Fase 4b**: `HypothesisCard` (confiança,
-  navegação de evidência apontando pra sessão ANALISADA, seção de término,
-  ações só enquanto proposta), `ActivityFeed` (o destacado nunca é
-  escondido, nem sendo ruído de máquina, nem com filtro de agente) e os
-  branches `psychologist.*` de `activity.ts` — que existiam sem nenhum teste.
+- **First web tests of Phase 4b**: `HypothesisCard` (confidence, evidence
+  navigation pointing to the ANALYZED session, termination section,
+  actions only while proposed), `ActivityFeed` (the highlighted one is
+  never hidden, neither as machine noise nor under an agent filter), and
+  the `psychologist.*` branches of `activity.ts` — which existed with no
+  test at all.
 
-- No engine entraram testes de triagem pesada ponta a ponta (todos os
-  anteriores rodavam com log vazio, `event_count == 0`), falha de contexto
-  devolvendo `{:error, _}`, correção bem-sucedida DEPOIS de uma rejeição da
-  api (o ciclo "até M tentativas" nunca tinha sido exercido até o sucesso),
-  timeout classificado a partir de `heartbeat_timeout` com status `"closed"`,
-  e o corte do log. Na api, `AcceptHypothesisUseCase`/
-  `DismissHypothesisUseCase` (que não tinham teste nenhum), o CAS barrando
-  double-accept, `ListPsychologistAnalysesUseCase` (leve < pesada),
-  `GetSessionEventUseCase` e a exigência de término guiada por `cause`.
+- On the engine, end-to-end heavy-triage tests were added (all previous
+  ones ran with an empty log, `event_count == 0`), context failure
+  returning `{:error, _}`, a successful correction AFTER an api rejection
+  (the "up to M attempts" cycle had never been exercised all the way to
+  success), timeout classified from `heartbeat_timeout` with status
+  `"closed"`, and the log cut. On the api,
+  `AcceptHypothesisUseCase`/`DismissHypothesisUseCase` (which had no test
+  at all), the CAS blocking a double accept,
+  `ListPsychologistAnalysesUseCase` (light < heavy),
+  `GetSessionEventUseCase`, and the `cause`-driven termination
+  requirement.
 
-## Verificação executada
+## Verification performed
 
-O critério de aceite RODOU nesta stack (Ollama local, sem provider pago) e
-passou nos três casos: análise current por sessão, tier esperado, hipótese em
-cada uma, TODAS as evidências resolvendo pelo endpoint por id na própria
-sessão, `terminationAnalysis` nas duas anormais, custo da leve
-(US$ 0,000087) abaixo do da pesada (US$ 0,002086), e reanálise
-superseding com `superseded_at` datado.
+The acceptance criterion RAN on this stack (local Ollama, no paid
+provider) and passed all three cases: one current analysis per session,
+the expected tier, a hypothesis in each, ALL evidence resolving via the
+by-id endpoint within its own session, `terminationAnalysis` on both
+abnormal ones, the light tier's cost (US$ 0.000087) below the heavy
+tier's (US$ 0.002086), and re-analysis superseding with a dated
+`superseded_at`.
 
-Duas coisas só apareceram rodando, e ambas viraram default/documentação no
-script:
+Two things only showed up while running, and both became a default/piece
+of documentation in the script:
 
-- **`llama3.1:8b` não chama a tool.** Gastou as iterações do tier e nunca
-  emitiu `emit_hypotheses`; o desfecho saiu como "encerrou sem emitir
-  hipóteses" e NÃO como "falha no provider" — o que, de passagem, é a
-  distinção da decisão 4 funcionando: o modelo respondeu, só não usou a
-  tool. Nesta stack só o `qwen2.5-coder:7b` sustenta tool call com argumento
-  estruturado (mesmo motivo de ele rodar os dev agents), daí a cópia no
-  Ollama pra dar dois PREÇOS ao mesmo modelo capaz.
-- **O teto de 4 iterações do tier leve é apertado pra 7B local.** Na primeira
-  rodada a sessão de kill morreu em "limite de iterações" depois de duas
-  tentativas com `evidenceEventIds` vazio e duas citando um event id
-  INVENTADO (`01KYE4B4W25GJ8R6H9Z3FJ8DQX`), cada uma corretamente rejeitada
-  com a mensagem da api voltando pro modelo. Ou seja: o guarda-corpo de
-  evidência pegou uma alucinação de id em produção, exatamente como
-  desenhado. A resposta certa é subir o teto por ambiente (os knobs agora
-  estão no compose), nunca afrouxar a validação.
+- **`llama3.1:8b` doesn't call the tool.** It burned through the tier's
+  iterations and never emitted `emit_hypotheses`; the outcome came out as
+  "ended without emitting hypotheses" and NOT as "provider failure" —
+  which, incidentally, is decision 4's distinction working: the model
+  responded, it just didn't use the tool. On this stack only
+  `qwen2.5-coder:7b` sustains tool calling with structured arguments
+  (same reason it runs the dev agents), hence the copy in Ollama to give
+  the same capable model two PRICES.
+- **The light tier's 4-iteration cap is tight for a local 7B.** On the
+  first run the kill session died on "iteration limit" after two attempts
+  with empty `evidenceEventIds` and two citing a MADE-UP event id
+  (`01KYE4B4W25GJ8R6H9Z3FJ8DQX`), each one correctly rejected, with the
+  api's message going back to the model. In other words: the evidence
+  guardrail caught an id hallucination in production, exactly as
+  designed. The right answer is raising the cap per environment (the
+  knobs now live in the compose file), never loosening the validation.
 
-**O kill pós-restart foi verificado à mão e funciona.** Job
-`Engine.Workers.PsychologistWorker` em `executing`, `docker kill` no
-container do engine, o job ficou órfão em `executing` sem desfecho, engine de
-volta, e ~6 minutos depois (rescue_after de 5 min + intervalo do Lifeline) a
-análise CONCLUIU, com `supersedes` apontando pra anterior. Sem o Lifeline
-esse job não sairia de `executing` nunca.
+**The post-restart kill was verified by hand and works.** A job
+`Engine.Workers.PsychologistWorker` `executing`, `docker kill` on the
+engine's container, the job was left orphaned in `executing` with no
+outcome, engine back up, and ~6 minutes later (5-min rescue_after plus
+Lifeline's interval) the analysis COMPLETED, with `supersedes` pointing
+to the previous one. Without Lifeline, that job would never leave
+`executing`.
 
-## Escopo & assunções
+## Scope & assumptions
 
-Fora deste fechamento: `SELECT ... FOR UPDATE` em `findCurrentBySession`
-(ver decisão 8); `Oban unique:` no nível do job (a constraint + o pré-check
-bastam, e o Lifeline resolve o caso que motivaria); reanálise em lote;
-dashboard de custo além da faixa de análises; qualquer mudança em
-`Monitor.classify/1` ou na máquina de estados de sessão.
+Out of this closing: `SELECT ... FOR UPDATE` in `findCurrentBySession`
+(see decision 8); Oban `unique:` at the job level (the constraint + the
+pre-check are enough, and Lifeline resolves the case that would motivate
+it); batch re-analysis; a cost dashboard beyond the analyses strip; any
+change to `Monitor.classify/1` or to the session state machine.
 
-O `superseded_at` é aditivo e nullable — análises substituídas ANTES desta
-migração ficam com `superseded = true` e data nula, e isso é honesto: não
-existe registro de quando aconteceu.
+`superseded_at` is additive and nullable — analyses superseded BEFORE
+this migration are left with `superseded = true` and a null date, and
+that's honest: there's no record of when it happened.

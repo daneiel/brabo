@@ -48,7 +48,7 @@ jobs:
       # é o que torna a presença do PAT testável dentro do job.
       TEM_PAT: ${{ secrets.BRABO_BOT_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           # O cálculo lê TODAS as tags e o histórico desde a última final.
           fetch-depth: 0
@@ -59,8 +59,8 @@ jobs:
           # dispara a Release — degradação visível, não silenciosa.
           token: ${{ secrets.BRABO_BOT_TOKEN || github.token }}
 
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: 24.11.1
 
@@ -121,15 +121,15 @@ jobs:
           echo "Crie o segredo (PAT com \`repo\` + \`workflow\`) e rode este job de novo." >&2
           exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           fetch-depth: 0
           # Escrever em `main` e abrir PR que NASÇA COM CHECKS exige o PAT: PR
           # aberto com o `GITHUB_TOKEN` não dispara workflow.
           token: ${{ secrets.BRABO_BOT_TOKEN }}
 
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: 24.11.1
 
@@ -181,13 +181,13 @@ jobs:
           echo "::error title=destravar-gate::sem BRABO_BOT_TOKEN o gate não pode ser atualizado em main."
           exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           fetch-depth: 0
           token: ${{ secrets.BRABO_BOT_TOKEN }}
 
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: 24.11.1
 
@@ -226,3 +226,71 @@ jobs:
           git commit -m "chore(gate): destrava ${BRANCH} após a retropropagação"
           git push origin HEAD:main
           echo "::notice::${BRANCH} destravada"
+
+  # ------------------------------------------------------------------ alarme
+
+  # DÁ DESTINATÁRIO À FALHA. Sem este job, o `carimbar` falha e o mundo não
+  # sabe: workflow de `push` numa permanente não tem PR onde ficar vermelho —
+  # o merge já aconteceu —, então sobra um run na aba Actions que ninguém abre.
+  #
+  # Isso não é hipótese. O `carimbar` detectou corretamente as promoções
+  # squashadas #367 (2026-08-24) e #394 (2026-08-25), falhou nas duas, e o
+  # histórico ficou quebrado do mesmo jeito até a promoção seguinte aparecer
+  # com 11 arquivos em "conflito" que eram só ancestralidade perdida. A
+  # detecção estava certa; faltava para quem tocar.
+  avisar:
+    name: Avisar que o carimbo falhou
+    needs: carimbar
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # `github.token`, nunca o PAT: uma das causas de falha do `carimbar` É o
+      # `BRABO_BOT_TOKEN` inválido (o `checkout` morre com "could not read
+      # Username"). Um alarme que depende do que pode estar quebrado é um
+      # alarme que cala justamente na hora em que precisa tocar.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          token: ${{ github.token }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: 24.11.1
+
+      - name: Compor o alarme
+        id: alarme
+        env:
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          URL_DO_RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ARQUIVO_DO_CORPO: ${{ runner.temp }}/alarme.md
+        run: node scripts/ci/alarme-de-tag.ts
+
+      # Uma issue POR BRANCH, reaproveitada: a segunda falha na mesma
+      # permanente vira COMENTÁRIO, nunca issue nova. Enxurrada de issues
+      # idênticas ensina a ignorar, que é o defeito que este job existe para
+      # corrigir.
+      #
+      # A busca é `--json` + comparação EXATA de título, não `--search`: o
+      # título tem crases e colchetes, e a sintaxe de busca do GitHub os trata
+      # como operadores. Listar e comparar é determinístico.
+      - name: Abrir ou atualizar a issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITULO: ${{ steps.alarme.outputs.titulo }}
+          CORPO: ${{ runner.temp }}/alarme.md
+        run: |
+          set -euo pipefail
+          existente="$(gh issue list --state open --limit 100 --json number,title \
+            --jq '.[] | select(.title == $ENV.TITULO) | .number' | head -1)"
+
+          if [ -n "${existente}" ]; then
+            gh issue comment "${existente}" --body-file "${CORPO}"
+            echo "::notice::comentei na issue #${existente}"
+          else
+            url="$(gh issue create --title "${TITULO}" --body-file "${CORPO}")"
+            echo "::notice::issue aberta: ${url}"
+          fi

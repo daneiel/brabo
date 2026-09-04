@@ -1,8 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CodeExplorer } from './CodeExplorer';
+// Instância REAL do app — `CodeExplorer` não tem `I18nextProvider` próprio
+// (mesmo padrão de `Dashboard.test.tsx`/`ProjectExecutorsTab.test.tsx`).
+import i18n from '../../lib/i18n';
 import type { CodeTree } from '../../lib/api-types';
 
 const getCodeTree = vi.fn();
@@ -44,8 +47,13 @@ const FILHOS_APPS: CodeTree = {
   truncated: false,
 };
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage('pt-BR');
   vi.clearAllMocks();
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
 });
 
 describe('CodeExplorer — caminho feliz', () => {
@@ -75,6 +83,43 @@ describe('CodeExplorer — caminho feliz', () => {
     await user.click(screen.getByText('apps'));
     expect(await screen.findByText('web')).toBeInTheDocument();
     expect(getCodeTree).toHaveBeenCalledWith('p-1', { ref: 'dev', path: 'apps' });
+  });
+});
+
+describe('CodeExplorer — pasta é um Disclosure (aria-expanded acompanha o clique)', () => {
+  it('nasce fechada e alterna ao clicar; fechar de novo desmonta os filhos', async () => {
+    getCodeTree.mockImplementation((_projectId: string, opts: { path?: string }) =>
+      Promise.resolve(opts.path === 'apps' ? FILHOS_APPS : RAIZ),
+    );
+    const user = userEvent.setup();
+    montar();
+
+    await screen.findByText('apps');
+    const pasta = screen.getByRole('button', { name: /apps/ });
+    expect(pasta.getAttribute('aria-expanded')).toBe('false');
+
+    await user.click(pasta);
+    expect(pasta.getAttribute('aria-expanded')).toBe('true');
+    expect(await screen.findByText('web')).toBeInTheDocument();
+
+    await user.click(pasta);
+    expect(pasta.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByText('web')).not.toBeInTheDocument();
+  });
+
+  it('erro ao listar uma subpasta aparece dentro dela, sem derrubar a raiz', async () => {
+    getCodeTree.mockImplementation((_projectId: string, opts: { path?: string }) =>
+      opts.path === 'apps' ? Promise.reject(new Error('boom')) : Promise.resolve(RAIZ),
+    );
+    const user = userEvent.setup();
+    montar();
+
+    await screen.findByText('apps');
+    await user.click(screen.getByRole('button', { name: /apps/ }));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    // A raiz continua íntegra — o erro é só da subpasta.
+    expect(screen.getByText('README.md')).toBeInTheDocument();
   });
 });
 

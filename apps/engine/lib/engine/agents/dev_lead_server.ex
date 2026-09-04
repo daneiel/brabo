@@ -6,6 +6,13 @@ defmodule Engine.Agents.DevLeadServer do
   e propõe o PLANO de execução: quantos agentes por módulo e por quê. Ele **não
   escreve código** — distribui trabalho e responde por ele.
 
+  Desde o ADR 0090 ele também é dono do gate `implementavel`
+  (`docs/gates.yml`, ativo): a ferramenta `assess_implementability` propõe o
+  parecer de implementabilidade de uma story, a partir do plano de teste que
+  a QA-estratégia produz (`Engine.Gates.QaEstrategiaAgent`, segundo momento
+  do `qa-lead` — ver `docs/fluxo.yml`). Mesmo mecanismo de suspensão do
+  `propose_execution_plan`.
+
   Espelha o `Engine.Agents.ArquitetoServer` e o `Engine.Infra.InfraLeadServer`:
   GenServer por sessão, estado + rehydration + streaming + loop bounded de tool
   use. Kickoff no start fresco.
@@ -26,12 +33,57 @@ defmodule Engine.Agents.DevLeadServer do
 
   Sem `Terminal` e sem `write_file` — restrição ESTRUTURAL, não de política: um
   lead que escrevesse código faria o trabalho que delegou.
+
+  ## O plano suspende o turno esperando aprovação (ADR 0086, RN-284)
+
+  `propose_execution_plan` virou `proposed_action` de verdade (ver o
+  moduledoc de `Engine.Agents.DevLeadTools`), e este servidor é a PRIMEIRA
+  vez que um agente conversacional (síncrono, `GenServer.call` de até 180s
+  via `TurnoAssincrono`) suspende esperando decisão humana — o dev agent
+  (ADR 0052) e os gates de QA/Infra (ADR 0057) já suspendiam, mas os três são
+  disparados por `cast` e nunca esperavam resposta síncrona.
+
+  O mecanismo: quando `run_turn/2` recebe `{:pending, action_id}` de um tool
+  call, ele PARA o laço (sem processar mais chamadas nem recursar) e devolve
+  o `state` com a chave `:aguardando_aprovacao` —
+  `%{action_id:, tool_call_id:, tool_name:, remaining:}`.
+  `TurnoAssincrono.tratar_resultado/2` vê essa chave, responde ao `from` (o
+  que rompe o bloqueio síncrono no momento certo) e emite só
+  `agent.status: awaiting_approval` — SEM `agent.done`, porque o turno não
+  terminou.
+
+  Assinado via `Engine.Dev.Wake.subscribe/2` (o MESMO módulo que
+  `Engine.Gates.QaLeadServer` reusa para os subagentes de QA, apesar do nome
+  ser "dev" — a entrega de `{:action_settled, ...}` é por AGENTE, e "dev-lead"
+  é só mais um id de agente para o worker que drena a outbox), este servidor
+  recebe `{:action_settled, desfecho}` quando a api decide a ação. A mensagem
+  `role: "tool"` com o resultado REAL só entra em `state.messages` NESSE
+  momento — nunca antes, porque gravar "pending" ali mentiria pro modelo que
+  o comando já respondeu isso (mesmo raciocínio do dev agent, ver
+  `Engine.Harness.Hooks.ActionPipeline` e `Engine.Harness.ToolLoop`). O laço
+  retoma de `pendente.remaining`, que já desconta a iteração suspensa.
+
+  Enquanto `aguardando_aprovacao` está setado, uma segunda `user_message`
+  NÃO inicia turno novo — vira `agent.error` (origem `politica`) explicando
+  que há uma decisão pendente em Aprovações.
+
+  **Lacuna aceita, declarada**: se o engine reiniciar enquanto o Dev Lead
+  está suspenso, o `aguardando_aprovacao` (só em memória) se perde — ao
+  contrário do dev agent, este servidor NÃO reidrata `laco_pendente`. A
+  decisão continua registrada e visível em Aprovações (é durável na api), mas
+  o Dev Lead não narra o desfecho automaticamente quando ele chegar: o
+  processo que assinou o `Wake` morreu, e o próximo restart sobe um Dev Lead
+  novo, sem inscrição para aquela ação. Fechar isto exigiria o mesmo
+  mecanismo de reidratação do ADR 0052 (`handle_continue`, resume por linha
+  durável) — fora do escopo desta mudança, que só faz o comportamento bater
+  com o que `docs/fluxo.yml` já declarava.
   """
 
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Agents.{DevLeadTools, FalhaDeTurno, TurnoAssincrono}
+  alias Engine.Dev.Wake
   alias Engine.Sessions.EngineApiClient
 
   @agent "dev-lead"
@@ -66,17 +118,29 @@ defmodule Engine.Agents.DevLeadServer do
 
     history = rehydrate(project_id, session_id)
 
+    # Assina pelo próprio id — `task.action_settled` chega chaveado pelo ator
+    # que PROPÔS a ação (`acao.actor.id`, ver `avisarQuemEsperava` na api), e
+    # quem propõe `propose_execution_plan` é sempre "dev-lead". Mesmo módulo
+    # que `Engine.Gates.QaLeadServer` já reusa para os subagentes de QA.
+    :ok = Wake.subscribe(project_id, @agent)
+
     {:ok,
      %{
        session_id: session_id,
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [DevLeadTools.spec()],
+       # ADR 0090: `assess_implementability` entrou como SEGUNDA ferramenta,
+       # aditiva — `propose_execution_plan` continua a primeira e intocada.
+       tool_specs: [DevLeadTools.spec(), DevLeadTools.spec_assess_implementability()],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
-       turno_assincrono: nil
+       turno_assincrono: nil,
+       # O laço suspenso esperando a decisão do plano de execução (ADR 0086,
+       # RN-284). Só em memória — ver a lacuna de restart declarada no
+       # moduledoc.
+       aguardando_aprovacao: nil
      }}
   end
 
@@ -94,11 +158,75 @@ defmodule Engine.Agents.DevLeadServer do
     {:noreply, TurnoAssincrono.cancelar(state)}
   end
 
+  # Guarda: enquanto o plano de execução está aguardando decisão do usuário,
+  # a conversa NÃO recomeça — precisa vir ANTES da cláusula genérica de
+  # `{:user_message, text}` para o pattern match casar aqui primeiro. A
+  # resposta HTTP desta rota já é descartada pelo controller do engine para
+  # todos os agentes, então `{:reply, :ok, state}` basta.
+  #
+  # `emit` (durável) E `broadcast` (efêmero) — mesmo par que `emit_falha/2`
+  # usa em todo o resto deste arquivo. Só `emit` deixaria quem está com a
+  # aba aberta sem sinal nenhum até o próximo poll do event log.
+  @impl true
+  def handle_call({:user_message, _text}, _from, %{aguardando_aprovacao: %{}} = state) do
+    origem = "politica"
+
+    mensagem =
+      "Há uma decisão de plano de execução pendente em Aprovações — a " <>
+        "conversa não segue até ela ser decidida."
+
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: "aguardando_aprovacao_de_plano"
+    })
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+
+    {:reply, :ok, state}
+  end
+
   @impl true
   def handle_call({:user_message, text}, from, state) do
     work = state |> append(user_msg(text)) |> compact()
     TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
   end
+
+  # A ação que segurava o laço teve desfecho (ADR 0086/RN-284 — mesmo padrão
+  # do dev agent, ADR 0052, e do `QaLeadServer` para os subagentes de QA). O
+  # resultado de verdade entra no lugar onde estaria a palavra "pending", e o
+  # laço RETOMA de onde parou — `pendente.remaining` já desconta a iteração
+  # suspensa contra o teto.
+  #
+  # Guard de identidade: só age se for a MESMA ação que este Dev Lead está
+  # esperando — entrega duplicada (retry do Oban, drain concorrente) ou
+  # tardia (o servidor já morreu e um novo subiu, ver a lacuna declarada no
+  # moduledoc) vira no-op na cláusula seguinte, nunca derruba o processo.
+  @impl true
+  def handle_info(
+        {:action_settled, %{action_id: action_id} = desfecho},
+        %{aguardando_aprovacao: %{action_id: action_id} = pendente} = state
+      ) do
+    mensagem_tool = %{
+      "role" => "tool",
+      "content" => texto_do_desfecho(desfecho),
+      "toolCallId" => pendente.tool_call_id,
+      "name" => pendente.tool_name,
+      :pinned => false
+    }
+
+    state =
+      state
+      |> append(mensagem_tool)
+      |> Map.put(:aguardando_aprovacao, nil)
+
+    TurnoAssincrono.iniciar(state, nil, fn -> run_turn(state, pendente.remaining) end)
+  end
+
+  # Desfecho de OUTRA ação, ou o Dev Lead já não está esperando: ignora em
+  # vez de derrubar. A entrega é por agente, e nada garante que só chegue o
+  # que se espera.
+  def handle_info({:action_settled, _outro}, state), do: {:noreply, state}
 
   @impl true
   def handle_info(msg, state) do
@@ -110,7 +238,17 @@ defmodule Engine.Agents.DevLeadServer do
 
   # --- Turno com loop bounded de tool use ---
 
-  defp run_turn(state, remaining) when remaining <= 0, do: state
+  # O teto de iterações deixou de ser SILENCIOSO — mesma correção da RN-166
+  # já aplicada ao PO: um Dev Lead que esgotasse as 14 iterações terminava
+  # sem evento nenhum, indistinguível de um turno que simplesmente acabou.
+  defp run_turn(state, remaining) when remaining <= 0 do
+    emit(state, "toolloop.limit_reached", %{
+      iteration: @max_iterations,
+      max_iterations: @max_iterations
+    })
+
+    state
+  end
 
   defp run_turn(state, remaining) do
     # Ver o comentário em `criativo_server.ex`: quem fala é o agente (achado C).
@@ -128,9 +266,17 @@ defmodule Engine.Agents.DevLeadServer do
       # A api narra a falha no PRÓPRIO frame final (budget, credencial, binding).
       # Isto não caía no `{:error, _}` abaixo e não emitia evento nenhum: o
       # turno terminava em silêncio absoluto, pior que o balão vazio.
+      #
+      # Devolve `state` (mapa), e NÃO `{state, ""}` (tupla): quem recebe o
+      # retorno de `run_turn/2` é `TurnoAssincrono.tratar_resultado/2`, que faz
+      # `Map.put(resultado, :turno_assincrono, nil)`. `Map.put/3` numa tupla
+      # levanta `BadMapError` DENTRO do `handle_info` do agente e, como o
+      # servidor é `restart: :temporary`, ele morria e não voltava — a correção
+      # de uma falha silenciosa tinha virado uma QUEDA, com o gatilho mais
+      # corriqueiro que existe (acabar o orçamento).
       {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
         emit_falha(state, {:final, erro})
-        {state, ""}
+        state
 
       {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
@@ -143,28 +289,56 @@ defmodule Engine.Agents.DevLeadServer do
             state
 
           calls ->
-            {state, planou} =
-              Enum.reduce(calls, {state, false}, fn call, {st, acc} ->
-                {st, ok} = dispatch_tool(call, st)
-                {st, acc or ok}
+            # `reduce_while` — não `reduce` — porque `:pending` precisa PARAR
+            # o laço no meio da lista, sem processar as chamadas seguintes
+            # nem recursar para a próxima iteração. Antes de ADR 0086 as três
+            # saídas de `dispatch_tool/2` cabiam num booleano; agora são três
+            # desfechos distintos, e só um deles (suspensão) precisa
+            # interromper o `Enum.reduce`.
+            resultado =
+              Enum.reduce_while(calls, {state, false}, fn call, {st, _planou} ->
+                case dispatch_tool(call, st) do
+                  {st2, :ok} ->
+                    {:cont, {st2, true}}
+
+                  {st2, :error} ->
+                    {:cont, {st2, false}}
+
+                  {st2, {:pending, action_id, tool_call_id, tool_name}} ->
+                    {:halt, {:suspenso, st2, action_id, tool_call_id, tool_name}}
+                end
               end)
 
-            # O plano BEM-SUCEDIDO encerra o turno, como o `propose_infra_pr`
-            # encerra o do Infra Lead. Sem isto o laço volta ao modelo, que
-            # propõe de novo: na primeira execução real ele registrou DOIS
-            # planos, com textos diferentes e o mesmo total — e o event log é
-            # imutável, então nada dizia qual valia. A instrução "use UMA vez"
-            # no spec é pedido, não garantia; quem garante é o laço parar.
-            #
-            # BEM-SUCEDIDO, e não "chamou a ferramenta": um plano RECUSADO
-            # (vazio, ou com zero agente num módulo) precisa deixar o laço
-            # seguir, senão a recusa vira fim de turno e o modelo nunca chega
-            # a corrigir. A primeira versão desta guarda olhava só o nome da
-            # ferramenta e tinha esse defeito.
-            if planou do
-              state
-            else
-              run_turn(state, remaining - 1)
+            case resultado do
+              {:suspenso, st2, action_id, tool_call_id, tool_name} ->
+                # O `-1` documenta que a iteração suspensa CONTA contra o teto
+                # quando retomada — mesma vizinhança de raciocínio do
+                # comentário logo abaixo, sobre por que "bem-sucedido" encerra
+                # o laço.
+                Map.put(st2, :aguardando_aprovacao, %{
+                  action_id: action_id,
+                  tool_call_id: tool_call_id,
+                  tool_name: tool_name,
+                  remaining: remaining - 1
+                })
+
+              # O plano BEM-SUCEDIDO encerra o turno, como o `propose_infra_pr`
+              # encerra o do Infra Lead. Sem isto o laço volta ao modelo, que
+              # propõe de novo: na primeira execução real ele registrou DOIS
+              # planos, com textos diferentes e o mesmo total — e o event log é
+              # imutável, então nada dizia qual valia. A instrução "use UMA vez"
+              # no spec é pedido, não garantia; quem garante é o laço parar.
+              #
+              # BEM-SUCEDIDO, e não "chamou a ferramenta": um plano RECUSADO
+              # (vazio, ou com zero agente num módulo, ou denied pela api)
+              # precisa deixar o laço seguir, senão a recusa vira fim de turno
+              # e o modelo nunca chega a corrigir. A primeira versão desta
+              # guarda olhava só o nome da ferramenta e tinha esse defeito.
+              {st2, true} ->
+                st2
+
+              {st2, false} ->
+                run_turn(st2, remaining - 1)
             end
         end
 
@@ -178,34 +352,53 @@ defmodule Engine.Agents.DevLeadServer do
     end
   end
 
-  # Devolve `{state, plano_registrado?}` — o segundo elemento é o que decide se
-  # o laço para.
+  # Devolve `{state, :ok | :error | {:pending, action_id, tool_call_id,
+  # tool_name}}` — o segundo elemento é o que `run_turn/2` usa para decidir
+  # entre continuar, parar (sucesso) e SUSPENDER (pending, ADR 0086).
   defp dispatch_tool(call, state) do
     name = Map.get(call, "name")
     args = Map.get(call, "arguments", %{})
     id = Map.get(call, "id")
 
     emit(state, "tool.call", %{tool: name, args: args})
+    broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
-    {text, ok} =
-      case run_tool(name, args, state) do
-        {:ok, s} -> {s, name == "propose_execution_plan"}
-        {:error, s} -> {s, false}
-      end
+    case run_tool(name, args, state) do
+      {:ok, texto} ->
+        {append_tool_message(state, id, name, texto), :ok}
 
-    state =
-      append(state, %{
-        "role" => "tool",
-        "content" => text,
-        "toolCallId" => id,
-        "name" => name,
-        :pinned => false
-      })
+      {:pending, action_id} ->
+        # A mensagem `role: "tool"` NÃO entra ainda — gravar "pending" ali
+        # mentiria pro modelo que o comando já respondeu isso (mesmo
+        # raciocínio do dev agent, ver `Engine.Harness.Hooks.ActionPipeline`
+        # e `Engine.Harness.ToolLoop`, ~linhas 250-266). Ela entra de
+        # verdade em `handle_info({:action_settled, ...})`, com o resultado
+        # real.
+        {state, {:pending, action_id, id, name}}
 
-    {state, ok}
+      {:error, texto} ->
+        {append_tool_message(state, id, name, texto), :error}
+    end
+  end
+
+  defp append_tool_message(state, id, name, texto) do
+    append(state, %{
+      "role" => "tool",
+      "content" => texto,
+      "toolCallId" => id,
+      "name" => name,
+      :pinned => false
+    })
   end
 
   defp run_tool("propose_execution_plan", args, state), do: DevLeadTools.run(args, state)
+
+  # ADR 0090 — aditivo, sem tocar o clause acima. Devolve o MESMO contrato
+  # de três desfechos: `run_turn/2` já sabe suspender em `{:pending, _}`
+  # (gate `implementavel`, `aprovacao_humana: true` em docs/gates.yml).
+  defp run_tool("assess_implementability", args, state),
+    do: DevLeadTools.run_assessment(args, state)
+
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Kickoff ---
@@ -252,6 +445,11 @@ defmodule Engine.Agents.DevLeadServer do
     histórias não acelera nada e custa o dobro. Acima do teto da área, o
     usuário precisa autorizar, então o `porque` de cada módulo é o que ele vai
     ler para decidir.
+
+    Antes (ou depois) de propor o plano, você também pode avaliar a
+    IMPLEMENTABILIDADE de uma story com `assess_implementability` — é
+    OPCIONAL, use o julgamento: se uma história parece arriscada ou mal
+    especificada, vale registrar o parecer antes de contar com ela no plano.
 
     MÓDULOS:
     #{modulos}
@@ -317,6 +515,34 @@ defmodule Engine.Agents.DevLeadServer do
         nativas
     end
   end
+
+  # O que o modelo lê no lugar da palavra "pending" quando a ação retoma
+  # (ADR 0086, RN-284) — mesmo vocabulário de `Engine.Dev.DevAgentServer` e
+  # `Engine.Gates.QaLeadServer`, para quem lê os três não aprender três
+  # frases diferentes para o mesmo conceito.
+  defp texto_do_desfecho(%{status: "executed", execution_result: %{} = exec}) do
+    "exit #{Map.get(exec, "exitCode", "?")}\n#{Map.get(exec, "stdout", "")}"
+  end
+
+  # `propose_execution_plan` não tem execute-* pipeline — aprovação manual
+  # fica em `"approved"` para sempre (ver o comentário equivalente em
+  # `DevLeadTools.classificar/4`). Os três contam como sucesso.
+  defp texto_do_desfecho(%{status: status})
+       when status in ["executed", "auto_approved", "approved"],
+       do: "plano aprovado e registrado."
+
+  defp texto_do_desfecho(%{status: "failed", execution_result: %{} = exec}) do
+    "falhou: #{Map.get(exec, "stderr", "")}#{Map.get(exec, "stdout", "")}"
+  end
+
+  # Recusa é RESPOSTA, não silêncio: o motivo entra no lugar do resultado,
+  # para o modelo aprender que aquele plano não foi aceito e propor outro.
+  defp texto_do_desfecho(%{status: "denied"} = desfecho) do
+    motivo = Map.get(desfecho, :rejection_reason) || "sem motivo informado"
+    "recusado pelo usuário: #{motivo}"
+  end
+
+  defp texto_do_desfecho(%{status: status}), do: "desfecho da ação: #{status}"
 
   # `model_name` viaja do frame `final` da api (achado do problema 2). Sem
   # default: o único call site aqui sempre passa os 3 argumentos.

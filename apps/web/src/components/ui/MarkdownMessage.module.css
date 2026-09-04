@@ -126,3 +126,32 @@
   color: var(--text-muted);
   user-select: none;
 }
+
+/* Tabela GFM no balão (RN-176). O componente é o `Table` do design system; o
+   que mora aqui é só a acomodação dele ao fio, que é ESTREITO — um
+   `module_map` tem 4 colunas e o balão tem ~700px, então a tabela ROLA na
+   horizontal em vez de espremer coluna até a palavra quebrar letra a letra,
+   que seria o mesmo defeito relatado com outra forma. */
+.tabelaScroll {
+  margin: 10px 0;
+  overflow-x: auto;
+  /* Item de flex/grid não encolhe abaixo do próprio conteúdo sem isto — e é
+     esse encolhimento que faz a rolagem "não acontecer" e a tabela vazar. */
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* O piso de largura fica no FILHO (o `Table`), não no contêiner: é ele que
+   precisa exceder para o `overflow-x` do pai ter o que rolar. */
+.tabelaScroll > * {
+  min-width: max-content;
+}
+
+.tabelaCelula {
+  display: block;
+  /* Quebra por PALAVRA; o `max-content` acima é o que impede a coluna de
+     virar uma coluna de letras. */
+  overflow-wrap: break-word;
+  line-height: 1.45;
+  white-space: normal;
+}

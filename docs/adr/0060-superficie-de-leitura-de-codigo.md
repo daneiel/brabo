@@ -1,108 +1,115 @@
-# ADR 0060 — A superfície de leitura de código, contida e com orçamento
+# ADR 0060 — The code-reading surface, contained and budgeted
 
-- **Status:** aceito
-- **Data:** 2026-08-08
-- **Contexto anterior:** [ADR 0001](0001-git-provider-contract-shape.md) (o contrato
-  normalizado de git e o que entra nele), [ADR 0058](0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md)
-  (a contenção de caminho central, RN-092), [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md)
-  (as primitivas de escopo que esta contenção reusa)
+- **Status:** accepted
+- **Date:** 2026-08-08
+- **Prior context:** [ADR 0001](0001-git-provider-contract-shape.md) (the
+  normalized git contract and what enters it), [ADR 0058](0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md)
+  (the central path containment, RN-092), [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md)
+  (the scope primitives this containment reuses)
 
-## Contexto
+## Context
 
-A FASE 26a acrescentou `listTree` e `getPullRequestDiff` ao `GitProviderContract`,
-provadas nos três providers pela suite única. Faltava o consumidor — e a trava
-que a própria 26a instalou (`SEM_CONSUMIDOR_AINDA`) reprovaria o CI enquanto ele
-não existisse.
+PHASE 26a added `listTree` and `getPullRequestDiff` to the
+`GitProviderContract`, proven across the three providers by the single
+suite. What was missing was the consumer — and the guard 26a itself
+installed (`NO_CONSUMER_YET`) would fail CI as long as it didn't exist.
 
-O consumidor é a aba Code, e escrevê-lo obrigou a decidir três coisas que nenhum
-código anterior tinha decidido, porque nenhuma rota do produto até aqui recebeu
-**caminho de arquivo do cliente**.
+The consumer is the Code tab, and writing it forced three decisions that no
+prior code had made, because no route in the product up to this point had
+received a **file path from the client**.
 
-**A primeira é onde mora a busca.** A aba precisa de quatro leituras: árvore,
-conteúdo, busca e diff de PR. Três são operações do contrato. A busca não é de
-nenhum dos três providers: GitHub e GitLab têm code search de plataforma, com
-semânticas e limites próprios; o `LocalGitProvider` é um bare repo e não tem
-nada disso. Declarar `search` no contrato significaria ou uma 13ª operação com
-capability `false` no local — uma aba que funciona em dois providers e some no
-terceiro — ou importar o vocabulário de code search de uma plataforma para
-dentro do contrato normalizado, que existe justamente para não deixar o shape do
-Octokit vazar.
+**The first is where search lives.** The tab needs four reads: tree,
+content, search, and PR diff. Three are contract operations. Search is not
+one of the three providers': GitHub and GitLab have platform-level code
+search, with their own semantics and limits; `LocalGitProvider` is a bare
+repo and has none of that. Declaring `search` in the contract would mean
+either a 13th operation with capability `false` on local — a tab that works
+on two providers and disappears on the third — or importing a platform's
+code-search vocabulary into the normalized contract, which exists precisely
+to keep the Octokit shape from leaking through.
 
-**A segunda é o custo.** Ler é barato por chamada e caro por repetição. A árvore
-e o diff já têm teto no contrato (26a), mas eles limitam UMA resposta; a busca
-composta faz N chamadas, e N cresce com o tamanho do repositório e não com o
-tamanho do pedido. Quem paga é a credencial do owner do workspace
-([RN-058](../business-rules.md#rn-058)/[RN-082](../business-rules.md#rn-082)),
-e o rate limit é do provider. O produto já viu essa família de defeito de perto:
-o dashboard fazia 3.824 requisições por minuto porque cada projeto pedia a sua
-(RN-090), e o `429` resultante virava tela branca.
+**The second is cost.** Reading is cheap per call and expensive on
+repetition. The tree and the diff already have a ceiling in the contract
+(26a), but they limit ONE response; composite search makes N calls, and N
+grows with repository size, not with request size. Who pays is the
+workspace owner's credential
+([RN-058](../business-rules/custo.md#rn-058)/[RN-082](../business-rules/custo.md#rn-082)),
+and the rate limit is the provider's. The product has already seen this
+family of defect up close: the dashboard was making 3,824 requests per
+minute because every project requested its own (RN-090), and the resulting
+`429` turned into a blank screen.
 
-**A terceira é o caminho.** `../../etc/passwd` numa query string chega ao
-handler já decodificado pelo Express. Em `github`/`gitlab` esse caminho vira
-segmento de URL da API do provider, então um `..` não lê o arquivo errado: ele
-**troca de endpoint**, com o token do owner na mão. Em `local` ele vira o lado
-direito de `git show <ref>:<path>`. É a mesma classe de problema que o ADR 0058
-fechou para o `projectId`, aplicada agora ao caminho de arquivo — e a FASE 14d
-já ensinou o modo de falha que interessa evitar: testar a peça não é testar o
-caminho até ela.
+**The third is the path.** `../../etc/passwd` in a query string arrives at
+the handler already decoded by Express. On `github`/`gitlab` that path
+becomes a segment of the provider's API URL, so a `..` doesn't read the
+wrong file: it **switches endpoints**, with the owner's token in hand. On
+`local` it becomes the right-hand side of `git show <ref>:<path>`. It is the
+same class of problem ADR 0058 closed for `projectId`, now applied to the
+file path — and PHASE 14d already taught the failure mode worth avoiding:
+testing the piece is not testing the path to it.
 
-## Decisão
+## Decision
 
-**A busca fica FORA do contrato de git, composta na camada de aplicação, com
-orçamento.** `ReadProjectCodeUseCase` varre a árvore em largura chamando
-`listTree` e abre arquivos com `getFileContent`. Três orçamentos a param —
-diretórios percorridos, arquivos abertos, casamentos devolvidos — e `truncated`
-diz que ela parou. Largura e não profundidade porque, cortada no meio, ela
-entrega os arquivos mais rasos, que é onde quem busca costuma olhar. Um cache de
-TTL curto (30s), limitado em número de entradas, evita que navegar e buscar
-repitam as mesmas chamadas; curto porque a aba lê uma branch viva, e um TTL
-longo mostraria código que já mudou.
+**Search stays OUTSIDE the git contract, composed in the application layer,
+with a budget.** `ReadProjectCodeUseCase` walks the tree breadth-first by
+calling `listTree` and opens files with `getFileContent`. Three budgets stop
+it — directories walked, files opened, matches returned — and `truncated`
+says it stopped early. Breadth rather than depth because, cut off midway, it
+delivers the shallowest files, which is where searchers usually look. A
+short-TTL cache (30s), limited in entry count, keeps navigating and
+searching from repeating the same calls; short because the tab reads a live
+branch, and a long TTL would show code that has already changed.
 
-**A contenção de caminho é UMA função, no arquivo da RN-092.**
-`caminhoDeRepositorioContido()` ancora o caminho do cliente na pasta do projeto
-via `projectScopeRoot()` e reusa `normalizarCaminho`/`dentroDoEscopo` do ADR
-0055. Ela devolve o caminho **normalizado**, e o chamador usa o que voltou —
-devolver o original permitiria conferir uma string e mandar outra ao provider.
-Caminho absoluto é recusado mesmo quando o nome existiria dentro do repositório:
-reinterpretar a barra inicial seria conversão silenciosa. A `ref` é conferida no
-mesmo lugar, e `..` nela é recusado porque para o git `dev..main` é intervalo de
-commits, não revisão. Nenhuma rota valida caminho por conta própria.
+**Path containment is ONE function, in the RN-092 file.**
+`caminhoDeRepositorioContido()` anchors the client's path to the project
+folder via `projectScopeRoot()` and reuses `normalizarCaminho`/`dentroDoEscopo`
+from ADR 0055. It returns the **normalized** path, and the caller uses what
+came back — returning the original would allow checking one string and
+sending another to the provider. An absolute path is rejected even when the
+name would exist inside the repository: reinterpreting the leading slash
+would be a silent conversion. The `ref` is checked in the same place, and
+`..` in it is rejected because for git `dev..main` is a commit range, not a
+revision. No route validates a path on its own.
 
-**As quatro rotas são `GET`, `role:viewer`, e o controller não tem verbo de
-escrita.** Ver o código do projeto é a mesma permissão que ver o projeto.
-Leitura **não** vira `proposed_action`: ela não é efeito externo, e transformá-la
-em ação de aprovação encheria a fila de ruído até ninguém mais ler as de verdade.
-A credencial usada é a do owner, pelo mesmo resolvedor da escrita.
+**The four routes are `GET`, `role:viewer`, and the controller has no write
+verb.** Seeing a project's code is the same permission as seeing the
+project. Reading does **not** become a `proposed_action`: it is not an
+external effect, and turning it into an approval action would fill the
+queue with noise until nobody reads the real ones anymore. The credential
+used is the owner's, via the same resolver as writing.
 
-## Consequências
+## Consequences
 
-**O CodeQL vai continuar apontando, e isso é o preço aceito.** Barreira que mora
-em outra função ele não enxerga — foi o que fez os três `js/path-injection`
-sobreviverem à correção da PÓS-FASE 15, e a decisão de então foi manter a
-checagem central e pagar no painel. Ela não muda aqui: duplicar a contenção em
-cada rota calaria o alerta e criaria quatro cópias que um dia divergem. Alerta
-novo deste caminho se dispensa com justificativa escrita, nunca em silêncio.
+**CodeQL will keep flagging, and that is the accepted price.** A barrier
+that lives in another function it does not see — that's what made the three
+`js/path-injection` alerts survive the POST-PHASE 15 fix, and the decision
+back then was to keep the check central and pay for it in the dashboard. It
+does not change here: duplicating the containment in each route would
+silence the alert and create four copies that one day diverge. A new alert
+from this path is dismissed with a written justification, never silently.
 
-**A busca não é a busca do GitHub, e não deve fingir que é.** Ela não indexa,
-não entende sintaxe, não ordena por relevância, e num repositório grande ela
-CORTA. O contrato com quem consome é `truncated` + `filesScanned`: a tela diz
-que houve corte e sugere refinar o `path`. Trocar isso por code search de
-plataforma é decisão futura, e teria de resolver a assimetria do provider
-`local` antes.
+**Search is not GitHub's search, and it shouldn't pretend to be.** It does
+not index, does not understand syntax, does not sort by relevance, and on a
+large repository it CUTS OFF. The contract with the consumer is `truncated`
++ `filesScanned`: the screen says a cutoff happened and suggests narrowing
+the `path`. Swapping this for platform code search is a future decision, and
+it would have to resolve the `local` provider's asymmetry first.
 
-**O cache é compartilhado entre quem tem acesso ao mesmo projeto.** A chave não
-tem usuário, porque quem chega já passou pelo `role:viewer` da rota e o
-repositório é o mesmo para todos eles. Se algum dia a leitura passar a depender
-de QUEM lê, a chave precisa ganhar essa dimensão — está escrito no código porque
-é o tipo de premissa que some.
+**The cache is shared among everyone with access to the same project.** The
+key carries no user, because whoever gets there already passed the route's
+`role:viewer`, and the repository is the same for all of them. If reading
+ever comes to depend on WHO reads, the key needs to gain that dimension —
+it's written in the code because it's the kind of assumption that
+disappears.
 
-**A janela de 30s é atraso visível.** Um push feito fora do produto pode demorar
-até meio minuto para aparecer na aba. Invalidação de verdade exigiria saber
-quando o repositório mudou, e o produto não tem esse sinal para push externo;
-o TTL curto é a escolha honesta enquanto ele não existir.
+**The 30s window is visible lag.** A push made outside the product may take
+up to half a minute to show up in the tab. Real invalidation would require
+knowing when the repository changed, and the product has no such signal for
+an external push; the short TTL is the honest choice until it exists.
 
-**Fica de fora, declaradamente:** destaque de sintaxe (dependência nova, item 35
-da fase, decisão da 26c), terminal interativo (depende do container por projeto
-da FASE 25) e qualquer escrita pela aba. Quando a escrita vier, ela nasce
-`proposed_action` — e o fato de este controller não ter um único verbo de
-escrita é o que torna essa fronteira verificável, e não uma intenção.
+**Declaredly left out:** syntax highlighting (a new dependency, item 35 of
+the phase, a 26c decision), an interactive terminal (depends on the
+per-project container from PHASE 25), and any write through the tab. When
+writing comes, it is born a `proposed_action` — and the fact that this
+controller has not a single write verb is what makes that boundary
+verifiable, rather than merely an intention.

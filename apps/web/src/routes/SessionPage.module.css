@@ -70,7 +70,10 @@
 
 /* `.title` é um `button` desde a FASE 20 (clicar renomeia), então o reset do
    botão vem junto: sem ele o navegador aplica fundo, borda e a fonte dele, e a
-   barra de topo muda de cara. */
+   barra de topo muda de cara. `min-height: 24px` fecha o piso de alvo de
+   toque da WCAG 2.2 AA (2.5.8) que `scripts/dev/validacao-visual.js` cobra
+   (PROGRAMA 28, Onda 5/H5) — era ~16px efetivo (`padding: 0` + a linha do
+   texto), o mesmo defeito do `.rowId` de `ProjectSessionsTab.module.css`. */
 .title {
   font-family: var(--font-heading);
   font-weight: 600;
@@ -80,7 +83,9 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 24px;
   max-width: 100%;
   padding: 0;
   border: none;
@@ -253,6 +258,39 @@
   composes: messageMeta from '../components/ui/ChatBubble.module.css';
 }
 
+/* O modelo que gerou a resposta, ao lado do nome do agente (RN-175). Era
+   `.messageMeta` cru — mono 10px em `--text-muted`, que reprova contraste de
+   leitura sobre `--surface-0` (a mesma razão documentada em
+   `Input.module.css` para o `.hint`) e que, na prática, ninguém via. Vira um
+   CHIP: `--text-secondary` sobre `--surface-2`, com o ícone de modelo, para
+   dizer o que aquele texto É. */
+.messageModelo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.4;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  /* O nome de modelo é longo (`anthropic/claude-…`) e o cabeçalho não pode
+     empurrar a bolha: ele encolhe com reticências em vez de vazar. */
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sem o nome gravado. Continua LEGÍVEL — o que muda é o itálico, que separa
+   "o modelo se chama X" de "não sabemos qual foi". */
+.messageModeloAusente {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
 .bubble {
   composes: bubble from '../components/ui/ChatBubble.module.css';
 }
@@ -289,6 +327,25 @@
   max-width: 780px;
   margin: 0 auto;
   width: 100%;
+}
+
+/* Handoff manual a agente à escolha (ADR 0109/RN-440) — fita fina acima do
+   composer, de propósito mais discreta que ele: é redirecionamento, não
+   conversa. */
+.manualHandoffRow {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 24px 0;
+  max-width: 780px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.manualHandoffRow > :first-child {
+  flex: 1;
+  max-width: 260px;
 }
 
 .textarea {
@@ -365,6 +422,60 @@
 
 .asideEmpty {
   font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* O que o painel NÃO está mostrando (RN-180) — nota, não alarme: o teto é
+   normal numa sessão longa, e pintá-la de `danger` ensinaria a ignorar o
+   vermelho que importa. */
+.asideTeto {
+  margin: 0;
+  padding: 12px 18px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Paginador das regras de negócio (RN-178). */
+.asidePager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.asidePagerBotao {
+  /* 24px é o alvo mínimo que `scripts/dev/validacao-visual.js` cobra. NÃO
+     sobe para os 32px do handoff (PROGRAMA 28, Onda 5/H5): paginador denso
+     de painel lateral estreito, não botão de ícone PRIMÁRIO — mesmo
+     argumento do `.dot` de `Carousel.module.css`. */
+  min-width: 24px;
+  min-height: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.asidePagerBotao:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.asidePagerBotao:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.asidePagerTexto {
+  font-family: var(--font-mono);
+  font-size: 10px;
   color: var(--text-muted);
 }
 
@@ -509,21 +620,43 @@
 }
 
 /* Formulário de `chat.structured_question` (RN-162) — mesmo miolo do
-   `.handoffCard`, mas alinhado à esquerda (é um formulário, não uma
-   confirmação) e sem o realce de sucesso: perguntar não é uma decisão do
-   usuário aprovar/negar. */
+   `.handoffCard`, alinhado à esquerda porque é um FORMULÁRIO (os campos
+   pedem uma coluna, não um centro), e sem o realce de sucesso: perguntar não
+   é uma decisão do usuário aprovar/negar.
+
+   RN-171 — a CAIXA passou a ser centralizada, com o mesmo teto de 560px do
+   `ApprovalCard` no fio (`ApprovalCard.module.css`, RN-173). Antes ela
+   nascia encostada à esquerda com teto de 480px, enquanto as bolhas começam
+   45px adentro (avatar de 32px + gap de 13px) e o card de aprovação
+   centraliza: a pergunta era o único item do fio alinhado a nada, e é isso
+   que o relato chamou de "mal diagramada". Centralizar (e não recuar 45px
+   como as bolhas) segue a MESMA regra já registrada no `ApprovalCard`: caixa
+   que pede algo ao usuário fica no eixo do fio. O avatar em `.structured
+   QuestionCabecalho` é o que devolve a leitura de "isto é fala de alguém". */
 .structuredQuestionCard {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-  margin: 4px 0;
+  margin: 4px auto;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface-1);
   width: 100%;
-  max-width: 480px;
+  max-width: 560px;
+}
+
+/* O avatar do agente ao lado da pílula — a mesma dupla (avatar + nome) que a
+   bolha e o cabeçalho de grupo colapsado já usam, para a pergunta ler como
+   FALA e não como formulário órfão. `--msg-color` vem do `style` inline do
+   card (`corDoAgente`), como no resto do fio. */
+.structuredQuestionCabecalho {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .structuredQuestionForm {
@@ -619,6 +752,56 @@
   flex-direction: column;
   gap: 20px;
   padding-top: 10px;
+}
+
+/* Colapso de `agent.response` CONSECUTIVAS do MESMO turno+autor
+   (`agruparNarracoesDoTurno`) — "Passos do turno · N", com a última resposta
+   sempre fora dele. Sem `--msg-color`: ao contrário de `.agentGroup`
+   (RN-138), esta função não é envolvida por um `div` que o fixa — mesma
+   régua de `.fioHistoricoCabecalho`, que também vive sem cor de agente. */
+.narracoesCabecalho {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.narracoesGrupo {
+  display: flex;
+  flex-direction: column;
+}
+
+.narracoesRegiao {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 10px;
+}
+
+/* Histórico do fio recolhido por ORIGEM (RN-177). Fica no TOPO porque o fio é
+   crescente, e a borda inferior marca onde a conversa recente começa — sem
+   ela, um grupo fechado encosta na primeira mensagem aberta e os dois se leem
+   como a mesma coisa. */
+.fioHistorico {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fioHistoricoCabecalho {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.fioHistoricoRegiao {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 10px 0;
 }
 
 /* Evento citado por uma hipótese do Psicólogo, fixado no topo do log
@@ -769,6 +952,30 @@
 .artefatoItemIcone {
   flex-shrink: 0;
   color: var(--text-muted);
+}
+
+/* A árvore épico → história → tarefa (RN-179). O recuo é do CONTEÚDO, não do
+   cabeçalho: é ele que faz a hierarquia se ler de relance, e a linha da
+   esquerda evita contar recuos para saber em que nível se está. */
+.artefatoNo {
+  display: flex;
+  flex-direction: column;
+}
+
+.artefatoFilhosCabecalho {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  padding-left: 12px;
+}
+
+.artefatoFilhos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 14px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
 }
 
 .artefatoItemTitulo {

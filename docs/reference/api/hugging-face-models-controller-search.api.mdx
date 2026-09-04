@@ -1,0 +1,69 @@
+---
+id: hugging-face-models-controller-search
+title: "Searches GGUF models on the Hugging Face Hub"
+description: "Filters to OFFICIAL publishers only by default (the allowlist in `domain/llm/huggingface-official-publishers.ts`) — same 'manual curation always' spirit as the LLM catalog (ADR 0042), applied to the 'official' badge instead of to activation. `includeCommunity=true` brings in every publisher, each one tagged `official: false` for the screen to render the security warning — never hidden."
+sidebar_label: "Searches GGUF models on the Hugging Face Hub"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Searches GGUF models on the Hugging Face Hub"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/workspaces/{workspaceId}/huggingface/models"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Filters to OFFICIAL publishers only by default (the allowlist in `domain/llm/huggingface-official-publishers.ts`) — same "manual curation always" spirit as the LLM catalog (ADR 0042), applied to the "official" badge instead of to activation. `includeCommunity=true` brings in every publisher, each one tagged `official: false` for the screen to render the security warning — never hidden.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./hugging-face-models-controller-search.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./hugging-face-models-controller-search.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./hugging-face-models-controller-search.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

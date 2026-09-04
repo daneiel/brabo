@@ -1,0 +1,69 @@
+---
+id: internal-rag-controller-buscar
+title: "Hybrid search over the project's RAG index, for the engine's tool"
+description: "Same engine as `POST /projects/:projectId/rag/search` (human route), projected into the format the engine's `rag_search` tool expects."
+sidebar_label: "Hybrid search over the project's RAG index, for the engine's tool"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Hybrid search over the project's RAG index, for the engine's tool"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/rag/search"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Same engine as `POST /projects/:projectId/rag/search` (human route), projected into the format the engine's `rag_search` tool expects.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-rag-controller-buscar.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-rag-controller-buscar.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-rag-controller-buscar.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

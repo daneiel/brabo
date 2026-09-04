@@ -5,6 +5,15 @@ defmodule Engine.Agents.PoServer do
   event log e **produz o backlog** (épicos → histórias → tarefas) via as
   ferramentas create_epic/create_story/create_task (nunca SQL direto).
 
+  Ele também **relê** o que já existe — `listar_regras_de_negocio` e
+  `listar_backlog`, escopadas ao PROJETO (RN-164), mais `listar_metricas_de_produto`
+  (o funil/DORA parcial do projeto — RN-407) — e **pergunta** quando falta
+  informação, com o mesmo `ask_structured_questions` do Criativo (RN-165). As
+  três primeiras nasceram do mesmo defeito de uso real: até então as quatro
+  ferramentas do PO eram de ESCRITA, o contexto era lido uma única vez no
+  kickoff, e um backlog com épico e nenhuma história travava a execução em
+  silêncio.
+
   Igual ao CriativoServer: GenServer por sessão, estado + rehydration +
   streaming pelo canal Phoenix. **Diferença:** cada turno roda um LOOP bounded
   de tool use — injeta o resultado da ferramenta (ex.: o id do épico) de volta
@@ -17,6 +26,8 @@ defmodule Engine.Agents.PoServer do
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
   alias Engine.Harness.Tools.{CreateEpic, CreateStory, CreateTask, OfferHandoff}
+  alias Engine.Harness.Tools.{AskStructuredQuestions, ListarBacklog, ListarRegrasDeNegocio}
+  alias Engine.Harness.Tools.ListarMetricasDeProduto
   alias Engine.Sessions.EngineApiClient
 
   @agent "po"
@@ -76,11 +87,26 @@ defmodule Engine.Agents.PoServer do
        agent: @agent,
        messages: [system_msg | history],
        tool_specs: [
+         # LEITURA primeiro, de propósito: até a RN-164 as quatro ferramentas
+         # do PO eram todas de ESCRITA, e ele nunca relia nada depois do
+         # kickoff. A ordem da lista é o que o modelo vê primeiro.
+         ListarRegrasDeNegocio.spec(),
+         ListarBacklog.spec(),
+         ListarMetricasDeProduto.spec(),
          CreateEpic.spec(),
          CreateStory.spec(),
          CreateTask.spec(),
+         # RN-165: perguntar em vez de parar. A ferramenta é a MESMA do
+         # Criativo (RN-162) — o PO só passou a advertisá-la.
+         AskStructuredQuestions.spec(),
          OfferHandoff.spec()
        ],
+       # Épicos criados NESTE processo que ainda não receberam história
+       # (RN-165): `%{epic_id => titulo}`. Não é reidratado de propósito — a
+       # cobrança é sobre a obrigação que o PO assumiu no turno, e um estado
+       # reconstruído do event log reabriria cobrança de épico antigo que o
+       # usuário já resolveu de outro jeito.
+       epicos_sem_historia: %{},
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
@@ -124,7 +150,21 @@ defmodule Engine.Agents.PoServer do
 
   # --- Turno com loop bounded de tool use ---
 
-  defp run_turn(state, remaining) when remaining <= 0, do: state
+  # O teto de iterações deixou de ser SILENCIOSO (RN-166). Antes esta cláusula
+  # devolvia o state e pronto: um PO que esgotasse as 12 iterações terminava
+  # sem evento nenhum, e do lado de fora isso é indistinguível de um turno que
+  # simplesmente acabou. O `ToolLoop` já emitia `toolloop.limit_reached` desde
+  # a Fase 3 — os agentes conversacionais, que têm laço PRÓPRIO, ficaram de
+  # fora. Mesmo tipo de evento e mesmo payload: quem lê o log não precisa
+  # aprender um segundo nome para o mesmo fato.
+  defp run_turn(state, remaining) when remaining <= 0 do
+    emit(state, "toolloop.limit_reached", %{
+      iteration: @max_iterations,
+      max_iterations: @max_iterations
+    })
+
+    encerrar_turno(state)
+  end
 
   defp run_turn(state, remaining) do
     # Ver o comentário em `criativo_server.ex`: quem fala é o agente (achado C).
@@ -142,9 +182,17 @@ defmodule Engine.Agents.PoServer do
       # A api narra a falha no PRÓPRIO frame final (budget, credencial, binding).
       # Isto não caía no `{:error, _}` abaixo e não emitia evento nenhum: o
       # turno terminava em silêncio absoluto, pior que o balão vazio.
+      #
+      # Devolve `state` (mapa), e NÃO `{state, ""}` (tupla): quem recebe o
+      # retorno de `run_turn/2` é `TurnoAssincrono.tratar_resultado/2`, que faz
+      # `Map.put(resultado, :turno_assincrono, nil)`. `Map.put/3` numa tupla
+      # levanta `BadMapError` DENTRO do `handle_info` do agente e, como o
+      # servidor é `restart: :temporary`, ele morria e não voltava — a correção
+      # de uma falha silenciosa tinha virado uma QUEDA, com o gatilho mais
+      # corriqueiro que existe (acabar o orçamento).
       {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
         emit_falha(state, {:final, erro})
-        {state, ""}
+        state
 
       {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
@@ -154,7 +202,7 @@ defmodule Engine.Agents.PoServer do
 
         case tool_calls(message, state.tool_specs) do
           [] ->
-            state
+            encerrar_turno(state)
 
           calls ->
             state = Enum.reduce(calls, state, &dispatch_tool/2)
@@ -179,6 +227,7 @@ defmodule Engine.Agents.PoServer do
     id = Map.get(call, "id")
 
     emit(state, "tool.call", %{tool: name, args: args})
+    broadcast(state, "tool.call", %{tool: name, agent: @agent})
     result = run_tool(name, args, state)
 
     text =
@@ -187,7 +236,9 @@ defmodule Engine.Agents.PoServer do
         {:error, s} -> s
       end
 
-    append(state, %{
+    state
+    |> anotar_obrigacao(name, args, result)
+    |> append(%{
       "role" => "tool",
       "content" => text,
       "toolCallId" => id,
@@ -196,11 +247,85 @@ defmodule Engine.Agents.PoServer do
     })
   end
 
+  defp run_tool("listar_regras_de_negocio", args, state),
+    do: ListarRegrasDeNegocio.run(args, state)
+
+  defp run_tool("listar_backlog", args, state), do: ListarBacklog.run(args, state)
+
+  defp run_tool("listar_metricas_de_produto", args, state),
+    do: ListarMetricasDeProduto.run(args, state)
+
   defp run_tool("create_epic", args, state), do: CreateEpic.run(args, state)
   defp run_tool("create_story", args, state), do: CreateStory.run(args, state)
   defp run_tool("create_task", args, state), do: CreateTask.run(args, state)
+
+  defp run_tool("ask_structured_questions", args, state),
+    do: AskStructuredQuestions.run(args, state)
+
   defp run_tool("offer_handoff", args, state), do: OfferHandoff.run(args, state)
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
+
+  # --- A obrigação da história (RN-165) ---
+
+  # Épico criado entra na lista de pendências; história criada tira dela o
+  # épico que ela cita. Só o caminho de SUCESSO conta: um `create_story` que a
+  # api recusou (regra inexistente, por exemplo) não cobriu épico nenhum, e
+  # tratá-lo como se tivesse coberto é exatamente o silêncio que a RN-165
+  # existe para acabar.
+  defp anotar_obrigacao(state, "create_epic", args, {:ok, texto}) do
+    # Sem id parseável a obrigação ainda existe — ela só passa a ser
+    # identificada pelo título. Perder a cobrança porque a frase do tool-result
+    # mudou seria trocar um defeito silencioso por outro.
+    chave = CreateEpic.id_no_resultado(texto) || "titulo:#{Map.get(args, "title")}"
+
+    %{
+      state
+      | epicos_sem_historia:
+          Map.put(state.epicos_sem_historia, chave, Map.get(args, "title", "(sem título)"))
+    }
+  end
+
+  defp anotar_obrigacao(state, "create_story", args, {:ok, _texto}) do
+    %{
+      state
+      | epicos_sem_historia: Map.delete(state.epicos_sem_historia, Map.get(args, "epic_id"))
+    }
+  end
+
+  defp anotar_obrigacao(state, _name, _args, _result), do: state
+
+  # O desfecho de todo turno que TERMINA (o modelo parou de pedir ferramenta,
+  # ou o teto de iterações estourou). Épico sem história não pode encerrar
+  # calado: sem história não há tarefa, sem tarefa o dev agent não tem o que
+  # pegar, e a execução trava sem erro nenhum — foi o que o uso real encontrou.
+  #
+  # Padrão da RN-059: evento DURÁVEL com origem (o log é o que sobrevive) mais
+  # o broadcast, para quem está com a aba aberta ver na hora. A lista é
+  # esvaziada depois de reportada — a cobrança é por ocorrência, não um alarme
+  # que repete a cada turno até alguém desligar.
+  defp encerrar_turno(%{epicos_sem_historia: pendentes} = state) when map_size(pendentes) == 0,
+    do: state
+
+  defp encerrar_turno(%{epicos_sem_historia: pendentes} = state) do
+    titulos = Map.values(pendentes)
+
+    mensagem =
+      "Encerrei o turno com #{map_size(pendentes)} épico(s) sem nenhuma história: " <>
+        Enum.map_join(titulos, ", ", &"\"#{&1}\"") <>
+        ". Épico sozinho não gera tarefa, e sem tarefa a execução não sai do lugar. " <>
+        "Me diga o que falta para eu escrever essas histórias — ou peça que eu tente de novo."
+
+    emit(state, "backlog.epic_without_story", %{
+      origem: "modelo",
+      mensagem: mensagem,
+      epicIds: Map.keys(pendentes),
+      epicTitles: titulos
+    })
+
+    broadcast(state, "agent.error", %{origem: "modelo", mensagem: mensagem})
+
+    %{state | epicos_sem_historia: %{}}
+  end
 
   # --- Kickoff: monta a instrução a partir do brief + regras do event log ---
 
@@ -216,7 +341,12 @@ defmodule Engine.Agents.PoServer do
         build_kickoff(brief, rules)
 
       _ ->
-        "Gere o backlog do produto (épicos, histórias e tarefas) usando as ferramentas."
+        # Sem event log não há brief nem regra para citar — mas a obrigação e o
+        # que fazer quando falta informação continuam valendo, e é justamente
+        # neste caminho degradado que faltar informação é mais provável.
+        "Gere o backlog do produto (épicos, histórias e tarefas) usando as ferramentas.\n" <>
+          "Comece por `listar_regras_de_negocio` e `listar_backlog` para ver o que já existe.\n" <>
+          obrigacoes()
     end
   end
 
@@ -247,11 +377,41 @@ defmodule Engine.Agents.PoServer do
     Cubra TODAS as regras com ao menos uma história. Quando o backlog estiver pronto, ofereça
     um handoff ao arquiteto com offer_handoff(to_agent: "arquiteto").
 
+    #{obrigacoes()}
+
     PRODUCT BRIEF:
     #{summary}
 
     REGRAS DE NEGÓCIO (use estes ids em business_rule_ids):
     #{rules_text}
+
+    A lista acima é a desta sessão. `listar_regras_de_negocio` traz as do PROJETO
+    inteiro, com quais já estão cobertas — use-a se desconfiar que falta alguma.
+    """
+  end
+
+  # As duas coisas que a instrução de kickoff NÃO dizia, e que o uso real
+  # cobrou (RN-165): que a história é obrigatória depois do épico, e o que
+  # fazer quando falta informação para escrevê-la.
+  #
+  # A segunda é a que importa mais. Diante de uma lacuna, um modelo sem
+  # instrução escolhe entre inventar e parar — e parar foi o que aconteceu:
+  # épico criado, nenhuma história, e a execução travada sem erro nenhum.
+  # Perguntar é a terceira saída, e ela só existe se estiver escrita.
+  defp obrigacoes do
+    """
+    DUAS REGRAS QUE NÃO SE NEGOCIAM:
+
+    1. ÉPICO SEM HISTÓRIA NÃO SERVE PARA NADA. Épico não gera tarefa; história
+       gera. Se você criar um épico e terminar sem nenhuma história nele, a
+       execução do projeto TRAVA sem erro visível — e isso fica registrado
+       contra você no log da sessão. Nunca encerre nesse estado.
+    2. QUANDO FALTAR INFORMAÇÃO, PERGUNTE — não pare e não invente. Use
+       `ask_structured_questions` para pedir ao usuário, de uma vez só e em
+       formulário, tudo o que falta para você escrever as histórias (ex.: qual
+       o critério de aceite, quem é o usuário do fluxo, o que acontece no caso
+       de erro). Uma pergunta é sempre melhor que um backlog vazio ou que uma
+       história inventada.
     """
   end
 

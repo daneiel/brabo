@@ -1,11 +1,43 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import overviewPtBR from '../locales/pt-BR/overview.json';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
+import { ApiError } from '../lib/api-client';
 import { ToastProvider } from '../components/ui/ToastProvider';
+
+// Instância isolada de i18next em pt-BR (mesmo padrão de
+// `AccountPage.test.tsx`): as asserções abaixo já existiam em pt-BR antes da
+// extração pra `useTranslation('overview')`.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: { 'pt-BR': { overview: overviewPtBR } },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'overview',
+    ns: ['overview'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
+// `ArchitectureSummary` (Onda 3) usa `Link` de verdade — este arquivo não é
+// sobre navegação (isso é `ProjectOverviewTab.resumo-arquitetura.test.tsx`),
+// então o dublê é o mais simples possível, mesmo idioma de
+// `ProjectInsightsTab.test.tsx`.
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children }: { children?: ReactNode }) => <a>{children}</a>,
+}));
 import type {
   Architecture,
   Handoff,
+  ProjectCardSummary,
   Session,
   SessionEvent,
 } from '../lib/api-types';
@@ -20,6 +52,9 @@ const getSessionTokenUsage = vi.fn();
 const listModels = vi.fn();
 const getAgentModelBinding = vi.fn();
 const listAgentAutonomy = vi.fn();
+const listWorkspaces = vi.fn();
+const getProjectsSummary = vi.fn();
+const activateExecutionMock = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
@@ -36,7 +71,9 @@ vi.mock('../lib/api-client', async () => {
     listModels: (...args: unknown[]) => listModels(...args),
     getAgentModelBinding: (...args: unknown[]) => getAgentModelBinding(...args),
     listAgentAutonomy: (...args: unknown[]) => listAgentAutonomy(...args),
-    activateExecution: vi.fn(),
+    listWorkspaces: (...args: unknown[]) => listWorkspaces(...args),
+    getProjectsSummary: (...args: unknown[]) => getProjectsSummary(...args),
+    activateExecution: (...args: unknown[]) => activateExecutionMock(...args),
     requestParallelization: vi.fn(),
     rearmDevAgent: vi.fn(),
     setAgentAutonomy: vi.fn(),
@@ -136,14 +173,45 @@ const EVENTOS: SessionEvent[] = [
   }),
 ];
 
+// `roster.executionActivated` do resumo agregado (RN-090) — a fonte que a
+// aba passou a usar em vez de `events.some(...)`. `true` por padrão para
+// bater com o `execution.activated` que já vivia na fixture EVENTOS.
+function resumo(over: Partial<ProjectCardSummary['roster']> = {}): ProjectCardSummary {
+  return {
+    projectId: 'proj-1',
+    provider: 'github',
+    provisioningStatus: 'provisioned',
+    budget: null,
+    latestSessionId: 'sess-1',
+    latestSeq: 10,
+    lastEvent: null,
+    storiesAwaitingPromotion: 0,
+    pendingApprovalsCount: 0,
+    onlineAgentCount: 0,
+    roster: {
+      executionActivated: true,
+      moduleNames: ['Backend'],
+      gatesEverOpened: true,
+      delegatedSubagents: [],
+      infraActive: false,
+      uxDesignerActive: false,
+      staffActive: false,
+      ...over,
+    },
+  };
+}
+
 function montar() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const i18n = novaInstanciaI18n();
   return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <ProjectOverviewTab projectId="proj-1" />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ProjectOverviewTab projectId="proj-1" />
+        </ToastProvider>
+      </QueryClientProvider>
+    </I18nextProvider>,
   );
 }
 
@@ -159,6 +227,21 @@ beforeEach(() => {
   listModels.mockResolvedValue({ local: {}, cloud: {} });
   getAgentModelBinding.mockResolvedValue(null);
   listAgentAutonomy.mockResolvedValue([]);
+  listWorkspaces.mockResolvedValue([
+    {
+      workspace: {
+        id: 'ws-1',
+        name: 'Workspace',
+        slug: 'workspace',
+        createdBy: 'user-1',
+        createdAt: '2026-08-10T10:00:00.000Z',
+        updatedAt: '2026-08-10T10:00:00.000Z',
+      },
+      role: 'owner',
+    },
+  ]);
+  getProjectsSummary.mockResolvedValue([resumo()]);
+  activateExecutionMock.mockResolvedValue({ sessionId: 'sess-1', modules: [] });
 });
 
 /**
@@ -208,5 +291,80 @@ describe('ProjectOverviewTab — dev/QA saíram para Executores (FASE 27)', () =
     // qa-automacao/secops/infra); sem dev-backend/qa/qa-automacao sobram 5:
     // criativo, po, arquiteto, secops, infra.
     expect(screen.getByText(/5 agentes/)).toBeInTheDocument();
+  });
+});
+
+describe('ProjectOverviewTab — executionActivated vem do resumo, não da janela de 200 eventos', () => {
+  it('sessão com mais de 200 eventos: a seção Execução não volta a oferecer "Ativar execução" para uma execução já em andamento', async () => {
+    // A janela (`useSessionEvents`) perdeu o `execution.activated` original —
+    // só o resumo agregado (RN-090) ainda sabe que a execução está rodando.
+    listSessionEvents.mockResolvedValue({
+      items: [EVENTOS[0], EVENTOS[2], EVENTOS[3], EVENTOS[4]], // sem e2 (execution.activated)
+      nextCursor: null,
+    });
+    getProjectsSummary.mockResolvedValue([resumo({ executionActivated: true })]);
+
+    montar();
+
+    await screen.findByText('Execução');
+    expect(screen.queryByText('Ativar execução')).not.toBeInTheDocument();
+  });
+
+  it('resumo com `executionActivated: false` mantém o convite para ativar a execução', async () => {
+    listSessionEvents.mockResolvedValue({ items: EVENTOS, nextCursor: null });
+    getProjectsSummary.mockResolvedValue([
+      resumo({ executionActivated: false, gatesEverOpened: false }),
+    ]);
+
+    montar();
+
+    expect(await screen.findByText('Ativar execução')).toBeInTheDocument();
+  });
+});
+
+/**
+ * RN-478 — o mesmo botão tinha DOIS diagnósticos: o chat da sessão
+ * (`SessionPage.tsx`) já mostrava a causa por `mensagemDaApi`, e a Visão
+ * geral imprimia a constante `activateError`. O 400 que ensina ("o Arquiteto
+ * precisa definir os módulos", "a pasta do projeto está incoerente") morria
+ * aqui, e quem clicava ficava com "Não foi possível ativar a execução".
+ */
+describe('ProjectOverviewTab — a causa da recusa de ativar chega à tela', () => {
+  it('mostra a mensagem da api, e não a constante genérica', async () => {
+    getProjectsSummary.mockResolvedValue([
+      resumo({ executionActivated: false, gatesEverOpened: false }),
+    ]);
+    activateExecutionMock.mockRejectedValue(
+      new ApiError(400, {
+        message:
+          'workspacePath inválido para projeto no modo runner: "/home/voce/../../etc".',
+      }),
+    );
+
+    montar();
+
+    await userEvent.click(await screen.findByText('Ativar execução'));
+
+    expect(
+      await screen.findByText(/workspacePath inválido para projeto no modo runner/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Não foi possível ativar a execução'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('erro sem corpo da api cai no texto padrão — o fallback continua existindo', async () => {
+    getProjectsSummary.mockResolvedValue([
+      resumo({ executionActivated: false, gatesEverOpened: false }),
+    ]);
+    activateExecutionMock.mockRejectedValue({ nao: 'e um Error' });
+
+    montar();
+
+    await userEvent.click(await screen.findByText('Ativar execução'));
+
+    expect(
+      await screen.findByText('Não foi possível ativar a execução'),
+    ).toBeInTheDocument();
   });
 });

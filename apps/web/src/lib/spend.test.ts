@@ -1,12 +1,27 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeAll } from 'vitest';
+import i18n from './i18n';
 import {
+  alertaDeOrcamento,
   alturasRelativas,
   diaCurto,
   rotuloDoAtor,
   tituloDoDia,
   tokensDe,
+  type BudgetParaAlerta,
   type SpendLinha,
 } from './spend';
+
+/**
+ * `tituloDoDia`/`rotuloDoAtor`/`alertaDeOrcamento` resolvem texto pelo
+ * singleton REAL de `./i18n` (mesmo padrão de `session-kind.ts`) — sem
+ * `changeLanguage`, o idioma seguiria `idiomaInicial()` (o default do app,
+ * `en`, quando `navigator.language` do jsdom não começa com "pt"). Fixar
+ * `pt-BR` aqui mantém as asserções abaixo idênticas ao texto que já existia
+ * antes da extração.
+ */
+beforeAll(async () => {
+  await i18n.changeLanguage('pt-BR');
+});
 
 describe('alturasRelativas', () => {
   it('escala pelo maior da série', () => {
@@ -74,5 +89,70 @@ describe('rotuloDoAtor', () => {
 describe('tokensDe', () => {
   it('soma entrada e saída', () => {
     expect(tokensDe({ inputTokens: 10, outputTokens: 5 })).toBe(15);
+  });
+});
+
+describe('alertaDeOrcamento (RN-213)', () => {
+  const base: BudgetParaAlerta = {
+    limitMicros: 10_000_000,
+    spentMicros: 0,
+    policy: 'allow',
+    lastThresholdNotified: 0,
+  };
+
+  it('sem teto definido, não alerta mesmo com gasto alto', () => {
+    expect(
+      alertaDeOrcamento({ ...base, limitMicros: 0, spentMicros: 99, lastThresholdNotified: 100 }),
+    ).toBeNull();
+  });
+
+  it('abaixo de 70%, não alerta', () => {
+    expect(
+      alertaDeOrcamento({ ...base, spentMicros: 6_000_000, lastThresholdNotified: 0 }),
+    ).toBeNull();
+  });
+
+  it('cruzou 70%, alerta nível warning', () => {
+    expect(
+      alertaDeOrcamento({ ...base, spentMicros: 7_000_000, lastThresholdNotified: 70 }),
+    ).toEqual({
+      nivel: 'warning',
+      mensagem: 'Este projeto já passou de 70% do orçamento definido.',
+    });
+  });
+
+  it('cruzou 90%, alerta nível danger', () => {
+    expect(
+      alertaDeOrcamento({ ...base, spentMicros: 9_200_000, lastThresholdNotified: 90 }),
+    ).toEqual({
+      nivel: 'danger',
+      mensagem: 'Este projeto já passou de 90% do orçamento definido.',
+    });
+  });
+
+  /**
+   * `lastThresholdNotified` já É o veredito — a função nunca refaz a conta de
+   * `spentMicros`/`limitMicros` para decidir SE cruzou, só para decidir se a
+   * política `block` está ATIVAMENTE recusando chamada agora.
+   */
+  it('política block e teto atingido, avisa que chamadas estão bloqueadas', () => {
+    const alerta = alertaDeOrcamento({
+      ...base,
+      policy: 'block',
+      spentMicros: 10_000_000,
+      lastThresholdNotified: 100,
+    });
+    expect(alerta?.nivel).toBe('danger');
+    expect(alerta?.mensagem).toMatch(/BLOQUEADAS/);
+  });
+
+  it('política block mas ainda não bateu o teto, não fala em bloqueio', () => {
+    const alerta = alertaDeOrcamento({
+      ...base,
+      policy: 'block',
+      spentMicros: 9_500_000,
+      lastThresholdNotified: 90,
+    });
+    expect(alerta?.mensagem).not.toMatch(/BLOQUEADAS/);
   });
 });

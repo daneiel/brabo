@@ -19,11 +19,18 @@ defmodule Engine.Workers.AnamneseWorkerTest do
     Application.put_env(:engine, :engine_api_client, FakeEngineApiClient)
     Application.put_env(:engine, :test_pid, self())
 
+    # Template do grafo AUSENTE por padrão nesta suíte — a maioria dos testes
+    # aqui é sobre o CONTEÚDO da rodada (fila, decisões, catálogo), e quer o
+    # caminho de FALLBACK inline (mesmo texto de sempre), não o de template.
+    # Os testes do template do grafo (describe abaixo) sobrescrevem isto.
+    Process.put(:fake_prompt_template, {:error, :not_found})
+
     on_exit(fn ->
       File.rm_rf!(root)
       Application.delete_env(:engine, :project_workspaces_root)
       Application.delete_env(:engine, :engine_api_client)
       Application.delete_env(:engine, :test_pid)
+      Application.delete_env(:engine, :graph_templates_enabled?)
       Engine.GlobalSessionTestLock.release()
     end)
 
@@ -48,6 +55,16 @@ defmodule Engine.Workers.AnamneseWorkerTest do
       },
       overrides
     )
+  end
+
+  # `context()` sozinho não tem material pra passar `Triage.should_run?/3`
+  # (evento/decisão/fila zerados < min_events, default 10) — a rodada seria
+  # PULADA e `llm_turn` nunca chamado. Testes que só querem exercitar a
+  # RENDERIZAÇÃO do prompt (template/RAG), sem se importar com a régua de
+  # "vale a pena rodar", forçam via min_events baixo.
+  defp forcar_rodada! do
+    Application.put_env(:engine, :anamnese_min_events, 0)
+    on_exit(fn -> Application.delete_env(:engine, :anamnese_min_events) end)
   end
 
   defp profile do
@@ -445,5 +462,268 @@ defmodule Engine.Workers.AnamneseWorkerTest do
     assert :ok = AnamneseWorker.perform(job(project_id, session_id))
 
     assert_received {:llm_turn, "anamnese", _messages, _tools}
+  end
+
+  # Grafo de conhecimento (ADR 0099/0100): `initial_message/1` resolve o
+  # template `anamnese-kickoff` via `get_prompt_template`, com fallback
+  # OBRIGATÓRIO pro texto inline em qualquer falha. Um template FAKE simples
+  # (mesmos placeholders documentados em prompts/anamnese-kickoff.md) prova
+  # que a substituição — incluindo o sub-template condicional de
+  # `queued_instruction` — funciona sem depender do arquivo real.
+  describe "template do grafo (anamnese-kickoff)" do
+    # A flag `:graph_templates_enabled?` (COMPARTILHADA com o Psicólogo, ver
+    # config/runtime.exs) nasce DESLIGADA — os testes deste describe são
+    # justamente sobre o caminho de template, então ligam por padrão aqui; o
+    # teste de "flag desligada" abaixo sobrescreve de volta.
+    setup do
+      Application.put_env(:engine, :graph_templates_enabled?, true)
+      :ok
+    end
+
+    @template_fake """
+    REGRAS FAKE DO TEMPLATE.
+    {{queued_instruction}}
+
+    CATALOGO:
+    {{competency_catalog}}
+
+    MEMBROS:
+    {{members}}
+
+    PERFIS:
+    {{current_profiles}}
+
+    {{instructions}}
+    {{decisions}}
+    {{relevant_snippets}}
+    JANELA ({{window_from}} -> {{window_to}}){{omission_note}}:
+    {{events}}
+    """
+
+    test "get_prompt_template com sucesso: a mensagem inicial usa o template do grafo, com os placeholders (incluindo o sub-template de queued_instruction) substituídos",
+         %{project_id: project_id, session_id: session_id} do
+      forcar_rodada!()
+
+      Process.put(:fake_prompt_template, %{
+        "name" => "anamnese-kickoff",
+        "version" => "1",
+        "body" => @template_fake,
+        "hash" => "abc"
+      })
+
+      Process.put(
+        :fake_anamnese_context,
+        context(%{
+          "queuedHypotheses" => [
+            %{
+              "queueId" => "queue-1",
+              "hypothesisId" => "hyp-7",
+              "agenteAlvo" => "dev-api",
+              "hipotese" => "explica demais",
+              "sugestao" => "encurtar",
+              "confiancaPercent" => 80
+            }
+          ]
+        })
+      )
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_proficiency", %{
+          "profiles" => [profile()]
+        })
+      ])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+
+      assert_received {:prompt_template_fetched, "anamnese-kickoff", nil}
+      assert_received {:llm_turn, "anamnese", messages, _tools}
+
+      # `:pinned` não sobrevive até aqui — `Engine.Harness.ToolLoop.to_wire/1`
+      # o remove antes de mandar pro `llm_turn` (é o que garante que ele nunca
+      # vaza pro provider). `initial_message/1` seta `:pinned => true`
+      # incondicionalmente, no MESMO ponto de retorno, nos dois caminhos
+      # (template e inline) — não há branch que possa divergir isso.
+      msg = Enum.find(messages, &(&1["role"] == "user"))
+
+      content = msg["content"]
+
+      # O molde FAKE apareceu (prova que o template do grafo foi usado, não
+      # o fallback inline — que tem outro texto de abertura).
+      assert content =~ "REGRAS FAKE DO TEMPLATE"
+      refute content =~ "REGRAS INEGOCIÁVEIS:"
+
+      # Placeholders simples substituídos.
+      assert content =~ "nestjs"
+      assert content =~ "Dani"
+
+      # Sub-template condicional de queued_instruction: hipótese da fila
+      # entra formatada, no MESMO texto do caminho inline.
+      assert content =~ "hyp-7"
+      assert content =~ "input PRIORIZADO"
+      assert content =~ "propose_instruction_patch"
+
+      # Nenhum placeholder sobrevive sem substituição.
+      refute content =~ "{{"
+    end
+
+    test "get_prompt_template falhando ({:error, :not_found} — template ainda não semeado): cai no fallback inline, mensagem continua pinned",
+         %{project_id: project_id, session_id: session_id} do
+      forcar_rodada!()
+      Process.put(:fake_prompt_template, {:error, :not_found})
+
+      Process.put(:fake_anamnese_context, context())
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_proficiency", %{
+          "profiles" => [profile()]
+        })
+      ])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+
+      assert_received {:llm_turn, "anamnese", messages, _tools}
+      # `:pinned` não sobrevive até aqui — `Engine.Harness.ToolLoop.to_wire/1`
+      # o remove antes de mandar pro `llm_turn` (é o que garante que ele nunca
+      # vaza pro provider). `initial_message/1` seta `:pinned => true`
+      # incondicionalmente, no MESMO ponto de retorno, nos dois caminhos
+      # (template e inline) — não há branch que possa divergir isso.
+      msg = Enum.find(messages, &(&1["role"] == "user"))
+
+      content = msg["content"]
+      refute content =~ "REGRAS FAKE DO TEMPLATE"
+      assert content =~ "REGRAS INEGOCIÁVEIS:"
+      assert content =~ "nestjs"
+    end
+
+    test "get_prompt_template falhando por erro de rede/api: mesmo fallback inline, sem derrubar a rodada",
+         %{project_id: project_id, session_id: session_id} do
+      forcar_rodada!()
+      Process.put(:fake_prompt_template, {:error, :timeout})
+
+      Process.put(:fake_anamnese_context, context())
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_proficiency", %{
+          "profiles" => [profile()]
+        })
+      ])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+
+      assert_received {:llm_turn, "anamnese", messages, _tools}
+      # `:pinned` não sobrevive até aqui — `Engine.Harness.ToolLoop.to_wire/1`
+      # o remove antes de mandar pro `llm_turn` (é o que garante que ele nunca
+      # vaza pro provider). `initial_message/1` seta `:pinned => true`
+      # incondicionalmente, no MESMO ponto de retorno, nos dois caminhos
+      # (template e inline) — não há branch que possa divergir isso.
+      msg = Enum.find(messages, &(&1["role"] == "user"))
+      assert msg["content"] =~ "REGRAS INEGOCIÁVEIS:"
+    end
+
+    test "flag graph_templates_enabled? desligada: nem tenta o grafo, vai direto pro inline",
+         %{project_id: project_id, session_id: session_id} do
+      forcar_rodada!()
+      Application.put_env(:engine, :graph_templates_enabled?, false)
+
+      # Se o worker chamasse get_prompt_template mesmo com a flag desligada,
+      # isto quebraria a rodada — prova que ele nem tenta.
+      Process.put(:fake_prompt_template, {:error, :boom})
+
+      Process.put(:fake_anamnese_context, context())
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_proficiency", %{
+          "profiles" => [profile()]
+        })
+      ])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+
+      refute_received {:prompt_template_fetched, _, _}
+      assert_received {:llm_turn, "anamnese", messages, _tools}
+      msg = Enum.find(messages, &(&1["role"] == "user"))
+      assert msg["content"] =~ "REGRAS INEGOCIÁVEIS:"
+    end
+  end
+
+  # RAG (ADR 0099/0100, RN-414): a Anamnese consulta trechos relevantes do
+  # projeto pelas competências ainda sem perfil, EM COMPOSIÇÃO com a janela
+  # temporal — os hits chegam pelo `context` que o `ContextBuilder` já monta
+  # (testado em profundidade em `context_builder_test.exs`); aqui importa só
+  # que o WORKER os renderiza no prompt, nos dois caminhos (template e
+  # inline), e que a degradação aparece de forma legível.
+  describe "trechos relevantes do RAG no prompt" do
+    test "hits do RAG aparecem no prompt (caminho inline)", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      forcar_rodada!()
+      Process.put(:fake_anamnese_context, context())
+
+      Process.put(:fake_rag_search, %{
+        "hits" => [%{"path" => "docs/adr/0080.md", "excerpt" => "trecho do ADR do RAG"}],
+        "degraded" => false
+      })
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_proficiency", %{
+          "profiles" => [profile()]
+        })
+      ])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+
+      assert_received {:llm_turn, "anamnese", messages, _tools}
+      content = Enum.map_join(messages, "\n", &Map.get(&1, "content", ""))
+
+      assert content =~ "TRECHOS RELEVANTES DO PROJETO"
+      assert content =~ "docs/adr/0080.md"
+      assert content =~ "trecho do ADR do RAG"
+    end
+
+    test "degraded: true do RAG aparece de forma legível no prompt", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      forcar_rodada!()
+      Process.put(:fake_anamnese_context, context())
+
+      Process.put(:fake_rag_search, %{
+        "hits" => [%{"path" => "a.md", "excerpt" => "x"}],
+        "degraded" => true
+      })
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_proficiency", %{
+          "profiles" => [profile()]
+        })
+      ])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+
+      assert_received {:llm_turn, "anamnese", messages, _tools}
+      content = Enum.map_join(messages, "\n", &Map.get(&1, "content", ""))
+
+      assert content =~ "AVISO"
+      assert content =~ "DEGRADADA"
+    end
+
+    test "rag_search falhando: a rodada segue com o comportamento atual (sem trechos, sem erro)",
+         %{project_id: project_id, session_id: session_id} do
+      forcar_rodada!()
+      Process.put(:fake_anamnese_context, context())
+      Process.put(:fake_rag_search, {:error, :api_fora})
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("emit_proficiency", %{
+          "profiles" => [profile()]
+        })
+      ])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+
+      refute_received {:event_appended, ^project_id, ^session_id, %{type: "anamnese.run_failed"}}
+      assert_received {:llm_turn, "anamnese", _messages, _tools}
+    end
   end
 end

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   acceptHandoff,
   activateExecution,
-  answerStructuredQuestion,
   approveAction,
   approveAlwaysAction,
   cancelAgentTurn,
@@ -19,25 +19,37 @@ import {
   mensagemDaApi,
   promoteStories,
   renameSession,
+  requestManualHandoff,
   returnStory,
   sendAgentMessage,
   setAgentAutonomy,
   setSessionModelBinding,
   startAgent,
   transitionSession,
+  validateNecessity,
 } from '../lib/api-client';
 import { streamChatMessage } from '../lib/chat-stream';
-import { connectSessionHeartbeat } from '../lib/session-channel';
-import { useBacklog, useCurrentWorkspaceWithRole, useSessionEvents, useSessionEvent, usePendingActions, useHandoffs } from '../lib/hooks';
+import { useTurnoDoAgente } from '../lib/session-turno';
+import {
+  useBacklog,
+  useCurrentWorkspaceWithRole,
+  useSessionEvents,
+  useSessionEvent,
+  usePendingActions,
+  useHandoffs,
+} from '../lib/hooks';
 import { pollQueParaNoErro } from '../lib/query-policy';
 import { emailDaSessao } from '../lib/auth';
-import { AGENTS } from '../lib/agents';
+import { AGENTS, addressableAgents, corDoAgente, nomeDoAgente } from '../lib/agents';
+import {
+  agruparPorOrigem,
+  classifyEvent,
+  origemDoEvento,
+  ROTULO_DA_ORIGEM,
+  type OrigemDeEvento,
+} from '../lib/activity';
 import {
   AGENT_AUTONOMY_ALL_ACTIONS,
-  type BusinessRulePayload,
-  type ProposedAction,
-  type SessionEvent,
-  type SessionStatus,
   type StructuredQuestion,
   type StructuredQuestionAnsweredPayload,
   type StructuredQuestionPayload,
@@ -46,15 +58,13 @@ import { useToast } from '../components/ui/ToastProvider';
 import { TokenMeter } from '../components/TokenMeter';
 import { ModelPicker } from '../components/ModelPicker';
 import { ApprovalCard } from '../components/ApprovalCard';
-import { ActivityFeed } from '../components/ActivityFeed';
-import { EventItem } from '../components/EventItem';
+import { TurnActivityStrip } from '../components/TurnActivityStrip';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { MarkdownMessage } from '../components/ui/MarkdownMessage';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
 import { Disclosure } from '../components/ui/Disclosure';
-import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
@@ -69,16 +79,26 @@ import {
   AlertCircleIcon,
   ArrowLeftIcon,
   BulbIcon,
-  ChatIcon,
   ChevronRightIcon,
   LayoutSidebarIcon,
   ModelIcon,
-  PrIcon,
   StackIcon,
   StopSquareIcon,
   UserIcon,
 } from '../components/ui/icons';
 import styles from './SessionPage.module.css';
+import {
+  aberturasDeTurno,
+  afundarDesfechos,
+  ordemDaAcaoNaTimeline,
+  pontoDaSessao,
+  turnoDoSeq,
+  type TimelineEntry,
+} from '../lib/session-timeline';
+import { StorySlide } from './StorySlide';
+import { StructuredQuestionCard } from './StructuredQuestionCard';
+import { ContextAside } from './ContextAside';
+import { AGENTES_DE_CHAT, useSessionReadiness } from '../lib/session-readiness';
 
 interface SessionPageProps {
   projectId: string;
@@ -87,58 +107,113 @@ interface SessionPageProps {
   highlightEvent?: string;
 }
 
-interface TimelineEntry {
-  seq: number;
-  node: ReactNode;
-  /**
-   * Autor-agente desta entrada (colapso por agente, RN-138) — só populado
-   * para entradas que representam FALA/AÇÃO de um agente específico
-   * (`agent.response`, `agent.error`, épico/história criados pelo PO, card
-   * de aprovação). Ausente em entrada de usuário e em divisores/cards que
-   * marcam uma TRANSIÇÃO (handoff, promoção de história): são pontos de
-   * corte por natureza, e por isso sempre quebram um agrupamento em vez de
-   * participar dele.
-   */
-  agentId?: string;
+/**
+ * `aberturasDeTurno`, `turnoDoSeq`, `afundarDesfechos`, `pontoDaSessao` e
+ * `ordemDaAcaoNaTimeline` — junto com o tipo `TimelineEntry` que várias delas
+ * usam — moraram aqui até a extração mecânica de `../lib/session-timeline`
+ * (PR 1 da decomposição de `SessionPage.tsx`, ADR 0122): são puras, sem JSX
+ * nem referência a `styles`, e por isso a primeira fatia a sair. Reexportadas
+ * abaixo porque `SessionPage.ordenacao-e-avisos.test.tsx` as importa
+ * DIRETAMENTE de `./SessionPage` — mesmo símbolo, novo módulo dono.
+ * `agruparNarracoesDoTurno`, logo abaixo, FICA: produz JSX (`<Disclosure>`) e
+ * lê `styles.narracoes*`, então mover junto inventaria o primeiro `.tsx` sob
+ * `lib/` — precedente que este PR não decide sozinho.
+ */
+export { aberturasDeTurno, afundarDesfechos, ordemDaAcaoNaTimeline, turnoDoSeq };
+
+/**
+ * Colapsa `agent.response` CONSECUTIVAS do mesmo turno+autor num `Disclosure`
+ * compacto ("Passos do turno · N"), deixando só a ÚLTIMA intacta e fora dele —
+ * a faixa de atividade (`TurnActivityStrip`) já narra o CAMINHO até a
+ * resposta em tempo real; isto é o mesmo princípio aplicado ao HISTÓRICO, para
+ * um turno que produziu várias respostas seguidas (ex.: o modelo "pensa em
+ * voz alta" entre chamadas de ferramenta) não virar N bolhas iguais empilhadas
+ * no fio.
+ *
+ * Roda DEPOIS de `afundarDesfechos` na composição (nunca antes: a ordem de
+ * apresentação já precisa estar resolvida) e reusa os MESMOS dois campos que
+ * `afundarDesfechos` já lê — `turno` e `autor` — pra decidir a partição:
+ * turnos ou autores diferentes NUNCA se misturam no mesmo grupo. Só entradas
+ * com `agentResponse: true` participam; qualquer outro tipo quebra a
+ * sequência corrente (mesma régua de "fronteira" que `afundarDesfechos` usa
+ * pra desfecho) e passa direto, sem ser tocado.
+ *
+ * Função AGNÓSTICA a agente — nenhuma lista de nomes de agente aqui dentro,
+ * só `turno`/`autor`/o marcador de tipo. `titulo`/`trailing` chegam já
+ * resolvidos (quem chama passa o `t()` da sessão) pra este módulo continuar
+ * testável como função pura, sem precisar montar `I18nextProvider`.
+ */
+export function agruparNarracoesDoTurno(
+  entradas: TimelineEntry[],
+  rotulos: { titulo: string; trailing: (count: number) => string },
+): TimelineEntry[] {
+  const resultado: TimelineEntry[] = [];
+  let grupo: TimelineEntry[] = [];
+
+  function fecharGrupo() {
+    if (grupo.length === 0) return;
+    if (grupo.length === 1) {
+      resultado.push(grupo[0]);
+      grupo = [];
+      return;
+    }
+    const compactadas = grupo.slice(0, -1);
+    const ultima = grupo[grupo.length - 1];
+    const primeira = compactadas[0];
+    resultado.push({
+      ...primeira,
+      node: (
+        <Disclosure
+          key={`narracoes-${primeira.seq}`}
+          titulo={rotulos.titulo}
+          trailing={rotulos.trailing(compactadas.length)}
+          classNameCabecalho={styles.narracoesCabecalho}
+          className={styles.narracoesGrupo}
+        >
+          <div className={styles.narracoesRegiao}>
+            {compactadas.map((e) => (
+              <div key={e.seq}>{e.node}</div>
+            ))}
+          </div>
+        </Disclosure>
+      ),
+    });
+    resultado.push(ultima);
+    grupo = [];
+  }
+
+  for (const entrada of entradas) {
+    // `turno === 0` é o PRÓLOGO (`turnoDoSeq`: "antes da primeira abertura"),
+    // nunca um turno de verdade — não há o que narrar como "passos DO turno"
+    // ali. Excluir o prólogo também é o que preserva o comportamento de
+    // fixtures antigas (`SessionPage.painel-e-agrupamento.test.tsx`,
+    // `SessionPage.handoff-devlead-e-colapso.test.tsx`) que empilham vários
+    // `agent.response` sem nenhum evento de usuário entre eles só pra testar
+    // OUTRO mecanismo (RN-138, RN-177) — sem fronteira de turno nenhuma,
+    // agrupá-los aqui coincidiria por acidente com o que aquele mecanismo já
+    // resolve, produzindo Disclosure dentro de Disclosure.
+    if (!entrada.agentResponse || entrada.turno === 0) {
+      fecharGrupo();
+      resultado.push(entrada);
+      continue;
+    }
+    const anterior = grupo[grupo.length - 1];
+    if (anterior && (anterior.turno !== entrada.turno || anterior.autor !== entrada.autor)) {
+      fecharGrupo();
+    }
+    grupo.push(entrada);
+  }
+  fecharGrupo();
+
+  return resultado;
 }
 
 /**
- * O ponto de estado da barra de topo, derivado da máquina de estados da sessão
- * (`created → active → closing → closed | closed_abnormally`).
- *
- * Uma entrada por estado, sem `default` embutido: estado novo na máquina passa
- * a exigir uma decisão aqui em vez de herdar calado a aparência de "ao vivo".
+ * Quantas entradas do fio ficam ABERTAS antes de o resto virar histórico
+ * recolhido por origem (RN-177). Mesmo número do painel de log, e pelo mesmo
+ * pedido: "mantém as últimas 5 mensagens".
  */
-const PONTO_DA_SESSAO: Record<
-  SessionStatus,
-  { classe: 'pulsing' | 'statusDotParado' | 'statusDotFalha'; rotulo: string }
-> = {
-  created: { classe: 'statusDotParado', rotulo: 'ainda não ativada' },
-  active: { classe: 'pulsing', rotulo: 'ativa' },
-  closing: { classe: 'statusDotParado', rotulo: 'encerrando' },
-  closed: { classe: 'statusDotParado', rotulo: 'encerrada' },
-  closed_abnormally: { classe: 'statusDotFalha', rotulo: 'encerrada anormalmente' },
-};
-
-export function pontoDaSessao(status: SessionStatus | undefined) {
-  // Sem sessão carregada ainda não é "encerrada": é desconhecido, e o ponto
-  // fica apagado até o dado chegar.
-  return status ? PONTO_DA_SESSAO[status] : { classe: 'statusDotParado' as const, rotulo: 'carregando' };
-}
-
-/**
- * Agentes que participam do fluxo de CHAT do composer (achado 9-fix) —
- * quem tem rota de `message` wireada no engine, não só `start`.
- *
- * Conferido em `agent_command_controller.ex`: há cláusula própria pra
- * po/dev-lead/arquiteto, e a última cláusula (sem guarda de agente) trata
- * qualquer outro valor — incluindo `"infra"` — como se fosse o Criativo.
- * Infra Lead nunca teve `message` wireada, só `start`; incluí-lo aqui faria
- * o composer mandar mensagens que o engine rotearia em silêncio pro agente
- * errado. Ele é propositivo (CLAUDE.md Fase 4), não conversacional pelo
- * composer.
- */
-const AGENTES_DE_CHAT = ['criativo', 'po', 'arquiteto', 'dev-lead'] as const;
+const FIO_RECENTES_ABERTAS = 5;
 
 /**
  * `scrollIntoView` com guarda de existência (achado 10) — jsdom (ambiente de
@@ -150,291 +225,12 @@ function rolarParaOFim(el: HTMLElement | null) {
   el?.scrollIntoView?.({ block: 'end' });
 }
 
-/** Nome de exibição do agente; degrada para o id quando ele não está no roster. */
-function nomeDoAgente(id: string | undefined): string {
-  if (!id) return 'agente';
-  return AGENTS[id as keyof typeof AGENTS]?.name ?? id;
-}
-
-/**
- * Cor do agente — a mesma do card, do avatar e da marca de handoff.
- *
- * O fallback é `--accent` porque nem todo ator é agente do roster: no chat sem
- * agente ativo quem responde é o MODELO, e `actor.id` é o slug dele.
- */
-function corDoAgente(id: string | undefined): CSSProperties {
-  const cor = id ? AGENTS[id as keyof typeof AGENTS]?.color : undefined;
-  return { ['--msg-color' as string]: cor ?? 'var(--accent)' } as CSSProperties;
-}
-
-/**
- * Posição de uma `ProposedAction` na timeline (RN-155) — NUNCA `action.seq`
- * cru. Ele é `bigserial` ÚNICO e GLOBAL da tabela `proposed_actions` inteira
- * (contraste DELIBERADO com `session_events.seq`, documentado no próprio
- * `apps/api/src/db/schema.ts`), compartilhado por TODAS as sessões e
- * projetos do sistema — comparar os dois espaços numéricos direto (o que o
- * código fazia antes) produzia ordem imprevisível toda vez que um
- * `ApprovalCard` entrava na mistura com eventos normais: confirmado ao vivo,
- * card de aprovação aparecendo antes do fim da resposta do agente, e
- * mensagens de handoff/aprovação fora de ordem depois de handoffs.
- *
- * `ProposeActionUseCase` grava, na MESMA transação que cria a ação, um
- * evento `proposed_action.created` no event log com `payload.actionId`
- * apontando pra ela (`apps/api/.../actions/propose-action.use-case.ts`) — o
- * `seq` DESSE evento é o eixo certo: gapless, por SESSÃO, o MESMO espaço
- * numérico que todo o resto da timeline já usa. Empatar com o seq do evento
- * que a originou é intencional: a ordenação de `Array.prototype.sort` é
- * ESTÁVEL (garantida desde ES2019) e o código empurra os eventos pro array
- * ANTES das ações, então o card sempre cai IMEDIATAMENTE DEPOIS do evento
- * que o motivou, nunca antes nem misturado com outro turno.
- *
- * Duas rotas de criação (o bootstrap de Gitflow — `BootstrapRunner` e
- * `ProvisionRepositoryUseCase`, para `git_repo_create`/`git_branch_create`
- * etc.) gravam a ação sem esse evento — só outbox, que é transporte pro
- * engine e não aparece aqui. Pra essas, degrada pra `createdAt`: ancora no
- * último evento cujo `createdAt` não é depois do da ação (o único eixo que
- * os dois lados têm em comum) — `+ 0.5` pra nunca empatar com o seq de um
- * evento de verdade, o que preservaria a garantia de posição estrita só pra
- * quem tem vínculo direto.
- */
-export function ordemDaAcaoNaTimeline(
-  action: ProposedAction,
-  eventos: SessionEvent[],
-): number {
-  const eventoVinculado = eventos.find(
-    (e) =>
-      e.type === 'proposed_action.created' &&
-      (e.payload as { actionId?: unknown })?.actionId === action.id,
-  );
-  if (eventoVinculado) return eventoVinculado.seq;
-
-  const alvo = new Date(action.createdAt).getTime();
-  let ancoraSeq = 0;
-  let ancoraCreatedAt = -Infinity;
-  for (const e of eventos) {
-    const t = new Date(e.createdAt).getTime();
-    if (t <= alvo && t >= ancoraCreatedAt) {
-      ancoraCreatedAt = t;
-      ancoraSeq = e.seq;
-    }
-  }
-  return ancoraSeq + 0.5;
-}
-
-/**
- * Um slide do carrossel de histórias aguardando promoção (RN-148) — o mesmo
- * conteúdo do card avulso de `backlog.story_promotion_proposed` (RN-126),
- * sem a caixa em volta: quem dá a caixa é o `Carousel`.
- *
- * `resumo` é opcional de propósito: `CreateStoryUseCase` hoje só grava
- * storyId/epicId/title no evento — nem descrição, nem RF. O slide já sabe
- * mostrar o campo quando ele existir no payload; até lá, degrada pro título
- * sozinho.
- */
-function StorySlide({
-  projectId,
-  titulo,
-  resumo,
-  promovendo,
-  desabilitado,
-  onPromover,
-  onDevolver,
-}: {
-  projectId: string;
-  titulo: string;
-  resumo?: string;
-  promovendo: boolean;
-  desabilitado: boolean;
-  onPromover: () => void;
-  onDevolver: () => void;
-}) {
-  return (
-    <div className={styles.storySlide}>
-      <span className={styles.handoffPill}>
-        <StackIcon size={13} />
-        história &quot;{titulo}&quot; pronta, aguardando sua promoção
-      </span>
-      {resumo && <p className={styles.storySlideResumo}>{resumo}</p>}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <Button
-          variant="success"
-          disabled={desabilitado}
-          loading={promovendo}
-          onClick={onPromover}
-        >
-          Promover
-        </Button>
-        <Button variant="ghost" disabled={desabilitado} onClick={onDevolver}>
-          Devolver
-        </Button>
-      </div>
-      <Link
-        to="/projects/$projectId"
-        params={{ projectId }}
-        search={{ tab: 'backlog' }}
-        className={styles.timelineLink}
-      >
-        Ver no Backlog
-        <ChevronRightIcon size={11} />
-      </Link>
-    </div>
-  );
-}
-
-/**
- * Card de `chat.structured_question` (RN-162) — o formulário que o Criativo
- * pede quando faz VÁRIAS perguntas de uma vez, em vez de texto livre que o
- * usuário responderia item por item. `type` decide o input: `text`→`Input`,
- * `textarea`→`Textarea`, `select`→`Select` com `options`.
- *
- * Depois de enviado, o card vira SOMENTE LEITURA (`respondida`, derivado de
- * existir um `chat.structured_question_answered` posterior com o mesmo
- * `questionSetId` — o mesmo padrão de "resolvida" que o card de promoção de
- * história já usa) — reenviar não é possível, nem tentando de novo: o
- * backend recusa com 409 (`AnswerStructuredQuestionUseCase`), e aqui o
- * formulário nem chega a aparecer.
- */
-function StructuredQuestionCard({
-  projectId,
-  sessionId,
-  agent,
-  questionSetId,
-  questions,
-  respondida,
-  respostasExistentes,
-}: {
-  projectId: string;
-  sessionId: string;
-  agent: string;
-  questionSetId: string;
-  questions: StructuredQuestion[];
-  respondida: boolean;
-  respostasExistentes: Record<string, string> | undefined;
-}) {
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
-  const [respostas, setRespostas] = useState<Record<string, string>>({});
-  const [enviando, setEnviando] = useState(false);
-
-  if (respondida) {
-    return (
-      <div className={styles.structuredQuestionCard}>
-        <span className={styles.handoffPill}>
-          <ChatIcon size={13} />
-          perguntas do {nomeDoAgente(agent)} — respondidas
-        </span>
-        <dl className={styles.structuredQuestionAnswers}>
-          {questions.map((q) => (
-            <div key={q.id} className={styles.structuredQuestionAnswerRow}>
-              <dt>{q.label}</dt>
-              <dd>{respostasExistentes?.[q.id] ?? '—'}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    );
-  }
-
-  const completo = questions.every((q) => (respostas[q.id] ?? '').trim() !== '');
-
-  async function handleSubmit() {
-    if (enviando || !completo) return;
-    setEnviando(true);
-    try {
-      await answerStructuredQuestion(projectId, sessionId, agent, questionSetId, respostas);
-      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      showToast({ title: 'Respostas enviadas', tone: 'success' });
-    } catch (erro) {
-      showToast({
-        title: mensagemDaApi(erro, 'Não foi possível enviar as respostas'),
-        tone: 'danger',
-      });
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  return (
-    <div className={styles.structuredQuestionCard}>
-      <span className={styles.handoffPill}>
-        <ChatIcon size={13} />
-        perguntas do {nomeDoAgente(agent)}
-      </span>
-      <div className={styles.structuredQuestionForm}>
-        {questions.map((q) => {
-          const value = respostas[q.id] ?? '';
-          const atualizar = (v: string) =>
-            setRespostas((atual) => ({ ...atual, [q.id]: v }));
-
-          if (q.type === 'textarea') {
-            return (
-              <Textarea
-                key={q.id}
-                label={q.label}
-                value={value}
-                disabled={enviando}
-                onChange={(e) => atualizar(e.target.value)}
-              />
-            );
-          }
-
-          if (q.type === 'select') {
-            // `htmlFor`/`id` explícitos: `Select` (design system) não tem a
-            // prop `label` que `Input`/`Textarea` têm — sem a associação, um
-            // leitor de tela não liga a pergunta ao campo.
-            const selectId = `sq-${questionSetId}-${q.id}`;
-            return (
-              <div key={q.id} className={styles.structuredQuestionField}>
-                <label className={styles.structuredQuestionFieldLabel} htmlFor={selectId}>
-                  {q.label}
-                </label>
-                <Select
-                  id={selectId}
-                  value={value}
-                  disabled={enviando}
-                  onChange={(e) => atualizar(e.target.value)}
-                >
-                  <option value="" disabled>
-                    Selecione
-                  </option>
-                  {q.options.map((opcao) => (
-                    <option key={opcao} value={opcao}>
-                      {opcao}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            );
-          }
-
-          return (
-            <Input
-              key={q.id}
-              label={q.label}
-              value={value}
-              disabled={enviando}
-              onChange={(e) => atualizar(e.target.value)}
-            />
-          );
-        })}
-      </div>
-      <Button
-        variant="success"
-        loading={enviando}
-        disabled={!completo || enviando}
-        onClick={handleSubmit}
-      >
-        Enviar respostas
-      </Button>
-    </div>
-  );
-}
-
 export function SessionPage({
   projectId,
   sessionId,
   highlightEvent,
 }: SessionPageProps) {
+  const { t } = useTranslation('sessionPage');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // O access token carrega o e-mail; o nome não vem mais em claim nenhuma
@@ -464,39 +260,6 @@ export function SessionPage({
   // a navegação traz um `highlightEvent` (chip de evidência do Psicólogo).
   const [logOpen, setLogOpen] = useState(!!highlightEvent);
   const [draft, setDraft] = useState('');
-  const [streaming, setStreaming] = useState(false);
-  const [streamingText, setStreamingText] = useState('');
-  // QUEM está falando (achado C). O delta passou a carregar o agente; sem ele
-  // a tela rotulava a bolha com o nome do MODELO, que é detalhe de execução.
-  const [streamingAgent, setStreamingAgent] = useState<string | null>(null);
-  // Espelho do `streaming` para os handlers do canal: eles são registrados uma
-  // vez e enxergariam sempre o valor inicial do state.
-  const streamingRef = useRef(false);
-  // Achado B: o engine avisa "comecei a trabalhar" (`agent.status` "working")
-  // bem antes do primeiro delta — handoff aceito dispara um kickoff
-  // ASSÍNCRONO (`GenServer.cast`) no engine, ao contrário de handleSend/
-  // handleReadiness, que são síncronos e já ligam `streaming` na hora. Sem
-  // isto, entre aceitar o handoff e o agente responder a tela não mostra
-  // nada — só o silêncio, que é indistinguível de "não vai acontecer nada".
-  //
-  // `turnoAgentRef` guarda QUEM está prestes a responder, fixado no clique
-  // que disparou o turno (`handleAcceptHandoff`) — não no roster derivado dos
-  // eventos (`activeAgent`), que só reflete o `agent.activated` persistido
-  // depois de um round-trip e podia perder a corrida com o broadcast do
-  // canal, que é bem mais rápido.
-  const turnoAgentRef = useRef<string | null>(null);
-  // Agente identificado pelo `agent.status` "working" enquanto NENHUM delta
-  // chegou ainda pra este turno. `null` assim que o primeiro delta chega (o
-  // bloco de streaming já cobre) ou o turno termina.
-  const [statusAgent, setStatusAgent] = useState<string | null>(null);
-  // Indicador de "pensando" (bolha com os 3 pontinhos, RN-131) — só liga
-  // depois de 5s SEM nenhum texto chegar, e não no instante em que o turno
-  // começa. Antes ele piscava em toda mensagem, mesmo nas que respondiam em
-  // menos de um segundo — ruído visual pra maioria dos turnos, que é o efeito
-  // contrário do que um indicador de espera deveria ter. Ver o efeito que
-  // arma/desarma o timer, logo abaixo de `agenteExibido`.
-  const [pensandoVisivel, setPensandoVisivel] = useState(false);
-  const [optimisticUser, setOptimisticUser] = useState<string | null>(null);
   // Renomear (RN-098). `null` fora de edição — e não string vazia — porque
   // vazio é um nome que se está digitando, e nenhum campo aberto é outro
   // estado.
@@ -519,6 +282,16 @@ export function SessionPage({
   // Ativação inline da execução, a partir do card de aceite do handoff pro
   // Dev Lead (achado do problema 2) — mesmo padrão de `promovendoStoryId`.
   const [ativandoExecucao, setAtivandoExecucao] = useState(false);
+  // Gate `necessidade-validada` (RN-406) — diferente de `streaming`
+  // (`handleReadiness`/`handleArchitectureReadiness`), esta confirmação NÃO
+  // é um turno do engine: é só um POST que grava o evento, mesmo padrão de
+  // `ativandoExecucao`.
+  const [validandoNecessidade, setValidandoNecessidade] = useState(false);
+  // Handoff manual a agente à escolha (ADR 0109/RN-440) — o seletor some
+  // depois do envio (some junto com `offeredHandoff` ao ser aceito), então
+  // não precisa lembrar a escolha entre um handoff e outro.
+  const [manualHandoffTarget, setManualHandoffTarget] = useState('');
+  const [enviandoHandoffManual, setEnviandoHandoffManual] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
   // Achado 10: sentinela no fim da lista de mensagens — a sessão abre nela,
@@ -526,6 +299,9 @@ export function SessionPage({
   // sem NENHUM scroll automático.
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  // O CONTEÚDO do fio (RN-173) — o que muda de altura. O container rola, mas
+  // não é ele que cresce; observar o container não veria nada.
+  const messagesInnerRef = useRef<HTMLDivElement | null>(null);
   const abriuNoFimRef = useRef(false);
 
   const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
@@ -539,6 +315,31 @@ export function SessionPage({
   // de a timeline ser montada, e computá-la duas vezes criaria duas fontes
   // da mesma verdade.
   const isActive = session?.status === 'active';
+
+  // O cluster de estado do canal de turno — deixado de fora, de propósito,
+  // da decomposição em 5 PRs (ADR 0122): "controle de fluxo entrelaçado, não
+  // um move mecânico". ADR 0124 é a ADR própria, numerada à parte, que
+  // aquele texto previu. Ver `lib/session-turno.ts` para o desenho completo
+  // do hook (por que `cancelarTurnoOtimista` cobre só duas das cinco formas
+  // de desfazer o arme, por que o efeito do canal Phoenix move inteiro).
+  const {
+    streaming,
+    streamingText,
+    streamingAgent,
+    turnoViaCanal,
+    statusAgent,
+    pensandoVisivel,
+    atividadeDoTurno,
+    optimisticUser,
+    iniciarTurnoDoAgente,
+    finalizarTurnoDoAgente,
+    cancelarTurnoOtimista,
+    setStreaming,
+    setStreamingText,
+    setOptimisticUser,
+    setTurnoViaCanal,
+    turnoAgentRef,
+  } = useTurnoDoAgente(projectId, sessionId, session?.status, queryClient);
 
   // Achados 2/7: o poll pausa ENQUANTO um turno está em streaming — buscar
   // eventos já persistidos no meio do turno duplicava a bolha (o dado novo
@@ -578,88 +379,78 @@ export function SessionPage({
     abriuNoFimRef.current = true;
   }, [highlightEvent, events.length]);
 
-  // Mensagem nova (evento persistido ou delta de streaming) acompanha o fim
-  // SE o usuário já estava lá — não arranca o scroll de quem subiu pra reler
-  // o histórico. Só entra em jogo depois da abertura inicial.
-  useEffect(() => {
+  // Conteúdo novo acompanha o fim SE o usuário já estava lá — não arranca o
+  // scroll de quem subiu pra reler o histórico. A guarda dos 120px é
+  // DELIBERADA e continua intacta: ela é a diferença entre "o chat me segue"
+  // e "o chat me arrasta".
+  const acompanharOFim = useCallback(() => {
     if (!abriuNoFimRef.current) return;
     const container = scrollContainerRef.current;
     if (!container) return;
     const pertoDoFim =
       container.scrollHeight - container.scrollTop - container.clientHeight < 120;
     if (pertoDoFim) rolarParaOFim(messagesEndRef.current);
-  }, [events.length, streamingText]);
+  }, []);
+
+  // RN-173: as dependências eram só `[events.length, streamingText]`, e por
+  // isso TUDO que cresce o fio sem um evento novo passava despercebido — um
+  // `ApprovalCard` chegando pelo poll de `usePendingActions` (que é uma query
+  // SEPARADA) empurrava a conversa para fora da tela sem rolar nada. `actions`
+  // entra aqui pelo mesmo motivo que `events`: é uma das duas fontes da
+  // timeline.
+  useEffect(() => {
+    acompanharOFim();
+  }, [events.length, actions.length, streamingText, acompanharOFim]);
+
+  // A outra metade do mesmo problema, e a que NENHUMA lista de dependências
+  // resolve: altura que muda sem estado novo no `SessionPage` — abrir/fechar
+  // um `Disclosure` (o colapso por agente da RN-138, os "Detalhes" do próprio
+  // card de aprovação), o Markdown reflowando, um diagrama renderizando
+  // depois. Quem sabe disso é o LAYOUT, não o React, então quem pergunta é um
+  // `ResizeObserver` — sobre o CONTEÚDO, com a MESMA guarda dos 120px.
+  //
+  // A guarda de existência é a mesma razão de `rolarParaOFim`: jsdom não
+  // implementa `ResizeObserver`, e num navegador de verdade ele sempre existe
+  // — a guarda nunca muda o comportamento visível.
+  useEffect(() => {
+    const alvo = messagesInnerRef.current;
+    if (!alvo || typeof ResizeObserver === 'undefined') return;
+    const observador = new ResizeObserver(() => acompanharOFim());
+    observador.observe(alvo);
+    return () => observador.disconnect();
+  }, [acompanharOFim]);
 
   const handoffsQuery = useHandoffs(projectId, sessionId, 3000);
   const handoffs = handoffsQuery.data ?? [];
 
+  // As seis derivações de "prontidão" (RN-160/RN-161) — `criativoActive`,
+  // `arquitetoActive`, `hasBusinessRule`, `hasPromotedStory`,
+  // `hasProductBrief` e `activeAgent` — moraram aqui até a extração do hook
+  // `useSessionReadiness` (PR 5/5 da decomposição de `SessionPage.tsx`, ADR
+  // 0122): mesma lógica, mesmas dependências, só re-hospedadas atrás de um
+  // contrato de parâmetros explícito (`../lib/session-readiness.ts`).
+  const backlogQuery = useBacklog(projectId);
+  const {
+    criativoActive,
+    arquitetoActive,
+    hasBusinessRule,
+    hasPromotedStory,
+    hasProductBrief,
+    activeAgent,
+  } = useSessionReadiness(events, backlogQuery.data);
+
   // Um agente está ativo se houve um agent.activated pra ele nesta sessão.
   // Isto é EXISTÊNCIA histórica ("já entrou alguma vez"), não "é ele quem
-  // fala AGORA" — os dois viram perguntas diferentes logo abaixo.
+  // fala AGORA". Cópia local de uma linha da mesma checagem que o hook usa
+  // internamente pra `criativoActive`/`arquitetoActive` (`session-
+  // readiness.ts`) — o único consumidor que sobra aqui é `offeredHandoff`,
+  // logo abaixo, que não faz parte da extração do hook.
   const activeFor = (agent: string) =>
     events.some(
       (e) =>
         e.type === 'agent.activated' &&
         (e.payload as { agent?: string })?.agent === agent,
     );
-  const criativoActive = useMemo(() => activeFor('criativo'), [events]);
-  // Mesmo padrão do Criativo, para o botão de prontidão da arquitetura
-  // (achado do problema 1) — o Arquiteto não tinha NENHUM jeito de o usuário
-  // disparar `OfferInfraHandoffUseCase`: o endpoint já existia
-  // (`POST .../agents/arquiteto/handoff-infra`), mas nenhum lugar do
-  // frontend o chamava.
-  const arquitetoActive = useMemo(() => activeFor('arquiteto'), [events]);
-
-  // A garantia de VERDADE é o guardrail no engine — `CriativoServer` recusa
-  // `confirm_readiness` (e narra a recusa como `agent.error` no fio) quando
-  // a sessão não tem nenhuma `artifact.business_rule` (ver
-  // criativo_server.ex). Isto é só a UX complementar: desabilita o botão
-  // ANTES do clique, com a MESMA fonte que já alimenta o painel "Regras de
-  // negócio" em `ContextAside` — sem buscar de novo.
-  const hasBusinessRule = useMemo(
-    () => events.some((e) => e.type === 'artifact.business_rule'),
-    [events],
-  );
-
-  // RN-160: mirror do gate acima, para "Confirmar arquitetura pronta" — não
-  // basta ter regra de negócio capturada, precisa existir pelo menos 1
-  // história já PROMOVIDA (RN-048: `PromoteStoriesUseCase` move `draft` para
-  // `ready` via `TransitionStoryUseCase`; `in_progress`/`done` também contam,
-  // porque só se chega lá tendo passado por `ready`). A fonte é a MESMA que a
-  // aba Backlog já usa (`useBacklog`, `ProjectBacklogTab.tsx`, mesma
-  // queryKey `['backlog', projectId]`) — sem round-trip novo.
-  const backlogQuery = useBacklog(projectId);
-  const hasPromotedStory = useMemo(
-    () =>
-      (backlogQuery.data ?? []).some((epic) =>
-        epic.stories.some((s) => s.status !== 'draft'),
-      ),
-    [backlogQuery.data],
-  );
-
-  // O agente que recebe as mensagens do composer: o de `agent.activated`
-  // mais RECENTE (por `seq`) entre os `AGENTES_DE_CHAT` (achado 9-fix).
-  // Antes era uma cadeia de PRECEDÊNCIA fixa (arquiteto > po > criativo) que
-  // nunca "desligava" — uma vez que o Arquiteto atuasse, ele ficava com
-  // prioridade PARA SEMPRE, então mesmo depois de aceitar um handoff pro Dev
-  // Lead a mensagem seguinte continuava indo pro Arquiteto. `dev-lead` nem
-  // estava na cadeia; acrescentar mais um nome no fim só adiaria o mesmo bug
-  // pro próximo agente. "Mais recente vence" não precisa de ordem nenhuma.
-  const activeAgent = useMemo(() => {
-    let maisRecente: { agent: string; seq: number } | null = null;
-    for (const e of events) {
-      if (e.type !== 'agent.activated') continue;
-      const agent = (e.payload as { agent?: string })?.agent;
-      if (
-        !agent ||
-        !(AGENTES_DE_CHAT as readonly string[]).includes(agent)
-      ) {
-        continue;
-      }
-      if (!maisRecente || e.seq > maisRecente.seq) maisRecente = { agent, seq: e.seq };
-    }
-    return maisRecente?.agent ?? null;
-  }, [events]);
 
   // Handoff oferecido ainda não aceito → botão de aceitar, restrito a quem
   // CONVERSA nesta tela (RN-136). `handoffs` vem ordenado por `createdAt`
@@ -681,70 +472,12 @@ export function SessionPage({
       (AGENTES_DE_CHAT as readonly string[]).includes(h.toAgent),
   );
 
-  // Reconciliação de fim de turno do `activeAgent` — o que `onAgentDone` (canal)
-  // faz, extraído pra também servir de REDE DE SEGURANÇA em `handleSend` (ver
-  // abaixo). Idempotente: chamar duas vezes pro mesmo turno (canal E fallback)
-  // só reseta estado que já estava resetado e invalida query que já está fresca.
-  const finalizarTurnoDoAgente = useCallback(() => {
-    streamingRef.current = false;
-    setStreaming(false);
-    setStreamingText('');
-    setStreamingAgent(null);
-    setOptimisticUser(null);
-    // Fim do turno também encerra o indicador de "comecei a trabalhar"
-    // (achado B) — senão ele sobrevive a um turno que nunca chegou a
-    // streamar texto nenhum (só ferramentas, por exemplo).
-    turnoAgentRef.current = null;
-    setStatusAgent(null);
-    queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-    queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
-    queryClient.invalidateQueries({ queryKey: ['session-budget', projectId, sessionId] });
-  }, [queryClient, projectId, sessionId]);
-
-  // Canal Phoenix: recebe os deltas do Criativo (streaming token-a-token) e o
-  // fim do turno. A persistência (agent.response + artefatos) chega pelo poll.
-  useEffect(() => {
-    if (session?.status !== 'active') return;
-    const disconnect = connectSessionHeartbeat(projectId, sessionId, {
-      onAgentDelta: (text, agent) => {
-        streamingRef.current = true;
-        setStreaming(true);
-        setStreamingText((t) => t + text);
-        if (agent) setStreamingAgent(agent);
-        // O delta é o streaming de verdade — o indicador de "comecei a
-        // trabalhar" (achado B) já cumpriu o papel dele.
-        setStatusAgent(null);
-      },
-      onAgentDone: finalizarTurnoDoAgente,
-      // Achado B: `agent.status` "working" chega bem antes do primeiro
-      // delta quando o turno é disparado por um kickoff ASSÍNCRONO no engine
-      // (handoff aceito, `GenServer.cast`) — ao contrário de handleSend/
-      // handleReadiness, que já ligam `streaming` na hora por serem
-      // síncronos. Só vira indicador se NENHUM delta chegou ainda pra este
-      // turno (`streamingRef`); senão o bloco de streaming já cobre.
-      onAgentStatus: (payload) => {
-        if (payload.status === 'working') {
-          if (!streamingRef.current) setStatusAgent(turnoAgentRef.current);
-        } else {
-          setStatusAgent(null);
-        }
-      },
-      // Fase 4a — painel do time ao vivo: qualquer evento persistido
-      // (Dev/QA/SecOps/Infra) antecipa o refetch do polling — reaproveita o
-      // parsing/cache já existente (useSessionEvents), só antecipa quando o
-      // dado muda em vez de esperar o intervalo do poll.
-      // Enquanto um turno conversacional está streamando, NÃO antecipa o
-      // refetch: a bolha ao vivo é uma prévia do `agent.response` que está para
-      // ser persistido, e trazer o evento antes de `agent.done` põe as duas na
-      // tela ao mesmo tempo — a duplicação do achado C. `onAgentDone` invalida
-      // logo em seguida, então nada se perde; só deixa de aparecer duas vezes.
-      onEvent: () => {
-        if (streamingRef.current) return;
-        queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-      },
-    });
-    return disconnect;
-  }, [session?.status, sessionId, projectId, queryClient, finalizarTurnoDoAgente]);
+  // `iniciarTurnoDoAgente`, `finalizarTurnoDoAgente`, `cancelarTurnoOtimista`
+  // e o efeito do canal Phoenix (que armava/desarmava este mesmo cluster de
+  // estado) moraram aqui até a extração do hook `useTurnoDoAgente` (ADR
+  // 0124) — ver `lib/session-turno.ts` para o desenho completo, incluindo
+  // por que `cancelarTurnoOtimista` cobre só duas das cinco formas de
+  // desfazer o arme encontradas no arquivo.
 
   const { data: modelsByCategory } = useQuery({
     // A chave carrega o projeto porque a lista é do WORKSPACE dele (ADR 0049):
@@ -781,22 +514,10 @@ export function SessionPage({
     agenteFalando ??
     (statusAgent ? AGENTS[statusAgent as keyof typeof AGENTS] : undefined);
 
-  // Arma/desarma o timer de 5s do indicador de "pensando" (RN-131). Só conta
-  // o tempo enquanto há turno em curso (`streaming`/`statusAgent`) E nenhum
-  // texto chegou ainda — os dois viram `false` de novo assim que qualquer um
-  // dos dois deixa de valer: texto chegando (streaming REAL não espera nada,
-  // aparece na hora) ou o turno terminando antes dos 5s (a resposta foi
-  // rápida, e o indicador nunca deveria ter existido). O timer é cancelado no
-  // cleanup do próprio efeito sempre que uma dessas dependências muda, então
-  // nunca liga `pensandoVisivel` depois do fato.
-  useEffect(() => {
-    if (!(streaming || statusAgent) || streamingText) {
-      setPensandoVisivel(false);
-      return;
-    }
-    const timer = setTimeout(() => setPensandoVisivel(true), 5000);
-    return () => clearTimeout(timer);
-  }, [streaming, statusAgent, streamingText]);
+  // O efeito que arma/desarma o timer de 5s do indicador de "pensando"
+  // (RN-131) morou aqui até a extração do hook `useTurnoDoAgente` (ADR
+  // 0124) — é função pura de `streaming`/`statusAgent`/`atividadeDoTurno`,
+  // todos internos ao cluster de turno, então move junto.
 
   // A CONVERSA começou? (achado G, revisto por investigação AO VIVO — RN-131)
   // O critério ERA "existe `chat.message`/`agent.response`", pra não confundir
@@ -820,12 +541,21 @@ export function SessionPage({
   // já prova que a confirmação aconteceu.
   const arquiteturaJaDeclarada = handoffs.some((h) => h.fromAgent === 'arquiteto');
 
+  // A necessidade já foi validada? (RN-406) Diferente dos dois gates acima,
+  // esta confirmação NÃO produz handoff — é só o registro
+  // `necessity.validated` no event log, então a fonte é o próprio `events`.
+  const necessidadeJaValidada = events.some((e) => e.type === 'necessity.validated');
+
   const invalidateActions = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, sessionId] });
   }, [queryClient, projectId, sessionId]);
 
   const timeline = useMemo<TimelineEntry[]>(() => {
     const items: TimelineEntry[] = [];
+    // As fronteiras de turno (RN-172), calculadas UMA vez para a sessão
+    // inteira — é o que impede um desfecho de escorregar para o turno de
+    // baixo.
+    const aberturas = aberturasDeTurno(events);
     // O evento que representa a oferta de handoff ATUAL (ainda não aceita) —
     // o `handoff.offered` mais RECENTE com o mesmo par fromAgent/toAgent de
     // `offeredHandoff` (RN-125). O payload do evento não carrega o id do
@@ -842,62 +572,251 @@ export function SessionPage({
         }, -1)
       : -1;
 
-    // Carrossel de histórias (RN-148) — pré-passada pra saber, ANTES de
-    // decidir como cada `backlog.story_promotion_proposed` aparece, se as
-    // pendentes formam uma LEVA (2+ ao mesmo tempo). Mesmo critério de
-    // "resolvida" que o card avulso já checa por evento (`_transitioned`/
-    // `_promotion_returned` posterior com o mesmo storyId), olhado de uma
-    // vez só pra sessão inteira.
-    const promocoesPendentes = events
-      .filter((e) => e.type === 'backlog.story_promotion_proposed')
-      .map((e) => {
-        const payload = e.payload as {
-          storyId?: unknown;
-          title?: unknown;
-          description?: unknown;
-          rf?: unknown;
+    // Carrossel de histórias (RN-148) — a leva é o conjunto de histórias
+    // REALMENTE pendentes de promoção NESTA sessão, e essa verdade NÃO PODE
+    // depender de quantos eventos aconteceram desde a proposta: numa sessão
+    // longa, `backlog.story_promotion_proposed` sai da janela dos últimos
+    // 200 eventos de `useSessionEvents` (`latest: true`) enquanto a story
+    // continua pendente de verdade — a leva encolhia (ou sumia por completo)
+    // silenciosamente. É a MESMA classe de bug que a RN-180 já corrigiu para
+    // `ContextAside` trocando a fonte windowed pela completa (RN-XXX).
+    //
+    // A fonte de CONTEÚDO/CONTAGEM passa a ser `useBacklog` (`backlogQuery`,
+    // já usado acima para `hasPromotedStory` — mesma queryKey, sem
+    // round-trip novo): `Story.proposedReady` já é o dado COMPLETO e
+    // project-wide, sem janela — toda `Story` desta sessão com
+    // `proposedReady: true` é uma pendência real, exista ou não o evento de
+    // proposta ainda na janela. Quando a story ainda não existe no backlog
+    // carregado (query não respondeu, ou mockada vazia — os testes
+    // existentes de carrossel/promoção mockam `useBacklog` como `[]` de
+    // propósito), degrada story a story pro scan de janela de sempre, o que
+    // é o que mantém esses testes passando sem mudança nenhuma.
+    const backlogStoriesById = new Map(
+      (backlogQuery.data ?? [])
+        .flatMap((epic) => epic.stories)
+        .filter((s) => s.sessionId === sessionId)
+        .map((s) => [s.id, s] as const),
+    );
+
+    const resumoDeTextos = (
+      description: string | undefined,
+      rf: string[] | undefined,
+    ): string | undefined => {
+      if (description && description !== '') return description;
+      if (rf && rf.length > 0) return rf.join(' · ');
+      return undefined;
+    };
+
+    // Propostas na JANELA: enriquecem título/resumo quando o payload trouxer
+    // mais detalhe que a `Story`, dizem ONDE ancorar a leva na timeline, e
+    // são o fallback usado quando a story não está no backlog carregado.
+    const propostaNaJanelaPorStoryId = new Map<
+      string,
+      { seq: number; titulo: string; resumo: string | undefined }
+    >();
+    for (const e of events) {
+      if (e.type !== 'backlog.story_promotion_proposed') continue;
+      const payload = e.payload as {
+        storyId?: unknown;
+        title?: unknown;
+        description?: unknown;
+        rf?: unknown;
+      };
+      const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
+      if (!storyId) continue;
+      const titulo = typeof payload?.title === 'string' ? payload.title : t('compartilhado.semTitulo');
+      const description =
+        typeof payload?.description === 'string' ? payload.description : undefined;
+      const rf =
+        Array.isArray(payload?.rf) && payload.rf.every((r) => typeof r === 'string')
+          ? (payload.rf as string[])
+          : undefined;
+      propostaNaJanelaPorStoryId.set(storyId, {
+        seq: e.seq,
+        titulo,
+        resumo: resumoDeTextos(description, rf),
+      });
+    }
+
+    const windowDizResolvida = (storyId: string, propostaSeq: number) =>
+      events.some(
+        (e2) =>
+          e2.seq > propostaSeq &&
+          ((e2.type === 'backlog.story_transitioned' &&
+            (e2.payload as { storyId?: unknown })?.storyId === storyId) ||
+            (e2.type === 'backlog.story_promotion_returned' &&
+              (e2.payload as { storyId?: unknown })?.storyId === storyId)),
+      );
+
+    const idsConsiderados = new Set<string>([
+      ...propostaNaJanelaPorStoryId.keys(),
+      ...[...backlogStoriesById.values()]
+        .filter((s) => s.proposedReady)
+        .map((s) => s.id),
+    ]);
+
+    const promocoesPendentes = [...idsConsiderados]
+      .map((storyId) => {
+        const story = backlogStoriesById.get(storyId);
+        const naJanela = propostaNaJanelaPorStoryId.get(storyId);
+        const pendente = story
+          ? story.proposedReady
+          : naJanela !== undefined && !windowDizResolvida(storyId, naJanela.seq);
+        if (!pendente) return null;
+        return {
+          storyId,
+          titulo: naJanela?.titulo ?? story?.title ?? t('compartilhado.semTitulo'),
+          resumo: naJanela?.resumo ?? resumoDeTextos(story?.description, story?.rf),
+          // `undefined` quando o evento que abriu esta pendência já saiu da
+          // janela — é o sinal de que a leva precisa ancorar no topo do
+          // trecho visível em vez de sumir (requisito 2 da RN-XXX).
+          seq: naJanela?.seq,
         };
-        const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
-        const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
-        // `resumo` degrada pro título sozinho: `CreateStoryUseCase` hoje só
-        // grava storyId/epicId/title no evento — sem descrição nem RF. Fica
-        // pronto pra quando o payload ganhar o campo, em vez de reinventado
-        // nessa hora (requisito da tarefa: "se disponível no payload").
-        const resumo =
-          typeof payload?.description === 'string' && payload.description !== ''
-            ? payload.description
-            : Array.isArray(payload?.rf) &&
-                payload.rf.length > 0 &&
-                payload.rf.every((r) => typeof r === 'string')
-              ? (payload.rf as string[]).join(' · ')
-              : undefined;
-        return { seq: e.seq, storyId, titulo, resumo };
       })
       .filter(
-        (p): p is { seq: number; storyId: string; titulo: string; resumo: string | undefined } =>
-          typeof p.storyId === 'string' &&
-          !events.some(
-            (e2) =>
-              e2.seq > p.seq &&
-              ((e2.type === 'backlog.story_transitioned' &&
-                (e2.payload as { storyId?: unknown })?.storyId === p.storyId) ||
-                (e2.type === 'backlog.story_promotion_returned' &&
-                  (e2.payload as { storyId?: unknown })?.storyId === p.storyId)),
-          ),
-      );
+        (
+          p,
+        ): p is { storyId: string; titulo: string; resumo: string | undefined; seq: number | undefined } =>
+          p !== null,
+      )
+      // Mais antiga primeiro — mesma ordem que a janela já dava; quem saiu
+      // da janela é, por definição, mais antiga que quem ficou.
+      .sort((a, b) => (a.seq ?? -1) - (b.seq ?? -1));
+
+    const pendingStoryIds = new Set(promocoesPendentes.map((p) => p.storyId));
+    const seqsDaLevaNaJanela = promocoesPendentes
+      .map((p) => p.seq)
+      .filter((seq): seq is number => seq !== undefined);
+    // `null` quando NENHUMA pendente real tem o evento que a abriu ainda na
+    // janela — a leva inteira "saiu" do log visível, mas continua pendente
+    // de verdade.
+    const primeiraDaLevaNaJanela =
+      seqsDaLevaNaJanela.length > 0 ? Math.min(...seqsDaLevaNaJanela) : null;
+
     // 1 história pendente não ganha nada virando carrossel de um slide só —
-    // o card simples de sempre já resolve (degradação decidida, requisito 4
-    // da tarefa). 0 nem chega a ser pergunta.
-    const ehLevaDeHistorias = promocoesPendentes.length >= 2;
-    const primeiraDaLeva = ehLevaDeHistorias
-      ? Math.min(...promocoesPendentes.map((p) => p.seq))
-      : -1;
+    // o card simples de sempre já resolve (RN-148); 2+ viram o carrossel.
+    // Nó ÚNICO reaproveitado nos dois pontos possíveis de ancoragem abaixo.
+    const construirNoDaLeva = (): ReactNode => {
+      if (promocoesPendentes.length === 0) return null;
+      if (promocoesPendentes.length === 1) {
+        const p = promocoesPendentes[0];
+        return (
+          <div className={styles.handoffCard} key={`leva-unica-${p.storyId}`}>
+            <span className={styles.handoffPill}>
+              <StackIcon size={13} />
+              {t('historia.pendente', { titulo: p.titulo })}
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button
+                variant="success"
+                disabled={promovendoStoryId === p.storyId}
+                loading={promovendoStoryId === p.storyId}
+                onClick={() => handlePromoteStory(p.storyId)}
+              >
+                {t('historia.promover')}
+              </Button>
+              <Button
+                variant="ghost"
+                disabled={promovendoStoryId === p.storyId}
+                onClick={() => {
+                  setRecusandoStory({ id: p.storyId, title: p.titulo });
+                  setMotivoRecusa('');
+                }}
+              >
+                {t('historia.devolver')}
+              </Button>
+            </div>
+            <Link
+              to="/projects/$projectId"
+              params={{ projectId }}
+              search={{ tab: 'backlog' }}
+              className={styles.timelineLink}
+            >
+              {t('compartilhado.verNoBacklog')}
+              <ChevronRightIcon size={11} />
+            </Link>
+          </div>
+        );
+      }
+      const slides: CarouselSlide[] = promocoesPendentes.map((p) => ({
+        key: p.storyId,
+        label: p.titulo,
+        node: (
+          <StorySlide
+            key={p.storyId}
+            projectId={projectId}
+            titulo={p.titulo}
+            resumo={p.resumo}
+            promovendo={promovendoStoryId === p.storyId}
+            desabilitado={promovendoStoryId !== null || promovendoTodas}
+            onPromover={() => handlePromoteStory(p.storyId)}
+            onDevolver={() => {
+              setRecusandoStory({ id: p.storyId, title: p.titulo });
+              setMotivoRecusa('');
+            }}
+          />
+        ),
+      }));
+      return (
+        <Carousel
+          key="carrossel-historias"
+          ariaLabel={t('historia.aguardandoPromocao', { count: promocoesPendentes.length })}
+          slides={slides}
+          headerActions={
+            <Button
+              variant="success"
+              loading={promovendoTodas}
+              disabled={promovendoStoryId !== null}
+              onClick={() => handlePromoteAll(promocoesPendentes.map((p) => p.storyId))}
+            >
+              {t('historia.aprovarTodas')}
+            </Button>
+          }
+        />
+      );
+    };
+
+    // O evento que abriu a leva já saiu da janela inteira — nenhuma pendente
+    // tem `seq` (RN-XXX). Nunca esconder um estado real por causa de corte
+    // de leitura (mesma régua da RN-180): ancora no TOPO do trecho visível
+    // em vez de sumir, com um `seq` sentinela menor que qualquer evento da
+    // janela — só a ORDEM importa aqui, `afundarDesfechos` não mexe em
+    // entrada sem `desfecho`.
+    if (promocoesPendentes.length > 0 && primeiraDaLevaNaJanela === null) {
+      const seqDeAncoragem = (events[0]?.seq ?? 1) - 1;
+      items.push({
+        seq: seqDeAncoragem,
+        autor: 'agent:po',
+        turno: turnoDoSeq(aberturas, seqDeAncoragem),
+        origem: 'eventos',
+        node: construirNoDaLeva(),
+      });
+    }
 
     for (const event of events) {
-      if (event.type === 'chat.message') {
-        const text = typeof (event.payload as { text?: unknown })?.text === 'string' ? (event.payload as { text: string }).text : '';
+      // Todo item nascido deste evento herda o eixo (`seq`), o AUTOR e o
+      // TURNO dele — os três campos que `afundarDesfechos` lê. Passam por
+      // aqui em vez de serem repetidos em cada `items.push`: um `push` que
+      // esquecesse `autor`/`turno` viraria um item de turno "0" no meio do
+      // fio, e o desfecho pararia nele sem que ninguém entendesse por quê.
+      const empurrar = (
+        entry: Omit<TimelineEntry, 'seq' | 'autor' | 'turno' | 'origem'>,
+      ) =>
         items.push({
           seq: event.seq,
+          autor: `${event.actor.kind}:${event.actor.id}`,
+          turno: turnoDoSeq(aberturas, event.seq),
+          // RN-177: a origem sai do MESMO derivador do painel de log — uma
+          // classificação só para os dois lugares. Derivá-la aqui de novo,
+          // por tipo, garantiria que um dia as duas telas discordassem sobre
+          // o que é fala de agente.
+          origem: origemDoEvento(event),
+          ...entry,
+        });
+
+      if (event.type === 'chat.message') {
+        const text = typeof (event.payload as { text?: unknown })?.text === 'string' ? (event.payload as { text: string }).text : '';
+        empurrar({
           node: (
             <div
               className={styles.message}
@@ -909,7 +828,7 @@ export function SessionPage({
               </span>
               <div className={styles.messageBody}>
                 <div className={styles.messageHeader}>
-                  <span className={styles.messageName}>{user.name ?? 'Você'}</span>
+                  <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
                 </div>
                 <div className={styles.bubble}>{text}</div>
               </div>
@@ -933,8 +852,7 @@ export function SessionPage({
             e.type === 'chat.structured_question_answered' &&
             (e.payload as StructuredQuestionAnsweredPayload)?.questionSetId === event.id,
         );
-        items.push({
-          seq: event.seq,
+        empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
             <StructuredQuestionCard
@@ -950,6 +868,11 @@ export function SessionPage({
                   ? (respostaEvento.payload as StructuredQuestionAnsweredPayload).answers
                   : undefined
               }
+              // RN-174: quem responde é o agente que PERGUNTOU — o ator do
+              // próprio evento, e não `activeAgent`, que pode já ter mudado
+              // enquanto o formulário ficava na tela sem resposta.
+              onTurnoIniciado={() => iniciarTurnoDoAgente(event.actor.id)}
+              onTurnoTerminado={finalizarTurnoDoAgente}
             />
           ),
         });
@@ -966,8 +889,13 @@ export function SessionPage({
         // tempo (um na topbar, um no fio) seria o mesmo problema que
         // `ApprovalCard` já evita ao nunca duplicar a ação fora do fio.
         const isOfertaAtual = isActive && event.seq === offeredHandoffEventSeq;
-        items.push({
-          seq: event.seq,
+        empurrar({
+          // RN-172: passar o bastão é o DESFECHO do turno, e por isso desce
+          // abaixo da última fala do agente que passou — o `seq` do evento o
+          // põe antes dela porque o engine emite a ferramenta ANTES de
+          // recursar para o fechamento. Vale para as duas formas (card
+          // acionável e divisor mudo): a leitura errada é a mesma.
+          desfecho: true,
           node: isOfertaAtual ? (
             <div className={styles.handoffCard} key={event.id}>
               <span className={styles.handoffPill}>
@@ -975,7 +903,7 @@ export function SessionPage({
                   {nomeDoAgente(event.actor.id)}
                 </span>
                 <ChevronRightIcon size={13} />
-                passou o bastão ao
+                {t('handoff.passouOBastaoAo')}
                 <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>
                   {nomeDoAgente(toAgent)}
                 </span>
@@ -984,7 +912,7 @@ export function SessionPage({
                 variant="success"
                 onClick={() => handleAcceptHandoff(offeredHandoff!.id, offeredHandoff!.toAgent)}
               >
-                Aceitar handoff e iniciar {offeredHandoff!.toAgent}
+                {t('handoff.aceitarEIniciar', { agente: offeredHandoff!.toAgent })}
               </Button>
               {/* Handoff pro Dev Lead é o início da EXECUÇÃO — quem aceita
                   precisa saber onde acompanhar depois (RN-125). As outras
@@ -1000,7 +928,7 @@ export function SessionPage({
                     loading={ativandoExecucao}
                     onClick={handleActivateExecution}
                   >
-                    Ativar execução
+                    {t('handoff.ativarExecucao')}
                   </Button>
                   <Link
                     to="/projects/$projectId"
@@ -1008,7 +936,7 @@ export function SessionPage({
                     search={{ tab: 'executores' }}
                     className={styles.timelineLink}
                   >
-                    Acompanhe a execução em Executores
+                    {t('handoff.acompanheExecucao')}
                     <ChevronRightIcon size={11} />
                   </Link>
                 </>
@@ -1021,7 +949,7 @@ export function SessionPage({
                   {nomeDoAgente(event.actor.id)}
                 </span>
                 <ChevronRightIcon size={13} />
-                passou o bastão ao
+                {t('handoff.passouOBastaoAo')}
                 <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>
                   {nomeDoAgente(toAgent)}
                 </span>
@@ -1048,11 +976,10 @@ export function SessionPage({
         // do PO dentro do próprio turno dele, e segue elegível ao colapso
         // por agente (RN-138).
         const payload = event.payload as { title?: unknown };
-        const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
-        const verbo =
-          event.type === 'backlog.epic_created' ? 'criou o épico' : 'criou a história';
-        items.push({
-          seq: event.seq,
+        const titulo = typeof payload?.title === 'string' ? payload.title : t('compartilhado.semTitulo');
+        const verboKey =
+          event.type === 'backlog.epic_created' ? 'backlog.criouEpico' : 'backlog.criouHistoria';
+        empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
             <div className={styles.handoffDivider} key={event.id}>
@@ -1061,7 +988,7 @@ export function SessionPage({
                 <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
                   {nomeDoAgente(event.actor.id)}
                 </span>
-                {verbo} &quot;{titulo}&quot;
+                {t(verboKey)} &quot;{titulo}&quot;
               </span>
               <Link
                 to="/projects/$projectId"
@@ -1069,7 +996,7 @@ export function SessionPage({
                 search={{ tab: 'backlog' }}
                 className={styles.timelineLink}
               >
-                Ver no Backlog
+                {t('compartilhado.verNoBacklog')}
                 <ChevronRightIcon size={11} />
               </Link>
             </div>
@@ -1079,136 +1006,46 @@ export function SessionPage({
         // Promoção inline (RN-126) — a decisão que RN-048 já resolve na aba
         // Backlog ganha um segundo lugar: o fio da própria sessão do PO, onde
         // a história nasceu. Mesmo mecanismo (`promoteStories`/`returnStory`),
-        // sem endpoint novo. O card fica ACIONÁVEL só enquanto NENHUM evento
-        // posterior já decidiu o destino desta história — promovida
-        // (`backlog.story_transitioned`, que `PromoteStoriesUseCase` emite via
-        // `TransitionStoryUseCase`) ou devolvida
-        // (`backlog.story_promotion_returned`). Sem esta checagem, promover ou
-        // devolver deixaria os mesmos dois botões plantados no fio, oferecendo
-        // a mesma decisão de novo sobre uma história que já saiu da fila.
+        // sem endpoint novo.
+        //
+        // "Pendente" não é mais decidido por scan de janela (RN-XXX): vem do
+        // `pendingStoryIds` calculado acima a partir de `useBacklog`, com
+        // fallback pra janela só quando a story não está no backlog
+        // carregado. Card e carrossel colapsam pro MESMO nó
+        // (`construirNoDaLeva`, 1 ou 2+ pendentes) — só a story ÂNCORA (a
+        // proposta pendente mais antiga ainda na janela) o materializa;
+        // qualquer outra proposta pendente na mesma leva só faz `continue`,
+        // porque já está representada dentro dele.
         const payload = event.payload as { storyId?: unknown; title?: unknown };
         const storyId = typeof payload?.storyId === 'string' ? payload.storyId : undefined;
-        const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
-        const resolvida =
-          !storyId ||
-          events.some(
-            (e) =>
-              e.seq > event.seq &&
-              ((e.type === 'backlog.story_transitioned' &&
-                (e.payload as { storyId?: unknown })?.storyId === storyId) ||
-                (e.type === 'backlog.story_promotion_returned' &&
-                  (e.payload as { storyId?: unknown })?.storyId === storyId)),
-          );
+        const titulo = typeof payload?.title === 'string' ? payload.title : t('compartilhado.semTitulo');
+        const pendente = storyId ? pendingStoryIds.has(storyId) : false;
 
-        if (ehLevaDeHistorias && storyId && !resolvida) {
-          // Faz parte da LEVA (RN-148): o carrossel entra uma vez só, na
-          // posição da primeira proposta ainda pendente — as demais não
-          // viram card avulso aqui, porque já estão representadas como
-          // slide dele. `continue` em vez de `items.push`: nada nasce nesta
-          // volta do loop para as pendentes que não são a primeira.
-          if (event.seq === primeiraDaLeva) {
-            const slides: CarouselSlide[] = promocoesPendentes.map((p) => ({
-              key: p.storyId,
-              label: p.titulo,
-              node: (
-                <StorySlide
-                  key={p.storyId}
-                  projectId={projectId}
-                  titulo={p.titulo}
-                  resumo={p.resumo}
-                  promovendo={promovendoStoryId === p.storyId}
-                  desabilitado={promovendoStoryId !== null || promovendoTodas}
-                  onPromover={() => handlePromoteStory(p.storyId)}
-                  onDevolver={() => {
-                    setRecusandoStory({ id: p.storyId, title: p.titulo });
-                    setMotivoRecusa('');
-                  }}
-                />
-              ),
-            }));
-            items.push({
-              seq: event.seq,
-              node: (
-                <Carousel
-                  key="carrossel-historias"
-                  ariaLabel={`${promocoesPendentes.length} histórias aguardando promoção`}
-                  slides={slides}
-                  headerActions={
-                    <Button
-                      variant="success"
-                      loading={promovendoTodas}
-                      disabled={promovendoStoryId !== null}
-                      onClick={() =>
-                        handlePromoteAll(promocoesPendentes.map((p) => p.storyId))
-                      }
-                    >
-                      Aprovar todas
-                    </Button>
-                  }
-                />
-              ),
-            });
+        if (pendente) {
+          if (event.seq === primeiraDaLevaNaJanela) {
+            empurrar({ node: construirNoDaLeva() });
           }
           continue;
         }
 
-        items.push({
-          seq: event.seq,
-          node:
-            !resolvida && storyId ? (
-              <div className={styles.handoffCard} key={event.id}>
-                <span className={styles.handoffPill}>
-                  <StackIcon size={13} />
-                  história &quot;{titulo}&quot; pronta, aguardando sua promoção
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button
-                    variant="success"
-                    disabled={promovendoStoryId === storyId}
-                    loading={promovendoStoryId === storyId}
-                    onClick={() => handlePromoteStory(storyId)}
-                  >
-                    Promover
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled={promovendoStoryId === storyId}
-                    onClick={() => {
-                      setRecusandoStory({ id: storyId, title: titulo });
-                      setMotivoRecusa('');
-                    }}
-                  >
-                    Devolver
-                  </Button>
-                </div>
-                <Link
-                  to="/projects/$projectId"
-                  params={{ projectId }}
-                  search={{ tab: 'backlog' }}
-                  className={styles.timelineLink}
-                >
-                  Ver no Backlog
-                  <ChevronRightIcon size={11} />
-                </Link>
-              </div>
-            ) : (
-              <div className={styles.handoffDivider} key={event.id}>
-                <span className={styles.handoffPill}>
-                  <StackIcon size={13} />
-                  história &quot;{titulo}&quot; esteve aguardando sua promoção
-                </span>
-              </div>
-            ),
+        empurrar({
+          node: (
+            <div className={styles.handoffDivider} key={event.id}>
+              <span className={styles.handoffPill}>
+                <StackIcon size={13} />
+                {t('historia.estevePendente', { titulo })}
+              </span>
+            </div>
+          ),
         });
       } else if (event.type === 'backlog.story_promotion_returned') {
         // Narração simétrica ao card acima (RN-126) — mesma frase que
         // `activity.ts` já usa no log colapsado da sidebar, reaproveitada
         // aqui em vez de reinventada.
         const payload = event.payload as { title?: unknown; reason?: unknown };
-        const titulo = typeof payload?.title === 'string' ? payload.title : 'uma história';
-        const motivo = typeof payload?.reason === 'string' ? payload.reason : 'sem motivo';
-        items.push({
-          seq: event.seq,
+        const titulo = typeof payload?.title === 'string' ? payload.title : t('historia.tituloFallback');
+        const motivo = typeof payload?.reason === 'string' ? payload.reason : t('historia.semMotivo');
+        empurrar({
           node: (
             <div
               className={styles.message}
@@ -1220,8 +1057,8 @@ export function SessionPage({
               </span>
               <div className={styles.messageBody}>
                 <div className={styles.messageHeader}>
-                  <span className={styles.messageName}>{user.name ?? 'Você'}</span>
-                  <span className={styles.messageMeta}>devolveu ao PO</span>
+                  <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
+                  <span className={styles.messageMeta}>{t('historia.devolveuAoPo')}</span>
                 </div>
                 <div className={styles.bubble}>
                   &quot;{titulo}&quot;: {motivo}
@@ -1246,14 +1083,16 @@ export function SessionPage({
         // RN-146) — evento GRAVADO antes desta mudança não tem a chave, e
         // `payload.modelName` também pode chegar `null` (turno cuja api não
         // resolveu modelo nenhum antes de falhar). Os dois degradam para o
-        // rótulo genérico "modelo", nunca para `undefined`/`null` na tela.
+        // rótulo de desconhecido, nunca para `undefined`/`null` na tela.
         const modelName =
           typeof payload?.modelName === 'string' && payload.modelName !== ''
             ? payload.modelName
             : undefined;
-        items.push({
-          seq: event.seq,
+        empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
+          // `agruparNarracoesDoTurno` lê este marcador pra saber que ESTA
+          // entrada, e só ela, participa do colapso de "Passos do turno".
+          agentResponse: true,
           node: (
             <div className={styles.message} key={event.id} style={corDoAgente(event.actor.id)}>
               <span className={styles.avatar}>
@@ -1262,7 +1101,28 @@ export function SessionPage({
               <div className={styles.messageBody}>
                 <div className={styles.messageHeader}>
                   <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
-                  <span className={styles.messageMeta}>{modelName ?? 'modelo'}</span>
+                  {/* RN-175: o modelo ao lado do nome, como CHIP legível e não
+                      como a palavra solta "modelo" em 10px cinza — que era o
+                      que o relato viu e que se lê como se o modelo se chamasse
+                      "modelo". Sem o dado (evento anterior à RN-146/175, ou
+                      turno que falhou antes de resolver o binding) o chip diz
+                      que ele não foi REGISTRADO, que é a verdade: adivinhá-lo
+                      pelo binding atual do agente seria atribuir a uma resposta
+                      antiga um modelo que talvez nem existisse quando ela foi
+                      gerada. */}
+                  <span
+                    className={[styles.messageModelo, !modelName && styles.messageModeloAusente]
+                      .filter(Boolean)
+                      .join(' ')}
+                    title={
+                      modelName
+                        ? t('mensagens.modeloGerador', { modelName })
+                        : t('mensagens.modeloNaoGravado')
+                    }
+                  >
+                    <ModelIcon size={11} />
+                    {modelName ?? t('mensagens.modeloNaoRegistrado')}
+                  </span>
                 </div>
                 {/* Resposta vazia é evento ANTIGO: até a RN-059, falha de
                     turno era gravada como `agent.response` com conteúdo "" —
@@ -1271,9 +1131,7 @@ export function SessionPage({
                     se apagam, então a tela os NOMEIA. */}
                 {text === '' ? (
                   <div className={[styles.bubble, styles.bubbleVazio].join(' ')}>
-                    Resposta vazia — evento anterior à RN-059, quando falha de
-                    turno era gravada como resposta em branco. O motivo real
-                    não foi registrado.
+                    {t('mensagens.respostaVazia')}
                   </div>
                 ) : (
                   // RN-158: Markdown leve (negrito, cabeçalho, lista, fence de
@@ -1293,8 +1151,7 @@ export function SessionPage({
         // broadcast (efêmero) e o log guardava uma resposta vazia — quem
         // abrisse a sessão depois via um balão em branco e nada mais.
         const { mensagem, origem } = lerFalhaDeTurno(event.payload);
-        items.push({
-          seq: event.seq,
+        empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
           node: (
             <div
@@ -1310,7 +1167,7 @@ export function SessionPage({
                   <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
                   {/* A ORIGEM fica visível: é ela que diz se o próximo passo é
                       trocar a chave, esperar o provider ou abrir um bug. */}
-                  <span className={styles.messageMeta}>falha · origem {origem}</span>
+                  <span className={styles.messageMeta}>{t('mensagens.falhaOrigem', { origem })}</span>
                 </div>
                 <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
                   {mensagem}
@@ -1319,15 +1176,66 @@ export function SessionPage({
             </div>
           ),
         });
+      } else if (event.type.startsWith('delegation.')) {
+        // RN-181 — a área trabalha por dentro e o fio ficava mudo.
+        //
+        // Quando QA ou Infra delega a subagentes e consolida o veredito, os
+        // três desfechos (`completed`/`failed`/`dispensed`) só existiam no
+        // painel de log: quem acompanha a sessão via o gate abrir e fechar sem
+        // nenhum sinal de que houve uma segunda tentativa por baixo. O
+        // contrato externo da área NÃO muda (ADR 0038) — o fio não passa a
+        // endereçar subagente, só a NARRAR o que o lead já registrou.
+        //
+        // Aviso compacto, no formato da RN-157, e não bolha: é notificação de
+        // algo que aconteceu dentro da área, não uma fala. E a FRASE sai de
+        // `classifyEvent` — a mesma do painel —, porque duas redações do mesmo
+        // evento divergem na primeira mudança de payload.
+        const display = classifyEvent(event);
+        empurrar({
+          agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
+          node: (
+            <div className={styles.handoffDivider} key={event.id}>
+              {/* A frase de `classifyEvent` JÁ nomeia o subagente e a área —
+                  prefixar o lead produziria "QA Lead QA Automação concluiu a
+                  delegação (qa)". */}
+              <span
+                className={styles.handoffPill}
+                style={
+                  display.bad
+                    ? ({ color: 'var(--danger)' } as CSSProperties)
+                    : undefined
+                }
+              >
+                <display.icon size={13} />
+                {display.text}
+              </span>
+            </div>
+          ),
+        });
       }
     }
 
     for (const action of actions) {
+      // RN-155: NUNCA `action.seq` (bigserial global da tabela inteira,
+      // incomparável com `event.seq`) — ver `ordemDaAcaoNaTimeline`.
+      const ordem = ordemDaAcaoNaTimeline(action, events);
       items.push({
-        // RN-155: NUNCA `action.seq` (bigserial global da tabela inteira,
-        // incomparável com `event.seq`) — ver `ordemDaAcaoNaTimeline`.
-        seq: ordemDaAcaoNaTimeline(action, events),
+        seq: ordem,
+        autor: `${action.actor.kind}:${action.actor.id}`,
+        turno: turnoDoSeq(aberturas, ordem),
+        // RN-172: a decisão que o agente pede é o DESFECHO do turno dele. O
+        // eixo continua o da RN-155 (o `seq` do `proposed_action.created`),
+        // que é honesto — a ação NASCE no meio do turno; o que muda é onde
+        // ela é MOSTRADA, porque decidir é a última coisa que o turno pede.
+        desfecho: true,
         agentId: action.actor.kind === 'agent' ? action.actor.id : undefined,
+        // RN-177: a ação não é evento, mas o EVENTO que a representa no log é
+        // `proposed_action.created` — classificar por ele mantém as duas
+        // telas dizendo a mesma coisa sobre o mesmo fato.
+        origem: origemDoEvento({
+          type: 'proposed_action.created',
+          actor: action.actor,
+        }),
         // Sem `meta` com o modelo (achado I). O card recebia o modelo ATUAL da
         // sessão, então trocar o binding reescrevia retroativamente o rótulo de
         // TODA ação antiga — inclusive das que rodaram com outro modelo. Não há
@@ -1360,7 +1268,20 @@ export function SessionPage({
     // Um único eixo numérico agora (RN-155): `event.seq` pros eventos, e a
     // posição resolvida por `ordemDaAcaoNaTimeline` pras ações — nunca mais
     // `action.seq` cru misturado com `event.seq`.
-    return items.sort((a, b) => a.seq - b.seq);
+    //
+    // O `sort` continua sendo a ORDEM DO LOG, e a regra de APRESENTAÇÃO da
+    // RN-172 vem depois, numa passada separada e legível: quem lê daqui a um
+    // ano vê que a timeline é ordenada pelo event log e que handoff/aprovação
+    // são reposicionados por uma decisão de produto explícita — não vê um
+    // comparador com três termos que ninguém sabe mais justificar.
+    //
+    // `agruparNarracoesDoTurno` entra DEPOIS de `afundarDesfechos` — colapsa
+    // `agent.response` consecutivas do MESMO turno+autor, sem mexer na ordem
+    // que a passada anterior já decidiu.
+    return agruparNarracoesDoTurno(afundarDesfechos(items.sort((a, b) => a.seq - b.seq)), {
+      titulo: t('turno.passosDoTurno'),
+      trailing: (count) => t('turno.passosCount', { count }),
+    });
   }, [
     events,
     actions,
@@ -1375,6 +1296,9 @@ export function SessionPage({
     promovendoTodas,
     ativandoExecucao,
     podeAtivarAutoMode,
+    iniciarTurnoDoAgente,
+    finalizarTurnoDoAgente,
+    backlogQuery.data,
   ]);
 
   // Colapso de mensagens por agente depois que ele passa o bastão (RN-138) —
@@ -1396,7 +1320,7 @@ export function SessionPage({
     const colapsavel = (agentId: string) =>
       passaramBastao.has(agentId) && !comAcaoPendente.has(agentId);
 
-    const resultado: { key: string; node: ReactNode }[] = [];
+    const resultado: { key: string; node: ReactNode; origem: OrigemDeEvento }[] = [];
     let corrente: TimelineEntry[] = [];
 
     function fecharCorrente() {
@@ -1408,6 +1332,9 @@ export function SessionPage({
         const grupo = corrente;
         resultado.push({
           key: `grupo-${agentId}-${grupo[0].seq}`,
+          // Um colapso por agente é, por construção, fala de agente — mesmo
+          // quando o que ele contém veio de origens diferentes.
+          origem: 'agente',
           node: (
             <div style={corDoAgente(agentId)}>
               <Disclosure
@@ -1417,7 +1344,7 @@ export function SessionPage({
                     {nomeDoAgente(agentId)}
                   </span>
                 }
-                trailing={`${grupo.length} mensagens`}
+                trailing={t('artefatos.mensagensCount', { count: grupo.length })}
                 classNameCabecalho={styles.agentGroupCabecalho}
                 className={styles.agentGroup}
               >
@@ -1432,7 +1359,7 @@ export function SessionPage({
         });
       } else {
         for (const e of corrente) {
-          resultado.push({ key: String(e.seq), node: e.node });
+          resultado.push({ key: String(e.seq), node: e.node, origem: e.origem });
         }
       }
       corrente = [];
@@ -1447,7 +1374,7 @@ export function SessionPage({
       if (entry.agentId) {
         corrente = [entry];
       } else {
-        resultado.push({ key: String(entry.seq), node: entry.node });
+        resultado.push({ key: String(entry.seq), node: entry.node, origem: entry.origem });
       }
     }
     fecharCorrente();
@@ -1455,9 +1382,48 @@ export function SessionPage({
     return resultado;
   }, [timeline, handoffs, actions]);
 
+  /**
+   * RN-177 no FIO: as últimas {@link FIO_RECENTES_ABERTAS} entradas ficam
+   * abertas e tudo que veio antes vira histórico recolhido POR ORIGEM.
+   *
+   * O fio é CRESCENTE (o mais novo em baixo, junto do composer), então aqui o
+   * histórico fica no TOPO — é a mesma regra do painel de log com o eixo
+   * invertido, e não uma segunda decisão.
+   *
+   * O corte é sobre a lista JÁ agrupada por agente (RN-138): quem conta é o
+   * que o usuário vê, e um colapso de doze mensagens é UMA entrada na tela.
+   * Contar entradas cruas faria "as últimas 5" esconderem a conversa inteira
+   * atrás de um agrupamento.
+   */
+  const fio = useMemo(() => {
+    if (timelineAgrupada.length <= FIO_RECENTES_ABERTAS) {
+      return { historico: [], recentes: timelineAgrupada };
+    }
+    const corte = timelineAgrupada.length - FIO_RECENTES_ABERTAS;
+    return {
+      historico: agruparPorOrigem(
+        timelineAgrupada.slice(0, corte),
+        (item) => item.origem,
+      ),
+      recentes: timelineAgrupada.slice(corte),
+    };
+  }, [timelineAgrupada]);
+
+  // "Ativar sessão" chama o engine por baixo (a api cria a sessão
+  // supervisionada), e por isso falha por motivo que não é do domínio: engine
+  // fora do ar, url errada, 500. Sem o `catch`, o clique não mudava NADA na
+  // tela — mesmo desfecho de `handleActivateExecution` antes dele ganhar toast.
   async function handleActivate() {
-    await transitionSession(projectId, sessionId, 'active');
-    queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
+    try {
+      await transitionSession(projectId, sessionId, 'active');
+      await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, t('toasts.erroAtivarSessao')),
+        tone: 'danger',
+      });
+    }
   }
 
   async function handleClose() {
@@ -1480,7 +1446,7 @@ export function SessionPage({
       // só apareceria lá no próximo carregamento da tela.
       queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível renomear a sessão', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroRenomear'), tone: 'danger' });
     }
   }
 
@@ -1489,14 +1455,13 @@ export function SessionPage({
       await startAgent(projectId, sessionId, 'criativo');
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível iniciar a ideação', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroIniciarIdeacao'), tone: 'danger' });
     }
   }
 
   async function handleReadiness() {
     try {
-      setStreaming(true);
-      setStreamingText('');
+      iniciarTurnoDoAgente('criativo');
       await confirmReadiness(projectId, sessionId);
       // O product_brief + handoff chegam via o canal (agent.done) + poll.
       //
@@ -1512,8 +1477,8 @@ export function SessionPage({
       // novo quando o canal também entrega o evento não tem efeito.
       finalizarTurnoDoAgente();
     } catch {
-      setStreaming(false);
-      showToast({ title: 'Erro', message: 'Não foi possível confirmar prontidão', tone: 'danger' });
+      cancelarTurnoOtimista();
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroConfirmarProntidao'), tone: 'danger' });
     }
   }
 
@@ -1530,17 +1495,70 @@ export function SessionPage({
    */
   async function handleArchitectureReadiness() {
     try {
-      setStreaming(true);
-      setStreamingText('');
+      iniciarTurnoDoAgente('arquiteto');
       await confirmArchitectureReadiness(projectId, sessionId);
       finalizarTurnoDoAgente();
     } catch {
-      setStreaming(false);
+      cancelarTurnoOtimista();
       showToast({
-        title: 'Erro',
-        message: 'Não foi possível confirmar a arquitetura',
+        title: t('toasts.erro'),
+        message: t('toasts.erroConfirmarArquitetura'),
         tone: 'danger',
       });
+    }
+  }
+
+  /**
+   * Gate `necessidade-validada` (RN-406, ADR 0095) — o usuário confirma que
+   * o `product_brief` que o Criativo consolidou reflete de verdade a
+   * necessidade de negócio. Diferente de `handleReadiness`/
+   * `handleArchitectureReadiness`, NÃO é um `GenServer.call` síncrono no
+   * engine (o handoff Criativo→PO já aconteceu dentro do próprio
+   * `confirm_readiness`): é só um POST que grava `necessity.validated`, sem
+   * turno pra esperar — por isso não usa `streaming`, e sim um loading
+   * próprio (`validandoNecessidade`), mesmo padrão de `handleActivateExecution`.
+   */
+  async function handleValidateNecessity() {
+    if (validandoNecessidade) return;
+    setValidandoNecessidade(true);
+    try {
+      await validateNecessity(projectId, sessionId);
+      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
+      showToast({ title: t('toasts.necessidadeValidada'), tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, t('toasts.erroValidarNecessidade')),
+        tone: 'danger',
+      });
+    } finally {
+      setValidandoNecessidade(false);
+    }
+  }
+
+  // Handoff manual a agente à escolha (ADR 0109/RN-440): não é um turno do
+  // engine (mesmo padrão de `handleValidateNecessity`, não de `handleSend`),
+  // então não liga `streaming`/`iniciarTurnoDoAgente`. O card de aceite
+  // existente (`offeredHandoff`) pega o handoff novo sozinho no próximo poll
+  // de `useHandoffs` (3s) — sem isso a invalidação já cobriria o mesmo
+  // resultado mais rápido, mas o handoff em si só passa a existir depois
+  // deste POST responder.
+  async function handleRequestManualHandoff() {
+    if (!manualHandoffTarget || enviandoHandoffManual) return;
+    setEnviandoHandoffManual(true);
+    try {
+      await requestManualHandoff(projectId, sessionId, manualHandoffTarget);
+      await queryClient.invalidateQueries({
+        queryKey: ['session-handoffs', projectId, sessionId],
+      });
+      setManualHandoffTarget('');
+      showToast({ title: t('toasts.handoffManualEnviado'), tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, t('toasts.erroHandoffManual')),
+        tone: 'danger',
+      });
+    } finally {
+      setEnviandoHandoffManual(false);
     }
   }
 
@@ -1549,7 +1567,7 @@ export function SessionPage({
     // `GenServer.cast` assíncrono, e o `agent.status` "working" pode chegar
     // pelo canal antes mesmo desta chamada resolver. Sem o ref pronto agora,
     // o handler perderia a corrida e o indicador nasceria sem saber quem é.
-    turnoAgentRef.current = toAgent;
+    iniciarTurnoDoAgente(toAgent, { comStatus: false });
     try {
       await acceptHandoff(projectId, sessionId, handoffId);
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
@@ -1569,7 +1587,8 @@ export function SessionPage({
       }
     } catch {
       turnoAgentRef.current = null;
-      showToast({ title: 'Erro', message: 'Não foi possível aceitar o handoff', tone: 'danger' });
+      setTurnoViaCanal(false);
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroAceitarHandoff'), tone: 'danger' });
     }
   }
 
@@ -1608,10 +1627,10 @@ export function SessionPage({
       await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
       queryClient.invalidateQueries({ queryKey: ['session-handoffs', projectId, sessionId] });
-      showToast({ title: 'Execução ativada', tone: 'success' });
+      showToast({ title: t('toasts.execucaoAtivada'), tone: 'success' });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível ativar a execução'),
+        title: mensagemDaApi(erro, t('toasts.erroAtivarExecucao')),
         tone: 'danger',
       });
     } finally {
@@ -1632,10 +1651,10 @@ export function SessionPage({
         mode: 'auto_approve',
       });
       await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
-      showToast({ title: 'Modo automático ligado', message: agentId, tone: 'success' });
+      showToast({ title: t('toasts.modoAutomaticoLigado'), message: agentId, tone: 'success' });
     } catch (erro) {
       showToast({
-        title: mensagemDaApi(erro, 'Não foi possível ligar o modo automático'),
+        title: mensagemDaApi(erro, t('toasts.erroModoAutomatico')),
         message: agentId,
         tone: 'danger',
       });
@@ -1656,15 +1675,15 @@ export function SessionPage({
       queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
       if (r.failed.length > 0) {
         showToast({
-          title: 'Não foi possível promover',
+          title: t('toasts.erroPromover'),
           message: r.failed[0]?.reason,
           tone: 'danger',
         });
       } else {
-        showToast({ title: 'História promovida', tone: 'success' });
+        showToast({ title: t('toasts.historiaPromovida'), tone: 'success' });
       }
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível promover a história', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroPromoverHistoria'), tone: 'danger' });
     } finally {
       setPromovendoStoryId(null);
     }
@@ -1683,24 +1702,24 @@ export function SessionPage({
       queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
       if (r.failed.length === 0) {
         showToast({
-          title: r.promoted.length === 1 ? 'História promovida' : `${r.promoted.length} histórias promovidas`,
+          title: t('toasts.historiasPromovidas', { count: r.promoted.length }),
           tone: 'success',
         });
       } else if (r.promoted.length > 0) {
         showToast({
-          title: `${r.promoted.length} de ${storyIds.length} promovidas`,
+          title: t('toasts.promovidasParcial', { promovidas: r.promoted.length, total: storyIds.length }),
           message: r.failed[0]?.reason,
           tone: 'warning',
         });
       } else {
         showToast({
-          title: 'Não foi possível promover',
+          title: t('toasts.erroPromover'),
           message: r.failed[0]?.reason,
           tone: 'danger',
         });
       }
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível promover as histórias', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroPromoverHistorias'), tone: 'danger' });
     } finally {
       setPromovendoTodas(false);
     }
@@ -1709,17 +1728,25 @@ export function SessionPage({
   async function handleReturnStory() {
     if (!recusandoStory || motivoRecusa.trim() === '' || enviandoRecusa) return;
     setEnviandoRecusa(true);
+    // RN-174: devolver NÃO é só gravar a recusa — `ReturnStoryUseCase` chama
+    // `reviseStory`, que é um `handle_call({:revise, …})` no `po_server`, e
+    // esta chamada só resolve depois de o PO rodar o turno INTEIRO (reescrever
+    // a história). Sem armar o indicador, a tela ficava muda esse tempo todo.
+    iniciarTurnoDoAgente(activeAgent);
     try {
       await returnStory(projectId, recusandoStory.id, motivoRecusa.trim());
       setRecusandoStory(null);
       setMotivoRecusa('');
       await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
       queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-      showToast({ title: 'História devolvida ao PO', tone: 'success' });
+      showToast({ title: t('toasts.historiaDevolvida'), tone: 'success' });
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível devolver a história', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroDevolverHistoria'), tone: 'danger' });
     } finally {
       setEnviandoRecusa(false);
+      // Idempotente e nos DOIS caminhos: um erro que deixasse `streaming`
+      // ligado travaria o composer até o próximo turno.
+      finalizarTurnoDoAgente();
     }
   }
 
@@ -1748,7 +1775,7 @@ export function SessionPage({
       } catch {
         setStreaming(false);
         setOptimisticUser(null);
-        showToast({ title: 'Erro', message: 'Não foi possível iniciar a ideação', tone: 'danger' });
+        showToast({ title: t('toasts.erro'), message: t('toasts.erroIniciarIdeacao'), tone: 'danger' });
         return;
       }
     }
@@ -1757,6 +1784,14 @@ export function SessionPage({
     // turno roda no engine (harness); os deltas e o fim chegam pelo canal
     // Phoenix. Senão (sessão consultiva), chat humano stateless via SSE.
     if (agentParaEnviar) {
+      // A faixa de atividade (`turnoViaCanal`) liga AQUI, e não no `try` —
+      // `statusAgent` dá nome ao avatar da faixa mesmo antes de o primeiro
+      // `agent.status`/`agent.delta` do canal chegar (o mesmo argumento de
+      // `iniciarTurnoDoAgente`). `streaming`/`streamingText` já foram ligados
+      // acima, antes de `agentParaEnviar` ser conhecido — os dois também
+      // fazem parte do arme, mas religá-los aqui é reset pro mesmo valor,
+      // sem efeito observável.
+      iniciarTurnoDoAgente(agentParaEnviar);
       try {
         await sendAgentMessage(projectId, sessionId, agentParaEnviar, text);
         // Rede de segurança contra o canal perder o `agent.done` (achado da
@@ -1780,9 +1815,9 @@ export function SessionPage({
         // chamar duas vezes.
         finalizarTurnoDoAgente();
       } catch {
-        setStreaming(false);
+        cancelarTurnoOtimista();
         setOptimisticUser(null);
-        showToast({ title: 'Erro', message: 'Não foi possível enviar a mensagem', tone: 'danger' });
+        showToast({ title: t('toasts.erro'), message: t('toasts.erroEnviarMensagem'), tone: 'danger' });
       }
       return;
     }
@@ -1795,9 +1830,9 @@ export function SessionPage({
         if (evt.type === 'delta') {
           setStreamingText((t) => t + evt.text);
         } else if (evt.type === 'error') {
-          showToast({ title: 'Erro no chat', message: evt.message, tone: 'danger' });
+          showToast({ title: t('toasts.erroNoChat'), message: evt.message, tone: 'danger' });
         } else if (evt.type === 'metering_failed') {
-          showToast({ title: 'Aviso', message: evt.message, tone: 'warning' });
+          showToast({ title: t('toasts.aviso'), message: evt.message, tone: 'warning' });
         }
       }
     } finally {
@@ -1833,7 +1868,7 @@ export function SessionPage({
     try {
       await cancelAgentTurn(projectId, sessionId, agentAlvo);
     } catch {
-      showToast({ title: 'Erro', message: 'Não foi possível cancelar o turno', tone: 'danger' });
+      showToast({ title: t('toasts.erro'), message: t('toasts.erroCancelarTurno'), tone: 'danger' });
       return;
     }
 
@@ -1896,8 +1931,8 @@ export function SessionPage({
           to="/projects/$projectId"
           params={{ projectId }}
           className={styles.voltar}
-          aria-label="Voltar ao projeto"
-          title="Voltar ao projeto"
+          aria-label={t('topbar.voltarAoProjeto')}
+          title={t('topbar.voltarAoProjeto')}
         >
           <ArrowLeftIcon size={17} />
         </Link>
@@ -1910,7 +1945,7 @@ export function SessionPage({
             .filter(Boolean)
             .join(' ')}
           role="status"
-          aria-label={`Sessão ${pontoDaSessao(session?.status).rotulo}`}
+          aria-label={t('status.ariaLabel', { status: t(pontoDaSessao(session?.status).rotuloKey) })}
         />
         {/* Título e metadados em UMA linha cada, como o desenho — e por isso
             com reticências quando a barra aperta. `title` porque texto
@@ -1925,8 +1960,8 @@ export function SessionPage({
               value={rascunhoDoNome}
               autoFocus
               maxLength={LIMITE_DO_NOME}
-              aria-label="Nome da sessão"
-              placeholder={`Sem nome — a sessão fica ${hashtag}`}
+              aria-label={t('topbar.nomeDaSessao')}
+              placeholder={t('topbar.semNomeFicaHashtag', { hashtag })}
               onChange={(e) => setRascunhoDoNome(e.target.value)}
               onBlur={handleRename}
               onKeyDown={(e) => {
@@ -1938,11 +1973,11 @@ export function SessionPage({
             <button
               type="button"
               className={styles.title}
-              title={`Sessão ${rotulo} — clique para renomear`}
+              title={t('topbar.tituloRenomear', { rotulo })}
               onClick={() => setRascunhoDoNome(session?.name ?? '')}
               disabled={!session}
             >
-              Sessão {rotulo}
+              {t('topbar.tituloSessao', { rotulo })}
             </button>
           )}
           <div className={styles.meta} title={metaDaSessao}>
@@ -1957,6 +1992,14 @@ export function SessionPage({
           </Badge>
         )}
         <div className={styles.spacer} />
+        {/* SEM `filtroDeAgentesPadrao`, ao contrário dos seletores de agente e
+            de área nas Configurações — e a omissão é decisão, não esquecimento.
+            Este picker grava no escopo `session`, e `assertModelFitsBindingScope`
+            deixa `session` livre de propósito (RN-040): quem `exigeToolCalling`
+            é o TURNO, não o escopo — `RunLlmTurnUseCase` só liga a exigência
+            quando há ferramenta na chamada. Marcar o filtro aqui esconderia
+            modelo que a api aceita, que é o inverso do defeito que ligá-lo nas
+            outras duas telas conserta. */}
         {modelsByCategory && (
           <ModelPicker
             variant="topbar"
@@ -2007,13 +2050,13 @@ export function SessionPage({
               aria-hidden="true"
             />
             <span className={styles.iniciarIdeacaoDica}>
-              traz o Criativo pra conversa
+              {t('topbar.trazCriativo')}
             </span>
             <Button
               onClick={handleStartIdeation}
-              title="Traz o Criativo para conduzir a ideação desta sessão — ele ainda não entrou"
+              title={t('topbar.iniciarIdeacaoTitulo')}
             >
-              Iniciar ideação
+              {t('topbar.iniciarIdeacao')}
             </Button>
           </span>
         )}
@@ -2027,7 +2070,7 @@ export function SessionPage({
             `danger`, não um botão fantasma indistinguível dos outros. */}
         <Button variant="danger" onClick={handleClose} disabled={!session || session.status === 'closed'}>
           <StopSquareIcon size={15} />
-          Encerrar
+          {t('topbar.encerrar')}
         </Button>
         <button
           type="button"
@@ -2036,7 +2079,7 @@ export function SessionPage({
             .join(' ')}
           onClick={() => setAsideOpen((v) => !v)}
           aria-pressed={asideOpen}
-          aria-label="Alternar painel de contexto"
+          aria-label={t('topbar.alternarPainel')}
         >
           <LayoutSidebarIcon size={17} />
         </button>
@@ -2045,7 +2088,7 @@ export function SessionPage({
       <div className={styles.body}>
         <div className={styles.chatColumn}>
           <div className={styles.messages} ref={scrollContainerRef}>
-            <div className={styles.messagesInner}>
+            <div className={styles.messagesInner} ref={messagesInnerRef}>
               {/* O Criativo é ativado e NÃO fala primeiro: ele espera a sua
                   mensagem. Sem isto a tela ficava em branco depois de "Iniciar
                   ideação", e quem chega não tem como saber que a vez é dele.
@@ -2056,14 +2099,13 @@ export function SessionPage({
               {conviteVisivel && (
                 sessaoCriativa ? (
                   <div className={styles.convite}>
-                    <h2 className={styles.conviteTitulo}>A vez é sua</h2>
+                    <h2 className={styles.conviteTitulo}>{t('convite.criativa.titulo')}</h2>
                     <p className={styles.conviteTexto}>
-                      Esta é uma sessão <strong>criativa</strong>. O{' '}
-                      <strong>Criativo</strong> conduz a ideação: ele faz
-                      perguntas sobre o produto e registra as{' '}
-                      <strong>regras de negócio</strong> que saírem da conversa.
-                      Ele não decide tecnologia nem escreve código — isso é do
-                      Arquiteto e dos devs, mais adiante.
+                      <Trans
+                        i18nKey="convite.criativa.texto"
+                        ns="sessionPage"
+                        components={{ b: <strong /> }}
+                      />
                     </p>
                     {/* A AÇÃO, e não uma seta apontando para ela (FASE 24).
                         Ativar o Criativo continua sendo um clique explícito:
@@ -2072,53 +2114,81 @@ export function SessionPage({
                     {!criativoActive && (
                       <div className={styles.conviteAcao}>
                         <Button onClick={handleStartIdeation} disabled={!isActive}>
-                          Iniciar ideação
+                          {t('convite.criativa.iniciarIdeacao')}
                         </Button>
                         <span className={styles.conviteAcaoNota}>
-                          Ele ainda não entrou — é este clique que o traz.
+                          {t('convite.criativa.iniciarIdeacaoNota')}
                         </span>
                       </div>
                     )}
                     <p className={styles.conviteTexto}>
-                      Comece contando o que você quer construir e para quem. Por
-                      exemplo:
+                      {t('convite.criativa.exemploIntro')}
                     </p>
                     <button
                       type="button"
                       className={styles.conviteExemplo}
                       onClick={() =>
-                        setDraft(
-                          'Quero uma API que responda uma saudação para quem chamar. É para eu validar o fluxo de ponta a ponta.',
-                        )
+                        setDraft(t('convite.criativa.exemplo'))
                       }
                     >
-                      “Quero uma API que responda uma saudação para quem chamar. É
-                      para eu validar o fluxo de ponta a ponta.”
+                      “{t('convite.criativa.exemplo')}”
                     </button>
                     <p className={styles.conviteRodape}>
-                      Quando as regras estiverem completas, use{' '}
-                      <strong>Estou pronto para produzir</strong> — é o que gera o
-                      brief e passa a bola ao PO.
+                      <Trans
+                        i18nKey="convite.criativa.rodape"
+                        ns="sessionPage"
+                        components={{ b: <strong /> }}
+                      />
                     </p>
                   </div>
                 ) : (
                   <div className={styles.convite}>
-                    <h2 className={styles.conviteTitulo}>Sessão consultiva</h2>
+                    <h2 className={styles.conviteTitulo}>{t('convite.consultiva.titulo')}</h2>
                     <p className={styles.conviteTexto}>
-                      Aqui é conversa com o modelo: pergunte, peça contexto,
-                      tire dúvidas. <strong>Nenhum agente é ativado</strong>, o
-                      Criativo não entra e esta sessão não vai para execução.
+                      <Trans
+                        i18nKey="convite.consultiva.texto"
+                        ns="sessionPage"
+                        components={{ b: <strong /> }}
+                      />
                     </p>
                     <p className={styles.conviteRodape}>
-                      Quando for para <strong>produzir</strong>, abra uma sessão{' '}
-                      <strong>criativa</strong> na aba Sessões do projeto — o
-                      tipo é escolhido na criação e não muda depois.
+                      <Trans
+                        i18nKey="convite.consultiva.rodape"
+                        ns="sessionPage"
+                        components={{ b: <strong /> }}
+                      />
                     </p>
                   </div>
                 )
               )}
 
-              {timelineAgrupada.map((entry) => (
+              {/* RN-177 — o histórico recolhido POR ORIGEM, no topo do fio,
+                  porque o fio é crescente. Nasce FECHADO: a conversa que
+                  importa é a recente, e abrir tudo é o estado de hoje, que é
+                  justamente o que o pedido apontou como ilegível numa sessão
+                  longa. Cada origem é um `Disclosure` próprio — assim voltar a
+                  ler só o que o usuário disse não obriga a reabrir também
+                  todo o log de domínio. */}
+              {fio.historico.length > 0 && (
+                <div className={styles.fioHistorico}>
+                  {fio.historico.map(({ origem, itens }) => (
+                    <Disclosure
+                      key={origem}
+                      titulo={ROTULO_DA_ORIGEM[origem]}
+                      trailing={itens.length}
+                      classNameCabecalho={styles.fioHistoricoCabecalho}
+                    >
+                      <div className={styles.fioHistoricoRegiao}>
+                        {itens.map((entry) => (
+                          <div key={entry.key}>{entry.node}</div>
+                        ))}
+                      </div>
+                    </Disclosure>
+                  ))}
+                </div>
+              )}
+
+              {fio.recentes.map((entry) => (
                 <div key={entry.key}>{entry.node}</div>
               ))}
 
@@ -2132,7 +2202,7 @@ export function SessionPage({
                   </span>
                   <div className={styles.messageBody}>
                     <div className={styles.messageHeader}>
-                      <span className={styles.messageName}>{user.name ?? 'Você'}</span>
+                      <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
                     </div>
                     <div className={styles.bubble}>{optimisticUser}</div>
                   </div>
@@ -2150,8 +2220,14 @@ export function SessionPage({
                   (`pensandoVisivel`, armado pelo efeito acima) — texto de
                   verdade (`streamingText`) sempre aparece na hora, nunca
                   espera o timer. É por isso que a condição é "tem texto OU
-                  já passou o prazo", nunca só "tem texto". */}
-              {(streamingText || (pensandoVisivel && (streaming || statusAgent))) && (
+                  já passou o prazo", nunca só "tem texto".
+
+                  `!turnoViaCanal`: esta bolha ficou EXCLUSIVA do chat
+                  consultivo sem agente ativo (SSE, `streamChatMessage`) — um
+                  turno de agente conversacional narra pela faixa de
+                  atividade (`TurnActivityStrip`, logo abaixo do fio), nunca
+                  pelos dois ao mesmo tempo. */}
+              {!turnoViaCanal && (streamingText || (pensandoVisivel && (streaming || statusAgent))) && (
                 <div
                   className={styles.message}
                   style={
@@ -2183,8 +2259,8 @@ export function SessionPage({
                       */}
                       <span className={styles.messageName}>
                         {streamingText
-                          ? (agenteExibido?.name ?? 'agente')
-                          : 'Reunindo informações...'}
+                          ? (agenteExibido?.name ?? t('compartilhado.agenteGenerico'))
+                          : t('mensagens.reunindoInformacoes')}
                       </span>
                     </div>
                     {streamingText ? (
@@ -2205,6 +2281,60 @@ export function SessionPage({
             </div>
           </div>
 
+          {/* A faixa de atividade do turno — narra em tempo real o que um
+              agente conversacional está fazendo, FORA da área que rola (o
+              fio já rola pra ela sozinho quando o card final chega, via a
+              invalidação que `finalizarTurnoDoAgente` dispara). Só existe
+              turno de agente via `turnoViaCanal`: o chat consultivo sem
+              agente ativo continua na bolha antiga, dentro do fio. */}
+          {turnoViaCanal && (
+            <TurnActivityStrip
+              estado={atividadeDoTurno}
+              agente={streamingAgent ?? statusAgent}
+              pensandoVisivel={pensandoVisivel}
+            />
+          )}
+
+          {/*
+            Handoff manual a agente à escolha (ADR 0109/RN-440): a cadeia
+            fixa (Criativo→PO→Arquiteto→Dev Lead…) continua sendo o caminho
+            normal — este seletor existe para o caso que ela não cobre, o
+            Staff (ADR 0088) e agora também `ux-designer` sendo o exemplo
+            real: agentes com código pronto no engine, sem NENHUM jeito de
+            um humano chegar até eles pela tela. Fica FORA do `.composer`
+            de propósito — não é uma ação de conversa, é redirecionamento.
+            `activeFor` (não `AGENTES_DE_CHAT`) filtra quem já entrou nesta
+            sessão alguma vez, pro mesmo agente não ser oferecido duas
+            vezes.
+          */}
+          {isActive && (
+            <div className={styles.manualHandoffRow}>
+              <Select
+                aria-label={t('handoff.manualLabel')}
+                value={manualHandoffTarget}
+                disabled={enviandoHandoffManual}
+                onChange={(e) => setManualHandoffTarget(e.target.value)}
+              >
+                <option value="">{t('handoff.manualPlaceholder')}</option>
+                {addressableAgents()
+                  .filter((agente) => !activeFor(agente))
+                  .map((agente) => (
+                    <option key={agente} value={agente}>
+                      {nomeDoAgente(agente)}
+                    </option>
+                  ))}
+              </Select>
+              <Button
+                variant="secondary"
+                loading={enviandoHandoffManual}
+                disabled={!manualHandoffTarget}
+                onClick={handleRequestManualHandoff}
+              >
+                {t('handoff.manualBotao')}
+              </Button>
+            </div>
+          )}
+
           {session?.status === 'active' ? (
             <div className={styles.composer}>
               <textarea
@@ -2212,17 +2342,17 @@ export function SessionPage({
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={handleComposerKeyDown}
-                placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)"
+                placeholder={t('composer.placeholder')}
                 disabled={streaming}
               />
               <Button onClick={handleSend} disabled={streaming || !draft.trim()}>
-                Enviar
+                {t('composer.enviar')}
               </Button>
               {/* RN-122: só existe (habilitado) enquanto há turno em curso —
                   fora disso não há o que parar. */}
               {streaming && (
                 <Button variant="danger" onClick={handleCancel}>
-                  Parar
+                  {t('composer.parar')}
                 </Button>
               )}
               {/*
@@ -2239,11 +2369,11 @@ export function SessionPage({
                   disabled={streaming || !hasBusinessRule}
                   title={
                     !hasBusinessRule
-                      ? 'Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão'
+                      ? t('composer.prontoParaProduzirDesabilitado')
                       : undefined
                   }
                 >
-                  Estou pronto para produzir
+                  {t('composer.prontoParaProduzir')}
                 </Button>
               )}
               {/*
@@ -2258,11 +2388,35 @@ export function SessionPage({
                   disabled={streaming || !hasPromotedStory}
                   title={
                     !hasPromotedStory
-                      ? 'Promova pelo menos uma história no Backlog antes de confirmar a arquitetura'
+                      ? t('composer.confirmarArquiteturaDesabilitado')
                       : undefined
                   }
                 >
-                  Confirmar arquitetura pronta
+                  {t('composer.confirmarArquitetura')}
+                </Button>
+              )}
+              {/*
+                Gate `necessidade-validada` (RN-406, ADR 0095): confirmação
+                humana SEPARADA de "Estou pronto para produzir" — este botão
+                só existe para não deixar o Criativo (o modelo) se
+                autovalidar (`modelo-de-time.md`, anti-padrão registrado).
+                Habilita só DEPOIS que o product_brief já existe (não dá pra
+                "validar" algo que ainda não foi consolidado) e some assim
+                que já foi validada.
+              */}
+              {criativoActive && !necessidadeJaValidada && (
+                <Button
+                  variant="success"
+                  loading={validandoNecessidade}
+                  onClick={handleValidateNecessity}
+                  disabled={streaming || !hasProductBrief}
+                  title={
+                    !hasProductBrief
+                      ? t('composer.confirmarNecessidadeDesabilitado')
+                      : undefined
+                  }
+                >
+                  {t('composer.confirmarNecessidade')}
                 </Button>
               )}
             </div>
@@ -2270,11 +2424,11 @@ export function SessionPage({
             <div className={styles.activatePrompt}>
               {session?.status === 'created' ? (
                 <>
-                  Sessão ainda não ativada.
-                  <Button onClick={handleActivate}>Ativar sessão</Button>
+                  {t('ativacao.naoAtivada')}
+                  <Button onClick={handleActivate}>{t('ativacao.ativarSessao')}</Button>
                 </>
               ) : (
-                <span>Sessão {session?.status} — não é possível enviar mensagens.</span>
+                <span>{t('ativacao.statusGenerico', { status: session?.status })}</span>
               )}
             </div>
           )}
@@ -2283,8 +2437,12 @@ export function SessionPage({
         {asideOpen && (
           <ContextAside
             projectId={projectId}
+            sessionId={sessionId}
             actions={actionsQuery.data?.items ?? []}
-            events={events}
+            // O MESMO pausa-poll do fio (achados 2/7): o painel lê a mesma
+            // query, e um segundo observador com timer próprio ressuscitaria
+            // o poll que o turno em streaming pausa.
+            pausarPoll={streaming}
             logOpen={logOpen}
             onToggleLog={() => setLogOpen((open) => !open)}
             highlightEvent={highlightEvent}
@@ -2299,15 +2457,15 @@ export function SessionPage({
           card inline em vez da aba Backlog. */}
       {recusandoStory && (
         <Modal
-          title={`Devolver "${recusandoStory.title}" ao PO?`}
+          title={t('modal.devolverTitulo', { titulo: recusandoStory.title })}
           onClose={() => setRecusandoStory(null)}
         >
           <Textarea
-            label="Motivo"
+            label={t('modal.motivo')}
             value={motivoRecusa}
             onChange={(e) => setMotivoRecusa(e.target.value)}
-            hint="Vai como mensagem fixada na sessão do PO. Diga o que falta — é com isto que ele reescreve a história."
-            placeholder="Ex.: os critérios de aceite não cobrem a recusa do pagamento."
+            hint={t('modal.motivoDica')}
+            placeholder={t('modal.motivoPlaceholder')}
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <Button
@@ -2316,289 +2474,14 @@ export function SessionPage({
               disabled={motivoRecusa.trim() === ''}
               onClick={handleReturnStory}
             >
-              Devolver ao PO
+              {t('modal.devolverAoPo')}
             </Button>
             <Button variant="ghost" onClick={() => setRecusandoStory(null)}>
-              Cancelar
+              {t('modal.cancelar')}
             </Button>
           </div>
         </Modal>
       )}
     </div>
-  );
-}
-
-/**
- * Um artefato do painel "Artefatos gerados" (RN-159) — PR (dev ou ADR do
- * Arquiteto) e épico/história do PO, na mesma lista, agrupados por QUEM
- * gerou. `ordenacao` usa o mesmo eixo de `ordemDaAcaoNaTimeline` (RN-155)
- * pras ações — nunca `action.seq` cru, pelo mesmo motivo documentado lá:
- * é um bigserial GLOBAL da tabela inteira, incomparável entre artefatos de
- * origens diferentes.
- */
-interface ArtefatoGerado {
-  key: string;
-  actorId: string;
-  node: ReactNode;
-  ordenacao: number;
-}
-
-/** `pr_open` (PR de dev) e `open_adr_pr` (PR de ADR do Arquiteto) — os dois
- *  são "uma PR foi aberta", só o autor e o conteúdo mudam; o painel os
- *  mostra juntos, com o MESMO ícone. */
-const TITULO_PADRAO_POR_TIPO_DE_PR: Partial<Record<ProposedAction['actionType'], string>> = {
-  pr_open: 'Pull request',
-  open_adr_pr: 'ADR',
-};
-
-function urlDaPr(action: ProposedAction): string | null {
-  // `executionResult` no tipo do web é `TerminalExecutionResult | null`
-  // (o único payload de execução tipado hoje), mas `pr_open`/`open_adr_pr`
-  // gravam outra forma — mesmo cast que `ProjectOverviewTab.tsx` já faz pra
-  // ler `pullRequestUrl` de uma PR de dev.
-  return (action.executionResult as { pullRequestUrl?: string } | null)?.pullRequestUrl ?? null;
-}
-
-function ContextAside({
-  projectId,
-  actions,
-  events,
-  logOpen,
-  onToggleLog,
-  highlightEvent,
-  citedEvent,
-  citedEventMissing,
-}: {
-  projectId: string;
-  actions: ProposedAction[];
-  events: SessionEvent[];
-  logOpen: boolean;
-  onToggleLog: () => void;
-  highlightEvent?: string;
-  citedEvent?: SessionEvent;
-  citedEventMissing?: boolean;
-}) {
-  const businessRules = events.filter((e) => e.type === 'artifact.business_rule');
-
-  // Artefatos gerados (RN-159): PR (dev ou ADR) + épico/história do PO, numa
-  // lista só, agrupada por AGENTE. module_map/C4 ficaram de FORA desta
-  // rodada — decisão registrada no PR: os dois são estado VIGENTE do
-  // projeto (uma versão corrente, sobrescrita a cada geração), não um
-  // artefato datado por SESSÃO como PR/épico/história; a "Visão Geral"
-  // (`ProjectOverviewTab.tsx`) já é o lugar deles, sem âncora própria hoje —
-  // adicionar uma set fora do escopo desta entrega.
-  const artefatos: ArtefatoGerado[] = [];
-
-  for (const a of actions) {
-    if (a.actionType !== 'pr_open' && a.actionType !== 'open_adr_pr') continue;
-    const titulo = (a.payload as { title?: string }).title ?? TITULO_PADRAO_POR_TIPO_DE_PR[a.actionType]!;
-    const url = urlDaPr(a);
-    artefatos.push({
-      key: `pr-${a.id}`,
-      actorId: a.actor.id,
-      ordenacao: ordemDaAcaoNaTimeline(a, events),
-      node: url ? (
-        <a
-          key={`pr-${a.id}`}
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className={[styles.artefatoItem, styles.artefatoItemLink].join(' ')}
-        >
-          <PrIcon size={13} className={styles.artefatoItemIcone} />
-          <span className={styles.artefatoItemTitulo}>{titulo}</span>
-        </a>
-      ) : (
-        <span key={`pr-${a.id}`} className={styles.artefatoItem}>
-          <PrIcon size={13} className={styles.artefatoItemIcone} />
-          <span className={styles.artefatoItemTitulo}>{titulo}</span>
-        </span>
-      ),
-    });
-  }
-
-  for (const e of events) {
-    if (e.type !== 'backlog.epic_created' && e.type !== 'backlog.story_created') continue;
-    const payload = e.payload as { title?: unknown };
-    const titulo = typeof payload?.title === 'string' ? payload.title : '(sem título)';
-    artefatos.push({
-      key: `backlog-${e.id}`,
-      actorId: e.actor.id,
-      ordenacao: e.seq,
-      node: (
-        <Link
-          key={`backlog-${e.id}`}
-          to="/projects/$projectId"
-          params={{ projectId }}
-          search={{ tab: 'backlog' }}
-          className={[styles.artefatoItem, styles.artefatoItemLink].join(' ')}
-        >
-          <StackIcon size={13} className={styles.artefatoItemIcone} />
-          <span className={styles.artefatoItemTitulo}>{titulo}</span>
-        </Link>
-      ),
-    });
-  }
-
-  artefatos.sort((a, b) => a.ordenacao - b.ordenacao);
-
-  // Agrupado por `actorId` — o mesmo padrão de colapso do fio principal
-  // (RN-138, `timelineAgrupada`), num `Disclosure` por agente, com a ORDEM
-  // de primeira aparição (não alfabética: reflete a ordem em que os
-  // artefatos nasceram).
-  const gruposDeArtefatos: { actorId: string; itens: ArtefatoGerado[] }[] = [];
-  for (const item of artefatos) {
-    const grupo = gruposDeArtefatos.find((g) => g.actorId === item.actorId);
-    if (grupo) grupo.itens.push(item);
-    else gruposDeArtefatos.push({ actorId: item.actorId, itens: [item] });
-  }
-
-  // Opções do filtro "por agente" do feed (Fase 8d — a prop existia desde
-  // sempre em ActivityFeed, mas nenhum dos dois call sites a passava, então
-  // o filtro nunca funcionou). Deriva dos atores REAIS desta sessão — pega
-  // subagentes de área automaticamente, sem precisar buscar module_map/
-  // handoffs só pra montar a lista (que `deriveAgentRoster` exigiria).
-  const agentOptions = Array.from(new Set(events.map((e) => e.actor.id))).map((id) => ({
-    id,
-    label: AGENTS[id as keyof typeof AGENTS]?.name ?? id,
-  }));
-  const filesTouched = actions
-    .filter((a) => a.actionType === 'git_commit' || a.actionType === 'git_push')
-    .flatMap((a) => {
-      const files = (a.payload as { files?: { path: string; additions: number; deletions: number }[] }).files;
-      return files ?? [];
-    });
-
-  return (
-    <aside className={styles.aside}>
-      {/* O trilho se nomeia (handoff, seção 5). Sem isto, quem abre o painel vê
-          quatro rótulos mono soltos e nenhuma pista do que os junta. */}
-      <div className={styles.asideTitleBar}>
-        <h2 className={styles.asideTitle}>Contexto da sessão</h2>
-      </div>
-
-      <div className={styles.asideSection}>
-        {/* Contador exposto com o MESMO padrão do Log de eventos (`Disclosure`
-            + `trailing`) — antes o cabeçalho era um `div` mudo e o rodapé
-            estático do convite ("Quando as regras estiverem completas…")
-            não tinha como saber quantas já existiam. Sem threshold: o ganho
-            é mostrar o número real, não decidir por um mínimo. */}
-        <Disclosure
-          titulo="Regras de negócio"
-          trailing={businessRules.length}
-          padraoAberto
-          classNameCabecalho={styles.asideHeader}
-        >
-          {businessRules.length === 0 ? (
-            <div className={styles.asideEmpty}>Nada ainda.</div>
-          ) : (
-            businessRules.map((e) => {
-              const rule = e.payload as BusinessRulePayload;
-              return (
-                <div key={e.id} className={styles.ruleCard}>
-                  <div className={styles.ruleTitle}>{rule.title}</div>
-                  <div className={styles.ruleDescription}>{rule.description}</div>
-                  <div className={styles.ruleOrigin}>
-                    origem: {Array.isArray(rule.origin) ? rule.origin.length : 0} ref(s)
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </Disclosure>
-      </div>
-
-      <div className={styles.asideSection}>
-        {/* RN-159: agrupado por agente (mesmo `Disclosure` do colapso do fio,
-            RN-138) — antes era uma lista PLANA só de `pr_open`, sem dizer
-            QUEM abriu cada PR nem incluir épico/história do PO. */}
-        <Disclosure
-          titulo="Artefatos gerados"
-          trailing={artefatos.length}
-          padraoAberto
-          classNameCabecalho={styles.asideHeader}
-        >
-          {gruposDeArtefatos.length === 0 ? (
-            <div className={styles.asideEmpty}>Nada ainda.</div>
-          ) : (
-            gruposDeArtefatos.map(({ actorId, itens }) => (
-              <div key={actorId} style={corDoAgente(actorId)}>
-                <Disclosure
-                  titulo={
-                    <span className={styles.agentGroupTitulo}>
-                      <AvatarDoAgente id={actorId} />
-                      {nomeDoAgente(actorId)}
-                    </span>
-                  }
-                  trailing={itens.length}
-                  classNameCabecalho={styles.agentGroupCabecalho}
-                  className={styles.agentGroup}
-                >
-                  <div className={styles.artefatoGrupoRegiao}>
-                    {itens.map((item) => item.node)}
-                  </div>
-                </Disclosure>
-              </div>
-            ))
-          )}
-        </Disclosure>
-      </div>
-
-      <div className={styles.asideSection}>
-        <div className={styles.asideHeader}>Arquivos tocados</div>
-        {filesTouched.length === 0 ? (
-          <div className={styles.asideEmpty}>Nada ainda.</div>
-        ) : (
-          filesTouched.map((file) => (
-            <div key={file.path} className={styles.asideItem}>
-              <span className={styles.fileLetter}>M</span>
-              <span className={styles.filePath}>{file.path}</span>
-              <span className={styles.fileAdd}>+{file.additions}</span>
-              <span className={styles.fileDel}>−{file.deletions}</span>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Log completo de eventos — o alvo da navegação de evidência do
-          Psicólogo (Fase 4b). Colapsável pra não competir com o chat.
-
-          Migrado para o `Disclosure` do design system na FASE 20, a fase que
-          abre este arquivo. O colapso ad-hoc daqui era um `button` com
-          `aria-expanded` e um `−`/`+` de texto, sem `aria-controls` e sem
-          região nomeada: o leitor de tela anunciava um botão expandido sem
-          dizer o que ele expandia. A contagem virou `trailing`, que fica dentro
-          do alvo de clique — a linha inteira alterna, como nas outras seis. */}
-      <div className={styles.asideSection}>
-        <Disclosure
-          titulo="Log de eventos"
-          trailing={events.length}
-          aberto={logOpen}
-          onAlternar={onToggleLog}
-          classNameCabecalho={styles.asideHeader}
-        >
-          {/* Evento citado FIXADO no topo: garante que a evidência chega
-              no evento independente de paginação e dos filtros do feed. */}
-          {highlightEvent && citedEvent && (
-            <div className={styles.citedEvent}>
-              <div className={styles.citedEventLabel}>
-                Evento citado
-              </div>
-              <EventItem event={citedEvent} highlighted />
-            </div>
-          )}
-          {highlightEvent && citedEventMissing && (
-            <div className={styles.asideEmpty}>
-              O evento citado não foi encontrado nesta sessão.
-            </div>
-          )}
-          <ActivityFeed
-            events={events}
-            agentOptions={agentOptions}
-            highlightEventId={highlightEvent}
-          />
-        </Disclosure>
-      </div>
-    </aside>
   );
 }

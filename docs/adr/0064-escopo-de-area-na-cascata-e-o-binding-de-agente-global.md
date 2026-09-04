@@ -1,130 +1,139 @@
-# ADR 0064 — Escopo de área na cascata de modelo, e o binding de agente global
+# ADR 0064 — Area scope in the model cascade, and the global agent binding
 
-- **Status:** aceito
-- **Data:** 2026-08-09
-- **Contexto anterior:** [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)
-  (capabilities em duas camadas e a revalidação de `resolveBinding` ao cair de
-  nível), [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md)
-  (áreas como dado por projeto, `agent_areas`/`agent_area_members`), FASE 18
-  (a área nasce com o projeto, RN-094)
+- **Status:** accepted
+- **Date:** 2026-08-09
+- **Prior context:** [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+  (capabilities in two layers, and `resolveBinding` revalidating when it
+  falls back a level), [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md)
+  (areas as data per project, `agent_areas`/`agent_area_members`), PHASE 18
+  (the area is born with the project, RN-094)
 
-## Contexto
+## Context
 
-O pedido do usuário: "para leads de áreas e seu subgrupo estarem em conjunto,
-dando a possibilidade de escolher um mesmo modelo vigente para ambos." A
-decisão dele já veio junto — o modelo da área é **padrão herdável**: um agente
-específico pode divergir, e a UI mostra quem herda e quem divergiu.
+The user's request: "for area leads and their subgroup to be together, giving
+the option to choose the same current model for both." His decision came
+along with it — the area's model is a **heritable default**: a specific agent
+can diverge, and the UI shows who inherits and who diverged.
 
-A cascata de binding (`domain/llm/binding-resolver.ts`) resolve hoje
-`sessão > agente > projeto > workspace`, um binding por escopo, o mais
-específico vencendo. `agent_areas`/`agent_area_members` (ADR 0053, FASE 18)
-já são dado real por projeto — lead, subagentes e o teto de paralelismo. O que
-falta é o MODELO da área entrar nessa mesma cascata.
+The binding cascade (`domain/llm/binding-resolver.ts`) today resolves
+`session > agent > project > workspace`, one binding per scope, the most
+specific one winning. `agent_areas`/`agent_area_members` (ADR 0053, PHASE 18)
+are already real data per project — lead, subagents and the parallelism cap.
+What's missing is for the area's MODEL to enter that same cascade.
 
-Isso levanta uma pergunta de posição: entre quais dois níveis a área entra? E
-uma segunda, que só aparece ao tentar responder a primeira, é o coração desta
-ADR.
+That raises a positioning question: between which two levels does the area
+go? And a second one, which only shows up when trying to answer the first,
+is the heart of this ADR.
 
-### A incoerência: binding de agente é GLOBAL, área é POR PROJETO
+### The inconsistency: agent binding is GLOBAL, area is PER PROJECT
 
-`SetModelBindingUseCase.execute('agent', agentSlug, ...)` grava com
-`scope_id = agentSlug` — um SLUG, sem projeto. `PUT
-/projects/:projectId/agent-bindings/:agentSlug` recebe `:projectId` na rota e
-o **descarta explicitamente**: o comentário no código já dizia isso é
-intencional. Escolher o modelo do Arquiteto na tela de um projeto muda o
-modelo dele em TODOS os projetos onde ele existe.
+`SetModelBindingUseCase.execute('agent', agentSlug, ...)` writes with
+`scope_id = agentSlug` — a SLUG, with no project. `PUT
+/projects/:projectId/agent-bindings/:agentSlug` receives `:projectId` in the
+route and **explicitly discards it**: the comment in the code already said
+this is intentional. Choosing the Architect's model on one project's screen
+changes their model in EVERY project where they exist.
 
-Área, ao contrário, é por projeto desde o ADR 0053 — o mesmo `qa` de dois
-projetos diferentes pode ter tetos e (agora) modelos diferentes.
+Area, by contrast, has been per project since ADR 0053 — the same `qa` area
+in two different projects can have different caps and (now) different
+models.
 
-Colocar um escopo POR PROJETO acima de um escopo GLOBAL na mesma cascata é uma
-contradição de fato, não só de estilo: o mesmo agente resolveria modelos
-diferentes por projeto **só onde existisse área configurada**, e igual em
-todos os outros — comportamento que depende de um acidente de dados, não de
-uma regra. Tem duas saídas, mutuamente exclusivas:
+Putting a PER-PROJECT scope above a GLOBAL scope in the same cascade is a
+factual contradiction, not just a stylistic one: the same agent would
+resolve different models per project **only where an area happened to be
+configured**, and the same everywhere else — behavior that depends on a data
+accident, not a rule. There are two mutually exclusive ways out:
 
-1. **O binding de agente passa a ser por projeto.** Muda um comportamento que
-   existia desde a Fase 9a.
-2. **A área fica ABAIXO do agente na cascata.** Mantém o agente global, mas
-   contradiz "padrão herdável" — a área nunca conseguiria ser o padrão de um
-   agente que já tem binding (que é o caso comum, porque HOJE quase todo
-   binding registrado é de agente, não há outro nível entre ele e o projeto).
+1. **The agent binding becomes per project.** Changes a behavior that had
+   existed since Phase 9a.
+2. **The area sits BELOW the agent in the cascade.** Keeps the agent global,
+   but contradicts "heritable default" — the area could never be the
+   default for an agent that already has a binding (which is the common
+   case, because TODAY almost every registered binding is an agent's, with
+   no level between it and the project).
 
-## Decisão
+## Decision
 
-**Escolhida a opção 1: o binding de agente passa a ser por projeto.**
+**Option 1 was chosen: the agent binding becomes per project.**
 
-A cascata ganha o nível `area`, entre `agent` e `project`:
+The cascade gains the `area` level, between `agent` and `project`:
 
 ```
-sessão > agente > área > projeto > workspace
+session > agent > area > project > workspace
 ```
 
-A área é o PADRÃO que o lead e os subagentes de uma área compartilham; o
-binding do próprio agente é a DIVERGÊNCIA explícita que o sobrepõe. Essa
-ORDEM — e não a mera existência do nível — é a decisão do usuário sendo
-cumprida: se a área viesse acima do agente ela venceria sempre, e "padrão
-herdável" seria, na prática, "padrão imposto".
+The area is the DEFAULT that a lead and its area's subagents share; the
+agent's own binding is the explicit DIVERGENCE that overrides it. That
+ORDER — not just the level's existence — is the user's decision being
+honored: if area came above agent it would always win, and "heritable
+default" would, in practice, be "imposed default."
 
-Para a posição fazer sentido sem a contradição de escopo global acima de
-escopo por projeto, o binding de `agent` teve de deixar de ser global. O
-`scope_id` de `agent` e de `area` virou **composto**:
-`<projectId>:<slug do agente | chave da área>`. Nenhuma tabela nova: `UUID` de
-projeto e slug/chave nunca contêm `:`, o que torna o primeiro `:` um
-separador não ambíguo (`domain/llm/binding-scope-id.ts`), e o formato antigo
-(sem `:`) é **recusado** na escrita — gravá-lo criaria um binding que a
-cascata nunca mais encontraria, invisível em vez de um erro.
+For the position to make sense without the contradiction of a global scope
+sitting above a per-project scope, the `agent` binding had to stop being
+global. The `scope_id` of `agent` and `area` became **composite**:
+`<projectId>:<agent slug | area key>`. No new table: project `UUID`s and
+slugs/keys never contain `:`, which makes the first `:` an unambiguous
+separator (`domain/llm/binding-scope-id.ts`), and the old format (no `:`)
+is **rejected** on write — writing it would create a binding the cascade
+would never find again, invisible instead of an error.
 
-A migração 0040 espalha cada binding de agente global existente para uma
-linha por projeto, preservando o modelo que cada projeto resolvia antes da
-mudança, e apaga o formato antigo. É espalhar e não escolher um projeto
-"dono": a linha global nunca guardou informação de a quem pertencia.
+Migration 0040 spreads each existing global agent binding into one row per
+project, preserving the model each project was resolving to before the
+change, and removes the old format. It's a spread, not a "pick an owning
+project": the global row never held information about who it belonged to.
 
-**O nível novo entra na mesma revalidação de capability já existente** (ADR
-0041/RN-041/RN-043): modelo da área que sumiu do provider ou que não faz tool
-calling é pulado e registrado em `skipped`, exatamente como já acontecia com
-`agent`. `area` também passou a exigir `supports_tool_calling`
-(`assertModelFitsBindingScope`) — ela nunca é lida por chat humano, só por
-agente, e deixá-la passar adiaria a mesma falha silenciosa em um nível.
+**The new level enters the same capability revalidation that already
+existed** (ADR 0041/RN-041/RN-043): an area model that vanished from the
+provider or doesn't support tool calling is skipped and recorded in
+`skipped`, exactly as already happened for `agent`. `area` also came to
+require `supports_tool_calling` (`assertModelFitsBindingScope`) — it's
+never read by human chat, only by agents, and letting it pass would just
+postpone the same silent failure to another level.
 
-**"Voltar a herdar" apaga o binding, nunca copia o modelo do nível de baixo
-para o de cima.** `DELETE /projects/:id/agent-bindings/:slug` e `DELETE
-/projects/:id/area-bindings/:key`, os dois 204 e os dois 404 quando o escopo
-já herda. Gravar no agente o modelo que a área decidiu pareceria igual na
-tela e não é: viraria cópia, e a próxima mudança da área deixaria esse agente
-para trás em silêncio — herdar é a AUSÊNCIA de decisão própria.
+**"Go back to inheriting" deletes the binding, it never copies the model
+from the level below into the one above.** `DELETE
+/projects/:id/agent-bindings/:slug` and `DELETE
+/projects/:id/area-bindings/:key`, both 204, both 404 when the scope
+already inherits. Writing the area's chosen model into the agent would look
+the same on screen and isn't: it would become a copy, and the area's next
+change would leave that agent behind silently — inheriting is the ABSENCE
+of a decision of one's own.
 
-Mudar o modelo da ÁREA exige papel `maintainer`, e não `developer` como o do
-agente individual — o mesmo motivo do teto de paralelismo (RN-083): o
-binding da área alcança o lead e todos os subagentes de uma vez, e escolher
-modelo é decidir quanto o produto gasta sem perguntar. O binding de agente
-continua em `developer`, como já era.
+Changing an AREA's model requires the `maintainer` role, not `developer`
+like an individual agent's — the same reason as the parallelism cap
+(RN-083): the area's binding reaches the lead and every subagent at once,
+and choosing a model is deciding how much the product spends without
+asking. The agent binding stays at `developer`, as it already was.
 
-A UI (`AreaModelsSection` em `ProjectSettingsTab.tsx`) lista o padrão de cada
-área ao lado da tabela de agentes; a coluna Origem da tabela de agentes ganha
-"voltar a herdar" quando `origin === 'agent'` — o agente diverge, de uma área
-quando ele tem uma, ou do projeto/workspace quando não tem.
+The UI (`AreaModelsSection` in `ProjectSettingsTab.tsx`) lists each area's
+default next to the agent table; the agent table's Origin column gains
+"go back to inheriting" when `origin === 'agent'` — the agent diverges,
+from an area when it has one, or from the project/workspace when it
+doesn't.
 
-## Consequências
+## Consequences
 
-- **A cascata cresce de quatro para cinco níveis**, e todo consumidor que
-  enumerava os quatro (testes, DTOs, `ORIGIN_TONE` na UI) precisou do quinto.
-  É custo pago uma vez; a estrutura (revalidação de capability, `skipped`,
-  origem explícita) já existia e só se estendeu.
-- **O binding de agente deixou de ser global.** Quem dependia do slug global
-  — três scripts de seed/demo — passou a gravar por projeto
-  (`chaveDeAgente(projectId, slug)`). Não há mais forma de "um modelo para
-  este agente em todo lugar"; quem quer isso hoje configura por projeto, ou
-  configura no `workspace` (que continua global e é o fallback de todos).
-- **A área não tem tabela de binding própria** — reusa `model_bindings` com
-  `scope = 'area'`, pelo mesmo motivo que `agent` sempre reusou: não há
-  atributo do binding que dependa do tipo de escopo, só do `scope_id`.
-- **`scope_id` composto é um formato implícito**, não reforçado por
-  constraint de banco (é `text`). A validação vive em uma função só
-  (`assertScopeIdBemFormado`), e é ela — não o schema — quem impede o
-  binding fantasma. Se um dia `area`/`agent` ganharem tabela própria, este
-  formato vira o `id` dela e o `scope_id` some.
-- **Herdar por padrão de área não alcança subagentes fora do catálogo**: a
-  área do agente é resolvida pelo catálogo estático (`agent-areas.ts`), que
-  já cobre a área dinâmica de `dev` pelo predicado `ehDevDeModulo` sem
-  round-trip ao banco — nenhuma consulta nova a `agent_areas` foi necessária.
+- **The cascade grows from four to five levels**, and every consumer that
+  enumerated the four (tests, DTOs, `ORIGIN_TONE` in the UI) needed the
+  fifth. It's a one-time cost; the structure (capability revalidation,
+  `skipped`, explicit origin) already existed and just extended.
+- **The agent binding stopped being global.** Whoever depended on the
+  global slug — three seed/demo scripts — started writing per project
+  (`chaveDeAgente(projectId, slug)`). There's no longer a way to set "one
+  model for this agent everywhere"; whoever wants that today configures it
+  per project, or configures it at the `workspace` level (which stays
+  global and remains everyone's fallback).
+- **The area has no binding table of its own** — it reuses
+  `model_bindings` with `scope = 'area'`, for the same reason `agent`
+  always reused it: no binding attribute depends on the scope type, only
+  on `scope_id`.
+- **A composite `scope_id` is an implicit format**, not enforced by a
+  database constraint (it's `text`). The validation lives in a single
+  function (`assertScopeIdBemFormado`), and it — not the schema — is what
+  prevents the phantom binding. If `area`/`agent` ever get their own table,
+  this format becomes its `id` and `scope_id` goes away.
+- **Inheriting an area default doesn't reach subagents outside the
+  catalog**: an agent's area is resolved through the static catalog
+  (`agent-areas.ts`), which already covers the dynamic `dev` area through
+  the `ehDevDeModulo` predicate without a round trip to the database — no
+  new query against `agent_areas` was necessary.

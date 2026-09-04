@@ -1,0 +1,39 @@
+{
+  "carousel": {
+    "roleDescription": "carousel",
+    "counter": "{{current}} of {{total}}",
+    "previousLabel": "Previous story",
+    "nextLabel": "Next story",
+    "dotsGroupLabel": "Go to story",
+    "slideLabel": "Slide {{index}}",
+    "slideLabelNamed": "Slide {{index}}: {{label}}",
+    "dotLabel": "Story {{index}}",
+    "dotLabelNamed": "Story {{index}}: {{label}}"
+  },
+  "input": {
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
+  },
+  "modal": {
+    "closeLabel": "Close"
+  },
+  "markdownMessage": {
+    "codeFence": {
+      "defaultLanguage": "text"
+    },
+    "table": {
+      "emptyMessage": "Table has no rows."
+    }
+  },
+  "table": {
+    "emptyMessage": "Nothing here yet."
+  },
+  "toast": {
+    "closeLabel": "Close notification"
+  },
+  "erroDeCarregamento": {
+    "defaultMessage": "Could not reach the api.",
+    "trace": "trace {{traceId}}",
+    "retry": "Try again"
+  }
+}

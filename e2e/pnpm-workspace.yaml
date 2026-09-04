@@ -1,0 +1,18 @@
+# `e2e/` NÃO é membro do workspace da raiz — este arquivo faz dele o PRÓPRIO
+# root do pnpm (pacote único, sem `packages:`), com lockfile independente.
+# `pnpm install` de dentro de `e2e/` resolve contra ESTE arquivo e não sobe
+# até `../pnpm-workspace.yaml`, porque o pnpm usa o mais PRÓXIMO na árvore.
+#
+# O motivo é o mesmo do `website/` (ADR 0117): a árvore do Playwright nunca
+# chega a nenhuma imagem de produto, e deixá-la no lockfile da raiz faria
+# `pnpm audit` do produto reportar dependência de ferramenta de teste como
+# se fosse superfície do que embarca. A diferença em relação ao website é
+# que aqui o pacote TESTA o produto — o que não muda o argumento, porque o
+# que decide é para onde a dependência vai, não sobre o que ela fala.
+#
+# `playwright` faz download de navegador no `postinstall`, e por isso o
+# build precisa estar liberado. Ele é o ÚNICO — nada mais nesta árvore
+# executa script de instalação.
+allowBuilds:
+  '@playwright/test': true
+  playwright: true

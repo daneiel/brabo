@@ -6,6 +6,7 @@ import { NotFoundException } from '@nestjs/common';
 import { createTestDb, truncateAll } from '../../../support/test-db';
 import {
   projects,
+  projectContainers,
   sessions,
   users,
   workspaces,
@@ -20,11 +21,14 @@ import { DrizzleProposedActionRepository } from '../../../../src/infrastructure/
 import { DrizzleAgentAutonomyRepository } from '../../../../src/infrastructure/persistence/drizzle/agent-autonomy.repository';
 import { DrizzleOutboxRepository } from '../../../../src/infrastructure/persistence/drizzle/outbox.repository';
 import { DrizzleSessionEventRepository } from '../../../../src/infrastructure/persistence/drizzle/session-event.repository';
+import { DrizzleContainerRepository } from '../../../../src/infrastructure/persistence/drizzle/container.repository';
 import { FsPermissionsFileStore } from '../../../../src/infrastructure/filesystem/fs-permissions-file-store';
 import { ResolveEffectiveRoleUseCase } from '../../../../src/application/use-cases/iam/resolve-effective-role.use-case';
 import { AppendSessionEventUseCase } from '../../../../src/application/use-cases/sessions/append-session-event.use-case';
 import { ExecuteTerminalActionUseCase } from '../../../../src/application/use-cases/actions/execute-terminal-action.use-case';
+import { ObterCicloDeVidaDoContainerUseCase } from '../../../../src/application/use-cases/containers/obter-ciclo-de-vida-do-container.use-case';
 import { ProposeActionUseCase } from '../../../../src/application/use-cases/actions/propose-action.use-case';
+import { RECURSOS_PADRAO } from '../../../../src/domain/containers/project-container';
 import type { ApiToEngineClient } from '../../../../src/application/ports/api-to-engine-client.port';
 import type { TerminalExecutionResult } from '../../../../src/domain/actions/terminal-execution-result';
 
@@ -37,6 +41,10 @@ const proposedActionRepo = new DrizzleProposedActionRepository(db);
 const agentAutonomyRepo = new DrizzleAgentAutonomyRepository(db);
 const outboxRepo = new DrizzleOutboxRepository(db);
 const sessionEventRepo = new DrizzleSessionEventRepository(db);
+const containerRepo = new DrizzleContainerRepository(db);
+const obterCicloDeVidaDoContainer = new ObterCicloDeVidaDoContainerUseCase(
+  containerRepo,
+);
 const permissionsFileStore = new FsPermissionsFileStore();
 const resolveEffectiveRole = new ResolveEffectiveRoleUseCase(
   projectRepo,
@@ -77,8 +85,14 @@ class FakeApiToEngineClient implements ApiToEngineClient {
   async reviseStory(): Promise<void> {}
   async offerInfraHandoff(): Promise<void> {}
   async reanalyzeSession(): Promise<void> {}
+  async getPsychologistStatus(): Promise<{ enabled: boolean }> {
+    return { enabled: true };
+  }
   async runAnamnese(): Promise<void> {}
   async invalidateInstructions(): Promise<void> {}
+  async requestRunnerTicket(): Promise<{ ticket: string; expiresAt: Date }> {
+    return { ticket: 'fake-ticket', expiresAt: new Date() };
+  }
 
   executeTerminalAction(
     _projectId: string,
@@ -112,7 +126,10 @@ const proposeAction = new ProposeActionUseCase(
   executeTerminalAction,
   undefined as never, // executeGitAction — não exercitado aqui
   undefined as never, // executeInfraPr — não exercitado aqui
+  undefined as never, // executeContainerStart — não exercitado aqui
+  undefined as never, // executeContainerStop — não exercitado aqui
   appendSessionEvent,
+  obterCicloDeVidaDoContainer,
 );
 
 let workspacesRoot: string;
@@ -165,6 +182,18 @@ async function setupSession(role: Role = 'owner') {
   return { user, workspace, project, session };
 }
 
+async function marcarContainerRunning(projectId: string) {
+  await db.insert(projectContainers).values({
+    projectId,
+    status: 'running',
+    imageVersion: 1,
+    containerId: 'container-1',
+    cpus: RECURSOS_PADRAO.cpus,
+    memoryMb: RECURSOS_PADRAO.memoryMb,
+    pidsLimit: RECURSOS_PADRAO.pidsLimit,
+  });
+}
+
 describe('ProposeActionUseCase', () => {
   it('sem regra em permissions.json, cria a ação como pending', async () => {
     const { project, session } = await setupSession();
@@ -199,7 +228,7 @@ describe('ProposeActionUseCase', () => {
 
   it('allow em permissions.json: auto-aprova e JÁ EXECUTA (terminal)', async () => {
     const { project, session } = await setupSession();
-    await permissionsFileStore.write(project.id, {
+    await permissionsFileStore.write(project, {
       allow: ['Terminal(echo oi)'],
       deny: [],
       ask: [],
@@ -250,7 +279,7 @@ describe('ProposeActionUseCase', () => {
   it('InfraAgent propondo terminal vira denied mesmo com allow amplo em permissions.json (Fase 4a — defesa em profundidade)', async () => {
     const { project, session } = await setupSession();
     await agentAutonomyRepo.upsert(project.id, 'infra', 'terminal', 'deny');
-    await permissionsFileStore.write(project.id, {
+    await permissionsFileStore.write(project, {
       allow: ['Terminal(*)'],
       deny: [],
       ask: [],
@@ -350,6 +379,60 @@ describe('ProposeActionUseCase', () => {
     expect(action.resolvedPolicy).toBe('deny');
   });
 
+  it('git_merge proposto pela aba PRs (produtor real, RN-154) segue pending mesmo com "sempre permitir" já gravado em permissions.json', async () => {
+    // Onda 2 do programa de abas agrupadas: a aba PRs é a PRIMEIRA a propor
+    // `git_merge` de verdade, com `actor.kind: 'user'` e o payload real que o
+    // botão "Merge" envia (pullRequestId/sourceBranch/targetBranch/title).
+    // `GitMerge()` (sem especificidade nenhuma — `patternForAction` não
+    // discrimina por branch) já em `allow` simula quem clicou "Sempre
+    // permitir" numa PR anterior — e mesmo assim a trava de branch protegida
+    // continua vencendo por ÚLTIMO em `decide()`.
+    const { project, session } = await setupSession('maintainer');
+    await permissionsFileStore.write(project, {
+      allow: ['GitMerge()'],
+      deny: [],
+      ask: [],
+    });
+
+    const action = await proposeAction.execute(project.id, session.id, {
+      actionType: 'git_merge',
+      actor: { kind: 'user', id: 'user-1' },
+      payload: {
+        pullRequestId: '218',
+        sourceBranch: 'feature/task-a1b2c3d4',
+        targetBranch: 'dev',
+        title: 'feat: aba de PRs',
+      },
+    });
+
+    expect(action.resolvedPolicy).toBe('require_approval');
+    expect(action.status).toBe('pending');
+  });
+
+  it('git_merge proposto pela aba PRs continua pending mesmo com agent_autonomy curinga ligado pro mesmo ator', async () => {
+    // Reforça a suíte já existente da RN-154 (acima, com `actor.kind: 'agent'`)
+    // com o produtor real desta onda: o teto é absoluto independente de QUEM
+    // propõe. `autonomyMode` só é consultado para `actor.kind === 'agent'`
+    // (ver `ProposeActionUseCase.execute`), então este cenário usa um agente —
+    // é o que prova que nem essa porta ajudaria.
+    const { project, session } = await setupSession('maintainer');
+    await agentAutonomyRepo.upsert(project.id, 'dev-lead', '*', 'auto_approve');
+
+    const action = await proposeAction.execute(project.id, session.id, {
+      actionType: 'git_merge',
+      actor: { kind: 'agent', id: 'dev-lead' },
+      payload: {
+        pullRequestId: '218',
+        sourceBranch: 'feature/task-a1b2c3d4',
+        targetBranch: 'main',
+        title: 'feat: aba de PRs',
+      },
+    });
+
+    expect(action.resolvedPolicy).toBe('require_approval');
+    expect(action.status).toBe('pending');
+  });
+
   it('rejeita tipo de ação desconhecido', async () => {
     const { project, session } = await setupSession();
     await expect(
@@ -374,5 +457,139 @@ describe('ProposeActionUseCase', () => {
         },
       ),
     ).rejects.toThrow(NotFoundException);
+  });
+});
+
+// ADR 0134/RN-492: o piso de `terminal` DENTRO do container real do
+// projeto. `setupSession()` cria projeto `execution_mode: container`
+// (default do schema) SEM linha em `project_containers` — por isso a suíte
+// de cima já prova "sem container ativo, comportamento de hoje inalterado"
+// em toda ação `terminal`; os testes daqui provam o resto: o piso sobe
+// quando HÁ uma linha `running`, e os tetos absolutos continuam vencendo
+// por cima dele.
+describe('ProposeActionUseCase — piso do container ativo (ADR 0134, RN-492)', () => {
+  it('terminal auto-aprova e JÁ EXECUTA quando o projeto tem container registrado running, sem NENHUMA regra em permissions.json/agent_autonomy', async () => {
+    const { project, session } = await setupSession();
+    await marcarContainerRunning(project.id);
+
+    const action = await proposeAction.execute(project.id, session.id, {
+      actionType: 'terminal',
+      actor: { kind: 'agent', id: 'dev-api' },
+      payload: { command: 'npm test' },
+    });
+
+    expect(action.resolvedPolicy).toBe('auto_approve');
+    expect(action.status).toBe('executed');
+    expect(fakeEngineClient.calls).toEqual([
+      { actionId: action.id, command: 'npm test' },
+    ]);
+  });
+
+  it('container running NÃO auto-aprova ação que não é terminal (container_start, por exemplo)', async () => {
+    const { project, session } = await setupSession('maintainer');
+    await marcarContainerRunning(project.id);
+
+    const action = await proposeAction.execute(project.id, session.id, {
+      actionType: 'container_start',
+      actor: { kind: 'agent', id: 'infra' },
+      payload: {
+        imagem: 'node:22-bookworm-slim',
+        network: 'none',
+        resources: RECURSOS_PADRAO,
+        rationale: 'irrelevante para este teste',
+      },
+    });
+
+    expect(action.resolvedPolicy).toBe('require_approval');
+    expect(action.status).toBe('pending');
+  });
+
+  it('sem linha `running` em project_containers, comportamento de hoje inalterado (require_approval por padrão)', async () => {
+    const { project, session } = await setupSession();
+    // Nenhuma linha em project_containers para este projectId — o piso do
+    // container só se aplica quando a consulta encontra `status: running`.
+    const action = await proposeAction.execute(project.id, session.id, {
+      actionType: 'terminal',
+      actor: { kind: 'agent', id: 'dev-api' },
+      payload: { command: 'echo oi' },
+    });
+
+    expect(action.resolvedPolicy).toBe('require_approval');
+    expect(action.status).toBe('pending');
+  });
+
+  it('deny embutido (rm -rf /) continua vencendo mesmo com container ativo', async () => {
+    const { project, session } = await setupSession();
+    await marcarContainerRunning(project.id);
+
+    const action = await proposeAction.execute(project.id, session.id, {
+      actionType: 'terminal',
+      actor: { kind: 'agent', id: 'dev-api' },
+      payload: { command: 'rm -rf /' },
+    });
+
+    expect(action.status).toBe('denied');
+    expect(action.resolvedPolicy).toBe('deny');
+    expect(fakeEngineClient.calls).toHaveLength(0);
+  });
+
+  it('git push por dentro do terminal continua require_approval mesmo com container ativo — teto absoluto (RN-418/ADR 0102)', async () => {
+    const { project, session } = await setupSession();
+    await marcarContainerRunning(project.id);
+    await permissionsFileStore.write(project, {
+      allow: ['Terminal(*)'],
+      deny: [],
+      ask: [],
+    });
+
+    const action = await proposeAction.execute(project.id, session.id, {
+      actionType: 'terminal',
+      actor: { kind: 'agent', id: 'dev-api' },
+      payload: { command: 'git push origin HEAD:feature/x' },
+    });
+
+    expect(action.resolvedPolicy).toBe('require_approval');
+    expect(action.status).toBe('pending');
+    expect(fakeEngineClient.calls).toHaveLength(0);
+  });
+
+  it('sudo por dentro do terminal continua require_approval mesmo com container ativo — teto absoluto (RN-418/ADR 0102)', async () => {
+    const { project, session } = await setupSession();
+    await marcarContainerRunning(project.id);
+    await permissionsFileStore.write(project, {
+      allow: ['Terminal(*)'],
+      deny: [],
+      ask: [],
+    });
+
+    const action = await proposeAction.execute(project.id, session.id, {
+      actionType: 'terminal',
+      actor: { kind: 'agent', id: 'dev-api' },
+      payload: { command: 'sudo apt-get update' },
+    });
+
+    expect(action.resolvedPolicy).toBe('require_approval');
+    expect(action.status).toBe('pending');
+    expect(fakeEngineClient.calls).toHaveLength(0);
+  });
+
+  it('regra explícita de require_approval (permissions.json ask) rebaixa o piso do container — o piso não é um teto', async () => {
+    const { project, session } = await setupSession();
+    await marcarContainerRunning(project.id);
+    await permissionsFileStore.write(project, {
+      allow: [],
+      deny: [],
+      ask: ['Terminal(npm test)'],
+    });
+
+    const action = await proposeAction.execute(project.id, session.id, {
+      actionType: 'terminal',
+      actor: { kind: 'agent', id: 'dev-api' },
+      payload: { command: 'npm test' },
+    });
+
+    expect(action.resolvedPolicy).toBe('require_approval');
+    expect(action.status).toBe('pending');
+    expect(fakeEngineClient.calls).toHaveLength(0);
   });
 });

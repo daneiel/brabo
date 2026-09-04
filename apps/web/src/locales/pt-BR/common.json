@@ -1,0 +1,21 @@
+{
+  "sidebar": {
+    "account": "Conta",
+    "containers": "Containers"
+  },
+  "account": {
+    "title": "Conta",
+    "subtitle": "Ajustes que seguem você, não um projeto específico.",
+    "emailLabel": "Conectado como",
+    "language": {
+      "title": "Idioma",
+      "eyebrow": "interface",
+      "subtitle": "Só esta página está traduzida por enquanto — o resto da interface está sendo traduzido numa etapa separada, maior.",
+      "ptBR": "Português (Brasil)",
+      "en": "Inglês",
+      "saving": "Salvando…",
+      "saved": "Idioma salvo",
+      "error": "Não foi possível salvar sua preferência de idioma"
+    }
+  }
+}

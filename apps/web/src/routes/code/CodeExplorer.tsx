@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { getCodeTree, mensagemDaApi } from '../../lib/api-client';
-import { ChevronDownIcon, ChevronRightIcon, FileIcon, FolderIcon } from '../../components/ui/icons';
+import { FileIcon, FolderIcon } from '../../components/ui/icons';
+import { Disclosure } from '../../components/ui/Disclosure';
 import type { CodeTreeEntry } from '../../lib/api-types';
 import styles from './CodeExplorer.module.css';
 
@@ -25,6 +27,7 @@ interface CodeExplorerProps {
  * usuário a abre.
  */
 export function CodeExplorer({ projectId, gitRef, activePath, onOpenFile }: CodeExplorerProps) {
+  const { t } = useTranslation('code');
   const raizQuery = useQuery({
     queryKey: ['code-tree', projectId, gitRef, ''],
     queryFn: () => getCodeTree(projectId, { ref: gitRef, path: '' }),
@@ -33,23 +36,23 @@ export function CodeExplorer({ projectId, gitRef, activePath, onOpenFile }: Code
 
   return (
     <div className={styles.explorador}>
-      <div className={styles.cabecalho}>Explorador</div>
+      <div className={styles.cabecalho}>{t('explorer.title')}</div>
       <div className={styles.arvore}>
-        {!gitRef && <div className={styles.estado}>Sem branch para navegar.</div>}
+        {!gitRef && <div className={styles.estado}>{t('explorer.noRef')}</div>}
 
-        {gitRef && raizQuery.isLoading && <div className={styles.estado}>Carregando…</div>}
+        {gitRef && raizQuery.isLoading && <div className={styles.estado}>{t('explorer.loading')}</div>}
 
         {gitRef && raizQuery.isError && (
           <div className={styles.estadoErro} role="alert">
-            <span>{mensagemDaApi(raizQuery.error, 'Não consegui listar a raiz do repositório.')}</span>
+            <span>{mensagemDaApi(raizQuery.error, t('explorer.loadErrorFallback'))}</span>
             <button type="button" className={styles.botaoTentar} onClick={() => void raizQuery.refetch()}>
-              Tentar de novo
+              {t('shared.retry')}
             </button>
           </div>
         )}
 
         {gitRef && raizQuery.data && raizQuery.data.entries.length === 0 && (
-          <div className={styles.estado}>Repositório vazio nesta ref.</div>
+          <div className={styles.estado}>{t('explorer.empty')}</div>
         )}
 
         {gitRef && raizQuery.data && raizQuery.data.entries.length > 0 && (
@@ -69,9 +72,7 @@ export function CodeExplorer({ projectId, gitRef, activePath, onOpenFile }: Code
         )}
 
         {gitRef && raizQuery.data?.truncated && (
-          <div className={styles.truncado}>
-            A raiz tem mais entradas do que o teto por nível — refine navegando pelas pastas.
-          </div>
+          <div className={styles.truncado}>{t('explorer.truncated')}</div>
         )}
       </div>
     </div>
@@ -96,6 +97,7 @@ interface TreeEntryProps {
 }
 
 function TreeEntry({ entrada, projectId, gitRef, depth, activePath, onOpenFile }: TreeEntryProps) {
+  const { t } = useTranslation('code');
   const [aberto, setAberto] = useState(false);
   const indentacao = 8 + depth * 13;
 
@@ -124,36 +126,41 @@ function TreeEntry({ entrada, projectId, gitRef, depth, activePath, onOpenFile }
   }
 
   return (
-    <li>
-      <button
-        type="button"
-        className={styles.linha}
-        style={{ paddingLeft: indentacao }}
-        onClick={() => setAberto((v) => !v)}
-        aria-expanded={aberto}
+    // A indentação por profundidade é a peculiaridade que o `Disclosure`
+    // genérico não tem hook pra cobrir (não existe prop `style` no
+    // cabeçalho): em vez de estender o componente compartilhado por causa
+    // de UM valor numérico, a profundidade vira variável CSS no `<li>` — ela
+    // herda por qualquer número de wrappers que o `Disclosure` insira, e
+    // `.linha` (classNameCabecalho) lê `var(--indent)`. Pixel a pixel igual
+    // ao `style={{ paddingLeft: indentacao }}` de antes.
+    <li style={{ ['--indent' as string]: `${indentacao}px` }}>
+      <Disclosure
+        aberto={aberto}
+        onAlternar={() => setAberto((v) => !v)}
+        classNameCabecalho={styles.linha}
+        titulo={
+          <>
+            <FolderIcon size={13} />
+            <span className={styles.nome}>{entrada.name}</span>
+          </>
+        }
       >
-        {aberto ? <ChevronDownIcon size={12} /> : <ChevronRightIcon size={12} />}
-        <FolderIcon size={13} />
-        <span className={styles.nome}>{entrada.name}</span>
-      </button>
-
-      {aberto && (
         <ul className={styles.lista}>
           {filhosQuery.isLoading && (
             <li className={styles.estadoFilho} style={{ paddingLeft: indentacao + 18 }}>
-              Carregando…
+              {t('explorer.loading')}
             </li>
           )}
           {filhosQuery.isError && (
             <li className={styles.estadoFilho} style={{ paddingLeft: indentacao + 18 }}>
               <span role="alert">
-                {mensagemDaApi(filhosQuery.error, 'Não consegui listar esta pasta.')}
+                {mensagemDaApi(filhosQuery.error, t('explorer.folderErrorFallback'))}
               </span>
             </li>
           )}
           {filhosQuery.data && filhosQuery.data.entries.length === 0 && (
             <li className={styles.estadoFilho} style={{ paddingLeft: indentacao + 18 }}>
-              Pasta vazia.
+              {t('explorer.folderEmpty')}
             </li>
           )}
           {filhosQuery.data &&
@@ -173,11 +180,11 @@ function TreeEntry({ entrada, projectId, gitRef, depth, activePath, onOpenFile }
               className={styles.truncadoFilho}
               style={{ paddingLeft: indentacao + 18 }}
             >
-              Mais entradas do que o teto por nível.
+              {t('explorer.folderTruncated')}
             </li>
           )}
         </ul>
-      )}
+      </Disclosure>
     </li>
   );
 }

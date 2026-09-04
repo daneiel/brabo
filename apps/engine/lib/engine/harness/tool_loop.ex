@@ -153,7 +153,16 @@ defmodule Engine.Harness.ToolLoop.Default do
             content: content,
             error: Map.get(resp, "error"),
             iteration: ctx.iteration,
-            tokensSpentMicros: ctx.tokens_spent_micros
+            tokensSpentMicros: ctx.tokens_spent_micros,
+            # RN-175: o modelo que gerou a resposta, do MESMO frame de onde já
+            # saem `usage` e `error`. Os quatro conversacionais gravam isto
+            # desde a RN-146; o `ToolLoop` — que é o caminho de TODO agente de
+            # execução e de gate (dev-*, QA, SecOps, Infra-Workflows,
+            # Psicólogo, Anamnese) — nunca gravou, e por isso a tela mostrava
+            # o rótulo genérico para todos eles. `RunLlmTurnUseCase` já
+            # devolve `modelName` no corpo (nulo só quando falha ANTES de
+            # resolver o binding), então não há chamada nova.
+            modelName: Map.get(resp, "modelName")
           })
         end
 

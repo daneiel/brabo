@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import i18next from 'i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import authEn from '../locales/en/auth.json';
+import authPtBR from '../locales/pt-BR/auth.json';
 import { LoginPage } from './LoginPage';
 
 /**
@@ -10,11 +14,35 @@ import { LoginPage } from './LoginPage';
  * inexistente, senha errada, conta bloqueada e conta migrada — se esta tela
  * tentasse traduzir cada caso, estaria inventando informação que não recebeu.
  */
+// Instância REAL de i18next, com os recursos do namespace "auth" — mesmo
+// padrão de AccountPage.test.tsx: o que se prova aqui é o texto que a tela
+// mostra, não a mecânica de i18next em si.
+function novaInstanciaI18n() {
+  const instancia = i18next.createInstance();
+  void instancia.use(initReactI18next).init({
+    resources: {
+      en: { auth: authEn },
+      'pt-BR': { auth: authPtBR },
+    },
+    lng: 'pt-BR',
+    fallbackLng: 'pt-BR',
+    defaultNS: 'auth',
+    ns: ['auth'],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+  return instancia;
+}
+
 function montar(
   onEntrar = vi.fn().mockResolvedValue({ ok: true }),
   irPara = vi.fn(),
 ) {
-  render(<LoginPage onEntrar={onEntrar} irPara={irPara} />);
+  render(
+    <I18nextProvider i18n={novaInstanciaI18n()}>
+      <LoginPage onEntrar={onEntrar} irPara={irPara} />
+    </I18nextProvider>,
+  );
   return { onEntrar, irPara };
 }
 
@@ -118,5 +146,35 @@ describe('LoginPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Esqueci minha senha' }));
     expect(irPara).toHaveBeenCalledWith('/esqueci-senha');
+  });
+
+  describe('login social (ADR 0084)', () => {
+    it('os dois links apontam para as rotas de início do OAuth, sem fetch nenhum', () => {
+      montar();
+
+      const github = screen.getByRole('link', { name: /Continuar com GitHub/ });
+      const gitlab = screen.getByRole('link', { name: /Continuar com GitLab/ });
+
+      expect(github).toHaveAttribute(
+        'href',
+        expect.stringMatching(/\/auth\/oauth\/github\/start$/),
+      );
+      expect(gitlab).toHaveAttribute(
+        'href',
+        expect.stringMatching(/\/auth\/oauth\/gitlab\/start$/),
+      );
+    });
+
+    it('?oauth_error=1 mostra um alerta genérico, sem detalhar o motivo (RN-283)', () => {
+      render(
+        <I18nextProvider i18n={novaInstanciaI18n()}>
+          <LoginPage onEntrar={vi.fn()} irPara={vi.fn()} erroOAuth />
+        </I18nextProvider>,
+      );
+
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /não foi possível concluir o login social/i,
+      );
+    });
   });
 });
