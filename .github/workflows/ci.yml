@@ -482,8 +482,24 @@ jobs:
       # em `moderate` num monorepo com esta árvore de dependências
       # transformaria o CI num bloqueio permanente por coisa que ninguém pode
       # resolver hoje, e a reação seria desligar o gate inteiro.
+      # NÃO é `pnpm audit` direto: o script separa "não consegui perguntar" de
+      # "encontrei vulnerabilidade", e só o PRIMEIRO é risco assumido.
+      #
+      # O endpoint de advisories do npm derrubou este job em QUATRO PRs em
+      # 2026-09-04, sempre com a mesma assinatura (`advisories/bulk error
+      # (503)` + `TimeoutError`), e reproduzido fora do CI batendo direto nele.
+      # Gate que reprova por indisponibilidade de terceiro ensina a re-rodar
+      # até passar — e quem aprende isso re-roda também quando o vermelho era
+      # de verdade.
+      #
+      # Decisão do dono do produto (2026-09-04): três tentativas sem resposta
+      # = RISCO ASSUMIDO, verde com aviso alto no resumo do job. Vulnerabilidade
+      # encontrada continua reprovando na PRIMEIRA, sem retentativa, e saída
+      # desconhecida reprova também (fail closed). Ver ADR 0140.
       - name: pnpm audit (workspace)
-        run: pnpm audit --audit-level critical
+        env:
+          TENTATIVAS: '3'
+        run: node scripts/ci/auditoria-de-dependencias.ts
 
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124  # v1
         with:

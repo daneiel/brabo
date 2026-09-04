@@ -340,11 +340,16 @@ rules:
       # consequência: regra que cobra o que não faz sentido ensina a usar o
       # escape hatch por reflexo, e aí ele para de significar alguma coisa.
       #
-      # O extglob EXCLUI os dois pelo nome e continua casando com todo o resto
+      # `auditoria-de-dependencias.ts` (ADR 0140) entrou pelo MESMO critério: o
+      # que ele decide é quando um timeout do endpoint de advisories do npm
+      # vira risco assumido, e isso não toca degrau, destino nem versão. A doc
+      # dele é `cadeia-de-suprimentos-do-ci.md`, onde o risco está declarado.
+      #
+      # O extglob EXCLUI os três pelo nome e continua casando com todo o resto
       # — inclusive com script de política que ainda não existe. Falha fechado:
       # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
       # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
-      - "scripts/ci/!(coverage-floor|actions-pinadas)*"
+      - "scripts/ci/!(coverage-floor|actions-pinadas|auditoria-de-dependencias)*"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
