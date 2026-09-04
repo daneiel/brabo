@@ -6898,14 +6898,23 @@ consumida pelo seed (`seed-golden-set-rag.ts`) e testada isolada — a mesma
 disciplina de `gate-registry.ts`: a decisão de "isto bateu" não depende de
 como o resultado chegou.
 
-O golden-set roda **manual** (`mix golden_set.rag`), nunca em CI — mesma
-decisão já registrada para o golden-set do QA (ADR 0123): sem segredo de LLM
-de API ou infra nova, não há como rodar Ollama de verdade em CI. Excluído
-por tag PERMANENTE (`:golden_set_rag`) em `test_helper.exs`, nunca por
-detecção de "Ollama alcançável" — mesmo motivo do lado QA: esta máquina já
-tem Ollama de pé o tempo todo. O piso é RATCHET (`>=`, nunca `>`), contagem e
-não porcentagem, chaveado pelo modelo de EMBEDDING (`nomic-embed-text`, hoje
-o único que o produto suporta) e escrito só por humano.
+O golden-set roda **manual** (`mix golden_set.rag`), nunca em `mix test`
+comum — mesma decisão já registrada para o golden-set do QA (ADR 0123):
+sem segredo de LLM de API ou infra nova, não havia como rodar Ollama de
+verdade em CI. Excluído por tag PERMANENTE (`:golden_set_rag`) em
+`test_helper.exs`, nunca por detecção de "Ollama alcançável" — mesmo motivo
+do lado QA: esta máquina já tem Ollama de pé o tempo todo. O piso é RATCHET
+(`>=`, nunca `>`), contagem e não porcentagem, chaveado pelo modelo de
+EMBEDDING (`nomic-embed-text`, hoje o único que o produto suporta) e
+escrito só por humano.
+
+**Revisada pela RN-498:** "não há como rodar Ollama de verdade em CI" era
+verdade na Etapa 2 e deixou de ser na Etapa 3 (ADR 0138) — um workflow
+dedicado, agendado, agora roda `mix golden_set.rag` de verdade contra um
+Ollama real em CI. A exclusão permanente em `test_helper.exs` acima
+CONTINUA valendo como está: ela protege o `mix test` comum (e a máquina de
+qualquer desenvolvedor com Ollama de pé), nunca o novo workflow, que invoca
+a tag explicitamente, do mesmo jeito que sempre foi preciso.
 
 - **Onde:** `apps/api/src/domain/rag/golden-set-criterio.ts`,
   `apps/api/scripts/seed-golden-set-rag.ts`,
@@ -7390,6 +7399,55 @@ mount É a raiz confirmada, ponto.
   (os três com describe "mounted/runner (ADR 0137)")
 - **Decisão arquitetural:** [ADR 0137](adr/0137-o-runner-sobe-o-container-do-projeto.md)
 - **Origem:** plano do dono do produto, Parte 1 / PR 1.3
+
+### RN-498 — O golden-set do RAG roda em CI de verdade, AGENDADO — e o gate continua `warn` {#rn-498}
+
+A RN-490 registrou o golden-set do RAG (ADR 0132) nascendo `mix
+golden_set.rag` manual, "nunca em CI", pelo mesmo motivo do golden-set do
+QA (ADR 0123): sem segredo de LLM de API ou infra nova, não havia como
+rodar Ollama de verdade em um runner de CI. Esta RN fecha essa metade —
+só para o RAG, nunca para o QA — com um workflow dedicado
+(`.github/workflows/golden-set-rag.yml`, `schedule` + `workflow_dispatch`)
+que puxa `nomic-embed-text` num serviço Ollama real (mesma versão pinada
+`0.33.1` do resto do produto) e roda `mix golden_set.rag` de verdade.
+
+**A diferença que torna isto tratável para o RAG e não para o QA:** o
+golden-set do RAG só chama o modelo de EMBEDDING — CPU, determinístico,
+sem amostragem — nunca um modelo de CHAT fazendo julgamento, que é o que o
+golden-set do QA exige (caro, mede algo não-determinístico por natureza,
+como o próprio ADR 0123 registra com rodadas reais variando 1 a 5 acertos
+em 6). `ubuntu-latest`, sem GPU nenhuma, basta aqui — não bastaria para o
+QA. O golden-set do QA **não muda nada** com esta RN: continua inteiramente
+manual, `TODO(humano)` no CLAUDE.md.
+
+**`severidade: warn` (`docs/gates.yml`) CONTINUA `warn`, e o motivo mudou.**
+Não é mais "não há CI com LLM" — passa a ser cadência: o workflow é
+AGENDADO (noturno + disparo manual), nunca roda por `pull_request`. `block`
+prometeria um travamento de merge que não existe — o mesmo raciocínio que
+já valia na Etapa 2, aplicado à razão certa agora. Uma regressão de acerto
+de busca vira sinal de tendência visível em até 24h (ou na hora, via
+`workflow_dispatch`), nunca um gate que bloqueia PR — trade-off aceito
+explicitamente pelo dono do produto, dado o custo de puxar o modelo e
+rodar 17 buscas (alguns minutos) em toda janela.
+
+**Nenhum segredo precisa ser gerado no workflow.** `seed-golden-set-rag.ts`
+nunca define `NODE_ENV`, e os quatro segredos que a api recusaria com
+literal de exemplo em produção (RN-114) só são checados quando
+`NODE_ENV === 'production'` — o script cai no ramo de desenvolvimento e usa
+os literais de dev sem reclamar, diferente de `docker/smoke.sh`, que sobe
+com `NODE_ENV=production` de propósito e por isso gera os seus com
+`openssl rand`.
+
+**A exclusão permanente da tag `:golden_set_rag` em `test_helper.exs`
+(RN-490) não muda.** Ela protege o `mix test` comum — inclusive na máquina
+de qualquer desenvolvedor com Ollama de pé — nunca o novo workflow, que
+invoca `mix golden_set.rag` explicitamente, do mesmo jeito que sempre foi
+preciso rodar manual.
+
+- **Onde:** `.github/workflows/golden-set-rag.yml`, `docs/gates.yml`
+  (`rag-acertivo`)
+- **ADR:** [0138](adr/0138-golden-set-do-rag-em-ci-agendado.md)
+- **Origem:** plano do dono do produto, Parte 2 / Etapa 3
 
 ---
 

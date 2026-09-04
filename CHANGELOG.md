@@ -1622,6 +1622,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `HADOLINT_VERSION`/`ACTIONLINT_VERSION` entre `ci.yml` e
   `docker/engine/Dockerfile.prod` e falha se divergirem — o comentário que
   prometia isso não era garantido por nada até agora.
+- **engine,api,ci**: o golden-set de acerto do RAG (ADR 0132, RN-490) passa
+  a rodar em CI de verdade — Etapa 3 do programa de RAG mensurável (ADR
+  0138, RN-498). Workflow novo, `.github/workflows/golden-set-rag.yml`,
+  separado de `ci.yml` de propósito: roda AGENDADO (`schedule` noturno +
+  `workflow_dispatch`), nunca por `pull_request` — sobe `postgres` e
+  `ollama` (mesma versão `0.33.1` pinada do resto do produto) como
+  serviços, puxa `nomic-embed-text` e roda `mix golden_set.rag` contra um
+  Ollama real. O gate `rag-acertivo` (`docs/gates.yml`) CONTINUA `warn`: um
+  workflow agendado não bloqueia PR nenhum, então `block` prometeria um
+  travamento que não existe — o motivo do `warn` mudou (de "sem CI com
+  LLM" para "cadência de custo"), a severidade não. Tratável só pra este
+  golden-set, não pro do QA (ADR 0123, sem mudança nenhuma): aqui só o
+  modelo de EMBEDDING roda, CPU, determinístico — nunca um modelo de chat
+  fazendo julgamento.
 
 ### Manutenção
 

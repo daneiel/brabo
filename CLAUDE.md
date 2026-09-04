@@ -76,6 +76,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | O portão da imagem nos três modos (PR 1.7, BREAKING) | Executa a decisão #5 do plano original, já aceita antes deste PR existir: a dispensa do portão RN-105 (409 sem imagem decidida) para `mounted`/`runner` (RN-169/RN-421, ADR 0072/0104) é REVOGADA — `ReadProjectCodeUseCase.portaoDoContainer` deixa de checar `executionMode`, e `ProjectCodeTab` (web) SIMPLIFICA: os três modos seguem o mesmo `useQuery`, `modoLocal` sai. `RegistrarTransicaoDeContainerUseCase` também para de recusar (400) por modo — `project_containers` pode nascer nos três, mas chegar em `running` de verdade CONTINUA impossível para `mounted`/`runner`, aplicado só no broker (`ModoDeExecucaoNaoSuportadoError`), que `ExecuteContainerStartUseCase` já trata sem crash nem silêncio, ANTES de qualquer transição ser chamada — por isso nenhuma checagem de modo foi duplicada na api. Custo aceito, declarado: `exp001`/`exp002` e qualquer outro projeto `mounted`/`runner` existente sem imagem decidida perdem a aba Code até o Arquiteto (ou a Infra) decidir uma — ação de operador exigida DEPOIS do deploy, por isso a branch nasce `breaking/` e a versão sobe MAJOR | ADR 0135, RN-494 |
 | Página global de containers (PR 1.8, fecha a Parte 1) | `/containers`, cross-projeto: uma linha por projeto do workspace com `project_containers` — imagem CONGELADA (`imageVersion`, não a vigente), estado REGISTRADO, estado OBSERVADO e recursos, via `ContainersOverviewRepository` (TRÊS consultas em lote, mesmo molde de `ProjectsSummaryRepository`, nunca N+1). Perguntar o observado ao broker é chamada de rede por projeto — só `provisioning`/`running` são elegíveis, com teto de 20 chamadas por carregamento (`TETO_DE_VERIFICACOES_POR_CARGA`); o que fica de fora diz por quê (`naoVerificado`), nunca confundido com o broker ter recusado (`naoObservado`). Dois tipos de ação NOVOS fecham as cinco operações do ADR 0128/0130 (todas com chamador agora): `container_stop` segue o calibre de `container_start` (`maintainer`, pode auto-aprovar); `container_remove` — descarta o container, exige reprovisionar do zero — entra no MESMO teto absoluto de git push/comando privilegiado (RN-418), nunca auto-aprovável, "sempre permitir" recusado na fonte. `ContainerBrokerPort.remove` já era `docker rm --force`; a máquina de estados não ganhou atalho `running → removed` — o caso de uso registra os dois hops. "Subir de novo" REUSA `container_start` sem mudança de backend, montando o payload a partir da decisão de imagem vigente do projeto | ADR 0136, RN-495/496 |
 | O runner sobe o container do projeto (PR 1.3, Parte 1 fora de ordem — fecha a metade que a RN-494/PR 1.7 tinha deixado declarada) | `container_start`/`container_stop`/`container_remove` ganham SEGUNDO caminho de execução, ramificado por `executionMode`: `container` segue pelo broker (inalterado); `mounted`/`runner` passam a pedir ao RUNNER conectado, via TRÊS pares novos no canal Phoenix (`container_start`/`_result`, `container_stop`/`_result`, `container_remove`/`_result`, mesmo molde de `exec`/`exec_result`) — `EngineWeb.ContainerCommandController` repassa pro `RunnerRouter`, que o runner atende com `DockerViaCli` (o Docker DELE, `@brabo/docker-port`, que ganha uso real além de `--self-test-docker`). A imagem é LIDA (`ObterSpecDeContainerUseCase`, o mesmo caso de uso do broker), nunca reeleita. "Sem runner"/"timeout" (`RunnerNaoConectadoError`) e "runner recusou" (`RunnerRecusouContainerError`) viram `failed` nomeado, nunca exceção. `Engine.Actions.TerminalExecutor` não ganhou saída nova — ele já roteava todo comando de projeto `runner` conectado pro canal incondicionalmente; a escolha host-vs-container é INTERNA ao runner (`EstadoDoRunner.containerAtivo`, `tratarExec` roteia via `docker exec` com `cwd` traduzido por troca de prefixo, `cwdParaContainer`). `guard.ts`/RN-434 passa a cobrir o bind-mount sem NENHUMA validação nova — o mount É a raiz já confirmada no startup da CLI | ADR 0137, RN-497 |
+| Golden-set do RAG em CI, agendado (Parte 2/Etapa 3) | Fecha a metade que a RN-490/ADR 0132 tinha deixado como `TODO(humano)` — só para o RAG, nunca para o QA (ADR 0123, sem mudança nenhuma). Workflow novo (`.github/workflows/golden-set-rag.yml`, `schedule` noturno + `workflow_dispatch`, separado de `ci.yml` de propósito) sobe `postgres`+`ollama` como serviços e roda `mix golden_set.rag` de verdade — tratável porque este golden-set só chama o modelo de EMBEDDING (CPU, determinístico), nunca um modelo de chat fazendo julgamento como o do QA exige. `rag-acertivo` CONTINUA `warn`: agendado nunca bloqueia PR, então `block` prometeria um travamento que não existe — o motivo mudou (de "sem CI" para "cadência"), a severidade não. Achado que dispensou geração de segredo: `seed-golden-set-rag.ts` nunca define `NODE_ENV`, então os quatro segredos de RN-114 caem no literal de dev sem reclamar | ADR 0138, RN-498 |
 
 ## Estado atual e aberto
 
@@ -225,7 +226,10 @@ daqui e o fechamento vai para o histórico.
   mede se o arquivo certo aparece, não se os PESOS estão certos; mexer nos
   quatro números antes de acumular medição de verdade continuaria destruindo
   a linha de base que os dois instrumentos juntos existem para criar (Etapa 5
-  é a única que calibra, e só se a medição comprovar que ajuda)
+  é a única que calibra, e só se a medição comprovar que ajuda). O que mudou
+  desde a Etapa 3 (ADR 0138, RN-498) é só ONDE o golden-set roda — em CI
+  agora, agendado, além de manual — nunca O QUE ele mede nem o corpus que
+  usa; corpus curado e calibração continuam exatamente como estavam
 - `rc/rcfix` (ADR 0030) e preferência de moeda com taxa manual seguem no
   backlog original da FASE 13c, sem revisão desde então
 - Pull de modelo Hugging Face roda o download inteiro de forma SÍNCRONA
@@ -246,13 +250,15 @@ daqui e o fechamento vai para o histórico.
   `apps/engine`) contra Ollama local — nunca em CI. Ligar em CI exige
   segredo de LLM de API OU infra nova (runner com GPU, passo de pull do
   Ollama): decisão de um humano, não algo que se constrói escolhendo
-- Golden-set de acerto do RAG (ADR 0132, RN-490) — mesma régua do de cima,
-  mesmo motivo: roda manualmente (`mix golden_set.rag`) contra Ollama local
-  (`nomic-embed-text`), nunca em CI. Medido de verdade nesta sessão (17/17,
-  duas rodadas, determinístico), piso gravado em `floor.json` — mas contra um
-  corpus CURADO (22 arquivos), não os 130+ ADRs reais do produto; ampliar o
-  corpus é decisão de custo de embedding numa rodada manual, não escolhida
-  aqui
+- Golden-set de acerto do RAG (ADR 0132, RN-490) — a metade "nunca em CI"
+  FECHOU na Etapa 3 (ADR 0138, RN-498): `.github/workflows/golden-set-rag.yml`
+  roda `mix golden_set.rag` de verdade, agendado (o gate `rag-acertivo`
+  continua `warn`, agora por cadência, não por falta de CI). O que segue
+  pendência de dono humano é só a outra metade: medido de verdade (17/17,
+  duas rodadas manuais antes disso, determinístico), piso gravado em
+  `floor.json` — mas contra um corpus CURADO (22 arquivos), não os 130+
+  ADRs reais do produto; ampliar o corpus é decisão de custo de embedding
+  numa rodada manual, não escolhida aqui
 
 **Backlog vivo:** `docs/explanation/backlog.md` (fonte única de priorização).
 
