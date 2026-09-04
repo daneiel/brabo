@@ -521,16 +521,31 @@ jobs:
         working-directory: apps/engine
         run: mix deps.get
 
-      # Os dois respondem perguntas DIFERENTES e por isso os dois rodam:
-      #   hex.audit    -> este pacote foi APOSENTADO pelo autor?
-      #   deps.audit   -> este pacote tem CVE publicada? (mix_audit)
-      # Só o primeiro, que foi o pedido original, deixaria o gate do engine sem
-      # detectar vulnerabilidade nenhuma.
-      - name: mix hex.audit (pacotes aposentados)
+      # Os dois rodam, mas NÃO pela divisão que este comentário afirmava até
+      # 2026-09-04 ("hex.audit -> aposentado, deps.audit -> CVE"). O `hex.audit`
+      # cobre os DOIS assuntos e reprova por qualquer um deles — o `@shortdoc`
+      # do próprio Hex é "Shows retired Hex deps and security advisories" —, e
+      # foi ele quem pegou as duas advisories de `mint 1.9.3` que derrubaram a
+      # PR de promoção #473. O comentário antigo mandava quem estivesse
+      # depurando o vermelho procurar por pacote aposentado, que não era o caso.
+      #
+      # O que separa os dois é a BASE, não o assunto:
+      #   hex.audit   -> o que a hex.pm serve no registro (retirement +
+      #                  advisory), a mesma origem dos pacotes
+      #   deps.audit  -> o repositório `elixir-security-advisories` (mix_audit)
+      # Bases diferentes divergem, e a que estiver na frente é a que pega o
+      # caso. Por isso os dois ficam: cortar um é aceitar o atraso do outro,
+      # não remover redundância.
+      #
+      # Um passo reprovado ENCERRA o job (`bash -e`), então numa run vermelha o
+      # segundo auditor não chega a rodar e o relatório fica pela metade — foi o
+      # que aconteceu na #473. Aceito: o desfecho do gate não muda, e o passo
+      # que sobrou roda sozinho no próximo push.
+      - name: mix hex.audit (aposentados e advisories da hex.pm)
         working-directory: apps/engine
         run: mix hex.audit
 
-      - name: mix deps.audit (CVEs)
+      - name: mix deps.audit (elixir-security-advisories)
         working-directory: apps/engine
         run: mix deps.audit
 
