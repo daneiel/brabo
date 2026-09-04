@@ -1606,6 +1606,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### CI
 
+- **ci**: o alarme de merge de esteira ganha **destinatário** (ADR 0139). A
+  verificação já existia e já funcionava — o `tag-release` reprovou as duas
+  promoções squashadas (#367 e #394) com a mensagem certa —, mas workflow de
+  `push` que falha numa permanente não tem PR onde ficar vermelho: sobrava um
+  run na aba Actions que nada apontava, e o repositório tinha zero issues na
+  história inteira. Agora `tag-release` tem um job `avisar` que **abre uma
+  issue** com branch, commit, run e o conserto, e **comenta na já aberta** em
+  vez de abrir uma segunda para a mesma branch. Autentica com `github.token`,
+  nunca com o PAT — um `BRABO_BOT_TOKEN` inválido é uma das falhas que ele
+  precisa reportar. A regra passa a cobrir `dev` de forma ESTREITA: lá trabalho
+  entra por squash de propósito, então só é defeito o PR que trazia uma
+  **aresta nova** (head era merge cujo segundo pai não estava na base) — o caso
+  da #464, cuja entrega inteira era essa aresta. Verificado contra os três
+  commits reais que o motivaram, sem falso positivo
+
 - **ci,docker**: endurece a cadeia de suprimentos do CI (achados #1 e #8 da
   revisão externa de 2026-08-28, `docs/explanation/backlog.md`). Todo
   binário baixado por `curl` num release do GitHub (gitleaks, hadolint,

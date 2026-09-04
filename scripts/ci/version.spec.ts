@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CicloVazioError,
   classificar,
+  conferirMergeDeEsteira,
   explicarParInvalido,
   extrairNumerosDePr,
   identificarCaminho,
@@ -397,5 +398,69 @@ describe('a esteira, de ponta a ponta', () => {
     const shas = { 'v0.2.0-qa.1': 'aaa', 'v0.2.0-qa.2': 'bbb' };
     expect(verificarAncora(versao, tags, shas, 'bbb').ok).toBe(true);
     expect(verificarAncora(versao, tags, shas, 'aaa').ok).toBe(false);
+  });
+});
+
+// -------------------------------------------- 8. o merge de esteira e seus pais
+
+describe('conferirMergeDeEsteira', () => {
+  it('reprova promoção em qa com um pai só — o caso do #367 e do #394', () => {
+    const v = conferirMergeDeEsteira({ branch: 'qa', pais: 1, trazAresta: null });
+    expect(v.ok).toBe(false);
+    expect(v.motivo).toContain('não é merge commit (1 pai)');
+    expect(v.motivo).toContain('Create a merge commit');
+  });
+
+  it('aprova promoção em qa com dois pais', () => {
+    expect(conferirMergeDeEsteira({ branch: 'qa', pais: 2, trazAresta: null }).ok).toBe(true);
+  });
+
+  it('reprova em main com um pai só', () => {
+    expect(conferirMergeDeEsteira({ branch: 'main', pais: 1, trazAresta: null }).ok).toBe(false);
+  });
+
+  // A taxa-base manda aqui: `dev` recebe trabalho o tempo todo, e trabalho
+  // entra por squash de propósito. Reprovar isso seria um alarme que dispara
+  // em todo PR — e alarme que sempre toca é alarme desligado.
+  it('aprova squash de PR de trabalho em dev', () => {
+    const v = conferirMergeDeEsteira({ branch: 'dev', pais: 1, trazAresta: false });
+    expect(v.ok).toBe(true);
+    expect(v.motivo).toContain('convenção do repositório');
+  });
+
+  // O caso da #464: o PR era um merge de `qa` e existia SÓ para entregar essa
+  // aresta. Squashado, entregou nada — e o defeito que ele consertava seguiu
+  // de pé, invisível.
+  it('reprova em dev quando o PR trazia aresta nova e foi squashado', () => {
+    const v = conferirMergeDeEsteira({ branch: 'dev', pais: 1, trazAresta: true });
+    expect(v.ok).toBe(false);
+    expect(v.motivo).toContain('ARESTA NOVA');
+    expect(v.motivo).toContain('#464');
+  });
+
+  // O caso vizinho que NÃO pode ser confundido com o de cima: PR de trabalho
+  // que puxou `dev` para dentro de si antes de mergear. O head é um merge
+  // também, mas o segundo pai já estava na base — o squash não perde nada.
+  it('não confunde PR que puxou dev para dentro de si com aresta nova', () => {
+    expect(conferirMergeDeEsteira({ branch: 'dev', pais: 1, trazAresta: false }).ok).toBe(true);
+  });
+
+  it('aprova retropropagação com dois pais em qualquer branch', () => {
+    expect(conferirMergeDeEsteira({ branch: 'dev', pais: 2, trazAresta: true }).ok).toBe(true);
+    expect(conferirMergeDeEsteira({ branch: 'qa', pais: 2, trazAresta: true }).ok).toBe(true);
+  });
+
+  // `null` é resposta ("não consegui saber"), não ausência de dado. Em `dev`
+  // ela não vira defeito: o alarme cala em vez de acusar sem base.
+  it('em dev, não saber se havia aresta não vira reprovação', () => {
+    const v = conferirMergeDeEsteira({ branch: 'dev', pais: 1, trazAresta: null });
+    expect(v.ok).toBe(true);
+    expect(v.motivo).toContain('sem saber');
+  });
+
+  // Em qa/main o universo é só esteira: não saber a origem não muda nada,
+  // porque o que entra ali é sempre promoção.
+  it('em qa, um pai reprova mesmo sem saber a origem', () => {
+    expect(conferirMergeDeEsteira({ branch: 'qa', pais: 1, trazAresta: null }).ok).toBe(false);
   });
 });
