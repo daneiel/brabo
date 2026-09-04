@@ -4,6 +4,29 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Correções
+
+- **web**: o handoff para a **Infra** volta a ser aceitável — por um card
+  próprio, fora do fio (RN-499). O filtro `AGENTES_DE_CHAT` de
+  `offeredHandoff` (RN-136) exclui `infra` **e está certo em excluir**: o
+  Infra Lead não tem cláusula de `message` no engine, e alargar a lista faria
+  o composer mandar mensagem que seria roteada em silêncio para o Criativo. O
+  que não estava certo era a consequência que o comentário do próprio código
+  registrava como aceita — *"como Infra nunca é aceito por AQUI … na prática,
+  nunca"*: `acceptHandoff` tinha **um único consumidor**, o card do fio, atrás
+  daquele filtro. Resultado: `OfferInfraHandoffUseCase` oferecia o handoff, ele
+  ficava `offered` para sempre, o Infra Lead nunca era ativado, nunca propunha
+  `container_start`, e nenhum projeto de nenhum modo chegava a ter container de
+  pé — uma capacidade inteira inalcançável por tela nenhuma. Agora existe um
+  card acionável na faixa entre o fio e o composer (a mesma que já hospeda o
+  handoff manual, declarada como o lugar das ações de handoff que **não** são
+  conversa), chamando o `acceptHandoff` que já existia. Ele diz a consequência
+  do clique — o Infra Lead assume o provisionamento e vai **propor** a subida
+  do container, proposta que ainda passa pelo pipeline de aprovação de sempre —
+  e some pelo mesmo `activeFor` do card do fio quando a Infra já está ativa. O
+  `handoff.offered` da Infra continua **narrado** no fio como divisor mudo, e
+  nenhum handoff conversacional muda de forma
+
 ### CI
 
 - **ci**: o workflow dos binários do runner passa a **esperar** pela GitHub

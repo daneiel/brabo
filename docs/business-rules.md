@@ -7449,6 +7449,61 @@ preciso rodar manual.
 - **ADR:** [0138](adr/0138-golden-set-do-rag-em-ci-agendado.md)
 - **Origem:** plano do dono do produto, Parte 2 / Etapa 3
 
+### RN-499 — O handoff da Infra tem card acionável PRÓPRIO, fora do fio — sem alargar `AGENTES_DE_CHAT` {#rn-499}
+
+`OfferInfraHandoffUseCase` oferece o handoff pro Infra Lead
+(`offer-infra-handoff.use-case.ts:43`), e até aqui **tela nenhuma podia
+aceitá-lo**. `offeredHandoff` (`SessionPage.tsx`) restringe o card do fio a
+`AGENTES_DE_CHAT` ([RN-136](#rn-136)), que não inclui `infra`, e
+`acceptHandoff` (`api-client.ts`) tinha **um único consumidor** — esse card,
+atrás desse filtro. O comentário do próprio código registrava a consequência
+como aceita: *"como Infra nunca é aceito por AQUI … na prática, nunca"*.
+
+O efeito não era cosmético: o handoff ficava `offered` para sempre, o Infra
+Lead nunca era ativado, `propose_container_start` nunca era chamado
+([RN-491](#rn-491)) e **nenhum projeto de nenhum modo chegava a ter container
+de pé**. A cadeia "Infra aceita → propõe `container_start` → aprovado →
+`running`" era inalcançável por qualquer caminho de tela.
+
+**O filtro NÃO foi alargado, e isso é a regra.** `AGENTES_DE_CHAT` está certo
+em excluir `infra`: o `agent_command_controller.ex` do engine não tem cláusula
+de `message` pro Infra Lead, e a última cláusula (sem guarda) trataria
+`"infra"` como se fosse o Criativo — pôr `infra` na lista faria a tela
+oferecer um fio de conversa que não existe e o composer mandar mensagem pro
+agente errado. Aceitar a Infra é uma ação **propositiva**, não conversacional.
+
+O card acionável mora, então, **fora do fio**: na faixa fixa entre a área que
+rola e o composer, a mesma que hospeda o handoff manual
+([RN-440](#rn-440)) e que já se declara o lugar das ações de handoff que "não
+são conversa, são redirecionamento". Três consequências que a escolha compra:
+o `handoff.offered` da Infra **continua narrado** no fio como divisor mudo
+(nada muda na timeline); nenhum handoff conversacional muda de forma; e o
+botão não some quando a oferta sai da janela de 200 eventos numa sessão longa
+— o card do fio dependeria do evento estar visível, este não depende.
+
+O card **diz a consequência do clique**, porque ela não é óbvia: aceitar ativa
+o Infra Lead, que assume o provisionamento e vai **propor** a subida do
+container; a proposta ainda passa pelo pipeline de aprovação de sempre
+(`container_start`, `maintainer`, nunca auto-aprovável por seed —
+[RN-491](#rn-491)). Aceitar não sobe container nenhum.
+
+Fechamento: o mesmo `activeFor(h.toAgent)` do card do fio — handoff já aceito,
+ou Infra já ativa nesta sessão por qualquer outro caminho, não reabre convite.
+E o clique chama o **mesmo** `handleAcceptHandoff`, sem segundo caminho de
+aceite.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx`
+  (`handoffDaInfraOferecido`, e o bloco `styles.infraHandoffRow` acima do
+  `manualHandoffRow`)
+- **Teste:** `apps/web/src/routes/SessionPage.handoff-da-infra.test.tsx` —
+  card aparece e aceita com os ids certos; some com a Infra já ativa; some em
+  sessão não-ativa; o divisor mudo do fio continua lá sem botão de fio; e a
+  **não-regressão** de [RN-136](#rn-136): Infra (mais antigo) + Dev Lead (mais
+  novo) pendentes mostram os DOIS cards, cada um aceitando o próprio handoff
+- **Origem:** exploração do plano "Nome e local na mesma tela, e container
+  antes dos dev agents" (D0) — o bloqueador que tornava o requisito "dev agent
+  só depois do container de pé" equivalente a "dev agent nunca começa"
+
 ---
 
 ## Quando dá errado
