@@ -1356,6 +1356,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/workspaces-controller-get-projects-base",
+          label: "The base folder for projects in Mounted mode",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/workspaces-controller-get-projects-status",
           label: "Count of blocked tasks per project",
           className: "api-method get",

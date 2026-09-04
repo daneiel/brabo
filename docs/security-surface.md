@@ -171,6 +171,25 @@ reason in the URL.
   `PATCH` with no guard at all. The lexical predicate still runs on every
   derivation of the root — on READS too, not just on creation — because the
   only way to bypass creation is to write straight to the database.
+- **`GET /workspaces/:workspaceId/projects-base` reveals a piece of the
+  operator's filesystem topology, and that's why it isn't `viewer`**
+  ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md),
+  [RN-500](business-rules.md#rn-500)). It returns
+  `{ projectsBase: string | null }` — the single host folder mounted by
+  identity into the `api` and `engine` containers, under which every
+  `mounted` project lives. `null` is the normal state of an installation
+  that doesn't offer Mounted mode, and it's how the project wizard learns
+  not to offer a mode this installation can't honor.
+
+  The minimum is `maintainer`: the **same** as `POST
+  /workspaces/:workspaceId/projects` above, because deciding what that
+  route offers is the only thing this value is for. Inheriting `viewer`
+  from the neighboring `projects-*` reads — they sit next to each other in
+  the same controller — would hand an absolute host path to everyone who
+  can look at the workspace, for no capability in return. `workspaceId`
+  doesn't enter the computation: the base is **installation**
+  configuration, identical for every workspace, and the parameter is there
+  only to give the `RolesGuard` a scope.
 - **`GET /`** is the NestJS scaffold's "Hello World!"
   (`src/app.controller.ts`). It's behind the guard and leaks nothing, but
   serves no purpose — a removal candidate. It stayed recorded here instead
@@ -686,6 +705,7 @@ reason in the URL.
 | PATCH | `/workspaces/:workspaceId/models/:modelId/pricing` | role:owner |
 | GET | `/workspaces/:workspaceId/projects` | role:viewer |
 | POST | `/workspaces/:workspaceId/projects` | role:maintainer |
+| GET | `/workspaces/:workspaceId/projects-base` | role:maintainer |
 | GET | `/workspaces/:workspaceId/projects-status` | role:viewer |
 | GET | `/workspaces/:workspaceId/projects-summary` | role:viewer |
 | GET | `/workspaces/:workspaceId/summary` | role:viewer |

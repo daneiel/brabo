@@ -42,6 +42,43 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `handoff.offered` da Infra continua **narrado** no fio como divisor mudo, e
   nenhum handoff conversacional muda de forma
 
+### BREAKING
+
+- **feat(config)**: nasce `BRABO_PROJECTS_BASE` — **uma base única**, definida
+  uma vez pelo operador, onde moram as pastas dos projetos no modo **Pasta
+  montada**. Ela é montada por **identidade** (`$X:$X`) nos serviços `api` e
+  `engine`, e com isso **acaba a edição de compose por projeto**: criar um
+  projeto `mounted` exigia acrescentar à mão uma linha de bind-mount nos dois
+  serviços e reiniciá-los — o que mata todo turno de agente, socket de terminal
+  e chamada de LLM em voo da instalação inteira, para onboardar UM projeto.
+  Era tolerável enquanto `mounted` era escape hatch; deixa de ser agora que ele
+  vira escolha de primeira classe.
+
+  **Sem a variável, o modo Pasta montada não é oferecido.** A api passa a
+  responder `projectsBase` em `GET /workspaces/:workspaceId/projects-base`
+  (`maintainer`, o mesmo mínimo de `POST .../projects`), e `null` — estado
+  NORMAL, nunca erro — é como a criação de projeto aprende a não oferecer um
+  modo que a instalação não honra. Os modos `container` (default) e `runner`
+  não são afetados e seguem funcionando sem a variável.
+
+  **`pnpm dev` passa a RECUSAR subir** quando a base contém, ou está contida
+  por, o checkout do Brabo. Essa checagem só é possível no preflight, que roda
+  no host: a api compara o caminho de um projeto contra `process.cwd()`, que
+  dentro do container dela é `/workspace`, e nunca vê o checkout real — sem a
+  guarda, quem clona o Brabo em `$HOME/brabo` e aponta a base para lá passa por
+  toda validação existente e faz os dev agents executarem dentro da árvore do
+  próprio produto (a falha que o ADR 0055 existe para impedir).
+
+  **Ação de operador exigida ANTES do deploy** — daí `breaking/` e MAJOR: quem
+  já usa `mounted` tem linhas de bind-mount por projeto escritas à mão no
+  compose. Elas continuam funcionando e nada as remove (nenhum projeto
+  existente quebra), mas o caminho suportado daqui em diante é a base. O broker
+  ganha `BRABO_PROJECTS_HOST_BASE`, derivada, ainda sem consumidor.
+
+  Custos declarados: symlink sob a base apontando para fora resolve diferente
+  dos dois lados; e esta v1 suporta UMA base — código fora dela exige mover a
+  pasta. Ver ADR 0141 e RN-500.
+
 ### CI
 
 - **ci**: o workflow dos binários do runner passa a **esperar** pela GitHub
