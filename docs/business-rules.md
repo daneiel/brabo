@@ -7665,13 +7665,13 @@ tela afirmando o que não sabe.
   e `:334`
 - **Teste:**
   `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
-  (`describe('materializarWorkspaceMontado')` e a não-regressão
-  `'projeto `mounted` LEGADO, FORA da base, continua resolvendo sem lançar'`);
+  (`describe('materializarWorkspaceMontado')` e a não-regressão "projeto
+  mounted LEGADO, FORA da base, continua resolvendo sem lançar");
   `apps/api/test/application/use-cases/iam/create-project-modo-de-workspace.spec.ts`
   (`describe('mounted valida só o léxico + a base na criação')`);
   `apps/api/test/application/use-cases/iam/convert-project-execution-mode.use-case.spec.ts`;
   `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
-  (`describe('ExecuteContainerStartUseCase — materialização do `mounted`')`)
+  (`describe` "ExecuteContainerStartUseCase — materialização do mounted")
 - **ADR:** [0142](adr/0142-validacao-de-workspace-montado-adiada.md), que
   referencia [0141](adr/0141-base-unica-dos-projetos-montados.md)
 - **Origem:** plano do dono do produto, PR 2
