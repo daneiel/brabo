@@ -260,11 +260,7 @@ The loop that makes the team improve.
 
 - **One file per decision**, at `docs/adr/NNNN-short-title.md`, with
   sequential 4-digit numbering. **No number reuse**, not even when an ADR
-<<<<<<< HEAD
   is superseded — the next one is **0144**.
-=======
-  is superseded — the next one is **0143**.
->>>>>>> 3465d4a72 (feat(api): a pasta montada nasce quando o container sobe (ADR 0142, RN-501))
 - **Three sections, only those:** **Context** (the problem or force that motivated it),
   **Decision** (what was decided), **Consequences** (the accepted trade-offs and
   what's left for later).
