@@ -3,8 +3,8 @@ id: artifacts
 title: Artifacts
 sidebar_label: Artifacts
 sidebar_position: 4
-description: The ten artifact schemas validated in the engine, who can emit each one, and why most are not emittable by the model.
-keywords: [artifact, schema, emit_artifact, qa_verdict, business_rule]
+description: The eleven artifact schemas validated in the engine, who can emit each one, and why most are not emittable by the model.
+keywords: [artifact, schema, emit_artifact, qa_verdict, business_rule, decision_record]
 ---
 
 # Artifacts
@@ -26,8 +26,8 @@ This is the most important distinction on this page, and it's easy to miss:
 | **tool** | the model decides to emit, calling `emit_artifact` |
 | **server** | the code emits when the outcome happens; the model doesn't choose |
 
-**Only two types are emittable by tool:** `note` and `business_rule`. Everything
-else is emitted by the server.
+**Only three types are emittable by tool:** `note`, `business_rule` and
+`decision_record`. Everything else is emitted by the server.
 
 The reason is the same in every case: when the artifact is the **record of an
 outcome**, letting the model choose whether to emit it means letting it omit it. A
@@ -74,6 +74,32 @@ business rules from that conversation were silently rejected**. `origin` as
 free text also fails: it has to be a list, and the description says so in plain
 terms ([RN-061](../business-rules/custo.md#rn-061)).
 :::
+
+### `decision_record` — tool
+
+| field | required |
+|---|---|
+| `context` | ✅ |
+| `options` | ✅ — list |
+| `choice` | ✅ |
+| `consequences` | ✅ |
+
+The "summarized ADR" any of the six conversational agents can emit — the
+Creative, PO, Architect, Dev Lead, UX Designer and Staff all carry
+`emit_artifact` with this type ([RN-505](../business-rules.md#rn-505)). No
+cross-field validation on purpose: `choice` doesn't have to match one of the
+`options` verbatim — free text is more robust, and the generic schema only
+checks key presence, the same rule as `note`/`business_rule`.
+
+It reuses the **generic** pattern instead of the dedicated one
+(`artifact.project_image`/`artifact.c4_diagram`, versioned, own TS schema, own
+HTTP route): a decision is append-only by nature, not a "current" value that
+gets replaced. It is deliberately distinct from `open_adr_pr` (Architect-only,
+commits a real file under `docs/adr/*.md` and opens a real PR with mandatory
+human approval) — the two coexist for different scales of decision:
+`decision_record` is frictionless, searchable in the session log, for any
+relevant decision; `open_adr_pr` is for when the decision is big enough to
+become a real repository document.
 
 ### `product_brief` — server
 
@@ -227,7 +253,7 @@ historical, and is noted as
 
 | error | cause |
 |---|---|
-| `{:unknown_type, tipo}` | type outside the ten |
+| `{:unknown_type, tipo}` | type outside the eleven |
 | `{:missing_keys, [...]}` | required fields missing, all named |
 | `:origem_invalida` | `business_rule.origin` empty or not a list |
 | `{:sujeito_invalido, chaves}` | verdict with both subjects, or with neither |

@@ -24,13 +24,24 @@ defmodule Engine.Agents.ArquitetoServer do
     CreateC4Diagram,
     RouteModulesToInfra,
     ProposeAdr,
-    EmitInsight
+    EmitInsight,
+    EmitArtifact
   }
 
   alias Engine.Sessions.EngineApiClient
 
   @agent "arquiteto"
   @max_iterations 14
+
+  # Frente 3 do plano de decision_record — IDÊNTICA nos 5 conversacionais que
+  # ganharam emit_artifact nesta leva (PO, Arquiteto, Dev Lead, UX Designer,
+  # Staff; o Criativo já tinha a ferramenta antes). Fica de fora do texto de
+  # identidade (`Engine.Harness.Agents`) porque não é sobre QUEM o agente é —
+  # é uma instrução operacional sobre UMA ferramenta, igual nos 5.
+  @instrucao_decision_record "Use `emit_artifact` com `type: decision_record` para " <>
+                               "registrar uma decisão relevante tomada nesta conversa, " <>
+                               "com contexto, opções consideradas, a escolha e as " <>
+                               "consequências aceitas."
 
   # --- API pública ---
 
@@ -85,7 +96,10 @@ defmodule Engine.Agents.ArquitetoServer do
          CreateC4Diagram.spec(),
          RouteModulesToInfra.spec(),
          ProposeAdr.spec(),
-         EmitInsight.spec()
+         EmitInsight.spec(),
+         # Frente 3 do plano de decision_record — mesma ferramenta do
+         # Criativo, tipo novo (`decision_record`).
+         EmitArtifact.spec()
        ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
@@ -284,6 +298,7 @@ defmodule Engine.Agents.ArquitetoServer do
   defp run_tool("route_modules_to_infra", args, state), do: RouteModulesToInfra.run(args, state)
   defp run_tool("propose_adr", args, state), do: ProposeAdr.run(args, state)
   defp run_tool("emit_insight", args, state), do: EmitInsight.run(args, state)
+  defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Kickoff ---
@@ -381,10 +396,13 @@ defmodule Engine.Agents.ArquitetoServer do
   end
 
   defp system_prompt(project_id) do
-    project_id
-    |> ContextBuilder.build_layers(@agent)
-    |> PromptAssembler.assemble()
-    |> PromptAssembler.Default.render()
+    base =
+      project_id
+      |> ContextBuilder.build_layers(@agent)
+      |> PromptAssembler.assemble()
+      |> PromptAssembler.Default.render()
+
+    base <> "\n\n" <> @instrucao_decision_record
   end
 
   defp user_msg(text), do: %{"role" => "user", "content" => text, :pinned => false}

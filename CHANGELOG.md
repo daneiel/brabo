@@ -101,6 +101,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   ANTES do novo branch, sem exceção por agente. Sem migração: entradas
   antigas em `permissions.json` para um dev-de-módulo continuam lá,
   decisão consciente
+- **engine**: novo tipo de artefato `decision_record` — o "ADR resumido" que
+  qualquer um dos seis agentes conversacionais (Criativo, PO, Arquiteto, Dev
+  Lead, UX Designer, Staff) pode emitir com `emit_artifact` para registrar uma
+  decisão relevante tomada na conversa (`context`, `options`, `choice`,
+  `consequences`; RN-505). Reusa o padrão **genérico** de `ArtifactSchemas`
+  (o mesmo de `note`/`business_rule`) em vez do dedicado de
+  `project_image`/`c4_diagram` — uma decisão é log append-only, não um
+  "vigente" que se substitui. Distinto de `open_adr_pr` (só o Arquiteto, commit
+  real em `docs/adr/*.md` com PR e aprovação humana): os dois coexistem, para
+  escalas diferentes de decisão. PO, Arquiteto, Dev Lead, UX Designer e Staff
+  ganham a ferramenta nesta mudança — o Criativo já a tinha desde a Fase 3b, só
+  ganhou o tipo novo. **Fora de escopo, declarado:** agentes de execução (QA,
+  SecOps, Dev Agent de módulo, sobre `ToolLoop`) ficam de fora desta fatia; a
+  amarração com o Infra Lead (emitir `decision_record` ao propor subir
+  container via runner) depende de uma tool que outra frente do mesmo plano
+  está criando em paralelo e é o próximo passo, não implementada aqui
 
 ### Correções
 
