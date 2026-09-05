@@ -327,6 +327,35 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   **persistir pelo teto** para ser declarada, em vez de ser lida no primeiro
   instante, quando ainda não significa nada
 
+### Desempenho
+
+- **api**: a suíte de testes da api ganha **banco por worker**, destravando
+  `fileParallelism: true`. Até aqui, `apps/api/vitest.config.ts` rodava com
+  `fileParallelism: false` porque os ~80 specs que tocam banco compartilhavam
+  a MESMA `brabo_test` e faziam `TRUNCATE` entre testes — arquivo em paralelo
+  colidiria com arquivo. A saída não foi sincronizar o `TRUNCATE` (isso
+  serializaria de novo, só que pior); foi dar a cada worker do Vitest um
+  banco EXCLUSIVO. `test/support/global-setup.ts` migra um banco TEMPLATE
+  uma única vez e clona um banco por worker via `CREATE DATABASE ...
+  TEMPLATE` (cópia de página, não replay de migration — barato mesmo
+  criando vários); `test/support/test-db-name.ts` resolve qual banco cada
+  processo usa a partir de `VITEST_POOL_ID`, com `createTestDb()`/
+  `truncateAll()` mantendo a MESMA assinatura pública para os ~80
+  chamadores. `maxWorkers: 4` substitui `poolOptions.forks.maxForks`, que
+  **não existe mais** no Vitest 4 (conferido no `.d.ts` publicado) — fixo em
+  4 para bater com as 4 vCPU do runner do CI, não auto-detectado (o número
+  precisa ser o MESMO na máquina do dev e no runner, senão o que se mede
+  localmente não é o que roda lá).
+
+  Medido: suíte inteira (297 arquivos, 2749 testes) caiu de **792,58s** para
+  **471,23s** numa rodada limpa (~40%), com três rodadas completas sem
+  nenhum teste piscando (mesma contagem de passou/pulou nas três) e os
+  pisos de cobertura intactos (`--coverage`: 82,27%/72,09%/77,13%/83,21%
+  contra o piso de 80/69/74/81). O número medido em CI (`Testes TS (api +
+  web)`, hoje 159s/91s de acordo com `docs/reference/rulesets.md`) ainda não
+  foi reamostrado num runner hospedado — ver `TODO(humano)` no próprio
+  arquivo
+
 ## v4.0.0 — 2026-09-04
 
 ### ⚠ Mudanças incompatíveis

@@ -218,8 +218,14 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     env:
-      # O globalSetup do vitest cria a brabo_test e aplica as migrations
-      # sozinho — só precisa de um Postgres onde possa CREATE DATABASE.
+      # O globalSetup do vitest (apps/api/test/support/global-setup.ts) cria
+      # os bancos sozinho — só precisa de um Postgres onde possa CREATE
+      # DATABASE. `TEST_DATABASE_URL` não é mais UM banco de teste: desde
+      # perf/banco-por-worker-nos-testes-da-api ela só nomeia a BASE de onde
+      # o setup deriva o banco template (`brabo_test_template`) e um banco
+      # por worker do Vitest (`brabo_test_w1`..`brabo_test_w4`,
+      # `apps/api/test/support/test-db-name.ts`) — nenhum teste conecta em
+      # "brabo_test" no fluxo normal.
       DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo
       TEST_DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo_test
     steps:
