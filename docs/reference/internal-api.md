@@ -537,6 +537,31 @@ window costs is stated in the ADR and belongs to the SCREEN, not to this
 contract: a project in that state has `workspace_verified_at = null`, and the
 UI has to say the folder isn't there yet rather than show a path as if it were.
 
+#### Browsing that base is NOT an internal route either
+
+The folder picker that helps a human choose where a `mounted` project will
+live is `GET /workspaces/:workspaceId/project-folders`
+([RN-504](../business-rules.md#rn-504)) — a **public** route on the
+`workspaces` controller, behind `@RequireRole('maintainer')` and documented in
+[the security surface](../security-surface.md), not an `internal/` one.
+
+The distinction is the same one this page draws everywhere: `internal/` exists
+for what the ENGINE needs and cannot read from the database — never for what a
+BROWSER needs. Nobody in the engine browses folders; the caller here is a person
+clicking through a picker in the project wizard, authenticated as themselves and
+authorized by their role in the workspace. Routing it through the service token
+would replace a per-user authorization with a shared secret, on a route whose
+entire job is to expose part of the operator's filesystem topology.
+
+It also replaces the two mechanisms that used to do this job, and both of them
+lived OUTSIDE this contract: `FolderBrowserModal` navigated through the runner's
+own websocket (`fs_list_dir`/`fs_home_dir`, the `terminal:<projectId>` channel —
+so the listing came from the user's machine, never from the server), and
+`RunnerOnboardingPanel` used `showDirectoryPicker`, which hands back a browser
+handle and never an absolute path. With the runner leaving project creation, the
+api is the only party that can answer — and it answers about the ONE folder it
+can see, the base above.
+
 ### Workspace confirmation by the runner — the WRITE, which is a new route ([RN-423](../business-rules.md#rn-423))
 
 | method | path |

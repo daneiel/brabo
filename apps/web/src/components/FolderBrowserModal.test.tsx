@@ -7,7 +7,7 @@ import { initReactI18next, I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import terminalPtBR from '../locales/pt-BR/terminal.json';
 import { FolderBrowserModal } from './FolderBrowserModal';
-import type { FsBrowserChannel } from '../lib/fs-browser-channel';
+import type { FsBrowser } from '../lib/fs-browser';
 
 /**
  * `fs-browser-channel` é substituído por um dublê controlável — o que
@@ -58,39 +58,50 @@ function renderComI18n(ui: ReactElement) {
   );
 }
 
-const { connectFsBrowserChannelMock, fakeChannel } = vi.hoisted(() => {
-  const fakeChannel: {
-    listarDiretorio: ReturnType<typeof vi.fn>;
-    diretorioInicial: ReturnType<typeof vi.fn>;
-    fechar: ReturnType<typeof vi.fn>;
-  } = {
-    listarDiretorio: vi.fn(),
-    diretorioInicial: vi.fn(),
-    fechar: vi.fn(),
-  };
-  const connectFsBrowserChannelMock = vi.fn(() => fakeChannel as unknown as FsBrowserChannel);
-  return { connectFsBrowserChannelMock, fakeChannel };
-});
+const { connectFsBrowserChannelMock, criarFsBrowserViaApiMock, fakeChannel, fakeApi } =
+  vi.hoisted(() => {
+    const novoDuble = () => ({
+      listarDiretorio: vi.fn(),
+      diretorioInicial: vi.fn(),
+      fechar: vi.fn(),
+    });
+    const fakeChannel = novoDuble();
+    const fakeApi = novoDuble();
+    return {
+      fakeChannel,
+      fakeApi,
+      connectFsBrowserChannelMock: vi.fn(() => fakeChannel as unknown as FsBrowser),
+      criarFsBrowserViaApiMock: vi.fn(() => fakeApi as unknown as FsBrowser),
+    };
+  });
 
 vi.mock('../lib/fs-browser-channel', () => ({
   connectFsBrowserChannel: connectFsBrowserChannelMock,
+}));
+
+vi.mock('../lib/fs-browser', () => ({
+  criarFsBrowserViaApi: criarFsBrowserViaApiMock,
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('FolderBrowserModal', () => {
-  it('projectId nulo: não conecta e mostra o estado declarado (sem projeto ainda)', () => {
-    const onClose = vi.fn();
+describe('FolderBrowserModal — transporte via runner (não-regressão)', () => {
+  it('origem runner usa o canal do runner, e NUNCA o transporte de api', async () => {
+    fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
+    fakeChannel.listarDiretorio.mockResolvedValue({ path: '/home/user', entradas: [] });
+
     renderComI18n(
-      <FolderBrowserModal projectId={null} onSelecionar={vi.fn()} onClose={onClose} />,
+      <FolderBrowserModal
+        origem={{ tipo: 'runner', projectId: 'proj-1' }}
+        onSelecionar={vi.fn()}
+        onClose={vi.fn()}
+      />,
     );
 
-    expect(connectFsBrowserChannelMock).not.toHaveBeenCalled();
-    expect(
-      screen.getByText((t) => t.includes('depois que o projeto existir')),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(connectFsBrowserChannelMock).toHaveBeenCalledWith('proj-1'));
+    expect(criarFsBrowserViaApiMock).not.toHaveBeenCalled();
   });
 
   it('lista pastas E arquivos, mas só a pasta é selecionável/navegável', async () => {
@@ -109,7 +120,7 @@ describe('FolderBrowserModal', () => {
     });
 
     renderComI18n(
-      <FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />,
+      <FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />,
     );
 
     expect(connectFsBrowserChannelMock).toHaveBeenCalledWith('proj-1');
@@ -129,7 +140,7 @@ describe('FolderBrowserModal', () => {
     }));
 
     renderComI18n(
-      <FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />,
+      <FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />,
     );
 
     const item = await screen.findByRole('option', { name: 'projetos' });
@@ -156,7 +167,7 @@ describe('FolderBrowserModal', () => {
     });
 
     renderComI18n(
-      <FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />,
+      <FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />,
     );
 
     const item = await screen.findByRole('option', { name: 'projetos' });
@@ -177,7 +188,7 @@ describe('FolderBrowserModal', () => {
     const onSelecionar = vi.fn();
     const onClose = vi.fn();
     renderComI18n(
-      <FolderBrowserModal projectId="proj-1" onSelecionar={onSelecionar} onClose={onClose} />,
+      <FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={onSelecionar} onClose={onClose} />,
     );
 
     const item = await screen.findByRole('option', { name: 'projetos' });
@@ -195,7 +206,7 @@ describe('FolderBrowserModal', () => {
 
     const onSelecionar = vi.fn();
     renderComI18n(
-      <FolderBrowserModal projectId="proj-1" onSelecionar={onSelecionar} onClose={vi.fn()} />,
+      <FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={onSelecionar} onClose={vi.fn()} />,
     );
 
     await waitFor(() =>
@@ -213,7 +224,7 @@ describe('FolderBrowserModal', () => {
       entradas: [],
     }));
 
-    renderComI18n(<FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />);
+    renderComI18n(<FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />);
 
     await waitFor(() => expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user'));
 
@@ -234,7 +245,7 @@ describe('FolderBrowserModal', () => {
       entradas: [],
     }));
 
-    renderComI18n(<FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />);
+    renderComI18n(<FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />);
 
     await waitFor(() => expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user'));
 
@@ -250,7 +261,7 @@ describe('FolderBrowserModal', () => {
       entradas: [],
     }));
 
-    renderComI18n(<FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />);
+    renderComI18n(<FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />);
 
     await waitFor(() =>
       expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user/projetos'),
@@ -266,7 +277,7 @@ describe('FolderBrowserModal', () => {
       erro: 'Nenhum runner conectado a este projeto. Rode `brabo-runner --project proj-1 --dir <pasta>`.',
     });
 
-    renderComI18n(<FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />);
+    renderComI18n(<FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />);
 
     expect(
       await screen.findByText((t) => t.includes('Nenhum runner conectado')),
@@ -286,12 +297,141 @@ describe('FolderBrowserModal', () => {
     fakeChannel.listarDiretorio.mockResolvedValue({ path: '/home/user', entradas: [] });
 
     const { unmount } = renderComI18n(
-      <FolderBrowserModal projectId="proj-1" onSelecionar={vi.fn()} onClose={vi.fn()} />,
+      <FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />,
     );
     await waitFor(() => expect(connectFsBrowserChannelMock).toHaveBeenCalled());
 
     unmount();
     expect(fakeChannel.fechar).toHaveBeenCalledTimes(1);
+    cleanup();
+  });
+});
+
+/**
+ * O transporte de api (RN-504) — o que o assistente de criação passa a usar.
+ *
+ * O dublê é o mesmo tipo (`FsBrowser`): é justamente o ponto da extração da
+ * interface, e é por isso que os casos de ORQUESTRAÇÃO acima não precisaram
+ * ser duplicados aqui. O que este bloco prova é só o que MUDA com a origem —
+ * qual fábrica é chamada, quais atalhos existem, e a declaração do que ficou
+ * de fora da listagem.
+ */
+describe('FolderBrowserModal — transporte via api (RN-504)', () => {
+  function renderApi(props?: { caminhoInicial?: string; onSelecionar?: () => void }) {
+    return renderComI18n(
+      <FolderBrowserModal
+        origem={{ tipo: 'api', workspaceId: 'ws-1' }}
+        caminhoInicial={props?.caminhoInicial}
+        onSelecionar={props?.onSelecionar ?? vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+  }
+
+  it('usa o transporte de api, ancorado no workspace, e NUNCA abre canal de runner', async () => {
+    fakeApi.diretorioInicial.mockResolvedValue({ path: '/home/voce/brabo' });
+    fakeApi.listarDiretorio.mockResolvedValue({
+      path: '/home/voce/brabo',
+      entradas: [{ nome: 'loja', isDir: true }],
+      arquivos: 0,
+      simbolicos: 0,
+      truncado: false,
+    });
+
+    renderApi();
+
+    expect(criarFsBrowserViaApiMock).toHaveBeenCalledWith('ws-1');
+    expect(await screen.findByText('loja')).toBeInTheDocument();
+    // Sem runner no caminho: o socket Phoenix não é sequer construído.
+    expect(connectFsBrowserChannelMock).not.toHaveBeenCalled();
+  });
+
+  it('não oferece o atalho "Raiz" — `/` está fora da base, e a api só teria como recusar', async () => {
+    fakeApi.diretorioInicial.mockResolvedValue({ path: '/home/voce/brabo' });
+    fakeApi.listarDiretorio.mockResolvedValue({
+      path: '/home/voce/brabo',
+      entradas: [],
+      arquivos: 0,
+      simbolicos: 0,
+      truncado: false,
+    });
+
+    renderApi();
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Base de projetos' })).toBeInTheDocument(),
+    );
+    expect(screen.queryByRole('button', { name: 'Raiz' })).not.toBeInTheDocument();
+  });
+
+  it('DIZ o que ficou de fora: pasta cheia de código não se apresenta como vazia', async () => {
+    fakeApi.diretorioInicial.mockResolvedValue({ path: '/home/voce/brabo/loja' });
+    fakeApi.listarDiretorio.mockResolvedValue({
+      path: '/home/voce/brabo/loja',
+      entradas: [],
+      arquivos: 12,
+      simbolicos: 2,
+      truncado: false,
+    });
+
+    renderApi();
+
+    // A lista está vazia de SUBPASTAS, e a tela diz isso — mas sem esconder
+    // que há 12 arquivos e 2 links ali (RN-180).
+    expect(await screen.findByText('Nenhuma subpasta aqui.')).toBeInTheDocument();
+    expect(
+      screen.getByText((t) => t.includes('12 arquivos não aparecem')),
+    ).toBeInTheDocument();
+    expect(screen.getByText((t) => t.includes('2 atalhos não aparecem'))).toBeInTheDocument();
+  });
+
+  it('anuncia o corte no teto quando a api marca `truncado`', async () => {
+    fakeApi.diretorioInicial.mockResolvedValue({ path: '/home/voce/brabo' });
+    fakeApi.listarDiretorio.mockResolvedValue({
+      path: '/home/voce/brabo',
+      entradas: [{ nome: 'p0001', isDir: true }],
+      arquivos: 0,
+      simbolicos: 0,
+      truncado: true,
+    });
+
+    renderApi();
+
+    expect(
+      await screen.findByText((t) => t.includes('primeiras 500 subpastas')),
+    ).toBeInTheDocument();
+  });
+
+  it('recusa da api vira mensagem na tela, e nunca o painel de onboarding do runner', async () => {
+    fakeApi.diretorioInicial.mockResolvedValue({
+      erro: 'A pasta "/etc" está fora da base de projetos (/home/voce/brabo).',
+    });
+
+    renderApi();
+
+    expect(
+      await screen.findByText((t) => t.includes('fora da base de projetos')),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Já instalei, conectar' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('cleanup no unmount chama `fechar()` também no transporte de api (no-op, mas chamado)', async () => {
+    fakeApi.diretorioInicial.mockResolvedValue({ path: '/home/voce/brabo' });
+    fakeApi.listarDiretorio.mockResolvedValue({
+      path: '/home/voce/brabo',
+      entradas: [],
+      arquivos: 0,
+      simbolicos: 0,
+      truncado: false,
+    });
+
+    const { unmount } = renderApi();
+    await waitFor(() => expect(criarFsBrowserViaApiMock).toHaveBeenCalled());
+
+    unmount();
+    expect(fakeApi.fechar).toHaveBeenCalledTimes(1);
     cleanup();
   });
 });

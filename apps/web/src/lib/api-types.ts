@@ -197,6 +197,27 @@ export interface ProjectUnreadEvents {
   events: SessionEvent[];
 }
 
+/**
+ * Uma listagem do navegador de pastas de projeto (RN-504).
+ *
+ * `entries` traz SÓ nome de subdiretório — arquivo, symlink e entrada
+ * começada com `.` ficam de fora —, e é por isso que os três números vêm
+ * junto: sem eles uma pasta cheia de código chegaria como lista vazia e a
+ * tela diria "pasta vazia", afirmando sobre o que não leu (RN-180).
+ *
+ * `base`/`path` nulos juntos são a instalação SEM `BRABO_PROJECTS_BASE` —
+ * estado normal, nunca erro, e é assim que a criação de projeto aprende a
+ * não oferecer o modo Pasta montada.
+ */
+export interface ProjectFolders {
+  base: string | null;
+  path: string | null;
+  entries: string[];
+  truncado: boolean;
+  arquivos: number;
+  simbolicos: number;
+}
+
 export interface ProjectMemberWithUser {
   userId: string;
   role: Role;
