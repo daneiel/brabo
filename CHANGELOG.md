@@ -87,6 +87,21 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   agente `:idle` do projeto recebe o `{:wake, :became_claimable}` que já
   existia e re-tenta sozinho
 
+- **api**: "sempre permitir" de um Dev Agent de módulo (`dev-<modulo>`)
+  passa a escopar a `agent_autonomy`, POR AGENTE — não mais o
+  `permissions.json` de projeto inteiro (RN-505). Antes, aprovar sempre um
+  comando pro `dev-checkout` liberava o MESMO comando pro `dev-auth`, pro
+  `dev-lead` e pra qualquer outro agente do projeto; agora a chave é
+  `(projeto, agente, tipo de ação)`, o mesmo mecanismo que já semeia as três
+  ações git por módulo na ativação da execução. `dev-lead` (lidera a área,
+  não é membro dela) e qualquer ator que não seja dev-de-módulo continuam
+  indo pro `permissions.json` de sempre. Os dois tetos absolutos que já
+  recusavam o clique inteiro — terminal com efeito externo git/comando
+  privilegiado (RN-418) e `container_remove` (RN-495) — continuam rodando
+  ANTES do novo branch, sem exceção por agente. Sem migração: entradas
+  antigas em `permissions.json` para um dev-de-módulo continuam lá,
+  decisão consciente
+
 ### Correções
 
 - **engine**: o comando de terminal do dev agent **não cai mais fora do

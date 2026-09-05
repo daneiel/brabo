@@ -176,6 +176,16 @@ export function ApprovalCard({
   const podeSemprePermitir =
     action.actionType !== 'instruction_patch' &&
     action.actionType !== 'container_remove';
+  // Mesma regra de `ehDevDeModulo`/`DEV_LEAD` em
+  // `apps/api/src/domain/agents/agent-areas.ts` (RN-505) — sem cópia gerada
+  // pro web porque só ESTE componente precisa saber, e só pra trocar o
+  // TEXTO da nota (a api decide o destino da gravação sozinha). `dev-lead`
+  // lidera a área de `dev`, mas não é membro dela — continua no texto de
+  // sempre (permissions.json de projeto inteiro).
+  const ehAgenteDeModulo =
+    action.actor.kind === 'agent' &&
+    action.actor.id.startsWith('dev-') &&
+    action.actor.id !== 'dev-lead';
   const isCritical = urgency === 'critico';
 
   const payload = action.payload;
@@ -289,7 +299,9 @@ export function ApprovalCard({
           {variant === 'chat' && podeSemprePermitir && (
             <span className={styles.note}>
               <AlertIcon size={12} />
-              {t('approvalCard.notes.alwaysAllow')}
+              {ehAgenteDeModulo
+                ? t('approvalCard.notes.alwaysAllowScoped', { agent: actorLabel })
+                : t('approvalCard.notes.alwaysAllow')}
             </span>
           )}
           {variant === 'chat' && onActivateAutoMode && (
