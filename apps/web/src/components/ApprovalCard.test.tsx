@@ -139,7 +139,7 @@ describe('ApprovalCard', () => {
     expect(screen.getByText(/permissions\.json/)).toBeInTheDocument();
   });
 
-  // RN-505 (Frente 2): "sempre permitir" de um Dev Agent de módulo escopa
+  // RN-509 (Frente 2): "sempre permitir" de um Dev Agent de módulo escopa
   // `agent_autonomy` POR AGENTE, e a nota do card deve dizer isso — não
   // prometer o `permissions.json` de projeto inteiro que não é mais o
   // destino da gravação.

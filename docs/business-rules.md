@@ -7944,7 +7944,7 @@ da interface, o binário segue sendo refinado); o protocolo em
   esta rota escopa)
 - **Origem:** plano do dono do produto, PR 4
 
-### RN-505 — "Sempre permitir" de um Dev Agent de módulo escopa a `agent_autonomy`, POR AGENTE — não mais o `permissions.json` de projeto inteiro {#rn-505}
+### RN-509 — "Sempre permitir" de um Dev Agent de módulo escopa a `agent_autonomy`, POR AGENTE — não mais o `permissions.json` de projeto inteiro {#rn-509}
 
 `ApproveAlwaysActionUseCase` sempre gravou em `permissions.json/allow` —
 escopo de **PROJETO INTEIRO**, compartilhado por qualquer ator. Isso
@@ -8008,7 +8008,7 @@ esquecida.
   (`upsert`, já existente, sem método novo)
 - **Teste:**
   `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts`
-  (descreve `escopo por Dev Agent de módulo (RN-505)`: caminho feliz
+  (descreve `escopo por Dev Agent de módulo (RN-509)`: caminho feliz
   `dev-checkout` grava `agent_autonomy` e não vaza pra `dev-auth`; os DOIS
   tetos absolutos recusando o clique inteiro pra um ator dev-de-módulo;
   `dev-lead` e ator `user` — inclusive com id começando em `dev-` —

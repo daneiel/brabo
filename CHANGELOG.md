@@ -119,7 +119,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **api**: "sempre permitir" de um Dev Agent de módulo (`dev-<modulo>`)
   passa a escopar a `agent_autonomy`, POR AGENTE — não mais o
-  `permissions.json` de projeto inteiro (RN-505). Antes, aprovar sempre um
+  `permissions.json` de projeto inteiro (RN-509). Antes, aprovar sempre um
   comando pro `dev-checkout` liberava o MESMO comando pro `dev-auth`, pro
   `dev-lead` e pra qualquer outro agente do projeto; agora a chave é
   `(projeto, agente, tipo de ação)`, o mesmo mecanismo que já semeia as três
