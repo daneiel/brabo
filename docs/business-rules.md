@@ -7504,6 +7504,90 @@ aceite.
   antes dos dev agents" (D0) — o bloqueador que tornava o requisito "dev agent
   só depois do container de pé" equivalente a "dev agent nunca começa"
 
+### RN-502 — Dev agent só reivindica task com container `running`, e o terminal não cai mais fora dele {#rn-502}
+
+Duas metades da mesma regra: **sem ambiente de execução, o dev agent não
+começa**, e **sem ambiente de execução, o comando não roda em lugar nenhum**.
+
+**A guarda do claim.** `Engine.Dev.AgentIo.try_claim/2` — o ponto ÚNICO de
+claim — consulta
+`Engine.Containers.ProjectContainerLifecycle.running?/1` ANTES de chamar
+`claim_task/1`. Sem uma linha REGISTRADA `running` em `project_containers`
+([RN-243](#rn-243)/ADR 0081), o agente cai em `:idle`, persiste, emite
+`dev.blocked_by_container` e **não chama a api**. A guarda vem antes do claim
+de propósito: reivindicar para devolver logo em seguida deixaria a task
+marcada e sem dono vivo, que é o estado que `block_task/4` existe para nunca
+produzir.
+
+**`:idle`, e não um status novo.** É o único estado do qual um wake ainda
+resgata — os guards de `handle_info/2` são todos casados com ele
+(`{:wake, :became_claimable}` exige `:idle`, `:rearm` exige `:idle_tripped`,
+`gate_resolved` exige `task_id` batendo,
+[RN-047](business-rules/custo.md#rn-047)). Um
+`:blocked_by_container` inventado seria um estado do qual nada resgata.
+
+**No ENGINE e não só no `activate-execution` da api**, porque o claim tem um
+caminho que nenhuma rota cobre: a REIDRATAÇÃO. `Engine.Dev.DevRehydrator` não
+faz cast `:work`; quem claima depois de um restart é `DevAgentServer.init/1`
+→ `finish_restart_recovery/1` → `try_claim/2`. Um gate só na fronteira HTTP
+deixaria todo agente reidratado voltar a trabalhar sem container.
+
+**O wake.** Leitura não avisa ninguém: um agente já parado continuaria parado
+até um evento não relacionado passar por perto. Então a chegada em `running`
+PUBLICA — `RegistrarTransicaoDeContainerUseCase` grava a linha e o evento na
+MESMA transação, `aggregateType: 'container'` (o terceiro agregado que
+`Engine.Outbox.Drain` passou a drenar, ao lado de `session` e `task`),
+`aggregateId` = o PROJETO. `Engine.Workers.DevAgentWakeWorker` entrega
+`{:wake, :became_claimable}` a TODOS os agentes do projeto
+(`DevAgentState.list_by_project/1` — o container é do projeto, não de um
+módulo). É a MESMA mensagem que já existia, e não uma nova: a semântica dela
+já é "pode haver trabalho agora", e uma mensagem própria exigiria cláusula
+nova de `handle_info/2` nos dois servers com guard idêntico ao que já existe.
+Só `running` publica; `provisioning`/`stopped`/`failed`/`removed` não soltam
+ninguém.
+
+**A segunda metade: o terminal.** `Engine.Actions.TerminalExecutor`
+degradava calado — `container` sem container `running` caía em
+`:caminho_de_sempre`, isto é, `System.cmd` DENTRO do processo do engine, o
+mesmo que fala com o banco, com a api e com todos os outros projetos. O ADR
+0134 ([RN-492](#rn-492)) tinha fechado o isolamento só no caminho feliz.
+Agora recusa (`:recusar_container_ausente`), espelhando o
+`:recusar_nao_verificado`/`:recusar_runner_desconectado` que o modo `runner`
+já tinha ([RN-423](#rn-423)), e como `failed_result` normal — nunca crash.
+`mounted` entra no MESMO ramo: com container `running` atravessa pro broker
+igual a `container`; sem ele, recusa. O catch-all `:caminho_de_sempre`
+encolhe para o que sempre deveria ter sido sozinho — **projeto inexistente ou
+`project_id` malformado**. Nenhum modo de execução cai nele.
+
+**Consequência declarada:** projeto sem container de pé para de trabalhar, e
+diz por quê. É deliberado — é o que a regra existe para fazer — e é por isso
+que ela só pode entrar DEPOIS das mudanças que dão container ao modo
+`mounted`.
+
+- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex` (`try_claim/2`),
+  `apps/engine/lib/engine/actions/terminal_executor.ex`
+  (`decisao_de_execucao/1`),
+  `apps/engine/lib/engine/outbox/drain.ex`,
+  `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex`,
+  `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts`
+- **Teste:** `apps/engine/test/engine/dev/claim_com_container_test.exs` —
+  `:work` inicial sem container cai em `:idle`, persiste, emite e **não**
+  chama a api; o Noop passa pela mesma guarda; agente REIDRATADO para em
+  `:idle` sem claimar; `container.running` na outbox percorre
+  drain → worker → wake → agente e ele re-claima; e o caminho de sempre
+  segue intacto com container `running`.
+  `apps/engine/test/engine/actions/terminal_executor_test.exs` — recusa para
+  `container` (sem linha e com `stopped`) e para `mounted`; `mounted` com
+  `running` atravessa pro broker; só projeto inexistente cai em
+  `:caminho_de_sempre`.
+  `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`
+  — `running` publica `container.running` no agregado `container`; os outros
+  destinos e a criação da linha não publicam nada
+- **ADR:** [0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
+- **Origem:** plano "Nome e local na mesma tela, e container antes dos dev
+  agents" (PR 7) — dez tasks do `exp001` travaram de uma vez porque nada
+  ordenava container antes de dev agent
+
 ---
 
 ## A base única dos projetos montados (RN-500)
@@ -7573,6 +7657,108 @@ na RN seguinte.
   `scripts/dev/base-de-projetos.spec.ts`
 - **ADR:** [0141](adr/0141-base-unica-dos-projetos-montados.md)
 - **Origem:** plano do dono do produto, PR 1
+
+---
+
+## A pasta montada nasce quando o container sobe (RN-501)
+
+### RN-501 — `mounted` valida só o LÉXICO e a base na criação; a pasta é MATERIALIZADA depois, por quem tem autoridade sobre o disco {#rn-501}
+
+A criação de um projeto `mounted` **deixou de tocar disco**. Ela exige duas
+coisas, e as duas são léxicas:
+
+1. o mesmo predicado que `runner` já usava (`caminhoDeWorkspaceLocalValido`) —
+   absoluto, sem `..`, fora da raiz e das pastas de sistema, sem se sobrepor ao
+   checkout do Brabo (RN-422/RN-423);
+2. estar **dentro de `BRABO_PROJECTS_BASE`** ([RN-500](#rn-500)), que é a única
+   pasta do computador que os containers da api e do engine enxergam.
+
+O projeto nasce com `workspaceVerifiedAt: null`, exatamente como um `runner`.
+
+**Por que adiar.** O requisito é do dono do produto e é literal: *"se for Pasta
+montada, o bind-mount deve ser criado APÓS a decisão do arquiteto"*. A validação
+de disco rodava na CRIAÇÃO, que é a primeira tela do fluxo, e a decisão do
+Arquiteto acontece muitas sessões depois — exigir a pasta pronta na criação é
+exigi-la antes de existir decisão nenhuma. E é o que impedia `mounted` de ser
+escolha de primeira classe: um caminho SUGERIDO pelo assistente
+(`<base>/<slug>`) é, por construção, um caminho que ainda não existe.
+
+A diferença entre `mounted` e `runner` nunca foi *o que conta como caminho
+válido* — é **quando e quem** confirma o disco. No `runner` é o CLI conectando;
+no `mounted` é a materialização.
+
+**Sem base configurada, o MODO não está disponível.** A recusa diz isso, com o
+nome da variável e o que o operador precisa fazer — nunca finge que o caminho é
+que estava errado. Fora da base, a recusa **nomeia a base** e **sugere**
+`<base>/<nome que a pessoa pediu>`, nunca a base pelada, que ensinaria a colocar
+o projeto na raiz de todos eles. As duas mensagens saem de UMA fonte
+(`motivoDeForaDaBaseDeProjetos`), porque as duas portas que aplicam a regra —
+criação/conversão e materialização — recusam pelo mesmo motivo.
+
+**A materialização** (`materializarWorkspaceMontado`) é `mkdir -p` mais as três
+perguntas de disco de sempre (existe? é pasta? dá para escrever?), com a recusa
+por estar fora da base **antes** do `mkdir` — senão um caminho gravado por fora
+do produto faria a api criar pasta em qualquer lugar que ela alcança. Dois
+chamadores:
+
+- **`ExecuteContainerStartUseCase`** — o normal. Quando a Infra sobe o
+  container, a pasta é criada, provada gravável, e `workspace_verified_at` é
+  carimbado pelo MESMO caminho que `ConfirmProjectWorkspaceUseCase` usa. Falhar
+  é `failed` **NOMEADO**, nunca throw nem 500 — mesma disciplina de
+  `BrokerIndisponivelError`/`RunnerNaoConectadoError` —, e o ciclo de vida
+  **não** chega a ser marcado `provisioning`: marcá-lo e só então descobrir que
+  não dá para escrever deixaria `project_containers` afirmando um estado que
+  nunca existiu. A mensagem nomeia a variável, o caminho, a causa provável (dono
+  da pasta no host; as imagens rodam non-root, ADR 0024) e o próximo passo
+  ("aprove `container_start` de novo").
+- **`ConvertProjectExecutionModeUseCase`** — a exceção, declarada. A conversão
+  não tem passo de container onde pendurar o trabalho, e logo em seguida ela MOVE
+  o `permissions.json` para `permissionsFilePath(localNova)`, que em `mounted` é a
+  pasta do usuário. Mover arquivo para dentro de pasta inexistente falha, então
+  aqui mkdir-na-decisão é o certo — antes da transação, para que a recusa não
+  deixe transação aberta, e virando 400.
+
+**O que esta RN NÃO faz, e é a regressão mais fácil de causar.** A regra da base
+**não** entra em `caminhoDeWorkspaceLocalValido`. Esse predicado roda em TODA
+LEITURA, por `projectScopeRoot` (escopo de terminal, `permissions.json`, aba
+Code), e um projeto `mounted` LEGADO — criado quando o bind-mount era uma linha
+de compose por projeto, portanto fora da base — passaria a explodir com
+`LocalizacaoDeProjetoInvalidaError` ao ser simplesmente lido. A base é regra de
+**criação e conversão**; o léxico é **para sempre**.
+
+**Sem migration, e o CHECK do banco fica intacto.** `mounted` continua gravando
+`workspace_path` NÃO-nulo, então
+`(execution_mode <> 'container') = (workspace_path IS NOT NULL)` segue
+satisfeito. Adiar a **verificação** nunca toca o invariante de **pareamento**.
+
+**Consequência declarada:** entre criar o projeto e subir o container,
+`workspace_path` aponta para uma pasta que pode não existir. Nada quebra
+(`projectScopeRoot` é léxico; `permissions.json` degrada para
+`EMPTY_PERMISSIONS_FILE`, que é `require_approval` em tudo), mas a tela precisa
+DIZER — uma tela que mostra um caminho sem dizer que ele ainda não existe é uma
+tela afirmando o que não sabe.
+
+- **Onde:** `apps/api/src/application/services/workspace-location.ts:93`
+  (léxico) e `:108` (base);
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:486`
+  (`motivoDeForaDaBaseDeProjetos`), `:535`
+  (`validarWorkspaceMontadoEmDisco`, o antigo `validarCaminhoDeWorkspaceLocal`)
+  e `:616` (`materializarWorkspaceMontado`);
+  `apps/api/src/application/use-cases/iam/convert-project-execution-mode.use-case.ts:139`;
+  `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts:133`
+  e `:334`
+- **Teste:**
+  `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (`describe('materializarWorkspaceMontado')` e a não-regressão "projeto
+  mounted LEGADO, FORA da base, continua resolvendo sem lançar");
+  `apps/api/test/application/use-cases/iam/create-project-modo-de-workspace.spec.ts`
+  (`describe('mounted valida só o léxico + a base na criação')`);
+  `apps/api/test/application/use-cases/iam/convert-project-execution-mode.use-case.spec.ts`;
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
+  (`describe` "ExecuteContainerStartUseCase — materialização do mounted")
+- **ADR:** [0142](adr/0142-validacao-de-workspace-montado-adiada.md), que
+  referencia [0141](adr/0141-base-unica-dos-projetos-montados.md)
+- **Origem:** plano do dono do produto, PR 2
 
 ---
 
@@ -7672,7 +7858,8 @@ da interface, o binário segue sendo refinado); o protocolo em
 | Modelo do binding some do provider | a cascata cai para o nível de baixo e AVISA qual escopo pulou — nunca troca o modelo em silêncio (RN-041) |
 | Preço do modelo muda | vale daqui em diante; o custo gravado e o preço que o produziu ficam intocados (RN-042) |
 | Criar o handoff falha (Criativo→PO, Arquiteto→Infra/Dev Lead) | `agent.error` durável, o processo do agente CONTINUA vivo; o que já foi gravado antes (product_brief, regras) não se perde (RN-116) |
-| Caminho de projeto **Local** não montado no container | a criação é **recusada** (400) com a linha de compose a acrescentar — o projeto não nasce para travar depois (RN-170) |
+| Caminho de projeto **Pasta montada** fora de `BRABO_PROJECTS_BASE` | a criação é **recusada** (400) nomeando a base e sugerindo `<base>/<nome>` — o projeto não nasce para travar depois (RN-170/RN-501) |
+| Pasta de projeto **Pasta montada** inalcançável quando a Infra sobe o container | `container_start` termina `failed` NOMEADO (variável, caminho, dono da pasta, próximo passo) e o ciclo de vida **não** chega a `provisioning` (RN-501) |
 | `BRABO_PROJECTS_BASE` ausente | a api responde `projectsBase: null` e a criação de projeto **não oferece** o modo Pasta montada — nunca oferecer um modo que a instalação não honra (RN-500) |
 | Navegador de pastas recebe um `path` fora da base (inclusive a armadilha de prefixo `<base>2`) | **400** que nomeia a base — malformado, e não 403: nenhum papel navega fora dela (RN-504) |
 | Navegador de pastas recebe um `path` dentro da base que a api não consegue abrir | **404** dizendo QUAL dos dois é (não existe / existe e não dá para ler) — nunca 500 com mensagem de `fs` (RN-504) |

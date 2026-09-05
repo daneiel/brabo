@@ -17,6 +17,7 @@ defmodule Engine.Dev.AgentIo do
   `:max_consecutive_blocked` (Fase 12b — circuit breaker por agente).
   """
 
+  alias Engine.Containers.ProjectContainerLifecycle
   alias Engine.Dev.DevAgentState
   alias Engine.Harness.ArtifactEmitter
   alias Engine.Sessions.EngineApiClient
@@ -108,8 +109,67 @@ defmodule Engine.Dev.AgentIo do
   sempre que uma task termina e o agente segue livre.
 
   `run_task` recebe `{state_em_working, task}` e devolve o novo state.
+
+  ## A guarda do container (RN-502, ADR 0143)
+
+  ANTES de qualquer chamada à api: sem um container REGISTRADO `running`
+  para o projeto (`Engine.Containers.ProjectContainerLifecycle.running?/1`,
+  o predicado que o `TerminalExecutor` já consultava), o agente NÃO
+  reivindica task nenhuma — cai em `:idle` e emite
+  `dev.blocked_by_container`.
+
+  Ela mora AQUI, e não só no `activate-execution` da api, porque este é o
+  ponto único de claim: o `:work` inicial passa por ele, `finish_task/3`
+  passa por ele e — o caminho que um gate só na api perderia — a
+  REIDRATAÇÃO passa por ele. `Engine.Dev.DevRehydrator` não faz cast
+  `:work`; quem claima depois de um restart é `DevAgentServer.init/1` ->
+  `finish_restart_recovery/1` -> `try_claim/2`, sem passar por rota
+  nenhuma. Um gate só na fronteira HTTP deixaria todo agente reidratado
+  voltar a trabalhar sem container.
+
+  `:idle` — e NÃO um status novo — pelo mesmo motivo que a cláusula
+  `{:error, reason}` logo abaixo já documenta: **`:idle` é o único estado
+  do qual um wake ainda resgata**. Os guards de `handle_info/2` são todos
+  casados com ele (`{:wake, :became_claimable}` exige `:idle`; `:rearm`
+  exige `:idle_tripped`; `gate_resolved` exige `task_id` batendo), então um
+  `:blocked_by_container` inventado aqui seria um estado do qual nada
+  resgata — o agente ficaria parado para sempre, e teríamos recriado
+  exatamente o sintoma que a Fase 12b existiu para eliminar. Quando o
+  container chega em `running`, a api publica `container.running` no outbox
+  e `Engine.Workers.DevAgentWakeWorker` entrega `{:wake, :became_claimable}`
+  aos agentes do projeto: quem está `:idle` re-tenta o claim, e a guarda
+  agora passa.
+
+  E a guarda vem ANTES de `claim_task/1` de propósito: reivindicar para
+  devolver logo em seguida deixaria a task marcada e sem dono vivo, que é
+  o estado que `block_task/4` existe para nunca produzir.
   """
   def try_claim(state, run_task) when is_function(run_task, 2) do
+    if ProjectContainerLifecycle.running?(state.project_id) do
+      claim_e_rodar(state, run_task)
+    else
+      bloquear_por_container(state)
+    end
+  end
+
+  defp bloquear_por_container(state) do
+    state = %{state | status: :idle}
+    persist(state)
+
+    emit(state, "dev.blocked_by_container", %{
+      agentId: state.agent_id,
+      module: state.module,
+      reason:
+        "o projeto não tem container REGISTRADO como `running` — o dev agent " <>
+          "não reivindica task antes de o ambiente de execução existir (RN-502). " <>
+          "Suba o container do projeto (a Infra propõe `container_start`) e o " <>
+          "agente volta a tentar sozinho."
+    })
+
+    state
+  end
+
+  defp claim_e_rodar(state, run_task) do
     case claim_task(state) do
       # `""` junto com `nil` de propósito. Quem normaliza o corpo vazio é o
       # `EngineApiClient.claim_task/4`, na fronteira; esta cláusula é a guarda

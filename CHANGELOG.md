@@ -19,7 +19,43 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Novidades
+
+- **engine,api**: dev agent só reivindica task com o container do projeto
+  `running` (ADR 0143, RN-502). Antes não havia ordem nenhuma: numa execução
+  real do `exp001` nenhum `container_start` chegou a ser proposto, e os dez
+  dev agents começaram assim mesmo — para travar dez vezes. A guarda mora em
+  `AgentIo.try_claim/2`, o ponto **único** de claim, e usa o predicado que já
+  existia (`ProjectContainerLifecycle.running?/1`, ADR 0134). No **engine** e
+  não só no `activate-execution` da api porque o claim tem um caminho que
+  rota nenhuma cobre: a **reidratação** não faz cast `:work` — quem claima
+  depois de um restart é `init/1` → `finish_restart_recovery/1` →
+  `try_claim/2` —, e um gate só na fronteira HTTP deixaria todo agente
+  reidratado voltar a trabalhar sem container. Sem container o agente cai em
+  `:idle` (**não** um status novo: é o único estado do qual um wake ainda
+  resgata, e todos os guards de `handle_info/2` já se apoiam nisso), persiste
+  e emite `dev.blocked_by_container` — quem distingue "a fila esvaziou" de
+  "não há container" é o EVENTO, nunca o status. Quando o container sobe, a
+  api publica `container.running` na MESMA transação que grava a transição,
+  num agregado `container` novo que o dreno do engine passa a ler, e todo
+  agente `:idle` do projeto recebe o `{:wake, :became_claimable}` que já
+  existia e re-tenta sozinho
+
 ### Correções
+
+- **engine**: o comando de terminal do dev agent **não cai mais fora do
+  container** em silêncio (RN-502). `container` sem container `running` caía
+  em `:caminho_de_sempre`, isto é, `System.cmd` dentro do processo do engine —
+  o mesmo processo que fala com o banco, com a api e com todos os outros
+  projetos —, então o isolamento do ADR 0134 valia só no caminho feliz e a
+  ausência dele não recusava: degradava, e degradava calada. Agora recusa
+  (`failed_result` com o motivo nomeado), espelhando o
+  `:recusar_nao_verificado`/`:recusar_runner_desconectado` que o modo `runner`
+  já tinha. `mounted` entra no mesmo ramo — com container `running` atravessa
+  pro broker igual a `container`, sem ele recusa — e o catch-all
+  `:caminho_de_sempre` encolhe para o que sempre deveria ter sido sozinho:
+  projeto inexistente ou id malformado. Consequência declarada: projeto sem
+  container de pé para de trabalhar, e diz por quê
 
 - **web**: o handoff para a **Infra** volta a ser aceitável — por um card
   próprio, fora do fio (RN-499). O filtro `AGENTES_DE_CHAT` de
@@ -42,7 +78,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `handoff.offered` da Infra continua **narrado** no fio como divisor mudo, e
   nenhum handoff conversacional muda de forma
 
-### Adicionado
+### Funcionalidades
 
 - **feat(api,web)**: **"Procurar pasta" passa a ser servido pela api**, escopado
   à base de projetos montados — `GET /workspaces/:workspaceId/project-folders`,
@@ -85,6 +121,45 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   transporte via runner fica **sem chamador no web** a partir daqui e continua
   no repositório por decisão declarada; o protocolo em
   `apps/runner/src/channel.ts` não é tocado. Ver RN-504.
+
+- **api**: a pasta de um projeto no modo **Pasta montada** deixa de precisar
+  existir na criação — ela é **materializada quando a Infra sobe o container**
+  (RN-501, ADR 0142). O requisito do dono do produto é literal, *"se for Pasta
+  montada, o bind-mount deve ser criado APÓS a decisão do arquiteto"*, e a
+  validação de disco na criação o tornava impossível: a criação é a PRIMEIRA
+  tela do fluxo e a decisão do Arquiteto acontece muitas sessões depois. Era
+  também o que impedia `mounted` de ser escolha de primeira classe — um caminho
+  SUGERIDO pelo assistente (`<base>/<slug>`) é, por construção, um caminho que
+  ainda não existe.
+
+  **O que a criação passa a exigir** é só o LÉXICO — a mesma disciplina que o
+  modo `runner` já tinha (RN-423) — mais estar dentro de `BRABO_PROJECTS_BASE`
+  (RN-500). A diferença entre os dois modos nunca foi *o que conta como caminho
+  válido*, e sim **quando e quem** confirma o disco: no `runner` é o CLI
+  conectando; no `mounted` passa a ser a materialização. Sem base configurada, a
+  recusa diz que o **modo** não está disponível nesta instalação, em vez de
+  fingir que o caminho é que estava errado; fora da base, ela **nomeia a base** e
+  **sugere** `<base>/<nome pedido>`.
+
+  **Quem materializa** é `container_start`, na execução: `mkdir -p`, as três
+  perguntas de disco de sempre (existe? é pasta? dá para escrever?) e o carimbo
+  de `workspace_verified_at`, tudo ANTES de qualquer transição de ciclo de vida.
+  Pasta inalcançável vira `failed` **NOMEADO** — variável, caminho, causa
+  provável (dono da pasta no host; as imagens rodam non-root) e o próximo passo
+  —, nunca throw nem 500, e a linha de `project_containers` **não** chega a ser
+  marcada `provisioning`. A conversão de modo é a única exceção e cria a pasta na
+  hora, porque não tem passo de container onde pendurar o trabalho e move o
+  `permissions.json` para dentro dela logo em seguida.
+
+  **Sem migration, e o CHECK do banco fica intacto:** `mounted` continua
+  gravando `workspace_path` não-nulo, então
+  `(execution_mode <> 'container') = (workspace_path IS NOT NULL)` segue
+  satisfeito — adiar a *verificação* nunca toca o invariante de *pareamento*. A
+  regra da base **não** entrou em `caminhoDeWorkspaceLocalValido`, que roda em
+  toda LEITURA: um projeto `mounted` legado, fora da base, passaria a explodir ao
+  ser lido, e há teste de não-regressão para isso. A mensagem que ensinava a
+  acrescentar `- <caminho>:<caminho>` ao `docker-compose.yml` morreu junto (ADR
+  0141), e há asserção sobre a ausência dela
 
 ### BREAKING
 

@@ -157,20 +157,39 @@ reason in the URL.
   new route, and no role change (`RequireRole('maintainer')`, as it already
   was) — what changed is the reach of what the route grants.
 
-  Validation diverges across the TWO modes that aren't `container`
-  (RN-422): `mounted` still touches disk at creation time (absolute, no
-  `..`, existing, writable from inside the container, never root or a
-  system folder, never overlapping the Brabo checkout in either direction),
-  with a `400` refusal and the compose line that resolves it; `runner`
-  validates only the LEXICAL form — the same list of prohibitions, without
-  touching disk — because only the runner, running on the real host, has
-  the authority to confirm the folder exists (RN-423, see
-  `POST /internal/projects/:projectId/workspace-verification` below). The
-  mode is **frozen** afterward: `UpdateProjectDto` deliberately omits both
-  fields, otherwise `PartialType(CreateProjectDto)` would expose them on a
-  `PATCH` with no guard at all. The lexical predicate still runs on every
-  derivation of the root — on READS too, not just on creation — because the
-  only way to bypass creation is to write straight to the database.
+  Since [ADR 0142](adr/0142-validacao-de-workspace-montado-adiada.md)
+  ([RN-501](business-rules.md#rn-501)) the TWO modes that aren't
+  `container` validate the SAME thing at creation time: only the LEXICAL
+  form — absolute, no `..`, never root or a system folder, never
+  overlapping the Brabo checkout in either direction (RN-422/RN-423) — with
+  no disk I/O at all. `mounted` adds one rule of its own: the path must sit
+  inside `BRABO_PROJECTS_BASE`, the only folder of the machine both
+  containers can see (ADR 0141), and with no base configured the refusal
+  says the MODE is unavailable on this installation rather than blaming the
+  path.
+
+  **The security-relevant part of that change is what did NOT move.** The
+  path supplied is still the terminal scope root, and the lexical predicate
+  is still what contains it — it runs on every derivation of the root, on
+  READS too, because writing straight to the database is the only way to
+  bypass creation. What was deferred is the DISK check (does it exist? is
+  it a directory? can this process write to it?), which never contained
+  anything: it answered "will this work", not "is this allowed". It now
+  runs in `materializarWorkspaceMontado`, when Infra starts the container
+  (and, as a declared exception, on mode conversion), and the base rule is
+  re-applied there BEFORE the `mkdir -p` — so a path written outside the
+  product can't make the api create a folder anywhere it reaches.
+
+  The base rule deliberately stays OUT of the lexical predicate: that one
+  runs on every read, and a LEGACY `mounted` project outside the base would
+  start failing when merely read. `runner` continues to be confirmed by the
+  runner itself, the only party with authority over the real host (RN-423,
+  see `POST /internal/projects/:projectId/workspace-verification` below);
+  `mounted` is now confirmed by the materialization, which stamps
+  `workspace_verified_at` the same way. The mode is **frozen** afterward:
+  `UpdateProjectDto` deliberately omits both fields, otherwise
+  `PartialType(CreateProjectDto)` would expose them on a `PATCH` with no
+  guard at all.
 - **`GET /workspaces/:workspaceId/projects-base` reveals a piece of the
   operator's filesystem topology, and that's why it isn't `viewer`**
   ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md),

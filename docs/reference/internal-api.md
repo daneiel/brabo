@@ -523,6 +523,20 @@ host, so the leading-slash discriminator above keeps working, `projectScopeRoot`
 **no route was added in either direction**. A fixed mountpoint would have
 forced a translation into this contract; identity is what buys its absence.
 
+**Nor does deferring the disk check change anything here**
+([ADR 0142](../adr/0142-validacao-de-workspace-montado-adiada.md),
+[RN-501](../business-rules.md#rn-501)). Creating a `mounted` project stopped
+requiring the folder to exist — creation validates the lexical form plus the
+base, and the folder is created when Infra starts the container — so between
+those two moments the engine can read a `workspace_path` pointing at a folder
+that isn't there yet. That is not a contract change and needs no route: the
+engine already had to survive it, because `runner` has had the same window
+since ADR 0104 (the path is written at creation and only confirmed later), and
+`Engine.Actions.Workspace.ensure!/4` already creates what it needs. What the
+window costs is stated in the ADR and belongs to the SCREEN, not to this
+contract: a project in that state has `workspace_verified_at = null`, and the
+UI has to say the folder isn't there yet rather than show a path as if it were.
+
 #### Browsing that base is NOT an internal route either
 
 The folder picker that helps a human choose where a `mounted` project will
