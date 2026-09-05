@@ -1,7 +1,7 @@
 defmodule Engine.Infra.Tools.ProposeContainerStartViaRunner do
   @moduledoc """
   Spec da ferramenta `container_start_via_runner` — pro modelo do Infra Lead
-  (RN-506, ADR 0145). Segundo caminho para subir o container real do
+  (RN-508, ADR 0145). Segundo caminho para subir o container real do
   projeto, EXCLUSIVO de `execution_mode: runner` (`mounted` segue por
   `propose_container_start`, o broker, desde a RN-503).
 

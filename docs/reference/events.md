@@ -148,6 +148,7 @@ have to learn a second name just because the conversational agent doesn't use
 |---|---|
 | `artifact.product_brief` | `title`, `summary`, `rules` |
 | `artifact.business_rule` | `title`, `description`, `origin` |
+| `artifact.decision_record` | `context`, `options`, `choice`, `consequences` — a "summarized ADR" any of the six conversational agents can emit; reuses the generic pattern instead of the dedicated one, and coexists with `open_adr_pr` (Architect-only, a real committed document) ([RN-505](../business-rules.md#rn-505)) |
 | `artifact.module_map` | the Architect's module map |
 | `artifact.module_routing` | the Architect's candidate image per module, one item per module of the current `module_map` — the Architect CANDIDATES, Infra ELECTS ([RN-487](../business-rules.md#rn-487), [ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)) |
 | `artifact.insight` | — |

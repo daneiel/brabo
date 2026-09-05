@@ -27,7 +27,7 @@ export interface ExecMessage {
   command: string;
   cwd: string;
   /**
-   * Credencial de git (ADR 0056), estendida ao protocolo pela RN-505/ADR
+   * Credencial de git (ADR 0056), estendida ao protocolo pela RN-507/ADR
    * 0145 — Docker virou pré-requisito real do modo `runner`, e a
    * materialização do worktree do dev agent (`Engine.Actions.Workspace.
    * RunnerGit`) passou a viajar pelo MESMO canal `exec`/`exec_result` que já

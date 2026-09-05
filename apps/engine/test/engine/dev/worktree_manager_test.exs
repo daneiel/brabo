@@ -1,6 +1,6 @@
 defmodule Engine.Dev.WorktreeManagerTest do
   # async: false — mexe em Application env global (:project_workspaces_root) e no
-  # filesystem, e (desde a RN-505) em `Engine.Runners.Registry`, que usa
+  # filesystem, e (desde a RN-507) em `Engine.Runners.Registry`, que usa
   # `:global` — o mesmo motivo de `Engine.Runners.RunnerRouterTest`. Os testes
   # ORIGINAIS (local, sem projeto no banco) continuam funcionando sem tocar o
   # banco — `WorktreeManager.runner?/1` degrada pra `false` sem sandbox
@@ -104,11 +104,11 @@ defmodule Engine.Dev.WorktreeManagerTest do
     assert WorktreeManager.list(project_id) == ["dev-api"]
   end
 
-  # RN-505/ADR 0145 — as MESMAS quatro operações, para um projeto
+  # RN-507/ADR 0145 — as MESMAS quatro operações, para um projeto
   # `execution_mode: runner`: bifurcam para `Engine.Actions.Workspace.
   # RunnerGit`, pelo canal Phoenix, nunca `File.ls`/`System.cmd` local (que
   # não alcançaria a pasta do usuário de qualquer jeito).
-  describe "runner (RN-505, ADR 0145)" do
+  describe "runner (RN-507, ADR 0145)" do
     defp insert_runner_project!(project_id, workspace_path) do
       Repo.query!(
         "INSERT INTO public.projects " <>

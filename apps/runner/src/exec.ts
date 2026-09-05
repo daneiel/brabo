@@ -25,7 +25,7 @@ export interface ExecOpts {
   maxBytes?: number;
   /**
    * Credencial de git (ADR 0056), estendida ao protocolo `exec`/`exec_result`
-   * pela RN-505/ADR 0145. MESCLADO em cima de `process.env` — nunca o
+   * pela RN-507/ADR 0145. MESCLADO em cima de `process.env` — nunca o
    * substitui: `spawn` com `env` definido descarta o ambiente herdado
    * (PATH incluso), e um `git`/`sh` sem PATH nem resolve o próprio binário.
    * Nunca aparece em `command` (argv) nem em log nenhum — ver `index.ts`.

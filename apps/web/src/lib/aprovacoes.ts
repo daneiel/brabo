@@ -305,7 +305,7 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     'Remove o container do projeto de vez — descarta o que existe. Para ' +
     'voltar a ter um, é preciso subir de novo do zero.',
 
-  // RN-506 (ADR 0145) — segundo tipo pra subir o container real do projeto,
+  // RN-508 (ADR 0145) — segundo tipo pra subir o container real do projeto,
   // exclusivo do modo Runner: sobe pelo `brabo-runner`, na máquina do
   // usuário, com o Docker DELE — nunca elege imagem candidata nenhuma (a
   // que já estiver decidida é a que sobe), diferente de `container_start`.

@@ -29,7 +29,7 @@ defmodule Engine.Actions.Workspace do
   agentes menos um — o que quebrava o critério de aceite de dois devs em
   paralelo. Ver `ensure/3` pro caminho sem exceção.
 
-  Desde a RN-505 (ADR 0145), `ensure!/4` bifurca por `execution_mode`: LOCAL
+  Desde a RN-507 (ADR 0145), `ensure!/4` bifurca por `execution_mode`: LOCAL
   (`init_from_bare!/4`, tudo acima) para `container`/`mounted`; via
   `Engine.Actions.Workspace.RunnerGit` para `runner` — os MESMOS init +
   remote add + fetch + checkout, só que executados na máquina do usuário, via
@@ -74,7 +74,7 @@ defmodule Engine.Actions.Workspace do
   bind-mount por identidade no engine também, então `mounted` já enxerga a
   pasta), via `RunnerGit` para `runner`.
 
-  Até a RN-505 (ADR 0145), esta função tentava `File.mkdir_p!`/`git init`
+  Até a RN-507 (ADR 0145), esta função tentava `File.mkdir_p!`/`git init`
   LOCAL para os TRÊS modos — em `runner` isso é o defeito que a RN-478
   registrou e deixou ABERTO de propósito: `workspace_dir/2` devolve o
   caminho do HOST, e o processo do engine não tem bind-mount nenhum para lá,
@@ -82,7 +82,7 @@ defmodule Engine.Actions.Workspace do
   falha). A materialização passa a acontecer DENTRO do container real do
   projeto, na máquina do usuário — pelo MESMO canal Phoenix que já executa
   comando de terminal aprovado (`Engine.Runners.RunnerRouter.exec/5`) — e só
-  quando as TRÊS pré-condições da RN-505 estão satisfeitas
+  quando as TRÊS pré-condições da RN-507 estão satisfeitas
   (`Engine.Runners.RunnerReadiness`); faltando alguma, `RunnerGit.ensure!/5`
   levanta com mensagem NOMEADA, sem tentar I/O nenhum antes.
   """

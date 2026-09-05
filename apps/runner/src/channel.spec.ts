@@ -144,10 +144,10 @@ describe('conectarCanal', () => {
     ]);
   });
 
-  // RN-505/ADR 0145 — `env` é OPCIONAL e só repassado quando é de verdade um
+  // RN-507/ADR 0145 — `env` é OPCIONAL e só repassado quando é de verdade um
   // objeto string->string; um payload malformado (array, número, string
   // solta) some, em vez de virar env arbitrário do processo filho.
-  it('exec com env (credencial de git, RN-505): repassa o objeto pro handler', async () => {
+  it('exec com env (credencial de git, RN-507): repassa o objeto pro handler', async () => {
     const canal = new CanalFalso({ status: 'ok' });
     const onExec = vi.fn();
 

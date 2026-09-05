@@ -6,7 +6,7 @@ defmodule Engine.Dev.WorktreeManager do
   (`Engine.Actions.Workspace`). 1 worktree por agente (o dir por agent_id já
   garante), com limpeza de órfãos (worktree sem agente vivo).
 
-  Desde a RN-505 (ADR 0145), as QUATRO operações públicas (`add_worktree/3`
+  Desde a RN-507 (ADR 0145), as QUATRO operações públicas (`add_worktree/3`
   vira `create/3`, `remove/2`, `list/1`, `cleanup_orphans/2`) bifurcam por
   `execution_mode`: LOCAL (`GitCmd`, tudo abaixo) para `container`/`mounted`
   — comportamento de sempre —, via `Engine.Actions.Workspace.RunnerGit` para

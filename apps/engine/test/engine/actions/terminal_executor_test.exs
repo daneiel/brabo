@@ -383,7 +383,7 @@ defmodule Engine.Actions.TerminalExecutorTest do
       assert result.stderr =~ "nenhum runner está conectado"
     end
 
-    # RN-505/ADR 0145 — a inconsistência que este PR fecha: até aqui, workspace
+    # RN-507/ADR 0145 — a inconsistência que este PR fecha: até aqui, workspace
     # verificado + runner conectado bastava, mesmo sem Docker de pé na máquina
     # do usuário. Container `running` REGISTRADO vira a TERCEIRA pré-condição,
     # no mesmo calibre de `container`/`mounted` desde a RN-502.

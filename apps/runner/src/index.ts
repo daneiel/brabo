@@ -305,7 +305,7 @@ export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Prom
     return;
   }
 
-  // Log NUNCA imprime `msg.env` (RN-505/ADR 0145) — só ref/command/cwd, os
+  // Log NUNCA imprime `msg.env` (RN-507/ADR 0145) — só ref/command/cwd, os
   // mesmos três campos de sempre. A credencial de git só existe no `env` do
   // processo filho que `executarComando` spawna, nunca em texto.
   console.log(`exec ${msg.ref}: ${msg.command} (cwd=${cwd})`);

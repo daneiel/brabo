@@ -118,7 +118,7 @@ defmodule Engine.Projects.Project do
   nos modos `mounted`/`runner`. Tem que ser o mesmo, senão a poda varreria a
   pasta gerenciada de um projeto cujo worktree vive na pasta do usuário.
 
-  `execution_mode` entrou com a RN-505 (ADR 0145): `WorktreeCleanup` precisa
+  `execution_mode` entrou com a RN-507 (ADR 0145): `WorktreeCleanup` precisa
   dele para decidir COMO alcançar cada pasta — `File.dir?` local para
   `container`/`mounted`, `Engine.Runners.RunnerReadiness` (pula em silêncio
   sem runner pronto) para `runner`.

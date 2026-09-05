@@ -390,7 +390,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
                      %{type: "agent.response", payload: %{content: "pronto-cs"}}}
   end
 
-  # --- `container_start_via_runner` (RN-506, ADR 0145) ---
+  # --- `container_start_via_runner` (RN-508, ADR 0145) ---
 
   defp insert_project!(project_id, execution_mode) do
     Repo.query!(

@@ -139,6 +139,39 @@ describe('ApprovalCard', () => {
     expect(screen.getByText(/permissions\.json/)).toBeInTheDocument();
   });
 
+  // RN-505 (Frente 2): "sempre permitir" de um Dev Agent de módulo escopa
+  // `agent_autonomy` POR AGENTE, e a nota do card deve dizer isso — não
+  // prometer o `permissions.json` de projeto inteiro que não é mais o
+  // destino da gravação.
+  it('ator dev-de-módulo: a nota de "sempre permitir" cita o AGENTE, não permissions.json', () => {
+    render(
+      <ApprovalCard
+        action={makeAction({ actor: { kind: 'agent', id: 'dev-checkout' } })}
+        variant="chat"
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText(/libera este tipo de ação só para dev-checkout/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/permissions\.json/)).toBeNull();
+  });
+
+  it('ator dev-lead: continua com a nota de permissions.json (lidera a área, não é membro dela)', () => {
+    render(
+      <ApprovalCard
+        action={makeAction({ actor: { kind: 'agent', id: 'dev-lead' } })}
+        variant="chat"
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/permissions\.json/)).toBeInTheDocument();
+  });
+
   it('esconde os botões e mostra o estado decidido quando negado', () => {
     render(
       <ApprovalCard

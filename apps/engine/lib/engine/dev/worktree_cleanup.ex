@@ -38,7 +38,7 @@ defmodule Engine.Dev.WorktreeCleanup do
   O efeito seria silencioso — `File.dir?` falso, projeto pulado, worktree
   órfão nunca podado. A junção passou a ser a MESMA de todo mundo.
 
-  ## `runner` (RN-505, ADR 0145): pular é a resposta certa, não uma falha
+  ## `runner` (RN-507, ADR 0145): pular é a resposta certa, não uma falha
 
   Para `container`/`mounted`, `File.dir?(work_dir)` continua decidindo se
   vale a pena podar — a pasta é local ao engine, e ausência dela é sinal

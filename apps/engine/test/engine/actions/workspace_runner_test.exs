@@ -1,7 +1,7 @@
 defmodule Engine.Actions.WorkspaceRunnerTest do
   @moduledoc """
   `Engine.Actions.Workspace.ensure!/4` para projeto `execution_mode: runner`
-  (RN-505, ADR 0145).
+  (RN-507, ADR 0145).
 
   Até esta entrega, a lacuna era ABERTA de propósito (RN-478): `ensure!/4`
   tentava `File.mkdir_p!`/`git init` LOCAL contra o caminho do HOST, e a
@@ -102,7 +102,7 @@ defmodule Engine.Actions.WorkspaceRunnerTest do
   end
 
   # Variante que também captura `env` — usada só pelo teste de credencial
-  # (RN-505), que precisa provar que `env` viaja SÓ no `git fetch`, nunca nos
+  # (RN-507), que precisa provar que `env` viaja SÓ no `git fetch`, nunca nos
   # outros comandos da mesma cadeia.
   defp start_fake_runner_loop_capturando_env!(project_id) do
     parent = self()
@@ -177,7 +177,7 @@ defmodule Engine.Actions.WorkspaceRunnerTest do
     refute File.exists?(pasta)
   end
 
-  test "runner verificado e conectado, mas SEM container running: recusa nomeada (RN-505)" do
+  test "runner verificado e conectado, mas SEM container running: recusa nomeada (RN-507)" do
     id = Ecto.UUID.generate()
     pasta = caminho_impossivel()
 
@@ -193,7 +193,7 @@ defmodule Engine.Actions.WorkspaceRunnerTest do
 
     assert {:error, mensagem} = Workspace.ensure_remoto(id, remoto())
     assert mensagem =~ "não tem container REGISTRADO como `running`"
-    assert mensagem =~ "RN-505"
+    assert mensagem =~ "RN-507"
     refute File.exists?(pasta)
   end
 
@@ -266,7 +266,7 @@ defmodule Engine.Actions.WorkspaceRunnerTest do
     assert Enum.all?(outros, fn {_c, env} -> env == nil end)
   end
 
-  test "projeto no modo de sempre: mensagem original passa intacta, sem menção a runner nem RN-505" do
+  test "projeto no modo de sempre: mensagem original passa intacta, sem menção a runner nem RN-507" do
     id = Ecto.UUID.generate()
 
     insert_project!(id, %{execution_mode: "container", workspace_dir_name: "loja-abcdefgh"})
@@ -280,6 +280,6 @@ defmodule Engine.Actions.WorkspaceRunnerTest do
     assert {:error, mensagem} = Workspace.ensure_remoto(id, remoto())
 
     refute mensagem =~ "runner"
-    refute mensagem =~ "RN-505"
+    refute mensagem =~ "RN-507"
   end
 end

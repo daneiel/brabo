@@ -21,7 +21,7 @@ defmodule Engine.Infra.InfraLeadServer do
   da PR de infra: nunca inventa candidata fora da lista, e vira
   `proposed_action` que SEMPRE exige aprovação humana.
 
-  Desde a RN-506 (ADR 0145) ganha uma SEGUNDA tool de subir container,
+  Desde a RN-508 (ADR 0145) ganha uma SEGUNDA tool de subir container,
   `container_start_via_runner` — exclusiva de projeto `execution_mode:
   runner` (não elege candidata nenhuma; ver o moduledoc de
   `Engine.Infra.Tools.ProposeContainerStartViaRunner`). O dispatch dela
@@ -309,7 +309,7 @@ defmodule Engine.Infra.InfraLeadServer do
     })
   end
 
-  # `container_start_via_runner` (RN-506, ADR 0145) — MESMO desenho de
+  # `container_start_via_runner` (RN-508, ADR 0145) — MESMO desenho de
   # `dispatch_container_start/2` (despacha inline, sem HALT), com uma
   # diferença: ANTES de chamar `propose_action`, consulta LOCALMENTE
   # (`Project.get/1` + `RunnerRegistry.connected?/1`, sem HTTP — os dois

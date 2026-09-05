@@ -14,7 +14,7 @@ defmodule Engine.Actions.TerminalExecutor do
   de verdade pediria uma lib tipo MuonTrap, não justificada ainda.
 
   ## Roteamento pro runner local (projeto `runner`, verificado, conectado, com
-  ## Docker de pé — RN-423/RN-505, ADR 0104/0145)
+  ## Docker de pé — RN-423/RN-507, ADR 0104/0145)
 
   O comando que chega aqui JÁ foi aprovado pelo pipeline de sempre
   (`decide()`/`proposed_action` do lado api) — este módulo nunca decide SE
@@ -22,14 +22,14 @@ defmodule Engine.Actions.TerminalExecutor do
   (ADR 0072/0104), há QUATRO pré-condições, não uma: workspace VERIFICADO
   (`workspace_verified_at` não-nulo — o runner confirmou o caminho no host
   pelo menos uma vez), runner CONECTADO agora (`Engine.Runners.Registry`) e,
-  desde a RN-505 (ADR 0145), container REGISTRADO `running`
+  desde a RN-507 (ADR 0145), container REGISTRADO `running`
   (`Engine.Containers.ProjectContainerLifecycle.running?/1`) — o mesmo
   predicado que `container`/`mounted` já exigiam desde a RN-502. Só com as
   TRÊS o comando é entregue via canal Phoenix (`Engine.Runners.RunnerRouter`)
   em vez de `System.cmd` local; a escolha host-vs-container DENTRO do runner
   continua interna a ele (ADR 0137).
 
-  A RN-505 fecha a última inconsistência que separava `runner` dos outros dois
+  A RN-507 fecha a última inconsistência que separava `runner` dos outros dois
   modos: até aqui, workspace verificado + runner conectado bastava para rotear
   — sem Docker de pé na máquina do usuário, o comando ainda chegava ao runner,
   que ou tinha um container de uma sessão anterior (acidental) ou executava no
@@ -127,12 +127,12 @@ defmodule Engine.Actions.TerminalExecutor do
   # caminho de sempre, nunca propaga erro daqui.
   #
   # SETE saídas (RN-423/ADR 0104 + RN-492/ADR 0134 + RN-502/ADR 0143 +
-  # RN-505/ADR 0145):
+  # RN-507/ADR 0145):
   #
   #   - `runner` sem workspace verificado: recusa (nunca roteia às cegas);
   #   - `runner` verificado, sem runner conectado: recusa (idem);
   #   - `runner` verificado e conectado, SEM container `running`: recusa
-  #     (RN-505) — ver abaixo. As TRÊS recusas de `runner` compartilham o
+  #     (RN-507) — ver abaixo. As TRÊS recusas de `runner` compartilham o
   #     mesmo shape, `{:recusar_runner, motivo}` — `motivo` vem de
   #     `Engine.Runners.RunnerReadiness.verificar/1`, a mesma função que
   #     `Engine.Actions.Workspace.RunnerGit` consulta para materializar o
@@ -150,7 +150,7 @@ defmodule Engine.Actions.TerminalExecutor do
   #   - projeto inexistente ou id malformado: caminho de sempre.
   #
   # ## O fallback silencioso que sumiu (RN-502, ADR 0143) — e a lacuna que a
-  # ## RN-505 (ADR 0145) fechou do lado do `runner`
+  # ## RN-507 (ADR 0145) fechou do lado do `runner`
   #
   # Até a RN-502, `container` sem container `running` caía em
   # `:caminho_de_sempre`, isto é, `System.cmd` DENTRO do processo do engine —
@@ -167,7 +167,7 @@ defmodule Engine.Actions.TerminalExecutor do
   # runner conectado, e um comando aprovado atravessava pro canal Phoenix
   # mesmo sem Docker de pé na máquina do usuário (o `brabo-runner` decidia
   # host-vs-container sozinho, ADR 0137, e sem container ativo caía no HOST
-  # puro — o fallback que a decisão do dono do produto fechou). A RN-505
+  # puro — o fallback que a decisão do dono do produto fechou). A RN-507
   # unifica os três modos sob o MESMO predicado
   # (`ProjectContainerLifecycle.running?/1`) — Docker deixa de ser opcional
   # para `runner`, e sem container registrado o comando recusa igual aos

@@ -37,7 +37,7 @@ defmodule Engine.Runners.RunnerRouter do
   `"exec_result"`, chaves string) | `{:error, :not_connected}` |
   `{:error, :timeout}`.
 
-  `env` (opcional, default `nil`) é o par extra que a RN-505/ADR 0145
+  `env` (opcional, default `nil`) é o par extra que a RN-507/ADR 0145
   acrescentou ao protocolo `exec`/`exec_result`, para o `git fetch`/`push` de
   `Engine.Actions.Workspace.RunnerGit` injetar a credencial (ADR 0056) sem
   gravá-la em argv nem em arquivo — o MESMO raciocínio de

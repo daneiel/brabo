@@ -3,7 +3,7 @@ defmodule Engine.Runners.RunnerReadiness do
   As TRÊS pré-condições que um projeto `execution_mode: runner` precisa ter
   para qualquer comando alcançar a máquina do usuário — a MESMA pergunta que
   `Engine.Actions.TerminalExecutor` sempre respondeu para rotear terminal
-  (RN-423/ADR 0104), com o predicado que a RN-505 (ADR 0145) acrescentou:
+  (RN-423/ADR 0104), com o predicado que a RN-507 (ADR 0145) acrescentou:
   container REGISTRADO `running`
   (`Engine.Containers.ProjectContainerLifecycle.running?/1`), unificando
   `runner` com `container`/`mounted` desde a RN-502 (ADR 0143) — Docker deixa
@@ -85,7 +85,7 @@ defmodule Engine.Runners.RunnerReadiness do
 
   def mensagem(:sem_container, _project_id) do
     "workspace confirmado e runner conectado, mas o projeto não tem " <>
-      "container REGISTRADO como `running` na sua máquina (RN-505) — " <>
+      "container REGISTRADO como `running` na sua máquina (RN-507) — " <>
       "Docker virou pré-requisito real do modo runner, sem fallback " <>
       "pro host. Peça à Infra para propor `container_start_via_runner` " <>
       "e, depois de aprovado, tente de novo."

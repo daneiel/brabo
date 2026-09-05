@@ -88,7 +88,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   existia e re-tenta sozinho
 
 - **engine,runner,api**: Docker vira pré-requisito real do modo **Runner**,
-  sem fallback para o host (RN-505/506, ADR 0145). Até aqui, um projeto
+  sem fallback para o host (RN-507/508, ADR 0145). Até aqui, um projeto
   `runner` verificado e conectado tinha todo comando de terminal roteado ao
   CLI incondicionalmente — sem container `running` de pé, o runner decidia
   sozinho cair no HOST puro, o mesmo fallback silencioso que o ADR 0143 já
@@ -116,6 +116,37 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   Infra Lead consultando `execution_mode` e a presença de um runner conectado
   LOCALMENTE, sem HTTP, antes de propor — recusando com motivo nomeado em vez
   de propor às cegas.
+
+- **api**: "sempre permitir" de um Dev Agent de módulo (`dev-<modulo>`)
+  passa a escopar a `agent_autonomy`, POR AGENTE — não mais o
+  `permissions.json` de projeto inteiro (RN-505). Antes, aprovar sempre um
+  comando pro `dev-checkout` liberava o MESMO comando pro `dev-auth`, pro
+  `dev-lead` e pra qualquer outro agente do projeto; agora a chave é
+  `(projeto, agente, tipo de ação)`, o mesmo mecanismo que já semeia as três
+  ações git por módulo na ativação da execução. `dev-lead` (lidera a área,
+  não é membro dela) e qualquer ator que não seja dev-de-módulo continuam
+  indo pro `permissions.json` de sempre. Os dois tetos absolutos que já
+  recusavam o clique inteiro — terminal com efeito externo git/comando
+  privilegiado (RN-418) e `container_remove` (RN-495) — continuam rodando
+  ANTES do novo branch, sem exceção por agente. Sem migração: entradas
+  antigas em `permissions.json` para um dev-de-módulo continuam lá,
+  decisão consciente
+- **engine**: novo tipo de artefato `decision_record` — o "ADR resumido" que
+  qualquer um dos seis agentes conversacionais (Criativo, PO, Arquiteto, Dev
+  Lead, UX Designer, Staff) pode emitir com `emit_artifact` para registrar uma
+  decisão relevante tomada na conversa (`context`, `options`, `choice`,
+  `consequences`; RN-505). Reusa o padrão **genérico** de `ArtifactSchemas`
+  (o mesmo de `note`/`business_rule`) em vez do dedicado de
+  `project_image`/`c4_diagram` — uma decisão é log append-only, não um
+  "vigente" que se substitui. Distinto de `open_adr_pr` (só o Arquiteto, commit
+  real em `docs/adr/*.md` com PR e aprovação humana): os dois coexistem, para
+  escalas diferentes de decisão. PO, Arquiteto, Dev Lead, UX Designer e Staff
+  ganham a ferramenta nesta mudança — o Criativo já a tinha desde a Fase 3b, só
+  ganhou o tipo novo. **Fora de escopo, declarado:** agentes de execução (QA,
+  SecOps, Dev Agent de módulo, sobre `ToolLoop`) ficam de fora desta fatia; a
+  amarração com o Infra Lead (emitir `decision_record` ao propor subir
+  container via runner) depende de uma tool que outra frente do mesmo plano
+  está criando em paralelo e é o próximo passo, não implementada aqui
 
 ### Correções
 

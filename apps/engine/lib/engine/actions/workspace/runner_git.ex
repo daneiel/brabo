@@ -10,7 +10,7 @@ defmodule Engine.Actions.Workspace.RunnerGit do
   não tem bind-mount nenhum para lá (a lacuna que a RN-478 registrou e
   deixou ABERTA de propósito).
 
-  ## RN-505 (ADR 0145) — Docker vira pré-requisito real do modo `runner`
+  ## RN-507 (ADR 0145) — Docker vira pré-requisito real do modo `runner`
 
   TODA função pública daqui checa `Engine.Runners.RunnerReadiness` ANTES de
   mandar qualquer coisa pelo canal — as MESMAS três pré-condições que
@@ -28,7 +28,7 @@ defmodule Engine.Actions.Workspace.RunnerGit do
 
   `git fetch` autenticado usa a MESMA disciplina de `Engine.Actions.GitAuth`
   do lado local: a credencial viaja só no AMBIENTE do processo filho que o
-  RUNNER spawna — o campo `env` que a RN-505 acrescentou ao protocolo
+  RUNNER spawna — o campo `env` que a RN-507 acrescentou ao protocolo
   `exec`/`exec_result` (`Engine.Runners.RunnerRouter.exec/5`,
   `apps/runner/src/exec.ts`) — nunca concatenada no comando (apareceria no
   log do runner) nem gravada em `.git/config` (o dev agent lê essa pasta
@@ -60,7 +60,7 @@ defmodule Engine.Actions.Workspace.RunnerGit do
   por `project_id` — dois dev agents do mesmo projeto `runner` ativando a
   execução em paralelo não colidem, igual ao caminho local.
 
-  Levanta (nunca devolve `{:error, _}`) quando a pré-condição da RN-505
+  Levanta (nunca devolve `{:error, _}`) quando a pré-condição da RN-507
   falta, ou quando o `git fetch`/`checkout` falha de verdade — mesmo
   contrato que `Engine.Actions.Workspace.ensure!/4` sempre teve, e que
   `ensure_remoto/2` já sabe capturar e traduzir em `{:error, mensagem}`.
@@ -187,7 +187,7 @@ defmodule Engine.Actions.Workspace.RunnerGit do
     end
   end
 
-  # ADR 0056/RN-505 — ver o moduledoc. `args_de_auth/1`/`env_de_auth/1` são
+  # ADR 0056/RN-507 — ver o moduledoc. `args_de_auth/1`/`env_de_auth/1` são
   # os MESMOS que `Engine.Actions.GitAuth` usa no caminho local: só o
   # transporte da credencial muda (era `System.cmd(env: ...)` local, agora é
   # o campo `env` do payload `exec` do canal).

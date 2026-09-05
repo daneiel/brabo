@@ -113,7 +113,7 @@ defmodule Engine.Dev.WorktreeCleanupTest do
     assert WorktreeCleanup.live_agents(Ecto.UUID.generate()) == []
   end
 
-  # RN-505/ADR 0145 — a poda ganhou um SEGUNDO caminho, pro modo `runner`, e
+  # RN-507/ADR 0145 — a poda ganhou um SEGUNDO caminho, pro modo `runner`, e
   # ele precisa DEGRADAR: sem runner conectado (ou sem container `running`)
   # AGORA, o projeto é pulado nesta rodada — nunca um erro, e nunca uma
   # exceção que derrube `Enum.each/2` antes de chegar nos projetos seguintes.

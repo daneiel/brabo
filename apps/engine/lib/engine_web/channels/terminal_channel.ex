@@ -366,7 +366,7 @@ defmodule EngineWeb.TerminalChannel do
   # pid do canal :runner (achado via Registry) e fica bloqueado em `receive`
   # esperando {:runner_exec_result, ref, payload} — ver handle_in("exec_result", ...).
   #
-  # `env` (RN-505/ADR 0145) só entra no payload empurrado quando não é `nil` —
+  # `env` (RN-507/ADR 0145) só entra no payload empurrado quando não é `nil` —
   # a credencial de git (ADR 0056) nunca deve aparecer como `null` gratuito
   # nem em log nenhum daqui pra frente; ver `apps/runner/src/index.ts`, que
   # audita explicitamente que este campo nunca é logado do lado dele.
