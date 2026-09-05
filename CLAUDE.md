@@ -86,6 +86,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 
 | Agentes de dev só depois do container (PR 7) | Numa execução real do `exp001`, DEZ tasks de dev travaram de uma vez — e o achado não foi a pasta que falhou, foi que **nada ordenava container antes de dev agent**. `Engine.Dev.AgentIo.try_claim/2` — o ponto ÚNICO de claim — passa a consultar `ProjectContainerLifecycle.running?/1` (o predicado que o ADR 0134 já tinha) ANTES de chamar a api: sem linha REGISTRADA `running`, o agente cai em `:idle`, persiste e emite `dev.blocked_by_container`. No ENGINE e não só no `activate-execution` da api porque a REIDRATAÇÃO chega ao `try_claim/2` sem passar por rota nenhuma (`init/1` → `finish_restart_recovery/1`). `:idle` e NÃO status novo, pela razão que o próprio docblock do `try_claim/2` já registrava desde a Fase 12b — é o único estado do qual um wake ainda resgata, e todos os guards de `handle_info/2` se apoiam nisso; quem distingue "fila vazia" de "sem container" é o EVENTO, nunca o status. O wake vem pelo outbox: `RegistrarTransicaoDeContainerUseCase` publica `container.running` na MESMA transação que grava a chegada em `running`, num `aggregate_type` NOVO (`container`, o terceiro que `Engine.Outbox.Drain` lê) em vez de pegar `task` emprestado, com o PROJETO como `aggregateId`; a mensagem entregue é a `{:wake, :became_claimable}` que já existia. Segunda metade: `TerminalExecutor` para de degradar calado — `container` sem `running` caía em `System.cmd` DENTRO do processo do engine, e agora RECUSA, com `mounted` no mesmo ramo | ADR 0143, RN-502 |
 | Alarme de merge de esteira com destinatário | A regra "promoção é `--no-ff`" foi quebrada TRÊS vezes (#367, #394, #464 — a terceira era o PR que consertava as duas primeiras). O achado: a detecção JÁ existia e JÁ funcionou (o `tag-release` reprovou as duas primeiras com a mensagem certa) — faltava para QUEM tocar, porque workflow de `push` que falha numa permanente não tem PR onde ficar vermelho e o repo tinha zero issues. `tag-release` ganha o job `avisar`, que abre issue (e comenta na já aberta, nunca duplica) com `github.token` e nunca com o PAT — PAT inválido é uma das falhas que ele reporta — e isso deixou de ser hipotético: o `BRABO_BOT_TOKEN` expirou em 2026-09-03 à noite, reprovou duas runs do `tag-release`, e foi rotacionado em 2026-09-04; a v4.0.0 carimbou e DISPAROU a Release, o que só acontece com PAT válido (tag criada com `GITHUB_TOKEN` não dispara workflow). A regra passa a cobrir `dev` de forma ESTREITA: só é defeito o PR que trazia ARESTA NOVA (head era merge cujo segundo pai não estava na base), nunca o squash de PR de trabalho, que é a convenção. Desligar squash no repo foi MEDIDO e recusado (taxaria todo PR e mexeria no `changelog.mjs`, que roda `--no-merges`) | ADR 0139 |
+| O artefato de decisão dos conversacionais (Frente 3, fatia genérica) | `decision_record` reusa o padrão GENÉRICO de `emit_artifact`/`ArtifactSchemas` (o mesmo de `note`/`business_rule`) em vez do dedicado de `project_image`/`c4_diagram` — uma decisão é log append-only, nunca um "vigente" que se substitui. PO, Arquiteto, Dev Lead, UX Designer e Staff ganham a ferramenta (alias + `tool_specs` + `run_tool/3` + a mesma frase no `system_prompt/1`); o Criativo já tinha `emit_artifact` desde a Fase 3b e só ganhou o tipo novo, sem mudança nele. Distinto de `open_adr_pr` (só o Arquiteto, commit real + PR + aprovação humana): os dois COEXISTEM para escalas diferentes de decisão. Fora de escopo, declarado: agentes de execução (`ToolLoop`, sem harness comum) e a amarração com o Infra Lead — emitir `decision_record` ao propor `container_start_via_runner` — que depende de uma tool de outra frente do mesmo plano, em branch separada | RN-505 |
 
 ## Estado atual e aberto
 
@@ -670,6 +671,15 @@ daqui e o fechamento vai para o histórico.
   do `module_map` vigente pelo caso de uso, nunca redigitado pelo modelo
   na ferramenta `create_c4_diagram` — só o Context (nome do sistema e
   atores externos) vem do tool call.
+- `decision_record` é o outro polo do mesmo espectro: reusa o padrão
+  GENÉRICO de `emit_artifact`/`ArtifactSchemas` (o de `note`/
+  `business_rule`) em vez do dedicado de `project_image`/`c4_diagram` —
+  uma decisão é log append-only, nunca um "vigente" que se substitui
+  (RN-505). Os SEIS conversacionais (Criativo, PO, Arquiteto, Dev Lead,
+  UX Designer, Staff) podem emitir; distinto de `open_adr_pr` (só o
+  Arquiteto, commit real em `docs/adr/*.md` + PR + aprovação humana) —
+  os dois COEXISTEM, para escalas diferentes de decisão, nunca um
+  substituindo o outro.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
 - Agente que ESCREVE tem de poder LER o que já existe, e tem de poder

@@ -7946,6 +7946,79 @@ da interface, o binário segue sendo refinado); o protocolo em
 
 ---
 
+## O artefato de decisão dos conversacionais (RN-505)
+
+### RN-505 — `decision_record` reusa o padrão GENÉRICO de `emit_artifact`, não o dedicado {#rn-505}
+
+Um agente conversacional que toma uma decisão relevante numa conversa (por
+que escolheu X e não Y, o que considerou, o que aceitou perder) registra isso
+com `emit_artifact` e `type: decision_record` — payload com `context`,
+`options` (lista), `choice` e `consequences`, as quatro chaves obrigatórias
+em `Engine.Harness.ArtifactSchemas` (`artifact_schemas.ex:82`), tool-emittable
+desde que entrou em `@tool_emittable` (`artifact_schemas.ex:98`). **Sem
+validação cruzada de propósito:** `choice` não precisa bater com um item de
+`options` — texto livre é mais robusto, e o schema genérico só valida
+presença de chave (a mesma régua de `note`/`business_rule`).
+
+**Por que reusar o padrão GENÉRICO em vez do dedicado.** `artifact.project_image`
+e `artifact.c4_diagram` (RN vizinhas desta) são artefatos VERSIONADOS — cada
+emissão substitui a anterior como "vigente", com rota HTTP própria de leitura
+e schema TypeScript dedicado na api. Uma decisão não é assim: é um registro
+append-only por natureza, não um "vigente" que se substitui — o mesmo
+raciocínio que já vale para `note`/`business_rule`. Pagar o preço do padrão
+dedicado (schema TS, versionamento, rota nova) para um log que só precisa
+existir e ser pesquisável no event log da sessão custaria estrutura que a
+decisão não pede.
+
+**Distinção declarada com `open_adr_pr` (só o Arquiteto tem).** Os dois
+COEXISTEM, com propósitos diferentes: `decision_record` é para TODA decisão
+relevante de qualquer um dos seis conversacionais, sem fricção nenhuma —
+nunca commita arquivo, nunca abre PR, nunca espera aprovação humana.
+`open_adr_pr` é para quando a decisão é grande o bastante para virar
+DOCUMENTO real em `docs/adr/*.md`, com PR de verdade e aprovação humana
+obrigatória. Um projeto pode ter dez `decision_record` e zero ADR numa
+sessão — o segundo não é a versão "séria" do primeiro, é outra ferramenta
+para outra escala de decisão.
+
+**Wiring nos cinco conversacionais que ainda não tinham `emit_artifact`** —
+PO (`po_server.ex:115`), Arquiteto (`arquiteto_server.ex:102`), Dev Lead
+(`dev_lead_server.ex:153`), UX Designer (`ux_designer_server.ex:94`) e Staff
+(`staff_server.ex:94`); o Criativo já tinha a ferramenta desde a Fase 3b, só
+ganhou o tipo novo (é o `known/0` compartilhado quem decide, sem mudança no
+`CriativoServer`). Em cada um, o `run_tool/3` comum ganhou a cláusula
+`"emit_artifact" -> EmitArtifact.run/2` (ex.: `po_server.ex:279`) — **sem
+tratamento especial**: diferente de `propose_execution_plan`/
+`assess_implementability` no Dev Lead (que suspendem o turno esperando
+aprovação, ADR 0086), `emit_artifact` nunca devolve `{:pending, _}`, então
+entra no dispatch comum sem precisar do `reduce_while` que aquelas duas
+ferramentas exigem. E os cinco ganharam a MESMA frase no `system_prompt/1`
+(ex.: `po_server.ex:463`) explicando quando usar `type: decision_record` —
+fora do texto de identidade (`Engine.Harness.Agents`) porque não é sobre
+QUEM o agente é, é uma instrução operacional sobre uma ferramenta.
+
+**Fora de escopo, declarado.** Agentes de execução (QA, SecOps, Dev Agent de
+módulo) rodam sobre `ToolLoop`, sem harness comum aos seis conversacionais —
+ficam de fora desta fatia, investigação própria por módulo antes de
+estender. A amarração com a Frente 1 do mesmo plano (o dispatch do Infra
+Lead emitindo um `decision_record` server-emitted quando propõe subir
+container via runner) também fica de fora: depende de uma tool
+(`propose_container_start_via_runner`) que outro PR está criando em
+paralelo — ver TODO no PR desta mudança.
+
+- **Onde:** `apps/engine/lib/engine/harness/artifact_schemas.ex` (schema +
+  `@tool_emittable`); `apps/engine/lib/engine/agents/po_server.ex`,
+  `arquiteto_server.ex`, `dev_lead_server.ex`, `ux_designer_server.ex`,
+  `staff_server.ex` (alias + `tool_specs` + `run_tool/3` +
+  `system_prompt/1`)
+- **Teste:** `apps/engine/test/engine/harness/artifact_schemas_test.exs`
+  (`describe("decision_record …")`);
+  `apps/engine/test/engine/agents/po_server_test.exs` e
+  `arquiteto_server_test.exs`
+  (`describe("Frente 3 do plano de decision_record — emit_artifact")`)
+- **Origem:** plano do dono do produto, Frente 3 ("Artefato de decisão")
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -7998,6 +8071,7 @@ da interface, o binário segue sendo refinado); o protocolo em
 | `route_modules_to_infra` chamado sem `module_map` vigente, com lista vazia, módulo repetido, módulo fora do mapa, ou imagem inválida (`latest`/sem tag/`rationale` curto) | 400 nomeando o que falta ou o que está errado — pelo agente, tool-result de erro que o modelo corrige, nunca crash (RN-487) |
 | `container_start` elege uma imagem fora das candidatas do roteamento vigente do Arquiteto | ação vira `failed` nomeando a imagem recusada e listando as candidatas válidas — nem a imagem é decidida nem o broker é chamado (RN-491) |
 | Broker recusa ou está indisponível ao subir o container (`BrokerRecusouError`/`BrokerIndisponivelError`) | ação vira `failed` com a mensagem do broker — nunca propaga, nunca fica pendente (RN-491) |
+| `emit_artifact` com `type: decision_record` faltando `context`/`options`/`choice`/`consequences` | tool-result de erro nomeando a(s) chave(s) que faltam — o modelo corrige na próxima volta do laço, nunca crash (RN-505) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar
