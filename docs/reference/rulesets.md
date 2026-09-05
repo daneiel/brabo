@@ -186,6 +186,19 @@ shorten the PR has two targets, and only two:
   that used to gate the PR is now the SLOWEST of the three, not their sum, a
   real **~48%** cut.
 
+  `test-web` and `test-packages` were stable across every run of this PR
+  (164–169s and 55–56s). `test-api` was not: a second push measured it at
+  **388s** — worse than the old job's 343s total — with every step still
+  green, then a bare re-run of the SAME commit measured **172s**. Three real
+  samples of `test-api` on this PR: 177s, 388s, 172s. Two out of three land
+  where `test-web` and `test-packages` do (comfortably inside the ~4min
+  target); the 388s run is consistent with shared-runner contention on
+  GitHub's side rather than a regression from the split — nothing in the
+  job changed between that run and the retry that measured 172s. Recorded
+  as observed, not smoothed away: whoever chases the next slow `test-api`
+  run should know this variance already existed the day the job was split,
+  and check for contention before assuming a new regression.
+
 > **The "two costs" warning that used to live here doesn't apply anymore —
 > both premises changed.** It used to say splitting `Testes TS (api + web)`
 > would (1) erase a required check by renaming it, locking every PR forever

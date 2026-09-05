@@ -381,6 +381,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   de fato, porque nenhum ruleset está aplicado neste repositório ainda
   (`gh api repos/daneiel/brabo/branches/dev/protection` → `404`).
 
+  `test-web` e `test-packages` ficaram estáveis nas três rodadas desta PR
+  (164–169s e 55–56s); `test-api` NÃO — uma segunda rodada mediu **388s**
+  (pior que os 343s do job antigo, com todo passo verde), e um re-run do
+  MESMO commit logo depois mediu **172s**. Três amostras reais de
+  `test-api`: 177s, 388s, 172s — duas batem com a faixa de `test-web`/
+  `test-packages`, e o outlier de 388s é consistente com contenção do
+  runner compartilhado do GitHub, não com regressão da divisão (nada mudou
+  no job entre aquela rodada e o re-run). Registrado como observado, não
+  escondido — ver `docs/reference/rulesets.md` para o detalhe.
+
 ## v4.0.0 — 2026-09-04
 
 ### ⚠ Mudanças incompatíveis
