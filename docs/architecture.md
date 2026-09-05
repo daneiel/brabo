@@ -236,6 +236,37 @@ Two UI checks are automatic: contrast (`lib/contraste.ts`, a test over
 `design/tokens.css`) and layout (`scripts/dev/validacao-visual.js`, run in
 the browser). Explained in `design/README.md`.
 
+**The folder picker is the web's one TWO-TRANSPORT read**, and the interface
+that makes it one lives in `lib/fs-browser.ts`
+([RN-504](business-rules.md#rn-504)). `FsBrowser` — `listarDiretorio` /
+`diretorioInicial` / `fechar` — has two implementations, and they don't talk
+to the same machine: `criarFsBrowserViaApi(workspaceId)` calls
+`GET /workspaces/:workspaceId/project-folders` on the api, scoped hard to
+`BRABO_PROJECTS_BASE` ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)),
+while `connectFsBrowserChannel(projectId)` (`lib/fs-browser-channel.ts`) speaks
+the Phoenix `terminal:<projectId>` channel and reads the USER's disk through
+the runner.
+
+The interface was extracted out of the channel module precisely because it
+stopped having one implementation. `FolderBrowserModal` picks between them with
+a discriminated union — `origem: { tipo: 'api'; workspaceId } | { tipo:
+'runner'; projectId }`, not two optional props, so "neither" and "both" are not
+representable states the component has to handle at runtime — and its body
+never learns which one it got. Only three things branch on `origem`: which
+factory runs, which shortcuts exist (`/` is not offered over the api transport;
+it is outside the base by construction, and the button could only ever end in a
+400) and whether `RunnerOnboardingPanel` makes sense.
+
+`ListagemResultado` gained three OPTIONAL fields — `arquivos`, `simbolicos`,
+`truncado` — and they are optional because only the api transport counts what it
+excluded. The runner protocol (`FsEntrada` in `apps/runner/src/channel.ts`)
+returns folders and files mixed and counts nothing; filling in zeros there would
+assert "nothing was left out", which is different from not knowing.
+
+After this change the runner transport has ZERO callers in the web. It stays by
+a declared product decision — the runner leaves the creation wizard, the binary
+keeps being refined — and nothing here touches the channel protocol either way.
+
 **The Code tab (PHASE 26) is the same read pattern**, applied to code
 instead of events: `getContainerState`/`getCodeTree`/`getCodeFile`/
 `searchCode`/`getCodeDiff` in `lib/api-client.ts` mirror the api's read

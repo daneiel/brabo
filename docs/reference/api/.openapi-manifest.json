@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "f5d780331fc629e4665e676f4b5275b449c38947c379cde808973196a32e8032",
+  "openapiSha256": "f13928e2b451af9e3af7ce4c3359945a3503ee35e9c2be96b89b976cb121998c",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -779,7 +779,7 @@
     "sessions-controller-transition.RequestSchema.json": "0b3fdadba6baf76eed16149b3e3603a9eece3025c94505b52141d733f32da248",
     "sessions-controller-transition.StatusCodes.json": "bac29893341373baad1228e2c1d4f2b90f0191796538e73e36010c2202898646",
     "sessions-controller-transition.api.mdx": "44678ecd7ea93a5ebe598abe3dd1a73773a2483cebfcd55c5ef953f4908945b8",
-    "sidebar.ts": "a6fa07c1e9769b9dcf75396632938f03f8be790fa865eb364b9ead530dc61432",
+    "sidebar.ts": "00235e631ca4de88910d60868494a44cf4e9fa33f55704492c358b0265ff30de",
     "spend-controller-get-my-spend.ParamsDetails.json": "e45ac28a1c400c6a9ca93fc8413c1917113f32cca6e1b229e552ed1fe4e45f31",
     "spend-controller-get-my-spend.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "spend-controller-get-my-spend.StatusCodes.json": "edb168dd12843168011cf3d731fd24fd339c015693dd2fdcf8e0941921b875b5",
@@ -832,6 +832,10 @@
     "workspaces-controller-get.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "workspaces-controller-get.StatusCodes.json": "df6c05980a65a285ff68c61bbe390e733238d99eb076fb17224a59f8491668e9",
     "workspaces-controller-get.api.mdx": "adf211219c00b959a43433bc3380d36c8a4ab05185ef8690b3e70e23ae8f5eb3",
+    "workspaces-controller-list-project-folders.ParamsDetails.json": "bdc0fb0f585d44e9fb15ad779e7a1b2c5a6c06c9cb5d45cb3c988e7b12eb71f2",
+    "workspaces-controller-list-project-folders.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
+    "workspaces-controller-list-project-folders.StatusCodes.json": "f10b4079815d9ecb0bc47d1ce0dc221e78243a03d4097f6600f8de9d814a597d",
+    "workspaces-controller-list-project-folders.api.mdx": "8cb0819cc3ab29ab63dab00dd243b035c52bf5ecda7a773869e8bdd5a640cdbc",
     "workspaces-controller-list-projects.ParamsDetails.json": "56d669b72315e3339a75e1873f3cf2543f5b2ba3552994ad2fb69d673da7192b",
     "workspaces-controller-list-projects.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "workspaces-controller-list-projects.StatusCodes.json": "655edc81aafea715ddcbda1a7472cdd72845bef680604073b3832c55b0cb51d3",

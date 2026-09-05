@@ -737,13 +737,27 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       </div>
     </Modal>
     {navegadorDePastaAberto && (
-      // `mounted`: `projectId={null}` — o projeto ainda não existe (só
-      // nasce na confirmação), ver o docblock de `FolderBrowserModal`.
-      // `runner`: `handleProcurarPasta` já garantiu um projeto real antes
-      // de abrir o modal (RN-437, ADR 0108) — `projetoParaNavegar` sempre
-      // está preenchido aqui.
+      // A navegação passa a ser servida pela API, escopada à base de projetos
+      // montados (RN-504) — nos DOIS modos, e não só em `mounted`.
+      //
+      // O que isso resolve: antes, `mounted` abria o modal com
+      // `projectId={null}` e ele não navegava nada (o projeto só nasce na
+      // confirmação), e `runner` só navegava porque o assistente CRIAVA o
+      // projeto antecipadamente para ter um id a passar (RN-437, ADR 0108).
+      // A base da instalação não depende de projeto nenhum existir, então o
+      // primeiro caso deixa de ser um estado declarado e vira navegação de
+      // verdade.
+      //
+      // O preço, declarado: para `runner` a lista deixa de ser o disco da
+      // máquina do usuário e passa a ser a base — e a pasta de um projeto
+      // `runner` não precisa morar lá. É aceito porque o modo `runner` sai da
+      // criação de projeto no PR seguinte deste plano, junto com toda a
+      // criação antecipada; digitar o caminho continua funcionando enquanto
+      // isso. O transporte via runner (`connectFsBrowserChannel`) fica sem
+      // chamador no web a partir daqui, e continua no repositório por decisão
+      // declarada — o protocolo em `apps/runner/src/channel.ts` não muda.
       <FolderBrowserModal
-        projectId={modoDeWorkspace === 'runner' ? (projetoParaNavegar?.id ?? null) : null}
+        origem={{ tipo: 'api', workspaceId }}
         caminhoInicial={caminhoLocal.trim() || undefined}
         onSelecionar={(caminho) => setCaminhoLocal(caminho)}
         onClose={() => setNavegadorDePastaAberto(false)}

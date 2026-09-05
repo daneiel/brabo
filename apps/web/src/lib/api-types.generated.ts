@@ -3605,6 +3605,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/project-folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the subfolders of a folder inside the projects base
+         * @description The folder picker for Mounted mode, served by the api instead of by the runner (RN-504). Scoped HARD to `BRABO_PROJECTS_BASE` (ADR 0141): `path` is optional and defaults to the base itself, and any `path` outside it is a `400` — a malformed request, not a permission problem, since no role browses outside the base.
+         *
+         *     Capped on purpose: directories only, at most 500 of them (sorted BEFORE the cut, with `truncado` saying so), never recursive, dot-prefixed entries excluded, and symlinks reported but never followed. What is left out is COUNTED (`arquivos`, `simbolicos`) so a folder full of code never looks empty.
+         *
+         *     There is no POST companion: creating a folder belongs to materializing the mounted workspace, never to the picker.
+         */
+        get: operations["WorkspacesController_listProjectFolders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/projects": {
         parameters: {
             query?: never;
@@ -6775,6 +6799,42 @@ export interface components {
              */
             onlineAgentCount: number;
             roster: components["schemas"]["RosterFactsResponseDto"];
+        };
+        ProjectFoldersResponseDto: {
+            /**
+             * @description The mounted-projects base of this installation (`BRABO_PROJECTS_BASE`, ADR 0141) — the same value `GET .../projects-base` returns, repeated here so a client can render the breadcrumb without a second call. `null` means the installation offers no Mounted mode.
+             * @example /home/voce/brabo
+             */
+            base: Record<string, never> | null;
+            /**
+             * @description The folder actually listed, normalized. Equals `base` when the request omitted `path`. `null` only when there is no base at all: nothing was listed because there is nowhere to list.
+             * @example /home/voce/brabo/clientes
+             */
+            path: Record<string, never> | null;
+            /**
+             * @description The SUBDIRECTORY names directly under `path`, sorted, never recursive. Files, symlinks and dot-prefixed entries are excluded — see `arquivos`, `simbolicos` and `truncado`.
+             * @example [
+             *       "api",
+             *       "loja",
+             *       "website"
+             *     ]
+             */
+            entries: string[];
+            /**
+             * @description The folder holds more than 500 subdirectories and only the first 500 came back. Sorting happens BEFORE the cut, so the cut is deterministic instead of "whatever the filesystem returned first".
+             * @example false
+             */
+            truncado: boolean;
+            /**
+             * @description How many non-directory entries were left out. A folder full of code must not look empty (RN-180).
+             * @example 12
+             */
+            arquivos: number;
+            /**
+             * @description How many symlinks were left out. The browser never follows one — a link is reported, never descended into, so a link pointing outside the base is not a way out of it.
+             * @example 1
+             */
+            simbolicos: number;
         };
         ProjectGitRemoteResponseDto: {
             /**
@@ -18797,6 +18857,63 @@ export interface operations {
                 content?: never;
             };
             /** @description Some id in the batch doesn't exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkspacesController_listProjectFolders: {
+        parameters: {
+            query?: {
+                /** @description Absolute path to list. Omitted means the base itself. Must be inside `BRABO_PROJECTS_BASE`; `..`, `.` and relative paths are refused outright rather than resolved. */
+                path?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectFoldersResponseDto"];
+                };
+            };
+            /** @description The path is outside the projects base, or malformed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace doesn't exist or is invisible to the caller. */
             404: {
                 headers: {
                     [name: string]: unknown;
