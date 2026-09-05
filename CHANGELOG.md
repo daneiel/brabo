@@ -356,6 +356,31 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   foi reamostrado num runner hospedado — ver `TODO(humano)` no próprio
   arquivo
 
+- **ci**: o job `Testes TS (api + web)` do `ci.yml` vira **três jobs
+  paralelos** — `test-api`, `test-web` e `test-packages`. Medido no run real
+  da PR #494 (job 101317149006): o job único levava **343s** (5m43s), acima
+  do teto de ~4min da sessão — e só a fatia da api toca banco; web, scripts
+  de CI, porta de Docker, broker e runner nunca precisaram do serviço
+  `postgres` que o job carregava para todo mundo.
+
+  `test-api` mantém o serviço `postgres` (com o healthcheck de sempre) e as
+  variáveis `DATABASE_URL`/`TEST_DATABASE_URL`; `test-web` e `test-packages`
+  não têm serviço nenhum. Cada um paga o próprio `checkout` + `setup-node` +
+  `pnpm install`, e não há `needs:` em lugar nenhum do `ci.yml` — os três já
+  nasceram paralelos entre si e com os demais jobs, sem grafo de dependência
+  novo.
+
+  Medido de verdade no CI do PR desta mudança (#495, run 33972208407): o job
+  antigo (343s) vira **177s** (`test-api`), **169s** (`test-web`) e **56s**
+  (`test-packages`) — o caminho crítico é o mais lento dos três, não a soma,
+  uma queda real de **~48%** no check que travava o PR. `docs/reference/rulesets.md`
+  registra os números e por que a análise anterior — que tinha CONCLUÍDO que
+  dividir esse job não valia a pena — parou de valer: o cálculo mudou quando
+  o web cresceu a ponto de custar tanto quanto a api (125s no run que mediu
+  os 343s), e a preocupação de "apagar um required check" nunca se aplicou
+  de fato, porque nenhum ruleset está aplicado neste repositório ainda
+  (`gh api repos/daneiel/brabo/branches/dev/protection` → `404`).
+
 ## v4.0.0 — 2026-09-04
 
 ### ⚠ Mudanças incompatíveis
