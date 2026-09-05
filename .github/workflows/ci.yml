@@ -1102,6 +1102,17 @@ jobs:
   # Limpeza OBRIGATÓRIA das tags efêmeras — elas nunca podem se acumular no
   # GHCR. `if: always()` porque a limpeza vale inclusive quando o push, o
   # scan ou o pull falharam no meio.
+  #
+  # ACHADO (primeira rodada real desta medição): a API recusa apagar a
+  # ÚLTIMA versão de um pacote — "You cannot delete the last tagged version
+  # of a package. You must delete the package instead." (400) — e como cada
+  # pacote `brabo-ci-*` nasce e morre NESTA run (uma tag por run), a versão
+  # que acabou de ser publicada É sempre a última, então apagar por VERSÃO
+  # falharia em toda run, não só numa borda. A saída é apagar o PACOTE
+  # inteiro, não uma versão dele — seguro porque nada além desta medição
+  # publica em `brabo-ci-*`, e também AUTO-CURA qualquer versão órfã que uma
+  # limpeza anterior tenha deixado pra trás (ex.: run cancelada antes deste
+  # job rodar).
   limpar-imagens-medicao:
     name: "[MEDIÇÃO] Limpa as imagens efêmeras do GHCR"
     needs: [images, medir-pull-ghcr]
@@ -1111,24 +1122,18 @@ jobs:
     permissions:
       packages: write
     steps:
-      - name: Deletar as versões efêmeras desta run
+      - name: Deletar os pacotes efêmeros inteiros
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.images.outputs.medicao_tag }}
           OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
-          if [ -z "${TAG}" ]; then
-            echo "::notice::sem tag de medição (o job images não chegou a publicar) — nada a limpar"
-            exit 0
-          fi
           for alvo in api engine web backup; do
             pacote="brabo-ci-${alvo}"
-            id="$(gh api "users/${OWNER}/packages/container/${pacote}/versions" --jq ".[] | select(.metadata.container.tags[]? == \"${TAG}\") | .id" | head -1)"
-            if [ -z "${id}" ]; then
-              echo "::warning::não achei versão de ${pacote}:${TAG} pra deletar (pode já ter sido removida, ou o push falhou)"
+            if ! gh api "users/${OWNER}/packages/container/${pacote}" >/dev/null 2>&1; then
+              echo "::notice::pacote ${pacote} não existe — nada a limpar (push pode ter falhado antes de criá-lo)"
               continue
             fi
-            gh api -X DELETE "users/${OWNER}/packages/container/${pacote}/versions/${id}"
-            echo "ok: deletado ${pacote}:${TAG} (version id ${id})"
+            gh api -X DELETE "users/${OWNER}/packages/container/${pacote}"
+            echo "ok: pacote ${pacote} deletado inteiro"
           done
