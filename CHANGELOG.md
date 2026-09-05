@@ -385,13 +385,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   quatro vezes, e localmente derrubou o step de scan de ~11s (cópia) +
   ~10s (scan) para ~5s (link instantâneo + scan).
 
-  Medido no PR real (job `images`, ver `gh api .../actions/jobs/<id>`) com
-  a versão final (`ln -s`): **333s → TODO(medir)s**. Ganho esperado é só
-  nos quatro scans (~28s → ~17s, o mais lento dos quatro rodando sozinho)
-  — isso sozinho NÃO derruba o job pra baixo do teto de ~4min: o resto do
-  job (build das quatro imagens, smoke, E2E) já soma mais que isso, por
-  decisão de arquitetura aceita e documentada (não é escopo desta mudança
-  revisar).
+  Medido no PR real (`gh api repos/.../actions/jobs/<id>`, dois runs do
+  MESMO PR): os TRÊS steps do trivy (instalar o binário + baixar a base +
+  escanear as quatro em paralelo) somaram **27s** com `cp -r` e **15s** com
+  `ln -s` — a base de comparação correta é essa, e não a duração TOTAL do
+  job entre os dois runs, porque o segundo herdou o cache do `gha` já
+  aquecido pelo primeiro (`Build das quatro imagens` caiu de 168s pra 22s
+  só por isso, sem relação com o trivy). **28s → 15s** nos scans (baseline
+  sequencial de 4 steps da action, medido antes desta mudança) é a
+  comparação honesta: ~46% mais rápido, batendo a expectativa de ~17s.
+
+  Aplicado ao total original de **333s** mantendo o resto igual, o job
+  previsto fica em **~320s (5m20s)** — ainda ACIMA do teto de ~4min, como
+  esperado e declarado de antemão: o resto do job (build ~179s + smoke
+  ~42s + setup do Playwright ~32s + E2E ~7s+1s + derrubar o compose ~16s
+  ≈ 277s) já excede o teto sozinho, e reduzir isso exigiria reabrir a
+  decisão de manter build+scan+smoke no mesmo job — fora de escopo aqui,
+  por decisão já medida e documentada (ver o comentário no topo do job
+  `images` e no `docker-bake.hcl`).
 
 ## v4.0.0 — 2026-09-04
 
