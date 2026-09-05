@@ -161,10 +161,11 @@ shorten the PR has two targets, and only two:
   with more cores and on the runner, or the locally measured behavior isn't
   what runs there). Measured locally: the api suite's own duration dropped
   from 792.58s to 471.23s on a clean run (~40%, three repeats with no
-  flakiness). \* The `159s`/`91s` above are the PRE-change numbers — this
-  hasn't had a fresh cold/warm sample on a GitHub-hosted runner yet.
-  **TODO(humano):** re-measure `Testes TS (api + web)` on `ci.yml` after
-  this lands on `dev` and replace the row above.
+  flakiness). Re-sampled on the actual GitHub-hosted runner (PR #491,
+  `ci.yml`): the `pnpm --filter api test` step itself dropped to **96s** —
+  right at the `91s` warm-cache floor this table already cited as the
+  theoretical best case, not a lucky outlier. The `159s`/`91s` row above is
+  now the PRE-change baseline, kept for the historical comparison.
 
 > **Splitting a job to parallelize it has two costs the number doesn't
 > show.** The first: the job's name **is** the required check's name, so
