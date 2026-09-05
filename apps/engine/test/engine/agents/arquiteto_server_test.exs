@@ -273,4 +273,38 @@ defmodule Engine.Agents.ArquitetoServerTest do
 
     assert final_state.turno_assincrono == nil
   end
+
+  describe "Frente 3 do plano de decision_record — emit_artifact" do
+    test "emit_artifact está na lista de tools do Arquiteto", %{state: state} do
+      nomes = Enum.map(state.tool_specs, & &1.name)
+      assert "emit_artifact" in nomes
+    end
+
+    test "emit_artifact com type: decision_record emite artifact.decision_record", %{
+      state: state,
+      session_id: session_id
+    } do
+      Process.put(:fake_events, brief_rules_backlog())
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("emit_artifact", %{
+          "type" => "decision_record",
+          "payload" => %{
+            "context" => "Precisávamos escolher o banco de dados",
+            "options" => ["Postgres", "MySQL"],
+            "choice" => "Postgres",
+            "consequences" => "ganhamos pgvector para o RAG, perdemos familiaridade do time"
+          }
+        }),
+        FakeEngineApiClient.final_response("Decisão registrada.")
+      ])
+
+      assert {:noreply, _new_state} = sync_cast(ArquitetoServer, :kickoff, state)
+
+      assert_received {:event_appended, _, ^session_id,
+                       %{type: "artifact.decision_record", payload: payload}}
+
+      assert payload["choice"] == "Postgres"
+    end
+  end
 end

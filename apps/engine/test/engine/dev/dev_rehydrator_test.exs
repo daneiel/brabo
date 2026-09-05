@@ -31,7 +31,16 @@ defmodule Engine.Dev.DevRehydratorTest do
       Application.delete_env(:engine, :test_pid)
     end)
 
-    %{project_id: Ecto.UUID.generate(), session_id: Ecto.UUID.generate()}
+    project_id = Ecto.UUID.generate()
+
+    # RN-502/ADR 0143 — o caminho de reidratação PASSA por `try_claim/2`
+    # (`init/1` -> `finish_restart_recovery/1`), então a guarda de container
+    # vale para ele também. As specs daqui são sobre reidratar COM ambiente;
+    # a que prova a guarda no caminho reidratado mora em
+    # `claim_com_container_test.exs`.
+    container_running!(project_id)
+
+    %{project_id: project_id, session_id: Ecto.UUID.generate()}
   end
 
   # De qual módulo o processo registrado é — é o que distingue um dev agent

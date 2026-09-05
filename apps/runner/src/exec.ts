@@ -23,6 +23,14 @@ export interface ExecOpts {
   shell?: string;
   timeoutMs?: number;
   maxBytes?: number;
+  /**
+   * Credencial de git (ADR 0056), estendida ao protocolo `exec`/`exec_result`
+   * pela RN-507/ADR 0145. MESCLADO em cima de `process.env` — nunca o
+   * substitui: `spawn` com `env` definido descarta o ambiente herdado
+   * (PATH incluso), e um `git`/`sh` sem PATH nem resolve o próprio binário.
+   * Nunca aparece em `command` (argv) nem em log nenhum — ver `index.ts`.
+   */
+  env?: Record<string, string>;
 }
 
 export interface ExecResult {
@@ -79,6 +87,11 @@ export function executarComando(
       // stdin fechado: comando não-interativo não deveria esperar entrada,
       // e deixar herdado prenderia o processo do runner ao terminal dele.
       stdio: ['ignore', 'pipe', 'pipe'],
+      // MESCLA, nunca substitui: `spawn` com `env` definido descarta TODO o
+      // ambiente herdado (o `undefined` do caminho comum omite `env` da
+      // opção, e o Node herda `process.env` sozinho — só quando `opts.env`
+      // carrega algo é que `{ ...process.env, ...opts.env }` entra em jogo).
+      env: opts.env ? { ...process.env, ...opts.env } : undefined,
     });
 
     let finalizado = false;

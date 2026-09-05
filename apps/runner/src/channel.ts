@@ -26,6 +26,18 @@ export interface ExecMessage {
   ref: string;
   command: string;
   cwd: string;
+  /**
+   * Credencial de git (ADR 0056), estendida ao protocolo pela RN-507/ADR
+   * 0145 — Docker virou pré-requisito real do modo `runner`, e a
+   * materialização do worktree do dev agent (`Engine.Actions.Workspace.
+   * RunnerGit`) passou a viajar pelo MESMO canal `exec`/`exec_result` que já
+   * executa terminal aprovado. Opcional: comando de terminal comum nunca
+   * carrega este campo. Repassado só pro `spawn` do HOST (`exec.ts`) — NUNCA
+   * pro `docker exec` (sem suporte a `env` em `packages/docker-port`, de
+   * propósito) nem concatenado na string do comando, e NUNCA logado (ver
+   * `index.ts`).
+   */
+  env?: Record<string, string>;
 }
 
 export interface ExecResultMessage {
@@ -316,6 +328,16 @@ export function conectarCanal(opts: ConectarCanalOpts): Promise<CanalConectado> 
   });
 }
 
+/** `true` só para um objeto plano de string->string — nunca `null`/array/tipo misto. */
+function envValido(valor: unknown): valor is Record<string, string> {
+  return (
+    typeof valor === 'object' &&
+    valor !== null &&
+    !Array.isArray(valor) &&
+    Object.values(valor).every((v) => typeof v === 'string')
+  );
+}
+
 function registrarHandlers(canal: ChannelLike, handlers: RunnerChannelHandlers): void {
   canal.on('exec', (payload: unknown) => {
     const msg = payload as Partial<ExecMessage>;
@@ -324,7 +346,11 @@ function registrarHandlers(canal: ChannelLike, handlers: RunnerChannelHandlers):
       typeof msg.command === 'string' &&
       typeof msg.cwd === 'string'
     ) {
-      handlers.onExec({ ref: msg.ref, command: msg.command, cwd: msg.cwd });
+      // `env` é opcional e só aceito quando é um objeto de string->string de
+      // verdade — nunca repassado cru: um payload malformado não deveria
+      // virar env arbitrário do processo filho.
+      const env = envValido(msg.env) ? msg.env : undefined;
+      handlers.onExec({ ref: msg.ref, command: msg.command, cwd: msg.cwd, env });
     }
   });
 

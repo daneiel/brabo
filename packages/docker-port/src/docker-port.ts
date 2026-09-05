@@ -223,6 +223,70 @@ export function raizDeProjetoValidada(caminho: string): RaizDeProjeto {
 }
 
 /**
+ * O SEGMENTO relativo que se concatena a uma raiz de host para chegar à pasta
+ * do projeto — a metade que a api manda pela rede (RN-503), e a única metade
+ * que ela manda.
+ *
+ * Existe porque o broker passou a ter DUAS raízes (a gerenciada e a base dos
+ * projetos montados, ADR 0141) e porque o segmento de um projeto montado é um
+ * CAMINHO, com `/` no meio — `nomeDeWorkspaceValidado`, que serve ao nome do
+ * container, recusa `/` de propósito e não serve aqui.
+ *
+ * Três recusas, e as três pelo mesmo motivo geométrico: o resultado da
+ * concatenação tem de continuar DENTRO da raiz.
+ *
+ *   - `..` — recusado ANTES de qualquer normalização, como em
+ *     `raizDeProjetoValidada`: `resolve()` apagaria o `..` e devolveria um
+ *     caminho plausível fora da raiz, escondendo a travessia;
+ *   - absoluto — `/etc` concatenado a uma raiz não é "sob a raiz" para
+ *     ninguém que leia o resultado, e `resolve(raiz, '/etc')` é `/etc`;
+ *   - vazio — `<raiz>/` é a PRÓPRIA raiz, isto é, montar a base inteira num
+ *     container de um projeto só. Recusar aqui é a segunda barreira: a api já
+ *     recusa (`segmentoSobABaseDeProjetos`), e este lado não pressupõe que ela
+ *     esteja correta.
+ *
+ * NUL e barra dupla entram na mesma régua — o primeiro porque trunca caminho
+ * em qualquer syscall, a segunda porque é o disfarce mais barato de um
+ * segmento vazio no meio.
+ */
+export function segmentoDeProjetoValidado(segmento: unknown): string {
+  if (typeof segmento !== 'string') {
+    throw new RaizDeProjetoInvalidaError(
+      String(segmento),
+      'segmento de projeto não é string',
+    );
+  }
+  if (segmento.length === 0) {
+    throw new RaizDeProjetoInvalidaError(
+      segmento,
+      'segmento de projeto vazio — `<raiz>/` é a própria raiz, e montar a ' +
+        'raiz inteira daria a este container a pasta de todos os projetos',
+    );
+  }
+  if (segmento.includes('\0')) {
+    throw new RaizDeProjetoInvalidaError(segmento, 'contém byte NUL');
+  }
+  if (segmento.startsWith('/')) {
+    throw new RaizDeProjetoInvalidaError(
+      segmento,
+      'é absoluto — o segmento é o pedaço RELATIVO que a raiz do broker não ' +
+        'cobre, e concatenar um absoluto simplesmente descarta a raiz',
+    );
+  }
+  const partes = segmento.split('/');
+  if (partes.some((p) => p === '..')) {
+    throw new RaizDeProjetoInvalidaError(segmento, 'contém `..`');
+  }
+  if (partes.some((p) => p.length === 0)) {
+    throw new RaizDeProjetoInvalidaError(
+      segmento,
+      'tem segmento vazio (barra dupla ou barra final)',
+    );
+  }
+  return segmento;
+}
+
+/**
  * A especificação COMPLETA de um container gerenciado. É fechada de propósito:
  * o que não está aqui não pode ser pedido ao daemon, porque o adaptador monta o
  * payload a partir deste tipo e de mais nada.

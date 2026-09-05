@@ -1,0 +1,73 @@
+---
+id: workspaces-controller-list-project-folders
+title: "Lists the subfolders of a folder inside the projects base"
+description: "The folder picker for Mounted mode, served by the api instead of by the runner (RN-504). Scoped HARD to `BRABO_PROJECTS_BASE` (ADR 0141): `path` is optional and defaults to the base itself, and any `path` outside it is a `400` — a malformed request, not a permission problem, since no role browses outside the base."
+sidebar_label: "Lists the subfolders of a folder inside the projects base"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lists the subfolders of a folder inside the projects base"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/workspaces/{workspaceId}/project-folders"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+The folder picker for Mounted mode, served by the api instead of by the runner (RN-504). Scoped HARD to `BRABO_PROJECTS_BASE` (ADR 0141): `path` is optional and defaults to the base itself, and any `path` outside it is a `400` — a malformed request, not a permission problem, since no role browses outside the base.
+
+Capped on purpose: directories only, at most 500 of them (sorted BEFORE the cut, with `truncado` saying so), never recursive, dot-prefixed entries excluded, and symlinks reported but never followed. What is left out is COUNTED (`arquivos`, `simbolicos`) so a folder full of code never looks empty.
+
+There is no POST companion: creating a folder belongs to materializing the mounted workspace, never to the picker.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./workspaces-controller-list-project-folders.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./workspaces-controller-list-project-folders.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./workspaces-controller-list-project-folders.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

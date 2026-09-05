@@ -22,6 +22,33 @@ describe('lerConfiguracao — desenvolvimento', () => {
     // Não configurada é estado LEGÍTIMO: só `start` recusa, e dizendo qual
     // variável falta.
     expect(config.raizDeWorkspacesNoHost).toBeNull();
+    expect(config.baseDeProjetosNoHost).toBeNull();
+  });
+
+  it('lê as DUAS raízes de variáveis separadas, e nenhuma cai na outra (RN-503)', () => {
+    const config = lerConfiguracao({
+      PROJECT_WORKSPACES_HOST_ROOT: '/srv/brabo/project-workspaces',
+      BRABO_PROJECTS_HOST_BASE: '/home/voce/brabo',
+    });
+
+    expect(config.raizDeWorkspacesNoHost).toBe('/srv/brabo/project-workspaces');
+    expect(config.baseDeProjetosNoHost).toBe('/home/voce/brabo');
+  });
+
+  it('uma configurada e a outra não é estado legítimo — não há herança entre elas', () => {
+    // Herdar seria o pior desfecho possível: a raiz gerenciada é nomeada por
+    // `workspace_dir_name` e a base é nomeada pelo usuário, então o mesmo nome
+    // aponta para pastas diferentes, e o container subiria com a pasta errada
+    // sem nada indicando por quê.
+    const soGerenciada = lerConfiguracao({
+      PROJECT_WORKSPACES_HOST_ROOT: '/srv/brabo/project-workspaces',
+    });
+    const soBase = lerConfiguracao({
+      BRABO_PROJECTS_HOST_BASE: '/home/voce/brabo',
+    });
+
+    expect(soGerenciada.baseDeProjetosNoHost).toBeNull();
+    expect(soBase.raizDeWorkspacesNoHost).toBeNull();
   });
 
   it('tira a barra final da API_URL para não montar `//internal`', () => {

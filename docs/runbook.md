@@ -36,7 +36,9 @@ Start with triage.
 | agent stopping with `iteration limit reached` without delivering | [Inference environment](#ambiente-de-inferencia) |
 | I want to add an OpenAI-compatible LLM provider | [Adding a compatible provider](#adicionando-um-provider-compativel) |
 | I want to migrate my workspaces from the Docker volume to a real folder | [Migrating workspaces to a local folder](#migrar-workspaces-pasta-local) |
-| creating a **Local** project refuses, saying the folder doesn't exist | [Project in Local mode](#projeto-no-modo-local) |
+| the project wizard doesn't offer **Mounted** mode, or creating a mounted project refuses saying the path must sit inside the base | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
+| approving `container_start` on a mounted project fails saying the api couldn't create or reach the folder | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
+| `pnpm dev` refuses to start, saying `BRABO_PROJECTS_BASE` overlaps the Brabo checkout | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
 | provisioning a repository fails with `permission denied: /data/git-repos/<slug>.git`, or `permissions.json` can't be written | [Dev containers write as your user, not root](#dev-containers-nao-root) |
@@ -56,10 +58,11 @@ the product that talks to a Docker daemon, and the only service with
 `/var/run/docker.sock` mounted. **Do not mount that socket anywhere else.**
 
 It ships under a compose profile and therefore **does not come up with
-`pnpm dev`**. That is deliberate: nothing calls it to WRITE yet (whoever
-proposes starting a container is the Infra Lead, through a `proposed_action`),
-so having it up by default would hand every development machine access to the
-host's Docker in exchange for nothing.
+`pnpm dev`**. That is deliberate: having it up by default would hand every
+development machine access to the host's Docker whether or not anyone is
+running containers there. Without it, `container_start` ends as a NAMED
+`failed` (`BrokerIndisponivelError`) — never a crash, and never a silent
+fallback to running outside a container.
 
 To bring it up:
 
@@ -72,10 +75,22 @@ getent group docker | cut -d: -f3
 #    DOCKER_GID=<the number above>
 #    BROKER_URL=http://broker:8090
 #    PROJECT_WORKSPACES_HOST_ROOT=/home/you/brabo-projects   # ALREADY EXPANDED
+#    BRABO_PROJECTS_BASE=/home/you/brabo                     # derives HOST_BASE
 
 docker compose -f docker/docker-compose.yml --env-file .env \
   --profile container-broker up -d broker
 ```
+
+**The broker has TWO roots, and neither stands in for the other**
+([RN-503](business-rules.md#rn-503),
+[ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)).
+`PROJECT_WORKSPACES_HOST_ROOT` is where **Container**-mode projects live;
+`BRABO_PROJECTS_HOST_BASE` is where **Mounted**-mode projects live, and the
+compose derives it from `BRABO_PROJECTS_BASE`, so setting the base is normally
+all you do. Whichever is missing, the refusal names it and touches no
+container. A fallback to the other root would mount the wrong project's folder
+— the managed root is named by `workspace_dir_name`, the base is named by you,
+and the same name means different folders in each.
 
 To check that it is up — from the api, which is the ONLY service that reaches
 it (the `broker` network is `internal: true` and the service publishes no port,
@@ -100,11 +115,13 @@ that reason would produce a restart loop that resolves nothing.
 | `PROJECT_WORKSPACES_HOST_ROOT não está definida` on `start` | expected, and the refusal is the correct behaviour. `-v` is resolved by the DAEMON against the HOST filesystem; guessing would mount an EMPTY folder and the dev agent would work in a directory with no code. The other four operations keep working without it |
 | the lifecycle route says `naoObservado: "broker-nao-configurado"` | `BROKER_URL` is empty on the **api**. That is a normal state, not a failure — the read declares that it did not look instead of inheriting the recorded state ([RN-486](business-rules.md#rn-486)) |
 | the lifecycle route says `naoObservado: "broker-sem-resposta"` | `BROKER_URL` is set and nothing answered: the profile is probably off, or the api is not on the `broker` network |
-| the broker answers `409` for a project | it is in `mounted`/`runner` mode. Their folder lives on the user's machine and this host cannot see it — there, the runner is what brings a container up |
+| `BRABO_PROJECTS_HOST_BASE não está definida` on `start` of a **Mounted** project | same shape as the row above, other root. Set `BRABO_PROJECTS_BASE` in `.env` and recreate the broker; the compose derives this one from it ([RN-503](business-rules.md#rn-503)) |
+| the broker answers `409` for a project in `runner` mode | expected. That folder lives on the user's machine and this host cannot see it — there, the runner is what brings a container up ([ADR 0137](adr/0137-o-runner-sobe-o-container-do-projeto.md)) |
+| the broker answers `409` saying it doesn't know where the project folder is | a LEGACY **Mounted** project, created before the base existed and living outside it. The fix is to move the folder under `BRABO_PROJECTS_BASE`, not to change the project's mode — the message names the base and the path it saw ([RN-503](business-rules.md#rn-503)) |
 
-**The broker never brings a container up on its own.** There is no loop, no
-queue and no `container_start` proposed_action yet: it acts when called, and the
-only caller today performs a READ.
+**The broker never brings a container up on its own.** There is no loop and no
+queue: it acts when called, and every write call originates from a
+`proposed_action` a human approved.
 
 ### Migrating workspaces to a local folder {#migrar-workspaces-pasta-local}
 
@@ -134,64 +151,136 @@ volume ls` if you renamed the project. The old volume keeps existing
 afterward (Compose doesn't delete a volume that fell out of use); remove it
 with `docker volume rm` once you're sure the copy worked.
 
-### Project in Local mode {#projeto-no-modo-local}
+### Project in Mounted mode: the projects base {#projeto-no-modo-local}
 
-**Symptom:** when creating the project and picking **Local**, the api
-responds `400` saying the folder *doesn't exist from inside the api*.
+**Symptom:** the project wizard doesn't offer **Mounted** at all; or it
+does, and the api responds `400` saying the folder *doesn't exist from
+inside the api*.
 
-That's the guard working ([RN-170](business-rules/autenticacao.md#rn-170)), not a bug:
-the path you typed exists on your computer and **not** inside the
-container. A project created like that would get stuck later, on the first
-tool of the first agent, far from the screen where the decision was made —
-that's why it isn't allowed to be born.
+Both come from the same fact: a project in Mounted mode keeps its code in a
+folder of **yours**, and the api and the engine can only reach it if it is
+mounted into their containers. What changed
+([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md),
+[RN-500](business-rules.md#rn-500)) is who arranges that, and how often:
+there is now **one base**, configured once by the operator, and every
+mounted project lives underneath it. You never edit compose per project
+again.
 
-**What to do.** Mount the folder in **both** services, at the **same
-absolute path** on both sides:
+**What to do — once, for the whole installation:**
 
-```yaml
-# docker/docker-compose.yml
-services:
-  api:
-    volumes:
-      # ... the lines that already exist
-      - /home/voce/projetos/loja:/home/voce/projetos/loja
-
-  engine:
-    volumes:
-      # ... the lines that already exist
-      - /home/voce/projetos/loja:/home/voce/projetos/loja
+```bash
+# .env — an ABSOLUTE path. `~` is NOT expanded by Compose.
+BRABO_PROJECTS_BASE=/home/voce/brabo
 ```
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d api engine
+docker compose -f docker/docker-compose.yml --env-file .env up -d api engine
 ```
 
-Check before trying again — the api validates what **it** sees, and has no
-way to know what's mounted in the other container:
+That's it. From here on, a project in Mounted mode goes somewhere under
+`/home/voce/brabo` and needs no further setup.
+
+**The folder itself does not need to exist yet**
+([ADR 0142](adr/0142-validacao-de-workspace-montado-adiada.md),
+[RN-501](business-rules.md#rn-501)). Creating a Mounted project validates
+only the path FORMAT plus "is it under the base"; the folder is created
+later, when Infra starts the project's container — which is what makes the
+wizard able to SUGGEST `<base>/<project slug>` in the first place. Between
+those two moments `workspacePath` points at a folder that isn't there yet,
+and the project's `workspaceVerifiedAt` is `null`; converting an existing
+project to Mounted is the one exception and creates the folder right away,
+because it moves `permissions.json` into it.
+
+So a `400` at creation now means one of two things only, and both name what
+they mean: the path is not under the base (the message names the base and
+suggests `<base>/<name>`), or `BRABO_PROJECTS_BASE` isn't configured at all
+(the message says the MODE is unavailable on this installation). A folder
+the api cannot create or reach shows up later instead, as a NAMED `failed`
+on the `container_start` action — never a 500, and the container lifecycle
+is not marked `provisioning` when that happens.
+
+**Mounted projects get a real container, and it runs on the SERVER**
+([RN-503](business-rules.md#rn-503),
+[ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)). Because the base is
+reachable by the host's Docker daemon, `container_start` for a Mounted project
+goes to the [broker](#broker-de-container), exactly like Container mode — it no
+longer requires a `brabo-runner` connected. Only **Runner** mode still goes to
+the runner, on the user's own machine, because that folder is somewhere this
+server cannot see. Bringing the broker up (`--profile container-broker`) is
+therefore part of the setup if you want Mounted projects to have containers.
+That same step is when the folder above gets created, in that order: the
+daemon can only bind-mount a folder that already exists.
+
+**Why the wizard hides Mounted mode.** Without `BRABO_PROJECTS_BASE`, the
+api reports `projectsBase: null` and the option is not offered at all. That
+is deliberate: offering a mode the installation cannot honor produces a
+project that gets stuck later, on the first tool of the first agent, far
+from the screen where the decision was made. Container mode (the default)
+and Runner mode are unaffected and keep working without this variable.
+
+**Why the same path on both sides.** The base is mounted by **identity** —
+`/home/voce/brabo:/home/voce/brabo` — in `api` and `engine` alike. The path
+is written ONCE to `projects.workspace_path` and read by both processes
+([RN-169](business-rules/autenticacao.md#rn-169)); it is also the string
+the screen shows back to you. Mounting it somewhere else would make the
+engine write where the api doesn't read, and would make the screen show a
+path that exists on neither your machine nor theirs.
+
+**Check what the containers actually see:**
 
 ```bash
-docker compose -f docker/docker-compose.yml exec api  ls -la /home/voce/projetos/loja
-docker compose -f docker/docker-compose.yml exec engine ls -la /home/voce/projetos/loja
+docker compose -f docker/docker-compose.yml exec api    ls -la /home/voce/brabo
+docker compose -f docker/docker-compose.yml exec engine ls -la /home/voce/brabo
 ```
 
-**Why the same path on both sides.** The path is written ONCE to
-`projects.workspace_path` and read by both processes
-([RN-169](business-rules/autenticacao.md#rn-169)). Mounting it in different places would
-make the engine write where the api doesn't read — the divergence that the
-single derivation exists to prevent.
+**Don't point the base at Brabo's own checkout.** `pnpm dev` refuses to
+bring the stack up when `BRABO_PROJECTS_BASE` contains, or is contained by,
+the repository you cloned — it names both paths and stops. This check lives
+in the preflight and nowhere else on purpose: the api compares a project
+path against `process.cwd()`, which inside its container is `/workspace`,
+so it has no way to see your real checkout. Without the preflight guard,
+cloning Brabo into `$HOME/brabo` and setting the base to the same folder
+passes every validation and has dev agents running inside the product's own
+tree — the failure
+[ADR 0055](adr/0055-escopo-de-caminho-em-comando-de-agente.md) exists to
+prevent.
+
+**Pick a dedicated folder.** Everything under the base is reachable from
+inside the product's containers. Don't point it at your whole `$HOME`, and
+don't point it at a folder that holds other secrets of yours.
 
 **Other refusal modes, and what each one means:**
 
 | the message says | what to do |
 |---|---|
-| *doesn't exist from inside the api* | mount it, as above |
+| Mounted mode isn't offered at all | `BRABO_PROJECTS_BASE` isn't set — set it and `up -d api engine` |
+| *Mounted mode is not available on this installation* (at creation) | same cause, said by the api: `BRABO_PROJECTS_BASE` isn't set (RN-501) |
+| *the folder must sit inside `<base>`* (at creation) | the path is outside the base; use the `<base>/<name>` the message suggests, or change the base and `up -d api engine` |
+| *I couldn't create/reach `<path>` from inside the api* (on `container_start`) | the base isn't actually mounted, or the folder's owner on the host blocks it. Check with the `exec ls` above, fix it, and approve `container_start` again (RN-501) |
+| *doesn't exist from inside the api* | the base isn't mounted into the containers; check with the `exec ls` above |
 | *exists but isn't a folder* | the path points to a file; use a folder |
 | *the process can't write to it* | owner/permission of the folder on the host. Images run non-root ([ADR 0024](adr/0024-fase5-imagens-producao-ci.md)); adjust the folder's owner or mode |
 | *Invalid path for a Local project* | it's a filesystem root, a system folder, relative, has `..`, or overlaps Brabo's own checkout — pick your own folder, outside those ([ADR 0072](adr/0072-projeto-local-ou-container.md)) |
 
+**Known limits, stated rather than hidden.** A symlink under the base
+pointing outside it resolves differently inside the containers, since the
+target isn't mounted — the folder browser refuses to descend into symlinks,
+and the disk check catches the divergence as a named failure. And this
+version supports **one** base: code living somewhere else has to be moved
+under it.
+
+**Migrating from the old per-project mounts.** If you have hand-written
+`- /home/voce/projetos/loja:/home/voce/projetos/loja` lines in `api` and
+`engine`, they keep working and nothing removes them — existing projects
+are not broken by this change. The supported path from here on is the base;
+move those folders under it and drop the hand-written lines when you get
+the chance.
+
 **Don't confuse this with Container mode.** A project in Container mode
 (the default) keeps using `PROJECT_WORKSPACES_ROOT` and the migration
-procedure above; Local mode never touches that root.
+procedure above; Mounted mode never touches that root, and the base is
+never the same folder as that root ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)
+explains why conflating them would let two projects land in one folder).
 
 ### Dev containers write as your user, not root {#dev-containers-nao-root}
 
@@ -699,6 +788,23 @@ password; an empty `NEO4J_AUTH` brings down the `neo4j` container first).
 ```bash
 export NEO4J_PASSWORD="$(openssl rand -hex 24)"
 ```
+
+**In development the switch is `NEO4J_URI`, and it is empty by default.** The
+`neo4j` service runs in the dev compose's default profile, so the server is up
+whether or not anything talks to it; the api only connects when `NEO4J_URI` is
+set. Uncomment it in `.env` (`bolt://neo4j:7687`) and recreate the api —
+`GraphStore` then logs `Neo4j conectado — constraints do grafo garantidas`
+instead of `NEO4J_URI/NEO4J_USER/NEO4J_PASSWORD ausentes`. User and password
+reach the container with the same defaults the `neo4j` service uses for
+`NEO4J_AUTH`, so set them only to CHANGE the password, and changing it there
+changes both sides at once.
+
+Until this was wired, `docker-compose.yml` did not pass the three variables to
+the `api` service at all and the service has no `env_file` — so the block
+`.env.example` has documented since the graph was born reached nothing, and
+uncommenting it turned nothing on. `docker-compose.prod.yml` had supplied them
+since day one (that is why only development was affected): a healthy Neo4j sat
+next to an api reporting the variables absent, indefinitely.
 
 **HEX, not base64.** Neo4j's entrypoint reads `NEO4J_AUTH` as
 `user/password` and splits on the FIRST slash — a base64 password can

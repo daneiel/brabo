@@ -167,8 +167,78 @@ defmodule Engine.Harness.ArtifactSchemasTest do
     end
   end
 
+  describe "decision_record (Frente 3 — ADR resumido dos conversacionais)" do
+    test "válido com as quatro chaves" do
+      assert :ok =
+               ArtifactSchemas.validate("decision_record", %{
+                 "context" => "Precisávamos escolher o formato de resposta da API pública",
+                 "options" => ["JSON", "XML", "texto puro"],
+                 "choice" => "JSON",
+                 "consequences" => "Clientes precisam de um parser JSON; ganhamos tooling padrão"
+               })
+
+      assert "decision_record" in ArtifactSchemas.known()
+    end
+
+    test "sem validação cruzada — choice não precisa bater com um item de options" do
+      assert :ok =
+               ArtifactSchemas.validate("decision_record", %{
+                 "context" => "c",
+                 "options" => ["a", "b"],
+                 "choice" => "nenhuma das duas, decidimos por uma terceira via",
+                 "consequences" => "consequências"
+               })
+    end
+
+    test "faltando options" do
+      assert {:error, {:missing_keys, ["options"]}} =
+               ArtifactSchemas.validate("decision_record", %{
+                 "context" => "c",
+                 "choice" => "escolha",
+                 "consequences" => "consequências"
+               })
+    end
+
+    test "options que não é lista não é validado por tipo (schema genérico só valida presença)" do
+      assert :ok =
+               ArtifactSchemas.validate("decision_record", %{
+                 "context" => "c",
+                 "options" => "não é uma lista",
+                 "choice" => "escolha",
+                 "consequences" => "consequências"
+               })
+    end
+
+    test "faltando context" do
+      assert {:error, {:missing_keys, ["context"]}} =
+               ArtifactSchemas.validate("decision_record", %{
+                 "options" => ["a", "b"],
+                 "choice" => "a",
+                 "consequences" => "consequências"
+               })
+    end
+
+    test "faltando choice" do
+      assert {:error, {:missing_keys, ["choice"]}} =
+               ArtifactSchemas.validate("decision_record", %{
+                 "context" => "c",
+                 "options" => ["a", "b"],
+                 "consequences" => "consequências"
+               })
+    end
+
+    test "faltando consequences" do
+      assert {:error, {:missing_keys, ["consequences"]}} =
+               ArtifactSchemas.validate("decision_record", %{
+                 "context" => "c",
+                 "options" => ["a", "b"],
+                 "choice" => "a"
+               })
+    end
+  end
+
   test "known/0 lista só os model-emittable" do
-    assert Enum.sort(ArtifactSchemas.known()) == ["business_rule", "note"]
+    assert Enum.sort(ArtifactSchemas.known()) == ["business_rule", "decision_record", "note"]
   end
 
   test "tipo desconhecido" do

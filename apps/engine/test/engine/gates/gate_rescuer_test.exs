@@ -39,7 +39,13 @@ defmodule Engine.Gates.GateRescuerTest do
       Application.delete_env(:engine, :gitleaks_fake_available)
     end)
 
-    %{project_id: Ecto.UUID.generate(), session_id: Ecto.UUID.generate()}
+    project_id = Ecto.UUID.generate()
+
+    # RN-502/ADR 0143 — o resgate solta o agente para o próximo claim, e todo
+    # claim exige container REGISTRADO `running`.
+    container_running!(project_id)
+
+    %{project_id: project_id, session_id: Ecto.UUID.generate()}
   end
 
   defp wait_unregister(registry, key, tentativas \\ 100) do

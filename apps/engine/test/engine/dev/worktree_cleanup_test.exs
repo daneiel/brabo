@@ -112,4 +112,30 @@ defmodule Engine.Dev.WorktreeCleanupTest do
     assert WorktreeCleanup.live_agents(ctx.project_id) == ["dev-api"]
     assert WorktreeCleanup.live_agents(Ecto.UUID.generate()) == []
   end
+
+  # RN-507/ADR 0145 — a poda ganhou um SEGUNDO caminho, pro modo `runner`, e
+  # ele precisa DEGRADAR: sem runner conectado (ou sem container `running`)
+  # AGORA, o projeto é pulado nesta rodada — nunca um erro, e nunca uma
+  # exceção que derrube `Enum.each/2` antes de chegar nos projetos seguintes.
+  test "projeto runner sem runner conectado é pulado em silêncio — o job continua pros outros",
+       ctx do
+    {:ok, _} = WorktreeManager.add_worktree(ctx.work_dir, "dev-api", "task-a")
+    agent_on_another_replica!(ctx.project_id, "dev-api")
+
+    runner_project_id = Ecto.UUID.generate()
+
+    Engine.Repo.query!(
+      "INSERT INTO public.projects " <>
+        "(id, name, slug, execution_mode, workspace_path, workspace_verified_at) " <>
+        "VALUES ($1, 'proj-runner', 'proj-runner-x', 'runner', '/home/nao/existe', now())",
+      [Ecto.UUID.dump!(runner_project_id)]
+    )
+
+    assert :ok = WorktreeCleanup.run()
+
+    # O projeto `container` do fixture continua sendo podado normalmente —
+    # o projeto `runner`, sem runner conectado nem container `running`, não
+    # derrubou o job pros demais.
+    assert WorktreeManager.list(ctx.project_id) == ["dev-api"]
+  end
 end

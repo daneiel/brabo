@@ -5,11 +5,21 @@ defmodule Engine.Dev.WorktreeManager do
   `feature/<task-slug>`, derivado do working tree local do projeto
   (`Engine.Actions.Workspace`). 1 worktree por agente (o dir por agent_id já
   garante), com limpeza de órfãos (worktree sem agente vivo).
+
+  Desde a RN-507 (ADR 0145), as QUATRO operações públicas (`add_worktree/3`
+  vira `create/3`, `remove/2`, `list/1`, `cleanup_orphans/2`) bifurcam por
+  `execution_mode`: LOCAL (`GitCmd`, tudo abaixo) para `container`/`mounted`
+  — comportamento de sempre —, via `Engine.Actions.Workspace.RunnerGit` para
+  `runner`, pelo MESMO canal Phoenix que já executa terminal aprovado. As
+  aridades `_at`/`add_worktree/3` PURAMENTE locais continuam existindo,
+  inalteradas — são o que a suíte já exercita direto contra um bare repo de
+  verdade, e o que `runner?/1` usa para decidir pra qual das duas rotear.
   """
 
   alias Engine.Actions.GitCmd
   alias Engine.Actions.Workspace
-  alias Engine.Projects.ProjectRepository
+  alias Engine.Actions.Workspace.RunnerGit
+  alias Engine.Projects.{Project, ProjectRepository}
 
   @doc """
   Cria (ou recria) o worktree do agente numa branch nova `feature/<slug>`.
@@ -19,8 +29,20 @@ defmodule Engine.Dev.WorktreeManager do
   def create(project_id, agent_id, task_slug) do
     with {:ok, remoto} <- ProjectRepository.remoto_de_trabalho(project_id),
          {:ok, work_dir} <- Workspace.ensure_remoto(project_id, remoto) do
-      add_worktree(work_dir, agent_id, task_slug)
+      if runner?(project_id) do
+        RunnerGit.add_worktree(project_id, work_dir, agent_id, task_slug)
+      else
+        add_worktree(work_dir, agent_id, task_slug)
+      end
     end
+  end
+
+  defp runner?(project_id) do
+    match?(%{execution_mode: "runner"}, Project.get(project_id))
+  rescue
+    _ -> false
+  catch
+    :exit, _ -> false
   end
 
   @doc """
@@ -53,7 +75,13 @@ defmodule Engine.Dev.WorktreeManager do
 
   @doc "Remove o worktree do agente (best-effort) — opera no working tree do projeto."
   def remove(project_id, agent_id) do
-    remove_at(Workspace.workspace_dir(project_id), agent_id)
+    work_dir = Workspace.workspace_dir(project_id)
+
+    if runner?(project_id) do
+      RunnerGit.remove_worktree(project_id, work_dir, agent_id)
+    else
+      remove_at(work_dir, agent_id)
+    end
   end
 
   @doc "Mesmo que `remove/2`, com o `work_dir` já resolvido — sem consulta ao banco."
@@ -64,7 +92,13 @@ defmodule Engine.Dev.WorktreeManager do
 
   @doc "Lista os agent_ids que têm worktree no projeto."
   def list(project_id) do
-    list_at(Workspace.workspace_dir(project_id))
+    work_dir = Workspace.workspace_dir(project_id)
+
+    if runner?(project_id) do
+      RunnerGit.list_worktrees(project_id, work_dir)
+    else
+      list_at(work_dir)
+    end
   end
 
   @doc "Mesmo que `list/1`, com o `work_dir` já resolvido — sem consulta ao banco."
@@ -83,7 +117,13 @@ defmodule Engine.Dev.WorktreeManager do
   Retorna a lista de agent_ids removidos.
   """
   def cleanup_orphans(project_id, live_agent_ids) do
-    cleanup_orphans_at(Workspace.workspace_dir(project_id), live_agent_ids)
+    work_dir = Workspace.workspace_dir(project_id)
+
+    if runner?(project_id) do
+      RunnerGit.cleanup_orphans(project_id, work_dir, live_agent_ids)
+    else
+      cleanup_orphans_at(work_dir, live_agent_ids)
+    end
   end
 
   @doc """

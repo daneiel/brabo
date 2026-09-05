@@ -161,9 +161,11 @@ export class ProjectResponseDto implements Wire<Project> {
     description:
       'WHERE the command executes (RN-169/RN-421 — ADR 0072/0104). ' +
       '`container`: the folder managed in PROJECT_WORKSPACES_ROOT. ' +
-      "`mounted`: the user's folder in `workspacePath`, mounted via " +
-      "bind-mount. `runner`: the user's folder confirmed by the runner " +
-      '(see `workspaceVerifiedAt`).',
+      "`mounted`: the user's folder in `workspacePath`, inside " +
+      '`BRABO_PROJECTS_BASE` and reached through the base bind-mount (ADR ' +
+      "0141). `runner`: the user's folder confirmed by the runner. Both " +
+      '`mounted` and `runner` report the confirmation in ' +
+      '`workspaceVerifiedAt`.',
   })
   executionMode!: ProjectExecutionMode;
 
@@ -180,9 +182,11 @@ export class ProjectResponseDto implements Wire<Project> {
     example: null,
     nullable: true,
     description:
-      'When the runner first confirmed the path (RN-423). `null` = not ' +
-      'yet verified — only meaningful with `executionMode: "runner"`; ' +
-      '`container`/`mounted` never fill this field in.',
+      'When the path was confirmed on disk. `null` = not yet verified. In ' +
+      '`runner` the confirmation comes from the CLI connecting (RN-423); in ' +
+      '`mounted` it is stamped when Infra starts the container and the ' +
+      'folder is materialized (RN-501, ADR 0142). `container` never fills ' +
+      'this field in. It records A confirmation, never a heartbeat.',
   })
   workspaceVerifiedAt!: string | null;
 
@@ -490,3 +494,110 @@ export const _chavesProjectUnreadEvents: MesmasChaves<
   ProjectUnreadEventsResponseDto,
   ProjectUnreadEvents
 > = true;
+
+/**
+ * A base dos projetos no modo `mounted`, como o cliente a enxerga (ADR 0141,
+ * RN-500).
+ *
+ * DTO de UM campo, e ele é `nullable` de propósito: `null` não é erro nem
+ * falha de leitura — é a instalação dizendo "esta máquina não oferece o modo
+ * Pasta montada". É por aqui que a criação de projeto aprende a NÃO oferecer
+ * um modo que a instalação não honra, em vez de oferecer e recusar depois.
+ *
+ * Sem `MesmasChaves` contra um tipo de domínio porque não há domínio nenhum
+ * aqui: o valor é configuração da INSTALAÇÃO, lido de `BRABO_PROJECTS_BASE`
+ * pela mesma função (`baseDeProjetos`) que a regra de criação/conversão vai
+ * usar. Uma cópia do valor em outro lugar seria a segunda fonte que um dia
+ * diverge.
+ */
+export class ProjectsBaseResponseDto {
+  @ApiProperty({
+    example: '/home/voce/brabo',
+    nullable: true,
+    description:
+      "The single folder on the operator's computer that the Brabo " +
+      'containers can see, mounted by IDENTITY (`$X:$X`) into `api` and ' +
+      '`engine` (ADR 0141). `null` means `BRABO_PROJECTS_BASE` is not set: ' +
+      'the installation offers no Mounted mode, and the project wizard must ' +
+      'not offer it. Never a failure — absent is a normal state.',
+  })
+  projectsBase!: string | null;
+}
+
+/**
+ * Uma listagem do navegador de pastas de projeto (RN-504).
+ *
+ * ## Por que cinco campos, e não só `entries`
+ *
+ * Porque `entries` sozinho MENTE. Ele só traz diretório — arquivo e symlink
+ * são deliberadamente omitidos —, e uma pasta cheia de código, ou cheia de
+ * links, chegaria como lista vazia e a tela diria "pasta vazia". É o defeito
+ * que a RN-180 nomeia: tela que mostra um RECORTE diz que é recorte.
+ * `arquivos` e `simbolicos` são a declaração do que ficou de fora, e
+ * `truncado` é a declaração de que nem tudo que caberia coube.
+ *
+ * `base` vem em TODA resposta, e não só em `GET .../projects-base`, porque é
+ * ela que dá sentido a `path`: o cliente sabe onde a navegação começa e até
+ * onde ela sobe sem precisar de uma segunda chamada. `null` — em `base` e em
+ * `path` juntos — é a instalação sem `BRABO_PROJECTS_BASE`: normal, nunca
+ * erro, e é assim que o assistente de criação aprende a não oferecer o modo
+ * Pasta montada.
+ */
+export class ProjectFoldersResponseDto {
+  @ApiProperty({
+    example: '/home/voce/brabo',
+    nullable: true,
+    description:
+      'The mounted-projects base of this installation (`BRABO_PROJECTS_BASE`, ' +
+      'ADR 0141) — the same value `GET .../projects-base` returns, repeated ' +
+      'here so a client can render the breadcrumb without a second call. ' +
+      '`null` means the installation offers no Mounted mode.',
+  })
+  base!: string | null;
+
+  @ApiProperty({
+    example: '/home/voce/brabo/clientes',
+    nullable: true,
+    description:
+      'The folder actually listed, normalized. Equals `base` when the ' +
+      'request omitted `path`. `null` only when there is no base at all: ' +
+      'nothing was listed because there is nowhere to list.',
+  })
+  path!: string | null;
+
+  @ApiProperty({
+    type: [String],
+    example: ['api', 'loja', 'website'],
+    description:
+      'The SUBDIRECTORY names directly under `path`, sorted, never ' +
+      'recursive. Files, symlinks and dot-prefixed entries are excluded — ' +
+      'see `arquivos`, `simbolicos` and `truncado`.',
+  })
+  entries!: string[];
+
+  @ApiProperty({
+    example: false,
+    description:
+      'The folder holds more than 500 subdirectories and only the first 500 ' +
+      'came back. Sorting happens BEFORE the cut, so the cut is ' +
+      'deterministic instead of "whatever the filesystem returned first".',
+  })
+  truncado!: boolean;
+
+  @ApiProperty({
+    example: 12,
+    description:
+      'How many non-directory entries were left out. A folder full of code ' +
+      'must not look empty (RN-180).',
+  })
+  arquivos!: number;
+
+  @ApiProperty({
+    example: 1,
+    description:
+      'How many symlinks were left out. The browser never follows one — a ' +
+      'link is reported, never descended into, so a link pointing outside ' +
+      'the base is not a way out of it.',
+  })
+  simbolicos!: number;
+}

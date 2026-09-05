@@ -12,6 +12,7 @@ import i18n from '../lib/i18n';
 const createProject = vi.fn();
 const listCredentials = vi.fn();
 const registerGitCredential = vi.fn();
+const listProjectFolders = vi.fn();
 
 vi.mock('../lib/api-client', () => ({
   ApiError: class ApiError extends Error {
@@ -29,15 +30,21 @@ vi.mock('../lib/api-client', () => ({
   createProject: (...a: unknown[]) => createProject(...a),
   listCredentials: (...a: unknown[]) => listCredentials(...a),
   registerGitCredential: (...a: unknown[]) => registerGitCredential(...a),
+  // O navegador de pastas passou a ser servido pela api (RN-504): o modal
+  // usa `criarFsBrowserViaApi`, que fala com estas duas.
+  listProjectFolders: (...a: unknown[]) => listProjectFolders(...a),
+  mensagemDaApi: (erro: unknown) => (erro instanceof Error ? erro.message : 'Erro'),
 }));
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
 }));
 
-// `FolderBrowserModal` real é montado quando `execution_mode` é `runner`
-// (RN-437, ADR 0108) — o canal Phoenix é substituído pelo MESMO dublê de
-// `FolderBrowserModal.test.tsx`, controlável e sem depender de rede.
+// O `FolderBrowserModal` real é montado quando "Procurar pasta" abre. Desde a
+// RN-504 ele fala com a API (`listProjectFolders`, mockada acima) e não mais
+// com o canal Phoenix — este dublê fica porque o módulo do canal segue
+// importado pelo componente, e sem ele o `Socket` do phoenix.js tentaria
+// conectar de verdade se algum caminho voltasse a usá-lo.
 const { connectFsBrowserChannelMock } = vi.hoisted(() => {
   const fakeChannel = {
     listarDiretorio: vi.fn().mockResolvedValue({ path: '/home/user', entradas: [] }),
@@ -96,6 +103,14 @@ async function ateWorkspace() {
 beforeEach(async () => {
   await i18n.changeLanguage('pt-BR');
   vi.clearAllMocks();
+  listProjectFolders.mockResolvedValue({
+    base: '/home/user/brabo',
+    path: '/home/user/brabo',
+    entries: [],
+    truncado: false,
+    arquivos: 0,
+    simbolicos: 0,
+  });
   listCredentials.mockResolvedValue([
     {
       id: 'cred-1',
@@ -223,26 +238,36 @@ describe('NewProjectWizard — onde o código vai morar', () => {
   });
 
   /**
-   * "Procurar pasta..." (ADR 0107, navegação de pasta via o Runner). Nesta
-   * tela o projeto AINDA não existe (só nasce na confirmação) — o modal
-   * mostra o estado declarado em vez de tentar conectar a um runner sem
-   * projeto para ancorar. O campo de texto livre continua sendo o caminho
-   * de verdade aqui, exatamente como antes desta entrega.
+   * "Procurar pasta..." em `mounted` NAVEGA de verdade desde a RN-504.
+   *
+   * Antes desta entrega o modal abria com `projectId: null` e mostrava um
+   * estado declarado ("depois que o projeto existir…"), porque o único
+   * transporte era o canal do runner e ele precisa de um projeto para
+   * ancorar. A base de projetos montados não depende de projeto nenhum, e
+   * NENHUM projeto é criado por abrir o navegador — que é o que o
+   * `createProject` não chamado prova aqui.
    */
-  it('"Procurar pasta..." mostra o estado declarado (sem projeto ainda), e digitar continua funcionando', async () => {
+  it('"Procurar pasta..." navega pela base servida pela api, sem criar projeto', async () => {
+    listProjectFolders.mockResolvedValue({
+      base: '/home/user/brabo',
+      path: '/home/user/brabo',
+      entries: ['clientes'],
+      truncado: false,
+      arquivos: 0,
+      simbolicos: 0,
+    });
     await ateWorkspace();
     fireEvent.click(screen.getByText('Pasta montada'));
 
     fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
 
-    expect(
-      await screen.findByText((t) => t.includes('depois que o projeto existir')),
-    ).toBeTruthy();
+    expect(await screen.findByText('clientes')).toBeTruthy();
+    expect(listProjectFolders).toHaveBeenCalledWith('ws-1');
+    expect(createProject).not.toHaveBeenCalled();
+    // O canal do runner não é sequer aberto: o transporte é outro.
+    expect(connectFsBrowserChannelMock).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Entendi' }));
-    expect(
-      screen.queryByText((t) => t.includes('depois que o projeto existir')),
-    ).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
 
     fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
       target: { value: '/home/voce/projetos/loja' },
@@ -296,9 +321,13 @@ describe('NewProjectWizard — onde o código vai morar', () => {
  * Navegação de pasta ANTECIPADA no modo Runner (RN-437, ADR 0108).
  *
  * `ADR 0107` tinha declarado como lacuna: "Procurar pasta..." não conseguia
- * ancorar num projeto porque ele só nascia na confirmação. Esta entrega
- * fecha isso SÓ pra `runner` — `mounted` continua com `projectId: null`,
- * provado pelo teste "mostra o estado declarado" acima, intocado.
+ * ancorar num projeto porque ele só nascia na confirmação.
+ *
+ * Desde a RN-504 o MODAL já não depende disso — ele navega a base pela api,
+ * nos dois modos. A criação antecipada, porém, CONTINUA no assistente, e é
+ * por isso que estes casos seguem aqui: ela é removida no PR seguinte deste
+ * plano, junto com o modo `runner` na criação, e até lá o comportamento tem
+ * de continuar coberto.
  */
 describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', () => {
   async function ateWorkspaceRunner() {
@@ -322,14 +351,16 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
       executionMode: 'runner',
       workspacePath: '/home/voce/projetos/loja',
     });
+    // A criação antecipada CONTINUA acontecendo (é o caminho que o PR
+    // seguinte do plano remove); o que mudou é que o modal já não usa o id
+    // criado — ele navega a base pela api. Manter esta asserção provaria o
+    // contrário do código.
+    // O caminho já digitado vira a pasta de abertura, e o workspace é o que
+    // ancora o transporte.
     await waitFor(() =>
-      expect(connectFsBrowserChannelMock).toHaveBeenCalledWith('proj-runner-1'),
+      expect(listProjectFolders).toHaveBeenCalledWith('ws-1', '/home/voce/projetos/loja'),
     );
-    // Não é mais o estado declarado "sem projeto ainda" — o modal recebeu
-    // um `projectId` real.
-    expect(
-      screen.queryByText((t) => t.includes('depois que o projeto existir')),
-    ).toBeNull();
+    expect(connectFsBrowserChannelMock).not.toHaveBeenCalled();
   });
 
   it('sem digitar nada ainda, cria com o caminho PLACEHOLDER — nunca com o campo vazio', async () => {
@@ -359,9 +390,7 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
     fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
     fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
 
-    await waitFor(() =>
-      expect(connectFsBrowserChannelMock).toHaveBeenLastCalledWith('proj-runner-1'),
-    );
+    await waitFor(() => expect(listProjectFolders).toHaveBeenCalled());
     expect(createProject).toHaveBeenCalledTimes(1);
   });
 
@@ -394,9 +423,6 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
       name: 'Loja Nova',
       slug: 'loja-nova',
     });
-    await waitFor(() =>
-      expect(connectFsBrowserChannelMock).toHaveBeenLastCalledWith('proj-runner-2'),
-    );
   });
 
   it('handleConfirm reaproveita o projeto criado ao navegar, sem duplicar', async () => {

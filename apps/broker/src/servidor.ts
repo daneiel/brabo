@@ -40,10 +40,12 @@ import {
 } from './api-client.ts';
 import { tokenConfere } from './config.ts';
 import {
+  BaseDeProjetosNaoConfiguradaError,
   ComandoInvalidoError,
   DiretorioForaDoEscopoError,
   exec,
   inspect,
+  LocalizacaoIndisponivelError,
   ModoDeExecucaoNaoSuportadoError,
   RaizDeWorkspacesNaoConfiguradaError,
   remove,
@@ -190,7 +192,13 @@ export function respostaDeErro(erro: unknown): RespostaDoBroker {
   if (erro instanceof ApiIndisponivelError) {
     return { status: 502, corpo: corpo(erro, 'infra') };
   }
-  if (erro instanceof RaizDeWorkspacesNaoConfiguradaError) {
+  if (
+    erro instanceof RaizDeWorkspacesNaoConfiguradaError ||
+    erro instanceof BaseDeProjetosNaoConfiguradaError
+  ) {
+    // 503 e não 409: falta uma peça do AMBIENTE deste processo, e o conserto é
+    // do operador, não de quem pediu. As duas classes existem separadas para a
+    // mensagem NOMEAR qual das duas raízes falta.
     return { status: 503, corpo: corpo(erro, 'infra') };
   }
   if (erro instanceof ProjetoDesconhecidoError) {
@@ -200,7 +208,8 @@ export function respostaDeErro(erro: unknown): RespostaDoBroker {
     erro instanceof ContainerNaoGerenciadoError ||
     erro instanceof ContainerAusenteError ||
     erro instanceof SemDecisaoDeImagemError ||
-    erro instanceof ModoDeExecucaoNaoSuportadoError
+    erro instanceof ModoDeExecucaoNaoSuportadoError ||
+    erro instanceof LocalizacaoIndisponivelError
   ) {
     // 409: o pedido é legível e o estado do mundo não permite atendê-lo.
     return { status: 409, corpo: corpo(erro, 'politica') };

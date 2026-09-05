@@ -36,12 +36,32 @@ export interface DecisaoDeImagemDaApi {
   resources: { cpus: number; memoryMb: number; pidsLimit: number };
 }
 
+/**
+ * ONDE a pasta do projeto fica, dita pela api sem nenhum caminho absoluto
+ * (RN-503). O broker resolve `tipo` contra uma das raízes DELE e concatena o
+ * `segmento` — ver `raizDoProjetoNoHost` em `operacoes.ts`.
+ *
+ * Tipado como `string` e não como união fechada de propósito: isto é JSON de
+ * outro processo, e um `tipo` desconhecido tem de ser RECUSADO em runtime,
+ * nomeando o valor. Uma união aqui faria o compilador afirmar sobre bytes que
+ * ele não viu, e o `else` da recusa pareceria código morto.
+ */
+export interface LocalizacaoDoProjeto {
+  tipo: string;
+  /** Presente em `gerenciada`/`montada`. Relativo, sempre. */
+  segmento?: string;
+  /** Presente em `indisponivel`. */
+  motivo?: string;
+}
+
 export interface ContextoDoProjeto {
   projectId: string;
   projectSlug: string;
   workspaceId: string;
   workspaceDirName: string;
   executionMode: string;
+  /** O localizador discriminado da pasta (RN-503). */
+  localizacao?: LocalizacaoDoProjeto | null;
   /** `null` enquanto o Arquiteto não decidiu (RN-105). */
   imagem: DecisaoDeImagemDaApi | null;
   /** Versão do artefato vigente — 0 quando não há decisão. */

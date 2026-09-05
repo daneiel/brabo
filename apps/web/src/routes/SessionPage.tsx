@@ -472,6 +472,28 @@ export function SessionPage({
       (AGENTES_DE_CHAT as readonly string[]).includes(h.toAgent),
   );
 
+  // O handoff da INFRA, que o filtro logo acima deixa de fora — e de
+  // propósito: `AGENTES_DE_CHAT` está CERTO em excluir o Infra Lead (ele não
+  // tem cláusula de `message` no engine, e alargar aquela lista faria o
+  // composer mandar mensagem que seria roteada em silêncio pro Criativo).
+  //
+  // O que o comentário da RN-136 acima descreve como consequência aceita —
+  // "Infra nunca é aceito por AQUI … na prática, nunca" — não era aceitável:
+  // `acceptHandoff` tinha UM consumidor só (o card do fio, atrás daquele
+  // filtro), então o handoff oferecido por `OfferInfraHandoffUseCase` ficava
+  // `offered` para sempre, o Infra Lead nunca era ativado, e com ele nunca
+  // vinha `propose_container_start` — a cadeia inteira "Infra aceita → propõe
+  // `container_start` → aprovado → container `running`" era INALCANÇÁVEL por
+  // tela nenhuma (RN-499).
+  //
+  // A correção NÃO é alargar `AGENTES_DE_CHAT`: é um card PRÓPRIO, fora do
+  // fio, que chama o MESMO `handleAcceptHandoff`. `activeFor` é o mesmo
+  // predicado da linha acima — handoff já aceito (ou Infra já ativa nesta
+  // sessão por qualquer outro caminho) não reabre convite nenhum.
+  const handoffDaInfraOferecido = handoffs.find(
+    (h) => h.status === 'offered' && h.toAgent === 'infra' && !activeFor('infra'),
+  );
+
   // `iniciarTurnoDoAgente`, `finalizarTurnoDoAgente`, `cancelarTurnoOtimista`
   // e o efeito do canal Phoenix (que armava/desarmava este mesmo cluster de
   // estado) moraram aqui até a extração do hook `useTurnoDoAgente` (ADR
@@ -2293,6 +2315,56 @@ export function SessionPage({
               agente={streamingAgent ?? statusAgent}
               pensandoVisivel={pensandoVisivel}
             />
+          )}
+
+          {/*
+            O card ACIONÁVEL do handoff da Infra (RN-499). Ele mora AQUI, na
+            faixa entre o fio e o composer, e não dentro da timeline, por
+            três razões:
+
+            1. Esta faixa já é o lugar declarado das ações de handoff que
+               NÃO são conversa — o seletor logo abaixo (ADR 0109/RN-440)
+               fica "FORA do `.composer` de propósito — não é uma ação de
+               conversa, é redirecionamento". Aceitar a Infra é exatamente
+               isso: não abre fio nenhum, ativa um agente propositivo.
+            2. O card do fio pertence a um EVENTO (`handoff.offered`), e o
+               evento da Infra continua sendo NARRADO lá como divisor mudo,
+               sem mudança — o filtro `AGENTES_DE_CHAT` da RN-136 fica
+               intacto, e nenhum handoff conversacional muda de forma.
+            3. A faixa não rola. A oferta da Infra sai da janela de 200
+               eventos numa sessão longa, e um botão que só existe enquanto
+               o evento estiver visível é um botão que some sozinho.
+
+            O que o texto tem de dizer é a CONSEQUÊNCIA do clique, porque
+            ela não é óbvia: o Infra Lead assume e vai PROPOR a subida do
+            container — proposta que ainda passa pelo pipeline de aprovação
+            de sempre (`container_start`, `maintainer`, RN-491). Aceitar não
+            sobe container nenhum.
+          */}
+          {isActive && handoffDaInfraOferecido && (
+            <div className={styles.infraHandoffRow}>
+              <div className={styles.infraHandoffTexto}>
+                <span className={styles.infraHandoffTitulo}>
+                  {t('handoff.infraTitulo', {
+                    de: nomeDoAgente(handoffDaInfraOferecido.fromAgent),
+                  })}
+                </span>
+                <span className={styles.infraHandoffDetalhe}>
+                  {t('handoff.infraDetalhe')}
+                </span>
+              </div>
+              <Button
+                variant="success"
+                onClick={() =>
+                  handleAcceptHandoff(
+                    handoffDaInfraOferecido.id,
+                    handoffDaInfraOferecido.toAgent,
+                  )
+                }
+              >
+                {t('handoff.infraBotao')}
+              </Button>
+            </div>
           )}
 
           {/*

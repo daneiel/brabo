@@ -78,7 +78,18 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | O runner sobe o container do projeto (PR 1.3, Parte 1 fora de ordem — fecha a metade que a RN-494/PR 1.7 tinha deixado declarada) | `container_start`/`container_stop`/`container_remove` ganham SEGUNDO caminho de execução, ramificado por `executionMode`: `container` segue pelo broker (inalterado); `mounted`/`runner` passam a pedir ao RUNNER conectado, via TRÊS pares novos no canal Phoenix (`container_start`/`_result`, `container_stop`/`_result`, `container_remove`/`_result`, mesmo molde de `exec`/`exec_result`) — `EngineWeb.ContainerCommandController` repassa pro `RunnerRouter`, que o runner atende com `DockerViaCli` (o Docker DELE, `@brabo/docker-port`, que ganha uso real além de `--self-test-docker`). A imagem é LIDA (`ObterSpecDeContainerUseCase`, o mesmo caso de uso do broker), nunca reeleita. "Sem runner"/"timeout" (`RunnerNaoConectadoError`) e "runner recusou" (`RunnerRecusouContainerError`) viram `failed` nomeado, nunca exceção. `Engine.Actions.TerminalExecutor` não ganhou saída nova — ele já roteava todo comando de projeto `runner` conectado pro canal incondicionalmente; a escolha host-vs-container é INTERNA ao runner (`EstadoDoRunner.containerAtivo`, `tratarExec` roteia via `docker exec` com `cwd` traduzido por troca de prefixo, `cwdParaContainer`). `guard.ts`/RN-434 passa a cobrir o bind-mount sem NENHUMA validação nova — o mount É a raiz já confirmada no startup da CLI | ADR 0137, RN-497 |
 | Golden-set do RAG em CI, agendado (Parte 2/Etapa 3) | Fecha a metade que a RN-490/ADR 0132 tinha deixado como `TODO(humano)` — só para o RAG, nunca para o QA (ADR 0123, sem mudança nenhuma). Workflow novo (`.github/workflows/golden-set-rag.yml`, `schedule` noturno + `workflow_dispatch`, separado de `ci.yml` de propósito) sobe `postgres`+`ollama` como serviços e roda `mix golden_set.rag` de verdade — tratável porque este golden-set só chama o modelo de EMBEDDING (CPU, determinístico), nunca um modelo de chat fazendo julgamento como o do QA exige. `rag-acertivo` CONTINUA `warn`: agendado nunca bloqueia PR, então `block` prometeria um travamento que não existe — o motivo mudou (de "sem CI" para "cadência"), a severidade não. Achado que dispensou geração de segredo: `seed-golden-set-rag.ts` nunca define `NODE_ENV`, então os quatro segredos de RN-114 caem no literal de dev sem reclamar | ADR 0138, RN-498 |
 
+| O handoff da Infra podia ser aceito por tela nenhuma (D0) | `offeredHandoff` filtra o card do fio por `AGENTES_DE_CHAT`, que exclui `infra` — e o filtro está CERTO (o engine não tem cláusula de `message` pro Infra Lead; alargá-lo faria a tela oferecer um fio que não existe e o composer mandar mensagem pro Criativo). O defeito era a consequência, que o comentário do próprio código registrava como aceita: `acceptHandoff` tinha UM consumidor só, atrás desse filtro, então o handoff de `OfferInfraHandoffUseCase` ficava `offered` para sempre, o Infra Lead nunca era ativado, `propose_container_start` nunca era chamado e NENHUM projeto de nenhum modo chegava a ter container de pé. Correção: card acionável PRÓPRIO, fora do fio, na faixa fixa entre a área que rola e o composer — a mesma que já hospeda o handoff manual e se declara o lugar das ações de handoff que não são conversa —, chamando o `acceptHandoff` que já existia, fechado pelo mesmo `activeFor`. O `handoff.offered` da Infra continua NARRADO no fio como divisor mudo | RN-499 |
+| A base única dos projetos montados (PR 1, BREAKING) | Criar projeto `mounted` exigia uma linha de bind-mount escrita À MÃO em `api` E `engine` mais um restart dos dois — que mata todo turno de agente, socket de terminal e chamada de LLM em voo da instalação, para onboardar UM projeto. Nasce `BRABO_PROJECTS_BASE`: UMA base, configurada uma vez pelo operador, montada por IDENTIDADE (`$X:$X`) nos dois serviços, com todos os projetos montados dentro dela e NADA editado por projeto. Identidade e não mountpoint fixo porque `workspace_path` é digitado pelo usuário e mostrado de volta a ele — e é o que faz `projectScopeRoot`/`workspace_dir/2` continuarem certos sem código novo. Variável PRÓPRIA (colisão de namespace com `workspace_dir_name` UNIQUE faria `git init` na pasta de outro projeto; dono oposto; a base é navegável e a raiz gerenciada não deve ser). AUSENTE é normal: `projectsBase: null` (`GET workspaces/:id/projects-base`, `maintainer`) e o modo não é oferecido. E `pnpm dev` RECUSA subir com a base sobreposta ao checkout — a única checagem possível, porque a api compara contra `/workspace`. Dois custos declarados: symlink sob a base e uma base só | ADR 0141, RN-500 |
+| A pasta montada nasce quando o container sobe (PR 2) | Fecha a metade que o ADR 0141 deixou declarada. `mounted` validava DISCO na criação (existe? é pasta? é gravável de dentro da api?), o que tornava impossível o requisito literal do dono do produto — *"se for Pasta montada, o bind-mount deve ser criado APÓS a decisão do arquiteto"* —, porque a criação é a PRIMEIRA tela e a decisão do Arquiteto acontece muitas sessões depois; e era o que impedia `mounted` de ser escolha de primeira classe, já que um caminho SUGERIDO pelo assistente é por construção um caminho que ainda não existe. Passa a validar só o LÉXICO (a mesma disciplina de `runner` desde a RN-423) mais estar dentro de `BRABO_PROJECTS_BASE`; a pasta é MATERIALIZADA por `materializarWorkspaceMontado` (`mkdir -p` + as três perguntas de disco, com a recusa por estar fora da base ANTES do `mkdir`), chamada de DOIS lugares: `ExecuteContainerStartUseCase` (o normal — cria, prova gravável e carimba `workspace_verified_at` ANTES de qualquer transição; falha vira `failed` NOMEADO e o ciclo de vida NÃO chega a `provisioning`) e `ConvertProjectExecutionModeUseCase` (a exceção declarada — não tem passo de container onde pendurar o trabalho e move o `permissions.json` para dentro da pasta logo em seguida). A regra da base NÃO entra em `caminhoDeWorkspaceLocalValido`, que roda em toda LEITURA — projeto `mounted` legado fora da base explodiria ao ser lido —, com teste de não-regressão. Sem migration: `mounted` segue gravando `workspace_path` não-nulo, e adiar a VERIFICAÇÃO nunca toca o invariante de PAREAMENTO do CHECK | ADR 0142, RN-501 |
+| Container de projeto montado (PR 3) | Projeto `mounted` não conseguia container NENHUM, por dois bloqueios independentes — a api mandava todo modo não-`container` pro RUNNER (que exige `brabo-runner` conectado) e o broker recusava não-`container` na fonte. Os dois eram sobre GEOMETRIA, não sobre o nome do modo, e a base única do ADR 0141 mudou a geometria. A ramificação vira por DESTINO: `container` E `mounted` → broker, só `runner` → runner (e `container_stop`/`_remove` mudam JUNTAS com o `_start`, senão sobe no servidor e para na máquina do usuário). O invariante do ADR 0130 não se mexe — nenhum caminho absoluto atravessa a rede: o broker ganha uma SEGUNDA raiz (`BRABO_PROJECTS_HOST_BASE`) e a api manda um localizador DISCRIMINADO (`gerenciada` \| `montada` \| `indisponivel`) dizendo contra qual raiz o segmento relativo vale. TRÊS variantes porque `indisponivel` tem dois consertos diferentes (`runner` × `mounted` legado fora da base), e raiz que falta NUNCA é suprida pela outra. `mounted` ELEGE a imagem como `container` — o broker compõe de `artifact.project_image`, então eleição não gravada é eleição inerte (ADR 0133 num segundo modo) | ADR 0144, RN-503 |
+| O navegador de pastas passa a ser servido pela api (PR 4) | O assistente de criação perde os DOIS mecanismos de "procurar pasta", e os dois dependiam do runner: `FolderBrowserModal` navegava pelo WEBSOCKET DELE (`fs_list_dir`/`fs_home_dir`, lendo o disco do usuário) e o `RunnerOnboardingPanel` usava `showDirectoryPicker`, que devolve handle de navegador e nunca caminho absoluto — que é o que `workspace_path` guarda. Nasce `GET workspaces/:workspaceId/project-folders` (`maintainer`, o mesmo mínimo de `POST .../projects`: a rota revela a TOPOLOGIA de arquivos do operador, onde `projects-base` revelava um caminho só), escopada DURA à base do ADR 0141 — `path` omitido é a base, e sair dela é **400** e não 403 (nenhum papel navega fora; o pedido é malformado, não subautorizado). Tetos como contrato: só diretório, 500 ordenados ANTES do corte, sem recursão, `.`-prefixadas fora, symlink reportado e NUNCA descido — e o que fica de fora é CONTADO (`arquivos`/`simbolicos`/`truncado`), senão pasta cheia de código apareceria como vazia (RN-180). Sem POST: criar pasta é da materialização. No web, a interface `FsBrowser` (`lib/fs-browser.ts`) ganha DUAS implementações e `FolderBrowserModal` escolhe por união discriminada; o transporte via runner fica sem chamador, mantido por decisão declarada | RN-504 |
+
+| Agentes de dev só depois do container (PR 7) | Numa execução real do `exp001`, DEZ tasks de dev travaram de uma vez — e o achado não foi a pasta que falhou, foi que **nada ordenava container antes de dev agent**. `Engine.Dev.AgentIo.try_claim/2` — o ponto ÚNICO de claim — passa a consultar `ProjectContainerLifecycle.running?/1` (o predicado que o ADR 0134 já tinha) ANTES de chamar a api: sem linha REGISTRADA `running`, o agente cai em `:idle`, persiste e emite `dev.blocked_by_container`. No ENGINE e não só no `activate-execution` da api porque a REIDRATAÇÃO chega ao `try_claim/2` sem passar por rota nenhuma (`init/1` → `finish_restart_recovery/1`). `:idle` e NÃO status novo, pela razão que o próprio docblock do `try_claim/2` já registrava desde a Fase 12b — é o único estado do qual um wake ainda resgata, e todos os guards de `handle_info/2` se apoiam nisso; quem distingue "fila vazia" de "sem container" é o EVENTO, nunca o status. O wake vem pelo outbox: `RegistrarTransicaoDeContainerUseCase` publica `container.running` na MESMA transação que grava a chegada em `running`, num `aggregate_type` NOVO (`container`, o terceiro que `Engine.Outbox.Drain` lê) em vez de pegar `task` emprestado, com o PROJETO como `aggregateId`; a mensagem entregue é a `{:wake, :became_claimable}` que já existia. Segunda metade: `TerminalExecutor` para de degradar calado — `container` sem `running` caía em `System.cmd` DENTRO do processo do engine, e agora RECUSA, com `mounted` no mesmo ramo | ADR 0143, RN-502 |
 | Alarme de merge de esteira com destinatário | A regra "promoção é `--no-ff`" foi quebrada TRÊS vezes (#367, #394, #464 — a terceira era o PR que consertava as duas primeiras). O achado: a detecção JÁ existia e JÁ funcionou (o `tag-release` reprovou as duas primeiras com a mensagem certa) — faltava para QUEM tocar, porque workflow de `push` que falha numa permanente não tem PR onde ficar vermelho e o repo tinha zero issues. `tag-release` ganha o job `avisar`, que abre issue (e comenta na já aberta, nunca duplica) com `github.token` e nunca com o PAT — PAT inválido é uma das falhas que ele reporta — e isso deixou de ser hipotético: o `BRABO_BOT_TOKEN` expirou em 2026-09-03 à noite, reprovou duas runs do `tag-release`, e foi rotacionado em 2026-09-04; a v4.0.0 carimbou e DISPAROU a Release, o que só acontece com PAT válido (tag criada com `GITHUB_TOKEN` não dispara workflow). A regra passa a cobrir `dev` de forma ESTREITA: só é defeito o PR que trazia ARESTA NOVA (head era merge cujo segundo pai não estava na base), nunca o squash de PR de trabalho, que é a convenção. Desligar squash no repo foi MEDIDO e recusado (taxaria todo PR e mexeria no `changelog.mjs`, que roda `--no-merges`) | ADR 0139 |
+| O artefato de decisão dos conversacionais (Frente 3, fatia genérica) | `decision_record` reusa o padrão GENÉRICO de `emit_artifact`/`ArtifactSchemas` (o mesmo de `note`/`business_rule`) em vez do dedicado de `project_image`/`c4_diagram` — uma decisão é log append-only, nunca um "vigente" que se substitui. PO, Arquiteto, Dev Lead, UX Designer e Staff ganham a ferramenta (alias + `tool_specs` + `run_tool/3` + a mesma frase no `system_prompt/1`); o Criativo já tinha `emit_artifact` desde a Fase 3b e só ganhou o tipo novo, sem mudança nele. Distinto de `open_adr_pr` (só o Arquiteto, commit real + PR + aprovação humana): os dois COEXISTEM para escalas diferentes de decisão. Fora de escopo, declarado: agentes de execução (`ToolLoop`, sem harness comum) e a amarração com o Infra Lead — emitir `decision_record` ao propor `container_start_via_runner` — que depende de uma tool de outra frente do mesmo plano, em branch separada | RN-505 |
+| "Sempre permitir" separado por Dev Agent de módulo | Clicar "sempre permitir" numa ação de um `dev-<modulo>` gravava em `permissions.json`, escopo de PROJETO INTEIRO — liberava o mesmo comando pra qualquer outro agente. Passa a gravar em `agent_autonomy(projeto, agente, tipo)`, o MESMO mecanismo já usado pras 3 ações git seedadas na ativação da execução. `dev-lead` (lidera a área, não é membro dela) e qualquer ator não-modular continuam indo pro `permissions.json` de sempre; os dois tetos absolutos (terminal com efeito externo/comando privilegiado, `container_remove`) continuam recusando o clique inteiro ANTES do branch novo. Sem migração: entradas antigas continuam em `permissions.json`, decisão consciente | RN-509 |
+| Docker vira pré-requisito real do modo Runner | `runner` roteava todo terminal aprovado ao CLI assim que workspace verificado + runner conectado batiam, sem checar container `running` — sem Docker de pé, o runner caía sozinho no HOST puro, o MESMO fallback silencioso que o ADR 0143 já tinha fechado para `container`/`mounted`. `Engine.Runners.RunnerReadiness` unifica as TRÊS pré-condições (verificado, conectado, container `running`) com dois consumidores: `TerminalExecutor` e a materialização do worktree do dev agent, que deixa de tentar `File.mkdir_p!`/`git init` LOCAL contra o caminho do HOST (a lacuna aberta desde a RN-478) e passa a rodar DENTRO do container real, na máquina do usuário, pelo MESMO canal `exec`/`exec_result` (`Engine.Actions.Workspace.RunnerGit`, novo) — `WorktreeManager` bifurca pelo mesmo critério, e o job periódico de limpeza PULA em silêncio um projeto `runner` sem runner pronto agora. O protocolo `exec` ganha `env` opcional para a credencial de git (ADR 0056) viajar no ambiente do processo filho do HOST — mesclado sobre `process.env`, nunca repassado ao `docker exec` nem logado. `container_start` deixa de atender `runner` (o payload dela, com eleição de imagem, nunca fazia sentido lá); nasce `container_start_via_runner` — schema só com `rationale`, sobe a imagem já decidida —, com a tool nova do Infra Lead recusando LOCALMENTE (sem HTTP) antes de propor às cegas | RN-507/508, ADR 0145 |
+| RN-505 duplicada em dev, corrigida | O "artefato de decisão" e o "sempre permitir por Dev Agent" mergearam com 2 minutos de diferença, cada um alocando RN-505 sem ver o outro; "sempre permitir por Dev Agent" foi renumerado pra RN-509 (`docs/business-rules.md`, CHANGELOG, o comentário do `approve-always-action.use-case.ts` e do `ApprovalCard.test.tsx`), liberando o anchor `{#rn-505}` pro `decision_record`. Achado junto: a renumeração 505→507/506→508 feita durante a resolução de conflito de outro PR (Docker/runner, ADR 0145) tinha ficado INCOMPLETA — sobravam três menções a "RN-505" neste próprio arquivo, também corrigidas pra "RN-507" | — |
 
 ## Estado atual e aberto
 
@@ -141,13 +152,27 @@ daqui e o fechamento vai para o histórico.
   três modos agora exigem imagem decidida para a aba Code, e
   `RegistrarTransicaoDeContainerUseCase` não recusa mais por modo), mas quem
   impedia `mounted`/`runner` de chegar em `running` era só o broker
-  (`ModoDeExecucaoNaoSuportadoError`). O ADR 0137 fecha essa metade DO OUTRO
-  LADO: `mounted`/`runner` sobem container de verdade, só que NA MÁQUINA DO
-  USUÁRIO, pelo `brabo-runner` — o broker (e o servidor) continuam sem
-  enxergar essa pasta, e `container` continua sendo o único modo que sobe
-  container NO SERVIDOR. A pergunta "quantos módulos, um container só"
-  segue como está, `project_id UNIQUE` em `project_containers`, sem mudança
-  aqui
+  (`ModoDeExecucaoNaoSuportadoError`). O ADR 0137 fechou essa metade DO OUTRO
+  LADO: `mounted`/`runner` sobem container de verdade NA MÁQUINA DO USUÁRIO,
+  pelo `brabo-runner`. E o ADR 0144 (RN-503) fechou a metade que faltava para
+  `mounted`, do lado do SERVIDOR: a base única do ADR 0141 tornou aquela pasta
+  alcançável pelo daemon do host, então `mounted` passa a subir pelo BROKER
+  como `container` — a ramificação vira por DESTINO (`container` e `mounted` →
+  broker, `runner` → runner), e as três ações de ciclo de vida mudam juntas. O
+  broker ganhou uma SEGUNDA raiz (`BRABO_PROJECTS_HOST_BASE`) e a api passou a
+  mandar um localizador DISCRIMINADO em vez de um nome solto, sem que nenhum
+  caminho absoluto atravesse a rede. `runner` é o único modo que segue sem
+  container NO SERVIDOR — a pasta dele mora numa máquina que o broker não
+  enxerga. A pergunta "quantos módulos, um container só" segue como está,
+  `project_id UNIQUE` em `project_containers`, sem mudança aqui. O que
+  faltava fechar era o OUTRO fallback: até a RN-507 (ADR 0145), um projeto
+  `runner` verificado e conectado tinha comando roteado ao CLI mesmo SEM
+  container `running` de pé — o runner caía sozinho no host puro,
+  silenciosamente. `Engine.Runners.RunnerReadiness` unifica os TRÊS modos sob
+  o MESMO predicado, e `container_start` deixa de atender `runner` (o
+  payload dela, com eleição de imagem, nunca fazia sentido pra um caminho
+  sem roteamento contra o qual eleger) — `container_start_via_runner` é o
+  tipo novo, exclusivo desse modo
 - Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
   aguardando spec; Staff dormente para disparo automático (acionável manual)
 - `appsec run_design/2` acionável, nada aciona sozinho (gatilho:
@@ -187,13 +212,6 @@ daqui e o fechamento vai para o histórico.
   reconciliar é decisão de produto à parte, não tomada no ADR 0126
 - `gatesEverOpened` sofre da classe de defeito da janela de 200 eventos —
   declarado, não corrigido (exigiria mudar assinatura de `deriveAgentRoster`)
-- O ENGINE tem o mesmo defeito que a RN-478 fechou na api, e ele segue ABERTO:
-  `Engine.Actions.Workspace.ensure!/4` faz `File.mkdir_p!` do caminho do HOST
-  em projeto `runner`, e o working tree do dev agent não tem onde nascer. Não
-  vira 500 (o `rescue` de `ensure_remoto/2` devolve `{:error, …}`), vira dev
-  agent que não trabalha — a mensagem NOMEIA a causa desde a RN-478. Corrigir
-  isolado seria materializar worktree no host por um caminho que a execução em
-  container substitui; a decisão é esperar por ela
 - Conversão de `execution_mode` nunca migra diff NÃO commitado — órfão no
   disco antigo (RN-447..450, ADR 0111)
 - Mirror web de `SOLO_CONVERSATIONAL_AGENTS` sem teste cruzado com a api
@@ -207,6 +225,29 @@ daqui e o fechamento vai para o histórico.
 - Chave de dispositivo órfã (aba fechada no meio do fluxo da RN-473) é INERTE,
   mas invisível: `RunnerDeviceKeysController` tem `POST`/`DELETE` e nenhuma
   rota de LISTAGEM, então não há tela onde revogá-la
+- **A credencial de git some quando o container do runner já está ativo, e
+  isso é o caminho COMUM, não uma borda.** `RunnerReadiness` (RN-507)
+  exige container `running` REGISTRADO antes de QUALQUER operação de
+  `RunnerGit` — inclusive o `git fetch` autenticado inicial. Mas a ÚNICA
+  forma de esse registro existir para um projeto `runner` é o MESMO runner
+  ter subido o próprio container com sucesso, e é esse mesmo sucesso que
+  marca `estado.containerAtivo` nele — os dois nascem do mesmo evento.
+  `tratarExec` roteia pra dentro do container (sem campo de `env`, ADR
+  0130: sem `-e` livre) sempre que `containerAtivo` está setado, e só usa
+  o caminho HOST (que carrega a credencial) quando está `null`. Ou seja:
+  no instante em que a RN-507 deixa o `fetch` autenticado rodar, o
+  container quase sempre já está de pé no MESMO runner — e é exatamente
+  aí que a credencial é descartada, em silêncio, sem erro. Não é
+  vazamento (o oposto: super-contido a ponto de quebrar a própria
+  função) — mas clone/fetch inicial de repositório REMOTO AUTENTICADO em
+  modo `runner` tende a falhar no caminho comum, não num caso de borda.
+  Repositório `local` (sem credencial) e os modos `container`/`mounted`
+  não são afetados. Sem teste ponta a ponta cobrindo o cenário — só
+  `channel.spec.ts` prova a passagem isolada da mensagem. Investigado e
+  confirmado por leitura de código ao revisar a RN-507/508 (ADR 0145);
+  corrigir exigiria decidir COMO uma operação de `RunnerGit` credenciada
+  se comunica com um `docker exec` que hoje não tem campo de `env` —
+  fora do escopo dessa entrega
 - `guard.ts` do runner é best-effort por invariante, não lacuna
 - Exclusividade por `{project_id, machine_id}` adiada até segundo dev
   simultâneo real
@@ -335,7 +376,15 @@ daqui e o fechamento vai para o histórico.
   `exec`/`exec_result`), fazem `DockerViaCli.start/stop/exec` de
   verdade, com o Docker do PRÓPRIO usuário — para projeto
   `mounted`/`runner`, que o broker nunca alcança (a pasta mora numa
-  máquina que o servidor não enxerga)
+  máquina que o servidor não enxerga). Desde a RN-507 (ADR 0145), Docker é
+  PRÉ-REQUISITO real do modo `runner` — sem container `running`
+  REGISTRADO, `TerminalExecutor` recusa e nem chega a mandar comando pro
+  canal — e o par `exec`/`exec_result` ganha um campo `env` opcional
+  (`Record<string,string>`) para a credencial de git (ADR 0056) viajar
+  no ambiente do processo filho que `apps/runner/src/exec.ts` spawna no
+  HOST do usuário: mesclado sobre `process.env` (nunca substitui —
+  perderia PATH), nunca repassado ao `docker exec` (a porta de Docker não
+  ganhou campo de `env`, de propósito) e nunca logado
 - `apps/broker`: workspace novo, Node/TS — o ÚNICO processo do produto que
   fala com um daemon Docker no SERVIDOR (ADR 0130), e o único serviço com
   `/var/run/docker.sock` montado. Não monte esse socket em mais nenhum. Sem
@@ -350,8 +399,20 @@ daqui e o fechamento vai para o histórico.
   contenção de um processo root-equivalente no host dependeria de o CHAMADOR
   estar correto. A api NÃO manda caminho nenhum (o `-v` é resolvido pelo daemon
   contra o filesystem do HOST; um caminho de dentro do container da api montaria
-  uma pasta VAZIA): o broker compõe com `PROJECT_WORKSPACES_HOST_ROOT`, e recusa
-  `start` nomeando a variável quando ela falta. Contenção em cinco camadas
+  uma pasta VAZIA). Desde o ADR 0144 (RN-503) ele tem DUAS raízes —
+  `PROJECT_WORKSPACES_HOST_ROOT` (a pasta GERENCIADA, modo `container`) e
+  `BRABO_PROJECTS_HOST_BASE` (a base dos projetos MONTADOS, derivada de
+  `BRABO_PROJECTS_BASE` no compose, ADR 0141) — e ele NÃO adivinha qual usar: a
+  api manda um localizador DISCRIMINADO (`localizacao`: `gerenciada` |
+  `montada` | `indisponivel`) dizendo contra qual raiz o SEGMENTO relativo
+  vale. O invariante é o mesmo de sempre — o que atravessa a rede continua
+  sendo só a metade que a raiz do broker não cobre. `start` recusa NOMEANDO a
+  raiz que falta, e NUNCA cai na outra: a gerenciada é nomeada por
+  `workspace_dir_name` e a base é nomeada pelo usuário, então o mesmo nome
+  aponta para pastas diferentes e o container subiria com o código de outro
+  projeto. Ele atende `container` E `mounted`, e recusa `runner` (a pasta mora
+  numa máquina que este host não enxerga); a lista é de PERMITIDOS, então modo
+  novo no enum nasce recusado com mensagem. Contenção em cinco camadas
   independentes — sem porta publicada, rede `internal: true` que só a api
   alcança, `BRABO_SERVICE_TOKEN` em tempo constante, cinco operações, spec
   computada. Sobe sob `profiles: ["container-broker"]` nos dois composes e
@@ -534,20 +595,53 @@ daqui e o fechamento vai para o histórico.
   `local`, renomeado — uma pasta do USUÁRIO montada por bind-mount, caminho
   absoluto livre em `projects.workspace_path`) ou `runner` (uma pasta do
   USUÁRIO SEM bind-mount, confirmada por um CLI — `brabo-runner` — rodando na
-  máquina dela, RN-423). O par (modo, caminho) é amarrado por CHECK no banco
+  máquina dela, RN-423). Desde o ADR 0141 (RN-500), o bind-mount de `mounted`
+  deixa de ser uma linha de compose POR PROJETO e passa a ser UMA base da
+  INSTALAÇÃO — `BRABO_PROJECTS_BASE`, montada por IDENTIDADE (`$X:$X`) em `api`
+  e `engine`, com todos os projetos montados morando dentro dela. Identidade e
+  não mountpoint fixo porque `workspace_path` é digitado pelo usuário e mostrado
+  de volta a ele, e é isso que faz `projectScopeRoot` e
+  `Engine.Actions.Workspace.workspace_dir/2` continuarem certos sem código novo.
+  Variável PRÓPRIA, NUNCA `PROJECT_WORKSPACES_HOST_DIR`: a raiz gerenciada é
+  nomeada por `workspace_dir_name` (UNIQUE) e a base é nomeada pelo usuário, e
+  apontar as duas para o mesmo lugar faria `init_from_bare!` dar `git init` na
+  pasta de outro projeto. `baseDeProjetos()` NUNCA lança e AUSENTE é estado
+  normal — `GET workspaces/:workspaceId/projects-base` (`maintainer`) devolve
+  `projectsBase: null`, e é assim que a criação aprende a NÃO oferecer o modo.
+  A base NÃO entra em `caminhoDeWorkspaceLocalValido` (que roda em toda LEITURA
+  e faria projeto montado legado explodir ao ser lido): é regra de criação e
+  conversão. E `pnpm dev` RECUSA subir com a base sobreposta ao checkout do
+  Brabo, nos dois sentidos — checagem que só o preflight pode fazer, porque a
+  api compara contra `process.cwd()` (`/workspace` dentro do container dela) e
+  nunca enxerga o checkout real. O par (modo, caminho) é amarrado por CHECK no banco
   (`execution_mode <> 'container'`), e `projectScopeRoot` continua sendo a
-  derivação ÚNICA da raiz — não duplique validação nos chamadores. Caminho
-  `mounted` é validado na CRIAÇÃO e RECUSADO com mensagem que ensina a montar
-  (RN-422/histórico RN-170): absoluto, sem `..`, existente, gravável de
-  dentro do container, nunca raiz/pasta de sistema nem sobreposto ao
-  checkout do Brabo. `runner` valida só o LÉXICO na criação (sem I/O) e
-  nasce `workspaceVerifiedAt: null` — o runner confirma o caminho de verdade
-  quando conecta, sobrescrevendo o que foi digitado. O portão da imagem
+  derivação ÚNICA da raiz — não duplique validação nos chamadores. Desde a
+  RN-501 (ADR 0142), `mounted` e `runner` validam na criação a MESMA coisa: só
+  o LÉXICO, sem I/O (absoluto, sem `..`, nunca raiz/pasta de sistema nem
+  sobreposto ao checkout do Brabo — RN-422/RN-423/histórico RN-170), com
+  `mounted` acrescentando estar dentro de `BRABO_PROJECTS_BASE`. Os DOIS
+  nascem `workspaceVerifiedAt: null`, e a diferença entre eles é QUANDO/QUEM
+  confirma o disco: no `runner` é o CLI conectando (sobrescrevendo o que foi
+  digitado); no `mounted` é `materializarWorkspaceMontado` — `mkdir -p` mais
+  as três perguntas de disco —, chamada por `ExecuteContainerStartUseCase`
+  quando a Infra sobe o container (o requisito "após a decisão do Arquiteto"
+  cumprido literalmente; falha vira `failed` NOMEADO e o ciclo de vida NÃO
+  chega a `provisioning`) e, como EXCEÇÃO declarada, pela conversão de modo,
+  que não tem passo de container onde pendurar o trabalho e move o
+  `permissions.json` para dentro da pasta. Adiar a VERIFICAÇÃO não toca o
+  invariante de PAREAMENTO: `mounted` segue gravando `workspace_path`
+  não-nulo e o CHECK fica intacto, sem migration. O portão da imagem
   (RN-105) VALE para os TRÊS modos desde a RN-494/ADR 0135 — projeto
   `mounted`/`runner` sem `artifact.project_image` decidido também responde
   409 na aba Code; a dispensa antiga foi REVOGADA, não é mais o
-  comportamento. `mounted`/`runner` continuam sem container PRÓPRIO no
-  SERVIDOR — quem sobe container pra eles é o `brabo-runner`, na máquina do
+  comportamento. Desde o ADR 0144 (RN-503), `mounted` SOBE container no
+  SERVIDOR, pelo BROKER — a base única do ADR 0141 tornou a pasta alcançável
+  pelo daemon, e a recusa antiga era sobre GEOMETRIA, não sobre o nome do
+  modo. A ramificação de `container_start`/`_stop`/`_remove` passa a ser por
+  DESTINO: `container` e `mounted` → broker, `runner` → runner (as três mudam
+  JUNTAS; subir no servidor e parar na máquina do usuário deixaria de pé, sem
+  forma de parar, o que está de pé). `runner` continua sem container PRÓPRIO
+  no SERVIDOR — quem sobe container pra ele é o `brabo-runner`, na máquina do
   USUÁRIO, com o Docker dela (ADR 0137, RN-497). Consequência declarada no
   ADR: a contenção estrutural do `join` some para esses projetos, e o vetor
   de symlink do ADR 0055 continua aberto. No LINUX, o próprio CLI
@@ -587,8 +681,19 @@ daqui e o fechamento vai para o histórico.
   nunca auto-aprovável) também são `proposed_action`, propostas pela
   página global de containers (`/containers`) — sempre um humano, nunca um
   agente. A política de terminal do ADR 0055 (escopo de caminho, allowlist
-  estreito) segue valendo como está para `mounted`/`runner` e para `container` SEM um
-  `running` registrado. Com um `running` registrado, o comando de terminal
+  estreito) segue valendo como está — mas ela não decide mais ONDE o comando
+  roda quando NÃO há container: desde o ADR 0143 (RN-502), `container` e
+  `mounted` SEM um `running` registrado RECUSAM (`:recusar_container_ausente`,
+  `failed_result` nomeado), em vez de cair no `System.cmd` dentro do processo
+  do engine. Desde a RN-507 (ADR 0145), `runner` entrou na MESMA régua —
+  workspace verificado e runner conectado deixaram de bastar; sem container
+  `running` REGISTRADO (a mesma leitura de `ProjectContainerLifecycle`,
+  centralizada em `Engine.Runners.RunnerReadiness`), o comando recusa em vez
+  de atravessar pro canal e arriscar cair no HOST puro do usuário — o
+  fallback silencioso que essa RN fecha. O catch-all `:caminho_de_sempre` do
+  `TerminalExecutor` encolheu para projeto inexistente/id malformado —
+  nenhum modo de execução cai nele. Com um `running` registrado, o comando
+  de terminal
   passa a rodar DENTRO do container de verdade (`ContainerBrokerPort.exec`,
   ADR 0134, RN-492) e ganha um PISO de auto-aprovação por cima do escopo
   léxico — não no lugar dele (RN-493). Esse PISO é ESPECÍFICO de
@@ -607,6 +712,15 @@ daqui e o fechamento vai para o histórico.
   do `module_map` vigente pelo caso de uso, nunca redigitado pelo modelo
   na ferramenta `create_c4_diagram` — só o Context (nome do sistema e
   atores externos) vem do tool call.
+- `decision_record` é o outro polo do mesmo espectro: reusa o padrão
+  GENÉRICO de `emit_artifact`/`ArtifactSchemas` (o de `note`/
+  `business_rule`) em vez do dedicado de `project_image`/`c4_diagram` —
+  uma decisão é log append-only, nunca um "vigente" que se substitui
+  (RN-505). Os SEIS conversacionais (Criativo, PO, Arquiteto, Dev Lead,
+  UX Designer, Staff) podem emitir; distinto de `open_adr_pr` (só o
+  Arquiteto, commit real em `docs/adr/*.md` + PR + aprovação humana) —
+  os dois COEXISTEM, para escalas diferentes de decisão, nunca um
+  substituindo o outro.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
 - Agente que ESCREVE tem de poder LER o que já existe, e tem de poder

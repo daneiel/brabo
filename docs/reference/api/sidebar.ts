@@ -1344,6 +1344,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/workspaces-controller-list-project-folders",
+          label: "Lists the subfolders of a folder inside the projects base",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/workspaces-controller-list-projects",
           label: "Lists the workspace's projects",
           className: "api-method get",
@@ -1353,6 +1359,12 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/workspaces-controller-create-project-in-workspace",
           label: "Creates a project inside the workspace",
           className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/workspaces-controller-get-projects-base",
+          label: "The base folder for projects in Mounted mode",
+          className: "api-method get",
         },
         {
           type: "doc",

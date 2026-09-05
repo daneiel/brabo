@@ -410,7 +410,7 @@ export interface paths {
         };
         /**
          * What the broker needs to compose the container spec itself
-         * @description Project identity, execution mode and the Architect's current image decision. The broker revalidates all of it before handing anything to the daemon — reading from here is not the same as trusting it, and the refusal names the field. No path is returned: the bind source is resolved by the daemon against the HOST filesystem, and a path from inside the api container would silently mount an empty folder.
+         * @description Project identity, execution mode and the Architect's current image decision. The broker revalidates all of it before handing anything to the daemon — reading from here is not the same as trusting it, and the refusal names the field. No ABSOLUTE path is returned: the bind source is resolved by the daemon against the HOST filesystem, and a path from inside the api container would silently mount an empty folder. What travels is `localizacao` (RN-503) — which of the two broker roots to use, plus the relative segment that root does not cover.
          */
         get: operations["InternalContainersController_containerSpec"];
         put?: never;
@@ -3605,6 +3605,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/project-folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the subfolders of a folder inside the projects base
+         * @description The folder picker for Mounted mode, served by the api instead of by the runner (RN-504). Scoped HARD to `BRABO_PROJECTS_BASE` (ADR 0141): `path` is optional and defaults to the base itself, and any `path` outside it is a `400` — a malformed request, not a permission problem, since no role browses outside the base.
+         *
+         *     Capped on purpose: directories only, at most 500 of them (sorted BEFORE the cut, with `truncado` saying so), never recursive, dot-prefixed entries excluded, and symlinks reported but never followed. What is left out is COUNTED (`arquivos`, `simbolicos`) so a folder full of code never looks empty.
+         *
+         *     There is no POST companion: creating a folder belongs to materializing the mounted workspace, never to the picker.
+         */
+        get: operations["WorkspacesController_listProjectFolders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/projects": {
         parameters: {
             query?: never;
@@ -3617,6 +3641,26 @@ export interface paths {
         put?: never;
         /** Creates a project inside the workspace */
         post: operations["WorkspacesController_createProjectInWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/projects-base": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The base folder for projects in Mounted mode
+         * @description The single folder on the operator machine that the api and engine containers can see, mounted by identity (ADR 0141). `null` — a normal state, never an error — means this installation has no `BRABO_PROJECTS_BASE`, so the project wizard must not offer Mounted mode at all. The same value for every workspace: it is installation configuration, and `workspaceId` only scopes the authorization.
+         */
+        get: operations["WorkspacesController_getProjectsBase"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4815,16 +4859,18 @@ export interface components {
             /** @example aaaaaaaa-0000-4000-8000-000000000000 */
             workspaceId: string;
             /**
-             * @description Folder name FROZEN at project creation (RN-109). It is the single source of the container name (`brabo-<workspaceDirName>`), and the broker joins it with its OWN host root to get the bind source — the api never sends a path, because a path from inside the api container is not a path the Docker daemon can resolve.
+             * @description Folder name FROZEN at project creation (RN-109). It is the single source of the container name (`brabo-<workspaceDirName>`) in ALL three modes. Where the FOLDER is is a different question, answered by `localizacao` (RN-503) — the api still never sends an absolute path, because a path from inside the api container is not a path the Docker daemon can resolve.
              * @example exp002-f52be111
              */
             workspaceDirName: string;
             /**
-             * @description Where the code lives. The broker refuses `mounted`/`runner`: that folder is on the user's machine and this host cannot see it — there, the runner is what brings a container up.
+             * @description Where the code lives. The broker serves `container` AND `mounted` (RN-503): since ADR 0141 the mounted folder lives under one base this server mounts by identity, so the daemon reaches it. It still refuses `runner`: that folder is on the user's machine and no root here sees it — there, the runner is what brings a container up (ADR 0137).
              * @example container
              * @enum {string}
              */
             executionMode: "container" | "mounted" | "runner";
+            /** @description The discriminated locator of the project folder (RN-503): which of the broker's two roots resolves it, and the relative segment to join to that root. */
+            localizacao: components["schemas"]["LocalizacaoDoProjetoResponseDto"];
             /** @description `null` while the Architect has not decided (RN-105) — `start` is then refused with 409 on the broker side, and the other four operations still work. */
             imagem: components["schemas"]["ImagemParaOBrokerResponseDto"] | null;
             /**
@@ -4864,7 +4910,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
             /** @description Always an agent on this route. */
             actor: components["schemas"]["ActorDto"];
             /**
@@ -4959,13 +5005,13 @@ export interface components {
              */
             storyPromotion?: "manual" | "auto";
             /**
-             * @description WHERE this project's command EXECUTES (RN-169/RN-421 — ADR 0072/0104). `container` (default): the folder managed by the product inside PROJECT_WORKSPACES_ROOT, the usual behavior. `mounted`: a folder of YOURS, given in `workspacePath`, that needs to be mounted inside the api's and engine's containers — creation REFUSES (400) a path that isn't, with instructions on how to mount it (RN-422). `runner`: a folder of YOURS that does NOT need a bind-mount — creation only validates the path format and the project is born "unverified"; run `brabo-runner --project <id> --dir <folder>` on your machine to confirm it (RN-423).
+             * @description WHERE this project's command EXECUTES (RN-169/RN-421 — ADR 0072/0104). `container` (default): the folder managed by the product inside PROJECT_WORKSPACES_ROOT, the usual behavior. `mounted`: a folder of YOURS, given in `workspacePath`, inside the installation-wide base `BRABO_PROJECTS_BASE` (ADR 0141) — creation validates only the path FORMAT plus that base, and the folder itself is created later, when Infra starts the container (RN-501, ADR 0142). `runner`: a folder of YOURS that does NOT need a bind-mount — creation only validates the path format and the project is born "unverified"; run `brabo-runner --project <id> --dir <folder>` on your machine to confirm it (RN-423).
              * @example container
              * @enum {string}
              */
             executionMode?: "container" | "mounted" | "runner";
             /**
-             * @description The folder's ABSOLUTE path, required when `executionMode` is `mounted` or `runner`, and refused when it is `container`. In `mounted`, validated on creation: it needs to exist and be writable from inside the container, and cannot be the system root, a system folder, nor overlap with the Brabo checkout (RN-422). In `runner`, only the FORMAT is validated now — existence is confirmed later, by the runner (RN-423).
+             * @description The folder's ABSOLUTE path, required when `executionMode` is `mounted` or `runner`, and refused when it is `container`. In BOTH of them only the FORMAT is validated now — absolute, no `..`, not the system root, not a system folder, not overlapping the Brabo checkout (RN-422/RN-423). `mounted` adds one rule: it must sit inside `BRABO_PROJECTS_BASE`, the single folder of your machine the Brabo containers can see (ADR 0141) — with no base configured the mode is not available on this installation and creation says so. Disk is touched later: by the runner in `runner`, and when Infra starts the container in `mounted` (RN-501, ADR 0142).
              * @example /home/you/projects/store
              */
             workspacePath?: string;
@@ -5986,6 +6032,24 @@ export interface components {
             /** @description Plain UTF-8 text — never base64. */
             content: string;
         };
+        LocalizacaoDoProjetoResponseDto: {
+            /**
+             * @description Which of the broker's roots resolves this folder. `gerenciada` → `PROJECT_WORKSPACES_HOST_ROOT` (the product-managed folder, named by `workspaceDirName`); `montada` → `BRABO_PROJECTS_HOST_BASE` (the single base of Mounted projects, ADR 0141); `indisponivel` → no root of this server reaches it, and `motivo` says why. Three states, not two: `runner` projects and legacy `mounted` projects created outside the base are refusals with DIFFERENT fixes, and collapsing them into a null would make the caller guess which one it got.
+             * @example gerenciada
+             * @enum {string}
+             */
+            tipo: "gerenciada" | "montada" | "indisponivel";
+            /**
+             * @description The part the broker's root does NOT cover, joined to it as `<root>/<segmento>`. For `gerenciada` it is `workspaceDirName`; for `montada`, the RELATIVE path under the base (it may contain `/`). ABSENT — not null — when `tipo` is `indisponivel`: the two variants are a discriminated union on the api side and the wire says the same thing, so a caller that reads `segmento` without checking `tipo` breaks loudly instead of composing `<root>/null`.
+             * @example loja
+             */
+            segmento?: string;
+            /**
+             * @description Why no root reaches this folder. Present only when `tipo` is `indisponivel`. It is a message meant to be repeated back to whoever operates, so it names the mode or the base.
+             * @example o projeto está no modo "runner"…
+             */
+            motivo?: string;
+        };
         LoginDto: {
             /** @example fulano@brabo.dev */
             email: string;
@@ -6756,6 +6820,42 @@ export interface components {
             onlineAgentCount: number;
             roster: components["schemas"]["RosterFactsResponseDto"];
         };
+        ProjectFoldersResponseDto: {
+            /**
+             * @description The mounted-projects base of this installation (`BRABO_PROJECTS_BASE`, ADR 0141) — the same value `GET .../projects-base` returns, repeated here so a client can render the breadcrumb without a second call. `null` means the installation offers no Mounted mode.
+             * @example /home/voce/brabo
+             */
+            base: Record<string, never> | null;
+            /**
+             * @description The folder actually listed, normalized. Equals `base` when the request omitted `path`. `null` only when there is no base at all: nothing was listed because there is nowhere to list.
+             * @example /home/voce/brabo/clientes
+             */
+            path: Record<string, never> | null;
+            /**
+             * @description The SUBDIRECTORY names directly under `path`, sorted, never recursive. Files, symlinks and dot-prefixed entries are excluded — see `arquivos`, `simbolicos` and `truncado`.
+             * @example [
+             *       "api",
+             *       "loja",
+             *       "website"
+             *     ]
+             */
+            entries: string[];
+            /**
+             * @description The folder holds more than 500 subdirectories and only the first 500 came back. Sorting happens BEFORE the cut, so the cut is deterministic instead of "whatever the filesystem returned first".
+             * @example false
+             */
+            truncado: boolean;
+            /**
+             * @description How many non-directory entries were left out. A folder full of code must not look empty (RN-180).
+             * @example 12
+             */
+            arquivos: number;
+            /**
+             * @description How many symlinks were left out. The browser never follows one — a link is reported, never descended into, so a link pointing outside the base is not a way out of it.
+             * @example 1
+             */
+            simbolicos: number;
+        };
         ProjectGitRemoteResponseDto: {
             /**
              * @description `local` is a bare-repo path on disk with no credential; `remote` is a URL that requires authentication.
@@ -6827,7 +6927,7 @@ export interface components {
              */
             workspaceDirName: string;
             /**
-             * @description WHERE the command executes (RN-169/RN-421 — ADR 0072/0104). `container`: the folder managed in PROJECT_WORKSPACES_ROOT. `mounted`: the user's folder in `workspacePath`, mounted via bind-mount. `runner`: the user's folder confirmed by the runner (see `workspaceVerifiedAt`).
+             * @description WHERE the command executes (RN-169/RN-421 — ADR 0072/0104). `container`: the folder managed in PROJECT_WORKSPACES_ROOT. `mounted`: the user's folder in `workspacePath`, inside `BRABO_PROJECTS_BASE` and reached through the base bind-mount (ADR 0141). `runner`: the user's folder confirmed by the runner. Both `mounted` and `runner` report the confirmation in `workspaceVerifiedAt`.
              * @example container
              * @enum {string}
              */
@@ -6838,7 +6938,7 @@ export interface components {
              */
             workspacePath: Record<string, never> | null;
             /**
-             * @description When the runner first confirmed the path (RN-423). `null` = not yet verified — only meaningful with `executionMode: "runner"`; `container`/`mounted` never fill this field in.
+             * @description When the path was confirmed on disk. `null` = not yet verified. In `runner` the confirmation comes from the CLI connecting (RN-423); in `mounted` it is stamped when Infra starts the container and the folder is materialized (RN-501, ADR 0142). `container` never fills this field in. It records A confirmation, never a heartbeat.
              * @example null
              */
             workspaceVerifiedAt: Record<string, never> | null;
@@ -6870,6 +6970,13 @@ export interface components {
              * @example 2026-07-21T11:00:00.000Z
              */
             updatedAt: string;
+        };
+        ProjectsBaseResponseDto: {
+            /**
+             * @description The single folder on the operator's computer that the Brabo containers can see, mounted by IDENTITY (`$X:$X`) into `api` and `engine` (ADR 0141). `null` means `BRABO_PROJECTS_BASE` is not set: the installation offers no Mounted mode, and the project wizard must not offer it. Never a failure — absent is a normal state.
+             * @example /home/voce/brabo
+             */
+            projectsBase: Record<string, never> | null;
         };
         ProjectUnreadEventsResponseDto: {
             /** @example 01JC4Z0000PROJETO0000000001 */
@@ -6935,7 +7042,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
             /** @description Who is proposing it. */
             actor: components["schemas"]["ActorDto"];
             /**
@@ -6968,7 +7075,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
             /**
              * @description Parameters of the action, specific to the `actionType`.
              * @example {
@@ -8033,7 +8140,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "*";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner" | "*";
             /**
              * @description This agent's autonomy for this type. Does NOT override `permissions.json`: a pattern in `deny` stays blocked no matter how much autonomy the agent has.
              * @example auto_approve
@@ -18785,6 +18892,63 @@ export interface operations {
             };
         };
     };
+    WorkspacesController_listProjectFolders: {
+        parameters: {
+            query?: {
+                /** @description Absolute path to list. Omitted means the base itself. Must be inside `BRABO_PROJECTS_BASE`; `..`, `.` and relative paths are refused outright rather than resolved. */
+                path?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectFoldersResponseDto"];
+                };
+            };
+            /** @description The path is outside the projects base, or malformed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace doesn't exist or is invisible to the caller. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     WorkspacesController_listProjects: {
         parameters: {
             query?: never;
@@ -18887,6 +19051,53 @@ export interface operations {
             };
             /** @description A project with this slug already exists in the workspace. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkspacesController_getProjectsBase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectsBaseResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace doesn't exist or is invisible to the caller. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

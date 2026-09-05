@@ -28,7 +28,7 @@
     },
     "mounted": {
       "label": "Mounted folder",
-      "desc": "The code lives in a folder of YOURS. It needs to be mounted inside the api and engine containers, at the same path."
+      "desc": "The code lives in a folder of YOURS, inside the installation's projects base (BRABO_PROJECTS_BASE). It's created when Infra starts the container."
     },
     "runner": {
       "label": "Local runner",
@@ -78,7 +78,7 @@
     "preparing": "Preparing…",
     "hintMounted": "absolute path, as it appears INSIDE the container",
     "hintRunner": "absolute path, as it appears on YOUR machine",
-    "mountedWarning": "The folder needs to be <strong>mounted in the api and engine containers</strong>, at the <strong>same absolute path</strong> — the two write to the same place. In <code>docker/docker-compose.yml</code>, add <code>- {{caminho}}:{{caminho}}</code> to the <code>api</code> and <code>engine</code> services. If it isn't, creation is <strong>refused</strong> right here — the project doesn't come out broken.",
+    "mountedWarning": "The folder needs to sit <strong>inside the projects base</strong> the operator configured (<code>BRABO_PROJECTS_BASE</code>) — the only folder of your machine the api and engine containers can see. It <strong>doesn't need to exist yet</strong>: it's created when Infra starts the project's container.",
     "runnerHint": {
       "intro": "After creating the project, run this on your machine:",
       "introExisting": "The project already exists — run this on your machine:",

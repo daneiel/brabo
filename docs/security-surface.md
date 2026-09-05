@@ -157,20 +157,97 @@ reason in the URL.
   new route, and no role change (`RequireRole('maintainer')`, as it already
   was) — what changed is the reach of what the route grants.
 
-  Validation diverges across the TWO modes that aren't `container`
-  (RN-422): `mounted` still touches disk at creation time (absolute, no
-  `..`, existing, writable from inside the container, never root or a
-  system folder, never overlapping the Brabo checkout in either direction),
-  with a `400` refusal and the compose line that resolves it; `runner`
-  validates only the LEXICAL form — the same list of prohibitions, without
-  touching disk — because only the runner, running on the real host, has
-  the authority to confirm the folder exists (RN-423, see
-  `POST /internal/projects/:projectId/workspace-verification` below). The
-  mode is **frozen** afterward: `UpdateProjectDto` deliberately omits both
-  fields, otherwise `PartialType(CreateProjectDto)` would expose them on a
-  `PATCH` with no guard at all. The lexical predicate still runs on every
-  derivation of the root — on READS too, not just on creation — because the
-  only way to bypass creation is to write straight to the database.
+  Since [ADR 0142](adr/0142-validacao-de-workspace-montado-adiada.md)
+  ([RN-501](business-rules.md#rn-501)) the TWO modes that aren't
+  `container` validate the SAME thing at creation time: only the LEXICAL
+  form — absolute, no `..`, never root or a system folder, never
+  overlapping the Brabo checkout in either direction (RN-422/RN-423) — with
+  no disk I/O at all. `mounted` adds one rule of its own: the path must sit
+  inside `BRABO_PROJECTS_BASE`, the only folder of the machine both
+  containers can see (ADR 0141), and with no base configured the refusal
+  says the MODE is unavailable on this installation rather than blaming the
+  path.
+
+  **The security-relevant part of that change is what did NOT move.** The
+  path supplied is still the terminal scope root, and the lexical predicate
+  is still what contains it — it runs on every derivation of the root, on
+  READS too, because writing straight to the database is the only way to
+  bypass creation. What was deferred is the DISK check (does it exist? is
+  it a directory? can this process write to it?), which never contained
+  anything: it answered "will this work", not "is this allowed". It now
+  runs in `materializarWorkspaceMontado`, when Infra starts the container
+  (and, as a declared exception, on mode conversion), and the base rule is
+  re-applied there BEFORE the `mkdir -p` — so a path written outside the
+  product can't make the api create a folder anywhere it reaches.
+
+  The base rule deliberately stays OUT of the lexical predicate: that one
+  runs on every read, and a LEGACY `mounted` project outside the base would
+  start failing when merely read. `runner` continues to be confirmed by the
+  runner itself, the only party with authority over the real host (RN-423,
+  see `POST /internal/projects/:projectId/workspace-verification` below);
+  `mounted` is now confirmed by the materialization, which stamps
+  `workspace_verified_at` the same way. The mode is **frozen** afterward:
+  `UpdateProjectDto` deliberately omits both fields, otherwise
+  `PartialType(CreateProjectDto)` would expose them on a `PATCH` with no
+  guard at all.
+- **`GET /workspaces/:workspaceId/projects-base` reveals a piece of the
+  operator's filesystem topology, and that's why it isn't `viewer`**
+  ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md),
+  [RN-500](business-rules.md#rn-500)). It returns
+  `{ projectsBase: string | null }` — the single host folder mounted by
+  identity into the `api` and `engine` containers, under which every
+  `mounted` project lives. `null` is the normal state of an installation
+  that doesn't offer Mounted mode, and it's how the project wizard learns
+  not to offer a mode this installation can't honor.
+
+  The minimum is `maintainer`: the **same** as `POST
+  /workspaces/:workspaceId/projects` above, because deciding what that
+  route offers is the only thing this value is for. Inheriting `viewer`
+  from the neighboring `projects-*` reads — they sit next to each other in
+  the same controller — would hand an absolute host path to everyone who
+  can look at the workspace, for no capability in return. `workspaceId`
+  doesn't enter the computation: the base is **installation**
+  configuration, identical for every workspace, and the parameter is there
+  only to give the `RolesGuard` a scope.
+- **`GET /workspaces/:workspaceId/project-folders` serves directory
+  listings from a client-supplied path, and its whole safety is ONE
+  containment** ([RN-504](business-rules.md#rn-504),
+  [ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)). It exists
+  because the project wizard lost both of its "browse for a folder"
+  mechanisms at once: `FolderBrowserModal` used to navigate through the
+  RUNNER's websocket, and `RunnerOnboardingPanel` used
+  `showDirectoryPicker`, which hands back a browser handle and never an
+  absolute path. With the runner leaving project creation, the browser has
+  no way to list a filesystem — so the api lists it, and the api only sees
+  one folder: the mounted-projects base.
+
+  The containment is that base and nothing else. `path` is optional and
+  defaults to `BRABO_PROJECTS_BASE`; every supplied `path` must satisfy
+  `dentroDaBaseDeProjetos` — the same `dentroDoEscopo` the ADR 0055
+  terminal scope uses, so `/home/you/brabo2` is NOT inside `/home/you/brabo`
+  even though the string starts the same. Leaving the base is a **400**, not
+  a 403: 403 would suggest some other role would see it, and none does. The
+  request is malformed, not under-authorized. `..` and `.` are refused
+  outright rather than resolved, for the same reason the creation predicate
+  refuses them — resolving accepts that the path read is not the path asked
+  for.
+
+  The caps are part of the contract, not an implementation detail:
+  directories only, at most 500 of them (sorted BEFORE the cut), never
+  recursive, dot-prefixed entries excluded, and symlinks reported but never
+  descended into — so a link pointing outside the base is not a way out of
+  it. What is excluded is COUNTED (`arquivos`, `simbolicos`, `truncado`), so
+  a folder full of code never comes back looking empty
+  ([RN-180](business-rules/autenticacao.md#rn-180)). There is no POST companion:
+  creating a folder belongs to materializing the mounted workspace, never to
+  the picker.
+
+  The minimum is `maintainer`, the same as `POST
+  /workspaces/:workspaceId/projects` and `projects-base` above, and for the
+  same reason one step further: `projects-base` reveals ONE path on the
+  operator's machine, this route reveals the TOPOLOGY under it. Whoever
+  can't create a project has nothing to do with the list of folders a
+  project could be created in.
 - **`GET /`** is the NestJS scaffold's "Hello World!"
   (`src/app.controller.ts`). It's behind the guard and leaks nothing, but
   serves no purpose — a removal candidate. It stayed recorded here instead
@@ -232,13 +309,22 @@ reason in the URL.
   a container spec, it comes here to READ project identity, execution mode and
   the Architect's current image decision, and composes the spec itself. A spec
   travelling in a request body would make the containment of a root-equivalent
-  process depend on its caller being correct. It returns **no path at all** —
-  the bind source is resolved by the daemon against the HOST filesystem, so a
-  path from inside the api container would silently mount an empty folder; the
-  broker joins `workspaceDirName` with its own `PROJECT_WORKSPACES_HOST_ROOT`,
-  and refuses `start` when that is not configured. It also drops `rationale`,
-  which exists so a human can review the decision and has no consumer in a
-  `docker run`.
+  process depend on its caller being correct. It returns **no absolute path at
+  all** — the bind source is resolved by the daemon against the HOST
+  filesystem, so a path from inside the api container would silently mount an
+  empty folder. What travels instead is `localizacao`
+  ([RN-503](business-rules.md#rn-503),
+  [ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)): a discriminated locator
+  saying which of the broker's TWO roots resolves the folder (`gerenciada` →
+  `PROJECT_WORKSPACES_HOST_ROOT`, `montada` → `BRABO_PROJECTS_HOST_BASE`, or
+  `indisponivel` with a reason) plus the RELATIVE segment that root does not
+  cover. The api never learns where those roots are on the host, and the broker
+  never learns anything about the project — neither side alone can write an
+  arbitrary path, which is the containment. The broker refuses `start` naming
+  whichever root is missing, never falling back to the other, and revalidates
+  the segment (`..`, absolute, empty, `NUL` all refused) plus the concatenated
+  result before it becomes a `-v`. It also drops `rationale`, which exists so a
+  human can review the decision and has no consumer in a `docker run`.
 - **`POST /projects/:projectId/runner-ticket` is classified `role:developer`
   like any other route, but does NOT accept a session JWT** (ADR 0105,
   RN-424) — only a Personal Access Token (`brb_…`) OR a runner device key
@@ -686,6 +772,8 @@ reason in the URL.
 | PATCH | `/workspaces/:workspaceId/models/:modelId/pricing` | role:owner |
 | GET | `/workspaces/:workspaceId/projects` | role:viewer |
 | POST | `/workspaces/:workspaceId/projects` | role:maintainer |
+| GET | `/workspaces/:workspaceId/projects-base` | role:maintainer |
+| GET | `/workspaces/:workspaceId/project-folders` | role:maintainer |
 | GET | `/workspaces/:workspaceId/projects-status` | role:viewer |
 | GET | `/workspaces/:workspaceId/projects-summary` | role:viewer |
 | GET | `/workspaces/:workspaceId/summary` | role:viewer |

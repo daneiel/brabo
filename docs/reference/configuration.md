@@ -175,32 +175,58 @@ makes rotation possible without downtime ([RN-035](../business-rules/autenticaca
 |---|---|---|
 | `GIT_LOCAL_REPOS_ROOT` | `/tmp/brabo-git-repos` | Local provider. In `/tmp`, repos disappear on reboot |
 | `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` | project agent worktrees in **Container** mode. **Needs to be the same path on the engine**, and the same volume |
+| `BRABO_PROJECTS_BASE` | empty | the single host folder under which **Mounted**-mode projects live, mounted by identity into `api` and `engine`. Empty is a NORMAL state: the api reports `projectsBase: null` and the project wizard doesn't offer Mounted mode at all |
 | `GITHUB_OAUTH_CLIENT_ID` / `_SECRET` | empty | empty = GitHub OAuth connection unavailable (PAT still works) |
 | `GITLAB_OAUTH_CLIENT_ID` / `_SECRET` | empty | same |
 
-#### Project in Local mode: not a variable, a mount
+#### Project in Mounted mode: one base, mounted by identity
 
 Since [ADR 0072](../adr/0072-projeto-local-ou-container.md), a project can be
-born in **Local** mode — the code lives in a user folder, at a free absolute
-path, and `PROJECT_WORKSPACES_ROOT` **doesn't participate** in its root.
+born in **Mounted** mode (the old `local`, renamed by
+[ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md))
+— the code lives in a user folder and `PROJECT_WORKSPACES_ROOT` **doesn't
+participate** in its root.
 
-This has NO environment variable: the path is a project-level datum
-(`projects.workspace_path`), chosen at creation. What the ENVIRONMENT needs to
-provide is the mount — the same folder, at the **same absolute path**, inside
-both the `api` and `engine` containers:
+The path of a given project is a project-level datum
+(`projects.workspace_path`), chosen at creation and never an environment
+variable. What the ENVIRONMENT provides is the **base** those folders live
+under — `BRABO_PROJECTS_BASE`, one per installation
+([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md),
+[RN-500](../business-rules.md#rn-500)):
 
-```yaml
-# docker/docker-compose.yml — on BOTH services
-    volumes:
-      - /home/voce/projetos/loja:/home/voce/projetos/loja
+```bash
+# .env — ABSOLUTE. `~` is not expanded by Compose.
+BRABO_PROJECTS_BASE=/home/voce/brabo
 ```
 
-Mounting on only one of the two produces a project the api accepts and the
-engine can't see: creation validation
-([RN-170](../business-rules/autenticacao.md#rn-170)) checks what the **api** sees, and it
-has no way to know what's mounted in the other container. With no mount at
-all, creation is refused with a 400 and the message carries the line above —
-see the [runbook](../runbook.md#projeto-no-modo-local).
+```yaml
+# docker/docker-compose.yml — on BOTH `api` and `engine`, already written
+    volumes:
+      - ${BRABO_PROJECTS_BASE:-brabo_projects_base}:${BRABO_PROJECTS_BASE:-/data/brabo-projects-base}
+```
+
+The operator sets this **once** and restarts `api` + `engine`; nothing is
+edited per project, ever. Before this, every mounted project needed a
+hand-written bind-mount line in both services plus a restart — which kills
+every in-flight agent turn, terminal socket and LLM call in the installation.
+
+The mount is by **identity** (`$X:$X`): the same absolute path on the host and
+inside both containers. That is what keeps honest the string the user types and
+the screen shows back, and it is why `projectScopeRoot` (api) and
+`Engine.Actions.Workspace.workspace_dir/2` (engine) need no translation layer.
+
+**It is not `PROJECT_WORKSPACES_HOST_DIR`, and must never point at the same
+folder.** A managed workspace is named by `workspace_dir_name` (UNIQUE) and a
+mounted project is named by the user, so `<base>/loja` and a container project
+whose folder name is `loja` would collide, with the repo bootstrap running
+`git init` inside someone else's project. The ADR has the other two reasons.
+
+With the variable **unset**, Mounted mode isn't offered — never offer a mode
+the installation can't honor. And `pnpm dev` **refuses to start** when the base
+overlaps the Brabo checkout in either direction; that check lives in the
+preflight because it runs on the host, and the api can only compare against
+`process.cwd()` (`/workspace` inside its own container). See the
+[runbook](../runbook.md#projeto-no-modo-local).
 
 ### LLM
 
@@ -214,9 +240,9 @@ see the [runbook](../runbook.md#projeto-no-modo-local).
 
 | variable | default | note |
 |---|---|---|
-| `NEO4J_URI` | — | e.g. `bolt://localhost:7687`. Missing or partial (together with `NEO4J_USER`/`NEO4J_PASSWORD`) outside production = graph OFF, dependent routes degrade (`GraphUnavailableError`/503) — nobody needs a local Neo4j just to run the suite. In production, the absence of any of the three brings the boot down |
-| `NEO4J_USER` | — | see `NEO4J_URI` |
-| `NEO4J_PASSWORD` 🔒 | — | see `NEO4J_URI`. No public default on purpose — there's no plausible "example value" for a database password |
+| `NEO4J_URI` | — | e.g. `bolt://neo4j:7687`. **This one is the switch**: empty = graph OFF, dependent routes degrade (`GraphUnavailableError`/503) — nobody needs a local Neo4j just to run the suite. In production, the absence of any of the three brings the boot down. Turning the graph on in development is this one line in `.env` and a restart of the api; until 2026-09-04 that did nothing, because the dev compose did not pass the three variables to the `api` service at all and the service has no `env_file` — `docker-compose.prod.yml` had supplied them since day one, which is why only development was affected |
+| `NEO4J_USER` | `neo4j` (dev) | reaches the container with the same default the `neo4j` service uses for `NEO4J_AUTH`, so set it only to CHANGE the user — changing it there changes both sides at once. Two independent defaults would leave the api authenticating with credentials the server no longer has |
+| `NEO4J_PASSWORD` 🔒 | `dev-neo4j-password-change-me` (dev only) | same pairing rule as `NEO4J_USER`. **No public default in production** on purpose — there's no plausible "example value" for a database password, and `docker-compose.prod.yml` keeps `NEO4J_AUTH` empty so the official image's own entrypoint refuses to start rather than booting with a guessable one |
 | `GRAPH_PROJECTOR_INTERVAL_MS` | `2000` | period of the poller that drains the outbox's `graph_projection` queue and writes handoffs/hypotheses/profiles/interactions to the graph (RN-416) |
 
 ### Observability
@@ -453,6 +479,25 @@ docker compose -f docker/docker-compose.yml --env-file .env \
 managed Docker volume — pair it with `PROJECT_WORKSPACES_HOST_DIR` (above) and
 repeat the same path here, ALREADY EXPANDED (`~` is not expanded by Compose).
 
+`BRABO_PROJECTS_HOST_BASE` is the broker's SECOND root — the base of **Mounted**
+projects, also on the host
+([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md),
+[ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md)). Unlike the one above it
+does not need to be filled in: the compose derives it from
+`BRABO_PROJECTS_BASE`, which is already a host path by definition (it is what
+`api` and `engine` mount by identity). Set it explicitly only if the Docker
+daemon reaches that folder by a different path.
+
+It is what makes a **Mounted** project able to have a container at all
+([RN-503](../business-rules.md#rn-503)): the api sends a discriminated locator
+(`localizacao.tipo` — `gerenciada` or `montada`) plus the relative segment, and
+the broker resolves it against the matching root. The two roots never stand in
+for each other. Missing this one makes `start` of a `mounted` project refuse
+with **503**, NAMING the variable, without touching a container — falling back
+to `PROJECT_WORKSPACES_HOST_ROOT` would mount another project's folder, because
+the managed root is named by `workspace_dir_name` and the base is named by the
+user.
+
 
 ---
 
@@ -494,9 +539,9 @@ anyone noticing.
 
 > ⚠️ Block generated by `pnpm docs:generate`. Do not edit by hand — the next build overwrites it.
 
-Inventory extracted from the code: **129 variables** read at runtime. **2** still have no description in the tables above.
+Inventory extracted from the code: **131 variables** read at runtime. **2** still have no description in the tables above.
 
-**api** — 57 variables
+**api** — 58 variables
 
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
 - `AUTH_ACCESS_TOKEN_TTL_MS` <sub>(apps/api/src/infrastructure/security/ed25519-access-token-issuer.ts)</sub>
@@ -516,6 +561,7 @@ Inventory extracted from the code: **129 variables** read at runtime. **2** stil
 - `AUTH_SET_PASSWORD_TTL_MS` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
 - `AUTH_TOKEN_PEPPER` <sub>(apps/api/src/infrastructure/security/auth-key-material.ts)</sub>
 - `BRABO_FORCE_SEED` <sub>(apps/api/src/scripts/provisionar-usuario.ts)</sub>
+- `BRABO_PROJECTS_BASE` <sub>(apps/api/src/infrastructure/filesystem/project-workspaces-root.ts)</sub>
 - `BRABO_SEED_PASSWORD` <sub>(apps/api/src/db/seed.ts)</sub>
 - `BRABO_SERVICE_TOKEN` <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub>
 - `BRABO_SERVICE_TOKEN_PREVIOUS` <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub>
@@ -628,9 +674,10 @@ Inventory extracted from the code: **129 variables** read at runtime. **2** stil
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 
-**broker** — 6 variables
+**broker** — 7 variables
 
 - `API_URL` <sub>(apps/broker/src/config.ts)</sub>
+- `BRABO_PROJECTS_HOST_BASE` <sub>(apps/broker/src/config.ts)</sub>
 - `BRABO_SERVICE_TOKEN` <sub>(apps/broker/src/config.ts)</sub>
 - `BRABO_SERVICE_TOKEN_PREVIOUS` <sub>(apps/broker/src/config.ts)</sub>
 - `BROKER_PORT` <sub>(apps/broker/src/config.ts)</sub>

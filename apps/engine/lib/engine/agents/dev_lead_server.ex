@@ -82,6 +82,7 @@ defmodule Engine.Agents.DevLeadServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
+  alias Engine.Harness.Tools.EmitArtifact
   alias Engine.Agents.{DevLeadTools, FalhaDeTurno, TurnoAssincrono}
   alias Engine.Dev.Wake
   alias Engine.Sessions.EngineApiClient
@@ -91,6 +92,16 @@ defmodule Engine.Agents.DevLeadServer do
   # Conversacional: o teto do TIPO (RN-085) vale para o laço do harness; este
   # servidor tem laço próprio, e 14 é o mesmo do Arquiteto e do Infra Lead.
   @max_iterations 14
+
+  # Frente 3 do plano de decision_record — IDÊNTICA nos 5 conversacionais que
+  # ganharam emit_artifact nesta leva (PO, Arquiteto, Dev Lead, UX Designer,
+  # Staff; o Criativo já tinha a ferramenta antes). Fica de fora do texto de
+  # identidade (`Engine.Harness.Agents`) porque não é sobre QUEM o agente é —
+  # é uma instrução operacional sobre UMA ferramenta, igual nos 5.
+  @instrucao_decision_record "Use `emit_artifact` com `type: decision_record` para " <>
+                               "registrar uma decisão relevante tomada nesta conversa, " <>
+                               "com contexto, opções consideradas, a escolha e as " <>
+                               "consequências aceitas."
 
   # --- API pública ---
 
@@ -132,7 +143,15 @@ defmodule Engine.Agents.DevLeadServer do
        messages: [system_msg | history],
        # ADR 0090: `assess_implementability` entrou como SEGUNDA ferramenta,
        # aditiva — `propose_execution_plan` continua a primeira e intocada.
-       tool_specs: [DevLeadTools.spec(), DevLeadTools.spec_assess_implementability()],
+       # Frente 3 do plano de decision_record: `emit_artifact` entra como
+       # TERCEIRA, também aditiva — não precisa do tratamento especial de
+       # `propose_execution_plan`/`assess_implementability` (nunca devolve
+       # `{:pending, _}`), só o `run_tool/3` comum abaixo.
+       tool_specs: [
+         DevLeadTools.spec(),
+         DevLeadTools.spec_assess_implementability(),
+         EmitArtifact.spec()
+       ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
@@ -399,6 +418,7 @@ defmodule Engine.Agents.DevLeadServer do
   defp run_tool("assess_implementability", args, state),
     do: DevLeadTools.run_assessment(args, state)
 
+  defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Kickoff ---
@@ -484,10 +504,13 @@ defmodule Engine.Agents.DevLeadServer do
   end
 
   defp system_prompt(project_id) do
-    project_id
-    |> ContextBuilder.build_layers(@agent)
-    |> PromptAssembler.assemble()
-    |> PromptAssembler.Default.render()
+    base =
+      project_id
+      |> ContextBuilder.build_layers(@agent)
+      |> PromptAssembler.assemble()
+      |> PromptAssembler.Default.render()
+
+    base <> "\n\n" <> @instrucao_decision_record
   end
 
   defp user_msg(text), do: %{"role" => "user", "content" => text, :pinned => false}

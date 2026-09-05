@@ -1,0 +1,1 @@
+{"parameters":[{"name":"path","required":false,"in":"query","description":"Absolute path to list. Omitted means the base itself. Must be inside `BRABO_PROJECTS_BASE`; `..`, `.` and relative paths are refused outright rather than resolved.","schema":{"type":"string"}}]}

@@ -108,21 +108,27 @@ defmodule Engine.Projects.Project do
   end
 
   @doc """
-  `%{id, workspace_dir_name}` de TODOS os projetos, numa consulta só — usado
-  pela poda de worktrees órfãos (`Engine.Dev.WorktreeCleanup`), que precisa
-  saber a QUE projeto cada pasta em disco pertence sem uma consulta por
-  projeto (ver comentário lá).
+  `%{id, workspace_dir_name, execution_mode}` de TODOS os projetos, numa
+  consulta só — usado pela poda de worktrees órfãos
+  (`Engine.Dev.WorktreeCleanup`), que precisa saber a QUE projeto cada pasta
+  em disco pertence sem uma consulta por projeto (ver comentário lá).
 
-  A chave conserva o nome antigo, mas o VALOR é o mesmo localizador de
-  `workspace_dir_name/1` (RN-169/RN-421): caminho absoluto nos modos
-  `mounted`/`runner`. Tem que ser o mesmo, senão a poda varreria a pasta
-  gerenciada de um projeto cujo worktree vive na pasta do usuário.
+  A chave `workspace_dir_name` conserva o nome antigo, mas o VALOR é o mesmo
+  localizador de `workspace_dir_name/1` (RN-169/RN-421): caminho absoluto
+  nos modos `mounted`/`runner`. Tem que ser o mesmo, senão a poda varreria a
+  pasta gerenciada de um projeto cujo worktree vive na pasta do usuário.
+
+  `execution_mode` entrou com a RN-507 (ADR 0145): `WorktreeCleanup` precisa
+  dele para decidir COMO alcançar cada pasta — `File.dir?` local para
+  `container`/`mounted`, `Engine.Runners.RunnerReadiness` (pula em silêncio
+  sem runner pronto) para `runner`.
   """
   def all_workspace_dirs do
     Repo.all(
       from p in __MODULE__,
         select: %{
           id: p.id,
+          execution_mode: p.execution_mode,
           workspace_dir_name:
             fragment(
               "case when ? <> 'container' then ? else coalesce(?, ?::text) end",

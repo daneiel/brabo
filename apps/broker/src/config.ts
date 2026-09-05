@@ -1,5 +1,5 @@
 /**
- * A configuração do broker — quatro variáveis, e a recusa de subir sem as que
+ * A configuração do broker — cinco variáveis, e a recusa de subir sem as que
  * importam.
  *
  * Mesma disciplina do ADR 0059/RN-093/RN-114 do lado da api: o default de
@@ -40,6 +40,26 @@ export interface ConfiguracaoDoBroker {
    * default aqui seria adivinhar o layout de disco de quem opera.
    */
   raizDeWorkspacesNoHost: string | null;
+  /**
+   * A SEGUNDA raiz — a base dos projetos MONTADOS **no HOST**
+   * (`BRABO_PROJECTS_HOST_BASE`, ADR 0141), e não uma variante da de cima.
+   *
+   * Duas e não uma porque as duas pastas têm dono e nomeação opostos: a
+   * gerenciada é do PRODUTO e nomeada por `workspace_dir_name` (UNIQUE); a
+   * base é do USUÁRIO e nomeada por ele. Apontar as duas para o mesmo lugar
+   * faria `<base>/loja` e um projeto `container` com `workspace_dir_name =
+   * loja` caírem na MESMA pasta física — o `git init` do bootstrap dentro do
+   * projeto de outra pessoa, com nada no schema impedindo.
+   *
+   * Qual das duas resolve um projeto NÃO é decidido aqui e nem é adivinhado:
+   * a api manda um localizador discriminado (`localizacao.tipo`, RN-503), e
+   * a spec diz contra qual raiz o segmento vale. O broker continua sem
+   * receber caminho absoluto nenhum.
+   *
+   * `null` é o mesmo estado legítimo da de cima, com o mesmo desfecho: só
+   * `start` de projeto `mounted` recusa, nomeando a variável.
+   */
+  baseDeProjetosNoHost: string | null;
 }
 
 export class ConfiguracaoInvalidaError extends Error {
@@ -65,6 +85,7 @@ export function lerConfiguracao(
   const anterior = (env.BRABO_SERVICE_TOKEN_PREVIOUS ?? '').trim();
 
   const raiz = (env.PROJECT_WORKSPACES_HOST_ROOT ?? '').trim();
+  const base = (env.BRABO_PROJECTS_HOST_BASE ?? '').trim();
 
   return {
     porta: porta(env.BROKER_PORT),
@@ -73,6 +94,7 @@ export function lerConfiguracao(
       anterior.length > 0 && anterior !== tokenDeServico ? anterior : null,
     apiUrl: (env.API_URL ?? 'http://api:3000').replace(/\/+$/, ''),
     raizDeWorkspacesNoHost: raiz.length > 0 ? raiz : null,
+    baseDeProjetosNoHost: base.length > 0 ? base : null,
   };
 }
 

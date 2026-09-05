@@ -2,7 +2,308 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v4.0.1 — 2026-09-04
+
+### Correções
+
+- **ci**: o anexo do binário espera a Release em vez de ler a ausência dela (35ba788ac)
+
+### Documentação
+
+- **ci**: o comentário do audit descreve o que os dois auditores fazem (aaf84ae04)
+- **changelog**: v4.0.0 (48dc81813)
+
+### Manutenção
+
+- **engine**: mint 1.10.0 fecha duas advisories de DoS (a71b984fb)
+
 ## Unreleased
+
+### Novidades
+
+- **api,broker**: projeto no modo **Pasta montada** passa a ter container de
+  verdade, e ele sobe **no servidor**, pelo broker — como o modo Container já
+  fazia (RN-503, ADR 0144). Até aqui `mounted` não conseguia container nenhum,
+  por dois bloqueios independentes: `ExecuteContainerStartUseCase` mandava todo
+  modo diferente de `container` para o RUNNER (que exige um `brabo-runner`
+  conectado), e o broker recusava não-`container` na fonte. Os dois existiam
+  pela mesma razão de **geometria**, não pelo nome do modo — a pasta ficava num
+  lugar arbitrário do disco do operador, que o daemon do servidor não tinha por
+  que enxergar —, e o ADR 0141 mudou justamente essa geometria ao pôr todo
+  projeto montado sob UMA base montada por identidade.
+
+  **A ramificação passa a ser por DESTINO:** `container` **e** `mounted` vão ao
+  broker; só `runner` vai ao runner, porque a pasta dele continua numa máquina
+  que o servidor não alcança. Vale para as três ações de ciclo de vida —
+  `container_start`, `container_stop` e `container_remove` mudam **juntas**,
+  senão o container sobe no servidor e o pedido de parar vai procurá-lo na
+  máquina do usuário, deixando de pé, sem forma de parar, o que está de pé.
+
+  **O invariante do ADR 0130 não se mexe: nenhum caminho absoluto atravessa a
+  rede.** O que muda é que o broker passou a ter DUAS raízes
+  (`PROJECT_WORKSPACES_HOST_ROOT` e `BRABO_PROJECTS_HOST_BASE`, que ganha
+  consumidor), então a spec DIZ contra qual delas o segmento vale, num
+  localizador discriminado: `gerenciada` (o `workspace_dir_name`), `montada`
+  (o caminho RELATIVO sob a base) ou `indisponivel` (nenhuma raiz alcança, com
+  o motivo). Três variantes e não duas porque `indisponivel` tem dois consertos
+  diferentes — projeto `runner` (o conserto é o runner, do lado de lá) e
+  projeto `mounted` LEGADO criado fora da base (o conserto é mover a pasta) —,
+  e um `null` mandaria quem opera para o lugar errado metade das vezes. A falta
+  de uma raiz **nunca** é suprida pela outra: a recusa nomeia a variável e não
+  toca container nenhum, porque a raiz gerenciada é nomeada por
+  `workspace_dir_name` e a base é nomeada pelo usuário — cair numa pela outra
+  montaria o código de outro projeto, em silêncio.
+
+  Três barreiras sobre a concatenação, não uma: a api recusa o que está fora da
+  base, o `packages/docker-port` recusa segmento que não é relativo (`..`,
+  absoluto, vazio, `NUL`) e o resultado ainda passa por `raizDeProjetoValidada`
+  antes de virar `-v`. E `mounted` **elege** a imagem como `container`, em vez
+  de ler a vigente como o runner: o broker compõe a partir de
+  `artifact.project_image`, indo BUSCÁ-LO na api, então uma eleição não gravada
+  ali seria inerte — é o argumento do ADR 0133 aplicado a um segundo modo.
+
+  Sem o broker de pé (ele sobe sob `profiles` e **não** sobe por padrão),
+  `container_start` de projeto montado termina `failed` NOMEADO
+  (`BrokerIndisponivelError`), nunca exceção e nunca queda silenciosa para fora
+  do container.
+
+- **engine,api**: dev agent só reivindica task com o container do projeto
+  `running` (ADR 0143, RN-502). Antes não havia ordem nenhuma: numa execução
+  real do `exp001` nenhum `container_start` chegou a ser proposto, e os dez
+  dev agents começaram assim mesmo — para travar dez vezes. A guarda mora em
+  `AgentIo.try_claim/2`, o ponto **único** de claim, e usa o predicado que já
+  existia (`ProjectContainerLifecycle.running?/1`, ADR 0134). No **engine** e
+  não só no `activate-execution` da api porque o claim tem um caminho que
+  rota nenhuma cobre: a **reidratação** não faz cast `:work` — quem claima
+  depois de um restart é `init/1` → `finish_restart_recovery/1` →
+  `try_claim/2` —, e um gate só na fronteira HTTP deixaria todo agente
+  reidratado voltar a trabalhar sem container. Sem container o agente cai em
+  `:idle` (**não** um status novo: é o único estado do qual um wake ainda
+  resgata, e todos os guards de `handle_info/2` já se apoiam nisso), persiste
+  e emite `dev.blocked_by_container` — quem distingue "a fila esvaziou" de
+  "não há container" é o EVENTO, nunca o status. Quando o container sobe, a
+  api publica `container.running` na MESMA transação que grava a transição,
+  num agregado `container` novo que o dreno do engine passa a ler, e todo
+  agente `:idle` do projeto recebe o `{:wake, :became_claimable}` que já
+  existia e re-tenta sozinho
+
+- **engine,runner,api**: Docker vira pré-requisito real do modo **Runner**,
+  sem fallback para o host (RN-507/508, ADR 0145). Até aqui, um projeto
+  `runner` verificado e conectado tinha todo comando de terminal roteado ao
+  CLI incondicionalmente — sem container `running` de pé, o runner decidia
+  sozinho cair no HOST puro, o mesmo fallback silencioso que o ADR 0143 já
+  tinha fechado para `container`/`mounted`. Agora as TRÊS pré-condições
+  (verificado, conectado, container `running`) vivem numa função só,
+  `Engine.Runners.RunnerReadiness`, e valem tanto para rotear terminal quanto
+  para materializar o worktree do dev agent — que passa a acontecer DENTRO do
+  container real do projeto, na máquina do usuário, pelo MESMO canal
+  `exec`/`exec_result` (`Engine.Actions.Workspace.RunnerGit`, novo), em vez de
+  `File.mkdir_p!`/`git init` LOCAL contra um caminho que o processo do engine
+  nunca alcançou (a lacuna aberta desde a RN-478). O job periódico de limpeza
+  de worktree (`Engine.Dev.WorktreeCleanup`) passa a PULAR, em silêncio, um
+  projeto `runner` sem runner pronto agora, em vez de nunca podá-lo de
+  verdade nem derrubar o job pros demais projetos. O protocolo `exec` ganha um
+  campo `env` opcional para a credencial de git (ADR 0056) viajar no ambiente
+  do processo filho no HOST do usuário — mesclado sobre `process.env`, nunca
+  repassado ao `docker exec` nem logado.
+
+  **`container_start` deixa de atender `runner`.** O payload dela
+  (`imagem`/`network`/`resources`/`rationale` — a Infra ELEGE) nunca fazia
+  sentido nesse caminho: não há roteamento contra o qual eleger, porque o
+  broker nunca alcança a pasta de um projeto `runner`. Nasce
+  `container_start_via_runner`, tipo de ação exclusivo desse modo (schema só
+  com `rationale` opcional — sobe a imagem já DECIDIDA), com a tool nova do
+  Infra Lead consultando `execution_mode` e a presença de um runner conectado
+  LOCALMENTE, sem HTTP, antes de propor — recusando com motivo nomeado em vez
+  de propor às cegas.
+
+- **api**: "sempre permitir" de um Dev Agent de módulo (`dev-<modulo>`)
+  passa a escopar a `agent_autonomy`, POR AGENTE — não mais o
+  `permissions.json` de projeto inteiro (RN-509). Antes, aprovar sempre um
+  comando pro `dev-checkout` liberava o MESMO comando pro `dev-auth`, pro
+  `dev-lead` e pra qualquer outro agente do projeto; agora a chave é
+  `(projeto, agente, tipo de ação)`, o mesmo mecanismo que já semeia as três
+  ações git por módulo na ativação da execução. `dev-lead` (lidera a área,
+  não é membro dela) e qualquer ator que não seja dev-de-módulo continuam
+  indo pro `permissions.json` de sempre. Os dois tetos absolutos que já
+  recusavam o clique inteiro — terminal com efeito externo git/comando
+  privilegiado (RN-418) e `container_remove` (RN-495) — continuam rodando
+  ANTES do novo branch, sem exceção por agente. Sem migração: entradas
+  antigas em `permissions.json` para um dev-de-módulo continuam lá,
+  decisão consciente
+- **engine**: novo tipo de artefato `decision_record` — o "ADR resumido" que
+  qualquer um dos seis agentes conversacionais (Criativo, PO, Arquiteto, Dev
+  Lead, UX Designer, Staff) pode emitir com `emit_artifact` para registrar uma
+  decisão relevante tomada na conversa (`context`, `options`, `choice`,
+  `consequences`; RN-505). Reusa o padrão **genérico** de `ArtifactSchemas`
+  (o mesmo de `note`/`business_rule`) em vez do dedicado de
+  `project_image`/`c4_diagram` — uma decisão é log append-only, não um
+  "vigente" que se substitui. Distinto de `open_adr_pr` (só o Arquiteto, commit
+  real em `docs/adr/*.md` com PR e aprovação humana): os dois coexistem, para
+  escalas diferentes de decisão. PO, Arquiteto, Dev Lead, UX Designer e Staff
+  ganham a ferramenta nesta mudança — o Criativo já a tinha desde a Fase 3b, só
+  ganhou o tipo novo. **Fora de escopo, declarado:** agentes de execução (QA,
+  SecOps, Dev Agent de módulo, sobre `ToolLoop`) ficam de fora desta fatia; a
+  amarração com o Infra Lead (emitir `decision_record` ao propor subir
+  container via runner) depende de uma tool que outra frente do mesmo plano
+  está criando em paralelo e é o próximo passo, não implementada aqui
+
+### Correções
+
+- **engine**: o comando de terminal do dev agent **não cai mais fora do
+  container** em silêncio (RN-502). `container` sem container `running` caía
+  em `:caminho_de_sempre`, isto é, `System.cmd` dentro do processo do engine —
+  o mesmo processo que fala com o banco, com a api e com todos os outros
+  projetos —, então o isolamento do ADR 0134 valia só no caminho feliz e a
+  ausência dele não recusava: degradava, e degradava calada. Agora recusa
+  (`failed_result` com o motivo nomeado), espelhando o
+  `:recusar_nao_verificado`/`:recusar_runner_desconectado` que o modo `runner`
+  já tinha. `mounted` entra no mesmo ramo — com container `running` atravessa
+  pro broker igual a `container`, sem ele recusa — e o catch-all
+  `:caminho_de_sempre` encolhe para o que sempre deveria ter sido sozinho:
+  projeto inexistente ou id malformado. Consequência declarada: projeto sem
+  container de pé para de trabalhar, e diz por quê
+
+- **web**: o handoff para a **Infra** volta a ser aceitável — por um card
+  próprio, fora do fio (RN-499). O filtro `AGENTES_DE_CHAT` de
+  `offeredHandoff` (RN-136) exclui `infra` **e está certo em excluir**: o
+  Infra Lead não tem cláusula de `message` no engine, e alargar a lista faria
+  o composer mandar mensagem que seria roteada em silêncio para o Criativo. O
+  que não estava certo era a consequência que o comentário do próprio código
+  registrava como aceita — *"como Infra nunca é aceito por AQUI … na prática,
+  nunca"*: `acceptHandoff` tinha **um único consumidor**, o card do fio, atrás
+  daquele filtro. Resultado: `OfferInfraHandoffUseCase` oferecia o handoff, ele
+  ficava `offered` para sempre, o Infra Lead nunca era ativado, nunca propunha
+  `container_start`, e nenhum projeto de nenhum modo chegava a ter container de
+  pé — uma capacidade inteira inalcançável por tela nenhuma. Agora existe um
+  card acionável na faixa entre o fio e o composer (a mesma que já hospeda o
+  handoff manual, declarada como o lugar das ações de handoff que **não** são
+  conversa), chamando o `acceptHandoff` que já existia. Ele diz a consequência
+  do clique — o Infra Lead assume o provisionamento e vai **propor** a subida
+  do container, proposta que ainda passa pelo pipeline de aprovação de sempre —
+  e some pelo mesmo `activeFor` do card do fio quando a Infra já está ativa. O
+  `handoff.offered` da Infra continua **narrado** no fio como divisor mudo, e
+  nenhum handoff conversacional muda de forma
+
+### Funcionalidades
+
+- **feat(api,web)**: **"Procurar pasta" passa a ser servido pela api**, escopado
+  à base de projetos montados — `GET /workspaces/:workspaceId/project-folders`,
+  `maintainer` (RN-504). O assistente de criação de projeto perde, de uma vez,
+  os DOIS mecanismos de navegar pasta que tinha, e os dois dependiam do runner:
+  `FolderBrowserModal` navegava pelo **websocket do runner**
+  (`fs_list_dir`/`fs_home_dir`, lendo o disco da máquina do usuário) e o
+  `RunnerOnboardingPanel` usava `showDirectoryPicker`, que devolve um handle do
+  navegador e **nunca um caminho absoluto** — que é o que
+  `projects.workspace_path` guarda. Sem runner, o navegador não tem como listar
+  filesystem nenhum; quem passa a responder é a api, que enxerga exatamente uma
+  pasta: a base do ADR 0141.
+
+  Efeito visível imediato: no modo **Pasta montada** o botão "Procurar pasta"
+  deixa de abrir um estado declarado ("depois que o projeto existir…") e navega
+  de verdade, **sem criar projeto nenhum** — a base não depende de projeto
+  algum existir.
+
+  **A contenção é uma só, e é dura.** `path` é opcional e omitido quer dizer a
+  base; todo `path` fornecido tem que satisfazer `dentroDaBaseDeProjetos`
+  (RN-500), que reusa o `dentroDoEscopo` do escopo de terminal (ADR 0055) e por
+  isso pega a armadilha de prefixo — `/home/voce/brabo2` **não** está dentro de
+  `/home/voce/brabo`, embora a string comece igual. Sair da base é **400**, e
+  não 403: 403 sugeriria que outro papel veria, e nenhum vê — o pedido está
+  malformado, não subautorizado. `..` e `.` são recusados em vez de resolvidos.
+
+  **Os tetos são contrato**: só diretório em `entries`, no máximo **500**
+  (ordenados **antes** do corte, para o corte ser determinístico), sem recursão,
+  entradas começadas com `.` fora, e symlink **reportado e nunca descido** — um
+  link para fora da base não é porta de saída. E o que fica de fora é
+  **contado** (`arquivos`, `simbolicos`, `truncado`), com a tela dizendo: sem
+  isso uma pasta cheia de código voltaria como lista vazia e apareceria como
+  "pasta vazia", que é a tela afirmando sobre o que não leu (RN-180). **Não há
+  POST** — criar pasta é da materialização do workspace montado, nunca do
+  seletor.
+
+  No cliente, o transporte vira uma das duas implementações de uma interface
+  nova (`lib/fs-browser.ts`, `FsBrowser`), e `FolderBrowserModal` escolhe por
+  `origem: { tipo: 'api'; workspaceId } | { tipo: 'runner'; projectId }`. O
+  transporte via runner fica **sem chamador no web** a partir daqui e continua
+  no repositório por decisão declarada; o protocolo em
+  `apps/runner/src/channel.ts` não é tocado. Ver RN-504.
+
+- **api**: a pasta de um projeto no modo **Pasta montada** deixa de precisar
+  existir na criação — ela é **materializada quando a Infra sobe o container**
+  (RN-501, ADR 0142). O requisito do dono do produto é literal, *"se for Pasta
+  montada, o bind-mount deve ser criado APÓS a decisão do arquiteto"*, e a
+  validação de disco na criação o tornava impossível: a criação é a PRIMEIRA
+  tela do fluxo e a decisão do Arquiteto acontece muitas sessões depois. Era
+  também o que impedia `mounted` de ser escolha de primeira classe — um caminho
+  SUGERIDO pelo assistente (`<base>/<slug>`) é, por construção, um caminho que
+  ainda não existe.
+
+  **O que a criação passa a exigir** é só o LÉXICO — a mesma disciplina que o
+  modo `runner` já tinha (RN-423) — mais estar dentro de `BRABO_PROJECTS_BASE`
+  (RN-500). A diferença entre os dois modos nunca foi *o que conta como caminho
+  válido*, e sim **quando e quem** confirma o disco: no `runner` é o CLI
+  conectando; no `mounted` passa a ser a materialização. Sem base configurada, a
+  recusa diz que o **modo** não está disponível nesta instalação, em vez de
+  fingir que o caminho é que estava errado; fora da base, ela **nomeia a base** e
+  **sugere** `<base>/<nome pedido>`.
+
+  **Quem materializa** é `container_start`, na execução: `mkdir -p`, as três
+  perguntas de disco de sempre (existe? é pasta? dá para escrever?) e o carimbo
+  de `workspace_verified_at`, tudo ANTES de qualquer transição de ciclo de vida.
+  Pasta inalcançável vira `failed` **NOMEADO** — variável, caminho, causa
+  provável (dono da pasta no host; as imagens rodam non-root) e o próximo passo
+  —, nunca throw nem 500, e a linha de `project_containers` **não** chega a ser
+  marcada `provisioning`. A conversão de modo é a única exceção e cria a pasta na
+  hora, porque não tem passo de container onde pendurar o trabalho e move o
+  `permissions.json` para dentro dela logo em seguida.
+
+  **Sem migration, e o CHECK do banco fica intacto:** `mounted` continua
+  gravando `workspace_path` não-nulo, então
+  `(execution_mode <> 'container') = (workspace_path IS NOT NULL)` segue
+  satisfeito — adiar a *verificação* nunca toca o invariante de *pareamento*. A
+  regra da base **não** entrou em `caminhoDeWorkspaceLocalValido`, que roda em
+  toda LEITURA: um projeto `mounted` legado, fora da base, passaria a explodir ao
+  ser lido, e há teste de não-regressão para isso. A mensagem que ensinava a
+  acrescentar `- <caminho>:<caminho>` ao `docker-compose.yml` morreu junto (ADR
+  0141), e há asserção sobre a ausência dela
+
+### BREAKING
+
+- **feat(config)**: nasce `BRABO_PROJECTS_BASE` — **uma base única**, definida
+  uma vez pelo operador, onde moram as pastas dos projetos no modo **Pasta
+  montada**. Ela é montada por **identidade** (`$X:$X`) nos serviços `api` e
+  `engine`, e com isso **acaba a edição de compose por projeto**: criar um
+  projeto `mounted` exigia acrescentar à mão uma linha de bind-mount nos dois
+  serviços e reiniciá-los — o que mata todo turno de agente, socket de terminal
+  e chamada de LLM em voo da instalação inteira, para onboardar UM projeto.
+  Era tolerável enquanto `mounted` era escape hatch; deixa de ser agora que ele
+  vira escolha de primeira classe.
+
+  **Sem a variável, o modo Pasta montada não é oferecido.** A api passa a
+  responder `projectsBase` em `GET /workspaces/:workspaceId/projects-base`
+  (`maintainer`, o mesmo mínimo de `POST .../projects`), e `null` — estado
+  NORMAL, nunca erro — é como a criação de projeto aprende a não oferecer um
+  modo que a instalação não honra. Os modos `container` (default) e `runner`
+  não são afetados e seguem funcionando sem a variável.
+
+  **`pnpm dev` passa a RECUSAR subir** quando a base contém, ou está contida
+  por, o checkout do Brabo. Essa checagem só é possível no preflight, que roda
+  no host: a api compara o caminho de um projeto contra `process.cwd()`, que
+  dentro do container dela é `/workspace`, e nunca vê o checkout real — sem a
+  guarda, quem clona o Brabo em `$HOME/brabo` e aponta a base para lá passa por
+  toda validação existente e faz os dev agents executarem dentro da árvore do
+  próprio produto (a falha que o ADR 0055 existe para impedir).
+
+  **Ação de operador exigida ANTES do deploy** — daí `breaking/` e MAJOR: quem
+  já usa `mounted` tem linhas de bind-mount por projeto escritas à mão no
+  compose. Elas continuam funcionando e nada as remove (nenhum projeto
+  existente quebra), mas o caminho suportado daqui em diante é a base. O broker
+  ganha `BRABO_PROJECTS_HOST_BASE`, derivada, ainda sem consumidor.
+
+  Custos declarados: symlink sob a base apontando para fora resolve diferente
+  dos dois lados; e esta v1 suporta UMA base — código fora dela exige mover a
+  pasta. Ver ADR 0141 e RN-500.
 
 ### CI
 
@@ -25,6 +326,149 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   nunca cria Release por conta própria; o que muda é que a ausência precisa
   **persistir pelo teto** para ser declarada, em vez de ser lida no primeiro
   instante, quando ainda não significa nada
+
+### Desempenho
+
+- **api**: a suíte de testes da api ganha **banco por worker**, destravando
+  `fileParallelism: true`. Até aqui, `apps/api/vitest.config.ts` rodava com
+  `fileParallelism: false` porque os ~80 specs que tocam banco compartilhavam
+  a MESMA `brabo_test` e faziam `TRUNCATE` entre testes — arquivo em paralelo
+  colidiria com arquivo. A saída não foi sincronizar o `TRUNCATE` (isso
+  serializaria de novo, só que pior); foi dar a cada worker do Vitest um
+  banco EXCLUSIVO. `test/support/global-setup.ts` migra um banco TEMPLATE
+  uma única vez e clona um banco por worker via `CREATE DATABASE ...
+  TEMPLATE` (cópia de página, não replay de migration — barato mesmo
+  criando vários); `test/support/test-db-name.ts` resolve qual banco cada
+  processo usa a partir de `VITEST_POOL_ID`, com `createTestDb()`/
+  `truncateAll()` mantendo a MESMA assinatura pública para os ~80
+  chamadores. `maxWorkers: 4` substitui `poolOptions.forks.maxForks`, que
+  **não existe mais** no Vitest 4 (conferido no `.d.ts` publicado) — fixo em
+  4 para bater com as 4 vCPU do runner do CI, não auto-detectado (o número
+  precisa ser o MESMO na máquina do dev e no runner, senão o que se mede
+  localmente não é o que roda lá).
+
+  Medido: suíte inteira (297 arquivos, 2749 testes) caiu de **792,58s** para
+  **471,23s** numa rodada limpa (~40%), com três rodadas completas sem
+  nenhum teste piscando (mesma contagem de passou/pulou nas três) e os
+  pisos de cobertura intactos (`--coverage`: 82,27%/72,09%/77,13%/83,21%
+  contra o piso de 80/69/74/81). O número medido em CI (`Testes TS (api +
+  web)`, hoje 159s/91s de acordo com `docs/reference/rulesets.md`) ainda não
+  foi reamostrado num runner hospedado — ver `TODO(humano)` no próprio
+  arquivo
+
+- **ci**: o job `Testes TS (api + web)` do `ci.yml` vira **três jobs
+  paralelos** — `test-api`, `test-web` e `test-packages`. Medido no run real
+  da PR #494 (job 101317149006): o job único levava **343s** (5m43s), acima
+  do teto de ~4min da sessão — e só a fatia da api toca banco; web, scripts
+  de CI, porta de Docker, broker e runner nunca precisaram do serviço
+  `postgres` que o job carregava para todo mundo.
+
+  `test-api` mantém o serviço `postgres` (com o healthcheck de sempre) e as
+  variáveis `DATABASE_URL`/`TEST_DATABASE_URL`; `test-web` e `test-packages`
+  não têm serviço nenhum. Cada um paga o próprio `checkout` + `setup-node` +
+  `pnpm install`, e não há `needs:` em lugar nenhum do `ci.yml` — os três já
+  nasceram paralelos entre si e com os demais jobs, sem grafo de dependência
+  novo.
+
+  Medido de verdade no CI do PR desta mudança (#495, run 33972208407): o job
+  antigo (343s) vira **177s** (`test-api`), **169s** (`test-web`) e **56s**
+  (`test-packages`) — o caminho crítico é o mais lento dos três, não a soma,
+  uma queda real de **~48%** no check que travava o PR. `docs/reference/rulesets.md`
+  registra os números e por que a análise anterior — que tinha CONCLUÍDO que
+  dividir esse job não valia a pena — parou de valer: o cálculo mudou quando
+  o web cresceu a ponto de custar tanto quanto a api (125s no run que mediu
+  os 343s), e a preocupação de "apagar um required check" nunca se aplicou
+  de fato, porque nenhum ruleset está aplicado neste repositório ainda
+  (`gh api repos/daneiel/brabo/branches/dev/protection` → `404`).
+
+  `test-web` e `test-packages` ficaram estáveis nas três rodadas desta PR
+  (164–169s e 55–56s); `test-api` NÃO — uma segunda rodada mediu **388s**
+  (pior que os 343s do job antigo, com todo passo verde), e um re-run do
+  MESMO commit logo depois mediu **172s**. Três amostras reais de
+  `test-api`: 177s, 388s, 172s — duas batem com a faixa de `test-web`/
+  `test-packages`, e o outlier de 388s é consistente com contenção do
+  runner compartilhado do GitHub, não com regressão da divisão (nada mudou
+  no job entre aquela rodada e o re-run). Registrado como observado, não
+  escondido — ver `docs/reference/rulesets.md` para o detalhe.
+
+- **ci**: os quatro scans do Trivy no job `images` (`Build, scan e smoke das
+  imagens de produção`) deixam de ser QUATRO steps sequenciais via
+  `aquasecurity/trivy-action` e passam a rodar em PARALELO, dentro do MESMO
+  job — o build e o scan continuam juntos de propósito (as quatro imagens
+  somam ~1,7 GB, e passá-las entre jobs custaria mais que o ganho; decisão
+  já medida e documentada no `docker-bake.hcl` e no `ci.yml`, não reaberta
+  aqui). GitHub Actions não paraleliza steps de um `uses:`, então a troca foi
+  para o binário chamado direto (`v0.70.0`, o mesmo já pinado, com checksum
+  verificado) num script de shell que dispara os quatro scans com `&` e
+  recolhe o código de saída de cada `wait` individualmente.
+
+  Dois achados ao medir, um atrás do outro. Primeiro: rodar `trivy image`
+  quatro vezes em paralelo contra o `--cache-dir` PADRÃO (compartilhado)
+  falha por disputa de lock (bbolt) — `cache may be in use by another
+  process: timeout` — mesmo pedindo pra não atualizar a base, porque o
+  scan usa DOIS bancos no mesmo diretório: `db/trivy.db` (a base de
+  vulnerabilidades, compartilhável) e `fanal/fanal.db` (cache de ANÁLISE DE
+  CAMADA, que cada scan cria do zero de qualquer forma). Isolar os dois
+  copiando o diretório `db/` inteiro pra um `--cache-dir` próprio por
+  imagem FUNCIONOU, mas comeu de volta boa parte do ganho: medido num PR
+  real, os quatro `cp -r` de ~1,3 GB somaram ~11s dentro dos ~21s do step
+  de scan, deixando o job em 312s — dentro do ruído dos 333s de baseline,
+  não uma melhora de verdade. Segundo achado, decorrente do primeiro: só o
+  `fanal.db` (vazio, por scan) precisa de isolamento — a base em si é só
+  LIDA (`--skip-db-update`) e aceita múltiplos leitores. Trocar o `cp -r`
+  por `ln -s` no diretório `db/` isola o mesmo lock sem copiar 1,3 GB
+  quatro vezes, e localmente derrubou o step de scan de ~11s (cópia) +
+  ~10s (scan) para ~5s (link instantâneo + scan).
+
+  Medido no PR real (`gh api repos/.../actions/jobs/<id>`, quatro runs do
+  MESMO PR): os TRÊS steps do trivy (instalar o binário + baixar a base +
+  escanear as quatro em paralelo) somaram **27s** com `cp -r` e **15s**/
+  **22s**/**26s** nos três runs seguintes já com `ln -s` (média ~21s) — a
+  base de comparação correta é essa, e não a duração TOTAL do job entre os
+  runs, porque cada um herdou cache do `gha` num estado diferente (`Build
+  das quatro imagens` variou de 22s a 168s SÓ por isso, sem relação
+  nenhuma com o trivy — inclusive o run mais completo, já com o `dev`
+  atualizado pelo PR irmão de paralelização dos testes TS, fechou o job
+  inteiro em **241s**, quase no teto de 240s, mas por causa do build, não
+  do trivy). Contra os **28s** da baseline sequencial (4 steps da action,
+  medido antes desta mudança), os três runs com `ln -s` ficam **iguais ou
+  mais rápidos** mesmo com a variância normal de rede (baixar a base: 4s
+  a 7s) e de I/O do runner (escanear: 9s a 17s) entre execuções — a
+  estrutura do achado (isolar só o `fanal.db`, sem copiar a base) é o que
+  garante o piso, não um número fixo.
+
+  Aplicado ao total original de **333s** mantendo o resto igual (média de
+  ~21s no trivy, ~7s de economia sobre os 28s da baseline), o job previsto
+  fica em **~326s (5m26s)** — ainda ACIMA do teto de ~4min, como esperado
+  e declarado de antemão: o resto do job (build ~179s + smoke ~42s +
+  setup do Playwright ~32s + E2E ~7s+1s + derrubar o compose ~16s ≈ 277s)
+  já excede o teto sozinho, e reduzir isso exigiria reabrir a decisão de
+  manter build+scan+smoke no mesmo job — fora de escopo aqui,
+  por decisão já medida e documentada (ver o comentário no topo do job
+  `images` e no `docker-bake.hcl`).
+
+- **ci**: a decisão de manter build+scan+smoke no MESMO job do `images` foi
+  reaberta a pedido explícito — desta vez testando push/pull via GHCR
+  (registry) em vez de artifact genérico — e REJEITADA de novo, com números
+  reais (PR #497, revertido: o job voltou a ser exatamente o de hoje).
+  Duas rodadas completas de CI mediram push das quatro imagens em 44–51s e
+  pull em 21–25s (round-trip 65–76s). Não compensa, e o motivo não é a rede
+  — GHCR é rápido —, é estrutural: o job de smoke+e2e precisa das QUATRO
+  imagens de qualquer jeito, então nenhum split evita pagar o pull inteiro,
+  e o único trabalho que sairia do caminho crítico (o Trivy, ~15–21s) vale
+  menos que o round-trip que passaria a existir. Resultado líquido: o split
+  ficaria **~55s mais lento**, não mais rápido. Achado paralelo, registrado
+  como nota permanente para quem reabrir essa pergunta com um mecanismo de
+  registry: um pacote NOVO publicado por `GITHUB_TOKEN` neste repositório
+  (público) nasce com visibilidade `public` por padrão — qualquer push
+  efêmero fica publicamente puxável até a limpeza rodar, então visibilidade
+  precisa ser decisão explícita, nunca um acidente de default. A limpeza das
+  imagens efêmeras usadas na medição (`brabo-ci-*`) também achou e corrigiu
+  um bug de instrumento: a API do GHCR recusa apagar a ÚLTIMA versão de um
+  pacote ("must delete the package instead"), e como cada pacote efêmero só
+  tinha uma versão por run, isso reprovava a limpeza sempre — corrigido para
+  apagar o pacote inteiro, verificado funcionando (as quatro imagens
+  efêmeras sumiram do GHCR, confirmado manualmente na aba Packages).
 
 ## v4.0.0 — 2026-09-04
 

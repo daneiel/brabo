@@ -469,4 +469,38 @@ defmodule Engine.Agents.PoServerTest do
 
     GenServer.stop(pid)
   end
+
+  describe "Frente 3 do plano de decision_record — emit_artifact" do
+    test "emit_artifact está na lista de tools do PO", %{state: state} do
+      nomes = Enum.map(state.tool_specs, & &1.name)
+      assert "emit_artifact" in nomes
+    end
+
+    test "emit_artifact com type: decision_record emite artifact.decision_record", %{
+      state: state,
+      session_id: session_id
+    } do
+      Process.put(:fake_events, brief_and_rules())
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("emit_artifact", %{
+          "type" => "decision_record",
+          "payload" => %{
+            "context" => "Precisávamos decidir o critério de aceite da história",
+            "options" => ["aceitar qualquer e-mail", "validar domínio"],
+            "choice" => "validar domínio",
+            "consequences" => "cadastros com domínio inválido passam a ser recusados"
+          }
+        }),
+        FakeEngineApiClient.final_response("Registrei a decisão.")
+      ])
+
+      assert {:noreply, _new_state} = sync_cast(PoServer, :kickoff, state)
+
+      assert_received {:event_appended, _, ^session_id,
+                       %{type: "artifact.decision_record", payload: payload}}
+
+      assert payload["choice"] == "validar domínio"
+    end
+  end
 end

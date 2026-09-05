@@ -105,6 +105,7 @@ A row in `session_events`, append-only, with a `seq` that's dense per session
 | `dev.started` | the dev agent began the cycle (activation, parallelization — NOT rehydration, which never re-fires) |
 | `dev.working` | claimed a task and set up the worktree |
 | `dev.idle` | the module's queue is empty — no task claimable right now |
+| `dev.blocked_by_container` | the agent did NOT claim, because the project has no container REGISTERED `running` ([RN-502](../business-rules.md#rn-502)). It stops in `:idle` like the two above — `idle` is the only state a wake still rescues — and this event is the only thing that tells "no container" apart from "empty queue" (`dev.idle`) and "the claim failed" (`dev.error`). The api never gets called: the guard runs BEFORE `claim_task/1`, so no task is ever left claimed without a live owner. It resolves on its own: `container.running` on the outbox wakes every `:idle` agent of the project |
 | `dev.awaiting_approval` | the git actions became pending approval (Phase 12e): **the gate does NOT open** — with no PR there's nothing to judge — and the worktree stays held until `task.pr_settled` ([RN-050](../business-rules/custo.md#rn-050)) |
 | `dev.awaiting_gate` | PR open, waiting on the gate (Phase 12b) — `task_id`/`worktree` remain held |
 | `dev.blocked` | the task was returned with a diagnosis (iteration limit, budget exceeded, `report_blocked`, worktree/context failure) |
@@ -147,6 +148,7 @@ have to learn a second name just because the conversational agent doesn't use
 |---|---|
 | `artifact.product_brief` | `title`, `summary`, `rules` |
 | `artifact.business_rule` | `title`, `description`, `origin` |
+| `artifact.decision_record` | `context`, `options`, `choice`, `consequences` — a "summarized ADR" any of the six conversational agents can emit; reuses the generic pattern instead of the dedicated one, and coexists with `open_adr_pr` (Architect-only, a real committed document) ([RN-505](../business-rules.md#rn-505)) |
 | `artifact.module_map` | the Architect's module map |
 | `artifact.module_routing` | the Architect's candidate image per module, one item per module of the current `module_map` — the Architect CANDIDATES, Infra ELECTS ([RN-487](../business-rules.md#rn-487), [ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)) |
 | `artifact.insight` | — |

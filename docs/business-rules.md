@@ -7449,6 +7449,799 @@ preciso rodar manual.
 - **ADR:** [0138](adr/0138-golden-set-do-rag-em-ci-agendado.md)
 - **Origem:** plano do dono do produto, Parte 2 / Etapa 3
 
+### RN-499 — O handoff da Infra tem card acionável PRÓPRIO, fora do fio — sem alargar `AGENTES_DE_CHAT` {#rn-499}
+
+`OfferInfraHandoffUseCase` oferece o handoff pro Infra Lead
+(`offer-infra-handoff.use-case.ts:43`), e até aqui **tela nenhuma podia
+aceitá-lo**. `offeredHandoff` (`SessionPage.tsx`) restringe o card do fio a
+`AGENTES_DE_CHAT` ([RN-136](#rn-136)), que não inclui `infra`, e
+`acceptHandoff` (`api-client.ts`) tinha **um único consumidor** — esse card,
+atrás desse filtro. O comentário do próprio código registrava a consequência
+como aceita: *"como Infra nunca é aceito por AQUI … na prática, nunca"*.
+
+O efeito não era cosmético: o handoff ficava `offered` para sempre, o Infra
+Lead nunca era ativado, `propose_container_start` nunca era chamado
+([RN-491](#rn-491)) e **nenhum projeto de nenhum modo chegava a ter container
+de pé**. A cadeia "Infra aceita → propõe `container_start` → aprovado →
+`running`" era inalcançável por qualquer caminho de tela.
+
+**O filtro NÃO foi alargado, e isso é a regra.** `AGENTES_DE_CHAT` está certo
+em excluir `infra`: o `agent_command_controller.ex` do engine não tem cláusula
+de `message` pro Infra Lead, e a última cláusula (sem guarda) trataria
+`"infra"` como se fosse o Criativo — pôr `infra` na lista faria a tela
+oferecer um fio de conversa que não existe e o composer mandar mensagem pro
+agente errado. Aceitar a Infra é uma ação **propositiva**, não conversacional.
+
+O card acionável mora, então, **fora do fio**: na faixa fixa entre a área que
+rola e o composer, a mesma que hospeda o handoff manual
+([RN-440](#rn-440)) e que já se declara o lugar das ações de handoff que "não
+são conversa, são redirecionamento". Três consequências que a escolha compra:
+o `handoff.offered` da Infra **continua narrado** no fio como divisor mudo
+(nada muda na timeline); nenhum handoff conversacional muda de forma; e o
+botão não some quando a oferta sai da janela de 200 eventos numa sessão longa
+— o card do fio dependeria do evento estar visível, este não depende.
+
+O card **diz a consequência do clique**, porque ela não é óbvia: aceitar ativa
+o Infra Lead, que assume o provisionamento e vai **propor** a subida do
+container; a proposta ainda passa pelo pipeline de aprovação de sempre
+(`container_start`, `maintainer`, nunca auto-aprovável por seed —
+[RN-491](#rn-491)). Aceitar não sobe container nenhum.
+
+Fechamento: o mesmo `activeFor(h.toAgent)` do card do fio — handoff já aceito,
+ou Infra já ativa nesta sessão por qualquer outro caminho, não reabre convite.
+E o clique chama o **mesmo** `handleAcceptHandoff`, sem segundo caminho de
+aceite.
+
+- **Onde:** `apps/web/src/routes/SessionPage.tsx`
+  (`handoffDaInfraOferecido`, e o bloco `styles.infraHandoffRow` acima do
+  `manualHandoffRow`)
+- **Teste:** `apps/web/src/routes/SessionPage.handoff-da-infra.test.tsx` —
+  card aparece e aceita com os ids certos; some com a Infra já ativa; some em
+  sessão não-ativa; o divisor mudo do fio continua lá sem botão de fio; e a
+  **não-regressão** de [RN-136](#rn-136): Infra (mais antigo) + Dev Lead (mais
+  novo) pendentes mostram os DOIS cards, cada um aceitando o próprio handoff
+- **Origem:** exploração do plano "Nome e local na mesma tela, e container
+  antes dos dev agents" (D0) — o bloqueador que tornava o requisito "dev agent
+  só depois do container de pé" equivalente a "dev agent nunca começa"
+
+### RN-502 — Dev agent só reivindica task com container `running`, e o terminal não cai mais fora dele {#rn-502}
+
+Duas metades da mesma regra: **sem ambiente de execução, o dev agent não
+começa**, e **sem ambiente de execução, o comando não roda em lugar nenhum**.
+
+**A guarda do claim.** `Engine.Dev.AgentIo.try_claim/2` — o ponto ÚNICO de
+claim — consulta
+`Engine.Containers.ProjectContainerLifecycle.running?/1` ANTES de chamar
+`claim_task/1`. Sem uma linha REGISTRADA `running` em `project_containers`
+([RN-243](#rn-243)/ADR 0081), o agente cai em `:idle`, persiste, emite
+`dev.blocked_by_container` e **não chama a api**. A guarda vem antes do claim
+de propósito: reivindicar para devolver logo em seguida deixaria a task
+marcada e sem dono vivo, que é o estado que `block_task/4` existe para nunca
+produzir.
+
+**`:idle`, e não um status novo.** É o único estado do qual um wake ainda
+resgata — os guards de `handle_info/2` são todos casados com ele
+(`{:wake, :became_claimable}` exige `:idle`, `:rearm` exige `:idle_tripped`,
+`gate_resolved` exige `task_id` batendo,
+[RN-047](business-rules/custo.md#rn-047)). Um
+`:blocked_by_container` inventado seria um estado do qual nada resgata.
+
+**No ENGINE e não só no `activate-execution` da api**, porque o claim tem um
+caminho que nenhuma rota cobre: a REIDRATAÇÃO. `Engine.Dev.DevRehydrator` não
+faz cast `:work`; quem claima depois de um restart é `DevAgentServer.init/1`
+→ `finish_restart_recovery/1` → `try_claim/2`. Um gate só na fronteira HTTP
+deixaria todo agente reidratado voltar a trabalhar sem container.
+
+**O wake.** Leitura não avisa ninguém: um agente já parado continuaria parado
+até um evento não relacionado passar por perto. Então a chegada em `running`
+PUBLICA — `RegistrarTransicaoDeContainerUseCase` grava a linha e o evento na
+MESMA transação, `aggregateType: 'container'` (o terceiro agregado que
+`Engine.Outbox.Drain` passou a drenar, ao lado de `session` e `task`),
+`aggregateId` = o PROJETO. `Engine.Workers.DevAgentWakeWorker` entrega
+`{:wake, :became_claimable}` a TODOS os agentes do projeto
+(`DevAgentState.list_by_project/1` — o container é do projeto, não de um
+módulo). É a MESMA mensagem que já existia, e não uma nova: a semântica dela
+já é "pode haver trabalho agora", e uma mensagem própria exigiria cláusula
+nova de `handle_info/2` nos dois servers com guard idêntico ao que já existe.
+Só `running` publica; `provisioning`/`stopped`/`failed`/`removed` não soltam
+ninguém.
+
+**A segunda metade: o terminal.** `Engine.Actions.TerminalExecutor`
+degradava calado — `container` sem container `running` caía em
+`:caminho_de_sempre`, isto é, `System.cmd` DENTRO do processo do engine, o
+mesmo que fala com o banco, com a api e com todos os outros projetos. O ADR
+0134 ([RN-492](#rn-492)) tinha fechado o isolamento só no caminho feliz.
+Agora recusa (`:recusar_container_ausente`), espelhando o
+`:recusar_nao_verificado`/`:recusar_runner_desconectado` que o modo `runner`
+já tinha ([RN-423](#rn-423)), e como `failed_result` normal — nunca crash.
+`mounted` entra no MESMO ramo: com container `running` atravessa pro broker
+igual a `container`; sem ele, recusa. O catch-all `:caminho_de_sempre`
+encolhe para o que sempre deveria ter sido sozinho — **projeto inexistente ou
+`project_id` malformado**. Nenhum modo de execução cai nele.
+
+**Consequência declarada:** projeto sem container de pé para de trabalhar, e
+diz por quê. É deliberado — é o que a regra existe para fazer — e é por isso
+que ela só pode entrar DEPOIS das mudanças que dão container ao modo
+`mounted`.
+
+- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex` (`try_claim/2`),
+  `apps/engine/lib/engine/actions/terminal_executor.ex`
+  (`decisao_de_execucao/1`),
+  `apps/engine/lib/engine/outbox/drain.ex`,
+  `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex`,
+  `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts`
+- **Teste:** `apps/engine/test/engine/dev/claim_com_container_test.exs` —
+  `:work` inicial sem container cai em `:idle`, persiste, emite e **não**
+  chama a api; o Noop passa pela mesma guarda; agente REIDRATADO para em
+  `:idle` sem claimar; `container.running` na outbox percorre
+  drain → worker → wake → agente e ele re-claima; e o caminho de sempre
+  segue intacto com container `running`.
+  `apps/engine/test/engine/actions/terminal_executor_test.exs` — recusa para
+  `container` (sem linha e com `stopped`) e para `mounted`; `mounted` com
+  `running` atravessa pro broker; só projeto inexistente cai em
+  `:caminho_de_sempre`.
+  `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`
+  — `running` publica `container.running` no agregado `container`; os outros
+  destinos e a criação da linha não publicam nada
+- **ADR:** [0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
+- **Origem:** plano "Nome e local na mesma tela, e container antes dos dev
+  agents" (PR 7) — dez tasks do `exp001` travaram de uma vez porque nada
+  ordenava container antes de dev agent
+
+---
+
+## A base única dos projetos montados (RN-500)
+
+### RN-500 — Existe UMA base para os projetos montados, ela é montada por identidade, e ausente quer dizer "não ofereça o modo" {#rn-500}
+
+`BRABO_PROJECTS_BASE` é a **única** pasta do computador do operador que os
+containers do Brabo enxergam. Ela é montada por **identidade** (`$X:$X`) nos
+serviços `api` e `engine`, o que significa que o caminho é o MESMO no host e
+dentro dos dois containers.
+
+A identidade não é preferência de estilo. A string de `projects.workspace_path`
+é digitada pelo usuário e mostrada de volta a ele; com host ≠ container o
+produto teria que escolher qual das duas guardar, e qualquer escolha faz a tela
+mentir para alguém. E é ela que faz `projectScopeRoot` (api) e
+`Engine.Actions.Workspace.workspace_dir/2` (engine) continuarem corretos **sem
+uma linha de código nova** — o discriminador da barra inicial segue valendo, e o
+escopo de terminal do ADR 0055 continua autorizando exatamente a pasta que o
+usuário vê.
+
+**Ausente é estado NORMAL, não erro.** `baseDeProjetos()` devolve `null` quando
+a variável não está definida ou está vazia, e NUNCA lança. `null` viaja até o
+cliente por `GET /workspaces/:workspaceId/projects-base` (`maintainer`, o mesmo
+mínimo de `POST .../projects`, porque é para decidir o que aquela rota oferece
+que o valor existe) e é assim que a criação de projeto aprende a **não oferecer**
+o modo Pasta montada. Oferecer um modo que a instalação não honra produz um
+projeto que trava depois, na primeira ferramenta do primeiro agente, longe da
+tela onde a decisão foi tomada — é a mesma lição da RN-170.
+
+`dentroDaBaseDeProjetos` reusa `dentroDoEscopo`, a mesma função do escopo de
+terminal, e não uma comparação de prefixo escrita de novo: a armadilha é
+exatamente a que ela já resolve — `/home/voce/brabo2` **não** está dentro de
+`/home/voce/brabo`, embora a string comece igual. A própria base conta como
+dentro; com base `null`, nada está dentro.
+
+**A base é variável PRÓPRIA**, nunca `PROJECT_WORKSPACES_HOST_DIR`. Os três
+motivos estão no ADR, e o primeiro tem consequência de dados: workspace
+gerenciado é nomeado por `workspace_dir_name` (UNIQUE) e projeto montado é
+nomeado pelo usuário, então `<base>/loja` e um projeto `container` com
+`workspace_dir_name = loja` cairiam na MESMA pasta física, com
+`init_from_bare!` dando `git init` dentro do projeto do outro.
+
+**A guarda do checkout mora no preflight, e é o único lugar onde ela é
+possível.** `pnpm dev` **recusa subir** quando a base se sobrepõe ao checkout do
+Brabo, nos dois sentidos. A api não consegue fazer essa checagem: ela compara
+contra `process.cwd()`, que dentro do container dela é `/workspace`, e nunca vê
+o caminho real no disco. Sem essa guarda, quem clona o Brabo em `$HOME/brabo` e
+aponta a base para lá passa por toda validação existente e faz os dev agents
+executarem dentro da árvore do próprio produto — a falha do ADR 0055 entrando
+por uma porta que ele não vigia.
+
+**O que esta RN NÃO faz:** ela não exige que um projeto `mounted` esteja dentro
+da base. `caminhoDeWorkspaceLocalValido` e `projectScopeRoot` ficam intactos —
+aquele predicado roda em toda LEITURA, e projeto montado legado fora da base
+passaria a explodir ao ser lido. A base é regra de CRIAÇÃO e CONVERSÃO, e entra
+na RN seguinte.
+
+- **Onde:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:67`
+  (`baseDeProjetos`) e `:92` (`dentroDaBaseDeProjetos`);
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts:197`
+  (`GET :workspaceId/projects-base`); `scripts/dev/base-de-projetos.mjs` e a
+  chamada em `scripts/dev/preflight.mjs`; `docker/docker-compose.yml` e
+  `docker/docker-compose.prod.yml` (serviços `api`, `engine`, `broker`)
+- **Teste:**
+  `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (`describe('baseDeProjetos / dentroDaBaseDeProjetos')`) e
+  `scripts/dev/base-de-projetos.spec.ts`
+- **ADR:** [0141](adr/0141-base-unica-dos-projetos-montados.md)
+- **Origem:** plano do dono do produto, PR 1
+
+---
+
+## A pasta montada nasce quando o container sobe (RN-501)
+
+### RN-501 — `mounted` valida só o LÉXICO e a base na criação; a pasta é MATERIALIZADA depois, por quem tem autoridade sobre o disco {#rn-501}
+
+A criação de um projeto `mounted` **deixou de tocar disco**. Ela exige duas
+coisas, e as duas são léxicas:
+
+1. o mesmo predicado que `runner` já usava (`caminhoDeWorkspaceLocalValido`) —
+   absoluto, sem `..`, fora da raiz e das pastas de sistema, sem se sobrepor ao
+   checkout do Brabo (RN-422/RN-423);
+2. estar **dentro de `BRABO_PROJECTS_BASE`** ([RN-500](#rn-500)), que é a única
+   pasta do computador que os containers da api e do engine enxergam.
+
+O projeto nasce com `workspaceVerifiedAt: null`, exatamente como um `runner`.
+
+**Por que adiar.** O requisito é do dono do produto e é literal: *"se for Pasta
+montada, o bind-mount deve ser criado APÓS a decisão do arquiteto"*. A validação
+de disco rodava na CRIAÇÃO, que é a primeira tela do fluxo, e a decisão do
+Arquiteto acontece muitas sessões depois — exigir a pasta pronta na criação é
+exigi-la antes de existir decisão nenhuma. E é o que impedia `mounted` de ser
+escolha de primeira classe: um caminho SUGERIDO pelo assistente
+(`<base>/<slug>`) é, por construção, um caminho que ainda não existe.
+
+A diferença entre `mounted` e `runner` nunca foi *o que conta como caminho
+válido* — é **quando e quem** confirma o disco. No `runner` é o CLI conectando;
+no `mounted` é a materialização.
+
+**Sem base configurada, o MODO não está disponível.** A recusa diz isso, com o
+nome da variável e o que o operador precisa fazer — nunca finge que o caminho é
+que estava errado. Fora da base, a recusa **nomeia a base** e **sugere**
+`<base>/<nome que a pessoa pediu>`, nunca a base pelada, que ensinaria a colocar
+o projeto na raiz de todos eles. As duas mensagens saem de UMA fonte
+(`motivoDeForaDaBaseDeProjetos`), porque as duas portas que aplicam a regra —
+criação/conversão e materialização — recusam pelo mesmo motivo.
+
+**A materialização** (`materializarWorkspaceMontado`) é `mkdir -p` mais as três
+perguntas de disco de sempre (existe? é pasta? dá para escrever?), com a recusa
+por estar fora da base **antes** do `mkdir` — senão um caminho gravado por fora
+do produto faria a api criar pasta em qualquer lugar que ela alcança. Dois
+chamadores:
+
+- **`ExecuteContainerStartUseCase`** — o normal. Quando a Infra sobe o
+  container, a pasta é criada, provada gravável, e `workspace_verified_at` é
+  carimbado pelo MESMO caminho que `ConfirmProjectWorkspaceUseCase` usa. Falhar
+  é `failed` **NOMEADO**, nunca throw nem 500 — mesma disciplina de
+  `BrokerIndisponivelError`/`RunnerNaoConectadoError` —, e o ciclo de vida
+  **não** chega a ser marcado `provisioning`: marcá-lo e só então descobrir que
+  não dá para escrever deixaria `project_containers` afirmando um estado que
+  nunca existiu. A mensagem nomeia a variável, o caminho, a causa provável (dono
+  da pasta no host; as imagens rodam non-root, ADR 0024) e o próximo passo
+  ("aprove `container_start` de novo").
+- **`ConvertProjectExecutionModeUseCase`** — a exceção, declarada. A conversão
+  não tem passo de container onde pendurar o trabalho, e logo em seguida ela MOVE
+  o `permissions.json` para `permissionsFilePath(localNova)`, que em `mounted` é a
+  pasta do usuário. Mover arquivo para dentro de pasta inexistente falha, então
+  aqui mkdir-na-decisão é o certo — antes da transação, para que a recusa não
+  deixe transação aberta, e virando 400.
+
+**O que esta RN NÃO faz, e é a regressão mais fácil de causar.** A regra da base
+**não** entra em `caminhoDeWorkspaceLocalValido`. Esse predicado roda em TODA
+LEITURA, por `projectScopeRoot` (escopo de terminal, `permissions.json`, aba
+Code), e um projeto `mounted` LEGADO — criado quando o bind-mount era uma linha
+de compose por projeto, portanto fora da base — passaria a explodir com
+`LocalizacaoDeProjetoInvalidaError` ao ser simplesmente lido. A base é regra de
+**criação e conversão**; o léxico é **para sempre**.
+
+**Sem migration, e o CHECK do banco fica intacto.** `mounted` continua gravando
+`workspace_path` NÃO-nulo, então
+`(execution_mode <> 'container') = (workspace_path IS NOT NULL)` segue
+satisfeito. Adiar a **verificação** nunca toca o invariante de **pareamento**.
+
+**Consequência declarada:** entre criar o projeto e subir o container,
+`workspace_path` aponta para uma pasta que pode não existir. Nada quebra
+(`projectScopeRoot` é léxico; `permissions.json` degrada para
+`EMPTY_PERMISSIONS_FILE`, que é `require_approval` em tudo), mas a tela precisa
+DIZER — uma tela que mostra um caminho sem dizer que ele ainda não existe é uma
+tela afirmando o que não sabe.
+
+- **Onde:** `apps/api/src/application/services/workspace-location.ts:93`
+  (léxico) e `:108` (base);
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:486`
+  (`motivoDeForaDaBaseDeProjetos`), `:535`
+  (`validarWorkspaceMontadoEmDisco`, o antigo `validarCaminhoDeWorkspaceLocal`)
+  e `:616` (`materializarWorkspaceMontado`);
+  `apps/api/src/application/use-cases/iam/convert-project-execution-mode.use-case.ts:139`;
+  `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts:133`
+  e `:334`
+- **Teste:**
+  `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  (`describe('materializarWorkspaceMontado')` e a não-regressão "projeto
+  mounted LEGADO, FORA da base, continua resolvendo sem lançar");
+  `apps/api/test/application/use-cases/iam/create-project-modo-de-workspace.spec.ts`
+  (`describe('mounted valida só o léxico + a base na criação')`);
+  `apps/api/test/application/use-cases/iam/convert-project-execution-mode.use-case.spec.ts`;
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
+  (`describe` "ExecuteContainerStartUseCase — materialização do mounted")
+- **ADR:** [0142](adr/0142-validacao-de-workspace-montado-adiada.md), que
+  referencia [0141](adr/0141-base-unica-dos-projetos-montados.md)
+- **Origem:** plano do dono do produto, PR 2
+
+---
+
+## Projeto montado sobe container pelo BROKER (RN-503)
+
+### RN-503 — Projeto `mounted` sobe container pelo BROKER, e o que atravessa a rede é um localizador discriminado — nunca um caminho absoluto {#rn-503}
+
+Um projeto no modo Pasta montada **não conseguia container nenhum** até aqui, e
+por dois bloqueios independentes: `ExecuteContainerStartUseCase` mandava todo
+modo diferente de `container` para o RUNNER (que exige um `brabo-runner`
+conectado), e o broker recusava na fonte qualquer modo que não fosse
+`container`, com `ModoDeExecucaoNaoSuportadoError`.
+
+Os dois existiam pela mesma razão de GEOMETRIA, não pelo nome do modo: a pasta
+de um projeto montado ficava num lugar arbitrário do disco do operador, que o
+daemon Docker do servidor não tinha por que enxergar. O ADR 0141 (RN-500)
+mudou essa geometria — todo projeto montado passa a morar sob **uma** base
+montada por identidade —, e é isso, e só isso, que esta regra colhe.
+
+**A ramificação passa a ser por DESTINO, não por modo.** `container` **e**
+`mounted` vão ao BROKER; só `runner` vai ao runner, porque a pasta dele
+continua numa máquina que este servidor não alcança (ADR 0137). Vale igual para
+as três ações de ciclo de vida — `container_start`, `container_stop` e
+`container_remove`: elas TÊM de mudar juntas, senão o container de um projeto
+montado sobe no servidor e o pedido de parar vai procurá-lo na máquina do
+usuário, deixando de pé, sem forma de parar, o que está de pé.
+
+**O invariante do ADR 0130 não se mexe: nenhum caminho absoluto atravessa a
+rede.** O broker é root-equivalente no host e COMPÕE o `-v` a partir das raízes
+DELE; se a api mandasse `/home/voce/brabo/loja`, a contenção do bind-mount
+passaria a depender de a api estar correta, que é exatamente a dependência que
+o broker existe para não ter. O que muda é que agora existem DUAS raízes do
+lado de lá, então a spec precisa DIZER contra qual delas o pedaço relativo
+vale — e diz, num localizador discriminado:
+
+| `localizacao.tipo` | segmento | raiz do broker |
+|---|---|---|
+| `gerenciada` | `workspace_dir_name` (RN-109) | `PROJECT_WORKSPACES_HOST_ROOT` |
+| `montada` | o caminho RELATIVO sob a base | `BRABO_PROJECTS_HOST_BASE` |
+| `indisponivel` | — (há `motivo`) | nenhuma |
+
+**Três estados e não dois**, porque o terceiro existe de verdade e tem dois
+consertos diferentes: projeto `runner` (a pasta está noutra máquina — o
+conserto é o runner, do lado de lá) e projeto `mounted` LEGADO criado fora da
+base (o conserto é mover a pasta). Colapsá-los num `null` faria a mesma
+ausência mandar quem opera para o lugar errado. A pasta que É a própria base
+também cai aqui, e não vira segmento vazio: `<raiz>/` montaria a base inteira
+— a pasta de TODOS os projetos montados — dentro do container de um só.
+
+**A falta de uma raiz nunca é suprida pela outra.** Sem
+`BRABO_PROJECTS_HOST_BASE`, um `start` de projeto montado recusa **nomeando a
+variável** (`BaseDeProjetosNaoConfiguradaError`, origem `infra`, 503) e não
+toca container nenhum — mesmo molde de `RaizDeWorkspacesNaoConfiguradaError`.
+Cair na outra raiz por omissão seria o pior desfecho possível: a raiz
+gerenciada é nomeada por `workspace_dir_name` e a base é nomeada pelo usuário,
+então o mesmo nome aponta para pastas diferentes e o container subiria com a
+pasta de OUTRO projeto, sem nada indicando por quê. Pelo mesmo motivo, a lista
+de modos que o broker atende é de PERMITIDOS: um modo novo no enum nasce
+recusado, com mensagem, em vez de aceito por omissão.
+
+**A composição continua passando por três barreiras, não uma.** A api recusa o
+que não está sob a base (`segmentoSobABaseDeProjetos`); o broker recusa o
+segmento que não é relativo (`segmentoDeProjetoValidado` — `..`, absoluto,
+vazio, barra dupla, NUL); e o resultado da concatenação ainda passa por
+`raizDeProjetoValidada` antes de virar `-v`. Validar o segmento e não validar a
+concatenação seria confiar na aritmética de strings.
+
+**`mounted` ELEGE a imagem, como `container` — não lê a vigente como o runner.**
+Não é simetria estética: é o único desenho que funciona. O broker compõe a
+partir de `artifact.project_image`, indo BUSCÁ-LO na api. Uma eleição da Infra
+que não fosse gravada nesse artefato seria inerte — o container subiria com a
+imagem que o Arquiteto decidiu, o payload que o humano aprovou diria outra, e
+nada no registro denunciaria a diferença. O caminho do runner pode ler a
+vigente justamente porque ali a api MANDA os campos da spec pelo canal; lá o
+artefato não é a fonte que o outro lado consulta.
+
+**O que esta regra NÃO faz:** não materializa pasta nenhuma — quem cria a pasta
+do projeto montado é a [RN-501](#rn-501), no MESMO caso de uso e **antes** desta
+ramificação, justamente porque o daemon do servidor precisa da pasta existindo
+para montá-la. Também não toca o portão da imagem (RN-105 já vale para os três
+modos desde a RN-494) e não muda quem PROPÕE `container_start` — o Infra Lead
+segue podendo propor para um projeto sem runner conectado e sem imagem
+decidida, a lacuna declarada desde a RN-494.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts`
+  (`LocalizacaoDoProjeto`, `localizacaoDoProjeto`);
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`segmentoSobABaseDeProjetos`);
+  `apps/api/src/interfaces/http/internal/dto/container-spec-internal.response.dto.ts`;
+  `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts`,
+  `…/execute-container-stop.use-case.ts`, `…/execute-container-remove.use-case.ts`
+  (a ramificação `!== 'runner'`);
+  `packages/docker-port/src/docker-port.ts` (`segmentoDeProjetoValidado`);
+  `apps/broker/src/config.ts` (`baseDeProjetosNoHost`) e
+  `apps/broker/src/operacoes.ts` (`raizDoProjetoNoHost`,
+  `garantirModoSuportado`, `BaseDeProjetosNaoConfiguradaError`,
+  `LocalizacaoIndisponivelError`)
+- **Teste:**
+  `apps/api/test/application/use-cases/containers/spec-e-observacao-de-container.use-case.spec.ts`
+  (`describe('… o localizador discriminado (RN-503)')`);
+  `apps/api/test/application/use-cases/actions/execute-container-{start,stop,remove}.use-case.spec.ts`;
+  `packages/docker-port/src/docker-port.spec.ts`
+  (`describe('segmentoDeProjetoValidado')`); `apps/broker/src/operacoes.spec.ts`
+  e `apps/broker/src/config.spec.ts`
+- **ADR:** [0130](adr/0130-broker-de-container.md),
+  [0141](adr/0141-base-unica-dos-projetos-montados.md)
+- **Origem:** plano do dono do produto, PR 3
+
+---
+
+## O navegador de pastas servido pela api (RN-504)
+
+### RN-504 — O navegador de pastas é escopado à base de projetos e NUNCA sai dela {#rn-504}
+
+`GET /workspaces/:workspaceId/project-folders` lista as **subpastas** de um
+caminho, e existe porque o assistente de criação de projeto perde, de uma vez,
+os DOIS mecanismos de "procurar pasta" que tinha: `FolderBrowserModal` navegava
+pelo **websocket do runner** (`fs_list_dir`/`fs_home_dir`) e o
+`RunnerOnboardingPanel` usava `showDirectoryPicker`, que devolve um handle do
+navegador e nunca um caminho absoluto. Sem runner, o navegador não tem como
+listar filesystem nenhum — e é caminho absoluto que `projects.workspace_path`
+guarda.
+
+**A contenção é UMA, e é dura.** `path` é opcional e omitido quer dizer a base
+(`baseDeProjetos()`); todo `path` fornecido tem que satisfazer
+`dentroDaBaseDeProjetos` (RN-500), que reusa `dentroDoEscopo` — a mesma função
+do escopo de terminal do ADR 0055 — e por isso pega a armadilha de prefixo:
+`/home/voce/brabo2` **não** está dentro de `/home/voce/brabo`, embora a string
+comece igual. `..` e `.` são **recusados** em vez de resolvidos, pela mesma
+razão de `caminhoDeWorkspaceLocalValido`: resolver aceitaria que o caminho lido
+não é o caminho pedido.
+
+**Sair da base é 400, e não 403.** 403 diria "você não tem permissão para ver
+isto" e sugeriria que outro papel veria — não é o caso. Não existe papel nenhum
+que navegue fora da base, porque fora da base não é uma área mais privilegiada,
+é uma área que esta rota simplesmente não endereça. O pedido está MALFORMADO.
+
+**Os tetos são contrato, não detalhe de implementação:** só diretório em
+`entries`; no máximo **500**, ordenados **antes** do corte (senão "as 500
+primeiras" seria a ordem que o filesystem devolveu, que muda entre máquinas);
+sem recursão; entradas começadas com `.` fora; e symlink **reportado, nunca
+descido** — `readdirSync(withFileTypes)` tem semântica de `lstat`, então um
+link apontando para fora da base não é porta de saída. **O que fica de fora é
+CONTADO** (`arquivos`, `simbolicos`, `truncado`): sem isso uma pasta cheia de
+código voltaria como lista vazia e a tela diria "pasta vazia", afirmando sobre
+o que não leu (RN-180).
+
+**Não há POST.** Criar pasta é da materialização do workspace montado, no
+momento em que o container sobe — nunca do seletor.
+
+**O mínimo é `maintainer`**, o mesmo de `POST .../projects` e de
+`.../projects-base`, e pelo mesmo raciocínio um passo adiante: `projects-base`
+revela UM caminho da máquina do operador, esta rota revela a TOPOLOGIA abaixo
+dele. Herdar o `viewer` das rotas vizinhas por elas serem vizinhas é o defeito
+que a RN-102 nomeia — o mínimo é do ENDPOINT, nunca da seção. `workspaceId` não
+entra no cálculo: a base é da INSTALAÇÃO, e ele está na rota porque é o que dá
+escopo ao `RolesGuard`.
+
+**No cliente**, o transporte vira uma das DUAS implementações da interface
+`FsBrowser` (`apps/web/src/lib/fs-browser.ts`): `criarFsBrowserViaApi` (nova) e
+`connectFsBrowserChannel` (o canal do runner, re-tipada). `FolderBrowserModal`
+escolhe por `origem: { tipo: 'api'; workspaceId } | { tipo: 'runner'; projectId }`
+— união discriminada, e não duas props opcionais, porque "nenhuma das duas" e
+"as duas" seriam estados representáveis que o componente teria de tratar em
+runtime. O transporte via runner fica **sem chamador no web** a partir daqui, e
+continua no repositório por decisão declarada do dono do produto (o runner sai
+da interface, o binário segue sendo refinado); o protocolo em
+`apps/runner/src/channel.ts` não é tocado de qualquer forma.
+
+- **Onde:** `apps/api/src/infrastructure/filesystem/project-folders-browser.ts`
+  (`listarPastasDeProjeto`, `TETO_DE_ENTRADAS`, `PastaForaDaBaseError`,
+  `PastaNaoLegivelError`);
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts`
+  (`listProjectFolders`); `apps/web/src/lib/fs-browser.ts`;
+  `apps/web/src/components/FolderBrowserModal.tsx`
+- **Teste:**
+  `apps/api/test/infrastructure/filesystem/project-folders-browser.spec.ts`,
+  `apps/api/test/interfaces/http/iam/workspaces-project-folders.controller.spec.ts`,
+  `apps/web/src/lib/fs-browser.test.ts`,
+  `apps/web/src/components/FolderBrowserModal.test.tsx`
+- **ADR:** [0141](adr/0141-base-unica-dos-projetos-montados.md) (a base que
+  esta rota escopa)
+- **Origem:** plano do dono do produto, PR 4
+
+### RN-509 — "Sempre permitir" de um Dev Agent de módulo escopa a `agent_autonomy`, POR AGENTE — não mais o `permissions.json` de projeto inteiro {#rn-509}
+
+`ApproveAlwaysActionUseCase` sempre gravou em `permissions.json/allow` —
+escopo de **PROJETO INTEIRO**, compartilhado por qualquer ator. Isso
+significava que "sempre permitir" um comando pro `dev-checkout` liberava o
+MESMO comando pro `dev-auth`, pro `dev-lead`, e pra qualquer agente futuro
+do projeto: a intenção de quem clicou ("confio NESTE agente com ISTO") não
+tinha como ser expressa — só existia "confio em qualquer um com isto".
+
+**A gravação passa a se ramificar pelo ATOR**, dentro do MESMO use case (não
+um novo — duplicar as duas guardas de teto absoluto de terminal fora de
+escopo/`git_push`/`sudo` e de `container_remove` em dois lugares seria o
+mesmo defeito que RN-418/RN-495 já existem para evitar):
+
+- Ator `agent` cujo id é `dev-<modulo>` (ADR 0053/FASE 14d — a área
+  DINÂMICA de `dev`, um agente por módulo do `module_map`): grava em
+  `agent_autonomy(projectId, agentId, actionType) = auto_approve`, pelo
+  MESMO `AgentAutonomyRepository.upsert` que
+  `activate-execution.use-case.ts` já chama pra semear as três ações git
+  por módulo. `permissions.json` fica intocado.
+- Qualquer outro ator — `user`, `system`, agente `agent` que não é
+  dev-de-módulo, e o `dev-lead` — continua indo pro `permissions.json/allow`
+  de sempre, escopo de projeto inteiro, exatamente como antes.
+
+**`dev-lead` é a exceção que precisa de nome próprio.** `ehDevDeModulo`
+(`agent-areas.ts`) é `agentId.startsWith('dev-')` PURO, de propósito — e
+isso classifica `dev-lead` como `true`. Quem exclui o lead da própria área
+é `ehMembroDe`, não `ehDevDeModulo` sozinho ("o lead não é membro da própria
+área" vale pra qualquer área — duplicar a exclusão dentro do predicado
+deixava as duas cópias inalcançáveis por teste, achado registrado no
+comentário do próprio `agent-areas.ts`). Por isso o branch usa
+`ehDevDeModulo(actor.id) && actor.id !== DEV_LEAD`: sem o segundo termo,
+"sempre permitir" clicado numa ação do `dev-lead` gravaria autonomia de
+módulo sob o agentId do LEAD por acidente — um agente que não é membro de
+`dev`, que não tem módulo, e que a área nunca olha via `agent_area_members`.
+
+**Os dois tetos absolutos de `decide.ts` continuam rodando ANTES do branch,
+sem mudar de ordem.** Terminal com efeito externo git (`git push`, `gh pr
+create`) ou privilegiado (`sudo`/`doas`) — RN-106/RN-418 — e
+`container_remove` — RN-495 — seguem recusando o clique INTEIRO (400, ação
+nem aprovada), pra QUALQUER ator, antes mesmo do projeto ser buscado.
+Escopar a gravação por agente não é uma segunda porta pro mesmo teto: os
+dois `if` de recusa ficam onde estavam, e o branch novo entra depois.
+
+**O evento `permission.granted` carrega um payload OU outro, nunca um
+fingindo ser o outro.** `{ pattern }` continua sendo o formato do caminho de
+`permissions.json` (o padrão de texto gravado no arquivo); o caminho novo
+emite `{ agentId, actionType }` — não há "padrão" nenhum pra mostrar quando
+a gravação é uma linha de tabela chaveada por agente.
+
+**Sem migração de dados.** Entradas antigas de "sempre permitir" gravadas
+para um dev-de-módulo em `permissions.json`, de antes desta regra existir,
+continuam lá exatamente como estavam — só não recebem MAIS entradas desse
+tipo dali pra frente. Decisão consciente do dono do produto, não lacuna
+esquecida.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts`
+  (o branch `ehAgenteDeModulo`), `apps/api/src/domain/agents/agent-areas.ts`
+  (`ehDevDeModulo`, `DEV_LEAD` — consumidos, não alterados),
+  `apps/api/src/application/ports/agent-autonomy-repository.port.ts`
+  (`upsert`, já existente, sem método novo)
+- **Teste:**
+  `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts`
+  (descreve `escopo por Dev Agent de módulo (RN-509)`: caminho feliz
+  `dev-checkout` grava `agent_autonomy` e não vaza pra `dev-auth`; os DOIS
+  tetos absolutos recusando o clique inteiro pra um ator dev-de-módulo;
+  `dev-lead` e ator `user` — inclusive com id começando em `dev-` —
+  continuam no caminho antigo)
+- **Origem:** plano do dono do produto, Frente 2
+
+---
+
+## O artefato de decisão dos conversacionais (RN-505)
+
+### RN-505 — `decision_record` reusa o padrão GENÉRICO de `emit_artifact`, não o dedicado {#rn-505}
+
+Um agente conversacional que toma uma decisão relevante numa conversa (por
+que escolheu X e não Y, o que considerou, o que aceitou perder) registra isso
+com `emit_artifact` e `type: decision_record` — payload com `context`,
+`options` (lista), `choice` e `consequences`, as quatro chaves obrigatórias
+em `Engine.Harness.ArtifactSchemas` (`artifact_schemas.ex:82`), tool-emittable
+desde que entrou em `@tool_emittable` (`artifact_schemas.ex:98`). **Sem
+validação cruzada de propósito:** `choice` não precisa bater com um item de
+`options` — texto livre é mais robusto, e o schema genérico só valida
+presença de chave (a mesma régua de `note`/`business_rule`).
+
+**Por que reusar o padrão GENÉRICO em vez do dedicado.** `artifact.project_image`
+e `artifact.c4_diagram` (RN vizinhas desta) são artefatos VERSIONADOS — cada
+emissão substitui a anterior como "vigente", com rota HTTP própria de leitura
+e schema TypeScript dedicado na api. Uma decisão não é assim: é um registro
+append-only por natureza, não um "vigente" que se substitui — o mesmo
+raciocínio que já vale para `note`/`business_rule`. Pagar o preço do padrão
+dedicado (schema TS, versionamento, rota nova) para um log que só precisa
+existir e ser pesquisável no event log da sessão custaria estrutura que a
+decisão não pede.
+
+**Distinção declarada com `open_adr_pr` (só o Arquiteto tem).** Os dois
+COEXISTEM, com propósitos diferentes: `decision_record` é para TODA decisão
+relevante de qualquer um dos seis conversacionais, sem fricção nenhuma —
+nunca commita arquivo, nunca abre PR, nunca espera aprovação humana.
+`open_adr_pr` é para quando a decisão é grande o bastante para virar
+DOCUMENTO real em `docs/adr/*.md`, com PR de verdade e aprovação humana
+obrigatória. Um projeto pode ter dez `decision_record` e zero ADR numa
+sessão — o segundo não é a versão "séria" do primeiro, é outra ferramenta
+para outra escala de decisão.
+
+**Wiring nos cinco conversacionais que ainda não tinham `emit_artifact`** —
+PO (`po_server.ex:115`), Arquiteto (`arquiteto_server.ex:102`), Dev Lead
+(`dev_lead_server.ex:153`), UX Designer (`ux_designer_server.ex:94`) e Staff
+(`staff_server.ex:94`); o Criativo já tinha a ferramenta desde a Fase 3b, só
+ganhou o tipo novo (é o `known/0` compartilhado quem decide, sem mudança no
+`CriativoServer`). Em cada um, o `run_tool/3` comum ganhou a cláusula
+`"emit_artifact" -> EmitArtifact.run/2` (ex.: `po_server.ex:279`) — **sem
+tratamento especial**: diferente de `propose_execution_plan`/
+`assess_implementability` no Dev Lead (que suspendem o turno esperando
+aprovação, ADR 0086), `emit_artifact` nunca devolve `{:pending, _}`, então
+entra no dispatch comum sem precisar do `reduce_while` que aquelas duas
+ferramentas exigem. E os cinco ganharam a MESMA frase no `system_prompt/1`
+(ex.: `po_server.ex:463`) explicando quando usar `type: decision_record` —
+fora do texto de identidade (`Engine.Harness.Agents`) porque não é sobre
+QUEM o agente é, é uma instrução operacional sobre uma ferramenta.
+
+**Fora de escopo, declarado.** Agentes de execução (QA, SecOps, Dev Agent de
+módulo) rodam sobre `ToolLoop`, sem harness comum aos seis conversacionais —
+ficam de fora desta fatia, investigação própria por módulo antes de
+estender. A amarração com a Frente 1 do mesmo plano (o dispatch do Infra
+Lead emitindo um `decision_record` server-emitted quando propõe subir
+container via runner) também fica de fora: depende de uma tool
+(`propose_container_start_via_runner`) que outro PR está criando em
+paralelo — ver TODO no PR desta mudança.
+
+- **Onde:** `apps/engine/lib/engine/harness/artifact_schemas.ex` (schema +
+  `@tool_emittable`); `apps/engine/lib/engine/agents/po_server.ex`,
+  `arquiteto_server.ex`, `dev_lead_server.ex`, `ux_designer_server.ex`,
+  `staff_server.ex` (alias + `tool_specs` + `run_tool/3` +
+  `system_prompt/1`)
+- **Teste:** `apps/engine/test/engine/harness/artifact_schemas_test.exs`
+  (`describe("decision_record …")`);
+  `apps/engine/test/engine/agents/po_server_test.exs` e
+  `arquiteto_server_test.exs`
+  (`describe("Frente 3 do plano de decision_record — emit_artifact")`)
+- **Origem:** plano do dono do produto, Frente 3 ("Artefato de decisão")
+
+---
+
+### RN-507 — Docker vira pré-requisito real do modo `runner`: os TRÊS modos de execução exigem o MESMO predicado {#rn-507}
+
+Até aqui, `Engine.Actions.TerminalExecutor.decisao_de_execucao/1` checava só
+DUAS pré-condições para rotear terminal a um projeto `execution_mode: runner`
+— workspace CONFIRMADO e runner CONECTADO agora — e roteava incondicionalmente
+assim que as duas batiam, sem checar se havia container `running` REGISTRADO
+(`Engine.Containers.ProjectContainerLifecycle.running?/1`), o mesmo predicado
+que `container`/`mounted` já exigiam desde a RN-502 (ADR 0143). O runner do
+lado de lá decidia sozinho se o comando rodava dentro do container que ele
+subiu (ADR 0137) ou caía no HOST puro — e sem Docker de pé na máquina do
+usuário, caía sempre no host, silenciosamente: o isolamento que o ADR 0134
+buscou criar para `container` nunca valeu para `runner`.
+
+**A correção unifica os três modos sob a MESMA pergunta.** `runner` ganha uma
+TERCEIRA pré-condição, na mesma ordem que as outras duas: verificado →
+conectado → container `running`. As três recusas nomeadas (workspace não
+verificado, runner desconectado, sem container) vivem hoje em
+`Engine.Runners.RunnerReadiness` — extraído porque um SEGUNDO consumidor
+nasceu no mesmo PR (`Engine.Actions.Workspace.RunnerGit`, abaixo): "não são
+duas derivações, é esta função com dois consumidores", o mesmo raciocínio do
+moduledoc de `ProjectContainerLifecycle`.
+
+**A materialização do worktree do dev agent muda de mecanismo, não de
+resultado.** `Engine.Actions.Workspace.ensure!/4` tentava `File.mkdir_p!`/
+`System.cmd("git", ...)` LOCAL contra o caminho do HOST, mesmo em modo
+`runner` — a lacuna que a RN-478 registrou e deixou ABERTA de propósito ("o
+working tree do dev agent não tem onde nascer", já que o processo do engine
+não tem bind-mount nenhum para uma pasta que mora na máquina do usuário). A
+correção não é "melhorar a mensagem de erro" de novo: `ensure!/4` passa a
+bifurcar por `execution_mode` — LOCAL para `container`/`mounted` (inalterado:
+`mounted` já enxerga sua pasta via `BRABO_PROJECTS_BASE`, bind-mount por
+identidade no engine desde o ADR 0141), via `Engine.Actions.Workspace.
+RunnerGit` para `runner`. `RunnerGit` faz `git init`/`remote add`/`fetch`/
+`checkout` (e os equivalentes de `File.dir?`/`ls`/`rm_rf` que
+`Engine.Dev.WorktreeManager` precisa) como comandos de shell NORMAIS,
+entregues pelo MESMO canal Phoenix que já executa terminal aprovado
+(`Engine.Runners.RunnerRouter.exec/5`) — nunca um mecanismo novo, e sempre
+depois de `RunnerReadiness.verificar/1` confirmar as três pré-condições
+(levanta com mensagem nomeada antes de tentar qualquer I/O, nunca um `exec`
+às cegas). `Engine.Dev.WorktreeManager` (`create/3`, `remove/2`, `list/1`,
+`cleanup_orphans/2`) bifurca pelo mesmo critério.
+
+**O job periódico de limpeza PULA em silêncio, nunca falha.**
+`Engine.Dev.WorktreeCleanup.run/0` varria `File.dir?(work_dir)` para decidir
+se podava — sempre `false` para `runner` (o caminho é do HOST, o engine não
+o enxerga), então `runner` nunca era podado de verdade nem testado por essa
+via. O gate vira por MODO: `File.dir?` continua para `container`/`mounted`;
+para `runner`, `RunnerReadiness.pronto?/1` decide — sem runner conectado ou
+sem container `running` AGORA, o projeto é pulado NESTA rodada (`"não dá pra
+saber agora"`, nunca um erro, nunca um worktree tratado como órfão por
+engano), e `Enum.each/2` continua para os projetos seguintes sem exceção
+nenhuma atravessar.
+
+**O protocolo `exec`/`exec_result` ganha um campo NOVO: `env` (ADR 0056).** O
+`git fetch` autenticado de `RunnerGit` precisa da credencial do provider —
+que só pode viajar no AMBIENTE do processo filho (nunca argv, nunca
+`.git/config`, mesma disciplina de `Engine.Actions.GitAuth` local). Como o
+processo filho agora nasce na máquina do usuário, o campo `env` (opcional,
+`Record<string,string>`) entra no payload que `RunnerRouter.exec/5`
+despacha — presente só quando há credencial de verdade (provider `local`
+nunca o carrega). Do lado do runner: `apps/runner/src/exec.ts` MESCLA (nunca
+substitui) `opts.env` em cima de `process.env` antes do `spawn` — `env`
+definido sem merge descartaria PATH e quebraria a resolução do próprio
+binário `git`/`sh`. `apps/runner/src/index.ts` repassa `msg.env` só para o
+caminho HOST (`executarComando`) — o container (`docker exec`, via
+`packages/docker-port`) não ganhou suporte a `env` (fora de escopo desta
+entrega: a operação `exec` da porta continua sem esse campo, de propósito,
+ADR 0130). Nenhum log do runner imprime `env` em ponto nenhum — auditado por
+grep, `console.log`/`console.warn`/`console.error` seguem citando só
+`ref`/`command`/`cwd`/`exitCode`.
+
+- **Onde:** `apps/engine/lib/engine/actions/terminal_executor.ex`
+  (`decisao_de_execucao/1`); `apps/engine/lib/engine/runners/
+  runner_readiness.ex` (novo); `apps/engine/lib/engine/actions/workspace.ex`
+  (`ensure!/4`); `apps/engine/lib/engine/actions/workspace/runner_git.ex`
+  (novo); `apps/engine/lib/engine/dev/worktree_manager.ex`;
+  `apps/engine/lib/engine/dev/worktree_cleanup.ex`;
+  `apps/engine/lib/engine/projects/project.ex` (`all_workspace_dirs/0` ganha
+  `execution_mode`); `apps/engine/lib/engine/runners/runner_router.ex`
+  (`exec/5`); `apps/engine/lib/engine_web/channels/terminal_channel.ex`;
+  `apps/runner/src/channel.ts` (`ExecMessage.env`); `apps/runner/src/exec.ts`;
+  `apps/runner/src/index.ts`
+- **Teste:** `apps/engine/test/engine/actions/terminal_executor_test.exs`,
+  `apps/engine/test/engine/actions/workspace_runner_test.exs`,
+  `apps/engine/test/engine/dev/worktree_manager_test.exs`,
+  `apps/engine/test/engine/dev/worktree_cleanup_test.exs`,
+  `apps/runner/src/channel.spec.ts`
+- **ADR:** [0145](adr/0145-docker-pre-requisito-do-runner.md)
+- **Origem:** decisão do dono do produto — Docker vira pré-requisito real do
+  modo `runner`, sem fallback pro host
+
+### RN-508 — `container_start_via_runner`: segundo tipo de ação para subir o container, exclusivo de `runner`, e o Infra Lead recusa às cegas ANTES de propor {#rn-508}
+
+`container_start` (ADR 0130/0133) exige `imagem`/`network`/`resources`/
+`rationale` — a Infra ELEGE uma candidata do roteamento do Arquiteto. Até
+esta entrega, o mesmo tipo de ação também atendia `execution_mode: runner`
+(`ExecuteContainerStartUseCase.executeViaRunner`), mas o caminho do runner
+NUNCA lia nenhum desses quatro campos: a imagem que sobe é a que já estiver
+DECIDIDA (não há roteamento contra o qual eleger, porque o broker nunca
+alcança a pasta de um projeto `runner`). Pedir 4 campos que o dispatch sempre
+descartava é o defeito que motiva nascer uma AÇÃO separada em vez de uma
+`container_start` "inteligente" ramificando por modo.
+
+**`container_start_via_runner` só tem `rationale` (opcional).** Mesmo calibre
+de `container_start` (`maintainer`, `require_approval` por padrão, nunca
+semeado em auto-aprovação, configurável em `permissions.json` como as
+demais três ações de container — não entra no teto absoluto de
+`container_remove`). `ExecuteContainerStartUseCase` perde o ramo `runner`
+inteiro (`executeViaRunner`, `ApiToEngineClient`/`ObterSpecDeContainerUseCase`
+saem do construtor) — fica exclusivo de `container`/`mounted`, os dois pelo
+BROKER (RN-503). O código extraído vira
+`ExecuteContainerStartViaRunnerUseCase`, mesmo arquivo-irmão. A dança de
+ciclo de vida (`provisioning -> running`) que os dois caminhos compartilhavam
+por cópia vira `SubirCicloDeVidaDoContainerUseCase`
+(`apps/api/.../containers/`) — extraída para não duplicar o racional da
+máquina de estados nos dois arquivos.
+
+**O Infra Lead consulta LOCALMENTE, sem HTTP, antes de propor.** A tool nova
+(`Engine.Infra.Tools.ProposeContainerStartViaRunner`) é interceptada por
+`Engine.Infra.InfraLeadServer.dispatch_calls/2`, que lê `Project.get/1`
+(execution_mode) e `Engine.Runners.Registry.connected?/1` (runner conectado)
+— as DUAS leituras já são locais, no mesmo processo BEAM — ANTES de chamar
+`propose_action`. Recusa com motivo NOMEADO (nunca propõe às cegas) quando o
+projeto está em `container` (usa `propose_container_start`), em `mounted`
+(idem, desde a RN-503) ou em `runner` sem runner conectado agora. Esta
+lacuna — "propor sem saber se dá certo" — é a MESMA que `propose_container_start`
+tem desde a RN-494, declarada e aceita para aquela tool (tocar o prompt/
+instrução do Infra Lead ficaria fora do escopo de API/domínio); a tool NOVA
+nasce sem ela, porque nasce sabendo negar.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts` (`container_start_via_runner`);
+  `apps/api/src/application/use-cases/actions/
+  execute-container-start-via-runner.use-case.ts` (novo);
+  `apps/api/src/application/use-cases/containers/
+  subir-ciclo-de-vida-do-container.use-case.ts` (novo);
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts`;
+  `apps/api/src/application/use-cases/actions/approve-action.use-case.ts`;
+  `apps/web/src/lib/aprovacoes.ts`;
+  `apps/engine/lib/engine/infra/tools/propose_container_start_via_runner.ex`
+  (novo); `apps/engine/lib/engine/infra/infra_lead_server.ex`
+- **Teste:**
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/actions/
+  execute-container-start-via-runner.use-case.spec.ts` (novo),
+  `apps/web/src/lib/aprovacoes.test.ts`,
+  `apps/engine/test/engine/infra/tools/
+  propose_container_start_via_runner_test.exs` (novo),
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs`
+- **ADR:** [0145](adr/0145-docker-pre-requisito-do-runner.md)
+- **Origem:** decisão do dono do produto — Docker vira pré-requisito real do
+  modo `runner`, sem fallback pro host
+
 ---
 
 ## Quando dá errado
@@ -7471,7 +8264,16 @@ preciso rodar manual.
 | Modelo do binding some do provider | a cascata cai para o nível de baixo e AVISA qual escopo pulou — nunca troca o modelo em silêncio (RN-041) |
 | Preço do modelo muda | vale daqui em diante; o custo gravado e o preço que o produziu ficam intocados (RN-042) |
 | Criar o handoff falha (Criativo→PO, Arquiteto→Infra/Dev Lead) | `agent.error` durável, o processo do agente CONTINUA vivo; o que já foi gravado antes (product_brief, regras) não se perde (RN-116) |
-| Caminho de projeto **Local** não montado no container | a criação é **recusada** (400) com a linha de compose a acrescentar — o projeto não nasce para travar depois (RN-170) |
+| Caminho de projeto **Pasta montada** fora de `BRABO_PROJECTS_BASE` | a criação é **recusada** (400) nomeando a base e sugerindo `<base>/<nome>` — o projeto não nasce para travar depois (RN-170/RN-501) |
+| Pasta de projeto **Pasta montada** inalcançável quando a Infra sobe o container | `container_start` termina `failed` NOMEADO (variável, caminho, dono da pasta, próximo passo) e o ciclo de vida **não** chega a `provisioning` (RN-501) |
+| `BRABO_PROJECTS_BASE` ausente | a api responde `projectsBase: null` e a criação de projeto **não oferece** o modo Pasta montada — nunca oferecer um modo que a instalação não honra (RN-500) |
+| Navegador de pastas recebe um `path` fora da base (inclusive a armadilha de prefixo `<base>2`) | **400** que nomeia a base — malformado, e não 403: nenhum papel navega fora dela (RN-504) |
+| Navegador de pastas recebe um `path` dentro da base que a api não consegue abrir | **404** dizendo QUAL dos dois é (não existe / existe e não dá para ler) — nunca 500 com mensagem de `fs` (RN-504) |
+| Pasta navegada só tem arquivos, symlinks, ou mais de 500 subpastas | a listagem volta com `arquivos`/`simbolicos`/`truncado` e a tela DIZ o que ficou de fora — pasta cheia de código nunca se apresenta como vazia (RN-504) |
+| `BRABO_PROJECTS_BASE` sobreposta ao checkout do Brabo (nos dois sentidos) | `pnpm dev` **recusa subir**, nomeando os dois caminhos. Nenhuma validação da api pega isso: ela compara contra `process.cwd()`, que dentro do container dela é `/workspace` (RN-500) |
+| `BRABO_PROJECTS_HOST_BASE` ausente no broker e `container_start` de projeto `mounted` | recusa **nomeando a variável** (503, origem `infra`), sem tocar container nenhum — nunca cai na outra raiz, que apontaria para a pasta de outro projeto (RN-503) |
+| Projeto `mounted` LEGADO, com a pasta fora da base | a spec devolve `localizacao.tipo: 'indisponivel'` com o motivo nomeando a base e o caminho; o broker recusa com 409 e o conserto é **mover a pasta**, não trocar de modo (RN-503) |
+| Broker fora do ar (ele sobe sob `profiles` e NÃO sobe por padrão) e `container_start` de projeto `mounted` | a ação termina `failed` com o motivo do `BrokerIndisponivelError`, nunca exceção — e nada transiciona no ciclo de vida (RN-503) |
 | Localização de projeto incoerente no banco (par modo/caminho gravado por fora da criação) | a ativação da execução recusa com **400** e o motivo em pt-BR, nunca 500 sem corpo (RN-478) |
 | Login social: e-mail do provider bate com conta existente mas NÃO verificado | recusado com 403, nenhum vínculo gravado — e-mail não verificado não é prova de identidade (RN-274) |
 | Login social: `state` inválido/expirado, ou de outro PROPÓSITO (fluxo de conexão de git) | recusado, nenhuma chamada ao provider nem escrita no banco (RN-273) |
@@ -7494,6 +8296,12 @@ preciso rodar manual.
 | `route_modules_to_infra` chamado sem `module_map` vigente, com lista vazia, módulo repetido, módulo fora do mapa, ou imagem inválida (`latest`/sem tag/`rationale` curto) | 400 nomeando o que falta ou o que está errado — pelo agente, tool-result de erro que o modelo corrige, nunca crash (RN-487) |
 | `container_start` elege uma imagem fora das candidatas do roteamento vigente do Arquiteto | ação vira `failed` nomeando a imagem recusada e listando as candidatas válidas — nem a imagem é decidida nem o broker é chamado (RN-491) |
 | Broker recusa ou está indisponível ao subir o container (`BrokerRecusouError`/`BrokerIndisponivelError`) | ação vira `failed` com a mensagem do broker — nunca propaga, nunca fica pendente (RN-491) |
+| `emit_artifact` com `type: decision_record` faltando `context`/`options`/`choice`/`consequences` | tool-result de erro nomeando a(s) chave(s) que faltam — o modelo corrige na próxima volta do laço, nunca crash (RN-505) |
+| Terminal/worktree num projeto `runner` verificado e conectado, mas SEM container `running` | recusa NOMEADA (`RunnerReadiness`), nunca cai no host puro — Docker é pré-requisito real, sem fallback (RN-507) |
+| `RunnerGit` tenta materializar o worktree sem as três pré-condições da RN-507 | levanta com mensagem nomeada ANTES de qualquer `exec` — nunca tenta às cegas e deixa o timeout do canal explicar (RN-507) |
+| Job periódico de limpeza de worktree encontra um projeto `runner` sem runner conectado ou sem container `running` | PULA o projeto nesta rodada, em silêncio — nunca um erro, nunca deixa de podar os demais projetos (RN-507) |
+| `container_start_via_runner` proposto para projeto `container`/`mounted`, ou `runner` sem runner conectado | o Infra Lead RECUSA localmente, nomeando o motivo, sem chamar `propose_action` nenhuma vez (RN-508) |
+| `container_start_via_runner` aprovado sem imagem decidida (RN-105) | ação vira `failed` nomeando a ausência de decisão — nunca chama o engine (RN-508) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

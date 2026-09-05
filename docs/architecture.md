@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 139 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 144 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -80,9 +80,15 @@ command. The outbox exists because writing state and publishing the event
 need to be the same transaction; the HTTP exists because some operations
 need an immediate response.
 
-The outbox drains two `aggregate_type`s: `session` (since Phase 5) and
+The outbox drains three `aggregate_type`s: `session` (since Phase 5),
 `task` (Phase 12b — `task.gate_resolved`/`task.became_claimable`, the dev
-agent's rescheduling after a gate resolves or a new task becomes claimable).
+agent's rescheduling after a gate resolves or a new task becomes claimable)
+and `container` ([ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
+/[RN-502](business-rules.md#rn-502) — `container.running`, appended in the
+same transaction that records the project's container reaching `running`, so
+the dev agents its absence had parked in `:idle` wake up on their own; its
+own aggregate rather than a borrowed `task`, because the event is about no
+task at all).
 The reason it's an outbox, and not a synchronous HTTP call like the others:
 an engine restart between the gate's verdict and the agent's reaction must
 not lose the signal — the row survives the process that would read it, HTTP
@@ -229,6 +235,37 @@ drawn from it.
 Two UI checks are automatic: contrast (`lib/contraste.ts`, a test over
 `design/tokens.css`) and layout (`scripts/dev/validacao-visual.js`, run in
 the browser). Explained in `design/README.md`.
+
+**The folder picker is the web's one TWO-TRANSPORT read**, and the interface
+that makes it one lives in `lib/fs-browser.ts`
+([RN-504](business-rules.md#rn-504)). `FsBrowser` — `listarDiretorio` /
+`diretorioInicial` / `fechar` — has two implementations, and they don't talk
+to the same machine: `criarFsBrowserViaApi(workspaceId)` calls
+`GET /workspaces/:workspaceId/project-folders` on the api, scoped hard to
+`BRABO_PROJECTS_BASE` ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)),
+while `connectFsBrowserChannel(projectId)` (`lib/fs-browser-channel.ts`) speaks
+the Phoenix `terminal:<projectId>` channel and reads the USER's disk through
+the runner.
+
+The interface was extracted out of the channel module precisely because it
+stopped having one implementation. `FolderBrowserModal` picks between them with
+a discriminated union — `origem: { tipo: 'api'; workspaceId } | { tipo:
+'runner'; projectId }`, not two optional props, so "neither" and "both" are not
+representable states the component has to handle at runtime — and its body
+never learns which one it got. Only three things branch on `origem`: which
+factory runs, which shortcuts exist (`/` is not offered over the api transport;
+it is outside the base by construction, and the button could only ever end in a
+400) and whether `RunnerOnboardingPanel` makes sense.
+
+`ListagemResultado` gained three OPTIONAL fields — `arquivos`, `simbolicos`,
+`truncado` — and they are optional because only the api transport counts what it
+excluded. The runner protocol (`FsEntrada` in `apps/runner/src/channel.ts`)
+returns folders and files mixed and counts nothing; filling in zeros there would
+assert "nothing was left out", which is different from not knowing.
+
+After this change the runner transport has ZERO callers in the web. It stays by
+a declared product decision — the runner leaves the creation wizard, the binary
+keeps being refined — and nothing here touches the channel protocol either way.
 
 **The Code tab (PHASE 26) is the same read pattern**, applied to code
 instead of events: `getContainerState`/`getCodeTree`/`getCodeFile`/
@@ -397,6 +434,20 @@ The container's lifecycle (provision, recycle, clean up) doesn't exist yet
 — a declared cut from PHASE 25, recorded in CLAUDE.md — so this invariant
 coexists, for now, with the path-scope policy from
 [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md).
+
+And since [ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
+/[RN-502](business-rules.md#rn-502), a decided image is no longer the only
+precondition: **a dev agent does not claim a task at all until the project's
+container is REGISTERED `running`**. The guard lives in
+`Engine.Dev.AgentIo.try_claim/2` — the single claim point — and not only in
+the api's `activate-execution`, because rehydration reaches `try_claim/2`
+without going through any route (`DevAgentServer.init/1` ->
+`finish_restart_recovery/1`). Without a container the agent falls to `:idle`
+(the only state a wake still rescues) and says so with
+`dev.blocked_by_container`. The other half of the same rule is that
+`Engine.Actions.TerminalExecutor` stopped falling back to `System.cmd` inside
+the engine process when there is no container: it refuses, named, the way the
+`runner` mode already did.
 
 **9. An agent that WRITES must be able to READ and must be able to ASK.**
 Both halves are the same lesson, and came from an agent that only had

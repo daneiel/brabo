@@ -35,7 +35,13 @@ defmodule EngineWeb.ExecutionCommandControllerTest do
       Application.delete_env(:engine, :test_pid)
     end)
 
-    %{project_id: Ecto.UUID.generate(), session_id: Ecto.UUID.generate()}
+    project_id = Ecto.UUID.generate()
+
+    # RN-502/ADR 0143 — a rota sobe/acorda dev agents, e todo claim exige
+    # container REGISTRADO `running`.
+    Engine.DataCase.container_running!(project_id)
+
+    %{project_id: project_id, session_id: Ecto.UUID.generate()}
   end
 
   test "start sobe um dev agent REAL por módulo por padrão", %{
