@@ -7944,6 +7944,77 @@ da interface, o binário segue sendo refinado); o protocolo em
   esta rota escopa)
 - **Origem:** plano do dono do produto, PR 4
 
+### RN-505 — "Sempre permitir" de um Dev Agent de módulo escopa a `agent_autonomy`, POR AGENTE — não mais o `permissions.json` de projeto inteiro {#rn-505}
+
+`ApproveAlwaysActionUseCase` sempre gravou em `permissions.json/allow` —
+escopo de **PROJETO INTEIRO**, compartilhado por qualquer ator. Isso
+significava que "sempre permitir" um comando pro `dev-checkout` liberava o
+MESMO comando pro `dev-auth`, pro `dev-lead`, e pra qualquer agente futuro
+do projeto: a intenção de quem clicou ("confio NESTE agente com ISTO") não
+tinha como ser expressa — só existia "confio em qualquer um com isto".
+
+**A gravação passa a se ramificar pelo ATOR**, dentro do MESMO use case (não
+um novo — duplicar as duas guardas de teto absoluto de terminal fora de
+escopo/`git_push`/`sudo` e de `container_remove` em dois lugares seria o
+mesmo defeito que RN-418/RN-495 já existem para evitar):
+
+- Ator `agent` cujo id é `dev-<modulo>` (ADR 0053/FASE 14d — a área
+  DINÂMICA de `dev`, um agente por módulo do `module_map`): grava em
+  `agent_autonomy(projectId, agentId, actionType) = auto_approve`, pelo
+  MESMO `AgentAutonomyRepository.upsert` que
+  `activate-execution.use-case.ts` já chama pra semear as três ações git
+  por módulo. `permissions.json` fica intocado.
+- Qualquer outro ator — `user`, `system`, agente `agent` que não é
+  dev-de-módulo, e o `dev-lead` — continua indo pro `permissions.json/allow`
+  de sempre, escopo de projeto inteiro, exatamente como antes.
+
+**`dev-lead` é a exceção que precisa de nome próprio.** `ehDevDeModulo`
+(`agent-areas.ts`) é `agentId.startsWith('dev-')` PURO, de propósito — e
+isso classifica `dev-lead` como `true`. Quem exclui o lead da própria área
+é `ehMembroDe`, não `ehDevDeModulo` sozinho ("o lead não é membro da própria
+área" vale pra qualquer área — duplicar a exclusão dentro do predicado
+deixava as duas cópias inalcançáveis por teste, achado registrado no
+comentário do próprio `agent-areas.ts`). Por isso o branch usa
+`ehDevDeModulo(actor.id) && actor.id !== DEV_LEAD`: sem o segundo termo,
+"sempre permitir" clicado numa ação do `dev-lead` gravaria autonomia de
+módulo sob o agentId do LEAD por acidente — um agente que não é membro de
+`dev`, que não tem módulo, e que a área nunca olha via `agent_area_members`.
+
+**Os dois tetos absolutos de `decide.ts` continuam rodando ANTES do branch,
+sem mudar de ordem.** Terminal com efeito externo git (`git push`, `gh pr
+create`) ou privilegiado (`sudo`/`doas`) — RN-106/RN-418 — e
+`container_remove` — RN-495 — seguem recusando o clique INTEIRO (400, ação
+nem aprovada), pra QUALQUER ator, antes mesmo do projeto ser buscado.
+Escopar a gravação por agente não é uma segunda porta pro mesmo teto: os
+dois `if` de recusa ficam onde estavam, e o branch novo entra depois.
+
+**O evento `permission.granted` carrega um payload OU outro, nunca um
+fingindo ser o outro.** `{ pattern }` continua sendo o formato do caminho de
+`permissions.json` (o padrão de texto gravado no arquivo); o caminho novo
+emite `{ agentId, actionType }` — não há "padrão" nenhum pra mostrar quando
+a gravação é uma linha de tabela chaveada por agente.
+
+**Sem migração de dados.** Entradas antigas de "sempre permitir" gravadas
+para um dev-de-módulo em `permissions.json`, de antes desta regra existir,
+continuam lá exatamente como estavam — só não recebem MAIS entradas desse
+tipo dali pra frente. Decisão consciente do dono do produto, não lacuna
+esquecida.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts`
+  (o branch `ehAgenteDeModulo`), `apps/api/src/domain/agents/agent-areas.ts`
+  (`ehDevDeModulo`, `DEV_LEAD` — consumidos, não alterados),
+  `apps/api/src/application/ports/agent-autonomy-repository.port.ts`
+  (`upsert`, já existente, sem método novo)
+- **Teste:**
+  `apps/api/test/application/use-cases/actions/approve-always-action.use-case.spec.ts`
+  (descreve `escopo por Dev Agent de módulo (RN-505)`: caminho feliz
+  `dev-checkout` grava `agent_autonomy` e não vaza pra `dev-auth`; os DOIS
+  tetos absolutos recusando o clique inteiro pra um ator dev-de-módulo;
+  `dev-lead` e ator `user` — inclusive com id começando em `dev-` —
+  continuam no caminho antigo)
+- **Origem:** plano do dono do produto, Frente 2
+
 ---
 
 ## O artefato de decisão dos conversacionais (RN-505)

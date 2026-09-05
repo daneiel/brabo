@@ -135,6 +135,7 @@
     },
     "notes": {
       "alwaysAllow": "\"Always allow\" records the rule in .brabo/permissions.json",
+      "alwaysAllowScoped": "\"Always allow\" releases this action type only for {{agent}} — not for the project's other agents",
       "autoMode": "\"Auto mode\" releases EVERY future action from {{actor}} without asking — except merges into a protected branch, instruction patches and parallelism, which keep always asking for your decision. You can turn it off later from the agent's card."
     },
     "decided": {
