@@ -880,6 +880,20 @@ jobs:
           echo "duracao_s=${duracao}" >> "$GITHUB_OUTPUT"
           echo "::notice::[MEDIÇÃO] push das 4 imagens pro GHCR: ${duracao}s"
 
+      # [MEDIÇÃO] Achado de segurança a confirmar: qual a visibilidade default
+      # de um pacote NOVO publicado por GITHUB_TOKEN. As quatro imagens de
+      # release (ADR 0119) são públicas de propósito; estas são pacotes
+      # PRÓPRIOS (brabo-ci-*) e SÓ podem ficar públicas se isso for uma
+      # escolha, não um acidente de default.
+      - name: "[MEDIÇÃO] Visibilidade do pacote efêmero"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          vis="$(gh api "users/${OWNER}/packages/container/brabo-ci-api" --jq .visibility)"
+          echo "::notice::[MEDIÇÃO] visibilidade default de brabo-ci-api: ${vis}"
+
       # Critério de aceite explícito da sessão. Checado aqui além do smoke.sh
       # porque é barato e falha com mensagem direta.
       - name: Nenhuma imagem pode rodar como root
