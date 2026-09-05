@@ -275,8 +275,14 @@ defmodule Engine.Actions.TerminalExecutorTest do
       )
     end
 
-    # Modo `mounted` (ADR 0072/0104): sempre `:caminho_de_sempre` — nunca
-    # checa runner conectado, porque não HÁ roteamento pra ele nesse modo.
+    # Modo `mounted` (ADR 0072/0104): segue o MESMO ramo de `container` desde a
+    # RN-502/ADR 0143 — com container REGISTRADO `running`,
+    # `:executar_no_container`; sem ele, `:recusar_container_ausente`. Nunca
+    # `:caminho_de_sempre`, que era o comportamento até esta entrega.
+    #
+    # O que CONTINUA valendo: `mounted` nunca checa runner conectado, porque
+    # não HÁ roteamento pro runner nesse modo — a checagem de `Registry` é
+    # exclusiva do modo `runner`.
     defp insert_mounted_project!(project_id, workspace_path) do
       Repo.query!(
         "INSERT INTO public.projects (id, name, slug, execution_mode, workspace_path) " <>
@@ -375,18 +381,16 @@ defmodule Engine.Actions.TerminalExecutorTest do
       assert result.stderr =~ "nenhum runner está conectado"
     end
 
-    test "SEM runner nenhum envolvido, projeto mounted cai no caminho de sempre (System.cmd)" do
+    # RN-502/ADR 0143 — este teste afirmava o contrário até aqui ("cai no
+    # caminho de sempre"), e era essa a degradação calada: projeto `mounted`
+    # sem container executava `System.cmd` DENTRO do processo do engine, e
+    # nada na saída dizia isso. `mounted` entrou no mesmo ramo de `container`.
+    test "SEM runner nenhum envolvido, projeto mounted SEM container running RECUSA" do
       force_rtk_unavailable!()
       bare = create_bare_repo_with_commit!()
       project_id = unique_project_id()
       insert_project_repository!(project_id, bare)
 
-      # workspace_path PRECISA ser uma pasta real e gravável — em modo
-      # `mounted`, `Engine.Actions.Workspace.workspace_dir/1` resolve
-      # DIRETO pra esse caminho (RN-421), então o `git init`/checkout do
-      # caminho de sempre roda ali de verdade. Diferente de `runner`,
-      # `mounted` NUNCA checa runner conectado — não há decisão de
-      # roteamento pra esse modo.
       workspace_path =
         Path.join(System.tmp_dir!(), "brabo-mounted-ws-#{System.unique_integer([:positive])}")
 
@@ -395,8 +399,9 @@ defmodule Engine.Actions.TerminalExecutorTest do
 
       result = TerminalExecutor.run(project_id, "echo oi")
 
-      assert result.exit_code == 0
-      assert result.stdout =~ "oi"
+      assert result.exit_code == nil
+      assert result.stdout == ""
+      assert result.stderr =~ "não tem container REGISTRADO como `running`"
     end
 
     test "projeto em modo container (default) nunca roteia pro runner, mesmo se um estivesse conectado" do
@@ -557,15 +562,16 @@ defmodule Engine.Actions.TerminalExecutorTest do
       assert result.stderr =~ "não foi possível executar no container"
     end
 
-    test "container SEM linha running (nunca subiu): cai no caminho de sempre, nunca chama o broker" do
+    # RN-502/ADR 0143 — os dois testes abaixo afirmavam "cai no caminho de
+    # sempre" e passaram a afirmar a recusa. É a mesma mudança vista de dois
+    # ângulos: nunca ter subido e ter subido e caído.
+    test "container SEM linha running (nunca subiu): RECUSA, e nunca chama o broker" do
       force_rtk_unavailable!()
       bare = create_bare_repo_with_commit!()
       project_id = unique_project_id()
       insert_project_repository!(project_id, bare)
       insert_container_project!(project_id, unique_tmp_name("ws"))
       # SEM insert_container_lifecycle! — nenhuma linha em project_containers.
-
-      test_pid = self()
 
       Process.put(
         :fake_container_exec,
@@ -580,14 +586,14 @@ defmodule Engine.Actions.TerminalExecutorTest do
 
       result = TerminalExecutor.run(project_id, "echo oi")
 
-      assert result.exit_code == 0
-      assert result.stdout =~ "oi"
+      assert result.exit_code == nil
+      assert result.stdout == ""
+      assert result.stderr =~ "não tem container REGISTRADO como `running`"
+      # Nem broker, nem `System.cmd`: sem container, não roda em lugar nenhum.
       refute_receive {:container_exec, _, _, _, _}, 200
-      # A afirmação que importa: rodou pelo System.cmd de sempre, não pelo broker.
-      _ = test_pid
     end
 
-    test "container com linha 'stopped' (já subiu, mas não está de pé agora): cai no caminho de sempre" do
+    test "container com linha 'stopped' (já subiu, mas não está de pé agora): RECUSA" do
       force_rtk_unavailable!()
       bare = create_bare_repo_with_commit!()
       project_id = unique_project_id()
@@ -597,9 +603,52 @@ defmodule Engine.Actions.TerminalExecutorTest do
 
       result = TerminalExecutor.run(project_id, "echo oi")
 
+      assert result.exit_code == nil
+      assert result.stdout == ""
+      assert result.stderr =~ "não tem container REGISTRADO como `running`"
+      refute_receive {:container_exec, _, _, _, _}, 200
+    end
+
+    # A outra metade da cláusula estendida: `mounted` COM container `running`
+    # atravessa pro broker igual a `container` — desde que `mounted` passou a
+    # subir container de verdade, tratá-lo diferente aqui seria arbitrário.
+    test "mounted COM linha running atravessa pro broker, igual a container" do
+      project_id = unique_project_id()
+
+      workspace_path =
+        Path.join(System.tmp_dir!(), "brabo-mounted-ws-#{System.unique_integer([:positive])}")
+
+      on_exit(fn -> File.rm_rf!(workspace_path) end)
+      insert_mounted_project!(project_id, workspace_path)
+      insert_container_lifecycle!(project_id, "'running'")
+
+      Process.put(
+        :fake_container_exec,
+        {:ok,
+         %{"sucesso" => true, "exitCode" => 0, "output" => "do container\n", "timedOut" => false}}
+      )
+
+      result = TerminalExecutor.run(project_id, "npm test")
+
+      assert result.exit_code == 0
+      assert result.stdout =~ "do container"
+      assert_receive {:container_exec, ^project_id, "npm test", _cwd, _timeout}
+    end
+
+    # O catch-all encolheu para ISTO, e só isto: nenhum modo de execução cai
+    # mais no `System.cmd` local.
+    test "projeto inexistente é o único caso que ainda cai no caminho de sempre" do
+      force_rtk_unavailable!()
+      bare = create_bare_repo_with_commit!()
+      project_id = unique_project_id()
+      insert_project_repository!(project_id, bare)
+      # SEM insert_container_project!/insert_mounted_project! — não há linha em
+      # `projects`, então `Project.get/1` devolve `nil`.
+
+      result = TerminalExecutor.run(project_id, "echo oi")
+
       assert result.exit_code == 0
       assert result.stdout =~ "oi"
-      refute_receive {:container_exec, _, _, _, _}, 200
     end
   end
 end

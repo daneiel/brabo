@@ -47,6 +47,10 @@ defmodule Engine.Dev.DevAgentServer do
   réplica): `{:gate_resolved, %{task_id:, next_action:}}` só age se
   `task_id` bater E o agente estiver `:awaiting_gate` — entrega
   duplicada/tardia é no-op; `{:wake, :became_claimable}` só age se `:idle`.
+  Esse segundo wake tem DOIS produtores desde a RN-502 (ADR 0143) —
+  `task.became_claimable` e `container.running` — e nenhuma cláusula nova
+  aqui: a mensagem já significa "pode haver trabalho agora", e é `try_claim/2`
+  que decide se há (fila) e se pode (container).
 
   ## Reidratação (Fase 12b-6)
 
