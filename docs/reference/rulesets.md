@@ -116,12 +116,16 @@ workflow's):
 
 The duration column is **measured**, not estimated — three real runs, cold
 and warm cache. It exists so that "optimizing CI" starts from the number,
-not the guess.
+not the guess. `*` marks a row measured from a single real run instead of
+three — the job is new (or just renamed) and hasn't been re-sampled cold vs.
+warm yet; the same number fills both columns until it is.
 
 | check | workflow | cold | warm |
 |---|---|---|---|
 | `Build, scan e smoke das imagens de produção` | `ci.yml` | **295s** | 109s |
-| `Testes TS (api + web)` | `ci.yml` | 159s\* | **159s**\* |
+| `Testes TS (api)` | `ci.yml` | 177s\* | **177s**\* |
+| `Testes TS (web)` | `ci.yml` | 169s\* | **169s**\* |
+| `Testes TS (pacotes)` | `ci.yml` | 56s\* | **56s**\* |
 | `Testes do engine (ExUnit)` | `ci.yml` | 124s | 39s |
 | `Auditoria de dependências` | `ci.yml` | 99s | 85s |
 | `Lint` | `ci.yml` | 66s | 69s |
@@ -145,11 +149,11 @@ shorten the PR has two targets, and only two:
   into a job matrix would be WORSE: 1.7 GB of images per artifact costs
   more than the build, and the smoke test needs all four on the same
   daemon;
-- **warm cache: `Testes TS`**, where 91s of the 159s were
+- **the old `Testes TS (api + web)` job**, where 91s of the 159s were
   `pnpm --filter api test`, serialized by `fileParallelism: false` in
   `apps/api/vitest.config.ts` because the ~80 specs that touch the database
   shared ONE `brabo_test` and ran TRUNCATE between tests — arrivals in
-  parallel would collide. That's fixed now
+  parallel would collide. That's fixed
   (`perf/banco-por-worker-nos-testes-da-api`, CHANGELOG): each Vitest worker
   gets its OWN database instead — `test/support/global-setup.ts` migrates a
   TEMPLATE once and clones one database per worker via
@@ -163,23 +167,57 @@ shorten the PR has two targets, and only two:
   from 792.58s to 471.23s on a clean run (~40%, three repeats with no
   flakiness). Re-sampled on the actual GitHub-hosted runner (PR #491,
   `ci.yml`): the `pnpm --filter api test` step itself dropped to **96s** —
-  right at the `91s` warm-cache floor this table already cited as the
-  theoretical best case, not a lucky outlier. The `159s`/`91s` row above is
-  now the PRE-change baseline, kept for the historical comparison.
+  right at the `91s` warm-cache floor this table used to cite as the
+  theoretical best case, not a lucky outlier.
 
-> **Splitting a job to parallelize it has two costs the number doesn't
-> show.** The first: the job's name **is** the required check's name, so
-> splitting `Testes TS (api + web)` into three would erase a required
-> check — which would never report again and would lock every PR forever
-> (the same trap as the note further below). Preserving the name would
-> require a fan-in job with `needs:`, or touching Settings.
+  That fix changed the shape of the job it ran inside, and that's what made
+  the SECOND cut possible. `apps/web`'s own test step had grown to 125s in
+  the same run that measured the job's `343s` total (PR #494, job
+  `101317149006`) — no longer the small tail the callout below used to
+  describe, but a peer of the api's. `perf/paraleliza-testes-ts` (CHANGELOG)
+  split the job into three parallel ones — `test-api` (keeps the `postgres`
+  service and the `DATABASE_URL`/`TEST_DATABASE_URL` env, since it's the
+  only one that touches the database), `test-web`, and `test-packages`
+  (scripts de CI, porta de Docker, broker, runner — the six components that
+  never needed Postgres) — each with its own `checkout` + `setup-node` +
+  `pnpm install`. Measured on the actual GitHub-hosted runner (PR #495,
+  `ci.yml`): **177s** (`test-api`), **169s** (`test-web`), **56s**
+  (`test-packages`), against **343s** for the job they replaced — the check
+  that used to gate the PR is now the SLOWEST of the three, not their sum, a
+  real **~48%** cut.
+
+  `test-web` and `test-packages` were stable across every run of this PR
+  (164–169s and 55–56s). `test-api` was not: a second push measured it at
+  **388s** — worse than the old job's 343s total — with every step still
+  green, then a bare re-run of the SAME commit measured **172s**. Three real
+  samples of `test-api` on this PR: 177s, 388s, 172s. Two out of three land
+  where `test-web` and `test-packages` do (comfortably inside the ~4min
+  target); the 388s run is consistent with shared-runner contention on
+  GitHub's side rather than a regression from the split — nothing in the
+  job changed between that run and the retry that measured 172s. Recorded
+  as observed, not smoothed away: whoever chases the next slow `test-api`
+  run should know this variance already existed the day the job was split,
+  and check for contention before assuming a new regression.
+
+> **The "two costs" warning that used to live here doesn't apply anymore —
+> both premises changed.** It used to say splitting `Testes TS (api + web)`
+> would (1) erase a required check by renaming it, locking every PR forever
+> unless a fan-in job or a Settings change preserved the name, and (2) not
+> pay off, because the api's 91s would carry the setup regardless of how
+> many jobs it's split into, for a ~7s net gain.
 >
-> The second: **measured, the gain wasn't there.** Each new job repays
-> `checkout` + `setup-node` + `pnpm install` (~25s) and, in the api's case,
-> the Postgres container (13s). Splitting the 159s gives ~150s, because the
-> api test's 91s stay whole and carry the setup regardless. **~7s** of gain
-> for the cost of a required check and one more job — it doesn't pay off.
-> What pays off is attacking the 91s.
+> Premise 2 stopped being true once the web suite grew to cost as much as
+> the api's — splitting three comparably-sized components, not one big one
+> plus small tails, is what turns "≈150s vs 159s" into "177s vs 343s".
+> Premise 1 stopped applying for an orthogonal reason: **no ruleset is
+> applied to this repository yet** — `gh api
+> repos/daneiel/brabo/branches/dev/protection` still returns `404`, same as
+> the "Current state" note at the top of this page — so there was no
+> required check to erase. The required-checks table above already reflects
+> the rename. **If a ruleset is ever applied**, list `Testes TS (api)`,
+> `Testes TS (web)` and `Testes TS (pacotes)` — never the retired `Testes TS
+> (api + web)` name, which would silently match nothing and lock every
+> future PR, exactly as the general warning further below describes.
 
 > **The check's name is smaller than what it guards.** `Drift, gerados e
 > build` is three things in the title and **five** gates in the job:
