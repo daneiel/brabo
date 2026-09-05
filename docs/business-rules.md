@@ -7946,6 +7946,160 @@ da interface, o binário segue sendo refinado); o protocolo em
 
 ---
 
+### RN-505 — Docker vira pré-requisito real do modo `runner`: os TRÊS modos de execução exigem o MESMO predicado {#rn-505}
+
+Até aqui, `Engine.Actions.TerminalExecutor.decisao_de_execucao/1` checava só
+DUAS pré-condições para rotear terminal a um projeto `execution_mode: runner`
+— workspace CONFIRMADO e runner CONECTADO agora — e roteava incondicionalmente
+assim que as duas batiam, sem checar se havia container `running` REGISTRADO
+(`Engine.Containers.ProjectContainerLifecycle.running?/1`), o mesmo predicado
+que `container`/`mounted` já exigiam desde a RN-502 (ADR 0143). O runner do
+lado de lá decidia sozinho se o comando rodava dentro do container que ele
+subiu (ADR 0137) ou caía no HOST puro — e sem Docker de pé na máquina do
+usuário, caía sempre no host, silenciosamente: o isolamento que o ADR 0134
+buscou criar para `container` nunca valeu para `runner`.
+
+**A correção unifica os três modos sob a MESMA pergunta.** `runner` ganha uma
+TERCEIRA pré-condição, na mesma ordem que as outras duas: verificado →
+conectado → container `running`. As três recusas nomeadas (workspace não
+verificado, runner desconectado, sem container) vivem hoje em
+`Engine.Runners.RunnerReadiness` — extraído porque um SEGUNDO consumidor
+nasceu no mesmo PR (`Engine.Actions.Workspace.RunnerGit`, abaixo): "não são
+duas derivações, é esta função com dois consumidores", o mesmo raciocínio do
+moduledoc de `ProjectContainerLifecycle`.
+
+**A materialização do worktree do dev agent muda de mecanismo, não de
+resultado.** `Engine.Actions.Workspace.ensure!/4` tentava `File.mkdir_p!`/
+`System.cmd("git", ...)` LOCAL contra o caminho do HOST, mesmo em modo
+`runner` — a lacuna que a RN-478 registrou e deixou ABERTA de propósito ("o
+working tree do dev agent não tem onde nascer", já que o processo do engine
+não tem bind-mount nenhum para uma pasta que mora na máquina do usuário). A
+correção não é "melhorar a mensagem de erro" de novo: `ensure!/4` passa a
+bifurcar por `execution_mode` — LOCAL para `container`/`mounted` (inalterado:
+`mounted` já enxerga sua pasta via `BRABO_PROJECTS_BASE`, bind-mount por
+identidade no engine desde o ADR 0141), via `Engine.Actions.Workspace.
+RunnerGit` para `runner`. `RunnerGit` faz `git init`/`remote add`/`fetch`/
+`checkout` (e os equivalentes de `File.dir?`/`ls`/`rm_rf` que
+`Engine.Dev.WorktreeManager` precisa) como comandos de shell NORMAIS,
+entregues pelo MESMO canal Phoenix que já executa terminal aprovado
+(`Engine.Runners.RunnerRouter.exec/5`) — nunca um mecanismo novo, e sempre
+depois de `RunnerReadiness.verificar/1` confirmar as três pré-condições
+(levanta com mensagem nomeada antes de tentar qualquer I/O, nunca um `exec`
+às cegas). `Engine.Dev.WorktreeManager` (`create/3`, `remove/2`, `list/1`,
+`cleanup_orphans/2`) bifurca pelo mesmo critério.
+
+**O job periódico de limpeza PULA em silêncio, nunca falha.**
+`Engine.Dev.WorktreeCleanup.run/0` varria `File.dir?(work_dir)` para decidir
+se podava — sempre `false` para `runner` (o caminho é do HOST, o engine não
+o enxerga), então `runner` nunca era podado de verdade nem testado por essa
+via. O gate vira por MODO: `File.dir?` continua para `container`/`mounted`;
+para `runner`, `RunnerReadiness.pronto?/1` decide — sem runner conectado ou
+sem container `running` AGORA, o projeto é pulado NESTA rodada (`"não dá pra
+saber agora"`, nunca um erro, nunca um worktree tratado como órfão por
+engano), e `Enum.each/2` continua para os projetos seguintes sem exceção
+nenhuma atravessar.
+
+**O protocolo `exec`/`exec_result` ganha um campo NOVO: `env` (ADR 0056).** O
+`git fetch` autenticado de `RunnerGit` precisa da credencial do provider —
+que só pode viajar no AMBIENTE do processo filho (nunca argv, nunca
+`.git/config`, mesma disciplina de `Engine.Actions.GitAuth` local). Como o
+processo filho agora nasce na máquina do usuário, o campo `env` (opcional,
+`Record<string,string>`) entra no payload que `RunnerRouter.exec/5`
+despacha — presente só quando há credencial de verdade (provider `local`
+nunca o carrega). Do lado do runner: `apps/runner/src/exec.ts` MESCLA (nunca
+substitui) `opts.env` em cima de `process.env` antes do `spawn` — `env`
+definido sem merge descartaria PATH e quebraria a resolução do próprio
+binário `git`/`sh`. `apps/runner/src/index.ts` repassa `msg.env` só para o
+caminho HOST (`executarComando`) — o container (`docker exec`, via
+`packages/docker-port`) não ganhou suporte a `env` (fora de escopo desta
+entrega: a operação `exec` da porta continua sem esse campo, de propósito,
+ADR 0130). Nenhum log do runner imprime `env` em ponto nenhum — auditado por
+grep, `console.log`/`console.warn`/`console.error` seguem citando só
+`ref`/`command`/`cwd`/`exitCode`.
+
+- **Onde:** `apps/engine/lib/engine/actions/terminal_executor.ex`
+  (`decisao_de_execucao/1`); `apps/engine/lib/engine/runners/
+  runner_readiness.ex` (novo); `apps/engine/lib/engine/actions/workspace.ex`
+  (`ensure!/4`); `apps/engine/lib/engine/actions/workspace/runner_git.ex`
+  (novo); `apps/engine/lib/engine/dev/worktree_manager.ex`;
+  `apps/engine/lib/engine/dev/worktree_cleanup.ex`;
+  `apps/engine/lib/engine/projects/project.ex` (`all_workspace_dirs/0` ganha
+  `execution_mode`); `apps/engine/lib/engine/runners/runner_router.ex`
+  (`exec/5`); `apps/engine/lib/engine_web/channels/terminal_channel.ex`;
+  `apps/runner/src/channel.ts` (`ExecMessage.env`); `apps/runner/src/exec.ts`;
+  `apps/runner/src/index.ts`
+- **Teste:** `apps/engine/test/engine/actions/terminal_executor_test.exs`,
+  `apps/engine/test/engine/actions/workspace_runner_test.exs`,
+  `apps/engine/test/engine/dev/worktree_manager_test.exs`,
+  `apps/engine/test/engine/dev/worktree_cleanup_test.exs`,
+  `apps/runner/src/channel.spec.ts`
+- **ADR:** [0145](adr/0145-docker-pre-requisito-do-runner.md)
+- **Origem:** decisão do dono do produto — Docker vira pré-requisito real do
+  modo `runner`, sem fallback pro host
+
+### RN-506 — `container_start_via_runner`: segundo tipo de ação para subir o container, exclusivo de `runner`, e o Infra Lead recusa às cegas ANTES de propor {#rn-506}
+
+`container_start` (ADR 0130/0133) exige `imagem`/`network`/`resources`/
+`rationale` — a Infra ELEGE uma candidata do roteamento do Arquiteto. Até
+esta entrega, o mesmo tipo de ação também atendia `execution_mode: runner`
+(`ExecuteContainerStartUseCase.executeViaRunner`), mas o caminho do runner
+NUNCA lia nenhum desses quatro campos: a imagem que sobe é a que já estiver
+DECIDIDA (não há roteamento contra o qual eleger, porque o broker nunca
+alcança a pasta de um projeto `runner`). Pedir 4 campos que o dispatch sempre
+descartava é o defeito que motiva nascer uma AÇÃO separada em vez de uma
+`container_start` "inteligente" ramificando por modo.
+
+**`container_start_via_runner` só tem `rationale` (opcional).** Mesmo calibre
+de `container_start` (`maintainer`, `require_approval` por padrão, nunca
+semeado em auto-aprovação, configurável em `permissions.json` como as
+demais três ações de container — não entra no teto absoluto de
+`container_remove`). `ExecuteContainerStartUseCase` perde o ramo `runner`
+inteiro (`executeViaRunner`, `ApiToEngineClient`/`ObterSpecDeContainerUseCase`
+saem do construtor) — fica exclusivo de `container`/`mounted`, os dois pelo
+BROKER (RN-503). O código extraído vira
+`ExecuteContainerStartViaRunnerUseCase`, mesmo arquivo-irmão. A dança de
+ciclo de vida (`provisioning -> running`) que os dois caminhos compartilhavam
+por cópia vira `SubirCicloDeVidaDoContainerUseCase`
+(`apps/api/.../containers/`) — extraída para não duplicar o racional da
+máquina de estados nos dois arquivos.
+
+**O Infra Lead consulta LOCALMENTE, sem HTTP, antes de propor.** A tool nova
+(`Engine.Infra.Tools.ProposeContainerStartViaRunner`) é interceptada por
+`Engine.Infra.InfraLeadServer.dispatch_calls/2`, que lê `Project.get/1`
+(execution_mode) e `Engine.Runners.Registry.connected?/1` (runner conectado)
+— as DUAS leituras já são locais, no mesmo processo BEAM — ANTES de chamar
+`propose_action`. Recusa com motivo NOMEADO (nunca propõe às cegas) quando o
+projeto está em `container` (usa `propose_container_start`), em `mounted`
+(idem, desde a RN-503) ou em `runner` sem runner conectado agora. Esta
+lacuna — "propor sem saber se dá certo" — é a MESMA que `propose_container_start`
+tem desde a RN-494, declarada e aceita para aquela tool (tocar o prompt/
+instrução do Infra Lead ficaria fora do escopo de API/domínio); a tool NOVA
+nasce sem ela, porque nasce sabendo negar.
+
+- **Onde:** `apps/api/src/domain/actions/decide.ts` (`container_start_via_runner`);
+  `apps/api/src/application/use-cases/actions/
+  execute-container-start-via-runner.use-case.ts` (novo);
+  `apps/api/src/application/use-cases/containers/
+  subir-ciclo-de-vida-do-container.use-case.ts` (novo);
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts`;
+  `apps/api/src/application/use-cases/actions/approve-action.use-case.ts`;
+  `apps/web/src/lib/aprovacoes.ts`;
+  `apps/engine/lib/engine/infra/tools/propose_container_start_via_runner.ex`
+  (novo); `apps/engine/lib/engine/infra/infra_lead_server.ex`
+- **Teste:**
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/actions/
+  execute-container-start-via-runner.use-case.spec.ts` (novo),
+  `apps/web/src/lib/aprovacoes.test.ts`,
+  `apps/engine/test/engine/infra/tools/
+  propose_container_start_via_runner_test.exs` (novo),
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs`
+- **ADR:** [0145](adr/0145-docker-pre-requisito-do-runner.md)
+- **Origem:** decisão do dono do produto — Docker vira pré-requisito real do
+  modo `runner`, sem fallback pro host
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -7998,6 +8152,11 @@ da interface, o binário segue sendo refinado); o protocolo em
 | `route_modules_to_infra` chamado sem `module_map` vigente, com lista vazia, módulo repetido, módulo fora do mapa, ou imagem inválida (`latest`/sem tag/`rationale` curto) | 400 nomeando o que falta ou o que está errado — pelo agente, tool-result de erro que o modelo corrige, nunca crash (RN-487) |
 | `container_start` elege uma imagem fora das candidatas do roteamento vigente do Arquiteto | ação vira `failed` nomeando a imagem recusada e listando as candidatas válidas — nem a imagem é decidida nem o broker é chamado (RN-491) |
 | Broker recusa ou está indisponível ao subir o container (`BrokerRecusouError`/`BrokerIndisponivelError`) | ação vira `failed` com a mensagem do broker — nunca propaga, nunca fica pendente (RN-491) |
+| Terminal/worktree num projeto `runner` verificado e conectado, mas SEM container `running` | recusa NOMEADA (`RunnerReadiness`), nunca cai no host puro — Docker é pré-requisito real, sem fallback (RN-505) |
+| `RunnerGit` tenta materializar o worktree sem as três pré-condições da RN-505 | levanta com mensagem nomeada ANTES de qualquer `exec` — nunca tenta às cegas e deixa o timeout do canal explicar (RN-505) |
+| Job periódico de limpeza de worktree encontra um projeto `runner` sem runner conectado ou sem container `running` | PULA o projeto nesta rodada, em silêncio — nunca um erro, nunca deixa de podar os demais projetos (RN-505) |
+| `container_start_via_runner` proposto para projeto `container`/`mounted`, ou `runner` sem runner conectado | o Infra Lead RECUSA localmente, nomeando o motivo, sem chamar `propose_action` nenhuma vez (RN-506) |
+| `container_start_via_runner` aprovado sem imagem decidida (RN-105) | ação vira `failed` nomeando a ausência de decisão — nunca chama o engine (RN-506) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

@@ -28,9 +28,19 @@ defmodule Engine.Actions.Workspace do
   "cannot copy .../hooks/*.sample: Arquivo existe") e derrubam todos os
   agentes menos um — o que quebrava o critério de aceite de dois devs em
   paralelo. Ver `ensure/3` pro caminho sem exceção.
+
+  Desde a RN-505 (ADR 0145), `ensure!/4` bifurca por `execution_mode`: LOCAL
+  (`init_from_bare!/4`, tudo acima) para `container`/`mounted`; via
+  `Engine.Actions.Workspace.RunnerGit` para `runner` — os MESMOS init +
+  remote add + fetch + checkout, só que executados na máquina do usuário, via
+  canal Phoenix, porque o processo do engine não tem bind-mount nenhum para o
+  caminho de HOST que um projeto `runner` usa. `mounted` NÃO muda: a base
+  única do ADR 0141 já é bind-mount por identidade no engine, então o
+  caminho local sempre funcionou para ele.
   """
 
   alias Engine.Actions.GitAuth
+  alias Engine.Actions.Workspace.RunnerGit
   alias Engine.Projects.Project
 
   @doc """
@@ -55,53 +65,46 @@ defmodule Engine.Actions.Workspace do
   def ensure_remoto(project_id, remoto) do
     {:ok, ensure!(project_id, remoto.origin, remoto.default_branch || "main", remoto)}
   rescue
-    e -> {:error, motivo_da_falha(project_id, e)}
+    e -> {:error, Exception.message(e)}
   end
 
-  # A MESMA lacuna que a RN-478 fechou do lado da api, e que aqui continua
-  # ABERTA de propósito: num projeto `runner` (RN-423, ADR 0104)
-  # `workspace_dir/2` devolve o caminho do HOST, e o `File.mkdir_p!` de
-  # `ensure!/4` roda dentro do container do engine, que não tem bind-mount
-  # nenhum para lá. Corrigir isso agora seria materializar worktree no host por
-  # um caminho que a execução em container substitui — então o que muda é a
-  # MENSAGEM: "permissão negada: /home/voce" manda procurar dono de pasta, que
-  # é o diagnóstico errado.
-  #
-  # `Project.get/1` só é consultado no caminho de FALHA (nunca no feliz), e com
-  # as mesmas duas guardas de `Project.workspace_dir_name/1`: id malformado
-  # levanta `Ecto.Query.CastError` e processo sem conexão do Sandbox levanta
-  # `DBConnection.OwnershipError` — as duas viram "não deu para saber", e a
-  # mensagem original passa intacta.
-  defp motivo_da_falha(project_id, erro) do
-    original = Exception.message(erro)
+  @doc """
+  Garante o working tree — LOCAL para `container`/`mounted`
+  (`init_from_bare!/4`, comportamento de sempre: `BRABO_PROJECTS_BASE` é
+  bind-mount por identidade no engine também, então `mounted` já enxerga a
+  pasta), via `RunnerGit` para `runner`.
 
-    case projeto_runner(project_id) do
-      nil ->
-        original
-
-      pasta ->
-        "o projeto está no modo `runner`: #{pasta} é uma pasta do HOST, e o " <>
-          "engine roda em container sem bind-mount para ela, então o working " <>
-          "tree do dev agent não tem onde nascer (não é permissão de arquivo a " <>
-          "corrigir — é a execução em container na máquina do usuário que " <>
-          "resolve). Falha original: #{original}"
-    end
-  end
-
-  defp projeto_runner(project_id) do
-    case Project.get(project_id) do
-      %{execution_mode: "runner", workspace_path: path} when is_binary(path) -> path
-      %{execution_mode: "runner"} -> "a pasta do projeto"
-      _ -> nil
-    end
-  rescue
-    _ -> nil
-  catch
-    :exit, _ -> nil
-  end
-
+  Até a RN-505 (ADR 0145), esta função tentava `File.mkdir_p!`/`git init`
+  LOCAL para os TRÊS modos — em `runner` isso é o defeito que a RN-478
+  registrou e deixou ABERTO de propósito: `workspace_dir/2` devolve o
+  caminho do HOST, e o processo do engine não tem bind-mount nenhum para lá,
+  então a tentativa sempre falhava (com uma mensagem melhorada, mas ainda uma
+  falha). A materialização passa a acontecer DENTRO do container real do
+  projeto, na máquina do usuário — pelo MESMO canal Phoenix que já executa
+  comando de terminal aprovado (`Engine.Runners.RunnerRouter.exec/5`) — e só
+  quando as TRÊS pré-condições da RN-505 estão satisfeitas
+  (`Engine.Runners.RunnerReadiness`); faltando alguma, `RunnerGit.ensure!/5`
+  levanta com mensagem NOMEADA, sem tentar I/O nenhum antes.
+  """
   def ensure!(project_id, bare_repo_path, default_branch \\ "main", remoto \\ %{}) do
     dir = workspace_dir(project_id)
+
+    if runner?(project_id) do
+      RunnerGit.ensure!(project_id, dir, bare_repo_path, default_branch, remoto)
+    else
+      ensure_local!(project_id, dir, bare_repo_path, default_branch, remoto)
+    end
+  end
+
+  defp runner?(project_id) do
+    match?(%{execution_mode: "runner"}, Project.get(project_id))
+  rescue
+    _ -> false
+  catch
+    :exit, _ -> false
+  end
+
+  defp ensure_local!(project_id, dir, bare_repo_path, default_branch, remoto) do
     File.mkdir_p!(dir)
 
     if pronto?(dir) do

@@ -305,10 +305,19 @@ export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Prom
     return;
   }
 
+  // Log NUNCA imprime `msg.env` (RN-505/ADR 0145) — só ref/command/cwd, os
+  // mesmos três campos de sempre. A credencial de git só existe no `env` do
+  // processo filho que `executarComando` spawna, nunca em texto.
   console.log(`exec ${msg.ref}: ${msg.command} (cwd=${cwd})`);
+  // `env` só se aplica ao caminho HOST (`executarComando`/`spawn`) — o
+  // container (`docker exec`, via `packages/docker-port`) não tem campo de
+  // `env` na operação, de propósito (ADR 0130: sem `-e` livre nenhum). Um
+  // `exec` com `env` despachado enquanto este runner tem container ativo
+  // ainda roda — só não carrega a credencial; ver o moduledoc de
+  // `Engine.Actions.Workspace.RunnerGit` para o que isso implica hoje.
   const resultado = estado.containerAtivo
     ? await executarComandoNoContainer(estado, estado.containerAtivo, msg.command, cwd)
-    : await executarComando(msg.command, cwd);
+    : await executarComando(msg.command, cwd, { env: msg.env });
   console.log(
     `exec ${msg.ref}: exit=${resultado.exitCode} timedOut=${resultado.timedOut} ` +
       `bytes=${resultado.output.length}`,

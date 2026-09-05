@@ -306,7 +306,7 @@ defmodule Engine.Actions.TerminalExecutorTest do
           send(parent, :fake_runner_ready)
 
           receive do
-            {:dispatch_exec, ref, command, cwd, from, _timeout_ms} ->
+            {:dispatch_exec, ref, command, cwd, _env, from, _timeout_ms} ->
               send(from, {:runner_exec_result, ref, responder.(command, cwd)})
           end
         end)
@@ -316,9 +316,10 @@ defmodule Engine.Actions.TerminalExecutorTest do
       pid
     end
 
-    test "com workspace VERIFICADO e runner conectado, o comando é roteado pro canal" do
+    test "com workspace VERIFICADO, runner conectado e container running, o comando é roteado pro canal" do
       project_id = unique_project_id()
       insert_runner_project!(project_id, "/pasta/do/usuario", verified: true)
+      insert_container_lifecycle!(project_id, "'running'")
 
       start_fake_runner!(project_id, fn command, cwd ->
         %{
@@ -339,6 +340,7 @@ defmodule Engine.Actions.TerminalExecutorTest do
     test "cwd explícito (worktree) é repassado ao runner tal como veio" do
       project_id = unique_project_id()
       insert_runner_project!(project_id, "/pasta/do/usuario", verified: true)
+      insert_container_lifecycle!(project_id, "'running'")
 
       start_fake_runner!(project_id, fn command, cwd ->
         %{"ref" => "x", "exitCode" => 0, "output" => "#{command}|#{cwd}", "timedOut" => false}
@@ -379,6 +381,36 @@ defmodule Engine.Actions.TerminalExecutorTest do
       assert result.exit_code == nil
       assert result.stdout == ""
       assert result.stderr =~ "nenhum runner está conectado"
+    end
+
+    # RN-505/ADR 0145 — a inconsistência que este PR fecha: até aqui, workspace
+    # verificado + runner conectado bastava, mesmo sem Docker de pé na máquina
+    # do usuário. Container `running` REGISTRADO vira a TERCEIRA pré-condição,
+    # no mesmo calibre de `container`/`mounted` desde a RN-502.
+    test "runner verificado e conectado, mas SEM container running: recusa, nunca roteia pro canal" do
+      project_id = unique_project_id()
+      insert_runner_project!(project_id, "/pasta/do/usuario", verified: true)
+      # SEM insert_container_lifecycle! — nenhuma linha em project_containers.
+
+      test_pid = self()
+
+      start_fake_runner!(project_id, fn command, cwd ->
+        send(test_pid, {:runner_foi_chamado, command, cwd})
+
+        %{
+          "ref" => "x",
+          "exitCode" => 0,
+          "output" => "não deveria chegar aqui",
+          "timedOut" => false
+        }
+      end)
+
+      result = TerminalExecutor.run(project_id, "echo oi")
+
+      assert result.exit_code == nil
+      assert result.stdout == ""
+      assert result.stderr =~ "não tem container REGISTRADO como `running`"
+      refute_receive {:runner_foi_chamado, _, _}, 200
     end
 
     # RN-502/ADR 0143 — este teste afirmava o contrário até aqui ("cai no

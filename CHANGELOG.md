@@ -87,6 +87,36 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   agente `:idle` do projeto recebe o `{:wake, :became_claimable}` que já
   existia e re-tenta sozinho
 
+- **engine,runner,api**: Docker vira pré-requisito real do modo **Runner**,
+  sem fallback para o host (RN-505/506, ADR 0145). Até aqui, um projeto
+  `runner` verificado e conectado tinha todo comando de terminal roteado ao
+  CLI incondicionalmente — sem container `running` de pé, o runner decidia
+  sozinho cair no HOST puro, o mesmo fallback silencioso que o ADR 0143 já
+  tinha fechado para `container`/`mounted`. Agora as TRÊS pré-condições
+  (verificado, conectado, container `running`) vivem numa função só,
+  `Engine.Runners.RunnerReadiness`, e valem tanto para rotear terminal quanto
+  para materializar o worktree do dev agent — que passa a acontecer DENTRO do
+  container real do projeto, na máquina do usuário, pelo MESMO canal
+  `exec`/`exec_result` (`Engine.Actions.Workspace.RunnerGit`, novo), em vez de
+  `File.mkdir_p!`/`git init` LOCAL contra um caminho que o processo do engine
+  nunca alcançou (a lacuna aberta desde a RN-478). O job periódico de limpeza
+  de worktree (`Engine.Dev.WorktreeCleanup`) passa a PULAR, em silêncio, um
+  projeto `runner` sem runner pronto agora, em vez de nunca podá-lo de
+  verdade nem derrubar o job pros demais projetos. O protocolo `exec` ganha um
+  campo `env` opcional para a credencial de git (ADR 0056) viajar no ambiente
+  do processo filho no HOST do usuário — mesclado sobre `process.env`, nunca
+  repassado ao `docker exec` nem logado.
+
+  **`container_start` deixa de atender `runner`.** O payload dela
+  (`imagem`/`network`/`resources`/`rationale` — a Infra ELEGE) nunca fazia
+  sentido nesse caminho: não há roteamento contra o qual eleger, porque o
+  broker nunca alcança a pasta de um projeto `runner`. Nasce
+  `container_start_via_runner`, tipo de ação exclusivo desse modo (schema só
+  com `rationale` opcional — sobe a imagem já DECIDIDA), com a tool nova do
+  Infra Lead consultando `execution_mode` e a presença de um runner conectado
+  LOCALMENTE, sem HTTP, antes de propor — recusando com motivo nomeado em vez
+  de propor às cegas.
+
 ### Correções
 
 - **engine**: o comando de terminal do dev agent **não cai mais fora do

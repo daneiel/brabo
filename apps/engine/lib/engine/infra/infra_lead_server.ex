@@ -21,6 +21,15 @@ defmodule Engine.Infra.InfraLeadServer do
   da PR de infra: nunca inventa candidata fora da lista, e vira
   `proposed_action` que SEMPRE exige aprovação humana.
 
+  Desde a RN-506 (ADR 0145) ganha uma SEGUNDA tool de subir container,
+  `container_start_via_runner` — exclusiva de projeto `execution_mode:
+  runner` (não elege candidata nenhuma; ver o moduledoc de
+  `Engine.Infra.Tools.ProposeContainerStartViaRunner`). O dispatch dela
+  CONSULTA LOCALMENTE (`Project.get/1` + `Engine.Runners.Registry.
+  connected?/1`, sem HTTP — os dois rodam no mesmo processo BEAM do Infra
+  Lead) o `execution_mode` do projeto e a presença de um runner conectado
+  ANTES de propor, recusando com motivo NOMEADO em vez de propor às cegas.
+
   ## Por que este continua sendo um GenServer conversacional e o Workflows não
 
   O QA (Fase 8b) reconstruiu seus subagentes sobre `ToolLoop`
@@ -48,9 +57,22 @@ defmodule Engine.Infra.InfraLeadServer do
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
   alias Engine.Infra.{InfraLead, WorkflowsAgent}
-  alias Engine.Infra.Tools.{ValidateInfraFile, ProposeInfraPr, ProposeContainerStart}
+
+  alias Engine.Infra.Tools.{
+    ValidateInfraFile,
+    ProposeInfraPr,
+    ProposeContainerStart,
+    ProposeContainerStartViaRunner
+  }
+
   alias Engine.Gates.Dispatcher
   alias Engine.Harness.ArtifactEmitter
+  alias Engine.Projects.Project
+  # `as: RunnerRegistry`, nunca `Registry` puro: este módulo já usa o
+  # `Registry` NATIVO do Elixir/OTP em `via/1` (`{:via, Registry, ...}`) — um
+  # alias sem `as:` teria sombreado essa referência sem erro de compilação
+  # nenhum, e `via/1` teria silenciosamente virado uma chamada errada.
+  alias Engine.Runners.Registry, as: RunnerRegistry
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
   @agent "infra"
@@ -93,7 +115,12 @@ defmodule Engine.Infra.InfraLeadServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [ValidateInfraFile.spec(), ProposeInfraPr.spec(), ProposeContainerStart.spec()]
+       tool_specs: [
+         ValidateInfraFile.spec(),
+         ProposeInfraPr.spec(),
+         ProposeContainerStart.spec(),
+         ProposeContainerStartViaRunner.spec()
+       ]
      }}
   end
 
@@ -225,6 +252,9 @@ defmodule Engine.Infra.InfraLeadServer do
         "propose_container_start" ->
           {:cont, {:cont, dispatch_container_start(call, st)}}
 
+        "container_start_via_runner" ->
+          {:cont, {:cont, dispatch_container_start_via_runner(call, st)}}
+
         _ ->
           {:cont, {:cont, dispatch_tool(call, st)}}
       end
@@ -277,6 +307,87 @@ defmodule Engine.Infra.InfraLeadServer do
       "name" => "propose_container_start",
       :pinned => false
     })
+  end
+
+  # `container_start_via_runner` (RN-506, ADR 0145) — MESMO desenho de
+  # `dispatch_container_start/2` (despacha inline, sem HALT), com uma
+  # diferença: ANTES de chamar `propose_action`, consulta LOCALMENTE
+  # (`Project.get/1` + `RunnerRegistry.connected?/1`, sem HTTP — os dois
+  # rodam no mesmo processo BEAM deste GenServer) se o projeto está mesmo em
+  # `execution_mode: runner` e se há um runner conectado. Recusa com motivo
+  # NOMEADO em vez de propor às cegas — a lacuna que a RN-494 deixou
+  # declarada para `propose_container_start` (que não sabe distinguir modo
+  # nem runner conectado) não se repete aqui, porque esta tool nasce sabendo
+  # negar.
+  defp dispatch_container_start_via_runner(call, state) do
+    args = Map.get(call, "arguments", %{})
+    id = Map.get(call, "id")
+    rationale = Map.get(args, "rationale", "")
+
+    text =
+      case recusa_local_de_container_start_via_runner(state.project_id) do
+        nil ->
+          emit(state, "tool.call", %{
+            tool: "container_start_via_runner",
+            args: %{rationale: rationale}
+          })
+
+          actor = %{kind: "agent", id: @agent}
+
+          case EngineApiClient.propose_action(
+                 state.project_id,
+                 state.session_id,
+                 "container_start_via_runner",
+                 actor,
+                 %{rationale: rationale}
+               ) do
+            {:ok, %{"id" => _id, "status" => status}} ->
+              "container_start_via_runner proposto (status #{status}) — decisão final do usuário."
+
+            {:error, reason} ->
+              "container_start_via_runner recusado: #{inspect(reason)}"
+          end
+
+        motivo ->
+          motivo
+      end
+
+    append(state, %{
+      "role" => "tool",
+      "content" => text,
+      "toolCallId" => id,
+      "name" => "container_start_via_runner",
+      :pinned => false
+    })
+  end
+
+  # `nil` quando pode propor; mensagem NOMEADA quando não pode. As DUAS
+  # leituras são locais — `Project.get/1` (mesmo padrão de
+  # `Engine.Actions.TerminalExecutor`) e `RunnerRegistry.connected?/1`
+  # (`:global`, alcança runner conectado em QUALQUER nó do cluster) — nenhuma
+  # bate na api.
+  defp recusa_local_de_container_start_via_runner(project_id) do
+    case Project.get(project_id) do
+      nil ->
+        "projeto não encontrado."
+
+      %{execution_mode: "runner"} ->
+        if RunnerRegistry.connected?(project_id) do
+          nil
+        else
+          "nenhum runner está conectado a este projeto agora — peça ao " <>
+            "usuário para rodar `brabo-runner --project #{project_id} --dir " <>
+            "<pasta>` na máquina dele antes de propor de novo."
+        end
+
+      %{execution_mode: "mounted"} ->
+        "projeto no modo `mounted` — desde a RN-503 ele sobe pelo BROKER, " <>
+          "como `container`. Use `propose_container_start`, não esta tool."
+
+      %{execution_mode: outro} ->
+        "projeto no modo `#{outro}` — container_start_via_runner é exclusiva " <>
+          "de `runner`. Use `propose_container_start` (o broker)."
+    end
   end
 
   defp dispatch_tool(call, state) do
@@ -499,6 +610,11 @@ defmodule Engine.Infra.InfraLeadServer do
        inventando uma imagem fora da lista). Este passo é INDEPENDENTE dos
        anteriores — pode acontecer antes, depois, ou nunca (sem roteamento
        vigente, pule-o; o container do projeto segue como está).
+    6. Se o projeto estiver no modo `runner` (código na máquina do usuário, sem
+       bind-mount pro servidor), `propose_container_start` não serve — chame
+       `container_start_via_runner` (só `rationale` opcional, sem eleger nada:
+       sobe a imagem já decidida). Se você não souber o modo, tente
+       `container_start_via_runner`; a recusa nomeada diz qual dos dois usar.
 
     Você NUNCA aplica nada em ambiente — só propõe. Sem acesso a terminal.
 

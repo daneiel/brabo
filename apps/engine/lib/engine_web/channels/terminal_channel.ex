@@ -365,9 +365,16 @@ defmodule EngineWeb.TerminalChannel do
   # Dispatch de comando aprovado: Engine.Runners.RunnerRouter manda isto pro
   # pid do canal :runner (achado via Registry) e fica bloqueado em `receive`
   # esperando {:runner_exec_result, ref, payload} — ver handle_in("exec_result", ...).
+  #
+  # `env` (RN-505/ADR 0145) só entra no payload empurrado quando não é `nil` —
+  # a credencial de git (ADR 0056) nunca deve aparecer como `null` gratuito
+  # nem em log nenhum daqui pra frente; ver `apps/runner/src/index.ts`, que
+  # audita explicitamente que este campo nunca é logado do lado dele.
   @impl true
-  def handle_info({:dispatch_exec, ref, command, cwd, from, timeout_ms}, socket) do
-    despachar_pedido(socket, ref, from, timeout_ms, "exec", %{command: command, cwd: cwd})
+  def handle_info({:dispatch_exec, ref, command, cwd, env, from, timeout_ms}, socket) do
+    payload = %{command: command, cwd: cwd}
+    payload = if env, do: Map.put(payload, :env, env), else: payload
+    despachar_pedido(socket, ref, from, timeout_ms, "exec", payload)
   end
 
   # container_start/container_stop/container_remove: MESMO mecanismo de
