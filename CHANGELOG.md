@@ -420,26 +420,30 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   quatro vezes, e localmente derrubou o step de scan de ~11s (cópia) +
   ~10s (scan) para ~5s (link instantâneo + scan).
 
-  Medido no PR real (`gh api repos/.../actions/jobs/<id>`, três runs do
+  Medido no PR real (`gh api repos/.../actions/jobs/<id>`, quatro runs do
   MESMO PR): os TRÊS steps do trivy (instalar o binário + baixar a base +
   escanear as quatro em paralelo) somaram **27s** com `cp -r` e **15s**/
-  **26s** nos dois runs seguintes já com `ln -s` — a base de comparação
-  correta é essa, e não a duração TOTAL do job entre os runs, porque cada
-  um herdou cache do `gha` num estado diferente (`Build das quatro
-  imagens` variou de 168s a 22s SÓ por isso, sem relação nenhuma com o
-  trivy). Contra os **28s** da baseline sequencial (4 steps da action,
-  medido antes desta mudança), os dois runs com `ln -s` ficam **iguais ou
-  mais rápidos** (15s e 26s) mesmo com a variância normal de rede (baixar
-  a base: 4s a 7s) e de I/O do runner (escanear: 9s a 17s) entre execuções
-  — a estrutura do achado (isolar só o `fanal.db`, sem copiar a base) é o
-  que garante o piso, não um número fixo.
+  **22s**/**26s** nos três runs seguintes já com `ln -s` (média ~21s) — a
+  base de comparação correta é essa, e não a duração TOTAL do job entre os
+  runs, porque cada um herdou cache do `gha` num estado diferente (`Build
+  das quatro imagens` variou de 22s a 168s SÓ por isso, sem relação
+  nenhuma com o trivy — inclusive o run mais completo, já com o `dev`
+  atualizado pelo PR irmão de paralelização dos testes TS, fechou o job
+  inteiro em **241s**, quase no teto de 240s, mas por causa do build, não
+  do trivy). Contra os **28s** da baseline sequencial (4 steps da action,
+  medido antes desta mudança), os três runs com `ln -s` ficam **iguais ou
+  mais rápidos** mesmo com a variância normal de rede (baixar a base: 4s
+  a 7s) e de I/O do runner (escanear: 9s a 17s) entre execuções — a
+  estrutura do achado (isolar só o `fanal.db`, sem copiar a base) é o que
+  garante o piso, não um número fixo.
 
-  Aplicado ao total original de **333s** mantendo o resto igual, o job
-  previsto fica em **~320s (5m20s)** — ainda ACIMA do teto de ~4min, como
-  esperado e declarado de antemão: o resto do job (build ~179s + smoke
-  ~42s + setup do Playwright ~32s + E2E ~7s+1s + derrubar o compose ~16s
-  ≈ 277s) já excede o teto sozinho, e reduzir isso exigiria reabrir a
-  decisão de manter build+scan+smoke no mesmo job — fora de escopo aqui,
+  Aplicado ao total original de **333s** mantendo o resto igual (média de
+  ~21s no trivy, ~7s de economia sobre os 28s da baseline), o job previsto
+  fica em **~326s (5m26s)** — ainda ACIMA do teto de ~4min, como esperado
+  e declarado de antemão: o resto do job (build ~179s + smoke ~42s +
+  setup do Playwright ~32s + E2E ~7s+1s + derrubar o compose ~16s ≈ 277s)
+  já excede o teto sozinho, e reduzir isso exigiria reabrir a decisão de
+  manter build+scan+smoke no mesmo job — fora de escopo aqui,
   por decisão já medida e documentada (ver o comentário no topo do job
   `images` e no `docker-bake.hcl`).
 
