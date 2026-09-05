@@ -848,13 +848,17 @@ jobs:
             [backup]="brabo-backup:prod"
           )
 
-          # Cache PRÓPRIO por imagem, semeado com a MESMA base já baixada —
+          # Cache PRÓPRIO por imagem, apontando pra MESMA base já baixada —
           # ver o comentário acima sobre a disputa de lock no cache padrão.
+          # LINK, não cópia: o lock em disputa era do `fanal.db` (cache de
+          # ANÁLISE DE CAMADA, que cada scan cria do zero de qualquer forma),
+          # nunca do `trivy.db` (a base em si) — copiar ~1,3 GB por imagem só
+          # pra isolar um arquivo que nasce vazio comia de volta boa parte do
+          # ganho da paralelização (medido: ~11s de cópia).
           for nome in "${!imagens[@]}"; do
             mkdir -p "/tmp/trivy-cache/${nome}"
-            cp -r /tmp/trivy-cache/seed/db "/tmp/trivy-cache/${nome}/db" &
+            ln -s /tmp/trivy-cache/seed/db "/tmp/trivy-cache/${nome}/db"
           done
-          wait
 
           pids=()
           nomes=()

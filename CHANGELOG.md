@@ -367,20 +367,31 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   verificado) num script de shell que dispara os quatro scans com `&` e
   recolhe o código de saída de cada `wait` individualmente.
 
-  Achado ao medir localmente: rodar `trivy image` quatro vezes em paralelo
-  contra o `--cache-dir` PADRÃO (compartilhado) falha por disputa de lock no
-  cache local do trivy (bbolt) — `cache may be in use by another process:
-  timeout` — mesmo pedindo pra não atualizar a base, porque o cache de
-  ANÁLISE DE CAMADA usa o mesmo arquivo que a base de vulnerabilidades. A
-  correção foi baixar a base UMA vez e copiar pra um `--cache-dir` PRÓPRIO
-  por imagem antes de paralelizar — isola o lock sem repetir o download.
+  Dois achados ao medir, um atrás do outro. Primeiro: rodar `trivy image`
+  quatro vezes em paralelo contra o `--cache-dir` PADRÃO (compartilhado)
+  falha por disputa de lock (bbolt) — `cache may be in use by another
+  process: timeout` — mesmo pedindo pra não atualizar a base, porque o
+  scan usa DOIS bancos no mesmo diretório: `db/trivy.db` (a base de
+  vulnerabilidades, compartilhável) e `fanal/fanal.db` (cache de ANÁLISE DE
+  CAMADA, que cada scan cria do zero de qualquer forma). Isolar os dois
+  copiando o diretório `db/` inteiro pra um `--cache-dir` próprio por
+  imagem FUNCIONOU, mas comeu de volta boa parte do ganho: medido num PR
+  real, os quatro `cp -r` de ~1,3 GB somaram ~11s dentro dos ~21s do step
+  de scan, deixando o job em 312s — dentro do ruído dos 333s de baseline,
+  não uma melhora de verdade. Segundo achado, decorrente do primeiro: só o
+  `fanal.db` (vazio, por scan) precisa de isolamento — a base em si é só
+  LIDA (`--skip-db-update`) e aceita múltiplos leitores. Trocar o `cp -r`
+  por `ln -s` no diretório `db/` isola o mesmo lock sem copiar 1,3 GB
+  quatro vezes, e localmente derrubou o step de scan de ~11s (cópia) +
+  ~10s (scan) para ~5s (link instantâneo + scan).
 
-  Medido no PR real (job `images`, ver `gh api .../actions/jobs/<id>`):
-  **333s → TODO(medir)s**. Ganho esperado é só nos quatro scans (~28s → ~17s,
-  o mais lento dos quatro rodando sozinho) — isso sozinho NÃO derruba o job
-  pra baixo do teto de ~4min: o resto do job (build das quatro imagens,
-  smoke, E2E) já soma mais que isso, por decisão de arquitetura aceita e
-  documentada (não é escopo desta mudança revisar).
+  Medido no PR real (job `images`, ver `gh api .../actions/jobs/<id>`) com
+  a versão final (`ln -s`): **333s → TODO(medir)s**. Ganho esperado é só
+  nos quatro scans (~28s → ~17s, o mais lento dos quatro rodando sozinho)
+  — isso sozinho NÃO derruba o job pra baixo do teto de ~4min: o resto do
+  job (build das quatro imagens, smoke, E2E) já soma mais que isso, por
+  decisão de arquitetura aceita e documentada (não é escopo desta mudança
+  revisar).
 
 ## v4.0.0 — 2026-09-04
 
