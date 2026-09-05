@@ -37,12 +37,26 @@ defmodule Engine.Dev.WorktreeCleanup do
   gerenciada produz `/data/project-workspaces/home/voce/...`, que não existe.
   O efeito seria silencioso — `File.dir?` falso, projeto pulado, worktree
   órfão nunca podado. A junção passou a ser a MESMA de todo mundo.
+
+  ## `runner` (RN-507, ADR 0145): pular é a resposta certa, não uma falha
+
+  Para `container`/`mounted`, `File.dir?(work_dir)` continua decidindo se
+  vale a pena podar — a pasta é local ao engine, e ausência dela é sinal
+  real de "nada a podar ainda". Para `runner`, `File.dir?` é sempre `false`
+  (o caminho é do HOST, o engine não o enxerga), então o gate precisa ser
+  OUTRO: `Engine.Runners.RunnerReadiness.pronto?/1` — sem runner conectado
+  ou sem container `running` AGORA, este projeto é PULADO nesta rodada, em
+  silêncio (nunca um erro, nunca um worktree tratado como órfão só porque
+  não deu pra perguntar). `Enum.each/2` continua rodando pros OUTROS
+  projetos mesmo quando um `runner` está fora do ar — nenhuma exceção
+  atravessa daqui pra derrubar o job inteiro.
   """
 
   alias Engine.Actions.Workspace
   alias Engine.Dev.DevAgentState
   alias Engine.Dev.WorktreeManager
   alias Engine.Projects.Project
+  alias Engine.Runners.RunnerReadiness
 
   def run do
     root = Application.get_env(:engine, :project_workspaces_root)
@@ -51,11 +65,21 @@ defmodule Engine.Dev.WorktreeCleanup do
       live = live_agents_by_project()
 
       Project.all_workspace_dirs()
-      |> Enum.each(fn %{id: project_id, workspace_dir_name: dir_name} ->
+      |> Enum.each(fn %{id: project_id, workspace_dir_name: dir_name} = info ->
         work_dir = Workspace.workspace_dir(project_id, dir_name)
+        live_ids = Map.get(live, project_id, [])
 
-        if File.dir?(work_dir) do
-          WorktreeManager.cleanup_orphans_at(work_dir, Map.get(live, project_id, []))
+        cond do
+          Map.get(info, :execution_mode) == "runner" ->
+            if RunnerReadiness.pronto?(project_id) do
+              WorktreeManager.cleanup_orphans(project_id, live_ids)
+            end
+
+          File.dir?(work_dir) ->
+            WorktreeManager.cleanup_orphans_at(work_dir, live_ids)
+
+          true ->
+            :ok
         end
       end)
     end

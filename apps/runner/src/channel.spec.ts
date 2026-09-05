@@ -144,6 +144,62 @@ describe('conectarCanal', () => {
     ]);
   });
 
+  // RN-507/ADR 0145 — `env` é OPCIONAL e só repassado quando é de verdade um
+  // objeto string->string; um payload malformado (array, número, string
+  // solta) some, em vez de virar env arbitrário do processo filho.
+  it('exec com env (credencial de git, RN-507): repassa o objeto pro handler', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const onExec = vi.fn();
+
+    await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: { ...handlersVazios, onExec },
+      criarSocket: fabricaFalsa(canal),
+    });
+
+    canal.simularRecebimento('exec', {
+      ref: 'r1',
+      command: 'git fetch origin',
+      cwd: '/projeto',
+      env: { BRABO_GIT_TOKEN: 'segredo', BRABO_GIT_USERNAME: 'x-access-token' },
+    });
+
+    expect(onExec).toHaveBeenCalledWith({
+      ref: 'r1',
+      command: 'git fetch origin',
+      cwd: '/projeto',
+      env: { BRABO_GIT_TOKEN: 'segredo', BRABO_GIT_USERNAME: 'x-access-token' },
+    });
+  });
+
+  it('exec com env malformado (não é objeto string->string): ignora o campo, nunca repassa', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const onExec = vi.fn();
+
+    await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: { ...handlersVazios, onExec },
+      criarSocket: fabricaFalsa(canal),
+    });
+
+    canal.simularRecebimento('exec', {
+      ref: 'r1',
+      command: 'echo oi',
+      cwd: '/projeto',
+      env: ['nao', 'e', 'um', 'objeto'],
+    });
+
+    expect(onExec).toHaveBeenCalledWith({
+      ref: 'r1',
+      command: 'echo oi',
+      cwd: '/projeto',
+    });
+  });
+
   it('entra no canal e faz roundtrip de container_start -> container_start_result (ADR 0137)', async () => {
     const canal = new CanalFalso({ status: 'ok' });
     const canalHolder: { atual: ChannelLike | null } = { atual: null };

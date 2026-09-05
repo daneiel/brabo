@@ -58,6 +58,9 @@ const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   // ADR 0136 (RN-495) — a página global de containers.
   container_stop: StopSquareIcon,
   container_remove: TrashIcon,
+  // RN-508 (ADR 0145) — mesmo calibre visual de `container_start`: sobe
+  // container real, só que na máquina do usuário, via runner.
+  container_start_via_runner: AlertIcon,
 };
 
 /**
@@ -177,7 +180,7 @@ export function ApprovalCard({
     action.actionType !== 'instruction_patch' &&
     action.actionType !== 'container_remove';
   // Mesma regra de `ehDevDeModulo`/`DEV_LEAD` em
-  // `apps/api/src/domain/agents/agent-areas.ts` (RN-505) — sem cópia gerada
+  // `apps/api/src/domain/agents/agent-areas.ts` (RN-507) — sem cópia gerada
   // pro web porque só ESTE componente precisa saber, e só pra trocar o
   // TEXTO da nota (a api decide o destino da gravação sozinha). `dev-lead`
   // lidera a área de `dev`, mas não é membro dela — continua no texto de

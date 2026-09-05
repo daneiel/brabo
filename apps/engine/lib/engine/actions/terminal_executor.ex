@@ -13,19 +13,32 @@ defmodule Engine.Actions.TerminalExecutor do
   trás dela). Aceitável pra este incremento (demo-grade); resolver isso
   de verdade pediria uma lib tipo MuonTrap, não justificada ainda.
 
-  ## Roteamento pro runner local (projeto `runner`, verificado, conectado —
-  ## RN-423, ADR 0104)
+  ## Roteamento pro runner local (projeto `runner`, verificado, conectado, com
+  ## Docker de pé — RN-423/RN-507, ADR 0104/0145)
 
   O comando que chega aqui JÁ foi aprovado pelo pipeline de sempre
   (`decide()`/`proposed_action` do lado api) — este módulo nunca decide SE
   um comando pode rodar, só ONDE. Quando o projeto está em modo `runner`
-  (ADR 0072/0104), há TRÊS pré-condições, não uma: workspace VERIFICADO
+  (ADR 0072/0104), há QUATRO pré-condições, não uma: workspace VERIFICADO
   (`workspace_verified_at` não-nulo — o runner confirmou o caminho no host
-  pelo menos uma vez) e runner CONECTADO agora (`Engine.Runners.Registry`).
-  Só com as duas o comando é entregue via canal Phoenix
-  (`Engine.Runners.RunnerRouter`) em vez de `System.cmd` local.
+  pelo menos uma vez), runner CONECTADO agora (`Engine.Runners.Registry`) e,
+  desde a RN-507 (ADR 0145), container REGISTRADO `running`
+  (`Engine.Containers.ProjectContainerLifecycle.running?/1`) — o mesmo
+  predicado que `container`/`mounted` já exigiam desde a RN-502. Só com as
+  TRÊS o comando é entregue via canal Phoenix (`Engine.Runners.RunnerRouter`)
+  em vez de `System.cmd` local; a escolha host-vs-container DENTRO do runner
+  continua interna a ele (ADR 0137).
 
-  Faltando qualquer uma das duas, o comando é RECUSADO explicitamente — NUNCA
+  A RN-507 fecha a última inconsistência que separava `runner` dos outros dois
+  modos: até aqui, workspace verificado + runner conectado bastava para rotear
+  — sem Docker de pé na máquina do usuário, o comando ainda chegava ao runner,
+  que ou tinha um container de uma sessão anterior (acidental) ou executava no
+  HOST puro (o fallback silencioso que este PR fecha). Agora a máquina do
+  usuário precisa ter subido o container do projeto (`container_start_via_runner`,
+  proposto pelo Infra Lead) antes de qualquer comando — Docker deixa de ser
+  opcional para o modo `runner`, é pré-requisito real.
+
+  Faltando qualquer uma das três, o comando é RECUSADO explicitamente — NUNCA
   cai no `System.cmd`/bind-mount de `mounted`, que não existe pra um projeto
   `runner`. Desde a RN-502 (ADR 0143), o caminho de sempre (`System.cmd`
   local) não vale mais para modo de execução NENHUM: ele sobrou só para
@@ -61,7 +74,7 @@ defmodule Engine.Actions.TerminalExecutor do
   alias Engine.Actions.Workspace
   alias Engine.Containers.ProjectContainerLifecycle
   alias Engine.Projects.{Project, ProjectRepository}
-  alias Engine.Runners.{Registry, RunnerRouter}
+  alias Engine.Runners.{RunnerReadiness, RunnerRouter}
   alias Engine.Sessions.EngineApiClient
 
   @bytes_per_token 4
@@ -88,19 +101,8 @@ defmodule Engine.Actions.TerminalExecutor do
       :rotear_runner ->
         run_via_runner(project_id, command, cwd, timeout)
 
-      :recusar_nao_verificado ->
-        failed_result(
-          "projeto no modo \"runner\" ainda não teve o workspace confirmado " <>
-            "— rode `brabo-runner --project #{project_id} --dir <pasta>` na " <>
-            "sua máquina antes de tentar de novo (RN-423)."
-        )
-
-      :recusar_runner_desconectado ->
-        failed_result(
-          "workspace já confirmado, mas nenhum runner está conectado a " <>
-            "este projeto agora — rode `brabo-runner --project #{project_id} " <>
-            "--dir <pasta>` na sua máquina e tente de novo."
-        )
+      {:recusar_runner, motivo} ->
+        failed_result(RunnerReadiness.mensagem(motivo, project_id))
 
       :recusar_container_ausente ->
         failed_result(
@@ -124,12 +126,20 @@ defmodule Engine.Actions.TerminalExecutor do
   # devolve `nil` pra projeto inexistente/id malformado — degrada pro
   # caminho de sempre, nunca propaga erro daqui.
   #
-  # SEIS saídas (RN-423/ADR 0104 + RN-492/ADR 0134 + RN-502/ADR 0143):
+  # SETE saídas (RN-423/ADR 0104 + RN-492/ADR 0134 + RN-502/ADR 0143 +
+  # RN-507/ADR 0145):
   #
   #   - `runner` sem workspace verificado: recusa (nunca roteia às cegas);
   #   - `runner` verificado, sem runner conectado: recusa (idem);
-  #   - `runner` verificado e conectado: roteia pro canal Phoenix — e a
-  #     escolha host-vs-container ali é INTERNA ao runner (ADR 0137);
+  #   - `runner` verificado e conectado, SEM container `running`: recusa
+  #     (RN-507) — ver abaixo. As TRÊS recusas de `runner` compartilham o
+  #     mesmo shape, `{:recusar_runner, motivo}` — `motivo` vem de
+  #     `Engine.Runners.RunnerReadiness.verificar/1`, a mesma função que
+  #     `Engine.Actions.Workspace.RunnerGit` consulta para materializar o
+  #     worktree do dev agent (dois consumidores, uma pergunta só);
+  #   - `runner` verificado, conectado, COM container `running`: roteia pro
+  #     canal Phoenix — a escolha host-vs-container DENTRO do runner
+  #     continua interna a ele (ADR 0137);
   #   - `container`/`mounted` com um container REGISTRADO `running` (ADR
   #     0130/0133): executa DENTRO dele, via broker. `true` aqui é só o
   #     REGISTRADO (RN-486: registrado e observado nunca se fundem); se o
@@ -139,9 +149,10 @@ defmodule Engine.Actions.TerminalExecutor do
   #     (`:recusar_container_ausente`) — ver abaixo;
   #   - projeto inexistente ou id malformado: caminho de sempre.
   #
-  # ## O fallback silencioso que sumiu (RN-502, ADR 0143)
+  # ## O fallback silencioso que sumiu (RN-502, ADR 0143) — e a lacuna que a
+  # ## RN-507 (ADR 0145) fechou do lado do `runner`
   #
-  # Até aqui, `container` sem container `running` caía em
+  # Até a RN-502, `container` sem container `running` caía em
   # `:caminho_de_sempre`, isto é, `System.cmd` DENTRO do processo do engine —
   # o mesmo processo que fala com o banco, com a api e com todos os outros
   # projetos. O ADR 0134 tinha fechado o isolamento só pro caminho feliz: a
@@ -149,27 +160,32 @@ defmodule Engine.Actions.TerminalExecutor do
   # projeto que nunca subiu container executava comando de dev agent
   # exatamente como antes do broker existir, e nada na saída dizia isso.
   #
-  # Agora recusa, espelhando `:recusar_nao_verificado`/
-  # `:recusar_runner_desconectado`: a mesma disciplina que o modo `runner`
-  # já tinha ("faltou a pré-condição, então não executa em lugar nenhum"),
-  # aplicada ao modo `container`. `mounted` entra no MESMO ramo — ele
-  # também tem container próprio desde que o `mounted` passou a subir pelo
-  # broker; sem ele, `System.cmd` no engine seria a mesma degradação calada.
+  # A RN-502 recusou, espelhando as recusas que o modo `runner` já tinha
+  # ("faltou a pré-condição, então não executa em lugar nenhum"),
+  # aplicada ao modo `container`/`mounted`. Só que `runner` em si NUNCA
+  # exigiu container `running` — ele checava só workspace verificado +
+  # runner conectado, e um comando aprovado atravessava pro canal Phoenix
+  # mesmo sem Docker de pé na máquina do usuário (o `brabo-runner` decidia
+  # host-vs-container sozinho, ADR 0137, e sem container ativo caía no HOST
+  # puro — o fallback que a decisão do dono do produto fechou). A RN-507
+  # unifica os três modos sob o MESMO predicado
+  # (`ProjectContainerLifecycle.running?/1`) — Docker deixa de ser opcional
+  # para `runner`, e sem container registrado o comando recusa igual aos
+  # outros dois, nunca cai no HOST puro.
+  #
   # A recusa é `failed_result` normal no chamador, nunca crash: é o mesmo
-  # contrato de falha das outras duas recusas deste módulo.
+  # contrato de falha das outras recusas deste módulo.
   #
   # O catch-all sobrou pro que ele sempre deveria ter coberto sozinho:
   # projeto inexistente / `project_id` malformado. Nenhum modo de execução
   # cai nele mais.
   defp decisao_de_execucao(project_id) do
     case Project.get(project_id) do
-      %{execution_mode: "runner", workspace_verified_at: nil} ->
-        :recusar_nao_verificado
-
       %{execution_mode: "runner"} ->
-        if Registry.connected?(project_id),
-          do: :rotear_runner,
-          else: :recusar_runner_desconectado
+        case RunnerReadiness.verificar(project_id) do
+          :pronto -> :rotear_runner
+          {:erro, motivo} -> {:recusar_runner, motivo}
+        end
 
       %{execution_mode: modo} when modo in ["container", "mounted"] ->
         if ProjectContainerLifecycle.running?(project_id),

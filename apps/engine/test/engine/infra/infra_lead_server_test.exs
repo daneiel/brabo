@@ -390,6 +390,96 @@ defmodule Engine.Infra.InfraLeadServerTest do
                      %{type: "agent.response", payload: %{content: "pronto-cs"}}}
   end
 
+  # --- `container_start_via_runner` (RN-508, ADR 0145) ---
+
+  defp insert_project!(project_id, execution_mode) do
+    Repo.query!(
+      "INSERT INTO public.projects (id, name, slug, execution_mode) VALUES ($1, 'proj', $2, $3)",
+      [Ecto.UUID.dump!(project_id), "proj-#{System.unique_integer([:positive])}", execution_mode]
+    )
+  end
+
+  test "projeto runner COM runner conectado: propõe container_start_via_runner, sem halt", %{
+    state: state
+  } do
+    insert_project!(state.project_id, "runner")
+    :ok = Engine.Runners.Registry.register(state.project_id, self())
+    on_exit(fn -> Engine.Runners.Registry.unregister(state.project_id) end)
+
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_propose_action, %{"id" => "pa-csvr-1", "status" => "pending"})
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("container_start_via_runner", %{"rationale" => "subir agora"}),
+      FakeEngineApiClient.final_response("pronto-csvr")
+    ])
+
+    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    assert_received {:propose_action, "container_start_via_runner", %{kind: "agent", id: "infra"},
+                     payload}
+
+    assert payload.rationale == "subir agora"
+
+    # Mesmo desenho de `propose_container_start`: sem HALT, o loop continua.
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "agent.response", payload: %{content: "pronto-csvr"}}}
+  end
+
+  test "projeto runner SEM runner conectado: recusa nomeada, NUNCA chama propose_action", %{
+    state: state
+  } do
+    insert_project!(state.project_id, "runner")
+    # SEM Engine.Runners.Registry.register/2 — nenhum runner conectado.
+
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("container_start_via_runner", %{"rationale" => "subir agora"}),
+      FakeEngineApiClient.final_response("depois-de-recusar")
+    ])
+
+    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    refute_received {:propose_action, "container_start_via_runner", _, _}
+
+    assert_received {:event_appended, _pid, _sid,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "depois-de-recusar"}
+                     }}
+  end
+
+  test "projeto NÃO runner (container): recusa nomeada apontando pra propose_container_start", %{
+    state: state
+  } do
+    insert_project!(state.project_id, "container")
+
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("container_start_via_runner", %{}),
+      FakeEngineApiClient.final_response("depois-de-recusar")
+    ])
+
+    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    refute_received {:propose_action, "container_start_via_runner", _, _}
+  end
+
   # --- `build_kickoff/1`: bloco ROTEAMENTO DE MÓDULOS ---
 
   test "kickoff inclui o roteamento de módulos quando o Arquiteto roteou", %{state: state} do

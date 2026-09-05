@@ -87,6 +87,9 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | Agentes de dev só depois do container (PR 7) | Numa execução real do `exp001`, DEZ tasks de dev travaram de uma vez — e o achado não foi a pasta que falhou, foi que **nada ordenava container antes de dev agent**. `Engine.Dev.AgentIo.try_claim/2` — o ponto ÚNICO de claim — passa a consultar `ProjectContainerLifecycle.running?/1` (o predicado que o ADR 0134 já tinha) ANTES de chamar a api: sem linha REGISTRADA `running`, o agente cai em `:idle`, persiste e emite `dev.blocked_by_container`. No ENGINE e não só no `activate-execution` da api porque a REIDRATAÇÃO chega ao `try_claim/2` sem passar por rota nenhuma (`init/1` → `finish_restart_recovery/1`). `:idle` e NÃO status novo, pela razão que o próprio docblock do `try_claim/2` já registrava desde a Fase 12b — é o único estado do qual um wake ainda resgata, e todos os guards de `handle_info/2` se apoiam nisso; quem distingue "fila vazia" de "sem container" é o EVENTO, nunca o status. O wake vem pelo outbox: `RegistrarTransicaoDeContainerUseCase` publica `container.running` na MESMA transação que grava a chegada em `running`, num `aggregate_type` NOVO (`container`, o terceiro que `Engine.Outbox.Drain` lê) em vez de pegar `task` emprestado, com o PROJETO como `aggregateId`; a mensagem entregue é a `{:wake, :became_claimable}` que já existia. Segunda metade: `TerminalExecutor` para de degradar calado — `container` sem `running` caía em `System.cmd` DENTRO do processo do engine, e agora RECUSA, com `mounted` no mesmo ramo | ADR 0143, RN-502 |
 | Alarme de merge de esteira com destinatário | A regra "promoção é `--no-ff`" foi quebrada TRÊS vezes (#367, #394, #464 — a terceira era o PR que consertava as duas primeiras). O achado: a detecção JÁ existia e JÁ funcionou (o `tag-release` reprovou as duas primeiras com a mensagem certa) — faltava para QUEM tocar, porque workflow de `push` que falha numa permanente não tem PR onde ficar vermelho e o repo tinha zero issues. `tag-release` ganha o job `avisar`, que abre issue (e comenta na já aberta, nunca duplica) com `github.token` e nunca com o PAT — PAT inválido é uma das falhas que ele reporta — e isso deixou de ser hipotético: o `BRABO_BOT_TOKEN` expirou em 2026-09-03 à noite, reprovou duas runs do `tag-release`, e foi rotacionado em 2026-09-04; a v4.0.0 carimbou e DISPAROU a Release, o que só acontece com PAT válido (tag criada com `GITHUB_TOKEN` não dispara workflow). A regra passa a cobrir `dev` de forma ESTREITA: só é defeito o PR que trazia ARESTA NOVA (head era merge cujo segundo pai não estava na base), nunca o squash de PR de trabalho, que é a convenção. Desligar squash no repo foi MEDIDO e recusado (taxaria todo PR e mexeria no `changelog.mjs`, que roda `--no-merges`) | ADR 0139 |
 | O artefato de decisão dos conversacionais (Frente 3, fatia genérica) | `decision_record` reusa o padrão GENÉRICO de `emit_artifact`/`ArtifactSchemas` (o mesmo de `note`/`business_rule`) em vez do dedicado de `project_image`/`c4_diagram` — uma decisão é log append-only, nunca um "vigente" que se substitui. PO, Arquiteto, Dev Lead, UX Designer e Staff ganham a ferramenta (alias + `tool_specs` + `run_tool/3` + a mesma frase no `system_prompt/1`); o Criativo já tinha `emit_artifact` desde a Fase 3b e só ganhou o tipo novo, sem mudança nele. Distinto de `open_adr_pr` (só o Arquiteto, commit real + PR + aprovação humana): os dois COEXISTEM para escalas diferentes de decisão. Fora de escopo, declarado: agentes de execução (`ToolLoop`, sem harness comum) e a amarração com o Infra Lead — emitir `decision_record` ao propor `container_start_via_runner` — que depende de uma tool de outra frente do mesmo plano, em branch separada | RN-505 |
+| "Sempre permitir" separado por Dev Agent de módulo | Clicar "sempre permitir" numa ação de um `dev-<modulo>` gravava em `permissions.json`, escopo de PROJETO INTEIRO — liberava o mesmo comando pra qualquer outro agente. Passa a gravar em `agent_autonomy(projeto, agente, tipo)`, o MESMO mecanismo já usado pras 3 ações git seedadas na ativação da execução. `dev-lead` (lidera a área, não é membro dela) e qualquer ator não-modular continuam indo pro `permissions.json` de sempre; os dois tetos absolutos (terminal com efeito externo/comando privilegiado, `container_remove`) continuam recusando o clique inteiro ANTES do branch novo. Sem migração: entradas antigas continuam em `permissions.json`, decisão consciente | RN-505 |
+| Docker vira pré-requisito real do modo Runner | `runner` roteava todo terminal aprovado ao CLI assim que workspace verificado + runner conectado batiam, sem checar container `running` — sem Docker de pé, o runner caía sozinho no HOST puro, o MESMO fallback silencioso que o ADR 0143 já tinha fechado para `container`/`mounted`. `Engine.Runners.RunnerReadiness` unifica as TRÊS pré-condições (verificado, conectado, container `running`) com dois consumidores: `TerminalExecutor` e a materialização do worktree do dev agent, que deixa de tentar `File.mkdir_p!`/`git init` LOCAL contra o caminho do HOST (a lacuna aberta desde a RN-478) e passa a rodar DENTRO do container real, na máquina do usuário, pelo MESMO canal `exec`/`exec_result` (`Engine.Actions.Workspace.RunnerGit`, novo) — `WorktreeManager` bifurca pelo mesmo critério, e o job periódico de limpeza PULA em silêncio um projeto `runner` sem runner pronto agora. O protocolo `exec` ganha `env` opcional para a credencial de git (ADR 0056) viajar no ambiente do processo filho do HOST — mesclado sobre `process.env`, nunca repassado ao `docker exec` nem logado. `container_start` deixa de atender `runner` (o payload dela, com eleição de imagem, nunca fazia sentido lá); nasce `container_start_via_runner` — schema só com `rationale`, sobe a imagem já decidida —, com a tool nova do Infra Lead recusando LOCALMENTE (sem HTTP) antes de propor às cegas | RN-507/508, ADR 0145 |
+| ⚠️ RN-505 duplicada em dev (achado, não corrigido aqui) | O "artefato de decisão" e o "sempre permitir por Dev Agent" mergearam com 2 minutos de diferença, cada um alocando RN-505 sem ver o outro — o anchor `{#rn-505}` está duplicado em `docs/business-rules.md`. Esta entrega evitou piorar (usou RN-507/508, não 505/506), mas NÃO renumerou o que já estava em `dev` — é um PR de docs separado, pequeno | — |
 
 ## Estado atual e aberto
 
@@ -161,7 +164,15 @@ daqui e o fechamento vai para o histórico.
   caminho absoluto atravesse a rede. `runner` é o único modo que segue sem
   container NO SERVIDOR — a pasta dele mora numa máquina que o broker não
   enxerga. A pergunta "quantos módulos, um container só" segue como está,
-  `project_id UNIQUE` em `project_containers`, sem mudança aqui
+  `project_id UNIQUE` em `project_containers`, sem mudança aqui. O que
+  faltava fechar era o OUTRO fallback: até a RN-505 (ADR 0145), um projeto
+  `runner` verificado e conectado tinha comando roteado ao CLI mesmo SEM
+  container `running` de pé — o runner caía sozinho no host puro,
+  silenciosamente. `Engine.Runners.RunnerReadiness` unifica os TRÊS modos sob
+  o MESMO predicado, e `container_start` deixa de atender `runner` (o
+  payload dela, com eleição de imagem, nunca fazia sentido pra um caminho
+  sem roteamento contra o qual eleger) — `container_start_via_runner` é o
+  tipo novo, exclusivo desse modo
 - Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
   aguardando spec; Staff dormente para disparo automático (acionável manual)
 - `appsec run_design/2` acionável, nada aciona sozinho (gatilho:
@@ -201,13 +212,6 @@ daqui e o fechamento vai para o histórico.
   reconciliar é decisão de produto à parte, não tomada no ADR 0126
 - `gatesEverOpened` sofre da classe de defeito da janela de 200 eventos —
   declarado, não corrigido (exigiria mudar assinatura de `deriveAgentRoster`)
-- O ENGINE tem o mesmo defeito que a RN-478 fechou na api, e ele segue ABERTO:
-  `Engine.Actions.Workspace.ensure!/4` faz `File.mkdir_p!` do caminho do HOST
-  em projeto `runner`, e o working tree do dev agent não tem onde nascer. Não
-  vira 500 (o `rescue` de `ensure_remoto/2` devolve `{:error, …}`), vira dev
-  agent que não trabalha — a mensagem NOMEIA a causa desde a RN-478. Corrigir
-  isolado seria materializar worktree no host por um caminho que a execução em
-  container substitui; a decisão é esperar por ela
 - Conversão de `execution_mode` nunca migra diff NÃO commitado — órfão no
   disco antigo (RN-447..450, ADR 0111)
 - Mirror web de `SOLO_CONVERSATIONAL_AGENTS` sem teste cruzado com a api
@@ -349,7 +353,15 @@ daqui e o fechamento vai para o histórico.
   `exec`/`exec_result`), fazem `DockerViaCli.start/stop/exec` de
   verdade, com o Docker do PRÓPRIO usuário — para projeto
   `mounted`/`runner`, que o broker nunca alcança (a pasta mora numa
-  máquina que o servidor não enxerga)
+  máquina que o servidor não enxerga). Desde a RN-505 (ADR 0145), Docker é
+  PRÉ-REQUISITO real do modo `runner` — sem container `running`
+  REGISTRADO, `TerminalExecutor` recusa e nem chega a mandar comando pro
+  canal — e o par `exec`/`exec_result` ganha um campo `env` opcional
+  (`Record<string,string>`) para a credencial de git (ADR 0056) viajar
+  no ambiente do processo filho que `apps/runner/src/exec.ts` spawna no
+  HOST do usuário: mesclado sobre `process.env` (nunca substitui —
+  perderia PATH), nunca repassado ao `docker exec` (a porta de Docker não
+  ganhou campo de `env`, de propósito) e nunca logado
 - `apps/broker`: workspace novo, Node/TS — o ÚNICO processo do produto que
   fala com um daemon Docker no SERVIDOR (ADR 0130), e o único serviço com
   `/var/run/docker.sock` montado. Não monte esse socket em mais nenhum. Sem
@@ -650,9 +662,15 @@ daqui e o fechamento vai para o histórico.
   roda quando NÃO há container: desde o ADR 0143 (RN-502), `container` e
   `mounted` SEM um `running` registrado RECUSAM (`:recusar_container_ausente`,
   `failed_result` nomeado), em vez de cair no `System.cmd` dentro do processo
-  do engine. O catch-all `:caminho_de_sempre` do `TerminalExecutor` encolheu
-  para projeto inexistente/id malformado — nenhum modo de execução cai nele.
-  Com um `running` registrado, o comando de terminal
+  do engine. Desde a RN-505 (ADR 0145), `runner` entrou na MESMA régua —
+  workspace verificado e runner conectado deixaram de bastar; sem container
+  `running` REGISTRADO (a mesma leitura de `ProjectContainerLifecycle`,
+  centralizada em `Engine.Runners.RunnerReadiness`), o comando recusa em vez
+  de atravessar pro canal e arriscar cair no HOST puro do usuário — o
+  fallback silencioso que essa RN fecha. O catch-all `:caminho_de_sempre` do
+  `TerminalExecutor` encolheu para projeto inexistente/id malformado —
+  nenhum modo de execução cai nele. Com um `running` registrado, o comando
+  de terminal
   passa a rodar DENTRO do container de verdade (`ContainerBrokerPort.exec`,
   ADR 0134, RN-492) e ganha um PISO de auto-aprovação por cima do escopo
   léxico — não no lugar dele (RN-493). Esse PISO é ESPECÍFICO de

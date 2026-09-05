@@ -1,10 +1,16 @@
 defmodule Engine.Dev.WorktreeManagerTest do
   # async: false — mexe em Application env global (:project_workspaces_root) e no
-  # filesystem. Não precisa de banco: exercita `add_worktree/3` num work_dir git
-  # montado à mão + list/remove/cleanup por workspace_dir.
-  use ExUnit.Case, async: false
+  # filesystem, e (desde a RN-507) em `Engine.Runners.Registry`, que usa
+  # `:global` — o mesmo motivo de `Engine.Runners.RunnerRouterTest`. Os testes
+  # ORIGINAIS (local, sem projeto no banco) continuam funcionando sem tocar o
+  # banco — `WorktreeManager.runner?/1` degrada pra `false` sem sandbox
+  # (mesmo raciocínio de `Engine.Actions.Workspace.projeto_runner/1`, agora
+  # removido de lá); os NOVOS (describe "runner") precisam do banco de
+  # verdade para inserir o projeto e o ciclo de vida do container.
+  use Engine.DataCase, async: false
 
   alias Engine.Dev.WorktreeManager
+  alias Engine.Runners.Registry
 
   setup do
     root =
@@ -96,5 +102,128 @@ defmodule Engine.Dev.WorktreeManagerTest do
 
     assert removed == ["dev-web"]
     assert WorktreeManager.list(project_id) == ["dev-api"]
+  end
+
+  # RN-507/ADR 0145 — as MESMAS quatro operações, para um projeto
+  # `execution_mode: runner`: bifurcam para `Engine.Actions.Workspace.
+  # RunnerGit`, pelo canal Phoenix, nunca `File.ls`/`System.cmd` local (que
+  # não alcançaria a pasta do usuário de qualquer jeito).
+  describe "runner (RN-507, ADR 0145)" do
+    defp insert_runner_project!(project_id, workspace_path) do
+      Repo.query!(
+        "INSERT INTO public.projects " <>
+          "(id, name, slug, execution_mode, workspace_path, workspace_verified_at) " <>
+          "VALUES ($1, 'proj', 'proj', 'runner', $2, now())",
+        [Ecto.UUID.dump!(project_id), workspace_path]
+      )
+    end
+
+    defp insert_container_lifecycle!(project_id, status) do
+      Repo.query!(
+        "INSERT INTO public.project_containers " <>
+          "(id, project_id, status, image_version, cpus, memory_mb, pids_limit) " <>
+          "VALUES ($1, $2, #{status}, 1, 1.0, 512, 128)",
+        [Ecto.UUID.dump!(Ecto.UUID.generate()), Ecto.UUID.dump!(project_id)]
+      )
+    end
+
+    defp fake_work_dir do
+      Path.join(
+        System.tmp_dir!(),
+        "brabo-wt-runner-#{System.os_time(:microsecond)}-#{System.unique_integer([:positive])}"
+      )
+    end
+
+    # Fake runner GENÉRICO, parametrizado por `responder` — cada teste decide
+    # o que cada comando devolve (mesmo desenho do fake runner de
+    # `Engine.Actions.WorkspaceRunnerTest`, um nível acima da resposta fixa).
+    defp start_fake_runner!(project_id, responder) do
+      parent = self()
+
+      pid =
+        spawn(fn ->
+          Ecto.Adapters.SQL.Sandbox.allow(Engine.Repo, parent, self())
+          :ok = Registry.register(project_id, self())
+          send(parent, :fake_runner_ready)
+          fake_runner_loop(parent, responder)
+        end)
+
+      assert_receive :fake_runner_ready, 1_000
+      on_exit(fn -> Process.exit(pid, :kill) end)
+      pid
+    end
+
+    defp fake_runner_loop(parent, responder) do
+      receive do
+        {:dispatch_exec, ref, command, cwd, _env, from, _timeout_ms} ->
+          send(parent, {:comando, command})
+          {exit_code, output} = responder.(command, cwd)
+
+          send(
+            from,
+            {:runner_exec_result, ref,
+             %{"exitCode" => exit_code, "output" => output, "timedOut" => false}}
+          )
+
+          fake_runner_loop(parent, responder)
+      end
+    end
+
+    test "list/1 num projeto runner PRONTO lista via o canal, nunca File.ls local" do
+      project_id = Ecto.UUID.generate()
+      work_dir = fake_work_dir()
+      insert_runner_project!(project_id, work_dir)
+      insert_container_lifecycle!(project_id, "'running'")
+
+      start_fake_runner!(project_id, fn command, _cwd ->
+        if String.starts_with?(command, "find "),
+          do: {0, "dev-api\ndev-web\n"},
+          else: {0, ""}
+      end)
+
+      # A pasta nunca existiu no disco do engine — se `list/1` tivesse caído
+      # no caminho LOCAL (`File.ls`), teria devolvido `[]` em silêncio, em
+      # vez dos dois agentes que só o runner "sabe".
+      refute File.exists?(work_dir)
+      assert Enum.sort(WorktreeManager.list(project_id)) == ["dev-api", "dev-web"]
+    end
+
+    test "cleanup_orphans/2 num projeto runner remove o órfão via o canal" do
+      project_id = Ecto.UUID.generate()
+      work_dir = fake_work_dir()
+      insert_runner_project!(project_id, work_dir)
+      insert_container_lifecycle!(project_id, "'running'")
+
+      test_pid = self()
+
+      start_fake_runner!(project_id, fn command, _cwd ->
+        cond do
+          String.starts_with?(command, "find ") ->
+            {0, "dev-api\ndev-web\n"}
+
+          String.contains?(command, "worktree remove") ->
+            send(test_pid, {:removeu, command})
+            {0, ""}
+
+          true ->
+            {0, ""}
+        end
+      end)
+
+      removidos = WorktreeManager.cleanup_orphans(project_id, ["dev-api"])
+
+      assert removidos == ["dev-web"]
+      assert_receive {:removeu, comando}
+      assert comando =~ "dev-web"
+    end
+
+    test "list/1 num projeto runner SEM container running devolve [] — não dá pra saber agora" do
+      project_id = Ecto.UUID.generate()
+      work_dir = fake_work_dir()
+      insert_runner_project!(project_id, work_dir)
+      # SEM insert_container_lifecycle! nem runner conectado.
+
+      assert WorktreeManager.list(project_id) == []
+    end
   end
 end

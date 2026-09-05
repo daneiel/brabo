@@ -36,15 +36,25 @@ defmodule Engine.Runners.RunnerRouter do
   `nil`) e `timeout_ms`. Devolve `{:ok, payload}` (o mapa cru do
   `"exec_result"`, chaves string) | `{:error, :not_connected}` |
   `{:error, :timeout}`.
+
+  `env` (opcional, default `nil`) é o par extra que a RN-507/ADR 0145
+  acrescentou ao protocolo `exec`/`exec_result`, para o `git fetch`/`push` de
+  `Engine.Actions.Workspace.RunnerGit` injetar a credencial (ADR 0056) sem
+  gravá-la em argv nem em arquivo — o MESMO raciocínio de
+  `Engine.Actions.GitAuth`, só que o processo filho nasce na máquina do
+  usuário, não neste. Chamador que não passa `env` (todo comando de terminal
+  comum) preserva o payload de sempre: `env` some do mapa em vez de viajar
+  como `null`, então o runner mais antigo (que ainda não conhece o campo)
+  nunca recebe uma chave que não sabe interpretar.
   """
-  def exec(project_id, command, cwd, timeout_ms) do
+  def exec(project_id, command, cwd, timeout_ms, env \\ nil) do
     case Registry.whereis(project_id) do
       nil ->
         {:error, :not_connected}
 
       pid ->
         ref = Ecto.UUID.generate()
-        send(pid, {:dispatch_exec, ref, command, cwd, self(), timeout_ms})
+        send(pid, {:dispatch_exec, ref, command, cwd, env, self(), timeout_ms})
 
         receive do
           {:runner_exec_result, ^ref, payload} -> {:ok, payload}

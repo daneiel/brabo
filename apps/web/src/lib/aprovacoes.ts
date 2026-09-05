@@ -64,6 +64,7 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   container_start: 'quer subir o container do projeto',
   container_stop: 'quer parar o container do projeto',
   container_remove: 'quer remover o container do projeto',
+  container_start_via_runner: 'quer subir o container do projeto na sua máquina',
 };
 
 type Payload = Record<string, unknown>;
@@ -303,6 +304,16 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
   container_remove: () =>
     'Remove o container do projeto de vez — descarta o que existe. Para ' +
     'voltar a ter um, é preciso subir de novo do zero.',
+
+  // RN-508 (ADR 0145) — segundo tipo pra subir o container real do projeto,
+  // exclusivo do modo Runner: sobe pelo `brabo-runner`, na máquina do
+  // usuário, com o Docker DELE — nunca elege imagem candidata nenhuma (a
+  // que já estiver decidida é a que sobe), diferente de `container_start`.
+  container_start_via_runner: (p) => {
+    const rationale = texto(p, 'rationale');
+    const porque = rationale ? `: "${curto(rationale)}"` : '';
+    return `Sobe o container do projeto na SUA máquina, via o runner conectado${porque}.`;
+  },
 };
 
 /** O verbo do tipo, ou um verbo neutro quando o web ainda não o conhece. */

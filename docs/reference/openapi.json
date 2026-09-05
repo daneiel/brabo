@@ -13960,7 +13960,8 @@
               "assess_implementability",
               "container_start",
               "container_stop",
-              "container_remove"
+              "container_remove",
+              "container_start_via_runner"
             ],
             "example": "terminal"
           },
@@ -18235,7 +18236,8 @@
               "assess_implementability",
               "container_start",
               "container_stop",
-              "container_remove"
+              "container_remove",
+              "container_start_via_runner"
             ],
             "example": "terminal",
             "description": "Action type. Each type has its own minimum role: `git_push`, `git_merge`, and `git_branch_protect` require `maintainer`, the rest `developer`."
@@ -18306,7 +18308,8 @@
               "assess_implementability",
               "container_start",
               "container_stop",
-              "container_remove"
+              "container_remove",
+              "container_start_via_runner"
             ],
             "example": "terminal",
             "description": "What the action would do. `git_push` and `git_merge` require `maintainer`."
@@ -20337,6 +20340,7 @@
               "container_start",
               "container_stop",
               "container_remove",
+              "container_start_via_runner",
               "*"
             ],
             "example": "terminal",
