@@ -385,15 +385,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   quatro vezes, e localmente derrubou o step de scan de ~11s (cópia) +
   ~10s (scan) para ~5s (link instantâneo + scan).
 
-  Medido no PR real (`gh api repos/.../actions/jobs/<id>`, dois runs do
+  Medido no PR real (`gh api repos/.../actions/jobs/<id>`, três runs do
   MESMO PR): os TRÊS steps do trivy (instalar o binário + baixar a base +
-  escanear as quatro em paralelo) somaram **27s** com `cp -r` e **15s** com
-  `ln -s` — a base de comparação correta é essa, e não a duração TOTAL do
-  job entre os dois runs, porque o segundo herdou o cache do `gha` já
-  aquecido pelo primeiro (`Build das quatro imagens` caiu de 168s pra 22s
-  só por isso, sem relação com o trivy). **28s → 15s** nos scans (baseline
-  sequencial de 4 steps da action, medido antes desta mudança) é a
-  comparação honesta: ~46% mais rápido, batendo a expectativa de ~17s.
+  escanear as quatro em paralelo) somaram **27s** com `cp -r` e **15s**/
+  **26s** nos dois runs seguintes já com `ln -s` — a base de comparação
+  correta é essa, e não a duração TOTAL do job entre os runs, porque cada
+  um herdou cache do `gha` num estado diferente (`Build das quatro
+  imagens` variou de 168s a 22s SÓ por isso, sem relação nenhuma com o
+  trivy). Contra os **28s** da baseline sequencial (4 steps da action,
+  medido antes desta mudança), os dois runs com `ln -s` ficam **iguais ou
+  mais rápidos** (15s e 26s) mesmo com a variância normal de rede (baixar
+  a base: 4s a 7s) e de I/O do runner (escanear: 9s a 17s) entre execuções
+  — a estrutura do achado (isolar só o `fanal.db`, sem copiar a base) é o
+  que garante o piso, não um número fixo.
 
   Aplicado ao total original de **333s** mantendo o resto igual, o job
   previsto fica em **~320s (5m20s)** — ainda ACIMA do teto de ~4min, como
