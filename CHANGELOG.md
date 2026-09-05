@@ -356,6 +356,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   foi reamostrado num runner hospedado — ver `TODO(humano)` no próprio
   arquivo
 
+- **ci**: os quatro scans do Trivy no job `images` (`Build, scan e smoke das
+  imagens de produção`) deixam de ser QUATRO steps sequenciais via
+  `aquasecurity/trivy-action` e passam a rodar em PARALELO, dentro do MESMO
+  job — o build e o scan continuam juntos de propósito (as quatro imagens
+  somam ~1,7 GB, e passá-las entre jobs custaria mais que o ganho; decisão
+  já medida e documentada no `docker-bake.hcl` e no `ci.yml`, não reaberta
+  aqui). GitHub Actions não paraleliza steps de um `uses:`, então a troca foi
+  para o binário chamado direto (`v0.70.0`, o mesmo já pinado, com checksum
+  verificado) num script de shell que dispara os quatro scans com `&` e
+  recolhe o código de saída de cada `wait` individualmente.
+
+  Achado ao medir localmente: rodar `trivy image` quatro vezes em paralelo
+  contra o `--cache-dir` PADRÃO (compartilhado) falha por disputa de lock no
+  cache local do trivy (bbolt) — `cache may be in use by another process:
+  timeout` — mesmo pedindo pra não atualizar a base, porque o cache de
+  ANÁLISE DE CAMADA usa o mesmo arquivo que a base de vulnerabilidades. A
+  correção foi baixar a base UMA vez e copiar pra um `--cache-dir` PRÓPRIO
+  por imagem antes de paralelizar — isola o lock sem repetir o download.
+
+  Medido no PR real (job `images`, ver `gh api .../actions/jobs/<id>`):
+  **333s → TODO(medir)s**. Ganho esperado é só nos quatro scans (~28s → ~17s,
+  o mais lento dos quatro rodando sozinho) — isso sozinho NÃO derruba o job
+  pra baixo do teto de ~4min: o resto do job (build das quatro imagens,
+  smoke, E2E) já soma mais que isso, por decisão de arquitetura aceita e
+  documentada (não é escopo desta mudança revisar).
+
 ## v4.0.0 — 2026-09-04
 
 ### ⚠ Mudanças incompatíveis
