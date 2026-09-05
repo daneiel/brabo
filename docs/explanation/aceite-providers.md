@@ -215,9 +215,13 @@ pnpm --filter api test -- openrouter-provider.smoke.spec.ts
 Requirements:
 
 - the test database up — `TEST_DATABASE_URL`, default
-  `postgres://brabo:brabo@localhost:5432/brabo_test` (the same one used by
-  any of the api's integration tests; the smoke calls `truncateAll` before
-  starting);
+  `postgres://brabo:brabo@localhost:5432/brabo_test`. Since
+  `perf/banco-por-worker-nos-testes-da-api`, that value only names the BASE
+  Vitest derives names from (`apps/api/test/support/test-db-name.ts`); this
+  single spec still runs on one Vitest worker and connects to that worker's
+  own database (`brabo_test_w1`, cloned from a migrated template), the same
+  mechanism any of the api's integration tests use — the smoke calls
+  `truncateAll` before starting;
 - credit in the provider's account. Since
   [ADR 0050](../adr/0050-credencial-sempre-cifrada-verificacao-explicita.md)
   registration tests nothing — who verifies the key is smoke step 1b

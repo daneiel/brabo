@@ -121,7 +121,7 @@ not the guess.
 | check | workflow | cold | warm |
 |---|---|---|---|
 | `Build, scan e smoke das imagens de produção` | `ci.yml` | **295s** | 109s |
-| `Testes TS (api + web)` | `ci.yml` | 159s | **159s** |
+| `Testes TS (api + web)` | `ci.yml` | 159s\* | **159s**\* |
 | `Testes do engine (ExUnit)` | `ci.yml` | 124s | 39s |
 | `Auditoria de dependências` | `ci.yml` | 99s | 85s |
 | `Lint` | `ci.yml` | 66s | 69s |
@@ -145,11 +145,26 @@ shorten the PR has two targets, and only two:
   into a job matrix would be WORSE: 1.7 GB of images per artifact costs
   more than the build, and the smoke test needs all four on the same
   daemon;
-- **warm cache: `Testes TS`**, where 91s of the 159s are
+- **warm cache: `Testes TS`**, where 91s of the 159s were
   `pnpm --filter api test`, serialized by `fileParallelism: false` in
-  `apps/api/vitest.config.ts` — the specs share `brabo_test` and run
-  TRUNCATE between tests. Parallelizing requires a database or schema per
-  worker, not the flag.
+  `apps/api/vitest.config.ts` because the ~80 specs that touch the database
+  shared ONE `brabo_test` and ran TRUNCATE between tests — arrivals in
+  parallel would collide. That's fixed now
+  (`perf/banco-por-worker-nos-testes-da-api`, CHANGELOG): each Vitest worker
+  gets its OWN database instead — `test/support/global-setup.ts` migrates a
+  TEMPLATE once and clones one database per worker via
+  `CREATE DATABASE ... TEMPLATE` (cheap, a page copy, not a migration
+  replay), `test/support/test-db-name.ts` resolves which one a given spec
+  connects to from `VITEST_POOL_ID`, and `vitest.config.ts` flips
+  `fileParallelism: true` with `maxWorkers: 4` (fixed at the runner's 4
+  vCPU, not auto-detected — the number has to be the SAME on a dev machine
+  with more cores and on the runner, or the locally measured behavior isn't
+  what runs there). Measured locally: the api suite's own duration dropped
+  from 792.58s to 471.23s on a clean run (~40%, three repeats with no
+  flakiness). \* The `159s`/`91s` above are the PRE-change numbers — this
+  hasn't had a fresh cold/warm sample on a GitHub-hosted runner yet.
+  **TODO(humano):** re-measure `Testes TS (api + web)` on `ci.yml` after
+  this lands on `dev` and replace the row above.
 
 > **Splitting a job to parallelize it has two costs the number doesn't
 > show.** The first: the job's name **is** the required check's name, so
