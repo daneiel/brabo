@@ -197,10 +197,13 @@ jobs:
             docker/web/Dockerfile.prod docker/backup/Dockerfile.prod \
             docker/broker/Dockerfile.prod
 
-  test-ts:
-    name: Testes TS (api + web)
+  test-api:
+    name: Testes TS (api)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Medido no run 33970169946 (job `test-ts`, antes da divisão): api sozinha
+    # (setup + testes + typecheck) ficava por volta de 180s. 8min é folga real
+    # sem ser bobeira.
+    timeout-minutes: 8
     services:
       postgres:
         # pgvector, não `postgres:16` puro: as migrations criam a extensão e um
@@ -253,15 +256,36 @@ jobs:
         run: pnpm --filter api test -- --coverage
 
       # O vitest transpila por SWC, que APAGA os tipos sem verificá-los — o
-      # mesmo motivo do typecheck dos scripts de CI, logo abaixo. Aqui isso
-      # importa mais do que parece: os DTOs de resposta da Fase 7b provam por
-      # TIPO que espelham a entidade de domínio (`Wire<T>` + `MesmasChaves`),
-      # e sem este passo essa prova só rodaria no job de imagens, 20 minutos
-      # depois e num lugar que ninguém lê.
+      # mesmo motivo do typecheck dos scripts de CI, no job `test-packages`.
+      # Aqui isso importa mais do que parece: os DTOs de resposta da Fase 7b
+      # provam por TIPO que espelham a entidade de domínio (`Wire<T>` +
+      # `MesmasChaves`), e sem este passo essa prova só rodaria no job de
+      # imagens, 20 minutos depois e num lugar que ninguém lê.
       - name: Typecheck da api
         run: pnpm --filter api typecheck
 
-      # Mesmo mecanismo do passo acima: `apps/web/vite.config.ts` tem
+  test-web:
+    name: Testes TS (web)
+    runs-on: ubuntu-latest
+    # Medido no run 33970169946 (job `test-ts`, antes da divisão): web sozinho
+    # (setup + testes + typecheck) ficava por volta de 190s. 8min é folga real
+    # sem ser bobeira. Sem serviço `postgres`: o web não toca banco.
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Mesmo mecanismo do passo abaixo: `apps/web/vite.config.ts` tem
       # `coverage.thresholds` no valor medido hoje, arredondado para baixo.
       - name: Testes do web (com piso de cobertura)
         run: pnpm --filter web test -- --coverage
@@ -278,6 +302,29 @@ jobs:
       # é incremental e pularia o trabalho num runner com cache.
       - name: Typecheck do web
         run: pnpm --filter web typecheck
+
+  test-packages:
+    name: Testes TS (pacotes)
+    runs-on: ubuntu-latest
+    # Medido no run 33970169946 (job `test-ts`, antes da divisão): os seis
+    # componentes abaixo (scripts de CI, porta de Docker, broker, runner)
+    # somavam ~20s no total — o grosso do tempo deste job é o setup
+    # (checkout + pnpm install). 8min é folga real sem ser bobeira. Sem
+    # serviço `postgres`: nenhum destes pacotes toca banco.
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
 
       # Os scripts de CI são lógica pura, sem banco — mas rodam no mesmo job
       # porque compartilham o `pnpm install` acima.
@@ -355,7 +402,8 @@ jobs:
 
       # Só para `node scripts/ci/coverage-floor.ts` logo abaixo — o script não
       # tem dependência nenhuma (só `node:fs`/`node:url`), então não precisa
-      # de `pnpm install` aqui, ao contrário do job `test-ts`.
+      # de `pnpm install` aqui, ao contrário dos jobs `test-api`/`test-web`/
+      # `test-packages`.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
