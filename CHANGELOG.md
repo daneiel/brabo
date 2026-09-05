@@ -447,6 +447,29 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   por decisão já medida e documentada (ver o comentário no topo do job
   `images` e no `docker-bake.hcl`).
 
+- **ci**: a decisão de manter build+scan+smoke no MESMO job do `images` foi
+  reaberta a pedido explícito — desta vez testando push/pull via GHCR
+  (registry) em vez de artifact genérico — e REJEITADA de novo, com números
+  reais (PR #497, revertido: o job voltou a ser exatamente o de hoje).
+  Duas rodadas completas de CI mediram push das quatro imagens em 44–51s e
+  pull em 21–25s (round-trip 65–76s). Não compensa, e o motivo não é a rede
+  — GHCR é rápido —, é estrutural: o job de smoke+e2e precisa das QUATRO
+  imagens de qualquer jeito, então nenhum split evita pagar o pull inteiro,
+  e o único trabalho que sairia do caminho crítico (o Trivy, ~15–21s) vale
+  menos que o round-trip que passaria a existir. Resultado líquido: o split
+  ficaria **~55s mais lento**, não mais rápido. Achado paralelo, registrado
+  como nota permanente para quem reabrir essa pergunta com um mecanismo de
+  registry: um pacote NOVO publicado por `GITHUB_TOKEN` neste repositório
+  (público) nasce com visibilidade `public` por padrão — qualquer push
+  efêmero fica publicamente puxável até a limpeza rodar, então visibilidade
+  precisa ser decisão explícita, nunca um acidente de default. A limpeza das
+  imagens efêmeras usadas na medição (`brabo-ci-*`) também achou e corrigiu
+  um bug de instrumento: a API do GHCR recusa apagar a ÚLTIMA versão de um
+  pacote ("must delete the package instead"), e como cada pacote efêmero só
+  tinha uma versão por run, isso reprovava a limpeza sempre — corrigido para
+  apagar o pacote inteiro, verificado funcionando (as quatro imagens
+  efêmeras sumiram do GHCR, confirmado manualmente na aba Packages).
+
 ## v4.0.0 — 2026-09-04
 
 ### ⚠ Mudanças incompatíveis

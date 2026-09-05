@@ -812,19 +812,23 @@ jobs:
     # O paralelismo vem do `bake`, não de uma matriz de jobs — cada job da
     # matriz teria seu próprio daemon, e aí as imagens precisariam trafegar.
     #
-    # [MEDIÇÃO TEMPORÁRIA — perf/imagens-via-ghcr-no-ci] Reabrindo essa
-    # decisão a pedido explícito: em vez de artifact genérico, testar GHCR
-    # como mecanismo de transporte entre jobs (layers deduplicadas, não um
-    # tar). Os passos marcados [MEDIÇÃO] abaixo só EXISTEM pra medir
-    # push/pull reais antes de desenhar o split — saem deste arquivo assim
-    # que a medição terminar, virando o desenho final ou um comentário
-    # registrando a rejeição.
-    permissions:
-      contents: read
-      packages: write
-    # [MEDIÇÃO] output só pro job de pull enxergar a tag efêmera desta run.
-    outputs:
-      medicao_tag: ${{ steps.medicao_push.outputs.tag }}
+    # SEGUNDO MECANISMO TAMBÉM MEDIDO E REJEITADO (PR #497, revertido):
+    # push/pull via GHCR em vez de artifact genérico — a ideia era empurrar
+    # as quatro imagens pro registry num job de build e puxar delas nos jobs
+    # de scan/smoke, que rodariam em PARALELO entre si em vez de sequenciais
+    # como hoje. Medido de verdade, duas rodadas completas: push 44–51s,
+    # pull 21–25s, round-trip 65–76s. Não compensa, e o motivo é estrutural,
+    # não um número que uma rede mais rápida resolveria: o job de smoke+e2e
+    # PRECISA das QUATRO imagens de qualquer forma, então o split nunca evita
+    # pagar o pull inteiro — o único trabalho que de fato sai do caminho
+    # crítico é o Trivy (~15–21s), e o round-trip sozinho já custa mais que
+    # isso. Resultado: o split ficaria ~55s MAIS LENTO que hoje, não mais
+    # rápido. Achado de segurança relevante para quem reabrir essa pergunta
+    # com um mecanismo de registry: pacote NOVO publicado por `GITHUB_TOKEN`
+    # neste repositório (público) nasce com visibilidade `public` por
+    # padrão — qualquer push efêmero fica publicamente puxável até a limpeza
+    # rodar, e isso precisa ser uma decisão explícita de visibilidade, nunca
+    # um acidente de default.
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
@@ -844,55 +848,6 @@ jobs:
           files: docker-bake.hcl
           targets: default
           load: true
-
-      # [MEDIÇÃO] Login no GHCR — mesmo mecanismo do `release.yml` (ADR
-      # 0119): `GITHUB_TOKEN` com `packages: write`, sem segredo novo. NUNCA
-      # a mesma tag que o release publica (`brabo-api:vX.Y.Z`) — pacote
-      # PRÓPRIO (`brabo-ci-*`), pra uma imagem de PR de CI nunca aparecer ao
-      # lado de uma release de verdade.
-      - name: "[MEDIÇÃO] Login no GHCR"
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # [MEDIÇÃO] Mede só o PUSH: as quatro imagens já estão no daemon local
-      # (step acima), então o tempo aqui é round-trip de rede puro, isolado
-      # do build. Tag efêmera por run+attempt — nunca reaproveitada, pra não
-      # colidir com uma run concorrente.
-      - name: "[MEDIÇÃO] Push das quatro imagens pro GHCR"
-        id: medicao_push
-        run: |
-          set -euo pipefail
-          tag="ci-${{ github.run_id }}-${{ github.run_attempt }}"
-          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
-          owner="${{ github.repository_owner }}"
-          for alvo in api engine web backup; do
-            docker tag "brabo-${alvo}:prod" "ghcr.io/${owner}/brabo-ci-${alvo}:${tag}"
-          done
-          inicio=$(date +%s)
-          for alvo in api engine web backup; do
-            docker push "ghcr.io/${owner}/brabo-ci-${alvo}:${tag}"
-          done
-          fim=$(date +%s)
-          duracao=$((fim - inicio))
-          echo "duracao_s=${duracao}" >> "$GITHUB_OUTPUT"
-          echo "::notice::[MEDIÇÃO] push das 4 imagens pro GHCR: ${duracao}s"
-
-      # [MEDIÇÃO] Achado de segurança a confirmar: qual a visibilidade default
-      # de um pacote NOVO publicado por GITHUB_TOKEN. As quatro imagens de
-      # release (ADR 0119) são públicas de propósito; estas são pacotes
-      # PRÓPRIOS (brabo-ci-*) e SÓ podem ficar públicas se isso for uma
-      # escolha, não um acidente de default.
-      - name: "[MEDIÇÃO] Visibilidade do pacote efêmero"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OWNER: ${{ github.repository_owner }}
-        run: |
-          set -euo pipefail
-          vis="$(gh api "users/${OWNER}/packages/container/brabo-ci-api" --jq .visibility)"
-          echo "::notice::[MEDIÇÃO] visibilidade default de brabo-ci-api: ${vis}"
 
       # Critério de aceite explícito da sessão. Checado aqui além do smoke.sh
       # porque é barato e falha com mensagem direta.
@@ -1065,75 +1020,3 @@ jobs:
       - name: Derrubar o compose
         if: always()
         run: docker compose -f docker/docker-compose.prod.yml down -v
-
-  # [MEDIÇÃO TEMPORÁRIA — perf/imagens-via-ghcr-no-ci] Mede o PULL num runner
-  # LIMPO (sem as imagens no daemon), separado do job `images` de propósito —
-  # é exatamente essa separação que o desenho final teria entre build e
-  # scan/smoke, e é o número que falta pra decidir se o mecanismo compensa.
-  medir-pull-ghcr:
-    name: "[MEDIÇÃO] Pull das imagens do GHCR"
-    needs: images
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      packages: read
-    steps:
-      - name: Login no GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pull das quatro imagens (runner limpo)
-        run: |
-          set -euo pipefail
-          tag="${{ needs.images.outputs.medicao_tag }}"
-          owner="${{ github.repository_owner }}"
-          inicio=$(date +%s)
-          for alvo in api engine web backup; do
-            docker pull "ghcr.io/${owner}/brabo-ci-${alvo}:${tag}"
-          done
-          fim=$(date +%s)
-          duracao=$((fim - inicio))
-          echo "::notice::[MEDIÇÃO] pull das 4 imagens do GHCR (runner limpo): ${duracao}s"
-
-  # Limpeza OBRIGATÓRIA das tags efêmeras — elas nunca podem se acumular no
-  # GHCR. `if: always()` porque a limpeza vale inclusive quando o push, o
-  # scan ou o pull falharam no meio.
-  #
-  # ACHADO (primeira rodada real desta medição): a API recusa apagar a
-  # ÚLTIMA versão de um pacote — "You cannot delete the last tagged version
-  # of a package. You must delete the package instead." (400) — e como cada
-  # pacote `brabo-ci-*` nasce e morre NESTA run (uma tag por run), a versão
-  # que acabou de ser publicada É sempre a última, então apagar por VERSÃO
-  # falharia em toda run, não só numa borda. A saída é apagar o PACOTE
-  # inteiro, não uma versão dele — seguro porque nada além desta medição
-  # publica em `brabo-ci-*`, e também AUTO-CURA qualquer versão órfã que uma
-  # limpeza anterior tenha deixado pra trás (ex.: run cancelada antes deste
-  # job rodar).
-  limpar-imagens-medicao:
-    name: "[MEDIÇÃO] Limpa as imagens efêmeras do GHCR"
-    needs: [images, medir-pull-ghcr]
-    if: always()
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      packages: write
-    steps:
-      - name: Deletar os pacotes efêmeros inteiros
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OWNER: ${{ github.repository_owner }}
-        run: |
-          set -euo pipefail
-          for alvo in api engine web backup; do
-            pacote="brabo-ci-${alvo}"
-            if ! gh api "users/${OWNER}/packages/container/${pacote}" >/dev/null 2>&1; then
-              echo "::notice::pacote ${pacote} não existe — nada a limpar (push pode ter falhado antes de criá-lo)"
-              continue
-            fi
-            gh api -X DELETE "users/${OWNER}/packages/container/${pacote}"
-            echo "ok: pacote ${pacote} deletado inteiro"
-          done
