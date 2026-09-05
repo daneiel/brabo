@@ -81,6 +81,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | O handoff da Infra podia ser aceito por tela nenhuma (D0) | `offeredHandoff` filtra o card do fio por `AGENTES_DE_CHAT`, que exclui `infra` — e o filtro está CERTO (o engine não tem cláusula de `message` pro Infra Lead; alargá-lo faria a tela oferecer um fio que não existe e o composer mandar mensagem pro Criativo). O defeito era a consequência, que o comentário do próprio código registrava como aceita: `acceptHandoff` tinha UM consumidor só, atrás desse filtro, então o handoff de `OfferInfraHandoffUseCase` ficava `offered` para sempre, o Infra Lead nunca era ativado, `propose_container_start` nunca era chamado e NENHUM projeto de nenhum modo chegava a ter container de pé. Correção: card acionável PRÓPRIO, fora do fio, na faixa fixa entre a área que rola e o composer — a mesma que já hospeda o handoff manual e se declara o lugar das ações de handoff que não são conversa —, chamando o `acceptHandoff` que já existia, fechado pelo mesmo `activeFor`. O `handoff.offered` da Infra continua NARRADO no fio como divisor mudo | RN-499 |
 | A base única dos projetos montados (PR 1, BREAKING) | Criar projeto `mounted` exigia uma linha de bind-mount escrita À MÃO em `api` E `engine` mais um restart dos dois — que mata todo turno de agente, socket de terminal e chamada de LLM em voo da instalação, para onboardar UM projeto. Nasce `BRABO_PROJECTS_BASE`: UMA base, configurada uma vez pelo operador, montada por IDENTIDADE (`$X:$X`) nos dois serviços, com todos os projetos montados dentro dela e NADA editado por projeto. Identidade e não mountpoint fixo porque `workspace_path` é digitado pelo usuário e mostrado de volta a ele — e é o que faz `projectScopeRoot`/`workspace_dir/2` continuarem certos sem código novo. Variável PRÓPRIA (colisão de namespace com `workspace_dir_name` UNIQUE faria `git init` na pasta de outro projeto; dono oposto; a base é navegável e a raiz gerenciada não deve ser). AUSENTE é normal: `projectsBase: null` (`GET workspaces/:id/projects-base`, `maintainer`) e o modo não é oferecido. E `pnpm dev` RECUSA subir com a base sobreposta ao checkout — a única checagem possível, porque a api compara contra `/workspace`. Dois custos declarados: symlink sob a base e uma base só | ADR 0141, RN-500 |
 | A pasta montada nasce quando o container sobe (PR 2) | Fecha a metade que o ADR 0141 deixou declarada. `mounted` validava DISCO na criação (existe? é pasta? é gravável de dentro da api?), o que tornava impossível o requisito literal do dono do produto — *"se for Pasta montada, o bind-mount deve ser criado APÓS a decisão do arquiteto"* —, porque a criação é a PRIMEIRA tela e a decisão do Arquiteto acontece muitas sessões depois; e era o que impedia `mounted` de ser escolha de primeira classe, já que um caminho SUGERIDO pelo assistente é por construção um caminho que ainda não existe. Passa a validar só o LÉXICO (a mesma disciplina de `runner` desde a RN-423) mais estar dentro de `BRABO_PROJECTS_BASE`; a pasta é MATERIALIZADA por `materializarWorkspaceMontado` (`mkdir -p` + as três perguntas de disco, com a recusa por estar fora da base ANTES do `mkdir`), chamada de DOIS lugares: `ExecuteContainerStartUseCase` (o normal — cria, prova gravável e carimba `workspace_verified_at` ANTES de qualquer transição; falha vira `failed` NOMEADO e o ciclo de vida NÃO chega a `provisioning`) e `ConvertProjectExecutionModeUseCase` (a exceção declarada — não tem passo de container onde pendurar o trabalho e move o `permissions.json` para dentro da pasta logo em seguida). A regra da base NÃO entra em `caminhoDeWorkspaceLocalValido`, que roda em toda LEITURA — projeto `mounted` legado fora da base explodiria ao ser lido —, com teste de não-regressão. Sem migration: `mounted` segue gravando `workspace_path` não-nulo, e adiar a VERIFICAÇÃO nunca toca o invariante de PAREAMENTO do CHECK | ADR 0142, RN-501 |
+| Container de projeto montado (PR 3) | Projeto `mounted` não conseguia container NENHUM, por dois bloqueios independentes — a api mandava todo modo não-`container` pro RUNNER (que exige `brabo-runner` conectado) e o broker recusava não-`container` na fonte. Os dois eram sobre GEOMETRIA, não sobre o nome do modo, e a base única do ADR 0141 mudou a geometria. A ramificação vira por DESTINO: `container` E `mounted` → broker, só `runner` → runner (e `container_stop`/`_remove` mudam JUNTAS com o `_start`, senão sobe no servidor e para na máquina do usuário). O invariante do ADR 0130 não se mexe — nenhum caminho absoluto atravessa a rede: o broker ganha uma SEGUNDA raiz (`BRABO_PROJECTS_HOST_BASE`) e a api manda um localizador DISCRIMINADO (`gerenciada` \| `montada` \| `indisponivel`) dizendo contra qual raiz o segmento relativo vale. TRÊS variantes porque `indisponivel` tem dois consertos diferentes (`runner` × `mounted` legado fora da base), e raiz que falta NUNCA é suprida pela outra. `mounted` ELEGE a imagem como `container` — o broker compõe de `artifact.project_image`, então eleição não gravada é eleição inerte (ADR 0133 num segundo modo) | ADR 0144, RN-503 |
 | O navegador de pastas passa a ser servido pela api (PR 4) | O assistente de criação perde os DOIS mecanismos de "procurar pasta", e os dois dependiam do runner: `FolderBrowserModal` navegava pelo WEBSOCKET DELE (`fs_list_dir`/`fs_home_dir`, lendo o disco do usuário) e o `RunnerOnboardingPanel` usava `showDirectoryPicker`, que devolve handle de navegador e nunca caminho absoluto — que é o que `workspace_path` guarda. Nasce `GET workspaces/:workspaceId/project-folders` (`maintainer`, o mesmo mínimo de `POST .../projects`: a rota revela a TOPOLOGIA de arquivos do operador, onde `projects-base` revelava um caminho só), escopada DURA à base do ADR 0141 — `path` omitido é a base, e sair dela é **400** e não 403 (nenhum papel navega fora; o pedido é malformado, não subautorizado). Tetos como contrato: só diretório, 500 ordenados ANTES do corte, sem recursão, `.`-prefixadas fora, symlink reportado e NUNCA descido — e o que fica de fora é CONTADO (`arquivos`/`simbolicos`/`truncado`), senão pasta cheia de código apareceria como vazia (RN-180). Sem POST: criar pasta é da materialização. No web, a interface `FsBrowser` (`lib/fs-browser.ts`) ganha DUAS implementações e `FolderBrowserModal` escolhe por união discriminada; o transporte via runner fica sem chamador, mantido por decisão declarada | RN-504 |
 
 | Agentes de dev só depois do container (PR 7) | Numa execução real do `exp001`, DEZ tasks de dev travaram de uma vez — e o achado não foi a pasta que falhou, foi que **nada ordenava container antes de dev agent**. `Engine.Dev.AgentIo.try_claim/2` — o ponto ÚNICO de claim — passa a consultar `ProjectContainerLifecycle.running?/1` (o predicado que o ADR 0134 já tinha) ANTES de chamar a api: sem linha REGISTRADA `running`, o agente cai em `:idle`, persiste e emite `dev.blocked_by_container`. No ENGINE e não só no `activate-execution` da api porque a REIDRATAÇÃO chega ao `try_claim/2` sem passar por rota nenhuma (`init/1` → `finish_restart_recovery/1`). `:idle` e NÃO status novo, pela razão que o próprio docblock do `try_claim/2` já registrava desde a Fase 12b — é o único estado do qual um wake ainda resgata, e todos os guards de `handle_info/2` se apoiam nisso; quem distingue "fila vazia" de "sem container" é o EVENTO, nunca o status. O wake vem pelo outbox: `RegistrarTransicaoDeContainerUseCase` publica `container.running` na MESMA transação que grava a chegada em `running`, num `aggregate_type` NOVO (`container`, o terceiro que `Engine.Outbox.Drain` lê) em vez de pegar `task` emprestado, com o PROJETO como `aggregateId`; a mensagem entregue é a `{:wake, :became_claimable}` que já existia. Segunda metade: `TerminalExecutor` para de degradar calado — `container` sem `running` caía em `System.cmd` DENTRO do processo do engine, e agora RECUSA, com `mounted` no mesmo ramo | ADR 0143, RN-502 |
@@ -147,13 +148,19 @@ daqui e o fechamento vai para o histórico.
   três modos agora exigem imagem decidida para a aba Code, e
   `RegistrarTransicaoDeContainerUseCase` não recusa mais por modo), mas quem
   impedia `mounted`/`runner` de chegar em `running` era só o broker
-  (`ModoDeExecucaoNaoSuportadoError`). O ADR 0137 fecha essa metade DO OUTRO
-  LADO: `mounted`/`runner` sobem container de verdade, só que NA MÁQUINA DO
-  USUÁRIO, pelo `brabo-runner` — o broker (e o servidor) continuam sem
-  enxergar essa pasta, e `container` continua sendo o único modo que sobe
-  container NO SERVIDOR. A pergunta "quantos módulos, um container só"
-  segue como está, `project_id UNIQUE` em `project_containers`, sem mudança
-  aqui
+  (`ModoDeExecucaoNaoSuportadoError`). O ADR 0137 fechou essa metade DO OUTRO
+  LADO: `mounted`/`runner` sobem container de verdade NA MÁQUINA DO USUÁRIO,
+  pelo `brabo-runner`. E o ADR 0144 (RN-503) fechou a metade que faltava para
+  `mounted`, do lado do SERVIDOR: a base única do ADR 0141 tornou aquela pasta
+  alcançável pelo daemon do host, então `mounted` passa a subir pelo BROKER
+  como `container` — a ramificação vira por DESTINO (`container` e `mounted` →
+  broker, `runner` → runner), e as três ações de ciclo de vida mudam juntas. O
+  broker ganhou uma SEGUNDA raiz (`BRABO_PROJECTS_HOST_BASE`) e a api passou a
+  mandar um localizador DISCRIMINADO em vez de um nome solto, sem que nenhum
+  caminho absoluto atravesse a rede. `runner` é o único modo que segue sem
+  container NO SERVIDOR — a pasta dele mora numa máquina que o broker não
+  enxerga. A pergunta "quantos módulos, um container só" segue como está,
+  `project_id UNIQUE` em `project_containers`, sem mudança aqui
 - Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
   aguardando spec; Staff dormente para disparo automático (acionável manual)
 - `appsec run_design/2` acionável, nada aciona sozinho (gatilho:
@@ -356,13 +363,20 @@ daqui e o fechamento vai para o histórico.
   contenção de um processo root-equivalente no host dependeria de o CHAMADOR
   estar correto. A api NÃO manda caminho nenhum (o `-v` é resolvido pelo daemon
   contra o filesystem do HOST; um caminho de dentro do container da api montaria
-  uma pasta VAZIA): o broker compõe com `PROJECT_WORKSPACES_HOST_ROOT`, e recusa
-  `start` nomeando a variável quando ela falta. Desde o ADR 0141 (RN-500) ele
-  tem uma SEGUNDA raiz declarada, `BRABO_PROJECTS_HOST_BASE` — a base dos
-  projetos MONTADOS, também no host, derivada de `BRABO_PROJECTS_BASE` no
-  compose. Ela ainda NÃO tem consumidor: quem resolve `mounted` contra ela é o
-  PR que dá container ao modo Pasta montada; a linha nasce junto com a base para
-  não aparecer meia release depois, longe do arquivo que a explica. Contenção em cinco camadas
+  uma pasta VAZIA). Desde o ADR 0144 (RN-503) ele tem DUAS raízes —
+  `PROJECT_WORKSPACES_HOST_ROOT` (a pasta GERENCIADA, modo `container`) e
+  `BRABO_PROJECTS_HOST_BASE` (a base dos projetos MONTADOS, derivada de
+  `BRABO_PROJECTS_BASE` no compose, ADR 0141) — e ele NÃO adivinha qual usar: a
+  api manda um localizador DISCRIMINADO (`localizacao`: `gerenciada` |
+  `montada` | `indisponivel`) dizendo contra qual raiz o SEGMENTO relativo
+  vale. O invariante é o mesmo de sempre — o que atravessa a rede continua
+  sendo só a metade que a raiz do broker não cobre. `start` recusa NOMEANDO a
+  raiz que falta, e NUNCA cai na outra: a gerenciada é nomeada por
+  `workspace_dir_name` e a base é nomeada pelo usuário, então o mesmo nome
+  aponta para pastas diferentes e o container subiria com o código de outro
+  projeto. Ele atende `container` E `mounted`, e recusa `runner` (a pasta mora
+  numa máquina que este host não enxerga); a lista é de PERMITIDOS, então modo
+  novo no enum nasce recusado com mensagem. Contenção em cinco camadas
   independentes — sem porta publicada, rede `internal: true` que só a api
   alcança, `BRABO_SERVICE_TOKEN` em tempo constante, cinco operações, spec
   computada. Sobe sob `profiles: ["container-broker"]` nos dois composes e
@@ -584,8 +598,14 @@ daqui e o fechamento vai para o histórico.
   (RN-105) VALE para os TRÊS modos desde a RN-494/ADR 0135 — projeto
   `mounted`/`runner` sem `artifact.project_image` decidido também responde
   409 na aba Code; a dispensa antiga foi REVOGADA, não é mais o
-  comportamento. `mounted`/`runner` continuam sem container PRÓPRIO no
-  SERVIDOR — quem sobe container pra eles é o `brabo-runner`, na máquina do
+  comportamento. Desde o ADR 0144 (RN-503), `mounted` SOBE container no
+  SERVIDOR, pelo BROKER — a base única do ADR 0141 tornou a pasta alcançável
+  pelo daemon, e a recusa antiga era sobre GEOMETRIA, não sobre o nome do
+  modo. A ramificação de `container_start`/`_stop`/`_remove` passa a ser por
+  DESTINO: `container` e `mounted` → broker, `runner` → runner (as três mudam
+  JUNTAS; subir no servidor e parar na máquina do usuário deixaria de pé, sem
+  forma de parar, o que está de pé). `runner` continua sem container PRÓPRIO
+  no SERVIDOR — quem sobe container pra ele é o `brabo-runner`, na máquina do
   USUÁRIO, com o Docker dela (ADR 0137, RN-497). Consequência declarada no
   ADR: a contenção estrutural do `join` some para esses projetos, e o vetor
   de symlink do ADR 0055 continua aberto. No LINUX, o próprio CLI

@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 142 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 143 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 

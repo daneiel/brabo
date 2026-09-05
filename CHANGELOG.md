@@ -21,6 +21,52 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,broker**: projeto no modo **Pasta montada** passa a ter container de
+  verdade, e ele sobe **no servidor**, pelo broker — como o modo Container já
+  fazia (RN-503, ADR 0144). Até aqui `mounted` não conseguia container nenhum,
+  por dois bloqueios independentes: `ExecuteContainerStartUseCase` mandava todo
+  modo diferente de `container` para o RUNNER (que exige um `brabo-runner`
+  conectado), e o broker recusava não-`container` na fonte. Os dois existiam
+  pela mesma razão de **geometria**, não pelo nome do modo — a pasta ficava num
+  lugar arbitrário do disco do operador, que o daemon do servidor não tinha por
+  que enxergar —, e o ADR 0141 mudou justamente essa geometria ao pôr todo
+  projeto montado sob UMA base montada por identidade.
+
+  **A ramificação passa a ser por DESTINO:** `container` **e** `mounted` vão ao
+  broker; só `runner` vai ao runner, porque a pasta dele continua numa máquina
+  que o servidor não alcança. Vale para as três ações de ciclo de vida —
+  `container_start`, `container_stop` e `container_remove` mudam **juntas**,
+  senão o container sobe no servidor e o pedido de parar vai procurá-lo na
+  máquina do usuário, deixando de pé, sem forma de parar, o que está de pé.
+
+  **O invariante do ADR 0130 não se mexe: nenhum caminho absoluto atravessa a
+  rede.** O que muda é que o broker passou a ter DUAS raízes
+  (`PROJECT_WORKSPACES_HOST_ROOT` e `BRABO_PROJECTS_HOST_BASE`, que ganha
+  consumidor), então a spec DIZ contra qual delas o segmento vale, num
+  localizador discriminado: `gerenciada` (o `workspace_dir_name`), `montada`
+  (o caminho RELATIVO sob a base) ou `indisponivel` (nenhuma raiz alcança, com
+  o motivo). Três variantes e não duas porque `indisponivel` tem dois consertos
+  diferentes — projeto `runner` (o conserto é o runner, do lado de lá) e
+  projeto `mounted` LEGADO criado fora da base (o conserto é mover a pasta) —,
+  e um `null` mandaria quem opera para o lugar errado metade das vezes. A falta
+  de uma raiz **nunca** é suprida pela outra: a recusa nomeia a variável e não
+  toca container nenhum, porque a raiz gerenciada é nomeada por
+  `workspace_dir_name` e a base é nomeada pelo usuário — cair numa pela outra
+  montaria o código de outro projeto, em silêncio.
+
+  Três barreiras sobre a concatenação, não uma: a api recusa o que está fora da
+  base, o `packages/docker-port` recusa segmento que não é relativo (`..`,
+  absoluto, vazio, `NUL`) e o resultado ainda passa por `raizDeProjetoValidada`
+  antes de virar `-v`. E `mounted` **elege** a imagem como `container`, em vez
+  de ler a vigente como o runner: o broker compõe a partir de
+  `artifact.project_image`, indo BUSCÁ-LO na api, então uma eleição não gravada
+  ali seria inerte — é o argumento do ADR 0133 aplicado a um segundo modo.
+
+  Sem o broker de pé (ele sobe sob `profiles` e **não** sobe por padrão),
+  `container_start` de projeto montado termina `failed` NOMEADO
+  (`BrokerIndisponivelError`), nunca exceção e nunca queda silenciosa para fora
+  do container.
+
 - **engine,api**: dev agent só reivindica task com o container do projeto
   `running` (ADR 0143, RN-502). Antes não havia ordem nenhuma: numa execução
   real do `exp001` nenhum `container_start` chegou a ser proposto, e os dez
