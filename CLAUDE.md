@@ -225,6 +225,29 @@ daqui e o fechamento vai para o histórico.
 - Chave de dispositivo órfã (aba fechada no meio do fluxo da RN-473) é INERTE,
   mas invisível: `RunnerDeviceKeysController` tem `POST`/`DELETE` e nenhuma
   rota de LISTAGEM, então não há tela onde revogá-la
+- **A credencial de git some quando o container do runner já está ativo, e
+  isso é o caminho COMUM, não uma borda.** `RunnerReadiness` (RN-507)
+  exige container `running` REGISTRADO antes de QUALQUER operação de
+  `RunnerGit` — inclusive o `git fetch` autenticado inicial. Mas a ÚNICA
+  forma de esse registro existir para um projeto `runner` é o MESMO runner
+  ter subido o próprio container com sucesso, e é esse mesmo sucesso que
+  marca `estado.containerAtivo` nele — os dois nascem do mesmo evento.
+  `tratarExec` roteia pra dentro do container (sem campo de `env`, ADR
+  0130: sem `-e` livre) sempre que `containerAtivo` está setado, e só usa
+  o caminho HOST (que carrega a credencial) quando está `null`. Ou seja:
+  no instante em que a RN-507 deixa o `fetch` autenticado rodar, o
+  container quase sempre já está de pé no MESMO runner — e é exatamente
+  aí que a credencial é descartada, em silêncio, sem erro. Não é
+  vazamento (o oposto: super-contido a ponto de quebrar a própria
+  função) — mas clone/fetch inicial de repositório REMOTO AUTENTICADO em
+  modo `runner` tende a falhar no caminho comum, não num caso de borda.
+  Repositório `local` (sem credencial) e os modos `container`/`mounted`
+  não são afetados. Sem teste ponta a ponta cobrindo o cenário — só
+  `channel.spec.ts` prova a passagem isolada da mensagem. Investigado e
+  confirmado por leitura de código ao revisar a RN-507/508 (ADR 0145);
+  corrigir exigiria decidir COMO uma operação de `RunnerGit` credenciada
+  se comunica com um `docker exec` que hoje não tem campo de `env` —
+  fora do escopo dessa entrega
 - `guard.ts` do runner é best-effort por invariante, não lacuna
 - Exclusividade por `{project_id, machine_id}` adiada até segundo dev
   simultâneo real
