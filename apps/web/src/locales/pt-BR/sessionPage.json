@@ -83,6 +83,9 @@
     "aceitarEIniciar": "Aceitar handoff e iniciar {{agente}}",
     "ativarExecucao": "Ativar execução",
     "acompanheExecucao": "Acompanhe a execução em Executores",
+    "infraTitulo": "{{de}} passou o bastão à Infra",
+    "infraDetalhe": "Aceitar ativa o Infra Lead, que assume o provisionamento e vai PROPOR a subida do container do projeto — a proposta ainda passa por você em Aprovações.",
+    "infraBotao": "Aceitar handoff da Infra",
     "manualLabel": "Endereçar handoff a outro agente",
     "manualPlaceholder": "Escolher agente...",
     "manualBotao": "Endereçar handoff"

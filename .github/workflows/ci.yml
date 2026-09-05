@@ -67,6 +67,13 @@ env:
   ACTIONLINT_SHA256: '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'
   KUSTOMIZE_SHA256: '029a7f0f4e1932c52a0476cf02a0fd855c0bb85694b82c338fc648dcb53a819d'
   KUBECONFORM_SHA256: 'c31518ddd122663b3f3aa874cfe8178cb0988de944f29c74a0b9260920d115d3'
+  # Binário do trivy usado no job `images` (scan das quatro imagens de
+  # produção). Baixado à parte — e não pela action `aquasecurity/trivy-action`
+  # — porque os quatro scans passam a rodar em PARALELO no mesmo job, e
+  # GitHub Actions não paraleliza steps de um `uses:`. Mesma versão `v0.70.0`
+  # que já validava o `.trivyignore.yaml` antes (era o `version:` da action).
+  TRIVY_VERSION: '0.70.0'
+  TRIVY_SHA256: '8b4376d5d6befe5c24d503f10ff136d9e0c49f9127a4279fd110b727929a5aa9'
 
 jobs:
   lint:
@@ -197,10 +204,13 @@ jobs:
             docker/web/Dockerfile.prod docker/backup/Dockerfile.prod \
             docker/broker/Dockerfile.prod
 
-  test-ts:
-    name: Testes TS (api + web)
+  test-api:
+    name: Testes TS (api)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Medido no run 33970169946 (job `test-ts`, antes da divisão): api sozinha
+    # (setup + testes + typecheck) ficava por volta de 180s. 8min é folga real
+    # sem ser bobeira.
+    timeout-minutes: 8
     services:
       postgres:
         # pgvector, não `postgres:16` puro: as migrations criam a extensão e um
@@ -218,8 +228,14 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     env:
-      # O globalSetup do vitest cria a brabo_test e aplica as migrations
-      # sozinho — só precisa de um Postgres onde possa CREATE DATABASE.
+      # O globalSetup do vitest (apps/api/test/support/global-setup.ts) cria
+      # os bancos sozinho — só precisa de um Postgres onde possa CREATE
+      # DATABASE. `TEST_DATABASE_URL` não é mais UM banco de teste: desde
+      # perf/banco-por-worker-nos-testes-da-api ela só nomeia a BASE de onde
+      # o setup deriva o banco template (`brabo_test_template`) e um banco
+      # por worker do Vitest (`brabo_test_w1`..`brabo_test_w4`,
+      # `apps/api/test/support/test-db-name.ts`) — nenhum teste conecta em
+      # "brabo_test" no fluxo normal.
       DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo
       TEST_DATABASE_URL: postgres://brabo:brabo@localhost:5432/brabo_test
     steps:
@@ -247,15 +263,36 @@ jobs:
         run: pnpm --filter api test -- --coverage
 
       # O vitest transpila por SWC, que APAGA os tipos sem verificá-los — o
-      # mesmo motivo do typecheck dos scripts de CI, logo abaixo. Aqui isso
-      # importa mais do que parece: os DTOs de resposta da Fase 7b provam por
-      # TIPO que espelham a entidade de domínio (`Wire<T>` + `MesmasChaves`),
-      # e sem este passo essa prova só rodaria no job de imagens, 20 minutos
-      # depois e num lugar que ninguém lê.
+      # mesmo motivo do typecheck dos scripts de CI, no job `test-packages`.
+      # Aqui isso importa mais do que parece: os DTOs de resposta da Fase 7b
+      # provam por TIPO que espelham a entidade de domínio (`Wire<T>` +
+      # `MesmasChaves`), e sem este passo essa prova só rodaria no job de
+      # imagens, 20 minutos depois e num lugar que ninguém lê.
       - name: Typecheck da api
         run: pnpm --filter api typecheck
 
-      # Mesmo mecanismo do passo acima: `apps/web/vite.config.ts` tem
+  test-web:
+    name: Testes TS (web)
+    runs-on: ubuntu-latest
+    # Medido no run 33970169946 (job `test-ts`, antes da divisão): web sozinho
+    # (setup + testes + typecheck) ficava por volta de 190s. 8min é folga real
+    # sem ser bobeira. Sem serviço `postgres`: o web não toca banco.
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Mesmo mecanismo do passo abaixo: `apps/web/vite.config.ts` tem
       # `coverage.thresholds` no valor medido hoje, arredondado para baixo.
       - name: Testes do web (com piso de cobertura)
         run: pnpm --filter web test -- --coverage
@@ -272,6 +309,29 @@ jobs:
       # é incremental e pularia o trabalho num runner com cache.
       - name: Typecheck do web
         run: pnpm --filter web typecheck
+
+  test-packages:
+    name: Testes TS (pacotes)
+    runs-on: ubuntu-latest
+    # Medido no run 33970169946 (job `test-ts`, antes da divisão): os seis
+    # componentes abaixo (scripts de CI, porta de Docker, broker, runner)
+    # somavam ~20s no total — o grosso do tempo deste job é o setup
+    # (checkout + pnpm install). 8min é folga real sem ser bobeira. Sem
+    # serviço `postgres`: nenhum destes pacotes toca banco.
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
 
       # Os scripts de CI são lógica pura, sem banco — mas rodam no mesmo job
       # porque compartilham o `pnpm install` acima.
@@ -349,7 +409,8 @@ jobs:
 
       # Só para `node scripts/ci/coverage-floor.ts` logo abaixo — o script não
       # tem dependência nenhuma (só `node:fs`/`node:url`), então não precisa
-      # de `pnpm install` aqui, ao contrário do job `test-ts`.
+      # de `pnpm install` aqui, ao contrário dos jobs `test-api`/`test-web`/
+      # `test-packages`.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -750,6 +811,24 @@ jobs:
     #
     # O paralelismo vem do `bake`, não de uma matriz de jobs — cada job da
     # matriz teria seu próprio daemon, e aí as imagens precisariam trafegar.
+    #
+    # SEGUNDO MECANISMO TAMBÉM MEDIDO E REJEITADO (PR #497, revertido):
+    # push/pull via GHCR em vez de artifact genérico — a ideia era empurrar
+    # as quatro imagens pro registry num job de build e puxar delas nos jobs
+    # de scan/smoke, que rodariam em PARALELO entre si em vez de sequenciais
+    # como hoje. Medido de verdade, duas rodadas completas: push 44–51s,
+    # pull 21–25s, round-trip 65–76s. Não compensa, e o motivo é estrutural,
+    # não um número que uma rede mais rápida resolveria: o job de smoke+e2e
+    # PRECISA das QUATRO imagens de qualquer forma, então o split nunca evita
+    # pagar o pull inteiro — o único trabalho que de fato sai do caminho
+    # crítico é o Trivy (~15–21s), e o round-trip sozinho já custa mais que
+    # isso. Resultado: o split ficaria ~55s MAIS LENTO que hoje, não mais
+    # rápido. Achado de segurança relevante para quem reabrir essa pergunta
+    # com um mecanismo de registry: pacote NOVO publicado por `GITHUB_TOKEN`
+    # neste repositório (público) nasce com visibilidade `public` por
+    # padrão — qualquer push efêmero fica publicamente puxável até a limpeza
+    # rodar, e isso precisa ser uma decisão explícita de visibilidade, nunca
+    # um acidente de default.
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
@@ -784,68 +863,100 @@ jobs:
             echo "ok: $img -> $user"
           done
 
-      - name: Trivy na api
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
-        with:
-          image-ref: brabo-api:prod
-          format: table
-          # Versão do binário do trivy pinada — a mesma usada pra validar o
-          # .trivyignore.yaml localmente. É o default da action nesta tag; sem
-          # pin explícito, atualizar a action mudaria o scanner em silêncio.
-          version: v0.70.0
-          scanners: vuln
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          # CVEs aceitas conscientemente, cada uma com justificativa e data de
-          # expiração — ver o cabeçalho do arquivo.
-          trivyignores: .trivyignore.yaml
-          exit-code: '1'
+      # Os quatro scans abaixo eram QUATRO steps sequenciais via
+      # `aquasecurity/trivy-action`, somando ~28s (api 17s — inclui o download
+      # da base de vulnerabilidades —, engine 6s, web 2s, backup 3s). GitHub
+      # Actions não paraleliza steps de um job, e a action não tem modo de
+      # escanear várias imagens numa chamada só — só dava pra paralelizar
+      # trocando por um binário chamado direto num script de shell.
+      #
+      # As quatro imagens já estão no MESMO daemon (é por isso que build, scan
+      # e smoke ficam neste único job, ver o comentário no topo), então não
+      # havia razão pras quatro serem sequenciais: o gargalo de cada scan é
+      # I/O (base de vulnerabilidades + análise de camada), não CPU.
+      #
+      # Achado ao medir localmente: `trivy image` quatro vezes em paralelo
+      # contra o MESMO `--cache-dir` (o default) falha por disputa de lock no
+      # cache local do trivy (bbolt) — "cache may be in use by another
+      # process: timeout" — mesmo com `--skip-db-update`, porque o cache de
+      # ANÁLISE DE CAMADA usa o mesmo arquivo que a base de vulnerabilidades,
+      # não só ela. A saída: baixar a base UMA vez, copiar pra um `--cache-dir`
+      # PRÓPRIO por imagem (isola o lock) e só então escanear as quatro em
+      # paralelo — o download de ~110MB deixa de se repetir quatro vezes e a
+      # cópia local em disco é bem mais barata que refazer o download.
+      - name: Instalar o binário do trivy
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/trivy.tar.gz \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  /tmp/trivy.tar.gz" | sha256sum -c -
+          sudo tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
+          sudo chmod 0755 /usr/local/bin/trivy
+          trivy --version
 
-      - name: Trivy no engine
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
-        with:
-          image-ref: brabo-engine:prod
-          format: table
-          # Versão do binário do trivy pinada — a mesma usada pra validar o
-          # .trivyignore.yaml localmente. É o default da action nesta tag; sem
-          # pin explícito, atualizar a action mudaria o scanner em silêncio.
-          version: v0.70.0
-          scanners: vuln
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          # CVEs aceitas conscientemente, cada uma com justificativa e data de
-          # expiração — ver o cabeçalho do arquivo.
-          trivyignores: .trivyignore.yaml
-          exit-code: '1'
+      - name: Baixar a base de vulnerabilidades do trivy
+        run: trivy image --cache-dir /tmp/trivy-cache/seed --no-progress --download-db-only
 
-      - name: Trivy no web
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
-        with:
-          image-ref: brabo-web:prod
-          format: table
-          # Versão do binário do trivy pinada — a mesma usada pra validar o
-          # .trivyignore.yaml localmente. É o default da action nesta tag; sem
-          # pin explícito, atualizar a action mudaria o scanner em silêncio.
-          version: v0.70.0
-          scanners: vuln
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          # CVEs aceitas conscientemente, cada uma com justificativa e data de
-          # expiração — ver o cabeçalho do arquivo.
-          trivyignores: .trivyignore.yaml
-          exit-code: '1'
+      - name: Trivy nas quatro imagens (em paralelo)
+        run: |
+          set -uo pipefail
+          # NÃO "set -e" aqui: cada scan roda em background (&) dentro de um
+          # subshell próprio, e o desfecho de cada um é lido depois via
+          # `wait`, nunca por status de comando em sequência — `errexit`
+          # dentro de uma função chamada em background mataria a função ANTES
+          # de ela registrar o próprio código de saída (achado ao testar a
+          # primeira versão deste script).
 
-      - name: Trivy no backup
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
-        with:
-          image-ref: brabo-backup:prod
-          format: table
-          version: v0.70.0
-          scanners: vuln
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          trivyignores: .trivyignore.yaml
-          exit-code: '1'
+          declare -A imagens=(
+            [api]="brabo-api:prod"
+            [engine]="brabo-engine:prod"
+            [web]="brabo-web:prod"
+            [backup]="brabo-backup:prod"
+          )
+
+          # Cache PRÓPRIO por imagem, apontando pra MESMA base já baixada —
+          # ver o comentário acima sobre a disputa de lock no cache padrão.
+          # LINK, não cópia: o lock em disputa era do `fanal.db` (cache de
+          # ANÁLISE DE CAMADA, que cada scan cria do zero de qualquer forma),
+          # nunca do `trivy.db` (a base em si) — copiar ~1,3 GB por imagem só
+          # pra isolar um arquivo que nasce vazio comia de volta boa parte do
+          # ganho da paralelização (medido: ~11s de cópia).
+          for nome in "${!imagens[@]}"; do
+            mkdir -p "/tmp/trivy-cache/${nome}"
+            ln -s /tmp/trivy-cache/seed/db "/tmp/trivy-cache/${nome}/db"
+          done
+
+          pids=()
+          nomes=()
+          for nome in "${!imagens[@]}"; do
+            (
+              trivy image \
+                --cache-dir "/tmp/trivy-cache/${nome}" \
+                --no-progress \
+                --format table \
+                --scanners vuln \
+                --severity HIGH,CRITICAL \
+                --ignore-unfixed \
+                --ignorefile .trivyignore.yaml \
+                --skip-db-update \
+                --exit-code 1 \
+                "${imagens[$nome]}" 2>&1 | sed "s/^/[${nome}] /"
+            ) &
+            pids+=("$!")
+            nomes+=("$nome")
+          done
+
+          # Cada `wait` é individual — e não um `wait` só pra todos — porque
+          # precisamos do código de saída DE CADA UM pra apontar qual imagem
+          # falhou, não só que alguma falhou.
+          status=0
+          for i in "${!pids[@]}"; do
+            if ! wait "${pids[$i]}"; then
+              echo "::error::Trivy falhou em ${nomes[$i]} (${imagens[${nomes[$i]}]})"
+              status=1
+            fi
+          done
+          exit "$status"
 
       # SMOKE_NO_BUILD: as imagens já estão no daemon, construídas com cache
       # acima — o compose reusaria a tag e reconstruiria à toa.

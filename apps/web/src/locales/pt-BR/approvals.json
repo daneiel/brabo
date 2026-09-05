@@ -135,6 +135,7 @@
     },
     "notes": {
       "alwaysAllow": "\"Sempre permitir\" grava a regra em .brabo/permissions.json",
+      "alwaysAllowScoped": "\"Sempre permitir\" libera este tipo de ação só para {{agent}} — não para os outros agentes do projeto",
       "autoMode": "\"Modo automático\" libera TODA ação futura de {{actor}} sem perguntar — exceto merge em branch protegida, patch de instrução e paralelismo, que continuam sempre pedindo sua decisão. Dá pra desligar depois no card do agente."
     },
     "decided": {

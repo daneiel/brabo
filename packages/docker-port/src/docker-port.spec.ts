@@ -4,6 +4,7 @@ import {
   PONTO_DE_MONTAGEM,
   RaizDeProjetoInvalidaError,
   raizDeProjetoValidada,
+  segmentoDeProjetoValidado,
 } from './docker-port.ts';
 
 /**
@@ -49,6 +50,60 @@ describe('raizDeProjetoValidada', () => {
     // válido. Aceitá-lo esconderia que a spec foi COMPOSTA com travessia
     // dentro, que é o sinal que interessa.
     expect(() => raizDeProjetoValidada('/home/alguem/dev/../dev/exp002')).toThrowError(
+      RaizDeProjetoInvalidaError,
+    );
+  });
+});
+
+/**
+ * O SEGMENTO relativo (RN-503) é a única metade do caminho que atravessa a
+ * rede — a outra é a raiz, que mora na configuração do broker. O que se prova
+ * aqui é que a concatenação `<raiz>/<segmento>` não consegue sair da raiz.
+ */
+describe('segmentoDeProjetoValidado', () => {
+  it('aceita um nome simples', () => {
+    expect(segmentoDeProjetoValidado('loja')).toBe('loja');
+  });
+
+  it('aceita mais de um nível — a pasta montada pode ser aninhada sob a base', () => {
+    expect(segmentoDeProjetoValidado('times/loja')).toBe('times/loja');
+  });
+
+  it.each([
+    ['travessia', '../etc', 'contém `..`'],
+    ['travessia no meio', 'loja/../../etc', 'contém `..`'],
+    ['absoluto', '/etc', 'é absoluto'],
+    ['a barra sozinha', '/', 'é absoluto'],
+    ['vazio', '', 'vazio'],
+    ['barra dupla', 'times//loja', 'segmento vazio'],
+    ['barra final', 'loja/', 'segmento vazio'],
+    ['com NUL', 'lo\0ja', 'NUL'],
+  ])('recusa %s com motivo nomeado', (_rotulo, segmento, trechoDoMotivo) => {
+    expect(() => segmentoDeProjetoValidado(segmento)).toThrowError(
+      RaizDeProjetoInvalidaError,
+    );
+    try {
+      segmentoDeProjetoValidado(segmento);
+    } catch (erro) {
+      expect((erro as RaizDeProjetoInvalidaError).motivo).toContain(
+        trechoDoMotivo,
+      );
+    }
+  });
+
+  it('recusa o que não é string — o valor veio de JSON de outro processo', () => {
+    expect(() => segmentoDeProjetoValidado(undefined)).toThrowError(
+      RaizDeProjetoInvalidaError,
+    );
+    expect(() => segmentoDeProjetoValidado(42)).toThrowError(
+      RaizDeProjetoInvalidaError,
+    );
+  });
+
+  it('recusa a travessia ANTES de qualquer normalização', () => {
+    // `times/../loja` normalizaria para `loja`, um segmento plausível. Aceitá-lo
+    // esconderia que quem compôs a spec escreveu uma travessia — o sinal.
+    expect(() => segmentoDeProjetoValidado('times/../loja')).toThrowError(
       RaizDeProjetoInvalidaError,
     );
   });

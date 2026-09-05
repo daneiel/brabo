@@ -1,0 +1,69 @@
+---
+id: workspaces-controller-get-projects-base
+title: "The base folder for projects in Mounted mode"
+description: "The single folder on the operator machine that the api and engine containers can see, mounted by identity (ADR 0141). `null` — a normal state, never an error — means this installation has no `BRABO_PROJECTS_BASE`, so the project wizard must not offer Mounted mode at all. The same value for every workspace: it is installation configuration, and `workspaceId` only scopes the authorization."
+sidebar_label: "The base folder for projects in Mounted mode"
+hide_title: true
+hide_table_of_contents: true
+api: eJztWG1v3MYR/isDJoBtgvci2w2Qa1NUspVUbisJOrV24RPMPXJ4HGu5S+8Odb5IB/RTfkF+YX5JMLvk6SwbTfutH/rB8HHJnZ2deZ6ZZ3SblOgLRy2TNcksuawRPJmVRqisLtGBNcA1gm3RKbYOGlXUZBC4VhzeqJZAmRLQrGS9sIYVGXQeCmXAI2bQ2M4wlrDcAJVomHgDjw9fXsD04PnBkzHkptM6h1/+9TMoMNY1SoNnxZiBwRt0oAygc9aFTxpUxgPX5IGMZ6W1Eu+hVh6Mhfzo4vDo7N35xdmr4xeX83dHh/PjPANvg7ets++xYFjTj8qV0HSewVgGW1Xo4G+9o40tERSD0noMISaqQbhRupO4OBCnNrC27tq3qsAZEMNDdwprKlp1LjxlIUT5bsdJmYM1egO+sC36GMiOa+vox7BhnGRJjDlZc1Ims+T1sNe/sIad1RrduxXyebyRP1IekyxplVMNMjqfzN5eZYlD31rj0Sez2+TpdCr/fZrzJEskaWhY3qm21VSEYyfvvXxwm/iixkbJL960mMwSu5Qj5TQnTjJF8+2+K1/4Gj+qptWyNKltg5MbW+Bk6dTSJlkiGFBLecuuw+y/BeYjD4Vt2o7R3WPzSGz/FiRPXh6fXp5c/hMe51+/mX39Jn8CZNhCrlrKY94itvMvgTai8YugE0gItjzyLLjzCT4C4gJi91EXgfLbSCUew2nkBlSKdOcw8mfp0QQwfsqkcbLdChg+dOSwTGZvP03WVZYwcUjNPp4uevC8ZJtst2Lh+fTgcwSdWmB7jSYD/NiK/eHROiBzozSV4GllFHdOPBEzzz43c2J8V1VUkNzAWS0BC6HY0abf+/zzvTt2QGnRm0cM+JE8Bw+EmDfkaakROJaBQgl9ormn335u7kIxgqaGGFp00HkBnAu/T85jLD0WnSPeJLO3t8kSlUMnjNtKKNVK2Jfs/PYS4Aa5tsLkFQbqKK6FCfcfTW736sN2MiRotIzM9uhudrQeTp8LNSP7Bh96vkou+6Ws//G9AIKTWfLq9WWSDfSsmdtkG+1TgaOQuz36qpb+gpskS0giU6Mqg0mjwhFvRoFko3m/+zLslgCRqWww0wMrkvHw/CT5Erl3b8dwHKormrK1JEhA7pzx8Gp+dioIK7CN7K5s5wRxmgpivVmY0hZdg4FLa+IaFJQkbBE85X2NG8mtcnjMawvz+TFYgz4L5hpkR4WXlWxhBhqeHXZcB7wsVXGdwbqmogaHJTlJzpPxwizMV1+BfCatLZZOWZRbqaJA7yMdIinT9OB3o4ZMxwjH5cv5Ibx6fZmmGbQOffSdzMLkh/vdYAZHIYHwh2Dpj3nsSm231FTANW5A0w16ULww+Q/HlzAZr1Hr0bWxazN5v772Y6nl+Xjwy2Hl0NeQprFGpSkocUQ62SMv/da26kOHveehoMYjyIAS/wQ1Z0ZvciisvSaEx3mo5O9603kG+bni+ruJ9DV5mqsG58T43VzizPkTKXUL03f4tkXlevMbGLoWLG25GUN+fja/hGBpMtiPu/ffaLuyHefgUMXc9Z5JKvvKF5bzN6MX84vvI1RziIheSMlvFBd1/CZepvCuGm4YgpemF5ZjAScPjTKlNJ/NOE3hWAVgxMAW1viu6Tv7fWpjOIPn5H0nKTOWa3RjuMBR/x2ZlWRAabnIZtSbKgWYEUNcY8X3FTWC1eGNve4PfP3ns78eQ6Ua0pvQFsgUuivFsLzWuCKmRmqcR+9FbsAhFFoK78KEZFfkxNY6dM+ic4FD/eXkhZKjiD3qCkq7Nr+XGglq6NFkRpWmVc0LI9TZ4S6fkGF0RulJmoOzHUsI+ryIkvzlp58HJek7V0lBl8t5YkhT27GnMny8MIE2oa9uHmb3CxVpSHMsDPKdr5XDcmE8Fg5ZAhCqfMzQ0ERsixGQtpJNzcD2Y1GjXh5O0fOrOZRYqU6zqMNG8QzyW1gk0nk7/8KWuEhmYLpmiS6DRdKg92oVFj07ycpd/+PtlbwPWnfv7TYS9w4K0aV3sK7RwN3C3I1Go/BP3uXPp9Mc7nYNV5gTch+C8g9ZC7g9J6l/rjM+xiJf18SoyXMvdirrllSeWvN6eIFlFNDKQGdCTYGKUJegtLdBfngYfDgQH8x/IAgKh2EWUHq395nsVfeFVPRZx8FN28WaH2TBxdHhiyHnPhhVsHbWrKDvYX0WB7vPxa5Dbzv3mUBIU+vS9N+IhJ2Vb/OQJmGNaHtNBffc6hVOpBKwU8ZTVP27Q3syx0N30XoabLp7sSEaw9mVE1M3CNoW13LzO0l/aEQ9ZWJ9LCFNS9S0FAmMegNkSvJSPzrytVrqTZrCEnmNgmIw1oTjA8uxUaSzXeBa5f3aujLqTxVOxlL6l4jTWRyABFJZ/BmhHR8Whqkhs5KmpKR9rKWCFNp6IXe0AGi6BveHodBoRNBKl1YrYz1TsTAlVljwwLN7HSYLc02hhq3JlHYtveLcepZozeDZdBoggRLenWaTg76ZTnvh1s9t30x9tjC7+WypUdif/+k8tNPHT/rC1EdigFS/5hDSFD9i00rTlPzLbRdm1SlXeshjK0qD+O9l/MN0ZuHaAc2768m8J+ouCqLp+GA87ecyVchcJoKqtZ4bFaRZL76kpIo6HGaiKuInyEYJz/5k8VB13d5Pff8f+/+Xxv5edjN+5EmrFRkR553TYcIOQ8Mnk0WWzPbsx5l8b264ypLaepZNt7ey8nent1tZ/tCh28Rp4kY5irP326ttNmh8GWyucZPMksNCRLdAVGIRZoIHfyXY7g84PxzLeCEX2xsjHswiwfowYZjNnu3b2/hF6NvbbZL1TsS5ZHu13W5/BdjWoyI=
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"The base folder for projects in Mounted mode"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/workspaces/{workspaceId}/projects-base"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+The single folder on the operator machine that the api and engine containers can see, mounted by identity (ADR 0141). `null` — a normal state, never an error — means this installation has no `BRABO_PROJECTS_BASE`, so the project wizard must not offer Mounted mode at all. The same value for every workspace: it is installation configuration, and `workspaceId` only scopes the authorization.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./workspaces-controller-get-projects-base.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./workspaces-controller-get-projects-base.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./workspaces-controller-get-projects-base.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

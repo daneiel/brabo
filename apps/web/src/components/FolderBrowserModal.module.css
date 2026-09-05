@@ -1,9 +1,3 @@
-.semProjeto {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .corpo {
   display: flex;
   flex-direction: column;
@@ -170,6 +164,16 @@
   color: var(--text-muted);
   font-size: 12px;
   text-align: center;
+}
+
+/* O que a listagem deixou de fora (arquivos, symlinks, corte no teto) —
+   sempre DENTRO da coluna central, colado abaixo da lista, para ser lido
+   junto com ela e não como um aviso à parte. */
+.rodapeDaLista {
+  padding: 6px 10px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
 }
 
 .detalhes {

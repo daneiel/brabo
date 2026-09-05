@@ -27,11 +27,21 @@ defmodule Engine.Agents.PoServer do
   alias Engine.Agents.{FalhaDeTurno, TurnoAssincrono}
   alias Engine.Harness.Tools.{CreateEpic, CreateStory, CreateTask, OfferHandoff}
   alias Engine.Harness.Tools.{AskStructuredQuestions, ListarBacklog, ListarRegrasDeNegocio}
-  alias Engine.Harness.Tools.ListarMetricasDeProduto
+  alias Engine.Harness.Tools.{EmitArtifact, ListarMetricasDeProduto}
   alias Engine.Sessions.EngineApiClient
 
   @agent "po"
   @max_iterations 12
+
+  # Frente 3 do plano de decision_record — IDÊNTICA nos 5 conversacionais que
+  # ganharam emit_artifact nesta leva (PO, Arquiteto, Dev Lead, UX Designer,
+  # Staff; o Criativo já tinha a ferramenta antes). Fica de fora do texto de
+  # identidade (`Engine.Harness.Agents`) porque não é sobre QUEM o agente é —
+  # é uma instrução operacional sobre UMA ferramenta, igual nos 5.
+  @instrucao_decision_record "Use `emit_artifact` com `type: decision_record` para " <>
+                               "registrar uma decisão relevante tomada nesta conversa, " <>
+                               "com contexto, opções consideradas, a escolha e as " <>
+                               "consequências aceitas."
 
   # --- API pública ---
 
@@ -99,7 +109,10 @@ defmodule Engine.Agents.PoServer do
          # RN-165: perguntar em vez de parar. A ferramenta é a MESMA do
          # Criativo (RN-162) — o PO só passou a advertisá-la.
          AskStructuredQuestions.spec(),
-         OfferHandoff.spec()
+         OfferHandoff.spec(),
+         # Frente 3 do plano de decision_record — mesma ferramenta do
+         # Criativo (RN-162 style reuse), tipo novo (`decision_record`).
+         EmitArtifact.spec()
        ],
        # Épicos criados NESTE processo que ainda não receberam história
        # (RN-165): `%{epic_id => titulo}`. Não é reidratado de propósito — a
@@ -263,6 +276,7 @@ defmodule Engine.Agents.PoServer do
     do: AskStructuredQuestions.run(args, state)
 
   defp run_tool("offer_handoff", args, state), do: OfferHandoff.run(args, state)
+  defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- A obrigação da história (RN-165) ---
@@ -440,10 +454,13 @@ defmodule Engine.Agents.PoServer do
   end
 
   defp system_prompt(project_id) do
-    project_id
-    |> ContextBuilder.build_layers(@agent)
-    |> PromptAssembler.assemble()
-    |> PromptAssembler.Default.render()
+    base =
+      project_id
+      |> ContextBuilder.build_layers(@agent)
+      |> PromptAssembler.assemble()
+      |> PromptAssembler.Default.render()
+
+    base <> "\n\n" <> @instrucao_decision_record
   end
 
   defp user_msg(text), do: %{"role" => "user", "content" => text, :pinned => false}

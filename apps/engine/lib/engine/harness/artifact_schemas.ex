@@ -65,7 +65,21 @@ defmodule Engine.Harness.ArtifactSchemas do
     # vazia é resposta válida (nem toda story carrega risco residual) e a
     # ferramenta já garante que a CHAVE existe — não há "esquecido" pra
     # distinguir de "nenhum".
-    "threat_model" => ["storyId", "threatModel", "requisitosDeSeguranca"]
+    "threat_model" => ["storyId", "threatModel", "requisitosDeSeguranca"],
+    # RN a confirmar no merge — o "ADR resumido" dos agentes conversacionais
+    # (Criativo, PO, Arquiteto, Dev Lead, UX Designer, Staff). Reusa o padrão
+    # GENÉRICO deste módulo em vez do padrão dedicado de
+    # `project_image`/`c4_diagram`: uma decisão é log append-only por
+    # natureza, não um "vigente" que se substitui a cada versão — o mesmo
+    # raciocínio de `note`/`business_rule`. Tool-emittable (ver
+    # `@tool_emittable`); distinto de `open_adr_pr` (que COMMITA um arquivo
+    # real em `docs/adr/*.md` e abre PR de verdade, sempre com aprovação
+    # humana, só o Arquiteto tem) — os dois coexistem, propósitos
+    # diferentes: este é para toda decisão relevante, sem fricção,
+    # pesquisável no log da sessão. Sem validação cruzada de propósito:
+    # `choice` não precisa bater com um item de `options` — texto livre é
+    # mais robusto, e o schema genérico só valida presença de chave.
+    "decision_record" => ["context", "options", "choice", "consequences"]
   }
 
   # Pareceres de gate. Os vereditos possíveis são os mesmos da máquina de
@@ -81,7 +95,7 @@ defmodule Engine.Harness.ArtifactSchemas do
   @gate_subject_keys ["taskId", "prActionId"]
 
   # Tipos que o modelo pode emitir via a ferramenta emit_artifact.
-  @tool_emittable ["note", "business_rule"]
+  @tool_emittable ["note", "business_rule", "decision_record"]
 
   @doc "Tipos de artefato emitíveis por ferramenta (model-facing)."
   def known, do: @tool_emittable

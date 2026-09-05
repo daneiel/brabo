@@ -1,14 +1,18 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
+  NotFoundException,
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -16,6 +20,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -39,8 +44,17 @@ import { AddMemberDto } from './dto/add-member.dto';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UnreadEventsDto } from './dto/unread-events.dto';
 import { BEARER } from '../../../infrastructure/openapi/documento';
+import { baseDeProjetos } from '../../../infrastructure/filesystem/project-workspaces-root';
 import {
+  listarPastasDeProjeto,
+  PastaForaDaBaseError,
+  PastaNaoLegivelError,
+  TETO_DE_ENTRADAS,
+} from '../../../infrastructure/filesystem/project-folders-browser';
+import {
+  ProjectFoldersResponseDto,
   ProjectResponseDto,
+  ProjectsBaseResponseDto,
   WorkspaceComPapelResponseDto,
   WorkspaceMemberResponseDto,
   WorkspaceResponseDto,
@@ -171,6 +185,109 @@ export class WorkspacesController {
   @ApiOkResponse({ type: [ProjectResponseDto] })
   listProjects(@Param('workspaceId') workspaceId: string) {
     return this.listProjectsForWorkspace.execute(workspaceId);
+  }
+
+  /**
+   * A base dos projetos montados (ADR 0141, RN-500).
+   *
+   * `maintainer`, o MESMO mínimo de `POST :workspaceId/projects` logo acima, e
+   * pelo mesmo motivo do PR seguinte: quem não pode criar projeto não precisa
+   * saber a topologia de arquivos do operador, e é exatamente para decidir o
+   * que a criação oferece que este valor existe. Herdar o `viewer` das rotas
+   * vizinhas por elas serem vizinhas é o defeito que a RN-102 nomeia — o
+   * mínimo é do ENDPOINT, nunca da seção.
+   *
+   * Sem caso de uso no meio: não há decisão a tomar, nem repositório a
+   * consultar, nem regra de domínio a aplicar. `baseDeProjetos()` já é a fonte
+   * ÚNICA da leitura (é ela que a validação de criação/conversão vai usar), e
+   * um caso de uso que só a repassasse seria uma camada que não decide nada —
+   * o mesmo raciocínio pelo qual `git.controller`/`auth.controller` leem
+   * `WEB_ORIGIN` direto. `workspaceId` não entra no cálculo de propósito: a
+   * base é da INSTALAÇÃO, não do workspace; ele está na rota porque é o que dá
+   * escopo ao `RolesGuard`.
+   */
+  @Get(':workspaceId/projects-base')
+  @RequireRole('maintainer')
+  @ApiOperation({
+    summary: 'The base folder for projects in Mounted mode',
+    description:
+      'The single folder on the operator machine that the api and engine ' +
+      'containers can see, mounted by identity (ADR 0141). `null` — a normal ' +
+      'state, never an error — means this installation has no ' +
+      '`BRABO_PROJECTS_BASE`, so the project wizard must not offer Mounted ' +
+      'mode at all. The same value for every workspace: it is installation ' +
+      'configuration, and `workspaceId` only scopes the authorization.',
+  })
+  @ApiOkResponse({ type: ProjectsBaseResponseDto })
+  getProjectsBase(): ProjectsBaseResponseDto {
+    return { projectsBase: baseDeProjetos() };
+  }
+
+  /**
+   * O navegador de pastas de projeto (RN-504).
+   *
+   * `maintainer`, o MESMO mínimo de `POST :workspaceId/projects` e de
+   * `projects-base` logo acima, e pelo mesmo raciocínio levado um passo
+   * adiante: `projects-base` revela UM caminho da máquina do operador, esta
+   * rota revela a TOPOLOGIA abaixo dele. Quem não pode criar projeto não tem
+   * o que fazer com a lista de pastas onde um projeto poderia nascer, e
+   * herdar o `viewer` das rotas vizinhas por elas serem vizinhas é o defeito
+   * que a RN-102 nomeia — o mínimo é do ENDPOINT, nunca da seção.
+   *
+   * Sem caso de uso no meio, pelo mesmo motivo de `projects-base`: não há
+   * decisão a tomar, repositório a consultar nem regra de domínio a aplicar.
+   * A contenção inteira — escopo, tetos, o que entra e o que só é contado —
+   * mora em `listarPastasDeProjeto`, que é fonte ÚNICA e testada; um caso de
+   * uso que só a repassasse seria camada que não decide nada.
+   * `workspaceId` não entra no cálculo: a base é da INSTALAÇÃO, e ele está na
+   * rota porque é o que dá escopo ao `RolesGuard`.
+   *
+   * **400 e não 403 para o caminho fora da base.** 403 diria "outro papel
+   * veria", e não existe papel que navegue fora da base — o pedido está
+   * malformado, não subautorizado.
+   */
+  @Get(':workspaceId/project-folders')
+  @RequireRole('maintainer')
+  @ApiOperation({
+    summary: 'Lists the subfolders of a folder inside the projects base',
+    description:
+      'The folder picker for Mounted mode, served by the api instead of by ' +
+      'the runner (RN-504). Scoped HARD to `BRABO_PROJECTS_BASE` (ADR ' +
+      '0141): `path` is optional and defaults to the base itself, and any ' +
+      '`path` outside it is a `400` — a malformed request, not a permission ' +
+      'problem, since no role browses outside the base.\n\n' +
+      `Capped on purpose: directories only, at most ${TETO_DE_ENTRADAS} of ` +
+      'them (sorted BEFORE the cut, with `truncado` saying so), never ' +
+      'recursive, dot-prefixed entries excluded, and symlinks reported but ' +
+      'never followed. What is left out is COUNTED (`arquivos`, ' +
+      '`simbolicos`) so a folder full of code never looks empty.\n\n' +
+      'There is no POST companion: creating a folder belongs to ' +
+      'materializing the mounted workspace, never to the picker.',
+  })
+  @ApiQuery({
+    name: 'path',
+    required: false,
+    description:
+      'Absolute path to list. Omitted means the base itself. Must be inside ' +
+      '`BRABO_PROJECTS_BASE`; `..`, `.` and relative paths are refused ' +
+      'outright rather than resolved.',
+  })
+  @ApiOkResponse({ type: ProjectFoldersResponseDto })
+  @ApiBadRequestResponse({
+    description: 'The path is outside the projects base, or malformed.',
+  })
+  listProjectFolders(@Query('path') path?: string): ProjectFoldersResponseDto {
+    try {
+      return listarPastasDeProjeto(path);
+    } catch (erro) {
+      if (erro instanceof PastaForaDaBaseError) {
+        throw new BadRequestException(erro.message);
+      }
+      if (erro instanceof PastaNaoLegivelError) {
+        throw new NotFoundException(erro.message);
+      }
+      throw erro;
+    }
   }
 
   @Get(':workspaceId/summary')

@@ -5,10 +5,18 @@ defmodule Engine.Containers.ProjectContainerLifecycle do
   a coluna diretamente, sem duplicar a derivação em outro lugar.
 
   A ÚNICA pergunta que o engine faz aqui é "há um container REGISTRADO como
-  `running` para este projeto?" (ADR 0134, RN-492) — é o que
-  `Engine.Actions.TerminalExecutor` consulta para decidir se um comando de
-  terminal de dev agent deve atravessar para dentro do container real, via
-  broker, em vez do caminho de sempre.
+  `running` para este projeto?" (ADR 0134, RN-492) — uma pergunta só, com
+  DOIS chamadores desde a RN-502 (ADR 0143), respondendo coisas diferentes:
+
+  - `Engine.Actions.TerminalExecutor` decide ONDE o comando roda — `true`
+    atravessa pro container real via broker; `false` RECUSA
+    (`:recusar_container_ausente`). Até a RN-502, `false` caía no
+    `System.cmd` local, e era essa a degradação calada que ela eliminou;
+  - `Engine.Dev.AgentIo.try_claim/2` decide se o dev agent PODE COMEÇAR —
+    `false` para o claim antes de ele acontecer, em `:idle`, com
+    `dev.blocked_by_container`.
+
+  Não são duas derivações: é esta função, com dois consumidores.
 
   `true` aqui NUNCA confirma que o container está de pé DE VERDADE agora
   (RN-486: registrado e observado nunca se fundem — só quem responde por
@@ -40,7 +48,13 @@ defmodule Engine.Containers.ProjectContainerLifecycle do
   "running"`. `false` para qualquer outro caso — sem linha, `provisioning`/
   `stopped`/`failed`/`removed`, `project_id` malformado ou erro de consulta
   (mesmas duas guardas de `Engine.Projects.Project.workspace_dir_name/1`:
-  degrada pro caminho de sempre, nunca propaga).
+  nunca propaga a falha pra quem só queria uma resposta).
+
+  O que `false` PRODUZ mudou com a RN-502, e é o que importa saber aqui: em
+  vez de degradar pro `System.cmd` local, ele agora RECUSA — o comando não
+  roda, e o dev agent não claima. Erro de consulta cai no mesmo lugar que
+  "não há container", de propósito: nos dois casos o engine não pode
+  afirmar que existe ambiente de execução, e afirmar é o que custaria caro.
   """
   def running?(project_id) do
     Repo.exists?(
