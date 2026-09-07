@@ -7790,9 +7790,33 @@ defeito que elas não têm — o mesmo cuidado de `baseSobrepoeOCheckout`, que
 devolve `false` para checkout desconhecido. E ele **relata, nunca bloqueia**:
 `pnpm dev` sobe igual.
 
-- **Onde:** `docker/docker-compose.yml` (serviço `broker`, sem `profiles`) e
-  `docker/docker-compose.prod.yml` (com `profiles`, e a nota que impede
-  uniformizar os dois); `scripts/dev/docker-gid.mjs` (`avaliarDockerGid`,
+**Sair do `profiles` não bastava, e o defeito só apareceu na primeira subida
+por padrão.** A imagem de desenvolvimento preparava o pnpm com `corepack` como
+**root** no build e rodava como uid 1000, que não lê aquele cache; sem cache o
+corepack tenta **baixar** o pnpm no start, e a única rede do broker é
+`internal: true` — a tentativa morria com `getaddrinfo EAI_AGAIN
+registry.npmjs.org` e o container saía com 1, cinco segundos depois de subir. O
+serviço também não tinha healthcheck, então `up --wait` imprimia `Healthy` e o
+reset total anunciava "reset completo" com o processo morto. Enquanto o serviço
+esteve sob profile isso nunca apareceu: quem o ligava de propósito era quem já
+estava olhando. A correção **tira o registry do caminho de runtime** — o
+`pnpm install` migra para um passo de BUILD e `COREPACK_HOME` passa a um
+diretório com o dono do uid de runtime — e **não abre a rede**, que é a
+primeira das cinco camadas acima. Como os três `node_modules` são volumes
+nomeados montados por cima do que a imagem instalou, e o Docker só semeia
+volume **vazio**, `docker/broker/entrypoint.sh` reconcilia os três contra uma
+cópia guardada fora de `/workspace`, carimbada com o sha256 do `pnpm-lock.yaml`
+do build — o mesmo carimbo que, comparado com o lockfile da árvore, avisa que a
+imagem está velha sem recusar subir. O compose de PRODUÇÃO não sofria disto:
+`Dockerfile.prod` já instalava em estágio de build, removia `corepack` da
+imagem final e já tinha `HEALTHCHECK`.
+
+- **Onde:** `docker/docker-compose.yml` (serviço `broker`, sem `profiles`, com
+  `healthcheck`) e `docker/docker-compose.prod.yml` (com `profiles`, e a nota
+  que impede uniformizar os dois); `docker/broker/Dockerfile` (`COREPACK_HOME`,
+  o `pnpm install` de build e a cópia em `/opt/broker-deps`);
+  `docker/broker/entrypoint.sh` (a reconciliação dos três volumes e o aviso de
+  lockfile); `scripts/dev/docker-gid.mjs` (`avaliarDockerGid`,
   `mensagemDoDockerGid`, `GID_PADRAO_DO_COMPOSE` — a decisão pura);
   `scripts/dev/preflight.mjs` (`relatarDockerGid`, `gidDoGrupoDocker`)
 - **Teste:** `scripts/dev/docker-gid.spec.ts` — o caminho feliz, as duas
