@@ -660,6 +660,141 @@ defmodule EngineWeb.TerminalChannelTest do
     end
   end
 
+  # RN-517 (ADR 0147 ponto 7) — o desfecho da rodada volta pelo canal e o
+  # engine REPASSA pra api. Ele nunca escreve a tabela: um segundo caminho de
+  # escrita seria a segunda fonte da mesma verdade.
+  describe "mirror_sync_result (ADR 0147 ponto 7, RN-517)" do
+    test "vindo do :runner, repassa pra api traduzindo o vocabulário do protocolo" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "runner", mirror_path: "/home/voce/espelhos/proj")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _resposta, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+          "capacidades" => ["exec", "pty", "espelho"]
+        })
+
+      push(joined, "mirror_sync_result", %{
+        "ref" => "m1",
+        "sucesso" => true,
+        "destino" => "/home/voce/espelhos/proj",
+        "copiados" => 412,
+        "pulados" => 3,
+        "recusados" => 0
+      })
+
+      assert_receive {:report_mirror_sync, ^project_id, resultado}
+
+      assert resultado == %{
+               ok: true,
+               destination: "/home/voce/espelhos/proj",
+               filesCopied: 412,
+               filesSkipped: 3,
+               filesRefused: 0
+             }
+    end
+
+    test "copiar ZERO chega como sucesso com filesCopied: 0, nunca omitido" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "runner", mirror_path: "/home/voce/espelhos/proj")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _resposta, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+          "capacidades" => ["exec", "pty", "espelho"]
+        })
+
+      push(joined, "mirror_sync_result", %{
+        "ref" => "m2",
+        "sucesso" => true,
+        "destino" => "/home/voce/espelhos/proj",
+        "copiados" => 0,
+        "pulados" => 0,
+        "recusados" => 0
+      })
+
+      assert_receive {:report_mirror_sync, ^project_id, %{ok: true, filesCopied: 0}}
+    end
+
+    test "falha chega com ok: false e o erro NOMEADO" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "runner", mirror_path: "/home/voce/espelhos/proj")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _resposta, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+          "capacidades" => ["exec", "pty", "espelho"]
+        })
+
+      push(joined, "mirror_sync_result", %{
+        "ref" => "m3",
+        "sucesso" => false,
+        "erro" => "o espelho não conseguiu listar o trabalho com o git"
+      })
+
+      assert_receive {:report_mirror_sync, ^project_id, resultado}
+      assert resultado.ok == false
+      assert resultado.error =~ "git"
+      # Campo que não veio é OMITIDO, nunca `nil`: o DTO da api distingue
+      # ausente de nulo, e um nulo explícito seria recusado na validação.
+      refute Map.has_key?(resultado, :destination)
+      refute Map.has_key?(resultado, :filesCopied)
+    end
+
+    test "payload sem `sucesso` booleano vira ok: false — nunca sucesso por omissão" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "runner", mirror_path: "/home/voce/espelhos/proj")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _resposta, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+          "capacidades" => ["exec", "pty", "espelho"]
+        })
+
+      push(joined, "mirror_sync_result", %{"ref" => "m4"})
+
+      assert_receive {:report_mirror_sync, ^project_id, %{ok: false}}
+    end
+
+    test "vindo de :web, é IGNORADO — nunca chama a api" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "runner", mirror_path: "/home/voce/espelhos/proj")
+      socket = emitir_e_conectar!(project_id, "terminal")
+
+      {:ok, _resposta, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      push(joined, "mirror_sync_result", %{"ref" => "m5", "sucesso" => true})
+
+      refute_receive {:report_mirror_sync, _, _}, 200
+    end
+
+    test "api que RECUSA o reporte não derruba o canal — telemetria não derruba o que mede" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "runner", mirror_path: "/home/voce/espelhos/proj")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _resposta, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+          "capacidades" => ["exec", "pty", "espelho"]
+        })
+
+      # Scriptado por application env, e não pelo dicionário de processo: quem
+      # chama o cliente é o processo do CANAL.
+      Application.put_env(:engine, :fake_report_mirror_sync, {:error, :timeout})
+      on_exit(fn -> Application.delete_env(:engine, :fake_report_mirror_sync) end)
+
+      push(joined, "mirror_sync_result", %{"ref" => "m6", "sucesso" => false, "erro" => "x"})
+      assert_receive {:report_mirror_sync, ^project_id, _}
+
+      # O canal segue vivo e continua tratando — a recusa da api virou log e
+      # nada mais.
+      push(joined, "mirror_sync_result", %{"ref" => "m7", "sucesso" => true, "destino" => "/d"})
+      assert_receive {:report_mirror_sync, ^project_id, _}
+      assert Process.alive?(joined.channel_pid)
+    end
+  end
+
   # `projects` é gerenciada pela api (Drizzle, schema "public") — o engine só
   # a lê. Mesmo fixture SQL cru de `workspace_runner_test.exs`.
   defp inserir_projeto!(project_id, execution_mode, opts \\ []) do

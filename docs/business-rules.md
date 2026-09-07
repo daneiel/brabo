@@ -8860,6 +8860,146 @@ fila de aprovações rotineiras, corroendo o teto que dá sentido ao clique.
 
 ---
 
+## O estado do espelho é visível, e os três estados não colapsam (RN-517)
+
+### RN-517 — O desfecho de cada rodada do espelho volta pelo canal e vira TELEMETRIA numa tabela própria; "nunca sincronizou", "sincronizou e não copiou nada" e "falhou" são TRÊS respostas, e sucesso e erro convivem {#rn-517}
+
+A sessão 8 da FASE 28 e o **ponto 7** do
+[ADR 0147](adr/0147-agente-local-com-capacidades.md). A
+[RN-516](#rn-516) fez o espelho copiar de verdade e deixou o `mirror_sync`
+**fire-and-forget** — sem `mirror_sync_result` no protocolo, de propósito,
+porque o formato da telemetria era decisão desta entrega. É ela que fecha o
+laço.
+
+**O caminho é o de `workspace_confirm`, e nenhum outro.** O runner empurra
+`mirror_sync_result` no canal `terminal:<projectId>` **depois** de a rodada
+terminar; o engine trata em `handle_in/3` e REPASSA à api pelo HTTP interno
+(`POST /internal/projects/:projectId/mirror-sync-result`), que grava pelo caso
+de uso. O engine **não escreve a tabela** — um segundo caminho de escrita
+seria a segunda fonte da mesma verdade, e a primeira coisa a divergir. É o
+único precedente de o runner contar algo sobre si mesmo, e foi por isso que o
+ADR o nomeou.
+
+**Nunca um "ok" otimista.** O desfecho reportado é o REAL: as três contagens
+que `sincronizarEspelho` devolveu (copiados, pulados, recusados — nunca
+recontadas) ou o erro nomeado. As TRÊS saídas de `tratarMirrorSync` reportam,
+e com mensagens diferentes: a recusa por destino não concedido, a falha da
+cópia e o sucesso. `ok` NUNCA é deduzido de haver contagem ou mensagem — nem
+no runner, nem na tradução do engine, nem no caso de uso da api: deduzir
+tornaria uma rodada que copiou **0** arquivos (perfeitamente normal)
+indistinguível de uma que nem chegou a rodar.
+
+**TABELA, e não event log.** `project_mirror_states`, uma linha por projeto
+(`project_id` único, mesmo desenho de `project_containers`). O motivo é o
+mesmo que fez `rag_searches` virar tabela ([RN-479](#rn-479)):
+`session_events.session_id` é `NOT NULL` e uma rodada de espelho **não tem
+sessão** — o event log perderia a coisa inteira, não uma parte dela. E não é
+`proposed_action` em hipótese nenhuma: a escrita do espelho é configuração que
+o usuário declarou, não um agente pedindo para agir.
+
+**Os TRÊS estados da [RN-088](#rn-088), e eles não colapsam.** "Nunca
+sincronizou" é a linha **ausente**. "Sincronizou e não copiou nada" é linha
+presente com `files_copied = 0` — um desfecho, não um vazio. "Falhou" é
+`last_error_at` mais recente que `last_synced_at`. São três respostas
+diferentes, a pessoa age diferente em cada uma, e um traço servindo às três
+seria a tela recusando nomear o que sabe ([RN-470](business-rules/custo.md#rn-470)).
+
+**Sucesso e erro CONVIVEM na mesma linha.** As duas escritas mencionam colunas
+**disjuntas**: a de sucesso não toca `last_error`/`last_error_at`, a de falha
+não toca nenhuma coluna de sucesso, e nenhuma das duas apaga a outra. Quem
+decide qual está VIGENTE é a comparação dos dois carimbos
+(`deriveMirrorSyncStatus`, função pura do domínio), e é isso que permite a tela
+dizer *"a última rodada falhou — última cópia boa em ontem, com 412 arquivos"*.
+Uma escrita destrutiva de um lado sobre o outro jogaria fora justamente a
+informação mais útil que a tela tem enquanto o espelho está quebrado. Duas
+escolhas menores na mesma direção: falha SEM destino não apaga o destino da
+última cópia que funcionou, e empate exato de carimbo resolve para `failed` —
+entre afirmar que está tudo bem e afirmar que algo falhou, a afirmação segura
+é a que faz a pessoa olhar.
+
+**`destination` é CONGELADO**, como `image_version` em `project_containers` e
+os pesos em `rag_searches` ([RN-479](#rn-479)): é o destino REAL daquela
+rodada, resolvido por `realpath` na máquina do usuário depois do `mkdir -p`.
+Ler `projects.mirror_path` na hora de mostrar diria o destino de AGORA sobre
+uma cópia de ontem — e os dois divergem de verdade, porque a concessão viaja no
+join e só muda quando o runner reconecta ([RN-516](#rn-516)). Quando divergem,
+a tela DIZ isso.
+
+**Gravar telemetria jamais derruba o que ela mede.** A cópia já terminou
+quando o reporte sai; o `handle_in` do engine só LOGA a recusa da api e devolve
+`{:noreply, socket}` nos dois ramos, e o canal do runner segue vivo. Sem canal
+(a conexão caiu entre o pedido e o fim da cópia) o runner não reporta e não
+lança — a rodada que aconteceu não é desfeita por isso. E um projeto cujo
+destino foi LIMPO no meio ainda registra: a rodada aconteceu, e o erro dela é
+o que costuma explicar o que houve.
+
+**Na tela**, a linha entra em `AmbienteDoProjeto` (a coluna lateral da Visão
+geral, ao lado das de modo de execução e runner) e **só existe em projeto que
+tem `mirrorPath`** — num projeto sem espelho, "nunca sincronizou" seria uma
+ausência inventada, o mesmo argumento que já valia para a linha do runner. Data
+ABSOLUTA com ressalva e nunca bolinha verde de "está de pé", pelo mesmo
+precedente de `workspaceVerifiedAt`: o carimbo diz que uma rodada aconteceu,
+não que a pasta esteja em dia com o que mudou depois (o gatilho é um momento
+nomeado, o commit — nunca um watcher). O `status` chega RESOLVIDO da api: a
+regra que decide qual carimbo vale tem uma fonte só, e é ela que decide qual
+das três frases a pessoa lê.
+
+**Papel `viewer` para LER, `maintainer` para escrever o destino** — a régua da
+[RN-102](business-rules/custo.md#rn-102) aplicada: o mínimo é do ENDPOINT, e este só lê. O destino já
+viaja em toda leitura de projeto (`GET /projects/:projectId`, `viewer`), então
+exigir `maintainer` aqui trancaria informação para quem já a vê no mesmo
+projeto, que é o pior dos dois defeitos porque é invisível para quem perdeu a
+capacidade.
+
+- **Onde:** `apps/api/src/db/schema/iam.ts` (`project_mirror_states`, no
+  agregado `iam` porque é lá que o destino mora — não há `domain/runners`);
+  `apps/api/src/db/migrations/0057_brave_silver_centurion.sql`;
+  `apps/api/src/domain/iam/mirror-state.ts` (`deriveMirrorSyncStatus`, a regra
+  dos três estados, pura); `apps/api/src/application/ports/mirror-state-repository.port.ts`
+  (DOIS métodos de escrita, não um upsert com tudo opcional — é o que torna a
+  disjunção um invariante do tipo, não uma convenção do chamador);
+  `apps/api/src/infrastructure/persistence/drizzle/mirror-state.repository.ts`;
+  `apps/api/src/application/use-cases/iam/record-mirror-sync.use-case.ts` e
+  `.../get-project-mirror-state.use-case.ts`;
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts`
+  (`POST .../mirror-sync-result`);
+  `apps/api/src/interfaces/http/iam/projects.controller.ts`
+  (`GET .../mirror-state`, `viewer`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex`
+  (`report_mirror_sync/2`);
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex`
+  (`handle_in("mirror_sync_result", …)` e a tradução do vocabulário);
+  `apps/runner/src/channel.ts` (`MirrorSyncResultMessage`,
+  `enviarMirrorSyncResult`); `apps/runner/src/index.ts` (`tratarMirrorSync`
+  reporta as três saídas); `apps/web/src/components/AmbienteDoProjeto.tsx`
+- **Teste:**
+  `apps/api/test/application/use-cases/iam/mirror-sync-telemetry.use-case.spec.ts`
+  (os três estados na função pura e na leitura; erro que não apaga o sucesso;
+  destino trocado; contagem 0; mensagem sem texto e mensagem longa; projeto
+  sem destino que ainda registra);
+  `apps/api/test/infrastructure/persistence/drizzle/mirror-state.repository.spec.ts`
+  (o invariante das colunas disjuntas contra o banco de verdade — um fake
+  provaria o fake);
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (`describe "mirror_sync_result"` — o repasse com tradução, o `filesCopied: 0`
+  que não some, campo ausente que NÃO vira `nil`, `sucesso` faltando que vira
+  `ok: false`, `:web` ignorado, e a api que recusa sem derrubar o canal);
+  `apps/runner/src/index-handlers.spec.ts`
+  (`describe "o desfecho é reportado em mirror_sync_result"` — contagem real,
+  repositório vazio como sucesso, falha nomeada, recusa sem destino, e a
+  conexão caída que não reporta nem lança);
+  `apps/web/src/components/AmbienteDoProjeto.test.tsx`
+  (`describe "linha do espelho"` — sem `mirrorPath` a linha some e nem consulta;
+  os três estados com três frases; nenhum vocabulário de liveness; destino
+  trocado dito)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 7
+- **Origem:** FASE 28, sessão 8. Fica declarado e NÃO feito: nenhum alarme,
+  nenhuma notificação e nenhuma retentativa automática de rodada que falhou —
+  a próxima rodada acontece no próximo momento nomeado, como sempre, e a tela
+  é o único lugar onde a falha aparece hoje
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

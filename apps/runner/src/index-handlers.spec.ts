@@ -400,14 +400,117 @@ describe('tratarMirrorSync — o destino concedido no join', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('o espelho NÃO empurra nada de volta pelo canal (a telemetria é de outra sessão)', async () => {
-    const workspace = projetoGit();
-    const destino = join(raiz, 'espelho');
-    const canal = new CanalFalso();
-    const estado = estadoFalso({ canal, dir: workspace, destinoDoEspelho: destino });
+  // RN-517 (ADR 0147 ponto 7) — o desfecho REAL volta pelo canal. Até a
+  // sessão 6B este handler não empurrava nada de propósito (a telemetria era
+  // outra entrega); o que ele NUNCA pode fazer é empurrar um "ok" otimista
+  // antes de a cópia terminar, e as asserções abaixo são sobre o que foi
+  // COPIADO de verdade.
+  /**
+   * O ÚNICO push que este handler faz. Falha ALTO quando não há nenhum — um
+   * `!` calado transformaria "o runner não reportou" (o defeito que a RN-517
+   * fecha) num `undefined` que a asserção seguinte reportaria como outra
+   * coisa.
+   */
+  function reporteDoEspelho(canal: CanalFalso): Record<string, unknown> {
+    const push = canal.pushes[0];
+    if (!push) throw new Error('nenhum mirror_sync_result foi empurrado');
+    expect(push.event).toBe('mirror_sync_result');
+    return push.payload as Record<string, unknown>;
+  }
 
-    await tratarMirrorSync(estado, { ref: 'm5', destino, momento: 'commit' });
+  describe('o desfecho é reportado em mirror_sync_result (RN-517)', () => {
+    it('sucesso empurra a contagem REAL e o destino resolvido', async () => {
+      const workspace = projetoGit();
+      const destino = join(raiz, 'espelho');
+      const canal = new CanalFalso();
+      const estado = estadoFalso({ canal, dir: workspace, destinoDoEspelho: destino });
 
-    expect(canal.pushes).toEqual([]);
+      await tratarMirrorSync(estado, { ref: 'm5', destino, momento: 'commit' });
+
+      expect(canal.pushes).toHaveLength(1);
+      const payload = reporteDoEspelho(canal);
+      expect(payload.ref).toBe('m5');
+      expect(payload.sucesso).toBe(true);
+      expect(payload.copiados).toBe(1);
+      expect(payload.pulados).toBe(0);
+      expect(payload.recusados).toBe(0);
+      // O destino RESOLVIDO (realpath depois do mkdir), não o que veio na
+      // mensagem — é ele que a api congela na linha.
+      expect(existsSync(payload.destino as string)).toBe(true);
+      expect(payload.erro).toBeUndefined();
+    });
+
+    it('repositório VAZIO reporta sucesso com copiados: 0, nunca uma falha', async () => {
+      const workspace = join(raiz, 'vazio');
+      mkdirSync(workspace, { recursive: true });
+      execFileSync('git', ['init', '-q', '.'], { cwd: workspace, stdio: 'pipe' });
+      const destino = join(raiz, 'espelho-vazio');
+      const canal = new CanalFalso();
+      const estado = estadoFalso({ canal, dir: workspace, destinoDoEspelho: destino });
+
+      await tratarMirrorSync(estado, { ref: 'm6', destino, momento: 'commit' });
+
+      const payload = reporteDoEspelho(canal);
+      // "sincronizou e não havia nada a copiar" é um ESTADO, não um vazio:
+      // colapsá-lo em falha (ou em silêncio) é o que a RN-088 recusa.
+      expect(payload.sucesso).toBe(true);
+      expect(payload.copiados).toBe(0);
+    });
+
+    it('falha da cópia vira reporte de erro NOMEADO, nunca silêncio', async () => {
+      const semGit = join(raiz, 'sem-git-2');
+      mkdirSync(semGit, { recursive: true });
+      const destino = join(raiz, 'espelho-falho');
+      const canal = new CanalFalso();
+      const estado = estadoFalso({ canal, dir: semGit, destinoDoEspelho: destino });
+
+      await tratarMirrorSync(estado, { ref: 'm7', destino, momento: 'commit' });
+
+      const payload = reporteDoEspelho(canal);
+      expect(payload.sucesso).toBe(false);
+      expect(String(payload.erro)).toContain('git');
+      expect(payload.copiados).toBeUndefined();
+    });
+
+    it('destino NÃO concedido reporta erro SEM destino — nada foi escrito lá', async () => {
+      const workspace = projetoGit();
+      const canal = new CanalFalso();
+      const estado = estadoFalso({
+        canal,
+        dir: workspace,
+        destinoDoEspelho: join(raiz, 'concedido'),
+      });
+
+      await tratarMirrorSync(estado, {
+        ref: 'm8',
+        destino: join(raiz, 'outro'),
+        momento: 'commit',
+      });
+
+      const payload = reporteDoEspelho(canal);
+      expect(payload.sucesso).toBe(false);
+      expect(String(payload.erro)).toContain('não foi concedido');
+      // Congelar como "onde a rodada escreveu" uma pasta que este runner
+      // RECUSOU seria a api afirmando o contrário do que aconteceu.
+      expect(payload.destino).toBeUndefined();
+    });
+
+    it('sem canal (a conexão caiu no meio) não reporta e não lança', async () => {
+      const workspace = projetoGit();
+      const destino = join(raiz, 'espelho-sem-canal');
+      const estado = estadoFalso({
+        canal: new CanalFalso(),
+        dir: workspace,
+        destinoDoEspelho: destino,
+      });
+      estado.canalAtual = null;
+
+      await expect(
+        tratarMirrorSync(estado, { ref: 'm9', destino, momento: 'commit' }),
+      ).resolves.toBeUndefined();
+      // A cópia ACONTECEU mesmo sem ter a quem contar — a rodada não é
+      // desfeita pela queda da conexão.
+      expect(existsSync(join(destino, 'app.ts'))).toBe(true);
+    });
   });
 });

@@ -614,9 +614,25 @@ erDiagram
   projects ||--o{ rag_searches : "every hybrid search leaves a row (RN-479)"
   rag_searches ||--o{ rag_feedback : "was this excerpt useful? (RN-480)"
   chunks ||--o{ rag_feedback : "the judged excerpt"
+  projects ||--o| project_mirror_states : "what the last mirror round did (RN-517)"
 ```
 
-53 tables in total. The two most recent are `rag_searches`/`rag_feedback`
+54 tables in total. The most recent is `project_mirror_states`
+([RN-517](business-rules.md#rn-517),
+[ADR 0147](adr/0147-agente-local-com-capacidades.md) point 7): one row per
+project, `project_id` unique, holding what the LAST mirror round did — the last
+successful sync with its three counts and its frozen destination, plus the last
+error. A TABLE and not an event for the same reason as `rag_searches` right
+above: a mirror round has no session, and `session_events.session_id` is
+`NOT NULL`, so the event log would silently drop the whole thing. Three states
+that never collapse ([RN-088](business-rules.md#rn-088)): "never synced" is the
+ABSENT row, "synced and copied nothing" is a present row with `files_copied = 0`,
+and "failed" is `last_error_at` newer than `last_synced_at`. Success and failure
+columns are DISJOINT and neither write touches the other's — which is why the
+screen can say "failing since today, last good copy was yesterday with 412
+files" instead of losing the most useful thing it has.
+
+The two before it are `rag_searches`/`rag_feedback`
 (RN-479/480): the trail of the hybrid search and the vote on what it
 returned, added because `rag-search-limits.ts` declares in its own comment
 that none of the four numbers of the hybrid search comes from calibration
@@ -653,8 +669,12 @@ validated against the OLD `workspace_path`.
 Since [RN-516](business-rules.md#rn-516) the engine READS this column — it is
 what decides whether the runner's `join` requires the `espelho` capability, and
 it is what travels back in that join's grant (`Engine.Runners.Espelho`,
-`EngineWeb.TerminalChannel`). The engine never writes it, and no internal route
-was added for it.
+`EngineWeb.TerminalChannel`). The engine never writes it. Since
+[RN-517](business-rules.md#rn-517) there IS an internal route in the
+neighbourhood — `POST /internal/projects/:projectId/mirror-sync-result` — but it
+writes `project_mirror_states`, never this column: the destination is
+CONFIGURATION (the user declares it) and the round outcome is TELEMETRY (the
+local agent reports it), and merging them would let a report overwrite a choice.
 **The constraints are business rules**: the event log's unique `(session_id, seq)`, the `check` requiring
 exactly one scope in `budgets` (project **or** session, never both), the
 partial indexes that guarantee analysis idempotency — and, since Phase 8b,

@@ -605,6 +605,47 @@ user's machine, exactly as in `runner` mode. The `realpath` half of the guard
 is the runner's (`apps/runner/src/espelho-guard.ts`, RN-516), and nothing in
 this contract should be read as the api having already established it.
 
+### What the mirror round DID — the report, which IS a new route ([RN-517](../business-rules.md#rn-517))
+
+| method | path |
+|---|---|
+| POST | `/internal/projects/:projectId/mirror-sync-result` (**not** session-scoped) |
+
+The same exception, one step later, and for the same reason: the only party
+that knows what happened on the user's machine is the `brabo-runner`. It
+pushes `mirror_sync_result` over the `terminal:<projectId>` channel after the
+round FINISHES — never an optimistic "ok" before it — and the engine forwards
+it here (`Engine.Sessions.EngineApiClient.report_mirror_sync/2`). The channel
+handler is modelled on `workspace_confirm` below, deliberately: it is the only
+precedent of the runner telling the server something about itself, and a
+second mechanism would be a second source of the same truth.
+
+The engine does NOT write the table. It translates the protocol's pt-BR
+vocabulary (`sucesso`/`erro`/`destino`/`copiados`, the same shape as
+`container_start_result`) into this route's body (`ok`/`error`/`destination`/
+`filesCopied`) and posts it. `ok` is never inferred from a count being present:
+a round that copied 0 files is normal, and inferring would make it
+indistinguishable from a round that never ran.
+
+The api writes `project_mirror_states` — a TABLE, never the event log, because
+a mirror round has no session and `session_events.session_id` is `NOT NULL`
+(the same reasoning that made `rag_searches` a table,
+[RN-479](../business-rules.md#rn-479)) — and never a `proposed_action`, because
+the mirror write is configuration the user declared, not an agent asking to
+act.
+
+**Recording never breaks what it measures.** The copy has already happened when
+this route is called; a `404`, a timeout or any other refusal is only LOGGED by
+the channel handler, and the runner's connection is untouched. That is also why
+a project whose destination was cleared meanwhile still records: the round
+happened, and its error is usually what explains what went wrong.
+
+What the screen reads is a **public** route, not this one:
+`GET /projects/:projectId/mirror-state` (`viewer`), which resolves the three
+states of [RN-088](../business-rules.md#rn-088) — `never` (absent row), `synced`
+(possibly with `filesCopied: 0`) and `failed` — on the api side, so the rule
+that decides which of the two timestamps is current has a single source.
+
 ### Workspace confirmation by the runner — the WRITE, which is a new route ([RN-423](../business-rules.md#rn-423))
 
 | method | path |

@@ -98,9 +98,22 @@ defmodule EngineWeb.TerminalChannel do
   reconectá-lo, pela mesma razão: a concessão é do join.
 
   `mirror_sync` (`handle_info({:dispatch_mirror_sync, ...})`) é o único
-  dispatch FIRE-AND-FORGET do canal — sem `from`, sem `pending_execs`, sem
-  evento de resultado. A telemetria da sincronização é o ponto 7 do ADR, de
-  outra sessão.
+  dispatch FIRE-AND-FORGET do canal — sem `from` e sem `pending_execs`.
+
+  ## `mirror_sync_result` (RN-517, ADR 0147 ponto 7)
+
+  Fire-and-forget nos DOIS sentidos: o runner reporta o desfecho REAL da
+  rodada (contagem, ou o erro nomeado) sem que ninguém esteja bloqueado
+  esperando — por isso `mirror_sync_result` NÃO passa por
+  `responder_pedido_pendente/3` como os quatro `_result` acima, e sim pelo
+  caminho de `workspace_confirm`: só o `:runner` origina, o engine repassa
+  pra api (`EngineApiClient.report_mirror_sync/2`) e a api grava numa TABELA
+  própria — nunca no event log, porque a rodada não tem sessão e
+  `session_events.session_id` é `NOT NULL` (o mesmo raciocínio que fez
+  `rag_searches` virar tabela, RN-479).
+
+  Falha do HTTP interno vira log e nada mais: gravar telemetria jamais
+  derruba o que ela mede, e a cópia já terminou quando a mensagem chega.
 
   ## Auditoria (PTY é ação do usuário, não passa por `proposed_action`)
 
@@ -336,6 +349,39 @@ defmodule EngineWeb.TerminalChannel do
         {:error, reason} ->
           Logger.warning(
             "terminal: workspace_confirm recusado (#{project_id}): " <> inspect(reason)
+          )
+      end
+    end
+
+    {:noreply, socket}
+  end
+
+  # mirror_sync_result (RN-517, ADR 0147 ponto 7): o desfecho REAL de uma
+  # rodada do espelho, contado pelo agente local depois de terminar. Só o
+  # `:runner` pode originar — mesmo caminho e mesmo formato de
+  # `workspace_confirm`, que é o único precedente de o runner contar algo
+  # sobre si mesmo: runner → canal → engine → HTTP interno → api grava.
+  #
+  # O engine NÃO escreve na tabela: ele repassa. Um segundo caminho de
+  # escrita (o engine com Ecto direto na tabela da api) seria a segunda fonte
+  # da mesma verdade, e a primeira coisa a divergir.
+  #
+  # Falha do HTTP interno vira LOG e nada mais — `{:noreply, socket}` sai
+  # igual nos dois ramos. Gravar telemetria jamais derruba o que ela mede: a
+  # cópia já terminou na máquina do usuário quando esta mensagem chega, e um
+  # 404/timeout aqui não pode desconectar o runner nem desfazer a cópia.
+  @impl true
+  def handle_in("mirror_sync_result", payload, socket) when is_map(payload) do
+    if socket.assigns.role == :runner do
+      project_id = socket.assigns.project_id
+
+      case EngineApiClient.report_mirror_sync(project_id, resultado_de_espelho(payload)) do
+        {:ok, _resp} ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning(
+            "terminal: mirror_sync_result não gravado (#{project_id}): " <> inspect(reason)
           )
       end
     end
@@ -664,6 +710,45 @@ defmodule EngineWeb.TerminalChannel do
       concedidas -> MapSet.member?(concedidas, capacidade)
     end
   end
+
+  # RN-517 — o vocabulário do PROTOCOLO do runner é pt-BR (`sucesso`, `erro`,
+  # `destino`, como em `container_start_result`) e o da api é inglês. A
+  # tradução mora aqui, na fronteira api↔engine, e em lugar nenhum além: o
+  # runner não conhece o corpo HTTP da api, e a api não conhece o canal.
+  #
+  # `ok` NUNCA é deduzido de haver contagem ou mensagem: uma rodada que copiou
+  # 0 arquivos é normal, e deduzir a tornaria indistinguível de uma que nem
+  # rodou. Payload sem `sucesso` booleano vira `ok: false` — "o runner disse
+  # algo que este servidor não entende" é uma falha, e não um sucesso por
+  # omissão (RN-088: "não sei" nunca colapsa no lado bom).
+  #
+  # O que não vier no formato certo é OMITIDO em vez de virar `null`: o DTO da
+  # api distingue campo ausente de campo nulo, e um `null` explícito seria
+  # recusado pela validação em vez de gravar o que se sabe.
+  defp resultado_de_espelho(payload) do
+    ok = Map.get(payload, "sucesso") == true
+
+    %{ok: ok}
+    |> por_string(:destination, Map.get(payload, "destino"))
+    |> por_inteiro(:filesCopied, Map.get(payload, "copiados"))
+    |> por_inteiro(:filesSkipped, Map.get(payload, "pulados"))
+    |> por_inteiro(:filesRefused, Map.get(payload, "recusados"))
+    |> por_string(:error, Map.get(payload, "erro"))
+  end
+
+  defp por_string(mapa, chave, valor) when is_binary(valor) do
+    case String.trim(valor) do
+      "" -> mapa
+      limpo -> Map.put(mapa, chave, limpo)
+    end
+  end
+
+  defp por_string(mapa, _chave, _valor), do: mapa
+
+  defp por_inteiro(mapa, chave, valor) when is_integer(valor) and valor >= 0,
+    do: Map.put(mapa, chave, valor)
+
+  defp por_inteiro(mapa, _chave, _valor), do: mapa
 
   defp relay_para_runner(socket, event, payload) do
     case Registry.whereis(socket.assigns.project_id) do

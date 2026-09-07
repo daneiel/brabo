@@ -47,6 +47,7 @@ import type {
   Page,
   PermissionPolicy,
   PermissionsFile,
+  MirrorState,
   Project,
   ProjectBlockedStatus,
   ProjectCardSummary,
@@ -335,6 +336,15 @@ export const createProject = (
 ) => post<Project>(`/workspaces/${workspaceId}/projects`, input);
 export const getProject = (projectId: string) =>
   get<Project>(`/projects/${projectId}`);
+/**
+ * O que a última rodada do espelho fez (RN-517, ADR 0147 ponto 7).
+ *
+ * Chamada SEPARADA de `getProject`, e só para projeto que tem destino: pendurar
+ * isto na leitura de projeto custaria uma consulta a mais em toda tela que
+ * carrega um projeto, para um dado que quase nenhuma delas mostra.
+ */
+export const getMirrorState = (projectId: string) =>
+  get<MirrorState>(`/projects/${projectId}/mirror-state`);
 // `maxConsecutiveBlocked` (Fase 12b): vale a partir da PRÓXIMA ativação da
 // execução — não afeta dev agents já rodando.
 // `storyPromotion` (Fase 12c): vale para as PRÓXIMAS histórias criadas; as que

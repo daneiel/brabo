@@ -225,6 +225,24 @@ reason in the URL.
   be indistinguishable from asking to clear, and clearing in silence is the
   defect. Writing the mirror is never a `proposed_action` — it is
   configuration the user declared, not an agent asking to act.
+- **`GET /projects/:projectId/mirror-state` is `viewer`, one notch below the
+  route that WRITES the destination** ([RN-517](business-rules.md#rn-517),
+  [ADR 0147](adr/0147-agente-local-com-capacidades.md), point 7). It returns
+  what the last mirror round did: which of the three states is current
+  (`never` | `synced` | `failed`), the last successful sync with its counts,
+  the frozen destination of that round, and the last error.
+
+  The asymmetry with `PUT .../mirror-path` (`maintainer`) is deliberate and
+  is the rule of [RN-102](business-rules/custo.md#rn-102) applied: the minimum
+  belongs to the ENDPOINT, and this one only READS. The destination itself
+  already rides on every project read (`GET /projects/:projectId`,
+  `viewer`), so requiring `maintainer` here would lock information away from
+  someone who already sees it in the same project — the worse of the two
+  defects, because it is invisible to whoever lost the capability.
+
+  What it does NOT expose is worth stating: no file names, no content, no
+  path other than the destination the caller can already read. The counts
+  are counts.
 - **`GET /workspaces/:workspaceId/projects-base` reveals a piece of the
   operator's filesystem topology, and that's why it isn't `viewer`**
   ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md),
@@ -331,6 +349,22 @@ reason in the URL.
   unreachable one (`{ sucesso: false, motivo }` is the normal shape, per
   RN-486 — a `running` row never guarantees the container is up right
   now), so a dead container is a regular failed command, not a 5xx.
+- **`POST /internal/projects/:projectId/mirror-sync-result`** ([RN-517](business-rules.md#rn-517),
+  [ADR 0147](adr/0147-agente-local-com-capacidades.md), point 7) is called
+  only by the engine, after the runner pushes `mirror_sync_result` over the
+  channel — never directly by the runner, which doesn't hold the service
+  token. The same shape and the same path as `workspace-verification` above,
+  and for the same reason: the runner is the only party that knows what
+  happened on the user's machine, and the engine repasses rather than writing
+  the table itself.
+
+  It writes TELEMETRY and nothing else: a row in `project_mirror_states`,
+  never the event log (a mirror round has no session and
+  `session_events.session_id` is `NOT NULL`) and never a `proposed_action`.
+  The body carries an outcome, three counts and an error message — no path
+  the api acts on, nothing executed, nothing granted. Recording never breaks
+  what it measures: the copy is already finished when this is called, and a
+  refusal here is only logged by the engine.
 - **`GET /internal/projects/:projectId/container-spec`** ([ADR 0130](adr/0130-broker-de-container.md),
   [RN-485](business-rules.md#rn-485)) is the only `engine-service` route whose
   caller is NOT the engine — it is the container **broker**, the single process
@@ -652,6 +686,7 @@ reason in the URL.
 | GET | `/internal/projects/:projectId/product-metrics` | engine-service |
 | POST | `/internal/projects/:projectId/workspace-verification` | engine-service |
 | POST | `/internal/projects/:projectId/container-exec` | engine-service |
+| POST | `/internal/projects/:projectId/mirror-sync-result` | engine-service |
 | GET | `/internal/projects/:projectId/container-spec` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
@@ -677,6 +712,7 @@ reason in the URL.
 | PATCH | `/projects/:projectId` | role:maintainer |
 | PUT | `/projects/:projectId/execution-mode` | role:maintainer |
 | PUT | `/projects/:projectId/mirror-path` | role:maintainer |
+| GET | `/projects/:projectId/mirror-state` | role:viewer |
 | GET | `/projects/:projectId/models` | role:viewer |
 | GET | `/projects/:projectId/actions` | role:developer |
 | GET | `/projects/:projectId/agent-autonomy` | role:maintainer |

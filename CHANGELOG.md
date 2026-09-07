@@ -79,6 +79,60 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,engine,runner,web**: o **estado do espelho** fica visível, e os três
+  estados não colapsam (RN-517,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 7). A RN-516
+  fez o espelho copiar de verdade e deixou o `mirror_sync` **fire-and-forget**
+  de propósito — sem `mirror_sync_result` no protocolo, porque o formato da
+  telemetria era decisão desta entrega. Esta fecha o laço.
+
+  **O caminho é o de `workspace_confirm`, e nenhum outro**: o runner empurra
+  `mirror_sync_result` no canal DEPOIS de a rodada terminar, o engine repassa
+  pela api interna (`POST /internal/projects/:projectId/mirror-sync-result`) e a
+  api grava. O engine **não escreve a tabela** — um segundo caminho de escrita
+  seria a segunda fonte da mesma verdade. Nunca um "ok" otimista antes do fim:
+  o que sobe são as três contagens que a cópia devolveu (copiados, pulados,
+  recusados, nunca recontadas) ou o erro nomeado, e as TRÊS saídas de
+  `tratarMirrorSync` reportam — inclusive a recusa por destino não concedido,
+  que hoje sumia no log local.
+
+  **TABELA (`project_mirror_states`), nunca event log**, pelo mesmo motivo que
+  fez `rag_searches` virar tabela (RN-479): uma rodada de espelho não tem
+  sessão e `session_events.session_id` é `NOT NULL`, então o event log perderia
+  a coisa inteira. E nunca `proposed_action`: a escrita do espelho é
+  configuração que o usuário declarou, não um agente pedindo para agir.
+
+  **Os TRÊS estados da RN-088, sem colapso**: "nunca sincronizou" é a linha
+  AUSENTE, "sincronizou e não copiou nada" é linha presente com
+  `files_copied = 0` (um desfecho, não um vazio) e "falhou" é o erro mais
+  recente que o último sucesso. **Sucesso e erro convivem na mesma linha** —
+  as duas escritas mencionam colunas disjuntas e nenhuma apaga a outra —, e é
+  isso que permite a tela dizer *"a última rodada falhou; a última cópia boa
+  foi ontem, com 412 arquivos"* em vez de perder a informação mais útil que ela
+  tem. O `destination` vai CONGELADO na linha, como a `image_version` de
+  `project_containers` e os pesos de `rag_searches`: mostrar o destino de AGORA
+  sobre uma cópia de ontem seria afirmar sobre uma pasta que aquela rodada
+  nunca tocou, e os dois divergem de verdade porque a concessão viaja no join.
+
+  **Gravar telemetria jamais derruba o que ela mede**: a cópia já terminou
+  quando o reporte sai, a recusa da api vira log e o canal do runner segue
+  vivo; sem canal o runner não reporta e não lança. Projeto cujo destino foi
+  limpo no meio **ainda registra** — a rodada aconteceu, e o erro dela é o que
+  costuma explicar o que houve.
+
+  **Na tela**, a linha entra na coluna lateral da Visão geral
+  (`AmbienteDoProjeto`) e **só aparece em projeto que tem destino** — num
+  projeto sem espelho, "nunca sincronizou" seria uma ausência inventada. Data
+  absoluta com ressalva, nunca bolinha verde de "está de pé": o carimbo diz que
+  uma rodada aconteceu, não que a pasta esteja em dia com o que mudou depois
+  (o gatilho é um momento nomeado, o commit — nunca um watcher). Quando o
+  destino declarado hoje difere do daquela rodada, a linha DIZ isso.
+
+  Rota nova de leitura `GET /projects/:projectId/mirror-state` (`viewer`, o
+  mesmo mínimo de ler o projeto, que já carrega o destino), com o `status`
+  resolvido na api para a regra dos três estados ter uma fonte só. Nada aqui
+  alarma, notifica ou reexecuta uma rodada que falhou — declarado, não feito.
+
 - **engine,runner**: o **espelho** passa a existir de verdade — o agente local
   copia o trabalho para a pasta que o usuário declarou (RN-516,
   [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) pontos 2, 3, 4 e 8).

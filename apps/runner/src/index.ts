@@ -40,6 +40,7 @@ import {
   enviarExecResult,
   enviarFsHomeDirReply,
   enviarFsListDirReply,
+  enviarMirrorSyncResult,
   enviarPtyData,
   enviarPtyError,
   enviarPtyOpened,
@@ -53,6 +54,7 @@ import {
   type FsHomeDirMessage,
   type FsListDirMessage,
   type MirrorSyncMessage,
+  type MirrorSyncResultMessage,
   type PtyOpenMessage,
 } from './channel.ts';
 import {
@@ -504,11 +506,21 @@ export async function tratarContainerRemove(
  * aterrissar na pasta de outro, e é por isso que o destino viaja na concessão
  * e não em configuração local.
  *
- * Recusa e falha viram LOG, nunca exceção que derruba o runner e nunca
- * silêncio. Não há `mirror_sync_result` no protocolo por enquanto: a
- * telemetria da sincronização (última sync, contagem, último erro) é o ponto
- * 7 do ADR, de outra sessão — e inventá-la aqui seria escolher o formato dela
- * sem a decisão que ela precisa.
+ * Recusa e falha viram LOG **e reporte**, nunca exceção que derruba o runner e
+ * nunca silêncio. O desfecho REAL da rodada volta pelo canal em
+ * `mirror_sync_result` (ADR 0147 ponto 7, RN-517) — DEPOIS de a cópia
+ * terminar, nunca um "ok" otimista antes —, com a contagem que
+ * `sincronizarEspelho` devolveu (nunca recontada aqui) ou com o erro nomeado.
+ *
+ * As TRÊS saídas reportam, e é isso que faz a tela conseguir distinguir os
+ * três estados da RN-088: a recusa por destino não concedido e a falha da
+ * cópia são `sucesso: false` com mensagens DIFERENTES, e o sucesso é
+ * `sucesso: true` mesmo quando copiou zero arquivo — "sincronizou e não havia
+ * nada a copiar" é um estado, não um vazio.
+ *
+ * Reportar é best-effort de verdade: sem canal (a conexão caiu entre o pedido
+ * e o fim da cópia) não há a quem contar, e a rodada que já aconteceu não é
+ * desfeita por isso.
  */
 export async function tratarMirrorSync(
   estado: EstadoDoRunner,
@@ -517,12 +529,15 @@ export async function tratarMirrorSync(
   const concedido = estado.destinoDoEspelho;
 
   if (!concedido || !mesmoCaminho(concedido, msg.destino)) {
-    console.warn(
-      `mirror_sync ${msg.ref}: RECUSADO — o destino ${JSON.stringify(msg.destino)} ` +
-        `não foi concedido nesta conexão (concedido: ` +
-        `${concedido ? JSON.stringify(concedido) : 'nenhum'}). Se o destino do ` +
-        `projeto mudou, reconecte o brabo-runner: a concessão é do join.`,
-    );
+    const explicacao =
+      `o destino ${JSON.stringify(msg.destino)} não foi concedido nesta ` +
+      `conexão (concedido: ${concedido ? JSON.stringify(concedido) : 'nenhum'}). ` +
+      `Se o destino do projeto mudou, reconecte o brabo-runner: a concessão é do join.`;
+    console.warn(`mirror_sync ${msg.ref}: RECUSADO — ${explicacao}`);
+    // `destino` fica de FORA: reportar o destino que veio na mensagem faria a
+    // api congelar, como "onde a rodada escreveu", uma pasta que este runner
+    // recusou justamente por não ter permissão de escrever nela.
+    reportarEspelho(estado, { ref: msg.ref, sucesso: false, erro: explicacao });
     return;
   }
 
@@ -534,9 +549,37 @@ export async function tratarMirrorSync(
         `(pulados=${resultado.pulados}, recusados=${resultado.recusados}). ` +
         `Nada foi apagado — o espelho nunca remove.`,
     );
+    reportarEspelho(estado, {
+      ref: msg.ref,
+      sucesso: true,
+      // O destino REAL, resolvido por `realpath` depois do `mkdir -p` — não o
+      // que veio na mensagem: é ele que a api congela na linha.
+      destino: resultado.destino,
+      copiados: resultado.copiados,
+      pulados: resultado.pulados,
+      recusados: resultado.recusados,
+    });
   } catch (erro) {
-    console.warn(`mirror_sync ${msg.ref}: falhou — ${mensagemDeErro(erro)}`);
+    const explicacao = mensagemDeErro(erro);
+    console.warn(`mirror_sync ${msg.ref}: falhou — ${explicacao}`);
+    reportarEspelho(estado, {
+      ref: msg.ref,
+      sucesso: false,
+      destino: concedido,
+      erro: explicacao,
+    });
   }
+}
+
+/**
+ * Empurra o desfecho, se ainda houver canal. Sem canal não há a quem contar —
+ * e uma cópia que já aconteceu não vira falha por a conexão ter caído depois
+ * dela (a próxima rodada reporta a próxima verdade).
+ */
+function reportarEspelho(estado: EstadoDoRunner, msg: MirrorSyncResultMessage): void {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+  enviarMirrorSyncResult(canal, msg);
 }
 
 /**

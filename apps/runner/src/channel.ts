@@ -119,9 +119,9 @@ export interface WorkspaceConfirmMessage {
 
 /**
  * `mirror_sync` (ADR 0147 pontos 4 e 8, RN-516) — o engine pede UMA rodada do
- * espelho, num MOMENTO NOMEADO (hoje: o commit). Só o servidor origina; este
- * runner não responde nada por enquanto — a telemetria da sincronização
- * (última sync, contagem, último erro) é o ponto 7 do ADR, de outra sessão.
+ * espelho, num MOMENTO NOMEADO (hoje: o commit). Só o servidor origina; o
+ * runner responde `mirror_sync_result` (RN-517) DEPOIS de a rodada terminar —
+ * sem ninguém bloqueado esperando por ela dos dois lados.
  *
  * `destino` viaja na mensagem para ser CONFERIDO contra o que foi concedido
  * no join desta conexão (`EspelhoConcedido`), nunca para ser obedecido: um
@@ -135,6 +135,33 @@ export interface MirrorSyncMessage {
   ref: string;
   destino: string;
   momento: string;
+}
+
+/**
+ * `mirror_sync_result` (ADR 0147 ponto 7, RN-517) — o desfecho REAL de UMA
+ * rodada do espelho, empurrado DEPOIS que ela terminou. Nunca um "ok"
+ * otimista antes do fim: quem mede o espelho tem de poder confiar que a
+ * contagem é do que foi copiado de verdade.
+ *
+ * FIRE-AND-FORGET nos dois sentidos, ao contrário de
+ * `container_start_result`/`exec_result`: ninguém do lado servidor está
+ * bloqueado esperando por ele (o `mirror_sync` que o originou também não
+ * esperava). O `ref` é o mesmo da rodada, e serve para correlacionar log dos
+ * dois lados — nada é resolvido por ele.
+ *
+ * `sucesso: false` carrega `erro` NOMEADO, e é o único campo que a tela tem
+ * para dizer o que houve. As contagens vêm direto do `ResultadoDoEspelho` de
+ * `espelho.ts` — nunca recontadas aqui.
+ */
+export interface MirrorSyncResultMessage {
+  ref: string;
+  sucesso: boolean;
+  /** O destino resolvido (sucesso) ou tentado (falha); ausente quando não há. */
+  destino?: string;
+  copiados?: number;
+  pulados?: number;
+  recusados?: number;
+  erro?: string;
 }
 
 /**
@@ -593,4 +620,18 @@ export function enviarContainerRemoveResult(
   msg: ContainerRemoveResultMessage,
 ): void {
   canal.push('container_remove_result', msg);
+}
+
+/**
+ * RN-517 (ADR 0147 ponto 7) — o desfecho da rodada do espelho, na MESMA forma
+ * de `workspace_confirm`: o runner contando algo sobre si mesmo, sem que
+ * ninguém esteja esperando. O engine repassa pra api, que grava numa tabela
+ * própria; falha lá do outro lado nunca volta pra cá, e é assim que
+ * telemetria não derruba o que ela mede.
+ */
+export function enviarMirrorSyncResult(
+  canal: ChannelLike,
+  msg: MirrorSyncResultMessage,
+): void {
+  canal.push('mirror_sync_result', msg);
 }
