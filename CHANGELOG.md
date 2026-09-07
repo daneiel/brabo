@@ -1072,6 +1072,62 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   apagar o pacote inteiro, verificado funcionando (as quatro imagens
   efêmeras sumiram do GHCR, confirmado manualmente na aba Packages).
 
+### Testes
+
+- **e2e**: a chave de dispositivo do runner ganha o E2E de navegador que nunca
+  teve — `e2e/testes/chave-de-dispositivo.spec.ts`, terceiro spec da camada do
+  [ADR 0120](docs/adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md).
+  A lacuna era exata: `apps/web/src/lib/runner-bootstrap.test.ts` faz
+  `vi.stubGlobal('crypto', …)` em todo teste que toca chave, então **a suíte
+  do web nunca gerou uma chave Ed25519 nem exportou uma JWK de verdade** — e
+  não podia, porque `crypto.subtle.generateKey({name:'Ed25519'})` não existe
+  em jsdom. Foi por essa fresta que a [RN-475](docs/business-rules.md#rn-475)
+  passou: o `kid` ausente na JWK privada fazia o modo automático do ADR 0118
+  **nunca autenticar**, e o teste que deixou passar afirmava que o arquivo
+  fora ABERTO, nunca o que havia dentro dele.
+
+  **O que ele prova**, num Chromium real contra o compose de produção: o par
+  Ed25519 é gerado na página (origem `:8088`); a pública é registrada em
+  `POST /projects/:id/runner-device-keys` por chamada **cruzada** (com
+  preflight, porque `Authorization` não é cabeçalho simples); a JWK privada
+  exportada carrega `kid` **igual ao `id` que o servidor devolveu**, é mesmo a
+  privada (`kty: OKP`, `crv: Ed25519`, `d` presente) e a pública **não** leva
+  `kid`; e — a asserção que a suíte do web não tem como obter — um JWT EdDSA
+  assinado com essa chave, com o `kid` lido **de volta do arquivo**, é
+  ACEITO por `POST .../runner-ticket` (201, `PatAuthGuard` achando a pública
+  por esse `kid`). O segundo teste cobre a
+  [RN-519](docs/business-rules.md#rn-519): a chave aparece em `GET
+  .../runner-device-keys`, a resposta **nunca** traz JWK (nem `publicKeyJwk`
+  nem `d`, comparado sobre o texto bruto), a revogada **continua na lista**
+  com `revokedAt` preenchido, e o MESMO JWT ainda dentro do TTL passa a ser
+  recusado com 401 — revogar é revogar, não sumir de uma tela.
+
+  **Provado por mutação, duas vezes** (a disciplina do ADR 0120): tirar o
+  `kid` do arquivo derruba a asserção direta; tirar o `kid` **e** a asserção
+  faz a api responder exatamente `401 Token ausente ou inválido` — a RN-475
+  reproduzida ponta a ponta.
+
+  **O que ele NÃO prova, declarado no spec e no `e2e/README.md`:** a metade de
+  INTERFACE. `configurarPastaAutomaticamente` começa por
+  `showDirectoryPicker`, e o Playwright não concede esse handle — então o
+  fluxo não passa pelo `RunnerOnboardingPanel` e o código de
+  `runner-bootstrap.ts` **não é o que roda ali**: os passos são reproduzidos
+  na página, na mesma ordem e com as mesmas chamadas de Web Crypto. Este spec
+  prova que a CADEIA aceita uma chave feita assim; `runner-bootstrap.test.ts`,
+  com o dublê, prova que o MÓDULO a faz assim. A gravação dos três arquivos em
+  disco (RN-466) fica fora pelo mesmo motivo.
+
+  Achado ao rodar de verdade, e agora documentado: **só UM spec por execução
+  pode usar o estado do `setup`.** O `brabo_refresh` gravado vale uma vez —
+  `RefreshUseCase` rotaciona e tem detecção de REUSO que revoga a família
+  inteira —, então um segundo contexto de navegador com o mesmo cookie derruba
+  a sessão dos specs seguintes, e o vermelho aparece no PRÓXIMO arquivo,
+  acusando o mecanismo dele. Não é defeito de produto (reuse detection é o
+  desenho); é uma restrição da camada, agora com seção própria no README. O
+  spec novo opta por sair do estado, porque só precisa da ORIGEM. Junto:
+  `autenticar()` passa a memoizar o token por execução, então a suíte custa
+  **3 logins fixos** contra o lockout por IP, por mais specs que venham.
+
 ## v4.0.0 — 2026-09-04
 
 ### ⚠ Mudanças incompatíveis

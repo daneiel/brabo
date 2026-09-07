@@ -38,6 +38,7 @@ onde a dependência **vai**, não sobre o que ela fala.
 | CSRF + origem cruzada (`:8088` → `:3000`) | não há origem de verdade nem preflight — o `main.ts` da api registra: "teste não faz preflight" |
 | sessão que sobrevive ao reload | é o único jeito de provar que o access em memória foi RECONSTRUÍDO do cookie, e não que nunca sumiu |
 | ticket de uso único do socket (RN-108) | exige handshake de WebSocket real contra o engine, numa TERCEIRA origem |
+| o `kid` da chave de dispositivo (RN-475) | `crypto.subtle.generateKey({name:'Ed25519'})` **não existe em jsdom** — `runner-bootstrap.test.ts` dubla `crypto.subtle` inteiro, então a suite do web nunca gerou uma chave nem exportou uma JWK de verdade. Aqui o par é real, e quem diz se ele serve é o `PatAuthGuard` respondendo 201 em `runner-ticket` |
 
 ## Convenções
 
@@ -49,6 +50,27 @@ onde a dependência **vai**, não sobre o que ela fala.
 - **Semeadura por HTTP** (`suporte/api.ts`), espelhando `docker/smoke.sh`. O
   navegador é caro, e preparo lento é preparo que fica desligado.
 
+## Só UM spec por execução pode usar o estado do `setup`
+
+O `brabo_refresh` gravado em `suporte/.estado-autenticado.json` vale **uma
+vez**. `RefreshUseCase` rotaciona e tem **detecção de reuso**, que revoga a
+FAMÍLIA inteira — então um segundo contexto de navegador carregando o app com
+o mesmo cookie não apenas falha: ele derruba a sessão para todos os specs
+seguintes, que passam a cair no login.
+
+A punição é enganosa, como a do lockout: o spec vermelho é o **próximo** da
+ordem alfabética, e ele acusa o mecanismo dele (um socket que não subiu),
+nunca o cookie. Foi assim que apareceu, ao acrescentar
+`chave-de-dispositivo.spec.ts`.
+
+Regra prática: quem precisa de sessão de NAVEGADOR fica com o estado
+(`socket-da-sessao.spec.ts`); quem só precisa da ORIGEM `:8088` e fala com a
+api por Bearer opta por sair, com
+`test.use({ storageState: { cookies: [], origins: [] } })` e um comentário
+dizendo por quê — são DOIS motivos diferentes de optar por sair, e o de
+`autenticacao.spec.ts` (precisa de origem limpa para provar o login) não é
+este.
+
 ## Se o login começar a falhar rodando várias vezes seguidas
 
 Não é bug de credencial, e a senha não mudou. É o **lockout progressivo por
@@ -57,9 +79,11 @@ IP** do próprio produto (`AUTH_LOCKOUT_IP_THRESHOLDS`, default
 uniforme** de senha errada — de propósito: distinguir os dois diria ao
 atacante quando ele acertou o e-mail.
 
-Cada execução gasta cerca de **3 logins** (o `setup`, o spec de autenticação
-e a semeadura por HTTP). Uma execução por vez, como no CI, fica muito longe
-do teto; iterar dez vezes em quinze minutos, não.
+Cada execução gasta exatamente **3 logins** (o `setup`, o spec de
+autenticação e a semeadura por HTTP), e continuará gastando 3 por mais specs
+que existam: `autenticar()` memoiza o token pela execução inteira, e com
+`workers: 1` os arquivos rodam no mesmo processo. Uma execução por vez, como
+no CI, fica muito longe do teto; iterar dez vezes em quinze minutos, não.
 
 Saídas, em ordem de preferência:
 
@@ -75,3 +99,18 @@ quase aconteceu ao escrever esta camada.
 
 Declarado, não esquecido (ver as Consequências do ADR 0120): diferenças
 entre navegadores (só chromium roda), aprovação inline e streaming.
+
+E, no spec da chave de dispositivo, uma metade nomeada: **a INTERFACE do
+onboarding do runner**. `configurarPastaAutomaticamente` começa por
+`showDirectoryPicker` (File System Access API), e o Playwright não tem como
+conceder esse handle — então o fluxo não é dirigido pelo
+`RunnerOnboardingPanel`, e o código de `apps/web/src/lib/runner-bootstrap.ts`
+**não é o código que roda ali**: os passos são reproduzidos na página, na
+mesma ordem e com as mesmas chamadas de Web Crypto.
+
+A divisão fica assim, e é de propósito: este spec prova que a CADEIA
+(navegador → registro → `kid` → JWT → `PatAuthGuard`) aceita uma chave feita
+assim; `runner-bootstrap.test.ts`, com o dublê, prova que o MÓDULO a faz
+assim. Nenhuma das duas cobre sozinha o que as duas cobrem juntas. Fora
+também, pelo mesmo motivo, a gravação dos três arquivos em disco (RN-466):
+sem handle de pasta não há disco onde escrever.
