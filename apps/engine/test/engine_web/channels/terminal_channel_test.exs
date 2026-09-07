@@ -555,16 +555,126 @@ defmodule EngineWeb.TerminalChannelTest do
     end
   end
 
+  # ADR 0147 ponto 4 / RN-516 — o DESTINO do espelho viaja na CONCESSÃO do
+  # join, e o runner nunca o guarda em configuração própria. As três coisas
+  # que este describe prova: o destino chega na resposta do join; destino
+  # declarado EXIGE a capacidade `espelho` (o primeiro caso REAL do mecanismo
+  # de recusa da RN-514); e `mirror_sync` é empurrado sem esperar resposta.
+  describe "o destino do espelho na concessão do join (ADR 0147 ponto 4, RN-516)" do
+    test "projeto COM destino: o runner que declara `espelho` recebe o destino na resposta" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "runner", mirror_path: "/home/voce/espelhos/proj")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      assert {:ok, resposta, joined} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+                 "capacidades" => ["exec", "pty", "espelho"]
+               })
+
+      assert resposta == %{espelho: %{destino: "/home/voce/espelhos/proj"}}
+      assert MapSet.member?(joined.assigns.capacidades, "espelho")
+    end
+
+    test "projeto COM destino e runner SEM `espelho`: join RECUSADO nomeando a capacidade" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "mounted", mirror_path: "/home/voce/espelhos/proj")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      assert {:error, %{reason: motivo}} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+                 "capacidades" => ["exec", "pty"]
+               })
+
+      assert motivo =~ "`espelho`"
+      assert motivo =~ "desatualizado"
+      # Recusou ANTES de registrar a presença, como toda recusa por capacidade.
+      refute Registry.connected?(project_id)
+    end
+
+    test "binário LEGADO (params vazios) num projeto com destino também é recusado" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "mounted", mirror_path: "/home/voce/espelhos/proj")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      assert {:error, %{reason: motivo}} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      assert motivo =~ "`espelho`"
+    end
+
+    test "projeto SEM destino: resposta VAZIA, e nada muda para quem declara `espelho`" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "runner")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      assert {:ok, resposta, joined} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+                 "capacidades" => ["exec", "pty", "espelho"]
+               })
+
+      assert resposta == %{}
+      assert MapSet.member?(joined.assigns.capacidades, "espelho")
+    end
+
+    test "mirror_sync é empurrado pro runner com destino e momento, sem esperar resposta" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "runner", mirror_path: "/home/voce/espelhos/proj")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _resposta, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+          "capacidades" => ["exec", "pty", "espelho"]
+        })
+
+      send(
+        joined.channel_pid,
+        {:dispatch_mirror_sync, "ref-espelho", "/home/voce/espelhos/proj", "commit"}
+      )
+
+      assert_push "mirror_sync", %{
+        ref: "ref-espelho",
+        destino: "/home/voce/espelhos/proj",
+        momento: "commit"
+      }
+    end
+
+    test "mirror_sync para runner SEM a capacidade `espelho` NÃO é empurrado" do
+      # Só alcançável quando o destino é declarado DEPOIS do join — mas a
+      # mensagem nunca vai a um handler que não existe do outro lado, que é o
+      # defeito silencioso que o ADR 0147 nomeia no Context.
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "runner")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _resposta, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+          "capacidades" => ["exec", "pty"]
+        })
+
+      send(
+        joined.channel_pid,
+        {:dispatch_mirror_sync, "ref-x", "/home/voce/espelhos/proj", "commit"}
+      )
+
+      refute_push "mirror_sync", %{}
+    end
+  end
+
   # `projects` é gerenciada pela api (Drizzle, schema "public") — o engine só
   # a lê. Mesmo fixture SQL cru de `workspace_runner_test.exs`.
-  defp inserir_projeto!(project_id, execution_mode) do
+  defp inserir_projeto!(project_id, execution_mode, opts \\ []) do
     caminho = if execution_mode == "container", do: nil, else: "/home/voce/projetos/proj"
 
     Engine.Repo.query!(
       "INSERT INTO public.projects " <>
-        "(id, name, slug, workspace_dir_name, execution_mode, workspace_path) " <>
-        "VALUES ($1, 'proj', 'proj', 'proj-abc12345', $2, $3)",
-      [Ecto.UUID.dump!(project_id), execution_mode, caminho]
+        "(id, name, slug, workspace_dir_name, execution_mode, workspace_path, mirror_path) " <>
+        "VALUES ($1, 'proj', 'proj', 'proj-abc12345', $2, $3, $4)",
+      [
+        Ecto.UUID.dump!(project_id),
+        execution_mode,
+        caminho,
+        Keyword.get(opts, :mirror_path)
+      ]
     )
   end
 

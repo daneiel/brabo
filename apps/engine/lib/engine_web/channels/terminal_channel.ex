@@ -79,6 +79,29 @@ defmodule EngineWeb.TerminalChannel do
   `handle_info({:dispatch_exec, ...})` (capacidade `exec`) e
   `handle_info({:relay, "pty_" <> _, ...})` (capacidade `pty`).
 
+  ## O DESTINO do espelho viaja na concessão do join (ADR 0147 ponto 4, RN-516)
+
+  A resposta do `join` do `:runner` deixou de ser vazia: quando o projeto tem
+  destino declarado (`projects.mirror_path`, RN-515) E a capacidade `espelho`
+  foi concedida, ela carrega `%{espelho: %{destino: "<caminho>"}}`. É o ÚNICO
+  lugar por onde o destino chega ao runner — nunca configuração global dele,
+  nunca variável de ambiente: um destino global faria o artefato do projeto B
+  aterrissar na pasta do projeto A, e o usuário descobriria isso pelo
+  conteúdo, não por um erro. O runner recusa `mirror_sync` para destino que
+  não lhe foi concedido NAQUELA conexão.
+
+  Consequência direta, declarada no ADR: destino declarado passa a EXIGIR a
+  capacidade, e um binário anterior a essa versão deixa de conectar naquele
+  projeto — recusa explícita e nomeada, nunca degradação silenciosa. É o
+  primeiro caso REAL do mecanismo que a RN-514 deixou implementado e sem
+  nenhum disparo. Trocar o destino com o runner conectado também exige
+  reconectá-lo, pela mesma razão: a concessão é do join.
+
+  `mirror_sync` (`handle_info({:dispatch_mirror_sync, ...})`) é o único
+  dispatch FIRE-AND-FORGET do canal — sem `from`, sem `pending_execs`, sem
+  evento de resultado. A telemetria da sincronização é o ponto 7 do ADR, de
+  outra sessão.
+
   ## Auditoria (PTY é ação do usuário, não passa por `proposed_action`)
 
   `pty_open`/`pty_close` vindos de `:web` emitem
@@ -174,13 +197,15 @@ defmodule EngineWeb.TerminalChannel do
   # entrou. A ordem inversa (registrar depois de conceder) mantém a recusa por
   # exclusividade que já existia como a ÚLTIMA palavra.
   defp entrar_como_runner(project_id, params, socket) do
-    case Capacidades.conceder(params, modo_de_execucao(project_id)) do
+    {modo, destino_do_espelho} = exigencias_do_projeto(project_id)
+
+    case Capacidades.conceder(params, modo, destino_do_espelho) do
       {:ok, concedidas} ->
         socket = assign(socket, :capacidades, concedidas)
 
         case Registry.register(project_id, self()) do
           :ok ->
-            {:ok, socket}
+            {:ok, resposta_do_join(concedidas, destino_do_espelho), socket}
 
           {:error, :already_connected} ->
             {:error, %{reason: "já existe um runner conectado a este projeto"}}
@@ -191,21 +216,52 @@ defmodule EngineWeb.TerminalChannel do
     end
   end
 
-  # `nil` quando não dá pra saber o modo (projeto inexistente, id malformado,
-  # consulta que falhou) — e `Capacidades.exigidas/1` trata `nil` como "não
-  # exige nada". Recusar um join por uma pré-condição que não se conseguiu
+  # ADR 0147 ponto 4 (RN-516): o DESTINO do espelho viaja ao runner DENTRO da
+  # concessão do join, e em lugar nenhum além — nunca configuração global no
+  # runner, nunca variável de ambiente. Um destino global faria o artefato do
+  # projeto B aterrissar na pasta do projeto A, e o usuário descobriria isso
+  # pelo CONTEÚDO, não por um erro.
+  #
+  # Só entra na resposta quando as DUAS coisas valem: há destino declarado E a
+  # capacidade `espelho` foi concedida. Mandar destino para quem não a declarou
+  # seria o servidor pedindo o que aquele binário não sabe fazer — e nem chega
+  # a acontecer hoje (destino declarado EXIGE a capacidade, então quem não a
+  # tem foi recusado acima); a checagem é o que mantém as duas coisas atadas se
+  # a exigência mudar.
+  #
+  # Resposta VAZIA no caso normal (projeto sem espelho), e o runner trata
+  # "não veio destino" e "não há destino" como a mesma coisa — as duas
+  # terminam em `mirror_sync` recusado, nunca numa cópia às cegas.
+  defp resposta_do_join(concedidas, destino) do
+    if is_binary(destino) and MapSet.member?(concedidas, "espelho") do
+      %{espelho: %{destino: destino}}
+    else
+      %{}
+    end
+  end
+
+  # `{nil, nil}` quando não dá pra saber (projeto inexistente, id malformado,
+  # consulta que falhou) — e `Capacidades.exigidas/2` trata os dois `nil` como
+  # "não exige nada". Recusar um join por uma pré-condição que não se conseguiu
   # CONFIRMAR seria colapsar "não sei" com "não tem" (RN-088). O `rescue` é o
   # mesmo de `Engine.Projects.Project.workspace_dir_name/1`, e pelo mesmo
   # motivo: id fora de forma de UUID levanta `Ecto.Query.CastError`.
-  defp modo_de_execucao(project_id) do
+  #
+  # UMA consulta para as DUAS perguntas: o modo (que decide `exec`) e o destino
+  # do espelho (que decide `espelho`). Duas leituras do mesmo projeto no mesmo
+  # join seriam duas chances de divergir.
+  defp exigencias_do_projeto(project_id) do
     case Project.get(project_id) do
-      %{execution_mode: modo} -> modo
-      _ -> nil
+      %{execution_mode: modo, mirror_path: destino} ->
+        {modo, if(Capacidades.destino?(destino), do: String.trim(destino), else: nil)}
+
+      _ ->
+        {nil, nil}
     end
   rescue
-    _ -> nil
+    _ -> {nil, nil}
   catch
-    _, _ -> nil
+    _, _ -> {nil, nil}
   end
 
   defp papel_do_kind("runner"), do: :runner
@@ -496,6 +552,36 @@ defmodule EngineWeb.TerminalChannel do
     despachar_pedido(socket, ref, from, timeout_ms, "container_remove", %{
       workspaceDirName: workspace_dir_name
     })
+  end
+
+  # mirror_sync (ADR 0147 pontos 4 e 8, RN-516) — `Engine.Runners.Espelho`
+  # manda isto pro pid do canal :runner num MOMENTO NOMEADO (hoje: o commit).
+  #
+  # FIRE-AND-FORGET, ao contrário dos quatro dispatch acima: não há `from`
+  # esperando, nada entra em `pending_execs` e nenhum `mirror_sync_result`
+  # existe no protocolo. Quem disparou está no meio de outra coisa (um commit
+  # que já terminou), e o resultado da sincronização é telemetria de conexão —
+  # o ponto 7 do ADR, de outra sessão. Inventar o formato dela aqui seria
+  # escolhê-lo sem a decisão que ela precisa.
+  #
+  # A checagem de capacidade é a mesma dos outros dois casos, e aqui ela é
+  # dupla-guarda: destino declarado EXIGE `espelho` no join (RN-516), então um
+  # runner sem a capacidade já foi recusado na entrada. Ela existe para o caso
+  # em que o destino é declarado DEPOIS do join — aí a mensagem seria empurrada
+  # a um binário que talvez não a entenda, e o defeito seria o do Context do
+  # ADR 0147: a mensagem chega, o handler não existe, nada acontece.
+  @impl true
+  def handle_info({:dispatch_mirror_sync, ref, destino, momento}, socket) do
+    if tem_capacidade?(socket, "espelho") do
+      push(socket, "mirror_sync", %{ref: ref, destino: destino, momento: momento})
+    else
+      Logger.warning(
+        "terminal (#{socket.assigns.project_id}): " <>
+          Capacidades.mensagem_de_capacidade_ausente("espelho", "mirror_sync")
+      )
+    end
+
+    {:noreply, socket}
   end
 
   @impl true

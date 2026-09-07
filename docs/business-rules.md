@@ -8681,6 +8681,185 @@ fila de aprovações rotineiras.
 
 ---
 
+## O espelho copia o trabalho para a pasta do usuário (RN-516)
+
+### RN-516 — O destino do espelho viaja na CONCESSÃO do join, o espelho copia a lista do git numa direção só e nunca apaga, e o gatilho é um momento nomeado — nunca um watcher {#rn-516}
+
+A metade B da sessão 6 da FASE 28: a capacidade `espelho`
+([RN-514](#rn-514), [ADR 0147](adr/0147-agente-local-com-capacidades.md))
+passa a EXISTIR. A [RN-515](#rn-515) decidiu **onde o destino mora** e não
+copiou arquivo nenhum; esta decide **como ele chega ao agente local, o que é
+copiado e quando**.
+
+**O destino viaja na concessão do `join`, nunca em configuração do runner.**
+A resposta do `join` do canal `terminal:<projectId>` deixou de ser vazia para
+o papel `:runner`: quando o projeto tem destino declarado
+(`projects.mirror_path`) **e** a capacidade `espelho` foi concedida, ela
+carrega `%{espelho: %{destino: "<caminho>"}}`. O runner guarda isso em
+`estado.destinoDoEspelho`, que morre junto com a conexão, e **recusa
+`mirror_sync` para destino que não lhe foi concedido naquela conexão** (ADR
+0147, ponto 4). Nunca variável de ambiente, nunca arquivo local: um destino
+global faria o artefato do projeto B aterrissar na pasta do projeto A, e o
+usuário descobriria isso **pelo conteúdo, não por um erro**.
+
+Consequência declarada, e ela é o preço: **trocar o destino com o runner
+conectado exige reconectá-lo.** A concessão é do join, e um destino novo
+chegando por outra porta seria exatamente a configuração global que a regra
+recusa.
+
+**`mirror_path` não-nulo passa a EXIGIR a capacidade.** Ela não entra no mapa
+por `execution_mode` — quem a exige é um DADO do projeto, não o modo (e
+`mounted` e `runner` podem ter destino enquanto `container` não pode). Este é
+o **primeiro caso REAL** do mecanismo de recusa que a RN-514 deixou
+implementado e sem nenhum disparo: um `brabo-runner` anterior a esta versão
+conectado a um projeto com destino **deixa de conectar**, com recusa nomeada
+(`JoinRecusadoError`, fatal e sem retry). É **opt-in** — só acontece onde
+alguém configurou um destino — e o custo está declarado no próprio ADR 0147.
+
+**As TRÊS recusas da guarda, e a passada de `realpath` não é redundante.**
+`apps/runner/src/espelho-guard.ts` é **irmão de `guard.ts`, não uma extensão
+dele**: reusa `semBarraFinal`/`dentroDoEscopo`/`realpathMaisProximo` e a dupla
+passada léxica-depois-`realpath` de `validarCwdDentroDaRaiz`, e herda por
+escrito a mesma ressalva de **TOCTOU** — é best-effort, não fronteira de
+segurança. Ele recusa (1) symlink que escape do destino, (2) destino que
+**contenha** o workspace e (3) destino **dentro** do workspace; (2) e (3) são
+o mesmo laço em sentidos opostos, e com o bind por identidade do
+[ADR 0141](adr/0141-base-unica-dos-projetos-montados.md) escrever o espelho
+dentro da origem faz o espelho copiar o próprio espelho. A api já recusou a
+metade **léxica** ([RN-515](#rn-515)) e diz, no próprio código, que é só o
+léxico — ela não tem disco onde resolver um symlink do computador do usuário.
+`destino/atalho -> /caminho/do/projeto` passa por lá sem ser visto, e é aqui
+que ele é resolvido.
+
+Uma diferença de mecanismo, achada implementando: `realpathMaisProximo` cai no
+primeiro ancestral que existe, e o destino do espelho quase nunca existe (é o
+`mkdir -p` desta rodada que o cria). Colapsar os dois lados no ancestral faria
+`/base-outra` e `/base` virarem ambos `/`, e a guarda recusaria toda pasta
+irmã. Por isso a segunda passada resolve o ancestral e **recoloca o sufixo** —
+symlink só pode morar num segmento que existe, então o que sobra nunca esconde
+link nenhum. A recusa (1) tem ainda uma segunda metade, **por arquivo**
+(`caminhoNoDestino`): um `destino/sub` que é link para `/etc` faria a cópia de
+`sub/passwd` escrever fora, com o destino em si perfeitamente válido.
+
+**Uma direção, e NUNCA apaga.** Workspace → destino. Nunca `--delete`, nunca
+`unlink`, nunca `rm`. **Arquivo apagado no workspace permanece no destino**, e
+isso é decisão, não descuido: a pasta do usuário não é réplica, é acúmulo — um
+agente que apaga arquivo na pasta pessoal de alguém por causa de um `git clean`
+do outro lado é a surpresa que o produto existe para não produzir.
+Sobrescrever arquivo que mudou é esperado; remover nunca é. O preço, declarado
+no ADR: o destino só cresce, e nenhum mecanismo automático o limpa.
+
+**O que se copia é a LISTA DO GIT, e nada mais.** Os arquivos **rastreados**
+(`git ls-files`) mais os **não-rastreados que não são ignorados**
+(`git ls-files --others --exclude-standard`), com `-z` (o git aspeia e escapa
+caminho com espaço ou acento sem ele). Isso é exatamente "o trabalho": pula
+`node_modules`, `dist`, saída de build e o próprio `.git` **sem manter lista de
+exclusão nenhuma**, que envelheceria a cada stack nova — o `.gitignore` do
+projeto já é a lista, mantida por quem mantém o projeto. O workspace é
+repositório git **por construção** (o produto provisiona Gitflow nele e o
+materializa com `git init`/`fetch`/`checkout`), então a pré-condição é do
+PRODUTO, não uma suposição sobre a máquina. Git que falha ou pasta que não é
+repositório **falham com motivo nomeado** — nunca um `cp -r` de tudo como
+plano B, que é como `node_modules` inteiro acabaria na pasta pessoal de alguém.
+
+Duas propriedades verificadas e declaradas, não escondidas: repositório git
+**aninhado** volta como UMA entrada de diretório e não é descido — o worktree
+de cada dev agent (`<workspace>/.worktrees/<agent_id>`) é um desses, então o
+espelho mostra o **checkout principal**, nunca o trabalho ainda isolado num
+worktree; e **symlink na origem é pulado**, porque seguir o link traria
+conteúdo de fora do projeto para dentro da pasta pessoal. O que fica de fora é
+CONTADO (`pulados`/`recusados`), nunca engolido. E não há heurística de
+"mudou?": copiar sempre custa bytes já iguais, enquanto pular por tamanho+mtime
+faria o espelho, em silêncio, não copiar um arquivo que mudou.
+
+**Predicado PRÓPRIO, e o espelho não exige Docker.**
+`Engine.Runners.RunnerReadiness` fica **byte a byte como está** (ADR 0147,
+ponto 3) — `Engine.Runners.Espelho` não o chama, não o estende e não recebe
+nada dele. O espelho tem DUAS pré-condições, workspace confirmado e runner
+conectado, e não a terceira que a [RN-507](#rn-507) acrescentou (container
+REGISTRADO `running`). Um `RunnerReadiness` com flag "pula container" é
+precisamente o mecanismo pelo qual essa terceira cai por acidente para o `exec`
+numa refatoração futura, e o
+[ADR 0145](adr/0145-docker-pre-requisito-do-runner.md) existe para
+ela não cair. E o espelho legitimamente não precisa dela: a terceira existe
+porque havia duas execuções possíveis e a errada era invisível; cópia de
+arquivo na máquina do usuário não tem container de onde cair. Ele também não
+pergunta o `execution_mode` — quem já decidiu isso foi a api ao gravar o
+destino ([RN-515](#rn-515) recusa `container`), e repetir a decisão seria a
+segunda fonte da mesma regra.
+
+**Gatilho por MOMENTO NOMEADO, nunca watcher.** O engine empurra `mirror_sync`
+de um ponto do código que tem nome — hoje o **commit bem-sucedido**
+(`EngineWeb.ActionCommandController`, `git_commit`). Nunca `fs.watch`: watcher
+é trabalho ilimitado disparado por qualquer coisa — uma instalação de
+dependências, um build, e pior, pelas escritas do próprio espelho, que é laço —
+e rodaria continuamente na máquina do usuário sem ninguém ter pedido, que é o
+oposto do que "agente local" deve significar. O empurrão é **fire-and-forget**:
+sem `from`, sem `pending_execs` e sem `mirror_sync_result`, porque quem
+disparou está no meio de outra coisa e a telemetria da sincronização é o ponto
+7 do ADR, de outra sessão. Falha do espelho vira log local, nunca exceção que
+derruba o runner e nunca silêncio.
+
+**Ele NÃO é `proposed_action`, e não deve virar uma.** A escrita do espelho é
+configuração que o usuário declarou, não um agente pedindo para agir — o ADR
+0147 é explícito disso, e sincronizar por comando de terminal cairia no escopo
+do [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) e viraria
+fila de aprovações rotineiras, corroendo o teto que dá sentido ao clique.
+
+- **Onde:** `apps/runner/src/espelho-guard.ts` (as três recusas, a dupla
+  passada com sufixo preservado, a ressalva de TOCTOU herdada);
+  `apps/runner/src/espelho.ts` (a lista do git, a cópia numa direção, o
+  `mkdir -p` só DEPOIS da guarda); `apps/runner/src/guard.ts` (os três
+  helpers passam a ser exportados — uma fonte só de comparação de caminho);
+  `apps/runner/src/channel.ts` (`CAPACIDADES_DO_RUNNER` ganha `espelho`,
+  `MirrorSyncMessage`, `EspelhoConcedido`, `espelhoConcedidoDaResposta`);
+  `apps/runner/src/index.ts` (`EstadoDoRunner.destinoDoEspelho`,
+  `tratarMirrorSync` — a recusa do destino não concedido);
+  `apps/engine/lib/engine/runners/capacidades.ex` (`exigidas/2`/`conceder/3`
+  e `destino?/1` — o destino, não o modo, é quem exige);
+  `apps/engine/lib/engine/runners/espelho.ex` (o predicado próprio, o
+  `destino/1` do join e o `sincronizar/2` fire-and-forget);
+  `apps/engine/lib/engine/projects/project.ex` (`mirror_path` no schema de
+  leitura); `apps/engine/lib/engine_web/channels/terminal_channel.ex` (a
+  concessão na resposta do join e o `dispatch_mirror_sync`);
+  `apps/engine/lib/engine_web/controllers/action_command_controller.ex` (o
+  gatilho do commit)
+- **Teste:** `apps/runner/src/espelho-guard.spec.ts` (destino dentro,
+  destino contendo, symlink de verdade em `tmp` escapando pelo próprio
+  destino e por um segmento do meio, `/base-outra` vs `/base`, o alvo por
+  arquivo, `lstat` vs `stat`); `apps/runner/src/espelho.spec.ts` (repositório
+  git de verdade: rastreado + não-rastreado-não-ignorado, ignorado de fora,
+  **arquivo apagado na origem permanece no destino**, repositório aninhado
+  pulado, symlink da origem pulado, symlink do destino recusado, guarda antes
+  do `mkdir`, pasta sem git falhando nomeada);
+  `apps/runner/src/channel.spec.ts` (o destino vindo na resposta do join, as
+  três capacidades declaradas, `mirror_sync` chegando ao handler);
+  `apps/runner/src/index-handlers.spec.ts` (`describe "tratarMirrorSync"` — o
+  destino não concedido recusado, a conexão sem concessão, a falha que não
+  lança, e o canal sem push nenhum de volta);
+  `apps/engine/test/engine/runners/capacidades_test.exs` (o destino exigindo
+  a capacidade, o binário legado recusado, `destino?/1`);
+  `apps/engine/test/engine/runners/espelho_test.exs` (as DUAS pré-condições
+  e a AUSÊNCIA da terceira — `:pronto` sem container nenhum registrado);
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (`describe "o destino do espelho na concessão do join"` — a concessão, as
+  duas recusas e o push de `mirror_sync`);
+  `apps/engine/test/engine_web/controllers/action_command_controller_test.exs`
+  (o gatilho: commit bem-sucedido dispara, commit que falha não dispara)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), pontos 2, 3, 4 e 8
+- **Origem:** FASE 28, sessão 6 (metade B). Ficou declarado e **não** ligado o
+  segundo momento nomeado do ponto 8, "fim de turno de agente": o engine tem
+  duas coisas disjuntas com esse nome e nenhuma é um enganche não-ambíguo —
+  `Engine.Agents.TurnoAssincrono.finalizar/1` fecha o turno dos seis
+  conversacionais, que não têm ferramenta de escrita no workspace, e também
+  dispara em crash e em cancelamento; `Engine.Dev.AgentIo.finish_task/3` não é
+  fronteira de ociosidade (reivindica a próxima task na mesma chamada) e o que
+  o dev agent escreve mora no worktree, que o espelho deliberadamente não
+  desce. Escolher um seria inventar produto onde o ADR nomeou um momento sem
+  nomear uma função
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |

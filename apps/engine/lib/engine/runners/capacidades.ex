@@ -18,13 +18,27 @@ defmodule Engine.Runners.Capacidades do
 
   - `exec` — comando já aprovado, o par `exec`/`exec_result` (ADR 0104);
   - `pty` — terminal interativo, os eventos `pty_*` (ADR 0103);
-  - `espelho` — copiar o trabalho para uma pasta fora da base montada.
+  - `espelho` — copiar o trabalho para uma pasta fora da base montada
+    (`mirror_sync`, ADR 0147 ponto 2, RN-516).
 
-  `espelho` está aqui como **nome do vocabulário e nada mais**: nenhum runner
-  o declara, nenhum modo o exige, e não há mensagem de espelho no protocolo.
-  Quem o implementa é a sessão 6 da FASE 28. Ele nasce nomeado porque o
-  vocabulário é do SERVIDOR: um nome que o servidor conhece hoje é um nome
-  que ele pode exigir amanhã sem quebrar o formato do `join`.
+  `espelho` nasceu aqui como nome do vocabulário e nada mais (RN-514) — e a
+  aposta se pagou: quando a capacidade passou a existir de verdade no binário
+  (RN-516), o formato do `join` não mudou uma vírgula. O que mudou foi só
+  QUEM a exige.
+
+  ## Quem exige `espelho`: o DESTINO, não o modo (RN-516)
+
+  As outras duas exigências vêm do `execution_mode`. Esta vem de um DADO do
+  projeto — `projects.mirror_path` (RN-515): destino declarado exige a
+  capacidade, destino nulo não exige nada. É a diferença entre "este modo
+  precisa disto para funcionar" e "o usuário pediu isto neste projeto", e por
+  isso ela não cabia no mapa por modo.
+
+  A consequência está declarada no ADR 0147: um runner velho conectado a um
+  projeto que exige `espelho` deixa de conectar, com recusa NOMEADA. É
+  opt-in — só acontece onde alguém configurou um destino — e é o primeiro
+  caso REAL do mecanismo de recusa que a RN-514 deixou implementado e sem
+  nenhum disparo.
 
   ## Ausência de params é o LEGADO, e isso é fato — não benevolência
 
@@ -67,8 +81,10 @@ defmodule Engine.Runners.Capacidades do
   # `TerminalExecutor` rotearia comando aprovado para um binário que não o
   # executa, e a falha apareceria como timeout, não como recusa.
   #
-  # NADA exige `espelho` ainda. O mecanismo de recusa nasce implementado e
-  # testado aqui; quem passa a exigir é a sessão 6 da FASE 28.
+  # `espelho` NÃO entra neste mapa, em modo nenhum: quem o exige é o DESTINO
+  # (`projects.mirror_path`), que é dado do projeto e não do modo — ver
+  # `exigidas/2`. `mounted` e `runner` podem ter destino; `container` não pode
+  # (a api recusa, RN-515), então o mapa por modo nunca acertaria os dois.
   @exigidas_por_modo %{"runner" => ["exec"]}
 
   @type capacidade :: String.t()
@@ -110,31 +126,50 @@ defmodule Engine.Runners.Capacidades do
   def declaradas(_params_nao_mapa), do: MapSet.new(@legado)
 
   @doc """
-  O que o `execution_mode` do projeto EXIGE. `nil` (projeto que não existe,
-  id malformado, consulta que falhou) exige NADA — "não sei qual é o modo"
-  nunca vira recusa, pela mesma régua da RN-088: o produto não colapsa "não
-  sei" com "não tem".
+  O que o projeto EXIGE — o `execution_mode` e, desde a RN-516, o DESTINO do
+  espelho (`projects.mirror_path`).
+
+  `nil` nos dois argumentos (projeto que não existe, id malformado, consulta
+  que falhou, projeto sem espelho) exige NADA — "não sei qual é o modo" nunca
+  vira recusa, pela mesma régua da RN-088: o produto não colapsa "não sei"
+  com "não tem". Destino em branco é tratado como ausente pelo mesmo motivo:
+  uma string vazia no banco não é um destino, é uma linha malformada, e
+  recusar o join por causa dela deixaria o projeto inalcançável sem dizer o
+  porquê certo.
+
+  `mirror_path` tem default `nil` para o chamador que só sabe do modo (o
+  teste do vocabulário, e qualquer código anterior à RN-516) continuar
+  perguntando a mesma coisa que sempre perguntou.
   """
-  @spec exigidas(String.t() | nil) :: MapSet.t(capacidade())
-  def exigidas(execution_mode) do
-    @exigidas_por_modo
-    |> Map.get(execution_mode, [])
-    |> MapSet.new()
+  @spec exigidas(String.t() | nil, String.t() | nil) :: MapSet.t(capacidade())
+  def exigidas(execution_mode, mirror_path \\ nil) do
+    por_modo = Map.get(@exigidas_por_modo, execution_mode, [])
+    por_destino = if destino?(mirror_path), do: ["espelho"], else: []
+
+    MapSet.new(por_modo ++ por_destino)
   end
+
+  @doc """
+  `true` só para um destino de espelho de VERDADE — string não-vazia depois
+  de aparada. Único lugar onde esta pergunta é respondida do lado engine.
+  """
+  @spec destino?(String.t() | nil | any()) :: boolean()
+  def destino?(mirror_path) when is_binary(mirror_path), do: String.trim(mirror_path) != ""
+  def destino?(_), do: false
 
   @doc """
   A decisão do `join`: `{:ok, concedidas}` com o conjunto que vive em
   `socket.assigns`, ou `{:error, faltando}` com a LISTA ordenada das
   capacidades exigidas que o runner não declarou.
   """
-  @spec conceder(map() | any(), String.t() | nil) ::
+  @spec conceder(map() | any(), String.t() | nil, String.t() | nil) ::
           {:ok, MapSet.t(capacidade())} | {:error, [capacidade()]}
-  def conceder(params, execution_mode) do
+  def conceder(params, execution_mode, mirror_path \\ nil) do
     declaradas = declaradas(params)
 
     faltando =
       execution_mode
-      |> exigidas()
+      |> exigidas(mirror_path)
       |> MapSet.difference(declaradas)
       |> Enum.sort()
 

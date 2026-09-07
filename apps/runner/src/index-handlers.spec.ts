@@ -1,10 +1,22 @@
-import { describe, expect, it, vi } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DockerPort, EspecificacaoDeContainer, PedidoDeExec } from '@brabo/docker-port';
 import {
   tratarContainerRemove,
   tratarContainerStart,
   tratarContainerStop,
   tratarExec,
+  tratarMirrorSync,
   type EstadoDoRunner,
 } from './index.ts';
 import type { ChannelLike, PushLike } from './channel.ts';
@@ -62,6 +74,7 @@ function estadoFalso(opts: {
   docker?: DockerPort;
   containerAtivo?: string | null;
   dir?: string;
+  destinoDoEspelho?: string | null;
 }): EstadoDoRunner {
   return {
     canalAtual: opts.canal,
@@ -74,6 +87,7 @@ function estadoFalso(opts: {
     ),
     docker: opts.docker ?? dockerFalso(),
     containerAtivo: opts.containerAtivo ?? null,
+    destinoDoEspelho: opts.destinoDoEspelho ?? null,
   };
 }
 
@@ -293,5 +307,107 @@ describe('tratarContainerStop/tratarContainerRemove (ADR 0137)', () => {
     expect(estado.containerAtivo).toBe('brabo-proj-abc12345');
     const payload = canal.pushes[0]?.payload as { sucesso: boolean };
     expect(payload.sucesso).toBe(false);
+  });
+});
+
+/**
+ * ADR 0147 ponto 4 / RN-516 — o destino do espelho é o que foi CONCEDIDO no
+ * join desta conexão, e nada mais. A recusa é o coração da regra: um destino
+ * global (ou um que o servidor mandou e a concessão não cobre) faria o
+ * artefato do projeto B aterrissar na pasta do projeto A, e o usuário
+ * descobriria isso pelo conteúdo, não por um erro.
+ */
+describe('tratarMirrorSync — o destino concedido no join', () => {
+  let raiz: string;
+
+  beforeEach(() => {
+    raiz = mkdtempSync(join(tmpdir(), 'brabo-runner-espelho-'));
+  });
+
+  afterEach(() => {
+    rmSync(raiz, { recursive: true, force: true });
+  });
+
+  function projetoGit(): string {
+    const workspace = join(raiz, 'projeto');
+    mkdirSync(workspace, { recursive: true });
+    const git = (args: string[]) =>
+      execFileSync('git', args, { cwd: workspace, stdio: 'pipe' });
+    git(['init', '-q', '.']);
+    git(['config', 'user.email', 't@brabo.dev']);
+    git(['config', 'user.name', 't']);
+    writeFileSync(join(workspace, 'app.ts'), 'o trabalho');
+    git(['add', '-A']);
+    git(['commit', '-qm', 'inicial']);
+    return workspace;
+  }
+
+  it('destino NÃO concedido é recusado — nada é copiado e nada é criado', async () => {
+    const workspace = projetoGit();
+    const outroDestino = join(raiz, 'destino-de-outro-projeto');
+    const estado = estadoFalso({
+      canal: new CanalFalso(),
+      dir: workspace,
+      destinoDoEspelho: join(raiz, 'concedido'),
+    });
+
+    await tratarMirrorSync(estado, { ref: 'm1', destino: outroDestino, momento: 'commit' });
+
+    expect(existsSync(outroDestino)).toBe(false);
+    expect(existsSync(join(raiz, 'concedido'))).toBe(false);
+  });
+
+  it('conexão SEM concessão nenhuma recusa qualquer destino', async () => {
+    const workspace = projetoGit();
+    const destino = join(raiz, 'espelho');
+    const estado = estadoFalso({
+      canal: new CanalFalso(),
+      dir: workspace,
+      destinoDoEspelho: null,
+    });
+
+    await tratarMirrorSync(estado, { ref: 'm2', destino, momento: 'commit' });
+
+    expect(existsSync(destino)).toBe(false);
+  });
+
+  it('destino concedido (barra final não muda o caminho) copia o trabalho', async () => {
+    const workspace = projetoGit();
+    const destino = join(raiz, 'espelho');
+    const estado = estadoFalso({
+      canal: new CanalFalso(),
+      dir: workspace,
+      destinoDoEspelho: destino,
+    });
+
+    await tratarMirrorSync(estado, { ref: 'm3', destino: `${destino}/`, momento: 'commit' });
+
+    expect(readFileSync(join(destino, 'app.ts'), 'utf8')).toBe('o trabalho');
+  });
+
+  it('falha do espelho NUNCA lança — o runner não cai por causa de uma cópia', async () => {
+    const semGit = join(raiz, 'sem-git');
+    const destino = join(raiz, 'espelho');
+    mkdirSync(semGit, { recursive: true });
+    const estado = estadoFalso({
+      canal: new CanalFalso(),
+      dir: semGit,
+      destinoDoEspelho: destino,
+    });
+
+    await expect(
+      tratarMirrorSync(estado, { ref: 'm4', destino, momento: 'commit' }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('o espelho NÃO empurra nada de volta pelo canal (a telemetria é de outra sessão)', async () => {
+    const workspace = projetoGit();
+    const destino = join(raiz, 'espelho');
+    const canal = new CanalFalso();
+    const estado = estadoFalso({ canal, dir: workspace, destinoDoEspelho: destino });
+
+    await tratarMirrorSync(estado, { ref: 'm5', destino, momento: 'commit' });
+
+    expect(canal.pushes).toEqual([]);
   });
 });

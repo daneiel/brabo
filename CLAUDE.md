@@ -94,6 +94,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | FASE 28 (sessão 3) — o assistente oferece a Pasta montada | As DUAS metades já eram regra e nunca tinham chegado à tela: "não oferecer sem base" é a RN-500 e "sugerir `<base>/<slug>`" é a RN-501 (o ADR 0142 adiou a validação de disco justamente pra que o assistente pudesse propor pasta que ainda não existe) — mas `GET .../projects-base` não tinha CHAMADOR nenhum no web e o card era oferecido incondicionalmente, então escolher o modo numa instalação sem base terminava em 400 depois de a pessoa ter chegado ao fim do assistente. NOVO é só a PRÉ-SELEÇÃO, que revisa o default do ADR 0072 SÓ para a instalação local. A consulta nasce com o WIZARD e não com o quinto passo (senão o card pisca com a pessoa olhando); base DESCONHECIDA (carregando) ou consulta FALHADA não viram oferta — a régua da RN-088/RN-468 e dos ADRs 0041/0042 —; a escolha humana fica guardada SEPARADA do modo vigente e vence a pré-seleção; e a sugestão só escreve no campo vazio ou por cima da sugestão anterior dela mesma (slug vazio, o caso da adoção, deixa o campo vazio em vez de inventar segmento). O aviso do modo parou de mentir: os DOIS estados que o backend tem — sob a base, nota neutra; fora dela, aviso de que a api recusa, NOMEANDO a base —, com "dentro da base" comparado por SEGMENTO (`/base-outra` não está dentro de `/base`). Zero mudança de api | RN-513, ADR 0146 ponto 4 |
 | FASE 28 (sessão 5) — o `join` do agente local deixa de ser mudo | O `join` do canal `terminal:<projectId>` era mudo dos DOIS lados — o runner mandava `{}` e o servidor fazia `_params` —, então o servidor não tinha como saber se o binário do outro lado entende uma mensagem nova, e o defeito era o pior possível: a mensagem chega, o handler não existe e NADA acontece, sem erro e sem log. Agora o runner DECLARA nos params (`Engine.Runners.Capacidades`, vocabulário `exec`/`pty`/`espelho`) e o servidor CONCEDE a interseção com o que CONHECE, em `socket.assigns` e NUNCA em tabela (capacidade é propriedade daquela CONEXÃO). O runner declara só `exec` e `pty` — declarar `espelho` sem implementá-lo é exatamente o defeito que a negociação impede; ele entra como NOME do vocabulário e nada mais, e a sessão 6 o implementa. Params ausentes/vazios são o binário LEGADO e concedem `{exec, pty}` — FATO, não benevolência: são as duas funções com que o runner nasceu, e recusar legado seria `breaking/` e MAJOR. Desconhecido é IGNORADO (runner mais NOVO que o engine conecta); exigida-e-não-declarada recusa o join NOMEANDO a que falta, ANTES do `Registry` — mecanismo implementado e testado que hoje NÃO dispara (`runner` exige `exec`, que todo binário tem; nada exige `espelho` ainda), e isso é o desenho. A metade que entrega valor HOJE: mensagem sem a capacidade é RECUSADA com resposta nomeada — `exec` responde no formato de `exec_result` (126 + causa) em vez de o `RunnerRouter` esperar o timeout, e `pty_*` vira `pty_error` na aba em vez de sumir. `RunnerReadiness` byte a byte como está | RN-514, ADR 0147 ponto 1 |
 | FASE 28 (sessão 6, metade A) — onde o destino do espelho mora | A capacidade `espelho` (RN-514) precisa de um DESTINO, e ele é POR PROJETO: coluna nova `projects.mirror_path` (nullable), campo `mirrorPath` e `PUT projects/:projectId/mirror-path` (`maintainer`, o mesmo mínimo de `execution-mode`/`projects-base` — a rota fala de um caminho do computador do OPERADOR). Nunca global, nem no runner nem por variável: destino global faria o artefato do projeto B aterrissar na pasta do projeto A, e o usuário descobriria pelo CONTEÚDO, não por um erro. `null` é o estado NORMAL, e limpar é `{"mirrorPath": null}` EXPLÍCITO — a chave é obrigatória, porque omiti-la seria indistinguível de pedir para limpar. A api valida SÓ o LÉXICO e DIZ que é só o léxico: ela não enxerga a máquina do destino (a situação do `runner`/RN-423, não a do `mounted`), então REUSA `caminhoDeWorkspaceLocalValido` em vez de uma quarta cópia da régua, e NÃO exige `BRABO_PROJECTS_BASE` — o destino do espelho é por definição a pasta que a base não cobre. Duas recusas próprias: os DOIS sentidos do laço origem↔destino (dentro do `workspacePath` e contendo ele — comparação por SEGMENTO, `/base-outra` NÃO está dentro de `/base`) e `container`, cuja origem é um volume do SERVIDOR que o agente local da máquina do usuário não enxerga; converter o modo ZERA o destino. A metade `realpath` da guarda é do RUNNER e ainda não existe — a api impediu o laço ESCRITO, nunca o construído por symlink. NADA aqui copia arquivo: `mirror_sync`, protocolo e cópia são a metade B | RN-515, ADR 0147 ponto 4 |
+| FASE 28 (sessão 6, metade B) — o espelho passa a existir | A capacidade `espelho` sai de nome do vocabulário e vira código nos DOIS lados. O DESTINO viaja na CONCESSÃO do `join` (a resposta deixa de ser vazia para o `:runner`: `%{espelho: %{destino: ...}}`), vive só naquela conexão e o runner RECUSA `mirror_sync` para destino não concedido — nunca configuração global nem variável, que faria o artefato do projeto B aterrissar na pasta do A. `mirror_path` não-nulo passa a EXIGIR a capacidade, e esse é o PRIMEIRO disparo real do mecanismo de recusa da RN-514: binário velho num projeto com destino DEIXA de conectar, nomeado e fatal — opt-in, custo declarado no ADR. `espelho-guard.ts` nasce IRMÃO de `guard.ts` (reusa os três helpers e a dupla passada, herda a ressalva de TOCTOU por escrito) e recusa as três coisas do ADR; achado implementando: `realpathMaisProximo` cai no ancestral, e como o destino quase nunca existe, colapsar os dois lados faria `/base-outra` e `/base` virarem `/` — a segunda passada resolve o ancestral e RECOLOCA o sufixo. UMA direção e NUNCA apaga: arquivo apagado na origem PERMANECE no destino (a pasta do usuário é acúmulo, não réplica). O que se copia é a LISTA DO GIT (rastreados + não-rastreados-não-ignorados), sem lista de exclusão própria; git que falha vira erro NOMEADO, nunca `cp -r` de plano B; repo git aninhado (o worktree do dev agent) volta como UMA entrada e não é descido, e symlink da origem é pulado. Predicado PRÓPRIO (`Engine.Runners.Espelho`), DUAS pré-condições e NUNCA `RunnerReadiness` com flag — `runner_readiness.ex` fica byte a byte. Gatilho: o COMMIT, momento nomeado, fire-and-forget e nunca watcher; "fim de turno de agente" fica DECLARADO e não ligado, por não haver enganche não-ambíguo | RN-516, ADR 0147 pontos 2/3/4/8 |
 
 ## Estado atual e aberto
 
@@ -351,18 +352,33 @@ daqui e o fechamento vai para o histórico.
   nativo, resolvido via `node_modules` de quem instalou o pacote) — ver
   "Runner local" (ADR 0103). Desde a RN-514 (ADR 0147 ponto 1) o `join`
   desse canal NÃO é mais mudo: o runner DECLARA nos params o que sabe
-  fazer (`CAPACIDADES_DO_RUNNER` em `channel.ts` — hoje `exec` e `pty`, e
-  só o que ele implementa de verdade) e o servidor CONCEDE a interseção
-  com o vocabulário que conhece (`Engine.Runners.Capacidades`: `exec`,
-  `pty`, `espelho`), guardando o conjunto em `socket.assigns` e NUNCA em
-  tabela. Params ausentes/vazios são o binário LEGADO e valem
+  fazer (`CAPACIDADES_DO_RUNNER` em `channel.ts` — desde a RN-516 as TRÊS,
+  `exec`, `pty` e `espelho`, e só o que ele implementa de verdade) e o
+  servidor CONCEDE a interseção com o vocabulário que conhece
+  (`Engine.Runners.Capacidades`), guardando o conjunto em `socket.assigns`
+  e NUNCA em tabela. Params ausentes/vazios são o binário LEGADO e valem
   `{exec, pty}` — fato, não suposição —, nome desconhecido é IGNORADO, e
-  capacidade EXIGIDA pelo `execution_mode` e não declarada recusa o join
-  NOMEANDO a que falta (`runner` exige `exec`; `container`/`mounted` não
-  exigem nada; NADA exige `espelho` ainda). Mensagem cuja capacidade não
-  foi concedida é RECUSADA com resposta nomeada — nunca entregue a um
-  handler que não existe do outro lado, que era o defeito silencioso que
-  o ADR 0147 nomeia. TRÊS caminhos de distribuição: clonar o
+  capacidade EXIGIDA e não declarada recusa o join NOMEANDO a que falta.
+  Quem exige: o `execution_mode` (`runner` exige `exec`;
+  `container`/`mounted` não exigem nada) e, desde a RN-516, o DADO
+  `projects.mirror_path` — destino de espelho declarado EXIGE `espelho`,
+  em qualquer modo. Essa é a primeira exigência que DISPARA de verdade, e
+  o custo está declarado no ADR: binário velho num projeto com destino
+  deixa de conectar (recusa nomeada, fatal, sem retry), e é opt-in.
+  Mensagem cuja capacidade não foi concedida é RECUSADA com resposta
+  nomeada — nunca entregue a um handler que não existe do outro lado, que
+  era o defeito silencioso que o ADR 0147 nomeia. A resposta do `join`
+  também deixou de ser vazia para o `:runner`: é por ela, e SÓ por ela,
+  que o DESTINO do espelho chega (`%{espelho: %{destino: ...}}`, ADR 0147
+  ponto 4) — nunca configuração local nem variável de ambiente, e o runner
+  recusa `mirror_sync` para destino que não lhe foi concedido NAQUELA
+  conexão; trocar o destino com o runner de pé exige reconectá-lo. O
+  espelho em si (`espelho.ts`/`espelho-guard.ts`) copia a LISTA DO GIT
+  numa direção só e NUNCA apaga — arquivo apagado na origem permanece no
+  destino —, com guarda IRMÃ de `guard.ts` (mesma dupla passada, mesma
+  ressalva de TOCTOU), e é disparado por MOMENTO NOMEADO do engine
+  (`mirror_sync`, hoje o commit), nunca por watcher. TRÊS caminhos de
+  distribuição: clonar o
   monorepo (dev), `npm install -g @brabo/runner` via `tsup` + `npm publish`
   (ADR 0106), e binário standalone via `bun` (`bun build --compile`, ADR
   0112) — o `.node` nativo do `node-pty` embutido por `with { type: 'file'
@@ -699,10 +715,25 @@ daqui e o fechamento vai para o histórico.
   modo ZERA o destino. A api valida SÓ o LÉXICO e DIZ isso, reusando
   `caminhoDeWorkspaceLocalValido` — NÃO escreva uma quarta cópia da régua —
   mais os DOIS sentidos do laço origem↔destino, por SEGMENTO e nunca
-  `startsWith`. A metade `realpath` da guarda é do RUNNER: a api impediu o laço
-  ESCRITO, nunca o construído por symlink, e o comentário no código diz isso.
+  `startsWith`. A metade `realpath` da guarda é do RUNNER
+  (`apps/runner/src/espelho-guard.ts`, RN-516): a api impediu o laço ESCRITO,
+  nunca o construído por symlink, e o comentário no código diz isso.
   A escrita do espelho NÃO é `proposed_action` — é configuração declarada pelo
   usuário, não agente pedindo para agir.
+  Desde a RN-516 (ADR 0147 pontos 2/3/4/8) o espelho EXISTE, e três coisas
+  dele são regra: o destino viaja SÓ na concessão do `join` e o runner recusa
+  `mirror_sync` para destino não concedido NAQUELA conexão (trocar o destino
+  com runner de pé exige reconectá-lo, e destino declarado passa a EXIGIR a
+  capacidade `espelho`, recusando binário velho no join); a cópia é numa
+  direção e NUNCA apaga — arquivo apagado na origem PERMANECE no destino, que
+  é acúmulo e não réplica —, e o que se copia é a LISTA DO GIT (rastreados +
+  não-rastreados-não-ignorados), com git que falha virando erro NOMEADO e
+  nunca um `cp -r` de plano B; e o gatilho é MOMENTO NOMEADO do engine (hoje
+  o commit), NUNCA um watcher, que seria trabalho ilimitado disparado até
+  pelas escritas do próprio espelho. O predicado do espelho é PRÓPRIO
+  (`Engine.Runners.Espelho`, DUAS pré-condições) — `RunnerReadiness` fica
+  byte a byte como está e NUNCA ganha flag "pula container": é por essa flag
+  que a terceira pré-condição do ADR 0145 cairia por acidente para o `exec`.
 - A imagem de container de um projeto é ARTEFATO — `artifact.project_image`,
   versionado, sem tabela, nunca configuração escondida —, e desde o ADR 0133
   (RN-491) tem DOIS emissores possíveis, distinguidos por `decidedBy`: o

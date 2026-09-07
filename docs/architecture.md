@@ -650,6 +650,11 @@ refusing with a reason. The refusal lives in the use case, and the conversion
 zeroes the column — the same shape as `workspace_verified_at`, and for an
 additional reason: the two directions of the origin↔destination loop were
 validated against the OLD `workspace_path`.
+Since [RN-516](business-rules.md#rn-516) the engine READS this column — it is
+what decides whether the runner's `join` requires the `espelho` capability, and
+it is what travels back in that join's grant (`Engine.Runners.Espelho`,
+`EngineWeb.TerminalChannel`). The engine never writes it, and no internal route
+was added for it.
 **The constraints are business rules**: the event log's unique `(session_id, seq)`, the `check` requiring
 exactly one scope in `budgets` (project **or** session, never both), the
 partial indexes that guarantee analysis idempotency — and, since Phase 8b,

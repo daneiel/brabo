@@ -573,24 +573,37 @@ the mounted base. It is a **public** route on the `projects` controller,
 picker above: the caller is a PERSON configuring their project, not the engine
 reading something it cannot get from the database.
 
-The engine's side of this contract does not exist yet, and that separation is
-deliberate. This route only decides **where the destination lives and what
-counts as a valid one**; the protocol that carries it to the runner
-(`mirror_sync`, the capability granted in the `join` params of
-[RN-514](../business-rules.md#rn-514)) and the copy itself belong to the
-engine and the runner. What the engine will read is the column — `mirror_path`
-on `projects`, `null` when the project has no mirror, which is the normal
-state — through the same `Engine.Projects.Project` reads it already uses for
-`workspace_path` and `execution_mode`. No new internal route is needed for
-that, and the value also rides along every project response
-(`ProjectResponseDto.mirrorPath`) so the web needs none either.
+This route only decides **where the destination lives and what counts as a
+valid one**. The protocol that carries it to the runner and the copy itself
+are the engine's and the runner's, and they exist since
+[RN-516](../business-rules.md#rn-516) — **with no new internal route**, which
+is the point worth writing down here. The engine reads the column directly —
+`mirror_path` on `projects`, `null` when the project has no mirror, which is
+the normal state — through the same `Engine.Projects.Project` reads it already
+uses for `workspace_path` and `execution_mode`, and the value also rides along
+every project response (`ProjectResponseDto.mirrorPath`), so the web needs
+none either.
+
+Where the destination reaches the runner is the **`join` reply of the
+`terminal:<projectId>` channel**, and nowhere else: when the project has a
+destination and the `espelho` capability was granted, the reply carries
+`%{espelho: %{destino: "<path>"}}`. The runner refuses `mirror_sync` for any
+destination that was not granted on that connection — never a global setting
+on its side, never an environment variable, because a global destination would
+land project B's artifact in project A's folder and the user would find out
+from the content, not from an error. Two consequences follow, both deliberate:
+a declared destination makes `espelho` a **required** capability, so a
+`brabo-runner` older than that version stops connecting to that project (named
+refusal, fatal, no retry — see [RN-514](../business-rules.md#rn-514)); and
+changing the destination while a runner is connected requires reconnecting it,
+because the grant belongs to the join.
 
 One asymmetry worth writing down: the api validates this path **lexically
 only**, and says so. It has no disk to ask — the destination lives on the
 user's machine, exactly as in `runner` mode. The `realpath` half of the guard
 (a symlink in some segment of the destination pointing back into the source)
-is the runner's, and nothing in this contract should be read as the api having
-already established it.
+is the runner's (`apps/runner/src/espelho-guard.ts`, RN-516), and nothing in
+this contract should be read as the api having already established it.
 
 ### Workspace confirmation by the runner — the WRITE, which is a new route ([RN-423](../business-rules.md#rn-423))
 

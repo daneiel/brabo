@@ -79,6 +79,98 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine,runner**: o **espelho** passa a existir de verdade — o agente local
+  copia o trabalho para a pasta que o usuário declarou (RN-516,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) pontos 2, 3, 4 e 8).
+  É a metade B da sessão 6: a RN-515 decidiu onde o destino mora e não copiou
+  nada; esta decide como ele chega ao agente, o que é copiado e quando.
+
+  **O destino viaja na CONCESSÃO do `join`, nunca em configuração do runner.**
+  A resposta do `join` do canal `terminal:<projectId>` deixou de ser vazia para
+  o papel `:runner`: com destino declarado e a capacidade `espelho` concedida,
+  ela carrega `%{espelho: %{destino: "<caminho>"}}`. O runner guarda isso na
+  conexão — morre com ela — e **recusa `mirror_sync` para destino que não lhe
+  foi concedido naquela conexão**. Nunca variável de ambiente, nunca arquivo
+  local: um destino global faria o artefato do projeto B aterrissar na pasta do
+  projeto A, e o usuário descobriria isso pelo conteúdo, não por um erro.
+  Consequência declarada: **trocar o destino com o runner conectado exige
+  reconectá-lo**.
+
+  ⚠ **Custo real, e ele é o primeiro disparo do mecanismo da RN-514:**
+  `mirror_path` não-nulo passa a **EXIGIR** a capacidade `espelho` no join, e um
+  `brabo-runner` anterior a esta versão conectado a um projeto com destino
+  **deixa de conectar** — recusa explícita e nomeada (fatal, sem retry, dizendo
+  para atualizar o binário), nunca degradação silenciosa. É **opt-in**: só
+  acontece onde alguém configurou um destino, e projeto sem espelho (a maioria)
+  não muda em nada. O custo está declarado no próprio ADR 0147, e quem instalou
+  pelo fluxo do ADR 0118 não tem atualização automática. `espelho` não entra no
+  mapa por `execution_mode`: quem exige é o **dado**, não o modo.
+
+  **As TRÊS recusas da guarda, com a passada de `realpath` que só existe aqui.**
+  `apps/runner/src/espelho-guard.ts` nasce **irmão de `guard.ts`, não uma
+  extensão dele**: reusa os três helpers de comparação de caminho e a dupla
+  passada léxica-depois-`realpath`, e **herda por escrito a ressalva de
+  TOCTOU** — best-effort, não fronteira de segurança. Recusa symlink que escape
+  do destino, destino que **contenha** o workspace e destino **dentro** dele —
+  os dois últimos são o mesmo laço em sentidos opostos. A api já recusou a
+  metade léxica (RN-515) e diz que é só o léxico; `destino/atalho ->
+  /caminho/do/projeto` passa por lá sem ser visto porque a api não tem disco
+  onde resolvê-lo. Achado implementando: `realpathMaisProximo` cai no primeiro
+  ancestral que existe, e o destino quase nunca existe — colapsar os dois lados
+  no ancestral faria `/base-outra` e `/base` virarem ambos `/`, recusando toda
+  pasta irmã; por isso a segunda passada resolve o ancestral e **recoloca o
+  sufixo**. E há uma segunda metade **por arquivo**: um `destino/sub` que é link
+  para `/etc` faria a cópia de `sub/passwd` escrever fora com o destino em si
+  perfeitamente válido.
+
+  **Uma direção, e NUNCA apaga.** Workspace → destino. Nunca `--delete`, nunca
+  `unlink`, nunca `rm`: **arquivo apagado no workspace permanece no destino**.
+  A pasta do usuário não é réplica, é acúmulo — um agente que apaga arquivo na
+  pasta pessoal de alguém por causa de um `git clean` do outro lado é a surpresa
+  que o produto existe para não produzir. Sobrescrever o que mudou é esperado;
+  remover nunca é. Preço declarado: o destino só cresce, e nada o limpa.
+
+  **O que se copia é a LISTA DO GIT, e nada mais** — rastreados
+  (`git ls-files`) mais não-rastreados-não-ignorados
+  (`git ls-files --others --exclude-standard`). Isso é exatamente "o trabalho":
+  pula `node_modules`, `dist`, saída de build e o próprio `.git` **sem lista de
+  exclusão nenhuma**, que envelheceria a cada stack nova. Git que falha ou pasta
+  que não é repositório **falham com motivo nomeado** — nunca um `cp -r` de tudo
+  como plano B. Duas propriedades verificadas e declaradas: repositório git
+  aninhado volta como UMA entrada de diretório e não é descido (o worktree de
+  cada dev agent é um desses — o espelho mostra o **checkout principal**, nunca
+  o trabalho ainda isolado num worktree), e symlink na origem é pulado. O que
+  fica de fora é CONTADO, nunca engolido.
+
+  **Predicado PRÓPRIO, e o espelho não exige Docker.**
+  `Engine.Runners.RunnerReadiness` fica **byte a byte como está** — o módulo
+  novo não o chama nem o estende. O espelho tem DUAS pré-condições (workspace
+  confirmado, runner conectado) e não a terceira da RN-507: um
+  `RunnerReadiness` com flag "pula container" é o mecanismo pelo qual essa
+  terceira cairia por acidente para o `exec`, e o ADR 0145 existe para ela não
+  cair. Cópia de arquivo na máquina do usuário não tem container de onde cair em
+  silêncio, e o espelho é justamente a capacidade que deve funcionar para quem
+  não quer Docker.
+
+  **Gatilho por MOMENTO NOMEADO, nunca watcher.** O engine empurra `mirror_sync`
+  do **commit bem-sucedido** — nunca `fs.watch`, que seria trabalho ilimitado
+  disparado por qualquer coisa, inclusive pelas escritas do próprio espelho, que
+  é laço. Fire-and-forget: sem `from`, sem `pending_execs` e sem
+  `mirror_sync_result`, porque a telemetria da sincronização é o ponto 7 do ADR,
+  de outra sessão. Falha vira log local, nunca exceção que derruba o runner e
+  nunca silêncio.
+
+  **Declarado e NÃO ligado:** o segundo momento nomeado do ponto 8, "fim de
+  turno de agente". O engine tem duas coisas disjuntas com esse nome e nenhuma é
+  enganche não-ambíguo — `TurnoAssincrono.finalizar/1` fecha o turno dos seis
+  conversacionais, que não têm ferramenta de escrita no workspace, e também
+  dispara em crash e em cancelamento; `AgentIo.finish_task/3` não é fronteira de
+  ociosidade (reivindica a próxima task na mesma chamada) e o que o dev agent
+  escreve mora no worktree, que o espelho não desce. Escolher um seria inventar
+  produto onde o ADR nomeou um momento sem nomear uma função.
+
+  A escrita do espelho **não** é `proposed_action`, e nada disso encosta em
+  `decide.ts`, tetos, event log, portão de imagem ou nas operações do broker.
 - **api**: o **destino do espelho** passa a existir, e ele é **por projeto**
   (RN-515, [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 4).
   Coluna nova `projects.mirror_path` (nullable), campo `mirrorPath` no projeto

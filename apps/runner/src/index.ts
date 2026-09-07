@@ -19,7 +19,9 @@
  * chave local do modo automático), `channel.ts` (protocolo Phoenix),
  * `exec.ts` (execução não-interativa), `pty.ts` (terminal interativo),
  * `guard.ts` (barreira best-effort de `cwd`), `fs-browser.ts` (navegação
- * de pasta local, sem a barreira de `guard.ts` — ver o docblock dele).
+ * de pasta local, sem a barreira de `guard.ts` — ver o docblock dele),
+ * `espelho-guard.ts` (o laço origem↔destino, irmão de `guard.ts`) e
+ * `espelho.ts` (a cópia numa direção só, que nunca apaga — ADR 0147, RN-516).
  */
 
 import { realpathSync } from 'node:fs';
@@ -50,6 +52,7 @@ import {
   type ExecMessage,
   type FsHomeDirMessage,
   type FsListDirMessage,
+  type MirrorSyncMessage,
   type PtyOpenMessage,
 } from './channel.ts';
 import {
@@ -73,6 +76,8 @@ import {
   PONTO_DE_MONTAGEM,
   type DockerPort,
 } from '@brabo/docker-port';
+import { mesmoCaminho } from './espelho-guard.ts';
+import { sincronizarEspelho } from './espelho.ts';
 import { executarComando } from './exec.ts';
 import { diretorioInicial, listarDiretorio } from './fs-browser.ts';
 import {
@@ -281,6 +286,18 @@ export interface EstadoDoRunner {
   gerenciadorPty: GerenciadorDePty;
   docker: DockerPort;
   containerAtivo: string | null;
+  /**
+   * O destino do espelho CONCEDIDO no join desta conexão (ADR 0147 ponto 4,
+   * RN-516), ou `null` — que é o estado normal. Vive aqui e em lugar nenhum
+   * além: nunca em arquivo de configuração, nunca em variável de ambiente.
+   * Um destino global faria o artefato do projeto B aterrissar na pasta do
+   * projeto A, e o usuário descobriria isso pelo conteúdo, não por um erro.
+   *
+   * Zerado quando a conexão cai, junto com `canalAtual`: a concessão é da
+   * CONEXÃO, e um destino que sobreviveu à queda seria o servidor afirmando
+   * o que este processo já não pode confirmar.
+   */
+  destinoDoEspelho: string | null;
 }
 
 export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Promise<void> {
@@ -476,6 +493,53 @@ export async function tratarContainerRemove(
 }
 
 /**
+ * `mirror_sync` (ADR 0147 pontos 2/4/8, RN-516) — UMA rodada do espelho, num
+ * momento NOMEADO pelo engine. Nunca um watcher deste lado: watcher é
+ * trabalho ilimitado disparado por qualquer coisa, inclusive pelas escritas
+ * do próprio espelho, que é laço.
+ *
+ * A PRIMEIRA coisa é conferir o destino contra o que foi concedido no join
+ * desta conexão. O runner não obedece um destino que o servidor mandou e a
+ * concessão não cobre — é isso que impede o artefato de um projeto de
+ * aterrissar na pasta de outro, e é por isso que o destino viaja na concessão
+ * e não em configuração local.
+ *
+ * Recusa e falha viram LOG, nunca exceção que derruba o runner e nunca
+ * silêncio. Não há `mirror_sync_result` no protocolo por enquanto: a
+ * telemetria da sincronização (última sync, contagem, último erro) é o ponto
+ * 7 do ADR, de outra sessão — e inventá-la aqui seria escolher o formato dela
+ * sem a decisão que ela precisa.
+ */
+export async function tratarMirrorSync(
+  estado: EstadoDoRunner,
+  msg: MirrorSyncMessage,
+): Promise<void> {
+  const concedido = estado.destinoDoEspelho;
+
+  if (!concedido || !mesmoCaminho(concedido, msg.destino)) {
+    console.warn(
+      `mirror_sync ${msg.ref}: RECUSADO — o destino ${JSON.stringify(msg.destino)} ` +
+        `não foi concedido nesta conexão (concedido: ` +
+        `${concedido ? JSON.stringify(concedido) : 'nenhum'}). Se o destino do ` +
+        `projeto mudou, reconecte o brabo-runner: a concessão é do join.`,
+    );
+    return;
+  }
+
+  try {
+    const resultado = await sincronizarEspelho({ workspace: estado.dir, destino: concedido });
+    console.log(
+      `mirror_sync ${msg.ref} (${msg.momento}): ${resultado.copiados} arquivo(s) ` +
+        `copiado(s) para ${resultado.destino} ` +
+        `(pulados=${resultado.pulados}, recusados=${resultado.recusados}). ` +
+        `Nada foi apagado — o espelho nunca remove.`,
+    );
+  } catch (erro) {
+    console.warn(`mirror_sync ${msg.ref}: falhou — ${mensagemDeErro(erro)}`);
+  }
+}
+
+/**
  * Uma "rodada" de conexão: pede um ticket FRESCO, entra no canal, e só volta
  * quando a conexão cai (ou lança se o join for recusado/não puder
  * conectar). A `credencial` é resolvida uma vez só, em `lerArgumentos` — mas
@@ -517,12 +581,19 @@ async function conectarERodar(
       onContainerStart: (msg) => void tratarContainerStart(estado, msg),
       onContainerStop: (msg) => void tratarContainerStop(estado, msg),
       onContainerRemove: (msg) => void tratarContainerRemove(estado, msg),
+      onMirrorSync: (msg) => void tratarMirrorSync(estado, msg),
       onDisconnected: () => resolverQueda(),
     },
   });
 
   estado.canalAtual = conexao.channel;
+  // ADR 0147 ponto 4 (RN-516): o destino do espelho é o que o SERVIDOR
+  // concedeu neste join, e vale só enquanto esta conexão viver.
+  estado.destinoDoEspelho = conexao.espelho?.destino ?? null;
   console.log(`conectado ao projeto ${projectId} — aguardando comandos aprovados...`);
+  if (estado.destinoDoEspelho) {
+    console.log(`espelho concedido: o trabalho será copiado para ${estado.destinoDoEspelho}`);
+  }
 
   // RN-423 (ADR 0104): confirma o `--dir` desta execução pro engine/api —
   // é este runner quem tem autoridade sobre o disco de verdade. Uma vez
@@ -531,6 +602,8 @@ async function conectarERodar(
 
   await queda;
   estado.canalAtual = null;
+  // A concessão morre com a conexão, junto com o canal — ver `EstadoDoRunner`.
+  estado.destinoDoEspelho = null;
   if (!deveParar()) {
     console.warn('conexão com o engine caiu — pedindo ticket novo e reconectando...');
   }
@@ -685,6 +758,7 @@ async function main(): Promise<void> {
     dir,
     docker: new DockerViaCli(),
     containerAtivo: null,
+    destinoDoEspelho: null,
     gerenciadorPty: new GerenciadorDePty(
       dir,
       (sessionRef, dataBase64) => {
