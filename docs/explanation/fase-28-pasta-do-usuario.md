@@ -112,6 +112,43 @@ final da anterior, com o que ela tiver descoberto.
 | 8 | estado do espelho na web (última sync, contagem, erro) | 6 |
 | 9 | E2E, `docs:check`, docmap e CHANGELOG fechados | 8 |
 
+## O que a fase entregou, e onde ela desviou do plano
+
+A tabela acima é o plano. O que segue é o registro do que aconteceu — as
+diferenças estão aqui porque um plano que se reescreve para bater com o
+resultado deixa de ensinar qualquer coisa.
+
+| # | RN/ADR | como saiu |
+|---|---|---|
+| 1 | ADR 0146, ADR 0147 | como planejado; faixa RN-511..520 reservada, com o salto sobre a RN-510 (já alocada em branch não mergeada) |
+| 2 | ADR 0146 pontos 1–2 | como planejado — base padrão `$HOME/projetos-brabo`, gravada por script Node porque item de menu do `bootstrap.sh` roda com stdin em `/dev/null` e por construção não consegue perguntar |
+| 3 | RN-513 | as duas metades já eram regra (RN-500/RN-501) e nunca tinham chegado à tela; NOVO foi só a pré-seleção |
+| 4 | RN-512, ADR 0146 ponto 3 | o broker sai do `profiles` no compose LOCAL **e só nele** — os dois composes divergem de propósito |
+| 5 | RN-514, ADR 0147 ponto 1 | como planejado; a recusa por capacidade faltante nasceu implementada e testada **sem disparar** — só a RN-516 lhe deu o primeiro disparo real |
+| 6 | RN-515/RN-516, ADR 0147 pontos 2/3/4/8 | partida em duas metades (destino × cópia), decisão tomada durante a sessão |
+| 7 | RN-518, RN-519/520, ADR 0147 pontos 5–6 | entregue **depois** da sessão 8 — as duas dependiam só da 6, e nada as ordenava entre si |
+| 8 | RN-517, ADR 0147 ponto 7 | como planejado |
+| 9 | — | fechamento: o E2E que faltava, a regra de docmap para `apps/runner/**` e este registro |
+
+Três coisas saíram diferentes do que o plano supunha, e as três estão
+declaradas onde importa:
+
+- **A sessão 7 rodou depois da 8.** As duas dependiam da 6 e de mais nada, e
+  nenhuma dependia da outra — a ordem da tabela era leitura, não precedência.
+- **BRB-031 não morreu.** O [ADR 0147](../adr/0147-agente-local-com-capacidades.md)
+  esperava que a instalação como serviço matasse o `chmod +x` manual do
+  [ADR 0118](../adr/0118-configuracao-automatica-do-runner-pelo-navegador.md).
+  Não mata: quem chega a rodar `brabo-runner service install` já precisou
+  tornar o binário executável para chegar ao comando. O efeito colateral
+  dependia de a instalação vir do bootstrap versionado do
+  [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md), que esta fase não
+  ligou.
+- **A revogação alcança `{projeto, usuário}`, nunca `{chave}`.** O ponto 6 do
+  ADR não prometia precisão por credencial, mas era a leitura natural dele.
+  Ela não existe: `runner_socket_tickets` guarda `project_id`/`user_id`/`kind`,
+  e a identidade da credencial morre no `PatAuthGuard`. O custo está escrito na
+  RN-520 e em `security-surface.md` em vez de disfarçado.
+
 ## O que esta fase NÃO toca
 
 Declarado nos dois ADRs, e repetido aqui porque é o que dá sentido ao resto:

@@ -300,6 +300,26 @@ rules:
     severity: warn
     note: "Cinco operações, e a especificação é COMPUTADA — mudar isso muda o contrato e o runbook."
 
+  # O `brabo-runner` é o ÚNICO processo do produto que roda na máquina do
+  # USUÁRIO, e ele não tinha regra nenhuma aqui — `apps/broker/**` tem desde o
+  # ADR 0130, `apps/runner/**` nunca teve. Enquanto o agente local era só
+  # "executa comando aprovado" isso quase passava; deixou de passar na FASE 28,
+  # que lhe deu capacidades declaradas no join (RN-514), a cópia para uma pasta
+  # do usuário (RN-516) e instalação como serviço (RN-518) — três mecanismos
+  # cujo contrato mora em doc, e nenhum obrigava a tocar doc nenhuma.
+  # `warn` e não `block` pelo mesmo motivo do broker: a superfície é fechada
+  # (o protocolo do canal e os subcomandos do CLI), e capacidade nova é decisão
+  # de produto com ADR, que o `adr-trigger` já cobra.
+  - id: agente-local
+    watch:
+      - "apps/runner/**"
+    docs:
+      - "apps/runner/README.md"
+      - "docs/security-surface.md"
+      - "docs/runbook.md"
+    severity: warn
+    note: "O agente local roda na máquina do usuário: o que ele DECLARA no join e o que ele instala são contrato, não detalhe."
+
   - id: deploy-e-runbook
     watch:
       - "deploy/k8s/**"
