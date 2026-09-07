@@ -79,6 +79,60 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: o **destino do espelho** passa a existir, e ele é **por projeto**
+  (RN-515, [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 4).
+  Coluna nova `projects.mirror_path` (nullable), campo `mirrorPath` no projeto
+  e rota `PUT /projects/:projectId/mirror-path` (`maintainer`, o mesmo mínimo
+  de `execution-mode` e de `projects-base`: a rota fala de um caminho do
+  computador do operador). O valor **volta em toda leitura de projeto**, então
+  nem a implementação do espelho nem a tela de estado precisam de rota nova.
+
+  **Por projeto e nunca global** — nem configuração no runner, nem variável de
+  ambiente. Um destino global faria o artefato do projeto B aterrissar na pasta
+  do projeto A, e o usuário descobriria isso **pelo conteúdo, não por um erro**.
+  E **`null` é o estado NORMAL**, não uma pendência: projeto sem espelho é a
+  maioria, e o produto nunca escolhe um destino sozinho. Limpar é
+  `{"mirrorPath": null}` — a chave é **obrigatória**, e omiti-la é 400, porque
+  um corpo que omite o campo seria indistinguível de "limpe" e limpar em
+  silêncio é justamente o defeito.
+
+  **A api valida só o LÉXICO, e a mensagem dela DIZ que é só o léxico.** Ela
+  não enxerga a máquina onde o destino vai existir — é a situação do modo
+  `runner` (RN-423), não a do `mounted`, cuja pasta acaba dentro da base que a
+  api alcança de verdade. Por isso reusa `caminhoDeWorkspaceLocalValido`, o
+  MESMO predicado da criação e da conversão, em vez de escrever uma quarta
+  cópia da mesma régua; e **não** exige `BRABO_PROJECTS_BASE`, porque o destino
+  do espelho é por definição a pasta que a base não cobre.
+
+  **Duas recusas próprias, e elas são o conteúdo da regra.** Destino DENTRO do
+  `workspacePath` e destino que CONTÉM ele são o mesmo laço em sentidos opostos
+  (escrever o espelho dentro da origem faz o espelho copiar o próprio espelho),
+  e a comparação é por **SEGMENTO** — `/base-outra` NÃO está dentro de `/base`,
+  e um `startsWith` cru taxaria uma pasta irmã legítima. E projeto
+  `execution_mode: container` **não pode ter destino nenhum**: a origem é um
+  volume gerenciado no SERVIDOR, e quem copiaria é um processo na máquina do
+  USUÁRIO, que não a enxerga — recusa NOMEADA, porque um destino gravado que
+  jamais recebe nada é pior que a recusa, já que parece configurado. Pelo mesmo
+  motivo, **converter o modo ZERA o destino** (mesma forma de
+  `workspaceVerifiedAt`, e com uma razão a mais: os dois sentidos do laço foram
+  validados contra o `workspacePath` ANTIGO).
+
+  **Esta é a metade LÉXICA da guarda, e só ela.** A outra é `realpath`, e é do
+  RUNNER (`espelho-guard.ts`), na máquina onde os dois caminhos existem de
+  verdade: um symlink em qualquer segmento do destino apontando de volta para a
+  origem passa por aqui sem ser visto. A api não garantiu o laço; ela impediu o
+  laço ESCRITO — e o comentário no código diz isso, para ninguém achar o
+  contrário. **Nada aqui copia arquivo nenhum**: `mirror_sync`, o protocolo e a
+  cópia são a metade B desta sessão, no engine e no runner.
+
+  E, declarado: a escrita do espelho **não** é `proposed_action`. É
+  configuração que o usuário declarou, não um agente pedindo para agir —
+  sincronizar por comando de terminal cairia no escopo de caminho do ADR 0055 e
+  viraria fila de aprovações rotineiras, corroendo o teto que dá sentido ao
+  clique. Nenhum teto absoluto, o event log, o portão da imagem nos três modos,
+  as cinco operações do broker e o CHECK
+  `projects_workspace_path_casa_com_modo` seguem intocados — a coluna nova é
+  independente dele, e a migration é um `ADD COLUMN` e nada mais.
 - **runner,engine**: o `join` do agente local **deixa de ser mudo** — o runner
   DECLARA nas params o que sabe fazer e o servidor CONCEDE a interseção com o
   vocabulário que conhece (RN-514,

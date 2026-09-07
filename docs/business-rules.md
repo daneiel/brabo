@@ -8576,6 +8576,111 @@ tipo lhe sejam **entregues**, nunca permissão para nada.
 
 ---
 
+## O destino do espelho é por projeto (RN-515)
+
+### RN-515 — O destino do espelho é declarado POR PROJETO e nunca é global; `null` é o estado normal; e a api valida SÓ o léxico, dizendo que é só o léxico {#rn-515}
+
+A capacidade `espelho` ([RN-514](#rn-514), [ADR 0147](adr/0147-agente-local-com-capacidades.md))
+copia o trabalho dos agentes para uma pasta do usuário **fora** da base
+montada — que é a razão de ela existir, porque bind mount não atravessa rede
+nem alcança caminho fora do que foi montado. Esta regra decide **onde esse
+destino mora e como o usuário o declara**; ela **não** copia arquivo nenhum.
+
+**Por PROJETO, nunca global.** O destino é a coluna `projects.mirror_path` e o
+campo `mirrorPath` do projeto, escrito por
+`PUT /projects/:projectId/mirror-path` (`maintainer`, o mesmo mínimo de
+`execution-mode` e de `projects-base`: a rota fala de um caminho do computador
+do operador). Nunca configuração global no runner, nunca variável de ambiente:
+um destino global faria o artefato do projeto B aterrissar na pasta do projeto
+A, e o usuário descobriria isso **pelo conteúdo, não por um erro** (ADR 0147,
+ponto 4).
+
+**`null` é o estado NORMAL, não uma pendência.** A coluna é nullable e nasce
+nula; projeto sem espelho é a maioria, e o produto nunca escolhe um destino
+sozinho. Limpar é `{"mirrorPath": null}` — a chave é **obrigatória**, e
+omiti-la é **400**: um corpo que omite o campo seria indistinguível de "limpe",
+e limpar em silêncio é justamente o defeito. Limpar funciona **sempre**,
+inclusive num projeto `container`, senão uma linha convertida ficaria presa no
+estado que a regra proíbe.
+
+**Só o LÉXICO, e a api DIZ que é só o léxico.** A api **não enxerga** a máquina
+onde o destino vai existir — é a situação do modo `runner`
+([RN-423](#rn-423)), não a do `mounted`, onde a pasta acaba dentro da base que
+a api alcança de verdade. Ela reusa `caminhoDeWorkspaceLocalValido`, o **mesmo**
+predicado da criação e da conversão (absoluto, sem `..`/`.`, nunca a raiz nem
+pasta de sistema, nunca sobreposto ao checkout do Brabo), em vez de uma quarta
+cópia da mesma régua — e **não** exige `BRABO_PROJECTS_BASE`, porque o destino
+do espelho é por definição a pasta que a base não cobre. A mensagem de recusa
+declara que o disco não foi verificado e quem o verifica.
+
+**Os dois sentidos do mesmo laço.** Destino **dentro** do `workspacePath` e
+destino que **contém** o `workspacePath` são a mesma recusa vista de dois lados
+(ADR 0147, ponto 2): escrever o espelho dentro da origem faz o espelho copiar o
+próprio espelho, e uma origem dentro do destino aninha a cópia a cada rodada.
+Recusar um e permitir o outro seria fechar a porta e deixar a janela. A
+comparação é por **SEGMENTO** (`dentroDoEscopo`), nunca `startsWith` cru:
+`/base-outra` **não** está dentro de `/base`, e recusá-lo taxaria uma pasta
+irmã perfeitamente legítima.
+
+**Esta é a metade LÉXICA da guarda, e só ela.** A outra é `realpath`, e é do
+RUNNER (`espelho-guard.ts`, ADR 0147 ponto 2), na máquina onde os dois caminhos
+existem de verdade. Um symlink em qualquer segmento do destino apontando de
+volta para a origem passa por aqui sem ser visto — a api não tem disco onde
+resolvê-lo. **A api não garantiu o laço**; ela impediu o laço ESCRITO.
+
+**`container` é recusado, e a recusa é NOMEADA.** A origem de um projeto
+`container` é um volume gerenciado **no servidor**, e quem copiaria é um
+processo na máquina do **usuário**, que não a enxerga. Aceitar e nunca copiar
+seria pior que recusar, porque pareceria configurado. `mounted` e `runner`
+podem. Pelo mesmo motivo, **converter o modo ZERA o destino**
+([RN-447](#rn-447)..450): em `container` ele não poderia existir, e mesmo entre
+`mounted` e `runner` a conversão MOVE a origem contra a qual os dois sentidos
+do laço foram validados.
+
+**O valor volta em toda leitura de projeto** (`ProjectResponseDto.mirrorPath`),
+para a implementação do espelho e a tela de estado não precisarem de rota nova.
+Não há endpoint de leitura dedicado.
+
+**E ele NÃO é `proposed_action`.** A escrita do espelho é configuração que o
+usuário declarou, não um agente pedindo para agir — o ADR 0147 é explícito
+disso, e sincronizar por comando de terminal cairia no escopo do
+[ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) e viraria
+fila de aprovações rotineiras.
+
+- **Onde:** `apps/api/src/db/schema/iam.ts` (coluna `mirror_path`, nullable,
+  sem CHECK — a recusa de `container` mora no caso de uso porque o modo é
+  CONVERSÍVEL); `apps/api/src/db/migrations/0056_lovely_firelord.sql`;
+  `apps/api/src/domain/iam/project.entity.ts` (`mirrorPath`);
+  `apps/api/src/application/services/workspace-location.ts`
+  (`validarDestinoDeEspelho` — o léxico reusado, a recusa de `container` e os
+  dois sentidos do laço);
+  `apps/api/src/application/use-cases/iam/set-project-mirror-path.use-case.ts`;
+  `apps/api/src/application/use-cases/iam/convert-project-execution-mode.use-case.ts`
+  (a conversão zerando o destino);
+  `apps/api/src/interfaces/http/iam/dto/set-mirror-path.dto.ts` (`@IsDefined`
+  + `@ValidateIf`, nunca `@IsOptional`, que colapsaria `null` e `undefined`);
+  `apps/api/src/interfaces/http/iam/projects.controller.ts`
+  (`PUT :projectId/mirror-path`, `maintainer`);
+  `apps/api/src/interfaces/http/iam/dto/iam.response.dto.ts`
+- **Teste:**
+  `apps/api/test/application/use-cases/iam/set-project-mirror-path.use-case.spec.ts`
+  (grava, normaliza, limpa, limpa mesmo em `container`, recusa
+  não-absoluto/`..`/raiz/pasta de sistema/checkout do Brabo, os dois sentidos
+  do laço, `/base-outra` vs `/base` NÃO sendo dentro, `container` recusado,
+  404); `apps/api/test/interfaces/http/iam/projects-execution-mode.controller.spec.ts`
+  (`describe "destino do espelho (RN-515)"` — `maintainer` e o repasse de
+  `null`);
+  `apps/api/test/application/use-cases/iam/convert-project-execution-mode.use-case.spec.ts`
+  (a conversão zerando o destino);
+  `apps/api/test/interfaces/route-surface.spec.ts` (a rota classificada em
+  `docs/security-surface.md`)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 4
+- **Origem:** FASE 28, sessão 6 (metade A — onde o destino mora; a cópia, o
+  `mirror_sync` e a segunda passada de `realpath` são a metade B, no engine e
+  no runner)
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -8638,6 +8743,9 @@ tipo lhe sejam **entregues**, nunca permissão para nada.
 | Runner que declara uma capacidade que ESTE servidor não conhece | o nome é **ignorado** e o join passa — runner mais novo que o engine conecta (RN-514) |
 | `exec` despachado a um runner que não declarou a capacidade `exec` | responde ao chamador no mesmo formato de `exec_result`, com `exitCode` 126 e a causa no `output` — nunca deixa o `RunnerRouter` esperar até o timeout (RN-514) |
 | `pty_*` relayado a um runner que não declarou a capacidade `pty` | a mensagem NÃO é entregue e a `:web` recebe `pty_error` nomeado — nunca "carregando" para sempre (RN-514) |
+| Destino de espelho dentro do `workspacePath` do projeto, ou contendo ele | **400** nomeando o sentido do laço — os dois são a mesma recusa, e a comparação é por SEGMENTO, então `/base-outra` NÃO conta como dentro de `/base` (RN-515) |
+| Destino de espelho declarado num projeto `execution_mode: container` | **400** NOMEANDO o motivo (a origem é um volume do servidor, o agente local não a enxerga) — nunca aceitar e nunca copiar (RN-515) |
+| `PUT .../mirror-path` sem a chave `mirrorPath` no corpo | **400** — omitir seria indistinguível de pedir para LIMPAR, e limpar em silêncio é o defeito; limpar é `null` explícito (RN-515) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

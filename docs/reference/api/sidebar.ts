@@ -558,6 +558,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/projects-controller-set-mirror-path-route",
+          label: "Declares (or clears) the project's mirror destination",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/projects-controller-get-permissions",
           label: "Reads the project's permissions.json",
           className: "api-method get",

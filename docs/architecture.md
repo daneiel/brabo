@@ -633,6 +633,23 @@ same discipline as the frozen price in metering
 calibration does not silently change what every earlier measurement meant.
 `session_socket_tickets` is kept off the diagram for the same reason as
 `refresh_tokens`/`account_tokens`: an auth mechanism, not a domain relation.
+
+`projects.mirror_path` (FASE 28, [RN-515](business-rules.md#rn-515),
+[ADR 0147](adr/0147-agente-local-com-capacidades.md) point 4) is a column and
+not a table because it is ONE optional value per project: the absolute path,
+on the USER's machine, that the local agent's `espelho` capability copies the
+work to. It is nullable and `NULL` is the NORMAL state — a project without a
+mirror is the majority, and the product never picks a destination on its own.
+It deliberately carries **no** CHECK pairing it with `execution_mode`, unlike
+`workspace_path` right next to it: `container` cannot have a destination (its
+source is a managed volume on the SERVER, and the process that would copy runs
+on the user's machine), but `execution_mode` is CONVERTIBLE
+([RN-447](business-rules.md#rn-447), [ADR 0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)),
+so a CHECK would make converting to `container` blow up in Postgres instead of
+refusing with a reason. The refusal lives in the use case, and the conversion
+zeroes the column — the same shape as `workspace_verified_at`, and for an
+additional reason: the two directions of the origin↔destination loop were
+validated against the OLD `workspace_path`.
 **The constraints are business rules**: the event log's unique `(session_id, seq)`, the `check` requiring
 exactly one scope in `budgets` (project **or** session, never both), the
 partial indexes that guarantee analysis idempotency — and, since Phase 8b,

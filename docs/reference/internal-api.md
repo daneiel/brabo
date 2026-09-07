@@ -562,6 +562,36 @@ handle and never an absolute path. With the runner leaving project creation, the
 api is the only party that can answer — and it answers about the ONE folder it
 can see, the base above.
 
+#### And neither is declaring the mirror destination
+
+`PUT /projects/:projectId/mirror-path` ([RN-515](../business-rules.md#rn-515),
+[ADR 0147](../adr/0147-agente-local-com-capacidades.md) point 4) stores the
+folder the `espelho` capability copies a project's work to — a folder OUTSIDE
+the mounted base. It is a **public** route on the `projects` controller,
+`@RequireRole('maintainer')`, documented in
+[the security surface](../security-surface.md), for the same reason as the
+picker above: the caller is a PERSON configuring their project, not the engine
+reading something it cannot get from the database.
+
+The engine's side of this contract does not exist yet, and that separation is
+deliberate. This route only decides **where the destination lives and what
+counts as a valid one**; the protocol that carries it to the runner
+(`mirror_sync`, the capability granted in the `join` params of
+[RN-514](../business-rules.md#rn-514)) and the copy itself belong to the
+engine and the runner. What the engine will read is the column — `mirror_path`
+on `projects`, `null` when the project has no mirror, which is the normal
+state — through the same `Engine.Projects.Project` reads it already uses for
+`workspace_path` and `execution_mode`. No new internal route is needed for
+that, and the value also rides along every project response
+(`ProjectResponseDto.mirrorPath`) so the web needs none either.
+
+One asymmetry worth writing down: the api validates this path **lexically
+only**, and says so. It has no disk to ask — the destination lives on the
+user's machine, exactly as in `runner` mode. The `realpath` half of the guard
+(a symlink in some segment of the destination pointing back into the source)
+is the runner's, and nothing in this contract should be read as the api having
+already established it.
+
 ### Workspace confirmation by the runner — the WRITE, which is a new route ([RN-423](../business-rules.md#rn-423))
 
 | method | path |

@@ -190,6 +190,41 @@ reason in the URL.
   `UpdateProjectDto` deliberately omits both fields, otherwise
   `PartialType(CreateProjectDto)` would expose them on a `PATCH` with no
   guard at all.
+- **`PUT /projects/:projectId/mirror-path` writes a path on the USER's
+  machine, and the api never sees that machine** ([RN-515](business-rules.md#rn-515),
+  [ADR 0147](adr/0147-agente-local-com-capacidades.md), point 4). It stores
+  the destination the `espelho` capability copies the project's work to — a
+  folder OUTSIDE the mounted base, which is precisely why a bind mount cannot
+  reach it and a local agent has to.
+
+  The minimum is `maintainer`, the same as `execution-mode` and
+  `projects-base` above, and for the same reason: this route is about a path
+  on the operator's own filesystem, not about project metadata.
+
+  What the api can validate here is ONLY the LEXICAL shape, and the refusal
+  message says so. It reuses `caminhoDeWorkspaceLocalValido` — absolute, no
+  `..`/`.`, never the root, never a system folder, never overlapping Brabo's
+  own checkout — exactly as `runner` creation does ([RN-423](business-rules.md#rn-423)),
+  and for the same reason: there is no disk here to ask. It does NOT require
+  `BRABO_PROJECTS_BASE`, because being outside the base is the point.
+
+  Two refusals are specific to this route. The destination may not be inside
+  `workspacePath` nor contain it — the same loop seen from both sides, since
+  writing the mirror inside its own source makes the mirror copy itself — and
+  the comparison is by SEGMENT (`dentroDoEscopo`), so `/base-outra` is not
+  inside `/base`. And a project in `execution_mode: container` may not have a
+  destination at all: its source is a managed volume ON THE SERVER, and the
+  process that would copy runs on the USER's machine, which cannot see it.
+  Both are **400**.
+
+  The other half of the guard — resolving symlinks with `realpath`, so a link
+  in any segment of the destination cannot point back into the source — is the
+  RUNNER's, on the machine where both paths actually exist. **This route does
+  not establish that guarantee**; it only rules out the loop as WRITTEN.
+  Clearing is `mirrorPath: null`, and the key is required: omitting it would
+  be indistinguishable from asking to clear, and clearing in silence is the
+  defect. Writing the mirror is never a `proposed_action` — it is
+  configuration the user declared, not an agent asking to act.
 - **`GET /workspaces/:workspaceId/projects-base` reveals a piece of the
   operator's filesystem topology, and that's why it isn't `viewer`**
   ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md),
@@ -641,6 +676,7 @@ reason in the URL.
 | GET | `/projects/:projectId` | role:viewer |
 | PATCH | `/projects/:projectId` | role:maintainer |
 | PUT | `/projects/:projectId/execution-mode` | role:maintainer |
+| PUT | `/projects/:projectId/mirror-path` | role:maintainer |
 | GET | `/projects/:projectId/models` | role:viewer |
 | GET | `/projects/:projectId/actions` | role:developer |
 | GET | `/projects/:projectId/agent-autonomy` | role:maintainer |

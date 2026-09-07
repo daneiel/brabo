@@ -6055,6 +6055,68 @@
         ]
       }
     },
+    "/projects/{projectId}/mirror-path": {
+      "put": {
+        "description": "The absolute path, ON THE USER MACHINE, where the local agent copies the work to (RN-515, ADR 0147) — a folder OUTSIDE the mounted base, which is the whole reason the mirror exists. Per project and never global: one global destination would land project B artifacts in project A's folder, and the user would find out from the contents, not from an error. `mirrorPath: null` CLEARS it and turns the mirror off — the key is required, omitting it is a 400, because a body that omits the field would be indistinguishable from asking to clear. `null` is the NORMAL state of a project. `maintainer`, the same minimum as `execution-mode` and `projects-base`: this route talks about a path on the operator's own filesystem. It validates ONLY the LEXICAL shape and refuses, with 400, a destination inside `workspacePath` or containing it (both directions of the same loop), and any destination at all on a `container` project. It never touches disk: the API cannot see the machine where the destination will live. Writing the mirror is NOT a proposed_action — it is configuration the user declared, not an agent asking to act.",
+        "operationId": "ProjectsController_setMirrorPathRoute",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMirrorPathDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role on the project."
+          },
+          "404": {
+            "description": "Project doesn't exist or is invisible to the caller."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Declares (or clears) the project's mirror destination",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/projects/{projectId}/model-binding": {
       "get": {
         "description": "This scope's RAW binding — `null` if the project only inherits from the workspace.",
@@ -17999,6 +18061,12 @@
             "nullable": true,
             "description": "When the path was confirmed on disk. `null` = not yet verified. In `runner` the confirmation comes from the CLI connecting (RN-423); in `mounted` it is stamped when Infra starts the container and the folder is materialized (RN-501, ADR 0142). `container` never fills this field in. It records A confirmation, never a heartbeat."
           },
+          "mirrorPath": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "The mirror destination on the USER'S machine — the folder OUTSIDE the mounted base where the local agent copies the work to (RN-515, ADR 0147). `null` means the project has no mirror, and that is the NORMAL state, never an error. Only `mounted`/`runner` can have one. Set through `PUT /projects/:projectId/mirror-path`; it rides along every project read so nothing needs a dedicated endpoint to learn it. The value was validated LEXICALLY only — whether the folder exists is known by the local agent, not by this API."
+          },
           "createdBy": {
             "type": "string",
             "example": "01JC4Z0000USUARIO0000000001"
@@ -18044,6 +18112,7 @@
           "executionMode",
           "workspacePath",
           "workspaceVerifiedAt",
+          "mirrorPath",
           "createdBy",
           "taskBudgetMicros",
           "maxConsecutiveBlocked",
@@ -20390,6 +20459,20 @@
         },
         "required": [
           "maxParallel"
+        ]
+      },
+      "SetMirrorPathDto": {
+        "type": "object",
+        "properties": {
+          "mirrorPath": {
+            "type": "string",
+            "nullable": true,
+            "example": "/home/you/mirrors/store",
+            "description": "The absolute path, ON THE USER'S MACHINE, where the local agent copies the project work to (RN-515, ADR 0147). Send `null` — the key is REQUIRED, omitting it is a 400 — to clear the destination and turn the mirror off; `null` is the normal state of a project, not an error. Only `mounted`/`runner` projects can have one: in `container` the source is a server-side managed volume the local agent cannot see, and the request is refused with 400 naming that reason. The API validates ONLY the LEXICAL shape (absolute, no `..`/`.`, never the root, a system folder, or overlapping Brabo's own checkout) plus the two directions of the origin↔destination loop (the destination cannot be inside `workspacePath`, nor contain it) — it never touches the disk, because it cannot see the machine where the destination will live, exactly as in `runner` mode (RN-423). Resolving symlinks is the local agent’s half of the guard, not this one."
+          }
+        },
+        "required": [
+          "mirrorPath"
         ]
       },
       "SetModelBindingDto": {
