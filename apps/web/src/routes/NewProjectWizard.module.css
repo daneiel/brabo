@@ -90,6 +90,22 @@
   padding: 8px 12px;
 }
 
+/* A nota neutra do modo Pasta montada, quando o caminho está SOB a base
+   consentida (RN-513): descreve, não alarma — por isso texto, e nunca um
+   `Alert tone="warning"`, que é reservado ao caminho que a api recusa. */
+.baseNote {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.baseNote code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
 .stepTitle {
   font-family: var(--font-heading);
   font-size: 15px;

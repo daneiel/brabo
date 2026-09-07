@@ -198,6 +198,19 @@ export interface ProjectUnreadEvents {
 }
 
 /**
+ * A base dos projetos montados desta instalação (ADR 0141, RN-500).
+ *
+ * `null` é estado NORMAL, nunca erro nem falha de leitura: a instalação não
+ * tem `BRABO_PROJECTS_BASE`, e por isso não oferece o modo Pasta montada. É
+ * daqui que o assistente de criação aprende a não oferecer um modo que a
+ * instalação não honra, em vez de oferecer e ver a api recusar depois
+ * (RN-513).
+ */
+export interface ProjectsBase {
+  projectsBase: string | null;
+}
+
+/**
  * Uma listagem do navegador de pastas de projeto (RN-504).
  *
  * `entries` traz SÓ nome de subdiretório — arquivo, symlink e entrada

@@ -7803,6 +7803,83 @@ devolve `false` para checkout desconhecido. E ele **relata, nunca bloqueia**:
 
 ---
 
+## A base decide o que a criação de projeto oferece (RN-513)
+
+### RN-513 — Com base consentida, `mounted` é o pré-selecionado com `<base>/<slug>` sugerido; sem base, ou sem saber, ele não é oferecido {#rn-513}
+
+Duas metades desta regra **já eram regra** e nunca tinham chegado ao cliente.
+"Não oferecer o modo sem base" é a [RN-500](#rn-500); "sugerir `<base>/<slug>`"
+é a [RN-501](#rn-501), e o ADR 0142 adiou a validação de disco justamente para
+que o assistente pudesse propor uma pasta que **ainda não existe**. Até aqui,
+`GET /workspaces/:workspaceId/projects-base` não tinha **chamador nenhum** no
+web, e o card "Pasta montada" era oferecido incondicionalmente — numa
+instalação sem `BRABO_PROJECTS_BASE`, escolher o modo terminava numa recusa
+400 da api depois de a pessoa ter escolhido, digitado o caminho e chegado ao
+fim do assistente.
+
+O que é **novo** é a **pré-seleção**: com base configurada, `mounted` nasce
+selecionado. Ela revisa o default do ADR 0072 (onde `container` é "a normal" e
+o modo local é escape hatch) e o revisa **só para a instalação local**, onde a
+base foi consentida por um humano no host ([RN-511](#rn-511)). O enum
+`project_execution_mode` não muda, nenhum modo novo nasce, e a conversão de
+modo (ADR 0111) não é tocada.
+
+**A consulta nasce com o assistente, não com o passo.** O passo "Onde o código
+vai morar" é o quinto; um `useQuery` montado só ali faria o card aparecer
+piscando depois que a pessoa já estivesse olhando a tela.
+
+**Desconhecido não vira oferta.** Enquanto a resposta não chegou, e também
+quando a consulta **falha** (403, rede, api fora), o card não aparece e
+`container` segue selecionado. Falha não é permissão para oferecer um modo
+cuja pré-condição não se conseguiu confirmar: é a mesma régua da
+[RN-088](#rn-088)/[RN-468](#rn-468) — o produto não colapsa "não sei" com "não
+tem" — e a dos ADRs 0041/0042, onde capability só é declarada quando
+**provada**.
+
+**A pré-seleção nunca sobrescreve escolha humana.** A base chega por rede,
+sempre DEPOIS do primeiro render. A tela guarda a escolha do usuário separada
+do modo vigente (`modoDeWorkspaceEscolhido` × `modoDeWorkspace`), e a
+pré-seleção só vale enquanto ninguém tocou nos cards — trocar o modo debaixo da
+mão de quem já clicou é defeito, não conveniência.
+
+**A sugestão nunca clobbera o que foi digitado.** `<base>/<slug>` entra em dois
+casos e só neles: campo vazio com nada sugerido ainda, ou campo contendo
+exatamente a sugestão anterior desta tela (o nome mudou no passo de detalhes, e
+a sugestão acompanha). Qualquer outra coisa — inclusive o campo vazio **depois**
+de o usuário ter apagado a sugestão — fica como está. Slug vazio (a adoção, onde
+o nome vem do provider) não vira segmento inventado: o campo continua vazio, e
+`canAdvanceFromWorkspace` segura o passo. O campo é **editável** o tempo todo; a
+pré-seleção não relaxou nenhuma régua de avanço.
+
+**E o aviso do modo parou de mentir.** O texto anterior era anterior ao ADR
+0141: dizia que o caminho era livre e que só funcionaria se o usuário o
+montasse. Hoje são **dois estados, e são os dois que o backend tem** — sob a
+base, nota neutra (a criação passa, e a pasta nem precisa existir: a Infra a
+cria ao subir o container, [RN-501](#rn-501)); fora da base, aviso dizendo que
+a api **recusa a criação** (400, em `resolverWorkspacePath`) e **nomeando** a
+base, em vez de mandar procurar a variável. Campo vazio não é "fora da base":
+não há caminho para a api recusar ainda, e alarmar antes de a pessoa digitar
+seria a tela afirmando sobre o que não tem. A comparação é por **segmento**,
+nunca `startsWith` cru — `/base-outra` não está dentro de `/base` —, espelhando
+`dentroDoEscopo` da api.
+
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:211` (a consulta),
+  `:229` (`podeOferecerMounted`/`baseDeProjetos`), `:240` (o modo vigente),
+  `:251` (`caminhoForaDaBase`), `:278` (a sugestão);
+  `apps/web/src/lib/wizard.ts:130` (`caminhoSugeridoNaBase`) e `:158`
+  (`caminhoDentroDaBase`) — as funções puras;
+  `apps/web/src/lib/api-client.ts:287` (`getProjectsBase`)
+- **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx`
+  (`describe('NewProjectWizard — a base de projetos decide o que é
+  oferecido')` — base presente, base `null`, consulta recusada com 403, a
+  escolha humana antes de a base chegar, e os dois estados do aviso);
+  `apps/web/src/lib/wizard.test.ts` (`describe('caminhoSugeridoNaBase')` e
+  `describe('caminhoDentroDaBase')`)
+- **ADR:** [0146](adr/0146-base-consentida-no-bootstrap.md), ponto 4
+- **Origem:** FASE 28, sessão 3
+
+---
+
 ## A pasta montada nasce quando o container sobe (RN-501)
 
 ### RN-501 — `mounted` valida só o LÉXICO e a base na criação; a pasta é MATERIALIZADA depois, por quem tem autoridade sobre o disco {#rn-501}

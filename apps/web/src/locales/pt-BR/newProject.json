@@ -78,7 +78,8 @@
     "preparing": "Preparando…",
     "hintMounted": "caminho absoluto, como ele aparece DENTRO do container",
     "hintRunner": "caminho absoluto, como ele aparece na SUA máquina",
-    "mountedWarning": "A pasta precisa ficar <strong>dentro da base de projetos</strong> configurada pelo operador (<code>BRABO_PROJECTS_BASE</code>) — é a única pasta do seu computador que os containers da api e do engine enxergam. Ela <strong>não precisa existir ainda</strong>: é criada quando a Infra subir o container do projeto.",
+    "mountedUnderBase": "A pasta fica <strong>dentro da base de projetos</strong> desta instalação (<code>{{base}}</code>) — a única pasta do seu computador que os containers da api e do engine enxergam. Ela <strong>não precisa existir ainda</strong>: é criada quando a Infra subir o container do projeto.",
+    "mountedOutsideBase": "Este caminho está <strong>fora da base de projetos</strong> desta instalação (<code>{{base}}</code>), e a api <strong>recusa a criação</strong> de um projeto montado fora dela. Escolha uma pasta sob <code>{{base}}</code>.",
     "runnerHint": {
       "intro": "Depois de criar o projeto, rode na sua máquina:",
       "introExisting": "O projeto já existe — rode na sua máquina:",

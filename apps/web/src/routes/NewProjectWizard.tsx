@@ -6,10 +6,13 @@ import type { GitProviderName } from '../lib/api-types';
 import {
   ApiError,
   createProject,
+  getProjectsBase,
   listCredentials,
   registerGitCredential,
 } from '../lib/api-client';
 import {
+  caminhoDentroDaBase,
+  caminhoSugeridoNaBase,
   canAdvanceFromCredential,
   canAdvanceFromDetails,
   canAdvanceFromMode,
@@ -151,12 +154,23 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   const [name, setName] = useState('');
   const [externalId, setExternalId] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('private');
-  // `container` é o pré-selecionado, ao contrário do modo de repositório, que
-  // nasce sem default: aqui existe SIM uma "normal" — é o comportamento que
-  // todo projeto teve até o ADR 0072, e o Local pede preparo do ambiente.
-  const [modoDeWorkspace, setModoDeWorkspace] =
-    useState<ModoDeWorkspace>('container');
+  // O modo que o USUÁRIO escolheu, e só ele — `undefined` é "ainda não
+  // tocou nos cards". O modo VIGENTE é derivado logo abaixo, porque desde o
+  // ADR 0146 (ponto 4) o default depende da instalação: com base consentida,
+  // `mounted` é o pré-selecionado; sem ela, `container` continua sendo (o
+  // default do ADR 0072). Guardar a escolha separada do vigente é o que
+  // impede a pré-seleção de trocar o modo debaixo da mão de quem já clicou
+  // — a base chega por rede, sempre DEPOIS do primeiro render (RN-513).
+  const [modoDeWorkspaceEscolhido, setModoDeWorkspaceEscolhido] =
+    useState<ModoDeWorkspace>();
   const [caminhoLocal, setCaminhoLocal] = useState('');
+  // A última sugestão `<base>/<slug>` que ESTA tela escreveu no campo. Sem
+  // ela não há como distinguir "campo com a sugestão de antes" (pode ser
+  // refeito quando o nome muda) de "campo digitado pelo usuário" (nunca se
+  // toca) — as duas são apenas uma string.
+  const [caminhoSugeridoAplicado, setCaminhoSugeridoAplicado] = useState<
+    string | null
+  >(null);
   // Navegação de pasta local via o Runner (ADR 0107/ADR 0108). No modo
   // `mounted` o projeto ainda não existe nesta tela (só nasce na
   // confirmação) e o modal abre no estado declarado — ver
@@ -186,6 +200,99 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   const needsCredential = !!provider && providerNeedsCredential(provider);
 
   const adotando = modo === 'adopt';
+
+  /**
+   * A base dos projetos montados (ADR 0141/0146 ponto 4, RN-500/RN-513).
+   *
+   * A consulta nasce com o WIZARD, não com o passo — o passo de workspace é
+   * o quinto, e um `useQuery` montado só ali faria o card aparecer piscando
+   * depois que a pessoa já estivesse olhando a tela.
+   */
+  const projectsBaseQuery = useQuery({
+    queryKey: ['projects-base', workspaceId],
+    queryFn: () => getProjectsBase(workspaceId),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  /**
+   * `mounted` só é oferecido quando a base é CONHECIDA e existe.
+   *
+   * Enquanto a resposta não chegou, e também quando a consulta FALHA (403,
+   * rede, api fora), o modo não aparece e `container` segue selecionado.
+   * Falha não é permissão para oferecer um modo cuja pré-condição não se
+   * conseguiu confirmar: é a mesma régua da RN-088/RN-468 — o produto não
+   * colapsa "não sei" com "não tem" — e a dos ADRs 0041/0042, onde
+   * capability só é declarada quando PROVADA. Oferecer no escuro terminaria
+   * na recusa da api (400) depois de a pessoa ter escolhido o modo, digitado
+   * o caminho e chegado ao fim do assistente.
+   */
+  const podeOferecerMounted =
+    projectsBaseQuery.isSuccess &&
+    projectsBaseQuery.data.projectsBase !== null;
+  const baseDeProjetos = podeOferecerMounted
+    ? (projectsBaseQuery.data?.projectsBase ?? null)
+    : null;
+
+  // O modo VIGENTE: a escolha humana quando existe, senão o default da
+  // instalação. Uma escolha em `mounted` que deixe de ser oferecível (a
+  // consulta invalidada devolvendo `null`) cai para o default em vez de
+  // ficar apontando para um card que saiu da tela.
+  const modoDeWorkspace: ModoDeWorkspace =
+    modoDeWorkspaceEscolhido !== undefined &&
+    (modoDeWorkspaceEscolhido !== 'mounted' || podeOferecerMounted)
+      ? modoDeWorkspaceEscolhido
+      : podeOferecerMounted
+        ? 'mounted'
+        : 'container';
+
+  // Campo VAZIO não é "fora da base": não há caminho para a api recusar
+  // ainda, e alarmar antes de a pessoa digitar seria a tela afirmando sobre
+  // o que não tem.
+  const caminhoForaDaBase =
+    caminhoLocal.trim() !== '' &&
+    !caminhoDentroDaBase(caminhoLocal, baseDeProjetos);
+
+  const modosDeWorkspaceOferecidos = useMemo(
+    () =>
+      MODOS_DE_WORKSPACE.filter(
+        (m) => m.id !== 'mounted' || podeOferecerMounted,
+      ),
+    [podeOferecerMounted],
+  );
+
+  /**
+   * A sugestão `<base>/<slug>` (RN-501, ADR 0142), que NUNCA clobbera o que
+   * foi digitado.
+   *
+   * Ela entra em dois casos, e só neles: o campo está vazio e nada foi
+   * sugerido ainda, ou o campo contém exatamente a sugestão anterior desta
+   * tela (o nome do projeto mudou no passo de detalhes, e a sugestão
+   * acompanha). Campo com qualquer outra coisa — inclusive vazio DEPOIS de
+   * o usuário ter apagado a sugestão — fica como está.
+   *
+   * Slug vazio (a adoção, onde o nome vem do provider) não vira segmento
+   * inventado: `caminhoSugeridoNaBase` devolve vazio e o campo continua
+   * vazio, com `canAdvanceFromWorkspace` segurando o passo até alguém
+   * digitar.
+   */
+  useEffect(() => {
+    if (modoDeWorkspace !== 'mounted') return;
+    const sugestao = caminhoSugeridoNaBase(baseDeProjetos, slug);
+    if (sugestao === '' || sugestao === caminhoLocal) return;
+    const campoLivre =
+      caminhoSugeridoAplicado === null
+        ? caminhoLocal === ''
+        : caminhoLocal === caminhoSugeridoAplicado;
+    if (!campoLivre) return;
+    setCaminhoLocal(sugestao);
+    setCaminhoSugeridoAplicado(sugestao);
+  }, [
+    modoDeWorkspace,
+    baseDeProjetos,
+    slug,
+    caminhoLocal,
+    caminhoSugeridoAplicado,
+  ]);
 
   const stepKeys = useMemo<StepKey[]>(() => {
     const keys: StepKey[] = ['mode', 'provider'];
@@ -547,7 +654,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       {currentStep === 'workspace' && (
         <div>
           <div className={styles.providerGrid}>
-            {MODOS_DE_WORKSPACE.map((m) => (
+            {modosDeWorkspaceOferecidos.map((m) => (
               <button
                 key={m.id}
                 type="button"
@@ -557,7 +664,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                 ]
                   .filter(Boolean)
                   .join(' ')}
-                onClick={() => setModoDeWorkspace(m.id)}
+                onClick={() => setModoDeWorkspaceEscolhido(m.id)}
               >
                 <span className={styles.providerLabel}>{t(m.labelKey)}</span>
                 <span className={styles.providerDesc}>{t(m.descKey)}</span>
@@ -595,17 +702,34 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   : t('workspace.hintRunner')}
               </div>
               {modoDeWorkspace === 'mounted' ? (
-                // O aviso é a decisão do dono do produto declarada na tela: o
-                // caminho é livre, e livre só funciona se estiver montado. Sem
-                // isto, a recusa da api (RN-422) chegaria como surpresa.
-                <Alert tone="warning">
-                  <Trans
-                    i18nKey="workspace.mountedWarning"
-                    ns="newProject"
-                    values={{ caminho: caminhoLocal.trim() || '/sua/pasta' }}
-                    components={{ strong: <strong />, code: <code /> }}
-                  />
-                </Alert>
+                // DOIS estados, e são os dois que o backend realmente tem
+                // (RN-500/RN-501): dentro da base consentida a criação passa,
+                // e a pasta nem precisa existir — `materializarWorkspaceMontado`
+                // a cria quando a Infra sobe o container (ADR 0142); fora
+                // dela a api RECUSA com 400, em `resolverWorkspacePath`.
+                // O aviso anterior era anterior ao ADR 0141 e dizia que o
+                // caminho era livre e que o usuário precisava montá-lo — as
+                // duas coisas deixaram de ser verdade quando a base virou
+                // uma só, montada por identidade.
+                caminhoForaDaBase ? (
+                  <Alert tone="warning">
+                    <Trans
+                      i18nKey="workspace.mountedOutsideBase"
+                      ns="newProject"
+                      values={{ base: baseDeProjetos ?? '' }}
+                      components={{ strong: <strong />, code: <code /> }}
+                    />
+                  </Alert>
+                ) : (
+                  <div className={styles.baseNote}>
+                    <Trans
+                      i18nKey="workspace.mountedUnderBase"
+                      ns="newProject"
+                      values={{ base: baseDeProjetos ?? '' }}
+                      components={{ strong: <strong />, code: <code /> }}
+                    />
+                  </div>
+                )
               ) : (
                 // `runner`: nada aqui trava a criação (RN-423) — o caminho só é
                 // confirmado quando o runner conectar, nunca "recusado na hora"

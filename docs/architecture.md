@@ -236,6 +236,22 @@ Two UI checks are automatic: contrast (`lib/contraste.ts`, a test over
 `design/tokens.css`) and layout (`scripts/dev/validacao-visual.js`, run in
 the browser). Explained in `design/README.md`.
 
+**The installation decides what the project wizard offers.** `getProjectsBase`
+(`lib/api-client.ts`) reads `GET /workspaces/:workspaceId/projects-base` — the
+single mounted-projects base of this installation ([ADR
+0141](adr/0141-base-unica-dos-projetos-montados.md)) — and the New Project
+wizard is its only caller ([RN-513](business-rules.md#rn-513)). `projectsBase:
+null` is a normal state, not a failure: the installation has no
+`BRABO_PROJECTS_BASE`, so the Mounted folder card is not offered at all and
+`container` stays the default. The same holds while the answer is in flight and
+when the query FAILS — unknown never becomes an offer, the same rule as
+[RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468). With a
+base, the card is PRE-SELECTED and the path field opens on `<base>/<slug>`,
+composed by `caminhoSugeridoNaBase` (`lib/wizard.ts`) — a pure function, next
+to `caminhoDentroDaBase`, which answers "is this path under the base?" by
+SEGMENT and mirrors the api's `dentroDoEscopo`. Neither the pre-selection nor
+the suggestion overwrites a human choice.
+
 **The folder picker is the web's one TWO-TRANSPORT read**, and the interface
 that makes it one lives in `lib/fs-browser.ts`
 ([RN-504](business-rules.md#rn-504)). `FsBrowser` — `listarDiretorio` /

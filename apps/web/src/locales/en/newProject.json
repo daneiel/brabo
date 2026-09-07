@@ -78,7 +78,8 @@
     "preparing": "Preparing…",
     "hintMounted": "absolute path, as it appears INSIDE the container",
     "hintRunner": "absolute path, as it appears on YOUR machine",
-    "mountedWarning": "The folder needs to sit <strong>inside the projects base</strong> the operator configured (<code>BRABO_PROJECTS_BASE</code>) — the only folder of your machine the api and engine containers can see. It <strong>doesn't need to exist yet</strong>: it's created when Infra starts the project's container.",
+    "mountedUnderBase": "The folder sits <strong>inside this installation's projects base</strong> (<code>{{base}}</code>) — the only folder of your machine the api and engine containers can see. It <strong>doesn't need to exist yet</strong>: it's created when Infra starts the project's container.",
+    "mountedOutsideBase": "This path is <strong>outside this installation's projects base</strong> (<code>{{base}}</code>), and the api <strong>refuses to create</strong> a mounted project outside it. Pick a folder under <code>{{base}}</code>.",
     "runnerHint": {
       "intro": "After creating the project, run this on your machine:",
       "introExisting": "The project already exists — run this on your machine:",

@@ -52,6 +52,7 @@ import type {
   ProjectCardSummary,
   ProjectFolders,
   ProjectMemberWithUser,
+  ProjectsBase,
   ProjectUnreadEvents,
   ProposedAction,
   ProvisionedRepository,
@@ -274,6 +275,17 @@ export const getWorkspace = (workspaceId: string) =>
 
 export const listProjects = (workspaceId: string) =>
   get<Project[]>(`/workspaces/${workspaceId}/projects`);
+/**
+ * A base dos projetos montados desta instalação (ADR 0141, RN-500).
+ *
+ * `projectsBase: null` é estado NORMAL, nunca erro: a instalação não tem
+ * `BRABO_PROJECTS_BASE`, e é assim que o assistente de criação aprende a NÃO
+ * oferecer o modo Pasta montada (RN-513). O valor é o mesmo para todo
+ * workspace — é configuração da INSTALAÇÃO, e `workspaceId` está na rota só
+ * porque é o que dá escopo ao `RolesGuard` (`maintainer`).
+ */
+export const getProjectsBase = (workspaceId: string) =>
+  get<ProjectsBase>(`/workspaces/${workspaceId}/projects-base`);
 /**
  * O navegador de pastas servido pela api (RN-504), escopado à base de
  * projetos montados. `path` omitido é a base.

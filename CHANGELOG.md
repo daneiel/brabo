@@ -79,6 +79,53 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: o assistente de novo projeto passa a **oferecer Pasta montada quando
+  a base existe** — e a **pré-selecioná-la**, com `<base>/<slug>` sugerido e
+  editável (RN-513,
+  [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) ponto 4). Sem base
+  (`projectsBase: null`), o card **não é oferecido** e `container` continua o
+  padrão.
+
+  Duas metades disto **já eram regra e nunca tinham chegado à tela**: "não
+  oferecer sem base" é a RN-500, e "sugerir `<base>/<slug>`" é a RN-501, cujo
+  ADR 0142 adiou a validação de disco justamente para que o assistente pudesse
+  propor uma pasta que ainda não existe. Até aqui,
+  `GET /workspaces/:workspaceId/projects-base` não tinha **chamador nenhum** no
+  web e o card era oferecido incondicionalmente — numa instalação sem
+  `BRABO_PROJECTS_BASE`, escolher o modo terminava numa recusa 400 da api
+  depois de a pessoa ter escolhido, digitado o caminho e chegado ao fim do
+  assistente. O que é **novo** é a pré-seleção, que revisa o default do ADR
+  0072 **só para a instalação local**, onde a base foi consentida por um humano
+  no host (RN-511). O enum `project_execution_mode` não muda, nenhum modo novo
+  nasce, e a conversão de modo (ADR 0111) não é tocada.
+
+  **Desconhecido não vira oferta.** Enquanto a resposta não chegou, e também
+  quando a consulta **falha** (403, rede, api fora), o card não aparece e
+  `container` segue selecionado: falha não é permissão para oferecer um modo
+  cuja pré-condição não se conseguiu confirmar — é a régua da RN-088/RN-468 (o
+  produto não colapsa "não sei" com "não tem") e a dos ADRs 0041/0042, onde
+  capability só se declara quando provada. A consulta nasce com o **assistente**
+  e não com o passo, que é o quinto: montada ali, o card apareceria piscando com
+  a pessoa já olhando a tela.
+
+  **Nem a pré-seleção nem a sugestão passam por cima de ninguém.** A base chega
+  por rede, sempre depois do primeiro render, então a escolha humana fica
+  guardada separada do modo vigente e vence a pré-seleção — trocar o modo
+  debaixo da mão de quem já clicou é defeito, não conveniência. E a sugestão só
+  escreve no campo vazio ou por cima da sugestão anterior dela mesma; caminho
+  digitado nunca é reescrito, nem quando o nome do projeto muda, e slug vazio (a
+  adoção) deixa o campo vazio em vez de inventar segmento.
+
+  **O aviso do modo parou de mentir.** O texto era anterior ao ADR 0141 e dizia
+  que o caminho era livre e só funcionaria se o usuário o montasse — as duas
+  coisas deixaram de ser verdade quando a base virou uma só, montada por
+  identidade. Agora são os **dois estados que o backend realmente tem**: sob a
+  base, nota neutra (a criação passa, e a pasta nem precisa existir — a Infra a
+  cria ao subir o container); fora dela, aviso de que a api **recusa a criação**,
+  **nomeando** a base em vez de mandar procurar a variável. Campo vazio não é
+  "fora da base", e a comparação é por **segmento** — `/base-outra` não está
+  dentro de `/base`.
+
 - **docker,scripts**: o **broker de container sobe por padrão no compose local**,
   e continua sob `profiles: ["container-broker"]` em produção (RN-512,
   [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) ponto 3). Os dois
