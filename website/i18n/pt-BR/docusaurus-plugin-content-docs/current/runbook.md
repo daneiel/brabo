@@ -110,8 +110,10 @@ pelo daemon Docker do host, o `container_start` de um projeto montado vai para
 o **broker**, exatamente como no modo Container — ele deixou de exigir um
 `brabo-runner` conectado. Só o modo **Runner** continua indo pelo runner, na
 máquina do próprio usuário, porque aquela pasta está num lugar que este
-servidor não enxerga. Subir o broker (`--profile container-broker`) passa a
-fazer parte da preparação, se você quer container para projetos montados. Ele
+servidor não enxerga. Localmente o broker já está de pé — ele vem com
+`pnpm dev` desde o [ADR 0146](adr/0146-base-consentida-no-bootstrap.md),
+justamente por ser o caminho do modo padrão; em produção ele ainda pede
+`--profile container-broker`. Ele
 tem DUAS raízes e nenhuma substitui a outra: `PROJECT_WORKSPACES_HOST_ROOT`
 (modo Container) e `BRABO_PROJECTS_HOST_BASE` (modo Pasta montada, derivada de
 `BRABO_PROJECTS_BASE` no compose). A que faltar é NOMEADA na recusa, sem tocar

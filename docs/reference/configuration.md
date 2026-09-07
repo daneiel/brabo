@@ -496,6 +496,14 @@ This changes **when** the broker runs, never **what** it accepts: the five
 containment layers are untouched, and it still receives a `projectId` plus one of
 five operations, with no parameter anywhere to write `privileged` or a free `-v`.
 
+Coming up by default is what exposed a defect that had never mattered: the local
+image installed its dependencies on START, and the broker's only network is
+`internal: true`, so there is no registry to reach — the container died with
+`getaddrinfo EAI_AGAIN registry.npmjs.org`, and with no healthcheck `up --wait`
+still printed `Healthy`. Dependencies now install at BUILD time and the service
+has a healthcheck; the network was not touched, and must not be. The operational
+detail lives in the [runbook](../runbook.md#broker-de-container).
+
 In production, bring it up explicitly:
 
 ```bash
