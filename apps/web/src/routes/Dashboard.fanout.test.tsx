@@ -64,6 +64,7 @@ function projeto(i: number): Project {
   executionMode: 'container',
   workspacePath: null,
   workspaceVerifiedAt: null,
+  mirrorPath: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

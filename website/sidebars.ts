@@ -123,6 +123,7 @@ const sidebars: SidebarsConfig = {
         'explanation/gates',
         'explanation/auditoria-fluxo-vs-codigo',
         'explanation/historico-de-fases',
+        'explanation/fase-28-pasta-do-usuario',
       ],
     },
     {

@@ -29,8 +29,11 @@ import { NOME_ARQUIVO_CHAVE, NOME_ARQUIVO_CONFIG } from './device-key.ts';
 
 const CLI = fileURLToPath(new URL('./index.ts', import.meta.url));
 
-function rodarNaPasta(cwd: string): { stderr: string; status: number | null } {
-  const resultado = spawnSync(process.execPath, [CLI], {
+function rodarNaPasta(
+  cwd: string,
+  extras: string[] = [],
+): { stdout: string; stderr: string; status: number | null } {
+  const resultado = spawnSync(process.execPath, [CLI, ...extras], {
     cwd,
     encoding: 'utf-8',
     // `INIT_CWD` vence `process.cwd()` em `lerArgumentos` — o vitest o herda
@@ -42,7 +45,11 @@ function rodarNaPasta(cwd: string): { stderr: string; status: number | null } {
     // não um teste lento.
     timeout: 30_000,
   });
-  return { stderr: resultado.stderr ?? '', status: resultado.status };
+  return {
+    stdout: resultado.stdout ?? '',
+    stderr: resultado.stderr ?? '',
+    status: resultado.status,
+  };
 }
 
 describe('brabo-runner sem credencial: a saída DIZ o que houve (RN-475)', () => {
@@ -97,5 +104,46 @@ describe('brabo-runner sem credencial: a saída DIZ o que houve (RN-475)', () =>
     const semKid = rodarNaPasta(dir).stderr;
 
     expect(semArquivo).not.toBe(semKid);
+  });
+});
+
+/**
+ * O segundo defeito de JUNÇÃO deste arquivo, e o mesmo raciocínio do primeiro
+ * (RN-475): `service` é despachado ANTES de `lerArgumentos`, e nenhum teste de
+ * unidade de `servico.ts` prova isso — ele passaria idêntico com o despacho no
+ * lugar errado, e aí `service status` numa pasta sem credencial imprimiria o
+ * bloco de uso em vez da resposta. Processo de verdade, `cwd` de verdade,
+ * pasta SEM chave nenhuma (RN-518).
+ */
+describe('brabo-runner service é despachado antes de exigir credencial (RN-518)', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(homedir(), '.brabo-runner-servico-spec-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('`service status --project <id>` responde NÃO INSTALADO (4), nunca o bloco de uso', () => {
+    const { stdout, stderr, status } = rodarNaPasta(dir, [
+      'service',
+      'status',
+      '--project',
+      'proj-de-teste',
+    ]);
+
+    expect(status).toBe(4);
+    expect(stdout).toContain('NÃO INSTALADO');
+    expect(stderr).not.toContain('uso: brabo-runner');
+  });
+
+  it('subcomando desconhecido cai no uso DE SERVICE, não no do CLI inteiro', () => {
+    const { stderr, status } = rodarNaPasta(dir, ['service', 'start']);
+
+    expect(status).toBe(2);
+    expect(stderr).toContain('uso: brabo-runner service');
+    expect(stderr).toContain('ADR 0147');
   });
 });

@@ -50,6 +50,37 @@ defmodule EngineWeb.RunnerSocket do
 
   def connect(_params, _socket, _connect_info), do: {:error, %{reason: "unauthorized"}}
 
+  @doc """
+  O identificador do socket, no formato que o mecanismo de desconexão forçada
+  do Phoenix usa (`Endpoint.broadcast(id, "disconnect", %{})`) — ADR 0147
+  ponto 6, RN-520.
+
+  Ele DEIXOU de ser `nil`, e a razão é que revogar uma credencial passou a
+  precisar alcançar a conexão viva. Sem `id/1`, o transporte não se inscreve
+  em tópico nenhum e não há como pedir a ele que encerre; parar só o processo
+  do CANAL deixaria o socket de pé e o cliente Phoenix tentando reentrar no
+  tópico para sempre, com um ticket já consumido — degradação silenciosa, que
+  é exatamente o defeito que o ADR 0147 existe para não repetir.
+
+  Os TRÊS segmentos são o escopo: `kind` separa o CLI (`runner`) da aba
+  Terminal da web (`terminal`), e o par projeto/usuário é a granularidade que
+  o ticket carrega — não há mais fina, porque a identidade da CREDENCIAL não
+  chega até aqui (ver `Engine.Runners.Revogacao`).
+  """
+  @spec socket_id(term(), term(), term()) :: String.t() | nil
+  def socket_id(kind, project_id, user_id)
+      when is_binary(kind) and is_binary(project_id) and is_binary(user_id) do
+    "runner_socket:#{kind}:#{project_id}:#{user_id}"
+  end
+
+  def socket_id(_kind, _project_id, _user_id), do: nil
+
   @impl true
+  def id(%{assigns: %{kind: kind, project_id: project_id, user_id: user_id}}),
+    do: socket_id(kind, project_id, user_id)
+
+  # `nil` continua sendo resposta válida: socket sem os três assigns (nunca
+  # acontece pelo `connect/3` acima, mas o contrato do Phoenix permite) só
+  # perde a desconexão forçada, nunca a conexão.
   def id(_socket), do: nil
 end

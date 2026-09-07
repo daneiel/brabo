@@ -19,7 +19,9 @@
  * chave local do modo automático), `channel.ts` (protocolo Phoenix),
  * `exec.ts` (execução não-interativa), `pty.ts` (terminal interativo),
  * `guard.ts` (barreira best-effort de `cwd`), `fs-browser.ts` (navegação
- * de pasta local, sem a barreira de `guard.ts` — ver o docblock dele).
+ * de pasta local, sem a barreira de `guard.ts` — ver o docblock dele),
+ * `espelho-guard.ts` (o laço origem↔destino, irmão de `guard.ts`) e
+ * `espelho.ts` (a cópia numa direção só, que nunca apaga — ADR 0147, RN-516).
  */
 
 import { realpathSync } from 'node:fs';
@@ -38,6 +40,7 @@ import {
   enviarExecResult,
   enviarFsHomeDirReply,
   enviarFsListDirReply,
+  enviarMirrorSyncResult,
   enviarPtyData,
   enviarPtyError,
   enviarPtyOpened,
@@ -50,6 +53,8 @@ import {
   type ExecMessage,
   type FsHomeDirMessage,
   type FsListDirMessage,
+  type MirrorSyncMessage,
+  type MirrorSyncResultMessage,
   type PtyOpenMessage,
 } from './channel.ts';
 import {
@@ -73,6 +78,8 @@ import {
   PONTO_DE_MONTAGEM,
   type DockerPort,
 } from '@brabo/docker-port';
+import { mesmoCaminho } from './espelho-guard.ts';
+import { sincronizarEspelho } from './espelho.ts';
 import { executarComando } from './exec.ts';
 import { diretorioInicial, listarDiretorio } from './fs-browser.ts';
 import {
@@ -88,6 +95,16 @@ import {
 } from './guard.ts';
 import { carregarNodePty } from './native-pty-loader.ts';
 import { GerenciadorDePty } from './pty.ts';
+import {
+  desinstalar,
+  ehSubcomandoConhecido,
+  instalar,
+  status as statusDoServico,
+  usoDeServico,
+  type ContextoDoServico,
+  type RespostaDoServico,
+} from './servico.ts';
+import { sistemaDeServicoReal } from './servico-sistema.ts';
 
 interface Argumentos {
   projectId: string;
@@ -116,7 +133,78 @@ function uso(): never {
       'Configurações do projeto → Tokens de acesso — nunca gravado em disco por este ' +
       'CLI. Sem token, a chave de dispositivo local (modo automático) é usada.',
   );
+  console.error(
+    'serviço de usuário: "brabo-runner service install|uninstall|status" instala o runner ' +
+      'como systemd --user (Linux) ou LaunchAgent (macOS) — nunca serviço de sistema, nunca ' +
+      'root; Windows fora de escopo (ADR 0147 ponto 5).',
+  );
   process.exit(2);
+}
+
+/**
+ * O comando ABSOLUTO que a unit de serviço deve executar — a única coisa sobre
+ * a instalação que só `index.ts` sabe responder, porque depende de qual dos
+ * três caminhos de distribuição está rodando AGORA (ADR 0103/0106/0112).
+ *
+ * No binário compilado (`bun build --compile`), `process.execPath` É o binário
+ * e `process.argv[1]` é um caminho VIRTUAL de dentro do bundle (`/$bunfs/...`)
+ * que não existe no disco — pôr esse caminho numa unit produziria um serviço
+ * que nunca sobe. Sob `node`, o comando é `node <script real>`, com
+ * `realpathSync` resolvendo o symlink que `npm install -g` cria em
+ * `node_modules/.bin/brabo-runner`: o symlink some numa reinstalação, o alvo
+ * dele não.
+ */
+export function comandoDoRunnerParaServico(): string[] {
+  const script = process.argv[1];
+  if (import.meta.url.includes('/$bunfs/') || !script || script.startsWith('/$bunfs/')) {
+    return [process.execPath];
+  }
+  try {
+    return [process.execPath, realpathSync(script)];
+  } catch {
+    return [process.execPath, script];
+  }
+}
+
+/**
+ * `brabo-runner service <sub>` — despachado ANTES de `lerArgumentos`, porque
+ * nenhum dos três subcomandos conecta a nada: exigir credencial e pasta
+ * verificada para PERGUNTAR se há um serviço instalado seria impedir
+ * justamente quem precisa da resposta. A resolução de projeto e de pasta reusa
+ * as funções de sempre (`lerConfigLocal`, `lerChaveDeDispositivo`,
+ * `resolverDir`, `validarDirDentroDoHomeNoLinux`) — nenhuma régua nova.
+ */
+function rodarSubcomandoDeServico(argv: string[]): RespostaDoServico {
+  const sub = argv[3];
+  if (!ehSubcomandoConhecido(sub)) return usoDeServico();
+
+  const ctx: ContextoDoServico = {
+    argv,
+    cwd: process.env.INIT_CWD ?? process.cwd(),
+    plataforma: process.platform,
+    home: homedir(),
+    xdgConfigHome: process.env.XDG_CONFIG_HOME ?? null,
+    uid: typeof process.getuid === 'function' ? process.getuid() : null,
+    comandoDoRunner: comandoDoRunnerParaServico(),
+    path: process.env.PATH ?? '',
+    sistema: sistemaDeServicoReal,
+  };
+
+  const resolverDirDoServico = (bruto: string, cwd: string): string =>
+    resolverDir(bruto, cwd, cwd);
+
+  if (sub === 'install') {
+    return instalar(ctx, {
+      lerConfig: lerConfigLocal,
+      lerChave: lerChaveDeDispositivo,
+      resolverDir: resolverDirDoServico,
+      validarDir: validarDirDentroDoHomeNoLinux,
+    });
+  }
+  if (sub === 'uninstall') {
+    return desinstalar(ctx, { lerConfig: lerConfigLocal, resolverDir: resolverDirDoServico });
+  }
+  return statusDoServico(ctx, { lerConfig: lerConfigLocal });
 }
 
 function lerArgumentos(argv: string[]): Argumentos {
@@ -281,6 +369,18 @@ export interface EstadoDoRunner {
   gerenciadorPty: GerenciadorDePty;
   docker: DockerPort;
   containerAtivo: string | null;
+  /**
+   * O destino do espelho CONCEDIDO no join desta conexão (ADR 0147 ponto 4,
+   * RN-516), ou `null` — que é o estado normal. Vive aqui e em lugar nenhum
+   * além: nunca em arquivo de configuração, nunca em variável de ambiente.
+   * Um destino global faria o artefato do projeto B aterrissar na pasta do
+   * projeto A, e o usuário descobriria isso pelo conteúdo, não por um erro.
+   *
+   * Zerado quando a conexão cai, junto com `canalAtual`: a concessão é da
+   * CONEXÃO, e um destino que sobreviveu à queda seria o servidor afirmando
+   * o que este processo já não pode confirmar.
+   */
+  destinoDoEspelho: string | null;
 }
 
 export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Promise<void> {
@@ -476,6 +576,94 @@ export async function tratarContainerRemove(
 }
 
 /**
+ * `mirror_sync` (ADR 0147 pontos 2/4/8, RN-516) — UMA rodada do espelho, num
+ * momento NOMEADO pelo engine. Nunca um watcher deste lado: watcher é
+ * trabalho ilimitado disparado por qualquer coisa, inclusive pelas escritas
+ * do próprio espelho, que é laço.
+ *
+ * A PRIMEIRA coisa é conferir o destino contra o que foi concedido no join
+ * desta conexão. O runner não obedece um destino que o servidor mandou e a
+ * concessão não cobre — é isso que impede o artefato de um projeto de
+ * aterrissar na pasta de outro, e é por isso que o destino viaja na concessão
+ * e não em configuração local.
+ *
+ * Recusa e falha viram LOG **e reporte**, nunca exceção que derruba o runner e
+ * nunca silêncio. O desfecho REAL da rodada volta pelo canal em
+ * `mirror_sync_result` (ADR 0147 ponto 7, RN-517) — DEPOIS de a cópia
+ * terminar, nunca um "ok" otimista antes —, com a contagem que
+ * `sincronizarEspelho` devolveu (nunca recontada aqui) ou com o erro nomeado.
+ *
+ * As TRÊS saídas reportam, e é isso que faz a tela conseguir distinguir os
+ * três estados da RN-088: a recusa por destino não concedido e a falha da
+ * cópia são `sucesso: false` com mensagens DIFERENTES, e o sucesso é
+ * `sucesso: true` mesmo quando copiou zero arquivo — "sincronizou e não havia
+ * nada a copiar" é um estado, não um vazio.
+ *
+ * Reportar é best-effort de verdade: sem canal (a conexão caiu entre o pedido
+ * e o fim da cópia) não há a quem contar, e a rodada que já aconteceu não é
+ * desfeita por isso.
+ */
+export async function tratarMirrorSync(
+  estado: EstadoDoRunner,
+  msg: MirrorSyncMessage,
+): Promise<void> {
+  const concedido = estado.destinoDoEspelho;
+
+  if (!concedido || !mesmoCaminho(concedido, msg.destino)) {
+    const explicacao =
+      `o destino ${JSON.stringify(msg.destino)} não foi concedido nesta ` +
+      `conexão (concedido: ${concedido ? JSON.stringify(concedido) : 'nenhum'}). ` +
+      `Se o destino do projeto mudou, reconecte o brabo-runner: a concessão é do join.`;
+    console.warn(`mirror_sync ${msg.ref}: RECUSADO — ${explicacao}`);
+    // `destino` fica de FORA: reportar o destino que veio na mensagem faria a
+    // api congelar, como "onde a rodada escreveu", uma pasta que este runner
+    // recusou justamente por não ter permissão de escrever nela.
+    reportarEspelho(estado, { ref: msg.ref, sucesso: false, erro: explicacao });
+    return;
+  }
+
+  try {
+    const resultado = await sincronizarEspelho({ workspace: estado.dir, destino: concedido });
+    console.log(
+      `mirror_sync ${msg.ref} (${msg.momento}): ${resultado.copiados} arquivo(s) ` +
+        `copiado(s) para ${resultado.destino} ` +
+        `(pulados=${resultado.pulados}, recusados=${resultado.recusados}). ` +
+        `Nada foi apagado — o espelho nunca remove.`,
+    );
+    reportarEspelho(estado, {
+      ref: msg.ref,
+      sucesso: true,
+      // O destino REAL, resolvido por `realpath` depois do `mkdir -p` — não o
+      // que veio na mensagem: é ele que a api congela na linha.
+      destino: resultado.destino,
+      copiados: resultado.copiados,
+      pulados: resultado.pulados,
+      recusados: resultado.recusados,
+    });
+  } catch (erro) {
+    const explicacao = mensagemDeErro(erro);
+    console.warn(`mirror_sync ${msg.ref}: falhou — ${explicacao}`);
+    reportarEspelho(estado, {
+      ref: msg.ref,
+      sucesso: false,
+      destino: concedido,
+      erro: explicacao,
+    });
+  }
+}
+
+/**
+ * Empurra o desfecho, se ainda houver canal. Sem canal não há a quem contar —
+ * e uma cópia que já aconteceu não vira falha por a conexão ter caído depois
+ * dela (a próxima rodada reporta a próxima verdade).
+ */
+function reportarEspelho(estado: EstadoDoRunner, msg: MirrorSyncResultMessage): void {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+  enviarMirrorSyncResult(canal, msg);
+}
+
+/**
  * Uma "rodada" de conexão: pede um ticket FRESCO, entra no canal, e só volta
  * quando a conexão cai (ou lança se o join for recusado/não puder
  * conectar). A `credencial` é resolvida uma vez só, em `lerArgumentos` — mas
@@ -517,12 +705,19 @@ async function conectarERodar(
       onContainerStart: (msg) => void tratarContainerStart(estado, msg),
       onContainerStop: (msg) => void tratarContainerStop(estado, msg),
       onContainerRemove: (msg) => void tratarContainerRemove(estado, msg),
+      onMirrorSync: (msg) => void tratarMirrorSync(estado, msg),
       onDisconnected: () => resolverQueda(),
     },
   });
 
   estado.canalAtual = conexao.channel;
+  // ADR 0147 ponto 4 (RN-516): o destino do espelho é o que o SERVIDOR
+  // concedeu neste join, e vale só enquanto esta conexão viver.
+  estado.destinoDoEspelho = conexao.espelho?.destino ?? null;
   console.log(`conectado ao projeto ${projectId} — aguardando comandos aprovados...`);
+  if (estado.destinoDoEspelho) {
+    console.log(`espelho concedido: o trabalho será copiado para ${estado.destinoDoEspelho}`);
+  }
 
   // RN-423 (ADR 0104): confirma o `--dir` desta execução pro engine/api —
   // é este runner quem tem autoridade sobre o disco de verdade. Uma vez
@@ -531,6 +726,8 @@ async function conectarERodar(
 
   await queda;
   estado.canalAtual = null;
+  // A concessão morre com a conexão, junto com o canal — ver `EstadoDoRunner`.
+  estado.destinoDoEspelho = null;
   if (!deveParar()) {
     console.warn('conexão com o engine caiu — pedindo ticket novo e reconectando...');
   }
@@ -662,6 +859,17 @@ async function main(): Promise<void> {
     return;
   }
 
+  // ANTES de `lerArgumentos` de propósito (ADR 0147 ponto 5, RN-518): `service`
+  // não conecta a nada, e o subcomando que mais importa (`status`) precisa
+  // funcionar numa pasta cuja configuração está quebrada — que é justamente
+  // quando alguém pergunta.
+  if (process.argv[2] === 'service') {
+    const resposta = rodarSubcomandoDeServico(process.argv);
+    const escrever = resposta.fluxo === 'erro' ? console.error : console.log;
+    for (const linha of resposta.linhas) escrever(linha);
+    process.exit(resposta.codigo);
+  }
+
   const { projectId, dir, apiUrl, credencial } = lerArgumentos(process.argv);
 
   const autenticacaoDescricao =
@@ -685,6 +893,7 @@ async function main(): Promise<void> {
     dir,
     docker: new DockerViaCli(),
     containerAtivo: null,
+    destinoDoEspelho: null,
     gerenciadorPty: new GerenciadorDePty(
       dir,
       (sessionRef, dataBase64) => {

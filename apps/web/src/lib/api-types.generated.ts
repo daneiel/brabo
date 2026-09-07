@@ -441,6 +441,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/projects/{projectId}/mirror-sync-result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The local agent reports the outcome of a mirror round (RN-517)
+         * @description Called only by the engine, after the runner pushes `mirror_sync_result` over the channel — the SAME path as `workspace_confirm` (runner → channel → engine → api), never a second mechanism: the engine reports, it does not write the table. This is TELEMETRY, not a domain event: never `session_events` (a mirror round has no session and `session_id` is `NOT NULL`, the same reasoning that made `rag_searches` a table) and never a `proposed_action` (the mirror write is configuration the user declared, not an agent asking to act). `ok` is what decides the outcome — never the presence of a count or of a message: a round that copied 0 files is normal and must not be indistinguishable from one that never ran. Recording never breaks what it measures: the copy is already done when this is called, and the engine only logs a refusal here. A project whose destination was cleared meanwhile STILL records — the round happened, and its error is usually what explains what went wrong.
+         */
+        post: operations["InternalProjectsController_mirrorSyncResult"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/projects/{projectId}/product-metrics": {
         parameters: {
             query?: never;
@@ -2103,6 +2123,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/mirror-path": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Declares (or clears) the project's mirror destination
+         * @description The absolute path, ON THE USER MACHINE, where the local agent copies the work to (RN-515, ADR 0147) — a folder OUTSIDE the mounted base, which is the whole reason the mirror exists. Per project and never global: one global destination would land project B artifacts in project A's folder, and the user would find out from the contents, not from an error. `mirrorPath: null` CLEARS it and turns the mirror off — the key is required, omitting it is a 400, because a body that omits the field would be indistinguishable from asking to clear. `null` is the NORMAL state of a project. `maintainer`, the same minimum as `execution-mode` and `projects-base`: this route talks about a path on the operator's own filesystem. It validates ONLY the LEXICAL shape and refuses, with 400, a destination inside `workspacePath` or containing it (both directions of the same loop), and any destination at all on a `container` project. It never touches disk: the API cannot see the machine where the destination will live. Writing the mirror is NOT a proposed_action — it is configuration the user declared, not an agent asking to act.
+         */
+        put: operations["ProjectsController_setMirrorPathRoute"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/mirror-state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the last mirror round did (RN-517)
+         * @description Telemetry the local agent pushed over the channel after copying the work to the user folder (ADR 0147, point 7) — never the event log, because a mirror round has no session and `session_events.session_id` is `NOT NULL` (the same reasoning that made `rag_searches` a table). THREE answers that never collapse into one (RN-088): `never` (no round ever reported), `synced` (the last round copied — `filesCopied` may be `0`, which means "looked and there was nothing to copy") and `failed`. A failure never erases the last successful sync, and a success never erases the last error: which one is CURRENT comes from comparing the two timestamps, so the screen can say "failing since today, last good copy was yesterday with 412 files". `lastDestination` is FROZEN — it diverges from `mirrorPath` after someone changes the destination, because the grant travels in the join and only changes when the runner reconnects (RN-516). `viewer`, the same minimum as reading the project, which already carries `mirrorPath`.
+         */
+        get: operations["ProjectsController_mirrorStateRoute"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/model-binding": {
         parameters: {
             query?: never;
@@ -2459,7 +2519,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Lista as próprias chaves de dispositivo deste projeto
+         * @description Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum.
+         */
+        get: operations["RunnerDeviceKeysController_listDeviceKeys"];
         put?: never;
         /**
          * Registra a chave pública de um dispositivo do runner local
@@ -2484,7 +2548,7 @@ export interface paths {
         post?: never;
         /**
          * Revoga uma chave de dispositivo própria
-         * @description Idempotente — revogar de novo não é erro.
+         * @description Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA o runner conectado deste usuário no projeto da chave: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. O alvo é `{projeto, usuário}` e não `{chave}` — um runner do MESMO usuário conectado com PAT ou com outra chave também cai, e reconecta sozinho se a credencial dele ainda valer. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.
          */
         delete: operations["RunnerDeviceKeysController_revokeDeviceKey"];
         options?: never;
@@ -6073,6 +6137,48 @@ export interface components {
              */
             status: "todo" | "in_progress" | "in_review" | "done";
         };
+        MirrorSyncResultInternalDto: {
+            /**
+             * @description The REAL outcome of the copy, reported by the local agent after it finished — never an optimistic "ok" before the round ends.
+             * @example true
+             */
+            ok: boolean;
+            /**
+             * @description The destination the round actually resolved (success) or tried to use (failure), on the USER machine. FROZEN in the row: showing the project's current destination next to yesterday's copy would be the screen asserting about a folder that round never touched. Omitted when the failure is about the destination itself.
+             * @example /home/you/mirrors/store
+             */
+            destination?: string;
+            /**
+             * @description Regular files copied in this round. `0` is a number, not an absence — "synced and copied nothing" is a state of its own (RN-088).
+             * @example 412
+             */
+            filesCopied?: number;
+            /**
+             * @description Entries git listed that are not regular files — a nested repository (a dev agent's worktree is one), a symlink, or a file that vanished between the listing and the copy.
+             * @example 3
+             */
+            filesSkipped?: number;
+            /**
+             * @description Targets the per-file guard refused (a symlink escaping the destination). Counted, never swallowed.
+             * @example 0
+             */
+            filesRefused?: number;
+            /**
+             * @description The NAMED failure message. Stored truncated when very long, saying it was truncated. It never erases the last successful sync — which row is CURRENT is decided by comparing the two timestamps.
+             * @example o espelho não conseguiu listar o trabalho com o git: not a git repository
+             */
+            error?: string;
+        };
+        MirrorSyncResultResponseDto: {
+            /** @example true */
+            recorded: boolean;
+            /**
+             * @description Which of the three states is CURRENT after this write. `never` is unreachable here (every write stamps one of the two timestamps) and is listed because the vocabulary is the same one the screen reads.
+             * @example synced
+             * @enum {string}
+             */
+            status: "never" | "synced" | "failed";
+        };
         ModelBindingResponseDto: {
             /** @example 01JC4Z0000BINDING00000000001 */
             id: string;
@@ -6909,6 +7015,39 @@ export interface components {
              */
             createdAt: string;
         };
+        ProjectMirrorStateResponseDto: {
+            /**
+             * @description The destination declared TODAY (`projects.mirror_path`, RN-515). `null` means the project has no mirror — the NORMAL state, and what makes the screen hide this line entirely instead of inventing an absence.
+             * @example /home/you/mirrors/store
+             */
+            mirrorPath: Record<string, never> | null;
+            /**
+             * @description `never` — no runner has reported a round yet (there is no row). `synced` — the last round copied; `filesCopied` may be `0`, which is "looked and there was nothing to copy" and has a sentence of its own. `failed` — the last round failed, and the error is newer than the last success. The API derives this from the two timestamps so the rule has one source; the screen still gets the raw fields to write the sentence.
+             * @example synced
+             * @enum {string}
+             */
+            status: "never" | "synced" | "failed";
+            /**
+             * @description The last SUCCESSFUL sync. A later failure never erases it — it is the most useful thing this screen has while the mirror is broken.
+             * @example 2026-09-07T12:04:00.000Z
+             */
+            lastSyncedAt: Record<string, never> | null;
+            /** @example 412 */
+            filesCopied: Record<string, never> | null;
+            /** @example 3 */
+            filesSkipped: Record<string, never> | null;
+            /** @example 0 */
+            filesRefused: Record<string, never> | null;
+            /**
+             * @description Where the last round actually wrote — FROZEN. It diverges from `mirrorPath` after someone changes the destination, because the grant travels in the join and only changes when the runner reconnects (RN-516).
+             * @example /home/you/mirrors/store
+             */
+            lastDestination: Record<string, never> | null;
+            /** @example null */
+            lastError: Record<string, never> | null;
+            /** @example null */
+            lastErrorAt: Record<string, never> | null;
+        };
         ProjectResponseDto: {
             /** @example 01JC4Z0000PROJETO0000000001 */
             id: string;
@@ -6942,6 +7081,11 @@ export interface components {
              * @example null
              */
             workspaceVerifiedAt: Record<string, never> | null;
+            /**
+             * @description The mirror destination on the USER'S machine — the folder OUTSIDE the mounted base where the local agent copies the work to (RN-515, ADR 0147). `null` means the project has no mirror, and that is the NORMAL state, never an error. Only `mounted`/`runner` can have one. Set through `PUT /projects/:projectId/mirror-path`; it rides along every project read so nothing needs a dedicated endpoint to learn it. The value was validated LEXICALLY only — whether the folder exists is known by the local agent, not by this API.
+             * @example null
+             */
+            mirrorPath: Record<string, never> | null;
             /** @example 01JC4Z0000USUARIO0000000001 */
             createdBy: string;
             /**
@@ -7966,6 +8110,29 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        RunnerDeviceKeyListResponseDto: {
+            /** @example 01JC4Z0000CHAVE000000000001 */
+            id: string;
+            /** @example laptop */
+            name: string;
+            /** @example 01JC4Z0000PROJETO000000001 */
+            projectId: string;
+            /**
+             * Format: date-time
+             * @example 2026-08-27T12:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Nulo = ativa. Revogada continua aparecendo na lista.
+             * @example null
+             */
+            revokedAt: Record<string, never> | null;
+            /**
+             * @description Nulo = nunca usada — o sinal de uma chave órfã (aba fechada no meio do fluxo de configuração automática do runner).
+             * @example null
+             */
+            lastUsedAt: Record<string, never> | null;
+        };
         RunnerDeviceKeyResponseDto: {
             /** @example 01JC4Z0000CHAVE000000000001 */
             id: string;
@@ -8161,6 +8328,13 @@ export interface components {
              * @example 4
              */
             maxParallel: number;
+        };
+        SetMirrorPathDto: {
+            /**
+             * @description The absolute path, ON THE USER'S MACHINE, where the local agent copies the project work to (RN-515, ADR 0147). Send `null` — the key is REQUIRED, omitting it is a 400 — to clear the destination and turn the mirror off; `null` is the normal state of a project, not an error. Only `mounted`/`runner` projects can have one: in `container` the source is a server-side managed volume the local agent cannot see, and the request is refused with 400 naming that reason. The API validates ONLY the LEXICAL shape (absolute, no `..`/`.`, never the root, a system folder, or overlapping Brabo's own checkout) plus the two directions of the origin↔destination loop (the destination cannot be inside `workspacePath`, nor contain it) — it never touches the disk, because it cannot see the machine where the destination will live, exactly as in `runner` mode (RN-423). Resolving symlinks is the local agent’s half of the guard, not this one.
+             * @example /home/you/mirrors/store
+             */
+            mirrorPath: string | null;
         };
         SetModelBindingDto: {
             /**
@@ -9496,6 +9670,52 @@ export interface operations {
                 content?: never;
             };
             /** @description Project with no provisioned repository, or the workspace owner has no registered credential for the repository provider. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalProjectsController_mirrorSyncResult: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MirrorSyncResultInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MirrorSyncResultResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project does not exist. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -14182,6 +14402,115 @@ export interface operations {
             };
         };
     };
+    ProjectsController_setMirrorPathRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMirrorPathDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project doesn't exist or is invisible to the caller. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProjectsController_mirrorStateRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMirrorStateResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project doesn't exist or is invisible to the caller. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ModelBindingsController_getProjectBinding: {
         parameters: {
             query?: never;
@@ -15204,6 +15533,55 @@ export interface operations {
                 content?: never;
             };
             /** @description Project does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RunnerDeviceKeysController_listDeviceKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunnerDeviceKeyListResponseDto"][];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Papel insuficiente no projeto. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Projeto não encontrado. */
             404: {
                 headers: {
                     [name: string]: unknown;

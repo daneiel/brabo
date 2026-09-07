@@ -47,11 +47,13 @@ import type {
   Page,
   PermissionPolicy,
   PermissionsFile,
+  MirrorState,
   Project,
   ProjectBlockedStatus,
   ProjectCardSummary,
   ProjectFolders,
   ProjectMemberWithUser,
+  ProjectsBase,
   ProjectUnreadEvents,
   ProposedAction,
   ProvisionedRepository,
@@ -275,6 +277,17 @@ export const getWorkspace = (workspaceId: string) =>
 export const listProjects = (workspaceId: string) =>
   get<Project[]>(`/workspaces/${workspaceId}/projects`);
 /**
+ * A base dos projetos montados desta instalação (ADR 0141, RN-500).
+ *
+ * `projectsBase: null` é estado NORMAL, nunca erro: a instalação não tem
+ * `BRABO_PROJECTS_BASE`, e é assim que o assistente de criação aprende a NÃO
+ * oferecer o modo Pasta montada (RN-513). O valor é o mesmo para todo
+ * workspace — é configuração da INSTALAÇÃO, e `workspaceId` está na rota só
+ * porque é o que dá escopo ao `RolesGuard` (`maintainer`).
+ */
+export const getProjectsBase = (workspaceId: string) =>
+  get<ProjectsBase>(`/workspaces/${workspaceId}/projects-base`);
+/**
  * O navegador de pastas servido pela api (RN-504), escopado à base de
  * projetos montados. `path` omitido é a base.
  *
@@ -323,6 +336,15 @@ export const createProject = (
 ) => post<Project>(`/workspaces/${workspaceId}/projects`, input);
 export const getProject = (projectId: string) =>
   get<Project>(`/projects/${projectId}`);
+/**
+ * O que a última rodada do espelho fez (RN-517, ADR 0147 ponto 7).
+ *
+ * Chamada SEPARADA de `getProject`, e só para projeto que tem destino: pendurar
+ * isto na leitura de projeto custaria uma consulta a mais em toda tela que
+ * carrega um projeto, para um dado que quase nenhuma delas mostra.
+ */
+export const getMirrorState = (projectId: string) =>
+  get<MirrorState>(`/projects/${projectId}/mirror-state`);
 // `maxConsecutiveBlocked` (Fase 12b): vale a partir da PRÓXIMA ativação da
 // execução — não afeta dev agents já rodando.
 // `storyPromotion` (Fase 12c): vale para as PRÓXIMAS histórias criadas; as que

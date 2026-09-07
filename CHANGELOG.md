@@ -79,6 +79,550 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **runner**: o agente local vira **serviço de usuário** —
+  `brabo-runner service install | uninstall | status` (RN-518,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 5). Até aqui
+  o runner era **só primeiro plano**: um processo encerrado por SIGINT/SIGTERM,
+  que morre com o terminal e não volta com a sessão do usuário. O precedente
+  era zero — nenhuma menção a `systemd`, `launchd` ou `LaunchAgent` no
+  workspace.
+
+  **Nível de usuário SEMPRE, e root é RECUSA e não aviso.** `systemd --user` no
+  Linux, `LaunchAgent` no macOS. Não é preferência de empacotamento: o docblock
+  de `apps/runner/src/guard.ts` declara *"o runner roda NA máquina do usuário,
+  com os privilégios DELE"* como a premissa em que as três fronteiras reais do
+  produto se apoiam — e a guarda de `cwd` é best-effort **por escrito**. Um
+  serviço de sistema rodando como root deixaria essa guarda como a única coisa
+  entre um comando aprovado e o disco da máquina. Por isso `install` com uid 0
+  recusa **sem escrever arquivo nenhum e sem rodar comando nenhum**:
+  instalar-e-avisar deixaria a instalação errada de pé, e o aviso seria lido
+  uma vez só.
+
+  **Windows fica fora de escopo, declarado.** A matriz de build já produz o
+  binário (ADR 0112), mas serviço de usuário ali é um **terceiro mecanismo**
+  (Serviços do SO com conta de usuário, ou Agendador de Tarefas no logon) — não
+  uma variação dos dois. Os três subcomandos recusam **nomeando a plataforma** e
+  apontando o caminho que continua funcionando; nunca falha muda, nunca um
+  "instalado" que não instalou nada.
+
+  **Uma unit por PROJETO**, `brabo-runner-<id>.service` /
+  `dev.brabo.runner.<id>`, porque o servidor já impõe um runner por projeto (um
+  segundo `join` no mesmo `terminal:<projectId>` é recusado). Nomear pela pasta
+  permitiria instalar duas units que nunca podem estar de pé juntas, e a
+  segunda apareceria como falha de conexão em vez de erro de instalação.
+  `uninstall`/`status` alcançam exatamente a mesma unit porque derivam o nome do
+  mesmo `projectId`, resolvido pelas mesmas duas fontes na mesma ordem do CLI de
+  sempre (`--project`, senão `brabo-runner.config.json`), e a pasta sai do
+  `resolverDir` de `guard.ts` — nenhuma régua nova. No Linux o arquivo vai para
+  onde o systemd PROCURA, com a precedência dele (`$XDG_CONFIG_HOME/systemd/user`,
+  senão `~/.config/systemd/user`): escrever sempre no segundo faria a unit
+  nascer onde o gerenciador nunca olha.
+
+  **`Restart=on-abnormal`, e nunca `on-failure`** (no plist: `KeepAlive` com
+  `Crashed`, nunca `SuccessfulExit`). O runner sai com 1 quando o join foi
+  RECUSADO — ticket inválido, outro runner no projeto, capacidade que falta
+  (RN-514) — ou quando esgotou o próprio teto de tentativas, e as duas coisas
+  são "pare e chame um humano": `on-failure` reiniciaria em laço uma recusa que
+  o CLI recusa reintentar sozinho. O `PATH` vai **congelado** na unit, com o
+  custo declarado dentro dela: os dois gerenciadores dão ao serviço um PATH
+  mínimo e o runner chama `git` (o espelho, RN-516) e `docker` (ADR 0137) —
+  sem isso o serviço subiria perfeitamente e as duas funções falhariam com "não
+  encontrado".
+
+  **Um serviço autentica por CHAVE DE DISPOSITIVO, nunca por token**:
+  `--token`/`BRABO_ACCOUNT_TOKEN` são ignorados de propósito, porque gravá-los
+  num arquivo de unit os deixaria em disco — e este CLI nunca gravou credencial
+  em disco. A RN-434 roda igual, pela MESMA função: unit apontando para fora do
+  `$HOME` no Linux é recusada, senão a unit contornaria pela porta dos fundos o
+  que a flag já recusa.
+
+  **`uninstall` remove os três, e a pasta sai da UNIT — nunca do `cwd`.** O
+  arquivo de unit, o `brabo-runner.config.json` e o
+  `brabo-runner-device-key.jwk.json`; o `WorkingDirectory` é lido de volta do
+  próprio arquivo, que é o registro do que foi instalado. Sem unit não há
+  registro, e aí os dois arquivos só saem com `--dir` explícito: adivinhar pelo
+  `cwd` apagaria a chave de um projeto que ninguém pediu para remover. E a
+  mensagem DIZ o que ele não fez — **a chave saiu deste disco, não do
+  servidor**; a pública continua em `runner_device_keys` e revogá-la é outra
+  coisa. Um "removido" que deixasse a pessoa achar que revogou seria pior que
+  não remover nada.
+
+  **`status` responde QUATRO estados, sem colapsar nenhum** (RN-088): não
+  instalado, instalado e rodando, instalado e parado, e instalado-e-não-consegui
+  -perguntar. A primeira resposta vem do **disco** (há arquivo de unit?), e é
+  por isso que ela continua certa numa máquina onde o gerenciador não existe;
+  `spawn` que falhou nunca vira "o gerenciador disse não", e palavra que o CLI
+  não sabe interpretar também cai em "não consegui perguntar" em vez de virar
+  "parado" por chute. Cada estado tem frase própria **e código de saída próprio**
+  (0/3/4/5 — 1 e 2 ficam de fora porque já significam falha genérica e erro de
+  uso): um `exit(1)` único para os três "não está rodando" colapsaria pelo
+  código o que a frase separa. Ativação que falha é um desfecho à parte, com o
+  arquivo mantido e o comando pendente nomeado.
+
+  Nada aqui é `proposed_action` — é o usuário rodando um comando na própria
+  máquina, sobre o próprio serviço. **BRB-031 NÃO fecha aqui**: quem chega a
+  rodar `service install` já precisou tornar o binário executável, e o ADR 0147
+  amarra a morte do `chmod +x` à instalação vir do bootstrap versionado do ADR
+  0146, que esta entrega não toca. Também fora, por decisão:
+  `start`/`stop`/`restart` (quem gerencia o ciclo de vida é o gerenciador do SO;
+  duplicá-lo no CLI criaria uma segunda fonte de verdade sobre o estado).
+
+- **api,engine**: a **revogação de chave de dispositivo** deixa de ser cega, e
+  passa a alcançar a conexão viva (RN-519/RN-520,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 6). Eram
+  DUAS metades, e as duas estavam abertas.
+
+  **Ninguém revoga o que não consegue ver.** O `RunnerDeviceKeysController`
+  tinha `@Post()` e `@Delete()` e listagem NENHUMA — nem a do próprio dono —,
+  então uma chave órfã (aba fechada no meio do fluxo da RN-473) era inerte,
+  invisível e permanente. Entra `@Get()`, `developer`, no mesmo formato que o
+  PAT já tem, escopado ao usuário no WHERE do repositório. A chave REVOGADA
+  continua na lista (sumir com ela faria a tela afirmar que nunca existiu), e
+  `lastUsedAt` nulo é o sinal da órfã. Nunca devolve a JWK pública: o que a
+  lista existe para permitir é revogar. O docblock que declarava o corte
+  errado — *"sem a visão de `maintainer`"* — passa a descrever o que o código
+  faz, e a visão de `maintainer` (RN-427) continua fora **por decisão**: aquela
+  nasceu de incidente com segredo COMPARTILHADO, e a metade privada de uma
+  chave de dispositivo nunca sai do navegador que a gerou.
+
+  **Revogar só impedia ticket NOVO.** Um `brabo-runner` já conectado mantinha o
+  canal `terminal:<projectId>` de pé — executando comando aprovado — com a
+  chave revogada, até cair sozinho. Agora a api manda o comando
+  (`POST /internal/projects/:projectId/runner/disconnect`, vigésima rota
+  interna) e o **engine** alcança o pid que o `Registry` já entregava; o engine
+  não lê a tabela de chaves e a api não fala com o canal. Ele derruba o
+  TRANSPORTE, não só o processo do canal (`EngineWeb.RunnerSocket.id/1` deixa
+  de ser `nil`, e o mecanismo é o `Endpoint.broadcast(id, "disconnect", %{})`
+  documentado do Phoenix): parar só o canal deixaria o socket vivo e o cliente
+  reentrando no tópico para sempre com um ticket já consumido.
+
+  **O alvo é `{projeto, usuário}` e nunca `{chave}`**, e isso é propriedade do
+  caminho do ticket: `runner_socket_tickets` guarda `project_id`/`user_id`/`kind`
+  e nada mais, então qual PAT ou qual `kid` abriu aquele socket morre no
+  `PatAuthGuard`. Custo DECLARADO — um runner do MESMO usuário conectado com
+  PAT ou com outra chave também cai, e reconecta sozinho se a credencial dele
+  ainda valer. Runner de outro usuário no mesmo projeto fica de pé, e o
+  desfecho diz isso (`de_outro_dono`) em vez de um `:ok` que não descreve nada.
+
+  **Derrubar nunca derruba a revogação**: o `DELETE` continua 204 e idempotente
+  — engine fora do ar, nenhum runner conectado ou timeout viram LOG, nunca
+  exceção, a mesma régua de `rag_searches` (RN-479) e do `mirror_sync_result`
+  (RN-517). Revoga PRIMEIRO e derruba depois (o contrário deixaria janela para
+  reconectar com a chave viva), e o projeto sai da LINHA revogada, nunca da
+  URL. Desfecho desconhecido vindo do engine vira `timeout` e nunca
+  `derrubado`. Fica declarado: **tela nenhuma** — esta entrega é a metade
+  server-side, e o web ainda não tem onde listar nem revogar.
+
+- **api,engine,runner,web**: o **estado do espelho** fica visível, e os três
+  estados não colapsam (RN-517,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 7). A RN-516
+  fez o espelho copiar de verdade e deixou o `mirror_sync` **fire-and-forget**
+  de propósito — sem `mirror_sync_result` no protocolo, porque o formato da
+  telemetria era decisão desta entrega. Esta fecha o laço.
+
+  **O caminho é o de `workspace_confirm`, e nenhum outro**: o runner empurra
+  `mirror_sync_result` no canal DEPOIS de a rodada terminar, o engine repassa
+  pela api interna (`POST /internal/projects/:projectId/mirror-sync-result`) e a
+  api grava. O engine **não escreve a tabela** — um segundo caminho de escrita
+  seria a segunda fonte da mesma verdade. Nunca um "ok" otimista antes do fim:
+  o que sobe são as três contagens que a cópia devolveu (copiados, pulados,
+  recusados, nunca recontadas) ou o erro nomeado, e as TRÊS saídas de
+  `tratarMirrorSync` reportam — inclusive a recusa por destino não concedido,
+  que hoje sumia no log local.
+
+  **TABELA (`project_mirror_states`), nunca event log**, pelo mesmo motivo que
+  fez `rag_searches` virar tabela (RN-479): uma rodada de espelho não tem
+  sessão e `session_events.session_id` é `NOT NULL`, então o event log perderia
+  a coisa inteira. E nunca `proposed_action`: a escrita do espelho é
+  configuração que o usuário declarou, não um agente pedindo para agir.
+
+  **Os TRÊS estados da RN-088, sem colapso**: "nunca sincronizou" é a linha
+  AUSENTE, "sincronizou e não copiou nada" é linha presente com
+  `files_copied = 0` (um desfecho, não um vazio) e "falhou" é o erro mais
+  recente que o último sucesso. **Sucesso e erro convivem na mesma linha** —
+  as duas escritas mencionam colunas disjuntas e nenhuma apaga a outra —, e é
+  isso que permite a tela dizer *"a última rodada falhou; a última cópia boa
+  foi ontem, com 412 arquivos"* em vez de perder a informação mais útil que ela
+  tem. O `destination` vai CONGELADO na linha, como a `image_version` de
+  `project_containers` e os pesos de `rag_searches`: mostrar o destino de AGORA
+  sobre uma cópia de ontem seria afirmar sobre uma pasta que aquela rodada
+  nunca tocou, e os dois divergem de verdade porque a concessão viaja no join.
+
+  **Gravar telemetria jamais derruba o que ela mede**: a cópia já terminou
+  quando o reporte sai, a recusa da api vira log e o canal do runner segue
+  vivo; sem canal o runner não reporta e não lança. Projeto cujo destino foi
+  limpo no meio **ainda registra** — a rodada aconteceu, e o erro dela é o que
+  costuma explicar o que houve.
+
+  **Na tela**, a linha entra na coluna lateral da Visão geral
+  (`AmbienteDoProjeto`) e **só aparece em projeto que tem destino** — num
+  projeto sem espelho, "nunca sincronizou" seria uma ausência inventada. Data
+  absoluta com ressalva, nunca bolinha verde de "está de pé": o carimbo diz que
+  uma rodada aconteceu, não que a pasta esteja em dia com o que mudou depois
+  (o gatilho é um momento nomeado, o commit — nunca um watcher). Quando o
+  destino declarado hoje difere do daquela rodada, a linha DIZ isso.
+
+  Rota nova de leitura `GET /projects/:projectId/mirror-state` (`viewer`, o
+  mesmo mínimo de ler o projeto, que já carrega o destino), com o `status`
+  resolvido na api para a regra dos três estados ter uma fonte só. Nada aqui
+  alarma, notifica ou reexecuta uma rodada que falhou — declarado, não feito.
+
+- **engine,runner**: o **espelho** passa a existir de verdade — o agente local
+  copia o trabalho para a pasta que o usuário declarou (RN-516,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) pontos 2, 3, 4 e 8).
+  É a metade B da sessão 6: a RN-515 decidiu onde o destino mora e não copiou
+  nada; esta decide como ele chega ao agente, o que é copiado e quando.
+
+  **O destino viaja na CONCESSÃO do `join`, nunca em configuração do runner.**
+  A resposta do `join` do canal `terminal:<projectId>` deixou de ser vazia para
+  o papel `:runner`: com destino declarado e a capacidade `espelho` concedida,
+  ela carrega `%{espelho: %{destino: "<caminho>"}}`. O runner guarda isso na
+  conexão — morre com ela — e **recusa `mirror_sync` para destino que não lhe
+  foi concedido naquela conexão**. Nunca variável de ambiente, nunca arquivo
+  local: um destino global faria o artefato do projeto B aterrissar na pasta do
+  projeto A, e o usuário descobriria isso pelo conteúdo, não por um erro.
+  Consequência declarada: **trocar o destino com o runner conectado exige
+  reconectá-lo**.
+
+  ⚠ **Custo real, e ele é o primeiro disparo do mecanismo da RN-514:**
+  `mirror_path` não-nulo passa a **EXIGIR** a capacidade `espelho` no join, e um
+  `brabo-runner` anterior a esta versão conectado a um projeto com destino
+  **deixa de conectar** — recusa explícita e nomeada (fatal, sem retry, dizendo
+  para atualizar o binário), nunca degradação silenciosa. É **opt-in**: só
+  acontece onde alguém configurou um destino, e projeto sem espelho (a maioria)
+  não muda em nada. O custo está declarado no próprio ADR 0147, e quem instalou
+  pelo fluxo do ADR 0118 não tem atualização automática. `espelho` não entra no
+  mapa por `execution_mode`: quem exige é o **dado**, não o modo.
+
+  **As TRÊS recusas da guarda, com a passada de `realpath` que só existe aqui.**
+  `apps/runner/src/espelho-guard.ts` nasce **irmão de `guard.ts`, não uma
+  extensão dele**: reusa os três helpers de comparação de caminho e a dupla
+  passada léxica-depois-`realpath`, e **herda por escrito a ressalva de
+  TOCTOU** — best-effort, não fronteira de segurança. Recusa symlink que escape
+  do destino, destino que **contenha** o workspace e destino **dentro** dele —
+  os dois últimos são o mesmo laço em sentidos opostos. A api já recusou a
+  metade léxica (RN-515) e diz que é só o léxico; `destino/atalho ->
+  /caminho/do/projeto` passa por lá sem ser visto porque a api não tem disco
+  onde resolvê-lo. Achado implementando: `realpathMaisProximo` cai no primeiro
+  ancestral que existe, e o destino quase nunca existe — colapsar os dois lados
+  no ancestral faria `/base-outra` e `/base` virarem ambos `/`, recusando toda
+  pasta irmã; por isso a segunda passada resolve o ancestral e **recoloca o
+  sufixo**. E há uma segunda metade **por arquivo**: um `destino/sub` que é link
+  para `/etc` faria a cópia de `sub/passwd` escrever fora com o destino em si
+  perfeitamente válido.
+
+  **Uma direção, e NUNCA apaga.** Workspace → destino. Nunca `--delete`, nunca
+  `unlink`, nunca `rm`: **arquivo apagado no workspace permanece no destino**.
+  A pasta do usuário não é réplica, é acúmulo — um agente que apaga arquivo na
+  pasta pessoal de alguém por causa de um `git clean` do outro lado é a surpresa
+  que o produto existe para não produzir. Sobrescrever o que mudou é esperado;
+  remover nunca é. Preço declarado: o destino só cresce, e nada o limpa.
+
+  **O que se copia é a LISTA DO GIT, e nada mais** — rastreados
+  (`git ls-files`) mais não-rastreados-não-ignorados
+  (`git ls-files --others --exclude-standard`). Isso é exatamente "o trabalho":
+  pula `node_modules`, `dist`, saída de build e o próprio `.git` **sem lista de
+  exclusão nenhuma**, que envelheceria a cada stack nova. Git que falha ou pasta
+  que não é repositório **falham com motivo nomeado** — nunca um `cp -r` de tudo
+  como plano B. Duas propriedades verificadas e declaradas: repositório git
+  aninhado volta como UMA entrada de diretório e não é descido (o worktree de
+  cada dev agent é um desses — o espelho mostra o **checkout principal**, nunca
+  o trabalho ainda isolado num worktree), e symlink na origem é pulado. O que
+  fica de fora é CONTADO, nunca engolido.
+
+  **Predicado PRÓPRIO, e o espelho não exige Docker.**
+  `Engine.Runners.RunnerReadiness` fica **byte a byte como está** — o módulo
+  novo não o chama nem o estende. O espelho tem DUAS pré-condições (workspace
+  confirmado, runner conectado) e não a terceira da RN-507: um
+  `RunnerReadiness` com flag "pula container" é o mecanismo pelo qual essa
+  terceira cairia por acidente para o `exec`, e o ADR 0145 existe para ela não
+  cair. Cópia de arquivo na máquina do usuário não tem container de onde cair em
+  silêncio, e o espelho é justamente a capacidade que deve funcionar para quem
+  não quer Docker.
+
+  **Gatilho por MOMENTO NOMEADO, nunca watcher.** O engine empurra `mirror_sync`
+  do **commit bem-sucedido** — nunca `fs.watch`, que seria trabalho ilimitado
+  disparado por qualquer coisa, inclusive pelas escritas do próprio espelho, que
+  é laço. Fire-and-forget: sem `from`, sem `pending_execs` e sem
+  `mirror_sync_result`, porque a telemetria da sincronização é o ponto 7 do ADR,
+  de outra sessão. Falha vira log local, nunca exceção que derruba o runner e
+  nunca silêncio.
+
+  **Declarado e NÃO ligado:** o segundo momento nomeado do ponto 8, "fim de
+  turno de agente". O engine tem duas coisas disjuntas com esse nome e nenhuma é
+  enganche não-ambíguo — `TurnoAssincrono.finalizar/1` fecha o turno dos seis
+  conversacionais, que não têm ferramenta de escrita no workspace, e também
+  dispara em crash e em cancelamento; `AgentIo.finish_task/3` não é fronteira de
+  ociosidade (reivindica a próxima task na mesma chamada) e o que o dev agent
+  escreve mora no worktree, que o espelho não desce. Escolher um seria inventar
+  produto onde o ADR nomeou um momento sem nomear uma função.
+
+  A escrita do espelho **não** é `proposed_action`, e nada disso encosta em
+  `decide.ts`, tetos, event log, portão de imagem ou nas operações do broker.
+- **api**: o **destino do espelho** passa a existir, e ele é **por projeto**
+  (RN-515, [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 4).
+  Coluna nova `projects.mirror_path` (nullable), campo `mirrorPath` no projeto
+  e rota `PUT /projects/:projectId/mirror-path` (`maintainer`, o mesmo mínimo
+  de `execution-mode` e de `projects-base`: a rota fala de um caminho do
+  computador do operador). O valor **volta em toda leitura de projeto**, então
+  nem a implementação do espelho nem a tela de estado precisam de rota nova.
+
+  **Por projeto e nunca global** — nem configuração no runner, nem variável de
+  ambiente. Um destino global faria o artefato do projeto B aterrissar na pasta
+  do projeto A, e o usuário descobriria isso **pelo conteúdo, não por um erro**.
+  E **`null` é o estado NORMAL**, não uma pendência: projeto sem espelho é a
+  maioria, e o produto nunca escolhe um destino sozinho. Limpar é
+  `{"mirrorPath": null}` — a chave é **obrigatória**, e omiti-la é 400, porque
+  um corpo que omite o campo seria indistinguível de "limpe" e limpar em
+  silêncio é justamente o defeito.
+
+  **A api valida só o LÉXICO, e a mensagem dela DIZ que é só o léxico.** Ela
+  não enxerga a máquina onde o destino vai existir — é a situação do modo
+  `runner` (RN-423), não a do `mounted`, cuja pasta acaba dentro da base que a
+  api alcança de verdade. Por isso reusa `caminhoDeWorkspaceLocalValido`, o
+  MESMO predicado da criação e da conversão, em vez de escrever uma quarta
+  cópia da mesma régua; e **não** exige `BRABO_PROJECTS_BASE`, porque o destino
+  do espelho é por definição a pasta que a base não cobre.
+
+  **Duas recusas próprias, e elas são o conteúdo da regra.** Destino DENTRO do
+  `workspacePath` e destino que CONTÉM ele são o mesmo laço em sentidos opostos
+  (escrever o espelho dentro da origem faz o espelho copiar o próprio espelho),
+  e a comparação é por **SEGMENTO** — `/base-outra` NÃO está dentro de `/base`,
+  e um `startsWith` cru taxaria uma pasta irmã legítima. E projeto
+  `execution_mode: container` **não pode ter destino nenhum**: a origem é um
+  volume gerenciado no SERVIDOR, e quem copiaria é um processo na máquina do
+  USUÁRIO, que não a enxerga — recusa NOMEADA, porque um destino gravado que
+  jamais recebe nada é pior que a recusa, já que parece configurado. Pelo mesmo
+  motivo, **converter o modo ZERA o destino** (mesma forma de
+  `workspaceVerifiedAt`, e com uma razão a mais: os dois sentidos do laço foram
+  validados contra o `workspacePath` ANTIGO).
+
+  **Esta é a metade LÉXICA da guarda, e só ela.** A outra é `realpath`, e é do
+  RUNNER (`espelho-guard.ts`), na máquina onde os dois caminhos existem de
+  verdade: um symlink em qualquer segmento do destino apontando de volta para a
+  origem passa por aqui sem ser visto. A api não garantiu o laço; ela impediu o
+  laço ESCRITO — e o comentário no código diz isso, para ninguém achar o
+  contrário. **Nada aqui copia arquivo nenhum**: `mirror_sync`, o protocolo e a
+  cópia são a metade B desta sessão, no engine e no runner.
+
+  E, declarado: a escrita do espelho **não** é `proposed_action`. É
+  configuração que o usuário declarou, não um agente pedindo para agir —
+  sincronizar por comando de terminal cairia no escopo de caminho do ADR 0055 e
+  viraria fila de aprovações rotineiras, corroendo o teto que dá sentido ao
+  clique. Nenhum teto absoluto, o event log, o portão da imagem nos três modos,
+  as cinco operações do broker e o CHECK
+  `projects_workspace_path_casa_com_modo` seguem intocados — a coluna nova é
+  independente dele, e a migration é um `ADD COLUMN` e nada mais.
+- **runner,engine**: o `join` do agente local **deixa de ser mudo** — o runner
+  DECLARA nas params o que sabe fazer e o servidor CONCEDE a interseção com o
+  vocabulário que conhece (RN-514,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 1). Três
+  capacidades: `exec` (ADR 0104), `pty` (ADR 0103) e `espelho` — e o runner
+  declara **só as duas primeiras**, porque declarar o que não se implementa é
+  exatamente o defeito que a negociação existe para impedir. `espelho` entra
+  como **nome do vocabulário e nada mais**; quem o implementa é a sessão
+  seguinte da FASE 28.
+
+  O que isso fecha: até aqui o servidor **não tinha como saber** se o binário do
+  outro lado entendia uma mensagem nova — a mensagem chegava, o handler não
+  existia, e **nada acontecia**, sem erro e sem log. Agora o conjunto concedido
+  vive em `socket.assigns` (nunca em tabela: capacidade é propriedade DAQUELA
+  conexão, e uma tabela poderia afirmar que um runner sabe algo que o processo
+  conectado agora não sabe), e **mensagem sem a capacidade concedida é RECUSADA
+  com resposta nomeada**: `exec` responde no mesmo formato de `exec_result`
+  (`exitCode` 126, a causa no `output`) em vez de deixar o `RunnerRouter`
+  esperar até o timeout, e `pty_*` não é relayado — a aba recebe `pty_error`
+  nomeado em vez de ficar em "carregando" para sempre.
+
+  **Nada muda para nenhum runner instalado hoje.** Params ausentes ou vazios são
+  o binário LEGADO e concedem `{exec, pty}` — isso é **fato, não benevolência**:
+  todo binário anterior a esta mudança sabe fazer as duas, são as funções com
+  que o runner nasceu. Recusar quem não declara faria todo runner instalado
+  parar de conectar, que seria `breaking/` e MAJOR. Capacidade declarada que o
+  servidor não conhece é **ignorada**, nunca motivo de recusa: um runner mais
+  NOVO que o engine tem que conseguir conectar.
+
+  A recusa por capacidade EXIGIDA e não declarada nasce implementada e testada,
+  e **não dispara na prática hoje** — `runner` exige `exec` (que todo binário
+  tem), `container`/`mounted` não exigem nada, e **nada exige `espelho` ainda**.
+  Isso é o desenho, não pendência. Quando dispara, o `{:error, %{reason: ...}}`
+  NOMEIA a capacidade que falta e manda atualizar o binário, e o CLI já trata a
+  recusa como fatal sem retry. `Engine.Runners.RunnerReadiness` fica byte a byte
+  como está (ADR 0147 ponto 3), e nenhum teto, nenhuma decisão de aprovação e
+  nenhum evento do log foram tocados.
+
+- **web**: o assistente de novo projeto passa a **oferecer Pasta montada quando
+  a base existe** — e a **pré-selecioná-la**, com `<base>/<slug>` sugerido e
+  editável (RN-513,
+  [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) ponto 4). Sem base
+  (`projectsBase: null`), o card **não é oferecido** e `container` continua o
+  padrão.
+
+  Duas metades disto **já eram regra e nunca tinham chegado à tela**: "não
+  oferecer sem base" é a RN-500, e "sugerir `<base>/<slug>`" é a RN-501, cujo
+  ADR 0142 adiou a validação de disco justamente para que o assistente pudesse
+  propor uma pasta que ainda não existe. Até aqui,
+  `GET /workspaces/:workspaceId/projects-base` não tinha **chamador nenhum** no
+  web e o card era oferecido incondicionalmente — numa instalação sem
+  `BRABO_PROJECTS_BASE`, escolher o modo terminava numa recusa 400 da api
+  depois de a pessoa ter escolhido, digitado o caminho e chegado ao fim do
+  assistente. O que é **novo** é a pré-seleção, que revisa o default do ADR
+  0072 **só para a instalação local**, onde a base foi consentida por um humano
+  no host (RN-511). O enum `project_execution_mode` não muda, nenhum modo novo
+  nasce, e a conversão de modo (ADR 0111) não é tocada.
+
+  **Desconhecido não vira oferta.** Enquanto a resposta não chegou, e também
+  quando a consulta **falha** (403, rede, api fora), o card não aparece e
+  `container` segue selecionado: falha não é permissão para oferecer um modo
+  cuja pré-condição não se conseguiu confirmar — é a régua da RN-088/RN-468 (o
+  produto não colapsa "não sei" com "não tem") e a dos ADRs 0041/0042, onde
+  capability só se declara quando provada. A consulta nasce com o **assistente**
+  e não com o passo, que é o quinto: montada ali, o card apareceria piscando com
+  a pessoa já olhando a tela.
+
+  **Nem a pré-seleção nem a sugestão passam por cima de ninguém.** A base chega
+  por rede, sempre depois do primeiro render, então a escolha humana fica
+  guardada separada do modo vigente e vence a pré-seleção — trocar o modo
+  debaixo da mão de quem já clicou é defeito, não conveniência. E a sugestão só
+  escreve no campo vazio ou por cima da sugestão anterior dela mesma; caminho
+  digitado nunca é reescrito, nem quando o nome do projeto muda, e slug vazio (a
+  adoção) deixa o campo vazio em vez de inventar segmento.
+
+  **O aviso do modo parou de mentir.** O texto era anterior ao ADR 0141 e dizia
+  que o caminho era livre e só funcionaria se o usuário o montasse — as duas
+  coisas deixaram de ser verdade quando a base virou uma só, montada por
+  identidade. Agora são os **dois estados que o backend realmente tem**: sob a
+  base, nota neutra (a criação passa, e a pasta nem precisa existir — a Infra a
+  cria ao subir o container); fora dela, aviso de que a api **recusa a criação**,
+  **nomeando** a base em vez de mandar procurar a variável. Campo vazio não é
+  "fora da base", e a comparação é por **segmento** — `/base-outra` não está
+  dentro de `/base`.
+
+- **docker,scripts**: o **broker de container sobe por padrão no compose local**,
+  e continua sob `profiles: ["container-broker"]` em produção (RN-512,
+  [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) ponto 3). Os dois
+  arquivos passam a divergir **de propósito** — não uniformize.
+
+  O broker nasceu sob profile com uma justificativa que o ADR 0130 escreveu:
+  *"dar acesso ao Docker do host a um processo que nada chama ainda seria uma
+  mudança de postura para toda máquina de desenvolvimento, em troca de nada"*.
+  As duas metades morreram. **"Nada o chama" é falso** desde os ADRs
+  0133/0134/0136 — ele tem quatro chamadores reais. E **"em troca de nada"
+  deixou de descrever a troca** quando o ADR 0144 fez `mounted` subir container
+  PELO BROKER e o ADR 0146 tornou `mounted` o padrão local: com o profile
+  desligado, o modo padrão terminava em `BrokerIndisponivelError`.
+
+  **A assimetria é o que o socket significa de cada lado.** Quem roda `pnpm dev`
+  já tem o socket do Docker — está rodando `docker compose`, contra o daemon do
+  próprio host —, então o broker recebê-lo não concede nada que o operador já
+  não possua; a superfície marginal é o HTTP dele, que não publica porta, vive
+  numa rede `internal: true` e compara `BRABO_SERVICE_TOKEN` em tempo constante.
+  Em produção o cálculo é o oposto: o socket é fronteira de privilégio de
+  verdade e o operador não é o desenvolvedor.
+
+  **As cinco camadas de contenção não são tocadas.** Isto muda QUANDO o broker
+  roda, nunca O QUE ele aceita — ele continua recebendo `projectId` e uma das
+  cinco operações, sem parâmetro nenhum onde se escreva `privileged` ou um `-v`
+  livre. A contenção nunca foi o profile.
+
+  Consequência ambiental, e a razão de ela ganhar relato: **`DOCKER_GID` passa a
+  importar para toda máquina de desenvolvimento**, não só para quem ligava o
+  profile de propósito. Errar o gid **não quebra o boot** — o broker sobe
+  normalmente —, quebra o USO: toda operação morre com `permission denied` no
+  socket, e o sintoma aparece muito depois, quando alguém propõe
+  `container_start`. Por isso `pnpm dev` passa a **relatar** o estado dele a cada
+  subida, comparando com o grupo real da máquina. O relato tem três desfechos que
+  não colapsam — bate, diverge (dizendo se o valor efetivo veio do `.env` ou do
+  default, porque as duas pedem instruções diferentes) e **não se aplica**, sem
+  grupo `docker` (Docker Desktop, rootless), que não é erro nem "não consegui".
+  Ele **nunca bloqueia**.
+
+- **scripts**: `pnpm bootstrap` ganha o passo **Docker › Base de projetos** — o
+  consentimento que faltava para o modo **Pasta montada** existir na prática
+  (RN-511, [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md)). A RN-500
+  já dizia o que fazer sem base (`projectsBase: null`, o modo não é oferecido);
+  o que não existia era alguém **pedir** que ela fosse configurada, e por isso
+  um modo pronto ficou inalcançável para quem instala o produto.
+
+  O passo propõe `$HOME/projetos-brabo` — e **não** `$HOME/brabo-projetos`, que
+  o `.env.example` já usa como exemplo de `PROJECT_WORKSPACES_HOST_DIR`, a raiz
+  que o PRODUTO gerencia; propor o mesmo nome para as duas seria andar para
+  dentro da colisão que o ADR 0141 recusou, em que `<base>/loja` cai na mesma
+  pasta física de um projeto `container` chamado `loja` e o bootstrap dá
+  `git init` no projeto do outro. **O nome é só a esquiva; a proteção é
+  mecanismo:** `validarBase` recusa, nos dois sentidos, a base sobreposta ao
+  checkout do Brabo **ou** àquela raiz — e vale para o caminho digitado, não só
+  para o default.
+
+  **O compartilhamento do Docker Desktop é provado MONTANDO**, nunca lido do
+  `settings.json` — a régua de "capability só se declara quando provada por
+  execução" (ADR 0041/0042) aplicada ao host. A prova é uma **sentinela**, não
+  um `ls` seco: pasta vazia e pasta não compartilhada produzem a mesma listagem
+  vazia, então o script escreve um arquivo e pergunta se o container o enxerga.
+  Três desfechos que não colapsam — provado, reprovado (não grava a variável) e
+  *não consegui provar* (grava, e diz em voz alta que a prova não rodou).
+
+  **Sem TTY, relata em vez de consentir.** Do menu o script só pode relatar:
+  todo item roda com stdin em `/dev/null`, de propósito, senão qualquer coisa
+  que leia stdin rouba as setas do usuário — e a saída diz o comando que
+  pergunta. Pelo mesmo motivo o `preflight.mjs` passa a **relatar** o estado da
+  base junto do que já reporta, e nunca a perguntar: a resposta é um caminho no
+  disco de alguém, e não há default que se aplique em silêncio.
+
+  Dois efeitos colaterais de higiene: `lerEnv`/`escreverEnv` saem do
+  `preflight.mjs` para `scripts/dev/env-file.mjs` (aquele arquivo roda
+  `await main()` no topo, então importá-lo subiria o preflight inteiro — o mesmo
+  argumento que já criara o `base-de-projetos.mjs`), e as **três** sugestões de
+  caminho que o repositório dava para essa variável, todas diferentes entre si,
+  passam a ser uma só.
+
+### Documentação
+
+- **docs**: nasce a **FASE 28 (pasta do usuário)** — só decisão, nenhuma linha de
+  código de produto. O problema que ela ataca: nenhum dos três modos de execução
+  entrega a coisa mais simples que um usuário espera, que é abrir o editor e ver
+  o trabalho acontecendo numa pasta dele. O caso instrutivo é o `mounted`, que
+  está **pronto e inalcançável** — o ADR 0141 construiu a base única e o ADR 0142
+  tornou possível sugerir um caminho que ainda não existe, mas nada no produto
+  pede que `BRABO_PROJECTS_BASE` seja configurada, e `GET .../projects-base` não
+  tem chamador no web.
+
+  O [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) decide o
+  consentimento no host: base padrão `$HOME/projetos-brabo` (e **não**
+  `$HOME/brabo-projetos`, que `.env.example` já usa como exemplo de
+  `PROJECT_WORKSPACES_HOST_DIR` — a conflação que o ADR 0141 recusou), gravada
+  por um script **Node** e nunca em bash, porque item de menu do `bootstrap.sh`
+  roda com stdin em `/dev/null` e **por construção não consegue perguntar**. O
+  compartilhamento do Docker Desktop é **provado montando**, nunca lido do
+  `settings.json` — a mesma régua de "capability só se declara quando provada"
+  dos ADRs 0041/0042. E o broker sai do `profiles` **no compose local, só nele**:
+  a justificativa original ("nada o chama... em troca de nada") morreu quando os
+  ADRs 0133/0136 lhe deram quatro chamadores e o ADR 0144 fez `mounted` subir
+  container por ele.
+
+  O [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) decide o agente
+  local: **um** binário que declara capacidades (`espelho`, `exec`, `pty`) no
+  `join` — hoje mudo dos dois lados —, com o servidor concedendo só o que o
+  `execution_mode` exige. O espelho vai numa direção e **nunca apaga**; não exige
+  Docker, e ganha predicado **próprio** em vez de um `RunnerReadiness` com flag.
+  Achado no caminho: a revogação de chave de dispositivo é **cega** — um
+  `developer` não consegue listar nem as próprias chaves (PATs têm cinco rotas,
+  chaves de dispositivo têm duas), e revogar hoje só impede ticket novo, sem
+  derrubar o canal vivo.
+
+  A linha que dá forma ao resto, declarada nos dois: **consentimento de
+  configuração não é aprovação de ação** — a escrita do espelho não passa por
+  `proposed_action` porque não é agente pedindo para agir; fazê-la por comando de
+  terminal cairia no escopo do ADR 0055 e viraria fila de aprovações rotineiras.
+
+  Faixa **RN-511 a RN-520** reservada para as sessões 2 a 9, com o método de
+  contagem registrado — e o salto sobre a RN-510 é deliberado, porque ela já
+  estava alocada numa branch ainda não mergeada. Contar só `dev` a devolveria e
+  recriaria a colisão de âncora da RN-505, que sobreviveu semanas porque
+  `docs:build` reprova âncora **inexistente**, nunca âncora duplicada.
+
+### Novidades
+
 - **api,broker**: projeto no modo **Pasta montada** passa a ter container de
   verdade, e ele sobe **no servidor**, pelo broker — como o modo Container já
   fazia (RN-503, ADR 0144). Até aqui `mounted` não conseguia container nenhum,
@@ -527,6 +1071,62 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   tinha uma versão por run, isso reprovava a limpeza sempre — corrigido para
   apagar o pacote inteiro, verificado funcionando (as quatro imagens
   efêmeras sumiram do GHCR, confirmado manualmente na aba Packages).
+
+### Testes
+
+- **e2e**: a chave de dispositivo do runner ganha o E2E de navegador que nunca
+  teve — `e2e/testes/chave-de-dispositivo.spec.ts`, terceiro spec da camada do
+  [ADR 0120](docs/adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md).
+  A lacuna era exata: `apps/web/src/lib/runner-bootstrap.test.ts` faz
+  `vi.stubGlobal('crypto', …)` em todo teste que toca chave, então **a suíte
+  do web nunca gerou uma chave Ed25519 nem exportou uma JWK de verdade** — e
+  não podia, porque `crypto.subtle.generateKey({name:'Ed25519'})` não existe
+  em jsdom. Foi por essa fresta que a [RN-475](docs/business-rules.md#rn-475)
+  passou: o `kid` ausente na JWK privada fazia o modo automático do ADR 0118
+  **nunca autenticar**, e o teste que deixou passar afirmava que o arquivo
+  fora ABERTO, nunca o que havia dentro dele.
+
+  **O que ele prova**, num Chromium real contra o compose de produção: o par
+  Ed25519 é gerado na página (origem `:8088`); a pública é registrada em
+  `POST /projects/:id/runner-device-keys` por chamada **cruzada** (com
+  preflight, porque `Authorization` não é cabeçalho simples); a JWK privada
+  exportada carrega `kid` **igual ao `id` que o servidor devolveu**, é mesmo a
+  privada (`kty: OKP`, `crv: Ed25519`, `d` presente) e a pública **não** leva
+  `kid`; e — a asserção que a suíte do web não tem como obter — um JWT EdDSA
+  assinado com essa chave, com o `kid` lido **de volta do arquivo**, é
+  ACEITO por `POST .../runner-ticket` (201, `PatAuthGuard` achando a pública
+  por esse `kid`). O segundo teste cobre a
+  [RN-519](docs/business-rules.md#rn-519): a chave aparece em `GET
+  .../runner-device-keys`, a resposta **nunca** traz JWK (nem `publicKeyJwk`
+  nem `d`, comparado sobre o texto bruto), a revogada **continua na lista**
+  com `revokedAt` preenchido, e o MESMO JWT ainda dentro do TTL passa a ser
+  recusado com 401 — revogar é revogar, não sumir de uma tela.
+
+  **Provado por mutação, duas vezes** (a disciplina do ADR 0120): tirar o
+  `kid` do arquivo derruba a asserção direta; tirar o `kid` **e** a asserção
+  faz a api responder exatamente `401 Token ausente ou inválido` — a RN-475
+  reproduzida ponta a ponta.
+
+  **O que ele NÃO prova, declarado no spec e no `e2e/README.md`:** a metade de
+  INTERFACE. `configurarPastaAutomaticamente` começa por
+  `showDirectoryPicker`, e o Playwright não concede esse handle — então o
+  fluxo não passa pelo `RunnerOnboardingPanel` e o código de
+  `runner-bootstrap.ts` **não é o que roda ali**: os passos são reproduzidos
+  na página, na mesma ordem e com as mesmas chamadas de Web Crypto. Este spec
+  prova que a CADEIA aceita uma chave feita assim; `runner-bootstrap.test.ts`,
+  com o dublê, prova que o MÓDULO a faz assim. A gravação dos três arquivos em
+  disco (RN-466) fica fora pelo mesmo motivo.
+
+  Achado ao rodar de verdade, e agora documentado: **só UM spec por execução
+  pode usar o estado do `setup`.** O `brabo_refresh` gravado vale uma vez —
+  `RefreshUseCase` rotaciona e tem detecção de REUSO que revoga a família
+  inteira —, então um segundo contexto de navegador com o mesmo cookie derruba
+  a sessão dos specs seguintes, e o vermelho aparece no PRÓXIMO arquivo,
+  acusando o mecanismo dele. Não é defeito de produto (reuse detection é o
+  desenho); é uma restrição da camada, agora com seção própria no README. O
+  spec novo opta por sair do estado, porque só precisa da ORIGEM. Junto:
+  `autenticar()` passa a memoizar o token por execução, então a suíte custa
+  **3 logins fixos** contra o lockout por IP, por mais specs que venham.
 
 ## v4.0.0 — 2026-09-04
 

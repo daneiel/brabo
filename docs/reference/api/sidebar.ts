@@ -282,6 +282,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-projects-controller-mirror-sync-result",
+          label: "The local agent reports the outcome of a mirror round (RN-517)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-projects-controller-product-metrics",
           label: "The project's delivery funnel and partial DORA metrics, for the PO to read",
           className: "api-method get",
@@ -555,6 +561,18 @@ const sidebar: SidebarsConfig = {
           id: "docs/reference/api/projects-controller-remove-member",
           label: "Disassociates a user from the project",
           className: "api-method delete",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/projects-controller-set-mirror-path-route",
+          label: "Declares (or clears) the project's mirror destination",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/projects-controller-mirror-state-route",
+          label: "What the last mirror round did (RN-517)",
+          className: "api-method get",
         },
         {
           type: "doc",
@@ -1058,6 +1076,12 @@ const sidebar: SidebarsConfig = {
           type: "doc",
           id: "docs/reference/api/personal-access-tokens-controller-list-all-pats",
           label: "Lista TODOS os Personal Access Tokens do projeto, de qualquer usuário",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "docs/reference/api/runner-device-keys-controller-list-device-keys",
+          label: "Lista as próprias chaves de dispositivo deste projeto",
           className: "api-method get",
         },
         {

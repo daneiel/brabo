@@ -190,6 +190,59 @@ reason in the URL.
   `UpdateProjectDto` deliberately omits both fields, otherwise
   `PartialType(CreateProjectDto)` would expose them on a `PATCH` with no
   guard at all.
+- **`PUT /projects/:projectId/mirror-path` writes a path on the USER's
+  machine, and the api never sees that machine** ([RN-515](business-rules.md#rn-515),
+  [ADR 0147](adr/0147-agente-local-com-capacidades.md), point 4). It stores
+  the destination the `espelho` capability copies the project's work to — a
+  folder OUTSIDE the mounted base, which is precisely why a bind mount cannot
+  reach it and a local agent has to.
+
+  The minimum is `maintainer`, the same as `execution-mode` and
+  `projects-base` above, and for the same reason: this route is about a path
+  on the operator's own filesystem, not about project metadata.
+
+  What the api can validate here is ONLY the LEXICAL shape, and the refusal
+  message says so. It reuses `caminhoDeWorkspaceLocalValido` — absolute, no
+  `..`/`.`, never the root, never a system folder, never overlapping Brabo's
+  own checkout — exactly as `runner` creation does ([RN-423](business-rules.md#rn-423)),
+  and for the same reason: there is no disk here to ask. It does NOT require
+  `BRABO_PROJECTS_BASE`, because being outside the base is the point.
+
+  Two refusals are specific to this route. The destination may not be inside
+  `workspacePath` nor contain it — the same loop seen from both sides, since
+  writing the mirror inside its own source makes the mirror copy itself — and
+  the comparison is by SEGMENT (`dentroDoEscopo`), so `/base-outra` is not
+  inside `/base`. And a project in `execution_mode: container` may not have a
+  destination at all: its source is a managed volume ON THE SERVER, and the
+  process that would copy runs on the USER's machine, which cannot see it.
+  Both are **400**.
+
+  The other half of the guard — resolving symlinks with `realpath`, so a link
+  in any segment of the destination cannot point back into the source — is the
+  RUNNER's, on the machine where both paths actually exist. **This route does
+  not establish that guarantee**; it only rules out the loop as WRITTEN.
+  Clearing is `mirrorPath: null`, and the key is required: omitting it would
+  be indistinguishable from asking to clear, and clearing in silence is the
+  defect. Writing the mirror is never a `proposed_action` — it is
+  configuration the user declared, not an agent asking to act.
+- **`GET /projects/:projectId/mirror-state` is `viewer`, one notch below the
+  route that WRITES the destination** ([RN-517](business-rules.md#rn-517),
+  [ADR 0147](adr/0147-agente-local-com-capacidades.md), point 7). It returns
+  what the last mirror round did: which of the three states is current
+  (`never` | `synced` | `failed`), the last successful sync with its counts,
+  the frozen destination of that round, and the last error.
+
+  The asymmetry with `PUT .../mirror-path` (`maintainer`) is deliberate and
+  is the rule of [RN-102](business-rules/custo.md#rn-102) applied: the minimum
+  belongs to the ENDPOINT, and this one only READS. The destination itself
+  already rides on every project read (`GET /projects/:projectId`,
+  `viewer`), so requiring `maintainer` here would lock information away from
+  someone who already sees it in the same project — the worse of the two
+  defects, because it is invisible to whoever lost the capability.
+
+  What it does NOT expose is worth stating: no file names, no content, no
+  path other than the destination the caller can already read. The counts
+  are counts.
 - **`GET /workspaces/:workspaceId/projects-base` reveals a piece of the
   operator's filesystem topology, and that's why it isn't `viewer`**
   ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md),
@@ -296,6 +349,22 @@ reason in the URL.
   unreachable one (`{ sucesso: false, motivo }` is the normal shape, per
   RN-486 — a `running` row never guarantees the container is up right
   now), so a dead container is a regular failed command, not a 5xx.
+- **`POST /internal/projects/:projectId/mirror-sync-result`** ([RN-517](business-rules.md#rn-517),
+  [ADR 0147](adr/0147-agente-local-com-capacidades.md), point 7) is called
+  only by the engine, after the runner pushes `mirror_sync_result` over the
+  channel — never directly by the runner, which doesn't hold the service
+  token. The same shape and the same path as `workspace-verification` above,
+  and for the same reason: the runner is the only party that knows what
+  happened on the user's machine, and the engine repasses rather than writing
+  the table itself.
+
+  It writes TELEMETRY and nothing else: a row in `project_mirror_states`,
+  never the event log (a mirror round has no session and
+  `session_events.session_id` is `NOT NULL`) and never a `proposed_action`.
+  The body carries an outcome, three counts and an error message — no path
+  the api acts on, nothing executed, nothing granted. Recording never breaks
+  what it measures: the copy is already finished when this is called, and a
+  refusal here is only logged by the engine.
 - **`GET /internal/projects/:projectId/container-spec`** ([ADR 0130](adr/0130-broker-de-container.md),
   [RN-485](business-rules.md#rn-485)) is the only `engine-service` route whose
   caller is NOT the engine — it is the container **broker**, the single process
@@ -342,20 +411,52 @@ reason in the URL.
   (issue/list/revoke the PAT itself, plus the two `maintainer` ones —
   RN-427, list/revoke of ANY user in the project) remain regular session
   JWT — only the route the TOKEN ITSELF authenticates changes mechanism.
-- **The two `/projects/:projectId/runner-device-keys` routes ARE regular
+- **The three `/projects/:projectId/runner-device-keys` routes ARE regular
   session JWT**, unlike `runner-ticket` above — the browser, already
   logged in, registers the Ed25519 public key it just generated (the
   private half never leaves it) before offering the runner binary for
   download. `POST` persists the public key only — there's no "raw secret"
   to hand back the way `IssuePersonalAccessTokenUseCase` does, because
   the client already holds the only secret involved (the private key) and
-  the api never sees it. `DELETE` revokes the caller's own key,
-  idempotently, same shape as the PAT's self-service revoke. `PatAuthGuard`
+  the api never sees it. `GET` lists the caller's own keys, revoked ones
+  included ([RN-519](business-rules.md#rn-519)) — it is what makes
+  revocation reachable at all, and until it existed an orphan key (tab
+  closed midway through the automatic-setup flow) was invisible and
+  permanent. It never returns the public JWK: what the list exists for is
+  revoking, and `lastUsedAt: null` is the signal of the orphan. `DELETE`
+  revokes the caller's own key, idempotently, same shape as the PAT's
+  self-service revoke. `PatAuthGuard`
   is what LATER accepts a JWT signed by that key's private half on
   `runner-ticket`, looked up by the `kid` header matching this table's
   `id`; the guard checks the key hasn't been revoked but never an
   expiry — the key itself doesn't expire, only the short-TTL (≤60s,
   `exp - iat`) JWT the runner signs with it each time.
+- **Revoking a device key now reaches the LIVE connection, and the target
+  is `{project, user}` — never `{key}`**
+  ([RN-520](business-rules.md#rn-520), [ADR 0147](adr/0147-agente-local-com-capacidades.md)
+  point 6). `DELETE` used to stop only the NEXT ticket: a `brabo-runner`
+  already connected kept its `terminal:<projectId>` channel alive, running
+  approved commands with the revoked key, until it fell on its own. The
+  api now asks the engine (`POST /internal/projects/:projectId/runner/disconnect`)
+  to drop it, and the engine reaches the channel pid — the api never talks
+  to the channel, and the engine never reads the key table.
+  The precision that does NOT exist is per-credential, and that's a
+  property of the ticket path rather than a preference:
+  `runner_socket_tickets` stores `project_id`/`user_id`/`kind` and nothing
+  else, so which PAT or which `kid` opened that socket dies in
+  `PatAuthGuard` and never reaches the engine. **Declared cost:** a runner
+  of the SAME user connected with a PAT, or with another key of the same
+  project, also falls — and reconnects by itself, because the next round
+  asks for a fresh ticket and a credential that still holds gets one. A
+  runner of another user in the same project is left alone. Dropping the
+  connection is a SIDE EFFECT: engine down, no runner connected or a
+  timeout can never make the `DELETE` (204, idempotent) fail or turn 5xx —
+  the same rule as `rag_searches` ([RN-479](business-rules.md#rn-479)) and
+  `mirror_sync_result` ([RN-517](business-rules.md#rn-517)).
+  The `maintainer` view the PAT has (RN-427, list/revoke of ANY user)
+  stays OUT for device keys — now by decision, not omission: that pair was
+  born of incident response to a SHARED secret circulating, and a device
+  key's private half never leaves the browser that made it.
 - **The `engine-service` routes aren't "internal" by naming convention.**
   What protects them is `EngineServiceGuard` comparing
   `X-Brabo-Service-Token` against the shared secret in constant time, plus
@@ -617,6 +718,7 @@ reason in the URL.
 | GET | `/internal/projects/:projectId/product-metrics` | engine-service |
 | POST | `/internal/projects/:projectId/workspace-verification` | engine-service |
 | POST | `/internal/projects/:projectId/container-exec` | engine-service |
+| POST | `/internal/projects/:projectId/mirror-sync-result` | engine-service |
 | GET | `/internal/projects/:projectId/container-spec` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
@@ -641,6 +743,8 @@ reason in the URL.
 | GET | `/projects/:projectId` | role:viewer |
 | PATCH | `/projects/:projectId` | role:maintainer |
 | PUT | `/projects/:projectId/execution-mode` | role:maintainer |
+| PUT | `/projects/:projectId/mirror-path` | role:maintainer |
+| GET | `/projects/:projectId/mirror-state` | role:viewer |
 | GET | `/projects/:projectId/models` | role:viewer |
 | GET | `/projects/:projectId/actions` | role:developer |
 | GET | `/projects/:projectId/agent-autonomy` | role:maintainer |
@@ -707,6 +811,7 @@ reason in the URL.
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId/admin` | role:maintainer |
 | POST | `/projects/:projectId/runner-device-keys` | role:developer |
+| GET | `/projects/:projectId/runner-device-keys` | role:developer |
 | DELETE | `/projects/:projectId/runner-device-keys/:deviceKeyId` | role:developer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |
 | DELETE | `/projects/:projectId/proficiency/me` | role:viewer |

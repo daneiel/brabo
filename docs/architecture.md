@@ -13,7 +13,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 144 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 146 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 
@@ -235,6 +235,22 @@ drawn from it.
 Two UI checks are automatic: contrast (`lib/contraste.ts`, a test over
 `design/tokens.css`) and layout (`scripts/dev/validacao-visual.js`, run in
 the browser). Explained in `design/README.md`.
+
+**The installation decides what the project wizard offers.** `getProjectsBase`
+(`lib/api-client.ts`) reads `GET /workspaces/:workspaceId/projects-base` — the
+single mounted-projects base of this installation ([ADR
+0141](adr/0141-base-unica-dos-projetos-montados.md)) — and the New Project
+wizard is its only caller ([RN-513](business-rules.md#rn-513)). `projectsBase:
+null` is a normal state, not a failure: the installation has no
+`BRABO_PROJECTS_BASE`, so the Mounted folder card is not offered at all and
+`container` stays the default. The same holds while the answer is in flight and
+when the query FAILS — unknown never becomes an offer, the same rule as
+[RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468). With a
+base, the card is PRE-SELECTED and the path field opens on `<base>/<slug>`,
+composed by `caminhoSugeridoNaBase` (`lib/wizard.ts`) — a pure function, next
+to `caminhoDentroDaBase`, which answers "is this path under the base?" by
+SEGMENT and mirrors the api's `dentroDoEscopo`. Neither the pre-selection nor
+the suggestion overwrites a human choice.
 
 **The folder picker is the web's one TWO-TRANSPORT read**, and the interface
 that makes it one lives in `lib/fs-browser.ts`
@@ -598,9 +614,25 @@ erDiagram
   projects ||--o{ rag_searches : "every hybrid search leaves a row (RN-479)"
   rag_searches ||--o{ rag_feedback : "was this excerpt useful? (RN-480)"
   chunks ||--o{ rag_feedback : "the judged excerpt"
+  projects ||--o| project_mirror_states : "what the last mirror round did (RN-517)"
 ```
 
-53 tables in total. The two most recent are `rag_searches`/`rag_feedback`
+54 tables in total. The most recent is `project_mirror_states`
+([RN-517](business-rules.md#rn-517),
+[ADR 0147](adr/0147-agente-local-com-capacidades.md) point 7): one row per
+project, `project_id` unique, holding what the LAST mirror round did — the last
+successful sync with its three counts and its frozen destination, plus the last
+error. A TABLE and not an event for the same reason as `rag_searches` right
+above: a mirror round has no session, and `session_events.session_id` is
+`NOT NULL`, so the event log would silently drop the whole thing. Three states
+that never collapse ([RN-088](business-rules.md#rn-088)): "never synced" is the
+ABSENT row, "synced and copied nothing" is a present row with `files_copied = 0`,
+and "failed" is `last_error_at` newer than `last_synced_at`. Success and failure
+columns are DISJOINT and neither write touches the other's — which is why the
+screen can say "failing since today, last good copy was yesterday with 412
+files" instead of losing the most useful thing it has.
+
+The two before it are `rag_searches`/`rag_feedback`
 (RN-479/480): the trail of the hybrid search and the vote on what it
 returned, added because `rag-search-limits.ts` declares in its own comment
 that none of the four numbers of the hybrid search comes from calibration
@@ -617,6 +649,32 @@ same discipline as the frozen price in metering
 calibration does not silently change what every earlier measurement meant.
 `session_socket_tickets` is kept off the diagram for the same reason as
 `refresh_tokens`/`account_tokens`: an auth mechanism, not a domain relation.
+
+`projects.mirror_path` (FASE 28, [RN-515](business-rules.md#rn-515),
+[ADR 0147](adr/0147-agente-local-com-capacidades.md) point 4) is a column and
+not a table because it is ONE optional value per project: the absolute path,
+on the USER's machine, that the local agent's `espelho` capability copies the
+work to. It is nullable and `NULL` is the NORMAL state — a project without a
+mirror is the majority, and the product never picks a destination on its own.
+It deliberately carries **no** CHECK pairing it with `execution_mode`, unlike
+`workspace_path` right next to it: `container` cannot have a destination (its
+source is a managed volume on the SERVER, and the process that would copy runs
+on the user's machine), but `execution_mode` is CONVERTIBLE
+([RN-447](business-rules.md#rn-447), [ADR 0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)),
+so a CHECK would make converting to `container` blow up in Postgres instead of
+refusing with a reason. The refusal lives in the use case, and the conversion
+zeroes the column — the same shape as `workspace_verified_at`, and for an
+additional reason: the two directions of the origin↔destination loop were
+validated against the OLD `workspace_path`.
+Since [RN-516](business-rules.md#rn-516) the engine READS this column — it is
+what decides whether the runner's `join` requires the `espelho` capability, and
+it is what travels back in that join's grant (`Engine.Runners.Espelho`,
+`EngineWeb.TerminalChannel`). The engine never writes it. Since
+[RN-517](business-rules.md#rn-517) there IS an internal route in the
+neighbourhood — `POST /internal/projects/:projectId/mirror-sync-result` — but it
+writes `project_mirror_states`, never this column: the destination is
+CONFIGURATION (the user declares it) and the round outcome is TELEMETRY (the
+local agent reports it), and merging them would let a report overwrite a choice.
 **The constraints are business rules**: the event log's unique `(session_id, seq)`, the `check` requiring
 exactly one scope in `budgets` (project **or** session, never both), the
 partial indexes that guarantee analysis idempotency — and, since Phase 8b,

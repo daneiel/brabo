@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  CAPACIDADES_DO_RUNNER,
   conectarCanal,
+  espelhoConcedidoDaResposta,
   enviarContainerRemoveResult,
   enviarContainerStartResult,
   enviarContainerStopResult,
@@ -69,6 +71,8 @@ class SocketFalso implements SocketLike {
   canal: CanalFalso;
   desconectado = false;
   onCloseCb: (() => void) | null = null;
+  /** O que o runner DECLAROU no join (RN-514) — tópico e params. */
+  canaisPedidos: { topic: string; params?: object }[] = [];
 
   constructor(canal: CanalFalso) {
     this.canal = canal;
@@ -84,13 +88,18 @@ class SocketFalso implements SocketLike {
   onClose(cb: () => void): void {
     this.onCloseCb = cb;
   }
-  channel(): ChannelLike {
+  channel(topic: string, params?: object): ChannelLike {
+    this.canaisPedidos.push({ topic, params });
     return this.canal;
   }
 }
 
-function fabricaFalsa(canal: CanalFalso): CriarSocket {
-  return () => new SocketFalso(canal);
+function fabricaFalsa(canal: CanalFalso, sockets?: SocketFalso[]): CriarSocket {
+  return () => {
+    const socket = new SocketFalso(canal);
+    sockets?.push(socket);
+    return socket;
+  };
 }
 
 const handlersVazios = {
@@ -104,6 +113,7 @@ const handlersVazios = {
   onContainerStart: vi.fn(),
   onContainerStop: vi.fn(),
   onContainerRemove: vi.fn(),
+  onMirrorSync: vi.fn(),
 };
 
 describe('conectarCanal', () => {
@@ -336,5 +346,146 @@ describe('conectarCanal', () => {
     expect(canal.pushes).toEqual([
       { event: 'workspace_confirm', payload: { path: '/home/voce/projetos/loja' } },
     ]);
+  });
+
+  /**
+   * ADR 0147 ponto 1 / RN-514 — o join deixou de ser mudo deste lado. A
+   * asserção é sobre o CONTEÚDO dos params, não sobre a chamada ter
+   * acontecido: params vazios eram justamente o estado anterior, e um teste
+   * que só checasse "chamou `channel()`" passaria com eles.
+   */
+  it('declara as capacidades que sabe executar nos params do join', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const sockets: SocketFalso[] = [];
+
+    await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: handlersVazios,
+      criarSocket: fabricaFalsa(canal, sockets),
+    });
+
+    expect(sockets).toHaveLength(1);
+    expect(sockets[0]!.canaisPedidos).toEqual([
+      { topic: 'terminal:p1', params: { capacidades: ['exec', 'pty', 'espelho'] } },
+    ]);
+  });
+
+  /**
+   * RN-516 — `espelho` entra na lista SÓ AGORA, e a asserção é sobre a lista
+   * inteira de propósito: o que a negociação existe para impedir é declarar o
+   * que não se implementa, e uma asserção frouxa (`toContain`) deixaria passar
+   * um nome acrescentado antes do código dele existir.
+   */
+  it('declara as TRÊS capacidades que implementa — nem uma a mais', () => {
+    expect([...CAPACIDADES_DO_RUNNER]).toEqual(['exec', 'pty', 'espelho']);
+  });
+
+  it('recusa por capacidade vira JoinRecusadoError (fatal, sem retry) com a mensagem do servidor legível', async () => {
+    const motivo = {
+      reason:
+        'este projeto exige a(s) capacidade(s) `espelho`, que o brabo-runner ' +
+        'conectado não declarou no join — o binário está desatualizado.',
+    };
+    const canal = new CanalFalso({ status: 'error', resp: motivo });
+
+    const erro = await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: handlersVazios,
+      criarSocket: fabricaFalsa(canal),
+    }).catch((e: unknown) => e);
+
+    expect(erro).toBeInstanceOf(JoinRecusadoError);
+    // `index.ts` imprime `erro.message` e encerra — é a única chance de
+    // explicar, então a razão do servidor tem que sobreviver até ali.
+    expect((erro as JoinRecusadoError).message).toContain('espelho');
+    expect((erro as JoinRecusadoError).motivo).toEqual(motivo);
+  });
+
+  /**
+   * ADR 0147 pontos 4 e 8 / RN-516 — o destino viaja na CONCESSÃO do join, e
+   * a mensagem `mirror_sync` só é entregue ao handler; quem confere o destino
+   * contra a concessão é `tratarMirrorSync` (`index.ts`), testado em
+   * `index-handlers.spec.ts`.
+   */
+  it('o destino do espelho vem na resposta do join e fica em `espelho`', async () => {
+    const canal = new CanalFalso({
+      status: 'ok',
+      resp: { espelho: { destino: '/home/voce/espelhos/loja' } },
+    });
+
+    const conectado = await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: handlersVazios,
+      criarSocket: fabricaFalsa(canal),
+    });
+
+    expect(conectado.espelho).toEqual({ destino: '/home/voce/espelhos/loja' });
+  });
+
+  it('join sem concessão de espelho: `espelho` é null — o estado NORMAL', async () => {
+    const canal = new CanalFalso({ status: 'ok', resp: {} });
+
+    const conectado = await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: handlersVazios,
+      criarSocket: fabricaFalsa(canal),
+    });
+
+    expect(conectado.espelho).toBeNull();
+  });
+
+  it('espelhoConcedidoDaResposta ignora resposta malformada em vez de inventar destino', () => {
+    expect(espelhoConcedidoDaResposta(undefined)).toBeNull();
+    expect(espelhoConcedidoDaResposta({ espelho: null })).toBeNull();
+    expect(espelhoConcedidoDaResposta({ espelho: { destino: '' } })).toBeNull();
+    expect(espelhoConcedidoDaResposta({ espelho: { destino: 42 } })).toBeNull();
+    expect(espelhoConcedidoDaResposta({ espelho: { destino: '/x' } })).toEqual({
+      destino: '/x',
+    });
+  });
+
+  it('mirror_sync chega ao handler com destino e momento; sem `destino` não chega', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const onMirrorSync = vi.fn();
+
+    await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: { ...handlersVazios, onMirrorSync },
+      criarSocket: fabricaFalsa(canal),
+    });
+
+    canal.simularRecebimento('mirror_sync', {
+      ref: 'm1',
+      destino: '/home/voce/espelhos/loja',
+      momento: 'commit',
+    });
+    expect(onMirrorSync).toHaveBeenCalledWith({
+      ref: 'm1',
+      destino: '/home/voce/espelhos/loja',
+      momento: 'commit',
+    });
+
+    // `momento` ausente é rastro que falta, não motivo pra descartar a rodada.
+    canal.simularRecebimento('mirror_sync', { ref: 'm2', destino: '/x' });
+    expect(onMirrorSync).toHaveBeenCalledWith({
+      ref: 'm2',
+      destino: '/x',
+      momento: 'desconhecido',
+    });
+
+    // Sem `destino` não há o que conferir contra a concessão — a mensagem não
+    // vira "sincronize para onde você achar".
+    canal.simularRecebimento('mirror_sync', { ref: 'm3' });
+    expect(onMirrorSync).toHaveBeenCalledTimes(2);
   });
 });

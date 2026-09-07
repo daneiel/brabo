@@ -65,6 +65,12 @@ export interface Project {
   // Quando o runner confirmou o caminho pela primeira vez (RN-423). `null` =
   // não verificado — só ganha sentido em `executionMode: 'runner'`.
   workspaceVerifiedAt: string | null;
+  // O DESTINO do espelho na máquina do usuário — a pasta FORA da base montada
+  // para onde o agente local copia o trabalho (RN-515, ADR 0147 ponto 4).
+  // `null` é o estado NORMAL, não uma pendência: projeto sem espelho é a
+  // maioria, e é por este campo que a tela decide não mostrar a linha de
+  // espelho em vez de inventar uma ausência.
+  mirrorPath: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -198,6 +204,19 @@ export interface ProjectUnreadEvents {
 }
 
 /**
+ * A base dos projetos montados desta instalação (ADR 0141, RN-500).
+ *
+ * `null` é estado NORMAL, nunca erro nem falha de leitura: a instalação não
+ * tem `BRABO_PROJECTS_BASE`, e por isso não oferece o modo Pasta montada. É
+ * daqui que o assistente de criação aprende a não oferecer um modo que a
+ * instalação não honra, em vez de oferecer e ver a api recusar depois
+ * (RN-513).
+ */
+export interface ProjectsBase {
+  projectsBase: string | null;
+}
+
+/**
  * Uma listagem do navegador de pastas de projeto (RN-504).
  *
  * `entries` traz SÓ nome de subdiretório — arquivo, symlink e entrada
@@ -216,6 +235,32 @@ export interface ProjectFolders {
   truncado: boolean;
   arquivos: number;
   simbolicos: number;
+}
+
+/**
+ * O estado da última rodada do espelho de um projeto (RN-517, ADR 0147
+ * ponto 7).
+ *
+ * `status` vem RESOLVIDO da api, e a tela não o recalcula: são os TRÊS
+ * estados da RN-088 e a regra que decide qual vale (comparar os dois
+ * carimbos) tem uma fonte só. `never` é a linha ausente — "nunca
+ * sincronizou" —, e ele NÃO é o mesmo que `synced` com `filesCopied: 0`,
+ * que é "olhei e não havia nada a copiar".
+ *
+ * `lastDestination` é CONGELADO: onde a última rodada de fato escreveu. Ele
+ * diverge de `mirrorPath` depois que alguém troca o destino, porque a
+ * concessão viaja no join e só muda quando o runner reconecta (RN-516).
+ */
+export interface MirrorState {
+  mirrorPath: string | null;
+  status: 'never' | 'synced' | 'failed';
+  lastSyncedAt: string | null;
+  filesCopied: number | null;
+  filesSkipped: number | null;
+  filesRefused: number | null;
+  lastDestination: string | null;
+  lastError: string | null;
+  lastErrorAt: string | null;
 }
 
 export interface ProjectMemberWithUser {

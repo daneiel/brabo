@@ -90,6 +90,15 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | "Sempre permitir" separado por Dev Agent de módulo | Clicar "sempre permitir" numa ação de um `dev-<modulo>` gravava em `permissions.json`, escopo de PROJETO INTEIRO — liberava o mesmo comando pra qualquer outro agente. Passa a gravar em `agent_autonomy(projeto, agente, tipo)`, o MESMO mecanismo já usado pras 3 ações git seedadas na ativação da execução. `dev-lead` (lidera a área, não é membro dela) e qualquer ator não-modular continuam indo pro `permissions.json` de sempre; os dois tetos absolutos (terminal com efeito externo/comando privilegiado, `container_remove`) continuam recusando o clique inteiro ANTES do branch novo. Sem migração: entradas antigas continuam em `permissions.json`, decisão consciente | RN-509 |
 | Docker vira pré-requisito real do modo Runner | `runner` roteava todo terminal aprovado ao CLI assim que workspace verificado + runner conectado batiam, sem checar container `running` — sem Docker de pé, o runner caía sozinho no HOST puro, o MESMO fallback silencioso que o ADR 0143 já tinha fechado para `container`/`mounted`. `Engine.Runners.RunnerReadiness` unifica as TRÊS pré-condições (verificado, conectado, container `running`) com dois consumidores: `TerminalExecutor` e a materialização do worktree do dev agent, que deixa de tentar `File.mkdir_p!`/`git init` LOCAL contra o caminho do HOST (a lacuna aberta desde a RN-478) e passa a rodar DENTRO do container real, na máquina do usuário, pelo MESMO canal `exec`/`exec_result` (`Engine.Actions.Workspace.RunnerGit`, novo) — `WorktreeManager` bifurca pelo mesmo critério, e o job periódico de limpeza PULA em silêncio um projeto `runner` sem runner pronto agora. O protocolo `exec` ganha `env` opcional para a credencial de git (ADR 0056) viajar no ambiente do processo filho do HOST — mesclado sobre `process.env`, nunca repassado ao `docker exec` nem logado. `container_start` deixa de atender `runner` (o payload dela, com eleição de imagem, nunca fazia sentido lá); nasce `container_start_via_runner` — schema só com `rationale`, sobe a imagem já decidida —, com a tool nova do Infra Lead recusando LOCALMENTE (sem HTTP) antes de propor às cegas | RN-507/508, ADR 0145 |
 | RN-505 duplicada em dev, corrigida | O "artefato de decisão" e o "sempre permitir por Dev Agent" mergearam com 2 minutos de diferença, cada um alocando RN-505 sem ver o outro; "sempre permitir por Dev Agent" foi renumerado pra RN-509 (`docs/business-rules.md`, CHANGELOG, o comentário do `approve-always-action.use-case.ts` e do `ApprovalCard.test.tsx`), liberando o anchor `{#rn-505}` pro `decision_record`. Achado junto: a renumeração 505→507/506→508 feita durante a resolução de conflito de outro PR (Docker/runner, ADR 0145) tinha ficado INCOMPLETA — sobravam três menções a "RN-505" neste próprio arquivo, também corrigidas pra "RN-507" | — |
+| FASE 28 (sessão 1) — a pasta do usuário, só decisão | Nenhum dos três modos entrega "abrir o editor e ver o trabalho numa pasta minha", e o caso instrutivo é o `mounted`: PRONTO e inalcançável, porque nada no produto pede que `BRABO_PROJECTS_BASE` seja configurada e `GET .../projects-base` não tem chamador no web. O ADR 0146 põe o consentimento no `pnpm bootstrap` — base padrão `$HOME/projetos-brabo` (e NÃO `$HOME/brabo-projetos`, que o `.env.example` já usa como exemplo de `PROJECT_WORKSPACES_HOST_DIR`: é a conflação que o ADR 0141 recusou, e a proteção é MECANISMO, recusando base sobreposta àquela raiz), gravada por script Node e nunca em bash, porque item de menu do `bootstrap.sh` roda com stdin em `/dev/null` e por construção NÃO consegue perguntar; compartilhamento do Docker Desktop PROVADO MONTANDO, nunca lido do `settings.json` (a régua de ADR 0041/0042 aplicada ao host, e a SEGUNDA guarda de plataforma do produto); e o broker sai do `profiles` no compose LOCAL e só nele — a justificativa original ("nada o chama... em troca de nada", ADR 0130) morreu quando os ADRs 0133/0136 lhe deram quatro chamadores e o 0144 fez `mounted` subir por ele. O ADR 0147 transforma o `brabo-runner` em UM agente local que DECLARA capacidades (`espelho`, `exec`, `pty`) nos params do `join` — hoje mudo dos dois lados —, concedidas por interseção com o `execution_mode` e guardadas em `socket.assigns`, nunca em tabela; espelho numa direção, NUNCA apaga, com predicado PRÓPRIO em vez de `RunnerReadiness` com flag. Achado: a revogação de chave de dispositivo é CEGA (um `developer` não lista nem as próprias chaves) e só impede ticket novo, sem derrubar o canal vivo. Os dois declaram a mesma linha: consentimento de CONFIGURAÇÃO não é aprovação de AÇÃO — a escrita do espelho não vira `proposed_action`, e fazê-la por terminal cairia no ADR 0055 e viraria fila de aprovações rotineiras. Faixa RN-511..520 reservada; o salto sobre a RN-510 é deliberado (já alocada em branch não mergeada) | ADR 0146/0147, fase-28-pasta-do-usuario.md |
+| FASE 28 (sessão 2) — a base deixa de depender de alguém adivinhar que ela existe | A RN-500 construiu a base e disse o que fazer quando ela falta; faltava alguém PEDIR que fosse configurada — nada no produto o fazia, e um modo pronto ficava inalcançável para quem instala. O passo entra no `pnpm bootstrap` (`Docker › Base de projetos`), propondo `$HOME/projetos-brabo` — e NÃO `~/brabo-projetos`, que o `.env.example` já usa como exemplo de `PROJECT_WORKSPACES_HOST_DIR`: propor o mesmo nome para as duas variáveis andaria para dentro da colisão que o ADR 0141 recusou. O nome é só a esquiva; a PROTEÇÃO é mecanismo — `validarBase` recusa candidata sobreposta (nos DOIS sentidos) ao checkout do Brabo ou à raiz gerenciada, e recusa o caminho DIGITADO, não só o default. O compartilhamento do Docker Desktop é provado MONTANDO uma sentinela, nunca lido de `settings.json` (arquivo não documentado, que descreve o que o usuário CONFIGUROU e não o que o daemon fará) — a régua dos ADRs 0041/0042 aplicada ao host, e a SEGUNDA guarda de plataforma do produto. Três desfechos que não colapsam, e sem terminal o passo RELATA em vez de consentir | RN-511, ADR 0146 pontos 1–2 |
+| FASE 28 (sessão 3) — o assistente oferece a Pasta montada | As DUAS metades já eram regra e nunca tinham chegado à tela: "não oferecer sem base" é a RN-500 e "sugerir `<base>/<slug>`" é a RN-501 (o ADR 0142 adiou a validação de disco justamente pra que o assistente pudesse propor pasta que ainda não existe) — mas `GET .../projects-base` não tinha CHAMADOR nenhum no web e o card era oferecido incondicionalmente, então escolher o modo numa instalação sem base terminava em 400 depois de a pessoa ter chegado ao fim do assistente. NOVO é só a PRÉ-SELEÇÃO, que revisa o default do ADR 0072 SÓ para a instalação local. A consulta nasce com o WIZARD e não com o quinto passo (senão o card pisca com a pessoa olhando); base DESCONHECIDA (carregando) ou consulta FALHADA não viram oferta — a régua da RN-088/RN-468 e dos ADRs 0041/0042 —; a escolha humana fica guardada SEPARADA do modo vigente e vence a pré-seleção; e a sugestão só escreve no campo vazio ou por cima da sugestão anterior dela mesma (slug vazio, o caso da adoção, deixa o campo vazio em vez de inventar segmento). O aviso do modo parou de mentir: os DOIS estados que o backend tem — sob a base, nota neutra; fora dela, aviso de que a api recusa, NOMEANDO a base —, com "dentro da base" comparado por SEGMENTO (`/base-outra` não está dentro de `/base`). Zero mudança de api | RN-513, ADR 0146 ponto 4 |
+| FASE 28 (sessão 5) — o `join` do agente local deixa de ser mudo | O `join` do canal `terminal:<projectId>` era mudo dos DOIS lados — o runner mandava `{}` e o servidor fazia `_params` —, então o servidor não tinha como saber se o binário do outro lado entende uma mensagem nova, e o defeito era o pior possível: a mensagem chega, o handler não existe e NADA acontece, sem erro e sem log. Agora o runner DECLARA nos params (`Engine.Runners.Capacidades`, vocabulário `exec`/`pty`/`espelho`) e o servidor CONCEDE a interseção com o que CONHECE, em `socket.assigns` e NUNCA em tabela (capacidade é propriedade daquela CONEXÃO). O runner declara só `exec` e `pty` — declarar `espelho` sem implementá-lo é exatamente o defeito que a negociação impede; ele entra como NOME do vocabulário e nada mais, e a sessão 6 o implementa. Params ausentes/vazios são o binário LEGADO e concedem `{exec, pty}` — FATO, não benevolência: são as duas funções com que o runner nasceu, e recusar legado seria `breaking/` e MAJOR. Desconhecido é IGNORADO (runner mais NOVO que o engine conecta); exigida-e-não-declarada recusa o join NOMEANDO a que falta, ANTES do `Registry` — mecanismo implementado e testado que hoje NÃO dispara (`runner` exige `exec`, que todo binário tem; nada exige `espelho` ainda), e isso é o desenho. A metade que entrega valor HOJE: mensagem sem a capacidade é RECUSADA com resposta nomeada — `exec` responde no formato de `exec_result` (126 + causa) em vez de o `RunnerRouter` esperar o timeout, e `pty_*` vira `pty_error` na aba em vez de sumir. `RunnerReadiness` byte a byte como está | RN-514, ADR 0147 ponto 1 |
+| FASE 28 (sessão 6, metade A) — onde o destino do espelho mora | A capacidade `espelho` (RN-514) precisa de um DESTINO, e ele é POR PROJETO: coluna nova `projects.mirror_path` (nullable), campo `mirrorPath` e `PUT projects/:projectId/mirror-path` (`maintainer`, o mesmo mínimo de `execution-mode`/`projects-base` — a rota fala de um caminho do computador do OPERADOR). Nunca global, nem no runner nem por variável: destino global faria o artefato do projeto B aterrissar na pasta do projeto A, e o usuário descobriria pelo CONTEÚDO, não por um erro. `null` é o estado NORMAL, e limpar é `{"mirrorPath": null}` EXPLÍCITO — a chave é obrigatória, porque omiti-la seria indistinguível de pedir para limpar. A api valida SÓ o LÉXICO e DIZ que é só o léxico: ela não enxerga a máquina do destino (a situação do `runner`/RN-423, não a do `mounted`), então REUSA `caminhoDeWorkspaceLocalValido` em vez de uma quarta cópia da régua, e NÃO exige `BRABO_PROJECTS_BASE` — o destino do espelho é por definição a pasta que a base não cobre. Duas recusas próprias: os DOIS sentidos do laço origem↔destino (dentro do `workspacePath` e contendo ele — comparação por SEGMENTO, `/base-outra` NÃO está dentro de `/base`) e `container`, cuja origem é um volume do SERVIDOR que o agente local da máquina do usuário não enxerga; converter o modo ZERA o destino. A metade `realpath` da guarda é do RUNNER e ainda não existe — a api impediu o laço ESCRITO, nunca o construído por symlink. NADA aqui copia arquivo: `mirror_sync`, protocolo e cópia são a metade B | RN-515, ADR 0147 ponto 4 |
+| FASE 28 (sessão 6, metade B) — o espelho passa a existir | A capacidade `espelho` sai de nome do vocabulário e vira código nos DOIS lados. O DESTINO viaja na CONCESSÃO do `join` (a resposta deixa de ser vazia para o `:runner`: `%{espelho: %{destino: ...}}`), vive só naquela conexão e o runner RECUSA `mirror_sync` para destino não concedido — nunca configuração global nem variável, que faria o artefato do projeto B aterrissar na pasta do A. `mirror_path` não-nulo passa a EXIGIR a capacidade, e esse é o PRIMEIRO disparo real do mecanismo de recusa da RN-514: binário velho num projeto com destino DEIXA de conectar, nomeado e fatal — opt-in, custo declarado no ADR. `espelho-guard.ts` nasce IRMÃO de `guard.ts` (reusa os três helpers e a dupla passada, herda a ressalva de TOCTOU por escrito) e recusa as três coisas do ADR; achado implementando: `realpathMaisProximo` cai no ancestral, e como o destino quase nunca existe, colapsar os dois lados faria `/base-outra` e `/base` virarem `/` — a segunda passada resolve o ancestral e RECOLOCA o sufixo. UMA direção e NUNCA apaga: arquivo apagado na origem PERMANECE no destino (a pasta do usuário é acúmulo, não réplica). O que se copia é a LISTA DO GIT (rastreados + não-rastreados-não-ignorados), sem lista de exclusão própria; git que falha vira erro NOMEADO, nunca `cp -r` de plano B; repo git aninhado (o worktree do dev agent) volta como UMA entrada e não é descido, e symlink da origem é pulado. Predicado PRÓPRIO (`Engine.Runners.Espelho`), DUAS pré-condições e NUNCA `RunnerReadiness` com flag — `runner_readiness.ex` fica byte a byte. Gatilho: o COMMIT, momento nomeado, fire-and-forget e nunca watcher; "fim de turno de agente" fica DECLARADO e não ligado, por não haver enganche não-ambíguo | RN-516, ADR 0147 pontos 2/3/4/8 |
+| FASE 28 (sessão 8) — o estado do espelho fica visível | O `mirror_sync` era fire-and-forget e o desfecho da cópia morria no log local do runner. Nasce `mirror_sync_result`, no MESMO caminho de `workspace_confirm` (runner → canal → engine → HTTP interno → api grava; o engine NÃO escreve a tabela), e o desfecho é o REAL — as três contagens que a cópia devolveu, ou o erro nomeado, nunca um "ok" otimista antes do fim. TABELA própria `project_mirror_states` (uma linha por projeto) e nunca event log, pelo motivo de `rag_searches` (RN-479): a rodada não tem sessão e `session_events.session_id` é `NOT NULL`. Os TRÊS estados da RN-088 não colapsam — linha AUSENTE é "nunca sincronizou", `files_copied = 0` é "sincronizou e não havia nada a copiar", e erro mais recente que o sucesso é "falhou" —, e sucesso e erro CONVIVEM: as duas escritas mencionam colunas disjuntas e nenhuma apaga a outra, então a tela mostra a falha de hoje ao lado da última cópia boa. `destination` vai CONGELADO na linha. Na Visão geral a linha só aparece em projeto que TEM destino, com data absoluta e ressalva, nunca bolinha verde | RN-517, ADR 0147 ponto 7 |
+| FASE 28 (sessão 7) — o agente local vira serviço de usuário | `brabo-runner service install|uninstall|status`, e o precedente era ZERO (nenhuma menção a `systemd`/`launchd` em `apps/runner/`; o modelo era foreground morto por SIGINT). Nível de USUÁRIO sempre — `systemd --user`/`LaunchAgent` —, e root é RECUSA e não aviso: o docblock de `guard.ts` declara "roda com os privilégios DELE" como a premissa das três fronteiras reais, e um serviço root deixaria a guarda best-effort de `cwd` como única coisa entre um comando aprovado e o disco. Windows é recusa NOMEADA (terceiro mecanismo, não variação dos dois). Uma unit por PROJETO porque o servidor já impõe um runner por projeto — nomear pela pasta criaria duas units que nunca sobem juntas, e a segunda apareceria como falha de conexão em vez de erro de instalação; no Linux o arquivo vai para onde o systemd PROCURA (`$XDG_CONFIG_HOME/systemd/user`, senão `~/.config`). `Restart=on-abnormal` e NUNCA `on-failure` (no plist, `KeepAlive`/`Crashed`): exit 1 do runner é recusa fatal de join (RN-514) ou teto de tentativas esgotado, e reiniciar seria o laço que o CLI recusa fazer sozinho. Serviço autentica por CHAVE DE DISPOSITIVO e nunca por token — gravá-lo numa unit o deixaria em disco, e este CLI nunca gravou credencial em disco. `uninstall` remove os TRÊS lendo a pasta da UNIT e nunca do `cwd` (sem unit, só com `--dir` — adivinhar apagaria a chave de outro projeto), e DIZ que a chave saiu do disco e NÃO foi revogada no servidor. `status` responde QUATRO estados com frase e código próprios (0/3/4/5), e a primeira resposta vem do DISCO — por isso continua certa numa máquina sem gerenciador; `spawn` que falhou nunca vira "o gerenciador disse não". BRB-031 NÃO fecha aqui | RN-518, ADR 0147 ponto 5 |
+| FASE 28 (sessão 7) — a revogação deixa de ser cega, e alcança a conexão viva | Eram DUAS metades abertas do ponto 6 do ADR 0147. **Ninguém revoga o que não vê:** `RunnerDeviceKeysController` tinha `POST`/`DELETE` e listagem NENHUMA — nem a do próprio dono —, então chave órfã (RN-473) era inerte, invisível e permanente; entra `GET` (`developer`, molde do PAT), com a REVOGADA na lista (sumir com ela faria a tela afirmar que nunca existiu), `lastUsedAt` nulo como sinal da órfã e nunca a JWK. A visão de `maintainer` (RN-427) fica fora por DECISÃO e não omissão — aquela nasceu de segredo COMPARTILHADO circulando, e a privada de uma chave de dispositivo nunca sai do navegador. **E revogar só impedia ticket NOVO:** o runner conectado seguia executando comando aprovado com a chave revogada. Agora a api MANDA (`POST internal/projects/:id/runner/disconnect`) e o ENGINE alcança o pid que o `Registry` já entregava — o engine não lê a tabela de chaves, a api não fala com o canal. Derruba o TRANSPORTE e não só o canal (`RunnerSocket.id/1` deixa de ser `nil`; `Endpoint.broadcast(id, "disconnect", %{})`, o mecanismo documentado do Phoenix), senão o socket ficaria vivo e o cliente reentraria no tópico para sempre com um ticket já consumido. Alvo é `{projeto, usuário}` e NUNCA `{chave}`, por construção — `runner_socket_tickets` guarda `project_id`/`user_id`/`kind` e a identidade da credencial morre no `PatAuthGuard`; custo declarado: runner do MESMO usuário com PAT ou outra chave também cai e reconecta sozinho, o de OUTRO dono fica de pé e o desfecho diz isso. Derrubar nunca derruba a revogação (204 idempotente, falha do engine é LOG — régua da RN-479/RN-517), revoga antes de derrubar, e o projeto sai da LINHA e nunca da URL. Fecha PELA METADE a lacuna "não há tela onde revogá-la": tela nenhuma, declarado | RN-519/520, ADR 0147 ponto 6 |
 
 ## Estado atual e aberto
 
@@ -106,9 +115,22 @@ daqui e o fechamento vai para o histórico.
   `dev-<modulo>` fechou (ADR 0094); a execução segue no caminho atual
 
 **Cortes e pausas vigentes:**
-- FASE 25b segue cortada NO QUE IMPORTA POR PADRÃO: o broker sobe sob
-  `profiles: ["container-broker"]` e portanto não sobe por padrão — sem ele
-  de pé, `container_start` termina `failed` com `BrokerIndisponivelError`. O
+- FASE 25b DEIXOU de ser corte no compose LOCAL (RN-512, ADR 0146 ponto 3): o
+  broker sai do `profiles` ali e sobe com `pnpm dev`, e permanece sob
+  `profiles: ["container-broker"]` só em PRODUÇÃO — os dois composes divergem
+  de propósito, não uniformize. A justificativa original ("nada o chama... em
+  troca de nada", ADR 0130) morreu: são quatro chamadores reais desde os ADRs
+  0133/0136, e o ADR 0144 fez `mounted` subir PELO broker, então com o profile
+  desligado o modo padrão terminava em `BrokerIndisponivelError`. A assimetria
+  é o que o socket significa de cada lado: quem roda `pnpm dev` já o tem (está
+  rodando `docker compose`), em produção ele é fronteira de privilégio e o
+  operador não é o desenvolvedor. Isso muda QUANDO o broker roda, nunca O QUE
+  ele aceita — as cinco camadas de contenção seguem intactas. Consequência:
+  `DOCKER_GID` passa a importar para toda máquina de desenvolvimento, e
+  `preflight.mjs` RELATA o estado dele a cada subida (errar não quebra o boot,
+  quebra o uso, e o sintoma aparece só no `container_start`). Em PRODUÇÃO, sem
+  o profile ligado, `container_start` continua terminando `failed` com
+  `BrokerIndisponivelError`. O
   que mudou (ADR 0133, RN-491) é que o MECANISMO deixou de ser corte:
   `container_start` é `proposed_action` de verdade, decidida caso a caso pelo
   `ApprovalCard` (`maintainer`, nunca seedada em auto-aprovação), e
@@ -222,9 +244,11 @@ daqui e o fechamento vai para o histórico.
   ANTES de a conversão salvar registra chave num projeto que ainda não é
   `runner`, e `ConfirmProjectWorkspaceUseCase` recusa a confirmação com 400 —
   a ordem "converte, depois onboarda" é decisão de produto à parte
-- Chave de dispositivo órfã (aba fechada no meio do fluxo da RN-473) é INERTE,
-  mas invisível: `RunnerDeviceKeysController` tem `POST`/`DELETE` e nenhuma
-  rota de LISTAGEM, então não há tela onde revogá-la
+- Chave de dispositivo órfã (aba fechada no meio do fluxo da RN-473) é INERTE
+  e agora VISÍVEL pela api — `RunnerDeviceKeysController` ganhou `GET` na
+  RN-519, com a revogada na lista e `lastUsedAt` nulo como sinal da órfã. O que
+  segue aberto é só a TELA: `apps/web` não tem onde listar nem revogar, então
+  quem quiser revogar chama a rota. Metade declarada, não omissão
 - **A credencial de git some quando o container do runner já está ativo, e
   isso é o caminho COMUM, não uma borda.** `RunnerReadiness` (RN-507)
   exige container `running` REGISTRADO antes de QUALQUER operação de
@@ -332,13 +356,50 @@ daqui e o fechamento vai para o histórico.
   embutido no bundle) para executar comandos aprovados e terminal
   interativo (`node-pty`, único `external` do build `tsup` — binding
   nativo, resolvido via `node_modules` de quem instalou o pacote) — ver
-  "Runner local" (ADR 0103). TRÊS caminhos de distribuição: clonar o
+  "Runner local" (ADR 0103). Desde a RN-514 (ADR 0147 ponto 1) o `join`
+  desse canal NÃO é mais mudo: o runner DECLARA nos params o que sabe
+  fazer (`CAPACIDADES_DO_RUNNER` em `channel.ts` — desde a RN-516 as TRÊS,
+  `exec`, `pty` e `espelho`, e só o que ele implementa de verdade) e o
+  servidor CONCEDE a interseção com o vocabulário que conhece
+  (`Engine.Runners.Capacidades`), guardando o conjunto em `socket.assigns`
+  e NUNCA em tabela. Params ausentes/vazios são o binário LEGADO e valem
+  `{exec, pty}` — fato, não suposição —, nome desconhecido é IGNORADO, e
+  capacidade EXIGIDA e não declarada recusa o join NOMEANDO a que falta.
+  Quem exige: o `execution_mode` (`runner` exige `exec`;
+  `container`/`mounted` não exigem nada) e, desde a RN-516, o DADO
+  `projects.mirror_path` — destino de espelho declarado EXIGE `espelho`,
+  em qualquer modo. Essa é a primeira exigência que DISPARA de verdade, e
+  o custo está declarado no ADR: binário velho num projeto com destino
+  deixa de conectar (recusa nomeada, fatal, sem retry), e é opt-in.
+  Mensagem cuja capacidade não foi concedida é RECUSADA com resposta
+  nomeada — nunca entregue a um handler que não existe do outro lado, que
+  era o defeito silencioso que o ADR 0147 nomeia. A resposta do `join`
+  também deixou de ser vazia para o `:runner`: é por ela, e SÓ por ela,
+  que o DESTINO do espelho chega (`%{espelho: %{destino: ...}}`, ADR 0147
+  ponto 4) — nunca configuração local nem variável de ambiente, e o runner
+  recusa `mirror_sync` para destino que não lhe foi concedido NAQUELA
+  conexão; trocar o destino com o runner de pé exige reconectá-lo. O
+  espelho em si (`espelho.ts`/`espelho-guard.ts`) copia a LISTA DO GIT
+  numa direção só e NUNCA apaga — arquivo apagado na origem permanece no
+  destino —, com guarda IRMÃ de `guard.ts` (mesma dupla passada, mesma
+  ressalva de TOCTOU), e é disparado por MOMENTO NOMEADO do engine
+  (`mirror_sync`, hoje o commit), nunca por watcher. TRÊS caminhos de
+  distribuição: clonar o
   monorepo (dev), `npm install -g @brabo/runner` via `tsup` + `npm publish`
   (ADR 0106), e binário standalone via `bun` (`bun build --compile`, ADR
   0112) — o `.node` nativo do `node-pty` embutido por `with { type: 'file'
   }` e extraído para um diretório real em runtime, já que `node-pty`
   resolve seu próprio addon por um `require()` de caminho COMPUTADO que o
-  Bun não consegue embutir sozinho. `--project`/`--dir`/`--token` são
+  Bun não consegue embutir sozinho. Desde a RN-518 (ADR 0147 ponto 5) ele
+  também se INSTALA — `brabo-runner service install|uninstall|status`, nível
+  de USUÁRIO sempre (`systemd --user`/`LaunchAgent`), com root RECUSADO e
+  Windows recusado por NOME; uma unit por PROJETO, `Restart=on-abnormal` e
+  nunca `on-failure` (exit 1 é recusa fatal de join ou teto esgotado, e
+  reiniciar seria o laço que o CLI recusa fazer), autenticação por CHAVE DE
+  DISPOSITIVO e nunca por token (uma unit com token o deixaria em disco), e
+  `status` com QUATRO estados e quatro códigos de saída — a primeira resposta
+  vem do DISCO, então ela continua certa numa máquina sem gerenciador.
+  `--project`/`--dir`/`--token` são
   OPCIONAIS quando a pasta tem `brabo-runner.config.json` e a chave de
   dispositivo gravados pelo fluxo do navegador (RN-464..466, ADR 0118):
   o navegador gera um par Ed25519 (Web Crypto), registra a chave pública
@@ -415,9 +476,10 @@ daqui e o fechamento vai para o histórico.
   novo no enum nasce recusado com mensagem. Contenção em cinco camadas
   independentes — sem porta publicada, rede `internal: true` que só a api
   alcança, `BRABO_SERVICE_TOKEN` em tempo constante, cinco operações, spec
-  computada. Sobe sob `profiles: ["container-broker"]` nos dois composes e
-  NÃO sobe por padrão; a imagem dele NÃO é publicada no GHCR (as quatro do ADR
-  0119 seguem sendo quatro)
+  computada. Desde a RN-512 (ADR 0146) sobe POR PADRÃO no compose local e
+  permanece sob `profiles: ["container-broker"]` no de produção — a divergência
+  entre os dois arquivos é a decisão, não descuido; a imagem dele NÃO é
+  publicada no GHCR (as quatro do ADR 0119 seguem sendo quatro)
 - `packages/docker-port`: a porta de Docker e o adaptador de CLI, consumidos
   por `apps/runner` e `apps/broker`. Runtime, e por isso NÃO cabe em
   `packages/shared` (100% tipo, invariante travado por teste). Sem passo de
@@ -607,7 +669,13 @@ daqui e o fechamento vai para o histórico.
   apontar as duas para o mesmo lugar faria `init_from_bare!` dar `git init` na
   pasta de outro projeto. `baseDeProjetos()` NUNCA lança e AUSENTE é estado
   normal — `GET workspaces/:workspaceId/projects-base` (`maintainer`) devolve
-  `projectsBase: null`, e é assim que a criação aprende a NÃO oferecer o modo.
+  `projectsBase: null`, e é assim que a criação aprende a NÃO oferecer o modo —
+  o que desde a RN-513 (ADR 0146 ponto 4) é VERDADE no cliente, e não mais
+  intenção sem chamador: o assistente consulta a rota ao MONTAR (não no quinto
+  passo), só oferece `mounted` com a base CONHECIDA e presente — carregando ou
+  consulta FALHADA não viram oferta, "não sei" nunca vira "tem" —, e com base
+  ele PRÉ-SELECIONA o modo sugerindo `<base>/<slug>`, sem jamais sobrescrever
+  escolha humana nem caminho digitado.
   A base NÃO entra em `caminhoDeWorkspaceLocalValido` (que roda em toda LEITURA
   e faria projeto montado legado explodir ao ser lido): é regra de criação e
   conversão. E `pnpm dev` RECUSA subir com a base sobreposta ao checkout do
@@ -650,6 +718,37 @@ daqui e o fechamento vai para o histórico.
   local, não a fronteira de segurança (essa continua sendo autenticação +
   pipeline de aprovação, ver `apps/runner/src/guard.ts`); fora do Linux a
   restrição não se aplica.
+  Desde a RN-515 (ADR 0147 ponto 4), `mounted` e `runner` podem ainda declarar
+  um DESTINO DE ESPELHO — `projects.mirror_path`/`mirrorPath`, por
+  `PUT projects/:projectId/mirror-path` (`maintainer`) —, a pasta da máquina do
+  usuário FORA da base para onde o agente local copia o trabalho. É por
+  PROJETO e nunca global (destino global aterrissaria o artefato do projeto B
+  na pasta do A, descoberto pelo conteúdo e não por um erro), `null` é o estado
+  NORMAL, e limpar é `null` EXPLÍCITO — a chave é obrigatória, senão omitir o
+  campo limparia em silêncio. `container` é RECUSADO com motivo (a origem é um
+  volume do SERVIDOR e quem copiaria está na máquina do usuário), e converter o
+  modo ZERA o destino. A api valida SÓ o LÉXICO e DIZ isso, reusando
+  `caminhoDeWorkspaceLocalValido` — NÃO escreva uma quarta cópia da régua —
+  mais os DOIS sentidos do laço origem↔destino, por SEGMENTO e nunca
+  `startsWith`. A metade `realpath` da guarda é do RUNNER
+  (`apps/runner/src/espelho-guard.ts`, RN-516): a api impediu o laço ESCRITO,
+  nunca o construído por symlink, e o comentário no código diz isso.
+  A escrita do espelho NÃO é `proposed_action` — é configuração declarada pelo
+  usuário, não agente pedindo para agir.
+  Desde a RN-516 (ADR 0147 pontos 2/3/4/8) o espelho EXISTE, e três coisas
+  dele são regra: o destino viaja SÓ na concessão do `join` e o runner recusa
+  `mirror_sync` para destino não concedido NAQUELA conexão (trocar o destino
+  com runner de pé exige reconectá-lo, e destino declarado passa a EXIGIR a
+  capacidade `espelho`, recusando binário velho no join); a cópia é numa
+  direção e NUNCA apaga — arquivo apagado na origem PERMANECE no destino, que
+  é acúmulo e não réplica —, e o que se copia é a LISTA DO GIT (rastreados +
+  não-rastreados-não-ignorados), com git que falha virando erro NOMEADO e
+  nunca um `cp -r` de plano B; e o gatilho é MOMENTO NOMEADO do engine (hoje
+  o commit), NUNCA um watcher, que seria trabalho ilimitado disparado até
+  pelas escritas do próprio espelho. O predicado do espelho é PRÓPRIO
+  (`Engine.Runners.Espelho`, DUAS pré-condições) — `RunnerReadiness` fica
+  byte a byte como está e NUNCA ganha flag "pula container": é por essa flag
+  que a terceira pré-condição do ADR 0145 cairia por acidente para o `exec`.
 - A imagem de container de um projeto é ARTEFATO — `artifact.project_image`,
   versionado, sem tabela, nunca configuração escondida —, e desde o ADR 0133
   (RN-491) tem DOIS emissores possíveis, distinguidos por `decidedBy`: o

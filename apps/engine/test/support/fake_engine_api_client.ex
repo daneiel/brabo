@@ -661,6 +661,23 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  # RN-517 (ADR 0147 ponto 7) — scriptável por APPLICATION ENV
+  # (`:fake_report_mirror_sync`, tipicamente `{:error, motivo}` pra exercitar a
+  # falha do HTTP interno, que o canal só LOGA) e não pelo dicionário de
+  # processo como `confirm_workspace`: quem chama isto é o processo do CANAL,
+  # e um `Process.put` no processo do TESTE nunca chegaria lá. Default aceita
+  # e devolve o ACK que a api devolveria.
+  @impl true
+  def report_mirror_sync(project_id, resultado) do
+    notify({:report_mirror_sync, project_id, resultado})
+
+    Application.get_env(
+      :engine,
+      :fake_report_mirror_sync,
+      {:ok, %{"recorded" => true, "status" => if(resultado[:ok], do: "synced", else: "failed")}}
+    )
+  end
+
   # ADR 0134, RN-492 — scriptável via `:fake_container_exec`
   # (`{:ok, %{"sucesso" => ...}}` ou `{:error, reason}`); default devolve
   # sucesso com exit 0 e output vazio, como um comando trivial que passou.

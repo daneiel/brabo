@@ -118,6 +118,67 @@ export interface WorkspaceConfirmMessage {
 }
 
 /**
+ * `mirror_sync` (ADR 0147 pontos 4 e 8, RN-516) — o engine pede UMA rodada do
+ * espelho, num MOMENTO NOMEADO (hoje: o commit). Só o servidor origina; o
+ * runner responde `mirror_sync_result` (RN-517) DEPOIS de a rodada terminar —
+ * sem ninguém bloqueado esperando por ela dos dois lados.
+ *
+ * `destino` viaja na mensagem para ser CONFERIDO contra o que foi concedido
+ * no join desta conexão (`EspelhoConcedido`), nunca para ser obedecido: um
+ * destino que o servidor mandou e o join não concedeu é recusado aqui. Ver
+ * `tratarMirrorSync` em `index.ts`.
+ *
+ * `momento` é só rastro para o log local — "commit", e amanhã o que o ADR
+ * chamar de fim de turno. O runner não decide nada com ele.
+ */
+export interface MirrorSyncMessage {
+  ref: string;
+  destino: string;
+  momento: string;
+}
+
+/**
+ * `mirror_sync_result` (ADR 0147 ponto 7, RN-517) — o desfecho REAL de UMA
+ * rodada do espelho, empurrado DEPOIS que ela terminou. Nunca um "ok"
+ * otimista antes do fim: quem mede o espelho tem de poder confiar que a
+ * contagem é do que foi copiado de verdade.
+ *
+ * FIRE-AND-FORGET nos dois sentidos, ao contrário de
+ * `container_start_result`/`exec_result`: ninguém do lado servidor está
+ * bloqueado esperando por ele (o `mirror_sync` que o originou também não
+ * esperava). O `ref` é o mesmo da rodada, e serve para correlacionar log dos
+ * dois lados — nada é resolvido por ele.
+ *
+ * `sucesso: false` carrega `erro` NOMEADO, e é o único campo que a tela tem
+ * para dizer o que houve. As contagens vêm direto do `ResultadoDoEspelho` de
+ * `espelho.ts` — nunca recontadas aqui.
+ */
+export interface MirrorSyncResultMessage {
+  ref: string;
+  sucesso: boolean;
+  /** O destino resolvido (sucesso) ou tentado (falha); ausente quando não há. */
+  destino?: string;
+  copiados?: number;
+  pulados?: number;
+  recusados?: number;
+  erro?: string;
+}
+
+/**
+ * O que o servidor CONCEDEU no `join` para a capacidade `espelho` (ADR 0147
+ * ponto 4): o destino DAQUELA conexão, e nada mais.
+ *
+ * Por que aqui e não em configuração do runner: um destino global faria o
+ * artefato do projeto B aterrissar na pasta do projeto A, e o usuário
+ * descobriria isso pelo CONTEÚDO, não por um erro. Nunca variável de
+ * ambiente, nunca arquivo local — o destino é por PROJETO, mora na api
+ * (RN-515) e chega junto da concessão.
+ */
+export interface EspelhoConcedido {
+  destino: string;
+}
+
+/**
  * O runner sobe o container do projeto (ADR 0137) — MESMO par exec/
  * exec_result, três vezes: `container_start`/`_result`, `container_stop`/
  * `_result`, `container_remove`/`_result`. Só a api (via engine) origina;
@@ -190,6 +251,7 @@ export interface RunnerChannelHandlers {
   onContainerStart: (msg: ContainerStartMessage) => void;
   onContainerStop: (msg: ContainerStopMessage) => void;
   onContainerRemove: (msg: ContainerRemoveMessage) => void;
+  onMirrorSync: (msg: MirrorSyncMessage) => void;
   /** Chamado quando a conexão cai DEPOIS de já ter entrado no canal. */
   onDisconnected?: () => void;
 }
@@ -259,6 +321,37 @@ const criarSocketPadrao: CriarSocket = async (url, opts) => {
   return new Socket(url, opts) as unknown as SocketLike;
 };
 
+/**
+ * As capacidades que ESTE binário declara no `join` (ADR 0147 ponto 1,
+ * RN-514). Até aqui o join era mudo dos dois lados — `socket.channel(topic,
+ * {})` — e o servidor não tinha como saber se o binário do outro lado
+ * entende uma mensagem nova. O defeito que isso produz é o pior possível: a
+ * mensagem chega, o handler não existe, e nada acontece — sem erro, sem log.
+ *
+ * A lista é o que este runner SABE FAZER de verdade, e nada além:
+ *
+ * - `exec` — comando já aprovado, o par `exec`/`exec_result` (ADR 0104);
+ * - `pty` — terminal interativo, `pty_*` (ADR 0103, `pty.ts`).
+ * - `espelho` — copiar o trabalho para a pasta que o usuário declarou, fora
+ *   da base montada (`mirror_sync`, `espelho.ts`/`espelho-guard.ts`, ADR 0147
+ *   ponto 2, RN-516).
+ *
+ * `espelho` entrou nesta lista SÓ AGORA, e só porque passou a existir de
+ * verdade no binário. Ela ficou de fora enquanto era nome no vocabulário do
+ * servidor e nada mais (RN-514): declarar o que não se implementa é
+ * exatamente o defeito que a negociação existe para impedir — o servidor
+ * concederia, entregaria a mensagem, e ela sumiria do mesmo jeito.
+ *
+ * O servidor IGNORA nome que não conhece (runner mais novo que o engine
+ * conecta) e RECUSA o join, nomeando a que falta, quando o projeto exige uma
+ * que não está aqui — recusa que `index.ts` já trata como fatal, sem retry.
+ * Desde a RN-516 essa recusa tem o primeiro caso REAL: projeto com
+ * `mirror_path` não-nulo exige `espelho`, e um binário anterior a esta
+ * versão deixa de conectar nele até ser atualizado. É opt-in — só acontece
+ * onde alguém configurou um destino — e o custo está declarado no ADR 0147.
+ */
+export const CAPACIDADES_DO_RUNNER = ['exec', 'pty', 'espelho'] as const;
+
 export interface ConectarCanalOpts {
   engineWsUrl: string;
   ticket: string;
@@ -271,8 +364,30 @@ export interface ConectarCanalOpts {
 export interface CanalConectado {
   socket: SocketLike;
   channel: ChannelLike;
+  /**
+   * O que o servidor concedeu para `espelho` NESTA conexão, ou `null` —
+   * `null` é o estado NORMAL (projeto sem destino declarado é a maioria).
+   * Ver `EspelhoConcedido`.
+   */
+  espelho: EspelhoConcedido | null;
   /** Encerra a conexão de propósito (não deve disparar reconexão do chamador). */
   desconectar(): void;
+}
+
+/**
+ * Lê o destino do espelho da resposta do `join`. Tudo que não for um
+ * `%{espelho: %{destino: "<string não-vazia>"}}` vira `null` — inclusive a
+ * resposta vazia de um engine anterior a esta versão. "Não veio destino" e
+ * "não há destino" são a mesma coisa para este runner, e as duas terminam no
+ * mesmo lugar: `mirror_sync` recusado, nunca uma cópia às cegas.
+ */
+export function espelhoConcedidoDaResposta(resp: unknown): EspelhoConcedido | null {
+  if (typeof resp !== 'object' || resp === null) return null;
+  const espelho = (resp as { espelho?: unknown }).espelho;
+  if (typeof espelho !== 'object' || espelho === null) return null;
+  const destino = (espelho as { destino?: unknown }).destino;
+  if (typeof destino !== 'string' || destino.length === 0) return null;
+  return { destino };
 }
 
 /**
@@ -301,15 +416,23 @@ export function conectarCanal(opts: ConectarCanalOpts): Promise<CanalConectado> 
 
       socket.connect();
 
-      const canal = socket.channel(`terminal:${projectId}`, {});
+      // Os params do join deixaram de ser vazios (RN-514): é aqui que este
+      // binário declara o que sabe fazer. Cópia mutável do `as const` —
+      // atravessa a rede como JSON.
+      const canal = socket.channel(`terminal:${projectId}`, {
+        capacidades: [...CAPACIDADES_DO_RUNNER],
+      });
 
       canal
         .join()
-        .receive('ok', () => {
+        .receive('ok', (resp: unknown) => {
           registrarHandlers(canal, handlers);
           resolvePromise({
             socket,
             channel: canal,
+            // O destino do espelho viaja DENTRO da concessão do join, nunca em
+            // configuração deste processo (ADR 0147 ponto 4).
+            espelho: espelhoConcedidoDaResposta(resp),
             desconectar: () => {
               canal.leave();
               socket.disconnect();
@@ -424,6 +547,21 @@ function registrarHandlers(canal: ChannelLike, handlers: RunnerChannelHandlers):
       handlers.onContainerRemove({ ref: msg.ref, workspaceDirName: msg.workspaceDirName });
     }
   });
+
+  // `destino` é OBRIGATÓRIO no payload — sem ele não há o que conferir contra
+  // a concessão do join, e "sincronize para o destino que você achar" é
+  // exatamente a forma que este protocolo não pode ter. `momento` é rastro:
+  // ausente vira `"desconhecido"` em vez de descartar a mensagem.
+  canal.on('mirror_sync', (payload: unknown) => {
+    const msg = payload as Partial<MirrorSyncMessage>;
+    if (typeof msg?.ref === 'string' && typeof msg.destino === 'string') {
+      handlers.onMirrorSync({
+        ref: msg.ref,
+        destino: msg.destino,
+        momento: typeof msg.momento === 'string' ? msg.momento : 'desconhecido',
+      });
+    }
+  });
 }
 
 export function enviarExecResult(canal: ChannelLike, msg: ExecResultMessage): void {
@@ -482,4 +620,18 @@ export function enviarContainerRemoveResult(
   msg: ContainerRemoveResultMessage,
 ): void {
   canal.push('container_remove_result', msg);
+}
+
+/**
+ * RN-517 (ADR 0147 ponto 7) — o desfecho da rodada do espelho, na MESMA forma
+ * de `workspace_confirm`: o runner contando algo sobre si mesmo, sem que
+ * ninguém esteja esperando. O engine repassa pra api, que grava numa tabela
+ * própria; falha lá do outro lado nunca volta pra cá, e é assim que
+ * telemetria não derruba o que ela mede.
+ */
+export function enviarMirrorSyncResult(
+  canal: ChannelLike,
+  msg: MirrorSyncResultMessage,
+): void {
+  canal.push('mirror_sync_result', msg);
 }
