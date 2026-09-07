@@ -52,6 +52,33 @@ defmodule EngineWeb.TerminalChannel do
   DEPOIS que o engine recebe o pedido da web, não uma origem própria do
   servidor — o engine não abre PTY por conta própria.
 
+  ## Capacidades declaradas no `join` (ADR 0147 ponto 1, RN-514)
+
+  O `join` deixou de ser mudo: o runner DECLARA nos params o que sabe fazer
+  (`%{"capacidades" => ["exec", "pty"]}`) e este canal CONCEDE, em
+  `autorizar_por_papel/3`, a interseção daquilo com o vocabulário que o
+  servidor conhece (`Engine.Runners.Capacidades`). O conjunto concedido vive
+  em `socket.assigns.capacidades` e em lugar NENHUM além dele — nunca em
+  tabela: capacidade é propriedade DAQUELA conexão, e uma tabela poderia
+  afirmar que um runner sabe algo que o processo conectado agora não sabe (é
+  o mesmo raciocínio que faz a entrada `:global` do `Registry` morrer junto
+  com o pid).
+
+  Só o papel `:runner` recebe conjunto. O socket `:web` NÃO ganha
+  `:capacidades` e NENHUMA checagem de capacidade se aplica a ele — a aba não
+  executa nada, ela pede; quem precisa saber fazer é o binário do outro lado,
+  e é o socket dele que carrega a resposta.
+
+  Capacidade EXIGIDA e não declarada recusa o `join` nomeando a que falta (o
+  runner trata a recusa como fatal, sem retry). Capacidade declarada que este
+  servidor não conhece é IGNORADA — runner mais novo que o engine tem que
+  conseguir conectar.
+
+  E a metade que entrega valor hoje: mensagem cuja capacidade não foi
+  concedida é RECUSADA com resposta NOMEADA, nunca engolida — ver
+  `handle_info({:dispatch_exec, ...})` (capacidade `exec`) e
+  `handle_info({:relay, "pty_" <> _, ...})` (capacidade `pty`).
+
   ## Auditoria (PTY é ação do usuário, não passa por `proposed_action`)
 
   `pty_open`/`pty_close` vindos de `:web` emitem
@@ -79,8 +106,15 @@ defmodule EngineWeb.TerminalChannel do
 
   require Logger
 
-  alias Engine.Runners.{Registry, SocketTicket}
+  alias Engine.Projects.Project
+  alias Engine.Runners.{Capacidades, Registry, SocketTicket}
   alias Engine.Sessions.{EngineApiClient, ProjectSession}
+
+  # Saída de um `exec` que nunca chegou ao runner por falta da capacidade
+  # `exec` (RN-514). 126 é o código POSIX de "comando encontrado, mas não
+  # executável" — é literalmente o caso: o binário existe do outro lado e não
+  # sabe executar isto.
+  @exit_code_sem_capacidade 126
 
   # Eventos que só o :runner pode originar — vão de broadcast pro tópico e
   # só chegam a sockets :web (handle_out/3 filtra).
@@ -96,18 +130,18 @@ defmodule EngineWeb.TerminalChannel do
   ])
 
   @impl true
-  def join("terminal:" <> project_id, _params, socket) do
+  def join("terminal:" <> project_id, params, socket) do
     if project_id != socket.assigns.project_id do
       {:error, %{reason: "unauthorized"}}
     else
       case SocketTicket.consumir(socket.assigns.ticket, project_id) do
-        {:ok, _linha} -> autorizar_por_papel(project_id, socket)
+        {:ok, _linha} -> autorizar_por_papel(project_id, params, socket)
         {:error, :invalid} -> {:error, %{reason: "unauthorized"}}
       end
     end
   end
 
-  defp autorizar_por_papel(project_id, socket) do
+  defp autorizar_por_papel(project_id, params, socket) do
     papel = papel_do_kind(socket.assigns.kind)
 
     socket =
@@ -124,6 +158,26 @@ defmodule EngineWeb.TerminalChannel do
 
     case papel do
       :runner ->
+        entrar_como_runner(project_id, params, socket)
+
+      # O socket :web NÃO ganha `:capacidades` — nenhuma checagem de
+      # capacidade se aplica a ele (ver moduledoc). Ele não declara nada
+      # porque não executa nada.
+      :web ->
+        {:ok, socket}
+    end
+  end
+
+  # ADR 0147 ponto 1 (RN-514): a capacidade EXIGIDA que o runner não declarou
+  # recusa o join ANTES de registrar a presença — registrar e recusar em
+  # seguida deixaria o `Registry` momentaneamente afirmando um runner que não
+  # entrou. A ordem inversa (registrar depois de conceder) mantém a recusa por
+  # exclusividade que já existia como a ÚLTIMA palavra.
+  defp entrar_como_runner(project_id, params, socket) do
+    case Capacidades.conceder(params, modo_de_execucao(project_id)) do
+      {:ok, concedidas} ->
+        socket = assign(socket, :capacidades, concedidas)
+
         case Registry.register(project_id, self()) do
           :ok ->
             {:ok, socket}
@@ -132,9 +186,26 @@ defmodule EngineWeb.TerminalChannel do
             {:error, %{reason: "já existe um runner conectado a este projeto"}}
         end
 
-      :web ->
-        {:ok, socket}
+      {:error, faltando} ->
+        {:error, %{reason: Capacidades.mensagem_de_recusa(faltando)}}
     end
+  end
+
+  # `nil` quando não dá pra saber o modo (projeto inexistente, id malformado,
+  # consulta que falhou) — e `Capacidades.exigidas/1` trata `nil` como "não
+  # exige nada". Recusar um join por uma pré-condição que não se conseguiu
+  # CONFIRMAR seria colapsar "não sei" com "não tem" (RN-088). O `rescue` é o
+  # mesmo de `Engine.Projects.Project.workspace_dir_name/1`, e pelo mesmo
+  # motivo: id fora de forma de UUID levanta `Ecto.Query.CastError`.
+  defp modo_de_execucao(project_id) do
+    case Project.get(project_id) do
+      %{execution_mode: modo} -> modo
+      _ -> nil
+    end
+  rescue
+    _ -> nil
+  catch
+    _, _ -> nil
   end
 
   defp papel_do_kind("runner"), do: :runner
@@ -372,9 +443,31 @@ defmodule EngineWeb.TerminalChannel do
   # audita explicitamente que este campo nunca é logado do lado dele.
   @impl true
   def handle_info({:dispatch_exec, ref, command, cwd, env, from, timeout_ms}, socket) do
-    payload = %{command: command, cwd: cwd}
-    payload = if env, do: Map.put(payload, :env, env), else: payload
-    despachar_pedido(socket, ref, from, timeout_ms, "exec", payload)
+    if tem_capacidade?(socket, "exec") do
+      payload = %{command: command, cwd: cwd}
+      payload = if env, do: Map.put(payload, :env, env), else: payload
+      despachar_pedido(socket, ref, from, timeout_ms, "exec", payload)
+    else
+      # RN-514: empurrar "exec" pra um runner que não declarou `exec` seria a
+      # mensagem sumindo — o `RunnerRouter` ficaria bloqueado até o `receive
+      # ... after` dele, e o usuário veria um TIMEOUT no lugar da causa. Aqui
+      # o `from` recebe o MESMO formato de `exec_result` que o runner mandaria
+      # (é o que `TerminalExecutor` e `RunnerGit` já sabem ler), com a causa
+      # no `output` — nada de átomo de erro novo, que obrigaria a mexer nos
+      # dois chamadores para dizer o que este payload já diz.
+      send(
+        from,
+        {:runner_exec_result, ref,
+         %{
+           "ref" => ref,
+           "exitCode" => @exit_code_sem_capacidade,
+           "output" => Capacidades.mensagem_de_capacidade_ausente("exec", "exec"),
+           "timedOut" => false
+         }}
+      )
+
+      {:noreply, socket}
+    end
   end
 
   # container_start/container_stop/container_remove: MESMO mecanismo de
@@ -413,6 +506,27 @@ defmodule EngineWeb.TerminalChannel do
   # Relay direto web -> runner (pty_open/pty_close/pty_input/pty_resize da
   # web): relay_para_runner/3 manda isto pro pid do canal :runner, que só
   # precisa empurrar pro cliente dele.
+  #
+  # RN-514: os `pty_*` são a capacidade `pty`. Runner que não a declarou não
+  # recebe a mensagem — e a `:web` que a originou recebe `pty_error` NOMEADO,
+  # pelo mesmo broadcast filtrado que o próprio runner usaria pra reportar
+  # erro de PTY. Sem isto o pedido morreria aqui e a aba ficaria em
+  # "carregando" pra sempre, que é exatamente o defeito da RN-088 que o
+  # `whereis` de `handle_in("pty_open", ...)` já fechou pro caso "sem runner".
+  @impl true
+  def handle_info({:relay, "pty_" <> _ = event, payload}, socket) do
+    if tem_capacidade?(socket, "pty") do
+      push(socket, event, payload)
+    else
+      broadcast_from(socket, "pty_error", %{
+        sessionRef: Map.get(payload, "sessionRef"),
+        message: Capacidades.mensagem_de_capacidade_ausente("pty", event)
+      })
+    end
+
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_info({:relay, event, payload}, socket) do
     push(socket, event, payload)
@@ -451,6 +565,17 @@ defmodule EngineWeb.TerminalChannel do
       {from, restante} ->
         send(from, {resultado_tag, ref, payload})
         {:noreply, assign(socket, :pending_execs, restante)}
+    end
+  end
+
+  # `socket.assigns.capacidades` só existe no socket :runner (ver moduledoc).
+  # `nil` -> `false`: as mensagens que consultam isto (`:dispatch_exec` e
+  # `{:relay, "pty_" <> _}`) só são enviadas ao pid que o `Registry` devolve,
+  # que é sempre o do runner — um `:web` nunca chega aqui.
+  defp tem_capacidade?(socket, capacidade) do
+    case socket.assigns[:capacidades] do
+      nil -> false
+      concedidas -> MapSet.member?(concedidas, capacidade)
     end
   end
 

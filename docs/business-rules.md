@@ -8464,6 +8464,118 @@ nasce sem ela, porque nasce sabendo negar.
 
 ---
 
+## O `join` do agente local deixa de ser mudo (RN-514)
+
+### RN-514 — O runner DECLARA o que sabe fazer no `join`, o servidor CONCEDE a interseção em `socket.assigns`, e mensagem sem capacidade é RECUSADA em vez de sumir {#rn-514}
+
+Até aqui o `join` do canal `terminal:<projectId>` era **mudo dos dois lados**:
+o runner mandava `socket.channel(\`terminal:${projectId}\`, {})` e o servidor
+os ignorava literalmente (`def join("terminal:" <> project_id, _params,
+socket)`). Toda a identidade vinha do ticket — o papel (`:runner`/`:web`) sai
+do `kind` —, e o servidor **não tinha como saber** se o binário do outro lado
+era de uma versão que entende uma mensagem nova.
+
+O defeito que isso produz é o pior possível, e é o que esta regra fecha: a
+mensagem chega, o handler não existe do outro lado, e **nada acontece** — sem
+erro, sem log, sem ninguém saber que a função nunca rodou.
+
+**Três capacidades, e só o que o runner sabe fazer é declarado.** O
+vocabulário do servidor é `exec` (comando aprovado, ADR 0104), `pty`
+(terminal interativo, ADR 0103) e `espelho` (copiar o trabalho para uma pasta
+fora da base montada). O runner declara **`exec` e `pty`**, e `espelho` fica
+de fora **de propósito**: declarar o que não se implementa é exatamente o
+defeito que a negociação existe para impedir — o servidor concederia,
+entregaria a mensagem, e ela sumiria do mesmo jeito. `espelho` nasce só como
+**nome do vocabulário**, sem comportamento nenhum; quem o implementa é a
+sessão 6 da FASE 28.
+
+**Ausência de params é o LEGADO, e isso é fato — não benevolência.** Todo
+binário anterior a esta mudança manda params vazios, e todo binário anterior
+a esta mudança sabe fazer `exec` e `pty`: são as duas funções com que o
+runner nasceu. Conceder `{exec, pty}` a quem não declara nada é ler
+corretamente a única coisa que aquele binário poderia ter dito. O contrário
+faria **todo runner instalado parar de conectar**, que é mudança exigindo
+ação do operador antes do deploy — `breaking/` e MAJOR, pela convenção do
+repositório, e não é isto que esta entrega é. Params ausentes, `capacidades`
+ausente, lista **vazia** e valor que não é lista caem todos no legado: são as
+formas que "este binário não sabe declarar nada" assume no caminho de rede.
+
+**Desconhecido é IGNORADO, nunca motivo de recusa.** O conjunto concedido é a
+interseção do declarado com o vocabulário que **este** servidor conhece —
+runner mais NOVO que o engine tem que conseguir conectar. Já declarar
+**apenas** nomes desconhecidos é declaração vazia, não legado: quem sabe
+declarar disse o que sabe fazer.
+
+**O que cada modo EXIGE.** `runner` exige `exec` — é literalmente o que faz o
+modo funcionar, e sem ele o `TerminalExecutor` rotearia comando aprovado para
+um binário que não o executa, com a falha aparecendo como *timeout* em vez de
+recusa. `container` e `mounted` não exigem nada (o runner nem é o caminho de
+execução deles). **Nada exige `espelho` ainda** — o mecanismo de recusa nasce
+implementado e testado, e não dispara na prática hoje. Isso é o desenho, não
+pendência. Modo que não se conseguiu ler (projeto inexistente, id malformado,
+consulta que falhou) exige **nada**: recusar por pré-condição não confirmada
+seria colapsar "não sei" com "não tem" ([RN-088](#rn-088)).
+
+**O conjunto concedido vive em `socket.assigns`, nunca em tabela.**
+Capacidade é propriedade **daquela conexão** — uma tabela poderia afirmar que
+um runner sabe algo que o processo conectado agora não sabe. É o mesmo
+raciocínio que faz a entrada `:global` do `Engine.Runners.Registry` morrer
+junto com o pid. Só o papel `:runner` recebe conjunto: o socket `:web` **não
+ganha `:capacidades`** e nenhuma checagem de capacidade se aplica a ele — a
+aba não executa nada, ela pede.
+
+**Recusa do join nomeia a que falta.** `{:error, %{reason: ...}}` dizendo
+qual capacidade o projeto exige e que o binário precisa ser atualizado. A
+recusa é **fatal do lado do runner**, sem retry (`JoinRecusadoError`,
+comportamento que já existia e não mudou) — por isso ela é a única chance de
+explicar, e "recusado" sem o nome do que falta obrigaria a adivinhar. A
+checagem acontece **antes** de `Registry.register/2`: registrar e recusar em
+seguida deixaria o `Registry` afirmando um runner que não entrou.
+
+**E a metade que entrega valor hoje: mensagem sem a capacidade concedida é
+RECUSADA com resposta nomeada, nunca engolida.** `exec` para um runner sem
+`exec` responde ao chamador no **mesmo formato de `exec_result`** que o
+runner mandaria (`exitCode` 126 — "encontrado, mas não executável" —, a causa
+no `output`), em vez de deixar o `RunnerRouter` bloqueado até o `receive ...
+after` e o usuário ver um *timeout* no lugar da causa. `pty_*` para um runner
+sem `pty` não é relayado, e a `:web` que originou recebe `pty_error` nomeado,
+pelo mesmo broadcast filtrado que o runner usaria para reportar erro de PTY —
+sem isso a aba ficaria em "carregando" para sempre, o defeito que o `whereis`
+de `handle_in("pty_open", ...)` já tinha fechado para o caso "sem runner".
+Como o legado tem as duas capacidades, **nada muda para ninguém hoje**.
+
+**Isto não é fronteira de segurança.** Capacidade é negociação de
+**protocolo**; quem autoriza continua sendo o ticket de uso único
+([RN-108](business-rules/autenticacao.md#rn-108)) e o pipeline de
+`proposed_action`. O que o runner ganha declarando é que mensagens daquele
+tipo lhe sejam **entregues**, nunca permissão para nada.
+
+- **Onde:** `apps/engine/lib/engine/runners/capacidades.ex` (novo — o
+  vocabulário, o legado, o que cada modo exige e as duas mensagens);
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex:133`
+  (`join/3` passa a receber `params`), `:144` (`autorizar_por_papel/3`),
+  `:176` (`entrar_como_runner/3`, a concessão antes do `Registry`), `:200`
+  (`modo_de_execucao/1`), `:445` (o gate de `exec` em
+  `handle_info({:dispatch_exec, ...})`) e `:517` (o de `pty` em
+  `handle_info({:relay, "pty_" <> _, ...})`);
+  `apps/runner/src/channel.ts` (`CAPACIDADES_DO_RUNNER` e os params do
+  `socket.channel/2`)
+- **Teste:** `apps/engine/test/engine/runners/capacidades_test.exs` (novo — o
+  vocabulário puro: legado, lista vazia, desconhecido ignorado, o que cada
+  modo exige, e que nada exige `espelho`);
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (`describe "capacidades declaradas no join (ADR 0147 ponto 1, RN-514)"` —
+  concessão em `assigns`, join sem params, desconhecido ignorado, `:web` sem
+  conjunto, a recusa nomeando `exec` num projeto `runner`, e as duas
+  mensagens recusadas com resposta em vez de silêncio);
+  `apps/runner/src/channel.spec.ts` (o CONTEÚDO dos params do join, `espelho`
+  fora da lista, e a recusa virando `JoinRecusadoError` com a mensagem do
+  servidor legível)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 1
+- **Origem:** FASE 28, sessão 5
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -8522,6 +8634,10 @@ nasce sem ela, porque nasce sabendo negar.
 | Job periódico de limpeza de worktree encontra um projeto `runner` sem runner conectado ou sem container `running` | PULA o projeto nesta rodada, em silêncio — nunca um erro, nunca deixa de podar os demais projetos (RN-507) |
 | `container_start_via_runner` proposto para projeto `container`/`mounted`, ou `runner` sem runner conectado | o Infra Lead RECUSA localmente, nomeando o motivo, sem chamar `propose_action` nenhuma vez (RN-508) |
 | `container_start_via_runner` aprovado sem imagem decidida (RN-105) | ação vira `failed` nomeando a ausência de decisão — nunca chama o engine (RN-508) |
+| Runner conectado a um projeto cujo `execution_mode` exige uma capacidade que ele não declarou no `join` | join **recusado** nomeando a capacidade e mandando atualizar o binário — recusa fatal, sem retry, nunca degradação silenciosa (RN-514) |
+| Runner que declara uma capacidade que ESTE servidor não conhece | o nome é **ignorado** e o join passa — runner mais novo que o engine conecta (RN-514) |
+| `exec` despachado a um runner que não declarou a capacidade `exec` | responde ao chamador no mesmo formato de `exec_result`, com `exitCode` 126 e a causa no `output` — nunca deixa o `RunnerRouter` esperar até o timeout (RN-514) |
+| `pty_*` relayado a um runner que não declarou a capacidade `pty` | a mensagem NÃO é entregue e a `:web` recebe `pty_error` nomeado — nunca "carregando" para sempre (RN-514) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

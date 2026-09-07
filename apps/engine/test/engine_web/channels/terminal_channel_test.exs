@@ -391,6 +391,183 @@ defmodule EngineWeb.TerminalChannelTest do
     end
   end
 
+  # ADR 0147 ponto 1 / RN-514 — o `join` deixou de ser mudo. O vocabulário e
+  # as três perguntas em si são cobertos por `Engine.Runners.CapacidadesTest`
+  # (função pura); aqui o que importa é o que o CANAL faz com a resposta:
+  # o que ele guarda em `socket.assigns`, quando recusa a entrada, e o que
+  # acontece com uma mensagem cuja capacidade não foi concedida.
+  describe "capacidades declaradas no join (ADR 0147 ponto 1, RN-514)" do
+    test "runner que declara {exec, pty} recebe os dois em socket.assigns" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      assert {:ok, _reply, joined} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+                 "capacidades" => ["exec", "pty"]
+               })
+
+      assert joined.assigns.capacidades == MapSet.new(["exec", "pty"])
+    end
+
+    test "join SEM params é binário LEGADO — concede {exec, pty}, nunca recusa" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      assert {:ok, _reply, joined} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      assert joined.assigns.capacidades == MapSet.new(["exec", "pty"])
+    end
+
+    test "capacidade DESCONHECIDA é ignorada e o join passa — runner mais novo que o engine entra" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      assert {:ok, _reply, joined} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+                 "capacidades" => ["exec", "pty", "capacidade-do-futuro"]
+               })
+
+      assert joined.assigns.capacidades == MapSet.new(["exec", "pty"])
+      assert Registry.connected?(project_id)
+    end
+
+    test "o socket :web NÃO recebe conjunto de capacidades — nenhuma checagem se aplica a ele" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "terminal")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+          "capacidades" => ["exec", "pty"]
+        })
+
+      assert joined.assigns[:capacidades] == nil
+    end
+
+    test "projeto `runner` cujo runner NÃO declara `exec`: join recusado NOMEANDO a que falta" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "runner")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      assert {:error, %{reason: motivo}} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+                 "capacidades" => ["pty"]
+               })
+
+      assert motivo =~ "`exec`"
+      assert motivo =~ "desatualizado"
+      # Recusou ANTES de registrar a presença — nunca deixa o Registry
+      # afirmando um runner que não entrou.
+      refute Registry.connected?(project_id)
+    end
+
+    test "MESMO projeto `runner`, runner declarando `exec`: entra normalmente" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "runner")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      assert {:ok, _reply, joined} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+                 "capacidades" => ["exec", "pty"]
+               })
+
+      assert joined.assigns.capacidades == MapSet.new(["exec", "pty"])
+    end
+
+    test "projeto `container` não exige nada — runner que só declara `pty` entra" do
+      project_id = Ecto.UUID.generate()
+      inserir_projeto!(project_id, "container")
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      assert {:ok, _reply, joined} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+                 "capacidades" => ["pty"]
+               })
+
+      assert joined.assigns.capacidades == MapSet.new(["pty"])
+    end
+
+    test "exec para runner SEM a capacidade `exec` responde NOMEADO — nunca some" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+          "capacidades" => ["pty"]
+        })
+
+      send(joined.channel_pid, {:dispatch_exec, "ref-x", "echo oi", "/proj", nil, self(), 5_000})
+
+      # O `from` (RunnerRouter, no caminho real) recebe o MESMO formato de
+      # `exec_result` — com a causa, em vez de esperar até o timeout dele.
+      assert_receive {:runner_exec_result, "ref-x", payload}
+      assert payload["exitCode"] == 126
+      assert payload["timedOut"] == false
+      assert payload["output"] =~ "`exec`"
+
+      # E nada foi empurrado pro runner.
+      refute_push "exec", %{}
+    end
+
+    test "pty_open para runner SEM a capacidade `pty`: a web recebe pty_error, o runner não recebe nada" do
+      project_id = Ecto.UUID.generate()
+
+      socket_runner = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, _joined_runner} =
+        Phoenix.ChannelTest.subscribe_and_join(socket_runner, "terminal:#{project_id}", %{
+          "capacidades" => ["exec"]
+        })
+
+      socket_web = emitir_e_conectar!(project_id, "terminal")
+
+      {:ok, _reply, joined_web} =
+        Phoenix.ChannelTest.subscribe_and_join(socket_web, "terminal:#{project_id}", %{})
+
+      push(joined_web, "pty_open", %{"sessionRef" => "sess-cap", "cols" => 80, "rows" => 24})
+
+      assert_push "pty_error", %{sessionRef: "sess-cap", message: mensagem}
+      assert mensagem =~ "`pty`"
+      assert mensagem =~ "`pty_open`"
+
+      # O relay não aconteceu: o runner nunca recebeu `pty_open`.
+      refute_push "pty_open", %{}
+    end
+
+    test "com a capacidade `pty` concedida, o relay segue exatamente como sempre foi" do
+      project_id = Ecto.UUID.generate()
+
+      socket_runner = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, _joined_runner} =
+        Phoenix.ChannelTest.subscribe_and_join(socket_runner, "terminal:#{project_id}", %{
+          "capacidades" => ["exec", "pty"]
+        })
+
+      socket_web = emitir_e_conectar!(project_id, "terminal")
+
+      {:ok, _reply, joined_web} =
+        Phoenix.ChannelTest.subscribe_and_join(socket_web, "terminal:#{project_id}", %{})
+
+      push(joined_web, "pty_open", %{"sessionRef" => "sess-ok", "cols" => 80, "rows" => 24})
+
+      assert_push "pty_open", %{"sessionRef" => "sess-ok"}
+    end
+  end
+
+  # `projects` é gerenciada pela api (Drizzle, schema "public") — o engine só
+  # a lê. Mesmo fixture SQL cru de `workspace_runner_test.exs`.
+  defp inserir_projeto!(project_id, execution_mode) do
+    caminho = if execution_mode == "container", do: nil, else: "/home/voce/projetos/proj"
+
+    Engine.Repo.query!(
+      "INSERT INTO public.projects " <>
+        "(id, name, slug, workspace_dir_name, execution_mode, workspace_path) " <>
+        "VALUES ($1, 'proj', 'proj', 'proj-abc12345', $2, $3)",
+      [Ecto.UUID.dump!(project_id), execution_mode, caminho]
+    )
+  end
+
   defp wait_until(fun, tentativas \\ 50)
 
   defp wait_until(_fun, 0), do: flunk("condição não ficou verdadeira a tempo")

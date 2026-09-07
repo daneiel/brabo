@@ -259,6 +259,31 @@ const criarSocketPadrao: CriarSocket = async (url, opts) => {
   return new Socket(url, opts) as unknown as SocketLike;
 };
 
+/**
+ * As capacidades que ESTE binário declara no `join` (ADR 0147 ponto 1,
+ * RN-514). Até aqui o join era mudo dos dois lados — `socket.channel(topic,
+ * {})` — e o servidor não tinha como saber se o binário do outro lado
+ * entende uma mensagem nova. O defeito que isso produz é o pior possível: a
+ * mensagem chega, o handler não existe, e nada acontece — sem erro, sem log.
+ *
+ * A lista é o que este runner SABE FAZER de verdade, e nada além:
+ *
+ * - `exec` — comando já aprovado, o par `exec`/`exec_result` (ADR 0104);
+ * - `pty` — terminal interativo, `pty_*` (ADR 0103, `pty.ts`).
+ *
+ * `espelho` (a terceira capacidade do vocabulário do servidor) NÃO entra
+ * aqui: declarar o que não se implementa é exatamente o defeito que a
+ * negociação existe para impedir — o servidor concederia, entregaria a
+ * mensagem, e ela sumiria do mesmo jeito. Quem a implementa é a sessão 6 da
+ * FASE 28, e é ela quem acrescenta o nome nesta lista.
+ *
+ * O servidor IGNORA nome que não conhece (runner mais novo que o engine
+ * conecta) e RECUSA o join, nomeando a que falta, quando o
+ * `execution_mode` do projeto exige uma que não está aqui — recusa que
+ * `index.ts` já trata como fatal, sem retry.
+ */
+export const CAPACIDADES_DO_RUNNER = ['exec', 'pty'] as const;
+
 export interface ConectarCanalOpts {
   engineWsUrl: string;
   ticket: string;
@@ -301,7 +326,12 @@ export function conectarCanal(opts: ConectarCanalOpts): Promise<CanalConectado> 
 
       socket.connect();
 
-      const canal = socket.channel(`terminal:${projectId}`, {});
+      // Os params do join deixaram de ser vazios (RN-514): é aqui que este
+      // binário declara o que sabe fazer. Cópia mutável do `as const` —
+      // atravessa a rede como JSON.
+      const canal = socket.channel(`terminal:${projectId}`, {
+        capacidades: [...CAPACIDADES_DO_RUNNER],
+      });
 
       canal
         .join()

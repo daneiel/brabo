@@ -79,6 +79,44 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **runner,engine**: o `join` do agente local **deixa de ser mudo** — o runner
+  DECLARA nas params o que sabe fazer e o servidor CONCEDE a interseção com o
+  vocabulário que conhece (RN-514,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 1). Três
+  capacidades: `exec` (ADR 0104), `pty` (ADR 0103) e `espelho` — e o runner
+  declara **só as duas primeiras**, porque declarar o que não se implementa é
+  exatamente o defeito que a negociação existe para impedir. `espelho` entra
+  como **nome do vocabulário e nada mais**; quem o implementa é a sessão
+  seguinte da FASE 28.
+
+  O que isso fecha: até aqui o servidor **não tinha como saber** se o binário do
+  outro lado entendia uma mensagem nova — a mensagem chegava, o handler não
+  existia, e **nada acontecia**, sem erro e sem log. Agora o conjunto concedido
+  vive em `socket.assigns` (nunca em tabela: capacidade é propriedade DAQUELA
+  conexão, e uma tabela poderia afirmar que um runner sabe algo que o processo
+  conectado agora não sabe), e **mensagem sem a capacidade concedida é RECUSADA
+  com resposta nomeada**: `exec` responde no mesmo formato de `exec_result`
+  (`exitCode` 126, a causa no `output`) em vez de deixar o `RunnerRouter`
+  esperar até o timeout, e `pty_*` não é relayado — a aba recebe `pty_error`
+  nomeado em vez de ficar em "carregando" para sempre.
+
+  **Nada muda para nenhum runner instalado hoje.** Params ausentes ou vazios são
+  o binário LEGADO e concedem `{exec, pty}` — isso é **fato, não benevolência**:
+  todo binário anterior a esta mudança sabe fazer as duas, são as funções com
+  que o runner nasceu. Recusar quem não declara faria todo runner instalado
+  parar de conectar, que seria `breaking/` e MAJOR. Capacidade declarada que o
+  servidor não conhece é **ignorada**, nunca motivo de recusa: um runner mais
+  NOVO que o engine tem que conseguir conectar.
+
+  A recusa por capacidade EXIGIDA e não declarada nasce implementada e testada,
+  e **não dispara na prática hoje** — `runner` exige `exec` (que todo binário
+  tem), `container`/`mounted` não exigem nada, e **nada exige `espelho` ainda**.
+  Isso é o desenho, não pendência. Quando dispara, o `{:error, %{reason: ...}}`
+  NOMEIA a capacidade que falta e manda atualizar o binário, e o CLI já trata a
+  recusa como fatal sem retry. `Engine.Runners.RunnerReadiness` fica byte a byte
+  como está (ADR 0147 ponto 3), e nenhum teto, nenhuma decisão de aprovação e
+  nenhum evento do log foram tocados.
+
 - **web**: o assistente de novo projeto passa a **oferecer Pasta montada quando
   a base existe** — e a **pré-selecioná-la**, com `<base>/<slug>` sugerido e
   editável (RN-513,
