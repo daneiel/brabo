@@ -478,25 +478,39 @@ logs work without it; traces still require the cluster.
 
 The broker ([ADR 0130](../adr/0130-broker-de-container.md)) is the only process
 in the product that talks to a Docker daemon on the server, and the only service
-with `/var/run/docker.sock` mounted. It ships under
-`profiles: ["container-broker"]` in both compose files, so **it does not come up
-by default** — giving every development machine access to the host's Docker in
-exchange for nothing would be a posture change with no counterpart. Bring it up
-with:
+with `/var/run/docker.sock` mounted. **Locally it comes up with `pnpm dev`; in
+production it stays under `profiles: ["container-broker"]`.** The two compose
+files differ on purpose ([ADR 0146](../adr/0146-base-consentida-no-bootstrap.md),
+point 3) — do not uniformize them.
+
+It used to be off by default in both, on the grounds that nothing called it yet.
+That premise died: it has four real callers, and
+[ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md) made **Mounted** mode bring
+its container up through the broker — so with the profile off, the default local
+mode ended in `BrokerIndisponivelError`. What sustains the asymmetry is what the
+socket means on each side: whoever runs `pnpm dev` already holds it (they are
+running `docker compose`), while in production it is a real privilege boundary
+and the operator is not the developer.
+
+This changes **when** the broker runs, never **what** it accepts: the five
+containment layers are untouched, and it still receives a `projectId` plus one of
+five operations, with no parameter anywhere to write `privileged` or a free `-v`.
+
+In production, bring it up explicitly:
 
 ```bash
-docker compose -f docker/docker-compose.yml --env-file .env \
+docker compose -f docker/docker-compose.prod.yml \
   --profile container-broker up -d broker
 ```
 
 | variable | default | when it fails |
 |---|---|---|
-| `BROKER_URL` | empty (read by the **api**) | Empty is a NORMAL state: whoever reads a container's observed state then says "not observed" instead of inheriting the recorded one ([RN-486](../business-rules.md#rn-486)). Point it at `http://broker:8090` when the profile is on |
+| `BROKER_URL` | empty (read by the **api**) | Empty is a NORMAL state: whoever reads a container's observed state then says "not observed" instead of inheriting the recorded one ([RN-486](../business-rules.md#rn-486)). Point it at `http://broker:8090` — locally the broker is up by default, so this is what connects the api to it |
 | `BROKER_PORT` | `8090` | Port the broker listens on. It publishes NOTHING to the host — only the api reaches it, through the `internal: true` compose network |
 | `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` in development | The SAME secret as api ↔ engine, in the same header. With `NODE_ENV=production` the broker refuses to boot when it is empty, when it is the repository's public literal, or under 16 characters — the RN-114 rule, which here guards a process that talks to the host's Docker |
 | `API_URL` | `http://api:3000` | Where the broker READS the Architect's decision. It does not receive a container spec; it comes and gets one ([RN-485](../business-rules.md#rn-485)) |
 | `PROJECT_WORKSPACES_HOST_ROOT` | — | The project folders' root **on the HOST**, not inside any container. Without it, `start` refuses naming this variable and the other four operations keep working. Do not confuse it with `PROJECT_WORKSPACES_ROOT`, which is the path inside the containers: `-v` is resolved by the DAEMON against the host filesystem, and a path from inside the api would make it create and mount an EMPTY folder |
-| `DOCKER_GID` | `999` (compose) | The gid of the host's `docker` group (`getent group docker \| cut -d: -f3`). The socket is `root:docker` and the broker runs non-root, so compose uses `group_add`. The default is the most common one and is wrong on several distributions — getting it wrong produces "permission denied" on the socket, which `DockerIndisponivelError` names with the group hint |
+| `DOCKER_GID` | `999` (compose) | The gid of the host's `docker` group (`getent group docker \| cut -d: -f3`). The socket is `root:docker` and the broker runs non-root, so compose uses `group_add`. The default is the most common one and is wrong on several distributions. Since [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md) this matters on EVERY development machine, not only where someone turned the profile on — getting it wrong does not break the boot, it breaks the use: every operation dies with "permission denied" on the socket, surfacing only when someone proposes `container_start`. `pnpm dev` reports the state of this variable on every run ([RN-512](../business-rules.md#rn-512)), and says "does not apply" on a machine with no `docker` group rather than accusing it |
 
 `PROJECT_WORKSPACES_HOST_ROOT` has no default and cannot be derived from a
 managed Docker volume — pair it with `PROJECT_WORKSPACES_HOST_DIR` (above) and

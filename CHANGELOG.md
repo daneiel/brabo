@@ -79,6 +79,45 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **docker,scripts**: o **broker de container sobe por padrão no compose local**,
+  e continua sob `profiles: ["container-broker"]` em produção (RN-512,
+  [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) ponto 3). Os dois
+  arquivos passam a divergir **de propósito** — não uniformize.
+
+  O broker nasceu sob profile com uma justificativa que o ADR 0130 escreveu:
+  *"dar acesso ao Docker do host a um processo que nada chama ainda seria uma
+  mudança de postura para toda máquina de desenvolvimento, em troca de nada"*.
+  As duas metades morreram. **"Nada o chama" é falso** desde os ADRs
+  0133/0134/0136 — ele tem quatro chamadores reais. E **"em troca de nada"
+  deixou de descrever a troca** quando o ADR 0144 fez `mounted` subir container
+  PELO BROKER e o ADR 0146 tornou `mounted` o padrão local: com o profile
+  desligado, o modo padrão terminava em `BrokerIndisponivelError`.
+
+  **A assimetria é o que o socket significa de cada lado.** Quem roda `pnpm dev`
+  já tem o socket do Docker — está rodando `docker compose`, contra o daemon do
+  próprio host —, então o broker recebê-lo não concede nada que o operador já
+  não possua; a superfície marginal é o HTTP dele, que não publica porta, vive
+  numa rede `internal: true` e compara `BRABO_SERVICE_TOKEN` em tempo constante.
+  Em produção o cálculo é o oposto: o socket é fronteira de privilégio de
+  verdade e o operador não é o desenvolvedor.
+
+  **As cinco camadas de contenção não são tocadas.** Isto muda QUANDO o broker
+  roda, nunca O QUE ele aceita — ele continua recebendo `projectId` e uma das
+  cinco operações, sem parâmetro nenhum onde se escreva `privileged` ou um `-v`
+  livre. A contenção nunca foi o profile.
+
+  Consequência ambiental, e a razão de ela ganhar relato: **`DOCKER_GID` passa a
+  importar para toda máquina de desenvolvimento**, não só para quem ligava o
+  profile de propósito. Errar o gid **não quebra o boot** — o broker sobe
+  normalmente —, quebra o USO: toda operação morre com `permission denied` no
+  socket, e o sintoma aparece muito depois, quando alguém propõe
+  `container_start`. Por isso `pnpm dev` passa a **relatar** o estado dele a cada
+  subida, comparando com o grupo real da máquina. O relato tem três desfechos que
+  não colapsam — bate, diverge (dizendo se o valor efetivo veio do `.env` ou do
+  default, porque as duas pedem instruções diferentes) e **não se aplica**, sem
+  grupo `docker` (Docker Desktop, rootless), que não é erro nem "não consegui".
+  Ele **nunca bloqueia**.
+
 - **scripts**: `pnpm bootstrap` ganha o passo **Docker › Base de projetos** — o
   consentimento que faltava para o modo **Pasta montada** existir na prática
   (RN-511, [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md)). A RN-500

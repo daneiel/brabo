@@ -107,9 +107,22 @@ daqui e o fechamento vai para o histórico.
   `dev-<modulo>` fechou (ADR 0094); a execução segue no caminho atual
 
 **Cortes e pausas vigentes:**
-- FASE 25b segue cortada NO QUE IMPORTA POR PADRÃO: o broker sobe sob
-  `profiles: ["container-broker"]` e portanto não sobe por padrão — sem ele
-  de pé, `container_start` termina `failed` com `BrokerIndisponivelError`. O
+- FASE 25b DEIXOU de ser corte no compose LOCAL (RN-512, ADR 0146 ponto 3): o
+  broker sai do `profiles` ali e sobe com `pnpm dev`, e permanece sob
+  `profiles: ["container-broker"]` só em PRODUÇÃO — os dois composes divergem
+  de propósito, não uniformize. A justificativa original ("nada o chama... em
+  troca de nada", ADR 0130) morreu: são quatro chamadores reais desde os ADRs
+  0133/0136, e o ADR 0144 fez `mounted` subir PELO broker, então com o profile
+  desligado o modo padrão terminava em `BrokerIndisponivelError`. A assimetria
+  é o que o socket significa de cada lado: quem roda `pnpm dev` já o tem (está
+  rodando `docker compose`), em produção ele é fronteira de privilégio e o
+  operador não é o desenvolvedor. Isso muda QUANDO o broker roda, nunca O QUE
+  ele aceita — as cinco camadas de contenção seguem intactas. Consequência:
+  `DOCKER_GID` passa a importar para toda máquina de desenvolvimento, e
+  `preflight.mjs` RELATA o estado dele a cada subida (errar não quebra o boot,
+  quebra o uso, e o sintoma aparece só no `container_start`). Em PRODUÇÃO, sem
+  o profile ligado, `container_start` continua terminando `failed` com
+  `BrokerIndisponivelError`. O
   que mudou (ADR 0133, RN-491) é que o MECANISMO deixou de ser corte:
   `container_start` é `proposed_action` de verdade, decidida caso a caso pelo
   `ApprovalCard` (`maintainer`, nunca seedada em auto-aprovação), e
@@ -416,9 +429,10 @@ daqui e o fechamento vai para o histórico.
   novo no enum nasce recusado com mensagem. Contenção em cinco camadas
   independentes — sem porta publicada, rede `internal: true` que só a api
   alcança, `BRABO_SERVICE_TOKEN` em tempo constante, cinco operações, spec
-  computada. Sobe sob `profiles: ["container-broker"]` nos dois composes e
-  NÃO sobe por padrão; a imagem dele NÃO é publicada no GHCR (as quatro do ADR
-  0119 seguem sendo quatro)
+  computada. Desde a RN-512 (ADR 0146) sobe POR PADRÃO no compose local e
+  permanece sob `profiles: ["container-broker"]` no de produção — a divergência
+  entre os dois arquivos é a decisão, não descuido; a imagem dele NÃO é
+  publicada no GHCR (as quatro do ADR 0119 seguem sendo quatro)
 - `packages/docker-port`: a porta de Docker e o adaptador de CLI, consumidos
   por `apps/runner` e `apps/broker`. Runtime, e por isso NÃO cabe em
   `packages/shared` (100% tipo, invariante travado por teste). Sem passo de

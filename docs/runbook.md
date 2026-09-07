@@ -57,27 +57,54 @@ The broker ([ADR 0130](adr/0130-broker-de-container.md)) is the only process in
 the product that talks to a Docker daemon, and the only service with
 `/var/run/docker.sock` mounted. **Do not mount that socket anywhere else.**
 
-It ships under a compose profile and therefore **does not come up with
-`pnpm dev`**. That is deliberate: having it up by default would hand every
-development machine access to the host's Docker whether or not anyone is
-running containers there. Without it, `container_start` ends as a NAMED
-`failed` (`BrokerIndisponivelError`) — never a crash, and never a silent
-fallback to running outside a container.
+**Locally it comes up with `pnpm dev`; in production it does not.** That
+asymmetry is a decision ([ADR 0146](adr/0146-base-consentida-no-bootstrap.md),
+point 3), not an oversight — do not "uniformize" the two compose files. Whoever
+runs `pnpm dev` **already holds the Docker socket** (they are running
+`docker compose` against their own host's daemon), so the broker receiving it
+grants nothing the operator does not already have. In production the socket is
+a real privilege boundary and the operator is not the developer, so there it
+stays under `profiles: ["container-broker"]`.
 
-To bring it up:
+Until that decision the broker was off by default in both files, on the grounds
+that "nothing calls it yet". That stopped being true: it has four real callers
+([ADR 0133](adr/0133-infra-elege-imagem-do-roteamento.md)/
+[0136](adr/0136-pagina-global-de-containers.md)), and
+[ADR 0144](adr/0144-a-segunda-raiz-do-broker.md) made **Mounted** mode bring its
+container up *through* the broker — so with the profile off, the default local
+mode ended in `BrokerIndisponivelError`. That failure is still what you get when
+the broker is genuinely absent: a NAMED `failed`, never a crash, and never a
+silent fallback to running outside a container.
+
+What you still have to set is the gid — and getting it wrong does **not** break
+the boot, it breaks the use:
 
 ```bash
-# 1. the gid of your host's docker group — the default (999) is the most
-#    common one and is wrong on several distributions
+# the gid of your host's docker group — the compose default (999) is the most
+# common one and is wrong on several distributions
 getent group docker | cut -d: -f3
 
-# 2. in .env
+# in .env
 #    DOCKER_GID=<the number above>
 #    BROKER_URL=http://broker:8090
 #    PROJECT_WORKSPACES_HOST_ROOT=/home/you/brabo-projects   # ALREADY EXPANDED
-#    BRABO_PROJECTS_BASE=/home/you/brabo                     # derives HOST_BASE
+#    BRABO_PROJECTS_BASE=/home/you/projetos-brabo            # derives HOST_BASE
 
-docker compose -f docker/docker-compose.yml --env-file .env \
+docker compose -f docker/docker-compose.yml --env-file .env up -d broker
+```
+
+`pnpm dev` **reports** the state of `DOCKER_GID` on every run
+([RN-512](business-rules.md#rn-512)), comparing it against your machine's real
+group, precisely so the mismatch is not discovered much later — when someone
+proposes `container_start` and every operation dies with `permission denied` on
+the socket. The report never blocks, and on a machine with no `docker` group at
+all (Docker Desktop, rootless) it says the question does not apply rather than
+accusing you of a defect.
+
+In production, bring it up explicitly:
+
+```bash
+docker compose -f docker/docker-compose.prod.yml \
   --profile container-broker up -d broker
 ```
 
@@ -220,10 +247,12 @@ reachable by the host's Docker daemon, `container_start` for a Mounted project
 goes to the [broker](#broker-de-container), exactly like Container mode — it no
 longer requires a `brabo-runner` connected. Only **Runner** mode still goes to
 the runner, on the user's own machine, because that folder is somewhere this
-server cannot see. Bringing the broker up (`--profile container-broker`) is
-therefore part of the setup if you want Mounted projects to have containers.
-That same step is when the folder above gets created, in that order: the
-daemon can only bind-mount a folder that already exists.
+server cannot see. Locally the broker is already up — it comes with `pnpm dev`
+since [ADR 0146](adr/0146-base-consentida-no-bootstrap.md), precisely because
+this is the default mode's path; in production it still needs
+`--profile container-broker`. That same step is when the folder above gets
+created, in that order: the daemon can only bind-mount a folder that already
+exists.
 
 **Why the wizard hides Mounted mode.** Without `BRABO_PROJECTS_BASE`, the
 api reports `projectsBase: null` and the option is not offered at all. That

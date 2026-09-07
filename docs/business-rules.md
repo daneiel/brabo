@@ -7736,6 +7736,73 @@ sem confirmação.
 
 ---
 
+## O broker sobe por padrão no compose local (RN-512)
+
+### RN-512 — O broker sai do `profiles` no compose LOCAL e só nele, e o `DOCKER_GID` passa a ser relatado no preflight {#rn-512}
+
+O broker nasceu sob `profiles: ["container-broker"]` com uma justificativa que
+o próprio ADR 0130 escreveu: *"dar acesso ao Docker do host a um processo que
+nada chama ainda seria uma mudança de postura para toda máquina de
+desenvolvimento, em troca de nada"*. As duas metades morreram. **"Nada o
+chama" é falso** desde os ADRs 0133/0134/0136 — o broker tem quatro chamadores
+reais. E **"em troca de nada" deixou de descrever a troca** quando o ADR 0144
+fez `mounted` subir container PELO BROKER e o ADR 0146 tornou `mounted` o
+padrão local: com o profile desligado, o modo padrão termina em
+`BrokerIndisponivelError`.
+
+Então ele sai do `profiles` em `docker/docker-compose.yml` — e **só ali**. Em
+`docker/docker-compose.prod.yml` o profile FICA, e os dois arquivos passam a
+divergir de propósito.
+
+**A assimetria é o que o socket significa de cada lado.** Quem roda `pnpm dev`
+**já tem o socket do Docker** — está rodando `docker compose`, contra o daemon
+do próprio host —, então o broker recebê-lo não concede nada que o operador já
+não possua. A superfície marginal é o HTTP do próprio broker, que não publica
+porta, vive numa rede `internal: true` que só a api alcança, e compara
+`BRABO_SERVICE_TOKEN` em tempo constante. Em produção o cálculo é o oposto: o
+socket é fronteira de privilégio de verdade, o operador não é o desenvolvedor,
+e nada nesta fase muda o modo padrão de uma instalação de produção.
+
+**As cinco camadas de contenção não são tocadas.** Isto muda **quando** o
+broker roda, nunca **o que** ele aceita: ele continua recebendo `projectId` e
+uma das cinco operações, continua indo à api ler a decisão do Arquiteto, e
+continua sem parâmetro nenhum onde se escreva `privileged`, `cap_add`,
+`network: host` ou um `-v` livre. A contenção nunca foi o profile.
+
+**A consequência ambiental, e por que ela ganhou relato.** `DOCKER_GID` deixa
+de importar só para quem ligava o profile de propósito — alguém que estava, por
+definição, prestando atenção nele — e passa a valer para qualquer pessoa que
+rode `pnpm dev`. O socket é `root:docker` no host e o processo do broker roda
+non-root; o `group_add` do compose é o que lhe dá o grupo, e o default `999` é
+o mais comum e está errado em várias distribuições. Errar **não quebra o
+boot** — o broker sobe normalmente —, quebra o USO: toda operação morre com
+`permission denied` no socket, e o sintoma aparece muito depois, quando alguém
+propõe `container_start`. Por isso `preflight.mjs` passa a **relatar** o
+estado a cada `pnpm dev`.
+
+O relato tem **três desfechos, e eles não colapsam**: bate; diverge (com a
+origem do valor efetivo — `configurado` × `default` — porque as duas pedem
+instruções diferentes); e **não se aplica**, quando a máquina não tem grupo
+`docker`. O terceiro não é erro nem "não consegui": em macOS e Windows o
+Docker Desktop não usa grupo unix, e num Docker rootless o socket é do próprio
+usuário. Tratar a ausência como divergência acusaria metade das máquinas de um
+defeito que elas não têm — o mesmo cuidado de `baseSobrepoeOCheckout`, que
+devolve `false` para checkout desconhecido. E ele **relata, nunca bloqueia**:
+`pnpm dev` sobe igual.
+
+- **Onde:** `docker/docker-compose.yml` (serviço `broker`, sem `profiles`) e
+  `docker/docker-compose.prod.yml` (com `profiles`, e a nota que impede
+  uniformizar os dois); `scripts/dev/docker-gid.mjs` (`avaliarDockerGid`,
+  `mensagemDoDockerGid`, `GID_PADRAO_DO_COMPOSE` — a decisão pura);
+  `scripts/dev/preflight.mjs` (`relatarDockerGid`, `gidDoGrupoDocker`)
+- **Teste:** `scripts/dev/docker-gid.spec.ts` — o caminho feliz, as duas
+  divergências (default ausente e valor errado), o "não se aplica" sem grupo
+  docker, e o default que por acaso ACERTA
+- **ADR:** [0146](adr/0146-base-consentida-no-bootstrap.md), ponto 3
+- **Origem:** FASE 28, sessão 4
+
+---
+
 ## A pasta montada nasce quando o container sobe (RN-501)
 
 ### RN-501 — `mounted` valida só o LÉXICO e a base na criação; a pasta é MATERIALIZADA depois, por quem tem autoridade sobre o disco {#rn-501}
