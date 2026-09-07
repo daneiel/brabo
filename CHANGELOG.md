@@ -167,6 +167,52 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `start`/`stop`/`restart` (quem gerencia o ciclo de vida é o gerenciador do SO;
   duplicá-lo no CLI criaria uma segunda fonte de verdade sobre o estado).
 
+- **api,engine**: a **revogação de chave de dispositivo** deixa de ser cega, e
+  passa a alcançar a conexão viva (RN-519/RN-520,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 6). Eram
+  DUAS metades, e as duas estavam abertas.
+
+  **Ninguém revoga o que não consegue ver.** O `RunnerDeviceKeysController`
+  tinha `@Post()` e `@Delete()` e listagem NENHUMA — nem a do próprio dono —,
+  então uma chave órfã (aba fechada no meio do fluxo da RN-473) era inerte,
+  invisível e permanente. Entra `@Get()`, `developer`, no mesmo formato que o
+  PAT já tem, escopado ao usuário no WHERE do repositório. A chave REVOGADA
+  continua na lista (sumir com ela faria a tela afirmar que nunca existiu), e
+  `lastUsedAt` nulo é o sinal da órfã. Nunca devolve a JWK pública: o que a
+  lista existe para permitir é revogar. O docblock que declarava o corte
+  errado — *"sem a visão de `maintainer`"* — passa a descrever o que o código
+  faz, e a visão de `maintainer` (RN-427) continua fora **por decisão**: aquela
+  nasceu de incidente com segredo COMPARTILHADO, e a metade privada de uma
+  chave de dispositivo nunca sai do navegador que a gerou.
+
+  **Revogar só impedia ticket NOVO.** Um `brabo-runner` já conectado mantinha o
+  canal `terminal:<projectId>` de pé — executando comando aprovado — com a
+  chave revogada, até cair sozinho. Agora a api manda o comando
+  (`POST /internal/projects/:projectId/runner/disconnect`, vigésima rota
+  interna) e o **engine** alcança o pid que o `Registry` já entregava; o engine
+  não lê a tabela de chaves e a api não fala com o canal. Ele derruba o
+  TRANSPORTE, não só o processo do canal (`EngineWeb.RunnerSocket.id/1` deixa
+  de ser `nil`, e o mecanismo é o `Endpoint.broadcast(id, "disconnect", %{})`
+  documentado do Phoenix): parar só o canal deixaria o socket vivo e o cliente
+  reentrando no tópico para sempre com um ticket já consumido.
+
+  **O alvo é `{projeto, usuário}` e nunca `{chave}`**, e isso é propriedade do
+  caminho do ticket: `runner_socket_tickets` guarda `project_id`/`user_id`/`kind`
+  e nada mais, então qual PAT ou qual `kid` abriu aquele socket morre no
+  `PatAuthGuard`. Custo DECLARADO — um runner do MESMO usuário conectado com
+  PAT ou com outra chave também cai, e reconecta sozinho se a credencial dele
+  ainda valer. Runner de outro usuário no mesmo projeto fica de pé, e o
+  desfecho diz isso (`de_outro_dono`) em vez de um `:ok` que não descreve nada.
+
+  **Derrubar nunca derruba a revogação**: o `DELETE` continua 204 e idempotente
+  — engine fora do ar, nenhum runner conectado ou timeout viram LOG, nunca
+  exceção, a mesma régua de `rag_searches` (RN-479) e do `mirror_sync_result`
+  (RN-517). Revoga PRIMEIRO e derruba depois (o contrário deixaria janela para
+  reconectar com a chave viva), e o projeto sai da LINHA revogada, nunca da
+  URL. Desfecho desconhecido vindo do engine vira `timeout` e nunca
+  `derrubado`. Fica declarado: **tela nenhuma** — esta entrega é a metade
+  server-side, e o web ainda não tem onde listar nem revogar.
+
 - **api,engine,runner,web**: o **estado do espelho** fica visível, e os três
   estados não colapsam (RN-517,
   [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 7). A RN-516

@@ -9,7 +9,7 @@ defmodule EngineWeb.TerminalChannelTest do
 
   use EngineWeb.ChannelCase, async: false
 
-  alias Engine.Runners.{Registry, SocketTicket}
+  alias Engine.Runners.{Registry, Revogacao, SocketTicket}
 
   setup do
     Application.put_env(:engine, :engine_api_client, Engine.Sessions.FakeEngineApiClient)
@@ -811,6 +811,66 @@ defmodule EngineWeb.TerminalChannelTest do
         Keyword.get(opts, :mirror_path)
       ]
     )
+  end
+
+  describe "revogação alcança a conexão viva (RN-520, ADR 0147 ponto 6)" do
+    test "runner DAQUELE usuário: o canal para, e a presença no Registry é liberada" do
+      project_id = Ecto.UUID.generate()
+      dono = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner", dono)
+
+      assert {:ok, _reply, joined} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      assert Registry.connected?(project_id)
+
+      # `Phoenix.ChannelTest` LINKA o canal ao processo de teste, e o
+      # `{:shutdown, :credencial_revogada}` se propagaria por esse link
+      # matando o próprio teste. Em produção não há link nenhum: o transporte
+      # MONITORA o canal. Desligar o link aqui é o que faz o teste observar o
+      # mesmo desfecho que a produção observa.
+      Process.unlink(joined.channel_pid)
+      Process.monitor(joined.channel_pid)
+
+      # É a corrente inteira: `Revogacao.derrubar/2` acha o pid pelo Registry,
+      # manda a mensagem e espera a resposta do canal DE VERDADE.
+      assert {:ok, :derrubado} = Revogacao.derrubar(project_id, dono)
+
+      assert_receive {:DOWN, _ref, :process, _pid, _motivo}, 1_000
+      wait_until(fn -> not Registry.connected?(project_id) end)
+    end
+
+    test "runner de OUTRO usuário no mesmo projeto fica de pé, e o pedinte é informado disso" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner", Ecto.UUID.generate())
+
+      assert {:ok, _reply, joined} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      assert {:ok, :de_outro_dono} = Revogacao.derrubar(project_id, Ecto.UUID.generate())
+
+      assert Process.alive?(joined.channel_pid)
+      assert Registry.connected?(project_id)
+    end
+
+    test "sem runner conectado: :sem_runner, e nada é derrubado — é o caso da chave órfã" do
+      project_id = Ecto.UUID.generate()
+
+      assert {:ok, :sem_runner} = Revogacao.derrubar(project_id, Ecto.UUID.generate())
+    end
+
+    test "socket :web NUNCA é o alvo: ele não ocupa o Registry, então nem chega a ser perguntado" do
+      project_id = Ecto.UUID.generate()
+      dono = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "terminal", dono)
+
+      assert {:ok, _reply, joined} =
+               Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{})
+
+      assert {:ok, :sem_runner} = Revogacao.derrubar(project_id, dono)
+
+      assert Process.alive?(joined.channel_pid)
+    end
   end
 
   defp wait_until(fun, tentativas \\ 50)

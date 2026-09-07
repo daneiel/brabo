@@ -1080,6 +1080,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/runner-device-keys-controller-list-device-keys",
+          label: "Lista as próprias chaves de dispositivo deste projeto",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/runner-device-keys-controller-register-device-key",
           label: "Registra a chave pública de um dispositivo do runner local",
           className: "api-method post",

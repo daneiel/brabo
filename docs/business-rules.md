@@ -9157,6 +9157,167 @@ cuja configuração está quebrada, que é justamente quando alguém pergunta.
   toca. Também fora: qualquer subcomando de `start`/`stop`/`restart` (quem
   gerencia o ciclo de vida é o gerenciador de serviços do SO, e duplicá-lo no
   CLI criaria uma segunda fonte de verdade sobre o estado) e Windows, acima
+
+---
+
+## A revogação de chave de dispositivo deixa de ser cega, e alcança a conexão viva (RN-519..520)
+
+### RN-519 — Ninguém revoga o que não consegue ver: a chave de dispositivo ganha listagem do PRÓPRIO dono, e a visão de `maintainer` fica fora por DECISÃO {#rn-519}
+
+A sessão 7 da FASE 28 e o **ponto 6** do
+[ADR 0147](adr/0147-agente-local-com-capacidades.md). A revogação existia desde
+o [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
+(`DELETE /projects/:projectId/runner-device-keys/:deviceKeyId`, `developer`,
+204, idempotente) — **e não havia como enxergar o que se revoga.**
+
+**O corte real era maior do que o docblock dizia.** Ele declarava a ausência
+como *"sem a visão de `maintainer` (listar/revogar de qualquer usuário) que o
+PAT tem"*. Mas o `PersonalAccessTokensController` tem **cinco** rotas — `@Post()`,
+`@Get()` e `@Delete(':tokenId')` para o próprio usuário, mais `@Get('all')` e
+`@Delete(':tokenId/admin')` para `maintainer` ([RN-427](#rn-427)) — e o de chave
+de dispositivo tinha **duas**. Não faltava só a visão de `maintainer`: faltava a
+listagem do PRÓPRIO dono. Uma chave órfã (aba fechada no meio do fluxo da
+[RN-473](#rn-473)) era inerte, invisível e permanente, sem tela nenhuma onde
+revogá-la — a lacuna que o `CLAUDE.md` já declarava.
+
+**Entra `@Get()`, `developer`, no mesmo formato que o PAT já tem** e escopado ao
+próprio usuário no WHERE do repositório, nunca num filtro do caso de uso.
+
+**A revogada CONTINUA na lista.** Mesma escolha de `listarDoUsuarioNoProjeto`
+do PAT: quem revogou precisa ver que revogou, e sumir com a linha faria a tela
+afirmar que a chave nunca existiu. `revokedAt` é o que separa as duas, e
+`lastUsedAt` nulo é o sinal da ÓRFÃ — registrada e nunca usada por runner
+nenhum.
+
+**Nunca a JWK pública.** Ela não é segredo, mas não serve a nada aqui: a lista
+existe para revogar, e para isso bastam `id`, nome e as três datas. A metade
+privada a api nunca viu.
+
+**A visão de `maintainer` continua FORA — agora por decisão, não por omissão.**
+As duas rotas de admin do PAT nasceram de resposta a incidente ([RN-427](#rn-427)):
+dev desligado com um segredo COMPARTILHADO circulando. Chave de dispositivo não
+é esse bicho — a privada nunca sai do navegador que a gerou, então não há
+segredo na mão de outro a conter. O que a `DELETE` daqui ganhou em troca foi
+ALCANCE ([RN-520](#rn-520)), não amplitude.
+
+- **Onde:** `apps/api/src/interfaces/http/runner/runner-device-keys.controller.ts:99`
+  (`@Get()`, `listDeviceKeys`, `developer`);
+  `apps/api/src/application/use-cases/auth/list-runner-device-keys.use-case.ts:24`;
+  `apps/api/src/application/ports/runner-device-key-repository.port.ts:53`
+  (`listarDoUsuarioNoProjeto`);
+  `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts:69`;
+  `apps/api/src/interfaces/http/runner/dto/runner-device-key-list.response.dto.ts:19`
+  (as DUAS travas de tipo, `Wire`/`MesmasChaves`, ao contrário do DTO do
+  registro)
+- **Teste:**
+  `apps/api/test/application/use-cases/auth/list-runner-device-keys.use-case.spec.ts`
+  (delegação com `userId`/`projectId` na ordem certa; a revogada que fica na
+  lista; a órfã com `lastUsedAt` nulo; repositório que rejeita e propaga);
+  `apps/api/test/interfaces/http/runner/runner-device-keys.controller.spec.ts`
+  (as TRÊS rotas em `developer`; a delegação; a rota que não devolve lista
+  vazia por engano)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 6
+- **Origem:** FASE 28, sessão 7. Fica declarado e NÃO feito: **tela nenhuma**.
+  Esta entrega é a metade server-side; a lacuna do `CLAUDE.md` fecha pela
+  metade — a api passa a poder listar e revogar, e `apps/web` ainda não tem
+  onde fazê-lo
+
+---
+
+### RN-520 — Revogar deixa de só impedir ticket NOVO e passa a derrubar a conexão VIVA; o alvo é `{projeto, usuário}` e nunca `{chave}`, e derrubar nunca derruba a revogação {#rn-520}
+
+A outra metade do **ponto 6** do
+[ADR 0147](adr/0147-agente-local-com-capacidades.md). Revogar uma chave de
+dispositivo impedia o ticket SEGUINTE e nada mais: um `brabo-runner` já
+conectado mantinha o canal `terminal:<projectId>` de pé — executando comando
+aprovado, atendendo PTY, subindo container — com a chave revogada, até cair
+sozinho.
+
+**Quem manda o comando é a api; quem alcança o pid é o engine.** A api chama
+`POST /internal/projects/:projectId/runner/disconnect` (o mesmo HTTP interno com
+service token de sempre, nunca um segundo mecanismo), e o engine acha o canal
+por `Engine.Runners.Registry.whereis/1` — o pid que ele já entregava. O engine
+**não consulta a tabela de chaves** e a api **não fala com o canal**; nenhum dos
+dois faz o trabalho do outro, a mesma divisão de `EngineWeb.ContainerCommandController`
+([RN-497](#rn-497)).
+
+**A precisão que existe é `{projeto, usuário}`, e a que não existe é
+`{chave}` — por construção, não por gosto.** `Engine.Runners.SocketTicket`
+guarda `project_id`, `user_id` e `kind`, e só; a api pede o ticket com
+`{userId, kind}`. A identidade da CREDENCIAL que originou o ticket (o PAT, ou o
+`kid` da chave de dispositivo — [RN-475](#rn-475)) morre no `PatAuthGuard` e
+nunca chega ao socket. Levá-la até lá exigiria coluna nova em
+`runner_socket_tickets`, campo novo no pedido interno e um assign novo no
+`connect/3`: mudança de contrato de auth, fora desta entrega.
+
+**Custo DECLARADO, e nomeado no código, não só aqui:** um runner do MESMO
+usuário conectado com PAT, ou com outra chave do mesmo projeto, também cai. Ele
+reconecta sozinho — a rodada seguinte pede um ticket novo, e a credencial que
+ainda vale ganha um. Quem foi revogado não ganha, e é aí que a revogação morde.
+Runner de OUTRO usuário no mesmo projeto **não cai**: a comparação é
+`socket.assigns.user_id`, dentro do processo do canal, que é o único que pode
+lê-lo — e o desfecho `de_outro_dono` volta ao pedinte em vez de um `:ok` que não
+descreve o que aconteceu.
+
+**Derruba o TRANSPORTE, não só o processo do canal.** Parar apenas o canal
+deixaria o socket vivo e o cliente Phoenix reentrando no tópico para sempre com
+um ticket já consumido — degradação silenciosa, exatamente o defeito que o ADR
+0147 existe para não repetir. `EngineWeb.RunnerSocket.id/1` deixa de ser `nil` e
+passa a nomear a conexão (`runner_socket:<kind>:<projectId>:<userId>`), e o
+canal usa o mecanismo documentado do Phoenix, `Endpoint.broadcast(id,
+"disconnect", %{})`. É por ele que o runner PERCEBE a queda: `onDisconnected`
+resolve a rodada, o laço pede ticket novo e a api recusa.
+
+**Efeito colateral NUNCA derruba o efeito principal.** O `DELETE` continua 204 e
+idempotente: engine fora do ar, nenhum runner conectado ou timeout não podem
+fazer a revogação falhar nem virar 5xx. A chamada ao engine mora num
+`try/catch` que só LOGA, dentro do caso de uso — a MESMA régua de
+`rag_searches` ([RN-479](#rn-479)) e do `mirror_sync_result`
+([RN-517](#rn-517)). E os quatro desfechos são informação, não erro: `sem_runner`
+é o caso normal de quem revoga uma chave órfã ([RN-519](#rn-519)), e desfecho
+DESCONHECIDO vindo do engine vira `timeout` e nunca `derrubado` — entre afirmar
+que a conexão caiu e afirmar que talvez não, a afirmação segura é a que não
+promete o que não se sabe.
+
+**Revoga PRIMEIRO, derruba depois**, e o projeto sai da LINHA revogada, nunca da
+URL: o `projectId` da rota já era ignorado no `DELETE`, e lê-lo aqui faria um
+`projectId` divergente derrubar o runner de um projeto que não tem nada com esta
+chave.
+
+- **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
+  (a ordem, o projeto da linha e o `try/catch` que só loga);
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:283`
+  (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
+  `apps/engine/lib/engine/runners/revogacao.ex:75` (`derrubar/3`);
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex:697`
+  (`handle_info({:derrubar_por_revogacao, …})`);
+  `apps/engine/lib/engine_web/channels/runner_socket.ex:66` (`id/1`, que deixou
+  de ser `nil`);
+  `apps/engine/lib/engine_web/controllers/runner_connection_command_controller.ex:27`;
+  `apps/engine/lib/engine_web/router.ex:82`
+- **Teste:**
+  `apps/api/test/application/use-cases/auth/revoke-runner-device-key.use-case.spec.ts`
+  (`describe "a revogação alcança a conexão viva"` — o projeto da linha; a
+  ordem revoga→derruba; engine fora do ar que não derruba a revogação; 404 que
+  não derruba ninguém);
+  `apps/api/test/infrastructure/http-clients/api-to-engine-client.spec.ts`
+  (a rota e o corpo; desfecho desconhecido virando `timeout`; 500 que LANÇA,
+  para o caso de uso tratar);
+  `apps/engine/test/engine/runners/revogacao_test.exs` (sem runner; o dono; o
+  outro dono; o teto; argumento fora de forma que não levanta);
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
+  (`describe "revogação alcança a conexão viva"` — o canal REAL que para e
+  libera a presença no `Registry`, o de outro dono que fica de pé, o `:web` que
+  nunca é alvo);
+  `apps/engine/test/engine_web/controllers/runner_connection_command_controller_test.exs`
+  (os 200 com desfecho, e o 400 de pedido malformado)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 6
+- **Origem:** FASE 28, sessão 7. Fica declarado e NÃO feito: a revogação não
+  alcança um runner conectado em OUTRO projeto com a mesma chave — não existe
+  esse caso, porque `runner_device_keys.project_id` amarra a chave a um projeto
+  só; e nenhuma tela dispara isto ainda (a metade web da [RN-519](#rn-519))
+
 ---
 
 ## Quando dá errado

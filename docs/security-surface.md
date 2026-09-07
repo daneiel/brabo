@@ -411,20 +411,52 @@ reason in the URL.
   (issue/list/revoke the PAT itself, plus the two `maintainer` ones —
   RN-427, list/revoke of ANY user in the project) remain regular session
   JWT — only the route the TOKEN ITSELF authenticates changes mechanism.
-- **The two `/projects/:projectId/runner-device-keys` routes ARE regular
+- **The three `/projects/:projectId/runner-device-keys` routes ARE regular
   session JWT**, unlike `runner-ticket` above — the browser, already
   logged in, registers the Ed25519 public key it just generated (the
   private half never leaves it) before offering the runner binary for
   download. `POST` persists the public key only — there's no "raw secret"
   to hand back the way `IssuePersonalAccessTokenUseCase` does, because
   the client already holds the only secret involved (the private key) and
-  the api never sees it. `DELETE` revokes the caller's own key,
-  idempotently, same shape as the PAT's self-service revoke. `PatAuthGuard`
+  the api never sees it. `GET` lists the caller's own keys, revoked ones
+  included ([RN-519](business-rules.md#rn-519)) — it is what makes
+  revocation reachable at all, and until it existed an orphan key (tab
+  closed midway through the automatic-setup flow) was invisible and
+  permanent. It never returns the public JWK: what the list exists for is
+  revoking, and `lastUsedAt: null` is the signal of the orphan. `DELETE`
+  revokes the caller's own key, idempotently, same shape as the PAT's
+  self-service revoke. `PatAuthGuard`
   is what LATER accepts a JWT signed by that key's private half on
   `runner-ticket`, looked up by the `kid` header matching this table's
   `id`; the guard checks the key hasn't been revoked but never an
   expiry — the key itself doesn't expire, only the short-TTL (≤60s,
   `exp - iat`) JWT the runner signs with it each time.
+- **Revoking a device key now reaches the LIVE connection, and the target
+  is `{project, user}` — never `{key}`**
+  ([RN-520](business-rules.md#rn-520), [ADR 0147](adr/0147-agente-local-com-capacidades.md)
+  point 6). `DELETE` used to stop only the NEXT ticket: a `brabo-runner`
+  already connected kept its `terminal:<projectId>` channel alive, running
+  approved commands with the revoked key, until it fell on its own. The
+  api now asks the engine (`POST /internal/projects/:projectId/runner/disconnect`)
+  to drop it, and the engine reaches the channel pid — the api never talks
+  to the channel, and the engine never reads the key table.
+  The precision that does NOT exist is per-credential, and that's a
+  property of the ticket path rather than a preference:
+  `runner_socket_tickets` stores `project_id`/`user_id`/`kind` and nothing
+  else, so which PAT or which `kid` opened that socket dies in
+  `PatAuthGuard` and never reaches the engine. **Declared cost:** a runner
+  of the SAME user connected with a PAT, or with another key of the same
+  project, also falls — and reconnects by itself, because the next round
+  asks for a fresh ticket and a credential that still holds gets one. A
+  runner of another user in the same project is left alone. Dropping the
+  connection is a SIDE EFFECT: engine down, no runner connected or a
+  timeout can never make the `DELETE` (204, idempotent) fail or turn 5xx —
+  the same rule as `rag_searches` ([RN-479](business-rules.md#rn-479)) and
+  `mirror_sync_result` ([RN-517](business-rules.md#rn-517)).
+  The `maintainer` view the PAT has (RN-427, list/revoke of ANY user)
+  stays OUT for device keys — now by decision, not omission: that pair was
+  born of incident response to a SHARED secret circulating, and a device
+  key's private half never leaves the browser that made it.
 - **The `engine-service` routes aren't "internal" by naming convention.**
   What protects them is `EngineServiceGuard` comparing
   `X-Brabo-Service-Token` against the shared secret in constant time, plus
@@ -779,6 +811,7 @@ reason in the URL.
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId/admin` | role:maintainer |
 | POST | `/projects/:projectId/runner-device-keys` | role:developer |
+| GET | `/projects/:projectId/runner-device-keys` | role:developer |
 | DELETE | `/projects/:projectId/runner-device-keys/:deviceKeyId` | role:developer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |
 | DELETE | `/projects/:projectId/proficiency/me` | role:viewer |
