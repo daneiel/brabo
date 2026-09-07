@@ -7302,6 +7302,56 @@
       }
     },
     "/projects/{projectId}/runner-device-keys": {
+      "get": {
+        "description": "Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum.",
+        "operationId": "RunnerDeviceKeysController_listDeviceKeys",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunnerDeviceKeyListResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Papel insuficiente no projeto."
+          },
+          "404": {
+            "description": "Projeto não encontrado."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista as próprias chaves de dispositivo deste projeto",
+        "tags": [
+          "projetos"
+        ]
+      },
       "post": {
         "description": "A chave PRIVADA nunca sai do navegador — só a JWK pública (Ed25519, RFC 8037) chega aqui. Use o `id` desta resposta como `kid` no header do JWT que o runner assina pra pedir ticket em `POST .../runner-ticket`.",
         "operationId": "RunnerDeviceKeysController_registerDeviceKey",
@@ -7365,7 +7415,7 @@
     },
     "/projects/{projectId}/runner-device-keys/{deviceKeyId}": {
       "delete": {
-        "description": "Idempotente — revogar de novo não é erro.",
+        "description": "Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA o runner conectado deste usuário no projeto da chave: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. O alvo é `{projeto, usuário}` e não `{chave}` — um runner do MESMO usuário conectado com PAT ou com outra chave também cai, e reconecta sozinho se a credencial dele ainda valer. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.",
         "operationId": "RunnerDeviceKeysController_revokeDeviceKey",
         "parameters": [
           {
@@ -20344,6 +20394,48 @@
         "required": [
           "projectId",
           "messages"
+        ]
+      },
+      "RunnerDeviceKeyListResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01JC4Z0000CHAVE000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "laptop"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "01JC4Z0000PROJETO000000001"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-27T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = ativa. Revogada continua aparecendo na lista."
+          },
+          "lastUsedAt": {
+            "type": "object",
+            "example": null,
+            "nullable": true,
+            "description": "Nulo = nunca usada — o sinal de uma chave órfã (aba fechada no meio do fluxo de configuração automática do runner)."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "projectId",
+          "createdAt",
+          "revokedAt",
+          "lastUsedAt"
         ]
       },
       "RunnerDeviceKeyResponseDto": {

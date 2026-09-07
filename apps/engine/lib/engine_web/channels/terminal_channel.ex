@@ -115,6 +115,21 @@ defmodule EngineWeb.TerminalChannel do
   Falha do HTTP interno vira log e nada mais: gravar telemetria jamais
   derruba o que ela mede, e a cópia já terminou quando a mensagem chega.
 
+  ## Revogação alcança a conexão viva (RN-520, ADR 0147 ponto 6)
+
+  Revogar uma chave de dispositivo deixou de só impedir ticket NOVO. A api
+  manda o comando (`POST /internal/projects/:projectId/runner/disconnect`) e
+  este canal é quem decide: `handle_info({:derrubar_por_revogacao, ...})`
+  compara o `user_id` DESTA conexão com o do dono da chave revogada, derruba
+  o TRANSPORTE (`Endpoint.broadcast(id, "disconnect", %{})`, o mecanismo
+  documentado do Phoenix — ver `EngineWeb.RunnerSocket.id/1`) e para.
+
+  A comparação é por USUÁRIO, e não pela credencial: `Engine.Runners.SocketTicket`
+  guarda `project_id`/`user_id`/`kind` e nada mais. O custo está declarado no
+  moduledoc de `Engine.Runners.Revogacao` — um runner do MESMO usuário
+  conectado com PAT ou com outra chave também cai, e reconecta sozinho se a
+  credencial dele ainda valer.
+
   ## Auditoria (PTY é ação do usuário, não passa por `proposed_action`)
 
   `pty_open`/`pty_close` vindos de `:web` emitem
@@ -145,6 +160,7 @@ defmodule EngineWeb.TerminalChannel do
   alias Engine.Projects.Project
   alias Engine.Runners.{Capacidades, Registry, SocketTicket}
   alias Engine.Sessions.{EngineApiClient, ProjectSession}
+  alias EngineWeb.RunnerSocket
 
   # Saída de um `exec` que nunca chegou ao runner por falta da capacidade
   # `exec` (RN-514). 126 é o código POSIX de "comando encontrado, mas não
@@ -630,6 +646,37 @@ defmodule EngineWeb.TerminalChannel do
     {:noreply, socket}
   end
 
+  # Revogação de credencial alcançando a conexão VIVA (ADR 0147 ponto 6,
+  # RN-520) — `Engine.Runners.Revogacao.derrubar/2` manda isto pro pid que o
+  # `Registry` entrega, porque o `user_id` daquela conexão só existe AQUI,
+  # em `socket.assigns`.
+  #
+  # A comparação é por USUÁRIO, nunca por credencial: a identidade do PAT ou
+  # da chave de dispositivo que originou o ticket morre no `PatAuthGuard` da
+  # api e nunca chega ao socket (ver o moduledoc de `Engine.Runners.Revogacao`
+  # para o custo declarado). Runner de OUTRO usuário no mesmo projeto fica de
+  # pé, e o pedinte é informado disso — nunca um `:ok` que não descreve o que
+  # aconteceu.
+  #
+  # Derruba o TRANSPORTE, não só este processo: parar só o canal deixaria o
+  # socket vivo e o cliente Phoenix reentrando no tópico para sempre com um
+  # ticket já consumido. `Endpoint.broadcast(id, "disconnect", %{})` é o
+  # mecanismo documentado do Phoenix, e é por ele que o runner percebe a
+  # queda, pede ticket novo e — com a credencial revogada — deixa de
+  # conseguir um. O `{:stop, ...}` logo abaixo é o que libera a presença no
+  # `Registry` na hora, sem depender do monitor do `:global`.
+  @impl true
+  def handle_info({:derrubar_por_revogacao, ref, user_id, from}, socket) do
+    if socket.assigns[:role] == :runner and socket.assigns[:user_id] == user_id do
+      send(from, {:runner_derrubado, ref, :derrubado})
+      desconectar_transporte(socket)
+      {:stop, {:shutdown, :credencial_revogada}, socket}
+    else
+      send(from, {:runner_derrubado, ref, :de_outro_dono})
+      {:noreply, socket}
+    end
+  end
+
   @impl true
   def handle_info({:expire_pending_exec, ref}, socket) do
     {:noreply, assign(socket, :pending_execs, Map.delete(socket.assigns.pending_execs, ref))}
@@ -704,6 +751,23 @@ defmodule EngineWeb.TerminalChannel do
   # `nil` -> `false`: as mensagens que consultam isto (`:dispatch_exec` e
   # `{:relay, "pty_" <> _}`) só são enviadas ao pid que o `Registry` devolve,
   # que é sempre o do runner — um `:web` nunca chega aqui.
+  # RN-520: derruba o TRANSPORTE, não só o processo do canal — ver
+  # `handle_info({:derrubar_por_revogacao, ...})` e `EngineWeb.RunnerSocket.id/1`.
+  # `nil` (socket sem os três assigns, que o `connect/3` nunca produz) só
+  # perde a desconexão forçada, nunca levanta.
+  defp desconectar_transporte(socket) do
+    case RunnerSocket.socket_id(
+           socket.assigns[:kind],
+           socket.assigns[:project_id],
+           socket.assigns[:user_id]
+         ) do
+      nil -> :ok
+      id -> EngineWeb.Endpoint.broadcast(id, "disconnect", %{})
+    end
+
+    :ok
+  end
+
   defp tem_capacidade?(socket, capacidade) do
     case socket.assigns[:capacidades] do
       nil -> false

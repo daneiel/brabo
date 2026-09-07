@@ -2519,7 +2519,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Lista as próprias chaves de dispositivo deste projeto
+         * @description Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum.
+         */
+        get: operations["RunnerDeviceKeysController_listDeviceKeys"];
         put?: never;
         /**
          * Registra a chave pública de um dispositivo do runner local
@@ -2544,7 +2548,7 @@ export interface paths {
         post?: never;
         /**
          * Revoga uma chave de dispositivo própria
-         * @description Idempotente — revogar de novo não é erro.
+         * @description Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA o runner conectado deste usuário no projeto da chave: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. O alvo é `{projeto, usuário}` e não `{chave}` — um runner do MESMO usuário conectado com PAT ou com outra chave também cai, e reconecta sozinho se a credencial dele ainda valer. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.
          */
         delete: operations["RunnerDeviceKeysController_revokeDeviceKey"];
         options?: never;
@@ -8105,6 +8109,29 @@ export interface components {
             tools?: {
                 [key: string]: unknown;
             }[];
+        };
+        RunnerDeviceKeyListResponseDto: {
+            /** @example 01JC4Z0000CHAVE000000000001 */
+            id: string;
+            /** @example laptop */
+            name: string;
+            /** @example 01JC4Z0000PROJETO000000001 */
+            projectId: string;
+            /**
+             * Format: date-time
+             * @example 2026-08-27T12:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Nulo = ativa. Revogada continua aparecendo na lista.
+             * @example null
+             */
+            revokedAt: Record<string, never> | null;
+            /**
+             * @description Nulo = nunca usada — o sinal de uma chave órfã (aba fechada no meio do fluxo de configuração automática do runner).
+             * @example null
+             */
+            lastUsedAt: Record<string, never> | null;
         };
         RunnerDeviceKeyResponseDto: {
             /** @example 01JC4Z0000CHAVE000000000001 */
@@ -15506,6 +15533,55 @@ export interface operations {
                 content?: never;
             };
             /** @description Project does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RunnerDeviceKeysController_listDeviceKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunnerDeviceKeyListResponseDto"][];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Papel insuficiente no projeto. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Projeto não encontrado. */
             404: {
                 headers: {
                     [name: string]: unknown;

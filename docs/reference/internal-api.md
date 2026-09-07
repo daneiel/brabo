@@ -1001,7 +1001,7 @@ instead.
 
 ## api → engine
 
-Nineteen command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
+Twenty command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
 
 | method | path | what it triggers |
 |---|---|---|
@@ -1022,6 +1022,20 @@ Nineteen command routes, plus the health ones. Under `/internal` with `VerifySer
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalidates the instruction cache |
 | POST | `/actions/execute` · `/actions/execute-git` | executes an **already approved** action |
 | POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | asks the RUNNER connected to the project to start/stop/remove its container ([RN-497](../business-rules.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — only for `mounted`/`runner` projects; `container` still goes through the broker, never here |
+| POST | `/projects/:id/runner/disconnect` | drops the LIVE connection of that user's runner in the project ([RN-520](../business-rules.md#rn-520), [ADR 0147](../adr/0147-agente-local-com-capacidades.md)) — called when a device key is revoked; always `200`, with `desfecho` = `derrubado` \| `sem_runner` \| `de_outro_dono` \| `timeout` |
+
+**`runner/disconnect` is the other half of a revocation, and it is the api that
+owns the decision.** `RevokeRunnerDeviceKeyUseCase` writes the revocation
+first, then asks here — the opposite order would leave a window in which the
+runner falls and reconnects with the key still valid. The engine does NOT read
+the device-key table: it only reaches the channel pid
+(`Engine.Runners.Registry.whereis/1`), compares the `user_id` of that
+connection, drops the transport and stops. And the api does NOT talk to the
+channel. The target is `{project, user}` and never `{key}`, because
+`runner_socket_tickets` stores `project_id`/`user_id`/`kind` and nothing else —
+the declared cost is in [RN-520](../business-rules.md#rn-520). Every outcome is
+a `200`: from the caller's side the `DELETE` is 204 and idempotent, and a
+revocation cannot fail because nobody happened to be connected.
 
 **The three `containers/*` routes are the mirror of `container-exec` below, in
 the opposite direction.** `container-exec` is the ENGINE asking the api to run
