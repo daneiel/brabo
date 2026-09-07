@@ -196,8 +196,31 @@ under — `BRABO_PROJECTS_BASE`, one per installation
 
 ```bash
 # .env — ABSOLUTE. `~` is not expanded by Compose.
-BRABO_PROJECTS_BASE=/home/voce/brabo
+BRABO_PROJECTS_BASE=/home/voce/projetos-brabo
 ```
+
+You don't have to write that line by hand. Since
+[ADR 0146](../adr/0146-base-consentida-no-bootstrap.md), `pnpm bootstrap` →
+**Docker › Base de projetos** runs `scripts/dev/consentir-base.mjs`, which
+proposes `$HOME/projetos-brabo`, refuses anything overlapping either the Brabo
+checkout or `PROJECT_WORKSPACES_HOST_DIR` (two roots with opposite owners —
+sharing a folder would make a Mounted project called `loja` land on top of a
+Container project whose `workspace_dir_name` is also `loja`), **proves** on
+macOS and Windows that Docker can actually see the folder by mounting it, and
+only then writes the variable.
+
+The proof is a mount, never a read of Docker Desktop's `settings.json`: that
+file is undocumented, differs across versions and platforms, and describes what
+the user configured rather than what the daemon will do — the same rule the
+product already applies to LLM providers, where a capability is declared only
+when proved by execution. It has **three** outcomes and they don't collapse:
+proved, refused (the variable is not written), and *couldn't prove* — no local
+image to mount with — which writes the variable and says loudly that the proof
+did not run.
+
+Run from the menu it only **reports**: every bootstrap menu item runs with
+stdin from `/dev/null` on purpose, so it cannot ask. To choose, run
+`node scripts/dev/consentir-base.mjs` in your own terminal.
 
 ```yaml
 # docker/docker-compose.yml — on BOTH `api` and `engine`, already written

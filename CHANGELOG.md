@@ -77,6 +77,47 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Novidades
+
+- **scripts**: `pnpm bootstrap` ganha o passo **Docker › Base de projetos** — o
+  consentimento que faltava para o modo **Pasta montada** existir na prática
+  (RN-511, [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md)). A RN-500
+  já dizia o que fazer sem base (`projectsBase: null`, o modo não é oferecido);
+  o que não existia era alguém **pedir** que ela fosse configurada, e por isso
+  um modo pronto ficou inalcançável para quem instala o produto.
+
+  O passo propõe `$HOME/projetos-brabo` — e **não** `$HOME/brabo-projetos`, que
+  o `.env.example` já usa como exemplo de `PROJECT_WORKSPACES_HOST_DIR`, a raiz
+  que o PRODUTO gerencia; propor o mesmo nome para as duas seria andar para
+  dentro da colisão que o ADR 0141 recusou, em que `<base>/loja` cai na mesma
+  pasta física de um projeto `container` chamado `loja` e o bootstrap dá
+  `git init` no projeto do outro. **O nome é só a esquiva; a proteção é
+  mecanismo:** `validarBase` recusa, nos dois sentidos, a base sobreposta ao
+  checkout do Brabo **ou** àquela raiz — e vale para o caminho digitado, não só
+  para o default.
+
+  **O compartilhamento do Docker Desktop é provado MONTANDO**, nunca lido do
+  `settings.json` — a régua de "capability só se declara quando provada por
+  execução" (ADR 0041/0042) aplicada ao host. A prova é uma **sentinela**, não
+  um `ls` seco: pasta vazia e pasta não compartilhada produzem a mesma listagem
+  vazia, então o script escreve um arquivo e pergunta se o container o enxerga.
+  Três desfechos que não colapsam — provado, reprovado (não grava a variável) e
+  *não consegui provar* (grava, e diz em voz alta que a prova não rodou).
+
+  **Sem TTY, relata em vez de consentir.** Do menu o script só pode relatar:
+  todo item roda com stdin em `/dev/null`, de propósito, senão qualquer coisa
+  que leia stdin rouba as setas do usuário — e a saída diz o comando que
+  pergunta. Pelo mesmo motivo o `preflight.mjs` passa a **relatar** o estado da
+  base junto do que já reporta, e nunca a perguntar: a resposta é um caminho no
+  disco de alguém, e não há default que se aplique em silêncio.
+
+  Dois efeitos colaterais de higiene: `lerEnv`/`escreverEnv` saem do
+  `preflight.mjs` para `scripts/dev/env-file.mjs` (aquele arquivo roda
+  `await main()` no topo, então importá-lo subiria o preflight inteiro — o mesmo
+  argumento que já criara o `base-de-projetos.mjs`), e as **três** sugestões de
+  caminho que o repositório dava para essa variável, todas diferentes entre si,
+  passam a ser uma só.
+
 ### Documentação
 
 - **docs**: nasce a **FASE 28 (pasta do usuário)** — só decisão, nenhuma linha de

@@ -7660,6 +7660,82 @@ na RN seguinte.
 
 ---
 
+## O consentimento da base, no host (RN-511)
+
+### RN-511 — A base é CONSENTIDA uma vez no host, o compartilhamento é provado MONTANDO, e sem terminal o passo relata em vez de consentir {#rn-511}
+
+A [RN-500](#rn-500) construiu a base e disse o que fazer quando ela falta —
+`projectsBase: null`, e o modo "Pasta montada" não é oferecido. O que faltava
+era alguém **pedir** que ela fosse configurada: nada no produto o fazia, e o
+resultado é que um modo pronto ficou inalcançável para quem instala.
+
+O passo de consentimento vive em `pnpm bootstrap` (`Docker › Base de
+projetos`), propõe **`$HOME/projetos-brabo`** e aceita outro caminho digitado.
+O nome não é preferência: `.env.example` já usa `~/brabo-projetos` como exemplo
+de `PROJECT_WORKSPACES_HOST_DIR`, a raiz que o PRODUTO gerencia, e propor o
+mesmo nome para as duas variáveis seria andar para dentro da colisão que o
+ADR 0141 recusou — `<base>/loja` cairia na mesma pasta física de um projeto
+`container` cujo `workspace_dir_name` também fosse `loja`, e o bootstrap daria
+`git init` dentro do projeto do outro.
+
+**O nome é só a esquiva; a proteção é mecanismo.** `validarBase` recusa
+qualquer candidata que se sobreponha — nos DOIS sentidos — ao checkout do Brabo
+(a guarda que a RN-500 já tinha) **ou** a `PROJECT_WORKSPACES_HOST_DIR` (a
+regra nova), além de recusar `~`, caminho relativo e a raiz. A recusa vale para
+o caminho DIGITADO, não só para o default; um default bem escolhido só evita
+que a recusa seja a primeira coisa que o usuário veja.
+
+**O compartilhamento do Docker Desktop é provado MONTANDO, nunca lido de
+`settings.json`.** Aquele arquivo não é documentado, muda entre versões e entre
+macOS e Windows, e descreve o que o usuário CONFIGUROU — não o que o daemon
+fará. É a mesma régua de "capability só é declarada quando provada por
+execução" dos ADRs 0041/0042, aplicada ao host. A prova é uma **sentinela**, e
+não um `ls` seco: pasta vazia e pasta não compartilhada produzem a mesma
+listagem vazia, então o script escreve um arquivo e pergunta se o container o
+enxerga. Só em macOS e Windows (`process.platform`); no Linux não há lista de
+compartilhamento, e a checagem é existência e escrita. É a SEGUNDA guarda de
+plataforma do produto, simétrica à primeira (`validarDirDentroDoHomeNoLinux`,
+no runner): cada uma restringe apenas onde a restrição significa alguma coisa.
+
+A prova tem **três desfechos, e eles não colapsam**: provado; reprovado (a
+variável **não** é gravada, e a recusa nomeia o caminho e onde adicioná-lo); e
+*não consegui provar* — sem imagem Docker local para montar —, que grava a
+variável e **diz em voz alta que a prova não rodou**, com o comando para
+rodá-la depois. "Não consegui olhar" virar "está tudo bem" é exatamente como
+uma base não compartilhada chegaria ao usuário na forma de um container que
+sobe com a pasta vazia, longe da tela onde a escolha foi feita.
+
+**Sem TTY, o passo RELATA e não faz nada.** O item de menu do `bootstrap.sh`
+roda com stdin vindo de `/dev/null` — de propósito, senão qualquer coisa que
+leia stdin rouba as setas do usuário — então de lá o script só pode relatar, e
+a saída diz o comando que pergunta. É o mesmo desenho de
+`perguntarUsoDoOllama`, que sem terminal aplica o default e avisa em vez de
+travar. Um script de consentimento que "consente" sozinho num pipe de CI é a
+negação da palavra. Pelo mesmo motivo `preflight.mjs` **relata** o estado da
+base e nunca pergunta: a resposta é um caminho no disco de alguém, e não existe
+default que se possa aplicar em silêncio.
+
+`mkdir -p` só acontece **depois** do aceite e da validação — criar pasta a
+partir de um caminho que ainda não passou pelas recusas é criar pasta em
+qualquer lugar que o processo alcance. E valor já presente nunca é sobrescrito
+sem confirmação.
+
+- **Onde:** `scripts/dev/consentir-base.mjs` (o I/O: perguntar, provar, criar,
+  gravar); `scripts/dev/base-de-projetos.mjs:143` (`basePadrao`), `:177`
+  (`validarBase`) e `:208` (`exigeProvaDeCompartilhamento`) — a decisão pura;
+  `scripts/dev/env-file.mjs` (`lerEnv`/`escreverEnv`, extraídas de
+  `preflight.mjs`, que roda `await main()` no topo e por isso não pode ser
+  importado); `scripts/dev/bootstrap.sh` (item `1.6`);
+  `scripts/dev/preflight.mjs` (`relatarBaseDeProjetos`)
+- **Teste:** `scripts/dev/base-de-projetos.spec.ts` (`describe('basePadrao')`,
+  `describe('validarBase')` — caminho feliz e as seis recusas — e
+  `describe('exigeProvaDeCompartilhamento')`); `scripts/dev/bootstrap.spec.ts`
+  (a árvore do menu, 25 folhas)
+- **ADR:** [0146](adr/0146-base-consentida-no-bootstrap.md)
+- **Origem:** FASE 28, sessão 2
+
+---
+
 ## A pasta montada nasce quando o container sobe (RN-501)
 
 ### RN-501 — `mounted` valida só o LÉXICO e a base na criação; a pasta é MATERIALIZADA depois, por quem tem autoridade sobre o disco {#rn-501}

@@ -166,11 +166,25 @@ there is now **one base**, configured once by the operator, and every
 mounted project lives underneath it. You never edit compose per project
 again.
 
-**What to do — once, for the whole installation:**
+**What to do — once, for the whole installation.** The supported path is the
+consent step ([ADR 0146](adr/0146-base-consentida-no-bootstrap.md)), which
+proposes a folder, refuses one that overlaps the Brabo checkout or
+`PROJECT_WORKSPACES_HOST_DIR`, proves on macOS/Windows that Docker can see it,
+creates it and writes the variable:
+
+```bash
+node scripts/dev/consentir-base.mjs
+```
+
+Run it in **your** terminal. `pnpm bootstrap` → *Docker › Base de projetos*
+runs the same script but can only **report**: every menu item runs with stdin
+from `/dev/null` on purpose, so it cannot ask a question.
+
+Writing the line by hand still works:
 
 ```bash
 # .env — an ABSOLUTE path. `~` is NOT expanded by Compose.
-BRABO_PROJECTS_BASE=/home/voce/brabo
+BRABO_PROJECTS_BASE=/home/voce/projetos-brabo
 ```
 
 ```bash
