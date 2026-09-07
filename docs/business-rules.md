@@ -9000,6 +9000,165 @@ capacidade.
 
 ---
 
+## O agente local vira serviço de USUÁRIO, e `status` não colapsa estado (RN-518)
+
+### RN-518 — `brabo-runner service install|uninstall|status` instala nível de USUÁRIO e nunca root; `uninstall` limpa a pasta que a UNIT registra; `status` responde quatro estados sem colapsar nenhum; Windows é recusa nomeada {#rn-518}
+
+A sessão 7 da FASE 28 e o **ponto 5** do
+[ADR 0147](adr/0147-agente-local-com-capacidades.md). Até aqui o agente local
+era **só primeiro plano**: um processo encerrado por SIGINT/SIGTERM, que morre
+com o terminal e não volta com a sessão do usuário. Não havia precedente
+nenhum — nenhuma menção a `systemd`, `launchd` ou `LaunchAgent` em
+`apps/runner/`.
+
+**Nível de usuário, SEMPRE — e root é RECUSA, não aviso.** `systemd --user`
+no Linux, `LaunchAgent` no macOS. Isso não é preferência de empacotamento: o
+docblock de `apps/runner/src/guard.ts:9-31` declara *"o runner roda NA máquina
+do usuário, com os privilégios DELE"* como a premissa em que as três fronteiras
+reais do produto se apoiam (autenticação, pipeline de aprovação,
+consentimento) — e a guarda de `cwd` é best-effort **por escrito**, justamente
+porque não é ela que segura nada. Um serviço de sistema rodando como root
+quebraria o invariante e deixaria a guarda best-effort como única coisa entre
+um comando aprovado e o disco da máquina. Por isso `install` com `uid` 0
+**recusa nomeando o motivo**, sem escrever arquivo nenhum e sem rodar comando
+nenhum: instalar-e-avisar deixaria a instalação errada de pé, e o aviso seria
+lido uma vez só.
+
+**Windows fica FORA DE ESCOPO, e a recusa é nomeada.** A matriz de build já
+produz o binário de Windows ([ADR 0112](adr/0112-binario-standalone-do-runner-via-bun-build-compile.md)),
+mas serviço de usuário ali é um **terceiro mecanismo** (Serviços do SO com
+conta de usuário, ou Agendador de Tarefas no logon) — não uma variação dos
+dois. Os três subcomandos respondem nomeando a plataforma, dizendo que a
+decisão é declarada, e apontando o caminho que continua funcionando (rodar em
+primeiro plano). Nunca falha muda, nunca um "instalado" que não instalou nada.
+Qualquer outra plataforma cai na mesma recusa.
+
+**Uma unit POR PROJETO, nomeada pelo `projectId`** — `brabo-runner-<id>.service`
+/ `dev.brabo.runner.<id>` — porque o servidor **já impõe um runner por
+projeto**: um segundo `join` no mesmo `terminal:<projectId>` é recusado pelo
+`Engine.Runners.Registry`. Nomear pela PASTA permitiria instalar duas units que
+nunca podem estar de pé ao mesmo tempo, e a segunda apareceria como falha de
+conexão em vez de erro de instalação. Instalar de novo, de outra pasta,
+**sobrescreve**. `uninstall` e `status` alcançam exatamente a mesma unit porque
+derivam o nome do MESMO `projectId`, resolvido pelas MESMAS duas fontes na
+mesma ordem do CLI de sempre (`--project`, senão `brabo-runner.config.json`), e
+a pasta sai de `resolverDir` de `guard.ts` — nunca uma segunda régua. No Linux
+o arquivo vai para onde o systemd **procura**, com a precedência dele:
+`$XDG_CONFIG_HOME/systemd/user` quando a variável está posta, `~/.config/systemd/user`
+quando não — escolher só o segundo faria a unit nascer onde o gerenciador nunca
+olha, e a falha apareceria como *"unit file does not exist"* no `enable`,
+visível mas pelo motivo errado.
+
+**O `projectId` vira NOME DE ARQUIVO, então ele é validado aqui.** Ele chega de
+duas fontes que não são o servidor (uma flag digitada e um arquivo da pasta), e
+um `--project ../../etc/systemd` escreveria fora do diretório de units. Só
+letras, dígitos, `.`, `-` e `_`, até 64 caracteres — UUID, o formato real de
+todo projeto do produto, passa inteiro. Caminho do runner e pasta com aspa
+dupla ou quebra de linha também são recusa nomeada: quebra de linha num arquivo
+de unit é injeção de diretiva, não caso de borda.
+
+**Um serviço autentica por CHAVE DE DISPOSITIVO, nunca por token.** `install`
+exige `brabo-runner-device-key.jwk.json` válido na pasta e recusa sem ele,
+ignorando `--token`/`BRABO_ACCOUNT_TOKEN` de propósito: gravar um token de
+conta dentro de um arquivo de unit o deixaria em disco, legível por qualquer
+processo do usuário e sobrevivendo ao shell que o exportou — e este CLI **nunca
+gravou credencial em disco** (o docblock de `auth.ts` tem uma trava de teste
+contra exatamente isso). A [RN-434](#rn-434) roda igual, pela MESMA função:
+serviço apontando para fora do `$HOME` no Linux é recusado, porque fazer por
+unit o que a CLI recusa fazer por flag seria contornar a regra pela porta dos
+fundos.
+
+**`Restart=on-abnormal`, e nunca `on-failure`** (no plist, `KeepAlive` com
+`Crashed`, e nunca `SuccessfulExit`). O runner sai com 1 quando o join foi
+**RECUSADO** — ticket inválido, outro runner no projeto, capacidade que falta
+([RN-514](#rn-514)) — ou quando esgotou o próprio teto de tentativas, e as duas
+coisas são "pare e chame um humano". `on-failure` reiniciaria uma recusa fatal
+em laço, que é exatamente o que o CLI recusa fazer sozinho. Sinal, OOM e
+watchdog — o que `on-abnormal` cobre — são a única falha que reiniciar
+conserta. O `PATH` vai **congelado** na unit, com o custo declarado no próprio
+arquivo: os dois gerenciadores dão ao serviço um PATH mínimo, e o runner chama
+`git` (o espelho, [RN-516](#rn-516)) e `docker` ([ADR 0137](adr/0137-o-runner-sobe-o-container-do-projeto.md));
+sem isso o serviço subiria perfeitamente e as duas funções falhariam com "não
+encontrado". É um retrato, e muda só reinstalando.
+
+**Ativação que falha NÃO apaga o arquivo, e não diz "instalado".** Escrever a
+unit e ativá-la são dois passos, e o gerenciador pode não estar lá
+(`systemctl` fora do PATH, `launchd` recusando). O arquivo **fica** — é o que a
+pessoa precisa para terminar à mão — e a resposta é um terceiro desfecho, que
+nomeia o comando pendente e o motivo. Apagar o arquivo transformaria "não
+consegui ativar" em "não aconteceu nada", que é falso.
+
+**`uninstall` remove os TRÊS, e a pasta sai da UNIT — nunca do `cwd`.** O ADR é
+explícito: o arquivo de unit, o `brabo-runner.config.json` e o
+`brabo-runner-device-key.jwk.json`. Os dois últimos moram na pasta do runner, e
+a pasta que interessa é a que foi **INSTALADA**, não a de onde a pessoa por
+acaso digitou o comando — por isso o `WorkingDirectory` é lido de volta do
+próprio arquivo da unit, que é o registro do que foi instalado. **Sem unit não
+há registro**: os dois arquivos só são removidos com `--dir` explícito, e a
+mensagem diz por quê. Adivinhar pelo `cwd` apagaria a chave de um projeto que
+ninguém pediu para remover. Desativar que falha vira **aviso** e o arquivo é
+removido assim mesmo — uma unit que o gerenciador não reconhece mais não é
+motivo para deixar o arquivo para trás.
+
+**E `uninstall` DIZ o que ele não fez: a chave saiu do disco, não do
+servidor.** A pública correspondente continua em `runner_device_keys`, e
+revogá-la é outra coisa (`DELETE /projects/:projectId/runner-device-keys/:deviceKeyId`,
+[ADR 0147](adr/0147-agente-local-com-capacidades.md) ponto 6). Um "removido"
+que deixasse a pessoa achar que revogou seria pior que não remover nada. O log
+do LaunchAgent também **não** é apagado: ele é o registro do usuário sobre o
+que aconteceu, e apagá-lo não foi pedido.
+
+**`status` responde QUATRO estados, e eles não colapsam** ([RN-088](#rn-088)):
+*não instalado*, *instalado e rodando*, *instalado e parado*, e *instalado e
+não consegui perguntar*. A primeira resposta vem do **DISCO** — há arquivo de
+unit? —, e é por isso que ela continua certa numa máquina onde o gerenciador
+não existe; só depois se pergunta ao gerenciador. `spawn` que falhou (binário
+ausente do PATH) **nunca** vira "o gerenciador disse não": são respostas
+diferentes, separadas na fonte, e uma palavra que este CLI não sabe interpretar
+também cai em "não consegui perguntar" em vez de virar "parado" por chute.
+Cada estado tem **frase própria** e **código de saída próprio** (0 / 3 / 4 / 5,
+com 1 e 2 fora porque já significam falha genérica e erro de uso neste CLI):
+um `exit(1)` único para os três "não está rodando" colapsaria pelo código
+exatamente o que a frase separa.
+
+**Nada aqui é `proposed_action`.** É o usuário rodando um comando na própria
+máquina, sobre o próprio serviço — não um agente pedindo para agir. `service`
+é despachado **antes** de `lerArgumentos`, porque nenhum dos três subcomandos
+conecta a nada e o que mais importa (`status`) precisa funcionar numa pasta
+cuja configuração está quebrada, que é justamente quando alguém pergunta.
+
+- **Onde:** `apps/runner/src/servico.ts` (novo — o vocabulário, as duas
+  plataformas como respostas às MESMAS cinco perguntas, as recusas, os quatro
+  estados e `CODIGO_POR_ESTADO`); `apps/runner/src/servico-sistema.ts` (novo —
+  o adaptador real de disco e de `systemctl`/`launchctl`, separado para que a
+  garantia "`servico.ts` não toca `node:fs`/`node:child_process`" continue
+  verificável); `apps/runner/src/index.ts` (`comandoDoRunnerParaServico`,
+  `rodarSubcomandoDeServico`, o despacho de `service` em `main()` antes de
+  `lerArgumentos`, e a linha nova em `uso()`)
+- **Teste:** `apps/runner/src/servico.spec.ts` (novo — caminho feliz nas duas
+  plataformas com o conteúdo real da unit/plist; root recusado sem escrever
+  nada; Windows nomeado; sem chave de dispositivo; `projectId` que viraria
+  caminho; `systemctl` ausente deixando o arquivo e dizendo que não ativou; a
+  RN-434 repassada; `uninstall` lendo a pasta da unit e não do `cwd`, sem unit
+  e sem `--dir` não tocando em arquivo nenhum, e o `disable` que falha virando
+  aviso; os QUATRO estados de `status` mais a palavra desconhecida e os três
+  desfechos do `launchctl`; e os quatro códigos de saída distintos);
+  `apps/runner/src/index.spec.ts`
+  (`describe "brabo-runner service é despachado antes de exigir credencial"` —
+  processo de VERDADE numa pasta sem credencial nenhuma: `status` responde 4 em
+  vez do bloco de uso, e subcomando desconhecido cai no uso de `service`)
+- **ADR:** [0147](adr/0147-agente-local-com-capacidades.md), ponto 5
+- **Origem:** FASE 28, sessão 7. Fica declarado e NÃO feito: **BRB-031** (o
+  `chmod +x` manual do fluxo do [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md))
+  **não** morre aqui — quem roda `brabo-runner service install` já precisou
+  tornar o binário executável para chegar até o comando, e o ADR 0147 amarra
+  esse efeito colateral à instalação vir do bootstrap versionado do
+  [ADR 0146](adr/0146-base-consentida-no-bootstrap.md), que esta entrega não
+  toca. Também fora: qualquer subcomando de `start`/`stop`/`restart` (quem
+  gerencia o ciclo de vida é o gerenciador de serviços do SO, e duplicá-lo no
+  CLI criaria uma segunda fonte de verdade sobre o estado) e Windows, acima
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -9065,6 +9224,12 @@ capacidade.
 | Destino de espelho dentro do `workspacePath` do projeto, ou contendo ele | **400** nomeando o sentido do laço — os dois são a mesma recusa, e a comparação é por SEGMENTO, então `/base-outra` NÃO conta como dentro de `/base` (RN-515) |
 | Destino de espelho declarado num projeto `execution_mode: container` | **400** NOMEANDO o motivo (a origem é um volume do servidor, o agente local não a enxerga) — nunca aceitar e nunca copiar (RN-515) |
 | `PUT .../mirror-path` sem a chave `mirrorPath` no corpo | **400** — omitir seria indistinguível de pedir para LIMPAR, e limpar em silêncio é o defeito; limpar é `null` explícito (RN-515) |
+| `brabo-runner service install` rodado como root | **recusa nomeada**, sem escrever arquivo nem rodar comando — o serviço é de usuário por desenho, e um root quebraria a premissa das três fronteiras do produto (RN-518) |
+| `brabo-runner service <qualquer>` no Windows (ou em qualquer plataforma fora de Linux/macOS) | **recusa nomeando a plataforma**, dizendo que a decisão é declarada e apontando o primeiro plano — nunca falha muda, nunca um "instalado" que não instalou (RN-518) |
+| `service install` numa pasta sem chave de dispositivo válida | **recusa nomeando o arquivo** — um serviço autentica por chave, nunca por token, que ficaria em disco dentro da unit (RN-518) |
+| `systemctl`/`launchctl` indisponível durante o `service install` | o arquivo de unit **FICA**, e a resposta diz que não ativou, nomeando o comando pendente — apagá-lo viraria "não aconteceu nada", que é falso (RN-518) |
+| `service uninstall` sem unit instalada e sem `--dir` | responde NÃO INSTALADO e **não toca em arquivo nenhum**: sem o registro da unit, adivinhar pelo `cwd` apagaria a chave de outro projeto (RN-518) |
+| `service status` numa máquina sem o gerenciador de serviços no PATH | responde "instalado, e NÃO consegui perguntar" com código próprio — "não sei" nunca vira "parado" (RN-518) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

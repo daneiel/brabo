@@ -133,6 +133,49 @@ pnpm --filter runner start -- --project <projectId> --dir <pasta-absoluta> --tok
 Requer **Node.js 22.6 ou mais recente** (o *type stripping* nativo de `.ts`
 que este caminho usa só existe a partir daí).
 
+## Serviço de usuário (`service install | uninstall | status`)
+
+Para que o runner suba junto com a sua sessão em vez de viver num terminal
+aberto, instale-o como **serviço de usuário** — `systemd --user` no Linux,
+`LaunchAgent` no macOS (ADR 0147, RN-518):
+
+```sh
+# de dentro da pasta configurada pelo botão "Configurar pasta automaticamente"
+brabo-runner service install
+brabo-runner service status
+brabo-runner service uninstall
+```
+
+- **Nível de usuário, sempre.** Nunca serviço de sistema, nunca root: rodar
+  `service install` como root é **recusado**, sem escrever arquivo nenhum. O
+  runner roda com os privilégios de quem o executa **por desenho**, e é essa
+  premissa que sustenta as três fronteiras descritas em *Segurança*, abaixo.
+- **Windows fica fora de escopo**, por decisão declarada: serviço de usuário
+  ali é um terceiro mecanismo, não uma variação dos dois. Os três subcomandos
+  recusam nomeando a plataforma; rodar em primeiro plano continua funcionando.
+- **Uma unit por projeto** (`brabo-runner-<projectId>.service` /
+  `dev.brabo.runner.<projectId>`), porque o servidor já aceita só um runner por
+  projeto. `--project` e `--dir` seguem opcionais: sem eles valem o
+  `brabo-runner.config.json` e a pasta corrente, como no resto do CLI.
+- **A credencial é a chave de dispositivo da pasta**, e só ela.
+  `--token`/`BRABO_ACCOUNT_TOKEN` são ignorados de propósito — gravá-los num
+  arquivo de unit os deixaria em disco, e este CLI nunca grava credencial em
+  disco.
+- **`uninstall` remove três coisas**: o arquivo de unit, o
+  `brabo-runner.config.json` e o `brabo-runner-device-key.jwk.json`. A pasta a
+  limpar é lida do próprio arquivo de unit (o registro do que foi instalado),
+  nunca chutada a partir do diretório corrente; sem unit, passe `--dir`. A
+  chave sai **deste disco** — ela **não** é revogada no servidor, o que se faz
+  pela tela do projeto.
+- **`status` responde um de quatro estados**, com frase e código de saída
+  próprios e sem colapsar nenhum: não instalado (`4`), instalado e rodando
+  (`0`), instalado e parado (`3`), e instalado com o gerenciador de serviços
+  sem responder (`5`) — este último nunca é apresentado como "parado".
+
+O `PATH` do momento da instalação vai **congelado** dentro da unit (os dois
+gerenciadores dão ao serviço um PATH mínimo, e o runner chama `git` e
+`docker`): mudou o seu PATH, rode `service install` de novo.
+
 ## Segurança
 
 A fronteira de segurança do runner **não é sandboxing** — é a composição de

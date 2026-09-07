@@ -95,6 +95,16 @@ import {
 } from './guard.ts';
 import { carregarNodePty } from './native-pty-loader.ts';
 import { GerenciadorDePty } from './pty.ts';
+import {
+  desinstalar,
+  ehSubcomandoConhecido,
+  instalar,
+  status as statusDoServico,
+  usoDeServico,
+  type ContextoDoServico,
+  type RespostaDoServico,
+} from './servico.ts';
+import { sistemaDeServicoReal } from './servico-sistema.ts';
 
 interface Argumentos {
   projectId: string;
@@ -123,7 +133,78 @@ function uso(): never {
       'Configurações do projeto → Tokens de acesso — nunca gravado em disco por este ' +
       'CLI. Sem token, a chave de dispositivo local (modo automático) é usada.',
   );
+  console.error(
+    'serviço de usuário: "brabo-runner service install|uninstall|status" instala o runner ' +
+      'como systemd --user (Linux) ou LaunchAgent (macOS) — nunca serviço de sistema, nunca ' +
+      'root; Windows fora de escopo (ADR 0147 ponto 5).',
+  );
   process.exit(2);
+}
+
+/**
+ * O comando ABSOLUTO que a unit de serviço deve executar — a única coisa sobre
+ * a instalação que só `index.ts` sabe responder, porque depende de qual dos
+ * três caminhos de distribuição está rodando AGORA (ADR 0103/0106/0112).
+ *
+ * No binário compilado (`bun build --compile`), `process.execPath` É o binário
+ * e `process.argv[1]` é um caminho VIRTUAL de dentro do bundle (`/$bunfs/...`)
+ * que não existe no disco — pôr esse caminho numa unit produziria um serviço
+ * que nunca sobe. Sob `node`, o comando é `node <script real>`, com
+ * `realpathSync` resolvendo o symlink que `npm install -g` cria em
+ * `node_modules/.bin/brabo-runner`: o symlink some numa reinstalação, o alvo
+ * dele não.
+ */
+export function comandoDoRunnerParaServico(): string[] {
+  const script = process.argv[1];
+  if (import.meta.url.includes('/$bunfs/') || !script || script.startsWith('/$bunfs/')) {
+    return [process.execPath];
+  }
+  try {
+    return [process.execPath, realpathSync(script)];
+  } catch {
+    return [process.execPath, script];
+  }
+}
+
+/**
+ * `brabo-runner service <sub>` — despachado ANTES de `lerArgumentos`, porque
+ * nenhum dos três subcomandos conecta a nada: exigir credencial e pasta
+ * verificada para PERGUNTAR se há um serviço instalado seria impedir
+ * justamente quem precisa da resposta. A resolução de projeto e de pasta reusa
+ * as funções de sempre (`lerConfigLocal`, `lerChaveDeDispositivo`,
+ * `resolverDir`, `validarDirDentroDoHomeNoLinux`) — nenhuma régua nova.
+ */
+function rodarSubcomandoDeServico(argv: string[]): RespostaDoServico {
+  const sub = argv[3];
+  if (!ehSubcomandoConhecido(sub)) return usoDeServico();
+
+  const ctx: ContextoDoServico = {
+    argv,
+    cwd: process.env.INIT_CWD ?? process.cwd(),
+    plataforma: process.platform,
+    home: homedir(),
+    xdgConfigHome: process.env.XDG_CONFIG_HOME ?? null,
+    uid: typeof process.getuid === 'function' ? process.getuid() : null,
+    comandoDoRunner: comandoDoRunnerParaServico(),
+    path: process.env.PATH ?? '',
+    sistema: sistemaDeServicoReal,
+  };
+
+  const resolverDirDoServico = (bruto: string, cwd: string): string =>
+    resolverDir(bruto, cwd, cwd);
+
+  if (sub === 'install') {
+    return instalar(ctx, {
+      lerConfig: lerConfigLocal,
+      lerChave: lerChaveDeDispositivo,
+      resolverDir: resolverDirDoServico,
+      validarDir: validarDirDentroDoHomeNoLinux,
+    });
+  }
+  if (sub === 'uninstall') {
+    return desinstalar(ctx, { lerConfig: lerConfigLocal, resolverDir: resolverDirDoServico });
+  }
+  return statusDoServico(ctx, { lerConfig: lerConfigLocal });
 }
 
 function lerArgumentos(argv: string[]): Argumentos {
@@ -776,6 +857,17 @@ async function main(): Promise<void> {
   if (process.argv.includes('--self-test-docker')) {
     await rodarAutoTesteDocker();
     return;
+  }
+
+  // ANTES de `lerArgumentos` de propósito (ADR 0147 ponto 5, RN-518): `service`
+  // não conecta a nada, e o subcomando que mais importa (`status`) precisa
+  // funcionar numa pasta cuja configuração está quebrada — que é justamente
+  // quando alguém pergunta.
+  if (process.argv[2] === 'service') {
+    const resposta = rodarSubcomandoDeServico(process.argv);
+    const escrever = resposta.fluxo === 'erro' ? console.error : console.log;
+    for (const linha of resposta.linhas) escrever(linha);
+    process.exit(resposta.codigo);
   }
 
   const { projectId, dir, apiUrl, credencial } = lerArgumentos(process.argv);
