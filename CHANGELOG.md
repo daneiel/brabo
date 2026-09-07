@@ -576,6 +576,76 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   caminho que o repositório dava para essa variável, todas diferentes entre si,
   passam a ser uma só.
 
+### Correções
+
+- **docker**: o **broker sobe de verdade** no compose local, e o `up --wait`
+  para de dar verde falso. A [RN-512](docs/business-rules.md#rn-512)
+  ([ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) ponto 3) tirou o
+  broker do `profiles` justamente para ele estar de pé em desenvolvimento — e
+  ele **nunca subiu**: `docker compose up -d broker` terminava em
+  `Exited (1)` cinco segundos depois, e `container_start` numa máquina de
+  desenvolvimento continuava dando `BrokerIndisponivelError`, exatamente o
+  sintoma que a decisão existia para eliminar.
+
+  **Por que ninguém tinha visto.** Enquanto o serviço viveu sob profile, quem
+  o subia de propósito era o mesmo que já sabia o que esperar; a primeira
+  subida por padrão foi também a primeira vez que alguém reparou. E ela
+  aconteceu no reset total, que anuncia `brabo-broker-1 Healthy` — o serviço
+  **não tinha healthcheck**, então `up --wait` considera saudável qualquer
+  container que INICIOU, e o reset terminava dizendo "reset completo" com o
+  processo já morto.
+
+  **A causa.** `docker/broker/Dockerfile` preparava o pnpm com `corepack` como
+  **root**, no build (o cache fica em `/root/.cache/node/corepack`), e o
+  container roda como uid 1000 — que não lê aquilo. Sem cache, o corepack trata
+  o pnpm como ausente e tenta **baixá-lo** no start; a única rede do broker é
+  `internal: true`, então a tentativa morre com
+  `getaddrinfo EAI_AGAIN registry.npmjs.org` e o processo sai com 1. O `CMD`
+  ainda faria `pnpm install` em runtime, pelo mesmo caminho. `docker/api/
+  Dockerfile` tem o **mesmo** padrão de corepack e sobe: a diferença nunca foi
+  o Dockerfile, foi o egress.
+
+  **A correção tira o registry do caminho de RUNTIME, e não abre a rede.** A
+  rede `internal: true` é a primeira das cinco camadas de contenção do
+  [ADR 0130](docs/adr/0130-broker-de-container.md) — um processo que fala com o
+  socket do Docker do host não alcança a internet, e isso não se negocia por
+  conveniência de build. Foram as duas direções, porque as duas eram
+  necessárias: `COREPACK_HOME` passa a apontar para `/opt/corepack`, preparado
+  no build e com o dono do uid de runtime, e o `pnpm install` migra do `CMD`
+  para um passo de **BUILD**, onde há rede.
+
+  **A parte que exigiu desenho: os três volumes nomeados de `node_modules`.**
+  O compose monta um volume por cima de cada um deles, e o Docker só semeia um
+  volume a partir da imagem quando ele está **vazio** — instalar na imagem
+  chegaria na primeira subida e nunca mais, deixando velho, em silêncio, todo
+  volume que já existe (e quem subiu o broker quebrado tem os três). Por isso a
+  árvore instalada é guardada **fora** de `/workspace` (que o bind mount cobre
+  inteiro) e o novo `docker/broker/entrypoint.sh` **reconcilia** os três contra
+  ela, carimbando com o sha256 do `pnpm-lock.yaml` do build. O mesmo carimbo
+  responde a segunda pergunta: comparado com o lockfile da árvore de trabalho,
+  ele diz que a imagem está velha — e **avisa** em vez de recusar subir, porque
+  o broker não tem dependência de runtime além do link de workspace para
+  `@brabo/docker-port`, e trocar um aviso por uma indisponibilidade seria pior.
+
+  **Healthcheck no serviço**, que é a outra metade do defeito: `wget` do
+  busybox contra `127.0.0.1:8090/health`, **de dentro** do container — ele não
+  publica porta, e não deve. É o mesmo teste que o `Dockerfile.prod` já fazia. O
+  `/health` fala do PROCESSO e nunca do daemon: reprovar por Docker fora do ar
+  produziria um laço de reinício que não resolve nada.
+
+  O compose de **produção não sofre disto** e não muda: `Dockerfile.prod` já
+  instala e empacota em estágio de build, remove `corepack`/`npm` da imagem
+  final, roda `node index.cjs` e já tinha `HEALTHCHECK`.
+
+  Junto, três blocos de comentário que a mesma decisão tinha deixado para trás:
+  `.env.example` ainda dizia que o broker "NÃO sobe por padrão: está sob o
+  profile `container-broker` nos dois composes" vinte linhas acima do bloco que
+  explica que ele passou a subir; e `BRABO_PROJECTS_HOST_BASE` continuava
+  descrita como "nada a consome ainda" nos dois composes e no `.env.example`,
+  superada pelo [ADR 0144](docs/adr/0144-a-segunda-raiz-do-broker.md)
+  ([RN-503](docs/business-rules.md#rn-503)).
+
+
 ### Documentação
 
 - **docs**: nasce a **FASE 28 (pasta do usuário)** — só decisão, nenhuma linha de

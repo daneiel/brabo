@@ -133,12 +133,42 @@ docker compose -f docker/docker-compose.yml --env-file .env exec -T api \
 broker does not fix a Docker that is down, and a healthcheck that failed for
 that reason would produce a restart loop that resolves nothing.
 
+**The local image installs its dependencies at BUILD time, and that is not an
+optimization.** The broker's only network is `internal: true`, so there is no
+reachable registry at runtime: an image that ran `corepack`/`pnpm install` on
+start died with `getaddrinfo EAI_AGAIN registry.npmjs.org` and exited 1. The
+fix took the registry out of the runtime path (`COREPACK_HOME` prepared in the
+build and owned by the runtime uid, `pnpm install` as a build step) rather than
+opening the network — the network is the first of the five containment layers.
+
+Two consequences you will meet:
+
+- **The three `node_modules` are named volumes mounted over what the image
+  installed**, and Docker only seeds a volume from the image when the volume is
+  EMPTY. `docker/broker/entrypoint.sh` therefore reconciles them against a copy
+  kept outside `/workspace`, stamped with the sha256 of the `pnpm-lock.yaml`
+  the image was built from. First boot after a `--build` logs
+  `sincronizando…` and takes a few seconds; the ones after log nothing.
+- **Changing a broker dependency requires `up -d --build broker`.** The
+  entrypoint compares its stamp with the working tree's lockfile and WARNS when
+  they differ. It warns instead of refusing to boot: the broker has no runtime
+  dependency beyond the workspace link to `@brabo/docker-port`, and trading a
+  warning for an outage would be worse.
+
+The service also has a **healthcheck** (`wget` against `127.0.0.1:8090/health`
+from inside the container — it publishes no port, and `node:24-alpine` has no
+`curl`). Without it `up --wait` reported `Healthy` the moment the container
+started, so `scripts/dev/reset-total.sh` announced "reset complete" with a
+broker that had died five seconds earlier.
+
 **Symptoms and what each one means:**
 
 | what you see | what it is |
 |---|---|
 | `permission denied` on `/var/run/docker.sock` | wrong `DOCKER_GID`. The socket is `root:docker` and the broker runs non-root; redo step 1 above and recreate the container (`up -d --force-recreate broker`) |
 | `não encontrei o executável docker no PATH` | the image was built without `docker-cli`. Rebuild it (`--build`). This error is deliberately SEPARATE from "daemon down": installing and starting are different fixes |
+| `getaddrinfo EAI_AGAIN registry.npmjs.org` and the container exits 1 | a broker image built before the dependencies moved to build time. Rebuild it (`up -d --build broker`). Do NOT give the service egress: the `internal: true` network is the containment, and the registry is what has to leave the runtime path |
+| `AVISO — pnpm-lock.yaml mudou desde o build desta imagem` | the image is older than the working tree's lockfile. It keeps running (the broker has no runtime dependency beyond the workspace link); rebuild when you actually changed a broker dependency |
 | `PROJECT_WORKSPACES_HOST_ROOT não está definida` on `start` | expected, and the refusal is the correct behaviour. `-v` is resolved by the DAEMON against the HOST filesystem; guessing would mount an EMPTY folder and the dev agent would work in a directory with no code. The other four operations keep working without it |
 | the lifecycle route says `naoObservado: "broker-nao-configurado"` | `BROKER_URL` is empty on the **api**. That is a normal state, not a failure — the read declares that it did not look instead of inheriting the recorded state ([RN-486](business-rules.md#rn-486)) |
 | the lifecycle route says `naoObservado: "broker-sem-resposta"` | `BROKER_URL` is set and nothing answered: the profile is probably off, or the api is not on the `broker` network |
