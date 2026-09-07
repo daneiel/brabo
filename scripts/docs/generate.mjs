@@ -18,9 +18,15 @@
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RAIZ } from './docmap.mjs';
+import {
+  arquivos,
+  eventosEmitidosPor,
+  grepTodos,
+  ler,
+} from './fontes.mjs';
 
 const CHECAR = process.argv.includes('--check');
 const AVISO =
@@ -64,10 +70,6 @@ function nomesCitados(doc) {
 const pendencias = [];
 
 // --------------------------------------------------------------- utilidades
-
-function ler(rel) {
-  return readFileSync(join(RAIZ, rel), 'utf8');
-}
 
 function escrever(rel, conteudo) {
   const atual = (() => {
@@ -118,31 +120,10 @@ function escreverBloco(rel, id, corpo) {
   escrever(rel, novo);
 }
 
-function git(...args) {
-  return execFileSync('git', args, { cwd: RAIZ, encoding: 'utf8' });
-}
-
-function arquivos(glob) {
-  return git('ls-files', glob).split('\n').filter(Boolean);
-}
-
-function grepTodos(padrao, caminhos) {
-  const achados = new Map(); // valor -> Set(arquivos)
-  for (const caminho of caminhos) {
-    let texto;
-    try {
-      texto = ler(caminho);
-    } catch {
-      continue;
-    }
-    for (const m of texto.matchAll(padrao)) {
-      const valor = m[1];
-      if (!achados.has(valor)) achados.set(valor, new Set());
-      achados.get(valor).add(caminho);
-    }
-  }
-  return achados;
-}
+// `ler`, `arquivos` e `grepTodos` moram em `./fontes.mjs`: a varredura do
+// repositório passou a ter um segundo consumidor (o teste cruzado de
+// vocabulário `dev.*` em `scripts/ci/`), e duas cópias do mesmo regex
+// respondendo "o que o engine emite?" é exatamente o defeito que ele pega.
 
 // ------------------------------------------------------- 1. scripts.md
 
@@ -274,15 +255,9 @@ function gerarEnv() {
 // ------------------------------------------- 3. inventário de tipos de evento
 
 function gerarEventos() {
-  const api = arquivos('apps/api/src/**/*.ts').filter((f) => !f.includes('.spec.'));
-  const engine = arquivos('apps/engine/lib/**/*.ex');
-
   const achados = new Map();
-  for (const [caminhos, padrao] of [
-    [api, /(?:type|eventType):\s*'([a-z_]+\.[a-z_]+)'/g],
-    [engine, /"([a-z_]+\.[a-z_]+)"/g],
-  ]) {
-    for (const [valor, arqs] of grepTodos(padrao, caminhos)) {
+  for (const app of ['api', 'engine']) {
+    for (const [valor, arqs] of eventosEmitidosPor(app)) {
       if (!PREFIXOS_DE_EVENTO.some((p) => valor.startsWith(`${p}.`))) continue;
       if (!achados.has(valor)) achados.set(valor, new Set());
       for (const a of arqs) achados.get(valor).add(a);
