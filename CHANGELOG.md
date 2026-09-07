@@ -2,6 +2,64 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## v5.0.0 — 2026-09-05
+
+### ⚠ Mudanças incompatíveis
+
+- **config**: uma base única para os projetos montados, por identidade (e27695564)
+
+### Novidades
+
+- **engine,runner,api**: Docker vira pré-requisito real do modo runner (49c077e7c)
+- **api**: "sempre permitir" de dev-de-módulo escopa agent_autonomy por agente (a1768ce2c)
+- **engine**: decision_record reusa emit_artifact genérico nos 5 conversacionais restantes (09eed4cf0)
+- **api**: a pasta montada nasce quando o container sobe (ADR 0142, RN-501) (54df79826)
+- **api,web**: o navegador de pastas passa a ser servido pela api (e187cd988)
+- **api,broker**: projeto montado sobe container pelo broker, com localizador discriminado (8b649ae96)
+- **engine,api**: dev agent só reivindica task com container de pé (ADR 0142, RN-501) (696f077d8)
+
+### Correções
+
+- **ci**: limpeza do pacote GHCR efêmero apaga o pacote, não a versão (c30c7b3cf)
+- **web**: o aviso do modo Pasta montada descrevia o remédio que morreu (5f587e7a6)
+- **web**: o handoff da Infra ganha card acionável fora do fio (RN-499) (a26ddd84d)
+- **docker**: as três variáveis do Neo4j chegam à api em dev (cc993485d)
+
+### Desempenho
+
+- **ci**: checa a visibilidade default do pacote GHCR efêmero (d8cbf0e23)
+- **ci**: mede push/pull via GHCR no job de imagens (instrumento temporário) (b92fc051a)
+- **ci**: troca cópia por symlink no cache do trivy (achado do PR) (22a52cef9)
+- **ci**: paraleliza os quatro scans do Trivy no job de imagens (f00b07f72)
+- **ci**: divide o job de testes TS em três jobs paralelos (19889a829)
+- **api**: banco por worker na suíte de testes, destravando fileParallelism (803a294e6)
+
+### Documentação
+
+- **ci**: rejeita GHCR (registry) como transporte entre jobs, medido de verdade (172c4c6a9)
+- **changelog**: quarto run (pós-merge do dev) fecha a amostra do trivy (af4e3ef08)
+- **changelog**: terceiro run do PR mostra variância — corrige o número único (4a21529b2)
+- **changelog**: números reais medidos no PR (achado do gha cache aquecido) (580d35893)
+- **ci**: registra a variância real medida em test-api (177s/388s/172s) (21815eb46)
+- **ci**: registra os números reais da divisão do job de testes TS (5ce7a4e50)
+- **business-rules**: renumera RN-505 duplicada e fecha resíduo do RN-507 (56acdd0e7)
+- declara a lacuna da credencial de git quando o container do runner já está ativo (504e97daf)
+- corrige contagem de RNs no README (368 → 371) (85f3c1e17)
+- preenche o TODO(humano) do rulesets.md com o número real de CI (eaf0c72b6)
+- reconcilia as contagens depois do merge da #482 (1ffcc28c7)
+- **business-rules**: crase aninhada na RN-501 quebrava o code span (780e2189e)
+- **api**: security-surface e internal-api descrevem a validação adiada (7365f8be0)
+- renumera para ADR 0143 e RN-502 (colisão com a #484) (26aa21802)
+- **i18n**: a tradução pt-BR do runbook diz que projeto montado sobe pelo broker (a35f8545e)
+- **engine,api**: os comentários descrevem o mundo depois da RN-501 (1bf20d116)
+- **i18n**: a tradução pt-BR do runbook acompanha o interruptor do grafo (523940b21)
+- **config**: a prosa das três variáveis do Neo4j descreve o que o código faz (0d924a215)
+- **changelog**: v4.0.1 (41d50c57e)
+
+### Manutenção
+
+- **docs**: a RN vira 503 e o ADR vira 0144, por alocação do coordenador (2245f2016)
+
 ## v4.0.1 — 2026-09-04
 
 ### Correções
