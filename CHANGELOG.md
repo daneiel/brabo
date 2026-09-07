@@ -77,6 +77,51 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Documentação
+
+- **docs**: nasce a **FASE 28 (pasta do usuário)** — só decisão, nenhuma linha de
+  código de produto. O problema que ela ataca: nenhum dos três modos de execução
+  entrega a coisa mais simples que um usuário espera, que é abrir o editor e ver
+  o trabalho acontecendo numa pasta dele. O caso instrutivo é o `mounted`, que
+  está **pronto e inalcançável** — o ADR 0141 construiu a base única e o ADR 0142
+  tornou possível sugerir um caminho que ainda não existe, mas nada no produto
+  pede que `BRABO_PROJECTS_BASE` seja configurada, e `GET .../projects-base` não
+  tem chamador no web.
+
+  O [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) decide o
+  consentimento no host: base padrão `$HOME/projetos-brabo` (e **não**
+  `$HOME/brabo-projetos`, que `.env.example` já usa como exemplo de
+  `PROJECT_WORKSPACES_HOST_DIR` — a conflação que o ADR 0141 recusou), gravada
+  por um script **Node** e nunca em bash, porque item de menu do `bootstrap.sh`
+  roda com stdin em `/dev/null` e **por construção não consegue perguntar**. O
+  compartilhamento do Docker Desktop é **provado montando**, nunca lido do
+  `settings.json` — a mesma régua de "capability só se declara quando provada"
+  dos ADRs 0041/0042. E o broker sai do `profiles` **no compose local, só nele**:
+  a justificativa original ("nada o chama... em troca de nada") morreu quando os
+  ADRs 0133/0136 lhe deram quatro chamadores e o ADR 0144 fez `mounted` subir
+  container por ele.
+
+  O [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) decide o agente
+  local: **um** binário que declara capacidades (`espelho`, `exec`, `pty`) no
+  `join` — hoje mudo dos dois lados —, com o servidor concedendo só o que o
+  `execution_mode` exige. O espelho vai numa direção e **nunca apaga**; não exige
+  Docker, e ganha predicado **próprio** em vez de um `RunnerReadiness` com flag.
+  Achado no caminho: a revogação de chave de dispositivo é **cega** — um
+  `developer` não consegue listar nem as próprias chaves (PATs têm cinco rotas,
+  chaves de dispositivo têm duas), e revogar hoje só impede ticket novo, sem
+  derrubar o canal vivo.
+
+  A linha que dá forma ao resto, declarada nos dois: **consentimento de
+  configuração não é aprovação de ação** — a escrita do espelho não passa por
+  `proposed_action` porque não é agente pedindo para agir; fazê-la por comando de
+  terminal cairia no escopo do ADR 0055 e viraria fila de aprovações rotineiras.
+
+  Faixa **RN-511 a RN-520** reservada para as sessões 2 a 9, com o método de
+  contagem registrado — e o salto sobre a RN-510 é deliberado, porque ela já
+  estava alocada numa branch ainda não mergeada. Contar só `dev` a devolveria e
+  recriaria a colisão de âncora da RN-505, que sobreviveu semanas porque
+  `docs:build` reprova âncora **inexistente**, nunca âncora duplicada.
+
 ### Novidades
 
 - **api,broker**: projeto no modo **Pasta montada** passa a ter container de
