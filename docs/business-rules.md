@@ -8440,6 +8440,27 @@ tem desde a RN-494, declarada e aceita para aquela tool (tocar o prompt/
 instrução do Infra Lead ficaria fora do escopo de API/domínio); a tool NOVA
 nasce sem ela, porque nasce sabendo negar.
 
+**A especificação que a api compõe é a que o runner VALIDA, e isso passou a
+ser provado.** `EspecificacaoDeContainerParaRunner` são os campos de
+`EntradaDeEspecificacao` (`packages/docker-port`) menos `raizDoProjeto`, que
+só o runner conhece — DEZ, não nove. Ela nasceu com nove, sem `projectId`, e
+a consequência foi que este caminho NUNCA subiu container nenhum desde que
+existe: o engine repassa o mapa opacamente, o runner o entrega a
+`especificacaoValidada`, que exige `projectId` como texto não vazio, e a ação
+terminava `failed` com *"especificação de container recusada em `projectId`:
+esperava texto não vazio, recebi undefined"* — e daí o bloqueio CORRETO da
+[RN-507](#rn-507)/[RN-502](#rn-502) fazia o resto, sem nenhum dev agent
+reivindicando tarefa. O dado sempre existiu (`SpecDeContainer.projectId`, o
+mesmo que o BROKER recebe por `GET .../container-spec`, e é por isso que só o
+modo `runner` quebrou); só não era copiado. Três suítes verdes não pegaram
+porque cada uma montava o próprio fixture: o teste do caso de uso afirmava o
+que ele mesmo esperava, o do runner montava um fixture COM `projectId`, e o
+engine não olha o mapa. O que passa a ser garantido é a CORRENTE — o payload
+que `ExecuteContainerStartViaRunnerUseCase` compõe, atravessando o
+`especificacaoValidada` de verdade —, e o teste também trava o conjunto de
+campos: `raizDoProjeto` é o único que a api não manda, então campo novo de um
+lado sem o outro reprova.
+
 - **Onde:** `apps/api/src/domain/actions/decide.ts` (`container_start_via_runner`);
   `apps/api/src/application/use-cases/actions/
   execute-container-start-via-runner.use-case.ts` (novo);
@@ -8447,6 +8468,8 @@ nasce sem ela, porque nasce sabendo negar.
   subir-ciclo-de-vida-do-container.use-case.ts` (novo);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts`;
   `apps/api/src/application/use-cases/actions/approve-action.use-case.ts`;
+  `apps/api/src/application/ports/api-to-engine-client.port.ts`
+  (`EspecificacaoDeContainerParaRunner`, os dez campos);
   `apps/web/src/lib/aprovacoes.ts`;
   `apps/engine/lib/engine/infra/tools/propose_container_start_via_runner.ex`
   (novo); `apps/engine/lib/engine/infra/infra_lead_server.ex`
@@ -8454,6 +8477,9 @@ nasce sem ela, porque nasce sabendo negar.
   `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`,
   `apps/api/test/application/use-cases/actions/
   execute-container-start-via-runner.use-case.spec.ts` (novo),
+  `apps/api/test/contract/
+  especificacao-de-container-para-runner.contract.spec.ts` (a CORRENTE —
+  o payload composto pela api contra o `especificacaoValidada` de verdade),
   `apps/web/src/lib/aprovacoes.test.ts`,
   `apps/engine/test/engine/infra/tools/
   propose_container_start_via_runner_test.exs` (novo),

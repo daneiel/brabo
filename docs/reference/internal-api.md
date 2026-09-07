@@ -1047,6 +1047,28 @@ The response is always `200`, `{ sucesso: false, motivoCodigo, motivo }` for
 tried and refused" — never an HTTP error status for either, same discipline
 as `container-exec`.
 
+**The `spec` of `containers/start` is opaque to the engine and exact for the
+runner.** `ContainerCommandController.start/2` forwards the map without
+reading a single field of it, so the contract is between the two ends: the api
+composes the ten fields of `EspecificacaoDeContainerParaRunner`
+(`workspaceDirName`, `projectId`, `projectSlug`, `workspaceId`, `imagem`,
+`imagemVersao`, `rede`, `cpus`, `memoriaMb`, `pidsLimit`) and the runner hands
+that map, plus the `raizDoProjeto` only it knows, to `especificacaoValidada`
+(`packages/docker-port`), which refuses the whole specification if any of them
+is missing. It refused every time until [RN-508](../business-rules.md#rn-508)
+was made true in code: `projectId` was never copied, so this path never
+started a container. Since nothing in the middle validates the map, a missing
+field would be invisible to all three suites — the chain is what
+`apps/api/test/contract/especificacao-de-container-para-runner.contract.spec.ts`
+proves, running the api's payload through the real validator, and it also pins
+`raizDoProjeto` as the one field the server never sends (no absolute host path
+crosses the wire, [ADR 0130](../adr/0130-broker-de-container.md)).
+
+`containers/stop` and `containers/remove` do NOT carry a spec: they send
+`workspaceDirName` and nothing else, because on the other side they only need
+`nomeDeWorkspaceValidado` to derive the container name. One field asked, one
+field sent — they were checked against the same validator and are correct.
+
 The two handoff offers come from the **same** confirmation of architecture
 ready, and they are separate routes on purpose: Infra and Dev are areas with independent
 outcomes, and a single call would make one's failure bring down the other. The order
