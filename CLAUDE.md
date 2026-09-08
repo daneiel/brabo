@@ -578,6 +578,36 @@ daqui e o fechamento vai para o histórico.
   esquecer não dá erro de build, dá 403 em runtime. Volume JÁ criado continua
   com o dono antigo: a correção vale para volume novo, e destravar um ambiente
   existente exige `docker volume rm` (ou um `chown` pontual como root).
+- `docker compose up --wait` só prova o que tem `healthcheck` — para serviço
+  sem um, ele espera "running" e segue em frente. Isso já custou duas vezes: o
+  broker morrendo em silêncio (corrigido com o healthcheck dele) e o
+  `scripts/dev/reset-total.sh` anunciando "reset completo" com a api em
+  `Exited (1)`. Os SEIS serviços do compose de DEV têm healthcheck agora, com
+  o MESMO teste que as imagens de produção já faziam por `HEALTHCHECK` no
+  Dockerfile (`/health` na api e no engine — toca o banco, que é a pergunta
+  certa para readiness; `/` no Vite do web). Serviço novo nasce com o dele, e
+  `start_period` de DEV é generoso de propósito: o CMD roda
+  `pnpm install`/`mix deps.get` antes de o processo escutar.
+- Script que apaga o banco PARA antes quem está conectado nele, e a lista é
+  `api` e `engine` — nenhum a mais. Os dois mantêm conexão viva com o Postgres
+  do compose (pool do Drizzle sobre `public`/`drizzle`; Ecto/Oban sobre
+  `engine`), e `DROP SCHEMA` embaixo deles MATA os processos — o engine morre
+  dentro do próprio drop, porque o `Rehydrator` consulta `engine.session_states`
+  — sem que nada os reerga depois. `web` não fala com banco, `neo4j` é outro
+  banco, o `broker` só fala HTTP com a api: parar de mais transforma um reset de
+  banco numa derrubada do ambiente. E script que AFIRMA um estado pergunta antes
+  de afirmar: `scripts/dev/reset-total.sh` bate em `/health` dos três e imprime
+  `ps` antes da frase final, que nomeia o que ficou de pé — e qualquer falha no
+  meio sai com o passo nomeado, nunca com a frase de sucesso.
+- `apps/api/src/db/seed.ts` é IDEMPOTENTE, e rodá-lo de novo é o caso normal
+  (o `bootstrap.sh` do k8s o chama com `BRABO_FORCE_SEED=1` contra um cluster
+  que pode já estar semeado, e quem vê o reset falhar tenta rodar só o seed).
+  Registro de demonstração novo entra REAPROVEITANDO o que já existe, nunca
+  com `create` puro — antes, workspace, projeto e sessão eram os três que não
+  reaproveitavam, e a segunda rodada escrevia metade e morria em
+  `duplicate key ... "workspaces_slug_unique"`. Sessão reencontrada NÃO é
+  reativada nem ganha os 5 eventos de novo: eles são append-only, e uma
+  timeline que existe para demonstrar cinco não pode crescer a cada reseed.
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   únicas exceções de push: tags (bot de release) e .release/gate.json
   (bot do gate).

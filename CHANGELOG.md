@@ -6,6 +6,79 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **dev**: `scripts/dev/reset-total.sh` terminava dizendo **"reset completo"**
+  com o ambiente quebrado, e essa frase era **mentira por construção** — ela
+  era um `echo` fixo no fim de um script que nunca perguntava nada sobre o
+  estado do que tinha acabado de mexer.
+
+  **O que quebrava.** A ordem era `up --wait` → `DROP SCHEMA` → `migrate` →
+  `seed`, ou seja: **o banco era destruído embaixo de processos vivos.** No
+  `DROP SCHEMA engine CASCADE` o engine morre na hora —
+  `Engine.Sessions.Rehydrator` consulta `engine.session_states`, que acabou de
+  sumir: `(Postgrex.Error) ERROR 42P01 (undefined_table) relation
+  "engine.session_states" does not exist`. As migrations rodavam depois e
+  recriavam tudo, mas **nada reergue um processo morto**: o engine ficava
+  `Exited (1)` e o seed falhava no passo que ativa a sessão (api → engine) com
+  `TypeError: fetch failed … ECONNREFUSED`. O registro anterior do mesmo
+  fenômeno visto do outro lado ("o reset derruba a api") tem esta causa raiz
+  idêntica.
+
+  **O que passa a valer.** A ordem é `preflight` → `build` → **`stop api
+  engine`** → `up postgres` → `DROP SCHEMA` → `migrate` → `up --wait` (tudo) →
+  `seed` → **verificação**. Param-se **dois** serviços e nenhum a mais, por um
+  critério objetivo — quem mantém conexão viva com o Postgres do compose: a
+  api (pool do Drizzle, `public`/`drizzle`) e o engine (Ecto/Oban, `engine`).
+  `web` é servidor do Vite e não fala com banco, `neo4j` é outro banco que
+  este reset não toca, e o `broker` só fala HTTP com a api. Parar de menos
+  deixa o defeito; parar de mais transforma um reset de banco numa derrubada
+  do ambiente inteiro.
+
+  **A frase final deixou de ser fixa.** Antes de afirmar, o script **pergunta**
+  — `wget` contra `/health` da api e do engine e contra `/` do web, de DENTRO
+  de cada container —, imprime `docker compose ps` e só então conclui; se algum
+  não responder, ele diz **quais** e sai com código 1. E qualquer falha no meio
+  agora tem desfecho nomeado (`RESET INCOMPLETO — parou em: <passo>`), em vez
+  de deixar a última linha de log de um comando qualquer como explicação.
+
+- **dev**: `--wait` não provava nada sobre `api`, `engine` e `web` no compose
+  de desenvolvimento — os três **não tinham `healthcheck`**, então
+  `docker compose up --wait` esperava o container ficar `running` e seguia em
+  frente. Foi exatamente assim que o broker morreu em silêncio antes de ganhar
+  o dele, e é por isso que o reset conseguia terminar com a api em
+  `Exited (1)`. Os três ganham `healthcheck` — o **mesmo teste** que as imagens
+  de produção já faziam por `HEALTHCHECK` no Dockerfile (`/health` na api e no
+  engine, que tocam o Postgres de propósito; `/`, a página, no Vite do web),
+  com `start_period` dimensionado para o boot de dev, que roda
+  `pnpm install`/`mix deps.get` antes de escutar. Passa a valer para todo
+  `up --wait`, não só para o reset.
+
+- **dev**: os três passos de HOST do reset (`db:migrate`, `engine:migrate`,
+  `seed`) caíam nos defaults embutidos no código — `localhost:5432` do
+  `drizzle.config.ts`, `localhost:4000` do `ApiToEngineClient`. Com
+  `API_PORT`/`ENGINE_PORT` trocados no `.env` (knobs que o compose oferece), o
+  seed conversava com **qualquer** engine que estivesse na 4000, não com o
+  desta stack; e um `DATABASE_URL` exportado no shell de quem chama — o valor
+  do `.env` aponta para o hostname `postgres`, que não resolve no host —
+  quebrava as migrations com `EAI_AGAIN`. O script agora **pergunta ao próprio
+  compose** qual porta ele publicou (`docker compose port`) e passa
+  `DATABASE_URL`/`ENGINE_URL` na frente de cada comando de host, nunca por
+  `export` (exportar contaminaria a interpolação do `up` seguinte).
+
+- **api**: `apps/api/src/db/seed.ts` não era idempotente, e rodá-lo de novo
+  deixava quem tentava se recuperar **pior do que estava**: usuários,
+  credenciais, modelos, curadoria, bindings e instruções já passavam por
+  `upsert`, mas o workspace, o projeto e a sessão eram `create` puro — a
+  segunda rodada escrevia metade das coisas e então morria em
+  `duplicate key value violates unique constraint "workspaces_slug_unique"`,
+  uma mensagem de Postgres que não aponta para nada. Rodar de novo é o caso
+  **normal**, não a exceção: o `bootstrap.sh` do k8s chama o seed com
+  `BRABO_FORCE_SEED=1` contra um cluster que pode já estar semeado, e quem vê o
+  reset falhar tenta rodar só o seed. Os três registros de demonstração passam
+  a ser **reaproveitados** quando já existem (workspace por slug, projeto por
+  slug, sessão pelo nome), e a sessão reencontrada **não** é reativada nem
+  ganha os 5 eventos de novo — eles são append-only, e cada rodada empilharia
+  mais cinco numa timeline que existe para demonstrar cinco.
+
 - **api**: a sessão parava de ser segurada quando os dev agents estavam
   bloqueados **esperando container**. `GetSessionPendingWorkUseCase` é o que
   impede o heartbeat de 30s (`session_heartbeat_timeout_ms`) de fechar uma

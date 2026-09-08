@@ -42,6 +42,7 @@ Start with triage.
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
 | provisioning a repository fails with `permission denied: /data/git-repos/<slug>.git`, or `permissions.json` can't be written | [Dev containers write as your user, not root](#dev-containers-nao-root) |
+| I want to wipe the dev database and start over, or `reset-total.sh` stopped in the middle | [Total reset of the dev environment](#reset-total) |
 
 Two things worth knowing before any procedure:
 
@@ -414,6 +415,56 @@ so this class of problem shouldn't recur.
    A volume created after the fix already comes up with the right owner. When
    you add a **new** named volume, create the directory in the image:
    forgetting it is not a build error, it is a runtime `permission denied`.
+
+### Total reset of the dev environment {#reset-total}
+
+```bash
+bash scripts/dev/reset-total.sh      # or: pnpm bootstrap → Docker › Reset total
+```
+
+Rebuilds the images, **wipes the database**, migrates and seeds again — the
+provider credentials already in `.env` (`<PROVIDER>_TEST_KEY`) come back
+active on the owner, so you don't retype them in the UI every time. It does
+**not** remove volumes: `node_modules`, `_build` and the local bare repos
+survive.
+
+**The order is the point, and it is not negotiable:**
+
+1. `preflight` and `build` — the slow part, done while your environment is
+   still up.
+2. **`stop api engine`.** These two, and no others: they are the ones holding
+   a live connection to the compose Postgres (the api's Drizzle pool over
+   `public`/`drizzle`, the engine's Ecto/Oban over `engine`). `web` is a Vite
+   server and talks to no database, `neo4j` is a different database this reset
+   doesn't touch, and the `broker` only speaks HTTP to the api.
+3. `up postgres`, `DROP SCHEMA`, `migrate`.
+4. `up --wait` for everything, then `seed`.
+5. Ask `/health` of the api and the engine and `/` of the web, print
+   `docker compose ps`, and only then conclude.
+
+Dropping the schemas **underneath live processes** is what used to break it:
+the engine dies inside the `DROP SCHEMA engine CASCADE`
+(`Engine.Sessions.Rehydrator` queries `engine.session_states`, which just
+vanished — `ERROR 42P01 (undefined_table)`), the migrations recreate
+everything afterwards, and **nothing brings a dead process back**. The seed
+then failed on the step that activates the session (api → engine) with
+`ECONNREFUSED`, and the script still printed "reset completo" — a fixed
+`echo` at the end of a script that never asked anything about what it had
+just done.
+
+**If it stops in the middle**, it says so and names the step
+(`RESET INCOMPLETO — parou em: <passo>`), and the answer is to **run it
+again**: it drops the schemas every time, so the second run starts from the
+same clean slate as the first. Running only `pnpm --filter api seed` to
+recover is also safe now — the seed is idempotent and reuses the demo
+workspace, project and session instead of duplicating them (and does **not**
+re-append the session's 5 events).
+
+| what you see | what it is |
+|---|---|
+| `RESET INCOMPLETO — parou em: migrations (api + engine)` with `permission denied` under `apps/engine/_build` | `pnpm engine:migrate` runs on the HOST, and Docker creates a missing bind-mount point as `root`. Fix it in place: `docker run --rm -v "$PWD/apps/engine:/x" alpine chown -R "$(id -u):$(id -g)" /x/_build` |
+| `RESET INCOMPLETO … banco apagado, migrado e semeado, mas estes serviços não responderam: <lista>` | the database is fine; a process didn't come back. `docker compose -f docker/docker-compose.yml --env-file .env logs <serviço>` says why. Nothing here needs the reset to run again |
+| the `up --wait` times out | `BRABO_RESET_WAIT_TIMEOUT` (seconds, default 600). A first boot with empty `node_modules`/`_build` volumes runs `pnpm install`/`mix deps.get` before the process listens |
 
 ---
 
