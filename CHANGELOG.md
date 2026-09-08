@@ -57,6 +57,54 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **runner,web**: o `brabo-runner` reconectava **sozinho, para sempre, com um
+  ticket morto** — e a conta era paga pelo usuário, em **429** na tela dele
+  (RN-108).
+
+  **Medido em execução real.** O log do engine mostrava o MESMO ticket
+  (`lpd719PD4T0TLZHLN_4k8k3Y…`) recusado repetidamente a cada **~5,13 s** —
+  exatamente o teto do backoff interno do `phoenix.js`, cujo `reconnectAfterMs`
+  padrão satura em 5000 ms —, somando **61 `REFUSED CONNECTION TO
+  EngineWeb.RunnerSocket`** em poucas horas. Somado à política PRÓPRIA de
+  reconexão do runner (essa correta: ticket fresco por rodada, backoff
+  `[1s, 2s, 5s, 10s, 30s]`, teto de tentativas seguidas), deu **530
+  requisições num minuto** — quatro minutos seguidos acima do teto de **300
+  req/min** do `RATE_LIMIT_USER`. E o rate limit é por **usuário**: quem via o
+  429 era o NAVEGADOR da pessoa, pagando pelo que o runner estourou.
+
+  **A causa.** `apps/runner/src/channel.ts` construía o socket com
+  `new Socket(engineWsUrl, { params: { ticket } })` — **sem**
+  `reconnectAfterMs`. O auto-reconnect embutido do `Phoenix.Socket` fica ativo
+  e repete com os MESMOS params, e o ticket do socket é de **uso único**
+  (RN-108): consumido na primeira conexão, toda tentativa seguinte é recusada.
+  O `apps/web/src/lib/session-channel.ts` sempre fez certo e é o modelo — o
+  runner copiou o **comentário** e não a linha.
+
+  **O agravante.** O docblock do próprio `channel.ts` AFIRMAVA a correção que
+  o código não fazia: *"`reconnectAfterMs` embutido do `Phoenix.Socket` é por
+  isso neutralizado"*. Nada neutralizava. Um revisor que lesse o comentário
+  parava de procurar exatamente ali — por isso o comentário passou a
+  **registrar que já esteve lá sem lastro**, a opção virou **obrigatória no
+  tipo** (`OpcoesDoSocket`, erro de compilação e não lembrança) e existe teste
+  que assere a **opção passada ao construtor**, não o comentário: um teste que
+  só verificasse "conecta" passava com o defeito de pé — e passou.
+
+  **A segunda consequência é pior que o 429.** Enquanto está nesse laço o
+  runner **não está conectado**, então `RunnerReadiness` (RN-507) recusa e o
+  projeto parece "sem agente local" — parte do que se via como "o container não
+  sobe" era isto.
+
+  Junto, na mesma causa: `conectarERodar` (`index.ts`) nunca descartava a
+  conexão caída, então o `Socket` da rodada anterior seguia vivo depois de o
+  laço já ter criado outro, e cada queda deixava mais um objeto tentando com o
+  ticket morto — agora `conexao.desconectar()` é explícito.
+
+  **Varredura dos outros construtores de `Socket`:**
+  `apps/web/src/lib/fs-browser-channel.ts` tinha a MESMA linha de defeito
+  (mesmo ticket de uso único, e sem política própria de reconexão — o
+  `onClose` dele manda "feche e reabra") e foi corrigido junto, com o mesmo
+  teste. `session-channel.ts` e `terminal-channel.ts` já estavam corretos.
+
 - **dev**: `scripts/dev/reset-total.sh` terminava dizendo **"reset completo"**
   com o ambiente quebrado, e essa frase era **mentira por construção** — ela
   era um `echo` fixo no fim de um script que nunca perguntava nada sobre o
