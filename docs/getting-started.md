@@ -313,6 +313,18 @@ screen that requires pressing Enter, requires typing the database name,
 and says at the end that recovering means `pnpm db:migrate` **and**
 `pnpm engine:migrate`.
 
+Its bigger sibling is **`Docker › Reset total`**
+(`bash scripts/dev/reset-total.sh`): rebuild, wipe the database, migrate and
+seed again in one go, keeping the provider credentials from `.env`. It
+**stops the api and the engine before wiping** — those two, and no others,
+hold live connections to the database — brings them back before seeding, and
+then **asks** `/health` of the api and the engine and `/` of the web before
+saying anything. If something didn't come back, it names it and exits
+non-zero instead of announcing success. It never removes volumes, so
+`node_modules`, `_build` and your local bare repos survive; if it stops in
+the middle it says at which step, and the answer is to run it again. Details
+and symptoms in the [Runbook](runbook.md#reset-total).
+
 Always work in `feature/*` off `dev`, with conventional commits in
 pt-BR. `CLAUDE.md` has the full conventions.
 
