@@ -63,38 +63,66 @@ function conversationalStatus(events: SessionEvent[], actorId: string): AgentSta
 // nunca bateria mesmo estando na lista. O `dev.idle`/`dev.working` que
 // `try_claim` dispara em seguida (round-trip assíncrono pelo engine) é
 // quem efetivamente atualiza o status, poucos instantes depois.
-const DEV_STATUS_EVENTS = [
-  'dev.started',
-  'dev.working',
-  'dev.idle',
-  'dev.blocked',
-  'dev.awaiting_gate',
-  'dev.idle_tripped',
-  'agent.response',
-  'backlog.task_blocked',
-];
+//
+// POR QUE É UM MAPA, e não uma lista mais um `switch` com `default`.
+// A lista e o `switch` eram DUAS pontas que podiam divergir, e divergiram:
+// quem acrescentava um tipo à lista sem lembrar do `switch` caía no
+// `default: return 'trabalhando'`. Foi o que aconteceu com
+// `dev.blocked_by_container` (RN-502/ADR 0143) — no `exp004`, cinco dev
+// agents ficaram HORAS esperando um humano subir o container e o painel
+// dizia que estavam trabalhando, sobre exatamente quem precisava de atenção.
+// Terceira instância da mesma deriva (a lista do heartbeat na api e o
+// inventário de `docs/reference/events.md` já tinham sido as duas
+// anteriores). Como MAPA, não existe "estar na lista sem ter decisão": a
+// chave É a decisão. Esquecer um tipo agora o torna INVISÍVEL — cai no
+// evento conhecido anterior, e no limite em `ocioso` —, nunca em
+// `trabalhando`; e o que pega o esquecimento é
+// `scripts/ci/vocabulario-de-eventos-dev.spec.ts`, que compara estas chaves
+// com o vocabulário `dev.*` REAL do engine.
+//
+// `dev.blocked_by_container` e `dev.awaiting_approval` são `aguardando` pelo
+// mesmo motivo que `dev.awaiting_gate` já era: o agente não segue até que
+// algo FORA dele aconteça (um gate terminar, uma aprovação sair, um
+// container subir). Sem estado novo em `AgentStatus`.
+const DEV_STATUS_EVENTS: Record<string, AgentStatus> = {
+  'dev.started': 'trabalhando',
+  'dev.working': 'trabalhando',
+  'dev.idle': 'ocioso',
+  'dev.blocked': 'falhou',
+  // `AgentIo.claim_e_rodar/2` erra o claim, emite `dev.error` e cai em
+  // `:idle` SEM emitir `dev.idle` — sem esta linha o painel voltava ao
+  // `dev.working` anterior e dizia `trabalhando`. Os outros emissores
+  // (`dev_agent_server.ex`) são seguidos de `backlog.task_blocked`, que já
+  // é `falhou`: mapear aqui concorda com eles em vez de contradizê-los.
+  'dev.error': 'falhou',
+  'dev.blocked_by_container': 'aguardando',
+  'dev.awaiting_approval': 'aguardando',
+  'dev.awaiting_gate': 'aguardando',
+  'dev.idle_tripped': 'travado',
+  // Os dois abaixo não são `dev.*` — não entram na comparação com o engine.
+  'agent.response': 'trabalhando',
+  'backlog.task_blocked': 'falhou',
+};
+
+/**
+ * Tipo `dev.*` que o engine emite e que o painel decidiu NÃO considerar, com
+ * o motivo — a válvula que impede o teste cruzado de forçar um mapeamento
+ * inventado. Vazio hoje, e essa é a resposta certa: os nove tipos que o
+ * engine emite têm todos um estado honesto no painel.
+ *
+ * Declarar aqui é uma DECISÃO registrada, não um esquecimento: o tipo fica
+ * invisível para `devStatus` (o painel mostra o evento conhecido anterior), e
+ * quem ler saberá que foi de propósito.
+ */
+export const DEV_STATUS_EVENTS_FORA: Record<string, string> = {};
 
 function devStatus(events: SessionEvent[], agentId: string): AgentStatus {
   const last = lastEventFor(
     events,
-    (e) => e.actor.id === agentId && DEV_STATUS_EVENTS.includes(e.type),
+    (e) => e.actor.id === agentId && e.type in DEV_STATUS_EVENTS,
   );
 
-  if (!last) return 'ocioso';
-
-  switch (last.type) {
-    case 'backlog.task_blocked':
-    case 'dev.blocked':
-      return 'falhou';
-    case 'dev.idle':
-      return 'ocioso';
-    case 'dev.awaiting_gate':
-      return 'aguardando';
-    case 'dev.idle_tripped':
-      return 'travado';
-    default:
-      return 'trabalhando';
-  }
+  return last ? DEV_STATUS_EVENTS[last.type] : 'ocioso';
 }
 
 // Subagentes de área (Fase 8b/8c/8d) não broadcastam `agent.status` próprio

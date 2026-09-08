@@ -367,10 +367,11 @@ rules:
       #
       # `vocabulario-de-eventos-dev.spec.ts` é o QUARTO pelo mesmo critério: ele
       # compara o vocabulário `dev.*` emitido pelo engine com as listas que a
-      # api consulta (RN-411), e mora aqui só porque lê DOIS apps como texto —
-      # `scripts/ci/` é onde vivem os testes que leem o repositório inteiro.
-      # Degrau, destino e versão de branch não aparecem nele; a doc dele é a
-      # própria RN-411 em `docs/business-rules.md`.
+      # api consulta (RN-411) e com o mapa que o painel do time consulta
+      # (`apps/web/src/lib/agent-status.ts`), e mora aqui só porque lê TRÊS
+      # apps como texto — `scripts/ci/` é onde vivem os testes que leem o
+      # repositório inteiro. Degrau, destino e versão de branch não aparecem
+      # nele; a doc dele é a própria RN-411 em `docs/business-rules.md`.
       #
       # O extglob EXCLUI os quatro pelo nome e continua casando com todo o resto
       # — inclusive com script de política que ainda não existe. Falha fechado:
