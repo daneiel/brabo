@@ -589,7 +589,7 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "docs/reference/api/containers-overview-controller-list",
-          label: "Lists the container of every project in the workspace that already has one",
+          label: "Lists every project in the workspace and its container, if any",
           className: "api-method get",
         },
       ],

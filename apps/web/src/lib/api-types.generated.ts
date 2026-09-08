@@ -3396,8 +3396,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lists the container of every project in the workspace that already has one
-         * @description One row per project with a `project_containers` row — a project that never provisioned a container is simply absent, not shown empty. The observed state is asked of the broker only for rows `provisioning`/`running`, and only up to a per-load budget — see `naoVerificado` on rows that were skipped, and ADR 0136 for the reasoning.
+         * Lists every project in the workspace and its container, if any
+         * @description One row per project of the workspace — since RN-521 a project that never provisioned a container is PRESENT with `registrado: null` instead of absent, because this page is the human path to start the first one. The observed state is asked of the broker only for rows `provisioning`/`running`, and only up to a per-load budget — see `naoVerificado` on rows that were skipped, and ADR 0136 for the reasoning.
          */
         get: operations["ContainersOverviewController_list"];
         put?: never;
@@ -4881,25 +4881,23 @@ export interface components {
             /** @example exp002 */
             projectSlug: string;
             /**
-             * @description What was RECORDED (project_containers.status).
-             * @example running
+             * @description Where this project's container comes up (RN-497/503). `container` and `mounted` go through the broker, on the server; `runner` goes through the local agent on the user's machine. It is what branches the start action between `container_start` and `container_start_via_runner`.
+             * @example runner
              * @enum {string}
              */
-            status: "provisioning" | "running" | "stopped" | "failed" | "removed";
-            /** @example 1 */
-            imageVersion: number;
+            executionMode: "container" | "mounted" | "runner";
+            /** @description `null` means this project NEVER provisioned a container — a THIRD state, not a `status` value: it is neither `stopped` (a container that existed and stopped) nor "could not be observed" (which is about the daemon). Read `naoVerificado: "sem_container_registrado"` alongside it. */
+            registrado: components["schemas"]["RegistroDeContainerResponseDto"] | null;
             /**
-             * @description The image FROZEN at `imageVersion`, resolved from the `artifact.project_image` event at that exact version — never the current one, which may have been revised since. `null` when that version's event could not be found.
-             * @example node:22-bookworm-slim
+             * @description Whether ANY `artifact.project_image` exists for this project — the RN-105 gate, which since RN-494/ADR 0135 applies to all THREE modes. `false` means starting a container is impossible right now, and the page says so instead of proposing an action that is known to fail.
+             * @example true
              */
-            imagem: Record<string, never> | null;
-            resources: components["schemas"]["RecursosDoContainerResponseDto"];
-            /** @example null */
-            failureReason: Record<string, never> | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            statusChangedAt: string;
+            temImagemDecidida: boolean;
+            /**
+             * Format: date-time
+             * @description When a runner CONFIRMED the folder (RN-423) — only meaningful for `executionMode: "runner"`. It records ONE confirmation and is never a heartbeat (RN-468): non-null does NOT prove a local agent is connected now. What it does prove is the negative — `null` on a `runner` project means no runner ever connected.
+             */
+            workspaceVerifiedAt: Record<string, never> | null;
             /** @description What the broker reports right now — `null` either because there is no container, because it could not be asked (`naoObservado`), or because this row was not asked this load (`naoVerificado`). */
             observado: components["schemas"]["ObservacaoDeContainerResponseDto"] | null;
             /** @enum {string|null} */
@@ -4907,12 +4905,12 @@ export interface components {
             /** @example null */
             detalheDaObservacao: Record<string, never> | null;
             /**
-             * @description Non-null when this row was NOT asked of the broker this load — never confused with `naoObservado`, which means it WAS asked and failed. `fora_do_escopo_da_verificacao`: status is `stopped`/`failed`/`removed`, where daemon confirmation does not matter. `teto_de_verificacoes_atingido`: eligible, but the per-load broker call budget was already spent by other rows.
+             * @description Non-null when this row was NOT asked of the broker this load — never confused with `naoObservado`, which means it WAS asked and failed. `fora_do_escopo_da_verificacao`: status is `stopped`/`failed`/`removed`, where daemon confirmation does not matter. `teto_de_verificacoes_atingido`: eligible, but the per-load broker call budget was already spent by other rows. `sem_container_registrado`: the project never provisioned one, so there is nothing to observe — and it never spends a call from the budget either.
              * @example null
              * @enum {string|null}
              */
-            naoVerificado: "fora_do_escopo_da_verificacao" | "teto_de_verificacoes_atingido" | null;
-            /** @description The pending `container_start`/`container_stop`/`container_remove` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab. */
+            naoVerificado: "fora_do_escopo_da_verificacao" | "teto_de_verificacoes_atingido" | "sem_container_registrado" | null;
+            /** @description The pending `container_start`/`container_stop`/`container_remove`/`container_start_via_runner` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab. */
             acaoPendente: components["schemas"]["ProposedActionResponseDto"] | null;
         };
         ContainerSpecInternalResponseDto: {
@@ -7827,6 +7825,28 @@ export interface components {
              * @example {"kty":"OKP","crv":"Ed25519","x":"…"}
              */
             publicKeyJwk: string;
+        };
+        RegistroDeContainerResponseDto: {
+            /**
+             * @description What was RECORDED (project_containers.status).
+             * @example running
+             * @enum {string}
+             */
+            status: "provisioning" | "running" | "stopped" | "failed" | "removed";
+            /** @example 1 */
+            imageVersion: number;
+            /**
+             * @description The image FROZEN at `imageVersion`, resolved from the `artifact.project_image` event at that exact version — never the current one, which may have been revised since. `null` when that version's event could not be found.
+             * @example node:22-bookworm-slim
+             */
+            imagem: Record<string, never> | null;
+            resources: components["schemas"]["RecursosDoContainerResponseDto"];
+            /** @example null */
+            failureReason: Record<string, never> | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            statusChangedAt: string;
         };
         ReindexProjectResponseDto: {
             docs: components["schemas"]["IndexDocsReportResponseDto"];

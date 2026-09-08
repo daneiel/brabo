@@ -190,6 +190,42 @@ reason in the URL.
   `UpdateProjectDto` deliberately omits both fields, otherwise
   `PartialType(CreateProjectDto)` would expose them on a `PATCH` with no
   guard at all.
+- **`GET /workspaces/:workspaceId/containers` now lists EVERY project of the
+  workspace, and the page it feeds became the human path to START a container**
+  ([RN-521](business-rules.md#rn-521),
+  [ADR 0136](adr/0136-pagina-global-de-containers.md)). The role did not change
+  (`viewer`, as it already was) and neither did the scope: it still answers only
+  for projects of the workspace the caller can see. What changed is the row set
+  — a project that never provisioned a container used to be ABSENT and now
+  appears with `registrado: null`, a THIRD state that is neither `stopped` nor
+  "could not be observed". The read is still bounded the same way: three batched
+  queries regardless of project count, and at most
+  `TETO_DE_VERIFICACOES_POR_CARGA` (20) broker calls per load, with rows that
+  have no container never eligible and therefore never able to crowd out a real
+  one.
+
+  **Nothing on this page acts directly.** Stopping, removing and starting are
+  all `proposed_action`, always with a HUMAN clicking, never an agent, and every
+  ceiling in `decide.ts` is untouched: both start types require `maintainer`,
+  and `container_remove` stays in the absolute ceiling of the privileged-command
+  family ([RN-418](business-rules.md#rn-418)) — never auto-approvable, "always
+  allow" refused at the source. The screen branches the start action by
+  `execution_mode` exactly as the backend does
+  ([RN-497](business-rules.md#rn-497)/[RN-503](business-rules.md#rn-503)):
+  `container`/`mounted` propose `container_start` (broker) and `runner` proposes
+  `container_start_via_runner` (local agent), with the payload each schema
+  actually accepts.
+
+  The screen's own refusals are honesty, not enforcement: it does not offer the
+  button with no image decided (the RN-105 gate, valid in all THREE modes since
+  [RN-494](business-rules.md#rn-494)), nor for a `runner` project whose folder no
+  local agent ever confirmed, nor to a role below `maintainer` — and it says
+  which of the three it is, in text. **Who refuses for real is still the
+  `RolesGuard` and the use cases.** The role read here is the WORKSPACE one, not
+  the effective project role (`projectRole ?? workspaceRole`,
+  [RN-471](business-rules.md#rn-471)): a member demoted inside one project still
+  sees the button and gets a 403, a declared cost of not paying an N+1 of
+  `project_members` on a cross-project page.
 - **`PUT /projects/:projectId/mirror-path` writes a path on the USER's
   machine, and the api never sees that machine** ([RN-515](business-rules.md#rn-515),
   [ADR 0147](adr/0147-agente-local-com-capacidades.md), point 4). It stores

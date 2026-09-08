@@ -1313,19 +1313,20 @@ export type MotivoDeNaoObservacao =
  */
 export type MotivoDeNaoVerificacao =
   | 'fora_do_escopo_da_verificacao'
-  | 'teto_de_verificacoes_atingido';
+  | 'teto_de_verificacoes_atingido'
+  /**
+   * O projeto NUNCA provisionou container (RN-521) — não há o que observar, e
+   * por isso ele não gasta nenhuma das 20 chamadas do orçamento. Distinto de
+   * `fora_do_escopo_da_verificacao`, que fala de um container que EXISTE e
+   * está parado.
+   */
+  | 'sem_container_registrado';
 
 /**
- * Uma linha da página global `/containers` (ADR 0136, RN-495) — espelha
- * `ContainerOverviewItemResponseDto`. `registrado` e `observado` nunca se
- * fundem (RN-468/486): o segundo é `null` tanto quando não há container
- * quanto quando não deu para perguntar — `naoObservado`/`naoVerificado`
- * distinguem os dois motivos de ausência.
+ * O REGISTRADO de uma linha da página global de containers — a linha de
+ * `project_containers` do projeto. Espelha `RegistroDeContainerResponseDto`.
  */
-export interface ContainerOverviewItem {
-  projectId: string;
-  projectName: string;
-  projectSlug: string;
+export interface RegistroDeContainer {
   status: ContainerLifecycleStatus;
   imageVersion: number;
   /** A imagem CONGELADA em `imageVersion` — `null` quando não foi possível resolver. */
@@ -1334,11 +1335,40 @@ export interface ContainerOverviewItem {
   failureReason: string | null;
   createdAt: string;
   statusChangedAt: string;
+}
+
+/**
+ * Uma linha da página global `/containers` (ADR 0136, RN-495/RN-521) —
+ * espelha `ContainerOverviewItemResponseDto`. `registrado` e `observado`
+ * nunca se fundem (RN-468/486): o segundo é `null` tanto quando não há
+ * container quanto quando não deu para perguntar —
+ * `naoObservado`/`naoVerificado` distinguem os dois motivos de ausência.
+ */
+export interface ContainerOverviewItem {
+  projectId: string;
+  projectName: string;
+  projectSlug: string;
+  /** Ramifica a ação de subida entre `container_start` e `container_start_via_runner` (RN-521). */
+  executionMode: ExecutionMode;
+  /**
+   * `null` = o projeto NUNCA provisionou um container. TERCEIRO estado, e não
+   * um `ContainerLifecycleStatus` a mais: não é `stopped` (um container que
+   * existiu e parou) nem "não observado" (que é sobre o daemon).
+   */
+  registrado: RegistroDeContainer | null;
+  /** O portão da RN-105 nos TRÊS modos: sem imagem decidida não há o que subir. */
+  temImagemDecidida: boolean;
+  /**
+   * Quando um runner CONFIRMOU a pasta (RN-423). Registro de UMA confirmação,
+   * nunca batimento (RN-468) — não-nulo NÃO prova agente local conectado
+   * agora; `null` em projeto `runner` prova que nenhum jamais conectou.
+   */
+  workspaceVerifiedAt: string | null;
   observado: ObservacaoDeContainer | null;
   naoObservado: MotivoDeNaoObservacao | null;
   detalheDaObservacao: string | null;
   naoVerificado: MotivoDeNaoVerificacao | null;
-  /** A `proposed_action` pendente de `container_start`/`container_stop`/`container_remove` deste projeto, se houver. */
+  /** A `proposed_action` pendente de container deste projeto, se houver. */
   acaoPendente: ProposedAction | null;
 }
 

@@ -1069,6 +1069,27 @@ crosses the wire, [ADR 0130](../adr/0130-broker-de-container.md)).
 `nomeDeWorkspaceValidado` to derive the container name. One field asked, one
 field sent — they were checked against the same validator and are correct.
 
+#### Who ASKS for `containers/start` changed, and it is still not an internal route
+
+Until [RN-521](../business-rules.md#rn-521) there was exactly ONE way to reach
+these three routes: the Infra Lead, inside a session, calling its own tool. When
+that path failed on a real `exp004` run there was no way to retry a machine
+operation except opening a new session and talking to an agent — five dev agents
+sat for hours emitting `dev.blocked_by_container`.
+
+The human path added by RN-521 lives on the global containers page
+(`/containers`) and does **not** add an internal route, nor bypass one. The
+click proposes a `proposed_action` through the PUBLIC api
+(`POST /projects/:id/sessions/:sessionId/actions`, `maintainer`), branching by
+`execution_mode` exactly as the backend already did:
+`container`/`mounted` propose `container_start` (broker) and `runner` proposes
+`container_start_via_runner`. Only the APPROVAL of that action reaches here —
+`ExecuteContainerStartViaRunnerUseCase` composing the ten-field spec above and
+calling `POST /projects/:id/containers/start`. The order is the invariant, not a
+detail: the api decides, the engine executes, and a screen that could ask the
+engine directly would be a back door around the approval pipeline, the same
+reason `/actions/execute` exists as it does.
+
 The two handoff offers come from the **same** confirmation of architecture
 ready, and they are separate routes on purpose: Infra and Dev are areas with independent
 outcomes, and a single call would make one's failure bring down the other. The order

@@ -323,19 +323,33 @@ calls `GET workspaces/:workspaceId/containers`, and `ContainerOverviewItem`
 in `lib/api-types.ts` mirrors `ContainerOverviewItemResponseDto`. The api
 side is a dedicated read model, `ContainersOverviewRepository`/
 `DrizzleContainersOverviewRepository`, same "no N+1 across projects"
-discipline as `ProjectsSummaryRepository` — three constant queries (the
-container rows joined to `projects`, the `artifact.project_image` events in
+discipline as `ProjectsSummaryRepository` — three constant queries (`projects`
+LEFT JOINed to the container rows, the `artifact.project_image` events in
 batch, the pending container `proposed_actions` in batch), never one per
 project. What CAN'T be batched — asking the broker for the observed state —
 gets an explicit per-load budget instead
 (`ObterVisaoGeralDeContainersUseCase.TETO_DE_VERIFICACOES_POR_CARGA`, only
 `provisioning`/`running` rows are asked, capped at 20): a row outside the
 budget says `naoVerificado`, never silently reusing another row's answer or
-inheriting the registered state. The three actions (stop/remove/start
-again) are `proposed_action`s like everywhere else — the page never calls
-the broker directly — and each row's pending action (if any) rides along in
-the same batched read, rendered as an inline `ApprovalCard`, the same
-pattern `ProjectPrsTab.tsx` already uses for merge proposals.
+inheriting the registered state. The actions (stop/remove/start) are
+`proposed_action`s like everywhere else — the page never calls the broker
+directly — and each row's pending action (if any) rides along in the same
+batched read, rendered as an inline `ApprovalCard`, the same pattern
+`ProjectPrsTab.tsx` already uses for merge proposals.
+
+Since [RN-521](business-rules.md#rn-521) the join is a LEFT one and the page
+lists EVERY project of the workspace, because it became the human path to start
+the FIRST container: a start that fails before registering leaves no row, and
+the old INNER JOIN hid exactly the project that needed the page.
+`ContainerOverviewItem.registrado` is therefore nullable — a third state named
+in the type, distinct from `stopped` and from "could not be observed" — and rows
+with no container are never eligible for the broker budget, so they cannot crowd
+out a real container. The branch between `container_start` (broker) and
+`container_start_via_runner` (local agent) is a pure function of the CLIENT,
+`routes/containers-subida.ts`: it also decides when NOT to offer the button (no
+image decided, `runner` whose folder no agent ever confirmed, role below
+`maintainer` by `roleAtLeast`) and each refusal has its own text — the screen
+never proposes an action it already knows will fail, and never hides why.
 
 ### Outside the applications
 

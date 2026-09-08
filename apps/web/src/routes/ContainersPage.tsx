@@ -10,9 +10,22 @@ import {
   mensagemDaApi,
   proposeAction,
 } from '../lib/api-client';
-import { useContainersOverview, useCurrentWorkspace, useLatestSession } from '../lib/hooks';
+import {
+  useContainersOverview,
+  useCurrentWorkspaceWithRole,
+  useLatestSession,
+} from '../lib/hooks';
 import { userIdDaSessao } from '../lib/auth';
-import type { ContainerOverviewItem, ContainerLifecycleStatus } from '../lib/api-types';
+import type {
+  ContainerOverviewItem,
+  ContainerLifecycleStatus,
+  Role,
+} from '../lib/api-types';
+import {
+  decidirSubida,
+  podeDecidirCicloDeVida,
+  type AcaoDeSubida,
+} from './containers-subida';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { Table, type TableColumn } from '../components/ui/Table';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
@@ -33,7 +46,13 @@ const TOM_DO_STATUS: Record<ContainerLifecycleStatus, BadgeTone> = {
  *  PROJETO, e um hook num `.map()` da página violaria a ordem de hooks —
  *  um componente por linha é o jeito certo de resolver isso (mesmo padrão
  *  de qualquer lista de itens com estado próprio). */
-function AcoesDoContainer({ item }: { item: ContainerOverviewItem }) {
+function AcoesDoContainer({
+  item,
+  papel,
+}: {
+  item: ContainerOverviewItem;
+  papel: Role | undefined;
+}) {
   const { t } = useTranslation('containers');
   const { latest: latestSession } = useLatestSession(item.projectId);
   const { showToast } = useToast();
@@ -84,34 +103,34 @@ function AcoesDoContainer({ item }: { item: ContainerOverviewItem }) {
     }
   }
 
-  // "Subir de novo" REUSA `container_start` (ADR 0136) — não é um tipo de
-  // ação novo. A imagem/rede/recursos vêm da DECISÃO VIGENTE do projeto
-  // (`GET .../container`, a mesma que a aba Code lê), nunca inventados pela
-  // tela: se o Arquiteto/Infra ainda não decidiu (não deveria acontecer para
-  // uma linha que já existe, mas a leitura degrada em vez de assumir), o
-  // clique falha com uma mensagem, nunca propõe um payload vazio.
-  async function subirDeNovo() {
+  // A subida ramifica por `executionMode` (RN-521), e os DOIS payloads são
+  // diferentes de propósito:
+  //
+  // - `container_start` (broker — `container`/`mounted`) carrega a ELEIÇÃO de
+  //   imagem, buscada da decisão VIGENTE do projeto (`GET .../container`, a
+  //   mesma que a aba Code lê), nunca inventada pela tela.
+  // - `container_start_via_runner` (agente local — `runner`, RN-508) tem
+  //   schema só com `rationale`: ela sobe a imagem JÁ decidida e não elege
+  //   nada. Copiar o payload da outra aqui seria mandar campos que o schema
+  //   recusa.
+  //
+  // `decidirSubida` já garantiu que existe imagem decidida antes de o botão
+  // aparecer; a leitura ainda degrada em vez de assumir, porque entre a carga
+  // da tela e o clique o artefato pode ter sido revisado.
+  async function subir(acao: AcaoDeSubida) {
     if (!latestSession) return;
     setEmAndamento('subir');
     try {
-      const estado = await getContainerState(item.projectId);
-      if (estado.status !== 'decidido' || !estado.decisao) {
-        showToast({
-          title: t('actions.startAgainNoDecisionTitle'),
-          message: t('actions.startAgainNoDecisionMessage'),
-          tone: 'danger',
-        });
-        return;
-      }
+      const payload =
+        acao === 'container_start_via_runner'
+          ? { rationale: t('actions.startRationale') }
+          : await payloadDeStartPeloBroker();
+      if (!payload) return;
+
       await proposeAction(item.projectId, latestSession.id, {
-        actionType: 'container_start',
+        actionType: acao,
         actor: { kind: 'user', id: userIdDaSessao() ?? 'usuário' },
-        payload: {
-          imagem: estado.decisao.image,
-          network: estado.decisao.network,
-          resources: estado.decisao.resources,
-          rationale: t('actions.startAgainRationale'),
-        },
+        payload,
       });
       invalidateContainers();
     } catch (erro) {
@@ -123,6 +142,27 @@ function AcoesDoContainer({ item }: { item: ContainerOverviewItem }) {
     } finally {
       setEmAndamento(null);
     }
+  }
+
+  async function payloadDeStartPeloBroker(): Promise<Record<
+    string,
+    unknown
+  > | null> {
+    const estado = await getContainerState(item.projectId);
+    if (estado.status !== 'decidido' || !estado.decisao) {
+      showToast({
+        title: t('actions.startNoDecisionTitle'),
+        message: t('actions.startNoDecisionMessage'),
+        tone: 'danger',
+      });
+      return null;
+    }
+    return {
+      imagem: estado.decisao.image,
+      network: estado.decisao.network,
+      resources: estado.decisao.resources,
+      rationale: t('actions.startRationale'),
+    };
   }
 
   async function aprovar() {
@@ -154,9 +194,9 @@ function AcoesDoContainer({ item }: { item: ContainerOverviewItem }) {
     queryClient.invalidateQueries({ queryKey: ['permissions', item.projectId] });
   }
 
-  // Uma proposta pendente de container (qualquer uma das três) SUBSTITUI os
-  // três botões pelo card de decisão — mesmo molde de `ProjectPrsTab`: a
-  // ação já existe, decidir É a próxima ação, não propor de novo.
+  // Uma proposta pendente de container (qualquer uma das quatro) SUBSTITUI os
+  // botões pelo card de decisão — mesmo molde de `ProjectPrsTab`: a ação já
+  // existe, decidir É a próxima ação, não propor de novo.
   if (item.acaoPendente) {
     return (
       <ApprovalCard
@@ -169,44 +209,62 @@ function AcoesDoContainer({ item }: { item: ContainerOverviewItem }) {
     );
   }
 
-  const podeParar = item.status === 'running' || item.status === 'provisioning';
-  const podeRemover = item.status !== 'removed';
-  const podeSubirDeNovo =
-    item.status === 'stopped' ||
-    item.status === 'failed' ||
-    item.status === 'removed';
+  const status = item.registrado?.status ?? null;
+  const podeDecidir = podeDecidirCicloDeVida(papel);
   const semSessao = !latestSession;
-  const tituloSemSessao = semSessao ? t('actions.noSession') : undefined;
+  // Parar/remover exigem um container REGISTRADO: num projeto que nunca
+  // provisionou não há o que parar nem o que remover.
+  const podeParar =
+    podeDecidir &&
+    !semSessao &&
+    (status === 'running' || status === 'provisioning');
+  const podeRemover =
+    podeDecidir && !semSessao && status !== null && status !== 'removed';
+
+  const subida = decidirSubida({ item, papel, temSessao: !semSessao });
+
+  // O motivo do bloqueio é dito em TEXTO, uma vez (ADR 0064) — `title` em
+  // elemento `disabled` não abre no Chromium. `ja_esta_de_pe` é a exceção:
+  // a coluna Registrado já mostra `rodando`, e repetir isso numa linha de
+  // texto em toda linha saudável é ruído, não explicação.
+  const motivo =
+    !subida.pode && subida.motivo !== 'ja_esta_de_pe'
+      ? t(`actions.bloqueio.${subida.motivo}`)
+      : null;
+  const ressalva = subida.pode && subida.ressalva ? t(`actions.ressalva.${subida.ressalva}`) : null;
 
   return (
-    <div className={styles.acoes}>
-      <Button
-        variant="secondary"
-        disabled={!podeParar || semSessao}
-        loading={emAndamento === 'parar'}
-        title={tituloSemSessao}
-        onClick={() => void parar()}
-      >
-        {t('actions.stop')}
-      </Button>
-      <Button
-        variant="danger"
-        disabled={!podeRemover || semSessao}
-        loading={emAndamento === 'remover'}
-        title={tituloSemSessao}
-        onClick={() => void remover()}
-      >
-        {t('actions.remove')}
-      </Button>
-      <Button
-        variant="primary"
-        disabled={!podeSubirDeNovo || semSessao}
-        loading={emAndamento === 'subir'}
-        title={tituloSemSessao}
-        onClick={() => void subirDeNovo()}
-      >
-        {t('actions.startAgain')}
-      </Button>
+    <div className={styles.blocoDeAcoes}>
+      <div className={styles.acoes}>
+        <Button
+          variant="secondary"
+          disabled={!podeParar}
+          loading={emAndamento === 'parar'}
+          onClick={() => void parar()}
+        >
+          {t('actions.stop')}
+        </Button>
+        <Button
+          variant="danger"
+          disabled={!podeRemover}
+          loading={emAndamento === 'remover'}
+          onClick={() => void remover()}
+        >
+          {t('actions.remove')}
+        </Button>
+        <Button
+          variant="primary"
+          disabled={!subida.pode}
+          loading={emAndamento === 'subir'}
+          onClick={() => {
+            if (subida.pode) void subir(subida.acao);
+          }}
+        >
+          {item.registrado ? t('actions.startAgain') : t('actions.start')}
+        </Button>
+      </div>
+      {motivo && <p className={styles.motivo}>{motivo}</p>}
+      {ressalva && <p className={styles.ressalva}>{ressalva}</p>}
     </div>
   );
 }
@@ -239,16 +297,25 @@ function EstadoObservadoCelula({ item }: { item: ContainerOverviewItem }) {
 }
 
 /**
- * A página global de containers (`/containers`, ADR 0136, RN-495) —
- * cross-projeto, do WORKSPACE inteiro. Lista o container de CADA projeto
- * que já tem `project_containers`: imagem/versão, estado REGISTRADO,
- * estado OBSERVADO (nunca fundidos — RN-468/486), recursos, desde quando, e
- * as três ações (parar/remover/subir de novo), todas `proposed_action`
- * aprovável — nenhuma direta.
+ * A página global de containers (`/containers`, ADR 0136, RN-495/RN-521) —
+ * cross-projeto, do WORKSPACE inteiro. Lista TODO projeto do workspace, tenha
+ * ele `project_containers` ou não: imagem/versão, estado REGISTRADO (ou
+ * "nunca provisionado", que é um TERCEIRO estado e não um status), estado
+ * OBSERVADO (nunca fundidos — RN-468/486), recursos, desde quando, e as ações
+ * (parar/remover/subir), todas `proposed_action` aprovável — nenhuma direta, e
+ * sempre um HUMANO clicando.
  */
 export function ContainersPage() {
   const { t, i18n } = useTranslation('containers');
-  const { data: workspace } = useCurrentWorkspace();
+  const { data: atual } = useCurrentWorkspaceWithRole();
+  const workspace = atual?.workspace;
+  // O papel do WORKSPACE, e a lacuna é declarada: o efetivo é
+  // `projectRole ?? workspaceRole` (RN-471), e esta tela é cross-projeto —
+  // buscar `project_members` de cada linha seria um N+1 de rede pelo qual a
+  // página inteira existe para não pagar. Consequência aceita: quem foi
+  // REBAIXADO num projeto específico ainda vê o botão aqui, e a api recusa com
+  // 403. É o defeito reparável (termina em toast), não o invisível.
+  const papel = atual?.role;
   const query = useContainersOverview(workspace?.id);
 
   const columns: TableColumn<ContainerOverviewItem>[] = [
@@ -270,24 +337,34 @@ export function ContainersPage() {
       key: 'image',
       label: t('table.image'),
       width: '1.6fr',
-      render: (item) => (
-        <span className={styles.imagemCelula}>
-          <span className={styles.imagemTexto}>
-            {item.imagem ?? t('table.imageUnresolved')}
+      render: (item) =>
+        item.registrado ? (
+          <span className={styles.imagemCelula}>
+            <span className={styles.imagemTexto}>
+              {item.registrado.imagem ?? t('table.imageUnresolved')}
+            </span>
+            <span className={styles.versao}>v{item.registrado.imageVersion}</span>
           </span>
-          <span className={styles.versao}>v{item.imageVersion}</span>
-        </span>
-      ),
+        ) : (
+          <span className={styles.semRegistro}>
+            {item.temImagemDecidida
+              ? t('table.imageDecidedNotFrozen')
+              : t('table.imageUndecided')}
+          </span>
+        ),
     },
     {
       key: 'status',
       label: t('table.registered'),
       width: '0.9fr',
-      render: (item) => (
-        <Badge tone={TOM_DO_STATUS[item.status]}>
-          {t(`status.${item.status}`)}
-        </Badge>
-      ),
+      render: (item) =>
+        item.registrado ? (
+          <Badge tone={TOM_DO_STATUS[item.registrado.status]}>
+            {t(`status.${item.registrado.status}`)}
+          </Badge>
+        ) : (
+          <span className={styles.semRegistro}>{t('status.nuncaProvisionado')}</span>
+        ),
     },
     {
       key: 'observed',
@@ -299,31 +376,37 @@ export function ContainersPage() {
       key: 'resources',
       label: t('table.resources'),
       width: '1fr',
-      render: (item) => (
-        <span className={styles.recursos}>
-          {t('table.resourcesValue', {
-            cpus: item.resources.cpus,
-            memoryMb: item.resources.memoryMb,
-            pidsLimit: item.resources.pidsLimit,
-          })}
-        </span>
-      ),
+      render: (item) =>
+        item.registrado ? (
+          <span className={styles.recursos}>
+            {t('table.resourcesValue', {
+              cpus: item.registrado.resources.cpus,
+              memoryMb: item.registrado.resources.memoryMb,
+              pidsLimit: item.registrado.resources.pidsLimit,
+            })}
+          </span>
+        ) : (
+          <span className={styles.semRegistro}>{t('table.resourcesNone')}</span>
+        ),
     },
     {
       key: 'since',
       label: t('table.since'),
       width: '1fr',
-      render: (item) => (
-        <span className={styles.desde}>
-          {new Date(item.statusChangedAt).toLocaleString(i18n.language)}
-        </span>
-      ),
+      render: (item) =>
+        item.registrado ? (
+          <span className={styles.desde}>
+            {new Date(item.registrado.statusChangedAt).toLocaleString(i18n.language)}
+          </span>
+        ) : (
+          <span className={styles.semRegistro}>{t('table.sinceNone')}</span>
+        ),
     },
     {
       key: 'actions',
       label: t('table.actions'),
       width: '2fr',
-      render: (item) => <AcoesDoContainer item={item} />,
+      render: (item) => <AcoesDoContainer item={item} papel={papel} />,
     },
   ];
 

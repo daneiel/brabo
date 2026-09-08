@@ -4,6 +4,57 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Novidades
+
+- **web,api**: a página `/containers` passa a listar **todo projeto do
+  workspace**, tenha ele container registrado ou não, e vira o **caminho
+  humano** de subir um container — ramificado por `execution_mode` (RN-521).
+
+  Subir o container tinha **um** caminho: o Infra Lead, dentro de uma sessão,
+  pela ferramenta dele. Numa execução real do `exp004` (modo `runner`) a
+  `container_start_via_runner` falhou pelo defeito que a RN-508 fechou, e não
+  havia como **tentar de novo**: cinco dev agents ficaram horas emitindo
+  `dev.blocked_by_container` e a única saída era abrir sessão nova e conversar
+  com um agente para reexecutar uma operação de máquina. A página global
+  ([ADR 0136](docs/adr/0136-pagina-global-de-containers.md)) já era o lugar
+  onde um humano decide ciclo de vida — mas a régua era "uma linha por projeto
+  que já tem `project_containers`", e uma subida que falha **antes** de
+  registrar não deixa linha: a tela escondia exatamente o projeto para o qual
+  precisava existir.
+
+  O read model troca INNER por **LEFT JOIN** e `registrado` vira `null` para
+  quem nunca provisionou — um **terceiro estado** com nome próprio ("nunca
+  provisionado"), que não é `stopped` (um container que existiu e parou) nem
+  "não observado" (que é sobre o daemon). A coluna Observado ganha o terceiro
+  motivo, `sem_container_registrado`. A lista alargou e o **orçamento não**:
+  projeto sem container não tem o que observar, então nunca é elegível e nunca
+  ocupa uma das 20 vagas de `TETO_DE_VERIFICACOES_POR_CARGA` — num workspace
+  com centenas de projetos vazios, quem tem container de verdade continua
+  verificado exatamente como antes, e continuam sendo **três** consultas em
+  lote, quantos projetos forem.
+
+  A ação segue a mesma régua do backend (RN-497/RN-503): `container` e
+  `mounted` propõem `container_start` (broker) e `runner` propõe
+  `container_start_via_runner` (agente local). Os dois **payloads** são
+  diferentes de propósito e não se copiam — o primeiro carrega a eleição de
+  imagem, lida da decisão vigente no clique; o segundo tem schema **só com
+  `rationale`** (RN-508), porque sobe a imagem já decidida e não elege nada.
+
+  E a tela **não propõe o que já se sabe que vai falhar**: sem imagem decidida
+  (o portão da RN-105, válido nos três modos desde a RN-494), num projeto
+  `runner` cuja pasta agente local nenhum jamais confirmou, ou para papel
+  abaixo de `maintainer` (o mínimo do **endpoint**, por `roleAtLeast` —
+  RN-102), o botão fica inerte e o motivo é dito **em texto**, uma vez, cada
+  recusa com o seu (`title` em elemento `disabled` não abre no Chromium). Quem
+  não pode continua **vendo** estado, imagem e recursos (ADR 0064). O que a
+  tela não sabe ela declara: `workspaceVerifiedAt` é registro de **uma**
+  confirmação e nunca batimento (RN-468), então a linha do `runner` oferece o
+  botão **com ressalva escrita** em vez de prometer que o agente está de pé.
+
+  Nenhum teto se mexeu: toda proposta daqui é `proposed_action` com um
+  **humano** clicando, e `container_remove` continua no teto absoluto da
+  RN-418. `decide.ts` fica byte a byte.
+
 ### Correções
 
 - **dev**: `scripts/dev/reset-total.sh` terminava dizendo **"reset completo"**

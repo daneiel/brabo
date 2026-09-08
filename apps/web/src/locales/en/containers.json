@@ -1,18 +1,22 @@
 {
   "title": "Containers",
-  "subtitle": "Every project in this workspace that already has a container — image, state, resources, and the actions to stop, remove, or start it again.",
+  "subtitle": "Every project in this workspace — image, state, resources, and the actions to stop, remove, or start the container.",
   "loadError": "Could not load the containers.",
   "loading": "Loading…",
-  "empty": "No project in this workspace has provisioned a container yet.",
+  "empty": "This workspace has no projects yet.",
   "table": {
     "project": "Project",
     "image": "Image",
     "imageUnresolved": "(image unavailable)",
+    "imageDecidedNotFrozen": "decided, not frozen yet",
+    "imageUndecided": "no image decided",
     "registered": "Registered",
     "observed": "Observed",
     "resources": "Resources",
     "resourcesValue": "{{cpus}} CPU · {{memoryMb}} MB · {{pidsLimit}} pids",
+    "resourcesNone": "—",
     "since": "Since",
+    "sinceNone": "—",
     "actions": "Actions"
   },
   "status": {
@@ -20,13 +24,15 @@
     "running": "running",
     "stopped": "stopped",
     "failed": "failed",
-    "removed": "removed"
+    "removed": "removed",
+    "nuncaProvisionado": "never provisioned"
   },
   "observed": {
     "none": "not observed",
     "naoVerificado": {
       "fora_do_escopo_da_verificacao": "not checked — registered state doesn't need daemon confirmation",
-      "teto_de_verificacoes_atingido": "not checked — per-load broker budget reached"
+      "teto_de_verificacoes_atingido": "not checked — per-load broker budget reached",
+      "sem_container_registrado": "there is no container to observe"
     },
     "naoObservado": {
       "broker-nao-configurado": "no broker configured",
@@ -37,11 +43,21 @@
   "actions": {
     "stop": "Stop",
     "remove": "Remove",
+    "start": "Start container",
     "startAgain": "Start again",
-    "noSession": "This project has no session yet — the action needs one to be proposed.",
     "errorTitle": "Could not propose the action",
-    "startAgainNoDecisionTitle": "No image decision for this project",
-    "startAgainNoDecisionMessage": "The Architect (or Infra) hasn't decided an image for this project — there is nothing to restart with.",
-    "startAgainRationale": "Reprovisioning with the project's current image decision."
+    "startNoDecisionTitle": "No image decision for this project",
+    "startNoDecisionMessage": "The Architect (or Infra) hasn't decided an image for this project — there is nothing to start with.",
+    "startRationale": "Start requested by a human on the containers page.",
+    "bloqueio": {
+      "ja_esta_de_pe": "The container is already up — stop it before starting again.",
+      "sem_imagem_decidida": "No image decided: the Architect (or Infra) must decide one before any container can start.",
+      "runner_nunca_confirmou": "No local agent has ever confirmed this project's folder — run `brabo-runner` on that machine before starting.",
+      "sem_papel": "Starting a container requires the maintainer role in this workspace.",
+      "sem_sessao": "This project has no session yet — the action needs one to be proposed."
+    },
+    "ressalva": {
+      "runner_pode_estar_desconectado": "The folder was confirmed by a local agent at some point; if it isn't running right now, the action fails once approved."
+    }
   }
 }

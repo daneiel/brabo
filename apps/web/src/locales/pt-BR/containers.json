@@ -1,18 +1,22 @@
 {
   "title": "Containers",
-  "subtitle": "Todo projeto deste workspace que já tem um container — imagem, estado, recursos e as ações de parar, remover ou subir de novo.",
+  "subtitle": "Todo projeto deste workspace — imagem, estado, recursos e as ações de parar, remover ou subir o container.",
   "loadError": "Não foi possível carregar os containers.",
   "loading": "Carregando…",
-  "empty": "Nenhum projeto deste workspace provisionou um container ainda.",
+  "empty": "Este workspace ainda não tem projeto nenhum.",
   "table": {
     "project": "Projeto",
     "image": "Imagem",
     "imageUnresolved": "(imagem indisponível)",
+    "imageDecidedNotFrozen": "decidida, ainda não congelada",
+    "imageUndecided": "nenhuma imagem decidida",
     "registered": "Registrado",
     "observed": "Observado",
     "resources": "Recursos",
     "resourcesValue": "{{cpus}} CPU · {{memoryMb}} MB · {{pidsLimit}} pids",
+    "resourcesNone": "—",
     "since": "Desde",
+    "sinceNone": "—",
     "actions": "Ações"
   },
   "status": {
@@ -20,13 +24,15 @@
     "running": "rodando",
     "stopped": "parado",
     "failed": "falhou",
-    "removed": "removido"
+    "removed": "removido",
+    "nuncaProvisionado": "nunca provisionado"
   },
   "observed": {
     "none": "não observado",
     "naoVerificado": {
       "fora_do_escopo_da_verificacao": "não verificado — estado registrado não precisa de confirmação do daemon",
-      "teto_de_verificacoes_atingido": "não verificado — teto de verificações da carga foi atingido"
+      "teto_de_verificacoes_atingido": "não verificado — teto de verificações da carga foi atingido",
+      "sem_container_registrado": "não há container para observar"
     },
     "naoObservado": {
       "broker-nao-configurado": "sem broker configurado",
@@ -37,11 +43,21 @@
   "actions": {
     "stop": "Parar",
     "remove": "Remover",
+    "start": "Subir container",
     "startAgain": "Subir de novo",
-    "noSession": "Este projeto ainda não tem sessão — a ação precisa de uma para ser proposta.",
     "errorTitle": "Não foi possível propor a ação",
-    "startAgainNoDecisionTitle": "Sem decisão de imagem para este projeto",
-    "startAgainNoDecisionMessage": "O Arquiteto (ou a Infra) ainda não decidiu uma imagem para este projeto — não há com o que reprovisionar.",
-    "startAgainRationale": "Reprovisiona com a decisão de imagem vigente do projeto."
+    "startNoDecisionTitle": "Sem decisão de imagem para este projeto",
+    "startNoDecisionMessage": "O Arquiteto (ou a Infra) ainda não decidiu uma imagem para este projeto — não há com o que subir.",
+    "startRationale": "Subida pedida por um humano na página de containers.",
+    "bloqueio": {
+      "ja_esta_de_pe": "O container já está de pé — pare-o antes de subir de novo.",
+      "sem_imagem_decidida": "Sem imagem decidida: o Arquiteto (ou a Infra) precisa decidir uma antes de qualquer container subir.",
+      "runner_nunca_confirmou": "Nenhum agente local jamais confirmou a pasta deste projeto — rode o `brabo-runner` na máquina dele antes de subir.",
+      "sem_papel": "Subir container exige o papel maintainer neste workspace.",
+      "sem_sessao": "Este projeto ainda não tem sessão — a ação precisa de uma para ser proposta."
+    },
+    "ressalva": {
+      "runner_pode_estar_desconectado": "A pasta foi confirmada um dia por um agente local; se ele não estiver rodando agora, a ação falha ao ser aprovada."
+    }
   }
 }
