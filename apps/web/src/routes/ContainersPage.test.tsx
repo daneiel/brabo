@@ -4,7 +4,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { ContainersPage } from './ContainersPage';
 import { ToastProvider } from '../components/ui/ToastProvider';
-import type { ContainerOverviewItem, ProposedAction, Session } from '../lib/api-types';
+import type {
+  ContainerOverviewItem,
+  ProposedAction,
+  RegistroDeContainer,
+  Role,
+  Session,
+} from '../lib/api-types';
 import i18n from '../lib/i18n';
 
 beforeAll(async () => {
@@ -33,12 +39,13 @@ vi.mock('../lib/api-client', async (importOriginal) => {
 });
 
 const useContainersOverview = vi.fn();
-const useCurrentWorkspace = vi.fn();
+const useCurrentWorkspaceWithRole = vi.fn();
 const useLatestSession = vi.fn();
 
 vi.mock('../lib/hooks', () => ({
   useContainersOverview: (...args: unknown[]) => useContainersOverview(...args),
-  useCurrentWorkspace: (...args: unknown[]) => useCurrentWorkspace(...args),
+  useCurrentWorkspaceWithRole: (...args: unknown[]) =>
+    useCurrentWorkspaceWithRole(...args),
   useLatestSession: (...args: unknown[]) => useLatestSession(...args),
 }));
 
@@ -65,6 +72,12 @@ function montar() {
   );
 }
 
+function comPapel(role: Role) {
+  useCurrentWorkspaceWithRole.mockReturnValue({
+    data: { workspace: { id: 'ws-1', name: 'Acme', slug: 'acme' }, role },
+  });
+}
+
 function sessaoRecente(id = 'sess-1'): Session {
   return {
     id,
@@ -80,11 +93,10 @@ function sessaoRecente(id = 'sess-1'): Session {
   };
 }
 
-function item(overrides: Partial<ContainerOverviewItem> = {}): ContainerOverviewItem {
+function registro(
+  overrides: Partial<RegistroDeContainer> = {},
+): RegistroDeContainer {
   return {
-    projectId: 'proj-1',
-    projectName: 'core',
-    projectSlug: 'core',
     status: 'running',
     imageVersion: 2,
     imagem: 'node:22-bookworm-slim',
@@ -92,6 +104,19 @@ function item(overrides: Partial<ContainerOverviewItem> = {}): ContainerOverview
     failureReason: null,
     createdAt: '2026-08-01T10:00:00.000Z',
     statusChangedAt: '2026-08-01T10:05:00.000Z',
+    ...overrides,
+  };
+}
+
+function item(overrides: Partial<ContainerOverviewItem> = {}): ContainerOverviewItem {
+  return {
+    projectId: 'proj-1',
+    projectName: 'core',
+    projectSlug: 'core',
+    executionMode: 'container',
+    registrado: registro(),
+    temImagemDecidida: true,
+    workspaceVerifiedAt: null,
     observado: null,
     naoObservado: null,
     detalheDaObservacao: null,
@@ -99,6 +124,22 @@ function item(overrides: Partial<ContainerOverviewItem> = {}): ContainerOverview
     acaoPendente: null,
     ...overrides,
   };
+}
+
+/** O cenário real do `exp004`: projeto `runner`, sem linha em
+ *  `project_containers`, imagem decidida e agente local já tendo confirmado a
+ *  pasta um dia. */
+function itemRunnerSemContainer(
+  overrides: Partial<ContainerOverviewItem> = {},
+): ContainerOverviewItem {
+  return item({
+    executionMode: 'runner',
+    registrado: null,
+    temImagemDecidida: true,
+    workspaceVerifiedAt: '2026-09-01T10:00:00.000Z',
+    naoVerificado: 'sem_container_registrado',
+    ...overrides,
+  });
 }
 
 function acaoPendente(overrides: Partial<ProposedAction> = {}): ProposedAction {
@@ -124,7 +165,7 @@ function acaoPendente(overrides: Partial<ProposedAction> = {}): ProposedAction {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useCurrentWorkspace.mockReturnValue({ data: { id: 'ws-1', name: 'Acme', slug: 'acme' } });
+  comPapel('maintainer');
   useLatestSession.mockReturnValue({ latest: sessaoRecente() });
 });
 
@@ -157,7 +198,7 @@ describe('ContainersPage', () => {
     montar();
 
     expect(
-      screen.getByText('Nenhum projeto deste workspace provisionou um container ainda.'),
+      screen.getByText('Este workspace ainda não tem projeto nenhum.'),
     ).toBeInTheDocument();
   });
 
@@ -236,7 +277,7 @@ describe('ContainersPage', () => {
     useContainersOverview.mockReturnValue({
       isPending: false,
       isError: false,
-      data: [item({ status: 'stopped' })],
+      data: [item({ registrado: registro({ status: 'stopped' }) })],
       refetch: vi.fn(),
     });
     getContainerState.mockResolvedValue({
@@ -265,17 +306,17 @@ describe('ContainersPage', () => {
           imagem: 'node:22-bookworm-slim',
           network: 'none',
           resources: { cpus: 2, memoryMb: 4096, pidsLimit: 512 },
-          rationale: 'Reprovisiona com a decisão de imagem vigente do projeto.',
+          rationale: 'Subida pedida por um humano na página de containers.',
         },
       });
     });
   });
 
-  it('sem decisão vigente: "Subir de novo" falha com toast, sem propor nada', async () => {
+  it('decisão sumiu entre a carga e o clique: "Subir de novo" falha com toast, sem propor nada', async () => {
     useContainersOverview.mockReturnValue({
       isPending: false,
       isError: false,
-      data: [item({ status: 'stopped' })],
+      data: [item({ registrado: registro({ status: 'stopped' }) })],
       refetch: vi.fn(),
     });
     getContainerState.mockResolvedValue({
@@ -295,18 +336,28 @@ describe('ContainersPage', () => {
     expect(proposeAction).not.toHaveBeenCalled();
   });
 
-  it('sem sessão no projeto: os três botões ficam desabilitados', () => {
+  it('sem sessão no projeto: os três botões ficam desabilitados, com o motivo em texto', () => {
     useLatestSession.mockReturnValue({ latest: undefined });
-    useContainersOverview.mockReturnValue({ isPending: false, isError: false, data: [item()], refetch: vi.fn() });
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item({ registrado: registro({ status: 'stopped' }) })],
+      refetch: vi.fn(),
+    });
 
     montar();
 
     expect(screen.getByRole('button', { name: 'Parar' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Remover' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Subir de novo' })).toBeDisabled();
+    expect(
+      screen.getByText(
+        'Este projeto ainda não tem sessão — a ação precisa de uma para ser proposta.',
+      ),
+    ).toBeInTheDocument();
   });
 
-  it('com ação pendente: mostra o card de decisão em vez dos três botões', () => {
+  it('com ação pendente: mostra o card de decisão em vez dos botões', () => {
     useContainersOverview.mockReturnValue({
       isPending: false,
       isError: false,
@@ -349,5 +400,170 @@ describe('ContainersPage', () => {
 
     expect(screen.getByRole('button', { name: 'Aprovar' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sempre permitir' })).not.toBeInTheDocument();
+  });
+
+  // --- RN-521: o terceiro estado e a subida ramificada por modo ---
+
+  it('projeto que NUNCA provisionou aparece na lista, com texto próprio — nunca "parado"', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [itemRunnerSemContainer()],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.getByText('nunca provisionado')).toBeInTheDocument();
+    expect(screen.queryByText('parado')).not.toBeInTheDocument();
+    expect(screen.getByText('não há container para observar')).toBeInTheDocument();
+  });
+
+  it('CENÁRIO REAL (exp004): projeto runner, sem container, imagem decidida, pasta confirmada → propõe container_start_via_runner com payload SÓ de rationale', async () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [itemRunnerSemContainer()],
+      refetch: vi.fn(),
+    });
+    proposeAction.mockResolvedValue(
+      acaoPendente({ actionType: 'container_start_via_runner' }),
+    );
+
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Subir container' }));
+
+    await waitFor(() => {
+      expect(proposeAction).toHaveBeenCalledWith('proj-1', 'sess-1', {
+        actionType: 'container_start_via_runner',
+        actor: { kind: 'user', id: 'user-1' },
+        payload: { rationale: 'Subida pedida por um humano na página de containers.' },
+      });
+    });
+    // O payload de `container_start` NUNCA é copiado: ela elege imagem, esta
+    // sobe a já decidida (RN-508).
+    expect(getContainerState).not.toHaveBeenCalled();
+  });
+
+  it('projeto runner: a tela DIZ que confirmação de pasta não é presença de agente', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [itemRunnerSemContainer()],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(
+      screen.getByText(/se ele não estiver rodando agora, a ação falha ao ser aprovada/),
+    ).toBeInTheDocument();
+  });
+
+  it('projeto mounted sem container: propõe container_start (broker), não a variante do runner', async () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [
+        itemRunnerSemContainer({ executionMode: 'mounted', workspaceVerifiedAt: null }),
+      ],
+      refetch: vi.fn(),
+    });
+    getContainerState.mockResolvedValue({
+      status: 'decidido',
+      decisao: {
+        image: 'node:22-bookworm-slim',
+        rationale: 'stack combina',
+        network: 'none',
+        resources: { cpus: 2, memoryMb: 4096, pidsLimit: 512 },
+      },
+      version: 1,
+      eventId: 'evt-1',
+      decidedAt: '2026-08-01T10:00:00.000Z',
+    });
+    proposeAction.mockResolvedValue(acaoPendente({ actionType: 'container_start' }));
+
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Subir container' }));
+
+    await waitFor(() => {
+      expect(proposeAction).toHaveBeenCalledWith(
+        'proj-1',
+        'sess-1',
+        expect.objectContaining({ actionType: 'container_start' }),
+      );
+    });
+  });
+
+  it('sem imagem decidida: não propõe às cegas — botão inerte e o motivo dito em TEXTO', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [itemRunnerSemContainer({ temImagemDecidida: false })],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Subir container' })).toBeDisabled();
+    expect(
+      screen.getByText(
+        'Sem imagem decidida: o Arquiteto (ou a Infra) precisa decidir uma antes de qualquer container subir.',
+      ),
+    ).toBeInTheDocument();
+    expect(proposeAction).not.toHaveBeenCalled();
+  });
+
+  it('runner que nunca confirmou pasta: botão inerte, motivo próprio — nunca confundido com "sem imagem"', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [itemRunnerSemContainer({ workspaceVerifiedAt: null })],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Subir container' })).toBeDisabled();
+    expect(
+      screen.getByText(
+        'Nenhum agente local jamais confirmou a pasta deste projeto — rode o `brabo-runner` na máquina dele antes de subir.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('developer NÃO decide ciclo de vida (o mínimo do endpoint é maintainer), mas CONTINUA vendo o estado', () => {
+    comPapel('developer');
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item({ registrado: registro({ status: 'stopped' }) })],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Subir de novo' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Remover' })).toBeDisabled();
+    expect(
+      screen.getByText('Subir container exige o papel maintainer neste workspace.'),
+    ).toBeInTheDocument();
+    // O que se tira é o CONTROLE, nunca a INFORMAÇÃO (ADR 0064).
+    expect(screen.getByText('parado')).toBeInTheDocument();
+    expect(screen.getByText('node:22-bookworm-slim')).toBeInTheDocument();
+  });
+
+  it('owner alcança o mínimo — a comparação é por hierarquia, nunca por igualdade de papel', () => {
+    comPapel('owner');
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item({ registrado: registro({ status: 'stopped' }) })],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.getByRole('button', { name: 'Subir de novo' })).toBeEnabled();
   });
 });

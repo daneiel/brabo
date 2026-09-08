@@ -9398,6 +9398,119 @@ chave.
   esse caso, porque `runner_device_keys.project_id` amarra a chave a um projeto
   só; e nenhuma tela dispara isto ainda (a metade web da [RN-519](#rn-519))
 
+### RN-521 — A página `/containers` lista TODO projeto do workspace e vira o caminho HUMANO de subir o container, ramificado por `execution_mode` {#rn-521}
+
+Subir o container de um projeto tinha **um** caminho: o Infra Lead, dentro de
+uma sessão, chamando a ferramenta dele. Numa execução real do `exp004` (modo
+`runner`) a `container_start_via_runner` falhou pelo defeito que a
+[RN-508](#rn-508) fechou — e não havia como TENTAR DE NOVO. Cinco dev agents
+ficaram horas emitindo `dev.blocked_by_container`
+([RN-502](#rn-502)), e a única saída era abrir sessão nova e conversar com um
+agente para reexecutar uma operação de máquina.
+
+A página global de containers ([ADR 0136](adr/0136-pagina-global-de-containers.md),
+[RN-495](#rn-495)) já era o lugar onde um HUMANO decide ciclo de vida de
+container — mas ela nem mostrava o projeto: a régua era "uma linha por projeto
+que já tem `project_containers`", e uma subida que falha ANTES de registrar não
+deixa linha nenhuma. A tela escondia exatamente o projeto para o qual ela
+precisava existir.
+
+**O TERCEIRO estado tem nome próprio, e não é `stopped`.** O read model passa a
+LEFT JOIN (era INNER) e `registrado` vira `null` para quem nunca provisionou —
+não é um valor novo de `ContainerLifecycleStatus` (`stopped` é um container que
+EXISTIU e parou), e não é "não observado" (que é sobre o daemon ter sido
+perguntado). A tela imprime **"nunca provisionado"** e a coluna Observado diz
+`sem_container_registrado`, o terceiro motivo de `naoVerificado` — os três não
+colapsam ([RN-088](#rn-088)/[RN-486](#rn-486)).
+
+**A lista alargou; o ORÇAMENTO não.** Perguntar o observado ao broker é chamada
+de rede por projeto, com teto de 20 por carregamento
+(`TETO_DE_VERIFICACOES_POR_CARGA`). Projeto sem `project_containers` não tem o
+que observar, então nunca é elegível e **nunca ocupa uma vaga**: num workspace
+com centenas de projetos vazios, quem tem container de verdade continua
+verificado exatamente como antes. E continuam sendo TRÊS consultas em lote,
+quantos projetos forem — nenhuma dentro de laço.
+
+**A ação ramifica por `execution_mode`, com a mesma régua do backend
+([RN-497](#rn-497)/[RN-503](#rn-503)):** `container` e `mounted` propõem
+`container_start` (broker, no servidor) e `runner` propõe
+`container_start_via_runner` (agente local, na máquina do usuário). Os DOIS
+payloads são diferentes de propósito e não se copiam: `container_start` carrega
+a ELEIÇÃO de imagem (imagem, rede, recursos), lida da decisão vigente do projeto
+no clique; `container_start_via_runner` tem schema **só com `rationale`**
+([RN-508](#rn-508)), porque ela sobe a imagem JÁ decidida e não elege nada.
+
+**A tela NÃO propõe o que já se sabe que vai falhar — e diz o motivo no lugar
+do botão.** Três recusas, cada uma com texto próprio, na ordem "estado do MUNDO
+antes da capacidade de quem olha" (assim um `viewer` ainda lê "falta decidir a
+imagem", e não só "você não pode"):
+
+1. **sem imagem decidida** — o portão da [RN-105](business-rules/autenticacao.md#rn-105), que vale nos TRÊS
+   modos desde a [RN-494](#rn-494); sem `artifact.project_image` não há o que
+   subir;
+2. **`runner` que nunca teve pasta confirmada** (`workspaceVerifiedAt` nulo,
+   [RN-423](#rn-423)) — nenhum agente local jamais conectou, então a ação
+   falharia com certeza. Mesma honestidade que a ferramenta do Infra Lead já
+   pratica ao recusar LOCALMENTE antes de propor ([RN-508](#rn-508));
+3. **papel abaixo de `maintainer`** — o mínimo é o do ENDPOINT
+   ([RN-102](business-rules/custo.md#rn-102)): os dois tipos pedem `maintainer` em `decide.ts`, e a
+   comparação sai de `roleAtLeast`, nunca de uma lista de papéis à mão. O que se
+   tira é o CONTROLE, nunca a INFORMAÇÃO ([ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)):
+   quem não pode continua vendo estado, imagem e recursos, e o motivo é dito UMA
+   vez em TEXTO — `title` em elemento `disabled` não abre no Chromium.
+
+**E o que a tela NÃO sabe, ela declara em vez de prometer.**
+`workspaceVerifiedAt` é registro de UMA confirmação e nunca batimento
+([RN-468](#rn-468)): não-nulo não prova agente local conectado AGORA, e a api
+não tem sinal de presença (quem sabe do agora é o canal Phoenix, no engine).
+Então a linha do `runner` oferece o botão **com ressalva escrita** — "se ele não
+estiver rodando agora, a ação falha ao ser aprovada" — em vez de uma bolinha
+verde que mentiria.
+
+**Nada de teto se mexeu.** Toda proposta desta tela é `proposed_action`,
+sempre com um HUMANO clicando, nunca um agente; `container_remove` continua no
+teto absoluto ([RN-418](#rn-418)) e `decide.ts` fica byte a byte. O papel lido
+é o do WORKSPACE, e a lacuna é declarada: o efetivo é
+`projectRole ?? workspaceRole` ([RN-471](#rn-471)), e buscar `project_members`
+por linha seria o N+1 de rede pelo qual esta página existe para não pagar —
+quem foi REBAIXADO num projeto ainda vê o botão e recebe 403, que é o defeito
+reparável (termina em toast), não o invisível.
+
+- **Onde:**
+  `apps/api/src/infrastructure/persistence/drizzle/containers-overview.repository.ts:96`
+  (o LEFT JOIN, o `ORDER BY` e `temImagemDecidida`);
+  `apps/api/src/application/ports/containers-overview-repository.port.ts:20`
+  (`executionMode`/`lifecycle` nulo/`temImagemDecidida`/`workspaceVerifiedAt`);
+  `apps/api/src/application/use-cases/containers/obter-visao-geral-de-containers.use-case.ts:29`
+  (`sem_container_registrado`) e `:86` (`elegivelParaVerificacao`, que é o que
+  mantém o orçamento intacto);
+  `apps/api/src/interfaces/http/containers/containers-overview.controller.ts:60`;
+  `apps/web/src/routes/containers-subida.ts:88` (`decidirSubida`, a regra
+  inteira, pura);
+  `apps/web/src/routes/ContainersPage.tsx:115` (os dois payloads)
+- **Teste:**
+  `apps/api/test/application/use-cases/containers/obter-visao-geral-de-containers.use-case.spec.ts`
+  (o terceiro estado com motivo próprio; 25 projetos vazios que NÃO empurram
+  para fora da verificação os 20 com container real);
+  `apps/api/test/infrastructure/persistence/drizzle/containers-overview.repository.spec.ts`
+  (projeto sem `project_containers` na lista; `temImagemDecidida`;
+  `container_start_via_runner` pendente; as TRÊS consultas que não crescem);
+  `apps/api/test/interfaces/http/containers/containers-overview.controller.spec.ts`
+  (o `registrado` aninhado e o `null` que sobrevive à conversão);
+  `apps/web/src/routes/containers-subida.test.ts` (a ramificação por modo, as
+  três recusas, a ressalva, a hierarquia de papel);
+  `apps/web/src/routes/ContainersPage.test.tsx` (o cenário REAL do `exp004`:
+  projeto `runner`, sem linha, imagem decidida, pasta confirmada → a ação
+  proposta é `container_start_via_runner` com payload só de `rationale`, e
+  `GET .../container` nem é chamado)
+- **ADR:** [0136](adr/0136-pagina-global-de-containers.md) (a página),
+  [0145](adr/0145-docker-pre-requisito-do-runner.md) (o tipo de ação),
+  [0133](adr/0133-infra-elege-imagem-do-roteamento.md) (o outro)
+- **Origem:** execução real do `exp004`, decisão do dono do produto. Fica
+  declarado e NÃO feito: a tela não sabe se há agente local conectado AGORA (não
+  existe sinal de presença na api), e o papel lido é o do workspace, não o
+  efetivo do projeto
+
 ---
 
 ## Quando dá errado
@@ -9471,6 +9584,11 @@ chave.
 | `systemctl`/`launchctl` indisponível durante o `service install` | o arquivo de unit **FICA**, e a resposta diz que não ativou, nomeando o comando pendente — apagá-lo viraria "não aconteceu nada", que é falso (RN-518) |
 | `service uninstall` sem unit instalada e sem `--dir` | responde NÃO INSTALADO e **não toca em arquivo nenhum**: sem o registro da unit, adivinhar pelo `cwd` apagaria a chave de outro projeto (RN-518) |
 | `service status` numa máquina sem o gerenciador de serviços no PATH | responde "instalado, e NÃO consegui perguntar" com código próprio — "não sei" nunca vira "parado" (RN-518) |
+| Projeto do workspace que NUNCA provisionou container, na página `/containers` | aparece na lista com `registrado: null` e o texto **"nunca provisionado"** — nunca `stopped`, nunca "não observado", e nunca gasta uma das 20 verificações do broker (RN-521) |
+| "Subir" clicado num projeto sem `artifact.project_image` decidido | o botão nem fica ativo: a tela DIZ que falta decidir a imagem, em texto, em vez de propor uma ação que já se sabe que termina em falha (RN-521/RN-105) |
+| "Subir" num projeto `runner` cujo `workspaceVerifiedAt` é nulo | botão inerte com motivo PRÓPRIO ("nenhum agente local jamais confirmou a pasta") — nunca colapsado com "sem imagem decidida" (RN-521) |
+| "Subir" num projeto `runner` com pasta confirmada mas runner possivelmente desligado | a tela OFERECE e escreve a ressalva: confirmação de pasta não é presença de agente (RN-468), e a ação falha ao ser aprovada se ele não estiver de pé (RN-521) |
+| Papel abaixo de `maintainer` na página `/containers` | controles inertes com o motivo dito UMA vez em texto; estado, imagem e recursos continuam VISÍVEIS (RN-521/RN-102, ADR 0064) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

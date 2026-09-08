@@ -10590,7 +10590,7 @@
     },
     "/workspaces/{workspaceId}/containers": {
       "get": {
-        "description": "One row per project with a `project_containers` row — a project that never provisioned a container is simply absent, not shown empty. The observed state is asked of the broker only for rows `provisioning`/`running`, and only up to a per-load budget — see `naoVerificado` on rows that were skipped, and ADR 0136 for the reasoning.",
+        "description": "One row per project of the workspace — since RN-521 a project that never provisioned a container is PRESENT with `registrado: null` instead of absent, because this page is the human path to start the first one. The observed state is asked of the broker only for rows `provisioning`/`running`, and only up to a per-load budget — see `naoVerificado` on rows that were skipped, and ADR 0136 for the reasoning.",
         "operationId": "ContainersOverviewController_list",
         "parameters": [
           {
@@ -10634,7 +10634,7 @@
             "bearer": []
           }
         ],
-        "summary": "Lists the container of every project in the workspace that already has one",
+        "summary": "Lists every project in the workspace and its container, if any",
         "tags": [
           "projects"
         ]
@@ -13936,43 +13936,36 @@
             "type": "string",
             "example": "exp002"
           },
-          "status": {
+          "executionMode": {
             "type": "string",
             "enum": [
-              "provisioning",
-              "running",
-              "stopped",
-              "failed",
-              "removed"
+              "container",
+              "mounted",
+              "runner"
             ],
-            "example": "running",
-            "description": "What was RECORDED (project_containers.status)."
+            "example": "runner",
+            "description": "Where this project's container comes up (RN-497/503). `container` and `mounted` go through the broker, on the server; `runner` goes through the local agent on the user's machine. It is what branches the start action between `container_start` and `container_start_via_runner`."
           },
-          "imageVersion": {
-            "type": "number",
-            "example": 1
+          "registrado": {
+            "nullable": true,
+            "description": "`null` means this project NEVER provisioned a container — a THIRD state, not a `status` value: it is neither `stopped` (a container that existed and stopped) nor \"could not be observed\" (which is about the daemon). Read `naoVerificado: \"sem_container_registrado\"` alongside it.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RegistroDeContainerResponseDto"
+              }
+            ]
           },
-          "imagem": {
+          "temImagemDecidida": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether ANY `artifact.project_image` exists for this project — the RN-105 gate, which since RN-494/ADR 0135 applies to all THREE modes. `false` means starting a container is impossible right now, and the page says so instead of proposing an action that is known to fail."
+          },
+          "workspaceVerifiedAt": {
             "type": "object",
             "nullable": true,
-            "example": "node:22-bookworm-slim",
-            "description": "The image FROZEN at `imageVersion`, resolved from the `artifact.project_image` event at that exact version — never the current one, which may have been revised since. `null` when that version's event could not be found."
-          },
-          "resources": {
-            "$ref": "#/components/schemas/RecursosDoContainerResponseDto"
-          },
-          "failureReason": {
-            "type": "object",
-            "nullable": true,
-            "example": null
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "statusChangedAt": {
-            "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "When a runner CONFIRMED the folder (RN-423) — only meaningful for `executionMode: \"runner\"`. It records ONE confirmation and is never a heartbeat (RN-468): non-null does NOT prove a local agent is connected now. What it does prove is the negative — `null` on a `runner` project means no runner ever connected."
           },
           "observado": {
             "nullable": true,
@@ -14004,15 +13997,16 @@
             "enum": [
               "fora_do_escopo_da_verificacao",
               "teto_de_verificacoes_atingido",
+              "sem_container_registrado",
               null
             ],
             "nullable": true,
             "example": null,
-            "description": "Non-null when this row was NOT asked of the broker this load — never confused with `naoObservado`, which means it WAS asked and failed. `fora_do_escopo_da_verificacao`: status is `stopped`/`failed`/`removed`, where daemon confirmation does not matter. `teto_de_verificacoes_atingido`: eligible, but the per-load broker call budget was already spent by other rows."
+            "description": "Non-null when this row was NOT asked of the broker this load — never confused with `naoObservado`, which means it WAS asked and failed. `fora_do_escopo_da_verificacao`: status is `stopped`/`failed`/`removed`, where daemon confirmation does not matter. `teto_de_verificacoes_atingido`: eligible, but the per-load broker call budget was already spent by other rows. `sem_container_registrado`: the project never provisioned one, so there is nothing to observe — and it never spends a call from the budget either."
           },
           "acaoPendente": {
             "nullable": true,
-            "description": "The pending `container_start`/`container_stop`/`container_remove` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab.",
+            "description": "The pending `container_start`/`container_stop`/`container_remove`/`container_start_via_runner` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab.",
             "type": "object",
             "allOf": [
               {
@@ -14025,13 +14019,10 @@
           "projectId",
           "projectName",
           "projectSlug",
-          "status",
-          "imageVersion",
-          "imagem",
-          "resources",
-          "failureReason",
-          "createdAt",
-          "statusChangedAt",
+          "executionMode",
+          "registrado",
+          "temImagemDecidida",
+          "workspaceVerifiedAt",
           "observado",
           "naoObservado",
           "detalheDaObservacao",
@@ -19838,6 +19829,58 @@
         "required": [
           "name",
           "publicKeyJwk"
+        ]
+      },
+      "RegistroDeContainerResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "provisioning",
+              "running",
+              "stopped",
+              "failed",
+              "removed"
+            ],
+            "example": "running",
+            "description": "What was RECORDED (project_containers.status)."
+          },
+          "imageVersion": {
+            "type": "number",
+            "example": 1
+          },
+          "imagem": {
+            "type": "object",
+            "nullable": true,
+            "example": "node:22-bookworm-slim",
+            "description": "The image FROZEN at `imageVersion`, resolved from the `artifact.project_image` event at that exact version — never the current one, which may have been revised since. `null` when that version's event could not be found."
+          },
+          "resources": {
+            "$ref": "#/components/schemas/RecursosDoContainerResponseDto"
+          },
+          "failureReason": {
+            "type": "object",
+            "nullable": true,
+            "example": null
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "statusChangedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "imageVersion",
+          "imagem",
+          "resources",
+          "failureReason",
+          "createdAt",
+          "statusChangedAt"
         ]
       },
       "ReindexProjectResponseDto": {
