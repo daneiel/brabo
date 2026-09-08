@@ -22,6 +22,18 @@ changes behavior by being edited in production: the registry DESCRIBES the
 gates, it doesn't apply them. It travels inside the api image; see the
 [runbook](../runbook.md#registro-de-gates).
 
+> **`up --wait` only proves what has a healthcheck.** In the development
+> compose, `api`, `engine` and `web` had none, so `docker compose up --wait`
+> reported them ready the moment the container started — before the process
+> was listening. That is how a container could die seconds later with the
+> command still reporting success. The three now carry the same check their
+> production images already declare in the Dockerfile (`/health` for api and
+> engine, which touches the database; `/` for the Vite server). The container
+> broker got its own in a separate change; `postgres` and `neo4j` always had
+> one. Nothing here is an environment variable — it is written down because
+> `--wait` is the thing scripts trust, and a service without a healthcheck
+> makes it lie.
+
 The defaults below were extracted from the code, not from prior
 documentation. The **when it fails** column is the part that saves time:
 almost every variable has a default that works in development and a specific
