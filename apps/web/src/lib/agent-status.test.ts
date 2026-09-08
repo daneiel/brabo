@@ -255,6 +255,77 @@ describe('deriveAgentRoster — status', () => {
       expect(statusOf(roster, 'dev-core')).toBe('ocioso');
     });
   });
+
+  describe('RN-502/ADR 0143 — esperar algo de fora não é trabalhar', () => {
+    // O cenário do `exp004`: cinco dev agents subiram, `try_claim/2` recusou
+    // por não haver container REGISTRADO como `running`, e cada um emitiu
+    // `dev.blocked_by_container` — e ficou HORAS assim, esperando um humano
+    // subir o container. O painel dizia `trabalhando` sobre exatamente quem
+    // precisava de atenção, porque o tipo não estava em `DEV_STATUS_EVENTS`.
+    it('dev.blocked_by_container deixa o dev aguardando, nunca trabalhando', () => {
+      const roster = deriveAgentRoster(
+        [
+          ev('dev.started', 'dev-core', { module: 'core' }),
+          ev('dev.blocked_by_container', 'dev-core', {
+            module: 'core',
+            reason: 'o projeto não tem container REGISTRADO como `running`',
+          }),
+        ],
+        moduleMap,
+        true,
+        [],
+      );
+      expect(statusOf(roster, 'dev-core')).not.toBe('trabalhando');
+      expect(statusOf(roster, 'dev-core')).toBe('aguardando');
+    });
+
+    // Mesmo caso semântico: o agente propôs e parou até um humano decidir.
+    // Aqui a lista de pendências (`pendingActionAgentIds`) pode nem ter
+    // chegado à tela ainda — o evento é a fonte que o painel já tem em mãos.
+    it('dev.awaiting_approval deixa o dev aguardando, nunca trabalhando', () => {
+      const roster = deriveAgentRoster(
+        [
+          ev('dev.working', 'dev-core', { taskId: 't1' }),
+          ev('dev.awaiting_approval', 'dev-core', { taskId: 't1', pendentes: 2 }),
+        ],
+        moduleMap,
+        true,
+        [],
+      );
+      expect(statusOf(roster, 'dev-core')).not.toBe('trabalhando');
+      expect(statusOf(roster, 'dev-core')).toBe('aguardando');
+    });
+
+    // `dev.error` era INVISÍVEL (nem na lista): o painel voltava ao
+    // `dev.working` anterior e dizia `trabalhando` sobre um agente que caiu
+    // em `:idle` por falha no claim (`AgentIo.claim_e_rodar/2`).
+    it('dev.error deixa o dev em falhou, nunca trabalhando', () => {
+      const roster = deriveAgentRoster(
+        [
+          ev('dev.working', 'dev-core', { taskId: 't1' }),
+          ev('dev.error', 'dev-core', { reason: '{:error, 503}' }),
+        ],
+        moduleMap,
+        true,
+        [],
+      );
+      expect(statusOf(roster, 'dev-core')).not.toBe('trabalhando');
+      expect(statusOf(roster, 'dev-core')).toBe('falhou');
+    });
+
+    it('o evento mais recente ainda manda — voltar a trabalhar apaga a espera', () => {
+      const roster = deriveAgentRoster(
+        [
+          ev('dev.blocked_by_container', 'dev-core', { module: 'core' }),
+          ev('dev.working', 'dev-core', { taskId: 't1' }),
+        ],
+        moduleMap,
+        true,
+        [],
+      );
+      expect(statusOf(roster, 'dev-core')).toBe('trabalhando');
+    });
+  });
 });
 
 describe('deriveAgentRoster — subagentes de área (Fase 8b/8c, no painel — Fase 8d)', () => {

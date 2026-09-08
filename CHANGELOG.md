@@ -36,6 +36,38 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   consultado) e `DEV_PENDING_TYPES` (é espera por ação humana, como
   `dev.idle_tripped` e `dev.awaiting_approval`).
 
+- **web**: o painel do time dizia **"trabalhando"** sobre dev agents que
+  estavam **parados esperando** — e sobre exatamente quem precisava de
+  atenção. `DEV_STATUS_EVENTS` (`apps/web/src/lib/agent-status.ts`) não
+  conhecia `dev.blocked_by_container`
+  (RN-502/[ADR 0143](docs/adr/0143-agentes-de-dev-so-depois-do-container.md))
+  nem `dev.awaiting_approval`, e os dois caíam no
+  `default: return 'trabalhando'` do `switch` de `devStatus`. É a **terceira**
+  instância da mesma deriva — o engine ganhou um tipo de evento e as cópias do
+  vocabulário ficaram para trás; as duas anteriores foram a lista do heartbeat
+  na api (acima) e o inventário gerado de `docs/reference/events.md`. No
+  `exp004`, cinco dev agents ficaram **horas** bloqueados esperando um humano
+  subir o container, com o painel dizendo que trabalhavam.
+
+  Os dois passam a valer **`aguardando`** — o mesmo estado que
+  `dev.awaiting_gate` já usava, porque é o mesmo caso: o agente não segue até
+  que algo **fora** dele aconteça (um gate terminar, uma aprovação sair, um
+  container subir). **Sem estado novo** em `AgentStatus`. Junto, a mesma
+  mentira em `dev.error`, que não estava em lista nenhuma e por isso era
+  invisível: o painel voltava ao `dev.working` anterior e dizia "trabalhando"
+  sobre um agente que caiu em `:idle` por falha de claim
+  (`AgentIo.claim_e_rodar/2`) — agora é `falhou`, concordando com os outros
+  emissores dele, que já são seguidos de `backlog.task_blocked`.
+
+  A correção estrutural é a lista **deixar de ser lista**: `DEV_STATUS_EVENTS`
+  vira **mapa** `tipo -> AgentStatus` e o `default` some. Numa lista, "estar
+  presente" e "ter um estado decidido" eram duas coisas separadas, e era no vão
+  entre elas que o defeito morava; no mapa a chave **é** a decisão. Esquecer um
+  tipo passa a torná-lo **invisível** (o painel mostra o evento conhecido
+  anterior, no limite `ocioso`), nunca "trabalhando". Zero RN nova: é a
+  [RN-470](docs/business-rules/custo.md#rn-470) — tela não colapsa dois estados
+  — voltando a ser cumprida.
+
 ### Testes
 
 - **ci**: nasce `scripts/ci/vocabulario-de-eventos-dev.spec.ts`, que compara o
@@ -62,6 +94,22 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `docs/reference/events.md` e este teste — dois regex respondendo "o que o
   engine emite?" é a mesma classe de defeito que ele pega. A saída de
   `pnpm docs:generate` fica byte a byte.
+
+- **ci**: o mesmo teste cruzado passa a cobrir o **web**, e não só a api — a
+  terceira instância da deriva (acima) mostrou que a api não era o único lugar
+  onde uma cópia do vocabulário `dev.*` envelhece calada. O desenho **não** é
+  idêntico ao da api, porque o caso não é: na api todo tipo tem de ser
+  conhecido (o heartbeat precisa ver o evento nem que seja para ignorá-lo), no
+  painel um tipo **pode** legitimamente não interessar. O que é inaceitável é
+  ficar de fora por **esquecimento**. Então a exigência é uma **decisão
+  explícita por tipo**, em um de dois lugares que se leem: `DEV_STATUS_EVENTS`
+  (o mapa `tipo -> AgentStatus`) ou `DEV_STATUS_EVENTS_FORA`
+  (`tipo -> motivo`, para o que o painel decide ignorar). O segundo está
+  **vazio** hoje, e essa é a resposta certa — existe para que a saída seja
+  declarar, nunca omitir. Como vazio ele não é exercitado por dado real
+  nenhum, a comparação foi isolada em `semDecisao` e provada com três casos
+  fabricados. A mensagem de falha nomeia o tipo, diz os dois lugares onde
+  decidir e cita o `exp004`, no mesmo tom da que já existia.
 
 ## v5.0.0 — 2026-09-05
 
