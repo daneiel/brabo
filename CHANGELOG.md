@@ -138,6 +138,68 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Correções
+
+- **api**: `container_start_via_runner` volta a poder subir container — ela
+  **nunca subiu nenhum**, desde que nasceu (RN-508,
+  [ADR 0145](docs/adr/0145-docker-pre-requisito-do-runner.md)). A ação
+  terminava `failed` em 100% das vezes com *"especificação de container
+  recusada em `projectId`: esperava texto não vazio, recebi undefined"*, e o
+  que se via numa execução real (`exp004`, modo `runner`, workspace confirmado
+  e runner conectado) era o **efeito** disso: nenhum dev agent reivindicava
+  tarefa e nada era escrito na pasta do usuário. Esse segundo bloqueio estava
+  CERTO — sem container REGISTRADO `running`, `RunnerReadiness` recusa (RN-507)
+  e `try_claim` recusa emitindo um `dev.blocked_by_container` por módulo
+  (RN-502, [ADR 0143](docs/adr/0143-agentes-de-dev-so-depois-do-container.md)). O
+  errado era o passo anterior.
+
+  **A causa: um campo.** `EspecificacaoDeContainerParaRunner` nasceu com NOVE
+  campos, sem `projectId`, e `ExecuteContainerStartViaRunnerUseCase` copiava
+  exatamente esses nove de `SpecDeContainer` — que sempre teve o `projectId`
+  ali, à mão. O engine repassa o mapa **opacamente**
+  (`ContainerCommandController.start/2` não lê campo nenhum), então nada se
+  perdia no meio: o runner entregava o que recebeu a `especificacaoValidada`
+  (`packages/docker-port`), que exige `projectId` como texto não vazio e recusa
+  a especificação inteira antes de qualquer `docker run`. O campo só vira o
+  rótulo `brabo.project.id` — barato de mandar, e a validação é dura de
+  propósito. Por contraste, o caminho do BROKER sempre funcionou porque ele
+  **busca** a spec na api (`GET /internal/projects/:id/container-spec`) e
+  recebe o `SpecDeContainer` inteiro; era por isso que só o modo `runner`
+  quebrava.
+
+  **Por que três suítes verdes não pegaram.** Cada elo testava a si mesmo com o
+  próprio fixture: o teste do caso de uso afirmava o objeto que ele mesmo
+  esperava, `apps/runner/src/index-handlers.spec.ts` montava um fixture de spec
+  **com** `projectId`, e o engine não olha o mapa. Ninguém exercitava a
+  CORRENTE — o objeto que a api de fato compõe, contra o validador que de fato
+  o recebe. O que passa a ser garantido é exatamente isso:
+  `apps/api/test/contract/especificacao-de-container-para-runner.contract.spec.ts`
+  roda o caso de uso REAL, captura o payload entregue ao `ApiToEngineClient` e
+  o atravessa pelo `especificacaoValidada` REAL, do jeito que
+  `tratarContainerStart` faz (acrescentando só a `raizDoProjeto`, que o runner
+  enche sozinho). Ele também trava o CONJUNTO de campos: `raizDoProjeto` é o
+  único que a api não manda, então a próxima divergência — campo novo de um
+  lado sem o outro — reprova em vez de virar uma segunda caçada.
+
+  O teste mora na suíte da api porque é o único lugar onde os dois lados
+  existem vivos ao mesmo tempo (`packages/docker-port` e `apps/runner` não
+  podem importar um caso de uso do NestJS, e inverter a dependência seria pior
+  que o defeito). O import é RELATIVO, nunca `@brabo/docker-port`: o invariante
+  de `test/api-nao-consome-docker-port.spec.ts` segue verde, e ele foi
+  **estendido** na mesma entrega para também reprovar um import relativo ao
+  pacote a partir de `src/` — que é o que de fato quebraria o boot em produção,
+  e que a busca por nome de pacote deixava passar.
+
+  Os irmãos foram conferidos e estão CERTOS: `container_stop`/
+  `container_remove` via runner mandam só `workspaceDirName`, e do outro lado
+  só `nomeDeWorkspaceValidado` é chamado — um campo pedido, um campo enviado.
+  E `projectId` era a única divergência: com ele, os dez campos da api mais a
+  `raizDoProjeto` do runner fecham exatamente a `EntradaDeEspecificacao`.
+
+  A prova ponta a ponta continua exigindo um humano (rodar o `brabo-runner`, a
+  Infra propor, alguém aprovar) — o que esta entrega garante é que o payload
+  para de ser recusado antes de chegar lá.
+
 ### Novidades
 
 - **runner**: o agente local vira **serviço de usuário** —
