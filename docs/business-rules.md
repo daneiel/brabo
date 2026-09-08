@@ -3608,7 +3608,8 @@ Lead/UX Designer/Staff/Infra). `Engine.Dev.DevAgentServer` (via
 `Engine.Dev.AgentIo`) nunca emite `agent.status` — usa vocabulário
 PRÓPRIO no event log da sessão: `dev.started`, `dev.working`,
 `dev.awaiting_gate`, `dev.awaiting_approval`, `dev.idle`,
-`dev.idle_tripped`, `dev.blocked`, `dev.error`. Uma sessão de execução
+`dev.idle_tripped`, `dev.blocked`, `dev.blocked_by_container`,
+`dev.error`. Uma sessão de execução
 com dev agent trabalhando OU travado sempre devolvia `pending: false`
 pelo terceiro sinal, porque nenhum `agent.status` existe para ele.
 
@@ -3631,16 +3632,45 @@ decidida à época. `awaiting_gate` era uma lacuna residual CONHECIDA; a
 [RN-412](#rn-412) a fechou, junto com `awaiting_approval` (por um
 argumento novo, não o original — ver RN-412).
 
+`dev.blocked_by_container` entrou DEPOIS, pelo mesmo argumento e por um
+achado igualmente real. O tipo nasceu com a
+[RN-502](#rn-502)/[ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md) — o dev
+agent não reivindica task antes de o projeto ter container `running`
+registrado — e a lista `DEV_EVENT_TYPES` do caso de uso não acompanhou.
+Como é a lista que o caso de uso CONSULTA, o evento ficou invisível: a
+api não o via nem para ignorá-lo. Na execução real do `exp004` (sessão
+`f782257e`) cinco dev agents emitiram `dev.started` e
+`dev.blocked_by_container` às 22:41:38, o engine fechou por
+`heartbeat_timeout` às 22:42:07 — 30 segundos cravados —, e eventos
+daquela sessão continuaram chegando 13 e 32 minutos depois. O último
+evento VISÍVEL por agente era `dev.started`, que está deliberadamente
+fora da régua. Os cinco esperavam um HUMANO subir o container, que é a
+definição de trabalho pendente que os outros sinais já usam.
+
+A afirmação de que a lista era "o vocabulário completo, confirmado por
+leitura direta do código do engine" era verdadeira quando foi escrita —
+e foi ela que envelheceu calada. O que a mantém verdadeira agora é
+MECANISMO: `scripts/ci/vocabulario-de-eventos-dev.spec.ts` extrai os
+tipos `dev.*` de `apps/engine/lib/**/*.ex` e reprova quando divergirem
+das duas listas do caso de uso, nomeando o tipo que falta. Ele COMPARA
+em vez de GERAR (o precedente de `agent-areas.ts`) porque só metade do
+par é derivável: `DEV_EVENT_TYPES` é mecânica, `DEV_PENDING_TYPES` é
+julgamento — quais estados significam "um humano precisa agir".
+
 - **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
 - **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
-  (dev agent `dev.working`/`dev.blocked`/`dev.idle_tripped` como último
-  evento → `pending: true`; `dev.idle` → `pending: false`; sessão sem
+  (dev agent `dev.working`/`dev.blocked`/`dev.idle_tripped`/`dev.blocked_by_container`
+  como último evento → `pending: true`, inclusive os cinco agentes do
+  cenário `exp004` e com `dev.blocked_by_container` vencendo um
+  `dev.idle` anterior; `dev.idle` → `pending: false`; sessão sem
   evento `dev.*` preserva o comportamento anterior; só o ÚLTIMO evento de
   cada agente importa; `dev-<modulo>-2` também segura; isolamento entre
-  sessões)
+  sessões) e `scripts/ci/vocabulario-de-eventos-dev.spec.ts` (o
+  vocabulário `dev.*` do engine × as duas listas da api)
 - **Origem:** achado por uso real — sessão de execução real com cinco dev
   agents em `idle_tripped` fechada pelo heartbeat enquanto o usuário
-  ainda desbloqueava tarefas manualmente
+  ainda desbloqueava tarefas manualmente; e, mais tarde, cinco dev agents
+  em `blocked_by_container` no `exp004`, pelo mesmo mecanismo
 
 ---
 

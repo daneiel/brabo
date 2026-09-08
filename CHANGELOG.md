@@ -2,6 +2,67 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Correções
+
+- **api**: a sessão parava de ser segurada quando os dev agents estavam
+  bloqueados **esperando container**. `GetSessionPendingWorkUseCase` é o que
+  impede o heartbeat de 30s (`session_heartbeat_timeout_ms`) de fechar uma
+  sessão com trabalho pendurado, e o **quarto sinal** dele (RN-411) enxerga
+  dev agents pelo vocabulário próprio `dev.*`. O engine emite **nove** tipos;
+  a lista `DEV_EVENT_TYPES` que o caso de uso **consulta** conhecia **oito** —
+  faltava `dev.blocked_by_container`, que nasceu depois dela
+  (RN-502/[ADR 0143](docs/adr/0143-agentes-de-dev-so-depois-do-container.md)).
+  Como é a lista consultada, o evento era **invisível**: a api não o via nem
+  para ignorá-lo.
+
+  **A prova, do event log de uma execução real** (projeto `exp004`, sessão
+  `f782257e`): 22:41:37 a sessão é criada; 22:41:38 chegam `execution.activated`,
+  cinco `dev.started` e cinco `dev.blocked_by_container`; **22:42:07** o engine
+  fecha por `heartbeat_timeout` — **30 segundos cravados**. Às **22:55:38** o
+  usuário aprova um merge e um `action.git_merge` é gravado, **13 minutos**
+  depois de a sessão constar como fechada; às **23:14:41** os cinco agentes
+  emitem `dev.blocked_by_container` de novo, **32 minutos** depois. O último
+  evento **visível** por agente era `dev.started`, que está deliberadamente
+  fora da régua de "pendente". Com o tipo na lista, os cinco teriam segurado a
+  sessão — eles esperavam um **humano** subir o container, que é a definição
+  de trabalho pendente que os outros quatro sinais já usam. O efeito colateral
+  é o que o próprio docblock do caso de uso antecipa: eventos continuam sendo
+  gravados numa sessão que o banco dá por encerrada, envenenando toda métrica
+  por sessão (duração, custo, "quantas terminaram bem").
+
+  O tipo entra nas **duas** listas — `DEV_EVENT_TYPES` (senão não é sequer
+  consultado) e `DEV_PENDING_TYPES` (é espera por ação humana, como
+  `dev.idle_tripped` e `dev.awaiting_approval`).
+
+### Testes
+
+- **ci**: nasce `scripts/ci/vocabulario-de-eventos-dev.spec.ts`, que compara o
+  vocabulário `dev.*` **realmente emitido** por `apps/engine/lib/**/*.ex` com
+  as duas listas do caso de uso e **reprova** quando divergirem, nomeando o
+  tipo que falta e dizendo o que fazer com ele. Só acrescentar a string
+  deixaria o décimo tipo repetir a história: o comentário da lista afirmava
+  ser "o vocabulário completo… confirmado por leitura direta do código do
+  engine" e estava **certo quando foi escrito** — foi essa afirmação que
+  envelheceu calada, e agora quem a mantém verdadeira é mecanismo.
+
+  Ele **compara** em vez de **gerar** (o precedente de `agent-areas.ts`)
+  porque só **metade** do par é derivável do engine: `DEV_EVENT_TYPES` é
+  mecânica, mas `DEV_PENDING_TYPES` é **julgamento** — quais estados
+  significam "um humano precisa agir" (`dev.idle` e `dev.started` estão fora
+  de propósito). Um gerador escreveria metade e teria de adivinhar a outra;
+  comparar reprova, nomeia e obriga a decisão humana, sem passo de build novo.
+  Ele vive em `scripts/ci/` porque lê **dois apps** como texto, e roda no CI
+  em `pnpm --filter @brabo/scripts test` (job `test-packages`).
+
+  Sem terceiro extrator: `ler`/`arquivos`/`grepTodos` e a varredura de tipos
+  de evento saem de `scripts/docs/generate.mjs` para
+  `scripts/docs/fontes.mjs`, agora compartilhada entre o inventário gerado de
+  `docs/reference/events.md` e este teste — dois regex respondendo "o que o
+  engine emite?" é a mesma classe de defeito que ele pega. A saída de
+  `pnpm docs:generate` fica byte a byte.
+
 ## v5.0.0 — 2026-09-05
 
 ### ⚠ Mudanças incompatíveis

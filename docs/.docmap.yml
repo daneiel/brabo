@@ -365,11 +365,18 @@ rules:
       # vira risco assumido, e isso não toca degrau, destino nem versão. A doc
       # dele é `cadeia-de-suprimentos-do-ci.md`, onde o risco está declarado.
       #
-      # O extglob EXCLUI os três pelo nome e continua casando com todo o resto
+      # `vocabulario-de-eventos-dev.spec.ts` é o QUARTO pelo mesmo critério: ele
+      # compara o vocabulário `dev.*` emitido pelo engine com as listas que a
+      # api consulta (RN-411), e mora aqui só porque lê DOIS apps como texto —
+      # `scripts/ci/` é onde vivem os testes que leem o repositório inteiro.
+      # Degrau, destino e versão de branch não aparecem nele; a doc dele é a
+      # própria RN-411 em `docs/business-rules.md`.
+      #
+      # O extglob EXCLUI os quatro pelo nome e continua casando com todo o resto
       # — inclusive com script de política que ainda não existe. Falha fechado:
       # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
       # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
-      - "scripts/ci/!(coverage-floor|actions-pinadas|auditoria-de-dependencias)*"
+      - "scripts/ci/!(coverage-floor|actions-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev)*"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
