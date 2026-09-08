@@ -102,6 +102,7 @@ aberto está na seção "Estado atual e aberto", logo abaixo.
 | FASE 28 (sessão 7) — a revogação deixa de ser cega, e alcança a conexão viva | Eram DUAS metades abertas do ponto 6 do ADR 0147. **Ninguém revoga o que não vê:** `RunnerDeviceKeysController` tinha `POST`/`DELETE` e listagem NENHUMA — nem a do próprio dono —, então chave órfã (RN-473) era inerte, invisível e permanente; entra `GET` (`developer`, molde do PAT), com a REVOGADA na lista (sumir com ela faria a tela afirmar que nunca existiu), `lastUsedAt` nulo como sinal da órfã e nunca a JWK. A visão de `maintainer` (RN-427) fica fora por DECISÃO e não omissão — aquela nasceu de segredo COMPARTILHADO circulando, e a privada de uma chave de dispositivo nunca sai do navegador. **E revogar só impedia ticket NOVO:** o runner conectado seguia executando comando aprovado com a chave revogada. Agora a api MANDA (`POST internal/projects/:id/runner/disconnect`) e o ENGINE alcança o pid que o `Registry` já entregava — o engine não lê a tabela de chaves, a api não fala com o canal. Derruba o TRANSPORTE e não só o canal (`RunnerSocket.id/1` deixa de ser `nil`; `Endpoint.broadcast(id, "disconnect", %{})`, o mecanismo documentado do Phoenix), senão o socket ficaria vivo e o cliente reentraria no tópico para sempre com um ticket já consumido. Alvo é `{projeto, usuário}` e NUNCA `{chave}`, por construção — `runner_socket_tickets` guarda `project_id`/`user_id`/`kind` e a identidade da credencial morre no `PatAuthGuard`; custo declarado: runner do MESMO usuário com PAT ou outra chave também cai e reconecta sozinho, o de OUTRO dono fica de pé e o desfecho diz isso. Derrubar nunca derruba a revogação (204 idempotente, falha do engine é LOG — régua da RN-479/RN-517), revoga antes de derrubar, e o projeto sai da LINHA e nunca da URL. Fecha PELA METADE a lacuna "não há tela onde revogá-la": tela nenhuma, declarado | RN-519/520, ADR 0147 ponto 6 |
 | A spec do runner ia sem `projectId`, e o caminho NUNCA subiu container | `container_start_via_runner` (RN-508, ADR 0145) terminava `failed` em 100% das vezes — *"especificação de container recusada em `projectId`: esperava texto não vazio, recebi undefined"* —, e numa execução real do `exp004` o que se via era o EFEITO: dez tasks de dev sem nenhum agente reivindicando. Esse bloqueio estava CERTO (RN-507 e RN-502/ADR 0143 recusam sem container `running` REGISTRADO); o errado era o passo anterior. `EspecificacaoDeContainerParaRunner` nasceu com NOVE campos e `especificacaoValidada` (`packages/docker-port`) sempre exigiu DEZ — o dado estava à mão em `SpecDeContainer.projectId` e só não era copiado; o engine repassa o mapa OPACAMENTE, então nada se perdia no meio. Por contraste o BROKER sempre funcionou porque ele BUSCA a spec na api e recebe o `SpecDeContainer` inteiro — era por isso que só o modo `runner` quebrava. Três suítes verdes não pegaram porque cada elo montava o próprio fixture: ninguém testava a CORRENTE. Entra ela — o payload que o caso de uso REAL compõe atravessando o validador REAL, e o CONJUNTO de campos travado (`raizDoProjeto` é o único que a api não manda) — na suíte da api, por import RELATIVO, o único lugar onde os dois lados existem vivos; o invariante `api-nao-consome-docker-port` segue verde e foi ESTENDIDO para reprovar import relativo a partir de `src/`. Irmãos conferidos e CERTOS: `container_stop`/`container_remove` mandam só `workspaceDirName`, que é tudo que `nomeDeWorkspaceValidado` pede | RN-508, ADR 0145 |
 | A sessão morria com dev agent bloqueado por container | O quarto sinal de trabalho pendente (RN-411) enxerga dev agents pelo vocabulário próprio `dev.*`, e o engine emite NOVE tipos onde `DEV_EVENT_TYPES` conhecia OITO — faltava `dev.blocked_by_container` (RN-502/ADR 0143), que nasceu depois da lista. Como é a lista que o caso de uso CONSULTA, o evento era invisível: a api não o via nem para IGNORÁ-LO. Prova do event log do `exp004`: cinco `dev.blocked_by_container` às 22:41:38, `heartbeat_timeout` às 22:42:07 (30s cravados), e eventos daquela sessão chegando 13 e 32 minutos DEPOIS — o que envenena toda métrica por sessão. O tipo entra nas DUAS listas. Zero RN nova: a regra (heartbeat mede inatividade da ABA, não do trabalho) já é a RN-411, e a prosa dela passa a descrever o código. O que impede o DÉCIMO tipo de repetir a história é mecanismo — `scripts/ci/vocabulario-de-eventos-dev.spec.ts` compara o vocabulário do engine com as listas da api e reprova nomeando o tipo; COMPARA e não gera (o molde de `agent-areas.ts`) porque só metade do par é derivável: `DEV_EVENT_TYPES` é mecânica, `DEV_PENDING_TYPES` é julgamento. Sem terceiro extrator: `scripts/docs/fontes.mjs` nasce compartilhada com o inventário gerado de `docs/reference/events.md` | RN-411, RN-502 |
+| O painel dizia "trabalhando" sobre quem estava parado | TERCEIRA instância da mesma deriva (as duas anteriores: a lista do heartbeat na api e o inventário gerado de `docs/reference/events.md`): `DEV_STATUS_EVENTS` (`apps/web/src/lib/agent-status.ts`) não conhecia `dev.blocked_by_container` (RN-502/ADR 0143) nem `dev.awaiting_approval`, e os dois caíam no `default: return 'trabalhando'` do `switch` de `devStatus`. No `exp004` cinco dev agents ficaram HORAS esperando um humano subir o container e o painel contava a história errada sobre exatamente quem precisava de atenção. Decisão do dono do produto: os DOIS são **`aguardando`**, o mesmo estado de `dev.awaiting_gate` — semanticamente é o mesmo caso, o agente não segue até que algo FORA dele aconteça (um gate terminar, uma aprovação sair, um container subir); SEM estado novo em `AgentStatus`. Junto, a mesma mentira em `dev.error`, que não estava na lista NENHUMA e por isso era invisível — o painel voltava ao `dev.working` anterior e dizia "trabalhando" sobre um agente que caiu em `:idle` por falha de claim; vira `falhou`, concordando com os outros emissores dele, que já são seguidos de `backlog.task_blocked`. A correção estrutural é a lista deixar de ser lista: `DEV_STATUS_EVENTS` vira MAPA `tipo -> AgentStatus`, e o `default` some — no mapa a chave É a decisão, e esquecer um tipo passa a torná-lo INVISÍVEL (cai no evento conhecido anterior, no limite `ocioso`), nunca "trabalhando". A quarta instância é fechada por MECANISMO: `scripts/ci/vocabulario-de-eventos-dev.spec.ts` ganha o cruzamento engine × WEB, que exige DECISÃO explícita por tipo — mapeado, ou declarado em `DEV_STATUS_EVENTS_FORA` (`tipo -> motivo`, vazio hoje) — porque, ao contrário da api, um tipo `dev.*` PODE legitimamente não interessar ao painel; o que não pode é ficar de fora por esquecimento. Zero RN nova: é a RN-470 (tela não colapsa dois estados) voltando a ser cumprida | RN-411, RN-470, RN-502 |
 | Subir container pela tela, nos três modos | Subir container tinha UM caminho — o Infra Lead, dentro de uma sessão, pela tool dele —, e quando ele falhava não havia como TENTAR DE NOVO: no `exp004` cinco dev agents ficaram horas em `dev.blocked_by_container` e a saída era abrir sessão nova pra conversar sobre uma operação de máquina. A `/containers` (ADR 0136) já era o lugar humano de decidir ciclo de vida, mas a régua "uma linha por projeto que já tem `project_containers`" escondia exatamente o projeto cuja PRIMEIRA subida falhou antes de registrar. Passa a LEFT JOIN e lista TODO projeto do workspace, com `registrado: null` como TERCEIRO estado nomeado ("nunca provisionado" — nem `stopped`, nem "não observado"; terceiro motivo `sem_container_registrado` na coluna Observado). A lista alargou e o ORÇAMENTO não: quem não tem container nunca é elegível e nunca ocupa uma das 20 vagas, e seguem TRÊS consultas em lote. A ação ramifica por `execution_mode` com a mesma régua do backend (RN-497/503) — `container`/`mounted` → `container_start` (broker), `runner` → `container_start_via_runner` (agente local) —, e os DOIS payloads são diferentes de propósito: o primeiro carrega a eleição de imagem, o segundo tem schema SÓ com `rationale` (RN-508). A tela não propõe o que já se sabe que falha: sem imagem decidida (RN-105 nos três modos), `runner` sem pasta jamais confirmada, ou papel abaixo de `maintainer` (`roleAtLeast`, RN-102) — botão inerte e o motivo dito em TEXTO, um por recusa, com estado/imagem/recursos ainda VISÍVEIS (ADR 0064). E o que a tela não sabe ela declara: `workspaceVerifiedAt` é UMA confirmação e nunca batimento (RN-468), então o `runner` ganha o botão COM ressalva escrita. Nenhum teto se mexeu | RN-521, ADR 0136 |
 
 ## Estado atual e aberto
@@ -245,17 +246,6 @@ daqui e o fechamento vai para o histórico.
   declarado, não corrigido (exigiria mudar assinatura de `deriveAgentRoster`)
 - Conversão de `execution_mode` nunca migra diff NÃO commitado — órfão no
   disco antigo (RN-447..450, ADR 0111)
-- `DEV_STATUS_EVENTS` (`apps/web/src/lib/agent-status.ts`) tem a MESMA
-  divergência que a RN-411 fechou na api, e ela segue ABERTA: a lista não
-  conhece `dev.blocked_by_container` nem `dev.awaiting_approval`, então um dev
-  agent parado esperando um humano subir o container cai no `default` do
-  `switch` (o último evento que ela enxerga é `dev.started`) e o painel diz
-  **"trabalhando"**. Achado ao corrigir a api e deliberadamente NÃO corrigido
-  junto: fechar exige escolher a que `AgentStatus` cada tipo mapeia
-  (`aguardando`? um estado novo?), e isso é decisão de produto sobre o
-  vocabulário da TELA, não a mesma linha de defeito do caso de uso. O teste
-  cruzado novo cobre só as listas da api — alargá-lo para o web reprovaria
-  hoje, por uma decisão que ninguém tomou
 - Mirror web de `SOLO_CONVERSATIONAL_AGENTS` sem teste cruzado com a api
   (pior caso: opção velha que o backend recusa com 400)
 - `ExecutionModeSection` (converter projeto existente para modo `runner`) é o
@@ -594,6 +584,36 @@ daqui e o fechamento vai para o histórico.
   esquecer não dá erro de build, dá 403 em runtime. Volume JÁ criado continua
   com o dono antigo: a correção vale para volume novo, e destravar um ambiente
   existente exige `docker volume rm` (ou um `chown` pontual como root).
+- `docker compose up --wait` só prova o que tem `healthcheck` — para serviço
+  sem um, ele espera "running" e segue em frente. Isso já custou duas vezes: o
+  broker morrendo em silêncio (corrigido com o healthcheck dele) e o
+  `scripts/dev/reset-total.sh` anunciando "reset completo" com a api em
+  `Exited (1)`. Os SEIS serviços do compose de DEV têm healthcheck agora, com
+  o MESMO teste que as imagens de produção já faziam por `HEALTHCHECK` no
+  Dockerfile (`/health` na api e no engine — toca o banco, que é a pergunta
+  certa para readiness; `/` no Vite do web). Serviço novo nasce com o dele, e
+  `start_period` de DEV é generoso de propósito: o CMD roda
+  `pnpm install`/`mix deps.get` antes de o processo escutar.
+- Script que apaga o banco PARA antes quem está conectado nele, e a lista é
+  `api` e `engine` — nenhum a mais. Os dois mantêm conexão viva com o Postgres
+  do compose (pool do Drizzle sobre `public`/`drizzle`; Ecto/Oban sobre
+  `engine`), e `DROP SCHEMA` embaixo deles MATA os processos — o engine morre
+  dentro do próprio drop, porque o `Rehydrator` consulta `engine.session_states`
+  — sem que nada os reerga depois. `web` não fala com banco, `neo4j` é outro
+  banco, o `broker` só fala HTTP com a api: parar de mais transforma um reset de
+  banco numa derrubada do ambiente. E script que AFIRMA um estado pergunta antes
+  de afirmar: `scripts/dev/reset-total.sh` bate em `/health` dos três e imprime
+  `ps` antes da frase final, que nomeia o que ficou de pé — e qualquer falha no
+  meio sai com o passo nomeado, nunca com a frase de sucesso.
+- `apps/api/src/db/seed.ts` é IDEMPOTENTE, e rodá-lo de novo é o caso normal
+  (o `bootstrap.sh` do k8s o chama com `BRABO_FORCE_SEED=1` contra um cluster
+  que pode já estar semeado, e quem vê o reset falhar tenta rodar só o seed).
+  Registro de demonstração novo entra REAPROVEITANDO o que já existe, nunca
+  com `create` puro — antes, workspace, projeto e sessão eram os três que não
+  reaproveitavam, e a segunda rodada escrevia metade e morria em
+  `duplicate key ... "workspaces_slug_unique"`. Sessão reencontrada NÃO é
+  reativada nem ganha os 5 eventos de novo: eles são append-only, e uma
+  timeline que existe para demonstrar cinco não pode crescer a cada reseed.
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   únicas exceções de push: tags (bot de release) e .release/gate.json
   (bot do gate).

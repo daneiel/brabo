@@ -3657,6 +3657,27 @@ em vez de GERAR (o precedente de `agent-areas.ts`) porque só metade do
 par é derivável: `DEV_EVENT_TYPES` é mecânica, `DEV_PENDING_TYPES` é
 julgamento — quais estados significam "um humano precisa agir".
 
+A MESMA deriva tinha uma terceira instância, no WEB, e o mecanismo
+passou a cobri-la. `DEV_STATUS_EVENTS`
+(`apps/web/src/lib/agent-status.ts`), que o painel do time consulta para
+dizer o estado de cada dev agent, também não conhecia
+`dev.blocked_by_container` nem `dev.awaiting_approval` — e ali a
+consequência não era invisibilidade, era MENTIRA: os dois caíam no
+`default: return 'trabalhando'` do `switch`, então no `exp004` o painel
+dizia que cinco dev agents parados havia HORAS, esperando um humano
+subir o container, estavam trabalhando. Os dois mapeiam para
+`aguardando`, o mesmo estado que `dev.awaiting_gate` já usava (o agente
+não segue até que algo FORA dele aconteça), sem estado novo em
+`AgentStatus`; `dev.error`, que não estava em lista nenhuma e por isso
+fazia o painel voltar ao `dev.working` anterior, mapeia para `falhou`.
+A lista deixou de ser lista: virou MAPA `tipo -> AgentStatus`, o que
+apaga o `default` e torna impossível acrescentar um tipo sem responder o
+que ele significa. E o teste cruzado ganhou o par engine × web, com uma
+exigência que a api não tem — DECISÃO explícita por tipo, mapeado OU
+declarado em `DEV_STATUS_EVENTS_FORA` (`tipo -> motivo`, vazio hoje) —,
+porque no painel um tipo `dev.*` PODE legitimamente não interessar; o
+que não pode é ficar de fora por esquecimento.
+
 - **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
 - **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
   (dev agent `dev.working`/`dev.blocked`/`dev.idle_tripped`/`dev.blocked_by_container`
@@ -3665,8 +3686,13 @@ julgamento — quais estados significam "um humano precisa agir".
   `dev.idle` anterior; `dev.idle` → `pending: false`; sessão sem
   evento `dev.*` preserva o comportamento anterior; só o ÚLTIMO evento de
   cada agente importa; `dev-<modulo>-2` também segura; isolamento entre
-  sessões) e `scripts/ci/vocabulario-de-eventos-dev.spec.ts` (o
-  vocabulário `dev.*` do engine × as duas listas da api)
+  sessões), `scripts/ci/vocabulario-de-eventos-dev.spec.ts` (o
+  vocabulário `dev.*` do engine × as duas listas da api E × o mapa do
+  painel, mais os três casos fabricados que provam a válvula
+  `DEV_STATUS_EVENTS_FORA`, que nenhum dado real exercita hoje) e
+  `apps/web/src/lib/agent-status.test.ts` (`dev.blocked_by_container` e
+  `dev.awaiting_approval` → `aguardando`, `dev.error` → `falhou`, nunca
+  `trabalhando`; e o evento mais recente continuando a mandar)
 - **Origem:** achado por uso real — sessão de execução real com cinco dev
   agents em `idle_tripped` fechada pelo heartbeat enquanto o usuário
   ainda desbloqueava tarefas manualmente; e, mais tarde, cinco dev agents

@@ -110,12 +110,12 @@ código num ambiente que já existe (por isso é o único com escolha por servi�
 
 | área | itens |
 |---|---|
-| **1. Docker** | `Deploy` → All · Api · Engine · Web — `Create` — `Destroy` |
+| **1. Docker** | `Deploy` → All · Api · Engine · Web — `Create` — `Destroy` — `Reset total` — `Reconfigurar Ollama` — `Base de projetos` |
 | **2. K8s** | `Deploy` → All — `Create` — `Destroy` |
-| **3. Database** | `Generate` — `Migrate` — `Delete` |
+| **3. Database** | `Generate` — `Migrate` — `Seed` — `Delete` |
 | **4. Test** | All · Api · Engine · Web · Smoke · Docs |
 
-Três coisas que o menu faz e vale saber:
+Quatro coisas que o menu faz e vale saber:
 
 - **`Docker › Destroy` preserva os volumes** (`down`, nunca `down -v`): destruir
   containers não é destruir dados.
@@ -127,6 +127,16 @@ Três coisas que o menu faz e vale saber:
   roda na primeira inicialização do volume, então um `DROP SCHEMA` puro faria a
   migração seguinte falhar. Como o engine divide o mesmo banco, o script avisa
   que recuperar exige `pnpm db:migrate` **e** `pnpm engine:migrate`.
+- **`Docker › Reset total` para a api e o engine antes de apagar** — esses
+  dois, e nenhum outro: são os que mantêm conexão viva com o banco, e um
+  `DROP SCHEMA` embaixo deles mata os processos sem que nada os reerga (o
+  engine morre dentro do próprio drop, porque o `Rehydrator` consulta uma
+  tabela que acabou de sumir). Depois de migrar ele sobe tudo de novo, espera
+  ficar saudável e semeia; no fim **pergunta** o `/health` da api e do engine e
+  o `/` do web antes de dizer qualquer coisa — se algum não responder, ele
+  nomeia e sai com código 1, em vez de anunciar sucesso. É a segunda tela que
+  pede confirmação (digitando `RESET`), e não remove volumes. Detalhes em
+  [`docs/runbook.md`](docs/runbook.md#reset-total).
 
 **Opções de linha de comando:**
 
