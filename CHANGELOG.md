@@ -6,6 +6,49 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine**: `assess_implementability` do Dev Lead passa a disparar o
+  **threat model de design** do appsec — o gatilho que `docs/fluxo.yml`
+  declarava como lacuna e já nomeava (RN-522).
+
+  `Engine.Gates.SecOpsAgentServer.run_design/2` (RN-360, ADR 0090) estava
+  implementado, testado e **sem chamador de produção nenhum**: a única menção
+  fora de teste era um comentário em `artifact_schemas.ex`, e o campo
+  `acionamento` do papel `appsec` dizia, com todas as letras, que o gatilho
+  natural era `assess_implementability` do Dev Lead — "fora do escopo desta
+  entrega". Passou a ser o escopo desta: `run_assessment/2` chama
+  `Engine.Gates.Dispatcher.run_appsec_design/2`, sexto callback do behaviour e
+  cópia estrutural de `run_qa_estrategia/3`, trocável em teste pelo mesmo
+  motivo dos cinco vizinhos.
+
+  Ele dispara **em paralelo** e **não bloqueia o parecer**. O ramo `:sem_plano`
+  fica byte a byte como era — já devolve erro pedindo ao modelo que chame de
+  novo (RN-163) —, e empilhar ali uma segunda espera faria o gate
+  `implementavel` depender de **duas** produções assíncronas em vez de uma,
+  queimando dois turnos do Dev Lead onde hoje se queima um. O threat model
+  chega a quem precisa pelo caminho que a RN-361 já definiu: handoff para
+  `arquiteto`, `dev-lead` e `infra`.
+
+  E dispara **uma vez só por story**. Como o modelo é instruído a rechamar
+  `assess_implementability`, sem guarda cada retentativa custaria outra rodada
+  de LLM do appsec e mais três handoffs sobre a mesma story: só dispara quando
+  não existe `artifact.threat_model` daquela `storyId` no histórico. A
+  pergunta é **existe**, não **qual** — o oposto do plano de teste, onde o mais
+  recente vence porque uma story pode ser reavaliada. O histórico é lido
+  **uma** vez por chamada e as duas perguntas saem da mesma lista (dois
+  `list_events/2` na mesma invocação seriam o amplificador que o ADR 0060
+  recusa, e este caminho é quente justamente pela retentativa); histórico
+  ilegível e args inválidos **não** disparam nada — ausência de resposta não é
+  prova de ausência de artefato, e a cláusula de fallback nem sabe qual é a
+  story.
+
+  O que **não** mudou: nenhuma rota HTTP nova (ninguém aciona o appsec direto),
+  nenhum teto tocado, `decide.ts` e `docs/gates.yml` intocados, e as mensagens
+  dos dois desfechos de `run_assessment/2` idênticas — em especial a de
+  `:sem_plano`, que sequer menciona o appsec: prometer ao modelo algo que ele
+  não vai receber ali é o defeito que a RN-163 fecha. Custo aceito e declarado:
+  uma chamada de LLM a mais por story avaliada, no mesmo calibre da
+  QA-estratégia que já rodava desse ponto.
+
 - **web,api**: a página `/containers` passa a listar **todo projeto do
   workspace**, tenha ele container registrado ou não, e vira o **caminho
   humano** de subir um container — ramificado por `execution_mode` (RN-521).

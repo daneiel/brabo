@@ -66,6 +66,26 @@ defmodule Engine.Agents.DevLeadTools do
     2. **Com plano** — monta o parecer (`storyId`/`parecer`/
        `justificativa`/o plano de teste embutido no payload, para o
        usuário decidir sem precisar abrir dois eventos) e propõe a ação.
+
+  ### O appsec dispara junto, e NÃO é pré-requisito (RN-522)
+
+  `Engine.Gates.SecOpsAgentServer.run_design/2` — o threat model STRIDE-lite
+  de DESIGN (appsec, RN-360, mesmo ADR 0090) — nasceu ACIONÁVEL e sem
+  chamador de produção nenhum: `docs/fluxo.yml` declarava a lacuna e já
+  nomeava ESTE ponto como o gatilho natural. É ele agora, por
+  `Engine.Gates.Dispatcher.run_appsec_design/2`.
+
+  Ele dispara em PARALELO, nas DUAS saídas acima, e o parecer NÃO espera por
+  ele. Fazer o parecer depender do threat model faria o gate `implementavel`
+  depender de DUAS produções assíncronas em vez de uma, e queimaria dois
+  turnos do Dev Lead onde hoje se queima um. O threat model chega a quem
+  precisa pelo caminho que a RN-361 já definiu — handoff para `arquiteto`,
+  `dev-lead` e `infra` —, não por este retorno.
+
+  A idempotência é obrigatória, e é o que `disparar_appsec_se_preciso/3`
+  guarda: o desfecho `:sem_plano` PEDE ao modelo que chame de novo, e sem a
+  guarda cada rechamada custaria mais uma rodada de LLM e mais três handoffs
+  sobre a mesma story.
   """
 
   alias Engine.Gates.Dispatcher
@@ -208,7 +228,9 @@ defmodule Engine.Agents.DevLeadTools do
           "pedindo para tentar de novo em instantes — não propõe decisão " <>
           "nenhuma nesse caso. Com o plano em mãos, propõe o parecer de " <>
           "implementabilidade: é uma decisão real, que o usuário aprova ou " <>
-          "recusa em Aprovações (gate `implementavel`).",
+          "recusa em Aprovações (gate `implementavel`). Nos dois casos, se a " <>
+          "story ainda não tem threat model, esta chamada também pede o de " <>
+          "AppSec — que corre em paralelo e não atrasa o parecer.",
       parameters: %{
         "type" => "object",
         "properties" => %{
@@ -234,17 +256,24 @@ defmodule Engine.Agents.DevLeadTools do
         state
       )
       when parecer in ["implementavel", "inviavel"] do
-    case buscar_plano_de_teste(state, story_id) do
-      {:ok, plano} ->
-        propor_parecer(state, story_id, parecer, justificativa, plano)
+    case EngineApiClient.list_events(state.project_id, state.session_id) do
+      {:ok, eventos} ->
+        # Em PARALELO, e sem que o parecer dependa disso — ver a seção
+        # "O appsec dispara junto" no moduledoc.
+        disparar_appsec_se_preciso(state, story_id, eventos)
 
-      :sem_plano ->
-        Dispatcher.run_qa_estrategia(state.project_id, state.session_id, story_id)
+        case plano_de_teste_mais_recente(eventos, story_id) do
+          {:ok, plano} ->
+            propor_parecer(state, story_id, parecer, justificativa, plano)
 
-        {:error,
-         "ainda não há plano de teste para essa story — pedi a avaliação de " <>
-           "QA-estratégia agora. Chame assess_implementability de novo em " <>
-           "instantes (o parecer só sai depois que o plano existir)."}
+          :sem_plano ->
+            Dispatcher.run_qa_estrategia(state.project_id, state.session_id, story_id)
+
+            {:error,
+             "ainda não há plano de teste para essa story — pedi a avaliação de " <>
+               "QA-estratégia agora. Chame assess_implementability de novo em " <>
+               "instantes (o parecer só sai depois que o plano existir)."}
+        end
 
       {:error, reason} ->
         {:error, "não consegui ler o histórico da sessão: #{inspect(reason)}"}
@@ -260,19 +289,20 @@ defmodule Engine.Agents.DevLeadTools do
   # que `Engine.Gates.QaEstrategiaAgent.run/4` emite `artifact.plano_de_teste`
   # (ver `qa_estrategia_agent.ex`, chamado com o mesmo `session_id`). O MAIS
   # RECENTE vence: o histórico é imutável, uma story pode ser reavaliada.
-  defp buscar_plano_de_teste(state, story_id) do
-    case EngineApiClient.list_events(state.project_id, state.session_id) do
-      {:ok, events} ->
-        events
-        |> Enum.filter(&plano_da_story?(&1, story_id))
-        |> List.last()
-        |> case do
-          nil -> :sem_plano
-          evento -> {:ok, Map.get(evento, "payload", %{})}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
+  #
+  # A leitura do histórico é UMA por chamada de `run_assessment/2` (o
+  # chamador acima), e as duas perguntas — "já há plano de teste?" e "já há
+  # threat model?" — são respondidas sobre a MESMA lista. Duas chamadas de
+  # `list_events/2` na mesma invocação seriam o amplificador de tráfego que
+  # o ADR 0060 recusa, ainda mais aqui: o modelo é instruído a tentar de
+  # novo, então este caminho é quente.
+  defp plano_de_teste_mais_recente(eventos, story_id) do
+    eventos
+    |> Enum.filter(&plano_da_story?(&1, story_id))
+    |> List.last()
+    |> case do
+      nil -> :sem_plano
+      evento -> {:ok, Map.get(evento, "payload", %{})}
     end
   end
 
@@ -280,6 +310,41 @@ defmodule Engine.Agents.DevLeadTools do
     do: Map.get(payload, "storyId") == story_id
 
   defp plano_da_story?(_evento, _story_id), do: false
+
+  # RN-522: o appsec (`Engine.Gates.SecOpsAgentServer.run_design/2`) era
+  # ACIONÁVEL e não tinha chamador de produção nenhum — `docs/fluxo.yml`
+  # declarava a lacuna e nomeava ESTE ponto como o gatilho natural.
+  #
+  # A guarda de idempotência não é zelo: o desfecho `:sem_plano` acima PEDE
+  # ao modelo que chame `assess_implementability` de novo, e sem ela cada
+  # rechamada dispararia outra rodada de LLM do appsec e mais três handoffs
+  # (RN-361) sobre a MESMA story. A pergunta aqui é EXISTE, não QUAL —
+  # diferente do plano de teste, onde o mais recente vence.
+  #
+  # Limite declarado: `artifact.threat_model` é emitido na sessão da STORY
+  # (`emit_threat_model/3` lê `story["sessionId"]`), enquanto esta leitura é
+  # da sessão do DEV LEAD. No caminho comum são a mesma sessão — o Dev Lead
+  # avalia stories do backlog que a própria sessão de execução criou. Não
+  # sendo, a guarda não enxerga o threat model e o appsec roda de novo:
+  # custo de uma rodada de LLM repetida, nunca dado errado (o artefato é
+  # append-only, e quem consome é o handoff). Fechar isso exigiria a api
+  # aceitar uma busca de artefato por story ATRAVÉS de sessões, que hoje não
+  # existe — fora do escopo desta entrega.
+  defp disparar_appsec_se_preciso(state, story_id, eventos) do
+    unless Enum.any?(eventos, &threat_model_da_story?(&1, story_id)) do
+      Dispatcher.run_appsec_design(state.project_id, story_id)
+    end
+
+    :ok
+  end
+
+  defp threat_model_da_story?(
+         %{"type" => "artifact.threat_model", "payload" => payload},
+         story_id
+       ),
+       do: Map.get(payload, "storyId") == story_id
+
+  defp threat_model_da_story?(_evento, _story_id), do: false
 
   defp propor_parecer(state, story_id, parecer, justificativa, plano) do
     actor = %{kind: "agent", id: "dev-lead"}

@@ -200,11 +200,18 @@ camada_seguranca:
       - { artefato: threat-model, destino: [arquiteto, dev-lead, infra] }     # RN-360
     entregaveis_alvo: [politica-de-supply-chain]   # herdado do secops hoje (SBOM/dependabot), sem mecanismo novo
     acionamento: >
-      lacuna — SecOpsAgentServer.run_design/2 existe e é ACIONÁVEL (qualquer
-      chamador dentro do engine, por project_id+story_id), mas nada aciona
-      sozinho ainda — nenhuma rota HTTP nem tool de outro agente chama. O
-      gatilho natural é assess_implementability do Dev Lead (frente
-      qa-estrategia, gate implementavel), fora do escopo desta entrega.
+      assess_implementability do Dev Lead (gate implementavel) — o gatilho
+      natural que esta linha declarava como lacuna, agora implementado
+      (RN-522). Ao avaliar uma story, run_assessment/2
+      (apps/engine/lib/engine/agents/dev_lead_tools.ex) chama
+      Engine.Gates.Dispatcher.run_appsec_design/2, que sobe o
+      SecOpsAgentServer do projeto e faz run_design/2. Dispara em PARALELO,
+      nas DUAS saídas do parecer, e NUNCA bloqueia: o parecer de
+      implementabilidade não espera pelo threat model. Idempotente — só
+      dispara para story que ainda não tem artifact.threat_model, senão
+      cada retentativa do modelo custaria outra rodada de LLM e mais três
+      handoffs (RN-361). Segue sem rota HTTP: nenhum humano aciona o appsec
+      direto, por decisão.
 
   - id: secops
     papel_de_mercado: SecOps (veredito na PR)

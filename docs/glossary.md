@@ -245,6 +245,16 @@ deliverable separate from the PR verdict): it produces the **test plan**
 before the dev agent writes any code. Never suspends — none of its tools
 go through the action pipeline.
 
+**AppSec** — the `secops` in a second MOMENT, the same shape QA-strategy has
+over `qa-lead`: the SAME process (`SecOpsAgentServer.run_design/2`) produces a
+STRIDE-lite **threat model** over a story's DESIGN — no worktree, no
+`task_id`, before any code or PR exists. It never approves or rejects
+anything; it ends by emitting `artifact.threat_model` and handing it off to
+the architect, the Dev Lead and Infra. Triggered by the Dev Lead's
+`assess_implementability`, in parallel, once per story
+([RN-360](business-rules.md#rn-360), [RN-522](business-rules.md#rn-522),
+[ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
+
 ---
 
 ## Backlog and architecture
