@@ -9647,6 +9647,124 @@ só o léxico é conhecível impediria consentir uma base antes de ela existir).
   `workspace_create`/`workspace_create_result` e a capacidade `workspace`
   (pontos 3 a 6 do ADR) — a base existe e é validada, mas nada ainda a
   CONSOME para criar pasta; e o `install.sh`, que é quem vai gravar o arquivo
+## O backup cobre os DOIS volumes que são fonte de verdade, e roda sem cluster (RN-528)
+
+### RN-528 — `git_local_repos` entra no backup, o destino pode ser disco, e o restore de compose reusa as MESMAS três validações {#rn-528}
+
+O backup cobria **um** banco e rodava **num** lugar. Três consequências, e a
+terceira é a que custa código: `make test-restore` exige `kubectl`, um cluster e
+o CronJob `brabo-backup` no namespace, e `docker-compose.prod.yml` não tinha
+serviço `backup` nenhum — a imagem era construída pelo bake e usada só no k8s.
+Migrar uma instalação por compose não tinha caminho **provado**.
+
+**Classificar antes de copiar.** O movimento fácil seria "fazer backup de todos
+os volumes", e ele é errado: dos sete, `neo4j_data` e `project_workspaces` são
+DERIVADOS, `ollama_data` é re-obtenível e `brabo_projects_base` é do usuário.
+Copiá-los dá impressão de cobertura sem acrescentar recuperação. Fonte de
+verdade são DOIS: `pgdata` — que já vinha, como dump lógico e nunca como cópia
+do diretório de dados de um Postgres em execução — e **`git_local_repos`**, que
+**nenhum backup cobria**. Um projeto com provider `local` guarda o repositório
+*bare* ali dentro, e ele NÃO é reconstruível do Postgres: o event log guarda a
+narrativa, não os objetos do git. A prosa do runbook dizia o contrário ("the
+real repositories live in GitHub/GitLab") e é essa frase que explica como o
+volume passou anos sem cobertura — ela vale para `github`/`gitlab`, e para
+`local` não há upstream nenhum.
+
+**A garantia do arquivo dos repos é declarada, e é menor do que "snapshot".**
+Nada é quiesced. O que se garante é consistência POR REFERÊNCIA — o git escreve
+os objetos antes de mover a ref, e troca a ref por rename atômico, então um
+`tar` que cruza um `git push` pega o valor velho ou o novo, nunca metade de um.
+O que NÃO se garante é instante global (o `tar` percorre a árvore ao longo de um
+período) nem conectividade dos objetos (a imagem não tem git, de propósito). E
+um `gc` concorrente apagando packfile vira FALHA e não arquivo parcial: o status
+do `tar` é capturado num arquivo, porque em POSIX `sh` o status de um cano é o
+do último comando — sem isso o arquivo incompleto se anunciaria como bom, e
+backup que mente é pior do que backup que falha, porque só o segundo vira
+alerta. `*.lock` fica de fora: restaurar um lock órfão produz repositório em que
+todo `git` recusa operar.
+
+**Destino em disco, S3 opcional.** As cinco variáveis de S3 deixam de ser
+obrigatórias e passam a ser o que já eram na prática — a configuração de UM dos
+destinos. `BACKUP_DIR` definida escolhe disco; ausente, S3, que é como o CronJob
+do k8s continua rodando sem uma linha de mudança. A inferência (em vez de uma
+variável de destino obrigatória) é o que mantém aquele caminho intacto: um
+destino explícito quebraria o CronJob no dia do deploy, não no do commit. Quatro
+prefixos e não dois (`daily/`, `weekly/`, `git-daily/`, `git-weekly/`) porque a
+retenção é por CONTAGEM: dois tipos de arquivo sob um prefixo fariam "manter 7"
+significar três backups e meio.
+
+**O restore de compose muda o invólucro, nunca o julgamento.**
+`test-restore-compose.sh` dispara um backup REAL pela mesma imagem e o mesmo
+comando de produção, e chama o MESMO `brabo-restore`, com as MESMAS três
+validações (lista de tabelas contra a origem, contagem das críticas na janela do
+backup, continuidade densa da `seq` de `session_events`).
+`deploy/k8s/test-restore.sh` fica **intacto** — unificá-los faria o caminho de
+compose depender de `kubectl`, que é a dependência que ele existe para não ter.
+E `restore.sh` continua sem tocar a database de ORIGEM, propriedade que não se
+negocia por conveniência de migração. O passo que só o compose pode cobrar é o
+terceiro: verificar o arquivo dos repos, porque no k8s aquele volume nem é
+montado no pod (pular é correto) e sob compose ele é (pular seria falso verde).
+
+**Restaurar os repos é comando IRMÃO, não fase do outro** — são dois artefatos
+com dois julgamentos, e juntá-los faria falha de git reprovar a validação do
+event log. Ele verifica por default e só escreve com `--restaurar`; recusa
+extrair por cima de repos existentes (a mistura de dois estados não levanta erro
+nenhum e só aparece num `fetch` com história errada); e — achado da execução
+real — recusa ANTES do `tar` quando o volume não aceita escrita, nomeando
+`--user 0:0`. `git_local_repos` é compartilhado por três imagens com uids
+diferentes e carrega o dono de quem o montou primeiro (medido: `1000:1000`,
+modo 0755) enquanto esta imagem roda como uid 70. Quando a extração roda como
+root, o que sai é devolvido ao dono do DIRETÓRIO e nunca deixado como root:
+senão o volume voltaria íntegro e inútil, com api e engine sem conseguir
+escrever no que acabou de ser restaurado.
+
+**Neo4j recebe reprojeção, não backup.** Restaurar uma projeção possivelmente
+velha ao lado de um Postgres restaurado noutro instante dá dois estados
+derivados de momentos diferentes, sem nada que os concilie. A reprojeção **não
+foi construída aqui** (é o BRB-018): até existir, instalação migrada nasce com
+o grafo VAZIO — degradação conhecida e nomeada, não perda de dado, porque o RAG
+vive no pgvector e vem no dump.
+
+- **Onde:** `docker/backup/lib.sh:28` (`destino_tipo`, a inferência que mantém o
+  CronJob intacto), `:65` (`destino_esperar` perguntando por ESCRITA e não por
+  existência), `:105` (`destino_enviar`, escrita em `.parcial` e rename),
+  `:181` (a garantia dos bare repos, escrita junto do código que a produz),
+  `:221` (`git_arquivar`, o status do `tar` num arquivo), `:259`
+  (`git_restaurar`, a devolução do dono) e `:273` (`git_raiz_gravavel`);
+  `docker/backup/backup.sh:31` (`destino_preparar` — as cinco variáveis de S3
+  deixando de ser obrigatórias), `:149` (os três desfechos do volume de repos,
+  sem colapsar "não montado" com "vazio"), `:170` (a conferência do status do
+  `tar`) e `:220` (a poda dos quatro prefixos);
+  `docker/backup/restore.sh:28` (o mesmo destino do backup) e `:120`, `:184`,
+  `:215` (as três validações e o veredito, sem uma linha de mudança);
+  `docker/backup/restore-git.sh:43` (verificar como default), `:109` (a recusa
+  de extrair por cima) e `:123` (a recusa por escrita, com o conserto nomeado);
+  `docker/backup/test-restore-compose.sh:60` (o `--profile` no `config` e não
+  no `run`);
+  `docker/docker-compose.prod.yml:392` (o serviço `backup`, sob `profiles` e
+  `restart: "no"`) e `:550` (o volume que NÃO entra na classificação dos sete);
+  `docker/backup/Dockerfile.prod:80` (o `/backups` criado e `chown`-ado ANTES
+  do `USER`);
+  `Makefile:54` (`test-restore-compose`)
+- **Teste:** `scripts/ci/backup-lib.spec.ts` — as funções num `sh` de verdade,
+  contra um diretório de verdade: as cinco operações do destino em disco; o
+  objeto ausente medindo 0; a escrita atômica e o `.parcial` que a listagem
+  ignora; os prefixos irmãos que não se misturam; o destino que existe e NÃO
+  aceita escrita (caso de falha); "não montado" × "montado e vazio"; o arquivo
+  dos repos com status 0 e conteúdo relido; `*.lock` e `objects/tmp_*` fora; o
+  ciclo arquivar→restaurar devolvendo byte a byte; a recusa de restaurar onde
+  não se pode escrever; e o tar truncado que reprova ao ser LIDO, nunca pelo
+  tamanho
+- **ADR:** [0152](adr/0152-backup-de-volumes-contra-compose.md)
+- **Origem:** FASE 29, sessão 5. Exercitado de verdade contra o compose de
+  desenvolvimento com dados reais (55 tabelas, 422 eventos, os bare repos de
+  `exp001` e `exp004`), incluindo a restauração num volume novo conferida com
+  `git fsck` — o registro está no `docs/runbook.md`, seção "Last verified run —
+  compose, disk destination". Fica declarado e NÃO feito: o caminho **S3** do
+  adaptador não tem cobertura automatizada (exigiria um endpoint), e continua
+  sendo o mesmo comando `aws` de antes; a reprojeção do Neo4j é o BRB-018; e
+  nada aqui agenda o backup num compose — quem o dispara é um humano ou o
+  instalador (sessão 6)
 
 ---
 
@@ -9963,6 +10081,13 @@ seria um `hash_divergente` que pareceria adulteração.
 - **Origem:** FASE 29, sessão 3. [ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md),
   o terceiro consumidor da tabela da decisão 3 — pela METADE que a api pode
   provar hoje, com a outra metade nomeada em vez de fingida
+| `BACKUP_DIR` aponta para um diretório que existe e NÃO aceita escrita | o backup recusa ANTES do `pg_dump`, dizendo que é ESCRITA — um destino read-only passaria num teste de existência e falharia depois, com o diagnóstico apontando para o lugar errado (RN-528) |
+| `git gc` concorrente apaga um packfile no meio do `tar` dos bare repos | a execução vira **`failed`** em `backup_runs`, com o status do `tar` nomeado — nunca um arquivo parcial que se anuncia como bom, porque só a falha vira alerta (RN-528) |
+| Volume `git_local_repos` não montado no container de backup (o CronJob do k8s) | o passo é **PULADO e dito no log** — e "não montado" nunca é colapsado com "montado e vazio", que é estado normal de instalação sem projeto `local` (RN-528) |
+| Há bare repos no volume e NENHUM arquivo no prefixo `git-daily/` | `brabo-restore-git` **reprova** dizendo que este volume está sem cobertura — ausente-e-vazio é outro desfecho, e sai com sucesso (RN-528) |
+| Arquivo dos bare repos truncado | reprova ao ser **LIDO** (`tar -tzf`), nunca pelo tamanho: um tar cortado tem bytes de sobra. É o `pg_restore --list` do lado do git (RN-528) |
+| `brabo-restore-git --restaurar` num volume que já tem bare repos | recusado: sobrepor dois estados de repositório não levanta erro nenhum e só aparece num `fetch` com história errada. `RESTORE_GIT_FORCE=1` para quem quer mesmo (RN-528) |
+| `brabo-restore-git --restaurar` sem poder escrever no volume (uid 70 × dono da api) | recusa **ANTES** do `tar`, nomeando `--user 0:0` — descobrir no meio da extração deixaria o volume pela metade. E o que é extraído como root volta para o dono do DIRETÓRIO (RN-528) |
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

@@ -113,6 +113,70 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   par `workspace_create`/`workspace_create_result` e a capacidade `workspace`
   (pontos 3 a 6 do ADR) — a base existe e é validada, mas nada ainda a consome
   para criar pasta.
+- **docker**: o backup passa a cobrir **os dois** volumes que são fonte de
+  verdade, aceita destino em **disco** e ganha um restore que roda **contra
+  compose**, sem cluster (RN-528).
+
+  O achado é `git_local_repos`: um projeto com provider `local` guarda o
+  repositório *bare* ali dentro, e **nenhum backup o cobria** — em ambiente
+  nenhum. Ele não é reconstruível a partir do Postgres, porque o event log
+  guarda a narrativa e não os objetos do git; perder o volume é perder o código
+  que os agentes produziram. A prosa do `docs/runbook.md` afirmava o contrário
+  ("the real repositories live in GitHub/GitLab"), e é essa frase que explica
+  como o volume passou anos sem cobertura: ela vale para `github`/`gitlab`, e
+  para `local` não existe upstream nenhum.
+
+  O movimento fácil seria copiar os sete volumes, e ele é errado
+  ([ADR 0152](docs/adr/0152-backup-de-volumes-contra-compose.md), decisão 1):
+  `neo4j_data` e `project_workspaces` são DERIVADOS, `ollama_data` é
+  re-obtenível e `brabo_projects_base` é do usuário — copiá-los dá impressão de
+  cobertura sem acrescentar recuperação. Fonte de verdade são dois: `pgdata`,
+  que continua como dump lógico e nunca como cópia do diretório de dados de um
+  Postgres em execução, e `git_local_repos`, que entra agora.
+
+  A garantia do arquivo dos repos é **declarada e menor do que "snapshot"**:
+  consistência por REFERÊNCIA (o git escreve os objetos antes de mover a ref, e
+  troca a ref por rename atômico), sem instante global e sem `git fsck` — a
+  imagem não tem git, de propósito. Um `gc` concorrente vira **falha** e não
+  arquivo parcial, porque o status do `tar` é capturado num arquivo: em POSIX
+  `sh` o status de um cano é o do último comando, e um arquivo incompleto que se
+  anuncia como bom é pior do que uma execução falha, que ao menos vira linha
+  `failed` em `backup_runs` e alerta.
+
+  As cinco variáveis de S3 deixam de ser obrigatórias e viram o que já eram na
+  prática — a configuração de UM dos destinos. Numa instalação de máquina única,
+  exigir um bucket para poder migrar é exigir infraestrutura que o instalador
+  não pede. A escolha é `BACKUP_DIR`; ausente, o destino continua sendo S3, que
+  é como o CronJob do k8s segue rodando sem uma linha de mudança.
+
+  `make test-restore-compose` é o `make test-restore` de quem não tem cluster:
+  dispara um backup REAL pela mesma imagem e o mesmo comando de produção e chama
+  o MESMO `brabo-restore`, com as MESMAS três validações. Muda o invólucro,
+  nunca o julgamento — e `deploy/k8s/test-restore.sh` fica **intacto**, porque
+  unificá-los faria o caminho de compose depender de `kubectl`. Nasce também o
+  serviço `backup` no `docker-compose.prod.yml` (sob `profiles`, `restart:
+  "no"`), que nunca tinha existido ali.
+
+  Restaurar os repos é comando **irmão** (`brabo-restore-git`) e não fase do
+  outro: são dois artefatos com dois julgamentos, e juntá-los faria uma falha de
+  git reprovar a validação do event log. Ele verifica por default, só escreve
+  com `--restaurar`, e recusa extrair por cima de repos existentes.
+
+  Rodando de verdade apareceu um defeito que a leitura não daria:
+  `git_local_repos` é compartilhado por três imagens com uids diferentes e
+  carrega o dono de quem o montou primeiro (medido: `1000:1000`, modo 0755),
+  enquanto a imagem de backup roda como uid 70 — a extração morria no meio com
+  `Permission denied`, deixando o volume pela metade. Agora a recusa vem ANTES
+  do `tar`, nomeando `--user 0:0`, e o que é extraído como root é devolvido ao
+  dono do DIRETÓRIO: sem isso o volume voltaria íntegro e inútil, com api e
+  engine sem conseguir escrever no que acabou de ser restaurado.
+
+  O Neo4j recebe **reprojeção, não backup** — restaurar uma projeção velha ao
+  lado de um Postgres restaurado noutro instante dá dois estados derivados de
+  momentos diferentes, sem nada que os concilie. A reprojeção não é construída
+  aqui (é o `BRB-018`): até existir, instalação migrada nasce com o grafo
+  **vazio**, degradação conhecida e nomeada, não perda de dado — o RAG vive no
+  pgvector e vem no dump.
 
 - **web,api**: a página `/containers` passa a listar **todo projeto do
   workspace**, tenha ele container registrado ou não, e vira o **caminho

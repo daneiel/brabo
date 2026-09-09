@@ -799,10 +799,16 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          # `install.sh` entra aqui na FASE 29 pelo motivo mais forte da lista:
-          # ele é o único destes que roda na máquina de TERCEIROS, e um erro
-          # de shell nele aparece na instalação de outra pessoa.
-          shellcheck -S warning deploy/k8s/*.sh docker/smoke.sh install.sh
+          # Dois alvos entraram na FASE 29, e por motivos diferentes:
+          #
+          #   `install.sh` é o único destes que roda na máquina de TERCEIROS —
+          #   um erro de shell nele aparece na instalação de outra pessoa.
+          #
+          #   `docker/backup/*.sh` decide se um backup RESTAURA, e o modo de
+          #   falha desses arquivos é silencioso (variável não citada, status
+          #   de pipeline perdido). Passam limpo hoje; o passo entra para que
+          #   continuem passando.
+          shellcheck -S warning deploy/k8s/*.sh docker/smoke.sh install.sh docker/backup/*.sh
 
   images:
     name: Build, scan e smoke das imagens de produção

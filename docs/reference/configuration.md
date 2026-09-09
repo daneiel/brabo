@@ -456,18 +456,37 @@ inlines it into `import.meta.env` → `runtime-config.ts` reads it →
 
 ## Backup
 
-Consumed by the CronJob, not by the apps. Details in
-[Restore](../runbook.md#restore).
+Consumed by the backup image, not by the apps — as a CronJob on Kubernetes and
+as `docker compose run --rm backup …` on a compose install. Details in
+[Restore](../runbook.md#restore); the reasoning is
+[ADR 0152](../adr/0152-backup-de-volumes-contra-compose.md).
+
+**The destination is one of two, and the choice is `BACKUP_DIR`.** Set it and
+the backup goes to disk; leave it empty and it goes to S3, which is what the
+Kubernetes CronJob does. The five `BACKUP_S3_*` variables stopped being
+unconditionally required: they are the configuration of *one* destination, and
+demanding a bucket before you can migrate demands infrastructure a single-machine
+install never asked for.
 
 | variable | default | note |
 |---|---|---|
-| `BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET` | — | S3-compatible destination |
+| `BACKUP_DIR` | — (S3) | destination **directory**. Set ⇒ disk; empty ⇒ S3. In the compose service it defaults to `/backups` |
+| `BRABO_BACKUP_HOST_DIR` | `backup_local` (named volume) | host path mounted at `/backups`. The named-volume default verifies a backup; it is the **wrong** destination to migrate with, because `docker compose down -v` deletes it along with what it was meant to save |
+| `BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET` | — | S3-compatible destination; required only when `BACKUP_DIR` is empty |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | — | bucket credential |
 | `BACKUP_KEEP_DAILY` | `7` | retention by **count**, not by age |
 | `BACKUP_KEEP_WEEKLY` | `4` | — |
+| `GIT_REPOS_DIR` | `/data/git-repos` | the bare repos of `local`-provider projects. Absent ⇒ the step is **skipped and said so** (the Kubernetes CronJob does not mount this volume) |
 | `RESTORE_DB` | — | name of the restore's destination database |
 | `RESTORE_PREFIX` | `daily/` | `weekly/` to restore from a weekly copy |
+| `RESTORE_GIT_PREFIX` | `git-daily/` | `git-weekly/` for the weekly copy of the bare repos |
+| `RESTORE_GIT_FORCE` | — | `1` allows extracting **over** existing bare repos. Off by default: overlaying two repository states produces a mix that no `git` complains about |
 | `RESTORE_ADMIN_URL` | — | connection with `CREATEDB` permission; in production it's separate from `DATABASE_URL` |
+
+Four prefixes, not two: `daily/` and `weekly/` hold the Postgres dumps,
+`git-daily/` and `git-weekly/` the bare-repo archives. They are kept apart
+because retention is by **count** — two kinds of file under one prefix would
+make "keep 7" mean three and a half backups.
 
 ## Local inference (containers)
 
