@@ -9710,6 +9710,61 @@ Nesta sessão o script **não instala nada** — subir o compose, gerar segredos
 instalar o runner são as sessões 4 e 7, e ele **diz isso** na saída em vez de
 terminar em silêncio.
 
+### RN-527 — A instalação sobe de um compose PRÓPRIO, por imagem escolhida, e confere a saúde antes de dizer que instalou {#rn-527}
+
+`docker/docker-compose.install.yml` é o que roda na máquina de quem instalou, e
+ele **não é** o `docker-compose.prod.yml`. Três diferenças, cada uma com um
+motivo:
+
+- as quatro imagens vêm de **variável obrigatória** (`${BRABO_API_IMAGE:?…}`),
+  sem default. Com default, uma variável ausente subiria metade da stack com
+  uma imagem que ninguém escolheu, e o erro apareceria como comportamento
+  estranho em vez de recusa;
+- **não há bloco `build:`** em lugar nenhum: este arquivo não constrói, e é o
+  ponto dele;
+- o serviço **`broker` não existe** aqui, porque a imagem dele não é publicada
+  (`docker-bake.hcl` tem quatro alvos). Consequência declarada: com
+  `--source=ghcr`, projeto `mounted` não sobe container (ADR 0150, decisão 7).
+
+O `docker-compose.prod.yml` fica **intacto** — ele se declara compose de
+**validação**, é o que `docker/smoke.sh` usa construindo local de propósito, e
+promovê-lo quebraria esse uso. O custo dos dois arquivos é declarado, e o teto
+contra a divergência é **mecânico**:
+`scripts/dev/composes-em-conformidade.spec.ts` reprova se o de instalação
+ganhar serviço, volume ou porta que o de validação não tenha, se algum `build:`
+sobreviver, ou se uma imagem de terceiro afrouxar para uma tag diferente.
+
+**A fonte da imagem é escolha, e "oficial" é resultado de verificação.**
+`--source=ghcr` (default) resolve por **digest** a partir do `images.json` da
+Release; `--source=local` roda `docker buildx bake` e **exige árvore limpa e em
+tag** — imagem construída de árvore suja não é a versão que ela diz ser, e o
+marcador registraria uma mentira.
+
+**Os segredos nascem uma vez e persistem.** Os cinco de
+[RN-114](business-rules/custo.md#rn-114) mais o `NEO4J_PASSWORD`, gerados com
+`openssl rand` no mesmo molde de `docker/smoke.sh:31-57` — inclusive o detalhe
+de o `NEO4J_PASSWORD` ser `-hex` e não `-base64`, porque uma `/` quebra o parse
+de `NEO4J_AUTH`. O `.env` é criado **vazio e com modo 600 ANTES** de receber
+conteúdo: criar com o umask do usuário e apertar depois deixaria os segredos
+legíveis por uma janela, e é justamente o arquivo que não pode ter essa janela.
+
+**Não há passo de migrate, e não deve haver:** o compose encadeia `api` →
+`migrate-api` com `service_completed_successfully`, e `up --wait` espera. Um
+segundo lugar mandando migrar seria a segunda fonte da mesma verdade.
+
+**E o instalador pergunta antes de afirmar.** Depois do `up --wait` — que já
+espera o healthcheck — ele bate no `/health` da api e do engine, e só então diz
+que instalou. É a régua que o `reset-total.sh` custou a aprender: ele anunciava
+"reset completo" com a api em `Exited (1)`.
+
+**Onde:** `install.sh` (raiz), `docker/docker-compose.install.yml`.
+**Teste:** `scripts/dev/install.spec.ts` (o plano, sem TTY nem efeito) e
+`scripts/dev/composes-em-conformidade.spec.ts` (a divergência entre os dois
+composes).
+**Origem:** FASE 29, sessão 4 ([ADR 0150](adr/0150-instalador-de-uma-linha.md)).
+Instalar o runner (sessão 7) e migrar uma instalação anterior (sessão 6)
+seguem fora, e o `--print-plan` os declara `nao-nesta-versao`.
+
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar
 > aqui — algo combinado e ainda não codificado não aparece nesta varredura.

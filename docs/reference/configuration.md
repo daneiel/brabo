@@ -49,6 +49,27 @@ failure mode in production.
 > down. See [RN-114](../business-rules/custo.md#rn-114) for the four that joined the
 > original `GIT_OAUTH_STATE_SECRET`.
 
+## Installation compose (`docker-compose.install.yml`)
+
+The compose that runs on an **installed** machine takes the four product
+images from **mandatory variables**, with no default — `install.sh` writes them
+into `.env`:
+
+| variable | what |
+|---|---|
+| `BRABO_API_IMAGE` | full reference of the api image; `ghcr.io/…@sha256:…` when the source is GHCR, `brabo-api:prod` when built locally |
+| `BRABO_ENGINE_IMAGE` | same, for the engine |
+| `BRABO_WEB_IMAGE` | same, for the web |
+
+They are `${VAR:?…}` on purpose. With a default, a missing variable would bring
+half the stack up on an image nobody picked, and the mistake would show up as
+strange behaviour instead of a refusal.
+
+These are **not** in the generated inventory below: the generator scans
+`apps/`, and these are read by Compose, not by product code
+([RN-527](../business-rules.md#rn-527)).
+
+
 ## api
 
 ### Essentials

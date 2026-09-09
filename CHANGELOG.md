@@ -122,6 +122,39 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   coberta por regra de docmap nenhuma (todos os globs de raiz são nomes
   literais); nasce a regra `instalador`.
 
+- **install,docker**: o instalador passa a **subir de verdade**, de um compose
+  PRÓPRIO da instalação ([RN-527](docs/business-rules.md#rn-527),
+  [ADR 0150](docs/adr/0150-instalador-de-uma-linha.md)).
+
+  Nasce `docker/docker-compose.install.yml`, gerado a partir do de produção e
+  diferente dele em três pontos: as quatro imagens vêm de **variável
+  obrigatória** (`${BRABO_API_IMAGE:?…}` — com default, uma variável ausente
+  subiria metade da stack com uma imagem que ninguém escolheu), **nenhum bloco
+  `build:`** sobrevive, e o serviço **`broker` não existe**, porque a imagem
+  dele não é publicada. O `docker-compose.prod.yml` fica intacto: ele se
+  declara compose de **validação** e é o que o `smoke.sh` usa construindo local.
+
+  O custo dos dois arquivos é declarado, e o teto é mecânico —
+  `scripts/dev/composes-em-conformidade.spec.ts` reprova se o de instalação
+  ganhar serviço, volume ou porta que o de validação não tenha, se algum
+  `build:` sobreviver, ou se uma imagem de terceiro afrouxar.
+
+  `--source=ghcr` (default) resolve por **digest** do `images.json` da Release;
+  `--source=local` roda `buildx bake` e exige **árvore limpa em tag**. Os cinco
+  segredos de RN-114 mais o `NEO4J_PASSWORD` nascem com `openssl rand` no molde
+  do `smoke.sh`, e o `.env` é criado **vazio e com modo 600 ANTES** de receber
+  conteúdo — criar com o umask e apertar depois deixaria uma janela em que os
+  segredos são legíveis.
+
+  Duas coisas do plano não sobreviveram ao disco, por motivos opostos: **não há
+  passo de migrate**, porque o compose já encadeia `api` → `migrate-api` com
+  `service_completed_successfully` e um segundo lugar mandando migrar seria a
+  segunda fonte da mesma verdade; e o **`smoke.sh` não é reusado**, porque ele
+  constrói (`--build`) o que a instalação acabou de baixar por digest e derruba
+  a stack no fim. No lugar dele, o instalador **pergunta antes de afirmar**:
+  `/health` da api e do engine antes de dizer que instalou — a régua que o
+  `reset-total.sh` custou a aprender.
+
 ### Correções
 
 - **dev**: `scripts/dev/reset-total.sh` terminava dizendo **"reset completo"**

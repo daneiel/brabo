@@ -161,7 +161,7 @@ de" é que ordena, e a FASE 28 registrou o caso em que a ordem real divergiu.
 | 1 | este documento, os ADRs 0149-0152, [o registro de BRB](../reference/brb.md) e a faixa de RN | — | não toca `apps/`, `docker/`, `scripts/`, `.github/`, `deploy/`; não edita ADR aceito |
 | 2 | assinatura em `release.yml` e `build-runner-binaries.yml`; `checksums.txt`; verificação no runbook | 1 | não escreve `install.sh`; não muda o que as imagens contêm; **não toca o proxy da api** (ver abaixo) |
 | 3 | `install.sh`: verificação de origem, detecção, pergunta, marcador — **e o proxy `GET /runner-releases/binary` passa a verificar** | 2 | **não sobe nada** — nem compose, nem migrate, nem runner |
-| 4 | `install.sh`: fonte GHCR × build local, segredos, compose de instalação, migrate, smoke | 3 | não instala runner; não migra instalação anterior |
+| 4 | `install.sh`: fonte GHCR × build local, segredos, compose de instalação, subida verificada | 3 | não instala runner; não migra instalação anterior |
 | 5 | backup e restore de volumes, rodando contra compose | 1 | não toca o CronJob do k8s nem `deploy/k8s/test-restore.sh` |
 | 6 | `install.sh`: migração de instalação anterior, provada com a sessão 5 | 4, 5 | não apaga a base do usuário nem a pasta de espelho, em hipótese nenhuma |
 | 7 | runner: base consentida no `guard.ts`; o `install.sh` instala o runner | 4 | não mexe no pareamento por projeto; não cria credencial nova |
@@ -177,6 +177,17 @@ de" é que ordena, e a FASE 28 registrou o caso em que a ordem real divergiu.
 > ele existe. Enquanto a 3 não fecha, o proxy continua servindo bytes do GitHub
 > sem verificar nada, exatamente como antes: a sessão 2 **não piora** esse
 > caminho, e também não o conserta.
+
+> **A sessão 4 não chama o `docker/smoke.sh`, e a mudança é deliberada.** O
+> plano dizia "migrate, smoke". Nenhum dos dois sobreviveu ao contato com o
+> disco, e por motivos opostos: **migrate** não é passo porque o compose já o
+> encadeia (`api` depende de `migrate-api` com
+> `service_completed_successfully`, e `up --wait` espera) — um segundo lugar
+> mandando migrar seria a segunda fonte da mesma verdade; e o **`smoke.sh`**
+> constrói as imagens (`--build`) e derruba a stack no fim, que é o oposto do
+> que uma instalação quer. No lugar dele, o instalador **pergunta antes de
+> afirmar**: bate no `/health` da api e do engine e só então diz que instalou —
+> a régua que o `reset-total.sh` aprendeu na marra (BRB-033).
 
 ## O que esta fase NÃO toca
 

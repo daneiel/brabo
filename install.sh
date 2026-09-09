@@ -66,6 +66,13 @@ IDENTIDADE_REGEX="^https://github.com/${REPO}/\.github/workflows/build-runner-bi
 EMISSOR_OIDC='https://token.actions.githubusercontent.com'
 
 MARCADOR_SCHEMA=1
+COMPOSE_DE_INSTALACAO='docker/docker-compose.install.yml'
+
+# Fonte das imagens. `ghcr` é o default: as quatro publicadas, por DIGEST,
+# com a assinatura verificada (ADR 0149). `local` constrói do checkout, e
+# exige árvore limpa em tag — imagem construída de árvore suja não é a versão
+# que ela diz ser.
+FONTE='ghcr'
 
 # --------------------------------------------------------------------------
 # Saída
@@ -215,9 +222,12 @@ imprimir_plano() {
   printf 'detectar\tfaz\tmarcador quando existe; sinais quando não, nomeando o que achou\n'
   printf 'perguntar\tfaz\texige TTY; sem TTY relata e sai 0\n'
   printf 'gravar-marcador\tfaz\t%s\n' "$(caminho_do_marcador)"
-  printf 'subir-compose\tnao-nesta-versao\tsessão 4 da FASE 29 (ADR 0150)\n'
-  printf 'gerar-segredos\tnao-nesta-versao\tsessão 4 da FASE 29 (ADR 0150)\n'
+  printf 'escolher-fonte\tfaz\t--source=ghcr (digest verificado) ou --source=local (bake, árvore limpa em tag)\n'
+  printf 'gerar-segredos\tfaz\tos cinco de RN-114 mais NEO4J_PASSWORD, no .env com modo 600\n'
+  printf 'subir-compose\tfaz\t%s, com --wait; as migrações vêm no encadeamento\n' "$COMPOSE_DE_INSTALACAO"
+  printf 'conferir-saude\tfaz\t/health da api e do engine, antes de dizer que instalou\n'
   printf 'instalar-runner\tnao-nesta-versao\tsessão 7 da FASE 29 (ADR 0151)\n'
+  printf 'migrar-instalacao-anterior\tnao-nesta-versao\tsessão 6 da FASE 29 (ADR 0152)\n'
   printf 'apagar-volumes\tso-com-confirmacao\tlistados um a um antes de perguntar\n'
   printf 'apagar-base-de-projetos\tnunca\ta pasta é do usuário, não do produto\n'
   printf 'apagar-pasta-de-espelho\tnunca\tRN-516 — o espelho nunca apaga, o instalador tampouco\n'
@@ -284,15 +294,96 @@ verificar_a_si_mesmo() {
 }
 
 # --------------------------------------------------------------------------
+# Segredos
+# --------------------------------------------------------------------------
+
+# Os cinco de RN-114/ADR 0059, mais o NEO4J_PASSWORD. A geração é a MESMA de
+# `docker/smoke.sh:31-57` — inclusive o detalhe que só aparece usando: o
+# NEO4J_PASSWORD é `-hex` e não `-base64`, porque uma `/` no valor quebra o
+# parse de `NEO4J_AUTH`.
+#
+# `${VAR:-$(gerar)}` respeita valor já exportado: quem já tem um segredo não o
+# vê ser trocado por uma reinstalação.
+gerar_segredos() {
+  GIT_OAUTH_STATE_SECRET="${GIT_OAUTH_STATE_SECRET:-$(openssl rand -base64 32)}"
+  AUTH_JWT_SECRET="${AUTH_JWT_SECRET:-$(openssl rand -base64 32)}"
+  BRABO_SERVICE_TOKEN="${BRABO_SERVICE_TOKEN:-$(openssl rand -base64 32)}"
+  CREDENTIALS_MASTER_KEY="${CREDENTIALS_MASTER_KEY:-$(openssl rand -base64 32)}"
+  SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(openssl rand -base64 64)}"
+  NEO4J_PASSWORD="${NEO4J_PASSWORD:-$(openssl rand -hex 24)}"
+}
+
+# --------------------------------------------------------------------------
+# Fonte das imagens
+# --------------------------------------------------------------------------
+
+# GHCR: os digests saem de `.release/images.json`, o mesmo manifesto que o
+# `release.yml` gera e anexa à Release (ADR 0119) — e por DIGEST, nunca por
+# tag, que é ponteiro móvel.
+resolver_imagens_do_ghcr() {
+  local tmp="$1" json="$1/images.json"
+
+  curl -fsSL -o "$json" \
+    "https://github.com/${REPO}/releases/latest/download/images.json" \
+    || recusar "a Release não publica images.json — sem ele não há digest para instalar. Use --source=local para construir do checkout."
+
+  # O manifesto é JSON INDENTADO, e `grep` trabalha linha a linha: `"alvo"` e
+  # `"digest"` moram em linhas diferentes, então um padrão `[^}]*` sobre o
+  # arquivo cru nunca alcança o segundo. Isto não é teoria — a primeira versão
+  # deste bloco devolvia vazio para os três, e só apareceu ao rodar contra o
+  # `images.json` real da Release. Compactar em UMA linha resolve sem exigir
+  # `jq`, que não se pode assumir na máquina de quem instala.
+  local compacto
+  compacto="$(tr -d '\n' < "$json" | tr -s ' ')"
+
+  local alvo var repo digest entrada
+  for alvo in api engine web; do
+    entrada="$(printf '%s' "$compacto" | grep -o "{[^{}]*\"alvo\": *\"${alvo}\"[^{}]*}" || true)"
+    repo="$(printf '%s' "$entrada" | grep -o '"repositorio": *"[^"]*"' | cut -d'"' -f4)"
+    digest="$(printf '%s' "$entrada" | grep -o '"digest": *"[^"]*"' | cut -d'"' -f4)"
+    if [ -z "$repo" ] || [ -z "$digest" ]; then
+      recusar "o manifesto não traz repositório e digest para '${alvo}'."
+    fi
+    var="BRABO_$(printf '%s' "$alvo" | tr '[:lower:]' '[:upper:]')_IMAGE"
+    eval "${var}='${repo}@${digest}'"
+    ok "${alvo}: ${digest}"
+  done
+}
+
+# Local: exige árvore LIMPA e em TAG. Uma imagem construída de árvore suja não
+# é a versão que ela diz ser, e o marcador registraria uma mentira.
+resolver_imagens_locais() {
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    || recusar "--source=local exige rodar de dentro do checkout do Brabo."
+  [ -z "$(git status --porcelain)" ] \
+    || recusar "--source=local exige árvore LIMPA: uma imagem construída de árvore suja não é a versão que ela diz ser."
+  git describe --exact-match --tags >/dev/null 2>&1 \
+    || recusar "--source=local exige estar numa TAG (git describe --exact-match)."
+
+  dizer 'Construindo as quatro imagens (docker buildx bake)…'
+  docker buildx bake -f docker-bake.hcl || recusar 'o build local falhou.'
+
+  BRABO_API_IMAGE='brabo-api:prod'
+  BRABO_ENGINE_IMAGE='brabo-engine:prod'
+  BRABO_WEB_IMAGE='brabo-web:prod'
+}
+
+# --------------------------------------------------------------------------
 # main
 # --------------------------------------------------------------------------
 
 main() {
-  case "${1:-}" in
-    --print-state) imprimir_estado; exit 0 ;;
-    --print-plan)  imprimir_plano;  exit 0 ;;
-    --help|-h)     sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-  esac
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --print-state) imprimir_estado; exit 0 ;;
+      --print-plan)  imprimir_plano;  exit 0 ;;
+      --help|-h)     sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+      --source=ghcr)  FONTE='ghcr';  shift ;;
+      --source=local) FONTE='local'; shift ;;
+      --source=*) recusar "fonte desconhecida: '${1#--source=}'. Use ghcr (o default) ou local." ;;
+      *) recusar "argumento desconhecido: '$1'." ;;
+    esac
+  done
 
   local plataforma
   plataforma="$(detectar_plataforma)"
@@ -349,23 +440,89 @@ main() {
     *) dizer 'Nada foi gravado.'; exit 0 ;;
   esac
 
+  dizer ''
+  dizer "${C_BOLD}Imagens (--source=${FONTE})${C_RESET}"
+  local tmp_imagens
+  tmp_imagens="$(mktemp -d)"
+  if [ "$FONTE" = 'ghcr' ]; then
+    resolver_imagens_do_ghcr "$tmp_imagens"
+  else
+    resolver_imagens_locais
+  fi
+  rm -rf "$tmp_imagens"
+
+  gerar_segredos
+
+  # O `.env` nasce com modo 600 ANTES de receber conteúdo: criar com o umask
+  # do usuário e apertar depois deixaria os segredos legíveis por uma janela,
+  # e é justamente o arquivo que não pode ter essa janela.
+  local env_arquivo="${PWD}/.env"
+  : > "$env_arquivo"
+  chmod 600 "$env_arquivo"
+  cat > "$env_arquivo" <<ENV
+# Gerado por install.sh em $(date -u +%Y-%m-%dT%H:%M:%SZ). Modo 600.
+# Os cinco segredos de RN-114 e o NEO4J_PASSWORD foram gerados com
+# \`openssl rand\`; guarde uma cópia antes de apagar este arquivo.
+BRABO_API_IMAGE=${BRABO_API_IMAGE}
+BRABO_ENGINE_IMAGE=${BRABO_ENGINE_IMAGE}
+BRABO_WEB_IMAGE=${BRABO_WEB_IMAGE}
+GIT_OAUTH_STATE_SECRET=${GIT_OAUTH_STATE_SECRET}
+AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
+BRABO_SERVICE_TOKEN=${BRABO_SERVICE_TOKEN}
+CREDENTIALS_MASTER_KEY=${CREDENTIALS_MASTER_KEY}
+SECRET_KEY_BASE=${SECRET_KEY_BASE}
+NEO4J_PASSWORD=${NEO4J_PASSWORD}
+ENV
+  ok ".env gravado com modo 600"
+
+  dizer ''
+  dizer "${C_BOLD}Subindo${C_RESET}"
+  # `--wait` só prova o que tem healthcheck, e é por isso que ele basta aqui:
+  # os serviços deste compose têm, e `api` depende de `migrate-api` com
+  # `service_completed_successfully` — as migrações rodam na ordem, e a subida
+  # espera por elas. Não há passo de migrate separado, e não deve haver: dois
+  # lugares mandando migrar é a segunda fonte da mesma verdade.
+  docker compose -f "$COMPOSE_DE_INSTALACAO" --env-file "$env_arquivo" up -d --wait \
+    || recusar 'a subida falhou. Nada foi desfeito: `docker compose -f '"$COMPOSE_DE_INSTALACAO"' logs` mostra o quê.'
+
+  # Perguntar antes de afirmar. `up --wait` já espera o healthcheck, mas quem
+  # anuncia "instalado" tem de ter perguntado — é a régua que o
+  # `reset-total.sh` aprendeu na marra (BRB-033).
+  local api_port="${API_PORT:-3000}" engine_port="${ENGINE_PORT:-4000}"
+  curl -fsS "http://localhost:${api_port}/health" >/dev/null \
+    || recusar "a api subiu mas não respondeu em /health (porta ${api_port})."
+  curl -fsS "http://localhost:${engine_port}/health" >/dev/null \
+    || recusar "o engine subiu mas não respondeu em /health (porta ${engine_port})."
+  ok 'api e engine respondendo'
+
   mkdir -p "$(dirname "$(caminho_do_marcador)")"
   cat > "$(caminho_do_marcador)" <<JSON
 {
   "schemaVersion": ${MARCADOR_SCHEMA},
   "instaladoEm": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "plataforma": "${plataforma}",
-  "fonte": null,
-  "digests": {},
-  "caminhos": {}
+  "fonte": "${FONTE}",
+  "imagens": {
+    "api": "${BRABO_API_IMAGE}",
+    "engine": "${BRABO_ENGINE_IMAGE}",
+    "web": "${BRABO_WEB_IMAGE}"
+  },
+  "caminhos": {
+    "env": "${env_arquivo}",
+    "compose": "${PWD}/${COMPOSE_DE_INSTALACAO}"
+  }
 }
 JSON
   ok "marcador gravado"
 
   dizer ''
+  dizer "${C_BOLD}Pronto${C_RESET}"
+  dizer "  Web:    http://localhost:${WEB_PORT:-8088}"
+  dizer "  API:    http://localhost:${api_port}/health"
+  dizer ''
   dizer "${C_BOLD}O que este instalador ainda NÃO faz${C_RESET}"
-  dizer 'Subir os serviços, gerar os segredos e instalar o runner são as sessões'
-  dizer 'seguintes da FASE 29. Ele para aqui de propósito — e diz isso, em vez de'
+  dizer 'Instalar o runner (sessão 7) e migrar uma instalação anterior (sessão 6)'
+  dizer 'ainda não acontecem. Ele para aqui de propósito — e diz isso, em vez de'
   dizer 'terminar em silêncio e deixar você procurando o que não aconteceu.'
 }
 

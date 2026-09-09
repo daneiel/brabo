@@ -52,15 +52,32 @@ describe('install.sh — o plano', () => {
     expect(por('apagar-volumes')?.valor).toBe('so-com-confirmacao');
   });
 
-  // A proibição própria da sessão 3 (documento da FASE 29): este instalador
-  // ainda não sobe nada. O teste existe para que "subir" não entre de carona
-  // numa sessão que declarou não fazê-lo.
-  it.each(['subir-compose', 'gerar-segredos', 'instalar-runner'])(
+  // A proibição própria da sessão 4: subir sim, instalar runner e migrar não.
+  // O teste existe para que nenhum dos dois entre de carona numa sessão que
+  // declarou não fazê-los — foi assim que a lista começou, na sessão 3, com
+  // `subir-compose` do lado de cá.
+  it.each(['instalar-runner', 'migrar-instalacao-anterior'])(
     '%s ainda não acontece nesta versão',
     (chave) => {
       expect(por(chave)?.valor).toBe('nao-nesta-versao');
     },
   );
+
+  it.each(['escolher-fonte', 'gerar-segredos', 'subir-compose', 'conferir-saude'])(
+    '%s já acontece',
+    (chave) => {
+      expect(por(chave)?.valor).toBe('faz');
+    },
+  );
+
+  // Perguntar antes de afirmar: `up --wait` espera o healthcheck, mas quem
+  // anuncia "instalado" tem de ter perguntado. É a régua que o
+  // `reset-total.sh` aprendeu na marra (BRB-033).
+  it('confere /health antes de dizer que instalou', () => {
+    const texto = fonte();
+    expect(texto).toContain('/health');
+    expect(texto).toMatch(/a api subiu mas não respondeu em \/health/);
+  });
 
   it('verifica a própria origem antes de qualquer coisa', () => {
     expect(por('verificar-origem')?.valor).toBe('faz');
@@ -97,6 +114,63 @@ describe('install.sh — o estado', () => {
     expect(estado.find((l) => l.chave === 'marcador')?.valor).toBe(
       '/tmp/xdg-de-teste/brabo/install-state.json',
     );
+  });
+});
+
+// O manifesto que o instalador lê é JSON **indentado**, e `grep` trabalha
+// linha a linha. A primeira versão do parser usava um padrão `[^}]*` sobre o
+// arquivo cru e devolvia VAZIO para os três alvos — o instalador teria subido
+// sem imagem nenhuma. Só apareceu rodando contra o `images.json` real da
+// Release, e este teste existe para que não volte.
+describe('install.sh — o parser do manifesto de imagens', () => {
+  const MANIFESTO_REAL = `{
+  "versao": "5.0.0",
+  "commit": "1538fdbbcd30",
+  "imagens": [
+    {
+      "alvo": "api",
+      "repositorio": "ghcr.io/daneiel/brabo-api",
+      "digest": "sha256:d99bf7226aab80685ce245decc9f7297b9ad6f8a771433f8e5ff444bb94369f2",
+      "tags": ["5.0.0", "1538fdbbcd30"]
+    },
+    {
+      "alvo": "engine",
+      "repositorio": "ghcr.io/daneiel/brabo-engine",
+      "digest": "sha256:47c79bddf6369589c30fc21992b994648b664d37beafaaaa8ff371f091782af5",
+      "tags": ["5.0.0", "1538fdbbcd30"]
+    }
+  ]
+}`;
+
+  // Reproduz o pipeline do script — compactar em uma linha e casar a ENTRADA
+  // inteira antes de extrair os campos.
+  function extrair(json: string, alvo: string) {
+    const compacto = json.replace(/\n/g, '').replace(/ {2,}/g, ' ');
+    const entrada = compacto.match(new RegExp(`\\{[^{}]*"alvo": *"${alvo}"[^{}]*\\}`))?.[0] ?? '';
+    return {
+      repositorio: entrada.match(/"repositorio": *"([^"]*)"/)?.[1] ?? '',
+      digest: entrada.match(/"digest": *"([^"]*)"/)?.[1] ?? '',
+    };
+  }
+
+  it('extrai repositório e digest de um manifesto indentado', () => {
+    const api = extrair(MANIFESTO_REAL, 'api');
+    expect(api.repositorio).toBe('ghcr.io/daneiel/brabo-api');
+    expect(api.digest).toMatch(/^sha256:[0-9a-f]{64}$/);
+
+    const engine = extrair(MANIFESTO_REAL, 'engine');
+    expect(engine.repositorio).toBe('ghcr.io/daneiel/brabo-engine');
+    expect(engine.digest).not.toBe(api.digest);
+  });
+
+  it('devolve vazio para alvo ausente, em vez de casar o errado', () => {
+    expect(extrair(MANIFESTO_REAL, 'web').digest).toBe('');
+  });
+
+  it('o script compacta antes de casar', () => {
+    // A garantia real está no shell, não neste helper: se alguém remover a
+    // compactação, o script volta a devolver vazio e nada aqui perceberia.
+    expect(fonte()).toMatch(/tr -d '\\n' < "\$json"/);
   });
 });
 

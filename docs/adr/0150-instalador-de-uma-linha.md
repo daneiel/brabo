@@ -159,6 +159,23 @@ executar nada — o precedente é real e do mesmo repositório:
 `scripts/dev/bootstrap.sh` tem `--print-commands` e é testado por
 `scripts/dev/bootstrap.spec.ts`.
 
+### 10. A verificação pós-subida é própria, e o `smoke.sh` não é reusado
+
+`docker/smoke.sh` gera os cinco segredos (`:31-57`) e é o precedente da
+decisão 5 — mas **chamá-lo não serve**: ele sobe com `--build` (constrói o que
+esta instalação acabou de baixar por digest) e derruba a stack no fim, a menos
+que `SMOKE_KEEP_UP=1`. É um teste de CI, e uma instalação não é um teste.
+
+O instalador faz o mínimo honesto no lugar: depois do `up --wait`, bate no
+`/health` da api e do engine, e **só então** diz que instalou. `--wait` já
+espera o healthcheck — mas quem anuncia um estado tem de tê-lo perguntado, que
+é exatamente a lição que o `reset-total.sh` custou (ele anunciava "reset
+completo" com a api em `Exited (1)`).
+
+Pelo mesmo raciocínio **não existe passo de migrate**: o compose encadeia
+`api` → `migrate-api` com `service_completed_successfully`, e um segundo lugar
+mandando migrar seria a segunda fonte da mesma verdade.
+
 ## O que este ADR recusa explicitamente
 
 - **`curl | sh`.** Pela decisão 1: fecha o stdin e com ele o consentimento.

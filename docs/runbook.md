@@ -2146,11 +2146,30 @@ command to run in a terminal. That is deliberate, and it is the same shape
 **What it never deletes:** your project base and your mirror folder. Named
 volumes only go with confirmation, listed one by one first.
 
-> **This version does not install yet.** It verifies, detects, asks and writes
-> the state marker — then stops, and says so. Bringing services up, generating
-> secrets and installing the runner are later sessions of FASE 29
-> ([ADR 0150](adr/0150-instalador-de-uma-linha.md)). Inspect what it would do
-> with `install.sh --print-plan`, which touches nothing.
+It brings the stack up from **its own compose**
+(`docker/docker-compose.install.yml`), which takes the images from variables
+and builds nothing. Two sources:
+
+```sh
+install.sh                  # --source=ghcr (default): by digest, signature verified
+install.sh --source=local   # buildx bake; requires a clean tree on a tag
+```
+
+Secrets are generated once and persisted into `.env` with mode **600** — the
+file is created empty and locked *before* receiving content, because a window
+where the secrets are world-readable is exactly what this file cannot have.
+
+There is **no migrate step**, and there should not be: the compose chains
+`api` → `migrate-api` with `service_completed_successfully`, so `up --wait`
+waits for the migrations. A second place ordering migrations would be a second
+source of the same truth.
+
+After the stack is up it **asks before claiming**: `/health` on the api and on
+the engine, and only then does it say it installed.
+
+> **What it still does not do:** install the runner (session 7) and migrate a
+> previous installation (session 6). Inspect the whole thing with
+> `install.sh --print-plan`, which touches nothing.
 
 ---
 
