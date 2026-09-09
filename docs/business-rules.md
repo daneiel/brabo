@@ -10128,6 +10128,45 @@ vem **antes** da chamada de deleção no código.
 **Origem:** FASE 29, sessão 6 ([ADR 0150](adr/0150-instalador-de-uma-linha.md),
 [ADR 0152](adr/0152-backup-de-volumes-contra-compose.md)).
 
+### RN-531 — O instalador consente UMA base para os dois lados e instala o agente local já executável {#rn-531}
+
+**Uma base, consentida uma vez.** O `install.sh` pergunta onde os projetos vão
+morar e grava o mesmo caminho nos DOIS lugares: `BRABO_PROJECTS_BASE` no `.env`
+(o servidor, [ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)) e o
+campo `base` do `runner.json` (o agente local,
+[RN-529](#rn-529)). O que difere entre `mounted` e `runner` é **quem executa**,
+não onde o código mora — duas bases diferentes para a mesma pasta seriam a
+colisão de namespace que o ADR 0141 recusou por escrito.
+
+A base é recusada quando não é absoluta, quando fica **dentro** do checkout do
+Brabo e quando **contém** o checkout — os dois sentidos, como o `preflight.mjs`
+já faz do lado do servidor. O `~` não é expandido de propósito: o valor vai
+para um arquivo de configuração, e um `~` gravado ali é lido literalmente.
+
+**O agente local é instalado já executável.** O binário é baixado, conferido
+contra o **mesmo** `checksums.txt` assinado que o script já verificou para
+conferir a si mesmo (RN-524) — baixá-lo duas vezes seriam duas chances de pegar
+manifestos diferentes, e a segunda não seria verificada — e instalado com
+`install -m 0755`, que põe o bit de execução no mesmo ato em que copia.
+
+**Isso fecha o BRB-031.** O `chmod +x` manual sobreviveu à FASE 28 porque a
+instalação como serviço não vinha de um artefato versionado: quem chegava a
+rodar `brabo-runner service install` já precisara tornar o binário executável
+para chegar ao comando. Vindo do instalador, o passo desaparece — a File System
+Access API do navegador não preserva o bit, um script preserva.
+
+Release sem o binário da plataforma **não interrompe a instalação**: o resto já
+está de pé, e a mensagem aponta `npm install -g @brabo/runner`. É a mesma
+disposição do passo do binário na configuração pelo navegador (RN-473), e a
+razão é a mesma — o agente local é a última etapa, não um pré-requisito.
+
+**Onde:** `install.sh`, `consentir_base` e `instalar_o_runner`.
+**Teste:** `scripts/dev/install.spec.ts` — `install -m 0755` presente, a
+instrução de `chmod` dirigida ao usuário ausente, e a conferência contra o
+manifesto assinada nomeada.
+**Origem:** FASE 29, sessão 7 ([ADR 0150](adr/0150-instalador-de-uma-linha.md),
+[ADR 0151](adr/0151-base-consentida-no-runner.md)).
+
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar
 > aqui — algo combinado e ainda não codificado não aparece nesta varredura.

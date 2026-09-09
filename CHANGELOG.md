@@ -347,6 +347,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `BRABO_PROJECTS_BASE` apontando para o host, a linha é bind-mount, e `down
   -v` não toca bind), a pasta de espelho, e o backup recém-provado.
 
+- **install**: o instalador consente **uma** base para os dois lados e instala o
+  agente local **já executável** ([RN-531](docs/business-rules.md#rn-531)).
+
+  A base perguntada uma vez é gravada em `BRABO_PROJECTS_BASE` (servidor) e no
+  campo `base` do `runner.json` (agente local): o que difere entre `mounted` e
+  `runner` é **quem executa**, não onde o código mora, e duas bases para a
+  mesma pasta seriam a colisão que o ADR 0141 recusou. Recusada quando não é
+  absoluta, quando fica dentro do checkout e quando o contém — os dois
+  sentidos.
+
+  O binário é conferido contra o **mesmo** `checksums.txt` assinado que o
+  script já verificou para conferir a si mesmo, e instalado com
+  `install -m 0755`. **Isso fecha o BRB-031**: o `chmod +x` manual sobreviveu à
+  FASE 28 porque a instalação não vinha de um artefato versionado — quem
+  chegava a rodar `service install` já precisara tornar o binário executável
+  para chegar ao comando. Release sem o binário da plataforma não interrompe a
+  instalação; o resto está de pé e a mensagem aponta o caminho do npm.
+
 ### Correções
 
 - **dev**: `scripts/dev/reset-total.sh` terminava dizendo **"reset completo"**

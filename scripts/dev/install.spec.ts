@@ -78,14 +78,8 @@ describe('install.sh — o plano', () => {
   // O teste existe para que nenhum dos dois entre de carona numa sessão que
   // declarou não fazê-los — foi assim que a lista começou, na sessão 3, com
   // `subir-compose` do lado de cá.
-  it.each(['instalar-runner'])(
-    '%s ainda não acontece nesta versão',
-    (chave) => {
-      expect(por(chave)?.valor).toBe('nao-nesta-versao');
-    },
-  );
-
-  it.each(['escolher-fonte', 'gerar-segredos', 'subir-compose', 'conferir-saude', 'migrar-instalacao-anterior'])(
+  it.each(['escolher-fonte', 'gerar-segredos', 'subir-compose', 'conferir-saude', 'migrar-instalacao-anterior',
+    'consentir-base', 'instalar-runner'])(
     '%s já acontece',
     (chave) => {
       expect(por(chave)?.valor).toBe('faz');
@@ -103,6 +97,28 @@ describe('install.sh — o plano', () => {
 
   it('verifica a própria origem antes de qualquer coisa', () => {
     expect(por('verificar-origem')?.valor).toBe('faz');
+  });
+
+  // BRB-031: o `chmod +x` manual do fluxo do navegador (a File System Access
+  // API não preserva o bit de execução). Um script preserva — e é por isso que
+  // este item fecha aqui, e não fechou na FASE 28, onde a instalação como
+  // serviço não vinha de um artefato versionado.
+  it('instala o runner com o bit de execução, sem chmod manual', () => {
+    const texto = fonte();
+    // `install -m 0755` põe o bit no mesmo ato que copia. O que BRB-031 pede
+    // é que o USUÁRIO não precise de `chmod` — o script fazendo é o oposto
+    // disso, e por isso o `chmod +x` do cosign (que o script baixa) não conta.
+    expect(texto).toContain('install -m 0755');
+    // O que não pode voltar é a INSTRUÇÃO de chmod dirigida a quem instala.
+    expect(texto).not.toMatch(/chmod \+x \.\/brabo-runner/);
+  });
+
+  // O binário passa pela MESMA verificação do resto (RN-524), contra o
+  // manifesto que o próprio script já verificou para conferir a si mesmo.
+  it('confere o binário do runner contra o manifesto assinado', () => {
+    const texto = fonte();
+    expect(texto).toMatch(/o manifesto assinado não cobre/);
+    expect(texto).toMatch(/o binário do runner NÃO bate com o manifesto assinado/);
   });
 });
 

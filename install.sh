@@ -226,7 +226,8 @@ imprimir_plano() {
   printf 'gerar-segredos\tfaz\tos cinco de RN-114 mais NEO4J_PASSWORD, no .env com modo 600\n'
   printf 'subir-compose\tfaz\t%s, com --wait; as migrações vêm no encadeamento\n' "$COMPOSE_DE_INSTALACAO"
   printf 'conferir-saude\tfaz\t/health da api e do engine, antes de dizer que instalou\n'
-  printf 'instalar-runner\tnao-nesta-versao\tsessão 7 da FASE 29 (ADR 0151)\n'
+  printf 'consentir-base\tfaz\tUMA base para os dois lados: .env do servidor e runner.json do agente\n'
+  printf 'instalar-runner\tfaz\tbinário verificado contra o manifesto assinado, instalado com bit de execução\n'
   printf 'migrar-instalacao-anterior\tfaz\tbackup, PROVA que restaura, pergunta, e só então apaga\n'
   printf 'apagar-sem-backup-provado\tnunca\tbackup que não restaurou não autoriza deleção nenhuma\n'
   printf 'apagar-volumes\tso-com-confirmacao\tlistados um a um antes de perguntar\n'
@@ -259,9 +260,15 @@ baixar_cosign() {
 #   2. o hash DESTE arquivo tem de estar dentro do manifesto verificado.
 # O passo 2 é o que fecha o ciclo: um `install.sh` trocado no caminho não
 # aparece no manifesto que a esteira assinou.
+# O diretório temporário SOBREVIVE a esta função, em `TMP_VERIFICACAO`: o
+# `checksums.txt` que ela baixou e verificou é o mesmo contra o qual o binário
+# do runner é conferido depois (`instalar_o_runner`). Baixá-lo duas vezes seria
+# duas chances de pegar manifestos diferentes — e a segunda não seria
+# verificada.
 verificar_a_si_mesmo() {
   local plataforma="$1" tmp meu_hash
   tmp="$(mktemp -d)"
+  TMP_VERIFICACAO="$tmp"
   # shellcheck disable=SC2064
   trap "rm -rf '${tmp}'" EXIT
 
@@ -289,9 +296,6 @@ verificar_a_si_mesmo() {
     recusar "o hash deste arquivo não está no manifesto assinado. Ou ele foi alterado, ou não é o instalador desta Release."
   fi
   ok 'este arquivo é o que a Release publicou'
-
-  rm -rf "$tmp"
-  trap - EXIT
 }
 
 # --------------------------------------------------------------------------
@@ -368,6 +372,95 @@ resolver_imagens_locais() {
   BRABO_ENGINE_IMAGE='brabo-engine:prod'
   BRABO_WEB_IMAGE='brabo-web:prod'
   BRABO_BACKUP_IMAGE='brabo-backup:prod'
+}
+
+# --------------------------------------------------------------------------
+# A base consentida, e o agente local
+# --------------------------------------------------------------------------
+
+# UMA base, consentida uma vez, servindo aos DOIS lados: `BRABO_PROJECTS_BASE`
+# no `.env` (o servidor, ADR 0141) e o campo `base` do `runner.json` (o agente
+# local, RN-529). O que difere entre os modos `mounted` e `runner` é QUEM
+# executa, não onde o código mora — e duas bases diferentes para a mesma pasta
+# seria a colisão de namespace que o ADR 0141 recusou por escrito.
+consentir_base() {
+  local sugerida="${HOME}/projetos-brabo" escolhida
+  dizer ''
+  dizer "${C_BOLD}Onde os projetos vão morar${C_RESET}"
+  dizer 'Uma pasta sua. É ela que você abre no editor, e é dentro dela que cada'
+  dizer 'projeto vira uma subpasta.'
+  printf 'Base [%s]: ' "$sugerida"
+  read -r escolhida || escolhida=''
+  [ -n "$escolhida" ] || escolhida="$sugerida"
+
+  case "$escolhida" in
+    /*) ;;
+    *) recusar "a base precisa ser um caminho ABSOLUTO — '${escolhida}' não é. (`~` não é expandido aqui de propósito: o valor vai para um arquivo de configuração, e um `~` gravado ali é lido literalmente.)" ;;
+  esac
+
+  # A mesma recusa que o `preflight.mjs` faz do lado do servidor: base
+  # sobreposta ao checkout, nos DOIS sentidos, faria `git init` na pasta errada.
+  local checkout; checkout="$(pwd)"
+  case "$escolhida/" in
+    "$checkout"/*) recusar "a base não pode ficar dentro do checkout do Brabo (${checkout})." ;;
+  esac
+  case "$checkout/" in
+    "$escolhida"/*) recusar "a base não pode CONTER o checkout do Brabo (${checkout})." ;;
+  esac
+
+  mkdir -p "$escolhida" || recusar "não consegui criar ${escolhida}."
+  BASE_DE_PROJETOS="$escolhida"
+  ok "base: ${BASE_DE_PROJETOS}"
+}
+
+# Instala o binário do agente local — e é isto que mata o `chmod +x` manual do
+# ADR 0118 (BRB-031): o navegador não preserva o bit de execução, um script
+# preserva. O binário passa pela MESMA verificação do resto (RN-524): hash
+# contra o `checksums.txt` assinado, que este script já baixou e verificou para
+# conferir a si mesmo.
+instalar_o_runner() {
+  local plataforma="$1" tmp="$2" alvo destino esperado obtido
+  case "$plataforma" in
+    linux-amd64)  alvo='linux-x64' ;;
+    linux-arm64)  alvo='linux-arm64' ;;
+    darwin-amd64) alvo='darwin-x64' ;;
+    darwin-arm64) alvo='darwin-arm64' ;;
+    *) recusar "sem binário de runner para '${plataforma}'." ;;
+  esac
+
+  dizer ''
+  dizer "${C_BOLD}Agente local${C_RESET}"
+  local nome="brabo-runner-${alvo}"
+  if ! curl -fsSL -o "${tmp}/${nome}" \
+      "https://github.com/${REPO}/releases/latest/download/${nome}"; then
+    dizer "A Release não publica ${nome}." >&2
+    dizer 'O agente local NÃO foi instalado; o resto da instalação está de pé.' >&2
+    dizer "Alternativa: npm install -g @brabo/runner" >&2
+    return 0
+  fi
+
+  # O manifesto já foi baixado e teve a assinatura verificada em
+  # `verificar_a_si_mesmo`; aqui só se confere a linha deste binário.
+  esperado="$(grep -i "  ${nome}\$" "${tmp}/checksums.txt" | cut -d' ' -f1 || true)"
+  [ -n "$esperado" ] || recusar "o manifesto assinado não cobre ${nome} — recusa, não aviso."
+  obtido="$(sha256sum "${tmp}/${nome}" | cut -d' ' -f1)"
+  [ "$esperado" = "$obtido" ] || recusar "o binário do runner NÃO bate com o manifesto assinado."
+  ok 'binário do runner verificado'
+
+  destino="${HOME}/.local/bin"
+  mkdir -p "$destino"
+  install -m 0755 "${tmp}/${nome}" "${destino}/brabo-runner"
+  ok "instalado em ${destino}/brabo-runner (executável — sem chmod manual)"
+
+  local cfg="${XDG_CONFIG_HOME:-${HOME}/.config}/brabo"
+  mkdir -p "$cfg"
+  printf '{\n  "base": "%s"\n}\n' "$BASE_DE_PROJETOS" > "${cfg}/runner.json"
+  ok "base gravada em ${cfg}/runner.json"
+
+  case ":${PATH}:" in
+    *":${destino}:"*) ;;
+    *) dizer "  Acrescente ${destino} ao seu PATH para chamar \`brabo-runner\` direto." ;;
+  esac
 }
 
 # --------------------------------------------------------------------------
@@ -545,6 +638,7 @@ main() {
   fi
   rm -rf "$tmp_imagens"
 
+  consentir_base
   gerar_segredos
 
   # O `.env` nasce com modo 600 ANTES de receber conteúdo: criar com o umask
@@ -561,6 +655,7 @@ BRABO_API_IMAGE=${BRABO_API_IMAGE}
 BRABO_ENGINE_IMAGE=${BRABO_ENGINE_IMAGE}
 BRABO_WEB_IMAGE=${BRABO_WEB_IMAGE}
 BRABO_BACKUP_IMAGE=${BRABO_BACKUP_IMAGE}
+BRABO_PROJECTS_BASE=${BASE_DE_PROJETOS}
 GIT_OAUTH_STATE_SECRET=${GIT_OAUTH_STATE_SECRET}
 AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
 BRABO_SERVICE_TOKEN=${BRABO_SERVICE_TOKEN}
@@ -594,6 +689,8 @@ ENV
     restaurar_apos_migrar "$MIGRAR_DE"
   fi
 
+  instalar_o_runner "$plataforma" "$TMP_VERIFICACAO"
+
   mkdir -p "$(dirname "$(caminho_do_marcador)")"
   cat > "$(caminho_do_marcador)" <<JSON
 {
@@ -609,6 +706,7 @@ ENV
   },
   "caminhos": {
     "env": "${env_arquivo}",
+    "baseDeProjetos": "${BASE_DE_PROJETOS}",
     "compose": "${PWD}/${COMPOSE_DE_INSTALACAO}"
   }
 }
