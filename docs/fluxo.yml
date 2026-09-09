@@ -202,7 +202,7 @@ camada_seguranca:
     acionamento: >
       assess_implementability do Dev Lead (gate implementavel) — o gatilho
       natural que esta linha declarava como lacuna, agora implementado
-      (RN-522). Ao avaliar uma story, run_assessment/2
+      (RN-539). Ao avaliar uma story, run_assessment/2
       (apps/engine/lib/engine/agents/dev_lead_tools.ex) chama
       Engine.Gates.Dispatcher.run_appsec_design/2, que sobe o
       SecOpsAgentServer do projeto e faz run_design/2. Dispara em PARALELO,

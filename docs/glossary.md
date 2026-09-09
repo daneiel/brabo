@@ -252,7 +252,7 @@ STRIDE-lite **threat model** over a story's DESIGN — no worktree, no
 anything; it ends by emitting `artifact.threat_model` and handing it off to
 the architect, the Dev Lead and Infra. Triggered by the Dev Lead's
 `assess_implementability`, in parallel, once per story
-([RN-360](business-rules.md#rn-360), [RN-522](business-rules.md#rn-522),
+([RN-360](business-rules.md#rn-360), [RN-539](business-rules.md#rn-539),
 [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
 
 ---

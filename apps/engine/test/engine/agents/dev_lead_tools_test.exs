@@ -219,10 +219,10 @@ defmodule Engine.Agents.DevLeadToolsTest do
     end
   end
 
-  # RN-522: o gatilho do appsec (`SecOpsAgentServer.run_design/2`), que até
+  # RN-539: o gatilho do appsec (`SecOpsAgentServer.run_design/2`), que até
   # aqui não tinha chamador de produção nenhum. Dispara em PARALELO e nunca
   # entra no caminho do parecer — os testes abaixo provam as duas metades.
-  describe "assess_implementability dispara o appsec (RN-522)" do
+  describe "assess_implementability dispara o appsec (RN-539)" do
     test "story SEM threat model: pede o threat model de design", %{ctx: ctx} do
       Process.put(:fake_events, [plano_de_teste_event("st-1")])
 

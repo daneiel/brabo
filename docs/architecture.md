@@ -118,7 +118,7 @@ was ASKED FOR would tie the Dev Lead's test to the database. The newest of the
 six, `run_appsec_design/2`, closed the last gate that was actionable with no
 production caller: `assess_implementability` now asks for the story's design
 threat model IN PARALLEL — the verdict never waits for it, and the ask happens
-only once per story ([RN-522](business-rules.md#rn-522),
+only once per story ([RN-539](business-rules.md#rn-539),
 [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
 
 ## Code map

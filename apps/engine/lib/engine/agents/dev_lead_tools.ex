@@ -67,7 +67,7 @@ defmodule Engine.Agents.DevLeadTools do
        `justificativa`/o plano de teste embutido no payload, para o
        usuário decidir sem precisar abrir dois eventos) e propõe a ação.
 
-  ### O appsec dispara junto, e NÃO é pré-requisito (RN-522)
+  ### O appsec dispara junto, e NÃO é pré-requisito (RN-539)
 
   `Engine.Gates.SecOpsAgentServer.run_design/2` — o threat model STRIDE-lite
   de DESIGN (appsec, RN-360, mesmo ADR 0090) — nasceu ACIONÁVEL e sem
@@ -311,7 +311,7 @@ defmodule Engine.Agents.DevLeadTools do
 
   defp plano_da_story?(_evento, _story_id), do: false
 
-  # RN-522: o appsec (`Engine.Gates.SecOpsAgentServer.run_design/2`) era
+  # RN-539: o appsec (`Engine.Gates.SecOpsAgentServer.run_design/2`) era
   # ACIONÁVEL e não tinha chamador de produção nenhum — `docs/fluxo.yml`
   # declarava a lacuna e nomeava ESTE ponto como o gatilho natural.
   #

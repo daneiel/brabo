@@ -63,7 +63,7 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     # Erro scriptável via :fake_events_error — mesmo padrão de
     # :fake_append_event_error/:fake_handoff_error. Sem ele não havia como
     # exercitar o ramo "não consegui ler o histórico da sessão" de quem lê o
-    # event log (RN-522: histórico ilegível não prova ausência de artefato,
+    # event log (RN-539: histórico ilegível não prova ausência de artefato,
     # então nada é disparado).
     case Process.get(:fake_events_error) do
       nil -> {:ok, Process.get(:fake_events, [])}

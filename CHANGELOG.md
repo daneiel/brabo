@@ -8,7 +8,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **engine**: `assess_implementability` do Dev Lead passa a disparar o
   **threat model de design** do appsec — o gatilho que `docs/fluxo.yml`
-  declarava como lacuna e já nomeava (RN-522).
+  declarava como lacuna e já nomeava (RN-539).
 
   `Engine.Gates.SecOpsAgentServer.run_design/2` (RN-360, ADR 0090) estava
   implementado, testado e **sem chamador de produção nenhum**: a única menção

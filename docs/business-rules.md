@@ -2902,7 +2902,7 @@ fora das chaves obrigatórias porque lista vazia é resposta válida). Falha
 (`modelo`/`politica`/`infra`), mesma régua da RN-059 — nunca resposta vazia
 nem silêncio só em broadcast.
 
-**O gatilho automático existe desde a [RN-522](#rn-522)**. Esta entrega foi
+**O gatilho automático existe desde a [RN-539](#rn-539)**. Esta entrega foi
 mantida autocontida de propósito (nenhum arquivo de outra frente tocado:
 `decide.ts`, `docs/gates.yml` e `dev_lead_tools.ex` intocados), e declarava a
 lacuna: `run_design/2` era ACIONÁVEL e nada acionava sozinho. O ponto de
@@ -9538,7 +9538,7 @@ reparável (termina em toast), não o invisível.
   existe sinal de presença na api), e o papel lido é o do workspace, não o
   efetivo do projeto
 
-### RN-522 — `assess_implementability` dispara o threat model de DESIGN em PARALELO, e uma vez só por story {#rn-522}
+### RN-539 — `assess_implementability` dispara o threat model de DESIGN em PARALELO, e uma vez só por story {#rn-539}
 
 O appsec (`Engine.Gates.SecOpsAgentServer.run_design/2`, [RN-360](#rn-360))
 nasceu implementado, testado e **sem chamador de produção nenhum**: a única
@@ -9590,7 +9590,7 @@ dispara — ela não sabe qual é a story.
   (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
   `apps/engine/test/support/fake_gate_dispatcher.ex:29`
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`,
-  describe "assess_implementability dispara o appsec (RN-522)" — story sem
+  describe "assess_implementability dispara o appsec (RN-539)" — story sem
   threat model dispara, story com threat model NÃO dispara (a idempotência),
   threat model de outra story não conta, o desfecho de `:sem_plano` não muda,
   o parecer é proposto normalmente ao lado do disparo, args inválidos e
