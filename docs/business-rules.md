@@ -9537,9 +9537,9 @@ reparável (termina em toast), não o invisível.
   existe sinal de presença na api), e o papel lido é o do workspace, não o
   efetivo do projeto
 
-## A flag que liga um agente tem de CHEGAR ao processo (RN-523)
+## A flag que liga um agente tem de CHEGAR ao processo (RN-540)
 
-### RN-523 — Flag booleana lida pelo `runtime.exs` é mapeada no `environment:` do serviço `engine` dos dois composes, com o default do código {#rn-523}
+### RN-540 — Flag booleana lida pelo `runtime.exs` é mapeada no `environment:` do serviço `engine` dos dois composes, com o default do código {#rn-540}
 
 Uma pausa só é reversível se existir o caminho de ligar. A da Anamnese e a do
 Psicólogo ([RN-115](business-rules/autenticacao.md#rn-115),

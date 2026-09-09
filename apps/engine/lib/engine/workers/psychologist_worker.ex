@@ -67,7 +67,7 @@ defmodule Engine.Workers.PsychologistWorker do
   fechamento de sessão, não um tick, então não há chave de boot pareada
   como a `START_ANAMNESE` da Anamnese.
 
-  Esta frase foi FALSA de 2026-08-10 até a RN-523: `PSYCHOLOGIST_ENABLED`
+  Esta frase foi FALSA de 2026-08-10 até a RN-540: `PSYCHOLOGIST_ENABLED`
   não estava no `environment:` do serviço `engine` de nenhum compose, e o
   Compose não repassa o ambiente do host — a variável nunca chegava ao
   processo, `runtime.exs` caía no default `"false"` e não havia erro

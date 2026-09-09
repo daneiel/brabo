@@ -60,7 +60,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **docker,engine,docs**: as flags que ligam a **Anamnese** e o **Psicólogo**
   não estavam mapeadas no `environment:` do serviço `engine` de compose
   nenhum — a pausa que três lugares do código chamavam de **reversível** não
-  era reversível em ambiente nenhum (RN-523).
+  era reversível em ambiente nenhum (RN-540).
 
   **O que se prometia.** O docblock de `AnamneseSchedulerWorker.enabled?/0`
   dizia, desde 2026-08-10: *"não é bug, é pausa reversível. Ligar de volta é

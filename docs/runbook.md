@@ -2116,7 +2116,7 @@ exposed in `docker-compose.yml`.
 > at `true`; the Psychologist has no boot key, because its automatic trigger
 > is session close.
 >
-> Until [RN-523](business-rules.md#rn-523) the two `*_ENABLED` flags were
+> Until [RN-540](business-rules.md#rn-540) the two `*_ENABLED` flags were
 > **not mapped** in either compose's `engine` service, and `docker compose`
 > does not forward the host environment — so setting them in `.env` did
 > nothing at all, silently, while three places in the code promised the pause

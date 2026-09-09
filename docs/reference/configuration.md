@@ -49,7 +49,7 @@ failure mode in production.
 > and `runtime.exs` fell back to `"false"` — no error anywhere. Every boolean
 > flag the engine reads is now mapped in both compose files, with the code's
 > own default, and `scripts/ci/flags-do-engine-no-compose.spec.ts` fails the
-> build for the next one that isn't ([RN-523](../business-rules.md#rn-523)).
+> build for the next one that isn't ([RN-540](../business-rules.md#rn-540)).
 > Kubernetes is deliberately outside that rule: a Deployment/ConfigMap
 > intercepts nothing, so there is no broken switch to fix there.
 

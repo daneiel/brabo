@@ -375,10 +375,10 @@ rules:
       #
       # `flags-do-engine-no-compose.spec.ts` é o QUINTO, pelo mesmo critério: ele
       # compara as flags booleanas que `apps/engine/config/runtime.exs` lê com o
-      # `environment:` do serviço `engine` dos dois composes (RN-523), e mora
+      # `environment:` do serviço `engine` dos dois composes (RN-540), e mora
       # aqui porque lê o repositório inteiro como texto — a mesma razão do
       # `vocabulario-de-eventos-dev.spec.ts` acima. Degrau, destino e versão de
-      # branch não aparecem nele; a doc dele é a própria RN-523 em
+      # branch não aparecem nele; a doc dele é a própria RN-540 em
       # `docs/business-rules.md`, e as duas que o `config-e-inferencia` já cobra
       # em `block` (`docs/reference/configuration.md` e `docs/runbook.md`).
       #
