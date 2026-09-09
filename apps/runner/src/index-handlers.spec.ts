@@ -88,6 +88,10 @@ function estadoFalso(opts: {
     docker: opts.docker ?? dockerFalso(),
     containerAtivo: opts.containerAtivo ?? null,
     destinoDoEspelho: opts.destinoDoEspelho ?? null,
+    // ADR 0151/RN-529: `null` é o estado NORMAL, e nenhum handler deste
+    // arquivo depende da base — ela só decide onde uma pasta de projeto NOVA
+    // nasce, e criar pasta não é `exec`, `pty` nem espelho.
+    base: null,
   };
 }
 

@@ -39,6 +39,7 @@ Start with triage.
 | the project wizard doesn't offer **Mounted** mode, or creating a mounted project refuses saying the path must sit inside the base | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | approving `container_start` on a mounted project fails saying the api couldn't create or reach the folder | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | `pnpm dev` refuses to start, saying `BRABO_PROJECTS_BASE` overlaps the Brabo checkout | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
+| `brabo-runner` exits with `base de projetos recusada`, or prints `base de projetos: nenhuma configurada` when I expected a base | [The runner's base of projects](#base-do-runner) |
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
 | provisioning a repository fails with `permission denied: /data/git-repos/<slug>.git`, or `permissions.json` can't be written | [Dev containers write as your user, not root](#dev-containers-nao-root) |
@@ -355,6 +356,53 @@ the chance.
 procedure above; Mounted mode never touches that root, and the base is
 never the same folder as that root ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)
 explains why conflating them would let two projects land in one folder).
+
+### The runner's base of projects {#base-do-runner}
+
+**Symptom:** `brabo-runner` exits with code 2 saying
+`base de projetos recusada (…)`, or it starts printing
+`base de projetos: nenhuma configurada` when you expected a base, or it says
+it is `Seguindo SEM base`.
+
+This is a **different base** from the one in
+[Project in Mounted mode](#projeto-no-modo-local). That one
+(`BRABO_PROJECTS_BASE`) belongs to the SERVER and is the only folder the
+containers can see; this one belongs to the **user's machine** and is where
+the local agent creates the folder of each project
+([ADR 0151](adr/0151-base-consentida-no-runner.md),
+[RN-529](business-rules.md#rn-529)). They are never the same variable, never
+the same file, and never validated against each other.
+
+Where the runner reads it from, in order:
+
+1. `--base <absolute path>` on the command line;
+2. `$XDG_CONFIG_HOME/brabo/runner.json` — falling back to
+   `~/.config/brabo/runner.json` — with the shape `{"base": "/abs/path"}`.
+
+```bash
+cat "${XDG_CONFIG_HOME:-$HOME/.config}/brabo/runner.json"
+# {"base":"/home/you/projetos-brabo"}
+```
+
+**No base at all is normal.** A runner without one keeps serving its project
+exactly as it always did; what it can't do is host a project folder created
+later. The startup line says which of the two states you're in, always.
+
+**Refusals, and why the disposition differs.** The base is refused when it is
+relative, has `..`, is `/`, points at an existing file, sits outside `$HOME`
+on Linux (the same rule `--dir` has had since
+[RN-434](business-rules.md#rn-434)), or is **inside** the current project's
+folder (or equal to it) — that last one would make every new project be born
+inside this one. Coming from `--base`, that ends the process with code 2;
+coming from the file, it is printed on `stderr` and the runner **carries on
+without a base**, because killing an agent that is serving a project over a
+setting it doesn't use yet would be out of proportion. A file that exists and
+declares no `base` is absence, not a refusal.
+
+**A project outside the base is not a problem.** `--dir` is validated exactly
+as it always was and the base plays no part in it: the base is a rule of
+CREATION. Do not "fix" a legacy project by moving it under the base to silence
+something — nothing is complaining.
 
 ### Dev containers write as your user, not root {#dev-containers-nao-root}
 

@@ -410,6 +410,26 @@ daqui e o fechamento vai para o histórico.
   DISPOSITIVO e nunca por token (uma unit com token o deixaria em disco), e
   `status` com QUATRO estados e quatro códigos de saída — a primeira resposta
   vem do DISCO, então ela continua certa numa máquina sem gerenciador.
+  Desde a RN-529 (ADR 0151 pontos 1 e 2) ele também pode nascer com uma
+  BASE — a pasta da máquina do usuário sob a qual cada projeto é uma
+  SUBPASTA. Ela é LOCAL e NUNCA chega pela rede (o desenho do broker, ADR
+  0144: quem tem a raiz é quem executa, e o que viaja é o SEGMENTO
+  relativo), vem de `--base` ou de `$XDG_CONFIG_HOME/brabo/runner.json`
+  (senão `~/.config/brabo/runner.json`, a precedência que `servico.ts` já
+  usa) — nunca do `brabo-runner.config.json`, que é POR PROJETO e escrito
+  pelo navegador, e nunca de variável de ambiente, que colidiria com
+  `BRABO_PROJECTS_BASE` (a base do lado SERVIDOR, ADR 0141) e não
+  sobreviveria a uma unit de serviço. `--dir` NÃO muda de significado e a
+  base NÃO entra na validação dele: é a proibição de
+  `project-workspaces-root.ts` transposta — projeto legado fora da base
+  segue válido, e a base é regra de CRIAÇÃO. `base-guard.ts` é o TERCEIRO
+  irmão de `guard.ts`, reusando os três helpers, a dupla passada e
+  `validarDirDentroDoHomeNoLinux` inteira, e o laço dele é ASSIMÉTRICO (a
+  pasta do projeto dentro da base é o arranjo normal; a base dentro da
+  pasta do projeto é o defeito). Recusa vinda da FLAG sai com código 2;
+  vinda do ARQUIVO é dita e o runner segue SEM base. Ausente é o estado
+  normal. Nada ainda CONSOME a base — `workspace_create` e a capacidade
+  `workspace` são os pontos 3–6 do ADR, declarados e não feitos.
   `--project`/`--dir`/`--token` são
   OPCIONAIS quando a pasta tem `brabo-runner.config.json` e a chave de
   dispositivo gravados pelo fluxo do navegador (RN-464..466, ADR 0118):

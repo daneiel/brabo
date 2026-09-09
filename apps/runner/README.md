@@ -120,6 +120,39 @@ do arquivo local.
   cada tentativa de conexão).
 - `--api-url`: ordem de prioridade: flag explícita → `BRABO_API_URL` →
   `apiUrl` do `brabo-runner.config.json` local → `http://localhost:3000`.
+- `--base`: a **base de projetos** desta máquina — a pasta sob a qual cada
+  projeto é uma **subpasta** (ADR 0151, RN-529). Omitida, é lida de
+  `$XDG_CONFIG_HOME/brabo/runner.json` (senão
+  `~/.config/brabo/runner.json`), que é onde o instalador a grava; a flag
+  explícita vence o arquivo. **Sem flag e sem arquivo o runner roda sem
+  base, exatamente como sempre.**
+
+### A base e `--dir` são coisas diferentes, e uma não invalida a outra
+
+`--dir` é a raiz **deste** projeto; a base é onde uma pasta de projeto
+**nova** nasce. Um projeto cuja pasta está fora da base continua
+perfeitamente válido — a base é regra de **criação**, e a validação de
+`--dir` (RN-434/RN-435) não a consulta. É a mesma proibição que a api já
+declara por escrito em `project-workspaces-root.ts` para
+`BRABO_PROJECTS_BASE` (RN-500/RN-501).
+
+A base é **local** e nunca chega pela rede: quem tem a raiz é quem executa,
+e o que o servidor manda é o **segmento relativo** (o invariante do ADR
+0130/0144). O que a base recusa, com motivo nomeado: caminho relativo, com
+`..`, `/`, um arquivo já existente, fora do `$HOME` no Linux (a mesma regra
+de `--dir`), e a base que está **dentro** da pasta deste projeto ou é igual
+a ela — nesse caso todo projeto novo nasceria dentro deste. O sentido
+contrário (a pasta do projeto dentro da base) é o arranjo normal.
+
+Recusa vinda da **flag** encerra o processo com código 2; recusa vinda do
+**arquivo** é dita em `stderr`, nomeia o que se perde, e o runner segue sem
+base — derrubar um agente que atende um projeto por causa de uma
+configuração que ele ainda não usa seria desproporcional. Um arquivo que
+existe e não declara `base` é ausência, não recusa.
+
+Isto é **best-effort**, como `guard.ts` e `espelho-guard.ts`: a fronteira de
+segurança continua sendo autenticação + pipeline de aprovação + o
+consentimento de quem rodou o CLI.
 
 ### Rodando direto do checkout do monorepo (sem instalar via npm)
 
