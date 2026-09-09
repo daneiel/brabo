@@ -159,8 +159,8 @@ de" é que ordena, e a FASE 28 registrou o caso em que a ordem real divergiu.
 | # | entregável | depende de | proibições próprias |
 |---|---|---|---|
 | 1 | este documento, os ADRs 0149-0152, [o registro de BRB](../reference/brb.md) e a faixa de RN | — | não toca `apps/`, `docker/`, `scripts/`, `.github/`, `deploy/`; não edita ADR aceito |
-| 2 | assinatura em `release.yml` e `build-runner-binaries.yml`; `checksums.txt`; verificação no runbook | 1 | não escreve `install.sh`; não muda o que as imagens contêm |
-| 3 | `install.sh`: verificação de origem, detecção, pergunta, marcador | 2 | **não sobe nada** — nem compose, nem migrate, nem runner |
+| 2 | assinatura em `release.yml` e `build-runner-binaries.yml`; `checksums.txt`; verificação no runbook | 1 | não escreve `install.sh`; não muda o que as imagens contêm; **não toca o proxy da api** (ver abaixo) |
+| 3 | `install.sh`: verificação de origem, detecção, pergunta, marcador — **e o proxy `GET /runner-releases/binary` passa a verificar** | 2 | **não sobe nada** — nem compose, nem migrate, nem runner |
 | 4 | `install.sh`: fonte GHCR × build local, segredos, compose de instalação, migrate, smoke | 3 | não instala runner; não migra instalação anterior |
 | 5 | backup e restore de volumes, rodando contra compose | 1 | não toca o CronJob do k8s nem `deploy/k8s/test-restore.sh` |
 | 6 | `install.sh`: migração de instalação anterior, provada com a sessão 5 | 4, 5 | não apaga a base do usuário nem a pasta de espelho, em hipótese nenhuma |
@@ -168,6 +168,15 @@ de" é que ordena, e a FASE 28 registrou o caso em que a ordem real divergiu.
 | 8 | protocolo: capacidade e mensagem de criação de pasta, predicado próprio | 7 | não altera `RunnerReadiness`; não introduz `proposed_action` |
 | 9 | web: picker via `fs_list_dir` no modo `runner`, espera com três estados (RN-474) | 8 | não toca o caminho do modo `mounted` (RN-504, pela api) |
 | 10 | E2E em máquina limpa (Linux e macOS), docmap para o `install.sh`, `docs:check`, CHANGELOG | 6, 9 | não afrouxa gate para o E2E passar |
+
+> **Os dois lados da verificação não entram juntos, e a divisão é a dependência
+> real.** A sessão 2 entrega quem **produz** a assinatura; os consumidores
+> entram na 3, porque os dois que existem — o `install.sh` conferindo o próprio
+> hash, e o proxy `GET /runner-releases/binary` conferindo o binário que serve —
+> leem o **mesmo** `checksums.txt` assinado e só podem ser escritos depois que
+> ele existe. Enquanto a 3 não fecha, o proxy continua servindo bytes do GitHub
+> sem verificar nada, exatamente como antes: a sessão 2 **não piora** esse
+> caminho, e também não o conserta.
 
 ## O que esta fase NÃO toca
 

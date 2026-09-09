@@ -9616,6 +9616,54 @@ reparável (termina em toast), não o invisível.
 | "Subir" num projeto `runner` com pasta confirmada mas runner possivelmente desligado | a tela OFERECE e escreve a ressalva: confirmação de pasta não é presença de agente (RN-468), e a ação falha ao ser aprovada se ele não estiver de pé (RN-521) |
 | Papel abaixo de `maintainer` na página `/containers` | controles inertes com o motivo dito UMA vez em texto; estado, imagem e recursos continuam VISÍVEIS (RN-521/RN-102, ADR 0064) |
 
+## FASE 29 — a instalação de uma linha: assinar o que se publica
+
+A [FASE 28](explanation/fase-28-pasta-do-usuario.md) recusou por escrito o
+instalador de uma linha enquanto os artefatos não fossem assinados (BRB-005), e
+é por isso que a [FASE 29](explanation/fase-29-instalacao-de-uma-linha.md)
+assina **antes** de instalar. Sessão 2, [ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md).
+
+### RN-524 — Artefato publicado é assinado por identidade de workflow, verificado no mesmo run, e a verificação recusa em vez de avisar {#rn-524}
+
+Toda tag final assina o que publica, e **verifica o que assinou antes de
+publicar a Release**:
+
+- as **quatro imagens** são assinadas **por DIGEST**, lido de
+  `.release/images.json` — nunca por tag. Tag é ponteiro móvel: assinar
+  `:5.0.0` atestaria o que aquela tag apontava no instante da assinatura, e não
+  o que ela aponta quando alguém baixa. O digest é o que o manifesto já registra
+  e o que o overlay de produção já aplica (ADR 0119);
+- os **cinco binários** do runner são cobertos por **UM** `checksums.txt`
+  assinado, e não por cinco assinaturas — quem verifica quatro e esquece o
+  quinto não tem como saber que esqueceu;
+- a assinatura é **keyless** (OIDC do GitHub Actions): a identidade que assina é
+  o próprio workflow, e não existe chave privada em custódia. Um par de chaves
+  próprio significaria mais um segredo de CI, e este repositório já viu um PAT
+  expirar em silêncio e reprovar duas runs do `tag-release`
+  ([ADR 0139](adr/0139-o-alarme-de-esteira-ganha-destinatario.md));
+- **falha de verificação é recusa nomeada, nunca aviso.** Um aviso que se aceita
+  clicando é uma verificação que não existe.
+
+O manifesto **declara o que cobre**. A matriz é `fail-fast: false` de propósito,
+então um alvo que não construiu não impede os outros quatro de terem manifesto —
+mas o job nomeia no log os alvos que ficaram de fora, porque um `checksums.txt`
+que lista quatro e cala sobre o quinto é pior que nenhum: quem verifica os
+quatro conclui que verificou a release.
+
+**Onde:** `.github/workflows/release.yml` (passos "Instalar o cosign" e "Assinar
+as imagens publicadas", com `id-token: write` no bloco de `permissions`);
+`.github/workflows/build-runner-binaries.yml` (job `checksums`, `needs: build`,
+`if: always()`).
+
+**Teste:** `scripts/ci/actions-pinadas.spec.ts` cobre o pin por SHA do
+`sigstore/cosign-installer` (com o comentário de versão ao lado, que é o que
+diz a um humano e ao Dependabot qual versão é aquele hash). A assinatura em si
+só se prova numa tag real — declarado, como o resto da esteira de release.
+
+**Origem:** FASE 29, sessão 2. Fecha **BRB-005** para imagens e binários. NÃO
+cobre o *code-signing* de sistema operacional dos binários (notarização do
+macOS, Authenticode do Windows), que exige identidade paga e segue no backlog.
+
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar
 > aqui — algo combinado e ainda não codificado não aparece nesta varredura.

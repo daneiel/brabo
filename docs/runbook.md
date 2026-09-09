@@ -2123,6 +2123,68 @@ branch, a ceiling on corrections, verdicts as an artifact, and a terminal
 
 ---
 
+## Verifying a published artifact {#verificar-artefato-publicado}
+
+Every final tag signs what it publishes, with `cosign` **keyless** — the
+signing identity is the workflow itself, and there is no key in custody
+anywhere ([ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md),
+[RN-524](business-rules.md#rn-524)). This is how **you** check it, outside
+CI.
+
+Both commands need the two `--certificate-*` flags. They are not optional
+decoration: without them `cosign` would accept a valid signature **from
+anyone**, which is the failure this whole mechanism exists to prevent.
+
+### An image, by digest
+
+```bash
+# The digest comes from .release/images.json, which is an asset of the Release
+# — never from a tag, which is a movable pointer.
+DIGEST=$(gh release download vX.Y.Z --pattern images.json --output - \
+  | jq -r '.imagens[] | select(.alvo == "api") | .digest')
+
+cosign verify \
+  --certificate-identity-regexp '^https://github.com/daneiel/brabo/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  "ghcr.io/daneiel/brabo-api@${DIGEST}"
+```
+
+### The runner binaries
+
+One signed `checksums.txt` covers all five targets, so verification is two
+steps: the manifest's signature, then the binary against the manifest.
+
+```bash
+gh release download vX.Y.Z --pattern 'checksums.txt*' --pattern 'brabo-runner-*'
+
+cosign verify-blob \
+  --bundle checksums.txt.bundle \
+  --certificate-identity-regexp '^https://github.com/daneiel/brabo/\.github/workflows/build-runner-binaries\.yml@' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  checksums.txt
+
+# Only after the manifest is proven authentic does checking the binary mean
+# anything — a checksums.txt nobody verified is a file the attacker also
+# gets to write.
+sha256sum -c checksums.txt --ignore-missing
+```
+
+### When verification fails
+
+**Do not install.** A signature that does not verify has exactly two
+readings — the artifact is not what the pipeline published, or the pipeline
+did not publish it — and neither is a reason to continue. Check whether the
+identity regex matches the workflow that really published that tag (a
+republish by `workflow_dispatch` signs with the same identity), and then
+treat it as an incident rather than as noise.
+
+**What this does NOT cover:** operating-system code-signing of the runner
+binaries — macOS notarization and Windows Authenticode. Those need a paid
+signing identity and are a separate backlog item; the OS will still warn on
+first run.
+
+---
+
 ## Adding a compatible provider {#adicionando-um-provider-compativel}
 
 Applies to any provider that speaks OpenAI's `/chat/completions` dialect —

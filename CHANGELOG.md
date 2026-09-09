@@ -55,6 +55,43 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   **humano** clicando, e `container_remove` continua no teto absoluto da
   RN-418. `decide.ts` fica byte a byte.
 
+- **ci**: toda tag final passa a **assinar o que publica**, e a verificar o que
+  assinou no mesmo run ([RN-524](docs/business-rules.md#rn-524),
+  [ADR 0149](docs/adr/0149-assinatura-dos-artefatos-publicados.md)).
+
+  O produto não assinava **nada**: procurar `cosign`, `sigstore`, `slsa` ou
+  `attestation` em `.github/`, `scripts/` e `docker/` devolvia uma ocorrência
+  só, e ela não cobria nem imagem nem binário (`npm publish --provenance`, do
+  pacote npm do runner). `release.yml` publicava as quatro imagens sem
+  `id-token: write`; `build-runner-binaries.yml` subia os cinco binários com
+  `gh release upload` e **nada mais** — enquanto os `sha256sum -c` que já
+  existem no repositório verificam binário **de terceiro**, que é exatamente o
+  padrão que o produto sabia aplicar e nunca aplicou a si mesmo. Era o
+  **BRB-005**, e é o que barrou o instalador de uma linha na FASE 28.
+
+  As imagens são assinadas **por DIGEST**, lido de `.release/images.json` —
+  nunca por tag: assinar `:5.0.0` atestaria o que aquela tag apontava no
+  instante da assinatura, e tag é ponteiro móvel. Os binários ganham **UM**
+  `checksums.txt` assinado, num job `checksums` que espera a matriz — e não
+  cinco assinaturas, porque quem verifica quatro e esquece o quinto não tem
+  como saber que esqueceu. O job roda com `if: always()` de propósito (a matriz
+  é `fail-fast: false`, e um alvo que não construiu não pode negar manifesto
+  aos outros quatro) e **nomeia os alvos que o manifesto não cobre**.
+
+  Keyless, e a razão é o histórico do próprio repositório: uma chave privada
+  seria mais um segredo de CI, e um PAT já expirou em silêncio e reprovou duas
+  runs do `tag-release` (ADR 0139). Os dois workflows **verificam antes de
+  publicar** — assinatura que ninguém tenta verificar é um arquivo a mais, e a
+  falha apareceria só na máquina de quem instala.
+
+  O procedimento de verificação para quem baixa está no
+  [runbook](docs/runbook.md#verificar-artefato-publicado), com as duas flags de
+  `--certificate-*` obrigatórias: sem elas o `cosign` aceitaria uma assinatura
+  válida **de qualquer um**, que é o defeito que o mecanismo existe para
+  fechar. O que **não** entra: code-signing de sistema operacional dos binários
+  (notarização, Authenticode), que exige identidade paga e segue no backlog; e
+  o proxy `GET /runner-releases/binary`, que continua sem verificar nada.
+
 ### Correções
 
 - **dev**: `scripts/dev/reset-total.sh` terminava dizendo **"reset completo"**

@@ -227,3 +227,109 @@ jobs:
             gh release upload "$TAG" "$arquivo"
             echo "anexado: $nome -> $TAG"
           fi
+
+  # ADR 0149 (BRB-005) — UM `checksums.txt` assinado, não cinco assinaturas.
+  #
+  # Por que um job SEPARADO e não um passo dentro da matriz: cada job da
+  # matriz roda numa plataforma diferente e enxerga só o PRÓPRIO binário. Um
+  # manifesto que cobre os cinco só pode ser montado depois que os cinco
+  # anexaram — e é por isso que este job baixa os assets da Release em vez de
+  # ler `dist-bin/`, que aqui está vazio.
+  #
+  # Cinco assinaturas separadas seriam cinco jeitos de a verificação ficar
+  # pela metade: quem verifica quatro e esquece o quinto não tem como saber
+  # que esqueceu. Um manifesto assinado cobre o conjunto com uma verificação
+  # só, e é o formato que qualquer consumidor sabe ler.
+  checksums:
+    name: checksums.txt assinado
+    needs: build
+    # `always()` porque a matriz é `fail-fast: false` de propósito: um alvo
+    # que não construiu NÃO deve impedir os outros quatro de terem manifesto.
+    # O que o manifesto não pode fazer é calar sobre a ausência — daí a
+    # comparação com a matriz esperada, abaixo.
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # anexar o manifesto e o bundle à Release
+      id-token: write # assinar keyless (a identidade é ESTE workflow)
+    steps:
+      - name: Qual tag
+        id: alvo
+        env:
+          ENTRADA: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+            tag="$ENTRADA"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Instalar o cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
+
+      - name: Gerar, assinar e anexar o checksums.txt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.alvo.outputs.tag }}
+          # Os cinco alvos da matriz acima. Escrito aqui de novo, de
+          # propósito: é contra ESTA lista que a ausência é declarada, e uma
+          # lista derivada do que foi baixado nunca acusaria falta nenhuma.
+          ALVOS_ESPERADOS: 'linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64'
+        run: |
+          set -euo pipefail
+
+          mkdir -p artefatos && cd artefatos
+
+          # Baixa o que ESTÁ anexado. `|| true`: Release sem nenhum binário é
+          # um desfecho tratado embaixo, com mensagem própria — não um erro de
+          # download.
+          gh release download "$TAG" --pattern 'brabo-runner-*' --dir . || true
+
+          presentes=''
+          faltando=''
+          for alvo in $ALVOS_ESPERADOS; do
+            if ls "brabo-runner-${alvo}"* >/dev/null 2>&1; then
+              presentes="${presentes} ${alvo}"
+            else
+              faltando="${faltando} ${alvo}"
+            fi
+          done
+
+          if [ -z "${presentes# }" ]; then
+            echo "::error::nenhum binário anexado a $TAG — não há o que assinar. O manifesto NÃO é criado vazio: um checksums.txt sem linhas afirmaria que a release não tem binários, quando o que houve foi a matriz inteira falhar."
+            exit 1
+          fi
+
+          # O manifesto DIZ o que cobre. Um checksums que lista quatro e cala
+          # sobre o quinto é pior que nenhum: quem verifica os quatro conclui
+          # que verificou a release.
+          sha256sum brabo-runner-* > checksums.txt
+          echo "cobre:${presentes}" >&2
+          if [ -n "${faltando# }" ]; then
+            echo "::warning::o manifesto NÃO cobre:${faltando} — esses alvos não têm binário anexado a $TAG."
+          fi
+
+          # `sign-blob` (e não `sign`, que é de imagem OCI). O bundle carrega
+          # assinatura, certificado e a prova de inclusão no log de
+          # transparência num arquivo só — é o que torna a verificação
+          # possível sem consultar o Rekor na hora.
+          cosign sign-blob --yes --bundle checksums.txt.bundle checksums.txt
+
+          # Verifica AQUI, antes de anexar. Assinatura que ninguém tenta
+          # verificar é um arquivo a mais na Release, e a falha apareceria só
+          # na máquina de quem instala.
+          cosign verify-blob \
+            --bundle checksums.txt.bundle \
+            --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/\.github/workflows/build-runner-binaries\.yml@" \
+            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+            checksums.txt
+
+          # `--clobber`: este job pode reexecutar por dispatch depois de um
+          # alvo ser reanexado, e aí o manifesto TEM de ser substituído — ao
+          # contrário do binário, cujo passo é idempotente porque o mesmo
+          # arquivo não muda.
+          gh release upload "$TAG" checksums.txt checksums.txt.bundle --clobber
+          echo "anexados: checksums.txt e checksums.txt.bundle -> $TAG"
