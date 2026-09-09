@@ -9537,6 +9537,94 @@ reparável (termina em toast), não o invisível.
   existe sinal de presença na api), e o papel lido é o do workspace, não o
   efetivo do projeto
 
+## A flag que liga um agente tem de CHEGAR ao processo (RN-523)
+
+### RN-523 — Flag booleana lida pelo `runtime.exs` é mapeada no `environment:` do serviço `engine` dos dois composes, com o default do código {#rn-523}
+
+Uma pausa só é reversível se existir o caminho de ligar. A da Anamnese e a do
+Psicólogo ([RN-115](business-rules/autenticacao.md#rn-115),
+[RN-117](business-rules/autenticacao.md#rn-117)) foram declaradas reversíveis
+em TRÊS lugares — o docblock de `AnamneseSchedulerWorker.enabled?/0` ("Ligar de
+volta é `ANAMNESE_ENABLED=true` e reiniciar o engine"), o de
+`PsychologistWorker.enabled?/0` e a tabela de
+[configuração](reference/configuration.md) — e o caminho **não existia em
+ambiente nenhum**.
+
+**Medido, não hipótese.** Com o compose de dev de pé:
+
+```
+$ docker compose … exec -T engine sh -lc \
+    'echo "[$START_ANAMNESE] [$ANAMNESE_ENABLED] [$PSYCHOLOGIST_ENABLED]"'
+[true] [] []
+```
+
+A causa é a camada que só o Compose tem: **ele não repassa o ambiente do host
+ao container**. Uma variável chega ao processo se, e só se, estiver escrita no
+`environment:` (ou num `env_file`) daquele serviço. O `engine` mapeava TREZE
+variáveis de Anamnese/Psicólogo — todas TETOS de custo
+(`ANAMNESE_INTERVAL_SECONDS`, `ANAMNESE_BUDGET_MICROS`,
+`PSYCHOLOGIST_TRIAGE_THRESHOLD`, …) — e nenhuma das duas que decidem se os
+agentes rodam. `ANAMNESE_ENABLED=true` no `.env` era inerte:
+`apps/engine/config/runtime.exs` caía no default `"false"` e os dois seguiam
+desligados **em silêncio, sem erro**.
+
+Origem provável do defeito: quando o default do código virou `false`
+(2026-08-10), ninguém precisou da variável para DESLIGAR. Só quem tenta LIGAR
+descobre que o fio não existe — e essa pessoa, por construção, aparece meses
+depois.
+
+**A regra.** Toda flag BOOLEANA que o `runtime.exs` lê — a forma
+`System.get_env("X", "true"|"false") == "true"` — tem de estar mapeada no
+`environment:` do serviço `engine` dos dois composes. O recorte é o das
+booleanas e não o das 58 variáveis do arquivo porque uma flag existe
+exatamente para ser virada, e a virada acontece pelo ambiente: flag sem linha
+no compose é interruptor sem fio. Teto numérico com default bom
+(`READ_FILE_MAX_BYTES`) e variável de release (`SECRET_KEY_BASE`, `POOL_SIZE`)
+ficam legitimamente de fora, e é por isso que a lista é DERIVADA do
+`runtime.exs` em vez de mantida à mão.
+
+O default difere por arquivo, e a diferença é a decisão:
+
+- em `docker/docker-compose.yml` (dev) a linha repete o default do CÓDIGO. Dev
+  é onde a promessa dos docblocks é exercida, e um default divergente ali faria
+  o compose decidir produto por baixo do `runtime.exs`.
+- em `docker/docker-compose.prod.yml` basta estar mapeada. Aquele arquivo
+  desliga os agentes de fundo de propósito (`START_ANAMNESE:-false` contra o
+  `true` do código), com o motivo escrito ao lado — cobrar igualdade
+  reprovaria uma decisão consciente.
+
+**Isto NÃO muda decisão de produto nenhuma.** As duas flags continuam
+`false` por default nos dois composes: a pausa de 2026-08-10 segue valendo,
+byte a byte. O que passou a existir é o interruptor.
+
+**E `ANAMNESE_ENABLED=true` sozinho não basta.** `START_ANAMNESE` (chave de
+BOOT, `apps/engine/lib/engine/application.ex:82,106-108`) decide se o `kickoff/0` que
+AGENDA o tick periódico é chamado; `ANAMNESE_ENABLED` (flag de PRODUTO) decide
+se uma rodada NOVA pode acontecer. São perguntas diferentes, e a Anamnese
+periódica exige as duas em `true`. O Psicólogo tem só a segunda — o gatilho
+automático dele é o fechamento de sessão, não um tick.
+
+**`deploy/k8s/` fica de fora, e por decisão.** Lá não existe a camada que
+quebra: um Deployment/ConfigMap não intercepta nada, e a variável é escrita
+onde toda variável é escrita. O `brabo-config` tem QUATRO literais (endereços
+de serviço e nível de log do web), sem nenhum dos 13 tetos nem
+`START_ANAMNESE` — o engine roda com os defaults do código, coerentemente.
+Não há interruptor sem fio a consertar ali.
+
+- **Onde:** `docker/docker-compose.yml:406-425` (as quatro chaves de boot e as
+  quatro flags de produto, no bloco de cada agente);
+  `docker/docker-compose.prod.yml:308-315`;
+  `apps/engine/config/runtime.exs:157,158,162,168,185,229,238,264` (as oito
+  flags); `.env.example` (as duas perguntas, lado a lado)
+- **Teste:** `scripts/ci/flags-do-engine-no-compose.spec.ts` — deriva as flags
+  do `runtime.exs` e reprova nomeando a que faltar em qualquer dos dois
+  composes, e a que divergir do default do código no de dev. `warn` nenhum:
+  reprova mesmo, no job `test-packages`
+- **Origem:** achado por medição direta no container do engine, 2026-09-08.
+  Fica declarado: a lista de exceções `FLAGS_FORA_DO_COMPOSE` nasce VAZIA — ela
+  existe para que "fora por decisão" tenha onde ser dito, e não vire
+  indistinguível de "fora por esquecimento"
+
 ---
 
 ## Quando dá errado

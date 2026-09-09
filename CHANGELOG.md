@@ -57,6 +57,73 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docker,engine,docs**: as flags que ligam a **Anamnese** e o **Psicólogo**
+  não estavam mapeadas no `environment:` do serviço `engine` de compose
+  nenhum — a pausa que três lugares do código chamavam de **reversível** não
+  era reversível em ambiente nenhum (RN-523).
+
+  **O que se prometia.** O docblock de `AnamneseSchedulerWorker.enabled?/0`
+  dizia, desde 2026-08-10: *"não é bug, é pausa reversível. Ligar de volta é
+  `ANAMNESE_ENABLED=true` e reiniciar o engine."* O de
+  `PsychologistWorker.enabled?/0` dizia o mesmo com o outro nome, e
+  `docs/reference/configuration.md` repetia.
+
+  **O que acontecia.** `docker compose` **não repassa o ambiente do host** ao
+  container: uma variável chega ao processo se, e só se, estiver escrita no
+  `environment:` daquele serviço. O `engine` mapeava **treze** variáveis de
+  Anamnese/Psicólogo — todas **tetos de custo** (`ANAMNESE_INTERVAL_SECONDS`,
+  `ANAMNESE_BUDGET_MICROS`, `PSYCHOLOGIST_TRIAGE_THRESHOLD`, …) — e nenhuma
+  das duas que decidem se os agentes rodam. `ANAMNESE_ENABLED=true` no `.env`
+  era inerte: `runtime.exs` caía no default `"false"` e os dois seguiam
+  desligados **em silêncio, sem erro**.
+
+  **A medição**, no compose de dev de pé, antes da correção:
+
+  ```
+  $ docker compose … exec -T engine sh -lc \
+      'echo "[$START_ANAMNESE] [$ANAMNESE_ENABLED] [$PSYCHOLOGIST_ENABLED]"'
+  [true] [] []
+  ```
+
+  Origem provável: quando o default do código virou `false`, ninguém precisou
+  da variável para **desligar** — só quem tenta **ligar** descobre que o fio
+  não existe, e essa pessoa aparece meses depois.
+
+  **O que mudou.** As oito flags booleanas que o `runtime.exs` lê passam a
+  estar mapeadas nos **dois** composes, cada uma com o **mesmo default do
+  código**. As quatro que faltavam além das duas do título
+  (`START_MODEL_SYNC`, `START_GATE_RESCUE`, `GRAPH_TEMPLATES_ENABLED`,
+  `GRAPH_INSTRUCTION_TEMPLATES_ENABLED`) entram junto porque são o **mesmo
+  defeito**, achado pelo próprio mecanismo deste PR: deixá-las de fora exigiria
+  quatro exceções sem motivo, e um mecanismo com quatro exceções de
+  conveniência é decorativo. Nenhuma linha muda comportamento — todas repetem
+  o default que já valia.
+
+  **O que NÃO mudou.** A decisão de produto de 2026-08-10 segue intacta: os
+  dois nascem `false` nos dois arquivos, e nada aqui liga agente nenhum. O que
+  passou a existir é o **interruptor**. E `ANAMNESE_ENABLED=true` sozinho
+  continua não bastando para a rodada periódica: `START_ANAMNESE` é a chave de
+  **boot** (decide se o tick é agendado) e as duas respondem perguntas
+  diferentes — o `.env.example` agora explica as duas lado a lado. O
+  Psicólogo tem só a flag de produto, porque o gatilho automático dele é o
+  fechamento de sessão, não um tick.
+
+  **`deploy/k8s/` não muda, e é coerência e não omissão.** Lá não existe a
+  camada que quebra: um Deployment/ConfigMap não intercepta nada, a variável é
+  escrita onde toda variável é escrita, e o `brabo-config` tem **quatro**
+  literais (endereços de serviço e nível de log do web) — sem nenhum dos treze
+  tetos nem `START_ANAMNESE`. Não há interruptor sem fio a consertar ali.
+
+  **O mecanismo**, que é o ponto: `scripts/ci/flags-do-engine-no-compose.spec.ts`
+  **deriva** do `runtime.exs` toda flag booleana
+  (`System.get_env("X", "true"|"false") == "true"`) e reprova nomeando a que
+  faltar em qualquer dos dois composes — e, no de dev, a que divergir do
+  default do código. A lista é derivada e não travada à mão porque das 58
+  variáveis do arquivo a maioria são tetos numéricos com default bom ou coisas
+  de release, legitimamente ausentes; o recorte que não admite ausência é o das
+  booleanas, porque uma flag existe para ser virada. Provado reintroduzindo o
+  defeito: as duas checagens reprovam.
+
 - **dev**: `scripts/dev/reset-total.sh` terminava dizendo **"reset completo"**
   com o ambiente quebrado, e essa frase era **mentira por construção** — ela
   era um `echo` fixo no fim de um script que nunca perguntava nada sobre o
