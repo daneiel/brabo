@@ -9799,6 +9799,116 @@ fila de aprovações rotineiras, corroendo o teto que dá sentido ao clique.
 
 ---
 
+## O picker do modo Runner volta a ler o disco de QUEM ESCOLHE (RN-533)
+
+### RN-533 — Em modo `runner` o navegador de pastas pergunta ao agente local, e a tela diz de quem é o disco {#rn-533}
+
+O assistente de criação tinha **um** navegador de pastas para **dois** modos que
+leem discos **diferentes**. A [RN-504](#rn-504) apontou os dois para a api —
+certo para `mounted`, cuja pasta mora sob `BRABO_PROJECTS_BASE`, no SERVIDOR — e
+declarou o preço por escrito: *"para `runner` a lista deixa de ser o disco da
+máquina do usuário e passa a ser a base"*. Aquilo foi aceito porque *"o modo
+`runner` sai da criação de projeto no PR seguinte"*, o que **não aconteceu**: o
+modo continua sendo oferecido, e a direção do
+[ADR 0151](adr/0151-base-consentida-no-runner.md) (ponto 7) é a oposta. Enquanto
+durou, escolher `runner` e clicar "Procurar pasta…" navegava um disco que não é
+o daquele projeto — e **nada na tela dizia isso**, então o erro só apareceria
+pelo CONTEÚDO da lista.
+
+**O MODO decide o transporte, e são duas perguntas diferentes.** `mounted`
+segue byte a byte pela api (`GET workspaces/:workspaceId/project-folders`,
+escopado duro à base — RN-504 intacta); `runner` volta a `fs_list_dir`, que
+sempre existiu dos dois lados e cujo transporte no web nunca saiu do
+repositório. Não é um transporte sobrando que ganhou uso: é a pergunta "o que há
+na SUA máquina?", que a api não tem como responder, voltando a ser feita a quem
+tem como.
+
+**A âncora do modo `runner` é a criação ANTECIPADA da [RN-437](#rn-437).** O
+ticket do canal é escopado a um `projectId` real, então o clique cria o projeto
+antes de abrir o modal — o propósito original daquela regra, que a RN-504 tinha
+deixado sem consumidor. E falhar essa criação **não abre o modal em transporte
+nenhum**: cair na api mostraria a base do SERVIDOR sob o rótulo de "sua
+máquina", exatamente o defeito que esta regra fecha.
+
+**Sem agente local conectado, o modo continua oferecido — e quem declara é o
+PICKER, não o passo de modo.** A [RN-513](#rn-513) esconde `mounted` quando a
+base é desconhecida ou ausente, e está certa: ali a api TEM sinal
+(`GET .../projects-base`), e sem base a criação termina em 400 no fim do
+assistente, sem conserto na tela. Aqui nenhuma das duas coisas vale. Não existe
+sinal de presença de runner na api — a [RN-521](#rn-521) já declara isso por
+escrito —, então esconder o modo ou apagar o botão seria decidir "não tem" a
+partir de "não sei", o colapso que a [RN-088](#rn-088)/[RN-468](#rn-468)
+proíbem; e o modo **não está quebrado** sem runner, porque o caminho é
+confirmado depois, pelo CLI ([RN-423](#rn-423)) — o que falta é só a
+NAVEGAÇÃO. Então a declaração vai para o único lugar que de fato pergunta: o
+picker, no instante em que pergunta.
+
+**O motivo é DISCRIMINADO, e os dois desfechos não colapsam.**
+`MotivoDeFalhaDoAgente` é `sem-agente` (o engine AFIRMA que não há runner
+conectado — um fato do servidor) ou `sem-resposta` (teto da requisição, socket
+caído, ticket recusado — ignorância, e dita como ignorância na tela). Antes
+desta regra quem decidia era `erro?.includes('Nenhum runner conectado')` no
+COMPONENTE — uma tela casando substring de uma frase em pt-BR que mora num
+`.ex` do engine, exatamente o que a [RN-532](#rn-532) recusa por escrito do
+outro lado (*"o texto é para um humano ler, o motivo é para o outro lado
+DECIDIR"*). O casamento sobrou em **um** lugar, o módulo que é dono do
+protocolo do canal, e a degradação é nomeada: frase reescrita no engine cai em
+`sem-resposta` — o estado "não sei" —, nunca em "há agente". O transporte de
+api **nunca** preenche `motivo`, e isso é decisão: recusa da api é recusa da
+api, tem mensagem própria que ENSINA e não há agente local a instalar para
+consertá-la.
+
+**A espera é a da [RN-474](#rn-474), REUSADA e não reescrita.** Os dois motivos
+levam à `EsperaDoRunner` — mesmos três estados (`esperando`/`confirmado`/
+`semResposta`, que nunca colapsam), mesmo TETO de 3 minutos, mesma redação,
+mesmo sinal (`workspaceVerifiedAt` MUDANDO, nunca "existindo"). Ela ganhou uma
+callback opcional porque aqui a confirmação tem CONSEQUÊNCIA: a listagem que
+falhou é refeita sozinha, em vez de a pessoa ter de descobrir que precisa
+clicar em algo. A callback dispara UMA vez por instância — sem o `ref`, cada
+rodada da sonda a redispararia e o chamador entraria em laço — e ela **não
+afirma "está de pé agora"** (`workspaceVerifiedAt` nunca disse isso, RN-468):
+por isso quem a recebe REPETE o pedido, e se o agente já caiu de novo a tela
+volta ao mesmo estado, honesta das duas vezes. Espera é UMA por tela:
+`RunnerOnboardingPanel` ganhou `mostrarEspera`, `false` só onde quem o monta já
+mostra a sua — duas seriam duas sondas, dois tetos e, no pior caso, duas frases
+discordando sobre o mesmo carimbo.
+
+**E o picker diz de QUEM é o disco, nas DUAS origens.** O único sinal antes
+disso era o rótulo de um atalho ("Base de projetos" × "Pasta pessoal"), que
+nomeia um lugar e não uma máquina. A frase da api não é decoração de simetria:
+sem ela a do runner leria como aviso excepcional, quando é informação que as
+duas devem.
+
+- **Onde:** `apps/web/src/lib/fs-browser.ts:60`
+  (`MotivoDeFalhaDoAgente`, e por que só o transporte do runner o preenche);
+  `apps/web/src/lib/fs-browser-channel.ts:66`
+  (`FRASE_DO_ENGINE_SEM_RUNNER`, o único casamento por substring que sobrou) e
+  `:68` (`motivoDaMensagem`); `apps/web/src/components/FolderBrowserModal.tsx:227`
+  (`agenteNaoRespondeu`, a decisão pelo motivo) e a linha de origem nas duas
+  origens; `apps/web/src/components/EsperaDoRunner.tsx:77` (`onConfirmado`) e
+  `:119` (o `ref` que a dispara uma vez);
+  `apps/web/src/components/RunnerOnboardingPanel.tsx:113` (`mostrarEspera`);
+  `apps/web/src/routes/NewProjectWizard.tsx:260` (`origemDoNavegador`, o
+  transporte escolhido pelo modo, `undefined` quando não há projeto a ancorar)
+- **Teste:** `apps/web/src/components/FolderBrowserModal.test.tsx` (a lista
+  declarando o disco da máquina do usuário; `sem-agente` caindo no painel de
+  onboarding; a decisão pelo MOTIVO e não pelo texto, com uma redação que
+  ninguém prometeu manter; `sem-resposta` com a ressalva de que isso não prova
+  ausência, UMA espera só e o teto anunciado; a listagem refeita sozinha quando
+  o carimbo muda); `apps/web/src/routes/NewProjectWizard.test.tsx` (o modo
+  decidindo o transporte nos dois sentidos; a criação antecipada ancorando o
+  canal; a criação que FALHA não abrindo navegador nenhum)
+- **ADR:** [0151](adr/0151-base-consentida-no-runner.md) ponto 7
+- **Origem:** FASE 29, sessão 9. Fica declarado e NÃO feito: o picker **não**
+  dispara `workspace_create` — escolher uma pasta é escolher, e criar é outra
+  coisa. `Engine.Runners.PastaDoProjeto.criar/3` (RN-532) segue sem chamador, e
+  ligá-lo exigiria uma rota HTTP nova na api, fora do escopo desta sessão. O
+  conserto definitivo do casamento por substring — o engine mandar um código ao
+  lado do texto, como o runner já faz com os cinco `motivo` da RN-532 — também
+  é do lado do engine, e fica declarado no código
+
+---
+
 ## O backup cobre os DOIS volumes que são fonte de verdade, e roda sem cluster (RN-528)
 
 ### RN-528 — `git_local_repos` entra no backup, o destino pode ser disco, e o restore de compose reusa as MESMAS três validações {#rn-528}

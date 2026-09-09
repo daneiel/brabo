@@ -6,6 +6,49 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: o navegador de pastas do assistente de criação volta a ler o disco da
+  MÁQUINA DO USUÁRIO no modo Runner, e a tela passa a dizer de quem é o disco
+  (RN-533, [ADR 0151](docs/adr/0151-base-consentida-no-runner.md) ponto 7).
+
+  Um navegador servia DOIS modos que leem discos diferentes. A
+  [RN-504](docs/business-rules.md#rn-504) apontou os dois para a api — certo
+  para `mounted`, cuja pasta mora sob `BRABO_PROJECTS_BASE`, no SERVIDOR — e
+  declarou o preço: para `runner`, a lista deixava de ser a máquina do usuário
+  e passava a ser a base. Aquilo foi aceito porque o modo `runner` sairia da
+  criação de projeto, o que **não aconteceu**. Enquanto durou, escolher
+  `runner` e clicar "Procurar pasta…" navegava um disco que não é o daquele
+  projeto — e nada na tela dizia isso, então o erro só apareceria pelo
+  CONTEÚDO da lista. Agora o MODO decide o transporte: `mounted` segue pela
+  api, byte a byte; `runner` volta a `fs_list_dir`, ancorado no projeto que a
+  [RN-437](docs/business-rules.md#rn-437) já criava antecipadamente (e que a
+  RN-504 tinha deixado sem consumidor). Criação antecipada que falha **não**
+  abre o modal em transporte nenhum.
+
+  **Sem agente local conectado, o modo continua oferecido — quem declara é o
+  picker.** A [RN-513](docs/business-rules.md#rn-513) esconde `mounted` sem
+  base porque ali a api TEM sinal e a criação terminaria em 400 sem conserto na
+  tela; aqui não existe sinal de presença de runner na api
+  ([RN-521](docs/business-rules.md#rn-521)), e esconder o modo seria decidir
+  "não tem" a partir de "não sei" ([RN-088](docs/business-rules.md#rn-088)/
+  [RN-468](docs/business-rules.md#rn-468)). O modo também não está quebrado sem
+  runner — o caminho é confirmado depois, pelo CLI
+  ([RN-423](docs/business-rules.md#rn-423)) —, então a declaração vai para o
+  único lugar que de fato pergunta.
+
+  **Os dois desfechos não colapsam**, e o motivo é DISCRIMINADO: `sem-agente`
+  (o servidor AFIRMA que não há runner) × `sem-resposta` (teto, socket caído,
+  ticket recusado — ignorância, dita como ignorância). O componente decidia
+  por `includes('Nenhum runner conectado')`, casando uma frase em pt-BR que
+  mora num `.ex` do engine — o que a
+  [RN-532](docs/business-rules.md#rn-532) recusa por escrito do outro lado. O
+  casamento sobrou em um lugar só, e frase reescrita no engine cai em
+  `sem-resposta`, nunca em "há agente".
+
+  **A espera é a da [RN-474](docs/business-rules.md#rn-474), reusada:** mesmos
+  três estados, mesmo teto de 3 minutos, mesmo sinal — e agora ela refaz a
+  listagem sozinha quando o agente aparece, em vez de deixar a pessoa clicando
+  para descobrir. Uma espera por tela, nunca duas.
+
 - **engine,runner**: a base do agente local ganha um CONSUMIDOR — a pasta de um
   projeto passa a nascer pelo canal, com `workspace_create`/
   `workspace_create_result` (RN-532,

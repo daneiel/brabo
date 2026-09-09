@@ -279,9 +279,32 @@ excluded. The runner protocol (`FsEntrada` in `apps/runner/src/channel.ts`)
 returns folders and files mixed and counts nothing; filling in zeros there would
 assert "nothing was left out", which is different from not knowing.
 
-After this change the runner transport has ZERO callers in the web. It stays by
-a declared product decision — the runner leaves the creation wizard, the binary
-keeps being refined — and nothing here touches the channel protocol either way.
+RN-504 pointed BOTH modes at the api and declared the price: for `runner`, the
+list stopped being the user's machine and became the base. That was accepted
+because the `runner` mode would leave the creation wizard — it didn't, and
+[RN-533](business-rules.md#rn-533) ([ADR 0151](adr/0151-base-consentida-no-runner.md)
+point 7) reverses it. The MODE now picks the transport, because they answer
+different questions: `mounted` asks the api (its folder lives under the base, on
+the SERVER), `runner` asks the local agent (its folder lives on a machine the
+server cannot see). The `runner` branch is anchored on the project the wizard
+already created ahead of time ([RN-437](business-rules.md#rn-437)); when that
+creation fails, no modal opens at all, because falling back to the api would
+show the SERVER's base under the label "your machine".
+
+Failure carries a DISCRIMINATED reason (`MotivoDeFalhaDoAgente`): `sem-agente`
+is the server ASSERTING there is no runner, `sem-resposta` is a timeout, a
+dropped socket or a refused ticket — ignorance, stated as ignorance
+([RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468)). The
+component used to decide by `includes('Nenhum runner conectado')`, matching a
+pt-BR sentence that lives in the engine's `.ex`; the substring match now lives
+in exactly one place, the module that owns the channel protocol, and a reworded
+engine message degrades to `sem-resposta`, never to "there is an agent". Both
+reasons mount `EsperaDoRunner` — RN-474's wait, REUSED: same three states, same
+ceiling, same signal — which re-runs the failed listing on its own when the
+stamp changes. One wait per screen: `RunnerOnboardingPanel` takes
+`mostrarEspera`, false only where its host already shows one. And the picker
+STATES whose disk it is listing, in both origins — the only hint before that was
+a shortcut's label, which names a place, not a machine.
 
 **The Code tab (PHASE 26) is the same read pattern**, applied to code
 instead of events: `getContainerState`/`getCodeTree`/`getCodeFile`/
