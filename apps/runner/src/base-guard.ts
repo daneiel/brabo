@@ -37,7 +37,7 @@
  *
  * ## A base NÃO entra na validação de `--dir` (a proibição da api, transposta)
  *
- * `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:93-100`
+ * `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:421-438`
  * proíbe por escrito que a regra da base desça para `caminhoDeWorkspaceLocalValido`,
  * porque aquele predicado roda em TODA LEITURA e um projeto legado fora da
  * base explodiria ao ser lido: *"A base é regra de CRIAÇÃO e CONVERSÃO; o
