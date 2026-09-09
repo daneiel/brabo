@@ -267,6 +267,14 @@ jobs:
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
+      # O checkout existe por UM motivo: o `install.sh` desta tag entra no
+      # manifesto. Sem ele, o script não teria contra o que conferir a si
+      # mesmo, e a verificação de origem da RN-526 seria letra morta.
+      - name: Checkout na tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: ${{ steps.alvo.outputs.tag }}
+
       - name: Instalar o cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
 
@@ -288,6 +296,13 @@ jobs:
           # download.
           gh release download "$TAG" --pattern 'brabo-runner-*' --dir . || true
 
+          # O `install.sh` entra no manifesto e na Release, e sem isso a
+          # verificação que ele faz de SI MESMO seria impossível: ele confere o
+          # próprio hash contra este arquivo (RN-526). Vem do checkout desta
+          # tag, não de download — é o mesmo commit que produziu tudo o mais
+          # que está sendo assinado aqui.
+          cp "${GITHUB_WORKSPACE}/install.sh" .
+
           presentes=''
           faltando=''
           for alvo in $ALVOS_ESPERADOS; do
@@ -306,7 +321,7 @@ jobs:
           # O manifesto DIZ o que cobre. Um checksums que lista quatro e cala
           # sobre o quinto é pior que nenhum: quem verifica os quatro conclui
           # que verificou a release.
-          sha256sum brabo-runner-* > checksums.txt
+          sha256sum brabo-runner-* install.sh > checksums.txt
           echo "cobre:${presentes}" >&2
           if [ -n "${faltando# }" ]; then
             echo "::warning::o manifesto NÃO cobre:${faltando} — esses alvos não têm binário anexado a $TAG."
@@ -331,5 +346,5 @@ jobs:
           # alvo ser reanexado, e aí o manifesto TEM de ser substituído — ao
           # contrário do binário, cujo passo é idempotente porque o mesmo
           # arquivo não muda.
-          gh release upload "$TAG" checksums.txt checksums.txt.bundle --clobber
-          echo "anexados: checksums.txt e checksums.txt.bundle -> $TAG"
+          gh release upload "$TAG" checksums.txt checksums.txt.bundle install.sh --clobber
+          echo "anexados: checksums.txt, checksums.txt.bundle e install.sh -> $TAG"

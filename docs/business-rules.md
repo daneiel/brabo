@@ -10319,6 +10319,41 @@ manifesto assinada nomeada.
 **Origem:** FASE 29, sessão 7 ([ADR 0150](adr/0150-instalador-de-uma-linha.md),
 [ADR 0151](adr/0151-base-consentida-no-runner.md)).
 
+### RN-534 — O instalador entra no manifesto assinado, e é exercitado numa máquina limpa {#rn-534}
+
+Duas metades da mesma garantia.
+
+**O `install.sh` entra no `checksums.txt` e na Release.** Sem isso a verificação
+que ele faz de si mesmo (RN-526) seria letra morta: ele confere o próprio hash
+contra o manifesto assinado, e o manifesto não o cobria. O arquivo vem do
+**checkout da tag**, não de download — é o mesmo commit que produziu tudo o mais
+que está sendo assinado no mesmo job.
+
+**E ele é exercitado numa máquina limpa**, que é o que o runner efêmero do
+Actions é: host recém-criado, sem Brabo, sem `.env`, sem marcador. O E2E prova,
+nessa ordem: o **plano** não deixou de prometer o que nunca apaga; o **estado**
+numa máquina limpa não inventa marcador nem sinais; **sem TTY** o instalador
+relata, sai 0 e **não grava**; e, com TTY simulado por `script -qec` (um
+terminal de verdade, não um pipe — o pipe é justamente o que mataria o
+consentimento), a instalação completa verifica assinatura, confere o próprio
+hash, grava o marcador e deixa o `.env` em modo **600**.
+
+**Ele não roda em `pull_request`**, e o motivo é o mesmo da assinatura: o
+manifesto assinado só existe depois de uma tag final. Fazer o script rodar em PR
+exigiria dar-lhe uma porta para PULAR a verificação — a porta que o ADR 0150
+recusa, e que uma vez aberta valeria para qualquer um, não só para o CI. É a
+decisão que o golden-set do RAG já tinha tomado pelo mesmo raciocínio
+([ADR 0138](adr/0138-golden-set-do-rag-em-ci-agendado.md)): o que não é
+exercitável em PR roda em cadência própria, e o workflow **diz por quê** em vez
+de fingir cobertura.
+
+**Onde:** `.github/workflows/install-e2e.yml`;
+`.github/workflows/build-runner-binaries.yml`, job `checksums`.
+**Teste:** o próprio workflow — e `scripts/dev/install.spec.ts` continua
+cobrindo a decisão sem rede.
+**Origem:** FASE 29, sessão 10 ([ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md),
+[ADR 0150](adr/0150-instalador-de-uma-linha.md)).
+
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar
 > aqui — algo combinado e ainda não codificado não aparece nesta varredura.

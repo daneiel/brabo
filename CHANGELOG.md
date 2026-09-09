@@ -417,6 +417,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   para chegar ao comando. Release sem o binário da plataforma não interrompe a
   instalação; o resto está de pé e a mensagem aponta o caminho do npm.
 
+- **ci,install**: o instalador entra no manifesto assinado e passa a ser
+  exercitado numa máquina limpa ([RN-534](docs/business-rules.md#rn-534)).
+
+  A primeira metade fecha um ciclo que estava aberto: o `install.sh` confere o
+  **próprio hash** contra o `checksums.txt` assinado (RN-526), e **nada o
+  colocava lá**. Agora o job `checksums` o inclui no manifesto e o anexa à
+  Release, a partir do checkout da tag — o mesmo commit que produziu o resto do
+  que está sendo assinado.
+
+  A segunda é o `install-e2e.yml`: numa máquina limpa, prova que o plano não
+  deixou de prometer o que nunca apaga, que o estado não inventa marcador nem
+  sinais, que **sem TTY** o instalador relata, sai 0 e não grava — e, com um
+  terminal de verdade simulado por `script -qec` (não um pipe, que é o que
+  mataria o consentimento), que a instalação completa verifica assinatura,
+  confere o próprio hash e deixa o `.env` em modo 600.
+
+  **Ele não roda em `pull_request`**, e isso é decisão declarada: o manifesto
+  assinado só existe depois de uma tag final, e fazer o script rodar em PR
+  exigiria uma porta para pular a verificação — a porta que o ADR 0150 recusa.
+  Mesma escolha, pelo mesmo motivo, do golden-set do RAG.
+
 ### Correções
 
 - **dev**: `scripts/dev/reset-total.sh` terminava dizendo **"reset completo"**

@@ -451,6 +451,13 @@ The `v*` pattern covers the three forms the pipeline creates: `-dev.N`,
 > ruleset — only `tag-release` creates it, and only after the pipeline
 > it runs at the end of.
 >
+> A final tag also fires `install-e2e.yml`, which exercises the published
+> `install.sh` on a **clean machine** — which is what an ephemeral Actions
+> runner is. It does not run on `pull_request`, and the reason is the same one
+> that keeps signing out of PRs: the signed manifest only exists after a final
+> tag, and making the script run there would mean giving it a door to skip
+> verification ([RN-534](../business-rules.md#rn-534)).
+>
 > Since [ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md),
 > `build-runner-binaries.yml` has **two** jobs rather than one: the
 > `build` matrix (five targets, `fail-fast: false`) and a `checksums`
