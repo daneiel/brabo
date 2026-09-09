@@ -21,6 +21,9 @@ Start with triage.
 | I'm about to roll out the engine | [Engine rollout](#rollout-do-engine) |
 | session `active` with no process, or stuck in `closing` | [When a session escapes](#quando-a-sessao-escapa) |
 | I lost data / want to verify the backup | [Restore](#restore) |
+| I want to verify or restore a backup on an install that has **no cluster** | [Restore](#restore) — `make test-restore-compose` |
+| a `local`-provider project lost its repository, or I'm moving an installation to another machine | [Recovering the bare repos](#restore-dos-bare-repos) |
+| the graph is empty after a restore or a migration | [Losing the graph](#perda-do-grafo) |
 | LLM or git credential stopped decrypting | [Master key rotation](#rotacao-da-chave-mestra) |
 | everyone logged out at once, or account locked at login | [Auth key rotation](#rotacao-das-chaves-do-auth) |
 | cost per hour spiked | [Cost incident](#incidente-de-custo) |
@@ -1276,20 +1279,70 @@ Decisions in [ADR 0027](adr/0027-fase5-backup-hardening-release.md).
 > runs, and it's run against the local cluster. There's no step here that
 > nobody has ever exercised. The record of the last run is at the end.
 
+### What is backed up, and what deliberately is not
+
+Seven named volumes exist; **two** are source of truth and only those are
+copied. The classification is
+[ADR 0152](adr/0152-backup-de-volumes-contra-compose.md), and the point of
+making it is that "back up every volume" costs space while hiding what matters.
+
+| volume | nature | in the backup? |
+|---|---|---|
+| `pgdata` | source of truth — event log, actions, pgvector, everything | yes, as a **logical dump**. Never a file copy of the data directory: copying a running Postgres produces a backup that may not restore |
+| `git_local_repos` | source of truth — the *bare* repos of `local`-provider projects | **yes**, and this was the hole. It is not reconstructible from Postgres: the event log holds the narrative, not the git objects |
+| `neo4j_data` | derived — a projection of the event log ([ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)) | no. The answer for derived memory is **reprojection**, not restore — see [Losing the graph](#perda-do-grafo) |
+| `project_workspaces` | derived — worktrees the `WorktreeManager` recreates from the bare repo | no |
+| `ollama_data` | re-obtainable — models download again | no |
+| `brabo_projects_base` | the user's, not the product's | no, and the installer never deletes it |
+
 ### Where the backup lives
 
 | what | where |
 |---|---|
-| schedule | `brabo-backup` CronJob, 03:17 UTC, daily |
-| destination | an S3-compatible bucket — `BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET` in the `brabo-secrets` Secret |
-| layout | `daily/brabo-<ISO>.dump` and `weekly/brabo-<ISO>.dump` |
-| retention | 7 daily + 4 weekly, by COUNT (`BACKUP_KEEP_DAILY` / `BACKUP_KEEP_WEEKLY`) |
-| format | `pg_dump --format=custom --compress=9` |
-| history | `backup_runs` table |
+| schedule | Kubernetes: `brabo-backup` CronJob, 03:17 UTC, daily. Compose: there is no scheduler — you run it, or the installer does before a migration |
+| destination | disk (`BACKUP_DIR`) **or** an S3-compatible bucket (`BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET`). `BACKUP_DIR` set wins; empty falls back to S3, which is what the CronJob does |
+| layout | `daily/brabo-<ISO>.dump` + `weekly/…` for Postgres; `git-daily/brabo-git-<ISO>.tar.gz` + `git-weekly/…` for the bare repos |
+| retention | 7 daily + 4 weekly of **each kind**, by COUNT (`BACKUP_KEEP_DAILY` / `BACKUP_KEEP_WEEKLY`) |
+| format | `pg_dump --format=custom --compress=9`; `tar -czf` for the repos |
+| history | `backup_runs` table — the **dump**, keyed by `object_key`. The repo archive carries the same timestamp in the sibling prefix; the link is the name, not a column |
 
-In the local cluster the destination is a MinIO inside the `brabo`
+In the local cluster the S3 destination is a MinIO inside the `brabo`
 namespace; in staging/prod it's the real bucket. The procedure doesn't
 change — only the endpoint.
+
+> **The default compose destination is a named volume, and that is fine for
+> verifying and wrong for migrating.** `docker compose down -v` deletes
+> `backup_local` along with the data it was meant to save. Point
+> `BRABO_BACKUP_HOST_DIR` at a host directory before any migration.
+
+### What the bare-repo archive guarantees — and what it does not {#garantia-dos-bare-repos}
+
+Nothing is quiesced: the repos are copied while api and engine may be writing
+to them. What that buys, exactly:
+
+- **Guaranteed.** Consistency **per reference**. Git writes objects before it
+  moves a ref, and swaps the ref by atomic rename (or by rewriting
+  `packed-refs` under a lock, also by rename). A `tar` crossing a `git push`
+  captures the ref at its old value or its new one, never half a value — and
+  in the new case the objects it reaches are already on disk.
+- **Guaranteed.** A partial archive **fails the run** instead of passing as
+  good. A concurrent `git gc` can delete a packfile between `tar` listing a
+  directory and reading it; `tar`'s exit status is captured in a file (in POSIX
+  `sh` a pipeline's status is the last command's) and a non-zero turns into a
+  `failed` row in `backup_runs`, which is what alerts on. Run it again.
+- **Guaranteed.** The archive is readable **end to end** before anything is
+  written — `brabo-restore-git` is the `pg_restore --list` of the git side. A
+  truncated tar has plausible size and only reading it tells.
+- **Not guaranteed.** Any global instant. `tar` walks the tree over a period,
+  so two repositories — or two refs of one — can come from different moments.
+  Irrelevant to git, which validates per ref; relevant to anyone reading
+  "the 03:17 backup" as one snapshot.
+- **Not guaranteed.** Object connectivity. Nothing here runs `git fsck`: the
+  backup image has no git, on purpose. What is proved is the integrity of the
+  container, not of the contents.
+- **Not copied.** `*.lock` files, and `objects/tmp_*`. Restoring an orphan lock
+  yields a repository where every `git` refuses to work, with a message that
+  never mentions backup.
 
 ### Before restoring: does the backup exist, and is it any good?
 
@@ -1314,13 +1367,31 @@ Three things in that output matter more than the last row:
 
 ### The automated path (the same one the test runs)
 
+On Kubernetes:
+
 ```bash
 make test-restore
 ```
 
-Triggers a real backup, restores into `brabo_restore_test`, validates,
-and drops the database. Use it when the goal is to **verify** the backup,
-not recover data.
+On a compose install — no cluster, no `kubectl`:
+
+```bash
+make test-restore-compose
+```
+
+Both trigger a **real** backup (same image, same command that runs in
+production — not an ad-hoc `pg_dump`, which would test a path nobody uses),
+restore into `brabo_restore_test`, validate, and drop the database. Use them
+when the goal is to **verify** the backup, not to recover data.
+
+The two wrappers stay separate on purpose: unifying them would make the compose
+path depend on `kubectl`, which is the dependency it exists not to have. What is
+*not* duplicated is the judgement — both run the same `brabo-restore`, with the
+same three validations. The compose one adds a third step the cluster cannot
+ask for: it verifies the bare-repo archive, because on Kubernetes the
+`git_local_repos` volume is not mounted in the backup pod and the step is
+legitimately skipped, while under compose it is mounted and skipping would be a
+false green.
 
 ### Restoring for real, during an incident
 
@@ -1389,12 +1460,71 @@ kubectl -n brabo rollout restart deployment/api deployment/engine
   into this dump. What does **not** survive is reading them if
   `AUTH_TOKEN_PEPPER` is different — same reasoning as the master key
   above.
-- **PVCs** (`/data/git-repos`, agent worktrees) aren't copied. The real
-  repositories live in GitHub/GitLab; what's lost is work-in-progress
-  cache.
+- **`brabo-restore` restores the database, and only it.** The bare repos
+  are the sibling command, `brabo-restore-git` — see
+  [Recovering the bare repos](#restore-dos-bare-repos). They are separate
+  commands rather than two phases of one because they are two artefacts with
+  two judgements: a git failure must not fail the event-log validation, and
+  the reverse would be worse.
+- **Agent worktrees** (`project_workspaces`) aren't copied, and don't need
+  to be: the `WorktreeManager` recreates them from the bare repo. What is
+  lost is uncommitted work in progress.
+- ~~The real repositories live in GitHub/GitLab~~ — **this used to be
+  written here and it was wrong**, which is why the volume went years with
+  no backup. It holds for `github`/`gitlab`-provider projects; for a
+  project on the `local` provider there is no upstream anywhere, and the
+  bare repo in `git_local_repos` **is** the code the agents produced.
 - **It's not PITR.** The granularity is the last dump; anything written
   after it is lost. If that's not acceptable, the path is WAL archiving
   on CloudNativePG, which is out of scope for this phase.
+
+### Recovering the bare repos {#restore-dos-bare-repos}
+
+Verifying costs nothing and writes nothing — it is the weekly gesture:
+
+```bash
+docker compose -f docker/docker-compose.prod.yml run --rm backup brabo-restore-git
+```
+
+Restoring is the once-in-an-incident gesture, and it has to be typed:
+
+```bash
+docker compose -f docker/docker-compose.prod.yml \
+  run --rm --user 0:0 backup brabo-restore-git --restaurar
+```
+
+Two things about that command, both measured rather than assumed:
+
+- **`--user 0:0` is not optional here.** `git_local_repos` is shared by three
+  images running as three different uids (the api as `node`, the engine as
+  `engine`, the backup image as uid 70). The volume takes the owner of whoever
+  mounted it first, mode 0755: uid 70 reads it and cannot write it. Without
+  root the command refuses **before** extracting, naming this fix — it does not
+  discover the problem halfway through `tar`, leaving the volume part-written.
+- **What is extracted is handed back to the owner of the directory**, never
+  left as root. Otherwise the volume would come back intact and useless: api
+  and engine, non-root, could not write into what was just restored, and the
+  symptom would surface long after the restore with nothing pointing at it.
+
+It **refuses to extract over existing repos**. Overlaying two repository states
+produces a mix that no `git` complains about and nobody notices until a `fetch`
+brings back the wrong history. Empty the volume, or pass `RESTORE_GIT_FORCE=1`
+if the overlay is genuinely what you want.
+
+### Losing the graph (Neo4j) {#perda-do-grafo}
+
+`neo4j_data` is **not** in any backup, and that is the decision, not an
+oversight ([ADR 0152](adr/0152-backup-de-volumes-contra-compose.md), decision
+4). Restoring a possibly-stale projection next to a Postgres restored at another
+instant gives two derived states from different moments with nothing to
+reconcile them. The right answer for derived memory is to reproject from the
+source.
+
+**That reprojection does not exist yet** — it is
+[BRB-018](reference/brb.md), and the phase that named the path deliberately did
+not build it. Until it does, a migrated or restored installation starts with an
+**empty graph**. The named effect: reads that depend on the graph degrade. The
+RAG is **not** affected — it lives in pgvector, which is inside the dump.
 
 ### When the restore fails
 
@@ -1407,6 +1537,10 @@ kubectl -n brabo rollout restart deployment/api deployment/engine
 | `out of window` on a critical table | count doesn't match the dump's timestamp: investigate before promoting |
 | `server version mismatch` | the Job's `pg_dump` is 16; a cluster on a different major refuses the connection |
 | Job timeout | database too large for `activeDeadlineSeconds`; raise the value on the Job, not the CronJob |
+| `destination inaccessible … does not accept writes` | with `BACKUP_DIR`, the directory exists and the container's uid can't write it. It is a **write** check, not an existence one, on purpose: a read-only destination would pass `ls` and fail the dump, with the error surfacing after `pg_dump` and pointing at the wrong thing |
+| `tar of the bare repos exited with N` | something changed under the repos mid-read — most likely a concurrent `git gc`. The run is marked `failed` rather than shipping a partial archive. Run it again |
+| `there are N bare repo(s) … and NO archive` | this volume has no coverage: the archive is missing while the repos are not. Absent-and-empty is normal and reported differently |
+| `does not accept writes by this user (uid 70)` on `--restaurar` | the shared-volume ownership case — restore with `--user 0:0`, see [Recovering the bare repos](#restore-dos-bare-repos) |
 
 ### Last verified run
 
@@ -1457,6 +1591,51 @@ representative dump before promising anyone an RTO.
    `postgres:16-alpine` base. Swapped for `alpine` + `postgresql16-client`
    + `aws-cli`, all from apk and therefore patchable: 48 → 0. See
    decision 1b of ADR 0027.
+
+### Last verified run — compose, disk destination
+
+| field | value |
+|---|---|
+| date | 2026-09-09 |
+| environment | Docker compose, PostgreSQL 16 (pgvector image), destination on **disk** — no cluster, no bucket, no `kubectl` |
+| command | `docker/backup/test-restore-compose.sh` (what `make test-restore-compose` runs) |
+| database | 55 tables, 422 events across 13 sessions — a populated database, not an empty one |
+| bare repos | 2 (`exp001.git`, `exp004.git`), 27 003 bytes archived |
+
+Output (the three steps, abridged):
+
+```
+[backup] destination: disk at /backups
+[backup] generating dump for daily/brabo-20260909T025733Z.dump
+[backup] archiving 2 bare repo(s) for git-daily/brabo-git-20260909T025733Z.tar.gz
+[backup] finished: daily/brabo-20260909T025733Z.dump (322894 bytes)
+[restore]   ok    55 tables restored, identical to the source
+[restore]   ok    session_events: 422 rows (window 422–422)
+[restore]   ok    intact event log: 422 events across 13 sessions, dense seq from 1
+[restore] RESTORE VALIDATED — all checks passed
+[restore-git]   ok    2 intact bare repo(s) (27003 bytes)
+[test-restore-compose] backup restored and intact
+```
+
+`backup_runs` got its `status = 'ok'` row for each run, with the **dump** as
+`object_key` — the same column `restore.sh` queries for the snapshot window.
+
+#### What this run found
+
+**The bare-repo restore could not write the volume it restores into**, and only
+running it revealed that. `git_local_repos` is shared by three images with three
+uids; it carries the owner of whoever mounted it first (measured: `1000:1000`,
+mode 0755) and the backup image runs as uid 70. The first `--restaurar` died
+mid-extraction with `tar: can't make dir ./exp001.git: Permission denied`,
+leaving the target part-written. Two changes came from it, both above: the
+command refuses **before** extracting and names `--user 0:0`, and when it does
+run as root it hands the extracted tree back to the directory's owner instead of
+leaving it root-owned — which would have produced a volume that restores
+perfectly and that api and engine cannot write to.
+
+Verified afterwards with real `git` (not the backup image, which has none):
+`git fsck --connectivity-only` clean on both repos, refs and commits intact,
+ownership back at `1000:1000`.
 
 ---
 
