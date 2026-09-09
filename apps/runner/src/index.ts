@@ -875,6 +875,14 @@ async function conectarERodar(
   estado.canalAtual = null;
   // A concessão morre com a conexão, junto com o canal — ver `EstadoDoRunner`.
   estado.destinoDoEspelho = null;
+  // A conexão caída é DESCARTADA de propósito, e explicitamente: sem isto o
+  // objeto `Socket` da rodada anterior ficava vivo depois de o `while` de
+  // `main()` já ter criado outro, e cada queda deixava mais um para trás. Com
+  // o auto-reconnect da lib ligado — o defeito que este mesmo commit fecha em
+  // `channel.ts` — cada abandonado seguia tentando com o ticket já consumido,
+  // e era isso que multiplicava a rajada. `desconectar()` é seguro sobre um
+  // transporte já fechado, e é ele quem cancela o timer de reconexão da lib.
+  conexao.desconectar();
   if (!deveParar()) {
     console.warn('conexão com o engine caiu — pedindo ticket novo e reconectando...');
   }

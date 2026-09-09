@@ -72,6 +72,21 @@ function motivoDaMensagem(erro: string | undefined): MotivoDeFalhaDoAgente {
 /** Generoso de propósito: cobre o pior caso de um runner ocupado, sem travar a UI para sempre. */
 const TIMEOUT_REQUISICAO_MS = 20_000;
 
+/**
+ * Um dia inteiro — na prática o auto-reconnect nunca dispara dentro da vida
+ * do socket. MESMO valor e MESMO nome de `session-channel.ts`/
+ * `terminal-channel.ts`, e pelo MESMO motivo: `getTerminalTicket` emite um
+ * ticket de USO ÚNICO (RN-108), e o auto-reconnect embutido do phoenix.js
+ * repete com os MESMOS params — o mesmo ticket já consumido, recusado toda
+ * vez, para sempre.
+ *
+ * Este módulo nem sequer tem política própria de reconexão: `onClose` diz
+ * "feche e reabra para tentar de novo". Sem esta opção, o socket continuava
+ * martelando o engine em background enquanto o modal ficasse aberto — o
+ * defeito que o `apps/runner` pagou com 429 na conta do usuário.
+ */
+const NUNCA_RECONECTAR_SOZINHO_MS = 24 * 60 * 60 * 1000;
+
 interface PendenteListagem {
   tipo: 'list';
   path: string;
@@ -159,7 +174,10 @@ export function connectFsBrowserChannel(projectId: string): FsBrowser {
     // `runner`) — antes desta correção, `FolderBrowserModal` nunca tinha
     // sido exercitado contra um engine real neste caminho.
     const wsUrl = engineWsUrl.replace(/^http/, 'ws');
-    socket = new Socket(wsUrl, { params: { ticket } });
+    socket = new Socket(wsUrl, {
+      params: { ticket },
+      reconnectAfterMs: () => NUNCA_RECONECTAR_SOZINHO_MS,
+    });
 
     socket.onError((erro: unknown) => {
       logger.warn('socket de navegação de pasta com erro', { projectId, erro: String(erro) });

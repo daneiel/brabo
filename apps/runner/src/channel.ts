@@ -16,10 +16,27 @@
  * (RN-108)
  *
  * O ticket é de USO ÚNICO — reconectar com o MESMO ticket nunca funciona.
- * `reconnectAfterMs` embutido do `Phoenix.Socket` é por isso neutralizado
- * (ver `index.ts`, que é quem decide a política de reconexão: busca ticket
- * NOVO via HTTP antes de cada tentativa, com backoff). Este módulo não
- * decide política de retry — só conecta UMA vez e resolve/rejeita.
+ * Por isso o `reconnectAfterMs` embutido do `Phoenix.Socket` é neutralizado
+ * AQUI, na construção do socket (`NUNCA_RECONECTAR_SOZINHO_MS`), como
+ * `session-channel.ts`/`terminal-channel.ts` do web já faziam. Quem decide
+ * política de reconexão é `index.ts`: ticket NOVO via HTTP antes de cada
+ * tentativa, backoff e teto de tentativas seguidas. Este módulo não decide
+ * política de retry — só conecta UMA vez e resolve/rejeita.
+ *
+ * ### O comentário que afirmava isto sem lastro
+ *
+ * Até a RN-108 voltar a ser cumprida no código (ver CHANGELOG), este
+ * docblock DIZIA que o `reconnectAfterMs` era "por isso neutralizado" e
+ * NADA o neutralizava: `new Socket(url, { params: { ticket } })` deixava o
+ * auto-reconnect da lib ligado, e ele repetia com os MESMOS params. Medido
+ * em execução real: o engine recusando o mesmo ticket a cada ~5,13s (o teto
+ * do backoff interno do phoenix.js), 61 `REFUSED CONNECTION TO
+ * EngineWeb.RunnerSocket` em poucas horas, e o `RATE_LIMIT_USER` da api
+ * (300 req/min) estourado — 530 requisições num minuto, cobradas do USUÁRIO
+ * dono da conta, que via 429 no NAVEGADOR. Um revisor que lesse este
+ * comentário parava de procurar exatamente aqui; por isso a opção passou a
+ * ser OBRIGATÓRIA no tipo `OpcoesDoSocket` e é asserida em teste
+ * (`channel.spec.ts`) — comentário não é mecanismo.
  */
 
 export interface ExecMessage {
@@ -334,10 +351,30 @@ export interface SocketLike {
   channel(topic: string, params?: object): ChannelLike;
 }
 
+/**
+ * Opções passadas ao `Socket` da lib `phoenix`. `reconnectAfterMs` é
+ * OBRIGATÓRIO de propósito: é a única coisa que impede o auto-reconnect
+ * embutido de repetir para sempre com um ticket de uso único já consumido
+ * (RN-108). Tipo obrigatório em vez de opcional para que esquecê-lo seja
+ * erro de compilação, e não um comentário dizendo que alguém lembrou.
+ */
+export interface OpcoesDoSocket {
+  params: Record<string, unknown>;
+  reconnectAfterMs: () => number;
+}
+
 export type CriarSocket = (
   url: string,
-  opts: { params: Record<string, unknown> },
+  opts: OpcoesDoSocket,
 ) => SocketLike | Promise<SocketLike>;
+
+/**
+ * Um dia inteiro — na prática o auto-reconnect nunca dispara dentro da vida
+ * de um socket. MESMO valor e MESMO nome de `apps/web/src/lib/
+ * session-channel.ts` e `terminal-channel.ts`, que resolvem o mesmo problema
+ * com o mesmo ticket de uso único.
+ */
+const NUNCA_RECONECTAR_SOZINHO_MS = 24 * 60 * 60 * 1000;
 
 /** Join recusado pelo servidor (ticket inválido/expirado, segundo runner no mesmo projeto, etc). */
 export class JoinRecusadoError extends Error {
@@ -494,7 +531,14 @@ export function conectarCanal(opts: ConectarCanalOpts): Promise<CanalConectado> 
 
   return new Promise((resolvePromise, rejectPromise) => {
     void (async () => {
-      const socket = await criar(engineWsUrl, { params: { ticket } });
+      const socket = await criar(engineWsUrl, {
+        params: { ticket },
+        // RN-108: o ticket é de USO ÚNICO. Sem isto, o auto-reconnect da lib
+        // repete com o MESMO `ticket` a cada ~5,13s para sempre — recusado
+        // toda vez, e martelando a api/engine em paralelo com a política de
+        // `index.ts`, que é a única que pede ticket NOVO.
+        reconnectAfterMs: () => NUNCA_RECONECTAR_SOZINHO_MS,
+      });
 
       socket.onError((erro: unknown) => {
         // Erro de transporte pode chegar antes OU depois do join resolver;

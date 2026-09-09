@@ -610,6 +610,33 @@ reconnect nativo do `Phoenix.Socket` reusaria o mesmo `params` da construção
 (`reconnectAfterMs` que praticamente nunca dispara) e a reconexão passa a ser
 inteiramente manual, com busca de ticket fresco a cada tentativa.
 
+Essa neutralização vale para TODO cliente do socket, e não só para o do web —
+inclusive o socket `/runner`, cujo ticket (`POST .../runner-ticket`) é do
+mesmo calibre. Ela falhou em DOIS dos quatro construtores de `Socket` do
+repositório, e o custo foi medido em execução real: `apps/runner/src/
+channel.ts` construía o socket sem a opção — enquanto o docblock do módulo
+AFIRMAVA que o reconnect era "por isso neutralizado" — e o auto-reconnect
+repetia o mesmo ticket já consumido a cada **~5,13s** (o teto do backoff
+interno do phoenix.js), rendendo **61 `REFUSED CONNECTION TO
+EngineWeb.RunnerSocket`** em poucas horas. Somado à política PRÓPRIA do
+runner (`index.ts`, essa correta), o resultado foram **530 requisições num
+minuto** contra o teto de 300 do `RATE_LIMIT_USER` — e como o limite é por
+USUÁRIO, o 429 aparecia no NAVEGADOR do dono da conta. Duas consequências, e
+a segunda é pior que o 429: enquanto está nesse laço o runner NÃO está
+conectado, então `RunnerReadiness` (RN-507) recusa e o projeto parece "sem
+agente local". `apps/web/src/lib/fs-browser-channel.ts` tinha a MESMA linha
+de defeito (mesmo ticket de uso único, e sem política própria de reconexão —
+o `onClose` dele manda "feche e reabra") e foi corrigido junto.
+
+O que impede a terceira instância é MECANISMO, não comentário: no runner as
+opções do `Socket` viraram um tipo com `reconnectAfterMs` OBRIGATÓRIO
+(`OpcoesDoSocket` em `channel.ts`), e os dois lados ganharam teste que assere
+a OPÇÃO PASSADA ao construtor — um teste que só verifique "conecta" passava
+com o defeito de pé, e passou. Junto, `conectarERodar` (`index.ts`) passou a
+DESCARTAR explicitamente a conexão caída (`conexao.desconectar()`): sem isso
+o `Socket` da rodada anterior sobrevivia à criação do próximo, e cada queda
+deixava mais um objeto vivo tentando com o ticket morto.
+
 - **Onde:** `apps/api/src/db/schema/sessions.ts` (`sessionSocketTickets`),
   `apps/api/src/domain/sessions/socket-ticket-scope.ts`,
   `apps/api/src/application/use-cases/sessions/create-socket-ticket.use-case.ts`,
@@ -617,7 +644,11 @@ inteiramente manual, com busca de ticket fresco a cada tentativa.
   `socket-ticket`), `apps/engine/lib/engine/sessions/socket_ticket.ex`,
   `apps/engine/lib/engine_web/channels/session_socket.ex`,
   `apps/engine/lib/engine_web/channels/session_channel.ex`,
-  `apps/web/src/lib/session-channel.ts`
+  `apps/web/src/lib/session-channel.ts`,
+  `apps/web/src/lib/fs-browser-channel.ts`,
+  `apps/runner/src/channel.ts` (`OpcoesDoSocket`,
+  `NUNCA_RECONECTAR_SOZINHO_MS`), `apps/runner/src/index.ts`
+  (`conectarERodar`, o descarte da conexão caída)
 - **Teste:**
   `apps/api/test/application/use-cases/sessions/create-socket-ticket.use-case.spec.ts`,
   `apps/api/test/domain/sessions/socket-ticket-scope.spec.ts`,
@@ -627,7 +658,12 @@ inteiramente manual, com busca de ticket fresco a cada tentativa.
   `apps/engine/test/engine_web/channels/session_socket_test.exs` (sem ticket
   a conexão é recusada),
   `apps/engine/test/engine_web/channels/session_channel_test.exs` (ticket de
-  outro projeto: join falha), `apps/web/src/lib/session-channel.test.ts`
+  outro projeto: join falha), `apps/web/src/lib/session-channel.test.ts`,
+  `apps/runner/src/channel.spec.ts` ("neutraliza o auto-reconnect do
+  Phoenix.Socket — ticket de uso único nunca é repetido"; assere a OPÇÃO
+  passada ao construtor, e reprova sem ela),
+  `apps/web/src/lib/fs-browser-channel.test.ts` (o mesmo, no transporte via
+  runner do navegador de pastas)
 - **Borda:** o ticket NÃO é o JWT reaproveitado — TTL curto, uso único, escopo
   fechado, e nasce de uma rota própria que já checa papel efetivo, não de
   decodificar o access token existente.

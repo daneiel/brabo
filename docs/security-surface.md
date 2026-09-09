@@ -505,6 +505,22 @@ reason in the URL.
   (issue/list/revoke the PAT itself, plus the two `maintainer` ones —
   RN-427, list/revoke of ANY user in the project) remain regular session
   JWT — only the route the TOKEN ITSELF authenticates changes mechanism.
+- **A client of the `/runner` socket must NEVER let `phoenix.js` reconnect on
+  its own** ([RN-108](business-rules/autenticacao.md#rn-108)). The ticket is
+  single-use, and the built-in auto-reconnect repeats the SAME `params` — so a
+  socket built without `reconnectAfterMs` retries a dead ticket forever. This
+  is not hypothetical: `apps/runner/src/channel.ts` shipped that way while its
+  own docblock claimed the opposite, and it was measured in real use — the same
+  ticket refused every ~5.13s (the ceiling of the library's internal backoff),
+  61 `REFUSED CONNECTION TO EngineWeb.RunnerSocket` in a few hours, and, on top
+  of the runner's OWN retry policy, 530 requests in one minute against the
+  300 req/min `RATE_LIMIT_USER` ceiling. The limit is **per user**, so the
+  denial of service landed on the account owner's BROWSER, as a 429 — an
+  unauthenticated third party is not involved, but a misbuilt client is enough
+  to lock its own user out. Reconnection is always the caller's own policy,
+  with a fresh ticket each attempt; the option is now REQUIRED by the type
+  (`OpcoesDoSocket`) and asserted by a test over the option passed to the
+  constructor, since a test that only checks "it connects" passed throughout.
 - **The three `/projects/:projectId/runner-device-keys` routes ARE regular
   session JWT**, unlike `runner-ticket` above — the browser, already
   logged in, registers the Ed25519 public key it just generated (the

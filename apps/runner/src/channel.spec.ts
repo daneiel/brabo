@@ -104,6 +104,22 @@ function fabricaFalsa(canal: CanalFalso, sockets?: SocketFalso[]): CriarSocket {
   };
 }
 
+/**
+ * Variante da fábrica que GUARDA o que foi passado ao construtor do `Socket`
+ * — url e opções. É a única forma de assertar a neutralização do
+ * auto-reconnect: um teste que só verifique "conecta" passava com o defeito
+ * de pé, e passou, por várias versões (ver o docblock de `channel.ts`).
+ */
+function fabricaQueGuardaOpcoes(
+  canal: CanalFalso,
+  registro: { url: string; opts: Parameters<CriarSocket>[1] }[],
+): CriarSocket {
+  return (url, opts) => {
+    registro.push({ url, opts });
+    return new SocketFalso(canal);
+  };
+}
+
 const handlersVazios = {
   onExec: vi.fn(),
   onPtyOpen: vi.fn(),
@@ -527,6 +543,42 @@ describe('conectarCanal', () => {
     // vira "sincronize para onde você achar".
     canal.simularRecebimento('mirror_sync', { ref: 'm3' });
     expect(onMirrorSync).toHaveBeenCalledTimes(2);
+  });
+
+  // RN-108 — "reconexão, inclusive automática, sempre busca ticket novo".
+  //
+  // O que este teste assere é a OPÇÃO passada ao construtor do `Socket`, e
+  // não o comentário do módulo nem "o runner conectou". Sem a opção, o
+  // auto-reconnect embutido do phoenix.js repete com os MESMOS params — o
+  // mesmo ticket já consumido — a cada ~5,13s (teto do backoff interno),
+  // para sempre, em paralelo com a política de `index.ts`. Medido em
+  // execução real: 61 recusas do `EngineWeb.RunnerSocket` em poucas horas e
+  // 530 requisições num minuto contra o teto de 300 do `RATE_LIMIT_USER`,
+  // debitadas do usuário dono da conta — que via 429 no navegador.
+  it('neutraliza o auto-reconnect do Phoenix.Socket — ticket de uso único nunca é repetido (RN-108)', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const registro: { url: string; opts: Parameters<CriarSocket>[1] }[] = [];
+
+    await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: handlersVazios,
+      criarSocket: fabricaQueGuardaOpcoes(canal, registro),
+    });
+
+    expect(registro).toHaveLength(1);
+    const primeiro = registro[0];
+    if (!primeiro) throw new Error('a fábrica não foi chamada');
+    // O ticket viaja nos params — é justamente ele que o auto-reconnect
+    // repetiria.
+    expect(primeiro.opts.params).toEqual({ ticket: 't1' });
+
+    const { reconnectAfterMs } = primeiro.opts;
+    expect(reconnectAfterMs).toBeDefined();
+    // Um dia inteiro, como no web: na prática nunca dispara dentro da vida
+    // do socket. A asserção é sobre a ORDEM de grandeza, não sobre o número.
+    expect(reconnectAfterMs()).toBeGreaterThan(60 * 60 * 1000);
   });
 });
 

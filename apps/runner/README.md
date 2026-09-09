@@ -235,6 +235,25 @@ O `PATH` do momento da instalação vai **congelado** dentro da unit (os dois
 gerenciadores dão ao serviço um PATH mínimo, e o runner chama `git` e
 `docker`): mudou o seu PATH, rode `service install` de novo.
 
+## Reconexão
+
+Quando a conexão cai, o runner **pede um ticket NOVO** e tenta de novo, com
+backoff (`1s, 2s, 5s, 10s, 30s`) e um teto de 10 tentativas seguidas sem
+sucesso — passou disso, ele desiste e diz para você rodá-lo de novo. Recusa de
+entrada no canal (ticket inválido, outro runner já conectado neste projeto)
+**não** é transitória: ele encerra na hora, com a mensagem, sem laço
+automático.
+
+O auto-reconnect embutido da biblioteca `phoenix` fica **desligado** de
+propósito (`reconnectAfterMs`), e isso não é detalhe: o ticket do socket é de
+**uso único** (RN-108), e o reconnect da lib repete os MESMOS parâmetros — ou
+seja, o mesmo ticket já consumido, recusado toda vez. Uma versão anterior deste
+CLI vinha com ele LIGADO (o comentário do código dizia o contrário) e o efeito
+medido foi: recusa a cada ~5,13s indefinidamente, e **429 (limite de
+requisições) na tela do navegador do dono da conta** — o limite da api é por
+usuário, e quem o estourava era o runner. Se você vir 429 na web sem explicação,
+confira se o binário do runner está atualizado.
+
 ## Segurança
 
 A fronteira de segurança do runner **não é sandboxing** — é a composição de

@@ -48,6 +48,7 @@ Start with triage.
 | I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
 | provisioning a repository fails with `permission denied: /data/git-repos/<slug>.git`, or `permissions.json` can't be written | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to wipe the dev database and start over, or `reset-total.sh` stopped in the middle | [Total reset of the dev environment](#reset-total) |
+| the web shows **429 (rate limit)** for no apparent reason, or a project in `runner` mode looks "no local agent" while `brabo-runner` is running | [The runner floods the api with a dead ticket](#runner-com-ticket-morto) |
 
 Two things worth knowing before any procedure:
 
@@ -898,6 +899,48 @@ stacked causes, all closed by [RN-433](business-rules.md#rn-433):
    `REFUSED CONNECTION`. Fixed by passing `engineWsUrl` straight to
    `Socket` — `apps/runner/src/channel.ts` (the CLI side of the same
    contract) already did this correctly.
+
+### The runner floods the api with a dead ticket {#runner-com-ticket-morto}
+
+Symptom: the web starts answering **429** to the person's own requests, with
+no unusual activity on their part; and/or a project in `runner` mode shows as
+having no local agent (dev tasks stuck on `dev.blocked_by_container`,
+`RunnerReadiness` refusing) while `brabo-runner` is visibly running on their
+machine.
+
+**How to confirm.** In the engine's log, look for the SAME ticket being
+refused over and over, at a fixed cadence of roughly **5,13 s**:
+
+```bash
+docker logs brabo-engine-1 2>&1 | grep 'REFUSED CONNECTION TO EngineWeb.RunnerSocket' | tail -20
+```
+
+Dozens of those in a few hours, all carrying the same ticket string, is the
+signature. ~5,13 s is not arbitrary — it is the ceiling of `phoenix.js`'s
+internal `reconnectAfterMs` backoff.
+
+**Cause.** The socket ticket is **single-use**
+([RN-108](business-rules/autenticacao.md#rn-108)); the library's built-in
+auto-reconnect repeats the SAME `params`, so it retries a ticket that was
+consumed on the first connection and will never be accepted again. A version
+of `apps/runner/src/channel.ts` shipped with that auto-reconnect left ON —
+while the module's own docblock claimed it was neutralized. Stacked on the
+runner's OWN retry policy (which is correct: fresh ticket per round, backoff,
+ceiling on consecutive attempts), the measured result was **530 requests in
+one minute** against the 300 req/min `RATE_LIMIT_USER` ceiling, four minutes
+in a row over the limit. The limit is **per user**, which is why the 429
+surfaced in the account owner's browser rather than anywhere near the runner.
+
+The second consequence is the worse one: while stuck in that loop the runner
+is **not connected**, so `RunnerReadiness` ([RN-507](business-rules.md#rn-507))
+refuses and the project looks like it has no local agent — some of what reads
+as "the container won't come up" is this.
+
+**Fix.** Update the `brabo-runner` binary (or reinstall from the project
+screen). Nothing to change on the server: the rate limiter did its job, and the
+engine was right to refuse every one of those tickets. If the flood is still
+in progress, stopping the runner ends it immediately, and the 429s clear as
+the sliding window drains (one minute).
 
 ### The api refuses to boot over an OAuth secret {#segredo-de-oauth-no-boot}
 
