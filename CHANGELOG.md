@@ -6,6 +6,59 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api,web**: `GET /runner-releases/binary` deixa de transmitir bytes sem
+  verificar nada — ele confere o **sha256 contra o `checksums.txt` da mesma
+  release** e **recusa** quando não pode conferir (RN-525,
+  [ADR 0149](docs/adr/0149-assinatura-dos-artefatos-publicados.md)).
+
+  A rota é `@Public()` e é o passo 4 do fluxo de configuração pelo navegador
+  ([RN-473](docs/business-rules.md#rn-473)). Ela validava a **entrada**
+  (`platform` contra uma allowlist fechada) e fazia `pipe` dos bytes do GitHub
+  direto para o cliente — o BRB-005 nomeia isso, e a RN-524 assinou os
+  artefatos sem tocar este consumidor, de propósito. Agora nenhum byte não
+  conferido chega ao cliente: a resposta só **começa** depois de o hash bater,
+  e o header `Content-Digest` (RFC 9530) repete o que foi conferido.
+
+  **O que ela NÃO faz está escrito onde ela é feita.** A assinatura do
+  manifesto (`checksums.txt.bundle`) **não** é verificada: isto é integridade
+  contra o manifesto, **não procedência** — quem reescreva a Release reescreve
+  os dois arquivos e passa. Os dois caminhos foram MEDIDOS e recusados:
+  `cosign` na imagem da api é **155 MB** contra um runtime Alpine + Node, e
+  `@sigstore/verify`+`@sigstore/tuf` é barato (**2,5 MB, 12 pacotes**) mas faz
+  `getTrustedRoot()` refrescar metadados TUF contra `tuf-repo-cdn.sigstore.dev`
+  — uma rota pública passaria a depender de um **segundo** host de terceiro
+  para verificar algo que **nenhuma Release carrega ainda** (o job `checksums`
+  só roda numa tag final), e capability sem prova não se declara
+  ([ADRs 0041/0042](docs/adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)). Quem verifica
+  assinatura é o `install.sh`, com `cosign` de verdade. BRB-005 fica **aberto**
+  para essa metade, e o registro diz isso em vez de anunciar o item fechado.
+
+  **Release sem `checksums.txt` recusa, não serve avisando.** Um aviso que se
+  aceita clicando é uma verificação que não existe — e apagar 400 bytes da
+  Release seria o downgrade mais barato possível. O custo está medido: a v5.0.0
+  tem dois binários e nenhum manifesto, e o passo do binário é **best-effort**
+  no navegador (RN-473, passo 4), caindo em `npm install -g @brabo/runner`, que
+  não depende de release nenhuma.
+
+  **Os desfechos de 502 não colapsam.** A recusa carrega `motivo` no corpo —
+  `plataforma_nao_publicada`, `release_sem_manifesto`,
+  `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou`,
+  `hash_divergente` —, porque cada um pede uma ação diferente de quem chamou, e
+  o status sozinho não os separa (régua da RN-470 numa resposta de api).
+  `baixarBinario` no web passa a ler `message` e `motivo`, e a frase da api
+  chega em `falhaDoBinario`.
+
+  **Conferir hash exige ler todos os bytes, e isso passa pelo disco.** Os
+  binários têm ~79 MB e o pod da api tem `limits.memory: 512Mi`: bufferizar
+  seria exaustão trivial numa rota pública, e cachear os bytes seria pior. Eles
+  descem em stream para um arquivo temporário em `/tmp` (o `emptyDir` que
+  existe porque o rootfs é read-only), com o hash calculado no caminho e um
+  teto de 256 MiB, e o arquivo é relido em stream **só depois** de bater —
+  memória constante. O cache de URLs (5 min) fica, e passa a guardar também o
+  manifesto já parseado, na **mesma** entrada: em janelas diferentes, uma
+  release publicada no meio faria o hash novo ser conferido contra o binário
+  velho, e o desfecho pareceria adulteração.
+
 - **web,api**: a página `/containers` passa a listar **todo projeto do
   workspace**, tenha ele container registrado ou não, e vira o **caminho
   humano** de subir um container — ramificado por `execution_mode` (RN-521).

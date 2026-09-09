@@ -82,13 +82,36 @@ lista quatro binários e cala sobre o quinto seria pior que nenhum.
 | consumidor | verifica | quando falha |
 |---|---|---|
 | `install.sh` (ADR 0150) | assinatura da imagem por digest; `checksums.txt` assinado antes de usar o binário | **recusa nomeada** — diz qual artefato, qual verificação e para |
-| `GET /runner-releases/binary` | o SHA-256 do binário contra o `checksums.txt` assinado da mesma Release | 502 com motivo; nunca serve bytes não verificados |
+| `GET /runner-releases/binary` | **só** o SHA-256 do binário contra o `checksums.txt` da mesma Release — **não** a assinatura dele (ver abaixo) | 502 com `motivo`; nunca serve bytes não verificados |
 | build local (ADR 0150) | a tag do git e a árvore limpa | recusa antes de construir |
 
 **Falha de verificação é recusa, nunca aviso.** Um aviso que se pode aceitar
 clicando é uma verificação que não existe — e o produto já aplica essa régua em
 outro lugar, quando `consentir-base.mjs:246-258` recusa gravar e sai com 1 se o
-compartilhamento não foi provado.
+compartilhamento não foi provado. Ausência do que se verificaria também é
+recusa: uma Release sem `checksums.txt` faz o proxy **recusar**, e não servir
+declarando que não pôde conferir — senão apagar 400 bytes da Release desligaria
+a verificação de todo mundo.
+
+#### O proxy da api verifica INTEGRIDADE, não procedência — e isso é decisão, não omissão
+
+A segunda linha da tabela nasceu escrita como se as duas metades fossem uma. Na
+sessão 3 elas foram separadas, depois de medir os dois jeitos de a api verificar
+assinatura:
+
+| caminho | medido | por que não |
+|---|---|---|
+| `cosign` dentro da imagem da api | **155 MB** (`cosign-linux-amd64` v2.6.1) | quase dobra uma imagem de runtime que é Alpine + Node, publicada por digest no GHCR ([ADR 0119](0119-imagens-publicadas-no-ghcr-por-digest.md)), para verificar um download opcional |
+| `@sigstore/verify` + `@sigstore/tuf` | **2,5 MB, 12 pacotes**, sem advisory | o tamanho não é o custo. `getTrustedRoot()` refresca metadados TUF contra `tuf-repo-cdn.sigstore.dev` (o `seeds.json` do pacote só semeia o `root.json`), então uma rota `@Public()` que hoje depende de UM host de terceiro passaria a depender de dois — e ela é o ponto de entrada do onboarding do [ADR 0118](0118-configuracao-automatica-do-runner-pelo-navegador.md). Pior: pela régua dos ADRs [0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)/[0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) — capability só é declarada quando **provada** — não há como provar o caminho hoje, porque **nenhuma Release tem `checksums.txt.bundle`**: o job `checksums` só roda numa tag final, e a lacuna já está declarada na RN-524 do lado de quem assina. Embarcar uma verificação não provável na frente do onboarding trocaria uma fraqueza conhecida por um 502 em toda plataforma, em toda instalação, descoberto só em produção |
+
+Então o proxy confere o hash e **diz que é só o hash** — no docblock, na
+descrição de OpenAPI, na mensagem de recusa e na
+[RN-525](../business-rules.md#rn-525). Quem verifica a assinatura é o
+`install.sh`, que tem `cosign` de verdade pelo caminho da decisão 4. A
+consequência é registrada e não escondida: **BRB-005 fecha para a produção da
+assinatura e segue aberto para a metade de procedência desta rota** — reabri-la
+é decisão de uma sessão posterior, com uma Release assinada real contra a qual
+provar.
 
 ### 4. O `cosign` que verifica também precisa de procedência
 
@@ -117,6 +140,13 @@ mais frágil do que o elo que a inicia.
 - **BRB-005 fecha** para imagens e binários — e só para eles. O registro
   ([BRB register](../reference/brb.md)) recebe a evidência quando a sessão 2
   mergear.
+- **E não fecha para a metade de procedência do proxy da api.** Pela decisão 3,
+  `GET /runner-releases/binary` confere integridade contra o manifesto e recusa
+  o que não pode conferir, mas não verifica a assinatura do manifesto — as duas
+  formas de fazê-lo foram medidas e recusadas (155 MB de `cosign` na imagem; um
+  segundo host de terceiro numa rota pública, verificando o que ainda não existe
+  para ser provado). O registro de BRB diz isso em vez de anunciar o item
+  fechado.
 - **O broker continua sem assinatura porque continua sem publicação.**
   `docker-bake.hcl:81-83` tem quatro alvos e `scripts/ci/images-manifest.ts:54`
   aceita quatro; `brabo-broker:prod` só existe construído localmente. A
