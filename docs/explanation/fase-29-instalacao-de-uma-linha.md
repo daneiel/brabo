@@ -108,6 +108,15 @@ sessão **encontrou o mesmo modo de falha acontecendo três vezes ao mesmo
 tempo**. Contar `dev` é condição necessária e não suficiente; a segunda metade
 do comando acima é o que faltava, e é por isso que ela entra aqui.
 
+> **As três foram resolvidas depois, e o critério foi a data.** Quem alocou
+> primeiro fica com o número: as três branches de 2026-09-06 mantiveram
+> `ADR 0148`, `RN-522` e `RN-523`, e as de 2026-09-08 renumeraram para
+> `ADR 0153`, `RN-539` e `RN-540` — acima da faixa desta fase, fora do alcance
+> de qualquer coisa em voo. Uma delas já era a **segunda** renumeração da mesma
+> RN: ela nasceu 522, virou 523 para escapar de uma colisão, e caiu em outra —
+> porque aquela varredura cobriu as branches **remotas**, e a que a esperava
+> era local.
+
 Vale repetir por que uma colisão sobrevive tanto tempo: **`docs:build` não pega
 âncora duplicada.** `onBrokenAnchors: 'throw'` reprova link para âncora que
 *não existe*; com duas âncoras iguais o Docusaurus resolve a primeira e a
