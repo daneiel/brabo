@@ -237,7 +237,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Documentação
 
-- **adr**: [ADR 0148](docs/adr/0148-deploy-enabled-o-gatilho-que-ninguem-cria.md)
+- **adr**: [ADR 0153](docs/adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.md)
   — `DEPLOY_ENABLED` é citado como gatilho de ativação por **dez documentos**
   (os ADRs 0089/0091/0092 no próprio campo Status, `fluxo.yml` em três lugares,
   `gates.yml` no gate `operavel`, mais `business-rules.md`, `backlog.md`,

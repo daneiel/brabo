@@ -309,7 +309,7 @@ gates:
       filtro: { actionType: assess_implementability }
       onde: apps/engine/lib/engine/agents/dev_lead_tools.ex
 
-  - id: deployavel # Infra — gate_saida de `area-infra` em docs/fluxo.yml (ADR 0148)
+  - id: deployavel # Infra — gate_saida de `area-infra` em docs/fluxo.yml (ADR 0153)
     fluxo: pre-deploy
     dono: area-infra
     entrada: [ci-workflows]
