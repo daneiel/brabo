@@ -3954,6 +3954,23 @@ obrigatório pro texto inline em qualquer falha (api fora, template não
 semeado, flag desligada). `:pinned => true` continua igual nos dois
 caminhos.
 
+O TERCEIRO consumidor da mesma flag é o prompt de sumarização do
+`ContextManager` (`context-manager-summarize`, o quarto e último template da
+leva da [RN-413](#rn-413) — era o único ainda sem consumidor, lacuna que a
+[ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)
+declarou aberta e que fecha aqui). Mesma régua, byte a byte: flag ligada
+tenta o template e substitui `{{turnos}}` pelo MESMO corpo `<role>:
+<content>` que a trilha inline já montava; qualquer desfecho que não seja
+`{"body" => corpo}` com corpo binário não-vazio cai no inline — SEM erro e
+SEM log de erro, porque flag desligada, template ainda não semeado e api do
+grafo fora do ar são o MESMO caminho de degradação. Com a flag desligada (o
+default) a api nem é chamada. O render é função privada PRÓPRIA, não um
+helper compartilhado: o conjunto de placeholders é do template, não do
+mecanismo — cada um dos três consumidores tem o seu. E o fallback
+determinístico de quando o MODELO falha (`"(N turnos anteriores
+omitidos)"`) é outra coisa e NÃO passa por template nenhum: é comportamento
+de código, não texto de prompt, e o próprio `.md` do template declara isso.
+
 **Consumo do restante do grafo (`query_user_context` — hipóteses com
 evidência e perfis lidos DIRETO do Neo4j) fica DECLARADO fora desta
 entrega**: ainda sem rota HTTP exposta do lado api; Psicólogo/Anamnese
@@ -3963,12 +3980,17 @@ relações em si.
 - **Onde:** `apps/engine/lib/engine/psychologist/context_builder.ex`,
   `apps/engine/lib/engine/workers/psychologist_worker.ex`;
   `apps/engine/lib/engine/anamnese/context_builder.ex`,
-  `apps/engine/lib/engine/workers/anamnese_worker.ex`
+  `apps/engine/lib/engine/workers/anamnese_worker.ex`;
+  `apps/engine/lib/engine/harness/context_manager.ex` (`prompt/1`,
+  `render_template/2`, `prompt_inline/1`)
 - **Teste:** `context_builder_test.exs` dos dois agentes (hits presentes;
   falha do RAG degrada sem erro; `degraded: true` visível; clamp de
   `top_k`; query derivada do gatilho); `psychologist_worker_test.exs`/
   `anamnese_worker_test.exs` (template com sucesso e com fallback;
-  `:pinned` idêntico nos dois caminhos; flag desligada nunca chama a api)
+  `:pinned` idêntico nos dois caminhos; flag desligada nunca chama a api);
+  `context_manager_test.exs` (template com `{{turnos}}` substituído;
+  `{:error, :not_found}` cai no inline e a compactação termina normal;
+  flag desligada nunca chama `get_prompt_template`)
 - **Origem:** ver [ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)
 
 ---

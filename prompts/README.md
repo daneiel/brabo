@@ -29,9 +29,16 @@ A leitura por agente começou nesta mesma onda, por TRÊS templates:
   `config/runtime.exs`). Mesma disciplina de fallback: falha ou flag
   desligada cai na string inline.
 
-Só `context-manager-summarize` ainda NÃO é lido por nenhum agente — o
-`.ex` dele continua sendo a fonte de verdade em produção até a onda que
-o consumir.
+- **`ContextManager`** (`apps/engine/lib/engine/harness/context_manager.ex`,
+  `prompt/1`, chamada por `summarize/2`) resolve
+  `context-manager-summarize` atrás da MESMA `graph_templates_enabled?`
+  do Psicólogo/Anamnese, substituindo `{{turnos}}` pelo mesmo corpo
+  `<role>: <content>` que a trilha inline já montava. Fecha o último dos
+  quatro templates da leva — não sobra nenhum sem consumidor.
+
+Os quatro templates desta leva têm consumidor. O `.ex` de cada um segue
+carregando o texto inline como plano B, nunca removido: com a flag
+desligada (o default) a api do grafo nem chega a ser chamada.
 
 ## Por que separar prompt de código
 
@@ -124,14 +131,13 @@ sucesso.
 
 ## O que este diretório NÃO faz, hoje
 
-- `context-manager-summarize.md` ainda não é lido por nenhum agente — o
-  `.ex` continua carregando o prompt inline, sem consultar o grafo.
 - A substituição de placeholder de cada template consumido mora no
   próprio agente (`Engine.Workers.PsychologistWorker`,
-  `Engine.Workers.AnamneseWorker`), reusando as MESMAS funções de
+  `Engine.Workers.AnamneseWorker`,
+  `Engine.Harness.ContextManager.Default`), reusando as MESMAS funções de
   formatação do caminho inline — pra não divergir o texto entre os dois
-  caminhos; o `{{variavel}}` de `context-manager-summarize` segue
-  documentação, não motor de template.
+  caminhos. Não há motor de template compartilhado, e isso é deliberado:
+  o conjunto de placeholders é do template, não do mecanismo.
 - Não há mais templates além dos quatro listados acima; o resto dos
   prompts inline segue no código até a onda que migra o restante.
 - Consumo real ainda exige DUAS coisas fora deste diretório: a flag

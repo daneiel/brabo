@@ -347,7 +347,7 @@ preflight because it runs on the host, and the api can only compare against
 | `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` / `_PESADA` | `50` / `400` | how many events go into the prompt |
 | `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` | `600` | truncation of each event's payload |
 | `PSYCHOLOGIST_RAG_TOP_K` | `3` | how many relevant `rag_search` snippets go into the context, deducted from the recent-events ceiling above ([RN-417](../business-rules.md#rn-417)) |
-| `GRAPH_TEMPLATES_ENABLED` | `false` | turns on resolving `psychologist-kickoff`/`anamnese-kickoff` as a graph template — key SHARED between Psychologist and Anamnese (RN-417), not to be confused with `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` above |
+| `GRAPH_TEMPLATES_ENABLED` | `false` | turns on resolving `psychologist-kickoff`/`anamnese-kickoff`/`context-manager-summarize` as a graph template — key SHARED between Psychologist, Anamnese and the `ContextManager`'s summarization prompt ([RN-417](../business-rules.md#rn-417)), not to be confused with `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` above. Off (the default) means the graph API is never even called; on, any failure falls back to the inline text with no error |
 
 ### Anamnese
 
