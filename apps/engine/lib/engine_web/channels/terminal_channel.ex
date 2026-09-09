@@ -23,6 +23,17 @@ defmodule EngineWeb.TerminalChannel do
      pedido); `handle_in("container_*_result", ...)` responde de volta. Só a
      api chama isto, e só para projeto `mounted`/`runner` (`container` sobe
      pelo broker, `apps/broker`, que nunca fala com este canal).
+  1c. **`workspace_create`/`workspace_create_result`** (ADR 0151 ponto 3,
+     RN-532) — MESMO mecanismo do item 1, uma vez mais:
+     `Engine.Runners.PastaDoProjeto` (via `RunnerRouter.create_workspace/3`)
+     pede a CRIAÇÃO da pasta de um projeto sob a base LOCAL do agente,
+     mandando só o SEGMENTO relativo — nunca um caminho absoluto (o
+     invariante do ADR 0130/0144). Modelado neste par, e **não** em
+     `workspace_confirm`, porque aquele é UNIDIRECIONAL (responde
+     `{:noreply, socket}` e não empurra nada de volta) e quem pede a criação
+     precisa saber se deu certo. A GRAVAÇÃO continua sendo do
+     `workspace_confirm`, que o runner empurra logo antes do resultado — ver
+     `handle_in("workspace_create_result", ...)`.
   2. **PTY interativo** (`pty_*`) — RELAY puro entre `:web` e `:runner`; o
      engine NUNCA interpreta os bytes do PTY (`data` é base64 opaco pra
      ele). Eventos que o `:runner` origina (`pty_data`, `pty_opened`,
@@ -76,8 +87,16 @@ defmodule EngineWeb.TerminalChannel do
 
   E a metade que entrega valor hoje: mensagem cuja capacidade não foi
   concedida é RECUSADA com resposta NOMEADA, nunca engolida — ver
-  `handle_info({:dispatch_exec, ...})` (capacidade `exec`) e
-  `handle_info({:relay, "pty_" <> _, ...})` (capacidade `pty`).
+  `handle_info({:dispatch_exec, ...})` (capacidade `exec`),
+  `handle_info({:relay, "pty_" <> _, ...})` (capacidade `pty`) e
+  `handle_info({:dispatch_workspace_create, ...})` (capacidade `workspace`).
+
+  `workspace` é a única das quatro cuja declaração depende do ESTADO da
+  execução do runner, e não só da versão dele: ele só a declara quando tem
+  BASE consentida (RN-529). Ninguém a EXIGE no join, então essa checagem no
+  dispatch não é dupla-guarda — ela É a segunda pré-condição de
+  `Engine.Runners.PastaDoProjeto`, e este é o único lugar do servidor onde
+  ela pode ser respondida.
 
   ## O DESTINO do espelho viaja na concessão do join (ADR 0147 ponto 4, RN-516)
 
@@ -158,7 +177,7 @@ defmodule EngineWeb.TerminalChannel do
   require Logger
 
   alias Engine.Projects.Project
-  alias Engine.Runners.{Capacidades, Registry, SocketTicket}
+  alias Engine.Runners.{Capacidades, PastaDoProjeto, Registry, SocketTicket}
   alias Engine.Sessions.{EngineApiClient, ProjectSession}
   alias EngineWeb.RunnerSocket
 
@@ -347,6 +366,19 @@ defmodule EngineWeb.TerminalChannel do
   @impl true
   def handle_in("container_remove_result", payload, socket) do
     responder_pedido_pendente(socket, payload, :runner_container_remove_result)
+  end
+
+  # workspace_create_result (ADR 0151 ponto 3, RN-532): MESMO mecanismo dos
+  # quatro acima — o `ref` correlaciona, `pending_execs` guarda quem pediu.
+  #
+  # Ele NÃO grava nada, e é isso que o mantém barato: quem grava é o
+  # `workspace_confirm` que o runner empurra ANTES dele, pelo caminho de
+  # sempre (canal → engine → HTTP interno → api). Nenhuma rota nova de
+  # gravação nasceu, e o único caminho que carimba `workspace_verified_at`
+  # continua sendo um só.
+  @impl true
+  def handle_in("workspace_create_result", payload, socket) do
+    responder_pedido_pendente(socket, payload, :runner_workspace_create_result)
   end
 
   # workspace_confirm: só o :runner pode originar — o caminho que ele
@@ -614,6 +646,40 @@ defmodule EngineWeb.TerminalChannel do
     despachar_pedido(socket, ref, from, timeout_ms, "container_remove", %{
       workspaceDirName: workspace_dir_name
     })
+  end
+
+  # workspace_create (ADR 0151 pontos 3 e 5, RN-532) —
+  # `Engine.Runners.PastaDoProjeto` manda isto pelo `RunnerRouter`, no MESMO
+  # molde de pedido-com-resposta dos quatro acima.
+  #
+  # A checagem de capacidade aqui NÃO é dupla-guarda como a do `mirror_sync`:
+  # ela é a SEGUNDA PRÉ-CONDIÇÃO do predicado, e este é o único lugar onde ela
+  # pode ser respondida. Ninguém EXIGE `workspace` no join (ADR 0151 ponto 4),
+  # então um runner sem base consentida conecta normalmente — e é aqui que se
+  # descobre que ele não tem onde criar pasta.
+  #
+  # A recusa responde ao `from` no FORMATO de `workspace_create_result`, com
+  # `motivo: "sem-base"`, exatamente como `dispatch_exec` faz com o 126: sem
+  # isso o `RunnerRouter` ficaria bloqueado até o `receive ... after` dele e o
+  # usuário veria um TIMEOUT no lugar da causa.
+  @impl true
+  def handle_info({:dispatch_workspace_create, ref, payload, from, timeout_ms}, socket) do
+    if tem_capacidade?(socket, "workspace") do
+      despachar_pedido(socket, ref, from, timeout_ms, "workspace_create", payload)
+    else
+      send(
+        from,
+        {:runner_workspace_create_result, ref,
+         %{
+           "ref" => ref,
+           "sucesso" => false,
+           "motivo" => "sem-base",
+           "erro" => PastaDoProjeto.mensagem(:sem_base)
+         }}
+      )
+
+      {:noreply, socket}
+    end
   end
 
   # mirror_sync (ADR 0147 pontos 4 e 8, RN-516) — `Engine.Runners.Espelho`

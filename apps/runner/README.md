@@ -154,6 +154,32 @@ Isto é **best-effort**, como `guard.ts` e `espelho-guard.ts`: a fronteira de
 segurança continua sendo autenticação + pipeline de aprovação + o
 consentimento de quem rodou o CLI.
 
+### O que a base HABILITA: `workspace_create` (RN-532)
+
+Com base consentida, este runner declara no `join` uma quarta capacidade —
+`workspace` — e passa a atender a mensagem `workspace_create` (ADR 0151
+pontos 3 a 6). O servidor manda o `projectId` e o **segmento relativo** à
+base (nunca um caminho absoluto); o runner faz `mkdir -p` e então
+`git init` — ou clona, quando o pedido traz uma URL de repositório, caso em
+que a credencial viaja em `env` e o clone roda no **HOST**, pelo mesmo
+mecanismo do `exec` (ADR 0145).
+
+Tendo dado certo, ele empurra o `workspace_confirm` que já existia — e é
+esse, e só esse, que GRAVA. Nenhuma rota nova de gravação nasceu, e o único
+caminho que carimba `workspace_verified_at` continua sendo um só. O
+`workspace_create_result` só destrava quem pediu: sucesso com o caminho
+final, ou erro **nomeado** (`sem-base`, `segmento`, `nao-e-pasta`, `mkdir`,
+`git`).
+
+Duas coisas que valem registrar. A capacidade `workspace` é a única cuja
+declaração depende do **estado desta execução** e não da versão do binário —
+sem base não há onde criar pasta, e declará-la mesmo assim seria o defeito
+silencioso que a negociação existe para impedir. E `estado.dir` **não muda**:
+a pasta criada é a do projeto do ponto de vista do servidor, mas a raiz que
+`guard.ts` usa para conter comando aprovado continua sendo a desta execução —
+trocá-la em runtime moveria uma fronteira de contenção por causa de uma
+mensagem de rede.
+
 ### Rodando direto do checkout do monorepo (sem instalar via npm)
 
 ```bash

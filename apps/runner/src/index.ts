@@ -36,6 +36,7 @@ import {
 } from './auth.ts';
 import { resolverBaseConsentida } from './base.ts';
 import {
+  capacidadesDoRunner,
   conectarCanal,
   enviarContainerRemoveResult,
   enviarContainerStartResult,
@@ -48,6 +49,7 @@ import {
   enviarPtyError,
   enviarPtyOpened,
   enviarWorkspaceConfirm,
+  enviarWorkspaceCreateResult,
   JoinRecusadoError,
   type ChannelLike,
   type ContainerRemoveMessage,
@@ -59,6 +61,7 @@ import {
   type MirrorSyncMessage,
   type MirrorSyncResultMessage,
   type PtyOpenMessage,
+  type WorkspaceCreateMessage,
 } from './channel.ts';
 import {
   estadoDaChaveDeDispositivo,
@@ -97,6 +100,7 @@ import {
   validarDirDentroDoHomeNoLinux,
 } from './guard.ts';
 import { carregarNodePty } from './native-pty-loader.ts';
+import { criarPastaDoProjeto, CriacaoDePastaRecusadaError } from './pasta-do-projeto.ts';
 import { GerenciadorDePty } from './pty.ts';
 import {
   desinstalar,
@@ -733,6 +737,75 @@ function reportarEspelho(estado: EstadoDoRunner, msg: MirrorSyncResultMessage): 
 }
 
 /**
+ * `workspace_create` (ADR 0151 ponto 3, RN-532) — o engine pede a pasta de um
+ * projeto sob a base LOCAL, mandando só o SEGMENTO relativo; quem tem a raiz é
+ * este processo (RN-529).
+ *
+ * ## A confirmação REUSA `workspace_confirm`, e a ORDEM é o mecanismo
+ *
+ * Tendo dado certo, o `workspace_confirm` que já existe desde a RN-423 é
+ * empurrado ANTES do `workspace_create_result`. Não é estética: os dois chegam
+ * ao MESMO processo de canal, em ordem, e aquele handler é síncrono (ele chama
+ * a api por HTTP interno e só então volta). Empurrar o confirm primeiro é o que
+ * garante que, quando o pedinte destravar do `receive`,
+ * `workspace_verified_at` já foi carimbado — sem nenhuma rota nova de gravação,
+ * sem o engine escrever tabela, e com o único caminho que carimba continuando
+ * a ser um só.
+ *
+ * ## As duas saídas reportam, sempre
+ *
+ * Ao contrário de `mirror_sync_result` (fire-and-forget dos dois lados), aqui
+ * há alguém BLOQUEADO esperando — o molde de `exec_result`/
+ * `container_start_result`. Recusa e falha viram `sucesso: false` com o motivo
+ * NOMEADO, nunca exceção que derruba o runner e nunca silêncio: silêncio aqui
+ * apareceria do outro lado como timeout, escondendo a causa.
+ */
+export async function tratarWorkspaceCreate(
+  estado: EstadoDoRunner,
+  msg: WorkspaceCreateMessage,
+): Promise<void> {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+
+  try {
+    const resultado = await criarPastaDoProjeto({
+      base: estado.base,
+      segmento: msg.segmento,
+      repoUrl: msg.repoUrl,
+      env: msg.env,
+    });
+
+    if (estado.canalAtual !== canal) return; // conexão caiu enquanto o git rodava
+
+    // `msg.env` NUNCA aparece aqui, pelo mesmo motivo do `exec` (ADR 0145).
+    console.log(
+      `workspace_create ${msg.ref}: ${resultado.caminho} (${resultado.modo}) ` +
+        `para o projeto ${msg.projectId}`,
+    );
+
+    enviarWorkspaceConfirm(canal, { path: resultado.caminho });
+    enviarWorkspaceCreateResult(canal, {
+      ref: msg.ref,
+      sucesso: true,
+      caminho: resultado.caminho,
+    });
+  } catch (erro) {
+    if (estado.canalAtual !== canal) return;
+    const explicacao = mensagemDeErro(erro);
+    console.warn(`workspace_create ${msg.ref}: recusado — ${explicacao}`);
+    enviarWorkspaceCreateResult(canal, {
+      ref: msg.ref,
+      sucesso: false,
+      // O motivo NOMEADO é o que o engine DECIDE em cima; o texto é o que um
+      // humano lê. Erro que não é do vocabulário deste módulo vira
+      // `desconhecido` em vez de se disfarçar de um dos cinco.
+      motivo: erro instanceof CriacaoDePastaRecusadaError ? erro.motivo : 'desconhecido',
+      erro: explicacao,
+    });
+  }
+}
+
+/**
  * Uma "rodada" de conexão: pede um ticket FRESCO, entra no canal, e só volta
  * quando a conexão cai (ou lança se o join for recusado/não puder
  * conectar). A `credencial` é resolvida uma vez só, em `lerArgumentos` — mas
@@ -775,8 +848,13 @@ async function conectarERodar(
       onContainerStop: (msg) => void tratarContainerStop(estado, msg),
       onContainerRemove: (msg) => void tratarContainerRemove(estado, msg),
       onMirrorSync: (msg) => void tratarMirrorSync(estado, msg),
+      onWorkspaceCreate: (msg) => void tratarWorkspaceCreate(estado, msg),
       onDisconnected: () => resolverQueda(),
     },
+    // ADR 0151 ponto 4 (RN-532): `workspace` só é declarada quando ESTA
+    // execução tem base consentida — declarar o que não se pode fazer é
+    // exatamente o defeito que a negociação existe para impedir (RN-514).
+    capacidades: capacidadesDoRunner(estado.base),
   });
 
   estado.canalAtual = conexao.channel;
