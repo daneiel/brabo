@@ -175,8 +175,8 @@ de" é que ordena, e a FASE 28 registrou o caso em que a ordem real divergiu.
 | 6 | `install.sh`: migração de instalação anterior, provada com a sessão 5 | 4, 5 | não apaga a base do usuário nem a pasta de espelho, em hipótese nenhuma |
 | 7 | runner: base consentida no `guard.ts`; o `install.sh` instala o runner | 4 | não mexe no pareamento por projeto; não cria credencial nova |
 | 8 | protocolo: capacidade e mensagem de criação de pasta, predicado próprio | 7 | não altera `RunnerReadiness`; não introduz `proposed_action` |
-| 9 | web: picker via `fs_list_dir` no modo `runner`, espera com três estados (RN-474) | 8 | não toca o caminho do modo `mounted` (RN-504, pela api) |
-| 10 | E2E em máquina limpa (Linux e macOS), docmap para o `install.sh`, `docs:check`, CHANGELOG | 6, 9 | não afrouxa gate para o E2E passar |
+| 9 | ✅ web: picker via `fs_list_dir` no modo `runner`, espera com três estados (RN-533) | 8 | não toca o caminho do modo `mounted` (RN-504, pela api) |
+| 10 | ✅ E2E em máquina limpa, o `install.sh` no manifesto assinado, docmap, `docs:check` (RN-534) | 6, 9 | não afrouxa gate para o E2E passar |
 
 > **Os dois lados da verificação não entram juntos, e a divisão é a dependência
 > real.** A sessão 2 entrega quem **produz** a assinatura; os consumidores
