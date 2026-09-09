@@ -9764,6 +9764,88 @@ composes).
 **Origem:** FASE 29, sessão 4 ([ADR 0150](adr/0150-instalador-de-uma-linha.md)).
 Instalar o runner (sessão 7) e migrar uma instalação anterior (sessão 6)
 seguem fora, e o `--print-plan` os declara `nao-nesta-versao`.
+### RN-525 — O proxy do binário confere o hash contra o manifesto da mesma release, recusa quando não pode conferir, e DIZ que isso é integridade e não procedência {#rn-525}
+
+`GET /runner-releases/binary` é `@Public()`, sem autenticação, e é o passo 4 do
+fluxo de configuração pelo navegador ([RN-473](#rn-473),
+[ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)). Até a
+sessão 3 da FASE 29 ele validava a ENTRADA (`platform` contra uma allowlist
+fechada) e transmitia os bytes do GitHub direto para o cliente, **sem verificar
+nada** — é o consumidor que o [ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md)
+nomeia e a [RN-524](#rn-524) deixou pendente.
+
+Agora ele **confere o sha256 dos bytes contra o `checksums.txt` da MESMA
+release** antes de responder qualquer coisa, e o header `Content-Digest`
+(RFC 9530) repete o hash conferido, para quem receber poder refazer a conta.
+
+**O que esta verificação NÃO faz, e está escrito onde ela é feita.** Ela **não
+verifica a assinatura** do manifesto (`checksums.txt.bundle`). Isto é
+**integridade contra o manifesto, não procedência**: quem consiga reescrever a
+Release reescreve os dois arquivos e passa. As duas formas de fechar isso foram
+MEDIDAS nesta sessão, e as duas foram recusadas:
+
+| caminho | medido | por que não |
+|---|---|---|
+| `cosign` na imagem da api | **155 MB** (`cosign-linux-amd64` v2.6.1) | quase dobra a imagem de runtime (Alpine + Node), publicada por digest no GHCR ([ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md)), para verificar um download opcional |
+| `@sigstore/verify` + `@sigstore/tuf` | **2,5 MB, 12 pacotes** | o tamanho não é o custo. `getTrustedRoot()` refresca metadados TUF contra `tuf-repo-cdn.sigstore.dev` (o `seeds.json` do pacote só semeia o `root.json`), então uma rota pública que hoje depende de UM host de terceiro passaria a depender de dois. E, pela régua dos ADRs [0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)/[0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) — capability só é declarada quando **provada** —, não há como provar o caminho hoje: **nenhuma Release tem `checksums.txt.bundle`**, porque o job `checksums` nasceu na sessão 2 e só roda numa tag final, lacuna que a própria [RN-524](#rn-524) já declara do lado de quem assina |
+
+Quem verifica a ASSINATURA é o `install.sh` (sessão 4/7), que tem `cosign` de
+verdade e o baixa pinado com `sha256sum -c` (decisão 4 do ADR 0149). **BRB-005
+segue aberto para a metade de procedência desta rota**, e
+[o registro](reference/brb.md) diz isso — não é rodapé, é o limite do que a rota
+prova.
+
+**Release sem `checksums.txt` é RECUSA, nunca "sirvo avisando".** Um aviso que
+se aceita clicando é uma verificação que não existe (ADR 0149, decisão 3) — e
+seria o downgrade mais barato possível: apagar 400 bytes da Release desligaria a
+conferência de todo mundo. O custo está medido e é pequeno: na v5.0.0 há dois
+binários (`linux-x64`, `linux-arm64`) e nenhum manifesto, e o passo do binário é
+**best-effort** no fluxo do navegador ([RN-473](#rn-473), passo 4) — ele cai em
+`npm install -g @brabo/runner`, que não depende de release nenhuma. Toda release
+anterior à primeira tag depois do ADR 0149 cai nesse caminho, por construção.
+
+**Os seis desfechos de 502 não colapsam.** O status sozinho não os separa e
+eles pedem ações diferentes de quem chamou, então a recusa carrega um `motivo`
+no corpo — `plataforma_nao_publicada`, `release_sem_manifesto`,
+`manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou`,
+`hash_divergente`. É a régua da [RN-470](business-rules/custo.md#rn-470) numa resposta de api: "essa
+plataforma não saiu ainda" manda esperar a próxima release, "release sem
+manifesto" manda usar o npm, e "hash divergente" é incidente. Em especial,
+"manifesto não listado na release" e "manifesto listado que falhou ao baixar"
+são desfechos DIFERENTES — confundi-los mandaria a pessoa instalar pelo npm por
+causa de uma falha de rede momentânea.
+
+**Conferir hash exige ler todos os bytes, e isso passa pelo disco.** Bufferizar
+os ~79 MB do binário em memória seria exaustão trivial numa rota pública (o pod
+da api tem `limits.memory: 512Mi`), e cachear os bytes seria pior — cinco
+plataformas × 79 MB. Os bytes descem em **stream** para um arquivo temporário em
+`/tmp` (um `emptyDir` montado justamente porque o rootfs da api é read-only), com
+o hash calculado no caminho, e o arquivo é relido em stream para o cliente **só
+depois** de o hash bater: memória constante, e nenhum byte não conferido chega
+ao cliente. Um teto de 256 MiB aborta resposta absurda antes de encher o `/tmp`.
+O cache existente (URLs, 5 min) **fica**, e passa a guardar também o manifesto
+já parseado — centenas de bytes de TEXTO, nunca bytes de binário —, na MESMA
+entrada e nunca num cache próprio: em janelas diferentes, uma release publicada
+no meio faria o hash novo ser conferido contra o binário velho, e o desfecho
+seria um `hash_divergente` que pareceria adulteração.
+
+- **Onde:** `apps/api/src/interfaces/http/runner/runner-releases.controller.ts`
+  (a verificação, o teto de bytes, o arquivo temporário e o `Content-Digest`),
+  `apps/api/src/interfaces/http/runner/checksums.ts` (a leitura pura do
+  manifesto e a união de `MotivoDaRecusa`),
+  `apps/web/src/lib/runner-bootstrap.ts` (`baixarBinario` passa a ler `message`
+  e `motivo` do corpo, e a frase chega em `falhaDoBinario`)
+- **Teste:** `apps/api/test/interfaces/runner-releases.controller.spec.ts`
+  (caminho feliz com `Content-Digest`; hash divergente sem NENHUM byte nem
+  header no corpo; release sem manifesto recusando antes de baixar o binário;
+  manifesto que não cobre a plataforma; manifesto ilegível; download falhado; e
+  o cache guardando release e manifesto juntos) e o `describe('parsearChecksums')`
+  do mesmo arquivo; `apps/web/src/lib/runner-bootstrap.test.ts` (a frase da api
+  e o `motivo` chegando ao chamador, e corpo não-JSON não virando segunda
+  exceção)
+- **Origem:** FASE 29, sessão 3. [ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md),
+  o terceiro consumidor da tabela da decisão 3 — pela METADE que a api pode
+  provar hoje, com a outra metade nomeada em vez de fingida
 
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar

@@ -67,9 +67,30 @@ tool that lets someone authenticate would be backwards. `platform` is a
 closed allowlist (`linux-x64`/`linux-arm64`/`darwin-x64`/`darwin-arm64`/
 `win32-x64`), never interpolated raw into the GitHub URL — closing the
 SSRF/path-injection vector an open parameter would leave. The resolved
-asset URL (never the bytes) is cached in memory for a few minutes,
-purely to stay under GitHub's unauthenticated rate limit under
-concurrent downloads.
+asset URL (never the binary's bytes) is cached in memory for a few
+minutes, purely to stay under GitHub's unauthenticated rate limit under
+concurrent downloads; since session 3 of FASE 29 the parsed
+`checksums.txt` — a few hundred bytes of *text* — is memoised in that
+same entry, so hash and binary always come from the same release.
+
+Since [RN-525](business-rules.md#rn-525) ([ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md))
+the route no longer streams unverified bytes: it checks the sha256 of
+what it downloaded against the release's `checksums.txt` and answers
+**502 with a named `motivo`** when it cannot — including when the
+release publishes no manifest at all, which is a *refusal*, never bytes
+served with a warning. Read the guarantee narrowly: this is **integrity
+against the manifest, not provenance**. The route does **not** verify
+the manifest's `cosign` signature (`checksums.txt.bundle`), so anyone
+who can rewrite the Release rewrites both files and passes. Both ways to
+close it were measured and refused for now — `cosign` in the image is
+155 MB, and `@sigstore/verify` would make a `@Public()` route depend on
+a second third-party host (`tuf-repo-cdn.sigstore.dev`) to check
+something no Release carries yet. The consumer that *does* verify the
+signature is `install.sh`. Because verifying the hash means reading
+every byte, the download lands in a temporary file under `/tmp` (the
+pod's `emptyDir`, mounted because the rootfs is read-only) with a
+256 MiB ceiling, and is streamed back only after the hash matches —
+never buffered in the 512Mi process.
 
 ### First-party auth
 

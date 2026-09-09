@@ -114,10 +114,27 @@ rules:
     docs: ["docs/reference/internal-api.md"]
     severity: block
 
+  # DIVIDIDA na FASE 29, e o motivo é o mesmo que este arquivo já usa duas
+  # vezes (a separação de `checks-e-rulesets` e a exclusão de `scripts/ci/`):
+  # a regra era uma conjunção — `docs:` exige TODOS —, então QUALQUER mudança
+  # em QUALQUER controller HTTP cobrava também `internal-api.md`, que
+  # documenta as rotas `/internal/*` entre api e engine. Uma rota pública não
+  # tem o que dizer ali, e cobrar isso ensina a usar o escape hatch por
+  # reflexo — aí ele para de significar alguma coisa.
+  #
+  # `security-surface.md` continua cobrindo TODO controller, e tem de
+  # continuar: ele é o inventário de TODAS as rotas, e um teste
+  # (`route-surface.spec.ts`) reprova rota sem linha.
   - id: superficie-http
     watch:
       - "apps/api/src/interfaces/http/**"
-    docs: ["docs/security-surface.md", "docs/reference/internal-api.md"]
+    docs: ["docs/security-surface.md"]
+    severity: block
+
+  - id: superficie-http-interna
+    watch:
+      - "apps/api/src/interfaces/http/internal/**"
+    docs: ["docs/reference/internal-api.md"]
     severity: block
     note: "Rota nova sem classificação já quebra route-surface.spec.ts; a doc é a fonte dele."
 
