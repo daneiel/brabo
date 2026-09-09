@@ -9539,6 +9539,117 @@ reparável (termina em toast), não o invisível.
 
 ---
 
+### RN-529 — O `brabo-runner` nasce com uma BASE local, cada projeto é uma subpasta dela, e a base NUNCA invalida `--dir` {#rn-529}
+
+O agente local não tinha noção de base. A única raiz era `--dir`, resolvida por
+`resolverDir` contra `INIT_CWD ?? process.cwd()`; sem a flag, a raiz era o
+próprio `cwd`. `estado.dir` é **um** caminho, singular — o do projeto daquela
+conexão —, e não existia constante, variável nem campo que dissesse onde os
+projetos moram naquela máquina. A palavra "base" só aparecia em comentário.
+
+**A base é LOCAL, e nunca chega pela rede.** É o desenho do broker
+([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)) aplicado ao agente local:
+quem tem a raiz é quem executa, e o que atravessa a rede é o **segmento
+relativo**. Não existe campo de base vindo do servidor, e
+`resolverPastaDoProjetoNaBase` recusa um segmento ABSOLUTO por léxico — nunca o
+"aceita e reinterpreta".
+
+**Duas fontes, e a flag vence.** `--base <caminho>` na linha de comando, e
+`$XDG_CONFIG_HOME/brabo/runner.json` (senão `~/.config/brabo/runner.json`), que
+é onde o instalador ([ADR 0150](adr/0150-instalador-de-uma-linha.md)) a grava. O
+arquivo é de USUÁRIO e não de projeto de propósito: a base é **uma** para N
+projetos, e guardá-la no `brabo-runner.config.json` — que é por projeto, vive
+DENTRO da pasta do projeto e é escrito pelo NAVEGADOR — daria N cópias do mesmo
+valor com N chances de divergir. Variável de ambiente foi recusada por duas
+razões: `BRABO_PROJECTS_BASE` já existe e é a base dos projetos `mounted` do
+lado SERVIDOR ([RN-500](#rn-500)), a colisão de namespace que o
+[ADR 0141](adr/0141-base-unica-dos-projetos-montados.md) recusou por escrito; e
+sob `systemd --user`/LaunchAgent ([RN-518](#rn-518)) o ambiente é o da unit, não
+o do shell de quem instalou. Só a flag também não bastaria: a base entraria no
+`ExecStart` de cada unit, e trocá-la exigiria reescrever todas.
+
+**`--dir` continua significando exatamente o que sempre significou, e a base
+NÃO entra na validação dele.** Isto é a proibição da api transposta:
+`project-workspaces-root.ts` proíbe por escrito que a regra da base desça para
+`caminhoDeWorkspaceLocalValido`, porque aquele predicado roda em toda LEITURA e
+um projeto legado fora da base explodiria ao ser lido — *"a base é regra de
+CRIAÇÃO e CONVERSÃO; o léxico é para sempre"* ([RN-501](#rn-501)). Deste lado
+vale igual: `--dir` segue validado por `validarDirDentroDoHomeNoLinux` +
+`garantirDiretorio` ([RN-434](#rn-434)/[RN-435](#rn-435)), e estar FORA da base
+não o invalida. Sem isso a base seria `breaking/` sem ganho, contra o binário
+legado da [RN-514](#rn-514). A base decide **só** onde uma pasta de projeto NOVA
+nasce.
+
+**A guarda reusa a régua; não nasce uma quarta cópia.** `base-guard.ts` é o
+TERCEIRO irmão de `guard.ts`, ao lado de `espelho-guard.ts`: importa
+`semBarraFinal`, `dentroDoEscopo` e `realpathMaisProximo` — os três helpers que
+deixaram de ser privados justamente para isso ([RN-516](#rn-516)) —, repete a
+**dupla passada** léxica-depois-`realpath` de `validarCwdDentroDaRaiz`, e reusa
+`validarDirDentroDoHomeNoLinux` INTEIRA para exigir a base dentro do `$HOME` no
+Linux (base dentro do `$HOME` implica toda subpasta dentro dele, então as duas
+checagens continuam concordando). Da recusa de laço de `espelho-guard.ts` reusa
+o que é régua — `dentroDoEscopo`, comparação por SEGMENTO e nunca `startsWith`
+cru, para `/base-outra` não contar como dentro de `/base` — e **não** a função
+`recusarLaco`, que lança `DestinoDeEspelhoInvalidoError` e reportaria uma base
+malformada como problema de espelho. Mesma lição da [RN-515](#rn-515): reusa-se
+a régua, não a mensagem.
+
+**O laço aqui é ASSIMÉTRICO, e esse é o achado.** No espelho os dois sentidos
+são defeito. Aqui a pasta do projeto DENTRO da base é o arranjo NORMAL — é
+literalmente o que "cada projeto é uma subpasta dela" quer dizer. O sentido
+contrário é que é laço: base dentro da raiz deste projeto (ou igual a ela) faria
+todo projeto novo nascer dentro deste, com o git e o espelho deste passando a
+varrer os outros. Só esse é recusado.
+
+**Recusa tem disposição diferente por FONTE, e nenhuma é silenciosa.** Base
+ausente é o estado NORMAL (`null`, o legado intacto). Base pela FLAG que não
+passa na guarda sai com código 2 — é um pedido explícito digitado agora e
+impossível de honrar, a mesma disposição de `--dir` recusado. Base pelo ARQUIVO
+que não passa é dita em `stderr`, nomeia o que se perde ("não terá onde criar a
+pasta de um projeto novo") e o runner **segue sem base**: derrubar um agente
+local que atende um projeto por causa de uma configuração que ele ainda nem usa
+seria desproporcional. Um arquivo que existe e não declara `base` é ausência, não
+recusa — é configuração SEM base consentida, não configuração quebrada. E a
+linha de startup diz a base nos DOIS estados, porque omitir "nenhuma" deixaria
+alguém procurando por que a pasta não apareceu.
+
+**Isto é BEST-EFFORT, e a ressalva de TOCTOU é herdada por escrito** de
+`guard.ts` e `espelho-guard.ts`: symlink criado DEPOIS da checagem e ANTES do
+`mkdir` não é coberto, nem link cujo alvo ainda não existe. A fronteira de
+segurança continua sendo autenticação + pipeline de aprovação + o consentimento
+de quem rodou o CLI.
+
+Nada aqui CRIA pasta: a validação da base não exige que ela exista (quem a cria
+é o instalador, e é o mesmo raciocínio do
+[ADR 0142](adr/0142-validacao-de-workspace-montado-adiada.md) — validar disco onde
+só o léxico é conhecível impediria consentir uma base antes de ela existir). A
+única pergunta de disco é a que nunca é ambígua: um caminho que JÁ existe e não
+é pasta nunca virará uma.
+
+- **Onde:** `apps/runner/src/base.ts:69` (`caminhoDoArquivoDeBase`, a
+  precedência XDG de `servico.ts`), `:90` (`lerBaseConsentida`, os quatro
+  desfechos) e `:165` (`resolverBaseConsentida`, a ordem das fontes e a origem
+  da recusa); `apps/runner/src/base-guard.ts:119`
+  (`validarBaseDeProjetos`), `:200` (`recusarLacoComARaiz`, o laço assimétrico)
+  e `:278` (`resolverPastaDoProjetoNaBase`, a subpasta e a dupla passada);
+  `apps/runner/src/index.ts:321` (a resolução no `lerArgumentos`, DEPOIS de
+  `garantirDiretorio` e sem tocar na validação de `--dir`) e `:452`
+  (`EstadoDoRunner.base`)
+- **Teste:** `apps/runner/src/base-guard.spec.ts` (caminho feliz com base que
+  ainda não existe; a irmã com prefixo comum que NÃO é confundida; `..`, `/`,
+  arquivo, `$HOME` no Linux; o laço nos dois sentidos, incluindo o construído
+  por symlink REAL; o segmento absoluto, com `..`, o que aponta para a própria
+  base e o que escapa por link no meio);
+  `apps/runner/src/base.spec.ts` (a precedência XDG, os quatro desfechos da
+  leitura, a flag vencendo o arquivo, e a recusa carregando a ORIGEM)
+- **ADR:** [0151](adr/0151-base-consentida-no-runner.md) pontos 1 e 2
+- **Origem:** FASE 29. Fica declarado e NÃO feito nesta entrega: o par
+  `workspace_create`/`workspace_create_result` e a capacidade `workspace`
+  (pontos 3 a 6 do ADR) — a base existe e é validada, mas nada ainda a
+  CONSOME para criar pasta; e o `install.sh`, que é quem vai gravar o arquivo
+
+---
+
 ## Quando dá errado
 
 | situação | o que o sistema faz |
@@ -9615,6 +9726,12 @@ reparável (termina em toast), não o invisível.
 | "Subir" num projeto `runner` cujo `workspaceVerifiedAt` é nulo | botão inerte com motivo PRÓPRIO ("nenhum agente local jamais confirmou a pasta") — nunca colapsado com "sem imagem decidida" (RN-521) |
 | "Subir" num projeto `runner` com pasta confirmada mas runner possivelmente desligado | a tela OFERECE e escreve a ressalva: confirmação de pasta não é presença de agente (RN-468), e a ação falha ao ser aprovada se ele não estiver de pé (RN-521) |
 | Papel abaixo de `maintainer` na página `/containers` | controles inertes com o motivo dito UMA vez em texto; estado, imagem e recursos continuam VISÍVEIS (RN-521/RN-102, ADR 0064) |
+| `brabo-runner --base <caminho>` com caminho relativo, com `..`, igual a `/`, apontando para um arquivo, ou (no Linux) fora do `$HOME` | **recusa nomeando o motivo** e sai com código 2 — pedido explícito digitado agora que não dá para honrar, a mesma disposição de `--dir` recusado (RN-529) |
+| `--base` DENTRO da pasta deste projeto, ou igual a ela | recusa `base-dentro-da-raiz`: todo projeto novo nasceria dentro deste. O sentido CONTRÁRIO (a pasta do projeto dentro da base) é o arranjo normal e passa (RN-529) |
+| `$XDG_CONFIG_HOME/brabo/runner.json` corrompido, ou com uma base que a guarda recusa | a recusa é DITA em `stderr`, nomeia o que se perde, e o runner **segue sem base** — derrubar um agente que atende um projeto por uma configuração que ele ainda não usa seria desproporcional (RN-529) |
+| Arquivo de base que existe e não declara `base` | é **ausência**, não recusa: configuração sem base consentida, não configuração quebrada — o runner roda como sempre (RN-529) |
+| Projeto cuja pasta (`--dir`) está FORA da base configurada | segue **válido**, sem aviso: a base é regra de criação, e o léxico de `--dir` é para sempre — a mesma proibição escrita em `project-workspaces-root.ts` (RN-529/RN-501) |
+| Segmento de projeto ABSOLUTO, com `..`, apontando para a própria base, ou escapando dela por symlink | recusa nomeada por motivo próprio, na dupla passada (léxica e por `realpath`) — nunca aceito e reinterpretado, porque o que atravessa a rede é o SEGMENTO (RN-529, ADR 0130) |
 
 ## FASE 29 — a instalação de uma linha: assinar o que se publica
 

@@ -58,6 +58,61 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   manifesto já parseado, na **mesma** entrada: em janelas diferentes, uma
   release publicada no meio faria o hash novo ser conferido contra o binário
   velho, e o desfecho pareceria adulteração.
+- **runner**: o `brabo-runner` passa a poder nascer com uma **base de
+  projetos** — uma pasta da máquina do usuário sob a qual cada projeto é uma
+  **subpasta** (RN-529, [ADR 0151](docs/adr/0151-base-consentida-no-runner.md)
+  pontos 1 e 2).
+
+  Ele não tinha noção nenhuma de base: a única raiz era `--dir`, e `estado.dir`
+  é **um** caminho, singular, o do projeto daquela conexão. Não havia constante,
+  variável nem campo dizendo onde os projetos moram naquela máquina — a palavra
+  só aparecia em comentário.
+
+  A base é **local e nunca chega pela rede**, o desenho do broker
+  ([ADR 0144](docs/adr/0144-a-segunda-raiz-do-broker.md)) aplicado ao agente
+  local: quem tem a raiz é quem executa, e o que atravessa é o **segmento
+  relativo** — segmento absoluto é recusado por léxico, nunca reinterpretado.
+  Duas fontes, com a flag vencendo: `--base <caminho>` e
+  `$XDG_CONFIG_HOME/brabo/runner.json` (senão `~/.config/brabo/runner.json`),
+  que é onde o instalador a gravará. Arquivo de USUÁRIO e não de projeto de
+  propósito: a base é **uma** para N projetos, e guardá-la no
+  `brabo-runner.config.json` — que é por projeto, vive dentro da pasta do
+  projeto e é escrito pelo navegador — daria N cópias com N chances de divergir.
+  Variável de ambiente foi recusada por duas razões: `BRABO_PROJECTS_BASE` já é
+  a base dos projetos `mounted` do lado **servidor** (a colisão de namespace
+  que o [ADR 0141](docs/adr/0141-base-unica-dos-projetos-montados.md) recusou
+  por escrito), e sob `systemd --user`/LaunchAgent o ambiente é o da unit, não
+  o do shell de quem instalou.
+
+  **`--dir` não muda de significado, e a base não entra na validação dele** —
+  a proibição da api transposta: assim como a regra da base fica fora de
+  `caminhoDeWorkspaceLocalValido` porque aquele predicado roda em toda leitura,
+  aqui um projeto legado fora da base segue válido. A base decide **só** onde
+  uma pasta de projeto nova nasce; quebrar `--dir` seria `breaking/` sem ganho,
+  contra o binário legado da RN-514.
+
+  A guarda (`base-guard.ts`) é o **terceiro irmão** de `guard.ts`, ao lado de
+  `espelho-guard.ts`: reusa `semBarraFinal`/`dentroDoEscopo`/
+  `realpathMaisProximo`, a dupla passada léxica-depois-`realpath`, e
+  `validarDirDentroDoHomeNoLinux` inteira — nenhuma quarta cópia da régua
+  (RN-515). Da recusa de laço do espelho reusa o que é régua (comparação por
+  **segmento**, para `/base-outra` não contar como dentro de `/base`) e não a
+  função, que lançaria um erro de espelho para uma base malformada. E o laço
+  aqui é **assimétrico**: a pasta do projeto dentro da base é o arranjo normal;
+  a base dentro da pasta do projeto é o defeito.
+
+  Recusa tem disposição por **fonte**, e nenhuma é silenciosa: pela flag,
+  código 2 (a mesma disposição de `--dir` recusado); pelo arquivo, mensagem em
+  `stderr` nomeando o que se perde, e o runner segue sem base. Arquivo que
+  existe e não declara `base` é ausência, não recusa. A linha de startup diz a
+  base nos dois estados.
+
+  Best-effort por invariante, com a ressalva de TOCTOU herdada por escrito: a
+  fronteira de segurança continua sendo autenticação + pipeline de aprovação +
+  o consentimento de quem rodou o CLI. Fica declarado e **não** feito aqui: o
+  par `workspace_create`/`workspace_create_result` e a capacidade `workspace`
+  (pontos 3 a 6 do ADR) — a base existe e é validada, mas nada ainda a consome
+  para criar pasta.
 
 - **web,api**: a página `/containers` passa a listar **todo projeto do
   workspace**, tenha ele container registrado ou não, e vira o **caminho

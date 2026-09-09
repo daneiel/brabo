@@ -396,6 +396,24 @@ reason in the URL.
   (`caminhoDeWorkspaceLocalValido`) — system root and overlap with the
   Brabo checkout remain forbidden even coming from the runner. `400` if the
   project isn't in `runner` mode.
+
+  Since [ADR 0151](adr/0151-base-consentida-no-runner.md)
+  ([RN-529](business-rules.md#rn-529)) the runner can ALSO be born with a
+  **base** — one folder of that machine under which each project is a
+  subfolder. Two things about it belong on this page. First, the base is
+  **local and never arrives over the wire**: it comes from `--base` or from
+  `$XDG_CONFIG_HOME/brabo/runner.json`, never from a server field, so the
+  invariant of [ADR 0130](adr/0130-broker-de-container.md)/
+  [ADR 0144](adr/0144-a-segunda-raiz-do-broker.md) holds on this side too —
+  whoever owns the root is whoever executes, and only the **relative
+  segment** travels. `resolverPastaDoProjetoNaBase` refuses an ABSOLUTE
+  segment lexically rather than reinterpreting it. Second, the base does
+  **not** enter the validation of `--dir`, exactly as the base rule stays out
+  of the api's lexical predicate: a project whose folder predates the base
+  keeps working. The guard is a THIRD sibling of `guard.ts`, reusing
+  `dentroDoEscopo`/`realpathMaisProximo`/`semBarraFinal` and the same
+  lexical-then-`realpath` double pass — and it inherits the same TOCTOU
+  caveat in writing: best-effort, never the security boundary.
 - **`POST /internal/projects/:projectId/container-exec`** ([RN-492](business-rules.md#rn-492),
   [ADR 0134](adr/0134-dev-agents-executam-dentro-do-container.md)) is called
   only by the engine, when `Engine.Actions.TerminalExecutor` decided a
