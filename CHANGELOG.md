@@ -327,6 +327,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `/health` da api e do engine antes de dizer que instalou — a régua que o
   `reset-total.sh` custou a aprender.
 
+- **install**: migrar uma instalação existente passa a ser possível, e o
+  instalador **só ganha o direito de apagar depois de provar que restaura**
+  ([RN-530](docs/business-rules.md#rn-530)).
+
+  A ordem é backup → **provar** → perguntar → apagar → instalar → restaurar, e
+  o passo do meio é o que dá sentido ao resto: um backup que ninguém tentou
+  restaurar é um arquivo, e a hora de descobrir isso não é depois do `down -v`.
+  A prova roda `docker/backup/test-restore-compose.sh`, com as mesmas três
+  validações de sempre. Backup que falha, ou prova que falha, **param a
+  migração sem apagar nada**.
+
+  O destino do backup é uma pasta do **host** — o default do compose é o volume
+  nomeado `backup_local`, que o `down -v` apagaria junto com o que se quer
+  preservar. E instalar por cima sem migrar não é oferecido: um `up` sobre
+  volumes de outra versão é o tipo de estrago que não avisa.
+
+  O que nunca é apagado continua nunca sendo: a base de projetos (com
+  `BRABO_PROJECTS_BASE` apontando para o host, a linha é bind-mount, e `down
+  -v` não toca bind), a pasta de espelho, e o backup recém-provado.
+
 ### Correções
 
 - **dev**: `scripts/dev/reset-total.sh` terminava dizendo **"reset completo"**

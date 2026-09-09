@@ -10089,6 +10089,45 @@ seria um `hash_divergente` que pareceria adulteração.
 | `brabo-restore-git --restaurar` num volume que já tem bare repos | recusado: sobrepor dois estados de repositório não levanta erro nenhum e só aparece num `fetch` com história errada. `RESTORE_GIT_FORCE=1` para quem quer mesmo (RN-528) |
 | `brabo-restore-git --restaurar` sem poder escrever no volume (uid 70 × dono da api) | recusa **ANTES** do `tar`, nomeando `--user 0:0` — descobrir no meio da extração deixaria o volume pela metade. E o que é extraído como root volta para o dono do DIRETÓRIO (RN-528) |
 
+### RN-530 — Migrar exige backup PROVADO: o instalador só ganha o direito de apagar depois de restaurar {#rn-530}
+
+Instalar por cima de uma instalação existente **não é oferecido**: ou se migra,
+ou se para. Um `up` sobre volumes de outra versão é o tipo de estrago que não
+avisa.
+
+A migração tem uma ordem, e o passo do meio é o que dá sentido a ela:
+**backup → PROVAR que restaura → perguntar → apagar → instalar → restaurar.**
+
+A prova não é zelo. Um backup que ninguém tentou restaurar é um arquivo, e a
+hora de descobrir isso não é depois do `down -v` — por isso o instalador roda
+`docker/backup/test-restore-compose.sh` (as MESMAS três validações de
+`restore.sh`, ADR 0152) antes de qualquer deleção. Backup que falha, ou prova
+que falha, **interrompem a migração sem apagar nada**, e a mensagem diz onde o
+backup ficou.
+
+**O destino do backup é uma pasta do HOST**, e isso é o detalhe que faz a
+diferença entre migrar e perder: o default do compose é o volume nomeado
+`backup_local`, que o `down -v` apagaria **junto** com o que se quer preservar.
+
+**O que a migração apaga**: os volumes nomeados da instalação (`pgdata`
+inclusive), os containers e a rede. **O que ela nunca apaga**: a base de
+projetos — quando `BRABO_PROJECTS_BASE` aponta para uma pasta do host, a linha
+do compose é **bind-mount**, e `down -v` não toca bind —, a pasta de espelho
+(RN-516) e o backup recém-provado.
+
+O dump do Postgres **não** é restaurado automaticamente sobre o banco novo:
+`brabo-restore` valida contra uma database de teste e nunca sobrescreve a
+origem (ADR 0152), e restaurar sobre um banco já populado é operação
+destrutiva que o instalador não toma sozinho. Os repositórios git locais, sim —
+eles são fonte de verdade que nasceria vazia.
+
+**Onde:** `install.sh`, `migrar_instalacao_anterior` e `restaurar_apos_migrar`.
+**Teste:** `scripts/dev/install.spec.ts` — o plano declara
+`apagar-sem-backup-provado: nunca`, e um teste afere que a chamada da prova
+vem **antes** da chamada de deleção no código.
+**Origem:** FASE 29, sessão 6 ([ADR 0150](adr/0150-instalador-de-uma-linha.md),
+[ADR 0152](adr/0152-backup-de-volumes-contra-compose.md)).
+
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar
 > aqui — algo combinado e ainda não codificado não aparece nesta varredura.

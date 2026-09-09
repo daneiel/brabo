@@ -48,6 +48,28 @@ describe('install.sh — o plano', () => {
     expect(por('apagar-pasta-de-espelho')?.valor).toBe('nunca');
   });
 
+  // A garantia que dá ao instalador o direito de apagar: ele só apaga depois
+  // de PROVAR que o backup restaura. Um backup que ninguém tentou restaurar é
+  // um arquivo, e a hora de descobrir isso não é depois do `down -v`.
+  it('nunca apaga sem backup provado', () => {
+    expect(por('apagar-sem-backup-provado')?.valor).toBe('nunca');
+  });
+
+  it('a prova de restauração acontece ANTES da deleção', () => {
+    // Só linhas de CÓDIGO: `down -v` aparece antes em comentários, e eles são
+    // justamente os que explicam por que a prova vem primeiro. Um teste que
+    // lesse o arquivo cru reprovaria a explicação junto com o código — foi o
+    // que aconteceu na primeira versão deste teste.
+    const codigo = fonte()
+      .split('\n')
+      .filter((l) => !l.trimStart().startsWith('#'))
+      .join('\n');
+    const prova = codigo.indexOf('test-restore-compose.sh');
+    const delecao = codigo.indexOf('down -v');
+    expect(prova).toBeGreaterThan(-1);
+    expect(delecao).toBeGreaterThan(prova);
+  });
+
   it('só apaga volume com confirmação', () => {
     expect(por('apagar-volumes')?.valor).toBe('so-com-confirmacao');
   });
@@ -56,14 +78,14 @@ describe('install.sh — o plano', () => {
   // O teste existe para que nenhum dos dois entre de carona numa sessão que
   // declarou não fazê-los — foi assim que a lista começou, na sessão 3, com
   // `subir-compose` do lado de cá.
-  it.each(['instalar-runner', 'migrar-instalacao-anterior'])(
+  it.each(['instalar-runner'])(
     '%s ainda não acontece nesta versão',
     (chave) => {
       expect(por(chave)?.valor).toBe('nao-nesta-versao');
     },
   );
 
-  it.each(['escolher-fonte', 'gerar-segredos', 'subir-compose', 'conferir-saude'])(
+  it.each(['escolher-fonte', 'gerar-segredos', 'subir-compose', 'conferir-saude', 'migrar-instalacao-anterior'])(
     '%s já acontece',
     (chave) => {
       expect(por(chave)?.valor).toBe('faz');

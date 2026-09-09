@@ -227,7 +227,8 @@ imprimir_plano() {
   printf 'subir-compose\tfaz\t%s, com --wait; as migrações vêm no encadeamento\n' "$COMPOSE_DE_INSTALACAO"
   printf 'conferir-saude\tfaz\t/health da api e do engine, antes de dizer que instalou\n'
   printf 'instalar-runner\tnao-nesta-versao\tsessão 7 da FASE 29 (ADR 0151)\n'
-  printf 'migrar-instalacao-anterior\tnao-nesta-versao\tsessão 6 da FASE 29 (ADR 0152)\n'
+  printf 'migrar-instalacao-anterior\tfaz\tbackup, PROVA que restaura, pergunta, e só então apaga\n'
+  printf 'apagar-sem-backup-provado\tnunca\tbackup que não restaurou não autoriza deleção nenhuma\n'
   printf 'apagar-volumes\tso-com-confirmacao\tlistados um a um antes de perguntar\n'
   printf 'apagar-base-de-projetos\tnunca\ta pasta é do usuário, não do produto\n'
   printf 'apagar-pasta-de-espelho\tnunca\tRN-516 — o espelho nunca apaga, o instalador tampouco\n'
@@ -370,6 +371,80 @@ resolver_imagens_locais() {
 }
 
 # --------------------------------------------------------------------------
+# Migração de uma instalação anterior
+# --------------------------------------------------------------------------
+
+# A ordem do ADR 0150 é: backup -> PROVAR -> confirmar -> deleção -> instalação
+# -> restore. O "provar" no meio não é zelo: é o que dá ao instalador o direito
+# de apagar. Um backup que ninguém tentou restaurar é um arquivo, não um
+# backup — e a hora de descobrir isso não é depois do `down -v`.
+#
+# O destino é uma pasta do HOST, e isso importa: o default do compose é o
+# volume nomeado `backup_local`, que o `down -v` apagaria JUNTO com o que se
+# quer preservar (ADR 0152).
+migrar_instalacao_anterior() {
+  local destino="$1"
+
+  dizer ''
+  dizer "${C_BOLD}Migrando a instalação existente${C_RESET}"
+  mkdir -p "$destino" || recusar "não consegui criar a pasta de backup: ${destino}"
+
+  # 1. backup
+  dizer 'Backup do Postgres e dos repositórios git locais…'
+  BACKUP_DIR=/backups docker compose -f "$COMPOSE_DE_INSTALACAO" --env-file "$PWD/.env" \
+    run --rm -v "${destino}:/backups" backup brabo-backup \
+    || recusar "o backup falhou. NADA foi apagado — a migração para aqui, de propósito."
+
+  # 2. provar que restaura, ANTES de apagar
+  dizer 'Provando que o backup restaura…'
+  BRABO_COMPOSE_FILE="${PWD}/${COMPOSE_DE_INSTALACAO}" BACKUP_DIR=/backups \
+    bash docker/backup/test-restore-compose.sh \
+    || recusar "o backup NÃO restaurou. Nada foi apagado. Um backup que não restaura não autoriza deleção nenhuma."
+  ok 'backup provado'
+
+  # 3. dizer o que some, e o que não
+  dizer ''
+  dizer "${C_BOLD}O que a migração APAGA${C_RESET}"
+  dizer '  - os volumes nomeados desta instalação, `pgdata` inclusive'
+  dizer '  - os containers e a rede do projeto compose'
+  dizer ''
+  dizer "${C_BOLD}O que ela NUNCA apaga${C_RESET}"
+  dizer '  - a base de projetos: quando BRABO_PROJECTS_BASE aponta para uma pasta'
+  dizer '    do host, a linha do compose é bind-mount, e `down -v` não toca bind'
+  dizer '  - a pasta de espelho (RN-516: o espelho nunca apaga, e este tampouco)'
+  dizer "  - o backup que acabou de ser provado, em ${destino}"
+  dizer ''
+  printf 'Apagar os volumes e reinstalar? [s/N] '
+  local resposta; read -r resposta || resposta=''
+  case "$resposta" in
+    s|S|sim|SIM) ;;
+    *) dizer "Nada foi apagado. O backup provado continua em ${destino}."; exit 0 ;;
+  esac
+
+  docker compose -f "$COMPOSE_DE_INSTALACAO" --env-file "$PWD/.env" down -v \
+    || recusar "a deleção falhou pela metade. O backup provado está em ${destino} — não prossiga sem olhar."
+  ok 'volumes removidos'
+
+  MIGRAR_DE="$destino"
+}
+
+# Chamado DEPOIS da subida, com o banco novo de pé.
+restaurar_apos_migrar() {
+  local destino="$1"
+  dizer ''
+  dizer "${C_BOLD}Restaurando${C_RESET}"
+  BACKUP_DIR=/backups docker compose -f "$COMPOSE_DE_INSTALACAO" --env-file "$PWD/.env" \
+    run --rm -v "${destino}:/backups" backup brabo-restore-git --restaurar \
+    || recusar "a restauração dos repositórios git falhou. O backup continua em ${destino}."
+  ok 'repositórios git restaurados'
+  dizer ''
+  dizer "O dump do Postgres está em ${destino}. Restaurá-lo sobre um banco JÁ"
+  dizer 'populado é operação destrutiva, e por isso não acontece sozinha aqui:'
+  dizer '`brabo-restore` valida contra uma database de teste, nunca sobrescreve'
+  dizer 'a origem (ADR 0152). Ver docs/runbook.md#restore.'
+}
+
+# --------------------------------------------------------------------------
 # main
 # --------------------------------------------------------------------------
 
@@ -419,6 +494,24 @@ main() {
     dizer 'a sessão 6 da FASE 29, e este instalador ainda não a faz.'
   else
     ok 'nenhuma instalação anterior encontrada'
+  fi
+
+  # Se há instalação anterior, a migração é oferecida ANTES de tudo: ela é o
+  # único caminho que apaga, e apagar depois de já ter subido metade da coisa
+  # nova seria a pior ordem possível.
+  MIGRAR_DE=''
+  if [ -n "$marcador" ] || [ -n "$sinais" ]; then
+    if [ -t 0 ]; then
+      dizer ''
+      printf 'Migrar esta instalação (backup, prova de restauração, e só então apagar)? [s/N] '
+      local quer_migrar; read -r quer_migrar || quer_migrar=''
+      case "$quer_migrar" in
+        s|S|sim|SIM)
+          migrar_instalacao_anterior "${BRABO_BACKUP_HOST_DIR:-${PWD}/brabo-backup-$(date -u +%Y%m%d%H%M%S)}"
+          ;;
+        *) recusar 'instalar por cima de uma instalação existente não é oferecido: ou se migra, ou se para. Um `up` sobre volumes de outra versão é o tipo de estrago que não avisa.' ;;
+      esac
+    fi
   fi
 
   # Sem TTY: RELATA e sai bem. Mesmo desenho de `consentir-base.mjs` — o menu
@@ -496,6 +589,10 @@ ENV
   curl -fsS "http://localhost:${engine_port}/health" >/dev/null \
     || recusar "o engine subiu mas não respondeu em /health (porta ${engine_port})."
   ok 'api e engine respondendo'
+
+  if [ -n "$MIGRAR_DE" ]; then
+    restaurar_apos_migrar "$MIGRAR_DE"
+  fi
 
   mkdir -p "$(dirname "$(caminho_do_marcador)")"
   cat > "$(caminho_do_marcador)" <<JSON
