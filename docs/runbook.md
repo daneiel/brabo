@@ -2123,6 +2123,37 @@ branch, a ceiling on corrections, verdicts as an artifact, and a terminal
 
 ---
 
+## Installing {#instalando}
+
+```sh
+sh -c "$(curl -fsSL https://github.com/daneiel/brabo/releases/latest/download/install.sh)"
+```
+
+**Never `curl … | sh`.** The reason is mechanical, not stylistic: with the
+script arriving through the pipe, the process's `stdin` **is** the download,
+so any `read` reads bytes of the script itself or hits EOF. An installer that
+cannot ask would have to pick folder locations on someone else's machine by
+itself ([RN-526](business-rules.md#rn-526)).
+
+The script verifies **its own origin** before doing anything — the signature
+of the Release's `checksums.txt`, and then its own hash inside that verified
+manifest. A failure at either step is a **named refusal**, never a warning.
+
+Without a TTY it **reports and exits 0**: it prints what it found and the
+command to run in a terminal. That is deliberate, and it is the same shape
+`consentir-base.mjs` already has.
+
+**What it never deletes:** your project base and your mirror folder. Named
+volumes only go with confirmation, listed one by one first.
+
+> **This version does not install yet.** It verifies, detects, asks and writes
+> the state marker — then stops, and says so. Bringing services up, generating
+> secrets and installing the runner are later sessions of FASE 29
+> ([ADR 0150](adr/0150-instalador-de-uma-linha.md)). Inspect what it would do
+> with `install.sh --print-plan`, which touches nothing.
+
+---
+
 ## Verifying a published artifact {#verificar-artefato-publicado}
 
 Every final tag signs what it publishes, with `cosign` **keyless** — the

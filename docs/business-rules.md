@@ -9664,6 +9664,52 @@ só se prova numa tag real — declarado, como o resto da esteira de release.
 cobre o *code-signing* de sistema operacional dos binários (notarização do
 macOS, Authenticode do Windows), que exige identidade paga e segue no backlog.
 
+### RN-526 — O instalador verifica a própria origem, NOMEIA o que achou antes de perguntar, e nunca apaga pasta de usuário {#rn-526}
+
+`install.sh` (raiz do repositório, versionado e publicado como asset da Release)
+é a porta única de instalação. Quatro garantias, e cada uma existe contra um
+defeito concreto:
+
+**A invocação preserva o stdin.** A forma documentada é
+`sh -c "$(curl -fsSL …)"`, e **nunca** `curl … | sh`: com o script chegando
+pelo pipe, o `stdin` do processo É o download, e qualquer `read` lê bytes do
+próprio script ou encontra EOF. Um instalador que não consegue perguntar
+escolheria sozinho onde criar pastas no computador de alguém — o oposto da
+régua que a RN-511 já aplica ao consentimento da base.
+
+**Ele verifica a própria origem antes de agir**, e a cadeia tem dois elos: a
+assinatura do `checksums.txt` da Release (RN-524), e o hash **deste arquivo**
+dentro do manifesto verificado. O `cosign` que faz a verificação é ele mesmo
+pinado por versão e conferido por `sha256sum` contra o hash escrito no script —
+quem confia no `install.sh` o bastante para executá-lo confia no hash que ele
+carrega, e a cadeia não fica mais frágil que o elo que a inicia. Falha em
+qualquer elo é **recusa nomeada, nunca aviso**.
+
+**A detecção nomeia o que achou.** Pelo marcador
+(`$XDG_STATE_HOME/brabo/install-state.json`) quando ele existe; por sinais
+(projeto de compose `brabo*`, units `brabo-runner-*`, binário no PATH) quando
+não — e a lista é impressa **antes** de qualquer pergunta. Não existe o caminho
+"achei algo e decido sozinho". Sem TTY o script **relata e sai 0**, como
+`consentir-base.mjs` já faz.
+
+**Ele nunca apaga pasta de usuário.** A base de projetos e a pasta de espelho
+estão fora do alcance de qualquer confirmação — a mesma régua do espelho
+(RN-516): pasta de usuário é acúmulo, não estado do produto. Volume nomeado só
+sai com confirmação, e listado um a um antes de perguntar.
+
+O marcador mora no `$XDG_STATE_HOME` e **não** em `~/.brabo/`, que é onde o
+runner guarda coisa por PROJETO: estado de instalação e configuração de projeto
+são vidas diferentes, e juntá-los faria a remoção de um apagar o outro.
+
+**Onde:** `install.sh` (raiz).
+**Teste:** `scripts/dev/install.spec.ts` — os modos `--print-state` e
+`--print-plan` provam a DECISÃO sem TTY, sem rede e sem efeito, no molde de
+`bootstrap.spec.ts`.
+**Origem:** FASE 29, sessão 3 ([ADR 0150](adr/0150-instalador-de-uma-linha.md)).
+Nesta sessão o script **não instala nada** — subir o compose, gerar segredos e
+instalar o runner são as sessões 4 e 7, e ele **diz isso** na saída em vez de
+terminar em silêncio.
+
 > **TODO(humano):** as RNs acima foram extraídas do código e dos testes. Falta
 > confirmar se existe regra de negócio **não implementada** que deveria estar
 > aqui — algo combinado e ainda não codificado não aparece nesta varredura.

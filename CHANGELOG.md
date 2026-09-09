@@ -92,6 +92,36 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   (notarização, Authenticode), que exige identidade paga e segue no backlog; e
   o proxy `GET /runner-releases/binary`, que continua sem verificar nada.
 
+- **install**: nasce o `install.sh` — versionado no repositório, publicado como
+  asset da Release, e **porta única** de instalação
+  ([RN-526](docs/business-rules.md#rn-526),
+  [ADR 0150](docs/adr/0150-instalador-de-uma-linha.md)).
+
+  A forma de invocação é `sh -c "$(curl -fsSL …)"` e **nunca** `curl … | sh`,
+  por um motivo mecânico: com o script chegando pelo pipe, o `stdin` do
+  processo **é** o download, e qualquer `read` para perguntar lê bytes do
+  próprio script ou encontra EOF. Um instalador que não consegue perguntar
+  escolheria sozinho onde criar pastas no computador de alguém.
+
+  Ele **verifica a própria origem** antes de agir — a assinatura do
+  `checksums.txt` da Release (RN-524) e o hash deste arquivo dentro do
+  manifesto verificado —, com o `cosign` pinado por versão e conferido por
+  `sha256sum` contra o hash escrito no script. A **detecção nomeia o que
+  achou** (marcador, ou sinais: compose `brabo*`, units do runner, binário no
+  PATH) antes de qualquer pergunta; sem TTY ele **relata e sai 0**.
+
+  E **nunca apaga pasta de usuário**: a base de projetos e a pasta de espelho
+  estão fora do alcance de qualquer confirmação, pela mesma régua do espelho
+  (RN-516) — pasta de usuário é acúmulo, não estado do produto.
+
+  **Esta versão não instala nada**, e diz isso na saída em vez de terminar em
+  silêncio: subir o compose, gerar segredos e instalar o runner são as sessões
+  seguintes. `--print-plan` e `--print-state` expõem a DECISÃO sem TTY, sem
+  rede e sem efeito — é o que `scripts/dev/install.spec.ts` exercita, no molde
+  do `--print-commands` do `bootstrap.sh`. A raiz do repositório não era
+  coberta por regra de docmap nenhuma (todos os globs de raiz são nomes
+  literais); nasce a regra `instalador`.
+
 ### Correções
 
 - **dev**: `scripts/dev/reset-total.sh` terminava dizendo **"reset completo"**
