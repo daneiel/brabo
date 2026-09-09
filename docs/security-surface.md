@@ -414,6 +414,25 @@ reason in the URL.
   `dentroDoEscopo`/`realpathMaisProximo`/`semBarraFinal` and the same
   lexical-then-`realpath` double pass — and it inherits the same TOCTOU
   caveat in writing: best-effort, never the security boundary.
+
+  Since [RN-532](business-rules.md#rn-532) (same ADR, points 3 to 6) that
+  base has a CONSUMER: the `workspace_create`/`workspace_create_result`
+  pair. Three things about it belong on this page. First, **no new write
+  route was born**: having created the folder, the runner pushes the
+  `workspace_confirm` that already existed, and it is that one — through
+  this very endpoint — that stamps `workspace_verified_at`. The engine
+  still does not write the table, and the single path that stamps stays
+  single. Second, what travels is the **relative segment**, never an
+  absolute path, and the runner refuses an absolute one lexically. Third,
+  the capability `workspace` is the only one of the four whose declaration
+  depends on the runner's STATE rather than its version — it is declared
+  only when a base was consented — so it is by that declaration, and by
+  nothing else, that the server learns a base exists. Nobody REQUIRES it at
+  join time: a runner without a base connects and serves its project as
+  always, and only `workspace_create` is refused, with a NAMED answer.
+  Creating that folder is consented configuration, not an agent asking to
+  act: it is **not** a `proposed_action`, and no ceiling in `decide.ts`
+  gains an exception.
 - **`POST /internal/projects/:projectId/container-exec`** ([RN-492](business-rules.md#rn-492),
   [ADR 0134](adr/0134-dev-agents-executam-dentro-do-container.md)) is called
   only by the engine, when `Engine.Actions.TerminalExecutor` decided a

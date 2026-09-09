@@ -14,17 +14,40 @@ defmodule Engine.Runners.Capacidades do
   mensagem chega, o handler não existe do outro lado, e nada acontece — sem
   erro, sem log, sem ninguém saber que a função nunca rodou.
 
-  ## As três capacidades
+  ## As quatro capacidades
 
   - `exec` — comando já aprovado, o par `exec`/`exec_result` (ADR 0104);
   - `pty` — terminal interativo, os eventos `pty_*` (ADR 0103);
   - `espelho` — copiar o trabalho para uma pasta fora da base montada
-    (`mirror_sync`, ADR 0147 ponto 2, RN-516).
+    (`mirror_sync`, ADR 0147 ponto 2, RN-516);
+  - `workspace` — criar a pasta de um projeto sob a BASE local do agente
+    (`workspace_create`, ADR 0151 ponto 3, RN-532).
 
   `espelho` nasceu aqui como nome do vocabulário e nada mais (RN-514) — e a
   aposta se pagou: quando a capacidade passou a existir de verdade no binário
   (RN-516), o formato do `join` não mudou uma vírgula. O que mudou foi só
   QUEM a exige.
+
+  `workspace` NÃO repetiu essa aposta, e o ADR 0151 ponto 4 diz por quê: ela
+  entra no vocabulário **na sessão em que o código entra**, dos dois lados. A
+  lição da RN-514 é que declarar o que não se implementa é exatamente o defeito
+  silencioso que a negociação existe para impedir; um nome no servidor sem o
+  código do outro lado é a mesma aposta feita de novo, e ela só se pagou uma
+  vez porque alguém a cobrou.
+
+  ## `workspace` é o que o servidor SABE sobre a base do agente
+
+  Ela é a única das quatro cuja declaração depende do ESTADO daquela execução,
+  e não só da versão do binário: o runner só a declara quando tem uma BASE
+  consentida (RN-529, `capacidadesDoRunner` em `channel.ts`). O engine não lê o
+  disco do usuário e não tem tabela de bases — então "há base consentida"
+  chega por esta linha e por mais nenhuma, e é ela que responde a segunda
+  pré-condição de `Engine.Runners.PastaDoProjeto`.
+
+  Ninguém a EXIGE (ela não está em `@exigidas_por_modo` e não vem de dado do
+  projeto): um runner sem base continua conectando e atendendo normalmente o
+  projeto dele. O que ele não recebe é `workspace_create` — recusado com
+  resposta NOMEADA, nunca entregue a um handler que não existe.
 
   ## Quem exige `espelho`: o DESTINO, não o modo (RN-516)
 
@@ -69,9 +92,15 @@ defmodule Engine.Runners.Capacidades do
 
   # O vocabulário que ESTE servidor conhece. Ordem alfabética: ela é a ordem
   # em que a mensagem de recusa nomeia o que falta.
-  @conhecidas ~w(espelho exec pty)
+  @conhecidas ~w(espelho exec pty workspace)
 
   # O que um binário que não declara nada sabe fazer, por construção.
+  #
+  # `workspace` NUNCA entra aqui, e por um motivo mais forte que a idade do
+  # binário: ela depende de haver uma BASE consentida naquela execução, e um
+  # binário mudo não tem como ter consentido base nenhuma (o mecanismo nasceu
+  # depois dele). Concedê-la por omissão seria o servidor AFIRMANDO uma base
+  # que não existe.
   @legado ~w(exec pty)
 
   # O que cada `execution_mode` EXIGE do runner conectado. `container` e
@@ -85,6 +114,12 @@ defmodule Engine.Runners.Capacidades do
   # (`projects.mirror_path`), que é dado do projeto e não do modo — ver
   # `exigidas/2`. `mounted` e `runner` podem ter destino; `container` não pode
   # (a api recusa, RN-515), então o mapa por modo nunca acertaria os dois.
+  #
+  # `workspace` também não entra, e por outro motivo (ADR 0151 ponto 4): exigi-la
+  # em `runner` faria todo runner SEM base consentida deixar de conectar — o que
+  # é `breaking/` e MAJOR — para uma função que aquele projeto talvez nunca
+  # use. Ela é opt-in pela outra ponta: quem tem base declara, e só quem
+  # declarou recebe `workspace_create`.
   @exigidas_por_modo %{"runner" => ["exec"]}
 
   @type capacidade :: String.t()

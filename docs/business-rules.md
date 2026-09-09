@@ -9643,10 +9643,162 @@ só o léxico é conhecível impediria consentir uma base antes de ela existir).
   `apps/runner/src/base.spec.ts` (a precedência XDG, os quatro desfechos da
   leitura, a flag vencendo o arquivo, e a recusa carregando a ORIGEM)
 - **ADR:** [0151](adr/0151-base-consentida-no-runner.md) pontos 1 e 2
-- **Origem:** FASE 29. Fica declarado e NÃO feito nesta entrega: o par
-  `workspace_create`/`workspace_create_result` e a capacidade `workspace`
-  (pontos 3 a 6 do ADR) — a base existe e é validada, mas nada ainda a
-  CONSOME para criar pasta; e o `install.sh`, que é quem vai gravar o arquivo
+- **Origem:** FASE 29. O par `workspace_create`/`workspace_create_result` e a
+  capacidade `workspace` (pontos 3 a 6 do ADR), declarados aqui como não
+  feitos, FECHARAM na [RN-532](#rn-532) — a base passou a ter consumidor.
+  Segue declarado e NÃO feito: o `install.sh`, que é quem vai gravar o arquivo
+---
+
+## A base do agente local ganha um consumidor: a pasta do projeto nasce pelo canal (RN-532)
+
+### RN-532 — `workspace_create` cria a pasta sob a base LOCAL, e quem GRAVA continua sendo o `workspace_confirm` que já existia {#rn-532}
+
+A [RN-529](#rn-529) deu ao `brabo-runner` uma BASE e a validou, e declarou por
+escrito que **nada a consumia**. Este é o consumidor: o par
+`workspace_create`/`workspace_create_result`, a capacidade `workspace` e um
+predicado próprio no engine.
+
+**O par é de PEDIDO COM RESPOSTA, e não podia ser modelado no
+`workspace_confirm`.** Aquele é UNIDIRECIONAL: `handle_in("workspace_confirm",
+…)` responde `{:noreply, socket}` e não empurra nada de volta. Quem pede a
+criação de uma pasta precisa saber se ela apareceu, e com que caminho — então o
+molde é o de `exec`/`exec_result` (`despachar_pedido` + `pending_execs` +
+`responder_pedido_pendente/3`), o mesmo dos três pares de container. Registro de
+precisão, porque o nome circulou: **`workspace.verified` não existe** neste
+repositório — o que existe é o evento `project.workspace_verified` e a coluna
+`workspace_verified_at`.
+
+**Só o SEGMENTO atravessa a rede.** A base é local e nunca vem do servidor
+(RN-529); o engine manda `projectId` e o segmento RELATIVO, e é
+`resolverPastaDoProjetoNaBase` — do lado do runner, que tem a raiz — quem os
+junta. É o invariante do [ADR 0130](adr/0130-broker-de-container.md)/
+[ADR 0144](adr/0144-a-segunda-raiz-do-broker.md) aplicado ao agente local: quem
+tem a raiz é quem executa. Um segmento ABSOLUTO é recusado por LÉXICO, nunca
+aceito e reinterpretado.
+
+**A confirmação REUSA o `workspace_confirm`, e é o que economiza uma frente
+inteira.** Tendo criado a pasta, o runner empurra o `workspace_confirm` que
+existe desde a [RN-423](#rn-423) — e é ele que grava, pelo caminho já
+construído: canal → engine → HTTP interno → `ConfirmProjectWorkspaceUseCase`,
+que revalida o léxico, é idempotente e carimba `workspace_verified_at`.
+**Nenhuma rota nova de gravação nasce**, o engine continua não escrevendo a
+tabela, e o único caminho que carimba continua sendo um só. A ORDEM é o
+mecanismo, não estética: os dois pushes chegam ao MESMO processo de canal, em
+ordem, e o handler do `workspace_confirm` é síncrono — mandá-lo ANTES do
+resultado é o que garante que o carimbo já existe quando o pedinte destrava do
+`receive`.
+
+**A capacidade `workspace` entra no vocabulário na sessão em que o código
+entra**, dos dois lados ([ADR 0151](adr/0151-base-consentida-no-runner.md)
+ponto 4). A [RN-514](#rn-514) tinha feito a aposta oposta com `espelho` — nome
+no servidor sem código do outro lado — e ela só se pagou porque alguém a
+cobrou; repetir seria repetir o defeito silencioso que a negociação existe para
+impedir.
+
+**Ela é a única das quatro cuja declaração depende do ESTADO daquela execução,
+e não da versão do binário.** O runner só a declara quando tem base consentida
+(`capacidadesDoRunner`), e é por essa linha — e por mais nenhuma — que o
+servidor SABE que existe base: o engine não lê o disco do usuário e não tem
+tabela de bases. Ninguém a EXIGE no join, e isso é decisão: exigi-la em
+`runner` faria todo binário sem base deixar de conectar, o que é `breaking/` e
+MAJOR, por uma função que aquele projeto talvez nunca use. Ela é opt-in pela
+outra ponta — quem tem base declara, e só quem declarou recebe a mensagem.
+
+**Predicado PRÓPRIO, e `RunnerReadiness` fica byte a byte.**
+`Engine.Runners.PastaDoProjeto` tem DUAS pré-condições — runner conectado, base
+consentida — e o ADR adota literalmente a recusa que `Engine.Runners.Espelho` já
+tinha escrito: uma função compartilhada com flag "pula container" é precisamente
+o caminho pelo qual a terceira pré-condição cai POR ACIDENTE para o `exec` numa
+refatoração futura ([RN-507](#rn-507)/[ADR 0145](adr/0145-docker-pre-requisito-do-runner.md)
+existe para ela não cair). E aqui a terceira seria pior que desnecessária: é
+**circular** — um projeto `runner` só chega a ter container `running`
+REGISTRADO depois de o próprio runner o subir, e o container sobe sobre a pasta
+que esta mensagem existe para criar.
+
+Ele também NÃO pergunta `workspace_verified_at` (ao contrário do espelho: aqui
+ele é o RESULTADO, e exigi-lo tornaria a mensagem inalcançável exatamente no
+caso para o qual foi feita) nem o `execution_mode` (a segunda fonte da mesma
+regra — quem tem base consentida é o agente local, e só existe agente local
+onde ele existe).
+
+**Onde cada pré-condição é respondida, e por que não são as duas no mesmo
+lugar.** "Runner conectado" é do `Registry`, e o módulo a responde sozinho.
+"Base consentida" é propriedade daquela CONEXÃO: ela vive em `socket.assigns` e
+**nunca em tabela** (a régua do
+[ADR 0147](adr/0147-agente-local-com-capacidades.md)), então quem a responde é o
+despacho — o canal recusa ANTES de empurrar e devolve `motivo: "sem-base"` pelo
+MESMO `ref`, no formato que o módulo já espera, exatamente como `dispatch_exec`
+faz com o 126. Nunca um timeout, que é como o defeito silencioso apareceria. Os
+dois motivos, as duas mensagens e a ordem em que se aplicam moram no módulo, e
+em nenhum outro lugar.
+
+**Erro NOMEADO, e cinco motivos que não colapsam.** `sem-base`, `segmento`,
+`nao-e-pasta`, `mkdir` e `git` viajam como `motivo` ao lado do texto de `erro` —
+separados de propósito: o texto é para um humano ler, o motivo é para o outro
+lado DECIDIR, e colapsá-los obrigaria o engine a casar substring de pt-BR. Só
+`sem-base` vira átomo próprio no engine (`:sem_base`), porque só ele tem
+conserto próprio; os outros quatro são `:recusado` com a mensagem do runner. O
+`init`/clone que falha é erro nomeado e **nunca um plano B**: uma pasta sem
+`.git` quebraria o worktree do dev agent, o espelho e o próprio versionamento do
+usuário num lugar longe da causa.
+
+**Idempotente, e os três desfechos não colapsam.** `mkdir -p` já é idempotente;
+o que precisou de decisão foi o repositório — uma pasta que JÁ é repositório
+volta como SUCESSO, com o modo `ja-era-repositorio`, nunca um `init` por cima
+(que mentiria sobre o que aconteceu) nem um clone (que falharia por pasta
+não-vazia e transformaria "já estava pronto" em erro). É a mesma disposição de
+`ConfirmProjectWorkspaceUseCase`, e pelo mesmo motivo: a mensagem pode chegar
+duas vezes.
+
+**`estado.dir` NÃO muda.** A pasta criada é a do projeto do ponto de vista do
+SERVIDOR — e é o `workspace_confirm` que a grava lá. A raiz que `guard.ts` usa
+para conter comando aprovado continua sendo a desta execução: trocá-la em
+runtime moveria uma fronteira de contenção por causa de uma mensagem de rede, e
+este CLI nunca faz isso.
+
+**Isto NÃO é `proposed_action`, e nenhum teto ganha exceção.** Criar a pasta do
+projeto que o usuário acabou de pedir é configuração CONSENTIDA, não um agente
+pedindo para agir — a mesma linha que o espelho já estabeleceu
+([RN-516](#rn-516)). Fazê-la por comando de terminal cairia no escopo do
+[ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) e viraria
+fila de aprovações rotineiras, corroendo o teto que dá sentido ao clique.
+
+- **Onde:** `apps/runner/src/pasta-do-projeto.ts:132` (`criarPastaDoProjeto` —
+  a ordem guarda→disco→versionamento e os cinco motivos);
+  `apps/runner/src/channel.ts:142` (`WorkspaceCreateMessage`), `:163`
+  (`WorkspaceCreateResultMessage`), `:425` (`CAPACIDADE_DE_WORKSPACE` e
+  `capacidadesDoRunner`); `apps/runner/src/index.ts:763`
+  (`tratarWorkspaceCreate` — a ordem `workspace_confirm` antes do resultado);
+  `apps/engine/lib/engine/runners/pasta_do_projeto.ex:107` (`verificar/1`) e
+  `:134` (`criar/3`); `apps/engine/lib/engine/runners/runner_router.ex:128`
+  (`create_workspace/3`); `apps/engine/lib/engine/runners/capacidades.ex:95`
+  (`workspace` no vocabulário, e fora do legado);
+  `apps/engine/lib/engine_web/channels/terminal_channel.ex:666`
+  (`handle_info({:dispatch_workspace_create, …})`, a recusa nomeada) e `:380`
+  (`handle_in("workspace_create_result", …)`)
+- **Teste:** `apps/runner/src/pasta-do-projeto.spec.ts` (caminho feliz com
+  `init` e com clone; a idempotência provada com o binário de versionamento de
+  VERDADE; os cinco motivos, com textos distintos, e a pasta que NÃO nasce fora
+  da base); `apps/runner/src/index-handlers.spec.ts` (a ORDEM
+  `workspace_confirm` → `workspace_create_result`; sem base, nenhum confirm;
+  conexão caída não empurra nada); `apps/runner/src/channel.spec.ts`
+  (`workspace` só declarada com base; payload sem `segmento`/`projectId`
+  descartado; `env` malformado virando `undefined`);
+  `apps/engine/test/engine/runners/pasta_do_projeto_test.exs` (as duas
+  pré-condições SEM banco — a asserção é o `ExUnit.Case` puro —, o payload
+  exato, os quatro motivos e o sucesso sem caminho que não vira sucesso);
+  `apps/engine/test/engine/runners/runner_router_test.exs` (o roundtrip e o
+  timeout); `apps/engine/test/engine/runners/capacidades_test.exs`
+  (`workspace` declarável, nunca no legado, nunca exigida);
+  `apps/engine/test/engine_web/channels/terminal_channel_test.exs` (a recusa
+  nomeada pelo mesmo `ref`, e nada empurrado ao runner)
+- **ADR:** [0151](adr/0151-base-consentida-no-runner.md) pontos 3 a 6
+- **Origem:** FASE 29, sessão 8. Fica declarado e NÃO feito: quem CHAMA
+  `PastaDoProjeto.criar/3` — o caminho web→api→engine é da sessão 9 —, e o
+  `install.sh` que grava o arquivo da base, que é de outra frente
+
+---
+
 ## O backup cobre os DOIS volumes que são fonte de verdade, e roda sem cluster (RN-528)
 
 ### RN-528 — `git_local_repos` entra no backup, o destino pode ser disco, e o restore de compose reusa as MESMAS três validações {#rn-528}

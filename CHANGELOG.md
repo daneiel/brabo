@@ -6,6 +6,58 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine,runner**: a base do agente local ganha um CONSUMIDOR — a pasta de um
+  projeto passa a nascer pelo canal, com `workspace_create`/
+  `workspace_create_result` (RN-532,
+  [ADR 0151](docs/adr/0151-base-consentida-no-runner.md) pontos 3 a 6).
+
+  A [RN-529](docs/business-rules.md#rn-529) deu ao `brabo-runner` uma BASE e
+  declarou por escrito que **nada a consumia**. Agora o engine manda o
+  `projectId` e o **segmento relativo** — nunca um caminho absoluto, o
+  invariante do [ADR 0130](docs/adr/0130-broker-de-container.md)/
+  [0144](docs/adr/0144-a-segunda-raiz-do-broker.md): quem tem a raiz é quem
+  executa —, e o runner faz `mkdir -p` e inicializa (ou clona) o repositório.
+
+  **Nenhuma rota nova de gravação nasce.** Tendo dado certo, o runner empurra o
+  `workspace_confirm` que existe desde a
+  [RN-423](docs/business-rules.md#rn-423), e é ELE que grava, pelo caminho já
+  construído (canal → engine → HTTP interno → `ConfirmProjectWorkspaceUseCase`).
+  O engine continua **não escrevendo a tabela**, e o único caminho que carimba
+  `workspace_verified_at` continua sendo um só. A ORDEM é o mecanismo: o
+  confirm vai ANTES do resultado, e como os dois chegam ao mesmo processo de
+  canal em ordem, o carimbo já existe quando quem pediu destrava.
+
+  O par novo é de **pedido com resposta** (o molde de `exec`/`exec_result`) e
+  não podia ser modelado no `workspace_confirm`, que é **unidirecional**. E
+  `workspace.verified` **não existe** neste repositório — o que existe é o
+  evento `project.workspace_verified` e a coluna `workspace_verified_at`.
+
+  **A capacidade `workspace` entra no vocabulário na sessão em que o código
+  entra**, dos dois lados. Ela é a única das quatro cuja declaração depende do
+  ESTADO da execução e não da versão do binário — o runner só a declara quando
+  tem base consentida —, e é por essa linha, e por mais nenhuma, que o servidor
+  sabe que existe base. **Ninguém a exige no join**: runner sem base conecta e
+  atende o projeto dele como sempre; só `workspace_create` é recusado, com
+  resposta NOMEADA pelo mesmo `ref`, nunca um timeout.
+
+  Predicado **próprio** (`Engine.Runners.PastaDoProjeto`), DUAS pré-condições, e
+  `RunnerReadiness` fica **byte a byte** — nunca uma flag "pula container", pelo
+  motivo que o ADR 0147 já tinha escrito. Aqui a terceira pré-condição seria
+  além de desnecessária **circular**: um projeto `runner` só chega a ter
+  container `running` depois de o runner o subir, e o container sobe sobre a
+  pasta que esta mensagem existe para criar.
+
+  Erro é NOMEADO em cinco motivos que não colapsam (`sem-base`, `segmento`,
+  `nao-e-pasta`, `mkdir`, `git`), e falha do repositório nunca vira plano B.
+  Pasta que já é repositório volta como **sucesso** (`ja-era-repositorio`), pela
+  mesma disposição idempotente de `ConfirmProjectWorkspaceUseCase`.
+
+  Isto **não** é `proposed_action` e nenhum teto de `decide.ts` ganha exceção:
+  criar a pasta que o usuário acabou de pedir é configuração consentida, a mesma
+  linha que o espelho já estabeleceu ([RN-516](docs/business-rules.md#rn-516)).
+  Fica declarado e NÃO feito: quem CHAMA `PastaDoProjeto.criar/3` — o caminho
+  web→api→engine é de outra sessão.
+
 - **api,web**: `GET /runner-releases/binary` deixa de transmitir bytes sem
   verificar nada — ele confere o **sha256 contra o `checksums.txt` da mesma
   release** e **recusa** quando não pode conferir (RN-525,

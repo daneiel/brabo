@@ -106,6 +106,35 @@ defmodule Engine.Runners.RunnerRouter do
     )
   end
 
+  @doc """
+  Pede ao runner conectado a CRIAÇÃO da pasta de um projeto sob a base LOCAL
+  dele (ADR 0151 ponto 3, RN-532) — `payload` é `%{projectId:, segmento:}`,
+  mais `repoUrl`/`env` quando houver. MESMO par de pedido-com-resposta:
+  `workspace_create`/`workspace_create_result`.
+
+  Aqui e não em `Engine.Runners.Espelho`: `mirror_sync` é fire-and-forget, e
+  este pedido precisa de resposta — quem pediu a pasta tem de saber se ela
+  apareceu, e com que caminho.
+
+  Devolve `{:ok, payload}` (o mapa cru de `"workspace_create_result"`) |
+  `{:error, :not_connected}` | `{:error, :timeout}` — o mesmo contrato de
+  `exec/5` e das três de container. Quem TRADUZ isso em motivo nomeado é
+  `Engine.Runners.PastaDoProjeto`.
+
+  O teto é o mesmo `@timeout_padrao_ms` das operações de container, e pelo
+  mesmo raciocínio: um `git clone` implícito legitimamente leva mais que um
+  comando de terminal comum.
+  """
+  def create_workspace(project_id, payload, timeout_ms \\ @timeout_padrao_ms) do
+    dispatch(
+      project_id,
+      :dispatch_workspace_create,
+      payload,
+      timeout_ms,
+      :runner_workspace_create_result
+    )
+  end
+
   # O molde comum das TRÊS operações de container acima — mesmo desenho de
   # `exec/4` (`Registry.whereis` -> `send` correlacionado por `ref` -> espera
   # bloqueada por `receive ... after`), fatorado porque três cópias quase

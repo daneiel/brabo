@@ -43,6 +43,7 @@ Start with triage.
 | approving `container_start` on a mounted project fails saying the api couldn't create or reach the folder | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | `pnpm dev` refuses to start, saying `BRABO_PROJECTS_BASE` overlaps the Brabo checkout | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | `brabo-runner` exits with `base de projetos recusada`, or prints `base de projetos: nenhuma configurada` when I expected a base | [The runner's base of projects](#base-do-runner) |
+| the project folder never appears on the user's machine, and the engine log says `workspace_create: o projeto <id> não criou pasta` | [The project folder never appears](#pasta-do-projeto-nunca-aparece) |
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
 | provisioning a repository fails with `permission denied: /data/git-repos/<slug>.git`, or `permissions.json` can't be written | [Dev containers write as your user, not root](#dev-containers-nao-root) |
@@ -406,6 +407,43 @@ declares no `base` is absence, not a refusal.
 as it always was and the base plays no part in it: the base is a rule of
 CREATION. Do not "fix" a legacy project by moving it under the base to silence
 something — nothing is complaining.
+
+### The project folder never appears on the user's machine {#pasta-do-projeto-nunca-aparece}
+
+**Symptom:** a project folder was expected to show up under the runner's base
+and it didn't. The engine log has a line starting with
+`workspace_create: o projeto <id> não criou pasta —`, and the folder is
+missing.
+
+The message names which of the two pre-conditions failed
+([RN-532](business-rules.md#rn-532),
+[ADR 0151](adr/0151-base-consentida-no-runner.md) points 3 to 6), and they are
+the only two — **no container is required**, deliberately: requiring one would
+be circular, since a `runner` project only reaches a registered `running`
+container after the runner brings it up over the very folder this message
+exists to create.
+
+- **`nenhum brabo-runner está conectado a este projeto agora`** — start the
+  agent for that project; see [the base above](#base-do-runner) for the flags.
+- **`não declarou a capacidade `workspace` no join`** — the connected binary
+  either predates this version, or is running **without a consented base**.
+  Both fixes are in the previous section: run the installer, or start the
+  runner with `--base`. The refusal is named on purpose because the two causes
+  have different fixes; the join itself is NOT refused, so the runner keeps
+  serving its project normally.
+- **`o brabo-runner recusou criar a pasta`** — the message carries the
+  runner's own reason: `segmento` (the segment escaped the base — the guard
+  refused, nothing was created), `nao-e-pasta` (the target already exists as a
+  file; this CLI never overwrites one), `mkdir` (permission or disk) or `git`
+  (the `git init`/clone failed — the folder DOES exist and no plan B was
+  attempted, on purpose).
+- **`não respondeu ... a tempo`** — a large clone can exceed the ceiling.
+  Check the runner's machine; nothing is left half-written on the server side,
+  because the write only happens through `workspace_confirm`.
+
+A folder that already exists as a git repository is a **success**, not an
+error: the operation is idempotent and reports `ja-era-repositorio` in the
+runner's log.
 
 ### Dev containers write as your user, not root {#dev-containers-nao-root}
 
