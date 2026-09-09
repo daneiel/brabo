@@ -29,9 +29,22 @@ import type { FsBrowser } from '../lib/fs-browser';
  * o painel nem chega a renderizar, e a mensagem que este arquivo afirma
  * desaparece junto.
  */
+/**
+ * `workspaceVerifiedAt` é a sonda da `EsperaDoRunner` (RN-474), que este
+ * componente monta enquanto o agente local não responde (RN-533) — a variável
+ * é o que deixa um teste "conectar o agente" no meio do caminho. `null` é o
+ * estado inicial de todos os outros casos, e a espera fica em `esperando`.
+ */
+let carimboDoProjeto: string | null = null;
+
 vi.mock('../lib/api-client', () => ({
   API_URL: 'https://api.brabo.example',
-  getProject: () => Promise.resolve({ id: 'proj-1', workspacePath: null }),
+  getProject: () =>
+    Promise.resolve({
+      id: 'proj-1',
+      workspacePath: null,
+      workspaceVerifiedAt: carimboDoProjeto,
+    }),
 }));
 
 function novaInstanciaI18n() {
@@ -85,6 +98,7 @@ vi.mock('../lib/fs-browser', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  carimboDoProjeto = null;
 });
 
 describe('FolderBrowserModal — transporte via runner (não-regressão)', () => {
@@ -271,10 +285,24 @@ describe('FolderBrowserModal — transporte via runner (não-regressão)', () =>
     expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user');
   });
 
-  it('sem runner conectado: mostra o RunnerOnboardingPanel, e "Já instalei, conectar" tenta de novo', async () => {
+  it('DIZ que a lista é o disco da máquina do usuário, nunca o do servidor (RN-533)', async () => {
+    fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
+    fakeChannel.listarDiretorio.mockResolvedValue({ path: '/home/user', entradas: [] });
+
+    renderComI18n(
+      <FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    expect(
+      await screen.findByText((t) => t.includes('disco da SUA máquina')),
+    ).toBeInTheDocument();
+  });
+
+  it('sem agente conectado: mostra o RunnerOnboardingPanel, e "Já instalei, conectar" tenta de novo', async () => {
     const user = userEvent.setup();
     fakeChannel.diretorioInicial.mockResolvedValue({
       erro: 'Nenhum runner conectado a este projeto. Rode `brabo-runner --project proj-1 --dir <pasta>`.',
+      motivo: 'sem-agente',
     });
 
     renderComI18n(<FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />);
@@ -290,6 +318,79 @@ describe('FolderBrowserModal — transporte via runner (não-regressão)', () =>
     await user.click(screen.getByRole('button', { name: 'Já instalei, conectar' }));
 
     await waitFor(() => expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user'));
+  });
+
+  /**
+   * Quem DECIDE é o `motivo`, nunca a frase (RN-533, a lição da RN-532).
+   *
+   * Este caso é o que impede a regressão de voltar: com o casamento por
+   * substring, um engine que reescrevesse "Nenhum runner conectado" faria a
+   * tela mostrar um alerta vermelho e uma lista vazia no lugar do painel de
+   * onboarding — sem nada explodir, e sem ninguém notar até alguém tentar
+   * instalar o agente por esta tela.
+   */
+  it('decide pelo MOTIVO, não pelo texto: erro de outra redação com `sem-agente` cai no painel', async () => {
+    fakeChannel.diretorioInicial.mockResolvedValue({
+      erro: 'texto que ninguém prometeu manter',
+      motivo: 'sem-agente',
+    });
+
+    renderComI18n(<FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />);
+
+    expect(
+      await screen.findByRole('button', { name: 'Já instalei, conectar' }),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * "Ninguém respondeu" e "não há agente" NUNCA colapsam (RN-088/RN-468) — e
+   * a espera com teto da RN-474 vale nos dois, porque a pergunta é a mesma.
+   */
+  it('sem resposta a tempo: espera da RN-474 com a ressalva de que isso não prova ausência', async () => {
+    fakeChannel.diretorioInicial.mockResolvedValue({
+      erro: 'O runner demorou demais para responder.',
+      motivo: 'sem-resposta',
+    });
+
+    renderComI18n(<FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />);
+
+    expect(
+      await screen.findByText((t) => t.includes('não prova que não há agente local')),
+    ).toBeInTheDocument();
+    // A espera da RN-474, reusada — e UMA só: o painel abaixo tem a dele
+    // desligada (`mostrarEspera={false}`).
+    expect(screen.getAllByText('Procurando o runner…')).toHaveLength(1);
+    expect(
+      screen.getByText((t) => t.includes('Paramos de procurar depois de 3 minutos')),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * A espera não é decorativa: quando o carimbo muda — o agente conectou e
+   * reportou a pasta —, a listagem que falhou é REFEITA sozinha, sem a pessoa
+   * ter de descobrir que precisa clicar em algo.
+   */
+  it('quando o agente aparece, a listagem é refeita sozinha', async () => {
+    fakeChannel.diretorioInicial.mockResolvedValue({
+      erro: 'Nenhum runner conectado a este projeto.',
+      motivo: 'sem-agente',
+    });
+
+    renderComI18n(<FolderBrowserModal origem={{ tipo: 'runner', projectId: 'proj-1' }} onSelecionar={vi.fn()} onClose={vi.fn()} />);
+
+    await screen.findByRole('button', { name: 'Já instalei, conectar' });
+    expect(fakeChannel.listarDiretorio).not.toHaveBeenCalled();
+
+    // O carimbo MUDA: é assim que `EsperaDoRunner` sabe que o agente
+    // conectou (`workspaceVerifiedAt`, RN-474) — nunca um batimento.
+    fakeChannel.diretorioInicial.mockResolvedValue({ path: '/home/user' });
+    fakeChannel.listarDiretorio.mockResolvedValue({ path: '/home/user', entradas: [] });
+    carimboDoProjeto = '2026-09-09T12:00:00.000Z';
+
+    await waitFor(
+      () => expect(fakeChannel.listarDiretorio).toHaveBeenCalledWith('/home/user'),
+      { timeout: 8000 },
+    );
   });
 
   it('cleanup no unmount: fecha o canal', async () => {

@@ -5,6 +5,7 @@ import type {
   DiretorioInicialResultado,
   FsBrowser,
   ListagemResultado,
+  MotivoDeFalhaDoAgente,
 } from './fs-browser';
 
 /**
@@ -43,7 +44,30 @@ export type {
   FsBrowser,
   FsEntrada,
   ListagemResultado,
+  MotivoDeFalhaDoAgente,
 } from './fs-browser';
+
+/**
+ * A frase com que o engine anuncia "não há runner conectado a este projeto"
+ * (`terminal_channel.ex`, nos dois handlers de `fs_*`).
+ *
+ * O casamento por SUBSTRING mora aqui, e só aqui — este módulo é o dono do
+ * protocolo do canal, e traduzir a resposta do engine para o vocabulário do
+ * `FsBrowser` é o trabalho dele. Antes da RN-533 quem casava era o
+ * `FolderBrowserModal`, ou seja: um componente de tela decidindo por uma frase
+ * em pt-BR escrita num arquivo `.ex` do engine.
+ *
+ * O conserto DEFINITIVO é o engine mandar um código ao lado do texto, como o
+ * runner já faz com os cinco `motivo` da RN-532 — mas o engine está fora do
+ * escopo desta entrega, e a lacuna fica declarada aqui em vez de escondida.
+ * Enquanto isso a degradação é benigna e nomeada: mudar a frase no engine faz
+ * a falha cair em `sem-resposta` (o estado "não sei"), nunca em "há agente".
+ */
+const FRASE_DO_ENGINE_SEM_RUNNER = 'Nenhum runner conectado';
+
+function motivoDaMensagem(erro: string | undefined): MotivoDeFalhaDoAgente {
+  return erro?.includes(FRASE_DO_ENGINE_SEM_RUNNER) ? 'sem-agente' : 'sem-resposta';
+}
 
 /** Generoso de propósito: cobre o pior caso de um runner ocupado, sem travar a UI para sempre. */
 const TIMEOUT_REQUISICAO_MS = 20_000;
@@ -78,15 +102,23 @@ export function connectFsBrowserChannel(projectId: string): FsBrowser {
     else filaAntesDoCanal.push(fn);
   }
 
-  function resolverComErro(ref: string, mensagem: string) {
+  // Toda falha DESTE lado — teto da requisição, socket caído, ticket recusado,
+  // join reprovado — é `sem-resposta`: nenhuma delas prova que não há agente,
+  // e afirmar que não há seria a tela decidindo o que não sabe (RN-088/RN-468).
+  // `sem-agente` só nasce da resposta do engine, que sabe.
+  function resolverComErro(
+    ref: string,
+    mensagem: string,
+    motivo: MotivoDeFalhaDoAgente = 'sem-resposta',
+  ) {
     const pendente = pendentes.get(ref);
     if (!pendente) return;
     pendentes.delete(ref);
     clearTimeout(pendente.temporizador);
     if (pendente.tipo === 'list') {
-      pendente.resolve({ path: pendente.path, entradas: [], erro: mensagem });
+      pendente.resolve({ path: pendente.path, entradas: [], erro: mensagem, motivo });
     } else {
-      pendente.resolve({ erro: mensagem });
+      pendente.resolve({ erro: mensagem, motivo });
     }
   }
 
@@ -155,6 +187,7 @@ export function connectFsBrowserChannel(projectId: string): FsBrowser {
         path: typeof msg.path === 'string' ? msg.path : pendente.path,
         entradas: Array.isArray(msg.entradas) ? msg.entradas : [],
         erro: msg.erro,
+        ...(msg.erro ? { motivo: motivoDaMensagem(msg.erro) } : {}),
       });
     });
 
@@ -165,7 +198,11 @@ export function connectFsBrowserChannel(projectId: string): FsBrowser {
       if (!pendente || pendente.tipo !== 'home') return;
       pendentes.delete(msg.ref);
       clearTimeout(pendente.temporizador);
-      pendente.resolve({ path: msg.path, erro: msg.erro });
+      pendente.resolve({
+        path: msg.path,
+        erro: msg.erro,
+        ...(msg.erro ? { motivo: motivoDaMensagem(msg.erro) } : {}),
+      });
     });
 
     canal
@@ -201,7 +238,12 @@ export function connectFsBrowserChannel(projectId: string): FsBrowser {
   return {
     listarDiretorio(path: string) {
       if (erroDeConexao) {
-        return Promise.resolve({ path, entradas: [], erro: erroDeConexao });
+        return Promise.resolve({
+          path,
+          entradas: [],
+          erro: erroDeConexao,
+          motivo: 'sem-resposta' as const,
+        });
       }
       const ref = crypto.randomUUID();
       return new Promise<ListagemResultado>((resolve) => {
@@ -214,7 +256,7 @@ export function connectFsBrowserChannel(projectId: string): FsBrowser {
     },
     diretorioInicial() {
       if (erroDeConexao) {
-        return Promise.resolve({ erro: erroDeConexao });
+        return Promise.resolve({ erro: erroDeConexao, motivo: 'sem-resposta' as const });
       }
       const ref = crypto.randomUUID();
       return new Promise<DiretorioInicialResultado>((resolve) => {

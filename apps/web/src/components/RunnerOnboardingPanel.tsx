@@ -41,6 +41,18 @@ interface RunnerOnboardingPanelProps {
    * três pontos de montagem.
    */
   caminhoSugerido?: string;
+  /**
+   * `false` quando quem MONTOU este painel já mostra a `EsperaDoRunner`
+   * (RN-533: o `FolderBrowserModal`, que a mantém no topo enquanto o agente
+   * local não responde). Duas esperas na mesma tela seriam duas sondas, dois
+   * tetos e — no pior caso — duas frases discordando sobre o mesmo carimbo.
+   *
+   * Default `true`: os outros dois pontos de montagem (`TerminalPanel` e o
+   * passo `workspace` do `NewProjectWizard`) não montam espera nenhuma, e um
+   * default que exigisse cada um se declarar faria a espera sumir de quem
+   * esquecesse a prop.
+   */
+  mostrarEspera?: boolean;
 }
 
 type EstadoAutomatico =
@@ -98,6 +110,7 @@ export function RunnerOnboardingPanel({
   retrying,
   className,
   caminhoSugerido,
+  mostrarEspera = true,
 }: RunnerOnboardingPanelProps) {
   const { t } = useTranslation('terminal');
 
@@ -306,7 +319,7 @@ export function RunnerOnboardingPanel({
 
           {/* Só existe configuração feita se havia `projectId` — os dois
               handlers retornam cedo sem ele. A guarda é para o compilador. */}
-          {projectId && <EsperaDoRunner projectId={projectId} />}
+          {projectId && mostrarEspera && <EsperaDoRunner projectId={projectId} />}
         </div>
       )}
 
