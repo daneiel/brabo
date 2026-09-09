@@ -337,7 +337,7 @@ resolver_imagens_do_ghcr() {
   compacto="$(tr -d '\n' < "$json" | tr -s ' ')"
 
   local alvo var repo digest entrada
-  for alvo in api engine web; do
+  for alvo in api engine web backup; do
     entrada="$(printf '%s' "$compacto" | grep -o "{[^{}]*\"alvo\": *\"${alvo}\"[^{}]*}" || true)"
     repo="$(printf '%s' "$entrada" | grep -o '"repositorio": *"[^"]*"' | cut -d'"' -f4)"
     digest="$(printf '%s' "$entrada" | grep -o '"digest": *"[^"]*"' | cut -d'"' -f4)"
@@ -366,6 +366,7 @@ resolver_imagens_locais() {
   BRABO_API_IMAGE='brabo-api:prod'
   BRABO_ENGINE_IMAGE='brabo-engine:prod'
   BRABO_WEB_IMAGE='brabo-web:prod'
+  BRABO_BACKUP_IMAGE='brabo-backup:prod'
 }
 
 # --------------------------------------------------------------------------
@@ -466,6 +467,7 @@ main() {
 BRABO_API_IMAGE=${BRABO_API_IMAGE}
 BRABO_ENGINE_IMAGE=${BRABO_ENGINE_IMAGE}
 BRABO_WEB_IMAGE=${BRABO_WEB_IMAGE}
+BRABO_BACKUP_IMAGE=${BRABO_BACKUP_IMAGE}
 GIT_OAUTH_STATE_SECRET=${GIT_OAUTH_STATE_SECRET}
 AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
 BRABO_SERVICE_TOKEN=${BRABO_SERVICE_TOKEN}
@@ -505,7 +507,8 @@ ENV
   "imagens": {
     "api": "${BRABO_API_IMAGE}",
     "engine": "${BRABO_ENGINE_IMAGE}",
-    "web": "${BRABO_WEB_IMAGE}"
+    "web": "${BRABO_WEB_IMAGE}",
+    "backup": "${BRABO_BACKUP_IMAGE}"
   },
   "caminhos": {
     "env": "${env_arquivo}",
