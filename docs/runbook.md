@@ -2416,6 +2416,26 @@ exposed in `docker-compose.yml`.
 > on the next boot regardless of the guard. The queue needs to be
 > **purged**, not just have the guard turned off.
 
+> **Turning the Anamnesis or the Psychologist back on: two variables, not
+> one.** They have been paused since 2026-08-10, and the pause is a product
+> decision, not a bug. `ANAMNESE_ENABLED` / `PSYCHOLOGIST_ENABLED` are the
+> product flags (may a NEW round happen at all); `START_ANAMNESE` is the boot
+> key (is the periodic tick even scheduled). The periodic Anamnesis needs both
+> at `true`; the Psychologist has no boot key, because its automatic trigger
+> is session close.
+>
+> Until [RN-540](business-rules.md#rn-540) the two `*_ENABLED` flags were
+> **not mapped** in either compose's `engine` service, and `docker compose`
+> does not forward the host environment — so setting them in `.env` did
+> nothing at all, silently, while three places in the code promised the pause
+> was reversible. They are mapped now, with the code's own default (`false`
+> in both files: the pause itself is unchanged), and
+> `scripts/ci/flags-do-engine-no-compose.spec.ts` fails the build for the next
+> boolean flag that isn't. On Kubernetes there was nothing to fix — a
+> Deployment/ConfigMap intercepts nothing, and `brabo-config` never carried
+> these variables. Both flags are read at boot: change them and
+> `docker compose up -d engine`.
+
 ### A semantic gate on a small model
 
 QA is the role that fits worst in a local 7B: the judgment varies between

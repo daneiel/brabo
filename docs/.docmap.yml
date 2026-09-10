@@ -390,11 +390,20 @@ rules:
       # repositório inteiro. Degrau, destino e versão de branch não aparecem
       # nele; a doc dele é a própria RN-411 em `docs/business-rules.md`.
       #
-      # O extglob EXCLUI os quatro pelo nome e continua casando com todo o resto
+      # `flags-do-engine-no-compose.spec.ts` é o QUINTO, pelo mesmo critério: ele
+      # compara as flags booleanas que `apps/engine/config/runtime.exs` lê com o
+      # `environment:` do serviço `engine` dos dois composes (RN-540), e mora
+      # aqui porque lê o repositório inteiro como texto — a mesma razão do
+      # `vocabulario-de-eventos-dev.spec.ts` acima. Degrau, destino e versão de
+      # branch não aparecem nele; a doc dele é a própria RN-540 em
+      # `docs/business-rules.md`, e as duas que o `config-e-inferencia` já cobra
+      # em `block` (`docs/reference/configuration.md` e `docs/runbook.md`).
+      #
+      # O extglob EXCLUI os cinco pelo nome e continua casando com todo o resto
       # — inclusive com script de política que ainda não existe. Falha fechado:
       # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
       # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
-      - "scripts/ci/!(coverage-floor|actions-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev)*"
+      - "scripts/ci/!(coverage-floor|actions-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose)*"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
