@@ -2467,6 +2467,12 @@ The script verifies **its own origin** before doing anything — the signature
 of the Release's `checksums.txt`, and then its own hash inside that verified
 manifest. A failure at either step is a **named refusal**, never a warning.
 
+Detection has a **5s ceiling** on the Docker call it makes (`docker compose ls`
+talks to the daemon, and a slow or stopped daemon behind a live socket would
+hang the whole thing *before the first question*). Hitting the ceiling is not
+an error — it is the same outcome as having no Docker at all, and the rest of
+the signals are still read.
+
 Without a TTY it **reports and exits 0**: it prints what it found and the
 command to run in a terminal. That is deliberate, and it is the same shape
 `consentir-base.mjs` already has.
