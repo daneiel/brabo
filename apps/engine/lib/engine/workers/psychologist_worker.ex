@@ -63,7 +63,17 @@ defmodule Engine.Workers.PsychologistWorker do
   2026-08-10 já aplicada à Anamnese ("hoje ele não está trazendo dados de
   muito valor"), documentada em docs/explanation/backlog.md — não é bug, é
   pausa reversível. Ligar de volta é `PSYCHOLOGIST_ENABLED=true` e
-  reiniciar o engine.
+  reiniciar o engine — aqui é UMA variável só: o gatilho automático é o
+  fechamento de sessão, não um tick, então não há chave de boot pareada
+  como a `START_ANAMNESE` da Anamnese.
+
+  Esta frase foi FALSA de 2026-08-10 até a RN-540: `PSYCHOLOGIST_ENABLED`
+  não estava no `environment:` do serviço `engine` de nenhum compose, e o
+  Compose não repassa o ambiente do host — a variável nunca chegava ao
+  processo, `runtime.exs` caía no default `"false"` e não havia erro
+  nenhum. Está mapeada agora, com o mesmo default do código, e
+  `scripts/ci/flags-do-engine-no-compose.spec.ts` reprova a próxima que
+  faltar.
   """
   def enabled?, do: Application.get_env(:engine, :psychologist_enabled?, false)
 
