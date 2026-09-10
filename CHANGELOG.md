@@ -26,6 +26,47 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **engine**: o prompt de sumarização do `ContextManager` passa a resolver o
+  template `context-manager-summarize` do grafo, com o texto inline como
+  fallback obrigatório — fecha o ÚLTIMO dos quatro templates da leva da RN-413
+  sem consumidor (RN-417).
+
+  A [ADR 0101](docs/adr/0101-memoria-relacional-como-projecao-do-event-log.md)
+  declarou a lacuna com todas as letras: *"`context-manager-summarize` is the
+  only one of the first wave's four templates still not consumed by any
+  agent"*. O template existia em `prompts/`, já era semeado pelo seeder
+  genérico (`scripts/dev/seed-prompts.ts`, que varre `prompts/*.md`) e tinha
+  `{{turnos}}` documentado — mas o `.ex` seguia com o prompt como literal, e
+  editar o `.md` não mudava nada em lugar nenhum. Era código morto
+  documentado.
+
+  `summarize/2` ganha `prompt/1`, cópia fiel do molde dos DOIS consumidores
+  que já existiam (`AnamneseWorker.initial_message/1`,
+  `PsychologistWorker.render_kickoff/4`): a MESMA flag compartilhada
+  `graph_templates_enabled?` (`GRAPH_TEMPLATES_ENABLED`, default `false`) — e
+  não uma chave nova por agente, pelo motivo que o comentário do
+  `anamnese_worker.ex` já registrava: rollout de "consumo de template do
+  grafo" é decisão por PRODUTO, compartilhada entre os agentes. Qualquer
+  desfecho que não seja `{:ok, %{"body" => corpo}}` com corpo binário
+  não-vazio cai no inline, **sem erro e sem log de erro** — flag desligada,
+  template ainda não semeado e api do grafo fora do ar são o MESMO caminho de
+  degradação, e distingui-los aqui produziria log de erro para o caso normal.
+  Com a flag desligada (o default) a api nem chega a ser chamada, e o
+  comportamento fica idêntico ao de antes.
+
+  Duas coisas que NÃO mudaram, de propósito. O render é função privada
+  PRÓPRIA, não um helper compartilhado — o repositório duplica esse render nos
+  três consumidores porque o conjunto de placeholders é do template, não do
+  mecanismo. E o fallback determinístico de quando o MODELO falha
+  (`"(N turnos anteriores omitidos)"`) NÃO passa pelo template: é
+  comportamento de código, não texto de prompt, como o próprio
+  `prompts/context-manager-summarize.md` já declarava.
+
+  Sem RN nova: o mecanismo "template do grafo com fallback inline obrigatório"
+  já é a RN-417, e este é o terceiro consumidor da MESMA regra, não uma regra
+  diferente — a prosa dela foi ampliada. O ADR 0101 está aceito e NÃO foi
+  editado; o fechamento da lacuna que ele declarou fica registrado aqui e no
+  `CLAUDE.md`.
 - **web**: o navegador de pastas do assistente de criação volta a ler o disco da
   MÁQUINA DO USUÁRIO no modo Runner, e a tela passa a dizer de quem é o disco
   (RN-533, [ADR 0151](docs/adr/0151-base-consentida-no-runner.md) ponto 7).
