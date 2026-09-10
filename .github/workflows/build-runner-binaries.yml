@@ -24,8 +24,16 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag final a (re)construir (ex.: v1.2.0)'
-        required: true
+        # VAZIA = ENSAIO: constrói e roda o smoke nas cinco plataformas a
+        # partir da branch escolhida, e NÃO anexa nada a Release nenhuma.
+        #
+        # Existe porque estes binários só eram construídos numa tag, e foi
+        # assim que duas falhas de plataforma ficaram invisíveis até o corte:
+        # `darwin-arm64` no `--self-test-pty` (o `spawn-helper` não era
+        # embutido) e `win32-x64` no `build:bin` (o `.node` está no prebuild,
+        # não em `build/Release`). Nenhuma das duas aparece no Linux.
+        description: 'Tag final a (re)construir (ex.: v1.2.0). VAZIA = ensaio, sem anexar nada.'
+        required: false
         type: string
 
 permissions:
@@ -112,6 +120,17 @@ jobs:
           ENTRADA: ${{ inputs.tag }}
         run: |
           set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ] && [ -z "$ENTRADA" ]; then
+            # ENSAIO: constrói a partir do que foi escolhido no dispatch e não
+            # anexa nada. Sem isto, a única forma de exercitar as cinco
+            # plataformas era cortar uma tag — e uma falha de plataforma só
+            # aparecia com a Release já publicada.
+            echo 'ensaio=true' >> "$GITHUB_OUTPUT"
+            echo "ref=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "ENSAIO a partir de ${GITHUB_REF_NAME} — nada será anexado."
+            exit 0
+          fi
           if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
             tag="$ENTRADA"
           else
@@ -121,6 +140,8 @@ jobs:
             echo "::error::'$tag' não é tag final. O formato é vX.Y.Z, sem sufixo -dev.N nem -qa.N."
             exit 1
           fi
+          echo 'ensaio=false' >> "$GITHUB_OUTPUT"
+          echo "ref=$tag" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "tag a construir: $tag"
 
@@ -128,7 +149,7 @@ jobs:
         with:
           # Checkout NA TAG, nunca no ref do evento — mesmo motivo de
           # `publish-runner.yml`.
-          ref: ${{ steps.alvo.outputs.tag }}
+          ref: ${{ steps.alvo.outputs.ref }}
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2
         with:
@@ -169,6 +190,8 @@ jobs:
       # que já existe. `gh release upload` sem `--clobber` falharia com 422
       # nesse caso; a checagem evita alcançar isso.
       - name: Anexar à GitHub Release
+        # Ensaio prova o BUILD e o SMOKE; publicar é o que ele não faz.
+        if: steps.alvo.outputs.ensaio != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.alvo.outputs.tag }}
@@ -247,7 +270,11 @@ jobs:
     # que não construiu NÃO deve impedir os outros quatro de terem manifesto.
     # O que o manifesto não pode fazer é calar sobre a ausência — daí a
     # comparação com a matriz esperada, abaixo.
-    if: always()
+    #
+    # E NUNCA em ensaio (dispatch com `tag` vazia): não há Release a que
+    # anexar nem manifesto a assinar. A condição é de JOB e lê `inputs`
+    # direto — `steps.alvo` é do próprio job e não alcança este nível.
+    if: always() && (github.event_name != 'workflow_dispatch' || inputs.tag != '')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -260,11 +287,21 @@ jobs:
           ENTRADA: ${{ inputs.tag }}
         run: |
           set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ] && [ -z "$ENTRADA" ]; then
+            # ENSAIO (ver o job `build`): não há manifesto a assinar nem
+            # Release a que anexar. O job inteiro é pulado logo abaixo.
+            echo 'ensaio=true' >> "$GITHUB_OUTPUT"
+            echo "ref=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
             tag="$ENTRADA"
           else
             tag="${GITHUB_REF_NAME}"
           fi
+          echo 'ensaio=false' >> "$GITHUB_OUTPUT"
+          echo "ref=$tag" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       # O checkout existe por UM motivo: o `install.sh` desta tag entra no
@@ -273,7 +310,7 @@ jobs:
       - name: Checkout na tag
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
-          ref: ${{ steps.alvo.outputs.tag }}
+          ref: ${{ steps.alvo.outputs.ref }}
 
       - name: Instalar o cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
