@@ -101,6 +101,68 @@ function dataDe(ref) {
   }
 }
 
+/**
+ * Parte uma seção de changelog nos seus blocos `### Titulo` -> itens.
+ *
+ * Devolve pares na ORDEM em que aparecem, e não um mapa: a ordem das
+ * subseções é decisão do arquivo (`SECOES`), e um mapa a perderia.
+ */
+export function blocosDe(corpo) {
+  const blocos = [];
+  let atual = null;
+  for (const linha of corpo.split('\n')) {
+    if (linha.startsWith('### ')) {
+      atual = { titulo: linha.slice(4).trim(), linhas: [] };
+      blocos.push(atual);
+    } else if (atual) {
+      atual.linhas.push(linha);
+    }
+  }
+  for (const b of blocos) {
+    while (b.linhas.length && b.linhas[b.linhas.length - 1].trim() === '') b.linhas.pop();
+    while (b.linhas.length && b.linhas[0].trim() === '') b.linhas.shift();
+  }
+  return blocos;
+}
+
+/**
+ * Funde o `## Unreleased` REDIGIDO com a seção GERADA dos commits.
+ *
+ * O defeito que isto fecha: o corte de versão fazia `prepend` da seção gerada
+ * e deixava o `## Unreleased` intacto logo abaixo — para sempre. Como a prosa
+ * de cada PR é escrita ali, ela NUNCA chegava à versão publicada: a versão
+ * levava só as linhas curtas geradas dos commits, e o arquivo acumulava
+ * seções `## Unreleased` fósseis (cinco delas, quando isto foi medido).
+ *
+ * A fusão é por TÍTULO de subseção, e a ordem dentro de cada uma é
+ * deliberada: primeiro o que foi REDIGIDO (explica a mudança), depois o
+ * inventário dos commits (prova o que entrou). Subseção que só existe num dos
+ * lados entra inteira, na ordem em que apareceu — as redigidas primeiro,
+ * porque são as que alguém escolheu escrever.
+ */
+export function fundirComUnreleased(secaoGerada, corpoUnreleased) {
+  const redigidos = blocosDe(corpoUnreleased);
+  if (redigidos.length === 0) return secaoGerada;
+
+  const linhasGeradas = secaoGerada.split('\n');
+  const cabecalho = linhasGeradas[0]; // `## vX.Y.Z — data`
+  const gerados = blocosDe(linhasGeradas.slice(1).join('\n'));
+
+  const titulos = [];
+  for (const b of [...redigidos, ...gerados]) {
+    if (!titulos.includes(b.titulo)) titulos.push(b.titulo);
+  }
+
+  const saida = [cabecalho, ''];
+  for (const titulo of titulos) {
+    const doRedigido = redigidos.filter((b) => b.titulo === titulo);
+    const doGerado = gerados.filter((b) => b.titulo === titulo);
+    saida.push(`### ${titulo}`, '');
+    for (const b of [...doRedigido, ...doGerado]) saida.push(...b.linhas, '');
+  }
+  return saida.join('\n');
+}
+
 function render(versao, de, ate) {
   const analisados = commits(de, ate).map(analisar).filter(Boolean);
   const data = dataDe(ate);
@@ -135,66 +197,90 @@ function render(versao, de, ate) {
 
 const escopo = (c) => (c.escopo ? `**${c.escopo}**: ` : '');
 
-// --- execução --------------------------------------------------------------
-const args = process.argv.slice(2).filter((a) => a !== '--stdout');
-const soImprimir = process.argv.includes('--stdout');
-const [versao, anteriorArg, ateArg] = args;
-
-if (!versao) {
-  console.error(
-    'uso: node scripts/changelog.mjs <versão> [tag-anterior] [até] [--stdout]',
-  );
-  process.exit(1);
-}
-
-// `até` existe para reconstruir uma versão ANTIGA (o intervalo termina na tag
-// dela, não em HEAD). O default `HEAD` é o uso normal do release.
-const ate = ateArg ?? 'HEAD';
-
-// Tag anterior descoberta sozinha quando não informada — relativa a `ate`, e
-// ignorando PRÉ-RELEASES.
+// --- execução ---------------------------------------------------------------
 //
-// Eram dois erros no mesmo lugar. `describe ... HEAD` só acertava quando `ate`
-// FOSSE HEAD: reconstruir uma versão antiga produzia intervalo invertido
-// (`v1.4.0..v0.1.0`), que o git resolve como vazio. E sem `--exclude '*-*'` a
-// tag anterior a `v1.4.0` é `v1.4.0-qa.1`, sobrando só os merges de promoção —
-// que o `--no-merges` descarta.
-//
-// Os dois juntos produziam uma seção dizendo "nenhum commit neste intervalo"
-// em vez de falhar: silencioso e errado. Foi o que deixou seis GitHub Releases
-// publicadas com o corpo vazio.
-//
-// `null` quando não existe tag anterior: é o primeiro release, e aí o
-// intervalo é a história inteira até `ate`.
-let anterior = anteriorArg || null;
-if (!anterior) {
-  try {
-    anterior = git(
-      'describe',
-      '--tags',
-      '--abbrev=0',
-      '--match',
-      'v*',
-      '--exclude',
-      '*-*',
-      `${ate}^`,
+// Guardada: `fundirComUnreleased` e `blocosDe` são lógica pura e têm teste
+// próprio (`scripts/ci/changelog.spec.ts`), e importar este arquivo num teste
+// não pode disparar `git` nem escrever no CHANGELOG. Mesmo desenho do
+// `pr-police.ts` — a decisão é testável, o adaptador de CLI fica no fim.
+const chamadoDireto =
+  typeof process.argv[1] === 'string' && process.argv[1].endsWith('changelog.mjs');
+
+if (chamadoDireto) {
+  const args = process.argv.slice(2).filter((a) => a !== '--stdout');
+  const soImprimir = process.argv.includes('--stdout');
+  const [versao, anteriorArg, ateArg] = args;
+
+  if (!versao) {
+    console.error(
+      'uso: node scripts/changelog.mjs <versão> [tag-anterior] [até] [--stdout]',
     );
-  } catch {
-    anterior = null;
+    process.exit(1);
   }
-}
 
-const secao = render(versao, anterior, ate);
+  // `até` existe para reconstruir uma versão ANTIGA (o intervalo termina na tag
+  // dela, não em HEAD). O default `HEAD` é o uso normal do release.
+  const ate = ateArg ?? 'HEAD';
 
-if (soImprimir) {
-  process.stdout.write(secao);
-} else {
-  // Prepend, nunca sobrescrita: o histórico das versões anteriores é o valor
-  // do arquivo.
-  const cabecalho = '# Changelog\n\nGerado dos conventional commits por `scripts/changelog.mjs`.\n\n';
-  const atual = existsSync(ARQUIVO)
-    ? readFileSync(ARQUIVO, 'utf8').replace(cabecalho, '')
-    : '';
-  writeFileSync(ARQUIVO, `${cabecalho}${secao}\n${atual}`.trimEnd() + '\n');
-  console.error(`[changelog] ${ARQUIVO} atualizado (${versao}, desde ${anterior ?? 'o início'})`);
+  // Tag anterior descoberta sozinha quando não informada — relativa a `ate`, e
+  // ignorando PRÉ-RELEASES.
+  //
+  // Eram dois erros no mesmo lugar. `describe ... HEAD` só acertava quando `ate`
+  // FOSSE HEAD: reconstruir uma versão antiga produzia intervalo invertido
+  // (`v1.4.0..v0.1.0`), que o git resolve como vazio. E sem `--exclude '*-*'` a
+  // tag anterior a `v1.4.0` é `v1.4.0-qa.1`, sobrando só os merges de promoção —
+  // que o `--no-merges` descarta.
+  //
+  // Os dois juntos produziam uma seção dizendo "nenhum commit neste intervalo"
+  // em vez de falhar: silencioso e errado. Foi o que deixou seis GitHub Releases
+  // publicadas com o corpo vazio.
+  //
+  // `null` quando não existe tag anterior: é o primeiro release, e aí o
+  // intervalo é a história inteira até `ate`.
+  let anterior = anteriorArg || null;
+  if (!anterior) {
+    try {
+      anterior = git(
+        'describe',
+        '--tags',
+        '--abbrev=0',
+        '--match',
+        'v*',
+        '--exclude',
+        '*-*',
+        `${ate}^`,
+      );
+    } catch {
+      anterior = null;
+    }
+  }
+
+  const secao = render(versao, anterior, ate);
+
+  if (soImprimir) {
+    process.stdout.write(secao);
+  } else {
+    // Prepend, nunca sobrescrita: o histórico das versões anteriores é o valor
+    // do arquivo.
+    const cabecalho = '# Changelog\n\nGerado dos conventional commits por `scripts/changelog.mjs`.\n\n';
+    let atual = existsSync(ARQUIVO)
+      ? readFileSync(ARQUIVO, 'utf8').replace(cabecalho, '')
+      : '';
+
+    // O `## Unreleased` do topo é CONSUMIDO, não pulado: a prosa que os PRs
+    // escrevem ali é o que explica a versão, e um prepend cego a deixaria
+    // órfã embaixo da seção nova — que foi exatamente o que aconteceu cinco
+    // vezes antes disto existir.
+    let secaoFinal = secao;
+    const inicioUnreleased = atual.indexOf('## Unreleased');
+    if (inicioUnreleased !== -1) {
+      const depois = atual.indexOf('\n## ', inicioUnreleased + 1);
+      const corpo = atual.slice(inicioUnreleased + '## Unreleased'.length, depois === -1 ? undefined : depois);
+      secaoFinal = fundirComUnreleased(secao, corpo);
+      atual = atual.slice(0, inicioUnreleased) + (depois === -1 ? '' : atual.slice(depois + 1));
+    }
+
+    writeFileSync(ARQUIVO, `${cabecalho}${secaoFinal}\n${atual}`.trimEnd() + '\n');
+    console.error(`[changelog] ${ARQUIVO} atualizado (${versao}, desde ${anterior ?? 'o início'})`);
+  }
 }
