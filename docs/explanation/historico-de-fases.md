@@ -1805,8 +1805,10 @@ virou fallback obrigatório: ux-designer (`graph_instruction_templates_enabled?`
 Psicólogo e Anamnese (`graph_templates_enabled?`, mesma chave pros
 dois). Duas flags, não uma — colidiriam com defaults CONTRÁRIOS entre
 frentes paralelas se dividissem a chave; os dois defaults são `false`.
-Só `context-manager-summarize` (dos quatro templates da leva) ainda não
-tem consumidor.
+Só `context-manager-summarize` (dos quatro templates da leva) ficou sem
+consumidor à época — lacuna que a ADR 0101 declarou aberta e que fechou
+depois, pelo QUARTO consumidor da MESMA `graph_templates_enabled?`: o
+prompt de sumarização do `ContextManager` (`prompt/1`, ver a RN-417).
 
 `Psychologist.ContextBuilder`/`Anamnese.ContextBuilder` ganharam uma
 SEGUNDA fonte de contexto — `rag_search`, com query derivada do gatilho
