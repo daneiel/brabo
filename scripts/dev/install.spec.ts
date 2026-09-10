@@ -255,4 +255,20 @@ describe('install.sh — invariantes do arquivo', () => {
       .join('\n');
     expect(codigo).not.toMatch(/curl[^\n|]*\|\s*(ba)?sh\b/);
   });
+
+  // Duas mensagens deste script anunciaram a quem instalava que ele NÃO migrava
+  // e NÃO instalava o runner, meses depois de as duas funções existirem e serem
+  // chamadas: eram o texto da sessão que as declarou pendentes, sobrevivendo às
+  // sessões que as fizeram. O plano imprimível já dizia `faz` nas duas linhas —
+  // o que faltava era alguém cobrar o TEXTO. A régua é do destinatário: quem
+  // roda isto não sabe o que é uma sessão de fase, e uma pendência de plano
+  // nunca é notícia para ele. Comentário segue livre — é onde a decisão mora.
+  it('não fala de sessões de fase para quem instala', () => {
+    const codigo = fonte()
+      .split('\n')
+      .filter((l) => !l.trimStart().startsWith('#'))
+      .join('\n');
+    expect(codigo).not.toMatch(/sess(ão|ao)\s+\d/i);
+    expect(codigo).not.toMatch(/\bFASE\s+\d/i);
+  });
 });

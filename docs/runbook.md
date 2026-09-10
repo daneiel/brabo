@@ -2475,9 +2475,28 @@ source of the same truth.
 After the stack is up it **asks before claiming**: `/health` on the api and on
 the engine, and only then does it say it installed.
 
-> **What it still does not do:** install the runner (session 7) and migrate a
-> previous installation (session 6). Inspect the whole thing with
-> `install.sh --print-plan`, which touches nothing.
+It **installs the local agent** — the binary is verified against the signed
+manifest and placed with `install -m 0755`, so there is no manual `chmod`
+([RN-531](business-rules.md#rn-531)) — and it asks ONE base, writing it to
+both sides: `BRABO_PROJECTS_BASE` in `.env` and `base` in the runner's
+`runner.json`. A Release with no binary for this platform does not interrupt
+the installation: it says so and points at `npm install -g @brabo/runner`.
+
+Over an existing installation it **migrates or stops** — an `up` on volumes
+from another version is damage that gives no warning. The order is backup →
+**PROVE** it restores → ask → delete → install → restore, and the proof in the
+middle is what gives the installer the right to delete
+([RN-530](business-rules.md#rn-530)).
+
+> **What it does not do:** bring up the container **broker** — that service is
+> absent from the installation compose because its image is not published, and
+> without it a project in **mounted** mode cannot start a container
+> ([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)); the **runner** mode uses
+> the Docker on that machine and does not depend on it. It also does not
+> **pair** the local agent with a project: the binary and the base are ready,
+> but the device key and `brabo-runner.config.json` still come from the
+> project screen ([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)).
+> Inspect the whole thing with `install.sh --print-plan`, which touches nothing.
 
 ---
 

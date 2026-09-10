@@ -583,8 +583,8 @@ main() {
       [ -n "$linha" ] && detalhe "  - ${linha}"
     done
     dizer ''
-    dizer 'Migrar uma instalação assim exige backup antes de qualquer remoção — é'
-    dizer 'a sessão 6 da FASE 29, e este instalador ainda não a faz.'
+    dizer 'Migrar exige backup antes de qualquer remoção, e é o que vem a'
+    dizer 'seguir: nada é apagado antes de o backup PROVAR que restaura.'
   else
     ok 'nenhuma instalação anterior encontrada'
   fi
@@ -718,10 +718,14 @@ JSON
   dizer "  Web:    http://localhost:${WEB_PORT:-8088}"
   dizer "  API:    http://localhost:${api_port}/health"
   dizer ''
-  dizer "${C_BOLD}O que este instalador ainda NÃO faz${C_RESET}"
-  dizer 'Instalar o runner (sessão 7) e migrar uma instalação anterior (sessão 6)'
-  dizer 'ainda não acontecem. Ele para aqui de propósito — e diz isso, em vez de'
-  dizer 'terminar em silêncio e deixar você procurando o que não aconteceu.'
+  dizer "${C_BOLD}O que este instalador NÃO faz${C_RESET}"
+  dizer 'Não sobe o broker de container: o serviço não existe no compose de'
+  dizer 'instalação, porque a imagem dele não é publicada. Sem broker, projeto'
+  dizer 'em modo Pasta montada não sobe container (ADR 0144); o modo Runner usa'
+  dizer 'o Docker desta máquina e não depende dele.'
+  dizer 'Não pareia o agente local com um projeto: o binário e a base ficam'
+  dizer 'prontos aqui, mas a chave de dispositivo e o brabo-runner.config.json'
+  dizer 'continuam vindo da tela do projeto (ADR 0118).'
 }
 
 main "$@"

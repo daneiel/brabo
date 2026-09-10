@@ -483,6 +483,30 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **install**: o `install.sh` anunciava a quem instala que **não** migrava uma
+  instalação anterior e **não** instalava o agente local — as duas coisas que
+  ele faz.
+
+  Era o texto da sessão que declarou as duas pendentes, sobrevivendo às sessões
+  que as construíram: `migrar_instalacao_anterior` e `instalar_o_runner`
+  existem e são chamadas no fluxo principal, e o `--print-plan` já dizia `faz`
+  nas duas linhas. Quem lia o final da instalação ficava procurando um passo
+  que já tinha acontecido. O mesmo bloco vivia no runbook, e caiu junto.
+
+  No lugar, o instalador diz o que de fato **não** faz: não sobe o **broker**
+  (o serviço não existe no compose de instalação, porque a imagem dele não é
+  publicada — e sem ele um projeto em modo **Pasta montada** não sobe
+  container, enquanto o modo **Runner** usa o Docker da própria máquina), e não
+  **pareia** o agente local com um projeto — o binário e a base ficam prontos,
+  mas a chave de dispositivo e o `brabo-runner.config.json` continuam vindo da
+  tela do projeto.
+
+  **O mecanismo contra a terceira repetição é do destinatário, não da frase:**
+  `install.spec.ts` passa a reprovar menção a "sessão N" ou "FASE N" nas linhas
+  de CÓDIGO do script. Quem roda o instalador não sabe o que é uma sessão de
+  fase, e uma pendência de plano nunca é notícia para ele — comentário segue
+  livre, que é onde a decisão mora.
+
 - **runner,web**: o `brabo-runner` reconectava **sozinho, para sempre, com um
   ticket morto** — e a conta era paga pelo usuário, em **429** na tela dele
   (RN-108).
