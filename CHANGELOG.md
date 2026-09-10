@@ -783,6 +783,33 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   fabricados. A mensagem de falha nomeia o tipo, diz os dois lugares onde
   decidir e cita o `exp004`, no mesmo tom da que já existia.
 
+### Documentação
+
+- **adr**: [ADR 0153](docs/adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.md)
+  — `DEPLOY_ENABLED` é citado como gatilho de ativação por **dez documentos**
+  (os ADRs 0089/0091/0092 no próprio campo Status, `fluxo.yml` em três lugares,
+  `gates.yml` no gate `operavel`, mais `business-rules.md`, `backlog.md`,
+  `modelo-de-time.md`, `auditoria-fluxo-vs-codigo.md`, `historico-de-fases.md` e
+  o `CLAUDE.md`) e **não existe em lugar nenhum do código**: as duas únicas
+  ocorrências são COMENTÁRIOS (`external-effect.ts:144`,
+  `listar_metricas_de_produto.ex:185`). Dez documentos apontam para um
+  interruptor que não tem parede.
+
+  Achado que não é sobre deploy: o gate **`deployavel`** é declarado como
+  `gate_saida` de `area-infra` em `fluxo.yml:247` e **não estava no registro**
+  `docs/gates.yml` — exatamente a inconsistência que o cruzamento entre as três
+  peças do modelo de time pegaria, e o segundo achado desse tipo. Ele entra
+  agora, `status: planned` e `severidade: warn` (RN-070/071 proíbem promover a
+  `block` sem script de verificação), no molde exato do `operavel`.
+
+  **Nada muda em runtime**: nenhuma variável nova, nenhum default alterado,
+  nenhum gate avaliado que não fosse antes. A alternativa considerada e
+  **recusada** foi criar a variável agora com default `false` — uma variável que
+  nenhum código lê é a mesma promessa vazia que o ADR denuncia, agora com uma
+  linha de configuração para sustentá-la; ela nasce no PR que tiver o primeiro
+  consumidor real. A camada de plataforma continua parada e passa a dizer
+  honestamente por quê: não falta uma flag, falta um ambiente.
+
 ## v5.0.0 — 2026-09-05
 
 ### ⚠ Mudanças incompatíveis
