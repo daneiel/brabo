@@ -255,8 +255,8 @@ finding of that shape; the first was `paralelismo-autorizado` ageing in
 the opposite direction.
 
 It enters as `planned`/`warn`, with no `evidencia` block and no
-verification script, because [RN-070](../business-rules.md#rn-070)/
-[RN-071](../business-rules.md#rn-071) forbid `block` without one — and
+verification script, because [RN-070](../business-rules/custo.md#rn-070)/
+[RN-071](../business-rules/custo.md#rn-071) forbid `block` without one — and
 because what blocks it is not code. The infrastructure exists (overlays,
 GHCR images by digest, smoke/rollout/restore scripts); what is missing
 is a production environment with real traffic and someone maintaining
