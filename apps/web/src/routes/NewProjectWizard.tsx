@@ -42,8 +42,6 @@ type StepKey =
   | 'provider'
   | 'credential'
   | 'details'
-  | 'workspace'
-  | 'policy'
   | 'confirm';
 type Visibility = 'private' | 'public';
 
@@ -140,8 +138,6 @@ const STEP_TITLE_KEY: Record<StepKey, string> = {
   provider: 'steps.provider',
   credential: 'steps.credential',
   details: 'steps.details',
-  workspace: 'steps.workspace',
-  policy: 'steps.policy',
   confirm: 'steps.confirm',
 };
 
@@ -329,13 +325,14 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       keys.push('provider');
       if (needsCredential) keys.push('credential');
     }
+    // Destino e identificação num passo só: `details` agora carrega os dois.
     keys.push('details');
-    keys.push('workspace');
-    // Adotar não passa pela política: o que vai (ou não) acontecer com as
-    // branches é decidido depois, na tela do PLANO, contra o repositório
-    // real — prometer o template aqui seria mentir sobre o que o
-    // bootstrap faria num repo que já tem política própria.
-    if (!adotando) keys.push('policy');
+    // O passo "Política de branches" SAIU, e não por espaço: ele não era
+    // escolha nenhuma — o payload de criação nunca teve campo de política, e
+    // o bootstrap roda igual na api. Uma tela que pergunta o que não usa
+    // ensina que ali há decisão. O que ele mostrava de útil (quantos passos
+    // de Gitflow vêm a seguir) continua no resumo do Confirmar, que é onde
+    // se aprova.
     keys.push('confirm');
     return keys;
   }, [needsCredential, adotando]);
@@ -372,12 +369,13 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       case 'credential':
         return canAdvanceFromCredential(provider!, selectedCredentialId);
       case 'details':
+        // CONJUNÇÃO dos dois gates que existiam quando isto eram dois passos.
+        // Um `||` aqui deixaria avançar sem nome, ou com caminho inválido.
         return (
           canAdvanceFromDetails(modo!, { name, externalId }) &&
-          (adotando || slug.length > 0)
+          (adotando || slug.length > 0) &&
+          canAdvanceFromWorkspace(modoDeWorkspace, caminhoLocal)
         );
-      case 'workspace':
-        return canAdvanceFromWorkspace(modoDeWorkspace, caminhoLocal);
       default:
         return true;
     }
@@ -611,79 +609,13 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         />
       )}
 
-      {currentStep === 'details' && adotando && (
+      {/* UM passo, com o DESTINO acima da identificação — é o destino que
+          decide se existe campo de caminho, e pedir o nome primeiro era
+          mostrar a consequência depois da escolha fácil. Os dois eram
+          passos separados; o gate deste é a CONJUNÇÃO dos dois que
+          existiam, e um `||` no lugar do `&&` deixaria avançar sem nome. */}
+      {currentStep === 'details' && (
         <div>
-          <div className={styles.field}>
-            <label className={styles.fieldLabel} htmlFor="repo-external-id">
-              {t('details.adopt.repoLabel')}
-            </label>
-            <Input
-              id="repo-external-id"
-              value={externalId}
-              onChange={(e) => setExternalId(e.target.value)}
-              placeholder={
-                provider === 'local'
-                  ? t('details.adopt.placeholderLocal')
-                  : t('details.adopt.placeholderRemote')
-              }
-              autoFocus
-            />
-            <div className={styles.slugPreview}>
-              {provider === 'local'
-                ? t('details.adopt.hintLocal')
-                : t('details.adopt.hintRemote')}
-            </div>
-          </div>
-          <p className={styles.policyNote}>
-            <Trans i18nKey="details.adopt.note" ns="newProject" components={{ strong: <strong /> }} />
-          </p>
-        </div>
-      )}
-
-      {currentStep === 'details' && !adotando && (
-        <div>
-          <div className={styles.field}>
-            <label className={styles.fieldLabel} htmlFor="project-name">
-              {t('details.create.nameLabel')}
-            </label>
-            <Input
-              id="project-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t('details.create.namePlaceholder')}
-              autoFocus
-            />
-            {/* Sem dono no rótulo: quem provisiona é o backend, com o dono da
-                CREDENCIAL (`createForAuthenticatedUser`). Dizia `brabo/<slug>`,
-                fixo no código — e o nome errado ia até a tela de confirmação,
-                onde o usuário aprova. Melhor mostrar só o que se sabe. */}
-            {slug && (
-              <div className={styles.slugPreview}>
-                {t('details.create.repoPreview', { slug })}
-              </div>
-            )}
-          </div>
-          <div className={styles.field}>
-            <span className={styles.fieldLabel}>{t('details.create.visibilityLabel')}</span>
-            <div className={styles.toggleRow}>
-              {(['private', 'public'] as Visibility[]).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  className={[styles.toggleOption, visibility === v && styles.selected].filter(Boolean).join(' ')}
-                  onClick={() => setVisibility(v)}
-                >
-                  {v === 'private'
-                    ? t('details.create.visibilityPrivate')
-                    : t('details.create.visibilityPublic')}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {currentStep === 'workspace' && (
         <div>
           <div className={styles.providerGrid}>
             {modosDeWorkspaceOferecidos.map((m) => (
@@ -780,32 +712,75 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
             </div>
           )}
         </div>
-      )}
-
-      {currentStep === 'policy' && (
-        <div className={styles.policy}>
-          <p className={styles.policyIntro}>{t('policy.intro')}</p>
-          <ol className={styles.policySteps}>
-            {BOOTSTRAP_STEPS.map((step) => (
-              <li key={step.name}>{t(step.labelKey, { ns: 'provisioning' })}</li>
-            ))}
-          </ol>
-          <div className={styles.branchPills}>
-            {/* Sem `rc`: as permanentes hoje são main, dev e qa — a volta da
-                rc/rcfix está no backlog do ADR 0030. Nomes de branch não são
-                traduzidos: são identificadores, não texto de interface. */}
-            {['main', 'dev', 'qa'].map((b) => (
-              <span key={b} className={styles.pill}>
-                {b}
-              </span>
-            ))}
+          {adotando ? (
+          <div>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel} htmlFor="repo-external-id">
+                {t('details.adopt.repoLabel')}
+              </label>
+              <Input
+                id="repo-external-id"
+                value={externalId}
+                onChange={(e) => setExternalId(e.target.value)}
+                placeholder={
+                  provider === 'local'
+                    ? t('details.adopt.placeholderLocal')
+                    : t('details.adopt.placeholderRemote')
+                }
+                autoFocus
+              />
+              <div className={styles.slugPreview}>
+                {provider === 'local'
+                  ? t('details.adopt.hintLocal')
+                  : t('details.adopt.hintRemote')}
+              </div>
+            </div>
+            <p className={styles.notaDaAdocao}>
+              <Trans i18nKey="details.adopt.note" ns="newProject" components={{ strong: <strong /> }} />
+            </p>
           </div>
-          <p className={styles.policyNote}>
-            <Trans i18nKey="policy.note" ns="newProject" components={{ code: <code /> }} />
-            {provider === 'local'
-              ? t('policy.noteSuffixLocal')
-              : t('policy.noteSuffixDefault')}
-          </p>
+          ) : (
+          <div>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel} htmlFor="project-name">
+                {t('details.create.nameLabel')}
+              </label>
+              <Input
+                id="project-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('details.create.namePlaceholder')}
+                autoFocus
+              />
+              {/* Sem dono no rótulo: quem provisiona é o backend, com o dono da
+                  CREDENCIAL (`createForAuthenticatedUser`). Dizia `brabo/<slug>`,
+                  fixo no código — e o nome errado ia até a tela de confirmação,
+                  onde o usuário aprova. Melhor mostrar só o que se sabe. */}
+              {slug && (
+                <div className={styles.slugPreview}>
+                  {t('details.create.repoPreview', { slug })}
+                </div>
+              )}
+            </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>{t('details.create.visibilityLabel')}</span>
+              <div className={styles.toggleRow}>
+                {(['private', 'public'] as Visibility[]).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={[styles.toggleOption, visibility === v && styles.selected].filter(Boolean).join(' ')}
+                    onClick={() => setVisibility(v)}
+                  >
+                    {v === 'private'
+                      ? t('details.create.visibilityPrivate')
+                      : t('details.create.visibilityPublic')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          )}
         </div>
       )}
 

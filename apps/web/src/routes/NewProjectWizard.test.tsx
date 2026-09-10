@@ -105,14 +105,20 @@ async function ateVisibilidade(provider: 'GitHub' | 'Local', adotando = false) {
   }
 }
 
-/** Do passo 1 até o de workspace, no provider Local (sem credencial). */
+/**
+ * Do passo 1 até onde se escolhe o destino, no provider Local.
+ *
+ * Destino e identificação são UM passo agora: `ateVisibilidade` já chega
+ * nele, e preencher o nome não avança mais para outra tela — os dois campos
+ * convivem, com o destino acima. O nome continua sendo preenchido aqui
+ * porque o gate do passo é a CONJUNÇÃO dos dois, e sem ele o "Continuar"
+ * fica inerte.
+ */
 async function ateWorkspace() {
   await ateVisibilidade('Local');
   fireEvent.change(screen.getByLabelText('Nome do projeto'), {
     target: { value: 'Loja' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-  await screen.findByText('Onde o código vai morar');
 }
 
 const BASE = '/home/user/projetos-brabo';
@@ -210,7 +216,6 @@ describe('NewProjectWizard — onde o código vai morar', () => {
 
     // Avança sem digitar nada: é o comportamento de sempre.
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
 
     await waitFor(() => expect(createProject).toHaveBeenCalled());
@@ -229,7 +234,6 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
       target: { value: '/home/voce/projetos/loja' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
 
@@ -278,7 +282,6 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
       target: { value: '/home/voce/projetos/loja' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
 
@@ -349,7 +352,6 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     expect(screen.getByText(/--token/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
 
     await waitFor(() => expect(createProject).toHaveBeenCalled());
@@ -399,11 +401,11 @@ describe('NewProjectWizard — a base de projetos decide o que é oferecido', ()
       `${BASE}/loja`,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    // Sem ida e volta: nome e destino estão no MESMO passo agora, e avançar
+    // aqui sairia da tela onde o caminho é visível.
     fireEvent.change(screen.getByLabelText('Nome do projeto'), {
       target: { value: 'Loja Nova' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
     await waitFor(() =>
       expect(screen.getByLabelText('Caminho da pasta')).toHaveValue(
@@ -418,11 +420,11 @@ describe('NewProjectWizard — a base de projetos decide o que é oferecido', ()
       target: { value: `${BASE}/minha-pasta` },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    // Sem ida e volta: nome e destino estão no MESMO passo agora, e avançar
+    // aqui sairia da tela onde o caminho é visível.
     fireEvent.change(screen.getByLabelText('Nome do projeto'), {
       target: { value: 'Loja Nova' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     await screen.findByText('Onde o código vai morar');
 
     expect(screen.getByLabelText('Caminho da pasta')).toHaveValue(
@@ -661,11 +663,11 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
 
     // Volta ao passo de detalhes e muda o nome — invalida o snapshot que
     // autorizou o projeto anterior.
-    fireEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    // Sem ida e volta: nome e destino estão no MESMO passo agora, e avançar
+    // aqui sairia da tela onde o caminho é visível.
     fireEvent.change(screen.getByLabelText('Nome do projeto'), {
       target: { value: 'Loja Nova' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     await screen.findByText('Onde o código vai morar');
 
     fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
@@ -688,8 +690,7 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
     await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
     fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' })); // workspace → policy
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' })); // policy → confirm
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' })); // destino+nome → confirm
     fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
 
     // `createProject` já tinha sido chamado uma vez ao navegar — este

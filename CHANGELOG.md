@@ -26,6 +26,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: o assistente de criação pede o **destino antes do nome**, num passo
+  só, e perde o passo que não era escolha.
+
+  O nome vinha antes do destino, e é o destino que decide se existe campo de
+  caminho — pedir o nome primeiro era mostrar a consequência depois da escolha
+  fácil. Os dois viram **um** passo, com o destino acima; o gate dele é a
+  **conjunção** dos dois que existiam, e um `||` no lugar do `&&` deixaria
+  avançar sem nome.
+
+  O passo **"Política de branches"** sai por não ser escolha nenhuma: o payload
+  de criação nunca teve campo de política, e o bootstrap roda igual na api. Uma
+  tela que pergunta o que não usa ensina que ali há decisão. O que ele mostrava
+  de útil — quantos passos de Gitflow vêm a seguir — **continua no resumo do
+  Confirmar**, que é onde se aprova.
+
+  **O modo Runner continua sendo oferecido na criação**, e a criação antecipada
+  de projeto ([RN-437](docs/business-rules.md#rn-437)) continua existindo: as
+  duas são a âncora do picker que lê o disco do usuário
+  ([RN-533](docs/business-rules.md#rn-533)). O commit de origem desta mudança
+  removia as duas, e essa metade foi deliberadamente deixada de fora.
+
 - **web**: **criar um projeto deixa de criar repositório git** (RN-541). Criar e
   provisionar eram o mesmo gesto, e o que os unia era uma TELA: a página de
   provisionamento dispara `provisionRepository` no efeito de montagem e é o
