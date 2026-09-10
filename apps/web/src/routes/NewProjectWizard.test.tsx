@@ -77,11 +77,21 @@ function montar() {
   );
 }
 
-/** Avança do passo 1 (modo) e 2 (provider) até o de nome e visibilidade. */
-async function ateVisibilidade(provider: 'GitHub' | 'Local') {
+/**
+ * Avança do passo 1 (modo) até o de nome e visibilidade.
+ *
+ * CRIAR não tem mais passo de provider (RN-541): o git nasce no handoff ao
+ * Dev Lead, sempre `local`, então perguntar "onde hospedar" aqui seria
+ * perguntar por uma decisão que a tela não usa. O parâmetro sobrevive para os
+ * casos que exercitam a ADOÇÃO, onde o provider é obrigatório.
+ */
+async function ateVisibilidade(provider: 'GitHub' | 'Local', adotando = false) {
   montar();
-  fireEvent.click(screen.getByText('Criar novo'));
+  fireEvent.click(screen.getByText(adotando ? 'Adotar existente' : 'Criar novo'));
   fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+  if (!adotando) return;
+
   fireEvent.click(screen.getByText(provider));
   fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
@@ -155,36 +165,34 @@ afterAll(() => {
 });
 
 /**
- * O aviso do repositório privado no GitHub.
+ * O passo de provider, e de quem ele é.
  *
- * No plano gratuito, repositório privado NÃO aceita proteção de branch — e o
- * bootstrap descobre isso no último passo, com o repositório já criado e a
- * mensagem crua da API na tela. Era tarde demais para uma decisão que se toma
- * dois passos antes.
+ * O aviso do repositório privado no GitHub morava aqui e MORREU com a
+ * RN-541: ele só aparecia no passo de visibilidade da CRIAÇÃO, quando o
+ * provider era `github` — e criar deixou de perguntar provider, porque
+ * deixou de criar repositório. O aviso virou código que nunca dispara, e
+ * saiu junto.
+ *
+ * No lugar dele, o que precisa de garantia agora é a regra nova: a criação
+ * não pergunta onde hospedar, e a adoção continua perguntando — sem
+ * provider não há repositório existente para apontar.
  */
-describe('NewProjectWizard — aviso de repositório privado', () => {
-  it('avisa quando o provider é GitHub e a visibilidade é privada', async () => {
-    await ateVisibilidade('GitHub');
+describe('NewProjectWizard — o provider é da adoção', () => {
+  it('criar não passa por provider: do modo vai direto para nome', async () => {
+    montar();
+    fireEvent.click(screen.getByText('Criar novo'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    expect(
-      await screen.findByText(/não aceita proteção de branch/i),
-    ).toBeTruthy();
+    expect(await screen.findByLabelText('Nome do projeto')).toBeTruthy();
+    expect(screen.queryByText('GitHub')).toBeNull();
   });
 
-  it('some ao escolher Público — lá a proteção funciona', async () => {
-    await ateVisibilidade('GitHub');
-    await screen.findByText(/não aceita proteção de branch/i);
+  it('adotar continua perguntando o provider', async () => {
+    montar();
+    fireEvent.click(screen.getByText('Adotar existente'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Público' }));
-
-    expect(screen.queryByText(/não aceita proteção de branch/i)).toBeNull();
-  });
-
-  /** O limite é do GitHub. Repetir o aviso no Local seria mentira. */
-  it('não aparece no provider Local, que não tem plano nenhum', async () => {
-    await ateVisibilidade('Local');
-
-    expect(screen.queryByText(/não aceita proteção de branch/i)).toBeNull();
+    expect(await screen.findByText('GitHub')).toBeTruthy();
   });
 });
 

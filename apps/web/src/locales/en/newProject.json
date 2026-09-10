@@ -67,8 +67,7 @@
       "repoPreview": "repo: {{slug}}",
       "visibilityLabel": "Visibility",
       "visibilityPrivate": "Private",
-      "visibilityPublic": "Public",
-      "githubPrivateWarning": "On GitHub's free plan, <strong>private repositories don't support branch protection</strong>. The project works and the branches are created, but the \"Protect branches\" step will fail, and GitHub won't block direct pushes to <code>main</code>, <code>qa</code>, and <code>dev</code> — Brabo's own merge lock still applies, GitHub's doesn't."
+      "visibilityPublic": "Public"
     }
   },
   "workspace": {

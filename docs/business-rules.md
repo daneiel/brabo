@@ -10694,6 +10694,134 @@ cobrindo a decisão sem rede.
 
 ---
 
+## Criar projeto não provisiona repositório (RN-541)
+
+### RN-541 — Criar um projeto NÃO cria repositório git; o bootstrap é adiado até o handoff do Arquiteto {#rn-541}
+
+Criar um projeto e provisionar o git eram, na prática, o mesmo gesto — e o que
+os unia era uma TELA. `ProvisioningPage` dispara `provisionRepository` no efeito
+de montagem e é o **único** chamador dele no web; o assistente navegava para lá
+ao confirmar, então todo projeto nascia com repositório e Gitflow completos, sem
+que ninguém tivesse pedido.
+
+O dono do produto quer o contrário: o que se gera por ora segue **sem git**, e o
+repositório só nasce quando o desenvolvimento começa de verdade — o momento em
+que o **Arquiteto passa o handoff ao Dev Lead**.
+
+**O mecanismo do adiamento é não navegar para aquela tela.** Ao criar, o
+assistente vai direto para a página do PROJETO. Nada mais precisou ser desligado:
+como o disparo mora no `useEffect` de uma rota que deixou de ser visitada, deixar
+de visitá-la É o adiamento. A rota continua existindo e continua alcançável — o
+Dashboard leva a ela quando o provisionamento **falhou** e precisa ser retomado.
+
+**Provider e credencial saem da criação, e ficam na adoção.** Sem repositório
+para criar agora, perguntar "onde hospedar" seria colher uma decisão que a tela
+não usa, e o passo de credencial cobraria um PAT para um repositório que ninguém
+vai criar. Adotar é o oposto por construção — aponta para um repositório que já
+existe, e sem provider não há o que apontar. O assistente passa a ter **três**
+passos ao criar e quatro ou cinco ao adotar.
+
+**A tela de Confirmar deixa de prometer o Gitflow.** Ela anunciava "N passos de
+Gitflow" ao criar, contando `BOOTSTRAP_STEPS`; isso passaria a ser mentira no
+instante em que o bootstrap deixou de rodar ali. Passa a dizer QUANDO o
+repositório nasce, em vez de afirmar que já está nascendo.
+
+**Consequência declarada:** entre a criação e o handoff, o projeto existe sem
+repositório. Nada quebra — `GET .../repository` responde `null` e não 404, a
+página do projeto já tem o estado "repositório não provisionado" e a seção de
+Repositório em Configurações simplesmente não aparece —, mas todo caminho que
+precise de working tree falha NOMEADO até lá (`remoto_de_trabalho` devolve
+`:not_found`, e `open_adr_pr` recusa com "Projeto sem repositório provisionado").
+Isso deixa de ser borda e passa a ser o estado normal do começo de um projeto.
+
+**O gatilho é a próxima entrega**, e sem ele um projeto criado hoje ficaria sem
+repositório para sempre: o aceite do handoff Arquiteto → Dev Lead passa a
+provisionar `local`, o único provider que não pede credencial.
+
+O aviso "no plano gratuito do GitHub, repositório privado não aceita proteção de
+branch" saiu da tela junto — não por ter deixado de ser verdade, mas por ter
+ficado **inalcançável**: a condição era `provider === 'github'`, e ao criar não
+há mais provider escolhido.
+
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:170` (`stepKeys`, agora
+  dependente de `adotando`), `:285` (a guarda de `provider` restrita à adoção) e
+  `:323` (a navegação para `/projects/$projectId`)
+- **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx`, `describe('NewProjectWizard — o git é adiado')`
+  — "criar não passa mais pela página de provisionamento — vai direto ao
+  projeto", "criar tem TRÊS passos: provider e credencial saíram", "adotar
+  mantém provider e credencial" e "a tela de Confirmar não promete mais o
+  Gitflow agora"
+- **Origem:** pedido do dono do produto — *"o que for gerado por hora segue sem
+  git; git mesmo só será iniciado após iniciar desenvolvimento em projetos
+  novos, neste momento que deve rodar o bootstrap"*
+
+---
+
+## O repositório nasce no handoff para o Dev Lead (RN-522)
+
+### RN-522 — O repositório é provisionado ao ACEITAR o handoff Arquiteto → Dev Lead, sempre `local`, e a falha nunca derruba o aceite {#rn-522}
+
+A [RN-541](#rn-541) tirou o provisionamento da criação e declarou que o gatilho
+viria em seguida. Este é o gatilho — e sem ele um projeto criado ficaria sem
+repositório **para sempre**, porque `ProvisioningPage` era o único chamador de
+`provisionRepository` no web e a criação deixou de navegar para lá.
+
+O momento é o **aceite do handoff do Arquiteto para o Dev Lead**, e não a
+ativação da execução. São instantes DISTINTOS, nesta ordem: aceitar o handoff
+ativa o Dev Lead; ativar a execução é quando os dev agents começam a reivindicar
+task. É no primeiro que "o desenvolvimento começou" passa a ser verdade, e é o
+que o dono do produto pediu — *"quando o arquiteto passar o handoff para o
+desenvolvedor iniciar o desenvolvimento"*.
+
+O ramo mora em `AcceptHandoffUseCase`, ao lado do ramo `'infra'` que já existia
+e pela mesma razão de ordem: o efeito acontece **antes** de `activateAgent`, de
+modo que o agente acorde num projeto que já tem onde trabalhar.
+
+**Sempre `local`.** É o único provider que não pede credencial nenhuma — o
+`if (providerName !== 'local')` de `ProvisionRepositoryUseCase` nunca chega a
+resolver segredo, e o `LocalGitProvider.createRepo` sequer lê o `accessToken`
+que a assinatura aceita. É isso que torna um provisionamento **automático**
+possível: ninguém escolheu hospedagem no meio do aceite, então não há credencial
+a buscar nem pergunta a fazer. Publicar num provider remoto continua sendo
+caminho separado (adoção, ou conversão em Configurações) — declarado, não
+esquecido. Efeito colateral aceito: `protectBranch: false` no provider local faz
+o último passo do bootstrap **degradar** (`step_degraded`), nunca falhar.
+
+**A falha vira EVENTO, nunca exceção.** Este caso de uso não tem transação:
+quando o provisionamento roda, `updateStatus('accepted')` e o evento
+`handoff.accepted` já estão COMMITADOS. Um throw devolveria 500 ao usuário sobre
+um handoff que, no banco, foi aceito — e ainda impediria o `activateAgent` logo
+abaixo, deixando o Dev Lead sem acordar por causa de uma falha de git. Então o
+desfecho vai para o event log como `repository.provision_failed`, com `origem` e
+a mensagem real, e o aceite segue. É a régua de sempre: falha registra a origem
+e nunca vira resposta vazia.
+
+**O que NÃO é falha:** projeto que ADOTOU um repositório. `ProvisionRepository`
+recusa esse caso com `ConflictException` de propósito — bootstrap de repositório
+de terceiro só roda por aprovação de plano (RN-045) —, mas o projeto TEM
+repositório, então não há o que provisionar e registrar isso como falha mentiria
+sobre o estado dele. O ramo consulta `findByProjectId` e sai antes. Repositório
+`created` que já existe **não** é pulado: cai no caso de uso normal, que é
+idempotente por desenho ("rodar de novo não falha"), e é assim que um bootstrap
+interrompido se completa.
+
+- **Onde:**
+  `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts` — o
+  ramo `dev-lead` no `execute` e o método privado `provisionarRepositorio`, com
+  o `try/catch` e a saída antecipada do repositório adotado;
+  `apps/api/src/application/use-cases/agents/agents-use-cases.module.ts` (o
+  import de `GitUseCasesModule` — a seta é `agents → git`, e `git` não importa
+  `agents`, então não há ciclo)
+- **Teste:**
+  `apps/api/test/application/use-cases/agents/accept-handoff.use-case.spec.ts`
+  — caminho feliz ("aceitar para o Dev Lead provisiona `local` com o slug do
+  projeto"), os dois casos de falha ("provisionamento que falha NÃO derruba o
+  aceite nem a ativação" e "a falha vira evento nomeado, com origem e a mensagem
+  real"), e os limites ("aceitar para OUTRO agente não provisiona nada",
+  "projeto que ADOTOU repositório não provisiona, e isso não é falha",
+  "repositório já CRIADO cai no caso de uso, que é idempotente por desenho")
+- **Origem:** pedido do dono do produto — *"o gatilho deve vir quando o arquiteto
+  passar o handoff para o desenvolvedor iniciar o desenvolvimento"*
 ## Os artefatos dos agentes viram arquivo, em `docs/` (RN-523)
 
 ### RN-523 — A pasta `docs/` é PROJEÇÃO do event log: derivada, por agente, e nunca fonte de verdade {#rn-523}

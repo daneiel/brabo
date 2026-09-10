@@ -314,8 +314,21 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   ]);
 
   const stepKeys = useMemo<StepKey[]>(() => {
-    const keys: StepKey[] = ['mode', 'provider'];
-    if (needsCredential) keys.push('credential');
+    // Provider e credencial são do caminho de ADOÇÃO, e só dele (RN-541).
+    //
+    // Criar um projeto deixou de provisionar repositório: o git nasce quando o
+    // Arquiteto passa o handoff ao Dev Lead, e nasce `local`, que é o único
+    // provider que não pede credencial nenhuma. Perguntar "onde hospedar" na
+    // criação seria perguntar por uma decisão que a tela não vai usar — e
+    // cobrar um PAT para um repositório que ninguém vai criar agora.
+    //
+    // Adotar é o oposto por construção: aponta para um repositório que JÁ
+    // existe, e sem provider não há o que apontar.
+    const keys: StepKey[] = ['mode'];
+    if (adotando) {
+      keys.push('provider');
+      if (needsCredential) keys.push('credential');
+    }
     keys.push('details');
     keys.push('workspace');
     // Adotar não passa pela política: o que vai (ou não) acontecer com as
@@ -442,7 +455,10 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   }
 
   async function handleConfirm() {
-    if (!provider) return;
+    // A guarda é da ADOÇÃO: lá o provider é obrigatório e vai no `search` da
+    // tela de plano. Ao criar ele é `undefined` no caso normal, e o `return`
+    // incondicional que existia aqui faria o botão não fazer NADA, em silêncio.
+    if (adotando && !provider) return;
     setSubmitting(true);
     setErroDeCriacao(null);
     try {
@@ -480,12 +496,18 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
           ? {
               to: '/projects/$projectId/adoption',
               params: { projectId: project.id },
-              search: { provider, externalId: externalId.trim() },
+              search: { provider: provider!, externalId: externalId.trim() },
             }
-          : {
-              to: '/projects/$projectId/provisioning',
+          : // Criar vai direto para o PROJETO (RN-541). Ir para a tela de
+            // provisionamento era o que fazia criar projeto e provisionar git
+            // serem o mesmo gesto: ela é o ÚNICO chamador de
+            // `provisionRepository` no web, e o disparo mora no efeito de
+            // montagem dela. Não passar por lá é, literalmente, o adiamento do
+            // git. A rota continua existindo — o Dashboard leva a ela quando o
+            // provisionamento FALHOU e precisa ser retomado.
+            {
+              to: '/projects/$projectId',
               params: { projectId: project.id },
-              search: { provider },
             },
       );
     } catch (error) {
@@ -657,20 +679,6 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                 </button>
               ))}
             </div>
-            {/* O plano gratuito do GitHub só protege branch em repositório
-                PÚBLICO. Sem este aviso, a escolha "Privado" leva a um
-                bootstrap que falha no último passo com a mensagem crua da API
-                — e o usuário descobre a limitação do plano dele já com o
-                repositório criado. */}
-            {provider === 'github' && visibility === 'private' && (
-              <Alert tone="warning">
-                <Trans
-                  i18nKey="details.create.githubPrivateWarning"
-                  ns="newProject"
-                  components={{ strong: <strong />, code: <code /> }}
-                />
-              </Alert>
-            )}
           </div>
         </div>
       )}
