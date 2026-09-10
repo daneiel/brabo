@@ -26,6 +26,70 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: **criar um projeto deixa de criar repositório git** (RN-541). Criar e
+  provisionar eram o mesmo gesto, e o que os unia era uma TELA: a página de
+  provisionamento dispara `provisionRepository` no efeito de montagem e é o
+  ÚNICO chamador dele no web, e o assistente navegava para lá ao confirmar. O
+  dono do produto quer o contrário — o que se gera por ora segue **sem git**, e
+  o repositório nasce quando o desenvolvimento começa: no **handoff do Arquiteto
+  ao Dev Lead**.
+
+  **O mecanismo do adiamento é não navegar para aquela tela.** Ao criar, o
+  assistente vai direto para a página do projeto; nada precisou ser desligado,
+  porque deixar de visitar a rota É o adiamento. Ela continua existindo e
+  alcançável — o Dashboard leva a ela quando o provisionamento FALHOU.
+
+  **Provider e credencial saem da criação** e ficam na adoção, que por
+  construção aponta para um repositório que já existe. Criar passa a ter TRÊS
+  passos; adotar, quatro ou cinco. E a tela de Confirmar deixa de anunciar "N
+  passos de Gitflow" — passaria a mentir no instante em que o bootstrap deixou
+  de rodar ali — e diz QUANDO o repositório nasce.
+
+  Saiu junto o aviso "no plano gratuito do GitHub, repositório privado não
+  aceita proteção de branch": não por ter deixado de ser verdade, mas por ter
+  ficado inalcançável — a condição era `provider === 'github'`, e ao criar não
+  há mais provider escolhido.
+
+  **Consequência declarada:** entre a criação e o handoff o projeto existe sem
+  repositório. Nada quebra (a api responde `null` e não 404, e a tela do projeto
+  já tem o estado "repositório não provisionado"), mas todo caminho que precise
+  de working tree falha NOMEADO até lá. **O gatilho vem na entrega seguinte** —
+  sem ele, um projeto criado hoje ficaria sem repositório para sempre.
+
+- **api**: o repositório git do projeto passa a nascer no **aceite do handoff do
+  Arquiteto para o Dev Lead** (RN-522). É o gatilho que a RN-541 tinha declarado
+  pendente — sem ele, um projeto criado ficaria sem repositório para sempre,
+  porque `ProvisioningPage` era o único chamador de `provisionRepository` no web
+  e a criação deixou de navegar para lá.
+
+  O momento é o aceite do handoff, e **não** a ativação da execução: são
+  instantes distintos, nesta ordem, e é no primeiro que "o desenvolvimento
+  começou" passa a ser verdade. O ramo mora em `AcceptHandoffUseCase`, ao lado
+  do ramo `infra` que já existia e pela mesma razão de ordem — o efeito acontece
+  **antes** do `activateAgent`, para o agente acordar num projeto que já tem
+  onde trabalhar.
+
+  **Sempre `local`**, porque é o único provider que não pede credencial nenhuma:
+  o `LocalGitProvider.createRepo` sequer lê o `accessToken` que a assinatura
+  aceita. É isso que torna um provisionamento **automático** possível — ninguém
+  escolheu hospedagem no meio do aceite, então não há credencial a resolver nem
+  pergunta a fazer. Publicar num provider remoto continua sendo caminho separado
+  (adoção, ou conversão em Configurações), declarado.
+
+  **A falha nunca derruba o aceite.** O caso de uso não tem transação: quando o
+  provisionamento roda, a transição para `accepted` e o evento `handoff.accepted`
+  já estão commitados, e um throw devolveria 500 sobre um handoff que no banco
+  foi aceito — além de impedir a ativação do agente por causa de uma falha de
+  git. O desfecho vai para o event log como `repository.provision_failed`, com
+  origem e a mensagem real, e o aceite segue.
+
+  Um caso que deliberadamente **não** é falha: projeto que ADOTOU um
+  repositório. A recusa da RN-045 existe para não rodar bootstrap em repositório
+  de terceiro, mas o projeto TEM repositório — registrar isso como falha
+  mentiria sobre o estado dele, então o ramo sai antes. Repositório `created`
+  que já existe não é pulado: cai na idempotência que o caso de uso já promete,
+  e é assim que um bootstrap interrompido se completa.
+
 - **engine**: o prompt de sumarização do `ContextManager` passa a resolver o
   template `context-manager-summarize` do grafo, com o texto inline como
   fallback obrigatório — fecha o ÚLTIMO dos quatro templates da leva da RN-413
