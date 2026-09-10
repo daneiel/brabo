@@ -7500,8 +7500,53 @@ de qualquer desenvolvedor com Ollama de pé — nunca o novo workflow, que
 invoca `mix golden_set.rag` explicitamente, do mesmo jeito que sempre foi
 preciso rodar manual.
 
+**Corrigido depois de medir: o workflow acima nunca rodou verde uma vez.**
+Cinco execuções agendadas seguidas (05 a 09/09/2026) falharam, e havia
+**três** defeitos empilhados, cada um escondendo o seguinte:
+
+1. **`mix golden_set.rag` é um alias que chama `test`, e o Mix recusa isso
+   fora do ambiente `:test`** — `** (Mix) "mix test" is running in the "dev"
+   environment` —, antes de rodar coisa alguma. `def cli` em
+   `apps/engine/mix.exs` passa a declarar `preferred_envs` para as DUAS
+   tasks de golden-set: é o que faz o comando curto, o único documentado em
+   toda parte, funcionar sem prefixo de ambiente. Exigir `MIX_ENV=test` de
+   quem chama seria transferir a correção para toda a prosa que ensina o
+   comando — e para quem esquecesse, de novo.
+2. **O job nunca subiu a api**, e o teste PULA quando `API_URL` não responde
+   (pré-condição de ambiente declarada no ADR 0132). Corrigido o item 1, o
+   job ficaria verde sem medir nada. Passa a subir a api de verdade (build,
+   `node dist/main.js`, espera do `/health`) — satisfazer a pré-condição, e
+   nunca afrouxar o teste, que seria mudar o julgamento para caber no CI.
+   Quem faz o trabalho continua sendo `seed-golden-set-rag.ts`, que sobe o
+   próprio contexto Nest; a instância existe para responder ao `/health`.
+3. **O seed morria em 409 no portão da imagem.** Ele criava o projeto como
+   `runner` justamente para ESCAPAR do portão (RN-105), apoiado na isenção
+   que a RN-169/RN-421 davam a `mounted`/`runner` — isenção **revogada pela
+   RN-494** (ADR 0135), com o comentário do script continuando a citá-la.
+   Agora o seed ATRAVESSA o portão pelo caminho real: decide a imagem por
+   `DecidirImagemDoProjetoUseCase`, o mesmo caso de uso do
+   `choose_project_image` do Arquiteto, numa sessão `consultiva` que ele
+   abre (o evento de decisão exige `session_id`, que é `NOT NULL`) — nunca
+   um INSERT de artefato à mão, que faria o golden-set medir contra um
+   estado que a produção não sabe produzir.
+
+**E o job passa a exigir que o golden-set tenha MEDIDO.** A guarda é a linha
+de resultado (`N/N casos acertaram`), que só é impressa depois de os 17
+casos rodarem; sem ela o passo reprova nomeando o motivo. Ela é necessária
+porque o `{:skip, motivo}` que o teste devolve do CORPO **é inerte** — não
+existe skip em runtime no ExUnit, e o que se vê é `Result: 1 passed`. Foi
+exatamente o que aconteceu ao medir: com o seed morrendo em 409, o teste
+passou. `excluded` NÃO serve de sinal aqui, ao contrário do que a guarda
+irmã de `ci.yml` verifica: a saída legítima traz mais de mil excluídos, que
+são todos os outros testes do engine, fora pela tag.
+
+Medido depois das três correções, nesta máquina, pelo caminho que o job
+passa a percorrer: **17/17 no top-5**, igual às duas rodadas manuais que
+gravaram o piso.
+
 - **Onde:** `.github/workflows/golden-set-rag.yml`, `docs/gates.yml`
-  (`rag-acertivo`)
+  (`rag-acertivo`), `apps/engine/mix.exs`,
+  `apps/api/scripts/seed-golden-set-rag.ts`
 - **ADR:** [0138](adr/0138-golden-set-do-rag-em-ci-agendado.md)
 - **Origem:** plano do dono do produto, Parte 2 / Etapa 3
 

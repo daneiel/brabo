@@ -503,6 +503,36 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **ci,engine,api**: o golden-set do RAG em CI
+  ([RN-498](docs/business-rules.md#rn-498)) **nunca rodou verde uma vez** —
+  cinco execuções agendadas seguidas, três defeitos empilhados.
+
+  **1. O Mix recusava antes de começar.** `mix golden_set.rag` é alias que
+  chama `test`, e fora do ambiente `:test` o Mix para com `** (Mix) "mix test"
+  is running in the "dev" environment`. `def cli` no `mix.exs` do engine passa
+  a declarar `preferred_envs` para as duas tasks de golden-set — o comando
+  curto é o único documentado em toda parte, e é ele que precisava funcionar.
+
+  **2. O job nunca subiu a api**, e o teste PULA quando `API_URL` não responde
+  ([ADR 0132](docs/adr/0132-golden-set-de-acerto-do-rag.md)) — corrigido o
+  item 1, o workflow ficaria verde sem medir nada. Agora sobe a api de verdade
+  e espera o `/health`: satisfazer a pré-condição, nunca afrouxar o teste.
+
+  **3. O seed morria em 409.** Ele criava o projeto como `runner` para escapar
+  do portão da imagem, apoiado numa isenção que a
+  [RN-494](docs/business-rules.md#rn-494) revogou — e o comentário do script
+  ainda citava a regra morta. Agora ele atravessa o portão pelo caminho real,
+  decidindo a imagem por `DecidirImagemDoProjetoUseCase`, o mesmo caso de uso
+  do Arquiteto.
+
+  **E o job passa a reprovar quando o golden-set não MEDE.** A guarda é a
+  linha de resultado, que só sai depois dos 17 casos. Ela é necessária porque
+  o `{:skip, motivo}` que o teste devolve do corpo **é inerte** — não há skip
+  em runtime no ExUnit —, e foi o que se viu ao medir: com o seed morto em
+  409, `Result: 1 passed`.
+
+  Medido depois das três correções, pelo caminho que o job passa a percorrer:
+  **17/17 no top-5**, igual às rodadas manuais que gravaram o piso.
 - **install**: o `install.sh` anunciava a quem instala que **não** migrava uma
   instalação anterior e **não** instalava o agente local — as duas coisas que
   ele faz.

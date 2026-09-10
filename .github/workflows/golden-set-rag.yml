@@ -124,6 +124,36 @@ jobs:
       - name: Migrations da api
         run: pnpm --filter api db:migrate
 
+      # O golden-set PULA (não falha) quando a api não responde em `API_URL`,
+      # e essa é a pré-condição de AMBIENTE que o ADR 0132 declara — num job
+      # cujo único propósito é medir, pular seria um verde que não mediu nada.
+      # Satisfazer a pré-condição é subir a api de verdade; afrouxar o teste
+      # seria mudar o julgamento para caber no CI.
+      #
+      # Note que quem faz o trabalho NÃO é esta api: `seed-golden-set-rag.ts`
+      # sobe o próprio contexto Nest (`createApplicationContext`) e chama
+      # `HybridSearchUseCase` direto. Esta instância existe para responder ao
+      # `/health` que o teste exige antes de aceitar medir.
+      - name: Build da api
+        run: pnpm --filter api build
+
+      - name: Subir a api e esperar o /health
+        working-directory: apps/api
+        run: |
+          set -euo pipefail
+          node dist/main.js > /tmp/api.log 2>&1 &
+          echo $! > /tmp/api.pid
+          for _ in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/health >/dev/null 2>&1; then
+              echo "api de pé"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::a api não respondeu em /health depois de 120s"
+          tail -50 /tmp/api.log
+          exit 1
+
       - name: mix deps.get
         working-directory: apps/engine
         run: mix deps.get
@@ -142,4 +172,34 @@ jobs:
       # NODE_ENV=production de propósito).
       - name: mix golden_set.rag
         working-directory: apps/engine
-        run: mix golden_set.rag
+        run: mix golden_set.rag 2>&1 | tee /tmp/golden-rag.log
+
+      # Guarda do falso-verde, a mesma de `ci.yml` ("Nenhum teste pode ter
+      # sido excluído além dos golden-sets"), aplicada ao caso inverso: lá o
+      # perigo é o golden-set rodar por acidente, aqui é ele NÃO rodar e o job
+      # passar assim mesmo. O teste pula por desenho quando a api ou o
+      # embedding faltam (ADR 0132) — desenho certo para uma rodada manual, e
+      # silêncio inaceitável para uma agendada, que ninguém está olhando.
+      #
+      # Duas asserções, porque uma só mentiria: a linha de resultado prova que
+      # os 17 casos foram avaliados, e a contagem de `skipped`/`excluded` pega
+      # o caso em que ExUnit reporta sucesso sem ter medido.
+      - name: O golden-set precisa ter RODADO, não pulado
+        run: |
+          set -euo pipefail
+          # A ASSERÇÃO é a linha de resultado: ela só é impressa depois de os
+          # 17 casos rodarem. `excluded` NÃO serve de sinal aqui — a saída
+          # legítima traz mil e tantos excluídos, que são todos os outros
+          # testes do engine, fora pela tag `:golden_set_rag`.
+          if ! grep -qE '[0-9]+/[0-9]+ casos acertaram' /tmp/golden-rag.log; then
+            echo "::error::o golden-set NÃO mediu — ExUnit reportou sucesso sem avaliar caso nenhum:"
+            grep -E 'inalcançável|indisponível|falhou|skipped|Seed do golden-set' /tmp/golden-rag.log || true
+            exit 1
+          fi
+          grep -E '[0-9]+/[0-9]+ casos acertaram' /tmp/golden-rag.log
+
+      # O log da api só interessa quando algo acima falhou — e aí interessa
+      # muito: "api inalcançável" e "seed falhou" têm causas diferentes.
+      - name: Log da api (só em falha)
+        if: failure()
+        run: tail -100 /tmp/api.log || true
