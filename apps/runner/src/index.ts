@@ -20,8 +20,10 @@
  * `exec.ts` (execução não-interativa), `pty.ts` (terminal interativo),
  * `guard.ts` (barreira best-effort de `cwd`), `fs-browser.ts` (navegação
  * de pasta local, sem a barreira de `guard.ts` — ver o docblock dele),
- * `espelho-guard.ts` (o laço origem↔destino, irmão de `guard.ts`) e
- * `espelho.ts` (a cópia numa direção só, que nunca apaga — ADR 0147, RN-516).
+ * `espelho-guard.ts` (o laço origem↔destino, irmão de `guard.ts`),
+ * `espelho.ts` (a cópia numa direção só, que nunca apaga — ADR 0147, RN-516),
+ * `base.ts` (de ONDE vem a base de projetos desta máquina) e `base-guard.ts`
+ * (a base e a subpasta de cada projeto dentro dela — ADR 0151, RN-529).
  */
 
 import { realpathSync } from 'node:fs';
@@ -32,7 +34,9 @@ import {
   obterTicketDoRunnerComCredencial,
   type CredencialDeAutenticacao,
 } from './auth.ts';
+import { resolverBaseConsentida } from './base.ts';
 import {
+  capacidadesDoRunner,
   conectarCanal,
   enviarContainerRemoveResult,
   enviarContainerStartResult,
@@ -45,6 +49,7 @@ import {
   enviarPtyError,
   enviarPtyOpened,
   enviarWorkspaceConfirm,
+  enviarWorkspaceCreateResult,
   JoinRecusadoError,
   type ChannelLike,
   type ContainerRemoveMessage,
@@ -56,6 +61,7 @@ import {
   type MirrorSyncMessage,
   type MirrorSyncResultMessage,
   type PtyOpenMessage,
+  type WorkspaceCreateMessage,
 } from './channel.ts';
 import {
   estadoDaChaveDeDispositivo,
@@ -94,6 +100,7 @@ import {
   validarDirDentroDoHomeNoLinux,
 } from './guard.ts';
 import { carregarNodePty } from './native-pty-loader.ts';
+import { criarPastaDoProjeto, CriacaoDePastaRecusadaError } from './pasta-do-projeto.ts';
 import { GerenciadorDePty } from './pty.ts';
 import {
   desinstalar,
@@ -111,6 +118,14 @@ interface Argumentos {
   dir: string;
   apiUrl: string;
   credencial: CredencialDeAutenticacao;
+  /**
+   * A BASE de projetos desta máquina (ADR 0151 ponto 1, RN-529), ou `null` —
+   * que é o estado NORMAL, e é o binário legado da RN-514 continuando a
+   * funcionar. Ela NÃO substitui `dir`: `dir` é a raiz DESTE projeto, a base é
+   * onde uma pasta de projeto NOVA vai nascer. Ver `base-guard.ts` para por
+   * que a regra da base não desce para a validação de `--dir`.
+   */
+  base: string | null;
 }
 
 function uso(): never {
@@ -127,6 +142,13 @@ function uso(): never {
     '--dir: se a pasta ainda não existir, ela é criada automaticamente (dentro do ' +
       '$HOME no Linux, RN-434/RN-435). Se apontar para um arquivo existente, é erro. ' +
       'Omitida, a raiz é a própria pasta de onde o comando roda.',
+  );
+  console.error(
+    '--base: a pasta desta máquina sob a qual cada projeto é uma SUBPASTA (ADR 0151). ' +
+      'Opcional e independente de --dir, que continua sendo a raiz DESTE projeto: a base ' +
+      'só decide onde uma pasta de projeto NOVA nasce. Omitida, é lida de ' +
+      '$XDG_CONFIG_HOME/brabo/runner.json (senão ~/.config/brabo/runner.json), onde o ' +
+      'instalador a grava; sem arquivo e sem flag, o runner roda sem base, como sempre.',
   );
   console.error(
     'Autenticação: --token <brb_...>, ou BRABO_ACCOUNT_TOKEN no ambiente. Gere em ' +
@@ -291,6 +313,45 @@ function lerArgumentos(argv: string[]): Argumentos {
     throw erro;
   }
 
+  // A BASE (ADR 0151 ponto 1, RN-529) — DEPOIS de `garantirDiretorio` de
+  // propósito: a recusa de laço compara a base contra `dir`, e comparar
+  // contra um caminho que ainda não existe deixaria a segunda passada
+  // (`realpath`) resolvendo um ancestral em vez da raiz de verdade.
+  //
+  // A base NÃO participou de nenhuma linha acima, e isso é a decisão, não
+  // esquecimento: `--dir` continua validado exatamente como sempre, e estar
+  // FORA da base não o invalida (ver o docblock de `base-guard.ts`, que
+  // transpõe a proibição escrita em `project-workspaces-root.ts`).
+  let baseFlag: string | undefined;
+  if (flagInformado('--base')) {
+    baseFlag = valorDe('--base');
+    if (!baseFlag || baseFlag.startsWith('--')) uso();
+  }
+  const baseResolvida = resolverBaseConsentida(
+    baseFlag,
+    homedir(),
+    process.env.XDG_CONFIG_HOME ?? null,
+    { plataforma: process.platform, home: homedir(), raizDoProjeto: dir },
+  );
+  let base: string | null = null;
+  if (baseResolvida.estado === 'ok') {
+    base = baseResolvida.base;
+  } else if (baseResolvida.estado === 'recusada') {
+    console.error(baseResolvida.mensagem);
+    if (baseResolvida.origem === 'flag') {
+      // Pedido EXPLÍCITO digitado agora e impossível de honrar — mesma
+      // disposição de `--dir` recusado, logo acima.
+      process.exit(2);
+    }
+    // Arquivo gravado pelo instalador. Recusar aqui derrubaria um runner que
+    // nem usa a base — mas ficar CALADO seria o defeito que este repositório
+    // não aceita, então a recusa é dita e o que se perde é nomeado.
+    console.error(
+      'Seguindo SEM base: este runner continua atendendo este projeto normalmente, ' +
+        'mas não terá onde criar a pasta de um projeto novo.',
+    );
+  }
+
   // `--token`/`BRABO_ACCOUNT_TOKEN` sempre vence a chave de dispositivo
   // local quando ambos existem — mesmo critério de "flag explícita vence
   // arquivo local" usado acima para `--project`/`--api-url`.
@@ -327,7 +388,7 @@ function lerArgumentos(argv: string[]): Argumentos {
     uso();
   }
 
-  return { projectId, dir, apiUrl, credencial };
+  return { projectId, dir, apiUrl, credencial, base };
 }
 
 function mensagemDeErro(erro: unknown): string {
@@ -381,6 +442,18 @@ export interface EstadoDoRunner {
    * o que este processo já não pode confirmar.
    */
   destinoDoEspelho: string | null;
+  /**
+   * A BASE de projetos desta máquina (ADR 0151 ponto 1, RN-529), ou `null` —
+   * o estado NORMAL. Ao contrário de `destinoDoEspelho`, ela NÃO vem da
+   * concessão do join e NÃO é zerada quando a conexão cai: a base é LOCAL,
+   * consentida no instalador, e nunca recebida pela rede. É o desenho do
+   * broker (ADR 0144) — quem tem a raiz é quem executa, e o que viaja é o
+   * SEGMENTO.
+   *
+   * `dir` continua sendo a raiz DESTE projeto e não deriva daqui: os dois
+   * convivem, e um projeto legado fora da base segue válido.
+   */
+  base: string | null;
 }
 
 export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Promise<void> {
@@ -664,6 +737,75 @@ function reportarEspelho(estado: EstadoDoRunner, msg: MirrorSyncResultMessage): 
 }
 
 /**
+ * `workspace_create` (ADR 0151 ponto 3, RN-532) — o engine pede a pasta de um
+ * projeto sob a base LOCAL, mandando só o SEGMENTO relativo; quem tem a raiz é
+ * este processo (RN-529).
+ *
+ * ## A confirmação REUSA `workspace_confirm`, e a ORDEM é o mecanismo
+ *
+ * Tendo dado certo, o `workspace_confirm` que já existe desde a RN-423 é
+ * empurrado ANTES do `workspace_create_result`. Não é estética: os dois chegam
+ * ao MESMO processo de canal, em ordem, e aquele handler é síncrono (ele chama
+ * a api por HTTP interno e só então volta). Empurrar o confirm primeiro é o que
+ * garante que, quando o pedinte destravar do `receive`,
+ * `workspace_verified_at` já foi carimbado — sem nenhuma rota nova de gravação,
+ * sem o engine escrever tabela, e com o único caminho que carimba continuando
+ * a ser um só.
+ *
+ * ## As duas saídas reportam, sempre
+ *
+ * Ao contrário de `mirror_sync_result` (fire-and-forget dos dois lados), aqui
+ * há alguém BLOQUEADO esperando — o molde de `exec_result`/
+ * `container_start_result`. Recusa e falha viram `sucesso: false` com o motivo
+ * NOMEADO, nunca exceção que derruba o runner e nunca silêncio: silêncio aqui
+ * apareceria do outro lado como timeout, escondendo a causa.
+ */
+export async function tratarWorkspaceCreate(
+  estado: EstadoDoRunner,
+  msg: WorkspaceCreateMessage,
+): Promise<void> {
+  const canal = estado.canalAtual;
+  if (!canal) return;
+
+  try {
+    const resultado = await criarPastaDoProjeto({
+      base: estado.base,
+      segmento: msg.segmento,
+      repoUrl: msg.repoUrl,
+      env: msg.env,
+    });
+
+    if (estado.canalAtual !== canal) return; // conexão caiu enquanto o git rodava
+
+    // `msg.env` NUNCA aparece aqui, pelo mesmo motivo do `exec` (ADR 0145).
+    console.log(
+      `workspace_create ${msg.ref}: ${resultado.caminho} (${resultado.modo}) ` +
+        `para o projeto ${msg.projectId}`,
+    );
+
+    enviarWorkspaceConfirm(canal, { path: resultado.caminho });
+    enviarWorkspaceCreateResult(canal, {
+      ref: msg.ref,
+      sucesso: true,
+      caminho: resultado.caminho,
+    });
+  } catch (erro) {
+    if (estado.canalAtual !== canal) return;
+    const explicacao = mensagemDeErro(erro);
+    console.warn(`workspace_create ${msg.ref}: recusado — ${explicacao}`);
+    enviarWorkspaceCreateResult(canal, {
+      ref: msg.ref,
+      sucesso: false,
+      // O motivo NOMEADO é o que o engine DECIDE em cima; o texto é o que um
+      // humano lê. Erro que não é do vocabulário deste módulo vira
+      // `desconhecido` em vez de se disfarçar de um dos cinco.
+      motivo: erro instanceof CriacaoDePastaRecusadaError ? erro.motivo : 'desconhecido',
+      erro: explicacao,
+    });
+  }
+}
+
+/**
  * Uma "rodada" de conexão: pede um ticket FRESCO, entra no canal, e só volta
  * quando a conexão cai (ou lança se o join for recusado/não puder
  * conectar). A `credencial` é resolvida uma vez só, em `lerArgumentos` — mas
@@ -706,8 +848,13 @@ async function conectarERodar(
       onContainerStop: (msg) => void tratarContainerStop(estado, msg),
       onContainerRemove: (msg) => void tratarContainerRemove(estado, msg),
       onMirrorSync: (msg) => void tratarMirrorSync(estado, msg),
+      onWorkspaceCreate: (msg) => void tratarWorkspaceCreate(estado, msg),
       onDisconnected: () => resolverQueda(),
     },
+    // ADR 0151 ponto 4 (RN-532): `workspace` só é declarada quando ESTA
+    // execução tem base consentida — declarar o que não se pode fazer é
+    // exatamente o defeito que a negociação existe para impedir (RN-514).
+    capacidades: capacidadesDoRunner(estado.base),
   });
 
   estado.canalAtual = conexao.channel;
@@ -728,6 +875,14 @@ async function conectarERodar(
   estado.canalAtual = null;
   // A concessão morre com a conexão, junto com o canal — ver `EstadoDoRunner`.
   estado.destinoDoEspelho = null;
+  // A conexão caída é DESCARTADA de propósito, e explicitamente: sem isto o
+  // objeto `Socket` da rodada anterior ficava vivo depois de o `while` de
+  // `main()` já ter criado outro, e cada queda deixava mais um para trás. Com
+  // o auto-reconnect da lib ligado — o defeito que este mesmo commit fecha em
+  // `channel.ts` — cada abandonado seguia tentando com o ticket já consumido,
+  // e era isso que multiplicava a rajada. `desconectar()` é seguro sobre um
+  // transporte já fechado, e é ele quem cancela o timer de reconexão da lib.
+  conexao.desconectar();
   if (!deveParar()) {
     console.warn('conexão com o engine caiu — pedindo ticket novo e reconectando...');
   }
@@ -870,7 +1025,7 @@ async function main(): Promise<void> {
     process.exit(resposta.codigo);
   }
 
-  const { projectId, dir, apiUrl, credencial } = lerArgumentos(process.argv);
+  const { projectId, dir, apiUrl, credencial, base } = lerArgumentos(process.argv);
 
   const autenticacaoDescricao =
     credencial.tipo === 'token'
@@ -880,6 +1035,9 @@ async function main(): Promise<void> {
     `brabo-runner — projeto ${projectId}, raiz ${dir}, api ${apiUrl}, ` +
       `autenticação: ${autenticacaoDescricao}`,
   );
+  // Dito SEMPRE, nos dois estados: "sem base" é o caso normal, e omiti-lo
+  // deixaria alguém procurando por que a pasta do projeto novo não apareceu.
+  console.log(base ? `base de projetos: ${base}` : 'base de projetos: nenhuma configurada');
 
   // Resolvido UMA vez, antes de montar o estado — normal `import('node-pty')`
   // sob `node dist/index.cjs`/`bun run src/index.ts`; extraído do binário
@@ -894,6 +1052,7 @@ async function main(): Promise<void> {
     docker: new DockerViaCli(),
     containerAtivo: null,
     destinoDoEspelho: null,
+    base,
     gerenciadorPty: new GerenciadorDePty(
       dir,
       (sessionRef, dataBase64) => {

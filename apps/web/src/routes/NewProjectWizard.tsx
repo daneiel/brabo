@@ -30,7 +30,10 @@ import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
 import { useToast } from '../components/ui/ToastProvider';
 import { GitHubIcon, GitLabIcon, LocalRepoIcon, PlusIcon, FolderIcon } from '../components/ui/icons';
-import { FolderBrowserModal } from '../components/FolderBrowserModal';
+import {
+  FolderBrowserModal,
+  type OrigemDoNavegador,
+} from '../components/FolderBrowserModal';
 import { RunnerOnboardingPanel } from '../components/RunnerOnboardingPanel';
 import styles from './NewProjectWizard.module.css';
 
@@ -171,13 +174,12 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
   const [caminhoSugeridoAplicado, setCaminhoSugeridoAplicado] = useState<
     string | null
   >(null);
-  // Navegação de pasta local via o Runner (ADR 0107/ADR 0108). No modo
-  // `mounted` o projeto ainda não existe nesta tela (só nasce na
-  // confirmação) e o modal abre no estado declarado — ver
-  // `FolderBrowserModal` sobre `projectId: null`. No modo `runner`, o
-  // clique em "Procurar pasta..." cria o projeto ANTECIPADAMENTE
-  // (`handleProcurarPasta`) para poder ancorar o ticket do canal a um
-  // `projectId` real — `projetoParaNavegar` guarda o id criado e o
+  // Navegação de pasta (ADR 0107/0108, RN-504, RN-533). No modo `mounted` o
+  // modal fala com a API e não precisa de projeto nenhum: a base é da
+  // INSTALAÇÃO. No modo `runner` ele fala com o agente local pelo canal, e o
+  // ticket desse canal é escopado a um `projectId` real — por isso o clique
+  // em "Procurar pasta..." cria o projeto ANTECIPADAMENTE
+  // (`handleProcurarPasta`), e `projetoParaNavegar` guarda o id criado com o
   // SNAPSHOT de identidade que autorizou a criação, pra saber quando é
   // seguro reusar em vez de criar de novo.
   const [navegadorDePastaAberto, setNavegadorDePastaAberto] = useState(false);
@@ -244,6 +246,23 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       : podeOferecerMounted
         ? 'mounted'
         : 'container';
+
+  /**
+   * DE ONDE o navegador de pastas lê o disco, decidido pelo MODO (RN-533).
+   *
+   * `undefined` só acontece em `runner` antes de a criação antecipada ter
+   * dado certo — e aí o modal simplesmente não monta, porque
+   * `handleProcurarPasta` nem chega a abri-lo. Representar isso como
+   * `undefined` em vez de cair no transporte de api é deliberado: o silêncio
+   * é honesto, e o fallback mostraria o disco do SERVIDOR a quem escolheu
+   * o modo em que a pasta mora na máquina dele.
+   */
+  const origemDoNavegador: OrigemDoNavegador | undefined =
+    modoDeWorkspace === 'runner'
+      ? projetoParaNavegar
+        ? { tipo: 'runner', projectId: projetoParaNavegar.id }
+        : undefined
+      : { tipo: 'api', workspaceId };
 
   // Campo VAZIO não é "fora da base": não há caminho para a api recusar
   // ainda, e alarmar antes de a pessoa digitar seria a tela afirmando sobre
@@ -373,12 +392,17 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
 
   /**
    * "Procurar pasta..." (RN-437, ADR 0108). Fora do modo `runner`, só abre o
-   * modal — comportamento de sempre, `projectId: null` (ver
-   * `FolderBrowserModal`). No modo `runner`, o modal precisa de um projeto
-   * real pra ancorar o ticket do canal: se já existe um criado
-   * ANTECIPADAMENTE e a identidade (nome/externalId/adotando) não mudou
-   * desde então, reusa; senão cria agora, com o caminho digitado ou o
+   * modal — ele navega a base pela API, que não depende de projeto nenhum
+   * existir (RN-504). No modo `runner`, o modal precisa de um projeto real
+   * pra ancorar o ticket do canal do agente local (RN-533): se já existe um
+   * criado ANTECIPADAMENTE e a identidade (nome/externalId/adotando) não
+   * mudou desde então, reusa; senão cria agora, com o caminho digitado ou o
    * placeholder provisório.
+   *
+   * Falhar aqui NÃO abre o modal — sem projeto não há transporte de runner a
+   * montar, e abrir "no que der" cairia na base do servidor com o rótulo
+   * errado. O toast diz que a preparação falhou, e o campo de texto continua
+   * sendo o caminho que sempre funcionou.
    */
   async function handleProcurarPasta() {
     if (modoDeWorkspace !== 'runner') {
@@ -860,28 +884,32 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         </div>
       </div>
     </Modal>
-    {navegadorDePastaAberto && (
-      // A navegação passa a ser servida pela API, escopada à base de projetos
-      // montados (RN-504) — nos DOIS modos, e não só em `mounted`.
+    {navegadorDePastaAberto && origemDoNavegador && (
+      // O transporte é escolhido pelo MODO, e são duas perguntas diferentes
+      // (RN-533, ADR 0151 ponto 7).
       //
-      // O que isso resolve: antes, `mounted` abria o modal com
-      // `projectId={null}` e ele não navegava nada (o projeto só nasce na
-      // confirmação), e `runner` só navegava porque o assistente CRIAVA o
-      // projeto antecipadamente para ter um id a passar (RN-437, ADR 0108).
-      // A base da instalação não depende de projeto nenhum existir, então o
-      // primeiro caso deixa de ser um estado declarado e vira navegação de
-      // verdade.
+      // `mounted` pergunta à API, escopado à base de projetos montados
+      // (RN-504): a pasta dele mora dentro de `BRABO_PROJECTS_BASE`, no
+      // SERVIDOR, e é o servidor quem a enxerga. Este caminho fica intacto.
       //
-      // O preço, declarado: para `runner` a lista deixa de ser o disco da
-      // máquina do usuário e passa a ser a base — e a pasta de um projeto
-      // `runner` não precisa morar lá. É aceito porque o modo `runner` sai da
-      // criação de projeto no PR seguinte deste plano, junto com toda a
-      // criação antecipada; digitar o caminho continua funcionando enquanto
-      // isso. O transporte via runner (`connectFsBrowserChannel`) fica sem
-      // chamador no web a partir daqui, e continua no repositório por decisão
-      // declarada — o protocolo em `apps/runner/src/channel.ts` não muda.
+      // `runner` volta a perguntar ao AGENTE LOCAL, pelo canal Phoenix
+      // (`fs_list_dir`) que sempre existiu dos dois lados. A RN-504 o tinha
+      // apontado para a api junto com o `mounted`, e declarou o preço:
+      // "para `runner` a lista deixa de ser o disco da máquina do usuário e
+      // passa a ser a base". Aquilo foi aceito porque o modo `runner` sairia
+      // da criação de projeto — o que não aconteceu, e a direção de produto
+      // do ADR 0151 é a oposta. Enquanto isso durou, escolher `runner` e
+      // clicar "Procurar pasta..." navegava um disco que não é o daquele
+      // projeto, e nada na tela dizia isso.
+      //
+      // A âncora do modo `runner` é o projeto criado ANTECIPADAMENTE
+      // (RN-437, ADR 0108) — o ticket do canal é escopado a um `projectId`
+      // real —, e é por isso que `origemDoNavegador` pode ser `undefined`:
+      // sem projeto criado não há transporte a montar, e abrir o modal caindo
+      // na api mostraria a base do servidor sob o rótulo de "sua máquina",
+      // que é exatamente o que esta entrega existe para acabar.
       <FolderBrowserModal
-        origem={{ tipo: 'api', workspaceId }}
+        origem={origemDoNavegador}
         caminhoInicial={caminhoLocal.trim() || undefined}
         onSelecionar={(caminho) => setCaminhoLocal(caminho)}
         onClose={() => setNavegadorDePastaAberto(false)}

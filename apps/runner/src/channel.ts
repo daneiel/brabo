@@ -16,10 +16,27 @@
  * (RN-108)
  *
  * O ticket é de USO ÚNICO — reconectar com o MESMO ticket nunca funciona.
- * `reconnectAfterMs` embutido do `Phoenix.Socket` é por isso neutralizado
- * (ver `index.ts`, que é quem decide a política de reconexão: busca ticket
- * NOVO via HTTP antes de cada tentativa, com backoff). Este módulo não
- * decide política de retry — só conecta UMA vez e resolve/rejeita.
+ * Por isso o `reconnectAfterMs` embutido do `Phoenix.Socket` é neutralizado
+ * AQUI, na construção do socket (`NUNCA_RECONECTAR_SOZINHO_MS`), como
+ * `session-channel.ts`/`terminal-channel.ts` do web já faziam. Quem decide
+ * política de reconexão é `index.ts`: ticket NOVO via HTTP antes de cada
+ * tentativa, backoff e teto de tentativas seguidas. Este módulo não decide
+ * política de retry — só conecta UMA vez e resolve/rejeita.
+ *
+ * ### O comentário que afirmava isto sem lastro
+ *
+ * Até a RN-108 voltar a ser cumprida no código (ver CHANGELOG), este
+ * docblock DIZIA que o `reconnectAfterMs` era "por isso neutralizado" e
+ * NADA o neutralizava: `new Socket(url, { params: { ticket } })` deixava o
+ * auto-reconnect da lib ligado, e ele repetia com os MESMOS params. Medido
+ * em execução real: o engine recusando o mesmo ticket a cada ~5,13s (o teto
+ * do backoff interno do phoenix.js), 61 `REFUSED CONNECTION TO
+ * EngineWeb.RunnerSocket` em poucas horas, e o `RATE_LIMIT_USER` da api
+ * (300 req/min) estourado — 530 requisições num minuto, cobradas do USUÁRIO
+ * dono da conta, que via 429 no NAVEGADOR. Um revisor que lesse este
+ * comentário parava de procurar exatamente aqui; por isso a opção passou a
+ * ser OBRIGATÓRIA no tipo `OpcoesDoSocket` e é asserida em teste
+ * (`channel.spec.ts`) — comentário não é mecanismo.
  */
 
 export interface ExecMessage {
@@ -115,6 +132,57 @@ export interface FsHomeDirReplyMessage {
 /** RN-423 (ADR 0104) — o caminho que este runner recebeu por `--dir`. */
 export interface WorkspaceConfirmMessage {
   path: string;
+}
+
+/**
+ * `workspace_create` (ADR 0151 ponto 3, RN-532) — o engine pede a CRIAÇÃO da
+ * pasta de um projeto sob a base LOCAL deste runner. Só o servidor origina; o
+ * runner responde `workspace_create_result`.
+ *
+ * Molde de PEDIDO COM RESPOSTA (`exec`/`exec_result`), e não o de
+ * `workspace_confirm` — este é UNIDIRECIONAL do outro lado (o canal responde
+ * `{:noreply, socket}` e não empurra nada de volta), e quem pede a criação
+ * precisa saber se deu certo.
+ *
+ * `segmento` é RELATIVO à base, e é o ÚNICO pedaço de caminho que atravessa a
+ * rede: a base é local, consentida no instalador (RN-529), e nunca vem do
+ * servidor. É o invariante do ADR 0130/0144 — quem tem a raiz é quem executa.
+ * Um segmento absoluto é RECUSADO por léxico em `base-guard.ts`, nunca aceito
+ * e reinterpretado.
+ *
+ * `repoUrl` ausente é `git init` (projeto novo); presente é `git clone`.
+ * `env` é a credencial de git (ADR 0056), pelo MESMO mecanismo que a RN-507/ADR
+ * 0145 acrescentou ao `exec`: mesclada sobre `process.env` no processo filho do
+ * HOST, nunca repassada a `docker exec` e nunca logada. É o que faz o ADR 0151
+ * poder declarar que este clone não sofre da lacuna da credencial descartada.
+ */
+export interface WorkspaceCreateMessage {
+  ref: string;
+  projectId: string;
+  segmento: string;
+  repoUrl?: string;
+  env?: Record<string, string>;
+}
+
+/**
+ * `workspace_create_result` (ADR 0151 ponto 3, RN-532) — sucesso com o caminho
+ * FINAL, ou erro NOMEADO.
+ *
+ * `motivo` é um código curto (`sem-base`, `segmento`, `nao-e-pasta`, `mkdir`,
+ * `git`) e existe separado de `erro` de propósito: `erro` é o texto que um
+ * humano lê, `motivo` é o que o outro lado DECIDE em cima. Colapsar os dois
+ * obrigaria o engine a casar substring de pt-BR.
+ *
+ * `caminho` só vem no sucesso, e é o mesmo que segue no `workspace_confirm`
+ * empurrado logo antes dele — é ele, e nunca este resultado, que GRAVA
+ * (ADR 0151 ponto 3: nenhuma rota nova de gravação nasce).
+ */
+export interface WorkspaceCreateResultMessage {
+  ref: string;
+  sucesso: boolean;
+  caminho?: string;
+  motivo?: string;
+  erro?: string;
 }
 
 /**
@@ -252,6 +320,7 @@ export interface RunnerChannelHandlers {
   onContainerStop: (msg: ContainerStopMessage) => void;
   onContainerRemove: (msg: ContainerRemoveMessage) => void;
   onMirrorSync: (msg: MirrorSyncMessage) => void;
+  onWorkspaceCreate: (msg: WorkspaceCreateMessage) => void;
   /** Chamado quando a conexão cai DEPOIS de já ter entrado no canal. */
   onDisconnected?: () => void;
 }
@@ -282,10 +351,30 @@ export interface SocketLike {
   channel(topic: string, params?: object): ChannelLike;
 }
 
+/**
+ * Opções passadas ao `Socket` da lib `phoenix`. `reconnectAfterMs` é
+ * OBRIGATÓRIO de propósito: é a única coisa que impede o auto-reconnect
+ * embutido de repetir para sempre com um ticket de uso único já consumido
+ * (RN-108). Tipo obrigatório em vez de opcional para que esquecê-lo seja
+ * erro de compilação, e não um comentário dizendo que alguém lembrou.
+ */
+export interface OpcoesDoSocket {
+  params: Record<string, unknown>;
+  reconnectAfterMs: () => number;
+}
+
 export type CriarSocket = (
   url: string,
-  opts: { params: Record<string, unknown> },
+  opts: OpcoesDoSocket,
 ) => SocketLike | Promise<SocketLike>;
+
+/**
+ * Um dia inteiro — na prática o auto-reconnect nunca dispara dentro da vida
+ * de um socket. MESMO valor e MESMO nome de `apps/web/src/lib/
+ * session-channel.ts` e `terminal-channel.ts`, que resolvem o mesmo problema
+ * com o mesmo ticket de uso único.
+ */
+const NUNCA_RECONECTAR_SOZINHO_MS = 24 * 60 * 60 * 1000;
 
 /** Join recusado pelo servidor (ticket inválido/expirado, segundo runner no mesmo projeto, etc). */
 export class JoinRecusadoError extends Error {
@@ -352,11 +441,50 @@ const criarSocketPadrao: CriarSocket = async (url, opts) => {
  */
 export const CAPACIDADES_DO_RUNNER = ['exec', 'pty', 'espelho'] as const;
 
+/**
+ * A QUARTA capacidade (ADR 0151 pontos 3 e 4, RN-532) — criar a pasta de um
+ * projeto sob a base local (`workspace_create`).
+ *
+ * Ela NÃO está em `CAPACIDADES_DO_RUNNER` porque não é incondicional: as três
+ * de lá este binário sabe fazer sempre, e esta depende de haver uma BASE
+ * consentida nesta execução (RN-529). Um runner sem base não tem onde criar
+ * pasta nenhuma, e declarar a capacidade mesmo assim seria exatamente o
+ * defeito que a negociação existe para impedir — a mensagem chegaria, o
+ * trabalho não aconteceria, e o servidor teria concedido com base numa
+ * afirmação falsa.
+ *
+ * Consequência declarada, e é o desenho: **a declaração desta capacidade É o
+ * que o servidor sabe sobre a base**. O engine não lê o disco do usuário e não
+ * tem tabela de bases — a segunda pré-condição do predicado dele
+ * (`Engine.Runners.PastaDoProjeto`) é respondida por esta linha, e por mais
+ * nenhuma.
+ */
+export const CAPACIDADE_DE_WORKSPACE = 'workspace';
+
+/**
+ * O que ESTE processo declara no `join`, DADA a base desta execução — as três
+ * incondicionais, mais `workspace` quando há base.
+ *
+ * É por isso que a capacidade é da CONEXÃO e não do binário: o mesmo executável
+ * declara conjuntos diferentes conforme foi consentida uma base ou não, e o
+ * servidor guarda o resultado em `socket.assigns`, nunca em tabela (ADR 0147).
+ */
+export function capacidadesDoRunner(base: string | null): string[] {
+  const declaradas: string[] = [...CAPACIDADES_DO_RUNNER];
+  if (base) declaradas.push(CAPACIDADE_DE_WORKSPACE);
+  return declaradas;
+}
+
 export interface ConectarCanalOpts {
   engineWsUrl: string;
   ticket: string;
   projectId: string;
   handlers: RunnerChannelHandlers;
+  /**
+   * O que declarar no `join`. Default: `CAPACIDADES_DO_RUNNER` (as três
+   * incondicionais) — quem tem base passa `capacidadesDoRunner(base)`.
+   */
+  capacidades?: readonly string[];
   /** Injetável para teste — default é a `Socket` real da lib `phoenix`. */
   criarSocket?: CriarSocket;
 }
@@ -403,7 +531,14 @@ export function conectarCanal(opts: ConectarCanalOpts): Promise<CanalConectado> 
 
   return new Promise((resolvePromise, rejectPromise) => {
     void (async () => {
-      const socket = await criar(engineWsUrl, { params: { ticket } });
+      const socket = await criar(engineWsUrl, {
+        params: { ticket },
+        // RN-108: o ticket é de USO ÚNICO. Sem isto, o auto-reconnect da lib
+        // repete com o MESMO `ticket` a cada ~5,13s para sempre — recusado
+        // toda vez, e martelando a api/engine em paralelo com a política de
+        // `index.ts`, que é a única que pede ticket NOVO.
+        reconnectAfterMs: () => NUNCA_RECONECTAR_SOZINHO_MS,
+      });
 
       socket.onError((erro: unknown) => {
         // Erro de transporte pode chegar antes OU depois do join resolver;
@@ -420,7 +555,7 @@ export function conectarCanal(opts: ConectarCanalOpts): Promise<CanalConectado> 
       // binário declara o que sabe fazer. Cópia mutável do `as const` —
       // atravessa a rede como JSON.
       const canal = socket.channel(`terminal:${projectId}`, {
-        capacidades: [...CAPACIDADES_DO_RUNNER],
+        capacidades: [...(opts.capacidades ?? CAPACIDADES_DO_RUNNER)],
       });
 
       canal
@@ -562,6 +697,28 @@ function registrarHandlers(canal: ChannelLike, handlers: RunnerChannelHandlers):
       });
     }
   });
+
+  // `projectId` e `segmento` são OBRIGATÓRIOS: sem os dois não há pedido, e
+  // "crie a pasta que você achar" é exatamente a forma que este protocolo não
+  // pode ter. `repoUrl` ausente é `git init` (o caso do projeto novo);
+  // `env` passa pelo MESMO filtro do `exec`, para um payload malformado nunca
+  // virar ambiente arbitrário do processo filho.
+  canal.on('workspace_create', (payload: unknown) => {
+    const msg = payload as Partial<WorkspaceCreateMessage>;
+    if (
+      typeof msg?.ref === 'string' &&
+      typeof msg.projectId === 'string' &&
+      typeof msg.segmento === 'string'
+    ) {
+      handlers.onWorkspaceCreate({
+        ref: msg.ref,
+        projectId: msg.projectId,
+        segmento: msg.segmento,
+        repoUrl: typeof msg.repoUrl === 'string' ? msg.repoUrl : undefined,
+        env: envValido(msg.env) ? msg.env : undefined,
+      });
+    }
+  });
 }
 
 export function enviarExecResult(canal: ChannelLike, msg: ExecResultMessage): void {
@@ -579,6 +736,20 @@ export function enviarWorkspaceConfirm(
   msg: WorkspaceConfirmMessage,
 ): void {
   canal.push('workspace_confirm', msg);
+}
+
+/**
+ * ADR 0151 ponto 3 (RN-532) — o desfecho do `workspace_create`, correlacionado
+ * pelo MESMO `ref` que veio no pedido. Ao contrário de `mirror_sync_result`,
+ * aqui há alguém BLOQUEADO esperando do outro lado (o molde de
+ * `exec_result`/`container_start_result`), e por isso ele nunca pode deixar de
+ * ser enviado: sem ele o pedinte veria um TIMEOUT no lugar da causa.
+ */
+export function enviarWorkspaceCreateResult(
+  canal: ChannelLike,
+  msg: WorkspaceCreateResultMessage,
+): void {
+  canal.push('workspace_create_result', msg);
 }
 
 export function enviarPtyOpened(canal: ChannelLike, msg: PtyOpenedMessage): void {

@@ -442,6 +442,32 @@ changelog, with no error at all.
 The `v*` pattern covers the three forms the pipeline creates: `-dev.N`,
 `-qa.N`, and the final one. Only `tag-release` can create them.
 
+> **What a final tag runs, and why none of it is a required check.**
+> Pushing `vX.Y.Z` fires `release.yml`, `build-runner-binaries.yml` and
+> `publish-runner.yml` in parallel. Their jobs never appear in the
+> required-checks table above, and that is structural rather than an
+> omission: required checks gate a **pull request**, and by the time a
+> tag exists the PR has already merged. What gates the tag is the
+> ruleset — only `tag-release` creates it, and only after the pipeline
+> it runs at the end of.
+>
+> A final tag also fires `install-e2e.yml`, which exercises the published
+> `install.sh` on a **clean machine** — which is what an ephemeral Actions
+> runner is. It does not run on `pull_request`, and the reason is the same one
+> that keeps signing out of PRs: the signed manifest only exists after a final
+> tag, and making the script run there would mean giving it a door to skip
+> verification ([RN-534](../business-rules.md#rn-534)).
+>
+> Since [ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md),
+> `build-runner-binaries.yml` has **two** jobs rather than one: the
+> `build` matrix (five targets, `fail-fast: false`) and a `checksums`
+> job that waits for it. The second runs with `if: always()` on
+> purpose — a target that failed to build must not deny the other four
+> a signed manifest — and it names in the log which targets the manifest
+> does **not** cover, because a `checksums.txt` that lists four and stays
+> quiet about the fifth is worse than none: whoever verifies the four
+> concludes they verified the release.
+
 ### Bypass
 
 | who | mode |

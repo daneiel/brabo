@@ -1,0 +1,141 @@
+name: E2E do instalador
+
+# PROVA o `install.sh` numa máquina limpa — e o runner efêmero do Actions é
+# exatamente isso: um host recém-criado, sem Brabo, sem `.env`, sem marcador.
+#
+# POR QUE NÃO RODA EM `pull_request`, que seria o óbvio: o instalador verifica a
+# própria origem contra o `checksums.txt` ASSINADO de uma Release (RN-526), e
+# esse manifesto só existe depois de uma tag final. Em PR não há o que
+# verificar, e a única forma de fazer o script rodar ali seria dar-lhe uma porta
+# para PULAR a verificação — precisamente a porta que o ADR 0150 recusa, e que
+# uma vez aberta valeria para qualquer um, não só para o CI.
+#
+# Mesma decisão, pelo mesmo motivo, do golden-set do RAG
+# (`golden-set-rag.yml`, ADR 0138): o que não é exercitável em PR roda em
+# cadência própria, e o workflow diz por quê em vez de fingir cobertura.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag final a exercitar (ex.: v1.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read # só baixa a Release; não publica nada
+
+concurrency:
+  group: install-e2e-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  instalar:
+    name: install.sh (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - name: Qual tag
+        id: alvo
+        env:
+          ENTRADA: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+            tag="$ENTRADA"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      # A Release nasce alguns minutos depois da tag, e este workflow dispara
+      # junto com `release.yml`. Mesma corrida que `build-runner-binaries.yml`
+      # documenta e resolve do mesmo jeito: espera LIMITADA, e ausência que
+      # PERSISTE pelo teto é erro explícito.
+      - name: Esperar a Release existir
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.alvo.outputs.tag }}
+        run: |
+          set -euo pipefail
+          limite=$(( SECONDS + 900 ))
+          until gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; do
+            if [ "$SECONDS" -ge "$limite" ]; then
+              echo "::error::a Release de $TAG não existe depois de 900s — este workflow só EXERCITA uma Release existente."
+              exit 1
+            fi
+            sleep 20
+          done
+
+      # O `install.sh` vem da RELEASE, não do checkout — é o arquivo que uma
+      # pessoa de verdade baixa, e é ele que precisa provar que funciona. Baixar
+      # do checkout testaria um arquivo que ninguém executa.
+      - name: Baixar o instalador publicado
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.alvo.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'install.sh' --dir .
+          chmod +x install.sh
+
+      # PRIMEIRO os modos que não tocam nada. Se o plano já mentir, o resto do
+      # job é ruído.
+      - name: O plano e o estado, numa máquina limpa
+        run: |
+          set -euo pipefail
+          NO_COLOR=1 ./install.sh --print-state | tee estado.txt
+          grep -q 'marcador-existe	nao' estado.txt \
+            || { echo "::error::máquina limpa e o instalador diz que há marcador"; exit 1; }
+          grep -qE '^sinal' estado.txt \
+            && { echo "::error::máquina limpa e o instalador achou sinais de instalação"; exit 1; }
+
+          NO_COLOR=1 ./install.sh --print-plan | tee plano.txt
+          grep -q 'apagar-base-de-projetos	nunca' plano.txt || { echo "::error::o plano deixou de prometer que nunca apaga a base"; exit 1; }
+          grep -q 'apagar-pasta-de-espelho	nunca' plano.txt || { echo "::error::o plano deixou de prometer que nunca apaga o espelho"; exit 1; }
+          grep -q 'apagar-sem-backup-provado	nunca' plano.txt || { echo "::error::o plano deixou de prometer que não apaga sem backup provado"; exit 1; }
+
+      # Sem TTY o instalador RELATA e sai 0 — e isto é o que prova que ele não
+      # decide sozinho quando não pode perguntar. É também o único caminho do
+      # fluxo real que se exercita sem simular um terminal.
+      - name: Sem TTY, relata e sai bem
+        run: |
+          set -euo pipefail
+          NO_COLOR=1 ./install.sh < /dev/null > saida.txt 2>&1 || {
+            echo "::error::sem TTY o instalador deveria sair 0"
+            cat saida.txt
+            exit 1
+          }
+          grep -q 'Sem terminal interativo' saida.txt \
+            || { echo "::error::sem TTY, o instalador não disse que não decidiu nada"; cat saida.txt; exit 1; }
+          test ! -f "${XDG_STATE_HOME:-$HOME/.local/state}/brabo/install-state.json" \
+            || { echo "::error::sem TTY o instalador GRAVOU o marcador"; exit 1; }
+
+      # O fluxo completo exige um terminal, e `script -qec` dá um de verdade
+      # (não um pipe — que é justamente o que mataria o consentimento). As
+      # respostas vão por um arquivo, não por `echo |`, pelo mesmo motivo.
+      - name: Instalação completa, com TTY simulado
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          printf 'nao-migrar\n%s/projetos-brabo\ns\n' "$HOME" > respostas.txt
+          script -qec "NO_COLOR=1 ./install.sh --source=ghcr < respostas.txt" /dev/null | tee completa.txt || true
+
+          grep -q 'assinatura do manifesto confere' completa.txt \
+            || { echo "::error::a verificação de assinatura não passou"; exit 1; }
+          grep -q 'este arquivo é o que a Release publicou' completa.txt \
+            || { echo "::error::o instalador não conferiu o próprio hash"; exit 1; }
+          test -f "${XDG_STATE_HOME:-$HOME/.local/state}/brabo/install-state.json" \
+            || { echo "::error::a instalação terminou sem marcador"; exit 1; }
+          test "$(stat -c '%a' .env)" = '600' \
+            || { echo "::error::o .env não está com modo 600"; exit 1; }
+
+      - name: O que ficou de pé
+        if: always() && runner.os == 'Linux'
+        run: docker compose -f docker/docker-compose.install.yml ps 2>/dev/null || true
