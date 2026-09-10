@@ -6,9 +6,7 @@
     "mode": "Criar novo ou adotar existente",
     "provider": "Onde hospedar",
     "credential": "Credencial de acesso",
-    "details": "Nome e visibilidade",
-    "workspace": "Onde o código vai morar",
-    "policy": "Política de branches",
+    "details": "Onde o código vai morar",
     "confirm": "Confirmar"
   },
   "mode": {
@@ -86,12 +84,6 @@
       "placeholderId": "<id do projeto>",
       "note": "O runner confirma o caminho ao conectar — nenhum comando roda antes disso."
     }
-  },
-  "policy": {
-    "intro": "Ao provisionar, o bootstrap de Gitflow roda estes passos no repo:",
-    "note": "Cascata de promoção: <code>dev ← main</code>, <code>qa ← dev</code>. As permanentes recebem proteção",
-    "noteSuffixLocal": " — exceto no Local, que não tem proteção de branch (o passo é pulado com aviso).",
-    "noteSuffixDefault": " (main, qa, dev)."
   },
   "confirm": {
     "modeLabel": "Modo",
