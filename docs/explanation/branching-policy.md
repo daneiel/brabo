@@ -556,6 +556,15 @@ it reads and swaps all of them before writing any one of them: a phrase
 missing in either fails the whole release rather than leaving it half
 written.
 
+**The cut CONSUMES the `## Unreleased` section**, it does not prepend past
+it. That distinction is not cosmetic: prose written in each PR's
+`Unreleased` block is the *explanation* of what changed, and for five
+releases it never reached the published version — `changelog.mjs`
+prepended the generated section and left the hand-written one buried
+underneath, forever. The merge is per subsection title, with the
+**written** entries first (they explain) and the commit inventory after
+(it proves what went in).
+
 The three things move together on purpose. The version is **generatable**
 (the release knows what it is), and `docs:check` confirms it matches the
 CHANGELOG's most recent cut in each of the files; separating the two
