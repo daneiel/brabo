@@ -712,6 +712,33 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **runner,ci**: os binários de **macOS** e **Windows** nunca construíram — e
+  a matriz reprovava em toda tag, sempre pelo mesmo passo, por **duas** causas
+  diferentes.
+
+  **`darwin-arm64`** morria no `--self-test-pty` com `posix_spawnp failed`. O
+  `node-pty` precisa do **`spawn-helper`** ao lado do binding — `lib/unixTerminal.js`
+  monta `native.dir + '/spawn-helper'` e o C++ o executa —, e o build embutia
+  só `*.node`. Agora todo arquivo do diretório nativo entra (menos `.pdb`,
+  símbolo de depuração), e os executáveis são extraídos **com o bit de
+  execução**: `writeFileSync` não o preserva, e sem ele o erro é idêntico ao
+  de arquivo ausente.
+
+  **`win32-x64`** morria antes, no build, com *"build/Release existe mas não
+  tem nenhum .node dentro"*. É verdade e é o normal: o `post-install.js` do
+  node-pty limpa aquela pasta e move o `conpty/` para lá, enquanto os `.node`
+  vêm do `prebuilds/win32-x64`. A escolha do diretório passa a ser por
+  **conteúdo** — o que tem `.node` — e não por existência.
+
+  **E o workflow ganha modo de ENSAIO** (`workflow_dispatch` com a tag vazia):
+  constrói e roda o smoke nas cinco plataformas a partir de uma branch, sem
+  anexar nada. Era o que faltava para uma falha de plataforma aparecer antes
+  do corte, e não com a Release já publicada.
+
+  As duas correções têm teste com os layouts **fabricados** de cada
+  plataforma: nenhuma das duas falhas aparece no Linux, que é onde
+  `build:bin` roda antes do CI.
+
 - **changelog**: a prosa escrita nos PRs **nunca chegava à versão publicada**.
 
   `scripts/changelog.mjs` fazia `prepend` da seção gerada dos commits e
