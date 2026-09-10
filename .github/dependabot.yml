@@ -1,0 +1,57 @@
+# Dependabot — o que este arquivo liga, e o que ele NÃO consegue desligar.
+#
+# Antes dele, `cadeia-de-suprimentos-do-ci.md` declarava "No Dependabot", e
+# isso tinha deixado de ser verdade: os SECURITY UPDATES estão ligados na
+# INTERFACE do repositório (não em arquivo nenhum) e rodavam todo dia — em
+# `dev`, contra `npm_and_yarn in /., /website`, reprovando com
+# `Dependabot::DependabotError`. Um workflow vermelho por dia que ninguém lia.
+#
+# Por que eles falham, medido: os pacotes que ele tenta corrigir são os que
+# este repositório resolve por OVERRIDE em `pnpm-workspace.yaml` (`multer`,
+# `esbuild` e a lista inteira ao lado deles). Override é um mecanismo que o
+# Dependabot não sabe manipular — ele vê a árvore resolvida, tenta subir o
+# pacote no lugar onde ele não está declarado, e erra. O alerta que ele
+# persegue já está fechado; o que sobra é o erro.
+#
+# Este arquivo NÃO desliga security update: isso é chave da interface, e só o
+# dono do repositório alcança. O que ele faz é as duas coisas que cabem aqui.
+version: 2
+updates:
+  # 1. LIGA o que a doc já nomeava como dívida: as actions de terceiro estão
+  #    presas por COMMIT SHA (`@<sha>  # v4`), com a versão num comentário —
+  #    exatamente a forma que o Dependabot lê e atualiza. Quem move o SHA hoje
+  #    é uma pessoa, à mão, e "um pin que ninguém atualiza é um pin que
+  #    envelhece até uma versão vulnerável" (cadeia-de-suprimentos-do-ci.md).
+  #
+  #    O `scripts/ci/actions-pinadas.ts` continua reprovando quem não pinar:
+  #    o bot propõe SHA novo com o comentário da versão, e o check garante que
+  #    ninguém troque isso por uma tag.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      # Conventional commits em pt-BR, como o resto do repositório — o
+      # `pr-police` e o cálculo de versão leem o assunto do commit.
+      prefix: chore
+      include: scope
+
+  # 2. Declara as duas árvores npm com LIMITE ZERO. Isso desliga os *version
+  #    updates* (que inundariam um monorepo deste tamanho e competiriam com os
+  #    overrides escopados) sem tocar nos *security updates*, que são da
+  #    interface. É o idioma documentado para "não abra PR de rotina aqui".
+  #
+  #    As duas árvores porque `website/` NÃO é membro do workspace (ADR 0117):
+  #    tem lockfile próprio, e o Dependabot já as enxerga separadas.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+  - package-ecosystem: npm
+    directory: /website
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0

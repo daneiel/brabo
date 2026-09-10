@@ -138,10 +138,25 @@ go to GHCR and the overlay pins them **by digest**, recorded per tag in
 
 Declared, not fixed:
 
-- **No Dependabot.** The SHAs are updated by hand. The version comments
-  are already in the shape Dependabot expects, so enabling it is a
-  config file — but it doesn't exist today, and a pin nobody updates is
-  a pin that ages into a known-vulnerable version.
+- ~~**No Dependabot.**~~ **Half closed, and the other half is not ours
+  to close.** The claim had also stopped being true: *security* updates
+  are switched on in the repository's **interface**, in no file, and were
+  running daily against `npm_and_yarn in /., /website` — and **failing**,
+  every day, with `Dependabot::DependabotError`. Measured cause: the
+  packages it chases (`multer`, `esbuild`, and the list beside them) are
+  the ones this repository fixes through **overrides** in
+  `pnpm-workspace.yaml`, a mechanism Dependabot cannot manipulate. The
+  alert it pursues is already closed; what is left is the error.
+
+  `.github/dependabot.yml` now exists and does the two things a file can
+  do: it **enables `github-actions`** — the debt named right here, since
+  the SHAs are moved by hand and *a pin nobody updates is a pin that ages
+  into a known-vulnerable version* — and declares both npm trees with
+  `open-pull-requests-limit: 0`, which turns off routine version updates
+  without touching security ones. **Turning security updates off is an
+  interface switch**, reachable only by the repository owner; until
+  someone decides, that job keeps failing on alerts that the overrides
+  already closed.
 - **npm/pnpm dependencies aren't attested.** The lockfile pins versions
   and integrity hashes, which is real, but there's no provenance check
   (`npm audit signatures` or equivalent) in any job.
