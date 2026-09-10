@@ -52,9 +52,21 @@ defmodule Engine.MixProject do
     ]
   end
 
+  # Alias que chama `test` PRECISA nascer em `:test`. Sem isto o Mix recusa
+  # antes de rodar qualquer coisa — `** (Mix) "mix test" is running in the
+  # "dev" environment` —, e a recusa é do ambiente, não do teste: o comando
+  # documentado em toda parte (`mix golden_set.rag`, `mix golden_set.qa`)
+  # falhava sozinho, e o workflow agendado do RAG (ADR 0138) nunca chegou a
+  # rodar verde uma vez. Exigir `MIX_ENV=test` de quem chama seria transferir
+  # a correção para toda a prosa que já ensina o comando curto — e para quem
+  # esquecesse, de novo.
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [
+        precommit: :test,
+        "golden_set.qa": :test,
+        "golden_set.rag": :test
+      ]
     ]
   end
 

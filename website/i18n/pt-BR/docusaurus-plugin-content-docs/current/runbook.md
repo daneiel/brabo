@@ -37,6 +37,7 @@ arquivo. Comece pela triagem.
 | quero acrescentar um provider de LLM compatível com a OpenAI | [Adicionando um provider compatível](#adicionando-um-provider-compativel) |
 | quero migrar meus workspaces do volume Docker para uma pasta real | [Migrar workspaces para pasta local](#migrar-workspaces-pasta-local) |
 | criar projeto **Local** recusa dizendo que a pasta não existe | [Projeto no modo Local](#projeto-no-modo-local) |
+| a web começa a responder **429 (limite de requisições)** sem motivo aparente, ou um projeto no modo `runner` aparece "sem agente local" com o `brabo-runner` rodando | [O runner inunda a api com um ticket morto](#runner-com-ticket-morto) |
 
 Duas coisas que valem antes de qualquer procedimento:
 
@@ -420,6 +421,47 @@ Duas checagens antes de culpar o endereço, se o `ENGINE_URL` estiver correto:
   `termination_reason`: `heartbeat_timeout` significa que a ativação funcionou e
   ninguém entrou no canal Phoenix — comportamento esperado quando se ativa por
   fora da interface (`SESSION_HEARTBEAT_TIMEOUT_MS`).
+
+### O runner inunda a api com um ticket morto {#runner-com-ticket-morto}
+
+Sintoma: a web passa a responder **429** às requisições da própria pessoa, sem
+atividade incomum da parte dela; e/ou um projeto no modo `runner` aparece como
+se não tivesse agente local (tasks de dev presas em
+`dev.blocked_by_container`, `RunnerReadiness` recusando) com o `brabo-runner`
+visivelmente rodando na máquina dela.
+
+**Como confirmar.** No log do engine, procure o MESMO ticket sendo recusado
+repetidamente, numa cadência fixa de aproximadamente **5,13 s**:
+
+```bash
+docker logs brabo-engine-1 2>&1 | grep 'REFUSED CONNECTION TO EngineWeb.RunnerSocket' | tail -20
+```
+
+Dezenas dessas em poucas horas, todas carregando a mesma string de ticket, é a
+assinatura. Os ~5,13 s não são arbitrários — são o teto do backoff interno do
+`reconnectAfterMs` do `phoenix.js`.
+
+**Causa.** O ticket do socket é de **uso único**
+([RN-108](business-rules/autenticacao.md#rn-108)); o auto-reconnect embutido da
+biblioteca repete os MESMOS `params`, então ele tenta de novo um ticket que foi
+consumido na primeira conexão e nunca mais será aceito. Uma versão do
+`apps/runner/src/channel.ts` foi publicada com esse auto-reconnect LIGADO — e o
+docblock do próprio módulo afirmava o contrário. Somado à política PRÓPRIA de
+reconexão do runner (que está correta: ticket fresco por rodada, backoff, teto
+de tentativas seguidas), o resultado medido foram **530 requisições num
+minuto** contra o teto de 300 req/min do `RATE_LIMIT_USER`, quatro minutos
+seguidos acima do limite. O limite é **por usuário**, e é por isso que o 429
+aparecia no navegador do dono da conta, longe do runner.
+
+A segunda consequência é a pior: enquanto está preso nesse laço o runner **não
+está conectado**, então `RunnerReadiness` (RN-507) recusa e o projeto parece não ter agente local — parte do que se lê como "o
+container não sobe" é isto.
+
+**Correção.** Atualize o binário do `brabo-runner` (ou reinstale pela tela do
+projeto). Nada a mudar no servidor: o rate limiter fez o trabalho dele, e o
+engine estava certo em recusar cada um daqueles tickets. Se a enxurrada ainda
+estiver em curso, parar o runner a encerra na hora, e os 429 somem conforme a
+janela deslizante drena (um minuto).
 
 ### A api recusa subir por segredo de OAuth {#segredo-de-oauth-no-boot}
 

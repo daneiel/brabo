@@ -443,6 +443,25 @@ deliberately modest:
 | the four production images | built to prove the tag is **buildable** |
 | the version baked into two of them | baked in as an `ARG` in the api
 and web — see below |
+| **signatures for the four images** | `cosign` keyless, **by digest**,
+signed and then verified in the same run
+([ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md)) |
+
+The last row is what a final tag gained in FASE 29, and it is worth being
+precise about **why by digest**: signing `:5.0.0` would attest whatever
+that tag pointed at in the instant of signing, and a tag is a movable
+pointer. The digest is what `.release/images.json` already records and
+what the production overlay already applies.
+
+The signature is **verified in the same run, before the Release exists**.
+A signature nobody tries to verify is one more file in the registry, and
+the failure would otherwise surface on the machine of whoever installs —
+the worst possible place to discover it.
+
+The runner binaries follow in `build-runner-binaries.yml`, with **one**
+signed `checksums.txt` covering the five targets rather than five
+separate signatures: verifying four and forgetting the fifth is a failure
+mode nobody notices, and a single manifest removes it.
 
 #### The version lives in the tag, and the release is what carries it to the artifact
 

@@ -555,6 +555,73 @@ defmodule EngineWeb.TerminalChannelTest do
     end
   end
 
+  # workspace_create/workspace_create_result (ADR 0151 ponto 3, RN-532) —
+  # MESMO mecanismo dos quatro pares acima; `Engine.Runners.PastaDoProjetoTest`
+  # já cobre o roundtrip completo via `RunnerRouter`. Aqui o que importa é a
+  # SEGUNDA pré-condição do predicado, que só este canal pode responder: sem a
+  # capacidade `workspace` concedida, a recusa volta NOMEADA pelo mesmo `ref`,
+  # nunca como timeout.
+  describe "workspace_create (ADR 0151, RN-532)" do
+    test "com a capacidade concedida, empurra \"workspace_create\" com ref e segmento" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+          "capacidades" => ["exec", "pty", "workspace"]
+        })
+
+      payload = %{projectId: project_id, segmento: "loja"}
+      send(joined.channel_pid, {:dispatch_workspace_create, "ref-w1", payload, self(), 5_000})
+
+      assert_push "workspace_create", %{ref: "ref-w1", segmento: "loja"}
+    end
+
+    test "workspace_create_result responde pro from com :runner_workspace_create_result" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+          "capacidades" => ["exec", "workspace"]
+        })
+
+      send(joined.channel_pid, {:dispatch_workspace_create, "ref-w2", %{}, self(), 5_000})
+      assert_push "workspace_create", %{ref: "ref-w2"}
+
+      push(joined, "workspace_create_result", %{
+        "ref" => "ref-w2",
+        "sucesso" => true,
+        "caminho" => "/home/voce/projetos/loja"
+      })
+
+      assert_receive {:runner_workspace_create_result, "ref-w2",
+                      %{"sucesso" => true, "caminho" => "/home/voce/projetos/loja"}}
+    end
+
+    test "runner SEM a capacidade `workspace` recebe recusa NOMEADA — nunca um timeout" do
+      project_id = Ecto.UUID.generate()
+      socket = emitir_e_conectar!(project_id, "runner")
+
+      # O join PASSA: ninguém exige `workspace` (ADR 0151 ponto 4), então um
+      # runner sem base consentida continua atendendo o projeto dele.
+      {:ok, _reply, joined} =
+        Phoenix.ChannelTest.subscribe_and_join(socket, "terminal:#{project_id}", %{
+          "capacidades" => ["exec", "pty"]
+        })
+
+      send(joined.channel_pid, {:dispatch_workspace_create, "ref-w3", %{}, self(), 5_000})
+
+      assert_receive {:runner_workspace_create_result, "ref-w3", payload}
+      assert payload["sucesso"] == false
+      assert payload["motivo"] == "sem-base"
+      assert payload["erro"] =~ "--base"
+
+      # E nada foi empurrado pro runner.
+      refute_push "workspace_create", %{}
+    end
+  end
+
   # ADR 0147 ponto 4 / RN-516 — o DESTINO do espelho viaja na CONCESSÃO do
   # join, e o runner nunca o guarda em configuração própria. As três coisas
   # que este describe prova: o destino chega na resposta do join; destino

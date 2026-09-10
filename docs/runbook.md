@@ -21,6 +21,9 @@ Start with triage.
 | I'm about to roll out the engine | [Engine rollout](#rollout-do-engine) |
 | session `active` with no process, or stuck in `closing` | [When a session escapes](#quando-a-sessao-escapa) |
 | I lost data / want to verify the backup | [Restore](#restore) |
+| I want to verify or restore a backup on an install that has **no cluster** | [Restore](#restore) — `make test-restore-compose` |
+| a `local`-provider project lost its repository, or I'm moving an installation to another machine | [Recovering the bare repos](#restore-dos-bare-repos) |
+| the graph is empty after a restore or a migration | [Losing the graph](#perda-do-grafo) |
 | LLM or git credential stopped decrypting | [Master key rotation](#rotacao-da-chave-mestra) |
 | everyone logged out at once, or account locked at login | [Auth key rotation](#rotacao-das-chaves-do-auth) |
 | cost per hour spiked | [Cost incident](#incidente-de-custo) |
@@ -39,10 +42,13 @@ Start with triage.
 | the project wizard doesn't offer **Mounted** mode, or creating a mounted project refuses saying the path must sit inside the base | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | approving `container_start` on a mounted project fails saying the api couldn't create or reach the folder | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | `pnpm dev` refuses to start, saying `BRABO_PROJECTS_BASE` overlaps the Brabo checkout | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
+| `brabo-runner` exits with `base de projetos recusada`, or prints `base de projetos: nenhuma configurada` when I expected a base | [The runner's base of projects](#base-do-runner) |
+| the project folder never appears on the user's machine, and the engine log says `workspace_create: o projeto <id> não criou pasta` | [The project folder never appears](#pasta-do-projeto-nunca-aparece) |
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
 | provisioning a repository fails with `permission denied: /data/git-repos/<slug>.git`, or `permissions.json` can't be written | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to wipe the dev database and start over, or `reset-total.sh` stopped in the middle | [Total reset of the dev environment](#reset-total) |
+| the web shows **429 (rate limit)** for no apparent reason, or a project in `runner` mode looks "no local agent" while `brabo-runner` is running | [The runner floods the api with a dead ticket](#runner-com-ticket-morto) |
 
 Two things worth knowing before any procedure:
 
@@ -355,6 +361,90 @@ the chance.
 procedure above; Mounted mode never touches that root, and the base is
 never the same folder as that root ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)
 explains why conflating them would let two projects land in one folder).
+
+### The runner's base of projects {#base-do-runner}
+
+**Symptom:** `brabo-runner` exits with code 2 saying
+`base de projetos recusada (…)`, or it starts printing
+`base de projetos: nenhuma configurada` when you expected a base, or it says
+it is `Seguindo SEM base`.
+
+This is a **different base** from the one in
+[Project in Mounted mode](#projeto-no-modo-local). That one
+(`BRABO_PROJECTS_BASE`) belongs to the SERVER and is the only folder the
+containers can see; this one belongs to the **user's machine** and is where
+the local agent creates the folder of each project
+([ADR 0151](adr/0151-base-consentida-no-runner.md),
+[RN-529](business-rules.md#rn-529)). They are never the same variable, never
+the same file, and never validated against each other.
+
+Where the runner reads it from, in order:
+
+1. `--base <absolute path>` on the command line;
+2. `$XDG_CONFIG_HOME/brabo/runner.json` — falling back to
+   `~/.config/brabo/runner.json` — with the shape `{"base": "/abs/path"}`.
+
+```bash
+cat "${XDG_CONFIG_HOME:-$HOME/.config}/brabo/runner.json"
+# {"base":"/home/you/projetos-brabo"}
+```
+
+**No base at all is normal.** A runner without one keeps serving its project
+exactly as it always did; what it can't do is host a project folder created
+later. The startup line says which of the two states you're in, always.
+
+**Refusals, and why the disposition differs.** The base is refused when it is
+relative, has `..`, is `/`, points at an existing file, sits outside `$HOME`
+on Linux (the same rule `--dir` has had since
+[RN-434](business-rules.md#rn-434)), or is **inside** the current project's
+folder (or equal to it) — that last one would make every new project be born
+inside this one. Coming from `--base`, that ends the process with code 2;
+coming from the file, it is printed on `stderr` and the runner **carries on
+without a base**, because killing an agent that is serving a project over a
+setting it doesn't use yet would be out of proportion. A file that exists and
+declares no `base` is absence, not a refusal.
+
+**A project outside the base is not a problem.** `--dir` is validated exactly
+as it always was and the base plays no part in it: the base is a rule of
+CREATION. Do not "fix" a legacy project by moving it under the base to silence
+something — nothing is complaining.
+
+### The project folder never appears on the user's machine {#pasta-do-projeto-nunca-aparece}
+
+**Symptom:** a project folder was expected to show up under the runner's base
+and it didn't. The engine log has a line starting with
+`workspace_create: o projeto <id> não criou pasta —`, and the folder is
+missing.
+
+The message names which of the two pre-conditions failed
+([RN-532](business-rules.md#rn-532),
+[ADR 0151](adr/0151-base-consentida-no-runner.md) points 3 to 6), and they are
+the only two — **no container is required**, deliberately: requiring one would
+be circular, since a `runner` project only reaches a registered `running`
+container after the runner brings it up over the very folder this message
+exists to create.
+
+- **`nenhum brabo-runner está conectado a este projeto agora`** — start the
+  agent for that project; see [the base above](#base-do-runner) for the flags.
+- **`não declarou a capacidade `workspace` no join`** — the connected binary
+  either predates this version, or is running **without a consented base**.
+  Both fixes are in the previous section: run the installer, or start the
+  runner with `--base`. The refusal is named on purpose because the two causes
+  have different fixes; the join itself is NOT refused, so the runner keeps
+  serving its project normally.
+- **`o brabo-runner recusou criar a pasta`** — the message carries the
+  runner's own reason: `segmento` (the segment escaped the base — the guard
+  refused, nothing was created), `nao-e-pasta` (the target already exists as a
+  file; this CLI never overwrites one), `mkdir` (permission or disk) or `git`
+  (the `git init`/clone failed — the folder DOES exist and no plan B was
+  attempted, on purpose).
+- **`não respondeu ... a tempo`** — a large clone can exceed the ceiling.
+  Check the runner's machine; nothing is left half-written on the server side,
+  because the write only happens through `workspace_confirm`.
+
+A folder that already exists as a git repository is a **success**, not an
+error: the operation is idempotent and reports `ja-era-repositorio` in the
+runner's log.
 
 ### Dev containers write as your user, not root {#dev-containers-nao-root}
 
@@ -809,6 +899,48 @@ stacked causes, all closed by [RN-433](business-rules.md#rn-433):
    `REFUSED CONNECTION`. Fixed by passing `engineWsUrl` straight to
    `Socket` — `apps/runner/src/channel.ts` (the CLI side of the same
    contract) already did this correctly.
+
+### The runner floods the api with a dead ticket {#runner-com-ticket-morto}
+
+Symptom: the web starts answering **429** to the person's own requests, with
+no unusual activity on their part; and/or a project in `runner` mode shows as
+having no local agent (dev tasks stuck on `dev.blocked_by_container`,
+`RunnerReadiness` refusing) while `brabo-runner` is visibly running on their
+machine.
+
+**How to confirm.** In the engine's log, look for the SAME ticket being
+refused over and over, at a fixed cadence of roughly **5,13 s**:
+
+```bash
+docker logs brabo-engine-1 2>&1 | grep 'REFUSED CONNECTION TO EngineWeb.RunnerSocket' | tail -20
+```
+
+Dozens of those in a few hours, all carrying the same ticket string, is the
+signature. ~5,13 s is not arbitrary — it is the ceiling of `phoenix.js`'s
+internal `reconnectAfterMs` backoff.
+
+**Cause.** The socket ticket is **single-use**
+([RN-108](business-rules/autenticacao.md#rn-108)); the library's built-in
+auto-reconnect repeats the SAME `params`, so it retries a ticket that was
+consumed on the first connection and will never be accepted again. A version
+of `apps/runner/src/channel.ts` shipped with that auto-reconnect left ON —
+while the module's own docblock claimed it was neutralized. Stacked on the
+runner's OWN retry policy (which is correct: fresh ticket per round, backoff,
+ceiling on consecutive attempts), the measured result was **530 requests in
+one minute** against the 300 req/min `RATE_LIMIT_USER` ceiling, four minutes
+in a row over the limit. The limit is **per user**, which is why the 429
+surfaced in the account owner's browser rather than anywhere near the runner.
+
+The second consequence is the worse one: while stuck in that loop the runner
+is **not connected**, so `RunnerReadiness` ([RN-507](business-rules.md#rn-507))
+refuses and the project looks like it has no local agent — some of what reads
+as "the container won't come up" is this.
+
+**Fix.** Update the `brabo-runner` binary (or reinstall from the project
+screen). Nothing to change on the server: the rate limiter did its job, and the
+engine was right to refuse every one of those tickets. If the flood is still
+in progress, stopping the runner ends it immediately, and the 429s clear as
+the sliding window drains (one minute).
 
 ### The api refuses to boot over an OAuth secret {#segredo-de-oauth-no-boot}
 
@@ -1276,20 +1408,70 @@ Decisions in [ADR 0027](adr/0027-fase5-backup-hardening-release.md).
 > runs, and it's run against the local cluster. There's no step here that
 > nobody has ever exercised. The record of the last run is at the end.
 
+### What is backed up, and what deliberately is not
+
+Seven named volumes exist; **two** are source of truth and only those are
+copied. The classification is
+[ADR 0152](adr/0152-backup-de-volumes-contra-compose.md), and the point of
+making it is that "back up every volume" costs space while hiding what matters.
+
+| volume | nature | in the backup? |
+|---|---|---|
+| `pgdata` | source of truth — event log, actions, pgvector, everything | yes, as a **logical dump**. Never a file copy of the data directory: copying a running Postgres produces a backup that may not restore |
+| `git_local_repos` | source of truth — the *bare* repos of `local`-provider projects | **yes**, and this was the hole. It is not reconstructible from Postgres: the event log holds the narrative, not the git objects |
+| `neo4j_data` | derived — a projection of the event log ([ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)) | no. The answer for derived memory is **reprojection**, not restore — see [Losing the graph](#perda-do-grafo) |
+| `project_workspaces` | derived — worktrees the `WorktreeManager` recreates from the bare repo | no |
+| `ollama_data` | re-obtainable — models download again | no |
+| `brabo_projects_base` | the user's, not the product's | no, and the installer never deletes it |
+
 ### Where the backup lives
 
 | what | where |
 |---|---|
-| schedule | `brabo-backup` CronJob, 03:17 UTC, daily |
-| destination | an S3-compatible bucket — `BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET` in the `brabo-secrets` Secret |
-| layout | `daily/brabo-<ISO>.dump` and `weekly/brabo-<ISO>.dump` |
-| retention | 7 daily + 4 weekly, by COUNT (`BACKUP_KEEP_DAILY` / `BACKUP_KEEP_WEEKLY`) |
-| format | `pg_dump --format=custom --compress=9` |
-| history | `backup_runs` table |
+| schedule | Kubernetes: `brabo-backup` CronJob, 03:17 UTC, daily. Compose: there is no scheduler — you run it, or the installer does before a migration |
+| destination | disk (`BACKUP_DIR`) **or** an S3-compatible bucket (`BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET`). `BACKUP_DIR` set wins; empty falls back to S3, which is what the CronJob does |
+| layout | `daily/brabo-<ISO>.dump` + `weekly/…` for Postgres; `git-daily/brabo-git-<ISO>.tar.gz` + `git-weekly/…` for the bare repos |
+| retention | 7 daily + 4 weekly of **each kind**, by COUNT (`BACKUP_KEEP_DAILY` / `BACKUP_KEEP_WEEKLY`) |
+| format | `pg_dump --format=custom --compress=9`; `tar -czf` for the repos |
+| history | `backup_runs` table — the **dump**, keyed by `object_key`. The repo archive carries the same timestamp in the sibling prefix; the link is the name, not a column |
 
-In the local cluster the destination is a MinIO inside the `brabo`
+In the local cluster the S3 destination is a MinIO inside the `brabo`
 namespace; in staging/prod it's the real bucket. The procedure doesn't
 change — only the endpoint.
+
+> **The default compose destination is a named volume, and that is fine for
+> verifying and wrong for migrating.** `docker compose down -v` deletes
+> `backup_local` along with the data it was meant to save. Point
+> `BRABO_BACKUP_HOST_DIR` at a host directory before any migration.
+
+### What the bare-repo archive guarantees — and what it does not {#garantia-dos-bare-repos}
+
+Nothing is quiesced: the repos are copied while api and engine may be writing
+to them. What that buys, exactly:
+
+- **Guaranteed.** Consistency **per reference**. Git writes objects before it
+  moves a ref, and swaps the ref by atomic rename (or by rewriting
+  `packed-refs` under a lock, also by rename). A `tar` crossing a `git push`
+  captures the ref at its old value or its new one, never half a value — and
+  in the new case the objects it reaches are already on disk.
+- **Guaranteed.** A partial archive **fails the run** instead of passing as
+  good. A concurrent `git gc` can delete a packfile between `tar` listing a
+  directory and reading it; `tar`'s exit status is captured in a file (in POSIX
+  `sh` a pipeline's status is the last command's) and a non-zero turns into a
+  `failed` row in `backup_runs`, which is what alerts on. Run it again.
+- **Guaranteed.** The archive is readable **end to end** before anything is
+  written — `brabo-restore-git` is the `pg_restore --list` of the git side. A
+  truncated tar has plausible size and only reading it tells.
+- **Not guaranteed.** Any global instant. `tar` walks the tree over a period,
+  so two repositories — or two refs of one — can come from different moments.
+  Irrelevant to git, which validates per ref; relevant to anyone reading
+  "the 03:17 backup" as one snapshot.
+- **Not guaranteed.** Object connectivity. Nothing here runs `git fsck`: the
+  backup image has no git, on purpose. What is proved is the integrity of the
+  container, not of the contents.
+- **Not copied.** `*.lock` files, and `objects/tmp_*`. Restoring an orphan lock
+  yields a repository where every `git` refuses to work, with a message that
+  never mentions backup.
 
 ### Before restoring: does the backup exist, and is it any good?
 
@@ -1314,13 +1496,31 @@ Three things in that output matter more than the last row:
 
 ### The automated path (the same one the test runs)
 
+On Kubernetes:
+
 ```bash
 make test-restore
 ```
 
-Triggers a real backup, restores into `brabo_restore_test`, validates,
-and drops the database. Use it when the goal is to **verify** the backup,
-not recover data.
+On a compose install — no cluster, no `kubectl`:
+
+```bash
+make test-restore-compose
+```
+
+Both trigger a **real** backup (same image, same command that runs in
+production — not an ad-hoc `pg_dump`, which would test a path nobody uses),
+restore into `brabo_restore_test`, validate, and drop the database. Use them
+when the goal is to **verify** the backup, not to recover data.
+
+The two wrappers stay separate on purpose: unifying them would make the compose
+path depend on `kubectl`, which is the dependency it exists not to have. What is
+*not* duplicated is the judgement — both run the same `brabo-restore`, with the
+same three validations. The compose one adds a third step the cluster cannot
+ask for: it verifies the bare-repo archive, because on Kubernetes the
+`git_local_repos` volume is not mounted in the backup pod and the step is
+legitimately skipped, while under compose it is mounted and skipping would be a
+false green.
 
 ### Restoring for real, during an incident
 
@@ -1389,12 +1589,71 @@ kubectl -n brabo rollout restart deployment/api deployment/engine
   into this dump. What does **not** survive is reading them if
   `AUTH_TOKEN_PEPPER` is different — same reasoning as the master key
   above.
-- **PVCs** (`/data/git-repos`, agent worktrees) aren't copied. The real
-  repositories live in GitHub/GitLab; what's lost is work-in-progress
-  cache.
+- **`brabo-restore` restores the database, and only it.** The bare repos
+  are the sibling command, `brabo-restore-git` — see
+  [Recovering the bare repos](#restore-dos-bare-repos). They are separate
+  commands rather than two phases of one because they are two artefacts with
+  two judgements: a git failure must not fail the event-log validation, and
+  the reverse would be worse.
+- **Agent worktrees** (`project_workspaces`) aren't copied, and don't need
+  to be: the `WorktreeManager` recreates them from the bare repo. What is
+  lost is uncommitted work in progress.
+- ~~The real repositories live in GitHub/GitLab~~ — **this used to be
+  written here and it was wrong**, which is why the volume went years with
+  no backup. It holds for `github`/`gitlab`-provider projects; for a
+  project on the `local` provider there is no upstream anywhere, and the
+  bare repo in `git_local_repos` **is** the code the agents produced.
 - **It's not PITR.** The granularity is the last dump; anything written
   after it is lost. If that's not acceptable, the path is WAL archiving
   on CloudNativePG, which is out of scope for this phase.
+
+### Recovering the bare repos {#restore-dos-bare-repos}
+
+Verifying costs nothing and writes nothing — it is the weekly gesture:
+
+```bash
+docker compose -f docker/docker-compose.prod.yml run --rm backup brabo-restore-git
+```
+
+Restoring is the once-in-an-incident gesture, and it has to be typed:
+
+```bash
+docker compose -f docker/docker-compose.prod.yml \
+  run --rm --user 0:0 backup brabo-restore-git --restaurar
+```
+
+Two things about that command, both measured rather than assumed:
+
+- **`--user 0:0` is not optional here.** `git_local_repos` is shared by three
+  images running as three different uids (the api as `node`, the engine as
+  `engine`, the backup image as uid 70). The volume takes the owner of whoever
+  mounted it first, mode 0755: uid 70 reads it and cannot write it. Without
+  root the command refuses **before** extracting, naming this fix — it does not
+  discover the problem halfway through `tar`, leaving the volume part-written.
+- **What is extracted is handed back to the owner of the directory**, never
+  left as root. Otherwise the volume would come back intact and useless: api
+  and engine, non-root, could not write into what was just restored, and the
+  symptom would surface long after the restore with nothing pointing at it.
+
+It **refuses to extract over existing repos**. Overlaying two repository states
+produces a mix that no `git` complains about and nobody notices until a `fetch`
+brings back the wrong history. Empty the volume, or pass `RESTORE_GIT_FORCE=1`
+if the overlay is genuinely what you want.
+
+### Losing the graph (Neo4j) {#perda-do-grafo}
+
+`neo4j_data` is **not** in any backup, and that is the decision, not an
+oversight ([ADR 0152](adr/0152-backup-de-volumes-contra-compose.md), decision
+4). Restoring a possibly-stale projection next to a Postgres restored at another
+instant gives two derived states from different moments with nothing to
+reconcile them. The right answer for derived memory is to reproject from the
+source.
+
+**That reprojection does not exist yet** — it is
+[BRB-018](reference/brb.md), and the phase that named the path deliberately did
+not build it. Until it does, a migrated or restored installation starts with an
+**empty graph**. The named effect: reads that depend on the graph degrade. The
+RAG is **not** affected — it lives in pgvector, which is inside the dump.
 
 ### When the restore fails
 
@@ -1407,6 +1666,10 @@ kubectl -n brabo rollout restart deployment/api deployment/engine
 | `out of window` on a critical table | count doesn't match the dump's timestamp: investigate before promoting |
 | `server version mismatch` | the Job's `pg_dump` is 16; a cluster on a different major refuses the connection |
 | Job timeout | database too large for `activeDeadlineSeconds`; raise the value on the Job, not the CronJob |
+| `destination inaccessible … does not accept writes` | with `BACKUP_DIR`, the directory exists and the container's uid can't write it. It is a **write** check, not an existence one, on purpose: a read-only destination would pass `ls` and fail the dump, with the error surfacing after `pg_dump` and pointing at the wrong thing |
+| `tar of the bare repos exited with N` | something changed under the repos mid-read — most likely a concurrent `git gc`. The run is marked `failed` rather than shipping a partial archive. Run it again |
+| `there are N bare repo(s) … and NO archive` | this volume has no coverage: the archive is missing while the repos are not. Absent-and-empty is normal and reported differently |
+| `does not accept writes by this user (uid 70)` on `--restaurar` | the shared-volume ownership case — restore with `--user 0:0`, see [Recovering the bare repos](#restore-dos-bare-repos) |
 
 ### Last verified run
 
@@ -1457,6 +1720,51 @@ representative dump before promising anyone an RTO.
    `postgres:16-alpine` base. Swapped for `alpine` + `postgresql16-client`
    + `aws-cli`, all from apk and therefore patchable: 48 → 0. See
    decision 1b of ADR 0027.
+
+### Last verified run — compose, disk destination
+
+| field | value |
+|---|---|
+| date | 2026-09-09 |
+| environment | Docker compose, PostgreSQL 16 (pgvector image), destination on **disk** — no cluster, no bucket, no `kubectl` |
+| command | `docker/backup/test-restore-compose.sh` (what `make test-restore-compose` runs) |
+| database | 55 tables, 422 events across 13 sessions — a populated database, not an empty one |
+| bare repos | 2 (`exp001.git`, `exp004.git`), 27 003 bytes archived |
+
+Output (the three steps, abridged):
+
+```
+[backup] destination: disk at /backups
+[backup] generating dump for daily/brabo-20260909T025733Z.dump
+[backup] archiving 2 bare repo(s) for git-daily/brabo-git-20260909T025733Z.tar.gz
+[backup] finished: daily/brabo-20260909T025733Z.dump (322894 bytes)
+[restore]   ok    55 tables restored, identical to the source
+[restore]   ok    session_events: 422 rows (window 422–422)
+[restore]   ok    intact event log: 422 events across 13 sessions, dense seq from 1
+[restore] RESTORE VALIDATED — all checks passed
+[restore-git]   ok    2 intact bare repo(s) (27003 bytes)
+[test-restore-compose] backup restored and intact
+```
+
+`backup_runs` got its `status = 'ok'` row for each run, with the **dump** as
+`object_key` — the same column `restore.sh` queries for the snapshot window.
+
+#### What this run found
+
+**The bare-repo restore could not write the volume it restores into**, and only
+running it revealed that. `git_local_repos` is shared by three images with three
+uids; it carries the owner of whoever mounted it first (measured: `1000:1000`,
+mode 0755) and the backup image runs as uid 70. The first `--restaurar` died
+mid-extraction with `tar: can't make dir ./exp001.git: Permission denied`,
+leaving the target part-written. Two changes came from it, both above: the
+command refuses **before** extracting and names `--user 0:0`, and when it does
+run as root it hands the extracted tree back to the directory's owner instead of
+leaving it root-owned — which would have produced a volume that restores
+perfectly and that api and engine cannot write to.
+
+Verified afterwards with real `git` (not the backup image, which has none):
+`git fsck --connectivity-only` clean on both repos, refs and commits intact,
+ownership back at `1000:1000`.
 
 ---
 
@@ -2140,6 +2448,137 @@ The gate machine itself doesn't vary: immutable order, return on the same
 branch, a ceiling on corrections, verdicts as an artifact, and a terminal
 `awaiting_user` are all verified by ExUnit
 ([RN-014](business-rules.md#rn-014), [RN-015](business-rules.md#rn-015)).
+
+---
+
+## Installing {#instalando}
+
+```sh
+sh -c "$(curl -fsSL https://github.com/daneiel/brabo/releases/latest/download/install.sh)"
+```
+
+**Never `curl … | sh`.** The reason is mechanical, not stylistic: with the
+script arriving through the pipe, the process's `stdin` **is** the download,
+so any `read` reads bytes of the script itself or hits EOF. An installer that
+cannot ask would have to pick folder locations on someone else's machine by
+itself ([RN-526](business-rules.md#rn-526)).
+
+The script verifies **its own origin** before doing anything — the signature
+of the Release's `checksums.txt`, and then its own hash inside that verified
+manifest. A failure at either step is a **named refusal**, never a warning.
+
+Without a TTY it **reports and exits 0**: it prints what it found and the
+command to run in a terminal. That is deliberate, and it is the same shape
+`consentir-base.mjs` already has.
+
+**What it never deletes:** your project base and your mirror folder. Named
+volumes only go with confirmation, listed one by one first.
+
+It brings the stack up from **its own compose**
+(`docker/docker-compose.install.yml`), which takes the images from variables
+and builds nothing. Two sources:
+
+```sh
+install.sh                  # --source=ghcr (default): by digest, signature verified
+install.sh --source=local   # buildx bake; requires a clean tree on a tag
+```
+
+Secrets are generated once and persisted into `.env` with mode **600** — the
+file is created empty and locked *before* receiving content, because a window
+where the secrets are world-readable is exactly what this file cannot have.
+
+There is **no migrate step**, and there should not be: the compose chains
+`api` → `migrate-api` with `service_completed_successfully`, so `up --wait`
+waits for the migrations. A second place ordering migrations would be a second
+source of the same truth.
+
+After the stack is up it **asks before claiming**: `/health` on the api and on
+the engine, and only then does it say it installed.
+
+It **installs the local agent** — the binary is verified against the signed
+manifest and placed with `install -m 0755`, so there is no manual `chmod`
+([RN-531](business-rules.md#rn-531)) — and it asks ONE base, writing it to
+both sides: `BRABO_PROJECTS_BASE` in `.env` and `base` in the runner's
+`runner.json`. A Release with no binary for this platform does not interrupt
+the installation: it says so and points at `npm install -g @brabo/runner`.
+
+Over an existing installation it **migrates or stops** — an `up` on volumes
+from another version is damage that gives no warning. The order is backup →
+**PROVE** it restores → ask → delete → install → restore, and the proof in the
+middle is what gives the installer the right to delete
+([RN-530](business-rules.md#rn-530)).
+
+> **What it does not do:** bring up the container **broker** — that service is
+> absent from the installation compose because its image is not published, and
+> without it a project in **mounted** mode cannot start a container
+> ([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)); the **runner** mode uses
+> the Docker on that machine and does not depend on it. It also does not
+> **pair** the local agent with a project: the binary and the base are ready,
+> but the device key and `brabo-runner.config.json` still come from the
+> project screen ([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)).
+> Inspect the whole thing with `install.sh --print-plan`, which touches nothing.
+
+---
+
+## Verifying a published artifact {#verificar-artefato-publicado}
+
+Every final tag signs what it publishes, with `cosign` **keyless** — the
+signing identity is the workflow itself, and there is no key in custody
+anywhere ([ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md),
+[RN-524](business-rules.md#rn-524)). This is how **you** check it, outside
+CI.
+
+Both commands need the two `--certificate-*` flags. They are not optional
+decoration: without them `cosign` would accept a valid signature **from
+anyone**, which is the failure this whole mechanism exists to prevent.
+
+### An image, by digest
+
+```bash
+# The digest comes from .release/images.json, which is an asset of the Release
+# — never from a tag, which is a movable pointer.
+DIGEST=$(gh release download vX.Y.Z --pattern images.json --output - \
+  | jq -r '.imagens[] | select(.alvo == "api") | .digest')
+
+cosign verify \
+  --certificate-identity-regexp '^https://github.com/daneiel/brabo/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  "ghcr.io/daneiel/brabo-api@${DIGEST}"
+```
+
+### The runner binaries
+
+One signed `checksums.txt` covers all five targets, so verification is two
+steps: the manifest's signature, then the binary against the manifest.
+
+```bash
+gh release download vX.Y.Z --pattern 'checksums.txt*' --pattern 'brabo-runner-*'
+
+cosign verify-blob \
+  --bundle checksums.txt.bundle \
+  --certificate-identity-regexp '^https://github.com/daneiel/brabo/\.github/workflows/build-runner-binaries\.yml@' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  checksums.txt
+
+# Only after the manifest is proven authentic does checking the binary mean
+# anything — a checksums.txt nobody verified is a file the attacker also
+# gets to write.
+sha256sum -c checksums.txt --ignore-missing
+```
+
+### When verification fails
+
+**Do not install.** A signature that does not verify has exactly two
+readings — the artifact is not what the pipeline published, or the pipeline
+did not publish it — and neither is a reason to continue. Check whether the
+identity regex matches the workflow that really published that tag (a
+republish by `workflow_dispatch` signs with the same identity), and then
+treat it as an incident rather than as noise.
+
+**What this does NOT cover:** operating-system code-signing of the runner
+binaries — macOS notarization and Windows Authenticode. Those need a paid
+signing identity and are a separate backlog item; the OS will still warn on
+first run.
 
 ---
 
