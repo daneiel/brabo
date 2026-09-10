@@ -709,6 +709,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   pertencia, pela mesma regra. Conferido: as 941 linhas de item do arquivo
   continuam 941, e nenhuma versão ficou com subseção repetida.
 
+- **install**: a detecção do instalador podia ficar pendurada no Docker, e o
+  teste dela reprovava PR de qualquer assunto.
+
+  `detectar_por_sinais` chama `docker compose ls`, que fala com o daemon.
+  Medido: **~0,2s** numa máquina com Docker de pé e **7,15s** num runner de CI
+  na primeira chamada. Sem teto, um daemon lento — ou parado atrás de um
+  socket que existe — deixaria a detecção pendurada **antes da primeira
+  pergunta**, e quem instala veria um script que não faz nada.
+
+  Agora a chamada tem **teto de 5s**, e estourá-lo não é erro: é o mesmo
+  desfecho de não haver Docker nenhum, com o resto dos sinais seguindo normal.
+
+  O teste tinha o outro lado do mesmo problema: os três casos que SPAWNAM o
+  script viviam com o default de 5s do vitest, sem margem para o teto ser
+  exercido e o processo ainda terminar. Foi o que reprovou o CI de um PR que
+  não toca o instalador. A margem é do teste; o teto que protege quem instala
+  é o do script.
+
 - **docker,engine,docs**: as flags que ligam a **Anamnese** e o **Psicólogo**
   não estavam mapeadas no `environment:` do serviço `engine` de compose
   nenhum — a pausa que três lugares do código chamavam de **reversível** não
