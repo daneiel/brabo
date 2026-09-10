@@ -39,6 +39,20 @@ documentation. The **when it fails** column is the part that saves time:
 almost every variable has a default that works in development and a specific
 failure mode in production.
 
+> **A variable only reaches the process if the compose maps it.** `docker
+> compose` does not forward the host environment into a container: a variable
+> arrives if — and only if — it is written in that service's `environment:`
+> (or an `env_file`). This is not a detail; it is how `ANAMNESE_ENABLED` and
+> `PSYCHOLOGIST_ENABLED` stayed silently unreachable while three places in the
+> code promised the 2026-08-10 pause was reversible with `X=true` plus a
+> restart. Measured inside the running engine container, they came back empty
+> and `runtime.exs` fell back to `"false"` — no error anywhere. Every boolean
+> flag the engine reads is now mapped in both compose files, with the code's
+> own default, and `scripts/ci/flags-do-engine-no-compose.spec.ts` fails the
+> build for the next one that isn't ([RN-540](../business-rules.md#rn-540)).
+> Kubernetes is deliberately outside that rule: a Deployment/ConfigMap
+> intercepts nothing, so there is no broken switch to fix there.
+
 > **Development defaults are insecure on purpose.** Values like
 > `dev-master-key-change-me` exist so `pnpm dev` comes up without ceremony. In
 > production they need to be changed — and for six of them the process
@@ -361,7 +375,7 @@ preflight because it runs on the host, and the api can only compare against
 
 | variable | default | note |
 |---|---|---|
-| `PSYCHOLOGIST_ENABLED` | `false` | GLOBAL pause of NEW rounds (automatic and on-demand) — the user's product decision on 2026-08-10, not a bug, same pattern as `ANAMNESE_ENABLED` below. Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-117](../business-rules/autenticacao.md#rn-117)) |
+| `PSYCHOLOGIST_ENABLED` | `false` | GLOBAL pause of NEW rounds (automatic and on-demand) — the user's product decision on 2026-08-10, not a bug, same pattern as `ANAMNESE_ENABLED` below. Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-117](../business-rules/autenticacao.md#rn-117)). No boot key pairs with it: the Psychologist's automatic trigger is session close, not a tick |
 | `PSYCHOLOGIST_TRIAGE_THRESHOLD` | `20` | events in the session that separate a **light** analysis from a **heavy** one |
 | `PSYCHOLOGIST_MAX_ITERATIONS_LEVE` / `_PESADA` | `4` / `8` | — |
 | `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` | `50000` / `300000` | USD 0.05 and USD 0.30 per analysis |
@@ -374,7 +388,7 @@ preflight because it runs on the host, and the api can only compare against
 
 | variable | default | note |
 |---|---|---|
-| `ANAMNESE_ENABLED` | `false` | GLOBAL pause of NEW rounds (periodic and on-demand) — the user's product decision on 2026-08-10, not a bug. Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-115](../business-rules/autenticacao.md#rn-115)) |
+| `ANAMNESE_ENABLED` | `false` | GLOBAL pause of NEW rounds (periodic and on-demand) — the user's product decision on 2026-08-10, not a bug. Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-115](../business-rules/autenticacao.md#rn-115)). **On its own it is not enough for the PERIODIC round**: `START_ANAMNESE` (boot key, below) also has to be `true`, and the two answer different questions |
 | `ANAMNESE_INTERVAL_SECONDS` | `900` | 15 min between runs |
 | `ANAMNESE_MIN_EVENTS` | `10` | below this it doesn't run — avoids profiling on noise |
 | `ANAMNESE_INITIAL_WINDOW_DAYS` | `30` | window of the first run |
