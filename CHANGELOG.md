@@ -4,6 +4,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### ⚠ Mudanças incompatíveis
+
+- **api**: `GET /runner-releases/binary` passa a **recusar com 502** a Release
+  que não publica `checksums.txt` — recusa nomeada, nunca aviso
+  ([RN-525](docs/business-rules.md#rn-525)).
+
+  Nenhuma Release publicada até aqui tem esse asset: o job `checksums` nasceu
+  nesta fase e só roda numa tag final. Então, entre este deploy e a primeira
+  tag que publicar o manifesto, o passo do download do binário no onboarding
+  pelo navegador ([ADR 0118](docs/adr/0118-configuracao-automatica-do-runner-pelo-navegador.md))
+  responde 502 **em toda plataforma**. É o desenho: a alternativa seria servir
+  bytes que não se pôde conferir. O caminho alternativo continua de pé, e é o
+  que a própria mensagem aponta — `npm install -g @brabo/runner`.
+
+  **O que o operador faz:** cortar uma tag final depois deste merge, e
+  conferir que `build-runner-binaries.yml` chegou ao job `checksums`. Ele está
+  vermelho nas três últimas runs (`darwin-arm64` em `--self-test-pty`,
+  `win32-x64` em `node-pty` sem `.node`); como o job é `if: always()`, o
+  manifesto sai cobrindo os binários que construíram — hoje, os dois de Linux.
+
 ### Novidades
 
 - **web**: o navegador de pastas do assistente de criação volta a ler o disco da
