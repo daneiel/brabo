@@ -145,10 +145,22 @@ Declared, not fixed:
 - **npm/pnpm dependencies aren't attested.** The lockfile pins versions
   and integrity hashes, which is real, but there's no provenance check
   (`npm audit signatures` or equivalent) in any job.
-- **No signing or attestation of our own artifacts.** Neither the
-  published images nor the runner binaries are signed — this sits with
-  the runner code-signing item in
-  [the backlog](backlog.md), unchanged by this page.
+- ~~**No signing or attestation of our own artifacts.**~~ **Closed by
+  [ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md)**
+  (BRB-005). `release.yml` signs the four images **by digest** with
+  `cosign` keyless — the OIDC identity of the workflow, no key in
+  custody anywhere — and `build-runner-binaries.yml` gained a
+  consolidating job that publishes **one signed `checksums.txt`**
+  covering the five binaries, rather than five separate signatures.
+  Both workflows **verify what they just signed**, in the same run:
+  a signature nobody tries to verify is one more file in the release,
+  and the failure would otherwise surface on the machine of whoever
+  installs — the worst place to find it.
+
+  What this does **not** cover, and is a different item: **code-signing
+  the runner binaries** for the OS (macOS notarization, Windows
+  Authenticode), which needs a paid signing identity and stays in
+  [the backlog](backlog.md).
 - **Third-party images are tag-pinned, not digest-pinned** (above).
 - **The workflows' own permissions** aren't covered here; that's the
   `permissions:` block per workflow, and it's a separate audit.
