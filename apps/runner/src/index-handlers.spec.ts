@@ -17,6 +17,7 @@ import {
   tratarContainerStop,
   tratarExec,
   tratarMirrorSync,
+  tratarWorkspaceCreate,
   type EstadoDoRunner,
 } from './index.ts';
 import type { ChannelLike, PushLike } from './channel.ts';
@@ -75,6 +76,7 @@ function estadoFalso(opts: {
   containerAtivo?: string | null;
   dir?: string;
   destinoDoEspelho?: string | null;
+  base?: string | null;
 }): EstadoDoRunner {
   return {
     canalAtual: opts.canal,
@@ -88,6 +90,10 @@ function estadoFalso(opts: {
     docker: opts.docker ?? dockerFalso(),
     containerAtivo: opts.containerAtivo ?? null,
     destinoDoEspelho: opts.destinoDoEspelho ?? null,
+    // ADR 0151/RN-529: `null` é o estado NORMAL, e o ÚNICO handler que
+    // depende da base é `tratarWorkspaceCreate` (RN-532) — `exec`, `pty` e
+    // espelho não sabem que ela existe.
+    base: opts.base ?? null,
   };
 }
 
@@ -512,5 +518,97 @@ describe('tratarMirrorSync — o destino concedido no join', () => {
       // desfeita pela queda da conexão.
       expect(existsSync(join(destino, 'app.ts'))).toBe(true);
     });
+  });
+});
+
+/**
+ * ADR 0151 ponto 3 / RN-532 — `workspace_create`, e as DUAS coisas que só este
+ * handler decide: a ORDEM `workspace_confirm` → `workspace_create_result` (é
+ * ela que garante que o carimbo já existe quando o pedinte destrava), e que
+ * NENHUMA saída fica calada, porque do outro lado há alguém bloqueado.
+ */
+describe('tratarWorkspaceCreate — a pasta do projeto sob a base local', () => {
+  let raiz: string;
+
+  beforeEach(() => {
+    raiz = mkdtempSync(join(tmpdir(), 'brabo-runner-pasta-'));
+  });
+
+  afterEach(() => {
+    rmSync(raiz, { recursive: true, force: true });
+  });
+
+  it('cria a pasta e empurra `workspace_confirm` ANTES do resultado', async () => {
+    const canal = new CanalFalso();
+    const base = join(raiz, 'projetos');
+    mkdirSync(base);
+    const estado = estadoFalso({ canal, base });
+
+    await tratarWorkspaceCreate(estado, {
+      ref: 'w1',
+      projectId: 'p-1',
+      segmento: 'loja',
+    });
+
+    const alvo = join(base, 'loja');
+    expect(existsSync(join(alvo, '.git'))).toBe(true);
+
+    // A ORDEM é o mecanismo: os dois chegam ao MESMO processo de canal, e o
+    // `workspace_confirm` é síncrono do outro lado — mandá-lo primeiro é o que
+    // faz `workspace_verified_at` já estar carimbado quando o pedinte volta.
+    expect(canal.pushes).toEqual([
+      { event: 'workspace_confirm', payload: { path: alvo } },
+      { event: 'workspace_create_result', payload: { ref: 'w1', sucesso: true, caminho: alvo } },
+    ]);
+  });
+
+  it('sem base consentida: `sem-base` NOMEADO, e NENHUM `workspace_confirm`', async () => {
+    const canal = new CanalFalso();
+    const estado = estadoFalso({ canal, base: null });
+
+    await tratarWorkspaceCreate(estado, {
+      ref: 'w2',
+      projectId: 'p-1',
+      segmento: 'loja',
+    });
+
+    expect(canal.pushes).toHaveLength(1);
+    const [push] = canal.pushes;
+    expect(push?.event).toBe('workspace_create_result');
+    const payload = push?.payload as Record<string, unknown>;
+    expect(payload.sucesso).toBe(false);
+    expect(payload.motivo).toBe('sem-base');
+    // Confirmar um caminho que não foi criado faria a api gravar uma pasta
+    // que não existe — por isso o confirm só sai no sucesso.
+    expect(payload.caminho).toBeUndefined();
+  });
+
+  it('segmento que escapa da base é recusado NOMEADO, e nada nasce fora dela', async () => {
+    const canal = new CanalFalso();
+    const base = join(raiz, 'projetos');
+    mkdirSync(base);
+    const estado = estadoFalso({ canal, base });
+
+    await tratarWorkspaceCreate(estado, {
+      ref: 'w3',
+      projectId: 'p-1',
+      segmento: '../fora',
+    });
+
+    expect(existsSync(join(raiz, 'fora'))).toBe(false);
+    const payload = canal.pushes[0]?.payload as Record<string, unknown>;
+    expect(payload.sucesso).toBe(false);
+    expect(payload.motivo).toBe('segmento');
+  });
+
+  it('sem canal (a conexão caiu) não empurra nada e não lança', async () => {
+    const base = join(raiz, 'projetos');
+    const estado = estadoFalso({ canal: new CanalFalso(), base });
+    estado.canalAtual = null;
+
+    await expect(
+      tratarWorkspaceCreate(estado, { ref: 'w4', projectId: 'p-1', segmento: 'loja' }),
+    ).resolves.toBeUndefined();
+    expect(existsSync(join(base, 'loja'))).toBe(false);
   });
 });

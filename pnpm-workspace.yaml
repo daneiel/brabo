@@ -184,6 +184,19 @@ overrides:
   # `mermaid@11.16.1` (ele próprio um override acima), que pede
   # `dompurify: ^3.3.3`; a 3.4.13 é a correção e cabe na faixa.
   dompurify@>=3.0.0 <3.4.13: 3.4.13
+  # PRODUTO-EXCLUSIVA — `pnpm why multer` mostra UM pai só, e ele é da árvore
+  # do produto: `@nestjs/platform-express@11.1.28`, que é a última publicada,
+  # então não há bump de upstream que resolva.
+  #
+  # 4 HIGH · CVE-2026-77037, CVE-2026-77078 e CVE-2026-82333 — três negações
+  # de serviço (descritor de arquivo, multipart forjado, array grande demais),
+  # todas corrigidas na 2.3.0, que é a última estável da linha (a 3.x ainda
+  # está em alpha). O Trivy reprovava o scan da imagem da api por elas.
+  #
+  # A faixa cobre a linha 2 inteira, pela disciplina 1 acima: fixar
+  # `multer@2.2.0` fecharia o buraco de hoje e o reabriria em silêncio no dia
+  # em que o Nest pedisse 2.1.x.
+  multer@>=2.0.0 <2.3.0: 2.3.0
 
 
 # O default do pnpm ("install") roda um `pnpm install` do workspace INTEIRO,

@@ -45,11 +45,11 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
 }));
 
-// O `FolderBrowserModal` real é montado quando "Procurar pasta" abre. Desde a
-// RN-504 ele fala com a API (`listProjectFolders`, mockada acima) e não mais
-// com o canal Phoenix — este dublê fica porque o módulo do canal segue
-// importado pelo componente, e sem ele o `Socket` do phoenix.js tentaria
-// conectar de verdade se algum caminho voltasse a usá-lo.
+// O `FolderBrowserModal` real é montado quando "Procurar pasta" abre, e o
+// transporte depende do MODO (RN-533): `mounted` fala com a API
+// (`listProjectFolders`, mockada acima) e `runner` fala com o canal Phoenix —
+// que este dublê substitui, para o `Socket` do phoenix.js não tentar conectar
+// de verdade.
 const { connectFsBrowserChannelMock } = vi.hoisted(() => {
   const fakeChannel = {
     listarDiretorio: vi.fn().mockResolvedValue({ path: '/home/user', entradas: [] }),
@@ -522,11 +522,11 @@ describe('NewProjectWizard — a base de projetos decide o que é oferecido', ()
  * `ADR 0107` tinha declarado como lacuna: "Procurar pasta..." não conseguia
  * ancorar num projeto porque ele só nascia na confirmação.
  *
- * Desde a RN-504 o MODAL já não depende disso — ele navega a base pela api,
- * nos dois modos. A criação antecipada, porém, CONTINUA no assistente, e é
- * por isso que estes casos seguem aqui: ela é removida no PR seguinte deste
- * plano, junto com o modo `runner` na criação, e até lá o comportamento tem
- * de continuar coberto.
+ * A RN-504 apontou o MODAL para a api nos dois modos, e a criação antecipada
+ * ficou sem consumidor. A RN-533 (ADR 0151 ponto 7) a devolve ao seu propósito
+ * original: no modo `runner` o modal fala com o AGENTE LOCAL, e o ticket desse
+ * canal é escopado a um `projectId` real — sem projeto criado não há como
+ * navegar o disco da máquina do usuário.
  */
 describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', () => {
   async function ateWorkspaceRunner() {
@@ -550,16 +550,61 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
       executionMode: 'runner',
       workspacePath: '/home/voce/projetos/loja',
     });
-    // A criação antecipada CONTINUA acontecendo (é o caminho que o PR
-    // seguinte do plano remove); o que mudou é que o modal já não usa o id
-    // criado — ele navega a base pela api. Manter esta asserção provaria o
-    // contrário do código.
-    // O caminho já digitado vira a pasta de abertura, e o workspace é o que
-    // ancora o transporte.
+    // O id criado é usado: é ele que ancora o canal do agente local (RN-533).
     await waitFor(() =>
-      expect(listProjectFolders).toHaveBeenCalledWith('ws-1', '/home/voce/projetos/loja'),
+      expect(connectFsBrowserChannelMock).toHaveBeenCalledWith('proj-runner-1'),
     );
+    // E a api NÃO é consultada — o disco que interessa aqui é o da máquina do
+    // usuário, não a base do servidor.
+    expect(listProjectFolders).not.toHaveBeenCalled();
+  });
+
+  /**
+   * O modo decide o TRANSPORTE, e são duas perguntas diferentes (RN-533).
+   *
+   * Sem este par de asserções, apontar os dois modos para o mesmo lugar volta
+   * a passar despercebido: as duas listagens renderizam igual, e a diferença
+   * só aparece no CONTEÚDO — que num ambiente de teste é um dublê.
+   */
+  it('o modo decide o transporte: `runner` pelo agente local, `mounted` pela api', async () => {
+    createProject.mockResolvedValue({ id: 'proj-runner-1' });
+    getProjectsBase.mockResolvedValue({ projectsBase: BASE });
+    await ateWorkspace();
+    await screen.findByText('Pasta montada');
+
+    fireEvent.click(screen.getByText('Runner local'));
+    fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
+    await waitFor(() =>
+      expect(connectFsBrowserChannelMock).toHaveBeenCalledWith('proj-runner-1'),
+    );
+    expect(listProjectFolders).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
+
+    connectFsBrowserChannelMock.mockClear();
+    fireEvent.click(screen.getByText('Pasta montada'));
+    fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
+    await waitFor(() => expect(listProjectFolders).toHaveBeenCalled());
     expect(connectFsBrowserChannelMock).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Falhar a criação antecipada NÃO abre o modal (RN-533).
+   *
+   * O defeito que isto impede é silencioso: abrir "no que der" cairia no
+   * transporte de api e mostraria a base do SERVIDOR a quem acabou de
+   * escolher o modo em que a pasta mora na máquina dele — descoberto pelo
+   * conteúdo, nunca por um erro.
+   */
+  it('criação antecipada que falha não abre o navegador em transporte nenhum', async () => {
+    createProject.mockRejectedValue(new Error('api fora'));
+    await ateWorkspaceRunner();
+
+    fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
+
+    await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
+    expect(connectFsBrowserChannelMock).not.toHaveBeenCalled();
+    expect(listProjectFolders).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument();
   });
 
   it('sem digitar nada ainda, cria com o caminho PLACEHOLDER — nunca com o campo vazio', async () => {
@@ -589,7 +634,7 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
     fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
     fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
 
-    await waitFor(() => expect(listProjectFolders).toHaveBeenCalled());
+    await waitFor(() => expect(connectFsBrowserChannelMock).toHaveBeenCalled());
     expect(createProject).toHaveBeenCalledTimes(1);
   });
 
