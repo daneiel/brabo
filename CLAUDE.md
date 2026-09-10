@@ -216,9 +216,16 @@ daqui e o fechamento vai para o histórico.
 - Anamnese e Psicólogo PAUSADOS desde 2026-08-10 (`ANAMNESE_ENABLED=false`),
   aguardando spec; Staff dormente para disparo automático (acionável manual)
 - `context-manager-summarize` é o único template da leva sem consumidor
-- `DEPLOY_ENABLED` não existe: trava `platform` em `planned` e mantém
-  `secops-runtime` sem detecção/resposta/postmortem de incidente (mesmo
-  gatilho ausente para os dois — ADR 0091/0092)
+- `DEPLOY_ENABLED` não existe **e não nasce por decisão** (ADR 0153): dez
+  documentos o citam como gatilho e as duas únicas ocorrências no código são
+  comentários. Ele trava `platform` em `planned` e mantém `secops-runtime` sem
+  resposta/postmortem de incidente (a DETECÇÃO já é `active`, por script — ADR
+  0091/0092). O que o ADR 0153 fez foi separar as duas metades: o gate
+  `deployavel` entrou no registro `gates.yml` (estava só no `fluxo.yml` — buraco
+  do registro, não do deploy), e o resto é **ambiente**, não flag — a
+  infraestrutura já está pronta (overlays, imagens no GHCR por digest, smoke/
+  rollout/restore), falta alguém rodar e manter. A variável nasce no PR que
+  tiver o primeiro consumidor real, nunca antes
 - UX Designer: `teste-de-usabilidade` (exige usuário humano real) e
   `métricas-de-uso` (o funil mede sessão→commit→PR→merge, não adoção de
   feature pelos usuários finais do produto construído) ficam fora de
