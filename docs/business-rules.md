@@ -10822,3 +10822,97 @@ interrompido se completa.
   "repositório já CRIADO cai no caso de uso, que é idempotente por desenho")
 - **Origem:** pedido do dono do produto — *"o gatilho deve vir quando o arquiteto
   passar o handoff para o desenvolvedor iniciar o desenvolvimento"*
+## Os artefatos dos agentes viram arquivo, em `docs/` (RN-523)
+
+### RN-523 — A pasta `docs/` é PROJEÇÃO do event log: derivada, por agente, e nunca fonte de verdade {#rn-523}
+
+Todo artefato que os agentes produzem vive **exclusivamente no event log** —
+`apps/engine/lib/engine/harness/tools/emit_artifact.ex:3-5` diz literalmente
+que *"não há tabela de artefatos"*. Isso continua certo para a FONTE, e esta RN
+não mexe nisso. O que ela fecha é outro buraco: essa memória não chegava a
+lugar nenhum que uma pessoa abrisse. Quem abre a pasta do projeto no editor não
+encontrava nada do raciocínio que produziu o código. (O **provisionamento
+adiado** — criar projeto deixar de criar repositório, e o git nascer no aceite
+do handoff ao Dev Lead — abre um intervalo inteiro em que o projeto não tem nem
+repositório, e torna esta pasta ainda mais necessária; ele vem em PR próprio, e
+esta RN não depende dele.)
+
+Cada evento `artifact.*` de um tipo permitido vira um Markdown em
+`docs/<agente>/` dentro do workspace do projeto. É **projeção derivada**, no
+mesmo sentido estrito que o ADR 0101 deu ao grafo Neo4j: a fonte é o evento, a
+pasta pode ser apagada inteira e reconstruída, e **nada no produto lê dela**
+para decidir coisa alguma.
+
+**O mecanismo é o do `GraphProjector`, copiado peça por peça** — poller
+próprio, `drainOnce()` público, flag contra ciclos sobrepostos, lote de 50, e
+`markProcessed` só após sucesso. A linha de outbox é uma TERCEIRA, gravada na
+mesma transação do evento, sob um `aggregate_type` PRÓPRIO
+(`artifact_projection`): `Engine.Outbox.Drain` só drena `session`, `task` e
+`container`, e disputar a linha `'session'` seria perder a corrida contra ele
+quase sempre. Uma diferença deliberada em relação ao grafo: o `aggregateId` é o
+**projeto**, não a sessão — a pasta é do projeto, e gravá-lo ali poupa o
+projetor de uma consulta por artefato.
+
+**A lista é de PERMITIDOS.** Tipo de artefato novo nasce fora da projeção e
+entra quando alguém decidir que ele é documento, em vez de aparecer sozinho
+numa pasta que o usuário lê. Ficam de fora `qa_verdict`, `secops_verdict`,
+`task_blocked` e `infra_delegation_files`: são desfechos OPERACIONAIS, e um
+veredito de gate por task encheria `docs/qa-lead/` de arquivos que ninguém
+abre, custando à pasta a propriedade que a torna útil — caber numa olhada.
+
+**Versionado sobrescreve; append-only leva o `seq`.** Os quatro tipos lidos por
+redução ao maior `version` (`module_map`, `module_routing`, `project_image`,
+`c4_diagram`) escrevem sempre o mesmo arquivo, e a pasta mostra o vigente — o
+histórico continua inteiro no event log. Os demais viram arquivo próprio com o
+`seq` do evento no nome, e **sem ele** dois artefatos do mesmo tipo com o mesmo
+título gerariam o mesmo arquivo, com o segundo apagando o primeiro: a única
+forma de esta projeção perder informação que a fonte tem.
+
+**Duas barreiras contra o filesystem, e a segunda não é redundante.** O nome
+sai do título que o MODELO escreveu. `slugDeArquivo` **deriva** um nome de um
+alfabeto fechado (nenhum caminho de retorno deixa separador sobreviver;
+devolve `null` quando não sobra nada), e `FsArtifactFileStore` confere de novo
+com `relative()` antes de abrir. As duas respondem perguntas diferentes — "que
+nome eu derivo disto" e "o que eu vou de fato abrir" —, e confiar só na
+primeira faria a segurança da escrita depender de nenhuma mudança futura de
+slug jamais deixar passar um separador, que é a contenção que o ADR 0130 recusa
+por princípio.
+
+**A projeção nunca derruba a fonte.** Nenhum throw escapa do ciclo: cada item
+falha isolado, fica logado e permanece `processed_at IS NULL` para o ciclo
+seguinte. Diferente do grafo, **não há aqui um erro que pare o lote inteiro** —
+falha de escrita costuma ser do ITEM, e parar o lote bloquearia todos atrás
+dele. Evento que sumiu do event log é marcado processado, não retentado para
+sempre.
+
+**Em modo `runner` a pasta desvia para a raiz gerenciada**, pelo mesmo motivo
+físico do `permissions.json` ([RN-478](#rn-478)): quem escreve é a api, de
+dentro do container dela, e o canal do runner só transporta comando, sem
+primitiva de escrever conteúdo. Custo declarado: ali `docs/` não fica ao lado
+do código.
+
+**A escrita NÃO passa por `proposed_action`**, e não é omissão: aquele pipeline
+é a origem de todo efeito externo de um AGENTE PEDINDO PARA AGIR, e aqui o
+artefato já foi emitido e já está no event log. Passar a projeção pela fila
+encheria as aprovações de decisões rotineiras — uma por artefato — e corroeria
+o teto que dá sentido ao clique nas ações que são efeito externo de verdade.
+
+- **Onde:** `apps/api/src/domain/artifacts/artifact-projection-events.ts` (o
+  vocabulário e as regras de nome, puros);
+  `apps/api/src/application/artifact-projection/artifact-projector.ts` (o
+  poller); `apps/api/src/application/ports/artifact-file-store.port.ts` e
+  `apps/api/src/infrastructure/filesystem/fs-artifact-file-store.ts` (a
+  escrita, com a segunda barreira);
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  (`pastaDeArtefatosDoProjeto`, irmã de `permissionsFilePath`);
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts`
+  (a terceira linha de outbox)
+- **Teste:** `apps/api/test/domain/artifacts/artifact-projection-events.spec.ts`
+  (as regras de nome, o traversal e a colisão por `seq`) e
+  `apps/api/test/application/artifact-projection/artifact-projector.spec.ts`
+  (caminho feliz, versionado sobrescrevendo, e a degradação: falha deixa a
+  linha não processada, o ciclo seguinte retenta, uma falha não bloqueia o
+  lote, evento sumido não é retentado para sempre, reprocessar é idempotente)
+- **ADR:** [0148](adr/0148-artefatos-projetados-em-arquivo.md)
+- **Origem:** pedido do dono do produto — *"criar apenas uma pasta por ora
+  chamada docs, onde os artefatos estarão de cada um dos agentes"*

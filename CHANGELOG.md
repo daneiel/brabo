@@ -89,6 +89,47 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   mentiria sobre o estado dele, então o ramo sai antes. Repositório `created`
   que já existe não é pulado: cai na idempotência que o caso de uso já promete,
   e é assim que um bootstrap interrompido se completa.
+- **api**: os artefatos dos agentes passam a virar **arquivo**, numa pasta
+  `docs/` organizada por agente dentro do workspace do projeto (RN-523,
+  [ADR 0148](docs/adr/0148-artefatos-projetados-em-arquivo.md)). Todo artefato
+  vive hoje só no event log — `emit_artifact.ex` diz literalmente que *"não há
+  tabela de artefatos"* —, o que continua certo para a FONTE e não muda aqui. O
+  que muda é que essa memória não chegava a lugar nenhum que uma pessoa
+  abrisse: quem abre a pasta do projeto no editor não encontrava nada do
+  raciocínio que produziu o código, e desde a RN-521/RN-522 há um intervalo
+  inteiro — entre a criação e o handoff do Arquiteto — em que o projeto não tem
+  nem repositório.
+
+  É **projeção derivada**, no mesmo sentido estrito que o ADR 0101 deu ao grafo
+  Neo4j: a fonte é o evento, a pasta pode ser apagada inteira e reconstruída, e
+  **nada no produto lê dela**. O mecanismo copia o `GraphProjector` peça por
+  peça (poller próprio, `drainOnce()` público, lote de 50, `markProcessed` só
+  após sucesso) e usa um `aggregate_type` PRÓPRIO, porque `Engine.Outbox.Drain`
+  só drena `session`/`task`/`container` e disputar a linha `'session'` seria
+  perder a corrida contra ele quase sempre.
+
+  **Lista de PERMITIDOS**, não de excluídos: tipo novo nasce fora da projeção.
+  Ficam de fora `qa_verdict`, `secops_verdict`, `task_blocked` e
+  `infra_delegation_files` — desfechos operacionais, não documentos; um
+  veredito de gate por task encheria a pasta de arquivos que ninguém abre.
+  Os quatro tipos **versionados** sobrescrevem o mesmo arquivo (a pasta mostra
+  o vigente, o histórico continua no event log); os append-only levam o `seq`
+  do evento no nome, sem o qual dois artefatos de mesmo tipo e título
+  colidiriam e o segundo apagaria o primeiro.
+
+  **Duas barreiras contra o filesystem**, porque o nome sai do título que o
+  MODELO escreveu: `slugDeArquivo` deriva o nome de um alfabeto fechado, e a
+  escrita confere de novo com `relative()` antes de abrir. Confiar só na
+  primeira faria a segurança depender de nenhuma mudança futura de slug deixar
+  passar um separador — a contenção que o ADR 0130 recusa por princípio.
+
+  **A projeção nunca derruba a fonte**: nenhum throw escapa do ciclo, e o item
+  que falha permanece na fila para o ciclo seguinte. Em modo `runner` a pasta
+  desvia para a raiz gerenciada, pelo mesmo motivo físico do `permissions.json`
+  (RN-478) — custo declarado: ali ela não fica ao lado do código. E a escrita
+  **não** passa por `proposed_action`: não é agente pedindo para agir, é o
+  sistema materializando algo que já é fato, e pô-la na fila encheria as
+  aprovações de uma decisão rotineira por artefato.
 
 - **engine**: `assess_implementability` do Dev Lead passa a disparar o
   **threat model de design** do appsec — o gatilho que `docs/fluxo.yml`
