@@ -2902,12 +2902,13 @@ fora das chaves obrigatórias porque lista vazia é resposta válida). Falha
 (`modelo`/`politica`/`infra`), mesma régua da RN-059 — nunca resposta vazia
 nem silêncio só em broadcast.
 
-**Lacuna declarada, não bug**: `run_design/2` é ACIONÁVEL, mas nada aciona
-sozinho ainda. O ponto de disparo natural é `assess_implementability` do Dev
-Lead (frente `qa-estrategia`, gate `implementavel`, mesmo ADR 0090) — fora do
-escopo desta entrega, que foi mantida autocontida (nenhum arquivo de outra
-frente tocado: `decide.ts`, `docs/gates.yml` e `dev_lead_tools.ex`
-intocados).
+**O gatilho automático existe desde a [RN-539](#rn-539)**. Esta entrega foi
+mantida autocontida de propósito (nenhum arquivo de outra frente tocado:
+`decide.ts`, `docs/gates.yml` e `dev_lead_tools.ex` intocados), e declarava a
+lacuna: `run_design/2` era ACIONÁVEL e nada acionava sozinho. O ponto de
+disparo que ela nomeava — `assess_implementability` do Dev Lead, frente
+`qa-estrategia`, gate `implementavel`, mesmo ADR 0090 — passou a ser o
+chamador de verdade, em paralelo e uma vez só por story.
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex` (`run_design/2`,
   `handle_cast/2`, `run_appsec_design/3`, `emit_threat_model/3`,
@@ -9604,6 +9605,74 @@ reparável (termina em toast), não o invisível.
   existe sinal de presença na api), e o papel lido é o do workspace, não o
   efetivo do projeto
 
+### RN-539 — `assess_implementability` dispara o threat model de DESIGN em PARALELO, e uma vez só por story {#rn-539}
+
+O appsec (`Engine.Gates.SecOpsAgentServer.run_design/2`, [RN-360](#rn-360))
+nasceu implementado, testado e **sem chamador de produção nenhum**: a única
+menção fora de teste era um comentário em `artifact_schemas.ex`. A própria
+[RN-360](#rn-360) declarava a lacuna, e `docs/fluxo.yml` (papel `appsec`,
+campo `acionamento`) já NOMEAVA o gatilho que faltava — `assess_implementability`
+do Dev Lead, gate `implementavel`, o mesmo [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md).
+Era ele. `run_assessment/2` passa a chamá-lo por
+`Engine.Gates.Dispatcher.run_appsec_design/2` — sexto callback do behaviour,
+CÓPIA estrutural de `run_qa_estrategia/3` e trocável em teste pelo mesmo
+motivo dos cinco vizinhos (o chamador é exercitado por um teste leve, sem
+sandbox Ecto, e não deveria subir um GenServer real só para provar que
+PEDIU).
+
+**Em paralelo, e o parecer não espera.** O disparo acontece nas DUAS saídas
+de `run_assessment/2` — com plano de teste e sem — e o desfecho de cada uma
+fica byte a byte como era. Fazer o parecer depender do threat model faria o
+gate `implementavel` depender de DUAS produções assíncronas em vez de uma, e
+queimaria dois turnos do Dev Lead onde hoje se queima um: o ramo `:sem_plano`
+já devolve `{:error, ...}` pedindo ao modelo que chame de novo
+([RN-163](business-rules/autenticacao.md#rn-163)), e uma segunda espera empilhada nele multiplicaria a
+janela. O threat model chega a quem precisa pelo caminho que a
+[RN-361](#rn-361) já definiu — handoff para `arquiteto`, `dev-lead` e
+`infra` —, nunca por este retorno; a mensagem do `:sem_plano` sequer menciona
+o appsec, porque prometer ao modelo algo que ele não vai receber ali é o
+defeito que a [RN-163](business-rules/autenticacao.md#rn-163) fecha.
+
+**E uma vez só por story.** O modelo é INSTRUÍDO a chamar
+`assess_implementability` de novo enquanto o plano de teste não existe: sem
+guarda, cada rechamada custaria outra rodada de LLM do appsec e mais três
+handoffs sobre a MESMA story. `disparar_appsec_se_preciso/3` só dispara
+quando não há `artifact.threat_model` daquela `storyId` no histórico. A
+pergunta aqui é EXISTE, não QUAL — o oposto do plano de teste, onde o mais
+recente vence porque uma story pode ser reavaliada.
+
+A leitura do event log é **uma** por chamada: as duas perguntas ("já há plano
+de teste?", "já há threat model?") são respondidas sobre a mesma lista. Dois
+`list_events/2` na mesma invocação seriam o amplificador de tráfego que o
+[ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md) recusa, e este caminho é
+quente justamente por causa da retentativa. Histórico ILEGÍVEL não dispara
+nada: ausência de resposta não é prova de ausência de artefato, e disparar ali
+reabriria a rechamada por outra porta. A cláusula de args inválidos também não
+dispara — ela não sabe qual é a story.
+
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:254`
+  (`run_assessment/2`, a leitura única do histórico) e `:333`
+  (`disparar_appsec_se_preciso/3`, a guarda de idempotência);
+  `apps/engine/lib/engine/gates/dispatcher.ex:43` (o callback) e `:110`
+  (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
+  `apps/engine/test/support/fake_gate_dispatcher.ex:29`
+- **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`,
+  describe "assess_implementability dispara o appsec (RN-539)" — story sem
+  threat model dispara, story com threat model NÃO dispara (a idempotência),
+  threat model de outra story não conta, o desfecho de `:sem_plano` não muda,
+  o parecer é proposto normalmente ao lado do disparo, args inválidos e
+  histórico ilegível não disparam
+- **ADR:** [0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+  (que declarava o gatilho automático como fora de escopo)
+- **Origem:** `docs/fluxo.yml`, papel `appsec`. Fica declarado e NÃO feito:
+  `artifact.threat_model` é emitido na sessão da STORY
+  (`emit_threat_model/3` lê `story["sessionId"]`), enquanto a guarda lê o
+  histórico da sessão do DEV LEAD. No caminho comum são a mesma sessão — o
+  Dev Lead avalia stories que a própria sessão de execução criou. Não sendo,
+  a guarda não enxerga o threat model e o appsec roda outra vez: custo de uma
+  rodada de LLM repetida, nunca dado errado (o artefato é append-only e quem
+  o consome é o handoff). Fechar isso exigiria a api aceitar busca de
+  artefato por story ATRAVÉS de sessões, que hoje não existe
 ## A flag que liga um agente tem de CHEGAR ao processo (RN-540)
 
 ### RN-540 — Flag booleana lida pelo `runtime.exs` é mapeada no `environment:` do serviço `engine` dos dois composes, com o default do código {#rn-540}

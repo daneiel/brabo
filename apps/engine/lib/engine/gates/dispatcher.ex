@@ -24,6 +24,25 @@ defmodule Engine.Gates.Dispatcher do
             ) :: :ok
 
   @doc """
+  AppSec de DESIGN (RN-360, ADR 0090) — o SEGUNDO momento do secops, por
+  `story_id`: threat model STRIDE-lite sobre a story + `module_map`, ANTES
+  de existir código/PR. Sobe (se preciso) o MESMO `SecOpsAgentServer` de
+  `run_secops/2` e chama `run_design/2`.
+
+  A indireção existe pelo mesmo motivo dos vizinhos: o chamador
+  (`Engine.Agents.DevLeadTools.run_assessment/2`) é exercitado por um teste
+  LEVE, sem sandbox Ecto — subir um GenServer real ali só para provar que o
+  threat model foi PEDIDO acoplaria o teste do Dev Lead ao banco.
+
+  Sem `session_id`, ao contrário de `run_qa_estrategia/3`, e isso é
+  deliberado: o appsec descobre a sessão pela PRÓPRIA story
+  (`Engine.Gates.AppSecContextBuilder.fetch/2` lê `story["sessionId"]`),
+  nunca pela do chamador — a assinatura acompanha
+  `SecOpsAgentServer.run_design/2`, que é quem manda aqui.
+  """
+  @callback run_appsec_design(project_id :: String.t(), story_id :: String.t()) :: :ok
+
+  @doc """
   Gates de PR de infra (Fase 4a — InfraAgent): mesma indireção, mas
   DETERMINÍSTICOS de ponta a ponta (sem GenServer próprio nem LLM) —
   `Engine.Infra.InfraGateRunner` roda em `Task.start` (fire-and-forget,
@@ -46,6 +65,9 @@ defmodule Engine.Gates.Dispatcher do
 
   def run_qa_estrategia(project_id, session_id, story_id),
     do: impl().run_qa_estrategia(project_id, session_id, story_id)
+
+  def run_appsec_design(project_id, story_id),
+    do: impl().run_appsec_design(project_id, story_id)
 
   def run_infra_qa(project_id, session_id, pr_action_id),
     do: impl().run_infra_qa(project_id, session_id, pr_action_id)
@@ -81,6 +103,13 @@ defmodule Engine.Gates.Dispatcher.Live do
   def run_qa_estrategia(project_id, session_id, story_id) do
     {:ok, _pid, _origin} = QaLeadSupervisor.start_agent(project_id)
     QaLeadServer.run_design(project_id, session_id, story_id)
+    :ok
+  end
+
+  @impl true
+  def run_appsec_design(project_id, story_id) do
+    {:ok, _pid, _origin} = SecOpsAgentSupervisor.start_agent(project_id)
+    SecOpsAgentServer.run_design(project_id, story_id)
     :ok
   end
 

@@ -108,6 +108,19 @@ wasn't a missing outbox, it was missing durable state for what happens
 BETWEEN two in-process calls. See
 [RN-140](business-rules.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
 
+Who ASKS for a gate is never the gate itself: `Engine.Gates.Dispatcher` is a
+behaviour with six callbacks (PR QA and SecOps, QA-strategy, the two
+deterministic infra gates, and design AppSec) whose only job is to start the
+per-project GenServer if needed and cast into it. The indirection exists for
+the callers' tests: `Engine.Agents.DevLeadTools` is exercised by a LIGHT test
+with no Ecto sandbox, and starting a real GenServer there just to prove a gate
+was ASKED FOR would tie the Dev Lead's test to the database. The newest of the
+six, `run_appsec_design/2`, closed the last gate that was actionable with no
+production caller: `assess_implementability` now asks for the story's design
+threat model IN PARALLEL — the verdict never waits for it, and the ask happens
+only once per story ([RN-539](business-rules.md#rn-539),
+[ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
+
 ## Code map
 
 ### `apps/api` — NestJS, 444 files
