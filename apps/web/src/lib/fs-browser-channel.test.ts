@@ -29,7 +29,7 @@ const { FakeSocket, fakeChannel, socketInstances, getTerminalTicketMock, listene
 
     class FakeSocket {
       url: string;
-      opts: { params?: { ticket?: string } };
+      opts: { params?: { ticket?: string }; reconnectAfterMs?: () => number };
       connect = vi.fn();
       disconnect = vi.fn();
       channel = vi.fn(() => fakeChannel);
@@ -37,7 +37,10 @@ const { FakeSocket, fakeChannel, socketInstances, getTerminalTicketMock, listene
       onClose = vi.fn();
       onError = vi.fn();
 
-      constructor(url: string, opts: { params?: { ticket?: string } }) {
+      constructor(
+        url: string,
+        opts: { params?: { ticket?: string }; reconnectAfterMs?: () => number },
+      ) {
         this.url = url;
         this.opts = opts;
         socketInstances.push(this);
@@ -165,6 +168,30 @@ describe('connectFsBrowserChannel', () => {
     const resultado = await canal.diretorioInicial();
 
     expect(resultado.erro).toMatch(/não consegui pedir autorização/i);
+    canal.fechar();
+  });
+
+  // RN-108 — o ticket de `getTerminalTicket` é de USO ÚNICO, e este módulo
+  // não tem política própria de reconexão (o `onClose` manda "feche e reabra").
+  // Sem neutralizar o auto-reconnect do phoenix.js, o socket ficava repetindo
+  // o MESMO ticket em background enquanto o modal estivesse aberto — a mesma
+  // linha de defeito que o `apps/runner` pagou com 429 na conta do usuário.
+  it('neutraliza o auto-reconnect do Phoenix.Socket — ticket de uso único nunca é repetido (RN-108)', async () => {
+    getTerminalTicketMock.mockResolvedValue({
+      ticket: 'ticket-1',
+      engineWsUrl: 'ws://engine.local/runner',
+    });
+
+    const canal = connectFsBrowserChannel('proj-1');
+    await flush();
+
+    expect(socketInstances).toHaveLength(1);
+    expect(socketInstances[0].opts.params).toEqual({ ticket: 'ticket-1' });
+    const { reconnectAfterMs } = socketInstances[0].opts;
+    expect(reconnectAfterMs).toBeDefined();
+    // Um dia inteiro: na prática nunca dispara dentro da vida do socket.
+    expect(reconnectAfterMs!()).toBeGreaterThan(60 * 60 * 1000);
+
     canal.fechar();
   });
 

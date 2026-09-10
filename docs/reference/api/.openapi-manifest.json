@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "93eaffb5fde31aaa9bc85b091bea46897899ec40c6bb2040df8dd302537b4b85",
+  "openapiSha256": "60cda39dbf97f89e5fff745053d48b417b43584a1b64eae7ef0ff1ce048c31c1",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -749,8 +749,8 @@
     "runner-device-keys-controller-revoke-device-key.api.mdx": "92d2290a0c293b21538cde27f320d5e4294b5abc8ee2728379d4a90e59e79557",
     "runner-releases-controller-binary.ParamsDetails.json": "c7c69ffea7e3e6af99994c9347a2f29c4a558bdf8854ac3b61df817cbadcd1f7",
     "runner-releases-controller-binary.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
-    "runner-releases-controller-binary.StatusCodes.json": "36374ef8619c8a639ecce65b533e921029b36028d1ab7cf6da2ab55097c64129",
-    "runner-releases-controller-binary.api.mdx": "eef51ef5e24d0f83a303a21baa7b85203bdcc22f385da269c7143df1a86feaad",
+    "runner-releases-controller-binary.StatusCodes.json": "1f0d4cba2b642badb843cb08e40b360ffc0cd1da15caeee2c19a69933e9ef288",
+    "runner-releases-controller-binary.api.mdx": "9f84b207f6f0418fd3e600a68472b61d29bff03b55a261a1393bf181d09cf489",
     "runner-tickets-controller-runner-ticket.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "runner-tickets-controller-runner-ticket.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "runner-tickets-controller-runner-ticket.StatusCodes.json": "d0879b360fd23961f9a7ee2202ac3de8e58c4644e8d355290bfaf1405668aadc",

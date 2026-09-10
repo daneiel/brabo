@@ -553,14 +553,22 @@ authorized by their role in the workspace. Routing it through the service token
 would replace a per-user authorization with a shared secret, on a route whose
 entire job is to expose part of the operator's filesystem topology.
 
-It also replaces the two mechanisms that used to do this job, and both of them
-lived OUTSIDE this contract: `FolderBrowserModal` navigated through the runner's
-own websocket (`fs_list_dir`/`fs_home_dir`, the `terminal:<projectId>` channel —
-so the listing came from the user's machine, never from the server), and
+The two mechanisms that used to do this job both lived OUTSIDE this contract:
+`FolderBrowserModal` navigated through the runner's own websocket
+(`fs_list_dir`/`fs_home_dir`, the `terminal:<projectId>` channel — so the
+listing came from the user's machine, never from the server), and
 `RunnerOnboardingPanel` used `showDirectoryPicker`, which hands back a browser
-handle and never an absolute path. With the runner leaving project creation, the
-api is the only party that can answer — and it answers about the ONE folder it
-can see, the base above.
+handle and never an absolute path.
+
+This route replaced the first one for the `mounted` mode, and only for it. RN-504
+had pointed BOTH modes here on the premise that the `runner` mode would leave
+project creation; it didn't, and
+[RN-533](../business-rules.md#rn-533) ([ADR 0151](../adr/0151-base-consentida-no-runner.md)
+point 7) sent the `runner` picker back to the channel. The two are not
+redundant — they read different disks, and neither can answer for the other: this
+route answers about the ONE folder the api can see, the base above; the channel
+answers about the machine the server cannot see at all. Nothing about this
+route's contract changed with that.
 
 #### And neither is declaring the mirror destination
 

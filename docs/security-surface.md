@@ -67,9 +67,30 @@ tool that lets someone authenticate would be backwards. `platform` is a
 closed allowlist (`linux-x64`/`linux-arm64`/`darwin-x64`/`darwin-arm64`/
 `win32-x64`), never interpolated raw into the GitHub URL — closing the
 SSRF/path-injection vector an open parameter would leave. The resolved
-asset URL (never the bytes) is cached in memory for a few minutes,
-purely to stay under GitHub's unauthenticated rate limit under
-concurrent downloads.
+asset URL (never the binary's bytes) is cached in memory for a few
+minutes, purely to stay under GitHub's unauthenticated rate limit under
+concurrent downloads; since session 3 of FASE 29 the parsed
+`checksums.txt` — a few hundred bytes of *text* — is memoised in that
+same entry, so hash and binary always come from the same release.
+
+Since [RN-525](business-rules.md#rn-525) ([ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md))
+the route no longer streams unverified bytes: it checks the sha256 of
+what it downloaded against the release's `checksums.txt` and answers
+**502 with a named `motivo`** when it cannot — including when the
+release publishes no manifest at all, which is a *refusal*, never bytes
+served with a warning. Read the guarantee narrowly: this is **integrity
+against the manifest, not provenance**. The route does **not** verify
+the manifest's `cosign` signature (`checksums.txt.bundle`), so anyone
+who can rewrite the Release rewrites both files and passes. Both ways to
+close it were measured and refused for now — `cosign` in the image is
+155 MB, and `@sigstore/verify` would make a `@Public()` route depend on
+a second third-party host (`tuf-repo-cdn.sigstore.dev`) to check
+something no Release carries yet. The consumer that *does* verify the
+signature is `install.sh`. Because verifying the hash means reading
+every byte, the download lands in a temporary file under `/tmp` (the
+pod's `emptyDir`, mounted because the rootfs is read-only) with a
+256 MiB ceiling, and is streamed back only after the hash matches —
+never buffered in the 512Mi process.
 
 ### First-party auth
 
@@ -375,6 +396,43 @@ reason in the URL.
   (`caminhoDeWorkspaceLocalValido`) — system root and overlap with the
   Brabo checkout remain forbidden even coming from the runner. `400` if the
   project isn't in `runner` mode.
+
+  Since [ADR 0151](adr/0151-base-consentida-no-runner.md)
+  ([RN-529](business-rules.md#rn-529)) the runner can ALSO be born with a
+  **base** — one folder of that machine under which each project is a
+  subfolder. Two things about it belong on this page. First, the base is
+  **local and never arrives over the wire**: it comes from `--base` or from
+  `$XDG_CONFIG_HOME/brabo/runner.json`, never from a server field, so the
+  invariant of [ADR 0130](adr/0130-broker-de-container.md)/
+  [ADR 0144](adr/0144-a-segunda-raiz-do-broker.md) holds on this side too —
+  whoever owns the root is whoever executes, and only the **relative
+  segment** travels. `resolverPastaDoProjetoNaBase` refuses an ABSOLUTE
+  segment lexically rather than reinterpreting it. Second, the base does
+  **not** enter the validation of `--dir`, exactly as the base rule stays out
+  of the api's lexical predicate: a project whose folder predates the base
+  keeps working. The guard is a THIRD sibling of `guard.ts`, reusing
+  `dentroDoEscopo`/`realpathMaisProximo`/`semBarraFinal` and the same
+  lexical-then-`realpath` double pass — and it inherits the same TOCTOU
+  caveat in writing: best-effort, never the security boundary.
+
+  Since [RN-532](business-rules.md#rn-532) (same ADR, points 3 to 6) that
+  base has a CONSUMER: the `workspace_create`/`workspace_create_result`
+  pair. Three things about it belong on this page. First, **no new write
+  route was born**: having created the folder, the runner pushes the
+  `workspace_confirm` that already existed, and it is that one — through
+  this very endpoint — that stamps `workspace_verified_at`. The engine
+  still does not write the table, and the single path that stamps stays
+  single. Second, what travels is the **relative segment**, never an
+  absolute path, and the runner refuses an absolute one lexically. Third,
+  the capability `workspace` is the only one of the four whose declaration
+  depends on the runner's STATE rather than its version — it is declared
+  only when a base was consented — so it is by that declaration, and by
+  nothing else, that the server learns a base exists. Nobody REQUIRES it at
+  join time: a runner without a base connects and serves its project as
+  always, and only `workspace_create` is refused, with a NAMED answer.
+  Creating that folder is consented configuration, not an agent asking to
+  act: it is **not** a `proposed_action`, and no ceiling in `decide.ts`
+  gains an exception.
 - **`POST /internal/projects/:projectId/container-exec`** ([RN-492](business-rules.md#rn-492),
   [ADR 0134](adr/0134-dev-agents-executam-dentro-do-container.md)) is called
   only by the engine, when `Engine.Actions.TerminalExecutor` decided a
@@ -447,6 +505,22 @@ reason in the URL.
   (issue/list/revoke the PAT itself, plus the two `maintainer` ones —
   RN-427, list/revoke of ANY user in the project) remain regular session
   JWT — only the route the TOKEN ITSELF authenticates changes mechanism.
+- **A client of the `/runner` socket must NEVER let `phoenix.js` reconnect on
+  its own** ([RN-108](business-rules/autenticacao.md#rn-108)). The ticket is
+  single-use, and the built-in auto-reconnect repeats the SAME `params` — so a
+  socket built without `reconnectAfterMs` retries a dead ticket forever. This
+  is not hypothetical: `apps/runner/src/channel.ts` shipped that way while its
+  own docblock claimed the opposite, and it was measured in real use — the same
+  ticket refused every ~5.13s (the ceiling of the library's internal backoff),
+  61 `REFUSED CONNECTION TO EngineWeb.RunnerSocket` in a few hours, and, on top
+  of the runner's OWN retry policy, 530 requests in one minute against the
+  300 req/min `RATE_LIMIT_USER` ceiling. The limit is **per user**, so the
+  denial of service landed on the account owner's BROWSER, as a 429 — an
+  unauthenticated third party is not involved, but a misbuilt client is enough
+  to lock its own user out. Reconnection is always the caller's own policy,
+  with a fresh ticket each attempt; the option is now REQUIRED by the type
+  (`OpcoesDoSocket`) and asserted by a test over the option passed to the
+  constructor, since a test that only checks "it connects" passed throughout.
 - **The three `/projects/:projectId/runner-device-keys` routes ARE regular
   session JWT**, unlike `runner-ticket` above — the browser, already
   logged in, registers the Ed25519 public key it just generated (the

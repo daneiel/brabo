@@ -120,6 +120,65 @@ do arquivo local.
   cada tentativa de conexão).
 - `--api-url`: ordem de prioridade: flag explícita → `BRABO_API_URL` →
   `apiUrl` do `brabo-runner.config.json` local → `http://localhost:3000`.
+- `--base`: a **base de projetos** desta máquina — a pasta sob a qual cada
+  projeto é uma **subpasta** (ADR 0151, RN-529). Omitida, é lida de
+  `$XDG_CONFIG_HOME/brabo/runner.json` (senão
+  `~/.config/brabo/runner.json`), que é onde o instalador a grava; a flag
+  explícita vence o arquivo. **Sem flag e sem arquivo o runner roda sem
+  base, exatamente como sempre.**
+
+### A base e `--dir` são coisas diferentes, e uma não invalida a outra
+
+`--dir` é a raiz **deste** projeto; a base é onde uma pasta de projeto
+**nova** nasce. Um projeto cuja pasta está fora da base continua
+perfeitamente válido — a base é regra de **criação**, e a validação de
+`--dir` (RN-434/RN-435) não a consulta. É a mesma proibição que a api já
+declara por escrito em `project-workspaces-root.ts` para
+`BRABO_PROJECTS_BASE` (RN-500/RN-501).
+
+A base é **local** e nunca chega pela rede: quem tem a raiz é quem executa,
+e o que o servidor manda é o **segmento relativo** (o invariante do ADR
+0130/0144). O que a base recusa, com motivo nomeado: caminho relativo, com
+`..`, `/`, um arquivo já existente, fora do `$HOME` no Linux (a mesma regra
+de `--dir`), e a base que está **dentro** da pasta deste projeto ou é igual
+a ela — nesse caso todo projeto novo nasceria dentro deste. O sentido
+contrário (a pasta do projeto dentro da base) é o arranjo normal.
+
+Recusa vinda da **flag** encerra o processo com código 2; recusa vinda do
+**arquivo** é dita em `stderr`, nomeia o que se perde, e o runner segue sem
+base — derrubar um agente que atende um projeto por causa de uma
+configuração que ele ainda não usa seria desproporcional. Um arquivo que
+existe e não declara `base` é ausência, não recusa.
+
+Isto é **best-effort**, como `guard.ts` e `espelho-guard.ts`: a fronteira de
+segurança continua sendo autenticação + pipeline de aprovação + o
+consentimento de quem rodou o CLI.
+
+### O que a base HABILITA: `workspace_create` (RN-532)
+
+Com base consentida, este runner declara no `join` uma quarta capacidade —
+`workspace` — e passa a atender a mensagem `workspace_create` (ADR 0151
+pontos 3 a 6). O servidor manda o `projectId` e o **segmento relativo** à
+base (nunca um caminho absoluto); o runner faz `mkdir -p` e então
+`git init` — ou clona, quando o pedido traz uma URL de repositório, caso em
+que a credencial viaja em `env` e o clone roda no **HOST**, pelo mesmo
+mecanismo do `exec` (ADR 0145).
+
+Tendo dado certo, ele empurra o `workspace_confirm` que já existia — e é
+esse, e só esse, que GRAVA. Nenhuma rota nova de gravação nasceu, e o único
+caminho que carimba `workspace_verified_at` continua sendo um só. O
+`workspace_create_result` só destrava quem pediu: sucesso com o caminho
+final, ou erro **nomeado** (`sem-base`, `segmento`, `nao-e-pasta`, `mkdir`,
+`git`).
+
+Duas coisas que valem registrar. A capacidade `workspace` é a única cuja
+declaração depende do **estado desta execução** e não da versão do binário —
+sem base não há onde criar pasta, e declará-la mesmo assim seria o defeito
+silencioso que a negociação existe para impedir. E `estado.dir` **não muda**:
+a pasta criada é a do projeto do ponto de vista do servidor, mas a raiz que
+`guard.ts` usa para conter comando aprovado continua sendo a desta execução —
+trocá-la em runtime moveria uma fronteira de contenção por causa de uma
+mensagem de rede.
 
 ### Rodando direto do checkout do monorepo (sem instalar via npm)
 
@@ -175,6 +234,25 @@ brabo-runner service uninstall
 O `PATH` do momento da instalação vai **congelado** dentro da unit (os dois
 gerenciadores dão ao serviço um PATH mínimo, e o runner chama `git` e
 `docker`): mudou o seu PATH, rode `service install` de novo.
+
+## Reconexão
+
+Quando a conexão cai, o runner **pede um ticket NOVO** e tenta de novo, com
+backoff (`1s, 2s, 5s, 10s, 30s`) e um teto de 10 tentativas seguidas sem
+sucesso — passou disso, ele desiste e diz para você rodá-lo de novo. Recusa de
+entrada no canal (ticket inválido, outro runner já conectado neste projeto)
+**não** é transitória: ele encerra na hora, com a mensagem, sem laço
+automático.
+
+O auto-reconnect embutido da biblioteca `phoenix` fica **desligado** de
+propósito (`reconnectAfterMs`), e isso não é detalhe: o ticket do socket é de
+**uso único** (RN-108), e o reconnect da lib repete os MESMOS parâmetros — ou
+seja, o mesmo ticket já consumido, recusado toda vez. Uma versão anterior deste
+CLI vinha com ele LIGADO (o comentário do código dizia o contrário) e o efeito
+medido foi: recusa a cada ~5,13s indefinidamente, e **429 (limite de
+requisições) na tela do navegador do dono da conta** — o limite da api é por
+usuário, e quem o estourava era o runner. Se você vir 429 na web sem explicação,
+confira se o binário do runner está atualizado.
 
 ## Segurança
 

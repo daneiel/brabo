@@ -41,6 +41,9 @@ permissions:
   contents: write # criar a GitHub Release e a branch do corte do CHANGELOG
   pull-requests: write # abrir a PR do CHANGELOG para `dev`
   packages: write # publicar as quatro imagens no GHCR (ADR 0119)
+  id-token: write # assinar as imagens com cosign keyless (ADR 0149) — o token
+  # OIDC é a IDENTIDADE que assina, e é ela que a verificação cobra depois.
+  # Escopado a este workflow: não amplia o que `packages: write` já permitia.
 
 env:
   NODE_VERSION: '24.11.1'
@@ -317,6 +320,44 @@ jobs:
           BAKE_METADATA: ${{ steps.bake.outputs.metadata }}
           TAG: ${{ steps.versao.outputs.versao }}
           TAG_EXTRA: ${{ steps.versao.outputs.sha }}
+
+      # ADR 0149 (BRB-005). Assina as QUATRO imagens por DIGEST, lido do
+      # manifesto que o passo acima acabou de gerar — nunca por tag, que é
+      # ponteiro móvel: assinar `:5.0.0` garantiria o que aquela tag apontava
+      # no instante da assinatura, e não o que ela aponta quando alguém baixa.
+      #
+      # Keyless: quem assina é a IDENTIDADE deste workflow (OIDC), sem chave
+      # em lugar nenhum. A alternativa — par de chaves próprio — significaria
+      # custódia, rotação e MAIS UM segredo de CI, e este repositório já viu
+      # um PAT expirar em silêncio e reprovar duas runs do `tag-release`
+      # (ADR 0139). Credencial derivada da execução não expira no armário.
+      - name: Instalar o cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
+
+      - name: Assinar as imagens publicadas
+        run: |
+          set -euo pipefail
+
+          # `--yes` porque não há TTY para confirmar a submissão ao log de
+          # transparência; sem ele o passo trava até o timeout do job.
+          jq -r '.imagens[] | "\(.repositorio)@\(.digest)"' .release/images.json \
+            | while read -r referencia; do
+                echo "assinando ${referencia}"
+                cosign sign --yes "${referencia}"
+              done
+
+          # Prova que o que acabou de ser assinado VERIFICA, aqui, antes de a
+          # Release existir. Assinatura que ninguém tenta verificar é um
+          # arquivo a mais no registry — e a falha apareceria só na máquina de
+          # quem instala, que é o pior lugar para descobri-la.
+          jq -r '.imagens[] | "\(.repositorio)@\(.digest)"' .release/images.json \
+            | while read -r referencia; do
+                cosign verify \
+                  --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/\.github/workflows/release\.yml@" \
+                  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+                  "${referencia}" > /dev/null
+                echo "verificado: ${referencia}"
+              done
 
       - name: Publicar a GitHub Release
         env:

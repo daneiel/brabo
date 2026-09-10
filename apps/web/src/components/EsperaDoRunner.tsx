@@ -46,6 +46,19 @@ import styles from './EsperaDoRunner.module.css';
  * `semResposta` (o teto estourou) nunca colapsam, e nenhum deles é eterno: a
  * sonda para em {@link TETO_MS} e diz o que fazer, com um botão que recomeça
  * a espera sem refazer a configuração.
+ *
+ * ## O segundo montador, e por que ele precisou de `onConfirmado` (RN-533)
+ *
+ * O `FolderBrowserModal` monta esta espera quando o agente local não respondeu
+ * ao `fs_list_dir` — o mesmo desenho, para a mesma pergunta ("ele apareceu?"),
+ * em vez de uma segunda sonda com um segundo teto e uma segunda redação. A
+ * diferença é que ali a confirmação tem CONSEQUÊNCIA: a listagem que falhou
+ * precisa ser refeita. Daí a callback, opcional e disparada UMA vez.
+ *
+ * Ela não afirma "o runner está de pé AGORA" — `workspaceVerifiedAt` nunca
+ * disse isso (RN-468) —, e por isso quem a recebe REPETE o pedido em vez de
+ * assumir sucesso: se o agente já caiu de novo, a listagem falha e a tela
+ * volta a este mesmo estado, dizendo a verdade das duas vezes.
  */
 
 /** Frequência da sonda. Um `GET` leve, na chave de cache que a página já tem. */
@@ -55,7 +68,14 @@ export const TETO_MS = 180_000;
 
 type Fase = 'esperando' | 'confirmado' | 'semResposta';
 
-export function EsperaDoRunner({ projectId }: { projectId: string }) {
+export function EsperaDoRunner({
+  projectId,
+  onConfirmado,
+}: {
+  projectId: string;
+  /** Disparada UMA vez, quando o carimbo muda. Ver o docblock acima. */
+  onConfirmado?: () => void;
+}) {
   const { t, i18n } = useTranslation('terminal');
   /** Muda a cada reinício manual — reinicia o temporizador do teto. */
   const [rodada, setRodada] = useState(0);
@@ -89,6 +109,19 @@ export function EsperaDoRunner({ projectId }: { projectId: string }) {
     const id = setTimeout(() => setExpirou(true), TETO_MS);
     return () => clearTimeout(id);
   }, [confirmado, expirou, rodada]);
+
+  /**
+   * UMA vez, e por instância — não por rodada. Reiniciar a espera não pode
+   * reavisar sobre uma confirmação que já foi avisada, e `confirmado` é
+   * derivado a cada render: sem o ref, cada `refetch` da sonda dispararia a
+   * callback de novo e o chamador refaria a listagem em laço.
+   */
+  const jaAvisou = useRef(false);
+  useEffect(() => {
+    if (!confirmado || jaAvisou.current) return;
+    jaAvisou.current = true;
+    onConfirmado?.();
+  }, [confirmado, onConfirmado]);
 
   const fase: Fase = confirmado ? 'confirmado' : expirou ? 'semResposta' : 'esperando';
 
