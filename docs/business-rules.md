@@ -10524,9 +10524,11 @@ Todo artefato que os agentes produzem vive **exclusivamente no event log** —
 que *"não há tabela de artefatos"*. Isso continua certo para a FONTE, e esta RN
 não mexe nisso. O que ela fecha é outro buraco: essa memória não chegava a
 lugar nenhum que uma pessoa abrisse. Quem abre a pasta do projeto no editor não
-encontrava nada do raciocínio que produziu o código — e, desde a
-[RN-521](#rn-521)/[RN-522](#rn-522), há um intervalo inteiro (entre a criação e
-o handoff do Arquiteto) em que o projeto não tem nem repositório.
+encontrava nada do raciocínio que produziu o código. (O **provisionamento
+adiado** — criar projeto deixar de criar repositório, e o git nascer no aceite
+do handoff ao Dev Lead — abre um intervalo inteiro em que o projeto não tem nem
+repositório, e torna esta pasta ainda mais necessária; ele vem em PR próprio, e
+esta RN não depende dele.)
 
 Cada evento `artifact.*` de um tipo permitido vira um Markdown em
 `docs/<agente>/` dentro do workspace do projeto. É **projeção derivada**, no

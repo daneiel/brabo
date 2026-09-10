@@ -15,7 +15,8 @@ legível pela timeline da sessão, uma linha por vez, dentro do produto. Quem
 abre a pasta do projeto no editor — que é onde o código vai estar — não
 encontra nada do raciocínio que produziu aquele código.
 
-O buraco ficou maior com a decisão de **adiar o git** (RN-521/RN-522): entre a
+O buraco ficou maior com a decisão de **adiar o git** (provisionamento adiado,
+em PR próprio): entre a
 criação do projeto e o handoff do Arquiteto ao Dev Lead, o projeto existe sem
 repositório nenhum. Nesse intervalo, tudo o que o produto acumulou sobre o
 projeto está em linhas de banco, e a pasta do usuário está vazia.
@@ -149,7 +150,7 @@ efeito externo.
 
 O usuário passa a ter, na pasta do projeto, uma pasta `docs/` organizada por
 agente com o raciocínio que produziu o código. Ela aparece antes do git existir
-(RN-521/RN-522), que é justamente o intervalo em que hoje não há nada em disco.
+(o provisionamento adiado), que é justamente o intervalo em que hoje não há nada em disco.
 
 **A projeção nunca derruba a fonte.** Nenhum throw escapa do `drainOnce`: cada
 item falha isolado, fica logado e permanece `processed_at IS NULL` para o ciclo
