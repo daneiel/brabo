@@ -46,6 +46,22 @@ defmodule Engine.Runners.CapacidadesTest do
       assert Capacidades.declaradas(%{"capacidades" => ["espelho"]}) ==
                MapSet.new(["espelho"])
     end
+
+    test "`workspace` está no vocabulário e é declarável (ADR 0151 ponto 4, RN-532)" do
+      assert "workspace" in Capacidades.conhecidas()
+
+      assert Capacidades.declaradas(%{"capacidades" => ["exec", "workspace"]}) ==
+               MapSet.new(["exec", "workspace"])
+    end
+
+    test "`workspace` NUNCA é concedida por omissão — o legado não consentiu base nenhuma" do
+      # É mais forte que a idade do binário: ela depende de haver uma BASE
+      # consentida naquela execução (RN-529), e um binário mudo não teria como
+      # ter consentido uma. Concedê-la seria o servidor AFIRMANDO uma base.
+      refute "workspace" in Capacidades.legado()
+      refute MapSet.member?(Capacidades.declaradas(%{}), "workspace")
+      refute MapSet.member?(Capacidades.declaradas(nil), "workspace")
+    end
   end
 
   describe "exigidas/2" do
@@ -56,6 +72,18 @@ defmodule Engine.Runners.CapacidadesTest do
     test "`container` e `mounted` não exigem nada — o runner não é o caminho de execução deles" do
       assert Capacidades.exigidas("container") == MapSet.new()
       assert Capacidades.exigidas("mounted") == MapSet.new()
+    end
+
+    test "NINGUÉM exige `workspace` — runner sem base continua conectando (ADR 0151 ponto 4)" do
+      # Exigi-la em `runner` faria todo binário sem base consentida deixar de
+      # conectar, o que é `breaking/` e MAJOR, por uma função que aquele
+      # projeto talvez nunca use. Ela é opt-in pela outra ponta.
+      for modo <- ["runner", "container", "mounted", nil] do
+        refute MapSet.member?(Capacidades.exigidas(modo), "workspace")
+      end
+
+      assert {:ok, concedidas} = Capacidades.conceder(%{"capacidades" => ["exec"]}, "runner")
+      refute MapSet.member?(concedidas, "workspace")
     end
 
     test "modo desconhecido ou `nil` não exige nada — 'não sei' nunca vira recusa (RN-088)" do

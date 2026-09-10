@@ -218,15 +218,60 @@ async function registrarChaveEExportarPrivada(
   return exportarJwkPrivada(par, registro.id);
 }
 
+/**
+ * O código de recusa que a api põe no corpo do 502 desta rota (RN-525).
+ *
+ * Ele existe porque o status sozinho não distingue os desfechos, e eles pedem
+ * ações diferentes: `plataforma_nao_publicada` é esperar a próxima release,
+ * `release_sem_manifesto` é usar o `npm install -g @brabo/runner` (o caminho
+ * que a [RN-473](../../../../docs/business-rules.md#rn-473) já reserva para o
+ * passo 4 falhar), e `hash_divergente` é incidente. Aqui a distinção vira a
+ * FRASE que chega em `falhaDoBinario` — o campo que a tela mostra.
+ */
+export interface FalhaDoDownload extends Error {
+  readonly status: number;
+  readonly motivo?: string;
+}
+
+/**
+ * O corpo de uma resposta de erro, quando ele é JSON — `null` quando não é.
+ *
+ * Nem toda recusa vem da api: um proxy no caminho responde HTML, e uma
+ * resposta cortada nem chega a ser um documento. Ler o corpo é uma
+ * conveniência para melhorar a frase, e não pode virar uma SEGUNDA exceção em
+ * cima da que já estamos relatando — que é o que aconteceria com um
+ * `res.json()` chamado direto.
+ */
+async function lerCorpoDeErro(
+  res: Response,
+): Promise<{ message?: unknown; motivo?: unknown } | null> {
+  try {
+    return (await res.json()) as { message?: unknown; motivo?: unknown };
+  } catch {
+    return null;
+  }
+}
+
 /** Bytes do binário do runner para `platform`, direto da api (rota pública). */
 export async function baixarBinario(platform: string): Promise<ArrayBuffer> {
   const res = await fetch(
     `${API_URL}/runner-releases/binary?platform=${encodeURIComponent(platform)}`,
   );
   if (!res.ok) {
-    throw new Error(
-      `Não foi possível baixar o binário do runner para "${platform}" (HTTP ${res.status}).`,
-    );
+    // O corpo é JSON quando a api recusou por si; pode não ser (um proxy no
+    // caminho, por exemplo), e aí a frase é só a do status — nunca uma
+    // exceção nova em cima da que já estamos relatando.
+    const corpo = await lerCorpoDeErro(res);
+    const razao = typeof corpo?.message === 'string' ? ` ${corpo.message}` : '';
+    throw Object.assign(
+      new Error(
+        `Não foi possível baixar o binário do runner para "${platform}" (HTTP ${res.status}).${razao}`,
+      ),
+      {
+        status: res.status,
+        motivo: typeof corpo?.motivo === 'string' ? corpo.motivo : undefined,
+      },
+    ) as FalhaDoDownload;
   }
   return res.arrayBuffer();
 }

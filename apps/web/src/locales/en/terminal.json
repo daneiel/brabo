@@ -24,7 +24,10 @@
     "itemCount_other": "{{count}} items",
     "cancel": "Cancel",
     "select": "Use this folder",
-    "initialDirError": "Could not get the initial folder."
+    "initialDirError": "Could not get the initial folder.",
+    "origemRunner": "This list comes from the local agent (brabo-runner) and shows YOUR machine's disk — not the server's.",
+    "origemApi": "This list comes from the server, inside this installation's projects base — not from your machine's disk.",
+    "semRespostaRessalva": "Nobody answered in time. That is not proof there is no local agent running: it can be a slow machine or a slow connection."
   },
   "runnerOnboarding": {
     "defaultMessage": "No runner connected to this project.",

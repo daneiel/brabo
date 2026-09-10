@@ -24,7 +24,10 @@
     "itemCount_other": "{{count}} itens",
     "cancel": "Cancelar",
     "select": "Usar esta pasta",
-    "initialDirError": "Não consegui obter a pasta inicial."
+    "initialDirError": "Não consegui obter a pasta inicial.",
+    "origemRunner": "Esta lista vem do agente local (brabo-runner) e mostra o disco da SUA máquina — não o do servidor.",
+    "origemApi": "Esta lista vem do servidor, dentro da base de projetos desta instalação — não do disco da sua máquina.",
+    "semRespostaRessalva": "Ninguém respondeu a tempo. Isso não prova que não há agente local rodando: pode ser lentidão da máquina ou da conexão."
   },
   "runnerOnboarding": {
     "defaultMessage": "Nenhum runner conectado a este projeto.",

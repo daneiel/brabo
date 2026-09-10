@@ -143,4 +143,40 @@ defmodule Engine.Runners.RunnerRouterTest do
                RunnerRouter.remove_container(project_id, "proj-abc12345")
     end
   end
+
+  # ADR 0151 ponto 3 / RN-532 — o QUINTO par de pedido-com-resposta, no mesmo
+  # molde. Ele mora aqui e não em `Engine.Runners.Espelho` porque `mirror_sync`
+  # é fire-and-forget: quem pede a pasta precisa saber se ela apareceu.
+  describe "create_workspace/3" do
+    test "sem runner conectado, devolve {:error, :not_connected}" do
+      assert {:error, :not_connected} =
+               RunnerRouter.create_workspace(unique_project_id(), %{segmento: "loja"})
+    end
+
+    test "runner conectado: roundtrip via dispatch_workspace_create/workspace_create_result" do
+      project_id = unique_project_id()
+      payload = %{projectId: project_id, segmento: "loja"}
+
+      start_fake_runner!(
+        project_id,
+        :dispatch_workspace_create,
+        :runner_workspace_create_result,
+        fn recebido ->
+          assert recebido == payload
+          %{"sucesso" => true, "caminho" => "/home/voce/projetos/loja"}
+        end
+      )
+
+      assert {:ok, %{"sucesso" => true, "caminho" => "/home/voce/projetos/loja"}} =
+               RunnerRouter.create_workspace(project_id, payload)
+    end
+
+    test "runner conectado mas nunca responde: devolve {:error, :timeout}" do
+      project_id = unique_project_id()
+      :ok = Registry.register(project_id, self())
+
+      assert {:error, :timeout} =
+               RunnerRouter.create_workspace(project_id, %{segmento: "loja"}, 50)
+    end
+  end
 end
