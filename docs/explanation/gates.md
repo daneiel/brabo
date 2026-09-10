@@ -243,6 +243,27 @@ reason moved from "no CI can run this" to "this CI doesn't sit on the merge
 path" — `warn` keeps describing exactly what's true, just not the same
 truth it described before.
 
+## A gate can be missing from the registry while `fluxo.yml` already assigns it
+
+`deployavel` is the fourth pattern, and the least flattering: it was
+declared as `area-infra`'s `gate_saida` in `docs/fluxo.yml` and was
+**absent from `docs/gates.yml` altogether** — not `planned`, not stale,
+simply not there. The team model has three pieces (catalogue, flow,
+registry) and nothing yet cross-checks them, so a gate can be a
+deliverable in one and not exist in another. This is the **second**
+finding of that shape; the first was `paralelismo-autorizado` ageing in
+the opposite direction.
+
+It enters as `planned`/`warn`, with no `evidencia` block and no
+verification script, because [RN-070](../business-rules/custo.md#rn-070)/
+[RN-071](../business-rules/custo.md#rn-071) forbid `block` without one — and
+because what blocks it is not code. The infrastructure exists (overlays,
+GHCR images by digest, smoke/rollout/restore scripts); what is missing
+is a production environment with real traffic and someone maintaining
+it. See [ADR 0153](../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.md),
+which also stops ten documents from citing `DEPLOY_ENABLED` as if it
+were a variable that exists in the code.
+
 ## Consumption: the screen derives, it doesn't repeat
 
 The PR track on the panel — Dev → QA → SecOps → You — used to be a
