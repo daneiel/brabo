@@ -123,7 +123,15 @@ describe('install.sh — o plano', () => {
 });
 
 describe('install.sh — o estado', () => {
-  it('responde sem TTY, sem efeito e com sucesso', () => {
+  // Estes casos SPAWNAM o script de verdade, e a detecção fala com o daemon
+  // do Docker. O script tem teto próprio (5s), mas o default de 5s do vitest
+  // não deixa margem para o teto ser exercido e o processo ainda terminar —
+  // foi o que reprovou um PR sem relação nenhuma com o instalador, num
+  // runner onde a primeira chamada ao daemon levou 7,15s. A margem é do
+  // TESTE; o teto de verdade, o que protege quem instala, é o do script.
+  const COM_MARGEM = 20_000;
+
+  it('responde sem TTY, sem efeito e com sucesso', { timeout: COM_MARGEM }, () => {
     const estado = imprimir('--print-state');
     expect(estado.find((l) => l.chave === 'plataforma')?.valor).toMatch(
       /^(linux|darwin)-(amd64|arm64)$/,
@@ -134,7 +142,7 @@ describe('install.sh — o estado', () => {
   // `--print-state` é leitura. Se ele gravasse, a primeira execução de alguém
   // curioso mudaria o que a segunda encontra — e o marcador existe justamente
   // para a segunda ser um diff confiável.
-  it('não cria o marcador', () => {
+  it('não cria o marcador', { timeout: COM_MARGEM }, () => {
     const estadoTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'brabo-install-'));
     try {
       const estado = imprimir('--print-state', { XDG_STATE_HOME: estadoTmp });
@@ -147,7 +155,7 @@ describe('install.sh — o estado', () => {
 
   // O marcador segue o XDG, e não `~/.brabo/` — que é onde o runner guarda
   // coisa POR PROJETO. Juntar os dois faria a remoção de um apagar o outro.
-  it('honra XDG_STATE_HOME', () => {
+  it('honra XDG_STATE_HOME', { timeout: COM_MARGEM }, () => {
     const estado = imprimir('--print-state', { XDG_STATE_HOME: '/tmp/xdg-de-teste' });
     expect(estado.find((l) => l.chave === 'marcador')?.valor).toBe(
       '/tmp/xdg-de-teste/brabo/install-state.json',

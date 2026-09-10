@@ -162,7 +162,16 @@ detectar_por_sinais() {
 
   if command -v docker >/dev/null 2>&1; then
     local projetos
-    projetos="$(docker compose ls --all --format json 2>/dev/null \
+    # TETO de 5s, e não uma espera aberta: `docker compose ls` fala com o
+    # daemon, e um daemon lento (ou parado, atrás de um socket que existe)
+    # deixaria a DETECÇÃO pendurada antes de a primeira pergunta aparecer —
+    # a pessoa vê um instalador que não faz nada. Medido: ~0,2s numa máquina
+    # com Docker de pé, 7s num runner de CI na primeira chamada.
+    #
+    # Estourar o teto NÃO é erro: é o mesmo desfecho de não haver Docker
+    # nenhum, e o passo de detecção segue com o resto dos sinais. `timeout`
+    # devolve 124, que o `|| true` do pipeline já absorve.
+    projetos="$(timeout 5 docker compose ls --all --format json 2>/dev/null \
       | grep -oE '"Name":"brabo[^"]*"' | cut -d'"' -f4 | sort -u | tr '\n' ' ' || true)"
     if [ -n "${projetos// /}" ]; then
       achados="${achados}compose:${projetos% }\n"
