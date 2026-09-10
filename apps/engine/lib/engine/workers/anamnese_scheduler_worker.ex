@@ -34,7 +34,16 @@ defmodule Engine.Workers.AnamneseSchedulerWorker do
   Default DESLIGADO a partir de agora: decisão do usuário em 2026-08-10
   ("hoje ele não está trazendo dados de muito valor"), documentada em
   docs/explanation/backlog.md — não é bug, é pausa reversível. Ligar de
-  volta é `ANAMNESE_ENABLED=true` e reiniciar o engine.
+  volta é `ANAMNESE_ENABLED=true` MAIS `START_ANAMNESE=true` (a chave de
+  boot acima, sem a qual não há tick a reabilitar) e reiniciar o engine.
+
+  Esta frase foi FALSA de 2026-08-10 até a RN-540: `ANAMNESE_ENABLED` não
+  estava no `environment:` do serviço `engine` de nenhum compose, e o
+  Compose não repassa o ambiente do host — a variável nunca chegava ao
+  processo, `runtime.exs` caía no default `"false"` e não havia erro
+  nenhum. As duas estão mapeadas agora, com o mesmo default do código, e
+  `scripts/ci/flags-do-engine-no-compose.spec.ts` reprova a próxima que
+  faltar.
   """
   def enabled?, do: Application.get_env(:engine, :anamnese_enabled?, false)
 
