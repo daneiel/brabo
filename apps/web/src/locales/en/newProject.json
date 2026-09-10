@@ -6,9 +6,7 @@
     "mode": "Create new or adopt existing",
     "provider": "Where to host",
     "credential": "Access credential",
-    "details": "Name and visibility",
-    "workspace": "Where the code will live",
-    "policy": "Branch policy",
+    "details": "Where the code will live",
     "confirm": "Confirm"
   },
   "mode": {
@@ -86,12 +84,6 @@
       "placeholderId": "<project id>",
       "note": "The runner confirms the path when it connects — no command runs before that."
     }
-  },
-  "policy": {
-    "intro": "On provisioning, the Gitflow bootstrap runs these steps on the repo:",
-    "note": "Promotion cascade: <code>dev ← main</code>, <code>qa ← dev</code>. The permanent branches get protection",
-    "noteSuffixLocal": " — except on Local, which has no branch protection (the step is skipped with a warning).",
-    "noteSuffixDefault": " (main, qa, dev)."
   },
   "confirm": {
     "modeLabel": "Mode",
