@@ -691,6 +691,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **changelog**: a prosa escrita nos PRs **nunca chegava à versão publicada**.
+
+  `scripts/changelog.mjs` fazia `prepend` da seção gerada dos commits e
+  deixava o `## Unreleased` **intacto logo abaixo** — para sempre. Como é ali
+  que cada PR escreve o porquê da mudança, o que a versão levava eram só as
+  linhas curtas geradas dos commits, e a explicação ficava órfã, num
+  `## Unreleased` enterrado que ninguém mais leria. Havia **cinco** deles no
+  arquivo, entre versões, de 2026-08-03 a 2026-09-04.
+
+  Agora o corte **consome** o `## Unreleased`: as subseções são fundidas por
+  título, e a ordem dentro de cada uma é deliberada — primeiro o que foi
+  REDIGIDO (explica), depois o inventário dos commits (prova o que entrou).
+  Subseção que só existe num dos lados entra inteira.
+
+  As cinco órfãs foram **reparadas**, cada uma fundida na versão a que
+  pertencia, pela mesma regra. Conferido: as 941 linhas de item do arquivo
+  continuam 941, e nenhuma versão ficou com subseção repetida.
+
 - **docker,engine,docs**: as flags que ligam a **Anamnese** e o **Psicólogo**
   não estavam mapeadas no `environment:` do serviço `engine` de compose
   nenhum — a pausa que três lugares do código chamavam de **reversível** não
@@ -1064,6 +1082,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   consumidor real. A camada de plataforma continua parada e passa a dizer
   honestamente por quê: não falta uma flag, falta um ambiente.
 
+
 ## v5.0.0 — 2026-09-05
 
 ### ⚠ Mudanças incompatíveis
@@ -1122,22 +1141,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **docs**: a RN vira 503 e o ADR vira 0144, por alocação do coordenador (2245f2016)
 
+
 ## v4.0.1 — 2026-09-04
-
-### Correções
-
-- **ci**: o anexo do binário espera a Release em vez de ler a ausência dela (35ba788ac)
-
-### Documentação
-
-- **ci**: o comentário do audit descreve o que os dois auditores fazem (aaf84ae04)
-- **changelog**: v4.0.0 (48dc81813)
-
-### Manutenção
-
-- **engine**: mint 1.10.0 fecha duas advisories de DoS (a71b984fb)
-
-## Unreleased
 
 ### Correções
 
@@ -1200,6 +1205,110 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   A prova ponta a ponta continua exigindo um humano (rodar o `brabo-runner`, a
   Infra propor, alguém aprovar) — o que esta entrega garante é que o payload
   para de ser recusado antes de chegar lá.
+
+- **docker**: o **broker sobe de verdade** no compose local, e o `up --wait`
+  para de dar verde falso. A [RN-512](docs/business-rules.md#rn-512)
+  ([ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) ponto 3) tirou o
+  broker do `profiles` justamente para ele estar de pé em desenvolvimento — e
+  ele **nunca subiu**: `docker compose up -d broker` terminava em
+  `Exited (1)` cinco segundos depois, e `container_start` numa máquina de
+  desenvolvimento continuava dando `BrokerIndisponivelError`, exatamente o
+  sintoma que a decisão existia para eliminar.
+
+  **Por que ninguém tinha visto.** Enquanto o serviço viveu sob profile, quem
+  o subia de propósito era o mesmo que já sabia o que esperar; a primeira
+  subida por padrão foi também a primeira vez que alguém reparou. E ela
+  aconteceu no reset total, que anuncia `brabo-broker-1 Healthy` — o serviço
+  **não tinha healthcheck**, então `up --wait` considera saudável qualquer
+  container que INICIOU, e o reset terminava dizendo "reset completo" com o
+  processo já morto.
+
+  **A causa.** `docker/broker/Dockerfile` preparava o pnpm com `corepack` como
+  **root**, no build (o cache fica em `/root/.cache/node/corepack`), e o
+  container roda como uid 1000 — que não lê aquilo. Sem cache, o corepack trata
+  o pnpm como ausente e tenta **baixá-lo** no start; a única rede do broker é
+  `internal: true`, então a tentativa morre com
+  `getaddrinfo EAI_AGAIN registry.npmjs.org` e o processo sai com 1. O `CMD`
+  ainda faria `pnpm install` em runtime, pelo mesmo caminho. `docker/api/
+  Dockerfile` tem o **mesmo** padrão de corepack e sobe: a diferença nunca foi
+  o Dockerfile, foi o egress.
+
+  **A correção tira o registry do caminho de RUNTIME, e não abre a rede.** A
+  rede `internal: true` é a primeira das cinco camadas de contenção do
+  [ADR 0130](docs/adr/0130-broker-de-container.md) — um processo que fala com o
+  socket do Docker do host não alcança a internet, e isso não se negocia por
+  conveniência de build. Foram as duas direções, porque as duas eram
+  necessárias: `COREPACK_HOME` passa a apontar para `/opt/corepack`, preparado
+  no build e com o dono do uid de runtime, e o `pnpm install` migra do `CMD`
+  para um passo de **BUILD**, onde há rede.
+
+  **A parte que exigiu desenho: os três volumes nomeados de `node_modules`.**
+  O compose monta um volume por cima de cada um deles, e o Docker só semeia um
+  volume a partir da imagem quando ele está **vazio** — instalar na imagem
+  chegaria na primeira subida e nunca mais, deixando velho, em silêncio, todo
+  volume que já existe (e quem subiu o broker quebrado tem os três). Por isso a
+  árvore instalada é guardada **fora** de `/workspace` (que o bind mount cobre
+  inteiro) e o novo `docker/broker/entrypoint.sh` **reconcilia** os três contra
+  ela, carimbando com o sha256 do `pnpm-lock.yaml` do build. O mesmo carimbo
+  responde a segunda pergunta: comparado com o lockfile da árvore de trabalho,
+  ele diz que a imagem está velha — e **avisa** em vez de recusar subir, porque
+  o broker não tem dependência de runtime além do link de workspace para
+  `@brabo/docker-port`, e trocar um aviso por uma indisponibilidade seria pior.
+
+  **Healthcheck no serviço**, que é a outra metade do defeito: `wget` do
+  busybox contra `127.0.0.1:8090/health`, **de dentro** do container — ele não
+  publica porta, e não deve. É o mesmo teste que o `Dockerfile.prod` já fazia. O
+  `/health` fala do PROCESSO e nunca do daemon: reprovar por Docker fora do ar
+  produziria um laço de reinício que não resolve nada.
+
+  O compose de **produção não sofre disto** e não muda: `Dockerfile.prod` já
+  instala e empacota em estágio de build, remove `corepack`/`npm` da imagem
+  final, roda `node index.cjs` e já tinha `HEALTHCHECK`.
+
+  Junto, três blocos de comentário que a mesma decisão tinha deixado para trás:
+  `.env.example` ainda dizia que o broker "NÃO sobe por padrão: está sob o
+  profile `container-broker` nos dois composes" vinte linhas acima do bloco que
+  explica que ele passou a subir; e `BRABO_PROJECTS_HOST_BASE` continuava
+  descrita como "nada a consome ainda" nos dois composes e no `.env.example`,
+  superada pelo [ADR 0144](docs/adr/0144-a-segunda-raiz-do-broker.md)
+  ([RN-503](docs/business-rules.md#rn-503)).
+
+- **engine**: o comando de terminal do dev agent **não cai mais fora do
+  container** em silêncio (RN-502). `container` sem container `running` caía
+  em `:caminho_de_sempre`, isto é, `System.cmd` dentro do processo do engine —
+  o mesmo processo que fala com o banco, com a api e com todos os outros
+  projetos —, então o isolamento do ADR 0134 valia só no caminho feliz e a
+  ausência dele não recusava: degradava, e degradava calada. Agora recusa
+  (`failed_result` com o motivo nomeado), espelhando o
+  `:recusar_nao_verificado`/`:recusar_runner_desconectado` que o modo `runner`
+  já tinha. `mounted` entra no mesmo ramo — com container `running` atravessa
+  pro broker igual a `container`, sem ele recusa — e o catch-all
+  `:caminho_de_sempre` encolhe para o que sempre deveria ter sido sozinho:
+  projeto inexistente ou id malformado. Consequência declarada: projeto sem
+  container de pé para de trabalhar, e diz por quê
+
+- **web**: o handoff para a **Infra** volta a ser aceitável — por um card
+  próprio, fora do fio (RN-499). O filtro `AGENTES_DE_CHAT` de
+  `offeredHandoff` (RN-136) exclui `infra` **e está certo em excluir**: o
+  Infra Lead não tem cláusula de `message` no engine, e alargar a lista faria
+  o composer mandar mensagem que seria roteada em silêncio para o Criativo. O
+  que não estava certo era a consequência que o comentário do próprio código
+  registrava como aceita — *"como Infra nunca é aceito por AQUI … na prática,
+  nunca"*: `acceptHandoff` tinha **um único consumidor**, o card do fio, atrás
+  daquele filtro. Resultado: `OfferInfraHandoffUseCase` oferecia o handoff, ele
+  ficava `offered` para sempre, o Infra Lead nunca era ativado, nunca propunha
+  `container_start`, e nenhum projeto de nenhum modo chegava a ter container de
+  pé — uma capacidade inteira inalcançável por tela nenhuma. Agora existe um
+  card acionável na faixa entre o fio e o composer (a mesma que já hospeda o
+  handoff manual, declarada como o lugar das ações de handoff que **não** são
+  conversa), chamando o `acceptHandoff` que já existia. Ele diz a consequência
+  do clique — o Infra Lead assume o provisionamento e vai **propor** a subida
+  do container, proposta que ainda passa pelo pipeline de aprovação de sempre —
+  e some pelo mesmo `activeFor` do card do fio quando a Infra já está ativa. O
+  `handoff.offered` da Infra continua **narrado** no fio como divisor mudo, e
+  nenhum handoff conversacional muda de forma
+
+- **ci**: o anexo do binário espera a Release em vez de ler a ausência dela (35ba788ac)
 
 ### Novidades
 
@@ -1700,123 +1809,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   caminho que o repositório dava para essa variável, todas diferentes entre si,
   passam a ser uma só.
 
-### Correções
-
-- **docker**: o **broker sobe de verdade** no compose local, e o `up --wait`
-  para de dar verde falso. A [RN-512](docs/business-rules.md#rn-512)
-  ([ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) ponto 3) tirou o
-  broker do `profiles` justamente para ele estar de pé em desenvolvimento — e
-  ele **nunca subiu**: `docker compose up -d broker` terminava em
-  `Exited (1)` cinco segundos depois, e `container_start` numa máquina de
-  desenvolvimento continuava dando `BrokerIndisponivelError`, exatamente o
-  sintoma que a decisão existia para eliminar.
-
-  **Por que ninguém tinha visto.** Enquanto o serviço viveu sob profile, quem
-  o subia de propósito era o mesmo que já sabia o que esperar; a primeira
-  subida por padrão foi também a primeira vez que alguém reparou. E ela
-  aconteceu no reset total, que anuncia `brabo-broker-1 Healthy` — o serviço
-  **não tinha healthcheck**, então `up --wait` considera saudável qualquer
-  container que INICIOU, e o reset terminava dizendo "reset completo" com o
-  processo já morto.
-
-  **A causa.** `docker/broker/Dockerfile` preparava o pnpm com `corepack` como
-  **root**, no build (o cache fica em `/root/.cache/node/corepack`), e o
-  container roda como uid 1000 — que não lê aquilo. Sem cache, o corepack trata
-  o pnpm como ausente e tenta **baixá-lo** no start; a única rede do broker é
-  `internal: true`, então a tentativa morre com
-  `getaddrinfo EAI_AGAIN registry.npmjs.org` e o processo sai com 1. O `CMD`
-  ainda faria `pnpm install` em runtime, pelo mesmo caminho. `docker/api/
-  Dockerfile` tem o **mesmo** padrão de corepack e sobe: a diferença nunca foi
-  o Dockerfile, foi o egress.
-
-  **A correção tira o registry do caminho de RUNTIME, e não abre a rede.** A
-  rede `internal: true` é a primeira das cinco camadas de contenção do
-  [ADR 0130](docs/adr/0130-broker-de-container.md) — um processo que fala com o
-  socket do Docker do host não alcança a internet, e isso não se negocia por
-  conveniência de build. Foram as duas direções, porque as duas eram
-  necessárias: `COREPACK_HOME` passa a apontar para `/opt/corepack`, preparado
-  no build e com o dono do uid de runtime, e o `pnpm install` migra do `CMD`
-  para um passo de **BUILD**, onde há rede.
-
-  **A parte que exigiu desenho: os três volumes nomeados de `node_modules`.**
-  O compose monta um volume por cima de cada um deles, e o Docker só semeia um
-  volume a partir da imagem quando ele está **vazio** — instalar na imagem
-  chegaria na primeira subida e nunca mais, deixando velho, em silêncio, todo
-  volume que já existe (e quem subiu o broker quebrado tem os três). Por isso a
-  árvore instalada é guardada **fora** de `/workspace` (que o bind mount cobre
-  inteiro) e o novo `docker/broker/entrypoint.sh` **reconcilia** os três contra
-  ela, carimbando com o sha256 do `pnpm-lock.yaml` do build. O mesmo carimbo
-  responde a segunda pergunta: comparado com o lockfile da árvore de trabalho,
-  ele diz que a imagem está velha — e **avisa** em vez de recusar subir, porque
-  o broker não tem dependência de runtime além do link de workspace para
-  `@brabo/docker-port`, e trocar um aviso por uma indisponibilidade seria pior.
-
-  **Healthcheck no serviço**, que é a outra metade do defeito: `wget` do
-  busybox contra `127.0.0.1:8090/health`, **de dentro** do container — ele não
-  publica porta, e não deve. É o mesmo teste que o `Dockerfile.prod` já fazia. O
-  `/health` fala do PROCESSO e nunca do daemon: reprovar por Docker fora do ar
-  produziria um laço de reinício que não resolve nada.
-
-  O compose de **produção não sofre disto** e não muda: `Dockerfile.prod` já
-  instala e empacota em estágio de build, remove `corepack`/`npm` da imagem
-  final, roda `node index.cjs` e já tinha `HEALTHCHECK`.
-
-  Junto, três blocos de comentário que a mesma decisão tinha deixado para trás:
-  `.env.example` ainda dizia que o broker "NÃO sobe por padrão: está sob o
-  profile `container-broker` nos dois composes" vinte linhas acima do bloco que
-  explica que ele passou a subir; e `BRABO_PROJECTS_HOST_BASE` continuava
-  descrita como "nada a consome ainda" nos dois composes e no `.env.example`,
-  superada pelo [ADR 0144](docs/adr/0144-a-segunda-raiz-do-broker.md)
-  ([RN-503](docs/business-rules.md#rn-503)).
-
-
-### Documentação
-
-- **docs**: nasce a **FASE 28 (pasta do usuário)** — só decisão, nenhuma linha de
-  código de produto. O problema que ela ataca: nenhum dos três modos de execução
-  entrega a coisa mais simples que um usuário espera, que é abrir o editor e ver
-  o trabalho acontecendo numa pasta dele. O caso instrutivo é o `mounted`, que
-  está **pronto e inalcançável** — o ADR 0141 construiu a base única e o ADR 0142
-  tornou possível sugerir um caminho que ainda não existe, mas nada no produto
-  pede que `BRABO_PROJECTS_BASE` seja configurada, e `GET .../projects-base` não
-  tem chamador no web.
-
-  O [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) decide o
-  consentimento no host: base padrão `$HOME/projetos-brabo` (e **não**
-  `$HOME/brabo-projetos`, que `.env.example` já usa como exemplo de
-  `PROJECT_WORKSPACES_HOST_DIR` — a conflação que o ADR 0141 recusou), gravada
-  por um script **Node** e nunca em bash, porque item de menu do `bootstrap.sh`
-  roda com stdin em `/dev/null` e **por construção não consegue perguntar**. O
-  compartilhamento do Docker Desktop é **provado montando**, nunca lido do
-  `settings.json` — a mesma régua de "capability só se declara quando provada"
-  dos ADRs 0041/0042. E o broker sai do `profiles` **no compose local, só nele**:
-  a justificativa original ("nada o chama... em troca de nada") morreu quando os
-  ADRs 0133/0136 lhe deram quatro chamadores e o ADR 0144 fez `mounted` subir
-  container por ele.
-
-  O [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) decide o agente
-  local: **um** binário que declara capacidades (`espelho`, `exec`, `pty`) no
-  `join` — hoje mudo dos dois lados —, com o servidor concedendo só o que o
-  `execution_mode` exige. O espelho vai numa direção e **nunca apaga**; não exige
-  Docker, e ganha predicado **próprio** em vez de um `RunnerReadiness` com flag.
-  Achado no caminho: a revogação de chave de dispositivo é **cega** — um
-  `developer` não consegue listar nem as próprias chaves (PATs têm cinco rotas,
-  chaves de dispositivo têm duas), e revogar hoje só impede ticket novo, sem
-  derrubar o canal vivo.
-
-  A linha que dá forma ao resto, declarada nos dois: **consentimento de
-  configuração não é aprovação de ação** — a escrita do espelho não passa por
-  `proposed_action` porque não é agente pedindo para agir; fazê-la por comando de
-  terminal cairia no escopo do ADR 0055 e viraria fila de aprovações rotineiras.
-
-  Faixa **RN-511 a RN-520** reservada para as sessões 2 a 9, com o método de
-  contagem registrado — e o salto sobre a RN-510 é deliberado, porque ela já
-  estava alocada numa branch ainda não mergeada. Contar só `dev` a devolveria e
-  recriaria a colisão de âncora da RN-505, que sobreviveu semanas porque
-  `docs:build` reprova âncora **inexistente**, nunca âncora duplicada.
-
-### Novidades
-
 - **api,broker**: projeto no modo **Pasta montada** passa a ter container de
   verdade, e ele sobe **no servidor**, pelo broker — como o modo Container já
   fazia (RN-503, ADR 0144). Até aqui `mounted` não conseguia container nenhum,
@@ -1944,42 +1936,53 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   container via runner) depende de uma tool que outra frente do mesmo plano
   está criando em paralelo e é o próximo passo, não implementada aqui
 
-### Correções
+### Documentação
 
-- **engine**: o comando de terminal do dev agent **não cai mais fora do
-  container** em silêncio (RN-502). `container` sem container `running` caía
-  em `:caminho_de_sempre`, isto é, `System.cmd` dentro do processo do engine —
-  o mesmo processo que fala com o banco, com a api e com todos os outros
-  projetos —, então o isolamento do ADR 0134 valia só no caminho feliz e a
-  ausência dele não recusava: degradava, e degradava calada. Agora recusa
-  (`failed_result` com o motivo nomeado), espelhando o
-  `:recusar_nao_verificado`/`:recusar_runner_desconectado` que o modo `runner`
-  já tinha. `mounted` entra no mesmo ramo — com container `running` atravessa
-  pro broker igual a `container`, sem ele recusa — e o catch-all
-  `:caminho_de_sempre` encolhe para o que sempre deveria ter sido sozinho:
-  projeto inexistente ou id malformado. Consequência declarada: projeto sem
-  container de pé para de trabalhar, e diz por quê
+- **docs**: nasce a **FASE 28 (pasta do usuário)** — só decisão, nenhuma linha de
+  código de produto. O problema que ela ataca: nenhum dos três modos de execução
+  entrega a coisa mais simples que um usuário espera, que é abrir o editor e ver
+  o trabalho acontecendo numa pasta dele. O caso instrutivo é o `mounted`, que
+  está **pronto e inalcançável** — o ADR 0141 construiu a base única e o ADR 0142
+  tornou possível sugerir um caminho que ainda não existe, mas nada no produto
+  pede que `BRABO_PROJECTS_BASE` seja configurada, e `GET .../projects-base` não
+  tem chamador no web.
 
-- **web**: o handoff para a **Infra** volta a ser aceitável — por um card
-  próprio, fora do fio (RN-499). O filtro `AGENTES_DE_CHAT` de
-  `offeredHandoff` (RN-136) exclui `infra` **e está certo em excluir**: o
-  Infra Lead não tem cláusula de `message` no engine, e alargar a lista faria
-  o composer mandar mensagem que seria roteada em silêncio para o Criativo. O
-  que não estava certo era a consequência que o comentário do próprio código
-  registrava como aceita — *"como Infra nunca é aceito por AQUI … na prática,
-  nunca"*: `acceptHandoff` tinha **um único consumidor**, o card do fio, atrás
-  daquele filtro. Resultado: `OfferInfraHandoffUseCase` oferecia o handoff, ele
-  ficava `offered` para sempre, o Infra Lead nunca era ativado, nunca propunha
-  `container_start`, e nenhum projeto de nenhum modo chegava a ter container de
-  pé — uma capacidade inteira inalcançável por tela nenhuma. Agora existe um
-  card acionável na faixa entre o fio e o composer (a mesma que já hospeda o
-  handoff manual, declarada como o lugar das ações de handoff que **não** são
-  conversa), chamando o `acceptHandoff` que já existia. Ele diz a consequência
-  do clique — o Infra Lead assume o provisionamento e vai **propor** a subida
-  do container, proposta que ainda passa pelo pipeline de aprovação de sempre —
-  e some pelo mesmo `activeFor` do card do fio quando a Infra já está ativa. O
-  `handoff.offered` da Infra continua **narrado** no fio como divisor mudo, e
-  nenhum handoff conversacional muda de forma
+  O [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) decide o
+  consentimento no host: base padrão `$HOME/projetos-brabo` (e **não**
+  `$HOME/brabo-projetos`, que `.env.example` já usa como exemplo de
+  `PROJECT_WORKSPACES_HOST_DIR` — a conflação que o ADR 0141 recusou), gravada
+  por um script **Node** e nunca em bash, porque item de menu do `bootstrap.sh`
+  roda com stdin em `/dev/null` e **por construção não consegue perguntar**. O
+  compartilhamento do Docker Desktop é **provado montando**, nunca lido do
+  `settings.json` — a mesma régua de "capability só se declara quando provada"
+  dos ADRs 0041/0042. E o broker sai do `profiles` **no compose local, só nele**:
+  a justificativa original ("nada o chama... em troca de nada") morreu quando os
+  ADRs 0133/0136 lhe deram quatro chamadores e o ADR 0144 fez `mounted` subir
+  container por ele.
+
+  O [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) decide o agente
+  local: **um** binário que declara capacidades (`espelho`, `exec`, `pty`) no
+  `join` — hoje mudo dos dois lados —, com o servidor concedendo só o que o
+  `execution_mode` exige. O espelho vai numa direção e **nunca apaga**; não exige
+  Docker, e ganha predicado **próprio** em vez de um `RunnerReadiness` com flag.
+  Achado no caminho: a revogação de chave de dispositivo é **cega** — um
+  `developer` não consegue listar nem as próprias chaves (PATs têm cinco rotas,
+  chaves de dispositivo têm duas), e revogar hoje só impede ticket novo, sem
+  derrubar o canal vivo.
+
+  A linha que dá forma ao resto, declarada nos dois: **consentimento de
+  configuração não é aprovação de ação** — a escrita do espelho não passa por
+  `proposed_action` porque não é agente pedindo para agir; fazê-la por comando de
+  terminal cairia no escopo do ADR 0055 e viraria fila de aprovações rotineiras.
+
+  Faixa **RN-511 a RN-520** reservada para as sessões 2 a 9, com o método de
+  contagem registrado — e o salto sobre a RN-510 é deliberado, porque ela já
+  estava alocada numa branch ainda não mergeada. Contar só `dev` a devolveria e
+  recriaria a colisão de âncora da RN-505, que sobreviveu semanas porque
+  `docs:build` reprova âncora **inexistente**, nunca âncora duplicada.
+
+- **ci**: o comentário do audit descreve o que os dois auditores fazem (aaf84ae04)
+- **changelog**: v4.0.0 (48dc81813)
 
 ### Funcionalidades
 
@@ -2322,257 +2325,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `autenticar()` passa a memoizar o token por execução, então a suíte custa
   **3 logins fixos** contra o lockout por IP, por mais specs que venham.
 
-## v4.0.0 — 2026-09-04
-
-### ⚠ Mudanças incompatíveis
-
-- **api,web**: o portão de imagem vale nos três modos de execução (ADR 0135, RN-494) (#458) (a7c299716)
-- **runner**: publicar @brabo/runner no npm via tsup (ADR 0106) (a1135b6d1)
-- **auth**: marca a chegada do login social como breaking (17c512846)
-- **api**: lint, registra o ADR 0079 e marca a quebra (7342303d6)
-
-### Novidades
-
-- **ci**: o alarme de merge de esteira ganha destinatário (ADR 0139) (f95d4165a)
-- **engine,api,ci**: golden-set do RAG passa a rodar em CI, agendado (ADR 0138, RN-498) (#461) (1eb71c322)
-- **runner,engine,api**: o runner sobe o container do projeto na máquina do usuário (ADR 0137, RN-497) (#460) (108d81cc7)
-- **api,web**: página global de containers (ADR 0136, RN-495/496) (#459) (11b49cb72)
-- **api,engine**: dev agents executam DENTRO do container do projeto (ADR 0134, RN-492/493) (#457) (eb32fa72c)
-- **api,engine,web**: a Infra elege entre as candidatas do Arquiteto e sobe o container (ADR 0133, RN-491) (#456) (d86b3b6a2)
-- **api,engine,web**: o Arquiteto roteia módulos para a Infra com imagem CANDIDATA (ADR 0131, RN-487) (#455) (e27637347)
-- **api,engine,docs**: o RAG ganha golden-set de acerto, e o gate rag-acertivo nasce warn (ADR 0132, RN-490) (#454) (14e6e1b2b)
-- **api,web,runner,broker**: o broker de container fala com o daemon, e a porta MOVE de onde nasceu (ADR 0130, RN-485/486) (#453) (cafd5034a)
-- **api,web,engine**: telemetria de busca do RAG — a medição existe antes de calibrar (RN-479/480/481, ADR 0129) (#452) (4a96d14a4)
-- **api,web,docker**: um modelo para os 17 agentes, e provisionamento que não fica calado (RN-476/477) (#450) (2d4446411)
-- **runner**: a porta de Docker nasce com o CLI, e a prova de empacotamento diz por quê (ADR 0128) (#448) (1ecc3883c)
-- **web**: a pasta vem antes do runner, e o binário deixa de ser bloqueio (RN-473/474) (#446) (a7295433c)
-- **web**: cascata de modelo como cadeia visível nas Configurações (RN-470) (#439) (d18f95c82)
-- **web**: salvar por seção no Paralelismo e no Teto de gasto (RN-469) (#438) (09e7ef4c7)
-- **web**: login em duas colunas e estado de ambiente onde há identidade (RN-468) (#437) (8b0f7a3c0)
-- **web**: padrão único de valor herdado nas Configurações (#436) (b18df5011)
-- **web**: sumário ancorado das 17 seções de Configurações (#435) (8cd07991a)
-- **web**: painel "precisa de você" com as cinco filas de decisão separadas (RN-467) (#434) (91dbf21b3)
-- **web**: trilho vertical de navegação do projeto e revisão da RN-201 (ADR 0126) (#433) (be1ac2e18)
-- **docs**: docs:check afere as contagens de RN e de provider, não só a de ADR (#417) (8f41df73d)
-- **ci,k8s**: publica as quatro imagens no GHCR e fixa o overlay por digest (#416) (2ce4f0a69)
-- **api,web,runner**: configura o brabo-runner pelo navegador com chave de dispositivo (#415) (561ea7a5f)
-- **web**: gera ActionType a partir do OpenAPI, fecha cópia manual que já divergiu 2x (#413) (5752f6b8c)
-- Ollama nativo no bootstrap + catálogo local via Hugging Face (#399) (bc3454148)
-- **engine,web**: faixa de atividade do turno na tela de Sessão (#393) (b8a91714a)
-- **engine**: broadcast efêmero de tool.call e teto de iterações não termina calado (#392) (5d93085a3)
-- **web**: dicionário ferramenta→frase para a faixa de atividade da sessão (#390) (1387564fb)
-- **ci**: arquiva automaticamente toda branch cujo PR é mergeado (#385) (cc9c8963a)
-- **api,web**: anexar pasta local como referência de leitura no Chat RAG (#388) (b2bab2c39)
-- **scripts,api**: Docker › Reset total no bootstrap, com credencial pré-salva no seed (864ac0629)
-- **api,web**: converter execution_mode de projeto existente, sem recriar (RN-447..450, ADR 0111) (ffbc98528)
-- **runner**: binário standalone via bun build --compile, matriz de 5 plataformas (ADR 0109) (300ab0786)
-- **api,web**: budget de área — teto de gasto opcional, aditivo (ADR 0109, RN-440) (b74873036)
-- **api,web**: handoff manual a agente à escolha (ADR 0109) (43667eb96)
-- **api,web,runner**: runner local conecta de verdade, navegador de pastas redesenhado e Onda 6b de i18n (5dd5ce6e9)
-- **api,web**: maintainer revoga PAT de outro usuário; backlog atualizado (RN-427) (4ca360321)
-- **runner**: Personal Access Token substitui login replicado (ADR 0105) (6570af80a)
-- **api,engine,web,runner**: execution_mode em três valores, workspace verificado pelo runner (ce9708f7e)
-- fundação de i18n — react-i18next na web, preferência de idioma no servidor, Docusaurus multi-locale (1a35ccdfb)
-- abas agrupadas, aba PRs project-wide, pasta local via Runner e correção do carrossel do PO (ea4f945a4)
-- **api,engine,web,runner**: execução na máquina do usuário e teto absoluto pra git/sudo (c814b9925)
-- **api,engine**: consumo do grafo de conhecimento — templates, relevância e projeção da outbox (bf3f7e6cb)
-- **api,engine**: fundação do grafo de conhecimento — Neo4j, rag_search, templates de prompt (a42537860)
-- **api,web**: "N agentes online" no dashboard com status ao vivo (28a36aa59)
-- **api,web**: SMTP real no MailSender, atrás de MAIL_TRANSPORT (ADR 0096) (4eb25bc55)
-- **api,engine**: PO ganha leitura de métricas de produto (RN-407) (e7402305b)
-- **api,web**: gate necessidade-validada fecha a auditoria fluxo.yml x codigo (9095ad4fb)
-- **api**: revalida RN-160 no backend e efetiva a delegacao Dev Lead -> dev (b048055bc)
-- **engine,api**: gate implementavel ativo — QA-estratégia como segundo momento do qa-lead (ADR 0090) (a8fbc0537)
-- **engine,api,web**: Staff ganha código, dormente para disparo automático (ADR 0088) (005595fc3)
-- **engine,web,api**: o UX Designer entra como quinto agente conversacional (ADR 0087) (000512c89)
-- **api**: dbre vira linter de migration e relatório de backup (ADR 0093) (a70ff5326)
-- **api**: analytics e delivery-metricas viram relatório do medicao (ADR 0089) (c317c398e)
-- **engine**: appsec vira o segundo momento do secops — threat model de design (RN-360/361, ADR 0090) (559b3dfff)
-- **api**: platform como script de relatório de telemetria sob demanda (de0bf980c)
-- **api**: relatório de segurança em runtime sobre rate_limit_hits (ADR 0091) (61b82b934)
-- **engine,api**: o plano do Dev Lead vira proposed_action e suspende o turno (ADR 0086) (fb24863b6)
-- **api,web**: login social (GitHub/GitLab), reusando emissão de sessão e cliente OAuth (dd1f5dcfa)
-- **web,api**: aba Terminal mostra o estado real do container (RN-267/268) (71ae6928c)
-- **web**: aba Chat RAG — busca híbrida, citação e cobertura do índice (677a04b5e)
-- **api**: pipeline de indexação e busca híbrida do Chat RAG (9997641ee)
-- **api**: ciclo de vida do container como tabela, sem orquestrador (ADR 0081) (cb261a98e)
-- **web**: virtualização de linha e minimapa na aba Code (RN-239..242) (18ba1a4a2)
-- **api**: tabela de chunks para o Chat RAG, vetor e tsvector juntos (617deeae3)
-- **web**: aba de Gastos ganha provider, orçamento por projeto e alertas (428de2e92)
-- **web**: KPIs, filtros e selos de status na aba Criativo (6191b44b3)
-- **web**: painel inferior de 4 abas e status bar honesta na aba Código (fe37d8ecb)
-- **web**: moldura de tela conforme handoff, e o registro de abas diverge dele (ADR 0078) (1edca7405)
-- **web**: sidebar recolhe, projetos expansíveis e seção Atividades (RN-195..201) (a51432116)
-- **web,docs**: ranking de modelos por capacidade sem nota inventada (RN-210, ADR 0079) (8c3ddec2a)
-- **api**: embeddings no contrato de LLMProvider (RN-189..191, ADR 0075) (aef35cc3d)
-- **api**: provider volta a ser dimensão de gasto, contido por tipo (RN-186..188) (89fb7692e)
-- **web,design**: o tema claro deixa de ser inalcançável, e passa a ser medido (e5df101cd)
-- **web**: o painel da sessão agrupa, ordena e diz o que não mostra (2d664ea99)
-- **web**: o fio da sessão diz quem fala, com qual modelo e o que pergunta (8904ae0f0)
-- **docs**: a documentação estável publica em /prd (26e205d5e)
-- **api,web**: projeto escolhe entre pasta do usuário e container (3cac71a76)
-- **engine,api**: o PO lê o que já existe e é cobrado pela história (86607605f)
-- **scripts**: rolar o log da execução no menu do bootstrap (0c1731924)
-
-### Correções
-
-- **api,web,engine**: o permissions.json mora onde a api alcança; o escopo do terminal, no host (RN-478) (#451) (9ea30060d)
-- **web,runner**: a JWK privada nasce com o `kid` do registro, e a recusa do CLI diz o que houve (RN-475) (#447) (179c749b2)
-- **api**: dois tetos de rebaixamento em project_members (ADR 0127, RN-472) (#445) (30cd83cf1)
-- **web**: a seção de Membros respeita o papel, e as duas ações caladas falam (RN-471) (#444) (6f3cfe85c)
-- **web**: a tabela de modelo por agente respeita o papel de quem olha (RN-102) (#443) (efb61ce15)
-- **web**: o seletor de modelo de agente e de área abre com "aptos para agentes" marcado (#442) (62eebad55)
-- **web**: trocar o modelo de um agente deixa de falhar em silêncio (#441) (aa50970ec)
-- **web**: "voltar a herdar" deixa de falhar em silêncio quando o agente já herdava (#440) (069a4ab74)
-- **docs**: escapa barra invertida antes do pipe em generate.mjs (#398) (08de8e9e4)
-- **web**: aba Insights diz quando o Psicólogo está pausado (#387) (48e6e58ee)
-- **web**: aba PRs deixa de mostrar o gate do Código como erro genérico (#386) (d64cbec6b)
-- **api**: quebra de linha do prettier em seed.ts (CI) (cac4535ce)
-- **runner**: --dir relativo resolve contra INIT_CWD, não o cwd rebaseado do pnpm (RN-453) (3426d1712)
-- renumera ADR 0109→0112 e RN-440/441→RN-451/452 (colisão entre PRs paralelas) (666d58e0c)
-- renumera ADR 0109→0110 e RN-440→RN-443 (colisão entre PRs paralelas) (eb452183b)
-- resolve as 4 falhas de CI da PR #377 (8208b32e6)
-- corrige quebra de compilação e testes da fundação de i18n (Onda 6b) (022d234ca)
-- **docs,engine**: regenera events.md com project.workspace_verified e corrige formatação do teste do canal (3df121312)
-- **docker,engine**: senha do neo4j no smoke volta a ser hex, bandit sobe a 1.12.5 (88b5bdb74)
-- inclui a mudança do engine da Onda 4 (esquecida no commit anterior) (8d40cee9f)
-- **docker**: senha efêmera do neo4j no smoke não pode conter barra (9c5d6235c)
-- **docker**: neo4j chega configurado na imagem de produção e no smoke (bdfb22f28)
-- **docker**: neo4j chega configurado na imagem de produção e no smoke (5828074a8)
-- **docker**: neo4j chega configurado na imagem de produção e no smoke (598cd1be6)
-- **api,docs**: corrige drift de docs, formatação e teste com import estático flagrados pelo CI (a190b3258)
-- **api,engine,web**: corrige 413 nas PRs e Executores vazio com execução ativa (7a0ca9b60)
-- **business-rules**: renumera RN-410 para RN-411 (colisao com PR #361) (e5fba21f0)
-- **api**: dev agent trabalhando ou travado segura a sessão de execução (033c9963a)
-- **api**: cria workspace pessoal automático no cadastro de conta nova (9bd1f649b)
-- **docs**: drift.mjs reconhece arquivo-raiz fora de docs/ como satisfeito (8dd665bc2)
-- **api**: formatação do DTO de métricas de produto (prettier) (f9037da11)
-- **docs**: restaura o cabeçalho ### RN-340 perdido na resolução do merge (968ccb9a7)
-- **web**: ApprovalCard.ACTION_ICON exaustivo pra assess_implementability (f2cc17be9)
-- **engine,web**: revisão pós-implementação do ADR 0086 (b2f82f43b)
-- **api**: lint da frente de login social — só formatação (prettier) (da521ffbb)
-- **web**: fecha o que sobrou da varredura de acessibilidade (PROGRAMA 28, Onda 5/H5) (cd1bbef1b)
-- **api**: lint da frente RAG — prettier e any implícito em listarArquivosMarkdown (8ddbe8143)
-- **web**: faixa de arquivo do diff em ApprovalCard ganha aria-controls (defbb0ea3)
-- **web**: foco visível em Select, Modal e ProjectCard (ADR 0036) (9de6e2a6b)
-- **ci**: dispensa seis CVEs de Go stdlib no gitleaks e no actionlint (538069d43)
-- **api,docs**: formatação do prettier e a fronteira de gasto na doc (0980c77b7)
-- **docker,web**: ENGINE_URL do .env impedia ativar sessão dentro do container (29bbb46d5)
-- **scripts**: a regex que extrai o script do 404 aceita qualquer caixa (586b75ef9)
-- **web**: a entrada de teste de afundarDesfechos declara a origem (267edfb99)
-- **web**: o evento citado nunca cai em grupo fechado do feed (3c1baffb2)
-- **engine**: falha no frame final não derruba mais o agente (02102056f)
-- **web**: handoff e aprovação como desfecho do turno (2cf6c6fad)
-- **api,docs**: tipa o statSync e documenta o que o modo Local muda (e26b3cb46)
-- **ci**: dispensa duas CVEs de Go stdlib no gitleaks e no actionlint (d53aecda3)
-- **engine**: o Criativo cumpre a promessa de tentar de novo (43db01cdd)
-
-### Refatorações
-
-- **web**: divide o ProjectSettingsTab.tsx em um arquivo por seção (ADR 0125) (#431) (2a1f8230e)
-- **web**: extrai hook useTurnoDoAgente do SessionPage.tsx (ADR 0124) (#430) (5c6eeda7c)
-- **web**: termina a deduplicação do arme de turno no SessionPage.tsx (#429) (92b9f66d5)
-- **web**: extrai hook useSessionReadiness do SessionPage.tsx (ADR 0122) (#427) (4d552771a)
-- **web**: extrai helpers de árvore de backlog e ContextAside do SessionPage.tsx (ADR 0122) (#426) (6374ced41)
-- **web**: extrai StructuredQuestionCard do SessionPage.tsx (ADR 0122) (#425) (7b27fd6f5)
-- **web**: extrai StorySlide do SessionPage.tsx (ADR 0122) (#423) (af907c2e7)
-- **web**: extrai helpers puros de timeline do SessionPage.tsx (ADR 0122) (#422) (f4dbeb833)
-- **api**: divide o schema.ts por agregado de domínio, atrás de um barrel (#421) (aeb045e11)
-- **web**: migra o painel inferior do CodeShell para o Disclosure (24f7ffab4)
-- **web**: migra o colapso de pasta do CodeExplorer para o Disclosure (4de38fe1b)
-- **web**: migra AgentTimelineTree (ramo e marco) para o Disclosure (58d74a326)
-- **web**: migra ModelCatalogSection para o Disclosure compartilhado (ec28ea1fa)
-- **web**: monta a árvore de backlog uma vez só no painel (76348b526)
-
-### Documentação
-
-- divide o business-rules.md pelas duas seções que eram metade dele (#418) (1ab674541)
-- corrige contagem de RNs no README (#412) (5933d5d02)
-- **backlog**: marca itens fechados da revisão externa e remove seção duplicada (#411) (fe2fa6e36)
-- **backlog**: registra triagem da revisão externa de 2026-08-28 (#404) (8467ee176)
-- move narrativa histórica do CLAUDE.md para docs/explanation/historico-de-fases.md (#389) (25594eaeb)
-- registra o painel de Problemas/lint/testes no backlog (392272538)
-- registra a rota PUT .../agent-areas/:key/budget em security-surface.md (a3dd63f02)
-- registrar as rotas de maintainer do PAT em internal-api.md (RN-427) (000ba0834)
-- revisar internal-api.md para as novas rotas de auth/PAT (09f711a80)
-- adicionar entrada de CHANGELOG do PAT do runner (ADR 0105) (139ce5ee6)
-- **api**: documenta a rota nova de confirmação do workspace e o gate workspace-verificado (b97995ecb)
-- **adr**: reconcilia ADR 0072 x ADR 0103 com execution_mode em três valores (8bfc67a1d)
-- **runbook**: neo4j entra na família dos segredos que não sobem com default (f7c9c19fc)
-- **runbook**: neo4j entra na família dos segredos que não sobem com default (554f1c6f9)
-- **runbook**: neo4j entra na família dos segredos que não sobem com default (d8824c8de)
-- **reference**: atualiza permissions.md com o teto absoluto de git/sudo (d584f85e3)
-- **reference**: atualiza internal-api.md com o caminho de escrita do GraphProjector (50614ba91)
-- **api,engine**: preenche descrição das variáveis novas em configuration.md (9bdd3e85e)
-- **api**: regenera configuration.md com GRAPH_PROJECTOR_INTERVAL_MS (38737f368)
-- **reference**: documenta as rotas internas do grafo de conhecimento e rag_search (75e04a085)
-- **api**: regenera configuration.md após o rebase que trouxe API_JSON_BODY_LIMIT (4b0024baf)
-- **runbook**: documenta API_JSON_BODY_LIMIT/TRANSPORT_MAX_BODY_BYTES no ambiente de inferência (92de35055)
-- **adr**: renumera para 0097/RN-409 apos rebase e corrige contagens (2a9e22c27)
-- **business-rules**: corrige slugs dos ADRs linkados na RN-408 (1620e50ad)
-- **governance**: GOVERNANCE.md fecha o TODO(humano) do modo community (2af710fae)
-- satisfaz o drift check da onda 6 (internal-api.md, gates.md) (90900bbb9)
-- **adr**: registra ADR 0094 e fecha a Onda 2 da auditoria fluxo.yml x codigo (60a664bd0)
-- **gates**: satisfaz o drift check da regra registro-de-gates (7c8052e8a)
-- **fluxo**: onda 1 da auditoria fluxo.yml x codigo em dia (7b8965540)
-- **scripts**: regenera scripts.md com os comandos da onda (analise:funil, relatorio:seguranca-runtime, relatorio:telemetria) (20cb33956)
-- **reference**: registra artifact.threat_model em artifacts.md e events.md (afe04eb6e)
-- **artifacts**: documenta o schema prototipo_navegavel (ADR 0087) (4d420831f)
-- **adr**: atualiza contagem de ADRs após o 0086 (drift do CI) (745aff040)
-- **fluxo**: auditoria fluxo.yml x codigo (ADR 0085) — divergencias, lacunas e ondas (959a26ffa)
-- **CLAUDE.md**: registra fluxo.yml como terceira peça do modelo de time (52e49105c)
-- **fluxo**: registro declarativo de papéis do time (ADR 0085) (5fd78d92d)
-- **onda-5**: CHANGELOG e os parágrafos de G3/F2/I; revoga a proibição de login social do CLAUDE.md (e7071f284)
-- **reference**: regenera .openapi-manifest.json após o merge com dev (3141dc6aa)
-- **runbook,internal-api**: callback do login social não registrado, e a rota fora do escopo da api interna (3d66c2ed8)
-- **reference**: regenera configuration.md (API_PUBLIC_URL agora lido por start-social-login.use-case.ts) (4ea8af3ce)
-- **internal-api**: registra GET .../container/lifecycle como fora do escopo (985a3ed81)
-- **onda-4**: RN-239..242, RN-249..251, CHANGELOG e os parágrafos de G2/F1 (f9d9f01f9)
-- **business-rules,internal-api**: RN-231..238 do RAG e a rota sem contraparte interna (abb1fca43)
-- **adr**: registra o ADR 0080 (busca híbrida) e regenera a referência (c5e27aa75)
-- **onda-3**: RN-211..218, RN-227..230, CHANGELOG e o parágrafo de H3 (89451e53b)
-- **business-rules**: RN-219..226 desta frente (51a531ff4)
-- **claude**: integra o parágrafo desta frente (989987ec9)
-- **claude**: integra o parágrafo desta frente (203be0447)
-- **claude**: registra o achado desta frente (7c2d36ce6)
-- **claude**: integra o parágrafo desta frente (f1fdd0dda)
-- **security**: a rota do owner concede mais, e a nota diz isso (bd6288686)
-- **runbook**: triagem para sessão que não sai de `created` (162cd4934)
-- **business-rules**: RN-059 registra a queda e a segunda barreira (ba9fd8e69)
-- **policy**: a PR do CHANGELOG carrega a versão nos dois arquivos (1ad52dfad)
-- **changelog**: v3.1.0 (a048f9991)
-- a invariante e o verbete que as três RNs mexeram (c6fd96b42)
-- **engine**: atualiza comentário de emit_response após a RN-163 (bcb544718)
-
-### Testes
-
-- **engine,api**: golden-set de regressão do julgamento semântico do QA de Automação (ADR 0123) (#428) (d07e0a11d)
-- **e2e,ci**: E2E de navegador contra o compose de produção (ADR 0120) (#420) (cc0267f05)
-- **web**: mock de api-client exporta mensagemDaApi no caso de falha (44328ee11)
-
 ### Manutenção
 
-- **ci**: timeout repetido do pnpm audit vira risco assumido (ADR 0140) (13603dddc)
-- **ci**: aceita a CVE-2026-56854 no binário oficial do gitleaks (#449) (5006ab681)
-- **ci,k8s**: pina as actions dos 15 workflows que sobraram, com check (#419) (9fafafa9c)
-- **deps,ci**: isola website em lockfile próprio, fora do pnpm audit do produto (#414) (08194006b)
-- **ci**: piso de cobertura em api, web e engine (ratchet) (#410) (406f91e1a)
-- **ci**: checksum verification and SHA-pinned actions (#408) (4723a46e5)
-- três limpezas independentes de higiene de repositório (#403) (9cd61e0e5)
-- **docker**: fixa versão do ollama nos dois compose (#401) (5b9916d4a)
-- **docker**: mapeia UID/GID do host para os containers de dev, sem root (#406) (9256471d4)
-- **docs**: unifica agents.md e claude.md via symlink (#402) (530c99dee)
-- **deps**: atualiza override do nanoid — advisory revisado exige 3.3.18 (#400) (f4fa6799c)
-- **deps**: atualiza override do nanoid — advisory revisado exige 3.3.18 (#395) (3d34fc910)
-- **engine**: mix format (frente staff) (4af7e075d)
-- **engine**: mix format (frente ux-designer) (228bcde6e)
-- **docs**: contagem de ADRs após o merge de H2 (#325) (58606ff00)
-- **adr**: renumera 0079 -> 0077 (7a9256d84)
-- **docs**: contagem de ADRs e o parágrafo do CLAUDE.md desta frente (5bed6a925)
-- **docs**: contagem de ADRs após o merge da #319 (a278b5867)
-- **design**: o handoff atualizado entra no repo — 10 telas (f5f771ac6)
+- **engine**: mint 1.10.0 fecha duas advisories de DoS (a71b984fb)
 
-## Unreleased
+
+## v4.0.0 — 2026-09-04
 
 ### ⚠ Mudanças incompatíveis
 
@@ -2598,6 +2356,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   broker (`ModoDeExecucaoNaoSuportadoError`), que já falha alto e nomeado
   em vez de calado. Ver [ADR 0135](docs/adr/0135-portao-de-imagem-nos-tres-modos.md)
   e RN-494 (revisa RN-169/RN-421)
+
+- **api,web**: o portão de imagem vale nos três modos de execução (ADR 0135, RN-494) (#458) (a7c299716)
+- **runner**: publicar @brabo/runner no npm via tsup (ADR 0106) (a1135b6d1)
+- **auth**: marca a chegada do login social como breaking (17c512846)
+- **api**: lint, registra o ADR 0079 e marca a quebra (7342303d6)
 
 ### Correções
 
@@ -2670,6 +2433,774 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `workspace_path` do projeto quando o basename dele bate com a pasta
   escolhida; quando não bate, sai sem prefixo, porque um `cd` para o lugar
   errado seria a tela afirmando o que não sabe (RN-473, RN-477)
+
+- **web, runner**: o **modo automático** do runner local — configurar a pasta
+  pelo navegador e rodar `brabo-runner` sem flag nenhuma — **nunca funcionou**,
+  desde que nasceu. O navegador gerava o par de chaves, registrava a metade
+  pública no projeto e gravava a privada na pasta, mas **descartava o `id` que
+  a api devolvia no registro** — nos dois caminhos, o automático e o kit
+  manual. Esse `id` é o **`kid`** da JWK, e é o único vínculo entre o arquivo
+  em disco e a chave pública guardada no servidor: sem ele, o CLI recusa a
+  chave (ele só repassa `jwk.kid`, nunca inventa um id) e a api não teria como
+  achar a pública para verificar a assinatura. O resultado era uma pasta com
+  aparência de configurada, uma chave inerte no projeto, e o CLI caindo no
+  modo manual sem dizer por quê. Agora o registro e a exportação da privada
+  acontecem **numa função só**, com o `id` fluindo dentro dela — descartá-lo
+  de novo exigiria apagar código, não esquecer uma linha. E o teste que
+  deixou isso passar mudou de pergunta: ele afirmava que o arquivo tinha sido
+  **aberto**, e passa a afirmar **o que foi escrito nele** (RN-475)
+- **runner**: a recusa da chave de dispositivo **diz o que houve**. Um arquivo
+  `brabo-runner-device-key.jwk.json` **presente e inválido** produzia
+  exatamente a mesma saída de um arquivo **ausente** — o bloco de uso, que
+  fala de `--project`/`--dir`/`--token` e não menciona o arquivo —, porque a
+  leitura devolve `null` nos dois casos (de propósito: ela nunca lança, e a
+  ausência é o caminho normal de quem usa flags). Quem tinha uma pasta
+  configurada era mandado investigar a configuração, que estava certa. A
+  leitura continua não lançando; o que mudou é que o CLI passa a **distinguir
+  os quatro estados** (ausente, JSON inválido, sem `kid`, válida) e a imprimir
+  a recusa **nomeada** — o arquivo, o motivo e as duas saídas (regravar a
+  pasta pelo navegador, ou usar `--token` enquanto isso) — em vez do texto
+  sobre flags. Ausente segue caindo no bloco de uso, que é a resposta certa
+  para quem não configurou nada (RN-475)
+- **api**: associar alguém a um projeto (`POST projects/:projectId/members`)
+  passa a recusar com **403** os **dois movimentos de rebaixamento** que
+  produziam estado sem volta. Um `maintainer` podia (1) rebaixar o **`owner` do
+  workspace** a `viewer` num projeto — o dono perdia o próprio projeto, e
+  restaurar exigia o `maintainer` que ele acabara de perder ali — e (2) **se
+  rebaixar sem poder desfazer**, porque desfazer é a mesma rota, que pede
+  `maintainer`. Agora: **ninguém rebaixa quem é `owner` do workspace** (lido de
+  `workspace_members.role`, nunca de `workspaces.created_by`) e **ninguém
+  rebaixa a si mesmo** (sem limiar; **subir** o próprio papel segue passando).
+  A **sobreposição continua valendo nos dois sentidos** — restringir um
+  `developer` de workspace a `viewer` num projeto sensível é capacidade
+  deliberada e não foi tocada. As **três descrições de OpenAPI** que prometiam
+  "the higher of this one and what the person already has" e "includes whoever
+  inherits access from the workspace" passam a descrever o que o código faz.
+  A tela ainda oferece o rebaixamento que a api recusa (ela não tem como
+  calcular o primeiro teto), mas **a recusa aparece** no toast, com a frase da
+  api — o gate do `Select` é PR à parte.
+  Ver [ADR 0127](docs/adr/0127-tetos-de-rebaixamento-em-project-members.md) e
+  RN-472.
+- **web**: em **Configurações**, a seção **Membros e papéis** passa a
+  **respeitar o papel de quem está olhando**, e suas duas ações caladas passam a
+  ter desfecho. Ela não checava papel nenhum: **convidar**, **trocar o papel de
+  alguém** e **remover** apareciam ativas para todo mundo, **`viewer`
+  incluído**, e a api recusava com 403 — e duas delas nem diziam isso, porque
+  não tinham tratamento de erro: a recusa virava silêncio na tela e ruído no
+  console. Remover um membro em silêncio era o pior dos três, por ser ação
+  consequente e sem volta pela tela. O mínimo **não** foi copiado da seção de
+  modelos logo acima: **Modelos por agente** exige `developer` e as três ações
+  daqui exigem `maintainer`, porque a régua é do **endpoint**, nunca da tela ao
+  lado. E o papel usado é o **efetivo do projeto**, não o do workspace — o
+  limite que a correção anterior tinha declarado. Não é uma lacuna nova nem uma
+  segunda: é a **mesma**, vista da seção que tem como fechá-la, porque esta já
+  busca a lista de membros do projeto e daí sai o papel de quem olha, composto
+  exatamente como a api o compõe. Quem não pode editar **continua lendo tudo** —
+  o papel de cada membro segue visível no seletor apagado —, e o motivo é dito
+  **uma vez, em texto**, na legenda. A legenda também passa a dizer **duas
+  coisas que a tela afirmava sem querer**: que o papel desta tabela **substitui**
+  o do workspace neste projeto, **nos dois sentidos** (pôr `viewer` aqui rebaixa
+  de verdade, inclusive quem é `owner` do workspace — o seletor não é uma
+  sugestão inofensiva), e que quem alcança o projeto **só pelo workspace não
+  aparece na lista**. **Convidar** manteve de propósito a dica fixa em vez da
+  frase da api: ali o ID é digitado à mão, e o erro que se alcança de verdade
+  responde `500`, cuja frase seria pior que a dica (RN-471)
+- **web**: em **Configurações**, a tabela **Modelos por agente** passa a
+  **respeitar o papel de quem está olhando**. Ela não checava papel nenhum: o
+  seletor de modelo e o "voltar a herdar" de cada linha apareciam clicáveis para
+  todo mundo, **`viewer` incluído**, e a api recusava com 403. Desde as
+  correções acima esse 403 pelo menos vira mensagem — o que não bastava:
+  oferecer um controle que só existe para ser recusado é a tela mentindo sobre o
+  que a pessoa pode fazer. O mínimo **não** foi copiado da seção irmã logo
+  abaixo: **Modelo por área** exige `maintainer` e **Modelos por agente** exige
+  `developer`, porque o vínculo da área alcança o lead e todos os subagentes de
+  uma vez e o do agente alcança um agente (RN-102). Copiar teria trocado o
+  defeito pelo **inverso**, e o inverso é pior — oferecer o que será recusado ao
+  menos termina numa mensagem, enquanto trancar quem podia editar é invisível
+  para quem perdeu a capacidade. Quem não pode editar **continua vendo tudo**: o
+  modelo vigente no gatilho, a cadeia de origem inteira e o próprio "voltar a
+  herdar", que é o que diz que aquele agente divergiu — some o controle, nunca a
+  informação. O motivo é dito **uma vez, em texto**, na legenda da seção, e não
+  como dica em cada linha: dica de mouse em controle desabilitado não abre no
+  Chromium, e explicação que não aparece é a mesma ausência com mais código. A
+  comparação de papéis saiu das telas e virou `roleAtLeast` sobre a hierarquia
+  que já existia — **Modelo por área** passou a usá-lo com o mesmo mínimo de
+  antes. Nada disso é fronteira de segurança: quem recusa continua sendo a api
+  (RN-102)
+- **web**: em **Configurações**, o seletor de modelo de **Modelos por agente** e
+  o de **Modelo por área** passam a abrir com o filtro **"aptos para agentes"
+  já marcado**. O filtro existe desde a Fase 9c e **nenhuma tela o ligava** — o
+  seletor abria oferecendo modelos sem *tool calling*, cujo clique a api recusa
+  com 422, e a frase da recusa manda a pessoa justamente para o filtro que
+  ninguém tinha ligado. Quem passa a ligá-lo não é escolhido por tela e sim pelo
+  **escopo do vínculo**: `assertModelFitsBindingScope` exige *tool calling* em
+  `agent` e em `area` e em mais nenhum, então as duas telas que gravam nesses
+  escopos abrem filtradas e o **seletor da sessão continua sem filtro** — ali a
+  api aceita modelo de conversa de propósito, e marcar esconderia o que o
+  domínio permite. Isto torna **improvável a causa mais comum** de recusa, nunca
+  impossível: as outras duas (modelo desativado no workspace, modelo sumido do
+  provider — RN-043) continuam alcançáveis daqui, o modelo indisponível segue
+  **listado e marcado**, e a mensagem de falha da correção anterior continua
+  sendo o que conta o desfecho. É o **estado inicial** de uma caixa de seleção,
+  não uma trava: desmarcar volta a listar o catálogo inteiro. Como consequência,
+  o seletor passa a **dizer quando o filtro esconde o modelo vigente** — o
+  vínculo herdado do projeto ou do workspace pode ser de conversa (esses dois
+  níveis nunca exigiram *tool calling*), e sem o aviso o gatilho mostrava um
+  nome que a lista aberta não continha, sem nada marcado. A causa é nomeada
+  porque só existe um filtro ali; quando a lista inteira fica vazia, quem fala
+  continua sendo o texto de lista vazia, que já manda desmarcar (RN-040)
+- **web**: em **Configurações**, escolher um modelo no seletor de uma linha de
+  **Modelos por agente** e ter o pedido recusado não produzia nada na tela: a
+  pessoa clicava, o dropdown fechava, a linha continuava no modelo antigo e o
+  erro só existia no console. Mesma classe de defeito da correção logo abaixo, e
+  na função vizinha do mesmo arquivo — `handleModelChange` não tinha `try/catch`
+  e era chamada do `onSelect` do seletor, então toda recusa da api virava
+  *unhandled promise rejection*. A recusa é alcançável de dentro do próprio
+  seletor: o modelo que sumiu do provider aparece na lista **marcado** em vez de
+  escondido (senão o vínculo que aponta para ele ficaria sem explicação), e a
+  lista é cacheada, então o modelo pode ter sido desligado no catálogo depois da
+  última leitura — nos dois casos a api recusa com 422. Agora a falha aparece,
+  com a mensagem da api e tom de falha. **O 404 aqui NÃO ganha desfecho
+  próprio**, ao contrário da correção de "voltar a herdar": aquele endpoint tem
+  **uma** causa de 404 e por isso o cliente pôde nomeá-la; este recusa por sete
+  caminhos e nenhum status identifica um deles sozinho — o 404 sozinho tem duas
+  causas ("Modelo não encontrado" e "Projeto não encontrado"), e escolher uma das
+  frases seria a tela afirmando o que não sabe. O contraste está comentado no
+  código, ao lado das duas funções. Nada de otimista foi introduzido: a coluna
+  **Modelo vigente** continua exibindo o vínculo que a api confirmou, e a linha
+  só é relida no sucesso — na recusa nada mudou no banco (RN-470)
+- **web**: em **Configurações**, clicar em "voltar a herdar" numa linha de
+  **Modelos por agente** que já herdava não fazia nada visível — nem confirmava,
+  nem reclamava. O botão aparece em toda origem `agent` de propósito (RN-470): a
+  cadeia do cliente não consegue separar o agente com modelo próprio daquele que
+  herdou o do **Criativo**, e nesse caso não há linha para apagar, então a api
+  responde 404 — ela está certa, "apaguei o que não existia" e "apaguei" não são
+  a mesma resposta. O que faltava era do lado do cliente: a função não tinha
+  `try/catch` e era chamada de um `onClick`, então toda recusa virava *unhandled
+  promise rejection* — silêncio na tela e ruído no console. Agora os três
+  desfechos são distintos, na gramática que **Modelo por área** já usava. O 404
+  ganhou desfecho **próprio** e não o das outras falhas, porque para quem clicou
+  ele não é falha: o estado pedido — o agente herda — **já é verdade**. A tela
+  diz isso na língua de quem está lendo, em vez de repassar a frase pt-BR que a
+  api crava no código (o idioma default do web é `en`), e ela pode dizer porque
+  este endpoint tem **uma** causa de 404: papel insuficiente é 403 e `scope_id`
+  malformado não é 404. Nos dois desfechos a linha é relida — se a api diz que
+  não havia binding, quem estava desatualizada era a tela. Qualquer outro status
+  continua sendo erro de verdade, com a mensagem da api e tom de falha
+- **engine,api,web**: a aba Insights, com zero hipóteses, mostrava "Sem
+  hipóteses ainda — o Psicólogo analisa cada sessão encerrada" mesmo com
+  `PSYCHOLOGIST_ENABLED=false` — indistinguível de "ainda ativo, só não
+  rodou". A tela nunca chegava perto do botão "Reanalisar" (só existe com
+  uma rodada de análise já feita), então nunca esbarrava no 503 que
+  denunciava a pausa. `GET /projects/:projectId/psychologist/status`
+  (`role:viewer`, sem efeito colateral) lê a flag global de antemão; a
+  tela agora diz "O Psicólogo está pausado — nenhuma sessão é analisada
+  até ser reativado" quando é o caso, e mantém a frase original quando de
+  fato ainda está ativo (RN-454)
+- **web**: a aba PRs mostrava o 409 do portão do container (RN-105 — o
+  Arquiteto ainda não decidiu qual imagem sobe para o projeto) como erro
+  transitório genérico, com botão "Tentar de novo" — a afordância errada
+  para um estado estável que só se resolve quando o Arquiteto decide, nunca
+  clicando de novo. A apresentação dedicada que a aba Code já tinha
+  (RN-107) foi extraída para `ContainerImageGateNotice`
+  (`components/ContainerImageGate.tsx`) e a aba PRs (`code/PrListAndDiff.tsx`)
+  passou a reconhecer o mesmo 409 (`isContainerImageGateError`,
+  `lib/api-client.ts`) e mostrar o mesmo estado. Placeholder truncado no
+  campo "Já sabe o id?" corrigido junto (largura do input de 200px para
+  260px).
+- **docker,scripts,deploy**: `gemma:1b` não existe no registry da Ollama
+  (`manifest unknown`) — só `gemma3:1b` existe. `ollama-model-loader`
+  sempre falhava e travava qualquer `docker compose up --wait`. Corrigido
+  em `docker-compose.yml`/`.prod.yml`, `.env.example`,
+  `docker/ollama/pull-models.sh`, `scripts/dev/verificar-modelos-ollama.sh`
+  e `deploy/k8s/base/ollama/job-model-loader.yaml` (RN-415).
+- **scripts**: `Database › Delete` nunca dropava de verdade — `DROP SCHEMA
+  public CASCADE` não alcança `engine.*` (Ecto/Oban vive em schema PRÓPRIO)
+  nem `drizzle.__drizzle_migrations` (controle do drizzle-kit, também em
+  schema próprio). Resultado real: `mix ecto.migrate` batia em
+  `duplicate_table` e `pnpm db:migrate` — sem erro nenhum — não recriava
+  NENHUMA tabela da api, porque via o controle do drizzle-kit intacto e
+  concluía que já tinha rodado tudo. `Delete`/`Reset total` agora dropam
+  `engine` e `drizzle` também.
+
+- **api,web**: converter `execution_mode` de um projeto EXISTENTE, sem
+  recriá-lo — fecha a correção que a Onda 1 do runner (ADR 0104) já tinha
+  registrado em `docs/explanation/backlog.md` (o item 4 daquele ADR dizia
+  que a conversão já era possível, e não era). Rota dedicada, `PUT
+  projects/:projectId/execution-mode` (`maintainer`), que orquestra a
+  migração em vez de um `PATCH` que só trocaria a coluna: relocaliza o
+  `permissions.json` para o novo escopo (o CONTEÚDO não muda), encerra o
+  ciclo de vida do container ao SAIR de `container` (ADR 0081), zera
+  `workspaceVerifiedAt` em toda conversão real e recusa com 409 enquanto
+  qualquer dev agent do projeto estiver trabalhando ou travado — ele não
+  re-resolve o worktree sozinho por baixo da troca. Nova seção em
+  Configurações do projeto, com o mesmo aviso e a mesma copy dos três
+  modos do wizard de criação (RN-447..450, ADR 0111)
+- **api,web**: handoff manual a agente à escolha (ADR 0109), fechando item
+  de backlog aberto desde a FASE 13c. `SessionPage.tsx` ganha um seletor
+  ("Endereçar handoff a...") sobre `addressableAgents()` (lead de área ∪
+  agente conversacional solo), que POSTa em `POST
+  .../sessions/:sessionId/handoffs` — mesmo `CreateHandoffUseCase` que um
+  agente já usa para oferecer handoff, com `actor: {kind:'user'}`
+  registrando que quem decidiu foi um humano. O caso real que motivou:
+  Staff (ADR 0088) e `ux-designer` (ADR 0087) tinham plumbing de engine
+  pronto e NENHUM caminho humano até eles — os dois entram em
+  `AGENTES_DE_CHAT` na mesma mudança (RN-440/RN-441)
+- **api,web**: budget por ÁREA (`agent_areas.budget_micros`/`spent_micros`)
+  fecha o item do backlog do ADR 0038 — teto de gasto opcional, configurável
+  por lead em Configurações (`maintainer`), ADITIVO aos budgets de projeto
+  e sessão que já existiam (nunca cascata: os três são checados
+  independentemente, e qualquer um bloqueado já recusa a chamada). `null`
+  é o default (sem teto); o gasto acumulado da área soma SEMPRE, com ou sem
+  teto configurado, o que já mostra o gasto real por área antes de alguém
+  configurar um limite. Rota `PUT projects/:projectId/agent-areas/:key/budget`
+  (`maintainer`), e a rota `GET agent-areas` já existente passa a devolver
+  `budgetMicros`/`spentMicros` (RN-443, ADR 0110)
+- **runner**: binário standalone do `@brabo/runner` — download direto de
+  `dist-bin/brabo-runner-<plataforma>-<arquitetura>[.exe]` numa GitHub
+  Release, sem Node/npm/node-gyp instalado na máquina. `bun build --compile`
+  empacota o CLI num único executável, com o `.node` nativo do `node-pty`
+  embutido (`with { type: 'file' }`) e extraído pra um diretório real em
+  runtime — o mecanismo completo, e o que ficou VALIDADO por execução real
+  em cada plataforma (só `linux-x64` neste sandbox; as outras quatro por
+  reasoning + a primeira execução real de CI na próxima tag), está no ADR
+  0112. Cinco plataformas (`linux-x64`, `linux-arm64`, `darwin-x64`,
+  `darwin-arm64`, `win32-x64`), cada uma construída no seu runner NATIVO
+  (`build-runner-binaries.yml`, mesmo gatilho de tag final de
+  `publish-runner.yml`) e anexada à Release já existente. Fecha o item de
+  backlog do ADR 0104 ("binário standalone (pkg/bun build --compile)"),
+  companion do ADR 0106 (RN-451/452)
+- **web**: `FolderBrowserModal` vira um explorador de três colunas —
+  atalhos ("Pasta pessoal", "Raiz"), lista central com breadcrumb e um
+  painel de detalhes —, seguindo a referência visual do dono do produto
+  (picker estilo GNOME Files/GTK). Um clique agora SELECIONA (destaca e
+  atualiza os detalhes) e duplo clique ENTRA — antes um único clique já
+  navegava. A lista deixou de esconder arquivos: eles aparecem visualmente
+  apagados e sem gesto nenhum, só pasta continua navegável/selecionável. O
+  botão final foi renomeado para "Usar esta pasta" (RN-436)
+- **api,web**: no modo de projeto `runner`, "Procurar pasta..." passa a
+  criar o projeto ANTECIPADAMENTE — ao clicar, não só na confirmação —
+  fechando a lacuna que o ADR 0107 já tinha declarado (o ticket do canal do
+  Runner precisa de um `projectId` real). Reuso por SNAPSHOT de identidade
+  (nome/repositório a adotar), nunca pelo caminho digitado: clicar de novo
+  sem mudar a identidade reabre o MESMO projeto, e a confirmação final
+  reusa em vez de criar de novo. O modo `mounted` não muda — continua sem
+  projeto até a confirmação, porque ali a validação de caminho toca disco
+  na criação (RN-437, ADR 0108)
+- **web**: `fs-browser-channel.ts` tinha o mesmo bug de path duplicado que a
+  RN-433 já tinha corrigido no `terminal-channel.ts` irmão (concatenava
+  `/runner/websocket` a um `engineWsUrl` que já vem pronto), então a
+  navegação de pasta contra um engine real caía direto em "a conexão com o
+  runner caiu". Achado ao verificar a RN-437 ponta a ponta — o módulo não
+  tinha teste próprio até agora (RN-438)
+- **api,web**: `maintainer` passa a revogar o Personal Access Token de
+  QUALQUER usuário do projeto — resposta a incidente (dev desligado com
+  token vazando), item declarado fora de escopo pelo ADR 0105. Rotas
+  separadas (`GET .../personal-access-tokens/all`,
+  `DELETE .../personal-access-tokens/:tokenId/admin`, ambas
+  `@RequireRole('maintainer')`), escopo por `projectId` em vez de
+  `userId` — a autorevogação de cada usuário não muda. Sub-lista nova em
+  Configurações do projeto, visível só para `owner`/`maintainer`, com o
+  e-mail do dono de cada token (RN-427, extensão do ADR 0105)
+- **runner**: `@brabo/runner` publicado no npm — `npm install -g
+  @brabo/runner` instala o CLI sem precisar clonar o monorepo. `tsup`
+  empacota `apps/runner` num `dist/index.cjs` único (`node-pty`
+  continua dependência separada, é binding nativo); publicação a cada
+  tag final via workflow próprio (`publish-runner.yml`), paralelo ao
+  `release.yml`. Fecha o backlog do ADR 0104 (ADR 0106)
+- **api,web,runner**: Personal Access Token (`brb_…`) pro `brabo-runner`,
+  fechando o item de backlog do ADR 0104 que bloqueava
+  `npm publish @brabo/runner`. `apps/runner/src/auth.ts` deixa de
+  replicar login (e-mail/senha interativos, cookies persistidos em
+  `~/.brabo/runner-credentials.json`) — o CLI passa a receber um token
+  de longa duração via `--token`/`BRABO_ACCOUNT_TOKEN`, emitido em
+  Configurações do projeto, revogável, com expiração opcional, escopado
+  a UM projeto. O token nunca autentica fora de
+  `POST /projects/:projectId/runner-ticket`, por construção
+  (`IS_PAT_ROUTE_KEY`/`@RequirePatAuth()` + `PatAuthGuard` de rota, nunca
+  um branch no `JwtAuthGuard` global) — nem sob papel elevado, nem em
+  nenhuma outra rota (RN-424/425/426, ADR 0105)
+- **api,engine,web,runner**: `execution_mode` do projeto passa a ter TRÊS
+  valores — `container` (default, inalterado), `mounted` (o antigo `local`,
+  renomeado) e `runner` (novo: pasta do usuário SEM bind-mount, confirmada
+  por um `brabo-runner` conectado). Reconcilia os ADRs 0072 e 0103: antes,
+  o roteamento pro runner reusava a mesma flag do modo `local`, então
+  usar o runner de verdade exigia passar pela validação de bind-mount que
+  ele não precisa. Criação de projeto `runner` valida só o caminho
+  (léxico, sem tocar disco); o runner confirma o caminho de verdade ao
+  conectar (`POST /internal/projects/:projectId/workspace-verification`,
+  novo), sobrescrevendo o que foi digitado — ele é a fonte da verdade.
+  Comando de agente roteado a um projeto `runner` sem workspace verificado
+  ou sem runner conectado é RECUSADO explicitamente, nunca cai no
+  fallback de container (RN-421/422/423, ADR 0104)
+- **runner**: no Linux, `brabo-runner --dir` só aceita um caminho dentro do
+  `$HOME` do usuário (o próprio home ou uma subpasta dele) — caminho fora
+  dessa árvore (`/etc`, `/root`, outra conta em `/home`, etc.) é recusado
+  na inicialização do CLI, com mensagem explicando o motivo. Fora do
+  Linux o comportamento não muda (RN-434, ADR 0104)
+- **runner**: `brabo-runner --dir` apontando para uma pasta que ainda não
+  existe deixa de ser erro fatal — a pasta é criada automaticamente
+  (`mkdir -p`), sempre DEPOIS de passar pela checagem do `$HOME` no Linux
+  (RN-434), então um caminho fora do home continua recusado mesmo quando
+  ainda não existe. `--dir` apontando para um arquivo já existente
+  continua erro real — nunca sobrescrito silenciosamente (RN-435, ADR
+  0104)
+- **api,web**: fundação de i18n — coluna `locale` em `users` (`'pt-BR'|'en'`,
+  default `'pt-BR'`), embutida no corpo de `/auth/login`/`/auth/refresh` (sem
+  chamada extra) via `EmitirSessaoUseCase`; `GET/PATCH /users/me/preferences`
+  como via redundante para a `AccountPage` nova (`/account`, fora do escopo
+  de projeto, link no rodapé da sidebar). `react-i18next`+`i18next` como
+  dependência nova de `apps/web`, isolada atrás de `lib/i18n.ts`/
+  `lib/idioma.ts` (mesmo desenho de `tema.ts` — servidor é a fonte de
+  verdade, `localStorage` só evita flash no primeiro paint). `en` é o idioma
+  default do app a partir de agora; `pt-BR` continua disponível. Docusaurus
+  (`website/`) ganhou `i18n.defaultLocale: 'en'`/`locales: ['en', 'pt-BR']`,
+  com o snapshot pt-BR atual de `docs/` preservado em
+  `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` antes de
+  `docs/` virar a fonte em inglês, e uma regra `warn` nova no docmap
+  (`traducao-pt-br`) cobrindo o drift entre as duas árvores. Extração em
+  massa do resto da interface e tradução de `docs/` são a próxima etapa,
+  em andamento (RN-432)
+- **web**: navegação por abas agrupadas — a régua de 11 abas do projeto vira
+  6 no topo (Visão geral, Agentes ▾, Dev ▾, Documentação ▾, Gastos,
+  Configurações), com `GroupedTabs` novo por cima do `Tabs` existente. Chat
+  e Chat RAG viram UMA aba com um controle segmentado interno
+  ("Conversar"/"Buscar") — a distinção de negócio entre os dois (RN-202)
+  não muda, só o contêiner de UI
+- **api,web**: aba **PRs** — listagem de pull requests do PROJETO inteiro,
+  direto do provider de git (nunca escopada a uma sessão), resolvendo o bug
+  em que a revisão de uma PR proposta numa sessão antiga sumia da tela assim
+  que uma sessão nova nascia. Novo cruzamento project-wide de ações
+  pendentes (`GET /projects/:id/actions?status=pending&actionType=`) acha a
+  proposta de merge correspondente independente de qual sessão a criou, e a
+  decisão usa o `sessionId` da própria ação. Botão "Merge" propõe
+  `git_merge` (primeira produtora real pela UI), desabilitado quando o gate
+  do dev agent bloqueou a task; a trava de branch protegida continua
+  absoluta (RN-154). `git_merge` ganhou corpo próprio no card de aprovação
+  em vez do despejo de JSON cru (RN-430)
+- **web**: aba própria **Arquitetura**, extraída da Visão Geral (module_map,
+  diagrama C4, ADRs, pendências de validação cruzada); a Visão Geral passa a
+  mostrar um resumo condensado com link "Ver arquitetura completa →".
+  Primeiro lightbox do design system: `C4DiagramView` ganha botão de
+  ampliar por diagrama, abrindo o SVG em tela cheia sobre `Modal`
+  (`size="full"`, novo) (RN-431)
+- **api,web,engine,runner**: navegação de pasta local via o Runner — dois
+  eventos novos no MESMO canal `terminal:<projectId>` (`fs_list_dir`/
+  `fs_home_dir`), relay puro do engine, exatamente como o PTY.
+  `FolderBrowserModal` (breadcrumb, subpastas, `..`, "Selecionar esta
+  pasta") integrado à criação de projeto e reaproveitável onde o projeto já
+  existe; sem runner conectado, `RunnerOnboardingPanel` (novo, compartilhado
+  com a aba Terminal) explica a instalação em vez de travar carregando. A
+  api continua sem enumerar filesystem nenhum — nenhuma rota nova (RN-429,
+  ADR 0107, revisa a ADR 0072)
+- **web**: corrigido o carrossel de promoção de histórias do PO, que
+  degradava silenciosamente para card único (ou sumia) em sessão longa —
+  a leva pendente agora vem de `useBacklog` (completo, sem janela) em vez
+  de um scan sobre os últimos 200 eventos, mesma classe de bug que a
+  RN-180 já corrigiu em `ContextAside` (RN-427)
+- **api,engine,web,runner**: execução de agente na máquina do usuário —
+  `apps/runner` (workspace novo, CLI `brabo-runner`) conecta ao engine
+  por canal Phoenix com ticket de uso único, executa comando de agente
+  já aprovado no `$SHELL` do usuário e abre terminal PTY interativo na
+  aba Code. Roteamento sempre acontece depois do pipeline de aprovação
+  normal; sem runner conectado, o comportamento de sempre (container)
+  continua. Junto: `git push`/PR/deploy e `sudo`/`doas` saem de `deny`
+  incondicional e viram teto absoluto — sempre pedem aprovação humana,
+  nunca auto-aprováveis mesmo com modo automático ligado, decisão
+  global do dono do produto (RN-418/419/420, ADR 0102/0103)
+- **api,engine**: consumo do grafo de conhecimento — ux-designer,
+  Psicólogo e Anamnese passam a resolver o kickoff/identidade a partir de
+  um template versionado do grafo (com fallback obrigatório pro texto
+  inline, atrás de duas flags separadas, default desligadas). Psicólogo e
+  Anamnese ganham uma segunda fonte de contexto: `rag_search` busca
+  trechos RELEVANTES ao gatilho da análise, compondo (nunca substituindo)
+  a leitura de eventos recentes/janela temporal existente, sempre dentro
+  do orçamento de tokens já declarado. O grafo passa a se escrever
+  sozinho — `GraphProjector` drena uma fila própria da outbox
+  transacional e projeta handoffs, hipóteses do Psicólogo, perfis da
+  Anamnese e fechamento de sessão, sem o engine nunca escrever no grafo
+  diretamente (RN-416/417, ADR 0101)
+- **api,engine**: fundação do grafo de conhecimento — Neo4j (`neo4j-driver`
+  na api, memória DERIVADA do event log, nunca fonte de verdade) para
+  templates de prompt versionados (idempotentes por hash) e memória
+  relacional (interações, hipóteses do Psicólogo, perfis da Anamnese,
+  handoffs). pgvector continua sendo o índice vetorial dos chunks — sem
+  duplicar embedding em dois bancos. Tool nova `rag_search` para os
+  agentes do engine, fechando o maior vão do RAG existente (nenhum agente
+  o consultava até agora); `ollama-model-loader` garante `gemma:1b`,
+  `yi-coder:1.5b` e `nomic-embed-text` no boot, fechando um bug real
+  separado (`nomic-embed-text` nunca era puxado automaticamente).
+  Primeira leva de templates extraída para `prompts/*.md`, sem editar
+  nenhum `.ex` ainda. Padrão inspirado no repositório
+  [ErickWendel/neo4j-ai-experiments](https://github.com/ErickWendel/neo4j-ai-experiments)
+  (RN-413/414/415, ADR 0099/0100)
+- **web,design**: o tema claro deixa de ser inalcançável — `public/theme-boot.js` aplica `data-theme` a partir de `localStorage['brabo.theme']` antes do primeiro paint (arquivo, não script inline, porque a imagem serve sob `script-src 'self'`), e `src/lib/tema.ts` é a API que o shell consome para alternar (ADR 0074, RN-182/RN-183)
+- **design**: os tokens que faltavam do handoff — escala `--fs-*`, raios `--r-xs`/`--r-sm` (mais alias para `--r-md`/`--r-lg`/`--r-pill`), métricas do shell (`--sidebar-w`, `--sidebar-w-collapsed`, `--header-h`, `--tabs-h`) e os nomes `--font-display`/`--shadow-modal` como ALIAS dos existentes
+- **design**: a paleta de realce passa a ter os oito papéis do handoff com prefixo `--syntax-*`, valor próprio por tema e 4,5:1 contra `--code-bg` nos dois — cinco dos oito valores do handoff foram recusados por medição (RN-185)
+- **web**: scrollbar customizada em `--border-strong`, raio 6px e borda na cor da superfície, nos dois temas
+- **api**: o relatório de gasto do workspace (`GET
+  /workspaces/:id/spend-report`, papel `owner`) ganhou a quebra por
+  **provider** e blocos separados de **pessoa** e **agente** — `porProvider`,
+  `porOwner` e `porAgente` (ADR 0076, RN-186/188). O relatório do membro
+  (`GET /projects/:id/spend/me`) **não mudou**: continua sem provider e sem
+  credencial, e agora a garantia é do TIPO — pedir a dimensão com escopo de
+  ator não compila (RN-187).
+- **web**: a aba Configurações ganha "Melhores modelos por capacidade" —
+  para código, documentação, análise, imagem e conversa, mostra o modelo mais
+  usado pelos agentes deste projeto entre os que a curadoria do workspace
+  marcou para aquele uso, com custo como desempate. Sem coluna de "nota":
+  o handoff pedia um score por capacidade, mas é dado fictício do mock — o
+  produto não mede qualidade de modelo em lugar nenhum (ADR 0077, RN-210)
+- **web**: a sidebar recolhe (264px ↔ 62px, trilha de ícones por projeto)
+  com preferência persistida; projetos ficam expansíveis (N ao mesmo tempo)
+  revelando as abas de cada um; nova seção **Atividades**, agrupada por
+  agente e, quando o módulo tem paralelização, por INSTÂNCIA real
+  (`dev-<modulo>`/`dev-<modulo>-2`, nunca um contador inventado); botão de
+  tema no rodapé; os dois itens globais sem rota ("Chat global"/
+  "Configurações") saem — só Projetos e Atividades são globais. A aba
+  Código recolhe a sidebar automaticamente, sem gravar a preferência
+  (RN-195..201)
+- **web**: moldura de tela conforme o handoff — cabeçalho do projeto com
+  `--header-h` (piso de 60px, sem cortar o alerta de orçamento), régua de abas
+  com `box-shadow: inset 0 -2px 0 var(--accent)` em vez de `border-bottom`,
+  rolagem horizontal em telas estreitas, e container de conteúdo com largura
+  máxima de 1040px. O rótulo "Code" virou "Código" (ADR 0078).
+- **web**: aba de Gastos ganha quebra por provider (Ranking, RN-211), bloco
+  de orçamento por projeto com o `TokenMeter` existente (RN-212) e alerta
+  de custo lido do orçamento (RN-213). KPI de economia com modelo local
+  fica de fora, declarado — falta preço contrafactual defensável (RN-214)
+- **web**: o painel inferior da aba Código ganha as quatro abas do handoff
+  (Terminal, Problemas, Diff de PR, Saída) — Problemas e Saída nascem com
+  estado vazio honesto, sem lint/teste ou stream de comando inventados
+  (RN-215/216) — e a status bar de 24px passa a mostrar `↑N ↓M` real da
+  branch e a linguagem do arquivo ativo (RN-217); abas do painel ganham
+  foco visível (RN-218)
+- **web**: a aba Criativo ganhou os 4 KPIs do handoff (sessões no projeto,
+  ativas agora, taxa ideação→commit, custo do mês), filtros pill
+  (todas/ativas/fechadas/abortadas) e selos de status para os 5 estados
+  reais da sessão — `closing` com selo próprio "encerrando", nunca fundido
+  com "fechada" (RN-227..230)
+- **api**: pipeline de indexação (`docs`/`adr`/`session`, chunking por
+  heading/parágrafo com 1200 caracteres e 150 de sobreposição) e busca
+  híbrida (vetor + léxico, pesos 0.6/0.4, limiar 0.2) do Chat RAG, com
+  degradação honesta quando o provider de embedding está indisponível e
+  três rotas novas (`POST .../rag/search`, `POST .../rag/reindex`,
+  `GET .../rag/coverage`) — RN-231..238, ADR 0080
+- **web**: virtualização de linha na aba Código — arquivo de 5.000 linhas
+  renderiza uma janela pequena de nós de DOM, não o arquivo inteiro — e
+  minimapa em `<canvas>` reaproveitando a tokenização já feita pelo realce
+  de sintaxe, sem segundo passe sobre o arquivo (RN-239..242)
+- **api**: ciclo de vida do container como tabela de estado
+  (`project_containers`, migração `0046`), sem orquestrador — máquina de
+  estados pura (`provisioning → running ⇄ stopped`, `failed`, `removed`),
+  primeira transição exigindo a imagem já decidida pelo Arquiteto e
+  congelando versão/recursos; nenhuma chamada real a Docker ainda
+  (RN-243..248, ADR 0081)
+- **web**: a aba **Chat RAG** (`key: 'rag'`), separada da aba Chat
+  (`sessions`, que continua sendo conversa com agente ativado) — busca com
+  filtro de escopo (docs/ADR/sessões), citações navegáveis (origem de
+  sessão leva ao evento exato; origem de arquivo mostra caminho/heading,
+  sem link — a aba Código não tem deep-link por caminho ainda), painel de
+  cobertura do índice com contagem REAL (nunca "reindexado há Xmin"
+  inventado) e botão de reindexar restrito a `maintainer`/`owner`. Avisa
+  quando a busca degradou para só léxica por falta de embedding
+  (RN-252..254, ADR 0082)
+- **api,web**: primeira exposição HTTP do ciclo de vida do container
+  (`GET .../container/lifecycle`, role:viewer) e a aba Terminal passa a
+  mostrar esse estado real (status, motivo de falha) sob o texto
+  explicativo que já existia — nunca um terminal simulado, porque não há
+  container real rodando ainda (FASE 25b segue cortada) (RN-267/268,
+  ADR 0083)
+- **api,web**: login social via GitHub/GitLab — revoga a proibição do
+  backlog do ADR 0031 só para esta capacidade. Reusa o mesmo app OAuth da
+  conexão de git (zero variável de ambiente nova) e a emissão de sessão do
+  login por senha; vincular a conta existente exige e-mail verificado pelo
+  provider, contra account takeover; conta provisionada nasce sem senha.
+  Branch `breaking/`: o operador precisa cadastrar um segundo callback
+  OAuth no provider antes do deploy (RN-272..283, ADR 0084)
+- **api,engine**: o plano de execução do Dev Lead (quantos agentes por
+  módulo e por quê) vira uma decisão real em Aprovações — antes só narrava
+  no fio, sem pipeline de aprovação nenhum. Enquanto ela não é decidida, a
+  conversa com o Dev Lead PAUSA: é a primeira vez que um agente
+  conversacional suspende esperando aprovação humana no meio do turno
+  síncrono (RN-284, ADR 0086)
+- **engine,web**: o UX Designer entra como o quinto agente conversacional
+  (Criativo, PO, Arquiteto, Dev Lead e agora ele), SOLO e sem área —
+  antecipado pelo dono do produto antes do gatilho de separação declarado
+  em `docs/fluxo.yml` ter disparado. Kickoff a partir do product brief do
+  Criativo; a única ferramenta, `propose_prototype`, registra personas,
+  jornadas e o protótipo navegável (`artifact.prototipo_navegavel`, sem
+  tabela nem rota nova na api) e oferece o mesmo artefato como handoff ao
+  PO e ao Dev Lead. `teste-de-usabilidade` fica fora de alcance (exige
+  usuário humano real); `metricas-de-uso` segue lacuna declarada
+  (RN-285..287, ADR 0087)
+- **engine,api,web**: o Staff/Principal Engineer ganha CÓDIGO — sexto
+  agente conversacional solo (`propose_rfc`: problema, opções com
+  trade-offs, recomendação e PoC descartável, devolvido ao Arquiteto por
+  handoff no mesmo tool call), acionável MANUALMENTE por handoff aceito
+  endereçado a "staff" (caminho genérico, sem entrar em
+  `USER_STARTED_AGENTS`). O gatilho AUTOMÁTICO (a Anamnese notando um
+  problema sistêmico recorrente) segue pendente enquanto
+  `ANAMNESE_ENABLED=false` — dormente para disparo automático, não para
+  acionamento manual (RN-305/306, ADR 0088)
+- **api,engine**: o gate `implementavel` sai de `planned` para `active` — o
+  Dev Lead ganha `assess_implementability`, o parecer de implementabilidade
+  de uma story (viável/inviável, com justificativa), a partir do plano de
+  teste que a QA-estratégia produz. A QA-estratégia deixa de ser papel
+  `proposto` em `docs/fluxo.yml`: é o próprio `qa-lead`, num SEGUNDO
+  momento (mesmo processo, entregável separado do veredito de PR) — sem
+  worktree, sem task, PRE-DEV. O parecer nasce `proposed_action`, mesmo
+  padrão do plano de execução (RN-340/341, ADR 0090)
+- **engine**: o papel `appsec` (`docs/fluxo.yml`) ganha o segundo momento do
+  secops — threat model de DESIGN (checklist STRIDE-lite) sobre a story e o
+  module_map vigente, ANTES de existir código ou PR. Roda no MESMO processo
+  do `SecOpsAgentServer` (`run_design/2`, sem worktree/task_id), termina
+  emitindo `artifact.threat_model` e criando handoff para arquiteto, dev-lead
+  e o lead de Infra. `run_design/2` já é acionável, mas nenhum caminho aciona
+  sozinho ainda — o gatilho automático fica para a frente `qa-estrategia`
+  (RN-360/361, ADR 0090)
+- **api**: novo script `pnpm --filter api analise:funil -- --projeto
+  <uuid> [--json]` — os papéis `analytics`/`delivery-metricas` de
+  `docs/fluxo.yml` (antes `status: proposto`) viram `active`, entregues
+  como RELATÓRIO puro (mesmo formato de `medir-execucao.ts`, sem agente,
+  sem GenServer). Mede funil real sessão → commit → PR → merge, lead time
+  real e deployment frequency real em branch protegida, todos extraídos
+  de `proposed_actions.execution_result`. Declara, de propósito, três
+  métricas sem caminho para existir hoje: funil de produto completo
+  (ideação → commit), evidência de adoção por feature e MTTR/change
+  failure rate (RN-320..322, ADR 0089)
+- **api**: `pnpm --filter api relatorio:seguranca-runtime` — o papel
+  `secops-runtime` (`docs/fluxo.yml`) antecipado como SCRIPT, não agente,
+  sobre o dado que o `RateLimitGuard` já coleta hoje (`rate_limit_hits`):
+  ranking de baldes (usuário/IP) com mais hits e distribuição temporal dos
+  picos, com a janela de retenção (curta, poucos minutos) sempre declarada.
+  Detecção automática de incidente, resposta a incidente e postmortem de
+  segurança seguem FORA — dependem de tráfego de produção real, que não
+  existe — e o relatório lista essa lacuna, sem simular incidente de
+  exemplo (RN-375..377, ADR 0091)
+- **api**: o papel `platform` (`docs/fluxo.yml`, `status: planned` —
+  ativação ainda pendente de `DEPLOY_ENABLED`, que não existe) ganha uma
+  primeira entrega honesta: `pnpm --filter api relatorio:telemetria
+  [--projeto <uuid>] [--json]`, um SCRIPT (não agente) que lê sob demanda as
+  mesmas fontes do `DomainGaugesCollector` — sessões ativas/closing e tasks
+  bloqueadas por projeto, estado do último backup — e linka para os
+  dashboards/alertas/runbook já versionados, sem duplicar. A saída declara
+  explicitamente o que NÃO mede: SLO numérico (nenhum definido), postmortem
+  (sem incidente real) e telemetria automática em loop fechado
+  (RN-385/386, ADR 0092)
+- **api**: o papel `dbre` vira dois scripts mecânicos —
+  `lint:migracao` varre `apps/api/src/db/migrations/*.sql` e sinaliza
+  `DROP TABLE`/`TRUNCATE`/`DROP COLUMN`/`ALTER COLUMN ... TYPE`/`ADD
+  COLUMN ... NOT NULL` sem `DEFAULT` (informativo, não bloqueia CI ainda);
+  `relatorio:backup` lê `backup_runs` sob demanda com a mesma lógica do
+  `DomainGaugesCollector`, citando o procedimento de restore já testado
+  em `docs/runbook.md`. Plano de capacidade e tuning seguem declarados
+  como lacuna — exigem volume real de dados, que não existe hoje
+  (RN-400..403, ADR 0093)
+- **api**: a delegação Dev Lead → `dev-<modulo>` vira DADO auditável em
+  `delegations` (`area: 'dev'`), fechando o item que o ADR 0053 (item 5)
+  tinha declarado fora de escopo. `status: 'completed'` é redefinido para
+  esta área — significa "o agente foi ativado", não "parecer emitido" como
+  em QA/Infra —, e `parecerArtifactId` aponta para o `artifact.module_map`
+  mais recente do projeto, o artefato que justificou a decisão de delegar
+  (RN-405, ADR 0094, auditoria fluxo.yml × código, item B1)
+- **api,web**: o gate `necessidade-validada` (Criativo → PO) ganha um
+  terceiro botão dedicado, "Confirmar necessidade validada", no mesmo
+  padrão de "Confirmar arquitetura pronta" — confirmação humana SEPARADA
+  do Criativo, nunca o modelo se autovalidando. Habilita só depois de
+  `confirm_readiness` já ter consolidado o `product_brief`; grava
+  `necessity.validated` sem sinalizar o engine, porque o handoff
+  Criativo→PO já aconteceu antes. `docs/gates.yml` ganha o gate
+  correspondente (`active`, `warn`) (RN-406, ADR 0095, auditoria
+  fluxo.yml × código, item B2 — última onda do plano)
+- **api,engine**: o PO ganha a terceira ferramenta de leitura,
+  `listar_metricas_de_produto` — o mesmo relatório de funil de entrega e
+  DORA parcial do script `analise:funil` (ADR 0089), agora legível dentro
+  do turno (`GET /internal/projects/:projectId/product-metrics`). As
+  funções de cálculo puras e a query migraram para
+  `apps/api/src/application/services/funil-metrics.ts`, reexportadas pelo
+  script sem mudar comportamento. Fecha o item B4 — a ÚLTIMA pendência da
+  auditoria fluxo.yml × código (RN-407)
+- **api,web**: SMTP real no `MailSender`, fechando o item de backlog aberto
+  desde o corte do Keycloak. `MAIL_TRANSPORT=smtp` (default continua `log`,
+  inclusive em produção) liga o envio de verdade via `nodemailer`, com
+  `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM` validados no boot em
+  produção pelo mesmo padrão da RN-114 (RN-408, ADR 0096). A investigação
+  achou uma lacuna real: `email_verification` não tinha rota web — nova tela
+  `/verificar-email` fecha isso, espelhando `/definir-senha`
+- **api,web**: o card do dashboard mostra "N online" — quantos agentes estão
+  trabalhando ou com pendência esperando decisão AGORA, nunca tamanho de
+  equipe ou presença histórica. Soma dev agents (`engine.dev_agent_states`,
+  agregado em lote) e agentes conversacionais (último `agent.status` da
+  sessão mais recente); QA/SecOps nunca contam, porque não emitem
+  `agent.status` (veredito único por invocação). Fecha o item de backlog
+  "N agentes online" no dashboard (RN-409, ADR 0097)
+
+- **api,engine**: corrigido o `413 request entity too large` que estourava
+  em PRs legítimas no gate de QA/SecOps — causa era da própria api do
+  Brabo, nunca do provider de LLM. A api nunca configurava limite de body
+  do Express (valia o default de 100 KB contra os 8 MB que o Phoenix
+  aceita); `API_JSON_BODY_LIMIT` (default 10 MB) fecha essa ponta. No
+  engine, a compactação de contexto era estruturalmente inalcançável antes
+  do estouro — a estimativa de tokens não contava `toolCalls` e a janela
+  usava só a janela do modelo (128k, ~350 KB antes de compactar); a janela
+  efetiva agora é `min(context_window, teto_de_transporte)`, com corte
+  sempre em fronteira de iteração do `ToolLoop` (RN-412, ADR 0098)
+- **api,web**: a aba Executores/Visão Geral não fica mais vazia com
+  execução real rolando — `executionActivated` era derivado da janela dos
+  últimos 200 eventos, e `execution.activated` (um dos primeiros eventos
+  da sessão) saía dessa janela em qualquer execução longa, apagando o
+  roster inteiro. As duas telas passam a usar o valor agregado sobre
+  TODOS os eventos que o resumo do workspace já calculava (RN-090). A
+  régua de trabalho pendente (`DEV_PENDING_TYPES`) ganhou
+  `dev.awaiting_gate`/`dev.awaiting_approval` — o heartbeat não fecha mais
+  a sessão com dev agent esperando o gate ou uma aprovação (RN-412,
+  estende a RN-411)
+- **api**: sessão de execução não fecha mais por baixo de dev agent
+  trabalhando ou travado esperando desbloqueio — o heartbeat de 30s só
+  enxergava `agent.status` (vocabulário dos conversacionais), e dev agents
+  usam vocabulário próprio (`dev.*`). Quarto sinal em
+  `GetSessionPendingWorkUseCase`: último evento `dev.working`/`dev.blocked`/
+  `dev.idle_tripped` de qualquer `dev-<modulo>` segura a sessão; `dev.idle`
+  não. Achado numa sessão de execução real com cinco dev agents em
+  `idle_tripped` (RN-411)
+- **api**: toda conta NOVA (registro por e-mail/senha ou login social)
+  ganha um workspace pessoal automático, na mesma transação que cria a
+  conta — antes `RegisterUseCase`/`SocialLoginCallbackUseCase` criavam
+  usuário e credencial mas nenhum workspace, e o botão "Novo projeto" do
+  dashboard silenciosamente não fazia nada. Nome/slug saem de uma função
+  única, `nomeESlugDoWorkspacePessoal`, e o slug leva sempre um sufixo do
+  id do usuário para ser único sem round-trip ao banco (RN-410)
+- **api**: "Confirmar arquitetura pronta" (RN-160) agora é revalidado no
+  BACKEND — antes só a UI desabilitava o botão sem história promovida do
+  backlog, e uma chamada HTTP direta a `POST
+  /agents/arquiteto/handoff-infra` ignorava a regra por completo. Recusa
+  ANTES de gravar qualquer evento ou sinalizar o engine (RN-404, ADR 0094,
+  auditoria fluxo.yml × código, item B6)
+
+- **web**: os seis colapsos ad-hoc restantes migram para o `Disclosure`
+  compartilhado (`ModelCatalogSection`, `AgentTimelineTree`,
+  `code/CodeExplorer.tsx`, `code/CodeShell.tsx`) — o marco com detalhe de
+  `AgentTimelineTree` tinha alvo de clique de 20px, abaixo do piso de 24px
+  do WCAG 2.2 AA (2.5.8); a faixa de arquivo do diff em `ApprovalCard` NÃO
+  migrou (animação própria de chevron que o componente genérico não
+  replica) e ganhou só o `aria-controls` que faltava (RN-249..251)
+- **web**: fecha o resto da varredura de acessibilidade — alvos de toque
+  abaixo do piso de 32px do handoff em botões de ícone da sidebar
+  (colapsada e expandida), ações destrutivas de Aprovações/Configurações e
+  o botão de fechar do `Toast` (que não tinha tamanho explícito nenhum, e
+  também ganhou `:focus-visible`); quatro alvos abaixo do piso de 24px do
+  WCAG corrigidos em telas reais. `aria-expanded` da sidebar auditado e já
+  estava correto nos dois controles
+
+- **web**: os valores de espaçamento da régua de abas do projeto, que viviam
+  como override de CSS de descendente em `ProjectPage.module.css` desde a
+  FASE 16, migraram para `Tabs.module.css` — pendência declarada fechada
+- **web**: a régua de abas do projeto (`Tabs.module.css`) ganhou
+  `:focus-visible` — navegar por Tab não mostrava indicação de foco nenhuma;
+  achado pela frente de acessibilidade, corrigido no mesmo padrão de
+  `Input.module.css` (ADR 0036), com anel `inset` (a régua rola
+  horizontalmente e um anel para fora seria cortado)
+
+- **design**: seis tokens do tema claro corrigidos até passarem AA — `--accent` 3,56 → 4,81:1, `--warning` 3,15 → 4,98:1, `--success` 3,89 → 5,12:1, `--violet` 4,16 → 4,95:1 e `--text-muted` 2,76 → 5,17:1 contra o fundo que os cobrava, mais `--accent-hover` um degrau abaixo; o tema escuro não mudou nenhum valor e a dívida dele segue travada nos mesmos cinco números (ADR 0074, RN-184)
+- **web**: o contraste passa a ser medido nos DOIS temas nos três arquivos que o medem — o teste que afirmava que "nada na app define `data-theme=light`" e que três pares reprovavam foi invertido junto com o produto
+- **web**: cor de agente e o `#fff` do botão `.success` saem de token (`var(--violet)`, `var(--on-accent)`); três cores de agente sem contraparte semântica ficam declaradas no arquivo, não inventadas
+- **web**: `Select`, `Modal` (botão de fechar) e `ProjectCard` ganham
+  `:focus-visible` no mesmo tratamento calibrado de `Input.module.css`
+  (ADR 0036, incluindo o bloco de `forced-colors`) — nenhum dos três tinha
+  indicação de foco própria alcançável só por teclado. O botão de fechar do
+  `Modal` também sobe de 30px para 32px, o piso de alvo de toque em desktop.
+  `Table` e `Badge` foram auditados e não precisaram de mudança: nenhum dos
+  dois expõe afordância interativa própria — linha de `Table` é apresentação
+  pura (quem precisa de linha clicável já usa `<button>`/`<a>` dentro da
+  célula, via `render`) e `Badge` não é usado com `onClick` em lugar nenhum
+  do produto hoje.
+
+- **docker,web**: o terminal do runner local (Code → Dev → Terminal, ADR
+  0103/0104) ficava preso em "Abrindo terminal..." para sempre em projeto
+  no modo `runner`, com o socket falhando em loop no console do browser.
+  Três causas empilhadas: `ENGINE_PUBLIC_URL` não tinha default nenhum em
+  `docker/docker-compose.yml` — o fallback do código caía em `ENGINE_URL`
+  (`http://engine:4000`, hostname que só resolve DENTRO da rede do
+  Compose, inalcançável pelo browser); `apps/web/src/lib/terminal-channel.ts`
+  nunca desligava a reconexão automática do `phoenix.js`, então um socket
+  que nunca abre (URL errada, engine fora do ar) girava sozinho pra sempre
+  em silêncio em vez de mostrar erro; e o mesmo módulo concatenava
+  `/runner/websocket` a um `engineWsUrl` que a api já devolve PRONTO
+  (`ws://host:porta/runner`) — o `Socket` do `phoenix.js` ainda acrescenta
+  `/websocket` sozinho, e o path duplicado (`/runner/runner/websocket/
+  websocket`) era recusado pelo engine (`NoRouteError`), o defeito que de
+  fato impedia a conexão, só visível depois de corrigir os dois primeiros.
+  Compose ganhou o mesmo default que `VITE_ENGINE_URL` já usa
+  (`http://localhost:4000`); o canal do terminal ganhou timeout próprio de
+  8s que chama `onErro` e desconecta, em vez de depender do backoff nativo
+  do Phoenix; e parou de concatenar path no `engineWsUrl`. Verificado
+  ponta a ponta contra o engine real (RN-433)
+- **api**: `POST .../runner-ticket` (autenticação por Personal Access
+  Token, ADR 0105) sempre respondia `403 "Não autenticado"`, mesmo com um
+  PAT válido — o runner local nunca conseguia conectar por essa via.
+  `RolesGuard`, guard GLOBAL, rodava antes de `PatAuthGuard`, guard local
+  da rota (ordem do Nest, não configurável pelo controller), e recusava
+  toda chamada com `request.user` ainda vazio antes do `PatAuthGuard`
+  sequer autenticar. Um segundo defeito, escondido atrás do primeiro:
+  `PatAuthGuard` comparava o token bruto direto contra o hash gravado no
+  banco, em vez de hashear antes de comparar — nunca teria funcionado
+  mesmo sem o problema de ordem. `RolesGuard` passa a se abster em rota
+  `@RequirePatAuth()` (mesmo desvio que `JwtAuthGuard` já tinha) e
+  `PatAuthGuard` passa a autenticar E autorizar (`@RequireRole`) no MESMO
+  guard. Verificado com o `brabo-runner` conectando de verdade a um
+  projeto real (RN-439)
+
+- **api,web,engine**: o permissions.json mora onde a api alcança; o escopo do terminal, no host (RN-478) (#451) (9ea30060d)
+- **web,runner**: a JWK privada nasce com o `kid` do registro, e a recusa do CLI diz o que houve (RN-475) (#447) (179c749b2)
+- **api**: dois tetos de rebaixamento em project_members (ADR 0127, RN-472) (#445) (30cd83cf1)
+- **web**: a seção de Membros respeita o papel, e as duas ações caladas falam (RN-471) (#444) (6f3cfe85c)
+- **web**: a tabela de modelo por agente respeita o papel de quem olha (RN-102) (#443) (efb61ce15)
+- **web**: o seletor de modelo de agente e de área abre com "aptos para agentes" marcado (#442) (62eebad55)
+- **web**: trocar o modelo de um agente deixa de falhar em silêncio (#441) (aa50970ec)
+- **web**: "voltar a herdar" deixa de falhar em silêncio quando o agente já herdava (#440) (069a4ab74)
+- **docs**: escapa barra invertida antes do pipe em generate.mjs (#398) (08de8e9e4)
+- **web**: aba Insights diz quando o Psicólogo está pausado (#387) (48e6e58ee)
+- **web**: aba PRs deixa de mostrar o gate do Código como erro genérico (#386) (d64cbec6b)
+- **api**: quebra de linha do prettier em seed.ts (CI) (cac4535ce)
+- **runner**: --dir relativo resolve contra INIT_CWD, não o cwd rebaseado do pnpm (RN-453) (3426d1712)
+- renumera ADR 0109→0112 e RN-440/441→RN-451/452 (colisão entre PRs paralelas) (666d58e0c)
+- renumera ADR 0109→0110 e RN-440→RN-443 (colisão entre PRs paralelas) (eb452183b)
+- resolve as 4 falhas de CI da PR #377 (8208b32e6)
+- corrige quebra de compilação e testes da fundação de i18n (Onda 6b) (022d234ca)
+- **docs,engine**: regenera events.md com project.workspace_verified e corrige formatação do teste do canal (3df121312)
+- **docker,engine**: senha do neo4j no smoke volta a ser hex, bandit sobe a 1.12.5 (88b5bdb74)
+- inclui a mudança do engine da Onda 4 (esquecida no commit anterior) (8d40cee9f)
+- **docker**: senha efêmera do neo4j no smoke não pode conter barra (9c5d6235c)
+- **docker**: neo4j chega configurado na imagem de produção e no smoke (bdfb22f28)
+- **docker**: neo4j chega configurado na imagem de produção e no smoke (5828074a8)
+- **docker**: neo4j chega configurado na imagem de produção e no smoke (598cd1be6)
+- **api,docs**: corrige drift de docs, formatação e teste com import estático flagrados pelo CI (a190b3258)
+- **api,engine,web**: corrige 413 nas PRs e Executores vazio com execução ativa (7a0ca9b60)
+- **business-rules**: renumera RN-410 para RN-411 (colisao com PR #361) (e5fba21f0)
+- **api**: dev agent trabalhando ou travado segura a sessão de execução (033c9963a)
+- **api**: cria workspace pessoal automático no cadastro de conta nova (9bd1f649b)
+- **docs**: drift.mjs reconhece arquivo-raiz fora de docs/ como satisfeito (8dd665bc2)
+- **api**: formatação do DTO de métricas de produto (prettier) (f9037da11)
+- **docs**: restaura o cabeçalho ### RN-340 perdido na resolução do merge (968ccb9a7)
+- **web**: ApprovalCard.ACTION_ICON exaustivo pra assess_implementability (f2cc17be9)
+- **engine,web**: revisão pós-implementação do ADR 0086 (b2f82f43b)
+- **api**: lint da frente de login social — só formatação (prettier) (da521ffbb)
+- **web**: fecha o que sobrou da varredura de acessibilidade (PROGRAMA 28, Onda 5/H5) (cd1bbef1b)
+- **api**: lint da frente RAG — prettier e any implícito em listarArquivosMarkdown (8ddbe8143)
+- **web**: faixa de arquivo do diff em ApprovalCard ganha aria-controls (defbb0ea3)
+- **web**: foco visível em Select, Modal e ProjectCard (ADR 0036) (9de6e2a6b)
+- **ci**: dispensa seis CVEs de Go stdlib no gitleaks e no actionlint (538069d43)
+- **api,docs**: formatação do prettier e a fronteira de gasto na doc (0980c77b7)
+- **docker,web**: ENGINE_URL do .env impedia ativar sessão dentro do container (29bbb46d5)
+- **scripts**: a regex que extrai o script do 404 aceita qualquer caixa (586b75ef9)
+- **web**: a entrada de teste de afundarDesfechos declara a origem (267edfb99)
+- **web**: o evento citado nunca cai em grupo fechado do feed (3c1baffb2)
+- **engine**: falha no frame final não derruba mais o agente (02102056f)
+- **web**: handoff e aprovação como desfecho do turno (2cf6c6fad)
+- **api,docs**: tipa o statSync e documenta o que o modo Local muda (e26b3cb46)
+- **ci**: dispensa duas CVEs de Go stdlib no gitleaks e no actionlint (d53aecda3)
+- **engine**: o Criativo cumpre a promessa de tentar de novo (43db01cdd)
 
 ### Novidades
 
@@ -3391,609 +3922,86 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   82 777 288 → 82 789 576 bytes — o crescimento é código, não dependência
   (ADR 0128)
 
-### Correções
-
-- **web, runner**: o **modo automático** do runner local — configurar a pasta
-  pelo navegador e rodar `brabo-runner` sem flag nenhuma — **nunca funcionou**,
-  desde que nasceu. O navegador gerava o par de chaves, registrava a metade
-  pública no projeto e gravava a privada na pasta, mas **descartava o `id` que
-  a api devolvia no registro** — nos dois caminhos, o automático e o kit
-  manual. Esse `id` é o **`kid`** da JWK, e é o único vínculo entre o arquivo
-  em disco e a chave pública guardada no servidor: sem ele, o CLI recusa a
-  chave (ele só repassa `jwk.kid`, nunca inventa um id) e a api não teria como
-  achar a pública para verificar a assinatura. O resultado era uma pasta com
-  aparência de configurada, uma chave inerte no projeto, e o CLI caindo no
-  modo manual sem dizer por quê. Agora o registro e a exportação da privada
-  acontecem **numa função só**, com o `id` fluindo dentro dela — descartá-lo
-  de novo exigiria apagar código, não esquecer uma linha. E o teste que
-  deixou isso passar mudou de pergunta: ele afirmava que o arquivo tinha sido
-  **aberto**, e passa a afirmar **o que foi escrito nele** (RN-475)
-- **runner**: a recusa da chave de dispositivo **diz o que houve**. Um arquivo
-  `brabo-runner-device-key.jwk.json` **presente e inválido** produzia
-  exatamente a mesma saída de um arquivo **ausente** — o bloco de uso, que
-  fala de `--project`/`--dir`/`--token` e não menciona o arquivo —, porque a
-  leitura devolve `null` nos dois casos (de propósito: ela nunca lança, e a
-  ausência é o caminho normal de quem usa flags). Quem tinha uma pasta
-  configurada era mandado investigar a configuração, que estava certa. A
-  leitura continua não lançando; o que mudou é que o CLI passa a **distinguir
-  os quatro estados** (ausente, JSON inválido, sem `kid`, válida) e a imprimir
-  a recusa **nomeada** — o arquivo, o motivo e as duas saídas (regravar a
-  pasta pelo navegador, ou usar `--token` enquanto isso) — em vez do texto
-  sobre flags. Ausente segue caindo no bloco de uso, que é a resposta certa
-  para quem não configurou nada (RN-475)
-- **api**: associar alguém a um projeto (`POST projects/:projectId/members`)
-  passa a recusar com **403** os **dois movimentos de rebaixamento** que
-  produziam estado sem volta. Um `maintainer` podia (1) rebaixar o **`owner` do
-  workspace** a `viewer` num projeto — o dono perdia o próprio projeto, e
-  restaurar exigia o `maintainer` que ele acabara de perder ali — e (2) **se
-  rebaixar sem poder desfazer**, porque desfazer é a mesma rota, que pede
-  `maintainer`. Agora: **ninguém rebaixa quem é `owner` do workspace** (lido de
-  `workspace_members.role`, nunca de `workspaces.created_by`) e **ninguém
-  rebaixa a si mesmo** (sem limiar; **subir** o próprio papel segue passando).
-  A **sobreposição continua valendo nos dois sentidos** — restringir um
-  `developer` de workspace a `viewer` num projeto sensível é capacidade
-  deliberada e não foi tocada. As **três descrições de OpenAPI** que prometiam
-  "the higher of this one and what the person already has" e "includes whoever
-  inherits access from the workspace" passam a descrever o que o código faz.
-  A tela ainda oferece o rebaixamento que a api recusa (ela não tem como
-  calcular o primeiro teto), mas **a recusa aparece** no toast, com a frase da
-  api — o gate do `Select` é PR à parte.
-  Ver [ADR 0127](docs/adr/0127-tetos-de-rebaixamento-em-project-members.md) e
-  RN-472.
-- **web**: em **Configurações**, a seção **Membros e papéis** passa a
-  **respeitar o papel de quem está olhando**, e suas duas ações caladas passam a
-  ter desfecho. Ela não checava papel nenhum: **convidar**, **trocar o papel de
-  alguém** e **remover** apareciam ativas para todo mundo, **`viewer`
-  incluído**, e a api recusava com 403 — e duas delas nem diziam isso, porque
-  não tinham tratamento de erro: a recusa virava silêncio na tela e ruído no
-  console. Remover um membro em silêncio era o pior dos três, por ser ação
-  consequente e sem volta pela tela. O mínimo **não** foi copiado da seção de
-  modelos logo acima: **Modelos por agente** exige `developer` e as três ações
-  daqui exigem `maintainer`, porque a régua é do **endpoint**, nunca da tela ao
-  lado. E o papel usado é o **efetivo do projeto**, não o do workspace — o
-  limite que a correção anterior tinha declarado. Não é uma lacuna nova nem uma
-  segunda: é a **mesma**, vista da seção que tem como fechá-la, porque esta já
-  busca a lista de membros do projeto e daí sai o papel de quem olha, composto
-  exatamente como a api o compõe. Quem não pode editar **continua lendo tudo** —
-  o papel de cada membro segue visível no seletor apagado —, e o motivo é dito
-  **uma vez, em texto**, na legenda. A legenda também passa a dizer **duas
-  coisas que a tela afirmava sem querer**: que o papel desta tabela **substitui**
-  o do workspace neste projeto, **nos dois sentidos** (pôr `viewer` aqui rebaixa
-  de verdade, inclusive quem é `owner` do workspace — o seletor não é uma
-  sugestão inofensiva), e que quem alcança o projeto **só pelo workspace não
-  aparece na lista**. **Convidar** manteve de propósito a dica fixa em vez da
-  frase da api: ali o ID é digitado à mão, e o erro que se alcança de verdade
-  responde `500`, cuja frase seria pior que a dica (RN-471)
-- **web**: em **Configurações**, a tabela **Modelos por agente** passa a
-  **respeitar o papel de quem está olhando**. Ela não checava papel nenhum: o
-  seletor de modelo e o "voltar a herdar" de cada linha apareciam clicáveis para
-  todo mundo, **`viewer` incluído**, e a api recusava com 403. Desde as
-  correções acima esse 403 pelo menos vira mensagem — o que não bastava:
-  oferecer um controle que só existe para ser recusado é a tela mentindo sobre o
-  que a pessoa pode fazer. O mínimo **não** foi copiado da seção irmã logo
-  abaixo: **Modelo por área** exige `maintainer` e **Modelos por agente** exige
-  `developer`, porque o vínculo da área alcança o lead e todos os subagentes de
-  uma vez e o do agente alcança um agente (RN-102). Copiar teria trocado o
-  defeito pelo **inverso**, e o inverso é pior — oferecer o que será recusado ao
-  menos termina numa mensagem, enquanto trancar quem podia editar é invisível
-  para quem perdeu a capacidade. Quem não pode editar **continua vendo tudo**: o
-  modelo vigente no gatilho, a cadeia de origem inteira e o próprio "voltar a
-  herdar", que é o que diz que aquele agente divergiu — some o controle, nunca a
-  informação. O motivo é dito **uma vez, em texto**, na legenda da seção, e não
-  como dica em cada linha: dica de mouse em controle desabilitado não abre no
-  Chromium, e explicação que não aparece é a mesma ausência com mais código. A
-  comparação de papéis saiu das telas e virou `roleAtLeast` sobre a hierarquia
-  que já existia — **Modelo por área** passou a usá-lo com o mesmo mínimo de
-  antes. Nada disso é fronteira de segurança: quem recusa continua sendo a api
-  (RN-102)
-- **web**: em **Configurações**, o seletor de modelo de **Modelos por agente** e
-  o de **Modelo por área** passam a abrir com o filtro **"aptos para agentes"
-  já marcado**. O filtro existe desde a Fase 9c e **nenhuma tela o ligava** — o
-  seletor abria oferecendo modelos sem *tool calling*, cujo clique a api recusa
-  com 422, e a frase da recusa manda a pessoa justamente para o filtro que
-  ninguém tinha ligado. Quem passa a ligá-lo não é escolhido por tela e sim pelo
-  **escopo do vínculo**: `assertModelFitsBindingScope` exige *tool calling* em
-  `agent` e em `area` e em mais nenhum, então as duas telas que gravam nesses
-  escopos abrem filtradas e o **seletor da sessão continua sem filtro** — ali a
-  api aceita modelo de conversa de propósito, e marcar esconderia o que o
-  domínio permite. Isto torna **improvável a causa mais comum** de recusa, nunca
-  impossível: as outras duas (modelo desativado no workspace, modelo sumido do
-  provider — RN-043) continuam alcançáveis daqui, o modelo indisponível segue
-  **listado e marcado**, e a mensagem de falha da correção anterior continua
-  sendo o que conta o desfecho. É o **estado inicial** de uma caixa de seleção,
-  não uma trava: desmarcar volta a listar o catálogo inteiro. Como consequência,
-  o seletor passa a **dizer quando o filtro esconde o modelo vigente** — o
-  vínculo herdado do projeto ou do workspace pode ser de conversa (esses dois
-  níveis nunca exigiram *tool calling*), e sem o aviso o gatilho mostrava um
-  nome que a lista aberta não continha, sem nada marcado. A causa é nomeada
-  porque só existe um filtro ali; quando a lista inteira fica vazia, quem fala
-  continua sendo o texto de lista vazia, que já manda desmarcar (RN-040)
-- **web**: em **Configurações**, escolher um modelo no seletor de uma linha de
-  **Modelos por agente** e ter o pedido recusado não produzia nada na tela: a
-  pessoa clicava, o dropdown fechava, a linha continuava no modelo antigo e o
-  erro só existia no console. Mesma classe de defeito da correção logo abaixo, e
-  na função vizinha do mesmo arquivo — `handleModelChange` não tinha `try/catch`
-  e era chamada do `onSelect` do seletor, então toda recusa da api virava
-  *unhandled promise rejection*. A recusa é alcançável de dentro do próprio
-  seletor: o modelo que sumiu do provider aparece na lista **marcado** em vez de
-  escondido (senão o vínculo que aponta para ele ficaria sem explicação), e a
-  lista é cacheada, então o modelo pode ter sido desligado no catálogo depois da
-  última leitura — nos dois casos a api recusa com 422. Agora a falha aparece,
-  com a mensagem da api e tom de falha. **O 404 aqui NÃO ganha desfecho
-  próprio**, ao contrário da correção de "voltar a herdar": aquele endpoint tem
-  **uma** causa de 404 e por isso o cliente pôde nomeá-la; este recusa por sete
-  caminhos e nenhum status identifica um deles sozinho — o 404 sozinho tem duas
-  causas ("Modelo não encontrado" e "Projeto não encontrado"), e escolher uma das
-  frases seria a tela afirmando o que não sabe. O contraste está comentado no
-  código, ao lado das duas funções. Nada de otimista foi introduzido: a coluna
-  **Modelo vigente** continua exibindo o vínculo que a api confirmou, e a linha
-  só é relida no sucesso — na recusa nada mudou no banco (RN-470)
-- **web**: em **Configurações**, clicar em "voltar a herdar" numa linha de
-  **Modelos por agente** que já herdava não fazia nada visível — nem confirmava,
-  nem reclamava. O botão aparece em toda origem `agent` de propósito (RN-470): a
-  cadeia do cliente não consegue separar o agente com modelo próprio daquele que
-  herdou o do **Criativo**, e nesse caso não há linha para apagar, então a api
-  responde 404 — ela está certa, "apaguei o que não existia" e "apaguei" não são
-  a mesma resposta. O que faltava era do lado do cliente: a função não tinha
-  `try/catch` e era chamada de um `onClick`, então toda recusa virava *unhandled
-  promise rejection* — silêncio na tela e ruído no console. Agora os três
-  desfechos são distintos, na gramática que **Modelo por área** já usava. O 404
-  ganhou desfecho **próprio** e não o das outras falhas, porque para quem clicou
-  ele não é falha: o estado pedido — o agente herda — **já é verdade**. A tela
-  diz isso na língua de quem está lendo, em vez de repassar a frase pt-BR que a
-  api crava no código (o idioma default do web é `en`), e ela pode dizer porque
-  este endpoint tem **uma** causa de 404: papel insuficiente é 403 e `scope_id`
-  malformado não é 404. Nos dois desfechos a linha é relida — se a api diz que
-  não havia binding, quem estava desatualizada era a tela. Qualquer outro status
-  continua sendo erro de verdade, com a mensagem da api e tom de falha
-- **engine,api,web**: a aba Insights, com zero hipóteses, mostrava "Sem
-  hipóteses ainda — o Psicólogo analisa cada sessão encerrada" mesmo com
-  `PSYCHOLOGIST_ENABLED=false` — indistinguível de "ainda ativo, só não
-  rodou". A tela nunca chegava perto do botão "Reanalisar" (só existe com
-  uma rodada de análise já feita), então nunca esbarrava no 503 que
-  denunciava a pausa. `GET /projects/:projectId/psychologist/status`
-  (`role:viewer`, sem efeito colateral) lê a flag global de antemão; a
-  tela agora diz "O Psicólogo está pausado — nenhuma sessão é analisada
-  até ser reativado" quando é o caso, e mantém a frase original quando de
-  fato ainda está ativo (RN-454)
-- **web**: a aba PRs mostrava o 409 do portão do container (RN-105 — o
-  Arquiteto ainda não decidiu qual imagem sobe para o projeto) como erro
-  transitório genérico, com botão "Tentar de novo" — a afordância errada
-  para um estado estável que só se resolve quando o Arquiteto decide, nunca
-  clicando de novo. A apresentação dedicada que a aba Code já tinha
-  (RN-107) foi extraída para `ContainerImageGateNotice`
-  (`components/ContainerImageGate.tsx`) e a aba PRs (`code/PrListAndDiff.tsx`)
-  passou a reconhecer o mesmo 409 (`isContainerImageGateError`,
-  `lib/api-client.ts`) e mostrar o mesmo estado. Placeholder truncado no
-  campo "Já sabe o id?" corrigido junto (largura do input de 200px para
-  260px).
-- **docker,scripts,deploy**: `gemma:1b` não existe no registry da Ollama
-  (`manifest unknown`) — só `gemma3:1b` existe. `ollama-model-loader`
-  sempre falhava e travava qualquer `docker compose up --wait`. Corrigido
-  em `docker-compose.yml`/`.prod.yml`, `.env.example`,
-  `docker/ollama/pull-models.sh`, `scripts/dev/verificar-modelos-ollama.sh`
-  e `deploy/k8s/base/ollama/job-model-loader.yaml` (RN-415).
-- **scripts**: `Database › Delete` nunca dropava de verdade — `DROP SCHEMA
-  public CASCADE` não alcança `engine.*` (Ecto/Oban vive em schema PRÓPRIO)
-  nem `drizzle.__drizzle_migrations` (controle do drizzle-kit, também em
-  schema próprio). Resultado real: `mix ecto.migrate` batia em
-  `duplicate_table` e `pnpm db:migrate` — sem erro nenhum — não recriava
-  NENHUMA tabela da api, porque via o controle do drizzle-kit intacto e
-  concluía que já tinha rodado tudo. `Delete`/`Reset total` agora dropam
-  `engine` e `drizzle` também.
-
-- **api,web**: converter `execution_mode` de um projeto EXISTENTE, sem
-  recriá-lo — fecha a correção que a Onda 1 do runner (ADR 0104) já tinha
-  registrado em `docs/explanation/backlog.md` (o item 4 daquele ADR dizia
-  que a conversão já era possível, e não era). Rota dedicada, `PUT
-  projects/:projectId/execution-mode` (`maintainer`), que orquestra a
-  migração em vez de um `PATCH` que só trocaria a coluna: relocaliza o
-  `permissions.json` para o novo escopo (o CONTEÚDO não muda), encerra o
-  ciclo de vida do container ao SAIR de `container` (ADR 0081), zera
-  `workspaceVerifiedAt` em toda conversão real e recusa com 409 enquanto
-  qualquer dev agent do projeto estiver trabalhando ou travado — ele não
-  re-resolve o worktree sozinho por baixo da troca. Nova seção em
-  Configurações do projeto, com o mesmo aviso e a mesma copy dos três
-  modos do wizard de criação (RN-447..450, ADR 0111)
-- **api,web**: handoff manual a agente à escolha (ADR 0109), fechando item
-  de backlog aberto desde a FASE 13c. `SessionPage.tsx` ganha um seletor
-  ("Endereçar handoff a...") sobre `addressableAgents()` (lead de área ∪
-  agente conversacional solo), que POSTa em `POST
-  .../sessions/:sessionId/handoffs` — mesmo `CreateHandoffUseCase` que um
-  agente já usa para oferecer handoff, com `actor: {kind:'user'}`
-  registrando que quem decidiu foi um humano. O caso real que motivou:
-  Staff (ADR 0088) e `ux-designer` (ADR 0087) tinham plumbing de engine
-  pronto e NENHUM caminho humano até eles — os dois entram em
-  `AGENTES_DE_CHAT` na mesma mudança (RN-440/RN-441)
-- **api,web**: budget por ÁREA (`agent_areas.budget_micros`/`spent_micros`)
-  fecha o item do backlog do ADR 0038 — teto de gasto opcional, configurável
-  por lead em Configurações (`maintainer`), ADITIVO aos budgets de projeto
-  e sessão que já existiam (nunca cascata: os três são checados
-  independentemente, e qualquer um bloqueado já recusa a chamada). `null`
-  é o default (sem teto); o gasto acumulado da área soma SEMPRE, com ou sem
-  teto configurado, o que já mostra o gasto real por área antes de alguém
-  configurar um limite. Rota `PUT projects/:projectId/agent-areas/:key/budget`
-  (`maintainer`), e a rota `GET agent-areas` já existente passa a devolver
-  `budgetMicros`/`spentMicros` (RN-443, ADR 0110)
-- **runner**: binário standalone do `@brabo/runner` — download direto de
-  `dist-bin/brabo-runner-<plataforma>-<arquitetura>[.exe]` numa GitHub
-  Release, sem Node/npm/node-gyp instalado na máquina. `bun build --compile`
-  empacota o CLI num único executável, com o `.node` nativo do `node-pty`
-  embutido (`with { type: 'file' }`) e extraído pra um diretório real em
-  runtime — o mecanismo completo, e o que ficou VALIDADO por execução real
-  em cada plataforma (só `linux-x64` neste sandbox; as outras quatro por
-  reasoning + a primeira execução real de CI na próxima tag), está no ADR
-  0112. Cinco plataformas (`linux-x64`, `linux-arm64`, `darwin-x64`,
-  `darwin-arm64`, `win32-x64`), cada uma construída no seu runner NATIVO
-  (`build-runner-binaries.yml`, mesmo gatilho de tag final de
-  `publish-runner.yml`) e anexada à Release já existente. Fecha o item de
-  backlog do ADR 0104 ("binário standalone (pkg/bun build --compile)"),
-  companion do ADR 0106 (RN-451/452)
-- **web**: `FolderBrowserModal` vira um explorador de três colunas —
-  atalhos ("Pasta pessoal", "Raiz"), lista central com breadcrumb e um
-  painel de detalhes —, seguindo a referência visual do dono do produto
-  (picker estilo GNOME Files/GTK). Um clique agora SELECIONA (destaca e
-  atualiza os detalhes) e duplo clique ENTRA — antes um único clique já
-  navegava. A lista deixou de esconder arquivos: eles aparecem visualmente
-  apagados e sem gesto nenhum, só pasta continua navegável/selecionável. O
-  botão final foi renomeado para "Usar esta pasta" (RN-436)
-- **api,web**: no modo de projeto `runner`, "Procurar pasta..." passa a
-  criar o projeto ANTECIPADAMENTE — ao clicar, não só na confirmação —
-  fechando a lacuna que o ADR 0107 já tinha declarado (o ticket do canal do
-  Runner precisa de um `projectId` real). Reuso por SNAPSHOT de identidade
-  (nome/repositório a adotar), nunca pelo caminho digitado: clicar de novo
-  sem mudar a identidade reabre o MESMO projeto, e a confirmação final
-  reusa em vez de criar de novo. O modo `mounted` não muda — continua sem
-  projeto até a confirmação, porque ali a validação de caminho toca disco
-  na criação (RN-437, ADR 0108)
-- **web**: `fs-browser-channel.ts` tinha o mesmo bug de path duplicado que a
-  RN-433 já tinha corrigido no `terminal-channel.ts` irmão (concatenava
-  `/runner/websocket` a um `engineWsUrl` que já vem pronto), então a
-  navegação de pasta contra um engine real caía direto em "a conexão com o
-  runner caiu". Achado ao verificar a RN-437 ponta a ponta — o módulo não
-  tinha teste próprio até agora (RN-438)
-- **api,web**: `maintainer` passa a revogar o Personal Access Token de
-  QUALQUER usuário do projeto — resposta a incidente (dev desligado com
-  token vazando), item declarado fora de escopo pelo ADR 0105. Rotas
-  separadas (`GET .../personal-access-tokens/all`,
-  `DELETE .../personal-access-tokens/:tokenId/admin`, ambas
-  `@RequireRole('maintainer')`), escopo por `projectId` em vez de
-  `userId` — a autorevogação de cada usuário não muda. Sub-lista nova em
-  Configurações do projeto, visível só para `owner`/`maintainer`, com o
-  e-mail do dono de cada token (RN-427, extensão do ADR 0105)
-- **runner**: `@brabo/runner` publicado no npm — `npm install -g
-  @brabo/runner` instala o CLI sem precisar clonar o monorepo. `tsup`
-  empacota `apps/runner` num `dist/index.cjs` único (`node-pty`
-  continua dependência separada, é binding nativo); publicação a cada
-  tag final via workflow próprio (`publish-runner.yml`), paralelo ao
-  `release.yml`. Fecha o backlog do ADR 0104 (ADR 0106)
-- **api,web,runner**: Personal Access Token (`brb_…`) pro `brabo-runner`,
-  fechando o item de backlog do ADR 0104 que bloqueava
-  `npm publish @brabo/runner`. `apps/runner/src/auth.ts` deixa de
-  replicar login (e-mail/senha interativos, cookies persistidos em
-  `~/.brabo/runner-credentials.json`) — o CLI passa a receber um token
-  de longa duração via `--token`/`BRABO_ACCOUNT_TOKEN`, emitido em
-  Configurações do projeto, revogável, com expiração opcional, escopado
-  a UM projeto. O token nunca autentica fora de
-  `POST /projects/:projectId/runner-ticket`, por construção
-  (`IS_PAT_ROUTE_KEY`/`@RequirePatAuth()` + `PatAuthGuard` de rota, nunca
-  um branch no `JwtAuthGuard` global) — nem sob papel elevado, nem em
-  nenhuma outra rota (RN-424/425/426, ADR 0105)
-- **api,engine,web,runner**: `execution_mode` do projeto passa a ter TRÊS
-  valores — `container` (default, inalterado), `mounted` (o antigo `local`,
-  renomeado) e `runner` (novo: pasta do usuário SEM bind-mount, confirmada
-  por um `brabo-runner` conectado). Reconcilia os ADRs 0072 e 0103: antes,
-  o roteamento pro runner reusava a mesma flag do modo `local`, então
-  usar o runner de verdade exigia passar pela validação de bind-mount que
-  ele não precisa. Criação de projeto `runner` valida só o caminho
-  (léxico, sem tocar disco); o runner confirma o caminho de verdade ao
-  conectar (`POST /internal/projects/:projectId/workspace-verification`,
-  novo), sobrescrevendo o que foi digitado — ele é a fonte da verdade.
-  Comando de agente roteado a um projeto `runner` sem workspace verificado
-  ou sem runner conectado é RECUSADO explicitamente, nunca cai no
-  fallback de container (RN-421/422/423, ADR 0104)
-- **runner**: no Linux, `brabo-runner --dir` só aceita um caminho dentro do
-  `$HOME` do usuário (o próprio home ou uma subpasta dele) — caminho fora
-  dessa árvore (`/etc`, `/root`, outra conta em `/home`, etc.) é recusado
-  na inicialização do CLI, com mensagem explicando o motivo. Fora do
-  Linux o comportamento não muda (RN-434, ADR 0104)
-- **runner**: `brabo-runner --dir` apontando para uma pasta que ainda não
-  existe deixa de ser erro fatal — a pasta é criada automaticamente
-  (`mkdir -p`), sempre DEPOIS de passar pela checagem do `$HOME` no Linux
-  (RN-434), então um caminho fora do home continua recusado mesmo quando
-  ainda não existe. `--dir` apontando para um arquivo já existente
-  continua erro real — nunca sobrescrito silenciosamente (RN-435, ADR
-  0104)
-- **api,web**: fundação de i18n — coluna `locale` em `users` (`'pt-BR'|'en'`,
-  default `'pt-BR'`), embutida no corpo de `/auth/login`/`/auth/refresh` (sem
-  chamada extra) via `EmitirSessaoUseCase`; `GET/PATCH /users/me/preferences`
-  como via redundante para a `AccountPage` nova (`/account`, fora do escopo
-  de projeto, link no rodapé da sidebar). `react-i18next`+`i18next` como
-  dependência nova de `apps/web`, isolada atrás de `lib/i18n.ts`/
-  `lib/idioma.ts` (mesmo desenho de `tema.ts` — servidor é a fonte de
-  verdade, `localStorage` só evita flash no primeiro paint). `en` é o idioma
-  default do app a partir de agora; `pt-BR` continua disponível. Docusaurus
-  (`website/`) ganhou `i18n.defaultLocale: 'en'`/`locales: ['en', 'pt-BR']`,
-  com o snapshot pt-BR atual de `docs/` preservado em
-  `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` antes de
-  `docs/` virar a fonte em inglês, e uma regra `warn` nova no docmap
-  (`traducao-pt-br`) cobrindo o drift entre as duas árvores. Extração em
-  massa do resto da interface e tradução de `docs/` são a próxima etapa,
-  em andamento (RN-432)
-- **web**: navegação por abas agrupadas — a régua de 11 abas do projeto vira
-  6 no topo (Visão geral, Agentes ▾, Dev ▾, Documentação ▾, Gastos,
-  Configurações), com `GroupedTabs` novo por cima do `Tabs` existente. Chat
-  e Chat RAG viram UMA aba com um controle segmentado interno
-  ("Conversar"/"Buscar") — a distinção de negócio entre os dois (RN-202)
-  não muda, só o contêiner de UI
-- **api,web**: aba **PRs** — listagem de pull requests do PROJETO inteiro,
-  direto do provider de git (nunca escopada a uma sessão), resolvendo o bug
-  em que a revisão de uma PR proposta numa sessão antiga sumia da tela assim
-  que uma sessão nova nascia. Novo cruzamento project-wide de ações
-  pendentes (`GET /projects/:id/actions?status=pending&actionType=`) acha a
-  proposta de merge correspondente independente de qual sessão a criou, e a
-  decisão usa o `sessionId` da própria ação. Botão "Merge" propõe
-  `git_merge` (primeira produtora real pela UI), desabilitado quando o gate
-  do dev agent bloqueou a task; a trava de branch protegida continua
-  absoluta (RN-154). `git_merge` ganhou corpo próprio no card de aprovação
-  em vez do despejo de JSON cru (RN-430)
-- **web**: aba própria **Arquitetura**, extraída da Visão Geral (module_map,
-  diagrama C4, ADRs, pendências de validação cruzada); a Visão Geral passa a
-  mostrar um resumo condensado com link "Ver arquitetura completa →".
-  Primeiro lightbox do design system: `C4DiagramView` ganha botão de
-  ampliar por diagrama, abrindo o SVG em tela cheia sobre `Modal`
-  (`size="full"`, novo) (RN-431)
-- **api,web,engine,runner**: navegação de pasta local via o Runner — dois
-  eventos novos no MESMO canal `terminal:<projectId>` (`fs_list_dir`/
-  `fs_home_dir`), relay puro do engine, exatamente como o PTY.
-  `FolderBrowserModal` (breadcrumb, subpastas, `..`, "Selecionar esta
-  pasta") integrado à criação de projeto e reaproveitável onde o projeto já
-  existe; sem runner conectado, `RunnerOnboardingPanel` (novo, compartilhado
-  com a aba Terminal) explica a instalação em vez de travar carregando. A
-  api continua sem enumerar filesystem nenhum — nenhuma rota nova (RN-429,
-  ADR 0107, revisa a ADR 0072)
-- **web**: corrigido o carrossel de promoção de histórias do PO, que
-  degradava silenciosamente para card único (ou sumia) em sessão longa —
-  a leva pendente agora vem de `useBacklog` (completo, sem janela) em vez
-  de um scan sobre os últimos 200 eventos, mesma classe de bug que a
-  RN-180 já corrigiu em `ContextAside` (RN-427)
-- **api,engine,web,runner**: execução de agente na máquina do usuário —
-  `apps/runner` (workspace novo, CLI `brabo-runner`) conecta ao engine
-  por canal Phoenix com ticket de uso único, executa comando de agente
-  já aprovado no `$SHELL` do usuário e abre terminal PTY interativo na
-  aba Code. Roteamento sempre acontece depois do pipeline de aprovação
-  normal; sem runner conectado, o comportamento de sempre (container)
-  continua. Junto: `git push`/PR/deploy e `sudo`/`doas` saem de `deny`
-  incondicional e viram teto absoluto — sempre pedem aprovação humana,
-  nunca auto-aprováveis mesmo com modo automático ligado, decisão
-  global do dono do produto (RN-418/419/420, ADR 0102/0103)
-- **api,engine**: consumo do grafo de conhecimento — ux-designer,
-  Psicólogo e Anamnese passam a resolver o kickoff/identidade a partir de
-  um template versionado do grafo (com fallback obrigatório pro texto
-  inline, atrás de duas flags separadas, default desligadas). Psicólogo e
-  Anamnese ganham uma segunda fonte de contexto: `rag_search` busca
-  trechos RELEVANTES ao gatilho da análise, compondo (nunca substituindo)
-  a leitura de eventos recentes/janela temporal existente, sempre dentro
-  do orçamento de tokens já declarado. O grafo passa a se escrever
-  sozinho — `GraphProjector` drena uma fila própria da outbox
-  transacional e projeta handoffs, hipóteses do Psicólogo, perfis da
-  Anamnese e fechamento de sessão, sem o engine nunca escrever no grafo
-  diretamente (RN-416/417, ADR 0101)
-- **api,engine**: fundação do grafo de conhecimento — Neo4j (`neo4j-driver`
-  na api, memória DERIVADA do event log, nunca fonte de verdade) para
-  templates de prompt versionados (idempotentes por hash) e memória
-  relacional (interações, hipóteses do Psicólogo, perfis da Anamnese,
-  handoffs). pgvector continua sendo o índice vetorial dos chunks — sem
-  duplicar embedding em dois bancos. Tool nova `rag_search` para os
-  agentes do engine, fechando o maior vão do RAG existente (nenhum agente
-  o consultava até agora); `ollama-model-loader` garante `gemma:1b`,
-  `yi-coder:1.5b` e `nomic-embed-text` no boot, fechando um bug real
-  separado (`nomic-embed-text` nunca era puxado automaticamente).
-  Primeira leva de templates extraída para `prompts/*.md`, sem editar
-  nenhum `.ex` ainda. Padrão inspirado no repositório
-  [ErickWendel/neo4j-ai-experiments](https://github.com/ErickWendel/neo4j-ai-experiments)
-  (RN-413/414/415, ADR 0099/0100)
-- **web,design**: o tema claro deixa de ser inalcançável — `public/theme-boot.js` aplica `data-theme` a partir de `localStorage['brabo.theme']` antes do primeiro paint (arquivo, não script inline, porque a imagem serve sob `script-src 'self'`), e `src/lib/tema.ts` é a API que o shell consome para alternar (ADR 0074, RN-182/RN-183)
-- **design**: os tokens que faltavam do handoff — escala `--fs-*`, raios `--r-xs`/`--r-sm` (mais alias para `--r-md`/`--r-lg`/`--r-pill`), métricas do shell (`--sidebar-w`, `--sidebar-w-collapsed`, `--header-h`, `--tabs-h`) e os nomes `--font-display`/`--shadow-modal` como ALIAS dos existentes
-- **design**: a paleta de realce passa a ter os oito papéis do handoff com prefixo `--syntax-*`, valor próprio por tema e 4,5:1 contra `--code-bg` nos dois — cinco dos oito valores do handoff foram recusados por medição (RN-185)
-- **web**: scrollbar customizada em `--border-strong`, raio 6px e borda na cor da superfície, nos dois temas
-- **api**: o relatório de gasto do workspace (`GET
-  /workspaces/:id/spend-report`, papel `owner`) ganhou a quebra por
-  **provider** e blocos separados de **pessoa** e **agente** — `porProvider`,
-  `porOwner` e `porAgente` (ADR 0076, RN-186/188). O relatório do membro
-  (`GET /projects/:id/spend/me`) **não mudou**: continua sem provider e sem
-  credencial, e agora a garantia é do TIPO — pedir a dimensão com escopo de
-  ator não compila (RN-187).
-- **web**: a aba Configurações ganha "Melhores modelos por capacidade" —
-  para código, documentação, análise, imagem e conversa, mostra o modelo mais
-  usado pelos agentes deste projeto entre os que a curadoria do workspace
-  marcou para aquele uso, com custo como desempate. Sem coluna de "nota":
-  o handoff pedia um score por capacidade, mas é dado fictício do mock — o
-  produto não mede qualidade de modelo em lugar nenhum (ADR 0077, RN-210)
-- **web**: a sidebar recolhe (264px ↔ 62px, trilha de ícones por projeto)
-  com preferência persistida; projetos ficam expansíveis (N ao mesmo tempo)
-  revelando as abas de cada um; nova seção **Atividades**, agrupada por
-  agente e, quando o módulo tem paralelização, por INSTÂNCIA real
-  (`dev-<modulo>`/`dev-<modulo>-2`, nunca um contador inventado); botão de
-  tema no rodapé; os dois itens globais sem rota ("Chat global"/
-  "Configurações") saem — só Projetos e Atividades são globais. A aba
-  Código recolhe a sidebar automaticamente, sem gravar a preferência
-  (RN-195..201)
-- **web**: moldura de tela conforme o handoff — cabeçalho do projeto com
-  `--header-h` (piso de 60px, sem cortar o alerta de orçamento), régua de abas
-  com `box-shadow: inset 0 -2px 0 var(--accent)` em vez de `border-bottom`,
-  rolagem horizontal em telas estreitas, e container de conteúdo com largura
-  máxima de 1040px. O rótulo "Code" virou "Código" (ADR 0078).
-- **web**: aba de Gastos ganha quebra por provider (Ranking, RN-211), bloco
-  de orçamento por projeto com o `TokenMeter` existente (RN-212) e alerta
-  de custo lido do orçamento (RN-213). KPI de economia com modelo local
-  fica de fora, declarado — falta preço contrafactual defensável (RN-214)
-- **web**: o painel inferior da aba Código ganha as quatro abas do handoff
-  (Terminal, Problemas, Diff de PR, Saída) — Problemas e Saída nascem com
-  estado vazio honesto, sem lint/teste ou stream de comando inventados
-  (RN-215/216) — e a status bar de 24px passa a mostrar `↑N ↓M` real da
-  branch e a linguagem do arquivo ativo (RN-217); abas do painel ganham
-  foco visível (RN-218)
-- **web**: a aba Criativo ganhou os 4 KPIs do handoff (sessões no projeto,
-  ativas agora, taxa ideação→commit, custo do mês), filtros pill
-  (todas/ativas/fechadas/abortadas) e selos de status para os 5 estados
-  reais da sessão — `closing` com selo próprio "encerrando", nunca fundido
-  com "fechada" (RN-227..230)
-- **api**: pipeline de indexação (`docs`/`adr`/`session`, chunking por
-  heading/parágrafo com 1200 caracteres e 150 de sobreposição) e busca
-  híbrida (vetor + léxico, pesos 0.6/0.4, limiar 0.2) do Chat RAG, com
-  degradação honesta quando o provider de embedding está indisponível e
-  três rotas novas (`POST .../rag/search`, `POST .../rag/reindex`,
-  `GET .../rag/coverage`) — RN-231..238, ADR 0080
-- **web**: virtualização de linha na aba Código — arquivo de 5.000 linhas
-  renderiza uma janela pequena de nós de DOM, não o arquivo inteiro — e
-  minimapa em `<canvas>` reaproveitando a tokenização já feita pelo realce
-  de sintaxe, sem segundo passe sobre o arquivo (RN-239..242)
-- **api**: ciclo de vida do container como tabela de estado
-  (`project_containers`, migração `0046`), sem orquestrador — máquina de
-  estados pura (`provisioning → running ⇄ stopped`, `failed`, `removed`),
-  primeira transição exigindo a imagem já decidida pelo Arquiteto e
-  congelando versão/recursos; nenhuma chamada real a Docker ainda
-  (RN-243..248, ADR 0081)
-- **web**: a aba **Chat RAG** (`key: 'rag'`), separada da aba Chat
-  (`sessions`, que continua sendo conversa com agente ativado) — busca com
-  filtro de escopo (docs/ADR/sessões), citações navegáveis (origem de
-  sessão leva ao evento exato; origem de arquivo mostra caminho/heading,
-  sem link — a aba Código não tem deep-link por caminho ainda), painel de
-  cobertura do índice com contagem REAL (nunca "reindexado há Xmin"
-  inventado) e botão de reindexar restrito a `maintainer`/`owner`. Avisa
-  quando a busca degradou para só léxica por falta de embedding
-  (RN-252..254, ADR 0082)
-- **api,web**: primeira exposição HTTP do ciclo de vida do container
-  (`GET .../container/lifecycle`, role:viewer) e a aba Terminal passa a
-  mostrar esse estado real (status, motivo de falha) sob o texto
-  explicativo que já existia — nunca um terminal simulado, porque não há
-  container real rodando ainda (FASE 25b segue cortada) (RN-267/268,
-  ADR 0083)
-- **api,web**: login social via GitHub/GitLab — revoga a proibição do
-  backlog do ADR 0031 só para esta capacidade. Reusa o mesmo app OAuth da
-  conexão de git (zero variável de ambiente nova) e a emissão de sessão do
-  login por senha; vincular a conta existente exige e-mail verificado pelo
-  provider, contra account takeover; conta provisionada nasce sem senha.
-  Branch `breaking/`: o operador precisa cadastrar um segundo callback
-  OAuth no provider antes do deploy (RN-272..283, ADR 0084)
-- **api,engine**: o plano de execução do Dev Lead (quantos agentes por
-  módulo e por quê) vira uma decisão real em Aprovações — antes só narrava
-  no fio, sem pipeline de aprovação nenhum. Enquanto ela não é decidida, a
-  conversa com o Dev Lead PAUSA: é a primeira vez que um agente
-  conversacional suspende esperando aprovação humana no meio do turno
-  síncrono (RN-284, ADR 0086)
-- **engine,web**: o UX Designer entra como o quinto agente conversacional
-  (Criativo, PO, Arquiteto, Dev Lead e agora ele), SOLO e sem área —
-  antecipado pelo dono do produto antes do gatilho de separação declarado
-  em `docs/fluxo.yml` ter disparado. Kickoff a partir do product brief do
-  Criativo; a única ferramenta, `propose_prototype`, registra personas,
-  jornadas e o protótipo navegável (`artifact.prototipo_navegavel`, sem
-  tabela nem rota nova na api) e oferece o mesmo artefato como handoff ao
-  PO e ao Dev Lead. `teste-de-usabilidade` fica fora de alcance (exige
-  usuário humano real); `metricas-de-uso` segue lacuna declarada
-  (RN-285..287, ADR 0087)
-- **engine,api,web**: o Staff/Principal Engineer ganha CÓDIGO — sexto
-  agente conversacional solo (`propose_rfc`: problema, opções com
-  trade-offs, recomendação e PoC descartável, devolvido ao Arquiteto por
-  handoff no mesmo tool call), acionável MANUALMENTE por handoff aceito
-  endereçado a "staff" (caminho genérico, sem entrar em
-  `USER_STARTED_AGENTS`). O gatilho AUTOMÁTICO (a Anamnese notando um
-  problema sistêmico recorrente) segue pendente enquanto
-  `ANAMNESE_ENABLED=false` — dormente para disparo automático, não para
-  acionamento manual (RN-305/306, ADR 0088)
-- **api,engine**: o gate `implementavel` sai de `planned` para `active` — o
-  Dev Lead ganha `assess_implementability`, o parecer de implementabilidade
-  de uma story (viável/inviável, com justificativa), a partir do plano de
-  teste que a QA-estratégia produz. A QA-estratégia deixa de ser papel
-  `proposto` em `docs/fluxo.yml`: é o próprio `qa-lead`, num SEGUNDO
-  momento (mesmo processo, entregável separado do veredito de PR) — sem
-  worktree, sem task, PRE-DEV. O parecer nasce `proposed_action`, mesmo
-  padrão do plano de execução (RN-340/341, ADR 0090)
-- **engine**: o papel `appsec` (`docs/fluxo.yml`) ganha o segundo momento do
-  secops — threat model de DESIGN (checklist STRIDE-lite) sobre a story e o
-  module_map vigente, ANTES de existir código ou PR. Roda no MESMO processo
-  do `SecOpsAgentServer` (`run_design/2`, sem worktree/task_id), termina
-  emitindo `artifact.threat_model` e criando handoff para arquiteto, dev-lead
-  e o lead de Infra. `run_design/2` já é acionável, mas nenhum caminho aciona
-  sozinho ainda — o gatilho automático fica para a frente `qa-estrategia`
-  (RN-360/361, ADR 0090)
-- **api**: novo script `pnpm --filter api analise:funil -- --projeto
-  <uuid> [--json]` — os papéis `analytics`/`delivery-metricas` de
-  `docs/fluxo.yml` (antes `status: proposto`) viram `active`, entregues
-  como RELATÓRIO puro (mesmo formato de `medir-execucao.ts`, sem agente,
-  sem GenServer). Mede funil real sessão → commit → PR → merge, lead time
-  real e deployment frequency real em branch protegida, todos extraídos
-  de `proposed_actions.execution_result`. Declara, de propósito, três
-  métricas sem caminho para existir hoje: funil de produto completo
-  (ideação → commit), evidência de adoção por feature e MTTR/change
-  failure rate (RN-320..322, ADR 0089)
-- **api**: `pnpm --filter api relatorio:seguranca-runtime` — o papel
-  `secops-runtime` (`docs/fluxo.yml`) antecipado como SCRIPT, não agente,
-  sobre o dado que o `RateLimitGuard` já coleta hoje (`rate_limit_hits`):
-  ranking de baldes (usuário/IP) com mais hits e distribuição temporal dos
-  picos, com a janela de retenção (curta, poucos minutos) sempre declarada.
-  Detecção automática de incidente, resposta a incidente e postmortem de
-  segurança seguem FORA — dependem de tráfego de produção real, que não
-  existe — e o relatório lista essa lacuna, sem simular incidente de
-  exemplo (RN-375..377, ADR 0091)
-- **api**: o papel `platform` (`docs/fluxo.yml`, `status: planned` —
-  ativação ainda pendente de `DEPLOY_ENABLED`, que não existe) ganha uma
-  primeira entrega honesta: `pnpm --filter api relatorio:telemetria
-  [--projeto <uuid>] [--json]`, um SCRIPT (não agente) que lê sob demanda as
-  mesmas fontes do `DomainGaugesCollector` — sessões ativas/closing e tasks
-  bloqueadas por projeto, estado do último backup — e linka para os
-  dashboards/alertas/runbook já versionados, sem duplicar. A saída declara
-  explicitamente o que NÃO mede: SLO numérico (nenhum definido), postmortem
-  (sem incidente real) e telemetria automática em loop fechado
-  (RN-385/386, ADR 0092)
-- **api**: o papel `dbre` vira dois scripts mecânicos —
-  `lint:migracao` varre `apps/api/src/db/migrations/*.sql` e sinaliza
-  `DROP TABLE`/`TRUNCATE`/`DROP COLUMN`/`ALTER COLUMN ... TYPE`/`ADD
-  COLUMN ... NOT NULL` sem `DEFAULT` (informativo, não bloqueia CI ainda);
-  `relatorio:backup` lê `backup_runs` sob demanda com a mesma lógica do
-  `DomainGaugesCollector`, citando o procedimento de restore já testado
-  em `docs/runbook.md`. Plano de capacidade e tuning seguem declarados
-  como lacuna — exigem volume real de dados, que não existe hoje
-  (RN-400..403, ADR 0093)
-- **api**: a delegação Dev Lead → `dev-<modulo>` vira DADO auditável em
-  `delegations` (`area: 'dev'`), fechando o item que o ADR 0053 (item 5)
-  tinha declarado fora de escopo. `status: 'completed'` é redefinido para
-  esta área — significa "o agente foi ativado", não "parecer emitido" como
-  em QA/Infra —, e `parecerArtifactId` aponta para o `artifact.module_map`
-  mais recente do projeto, o artefato que justificou a decisão de delegar
-  (RN-405, ADR 0094, auditoria fluxo.yml × código, item B1)
-- **api,web**: o gate `necessidade-validada` (Criativo → PO) ganha um
-  terceiro botão dedicado, "Confirmar necessidade validada", no mesmo
-  padrão de "Confirmar arquitetura pronta" — confirmação humana SEPARADA
-  do Criativo, nunca o modelo se autovalidando. Habilita só depois de
-  `confirm_readiness` já ter consolidado o `product_brief`; grava
-  `necessity.validated` sem sinalizar o engine, porque o handoff
-  Criativo→PO já aconteceu antes. `docs/gates.yml` ganha o gate
-  correspondente (`active`, `warn`) (RN-406, ADR 0095, auditoria
-  fluxo.yml × código, item B2 — última onda do plano)
-- **api,engine**: o PO ganha a terceira ferramenta de leitura,
-  `listar_metricas_de_produto` — o mesmo relatório de funil de entrega e
-  DORA parcial do script `analise:funil` (ADR 0089), agora legível dentro
-  do turno (`GET /internal/projects/:projectId/product-metrics`). As
-  funções de cálculo puras e a query migraram para
-  `apps/api/src/application/services/funil-metrics.ts`, reexportadas pelo
-  script sem mudar comportamento. Fecha o item B4 — a ÚLTIMA pendência da
-  auditoria fluxo.yml × código (RN-407)
-- **api,web**: SMTP real no `MailSender`, fechando o item de backlog aberto
-  desde o corte do Keycloak. `MAIL_TRANSPORT=smtp` (default continua `log`,
-  inclusive em produção) liga o envio de verdade via `nodemailer`, com
-  `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM` validados no boot em
-  produção pelo mesmo padrão da RN-114 (RN-408, ADR 0096). A investigação
-  achou uma lacuna real: `email_verification` não tinha rota web — nova tela
-  `/verificar-email` fecha isso, espelhando `/definir-senha`
-- **api,web**: o card do dashboard mostra "N online" — quantos agentes estão
-  trabalhando ou com pendência esperando decisão AGORA, nunca tamanho de
-  equipe ou presença histórica. Soma dev agents (`engine.dev_agent_states`,
-  agregado em lote) e agentes conversacionais (último `agent.status` da
-  sessão mais recente); QA/SecOps nunca contam, porque não emitem
-  `agent.status` (veredito único por invocação). Fecha o item de backlog
-  "N agentes online" no dashboard (RN-409, ADR 0097)
+- **ci**: o alarme de merge de esteira ganha destinatário (ADR 0139) (f95d4165a)
+- **engine,api,ci**: golden-set do RAG passa a rodar em CI, agendado (ADR 0138, RN-498) (#461) (1eb71c322)
+- **runner,engine,api**: o runner sobe o container do projeto na máquina do usuário (ADR 0137, RN-497) (#460) (108d81cc7)
+- **api,web**: página global de containers (ADR 0136, RN-495/496) (#459) (11b49cb72)
+- **api,engine**: dev agents executam DENTRO do container do projeto (ADR 0134, RN-492/493) (#457) (eb32fa72c)
+- **api,engine,web**: a Infra elege entre as candidatas do Arquiteto e sobe o container (ADR 0133, RN-491) (#456) (d86b3b6a2)
+- **api,engine,web**: o Arquiteto roteia módulos para a Infra com imagem CANDIDATA (ADR 0131, RN-487) (#455) (e27637347)
+- **api,engine,docs**: o RAG ganha golden-set de acerto, e o gate rag-acertivo nasce warn (ADR 0132, RN-490) (#454) (14e6e1b2b)
+- **api,web,runner,broker**: o broker de container fala com o daemon, e a porta MOVE de onde nasceu (ADR 0130, RN-485/486) (#453) (cafd5034a)
+- **api,web,engine**: telemetria de busca do RAG — a medição existe antes de calibrar (RN-479/480/481, ADR 0129) (#452) (4a96d14a4)
+- **api,web,docker**: um modelo para os 17 agentes, e provisionamento que não fica calado (RN-476/477) (#450) (2d4446411)
+- **runner**: a porta de Docker nasce com o CLI, e a prova de empacotamento diz por quê (ADR 0128) (#448) (1ecc3883c)
+- **web**: a pasta vem antes do runner, e o binário deixa de ser bloqueio (RN-473/474) (#446) (a7295433c)
+- **web**: cascata de modelo como cadeia visível nas Configurações (RN-470) (#439) (d18f95c82)
+- **web**: salvar por seção no Paralelismo e no Teto de gasto (RN-469) (#438) (09e7ef4c7)
+- **web**: login em duas colunas e estado de ambiente onde há identidade (RN-468) (#437) (8b0f7a3c0)
+- **web**: padrão único de valor herdado nas Configurações (#436) (b18df5011)
+- **web**: sumário ancorado das 17 seções de Configurações (#435) (8cd07991a)
+- **web**: painel "precisa de você" com as cinco filas de decisão separadas (RN-467) (#434) (91dbf21b3)
+- **web**: trilho vertical de navegação do projeto e revisão da RN-201 (ADR 0126) (#433) (be1ac2e18)
+- **docs**: docs:check afere as contagens de RN e de provider, não só a de ADR (#417) (8f41df73d)
+- **ci,k8s**: publica as quatro imagens no GHCR e fixa o overlay por digest (#416) (2ce4f0a69)
+- **api,web,runner**: configura o brabo-runner pelo navegador com chave de dispositivo (#415) (561ea7a5f)
+- **web**: gera ActionType a partir do OpenAPI, fecha cópia manual que já divergiu 2x (#413) (5752f6b8c)
+- Ollama nativo no bootstrap + catálogo local via Hugging Face (#399) (bc3454148)
+- **engine,web**: faixa de atividade do turno na tela de Sessão (#393) (b8a91714a)
+- **engine**: broadcast efêmero de tool.call e teto de iterações não termina calado (#392) (5d93085a3)
+- **web**: dicionário ferramenta→frase para a faixa de atividade da sessão (#390) (1387564fb)
+- **ci**: arquiva automaticamente toda branch cujo PR é mergeado (#385) (cc9c8963a)
+- **api,web**: anexar pasta local como referência de leitura no Chat RAG (#388) (b2bab2c39)
+- **scripts,api**: Docker › Reset total no bootstrap, com credencial pré-salva no seed (864ac0629)
+- **api,web**: converter execution_mode de projeto existente, sem recriar (RN-447..450, ADR 0111) (ffbc98528)
+- **runner**: binário standalone via bun build --compile, matriz de 5 plataformas (ADR 0109) (300ab0786)
+- **api,web**: budget de área — teto de gasto opcional, aditivo (ADR 0109, RN-440) (b74873036)
+- **api,web**: handoff manual a agente à escolha (ADR 0109) (43667eb96)
+- **api,web,runner**: runner local conecta de verdade, navegador de pastas redesenhado e Onda 6b de i18n (5dd5ce6e9)
+- **api,web**: maintainer revoga PAT de outro usuário; backlog atualizado (RN-427) (4ca360321)
+- **runner**: Personal Access Token substitui login replicado (ADR 0105) (6570af80a)
+- **api,engine,web,runner**: execution_mode em três valores, workspace verificado pelo runner (ce9708f7e)
+- fundação de i18n — react-i18next na web, preferência de idioma no servidor, Docusaurus multi-locale (1a35ccdfb)
+- abas agrupadas, aba PRs project-wide, pasta local via Runner e correção do carrossel do PO (ea4f945a4)
+- **api,engine,web,runner**: execução na máquina do usuário e teto absoluto pra git/sudo (c814b9925)
+- **api,engine**: consumo do grafo de conhecimento — templates, relevância e projeção da outbox (bf3f7e6cb)
+- **api,engine**: fundação do grafo de conhecimento — Neo4j, rag_search, templates de prompt (a42537860)
+- **api,web**: "N agentes online" no dashboard com status ao vivo (28a36aa59)
+- **api,web**: SMTP real no MailSender, atrás de MAIL_TRANSPORT (ADR 0096) (4eb25bc55)
+- **api,engine**: PO ganha leitura de métricas de produto (RN-407) (e7402305b)
+- **api,web**: gate necessidade-validada fecha a auditoria fluxo.yml x codigo (9095ad4fb)
+- **api**: revalida RN-160 no backend e efetiva a delegacao Dev Lead -> dev (b048055bc)
+- **engine,api**: gate implementavel ativo — QA-estratégia como segundo momento do qa-lead (ADR 0090) (a8fbc0537)
+- **engine,api,web**: Staff ganha código, dormente para disparo automático (ADR 0088) (005595fc3)
+- **engine,web,api**: o UX Designer entra como quinto agente conversacional (ADR 0087) (000512c89)
+- **api**: dbre vira linter de migration e relatório de backup (ADR 0093) (a70ff5326)
+- **api**: analytics e delivery-metricas viram relatório do medicao (ADR 0089) (c317c398e)
+- **engine**: appsec vira o segundo momento do secops — threat model de design (RN-360/361, ADR 0090) (559b3dfff)
+- **api**: platform como script de relatório de telemetria sob demanda (de0bf980c)
+- **api**: relatório de segurança em runtime sobre rate_limit_hits (ADR 0091) (61b82b934)
+- **engine,api**: o plano do Dev Lead vira proposed_action e suspende o turno (ADR 0086) (fb24863b6)
+- **api,web**: login social (GitHub/GitLab), reusando emissão de sessão e cliente OAuth (dd1f5dcfa)
+- **web,api**: aba Terminal mostra o estado real do container (RN-267/268) (71ae6928c)
+- **web**: aba Chat RAG — busca híbrida, citação e cobertura do índice (677a04b5e)
+- **api**: pipeline de indexação e busca híbrida do Chat RAG (9997641ee)
+- **api**: ciclo de vida do container como tabela, sem orquestrador (ADR 0081) (cb261a98e)
+- **web**: virtualização de linha e minimapa na aba Code (RN-239..242) (18ba1a4a2)
+- **api**: tabela de chunks para o Chat RAG, vetor e tsvector juntos (617deeae3)
+- **web**: aba de Gastos ganha provider, orçamento por projeto e alertas (428de2e92)
+- **web**: KPIs, filtros e selos de status na aba Criativo (6191b44b3)
+- **web**: painel inferior de 4 abas e status bar honesta na aba Código (fe37d8ecb)
+- **web**: moldura de tela conforme handoff, e o registro de abas diverge dele (ADR 0078) (1edca7405)
+- **web**: sidebar recolhe, projetos expansíveis e seção Atividades (RN-195..201) (a51432116)
+- **web,docs**: ranking de modelos por capacidade sem nota inventada (RN-210, ADR 0079) (8c3ddec2a)
+- **api**: embeddings no contrato de LLMProvider (RN-189..191, ADR 0075) (aef35cc3d)
+- **api**: provider volta a ser dimensão de gasto, contido por tipo (RN-186..188) (89fb7692e)
+- **web,design**: o tema claro deixa de ser inalcançável, e passa a ser medido (e5df101cd)
+- **web**: o painel da sessão agrupa, ordena e diz o que não mostra (2d664ea99)
+- **web**: o fio da sessão diz quem fala, com qual modelo e o que pergunta (8904ae0f0)
+- **docs**: a documentação estável publica em /prd (26e205d5e)
+- **api,web**: projeto escolhe entre pasta do usuário e container (3cac71a76)
+- **engine,api**: o PO lê o que já existe e é cobrado pela história (86607605f)
+- **scripts**: rolar o log da execução no menu do bootstrap (0c1731924)
 
 ### Documentação
 
@@ -4009,133 +4017,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   aberto" (decisões de produto em aberto, cortes/pausas vigentes, lacunas
   aceitas e pendências com dono humano — sem duplicar o que já fechou).
   CLAUDE.md cai para a faixa de 30–45 KB.
-
-### Correções
-
-- **api,engine**: corrigido o `413 request entity too large` que estourava
-  em PRs legítimas no gate de QA/SecOps — causa era da própria api do
-  Brabo, nunca do provider de LLM. A api nunca configurava limite de body
-  do Express (valia o default de 100 KB contra os 8 MB que o Phoenix
-  aceita); `API_JSON_BODY_LIMIT` (default 10 MB) fecha essa ponta. No
-  engine, a compactação de contexto era estruturalmente inalcançável antes
-  do estouro — a estimativa de tokens não contava `toolCalls` e a janela
-  usava só a janela do modelo (128k, ~350 KB antes de compactar); a janela
-  efetiva agora é `min(context_window, teto_de_transporte)`, com corte
-  sempre em fronteira de iteração do `ToolLoop` (RN-412, ADR 0098)
-- **api,web**: a aba Executores/Visão Geral não fica mais vazia com
-  execução real rolando — `executionActivated` era derivado da janela dos
-  últimos 200 eventos, e `execution.activated` (um dos primeiros eventos
-  da sessão) saía dessa janela em qualquer execução longa, apagando o
-  roster inteiro. As duas telas passam a usar o valor agregado sobre
-  TODOS os eventos que o resumo do workspace já calculava (RN-090). A
-  régua de trabalho pendente (`DEV_PENDING_TYPES`) ganhou
-  `dev.awaiting_gate`/`dev.awaiting_approval` — o heartbeat não fecha mais
-  a sessão com dev agent esperando o gate ou uma aprovação (RN-412,
-  estende a RN-411)
-- **api**: sessão de execução não fecha mais por baixo de dev agent
-  trabalhando ou travado esperando desbloqueio — o heartbeat de 30s só
-  enxergava `agent.status` (vocabulário dos conversacionais), e dev agents
-  usam vocabulário próprio (`dev.*`). Quarto sinal em
-  `GetSessionPendingWorkUseCase`: último evento `dev.working`/`dev.blocked`/
-  `dev.idle_tripped` de qualquer `dev-<modulo>` segura a sessão; `dev.idle`
-  não. Achado numa sessão de execução real com cinco dev agents em
-  `idle_tripped` (RN-411)
-- **api**: toda conta NOVA (registro por e-mail/senha ou login social)
-  ganha um workspace pessoal automático, na mesma transação que cria a
-  conta — antes `RegisterUseCase`/`SocialLoginCallbackUseCase` criavam
-  usuário e credencial mas nenhum workspace, e o botão "Novo projeto" do
-  dashboard silenciosamente não fazia nada. Nome/slug saem de uma função
-  única, `nomeESlugDoWorkspacePessoal`, e o slug leva sempre um sufixo do
-  id do usuário para ser único sem round-trip ao banco (RN-410)
-- **api**: "Confirmar arquitetura pronta" (RN-160) agora é revalidado no
-  BACKEND — antes só a UI desabilitava o botão sem história promovida do
-  backlog, e uma chamada HTTP direta a `POST
-  /agents/arquiteto/handoff-infra` ignorava a regra por completo. Recusa
-  ANTES de gravar qualquer evento ou sinalizar o engine (RN-404, ADR 0094,
-  auditoria fluxo.yml × código, item B6)
-
-- **web**: os seis colapsos ad-hoc restantes migram para o `Disclosure`
-  compartilhado (`ModelCatalogSection`, `AgentTimelineTree`,
-  `code/CodeExplorer.tsx`, `code/CodeShell.tsx`) — o marco com detalhe de
-  `AgentTimelineTree` tinha alvo de clique de 20px, abaixo do piso de 24px
-  do WCAG 2.2 AA (2.5.8); a faixa de arquivo do diff em `ApprovalCard` NÃO
-  migrou (animação própria de chevron que o componente genérico não
-  replica) e ganhou só o `aria-controls` que faltava (RN-249..251)
-- **web**: fecha o resto da varredura de acessibilidade — alvos de toque
-  abaixo do piso de 32px do handoff em botões de ícone da sidebar
-  (colapsada e expandida), ações destrutivas de Aprovações/Configurações e
-  o botão de fechar do `Toast` (que não tinha tamanho explícito nenhum, e
-  também ganhou `:focus-visible`); quatro alvos abaixo do piso de 24px do
-  WCAG corrigidos em telas reais. `aria-expanded` da sidebar auditado e já
-  estava correto nos dois controles
-
-- **web**: os valores de espaçamento da régua de abas do projeto, que viviam
-  como override de CSS de descendente em `ProjectPage.module.css` desde a
-  FASE 16, migraram para `Tabs.module.css` — pendência declarada fechada
-- **web**: a régua de abas do projeto (`Tabs.module.css`) ganhou
-  `:focus-visible` — navegar por Tab não mostrava indicação de foco nenhuma;
-  achado pela frente de acessibilidade, corrigido no mesmo padrão de
-  `Input.module.css` (ADR 0036), com anel `inset` (a régua rola
-  horizontalmente e um anel para fora seria cortado)
-
-- **design**: seis tokens do tema claro corrigidos até passarem AA — `--accent` 3,56 → 4,81:1, `--warning` 3,15 → 4,98:1, `--success` 3,89 → 5,12:1, `--violet` 4,16 → 4,95:1 e `--text-muted` 2,76 → 5,17:1 contra o fundo que os cobrava, mais `--accent-hover` um degrau abaixo; o tema escuro não mudou nenhum valor e a dívida dele segue travada nos mesmos cinco números (ADR 0074, RN-184)
-- **web**: o contraste passa a ser medido nos DOIS temas nos três arquivos que o medem — o teste que afirmava que "nada na app define `data-theme=light`" e que três pares reprovavam foi invertido junto com o produto
-- **web**: cor de agente e o `#fff` do botão `.success` saem de token (`var(--violet)`, `var(--on-accent)`); três cores de agente sem contraparte semântica ficam declaradas no arquivo, não inventadas
-- **web**: `Select`, `Modal` (botão de fechar) e `ProjectCard` ganham
-  `:focus-visible` no mesmo tratamento calibrado de `Input.module.css`
-  (ADR 0036, incluindo o bloco de `forced-colors`) — nenhum dos três tinha
-  indicação de foco própria alcançável só por teclado. O botão de fechar do
-  `Modal` também sobe de 30px para 32px, o piso de alvo de toque em desktop.
-  `Table` e `Badge` foram auditados e não precisaram de mudança: nenhum dos
-  dois expõe afordância interativa própria — linha de `Table` é apresentação
-  pura (quem precisa de linha clicável já usa `<button>`/`<a>` dentro da
-  célula, via `render`) e `Badge` não é usado com `onClick` em lugar nenhum
-  do produto hoje.
-
-### Correções
-
-- **docker,web**: o terminal do runner local (Code → Dev → Terminal, ADR
-  0103/0104) ficava preso em "Abrindo terminal..." para sempre em projeto
-  no modo `runner`, com o socket falhando em loop no console do browser.
-  Três causas empilhadas: `ENGINE_PUBLIC_URL` não tinha default nenhum em
-  `docker/docker-compose.yml` — o fallback do código caía em `ENGINE_URL`
-  (`http://engine:4000`, hostname que só resolve DENTRO da rede do
-  Compose, inalcançável pelo browser); `apps/web/src/lib/terminal-channel.ts`
-  nunca desligava a reconexão automática do `phoenix.js`, então um socket
-  que nunca abre (URL errada, engine fora do ar) girava sozinho pra sempre
-  em silêncio em vez de mostrar erro; e o mesmo módulo concatenava
-  `/runner/websocket` a um `engineWsUrl` que a api já devolve PRONTO
-  (`ws://host:porta/runner`) — o `Socket` do `phoenix.js` ainda acrescenta
-  `/websocket` sozinho, e o path duplicado (`/runner/runner/websocket/
-  websocket`) era recusado pelo engine (`NoRouteError`), o defeito que de
-  fato impedia a conexão, só visível depois de corrigir os dois primeiros.
-  Compose ganhou o mesmo default que `VITE_ENGINE_URL` já usa
-  (`http://localhost:4000`); o canal do terminal ganhou timeout próprio de
-  8s que chama `onErro` e desconecta, em vez de depender do backoff nativo
-  do Phoenix; e parou de concatenar path no `engineWsUrl`. Verificado
-  ponta a ponta contra o engine real (RN-433)
-- **api**: `POST .../runner-ticket` (autenticação por Personal Access
-  Token, ADR 0105) sempre respondia `403 "Não autenticado"`, mesmo com um
-  PAT válido — o runner local nunca conseguia conectar por essa via.
-  `RolesGuard`, guard GLOBAL, rodava antes de `PatAuthGuard`, guard local
-  da rota (ordem do Nest, não configurável pelo controller), e recusava
-  toda chamada com `request.user` ainda vazio antes do `PatAuthGuard`
-  sequer autenticar. Um segundo defeito, escondido atrás do primeiro:
-  `PatAuthGuard` comparava o token bruto direto contra o hash gravado no
-  banco, em vez de hashear antes de comparar — nunca teria funcionado
-  mesmo sem o problema de ordem. `RolesGuard` passa a se abster em rota
-  `@RequirePatAuth()` (mesmo desvio que `JwtAuthGuard` já tinha) e
-  `PatAuthGuard` passa a autenticar E autorizar (`@RequireRole`) no MESMO
-  guard. Verificado com o `brabo-runner` conectando de verdade a um
-  projeto real (RN-439)
-
-### Desempenho
-
-- **api**: índice `token_usage(created_at)` (migração `0044`). Medido pelo ADR
-  0063 a 525 mil linhas: o relatório do workspace sai de 55 ms para 32 ms e o
-  do membro de 38 ms para 19 ms — os dois planos deixam de ser *seq scan*.
-
-### Documentação
 
 - **docs,web,api**: Onda 6b (i18n) — a extração em massa da interface e a
   tradução de `docs/` que a Onda 6a (RN-432) tinha deixado como "próxima
@@ -4173,6 +4054,70 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   português) e uma fatia de componentes `.tsx` menores seguem como o que
   falta pra fechar a onda por completo — ver o CLAUDE.md pro estado
   atualizado.
+
+- divide o business-rules.md pelas duas seções que eram metade dele (#418) (1ab674541)
+- corrige contagem de RNs no README (#412) (5933d5d02)
+- **backlog**: marca itens fechados da revisão externa e remove seção duplicada (#411) (fe2fa6e36)
+- **backlog**: registra triagem da revisão externa de 2026-08-28 (#404) (8467ee176)
+- move narrativa histórica do CLAUDE.md para docs/explanation/historico-de-fases.md (#389) (25594eaeb)
+- registra o painel de Problemas/lint/testes no backlog (392272538)
+- registra a rota PUT .../agent-areas/:key/budget em security-surface.md (a3dd63f02)
+- registrar as rotas de maintainer do PAT em internal-api.md (RN-427) (000ba0834)
+- revisar internal-api.md para as novas rotas de auth/PAT (09f711a80)
+- adicionar entrada de CHANGELOG do PAT do runner (ADR 0105) (139ce5ee6)
+- **api**: documenta a rota nova de confirmação do workspace e o gate workspace-verificado (b97995ecb)
+- **adr**: reconcilia ADR 0072 x ADR 0103 com execution_mode em três valores (8bfc67a1d)
+- **runbook**: neo4j entra na família dos segredos que não sobem com default (f7c9c19fc)
+- **runbook**: neo4j entra na família dos segredos que não sobem com default (554f1c6f9)
+- **runbook**: neo4j entra na família dos segredos que não sobem com default (d8824c8de)
+- **reference**: atualiza permissions.md com o teto absoluto de git/sudo (d584f85e3)
+- **reference**: atualiza internal-api.md com o caminho de escrita do GraphProjector (50614ba91)
+- **api,engine**: preenche descrição das variáveis novas em configuration.md (9bdd3e85e)
+- **api**: regenera configuration.md com GRAPH_PROJECTOR_INTERVAL_MS (38737f368)
+- **reference**: documenta as rotas internas do grafo de conhecimento e rag_search (75e04a085)
+- **api**: regenera configuration.md após o rebase que trouxe API_JSON_BODY_LIMIT (4b0024baf)
+- **runbook**: documenta API_JSON_BODY_LIMIT/TRANSPORT_MAX_BODY_BYTES no ambiente de inferência (92de35055)
+- **adr**: renumera para 0097/RN-409 apos rebase e corrige contagens (2a9e22c27)
+- **business-rules**: corrige slugs dos ADRs linkados na RN-408 (1620e50ad)
+- **governance**: GOVERNANCE.md fecha o TODO(humano) do modo community (2af710fae)
+- satisfaz o drift check da onda 6 (internal-api.md, gates.md) (90900bbb9)
+- **adr**: registra ADR 0094 e fecha a Onda 2 da auditoria fluxo.yml x codigo (60a664bd0)
+- **gates**: satisfaz o drift check da regra registro-de-gates (7c8052e8a)
+- **fluxo**: onda 1 da auditoria fluxo.yml x codigo em dia (7b8965540)
+- **scripts**: regenera scripts.md com os comandos da onda (analise:funil, relatorio:seguranca-runtime, relatorio:telemetria) (20cb33956)
+- **reference**: registra artifact.threat_model em artifacts.md e events.md (afe04eb6e)
+- **artifacts**: documenta o schema prototipo_navegavel (ADR 0087) (4d420831f)
+- **adr**: atualiza contagem de ADRs após o 0086 (drift do CI) (745aff040)
+- **fluxo**: auditoria fluxo.yml x codigo (ADR 0085) — divergencias, lacunas e ondas (959a26ffa)
+- **CLAUDE.md**: registra fluxo.yml como terceira peça do modelo de time (52e49105c)
+- **fluxo**: registro declarativo de papéis do time (ADR 0085) (5fd78d92d)
+- **onda-5**: CHANGELOG e os parágrafos de G3/F2/I; revoga a proibição de login social do CLAUDE.md (e7071f284)
+- **reference**: regenera .openapi-manifest.json após o merge com dev (3141dc6aa)
+- **runbook,internal-api**: callback do login social não registrado, e a rota fora do escopo da api interna (3d66c2ed8)
+- **reference**: regenera configuration.md (API_PUBLIC_URL agora lido por start-social-login.use-case.ts) (4ea8af3ce)
+- **internal-api**: registra GET .../container/lifecycle como fora do escopo (985a3ed81)
+- **onda-4**: RN-239..242, RN-249..251, CHANGELOG e os parágrafos de G2/F1 (f9d9f01f9)
+- **business-rules,internal-api**: RN-231..238 do RAG e a rota sem contraparte interna (abb1fca43)
+- **adr**: registra o ADR 0080 (busca híbrida) e regenera a referência (c5e27aa75)
+- **onda-3**: RN-211..218, RN-227..230, CHANGELOG e o parágrafo de H3 (89451e53b)
+- **business-rules**: RN-219..226 desta frente (51a531ff4)
+- **claude**: integra o parágrafo desta frente (989987ec9)
+- **claude**: integra o parágrafo desta frente (203be0447)
+- **claude**: registra o achado desta frente (7c2d36ce6)
+- **claude**: integra o parágrafo desta frente (f1fdd0dda)
+- **security**: a rota do owner concede mais, e a nota diz isso (bd6288686)
+- **runbook**: triagem para sessão que não sai de `created` (162cd4934)
+- **business-rules**: RN-059 registra a queda e a segunda barreira (ba9fd8e69)
+- **policy**: a PR do CHANGELOG carrega a versão nos dois arquivos (1ad52dfad)
+- **changelog**: v3.1.0 (a048f9991)
+- a invariante e o verbete que as três RNs mexeram (c6fd96b42)
+- **engine**: atualiza comentário de emit_response após a RN-163 (bcb544718)
+
+### Desempenho
+
+- **api**: índice `token_usage(created_at)` (migração `0044`). Medido pelo ADR
+  0063 a 525 mil linhas: o relatório do workspace sai de 55 ms para 32 ms e o
+  do membro de 38 ms para 19 ms — os dois planos deixam de ser *seq scan*.
 
 ### CI
 
@@ -4467,6 +4412,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `ProficiencySection.test.tsx`, o único que renderiza as 17 seções de uma
   vez. Fecha a linha de dívida nas DUAS metades
 
+- **ci**: timeout repetido do pnpm audit vira risco assumido (ADR 0140) (13603dddc)
+- **ci**: aceita a CVE-2026-56854 no binário oficial do gitleaks (#449) (5006ab681)
+- **ci,k8s**: pina as actions dos 15 workflows que sobraram, com check (#419) (9fafafa9c)
+- **deps,ci**: isola website em lockfile próprio, fora do pnpm audit do produto (#414) (08194006b)
+- **ci**: piso de cobertura em api, web e engine (ratchet) (#410) (406f91e1a)
+- **ci**: checksum verification and SHA-pinned actions (#408) (4723a46e5)
+- três limpezas independentes de higiene de repositório (#403) (9cd61e0e5)
+- **docker**: fixa versão do ollama nos dois compose (#401) (5b9916d4a)
+- **docker**: mapeia UID/GID do host para os containers de dev, sem root (#406) (9256471d4)
+- **docs**: unifica agents.md e claude.md via symlink (#402) (530c99dee)
+- **deps**: atualiza override do nanoid — advisory revisado exige 3.3.18 (#400) (f4fa6799c)
+- **deps**: atualiza override do nanoid — advisory revisado exige 3.3.18 (#395) (3d34fc910)
+- **engine**: mix format (frente staff) (4af7e075d)
+- **engine**: mix format (frente ux-designer) (228bcde6e)
+- **docs**: contagem de ADRs após o merge de H2 (#325) (58606ff00)
+- **adr**: renumera 0079 -> 0077 (7a9256d84)
+- **docs**: contagem de ADRs e o parágrafo do CLAUDE.md desta frente (5bed6a925)
+- **docs**: contagem de ADRs após o merge da #319 (a278b5867)
+- **design**: o handoff atualizado entra no repo — 10 telas (f5f771ac6)
+
 ### Mudanças internas
 
 - **runner,broker**: a porta de Docker do ADR 0128 **muda de casa** —
@@ -4492,6 +4457,30 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   Acrescentar campo à porta merece nota porque a régua deste desenho é não
   acrescentar parâmetro; a régua vale para o que AFROUXA, e este aperta (ADR 0130)
 
+### Refatorações
+
+- **web**: divide o ProjectSettingsTab.tsx em um arquivo por seção (ADR 0125) (#431) (2a1f8230e)
+- **web**: extrai hook useTurnoDoAgente do SessionPage.tsx (ADR 0124) (#430) (5c6eeda7c)
+- **web**: termina a deduplicação do arme de turno no SessionPage.tsx (#429) (92b9f66d5)
+- **web**: extrai hook useSessionReadiness do SessionPage.tsx (ADR 0122) (#427) (4d552771a)
+- **web**: extrai helpers de árvore de backlog e ContextAside do SessionPage.tsx (ADR 0122) (#426) (6374ced41)
+- **web**: extrai StructuredQuestionCard do SessionPage.tsx (ADR 0122) (#425) (7b27fd6f5)
+- **web**: extrai StorySlide do SessionPage.tsx (ADR 0122) (#423) (af907c2e7)
+- **web**: extrai helpers puros de timeline do SessionPage.tsx (ADR 0122) (#422) (f4dbeb833)
+- **api**: divide o schema.ts por agregado de domínio, atrás de um barrel (#421) (aeb045e11)
+- **web**: migra o painel inferior do CodeShell para o Disclosure (24f7ffab4)
+- **web**: migra o colapso de pasta do CodeExplorer para o Disclosure (4de38fe1b)
+- **web**: migra AgentTimelineTree (ramo e marco) para o Disclosure (58d74a326)
+- **web**: migra ModelCatalogSection para o Disclosure compartilhado (ec28ea1fa)
+- **web**: monta a árvore de backlog uma vez só no painel (76348b526)
+
+### Testes
+
+- **engine,api**: golden-set de regressão do julgamento semântico do QA de Automação (ADR 0123) (#428) (d07e0a11d)
+- **e2e,ci**: E2E de navegador contra o compose de produção (ADR 0120) (#420) (cc0267f05)
+- **web**: mock de api-client exporta mensagemDaApi no caso de falha (44328ee11)
+
+
 ## v3.1.0 — 2026-08-13
 
 ### Novidades
@@ -4511,147 +4500,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - atualiza README, CLAUDE.md e onboarding até o estado de hoje (285db8cd)
 - **changelog**: v3.0.0 (5b14cd57)
 
+
 ## v3.0.0 — 2026-08-13
-
-### ⚠ Mudanças incompatíveis
-
-- registra a quebra que o container por projeto introduz (54408462)
-
-### Novidades
-
-- **engine,api,web**: Criativo pode fazer perguntas estruturadas (RN-162) (14b2636f)
-- **web**: gate de história promovida no botão do Arquiteto e fusão condicional handoff+execução (RN-160, RN-161) (a5433682)
-- **web**: markdown leve no chat com highlight (RN-158) e artefatos gerados agrupados por agente (RN-159) (f3bc4e03)
-- **api,web**: "auto mode" no ApprovalCard — autonomia pra qualquer ação de um agente (RN-153/154) (4cdb5e8e)
-- **code**: vincula branch de dev agent ao módulo dono (RN-152) (ee870790)
-- **api,engine,web**: diagrama C4 do Arquiteto na Visão Geral do projeto (61fc8af3)
-- **web**: carrossel de histórias com promoção pendente no fio do PO (80ad9003)
-- **web,api,engine**: botão de prontidão do Arquiteto, modelo no agent.response e ícone no grupo colapsado (ee338c40)
-- **engine**: gate sobrevive a restart no meio do ciclo (ADR 0067, RN-136) (ee919d3e)
-- **web**: botão volta ao projeto e promoção de história inline no fio (b9add0ea)
-- **web**: handoff aceito inline no fio, com link do PO pro Backlog (d53ac38e)
-- **engine,api,web**: botão Parar cancela de verdade o turno do agente (RN-121) (55979ca1)
-- **web**: aba Executores separa dev agent e QA do time misturado (76e3b56c)
-- **web**: árvore do time abre os 5 últimos e expande detalhe de execução (8f1e12c8)
-- **web**: permite renomear sessão direto da lista do projeto (da8ccde3)
-- **api,engine,web**: desativa o Psicólogo globalmente por decisão do usuário (9016a3d3)
-- **engine,api,web**: a Anamnese pode ser pausada globalmente (100dc51d)
-- **web**: lista navegável de PRs no painel de diff da aba Code (fedaef2d)
-- **web**: dropdown rico de branches na aba Code (baf8edd8)
-- **web**: blame no editor da aba Code, sob demanda (RN-113) (7ffe472b)
-- **api**: fundação de blame, PRs navegáveis e branch rica na aba Code (11594f05)
-- **api,engine**: a pasta do workspace do projeto ganha nome legível (4cda77a9)
-- **api,engine,web**: o socket da sessão exige ticket opaco de uso único (fc0b24d4)
-- **docker**: PROJECT_WORKSPACES_HOST_DIR aponta o workspace para pasta real (36c1690c)
-- **web**: a aba Code, só leitura — explorador, busca, editor com realce de sintaxe e diff de PR (9cea55e4)
-- **api,web**: modelo de LLM vira padrão herdável por área (bd7f69a7)
-- **api,engine**: container por projeto — o Arquiteto decide a imagem, a fronteira deixa de ser só política (7014d722)
-- **web**: o tipo da sessão vira lugar — abas Criativo e Chat (0dde807a)
-- **api,web**: o mesmo gasto para duas audiências (506f39b9)
-- **web,api**: Atividades pagina por cursor e o sino ordena do mais recente (4d8a7b8a)
-- **api,web**: a sessão nasce com tipo, ganha nome e uma saída (a42cb53f)
-- **web**: toda aprovação diz o que faz, e o payload cru nasce colapsado (d247cd85)
-- **api**: a superfície de leitura de código da aba Code, contida e com orçamento (55ace0cb)
-- **api,shared**: arvore e diff de PR no contrato de git, provados pela suite (2c8ea308)
-
-### Correções
-
-- **engine,docs**: mix format + regenera inventário de eventos (dd3a52fa)
-- **business-rules**: corrige link relativo do ADR 0069 na RN-161 (200af4f5)
-- **web**: corrige ordenação da timeline, indicador de 5s e aviso do PO (f88589fe)
-- **api,web**: badge da sidebar mostra aprovações pendentes, não atividade não lida (RN-151) (28ae04c6)
-- **engine**: search_workspace trunca por quantidade de hits e por bytes (RN-150) (479eb3de)
-- **api**: CodeQL reconhece a sanitização de segmento de URL interna (RN-128) (acadfe46)
-- **api**: amplia allowlist de terminal do dev agent para subcomandos git de leitura (c13f0100)
-- **engine,web**: Criativo recusa handoff ao PO sem regra de negócio nenhuma (7f0a4b6d)
-- **engine**: read_file trunca conteúdo grande, evitando 413 do provider (2cb84851)
-- **web**: aba Criativo não lista mais a sessão de execução vigente (39390472)
-- **api,web**: aba Executores lê a sessão de execução vigente, não a mais recente do projeto (ba9f7dfa)
-- **web**: prioridade do handoff pro Dev Lead, ativação inline e colapso por agente no fio (d9ebaae2)
-- **api**: ativar execução fecha a sessão de chat que originou o pedido (7947cc83)
-- **api**: sessão do bootstrap de Git nasce com nome default "git-bootstrap" (34139d19)
-- **web**: três corridas confirmadas ao vivo em SessionPage.tsx (RN-129) (ec35d232)
-- **web**: write_file mostra corpo próprio na aprovação, e payload vazio vira mensagem clara (04c1f7ea)
-- **engine**: ToolLoop nunca grava agent.response vazio, estende RN-059 (2833f326)
-- **api**: valida query array e segmento de URL interna (CodeQL crítico) (ac55537a)
-- **ci**: libera git log/blame/show pro claude-review não travar em permissão (336e03b6)
-- **docs**: regenera events.md com o arquivo certo pro agent.done/status (ec66743d)
-- **api,web**: sessão de chat consistente — modelo, duplicata, ideação e roteamento (5762dc39)
-- **api**: heartbeat não fecha sessão com agente em turno após handoff (a2e75275)
-- **web**: pista no convite perdido e indicador de agente trabalhando (5de8c6db)
-- **web**: marca "Brabo" da sidebar navega para o dashboard (8aa31f02)
-- **engine**: perform/1 do scheduler da Anamnese confere a flag global (ef07468c)
-- **web**: reconcilia turno do agente mesmo sem agent.done do canal (dbeddc97)
-- **api**: lint (prettier + type assertion desnecessária) e docs vale-revisar (29fba8ea)
-- **api,engine**: os quatro segredos irmãos do GIT_OAUTH_STATE_SECRET também recusam o default em produção (0df9047c)
-- **docker**: o smoke manda o kind, que a rota de sessão passou a exigir (7a9c5c0c)
-- **web**: o typecheck do CI inclui os testes, e o do editor não (069325db)
-- **api**: a área de agentes nasce com o projeto, e o backfill alcança os antigos (5ccbb861)
-
-### Refatorações
-
-- **web**: o teto do nome da sessão vive num lugar só (87c4530b)
-- **web**: o metadado truncado da sessão fica legível no hover (133fd31d)
-- **web**: Aprovações e Configurações conforme o handoff (6b7cb551)
-- **web**: Projeto e Sessão conforme o handoff de design (b1ba2a71)
-- **web,design**: login e lista de projetos conforme o handoff (f96f7a63)
-- **web**: rótulo de sessão vira helper e os cinco inline migram (00b4529a)
-- **web**: Disclosure no design system, sem migrar call site nenhum (70b76829)
-- **web**: as abas do projeto derivam de um registro só (2a699882)
-
-### Documentação
-
-- **business-rules**: RN-162 — perguntas estruturadas do Criativo (PR #292) (eafccac2)
-- **internal-api**: documenta que RN-162 reusa /sessions/:id/agent/message (345bbe0e)
-- **business-rules**: RN-160 e RN-161 — gate do Arquiteto e fusão handoff/execução (PR #290) (423d38bc)
-- **business-rules**: RN-158 e RN-159 — markdown e artefatos gerados (PR #288) (cb1f468e)
-- **business-rules**: RN-155 a RN-157 — ordenação da timeline (PR #286) (93f550c0)
-- **changelog**: consolida a onda 1 do exp003 (5 PRs) (87f473e3)
-- **security-surface,internal-api**: documenta a curinga do agent_autonomy de verdade (6a706576)
-- **business-rules**: corrige colisão de numeração RN-141 -> RN-144 (b85a0e21)
-- **business-rules**: corrige colisão de numeração RN-141 -> RN-142 (ad7273c1)
-- **business-rules**: corrige colisão de numeração RN-141 -> RN-143 (f353770a)
-- **api**: documenta os subcomandos git de leitura na allowlist do dev agent (6281cd1e)
-- **business-rules**: corrige colisão de numeração RN-136 -> RN-139 (c2ec03a1)
-- **business-rules**: corrige colisão de numeração RN-136 -> RN-140 (12c0f3d8)
-- **security-surface,internal-api**: documenta originSessionId da ativação de execução (4f5b7696)
-- **business-rules**: corrige colisão de numeração RN-129 -> RN-131 (9166452d)
-- **web**: documenta write_file no corpo próprio da aprovação (RN-096) (fcf19253)
-- **engine,api**: documenta a rota interna de cancelamento (RN-121) (b326001c)
-- **business-rules**: renumera RN-114 da Anamnese para RN-115 (edc96dab)
-- **business-rules**: renumera RN-110 dos segredos irmãos para RN-114 (b7f1d34c)
-- **runbook,getting-started**: dono root no bind mount, e como migrar workspaces existentes (7919e897)
-- **architecture**: a aba Code entra na descricao do contrato web-api (e577700f)
-- contagem de ADRs pos-merge de origin/dev (64) e manifesto regenerado (86ae1043)
-- **reference**: a cascata de binding ganha área, na página de providers (b3c026de)
-- **runbook**: o smoke cria sessão consultiva, e por que é ela que prova a rota (63d1883a)
-- **referencia**: a trava do tipo de sessão na api interna e nos artefatos (3864a4a1)
-- **architecture**: lib/aprovacoes.ts e a união ActionType que envelhece (4b604731)
-- **validacao**: 9ª e 10ª execuções, as de dois módulos, e o achado AF (3426928c)
-- **changelog**: a entrada vai para a secao Unreleased que ja existia (13b00324)
-- **business-rules,architecture**: as quatro capabilities de git na RN-028 (be746d7d)
-- **claude**: o programa 16-26, e o CLAUDE.md na definição de pronto (023b7940)
-- **claude**: o estado das fases depois da 15, e o que o uso ensinou (24cbb48c)
-- **changelog**: v2.5.1 (0e7072d3)
-
-### Testes
-
-- **web**: a sigla do conector conferida na tela, não na função (b806d810)
-
-### CI
-
-- recarrega o corpo da PR (a dispensa do drift estava entre crases, de novo) (7a91b96d)
-- recarrega o corpo da PR (a dispensa do drift estava entre crases) (fa408874)
-
-### Manutenção
-
-- **web**: árvore de Executores porta o skin de bolha do chat do Criativo (56b84620)
-- **docs**: renumera RN-123 do handoff inline pra RN-125 (e4fbeca5)
-- **docs**: desfaz colisão de RN-118 entre PR #247 e #248 (40332299)
-- **docs**: renumera RN-121 do cancelamento de turno para RN-122 (9162f8cf)
-- **design**: o handoff entra no repo e os tokens fecham contra ele (05e02860)
-
-## Unreleased
 
 ### Novidades
 
@@ -4881,6 +4731,41 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   503 (distinto do 409 de "projeto sem sessão"); o botão correspondente nas
   Configurações do projeto descobre o estado no primeiro clique e mantém a
   explicação visível na tela
+
+- **engine,api,web**: Criativo pode fazer perguntas estruturadas (RN-162) (14b2636f)
+- **web**: gate de história promovida no botão do Arquiteto e fusão condicional handoff+execução (RN-160, RN-161) (a5433682)
+- **web**: markdown leve no chat com highlight (RN-158) e artefatos gerados agrupados por agente (RN-159) (f3bc4e03)
+- **api,web**: "auto mode" no ApprovalCard — autonomia pra qualquer ação de um agente (RN-153/154) (4cdb5e8e)
+- **code**: vincula branch de dev agent ao módulo dono (RN-152) (ee870790)
+- **api,engine,web**: diagrama C4 do Arquiteto na Visão Geral do projeto (61fc8af3)
+- **web**: carrossel de histórias com promoção pendente no fio do PO (80ad9003)
+- **web,api,engine**: botão de prontidão do Arquiteto, modelo no agent.response e ícone no grupo colapsado (ee338c40)
+- **engine**: gate sobrevive a restart no meio do ciclo (ADR 0067, RN-136) (ee919d3e)
+- **web**: botão volta ao projeto e promoção de história inline no fio (b9add0ea)
+- **web**: handoff aceito inline no fio, com link do PO pro Backlog (d53ac38e)
+- **engine,api,web**: botão Parar cancela de verdade o turno do agente (RN-121) (55979ca1)
+- **web**: aba Executores separa dev agent e QA do time misturado (76e3b56c)
+- **web**: árvore do time abre os 5 últimos e expande detalhe de execução (8f1e12c8)
+- **web**: permite renomear sessão direto da lista do projeto (da8ccde3)
+- **api,engine,web**: desativa o Psicólogo globalmente por decisão do usuário (9016a3d3)
+- **engine,api,web**: a Anamnese pode ser pausada globalmente (100dc51d)
+- **web**: lista navegável de PRs no painel de diff da aba Code (fedaef2d)
+- **web**: dropdown rico de branches na aba Code (baf8edd8)
+- **web**: blame no editor da aba Code, sob demanda (RN-113) (7ffe472b)
+- **api**: fundação de blame, PRs navegáveis e branch rica na aba Code (11594f05)
+- **api,engine**: a pasta do workspace do projeto ganha nome legível (4cda77a9)
+- **api,engine,web**: o socket da sessão exige ticket opaco de uso único (fc0b24d4)
+- **docker**: PROJECT_WORKSPACES_HOST_DIR aponta o workspace para pasta real (36c1690c)
+- **web**: a aba Code, só leitura — explorador, busca, editor com realce de sintaxe e diff de PR (9cea55e4)
+- **api,web**: modelo de LLM vira padrão herdável por área (bd7f69a7)
+- **api,engine**: container por projeto — o Arquiteto decide a imagem, a fronteira deixa de ser só política (7014d722)
+- **web**: o tipo da sessão vira lugar — abas Criativo e Chat (0dde807a)
+- **api,web**: o mesmo gasto para duas audiências (506f39b9)
+- **web,api**: Atividades pagina por cursor e o sino ordena do mais recente (4d8a7b8a)
+- **api,web**: a sessão nasce com tipo, ganha nome e uma saída (a42cb53f)
+- **web**: toda aprovação diz o que faz, e o payload cru nasce colapsado (d247cd85)
+- **api**: a superfície de leitura de código da aba Code, contida e com orçamento (55ace0cb)
+- **api,shared**: arvore e diff de PR no contrato de git, provados pela suite (2c8ea308)
 
 ### Correções
 
@@ -5118,8 +5003,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `READ_FILE_MAX_BYTES` (default 32 KiB), com marca dizendo o arquivo e os
   dois tamanhos (RN-141)
 
-### Correções
-
 - **engine,web**: confirmar prontidão ("Estou pronto para produzir") numa
   conversa sem NENHUMA regra de negócio capturada criava o `product_brief`
   e oferecia o handoff ao PO mesmo assim (RN-142). `CriativoServer` agora
@@ -5129,6 +5012,42 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   (mesmo padrão do cancelamento, RN-122). O botão nasce `disabled` com a
   dica do porquê, lendo a mesma fonte que já alimenta o painel "Regras de
   negócio"
+
+- **web**: Timeline da sessão: ordenação de cards de aprovação misturados
+  com eventos (RN-155), texto do indicador de espera de 5s (RN-156), e
+  formato de aviso da criação de épico/história pelo PO (RN-157)
+
+- **engine,docs**: mix format + regenera inventário de eventos (dd3a52fa)
+- **business-rules**: corrige link relativo do ADR 0069 na RN-161 (200af4f5)
+- **web**: corrige ordenação da timeline, indicador de 5s e aviso do PO (f88589fe)
+- **api,web**: badge da sidebar mostra aprovações pendentes, não atividade não lida (RN-151) (28ae04c6)
+- **engine**: search_workspace trunca por quantidade de hits e por bytes (RN-150) (479eb3de)
+- **api**: CodeQL reconhece a sanitização de segmento de URL interna (RN-128) (acadfe46)
+- **api**: amplia allowlist de terminal do dev agent para subcomandos git de leitura (c13f0100)
+- **engine,web**: Criativo recusa handoff ao PO sem regra de negócio nenhuma (7f0a4b6d)
+- **engine**: read_file trunca conteúdo grande, evitando 413 do provider (2cb84851)
+- **web**: aba Criativo não lista mais a sessão de execução vigente (39390472)
+- **api,web**: aba Executores lê a sessão de execução vigente, não a mais recente do projeto (ba9f7dfa)
+- **web**: prioridade do handoff pro Dev Lead, ativação inline e colapso por agente no fio (d9ebaae2)
+- **api**: ativar execução fecha a sessão de chat que originou o pedido (7947cc83)
+- **api**: sessão do bootstrap de Git nasce com nome default "git-bootstrap" (34139d19)
+- **web**: três corridas confirmadas ao vivo em SessionPage.tsx (RN-129) (ec35d232)
+- **web**: write_file mostra corpo próprio na aprovação, e payload vazio vira mensagem clara (04c1f7ea)
+- **engine**: ToolLoop nunca grava agent.response vazio, estende RN-059 (2833f326)
+- **api**: valida query array e segmento de URL interna (CodeQL crítico) (ac55537a)
+- **ci**: libera git log/blame/show pro claude-review não travar em permissão (336e03b6)
+- **docs**: regenera events.md com o arquivo certo pro agent.done/status (ec66743d)
+- **api,web**: sessão de chat consistente — modelo, duplicata, ideação e roteamento (5762dc39)
+- **api**: heartbeat não fecha sessão com agente em turno após handoff (a2e75275)
+- **web**: pista no convite perdido e indicador de agente trabalhando (5de8c6db)
+- **web**: marca "Brabo" da sidebar navega para o dashboard (8aa31f02)
+- **engine**: perform/1 do scheduler da Anamnese confere a flag global (ef07468c)
+- **web**: reconcilia turno do agente mesmo sem agent.done do canal (dbeddc97)
+- **api**: lint (prettier + type assertion desnecessária) e docs vale-revisar (29fba8ea)
+- **api,engine**: os quatro segredos irmãos do GIT_OAUTH_STATE_SECRET também recusam o default em produção (0df9047c)
+- **docker**: o smoke manda o kind, que a rota de sessão passou a exigir (7a9c5c0c)
+- **web**: o typecheck do CI inclui os testes, e o do editor não (069325db)
+- **api**: a área de agentes nasce com o projeto, e o backfill alcança os antigos (5ccbb861)
 
 ### Refatorações
 
@@ -5142,11 +5061,71 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   estrutura de árvore (ramo por agente, marco por linha) e o comportamento
   de expandir/colapsar não mudam
 
-### Correções
+- **web**: o teto do nome da sessão vive num lugar só (87c4530b)
+- **web**: o metadado truncado da sessão fica legível no hover (133fd31d)
+- **web**: Aprovações e Configurações conforme o handoff (6b7cb551)
+- **web**: Projeto e Sessão conforme o handoff de design (b1ba2a71)
+- **web,design**: login e lista de projetos conforme o handoff (f96f7a63)
+- **web**: rótulo de sessão vira helper e os cinco inline migram (00b4529a)
+- **web**: Disclosure no design system, sem migrar call site nenhum (70b76829)
+- **web**: as abas do projeto derivam de um registro só (2a699882)
 
-- **web**: Timeline da sessão: ordenação de cards de aprovação misturados
-  com eventos (RN-155), texto do indicador de espera de 5s (RN-156), e
-  formato de aviso da criação de épico/história pelo PO (RN-157)
+### ⚠ Mudanças incompatíveis
+
+- registra a quebra que o container por projeto introduz (54408462)
+
+### Documentação
+
+- **business-rules**: RN-162 — perguntas estruturadas do Criativo (PR #292) (eafccac2)
+- **internal-api**: documenta que RN-162 reusa /sessions/:id/agent/message (345bbe0e)
+- **business-rules**: RN-160 e RN-161 — gate do Arquiteto e fusão handoff/execução (PR #290) (423d38bc)
+- **business-rules**: RN-158 e RN-159 — markdown e artefatos gerados (PR #288) (cb1f468e)
+- **business-rules**: RN-155 a RN-157 — ordenação da timeline (PR #286) (93f550c0)
+- **changelog**: consolida a onda 1 do exp003 (5 PRs) (87f473e3)
+- **security-surface,internal-api**: documenta a curinga do agent_autonomy de verdade (6a706576)
+- **business-rules**: corrige colisão de numeração RN-141 -> RN-144 (b85a0e21)
+- **business-rules**: corrige colisão de numeração RN-141 -> RN-142 (ad7273c1)
+- **business-rules**: corrige colisão de numeração RN-141 -> RN-143 (f353770a)
+- **api**: documenta os subcomandos git de leitura na allowlist do dev agent (6281cd1e)
+- **business-rules**: corrige colisão de numeração RN-136 -> RN-139 (c2ec03a1)
+- **business-rules**: corrige colisão de numeração RN-136 -> RN-140 (12c0f3d8)
+- **security-surface,internal-api**: documenta originSessionId da ativação de execução (4f5b7696)
+- **business-rules**: corrige colisão de numeração RN-129 -> RN-131 (9166452d)
+- **web**: documenta write_file no corpo próprio da aprovação (RN-096) (fcf19253)
+- **engine,api**: documenta a rota interna de cancelamento (RN-121) (b326001c)
+- **business-rules**: renumera RN-114 da Anamnese para RN-115 (edc96dab)
+- **business-rules**: renumera RN-110 dos segredos irmãos para RN-114 (b7f1d34c)
+- **runbook,getting-started**: dono root no bind mount, e como migrar workspaces existentes (7919e897)
+- **architecture**: a aba Code entra na descricao do contrato web-api (e577700f)
+- contagem de ADRs pos-merge de origin/dev (64) e manifesto regenerado (86ae1043)
+- **reference**: a cascata de binding ganha área, na página de providers (b3c026de)
+- **runbook**: o smoke cria sessão consultiva, e por que é ela que prova a rota (63d1883a)
+- **referencia**: a trava do tipo de sessão na api interna e nos artefatos (3864a4a1)
+- **architecture**: lib/aprovacoes.ts e a união ActionType que envelhece (4b604731)
+- **validacao**: 9ª e 10ª execuções, as de dois módulos, e o achado AF (3426928c)
+- **changelog**: a entrada vai para a secao Unreleased que ja existia (13b00324)
+- **business-rules,architecture**: as quatro capabilities de git na RN-028 (be746d7d)
+- **claude**: o programa 16-26, e o CLAUDE.md na definição de pronto (023b7940)
+- **claude**: o estado das fases depois da 15, e o que o uso ensinou (24cbb48c)
+- **changelog**: v2.5.1 (0e7072d3)
+
+### Testes
+
+- **web**: a sigla do conector conferida na tela, não na função (b806d810)
+
+### CI
+
+- recarrega o corpo da PR (a dispensa do drift estava entre crases, de novo) (7a91b96d)
+- recarrega o corpo da PR (a dispensa do drift estava entre crases) (fa408874)
+
+### Manutenção
+
+- **web**: árvore de Executores porta o skin de bolha do chat do Criativo (56b84620)
+- **docs**: renumera RN-123 do handoff inline pra RN-125 (e4fbeca5)
+- **docs**: desfaz colisão de RN-118 entre PR #247 e #248 (40332299)
+- **docs**: renumera RN-121 do cancelamento de turno para RN-122 (9162f8cf)
+- **design**: o handoff entra no repo e os tokens fecham contra ele (05e02860)
+
 
 ## v2.5.1 — 2026-08-08
 
@@ -5161,58 +5140,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **branching**: a ordem do escape da célula, na política (06e3d61c)
 - **changelog**: v2.5.0 (b3cc60e6)
 
+
 ## v2.5.0 — 2026-08-08
-
-### Novidades
-
-- **engine,api**: o Dev Lead existe, e e o unico endereco externo da execucao (ba62b6eb)
-- **api,engine**: a Anamnese propoe subir o teto, e gastar nunca se auto-aprova (73fb8426)
-- **api,web**: o teto de paralelismo configuravel, e enfim consultado (44cdc2f1)
-- **api**: o lead decide o paralelismo, e acima do teto você autoriza (daa3ab3f)
-- **api,web**: o painel deriva a esteira do registro de gates (d55ccd7d)
-
-### Correções
-
-- **api,docs**: lint da api e o contrato web na arquitetura (87a2d701)
-- **web**: renumera as regras para RN-088 e RN-089 (24c168b7)
-- **web**: 429 virava tela branca, e a app respondia com mais tráfego (7dfdd8e6)
-- **engine**: a corrida do worktree entre dois dev agents (58be13d1)
-- **validacao**: a assercao afirma a REGRA, e o Arquiteto decide os modulos (93e4e753)
-- **validacao**: --historias nao chegava ao resto do script (a214f593)
-- **engine**: o plano do Dev Lead encerra o turno (9bd97241)
-- mix format no tool_loop e o inventario de variaveis regenerado (9d34d4da)
-- **engine**: o teto de iteracoes e por TIPO de agente (fb3a1975)
-
-### Desempenho
-
-- **web,api**: o sino manda onde parou de ler, e pergunta uma vez só (0eeb87be)
-- **web,api**: o dashboard lê o workspace, não um projeto de cada vez (a3cee5ab)
-
-### Documentação
-
-- registra o achado AE e corrige a contabilidade do backlog (6663209c)
-- CLAUDE.md com o estado real das fases 14 e 15 (97fa990a)
-- a rota de handoff ao Dev Lead na api interna (4ab8e3a8)
-- regenera a referencia OpenAPI (43042a88)
-- as rotas de area e a assimetria do parallelize (f77bb229)
-- **runbook**: o sintoma de teto de iteracoes baixo demais (18ee7233)
-- a rota publica de gates e a RN-084 da esteira derivada (88e68500)
-- architecture.md registra agent_areas no modelo de dados (04bd39b9)
-- permissions.md documenta o tipo de ação parallelize (86e4090b)
-- CLAUDE.md com o estado real das fases depois da v2.4.0 (457af4f7)
-- **changelog**: v2.4.0 (d266af6e)
-
-### Testes
-
-- **validacao**: --modulos 2, para o paralelismo FAZER sentido (510c5855)
-- **validacao**: duas historias no mesmo modulo, e o teto exercitado (80287a06)
-- **engine**: restaurar env com nil apagava o default (de0ab417)
-
-### Manutenção
-
-- **deps**: fecha 5 alertas do Dependabot com overrides escopados (50efe887)
-
-## Unreleased
 
 ### Novidades
 
@@ -5292,6 +5221,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   defeito dos 3.824 req/min do dashboard. A credencial gasta é a do **owner**
   (RN-058/RN-082), como na escrita. Ver [ADR
   0060](docs/adr/0060-superficie-de-leitura-de-codigo.md).
+
+- **engine,api**: o Dev Lead existe, e e o unico endereco externo da execucao (ba62b6eb)
+- **api,engine**: a Anamnese propoe subir o teto, e gastar nunca se auto-aprova (73fb8426)
+- **api,web**: o teto de paralelismo configuravel, e enfim consultado (44cdc2f1)
+- **api**: o lead decide o paralelismo, e acima do teto você autoriza (daa3ab3f)
+- **api,web**: o painel deriva a esteira do registro de gates (d55ccd7d)
 
 ### Correções
 
@@ -5397,6 +5332,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   jsdom não mede layout. Junto, dois alvos de clique que estavam abaixo do piso
   de 24px da WCAG 2.2 AA (os chips de evidência da hipótese e o de diff no
   histórico de instruções)
+
+- **api,docs**: lint da api e o contrato web na arquitetura (87a2d701)
+- **web**: renumera as regras para RN-088 e RN-089 (24c168b7)
+- **web**: 429 virava tela branca, e a app respondia com mais tráfego (7dfdd8e6)
+- **engine**: a corrida do worktree entre dois dev agents (58be13d1)
+- **validacao**: a assercao afirma a REGRA, e o Arquiteto decide os modulos (93e4e753)
+- **validacao**: --historias nao chegava ao resto do script (a214f593)
+- **engine**: o plano do Dev Lead encerra o turno (9bd97241)
+- mix format no tool_loop e o inventario de variaveis regenerado (9d34d4da)
+- **engine**: o teto de iteracoes e por TIPO de agente (fb3a1975)
+
 ### Refatorações
 
 - **web**: as telas de **Projeto** e **Sessão** passam a seguir o handoff de
@@ -5485,6 +5431,34 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   não pintura, e seguem declaradas: o "Continuar com GitHub" do login e o
   indicador "N agentes online"
 
+- **deps**: fecha 5 alertas do Dependabot com overrides escopados (50efe887)
+
+### Desempenho
+
+- **web,api**: o sino manda onde parou de ler, e pergunta uma vez só (0eeb87be)
+- **web,api**: o dashboard lê o workspace, não um projeto de cada vez (a3cee5ab)
+
+### Documentação
+
+- registra o achado AE e corrige a contabilidade do backlog (6663209c)
+- CLAUDE.md com o estado real das fases 14 e 15 (97fa990a)
+- a rota de handoff ao Dev Lead na api interna (4ab8e3a8)
+- regenera a referencia OpenAPI (43042a88)
+- as rotas de area e a assimetria do parallelize (f77bb229)
+- **runbook**: o sintoma de teto de iteracoes baixo demais (18ee7233)
+- a rota publica de gates e a RN-084 da esteira derivada (88e68500)
+- architecture.md registra agent_areas no modelo de dados (04bd39b9)
+- permissions.md documenta o tipo de ação parallelize (86e4090b)
+- CLAUDE.md com o estado real das fases depois da v2.4.0 (457af4f7)
+- **changelog**: v2.4.0 (d266af6e)
+
+### Testes
+
+- **validacao**: --modulos 2, para o paralelismo FAZER sentido (510c5855)
+- **validacao**: duas historias no mesmo modulo, e o teto exercitado (80287a06)
+- **engine**: restaurar env com nil apagava o default (de0ab417)
+
+
 ## v2.4.0 — 2026-08-07
 
 ### Novidades
@@ -5555,6 +5529,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Documentação
 
 - **changelog**: v2.3.0 (6f6f5be4)
+
 
 ## v2.3.0 — 2026-08-07
 
@@ -5661,6 +5636,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - os achados da execução real em docs/, e quatro deles corrigidos (4dd7a073)
 - **engine,docs**: formato do Elixir e as três docs que o drift cobrava (e01ee61f)
 - **ci**: o release passa a escrever a versão do README junto do CHANGELOG (41f02548)
+
 
 ## v2.2.0 — 2026-08-04
 
@@ -5772,6 +5748,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **design-sync**: re-sync do design system — 66 componentes no Claude Design (3c9b6ad8)
 
+
 ## v2.1.0 — 2026-08-03
 
 ### Novidades
@@ -5791,28 +5768,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **changelog**: v2.0.0 (9336246)
 
+
 ## v2.0.0 — 2026-08-03
-
-### ⚠ Mudanças incompatíveis
-
-- **api,web**: a curadoria de modelo passa a ser por workspace (aae747d)
-
-### Novidades
-
-- **api**: Ollama e Anthropic descobrem o próprio catálogo (3b8a54e)
-
-### Correções
-
-- **api**: o preço da Vultr é oficial e nenhuma troca de preço escapa da auditoria (acf0ad1)
-- **ci**: PR de workflow nascia sem checks, e quebra não chegava ao changelog (44dec9b)
-- **scripts,ci**: o CHANGELOG e as notas de release estavam vazios (9976b70)
-
-### Documentação
-
-- **api**: a rota interna de sync não é "do workspace inteiro" (0962c05)
-- **branching**: o CHANGELOG volta por PR depois do release (fc570b6)
-
-## Unreleased
 
 ### Novidades
 
@@ -5889,97 +5846,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   viajar dentro da imagem de produção — sem isso a rota funcionaria em
   desenvolvimento e responderia erro só em produção, porque `docs/` inteiro é
   ignorado no build
-
-### Correções
-
-- **web**: erro de carregamento parou de virar **tela branca**. Abrir um projeto
-  com a api limitando por `429` devolvia a área principal inteiramente vazia —
-  sem mensagem, sem estado de erro, sem esqueleto —, porque a tela testava
-  `if (!project) return null` e com isso tratava "a api recusou" e "ainda não
-  chegou" como a mesma coisa. Agora a tela DIZ o que houve, com a frase que a
-  api mandou (é ela que sabe a diferença entre "tente em instantes" e "você não
-  tem acesso"), o `trace_id` para quem for investigar e um botão de tentar de
-  novo. No dashboard o defeito era pior que branco: `!projects` também era
-  verdadeiro no erro, então a tela convidava a **criar o primeiro projeto** de
-  um workspace que podia ter vinte. A barra lateral também fala, com o texto
-  cabendo nos 248px que ela tem (RN-088)
-- **web**: a app parou de responder ao rate limit da api com **mais tráfego**.
-  Uma sessão real acumulou 1128 erros `429` num console só: o TanStack Query
-  retentava três vezes cada falha e os ~25 polls de 3 a 5 segundos seguiam
-  batendo na mesma porta, num laço que impedia a janela deslizante do limite de
-  se refazer. Agora 4xx não se retenta — 429 é literalmente o servidor pedindo
-  para parar, e 401 já renovou a sessão por dentro — e todo poll para quando a
-  query erra, voltando sozinho no foco da janela, na remontagem da tela ou no
-  botão de tentar de novo. 5xx e falha de rede continuam com as três
-  tentativas, que ali é a reação certa
-- **web**: projetos de **mesmo nome** deixam de ser indistinguíveis na barra
-  lateral. Uma execução de validação criou vinte `validacao-real`, e as vinte
-  linhas eram idênticas. Quem repete nome passa a mostrar o id abreviado e a
-  data de criação, que já vinham no payload; nome único não ganha legenda
-  nenhuma, porque desempate em toda linha seria ruído no lugar com menos espaço
-  da tela
-- **engine**: o Psicólogo parou de analisar sessão **sem nada a analisar**. Uma
-  sessão cujo log inteiro era provisionamento de repositório passava pelo
-  critério de tamanho, ganhava a análise, e o modelo — sem evento algum para
-  citar — inventava `seq` inexistentes até a validação de evidência rejeitar e
-  ele desistir, com o orçamento já gasto. A contagem que decide se vale a pena
-  agora desconta os passos de máquina do bootstrap e o rastro que os próprios
-  analistas deixam na sessão: contar o turno anterior do Psicólogo fazia uma
-  sessão vazia parecer povoada a partir da primeira análise, e cada retentativa
-  a enchia mais. Não havendo material, a análise não roda e o desfecho fica no
-  log como `psychologist.analysis_skipped` — inclusive no reprocessamento
-  manual, onde quem clicou recebe o motivo em vez de uma hipótese inventada
-
-- **engine**: regra de negócio com título já registrado **no projeto** passa a
-  ser recusada na emissão. Rodar o Criativo duas vezes deixava as mesmas regras
-  duplicadas, metade delas órfãs; como o artefato é um evento de domínio, e
-  evento não é apagado nem editado, a entrada é o único momento em que dá para
-  recusar. A checagem é por projeto e não por sessão, que é onde a duplicata
-  nasce — a segunda rodada abre sessão nova. O erro volta ao modelo, que segue
-  para a próxima regra
-
-- **api**: o PO parou de criar história com título idêntico a uma que já existe
-  no projeto, e passa a **avisar** quando uma história nova não acrescenta
-  cobertura nenhuma — todas as regras que ela cita já estavam cobertas por
-  outra. São respostas diferentes de propósito: título repetido é erro e
-  bloqueia; justificativa repetida é suspeita e vira
-  `backlog.story_overlap_warned`, porque um segundo recorte da mesma regra pode
-  ser legítimo e quem julga isso é o usuário. Sobreposição **semântica** — dois
-  títulos diferentes para o mesmo endpoint — continua passando, e há teste
-  afirmando esse limite em vez de deixá-lo implícito
-
-- **api**: o bootstrap de Gitflow morria no primeiro passo em **todo projeto
-  GitHub novo**. Repositório recém-criado não tem commit nenhum, e aí a Git
-  Data API inteira do GitHub responde `409 Git Repository is empty` — o
-  provider tratava só `404` e nunca alcançava o próprio caminho de "primeiro
-  commit" que já tinha escrito. Agora o commit inicial sai pela Contents API,
-  que é a única que funciona em repo vazio. O backend falso dos testes também
-  foi corrigido: ele respondia `404` onde o GitHub responde `409`, e era por
-  isso que a suite ficava verde enquanto o produto quebrava
-- **web**: o wizard avisa, ao escolher **repositório privado no GitHub**, que o
-  plano gratuito não aceita proteção de branch — antes a limitação só aparecia
-  no último passo do bootstrap, com o repositório já criado e a mensagem crua
-  da API na tela
-
-- **ci**: a PR de changelog que o release abre passa a trazer junto a versão
-  anunciada no `README.md`. Sem isso, o check de versão (novo nesta rodada)
-  reprovaria toda PR de release — que é aberta pelo bot e só toca o CHANGELOG,
-  então nasceria vermelha esperando uma mão humana que a política não prevê
-
-### ⚠ Mudanças incompatíveis
-
-- **api**: `GET /models` deixou de existir. A lista do seletor virou
-  `GET /projects/:projectId/models` porque a curadoria passou a ser **por
-  workspace** (ADR 0049): `models.is_active` era uma coluna para a instalação
-  inteira, e um owner do workspace A ligando um modelo o ligava para o B — com
-  o gasto caindo no orçamento de quem não decidiu nada. O catálogo em si
-  continua global (nome, preço e capabilities são fato do provider); só a
-  decisão "aparece no seletor?" mudou de lugar, para a tabela nova
-  `workspace_models`. A migração `0034` dá a cada workspace existente
-  exatamente o que ele enxergava antes, **antes** de derrubar a coluna. Quem
-  consome a api por fora precisa trocar a rota; a UI já foi junto
-
-### Novidades
 
 - **api,web**: o catálogo passa a saber **quais modelos leem imagem, quais
   geram imagem e quais fazem thinking**, e a tela filtra por isso. O sync nunca
@@ -6077,7 +5943,83 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   hub e não ao fabricante do modelo; nas APIs diretas isso não se repete, já que
   a própria linha diz o provider
 
+- **api**: Ollama e Anthropic descobrem o próprio catálogo (3b8a54e)
+
 ### Correções
+
+- **web**: erro de carregamento parou de virar **tela branca**. Abrir um projeto
+  com a api limitando por `429` devolvia a área principal inteiramente vazia —
+  sem mensagem, sem estado de erro, sem esqueleto —, porque a tela testava
+  `if (!project) return null` e com isso tratava "a api recusou" e "ainda não
+  chegou" como a mesma coisa. Agora a tela DIZ o que houve, com a frase que a
+  api mandou (é ela que sabe a diferença entre "tente em instantes" e "você não
+  tem acesso"), o `trace_id` para quem for investigar e um botão de tentar de
+  novo. No dashboard o defeito era pior que branco: `!projects` também era
+  verdadeiro no erro, então a tela convidava a **criar o primeiro projeto** de
+  um workspace que podia ter vinte. A barra lateral também fala, com o texto
+  cabendo nos 248px que ela tem (RN-088)
+- **web**: a app parou de responder ao rate limit da api com **mais tráfego**.
+  Uma sessão real acumulou 1128 erros `429` num console só: o TanStack Query
+  retentava três vezes cada falha e os ~25 polls de 3 a 5 segundos seguiam
+  batendo na mesma porta, num laço que impedia a janela deslizante do limite de
+  se refazer. Agora 4xx não se retenta — 429 é literalmente o servidor pedindo
+  para parar, e 401 já renovou a sessão por dentro — e todo poll para quando a
+  query erra, voltando sozinho no foco da janela, na remontagem da tela ou no
+  botão de tentar de novo. 5xx e falha de rede continuam com as três
+  tentativas, que ali é a reação certa
+- **web**: projetos de **mesmo nome** deixam de ser indistinguíveis na barra
+  lateral. Uma execução de validação criou vinte `validacao-real`, e as vinte
+  linhas eram idênticas. Quem repete nome passa a mostrar o id abreviado e a
+  data de criação, que já vinham no payload; nome único não ganha legenda
+  nenhuma, porque desempate em toda linha seria ruído no lugar com menos espaço
+  da tela
+- **engine**: o Psicólogo parou de analisar sessão **sem nada a analisar**. Uma
+  sessão cujo log inteiro era provisionamento de repositório passava pelo
+  critério de tamanho, ganhava a análise, e o modelo — sem evento algum para
+  citar — inventava `seq` inexistentes até a validação de evidência rejeitar e
+  ele desistir, com o orçamento já gasto. A contagem que decide se vale a pena
+  agora desconta os passos de máquina do bootstrap e o rastro que os próprios
+  analistas deixam na sessão: contar o turno anterior do Psicólogo fazia uma
+  sessão vazia parecer povoada a partir da primeira análise, e cada retentativa
+  a enchia mais. Não havendo material, a análise não roda e o desfecho fica no
+  log como `psychologist.analysis_skipped` — inclusive no reprocessamento
+  manual, onde quem clicou recebe o motivo em vez de uma hipótese inventada
+
+- **engine**: regra de negócio com título já registrado **no projeto** passa a
+  ser recusada na emissão. Rodar o Criativo duas vezes deixava as mesmas regras
+  duplicadas, metade delas órfãs; como o artefato é um evento de domínio, e
+  evento não é apagado nem editado, a entrada é o único momento em que dá para
+  recusar. A checagem é por projeto e não por sessão, que é onde a duplicata
+  nasce — a segunda rodada abre sessão nova. O erro volta ao modelo, que segue
+  para a próxima regra
+
+- **api**: o PO parou de criar história com título idêntico a uma que já existe
+  no projeto, e passa a **avisar** quando uma história nova não acrescenta
+  cobertura nenhuma — todas as regras que ela cita já estavam cobertas por
+  outra. São respostas diferentes de propósito: título repetido é erro e
+  bloqueia; justificativa repetida é suspeita e vira
+  `backlog.story_overlap_warned`, porque um segundo recorte da mesma regra pode
+  ser legítimo e quem julga isso é o usuário. Sobreposição **semântica** — dois
+  títulos diferentes para o mesmo endpoint — continua passando, e há teste
+  afirmando esse limite em vez de deixá-lo implícito
+
+- **api**: o bootstrap de Gitflow morria no primeiro passo em **todo projeto
+  GitHub novo**. Repositório recém-criado não tem commit nenhum, e aí a Git
+  Data API inteira do GitHub responde `409 Git Repository is empty` — o
+  provider tratava só `404` e nunca alcançava o próprio caminho de "primeiro
+  commit" que já tinha escrito. Agora o commit inicial sai pela Contents API,
+  que é a única que funciona em repo vazio. O backend falso dos testes também
+  foi corrigido: ele respondia `404` onde o GitHub responde `409`, e era por
+  isso que a suite ficava verde enquanto o produto quebrava
+- **web**: o wizard avisa, ao escolher **repositório privado no GitHub**, que o
+  plano gratuito não aceita proteção de branch — antes a limitação só aparecia
+  no último passo do bootstrap, com o repositório já criado e a mensagem crua
+  da API na tela
+
+- **ci**: a PR de changelog que o release abre passa a trazer junto a versão
+  anunciada no `README.md`. Sem isso, o check de versão (novo nesta rodada)
+  reprovaria toda PR de release — que é aberta pelo bot e só toca o CHANGELOG,
+  então nasceria vermelha esperando uma mão humana que a política não prevê
 
 - **api**: o **refresh de sessão voltou a funcionar no browser** — na prática,
   nunca funcionou. O cookie `brabo_csrf` era gravado com `Path=/auth`, junto do
@@ -6209,6 +6151,31 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   taxonomia** — o `pr-police` reprova. É o engano mais comum, e a doc o
   induzia
 
+- **api**: o preço da Vultr é oficial e nenhuma troca de preço escapa da auditoria (acf0ad1)
+- **ci**: PR de workflow nascia sem checks, e quebra não chegava ao changelog (44dec9b)
+- **scripts,ci**: o CHANGELOG e as notas de release estavam vazios (9976b70)
+
+### ⚠ Mudanças incompatíveis
+
+- **api**: `GET /models` deixou de existir. A lista do seletor virou
+  `GET /projects/:projectId/models` porque a curadoria passou a ser **por
+  workspace** (ADR 0049): `models.is_active` era uma coluna para a instalação
+  inteira, e um owner do workspace A ligando um modelo o ligava para o B — com
+  o gasto caindo no orçamento de quem não decidiu nada. O catálogo em si
+  continua global (nome, preço e capabilities são fato do provider); só a
+  decisão "aparece no seletor?" mudou de lugar, para a tabela nova
+  `workspace_models`. A migração `0034` dá a cada workspace existente
+  exatamente o que ele enxergava antes, **antes** de derrubar a coluna. Quem
+  consome a api por fora precisa trocar a rota; a UI já foi junto
+
+- **api,web**: a curadoria de modelo passa a ser por workspace (aae747d)
+
+### Documentação
+
+- **api**: a rota interna de sync não é "do workspace inteiro" (0962c05)
+- **branching**: o CHANGELOG volta por PR depois do release (fc570b6)
+
+
 ## v1.4.0 — 2026-08-02
 
 ### Novidades
@@ -6255,6 +6222,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - escopo da FASE 12 no CLAUDE.md, e a 11 fecha no Status (706d48b)
 - runbook cobre a derivação de WEB_ORIGIN a partir de WEB_PORT (09f5098)
 
+
 ## v1.3.0 — 2026-08-01
 
 ### Novidades
@@ -6275,6 +6243,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - runbook de condução da 10b e o texto de entrada da sessão 0 (ed2cd39)
 - CLAUDE.md admite o que as Fases 8 e 9 não entregaram (b999249)
 - missão de dogfooding da Fase 10 e insumos do PO (0e27ecd)
+
 
 ## v1.2.0 — 2026-07-30
 
@@ -6312,17 +6281,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ci**: aceita CVE-2026-56852 no binário do gitleaks, com prazo (c0bd99d)
 - **design-sync**: sincroniza o DS com o Input da Fase 7a (752634a)
 
+
 ## v1.1.2 — 2026-07-28
 
 ### Documentação
 
 - corrige o que a doc afirmava sobre estado que mudou nesta sessão (1055e5e)
 
+
 ## v1.1.1 — 2026-07-27
 
 ### Manutenção
 
 - **ci**: torna a Release republicável e documenta as seis tags órfãs (bb517ee)
+
 
 ## v1.1.0 — 2026-07-27
 
@@ -6339,6 +6311,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **ci**: paraleliza o build da release e conserta o cache do Elixir (13dd7e0)
 
+
 ## v1.0.1 — 2026-07-27
 
 ### Correções
@@ -6353,6 +6326,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Manutenção
 
 - **ci**: fecha os três checks que a FASE 7 deixou vermelhos (5f75f93)
+
 
 ## v1.0.0 — 2026-07-27
 
@@ -6393,6 +6367,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - remove o Keycloak do compose, dos manifests e dos scripts (796e133)
 
+
 ## v0.3.1 — 2026-07-27
 
 ### Correções
@@ -6402,6 +6377,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Documentação
 
 - CI confere as contagens de ADR escritas em prosa (3efb89a)
+
 
 ## v0.3.0 — 2026-07-27
 
@@ -6417,6 +6393,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Documentação
 
 - **pages**: link para o site publicado e um build de site por PR (a05518b)
+
 
 ## v0.2.0 — 2026-07-27
 
@@ -6446,6 +6423,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Manutenção
 
 - **ci**: escada de três degraus e CI sem gatilho de push (#46) (b52bf00)
+
 
 ## v0.1.0 — 2026-07-26
 
