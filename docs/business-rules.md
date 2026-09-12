@@ -11447,17 +11447,17 @@ elo por elo, antes de qualquer linha ser escrita.
 (`runner_readiness.ex:52`) exige container `running` REGISTRADO antes de
 QUALQUER operação de `Engine.Actions.Workspace.RunnerGit` — inclusive o
 `git fetch` autenticado inicial, que sai de `fetch!/3`
-(`runner_git.ex:210`, via `exec/4` em `:280`). A ÚNICA forma de esse registro
+(`runner_git.ex:226`, via `exec/4` em `:288`). A ÚNICA forma de esse registro
 existir num projeto `runner` é o MESMO runner ter subido o próprio container
 ([ADR 0137](adr/0137-o-runner-sobe-o-container-do-projeto.md)), e é esse mesmo
 sucesso que marca `estado.containerAtivo` nele
-(`apps/runner/src/index.ts:764`, em `tratarContainerStart`). Com
+(`apps/runner/src/index.ts:822`, em `tratarContainerStart`). Com
 `containerAtivo` setado, `tratarExec` rota o comando para dentro do container
-(`index.ts:670`–`672`), e a operação `exec` de `packages/docker-port` **não tem
-campo de `env`** — de propósito ([ADR 0130](adr/0130-broker-de-container.md):
+(`index.ts:728`–`730`, e a recusa nova em `:693`), e a operação `exec` de
+`packages/docker-port` **não tem campo de `env`** — de propósito ([ADR 0130](adr/0130-broker-de-container.md):
 sem `-e` livre nenhum). O campo `env` que a RN-507 acrescentou ao par
 `exec`/`exec_result` (`RunnerRouter.exec/5`, `runner_router.ex:50`;
-`ExecMessage.env`, `apps/runner/src/channel.ts:57`) só é aplicado no caminho
+`ExecMessage.env`, `apps/runner/src/channel.ts:62`) só é aplicado no caminho
 HOST, onde `apps/runner/src/exec.ts:94` o MESCLA sobre `process.env`.
 
 Resultado: no instante em que a RN-507 deixa o `fetch` autenticado rodar, o
@@ -11479,7 +11479,7 @@ ser **recusado**, com marca, mensagem e origem.
 metades ao mesmo tempo: que o comando carrega credencial e que ele vai para
 dentro do container. O engine não sabe a segunda, e isso foi MEDIDO:
 `estado.containerAtivo` nasce `null` a cada execução do runner
-(`index.ts:1391`) e só é setado por `tratarContainerStart`, então um container
+(`index.ts:1449`) e só é setado por `tratarContainerStart`, então um container
 `running` REGISTRADO no banco **não implica** container ativo naquele processo
 — um runner reiniciado com o container de pé roteia pro HOST, e ali a
 credencial chega normalmente. Subir a checagem para `RunnerReadiness` ou para
