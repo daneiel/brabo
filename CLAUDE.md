@@ -884,6 +884,17 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `duplicate key ... "workspaces_slug_unique"`. Sessão reencontrada NÃO é
   reativada nem ganha os 5 eventos de novo: eles são append-only, e uma
   timeline que existe para demonstrar cinco não pode crescer a cada reseed.
+- Criar usuário tem UM núcleo (`ProvisionarUsuarioUseCase`) e DUAS portas com
+  regras diferentes, e a diferença é o que cada uma protege (RN-546, ADR 0155).
+  `provisionarUsuario` (seed/smoke) MANTÉM a recusa de `NODE_ENV=production` e
+  ela fica no SCRIPT, não no núcleo: o que ela protege é senha CONHECIDA criada
+  SEM interação humana, e não o trio de escritas — **não use `BRABO_FORCE_SEED`
+  para atravessá-la**. `POST /internal/first-account` roda em produção de
+  propósito (é onde o instalador roda), e é outra categoria: senha DIGITADA no
+  TTY por quem está na máquina. E a régua de senha é UMA só, a
+  `exigirSenhaValida` do domínio — por isso o DTO dessa rota NÃO repete um
+  `@MinLength`, que cobriria só uma das cinco recusas e divergiria da do
+  registro no primeiro dia em que uma das duas mudasse.
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   únicas exceções de push: tags (bot de release) e .release/gate.json
   (bot do gate).
