@@ -150,7 +150,21 @@ conexões (uma por projeto) os satisfazem byte a byte, preservando a recusa de
 segundo runner no mesmo projeto; **nada no engine muda**. E numa instalação
 nova ninguém consegue entrar hoje: o `.env` gerado não tem variável de e-mail,
 `MAIL_TRANSPORT` cai em `log`, e o registro exige verificar e-mail — a saída é
-pescar o link em `docker compose logs api`.
+pescar o link em `docker compose logs api`. A METADE DE API disso fechou na
+sessão 5 (RN-546, ADR 0155): `POST /internal/first-account` (`engine-service`,
+`BRABO_SERVICE_TOKEN`) cria a primeira conta JÁ VERIFICADA mais o workspace
+pessoal da RN-410 na mesma transação, e recusa com 409 havendo QUALQUER usuário
+— condição sobre a INSTALAÇÃO, nunca sobre o e-mail pedido, e é ela que impede
+a rota de virar criador de contas. Nenhuma rota pública de "primeiro owner"
+nasceu, e o registro normal fica byte a byte. O `install.sh` que consome a rota
+é a sessão 6 e NÃO existe: quem instala hoje continua pescando o link no log.
+Duas coisas dessa sessão são régua daqui pra frente — `provisionarUsuario`
+(seed/smoke) teve o NÚCLEO extraído para `ProvisionarUsuarioUseCase` e MANTEVE
+a recusa de `NODE_ENV=production`, porque o que ela protege é senha CONHECIDA
+criada SEM interação humana e não o trio de escritas (não use
+`BRABO_FORCE_SEED` para atravessá-la); e a régua de senha é UMA só, a
+`exigirSenhaValida` do domínio, por isso o DTO da rota NÃO repete um
+`@MinLength` — ele cobriria só uma das cinco recusas.
 
 **Decisões de produto abertas (não são bugs; não corrigir de passagem):**
 - Z/AD: allowlist de verbos não converge (verbo/forma/invocação são espaços

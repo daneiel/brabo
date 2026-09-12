@@ -11315,3 +11315,135 @@ não tem chamador em `apps/web` — medido; a única ocorrência é o tipo gerad
   do primeiro sobre a auto-promoção
 - **Origem:** `BRB-002`, P1 de Segurança do registro do mantenedor — o último
   movimento que os dois ADRs anteriores deixaram declarado
+
+---
+
+## A primeira conta de uma instalação nasce no terminal (RN-546)
+
+### RN-546 — Rota interna cria a PRIMEIRA conta, já verificada, e recusa quando existe qualquer usuário {#rn-546}
+
+Sessão 5 da [FASE 30](explanation/fase-30-runner-por-maquina.md), decidida pelo
+[ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md). É a metade de api
+do passo que fecha a instalação de uma linha; o `install.sh` que consome esta
+rota é a sessão 6 e não existe ainda.
+
+**O buraco, medido.** Numa instalação nova ninguém consegue entrar. O `.env`
+que o instalador gera não tem **nenhuma** variável de e-mail, `MAIL_TRANSPORT`
+cai no default `log` (`docker/docker-compose.install.yml`), e o registro normal
+exige verificar e-mail — que por um canal desligado não fecha. A instalação
+termina dizendo "Pronto" e a única saída é pescar o link em
+`docker compose logs api`.
+
+**A rota.** `POST /internal/first-account`, `engine-service` — autenticada pelo
+`BRABO_SERVICE_TOKEN`, no mesmo cabeçalho e com a mesma comparação em tempo
+constante das outras rotas internas. Corpo `{ email, senha, nome? }`, resposta
+`{ userId, email, workspaceId }`, `201`.
+
+**Por que interna, e nunca pública.** Uma rota pública de "criar o primeiro
+owner" é uma corrida entre quem instalou e quem escaneou a porta, e quem perde
+a corrida perde a instalação: `owner` do primeiro workspace não é papel que se
+recupere por HTTP. O service token fecha a corrida no lugar certo — ele é
+gerado pelo próprio `install.sh` e escrito no `.env` com modo `600`, então
+apresentá-lo prova controle da **máquina**, que é a credencial que este passo
+realmente quer.
+
+**A conta nasce VERIFICADA, e é a única coisa que esta rota afrouxa.** O que a
+verificação de e-mail prova é *"esta pessoa controla esta caixa"*; quem roda o
+instalador já provou algo mais forte — a máquina, o `.env` com os cinco
+segredos e o daemon do Docker. Exigir dela a prova mais fraca, por um canal que
+a instalação sabe estar desligado, é teatro. O **registro normal fica byte a
+byte**: o ADR cria um caminho para um caso nomeado, não mexe no outro.
+
+**A recusa é sobre a INSTALAÇÃO, não sobre o e-mail.**
+`UserRepository.existeAlgumUsuario()` (`SELECT 1 … LIMIT 1`, nunca `count(*)`),
+e `409` havendo qualquer usuário. A pergunta é sobre `users` e não sobre
+`auth_credentials`, porque conta provisionada por login social
+([RN-278](#rn-278)) nasce sem credencial e perguntar pela credencial diria "não
+há ninguém" numa instalação povoada. Herdar a idempotência por e-mail de
+`provisionarUsuario` transformaria a rota num criador de contas com nome
+enganoso — bastaria variar o endereço. Numa migração
+([RN-530](#rn-530)) os usuários vêm no restore e o passo se cala pelo mesmo
+critério.
+
+**Workspace pessoal na MESMA transação** ([RN-410](#rn-410)). Este é o TERCEIRO
+ponto de criação de conta, e ele não ganha regra de nome/slug própria: chama a
+mesma `nomeESlugDoWorkspacePessoal` dos outros dois. Sem isso a instalação
+fecharia com um login que atravessa e um dashboard onde "Novo projeto" não tem
+onde criar — a metade do buraco que esta fase veio tapar, não a outra.
+
+**A extração, e por que não `BRABO_FORCE_SEED`.** `provisionarUsuario` recusa
+rodar com `NODE_ENV=production`, e o instalador roda exatamente em produção. O
+que a recusa protege está escrito no docblock dela: senha **conhecida** criada
+**sem interação humana**. A rota é outra categoria — a senha é escolhida por um
+humano no TTY, lida sem eco e confirmada, atrás do service token, e só quando
+não há usuário nenhum. Então o núcleo (o trio de escritas que faz a conta
+nascer verificada) virou `ProvisionarUsuarioUseCase`, e **a recusa ficou no
+script**, que é quem ela protege. Mandar o instalador se declarar "seed
+forçado" o faria atravessar uma regra que nunca falou dele, e afrouxaria a
+recusa justamente onde ela vale.
+
+**Uma régua de senha, não duas.** `exigirSenhaValida` do domínio, chamada pelo
+MESMO código que o registro chama — e por isso o DTO desta rota **não** repete
+um `@MinLength`: a chamada cobre as CINCO recusas da política, não só o
+comprimento. O `@MaxLength` fica, porque não é política: é proteção de
+argon2id, que copia a entrada antes de derivar. `PoliticaDeSenhaError` é
+`Error` de domínio e não tem filtro global, então o caso de uso **traduz** para
+`400` — sem isso o instalador leria "erro do servidor" onde a resposta certa é
+"escolha outra senha". Traduzir ali não toca o registro normal.
+
+**Kind próprio na trilha de auth.** `first_account_created`, e não
+`register_created`: a conta nasce verificada sem e-mail nenhum ter sido
+enviado, e quem audita depois precisa ver isso escrito, não deduzir pela
+ausência de um `email_verified` ao lado. União fechada no TypeScript, coluna
+`text` no banco — kind novo não custa migração.
+
+**Sem `GET`.** "Existe algum usuário?" é pergunta que ninguém precisa fazer de
+fora: o `POST` responde `201` ou `409`, e o `409` já é a resposta. Uma rota de
+leitura publicaria o mesmo fato com uma superfície a mais, e a resposta dela
+seria o sinal exato que um scanner quer.
+
+**A superfície nova está declarada, não escondida.** Passa a existir um segundo
+caminho de criação de usuário que funciona em PRODUÇÃO. Ele é estreito em três
+contagens independentes (primeira conta, rota interna, service token) e some
+assim que a instalação tem gente. Está no
+[`security-surface.md`](security-surface.md), nas Consequences do ADR e aqui.
+
+**Uma janela declarada, não fechada.** A checagem de "existe algum usuário" roda
+DENTRO da transação, mas `READ COMMITTED` não impede duas chamadas concorrentes
+com e-mails diferentes de passarem juntas. Fechá-la exigiria lock consultivo
+sobre a ausência de linhas, e não é onde a contenção mora: quem alcança a rota
+já tem o service token, ou seja, já controla a instalação inteira. O que a
+condição impede é a rota VIRAR superfície permanente de criação de conta, e
+isso ela impede.
+
+**O que NÃO entrou, por decisão do ADR:** rota pública de primeiro owner; senha
+gerada pelo código ou default (a senha nunca é gravada — nem no `.env`, nem no
+marcador, nem em log); SMTP ligado sozinho (`MAIL_TRANSPORT=log` continua o
+default declarado); credencial de LLM (é de quem vai gastar,
+[RN-058](business-rules/custo.md#rn-058)); e qualquer mudança no registro normal.
+
+- **Código:** `apps/api/src/application/use-cases/auth/criar-primeira-conta.use-case.ts`
+  (a recusa por instalação povoada, a régua de senha, o workspace pessoal e o
+  evento), `apps/api/src/application/use-cases/auth/provisionar-usuario.use-case.ts`
+  (o núcleo extraído, sem a recusa de produção),
+  `apps/api/src/scripts/provisionar-usuario.ts` (só a recusa, mais a
+  delegação), `apps/api/src/interfaces/http/internal/internal-first-account.controller.ts`,
+  `apps/api/src/interfaces/http/internal/dto/first-account-internal.dto.ts` e
+  `…/first-account-internal.response.dto.ts`,
+  `apps/api/src/application/ports/user-repository.port.ts` e
+  `apps/api/src/infrastructure/persistence/drizzle/user.repository.ts`
+  (`existeAlgumUsuario`), `apps/api/src/domain/auth/auth-event.ts`
+  (`first_account_created`),
+  `apps/api/src/domain/auth/password-policy.ts` (INTOCADO — é a régua reusada)
+- **Teste:** `apps/api/test/application/use-cases/auth/criar-primeira-conta.use-case.spec.ts`
+  (caminho feliz com conta verificada e workspace pessoal, o kind próprio, o
+  `409` com instalação povoada, o `400` por comprimento e o `400` por motivo
+  que NÃO é comprimento, e o fallback de nome);
+  `apps/api/test/interfaces/http/internal/internal-first-account.controller.spec.ts`
+  (o repasse ao caso de uso, o `nome` ausente virando `null`, e as três
+  recusas do guard: cabeçalho ausente, token errado, token certo);
+  `apps/api/test/scripts/provisionar-usuario.spec.ts` (a recusa de produção
+  FICOU no script, e a delegação);
+  `apps/api/test/interfaces/route-surface.spec.ts` (a rota classificada)
+- **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md), que depende
+  do [0154](adr/0154-chave-de-dispositivo-de-maquina.md)

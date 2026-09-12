@@ -228,6 +228,12 @@ const sidebar: SidebarsConfig = {
       items: [
         {
           type: "doc",
+          id: "docs/reference/api/internal-first-account-controller-criar",
+          label: "Creates the FIRST account of an installation, already verified",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-gates-controller-ler",
           label: "Reads the declarative gate registry",
           className: "api-method get",
