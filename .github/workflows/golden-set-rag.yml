@@ -38,7 +38,7 @@ jobs:
         # pgvector, não `postgres:16` puro — mesmo motivo do `test-engine` em
         # ci.yml: as migrations criam a extensão e o corpus indexado depende
         # dela pra busca vetorial.
-        image: pgvector/pgvector:pg16
+        image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b  # pg16
         env:
           POSTGRES_USER: brabo
           POSTGRES_PASSWORD: brabo
@@ -54,7 +54,7 @@ jobs:
         # MESMA versão pinada de docker/docker-compose.yml — paridade de
         # embedding com o que roda em dev é o que faz `floor.json` (chaveado
         # por MODELO, não por ambiente) continuar válido aqui.
-        image: ollama/ollama:0.33.1
+        image: ollama/ollama@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c  # 0.33.1
         ports:
           - 11434:11434
         # `ollama list` como health-cmd, não `curl` — `curl` roda DENTRO do

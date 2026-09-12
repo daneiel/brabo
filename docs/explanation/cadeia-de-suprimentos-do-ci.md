@@ -120,19 +120,97 @@ tool downloads and verifies on its own, and reproducing its checksum
 table by hand would be a copy that ages. Weaker than the scanner
 binaries, stated rather than implied.
 
-## Container images
+## Container images: digest, with the tag alongside
 
-Third-party images are pinned by tag, not by digest: `neo4j:5.26-community`,
-`pgvector/pgvector:pg16`, `ollama/ollama:0.33.1`. Tags on a registry are
-mutable too, so this is weaker than the action pins — a deliberate stop,
-not an oversight. It buys the reproducibility that matters day to day
-(`latest` changing the local LLM provider's behaviour between two
-identical `docker compose pull`s) without the maintenance cost of
-digests on images we don't publish.
+Third-party images are pinned by **digest**, in exactly the shape the
+actions use:
 
-The images we **do** publish are the opposite: the four production images
-go to GHCR and the overlay pins them **by digest**, recorded per tag in
-`.release/images.json` ([ADR 0119](../adr/0119-imagens-publicadas-no-ghcr-por-digest.md)).
+```yaml
+image: neo4j@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61  # 5.26-community
+```
+
+```dockerfile
+# 24.11.1-alpine3.21
+FROM node@sha256:b8f7c9056af700568c1ce76173f1c93743fb64ca1343e18cdf3a6ded8985ad3d AS deps
+```
+
+**In a Dockerfile the tag goes on the line above, and that is not taste.**
+Docker's parser only recognizes `#` at the *start* of a line, so
+`FROM alpine@sha256:… # 3.20` is not a commented `FROM`, it is a `FROM` with
+three arguments, and the build dies with *"FROM requires either one or three
+arguments"*. This was found the right way — the `images` job's `bake` step
+failed on the first push, in 27 seconds — and it is worth recording that
+`hadolint` had passed the same file: it has its own parser, and a linter
+agreeing is not the build agreeing.
+
+The comment is **one token**, with no spaces, in both shapes. That is what
+separates the tag from the *prose* already sitting above nearly every `FROM`
+in this repository — without it, "there is a comment above" would be satisfied
+by any paragraph.
+
+This page used to say the opposite — tag pinning was "a deliberate stop,
+not an oversight," buying day-to-day reproducibility "without the
+maintenance cost of digests on images we don't publish." That reasoning
+is **revoked**, and the measurement is why: the 37 third-party references
+in the repository were on tags, and three of the places they run are
+worse than a `docker compose pull` going stale.
+
+- The `FROM` lines are the base of the four images we **publish** to
+  GHCR. A moved tag becomes bytes inside an image we sign and hand to
+  other people.
+- `docker/docker-compose.install.yml` runs on the machine of whoever
+  installed the product, beside their Postgres. In that same file the
+  four **own** images already arrive by digest, through a variable the
+  installer fills — the third-party ones arrived by tag, next to them.
+- `ci.yml` and `golden-set-rag.yml` run third-party images as job
+  `services:`. That is literally the runner the action rule exists to
+  protect, reached by the other door.
+
+To resolve a tag into the digest to write down — the **index** digest, so
+the pin keeps working on `linux/arm64` as well as `linux/amd64`:
+
+```bash
+docker manifest inspect neo4j:5.26-community | head -3   # confirms it is an index
+docker buildx imagetools inspect neo4j:5.26-community --format '{{.Manifest.Digest}}'
+```
+
+The trailing `# <tag>` comment is **required**, for the same reason it is
+on actions: `sha256:22ec5cd0…` does not tell anyone that it is Neo4j
+5.26. And, as with the actions, the rule has a mechanism rather than
+goodwill — `scripts/ci/imagens-pinadas.ts`, run in the `lint` job, which
+fails on any `image:`/`imageName:`/`FROM` that is not a digest, on any
+digest with no tag comment, and on the same tag carrying two different
+digests in two files. It is a **sibling** of `actions-pinadas.ts`, not an
+extension of it: `uses:` lives in workflow YAML with one syntax, images
+live in composes, kustomize manifests and Dockerfiles with three others,
+and one function answering both questions would answer both badly.
+
+What the check deliberately does **not** cover:
+
+- **The images we build ourselves** (`brabo-api`, `brabo-engine`,
+  `brabo-web`, `brabo-backup`, and `brabo-broker`, which is not
+  published). There is no third party who could move anything, and
+  `brabo-api:prod` is a *local* tag whose digest does not exist before
+  the build. Where they do cross a registry they are **already** by
+  digest, through the mechanism that owns them: `.release/images.json`
+  written by `release.yml` and applied by `make imagens-do-release`
+  ([ADR 0119](../adr/0119-imagens-publicadas-no-ghcr-por-digest.md)). The
+  repository's overlay holds the *marker*, not a frozen release —
+  demanding a literal digest there would fight that mechanism instead of
+  reinforcing it.
+- **Interpolated references** (`${BRABO_API_IMAGE:?…}`), which is the
+  same case seen from the other side.
+- **Multi-stage build stages** (`FROM deps AS build`, `FROM scratch`),
+  which are not registry images.
+
+The exception list is by *name* and fails closed: a new third-party image
+never matches `brabo-`, so it is born under the rule.
+
+**The price is real and is not paid here.** An image pinned by digest
+receives no security update until someone changes the digest by hand —
+the same debt the action SHAs carry. `.github/dependabot.yml` enables the
+`github-actions` ecosystem for that reason; the `docker` ecosystem is
+**not** enabled, and turning it on is a separate decision.
 
 ## What is still trusted on faith
 
@@ -176,7 +254,14 @@ Declared, not fixed:
   the runner binaries** for the OS (macOS notarization, Windows
   Authenticode), which needs a paid signing identity and stays in
   [the backlog](backlog.md).
-- **Third-party images are tag-pinned, not digest-pinned** (above).
+- ~~**Third-party images are tag-pinned, not digest-pinned.**~~ **Closed**
+  (above): all 37 third-party references — composes, kustomize manifests,
+  Dockerfile `FROM` lines and the workflow `services:` — are pinned by
+  digest with the tag in a comment, and `scripts/ci/imagens-pinadas.ts`
+  fails the `lint` job on the next regression. What is **not** closed, and
+  is the price of the pin rather than a leftover: a digest receives no
+  security update until someone bumps it by hand, and Dependabot's
+  `docker` ecosystem is not enabled — a separate decision.
 - **The workflows' own permissions** aren't covered here; that's the
   `permissions:` block per workflow, and it's a separate audit.
 - **A repeated `pnpm audit` timeout is an ACCEPTED RISK, by decision.**
