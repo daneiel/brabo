@@ -72,7 +72,14 @@ overrides:
   # quadrático de CPU ao resolver `!!omap` (DoS). A faixa `4.3.0` acima já não
   # bastava: a correção saiu na 4.3.1, então o teto virou 4.3.1 e a faixa
   # cresceu para cobrir a 4.3.0 também.
-  js-yaml@>=4.0.0 <4.3.1: 4.3.1
+  #
+  # HIGH · GHSA-2883-xcg3-v3hh — `maxTotalMergeKeys` não limita o CPU quando a
+  # fonte do merge é VAZIA, e o teto sobe de novo, para 4.3.2. Esta é a
+  # TERCEIRA revisão da mesma linha, e é a primeira que **o Dependabot ainda
+  # não alertou**: quem a viu foi o `pnpm audit` do próprio repositório, que a
+  # mede na `dev` enquanto o painel do GitHub mede a `main`. Vale como prova
+  # de que o `pnpm audit` local é o instrumento mais atual dos dois.
+  js-yaml@>=4.0.0 <4.3.2: 4.3.2
   # MISTA (ADR 0117) — duplicada em `website/package.json`. `mermaid` é
   # dependência de RUNTIME do próprio `apps/web` (ADR 0068, diagrama C4), não
   # só do `website` — `pnpm why mermaid -r` mostra os dois pais.
@@ -104,7 +111,19 @@ overrides:
   # HIGH · CVE-2026-18446 (alerta #20). Entra por `ajv`/`@redocly/ajv`
   # (`fast-uri: ^3.0.1` nos dois) — só uma das duas versões na árvore estava
   # desatualizada, a outra já era 3.1.5.
-  fast-uri@>=3.0.0 <3.1.5: 3.1.5
+  #
+  # 4 HIGH NOVAS · GHSA-f65p-4m7j-42xc, GHSA-jqff-g426-hqxp (as duas
+  # `>=3.0.0 <3.1.6`), GHSA-fph4-wmhf-6fwf (`>=3.1.2`) e GHSA-5jgf-p345-68v8
+  # (`>=3.1.3`) — alertas #34, #35, #37, #38 do produto e #46..#49 do website.
+  # A 3.1.5 que este override FIXAVA passou a ser a versão vulnerável: é a
+  # disciplina 1 funcionando ao contrário do esperado — a faixa antiga não
+  # ficou errada, ficou CURTA, e o teto sobe com o aviso. A mais larga das
+  # quatro é `>=3.0.0`, então é ela que fica.
+  #
+  # DEV-ONLY no produto: `pnpm why fast-uri --prod -r` devolve VAZIO. Entra por
+  # `ajv` ← `@angular-devkit/core` ← `@nestjs/schematics` ← `@nestjs/cli`, que
+  # é `devDependency`. Não chega a imagem nenhuma.
+  fast-uri@>=3.0.0 <3.1.6: 3.1.6
   # MISTA — já era o exemplo canônico de override que serve aos dois lados
   # (ADR 0117 mantém a duplicação em `website/package.json`).
   #
@@ -161,6 +180,38 @@ overrides:
   # drizzle-kit só usa a lib para transpilar `drizzle.config.ts`. Mesmo assim
   # vale fechar — o alerta some e a 0.25.12 já estava na árvore por outro pai.
   esbuild@<0.24.3: 0.25.12
+  # PRODUTO-EXCLUSIVA, e SEGUNDA faixa do mesmo pacote — as duas convivem
+  # porque são disjuntas e vêm de advisories diferentes, como as duas linhas de
+  # `js-yaml` acima. A de cima cobre a 0.2x antiga do `@esbuild-kit`; esta
+  # cobre a linha que o `tsup`/`vite` de hoje resolve.
+  #
+  # LOW · GHSA-g7r4-m6w7-qqqr (alerta #39), faixa `>=0.27.3 <0.28.1`. Entra por
+  # `tsup@8.5.1` (direto e via `bundle-require`) em `@brabo/runner`/
+  # `@brabo/broker`, e por uma variação de peer de `vite@8.1.5` sob o `vitest`
+  # do broker. Nenhum dos dois pais tem versão nova que resolva — daí o
+  # override em vez de subir o pai.
+  #
+  # A 0.28.1 JÁ ESTAVA na árvore, por `webpack` → `terser-webpack-plugin`:
+  # aqui é dedupe, não dependência nova.
+  #
+  # DEV-ONLY: `pnpm why esbuild --prod -r` devolve VAZIO.
+  esbuild@>=0.27.3 <0.28.1: 0.28.1
+  # PRODUTO E WEBSITE (ADR 0117) — duplicada em `website/package.json`.
+  #
+  # 2 MODERATE · GHSA-4mjr-xmp4-gh2g (`>=2.2.5 <6.16.0`) e GHSA-x5fp-wj9c-mxmx
+  # (`>=6.14.2 <=6.15.3`) — alertas #36/#40 do produto e #44/#45 do website.
+  #
+  # **Esta é a ÚNICA das quatro do produto que ALCANÇA PRODUÇÃO**, e a medição
+  # contradiz o veredito de "tudo dev-only": `pnpm why qs --prod -r` mostra
+  # DOIS caminhos, os dois em `dependencies` de `apps/api` — `express@5.2.1` ←
+  # `@nestjs/platform-express` (por `body-parser@2.3.0`) e `@gitbeaker/core` ←
+  # `@gitbeaker/rest`. Nenhum dos dois pais tem versão publicada que já traga
+  # a 6.16.0.
+  #
+  # Faixa presa à LINHA MAIOR (disciplina 2): o aviso começa em 2.2.5, mas só
+  # a 6.x existe nesta árvore, e `>=2.x` arrastaria uma major inteira que
+  # ninguém pede.
+  qs@>=6.0.0 <6.16.0: 6.16.0
   # MISTA (ADR 0117) — duplicada em `website/package.json`. O `nanoid` chega
   # SÓ pelo `postcss@8.5.23` acima, e esse `postcss` agora tem pai dos dois
   # lados (`web` via `vite`, `website` via `postcss-preset-env`) — então os

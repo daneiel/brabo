@@ -1104,6 +1104,56 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **chore**: as dependências vulneráveis dos dois lockfiles, **e o que não
+  fecha, dito por nome**.
+
+  **Nenhum dos alertas corrigidos aqui era exposição de produção em execução,
+  com UMA exceção — e a exceção contradiz o levantamento.** A medição que
+  motivou esta mudança dizia que os quatro do produto eram `devDependency`;
+  `pnpm why qs --prod -r` mostra o contrário, por **dois** caminhos em
+  `dependencies` de `apps/api`: `express@5.2.1` ← `@nestjs/platform-express`
+  (via `body-parser`) e `@gitbeaker/core` ← `@gitbeaker/rest`. Os outros três
+  — `fast-uri`, `vitest`/`@vitest/mocker` e `esbuild` — são de fato dev-only,
+  com `--prod -r` vazio e controle feito em `nodemailer` e `multer`, que
+  aparecem.
+
+  **Produto** (`pnpm-lock.yaml`): `fast-uri` 3.1.5 → **3.1.6** (4 HIGH novas),
+  `qs` 6.15.3 → **6.16.0** (2 MODERATE, o único de produção), `vitest` e
+  `@vitest/mocker` 4.1.10 → **4.1.11** (1 MODERATE) e `esbuild` 0.27.7 →
+  **0.28.1** (1 LOW, e era só dedupe: a 0.28.1 já estava na árvore por
+  `webpack`). Junto, `js-yaml` 4.3.1 → **4.3.2** — advisory que **o Dependabot
+  ainda não abriu** e que o `pnpm audit` local achou, porque o painel mede a
+  `main` e o `audit` mede o que se está desenvolvendo. `pnpm audit` do produto
+  fica **limpo**.
+
+  **Website** (`website/pnpm-lock.yaml`, lockfile próprio — ADR 0117):
+  `fast-uri` e `qs` pelas mesmas faixas, mais o `js-yaml`.
+
+  **O que NÃO fecha, e os dois são HIGH:**
+  `image-size@2.0.2` **não tem versão corrigida** — o `first_patched_version`
+  dos dois avisos é nulo, e quem o puxa é `@docusaurus/mdx-loader`, o núcleo do
+  Docusaurus. `@faker-js/faker@5.5.3` **tem** correção (10.4.1+) e mesmo assim
+  não sobe: `postman-collection@5.3.1` o pina em `5.5.3` EXATO e usa a API da
+  v5 que sumiu na v8, e com o override aplicado o `pnpm docs:build` **reprova**
+  (`Docusaurus could not load module … docusaurus-plugin-openapi-docs`, causa
+  `TypeError: Cannot read properties of undefined (reading 'city')`). Medido,
+  não suposto. Os dois estão escritos em `website/pnpm-workspace.yaml`, numa
+  seção que existe para que fechar três de quatro não vire um painel que
+  *parece* resolvido. O argumento de alcance é o do ADR 0117: nada de
+  `website/` chega a imagem nenhuma.
+
+  **Sem `pnpm.overrides` novo em `package.json`** — e não porque o repositório
+  não use overrides: ele já tem catorze na raiz e treze no website, todos em
+  `pnpm-workspace.yaml`, cada um com advisory e caminho do `pnpm why` ao lado.
+  Três das cinco mudanças são **subida de TETO de faixa que já existia**
+  (`fast-uri`, `js-yaml`), pela disciplina 1 do próprio arquivo; `qs` e a
+  segunda faixa de `esbuild` são entradas novas, no mesmo molde. `vitest` não
+  precisou de override: é `devDependency` DIRETA em seis pacotes e a 4.1.11
+  cabe no `^4.1.10` que eles já pediam.
+
+  Os alertas de `multer` e `nodemailer` **não são trabalho**: a `dev` já está
+  em 2.3.0 e 9.1.1. Eles apagam quando a promoção `dev → qa → main` andar.
+
 - **runner**: a credencial de git que não atravessa o container do agente local
   deixa de sumir em silêncio — o comando passa a ser **recusado** com desfecho
   nomeado, em vez de rodar sem ela e falhar como se o token estivesse errado

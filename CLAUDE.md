@@ -818,7 +818,21 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `website/pnpm-workspace.yaml`/`website/pnpm-lock.yaml`, instalado com
   `pnpm install` de DENTRO de `website/`, nunca `pnpm --filter website` (usa
   `pnpm --dir website` nos scripts `docs:*`). Isola o `pnpm audit` do
-  produto da árvore do Docusaurus, que nunca chega a imagem nenhuma
+  produto da árvore do Docusaurus, que nunca chega a imagem nenhuma.
+  Dependência vulnerável TRANSITIVA se fecha por `overrides` — e eles moram em
+  `pnpm-workspace.yaml` (raiz) e `website/pnpm-workspace.yaml`, NUNCA em
+  `package.json`: já são catorze na raiz e treze no website, cada um com o
+  advisory e o caminho do `pnpm why` no comentário ao lado. Duas disciplinas,
+  escritas no topo do arquivo: a chave é a FAIXA VULNERÁVEL do aviso (nunca a
+  versão instalada hoje) e a faixa é presa à LINHA MAIOR afetada. Faixa que já
+  existe e ganha advisory nova sobe de TETO — não nasce entrada nova —, e sobe
+  nos DOIS arquivos junto quando é MISTA, senão o lado esquecido volta a
+  resolver a faixa vulnerável em silêncio. O painel do Dependabot mede a
+  branch DEFAULT (`main`); quem mede a `dev` é o `pnpm audit` local, e ele já
+  achou advisory que o painel ainda não tinha aberto — leia os dois, nessa
+  ordem. Override que QUEBRA o consumidor não entra: mede-se e declara-se
+  (`@faker-js/faker` tem correção e não sobe, porque `postman-collection@5.3.1`
+  o pina EXATO e usa a API da v5 — com o override, `pnpm docs:build` reprova)
 - Auth: first-party no domínio da api (argon2id + access JWT curto +
   refresh opaco com rotação); autorização RBAC no domínio da api
   (inalterada desde a Fase 1)
