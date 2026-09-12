@@ -220,6 +220,89 @@ describe('install.sh — o parser do manifesto de imagens', () => {
   });
 });
 
+describe('install.sh — a comparação de versões', () => {
+  // Estes testes rodam a função DE VERDADE, extraída do script e executada por
+  // `bash` — nunca uma reimplementação em TS. O helper do parser de manifesto,
+  // logo acima, já registra por que: uma cópia em TypeScript continua passando
+  // depois que o shell quebra, e o que interessa aqui é o shell.
+  //
+  // `comparar_versoes` ecoa o veredito em vez de devolver código de saída
+  // porque, sob `set -e`, um `return 1` legítimo mataria o script inteiro.
+  function comparar(a: string, b: string): string {
+    const fn = fonte().match(/^comparar_versoes\(\) \{[\s\S]*?^\}/m)?.[0];
+    if (!fn) throw new Error('comparar_versoes não encontrada em install.sh');
+    return execFileSync('bash', ['-c', `${fn}\ncomparar_versoes "$1" "$2"`, '--', a, b], {
+      encoding: 'utf8',
+    }).trim();
+  }
+
+  it('ordena as três posições do semver', () => {
+    expect(comparar('5.1.0', '5.0.0')).toBe('maior');
+    expect(comparar('5.0.1', '5.0.0')).toBe('maior');
+    expect(comparar('6.0.0', '5.99.99')).toBe('maior');
+    expect(comparar('5.0.0', '5.1.0')).toBe('menor');
+    expect(comparar('5.0.0', '5.0.0')).toBe('igual');
+  });
+
+  it('compara número, não texto — 5.10.0 é MAIOR que 5.9.0', () => {
+    // O caso que uma comparação lexicográfica erra, e o motivo de a função
+    // existir em vez de um `[ "$a" \> "$b" ]`.
+    expect(comparar('5.10.0', '5.9.0')).toBe('maior');
+  });
+
+  it('normaliza o número de campos: 5.0.0 e 5 são a mesma versão', () => {
+    // Regressão de um defeito achado RODANDO, não lendo: `cut -d.` sobre uma
+    // string sem ponto devolve a linha inteira, então "5" tinha segundo campo
+    // "5" em vez de "0", e a resposta era `menor`.
+    expect(comparar('5.0.0', '5')).toBe('igual');
+    expect(comparar('5', '5.0.0')).toBe('igual');
+  });
+
+  it('corta o sufixo de pré-lançamento antes de comparar', () => {
+    expect(comparar('5.1.0-rc.1', '5.0.0')).toBe('maior');
+    expect(comparar('5.0.0-rc.1', '5.0.0')).toBe('igual');
+  });
+
+  it('versão vazia é MENOR, nunca igual', () => {
+    // É o que impede um marcador sem versão de ser lido como "mesma versão" e
+    // cair no ramo que não oferece nada.
+    expect(comparar('', '5.0.0')).toBe('menor');
+  });
+});
+
+describe('install.sh — o marcador registra a versão', () => {
+  function campo(chave: string, json: string): string {
+    const fn = fonte().match(/^campo_do_marcador\(\) \{[\s\S]*?^\}/m)?.[0];
+    if (!fn) throw new Error('campo_do_marcador não encontrada em install.sh');
+    return execFileSync('bash', ['-c', `${fn}\ncampo_do_marcador "$1" "$2"`, '--', chave, json], {
+      encoding: 'utf8',
+    }).trim();
+  }
+
+  it('lê a versão de um marcador de schema 2', () => {
+    expect(campo('versao', '{\n "schemaVersion": 2,\n "versao": "5.0.0"\n}')).toBe('5.0.0');
+  });
+
+  it('devolve vazio para marcador de schema 1, que não tem versão', () => {
+    // Estado NOMEADO e não erro: a instalação é real, só não se sabe qual — e o
+    // script diz isso em vez de adivinhar.
+    expect(campo('versao', '{ "schemaVersion": 1 }')).toBe('');
+  });
+
+  it('o schema do marcador subiu para 2 junto com o campo', () => {
+    // Um sobe sem o outro e um marcador novo passaria por antigo.
+    expect(fonte()).toMatch(/MARCADOR_SCHEMA=2/);
+    expect(fonte()).toMatch(/"versao": "\$\{VERSAO_A_INSTALAR\}"/);
+  });
+
+  it('a versão é resolvida ANTES da detecção decidir qualquer coisa', () => {
+    // A ordem É a decisão: perguntar "apago o que existe?" sem poder dizer o
+    // que entra no lugar é a pergunta cega que esta entrega remove.
+    const f = fonte();
+    expect(f.indexOf('versão a instalar:')).toBeLessThan(f.indexOf('O que já existe nesta máquina'));
+  });
+});
+
 describe('install.sh — invariantes do arquivo', () => {
   // Mesmo gênero de teste que `actions-pinadas.ts`: há garantias que só se
   // verificam lendo o script, porque exercitá-las exigiria a rede e uma

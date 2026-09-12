@@ -75,15 +75,15 @@ Uma entregável cada. A coluna "depende de" é que ordena.
 | # | entregável | depende de | proibições próprias |
 |---|---|---|---|
 | 1 | este documento, os ADRs 0154/0155 e a faixa de RN | — | não toca `apps/`, `docker/`, `scripts/`, `install.sh`; não edita ADR aceito |
-| 2 | api: `project_id` nullable, chave de máquina aceita em `runner-ticket`, `GET runner/projects` (RN-542) | 1 | não toca o engine; não afrouxa papel de rota nenhuma |
-| 3 | runner: N conexões, uma por projeto, descobertas pela rota (RN-543) | 2 | não toca `RunnerReadiness`, o espelho nem `workspace_create` |
-| 4 | runner: unit por máquina no `service install`, convivendo com as por projeto (RN-544) | 3 | não remove a unit por projeto; não muda `Restart=on-abnormal` |
-| 5 | api: rota interna de primeira conta, recusando se já houver usuário (RN-545) | 1 | não cria rota pública; não toca o registro normal |
-| 6 | `install.sh`: consentimento, conta, chave de máquina e `service install` (RN-546) | 4, 5 | não grava senha em lugar nenhum; sem TTY relata e sai 0 |
-| 7 | web: a tela do projeto reconhece agente de máquina já pareado (RN-547) | 3 | não remove o fluxo do ADR 0118 |
-| 8 | E2E em máquina limpa, docmap, `docs:check` (RN-548) | 6, 7 | não afrouxa gate para o E2E passar |
+| 2 | api: `project_id` nullable, chave de máquina aceita em `runner-ticket`, `GET runner/projects` (RN-543) | 1 | não toca o engine; não afrouxa papel de rota nenhuma |
+| 3 | runner: N conexões, uma por projeto, descobertas pela rota (RN-544) | 2 | não toca `RunnerReadiness`, o espelho nem `workspace_create` |
+| 4 | runner: unit por máquina no `service install`, convivendo com as por projeto (RN-545) | 3 | não remove a unit por projeto; não muda `Restart=on-abnormal` |
+| 5 | api: rota interna de primeira conta, recusando se já houver usuário (RN-546) | 1 | não cria rota pública; não toca o registro normal |
+| 6 | `install.sh`: consentimento, conta, chave de máquina e `service install` (RN-547) | 4, 5 | não grava senha em lugar nenhum; sem TTY relata e sai 0 |
+| 7 | web: a tela do projeto reconhece agente de máquina já pareado (RN-548) | 3 | não remove o fluxo do ADR 0118 |
+| 8 | E2E em máquina limpa, docmap, `docs:check` (RN-549) | 6, 7 | não afrouxa gate para o E2E passar |
 
-Faixa reservada: **RN-542..555**. ADRs **0154** e **0155**. A RN-541 já está
+Faixa reservada: **RN-543..555**. ADRs **0154** e **0155**. A RN-541 já está
 alocada em branch não mergeada — o salto é deliberado, pelo critério que a
 FASE 29 registrou ao resolver três colisões pela data.
 

@@ -10916,3 +10916,72 @@ o teto que dá sentido ao clique nas ações que são efeito externo de verdade.
 - **ADR:** [0148](adr/0148-artefatos-projetados-em-arquivo.md)
 - **Origem:** pedido do dono do produto — *"criar apenas uma pasta por ora
   chamada docs, onde os artefatos estarão de cada um dos agentes"*
+
+### RN-542 — O instalador compara a versão instalada com a que vai instalar, e a oferta é específica por relação {#rn-542}
+
+O `install.sh` detectava instalação anterior desde a [RN-530](#rn-530) e
+oferecia migrar com backup provado. O que ele **não** sabia era **qual** versão
+estava lá: o marcador (`$XDG_STATE_HOME/brabo/install-state.json`) gravava
+`schemaVersion`, `instaladoEm`, plataforma, fonte, digests e caminhos — e nada
+que dissesse 5.0.0. A pergunta *"migrar esta instalação?"* era cega nos dois
+lados, e quem respondia não tinha como saber se aquilo subia, descia ou repetia.
+
+A informação sempre esteve à mão e era ignorada: `images.json` da Release traz
+`"versao"` ao lado de `commit` e `publicadoEm`, e `resolver_imagens_do_ghcr` lia
+só `repositorio` e `digest`. Pela outra ponta, `--source=local` já exige árvore
+**limpa e em tag** — então `git describe` é uma versão confiável ali, pelas duas
+recusas que já aconteceram antes.
+
+**A ordem é a decisão.** As imagens passam a ser resolvidas **antes** da
+detecção: saber o que entra é pré-requisito de perguntar se o que existe sai.
+O marcador sobe para `schemaVersion: 2` e grava `versao` e `commit` — os dois
+juntos, porque um marcador novo sem o campo passaria por antigo.
+
+Com as duas versões em mãos, a oferta deixa de ser uma pergunta e vira quatro,
+uma por relação:
+
+| relação | oferta | default |
+|---|---|---|
+| maior | `Atualizar 5.0.0 → 5.1.0?` | **sim** — é o que a pessoa veio fazer, e o backup provado torna reversível |
+| igual | `Já é a 5.0.0. Reinstalar do zero mesmo assim?` | não — não há ganho a oferecer |
+| menor | nomeia **rebaixamento**, avisando que migração de banco não anda para trás | não — pode não ter volta |
+| desconhecida | marcador de schema 1 não tem versão: diz isso, e **não adivinha** | não |
+
+O ramo `maior` é o **único** com default sim, e é o único que pode tê-lo: o
+passo é reversível pelo backup que acabou de ser provado. Os outros três exigem
+um `s` digitado.
+
+**Em qualquer ramo a instalação é apagada e recriada do zero**, nunca subida por
+cima — decisão do dono do produto, e a mesma razão da RN-530: um `up` sobre
+volumes de outra versão é estrago que não avisa, e meia migração é pior que
+nenhuma. A cadeia backup → **PROVAR** → perguntar → apagar → instalar →
+restaurar não muda em nenhum deles.
+
+`comparar_versoes` é implementada à mão e **não** com `sort -V`: o BSD `sort` do
+macOS ganhou `-V` tarde, e este script roda na máquina dos outros — a mesma
+disciplina que já fez `sha_do_cosign` recusar array associativo por causa do
+bash 3.2. Ela ecoa o veredito em vez de devolver código de saída, porque sob
+`set -e` um `return 1` legítimo mataria o script.
+
+No menu do `pnpm bootstrap`, *Docker › Instalar (install.sh)* **relata** o plano
+e não instala — mecânica, não preferência: item de menu roda com stdin em
+`/dev/null` para o menu seguir lendo teclas do mesmo terminal, e este instalador
+existe para PERGUNTAR (é o motivo de o [ADR 0150](adr/0150-instalador-de-uma-linha.md)
+recusar `curl | sh`). É o mesmo desenho do item *Base de projetos*
+([RN-511](#rn-511)), e a nota do item carrega o comando que instala de verdade.
+
+- **Código:** `install.sh` (`comparar_versoes`, `campo_do_marcador`,
+  `resolver_imagens_do_ghcr`, `resolver_imagens_locais`, `main`);
+  `scripts/dev/bootstrap.sh` (item `1.7`)
+- **Teste:** `scripts/dev/install.spec.ts` — *"a comparação de versões"* e
+  *"o marcador registra a versão"*; a função é extraída do script e rodada por
+  `bash`, nunca reimplementada em TS (uma cópia continua passando depois que o
+  shell quebra)
+- **Achado rodando, não lendo:** `cut -d.` sobre uma string **sem ponto**
+  devolve a linha inteira, não vazio — então `5.0.0` vs `5` respondia `menor`.
+  Normalizado com `.0.0` no fim, com teste de regressão.
+- **ADR:** [0150](adr/0150-instalador-de-uma-linha.md)
+- **Origem:** pedido do dono do produto — *"o sh deve ser inteligente de
+  entender que já há uma versão e verificar se será uma nova versão a ser
+  executada ou não... caso seja uma nova ou escolhido isso pelo usuário deverá
+  deletar a anterior e instalar do zero para evitar possíveis erros"*
