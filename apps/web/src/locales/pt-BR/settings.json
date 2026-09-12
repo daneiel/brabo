@@ -217,12 +217,24 @@
     "eyebrow": "converter modo de execução",
     "subtitle": "Muda ONDE o comando deste projeto executa — a pasta gerenciada, uma pasta sua montada por bind-mount, ou uma pasta sua conectada pelo runner.",
     "needsMaintainer": "Só quem é maintainer ou owner pode converter.",
-    "warning": "Isto migra a pasta de trabalho do agente. Se algum dev agent estiver trabalhando ou travado agora, a conversão é recusada — espere terminar (ou desbloqueie a task travada) e tente de novo.",
+    "warning": {
+      "refuses": "Se algum dev agent estiver trabalhando ou travado agora, a conversão é recusada — espere terminar (ou desbloqueie a task travada) e tente de novo.",
+      "carries": "A conversão leva a POLÍTICA do projeto: o permissions.json muda de lugar com allow/deny/ask intactos.",
+      "leavesPath": "Ela NÃO copia nem move o conteúdo da pasta. O que estiver em {{caminho}} — trabalho não commitado incluído — fica lá, e nada vai buscá-lo depois.",
+      "leavesManaged": "Ela NÃO copia nem move o conteúdo da pasta. O que estiver na pasta gerenciada deste projeto, no servidor — trabalho não commitado incluído — fica lá, e nada vai buscá-lo depois."
+    },
     "card": {
       "title": "Modo de execução"
     },
     "selectAria": "Novo modo de execução",
     "pathAria": "Novo caminho da pasta",
+    "path": {
+      "underBase": "A pasta fica dentro da base de projetos desta instalação ({{base}}), e é nela que o navegador abre.",
+      "noBase": "Esta instalação não declarou base de projetos montados: não há de onde navegar, e o modo Pasta montada não tem onde existir aqui.",
+      "baseUnknown": "Não foi possível consultar a base de projetos desta instalação — não dá para saber se ela existe, então o navegador de pastas fica indisponível. Recarregue a página para tentar de novo.",
+      "baseLoading": "Consultando a base de projetos desta instalação…",
+      "runnerTyped": "Aqui o caminho é digitado. O navegador de pastas do modo Runner precisa de um runner já conectado a ESTE projeto, e ele só passa a existir depois que a conversão salva: converta primeiro, depois conecte o runner — é ele que confirma o caminho ao conectar."
+    },
     "save": "Converter",
     "saving": "Convertendo…",
     "toast": {

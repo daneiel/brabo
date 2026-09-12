@@ -26,6 +26,44 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: converter um projeto para **Pasta montada** passa a abrir o mesmo
+  **navegador de pastas** da criação, em vez de pedir o caminho no escuro
+  ([RN-559](docs/business-rules.md#rn-559)).
+
+  `ExecutionModeSection` era o único dos cinco lugares do produto em que se
+  escolhe uma pasta e não havia navegador nenhum. Ele entra com o mesmo
+  componente e o mesmo transporte que o assistente de criação usa para esse
+  modo — a base do servidor, escopada ao workspace —, e nada muda em quem
+  valida o caminho: continua sendo a api.
+
+  A seção também passa a dizer o que sabe sobre a base da instalação, com
+  texto diferente para cada coisa: consultando, não deu para saber, não existe,
+  ou existe (e aí ela é nomeada). O botão fica na tela apagado nos três
+  primeiros, com o motivo escrito ao lado — nunca escondido.
+
+  **O que continua como estava:** converter para o modo **Runner** segue com o
+  caminho digitado, e agora a tela **diz por quê** — o navegador daquele modo
+  precisa de um runner já conectado ao projeto, que só passa a existir depois
+  que a conversão salva. Converter primeiro e conectar o runner depois é a
+  ordem, e ela não mudou aqui.
+
+- **web**: o aviso da conversão de modo **para de prometer** uma migração que
+  nunca aconteceu ([RN-560](docs/business-rules.md#rn-560)).
+
+  Ele dizia "isto migra a pasta de trabalho do agente", nos dois idiomas. A
+  conversão move a **política** do projeto (o `permissions.json`, com as regras
+  intactas), zera a confirmação de pasta e o destino do espelho, e desprovisiona
+  o container — e não copia nem move **uma linha** do conteúdo da pasta. Agora o
+  aviso diz as três coisas separadas: o que a conversão recusa, o que ela leva e
+  o que ela **não** leva, **nomeando o caminho antigo** — que some da tela no
+  instante em que a conversão salva. Quando não há caminho a nomear (o projeto é
+  Container), ele aponta a pasta gerenciada no servidor.
+
+  **O que isso não faz:** o trabalho não commitado continua ficando para trás,
+  exatamente como antes. O que mudou é a tela parar de afirmar o contrário — e
+  ela não promete detectar diff, porque olhar o disco é impossível de responder
+  para o modo Runner do lado do servidor.
+
 - **ci**: o E2E do instalador passa a provar a instalação **inteira** numa
   máquina limpa — os cinco elos do fechamento, o agente local de pé esperando, e
   o primeiro projeto em modo Runner sendo pego sem ninguém voltar ao terminal
