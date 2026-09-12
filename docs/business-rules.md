@@ -10373,12 +10373,15 @@ O manifesto **declara o que cobre**. A matriz é `fail-fast: false` de propósit
 então um alvo que não construiu não impede os outros quatro de terem manifesto —
 mas o job nomeia no log os alvos que ficaram de fora, porque um `checksums.txt`
 que lista quatro e cala sobre o quinto é pior que nenhum: quem verifica os
-quatro conclui que verificou a release.
+quatro conclui que verificou a release. Esta metade era **intenção escrita e
+mecanismo que não a cumpria**: com `needs: build`, um alvo que não constrói não
+impedia, ele ATRASAVA um dia — ver [RN-565](#rn-565), que a torna verdadeira e
+mede o número.
 
 **Onde:** `.github/workflows/release.yml` (passos "Instalar o cosign" e "Assinar
 as imagens publicadas", com `id-token: write` no bloco de `permissions`);
-`.github/workflows/build-runner-binaries.yml` (job `checksums`, `needs: build`,
-`if: always()`).
+`.github/workflows/build-runner-binaries.yml` (job `checksums`, **sem** `needs:`
+desde a [RN-565](#rn-565) — a espera é pelos assets, com teto).
 
 **Teste:** `scripts/ci/actions-pinadas.spec.ts` cobre o pin por SHA do
 `sigstore/cosign-installer` (com o comentário de versão ao lado, que é o que
@@ -13016,3 +13019,68 @@ teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
   [0145](adr/0145-docker-pre-requisito-do-runner.md)
 - **Origem:** AT-048 (EP-020/HS-032) — a lacuna declarada no `CLAUDE.md` desde
   a [RN-494](#rn-494)
+
+### RN-565 — O manifesto assinado sai com o que a Release TEM, e não espera a plataforma que nunca constrói {#rn-565}
+
+O `checksums.txt` assinado ([RN-524](#rn-524)) é a pré-condição de duas outras
+regras: sem ele, `GET /runner-releases/binary` recusa com
+`release_sem_manifesto` ([RN-525](#rn-525)) e o `install.sh` recusa a si mesmo
+([RN-526](#rn-526)) — **em todas as plataformas, inclusive as que anexaram
+binário direito**. Um manifesto que atrasa não é um manifesto atrasado: para
+quem instala nesse intervalo, é um manifesto ausente.
+
+**A medição, contra as três tags que existem.** Em `v4.0.0`, `v4.0.1` e
+`v5.0.0`, o alvo `darwin-x64` (`macos-13`) ficou **24h00m01s** na fila e foi
+cancelado pelo teto do Actions — o MESMO número nas três, o que diz que ele
+nunca chega a ser agendado. Os outros quatro jobs terminam em no máximo
+**4m18s** (`linux-x64` na `v4.0.1`, 17:38:28Z → 17:42:44Z). O job `checksums`
+tinha `needs: build`: o `always()` garantia que ele RODASSE (dependência
+cancelada está coberta), nunca QUANDO.
+
+**A regra:** o job do manifesto **não depende da matriz**. Ele espera os
+**ASSETS** da Release, não os **JOBS** — com teto —, e publica o que existir,
+nomeando no log o que não cobre. A ausência de um alvo é desfecho previsto
+(`::notice::`), nunca erro; a ausência da **Release** continua sendo erro
+nomeado, porque este workflow só ANEXA e nunca cria; e **nenhum** binário
+anexado continua sendo erro, porque um `checksums.txt` vazio afirmaria que a
+release não tem binários quando o que houve foi a matriz inteira falhar.
+
+**O teto dos binários é 1200s, e o número não é arbitrário:** é o
+`timeout-minutes: 20` do próprio job `build` — o máximo que um alvo **com
+runner** pode demorar depois de começar. O que ele deliberadamente não cobre é
+o tempo de **fila**, e não cobrir tempo de fila é o ponto inteiro. O laço sai
+cedo quando os cinco chegam, que é o caminho feliz.
+
+**Nada do que o job FAZ muda.** Ele continua montando o manifesto a partir dos
+assets (e não de `dist-bin/`, vazio ali), assinando com `cosign` keyless e
+verificando antes de anexar — [RN-524](#rn-524) intacta, um manifesto e não
+cinco assinaturas. E um alvo que anexe DEPOIS do teto não fica órfão: o
+`--clobber` já existia para isso, e refazer o manifesto é um
+`workflow_dispatch` com a mesma tag.
+
+**O que esta regra NÃO faz:** `darwin-x64` continua não construindo. Trocar o
+label, tirar a plataforma ou pagar runner é decisão de dono, e o manifesto não
+pode depender dela — é justamente por depender dela que ele não saía.
+
+- **Código:** `.github/workflows/build-runner-binaries.yml:266` (o job, agora
+  sem `needs:`), `:299` (`timeout-minutes: 40`, que cabe as duas esperas),
+  `:309` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),
+  `:369` (o passo que espera), `:373`/`:374` (os dois tetos), `:382` (a Release
+  ausente, que é erro), `:405` (o teto dos binários, que é `notice`), `:455` (o
+  manifesto nomeando o que não cobre)
+- **Teste:** `scripts/ci/checksums-nao-espera-a-matriz.spec.ts` — que o job não
+  tem `needs:`, que os dois tetos existem, que o teto dos binários é derivado
+  do `timeout-minutes` do `build` (e não copiado), que ele cabe no
+  `timeout-minutes` do próprio job, que ausência de alvo é `notice` e ausência
+  de Release é `error`, que `ALVOS_ESPERADOS` bate com a matriz, e as quatro
+  garantias do ADR 0149 que esta mudança não toca (uma assinatura, verificar
+  antes de anexar, `id-token: write`, o `install.sh` no manifesto). É ESTÁTICO,
+  e o limite é declarado no topo do arquivo: o job só se prova numa tag final,
+  e nunca rodou em nenhuma
+- **Lacuna DECLARADA:** a matriz continua sendo cinco alvos e a Release continua
+  recebendo **dois** — `win32-x64` e `darwin-arm64` têm correção na `dev` nunca
+  exercitada, e `darwin-x64` não tem. O manifesto vai nascer cobrindo dois e vai
+  **dizer** isso, que é a diferença entre parcial e silencioso. E, com a matriz
+  falhando inteira, o job gasta as duas esperas antes de recusar
+- **ADR:** [0149](adr/0149-assinatura-dos-artefatos-publicados.md)
+- **Origem:** AT-051 (EP-009/HS-035)

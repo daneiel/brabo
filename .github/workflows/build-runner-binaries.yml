@@ -255,7 +255,7 @@ jobs:
   #
   # Por que um job SEPARADO e não um passo dentro da matriz: cada job da
   # matriz roda numa plataforma diferente e enxerga só o PRÓPRIO binário. Um
-  # manifesto que cobre os cinco só pode ser montado depois que os cinco
+  # manifesto que cobre o conjunto só pode ser montado depois que os alvos
   # anexaram — e é por isso que este job baixa os assets da Release em vez de
   # ler `dist-bin/`, que aqui está vazio.
   #
@@ -265,21 +265,48 @@ jobs:
   # só, e é o formato que qualquer consumidor sabe ler.
   checksums:
     name: checksums.txt assinado
-    needs: build
-    # `always()` porque a matriz é `fail-fast: false` de propósito: um alvo
-    # que não construiu NÃO deve impedir os outros quatro de terem manifesto.
-    # O que o manifesto não pode fazer é calar sobre a ausência — daí a
-    # comparação com a matriz esperada, abaixo.
+    # SEM `needs: build`, e a ausência É a correção — não um esquecimento.
+    #
+    # Com `needs: build` mais `always()`, o job rodava mesmo com a matriz
+    # falhando: `always()` cobre dependência CANCELADA. O que ele não cobria
+    # era QUANDO. E "quando" está medido nas três tags que existem
+    # (`v4.0.0`, `v4.0.1`, `v5.0.0`): o alvo `darwin-x64` (`macos-13`) fica
+    # **24h00m01s** na fila e é cancelado pelo teto do Actions, o MESMO
+    # número nas três — ou seja, nunca recebe runner. Todos os outros quatro
+    # jobs terminam em no máximo **4m18s** (linux-x64 na `v4.0.1`,
+    # 17:38:28Z → 17:42:44Z). Com `needs:`, o manifesto assinado só podia
+    # nascer UM DIA depois da Release, e para quem instala isso é o mesmo que
+    # não nascer: sem `checksums.txt`, `GET /runner-releases/binary` recusa
+    # com `release_sem_manifesto` (RN-525) e o `install.sh` recusa junto
+    # (RN-526) — em TODAS as plataformas, inclusive as duas que anexaram.
+    #
+    # Um manifesto parcial é honesto (ele DIZ o que não cobre); um manifesto
+    # ausente desliga a conferência de todo mundo.
+    #
+    # Tirar o `needs:` não tira a espera, MOVE de onde ela vem: em vez de
+    # esperar o JOB mais lento (que pode nem começar), este job espera os
+    # ASSETS, com teto — ver o passo "Esperar a Release e os binários". Nada
+    # do que ele FAZ muda: continua montando o manifesto a partir dos assets
+    # da Release, assinando keyless e verificando antes de anexar.
     #
     # E NUNCA em ensaio (dispatch com `tag` vazia): não há Release a que
     # anexar nem manifesto a assinar. A condição é de JOB e lê `inputs`
     # direto — `steps.alvo` é do próprio job e não alcança este nível.
-    if: always() && (github.event_name != 'workflow_dispatch' || inputs.tag != '')
+    if: github.event_name != 'workflow_dispatch' || inputs.tag != ''
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 600s de espera pela Release + 1200s pelos binários + o trabalho em si.
+    # Era 10 — que bastava enquanto o `needs:` fazia a espera por fora.
+    timeout-minutes: 40
     permissions:
       contents: write # anexar o manifesto e o bundle à Release
       id-token: write # assinar keyless (a identidade é ESTE workflow)
+    env:
+      # Os cinco alvos da matriz acima. Escrito aqui de novo, de propósito: é
+      # contra ESTA lista que a ausência é declarada, e uma lista derivada do
+      # que foi baixado nunca acusaria falta nenhuma. No JOB e não no passo
+      # porque agora são DOIS passos que a leem — quem espera e quem declara —,
+      # e duas cópias divergiriam no dia em que a matriz mudasse.
+      ALVOS_ESPERADOS: 'linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64'
     steps:
       - name: Qual tag
         id: alvo
@@ -315,14 +342,78 @@ jobs:
       - name: Instalar o cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
 
+      # A espera que o `needs: build` fazia, agora com TETO e olhando o que
+      # importa: os ASSETS, não os jobs.
+      #
+      # São duas esperas com desfechos DIFERENTES, e é por isso que são dois
+      # laços e não um:
+      #
+      # 1. A Release. Ausência PERMANENTE aqui é erro — este workflow só
+      #    ANEXA, nunca cria (a mesma regra e o mesmo teto do passo "Anexar à
+      #    GitHub Release" do job `build`, medido contra os ~4min que o
+      #    `release.yml` leva).
+      # 2. Os binários. Ausência aqui é ESPERADA e não é erro: é justamente o
+      #    caso que o manifesto sabe declarar. O laço PARA cedo quando os
+      #    cinco chegam — que é o caminho feliz e o mais rápido — e desiste no
+      #    teto quando algum não chega.
+      #
+      # O teto dos binários é 1200s = os `timeout-minutes: 20` do próprio job
+      # `build`, e o número não é arbitrário: 20min é o máximo que um alvo com
+      # runner pode DEMORAR depois de começar. O que ele não cobre é o tempo
+      # de FILA — e não cobrir tempo de fila é exatamente o ponto. Medido: os
+      # quatro alvos que recebem runner terminam em ≤ 4m18s.
+      #
+      # Um alvo que anexe DEPOIS disto não fica órfão: `gh release upload
+      # --clobber` no passo seguinte já existe para isso, e refazer o
+      # manifesto é um `workflow_dispatch` com a mesma tag.
+      - name: Esperar a Release e os binários
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.alvo.outputs.tag }}
+          ESPERA_MAXIMA_DA_RELEASE_SEGUNDOS: '600'
+          ESPERA_MAXIMA_DOS_BINARIOS_SEGUNDOS: '1200'
+          INTERVALO_SEGUNDOS: '15'
+        run: |
+          set -euo pipefail
+
+          limite=$(( SECONDS + ESPERA_MAXIMA_DA_RELEASE_SEGUNDOS ))
+          until gh release view "$TAG" >/dev/null 2>&1; do
+            if [ "$SECONDS" -ge "$limite" ]; then
+              echo "::error::a Release de $TAG não existe depois de ${ESPERA_MAXIMA_DA_RELEASE_SEGUNDOS}s de espera — este workflow só ANEXA a uma Release existente, nunca cria uma."
+              exit 1
+            fi
+            echo "a Release de $TAG ainda não existe; nova tentativa em ${INTERVALO_SEGUNDOS}s."
+            sleep "$INTERVALO_SEGUNDOS"
+          done
+
+          limite=$(( SECONDS + ESPERA_MAXIMA_DOS_BINARIOS_SEGUNDOS ))
+          while :; do
+            anexados="$(gh release view "$TAG" --json assets --jq '.assets[].name' || true)"
+            faltando=''
+            for alvo in $ALVOS_ESPERADOS; do
+              if ! printf '%s\n' "$anexados" | grep -q "^brabo-runner-${alvo}"; then
+                faltando="${faltando} ${alvo}"
+              fi
+            done
+
+            if [ -z "${faltando# }" ]; then
+              echo "os $(echo "$ALVOS_ESPERADOS" | wc -w) alvos estão anexados a $TAG."
+              break
+            fi
+
+            if [ "$SECONDS" -ge "$limite" ]; then
+              echo "::notice::teto de ${ESPERA_MAXIMA_DOS_BINARIOS_SEGUNDOS}s atingido esperando:${faltando}. O manifesto sai com o que existe e DIZ o que não cobre."
+              break
+            fi
+
+            echo "ainda faltam:${faltando}; nova tentativa em ${INTERVALO_SEGUNDOS}s."
+            sleep "$INTERVALO_SEGUNDOS"
+          done
+
       - name: Gerar, assinar e anexar o checksums.txt
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.alvo.outputs.tag }}
-          # Os cinco alvos da matriz acima. Escrito aqui de novo, de
-          # propósito: é contra ESTA lista que a ausência é declarada, e uma
-          # lista derivada do que foi baixado nunca acusaria falta nenhuma.
-          ALVOS_ESPERADOS: 'linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64'
         run: |
           set -euo pipefail
 
