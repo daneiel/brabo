@@ -9395,6 +9395,10 @@ ALCANCE ([RN-520](#rn-520)), não amplitude.
   Esta entrega é a metade server-side; a lacuna do `CLAUDE.md` fecha pela
   metade — a api passa a poder listar e revogar, e `apps/web` ainda não tem
   onde fazê-lo
+- **A outra metade FECHOU na [RN-561](#rn-561):** a aba Configurações ganhou a
+  seção que lista e revoga, marcando a ESPÉCIE de cada chave. O que segue
+  aberto daqui é a visão de `maintainer` (acima, por decisão) e o alvo
+  `{projeto, usuário}` da desconexão ([RN-520](#rn-520))
 
 ---
 
@@ -11091,7 +11095,9 @@ existe para matar.
   (`projectId: string | null`), para o consumidor futuro não ter o que mudar
   ali. E o web continua sem tela onde listar ou revogar chave de dispositivo
   (a metade aberta da RN-519): a espécie nova torna a lacuna maior, e ela fica
-  declarada, não fechada aqui.
+  declarada, não fechada aqui. **FECHADA depois pela [RN-561](#rn-561)**, que é
+  a tela — e a marca de espécie criada aqui é o que ela usa para não mentir
+  sobre o alcance de revogar.
 - **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
 - **Origem:** FASE 30, sessão 2 —
   [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
@@ -12106,7 +12112,10 @@ diferença não é escolha de desenho: é a forma do endpoint.
   NÃO muda o painel: é o defeito irmão, um escopo abaixo, e fechá-lo é decisão
   à parte. E o web continua sem TELA onde listar ou revogar chave de
   dispositivo (a metade aberta da [RN-519](#rn-519)) — esta entrega consome a
-  listagem e não a constrói
+  listagem e não a constrói. **FECHADA depois pela [RN-561](#rn-561)**, que a
+  constrói: a seção de Configurações reusa `podeLerChavesDeDispositivo` daqui
+  e a MESMA `queryKey`, e por isso revogar por lá invalida o reconhecimento
+  deste painel
 - **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
 - **Origem:** FASE 30, sessão 7 —
   [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
@@ -12808,3 +12817,123 @@ interrupção sem causa.
   > aviso que ninguém lê é o mesmo que aviso nenhum.
 - **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
 - **Origem:** AT-050 (EP-021/HS-034)
+
+---
+
+## A chave de dispositivo ganha tela, e a tela diz o alcance de revogar (RN-561)
+
+### RN-561 — A aba Configurações lista e revoga chave de dispositivo, marcando a ESPÉCIE — porque revogar a de MÁQUINA derruba o agente local em TODOS os projetos do dono {#rn-561}
+
+A metade que faltava da [RN-519](#rn-519), declarada por escrito desde então no
+`CLAUDE.md`: *"o que segue aberto é só a TELA: `apps/web` não tem onde listar
+nem revogar, então quem quiser revogar chama a rota"*. As duas rotas existem —
+o `DELETE` desde o
+[ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md) e o
+`GET` desde a RN-519 —, e **tela nenhuma as usava**. Esta RN é a tela, e ela
+**não abre rota nova**: o que a listagem já devolve basta para desenhar tudo o
+que segue.
+
+**Onde ela mora, e por que de PROJETO.** É a 18ª seção da aba Configurações
+(`device-keys`, grupo `pessoas`, logo depois de `access-tokens` — a vizinha que
+faz o mesmo com PAT). De projeto porque o endpoint é
+`/projects/:projectId/runner-device-keys`: uma tela de CONTA exigiria rota nova,
+e o recorte é sobre a que existe.
+
+**A ESPÉCIE aparece, e não é enfeite — é o alcance da única ação irreversível
+da tela.** Desde a [RN-543](#rn-543) a listagem marca `projeto` | `maquina`, e
+uma chave de MÁQUINA (`project_id` nulo) **serve todos os projetos do dono** e
+por isso aparece na lista de TODOS eles. Mostrá-la sem a marca faria a tela
+afirmar que é "a chave deste projeto", e quem clicasse em revogar acharia que
+derruba o agente local aqui quando derruba **em todos** — a tela mentiria
+justamente sobre o que menos pode errar. A marca é `warning` para a de máquina
+e `muted` para a de projeto, e **nunca `success`**: verde leria como "está de
+pé", que é a aritmética que a [RN-548](#rn-548) já recusou.
+
+**A confirmação DEPENDE da espécie, e diz também o custo colateral.** Revogar
+abre um diálogo com TRÊS frases, e a do meio é a que muda: a de máquina nomeia
+*todos os seus projetos em modo runner* (o laço de
+`RevokeRunnerDeviceKeyUseCase` sobre `listRunnerModeReachableBy`), a de projeto
+nomeia *o projeto dela*. Um texto só para as duas mentiria numa das metades. A
+terceira frase é o custo que a [RN-520](#rn-520) declarou e que esta entrega
+**não muda**: o alvo da desconexão é `{projeto, usuário}` e nunca `{chave}`, então
+outro runner do mesmo usuário no mesmo projeto também cai — mesmo autenticado
+por PAT ou por outra chave — e reconecta sozinho se a credencial dele ainda
+valer.
+
+**Uso registrado NÃO é agente de pé, e o vocabulário é o MESMO da RN-548.**
+`lastUsedAt` é a classe de dado do `workspaceVerifiedAt` ([RN-468](#rn-468)):
+registro de uma confirmação, nunca batimento. A ressalva é dita em TEXTO na
+legenda, e a coluna de status fala de REVOGAÇÃO ("ativa"/"revogada", um fato
+sobre a linha), nunca de conexão — quem sabe do AGORA continua sendo o canal do
+terminal. Inventar um segundo vocabulário para a mesma distinção seria a tela
+dizendo a mesma coisa de dois jeitos, e um dos dois envelheceria.
+
+**Cinco estados, e nenhum vira o outro
+([RN-088](#rn-088)/[RN-470](business-rules/custo.md#rn-470)).** Nenhuma chave
+("Nenhuma chave de dispositivo sua serve este projeto"), chave REVOGADA (que
+**continua na lista** por decisão da RN-519 — sumir com a linha faria a tela
+afirmar que nunca existiu, e ela não ganha botão porque revogar de novo, ainda
+que idempotente na api, sugeriria efeito que não sobrou), `lastUsedAt` NULO (a
+chave ÓRFÃ da [RN-473](#rn-473): registrada por uma aba que fechou no meio do
+fluxo e nunca usada por runner nenhum — texto próprio, e uma explicação abaixo
+da tabela que só aparece quando existe uma, porque explicar o que não ocorre é
+ruído), "ainda não carregou" e "não consegui ler". **"Não sei" nunca vira "não
+tem".**
+
+**O papel é o do ENDPOINT, e é o EFETIVO do projeto.** O mínimo é `developer`
+— o que `RunnerDeviceKeysController` exige nas TRÊS rotas
+([RN-102](business-rules/custo.md#rn-102)) — e a comparação sai da MESMA função
+que a RN-548 criou (`podeLerChavesDeDispositivo`, sobre `roleAtLeast`), nunca
+uma segunda régua e nunca `role === 'x' || role === 'y'` à mão. O que muda em
+relação à RN-548 é o INSUMO: lá o painel lia o papel de WORKSPACE e **declarava**
+a lacuna, porque monta em lugares que não buscam `project_members`; aqui os
+dados estão à mão — a seção mora na mesma aba que `MembersSection`, com a MESMA
+`queryKey`, e o react-query deduplica —, então o papel é composto como no caso
+de uso (`projectRole ?? workspaceRole`, uma SOBREPOSIÇÃO nos dois sentidos,
+[RN-471](#rn-471)) e a lacuna **fecha** em vez de se repetir. Papel AUSENTE não
+é papel INSUFICIENTE: enquanto a lista de membros está em voo a tela diz que
+está verificando, e não acusa quem lê de não alcançar `developer`. Quem não
+alcança **continua vendo** a seção inteira, o que uma chave de dispositivo é e o
+que revogar a de máquina custa — some o CONTROLE, nunca a INFORMAÇÃO
+([ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)) —, e o motivo é dito UMA vez
+em TEXTO (`title` em elemento `disabled` não abre no Chromium). Como as três
+rotas pedem o MESMO papel, quem não alcança também não vê a LISTA: a tela deixa
+de perguntar o que a api negaria, em vez de transformar um 403 previsível em
+"não consegui ler". Isto **não é fronteira de segurança** — quem recusa é o
+`RolesGuard`.
+
+**Uma por vez, e por isso não há desfecho de lote.** A tela não oferece
+"revogar todas", então a régua da [RN-469](#rn-469) — ação de UI que vira N
+chamadas não é transação, e a tela diz isso — não se aplica: oferecer o lote
+criaria um desfecho parcial a narrar para uma ação que ninguém pediu. Falha na
+revogação mostra a frase da PRÓPRIA api e a linha **continua** na lista.
+
+- **Código:** `apps/web/src/routes/settings/RunnerDeviceKeysSection.tsx:76`
+  (a seção inteira; o papel efetivo em `:107`, a consulta em `:130`, a
+  confirmação por espécie em `:326`);
+  `apps/web/src/routes/settings/sumario.ts:62` (a 18ª entrada do registro);
+  `apps/web/src/routes/ProjectSettingsTab.tsx:86` (a composição, na MESMA
+  ordem); `apps/web/src/locales/{en,pt-BR}/settings.json`
+  (`runnerDeviceKeys.*`). Consome `listRunnerDeviceKeys`/
+  `revokeRunnerDeviceKey` (`apps/web/src/lib/api-client.ts:431`) e
+  `podeLerChavesDeDispositivo` (`apps/web/src/lib/agente-de-maquina.ts:68`) sem
+  alterar nenhum dos dois
+- **Teste:** `apps/web/src/routes/settings/chaves-de-dispositivo.test.tsx` — as
+  duas espécies marcadas na mesma lista; a revogada que fica, marcada e sem
+  botão; a órfã com texto próprio e a explicação que NÃO aparece sem ela; vazio
+  e falha com textos diferentes; a ressalva de que uso registrado não é agente
+  de pé; o aviso de alcance nas DUAS espécies, com a chamada saindo só depois
+  de confirmar; cancelar sem revogar; a falha trazendo a frase da api com a
+  chave ainda na lista; `viewer` sem chamar a rota e com o motivo em texto; a
+  sobreposição do papel de projeto nos DOIS sentidos; e o papel ausente que
+  diz "verificando" em vez de acusar
+- **Fica declarado e NÃO fecha:** (1) o **alvo da revogação** continua sendo
+  `{projeto, usuário}` e nunca `{chave}` — a tela DIZ isso e não muda, porque
+  mudar exige coluna nova em `runner_socket_tickets` e contrato novo de auth
+  (RN-520), frente própria com ADR; (2) numa instalação **sem PROJETO**, a
+  chave de máquina recém-criada pela [RN-552](#rn-552) segue **inalcançável**:
+  as duas rotas são de projeto, e sem projeto não há a quem perguntar; (3) a
+  visão de `maintainer` (listar/revogar de qualquer usuário) continua FORA por
+  decisão da RN-519, não por omissão desta tela; (4) sem E2E de navegador — o
+  que se prova aqui é o que a tela AFIRMA, e isso a suíte de componente prova
+- **Origem:** AT-012 (EP-003/HS-007)

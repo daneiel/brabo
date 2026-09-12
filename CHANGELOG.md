@@ -26,6 +26,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: a aba **Configurações** ganha a seção **Chaves de dispositivo** —
+  listar e revogar a chave que autentica o `brabo-runner`, o que até aqui só
+  dava para fazer chamando a rota na mão
+  ([RN-561](docs/business-rules.md#rn-561)).
+
+  As duas rotas existiam desde a RN-519, sem tela nenhuma. A seção consome as
+  duas e não abre nenhuma outra: mostra as suas chaves que servem o projeto —
+  **as revogadas inclusive**, porque sumir com a linha faria a tela afirmar que
+  a chave nunca existiu —, marca a **espécie** de cada uma e diz quando cada
+  uma foi usada pela última vez.
+
+  A marca de espécie é o que decide o alcance de revogar, e por isso a
+  confirmação muda com ela: uma chave de **máquina** atende todos os seus
+  projetos em modo runner, e revogá-la derruba o agente local **em todos**; uma
+  de **projeto** derruba no projeto dela. O diálogo diz também o custo que já
+  valia: derrubar alcança `{projeto, usuário}` e não uma chave em particular,
+  então outro runner seu no mesmo projeto cai junto e reconecta sozinho se a
+  credencial dele ainda valer.
+
+  Uso registrado **não é** agente de pé — a tela diz isso em texto, e "ativa"
+  fala da chave, nunca de conexão. Chave ativa que nenhum agente usou (a que
+  sobra de um fluxo de configuração interrompido) tem texto próprio, distinto
+  de "nenhuma chave" e de "não consegui ler". Listar e revogar exigem papel
+  `developer` no projeto; quem não alcança continua vendo a seção e o que
+  revogar custa, com o motivo dito uma vez.
+
 - **web**: converter um projeto para **Pasta montada** passa a abrir o mesmo
   **navegador de pastas** da criação, em vez de pedir o caminho no escuro
   ([RN-559](docs/business-rules.md#rn-559)).

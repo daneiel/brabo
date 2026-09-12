@@ -6,7 +6,7 @@ import styles from './sumario.module.css';
 /**
  * O sumário ancorado da aba Configurações.
  *
- * A aba renderiza 17 seções numa rolagem só, e até aqui sem mapa nenhum: nem
+ * A aba renderiza 18 seções numa rolagem só, e até aqui sem mapa nenhum: nem
  * índice, nem âncora, nem noção de onde se está. Este é o mapa.
  *
  * ## Onde ele mora — e por que NÃO é uma quarta faixa
@@ -22,7 +22,7 @@ import styles from './sumario.module.css';
  * ## O que ele lista
  *
  * Só o que está no DOM. As entradas vêm do REGISTRO
- * (`SecaoDeConfiguracoes.tsx`), não da lista estática — sete das 17 seções
+ * (`SecaoDeConfiguracoes.tsx`), não da lista estática — sete das 18 seções
  * somem em condição normal (sem repositório, sem papel de `owner`, sem
  * catálogo), e oferecer entrada para uma delas seria um mapa apontando para
  * uma sala que não existe.
