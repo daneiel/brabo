@@ -1535,6 +1535,21 @@ o RACIOCÍNIO da triagem, que continua valendo.
   cobrar o que o gerador não escreve faria todo release nascer vermelho numa
   PR do bot. Frase alterada sem ajustar o padrão reprova como `CEGO`, de
   propósito.
+- Frase ancorada num lugar do CÓDIGO entra em
+  `verificarFrasesAncoradasNoCodigo` (`scripts/docs/generate.mjs`) — mesma
+  tabela-por-frase das contagens, só que o esperado é DERIVADO do artefato e
+  não é um número. Hoje são três: a escada da esteira no `description` do
+  `branching-policy.md`, derivada de `ESCADA` em `scripts/ci/pr-police.ts`
+  (NUNCA de `PROTECTED_BRANCHES`, que tem `rc` de propósito), e as duas frases
+  de `db:generate` (`README.md` e `docs/getting-started.md`), derivadas de
+  `apps/api/src/db/schema.ts` ser ou não barrel. Consequência prática: mudar a
+  escada ou desfazer o barrel reprova o `docs:check` até a prosa acompanhar.
+  Padrão que para de casar reprova como `CEGO`, e a FONTE sumir também.
+- Variável de ambiente tem ESCOPO no inventário gerado — `produto` (o que o
+  operador põe no `.env`) ou `ferramenta` (só CI e quem desenvolve) —, e a
+  fonte nova nasce com o dele. Fonte que mora direto numa pasta precisa de
+  DOIS globs: `**/` no pathspec do git exige pelo menos um nível de diretório,
+  e um inventário que nasce vazio não avisa, passa verde.
 - Antes de finalizar: pnpm docs:check e pnpm docs:build verdes (glob
   morto, gerado fora de dia e link quebrado reprovam).
 - Nunca inventar conteúdo de doc: sem informação suficiente, use

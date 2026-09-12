@@ -1620,6 +1620,56 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Documentação
 
+- **docs**: três documentos que contradiziam o código, e o aferidor que faltava
+  para cada um.
+
+  **O `db:generate` mandava editar o barrel.** `README.md:294` e
+  `docs/getting-started.md:267` mandavam rodar `pnpm db:generate` "depois de
+  mudar `apps/api/src/db/schema.ts`" — que desde o
+  [ADR 0121](docs/adr/0121-schema-dividido-por-agregado-de-dominio.md) é só um
+  barrel de `export *`. Instrução errada custa mais que número errado: o comando
+  **roda**, o Drizzle não vê diff nenhum, e quem seguiu a instrução conclui que
+  o comando está quebrado, não a frase. São as duas primeiras coisas que alguém
+  lê — a pior posição possível para uma instrução morta. Medidas as outras
+  quatro ocorrências de `db:generate` em `docs/`: nenhuma reproduz (duas são
+  inventário gerado, duas são o ADR 0121 citando o comando como PROVA).
+
+  **O `description` do `branching-policy.md` anunciava a escada de quatro
+  degraus.** `dev → qa → rc → main` no frontmatter, com o corpo do **mesmo
+  arquivo** explicando a partir da linha 54 que o `rc` saiu da política
+  ([ADR 0030](docs/adr/0030-politica-de-branches-mecanizada.md)). O arquivo se contradizia
+  consigo mesmo, e o `description` é a metade que se lê primeiro: é ele que
+  alimenta o card da busca local do site e o `<meta>` da página. Ocorrência
+  única no repositório. **O `rc` continua em `PROTECTED_BRANCHES`, e continua
+  certo** — não sobrou lixo ali, é decisão; e o enum `bootstrap_step` mantém
+  `create_rc_branch` pelo mesmo motivo.
+
+  **O inventário de variáveis não via duas árvores inteiras.**
+  `apps/api/scripts/` e `e2e/` ficavam de fora de `gerarEnv()`, e o
+  `docs:check` passava verde sobre elas. Junto entrou a mesma armadilha
+  pré-existente na api: `**/` no pathspec do git exige pelo menos um nível de
+  diretório, então o que mora direto em `apps/api/src/` escapava — e escondia
+  `API_JSON_BODY_LIMIT` (`apps/api/src/main.ts:59`), que é variável de
+  **produto**, o teto do corpo JSON que a api aceita. O inventário passa de 132
+  para 157 variáveis, cada fonte agora marcada `product` ou `tooling` — sem
+  isso `E2E_PASSWORD` apareceria ao lado de `SMTP_HOST` numa lista que um
+  operador lê para configurar a máquina dele. As 15 lacunas que a varredura
+  nova abriu foram escritas em prosa na mesma mudança (duas seções novas em
+  `docs/reference/configuration.md`); seguem abertas as **duas**
+  pré-existentes, de `HUGGINGFACE_*`.
+
+  **O que trava as duas primeiras daqui em diante:**
+  `verificarFrasesAncoradasNoCodigo` em `scripts/docs/generate.mjs`, no molde
+  da tabela das contagens em prosa — uma entrada por frase, um comentário por
+  entrada dizendo o que ela custou. A diferença é que o esperado não é um
+  número: a escada vem de `ESCADA` em `scripts/ci/pr-police.ts` (**nunca** de
+  `PROTECTED_BRANCHES`, que derivaria de volta a frase errada), e o destino do
+  `db:generate` vem de `schema.ts` conter ou não um `pgTable(`. Exercitado por
+  mutação nos dois sentidos: doc errada com código certo **reprova**, código
+  mudado com doc certa **reprova**, frase reescrita vira `CEGO`, e a fonte
+  sumindo também. O terceiro caso não ganhou aferidor de frase porque ele é o
+  próprio aferidor — o que faltava era escopo.
+
 - **adr**: [ADR 0153](docs/adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.md)
   — `DEPLOY_ENABLED` é citado como gatilho de ativação por **dez documentos**
   (os ADRs 0089/0091/0092 no próprio campo Status, `fluxo.yml` em três lugares,

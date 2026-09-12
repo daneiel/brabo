@@ -291,7 +291,9 @@ Um Postgres, uma database (`brabo`), dois schemas para nunca colidir:
 
 - **api (Drizzle)** — domínio em `public`; migrações em
   `apps/api/src/db/migrations/`, aplicadas com `pnpm db:migrate`
-  (`pnpm db:generate` depois de mudar `apps/api/src/db/schema.ts`).
+  (`pnpm db:generate` depois de mudar `apps/api/src/db/schema/<agregado>.ts` —
+  um arquivo por agregado desde o [ADR 0121](docs/adr/0121-schema-dividido-por-agregado-de-dominio.md);
+  `db/schema.ts` é só o barrel de `export *`).
 - **engine (Ecto/Oban)** — domínio e Oban em `engine`, via
   `migration_default_prefix`. Migrações em `apps/engine/priv/repo/migrations/`.
 
