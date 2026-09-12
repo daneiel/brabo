@@ -3,7 +3,7 @@ id: branching-policy
 title: Branch and versioning policy
 sidebar_label: Branching policy
 sidebar_position: 2
-description: The dev → qa → rc → main ladder, the branch taxonomy, who's born where, and why the policy is mechanized instead of agreed upon.
+description: The dev → qa → main ladder, the branch taxonomy, who's born where, and why the policy is mechanized instead of agreed upon.
 keywords: [branches, gitflow, promotion, hotfix, versioning, release]
 ---
 
