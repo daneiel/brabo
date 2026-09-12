@@ -1104,6 +1104,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **engine**: o Infra Lead deixa de propor `container_start` para um projeto
+  `runner` — recusa **local e nomeada**, antes de chamar a api
+  ([RN-566](docs/business-rules.md#rn-566)).
+
+  `propose_container_start` montava o payload e chamava a api direto, sem ler
+  o projeto. Num projeto `runner` essa proposta só podia terminar em falha: o
+  payload dela elege uma imagem candidata do roteamento do Arquiteto, e naquele
+  modo não há roteamento contra o qual eleger — o tipo certo é
+  `container_start_via_runner`. Agora a tool lê o `execution_mode` no mesmo
+  processo (sem HTTP, sem chamada de rede no laço do agente) e recusa dizendo
+  qual tool usar; `container` e `mounted` seguem propondo, pelo broker.
+
+  A régua é a que já existia dos dois lados — a tool irmã e a página
+  `/containers` —, agora numa função só com uma cláusula por tool. E a recusa
+  não vira silêncio: ela é resultado de ferramenta que o modelo lê, e a chamada
+  continua narrada no event log, o que a tool irmã ainda não fazia.
+
+  **O que continua possível:** propor sem imagem decidida em
+  `container`/`mounted`. A recusa aqui é sobre MODO; a tela checa as três
+  coisas porque tem um humano clicando.
+
 - **chore**: as dependências vulneráveis dos dois lockfiles, **e o que não
   fecha, dito por nome**.
 
