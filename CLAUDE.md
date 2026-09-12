@@ -266,7 +266,6 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - `DEPLOY_ENABLED` não existe: trava `platform` em `planned` e mantém
   `secops-runtime` sem detecção/resposta/postmortem de incidente (mesmo
   gatilho ausente para os dois — ADR 0091/0092)
-- `context-manager-summarize` é o único template da leva sem consumidor
 - `DEPLOY_ENABLED` não existe **e não nasce por decisão** (ADR 0153): dez
   documentos o citam como gatilho e as duas únicas ocorrências no código são
   comentários. Ele trava `platform` em `planned` e mantém `secops-runtime` sem
@@ -432,14 +431,22 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - Smokes de LLM: 5 de 6 providers sem credencial no ambiente (só OpenRouter
   rodou real); `GITHUB_TEST_TOKEN`/`GITLAB_TEST_TOKEN` idem para git
 - `NPM_TOKEN` não configurado — `publish-runner.yml` avisa e pula
-- Binário standalone: a estreia das 5 plataformas ACONTECEU (v4.0.0,
-  2026-09-04) e provou a metade que faltava — as CINCO construíram e passaram
-  no `smoke:bin` no runner nativo de cada uma. O que NÃO aconteceu foi o
-  ANEXO: as cinco reprovaram no passo de upload por uma corrida com
-  `release.yml`, e nenhuma Release tem binário até hoje. `darwin-x64`
-  (`macos-13`) não chegou nem a começar — ficou na fila por mais de 40min, e
-  se `macos-13` estiver saindo do catálogo de runners hospedados isso é um
-  segundo problema, ainda não investigado
+- Binário standalone: DOIS dos cinco alvos chegam à Release. `v4.0.1` e
+  `v5.0.0` anexam `brabo-runner-linux-x64` e `-linux-arm64` (medido com
+  `gh release view`) — a corrida com o `release.yml` que derrubava o anexo na
+  `v4.0.0` FOI corrigida, com espera de teto 600s em
+  `build-runner-binaries.yml`. O que falta são os outros três, e são TRÊS
+  causas distintas, não uma: `win32-x64` e `darwin-arm64` reprovam no BUILD
+  por motivo próprio de plataforma (o `.node` do `node-pty` fora de
+  `build/Release`; `--self-test-pty` com `posix_spawnp failed`), e as duas
+  correções JÁ ESTÃO na `dev` (`apps/runner/scripts/build-bin.mjs`), nunca
+  exercitadas — o que falta aí é uma TAG, não uma sessão. `darwin-x64`
+  (`macos-13`) é o único que nunca chegou a construir: ele fica **24h00m01s**
+  na fila e é cancelado, o MESMO número nas três tags, que é o teto do
+  Actions batendo — ou seja, o job NUNCA FOI AGENDADO. A hipótese "fila
+  congestionada" está descartada pela ordem de grandeza; a que sobra é label
+  sem runner, e decidir entre trocar o label, tirar a plataforma (a promessa
+  vira quatro alvos, em ADR novo) ou pagar runner é decisão de dono
 - i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR +
   fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
   arquivo para inglês como idioma primário
@@ -458,7 +465,15 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   ADRs reais do produto; ampliar o corpus é decisão de custo de embedding
   numa rodada manual, não escolhida aqui
 
-**Backlog vivo:** `docs/explanation/backlog.md` (fonte única de priorização).
+**Backlog:** `docs/explanation/backlog.md` é a triagem da FASE 13c e é
+HISTÓRICA — não a leia como fila viva. Medição de 2026-09-12: pelo menos DOZE
+itens que ela ainda apresenta como abertos já não reproduzem (o isolamento do
+executor, o schema por agregado, o golden-set do gate semântico, o backup de
+`git_local_repos`, o compose de instalação, "FASE 29 é planning-only", o
+Dependabot, duas lacunas do runbook, a severidade dos alertas, e mais). O
+defeito é de CADÊNCIA e não de conteúdo: fases foram fechadas sem ninguém
+voltar ali marcar. A fila viva é o backlog do mantenedor; este arquivo guarda
+o RACIOCÍNIO da triagem, que continua valendo.
 
 ## Stack (decidida — não proponha alternativas)
 - `apps/api`: NestJS 11 + Drizzle ORM + PostgreSQL 16 + pgvector;

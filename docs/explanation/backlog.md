@@ -12,6 +12,21 @@ that were scattered across ADRs and CLAUDE.md.
 > argument about what costs more to wait on; the priority decision belongs
 > to the user.
 
+> [!warning] Historical — do NOT read this as the live queue
+> This is the FASE 13c triage, and it has not been kept in step with the
+> repository. Measured on **2026-09-12**: at least **twelve** items still
+> presented here as open **no longer reproduce** — the executor isolation
+> (`terminal_executor.ex` refuses a missing container), the per-aggregate
+> schema (ADR 0121), the semantic-gate golden set (ADR 0123), the
+> `git_local_repos` backup, the install compose, "FASE 29 is planning-only",
+> Dependabot, two runbook gaps, and alert severity, among others.
+>
+> The defect is **cadence, not content**: phases were closed without anyone
+> coming back here to mark them. What survives — and what this file is worth
+> keeping for — is the **reasoning** of the triage: why each item costs more
+> to wait on than to do. Treat every state below as **unverified until
+> re-measured**.
+
 ## How it's classified
 
 **P1** — blocks the product from doing what it promises. **P2** — the
