@@ -24,7 +24,7 @@ import styles from '../ProjectSettingsTab.module.css';
  *
  * ## Por que um registro, e não a lista estática direto no sumário
  *
- * SETE das 17 seções renderizam `null` em condição normal — sem repositório
+ * SETE das 18 seções renderizam `null` em condição normal — sem repositório
  * provisionado, sem projeto carregado, sem papel de `owner` (RN-060), sem
  * catálogo. Um sumário montado da lista estática ofereceria entrada para
  * seção que não está na tela, e clicar nela não rolaria para lugar nenhum: um
@@ -33,15 +33,15 @@ import styles from '../ProjectSettingsTab.module.css';
  * lista exatamente o que está no DOM — e volta a listar quando a query
  * responde.
  *
- * ## Nome acessível por `aria-label`, uma regra só para as 17
+ * ## Nome acessível por `aria-label`, uma regra só para as 18
  *
  * O `<section>` ganha nome acessível (vira uma `region` para a tecnologia
  * assistiva) a partir da MESMA chave de i18n que o `<h2>` da seção renderiza —
  * as duas não têm como divergir. `aria-labelledby` apontando para o `<h2>`
- * seria o caminho canônico, mas DUAS das 17 (`model-catalog`, `key-spend`)
+ * seria o caminho canônico, mas DUAS das 18 (`model-catalog`, `key-spend`)
  * delegam para componentes compartilhados com outras abas
  * (`ModelCatalogSection`, `CredentialSpendSection`) e não têm `<h2>` próprio
- * para receber um `id`. Duas regras para 17 seções envelhecem pior que uma.
+ * para receber um `id`. Duas regras para 18 seções envelhecem pior que uma.
  */
 
 interface RegistroDoSumario {
@@ -97,7 +97,7 @@ export function ProvedorDoSumario({ children }: { children: ReactNode }) {
     // dentro do container `.body` desta página, a rolagem suave simplesmente
     // não acontece — a animação é cancelada e o `scrollTop` fica onde estava
     // (0 de 1277px num salto curto, 163 de 10057 num longo). A aba tem
-    // consulta em polling e 17 seções que remontam quando a resposta chega, e
+    // consulta em polling e 18 seções que remontam quando a resposta chega, e
     // qualquer mudança de layout aborta a animação de rolagem do container.
     // `SessionPage.tsx` usa `smooth` e funciona lá porque o alvo é um evento
     // PERTO, num container que não está se reconstruindo. Um salto instantâneo

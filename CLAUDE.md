@@ -142,6 +142,7 @@ estado lido do repositório e não da conversa.
 | A credencial que sumia no `docker exec` do runner (AT-053) | Lacuna que o ADR 0145 declarou POR ESCRITO e mediu: o container `running` que a RN-507 exige antes de qualquer operação de `RunnerGit` só existe porque o MESMO runner o subiu, e é esse mesmo sucesso que o faz rotear todo comando para dentro dele — por um `docker exec` sem campo de `env` (ADR 0130, sem `-e` livre). O `git fetch` autenticado rodava com o helper instalado e as variáveis VAZIAS, e a falha chegava como token inválido ou rede fora: o caminho COMUM, não uma borda. Entregou-se a metade do SILÊNCIO, nunca a do `env`: o par (`env` presente, container ativo) passa a ser RECUSADO antes de executar, com marca de PROTOCOLO partida entre duas linguagens, mensagem que diz o quê e por quê, e origem `politica` — não `codigo`, porque não há cláusula faltando, há decisão de produto pendente. Quem recusa é o RUNNER e só ele pode: `containerAtivo` nasce `null` a cada execução, então container `running` REGISTRADO no banco NÃO implica container ativo NAQUELE processo, e um runner reiniciado com o container de pé roteia pro HOST, onde a credencial chega — subir a checagem recusaria um caminho que funciona, e `RunnerReadiness` fica byte a byte como está. A saída nunca cita nome nem valor de variável, só a CONTAGEM (a invariante da RN-507 sobrevive intacta). Metade aberta declarada, e a adjacência também: a idempotência de `ensure!` marca o workspace pronto na segunda tentativa por achar o `.git`, e ela falha adiante em vez de repetir a recusa | RN-558 |
 | O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
+| A chave de dispositivo ganha tela, e a tela diz o alcance de revogar (AT-012) | RN-561 |
 
 ## Estado atual e aberto
 
@@ -349,35 +350,63 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   com cara de bug. A ordem "converte, depois onboarda" é decisão de produto à
   parte, sem dono. O que a RN-559 acrescentou ali é a tela DIZER isso em texto,
   em vez de só não oferecer botão nenhum (ADR 0064)
-- Chave de dispositivo órfã (aba fechada no meio do fluxo da RN-473) é INERTE
-  e agora VISÍVEL pela api — `RunnerDeviceKeysController` ganhou `GET` na
-  RN-519, com a revogada na lista e `lastUsedAt` nulo como sinal da órfã. O que
-  segue aberto é só a TELA: `apps/web` não tem onde listar nem revogar, então
-  quem quiser revogar chama a rota. Metade declarada, não omissão. Desde a
+- **A chave de dispositivo TEM tela desde a RN-561, e o que sobra da lacuna
+  mudou de assunto.** A metade de api existe desde a RN-519
+  (`RunnerDeviceKeysController` com `GET`, a revogada NA lista e `lastUsedAt`
+  nulo como sinal da órfã da RN-473), e a de TELA — *"`apps/web` não tem onde
+  listar nem revogar"* — FECHOU: a aba Configurações ganhou a 18ª seção
+  (`device-keys`, grupo `pessoas`), que lista e revoga sem abrir rota nenhuma.
+  A chave ÓRFÃ deixou de ser inalcançável: ela aparece com texto próprio
+  ("nunca usada") e tem botão. NÃO "unifique" a régua de papel dela com a do
+  `RunnerOnboardingPanel`: as duas usam a MESMA função
+  (`podeLerChavesDeDispositivo`, mínimo `developer`, o do ENDPOINT), mas o
+  INSUMO difere de propósito — o painel lê o papel de WORKSPACE e DECLARA a
+  lacuna (ele monta onde não há `project_members`), a seção compõe o EFETIVO do
+  projeto (`projectRole ?? workspaceRole`, RN-471) porque mora na mesma aba que
+  `MembersSection` e o dado está à mão. As duas compartilham a `queryKey`
+  `['runner-device-keys', projectId]`, e é por isso que revogar pela seção
+  invalida o reconhecimento do painel — mexer numa das duas sem a outra faz o
+  painel anunciar máquina pareada com a chave recém-revogada.
+  Desde a
   RN-543 essa lista devolve DUAS espécies e DIZ qual é qual (`especie`) — uma
   de máquina serve todo projeto do dono e aparece na listagem de todos, porque
   não aparecer em nenhuma a tornaria invisível e permanente, que é o defeito
-  que a RN-519 fechou renascido. A lacuna da TELA fica MAIOR com isso, e
-  continua declarada, e as DUAS metades de criar uma chave de máquina já
+  que a RN-519 fechou renascido. A marca é o que a tela USA: a confirmação de
+  revogar muda com a espécie (máquina derruba o agente local em TODOS os
+  projetos do dono em modo runner; projeto derruba no projeto dela), e sem ela
+  a tela mentiria sobre o alcance da única ação irreversível que oferece.
+  As DUAS metades de criar uma chave de máquina já
   existem: o MATERIAL nasce no terminal (RN-551, `brabo-runner device-key
   create`, par gerado na máquina) e quem REGISTRA a pública é a RN-552
-  (`POST /internal/machine-device-keys`, pelo service token). Isso ACRESCENTA
-  uma metade à lacuna da TELA em vez de fechá-la: numa instalação que ainda não
+  (`POST /internal/machine-device-keys`, pelo service token).
+  **O que segue aberto, e agora é só isto:** (1) numa instalação que ainda não
   tem PROJETO, a listagem e a revogação — as duas por
   `/projects/:projectId/runner-device-keys` — não têm projeto contra o que
-  responder, então tela nenhuma alcança uma chave de máquina recém-criada. É por
+  responder, então nem a seção nova alcança uma chave de máquina recém-criada;
+  fazer a tela ser de CONTA exigiria rota nova, e não é o que a RN-561 fez. É por
   isso que registrar SUBSTITUI a anterior em vez de deixar órfãs: uma órfã ali
   seria viva e inalcançável. E a rota só serve instalação de UMA pessoa (409 com
   duas ou mais), então instalação com time não tem por onde criar chave de
-  máquina — declarado, não acaso. Desde a RN-548 o web CONSOME essa
-  listagem — `RunnerOnboardingPanel` reconhece máquina já pareada e para de
-  mandar parear —, e isso NÃO fecha a lacuna: ler para reconhecer é outra coisa
-  que listar para revogar, e o painel de propósito não lista chave nem oferece
-  revogação. O que ele diz é o CUSTO da espécie (revogar derruba o agente em
+  máquina — declarado, não acaso. (2) O ALVO da revogação continua sendo
+  `{projeto, usuário}` e NUNCA `{chave}` (RN-520): a tela DIZ isso na
+  confirmação e não muda: outro runner seu no mesmo projeto cai junto, mesmo
+  com PAT ou outra chave, e reconecta se a credencial ainda valer. Mudar o
+  alvo exige coluna nova em `runner_socket_tickets` e contrato novo de auth —
+  frente própria, com ADR. (3) A visão de `maintainer` (listar/revogar de
+  qualquer usuário) segue FORA por DECISÃO da RN-519, não por omissão.
+  Desde a RN-548 o web também CONSOME essa
+  listagem para outra pergunta — `RunnerOnboardingPanel` reconhece máquina já
+  pareada e para de mandar parear —, e ler para RECONHECER continua sendo outra
+  coisa que listar para REVOGAR: o painel de propósito não lista chave nem
+  oferece revogação, e não passa a listar agora que a seção existe.
+  O que ele diz é o CUSTO da espécie (revogar derruba o agente em
   todos os projetos do dono), e o que ele NUNCA diz é que o agente está de pé:
   chave registrada prova pareamento e não processo vivo — a régua do
   `workspaceVerifiedAt` (RN-468) um passo antes —, e a lista é da CONTA e não
-  do navegador, então nem "esta máquina está pareada" cabe. É por essas duas
+  do navegador, então nem "esta máquina está pareada" cabe. A seção nova herda
+  esse vocabulário INTEIRO em vez de inventar um segundo: `lastUsedAt` é uso
+  registrado, "ativa"/"revogada" fala da LINHA e nunca de conexão, e a espécie
+  de máquina nunca ganha verde. É por essas duas
   ressalvas que o fluxo do ADR 0118 NÃO foi removido: ele muda de LUGAR (um
   `<details>` com o rótulo do caso que resolve), e aposentá-lo segue sendo o
   BRB-031
