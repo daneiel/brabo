@@ -2608,6 +2608,37 @@ binaries — macOS notarization and Windows Authenticode. Those need a paid
 signing identity and are a separate backlog item; the OS will still warn on
 first run.
 
+### The written offer of source, inside the engine image
+
+Signing answers *"is this what the pipeline published?"*. A second question
+travels with the same image and has a different answer: **where is the source
+of the GPL software inside it?**
+
+The engine image embeds `git`, `busybox`, `libgcc`/`libstdc++` and 18 other apk
+packages under GPL, plus the four scanners the engine invokes by `exec`.
+Running them as separate processes does not contaminate Brabo, which stays
+MIT — but *distributing* the image requires that whoever receives it can obtain
+the corresponding source. Since [ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md)
+that distribution happens on every final tag.
+
+The written offer is `THIRD_PARTY_NOTICES.md`, and it ships **inside** the
+image, because whoever runs `docker pull` does not have the repository:
+
+```bash
+docker run --rm --entrypoint sh ghcr.io/daneiel/brabo-engine:vX.Y.Z \
+  -c 'cat /usr/share/doc/brabo/THIRD_PARTY_NOTICES.md'
+```
+
+It names every component, its exact version and its licence, which is what
+lets anyone reach the upstream release of each one. If that file is missing
+from an image, the image should not be distributed — `scripts/ci/oferta-de-fonte-na-imagem.spec.ts`
+keeps the `COPY` from being removed by accident, but only a real tag proves the
+published artifact.
+
+The file also records what is **not** settled: separating the scanners into
+their own sidecar, leaving the engine image free of copyleft, stays open as an
+*architecture* choice rather than a compliance one.
+
 ---
 
 ## Adding a compatible provider {#adicionando-um-provider-compativel}

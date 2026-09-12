@@ -399,11 +399,20 @@ rules:
       # `docs/business-rules.md`, e as duas que o `config-e-inferencia` já cobra
       # em `block` (`docs/reference/configuration.md` e `docs/runbook.md`).
       #
-      # O extglob EXCLUI os cinco pelo nome e continua casando com todo o resto
+      # `oferta-de-fonte-na-imagem.spec.ts` é o SEXTO, pelo mesmo critério: ele
+      # verifica que o `THIRD_PARTY_NOTICES.md` é copiado para dentro da imagem
+      # do engine (BRB-017) e que o documento não afirma mais que nenhuma imagem
+      # é publicada. Mora aqui porque lê `docker/`, a raiz e o `.dockerignore`
+      # como texto — a mesma razão dos dois acima. Degrau, destino e versão de
+      # branch não aparecem nele; a doc dele é `docs/runbook.md`, na seção de
+      # verificação de artefato publicado, que a regra `config-e-inferencia` já
+      # cobra em `block` pelo mesmo Dockerfile.
+      #
+      # O extglob EXCLUI os seis pelo nome e continua casando com todo o resto
       # — inclusive com script de política que ainda não existe. Falha fechado:
       # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
       # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
-      - "scripts/ci/!(coverage-floor|actions-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose)*"
+      - "scripts/ci/!(coverage-floor|actions-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem)*"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
