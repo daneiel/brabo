@@ -12833,9 +12833,11 @@ o `DELETE` desde o
 **não abre rota nova**: o que a listagem já devolve basta para desenhar tudo o
 que segue.
 
-**Onde ela mora, e por que de PROJETO.** É a 18ª seção da aba Configurações
-(`device-keys`, grupo `pessoas`, logo depois de `access-tokens` — a vizinha que
-faz o mesmo com PAT). De projeto porque o endpoint é
+**Onde ela mora, e por que de PROJETO.** Ela leva a aba Configurações de 17 para
+**18** seções e é a **13ª na ordem de render** (`device-keys`, grupo `pessoas`,
+logo depois de `access-tokens` — a vizinha que faz o mesmo com PAT); a ordem do
+registro é a MESMA do barrel, porque é ela que o scroll-spy usa. De projeto
+porque o endpoint é
 `/projects/:projectId/runner-device-keys`: uma tela de CONTA exigiria rota nova,
 e o recorte é sobre a que existe.
 
@@ -12911,7 +12913,8 @@ revogação mostra a frase da PRÓPRIA api e a linha **continua** na lista.
 - **Código:** `apps/web/src/routes/settings/RunnerDeviceKeysSection.tsx:76`
   (a seção inteira; o papel efetivo em `:107`, a consulta em `:130`, a
   confirmação por espécie em `:326`);
-  `apps/web/src/routes/settings/sumario.ts:62` (a 18ª entrada do registro);
+  `apps/web/src/routes/settings/sumario.ts:62` (a entrada nova, 13ª na ordem de
+  render, das 18);
   `apps/web/src/routes/ProjectSettingsTab.tsx:86` (a composição, na MESMA
   ordem); `apps/web/src/locales/{en,pt-BR}/settings.json`
   (`runnerDeviceKeys.*`). Consome `listRunnerDeviceKeys`/
