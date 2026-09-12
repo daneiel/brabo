@@ -39,14 +39,30 @@ defmodule Engine.Actions.Workspace.RunnerGit do
   ## Onde o comando roda de verdade
 
   Interno ao runner (ADR 0137): com um container ativo, ele roteia para
-  `docker exec`; sem ele, para o host. Este módulo nunca sabe qual dos dois
+  `docker exec`; sem ele, para o host. Este módulo nunca DECIDE qual dos dois
   — ele só entrega o comando pelo canal, exatamente como
   `Engine.Actions.TerminalExecutor.run_via_runner/4` já fazia para comando
   de terminal comum.
+
+  ## RN-558 — e quando a credencial não atravessa
+
+  O `docker exec` não tem campo de `env` (ADR 0130, sem `-e` livre), então o
+  caminho de container é o único dos dois que NÃO carrega a credencial. Como o
+  container `running` REGISTRADO que a RN-507 exige nasce, num projeto
+  `runner`, do MESMO runner ter subido o próprio container, o caminho comum do
+  `fetch!/3` autenticado é justamente esse — e até esta entrega ele rodava
+  assim mesmo, com as variáveis vazias, falhando como se o token estivesse
+  errado.
+
+  Quem recusa é o RUNNER (ele é o único que sabe que há container ativo NAQUELE
+  processo); quem traduz a recusa em mensagem e em ORIGEM é
+  `Engine.Runners.CredencialDeGit`, e é de lá que sai a exceção que `fetch!/3`
+  levanta. Este módulo continua sem decidir onde o comando roda: ele só deixou
+  de confundir uma recusa com uma falha de git.
   """
 
   alias Engine.Actions.GitAuth
-  alias Engine.Runners.{RunnerReadiness, RunnerRouter}
+  alias Engine.Runners.{CredencialDeGit, RunnerReadiness, RunnerRouter}
 
   @timeout_ms 60_000
   @marca ".brabo-workspace-pronto"
@@ -211,8 +227,17 @@ defmodule Engine.Actions.Workspace.RunnerGit do
       {:ok, {0, _}} ->
         :ok
 
+      # RN-558 — a recusa NOMEADA do runner, quando ele tem container ativo e a
+      # credencial não teria como atravessar o `docker exec`. Vem antes da
+      # cláusula genérica de propósito: ela diria "git fetch falhou" sobre um
+      # `git fetch` que nunca chegou a rodar, e mandaria quem lê caçar token
+      # inválido ou rede fora.
       {:ok, {_status, out}} ->
-        raise "git fetch falhou (runner, projeto #{project_id}): #{out}"
+        if CredencialDeGit.recusada?(out) do
+          raise CredencialDeGit.mensagem(project_id, out)
+        else
+          raise "git fetch falhou (runner, projeto #{project_id}): #{out}"
+        end
 
       {:error, motivo} ->
         raise motivo
