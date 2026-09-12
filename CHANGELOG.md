@@ -26,6 +26,35 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: a primeira conta de uma instalação passa a nascer **pelo terminal**,
+  por uma rota interna que **recusa quando já existe qualquer usuário**
+  ([RN-546](docs/business-rules.md#rn-546),
+  [ADR 0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md)).
+
+  `POST /internal/first-account` (`engine-service`, `BRABO_SERVICE_TOKEN`) cria
+  o usuário com o e-mail **já verificado** e o workspace pessoal
+  ([RN-410](docs/business-rules.md#rn-410)) na mesma transação. Existe porque
+  numa instalação nova ninguém consegue entrar: o `.env` gerado não tem
+  variável de e-mail, `MAIL_TRANSPORT` cai em `log` e o registro espera uma
+  confirmação que nunca é enviada — a saída era pescar o link em
+  `docker compose logs api`.
+
+  **Superfície nova, declarada:** passa a existir um segundo caminho de criação
+  de usuário que funciona em produção. Ele é estreito em três contagens
+  independentes (primeira conta, rota interna, service token), responde `409`
+  havendo QUALQUER usuário — condição sobre a instalação, não sobre o e-mail
+  pedido — e some assim que a instalação tem gente. Nenhuma rota pública de
+  "criar o primeiro owner" nasceu, e o registro normal fica byte a byte.
+
+  `provisionarUsuario` (seed/smoke) teve o núcleo extraído para
+  `ProvisionarUsuarioUseCase` e **manteve** a recusa de rodar com
+  `NODE_ENV=production`: o que ela protege é senha conhecida criada sem
+  interação humana, e não o trio de escritas. A senha desta rota é escolhida
+  por um humano, hasheada e descartada — nunca no `.env`, no marcador nem em
+  log, e nunca gerada por código.
+
+  **O `install.sh` que consome a rota é a próxima sessão** e não entrou aqui.
+
 - **instalador**: o `install.sh` passa a saber **qual** versão está instalada e
   a oferta muda conforme a relação com a que vai instalar
   ([RN-542](docs/business-rules.md#rn-542)).
