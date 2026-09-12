@@ -195,12 +195,26 @@ Source: each package's \`package.json\` and the root \`Makefile\`.
 // ------------------------------------- 2. inventário de variáveis de ambiente
 
 function gerarEnv() {
+  // A quarta coluna de cada fonte é o ESCOPO, e ela é o conteúdo, não o
+  // enfeite: `produto` é o que quem OPERA a instalação configura no `.env` do
+  // deploy; `ferramenta` é o que só o CI e quem desenvolve usam. Sem essa
+  // distinção `E2E_PASSWORD` aparece ao lado de `SMTP_HOST` numa lista que um
+  // operador lê para configurar a máquina dele, e a lista fica PIOR do que
+  // estava incompleta.
   const fontes = [
-    ['api', arquivos('apps/api/src/**/*.ts').filter((f) => !f.includes('.spec.')),
-      /process\.env\.([A-Z_0-9]{3,})/g],
+    // DOIS globs para a api pelo mesmo motivo do broker, logo abaixo: o `**/`
+    // do pathspec do git exige pelo menos um nível de diretório, então os
+    // arquivos que moram direto em `apps/api/src/` escapavam. O preço estava
+    // medido e pago: `API_JSON_BODY_LIMIT` (`apps/api/src/main.ts:59`) é
+    // variável de PRODUTO — o teto do corpo JSON que a api aceita — e não
+    // aparecia em inventário nenhum.
+    ['api',
+      [...arquivos('apps/api/src/*.ts'), ...arquivos('apps/api/src/**/*.ts')]
+        .filter((f) => !f.includes('.spec.')),
+      /process\.env\.([A-Z_0-9]{3,})/g, 'produto'],
     ['engine', [...arquivos('apps/engine/lib/**/*.ex'), ...arquivos('apps/engine/config/*.exs')],
-      /System\.(?:get_env|fetch_env!?)\("([A-Z_0-9]{3,})"/g],
-    ['web', arquivos('apps/web/src/**/*.ts*'), /import\.meta\.env\.(VITE_[A-Z_0-9]+)/g],
+      /System\.(?:get_env|fetch_env!?)\("([A-Z_0-9]{3,})"/g, 'produto'],
+    ['web', arquivos('apps/web/src/**/*.ts*'), /import\.meta\.env\.(VITE_[A-Z_0-9]+)/g, 'produto'],
     // O broker (ADR 0130) entra porque é SERVIÇO da instalação: o que ele lê
     // do ambiente é configuração de quem opera, igual à da api e à do engine.
     // `apps/runner` continua de FORA de propósito — ele roda na máquina do
@@ -208,14 +222,29 @@ function gerarEnv() {
     // pelo `.env` do deploy.
     // DOIS globs, e não um: o `**/` do pathspec do git exige PELO MENOS um
     // nível de diretório, então `apps/broker/src/**/*.ts` devolve VAZIO
-    // enquanto todos os arquivos do broker moram direto em `src/`. (O mesmo
-    // vale para a api, onde os 6 arquivos de `src/` também escapam do glob
-    // acima — pré-existente, não mexido aqui.) Um inventário que nasce vazio
-    // não avisa: ele passa verde.
+    // enquanto todos os arquivos do broker moram direto em `src/`. Um
+    // inventário que nasce vazio não avisa: ele passa verde.
     ['broker',
       [...arquivos('apps/broker/src/*.ts'), ...arquivos('apps/broker/src/**/*.ts')]
         .filter((f) => !f.includes('.spec.')),
-      /env\.([A-Z_0-9]{3,})/g],
+      /env\.([A-Z_0-9]{3,})/g, 'produto'],
+    // As duas fontes de FERRAMENTA. Ficaram de fora até 2026-09-12 e o
+    // inventário passou verde o tempo todo — cinco variáveis lidas de verdade,
+    // nenhuma citada em `configuration.md`. Caem na MESMA armadilha do `**/`:
+    // `seed-golden-set-qa.ts` mora direto em `apps/api/scripts/` e
+    // `playwright.config.ts` direto em `e2e/`, então são dois globs cada.
+    //
+    // `e2e/` não é membro do workspace (ADR 0120, mesmo desenho do
+    // `website/`), e foi por isso que escapou da varredura — mas o gerador
+    // LÊ arquivo, não pacote, e membership não muda nada aqui.
+    ['api/scripts',
+      [...arquivos('apps/api/scripts/*.ts'), ...arquivos('apps/api/scripts/**/*.ts')]
+        .filter((f) => !f.includes('.spec.')),
+      /process\.env\.([A-Z_0-9]{3,})/g, 'ferramenta'],
+    ['e2e',
+      [...arquivos('e2e/*.ts'), ...arquivos('e2e/**/*.ts')]
+        .filter((f) => !f.includes('.spec.')),
+      /process\.env\.([A-Z_0-9]{3,})/g, 'ferramenta'],
   ];
 
   // Sem `semBlocoGerado` o check se auto-satisfaz: a variável nova entra no
@@ -229,10 +258,10 @@ function gerarEnv() {
   let total = 0;
   let naoDocumentadas = 0;
 
-  for (const [app, caminhos, padrao] of fontes) {
+  for (const [app, caminhos, padrao, escopo] of fontes) {
     const achados = [...grepTodos(padrao, caminhos).entries()].sort(([a], [b]) => a.localeCompare(b));
     total += achados.length;
-    corpo += `\n**${app}** — ${achados.length} variables\n\n`;
+    corpo += `\n**${app}** — ${achados.length} variables · ${escopo === 'produto' ? 'product' : 'tooling'}\n\n`;
     for (const [nome, arqs] of achados) {
       // Does the prose above document it? If not, the gap shows up here
       // instead of passing silently.
@@ -247,7 +276,10 @@ function gerarEnv() {
     (naoDocumentadas > 0
       ? ` **${naoDocumentadas}** still have no description in the tables above.`
       : ' All have a description in the tables above.') +
-    '\n';
+    '\n\nEach source is marked **product** — what whoever operates the installation' +
+    ' sets in the deployment `.env` — or **tooling**, read only by CI and by' +
+    ' whoever develops the product. A tooling variable never belongs in an' +
+    " operator's `.env`.\n";
 
   escreverBloco('docs/reference/configuration.md', 'env-inventario', cabecalho + corpo);
 }
@@ -788,6 +820,113 @@ function verificarContagensEmProsa() {
 }
 
 /**
+ * As FRASES ancoradas num lugar do código — a escada da esteira e o arquivo
+ * que o `db:generate` manda editar.
+ *
+ * Mesmo mecanismo das contagens em prosa, com uma fonte que não é um número:
+ * o valor esperado é DERIVADO do código, e a frase que o anuncia é conferida
+ * contra ele. A diferença com as contagens é só o tipo do valor — a lição do
+ * ADR 0029 (`gerar > verificar > lembrar`) é a mesma.
+ *
+ * As duas entradas nasceram de duas deriva medidas em 2026-09-12, e as duas
+ * sobreviveram anos porque **nada as aferia**:
+ *
+ *   - O `description` do `branching-policy.md` anunciava a escada de QUATRO
+ *     degraus (`dev → qa → rc → main`) enquanto o corpo do MESMO arquivo
+ *     explica, a partir da linha 54, que o `rc` saiu da política (ADR 0030).
+ *     O arquivo se contradizia consigo mesmo, e o `description` é a metade
+ *     que se lê primeiro: é ele que alimenta o card da busca local do site e
+ *     o `<meta>` da página. Mesmo agravante do `description` do
+ *     `docs/adr/index.md`, logo acima: frontmatter não se lê ao revisar
+ *     prosa.
+ *   - `README.md` e `docs/getting-started.md` mandavam rodar `db:generate`
+ *     "depois de mudar `apps/api/src/db/schema.ts`" — que desde o ADR 0121 é
+ *     só o barrel de `export *`. Instrução errada custa mais que número
+ *     errado: o comando RODA, o Drizzle não vê diff nenhum, e quem seguiu a
+ *     instrução conclui que o comando está quebrado, não a frase.
+ *
+ * A fonte de cada uma é o ARTEFATO, nunca outra prosa. A escada vem de
+ * `ESCADA` em `scripts/ci/pr-police.ts`, que é o código que a APLICA — e
+ * deliberadamente NÃO de `PROTECTED_BRANCHES`, que tem `rc` DE PROPÓSITO
+ * (ADR 0030: proteger uma branch que não existe não custa nada, desproteger
+ * uma que existe custa caro). Derivar a escada da lista de protegidas faria
+ * este check exigir de volta a frase errada.
+ *
+ * Padrão que não casa REPROVA, como nas contagens: um check cuja regex parou
+ * de achar a frase fica verde para sempre dizendo que conferiu algo que não
+ * olhou. E a fonte também: se `ESCADA` sumir de `pr-police.ts`, o check
+ * reprova em vez de comparar contra vazio.
+ */
+function verificarFrasesAncoradasNoCodigo() {
+  const escada = /export const ESCADA = \[([^\]]+)\] as const;/.exec(
+    ler('scripts/ci/pr-police.ts'),
+  );
+
+  if (escada === null) {
+    pendencias.push('frases ancoradas no código');
+    console.log(
+      '  CEGO      scripts/ci/pr-police.ts — não achei `export const ESCADA`.\n' +
+        '            Sem ela não há de onde derivar a escada da esteira.',
+    );
+    return;
+  }
+
+  // `apps/api/src/db/schema.ts` é BARREL enquanto não tiver `pgTable(` dentro
+  // (ADR 0121). Derivado, e não constante: desfazer o barrel faz o esperado
+  // voltar a ser o arquivo, e as duas frases reprovam sozinhas.
+  const moradaDoSchema = ler('apps/api/src/db/schema.ts').includes('pgTable(')
+    ? 'apps/api/src/db/schema.ts'
+    : 'apps/api/src/db/schema/';
+
+  const afericoes = [
+    {
+      arquivo: 'docs/explanation/branching-policy.md',
+      padrao: /^description: The (.+?) ladder/m,
+      esperado: [...escada[1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]).join(' → '),
+      oque: 'a escada da esteira no `description` do frontmatter',
+    },
+    {
+      arquivo: 'docs/getting-started.md',
+      padrao: /db:generate\s+# after changing (apps\/api\/src\/db\/schema(?:\/|\.ts))/,
+      esperado: moradaDoSchema,
+      oque: 'onde o `db:generate` manda mexer',
+    },
+    {
+      arquivo: 'README.md',
+      padrao: /depois de mudar `(apps\/api\/src\/db\/schema(?:\/|\.ts))/,
+      esperado: moradaDoSchema,
+      oque: 'onde o `db:generate` manda mexer',
+    },
+  ];
+
+  let problemas = 0;
+  for (const { arquivo, padrao, esperado, oque } of afericoes) {
+    const achado = padrao.exec(ler(arquivo));
+
+    if (achado === null) {
+      problemas++;
+      console.log(
+        `  CEGO      ${arquivo} — não achei ${oque}. A frase mudou, e o check\n` +
+          `            deixou de conferir. Ajuste o padrão em generate.mjs.`,
+      );
+      continue;
+    }
+
+    if (achado[1] !== esperado) {
+      problemas++;
+      console.log(`  DESATUAL. ${arquivo} — ${oque}: diz ${achado[1]}, é ${esperado}.`);
+    }
+  }
+
+  if (problemas > 0) pendencias.push('frases ancoradas no código');
+  else
+    console.log(
+      `  ok        frases ancoradas no código (escada ` +
+        `${afericoes[0].esperado}; schema em ${moradaDoSchema})`,
+    );
+}
+
+/**
  * A versão anunciada em prosa contra a ÚLTIMA release do CHANGELOG.
  *
  * O README ficou preso em `v0.1.0` da Fase 5 até a v2.1.0 — sete releases
@@ -878,6 +1017,7 @@ gerarReferenciaApi();
 gerarProvidersDeLlm();
 verificarIndiceAdr();
 verificarContagensEmProsa();
+verificarFrasesAncoradasNoCodigo();
 verificarVersaoAnunciada();
 
 if (CHECAR && pendencias.length > 0) {

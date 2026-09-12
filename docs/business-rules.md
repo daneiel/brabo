@@ -12640,3 +12640,162 @@ continua fora de `pull_request`.
 - **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
 - **Origem:** FASE 30, sessão 8 —
   [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+## A conversão de modo deixa de ser um salto no escuro (RN-559, RN-560)
+
+### RN-559 — A conversão para `mounted` abre o MESMO navegador de pastas do wizard; o ramo `runner` continua digitado, e a tela diz por quê {#rn-559}
+
+`ExecutionModeSection` era o **único dos cinco lugares** do produto em que se
+escolhe uma pasta e se digitava o caminho **no escuro** — os outros quatro já
+abriam o `FolderBrowserModal` desde a [RN-473](#rn-473)/[RN-504](#rn-504). A
+lacuna estava declarada no `CLAUDE.md` e o motivo declarado era do **outro
+ramo**: onboardar um runner ANTES de a conversão salvar registra chave num
+projeto que ainda não é `runner`, e `ConfirmProjectWorkspaceUseCase` recusa com
+400. Nada disso vale para `mounted`, e é isso que esta regra fecha.
+
+**Mesmo componente, mesmo transporte, nenhuma régua nova.** O ramo `mounted`
+monta o `FolderBrowserModal` com `origem: { tipo: 'api', workspaceId }` — a
+mesma união discriminada que `NewProjectWizard` usa para esse modo
+([RN-533](#rn-533)), porque a pasta mora dentro da base do SERVIDOR
+([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)) e é o servidor quem a
+enxerga. Não nasce navegador novo nem endpoint novo, e o navegador **não
+garante** caminho válido: quem valida continua sendo
+`validarExecutionModeEWorkspacePath` e o CHECK do banco.
+
+**O ramo `runner` NÃO ganha navegador, e isso é decisão, não esquecimento.** O
+transporte dele (`{ tipo: 'runner', projectId }`) exige um runner conectado a
+ESTE projeto, e um projeto que ainda não é `runner` não tem nenhum — a espera
+terminaria num erro com cara de bug. A ordem *"converte, depois onboarda"* segue
+sendo decisão de produto à parte. O que muda é a tela passar a **dizer** isso em
+texto em vez de só não oferecer botão nenhum, que é a régua do
+[ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md): tira-se o
+controle, nunca a informação.
+
+**A base é um estado de QUATRO valores, e eles não colapsam.** A rota
+`GET workspaces/:workspaceId/projects-base` ([RN-500](#rn-500)) pode estar em
+voo, ter falhado, ter respondido `null` ou ter respondido um caminho — e cada
+um desses tem texto PRÓPRIO, pela régua da [RN-088](#rn-088)/[RN-468](#rn-468):
+*"não sei"* nunca vira *"não tem"*. O botão fica na tela apagado nos três
+primeiros, com o motivo dito em TEXTO logo abaixo, e não por `title` (que em
+elemento `disabled` não abre no Chromium).
+
+| estado da base | o botão | o que a tela diz |
+|---|---|---|
+| em voo | apagado | "consultando a base de projetos desta instalação" |
+| a consulta falhou | apagado | não deu para SABER se ela existe; recarregue |
+| respondeu `null` | apagado | esta instalação não declarou base |
+| respondeu um caminho | vivo | a base, NOMEADA, e que é nela que o navegador abre |
+
+O modo `mounted` **não sai do seletor** quando a base falta, e essa é a
+diferença deliberada em relação ao wizard ([RN-513](#rn-513)): um projeto que
+JÁ é `mounted` não pode ver o próprio modo sumir do controle por causa de uma
+consulta em voo. O que some é o NAVEGADOR, não a conversão.
+
+**O mínimo é o do ENDPOINT.** `PUT projects/:projectId/execution-mode` e
+`GET workspaces/:workspaceId/projects-base` pedem os dois `maintainer`, lido por
+`roleAtLeast` sobre a `ROLE_ORDER` e nunca por uma lista de papéis à mão
+([RN-102](business-rules/custo.md#rn-102)) — a seção fazia
+`role === 'owner' || role === 'maintainer'`, que acerta por acidente enquanto o
+mínimo é alto. Quem não alcança o mínimo não dispara a consulta da base: ela
+terminaria num 403 certo, e o *"não sei"* que ela produziria seria sobre a
+autorização, não sobre a base.
+
+O valor escolhido no navegador é tratado como valor DIGITADO: ele preenche o
+campo e só vai à api quando alguém confirma no botão da seção. Esta seção **não
+vira autosave** ([RN-469](#rn-469)).
+
+- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:65` (os
+  quatro estados da base, como união), `:134` (o mínimo por `roleAtLeast`),
+  `:143` (a consulta que não sai para quem não alcança `maintainer`), `:169` (a
+  derivação dos quatro), `:180` (o que o navegador exige para existir), `:284`
+  (o botão, apagado e não escondido), `:290` (o texto do ramo `runner`), `:315`
+  (o `FolderBrowserModal` com `origem: { tipo: 'api', workspaceId }`);
+  `apps/web/src/locales/pt-BR/settings.json:231` e
+  `apps/web/src/locales/en/settings.json:231` (`executionMode.path.*`, os cinco
+  textos nos dois idiomas)
+- **Teste:** `apps/web/src/routes/settings/conversao-de-modo.test.tsx` — o
+  caminho feliz (abrir o navegador, escolher `loja`, o campo preencher e a
+  conversão enviar o que foi ESCOLHIDO, só depois do botão), a consulta da base
+  FALHANDO (botão inerte, texto próprio, o modal não montando nem à força, e o
+  campo continuando editável), a base AUSENTE com texto DIFERENTE do de falha e
+  do de carregamento, o ramo `runner` sem botão e com o motivo em texto, e o
+  papel abaixo de `maintainer` (controles apagados, valor vigente ainda
+  visível, consulta da base não disparada)
+- **Lacuna DECLARADA:** o ramo `runner` desta seção **continua digitado no
+  escuro** — a lacuna do `CLAUDE.md` encolheu para ele e não fechou. Fechá-la
+  exige decidir a ordem "converte, depois onboarda", que é decisão de produto à
+  parte e segue sem dono
+- **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md),
+  [0141](adr/0141-base-unica-dos-projetos-montados.md)
+- **Origem:** AT-049 (EP-021/HS-033)
+
+### RN-560 — O aviso da conversão diz o que ela recusa, o que ela leva e o que ela NÃO leva — nomeando o caminho antigo {#rn-560}
+
+O aviso fixo da seção afirmava *"isto migra a pasta de trabalho do agente"*, nos
+dois idiomas. `ConvertProjectExecutionModeUseCase` **não tem uma linha que copie
+ou mova conteúdo de pasta**: ele move o `permissions.json` (a POLÍTICA, com
+allow/deny/ask intactos — [RN-448](#rn-448)), zera `workspaceVerifiedAt`
+([RN-450](#rn-450)) e `mirrorPath` ([RN-515](#rn-515)), desprovisiona o
+container ao SAIR de `container` ([RN-449](#rn-449)) e grava o novo
+`workspacePath`. `materializarWorkspaceMontado` apenas CRIA a pasta nova
+([RN-501](#rn-501)). O que estiver na pasta antiga — **trabalho não commitado
+incluído** — fica lá, órfão.
+
+O órfão já era lacuna declarada no `CLAUDE.md` desde a
+[RN-447](#rn-447)..[450](#rn-450). O que esta regra fecha não é o órfão: é a
+tela afirmando o CONTRÁRIO do que o servidor faz. Isto é correção de afirmação,
+não feature — migrar conteúdo entre modos segue fora, sem dono.
+
+**Três fatos, e não um parágrafo**, porque respondem perguntas diferentes:
+
+1. **o que a conversão RECUSA** — dev agent trabalhando ou travado agora vira
+   409, e a frase da api é a que aparece no toast (o texto que já existia e
+   continua valendo);
+2. **o que ela LEVA** — a política do projeto muda de escopo com o conteúdo
+   intacto;
+3. **o que ela NÃO leva** — o conteúdo da pasta, trabalho não commitado
+   incluído, **nomeando o caminho antigo**.
+
+**O aviso NOMEIA o caminho** porque *"fica no disco antigo"* sem dizer QUAL
+disco manda a pessoa procurar. O valor está a uma linha de distância
+(`project.workspacePath`) e **some da tela** no instante em que a conversão
+salva. Quando não há caminho a nomear — o projeto é `container`, e a pasta
+antiga é um volume do SERVIDOR — a frase é OUTRA, apontando a pasta gerenciada:
+uma variante com `{{caminho}}` vazio diria *"o que estiver em "*, que é a tela
+recusando nomear o que sabe. É o caso em que a pessoa tem MENOS como adivinhar.
+
+**Ele não promete detecção.** Perguntar ao disco *"há trabalho não commitado?"*
+é I/O por modo e impossível de responder para `runner` do lado da api: a pasta
+mora numa máquina que o servidor não enxerga. Não se mede, não se afirma
+(ADRs [0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)/[0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)).
+E ele não bloqueia nada: a conversão continua sendo a mesma chamada, com as
+mesmas recusas.
+
+O tom do `Alert` passou de `accent` para `warning`, porque o terceiro fato é uma
+PERDA de alcance e não uma informação neutra. Segue sem `role="alert"`: é texto
+que já estava na tela quando ela abriu, e uma live region assertiva ali viraria
+interrupção sem causa.
+
+- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:225` (os
+  três fatos, um por linha), `:229` (a variante que nomeia o caminho antigo × a
+  da pasta gerenciada);
+  `apps/web/src/locales/pt-BR/settings.json:220` e
+  `apps/web/src/locales/en/settings.json:220` (`executionMode.warning.*`, os
+  quatro textos nos dois idiomas — `en` é o idioma default do app
+  ([RN-425](#rn-425)), e um aviso honesto só em português é a mesma mentira com
+  sotaque)
+- **Teste:** `apps/web/src/routes/settings/conversao-de-modo.test.tsx` — o
+  caminho feliz (o aviso contendo o caminho antigo E as palavras "trabalho não
+  commitado"), a variante sem caminho antigo (projeto `container` apontando a
+  pasta gerenciada, e a variante com caminho NÃO renderizada), e a prova
+  negativa nos DOIS bundles de idioma: a promessa de migração não sobrevive em
+  nenhum deles, e as quatro chaves existem em ambos
+- **Lacuna DECLARADA:** o aviso lista o que ENGANAVA, não **todas** as
+  consequências — `mirrorPath` zerado, `workspaceVerifiedAt` nulo e o container
+  removido continuam ditos só no caso de uso e nas RNs, nunca na tela.
+  > **TODO(humano):** o aviso deve listar TODAS as consequências (espelho
+  > zerado, container removido, confirmação de pasta perdida) ou só a que
+  > contradizia o texto anterior? Listar tudo é mais honesto e mais longo — e um
+  > aviso que ninguém lê é o mesmo que aviso nenhum.
+- **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
+- **Origem:** AT-050 (EP-021/HS-034)

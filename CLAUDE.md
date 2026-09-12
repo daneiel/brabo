@@ -137,6 +137,7 @@ estado lido do repositório e não da conversa.
 | FASE 30 (sessão 7) — a tela reconhece agente de máquina já pareado | ADR 0154, RN-548 |
 | FASE 30 — CONCLUÍDA (sessão 8: o E2E em máquina limpa) | historico-de-fases.md |
 | O runner reconectava sozinho com um ticket morto | RN-108 |
+| A conversão de modo deixa de ser um salto no escuro (AT-049/AT-050) | RN-559, RN-560 |
 | A credencial que sumia no `docker exec` do runner (AT-053) | Lacuna que o ADR 0145 declarou POR ESCRITO e mediu: o container `running` que a RN-507 exige antes de qualquer operação de `RunnerGit` só existe porque o MESMO runner o subiu, e é esse mesmo sucesso que o faz rotear todo comando para dentro dele — por um `docker exec` sem campo de `env` (ADR 0130, sem `-e` livre). O `git fetch` autenticado rodava com o helper instalado e as variáveis VAZIAS, e a falha chegava como token inválido ou rede fora: o caminho COMUM, não uma borda. Entregou-se a metade do SILÊNCIO, nunca a do `env`: o par (`env` presente, container ativo) passa a ser RECUSADO antes de executar, com marca de PROTOCOLO partida entre duas linguagens, mensagem que diz o quê e por quê, e origem `politica` — não `codigo`, porque não há cláusula faltando, há decisão de produto pendente. Quem recusa é o RUNNER e só ele pode: `containerAtivo` nasce `null` a cada execução, então container `running` REGISTRADO no banco NÃO implica container ativo NAQUELE processo, e um runner reiniciado com o container de pé roteia pro HOST, onde a credencial chega — subir a checagem recusaria um caminho que funciona, e `RunnerReadiness` fica byte a byte como está. A saída nunca cita nome nem valor de variável, só a CONTAGEM (a invariante da RN-507 sobrevive intacta). Metade aberta declarada, e a adjacência também: a idempotência de `ensure!` marca o workspace pronto na segunda tentativa por achar o `.git`, e ela falha adiante em vez de repetir a recusa | RN-558 |
 | O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
@@ -314,15 +315,32 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - `gatesEverOpened` sofre da classe de defeito da janela de 200 eventos —
   declarado, não corrigido (exigiria mudar assinatura de `deriveAgentRoster`)
 - Conversão de `execution_mode` nunca migra diff NÃO commitado — órfão no
-  disco antigo (RN-447..450, ADR 0111)
+  disco antigo (RN-447..450, ADR 0111). O órfão CONTINUA; o que mudou na
+  RN-560 é que a tela parou de dizer o contrário: o aviso afirmava *"isto
+  migra a pasta de trabalho do agente"* nos dois idiomas, e agora diz os três
+  fatos separados (o que a conversão RECUSA, o que ela LEVA — a política do
+  `permissions.json` —, e o que ela NÃO leva), NOMEANDO o caminho antigo, que
+  some da tela assim que a conversão salva. Ele não promete detecção de diff
+  (I/O por modo, impossível para `runner` do lado da api) e não lista TODAS as
+  consequências — `mirrorPath` zerado, `workspaceVerifiedAt` nulo e container
+  removido seguem ditos só no caso de uso e nas RNs. Migrar conteúdo entre
+  modos continua fora, sem dono
 - Mirror web de `SOLO_CONVERSATIONAL_AGENTS` sem teste cruzado com a api
   (pior caso: opção velha que o backend recusa com 400)
-- `ExecutionModeSection` (converter projeto existente para modo `runner`) é o
-  ÚNICO dos cinco lugares sem `RunnerOnboardingPanel` nem navegador de pastas —
-  digita-se o caminho no escuro. Ficou fora da RN-473 de propósito: onboardar
-  ANTES de a conversão salvar registra chave num projeto que ainda não é
-  `runner`, e `ConfirmProjectWorkspaceUseCase` recusa a confirmação com 400 —
-  a ordem "converte, depois onboarda" é decisão de produto à parte
+- `ExecutionModeSection` ENCOLHEU para o ramo `runner` (RN-559): converter para
+  `mounted` abre o MESMO `FolderBrowserModal` da criação, com
+  `origem: { tipo: 'api', workspaceId }` — mesmo componente, mesmo endpoint,
+  nenhuma régua nova (quem valida o caminho continua sendo a api). O que segue
+  aberto é converter para `runner`, que continua sem `RunnerOnboardingPanel` e
+  sem navegador, digitado no escuro. Ficou fora da RN-473 de propósito, e a
+  RN-559 NÃO reabriu: onboardar ANTES de a conversão salvar registra chave num
+  projeto que ainda não é `runner`, e `ConfirmProjectWorkspaceUseCase` recusa a
+  confirmação com 400; o transporte de navegador daquele ramo
+  (`{ tipo: 'runner', projectId }`) exige um runner conectado a ESSE projeto,
+  que só passa a existir depois da conversão, e a espera terminaria num erro
+  com cara de bug. A ordem "converte, depois onboarda" é decisão de produto à
+  parte, sem dono. O que a RN-559 acrescentou ali é a tela DIZER isso em texto,
+  em vez de só não oferecer botão nenhum (ADR 0064)
 - Chave de dispositivo órfã (aba fechada no meio do fluxo da RN-473) é INERTE
   e agora VISÍVEL pela api — `RunnerDeviceKeysController` ganhou `GET` na
   RN-519, com a revogada na lista e `lastUsedAt` nulo como sinal da órfã. O que
@@ -1535,6 +1553,21 @@ o RACIOCÍNIO da triagem, que continua valendo.
   cobrar o que o gerador não escreve faria todo release nascer vermelho numa
   PR do bot. Frase alterada sem ajustar o padrão reprova como `CEGO`, de
   propósito.
+- Frase ancorada num lugar do CÓDIGO entra em
+  `verificarFrasesAncoradasNoCodigo` (`scripts/docs/generate.mjs`) — mesma
+  tabela-por-frase das contagens, só que o esperado é DERIVADO do artefato e
+  não é um número. Hoje são três: a escada da esteira no `description` do
+  `branching-policy.md`, derivada de `ESCADA` em `scripts/ci/pr-police.ts`
+  (NUNCA de `PROTECTED_BRANCHES`, que tem `rc` de propósito), e as duas frases
+  de `db:generate` (`README.md` e `docs/getting-started.md`), derivadas de
+  `apps/api/src/db/schema.ts` ser ou não barrel. Consequência prática: mudar a
+  escada ou desfazer o barrel reprova o `docs:check` até a prosa acompanhar.
+  Padrão que para de casar reprova como `CEGO`, e a FONTE sumir também.
+- Variável de ambiente tem ESCOPO no inventário gerado — `produto` (o que o
+  operador põe no `.env`) ou `ferramenta` (só CI e quem desenvolve) —, e a
+  fonte nova nasce com o dele. Fonte que mora direto numa pasta precisa de
+  DOIS globs: `**/` no pathspec do git exige pelo menos um nível de diretório,
+  e um inventário que nasce vazio não avisa, passa verde.
 - Antes de finalizar: pnpm docs:check e pnpm docs:build verdes (glob
   morto, gerado fora de dia e link quebrado reprovam).
 - Nunca inventar conteúdo de doc: sem informação suficiente, use
