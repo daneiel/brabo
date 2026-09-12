@@ -26,6 +26,43 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: o envelope dos segredos do usuário passa a gravar **qual chave
+  mestra o embrulhou** (`key_id`), e a rotação da chave deixa de ser cega
+  ([RN-563](docs/business-rules.md#rn-563),
+  [ADR 0158](docs/adr/0158-o-id-da-chave-mestra-gravado-no-envelope.md)).
+
+  A pergunta que decide o passo 3 do runbook — *"ainda há credencial na chave
+  velha?"* — vira uma consulta SQL, em vez de rodar o script de novo e ler a
+  contagem que ele imprime. E, quando nenhuma das duas chaves abre um registro,
+  a mensagem passa a distinguir "veio de outro ambiente" de "rótulo incoerente
+  ou registro adulterado" de "linha anterior a esta coluna" — antes eram a
+  mesma falha genérica.
+
+  O rótulo é **observabilidade, nunca autoridade**: `decrypt` não mudou uma
+  linha, e quem decide se o envelope abre continua sendo o AES-GCM. Uma linha
+  cujo rótulo mente é re-embrulhada assim mesmo, e há teste fixando isso.
+
+  **O que o operador faz:** nada — a migration acrescenta duas colunas
+  anuláveis, e o `key_id` nasce na próxima escrita. Numa instalação existente,
+  a consulta de progresso só passa a valer depois da primeira rotação; antes
+  dela tudo é `NULL`, e `NULL` conta como pendente, de propósito. A impressão
+  digital da chave corrente sai numa linha no log do boot da api, que é o valor
+  contra o qual a consulta compara.
+
+- **api**: a rotação da chave mestra ganha **verificação nomeada**, ponta a
+  ponta e nas duas tabelas ([RN-562](docs/business-rules.md#rn-562)).
+
+  Era o procedimento com o pior desfecho do runbook e o único cuja linha de
+  verificação dizia "ver abaixo": `apps/api/src/scripts/rewrap-deks.ts` nunca
+  teve teste nenhum. Agora um spec percorre a sequência inteira — cifra com K1,
+  publica K2, reenvelopa, descarta K1 e ainda decifra — contra Postgres de
+  verdade e contra `user_credentials` **e** `project_git_connections`, mais a
+  idempotência e a linha ilegível que é contada sem abortar as outras.
+
+  O núcleo do script virou `reenvelopar()`, exportado, e o `main()` passou a
+  rodar só sob invocação direta — importá-lo de um spec rodava a rotação. O
+  nome do script e a invocação do runbook não mudaram.
+
 - **web**: converter um projeto para **Pasta montada** passa a abrir o mesmo
   **navegador de pastas** da criação, em vez de pedir o caminho no escuro
   ([RN-559](docs/business-rules.md#rn-559)).

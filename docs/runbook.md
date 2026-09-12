@@ -2103,11 +2103,10 @@ after any suspected leak.
 
 ### What's at stake
 
-The `wrapped_dek` stored in the database **doesn't identify which key
-wrapped it**. Direct consequence: changing the variable and restarting the
-api makes every existing credential unreadable, all at once, with no boot
-error — the failure only shows up on first use, as "unable to decrypt",
-and there's no way back short of restoring the old key.
+Changing the variable and restarting the api with a single key makes every
+existing credential unreadable, all at once, with no boot error — the failure
+only shows up on first use, as "unable to decrypt", and there's no way back
+short of restoring the old key.
 
 That's why rotation has three steps, not one. During the middle one, both
 keys coexist:
@@ -2119,6 +2118,27 @@ keys coexist:
 
 Two tables hold envelopes: `user_credentials` and
 `project_git_connections`.
+
+Since [RN-563](business-rules.md#rn-563) each envelope also carries a
+**`key_id`** — the fingerprint of the key that wrapped it. It is what makes
+the progress of step 2 answerable in SQL. Two things about it matter at 3am:
+
+- **It never decides whether a row opens.** Reading still tries the current
+  key and falls back to the previous one; AES-GCM authenticates, and it is the
+  authority. The label is metadata, and a row whose label disagrees with its
+  envelope is still re-wrapped correctly ([ADR 0158](adr/0158-o-id-da-chave-mestra-gravado-no-envelope.md)).
+- **`key_id IS NULL` means "written before that column existed", never "on the
+  current key".** On an installation that predates it, everything is `NULL`
+  until the first rotation, and the queries below count that as pending — which
+  is the honest answer.
+
+Get the current fingerprint from the api's own log; it prints one line at boot:
+
+```bash
+kubectl -n brabo logs -l app.kubernetes.io/name=api --tail=200 \
+  | grep 'chave mestra corrente'
+# chave mestra corrente: key_id=4f2b91c0a77e13d5
+```
 
 ### Before: size it up
 
@@ -2149,11 +2169,14 @@ kubectl -n brabo rollout restart deployment/api
 kubectl -n brabo rollout status  deployment/api
 ```
 
-Confirm the api is in rotation mode — it warns in the log, on purpose:
+Confirm the api is in rotation mode — it warns in the log, on purpose, and the
+warning names **both** fingerprints, which is what the queries below compare
+against:
 
 ```bash
 kubectl -n brabo logs -l app.kubernetes.io/name=api --tail=50 \
   | grep CREDENTIALS_MASTER_KEY_PREVIOUS
+# ... rotação em andamento (atual key_id=<NEW>, anterior key_id=<OLD>). ...
 ```
 
 > From here on **nothing breaks**: a new secret is already born on the new
@@ -2191,12 +2214,34 @@ Properties that matter if something interrupts the script:
 - **`failures > 0` blocks step 3.** These are rows that don't open with
   either key — usually coming from a different environment, or from an
   earlier rotation that was interrupted with the key already discarded.
-  The script identifies each one by id. Don't remove PREVIOUS: without
-  it you also lose what still opened.
+  The script identifies each one by id, and names WHY it failed — a row from
+  another environment ("embrulhado pela chave `<kid>`"), a row whose label
+  disagrees with its envelope ("rótulo incoerente ou registro adulterado"),
+  and a row with no label at all are three different diagnoses with three
+  different answers. Don't remove PREVIOUS: without it you also lose what
+  still opened.
+
+**Interrupted, and want to know where it stopped?** Ask the database instead of
+re-running the script for its counter — with `<NEW>` the current fingerprint
+from the log above:
+
+```sql
+select 'user_credentials' as tabela, count(*) as pendentes
+  from user_credentials       where key_id is distinct from '<NEW>'
+union all
+select 'project_git_connections', count(*)
+  from project_git_connections where key_id is distinct from '<NEW>';
+```
+
+`is distinct from`, never `<>`: rows with `key_id IS NULL` must count as
+pending, and `<>` would silently drop them.
 
 ### 3. Discard the old key
 
-Only once `failures=0`:
+Only once `failures=0` **and** the query above answers `0` on both tables. The
+two say different things and you want both: `failures=0` means nothing refused
+to open on this run, and the query means nothing is left behind — including
+rows that a previous, interrupted run never reached.
 
 ```bash
 # remove CREDENTIALS_MASTER_KEY_PREVIOUS from the provider, then
@@ -2209,10 +2254,29 @@ credentials screen, or any agent turn that uses an LLM key).
 
 ### Verifying without waiting for an incident
 
-`rewrap` runs in any environment. In a test one, the full cycle fits in a
-few minutes and validates the procedure — the same logic is covered by
-`test/infrastructure/security/envelope-encryption.service.spec.ts`,
-including the case where neither key works.
+**The whole cycle has a named verification, and it runs in CI**
+([RN-562](business-rules.md#rn-562)):
+
+```bash
+pnpm --filter api test -- test/scripts/rewrap-deks.spec.ts
+```
+
+That spec drives the sequence of this page against a real Postgres and **both**
+tables: encrypt with K1, publish K2, re-wrap, drop K1, and still decrypt. It
+also pins the two properties this procedure leans on — idempotence (a second
+run reports `re-wrapped=0`) and the unreadable row being counted and named
+without aborting the others.
+
+Narrower, in-memory coverage of the same primitives — including the case where
+neither key works, and the case where the `key_id` label lies — lives in
+`test/infrastructure/security/envelope-encryption.service.spec.ts`.
+
+`rewrap` also runs in any environment: on a test one, the full cycle by hand
+fits in a few minutes.
+
+> **TODO(humano):** has this rotation ever actually been executed, in any
+> environment? No source records a run with a date, and that changes whether
+> the spec above is a safety net or the first proof.
 
 ### Interaction with restore
 
@@ -2220,7 +2284,10 @@ including the case where neither key works.
 you back an intact database with useless credentials.** The dump carries
 the wrapped DEKs, not the key. If you restored a production backup into a
 test environment and the credentials don't open, it's not corruption:
-it's the wrong key. See
+it's the wrong key — and since [RN-563](business-rules.md#rn-563) you can
+confirm it in one comparison instead of by elimination, by reading `key_id`
+off any row and putting it next to the `chave mestra corrente` line in the
+api's boot log. See
 [Restore](#restore).
 
 That's why the master key is part of the recovery plan: a database backup
@@ -2233,7 +2300,9 @@ without the matching key doesn't recover the user's secrets.
 | the api boots with no rotation warning, but the script requires PREVIOUS | the variable never reached the pod; ESO only resyncs every `refreshInterval` (1h) |
 | `failures` equal to the total | the published PREVIOUS isn't the key that wrapped the store |
 | `already on current key` equal to the total, without having run before | both variables have the same value — the service ignores PREVIOUS in that case |
-| a credential stops working AFTER step 3 | some row was left behind; republish PREVIOUS immediately and run the script again |
+| a credential stops working AFTER step 3 | some row was left behind; republish PREVIOUS immediately and run the script again. The progress query in step 2 is what prevents this, and it is the check to run first |
+| the pending query answers the full total, on a database nobody rotated yet | expected: `key_id` is written from the next write on, so an installation that predates [RN-563](business-rules.md#rn-563) has it `NULL` everywhere until the first rotation. `NULL` counts as pending on purpose — "I don't know which key" is not "already current" |
+| `rewrap` says a row is on a key that is neither the current nor the previous one | the row came from another environment — most often a dump restored across installations. See [Interaction with restore](#rotacao-da-chave-mestra) below; the `key_id` in the row versus the one in the api's boot log tells you at a glance |
 
 ---
 

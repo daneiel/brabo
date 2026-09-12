@@ -138,6 +138,7 @@ estado lido do repositório e não da conversa.
 | FASE 30 — CONCLUÍDA (sessão 8: o E2E em máquina limpa) | historico-de-fases.md |
 | O runner reconectava sozinho com um ticket morto | RN-108 |
 | A conversão de modo deixa de ser um salto no escuro (AT-049/AT-050) | RN-559, RN-560 |
+| A rotação da chave mestra, provada e observável (AT-033/AT-034) | ADR 0158, RN-562, RN-563 |
 | A credencial que sumia no `docker exec` do runner (AT-053) | Lacuna que o ADR 0145 declarou POR ESCRITO e mediu: o container `running` que a RN-507 exige antes de qualquer operação de `RunnerGit` só existe porque o MESMO runner o subiu, e é esse mesmo sucesso que o faz rotear todo comando para dentro dele — por um `docker exec` sem campo de `env` (ADR 0130, sem `-e` livre). O `git fetch` autenticado rodava com o helper instalado e as variáveis VAZIAS, e a falha chegava como token inválido ou rede fora: o caminho COMUM, não uma borda. Entregou-se a metade do SILÊNCIO, nunca a do `env`: o par (`env` presente, container ativo) passa a ser RECUSADO antes de executar, com marca de PROTOCOLO partida entre duas linguagens, mensagem que diz o quê e por quê, e origem `politica` — não `codigo`, porque não há cláusula faltando, há decisão de produto pendente. Quem recusa é o RUNNER e só ele pode: `containerAtivo` nasce `null` a cada execução, então container `running` REGISTRADO no banco NÃO implica container ativo NAQUELE processo, e um runner reiniciado com o container de pé roteia pro HOST, onde a credencial chega — subir a checagem recusaria um caminho que funciona, e `RunnerReadiness` fica byte a byte como está. A saída nunca cita nome nem valor de variável, só a CONTAGEM (a invariante da RN-507 sobrevive intacta). Metade aberta declarada, e a adjacência também: a idempotência de `ensure!` marca o workspace pronto na segunda tentativa por achar o `.git`, e ela falha adiante em vez de repetir a recusa | RN-558 |
 | O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
@@ -1520,7 +1521,30 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `decide.ts` e reprova tipo sem frase; payload cru nunca é despejado,
   nasce colapsado (RN-096).
 - Segredos de usuário (API keys de LLM e tokens de git) criptografados
-  com envelope encryption; nunca em plaintext no banco ou em logs.
+  com envelope encryption; nunca em plaintext no banco ou em logs. Desde a
+  RN-563 (ADR 0158) o envelope carrega `key_id` — a IMPRESSÃO DIGITAL
+  (`HMAC-SHA256(chave derivada, rótulo)`, 8 bytes) da chave mestra que o
+  embrulhou, nas DUAS tabelas que guardam envelope (`user_credentials` e
+  `project_git_connections`, que mudam sempre JUNTAS). Ele existe para
+  responder em SQL *"quantas credenciais ainda estão na chave anterior?"* — o
+  passo 2 do runbook — e para dar diagnóstico DIFERENTE a "veio de outro
+  ambiente", "rótulo incoerente" e "linha sem rótulo". **Ele nunca decide se
+  o envelope abre**: `decrypt` continua tentando a atual e caindo para a
+  anterior, e `rewrap` continua decidindo "já está na chave atual" pela
+  TENTATIVA — quem autentica é o GCM. Não "otimize" isso pulando a tentativa
+  quando o rótulo bate: uma linha rotulada "atual" cujo envelope está na chave
+  velha seria pulada em silêncio, ficaria fora da contagem, e o passo 3 (que
+  descarta a chave velha) a tornaria ilegível para sempre — há teste fixando
+  a linha mentirosa sendo re-embrulhada assim mesmo. `key_id` NULO é a linha
+  gravada antes da coluna existir, e a consulta usa `IS DISTINCT FROM` e nunca
+  `<>` justamente para contá-la como PENDENTE. Não há migração do acervo: o
+  rótulo nasce na próxima escrita. E a impressão da chave corrente sai no log
+  do boot da api, porque coluna que não se compara contra nada é inútil.
+  A rotação inteira tem verificação NOMEADA desde a RN-562
+  (`apps/api/test/scripts/rewrap-deks.spec.ts`, contra Postgres de verdade e
+  contra as duas tabelas) — e é por ela que `rewrap-deks.ts` tem o núcleo
+  exportado (`reenvelopar`) com o `main()` sob `require.main === module`:
+  importar o script não pode rodar a rotação.
 - Decisões arquiteturais relevantes registradas em docs/adr/.
 
 ## Documentação é parte da definição de pronto (permanente)
