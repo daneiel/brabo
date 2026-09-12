@@ -536,6 +536,31 @@ reason in the URL.
   state — never an absolute path. What crosses the wire is the SEGMENT, and
   the root belongs to whoever executes, the same invariant as the broker
   (ADR 0144) and the runner base (ADR 0151).
+
+  Since [RN-544](business-rules.md#rn-544) the route has its CONSUMER: run
+  without `--project`, `brabo-runner` calls it at start and opens **one
+  connection per project listed**, each rooted at
+  `<base>/<workspaceDirName>` through the same guards
+  (`resolverPastaDoProjetoNaBase`, then RN-434/RN-435). Three things about
+  that belong on this page. First, **nothing on the engine changed**: the
+  `terminal:<projectId>` topic, the socket id and the ticket describe a
+  CONNECTION, and N connections satisfy them byte for byte — the refusal of a
+  second runner on the same project is untouched, and so are the mirror
+  ([RN-516](business-rules.md#rn-516)) and `workspace_create`
+  ([RN-532](business-rules.md#rn-532)), both of which already travelled in
+  the grant of THAT connection's join. Second, the discovery JWT carries **no
+  `projectId` claim** — the guard compares `payload.projectId !==
+  request.params.projectId`, and on a route with no project in the path both
+  must be `undefined`; signing an invented project id there would be refused
+  with a 403 that says the wrong thing. Third, **the runner never guesses the
+  species of its own key**: on disk a machine key and a project key are the
+  same file (a private JWK with a `kid`), the server is the one that knows,
+  and the named 403 is relayed with its own message and its own fix
+  (`--project`) instead of being flattened into a generic connection failure.
+  The new mode requires BOTH a machine credential and a **consented base** —
+  without a base there is nowhere to derive each project's folder from, and
+  inventing one would write a path on the user's disk they never consented
+  to; without both, running with no `--project` still prints usage.
 - **A client of the `/runner` socket must NEVER let `phoenix.js` reconnect on
   its own** ([RN-108](business-rules/autenticacao.md#rn-108)). The ticket is
   single-use, and the built-in auto-reconnect repeats the SAME `params` — so a

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,6 +32,7 @@ const CLI = fileURLToPath(new URL('./index.ts', import.meta.url));
 function rodarNaPasta(
   cwd: string,
   extras: string[] = [],
+  env: Record<string, string> = {},
 ): { stdout: string; stderr: string; status: number | null } {
   const resultado = spawnSync(process.execPath, [CLI, ...extras], {
     cwd,
@@ -39,7 +40,7 @@ function rodarNaPasta(
     // `INIT_CWD` vence `process.cwd()` em `lerArgumentos` — o vitest o herda
     // do pnpm que o invocou, e sem limpá-lo o CLI procuraria os arquivos na
     // raiz do monorepo em vez da pasta deste teste.
-    env: { ...process.env, INIT_CWD: cwd, BRABO_ACCOUNT_TOKEN: '' },
+    env: { ...process.env, INIT_CWD: cwd, BRABO_ACCOUNT_TOKEN: '', ...env },
     // Rede de segurança: os dois caminhos exercitados aqui saem em
     // milissegundos. Um processo que ficasse de pé seria um teste travado,
     // não um teste lento.
@@ -145,5 +146,63 @@ describe('brabo-runner service é despachado antes de exigir credencial (RN-518)
     expect(status).toBe(2);
     expect(stderr).toContain('uso: brabo-runner service');
     expect(stderr).toContain('ADR 0147');
+  });
+});
+
+/**
+ * O PORTÃO da RN-544, provado no PROCESSO pelo mesmo motivo dos dois defeitos
+ * acima: ele vive na JUNÇÃO de `lerArgumentos` com `base.ts` e `device-key.ts`,
+ * e nenhum teste de unidade dos três o pega. Até esta RN, `if (!projectId)
+ * uso()` — não existia execução sem projeto. Agora existe UMA, e o que este
+ * bloco tranca é que ela continua ESTREITA: sem base consentida, rodar sem
+ * `--project` segue caindo em `uso()`, como sempre caiu.
+ *
+ * `XDG_CONFIG_HOME` é apontado para uma pasta controlada nos dois testes — a
+ * máquina de quem roda a suíte pode ter um `~/.config/brabo/runner.json` de
+ * verdade, e sem isso o primeiro teste passaria ou falharia por acidente.
+ */
+describe('brabo-runner sem --project: o agente de MÁQUINA exige base (RN-544)', () => {
+  let dir: string;
+  let xdg: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(homedir(), '.brabo-runner-maquina-spec-'));
+    xdg = mkdtempSync(join(homedir(), '.brabo-runner-xdg-spec-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(xdg, { recursive: true, force: true });
+  });
+
+  it('SEM base consentida: recusa DIZENDO que falta a base, e ainda imprime o uso', () => {
+    const { stderr, status } = rodarNaPasta(dir, [], { XDG_CONFIG_HOME: xdg });
+
+    expect(status).toBe(2);
+    expect(stderr).toContain('agente de MÁQUINA');
+    expect(stderr).toContain('BASE de projetos consentida');
+    // O bloco de uso continua saindo: quem digitou errado o `--project` precisa
+    // dele, e esta recusa não substitui a resposta de sempre.
+    expect(stderr).toContain('uso: brabo-runner');
+  });
+
+  it('COM base consentida, a recusa passa a ser da CREDENCIAL — o portão abriu', () => {
+    mkdirSync(join(xdg, 'brabo'), { recursive: true });
+    const base = join(homedir(), '.brabo-runner-base-spec');
+    writeFileSync(join(xdg, 'brabo', 'runner.json'), JSON.stringify({ base }));
+    // Chave PRESENTE e recusada (sem `kid`) — é ela que prova que a execução
+    // atravessou a base e chegou na credencial, e a mensagem continua sendo a
+    // própria da RN-475, nunca o bloco de uso.
+    writeFileSync(
+      join(dir, NOME_ARQUIVO_CHAVE),
+      JSON.stringify({ kty: 'OKP', crv: 'Ed25519', x: 'abc', d: 'def' }),
+    );
+
+    const { stderr, status } = rodarNaPasta(dir, [], { XDG_CONFIG_HOME: xdg });
+
+    expect(status).toBe(2);
+    expect(stderr).toContain('RECUSADO');
+    expect(stderr).toContain('kid');
+    expect(stderr).not.toContain('BASE de projetos consentida');
   });
 });

@@ -129,6 +129,7 @@ estado lido do repositório e não da conversa.
 | FASE 29 (sessão 5) — o backup passa a cobrir o que perder dói | ADR 0152, RN-528 |
 | FASE 29 (sessão 9) — o picker do modo Runner volta a ler o disco de quem escolhe | ADR 0151, RN-533 |
 | FASE 30 (sessão 2) — a chave de dispositivo passa a poder ser da MÁQUINA | ADR 0154, RN-543 |
+| FASE 30 (sessão 3) — o agente local abre N conexões, uma por projeto | ADR 0154, RN-544 |
 | O runner reconectava sozinho com um ticket morto | RN-108 |
 | O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
@@ -158,6 +159,12 @@ pessoal da RN-410 na mesma transação, e recusa com 409 havendo QUALQUER usuár
 a rota de virar criador de contas. Nenhuma rota pública de "primeiro owner"
 nasceu, e o registro normal fica byte a byte. O `install.sh` que consome a rota
 é a sessão 6 e NÃO existe: quem instala hoje continua pescando o link no log.
+A sessão 3 (RN-544) fechou a metade do RUNNER e confirmou a medição: o agente
+local abre N conexões de verdade, uma por projeto descoberto pela rota, e
+**nada no engine mudou** — nem o espelho, nem o `workspace_create`, nem um
+handler. O que segue sem existir é quem CRIA chave de máquina (sessão 6) e a
+unit POR MÁQUINA (sessão 4): a unit continua por projeto, e o modo novo só é
+exercitável com chave registrada à mão.
 Duas coisas dessa sessão são régua daqui pra frente — `provisionarUsuario`
 (seed/smoke) teve o NÚCLEO extraído para `ProvisionarUsuarioUseCase` e MANTEVE
 a recusa de `NODE_ENV=production`, porque o que ela protege é senha CONHECIDA
@@ -544,6 +551,31 @@ criada SEM interação humana e não o trio de escritas (não use
   System Access API (fallback de dois downloads fora do Chromium) —
   `POST .../runner-ticket` aceita essa chave como segunda credencial de
   dispositivo, ADITIVA ao PAT (ADR 0105), nunca um substituto. Desde a
+  RN-544 (ADR 0154) `--project` é opcional por um SEGUNDO caminho, e só por
+  ele: o agente de MÁQUINA roda SEM `--project`, consulta
+  `GET /runner/projects` e abre **UMA conexão por projeto** listado, cada uma
+  em `<base>/<workspaceDirName>` pelas guardas de sempre
+  (`resolverPastaDoProjetoNaBase` + RN-434/435 — nenhuma régua nova). Ele exige
+  as DUAS coisas, credencial de MÁQUINA e BASE consentida, e sem base rodar sem
+  `--project` continua caindo em `uso()`; o modo com `--project` fica BYTE A
+  BYTE. Nada no engine muda (tópico, socket id e ticket descrevem uma CONEXÃO),
+  e o espelho/`workspace_create` também não — os dois já viajavam na concessão
+  do `join` DAQUELA conexão, que é o que os torna corretos com N. O que MUDA de
+  comportamento é o laço: o teto de tentativas e a recusa de join deixam de ser
+  do PROCESSO e passam a ser do PROJETO — um projeto que recusa ou esgota
+  encerra sozinho e NOMEADO, os demais seguem, e só quando NENHUM sobra o
+  processo sai com 1, listando o desfecho de cada um. A lista é consultada UMA
+  vez, no start (repesquisar faria uma lista que volta MENOR — apagado?
+  convertido? 500 transitório? — derrubar conexão VIVA por ambiguidade), e
+  lista VAZIA é estado NORMAL com saída 0. N conexões exigem N
+  `EstadoDoRunner`, e o motivo é medido: quatro campos dele são POR PROJETO
+  (`dir`, `canalAtual`, `containerAtivo`, `destinoDoEspelho`) mais o
+  `gerenciadorPty`, que nasce de `dir` — um estado compartilhado faria o
+  `docker exec` de um projeto rodar no container de OUTRO; `docker` e `base`
+  são da MÁQUINA e entram como o MESMO valor em todos, nunca cópias. E o runner
+  NÃO adivinha a espécie da própria chave (em disco as duas são o mesmo
+  arquivo, uma JWK com `kid`): quem sabe é o SERVIDOR, e o 403 dele é repassado
+  NOMEADO, com o conserto. Desde a
   RN-543 (ADR 0154) essa chave tem DUAS espécies, numa tabela só:
   `runner_device_keys.project_id` preenchido é a chave de PROJETO do fluxo
   acima, e NULO é a chave de MÁQUINA, que vale para qualquer projeto em que

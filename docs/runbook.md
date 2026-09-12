@@ -409,6 +409,45 @@ as it always was and the base plays no part in it: the base is a rule of
 CREATION. Do not "fix" a legacy project by moving it under the base to silence
 something — nothing is complaining.
 
+### The machine agent: one connection per project {#agente-de-maquina}
+
+**Symptom:** `brabo-runner` was started without `--project` and either printed
+the usage block, said `nenhum projeto em modo "runner" para esta conta`, or
+served some projects and refused others.
+
+Since [RN-544](business-rules.md#rn-544)
+([ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)) running without
+`--project` is a real mode: the agent asks `GET /runner/projects` and opens
+**one connection per project**, rooted at `<base>/<workspaceDirName>`. The mode
+with `--project` did not change at all. Reading the output:
+
+- **`Sem --project, este runner só roda como agente de MÁQUINA…`** — there is
+  no consented base. Both conditions are required and for different reasons:
+  the machine credential is what the route accepts, the base is where each
+  project's folder comes from. See [the base above](#base-do-runner).
+- **`a api recusou a descoberta de projetos: esta credencial está presa a um
+  PROJETO`** — a 403. The credential in use (a PAT, or a device key from the
+  browser flow) names one project and has nothing to discover. Run it with
+  `--project <projectId>` instead, or register a machine key. On disk the two
+  species are the same file, so the runner does not guess: the server is the
+  authority and its message is relayed verbatim.
+- **`nenhum projeto em modo "runner" para esta conta`** — this is the **normal**
+  state of a fresh install, and the process exits **0** on purpose, so
+  `Restart=on-abnormal` does not resurrect it. Create a project in Runner mode
+  and start the agent again: **the list is read only at start**, never polled.
+- **`[<projeto>] NÃO será atendido`** — that project's folder was refused (the
+  segment escaped the base, or the target exists and is not a directory). The
+  others keep going. Only if NONE is left does the process exit 1.
+- **`[<projeto>] este projeto deixa de ser atendido — os demais continuam`** —
+  the join was refused (usually a second runner already connected to that
+  project) or the retry ceiling ran out. Both are per PROJECT now, not per
+  process: one project failing no longer kills the agent for all the others.
+  When every project has ended this way the process prints the outcome of each
+  and exits 1.
+
+Every line of the connection loop is prefixed with the project name. If a
+message has no prefix, it came from the single-project mode.
+
 ### The project folder never appears on the user's machine {#pasta-do-projeto-nunca-aparece}
 
 **Symptom:** a project folder was expected to show up under the runner's base
