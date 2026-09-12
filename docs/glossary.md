@@ -133,8 +133,9 @@ second name for it.
 Explicit because the destination and the reason are recorded in the event
 log, instead of one agent implicitly "taking over" another's context.
 
-**Artifact** — an agent's structured, validated output. Seven closed
-schemas (`note`, `business_rule`, `product_brief`, `task_blocked`,
+**Artifact** — an agent's structured, validated output. Eleven closed
+schemas (`note`, `business_rule`, `product_brief`, `decision_record`,
+`plano_de_teste`, `prototipo_navegavel`, `threat_model`, `task_blocked`,
 `qa_verdict`, `secops_verdict`, `infra_delegation_files`): a missing field
 fails the emission. It's how a gate's verdict becomes data, not text.
 `business_rule` fails for a second reason: a title already registered in
