@@ -67,8 +67,24 @@ export const NOME_ARQUIVO_BASE = 'runner.json';
  * de `servico.ts`, e não uma segunda régua.
  */
 export function caminhoDoArquivoDeBase(home: string, xdgConfigHome: string | null): string {
+  return join(pastaDeConfiguracaoDoBrabo(home, xdgConfigHome), NOME_ARQUIVO_BASE);
+}
+
+/**
+ * A PASTA de configuração desta máquina — a metade de `caminhoDoArquivoDeBase`
+ * que não é o nome do arquivo.
+ *
+ * Extraída (e não copiada) quando ganhou o segundo consumidor: a chave de
+ * dispositivo criada no terminal (RN-551) mora ao lado do `runner.json`, pela
+ * mesma razão que ele mora aqui — é configuração da MÁQUINA, não de um
+ * projeto, e uma chave de máquina não tem pasta de projeto onde morar. Uma
+ * segunda cópia da precedência `$XDG_CONFIG_HOME` › `~/.config` é exatamente o
+ * que o docblock acima recusa: as duas divergiriam no dia em que uma delas
+ * mudasse.
+ */
+export function pastaDeConfiguracaoDoBrabo(home: string, xdgConfigHome: string | null): string {
   const raiz = xdgConfigHome && xdgConfigHome.length > 0 ? xdgConfigHome : join(home, '.config');
-  return join(raiz, 'brabo', NOME_ARQUIVO_BASE);
+  return join(raiz, 'brabo');
 }
 
 export type LeituraDaBase =

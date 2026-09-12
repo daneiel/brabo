@@ -125,7 +125,10 @@ as registra:
   MENOR — apagado? convertido? 500 transitório? — derrubar conexão viva por
   ambiguidade. O processo diz isso ao subir, e o gesto é reconectar.
 - **Lista vazia é estado NORMAL, com saída 0.** É o estado de toda instalação
-  nova, e `Restart=on-abnormal` não a reergue de propósito.
+  nova, e `Restart=on-abnormal` não a reergue de propósito. *(Revisado ao
+  dividir a sessão 6, [RN-550](../business-rules.md#rn-550): com ZERO conexões o agente
+  passa a FICAR DE PÉ e reconsultar — a metade "só no start" fica intacta para
+  quem tem conexão viva.)*
 
 E o que segue **declarado, não feito**: a `apiUrl` no modo de máquina vem de
 `--api-url`/`BRABO_API_URL`/default, e nunca do `brabo-runner.config.json`, que
@@ -231,6 +234,69 @@ registrada à mão. O comando oferecido é
 máquina chega com a unit da sessão 4. Uma chave de PROJETO ativa não muda o
 painel: é o defeito irmão, um escopo abaixo. E a tela de listar/revogar chave
 continua não existindo.
+
+### O que a divisão da sessão 6 fechou — e por que ela não é sessão 8
+
+A **sessão 6** tocaria `apps/api`, `apps/runner` e o `install.sh` de uma vez, e
+entrega de três workspaces é onde uma sessão se perde. Ela foi **dividida em
+três**: as duas peças abaixo, disjuntas e em paralelo, e o `install.sh` depois
+delas, como **orquestrador e nada mais** — a sessão 6 segue aberta, com esse
+recorte menor. **Nenhuma destas duas é sessão numerada da fase**, e em especial
+nenhuma é a sessão 8, que é o E2E e continua aberta na tabela acima.
+
+As duas peças que faltavam **do lado do agente**, e as duas vêm do ADR 0155.
+
+A primeira é uma REVISÃO da sessão 3, e a decisão é a ASSIMETRIA
+([RN-550](../business-rules.md#rn-550)): com **zero** conexões o agente deixa
+de sair e passa a ESPERAR, reconsultando `GET runner/projects` a 15s/30s/60s
+até o primeiro projeto aparecer; com conexão **viva**, a lista continua sendo
+lida só no start, byte a byte. O argumento da sessão 3 continua inteiro onde
+ele vale — lista que volta MENOR é ambígua, e derrubar conexão viva por
+ambiguidade troca estado certo por palpite —, e com zero conexões não há nada
+a derrubar. O que caiu foi o argumento do `exit 0` ("um serviço ativo que não
+faz nada"), porque o processo passou a fazer algo e a dizer que faz. Medido
+nesta sessão: `Restart=on-abnormal` **não olha código de saída** — ele reergue
+por sinal, watchdog ou timeout —, então nada nas duas units muda, e o efeito é
+a unit de máquina ficar `active (running)` de verdade. Esperar não tem teto;
+falhar tem (dez consultas seguidas, saída 1 nomeando o número).
+
+A segunda fecha a lacuna que as sessões 2, 3 e 4 declararam — *"ninguém CRIA
+chave de máquina ainda"* — pela metade que é do agente
+([RN-551](../business-rules.md#rn-551)): `brabo-runner device-key
+create|finish` gera o par Ed25519 **nesta máquina**. A decisão aqui é o CORTE:
+o CLI **não** fala com a api, porque quem registra é o instalador com o
+`BRABO_SERVICE_TOKEN`, e dar esse segredo ao agente ampliaria o que ele pode
+muito além do que ele precisa — cada lado guarda um segredo e nenhum vê o do
+outro. Disso decorre o desenho de dois passos: o `kid` é o id do REGISTRO e só
+existe depois dele, então o `create` grava um `.parcial` que o leitor ignora e
+o `finish` grava o nome de verdade. **O arquivo que o runner lê nunca existe
+sem `kid`** — o defeito da RN-475, impossível por construção.
+
+O que segue **declarado, não feito**: a ROTA que registra a pública de máquina
+e o `install.sh` que encadeia os três comandos continuam sendo a sessão 6.
+
+E a metade de API da mesma divisão ([RN-552](../business-rules.md#rn-552)):
+`POST /internal/machine-device-keys`, `engine-service`, corpo
+`{ name, publicKeyJwk }` e resposta com o `id` que vira o `kid` da privada
+(RN-475). **A credencial foi decidida e o custo está declarado**: o service
+token, porque exigir credencial do usuário recém-criado obrigaria o instalador
+a abrir na máquina exatamente a sessão viva que o [ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md)
+ponto 5 recusou abrir — e daria um segundo uso à senha que a RN-546 descarta de
+propósito. O preço: um `BRABO_SERVICE_TOKEN` vazado passa a poder **fabricar**
+credencial de acesso duradoura, não só falar com rotas internas.
+
+Três contenções vivem **na rota**, não no texto: não há `userId` no corpo (o
+dono é o usuário ÚNICO da instalação, e zero ou mais de um é 409 sem escrever
+nada — a condição da RN-546 com outra forma, sobre a INSTALAÇÃO e nunca sobre o
+argumento); registrar **SUBSTITUI** as chaves de máquina ativas do dono na mesma
+transação, então máquina reinstalada passa e mil chaves são impossíveis **por
+cláusula, sem número que envelheça**; e uma JWK com `d` é recusada por nome, com
+a régua de forma virando UMA, no domínio, chamada pelos dois registradores.
+
+O que segue **declarado, não feito**: numa instalação sem PROJETO, tela nenhuma
+alcança uma chave de máquina — listar e revogar são as duas por
+`/projects/:projectId/...` —, e é por isso que registrar substitui em vez de
+deixar órfã: uma órfã ali seria **viva e inalcançável**.
 
 Faixa reservada: **RN-543..555**. ADRs **0154** e **0155**. A RN-541 já está
 alocada em branch não mergeada — o salto é deliberado, pelo critério que a

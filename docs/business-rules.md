@@ -11112,7 +11112,7 @@ segundo runner no mesmo projeto fica intacta, e é garantia real, não acidente.
 
 **Dois modos, e o antigo fica byte a byte.** `--project`/`--dir` com
 credencial de projeto — inclusive o fluxo do navegador
-([ADR 0118](adr/0118-configuracao-do-runner-pelo-navegador.md),
+([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md),
 [RN-464](#rn-464)) — é o caminho de sempre: UMA conexão, e o desfecho dela
 continua sendo o do processo. O modo novo exige as DUAS coisas, e por motivos
 diferentes: credencial de MÁQUINA, porque é ela que a rota aceita; e **base
@@ -11902,7 +11902,7 @@ da CONTA, não deste navegador.** `runner_device_keys` não sabe de que máquina
 navegador está falando, então o mais forte que a tela pode afirmar é *"sua
 conta tem uma máquina pareada"* — nunca *"esta máquina está pareada"*. É por
 isso que o fluxo do navegador
-([ADR 0118](adr/0118-configuracao-do-runner-pelo-navegador.md)) **não é
+([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)) **não é
 removido**: ele muda de LUGAR, para um `<details>` cujo rótulo nomeia o único
 caso em que ainda é a resposta ("estou em outra máquina"). Aposentá-lo é o
 `BRB-031`, decisão do mantenedor, e não consequência desta entrega.
@@ -11963,4 +11963,221 @@ diferença não é escolha de desenho: é a forma do endpoint.
   listagem e não a constrói
 - **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
 - **Origem:** FASE 30, sessão 7 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+---
+
+## O agente de máquina espera o primeiro projeto, e a chave nasce no terminal (RN-550/551, FASE 30)
+
+### RN-550 — Com ZERO conexões o agente local NÃO sai: ele espera e reconsulta a lista; com conexão viva a consulta continua sendo só no start {#rn-550}
+
+Sessão 8 da [FASE 30](explanation/fase-30-runner-por-maquina.md). A
+[RN-544](#rn-544) fez lista vazia ser estado NORMAL e o processo sair com **0**,
+dizendo *"crie um projeto em modo Runner e suba o agente de novo — a lista é
+consultada só no start"*. Isso contradizia, por escrito, o
+[ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 5 — *"ele
+**espera**… quando a pessoa criar o primeiro projeto na web, o agente já está
+lá"* — e quebrava exatamente o caso que a fase persegue: a instalação nova, que
+é a instalação com ZERO projetos. O instalador subia o agente, o agente
+descobria que não havia nada e ia embora, e a pessoa que criasse o primeiro
+projeto minutos depois voltaria ao terminal sem nunca ter sido avisada disso.
+
+**A regra é ASSIMÉTRICA, e a assimetria é o desenho:**
+
+```
+conexões > 0  →  a lista é consultada SÓ no start   (a RN-544 fica byte a byte)
+conexões = 0  →  reconsulta, com cadência declarada
+```
+
+**E ela NÃO desfaz a decisão da RN-544.** O argumento daquela sessão continua
+inteiro: uma lista que volta **MENOR** é ambígua — projeto apagado, convertido
+de modo, papel revogado, ou um 500 transitório se disfarçando dos três —, e
+derrubar uma conexão **VIVA** por causa dessa ambiguidade trocaria um estado
+certo por um palpite. Com **zero** conexões não há nada a derrubar e não há
+ambiguidade nenhuma: qualquer projeto que apareça é ganho puro, e nenhuma
+decisão é tomada sobre o que sumiu. A reconsulta **PARA** no instante em que a
+primeira lista não-vazia chega, e daí em diante o comportamento é byte a byte o
+de hoje — o módulo da espera não é chamado de novo enquanto o processo viver.
+
+**O argumento do `exit 0` caiu porque a premissa dele caiu.** A RN-544 escreveu
+que *"ficar de pé com zero conexões seria um serviço 'ativo' que não faz nada, e
+o `status` da unit passaria a mentir"* — e isso dependia de o processo não fazer
+nada. É essa premissa que esta RN remove: ele reconsulta, com cadência
+declarada, e DIZ que está fazendo isso. `active (running)` passa a ser
+verdadeiro, e quem mentia era a saída com 0, que deixava a instalação nova sem
+agente justamente no minuto em que a pessoa ia criar o primeiro projeto.
+
+**A cadência escalona e ESTABILIZA: 15s, 30s, 60s, e o último se repete para
+sempre.** Os dois degraus curtos existem porque o caso a atender é o de alguém
+criando o primeiro projeto AGORA; um teto de minutos faria o agente aparecer
+depois de a pessoa desistir de olhar. O platô de 60s é o preço em regime — UMA
+requisição por minuto, de uma instalação, contra uma rota que devolve a lista do
+próprio dono da credencial. Crescer além disso economizaria tráfego que ninguém
+está pagando e pioraria a única coisa que a espera entrega.
+
+**Há teto, e ele é de FALHAS, nunca de espera.** Esperar não tem limite —
+esperar é o estado normal de uma instalação nova, e pode durar dias. O que tem
+teto são as falhas **SEGUIDAS** da consulta: dez, e então o processo sai com 1
+NOMEANDO o número, como o laço de conexão já faz com
+`TETO_DE_TENTATIVAS_SEGUIDAS` e pelo mesmo motivo (não martelar a api para
+sempre quando o problema não é transitório). Uma consulta que RESPONDE zera o
+contador — inclusive quando responde VAZIO, que é sucesso, porque a lista vazia
+é a resposta certa. A constante é SEPARADA de propósito, com o mesmo valor: uma
+conta falhas de CONECTAR e a outra, falhas de LISTAR, e amarrá-las faria uma
+mudança de cadência de conexão mexer, sem ninguém pedir, no tempo que uma
+instalação nova espera antes de desistir. `CredencialNaoEDeMaquinaError` (o 403
+por espécie de chave, [RN-544](#rn-544)) **não** entra no teto: ela é fatal na
+hora, porque uma chave de projeto não vira chave de máquina por esperar mais um
+minuto.
+
+**Ficar de pé em silêncio seria pior que sair.** "Esperando" e "travado" são a
+mesma imagem para quem lê `journalctl`, então o processo diz a cadência ao
+entrar na espera, diz quando o primeiro projeto aparece, e bate um BATIMENTO a
+cada 30 consultas (meia hora, no platô) informando **quantas** consultas já
+houve. Nem toda consulta vira linha, também de propósito: um log por minuto,
+para sempre, é o ruído que enterra as linhas que importam.
+
+**`Restart=on-abnormal` fica byte a byte, nas DUAS espécies de unit
+([RN-545](#rn-545)), e nada nelas muda.** Medido: `on-abnormal` reergue por
+SINAL, watchdog ou timeout — nunca por código de saída, nem 0 nem 1. A saída
+com 0 nunca foi o que impedia o serviço de ser reerguido; o que impedia é que
+`on-abnormal` não olha código nenhum. O efeito real da mudança é o oposto do
+temido: a unit de MÁQUINA, que é a que roda este modo, passa a ficar
+`active (running)` de verdade em vez de terminar em `inactive (dead)` segundos
+depois de subir — e `service status --machine` passa a responder `rodando` (0)
+onde antes respondia `parado` (3) numa instalação nova. A unit por PROJETO não
+é afetada em linha nenhuma: ela roda o modo `projeto`, que nunca chega aqui.
+
+**Uma exceção, declarada: lista NÃO-vazia cujos projetos são todos recusados
+continua saindo com 1.** Também são zero conexões, e mesmo assim não espera —
+porque ali cada recusa nomeia um defeito local concreto (segmento que escapa da
+base, pasta que é um arquivo) com conserto próprio, e reconsultar repetiria as
+mesmas recusas indefinidamente, enterrando no log a linha que diz o que
+consertar. A espera é para *"ainda não existe projeto"*, nunca para *"existe e
+eu não consigo atendê-lo"*.
+
+- **Código:** `apps/runner/src/espera-de-projetos.ts:127`
+  (`esperarPrimeiroProjeto`), `:60` (`CADENCIA_DA_ESPERA_MS`), `:75`
+  (`TETO_DE_FALHAS_DE_CONSULTA`), `:88` (`CONSULTAS_POR_BATIMENTO`);
+  `apps/runner/src/index.ts:1465` (a espera dentro de
+  `rodarComoAgenteDeMaquina`, e a exceção dos recusados logo abaixo)
+- **Teste:** `apps/runner/src/espera-de-projetos.spec.ts` — o caminho feliz
+  (espera, reconsulta, devolve a primeira lista não-vazia e PARA ali), a
+  cadência que estabiliza, o batimento a cada N consultas, o teto de falhas
+  seguidas com o número na mensagem, a resposta no meio ZERANDO o contador, o
+  403 de espécie subindo intacto e o SIGTERM devolvendo `parado`;
+  `apps/runner/src/index.spec.ts` — a JUNÇÃO no PROCESSO de verdade, contra uma
+  api de mentira que devolve `[]`: o processo DIZ que fica de pé e **não
+  termina**, que era o defeito
+- **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 5
+- **Origem:** FASE 30, sessão 8 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+### RN-551 — `brabo-runner device-key create`/`finish`: o par Ed25519 nasce NA MÁQUINA, a privada nunca viaja, e o arquivo que o runner lê nunca existe sem `kid` {#rn-551}
+
+Sessão 8 da [FASE 30](explanation/fase-30-runner-por-maquina.md), a outra
+metade. Até aqui, **só o navegador** gerava par de chaves de dispositivo
+(`apps/web/src/lib/runner-bootstrap.ts`, [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md),
+[RN-464](#rn-464)); o CLI só sabia **ler** o que alguém tinha posto na pasta
+(`device-key.ts`). O [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+ponto 4 pede o outro lado: *"o par é gerado **na máquina**; a privada nunca
+viaja… mantém verdadeira a frase que a RN-519 usa para recusar a visão de
+`maintainer`: 'a privada de uma chave de dispositivo nunca sai do navegador' —
+passa a ser 'nunca sai da máquina'"*. Sem isso, a [RN-543](#rn-543), a
+[RN-544](#rn-544) e a [RN-545](#rn-545) continuavam todas com a mesma lacuna
+declarada: **ninguém cria chave de máquina**.
+
+**São DOIS passos, e o motivo é o `kid`.** O `kid` gravado dentro da JWK privada
+É o id do registro no servidor ([RN-475](#rn-475)) — a cadeia inteira só o
+REPASSA (o runner lê `jwk.kid`, o JWT o leva no header, o `PatAuthGuard` acha a
+pública por ele), e ninguém o deriva de outra coisa. Ele só existe **depois** de
+a pública ser registrada, e uma privada gravada antes disso nasce inútil, que é
+literalmente o defeito que a RN-475 custou uma caçada para achar. O navegador
+resolve mantendo o par em MEMÓRIA entre o registro e a gravação; o CLI resolve
+com um arquivo **PARCIAL**:
+
+```sh
+PUB=$(brabo-runner device-key create)          # gera aqui, imprime a PÚBLICA
+ID=$(… registra PUB na api …  | jq -r .id)     # quem registra é o instalador
+brabo-runner device-key finish --id "$ID"      # carimba o kid e grava
+```
+
+**Em nenhum instante existe um `brabo-runner-device-key.jwk.json` sem `kid`.** O
+`create` grava em `…jwk.json.parcial`, um nome que `lerChaveDeDispositivo` não
+procura; o `finish` carimba e grava o nome de verdade. O arquivo que o runner LÊ
+ou está completo ou não existe, e uma interrupção entre os dois passos deixa um
+`.parcial` que o runner IGNORA e que o próximo `create` NOMEIA — dizendo que o
+registro daquela tentativa pode ter ficado ÓRFÃO, que é inerte e aparece na
+listagem da [RN-519](#rn-519).
+
+**O CLI NÃO fala com a api, e a razão é de SEGREDO, não técnica.** Quem registra
+a chave de máquina é o instalador, autenticado pelo `BRABO_SERVICE_TOKEN` que
+ele acabou de gerar ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+ponto 1). Fazer o `brabo-runner` chamar a rota exigiria pôr esse token na mão
+dele — um segredo de INSTALAÇÃO, que abre rotas internas, entregue a um processo
+que hoje só vê credencial de dispositivo e que fica de pé para sempre na máquina
+do usuário. O corte é o oposto: **cada lado guarda exatamente um segredo, e
+nenhum vê o do outro**. O que atravessa a fronteira entre eles é a JWK PÚBLICA e
+o id — nada que precise ser protegido.
+
+**O destino padrão é a pasta de configuração da máquina, e a precedência é
+REUSADA.** `$XDG_CONFIG_HOME/brabo/` (senão `~/.config/brabo/`), ao lado do
+`runner.json` da [RN-529](#rn-529) e pelo mesmo motivo — é configuração da
+MÁQUINA, e uma chave de máquina não tem pasta de projeto onde morar.
+`pastaDeConfiguracaoDoBrabo` foi EXTRAÍDA de `caminhoDoArquivoDeBase` quando
+ganhou o segundo consumidor, nunca copiada. Isso **não** reabre a porta que a
+Onda 2 do [ADR 0104](adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)
+fechou (credencial em caminho global e IMPLÍCITO): `device-key.ts` continua lendo só do `cwd` que o chamador
+passar, e quem aponta para esta pasta é o `--dir` da unit de máquina
+([RN-545](#rn-545)), explicitamente, escrito no serviço. `--dir` existe e serve
+também a uma pasta de projeto — em disco as duas espécies são o mesmo arquivo, e
+quem sabe a diferença é o SERVIDOR ([RN-544](#rn-544)): este comando não afirma
+espécie nenhuma.
+
+**A privada é gravada com modo 600, explícito, e nunca deixado ao `umask`.** A
+pasta nasce 700 quando é ESTE comando que a cria; uma pasta que já existia é do
+usuário (pode ser a que o navegador configurou) e não é reapertada. O `--dir`
+passa pela MESMA `validarDirDentroDoHomeNoLinux` da [RN-434](#rn-434), reusada
+inteira: o que se grava é um segredo do usuário, e uma pasta fora do `$HOME`
+dele não é onde o `systemd --user` dele vai procurar.
+
+**O stdout carrega UM valor, numa linha, e todo o resto é stderr.** É esse o
+contrato de que o `install.sh` depende (`PUB=$(…)`): misturar as duas coisas
+obrigaria o script a filtrar saída de humano, que é como um contrato se quebra
+sem ninguém perceber. No `create` o stdout é a JWK pública; no `finish`, o
+CAMINHO do arquivo — o valor que o passo seguinte (`service install --machine
+--dir <pasta>`) precisa.
+
+**Sobrescrever chave completa é RECUSADO, e não há `--force`.** Trocar a chave
+de uma máquina já pareada trocaria a identidade de um agente que pode estar de
+pé AGORA, em silêncio: a pública continuaria registrada e o processo passaria a
+assinar com uma chave que ninguém conhece. A recusa nomeia o gesto (revogar,
+apagar, recriar), e uma flag que derruba uma guarda cujo sintoma é silencioso
+devolveria o sintoma silencioso.
+
+- **Código:** `apps/runner/src/criar-chave-de-dispositivo.ts:202`
+  (`criarChaveDeDispositivo`), `:275` (`finalizarChaveDeDispositivo`), `:82`
+  (`SUFIXO_PARCIAL`), `:177` (`resolverDestino`); `apps/runner/src/base.ts:85`
+  (`pastaDeConfiguracaoDoBrabo`, extraída);
+  `apps/runner/src/index.ts:1280` (o despacho antes de `lerArgumentos`, e a
+  separação stdout/stderr)
+- **Teste:** `apps/runner/src/criar-chave-de-dispositivo.spec.ts` — o caminho
+  feliz ponta a ponta (a pública no stdout, o parcial em 600, o `finish`
+  carimbando, e a chave resultante lida por `lerChaveDeDispositivo` e ASSINANDO
+  um JWT de ticket de verdade), o `--dir`, e as recusas: `finish` sem `create`,
+  sem `--id`, com `--id` colado do JSON inteiro, chave completa já no lugar
+  (nos dois comandos), parcial que não é a JWK, subcomando desconhecido e o
+  aviso de órfão; `apps/runner/src/index.spec.ts` — a JUNÇÃO no processo de
+  verdade: `device-key create` roda numa pasta SEM credencial nenhuma, e o
+  stdout contém só a JWK pública
+- **Lacuna DECLARADA:** quem REGISTRA a pública continua não existindo neste
+  repositório — a rota de chave de MÁQUINA e o `install.sh` que a chama são
+  outras sessões da fase. O contrato que este comando assume é o que a rota de
+  chave de PROJETO já tem (`{ name, publicKeyJwk }`, com `publicKeyJwk` sendo o
+  JSON da JWK pública Ed25519 — `kty` "OKP", `crv` "Ed25519", `x` — e resposta
+  com `id`), e é isso que o stdout do `create` produz: uma linha nesse formato.
+  O comando também **não** escolhe o `name` do dispositivo, de propósito — ele é
+  campo do registro, e quem nomeia é quem registra
+- **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 4
+- **Origem:** FASE 30, sessão 8 —
   [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
