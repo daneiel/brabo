@@ -26,6 +26,50 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **runner**: o agente de **máquina** com zero projetos **fica de pé e
+  reconsulta a lista**, em vez de sair — e ganha
+  `brabo-runner device-key create|finish`, que gera o par Ed25519 **nesta
+  máquina** ([RN-550](docs/business-rules.md#rn-550),
+  [RN-551](docs/business-rules.md#rn-551),
+  [ADR 0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md)).
+
+  As duas peças fecham a instalação de uma linha do lado do agente local: numa
+  máquina recém-instalada não há projeto nenhum, e o agente **espera** — 15s,
+  30s e depois 60s entre consultas, para sempre — até o primeiro projeto
+  aparecer na web. Ninguém volta ao terminal. A regra é assimétrica de
+  propósito: **com conexão viva, a lista continua sendo consultada só no
+  start** ([RN-544](docs/business-rules.md#rn-544)), porque uma lista que volta
+  menor é ambígua e derrubar conexão viva por ambiguidade seria trocar estado
+  certo por palpite. Com zero conexões não há nada a derrubar, e a reconsulta
+  **para** assim que a primeira conexão sobe.
+
+  Esperar não tem teto; **falhar tem**: dez consultas seguidas sem resposta e o
+  processo sai com 1, nomeando o número. Uma consulta que responde — inclusive
+  vazio, que é resposta — zera o contador, e uma credencial que a api recusa
+  por espécie continua sendo fatal na hora. O processo **diz** a cadência ao
+  entrar na espera e bate um batimento a cada 30 consultas, com o número delas:
+  ficar de pé em silêncio faria "esperando" e "travado" parecerem a mesma
+  coisa. `Restart=on-abnormal` **não muda** em nenhuma das duas espécies de
+  unit — ele nunca olhou código de saída —, e o efeito prático é a unit de
+  máquina passar a ficar `active (running)` de verdade: `service status
+  --machine` responde `rodando` (0) onde antes respondia `parado` (3).
+
+  `device-key create` imprime a **JWK pública** no stdout (uma linha, para um
+  script capturar com `$(…)`) e grava a privada num arquivo **parcial**, em
+  modo 600; `device-key finish --id <id>` carimba o `kid` — o id que a api
+  devolve ao registrar a pública — e só então grava o nome que o runner lê. São
+  dois passos porque esse `kid` **é** o id do servidor
+  ([RN-475](docs/business-rules.md#rn-475)), e uma privada gravada antes dele
+  nasce inútil: entre um comando e outro o arquivo que o CLI lê simplesmente
+  não existe. O destino padrão é `$XDG_CONFIG_HOME/brabo/` (senão
+  `~/.config/brabo/`), ao lado do `runner.json`, e `--dir` aponta para outra
+  pasta quando for uma chave de projeto.
+
+  **Declarado e não feito:** o CLI **não** fala com a api — quem registra a
+  pública é o instalador, com o `BRABO_SERVICE_TOKEN`, e dar esse segredo ao
+  agente seria ampliar muito o que ele pode. A rota de chave de máquina e o
+  `install.sh` que encadeia os três comandos são outras sessões da FASE 30.
+
 - **web**: o painel de onboarding do runner **reconhece uma máquina já
   pareada** e para de mandar parear de novo
   ([RN-548](docs/business-rules.md#rn-548),
@@ -81,7 +125,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   esgota encerra sozinho, nomeado, e os demais seguem; só quando nenhum sobra o
   processo sai com 1, com o desfecho de cada um. A lista de projetos é
   consultada **só no start** — projeto criado depois entra quando o agente
-  reconectar — e uma lista **vazia é estado normal**, com saída 0.
+  reconectar — e uma lista **vazia é estado normal**, com saída 0 *(o que a
+  [RN-550](docs/business-rules.md#rn-550), acima, revisa: com zero conexões o
+  agente passa a ficar de pé e reconsultar; com conexão viva, a consulta segue
+  sendo só no start)*.
 
   **Declarado e não feito:** ninguém cria chave de máquina ainda (é o
   `install.sh`, sessão 6), a `apiUrl` no modo de máquina vem de

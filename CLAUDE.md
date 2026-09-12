@@ -131,6 +131,7 @@ estado lido do repositório e não da conversa.
 | FASE 30 (sessão 2) — a chave de dispositivo passa a poder ser da MÁQUINA | ADR 0154, RN-543 |
 | FASE 30 (sessão 3) — o agente local abre N conexões, uma por projeto | ADR 0154, RN-544 |
 | FASE 30 (sessão 4) — a unit de MÁQUINA, convivendo com as por projeto | ADR 0154, RN-545 |
+| FASE 30 (sessão 8) — o agente espera o primeiro projeto, e a chave nasce no terminal | ADR 0155, RN-550/551 |
 | O runner reconectava sozinho com um ticket morto | RN-108 |
 | O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
@@ -165,11 +166,15 @@ local abre N conexões de verdade, uma por projeto descoberto pela rota, e
 **nada no engine mudou** — nem o espelho, nem o `workspace_create`, nem um
 handler. A sessão 4 (RN-545) fechou o QUINTO e último acoplamento: a unit de
 MÁQUINA existe (`service install --machine`) e CONVIVE com as por projeto, sem
-remover nem renomear nenhuma e sem tocar `Restart=on-abnormal`. O que segue sem
-existir é quem CRIA chave de máquina (sessão 6): o modo novo só é exercitável
-com chave registrada à mão, e o `install --machine` não sabe distinguir chave de
-máquina de chave de projeto — em disco são o mesmo arquivo, e a recusa só chega
-no primeiro boot.
+remover nem renomear nenhuma e sem tocar `Restart=on-abnormal`. A sessão 8
+(RN-550/551) entregou as duas peças que faltavam DO LADO DO AGENTE:
+ele FICA DE PÉ com zero projetos e reconsulta a lista (a instalação nova deixa
+de terminar sem agente), e `brabo-runner device-key create|finish` gera o par
+Ed25519 NA MÁQUINA. O que segue sem existir é a ROTA que registra a pública de
+MÁQUINA e o `install.sh` que encadeia os três comandos (sessão 6): o modo novo
+só é exercitável com chave registrada à mão, e o `install --machine` não sabe
+distinguir chave de máquina de chave de projeto — em disco são o mesmo arquivo,
+e a recusa só chega no primeiro boot.
 Duas coisas dessa sessão são régua daqui pra frente — `provisionarUsuario`
 (seed/smoke) teve o NÚCLEO extraído para `ProvisionarUsuarioUseCase` e MANTEVE
 a recusa de `NODE_ENV=production`, porque o que ela protege é senha CONHECIDA
@@ -359,9 +364,11 @@ criada SEM interação humana e não o trio de escritas (não use
   de máquina serve todo projeto do dono e aparece na listagem de todos, porque
   não aparecer em nenhuma a tornaria invisível e permanente, que é o defeito
   que a RN-519 fechou renascido. A lacuna da TELA fica MAIOR com isso, e
-  continua declarada. E ninguém CRIA chave de máquina ainda: quem registra é o
-  `install.sh` (ADR 0155 ponto 4), noutra sessão da FASE 30 — a rota nasce no
-  PR que tiver o primeiro chamador real. Desde a RN-548 o web CONSOME essa
+  continua declarada. O MATERIAL de uma chave de máquina já nasce no terminal
+  desde a RN-551 (`brabo-runner device-key create`), mas ninguém REGISTRA a
+  pública ainda: a rota de chave de máquina e o `install.sh` que a chama (ADR
+  0155 ponto 4) são outra sessão da FASE 30 — a rota nasce no PR que tiver o
+  primeiro chamador real. Desde a RN-548 o web CONSOME essa
   listagem — `RunnerOnboardingPanel` reconhece máquina já pareada e para de
   mandar parear —, e isso NÃO fecha a lacuna: ler para reconhecer é outra coisa
   que listar para revogar, e o painel de propósito não lista chave nem oferece
@@ -589,7 +596,23 @@ criada SEM interação humana e não o trio de escritas (não use
   como `runner_device_keys` e grava os três arquivos numa pasta via File
   System Access API (fallback de dois downloads fora do Chromium) —
   `POST .../runner-ticket` aceita essa chave como segunda credencial de
-  dispositivo, ADITIVA ao PAT (ADR 0105), nunca um substituto. Desde a
+  dispositivo, ADITIVA ao PAT (ADR 0105), nunca um substituto. Desde a RN-551
+  (ADR 0155 ponto 4) o navegador NÃO é mais o único gerador: `brabo-runner
+  device-key create` gera o par NA MÁQUINA e `device-key finish --id <id>`
+  carimba o `kid`. São DOIS comandos porque o `kid` É o id do registro no
+  SERVIDOR (RN-475) e só existe depois dele — o `create` grava um `.parcial`
+  que `lerChaveDeDispositivo` NÃO procura, então o arquivo que o runner lê
+  nunca existe sem `kid`. O CLI NÃO fala com a api, e a razão é de SEGREDO:
+  quem registra é o instalador, com o `BRABO_SERVICE_TOKEN` — cada lado guarda
+  UM segredo e nenhum vê o do outro; o que atravessa é a JWK PÚBLICA e o id.
+  Destino padrão `$XDG_CONFIG_HOME/brabo/` (senão `~/.config/brabo/`), modo
+  600, REUSANDO a precedência de `base.ts` (`pastaDeConfiguracaoDoBrabo`,
+  extraída e nunca copiada) — e isso não reabre a porta do ADR 0104 Onda 2:
+  `device-key.ts` continua lendo só do `cwd` que o chamador passar, e quem
+  aponta para lá é o `--dir` da unit de máquina. `stdout` carrega UM valor numa
+  linha (a pública no `create`, o caminho no `finish`) e todo o resto é
+  `stderr` — é o contrato do `$(...)` do instalador. Sobrescrever chave
+  COMPLETA é recusado, sem `--force`. Desde a
   RN-544 (ADR 0154) `--project` é opcional por um SEGUNDO caminho, e só por
   ele: o agente de MÁQUINA roda SEM `--project`, consulta
   `GET /runner/projects` e abre **UMA conexão por projeto** listado, cada uma
@@ -604,9 +627,21 @@ criada SEM interação humana e não o trio de escritas (não use
   do PROCESSO e passam a ser do PROJETO — um projeto que recusa ou esgota
   encerra sozinho e NOMEADO, os demais seguem, e só quando NENHUM sobra o
   processo sai com 1, listando o desfecho de cada um. A lista é consultada UMA
-  vez, no start (repesquisar faria uma lista que volta MENOR — apagado?
-  convertido? 500 transitório? — derrubar conexão VIVA por ambiguidade), e
-  lista VAZIA é estado NORMAL com saída 0. N conexões exigem N
+  vez, no start — MAS só COM conexão viva (RN-550, ADR 0155 ponto 5): a regra é
+  ASSIMÉTRICA de propósito. Com conexão de pé, repesquisar faria uma lista que
+  volta MENOR (apagado? convertido? 500 transitório?) derrubar conexão VIVA por
+  ambiguidade; com ZERO conexões não há nada a derrubar nem ambiguidade
+  nenhuma, então lista VAZIA deixou de SAIR com 0 e passou a ESPERAR —
+  reconsulta a 15s/30s/60s (o último se repete), PARA na primeira lista
+  não-vazia, sem teto de espera e com teto de DEZ falhas seguidas (saída 1
+  nomeando o número; qualquer resposta, vazia inclusive, zera o contador). É o
+  caso da instalação nova, e o argumento do `exit 0` caiu junto com a premissa
+  dele ("um serviço ativo que não faz nada"): ele reconsulta e DIZ isso, com
+  batimento a cada 30 consultas. `Restart=on-abnormal` NÃO muda em unit nenhuma
+  (ele nunca olhou código de saída) — o efeito é a unit de MÁQUINA ficar
+  `active (running)` de verdade. Exceção declarada: lista NÃO-vazia com TODOS
+  os projetos recusados continua saindo com 1, porque ali cada recusa nomeia um
+  defeito local com conserto próprio. N conexões exigem N
   `EstadoDoRunner`, e o motivo é medido: quatro campos dele são POR PROJETO
   (`dir`, `canalAtual`, `containerAtivo`, `destinoDoEspelho`) mais o
   `gerenciadorPty`, que nasce de `dir` — um estado compartilhado faria o
