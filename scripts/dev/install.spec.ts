@@ -289,9 +289,12 @@ describe('install.sh — o marcador registra a versão', () => {
     expect(campo('versao', '{ "schemaVersion": 1 }')).toBe('');
   });
 
-  it('o schema do marcador subiu para 2 junto com o campo', () => {
-    // Um sobe sem o outro e um marcador novo passaria por antigo.
-    expect(fonte()).toMatch(/MARCADOR_SCHEMA=2/);
+  it('o schema do marcador sobe junto com cada campo novo', () => {
+    // Um sobe sem o outro e um marcador novo passaria por antigo. O número
+    // foi a 2 quando o marcador ganhou a `versao` e a 3 quando ganhou o
+    // `ownerEmail` (RN-547) — a asserção é sobre a REGRA, e o número vive em
+    // `install-fechamento.spec.ts`, ao lado do campo que o fez subir.
+    expect(fonte()).toMatch(/^MARCADOR_SCHEMA=[3-9]\d*$/m);
     expect(fonte()).toMatch(/"versao": "\$\{VERSAO_A_INSTALAR\}"/);
   });
 
@@ -361,5 +364,24 @@ describe('install.sh — invariantes do arquivo', () => {
       .join('\n');
     expect(codigo).not.toMatch(/sess(ão|ao)\s+\d/i);
     expect(codigo).not.toMatch(/\bFASE\s+\d/i);
+  });
+
+  // `--help` imprime o CABEÇALHO, que é comentário — então a regra acima, que
+  // só olha linhas de código, nunca o alcançou. E ele estava mentindo: dizia
+  // "ESTA VERSÃO NÃO INSTALA NADA" e mandava a pessoa esperar "as sessões
+  // seguintes", meses depois de o script subir o compose e instalar o runner.
+  // A régua do destinatário vale para tudo que ele LÊ, não só para o que o
+  // script imprime durante a execução.
+  it('o --help não fala de sessões de fase, e não é cortado no meio', () => {
+    const ajuda = execFileSync('bash', [SCRIPT, '--help'], {
+      encoding: 'utf8',
+      env: { ...process.env, NO_COLOR: '1' },
+    });
+    expect(ajuda).not.toMatch(/sess(ão|ao)\s+\d/i);
+    expect(ajuda).not.toMatch(/\bFASE\s+\d/i);
+    expect(ajuda).not.toMatch(/NÃO INSTALA NADA/i);
+    // A última linha do cabeçalho tem de aparecer: um intervalo fixo de linhas
+    // cortava a ajuda em silêncio assim que o cabeçalho crescia.
+    expect(ajuda).toContain('install.spec.ts');
   });
 });

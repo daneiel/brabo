@@ -12,11 +12,17 @@
 # no computador de alguém — e a régua deste produto é a oposta (RN-511, o passo
 # de consentimento do `pnpm bootstrap`, que sem TTY relata em vez de consentir).
 #
-# ESTA VERSÃO NÃO INSTALA NADA. Ela verifica a própria origem, detecta o que já
-# existe na máquina, pergunta, e grava o marcador — e para aí. Subir o compose,
-# gerar segredos e instalar o runner são as sessões seguintes da FASE 29
-# (ADR 0150). O script diz isso na saída, em vez de terminar em silêncio e
-# deixar a pessoa procurando o que não aconteceu.
+# O QUE ELE FAZ, em ordem: verifica a própria origem contra o manifesto
+# assinado da Release, resolve as imagens, detecta o que já existe na máquina,
+# migra (com backup PROVADO) se houver instalação anterior, sobe o compose,
+# instala o agente local e FECHA a instalação — cria a primeira conta, registra
+# a chave de dispositivo desta máquina e sobe o agente como serviço. Cada passo
+# diz o que fez; o que não deu certo aparece nomeado no fim, nunca em silêncio.
+#
+# O QUE ELE NUNCA FAZ: gravar a senha que você digitar (ela é lida sem eco,
+# usada e descartada), apagar sua base de projetos ou sua pasta de espelho,
+# apagar qualquer coisa sem um backup que ele mesmo provou restaurar, ligar
+# SMTP por conta própria ou pedir credencial de LLM.
 #
 # MODOS DE IMPRESSÃO (não executam nada, não perguntam nada):
 #
@@ -65,14 +71,30 @@ sha_do_cosign() {
 IDENTIDADE_REGEX="^https://github.com/${REPO}/\.github/workflows/build-runner-binaries\.yml@"
 EMISSOR_OIDC='https://token.actions.githubusercontent.com'
 
-MARCADOR_SCHEMA=2
+# Subiu para 3 quando o marcador ganhou o `ownerEmail` (RN-547) — pelo mesmo
+# motivo que subiu para 2 ao ganhar a `versao`: um sobe sem o outro e um
+# marcador novo passa por antigo. A AUSÊNCIA de `ownerEmail` num marcador de
+# schema 3 é estado normal (migração, ou o passo de conta recusado), e nada
+# deriva comportamento dela.
+MARCADOR_SCHEMA=3
 COMPOSE_DE_INSTALACAO='docker/docker-compose.install.yml'
+
+# O cabeçalho das rotas internas da api — o mesmo `CABECALHO_SERVICE_TOKEN` de
+# `apps/api/src/interfaces/http/auth/engine-service.guard.ts`. É por ele, e só
+# por ele, que este script prova controle da MÁQUINA às duas rotas que usa.
+CABECALHO_SERVICE_TOKEN='x-brabo-service-token'
 
 # Fonte das imagens. `ghcr` é o default: as quatro publicadas, por DIGEST,
 # com a assinatura verificada (ADR 0149). `local` constrói do checkout, e
 # exige árvore limpa em tag — imagem construída de árvore suja não é a versão
 # que ela diz ser.
 FONTE='ghcr'
+
+# Preenchidas por `instalar_o_runner`, e VAZIAS quando a Release não publica o
+# binário desta plataforma. Declaradas aqui porque `set -u` não perdoa: o
+# fechamento da instalação as lê para decidir se há binário com que trabalhar.
+RUNNER_BIN=''
+PASTA_DE_CONFIG=''
 
 # --------------------------------------------------------------------------
 # Saída
@@ -295,6 +317,12 @@ imprimir_plano() {
   printf 'conferir-saude\tfaz\t/health da api e do engine, antes de dizer que instalou\n'
   printf 'consentir-base\tfaz\tUMA base para os dois lados: .env do servidor e runner.json do agente\n'
   printf 'instalar-runner\tfaz\tbinário verificado contra o manifesto assinado, instalado com bit de execução\n'
+  printf 'criar-primeira-conta\tpergunta\te-mail e senha no TTY, sem eco; a conta nasce verificada e o passo se cala se já houver gente\n'
+  printf 'gravar-senha\tnunca\tnem no .env, nem no marcador, nem em log — lida, usada e descartada\n'
+  printf 'registrar-chave-de-maquina\tfaz\ta PÚBLICA viaja; o par é gerado nesta máquina e a privada fica aqui\n'
+  printf 'instalar-servico-do-agente\tfaz\tservice install --machine; unit por projeto instalada é RECUSA relatada, nunca engolida\n'
+  printf 'ligar-smtp\tnunca\tMAIL_TRANSPORT=log continua o default; a instalação deixa de DEPENDER de e-mail para fechar\n'
+  printf 'pedir-credencial-de-llm\tnunca\té decisão de quem vai gastar\n'
   printf 'migrar-instalacao-anterior\tfaz\tbackup, PROVA que restaura, pergunta, e só então apaga\n'
   printf 'apagar-sem-backup-provado\tnunca\tbackup que não restaurou não autoriza deleção nenhuma\n'
   printf 'apagar-volumes\tso-com-confirmacao\tlistados um a um antes de perguntar\n'
@@ -517,6 +545,9 @@ instalar_o_runner() {
     dizer "A Release não publica ${nome}." >&2
     dizer 'O agente local NÃO foi instalado; o resto da instalação está de pé.' >&2
     dizer "Alternativa: npm install -g @brabo/runner" >&2
+    # `RUNNER_BIN` fica vazio de propósito: é por ele que o fechamento sabe que
+    # não há binário para criar chave nem instalar serviço, e diz isso em vez
+    # de falhar chamando um comando que não existe.
     return 0
   fi
 
@@ -531,17 +562,437 @@ instalar_o_runner() {
   destino="${HOME}/.local/bin"
   mkdir -p "$destino"
   install -m 0755 "${tmp}/${nome}" "${destino}/brabo-runner"
+  RUNNER_BIN="${destino}/brabo-runner"
   ok "instalado em ${destino}/brabo-runner (executável — sem chmod manual)"
 
   local cfg="${XDG_CONFIG_HOME:-${HOME}/.config}/brabo"
   mkdir -p "$cfg"
   printf '{\n  "base": "%s"\n}\n' "$BASE_DE_PROJETOS" > "${cfg}/runner.json"
+  # A MESMA pasta onde `device-key create` grava por padrão (RN-551) e para
+  # onde o `--dir` da unit de máquina aponta (RN-545). Ela guarda `runner.json`
+  # e a chave, e nunca um `brabo-runner.config.json` — que é por PROJETO e faria
+  # `service install --machine` recusar, com razão.
+  PASTA_DE_CONFIG="$cfg"
   ok "base gravada em ${cfg}/runner.json"
 
   case ":${PATH}:" in
     *":${destino}:"*) ;;
     *) dizer "  Acrescente ${destino} ao seu PATH para chamar \`brabo-runner\` direto." ;;
   esac
+}
+
+# --------------------------------------------------------------------------
+# O fechamento da instalação — a primeira conta, a chave desta máquina e o
+# serviço do agente local (RN-547, ADR 0155)
+# --------------------------------------------------------------------------
+#
+# Até aqui a instalação terminava com o compose de pé e um login que NINGUÉM
+# atravessava: o `.env` não tem variável de e-mail nenhuma, `MAIL_TRANSPORT`
+# cai em `log`, e o registro normal exige verificar e-mail — a única saída era
+# pescar o link em `docker compose logs api`. Este bloco é o encadeamento das
+# quatro peças que fecham esse buraco, e ele é ORQUESTRADOR: cada peça já
+# existe, testada, do outro lado.
+#
+#   1. POST /internal/first-account          (RN-546) — conta já verificada
+#   2. brabo-runner device-key create        (RN-551) — o par nasce AQUI
+#   3. POST /internal/machine-device-keys    (RN-552) — só a pública viaja
+#   4. brabo-runner device-key finish --id   (RN-551) — o `kid` é carimbado
+#   5. brabo-runner service install --machine (RN-545) — a unit por máquina
+#
+# ## O que acontece quando um elo do meio falha
+#
+# NADA é desfeito, tudo é RELATADO, e o script continua — sempre saindo 0. O
+# motivo é que os elos já cumpridos são úteis por si: com a conta criada a
+# pessoa entra, com a chave registrada a máquina está pareada, e o serviço é o
+# único passo que ela pode repetir à mão com um comando que este script imprime.
+# Desfazer exigiria apagar conta e revogar chave — e não há rota para isso,
+# nem deveria haver uma que o instalador chame sozinho. O preço é que uma
+# instalação pode terminar pela metade; o que ela nunca faz é terminar pela
+# metade em SILÊNCIO, e é para isso que serve `PENDENCIAS`.
+#
+# ## Idempotência: "já instalado" e "quebrou" são o CÓDIGO HTTP
+#
+# `409` das duas rotas é o desfecho ESPERADO numa instalação que já tem gente
+# (uma segunda execução, ou uma migração cujo restore trouxe os usuários): o
+# passo se cala, dizendo por quê, e não conta como pendência. Qualquer outro
+# código — e o `000` de um curl que nem falou com a api — é FALHA, e aparece
+# com o código e a resposta da api ao lado. O script nunca deduz um do outro.
+#
+# ## A senha
+#
+# Lida no TTY sem eco, confirmada, e passada à api pelo STDIN do `curl` — nunca
+# por argv (que `ps` mostra a qualquer usuário da máquina) e nunca por arquivo.
+# Ela não vai para o `.env`, não vai para o marcador e não vai para log nenhum.
+# O marcador ganha só o E-MAIL, que identifica e não é segredo.
+
+PENDENCIAS=''
+
+pendencia() {
+  PENDENCIAS="${PENDENCIAS}${1}
+"
+}
+
+# Escapa o que uma string JSON não aceita cru. Só `\` e `"` — a barra PRIMEIRO,
+# senão ela escaparia as aspas que a própria substituição acabou de pôr. Os
+# caracteres de controle são RECUSADOS antes (ver `sem_controle`), em vez de
+# escapados: um instalador que reescreve a senha em silêncio produz uma conta
+# cuja senha não é a que a pessoa digitou.
+escapar_json() {
+  printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
+}
+
+# `0` quando o valor não tem tabulação nem barra invertida de controle. Escrito
+# com `case` e não com `grep` porque o argumento pode ser a SENHA, e um `grep`
+# a poria num processo externo.
+sem_controle() {
+  local tab; tab="$(printf '\t')"
+  case "$1" in
+    *"$tab"*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+# O nome com que esta máquina aparece na lista de chaves de dispositivo. É
+# campo do REGISTRO, e quem nomeia é quem registra (RN-551 declara isso por
+# escrito: o CLI não escolhe) — então a escolha é deste script, e é o
+# `hostname`: quem abrir a lista precisa saber a QUAL máquina ir, e o hostname
+# é o nome que a pessoa já usa para falar das máquinas dela (é o que o prompt
+# do shell mostra). Não é segredo, não é único, e a api não deriva nada dele.
+nome_da_maquina() {
+  local nome=''
+  nome="$(hostname 2>/dev/null || true)"
+  [ -n "$nome" ] || nome="$(uname -n 2>/dev/null || true)"
+  # Aspas, barras e quebras sairiam do lugar dentro do JSON; o corte em 80 é o
+  # `@MaxLength(80)` do DTO, aplicado aqui para a recusa não vir da api.
+  nome="$(printf '%s' "$nome" | sed -e 's/[\\"]//g' | tr '\n\r\t' '   ' | cut -c1-80)"
+  nome="$(printf '%s' "$nome" | sed -e 's/^ *//' -e 's/ *$//')"
+  [ -n "$nome" ] || nome='maquina-desta-instalacao'
+  printf '%s\n' "$nome"
+}
+
+# `POST` numa rota interna. O CORPO vem do STDIN e o cabeçalho vai num arquivo
+# de configuração do `curl`, e as duas escolhas são a mesma decisão: nada que
+# seja segredo entra em `argv`, porque `/proc/<pid>/cmdline` é legível por
+# qualquer usuário da máquina. A senha não toca disco em instante nenhum; o
+# service token toca, num arquivo 600 que é apagado em seguida — e ele já mora
+# em disco, no `.env`, com o mesmo modo.
+#
+# Ecoa o código HTTP, ou `000` quando o curl não chegou a falar com a api —
+# distinguir os dois é o que faz "quebrou" não virar "já instalado".
+post_interno() {
+  local url="$1" saida="$2" cfg codigo
+  cfg="$(mktemp)"
+  chmod 600 "$cfg"
+  {
+    printf 'url = "%s"\n' "$url"
+    printf 'request = "POST"\n'
+    printf 'header = "Content-Type: application/json"\n'
+    printf 'header = "%s: %s"\n' "$CABECALHO_SERVICE_TOKEN" "${BRABO_SERVICE_TOKEN:-}"
+    printf 'data-binary = "@-"\n'
+    printf 'silent\n'
+    printf 'max-time = 30\n'
+  } > "$cfg"
+  codigo="$(curl -K "$cfg" -o "$saida" -w '%{http_code}' 2>/dev/null || true)"
+  rm -f "$cfg"
+  printf '%s\n' "${codigo:-000}"
+}
+
+# O resultado de uma chamada às rotas internas. São TRÊS saídas, e é por isso
+# que elas são GLOBAIS em vez de ecoadas: `veredito="$(criar_primeira_conta …)"`
+# roda a função num SUBSHELL, e as outras duas atribuições morreriam com ele —
+# o script seguiria com `RESPOSTA_CORPO` não associada e `set -u` o mataria no
+# primeiro `dizer` que a imprimisse. Achado rodando, não lendo.
+#
+# O veredito é PALAVRA e não código de saída pelo motivo de `comparar_versoes`:
+# sob `set -e`, um `return 1` legítimo mataria o script.
+RESPOSTA_VEREDITO=''
+RESPOSTA_CODIGO=''
+RESPOSTA_CORPO=''
+
+classificar_resposta() {
+  local codigo="$1" nome_do_409="$2"
+  case "$codigo" in
+    201) RESPOSTA_VEREDITO='ok' ;;
+    409) RESPOSTA_VEREDITO="$nome_do_409" ;;
+    400) RESPOSTA_VEREDITO='recusada' ;;
+    *)   RESPOSTA_VEREDITO='falhou' ;;
+  esac
+}
+
+# `ja-tem-conta` é o `409` desta rota: a instalação já tem gente.
+criar_primeira_conta() {
+  local base="$1" email="$2" senha="$3" nome="$4" corpo resp
+  resp="$(mktemp)"
+  corpo="{\"email\":\"$(escapar_json "$email")\",\"senha\":\"$(escapar_json "$senha")\""
+  if [ -n "$nome" ]; then
+    corpo="${corpo},\"nome\":\"$(escapar_json "$nome")\""
+  fi
+  corpo="${corpo}}"
+  RESPOSTA_CODIGO="$(printf '%s' "$corpo" | post_interno "${base}/internal/first-account" "$resp")"
+  RESPOSTA_CORPO="$(cat "$resp" 2>/dev/null || true)"
+  rm -f "$resp"
+  classificar_resposta "$RESPOSTA_CODIGO" 'ja-tem-conta'
+}
+
+# O mesmo molde. `publicKeyJwk` é uma STRING no corpo — o JSON da JWK, dentro de
+# uma string JSON —, e é por isso que ele passa pelo mesmo `escapar_json` do
+# e-mail. `409` aqui NÃO quer dizer o mesmo que na rota da conta: é "a
+# instalação não tem exatamente um usuário" (RN-552), e por isso tem nome
+# próprio.
+registrar_chave_de_maquina() {
+  local base="$1" nome="$2" jwk="$3" corpo resp
+  resp="$(mktemp)"
+  corpo="{\"name\":\"$(escapar_json "$nome")\",\"publicKeyJwk\":\"$(escapar_json "$jwk")\"}"
+  RESPOSTA_CODIGO="$(printf '%s' "$corpo" | post_interno "${base}/internal/machine-device-keys" "$resp")"
+  RESPOSTA_CORPO="$(cat "$resp" 2>/dev/null || true)"
+  rm -f "$resp"
+  classificar_resposta "$RESPOSTA_CODIGO" 'sem-usuario-unico'
+}
+
+# Lê sem eco e põe em `SENHA_LIDA`. Global e não `$(...)` de propósito: uma
+# substituição de comando forkaria um subshell só para carregar a senha de
+# volta. `stty` ausente é RECUSA do passo, nunca "pergunta com eco" — prometer
+# sem eco e entregar com eco é pior que não perguntar.
+SENHA_LIDA=''
+ler_sem_eco() {
+  local antigo=''
+  SENHA_LIDA=''
+  if ! command -v stty >/dev/null 2>&1; then
+    return 1
+  fi
+  printf '%s' "$1"
+  antigo="$(stty -g 2>/dev/null || true)"
+  stty -echo 2>/dev/null || true
+  read -r SENHA_LIDA || SENHA_LIDA=''
+  if [ -n "$antigo" ]; then stty "$antigo" 2>/dev/null || true; fi
+  printf '\n'
+  return 0
+}
+
+# Pergunta e-mail, senha (duas vezes) e nome, e tenta criar a conta. O laço é
+# do PAR pergunta+resposta, porque a recusa que mais acontece é a política de
+# senha (a mesma do registro normal, RN-546) e ela só é conhecida depois do
+# POST — abortar a instalação inteira nesse ponto deixaria alguém com o compose
+# de pé e a segunda execução caindo no caminho de migração.
+TENTATIVAS_DE_CONTA=3
+CONTA_EMAIL=''
+perguntar_e_criar_a_conta() {
+  local base="$1" tentativa=1 email senha confirmacao nome veredito
+
+  dizer ''
+  dizer "${C_BOLD}A primeira conta${C_RESET}"
+  dizer 'Esta instalação não tem ninguém, e o e-mail de verificação não sai daqui:'
+  dizer 'MAIL_TRANSPORT é `log`, e nenhum servidor de SMTP foi configurado (nem vai'
+  dizer 'ser por este script). Então a conta que nasce aqui já nasce VERIFICADA —'
+  dizer 'quem está no terminal desta máquina provou mais do que um e-mail provaria.'
+  dizer 'A senha é lida sem eco, usada e descartada: ela não vai para o .env, nem'
+  dizer 'para o marcador, nem para log nenhum.'
+  dizer ''
+  printf 'Criar a primeira conta agora? [S/n] '
+  local resposta; read -r resposta || resposta=''
+  case "$resposta" in
+    n|N|nao|NAO|não|NÃO)
+      dizer 'Nenhuma conta foi criada.'
+      pendencia 'a primeira conta (recusada aqui): crie-a depois com POST /internal/first-account, ou rode o instalador de novo numa instalação sem usuários.'
+      return 1
+      ;;
+  esac
+
+  while [ "$tentativa" -le "$TENTATIVAS_DE_CONTA" ]; do
+    printf 'E-mail: '
+    read -r email || email=''
+    if [ -z "$email" ]; then
+      dizer '  E-mail vazio.' >&2
+      tentativa=$(( tentativa + 1 )); continue
+    fi
+
+    if ! ler_sem_eco 'Senha (não aparece na tela): '; then
+      dizer '  Não há `stty` nesta máquina, e sem ele a senha apareceria na tela.' >&2
+      pendencia 'a primeira conta: sem `stty` não dá para ler senha sem eco, e este script não pergunta senha com eco.'
+      return 1
+    fi
+    senha="$SENHA_LIDA"
+    if ! ler_sem_eco 'Repita a senha: '; then
+      pendencia 'a primeira conta: sem `stty` não dá para ler senha sem eco.'
+      return 1
+    fi
+    confirmacao="$SENHA_LIDA"
+    SENHA_LIDA=''
+
+    if [ "$senha" != "$confirmacao" ]; then
+      dizer '  As duas senhas não são iguais.' >&2
+      tentativa=$(( tentativa + 1 )); continue
+    fi
+    if ! sem_controle "$senha" || ! sem_controle "$email"; then
+      dizer '  Há uma tabulação no que foi digitado. Ela não pode ir para o corpo JSON, e' >&2
+      dizer '  este script não a remove por conta própria: a senha gravada não seria a sua.' >&2
+      tentativa=$(( tentativa + 1 )); continue
+    fi
+
+    printf 'Nome (opcional, Enter para pular): '
+    read -r nome || nome=''
+    if ! sem_controle "$nome"; then nome=''; fi
+
+    # Chamada DIRETA, nunca em `$( )`: ela devolve três coisas em globais, e
+    # um subshell perderia duas delas.
+    criar_primeira_conta "$base" "$email" "$senha" "$nome"
+    veredito="$RESPOSTA_VEREDITO"
+    senha=''; confirmacao=''
+
+    case "$veredito" in
+      ok)
+        CONTA_EMAIL="$email"
+        ok "conta criada e já verificada: ${email}"
+        return 0
+        ;;
+      ja-tem-conta)
+        # Não é falha, e não vira pendência. É a segunda execução, ou uma
+        # migração cujo restore trouxe os usuários — e o ADR 0155 diz que o
+        # passo se cala pelo mesmo critério nos dois casos.
+        dizer ''
+        dizer 'Esta instalação JÁ tem usuário, então a primeira conta não se aplica —'
+        dizer 'entre com a conta que já existe. Nada foi criado nem alterado.'
+        return 1
+        ;;
+      recusada)
+        dizer "  A api recusou: ${RESPOSTA_CORPO}" >&2
+        tentativa=$(( tentativa + 1 ))
+        ;;
+      *)
+        dizer "  A api respondeu ${RESPOSTA_CODIGO}: ${RESPOSTA_CORPO}" >&2
+        pendencia "a primeira conta: a api respondeu ${RESPOSTA_CODIGO}. A instalação está de pé; \`docker compose -f ${COMPOSE_DE_INSTALACAO} logs api\` diz o quê."
+        return 1
+        ;;
+    esac
+  done
+
+  dizer "  ${TENTATIVAS_DE_CONTA} tentativas e nenhuma conta criada." >&2
+  pendencia "a primeira conta: ${TENTATIVAS_DE_CONTA} tentativas recusadas. A instalação está de pé; rode o instalador de novo, ou use POST /internal/first-account com o BRABO_SERVICE_TOKEN do .env."
+  return 1
+}
+
+# A chave desta máquina, em dois passos, e o `kid` no meio. Ver RN-551: o par é
+# gerado aqui, o `create` grava um `.parcial` que o runner IGNORA, e só o
+# `finish` escreve o nome que ele lê — o arquivo que o runner lê nunca existe
+# sem `kid`, que é o defeito que a RN-475 custou uma caçada para achar.
+CAMINHO_DA_CHAVE=''
+parear_esta_maquina() {
+  local base="$1" publica id veredito caminho
+
+  dizer ''
+  dizer "${C_BOLD}A chave desta máquina${C_RESET}"
+
+  # O stdout do `create` é UMA linha, a JWK pública — tudo que é para humano
+  # sai no stderr, e é esse contrato que faz `$( )` funcionar aqui.
+  if ! publica="$("$RUNNER_BIN" device-key create)"; then
+    dizer 'Não consegui gerar o par de chaves nesta máquina (acima está o motivo).' >&2
+    pendencia 'a chave desta máquina: `brabo-runner device-key create` recusou. Nada foi registrado na api.'
+    return 1
+  fi
+  ok 'par Ed25519 gerado nesta máquina — a privada não viajou'
+
+  registrar_chave_de_maquina "$base" "$(nome_da_maquina)" "$publica"
+  veredito="$RESPOSTA_VEREDITO"
+  case "$veredito" in
+    ok) ;;
+    sem-usuario-unico)
+      dizer 'A api recusou: esta instalação não tem exatamente UM usuário, e a chave de' >&2
+      dizer 'máquina é do dono único de uma instalação nova.' >&2
+      pendencia 'a chave desta máquina: a api respondeu 409 (instalação sem usuário único). O agente local não foi pareado.'
+      avisar_chave_parcial
+      return 1
+      ;;
+    *)
+      dizer "A api respondeu ${RESPOSTA_CODIGO} ao registrar a chave: ${RESPOSTA_CORPO}" >&2
+      pendencia "a chave desta máquina: a api respondeu ${RESPOSTA_CODIGO} ao registrar. O agente local não foi pareado."
+      avisar_chave_parcial
+      return 1
+      ;;
+  esac
+
+  # O `id` do registro, e é dele — de nada mais — que o `kid` sai (RN-475). O
+  # mesmo leitor de campo de topo do marcador: `jq` não se assume na máquina de
+  # quem instala.
+  id="$(campo_do_marcador id "$RESPOSTA_CORPO")"
+  if [ -z "$id" ]; then
+    dizer "A api respondeu 201 mas sem um campo \`id\`: ${RESPOSTA_CORPO}" >&2
+    pendencia 'a chave desta máquina: a api registrou e não devolveu `id`, e sem ele a privada não pode ser carimbada.'
+    avisar_chave_parcial
+    return 1
+  fi
+  ok "chave registrada na api (id ${id})"
+
+  # O stdout do `finish` é o CAMINHO do arquivo completo — é dele que sai o
+  # `--dir` do serviço, em vez de este script recalcular a pasta por conta.
+  if ! caminho="$("$RUNNER_BIN" device-key finish --id "$id")"; then
+    dizer 'Não consegui carimbar o `kid` na chave privada (acima está o motivo).' >&2
+    pendencia "a chave desta máquina: \`brabo-runner device-key finish --id ${id}\` recusou. A pública JÁ está registrada — rode esse mesmo comando para terminar."
+    return 1
+  fi
+  CAMINHO_DA_CHAVE="$caminho"
+  ok "chave completa em ${caminho}"
+  return 0
+}
+
+# O `.parcial` que sobra quando o registro não fecha. Ele FICA onde está, e a
+# decisão é escrita: este script não sabe se o POST chegou a ser processado
+# (um timeout depois de a api gravar é indistinguível de um timeout antes), e
+# apagá-lo destruiria a única metade privada de uma chave que pode já estar
+# pareada. Ele é inerte por construção — o runner não lê esse nome (RN-551) —
+# e o próximo `device-key create` o nomeia e o substitui.
+avisar_chave_parcial() {
+  dizer '' >&2
+  dizer "A privada ficou em ${PASTA_DE_CONFIG}/brabo-runner-device-key.jwk.json.parcial, e ela" >&2
+  dizer 'NÃO foi apagada: o runner ignora esse nome, e se o registro tiver chegado à api' >&2
+  dizer 'ela é a única cópia da metade privada. `device-key create` a substitui na próxima' >&2
+  dizer 'vez, avisando.' >&2
+}
+
+# O serviço, e a recusa que numa máquina de desenvolvedor é o caso COMUM:
+# `install --machine` RECUSA quando há unit por PROJETO instalada (RN-545), e
+# não há `--force`. A recusa vem com as palavras dela — este script repassa a
+# saída do CLI inteira em vez de resumi-la, porque ela nomeia o `uninstall` de
+# cada unit encontrada, que é o gesto.
+subir_o_agente_como_servico() {
+  local api_url="$1" pasta saida
+
+  dizer ''
+  dizer "${C_BOLD}O agente local como serviço${C_RESET}"
+  pasta="$(dirname "$CAMINHO_DA_CHAVE")"
+
+  if saida="$("$RUNNER_BIN" service install --machine --dir "$pasta" --api-url "$api_url" 2>&1)"; then
+    printf '%s\n' "$saida"
+    ok 'agente local instalado como serviço desta máquina'
+    dizer 'Ele sobe sem projeto nenhum, e isso é o estado NORMAL de uma instalação nova:'
+    dizer 'fica de pé esperando, e pega o primeiro projeto em modo Runner que você criar'
+    dizer 'na web — sem ninguém voltar a este terminal.'
+    return 0
+  fi
+
+  printf '%s\n' "$saida" >&2
+  pendencia "o serviço do agente local: \`brabo-runner service install --machine\` recusou (acima, com as palavras dele). A chave desta máquina JÁ está registrada — resolva o que ele nomeia e rode: ${RUNNER_BIN} service install --machine --dir ${pasta} --api-url ${api_url}"
+  return 1
+}
+
+# O encadeamento. Ele NUNCA recusa (nunca sai 1): tudo aqui é relatado e vira
+# pendência nomeada, porque o compose já está de pé e derrubar a instalação por
+# causa do último passo seria trocar uma instalação pela metade por nenhuma.
+fechar_a_instalacao() {
+  local base="$1"
+
+  if ! perguntar_e_criar_a_conta "$base"; then return 0; fi
+
+  if [ -z "$RUNNER_BIN" ]; then
+    dizer ''
+    dizer 'O binário do agente local não foi instalado, então a chave desta máquina e o' >&2
+    dizer 'serviço ficam para depois.' >&2
+    pendencia 'a chave desta máquina e o serviço do agente: o binário do agente local não foi instalado.'
+    return 0
+  fi
+
+  if ! parear_esta_maquina "$base"; then return 0; fi
+  subir_o_agente_como_servico "$base" || true
+  return 0
 }
 
 # --------------------------------------------------------------------------
@@ -627,7 +1078,11 @@ main() {
     case "$1" in
       --print-state) imprimir_estado; exit 0 ;;
       --print-plan)  imprimir_plano;  exit 0 ;;
-      --help|-h)     sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+      # O cabeçalho INTEIRO, até a primeira linha que não é comentário — e não
+      # um intervalo fixo de linhas. O `2,30p` de antes cortava a ajuda no meio
+      # assim que o cabeçalho crescia, e ninguém percebia: `--help` é a única
+      # saída deste script que nenhum teste lia.
+      --help|-h)     sed -n '2,${/^[^#]/q;p;}' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
       --source=ghcr)  FONTE='ghcr';  shift ;;
       --source=local) FONTE='local'; shift ;;
       --source=*) recusar "fonte desconhecida: '${1#--source=}'. Use ghcr (o default) ou local." ;;
@@ -832,6 +1287,12 @@ ENV
 
   instalar_o_runner "$plataforma" "$TMP_VERIFICACAO"
 
+  # O fechamento vem DEPOIS do runner e ANTES do marcador, e a ordem é a
+  # decisão: a chave de máquina precisa do binário instalado e da base já
+  # gravada em `runner.json` (sem ela `service install --machine` recusa, com
+  # razão), e o marcador registra o e-mail do dono que este passo cria.
+  fechar_a_instalacao "http://localhost:${api_port}"
+
   mkdir -p "$(dirname "$(caminho_do_marcador)")"
   cat > "$(caminho_do_marcador)" <<JSON
 {
@@ -841,6 +1302,7 @@ ENV
   "instaladoEm": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "plataforma": "${plataforma}",
   "fonte": "${FONTE}",
+  "ownerEmail": "$(escapar_json "$CONTA_EMAIL")",
   "imagens": {
     "api": "${BRABO_API_IMAGE}",
     "engine": "${BRABO_ENGINE_IMAGE}",
@@ -860,15 +1322,37 @@ JSON
   dizer "${C_BOLD}Pronto${C_RESET}"
   dizer "  Web:    http://localhost:${WEB_PORT:-8088}"
   dizer "  API:    http://localhost:${api_port}/health"
+  if [ -n "$CONTA_EMAIL" ]; then
+    dizer "  Entre com ${CONTA_EMAIL} e a senha que você acabou de digitar."
+  fi
+
+  # O que ficou pela metade sai NOMEADO, e no fim — onde quem instalou ainda
+  # está olhando. Um passo que falha no meio de trinta linhas de saída some.
+  if [ -n "$PENDENCIAS" ]; then
+    dizer ''
+    dizer "${C_BOLD}O que ficou pendente${C_RESET}"
+    printf '%s' "$PENDENCIAS" | while IFS= read -r linha; do
+      [ -n "$linha" ] && dizer "  - ${linha}"
+    done
+    dizer 'O resto da instalação está de pé.'
+  fi
+
   dizer ''
   dizer "${C_BOLD}O que este instalador NÃO faz${C_RESET}"
   dizer 'Não sobe o broker de container: o serviço não existe no compose de'
   dizer 'instalação, porque a imagem dele não é publicada. Sem broker, projeto'
   dizer 'em modo Pasta montada não sobe container (ADR 0144); o modo Runner usa'
   dizer 'o Docker desta máquina e não depende dele.'
-  dizer 'Não pareia o agente local com um projeto: o binário e a base ficam'
-  dizer 'prontos aqui, mas a chave de dispositivo e o brabo-runner.config.json'
-  dizer 'continuam vindo da tela do projeto (ADR 0118).'
+  dizer 'Não liga SMTP e não pergunta servidor de e-mail: MAIL_TRANSPORT segue'
+  dizer '`log`, aqui como em produção. A conta criada acima nasceu verificada'
+  dizer 'justamente por isso; o registro de quem vier depois continua exigindo'
+  dizer 'verificar e-mail, e ligar SMTP é decisão de quem opera.'
+  dizer 'Não pede credencial de LLM: a chave de provider é de quem vai gastar,'
+  dizer 'e entra pela tela, na conta do dono do workspace.'
+  dizer 'Não pareia o agente local com um PROJETO: a chave desta máquina atende'
+  dizer 'todos os seus projetos em modo Runner, e a pasta de cada um nasce'
+  dizer 'sozinha sob a base. Parear uma pasta específica pela tela do projeto'
+  dizer 'continua existindo (ADR 0118), para quem quiser.'
 }
 
 main "$@"

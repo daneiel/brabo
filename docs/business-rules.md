@@ -11442,7 +11442,7 @@ não tem chamador em `apps/web` — medido; a única ocorrência é o tipo gerad
 Sessão 5 da [FASE 30](explanation/fase-30-runner-por-maquina.md), decidida pelo
 [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md). É a metade de api
 do passo que fecha a instalação de uma linha; o `install.sh` que consome esta
-rota é a sessão 6 e não existe ainda.
+rota é a sessão 6, e ele chegou na [RN-547](#rn-547).
 
 **O buraco, medido.** Numa instalação nova ninguém consegue entrar. O `.env`
 que o instalador gera não tem **nenhuma** variável de e-mail, `MAIL_TRANSPORT`
@@ -12170,9 +12170,10 @@ devolveria o sintoma silencioso.
   aviso de órfão; `apps/runner/src/index.spec.ts` — a JUNÇÃO no processo de
   verdade: `device-key create` roda numa pasta SEM credencial nenhuma, e o
   stdout contém só a JWK pública
-- **Lacuna DECLARADA:** quem REGISTRA a pública continua não existindo neste
-  repositório — a rota de chave de MÁQUINA e o `install.sh` que a chama são
-  outras sessões da fase. O contrato que este comando assume é o que a rota de
+- **Lacuna DECLARADA, e FECHADA nas duas metades:** quem REGISTRA a pública
+  não existia neste repositório quando esta RN fechou — a rota chegou na
+  [RN-552](#rn-552) e o `install.sh` que encadeia os dois comandos, na
+  [RN-547](#rn-547). O contrato que este comando assume é o que a rota de
   chave de PROJETO já tem (`{ name, publicKeyJwk }`, com `publicKeyJwk` sendo o
   JSON da JWK pública Ed25519 — `kty` "OKP", `crv` "Ed25519", `x` — e resposta
   com `id`), e é isso que o stdout do `create` produz: uma linha nesse formato.
@@ -12180,4 +12181,162 @@ devolveria o sintoma silencioso.
   campo do registro, e quem nomeia é quem registra
 - **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 4
 - **Origem:** FASE 30, sessão 8 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+---
+
+## O `install.sh` fecha a instalação (RN-547, FASE 30)
+
+### RN-547 — O instalador cria a primeira conta, registra a chave desta máquina e sobe o agente como serviço — e o que falha no meio é RELATADO, nunca desfeito nem engolido {#rn-547}
+
+Sessão 6 da [FASE 30](explanation/fase-30-runner-por-maquina.md), decidida pelo
+[ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md). A sessão tocaria
+três workspaces de uma vez e foi **dividida em três**: as duas peças do agente
+e da api já fecharam ([RN-546](#rn-546), [RN-551](#rn-551), [RN-552](#rn-552),
+sobre a unit da [RN-545](#rn-545)), e o que sobrou aqui é o `install.sh` como
+**orquestrador e nada mais** — nenhuma linha de `apps/` foi tocada, e nenhuma
+rota nasceu.
+
+**O buraco que fecha.** Uma instalação nova terminava dizendo "Pronto" com um
+login que NINGUÉM atravessava: o `.env` gerado não tem variável de e-mail
+nenhuma, `MAIL_TRANSPORT` cai no default `log`, e o registro normal exige
+verificar e-mail. A única saída era pescar o link em
+`docker compose logs api`. E o agente local ficava instalado sem credencial,
+esperando que alguém voltasse ao navegador para parear uma pasta.
+
+**A cadeia, e cada elo já existia.** `POST /internal/first-account`
+([RN-546](#rn-546)) → `brabo-runner device-key create` ([RN-551](#rn-551)) →
+`POST /internal/machine-device-keys` ([RN-552](#rn-552)) → `device-key finish
+--id <id>` → `brabo-runner service install --machine`
+([RN-545](#rn-545)). O `id` que a api devolve no registro é o que vira o `kid`
+da privada, e a cadeia inteira só o REPASSA — ninguém o deriva de outra coisa
+([RN-475](#rn-475)). O `--dir` do serviço sai do CAMINHO que o `finish`
+imprimiu, não de uma segunda conta do script sobre onde a pasta de configuração
+fica.
+
+**O que acontece quando um elo do meio falha: nada é desfeito, tudo é
+RELATADO, e o script sempre sai 0.** É a decisão desta entrega, e o argumento é
+que os elos já cumpridos são úteis por si — com a conta criada a pessoa entra,
+com a chave registrada a máquina está pareada, e o serviço é o único passo que
+ela repete à mão com um comando que o script imprime. Desfazer exigiria apagar
+conta e revogar chave, e não há rota para isso nem deveria haver uma que o
+instalador chame sozinho. O preço é que uma instalação pode terminar pela
+metade; o que ela nunca faz é terminar pela metade em SILÊNCIO — cada falha
+vira uma linha nomeada num bloco **"O que ficou pendente"**, no fim, onde quem
+instalou ainda está olhando. Derrubar a instalação inteira por causa do último
+passo trocaria meia instalação por nenhuma.
+
+**Idempotência é o CÓDIGO HTTP, e `409` não é falha.** As duas rotas respondem
+`409` quando a instalação já tem gente — uma segunda execução, ou uma migração
+([RN-530](#rn-530)) cujo restore trouxe os usuários. Esse é o desfecho
+ESPERADO: o passo se cala dizendo por quê, e **não** entra nas pendências.
+Qualquer outro código é falha, e aparece com o código e a resposta da api ao
+lado. `000` — o curl que não chegou a falar com a api — tem tratamento próprio
+pelo mesmo motivo: colapsá-lo com um código de resposta faria "a api não subiu"
+ser lida como "a api recusou". E o passo do agente só roda quando ESTA execução
+criou a conta: com usuário preexistente, registrar uma chave de máquina
+cunharia credencial duradoura para alguém que não pediu nada nesta rodada.
+
+**A senha não toca disco nem `argv`.** Lida no TTY sem eco (`stty -echo`, com o
+modo do terminal restaurado no fim), confirmada, e enviada à api pelo **STDIN**
+do `curl` — nunca por `--data` em linha de comando, que `/proc/<pid>/cmdline`
+publica para qualquer usuário da máquina, e nunca por arquivo. O cabeçalho com
+o `BRABO_SERVICE_TOKEN` vai num `--config` de modo 600, apagado em seguida: ele
+é segredo também, e esse segredo já mora em disco, no `.env`, com o mesmo modo.
+Sem `stty` na máquina o passo é **recusado**, nunca degradado para perguntar
+com eco — prometer sem eco e entregar com eco é pior que não perguntar. A senha
+não vai para o `.env`, não vai para o marcador e não vai para log nenhum; o
+marcador ganha o **e-mail**, que identifica e não é segredo, e o
+`MARCADOR_SCHEMA` sobe para **3** junto com o campo, pela mesma régua que o fez
+subir para 2 ao ganhar a `versao`.
+
+**A recusa de senha é repetível, e o teto é 3.** A política é a do domínio
+([RN-546](#rn-546)), a mesma do registro normal, e só é conhecida DEPOIS do
+POST. Abortar a instalação ali deixaria alguém com o compose de pé e a segunda
+execução caindo no caminho de migração — então o laço é do par
+pergunta+resposta, e esgotar o teto vira pendência nomeada em vez de recusa.
+Senha digitada diferente da confirmação não chega a sair da máquina.
+Tabulação no que foi digitado é **recusada** e nunca removida em silêncio: um
+instalador que reescreve a senha produz uma conta cuja senha não é a que a
+pessoa digitou.
+
+**A recusa do `service install --machine` é o caso COMUM numa máquina de
+desenvolvedor, e ela chega com as palavras dela.** `install --machine` recusa
+quando há unit por PROJETO instalada, sem `--force` ([RN-545](#rn-545):
+*"instalar e avisar deixaria a instalação errada de pé"*). O instalador
+repassa a saída do CLI INTEIRA em vez de resumi-la — é ela que nomeia o
+`uninstall` de cada unit encontrada, que é o gesto — e a pendência carrega o
+comando exato para repetir depois.
+
+**O `name` da chave é o `hostname`, e a escolha é deste script.** A
+[RN-551](#rn-551) declara por escrito que o CLI **não** nomeia: o `name` é
+campo do registro, e quem nomeia é quem registra. Quem abrir a lista de chaves
+de dispositivo precisa saber a QUAL máquina ir, e o hostname é o nome que a
+pessoa já usa para falar das máquinas dela — é o que o prompt do shell mostra.
+Não é segredo, não é único, e a api não deriva nada dele. Aspa e barra saem
+(sairiam do lugar dentro do JSON), o corte é em 80 (o `@MaxLength(80)` do DTO,
+aplicado aqui para a recusa não vir da api) e a ausência total de `hostname` e
+`uname` devolve um nome fixo — vazio viraria `400` pelo `@MinLength(1)`, depois
+de a conta já existir.
+
+**O `.parcial` que sobra quando o registro não fecha FICA onde está, e é
+nomeado.** O `create` grava a privada num arquivo com sufixo `.parcial` que o
+runner ignora por construção ([RN-551](#rn-551)), e se o registro falhar ele
+sobra. Apagá-lo seria o instalador decidir que sabe algo que não sabe: um
+timeout depois de a api gravar é indistinguível de um timeout antes, e o
+arquivo pode ser a única cópia da metade privada de uma chave já registrada. Ele
+é inerte, o próximo `device-key create` o nomeia e o substitui, e a mensagem
+diz as duas coisas.
+
+**O que este script NÃO faz, e agora diz certo.** A última linha da saída
+anunciava, meses depois de as funções existirem, que ele *"não pareia o agente
+local"* e que a chave *"continua vindo da tela do projeto"*. O texto foi
+reescrito: SMTP continua desligado por decisão (`MAIL_TRANSPORT=log`, aqui como
+em produção — e a conta criada nasce verificada justamente por isso), credencial
+de LLM continua sendo de quem vai gastar
+([RN-058](business-rules/custo.md#rn-058)), e o pareamento pela tela do projeto
+([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md))
+continua existindo para quem quiser — o que mudou é que ele deixou de ser
+obrigatório. O `--help` sofria do mesmo defeito num lugar que nenhum teste
+alcançava (ele imprime o CABEÇALHO, que é comentário, e a regra que proíbe falar
+de "sessões de fase" só lia linhas de código): ele dizia *"ESTA VERSÃO NÃO
+INSTALA NADA"*. Corrigido, e o intervalo fixo de linhas que o cortava em
+silêncio virou "até a primeira linha que não é comentário".
+
+**O que NÃO entrou:** rota nova de qualquer espécie (a sessão é orquestração —
+se faltasse algo do outro lado, o gesto era parar e relatar); SMTP; credencial
+de LLM; senha gravada em qualquer lugar; e qualquer caminho que crie conta sem
+TTY — sem terminal interativo o script relata e **sai 0**, no passo que já
+existia, antes de qualquer escrita.
+
+- **Código:** `install.sh:966` (`fechar_a_instalacao`, o encadeamento e o
+  "sempre 0"), `:769` (`perguntar_e_criar_a_conta`, o consentimento, o laço e o
+  teto), `:866` (`parear_esta_maquina`, o `id` virando `--id`), `:942`
+  (`subir_o_agente_como_servico`, a recusa repassada inteira), `:682`
+  (`post_interno`, o corpo pelo stdin e o cabeçalho pelo `--config` 600), `:704`
+  e `:727` (os vereditos das duas rotas), `:747` (`ler_sem_eco`), `:661`
+  (`nome_da_maquina`), `:929` (`avisar_chave_parcial`), `:640`/`:647`
+  (`escapar_json`/`sem_controle`), `:79` (`MARCADOR_SCHEMA=3`), `:1280` (a
+  chamada, depois do runner e antes do marcador), `:1291` (o `ownerEmail`)
+- **Teste:** `scripts/dev/install-fechamento.spec.ts` — as funções de shell
+  rodadas DE VERDADE (o script inteiro carregado por `source`, menos a chamada
+  de `main`) contra um servidor `node:http` real e um `brabo-runner` dublê: o
+  caminho feliz da conta (corpo, service token e senha chegando), `409`/`400`/
+  `500`/sem-resposta com vereditos DIFERENTES, o laço de senha e o teto de 3, a
+  ordem `create → registrar → finish → service install` com o `--id` sendo o
+  `id` da api, a recusa do `service install` repassada com as palavras dela, o
+  `.parcial` que fica quando o registro falha, o `create` que recusa sem nada
+  ser registrado, e o fechamento sem binário do agente; `scripts/dev/install.spec.ts`
+  (o plano imprimível, e o `--help` que deixou de mentir)
+- **Lacuna DECLARADA:** a instalação de ponta a ponta numa máquina limpa —
+  compose de verdade, api de verdade, binário do runner de verdade, unit escrita
+  e agente esperando o primeiro projeto — é o **E2E** da sessão 8 da fase, e só
+  ele pode provar. Aqui o `brabo-runner` é um dublê de shell e a api é um
+  servidor de teste; o que se prova é o ENCADEAMENTO, nunca a integração. E o
+  fluxo principal do `install.sh` (verificar a própria origem contra o
+  `checksums.txt` assinado) continua sem cobertura, pelo motivo que
+  `install.spec.ts` já registrava: nenhuma Release tem esse asset até a próxima
+  tag final
+- **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+- **Origem:** FASE 30, sessão 6 —
   [o recorte da fase](explanation/fase-30-runner-por-maquina.md)

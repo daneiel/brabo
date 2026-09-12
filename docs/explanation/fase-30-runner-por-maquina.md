@@ -79,7 +79,7 @@ Uma entregável cada. A coluna "depende de" é que ordena.
 | 3 | **FECHADA** — runner: N conexões, uma por projeto, descobertas pela rota ([RN-544](../business-rules.md#rn-544)) | 2 | não toca `RunnerReadiness`, o espelho nem `workspace_create` |
 | 4 | **FECHADA** — runner: unit por máquina no `service install`, convivendo com as por projeto ([RN-545](../business-rules.md#rn-545)) | 3 | não remove a unit por projeto; não muda `Restart=on-abnormal` |
 | 5 | **FECHADA** — api: `POST /internal/first-account`, conta verificada + workspace pessoal, `409` com qualquer usuário ([RN-546](../business-rules.md#rn-546)) | 1 | não cria rota pública; não toca o registro normal |
-| 6 | `install.sh`: consentimento, conta, chave de máquina e `service install` (RN-547) | 4, 5 | não grava senha em lugar nenhum; sem TTY relata e sai 0 |
+| 6 | **FECHADA** — `install.sh`: consentimento, conta, chave de máquina e `service install` ([RN-547](../business-rules.md#rn-547)) | 4, 5 | não grava senha em lugar nenhum; sem TTY relata e sai 0 |
 | 7 | **FECHADA** — web: a tela do projeto reconhece agente de máquina já pareado ([RN-548](../business-rules.md#rn-548)) | 3 | não remove o fluxo do ADR 0118 |
 | 8 | E2E em máquina limpa, docmap, `docs:check` (RN-549) | 6, 7 | não afrouxa gate para o E2E passar |
 
@@ -297,6 +297,62 @@ O que segue **declarado, não feito**: numa instalação sem PROJETO, tela nenhu
 alcança uma chave de máquina — listar e revogar são as duas por
 `/projects/:projectId/...` —, e é por isso que registrar substitui em vez de
 deixar órfã: uma órfã ali seria **viva e inalcançável**.
+
+### O que a sessão 6 fechou, e as quatro decisões que ela teve de tomar
+
+Com o recorte menor, a sessão 6 foi **orquestração e nada mais**: nenhuma linha
+de `apps/` mudou, nenhuma rota nasceu, e as quatro peças que o `install.sh`
+encadeia já existiam testadas. O buraco que a fase abriu no começo — *"numa
+instalação nova ninguém consegue entrar"* — fecha aqui, e a promessa do ponto 5
+do [ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md) passa a
+acontecer de verdade: o agente sobe sem projeto, espera, e pega o primeiro que
+a pessoa criar na web.
+
+As quatro decisões, registradas inteiras na
+[RN-547](../business-rules.md#rn-547):
+
+- **Quando um elo do meio falha, nada é desfeito e tudo é relatado — e o script
+  sempre sai 0.** Os elos já cumpridos são úteis por si (com a conta a pessoa
+  entra, com a chave a máquina está pareada), desfazer exigiria apagar conta e
+  revogar chave, e não há rota para isso nem deveria haver uma que o instalador
+  chame sozinho. O preço é uma instalação que pode terminar pela metade; o que
+  ela nunca faz é terminar pela metade em SILÊNCIO — cada falha é uma linha
+  nomeada num bloco final, com o comando para repetir.
+- **Idempotência é o CÓDIGO HTTP, e `409` não é falha.** Segunda execução, ou
+  migração cujo restore trouxe os usuários: o passo se cala dizendo por quê e
+  não entra nas pendências. `000` — o curl que não falou com a api — tem
+  tratamento próprio, senão "a api não subiu" seria lido como "a api recusou".
+  E o passo do agente só roda quando ESTA execução criou a conta: com usuário
+  preexistente, registrar chave de máquina cunharia credencial duradoura para
+  quem não pediu nada nesta rodada.
+- **O `name` da chave é o `hostname`.** A [RN-551](../business-rules.md#rn-551)
+  declarou que o CLI não nomeia — é campo do registro, e quem nomeia é quem
+  registra. Quem abre a lista de chaves precisa saber a QUAL máquina ir, e o
+  hostname é o nome que a pessoa já usa para falar das máquinas dela.
+- **O `.parcial` que sobra quando o registro não fecha FICA, e é nomeado.**
+  Apagá-lo seria o instalador decidir que sabe algo que não sabe: um timeout
+  depois de a api gravar é indistinguível de um antes, e o arquivo pode ser a
+  única cópia da metade privada de uma chave já registrada.
+
+Duas coisas mudaram e não estavam no recorte. A senha é enviada pelo **STDIN**
+do `curl`, com o service token num `--config` 600 — `/proc/<pid>/cmdline` é
+legível por qualquer usuário da máquina, e uma senha em `argv` ficaria exposta
+durante a requisição. E o `--help` **mentia**: ele imprime o cabeçalho, que é
+comentário, e a regra que proíbe falar de "sessões de fase" a quem instala só
+lia linhas de código — então *"ESTA VERSÃO NÃO INSTALA NADA"* sobreviveu meses
+depois de o script subir o compose e instalar o runner. Corrigido, com teste
+sobre a SAÍDA do `--help`, e o intervalo fixo de linhas que o cortava em
+silêncio virou "até a primeira linha que não é comentário".
+
+E o que segue **declarado, não feito**: a instalação de ponta a ponta numa
+máquina limpa — compose de verdade, api de verdade, binário do runner de
+verdade, unit escrita e agente esperando — é o **E2E da sessão 8**, e só ele
+pode provar. Nos testes desta sessão o `brabo-runner` é um dublê de shell e a
+api é um servidor de teste: o que se prova é o ENCADEAMENTO, nunca a
+integração. E o `install --machine` continua sem saber se a chave daquela pasta
+é mesmo de máquina (a lacuna da [RN-545](../business-rules.md#rn-545)) — a
+diferença é que agora existe um caminho que CRIA uma de máquina ali, então a
+recusa no primeiro boot deixou de ser o desfecho provável.
 
 Faixa reservada: **RN-543..555**. ADRs **0154** e **0155**. A RN-541 já está
 alocada em branch não mergeada — o salto é deliberado, pelo critério que a
