@@ -752,6 +752,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docker**: a oferta escrita de fonte passa a viajar **dentro** da imagem do
+  engine, em `/usr/share/doc/brabo/THIRD_PARTY_NOTICES.md` (BRB-017, **P1**).
+
+  A imagem embute `git`, `busybox`, `libgcc`/`libstdc++` e outras 18 apk sob
+  GPL, mais os quatro scanners que o engine invoca. Executá-los como processo
+  separado não contamina o Brabo, que segue MIT — mas **distribuir** a imagem
+  exige que quem a recebe possa obter o fonte correspondente, e desde o
+  [ADR 0119](docs/adr/0119-imagens-publicadas-no-ghcr-por-digest.md) ela é
+  publicada no GHCR a cada tag final.
+
+  A oferta só cumpre o papel onde o binário está: quem faz `docker pull` não
+  tem o repositório, e uma oferta que só existe no GitHub não acompanha a cópia
+  que a pessoa recebeu.
+
+  Junto, o `THIRD_PARTY_NOTICES.md` deixa de afirmar o contrário do que o
+  repositório faz — ele dizia *"Hoje nenhuma imagem é publicada em registry…
+  o que segue é informativo"*, verdadeiro em 2026-07-27 e superado pelo ADR
+  0119. `scripts/ci/oferta-de-fonte-na-imagem.spec.ts` trava as duas coisas.
+
 - **api**: remover a **própria** linha de `project_members` passa a ser recusado
   com **403** quando o efeito líquido é rebaixamento — o teto de
   auto-rebaixamento chega à outra porta
