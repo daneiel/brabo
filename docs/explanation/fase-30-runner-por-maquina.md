@@ -76,7 +76,7 @@ Uma entregável cada. A coluna "depende de" é que ordena.
 |---|---|---|---|
 | 1 | este documento, os ADRs 0154/0155 e a faixa de RN | — | não toca `apps/`, `docker/`, `scripts/`, `install.sh`; não edita ADR aceito |
 | 2 | **FECHADA** — api: `project_id` nullable, chave de máquina aceita em `runner-ticket`, `GET runner/projects` ([RN-543](../business-rules.md#rn-543)) | 1 | não toca o engine; não afrouxa papel de rota nenhuma |
-| 3 | runner: N conexões, uma por projeto, descobertas pela rota (RN-544) | 2 | não toca `RunnerReadiness`, o espelho nem `workspace_create` |
+| 3 | **FECHADA** — runner: N conexões, uma por projeto, descobertas pela rota ([RN-544](../business-rules.md#rn-544)) | 2 | não toca `RunnerReadiness`, o espelho nem `workspace_create` |
 | 4 | runner: unit por máquina no `service install`, convivendo com as por projeto (RN-545) | 3 | não remove a unit por projeto; não muda `Restart=on-abnormal` |
 | 5 | **FECHADA** — api: `POST /internal/first-account`, conta verificada + workspace pessoal, `409` com qualquer usuário ([RN-546](../business-rules.md#rn-546)) | 1 | não cria rota pública; não toca o registro normal |
 | 6 | `install.sh`: consentimento, conta, chave de máquina e `service install` (RN-547) | 4, 5 | não grava senha em lugar nenhum; sem TTY relata e sai 0 |
@@ -102,6 +102,35 @@ na [RN-543](../business-rules.md#rn-543):
 E o que segue **declarado, não feito**: nenhuma rota da api CRIA chave de
 máquina ainda — quem registra é o `install.sh` ([ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md)
 ponto 4), na sessão 6. A rota nasce no PR que tiver o primeiro chamador real.
+
+### O que a sessão 3 fechou, e as três decisões que ela teve de tomar
+
+O agente local abre N conexões de verdade, e a medição do recorte se
+confirmou: **nada no engine mudou**, e os handlers do runner (`tratarExec`,
+`tratarMirrorSync`, `tratarWorkspaceCreate`) não mudaram uma linha — o que
+forçou o desenho foram os quatro campos POR PROJETO de `EstadoDoRunner`, que
+viraram N estados com `docker` e `base` compartilhados por valor. O modo antigo
+ficou byte a byte, e o portão novo é estreito: credencial de máquina **e** base
+consentida.
+
+Três coisas o recorte não antecipava, e a [RN-544](../business-rules.md#rn-544)
+as registra:
+
+- **Um projeto recusado não derruba os outros.** O teto de tentativas e a
+  recusa de join deixaram de ser do PROCESSO e passaram a ser do PROJETO; só
+  quando nenhum sobra o processo sai com 1, com o desfecho de cada um. No modo
+  de projeto único a disposição antiga fica idêntica, pelo raciocínio
+  invertido: com UMA conexão, não sobra nada a atender.
+- **A lista é consultada só no start.** Repesquisar faria uma lista que volta
+  MENOR — apagado? convertido? 500 transitório? — derrubar conexão viva por
+  ambiguidade. O processo diz isso ao subir, e o gesto é reconectar.
+- **Lista vazia é estado NORMAL, com saída 0.** É o estado de toda instalação
+  nova, e `Restart=on-abnormal` não a reergue de propósito.
+
+E o que segue **declarado, não feito**: a `apiUrl` no modo de máquina vem de
+`--api-url`/`BRABO_API_URL`/default, e nunca do `brabo-runner.config.json`, que
+é por PROJETO — quem escreve a flag é a unit por máquina, da sessão 4. A unit
+continua por projeto: esta sessão mudou o PROCESSO, não o serviço.
 
 ### O que a sessão 5 fechou, e a decisão que o ADR 0155 não tinha
 

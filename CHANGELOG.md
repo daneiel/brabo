@@ -26,6 +26,40 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **runner**: o `brabo-runner` passa a poder rodar **sem `--project`**, abrindo
+  **uma conexão por projeto** descoberto em `GET /runner/projects`
+  ([RN-544](docs/business-rules.md#rn-544),
+  [ADR 0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md)).
+
+  É o consumidor que faltava para a [RN-543](docs/business-rules.md#rn-543). O
+  modo antigo fica **byte a byte**: `--project`/`--dir` com credencial de
+  projeto, inclusive o fluxo do navegador
+  ([ADR 0118](docs/adr/0118-configuracao-do-runner-pelo-navegador.md)), é uma
+  conexão só e o desfecho dela segue sendo o do processo. O modo novo exige as
+  duas coisas — credencial de máquina e **base consentida**
+  ([RN-529](docs/business-rules.md#rn-529)) —, e sem base rodar sem
+  `--project` continua caindo no bloco de uso, dizendo o que faltou. A pasta de
+  cada projeto é `<base>/<workspaceDirName>`, pelas mesmas guardas de sempre.
+
+  **Nada no engine mudou**: o tópico `terminal:<projectId>`, o socket id e o
+  ticket descrevem uma CONEXÃO, e N conexões os satisfazem byte a byte — a
+  recusa de segundo runner no mesmo projeto fica intacta. O espelho
+  ([RN-516](docs/business-rules.md#rn-516)) e o `workspace_create`
+  ([RN-532](docs/business-rules.md#rn-532)) também não mudaram: os dois já
+  viajavam na concessão do `join` daquela conexão.
+
+  **Mudança de comportamento no laço:** o teto de tentativas e a recusa de join
+  deixam de ser do PROCESSO e passam a ser do PROJETO. Um projeto que recusa ou
+  esgota encerra sozinho, nomeado, e os demais seguem; só quando nenhum sobra o
+  processo sai com 1, com o desfecho de cada um. A lista de projetos é
+  consultada **só no start** — projeto criado depois entra quando o agente
+  reconectar — e uma lista **vazia é estado normal**, com saída 0.
+
+  **Declarado e não feito:** ninguém cria chave de máquina ainda (é o
+  `install.sh`, sessão 6), a `apiUrl` no modo de máquina vem de
+  `--api-url`/`BRABO_API_URL`/default, e a unit de serviço continua sendo por
+  projeto — este PR muda o processo, não o serviço.
+
 - **api**: a primeira conta de uma instalação passa a nascer **pelo terminal**,
   por uma rota interna que **recusa quando já existe qualquer usuário**
   ([RN-546](docs/business-rules.md#rn-546),

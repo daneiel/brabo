@@ -140,6 +140,27 @@ describe('validarBaseDeProjetos', () => {
     expect(erro.motivo).toBe('base-dentro-da-raiz');
   });
 
+  it('`raizDoProjeto: null` (agente de MÁQUINA) não recusa por laço — não há sujeito (RN-544)', () => {
+    // Sem `--project` não há `--dir`, e toda raiz de projeto é DERIVADA da
+    // base. O laço que a checagem recusa ("a base dentro da raiz de um
+    // projeto") não tem como ser construído — e passar a própria base aqui
+    // seria pior que `null`: `dentroDoEscopo(base, base)` é verdadeiro, e toda
+    // base seria recusada.
+    const base = join(raiz, 'projetos-brabo');
+
+    expect(
+      validarBaseDeProjetos(base, { plataforma: 'darwin', home: raiz, raizDoProjeto: null }),
+    ).toBe(base);
+  });
+
+  it('`raizDoProjeto: null` NÃO afrouxa as outras recusas — só a do laço perde sujeito', () => {
+    const erro = capturarBase(() =>
+      validarBaseDeProjetos('/', { plataforma: 'darwin', home: raiz, raizDoProjeto: null }),
+    );
+
+    expect(erro.motivo).toBe('raiz-do-fs');
+  });
+
   it('o SENTIDO CONTRÁRIO é o arranjo normal: a pasta do projeto DENTRO da base passa', () => {
     // Assimetria deliberada (ver o docblock do módulo): no espelho os dois
     // sentidos são defeito; aqui um deles é exatamente o que o ADR desenha.

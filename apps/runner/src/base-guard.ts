@@ -102,8 +102,17 @@ export interface OpcoesDaBase {
    * A raiz DESTE projeto (`estado.dir`, já resolvida por `resolverDir`) — só
    * para a recusa de laço. Ela não é validada aqui: `--dir` tem a validação
    * dele, de sempre, e a base não entra nela (ver o docblock do módulo).
+   *
+   * `null` é o agente de MÁQUINA (RN-544): sem `--project` não há `--dir`, e
+   * portanto não há raiz de projeto contra a qual haver laço. Não é uma
+   * checagem desligada por conveniência — ela fica SEM SUJEITO: ali toda raiz
+   * de projeto é DERIVADA da base (`<base>/<workspaceDirName>`,
+   * `resolverPastaDoProjetoNaBase`), e o laço que este trecho recusa ("a base
+   * dentro da raiz de um projeto") não tem como ser construído, porque a base
+   * é o pai por definição. Passar a própria base aqui seria pior que `null`:
+   * `dentroDoEscopo(base, base)` é verdadeiro, e toda base seria recusada.
    */
-  raizDoProjeto: string;
+  raizDoProjeto: string | null;
 }
 
 /**
@@ -197,7 +206,16 @@ export function validarBaseDeProjetos(baseRecebida: string, opcoes: OpcoesDaBase
  * A dupla passada vale aqui também: um `base` cujo pai é um symlink apontando
  * para dentro da raiz do projeto tem forma lexical impecável.
  */
-function recusarLacoComARaiz(base: string, raizDoProjeto: string, baseOriginal: string): void {
+function recusarLacoComARaiz(
+  base: string,
+  raizDoProjeto: string | null,
+  baseOriginal: string,
+): void {
+  // Agente de MÁQUINA: não há raiz de projeto, e portanto não há laço a
+  // recusar — ver `OpcoesDaBase.raizDoProjeto` para por que isto é ausência de
+  // sujeito e não checagem afrouxada.
+  if (raizDoProjeto === null) return;
+
   const raiz = semBarraFinal(resolve(raizDoProjeto));
 
   const explicacao =

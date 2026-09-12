@@ -98,7 +98,9 @@ do arquivo local.
 - `--project`: o id do projeto no Brabo, com `execution_mode` = `runner`.
   Só **um** runner por projeto no cluster inteiro
   (`Engine.Runners.Registry`) — um segundo `brabo-runner` para o mesmo
-  projeto é recusado no join.
+  projeto é recusado no join. Omitido, o CLI só continua como **agente de
+  máquina** (abaixo), que exige chave de máquina e base consentida — caso
+  contrário ele imprime o uso dizendo o que faltou.
 - `--dir`: a pasta absoluta onde o código do projeto vive nesta máquina —
   raiz para os comandos (`exec`) e o terminal (PTY). Omitida, a raiz é a
   própria pasta de onde o comando roda (`cwd`). Se a pasta ainda não
@@ -179,6 +181,53 @@ a pasta criada é a do projeto do ponto de vista do servidor, mas a raiz que
 `guard.ts` usa para conter comando aprovado continua sendo a desta execução —
 trocá-la em runtime moveria uma fronteira de contenção por causa de uma
 mensagem de rede.
+
+### Agente de MÁQUINA: sem `--project`, uma conexão por projeto (RN-544)
+
+Com uma **chave de dispositivo de máquina** (ADR 0154, RN-543) e uma **base
+consentida**, o `brabo-runner` roda sem `--project`: ele consulta
+`GET /runner/projects` e abre **uma conexão por projeto** que a rota listar,
+cada uma na pasta `<base>/<workspaceDirName>`.
+
+```sh
+# a base vem do instalador (~/.config/brabo/runner.json) ou de --base
+brabo-runner --api-url https://brabo.exemplo
+```
+
+O modo com `--project` **não mudou em nada** — ele continua sendo o caminho de
+quem usa o fluxo do navegador (ADR 0118) ou flags explícitas, com uma conexão
+só. As **duas** condições do modo novo são obrigatórias e por motivos
+diferentes: a credencial de máquina é o que a rota aceita, e a base é de onde a
+pasta de cada projeto é derivada. Sem base, rodar sem `--project` cai no bloco
+de uso dizendo exatamente isso.
+
+Este CLI **não sabe** de que espécie é a própria chave: em disco, a de máquina
+e a de projeto são o mesmo arquivo (uma JWK com `kid`). Quem sabe é o servidor,
+e uma credencial presa a projeto é recusada com 403 e uma mensagem própria, que
+o CLI repassa nomeando o conserto (`--project`).
+
+O que muda no comportamento, e vale saber antes de operar:
+
+- **A lista é consultada só no start.** Projeto criado depois disso entra
+  quando o agente reconectar — repesquisar periodicamente faria uma lista que
+  volta menor (projeto apagado? convertido? 500 transitório?) derrubar conexão
+  viva por ambiguidade.
+- **Lista vazia é normal**, e o processo sai com **0**: é o estado de toda
+  instalação nova, e ficar de pé com zero conexões seria um serviço "ativo" que
+  não faz nada.
+- **O teto de tentativas e a recusa de join são POR PROJETO.** Um projeto
+  recusado (segundo runner no mesmo projeto, ticket inválido) ou que esgotou as
+  tentativas encerra sozinho, **nomeado**, e os demais seguem. Só quando nenhum
+  sobra o processo sai com 1, listando o desfecho de cada um.
+- **Todo log do laço é prefixado pelo nome do projeto** — com N laços
+  intercalados, "falha na conexão" sem dono não diz nada.
+- `--api-url` no modo de máquina vem da flag, de `BRABO_API_URL` ou do default:
+  o `brabo-runner.config.json` é **por projeto** e não participa.
+
+O espelho (RN-516) e o `workspace_create` (RN-532) continuam idênticos: os dois
+são por projeto e viajam na concessão do `join` **daquela** conexão — é isso que
+já os torna corretos com N. A unit de serviço continua sendo **por projeto**
+(RN-518); a unit por máquina é entrega à parte.
 
 ### Rodando direto do checkout do monorepo (sem instalar via npm)
 

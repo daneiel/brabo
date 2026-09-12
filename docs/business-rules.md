@@ -11095,6 +11095,121 @@ existe para matar.
 - **Origem:** FASE 30, sessão 2 —
   [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
 
+## O agente local abre N conexões, uma por projeto (RN-544, FASE 30)
+
+### RN-544 — O agente local abre N conexões, uma por projeto descoberto pela rota — e o teto de tentativas e a recusa de join deixam de ser do PROCESSO {#rn-544}
+
+A [RN-543](#rn-543) abriu `GET runner/projects` e ficou sem chamador. O
+`brabo-runner` continuava exigindo `--project`: `index.ts` tinha
+`if (!projectId) uso()`, e não existia execução sem projeto. Esta RN é o
+consumidor — e é a metade do [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+que prova a descoberta dele: *"um único processo que abra N conexões — uma por
+projeto que ele atende — satisfaz os itens 1, 2 e 3 byte a byte"*. **Nada no
+engine muda**: o tópico `terminal:<projectId>`, o socket id e o ticket
+descrevem uma CONEXÃO, e N conexões continuam sendo N conexões. A recusa de
+segundo runner no mesmo projeto fica intacta, e é garantia real, não acidente.
+
+**Dois modos, e o antigo fica byte a byte.** `--project`/`--dir` com
+credencial de projeto — inclusive o fluxo do navegador
+([ADR 0118](adr/0118-configuracao-do-runner-pelo-navegador.md),
+[RN-464](#rn-464)) — é o caminho de sempre: UMA conexão, e o desfecho dela
+continua sendo o do processo. O modo novo exige as DUAS coisas, e por motivos
+diferentes: credencial de MÁQUINA, porque é ela que a rota aceita; e **base
+consentida** ([RN-529](#rn-529)), porque sem ela não há de onde derivar a pasta
+de cada projeto, e inventar uma seria escrever no disco do usuário um caminho
+que ele não consentiu. Sem base, rodar sem `--project` segue caindo em `uso()`,
+dizendo qual das duas faltou.
+
+**O runner não sabe de que espécie é a própria chave, e isso é decisão.** Em
+disco, chave de máquina e chave de projeto são o MESMO arquivo: uma JWK privada
+com um `kid` ([RN-475](#rn-475)). Quem sabe é o SERVIDOR, que acha a pública
+por esse `kid`. Então o CLI pergunta, e o 403 nomeado do `PatAuthGuard` vira
+`CredencialNaoEDeMaquinaError`, com as palavras da api e o conserto
+(`--project`) — nunca um "falha na conexão" genérico. Um palpite local seria
+uma segunda fonte de verdade sobre a mesma coisa, e a local seria a errada. O
+JWT dessa chamada vai **sem** o claim `projectId`, porque o guard compara
+`payload.projectId !== request.params.projectId` e numa rota sem projeto os
+dois precisam ser `undefined`.
+
+**N conexões exigem N estados.** Quatro campos de `EstadoDoRunner` são POR
+PROJETO — `dir`, `canalAtual`, `containerAtivo`, `destinoDoEspelho` — mais o
+`gerenciadorPty`, que nasce de `dir`. Um estado compartilhado faria o
+`docker exec` de um projeto rodar no container de OUTRO, e o PTY de um abrir na
+pasta de outro. `docker` e `base` são da MÁQUINA e entram como o MESMO valor em
+todos, nunca cópias que possam divergir. O tipo não mudou, e os handlers
+(`tratarExec`, `tratarMirrorSync`, `tratarWorkspaceCreate`…) não mudaram uma
+linha: o espelho ([RN-516](#rn-516)) e o `workspace_create`
+([RN-532](#rn-532)) já eram por projeto e já viajavam na concessão do `join`
+daquela conexão, que é exatamente o que os torna corretos com N.
+
+**O teto e a recusa viram do PROJETO.** Eram do processo: recusa de join dava
+`process.exit(1)`, e `TETO_DE_TENTATIVAS_SEGUIDAS` esgotado também. Com N
+conexões, matar tudo por causa de uma derrubaria o agente de todos os projetos
+que estão funcionando. Então cada projeto tem seu laço e seu contador; um
+projeto que recusa ou esgota **encerra sozinho, NOMEADO**, e os demais seguem —
+e só quando NENHUM sobra o processo sai com 1, com um resumo dizendo o desfecho
+de cada um. Todo log do laço é prefixado pelo nome do projeto: com N laços
+intercalados, "falha na conexão" sem dono é a forma que o silêncio toma quando
+há N de algo. No modo `projeto` a disposição antiga fica idêntica, e pelo mesmo
+raciocínio invertido: com UMA conexão, não sobra nada a atender.
+
+**A lista é consultada UMA vez, no start.** Repesquisar periodicamente foi
+considerado e recusado: custa chamada recorrente por um evento raro, e o preço
+real não é tráfego — é que uma lista que volta MENOR é ambígua (projeto
+apagado, convertido de modo, papel revogado, ou um 500 transitório se
+disfarçando dos três), e derrubar conexão VIVA por causa dessa ambiguidade
+trocaria um estado certo por um palpite. O processo **DIZ** isso ao subir, e o
+gesto para pegar projeto novo é reconectar o agente — um comando só, com o
+serviço de usuário da [RN-518](#rn-518).
+
+**Lista VAZIA é estado NORMAL, e a saída é 0.** É o estado de toda máquina
+recém-instalada: o instalador sobe o agente antes de existir projeto nenhum
+([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)). Não é erro, então
+não é código de erro — e `Restart=on-abnormal` ([RN-518](#rn-518)) não o
+reergue, que é o certo: não há o que reerguer. Ficar de pé com zero conexões
+seria um serviço "ativo" que não faz nada, e o `status` da unit passaria a
+mentir.
+
+**A pasta de cada projeto é `<base>/<workspaceDirName>`, pelas guardas que já
+existem.** `resolverPastaDoProjetoNaBase` (a MESMA que `workspace_create` usa,
+e pelo mesmo motivo: o nome veio pela rede), mais
+`validarDirDentroDoHomeNoLinux` ([RN-434](#rn-434)) e `garantirDiretorio`
+([RN-435](#rn-435)) — nenhuma quarta cópia de régua nasce. Criar a pasta é a
+RN-435 aplicada a um caminho DERIVADO em vez de digitado; o que NÃO acontece
+aqui é `git init`/clone, que continua sendo `workspace_create`
+([RN-532](#rn-532)). Um projeto cuja pasta é recusada sai do plano nomeado e
+não derruba os outros. `OpcoesDaBase.raizDoProjeto` aceita `null` no modo de
+máquina: sem `--project` não há `--dir`, a recusa de laço fica **sem sujeito**
+(toda raiz é derivada da base, então "a base dentro da raiz de um projeto" não
+tem como ser construída), e passar a própria base ali seria pior —
+`dentroDoEscopo(base, base)` é verdadeiro e toda base seria recusada.
+
+- **Código:** `apps/runner/src/index.ts` (o portão em `lerArgumentos`,
+  `lerArgumentosDeMaquina`, `manterConexaoDoProjeto`, `criarEstado`,
+  `rodarComoAgenteDeMaquina`); `apps/runner/src/projetos.ts`
+  (`listarProjetosDoRunner`, `planejarConexoes`,
+  `CredencialNaoEDeMaquinaError`); `apps/runner/src/auth.ts`
+  (`assinarDescobertaComChaveDeDispositivo` — o JWT sem o claim `projectId`);
+  `apps/runner/src/base-guard.ts` (`OpcoesDaBase.raizDoProjeto` nulo)
+- **Teste:** `apps/runner/src/projetos.spec.ts` — caminho feliz da rota e do
+  plano, o 403 virando erro PRÓPRIO, resposta fora do contrato, e o segmento
+  que escapa da base sendo recusado SEM derrubar o vizinho (inclusive por
+  symlink, na segunda passada); `apps/runner/src/index.spec.ts` — o PORTÃO no
+  processo de verdade (sem base, `uso()` com o motivo; com base, a recusa passa
+  a ser da credencial); `apps/runner/src/base-guard.spec.ts` — `raizDoProjeto`
+  nulo não afrouxa nenhuma outra recusa
+- **Lacuna DECLARADA:** ninguém CRIA chave de máquina ainda (é o `install.sh`,
+  ADR 0155 ponto 4), então o modo novo só é exercitável com uma chave
+  registrada à mão — a metade que a RN-543 já declarava. A `apiUrl` no modo de
+  máquina vem de `--api-url`/`BRABO_API_URL`/default, e **não** do
+  `brabo-runner.config.json`, que é por PROJETO: uma instalação em porta ou
+  host diferentes precisa da flag no `ExecStart`, e quem a escreve é a unit por
+  máquina, que é a sessão 4 desta fase. E a unit continua sendo POR PROJETO —
+  este PR muda o PROCESSO, não o serviço
+- **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+- **Origem:** FASE 30, sessão 3 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
 ## O teto de auto-rebaixamento também na REMOÇÃO (RN-556)
 
 ### RN-556 — Remover a própria linha de `project_members` é recusado com 403 quando o efeito líquido é rebaixamento {#rn-556}

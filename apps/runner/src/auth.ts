@@ -75,7 +75,13 @@ export function obterToken(argToken?: string): string {
   return bruto;
 }
 
-async function tentarLerErro(resposta: Response): Promise<string> {
+/**
+ * O `message` que a api devolveu, ou string vazia. Exportada porque
+ * `projetos.ts` precisa da MESMA leitura para um fim diferente: relatar, com
+ * as palavras da api, por que uma credencial de PROJETO foi recusada na rota
+ * de descoberta. Uma segunda cópia divergiria no dia em que o formato mudar.
+ */
+export async function tentarLerErro(resposta: Response): Promise<string> {
   try {
     const corpo = (await resposta.json()) as { message?: string };
     return corpo.message ? `— ${corpo.message}` : '';
@@ -145,8 +151,40 @@ export async function assinarTicketComChaveDeDispositivo(
   deviceKeyId: string,
   projectId: string,
 ): Promise<string> {
+  return assinarComChaveDeDispositivo(jwkPrivada, deviceKeyId, { projectId });
+}
+
+/**
+ * O MESMO JWT, para a única rota que NÃO tem `:projectId` no caminho —
+ * `GET /runner/projects` (RN-543, ADR 0154 ponto 3), por onde o agente de
+ * MÁQUINA descobre os projetos que atende.
+ *
+ * A diferença é uma só, e ela é do CONTRATO do outro lado: o claim
+ * `projectId` fica AUSENTE. `PatAuthGuard` compara `payload.projectId !==
+ * request.params.projectId`, e numa rota sem projeto no caminho os dois
+ * precisam ser `undefined` — um JWT que nomeasse um projeto qualquer não
+ * passa a valer para uma rota que não pede projeto nenhum. Assinar aqui com
+ * um `projectId` inventado seria recusado com 403, e o 403 diria a coisa
+ * errada.
+ *
+ * O que este JWT NÃO faz é afirmar a espécie da chave: quem sabe se ela é de
+ * máquina ou de projeto é o servidor, que acha a pública pelo `kid`. Ver
+ * `projetos.ts` para por que essa ignorância é deliberada deste lado.
+ */
+export async function assinarDescobertaComChaveDeDispositivo(
+  jwkPrivada: object,
+  deviceKeyId: string,
+): Promise<string> {
+  return assinarComChaveDeDispositivo(jwkPrivada, deviceKeyId, {});
+}
+
+async function assinarComChaveDeDispositivo(
+  jwkPrivada: object,
+  deviceKeyId: string,
+  claims: Record<string, string>,
+): Promise<string> {
   const chave = await importJWK(jwkPrivada, 'EdDSA');
-  return new SignJWT({ projectId })
+  return new SignJWT(claims)
     .setProtectedHeader({ alg: 'EdDSA', kid: deviceKeyId })
     .setIssuedAt()
     .setExpirationTime(TTL_JWT_DE_DISPOSITIVO)
