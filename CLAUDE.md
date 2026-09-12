@@ -264,8 +264,6 @@ pescar o link em `docker compose logs api`.
   COERÊNCIA e não omissão: um Deployment/ConfigMap não intercepta nada, e o
   `brabo-config` nunca carregou nenhuma destas variáveis; Staff dormente para
   disparo automático (acionável manual)
-- `appsec run_design/2` acionável, nada aciona sozinho (gatilho:
-  `assess_implementability`, fora de escopo à época)
 - `DEPLOY_ENABLED` não existe: trava `platform` em `planned` e mantém
   `secops-runtime` sem detecção/resposta/postmortem de incidente (mesmo
   gatilho ausente para os dois — ADR 0091/0092)
