@@ -587,6 +587,47 @@ const POR_EXTENSO = [
 ];
 
 /**
+ * A mesma lista, em inglês, capitalizada — `docs/glossary.md` está em inglês e
+ * a frase abre com o número (*"Eleven closed schemas"*), então ele é a primeira
+ * palavra da sentença. Lista PRÓPRIA e não um `.toUpperCase()` sobre a de cima:
+ * são idiomas diferentes, não a mesma palavra com outra caixa.
+ */
+const POR_EXTENSO_EN = [
+  'Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight',
+  'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen',
+  'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty',
+];
+
+/**
+ * Quantos schemas de artefato existem: as chaves do mapa em
+ * `Engine.Harness.ArtifactSchemas`.
+ *
+ * Fonte é o ARTEFATO e nunca outra prosa, como nas demais aferições — aqui o
+ * artefato é o módulo do engine que VALIDA a emissão. Um schema novo entra na
+ * conta sozinho; era exatamente isso que faltava quando `decision_record`
+ * (RN-505), `plano_de_teste`, `prototipo_navegavel` e `threat_model` nasceram e
+ * o glossário seguiu dizendo "Seven".
+ *
+ * Zero REPROVA em vez de passar: se o padrão parar de casar (o mapa mudar de
+ * forma), uma contagem zerada faria a aferição comparar contra nada e ficar
+ * verde para sempre — o mesmo motivo pelo qual "padrão que não casa também
+ * reprova" logo abaixo.
+ */
+function contarSchemasDeArtefato() {
+  const fonte = ler('apps/engine/lib/engine/harness/artifact_schemas.ex');
+  const chaves = new Set(
+    [...fonte.matchAll(/^\s+"([a-z_]+)" =>/gm)].map((m) => m[1]),
+  );
+  if (chaves.size === 0) {
+    throw new Error(
+      'contarSchemasDeArtefato: nenhum schema encontrado em artifact_schemas.ex — ' +
+        'o formato do mapa mudou e o padrão precisa acompanhar.',
+    );
+  }
+  return chaves.size;
+}
+
+/**
  * Quantas RNs existem: uma por cabeçalho `### RN-NNN`.
  *
  * Soma os TRÊS arquivos — `business-rules.md` e os dois que saíram dele por
@@ -635,6 +676,7 @@ function verificarContagensEmProsa() {
   const proximo = String(Math.max(...numeros) + 1).padStart(4, '0');
   const regras = contarRegrasDeNegocio();
   const providers = descobrirProviders().size;
+  const schemas = contarSchemasDeArtefato();
 
   const afericoes = [
     {
@@ -686,6 +728,21 @@ function verificarContagensEmProsa() {
       esperado: POR_EXTENSO[providers] ?? String(providers),
       oque: 'a contagem de providers',
     },
+    {
+      // O glossário dizia "Seven closed schemas" com ONZE escritos, e listava
+      // os sete — `decision_record` (RN-505), `plano_de_teste`,
+      // `prototipo_navegavel` e `threat_model` entraram depois e ninguém
+      // voltou à frase. Mesmo modo de falha do "68 ADRs" logo acima: número no
+      // meio de uma frase que ninguém tem obrigação de lembrar de trocar.
+      //
+      // Por extenso porque a frase está assim desde sempre, como a dos
+      // providers. A aferição é da CONTAGEM, não da lista: conferir os onze
+      // nomes exigiria parsear a prosa, e a contagem já é o que deriva.
+      arquivo: 'docs/glossary.md',
+      padrao: /\*\*Artifact\*\* — an agent's structured, validated output\. (\w+)\n?\s*closed/,
+      esperado: POR_EXTENSO_EN[schemas] ?? String(schemas),
+      oque: 'a contagem de schemas de artefato',
+    },
   ];
 
   let problemas = 0;
@@ -711,7 +768,7 @@ function verificarContagensEmProsa() {
   else
     console.log(
       `  ok        contagens em prosa (${total} ADRs, próximo ${proximo}; ` +
-        `${regras} RNs; ${providers} providers)`,
+        `${regras} RNs; ${providers} providers; ${schemas} schemas)`,
     );
 }
 

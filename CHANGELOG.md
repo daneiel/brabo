@@ -752,6 +752,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docs**: o glossário dizia **"Seven closed schemas"** com **onze** escritos —
+  e agora a contagem é aferida, não lembrada (BRB-022).
+
+  Os quatro que faltavam nasceram depois da frase e ninguém voltou a ela:
+  `decision_record` ([RN-505](docs/business-rules.md#rn-505)), `plano_de_teste`,
+  `prototipo_navegavel` e `threat_model`. É o mesmo modo de falha do "68 ADRs"
+  do `CONTRIBUTING.md`, que já tinha aferição desde então.
+
+  `pnpm docs:check` passa a derivar o número de
+  `Engine.Harness.ArtifactSchemas` — o módulo que VALIDA a emissão, nunca outra
+  prosa — de modo que schema novo entra na conta sozinho. Provado por mutação
+  nos dois sentidos: mexer no número reprova com `DESATUAL`, reescrever a frase
+  reprova com `CEGO`.
+
 - **ci**: o `claude-review` para de reprovar em PR aberto por bot.
 
   A condição que o pulava enumerava **um login** (`github-actions[bot]`) — e
