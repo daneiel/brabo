@@ -116,6 +116,7 @@ import {
   instalar,
   status as statusDoServico,
   usoDeServico,
+  type BaseParaServico,
   type ContextoDoServico,
   type RespostaDoServico,
 } from './servico.ts';
@@ -198,7 +199,9 @@ function uso(): never {
   console.error(
     'serviço de usuário: "brabo-runner service install|uninstall|status" instala o runner ' +
       'como systemd --user (Linux) ou LaunchAgent (macOS) — nunca serviço de sistema, nunca ' +
-      'root; Windows fora de escopo (ADR 0147 ponto 5).',
+      'root; Windows fora de escopo (ADR 0147 ponto 5). São DUAS espécies de unit e elas ' +
+      'convivem: "--machine" instala a desta MÁQUINA (o modo acima, N conexões), e sem ela a ' +
+      'unit é a de UM projeto, como sempre foi (ADR 0154 ponto 4).',
   );
   process.exit(2);
 }
@@ -236,6 +239,20 @@ export function comandoDoRunnerParaServico(): string[] {
  * as funções de sempre (`lerConfigLocal`, `lerChaveDeDispositivo`,
  * `resolverDir`, `validarDirDentroDoHomeNoLinux`) — nenhuma régua nova.
  */
+/**
+ * O valor de uma flag em `argv`, ou `undefined` — a mesma leitura de
+ * `lerArgumentos` e de `servico.ts`, escrita aqui só porque `--base` precisa
+ * ser lida do `argv` do CONTEXTO do serviço, que não é `process.argv` nos
+ * testes.
+ */
+function valorDeFlag(argv: string[], flag: string): string | undefined {
+  const args = argv.slice(2);
+  const indice = args.indexOf(flag);
+  if (indice < 0) return undefined;
+  const valor = args[indice + 1];
+  return valor === undefined || valor.startsWith('--') ? undefined : valor;
+}
+
 function rodarSubcomandoDeServico(argv: string[]): RespostaDoServico {
   const sub = argv[3];
   if (!ehSubcomandoConhecido(sub)) return usoDeServico();
@@ -249,6 +266,7 @@ function rodarSubcomandoDeServico(argv: string[]): RespostaDoServico {
     uid: typeof process.getuid === 'function' ? process.getuid() : null,
     comandoDoRunner: comandoDoRunnerParaServico(),
     path: process.env.PATH ?? '',
+    apiUrlDoAmbiente: process.env.BRABO_API_URL ?? null,
     sistema: sistemaDeServicoReal,
   };
 
@@ -261,6 +279,25 @@ function rodarSubcomandoDeServico(argv: string[]): RespostaDoServico {
       lerChave: lerChaveDeDispositivo,
       resolverDir: resolverDirDoServico,
       validarDir: validarDirDentroDoHomeNoLinux,
+      // A base é INJETADA como as quatro acima (RN-545), e o adaptador mora
+      // aqui porque é `index.ts` que conhece o processo: `servico.ts` não lê
+      // disco nem ambiente por conta própria. `raizDoProjeto: null` é o mesmo
+      // argumento de `lerArgumentosDeMaquina` — não há `--dir` de projeto
+      // contra o qual haver laço, e passar a própria base ali recusaria todas.
+      resolverBase: (contexto): BaseParaServico => {
+        const resolvida = resolverBaseConsentida(
+          valorDeFlag(contexto.argv, '--base'),
+          contexto.home,
+          contexto.xdgConfigHome,
+          { plataforma: contexto.plataforma, home: contexto.home, raizDoProjeto: null },
+        );
+        if (resolvida.estado === 'ok') return { estado: 'ok', base: resolvida.base };
+        if (resolvida.estado === 'ausente') return { estado: 'ausente' };
+        // As duas origens levam ao mesmo desfecho aqui, e isso é decisão (ver
+        // `BaseParaServico`): instalar um serviço que sai no primeiro boot é
+        // pior que não instalar, venha a base de flag ou de arquivo.
+        return { estado: 'recusada', mensagem: resolvida.mensagem };
+      },
     });
   }
   if (sub === 'uninstall') {

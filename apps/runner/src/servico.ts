@@ -41,6 +41,65 @@
  * do MESMO `projectId`, resolvido pelas mesmas duas fontes na mesma ordem
  * (`--project`, senão `brabo-runner.config.json` da pasta corrente).
  *
+ * ## E, desde a RN-545, uma unit POR MÁQUINA — a segunda ESPÉCIE
+ *
+ * O modo de máquina da RN-544 é UM processo que abre N conexões, e ele não tem
+ * `projectId` nenhum: a lista de projetos vem de `GET runner/projects` e a
+ * pasta de cada um sai da BASE consentida. A unit que o põe de pé é
+ * `brabo-runner.service` / `dev.brabo.runner`, sem sufixo — e o nome NÃO pode
+ * colidir com o de projeto nenhum, o que é verdade por construção e travado
+ * por teste: `PROJECT_ID_VALIDO` exige ao menos um caractere, então
+ * `brabo-runner-<id>.service` nunca é `brabo-runner.service` (diferem no 13º
+ * caractere, `-` contra `.`), e `dev.brabo.runner.<id>` nunca é
+ * `dev.brabo.runner`.
+ *
+ * As duas espécies **convivem**, e é por isso que `AlvoDaUnidade` é um tipo
+ * discriminado e não um `projectId | null`: os seis membros de
+ * `PlataformaDeServico` que recebiam `projectId` passam a receber o alvo, e
+ * "não há projeto" vira fato de TIPO em vez de checagem de nulo espalhada.
+ *
+ * ### O discriminador é a flag `--machine`, e NUNCA a ausência de `--project`
+ *
+ * O ADR 0154 ponto 5 escreveu *"`service install` sem `--project` instala a
+ * unit de máquina"*. Isso foi medido aqui e **não** pôde ser implementado ao
+ * pé da letra: `resolverProjeto` tem DUAS fontes, e o caminho NORMAL de hoje é
+ * rodar `install` sem flag nenhuma de dentro da pasta que o navegador
+ * configurou — é o `brabo-runner.config.json` que responde. Tratar "sem
+ * `--project`" como "máquina" converteria em silêncio a instalação de quem já
+ * usa o produto, que é exatamente o que o ponto 5 do mesmo ADR promete não
+ * fazer. Então a espécie nova é **opt-in explícito** (`--machine`), as duas
+ * fontes de projeto seguem byte a byte, e `--machine` junto de `--project` é
+ * recusa nomeada em vez de precedência inventada.
+ *
+ * ### `install` RECUSA quando a outra espécie já está instalada
+ *
+ * O agente de máquina atende TODO projeto em modo `runner` do dono da chave.
+ * Somar a ele uma unit por projeto (ou o contrário) põe dois processos
+ * disputando o mesmo `terminal:<projectId>`, e o servidor nega um dos dois —
+ * provavelmente o que a pessoa acabou de instalar, que é a pior ordem possível
+ * para descobrir o problema. É recusa pelo MESMO critério da recusa de root,
+ * algumas linhas acima: instalar e avisar deixaria a instalação errada de pé, e
+ * a mensagem seria lida uma vez só. Nada é removido pela recusa — a unit que
+ * já existe continua exatamente como estava, e a mensagem nomeia o `uninstall`
+ * de cada uma. Não há `--force`: uma flag que derruba uma guarda cujo sintoma é
+ * silencioso devolve o sintoma silencioso.
+ *
+ * ### `status` responde sobre a espécie pedida, e DIZ que a outra existe
+ *
+ * Os quatro estados e os quatro códigos de saída (RN-088) não viram oito, e não
+ * são somados: o código continua sendo o da unit PERGUNTADA. A coexistência
+ * aparece em TEXTO, e é resposta do DISCO — as units da outra espécie são
+ * listadas pelo nome, sem perguntar o estado de cada uma ao gerenciador, e a
+ * saída DIZ que não perguntou (a mesma honestidade de `naoVerificado` na página
+ * de containers). Sem `--machine` e sem projeto resolvível, o principal é a
+ * unit de MÁQUINA — é a única cujo nome não precisa de argumento —, e a saída
+ * nomeia `--project` para quem queria a outra.
+ *
+ * `uninstall` NÃO herda esse default, e a assimetria é deliberada: ler a
+ * espécie errada custa uma linha errada, remover a espécie errada custa um
+ * serviço e uma chave de dispositivo. Sem espécie nomeada ele RECUSA, listando
+ * o que existe no disco e o comando exato de cada um.
+ *
  * ## A PASTA a limpar sai do arquivo da unit, não do `cwd`
  *
  * `uninstall` remove três coisas (o ADR é explícito): o arquivo da unit, o
@@ -110,6 +169,15 @@ export interface SistemaDeServico {
   /** `true` quando o arquivo EXISTIA e foi apagado; `false` quando não existia. */
   apagarArquivo(caminho: string): boolean;
   existeArquivo(caminho: string): boolean;
+  /**
+   * Nomes dos arquivos da pasta, ou `[]` quando ela não existe / não dá para
+   * ler. Existe por causa da coexistência das duas espécies (RN-545): é como
+   * `status` acha as units de PROJETO sem que ninguém lhe diga quais são, e é
+   * como `install` descobre que há a outra espécie antes de sobrepor-se a ela.
+   * Lista vazia e pasta ilegível colapsam de propósito — os dois querem dizer
+   * "não achei unit nenhuma aqui", e este módulo não age sobre a diferença.
+   */
+  listarPasta(caminho: string): string[];
   rodar(comando: string, args: string[]): ResultadoDeComando;
 }
 
@@ -145,6 +213,17 @@ export interface ContextoDoServico {
    * retrato do PATH de quem instalou, e muda só reinstalando.
    */
   path: string;
+  /**
+   * `BRABO_API_URL` do ambiente de quem instala, ou `null`. Ela entra no
+   * contexto por causa da unit de MÁQUINA (RN-545), e só ela a usa: no plano
+   * por PROJETO há um `brabo-runner.config.json` respondendo qual é a api, e a
+   * precedência de lá (`--api-url` › config › default) fica byte a byte. No
+   * plano de máquina esse arquivo é por projeto e não serve, então sem esta
+   * variável a única alternativa a `--api-url` seria o default `localhost` —
+   * ou seja, instalar de um shell com `BRABO_API_URL` posta geraria em
+   * silêncio uma unit apontando para o lugar errado.
+   */
+  apiUrlDoAmbiente: string | null;
   sistema: SistemaDeServico;
 }
 
@@ -184,38 +263,76 @@ export const CODIGO_POR_ESTADO: Record<EstadoDoServico, number> = {
   'nao-consegui-perguntar': 5,
 };
 
+/**
+ * De QUAL das duas espécies de unit se está falando (RN-545). Tipo
+ * discriminado, e não `projectId: string | null`, porque "o agente de máquina
+ * não tem projeto" é um fato, não um valor ausente: com o nulo, cada um dos
+ * seis membros de `PlataformaDeServico` teria de decidir sozinho o que fazer
+ * com ele, e o compilador não cobraria nenhum.
+ */
+export type AlvoDaUnidade =
+  | { especie: 'projeto'; projectId: string }
+  | { especie: 'maquina' };
+
+/** A unit ÚNICA do agente de máquina — sem `projectId`, por desenho. */
+export const ALVO_DE_MAQUINA: AlvoDaUnidade = { especie: 'maquina' };
+
+export function alvoDeProjeto(projectId: string): AlvoDaUnidade {
+  return { especie: 'projeto', projectId };
+}
+
 /** Onde a unit mora e o que fazer com ela — uma resposta por plataforma. */
 interface PlataformaDeServico {
   /** Nome humano, para as mensagens. */
   nome: string;
-  /** Caminho absoluto do arquivo de unit/plist. */
-  caminhoDaUnidade(ctx: ContextoDoServico, projectId: string): string;
+  /** A pasta onde TODAS as units desta plataforma moram — as duas espécies. */
+  pastaDasUnidades(ctx: ContextoDoServico): string;
+  /** O nome do ARQUIVO dentro dessa pasta (com extensão, onde houver). */
+  nomeDoArquivo(alvo: AlvoDaUnidade): string;
+  /**
+   * O `projectId` que um nome de arquivo da pasta descreve, ou `null` quando
+   * ele não é unit de PROJETO desta plataforma — inclusive quando é a unit de
+   * MÁQUINA. É o inverso de `nomeDoArquivo`, e é o que trava por teste a
+   * ausência de colisão entre as duas espécies.
+   */
+  projetoDoArquivo(nome: string): string | null;
   /** O identificador que o gerenciador usa (unit name / label). */
-  identificador(projectId: string): string;
+  identificador(alvo: AlvoDaUnidade): string;
   conteudo(ctx: ContextoDoServico, plano: PlanoDeInstalacao): string;
   /** Lê de volta o `WorkingDirectory` gravado — o registro do que foi instalado. */
   pastaGravada(conteudo: string): string | null;
   /** Comandos a rodar DEPOIS de escrever o arquivo, em ordem. */
-  ativar(ctx: ContextoDoServico, projectId: string): { comando: string; args: string[] }[];
+  ativar(ctx: ContextoDoServico, alvo: AlvoDaUnidade): { comando: string; args: string[] }[];
   /** Comandos a rodar ANTES de apagar o arquivo, em ordem (best-effort). */
-  desativar(ctx: ContextoDoServico, projectId: string): { comando: string; args: string[] }[];
+  desativar(ctx: ContextoDoServico, alvo: AlvoDaUnidade): { comando: string; args: string[] }[];
   /** Comandos a rodar DEPOIS de apagar o arquivo (best-effort). */
-  depoisDeRemover(ctx: ContextoDoServico, projectId: string): {
+  depoisDeRemover(ctx: ContextoDoServico, alvo: AlvoDaUnidade): {
     comando: string;
     args: string[];
   }[];
   /** Pergunta o estado ao gerenciador — só chamada com o arquivo já confirmado. */
   perguntarEstado(
     ctx: ContextoDoServico,
-    projectId: string,
+    alvo: AlvoDaUnidade,
   ): { estado: Exclude<EstadoDoServico, 'nao-instalado'>; detalhe: string };
 }
 
-interface PlanoDeInstalacao {
-  projectId: string;
-  dir: string;
-  apiUrl: string;
-}
+/**
+ * O que vai para dentro do arquivo. União discriminada pela MESMA razão de
+ * `AlvoDaUnidade`: os três campos do plano de projeto (`projectId`, `dir` como
+ * raiz DO projeto, `apiUrl` vinda do config daquela pasta) deixam de fazer
+ * sentido na máquina — lá não há projeto, `--dir` não existe (cada raiz sai da
+ * base) e a api não pode vir de um arquivo que é por projeto.
+ *
+ * `dir` sobrevive no plano de máquina com OUTRO significado, e por um motivo
+ * medido: `lerArgumentos` procura a chave de dispositivo em
+ * `INIT_CWD ?? process.cwd()`, que sob `systemd --user`/`launchd` é o
+ * `WorkingDirectory` da unit. É a pasta ONDE A CREDENCIAL ESTÁ, nunca a raiz de
+ * trabalho de projeto nenhum.
+ */
+type PlanoDeInstalacao =
+  | { especie: 'projeto'; projectId: string; dir: string; apiUrl: string }
+  | { especie: 'maquina'; dir: string; apiUrl: string; base: string };
 
 // ---------------------------------------------------------------- validação
 
@@ -247,7 +364,7 @@ function caminhoSeguroParaUnidade(caminho: string): boolean {
 const SYSTEMD: PlataformaDeServico = {
   nome: 'systemd --user',
 
-  caminhoDaUnidade(ctx, projectId) {
+  pastaDasUnidades(ctx) {
     // A MESMA precedência do systemd: `$XDG_CONFIG_HOME/systemd/user` quando a
     // variável está posta, `~/.config/systemd/user` quando não. Escolher só o
     // segundo faria a unit nascer onde o gerenciador não olha, e a falha
@@ -257,20 +374,62 @@ const SYSTEMD: PlataformaDeServico = {
       ctx.xdgConfigHome && ctx.xdgConfigHome.length > 0
         ? ctx.xdgConfigHome
         : join(ctx.home, '.config');
-    return join(base, 'systemd', 'user', SYSTEMD.identificador(projectId));
+    return join(base, 'systemd', 'user');
   },
 
-  identificador(projectId) {
-    return `brabo-runner-${projectId}.service`;
+  nomeDoArquivo(alvo) {
+    return SYSTEMD.identificador(alvo);
+  },
+
+  projetoDoArquivo(nome) {
+    const casou = /^brabo-runner-(.+)\.service$/.exec(nome);
+    const projectId = casou?.[1];
+    // A checagem do formato é o que impede um arquivo qualquer da pasta de
+    // virar "projeto instalado" numa mensagem.
+    return projectId !== undefined && projectIdValidoParaServico(projectId) ? projectId : null;
+  },
+
+  identificador(alvo) {
+    // Sem sufixo na máquina. Não colide com projeto nenhum por construção:
+    // `PROJECT_ID_VALIDO` exige ao menos um caractere, então o nome de projeto
+    // tem sempre um `-` onde este tem um `.` (travado por teste).
+    return alvo.especie === 'maquina'
+      ? 'brabo-runner.service'
+      : `brabo-runner-${alvo.projectId}.service`;
   },
 
   conteudo(ctx, plano) {
-    const exec = [...ctx.comandoDoRunner, '--project', plano.projectId, '--dir', plano.dir, '--api-url', plano.apiUrl]
-      .map((parte) => `"${parte}"`)
-      .join(' ');
+    const flags =
+      plano.especie === 'projeto'
+        ? ['--project', plano.projectId, '--dir', plano.dir, '--api-url', plano.apiUrl]
+        : // Nem `--project` nem `--dir`: é a AUSÊNCIA de `--project` que põe o
+          // processo no modo de máquina (RN-544), e a raiz de cada projeto sai
+          // da base. `--base` também fica de fora, de propósito — ver o bloco
+          // de `Environment=` abaixo.
+          ['--api-url', plano.apiUrl];
+    const exec = [...ctx.comandoDoRunner, ...flags].map((parte) => `"${parte}"`).join(' ');
+
+    const descricao =
+      plano.especie === 'projeto'
+        ? `brabo-runner — agente local do projeto ${plano.projectId}`
+        : 'brabo-runner — agente local desta MÁQUINA (uma conexão por projeto)';
+
+    // `XDG_CONFIG_HOME` CONGELADA, e só quando ela está posta — pelo mesmo
+    // motivo do PATH, e com uma consequência maior: é ela que decide ONDE o
+    // arquivo da base mora (`base.ts`), e `systemd --user` não repassa o
+    // ambiente do shell de quem instalou. Sem isto, um usuário com a variável
+    // apontada para fora de `~/.config` teria o serviço lendo a base errada —
+    // ou nenhuma — e saindo em `uso()`. O VALOR da base não vai para a unit de
+    // propósito: trocá-la continua sendo editar o arquivo e reiniciar, nunca
+    // reinstalar.
+    const ambiente =
+      plano.especie === 'maquina' && ctx.xdgConfigHome && ctx.xdgConfigHome.length > 0
+        ? [`Environment=XDG_CONFIG_HOME=${ctx.xdgConfigHome}`]
+        : [];
 
     return [
-      '# Gerado por `brabo-runner service install` (ADR 0147 ponto 5, RN-518).',
+      '# Gerado por `brabo-runner service install` (ADR 0147 ponto 5, RN-518;',
+      '# unit de máquina: ADR 0154 ponto 4, RN-545).',
       '# NÃO edite à mão: `service install` sobrescreve este arquivo inteiro.',
       '#',
       '# Serviço de USUÁRIO por desenho — nunca `systemctl` de sistema, nunca root.',
@@ -278,7 +437,7 @@ const SYSTEMD: PlataformaDeServico = {
       '# as três fronteiras reais do produto (ver apps/runner/src/guard.ts).',
       '',
       '[Unit]',
-      `Description=brabo-runner — agente local do projeto ${plano.projectId}`,
+      `Description=${descricao}`,
       'Documentation=https://github.com/daneiel/brabo/tree/main/apps/runner#readme',
       'After=network-online.target',
       '',
@@ -300,6 +459,7 @@ const SYSTEMD: PlataformaDeServico = {
       '# PATH mínimo, e o runner chama `git` (o espelho, RN-516) e `docker`',
       '# (ADR 0137). Custo declarado: isto é um retrato, e muda só reinstalando.',
       `Environment=PATH=${ctx.path}`,
+      ...ambiente,
       '',
       '[Install]',
       '# `default.target` é o alvo da SESSÃO do usuário. Nunca `multi-user.target`,',
@@ -314,19 +474,19 @@ const SYSTEMD: PlataformaDeServico = {
     return casou?.[1] ?? null;
   },
 
-  ativar(ctx, projectId) {
-    const unidade = SYSTEMD.identificador(projectId);
+  ativar(ctx, alvo) {
+    const unidade = SYSTEMD.identificador(alvo);
     return [
       { comando: 'systemctl', args: ['--user', 'daemon-reload'] },
       { comando: 'systemctl', args: ['--user', 'enable', '--now', unidade] },
     ];
   },
 
-  desativar(ctx, projectId) {
+  desativar(ctx, alvo) {
     return [
       {
         comando: 'systemctl',
-        args: ['--user', 'disable', '--now', SYSTEMD.identificador(projectId)],
+        args: ['--user', 'disable', '--now', SYSTEMD.identificador(alvo)],
       },
     ];
   },
@@ -335,11 +495,11 @@ const SYSTEMD: PlataformaDeServico = {
     return [{ comando: 'systemctl', args: ['--user', 'daemon-reload'] }];
   },
 
-  perguntarEstado(ctx, projectId) {
+  perguntarEstado(ctx, alvo) {
     const resultado = ctx.sistema.rodar('systemctl', [
       '--user',
       'is-active',
-      SYSTEMD.identificador(projectId),
+      SYSTEMD.identificador(alvo),
     ]);
     if (resultado.estado === 'nao-consegui') {
       return { estado: 'nao-consegui-perguntar', detalhe: resultado.motivo };
@@ -383,28 +543,51 @@ function desescaparXml(valor: string): string {
 const LAUNCHD: PlataformaDeServico = {
   nome: 'launchd (LaunchAgent)',
 
-  caminhoDaUnidade(ctx, projectId) {
-    return join(ctx.home, 'Library', 'LaunchAgents', `${LAUNCHD.identificador(projectId)}.plist`);
+  pastaDasUnidades(ctx) {
+    return join(ctx.home, 'Library', 'LaunchAgents');
   },
 
-  identificador(projectId) {
-    return `dev.brabo.runner.${projectId}`;
+  nomeDoArquivo(alvo) {
+    return `${LAUNCHD.identificador(alvo)}.plist`;
+  },
+
+  projetoDoArquivo(nome) {
+    const casou = /^dev\.brabo\.runner\.(.+)\.plist$/.exec(nome);
+    const projectId = casou?.[1];
+    return projectId !== undefined && projectIdValidoParaServico(projectId) ? projectId : null;
+  },
+
+  identificador(alvo) {
+    // Ver o comentário irmão em `SYSTEMD.identificador`: `dev.brabo.runner` e
+    // `dev.brabo.runner.<id>` não colidem porque o id nunca é vazio.
+    return alvo.especie === 'maquina'
+      ? 'dev.brabo.runner'
+      : `dev.brabo.runner.${alvo.projectId}`;
   },
 
   conteudo(ctx, plano) {
-    const argumentos = [
-      ...ctx.comandoDoRunner,
-      '--project',
-      plano.projectId,
-      '--dir',
-      plano.dir,
-      '--api-url',
-      plano.apiUrl,
-    ]
+    const flags =
+      plano.especie === 'projeto'
+        ? ['--project', plano.projectId, '--dir', plano.dir, '--api-url', plano.apiUrl]
+        : ['--api-url', plano.apiUrl];
+    const argumentos = [...ctx.comandoDoRunner, ...flags]
       .map((parte) => `      <string>${escaparXml(parte)}</string>`)
       .join('\n');
 
-    const log = join(ctx.home, 'Library', 'Logs', `brabo-runner-${plano.projectId}.log`);
+    const alvo: AlvoDaUnidade =
+      plano.especie === 'projeto' ? alvoDeProjeto(plano.projectId) : ALVO_DE_MAQUINA;
+    const sufixoDoLog = plano.especie === 'projeto' ? `-${plano.projectId}` : '';
+    const log = join(ctx.home, 'Library', 'Logs', `brabo-runner${sufixoDoLog}.log`);
+
+    // Mesma decisão do systemd: a variável que decide ONDE o arquivo da base
+    // mora viaja congelada; o VALOR da base, não.
+    const ambiente =
+      plano.especie === 'maquina' && ctx.xdgConfigHome && ctx.xdgConfigHome.length > 0
+        ? [
+            '      <key>XDG_CONFIG_HOME</key>',
+            `      <string>${escaparXml(ctx.xdgConfigHome)}</string>`,
+          ]
+        : [];
 
     return [
       '<?xml version="1.0" encoding="UTF-8"?>',
@@ -412,7 +595,7 @@ const LAUNCHD: PlataformaDeServico = {
       '<plist version="1.0">',
       '  <dict>',
       '    <key>Label</key>',
-      `    <string>${escaparXml(LAUNCHD.identificador(plano.projectId))}</string>`,
+      `    <string>${escaparXml(LAUNCHD.identificador(alvo))}</string>`,
       '',
       '    <key>ProgramArguments</key>',
       '    <array>',
@@ -441,6 +624,7 @@ const LAUNCHD: PlataformaDeServico = {
       '    <dict>',
       '      <key>PATH</key>',
       `      <string>${escaparXml(ctx.path)}</string>`,
+      ...ambiente,
       '    </dict>',
       '',
       // `launchd` não tem journal: sem estes dois a saída do runner some.
@@ -461,20 +645,20 @@ const LAUNCHD: PlataformaDeServico = {
     return casou?.[1] === undefined ? null : desescaparXml(casou[1]);
   },
 
-  ativar(ctx, projectId) {
+  ativar(ctx, alvo) {
     return [
       {
         comando: 'launchctl',
-        args: ['bootstrap', `gui/${ctx.uid ?? 0}`, LAUNCHD.caminhoDaUnidade(ctx, projectId)],
+        args: ['bootstrap', `gui/${ctx.uid ?? 0}`, caminhoDaUnidade(LAUNCHD, ctx, alvo)],
       },
     ];
   },
 
-  desativar(ctx, projectId) {
+  desativar(ctx, alvo) {
     return [
       {
         comando: 'launchctl',
-        args: ['bootout', `gui/${ctx.uid ?? 0}/${LAUNCHD.identificador(projectId)}`],
+        args: ['bootout', `gui/${ctx.uid ?? 0}/${LAUNCHD.identificador(alvo)}`],
       },
     ];
   },
@@ -483,8 +667,8 @@ const LAUNCHD: PlataformaDeServico = {
     return [];
   },
 
-  perguntarEstado(ctx, projectId) {
-    const resultado = ctx.sistema.rodar('launchctl', ['list', LAUNCHD.identificador(projectId)]);
+  perguntarEstado(ctx, alvo) {
+    const resultado = ctx.sistema.rodar('launchctl', ['list', LAUNCHD.identificador(alvo)]);
     if (resultado.estado === 'nao-consegui') {
       return { estado: 'nao-consegui-perguntar', detalhe: resultado.motivo };
     }
@@ -510,6 +694,43 @@ function plataformaDe(plataforma: NodeJS.Platform): PlataformaDeServico | null {
   if (plataforma === 'linux') return SYSTEMD;
   if (plataforma === 'darwin') return LAUNCHD;
   return null;
+}
+
+/**
+ * O caminho absoluto do arquivo de uma unit. Deixou de ser membro de
+ * `PlataformaDeServico` (RN-545) porque as duas plataformas respondiam a mesma
+ * coisa — pasta mais nome —, e manter duas implementações idênticas era a
+ * oportunidade de elas divergirem quando a segunda espécie chegasse.
+ */
+function caminhoDaUnidade(
+  plataforma: PlataformaDeServico,
+  ctx: ContextoDoServico,
+  alvo: AlvoDaUnidade,
+): string {
+  return join(plataforma.pastaDasUnidades(ctx), plataforma.nomeDoArquivo(alvo));
+}
+
+/**
+ * As units de PROJETO que existem no disco, em ordem — a resposta do DISCO, e
+ * só dela: nenhum gerenciador é perguntado aqui (ver o docblock do módulo,
+ * seção do `status`). É o que permite `install` recusar a sobreposição e
+ * `status` nomear a coexistência sem N chamadas de rede local.
+ */
+function projetosInstalados(
+  plataforma: PlataformaDeServico,
+  ctx: ContextoDoServico,
+): string[] {
+  const pasta = plataforma.pastaDasUnidades(ctx);
+  return ctx.sistema
+    .listarPasta(pasta)
+    .map((nome) => plataforma.projetoDoArquivo(nome))
+    .filter((projectId): projectId is string => projectId !== null)
+    .sort();
+}
+
+/** A unit de MÁQUINA existe no disco? Também resposta do disco, e só dela. */
+function maquinaInstalada(plataforma: PlataformaDeServico, ctx: ContextoDoServico): boolean {
+  return ctx.sistema.existeArquivo(caminhoDaUnidade(plataforma, ctx, ALVO_DE_MAQUINA));
 }
 
 function recusa(linhas: string[], codigo = 2): RespostaDoServico {
@@ -585,7 +806,59 @@ export function resolverProjeto(
   return config ? { projectId: config.projectId, fonte: 'config' } : null;
 }
 
+/** A flag que pede a espécie nova — opt-in explícito, ver o docblock. */
+const FLAG_MAQUINA = '--machine';
+
+/**
+ * QUAL das duas espécies o subcomando está falando (RN-545). Não é uma
+ * terceira fonte de projeto: `resolverProjeto` continua com as duas dele, e
+ * esta função só diz se o pedido é sobre a unit de máquina, sobre uma de
+ * projeto, sobre nenhuma (nada resolveu) ou contraditório.
+ */
+export type EspeciePedida =
+  | { especie: 'maquina' }
+  | { especie: 'projeto'; projeto: ProjetoResolvido }
+  | { especie: 'nenhuma' }
+  | { especie: 'contradicao' };
+
+export function resolverEspecie(
+  ctx: ContextoDoServico,
+  lerConfig: (pasta: string) => { projectId: string } | null,
+  pasta: string = ctx.cwd,
+): EspeciePedida {
+  const args = argumentos(ctx.argv);
+  const querMaquina = args.informado(FLAG_MAQUINA);
+  if (querMaquina && args.informado('--project')) return { especie: 'contradicao' };
+  if (querMaquina) return { especie: 'maquina' };
+  const projeto = resolverProjeto(ctx, lerConfig, pasta);
+  return projeto ? { especie: 'projeto', projeto } : { especie: 'nenhuma' };
+}
+
+const RECUSA_DE_CONTRADICAO = [
+  `${FLAG_MAQUINA} e --project são as DUAS espécies de unit, e pedir as duas de uma vez não é ` +
+    'um pedido: o agente de MÁQUINA (ADR 0154) atende todos os projetos do dono da chave, e a ' +
+    'unit por projeto atende exatamente um.',
+  `Rode com ${FLAG_MAQUINA} para a unit desta máquina, ou com --project <id> para a de um projeto.`,
+];
+
+/** O `--machine` recusado por não haver mecanismo — e nunca um valor a ler. */
+function recusaDeContradicao(): RespostaDoServico {
+  return recusa(RECUSA_DE_CONTRADICAO);
+}
+
 // ---------------------------------------------------------------- install
+
+/**
+ * O que `install` sabe da BASE de projetos (RN-529/RN-545) — a forma estreita
+ * de `BaseResolvida`, sem a `origem`: aqui as duas origens levam ao mesmo
+ * desfecho (recusar a instalação), porque uma unit de máquina sem base sobe e
+ * sai em `uso()` no primeiro boot, e instalar isso é a "instalação errada de
+ * pé" que este módulo recusa em toda parte.
+ */
+export type BaseParaServico =
+  | { estado: 'ok'; base: string }
+  | { estado: 'ausente' }
+  | { estado: 'recusada'; mensagem: string };
 
 export interface DependenciasDeInstalacao {
   lerConfig: (cwd: string) => { projectId: string; apiUrl: string } | null;
@@ -595,6 +868,12 @@ export interface DependenciasDeInstalacao {
   resolverDir: (bruto: string, cwd: string) => string;
   /** `validarDirDentroDoHomeNoLinux` — lança quando o dir sai do $HOME (RN-434). */
   validarDir: (dir: string, plataforma: NodeJS.Platform, home: string) => void;
+  /**
+   * `resolverBaseConsentida` de `base.ts`, INJETADA como as quatro acima —
+   * este módulo não lê disco nem ambiente por conta própria, e a base vem de
+   * um arquivo de usuário. Só a unit de MÁQUINA a consulta.
+   */
+  resolverBase: (ctx: ContextoDoServico) => BaseParaServico;
 }
 
 export function instalar(
@@ -616,11 +895,22 @@ export function instalar(
     ]);
   }
 
+  const args = argumentos(ctx.argv);
+  const querMaquina = args.informado(FLAG_MAQUINA);
+  if (querMaquina && args.informado('--project')) return recusaDeContradicao();
+
+  // A SOBREPOSIÇÃO das duas espécies é checada ANTES de qualquer escrita —
+  // recusar depois de gravar o arquivo deixaria de pé exatamente a instalação
+  // que a recusa existe para impedir. Ver o docblock: não há `--force`.
+  const sobreposicao = recusaDeSobreposicao(plataforma, ctx, querMaquina);
+  if (sobreposicao) return sobreposicao;
+
   // A PASTA primeiro, e só então o projeto: quem manda no `install` é a pasta
   // que vai ser instalada, e é o config DELA que responde por qual projeto ela
   // é. Sem `--dir` os dois são o mesmo lugar — o uso normal, que é rodar
-  // `install` de dentro da pasta configurada.
-  const args = argumentos(ctx.argv);
+  // `install` de dentro da pasta configurada. No modo de MÁQUINA a pasta tem
+  // outro significado (é onde a CREDENCIAL está, ver `PlanoDeInstalacao`) e o
+  // mesmo tratamento: `--dir`, senão o `cwd`.
   const dirBruto = args.informado('--dir') ? (args.valorDe('--dir') ?? '.') : '.';
   const dir = deps.resolverDir(dirBruto, ctx.cwd);
 
@@ -631,25 +921,6 @@ export function instalar(
     deps.validarDir(dir, ctx.plataforma, ctx.home);
   } catch (erro) {
     return recusa([erro instanceof Error ? erro.message : String(erro)]);
-  }
-
-  const projeto = resolverProjeto(ctx, deps.lerConfig, dir);
-  if (!projeto) {
-    return recusa([
-      'brabo-runner service install precisa saber QUAL projeto instalar.',
-      `Informe --project <projectId>, ou rode dentro da pasta que tem ${NOME_ARQUIVO_CONFIG} ` +
-        '(a que o botão "Configurar pasta automaticamente" baixou).',
-    ]);
-  }
-  if (!projectIdValidoParaServico(projeto.projectId)) {
-    return recusa([
-      `projectId recusado: ${JSON.stringify(projeto.projectId)}.`,
-      'Ele vira NOME DE ARQUIVO da unit e argumento de comando, então só letras, dígitos, ' +
-        '`.`, `-` e `_` (até 64 caracteres) são aceitos.',
-      projeto.fonte === 'config'
-        ? `O valor veio de ${NOME_ARQUIVO_CONFIG} de ${dir} — regrave a pasta pela tela do projeto.`
-        : 'O valor veio de --project.',
-    ]);
   }
 
   if (!caminhoSeguroParaUnidade(dir)) {
@@ -681,25 +952,36 @@ export function instalar(
       'Um serviço autentica pela CHAVE DE DISPOSITIVO daquela pasta, nunca por token: ' +
         '--token/BRABO_ACCOUNT_TOKEN vivem no seu shell, e gravá-los num arquivo de unit ' +
         'os deixaria em disco — coisa que este CLI nunca faz.',
-      'Use "Configurar pasta automaticamente" na tela do projeto para gravar a pasta, e ' +
-        'rode `brabo-runner service install` de dentro dela.',
+      querMaquina
+        ? 'Registre uma chave de dispositivo de MÁQUINA nesta pasta (ADR 0154) — hoje quem ' +
+          'faz isso é o instalador — e rode `brabo-runner service install --machine` ' +
+          'apontando para ela com --dir.'
+        : 'Use "Configurar pasta automaticamente" na tela do projeto para gravar a pasta, e ' +
+          'rode `brabo-runner service install` de dentro dela.',
     ]);
   }
 
   const config = deps.lerConfig(dir);
-  const apiUrl = args.valorDe('--api-url') ?? config?.apiUrl ?? 'http://localhost:3000';
-  if (!caminhoSeguroParaUnidade(apiUrl) || /\s/.test(apiUrl)) {
-    return recusa([`--api-url recusada: ${JSON.stringify(apiUrl)} tem espaço, aspa ou quebra de linha.`]);
+
+  const preparado = querMaquina
+    ? prepararPlanoDeMaquina(ctx, deps, dir, config !== null)
+    : prepararPlanoDeProjeto(ctx, deps, dir, args.valorDe('--api-url'), config);
+  if ('recusa' in preparado) return preparado.recusa;
+  const { plano, alvo, extraDaCabeca } = preparado;
+
+  if (!caminhoSeguroParaUnidade(plano.apiUrl) || /\s/.test(plano.apiUrl)) {
+    return recusa([
+      `--api-url recusada: ${JSON.stringify(plano.apiUrl)} tem espaço, aspa ou quebra de linha.`,
+    ]);
   }
 
-  const plano: PlanoDeInstalacao = { projectId: projeto.projectId, dir, apiUrl };
-  const caminho = plataforma.caminhoDaUnidade(ctx, projeto.projectId);
+  const caminho = caminhoDaUnidade(plataforma, ctx, alvo);
 
   ctx.sistema.criarPasta(join(caminho, '..'));
   ctx.sistema.escreverArquivo(caminho, plataforma.conteudo(ctx, plano));
 
   const pendentes: string[] = [];
-  for (const passo of plataforma.ativar(ctx, projeto.projectId)) {
+  for (const passo of plataforma.ativar(ctx, alvo)) {
     const resultado = ctx.sistema.rodar(passo.comando, passo.args);
     if (resultado.estado === 'nao-consegui') {
       pendentes.push(`${passo.comando} ${passo.args.join(' ')}  (${resultado.motivo})`);
@@ -715,9 +997,9 @@ export function instalar(
 
   const cabeca = [
     `Unit escrita: ${caminho}`,
-    `  projeto: ${projeto.projectId}`,
+    ...extraDaCabeca,
     `  pasta:   ${dir}`,
-    `  api:     ${apiUrl}`,
+    `  api:     ${plano.apiUrl}`,
     `  chave:   ${chave.deviceKeyId}`,
   ];
 
@@ -746,11 +1028,164 @@ export function instalar(
     linhas: [
       ...cabeca,
       '',
-      `Serviço de usuário ativado (${plataforma.nome}): ${plataforma.identificador(projeto.projectId)}`,
+      `Serviço de usuário ativado (${plataforma.nome}): ${plataforma.identificador(alvo)}`,
       'Ele sobe junto com a sua sessão e roda com o SEU usuário — nunca como root.',
-      'Confira com `brabo-runner service status`.',
+      alvo.especie === 'maquina'
+        ? 'Confira com `brabo-runner service status --machine`. A lista de projetos é ' +
+          'consultada no START (RN-544): projeto criado depois disto entra quando o serviço ' +
+          'for reiniciado.'
+        : 'Confira com `brabo-runner service status`.',
     ],
   };
+}
+
+/** O que uma das duas metades de `install` devolve: o plano, ou a recusa. */
+type PreparoDePlano =
+  | { plano: PlanoDeInstalacao; alvo: AlvoDaUnidade; extraDaCabeca: string[] }
+  | { recusa: RespostaDoServico };
+
+function prepararPlanoDeProjeto(
+  ctx: ContextoDoServico,
+  deps: DependenciasDeInstalacao,
+  dir: string,
+  apiUrlDaFlag: string | undefined,
+  config: { projectId: string; apiUrl: string } | null,
+): PreparoDePlano {
+  const projeto = resolverProjeto(ctx, deps.lerConfig, dir);
+  if (!projeto) {
+    return {
+      recusa: recusa([
+        'brabo-runner service install precisa saber QUAL projeto instalar.',
+        `Informe --project <projectId>, ou rode dentro da pasta que tem ${NOME_ARQUIVO_CONFIG} ` +
+          '(a que o botão "Configurar pasta automaticamente" baixou).',
+        `Para instalar o agente desta MÁQUINA, que atende todos os seus projetos em modo ` +
+          `runner de uma vez (ADR 0154), use ${FLAG_MAQUINA}.`,
+      ]),
+    };
+  }
+  if (!projectIdValidoParaServico(projeto.projectId)) {
+    return {
+      recusa: recusa([
+        `projectId recusado: ${JSON.stringify(projeto.projectId)}.`,
+        'Ele vira NOME DE ARQUIVO da unit e argumento de comando, então só letras, dígitos, ' +
+          '`.`, `-` e `_` (até 64 caracteres) são aceitos.',
+        projeto.fonte === 'config'
+          ? `O valor veio de ${NOME_ARQUIVO_CONFIG} de ${dir} — regrave a pasta pela tela do projeto.`
+          : 'O valor veio de --project.',
+      ]),
+    };
+  }
+
+  // A precedência da api aqui fica byte a byte: flag, senão o config DAQUELA
+  // pasta, senão o default. `BRABO_API_URL` não entra — ver `apiUrlDoAmbiente`.
+  const apiUrl = apiUrlDaFlag ?? config?.apiUrl ?? 'http://localhost:3000';
+  return {
+    plano: { especie: 'projeto', projectId: projeto.projectId, dir, apiUrl },
+    alvo: alvoDeProjeto(projeto.projectId),
+    extraDaCabeca: [`  projeto: ${projeto.projectId}`],
+  };
+}
+
+/**
+ * A metade nova (RN-545). Ela recusa mais do que a de projeto, e as duas
+ * recusas próprias são medidas, não zelo:
+ *
+ * 1. **`brabo-runner.config.json` na pasta.** `lerArgumentos` resolve o
+ *    `projectId` por esse arquivo quando `--project` falta, e o modo de máquina
+ *    é justamente "sem `projectId`" — uma unit de máquina cujo
+ *    `WorkingDirectory` tenha esse arquivo subiria o processo em modo PROJETO,
+ *    em silêncio, atendendo UM projeto e chamando-se agente da máquina.
+ * 2. **Sem base consentida.** O modo de máquina EXIGE base (RN-544) e sai em
+ *    `uso()` sem ela. Instalar assim seria gravar um serviço que nunca sobe.
+ */
+function prepararPlanoDeMaquina(
+  ctx: ContextoDoServico,
+  deps: DependenciasDeInstalacao,
+  dir: string,
+  temConfigDeProjeto: boolean,
+): PreparoDePlano {
+  if (temConfigDeProjeto) {
+    return {
+      recusa: recusa([
+        `A pasta ${dir} tem um ${NOME_ARQUIVO_CONFIG}, e por isso NÃO pode ser a pasta do ` +
+          'agente de máquina.',
+        `Esse arquivo é por PROJETO: o runner lê o projectId dele quando --project falta, ` +
+          'então o serviço subiria em modo de projeto — atendendo um só — com nome de agente ' +
+          'da máquina. O sintoma seria silencioso, e é por isso que a recusa é aqui.',
+        'Aponte --dir para uma pasta que tenha só a chave de dispositivo de MÁQUINA.',
+      ]),
+    };
+  }
+
+  const base = deps.resolverBase(ctx);
+  if (base.estado === 'recusada') {
+    return {
+      recusa: recusa([
+        base.mensagem,
+        'Sem base consentida o agente de máquina não sobe (RN-544), então a unit NÃO foi ' +
+          'gravada: instalar um serviço que sai no primeiro boot é pior que não instalar.',
+      ]),
+    };
+  }
+  if (base.estado === 'ausente') {
+    return {
+      recusa: recusa([
+        'Não há BASE de projetos consentida nesta máquina, e o agente de máquina não roda sem ' +
+          'uma: é dela que a pasta de cada projeto é derivada (<base>/<workspaceDirName>).',
+        'Rode o instalador para consentir uma base, ou grave-a em ' +
+          '$XDG_CONFIG_HOME/brabo/runner.json (senão ~/.config/brabo/runner.json).',
+      ]),
+    };
+  }
+
+  const apiUrl =
+    argumentos(ctx.argv).valorDe('--api-url') ??
+    ctx.apiUrlDoAmbiente ??
+    'http://localhost:3000';
+
+  return {
+    plano: { especie: 'maquina', dir, apiUrl, base: base.base },
+    alvo: ALVO_DE_MAQUINA,
+    extraDaCabeca: [
+      '  espécie: MÁQUINA (uma conexão por projeto, ADR 0154)',
+      `  base:    ${base.base}`,
+    ],
+  };
+}
+
+/**
+ * A recusa de SOBREPOSIÇÃO das duas espécies, ou `null` quando não há.
+ * Resposta do DISCO — ver o docblock do módulo. Nada é removido aqui: a unit
+ * que já existe fica intacta, e o que a mensagem entrega é o comando de
+ * remoção de cada uma.
+ */
+function recusaDeSobreposicao(
+  plataforma: PlataformaDeServico,
+  ctx: ContextoDoServico,
+  querMaquina: boolean,
+): RespostaDoServico | null {
+  if (querMaquina) {
+    const projetos = projetosInstalados(plataforma, ctx);
+    if (projetos.length === 0) return null;
+    return recusa([
+      `Há ${projetos.length} unit(s) por PROJETO instalada(s) nesta máquina, e o agente de ` +
+        'máquina atende TODOS os seus projetos em modo runner — os dois disputariam o mesmo ' +
+        'projeto, e o servidor negaria um deles (um runner por projeto).',
+      'Remova a(s) que existe(m) e instale de novo:',
+      ...projetos.map((projectId) => `  brabo-runner service uninstall --project ${projectId}`),
+      'Nada foi removido nem gravado agora — a instalação atual continua exatamente como estava.',
+    ]);
+  }
+
+  if (!maquinaInstalada(plataforma, ctx)) return null;
+  return recusa([
+    'Já há uma unit de MÁQUINA instalada, e ela atende TODOS os seus projetos em modo runner ' +
+      '— inclusive este. Instalar a unit por projeto poria dois processos disputando o mesmo ' +
+      'projeto, e o servidor negaria um deles (um runner por projeto).',
+    `Se quiser mesmo a unit deste projeto, remova antes a de máquina: ` +
+      `brabo-runner service uninstall ${FLAG_MAQUINA}`,
+    'Nada foi removido nem gravado agora — a instalação atual continua exatamente como estava.',
+  ]);
 }
 
 // -------------------------------------------------------------- uninstall
@@ -767,15 +1202,38 @@ export function desinstalar(
   const plataforma = plataformaDe(ctx.plataforma);
   if (!plataforma) return recusaDePlataforma(ctx.plataforma);
 
-  const projeto = resolverProjeto(ctx, deps.lerConfig);
-  if (!projeto || !projectIdValidoParaServico(projeto.projectId)) {
+  const pedido = resolverEspecie(ctx, deps.lerConfig);
+  if (pedido.especie === 'contradicao') return recusaDeContradicao();
+  // `uninstall` NÃO herda o default de máquina que `status` tem: ler a espécie
+  // errada custa uma linha errada, remover a espécie errada custa um serviço e
+  // uma chave de dispositivo. Sem espécie nomeada ele recusa — e diz o que
+  // existe, para o próximo comando não ser outro chute.
+  if (pedido.especie === 'nenhuma') {
     return recusa([
-      'brabo-runner service uninstall precisa saber QUAL projeto remover.',
-      `Informe --project <projectId>, ou rode dentro da pasta que tem ${NOME_ARQUIVO_CONFIG}.`,
+      'brabo-runner service uninstall precisa saber O QUE remover, e não adivinha: remover a ' +
+        'unit errada apaga também o config e a chave de dispositivo daquela pasta.',
+      `Informe --project <projectId>, rode dentro da pasta que tem ${NOME_ARQUIVO_CONFIG}, ou ` +
+        `use ${FLAG_MAQUINA} para a unit desta máquina.`,
+      ...linhasDoQueExiste(plataforma, ctx),
+    ]);
+  }
+  if (
+    pedido.especie === 'projeto' &&
+    !projectIdValidoParaServico(pedido.projeto.projectId)
+  ) {
+    return recusa([
+      `projectId recusado: ${JSON.stringify(pedido.projeto.projectId)}.`,
+      'Ele vira NOME DE ARQUIVO da unit, então só letras, dígitos, `.`, `-` e `_` (até 64 ' +
+        'caracteres) são aceitos.',
     ]);
   }
 
-  const caminho = plataforma.caminhoDaUnidade(ctx, projeto.projectId);
+  const alvo: AlvoDaUnidade =
+    pedido.especie === 'maquina' ? ALVO_DE_MAQUINA : alvoDeProjeto(pedido.projeto.projectId);
+  const descricaoDoAlvo =
+    alvo.especie === 'maquina' ? 'o agente desta MÁQUINA' : `o projeto ${alvo.projectId}`;
+
+  const caminho = caminhoDaUnidade(plataforma, ctx, alvo);
   const conteudo = ctx.sistema.lerArquivo(caminho);
 
   const args = argumentos(ctx.argv);
@@ -791,9 +1249,9 @@ export function desinstalar(
   const linhas: string[] = [];
 
   if (conteudo === null) {
-    linhas.push(`Não há unit instalada para o projeto ${projeto.projectId} (${caminho} não existe).`);
+    linhas.push(`Não há unit instalada para ${descricaoDoAlvo} (${caminho} não existe).`);
   } else {
-    for (const passo of plataforma.desativar(ctx, projeto.projectId)) {
+    for (const passo of plataforma.desativar(ctx, alvo)) {
       const resultado = ctx.sistema.rodar(passo.comando, passo.args);
       if (resultado.estado === 'nao-consegui') {
         linhas.push(
@@ -809,7 +1267,7 @@ export function desinstalar(
     }
     ctx.sistema.apagarArquivo(caminho);
     linhas.push(`unit removida: ${caminho}`);
-    for (const passo of plataforma.depoisDeRemover(ctx, projeto.projectId)) {
+    for (const passo of plataforma.depoisDeRemover(ctx, alvo)) {
       ctx.sistema.rodar(passo.comando, passo.args);
     }
   }
@@ -857,24 +1315,24 @@ export interface RelatorioDeStatus {
 /** A pergunta, sem formatação — é o que o teste afere. */
 export function consultarStatus(
   ctx: ContextoDoServico,
-  projectId: string,
+  alvo: AlvoDaUnidade,
 ): RelatorioDeStatus | null {
   const plataforma = plataformaDe(ctx.plataforma);
   if (!plataforma) return null;
 
-  const caminho = plataforma.caminhoDaUnidade(ctx, projectId);
+  const caminho = caminhoDaUnidade(plataforma, ctx, alvo);
   // O DISCO responde "instalado?" — e essa resposta continua certa numa máquina
   // onde o gerenciador não existe. Só depois se pergunta ao gerenciador.
   if (!ctx.sistema.existeArquivo(caminho)) {
     return { estado: 'nao-instalado', caminho, detalhe: 'não há arquivo de unit' };
   }
 
-  const resposta = plataforma.perguntarEstado(ctx, projectId);
+  const resposta = plataforma.perguntarEstado(ctx, alvo);
   return { estado: resposta.estado, caminho, detalhe: resposta.detalhe };
 }
 
 const FRASE_POR_ESTADO: Record<EstadoDoServico, string> = {
-  'nao-instalado': 'NÃO INSTALADO — não há serviço de usuário para este projeto nesta máquina.',
+  'nao-instalado': 'NÃO INSTALADO — não há serviço de usuário para este alvo nesta máquina.',
   rodando: 'INSTALADO E RODANDO — o agente local está de pé agora.',
   parado: 'INSTALADO E PARADO — a unit existe, e o serviço não está rodando.',
   'nao-consegui-perguntar':
@@ -882,31 +1340,118 @@ const FRASE_POR_ESTADO: Record<EstadoDoServico, string> = {
     'gerenciador de serviços não respondeu. Isto NÃO quer dizer que está parado.',
 };
 
+/**
+ * O que existe no DISCO, das duas espécies — as linhas que `uninstall` usa na
+ * recusa e `status` usa no bloco de coexistência. Nenhum gerenciador é
+ * perguntado, e as linhas DIZEM isso: um "existe" do disco e um "está rodando"
+ * do gerenciador são respostas diferentes, e fundi-las aqui faria a segunda
+ * parecer barata (seriam N chamadas) e certa (não foi perguntada).
+ */
+function linhasDoQueExiste(
+  plataforma: PlataformaDeServico,
+  ctx: ContextoDoServico,
+): string[] {
+  const projetos = projetosInstalados(plataforma, ctx);
+  const maquina = maquinaInstalada(plataforma, ctx);
+  if (projetos.length === 0 && !maquina) {
+    return ['Não há unit nenhuma instalada nesta máquina (nem de projeto, nem de máquina).'];
+  }
+  return [
+    'Units encontradas no disco (o estado de cada uma NÃO foi perguntado ao gerenciador):',
+    ...(maquina ? [`  ${FLAG_MAQUINA} — ${plataforma.identificador(ALVO_DE_MAQUINA)}`] : []),
+    ...projetos.map(
+      (projectId) =>
+        `  --project ${projectId} — ${plataforma.identificador(alvoDeProjeto(projectId))}`,
+    ),
+  ];
+}
+
+/**
+ * As units da OUTRA espécie, ditas em texto e NUNCA somadas ao código de saída
+ * (ver o docblock do módulo). É o ponto 5 do ADR 0154: deixar seis processos
+ * disputando três projetos em silêncio é o defeito que este bloco existe para
+ * impedir.
+ */
+function linhasDeCoexistencia(
+  plataforma: PlataformaDeServico,
+  ctx: ContextoDoServico,
+  principal: AlvoDaUnidade,
+): string[] {
+  if (principal.especie === 'maquina') {
+    const projetos = projetosInstalados(plataforma, ctx);
+    if (projetos.length === 0) return [];
+    return [
+      '',
+      `ATENÇÃO: há também ${projetos.length} unit(s) por PROJETO instalada(s) — o agente de ` +
+        'máquina já atende esses projetos, e os dois processos disputariam cada um deles ' +
+        '(o servidor nega um dos dois).',
+      ...projetos.map(
+        (projectId) => `  brabo-runner service uninstall --project ${projectId}`,
+      ),
+      'Presença lida do DISCO; o estado de cada uma não foi perguntado ao gerenciador.',
+    ];
+  }
+
+  if (!maquinaInstalada(plataforma, ctx)) return [];
+  return [
+    '',
+    'ATENÇÃO: há também uma unit de MÁQUINA instalada, e ela atende TODOS os seus projetos ' +
+      'em modo runner — inclusive este. Os dois processos disputariam este projeto.',
+    `  brabo-runner service status ${FLAG_MAQUINA}`,
+    'Presença lida do DISCO; o estado dela não foi perguntado ao gerenciador.',
+  ];
+}
+
 export function status(ctx: ContextoDoServico, deps: DependenciasDeStatus): RespostaDoServico {
   const plataforma = plataformaDe(ctx.plataforma);
   if (!plataforma) return recusaDePlataforma(ctx.plataforma);
 
-  const projeto = resolverProjeto(ctx, deps.lerConfig);
-  if (!projeto || !projectIdValidoParaServico(projeto.projectId)) {
+  const pedido = resolverEspecie(ctx, deps.lerConfig);
+  if (pedido.especie === 'contradicao') return recusaDeContradicao();
+  if (pedido.especie === 'projeto' && !projectIdValidoParaServico(pedido.projeto.projectId)) {
     return recusa([
-      'brabo-runner service status precisa saber QUAL projeto consultar.',
-      `Informe --project <projectId>, ou rode dentro da pasta que tem ${NOME_ARQUIVO_CONFIG}.`,
+      `projectId recusado: ${JSON.stringify(pedido.projeto.projectId)}.`,
+      'Ele vira NOME DE ARQUIVO da unit, então só letras, dígitos, `.`, `-` e `_` (até 64 ' +
+        'caracteres) são aceitos.',
     ]);
   }
 
-  const relatorio = consultarStatus(ctx, projeto.projectId);
+  // Sem espécie nomeada, o principal é a MÁQUINA: é a única unit cujo nome não
+  // precisa de argumento, e antes desta RN a mesma entrada respondia "precisa
+  // saber QUAL projeto" — uma pergunta, e não uma resposta, para quem tem
+  // exatamente a instalação que o instalador produz. Quem queria a outra é
+  // avisado na linha seguinte.
+  const alvo: AlvoDaUnidade =
+    pedido.especie === 'projeto' ? alvoDeProjeto(pedido.projeto.projectId) : ALVO_DE_MAQUINA;
+
+  const relatorio = consultarStatus(ctx, alvo);
   /* c8 ignore next */
   if (!relatorio) return recusaDePlataforma(ctx.plataforma);
+
+  const titulo =
+    alvo.especie === 'maquina'
+      ? `agente de MÁQUINA (ADR 0154) — ${plataforma.nome}`
+      : `projeto ${alvo.projectId} — ${plataforma.nome}`;
+  const semArgumento =
+    pedido.especie === 'nenhuma'
+      ? [
+          `Nenhum projeto foi informado nem encontrado em ${NOME_ARQUIVO_CONFIG}: a resposta ` +
+            'acima é sobre a unit desta MÁQUINA. Para perguntar por um projeto, use ' +
+            '--project <projectId>.',
+        ]
+      : [];
 
   return {
     fluxo: 'saida',
     codigo: CODIGO_POR_ESTADO[relatorio.estado],
     linhas: [
-      `projeto ${projeto.projectId} — ${plataforma.nome}`,
+      titulo,
       FRASE_POR_ESTADO[relatorio.estado],
       `  unit:    ${relatorio.caminho}`,
       `  detalhe: ${relatorio.detalhe}`,
       `  código de saída: ${CODIGO_POR_ESTADO[relatorio.estado]} (um por estado — nunca colapsados)`,
+      ...semArgumento,
+      ...linhasDeCoexistencia(plataforma, ctx, alvo),
     ],
   };
 }
@@ -919,7 +1464,8 @@ export function ehSubcomandoConhecido(valor: string | undefined): valor is Subco
 
 export function usoDeServico(): RespostaDoServico {
   return recusa([
-    'uso: brabo-runner service <install|uninstall|status> [--project <id>] [--dir <pasta>]',
+    'uso: brabo-runner service <install|uninstall|status> [--machine | --project <id>] ' +
+      '[--dir <pasta>]',
     '',
     'install   — instala o runner como serviço de USUÁRIO (systemd --user no Linux, ' +
       'LaunchAgent no macOS). Nunca serviço de sistema, nunca root.',
@@ -927,6 +1473,15 @@ export function usoDeServico(): RespostaDoServico {
       'disco (a revogação no servidor é outra coisa, feita pela tela do projeto).',
     'status    — diz um de quatro estados, sem colapsar nenhum: não instalado, instalado e ' +
       'rodando, instalado e parado, ou instalado e não consegui perguntar.',
+    '',
+    'DUAS espécies de unit, e elas convivem (ADR 0154 ponto 4, RN-545):',
+    `  ${FLAG_MAQUINA}        a unit desta MÁQUINA — um processo que atende TODOS os seus ` +
+      'projetos em modo runner, uma conexão para cada. Exige base consentida e uma chave de ' +
+      'dispositivo de máquina.',
+    '  --project <id>   a unit de UM projeto — o comportamento de sempre. Sem a flag, o ' +
+      'projeto sai do brabo-runner.config.json da pasta.',
+    'As duas juntas seriam dois processos disputando o mesmo projeto, então `install` recusa ' +
+      'quando a outra já existe, e `status` diz que ela está lá.',
     '',
     'Windows fica fora de escopo por decisão declarada (ADR 0147 ponto 5).',
   ]);
