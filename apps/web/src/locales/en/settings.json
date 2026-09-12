@@ -217,12 +217,24 @@
     "eyebrow": "convert execution mode",
     "subtitle": "Changes WHERE this project's commands execute — the managed folder, a folder of yours mounted via bind-mount, or a folder of yours connected through the runner.",
     "needsMaintainer": "Only a maintainer or owner can convert.",
-    "warning": "This migrates the agent's working folder. If any dev agent is working or stuck right now, the conversion is refused — wait for it to finish (or unblock the stuck task) and try again.",
+    "warning": {
+      "refuses": "If any dev agent is working or stuck right now, the conversion is refused — wait for it to finish (or unblock the stuck task) and try again.",
+      "carries": "The conversion carries the project's POLICY: permissions.json moves to the new scope with allow/deny/ask intact.",
+      "leavesPath": "It does NOT copy or move the folder contents. Whatever sits in {{caminho}} — uncommitted work included — stays there, and nothing will fetch it later.",
+      "leavesManaged": "It does NOT copy or move the folder contents. Whatever sits in this project's managed folder, on the server — uncommitted work included — stays there, and nothing will fetch it later."
+    },
     "card": {
       "title": "Execution mode"
     },
     "selectAria": "New execution mode",
     "pathAria": "New folder path",
+    "path": {
+      "underBase": "The folder lives inside this installation's projects base ({{base}}), and that is where the browser opens.",
+      "noBase": "This installation declared no mounted-projects base: there is nothing to browse, and the Mounted folder mode has nowhere to exist here.",
+      "baseUnknown": "Could not query this installation's projects base — there is no way to tell whether it exists, so the folder browser stays unavailable. Reload the page to try again.",
+      "baseLoading": "Querying this installation's projects base…",
+      "runnerTyped": "The path is typed here. The Runner folder browser needs a runner already connected to THIS project, and that only exists after the conversion saves: convert first, then connect the runner — it is the runner that confirms the path on connect."
+    },
     "save": "Convert",
     "saving": "Converting…",
     "toast": {

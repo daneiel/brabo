@@ -215,7 +215,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Introdução](docs/intro.md) | o panorama |
 | [Primeiros passos](docs/getting-started.md) | do clone ao primeiro turno de agente |
 | [Arquitetura](docs/architecture.md) | code map, fronteiras, invariantes, dívida técnica |
-| [Regras de negócio](docs/business-rules.md) | as 411 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
+| [Regras de negócio](docs/business-rules.md) | as 414 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
 | [Runbook](docs/runbook.md) | deploy, rollout, restore, rotação de chave, incidente de custo |
 | [Glossário](docs/glossary.md) | harness, gate, handoff, DEK, outbox, ciclo K |
 | [Observabilidade](docs/explanation/observability.md) | como se segue uma ação pelos três processos: trace, log e o caminho entre camadas |
@@ -291,7 +291,9 @@ Um Postgres, uma database (`brabo`), dois schemas para nunca colidir:
 
 - **api (Drizzle)** — domínio em `public`; migrações em
   `apps/api/src/db/migrations/`, aplicadas com `pnpm db:migrate`
-  (`pnpm db:generate` depois de mudar `apps/api/src/db/schema.ts`).
+  (`pnpm db:generate` depois de mudar `apps/api/src/db/schema/<agregado>.ts` —
+  um arquivo por agregado desde o [ADR 0121](docs/adr/0121-schema-dividido-por-agregado-de-dominio.md);
+  `db/schema.ts` é só o barrel de `export *`).
 - **engine (Ecto/Oban)** — domínio e Oban em `engine`, via
   `migration_default_prefix`. Migrações em `apps/engine/priv/repo/migrations/`.
 

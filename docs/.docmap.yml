@@ -408,11 +408,19 @@ rules:
       # verificação de artefato publicado, que a regra `config-e-inferencia` já
       # cobra em `block` pelo mesmo Dockerfile.
       #
-      # O extglob EXCLUI os seis pelo nome e continua casando com todo o resto
+      # `marca-de-credencial-do-runner.spec.ts` é o SÉTIMO, pelo mesmo critério:
+      # ele compara a MARCA da recusa da RN-558 nos dois lados em que ela vive —
+      # `apps/runner/src/index.ts` (TypeScript) e
+      # `apps/engine/lib/engine/runners/credencial_de_git.ex` (Elixir) —, e mora
+      # aqui porque nenhuma das duas suítes alcança a outra linguagem, que é a
+      # mesma razão dos três acima. Degrau, destino e versão de branch não
+      # aparecem nele; a doc dele é a própria RN-558 em `docs/business-rules.md`.
+      #
+      # O extglob EXCLUI os sete pelo nome e continua casando com todo o resto
       # — inclusive com script de política que ainda não existe. Falha fechado:
       # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
       # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
-      - "scripts/ci/!(coverage-floor|actions-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem)*"
+      - "scripts/ci/!(coverage-floor|actions-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem|marca-de-credencial-do-runner)*"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.

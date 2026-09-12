@@ -32,6 +32,7 @@ defmodule Engine.Dev.NoopDevAgentServer do
   use GenServer, restart: :temporary
 
   alias Engine.Dev.{AgentIo, Wake}
+  alias Engine.Runners.CredencialDeGit
   alias Engine.Sessions.EngineApiClient
 
   @impl_tag "noop"
@@ -309,7 +310,13 @@ defmodule Engine.Dev.NoopDevAgentServer do
         AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
         # O achado P: saía com `origin: null`. A origem é `codigo` — provider
         # não suportado é limite conhecido do produto, não falha de infra.
-        AgentIo.block_task(state, "falha ao preparar o worktree", inspect(reason), "codigo")
+        #
+        # RN-558 acrescenta UM caso a essa leitura, sem mexer nos outros: a
+        # recusa da credencial no runner é `politica`, não `codigo`. Mesmo
+        # classificador do `DevAgentServer` — o Noop existe para exercitar ESTE
+        # caminho, não uma cópia dele.
+        {motivo, origem} = CredencialDeGit.desfecho(reason)
+        AgentIo.block_task(state, motivo, inspect(reason), origem)
     end
   end
 

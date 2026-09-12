@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DockerPort, EspecificacaoDeContainer, PedidoDeExec } from '@brabo/docker-port';
 import {
+  MARCA_DE_CREDENCIAL_NAO_ENTREGUE,
   tratarContainerRemove,
   tratarContainerStart,
   tratarContainerStop,
@@ -156,6 +157,135 @@ describe('tratarExec — roteamento host vs container (ADR 0137)', () => {
       comando: 'pwd',
       cwd: '/work',
     });
+  });
+});
+
+describe('tratarExec — a credencial não atravessa o docker exec (RN-558)', () => {
+  // Credencial GERADA em runtime, nunca literal: fixture de segredo em disco é
+  // o que o varredor da esteira pega, e allowlist é a saída que este
+  // repositório não usa.
+  function credencialFalsa(): Record<string, string> {
+    return {
+      BRABO_GIT_USERNAME: 'x-access-token',
+      BRABO_GIT_TOKEN: `tok-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`,
+    };
+  }
+
+  it('CAMINHO FELIZ — sem container ativo, o `env` chega ao HOST e nada é recusado', async () => {
+    const canal = new CanalFalso();
+    const docker = dockerFalso();
+    const estado = estadoFalso({ canal, docker, containerAtivo: null });
+
+    await tratarExec(estado, {
+      ref: 'r4',
+      command: 'git -c credential.helper= fetch origin',
+      cwd: '/home/user/projetos/loja',
+      env: credencialFalsa(),
+    });
+
+    expect(docker.exec).not.toHaveBeenCalled();
+    // Executou de verdade (o `git` do teste falha, e tudo bem — o que importa
+    // é que o comando NÃO foi recusado antes de rodar).
+    const payload = canal.pushes[0]?.payload as { output: string };
+    expect(canal.pushes).toHaveLength(1);
+    expect(canal.pushes[0]?.event).toBe('exec_result');
+    expect(payload.output).not.toContain(MARCA_DE_CREDENCIAL_NAO_ENTREGUE);
+  });
+
+  it('CASO DE FALHA — com container ativo, RECUSA nomeada em vez de descartar a credencial', async () => {
+    const canal = new CanalFalso();
+    const docker = dockerFalso();
+    const estado = estadoFalso({ canal, docker, containerAtivo: 'brabo-proj-abc12345' });
+    const env = credencialFalsa();
+
+    await tratarExec(estado, {
+      ref: 'r5',
+      command: 'git -c credential.helper= fetch origin',
+      cwd: '/home/user/projetos/loja',
+      env,
+    });
+
+    // Nada rodou: nem no container, nem no host.
+    expect(docker.exec).not.toHaveBeenCalled();
+
+    expect(canal.pushes).toHaveLength(1);
+    const { event, payload } = canal.pushes[0] as {
+      event: string;
+      payload: { ref: string; exitCode: number; output: string; timedOut: boolean };
+    };
+    expect(event).toBe('exec_result');
+    expect(payload.ref).toBe('r5');
+    expect(payload.exitCode).toBe(-1);
+    expect(payload.timedOut).toBe(false);
+    // A MARCA é contrato com o engine (`Engine.Runners.CredencialDeGit`) — é
+    // por ela, e só por ela, que a origem da falha sai `politica`.
+    expect(payload.output).toContain(MARCA_DE_CREDENCIAL_NAO_ENTREGUE);
+    // E a saída diz o QUE e o PORQUÊ, não só que recusou.
+    expect(payload.output).toContain('docker exec');
+    expect(payload.output).toContain('ADR 0130');
+    expect(payload.output).toContain('NADA foi executado');
+  });
+
+  it('a recusa NUNCA cita nome nem valor de variável do `env` — só a contagem (RN-507)', async () => {
+    const canal = new CanalFalso();
+    const estado = estadoFalso({ canal, containerAtivo: 'brabo-proj-abc12345' });
+    const env = credencialFalsa();
+
+    await tratarExec(estado, {
+      ref: 'r6',
+      command: 'git fetch origin',
+      cwd: '/home/user/projetos/loja',
+      env,
+    });
+
+    const payload = canal.pushes[0]?.payload as { output: string };
+    for (const [nome, valor] of Object.entries(env)) {
+      expect(payload.output).not.toContain(nome);
+      expect(payload.output).not.toContain(valor);
+    }
+    expect(payload.output).toContain('2 variável(is)');
+  });
+
+  it('a recusa de CONTENÇÃO vence: cwd fora da raiz é dito ANTES da credencial', async () => {
+    const canal = new CanalFalso();
+    const docker = dockerFalso();
+    const estado = estadoFalso({ canal, docker, containerAtivo: 'brabo-proj-abc12345' });
+
+    await tratarExec(estado, {
+      ref: 'r8',
+      command: 'git fetch origin',
+      cwd: '/etc',
+      env: credencialFalsa(),
+    });
+
+    expect(docker.exec).not.toHaveBeenCalled();
+    const payload = canal.pushes[0]?.payload as { output: string };
+    // `guard.ts` é fronteira de CONTENÇÃO e a recusa dela tem de ser a que a
+    // pessoa ouve; a credencial que não atravessa é capacidade que falta.
+    // Colapsar as duas faria um comando apontado para fora da raiz parecer um
+    // problema de credencial.
+    expect(payload.output).not.toContain(MARCA_DE_CREDENCIAL_NAO_ENTREGUE);
+    expect(payload.output).toContain('runner recusou o comando');
+  });
+
+  it('`env` VAZIO com container ativo não é recusa — roteia pro container como sempre', async () => {
+    const canal = new CanalFalso();
+    const docker = dockerFalso();
+    const estado = estadoFalso({ canal, docker, containerAtivo: 'brabo-proj-abc12345' });
+
+    await tratarExec(estado, {
+      ref: 'r7',
+      command: 'ls',
+      cwd: '/home/user/projetos/loja',
+      env: {},
+    });
+
+    expect(docker.exec).toHaveBeenCalledWith('brabo-proj-abc12345', {
+      comando: 'ls',
+      cwd: '/work',
+    });
+    const payload = canal.pushes[0]?.payload as { output: string };
+    expect(payload.output).not.toContain(MARCA_DE_CREDENCIAL_NAO_ENTREGUE);
   });
 });
 

@@ -11435,6 +11435,152 @@ não tem chamador em `apps/web` — medido; a única ocorrência é o tipo gerad
 
 ---
 
+## A credencial que não atravessa o container do agente local (RN-558)
+
+### RN-558 — Credencial no `exec` com container ativo é RECUSADA pelo runner, com desfecho nomeado e origem `politica` {#rn-558}
+
+Lacuna declarada por escrito ao fechar a [RN-507](#rn-507)/[RN-508](#rn-508)
+([ADR 0145](adr/0145-docker-pre-requisito-do-runner.md)) e medida de novo aqui,
+elo por elo, antes de qualquer linha ser escrita.
+
+**A cadeia, medida.** `Engine.Runners.RunnerReadiness.verificar/1`
+(`runner_readiness.ex:52`) exige container `running` REGISTRADO antes de
+QUALQUER operação de `Engine.Actions.Workspace.RunnerGit` — inclusive o
+`git fetch` autenticado inicial, que sai de `fetch!/3`
+(`runner_git.ex:226`, via `exec/4` em `:288`). A ÚNICA forma de esse registro
+existir num projeto `runner` é o MESMO runner ter subido o próprio container
+([ADR 0137](adr/0137-o-runner-sobe-o-container-do-projeto.md)), e é esse mesmo
+sucesso que marca `estado.containerAtivo` nele
+(`apps/runner/src/index.ts:822`, em `tratarContainerStart`). Com
+`containerAtivo` setado, `tratarExec` rota o comando para dentro do container
+(`index.ts:728`–`730`, e a recusa nova em `:693`), e a operação `exec` de
+`packages/docker-port` **não tem campo de `env`** — de propósito ([ADR 0130](adr/0130-broker-de-container.md):
+sem `-e` livre nenhum). O campo `env` que a RN-507 acrescentou ao par
+`exec`/`exec_result` (`RunnerRouter.exec/5`, `runner_router.ex:50`;
+`ExecMessage.env`, `apps/runner/src/channel.ts:62`) só é aplicado no caminho
+HOST, onde `apps/runner/src/exec.ts:94` o MESCLA sobre `process.env`.
+
+Resultado: no instante em que a RN-507 deixa o `fetch` autenticado rodar, o
+container quase sempre já está de pé no MESMO runner — e era aí que a
+credencial ([ADR 0056](adr/0056-o-engine-trabalha-em-repositorio-remoto.md),
+`GitAuth.env_de_auth/1`) era descartada, **em silêncio, sem erro**. O `git`
+rodava com o helper efêmero instalado por `-c` e as duas variáveis VAZIAS, e
+saía com falha de autenticação — indistinguível de token inválido, permissão
+errada ou rede fora. A pessoa caçava a coisa errada, e o produto não dizia
+nada.
+
+**A correção é o desfecho NOMEADO, não a entrega da credencial.** O `docker
+exec` continua sem campo de `env` — mexer nisso é mudar a porta de contenção,
+e é decisão de ADR, não recorte (ver a lacuna declarada abaixo). O que muda é
+que o par (`env` presente, container ativo) deixa de ser executado e passa a
+ser **recusado**, com marca, mensagem e origem.
+
+**Quem recusa é o RUNNER, e só ele pode.** É o único processo que sabe as duas
+metades ao mesmo tempo: que o comando carrega credencial e que ele vai para
+dentro do container. O engine não sabe a segunda, e isso foi MEDIDO:
+`estado.containerAtivo` nasce `null` a cada execução do runner
+(`index.ts:1449`) e só é setado por `tratarContainerStart`, então um container
+`running` REGISTRADO no banco **não implica** container ativo naquele processo
+— um runner reiniciado com o container de pé roteia pro HOST, e ali a
+credencial chega normalmente. Subir a checagem para `RunnerReadiness` ou para
+`RunnerGit` recusaria um caminho que funciona. E `RunnerReadiness` fica BYTE A
+BYTE como está: ela não ganha flag nem quarta pré-condição — é a mesma regra
+que a [RN-516](#rn-516) já enunciou sobre não lhe pendurar uma flag "pula
+container".
+
+**A MARCA é constante de PROTOCOLO, não detalhe de mensagem.**
+`MARCA_DE_CREDENCIAL_NAO_ENTREGUE` (`index.ts`) e `@marca`
+(`credencial_de_git.ex`) carregam o MESMO token, e é por ele — não pela frase —
+que o engine reconhece a recusa depois de ela ter atravessado um `rescue` e
+virado string solta. Mudar um lado só não quebra compilação de nada: a recusa
+continua acontecendo e só a CLASSIFICAÇÃO volta a errar, que é a forma exata do
+defeito que esta RN fecha. Nenhuma das duas suítes alcança a outra linguagem
+(ExUnit não lê TypeScript, o vitest do runner não lê Elixir), então a guarda
+mora em `scripts/ci/`, com os outros testes que leem o repositório inteiro como
+texto.
+
+**A origem é `politica`, e a escolha aponta AÇÃO.** As quatro do
+[ADR 0020](adr/0020-destravar-gates-qa-secops.md) não distribuem culpa, dizem o que
+fazer. Isto não é cláusula que ninguém escreveu (`codigo`) nem rede que caiu
+(`infra`): é a contenção do ADR 0130 funcionando como desenhada, contra um caso
+que ela não previu. Quem lê `politica` sabe que não há bug para caçar — há uma
+decisão de produto pendente. `Engine.Runners.CredencialDeGit.desfecho/1`
+acrescenta UM caso e não reclassifica nenhum outro: qualquer outra falha de
+worktree mantém byte a byte `{"falha ao preparar o worktree", "codigo"}`, nos
+DOIS dev agents (o real e o Noop, que existe para exercitar ESTE caminho e não
+uma cópia dele).
+
+**A recusa de CONTENÇÃO vence, e a ordem é decisão.** Ela entra DEPOIS de
+`validarCwdDentroDaRaiz` (`guard.ts`): um comando apontado para fora da raiz
+precisa ouvir **isso**, porque ali há uma fronteira de contenção sendo
+recusada, enquanto aqui há uma capacidade que falta. Colapsar as duas faria um
+comando fora do escopo parecer problema de credencial — o mesmo defeito de
+diagnóstico, com outro sinal.
+
+**O `env` nunca aparece na recusa — só a CONTAGEM.** A invariante da RN-507 é
+que `msg.env` não vai para log nenhum, e esta saída vai para o event log do
+produto: a recusa diz "2 variável(is) de ambiente", jamais um nome ou um valor.
+O número já diz o que se precisa saber ali.
+
+**O que NÃO é afetado, confirmado por leitura:** repositório `local` (provider
+sem token) — `GitAuth.env_de_auth/1` devolve `[]`, `fetch!/3` converte para
+`nil`, o campo nem entra no payload, e a recusa não dispara; os modos
+`container` e `mounted` — nunca passam por `RunnerGit` (`Workspace.ensure!/4`
+bifurca por `execution_mode` e só `runner` vai para lá), e o container deles
+sobe pelo broker, do outro lado da rede; e comando de terminal comum, que nunca
+carregou `env`. `workspace_create` também carrega `env`, e também não é afetado:
+ele roda no HOST (`criarPastaDoProjeto`), não no container.
+
+- **Código:** `apps/runner/src/index.ts` (`MARCA_DE_CREDENCIAL_NAO_ENTREGUE` e
+  a recusa em `tratarExec`, depois da
+  validação de `cwd`), `apps/runner/src/channel.ts`
+  (o docblock de `ExecMessage.env`, que prometia "roda só sem a credencial"),
+  `apps/engine/lib/engine/runners/credencial_de_git.ex` (novo — a marca,
+  `recusada?/1`, `mensagem/2` e `desfecho/1`),
+  `apps/engine/lib/engine/actions/workspace/runner_git.ex` (a cláusula nova em
+  `fetch!/3`, antes da genérica, e o moduledoc),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex` e
+  `apps/engine/lib/engine/dev/noop_dev_agent_server.ex` (o desfecho de
+  `{:error, reason}` na criação do worktree)
+- **Teste:** `apps/runner/src/index-handlers.spec.ts`, bloco *"a credencial não
+  atravessa o docker exec (RN-558)"* — o caminho feliz (sem container, o `env`
+  chega ao host e nada é recusado), o caso de falha (com container, recusa
+  nomeada e `docker.exec` NÃO chamado), a prova negativa de que nome e valor
+  das variáveis não vazam na saída, `env` vazio não virando recusa, e a recusa
+  de contenção de `guard.ts` vencendo esta quando o `cwd` está fora da raiz;
+  `apps/engine/test/engine/actions/workspace_runner_test.exs` (os dois testes
+  `RN-558`: a recusa que vira mensagem nomeada com origem `politica`, e a falha
+  REAL do fetch que mantém a mensagem de sempre com origem `codigo` — o par
+  negativo que prova que a cláusula nova não sequestrou a antiga);
+  `scripts/ci/marca-de-credencial-do-runner.spec.ts` (a marca idêntica nos dois
+  lados). Verificado por mutação: neutralizar a cláusula de `fetch!/3` reprova
+  o teste do engine com a mensagem antiga à vista
+- **Lacuna DECLARADA, que é a METADE que continua aberta:** a credencial
+  continua **não atravessando** o `docker exec`. Clone/fetch de repositório
+  remoto AUTENTICADO em modo `runner` segue impossível com o container de pé —
+  o que mudou é que agora ele falha DIZENDO isso, em vez de parecer erro de
+  token. Fechar exige decidir COMO uma operação credenciada fala com um `docker
+  exec` sem campo de `env`, e as opções conhecidas mexem todas na porta de
+  contenção do ADR 0130 (dar `env` à operação; um arquivo de credencial montado
+  e apagado; rodar o `fetch` no host mesmo com container ativo, o que quebraria
+  o invariante de que o trabalho acontece dentro do container). É ADR, nunca
+  correção de passagem. Fica declarada também uma ADJACÊNCIA medida e não
+  corrigida: a recusa acontece DEPOIS de `init_from_bare!/5` já ter feito
+  `mkdir`/`git init`/`remote add`, e o `git_dir?/2` de `ensure!/5` marca o
+  workspace como pronto numa tentativa seguinte por encontrar o `.git` — então
+  a segunda tentativa não repete a recusa, ela falha adiante no `worktree add`.
+  É comportamento PRÉ-EXISTENTE da idempotência de `ensure!/5` (vale para
+  qualquer `fetch` que falhe, não só para este) e corrigi-lo é entrega própria
+- **ADR:** nenhum novo — a entrega não move fronteira nenhuma. Ela CONSOME o
+  [0130](adr/0130-broker-de-container.md) (a porta sem `env`), o
+  [0137](adr/0137-o-runner-sobe-o-container-do-projeto.md) (o container na
+  máquina do usuário), o [0145](adr/0145-docker-pre-requisito-do-runner.md) (a
+  pré-condição e o campo `env`) e o [0020](adr/0020-destravar-gates-qa-secops.md) (as
+  quatro origens)
+- **Origem:** `AT-053` — a lacuna que o ADR 0145 deixou declarada por escrito
+
+---
+
 ## A primeira conta de uma instalação nasce no terminal (RN-546)
 
 ### RN-546 — Rota interna cria a PRIMEIRA conta, já verificada, e recusa quando existe qualquer usuário {#rn-546}
@@ -12503,3 +12649,162 @@ continua fora de `pull_request`.
 - **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
 - **Origem:** FASE 30, sessão 8 —
   [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+## A conversão de modo deixa de ser um salto no escuro (RN-559, RN-560)
+
+### RN-559 — A conversão para `mounted` abre o MESMO navegador de pastas do wizard; o ramo `runner` continua digitado, e a tela diz por quê {#rn-559}
+
+`ExecutionModeSection` era o **único dos cinco lugares** do produto em que se
+escolhe uma pasta e se digitava o caminho **no escuro** — os outros quatro já
+abriam o `FolderBrowserModal` desde a [RN-473](#rn-473)/[RN-504](#rn-504). A
+lacuna estava declarada no `CLAUDE.md` e o motivo declarado era do **outro
+ramo**: onboardar um runner ANTES de a conversão salvar registra chave num
+projeto que ainda não é `runner`, e `ConfirmProjectWorkspaceUseCase` recusa com
+400. Nada disso vale para `mounted`, e é isso que esta regra fecha.
+
+**Mesmo componente, mesmo transporte, nenhuma régua nova.** O ramo `mounted`
+monta o `FolderBrowserModal` com `origem: { tipo: 'api', workspaceId }` — a
+mesma união discriminada que `NewProjectWizard` usa para esse modo
+([RN-533](#rn-533)), porque a pasta mora dentro da base do SERVIDOR
+([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md)) e é o servidor quem a
+enxerga. Não nasce navegador novo nem endpoint novo, e o navegador **não
+garante** caminho válido: quem valida continua sendo
+`validarExecutionModeEWorkspacePath` e o CHECK do banco.
+
+**O ramo `runner` NÃO ganha navegador, e isso é decisão, não esquecimento.** O
+transporte dele (`{ tipo: 'runner', projectId }`) exige um runner conectado a
+ESTE projeto, e um projeto que ainda não é `runner` não tem nenhum — a espera
+terminaria num erro com cara de bug. A ordem *"converte, depois onboarda"* segue
+sendo decisão de produto à parte. O que muda é a tela passar a **dizer** isso em
+texto em vez de só não oferecer botão nenhum, que é a régua do
+[ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md): tira-se o
+controle, nunca a informação.
+
+**A base é um estado de QUATRO valores, e eles não colapsam.** A rota
+`GET workspaces/:workspaceId/projects-base` ([RN-500](#rn-500)) pode estar em
+voo, ter falhado, ter respondido `null` ou ter respondido um caminho — e cada
+um desses tem texto PRÓPRIO, pela régua da [RN-088](#rn-088)/[RN-468](#rn-468):
+*"não sei"* nunca vira *"não tem"*. O botão fica na tela apagado nos três
+primeiros, com o motivo dito em TEXTO logo abaixo, e não por `title` (que em
+elemento `disabled` não abre no Chromium).
+
+| estado da base | o botão | o que a tela diz |
+|---|---|---|
+| em voo | apagado | "consultando a base de projetos desta instalação" |
+| a consulta falhou | apagado | não deu para SABER se ela existe; recarregue |
+| respondeu `null` | apagado | esta instalação não declarou base |
+| respondeu um caminho | vivo | a base, NOMEADA, e que é nela que o navegador abre |
+
+O modo `mounted` **não sai do seletor** quando a base falta, e essa é a
+diferença deliberada em relação ao wizard ([RN-513](#rn-513)): um projeto que
+JÁ é `mounted` não pode ver o próprio modo sumir do controle por causa de uma
+consulta em voo. O que some é o NAVEGADOR, não a conversão.
+
+**O mínimo é o do ENDPOINT.** `PUT projects/:projectId/execution-mode` e
+`GET workspaces/:workspaceId/projects-base` pedem os dois `maintainer`, lido por
+`roleAtLeast` sobre a `ROLE_ORDER` e nunca por uma lista de papéis à mão
+([RN-102](business-rules/custo.md#rn-102)) — a seção fazia
+`role === 'owner' || role === 'maintainer'`, que acerta por acidente enquanto o
+mínimo é alto. Quem não alcança o mínimo não dispara a consulta da base: ela
+terminaria num 403 certo, e o *"não sei"* que ela produziria seria sobre a
+autorização, não sobre a base.
+
+O valor escolhido no navegador é tratado como valor DIGITADO: ele preenche o
+campo e só vai à api quando alguém confirma no botão da seção. Esta seção **não
+vira autosave** ([RN-469](#rn-469)).
+
+- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:65` (os
+  quatro estados da base, como união), `:134` (o mínimo por `roleAtLeast`),
+  `:143` (a consulta que não sai para quem não alcança `maintainer`), `:169` (a
+  derivação dos quatro), `:180` (o que o navegador exige para existir), `:284`
+  (o botão, apagado e não escondido), `:290` (o texto do ramo `runner`), `:315`
+  (o `FolderBrowserModal` com `origem: { tipo: 'api', workspaceId }`);
+  `apps/web/src/locales/pt-BR/settings.json:231` e
+  `apps/web/src/locales/en/settings.json:231` (`executionMode.path.*`, os cinco
+  textos nos dois idiomas)
+- **Teste:** `apps/web/src/routes/settings/conversao-de-modo.test.tsx` — o
+  caminho feliz (abrir o navegador, escolher `loja`, o campo preencher e a
+  conversão enviar o que foi ESCOLHIDO, só depois do botão), a consulta da base
+  FALHANDO (botão inerte, texto próprio, o modal não montando nem à força, e o
+  campo continuando editável), a base AUSENTE com texto DIFERENTE do de falha e
+  do de carregamento, o ramo `runner` sem botão e com o motivo em texto, e o
+  papel abaixo de `maintainer` (controles apagados, valor vigente ainda
+  visível, consulta da base não disparada)
+- **Lacuna DECLARADA:** o ramo `runner` desta seção **continua digitado no
+  escuro** — a lacuna do `CLAUDE.md` encolheu para ele e não fechou. Fechá-la
+  exige decidir a ordem "converte, depois onboarda", que é decisão de produto à
+  parte e segue sem dono
+- **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md),
+  [0141](adr/0141-base-unica-dos-projetos-montados.md)
+- **Origem:** AT-049 (EP-021/HS-033)
+
+### RN-560 — O aviso da conversão diz o que ela recusa, o que ela leva e o que ela NÃO leva — nomeando o caminho antigo {#rn-560}
+
+O aviso fixo da seção afirmava *"isto migra a pasta de trabalho do agente"*, nos
+dois idiomas. `ConvertProjectExecutionModeUseCase` **não tem uma linha que copie
+ou mova conteúdo de pasta**: ele move o `permissions.json` (a POLÍTICA, com
+allow/deny/ask intactos — [RN-448](#rn-448)), zera `workspaceVerifiedAt`
+([RN-450](#rn-450)) e `mirrorPath` ([RN-515](#rn-515)), desprovisiona o
+container ao SAIR de `container` ([RN-449](#rn-449)) e grava o novo
+`workspacePath`. `materializarWorkspaceMontado` apenas CRIA a pasta nova
+([RN-501](#rn-501)). O que estiver na pasta antiga — **trabalho não commitado
+incluído** — fica lá, órfão.
+
+O órfão já era lacuna declarada no `CLAUDE.md` desde a
+[RN-447](#rn-447)..[450](#rn-450). O que esta regra fecha não é o órfão: é a
+tela afirmando o CONTRÁRIO do que o servidor faz. Isto é correção de afirmação,
+não feature — migrar conteúdo entre modos segue fora, sem dono.
+
+**Três fatos, e não um parágrafo**, porque respondem perguntas diferentes:
+
+1. **o que a conversão RECUSA** — dev agent trabalhando ou travado agora vira
+   409, e a frase da api é a que aparece no toast (o texto que já existia e
+   continua valendo);
+2. **o que ela LEVA** — a política do projeto muda de escopo com o conteúdo
+   intacto;
+3. **o que ela NÃO leva** — o conteúdo da pasta, trabalho não commitado
+   incluído, **nomeando o caminho antigo**.
+
+**O aviso NOMEIA o caminho** porque *"fica no disco antigo"* sem dizer QUAL
+disco manda a pessoa procurar. O valor está a uma linha de distância
+(`project.workspacePath`) e **some da tela** no instante em que a conversão
+salva. Quando não há caminho a nomear — o projeto é `container`, e a pasta
+antiga é um volume do SERVIDOR — a frase é OUTRA, apontando a pasta gerenciada:
+uma variante com `{{caminho}}` vazio diria *"o que estiver em "*, que é a tela
+recusando nomear o que sabe. É o caso em que a pessoa tem MENOS como adivinhar.
+
+**Ele não promete detecção.** Perguntar ao disco *"há trabalho não commitado?"*
+é I/O por modo e impossível de responder para `runner` do lado da api: a pasta
+mora numa máquina que o servidor não enxerga. Não se mede, não se afirma
+(ADRs [0041](adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)/[0042](adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)).
+E ele não bloqueia nada: a conversão continua sendo a mesma chamada, com as
+mesmas recusas.
+
+O tom do `Alert` passou de `accent` para `warning`, porque o terceiro fato é uma
+PERDA de alcance e não uma informação neutra. Segue sem `role="alert"`: é texto
+que já estava na tela quando ela abriu, e uma live region assertiva ali viraria
+interrupção sem causa.
+
+- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:225` (os
+  três fatos, um por linha), `:229` (a variante que nomeia o caminho antigo × a
+  da pasta gerenciada);
+  `apps/web/src/locales/pt-BR/settings.json:220` e
+  `apps/web/src/locales/en/settings.json:220` (`executionMode.warning.*`, os
+  quatro textos nos dois idiomas — `en` é o idioma default do app
+  ([RN-425](#rn-425)), e um aviso honesto só em português é a mesma mentira com
+  sotaque)
+- **Teste:** `apps/web/src/routes/settings/conversao-de-modo.test.tsx` — o
+  caminho feliz (o aviso contendo o caminho antigo E as palavras "trabalho não
+  commitado"), a variante sem caminho antigo (projeto `container` apontando a
+  pasta gerenciada, e a variante com caminho NÃO renderizada), e a prova
+  negativa nos DOIS bundles de idioma: a promessa de migração não sobrevive em
+  nenhum deles, e as quatro chaves existem em ambos
+- **Lacuna DECLARADA:** o aviso lista o que ENGANAVA, não **todas** as
+  consequências — `mirrorPath` zerado, `workspaceVerifiedAt` nulo e o container
+  removido continuam ditos só no caso de uso e nas RNs, nunca na tela.
+  > **TODO(humano):** o aviso deve listar TODAS as consequências (espelho
+  > zerado, container removido, confirmação de pasta perdida) ou só a que
+  > contradizia o texto anterior? Listar tudo é mais honesto e mais longo — e um
+  > aviso que ninguém lê é o mesmo que aviso nenhum.
+- **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
+- **Origem:** AT-050 (EP-021/HS-034)

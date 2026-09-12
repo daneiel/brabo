@@ -264,7 +264,7 @@ pnpm --filter api test      # vitest
 pnpm --filter web test      # vitest
 pnpm engine:test            # ExUnit
 pnpm build                  # build everything
-pnpm db:generate            # after changing apps/api/src/db/schema.ts
+pnpm db:generate            # after changing apps/api/src/db/schema/<aggregate>.ts
 pnpm db:migrate             # applies the migrations
 pnpm dev:down               # tear everything down
 ```

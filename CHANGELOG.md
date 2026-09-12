@@ -26,6 +26,44 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: converter um projeto para **Pasta montada** passa a abrir o mesmo
+  **navegador de pastas** da criação, em vez de pedir o caminho no escuro
+  ([RN-559](docs/business-rules.md#rn-559)).
+
+  `ExecutionModeSection` era o único dos cinco lugares do produto em que se
+  escolhe uma pasta e não havia navegador nenhum. Ele entra com o mesmo
+  componente e o mesmo transporte que o assistente de criação usa para esse
+  modo — a base do servidor, escopada ao workspace —, e nada muda em quem
+  valida o caminho: continua sendo a api.
+
+  A seção também passa a dizer o que sabe sobre a base da instalação, com
+  texto diferente para cada coisa: consultando, não deu para saber, não existe,
+  ou existe (e aí ela é nomeada). O botão fica na tela apagado nos três
+  primeiros, com o motivo escrito ao lado — nunca escondido.
+
+  **O que continua como estava:** converter para o modo **Runner** segue com o
+  caminho digitado, e agora a tela **diz por quê** — o navegador daquele modo
+  precisa de um runner já conectado ao projeto, que só passa a existir depois
+  que a conversão salva. Converter primeiro e conectar o runner depois é a
+  ordem, e ela não mudou aqui.
+
+- **web**: o aviso da conversão de modo **para de prometer** uma migração que
+  nunca aconteceu ([RN-560](docs/business-rules.md#rn-560)).
+
+  Ele dizia "isto migra a pasta de trabalho do agente", nos dois idiomas. A
+  conversão move a **política** do projeto (o `permissions.json`, com as regras
+  intactas), zera a confirmação de pasta e o destino do espelho, e desprovisiona
+  o container — e não copia nem move **uma linha** do conteúdo da pasta. Agora o
+  aviso diz as três coisas separadas: o que a conversão recusa, o que ela leva e
+  o que ela **não** leva, **nomeando o caminho antigo** — que some da tela no
+  instante em que a conversão salva. Quando não há caminho a nomear (o projeto é
+  Container), ele aponta a pasta gerenciada no servidor.
+
+  **O que isso não faz:** o trabalho não commitado continua ficando para trás,
+  exatamente como antes. O que mudou é a tela parar de afirmar o contrário — e
+  ela não promete detectar diff, porque olhar o disco é impossível de responder
+  para o modo Runner do lado do servidor.
+
 - **ci**: o E2E do instalador passa a provar a instalação **inteira** numa
   máquina limpa — os cinco elos do fechamento, o agente local de pé esperando, e
   o primeiro projeto em modo Runner sendo pego sem ninguém voltar ao terminal
@@ -1116,6 +1154,34 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   Os alertas de `multer` e `nodemailer` **não são trabalho**: a `dev` já está
   em 2.3.0 e 9.1.1. Eles apagam quando a promoção `dev → qa → main` andar.
 
+- **runner**: a credencial de git que não atravessa o container do agente local
+  deixa de sumir em silêncio — o comando passa a ser **recusado** com desfecho
+  nomeado, em vez de rodar sem ela e falhar como se o token estivesse errado
+  (`AT-053`, [RN-558](docs/business-rules.md#rn-558)).
+
+  Num projeto em modo Runner, o container `running` que a
+  [RN-507](docs/business-rules.md#rn-507) exige antes de qualquer operação de
+  git só existe porque o **mesmo** runner o subiu — e é esse mesmo sucesso que
+  o faz rotear todo comando para dentro dele, por um `docker exec` que **não
+  tem campo de `env`**, de propósito
+  ([ADR 0130](docs/adr/0130-broker-de-container.md)). Ou seja: no instante em
+  que o `git fetch` autenticado ganhava permissão para rodar, o container já
+  estava de pé e a credencial era descartada sem erro nenhum. Clone e fetch de
+  repositório remoto autenticado falhavam no caminho **comum**, e quem
+  investigava caçava token, permissão e rede.
+
+  O runner agora recusa esse par (credencial + container ativo) antes de
+  executar qualquer coisa, e o engine traduz a recusa numa mensagem que diz o
+  que aconteceu e por quê, com **origem `politica`** — não `codigo` — para quem
+  tria a rodada seguinte saber que não há bug para caçar. A saída nunca cita
+  nome nem valor de variável de ambiente, só a contagem.
+
+  **O que continua aberto, declarado:** a credencial segue não atravessando o
+  `docker exec`, então clone/fetch autenticado em modo Runner continua exigindo
+  o container parado. Entregar a credencial mexeria na porta de contenção do
+  Docker, e isso é decisão de ADR. Repositório local e os modos Container e
+  Montado não são afetados.
+
 - **api**: mudar o **próprio papel** passa a ser recusado com **403** nas duas
   rotas de associação, nos dois sentidos — e o upsert de workspace, que não
   tinha teto nenhum, ganha o dele (`BRB-002`, **P1**,
@@ -1631,6 +1697,56 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   decidir e cita o `exp004`, no mesmo tom da que já existia.
 
 ### Documentação
+
+- **docs**: três documentos que contradiziam o código, e o aferidor que faltava
+  para cada um.
+
+  **O `db:generate` mandava editar o barrel.** `README.md:294` e
+  `docs/getting-started.md:267` mandavam rodar `pnpm db:generate` "depois de
+  mudar `apps/api/src/db/schema.ts`" — que desde o
+  [ADR 0121](docs/adr/0121-schema-dividido-por-agregado-de-dominio.md) é só um
+  barrel de `export *`. Instrução errada custa mais que número errado: o comando
+  **roda**, o Drizzle não vê diff nenhum, e quem seguiu a instrução conclui que
+  o comando está quebrado, não a frase. São as duas primeiras coisas que alguém
+  lê — a pior posição possível para uma instrução morta. Medidas as outras
+  quatro ocorrências de `db:generate` em `docs/`: nenhuma reproduz (duas são
+  inventário gerado, duas são o ADR 0121 citando o comando como PROVA).
+
+  **O `description` do `branching-policy.md` anunciava a escada de quatro
+  degraus.** `dev → qa → rc → main` no frontmatter, com o corpo do **mesmo
+  arquivo** explicando a partir da linha 54 que o `rc` saiu da política
+  ([ADR 0030](docs/adr/0030-politica-de-branches-mecanizada.md)). O arquivo se contradizia
+  consigo mesmo, e o `description` é a metade que se lê primeiro: é ele que
+  alimenta o card da busca local do site e o `<meta>` da página. Ocorrência
+  única no repositório. **O `rc` continua em `PROTECTED_BRANCHES`, e continua
+  certo** — não sobrou lixo ali, é decisão; e o enum `bootstrap_step` mantém
+  `create_rc_branch` pelo mesmo motivo.
+
+  **O inventário de variáveis não via duas árvores inteiras.**
+  `apps/api/scripts/` e `e2e/` ficavam de fora de `gerarEnv()`, e o
+  `docs:check` passava verde sobre elas. Junto entrou a mesma armadilha
+  pré-existente na api: `**/` no pathspec do git exige pelo menos um nível de
+  diretório, então o que mora direto em `apps/api/src/` escapava — e escondia
+  `API_JSON_BODY_LIMIT` (`apps/api/src/main.ts:59`), que é variável de
+  **produto**, o teto do corpo JSON que a api aceita. O inventário passa de 132
+  para 157 variáveis, cada fonte agora marcada `product` ou `tooling` — sem
+  isso `E2E_PASSWORD` apareceria ao lado de `SMTP_HOST` numa lista que um
+  operador lê para configurar a máquina dele. As 15 lacunas que a varredura
+  nova abriu foram escritas em prosa na mesma mudança (duas seções novas em
+  `docs/reference/configuration.md`); seguem abertas as **duas**
+  pré-existentes, de `HUGGINGFACE_*`.
+
+  **O que trava as duas primeiras daqui em diante:**
+  `verificarFrasesAncoradasNoCodigo` em `scripts/docs/generate.mjs`, no molde
+  da tabela das contagens em prosa — uma entrada por frase, um comentário por
+  entrada dizendo o que ela custou. A diferença é que o esperado não é um
+  número: a escada vem de `ESCADA` em `scripts/ci/pr-police.ts` (**nunca** de
+  `PROTECTED_BRANCHES`, que derivaria de volta a frase errada), e o destino do
+  `db:generate` vem de `schema.ts` conter ou não um `pgTable(`. Exercitado por
+  mutação nos dois sentidos: doc errada com código certo **reprova**, código
+  mudado com doc certa **reprova**, frase reescrita vira `CEGO`, e a fonte
+  sumindo também. O terceiro caso não ganhou aferidor de frase porque ele é o
+  próprio aferidor — o que faltava era escopo.
 
 - **adr**: [ADR 0153](docs/adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.md)
   — `DEPLOY_ENABLED` é citado como gatilho de ativação por **dez documentos**

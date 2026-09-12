@@ -53,6 +53,11 @@ export interface ExecMessage {
    * pro `docker exec` (sem suporte a `env` em `packages/docker-port`, de
    * propósito) nem concatenado na string do comando, e NUNCA logado (ver
    * `index.ts`).
+   *
+   * Desde a RN-558, "nunca pro `docker exec`" deixou de significar "roda sem a
+   * credencial": com container ativo, um `exec` que carrega este campo é
+   * RECUSADO com desfecho nomeado (`MARCA_DE_CREDENCIAL_NAO_ENTREGUE`, em
+   * `index.ts`) em vez de executar e falhar como se fosse erro de autenticação.
    */
   env?: Record<string, string>;
 }
