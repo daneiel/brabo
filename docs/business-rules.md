@@ -12940,3 +12940,79 @@ revogação mostra a frase da PRÓPRIA api e a linha **continua** na lista.
   decisão da RN-519, não por omissão desta tela; (4) sem E2E de navegador — o
   que se prova aqui é o que a tela AFIRMA, e isso a suíte de componente prova
 - **Origem:** AT-012 (EP-003/HS-007)
+
+---
+
+### RN-566 — O Infra Lead recusa `container_start` por MODO antes de propor: a lacuna da RN-494 fecha na tool que a declarava {#rn-566}
+
+`propose_container_start` propunha às cegas. `dispatch_container_start/2`
+montava o payload e chamava `EngineApiClient.propose_action(...)` direto — sem
+uma leitura de projeto entre uma coisa e outra, e com **zero** ocorrências de
+`execution_mode` na tool inteira. Num projeto `runner` a proposta só podia
+terminar em falha: desde a [RN-507](#rn-507)/[ADR 0145](adr/0145-docker-pre-requisito-do-runner.md)
+`container_start` **não atende** esse modo, porque o payload dela ELEGE uma
+candidata do roteamento do Arquiteto ([ADR 0131](adr/0131-roteamento-de-modulos-para-infra.md))
+e em `runner` não há roteamento contra o qual eleger — o tipo daquele modo é
+[`container_start_via_runner`](#rn-508).
+
+**A régua não é nova, e não nasceu uma segunda.** A tool irmã já recusava
+localmente ([RN-508](#rn-508)) e a página `/containers` já ramificava por
+DESTINO ([RN-521](#rn-521), `acaoDeSubidaDoModo`): `container` e `mounted`
+sobem pelo BROKER, `runner` sobe pelo agente local ([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)/[RN-503](#rn-503)).
+O que esta regra faz é dar à tool que faltava a MESMA régua — uma leitura de
+projeto (`recusa_local_de_subida/2`, que devolve `nil` ou motivo) e uma
+CLÁUSULA por tool (`recusa_por_modo/3`). Duas réguas paralelas divergiriam no
+primeiro modo novo do enum.
+
+**A recusa de `container_start` é lista de PERMITIDOS**, como a do próprio
+broker: `container`/`mounted` passam, `runner` é recusado NOMEANDO a tool
+irmã, e modo novo no enum nasce recusado com mensagem em vez de proposto por
+omissão. Projeto inexistente também recusa — mesma cláusula das duas tools.
+
+**A recusa é ENTRADA do laço** ([RN-163](business-rules/autenticacao.md#rn-163)): texto de RESULTADO de
+ferramenta, que o modelo lê e usa para chamar a tool certa. Nunca
+`agent.error`, nunca fim de turno, nunca `proposed_action` — a api não é
+chamada. E **não é silêncio**: o `emit` do `tool.call` passou a acontecer
+ANTES da recusa nas DUAS tools (na irmã ele estava dentro do ramo que propõe),
+como no `dispatch_tool/2` genérico do mesmo módulo — recusa sem rastro no
+event log é a chamada sumindo do timeline do humano.
+
+**As leituras são LOCAIS, e isso é a decisão.** `Project.get/1` e
+`Engine.Runners.Registry.connected?/1` rodam no MESMO processo BEAM do Infra
+Lead; um HTTP à api aqui poria uma chamada de rede dentro do laço do agente.
+O custo declarado no `CLAUDE.md` — *"corrigir exigiria tocar o
+prompt/instrução do Infra Lead"* — **não se confirmou**: nenhuma linha de
+prompt mudou, e o texto da recusa é o que o modelo lê como resultado.
+
+**O que esta regra NÃO fecha, e é metade da lacuna:** a proposta cega por
+AUSÊNCIA DE IMAGEM continua possível em `container`/`mounted`. A recusa aqui é
+sobre MODO, e exigir imagem decidida inverteria a ordem — eleger a imagem é
+justamente o que essa proposta FAZ ([RN-491](#rn-491)). A `/containers` checa
+as TRÊS coisas (imagem decidida, modo, pasta confirmada) porque tem um humano
+clicando; o agente passa a checar UMA. `GetInfraContextUseCase` segue sem
+`executionMode` — enriquecer o contexto do Infra Lead é frente à parte.
+`container_stop`/`container_remove` não entram: são propostas pela tela, nunca
+por agente ([RN-495](#rn-495)).
+
+Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
+`maintainer`, nunca semeada em auto-aprovação, e `container_remove` segue no
+teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
+
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:299` (o
+  dispatch de `container_start` consultando antes de propor), `:401`
+  (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:417` (a
+  cláusula de `container_start`: lista de permitidos), `:420` (a recusa
+  nomeando `container_start_via_runner`), `:435` (a cláusula da irmã, com a
+  segunda pergunta — runner conectado), `:342` (o `emit` do `tool.call`
+  movido para antes da recusa);
+  `apps/engine/lib/engine/infra/tools/propose_container_start.ex`
+  (moduledoc — a tool deixou de propor às cegas)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:397`
+  (caminho feliz em `mounted` — o broker atende os dois), `:423` (caso de
+  falha: `runner` recusa NOMEADO, `propose_action` nunca chamada, o `tool.call`
+  narrado mesmo assim), `:464` (projeto inexistente), `:355` (o caminho feliz
+  de `container`, que passou a exigir a linha no banco)
+- **ADR:** [0144](adr/0144-a-segunda-raiz-do-broker.md),
+  [0145](adr/0145-docker-pre-requisito-do-runner.md)
+- **Origem:** AT-048 (EP-020/HS-032) — a lacuna declarada no `CLAUDE.md` desde
+  a [RN-494](#rn-494)

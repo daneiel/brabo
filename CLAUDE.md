@@ -138,6 +138,7 @@ estado lido do repositório e não da conversa.
 | FASE 30 — CONCLUÍDA (sessão 8: o E2E em máquina limpa) | historico-de-fases.md |
 | O runner reconectava sozinho com um ticket morto | RN-108 |
 | A conversão de modo deixa de ser um salto no escuro (AT-049/AT-050) | RN-559, RN-560 |
+| O Infra Lead recusa `container_start` por modo antes de propor (AT-048) | RN-566 |
 | A credencial que sumia no `docker exec` do runner (AT-053) | Lacuna que o ADR 0145 declarou POR ESCRITO e mediu: o container `running` que a RN-507 exige antes de qualquer operação de `RunnerGit` só existe porque o MESMO runner o subiu, e é esse mesmo sucesso que o faz rotear todo comando para dentro dele — por um `docker exec` sem campo de `env` (ADR 0130, sem `-e` livre). O `git fetch` autenticado rodava com o helper instalado e as variáveis VAZIAS, e a falha chegava como token inválido ou rede fora: o caminho COMUM, não uma borda. Entregou-se a metade do SILÊNCIO, nunca a do `env`: o par (`env` presente, container ativo) passa a ser RECUSADO antes de executar, com marca de PROTOCOLO partida entre duas linguagens, mensagem que diz o quê e por quê, e origem `politica` — não `codigo`, porque não há cláusula faltando, há decisão de produto pendente. Quem recusa é o RUNNER e só ele pode: `containerAtivo` nasce `null` a cada execução, então container `running` REGISTRADO no banco NÃO implica container ativo NAQUELE processo, e um runner reiniciado com o container de pé roteia pro HOST, onde a credencial chega — subir a checagem recusaria um caminho que funciona, e `RunnerReadiness` fica byte a byte como está. A saída nunca cita nome nem valor de variável, só a CONTAGEM (a invariante da RN-507 sobrevive intacta). Metade aberta declarada, e a adjacência também: a idempotência de `ensure!` marca o workspace pronto na segunda tentativa por achar o `.git`, e ela falha adiante em vez de repetir a recusa | RN-558 |
 | O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
@@ -285,22 +286,29 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   alcance, declarado (ADR 0087/0089)
 
 **Lacunas aceitas e declaradas:**
-- Nem `propose_container_start` (ferramenta do Infra Lead) nem
-  `GetInfraContextUseCase` restringem por `executionMode` — o Infra Lead
-  PODE propor `container_start` para um projeto `mounted`/`runner` sem saber
-  se há sequer um runner conectado. A lacuna NÃO mudou de tamanho com a
-  RN-521, e mudou de POSIÇÃO: o Infra Lead deixou de ser o único proponente,
-  e o segundo caminho (a `/containers`, sempre com um humano clicando) já
-  nasce honesto — ele checa imagem decidida, modo e pasta confirmada ANTES de
-  oferecer o botão, e diz qual das três coisas falta. Continua sendo o
-  agente, e só ele, quem propõe às cegas. Pré-existente ao ADR 0135 (RN-494),
-  investigado e confirmado nesse PR; o ADR 0137 (RN-497) mudou o QUE
-  acontece quando alguém aprova — deixou de ser SEMPRE falha (o broker
-  recusando com `ModoDeExecucaoNaoSuportadoError`) e passou a poder ter
-  sucesso de verdade, via o runner — mas a lacuna em si (o Infra Lead propor
-  às cegas, sem saber se há runner conectado ou imagem decidida) continua a
-  mesma: corrigir exigiria tocar o prompt/instrução do Infra Lead no
-  engine, fora do escopo de API/domínio
+- **O Infra Lead propunha `container_start` às cegas; desde a RN-566 ele
+  recusa por MODO, e o que sobra da lacuna é a IMAGEM.** A metade fechada:
+  `dispatch_container_start/2` consulta LOCALMENTE o `execution_mode`
+  (`Project.get/1`, mesmo processo BEAM, sem HTTP — rede no laço do agente
+  era o que a correção não podia custar) antes de chamar `propose_action`, e
+  projeto `runner` é recusado NOMEANDO `container_start_via_runner`. Não
+  nasceu régua nova: a tool irmã já recusava (RN-508) e a `/containers` já
+  ramificava por DESTINO (RN-521, `acaoDeSubidaDoModo`) — as duas tools
+  passam pela MESMA `recusa_local_de_subida/2`, com uma CLÁUSULA cada, e a de
+  `container_start` é lista de PERMITIDOS como a do broker (modo novo no enum
+  nasce recusado). O custo que ESTE arquivo declarava — *"corrigir exigiria
+  tocar o prompt/instrução do Infra Lead"* — foi MEDIDO e não se confirmou:
+  nenhuma linha de prompt mudou, e o texto da recusa é o que o modelo lê como
+  resultado de ferramenta (entrada do laço, RN-163, nunca `agent.error`).
+  **A metade que SEGUE ABERTA:** nem as duas tools nem
+  `GetInfraContextUseCase` sabem de IMAGEM DECIDIDA, então propor sem imagem
+  continua possível em `container`/`mounted` — e ali a recusa por imagem
+  inverteria a ordem, porque eleger a imagem é o que essa proposta FAZ
+  (RN-491). A `/containers` checa as TRÊS coisas (imagem, modo, pasta
+  confirmada) porque tem um humano clicando; o agente checa UMA. Enriquecer o
+  contexto do Infra Lead com modo e presença de runner é frente à parte, mais
+  cara. O ADR 0137 (RN-497) segue valendo: aprovar `container_start` em
+  `mounted` pode dar certo de verdade, pelo broker
 - Restart do engine com Dev Lead suspenso perde a inscrição no Wake (decisão
   segue visível em Aprovações) — ADR 0086
 - A aba de Código abre com 492px de moldura à esquerda (sidebar 264 + trilho
@@ -1244,7 +1252,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   o payload que o schema dele aceita. Ela RECUSA localmente (botão inerte, com
   o motivo em TEXTO) sem imagem decidida, em `runner` sem pasta jamais
   confirmada, e para papel abaixo de `maintainer` — o mínimo do ENDPOINT, por
-  `roleAtLeast`. A política de terminal do ADR 0055 (escopo de caminho, allowlist
+  `roleAtLeast`. Desde a RN-566 o AGENTE também ramifica por modo antes de
+  propor: as duas tools do Infra Lead passam por `recusa_local_de_subida/2`
+  (`infra_lead_server.ex`), que lê o projeto UMA vez e recusa com motivo
+  NOMEADO — a MESMA ramificação por DESTINO, nunca uma segunda régua. O que
+  ele NÃO checa, e a tela checa, é imagem decidida e pasta confirmada.
+  A política de terminal do ADR 0055 (escopo de caminho, allowlist
   estreito) segue valendo como está — mas ela não decide mais ONDE o comando
   roda quando NÃO há container: desde o ADR 0143 (RN-502), `container` e
   `mounted` SEM um `running` registrado RECUSAM (`:recusar_container_ausente`,

@@ -406,6 +406,20 @@ image decided, `runner` whose folder no agent ever confirmed, role below
 `maintainer` by `roleAtLeast`) and each refusal has its own text — the screen
 never proposes an action it already knows will fail, and never hides why.
 
+The OTHER proposer — the Infra Lead agent — branches the same way since
+[RN-566](business-rules.md#rn-566). Both of its tools go through one
+`recusa_local_de_subida/2` in `infra_lead_server.ex`, which reads the project
+ONCE (`Project.get/1`, same BEAM process, never HTTP: a network call inside the
+agent loop is the cost this fix could not pay) and returns `nil` or a NAMED
+reason, one clause per tool — `container`/`mounted` propose `container_start`,
+`runner` is refused pointing at `container_start_via_runner`, and the
+`container_start` clause is an ALLOWLIST like the broker's, so a new enum mode
+is born refused. The refusal is tool-RESULT text the model reads (loop input,
+[RN-163](business-rules/autenticacao.md#rn-163)), never an `agent.error`, and the `tool.call`
+is still emitted so a local refusal never disappears from the timeline. What the
+agent does NOT check, and the screen does, is the decided image and the
+confirmed folder.
+
 ### Outside the applications
 
 | directory | what it is |

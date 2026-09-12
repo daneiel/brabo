@@ -24,11 +24,17 @@ defmodule Engine.Infra.InfraLeadServer do
   Desde a RN-508 (ADR 0145) ganha uma SEGUNDA tool de subir container,
   `container_start_via_runner` — exclusiva de projeto `execution_mode:
   runner` (não elege candidata nenhuma; ver o moduledoc de
-  `Engine.Infra.Tools.ProposeContainerStartViaRunner`). O dispatch dela
-  CONSULTA LOCALMENTE (`Project.get/1` + `Engine.Runners.Registry.
-  connected?/1`, sem HTTP — os dois rodam no mesmo processo BEAM do Infra
-  Lead) o `execution_mode` do projeto e a presença de um runner conectado
-  ANTES de propor, recusando com motivo NOMEADO em vez de propor às cegas.
+  `Engine.Infra.Tools.ProposeContainerStartViaRunner`).
+
+  Desde a RN-566, as DUAS consultam LOCALMENTE (`Project.get/1` +
+  `Engine.Runners.Registry.connected?/1`, sem HTTP — os dois rodam no mesmo
+  processo BEAM do Infra Lead) o `execution_mode` do projeto ANTES de
+  propor, recusando com motivo NOMEADO em vez de propor às cegas.
+  `recusa_local_de_subida/2` lê o projeto UMA vez e cada tool tem a sua
+  CLÁUSULA — a ramificação por DESTINO do ADR 0144/RN-503, a mesma que a
+  página `/containers` aplica (RN-521): `container`/`mounted` pelo BROKER,
+  `runner` pelo agente local. O que o agente NÃO checa, e a tela checa, é
+  imagem decidida e pasta confirmada — declarado no CLAUDE.md.
 
   ## Por que este continua sendo um GenServer conversacional e o Workflows não
 
@@ -270,6 +276,12 @@ defmodule Engine.Infra.InfraLeadServer do
   # consolidação com o Workflows. Despacha inline, direto pra api, e deixa o
   # loop continuar: o modelo pode chamar `propose_infra_pr` antes/depois, ou
   # nunca chamar esta.
+  #
+  # Desde a RN-566 ela consulta LOCALMENTE o `execution_mode` ANTES de chamar
+  # `propose_action` — a MESMA régua que a irmã `container_start_via_runner`
+  # já aplicava (RN-508), e a MESMA ramificação por DESTINO que a página
+  # `/containers` aplica em `acaoDeSubidaDoModo` (RN-521): não há segunda
+  # régua, há duas cláusulas da mesma.
   defp dispatch_container_start(call, state) do
     args = Map.get(call, "arguments", %{})
     id = Map.get(call, "id")
@@ -283,21 +295,27 @@ defmodule Engine.Infra.InfraLeadServer do
 
     emit(state, "tool.call", %{tool: "propose_container_start", args: payload})
 
-    actor = %{kind: "agent", id: @agent}
-
     text =
-      case EngineApiClient.propose_action(
-             state.project_id,
-             state.session_id,
-             "container_start",
-             actor,
-             payload
-           ) do
-        {:ok, %{"id" => _id, "status" => status}} ->
-          "container_start proposto (status #{status}) — decisão final do usuário."
+      case recusa_local_de_subida(:container_start, state.project_id) do
+        nil ->
+          actor = %{kind: "agent", id: @agent}
 
-        {:error, reason} ->
-          "container_start recusado: #{inspect(reason)}"
+          case EngineApiClient.propose_action(
+                 state.project_id,
+                 state.session_id,
+                 "container_start",
+                 actor,
+                 payload
+               ) do
+            {:ok, %{"id" => _id, "status" => status}} ->
+              "container_start proposto (status #{status}) — decisão final do usuário."
+
+            {:error, reason} ->
+              "container_start recusado: #{inspect(reason)}"
+          end
+
+        motivo ->
+          motivo
       end
 
     append(state, %{
@@ -310,28 +328,30 @@ defmodule Engine.Infra.InfraLeadServer do
   end
 
   # `container_start_via_runner` (RN-508, ADR 0145) — MESMO desenho de
-  # `dispatch_container_start/2` (despacha inline, sem HALT), com uma
-  # diferença: ANTES de chamar `propose_action`, consulta LOCALMENTE
-  # (`Project.get/1` + `RunnerRegistry.connected?/1`, sem HTTP — os dois
-  # rodam no mesmo processo BEAM deste GenServer) se o projeto está mesmo em
-  # `execution_mode: runner` e se há um runner conectado. Recusa com motivo
-  # NOMEADO em vez de propor às cegas — a lacuna que a RN-494 deixou
-  # declarada para `propose_container_start` (que não sabe distinguir modo
-  # nem runner conectado) não se repete aqui, porque esta tool nasce sabendo
-  # negar.
+  # `dispatch_container_start/2` (despacha inline, sem HALT), e desde a
+  # RN-566 também a MESMA recusa local: as duas passam por
+  # `recusa_local_de_subida/2`, que lê o projeto UMA vez e aplica a cláusula
+  # de cada uma. O que era exclusividade desta tool (nascer sabendo negar)
+  # virou régua das duas.
+  #
+  # O `emit` do `tool.call` acontece ANTES da recusa desde a RN-566, como no
+  # `dispatch_tool/2` genérico deste mesmo módulo: recusa que não deixa
+  # rastro no event log é a recusa virando silêncio para o humano — quem lê
+  # o resultado dela é o modelo, e o timeline ficava sem saber que a chamada
+  # existiu.
   defp dispatch_container_start_via_runner(call, state) do
     args = Map.get(call, "arguments", %{})
     id = Map.get(call, "id")
     rationale = Map.get(args, "rationale", "")
 
-    text =
-      case recusa_local_de_container_start_via_runner(state.project_id) do
-        nil ->
-          emit(state, "tool.call", %{
-            tool: "container_start_via_runner",
-            args: %{rationale: rationale}
-          })
+    emit(state, "tool.call", %{
+      tool: "container_start_via_runner",
+      args: %{rationale: rationale}
+    })
 
+    text =
+      case recusa_local_de_subida(:container_start_via_runner, state.project_id) do
+        nil ->
           actor = %{kind: "agent", id: @agent}
 
           case EngineApiClient.propose_action(
@@ -361,34 +381,76 @@ defmodule Engine.Infra.InfraLeadServer do
     })
   end
 
-  # `nil` quando pode propor; mensagem NOMEADA quando não pode. As DUAS
-  # leituras são locais — `Project.get/1` (mesmo padrão de
+  # `nil` quando a tool PODE propor; mensagem NOMEADA quando não pode — a
+  # mensagem é ENTRADA do laço (resultado de ferramenta que o modelo lê,
+  # RN-163), nunca `agent.error` nem fim de turno.
+  #
+  # A leitura do projeto é UMA, comum às duas tools; o que diverge é a
+  # CLÁUSULA de cada uma (`recusa_por_modo/3`). Duas réguas paralelas
+  # divergiriam no primeiro modo novo do enum — e a régua aqui é a MESMA
+  # ramificação por DESTINO do ADR 0144/RN-503 que a página `/containers`
+  # aplica em `acaoDeSubidaDoModo` (RN-521): `container` e `mounted` sobem
+  # pelo BROKER (`container_start`), `runner` sobe pelo agente local
+  # (`container_start_via_runner`).
+  #
+  # As leituras são locais — `Project.get/1` (mesmo padrão de
   # `Engine.Actions.TerminalExecutor`) e `RunnerRegistry.connected?/1`
-  # (`:global`, alcança runner conectado em QUALQUER nó do cluster) — nenhuma
-  # bate na api.
-  defp recusa_local_de_container_start_via_runner(project_id) do
+  # (`:global`, alcança runner conectado em QUALQUER nó do cluster) — e
+  # nenhuma bate na api: um HTTP aqui poria uma chamada de rede dentro do
+  # laço do agente.
+  defp recusa_local_de_subida(tool, project_id) do
     case Project.get(project_id) do
-      nil ->
-        "projeto não encontrado."
-
-      %{execution_mode: "runner"} ->
-        if RunnerRegistry.connected?(project_id) do
-          nil
-        else
-          "nenhum runner está conectado a este projeto agora — peça ao " <>
-            "usuário para rodar `brabo-runner --project #{project_id} --dir " <>
-            "<pasta>` na máquina dele antes de propor de novo."
-        end
-
-      %{execution_mode: "mounted"} ->
-        "projeto no modo `mounted` — desde a RN-503 ele sobe pelo BROKER, " <>
-          "como `container`. Use `propose_container_start`, não esta tool."
-
-      %{execution_mode: outro} ->
-        "projeto no modo `#{outro}` — container_start_via_runner é exclusiva " <>
-          "de `runner`. Use `propose_container_start` (o broker)."
+      nil -> "projeto não encontrado."
+      %{execution_mode: modo} -> recusa_por_modo(tool, modo, project_id)
     end
   end
+
+  # `propose_container_start` — o caminho do BROKER. Lista de PERMITIDOS,
+  # como a do próprio broker: modo novo no enum nasce RECUSADO com mensagem,
+  # nunca proposto por omissão.
+  #
+  # O que esta cláusula NÃO checa, de propósito: imagem decidida. A eleição
+  # de imagem é justamente o que esta proposta FAZ (ADR 0131/RN-491), então
+  # exigi-la antes inverteria a ordem. A `/containers` checa as TRÊS coisas
+  # (imagem, modo, pasta confirmada) porque tem um humano clicando; o agente
+  # checa o MODO — a diferença está declarada no CLAUDE.md.
+  defp recusa_por_modo(:container_start, modo, _project_id) when modo in ~w(container mounted),
+    do: nil
+
+  defp recusa_por_modo(:container_start, "runner", _project_id),
+    do:
+      "projeto no modo `runner` — o broker nunca alcança a pasta dele (ela " <>
+        "mora na máquina do usuário), e o payload desta tool elege uma " <>
+        "candidata do roteamento do Arquiteto, que não existe nesse modo. " <>
+        "Use `container_start_via_runner`, não esta tool."
+
+  defp recusa_por_modo(:container_start, outro, _project_id),
+    do:
+      "projeto no modo `#{outro}` — `propose_container_start` sobe pelo " <>
+        "BROKER, que atende só `container` e `mounted` (ADR 0144)."
+
+  # `container_start_via_runner` — o caminho do AGENTE LOCAL (RN-508).
+  # Exclusiva de `runner`, e a única das duas que também pergunta pela
+  # presença de um runner conectado: é a metade que só o engine sabe.
+  defp recusa_por_modo(:container_start_via_runner, "runner", project_id) do
+    if RunnerRegistry.connected?(project_id) do
+      nil
+    else
+      "nenhum runner está conectado a este projeto agora — peça ao " <>
+        "usuário para rodar `brabo-runner --project #{project_id} --dir " <>
+        "<pasta>` na máquina dele antes de propor de novo."
+    end
+  end
+
+  defp recusa_por_modo(:container_start_via_runner, "mounted", _project_id),
+    do:
+      "projeto no modo `mounted` — desde a RN-503 ele sobe pelo BROKER, " <>
+        "como `container`. Use `propose_container_start`, não esta tool."
+
+  defp recusa_por_modo(:container_start_via_runner, outro, _project_id),
+    do:
+      "projeto no modo `#{outro}` — container_start_via_runner é exclusiva " <>
+        "de `runner`. Use `propose_container_start` (o broker)."
 
   defp dispatch_tool(call, state) do
     name = Map.get(call, "name")
