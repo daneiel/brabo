@@ -651,6 +651,28 @@ export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Prom
   const canal = estado.canalAtual;
   if (!canal) return; // conexão caiu entre o recebimento e o tratamento — nada a responder
 
+  let cwd: string;
+  try {
+    cwd = validarCwdDentroDaRaiz(msg.cwd, estado.dir);
+  } catch (erro) {
+    // Responde com falha explícita — nunca deixa o servidor esperando por
+    // um `exec_result` que nunca chega (ver guard.ts: best-effort, mas o
+    // que ela recusa precisa ser COMUNICADO, não engolido).
+    const explicacao =
+      erro instanceof CwdForaDaRaizError ? erro.message : mensagemDeErro(erro);
+    enviarExecResult(canal, {
+      ref: msg.ref,
+      exitCode: -1,
+      output: `[runner recusou o comando: ${explicacao}]`,
+      timedOut: false,
+    });
+    return;
+  }
+
+  // A ordem importa: esta recusa vem DEPOIS de `validarCwdDentroDaRaiz`, de
+  // propósito. `guard.ts` é fronteira de CONTENÇÃO, e um comando que aponta
+  // para fora da raiz precisa ouvir ISSO — a credencial que não atravessa é
+  // capacidade que falta, não comando que se recusa a conter.
   // RN-558 — a credencial não atravessa o `docker exec`, e a recusa é AQUI.
   //
   // Este processo é o ÚNICO que sabe as duas metades ao mesmo tempo: que o
@@ -688,24 +710,6 @@ export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Prom
       ref: msg.ref,
       exitCode: -1,
       output: explicacao,
-      timedOut: false,
-    });
-    return;
-  }
-
-  let cwd: string;
-  try {
-    cwd = validarCwdDentroDaRaiz(msg.cwd, estado.dir);
-  } catch (erro) {
-    // Responde com falha explícita — nunca deixa o servidor esperando por
-    // um `exec_result` que nunca chega (ver guard.ts: best-effort, mas o
-    // que ela recusa precisa ser COMUNICADO, não engolido).
-    const explicacao =
-      erro instanceof CwdForaDaRaizError ? erro.message : mensagemDeErro(erro);
-    enviarExecResult(canal, {
-      ref: msg.ref,
-      exitCode: -1,
-      output: `[runner recusou o comando: ${explicacao}]`,
       timedOut: false,
     });
     return;

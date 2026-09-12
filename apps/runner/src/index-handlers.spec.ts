@@ -246,6 +246,28 @@ describe('tratarExec — a credencial não atravessa o docker exec (RN-558)', ()
     expect(payload.output).toContain('2 variável(is)');
   });
 
+  it('a recusa de CONTENÇÃO vence: cwd fora da raiz é dito ANTES da credencial', async () => {
+    const canal = new CanalFalso();
+    const docker = dockerFalso();
+    const estado = estadoFalso({ canal, docker, containerAtivo: 'brabo-proj-abc12345' });
+
+    await tratarExec(estado, {
+      ref: 'r8',
+      command: 'git fetch origin',
+      cwd: '/etc',
+      env: credencialFalsa(),
+    });
+
+    expect(docker.exec).not.toHaveBeenCalled();
+    const payload = canal.pushes[0]?.payload as { output: string };
+    // `guard.ts` é fronteira de CONTENÇÃO e a recusa dela tem de ser a que a
+    // pessoa ouve; a credencial que não atravessa é capacidade que falta.
+    // Colapsar as duas faria um comando apontado para fora da raiz parecer um
+    // problema de credencial.
+    expect(payload.output).not.toContain(MARCA_DE_CREDENCIAL_NAO_ENTREGUE);
+    expect(payload.output).toContain('runner recusou o comando');
+  });
+
   it('`env` VAZIO com container ativo não é recusa — roteia pro container como sempre', async () => {
     const canal = new CanalFalso();
     const docker = dockerFalso();

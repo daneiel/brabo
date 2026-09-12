@@ -11510,6 +11510,13 @@ worktree mantém byte a byte `{"falha ao preparar o worktree", "codigo"}`, nos
 DOIS dev agents (o real e o Noop, que existe para exercitar ESTE caminho e não
 uma cópia dele).
 
+**A recusa de CONTENÇÃO vence, e a ordem é decisão.** Ela entra DEPOIS de
+`validarCwdDentroDaRaiz` (`guard.ts`): um comando apontado para fora da raiz
+precisa ouvir **isso**, porque ali há uma fronteira de contenção sendo
+recusada, enquanto aqui há uma capacidade que falta. Colapsar as duas faria um
+comando fora do escopo parecer problema de credencial — o mesmo defeito de
+diagnóstico, com outro sinal.
+
 **O `env` nunca aparece na recusa — só a CONTAGEM.** A invariante da RN-507 é
 que `msg.env` não vai para log nenhum, e esta saída vai para o event log do
 produto: a recusa diz "2 variável(is) de ambiente", jamais um nome ou um valor.
@@ -11538,7 +11545,8 @@ ele roda no HOST (`criarPastaDoProjeto`), não no container.
   atravessa o docker exec (RN-558)"* — o caminho feliz (sem container, o `env`
   chega ao host e nada é recusado), o caso de falha (com container, recusa
   nomeada e `docker.exec` NÃO chamado), a prova negativa de que nome e valor
-  das variáveis não vazam na saída, e `env` vazio não virando recusa;
+  das variáveis não vazam na saída, `env` vazio não virando recusa, e a recusa
+  de contenção de `guard.ts` vencendo esta quando o `cwd` está fora da raiz;
   `apps/engine/test/engine/actions/workspace_runner_test.exs` (os dois testes
   `RN-558`: a recusa que vira mensagem nomeada com origem `politica`, e a falha
   REAL do fetch que mantém a mensagem de sempre com origem `codigo` — o par
