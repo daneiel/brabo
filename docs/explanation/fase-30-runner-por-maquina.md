@@ -75,13 +75,33 @@ Uma entregável cada. A coluna "depende de" é que ordena.
 | # | entregável | depende de | proibições próprias |
 |---|---|---|---|
 | 1 | este documento, os ADRs 0154/0155 e a faixa de RN | — | não toca `apps/`, `docker/`, `scripts/`, `install.sh`; não edita ADR aceito |
-| 2 | api: `project_id` nullable, chave de máquina aceita em `runner-ticket`, `GET runner/projects` (RN-543) | 1 | não toca o engine; não afrouxa papel de rota nenhuma |
+| 2 | **FECHADA** — api: `project_id` nullable, chave de máquina aceita em `runner-ticket`, `GET runner/projects` ([RN-543](../business-rules.md#rn-543)) | 1 | não toca o engine; não afrouxa papel de rota nenhuma |
 | 3 | runner: N conexões, uma por projeto, descobertas pela rota (RN-544) | 2 | não toca `RunnerReadiness`, o espelho nem `workspace_create` |
 | 4 | runner: unit por máquina no `service install`, convivendo com as por projeto (RN-545) | 3 | não remove a unit por projeto; não muda `Restart=on-abnormal` |
 | 5 | api: rota interna de primeira conta, recusando se já houver usuário (RN-546) | 1 | não cria rota pública; não toca o registro normal |
 | 6 | `install.sh`: consentimento, conta, chave de máquina e `service install` (RN-547) | 4, 5 | não grava senha em lugar nenhum; sem TTY relata e sai 0 |
 | 7 | web: a tela do projeto reconhece agente de máquina já pareado (RN-548) | 3 | não remove o fluxo do ADR 0118 |
 | 8 | E2E em máquina limpa, docmap, `docs:check` (RN-549) | 6, 7 | não afrouxa gate para o E2E passar |
+
+### O que a sessão 2 fechou, e o que ela deixou declarado
+
+A metade da api está de pé: `runner_device_keys.project_id` é nullable, o
+`PatAuthGuard` resolve o papel contra o projeto **pedido** quando a credencial
+não nomeia nenhum, e `GET runner/projects` existe. Duas coisas que a medição do
+recorte não antecipava e a implementação obrigou a decidir, as duas registradas
+na [RN-543](../business-rules.md#rn-543):
+
+- **A listagem da RN-519 passou a devolver as duas espécies, marcadas.** Uma
+  chave de máquina que não entrasse em listagem nenhuma seria invisível e
+  permanente — o defeito que a RN-519 fechou, renascido na espécie nova.
+- **A revogação ganhou alvo PLURAL.** `revogar` de uma chave de máquina não tem
+  um `projectId` a passar ao engine; deixar de derrubar reabriria a RN-520 em
+  N conexões. Um `{projeto, usuário}` por projeto em modo `runner` do dono,
+  **sem tocar o engine**.
+
+E o que segue **declarado, não feito**: nenhuma rota da api CRIA chave de
+máquina ainda — quem registra é o `install.sh` ([ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md)
+ponto 4), na sessão 6. A rota nasce no PR que tiver o primeiro chamador real.
 
 Faixa reservada: **RN-543..555**. ADRs **0154** e **0155**. A RN-541 já está
 alocada em branch não mergeada — o salto é deliberado, pelo critério que a

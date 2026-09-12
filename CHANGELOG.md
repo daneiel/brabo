@@ -26,6 +26,42 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: a chave de dispositivo do runner passa a poder ser da **máquina**, e
+  não só de um projeto ([RN-543](docs/business-rules.md#rn-543),
+  [ADR 0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md)).
+
+  `runner_device_keys.project_id` vira nullable, e `NULL` significa "chave de
+  máquina": ela vale para qualquer projeto em que o **dono** dela alcance o
+  papel que a rota já exige. Mesma tabela, mesmo `kid`, mesma revogação —
+  tabela irmã foi considerada e recusada no ADR.
+
+  **Nenhum teto novo, e nenhum afrouxado.** A comparação que impede a chave do
+  projeto A servir o projeto B continua byte a byte e some **só** para
+  `project_id` nulo, onde não há o que comparar; aí o papel se resolve contra o
+  projeto **pedido**, como sempre. Papel insuficiente segue 403. O ramo do
+  Personal Access Token não muda.
+
+  Rota nova: `GET /runner/projects` devolve os projetos em modo `runner` nos
+  quais o chamador alcança `developer` — o mesmo mínimo de `runner-ticket` —,
+  com o nome da pasta e o estado de verificação. É a primeira rota autenticada
+  por credencial de dispositivo **sem projeto no caminho**, e por isso só
+  aceita credencial de máquina: uma presa a um projeto responde 403 com
+  mensagem própria. O agente pergunta em vez de varrer o disco.
+
+  **Nada no engine muda**: o tópico, o socket id e o ticket descrevem uma
+  conexão, e N conexões os satisfazem byte a byte.
+
+- **api**: a listagem de chaves de dispositivo
+  ([RN-519](docs/business-rules.md#rn-519)) passa a devolver **duas espécies** e
+  a dizer qual é qual (`especie: "projeto" | "maquina"`, `projectId` nulo na de
+  máquina). Uma chave de máquina serve todo projeto do dono, então aparece na
+  listagem de todos — sem isso ela seria invisível e permanente em toda tela.
+
+  Revogar uma chave de **máquina** derruba o agente local em **todos** os
+  projetos em modo `runner` daquele dono, um `{projeto, usuário}` por projeto —
+  o custo que a FASE 29 declarou por antecipação, chegando aqui sem tocar o
+  engine.
+
 - **instalador**: o `install.sh` passa a saber **qual** versão está instalada e
   a oferta muda conforme a relação com a que vai instalar
   ([RN-542](docs/business-rules.md#rn-542)).
