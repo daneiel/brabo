@@ -130,6 +130,7 @@ estado lido do repositório e não da conversa.
 | FASE 29 (sessão 9) — o picker do modo Runner volta a ler o disco de quem escolhe | ADR 0151, RN-533 |
 | O runner reconectava sozinho com um ticket morto | RN-108 |
 | O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
+| O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
 
 ## Estado atual e aberto
 
@@ -832,10 +833,29 @@ pescar o link em `docker compose logs api`.
   escreva uma segunda régua. O teto 1 NÃO tem par na remoção, de propósito:
   `owner` é o topo do `ROLE_ORDER`, então tirar a linha de um `owner` de
   workspace só pode ELEVAR o efetivo dele, e é a única forma de desfazer a
-  restrição que o teto 1 impede de criar. Segue possível e declarado: rebaixar
-  outro `maintainer`, auto-PROMOÇÃO, o `POST workspaces/:id/members` (sem teto
-  nenhum), e a auto-remoção quando o workspace segura o MESMO papel — essa é
-  benigna e continua passando.
+  restrição que o teto 1 impede de criar. Desde o ADR 0157 (RN-557) o teto 2
+  vale por QUATRO portas e nos DOIS SENTIDOS: `POST workspaces/:id/members`
+  deixou de ser upsert sem teto (era passa-adiante sem ator, num escopo onde
+  não há nível acima para segurar a queda nem rota que remova membro), e a
+  auto-PROMOÇÃO — que o ADR 0127 declarou como capacidade que ficava — é
+  BRECHA e fecha, nas duas rotas de associação: é a única metade do movimento
+  que ESCALA privilégio. A comparação virou UM classificador
+  (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende
+  dele); `ehAutoRebaixamento` sobreviveu como LEITURA dele, de propósito — é
+  por ela que `remocaoEhAutoRebaixamento` segue vendo só a metade de baixo, e
+  alargá-la faria a REMOÇÃO recusar o movimento benigno que o ADR 0156
+  protegeu. O teto 1 também NÃO tem par no workspace, e foi considerado, não
+  espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o
+  `@RequireRole('owner')` da rota já a impede — pô-lo faria de `owner` um
+  estado absorvente, do qual ninguém sai por HTTP. E o teto NÃO conta owners:
+  a cláusula já garante que um workspace nunca chega a zero, porque tirar o
+  último exigiria que ele mesmo o fizesse. Segue possível e declarado:
+  rebaixar outro `maintainer`; um `owner` rebaixando OUTRO `owner` no
+  workspace (única forma de revogar propriedade, reversível pela mesma rota);
+  reescrever o próprio papel com o MESMO valor (upsert idempotente não é
+  movimento); a auto-promoção pela REMOÇÃO da linha de projeto; e a
+  auto-remoção quando o workspace segura o MESMO papel — essa é benigna e
+  continua passando.
 - O projeto escolhe ONDE o código mora, na criação (RN-169/RN-421/RN-422,
   ADR 0072/0104) — e pode CONVERTER depois, sem recriar o projeto, por
   `PUT projects/:projectId/execution-mode` (`maintainer`, RN-447..450, ADR

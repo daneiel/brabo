@@ -11073,3 +11073,136 @@ cliente — mas calcular só ele produziria o meio-gate que o ADR 0127 recusou.
   fecha a lacuna que ele declarou
 - **Origem:** `BRB-001`, P1 de Segurança do registro do mantenedor — a lacuna
   que o ADR 0127 escreveu com a frase *"quem for fechá-lo vê o teste falhar"*
+
+---
+
+## O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção que fecha (RN-557)
+
+### RN-557 — Mudar o PRÓPRIO papel é recusado com 403 nas duas rotas de associação, nos dois sentidos {#rn-557}
+
+Terceira e última porta da linha aberta pela [RN-472](#rn-472) e continuada pela
+[RN-556](#rn-556). O [ADR 0127](adr/0127-tetos-de-rebaixamento-em-project-members.md)
+declarou esta por escrito — *"`POST workspaces/:workspaceId/members` continua um
+upsert sem teto nenhum — mesma classe de defeito, escopo acima"* — e o
+[ADR 0156](adr/0156-teto-de-auto-rebaixamento-na-remocao.md) a reafirmou como
+"escopo diferente, decisão separada". É o `BRB-002`, P1 de segurança.
+
+**O defeito, medido.** `AddWorkspaceMemberUseCase.execute` recebia
+`(workspaceId, userId, role)` e chamava `workspaces.addMember` — **não recebia o
+ator** —, e o controller (`@Post(':workspaceId/members')`,
+`@RequireRole('owner')`) chamava com o corpo puro, sem `@CurrentUser()`. Não
+havia com o que aplicar teto nenhum.
+
+**Por que é mais grave um escopo acima.** Duas coisas que existem no projeto não
+existem aqui: (a) **não há nível acima para segurar a queda** — no projeto,
+rebaixar-se derruba o efetivo para o papel de workspace, que muitas vezes o
+segura; no workspace o papel é o papel, e um `owner` que se grava `viewer` perde
+o workspace inteiro, com todos os projetos e a própria capacidade de convidar
+quem o reponha; (b) **não existe rota de remoção de membro** —
+`WorkspacesController` não tem `@Delete` de membro (medido, e o ADR 0156 já
+tinha usado esse fato). Desfazer é esta mesma rota, que pede o `owner` recém
+abandonado.
+
+**A auto-PROMOÇÃO era brecha, e fecha.** O ADR 0127 registrou nas Consequences
+que ela ficava: *"Um `maintainer` pode se gravar como `owner` do projeto (…) os
+tetos são sobre descer"*. Esta RN **revisa** essa frase. As duas metades são o
+mesmo movimento — uma pessoa decidindo sozinha qual autoridade tem — e a de cima
+é a única que **escala privilégio**: o ADR 0127 pôde dizer que os tetos dele não
+eram sobre escalação ("ninguém ganha papel que não tinha"), e sobre a promoção
+isso é falso.
+
+| movimento | desfecho |
+|---|---|
+| mudar o próprio papel no PROJETO, para baixo | **403** — [RN-472](#rn-472), inalterada |
+| mudar o próprio papel no PROJETO, para cima | **403** — era permitido, e é o que muda |
+| mudar o próprio papel no WORKSPACE, em qualquer sentido | **403** — a porta nova |
+| reescrever o próprio papel com o MESMO valor | passa — upsert idempotente não é movimento |
+| um `owner` rebaixando OUTRO `owner` no workspace | passa — é a única forma de revogar propriedade |
+| associar/rebaixar OUTRA pessoa, em qualquer escopo | passa — capacidade legítima de sempre |
+| auto-promoção pela REMOÇÃO da linha de projeto | passa — protegida pelo ADR 0156, ponto 3 |
+
+**O teto NÃO conta owners.** Recusar só quando o chamador for o último dono foi
+considerado e recusado pelo critério literal do ADR 0127: *"se enuncia numa
+cláusula, não tem número para envelhecer"*. Uma contagem acrescenta uma leitura
+que pode sair de fase com a escrita, tem de julgar se um segundo dono inativo
+conta, e faz a mesma chamada com o mesmo corpo passar hoje e recusar amanhã sem
+que nada do que o chamador controla tenha mudado. E a cláusula **já produz o
+invariante que a contagem existiria para garantir**: um workspace nunca fica sem
+`owner`, porque tirar o último exigiria que ele mesmo o fizesse.
+
+**O teto 1 não tem par neste escopo, e foi considerado, não espelhado.**
+Diferente da remoção ([RN-556](#rn-556)), aqui o movimento EXISTE — um `owner`
+pode rebaixar outro. A recusa vem de o teto 1 ser regra sobre **inversão de
+hierarquia**: no projeto a linha sobrepõe a de workspace ([RN-471](#rn-471)) e
+um `maintainer` alcança quem está ACIMA dele; no workspace o
+`@RequireRole('owner')` já garante que ninguém alcança alguém maior que si — a
+precondição está ausente. Pôr o par, somado à ausência de rota de remoção, faria
+de `owner` um **estado absorvente**: ninguém sairia dele por HTTP, e offboarding,
+rotação de propriedade e correção de convite errado passariam a exigir escrita
+direta no banco — a classe de estado que o ADR 0127 nasceu para eliminar, com o
+sinal trocado.
+
+**A régua não é copiada: a comparação vira UM classificador.**
+`autoMovimentoDoProprioPapel` devolve o SENTIDO
+(`'rebaixamento' | 'promocao' | null`) em vez de um booleano, porque quem chama
+precisa dele para escolher a mensagem. `ehAutoRebaixamento` continua existindo
+como uma LEITURA do classificador, e por motivo de comportamento e não de
+compatibilidade: `remocaoEhAutoRebaixamento` delega a ela, e alargá-la faria a
+REMOÇÃO recusar também a auto-promoção — tirar a própria linha que restringia
+alguém é justamente como se desfaz a restrição que o teto 1 impede de criar,
+movimento que o ADR 0156 protegeu por escrito.
+
+**Quatro mensagens, uma por SENTIDO e por ESCOPO.** Quem tentou se promover não
+recebe a frase de rebaixamento (não foi o que fez), e quem esbarra no teto do
+workspace não é mandado falar com um `maintainer` — lá o papel que desfaz é
+`owner`. Mesma disciplina do ponto 5 da [RN-556](#rn-556) e da
+[RN-470](#rn-470).
+
+**O papel do ator vem do repositório, não do `ResolveEffectiveRoleUseCase`** —
+o inverso da escolha da RN-556, pela mesma razão que ela deu: nos casos de uso
+de projeto o outro entra para o papel do ator não virar uma segunda composição
+de `projectRole ?? workspaceRole` escrita à mão; no workspace não há composição
+a proteger (`forWorkspace` É `workspaces.findMemberRole`), e este caso de uso já
+tem o repositório na mão.
+
+**A metade de PROMOÇÃO no workspace é inalcançável por HTTP, e é aplicada mesmo
+assim.** Com `@RequireRole('owner')` o ator já está no topo e não há para onde
+subir. Ela entra e é testada pelo motivo que o teto 2 sempre teve para não ter
+limiar: o caso de uso não presume o guard, e é ele que fica certo no dia em que
+a rota mudar de mínimo. Mesmo desenho da recusa por capacidade da
+[RN-514](#rn-514), implementada antes de ter disparo.
+
+**Nenhuma linha de web muda, e não é omissão:** `POST /workspaces/:workspaceId/members`
+não tem chamador em `apps/web` — medido; a única ocorrência é o tipo gerado em
+`api-types.generated.ts`. Não há toast para ajustar nem `Select` para fechar.
+
+- **Código:** `apps/api/src/domain/iam/tetos-de-rebaixamento.ts`
+  (`autoMovimentoDoProprioPapel`, o tipo `SentidoDoAutoMovimento`, as três
+  mensagens novas e o `ehAutoRebaixamento` que passou a ser leitura do
+  classificador),
+  `apps/api/src/application/use-cases/iam/add-workspace-member.use-case.ts`
+  (a assinatura com `atorId`, a leitura do papel do ator e os dois 403),
+  `apps/api/src/application/use-cases/iam/add-project-member.use-case.ts`
+  (a troca de `ehAutoRebaixamento` pelo classificador, que é o que fecha a
+  auto-promoção lá),
+  `apps/api/src/interfaces/http/iam/workspaces.controller.ts`
+  (`@CurrentUser()`, o `@ApiForbiddenResponse` e a descrição),
+  `apps/api/src/interfaces/http/iam/dto/add-member.dto.ts` e
+  `apps/api/src/interfaces/http/iam/projects.controller.ts` (as descrições que
+  prometiam "sem teto nenhum" e "downgrading yourself"),
+  `apps/api/src/db/seed.ts` (o `owner.id` como ator),
+  `apps/api/src/application/use-cases/iam/resolve-effective-role.use-case.ts`
+  (INTOCADO, terceiro ADR seguido)
+- **Teste:** `apps/api/test/application/use-cases/iam/tetos-de-rebaixamento.use-case.spec.ts`,
+  bloco *"Teto de auto-movimento no WORKSPACE — a quarta porta"* (a recusa com
+  outro dono presente, a recusa do dono único, a promoção inalcançável, a
+  mensagem por escopo, o upsert idempotente, o `owner` rebaixando outro `owner`
+  e a associação de terceiros), mais os três casos no bloco do teto 2 — o teste
+  da auto-promoção INVERTIDO, com o nome guardando a origem, a asserção de que
+  cada sentido tem sua frase, e o upsert idempotente no projeto
+- **ADR:** [0157](adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.md),
+  que referencia o [0127](adr/0127-tetos-de-rebaixamento-em-project-members.md)
+  e o [0156](adr/0156-teto-de-auto-rebaixamento-na-remocao.md), e revisa a frase
+  do primeiro sobre a auto-promoção
+- **Origem:** `BRB-002`, P1 de Segurança do registro do mantenedor — o último
+  movimento que os dois ADRs anteriores deixaram declarado

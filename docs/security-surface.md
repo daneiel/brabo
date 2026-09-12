@@ -703,6 +703,41 @@ reason in the URL.
   threshold: self-removal from project `owner` to workspace `maintainer` is
   reversible and is refused too — the only benign movement that changes
   outcome, still reachable through another `maintainer`.
+- **`POST /workspaces/:workspaceId/members` is `role:owner` in the table, and
+  that is no longer the whole answer either** — the third route of this family
+  ([ADR 0157](adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.md),
+  [RN-557](business-rules.md#rn-557)). ADR 0127 named this route as the same
+  class of defect *one scope up*, and ADR 0156 left it as a separate decision;
+  it was a twelve-line passthrough that **never received the actor**, so no cap
+  could have been applied. It is worse here than in the project for two reasons
+  that do not exist there: no level above catches the fall (in a project,
+  demoting yourself drops the effective role to the workspace one, which often
+  holds), and **there is no member `@Delete` at all** on this controller
+  (measured) — undoing is this same route, demanding the `owner` just
+  abandoned. So `AddWorkspaceMemberUseCase` now takes the actor and refuses
+  **changing YOUR OWN role with 403, in both directions**. The cap does **not
+  count owners**, on purpose: the clause has no number to age (ADR 0127's
+  criterion), and it already produces the invariant a count would exist to
+  guarantee — a workspace never reaches zero owners, since removing the last
+  one would require that owner to do it. Cap 1 has **no counterpart in this
+  scope**, considered rather than mirrored: it is a rule about *hierarchy
+  inversion*, and `@RequireRole('owner')` already makes inversion impossible —
+  whoever can call is never below whoever they touch. Adding it, on top of the
+  missing removal route, would make `owner` an absorbing state nobody leaves
+  over HTTP, which is the class of state ADR 0127 was born to eliminate.
+  Demoting **another** owner therefore stays allowed — the only way ownership
+  gets revoked, and reversible through the same route by any remaining owner.
+- **Self-PROMOTION is now refused on both association routes**, which changes
+  `POST /projects/:projectId/members` too. ADR 0127 had recorded it as a
+  capability that stayed (*"the caps are about going down"*); ADR 0157 revises
+  that. Both halves are one movement — a person deciding alone what authority
+  they hold — and the upward half is the only one that **escalates privilege**,
+  the very thing ADR 0127 could claim its caps never did. Rewriting the SAME
+  role still passes: an idempotent upsert is not a movement. The comparison
+  stayed in one place: `autoMovimentoDoProprioPapel` returns the SENSE instead
+  of a boolean (the caller needs it to pick the message), and
+  `ehAutoRebaixamento` survives as a reading of it so that the REMOVAL door
+  keeps seeing only the downward half, as ADR 0156 decided.
 - **`jwt` with no role doesn't mean without authorization.** On
   `/users/me/*` the scope is the user themselves; on `GET /workspaces`
   the listing is already filtered by the caller's membership.

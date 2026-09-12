@@ -752,6 +752,33 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: mudar o **próprio papel** passa a ser recusado com **403** nas duas
+  rotas de associação, nos dois sentidos — e o upsert de workspace, que não
+  tinha teto nenhum, ganha o dele (`BRB-002`, **P1**,
+  [RN-557](docs/business-rules.md#rn-557)).
+
+  `AddWorkspaceMemberUseCase` era um passa-adiante de doze linhas que **nunca
+  recebeu o ator**, numa rota `@RequireRole('owner')`. É a mesma classe de
+  defeito de `project_members` um escopo acima e mais grave: aqui não há nível
+  acima para segurar a queda, e **não existe rota que remova membro de
+  workspace** — um `owner` que se gravasse `viewer` perdia o workspace inteiro,
+  e desfazer é essa mesma rota, que pede o `owner` recém-abandonado.
+
+  Junto, a **auto-promoção** deixa de passar, também no projeto. O
+  [ADR 0127](docs/adr/0127-tetos-de-rebaixamento-em-project-members.md) a tinha
+  registrado como capacidade que ficava, com teste fixando a permissão; o
+  [ADR 0157](docs/adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.md)
+  a chama de brecha, porque das duas metades do movimento sobre o próprio papel
+  a de cima é a única que **escala privilégio**. O teste foi INVERTIDO, e o nome
+  guarda a origem.
+
+  **Custo declarado:** um `maintainer` legítimo que precise de `owner` no
+  projeto passa a depender de outra pessoa — continua alcançável por qualquer
+  outro `maintainer` ou pelo `owner` do workspace. Reescrever o MESMO papel
+  segue passando (upsert idempotente não é movimento), e um `owner` rebaixando
+  **outro** `owner` também: é a única forma de revogar propriedade, e o teto do
+  `owner` do workspace deliberadamente não tem par neste escopo.
+
 - **docker**: a oferta escrita de fonte passa a viajar **dentro** da imagem do
   engine, em `/usr/share/doc/brabo/THIRD_PARTY_NOTICES.md` (BRB-017, **P1**).
 
