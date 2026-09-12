@@ -81,7 +81,7 @@ Uma entregável cada. A coluna "depende de" é que ordena.
 | 5 | **FECHADA** — api: `POST /internal/first-account`, conta verificada + workspace pessoal, `409` com qualquer usuário ([RN-546](../business-rules.md#rn-546)) | 1 | não cria rota pública; não toca o registro normal |
 | 6 | **FECHADA** — `install.sh`: consentimento, conta, chave de máquina e `service install` ([RN-547](../business-rules.md#rn-547)) | 4, 5 | não grava senha em lugar nenhum; sem TTY relata e sai 0 |
 | 7 | **FECHADA** — web: a tela do projeto reconhece agente de máquina já pareado ([RN-548](../business-rules.md#rn-548)) | 3 | não remove o fluxo do ADR 0118 |
-| 8 | E2E em máquina limpa, docmap, `docs:check` (RN-549) | 6, 7 | não afrouxa gate para o E2E passar |
+| 8 | **FECHADA** — E2E em máquina limpa, docmap, `docs:check` ([RN-549](../business-rules.md#rn-549)) | 6, 7 | não afrouxa gate para o E2E passar |
 
 ### O que a sessão 2 fechou, e o que ela deixou declarado
 
@@ -354,9 +354,117 @@ integração. E o `install --machine` continua sem saber se a chave daquela past
 diferença é que agora existe um caminho que CRIA uma de máquina ali, então a
 recusa no primeiro boot deixou de ser o desfecho provável.
 
+### O que a sessão 8 fechou — e as três decisões que ela teve de tomar
+
+A última da fase, e a única que podia responder a pergunta que a fase inteira
+persegue. A sessão 6 declarou por escrito que os testes dela provam o
+ENCADEAMENTO e nunca a integração — `brabo-runner` dublê de shell, api de
+mentira —, e é essa lacuna que fecha aqui.
+
+O harness **não nasceu nesta sessão**: `.github/workflows/install-e2e.yml`
+existe desde a FASE 29 ([RN-534](../business-rules.md#rn-534)) e já rodava o
+instalador publicado num runner efêmero do Actions, que é literalmente uma
+máquina limpa. O que ele provava parava no `.env`. A sessão o **estendeu**, e
+o que ele prova agora são os cinco elos da [RN-547](../business-rules.md#rn-547)
+contra api e binário de verdade, o agente **de pé esperando**, e o primeiro
+projeto em modo Runner sendo pego sem ninguém voltar ao terminal.
+
+As três decisões, registradas inteiras na
+[RN-549](../business-rules.md#rn-549):
+
+- **O sinal de "o agente está de pé" é a LINHA que ele escreve, nunca o estado
+  do gerenciador.** `perguntarEstado` mapeia `activating` para `rodando` — com
+  razão ([RN-088](../business-rules.md#rn-088): "subindo" não é "parado") —,
+  então `systemctl is-active` e `service status --machine` respondem *de pé*
+  para um processo que vai morrer dois segundos depois. A linha da
+  [RN-550](../business-rules.md#rn-550) só existe depois de o agente ter lido a
+  chave do disco, tirado ticket, falado com a api e recebido lista VAZIA: ela
+  prova pareamento e espera de uma vez, e é um FATO GRAVADO, não uma amostragem
+  de estado — por isso esperar por ela com teto não é corrida. O `status` entra
+  depois dela, como confirmação, nunca no lugar.
+- **O desfecho se prova pela API, não pelo navegador.** O sujeito é o AGENTE, e
+  o que ele observa é `GET /runner/projects`. Um navegador criaria o projeto
+  pela mesma rota com uma camada a mais que falha por motivos alheios — e não
+  tornaria a asserção mais forte, porque ela continua sendo a linha do journal.
+  A camada de navegador existe (`e2e/`,
+  [ADR 0120](../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md)),
+  responde outra pergunta e assume o compose de produção de pé: trazê-la faria o
+  E2E do instalador depender de um segundo harness numa máquina que deveria
+  estar limpa.
+- **A metade que roda em PR é um TESTE, não o workflow.** O E2E segue fora de
+  `pull_request` — abrir essa porta é dar ao instalador um jeito de pular a
+  verificação de origem, que é o que o
+  [ADR 0150](../adr/0150-instalador-de-uma-linha.md) recusa. Só que workflow que
+  roda em tag é workflow cujo erro aparece na tag: `scripts/dev/install-e2e.spec.ts`
+  guarda as duas formas de ele apodrecer calado — o gate afrouxado, e a frase do
+  `install.sh` reescrita, que faz as asserções não falharem, e sim SUMIREM.
+
+**Dois defeitos apareceram, os dois invisíveis porque o workflow nunca rodou.**
+O primeiro era do harness e foi corrigido: o arquivo de respostas do TTY começava
+por `nao-migrar`, que numa máquina limpa cai na pergunta do MARCADOR — ela não
+casa `s|S|sim|SIM`, o script dizia *"Nada foi gravado"* e saía 0, e a asserção do
+marcador teria reprovado. O segundo é ACHADO e ficou como achado: o `install.sh`
+publicado **não sobe nada sozinho numa máquina limpa** — ele usa
+`docker/docker-compose.install.yml`, que não é asset da Release, não entra no
+`checksums.txt` assinado e **ele não baixa em lugar nenhum** (com
+`./postgres/init.sql` junto, são três arquivos). Quem segue o `curl … install.sh`
+do runbook morre em "no such file or directory" depois de já ter verificado
+assinatura e gravado o `.env`. O workflow os traz à mão, pela tag, num passo que
+diz que é achado; consertar é decidir entre asset assinado e clone, e é entrega
+própria.
+
+E o que segue **declarado, não feito**: este E2E **não roda no PR que o
+escreveu** — a primeira execução real é a próxima tag final, e nenhum check do PR
+prova uma linha dele. Ficam fora, por decisão: a segunda execução pelo caminho de
+MIGRAÇÃO ([RN-530](../business-rules.md#rn-530)), o macOS (o passo completo é
+Linux — `launchd`, e o Docker que o runner hospedado não tem) e o navegador.
+
 Faixa reservada: **RN-543..555**. ADRs **0154** e **0155**. A RN-541 já está
 alocada em branch não mergeada — o salto é deliberado, pelo critério que a
 FASE 29 registrou ao resolver três colisões pela data.
+
+## O que a fase entregou, no conjunto
+
+Oito sessões, mais as duas peças que saíram da divisão da sessão 6 e não são
+sessões numeradas. O que a fase prometeu no começo — *instalar o Brabo numa
+linha e **usar*** — passou a acontecer:
+
+- **A identidade do agente local deixou de ser por PROJETO e passou a ser da
+  MÁQUINA.** Os dois acoplamentos que a medição do recorte disse que precisavam
+  mudar mudaram: `runner_device_keys.project_id` é nullable
+  ([RN-543](../business-rules.md#rn-543)) e a unit é uma por máquina
+  ([RN-545](../business-rules.md#rn-545)). Os outros três **não mudaram**, e a
+  medição que os salvou é o achado mais útil da fase: tópico, socket id e ticket
+  descrevem uma CONEXÃO, e N conexões os satisfazem byte a byte.
+- **Nada no engine mudou.** `RunnerReadiness` ([RN-507](../business-rules.md#rn-507)),
+  o espelho ([RN-516](../business-rules.md#rn-516)) e `workspace_create`
+  ([RN-532](../business-rules.md#rn-532)) ficaram byte a byte, e os handlers do
+  runner também.
+- **Uma instalação nova deixou de nascer sem ninguém dentro.** `MAIL_TRANSPORT`
+  continua `log` e o instalador continua não ligando SMTP — o que mudou é que a
+  primeira conta nasce no TERMINAL, já verificada
+  ([RN-546](../business-rules.md#rn-546)/[RN-547](../business-rules.md#rn-547)),
+  com o workspace pessoal na mesma transação. Pescar link de verificação em
+  `docker compose logs api` deixou de ser o caminho.
+- **O agente sobe pareado e ESPERA.** O par Ed25519 nasce na máquina
+  ([RN-551](../business-rules.md#rn-551)), só a pública viaja
+  ([RN-552](../business-rules.md#rn-552)), o `id` do registro vira o `kid`
+  (o invariante da [RN-475](../business-rules.md#rn-475), agora impossível de
+  violar por construção), e com zero projetos o processo fica de pé
+  reconsultando ([RN-550](../business-rules.md#rn-550)) em vez de sair.
+- **A tela reconhece quem já está pareado** ([RN-548](../business-rules.md#rn-548)),
+  sem nunca afirmar que o agente está rodando — chave registrada prova
+  pareamento, não processo vivo.
+- **E o conjunto está medido de ponta a ponta** ([RN-549](../business-rules.md#rn-549)),
+  contra api e binário de verdade, numa máquina limpa.
+
+O que a fase **não** fechou está logo abaixo, em "Lacunas que a fase encosta e
+não resolve", e nenhuma delas mudou de tamanho no caminho — exceto a da TELA de
+listar/revogar chave, que ficou **maior** de propósito: a fase acrescentou uma
+espécie de chave a listar e não construiu a tela. Acrescente-se o achado do
+compose que a sessão 8 mediu, e a lacuna do `install --machine`, que continua
+sem saber se a chave daquela pasta é mesmo de máquina — em disco as duas
+espécies são o mesmo arquivo, e quem sabe é o servidor.
 
 ## O que esta fase NÃO toca
 

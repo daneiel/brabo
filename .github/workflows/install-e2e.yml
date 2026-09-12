@@ -39,7 +39,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-14]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    # 25 bastavam enquanto o job parava no `.env`. Com o fechamento inteiro
+    # (RN-547) ele ainda espera o agente entrar na espera e, depois do projeto
+    # nascer, a cadência de 15s/30s/60s da RN-550 — os dois com teto próprio,
+    # somando até 7min no pior caso.
+    timeout-minutes: 40
     steps:
       - name: Qual tag
         id: alvo
@@ -85,6 +89,44 @@ jobs:
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'install.sh' --dir .
           chmod +x install.sh
 
+      # ACHADO, medido ao escrever a sessão 8 da FASE 30, e a razão de este
+      # passo existir: o `install.sh` PUBLICADO não consegue subir nada sozinho
+      # numa máquina limpa. Ele sobe a pilha com
+      # `docker compose -f docker/docker-compose.install.yml`, um caminho
+      # RELATIVO ao diretório de onde roda — e esse arquivo NÃO é asset da
+      # Release, NÃO entra no `checksums.txt` assinado, e o script não o baixa
+      # em lugar nenhum (as únicas descargas dele são o `cosign`, o manifesto, o
+      # próprio hash e o binário do runner). O compose ainda bind-monta
+      # `./postgres/init.sql`, então são TRÊS arquivos e não um. Quem segue o
+      # `sh -c "$(curl … install.sh)"` do runbook morre em "no such file or
+      # directory" DEPOIS de já ter verificado assinatura, escolhido a base e
+      # gravado o `.env`.
+      #
+      # Este passo NÃO conserta isso, de propósito: consertar é decidir se o
+      # compose vira asset assinado (RN-524) ou se o instalador passa a clonar,
+      # e isso é entrega própria — não algo a fazer de passagem dentro do E2E
+      # que descobriu o buraco. Ele traz os arquivos à mão, PELA TAG, e fica
+      # aqui como a marca dele: no dia em que o instalador os buscar sozinho,
+      # este passo sai e nada mais muda.
+      - name: Os arquivos que o instalador NÃO baixa (achado declarado)
+        if: runner.os == 'Linux'
+        env:
+          TAG: ${{ steps.alvo.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p docker/postgres docker/ollama
+          for arquivo in \
+            docker/docker-compose.install.yml \
+            docker/postgres/init.sql \
+            docker/ollama/pull-models.sh
+          do
+            curl -fsSL -o "$arquivo" \
+              "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${TAG}/${arquivo}" \
+              || { echo "::error::não consegui trazer ${arquivo} da tag ${TAG}"; exit 1; }
+          done
+          echo 'trazidos à mão porque o instalador não os traz:'
+          ls -l docker/docker-compose.install.yml docker/postgres/init.sql
+
       # PRIMEIRO os modos que não tocam nada. Se o plano já mentir, o resto do
       # job é ruído.
       - name: O plano e o estado, numa máquina limpa
@@ -117,25 +159,290 @@ jobs:
           test ! -f "${XDG_STATE_HOME:-$HOME/.local/state}/brabo/install-state.json" \
             || { echo "::error::sem TTY o instalador GRAVOU o marcador"; exit 1; }
 
-      # O fluxo completo exige um terminal, e `script -qec` dá um de verdade
-      # (não um pipe — que é justamente o que mataria o consentimento). As
-      # respostas vão por um arquivo, não por `echo |`, pelo mesmo motivo.
-      - name: Instalação completa, com TTY simulado
+      # A ÚNICA divergência declarada entre este runner e a máquina limpa de uma
+      # pessoa, e ela é do AMBIENTE, nunca do instalador. Numa máquina de
+      # verdade quem instala tem SESSÃO de login e o `systemd --user` já está de
+      # pé; o job do Actions roda não-interativo, sem sessão, e sem ela
+      # `systemctl --user` não tem barramento a que falar. Sem este passo o
+      # `service install --machine` viraria pendência por um motivo que não é do
+      # produto, e o E2E "provaria" uma falha de laboratório.
+      #
+      # `enable-linger` não toca em nada do instalador: ele não é flag do
+      # script, não pula verificação nenhuma e não muda o que a unit faz.
+      - name: Sessão de usuário para o systemd (divergência declarada)
         if: runner.os == 'Linux'
         run: |
           set -euo pipefail
-          printf 'nao-migrar\n%s/projetos-brabo\ns\n' "$HOME" > respostas.txt
-          script -qec "NO_COLOR=1 ./install.sh --source=ghcr < respostas.txt" /dev/null | tee completa.txt || true
+          sudo loginctl enable-linger "$USER"
+          uid="$(id -u)"
+          echo "XDG_RUNTIME_DIR=/run/user/${uid}" >> "$GITHUB_ENV"
+          XDG_RUNTIME_DIR="/run/user/${uid}"
+          export XDG_RUNTIME_DIR
+          limite=$(( SECONDS + 90 ))
+          until systemctl --user show-environment >/dev/null 2>&1; do
+            if [ "$SECONDS" -ge "$limite" ]; then
+              echo "::error::o systemd de usuário não subiu em 90s — o resto do job não teria o que medir"
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "systemd de usuário de pé em ${XDG_RUNTIME_DIR}"
 
-          grep -q 'assinatura do manifesto confere' completa.txt \
-            || { echo "::error::a verificação de assinatura não passou"; exit 1; }
-          grep -q 'este arquivo é o que a Release publicou' completa.txt \
-            || { echo "::error::o instalador não conferiu o próprio hash"; exit 1; }
+      # O fluxo completo exige um terminal, e `script -qec` dá um de verdade
+      # (não um pipe — que é justamente o que mataria o consentimento). As
+      # respostas vão por um arquivo, não por `echo |`, pelo mesmo motivo.
+      #
+      # A ORDEM das respostas é a ordem dos `read` do script NUMA MÁQUINA LIMPA,
+      # e ela NÃO tem a pergunta de migração: o bloco que a faz está sob
+      # `if [ -n "$marcador" ] || [ -n "$sinais" ]`, e numa máquina limpa os dois
+      # são vazios. São SETE — marcador, base, consentimento da conta, e-mail,
+      # senha, senha de novo, e nome (linha vazia, que é "pular"). As três de
+      # antes começavam por `nao-migrar`, que caía na pergunta do MARCADOR: ela
+      # não casa `s|S|sim|SIM`, o script dizia "Nada foi gravado" e saía 0, e a
+      # asserção do marcador logo abaixo reprovaria. Nunca apareceu porque este
+      # workflow só roda em tag e ainda não rodou nenhuma.
+      - name: Instalação completa, com TTY simulado — e o fechamento inteiro
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+
+          # Gerada AQUI e nunca fixa: segredo em fixture é segredo no
+          # repositório. `openssl rand -base64 18` dá 24 caracteres, acima do
+          # mínimo de 12 da política do domínio, e o alfabeto base64 não tem
+          # `"` nem `\` (o que o `escapar_json` do instalador teria de escapar)
+          # nem tabulação, que ele RECUSA em vez de remover.
+          email='e2e-da-instalacao@example.com'
+          senha="$(openssl rand -base64 18)"
+          echo "::add-mask::${senha}"
+          ( umask 077; printf '%s\n%s\n' "$email" "$senha" > "${RUNNER_TEMP}/credencial" )
+
+          respostas="${RUNNER_TEMP}/respostas"
+          ( umask 077
+            printf 's\n%s/projetos-brabo\ns\n%s\n%s\n%s\n\n' \
+              "$HOME" "$email" "$senha" "$senha" > "$respostas" )
+
+          script -qec "NO_COLOR=1 ./install.sh --source=ghcr < ${respostas}" /dev/null \
+            | tee completa.txt || true
+          rm -f "$respostas"
+
+          exigir() {
+            grep -qF -- "$2" completa.txt \
+              || { echo "::error::$1 (não achei na saída: $2)"; exit 1; }
+          }
+
+          # O que a FASE 29 já provava.
+          exigir 'a verificação de assinatura não passou' 'assinatura do manifesto confere'
+          exigir 'o instalador não conferiu o próprio hash' 'este arquivo é o que a Release publicou'
+
+          # Os CINCO elos da RN-547, um a um, contra api e binário de verdade.
+          # Nos testes da sessão 6 o `brabo-runner` é dublê de shell e a api é
+          # um `node:http`: o que se provava lá é o ENCADEAMENTO, e é só aqui
+          # que existe integração para provar.
+          exigir 'elo 1 (RN-546): a primeira conta não foi criada' 'conta criada e já verificada'
+          exigir 'elo 2 (RN-551): o par não foi gerado na máquina' 'par Ed25519 gerado nesta máquina'
+          exigir 'elo 3 (RN-552): a pública não foi registrada' 'chave registrada na api (id '
+          exigir 'elo 4 (RN-551): o `kid` não foi carimbado' 'chave completa em '
+          exigir 'elo 5 (RN-545): a unit de máquina não foi instalada' 'agente local instalado como serviço desta máquina'
+
+          # A prova NEGATIVA, e é a que mais vale: a RN-547 manda RELATAR cada
+          # elo que falha num bloco final nomeado, e sair 0 do mesmo jeito. Um
+          # E2E que só olhasse o código de saída daria verde com quatro dos
+          # cinco elos quebrados. "Nenhuma pendência" é a única forma de
+          # afirmar que os cinco fecharam, inclusive os que este passo não sabe
+          # nomear.
+          if grep -qF 'O que ficou pendente' completa.txt; then
+            echo '::error::a instalação terminou com pendências — algum elo do fechamento não fechou'
+            sed -n '/O que ficou pendente/,$p' completa.txt
+            exit 1
+          fi
+
           test -f "${XDG_STATE_HOME:-$HOME/.local/state}/brabo/install-state.json" \
             || { echo "::error::a instalação terminou sem marcador"; exit 1; }
           test "$(stat -c '%a' .env)" = '600' \
             || { echo "::error::o .env não está com modo 600"; exit 1; }
 
+          # O arquivo que o runner LÊ nunca existe sem `kid` (RN-475/RN-551), e
+          # o `.parcial` do `create` some quando o `finish` fecha. Medido no
+          # disco, não na saída: é o invariante que custou uma caçada.
+          chave="${XDG_CONFIG_HOME:-$HOME/.config}/brabo/brabo-runner-device-key.jwk.json"
+          test -f "$chave" || { echo "::error::a chave desta máquina não ficou no disco"; exit 1; }
+          jq -e 'has("kid") and (.kid | length > 0)' "$chave" >/dev/null \
+            || { echo "::error::a chave que o runner lê ficou SEM kid"; exit 1; }
+          jq -e 'has("d")' "$chave" >/dev/null \
+            || { echo "::error::a privada não é privada — sem `d` o runner não assina nada"; exit 1; }
+          test ! -f "${chave}.parcial" \
+            || { echo "::error::o .parcial sobrou depois de o finish fechar"; exit 1; }
+
+          # A senha foi lida, usada e descartada (RN-547). Se ela aparecer em
+          # qualquer um destes, o instalador a gravou.
+          for arquivo in .env "${XDG_STATE_HOME:-$HOME/.local/state}/brabo/install-state.json" completa.txt; do
+            if grep -qF -- "$senha" "$arquivo" 2>/dev/null; then
+              echo "::error::a senha vazou para ${arquivo}"
+              exit 1
+            fi
+          done
+          grep -qF -- "$email" "${XDG_STATE_HOME:-$HOME/.local/state}/brabo/install-state.json" \
+            || { echo "::error::o marcador não guardou o ownerEmail"; exit 1; }
+
+      # A asserção que prova a promessa da fase, e o SINAL é a decisão deste
+      # passo.
+      #
+      # NÃO é `systemctl is-active` nem `service status --machine` sozinhos:
+      # `perguntarEstado` mapeia `activating` para `rodando` — com razão, porque
+      # "subindo" não é "parado" —, então os dois respondem "de pé" para um
+      # processo que vai morrer dois segundos depois. É exatamente a corrida que
+      # um `sleep` fixo esconde, e medir o artefato errado aqui é o jeito mais
+      # fácil de este E2E dar verde sem provar nada.
+      #
+      # O sinal é a LINHA que o processo escreve ao ENTRAR na espera (RN-550,
+      # `apps/runner/src/index.ts`): ela só existe depois de o agente ter lido a
+      # chave de máquina do disco, tirado ticket, falado com a api de VERDADE e
+      # recebido de volta uma lista VAZIA. Ela prova pareamento e espera de uma
+      # vez. E não é amostragem de estado — é um fato já gravado no journal, que
+      # não se desfaz —, então esperar por ELA com teto não é corrida: ou ela
+      # aparece, ou o teto estoura e o passo reprova mostrando o journal.
+      #
+      # `service status --machine` entra DEPOIS, e só como confirmação de que os
+      # quatro códigos respondem o que a tela do operador vai ver.
+      - name: O agente está DE PÉ, esperando o primeiro projeto
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          unidade='brabo-runner.service'
+
+          test -f "${HOME}/.config/systemd/user/${unidade}" \
+            || { echo "::error::a unit de MÁQUINA não foi escrita"; exit 1; }
+          # O nome sem sufixo é o que distingue as duas espécies (RN-545), e uma
+          # unit por PROJETO aqui significaria que o instalador pareou com um
+          # projeto — exatamente o que ele diz que não faz.
+          if compgen -G "${HOME}/.config/systemd/user/brabo-runner-*.service" >/dev/null; then
+            echo '::error::apareceu unit por PROJETO numa instalação que não tem projeto nenhum'
+            exit 1
+          fi
+
+          limite=$(( SECONDS + 180 ))
+          until journalctl --user -u "$unidade" --no-pager 2>/dev/null | grep -qF 'FICA DE PÉ'; do
+            if [ "$SECONDS" -ge "$limite" ]; then
+              echo '::error::o agente nunca disse que está esperando projeto — ele não subiu, ou não chegou a falar com a api'
+              systemctl --user status "$unidade" --no-pager --full || true
+              journalctl --user -u "$unidade" --no-pager || true
+              exit 1
+            fi
+            sleep 3
+          done
+          echo 'o agente entrou na espera — leu a chave, tirou ticket e recebeu lista vazia da api'
+
+          codigo=0
+          "${HOME}/.local/bin/brabo-runner" service status --machine || codigo=$?
+          [ "$codigo" -eq 0 ] \
+            || { echo "::error::service status --machine devolveu ${codigo}; 0 (rodando) é o esperado"; exit 1; }
+
+      # O DESFECHO que a fase inteira persegue: a pessoa cria o primeiro projeto
+      # em modo Runner e o agente o pega, sem ninguém voltar ao terminal.
+      #
+      # Pela API e não pelo NAVEGADOR, e a escolha é deliberada. O sujeito da
+      # afirmação é o AGENTE, não a página: o que ele observa é
+      # `GET /runner/projects`, um fato da api. Um navegador criaria o projeto
+      # pela MESMA rota com uma camada a mais que pode falhar por motivos que
+      # nada têm a ver com a promessa — e não tornaria a asserção mais forte,
+      # porque ela continua sendo a linha do journal do agente. A camada de
+      # navegador já existe (`e2e/`, ADR 0120), responde outra pergunta (três
+      # origens, cookie httpOnly, CSRF), tem lockfile próprio e assume o compose
+      # de produção de pé: arrastá-la para cá faria o E2E do instalador depender
+      # de um segundo harness instalado numa máquina que deveria estar limpa.
+      # Provar o wizard é trabalho da suíte do web, e ele já é coberto lá.
+      - name: O primeiro projeto em modo Runner, e o agente o pega
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          api='http://localhost:3000'
+          E2E_EMAIL="$(sed -n 1p "${RUNNER_TEMP}/credencial")"
+          E2E_SENHA="$(sed -n 2p "${RUNNER_TEMP}/credencial")"
+          export E2E_EMAIL E2E_SENHA
+          echo "::add-mask::${E2E_SENHA}"
+
+          # A senha vai pelo STDIN do curl, nunca por `argv`, pelo mesmo motivo
+          # que o instalador tem (`/proc/<pid>/cmdline`) — e o `jq -n` a lê do
+          # AMBIENTE, nunca de `--arg`, que também é argv.
+          token="$(jq -n '{email: env.E2E_EMAIL, senha: env.E2E_SENHA}' \
+            | curl -fsS -X POST "${api}/auth/login" \
+                -H 'Content-Type: application/json' --data-binary @- \
+            | jq -r '.accessToken')"
+          [ -n "$token" ] && [ "$token" != 'null' ] \
+            || { echo '::error::a conta criada pelo instalador não fez login — ela nasceu verificada?'; exit 1; }
+          echo "::add-mask::${token}"
+          echo 'a conta nascida no terminal atravessa o login, sem link de verificação nenhum'
+
+          # O workspace PESSOAL que a RN-546 cria na mesma transação. Sem ele o
+          # "Novo projeto" não teria onde criar, e é por isso que ele entrou.
+          ws="$(curl -fsS "${api}/workspaces" -H "Authorization: Bearer ${token}" | jq -r '.[0].id')"
+          [ -n "$ws" ] && [ "$ws" != 'null' ] \
+            || { echo '::error::a conta nasceu sem workspace pessoal'; exit 1; }
+
+          jq -n --arg caminho "${HOME}/projetos-brabo/e2e-da-instalacao" \
+            '{name: "E2E da instalacao", slug: "e2e-da-instalacao",
+              executionMode: "runner", workspacePath: $caminho}' \
+            | curl -fsS -X POST "${api}/workspaces/${ws}/projects" \
+                -H "Authorization: Bearer ${token}" \
+                -H 'Content-Type: application/json' --data-binary @- > projeto.json
+          jq -e '.executionMode == "runner"' projeto.json >/dev/null \
+            || { echo '::error::o projeto não nasceu em modo runner'; cat projeto.json; exit 1; }
+
+          # A cadência da espera é 15s/30s/60s e o último se repete (RN-550), e
+          # este projeto pode ter nascido logo depois de um sono de 60s — daí o
+          # teto de 240s. A linha é gravada ANTES de o agente tentar conectar,
+          # então ela mede o que esta sessão promete (pegar o projeto) e não o
+          # join, que depende do engine e é outra garantia.
+          limite=$(( SECONDS + 240 ))
+          until journalctl --user -u brabo-runner.service --no-pager 2>/dev/null \
+            | grep -qF 'a espera ACABA'; do
+            if [ "$SECONDS" -ge "$limite" ]; then
+              echo '::error::o agente não pegou o projeto criado na web — a promessa da FASE 30 não se cumpriu'
+              journalctl --user -u brabo-runner.service --no-pager || true
+              exit 1
+            fi
+            sleep 5
+          done
+          echo 'o agente pegou o primeiro projeto sozinho — ninguém voltou ao terminal'
+
+      # A idempotência da RN-547 vista do lado que o E2E alcança sem reinstalar:
+      # a api RESPONDE 409 de verdade à segunda `first-account`. O que o
+      # instalador FAZ com esse 409 (calar-se, e não virar pendência) é
+      # classificação de código HTTP, coberta em `install-fechamento.spec.ts`
+      # contra um servidor de teste — repeti-la aqui exigiria uma segunda
+      # instalação inteira, que passa pelo caminho de MIGRAÇÃO (backup provado,
+      # apagar, recriar) e é entrega própria, não um passo a mais.
+      - name: A segunda conta é 409, e é a api de verdade dizendo isso
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          token="$(grep '^BRABO_SERVICE_TOKEN=' .env | cut -d= -f2-)"
+          [ -n "$token" ] || { echo '::error::o .env não tem BRABO_SERVICE_TOKEN'; exit 1; }
+          cfg="$(mktemp)"; chmod 600 "$cfg"
+          {
+            printf 'url = "http://localhost:3000/internal/first-account"\n'
+            printf 'request = "POST"\n'
+            printf 'header = "Content-Type: application/json"\n'
+            printf 'header = "x-brabo-service-token: %s"\n' "$token"
+            printf 'data-binary = "@-"\n'
+            printf 'silent\n'
+          } > "$cfg"
+          # Senha gerada, e não uma constante: `exigirSenhaValida` roda ANTES do
+          # 409 (a política é do domínio, chamada pelo mesmo código do registro
+          # normal), então uma senha fraca daria 400 e o passo mediria a coisa
+          # errada.
+          E2E_SEGUNDA="$(openssl rand -base64 18)"
+          export E2E_SEGUNDA
+          echo "::add-mask::${E2E_SEGUNDA}"
+          codigo="$(jq -n '{email: "segunda@example.com", senha: env.E2E_SEGUNDA}' \
+            | curl -K "$cfg" -o /dev/null -w '%{http_code}')"
+          rm -f "$cfg"
+          [ "$codigo" = '409' ] \
+            || { echo "::error::a segunda first-account respondeu ${codigo}, e 409 é o desfecho esperado"; exit 1; }
+
       - name: O que ficou de pé
         if: always() && runner.os == 'Linux'
-        run: docker compose -f docker/docker-compose.install.yml ps 2>/dev/null || true
+        run: |
+          docker compose -f docker/docker-compose.install.yml ps 2>/dev/null || true
+          systemctl --user status brabo-runner.service --no-pager --full 2>/dev/null || true
+          journalctl --user -u brabo-runner.service --no-pager 2>/dev/null | tail -60 || true

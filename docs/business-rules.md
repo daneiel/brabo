@@ -12340,3 +12340,166 @@ existia, antes de qualquer escrita.
 - **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
 - **Origem:** FASE 30, sessão 6 —
   [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
+### RN-549 — O E2E em máquina limpa prova a instalação INTEIRA: os cinco elos, o agente de pé esperando, e o primeiro projeto pego sem ninguém voltar ao terminal {#rn-549}
+
+Sessão 8 da [FASE 30](explanation/fase-30-runner-por-maquina.md), a última — e a
+única que podia responder a pergunta que a fase inteira persegue: *numa máquina
+limpa, o `install.sh` termina com o agente local de pé e pareado, e a pessoa cria
+o primeiro projeto em modo Runner sem voltar ao terminal?* Até aqui a resposta era
+uma intenção escrita: a [RN-547](#rn-547) encadeou os cinco comandos e declarou,
+por escrito, que nos testes dela o `brabo-runner` é um dublê de shell e a api é um
+`node:http` — *"o que se prova é o ENCADEAMENTO, nunca a integração"*.
+
+**O harness não nasceu aqui: ele foi ESTENDIDO.** `.github/workflows/install-e2e.yml`
+existe desde a FASE 29 ([RN-534](#rn-534)) e já roda o instalador publicado num
+runner efêmero do Actions — que é literalmente uma máquina limpa, sem Brabo, sem
+`.env`, sem marcador. O que ele provava parava no `.env`: plano, estado, as três
+promessas de nunca apagar, o caminho sem TTY, e a subida com TTY simulado. Um
+segundo workflow duplicaria o lado caro (esperar a Release, baixar, verificar
+assinatura) para medir o lado barato.
+
+**Ele NÃO roda em `pull_request`, e a consequência é declarada em vez de
+escondida.** O instalador verifica a própria origem contra o `checksums.txt`
+**assinado** de uma Release ([RN-526](#rn-526)), que só existe depois de uma tag
+final; a única forma de fazê-lo rodar em PR seria dar-lhe uma porta para PULAR a
+verificação — a porta que o [ADR 0150](adr/0150-instalador-de-uma-linha.md)
+recusa, e que uma vez aberta valeria para qualquer um, não só para o CI. Logo: **o
+PR que escreveu este E2E não o executou**, e os checks dele passaram sem exercitar
+uma linha do que ele acrescentou. É a mesma decisão do golden-set do RAG
+([ADR 0138](adr/0138-golden-set-do-rag-em-ci-agendado.md)), pelo mesmo motivo.
+
+**Daí a metade que RODA em PR, e é a razão de ela existir.** Workflow que só roda
+em tag é workflow cujo erro aparece na tag, quando o release já está saindo e
+ninguém olha mais o PR que o quebrou. `scripts/dev/install-e2e.spec.ts` mede as
+duas maneiras conhecidas de este E2E apodrecer calado: alguém **afrouxar** o gate
+(pôr `pull_request` no gatilho, ou passar uma flag de pular verificação), e alguém
+**reescrever uma frase** do `install.sh` — com o que todo `grep` do workflow passa
+a não casar nada, e as asserções não falham, elas SOMEM. O canário de prompts é
+derivado, não decorado: as respostas do TTY vão por arquivo, **em ordem**, e um
+`read -r` novo no instalador desalinha todas as seguintes — a base viraria a
+senha —, então o teste conta os prompts e manda olhar o arquivo de respostas.
+
+**O que o E2E passou a provar, e cada asserção tem um dono.** Os cinco elos da
+[RN-547](#rn-547), um a um, contra api e binário de VERDADE — a conta
+([RN-546](#rn-546)), o par gerado na máquina e o `kid` carimbado
+([RN-551](#rn-551)), o registro da pública ([RN-552](#rn-552)) e a unit por
+máquina ([RN-545](#rn-545)). Mais o invariante da [RN-475](#rn-475) medido no
+DISCO e não na saída (o arquivo que o runner lê tem `kid`, tem `d`, e o
+`.parcial` sumiu quando o `finish` fechou), a senha ausente do `.env`, do
+marcador e do log, e o `ownerEmail` presente no marcador.
+
+**A prova NEGATIVA é a que mais vale, e é a ausência do bloco de pendências.** A
+[RN-547](#rn-547) manda relatar cada elo que falha num bloco final nomeado — e
+sair **0** do mesmo jeito. Um E2E que olhasse o código de saída daria verde com
+quatro dos cinco elos quebrados. *"Nenhuma pendência"* é a única forma de afirmar
+que os cinco fecharam, inclusive os que o workflow não sabe nomear.
+
+**O sinal de que o agente está DE PÉ esperando é a LINHA, nunca o estado do
+gerenciador — e essa escolha é a decisão central deste E2E.**
+`perguntarEstado` mapeia `activating` para `rodando` ([RN-088](#rn-088), com
+razão: "subindo" não é "parado"), então tanto `systemctl is-active` quanto
+`brabo-runner service status --machine` respondem *de pé* para um processo que vai
+morrer dois segundos depois. É exatamente a corrida que um `sleep` fixo esconde, e
+medir o artefato errado aqui — um binário no disco, uma unit escrita — é o jeito
+mais fácil de um E2E dar verde sem provar nada. O sinal escolhido é a linha que o
+processo escreve ao ENTRAR na espera ([RN-550](#rn-550)): ela só existe depois de
+o agente ter lido a chave de máquina do disco, tirado ticket, falado com a api de
+verdade e recebido uma lista VAZIA — prova pareamento e espera de uma vez. E não é
+amostragem de estado: é um fato já gravado no journal, que não se desfaz. Por isso
+esperar por ela com teto não é corrida — ou ela aparece, ou o teto estoura e o
+passo reprova mostrando o journal inteiro. `service status --machine` entra
+**depois** dela, como confirmação de que o código de saída responde o que o
+operador vai ver, nunca no lugar dela.
+
+**O desfecho da fase é medido pela API, e não pelo NAVEGADOR.** O sujeito da
+afirmação é o AGENTE, não a página: o que ele observa é `GET /runner/projects`
+([RN-543](#rn-543)), um fato da api. Um navegador criaria o projeto pela MESMA
+rota com uma camada a mais que falha por motivos alheios à promessa — e não
+tornaria a asserção mais forte, porque ela continua sendo a linha do journal do
+agente. A camada de navegador existe (`e2e/`,
+[ADR 0120](adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md)), responde
+outra pergunta (três origens, cookie `httpOnly`, CSRF), tem lockfile próprio e
+assume o compose de produção de pé: arrastá-la para cá faria o E2E do instalador
+depender de um segundo harness instalado numa máquina que deveria estar limpa.
+Provar o wizard é trabalho da suíte do web, e ele já é coberto lá. O que o passo
+mede é a cadeia inteira: a conta nascida no terminal **atravessa o login** sem
+link de verificação nenhum, o workspace pessoal da [RN-410](#rn-410) existe, o
+projeto nasce `runner`, e o agente o pega sozinho dentro da cadência de
+15s/30s/60s da [RN-550](#rn-550).
+
+**A idempotência é medida pela metade que o E2E alcança sem reinstalar.** A api
+responde `409` de verdade a uma segunda `first-account` — com senha GERADA, nunca
+constante, porque `exigirSenhaValida` roda ANTES do conflito e uma senha fraca
+daria `400`, medindo a coisa errada. O que o instalador FAZ com esse `409`
+(calar-se, e não virar pendência) é classificação de código HTTP, coberta em
+`install-fechamento.spec.ts` contra um servidor de teste: repeti-la aqui exigiria
+uma segunda instalação inteira, que passa pelo caminho de MIGRAÇÃO
+([RN-530](#rn-530)) — backup provado, apagar, recriar — e é entrega própria.
+
+**A única divergência entre este runner e uma máquina limpa é do AMBIENTE, e está
+nomeada.** Numa máquina de verdade quem instala tem sessão de login e o
+`systemd --user` já está de pé; o job do Actions roda não-interativo, sem sessão, e
+sem ela `systemctl --user` não tem barramento a que falar — o `service install
+--machine` viraria pendência por um motivo que não é do produto, e o E2E
+"provaria" uma falha de laboratório. `loginctl enable-linger` põe o gerenciador de
+usuário de pé; ele não é flag do instalador, não pula verificação nenhuma e não
+muda o que a unit faz.
+
+**Dois defeitos apareceram ao escrever isto, e os dois eram invisíveis porque o
+workflow nunca rodou.** O primeiro estava no próprio harness: o arquivo de
+respostas começava por `nao-migrar`, que numa máquina limpa cai na pergunta do
+MARCADOR — ela não casa `s|S|sim|SIM`, o script dizia *"Nada foi gravado"* e saía
+0, e a asserção do marcador logo abaixo teria reprovado. A pergunta de migração
+está sob `if [ -n "$marcador" ] || [ -n "$sinais" ]`, e numa máquina limpa os dois
+são vazios: ela não acontece. Corrigido para as SETE respostas reais.
+
+**O segundo é ACHADO e não foi corrigido aqui, de propósito.** O `install.sh`
+publicado **não consegue subir nada sozinho numa máquina limpa**: ele sobe a pilha
+com `docker compose -f docker/docker-compose.install.yml`, um caminho RELATIVO ao
+diretório de onde roda — e esse arquivo **não é asset da Release, não entra no
+`checksums.txt` assinado ([RN-524](#rn-524)), e o script não o baixa em lugar
+nenhum** (as únicas descargas dele são o `cosign`, o manifesto, o próprio hash e o
+binário do runner). O compose ainda bind-monta `./postgres/init.sql`, então são
+TRÊS arquivos e não um. Quem segue o `sh -c "$(curl … install.sh)"` do runbook
+morre em *"no such file or directory"* **depois** de já ter verificado assinatura,
+escolhido a base e gravado o `.env`. Consertar é decidir se o compose vira asset
+assinado ou se o instalador passa a clonar — entrega própria, não algo a fazer de
+passagem dentro do E2E que descobriu o buraco. O workflow traz os três à mão, pela
+tag, num passo que DIZ que é achado; o teste em PR cobra as duas metades (o passo
+existe, e o instalador continua usando o compose sem baixá-lo), e o dia em que o
+instalador os buscar sozinho o teste reprova — e o certo então é apagar o passo,
+não relaxar o teste.
+
+**O que NÃO entrou:** porta nenhuma para pular a verificação de origem; `apps/`
+intocado (o achado virou relato, não correção de passagem); nenhum segundo
+workflow de E2E de instalador; e nenhum gate afrouxado — em particular, o E2E
+continua fora de `pull_request`.
+
+- **Código:** `.github/workflows/install-e2e.yml:16` (o gatilho que segue sem
+  `pull_request`), `:111` (o passo do achado — os três arquivos que o instalador
+  não baixa), `:172` (a sessão de usuário do systemd, a divergência declarada),
+  `:204` (a instalação completa com as SETE respostas), `:241`–`:245` (os cinco
+  elos da RN-547, um por linha), `:253` (a prova negativa — nenhuma pendência),
+  `:267`–`:274` (o `kid`, o `d` e o `.parcial`, medidos no DISCO e não na
+  saída), `:278` (a senha que não vazou), `:307` (o
+  agente de pé, pela linha do journal e não pelo gerenciador), `:354` (o primeiro
+  projeto pela api, e o agente pegando-o), `:415` (o `409` da segunda conta)
+- **Teste:** `scripts/dev/install-e2e.spec.ts` — a metade que roda em PR: o
+  gatilho lido do DOCUMENTO (não do texto, que casaria com o comentário que
+  explica por que `pull_request` não está lá), a ausência de flag de pular
+  verificação nos dois arquivos, o contrato de frases entre workflow e
+  `install.sh` (os cinco elos mais as quatro de sempre), as duas linhas do
+  `apps/runner` de que as asserções dependem, o canário de prompts interativos, a
+  ORDEM entre a linha do journal e o `service status --machine`, e as duas metades
+  do achado do compose. Verificado por mutação: reescrever uma frase do
+  instalador e pôr `pull_request` no gatilho reprovam
+- **Lacuna DECLARADA:** este E2E **não roda no PR que o escreveu**, e nenhum
+  check dele prova uma linha do que foi acrescentado — a primeira execução real é
+  a próxima tag final. Fica também fora, e não por esquecimento: a segunda
+  execução do instalador pelo caminho de MIGRAÇÃO ([RN-530](#rn-530)) — backup,
+  prova de restauração, apagar e recriar —, o macOS (o passo completo é Linux:
+  `launchd`, e o Docker que o runner hospedado não tem), e o navegador
+- **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+- **Origem:** FASE 30, sessão 8 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)

@@ -134,6 +134,8 @@ estado lido do repositório e não da conversa.
 | FASE 30 — o agente espera o primeiro projeto, e a chave nasce no terminal | ADR 0155, RN-550/551 |
 | FASE 30 — a chave de MÁQUINA ganha quem a registra | ADR 0155, RN-552 |
 | FASE 30 (sessão 6) — o `install.sh` fecha a instalação | ADR 0155, RN-547 |
+| FASE 30 (sessão 7) — a tela reconhece agente de máquina já pareado | ADR 0154, RN-548 |
+| FASE 30 — CONCLUÍDA (sessão 8: o E2E em máquina limpa) | historico-de-fases.md |
 | O runner reconectava sozinho com um ticket morto | RN-108 |
 | O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
@@ -143,74 +145,11 @@ estado lido do repositório e não da conversa.
 O que segue é OPERATIVO — decide comportamento de sessão hoje. Fechou? Sai
 daqui e o fechamento vai para o histórico.
 
-**EM EXECUÇÃO — FASE 30 (o agente local da máquina):** a identidade do agente
-local deixa de ser por PROJETO e passa a ser da MÁQUINA, e o `install.sh` fecha
-a instalação criando a primeira conta e subindo o agente já pareado. Recorte em
-`docs/explanation/fase-30-runner-por-maquina.md`, decisões nos ADRs 0154/0155
-(`Proposed`), faixa RN-542..555, andamento no kanban do vault. Duas medições
-mudaram o recorte e valem para quem pegar uma sessão dela: **três dos cinco**
-acoplamentos de "um runner por projeto" NÃO precisam mudar — o tópico
-`terminal:<projectId>`, o socket id e o ticket descrevem uma CONEXÃO, e N
-conexões (uma por projeto) os satisfazem byte a byte, preservando a recusa de
-segundo runner no mesmo projeto; **nada no engine muda**. Numa instalação nova
-ninguém CONSEGUIA entrar — o `.env` gerado não tem variável de e-mail,
-`MAIL_TRANSPORT` cai em `log`, e o registro exige verificar e-mail, então a
-saída era pescar o link em `docker compose logs api`. **Isso FECHOU na sessão 6
-(RN-547): o `install.sh` cria a primeira conta no terminal, registra a chave
-desta máquina e sobe o agente como serviço.** A METADE DE API disso fechou na
-sessão 5 (RN-546, ADR 0155): `POST /internal/first-account` (`engine-service`,
-`BRABO_SERVICE_TOKEN`) cria a primeira conta JÁ VERIFICADA mais o workspace
-pessoal da RN-410 na mesma transação, e recusa com 409 havendo QUALQUER usuário
-— condição sobre a INSTALAÇÃO, nunca sobre o e-mail pedido, e é ela que impede
-a rota de virar criador de contas. Nenhuma rota pública de "primeiro owner"
-nasceu, e o registro normal fica byte a byte. O `install.sh` que consome a rota
-é a sessão 6, e ele EXISTE desde a RN-547.
-A sessão 3 (RN-544) fechou a metade do RUNNER e confirmou a medição: o agente
-local abre N conexões de verdade, uma por projeto descoberto pela rota, e
-**nada no engine mudou** — nem o espelho, nem o `workspace_create`, nem um
-handler. A sessão 4 (RN-545) fechou o QUINTO e último acoplamento: a unit de
-MÁQUINA existe (`service install --machine`) e CONVIVE com as por projeto, sem
-remover nem renomear nenhuma e sem tocar `Restart=on-abnormal`. As duas peças
-que faltavam para a instalação fechar entraram JUNTAS, e nenhuma delas é sessão
-numerada da fase — as duas saíram do recorte da sessão 6 em três. DO LADO DO
-AGENTE (RN-550/551): ele FICA DE PÉ com zero projetos e reconsulta a lista (a
-instalação nova deixa de terminar sem agente), e `brabo-runner device-key
-create|finish` gera o par Ed25519 NA MÁQUINA — a privada nunca viaja, e nunca
-existe em disco um arquivo que o runner leia sem `kid`. DO LADO DA API
-(RN-552): `POST /internal/machine-device-keys`, `engine-service`, corpo
-`{ name, publicKeyJwk }` (só a metade PÚBLICA; uma JWK com `d` é recusada com
-400 por nome) e resposta com o `id` que vira o `kid` da privada (RN-475). A
-credencial é o service token, e o custo está DECLARADO: um token vazado passa a
-poder FABRICAR credencial de acesso duradoura — por isso três contenções vivem
-na rota, não no texto. Não há `userId` no corpo (o dono é o usuário ÚNICO da
-instalação; zero ou mais de um é 409 e nada é escrito, a condição da RN-546 com
-outra forma), registrar SUBSTITUI as chaves de máquina ativas do dono na mesma
-transação (máquina reinstalada passa, mil chaves não existem — e as de PROJETO
-nunca são tocadas), e a régua de forma da JWK virou UMA, no domínio, chamada
-pelos dois registradores. A sessão 6 (RN-547) ENCADEOU os cinco comandos no
-`install.sh`, como ORQUESTRADOR e nada mais — nenhuma linha de `apps/` mudou e
-nenhuma rota nasceu. Três regras dela valem daqui pra frente: quando um elo do
-meio falha NADA é desfeito, tudo é RELATADO numa lista final nomeada, e o
-script SEMPRE sai 0 (o compose já está de pé, e derrubar tudo por causa do
-último passo troca meia instalação por nenhuma); idempotência é o CÓDIGO HTTP e
-`409` é desfecho ESPERADO numa instalação que já tem gente, nunca falha
-(`000`, o curl que nem falou com a api, tem tratamento próprio); e a senha
-viaja pelo STDIN do `curl`, nunca por `argv` — `/proc/<pid>/cmdline` é legível
-por qualquer usuário da máquina. O passo do agente só roda quando ESTA execução
-criou a conta: com usuário preexistente, registrar chave de máquina cunharia
-credencial duradoura para quem não pediu nada. O que segue sem existir: o E2E
-em máquina limpa (sessão 8 — nos testes de hoje o `brabo-runner` é dublê e a
-api é servidor de teste, então o que se prova é o encadeamento, nunca a
-integração), e o `install --machine` ainda não distingue chave de máquina de
-chave de projeto — em disco são o mesmo arquivo, e a recusa só chega no
-primeiro boot.
-Duas coisas dessa sessão são régua daqui pra frente — `provisionarUsuario`
-(seed/smoke) teve o NÚCLEO extraído para `ProvisionarUsuarioUseCase` e MANTEVE
-a recusa de `NODE_ENV=production`, porque o que ela protege é senha CONHECIDA
-criada SEM interação humana e não o trio de escritas (não use
-`BRABO_FORCE_SEED` para atravessá-la); e a régua de senha é UMA só, a
-`exigirSenhaValida` do domínio, por isso o DTO da rota NÃO repete um
-`@MinLength` — ele cobriria só uma das cinco recusas.
+**Nenhuma fase EM EXECUÇÃO.** A FASE 30 fechou na sessão 8 (RN-549) — a
+narrativa inteira está em `docs/explanation/historico-de-fases.md`, o recorte em
+`docs/explanation/fase-30-runner-por-maquina.md`, e o que sobreviveu dela como
+regra está em Stack (a chave de MÁQUINA, as duas espécies de unit, a espera com
+zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 
 **Decisões de produto abertas (não são bugs; não corrigir de passagem):**
 - Z/AD: allowlist de verbos não converge (verbo/forma/invocação são espaços
@@ -439,6 +378,25 @@ criada SEM interação humana e não o trio de escritas (não use
   corrigir exigiria decidir COMO uma operação de `RunnerGit` credenciada
   se comunica com um `docker exec` que hoje não tem campo de `env` —
   fora do escopo dessa entrega
+- **O `install.sh` publicado NÃO sobe nada sozinho numa máquina limpa** — medido
+  na RN-549. Ele usa `docker compose -f docker/docker-compose.install.yml`, um
+  caminho RELATIVO ao diretório de onde roda, e esse arquivo NÃO é asset da
+  Release, NÃO entra no `checksums.txt` assinado e **ele não o baixa em lugar
+  nenhum** (as únicas descargas são o `cosign`, o manifesto, o próprio hash e o
+  binário do runner). Com o `./postgres/init.sql` que o compose bind-monta, são
+  TRÊS arquivos. Quem segue o `sh -c "$(curl … install.sh)"` do runbook morre em
+  "no such file or directory" DEPOIS de já ter verificado assinatura, escolhido a
+  base e gravado o `.env` — a saída de hoje é rodar o instalador de dentro de um
+  checkout na tag. Corrigir é decidir entre publicar o compose como asset
+  ASSINADO (RN-524) e fazer o instalador clonar: entrega própria, com ADR, nunca
+  de passagem. O `install-e2e.yml` traz os três à mão num passo que DIZ que é
+  achado, e `scripts/dev/install-e2e.spec.ts` cobra as duas metades
+- `install --machine` não sabe se a chave daquela pasta é mesmo de MÁQUINA — em
+  disco as duas espécies são o mesmo arquivo (uma JWK com `kid`), e quem sabe é o
+  SERVIDOR. Uma pasta com chave de projeto instala a unit sem erro, e a recusa só
+  chega no primeiro boot. Declarado desde a RN-545; o que mudou com a RN-547 é
+  que passou a existir um caminho que CRIA uma de máquina ali, então a recusa
+  deixou de ser o desfecho provável
 - `guard.ts` do runner é best-effort por invariante, não lacuna
 - Exclusividade por `{project_id, machine_id}` adiada até segundo dev
   simultâneo real
@@ -852,7 +810,18 @@ criada SEM interação humana e não o trio de escritas (não use
   metade de PROCEDÊNCIA do proxy — BRB-005 segue aberto só nela. Ver
   docs/explanation/cadeia-de-suprimentos-do-ci.md, que também DECLARA o que
   segue confiado na fé (sem Dependabot, sem proveniência de dependência npm,
-  sem assinatura dos artefatos, imagem de terceiro por tag e não por digest)
+  sem assinatura dos artefatos, imagem de terceiro por tag e não por digest).
+  E há UM workflow que NÃO roda em `pull_request` e não pode passar a rodar:
+  `install-e2e.yml` (RN-534/RN-549). O instalador verifica a própria origem
+  contra o `checksums.txt` ASSINADO de uma Release, que só existe depois de uma
+  tag final — fazê-lo rodar em PR exigiria dar-lhe uma porta para PULAR a
+  verificação, que é a porta que o ADR 0150 recusa e que, aberta, vale para
+  qualquer um. A consequência é DECLARADA e não escondida: **PR que mexe nesse
+  workflow não o executa**, e verde ali não significa provado. O que roda em PR
+  é `scripts/dev/install-e2e.spec.ts`, e ele guarda as duas formas de o E2E
+  apodrecer calado — o gatilho afrouxado, e uma frase do `install.sh` reescrita
+  (que não faz as asserções falharem: faz elas SUMIREM). Mesma decisão, mesmo
+  motivo, do golden-set do RAG (ADR 0138)
 
 ## Convenções
 - Branches permanentes: dev, qa, main — um branch, um ambiente. `rc` saiu
