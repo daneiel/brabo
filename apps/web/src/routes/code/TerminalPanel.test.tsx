@@ -29,9 +29,13 @@ import type { TerminalChannelHandlers } from '../../lib/terminal-channel';
  */
 vi.mock('../../lib/api-client', () => ({
   API_URL: 'https://api.brabo.example',
+  // Campo explícito e não parâmetro-propriedade: `erasableSyntaxOnly` recusa
+  // o atalho, e o `tsconfig` do web o liga.
   ApiError: class ApiError extends Error {
-    constructor(readonly status: number) {
+    status: number;
+    constructor(status: number) {
       super(`api error ${status}`);
+      this.status = status;
     }
   },
   getProject: () => Promise.resolve({ id: 'proj-1', workspacePath: null }),
