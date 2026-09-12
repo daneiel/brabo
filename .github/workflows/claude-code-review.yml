@@ -12,20 +12,45 @@ on:
 
 jobs:
   claude-review:
-    # PR de promoção (dev→qa, qa→main) é aberto pelo `github-actions[bot]` e
-    # NÃO é revisado, por dois motivos independentes:
+    # PR aberto por BOT não é revisado, e o teste é o `type` do autor — nunca
+    # uma lista de logins. A lista foi o que estava aqui (`github-actions[bot]`
+    # apenas), e ela tem o defeito de quem enumera: acerta enquanto o conjunto
+    # não muda, e erra calada no dia em que um bot novo aparece. Foi o que
+    # aconteceu quando o `dependabot.yml` entrou (PR #520) — o PR #526 reprovou
+    # com a MESMA mensagem dos #64/#65, três meses depois de a lição ter sido
+    # aprendida e escrita logo abaixo.
+    #
+    # A razão 1 vale para TODO bot, e é mecânica, não preferência:
     #
     # 1. O action se recusa a rodar com ator não-humano ("Workflow initiated by
-    #    non-human actor"). Sem este `if`, o check falha em TODA promoção — foi
-    #    o que aconteceu nos PRs #64 e #65 do ciclo v0.3.1.
-    # 2. Mesmo que rodasse, seria revisão repetida: a promoção só carrega
-    #    commits que já passaram por um PR para `dev`, onde este mesmo workflow
-    #    já revisou. Revisar de novo em cada degrau é a mesma diff três vezes.
+    #    non-human actor: <nome> (type: Bot)"). Sem este `if`, o check falha
+    #    sempre — nos PRs #64 e #65 do ciclo v0.3.1 (promoção) e no #526
+    #    (Dependabot).
+    #
+    # A razão 2 vale só para PR de PROMOÇÃO, e não deixa de ser verdadeira por
+    # isso:
+    #
+    # 2. Seria revisão repetida: a promoção só carrega commits que já passaram
+    #    por um PR para `dev`, onde este mesmo workflow já revisou. Revisar de
+    #    novo em cada degrau é a mesma diff três vezes.
+    #
+    # Para o Dependabot existe ainda uma terceira, e ela FECHA a porta: o PR
+    # dele roda com o cofre de segredos DO DEPENDABOT, separado do de Actions,
+    # então `secrets.CLAUDE_CODE_OAUTH_TOKEN` chega VAZIO (o log do #526 mostra
+    # `Secret source: Dependabot` e `"anthropic_api_key": ""`). Mesmo liberando
+    # o ator, a revisão não teria credencial — e um check que falha por segredo
+    # ausente é pior que um pulado, porque parece defeito de código.
     #
     # Pular é seguro porque `claude-review` NÃO é check required
     # (docs/reference/rulesets.md, "Checks obrigatórios") — job pulado aqui não
-    # deixa PR de promoção pendente para sempre.
-    if: github.event.pull_request.user.login != 'github-actions[bot]'
+    # deixa PR nenhum pendente para sempre.
+    # As DUAS checagens, espelhando `ehAutorBot` (`scripts/ci/pr-police.ts:147`)
+    # em vez de inventar um teste mais fraco aqui: o `type` é o sinal da API, e
+    # o sufixo `[bot]` é a rede — o GitHub não permite `[` em login humano,
+    # então ele não é forjável.
+    if: >-
+      github.event.pull_request.user.type != 'Bot' &&
+      !endsWith(github.event.pull_request.user.login, '[bot]')
 
     runs-on: ubuntu-latest
     permissions:

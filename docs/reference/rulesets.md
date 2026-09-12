@@ -295,12 +295,29 @@ shorten the PR has two targets, and only two:
 "someone writes down why": LLM review is opinionated and costs tokens, so
 it informs the PR without being able to block it. Since it isn't required,
 the job can be skipped without leaving the PR pending — and it is skipped
-on promotion PRs, which `github-actions[bot]` opens. The action refuses to
-run with a non-human actor (*"Workflow initiated by non-human actor"*), and
-even if it ran it would be the same diff reviewed again: the promotion only
-carries commits already reviewed in the PR to `dev`. Without that `if`,
-the check fails on every promotion — which is what happened on PRs #64 and
-#65 of the `v0.3.1` cycle.
+on every PR opened by a **bot**. The action refuses to run with a non-human
+actor (*"Workflow initiated by non-human actor: &lt;name&gt; (type: Bot)"*), so
+without that `if` the check fails every time. That happened twice: on PRs
+#64 and #65 of the `v0.3.1` cycle (promotion, opened by
+`github-actions[bot]`) and again on PR #526 (Dependabot).
+
+The second time was a consequence of **how** the condition was written. It
+enumerated one login — `github-actions[bot]` — which is right until the set
+changes, and wrong silently the day a new bot shows up; `dependabot.yml`
+landed on PR #520 and the next Dependabot PR reproduced the failure whose
+lesson was already written down. The condition now tests the author's
+`type`, mirroring `ehAutorBot` (`scripts/ci/pr-police.ts`), with the
+`[bot]` login suffix as a backstop — GitHub does not allow `[` in a human
+login, so it cannot be forged.
+
+For promotion PRs there is a second, independent reason: it would be the
+same diff reviewed again, since the promotion only carries commits already
+reviewed in the PR to `dev`. And for Dependabot there is a third, which
+closes the door on its own — its PRs run with the **Dependabot secret
+store**, separate from the Actions one, so `CLAUDE_CODE_OAUTH_TOKEN`
+arrives empty. Even allowing the actor, the review would have no
+credential, and a check that fails for a missing secret is worse than a
+skipped one: it reads as a code defect.
 
 ### What a PR between permanent branches can't satisfy
 

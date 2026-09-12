@@ -752,6 +752,25 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **ci**: o `claude-review` para de reprovar em PR aberto por bot.
+
+  A condição que o pulava enumerava **um login** (`github-actions[bot]`) — e
+  enumeração acerta enquanto o conjunto não muda. O `dependabot.yml` entrou no
+  PR #520, e o PR #526 reprovou com a **mesma** mensagem dos #64/#65, cuja
+  lição já estava escrita no comentário logo acima da linha.
+
+  Passa a testar o `type` do autor, espelhando `ehAutorBot`
+  (`scripts/ci/pr-police.ts`) em vez de um teste mais fraco, com o sufixo
+  `[bot]` do login como rede — o GitHub não permite `[` em login humano, então
+  ele não é forjável. O padrão já existia no repositório: `pr-police.yml` passa
+  `user.type` desde sempre.
+
+  Para o Dependabot há ainda um motivo que fecha a porta sozinho: os PRs dele
+  rodam com o **cofre de segredos do Dependabot**, separado do de Actions, e
+  `CLAUDE_CODE_OAUTH_TOKEN` chega vazio. Mesmo liberando o ator, a revisão não
+  teria credencial — e um check que falha por segredo ausente é pior que um
+  pulado, porque parece defeito de código.
+
 - **runner,ci**: os binários de **macOS** e **Windows** nunca construíram — e
   a matriz reprovava em toda tag, sempre pelo mesmo passo, por **duas** causas
   diferentes.
