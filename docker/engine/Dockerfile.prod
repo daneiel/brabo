@@ -156,6 +156,25 @@ RUN mkdir -p /data/project-workspaces /data/git-repos \
  && chown -R engine:engine /data
 VOLUME ["/data/project-workspaces", "/data/git-repos"]
 
+# A oferta escrita de fonte viaja DENTRO da imagem, e não só no repositório.
+#
+# Esta imagem embute `git`, `busybox`, `libgcc`/`libstdc++` e outras 18 apk sob
+# GPL, mais os quatro scanners que o engine invoca por `exec`. Executá-los como
+# processo separado não contamina o Brabo (que segue MIT) — mas DISTRIBUIR a
+# imagem exige que quem a recebe possa obter o fonte correspondente, e desde o
+# ADR 0119 ela é publicada no GHCR a cada tag final.
+#
+# `THIRD_PARTY_NOTICES.md` é a oferta: ele nomeia cada componente, a versão
+# exata e a licença, o que permite chegar ao release upstream de cada um. Ele
+# precisa estar ONDE O BINÁRIO ESTÁ — quem faz `docker pull` não tem o
+# repositório, e uma oferta que só existe no GitHub não acompanha a cópia que
+# a pessoa recebeu. `/usr/share/doc` é o lugar convencional em imagem Linux.
+#
+# Copiado ANTES do `USER`, como os diretórios de dados acima: o arquivo é do
+# root e legível por todos (0644), e não deve ser escrevível pelo processo.
+COPY --chown=root:root --chmod=0644 THIRD_PARTY_NOTICES.md \
+     /usr/share/doc/brabo/THIRD_PARTY_NOTICES.md
+
 WORKDIR /app
 
 COPY --from=builder --chown=engine:engine /build/_build/prod/rel/engine ./
