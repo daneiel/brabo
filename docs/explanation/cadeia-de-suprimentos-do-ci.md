@@ -130,8 +130,23 @@ image: neo4j@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b10
 ```
 
 ```dockerfile
-FROM node@sha256:b8f7c9056af700568c1ce76173f1c93743fb64ca1343e18cdf3a6ded8985ad3d AS deps  # 24.11.1-alpine3.21
+# 24.11.1-alpine3.21
+FROM node@sha256:b8f7c9056af700568c1ce76173f1c93743fb64ca1343e18cdf3a6ded8985ad3d AS deps
 ```
+
+**In a Dockerfile the tag goes on the line above, and that is not taste.**
+Docker's parser only recognizes `#` at the *start* of a line, so
+`FROM alpine@sha256:… # 3.20` is not a commented `FROM`, it is a `FROM` with
+three arguments, and the build dies with *"FROM requires either one or three
+arguments"*. This was found the right way — the `images` job's `bake` step
+failed on the first push, in 27 seconds — and it is worth recording that
+`hadolint` had passed the same file: it has its own parser, and a linter
+agreeing is not the build agreeing.
+
+The comment is **one token**, with no spaces, in both shapes. That is what
+separates the tag from the *prose* already sitting above nearly every `FROM`
+in this repository — without it, "there is a comment above" would be satisfied
+by any paragraph.
 
 This page used to say the opposite — tag pinning was "a deliberate stop,
 not an oversight," buying day-to-day reproducibility "without the

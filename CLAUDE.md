@@ -901,7 +901,13 @@ o RACIOCÍNIO da triagem, que continua valendo.
   IMAGEM de terceiro é presa por DIGEST, com a tag num comentário ao lado
   (`neo4j@sha256:…  # 5.26-community`), e o digest é o do ÍNDICE, nunca o de
   uma plataforma — pinar o manifesto de `linux/amd64` quebraria `linux-arm64`
-  sem aviso. Vale nas TRÊS árvores onde imagem de terceiro entra: `docker/`
+  sem aviso. Em DOCKERFILE o comentário vai na linha DE CIMA, e isso NÃO é
+  gosto: o parser do Docker só reconhece `#` no INÍCIO da linha, então
+  `FROM x@sha256:… # tag` é um `FROM` com TRÊS argumentos e o build morre —
+  aprendido errando, e o `hadolint` tinha passado nos cinco Dockerfiles (parser
+  próprio; linter concordar não é build concordar). O comentário é UM TOKEN,
+  sem espaço, nos dois formatos: é o que separa a tag da PROSA que já mora
+  acima de quase todo `FROM`. Vale nas TRÊS árvores onde imagem de terceiro entra: `docker/`
   (compose E `FROM` de Dockerfile), `deploy/k8s/` e `.github/workflows/` —
   esta última é `services:` de job, ou seja, o MESMO runner que a regra das
   actions protege, alcançado pela outra porta, e foi o lugar que o próprio

@@ -10,7 +10,8 @@
 # Alpine 3.20.3) — a versão do Alpine tem que casar com a do runtime, porque o
 # ERTS embarcado no release é linkado contra a musl desta imagem.
 # ---------------------------------------------------------------------------
-FROM hexpm/elixir@sha256:1ec24d1913fa669eb93797df02e70a021da73786ab2bbb1f0de1a6360ba90255 AS builder  # 1.17.3-erlang-27.1.2-alpine-3.20.3
+# 1.17.3-erlang-27.1.2-alpine-3.20.3
+FROM hexpm/elixir@sha256:1ec24d1913fa669eb93797df02e70a021da73786ab2bbb1f0de1a6360ba90255 AS builder
 
 # build-base: compilar as NIFs das deps nativas.
 # hadolint ignore=DL3018
@@ -38,7 +39,8 @@ RUN mix compile --warnings-as-errors && mix release
 # Estágio 2: runtime. Alpine puro — o ERTS vem no release, não precisa de
 # Erlang/Elixir instalados.
 # ---------------------------------------------------------------------------
-FROM alpine@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4b4a AS runtime  # 3.20.3
+# 3.20.3
+FROM alpine@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4b4a AS runtime
 
 # Versões PINADAS de todo binário externo. Os valores são os que já rodam no
 # container de dev hoje — não são escolhas novas.

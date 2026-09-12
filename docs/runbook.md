@@ -2901,6 +2901,15 @@ trailing comment ([ADR 0158](adr/0158-imagem-de-terceiro-por-digest.md)):
 image: neo4j@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61  # 5.26-community
 ```
 
+In a **Dockerfile** the tag goes on the line *above* — Docker's parser only
+takes `#` at the start of a line, and a trailing one makes the build fail with
+*"FROM requires either one or three arguments"*:
+
+```dockerfile
+# 3.20
+FROM alpine@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc AS runtime
+```
+
 That is a **freeze**, and the cost lands here: the image receives no security
 update until a person changes the digest. Dependabot's `docker` ecosystem is
 not enabled, so nothing proposes the bump for you.

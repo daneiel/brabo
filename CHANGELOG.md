@@ -1201,6 +1201,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   último transforma em mecanismo a promessa que o `golden-set-rag.yml` fazia
   em comentário, de rodar a mesma versão do compose de dev.
 
+  **Em Dockerfile a tag vai na linha DE CIMA**, e isso foi aprendido errando: o
+  parser do Docker só reconhece `#` no início da linha, então
+  `FROM x@sha256:… # tag` é um `FROM` com três argumentos e o build morre em
+  `FROM requires either one or three arguments` — enquanto o `hadolint`, que
+  tem parser próprio, passava. O comentário é **um token**, sem espaço, nos
+  dois formatos: é o que separa a tag da prosa que já mora acima de quase todo
+  `FROM`.
+
   **O que ele NÃO cobre, por decisão:** as quatro imagens do próprio produto.
   Não há terceiro que as mova, `brabo-api:prod` é tag LOCAL cujo digest não
   existe antes do build, e onde elas atravessam um registry o

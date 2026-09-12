@@ -33,7 +33,7 @@ A frase tem duas premissas, e a medição derruba as duas.
 **"Imagens que não publicamos".** Medido em 2026-09-12: são **37** referências
 de terceiro, e três dos lugares onde elas rodam não são "o dia a dia".
 
-- Nove são `FROM` de Dockerfile — `node:24.11.1-alpine3.21`,
+- Treze são `FROM` de Dockerfile — `node:24.11.1-alpine3.21`,
   `hexpm/elixir:1.17.3-…`, `nginx:1.27.5-alpine`, `alpine:3.20`/`3.20.3`,
   `node:24-alpine`. Essas são a **base das imagens que publicamos**: bytes de
   terceiro que assinamos com `cosign` ([RN-524](../business-rules.md#rn-524)) e
@@ -69,10 +69,35 @@ lado** — a mesma forma que as actions usam:
 image: neo4j@sha256:22ec5cd0…  # 5.26-community
 ```
 
+Em **Dockerfile** o comentário vai na linha DE CIMA:
+
+```dockerfile
+# 3.20
+FROM alpine@sha256:d9e853e8… AS runtime
+```
+
 O digest é o do **índice** (manifest list), nunca o de uma plataforma: pinar o
 manifesto de `linux/amd64` quebraria `linux-arm64` sem aviso. O comentário é
 **obrigatório**, pelo motivo idêntico ao das actions — `sha256:22ec5cd0…` não
-diz a ninguém que aquilo é o Neo4j 5.26.
+diz a ninguém que aquilo é o Neo4j 5.26 —, e é **um token**, sem espaço: é o
+que separa a tag da PROSA que já mora acima de quase todo `FROM` deste
+repositório.
+
+**A posição em Dockerfile não é gosto, e foi aprendida errando.** A primeira
+versão desta mudança escreveu `FROM alpine@sha256:… # 3.20`, por simetria com
+o compose. O parser do Docker só reconhece `#` no INÍCIO da linha: aquilo não é
+um `FROM` comentado, é um `FROM` com três argumentos, e o build morre em
+`FROM requires either one or three arguments`. O achado tem uma segunda metade
+que vale mais que a primeira — **o `hadolint` tinha passado nos cinco
+Dockerfiles**. Ele tem parser próprio, e um linter concordar não é o build
+concordar; quem reprovou foi o `bake` do job `images`, em 27 segundos.
+
+O check herdou a lição em DUAS formas. Ele reconhece o comentário no fim do
+`FROM` **só para poder reprová-lo** — um padrão que simplesmente não casasse
+com a linha errada faria a referência SUMIR da varredura em vez de ficar
+vermelha, trocando um erro por silêncio, que é o defeito que este check existe
+para não ter. E, pelo mesmo motivo, o comentário do YAML é capturado inteiro e
+julgado depois, em vez de validado dentro do padrão.
 
 **2. Um check IRMÃO, não uma extensão.** `scripts/ci/imagens-pinadas.ts` roda no
 job `lint`, ao lado de `actions-pinadas.ts`, e reprova três coisas: referência
