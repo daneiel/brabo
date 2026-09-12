@@ -26,6 +26,41 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **install**: o instalador **fecha a instalação** — cria a primeira conta,
+  registra a chave desta máquina e sobe o agente local como serviço
+  ([RN-547](docs/business-rules.md#rn-547),
+  [ADR 0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md)).
+
+  Até aqui uma instalação nova terminava dizendo "Pronto" com um login que
+  ninguém atravessava: o `.env` gerado não tem variável de e-mail nenhuma,
+  `MAIL_TRANSPORT` cai em `log`, e o registro normal exige verificar e-mail —
+  a única saída era pescar o link em `docker compose logs api`. E o agente
+  local ficava instalado sem credencial, esperando alguém voltar ao navegador.
+
+  O instalador agora **pergunta** e-mail e senha no terminal (sem eco,
+  confirmada), cria a conta já verificada, gera o par Ed25519 nesta máquina,
+  registra só a metade pública e instala a unit por máquina. O agente sobe
+  **sem projeto nenhum**, que é o estado normal de uma instalação nova: ele
+  fica de pé esperando e pega o primeiro projeto em modo Runner criado na web,
+  sem ninguém voltar ao terminal.
+
+  **O que ele não faz, e diz:** não grava a senha em lugar algum (nem no
+  `.env`, nem no marcador, nem em log), não liga SMTP (`MAIL_TRANSPORT=log`
+  continua o default) e não pede credencial de LLM. Sem terminal interativo,
+  relata e sai 0.
+
+  **O que acontece quando um passo falha:** nada é desfeito e tudo é relatado.
+  Cada falha vira uma linha nomeada num bloco "O que ficou pendente", no fim,
+  com o comando exato para repetir. Em especial: `service install --machine`
+  **recusa** quando já há unit por projeto instalada — caso comum numa máquina
+  de desenvolvedor —, e a recusa chega inteira, com o `uninstall` de cada unit
+  que ela nomeia. Rodar o instalador de novo numa instalação que já tem gente
+  não é erro: as rotas respondem `409`, o passo se cala dizendo por quê, e isso
+  não conta como pendência.
+
+  O marcador (`$XDG_STATE_HOME/brabo/install-state.json`) sobe para
+  `schemaVersion: 3` e ganha `ownerEmail` — identificação, nunca segredo.
+
 - **api**: nasce a rota que **registra a chave de dispositivo de MÁQUINA** —
   `POST /internal/machine-device-keys`
   ([RN-552](docs/business-rules.md#rn-552),

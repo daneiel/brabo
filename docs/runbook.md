@@ -45,6 +45,7 @@ Start with triage.
 | `brabo-runner` exits with `base de projetos recusada`, or prints `base de projetos: nenhuma configurada` when I expected a base | [The runner's base of projects](#base-do-runner) |
 | `brabo-runner` sits printing `nada a atender AINDA`, or the machine unit is up but no project is being served | [The machine agent](#agente-de-maquina) |
 | I need a device key for the machine and there is no browser (a fresh install, a headless box) | [Device key from the terminal](#chave-de-dispositivo-pelo-terminal) |
+| the installer finished with a **"O que ficou pendente"** block, or a fresh install has no account, no machine key, or no agent service | [When the installer does not close the installation](#instalador-nao-fecha) |
 | the project folder never appears on the user's machine, and the engine log says `workspace_create: o projeto <id> não criou pasta` | [The project folder never appears](#pasta-do-projeto-nunca-aparece) |
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
@@ -522,6 +523,82 @@ brabo-runner device-key finish --id "$ID"
 - The CLI does **not** claim which species the key is. On disk a machine key
   and a project key are the same file; the route that registered the public
   half is what decides.
+
+### When the installer does not close the installation {#instalador-nao-fecha}
+
+**Symptom:** `install.sh` ended with a **"O que ficou pendente"** block, or a
+fresh install has a login nobody can get through, no machine device key, or no
+agent service running.
+
+Since [RN-547](business-rules.md#rn-547)
+([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)) the installer
+**closes** the installation: it creates the first account, registers this
+machine's device key and installs the machine unit. The chain is
+
+1. `POST /internal/first-account` ([RN-546](business-rules.md#rn-546)) — the
+   account is born **already verified**, because `MAIL_TRANSPORT` is `log` and
+   the installer does not turn SMTP on;
+2. `brabo-runner device-key create` ([RN-551](business-rules.md#rn-551)) — the
+   Ed25519 pair is generated **on the machine**; only the public half travels;
+3. `POST /internal/machine-device-keys` ([RN-552](business-rules.md#rn-552)) —
+   the returned `id` is what becomes the private JWK's `kid`
+   ([RN-475](business-rules.md#rn-475));
+4. `brabo-runner device-key finish --id <id>`;
+5. `brabo-runner service install --machine` ([RN-545](business-rules.md#rn-545)).
+
+**Nothing is ever undone, and every failure is named.** The installer always
+exits 0: the compose is up, and the links already completed are useful on their
+own. What failed is printed at the end with the exact command to repeat.
+
+- **`service install --machine` refused.** This is the **common** case on a
+  developer machine, not an edge one: it refuses when a **per-project** unit is
+  already installed, and there is no `--force` — two processes would fight over
+  the same project and the server would deny one of them. The refusal names the
+  `uninstall` of each unit it found. Remove them, then rerun the last step, which
+  the installer printed:
+
+  ```bash
+  brabo-runner service uninstall --project <projectId>   # for each one named
+  brabo-runner service install --machine \
+    --dir "${XDG_CONFIG_HOME:-$HOME/.config}/brabo" \
+    --api-url http://localhost:3000
+  ```
+
+  The folder in `--dir` is where the key was written — never a project folder,
+  which would carry a `brabo-runner.config.json` and make the unit come up in
+  **project** mode, silently serving one project while calling itself the
+  machine agent.
+
+- **Registering the key failed.** A `…jwk.json.parcial` is left behind on
+  purpose. It is inert — the runner does not read that name — and the installer
+  does **not** delete it: a timeout after the api committed is indistinguishable
+  from one before it, so that file may be the only copy of the private half of a
+  key that is already registered. Rerun the installer, or finish it by hand if
+  you know the registration id (`brabo-runner device-key finish --id <id>`). The
+  next `device-key create` names it and replaces it.
+
+- **The account step said the installation already has a user.** That is a
+  `409`, and it is the **expected** outcome, not a failure — a second run, or a
+  migration ([RN-530](business-rules.md#rn-530)) whose restore brought the
+  users back. Log in with the account that exists. The machine-key and service
+  steps are skipped in that case by design: minting a durable credential for
+  someone who did not ask for it in this run is not the installer's call.
+
+- **The password was refused.** The policy is the domain one, the same
+  registration uses, and it is only known after the POST — so the installer asks
+  again, up to three times, and turns an exhausted ceiling into a pending line
+  rather than aborting an installation that is already up. It never writes the
+  password anywhere: not the `.env`, not the marker, not a log. Only the
+  **e-mail** goes into the marker (`ownerEmail`, `schemaVersion: 3`).
+
+- **No TTY.** The installer reports and exits **0** before writing anything.
+  Run it from a terminal — and with `sh -c "$(curl …)"`, never `curl … | sh`,
+  which makes the download itself the process's stdin and kills every prompt.
+
+- **The agent is up but serving nothing.** That is the normal state of a fresh
+  install: it waits and re-queries until the first `runner`-mode project exists
+  ([RN-550](business-rules.md#rn-550)). See
+  [The machine agent](#agente-de-maquina).
 
 ### The project folder never appears on the user's machine {#pasta-do-projeto-nunca-aparece}
 

@@ -628,9 +628,11 @@ reason in the URL.
   credential and a different caller. The KEY MATERIAL it registers is produced
   on the machine: `brabo-runner device-key create`
   ([RN-551](business-rules.md#rn-551)) generates the Ed25519 pair locally and
-  prints only the public JWK, so the private half never travels. What is still
-  missing is the `install.sh` that chains the two
-  ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)).
+  prints only the public JWK, so the private half never travels. Since
+  [RN-547](business-rules.md#rn-547) the `install.sh` **chains the two** at the
+  end of an installation, and installs the machine unit with the resulting key
+  ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)) — which is what
+  makes this route's declared cost a live one rather than a hypothetical.
   Revoking a MACHINE key asks the engine to drop the live runner in EACH
   runner-mode project its owner reaches — one
   `{project, user}` call per project, the engine untouched.
