@@ -11532,7 +11532,8 @@ carregou `env`. `workspace_create` também carrega `env`, e também não é afet
 ele roda no HOST (`criarPastaDoProjeto`), não no container.
 
 - **Código:** `apps/runner/src/index.ts` (`MARCA_DE_CREDENCIAL_NAO_ENTREGUE` e
-  a recusa no topo de `tratarExec`), `apps/runner/src/channel.ts`
+  a recusa em `tratarExec`, depois da
+  validação de `cwd`), `apps/runner/src/channel.ts`
   (o docblock de `ExecMessage.env`, que prometia "roda só sem a credencial"),
   `apps/engine/lib/engine/runners/credencial_de_git.ex` (novo — a marca,
   `recusada?/1`, `mensagem/2` e `desfecho/1`),
