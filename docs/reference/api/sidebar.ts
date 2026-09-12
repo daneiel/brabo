@@ -1114,6 +1114,12 @@ const sidebar: SidebarsConfig = {
           label: "Emite um ticket de uso único para a aba Terminal da web",
           className: "api-method post",
         },
+        {
+          type: "doc",
+          id: "docs/reference/api/runner-projects-controller-list-runner-projects",
+          label: "Lista os projetos em modo 'runner' que este agente local atende",
+          className: "api-method get",
+        },
       ],
     },
     {

@@ -505,6 +505,37 @@ reason in the URL.
   (issue/list/revoke the PAT itself, plus the two `maintainer` ones —
   RN-427, list/revoke of ANY user in the project) remain regular session
   JWT — only the route the TOKEN ITSELF authenticates changes mechanism.
+- **`GET /runner/projects` is classified `jwt` and accepts NO session JWT at
+  all** ([RN-543](business-rules.md#rn-543),
+  [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)). It is the route by
+  which a MACHINE agent discovers the projects it serves, and it is the first
+  `@RequirePatAuth()` route with no `:projectId` in the path — which is exactly
+  what it exists to solve: the caller does not yet know which projects there
+  are. Two consequences, both pinned by tests:
+  - **Only a MACHINE credential gets in** (`runner_device_keys.project_id`
+    NULL). A credential bound to a project — a PAT, or a device key from the
+    ADR 0118 flow — describes one project and has nothing to discover;
+    `PatAuthGuard` refuses it with 403 and a message of its OWN, never the
+    "wrong project" one, which would lie about the reason. The comparison that
+    refuses key-of-A-on-B was NOT removed: it disappears only for `null`, and
+    both directions are pinned.
+  - **There is no `@RequireRole`, because there is no project to resolve one
+    against.** The `developer` minimum — the SAME as `runner-ticket` — is
+    applied PER ROW inside `ListRunnerProjectsUseCase`, with the product's
+    single ruler (`ResolveEffectiveRoleUseCase.forProject`). Nothing is
+    loosened: what comes out is exactly the set of projects for which
+    `runner-ticket` would already authorize this user. The automatic
+    classifier reads `@RequireRole` and sees no mechanism, so it lands on
+    `jwt` — the same approximation this document already corrects in prose for
+    `runner-ticket` above. The route never touches a session JWT:
+    `JwtAuthGuard` abstains on `@RequirePatAuth()` routes, and the public key
+    `PatAuthGuard` verifies comes from `runner_device_keys`, never from the
+    session issuer.
+
+  It returns the project id, name, `workspaceDirName` and the verification
+  state — never an absolute path. What crosses the wire is the SEGMENT, and
+  the root belongs to whoever executes, the same invariant as the broker
+  (ADR 0144) and the runner base (ADR 0151).
 - **A client of the `/runner` socket must NEVER let `phoenix.js` reconnect on
   its own** ([RN-108](business-rules/autenticacao.md#rn-108)). The ticket is
   single-use, and the built-in auto-reconnect repeats the SAME `params` — so a
@@ -540,7 +571,17 @@ reason in the URL.
   `runner-ticket`, looked up by the `kid` header matching this table's
   `id`; the guard checks the key hasn't been revoked but never an
   expiry — the key itself doesn't expire, only the short-TTL (≤60s,
-  `exp - iat`) JWT the runner signs with it each time.
+  `exp - iat`) JWT the runner signs with it each time. Since
+  [RN-543](business-rules.md#rn-543) the `GET` returns TWO species and SAYS
+  which is which (`especie`): a MACHINE key (`projectId: null`) serves every
+  project of its owner, so it shows up in every project's listing — without
+  that it would be invisible and permanent in every screen, the very defect
+  RN-519 closed, reborn in the new species. The `POST` still creates only
+  project-bound keys: nothing in the api creates a machine key yet (the
+  `install.sh` does, [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md),
+  in a later session of the phase). Revoking a MACHINE key asks the engine to
+  drop the live runner in EACH runner-mode project its owner reaches — one
+  `{project, user}` call per project, the engine untouched.
 - **Revoking a device key now reaches the LIVE connection, and the target
   is `{project, user}` — never `{key}`**
   ([RN-520](business-rules.md#rn-520), [ADR 0147](adr/0147-agente-local-com-capacidades.md)
@@ -929,6 +970,7 @@ reason in the URL.
 | POST | `/internal/sessions/:sessionId/tasks/claim` | engine-service |
 | POST | `/internal/sessions/:sessionId/termination` | engine-service |
 | GET | `/` | jwt |
+| GET | `/runner/projects` | jwt |
 | GET | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials/:provider/test` | jwt |

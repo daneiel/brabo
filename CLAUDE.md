@@ -128,6 +128,7 @@ estado lido do repositório e não da conversa.
 | FASE 29 (sessão 8) — a base do agente local ganha um consumidor | ADR 0151, RN-532 |
 | FASE 29 (sessão 5) — o backup passa a cobrir o que perder dói | ADR 0152, RN-528 |
 | FASE 29 (sessão 9) — o picker do modo Runner volta a ler o disco de quem escolhe | ADR 0151, RN-533 |
+| FASE 30 (sessão 2) — a chave de dispositivo passa a poder ser da MÁQUINA | ADR 0154, RN-543 |
 | O runner reconectava sozinho com um ticket morto | RN-108 |
 | O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
@@ -343,7 +344,14 @@ criada SEM interação humana e não o trio de escritas (não use
   e agora VISÍVEL pela api — `RunnerDeviceKeysController` ganhou `GET` na
   RN-519, com a revogada na lista e `lastUsedAt` nulo como sinal da órfã. O que
   segue aberto é só a TELA: `apps/web` não tem onde listar nem revogar, então
-  quem quiser revogar chama a rota. Metade declarada, não omissão
+  quem quiser revogar chama a rota. Metade declarada, não omissão. Desde a
+  RN-543 essa lista devolve DUAS espécies e DIZ qual é qual (`especie`) — uma
+  de máquina serve todo projeto do dono e aparece na listagem de todos, porque
+  não aparecer em nenhuma a tornaria invisível e permanente, que é o defeito
+  que a RN-519 fechou renascido. A lacuna da TELA fica MAIOR com isso, e
+  continua declarada. E ninguém CRIA chave de máquina ainda: quem registra é o
+  `install.sh` (ADR 0155 ponto 4), noutra sessão da FASE 30 — a rota nasce no
+  PR que tiver o primeiro chamador real
 - **A credencial de git some quando o container do runner já está ativo, e
   isso é o caminho COMUM, não uma borda.** `RunnerReadiness` (RN-507)
   exige container `running` REGISTRADO antes de QUALQUER operação de
@@ -537,7 +545,21 @@ criada SEM interação humana e não o trio de escritas (não use
   como `runner_device_keys` e grava os três arquivos numa pasta via File
   System Access API (fallback de dois downloads fora do Chromium) —
   `POST .../runner-ticket` aceita essa chave como segunda credencial de
-  dispositivo, ADITIVA ao PAT (ADR 0105), nunca um substituto. O `id` do
+  dispositivo, ADITIVA ao PAT (ADR 0105), nunca um substituto. Desde a
+  RN-543 (ADR 0154) essa chave tem DUAS espécies, numa tabela só:
+  `runner_device_keys.project_id` preenchido é a chave de PROJETO do fluxo
+  acima, e NULO é a chave de MÁQUINA, que vale para qualquer projeto em que
+  o DONO dela alcance o papel que a rota já exige. A comparação que impede
+  a chave do projeto A servir o projeto B NÃO foi apagada — ela some SÓ
+  para `null`, onde não há o que comparar, e aí o papel se resolve contra
+  o projeto PEDIDO. Nenhum teto novo, nenhum afrouxado: a chave de máquina
+  não dá ao runner nada que o dono dela já não tivesse. `user_id` continua
+  `NOT NULL` (o ADR recusa chave que atravesse usuários), e `GET
+  runner/projects` — a PRIMEIRA rota de credencial de dispositivo SEM
+  `:projectId` no caminho, e por isso exclusiva da espécie de máquina — é
+  como o agente DESCOBRE os projetos que atende, em vez de adivinhar por
+  nome de pasta. Nada no engine mudou: o tópico, o socket id e o ticket
+  descrevem uma CONEXÃO, e N conexões os satisfazem byte a byte. O `id` do
   registro vai gravado DENTRO da JWK privada, no `kid` (RN-475): é o único
   vínculo entre o arquivo em disco e a pública do servidor, e a cadeia
   inteira só o REPASSA — o runner lê `jwk.kid`, o JWT de ticket o leva no

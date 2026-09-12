@@ -10986,6 +10986,115 @@ recusar `curl | sh`). É o mesmo desenho do item *Base de projetos*
   executada ou não... caso seja uma nova ou escolhido isso pelo usuário deverá
   deletar a anterior e instalar do zero para evitar possíveis erros"*
 
+## A chave de dispositivo passa a poder ser da MÁQUINA (RN-543, FASE 30)
+
+### RN-543 — `runner_device_keys.project_id` nulo é a chave de MÁQUINA: vale para os projetos do DONO, resolvida contra o projeto pedido {#rn-543}
+
+A identidade do agente local era por PROJETO. Uma máquina com três projetos em
+modo `runner` tinha três chaves, três pastas com
+`brabo-runner-device-key.jwk.json` e três units de serviço — e a pessoa passava
+três vezes pelo mesmo fluxo de navegador ([RN-464](#rn-464)..[466](#rn-466),
+[RN-475](#rn-475)) para descrever **uma** máquina. É o item 4 dos cinco
+acoplamentos que o [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+mediu; os itens 1, 2 e 3 (tópico, socket id, ticket) descrevem uma **conexão**
+e N conexões os satisfazem byte a byte, então **nada no engine muda aqui**.
+
+**Uma tabela, duas espécies.** `project_id` preenchido = a chave de PROJETO de
+sempre. `project_id` NULL = a chave de MÁQUINA. Tabela irmã foi considerada e
+recusada no ADR: `PatAuthGuard` acha a pública pelo `kid` e não precisa saber a
+espécie, e duas tabelas fariam duas buscas — a segunda esquecida exatamente uma
+vez. NULL e não sentinela: a FK é real, e `project_id = '00000000-…'` exigiria
+uma linha falsa em `projects`. `user_id` continua `NOT NULL` — o ADR recusa
+chave que atravesse usuários, porque a credencial descreve **quem** age.
+
+**O ponto que decide tudo é um só.** `PatAuthGuard.autorizarPapel` recusava
+quando o projeto da credencial diferia do projeto da rota. Essa comparação
+**não** foi apagada: ela é o que impede a chave do projeto A servir o projeto
+B, e ela some **só** para `project_id` nulo, porque aí não há o que comparar. O
+papel passa a se resolver contra o projeto **PEDIDO**, que é o ADR 0154 ponto 2
+ao pé da letra — *"a autorização continua sendo a de sempre, resolvida contra o
+projeto pedido"*. **Nenhum teto novo e nenhum afrouxado**: a chave de máquina
+não dá ao runner nada que o DONO dela já não tivesse, e papel insuficiente no
+projeto pedido continua 403. O ramo do PAT não muda —
+`personal_access_tokens.project_id` continua `NOT NULL`.
+
+**O agente PERGUNTA quais projetos atende.** `GET runner/projects` devolve os
+projetos em `execution_mode: 'runner'` nos quais o dono da credencial alcança
+pelo menos `developer` — o MESMO mínimo de `runner-ticket`, porque listar
+projeto cujo ticket seria recusado é prometer o que a rota seguinte nega. Ele
+pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter
+pasta que não é projeto nenhum, e adivinhar por nome de pasta é a classe de
+erro que o [ADR 0141](adr/0141-a-base-unica-dos-projetos-montados.md) recusou.
+O que viaja é o SEGMENTO (`workspaceDirName`, [RN-109](business-rules/autenticacao.md#rn-109)) e nunca um
+caminho absoluto — o mesmo invariante do broker.
+
+É a **primeira rota `@RequirePatAuth()` sem `:projectId` no caminho**, e as
+duas consequências são travadas por teste: só credencial de MÁQUINA entra
+(uma de projeto descreve um projeto só e não tem o que descobrir — 403 com
+mensagem PRÓPRIA, nunca a de "projeto errado", que mentiria sobre o motivo), e
+não há `@RequireRole`, porque não há projeto contra o que resolvê-lo. O mínimo
+é aplicado por **LINHA**, com a régua ÚNICA do produto
+(`ResolveEffectiveRoleUseCase.forProject`, `projectRole ?? workspaceRole` —
+[RN-471](#rn-471)); a consulta de candidatos em SQL é `alcança`, nunca `tem
+papel`, e reescrever o `??` ali seria uma segunda régua. Por isso
+`route-surface.spec.ts` a classifica como `jwt` — o classificador lê
+`@RequireRole` e não enxerga mecanismo — e `docs/security-surface.md` corrige a
+leitura em prosa, exatamente como já faz para `runner-ticket`.
+
+**A listagem da [RN-519](#rn-519) passa a dizer a ESPÉCIE.** Uma chave de
+máquina serve todo projeto do dono, então ela entra na listagem de todos —
+marcada (`especie: 'maquina'`, `projectId: null`). As duas metades são
+obrigatórias: sem entrar na lista ela seria invisível e permanente em toda
+tela, que é o defeito que a RN-519 fechou renascido na espécie nova; sem a
+marca, a mesma linha apareceria em N projetos parecendo N chaves diferentes. A
+espécie é DERIVADA de `project_id` num lugar só — não há coluna para ela, e não
+deve haver.
+
+**E a revogação passa a ter alvo PLURAL.** [RN-520](#rn-520) derruba a conexão
+viva de `{projeto, usuário}`, e uma chave de máquina não nomeia projeto nenhum.
+Não derrubar reabriria exatamente o que a RN-520 fechou — a chave morre para
+ticket NOVO e as conexões vivas seguem executando comando aprovado —, agora em
+N conexões em vez de uma. Então revogar uma chave de máquina pede um
+`disconnectRunnerOfUser` **por projeto** em modo `runner` que o dono alcança. É
+a consequência que o ADR declarou por antecipação (*"revogar passará a derrubar
+todos os projetos daquela máquina"*), e ela cabe **sem tocar o engine**: a
+assinatura `{projeto, usuário}` fica byte a byte, só é chamada N vezes. A lista
+vem dos CANDIDATOS, sem filtro de papel, e isso é deliberado — desconectar não
+é decisão de autorização, e faltar um projeto deixaria de pé o que a revogação
+existe para matar.
+
+- **Código:** `apps/api/src/db/schema/auth.ts` (`runnerDeviceKeys.projectId`,
+  sem `.notNull()`); `apps/api/src/db/migrations/0058_public_war_machine.sql`;
+  `apps/api/src/interfaces/http/auth/pat-auth.guard.ts` (`autorizarPapel`);
+  `apps/api/src/interfaces/http/runner/runner-projects.controller.ts`;
+  `apps/api/src/application/use-cases/runner/list-runner-projects.use-case.ts`;
+  `apps/api/src/infrastructure/persistence/drizzle/project.repository.ts`
+  (`listRunnerModeReachableBy`);
+  `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts`;
+  `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts`
+- **Teste:** `apps/api/test/interfaces/pat-auth.guard.spec.ts` — *"chave de
+  MÁQUINA"*, com os DOIS sentidos travados (a de máquina vale em qualquer
+  projeto; a de PROJETO continua recusada em projeto diferente) e a rota sem
+  `:projectId`; `apps/api/test/application/use-cases/runner/list-runner-projects.use-case.spec.ts`
+  (papel abaixo de `developer` fica de fora);
+  `apps/api/test/infrastructure/persistence/drizzle/runner-device-key.repository.spec.ts`
+  e `.../project-runner-mode.repository.spec.ts` (contra o Postgres — o que
+  mudou é um `NOT NULL` e um `WHERE`, e fake nenhum prova qualquer um dos
+  dois); `apps/api/test/application/use-cases/auth/revoke-runner-device-key.use-case.spec.ts`
+  (*"o alvo da desconexão vira PLURAL"*);
+  `apps/api/test/interfaces/http/runner/runner-projects.controller.spec.ts`
+- **Lacuna DECLARADA:** nenhuma rota da api **cria** chave de máquina ainda.
+  Quem registra é o `install.sh` ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+  ponto 4), noutra sessão desta fase — a rota nasce no PR que tiver o primeiro
+  chamador real, nunca antes. O tipo da porta já é o da COLUNA
+  (`projectId: string | null`), para o consumidor futuro não ter o que mudar
+  ali. E o web continua sem tela onde listar ou revogar chave de dispositivo
+  (a metade aberta da RN-519): a espécie nova torna a lacuna maior, e ela fica
+  declarada, não fechada aqui.
+- **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+- **Origem:** FASE 30, sessão 2 —
+  [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
+
 ## O teto de auto-rebaixamento também na REMOÇÃO (RN-556)
 
 ### RN-556 — Remover a própria linha de `project_members` é recusado com 403 quando o efeito líquido é rebaixamento {#rn-556}

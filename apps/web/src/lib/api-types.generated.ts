@@ -2541,7 +2541,7 @@ export interface paths {
         };
         /**
          * Lista as próprias chaves de dispositivo deste projeto
-         * @description Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum.
+         * @description Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum. Desde a RN-543 inclui também as chaves de MÁQUINA do chamador (`especie: "maquina"`, `projectId` nulo), que servem este projeto sem pertencer a ele — sem elas na lista, uma chave de máquina seria invisível em toda tela.
          */
         get: operations["RunnerDeviceKeysController_listDeviceKeys"];
         put?: never;
@@ -3249,6 +3249,26 @@ export interface paths {
          * @description Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-x64, darwin-arm64, win32-x64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.
          */
         get: operations["RunnerReleasesController_binary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runner/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista os projetos em modo "runner" que este agente local atende
+         * @description Autenticada por uma chave de dispositivo de MÁQUINA (ADR 0154) — NUNCA por JWT de sessão, e nunca por uma credencial presa a um projeto, que responde 403. Devolve os projetos em `execution_mode: "runner"` nos quais o dono da chave alcança pelo menos `developer` (o mesmo mínimo de `POST .../runner-ticket`), com o nome da pasta e o estado de verificação de cada um. O agente pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter pasta que não é projeto nenhum.
+         */
+        get: operations["RunnerProjectsController_listRunnerProjects"];
         put?: never;
         post?: never;
         delete?: never;
@@ -8191,8 +8211,17 @@ export interface components {
             id: string;
             /** @example laptop */
             name: string;
-            /** @example 01JC4Z0000PROJETO000000001 */
-            projectId: string;
+            /**
+             * @description Nulo = chave de MÁQUINA (ADR 0154): vale para qualquer projeto do dono dela, e não só para este. Ver `especie`.
+             * @example 01JC4Z0000PROJETO000000001
+             */
+            projectId: Record<string, never> | null;
+            /**
+             * @description `projeto` = presa ao projeto desta rota (ADR 0118). `maquina` = descreve a MÁQUINA (ADR 0154) e aparece na listagem de todo projeto que ela atende — revogá-la derruba o agente local em todos eles.
+             * @example projeto
+             * @enum {string}
+             */
+            especie: "projeto" | "maquina";
             /**
              * Format: date-time
              * @example 2026-08-27T12:00:00.000Z
@@ -8219,6 +8248,22 @@ export interface components {
              * @example 2026-08-27T12:00:00.000Z
              */
             createdAt: string;
+        };
+        RunnerProjectResponseDto: {
+            /** @example 01JC4Z0000PROJETO000000001 */
+            projectId: string;
+            /** @example Brabo */
+            name: string;
+            /**
+             * @description O nome da pasta do projeto (RN-109) — segmento relativo sob a base da máquina, nunca um caminho absoluto.
+             * @example brabo-01jc4z
+             */
+            workspaceDirName: string;
+            /**
+             * @description Quando o runner confirmou a pasta pela primeira vez (RN-423). Nulo = nunca confirmada. É registro de uma confirmação, não batimento (RN-468): não diz que a pasta está de pé agora.
+             * @example null
+             */
+            workspaceVerifiedAt: Record<string, never> | null;
         };
         RunnerTicketResponseDto: {
             /** @description Token opaco de uso único, base64url. TTL de 30s: some depois do primeiro `connect/3` bem-sucedido no socket `/runner`, ou quando expira. */
@@ -18060,6 +18105,46 @@ export interface operations {
             };
             /** @description Recusa nomeada — nunca bytes com aviso. O corpo traz `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` ou `hash_divergente`. */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RunnerProjectsController_listRunnerProjects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunnerProjectResponseDto"][];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A credencial apresentada está presa a um projeto — esta rota exige uma chave de dispositivo de máquina. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
