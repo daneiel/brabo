@@ -2320,3 +2320,728 @@ Criativo diverge deliberadamente com `agent.error` (decisão documentada
 no próprio código). Os quatro corrigidos passam a emitir
 `toolloop.limit_reached`, mesmo evento do PO (RN-459).
 
+
+## Migrado do índice do CLAUDE.md em 2026-09-11
+
+As entradas abaixo vinham da tabela-índice do `CLAUDE.md` e **não tinham
+seção própria neste arquivo** — a narrativa delas existia num lugar só. Foram
+movidas sem reescrita, na ordem em que estavam, quando a tabela foi reduzida a
+índice. O que estiver aqui é histórico; o que vale hoje mora nas RNs, nos ADRs
+e na seção "Estado atual e aberto" do `CLAUDE.md`.
+
+### PROGRAMA 16–26 (ADR 0060–0072)
+Handoff de design adotado; 8 telas; kind de sessão; eventos paginados; Gastos;
+modelo por área; container por projeto (25b cortada); aba Code
+
+### pnpm bootstrap
+Menu de terminal sobre comandos existentes; Reset total
+
+### Ollama nativo / pull de Hugging Face (RN-461..463, ADR 0114–0115)
+Bootstrap dev pergunta uma vez e persiste o modo do Ollama em `.env`;
+navegador de modelos do Hub com pull em duas etapas e allowlist de publisher
+oficial
+
+### Lockfile próprio do website (ADR 0117)
+`website/` sai do workspace pnpm da raiz — lockfile e overrides de segurança
+isolados, `pnpm audit` do produto para de reportar a árvore do Docusaurus
+
+### Configuração automática do runner pelo navegador (RN-464..466, ADR 0118)
+Chave de dispositivo Ed25519 gerada no navegador, aditiva ao PAT; proxy do
+binário via GitHub Releases; File System Access API grava a pasta configurada,
+com fallback de download fora do Chromium; `--project/--dir/--token` viram
+opcionais no CLI
+
+### Imagens publicadas no GHCR (ADR 0119)
+`release.yml` publica as quatro imagens a cada tag final e registra os digests
+em `.release/images.json`; overlay de produção deixa de apontar para um
+placeholder
+
+### Schema por agregado (ADR 0121)
+`db/schema.ts` vira barrel; as 51 tabelas e 34 enums viram 16 arquivos sob
+`db/schema/`, um por agregado de `domain/*`
+
+### `SessionPage.tsx` em 5 PRs mecânicos (ADR 0122)
+3 807 → 2 661 linhas; timeline/turno, `StorySlide`, `StructuredQuestionCard`,
+árvore de backlog + `ContextAside`, hook `useSessionReadiness` — cluster do
+canal de turno e `ProjectSettingsTab.tsx` seguem fora, declarado
+
+### Hook do canal de turno do `SessionPage.tsx` (ADR 0124)
+2 661 → 2 479 linhas; PR mecânica de dedup
+(`iniciarTurnoDoAgente`/`finalizarTurnoDoAgente`/`cancelarTurnoOtimista`)
+seguida da extração de estado + efeito do canal Phoenix para o hook
+`useTurnoDoAgente` (`lib/session-turno.ts`) — fecha o item que a ADR 0122
+deixou declarado em aberto; `ProjectSettingsTab.tsx` segue fora, decisão
+separada
+
+### `ProjectSettingsTab.tsx` por seção (ADR 0125)
+2 532 → 77 linhas; as 17 seções viram um arquivo cada sob `routes/settings/`
+(+ `shared.ts` com os DOIS helpers de mais de um chamador), e o arquivo antigo
+fica no caminho como entrada e barrel — caminho e os 11 nomes exportados são
+contrato de 3 testes. Fecha a ÚLTIMA metade da linha de dívida de
+`docs/architecture.md`
+
+### Trilho vertical de navegação do projeto (ADR 0126, RN-201)
+A régua horizontal de dois níveis (`GroupedTabs`) vira um trilho vertical com
+os TRÊS grupos abertos ao mesmo tempo; geometria do trilho do `CodeShell`,
+teclado portado, os 5 contadores seguem separados. Revisa a RN-201: a aba de
+Código não recolhe mais a sidebar sozinha
+
+### Sumário ancorado de Configurações (CHANGELOG)
+As 17 seções da aba ganham `id`, `<section>` com nome acessível e um sumário
+em quatro grupos DENTRO da área de conteúdo — sem faixa vertical nova, moldura
+segue nos 444px do ADR 0126. Registro em `routes/settings/sumario.ts`
+(terceira lista do mesmo desenho de `project-tabs.ts`), deep-link `?section=`,
+spy por `IntersectionObserver`; só entra no sumário a seção que MONTOU
+
+### Padrão único de valor herdado (CHANGELOG)
+As QUATRO redações de "não tem valor próprio" da aba Configurações viram dois
+polos e um verbo, de uma fonte só (`routes/settings/heranca.tsx`): rótulo diz
+o ESTADO, detalhe diz a CONSEQUÊNCIA. Vocabulário unificado, forma não — a
+marca só entra onde o controle não mostra o estado sozinho
+
+### Salvar por seção em Configurações (RN-469)
+Paralelismo e Teto de gasto trocam N botões de linha por UM da seção
+(`settings/secao-salvavel.tsx`), com contagem de linhas pendentes e desfecho
+POR LINHA — salvar é N chamadas, não uma transação, e a tela nunca afirma o
+que não obteve. As três seções de autosave e Credenciais ficam de fora, cada
+uma por um motivo declarado
+
+### Painel "precisa de você" (RN-467)
+Chip no topo do projeto abre as CINCO filas de decisão num lugar só —
+separadas, ordenadas por urgência, sem soma nenhuma (nem no chip). Aprovações
+e merges decidem ali pelo `ApprovalCard`; as outras três levam à aba.
+Pendência de arquitetura empresta a data da história e DIZ que emprestou
+
+### Cascata de modelo como cadeia visível (RN-470)
+A coluna Origem para de imprimir o enum do banco e vira `workspace › projeto ›
+área › agente` com quatro estados por nó (`settings/cascata.tsx`) — separando
+os DOIS sentidos de `origin: 'agent'` sem tocar na api. O aviso de nível
+descartado entra na cadeia; os três `—` ganham três textos. Fecha o canvas de
+melhorias de UI (7 de 7 itens tomados)
+
+### Pasta antes do runner (RN-473/474)
+A configuração do runner pelo navegador (ADR 0118) inverte a ordem:
+`showDirectoryPicker` é o PRIMEIRO passo e o binário o ÚLTIMO, best-effort — a
+release sem asset devolvia 502 antes do seletor abrir, e a pasta ficava
+inalcançável. Falha do binário mantém os dois arquivos gravados e troca a
+instrução pelo caminho `npm install -g @brabo/runner`. Depois da instrução,
+`EsperaDoRunner` sonda `workspaceVerifiedAt` com três estados e teto
+
+### O `kid` na chave de dispositivo (RN-475)
+O modo automático do ADR 0118 NUNCA autenticou: o navegador descartava o `id`
+que o registro devolvia, e a JWK gravada nascia sem `kid` — o CLI a recusava
+sempre. Registro e exportação viram UMA função
+(`registrarChaveEExportarPrivada`), nos DOIS caminhos; e a recusa do CLI deixa
+de ser indistinguível de "não há chave". O teste que deixou passar afirmava
+que o arquivo fora ABERTO, nunca o conteúdo
+
+### Provisionamento que não fica calado (RN-477)
+Duas falhas não viravam estado nenhum — `step.check` fora do `try` e a recusa
+de `createRepo` ANTES de a linha de bootstrap existir —, e a tela pollava
+"Iniciando…" para sempre sem botão. Causa raiz de tudo: `/data/git-repos` e
+`/data/project-workspaces` nasciam `root` nas imagens de DEV, que o
+`Dockerfile.prod` já sabia criar antes do `USER`
+
+### O arquivo de política e o escopo do terminal (RN-478)
+`projectScopeRoot` tinha DOIS consumidores com necessidades opostas, e o modo
+`runner` (sem bind-mount) os separou: o escopo segue apontando para o HOST, o
+`permissions.json` passa a morar na raiz GERENCIADA. A ativação da execução
+devolvia 500 (`mkdir '/home/<usuario>'`), e a LEITURA degradava calada — em
+projeto `runner` o arquivo nunca existiu. Junto: erro tipado com 400 em vez de
+`Error` cru, a Visão geral parando de engolir a mensagem da api, e a anotação
+de OpenAPI que prometia 409 para dois casos que nunca foram 409
+
+### Aviso do passo humano antes do clique (RN-473/477)
+O passo de terminal do runner era anunciado só no estado de sucesso; passa a
+ser dito também no inicial, e o comando final ganha `cd <caminho>` quando dá
+para afirmar que a pasta escolhida é a do projeto. Rótulo do botão NÃO muda —
+ele fala da pasta, que é automática mesmo
+
+### Um modelo para todos os agentes (RN-476)
+A tabela `Modelos por agente` ganha uma barra que aplica UM modelo aos 17 de
+uma vez, gravando no nível do AGENTE (pelo projeto seria `maintainer`, e
+mexeria no default de sessão). Primeira EXCEÇÃO à régua "valor nomeado salva
+no `onChange`" da RN-469 — o seletor é argumento de ação, não configuração —,
+com o desfecho em três estados da própria RN-469
+
+### Tetos de rebaixamento em `project_members` (ADR 0127, RN-472)
+A sobreposição `projectRole ?? workspaceRole` FICA nos dois sentidos (é
+capacidade, não bug); o que entra são dois tetos de 403 no caso de uso —
+ninguém rebaixa o `owner` do workspace, ninguém rebaixa a si mesmo. As três
+descrições de OpenAPI que a RN-471 declarou falsas passam a descrever o
+código; o gate do `Select` é PR à parte, por a tela não ter como calcular o
+primeiro teto
+
+### Telemetria de busca do RAG (RN-479..481)
+A busca híbrida deixa rastro: `rag_searches` (com os pesos CONGELADOS na
+linha) e `rag_feedback` (o voto útil/irrelevante, o único sinal de verdade).
+TABELA e não só evento, porque `session_events.session_id` é `NOT NULL` e a
+busca da aba não tem sessão — o evento `rag.search`/`rag.feedback` é NARRAÇÃO,
+só quando há sessão. Ferramenta `rag_feedback` (`:direct`) nos seis agentes
+que já tinham `rag_search`, e `medir:rag` para ler. NADA calibrado — esta
+etapa só instrumenta
+
+### Broker de container (ADR 0130, RN-485/486)
+Nasce `apps/broker`, o ÚNICO processo que fala com um daemon Docker no
+servidor — e ele NÃO aceita especificação: recebe `projectId` + operação, LÊ a
+decisão do Arquiteto da api e COMPÕE imagem, rede, recursos e o único mount. A
+porta do ADR 0128 MOVE de `apps/runner/src/` para `packages/docker-port` (os
+dois consumidores a empacotam; a api não pode consumi-la). A rota de ciclo de
+vida passa a devolver observado ao lado de registrado, sem fundir
+
+### Roteamento de módulos para infra (PR 1.4) (ADR 0131, RN-487)
+Sétima ferramenta do Arquiteto, `route_modules_to_infra`: um item `{modulo,
+imagemCandidata, porque}` por módulo do `module_map` vigente, gravado como
+`artifact.module_routing` (sem tabela, mesmo desenho de
+`artifact.project_image`/`artifact.c4_diagram`). Ele CANDIDATA — a imagem de
+cada item passa pela mesma `validarDecisaoDeImagem` de `choose_project_image`
+—, e quem ELEGE entre as candidatas é a Infra, num PR à parte (1.5, fechado
+logo abaixo)
+
+### Golden-set de acerto do RAG (ADR 0132, RN-490)
+Molde do golden-set do QA (ADR 0123) aplicado à busca híbrida: como o
+julgamento não mora no engine (é `HybridSearchUseCase`, na api),
+`seed-golden-set-rag.ts` provisiona UM projeto com corpus real curado (22
+arquivos de `docs/`) E roda a busca para 17 perguntas compostas de RNs/ADRs
+reais; `rag_golden_test.exs` só invoca o script e aplica o piso. Critério de
+acerto — caminho de arquivo, top-5, nunca chunk exato/rank 1 — é função pura
+testada. Gate novo `rag-acertivo`, `warn` (sem CI com LLM). Medido de verdade,
+duas vezes, deterministicamente: 17/17 no top-5
+
+### Dev agents executam DENTRO do container real (PR 1.6) (ADR 0134, RN-492/493)
+Fecha o que a RN-491 declarou pendente: `Engine.Actions.TerminalExecutor`
+ganha a QUINTA saída, `:executar_no_container` — projeto `execution_mode:
+container` com uma linha REGISTRADA `running`
+(`Engine.Containers.ProjectContainerLifecycle`, leitura direta, mesmo padrão
+de `Engine.Projects.Project`) — e o comando atravessa engine → api (`POST
+internal/projects/:projectId/container-exec`,
+`ExecutarComandoNoContainerUseCase`) → broker (`ContainerBrokerPort.exec`, o
+PRIMEIRO chamador real da última das cinco operações do ADR 0128/0130),
+rodando via `docker exec` em vez de `System.cmd` local. `cwd` é traduzido do
+caminho de HOST pra dentro de `/work` no engine, ANTES da chamada — confirmado
+em código que é o MESMO diretório físico que `Workspace.ensure!/4` já escreve
+(o worktree do dev agent não muda de lugar nem de mecanismo).
+`BrokerRecusouError`/`BrokerIndisponivelError`/falha de transporte viram
+`failed_result` normal, nunca crash nem fallback silencioso pra fora do
+container (RN-486: `running` registrado nunca garante container de pé).
+Terminal DENTRO do container ganha PISO de auto-aprovação
+(`ProposeActionUseCase`/`decide.ts`, `containerExecutionActive`) — os cinco
+tetos absolutos e o escopo léxico de sempre continuam rodando por cima, byte a
+byte
+
+### O runner sobe o container do projeto (PR 1.3, Parte 1 fora de ordem — fecha a metade que a RN-494/PR 1.7 tinha deixado declarada) (ADR 0137, RN-497)
+`container_start`/`container_stop`/`container_remove` ganham SEGUNDO caminho
+de execução, ramificado por `executionMode`: `container` segue pelo broker
+(inalterado); `mounted`/`runner` passam a pedir ao RUNNER conectado, via TRÊS
+pares novos no canal Phoenix (`container_start`/`_result`,
+`container_stop`/`_result`, `container_remove`/`_result`, mesmo molde de
+`exec`/`exec_result`) — `EngineWeb.ContainerCommandController` repassa pro
+`RunnerRouter`, que o runner atende com `DockerViaCli` (o Docker DELE,
+`@brabo/docker-port`, que ganha uso real além de `--self-test-docker`). A
+imagem é LIDA (`ObterSpecDeContainerUseCase`, o mesmo caso de uso do broker),
+nunca reeleita. "Sem runner"/"timeout" (`RunnerNaoConectadoError`) e "runner
+recusou" (`RunnerRecusouContainerError`) viram `failed` nomeado, nunca
+exceção. `Engine.Actions.TerminalExecutor` não ganhou saída nova — ele já
+roteava todo comando de projeto `runner` conectado pro canal
+incondicionalmente; a escolha host-vs-container é INTERNA ao runner
+(`EstadoDoRunner.containerAtivo`, `tratarExec` roteia via `docker exec` com
+`cwd` traduzido por troca de prefixo, `cwdParaContainer`). `guard.ts`/RN-434
+passa a cobrir o bind-mount sem NENHUMA validação nova — o mount É a raiz já
+confirmada no startup da CLI
+
+### O handoff da Infra podia ser aceito por tela nenhuma (D0) (RN-499)
+`offeredHandoff` filtra o card do fio por `AGENTES_DE_CHAT`, que exclui
+`infra` — e o filtro está CERTO (o engine não tem cláusula de `message` pro
+Infra Lead; alargá-lo faria a tela oferecer um fio que não existe e o composer
+mandar mensagem pro Criativo). O defeito era a consequência, que o comentário
+do próprio código registrava como aceita: `acceptHandoff` tinha UM consumidor
+só, atrás desse filtro, então o handoff de `OfferInfraHandoffUseCase` ficava
+`offered` para sempre, o Infra Lead nunca era ativado,
+`propose_container_start` nunca era chamado e NENHUM projeto de nenhum modo
+chegava a ter container de pé. Correção: card acionável PRÓPRIO, fora do fio,
+na faixa fixa entre a área que rola e o composer — a mesma que já hospeda o
+handoff manual e se declara o lugar das ações de handoff que não são conversa
+—, chamando o `acceptHandoff` que já existia, fechado pelo mesmo `activeFor`.
+O `handoff.offered` da Infra continua NARRADO no fio como divisor mudo
+
+### A base única dos projetos montados (PR 1, BREAKING) (ADR 0141, RN-500)
+Criar projeto `mounted` exigia uma linha de bind-mount escrita À MÃO em `api`
+E `engine` mais um restart dos dois — que mata todo turno de agente, socket de
+terminal e chamada de LLM em voo da instalação, para onboardar UM projeto.
+Nasce `BRABO_PROJECTS_BASE`: UMA base, configurada uma vez pelo operador,
+montada por IDENTIDADE (`$X:$X`) nos dois serviços, com todos os projetos
+montados dentro dela e NADA editado por projeto. Identidade e não mountpoint
+fixo porque `workspace_path` é digitado pelo usuário e mostrado de volta a ele
+— e é o que faz `projectScopeRoot`/`workspace_dir/2` continuarem certos sem
+código novo. Variável PRÓPRIA (colisão de namespace com `workspace_dir_name`
+UNIQUE faria `git init` na pasta de outro projeto; dono oposto; a base é
+navegável e a raiz gerenciada não deve ser). AUSENTE é normal: `projectsBase:
+null` (`GET workspaces/:id/projects-base`, `maintainer`) e o modo não é
+oferecido. E `pnpm dev` RECUSA subir com a base sobreposta ao checkout — a
+única checagem possível, porque a api compara contra `/workspace`. Dois custos
+declarados: symlink sob a base e uma base só
+
+### Container de projeto montado (PR 3) (ADR 0144, RN-503)
+Projeto `mounted` não conseguia container NENHUM, por dois bloqueios
+independentes — a api mandava todo modo não-`container` pro RUNNER (que exige
+`brabo-runner` conectado) e o broker recusava não-`container` na fonte. Os
+dois eram sobre GEOMETRIA, não sobre o nome do modo, e a base única do ADR
+0141 mudou a geometria. A ramificação vira por DESTINO: `container` E
+`mounted` → broker, só `runner` → runner (e `container_stop`/`_remove` mudam
+JUNTAS com o `_start`, senão sobe no servidor e para na máquina do usuário). O
+invariante do ADR 0130 não se mexe — nenhum caminho absoluto atravessa a rede:
+o broker ganha uma SEGUNDA raiz (`BRABO_PROJECTS_HOST_BASE`) e a api manda um
+localizador DISCRIMINADO (`gerenciada` \|`montada` \|`indisponivel`) dizendo
+contra qual raiz o segmento relativo vale. TRÊS variantes porque
+`indisponivel` tem dois consertos diferentes (`runner` × `mounted` legado fora
+da base), e raiz que falta NUNCA é suprida pela outra. `mounted` ELEGE a
+imagem como `container` — o broker compõe de `artifact.project_image`, então
+eleição não gravada é eleição inerte (ADR 0133 num segundo modo)
+
+### Agentes de dev só depois do container (PR 7) (ADR 0143, RN-502)
+Numa execução real do `exp001`, DEZ tasks de dev travaram de uma vez — e o
+achado não foi a pasta que falhou, foi que **nada ordenava container antes de
+dev agent**. `Engine.Dev.AgentIo.try_claim/2` — o ponto ÚNICO de claim — passa
+a consultar `ProjectContainerLifecycle.running?/1` (o predicado que o ADR 0134
+já tinha) ANTES de chamar a api: sem linha REGISTRADA `running`, o agente cai
+em `:idle`, persiste e emite `dev.blocked_by_container`. No ENGINE e não só no
+`activate-execution` da api porque a REIDRATAÇÃO chega ao `try_claim/2` sem
+passar por rota nenhuma (`init/1` → `finish_restart_recovery/1`). `:idle` e
+NÃO status novo, pela razão que o próprio docblock do `try_claim/2` já
+registrava desde a Fase 12b — é o único estado do qual um wake ainda resgata,
+e todos os guards de `handle_info/2` se apoiam nisso; quem distingue "fila
+vazia" de "sem container" é o EVENTO, nunca o status. O wake vem pelo outbox:
+`RegistrarTransicaoDeContainerUseCase` publica `container.running` na MESMA
+transação que grava a chegada em `running`, num `aggregate_type` NOVO
+(`container`, o terceiro que `Engine.Outbox.Drain` lê) em vez de pegar `task`
+emprestado, com o PROJETO como `aggregateId`; a mensagem entregue é a `{:wake,
+:became_claimable}` que já existia. Segunda metade: `TerminalExecutor` para de
+degradar calado — `container` sem `running` caía em `System.cmd` DENTRO do
+processo do engine, e agora RECUSA, com `mounted` no mesmo ramo
+
+### Alarme de merge de esteira com destinatário (ADR 0139)
+A regra "promoção é `--no-ff`" foi quebrada TRÊS vezes (#367, #394, #464 — a
+terceira era o PR que consertava as duas primeiras). O achado: a detecção JÁ
+existia e JÁ funcionou (o `tag-release` reprovou as duas primeiras com a
+mensagem certa) — faltava para QUEM tocar, porque workflow de `push` que falha
+numa permanente não tem PR onde ficar vermelho e o repo tinha zero issues.
+`tag-release` ganha o job `avisar`, que abre issue (e comenta na já aberta,
+nunca duplica) com `github.token` e nunca com o PAT — PAT inválido é uma das
+falhas que ele reporta — e isso deixou de ser hipotético: o `BRABO_BOT_TOKEN`
+expirou em 2026-09-03 à noite, reprovou duas runs do `tag-release`, e foi
+rotacionado em 2026-09-04; a v4.0.0 carimbou e DISPAROU a Release, o que só
+acontece com PAT válido (tag criada com `GITHUB_TOKEN` não dispara workflow).
+A regra passa a cobrir `dev` de forma ESTREITA: só é defeito o PR que trazia
+ARESTA NOVA (head era merge cujo segundo pai não estava na base), nunca o
+squash de PR de trabalho, que é a convenção. Desligar squash no repo foi
+MEDIDO e recusado (taxaria todo PR e mexeria no `changelog.mjs`, que roda
+`--no-merges`)
+
+### O artefato de decisão dos conversacionais (Frente 3, fatia genérica) (RN-505)
+`decision_record` reusa o padrão GENÉRICO de `emit_artifact`/`ArtifactSchemas`
+(o mesmo de `note`/`business_rule`) em vez do dedicado de
+`project_image`/`c4_diagram` — uma decisão é log append-only, nunca um
+"vigente" que se substitui. PO, Arquiteto, Dev Lead, UX Designer e Staff
+ganham a ferramenta (alias + `tool_specs` + `run_tool/3` + a mesma frase no
+`system_prompt/1`); o Criativo já tinha `emit_artifact` desde a Fase 3b e só
+ganhou o tipo novo, sem mudança nele. Distinto de `open_adr_pr` (só o
+Arquiteto, commit real + PR + aprovação humana): os dois COEXISTEM para
+escalas diferentes de decisão. Fora de escopo, declarado: agentes de execução
+(`ToolLoop`, sem harness comum) e a amarração com o Infra Lead — emitir
+`decision_record` ao propor `container_start_via_runner` — que depende de uma
+tool de outra frente do mesmo plano, em branch separada
+
+### "Sempre permitir" separado por Dev Agent de módulo (RN-509)
+Clicar "sempre permitir" numa ação de um `dev-<modulo>` gravava em
+`permissions.json`, escopo de PROJETO INTEIRO — liberava o mesmo comando pra
+qualquer outro agente. Passa a gravar em `agent_autonomy(projeto, agente,
+tipo)`, o MESMO mecanismo já usado pras 3 ações git seedadas na ativação da
+execução. `dev-lead` (lidera a área, não é membro dela) e qualquer ator
+não-modular continuam indo pro `permissions.json` de sempre; os dois tetos
+absolutos (terminal com efeito externo/comando privilegiado,
+`container_remove`) continuam recusando o clique inteiro ANTES do branch novo.
+Sem migração: entradas antigas continuam em `permissions.json`, decisão
+consciente
+
+### Docker vira pré-requisito real do modo Runner (RN-507/508, ADR 0145)
+`runner` roteava todo terminal aprovado ao CLI assim que workspace verificado
++ runner conectado batiam, sem checar container `running` — sem Docker de pé,
+o runner caía sozinho no HOST puro, o MESMO fallback silencioso que o ADR 0143
+já tinha fechado para `container`/`mounted`. `Engine.Runners.RunnerReadiness`
+unifica as TRÊS pré-condições (verificado, conectado, container `running`) com
+dois consumidores: `TerminalExecutor` e a materialização do worktree do dev
+agent, que deixa de tentar `File.mkdir_p!`/`git init` LOCAL contra o caminho
+do HOST (a lacuna aberta desde a RN-478) e passa a rodar DENTRO do container
+real, na máquina do usuário, pelo MESMO canal `exec`/`exec_result`
+(`Engine.Actions.Workspace.RunnerGit`, novo) — `WorktreeManager` bifurca pelo
+mesmo critério, e o job periódico de limpeza PULA em silêncio um projeto
+`runner` sem runner pronto agora. O protocolo `exec` ganha `env` opcional para
+a credencial de git (ADR 0056) viajar no ambiente do processo filho do HOST —
+mesclado sobre `process.env`, nunca repassado ao `docker exec` nem logado.
+`container_start` deixa de atender `runner` (o payload dela, com eleição de
+imagem, nunca fazia sentido lá); nasce `container_start_via_runner` — schema
+só com `rationale`, sobe a imagem já decidida —, com a tool nova do Infra Lead
+recusando LOCALMENTE (sem HTTP) antes de propor às cegas
+
+### RN-505 duplicada em dev, corrigida
+O "artefato de decisão" e o "sempre permitir por Dev Agent" mergearam com 2
+minutos de diferença, cada um alocando RN-505 sem ver o outro; "sempre
+permitir por Dev Agent" foi renumerado pra RN-509 (`docs/business-rules.md`,
+CHANGELOG, o comentário do `approve-always-action.use-case.ts` e do
+`ApprovalCard.test.tsx`), liberando o anchor `{#rn-505}` pro
+`decision_record`. Achado junto: a renumeração 505→507/506→508 feita durante a
+resolução de conflito de outro PR (Docker/runner, ADR 0145) tinha ficado
+INCOMPLETA — sobravam três menções a "RN-505" neste próprio arquivo, também
+corrigidas pra "RN-507"
+
+### FASE 28 (sessão 5) — o `join` do agente local deixa de ser mudo (RN-514, ADR 0147 ponto 1)
+O `join` do canal `terminal:<projectId>` era mudo dos DOIS lados — o runner
+mandava `{}` e o servidor fazia `_params` —, então o servidor não tinha como
+saber se o binário do outro lado entende uma mensagem nova, e o defeito era o
+pior possível: a mensagem chega, o handler não existe e NADA acontece, sem
+erro e sem log. Agora o runner DECLARA nos params
+(`Engine.Runners.Capacidades`, vocabulário `exec`/`pty`/`espelho`) e o
+servidor CONCEDE a interseção com o que CONHECE, em `socket.assigns` e NUNCA
+em tabela (capacidade é propriedade daquela CONEXÃO). O runner declara só
+`exec` e `pty` — declarar `espelho` sem implementá-lo é exatamente o defeito
+que a negociação impede; ele entra como NOME do vocabulário e nada mais, e a
+sessão 6 o implementa. Params ausentes/vazios são o binário LEGADO e concedem
+`{exec, pty}` — FATO, não benevolência: são as duas funções com que o runner
+nasceu, e recusar legado seria `breaking/` e MAJOR. Desconhecido é IGNORADO
+(runner mais NOVO que o engine conecta); exigida-e-não-declarada recusa o join
+NOMEANDO a que falta, ANTES do `Registry` — mecanismo implementado e testado
+que hoje NÃO dispara (`runner` exige `exec`, que todo binário tem; nada exige
+`espelho` ainda), e isso é o desenho. A metade que entrega valor HOJE:
+mensagem sem a capacidade é RECUSADA com resposta nomeada — `exec` responde no
+formato de `exec_result` (126 + causa) em vez de o `RunnerRouter` esperar o
+timeout, e `pty_*` vira `pty_error` na aba em vez de sumir. `RunnerReadiness`
+byte a byte como está
+
+### FASE 28 (sessão 6, metade B) — o espelho passa a existir (RN-516, ADR 0147 pontos 2/3/4/8)
+A capacidade `espelho` sai de nome do vocabulário e vira código nos DOIS
+lados. O DESTINO viaja na CONCESSÃO do `join` (a resposta deixa de ser vazia
+para o `:runner`: `%{espelho: %{destino: ...}}`), vive só naquela conexão e o
+runner RECUSA `mirror_sync` para destino não concedido — nunca configuração
+global nem variável, que faria o artefato do projeto B aterrissar na pasta do
+A. `mirror_path` não-nulo passa a EXIGIR a capacidade, e esse é o PRIMEIRO
+disparo real do mecanismo de recusa da RN-514: binário velho num projeto com
+destino DEIXA de conectar, nomeado e fatal — opt-in, custo declarado no ADR.
+`espelho-guard.ts` nasce IRMÃO de `guard.ts` (reusa os três helpers e a dupla
+passada, herda a ressalva de TOCTOU por escrito) e recusa as três coisas do
+ADR; achado implementando: `realpathMaisProximo` cai no ancestral, e como o
+destino quase nunca existe, colapsar os dois lados faria `/base-outra` e
+`/base` virarem `/` — a segunda passada resolve o ancestral e RECOLOCA o
+sufixo. UMA direção e NUNCA apaga: arquivo apagado na origem PERMANECE no
+destino (a pasta do usuário é acúmulo, não réplica). O que se copia é a LISTA
+DO GIT (rastreados + não-rastreados-não-ignorados), sem lista de exclusão
+própria; git que falha vira erro NOMEADO, nunca `cp -r` de plano B; repo git
+aninhado (o worktree do dev agent) volta como UMA entrada e não é descido, e
+symlink da origem é pulado. Predicado PRÓPRIO (`Engine.Runners.Espelho`), DUAS
+pré-condições e NUNCA `RunnerReadiness` com flag — `runner_readiness.ex` fica
+byte a byte. Gatilho: o COMMIT, momento nomeado, fire-and-forget e nunca
+watcher; "fim de turno de agente" fica DECLARADO e não ligado, por não haver
+enganche não-ambíguo
+
+### O broker que nunca subiu (correção da RN-512) (RN-512, ADR 0130/0146)
+A RN-512 tirou o broker do `profiles` para ele estar de pé em dev, e ele NUNCA
+subiu: `corepack prepare` rodava como ROOT no build (cache em `/root/.cache`),
+o container roda como uid 1000, e sem cache o corepack tenta BAIXAR o pnpm num
+serviço cuja única rede é `internal: true` — `EAI_AGAIN registry.npmjs.org`,
+`Exited (1)` cinco segundos depois. Sem healthcheck, `up --wait` dizia
+`Healthy` e o reset total anunciava "reset completo" com o processo morto;
+enquanto houve profile, quem subia o broker era quem já estava olhando. A
+correção tira o registry do RUNTIME e NÃO abre a rede (primeira das cinco
+camadas do ADR 0130): `COREPACK_HOME` preparado no build com o dono do uid de
+runtime, `pnpm install` como passo de BUILD, e — porque os três volumes de
+`node_modules` cobrem o que a imagem instalou e o Docker só semeia volume
+VAZIO — um entrypoint que os reconcilia contra uma cópia fora de `/workspace`,
+carimbada pelo sha256 do lockfile do build (o mesmo carimbo AVISA que a imagem
+ficou para trás, sem recusar subir). Healthcheck no serviço, de dentro do
+container. Produção não sofria disto e não muda
+
+### FASE 28 (sessão 7) — o agente local vira serviço de usuário (RN-518, ADR 0147 ponto 5)
+`brabo-runner service install|uninstall|status`, e o precedente era ZERO
+(nenhuma menção a `systemd`/`launchd` em `apps/runner/`; o modelo era
+foreground morto por SIGINT). Nível de USUÁRIO sempre — `systemd
+--user`/`LaunchAgent` —, e root é RECUSA e não aviso: o docblock de `guard.ts`
+declara "roda com os privilégios DELE" como a premissa das três fronteiras
+reais, e um serviço root deixaria a guarda best-effort de `cwd` como única
+coisa entre um comando aprovado e o disco. Windows é recusa NOMEADA (terceiro
+mecanismo, não variação dos dois). Uma unit por PROJETO porque o servidor já
+impõe um runner por projeto — nomear pela pasta criaria duas units que nunca
+sobem juntas, e a segunda apareceria como falha de conexão em vez de erro de
+instalação; no Linux o arquivo vai para onde o systemd PROCURA
+(`$XDG_CONFIG_HOME/systemd/user`, senão `~/.config`). `Restart=on-abnormal` e
+NUNCA `on-failure` (no plist, `KeepAlive`/`Crashed`): exit 1 do runner é
+recusa fatal de join (RN-514) ou teto de tentativas esgotado, e reiniciar
+seria o laço que o CLI recusa fazer sozinho. Serviço autentica por CHAVE DE
+DISPOSITIVO e nunca por token — gravá-lo numa unit o deixaria em disco, e este
+CLI nunca gravou credencial em disco. `uninstall` remove os TRÊS lendo a pasta
+da UNIT e nunca do `cwd` (sem unit, só com `--dir` — adivinhar apagaria a
+chave de outro projeto), e DIZ que a chave saiu do disco e NÃO foi revogada no
+servidor. `status` responde QUATRO estados com frase e código próprios
+(0/3/4/5), e a primeira resposta vem do DISCO — por isso continua certa numa
+máquina sem gerenciador; `spawn` que falhou nunca vira "o gerenciador disse
+não". BRB-031 NÃO fecha aqui
+
+### A spec do runner ia sem `projectId`, e o caminho NUNCA subiu container (RN-508, ADR 0145)
+`container_start_via_runner` (RN-508, ADR 0145) terminava `failed` em 100% das
+vezes — *"especificação de container recusada em `projectId`: esperava texto
+não vazio, recebi undefined"* —, e numa execução real do `exp004` o que se via
+era o EFEITO: dez tasks de dev sem nenhum agente reivindicando. Esse bloqueio
+estava CERTO (RN-507 e RN-502/ADR 0143 recusam sem container `running`
+REGISTRADO); o errado era o passo anterior.
+`EspecificacaoDeContainerParaRunner` nasceu com NOVE campos e
+`especificacaoValidada` (`packages/docker-port`) sempre exigiu DEZ — o dado
+estava à mão em `SpecDeContainer.projectId` e só não era copiado; o engine
+repassa o mapa OPACAMENTE, então nada se perdia no meio. Por contraste o
+BROKER sempre funcionou porque ele BUSCA a spec na api e recebe o
+`SpecDeContainer` inteiro — era por isso que só o modo `runner` quebrava. Três
+suítes verdes não pegaram porque cada elo montava o próprio fixture: ninguém
+testava a CORRENTE. Entra ela — o payload que o caso de uso REAL compõe
+atravessando o validador REAL, e o CONJUNTO de campos travado (`raizDoProjeto`
+é o único que a api não manda) — na suíte da api, por import RELATIVO, o único
+lugar onde os dois lados existem vivos; o invariante
+`api-nao-consome-docker-port` segue verde e foi ESTENDIDO para reprovar import
+relativo a partir de `src/`. Irmãos conferidos e CERTOS:
+`container_stop`/`container_remove` mandam só `workspaceDirName`, que é tudo
+que `nomeDeWorkspaceValidado` pede
+
+### A pausa que não podia ser desfeita (RN-540)
+Anamnese e Psicólogo estavam PAUSADOS desde 2026-08-10 e três lugares chamavam
+a pausa de reversível — os docblocks de
+`AnamneseSchedulerWorker.enabled?/0`/`PsychologistWorker.enabled?/0` ("Ligar
+de volta é `X=true` e reiniciar o engine") e
+`docs/reference/configuration.md`. Não era reversível em ambiente NENHUM: o
+`environment:` do serviço `engine` mapeava as TREZE variáveis de
+Anamnese/Psicólogo — todas TETOS de custo — e nenhuma das duas de PRODUTO, e
+`docker compose` NÃO repassa o ambiente do host, então `ANAMNESE_ENABLED=true`
+no `.env` era inerte e `runtime.exs` caía no default `"false"` em SILÊNCIO.
+Medido no container de dev: `[true] [] []`. Origem provável: quando o default
+virou `false`, ninguém precisou da variável para DESLIGAR — só quem tenta
+LIGAR descobre que o fio não existe, meses depois. As OITO flags booleanas
+(`System.get_env("X", "true"|"false") == "true"`) entram nos DOIS composes com
+o MESMO default do código — as quatro extras (`START_MODEL_SYNC`,
+`START_GATE_RESCUE`, os dois `GRAPH_*`) porque são o mesmo defeito, achado
+pelo próprio mecanismo, e excetuá-las exigiria quatro desculpas. Zero mudança
+de comportamento: a decisão de produto de manter os dois desligados fica byte
+a byte, o que passa a existir é o INTERRUPTOR. O mecanismo é
+`scripts/ci/flags-do-engine-no-compose.spec.ts`, que DERIVA a lista do
+`runtime.exs` (as outras 50 variáveis são tetos com default bom e coisas de
+release, legitimamente ausentes) e cobra default igual só no compose de DEV —
+o de produção desliga os agentes de fundo de propósito. `deploy/k8s/` NÃO
+muda, por coerência: lá não existe a camada que quebra
+
+### FASE 29 (sessão 1) — instalação de uma linha, só planejamento (ADR 0149-0152, fase-29-instalacao-de-uma-linha.md)
+Instalar o Brabo são TRÊS gestos desconexos (compose com cinco segredos à mão,
+runner pelo navegador com `chmod +x`, `pnpm bootstrap` que só existe num
+checkout), e a FASE 28 recusou por escrito o instalador de uma linha enquanto
+os artefatos não forem assinados (BRB-005) — por isso a fase assina ANTES de
+instalar. Quatro ADRs `Proposed`: assinatura `cosign` keyless por DIGEST mais
+UM `checksums.txt` assinado, nunca cinco assinaturas (0149); o instalador
+invocado por `sh -c "$(curl …)"` e NUNCA `curl|sh`, porque com o pipe o script
+É o stdin e o consentimento morre (0150); a base consentida do runner,
+reusando `dentroDoEscopo` e a recusa de laço por SEGMENTO de
+`espelho-guard.ts` em vez de uma quarta cópia da régua (0151); e
+backup/restore contra compose (0152). A medição corrigiu CINCO pontos do
+recorte original: `workspace.verified` NÃO existe (o que existe é
+`workspace_confirm`, e ele é UNIDIRECIONAL), o ponto 5 do ADR 0146 versiona
+`consentir-base.mjs` e não um `install.sh`, `docker-compose.prod.yml` não
+consome GHCR e se declara compose de VALIDAÇÃO, `make test-restore` é caminho
+de Kubernetes com backup só de Postgres, e "um runner por projeto" está
+imposto em CINCO lugares independentes — o que tirou o runner por máquina
+desta fase, para a FASE 30. Achado próprio: **`git_local_repos` não está em
+backup nenhum**, e perdê-lo é perder o código dos projetos `local`. Nasce
+`docs/reference/brb.md` — e o achado é que o registro de BRB **não é do
+repositório**: vive no vault do mantenedor, com 33 itens, e aqui só dois ids
+apareciam em prosa. Medindo: BRB-032 e BRB-033 descrevem defeitos que **já não
+reproduzem**, e **BRB-004 não é o que o id sugere** — pede imagem de terceiro
+por DIGEST, não a tag que o #419 fixou. O arquivo daqui guarda a EVIDÊNCIA
+(estado medido, `arquivo:linha`); o vault segue dono da finding. Faixa
+RN-524..538 e ADRs 0149-0152, pulando o que está EM VOO: três colisões
+observadas no mesmo instante (ADR 0148 ×2, RN-522 ×2, RN-523 ×2), resolvidas
+depois pelo critério da DATA — quem alocou primeiro ficou com o número, e as
+branches de 08/09 viraram ADR 0153, RN-539 e RN-540
+
+### FASE 29 (sessão 2) — a esteira assina o que publica (RN-524, ADR 0149)
+O produto assinava **nada**: `cosign`/`sigstore`/`attestation` não existiam em
+`.github/`, `scripts/` ou `docker/`, e a única procedência era o
+`--provenance` do pacote **npm** do runner. `release.yml` publicava as quatro
+imagens **sem** `id-token: write`; `build-runner-binaries.yml` subia os cinco
+binários com `gh release upload` e nada mais — enquanto os `sha256sum -c` que
+já existiam verificam binário **de terceiro**, o padrão que o repositório
+sabia aplicar e nunca aplicou a si mesmo. Agora as imagens são assinadas por
+**DIGEST** (nunca por tag, ponteiro móvel) e os binários ganham **UM**
+`checksums.txt` assinado, num job `checksums` que espera a matriz — não cinco
+assinaturas, porque quem verifica quatro e esquece o quinto não sabe que
+esqueceu. O job é `if: always()` de propósito (`fail-fast: false` na matriz) e
+**nomeia o que o manifesto não cobre**. Os dois workflows **verificam antes de
+publicar**. Keyless pelo histórico da casa: chave privada seria mais um
+segredo de CI, e um PAT já expirou calado (ADR 0139). Procedimento de
+verificação no runbook, com as duas flags `--certificate-*` **obrigatórias** —
+sem elas o `cosign` aceita assinatura válida de QUALQUER UM. Fecha BRB-005
+para imagens e binários; ficam fora, declarados, o code-signing de SO e o
+proxy de download
+
+### FASE 29 (sessão 3) — o instalador que ainda não instala (RN-526, ADR 0150)
+Nasce `install.sh` na RAIZ, versionado e servido pela Release. A forma é `sh
+-c "$(curl …)"` e **nunca** `curl|sh`, por motivo MECÂNICO: com o pipe, o
+`stdin` do processo É o download, e todo `read` lê bytes do próprio script ou
+acha EOF — um instalador que não pergunta escolheria sozinho onde criar pasta
+na máquina de alguém. Ele VERIFICA A PRÓPRIA ORIGEM (a assinatura do
+`checksums.txt` da RN-524, e o hash dele DENTRO do manifesto verificado), com
+o `cosign` pinado e conferido por `sha256sum` contra o hash escrito no script;
+a DETECÇÃO nomeia o que achou antes de perguntar; sem TTY relata e sai 0; e
+**nunca apaga pasta de usuário** — base de projetos e pasta de espelho ficam
+fora de qualquer confirmação, pela régua do espelho (RN-516). Marcador em
+`$XDG_STATE_HOME/brabo/`, nunca em `~/.brabo/`, que é POR PROJETO. **Não
+instala nada nesta versão, e DIZ isso** em vez de terminar calado.
+`--print-plan`/`--print-state` expõem a decisão sem TTY, sem rede e sem efeito
+— molde do `--print-commands` do `bootstrap.sh`, testado igual. Dois bugs de
+bash achados rodando, os dois do mesmo gênero: sob `set -e`+`pipefail`, `[
+cond ] && atribuição` que dá falso MATA o script, e um `ls` que não casa
+derruba a substituição inteira — numa função cujo caso normal é "não achei
+nada". A RAIZ do repositório não era coberta por docmap nenhum (os globs de
+raiz são nomes literais); nasce a regra `instalador`
+
+### FASE 29 (sessão 4) — a instalação sobe de um compose próprio (RN-527, ADR 0150)
+Nasce `docker/docker-compose.install.yml`, GERADO a partir do de produção e
+diferente em três pontos: as quatro imagens vêm de **variável obrigatória**
+(`${BRABO_API_IMAGE:?…}` — com default, faltar a variável subiria metade da
+stack com imagem que ninguém escolheu, e o erro viraria comportamento estranho
+em vez de recusa), **nenhum `build:`** sobrevive, e o serviço **`broker` NÃO
+existe** porque a imagem dele não é publicada (o bake tem quatro alvos) — com
+`--source=ghcr`, `mounted` não sobe container, e o compose DIZ isso no
+comentário da `BROKER_URL`. O `docker-compose.prod.yml` fica intacto: ele se
+declara compose de VALIDAÇÃO e é o que o `smoke.sh` usa construindo local. O
+custo dos dois arquivos é declarado e o teto é MECÂNICO —
+`composes-em-conformidade.spec.ts` reprova serviço/volume/porta a mais,
+`build:` sobrevivente e imagem de terceiro afrouxada. Duas coisas do plano
+morreram no contato com o disco, por motivos opostos: **migrate não é passo**
+(o compose encadeia `api`→`migrate-api` com `service_completed_successfully`,
+e dois lugares mandando migrar seriam duas fontes da mesma verdade) e **o
+`smoke.sh` não é reusado** (ele CONSTRÓI o que a instalação baixou por digest,
+e derruba a stack no fim) — no lugar, o instalador PERGUNTA antes de afirmar,
+batendo no `/health` dos dois
+
+### FASE 29 (sessão 6) — migrar exige backup PROVADO (RN-530, ADR 0150/0152)
+Instalar por cima de instalação existente **não é oferecido** — ou migra, ou
+para: `up` sobre volumes de outra versão é estrago que não avisa. A ordem é
+backup → **PROVAR** → perguntar → apagar → instalar → restaurar, e o passo do
+meio é o que dá ao instalador o direito de apagar: um backup que ninguém
+tentou restaurar é um arquivo, e a hora de descobrir isso não é depois do
+`down -v`. A prova roda `test-restore-compose.sh` (as MESMAS três validações
+do ADR 0152); backup ou prova que falham param a migração **sem apagar nada**.
+O destino é pasta do HOST — o default do compose é o volume `backup_local`,
+que o `down -v` apagaria JUNTO com o que se quer preservar. O dump do Postgres
+NÃO é restaurado sozinho sobre banco populado (é destrutivo, e `brabo-restore`
+nunca toca a origem); os repos git locais sim, porque nasceriam vazios
+
+### FASE 29 (sessão 7) — uma base para os dois lados, e o BRB-031 fecha (RN-531, ADR 0150/0151)
+O instalador pergunta a base UMA vez e grava nos DOIS lugares:
+`BRABO_PROJECTS_BASE` no `.env` (servidor, ADR 0141) e o campo `base` do
+`runner.json` (agente local, RN-529) — o que difere entre `mounted` e `runner`
+é QUEM executa, não onde o código mora, e duas bases para a mesma pasta seriam
+a colisão que o ADR 0141 recusou. Recusa nos DOIS sentidos contra o checkout,
+e `~` não é expandido de propósito (o valor vai para arquivo de configuração,
+onde `~` é lido literalmente). O binário do runner é conferido contra o
+**mesmo** `checksums.txt` que o script já verificou para conferir a si mesmo —
+baixá-lo de novo seriam duas chances de pegar manifestos diferentes, e a
+segunda não seria verificada — e instalado com `install -m 0755`. **BRB-031
+fecha por aqui**: ele sobreviveu à FASE 28 porque a instalação não vinha de
+artefato versionado, e quem chegava ao `service install` já precisara do
+`chmod`. Release sem o binário da plataforma NÃO interrompe a instalação
+
+### FASE 29 (sessões 8-10) — o protocolo, o picker e o E2E (RN-532..534, ADR 0149/0150/0151)
+**8 (RN-532)**: nasce o par `workspace_create`/`_result` no molde de
+`exec`/`exec_result`, e a confirmação REUSA o `workspace_confirm` que já
+existe — nenhuma rota de gravação nova, engine continua sem escrever a tabela.
+O predicado é PRÓPRIO por uma razão mais forte que a do espelho: ali a
+terceira pré-condição seria **circular** — projeto `runner` só tem container
+`running` depois de o runner o subir, e o container sobe SOBRE a pasta que
+esta mensagem cria. A capacidade `workspace` é a única cuja declaração depende
+do ESTADO (base consentida), não da versão do binário. **9 (RN-533)**: o
+picker volta a ler o disco do usuário por `fs_list_dir`, e a decisão de NÃO
+esconder o modo sem runner é simétrica à RN-513, não contrária — lá a api TEM
+sinal e sem base a criação termina em 400; aqui não há sinal de presença (a
+RN-521 já declara), e esconder seria decidir "não tem" a partir de "não sei".
+Achado: a tela decidia casando a FRASE `'Nenhum runner conectado'` que mora
+num `.ex` do engine — virou motivo discriminado. **10 (RN-534)**: o
+`install.sh` entra no `checksums.txt` assinado (sem isso a verificação que ele
+faz de SI MESMO era letra morta) e é exercitado em máquina limpa, com TTY
+simulado por `script -qec` e nunca por pipe — o pipe é o que mata o
+consentimento. NÃO roda em PR, pelo mesmo motivo da assinatura
+
+### FASE 29 (sessão 8) — a base do agente local ganha um consumidor (RN-532, ADR 0151 pontos 3–6)
+A RN-529 construiu a BASE e declarou por escrito que nada a consumia. Entra o
+par `workspace_create`/`workspace_create_result`, no molde de PEDIDO COM
+RESPOSTA de `exec`/`exec_result` — e NUNCA no de `workspace_confirm`, que é
+UNIDIRECIONAL (`{:noreply, socket}`, não empurra nada de volta), precisão que
+a fase já tinha registrado junto com "`workspace.verified` NÃO existe". Só o
+SEGMENTO relativo atravessa a rede (invariante do ADR 0130/0144: quem tem a
+raiz é quem executa), e segmento ABSOLUTO é recusado por léxico. A confirmação
+REUSA o `workspace_confirm` que já existia, e é o que economiza uma frente
+inteira: **nenhuma rota nova de gravação nasce**, o engine continua não
+escrevendo a tabela, e o único caminho que carimba `workspace_verified_at`
+continua sendo um só — com a ORDEM como mecanismo (confirm ANTES do resultado,
+porque os dois chegam ao mesmo processo de canal em ordem e o handler do
+confirm é síncrono). A capacidade `workspace` entra no vocabulário NA SESSÃO
+EM QUE O CÓDIGO ENTRA, dos dois lados — a RN-514 fez a aposta oposta com
+`espelho` e ela só se pagou porque alguém a cobrou —, e ela é a ÚNICA das
+quatro cuja declaração depende do ESTADO daquela execução: o runner só a
+declara com base consentida, e é por essa linha, e por mais nenhuma, que o
+servidor SABE que existe base (o engine não lê o disco do usuário). NINGUÉM a
+exige no join, de propósito: exigi-la em `runner` seria `breaking/` e MAJOR
+por uma função que aquele projeto talvez nunca use. Predicado PRÓPRIO
+(`Engine.Runners.PastaDoProjeto`), DUAS pré-condições, `RunnerReadiness` byte
+a byte — e aqui a terceira seria pior que desnecessária, seria CIRCULAR: um
+projeto `runner` só chega a ter container `running` depois de o runner o
+subir, e o container sobe sobre a pasta que esta mensagem existe para criar.
+Ele também não pergunta `workspace_verified_at` (aqui é o RESULTADO) nem o
+modo. As DUAS pré-condições são respondidas em lugares diferentes porque "base
+consentida" é propriedade da CONEXÃO (`socket.assigns`, nunca tabela): o canal
+recusa ANTES de empurrar, com `motivo: "sem-base"` pelo mesmo `ref`, no
+formato que o módulo espera — nunca timeout. Cinco motivos nomeados que não
+colapsam, idempotência com desfecho PRÓPRIO (`ja-era-repositorio` é sucesso),
+e `estado.dir` NÃO muda. Não é `proposed_action` e nenhum teto ganha exceção
+
+### FASE 29 (sessão 5) — o backup passa a cobrir o que perder dói (ADR 0152, RN-528)
+O backup cobria UM banco e rodava NUM lugar: `make test-restore` é caminho de
+Kubernetes (exige `kubectl`, cluster e o CronJob) e `docker-compose.prod.yml`
+não tinha serviço `backup` NENHUM — migrar uma instalação por compose não
+tinha caminho provado. A decisão começa RECUSANDO o movimento fácil ("fazer
+backup de todos os volumes") e CLASSIFICANDO os sete: `neo4j_data` e
+`project_workspaces` são derivados, `ollama_data` é re-obtenível,
+`brabo_projects_base` é do usuário — copiá-los dá impressão de cobertura sem
+acrescentar recuperação. Fonte de verdade são DOIS, e o achado é o segundo:
+**`git_local_repos` não estava em backup nenhum**, e um projeto com provider
+`local` guarda o *bare* ali — não é reconstruível do Postgres (o event log
+guarda a NARRATIVA, não os objetos do git), então perder o volume é perder o
+código dos agentes. A prosa do runbook afirmava o contrário ("the real
+repositories live in GitHub/GitLab") e é ela que explica os anos sem
+cobertura: vale para `github`/`gitlab`, e para `local` não há upstream. A
+garantia do arquivo é DECLARADA e menor que "snapshot" — consistência por
+REFERÊNCIA (git escreve objetos antes de mover a ref, e troca a ref por rename
+atômico), sem instante global e sem `git fsck` (a imagem não tem git, de
+propósito); `gc` concorrente vira FALHA e não arquivo parcial, com o status do
+`tar` capturado num ARQUIVO porque em POSIX `sh` o status de um cano é o do
+último comando. As cinco variáveis de S3 deixam de ser obrigatórias e viram a
+configuração de UM destino (`BACKUP_DIR` escolhe disco; ausente, S3 — a
+inferência é o que mantém o CronJob INTACTO). `make test-restore-compose`
+dispara backup REAL e chama o MESMO `brabo-restore` com as MESMAS três
+validações: muda o INVÓLUCRO, nunca o julgamento, e
+`deploy/k8s/test-restore.sh` fica INTACTO (unificar faria o de compose
+depender de `kubectl`); `restore.sh` segue sem tocar a database de ORIGEM.
+Restaurar os repos é comando IRMÃO (`brabo-restore-git`, verifica por default,
+escreve só com `--restaurar`) e não fase do outro — dois artefatos, dois
+julgamentos, e juntá-los faria falha de git reprovar a validação do event log.
+Achado RODANDO, que a leitura não daria: o volume é compartilhado por três
+imagens com uids diferentes e carrega o dono de quem o montou primeiro (medido
+`1000:1000`, modo 0755), enquanto a imagem roda como uid 70 — a extração
+morria no meio deixando o volume pela metade; agora recusa ANTES do `tar`
+nomeando `--user 0:0`, e o extraído como root volta ao dono do DIRETÓRIO,
+senão o volume voltaria íntegro e INÚTIL (api e engine, non-root, sem
+conseguir escrever no que se acabou de restaurar). Neo4j recebe REPROJEÇÃO e
+não backup — não construída aqui (BRB-018): instalação migrada nasce com o
+grafo VAZIO, degradação nomeada e não perda de dado (o RAG vive no pgvector,
+dentro do dump)
