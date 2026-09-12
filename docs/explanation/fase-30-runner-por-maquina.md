@@ -125,8 +125,8 @@ as registra:
   MENOR — apagado? convertido? 500 transitório? — derrubar conexão viva por
   ambiguidade. O processo diz isso ao subir, e o gesto é reconectar.
 - **Lista vazia é estado NORMAL, com saída 0.** É o estado de toda instalação
-  nova, e `Restart=on-abnormal` não a reergue de propósito. *(Revisado na
-  sessão 8, [RN-550](../business-rules.md#rn-550): com ZERO conexões o agente
+  nova, e `Restart=on-abnormal` não a reergue de propósito. *(Revisado ao
+  dividir a sessão 6, [RN-550](../business-rules.md#rn-550): com ZERO conexões o agente
   passa a FICAR DE PÉ e reconsultar — a metade "só no start" fica intacta para
   quem tem conexão viva.)*
 
@@ -235,7 +235,14 @@ máquina chega com a unit da sessão 4. Uma chave de PROJETO ativa não muda o
 painel: é o defeito irmão, um escopo abaixo. E a tela de listar/revogar chave
 continua não existindo.
 
-### O que a sessão 8 fechou, e as duas decisões que ela teve de tomar
+### O que a divisão da sessão 6 fechou — e por que ela não é sessão 8
+
+A **sessão 6** tocaria `apps/api`, `apps/runner` e o `install.sh` de uma vez, e
+entrega de três workspaces é onde uma sessão se perde. Ela foi **dividida em
+três**: as duas peças abaixo, disjuntas e em paralelo, e o `install.sh` depois
+delas, como **orquestrador e nada mais** — a sessão 6 segue aberta, com esse
+recorte menor. **Nenhuma destas duas é sessão numerada da fase**, e em especial
+nenhuma é a sessão 8, que é o E2E e continua aberta na tabela acima.
 
 As duas peças que faltavam **do lado do agente**, e as duas vêm do ADR 0155.
 
@@ -267,6 +274,29 @@ sem `kid`** — o defeito da RN-475, impossível por construção.
 
 O que segue **declarado, não feito**: a ROTA que registra a pública de máquina
 e o `install.sh` que encadeia os três comandos continuam sendo a sessão 6.
+
+E a metade de API da mesma divisão ([RN-552](../business-rules.md#rn-552)):
+`POST /internal/machine-device-keys`, `engine-service`, corpo
+`{ name, publicKeyJwk }` e resposta com o `id` que vira o `kid` da privada
+(RN-475). **A credencial foi decidida e o custo está declarado**: o service
+token, porque exigir credencial do usuário recém-criado obrigaria o instalador
+a abrir na máquina exatamente a sessão viva que o [ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md)
+ponto 5 recusou abrir — e daria um segundo uso à senha que a RN-546 descarta de
+propósito. O preço: um `BRABO_SERVICE_TOKEN` vazado passa a poder **fabricar**
+credencial de acesso duradoura, não só falar com rotas internas.
+
+Três contenções vivem **na rota**, não no texto: não há `userId` no corpo (o
+dono é o usuário ÚNICO da instalação, e zero ou mais de um é 409 sem escrever
+nada — a condição da RN-546 com outra forma, sobre a INSTALAÇÃO e nunca sobre o
+argumento); registrar **SUBSTITUI** as chaves de máquina ativas do dono na mesma
+transação, então máquina reinstalada passa e mil chaves são impossíveis **por
+cláusula, sem número que envelheça**; e uma JWK com `d` é recusada por nome, com
+a régua de forma virando UMA, no domínio, chamada pelos dois registradores.
+
+O que segue **declarado, não feito**: numa instalação sem PROJETO, tela nenhuma
+alcança uma chave de máquina — listar e revogar são as duas por
+`/projects/:projectId/...` —, e é por isso que registrar substitui em vez de
+deixar órfã: uma órfã ali seria **viva e inalcançável**.
 
 Faixa reservada: **RN-543..555**. ADRs **0154** e **0155**. A RN-541 já está
 alocada em branch não mergeada — o salto é deliberado, pelo critério que a

@@ -11083,10 +11083,11 @@ existe para matar.
   dois); `apps/api/test/application/use-cases/auth/revoke-runner-device-key.use-case.spec.ts`
   (*"o alvo da desconexão vira PLURAL"*);
   `apps/api/test/interfaces/http/runner/runner-projects.controller.spec.ts`
-- **Lacuna DECLARADA:** nenhuma rota da api **cria** chave de máquina ainda.
-  Quem registra é o `install.sh` ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
-  ponto 4), noutra sessão desta fase — a rota nasce no PR que tiver o primeiro
-  chamador real, nunca antes. O tipo da porta já é o da COLUNA
+- **Lacuna DECLARADA, e FECHADA pela [RN-552](#rn-552):** quando esta RN
+  fechou, nenhuma rota da api **criava** chave de máquina — a rota nasceria no
+  PR que tivesse o primeiro chamador real, o `install.sh`
+  ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 4), nunca
+  antes. Foi o que aconteceu: `POST /internal/machine-device-keys`. O tipo da porta já é o da COLUNA
   (`projectId: string | null`), para o consumidor futuro não ter o que mudar
   ali. E o web continua sem tela onde listar ou revogar chave de dispositivo
   (a metade aberta da RN-519): a espécie nova torna a lacuna maior, e ela fica
@@ -11198,9 +11199,10 @@ tem como ser construída), e passar a própria base ali seria pior —
   processo de verdade (sem base, `uso()` com o motivo; com base, a recusa passa
   a ser da credencial); `apps/runner/src/base-guard.spec.ts` — `raizDoProjeto`
   nulo não afrouxa nenhuma outra recusa
-- **Lacuna DECLARADA:** ninguém CRIA chave de máquina ainda (é o `install.sh`,
-  ADR 0155 ponto 4), então o modo novo só é exercitável com uma chave
-  registrada à mão — a metade que a RN-543 já declarava. A `apiUrl` no modo de
+- **Lacuna DECLARADA, FECHADA depois pela [RN-552](#rn-552):** quando esta RN
+  fechou, ninguém CRIAVA chave de máquina (era o `install.sh`, ADR 0155 ponto
+  4), então o modo novo só era exercitável com uma chave registrada à mão — a
+  metade que a RN-543 já declarava. A `apiUrl` no modo de
   máquina vem de `--api-url`/`BRABO_API_URL`/default, e **não** do
   `brabo-runner.config.json`, que é por PROJETO: uma instalação em porta ou
   host diferentes precisa da flag no `ExecStart`, e quem a escreve é a unit por
@@ -11563,6 +11565,139 @@ default declarado); credencial de LLM (é de quem vai gastar,
 - **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md), que depende
   do [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
 
+## A chave de MÁQUINA que o instalador registra (RN-552)
+
+### RN-552 — Rota interna registra a chave de dispositivo de MÁQUINA, para o usuário ÚNICO da instalação, e registrar SUBSTITUI {#rn-552}
+
+Sessão 7 da [FASE 30](explanation/fase-30-runner-por-maquina.md), fechando o
+ponto 4 do [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) sobre a
+espécie de chave que o [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+criou. É a lacuna que a [RN-543](#rn-543) declarou por escrito e deixou aberta
+de propósito, pela régua do `DEPLOY_ENABLED`: *"nenhuma rota da api cria chave
+de máquina ainda; isso é o `install.sh`, e nasce com o primeiro chamador"*. O
+chamador chegou — é o instalador da sessão 6 —, então a rota nasce.
+
+**A rota.** `POST /internal/machine-device-keys`, `engine-service`. Corpo
+`{ name, publicKeyJwk }`, resposta `201` com
+`{ id, userId, name, createdAt, replacedKeyIds }`. Sem `GET` e sem `DELETE`.
+
+**A credencial é o SERVICE TOKEN, e a alternativa foi recusada por motivo
+escrito.** É o mesmo instalador, no mesmo minuto, no passo seguinte ao da
+[RN-546](#rn-546): o `BRABO_SERVICE_TOKEN` foi gerado pelo próprio `install.sh`
+e escrito no `.env` com modo `600`, então apresentá-lo prova controle da
+**máquina** — que é exatamente o que este passo quer provar. A candidata real
+do outro lado era a credencial do usuário recém-criado, e ela contraria o
+próprio ADR 0155: a senha é lida no TTY, *"usada e descartada"*, e o ponto 5
+declara que *"o instalador não faz login por ninguém"*, razão pela qual a
+resposta da primeira conta não devolve token de sessão. Exigi-la aqui obrigaria
+o instalador a criar, na máquina, a sessão viva que aquele ADR recusou criar.
+
+**O que essa escolha custa, declarado e não escondido.** Um
+`BRABO_SERVICE_TOKEN` vazado passa a poder **fabricar** uma credencial de
+acesso duradoura de um usuário — não só falar com as rotas internas. Está dito
+aqui, no [`security-surface.md`](security-surface.md) e no docblock do
+controller, ao lado da declaração irmã da primeira conta. O que a chave concede
+não aumentou: ela dá ao agente local exatamente os projetos que o dono dela já
+alcança em `developer`, resolvidos contra o projeto pedido ([RN-543](#rn-543)).
+
+**A rota não sabe escolher de quem é a chave.** **Não há `userId` no corpo.** O
+dono é o usuário ÚNICO da instalação, resolvido por
+`UserRepository.usuarioUnicoDaInstalacao()` (`LIMIT 2`, nunca `LIMIT 1`: com
+uma linha seria impossível distinguir "há exatamente um" de "há muitos"); com
+zero ou mais de um, `409` e **nada é escrito**. É o análogo exato da condição
+da [RN-546](#rn-546) — sobre a INSTALAÇÃO, nunca sobre o argumento pedido —, e
+é o que impede que quem tenha o token escolha a vítima. Consequência declarada:
+numa instalação com duas pessoas a rota não funciona mais, para ninguém. Ela se
+cala como a da primeira conta se cala, e pelo mesmo motivo — pertence ao
+MOMENTO da instalação, não à vida do produto.
+
+**Registrar SUBSTITUI, nunca acumula.** Toda chave de MÁQUINA ativa do dono é
+revogada na MESMA transação, e os ids voltam em `replacedKeyIds`. Uma máquina
+reinstalada é caso legítimo e continua passando; mil chaves de máquina viram
+impossíveis — e não por um número que envelhece, mas porque o conjunto de
+chaves de máquina vivas de um usuário nunca passa de uma. A revogação vem
+ANTES do registro: revogar depois deixaria uma janela com as duas vivas, e
+falhar no meio deixaria a instalação com duas credenciais de máquina e nenhuma
+forma de saber qual é a nova. Só as de MÁQUINA caem (`project_id IS NULL`): as
+de PROJETO vieram do navegador ([ADR 0118](adr/0118-configuracao-do-runner-pelo-navegador.md)),
+num fluxo que esta rota não conhece, e derrubá-las apagaria o pareamento de
+quem já usa o produto — o erro que a [RN-545](#rn-545) nomeou ao recusar
+converter instalação alheia em silêncio.
+
+**A resposta devolve o `id` porque ele vira o `kid`.** É a lição da
+[RN-475](#rn-475), a mais cara desta área: o id do registro vai gravado DENTRO
+da JWK privada, no `kid`, e a cadeia inteira só o REPASSA — o agente local lê
+`jwk.kid`, o JWT de ticket o leva no header, o `PatAuthGuard` acha a pública
+por ele. Ninguém deriva esse id de outra coisa, e foi por ele faltar que o modo
+automático do navegador nunca autenticou. O `userId` também volta, RESOLVIDO
+pela api: quem chama não o manda, e devolvê-lo deixa o instalador **conferir**
+contra a conta que acabou de criar em vez de supor.
+
+**A privada nunca viaja, e uma que chegue é RECUSADA.** O par é gerado na
+máquina e só a metade pública sobe — mesmo desenho do navegador, pelo mesmo
+motivo, mantendo verdadeira a frase que a [RN-519](#rn-519) usa. A validação de
+forma virou régua ÚNICA no domínio (`exigirJwkPublicaEd25519`), chamada pelos
+DOIS registradores: duas cópias divergiriam no primeiro dia em que uma delas
+mudasse, como a política de senha da [RN-546](#rn-546) já resolve. E ela ganhou
+um caso que nenhuma das duas tinha: JWK com **`d`** responde `400` dizendo o
+que chegou. `d` é a metade privada de uma JWK OKP (RFC 8037 §2) e só chega por
+engano de quem serializou o par inteiro — antes, ela passava na checagem (tem
+`kty`, `crv` e `x` como qualquer pública) e era **gravada**. Recusar é a
+resposta; a mensagem nomeia o que veio, porque um "JWK inválida" genérico faria
+a pessoa tentar de novo com o mesmo arquivo.
+
+**Kind próprio na trilha de auth.** `machine_device_key_registered`: esta é a
+única credencial duradoura de um usuário que nasce sem esse usuário autenticar
+nada — quem prova é o controle da máquina. Numa suspeita de vazamento do
+service token, é essa linha que diz quando e para quem ela foi criada, e o
+`metadata` carrega os ids que ela substituiu, nunca a JWK nem o nome.
+
+**Sem `GET` e sem `DELETE`, e o que isso custa.** Listar por aqui publicaria,
+para quem só tem o token da máquina, o inventário de credenciais de uma pessoa;
+revogar já existe onde tem dono humano
+(`DELETE /projects/:projectId/runner-device-keys/:deviceKeyId`, que casa por
+`{id, usuário}` e nunca por projeto). A assimetria tem preço, e ele está
+declarado: numa instalação que ainda não tem projeto, **tela nenhuma alcança
+uma chave de máquina** — e é justamente por isso que registrar SUBSTITUI em vez
+de deixar órfãs para trás, que seriam vivas e inalcançáveis.
+
+**O que NÃO entrou:** rota pública (mesma corrida da [RN-546](#rn-546));
+`userId` no corpo; chave de máquina para instalação com time (declarado acima
+como lacuna, não como acaso); tabela nova (uma chave de máquina continua sendo
+uma linha de `runner_device_keys` com `project_id NULL`, [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+ponto 1) — e **nenhuma migration**, porque a coluna já é nullable desde a
+[RN-543](#rn-543).
+
+- **Código:** `apps/api/src/interfaces/http/internal/internal-machine-device-keys.controller.ts:87`
+  (o `@Post()` da rota, e o docblock com a escolha de credencial),
+  `apps/api/src/application/use-cases/auth/registrar-chave-de-maquina.use-case.ts:122`
+  (o dono resolvido), `:124` (o `409`), `:136` (a substituição antes do
+  registro) e `:146` (`projectId: null`, o que faz dela uma chave de máquina),
+  `apps/api/src/domain/auth/jwk-de-dispositivo.ts:33` (a régua única) e `:59`
+  (a recusa da privada),
+  `apps/api/src/infrastructure/persistence/drizzle/user.repository.ts:31`
+  (`usuarioUnicoDaInstalacao`, `LIMIT 2`),
+  `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts:129`
+  (`revogarChavesDeMaquina`, os dois `IS NULL`),
+  `apps/api/src/domain/auth/auth-event.ts` (`machine_device_key_registered`),
+  `apps/api/src/interfaces/http/internal/dto/machine-device-key-internal.dto.ts`
+  e `…/machine-device-key-internal.response.dto.ts`
+- **Teste:** `apps/api/test/application/use-cases/auth/registrar-chave-de-maquina.use-case.spec.ts`
+  (caminho feliz com `projectId` nulo e dono resolvido; o `409` sem usuário
+  único, sem escrever nada; a substituição ANTES do registro; a privada
+  recusada antes de abrir transação; a trilha sem a JWK);
+  `apps/api/test/domain/auth/jwk-de-dispositivo.spec.ts` (a régua única, com o
+  `d` e a precedência da curva);
+  `apps/api/test/interfaces/http/internal/internal-machine-device-keys.controller.spec.ts`
+  (o contrato da resposta, o corpo SEM dono, e as três do guard);
+  `apps/api/test/infrastructure/persistence/drizzle/user.repository.spec.ts`
+  (um usuário devolve; dois devolvem `null`, nunca "o primeiro");
+  `apps/api/test/infrastructure/persistence/drizzle/runner-device-key.repository.spec.ts`
+  (a substituição contra o Postgres de verdade, e o que ela NÃO derruba);
+  `apps/api/test/interfaces/route-surface.spec.ts` (a rota classificada)
+- **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 4, sobre
+  a espécie criada pelo [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+
 ## A unit de MÁQUINA, convivendo com as por projeto (RN-545)
 
 ### RN-545 — `service install --machine` instala UMA unit para a máquina, e as duas espécies não se sobrepõem {#rn-545}
@@ -11707,10 +11842,11 @@ decisões de uma vez.
   a recusa aparece só no primeiro boot, como `CredencialNaoEDeMaquinaError`.
   Verificar no `install` exigiria uma chamada de rede num subcomando que hoje
   não faz nenhuma, e inventar um palpite local produziria a segunda fonte de
-  verdade que a RN-544 recusou. E ninguém CRIA chave de máquina ainda: quem
-  registra é o `install.sh`
+  verdade que a RN-544 recusou. E, à época desta RN, ninguém CRIAVA chave de
+  máquina: quem registra é o `install.sh`
   ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 4), na
-  sessão 6 — esta sessão entrega o subcomando que ele vai chamar
+  sessão 6 — esta sessão entrega o subcomando que ele vai chamar, e a rota que
+  ele chama chegou na [RN-552](#rn-552)
 - **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
 - **Origem:** FASE 30, sessão 4 —
 
@@ -11815,10 +11951,10 @@ diferença não é escolha de desenho: é a forma do endpoint.
   parear, a consulta falhada dizendo que não sabe, o papel abaixo de
   `developer` sem chamar a rota, e o wizard sem `projectId` sem a quem
   perguntar
-- **Lacuna DECLARADA:** ninguém CRIA chave de máquina ainda (é o `install.sh`,
-  ADR 0155 ponto 4, sessão 6), então hoje esta tela só é exercitável com uma
-  chave registrada à mão — a mesma metade que as RN-543 e RN-544 já
-  declaravam. O comando que o painel oferece é
+- **Lacuna DECLARADA, FECHADA depois pela [RN-552](#rn-552):** quando esta RN
+  fechou, ninguém CRIAVA chave de máquina (era o `install.sh`, ADR 0155 ponto
+  4, sessão 6), então esta tela só era exercitável com uma chave registrada à
+  mão — a mesma metade que as RN-543 e RN-544 já declaravam. O comando que o painel oferece é
   `brabo-runner service status --project <id>`, a forma que existe HOJE; a
   forma por máquina chega com a unit da sessão 4. Uma chave de PROJETO ativa
   NÃO muda o painel: é o defeito irmão, um escopo abaixo, e fechá-lo é decisão

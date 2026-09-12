@@ -341,6 +341,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/machine-device-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registers the MACHINE device key of a fresh installation
+         * @description For the one-line installer, right after it creates the first account: the local agent needs a credential, and the only one that existed was bound to a PROJECT — in an installation that has none yet. The pair is generated ON THE MACHINE and only the public half arrives here; write the returned `id` into the private JWK as `kid` (RN-475), which is the only link between the file on disk and the public half on the server. There is no `userId` in the body ON PURPOSE: the owner is the installation's SOLE user, resolved by the api, so holding the service token never means choosing whose credential to mint. Registering REPLACES: the owner's active machine keys are revoked in the same transaction, so a reinstalled machine works and a thousand machine keys cannot exist. Project keys (ADR 0118) are never touched.
+         */
+        post: operations["InternalMachineDeviceKeysController_registrarChave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/models/sync": {
         parameters: {
             query?: never;
@@ -6194,6 +6214,44 @@ export interface components {
             /** @example correct horse battery staple */
             senha: string;
         };
+        MachineDeviceKeyInternalDto: {
+            /**
+             * @description A name for a human to recognize this MACHINE later, in the device key list of every project it serves. Not unique. The installer suggests the hostname; nothing here is derived from it by the api.
+             * @example servidor-de-casa
+             */
+            name: string;
+            /**
+             * @description The PUBLIC Ed25519 JWK (RFC 8037), serialized as JSON. The pair is generated on the machine and the private half never travels — a JWK carrying `d` is refused with 400 saying so, never stored.
+             * @example {"kty":"OKP","crv":"Ed25519","x":"…"}
+             */
+            publicKeyJwk: string;
+        };
+        MachineDeviceKeyInternalResponseDto: {
+            /**
+             * Format: uuid
+             * @description The registration id. Write it into the PRIVATE JWK as `kid` before saving the file (RN-475): it is the only link between the key on disk and the public half on the server, and every step downstream only passes it along.
+             * @example 01JC4Z0000CHAVE000000000001
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The owner the api RESOLVED — the installation's sole user. The caller does not choose it and does not send it; this field is here so the installer can check it against the account it just created rather than assume.
+             * @example 01JC4Z0000USUARIO0000000001
+             */
+            userId: string;
+            /** @example servidor-de-casa */
+            name: string;
+            /**
+             * Format: date-time
+             * @example 2026-09-12T12:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Ids of the MACHINE keys this one REPLACED — revoked in the same transaction. Empty is the normal case (a fresh installation). Non-empty means a local agent still holding one of them stops getting tickets, and the installer should say so instead of letting it be discovered. Project keys (ADR 0118) are never touched.
+             * @example []
+             */
+            replacedKeyIds: string[];
+        };
         MarkTaskInternalDto: {
             /**
              * Format: uuid
@@ -9645,6 +9703,50 @@ export interface operations {
             };
             /** @description Neo4j not configured or unreachable — no fallback possible for reading/writing a template. */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalMachineDeviceKeysController_registrarChave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MachineDeviceKeyInternalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineDeviceKeyInternalResponseDto"];
+                };
+            };
+            /** @description The JWK is not a PUBLIC Ed25519 key — malformed JSON, wrong `kty`/`crv`, missing `x`, or carrying `d` (that is the private half, and it is refused by name rather than stored). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The installation has no user, or more than one. Nothing was written. This route belongs to the moment of installation and goes quiet for good once the installation has a team. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

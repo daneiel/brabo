@@ -131,7 +131,8 @@ estado lido do repositório e não da conversa.
 | FASE 30 (sessão 2) — a chave de dispositivo passa a poder ser da MÁQUINA | ADR 0154, RN-543 |
 | FASE 30 (sessão 3) — o agente local abre N conexões, uma por projeto | ADR 0154, RN-544 |
 | FASE 30 (sessão 4) — a unit de MÁQUINA, convivendo com as por projeto | ADR 0154, RN-545 |
-| FASE 30 (sessão 8) — o agente espera o primeiro projeto, e a chave nasce no terminal | ADR 0155, RN-550/551 |
+| FASE 30 — o agente espera o primeiro projeto, e a chave nasce no terminal | ADR 0155, RN-550/551 |
+| FASE 30 — a chave de MÁQUINA ganha quem a registra | ADR 0155, RN-552 |
 | O runner reconectava sozinho com um ticket morto | RN-108 |
 | O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
@@ -166,15 +167,27 @@ local abre N conexões de verdade, uma por projeto descoberto pela rota, e
 **nada no engine mudou** — nem o espelho, nem o `workspace_create`, nem um
 handler. A sessão 4 (RN-545) fechou o QUINTO e último acoplamento: a unit de
 MÁQUINA existe (`service install --machine`) e CONVIVE com as por projeto, sem
-remover nem renomear nenhuma e sem tocar `Restart=on-abnormal`. A sessão 8
-(RN-550/551) entregou as duas peças que faltavam DO LADO DO AGENTE:
-ele FICA DE PÉ com zero projetos e reconsulta a lista (a instalação nova deixa
-de terminar sem agente), e `brabo-runner device-key create|finish` gera o par
-Ed25519 NA MÁQUINA. O que segue sem existir é a ROTA que registra a pública de
-MÁQUINA e o `install.sh` que encadeia os três comandos (sessão 6): o modo novo
-só é exercitável com chave registrada à mão, e o `install --machine` não sabe
-distinguir chave de máquina de chave de projeto — em disco são o mesmo arquivo,
-e a recusa só chega no primeiro boot.
+remover nem renomear nenhuma e sem tocar `Restart=on-abnormal`. As duas peças
+que faltavam para a instalação fechar entraram JUNTAS, e nenhuma delas é sessão
+numerada da fase — as duas saíram do recorte da sessão 6 em três. DO LADO DO
+AGENTE (RN-550/551): ele FICA DE PÉ com zero projetos e reconsulta a lista (a
+instalação nova deixa de terminar sem agente), e `brabo-runner device-key
+create|finish` gera o par Ed25519 NA MÁQUINA — a privada nunca viaja, e nunca
+existe em disco um arquivo que o runner leia sem `kid`. DO LADO DA API
+(RN-552): `POST /internal/machine-device-keys`, `engine-service`, corpo
+`{ name, publicKeyJwk }` (só a metade PÚBLICA; uma JWK com `d` é recusada com
+400 por nome) e resposta com o `id` que vira o `kid` da privada (RN-475). A
+credencial é o service token, e o custo está DECLARADO: um token vazado passa a
+poder FABRICAR credencial de acesso duradoura — por isso três contenções vivem
+na rota, não no texto. Não há `userId` no corpo (o dono é o usuário ÚNICO da
+instalação; zero ou mais de um é 409 e nada é escrito, a condição da RN-546 com
+outra forma), registrar SUBSTITUI as chaves de máquina ativas do dono na mesma
+transação (máquina reinstalada passa, mil chaves não existem — e as de PROJETO
+nunca são tocadas), e a régua de forma da JWK virou UMA, no domínio, chamada
+pelos dois registradores. O que segue sem existir: o `install.sh` que encadeia
+os três comandos (sessão 6), e o `install --machine` ainda não distingue chave
+de máquina de chave de projeto — em disco são o mesmo arquivo, e a recusa só
+chega no primeiro boot.
 Duas coisas dessa sessão são régua daqui pra frente — `provisionarUsuario`
 (seed/smoke) teve o NÚCLEO extraído para `ProvisionarUsuarioUseCase` e MANTEVE
 a recusa de `NODE_ENV=production`, porque o que ela protege é senha CONHECIDA
@@ -364,11 +377,18 @@ criada SEM interação humana e não o trio de escritas (não use
   de máquina serve todo projeto do dono e aparece na listagem de todos, porque
   não aparecer em nenhuma a tornaria invisível e permanente, que é o defeito
   que a RN-519 fechou renascido. A lacuna da TELA fica MAIOR com isso, e
-  continua declarada. O MATERIAL de uma chave de máquina já nasce no terminal
-  desde a RN-551 (`brabo-runner device-key create`), mas ninguém REGISTRA a
-  pública ainda: a rota de chave de máquina e o `install.sh` que a chama (ADR
-  0155 ponto 4) são outra sessão da FASE 30 — a rota nasce no PR que tiver o
-  primeiro chamador real. Desde a RN-548 o web CONSOME essa
+  continua declarada, e as DUAS metades de criar uma chave de máquina já
+  existem: o MATERIAL nasce no terminal (RN-551, `brabo-runner device-key
+  create`, par gerado na máquina) e quem REGISTRA a pública é a RN-552
+  (`POST /internal/machine-device-keys`, pelo service token). Isso ACRESCENTA
+  uma metade à lacuna da TELA em vez de fechá-la: numa instalação que ainda não
+  tem PROJETO, a listagem e a revogação — as duas por
+  `/projects/:projectId/runner-device-keys` — não têm projeto contra o que
+  responder, então tela nenhuma alcança uma chave de máquina recém-criada. É por
+  isso que registrar SUBSTITUI a anterior em vez de deixar órfãs: uma órfã ali
+  seria viva e inalcançável. E a rota só serve instalação de UMA pessoa (409 com
+  duas ou mais), então instalação com time não tem por onde criar chave de
+  máquina — declarado, não acaso. Desde a RN-548 o web CONSOME essa
   listagem — `RunnerOnboardingPanel` reconhece máquina já pareada e para de
   mandar parear —, e isso NÃO fecha a lacuna: ler para reconhecer é outra coisa
   que listar para revogar, e o painel de propósito não lista chave nem oferece

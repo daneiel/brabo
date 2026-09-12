@@ -252,6 +252,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "docs/reference/api/internal-machine-device-keys-controller-registrar-chave",
+          label: "Registers the MACHINE device key of a fresh installation",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "docs/reference/api/internal-models-controller-sync",
           label: "Syncs the model catalog across all providers",
           className: "api-method post",

@@ -86,6 +86,23 @@ navegador (ADR 0118), pelo mesmo motivo, e mantém verdadeira a frase que a
 RN-519 usa para recusar a visão de `maintainer`: *"a privada de uma chave de
 dispositivo nunca sai do navegador"* — passa a ser "nunca sai da máquina".
 
+> **Detalhado na implementação (RN-552).** Este ponto não dizia por qual
+> credencial o instalador registra a chave, e as duas candidatas eram reais. A
+> rota — `POST /internal/machine-device-keys` — nasceu com o **service token**,
+> o mesmo da primeira conta: é o mesmo instalador, no mesmo minuto, e o token
+> prova controle da MÁQUINA, que é o que este passo quer provar. A alternativa,
+> credencial do usuário recém-criado, contrariaria o ponto 5 deste ADR
+> (*"o instalador não faz login por ninguém"*) e daria à senha lida no TTY um
+> segundo uso, onde as Consequences prometem que ela é *usada e descartada*.
+> O custo — um service token vazado passa a poder FABRICAR credencial de acesso
+> duradoura — está declarado em `docs/security-surface.md`, e três contenções
+> vivem na rota: não há `userId` no corpo (o dono é o usuário ÚNICO da
+> instalação, `409` com zero ou mais de um), registrar SUBSTITUI as chaves de
+> máquina ativas do dono (máquina reinstalada passa; mil chaves não existem), e
+> uma JWK com `d` é recusada por nome em vez de gravada. Detalhado em vez de
+> contrariado, e por escrito porque este ADR ainda é `Proposed`: ADR **aceito**
+> nunca se edita, o novo referencia o antigo.
+
 ### 5. O serviço sobe sem projeto, e isso é o estado normal
 
 O agente instalado consulta `GET runner/projects` (ADR 0154 ponto 3) e não
