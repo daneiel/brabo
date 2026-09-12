@@ -131,6 +131,17 @@ jobs:
       - name: Actions presas a commit SHA
         run: node scripts/ci/actions-pinadas.ts
 
+      # O IRMÃO do passo acima, e nasce junto por um motivo medido: o argumento
+      # das actions ("tag é ponteiro que o dono move sem aviso") valia igual
+      # para `image:`, e nenhuma das 37 referências de terceiro do repositório
+      # estava por digest — inclusive DUAS aqui neste arquivo, como `services:`
+      # de `test-api`/`test-engine`, que é literalmente o runner que o passo de
+      # cima existe para proteger. Ver docs/explanation/cadeia-de-suprimentos-do-ci.md.
+      #
+      # Antes do `pnpm install`, como o vizinho: o script só usa `node:fs`.
+      - name: Imagens de terceiro presas por digest
+        run: node scripts/ci/imagens-pinadas.ts
+
       - run: pnpm install --frozen-lockfile
 
       # `eslint` direto, SEM o script `lint` do package.json: ele roda com
@@ -215,7 +226,7 @@ jobs:
       postgres:
         # pgvector, não `postgres:16` puro: as migrations criam a extensão e um
         # Postgres sem ela falha na primeira migration.
-        image: pgvector/pgvector:pg16
+        image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b  # pg16
         env:
           POSTGRES_USER: brabo
           POSTGRES_PASSWORD: brabo
@@ -388,7 +399,7 @@ jobs:
     timeout-minutes: 15
     services:
       postgres:
-        image: pgvector/pgvector:pg16
+        image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b  # pg16
         env:
           POSTGRES_USER: brabo
           POSTGRES_PASSWORD: brabo

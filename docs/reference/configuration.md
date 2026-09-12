@@ -518,6 +518,19 @@ strangely. The symptom table is in
 | `OLLAMA_KEEP_ALIVE` | how long the model stays resident |
 | `DEMO_QA_MODEL` | points the QA gate to an API model — the per-agent binding wins over the project's |
 
+> **The `ollama` image version is not a variable — it is a digest.** Like every
+> third-party image in `docker/`, it is pinned as
+> `ollama/ollama@sha256:…  # 0.33.1`
+> ([ADR 0158](../adr/0158-imagem-de-terceiro-por-digest.md)), and the same
+> digest is used by `ci.yml`/`golden-set-rag.yml`, because the RAG golden-set
+> floor is keyed by model rather than by environment
+> ([ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md)). So an
+> inference behaviour that changed between two `docker compose pull`s is no
+> longer a possible cause: nothing moves unless someone edits the digest.
+> Bumping it is [a runbook procedure](../runbook.md#subindo-imagem-de-terceiro),
+> and `scripts/ci/imagens-pinadas.ts` refuses a bump that reaches only some of
+> the places the tag appears.
+
 ---
 
 ## Local observability (containers)

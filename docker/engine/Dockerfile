@@ -1,4 +1,4 @@
-FROM hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3
+FROM hexpm/elixir@sha256:1ec24d1913fa669eb93797df02e70a021da73786ab2bbb1f0de1a6360ba90255  # 1.17.3-erlang-27.1.2-alpine-3.20.3
 
 # UID/GID do usuário que roda o container — ver docker/api/Dockerfile, mesmo
 # mecanismo (docker-compose.yml `build.args` + .env.example). Fica no TOPO

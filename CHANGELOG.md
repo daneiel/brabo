@@ -21,8 +21,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   **O que o operador faz:** cortar uma tag final depois deste merge, e
   conferir que `build-runner-binaries.yml` chegou ao job `checksums`. Ele está
   vermelho nas três últimas runs (`darwin-arm64` em `--self-test-pty`,
-  `win32-x64` em `node-pty` sem `.node`); como o job é `if: always()`, o
-  manifesto sai cobrindo os binários que construíram — hoje, os dois de Linux.
+  `win32-x64` em `node-pty` sem `.node`); o manifesto sai cobrindo os binários
+  que construíram — hoje, os dois de Linux —, e **em minutos, não no dia
+  seguinte**: o job deixou de depender da matriz
+  ([RN-565](docs/business-rules.md#rn-565)), que é o que fazia o
+  `darwin-x64` segurá-lo por 24h.
 
 ### Novidades
 
@@ -1150,6 +1153,64 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   **O que continua possível:** propor sem imagem decidida em
   `container`/`mounted`. A recusa aqui é sobre MODO; a tela checa as três
   coisas porque tem um humano clicando.
+- **ci**: o `checksums.txt` assinado **deixa de ser refém da matriz de
+  binários** ([RN-565](docs/business-rules.md#rn-565)).
+
+  O job `checksums` tinha `needs: build`. O `always()` garantia que ele
+  RODASSE mesmo com a matriz falhando, nunca QUANDO — e "quando" está medido
+  nas três tags que existem: `darwin-x64` (`macos-13`) fica **24h00m01s** na
+  fila e é cancelado pelo teto do Actions, o MESMO número em `v4.0.0`,
+  `v4.0.1` e `v5.0.0`, enquanto os outros quatro jobs terminam em no máximo
+  **4m18s**. O manifesto só podia nascer um dia depois da Release — e, para
+  quem instala nesse intervalo, um manifesto que atrasa é um manifesto
+  ausente: o download recusa com `release_sem_manifesto`
+  ([RN-525](docs/business-rules.md#rn-525)) e o `install.sh` recusa junto
+  ([RN-526](docs/business-rules.md#rn-526)), **em todas as plataformas,
+  inclusive as duas que anexaram**.
+
+  O job passa a esperar os **assets**, não os **jobs**, com teto: 600s pela
+  Release (que, ausente, continua sendo erro nomeado — este workflow só
+  ANEXA) e 1200s pelos binários. O segundo número é o `timeout-minutes: 20`
+  do próprio job `build`, isto é, o máximo que um alvo **com runner** pode
+  demorar depois de começar; o que ele deliberadamente não cobre é o tempo de
+  **fila**. O laço sai cedo quando os cinco chegam.
+
+  **Nada do que o job faz muda:** um manifesto e não cinco assinaturas,
+  `cosign` keyless, verificação antes de anexar
+  ([RN-524](docs/business-rules.md#rn-524)). E `darwin-x64` continua não
+  construindo — trocar o label, tirar a plataforma ou pagar runner é decisão
+  de dono, e o manifesto não pode depender dela.
+
+- **chore**: toda **imagem de terceiro** passa a entrar por **digest**, com a
+  tag num comentário ao lado, e um lint reprova quem esquecer
+  ([ADR 0158](docs/adr/0158-imagem-de-terceiro-por-digest.md), `BRB-004`).
+
+  O argumento já estava escrito para o vizinho — *"tag é ponteiro que o dono
+  move sem aviso, e quem move executa código no runner que tem o checkout e
+  os segredos"* — e valia igual para `image:`. As **37** referências de
+  terceiro estavam por tag, e três dos lugares onde elas rodam não são o dia
+  a dia: os `FROM` são a base das quatro imagens que publicamos e assinamos;
+  quatro estão no compose que sobe **na máquina de quem instalou**, ao lado
+  das próprias, que já vinham por digest; e quatro são `services:` de
+  `ci.yml`/`golden-set-rag.yml`, que é literalmente o runner que a regra das
+  actions protege, alcançado pela outra porta.
+
+  `scripts/ci/imagens-pinadas.ts` roda no job `lint`, irmão de
+  `actions-pinadas.ts`, e reprova três coisas: referência mutável, digest sem
+  a tag em comentário, e a **mesma tag com dois digests diferentes** — este
+  último transforma em mecanismo a promessa que o `golden-set-rag.yml` fazia
+  em comentário, de rodar a mesma versão do compose de dev.
+
+  **O que ele NÃO cobre, por decisão:** as quatro imagens do próprio produto.
+  Não há terceiro que as mova, `brabo-api:prod` é tag LOCAL cujo digest não
+  existe antes do build, e onde elas atravessam um registry o
+  [ADR 0119](docs/adr/0119-imagens-publicadas-no-ghcr-por-digest.md) já as
+  resolve — o overlay guarda o MARCADOR de propósito.
+
+  **O preço, declarado:** digest congela, e imagem congelada não recebe
+  correção de segurança até alguém trocar o digest à mão. O ecossistema
+  `docker` do Dependabot **não** foi ligado; é decisão à parte. Subir um
+  digest é [procedimento de runbook](docs/runbook.md#subindo-imagem-de-terceiro).
 
 - **chore**: as dependências vulneráveis dos dois lockfiles, **e o que não
   fecha, dito por nome**.

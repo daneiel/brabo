@@ -416,11 +416,27 @@ rules:
       # mesma razão dos três acima. Degrau, destino e versão de branch não
       # aparecem nele; a doc dele é a própria RN-558 em `docs/business-rules.md`.
       #
-      # O extglob EXCLUI os sete pelo nome e continua casando com todo o resto
+      # `imagens-pinadas.ts` é o OITAVO, e pelo critério mais direto de todos:
+      # ele é o irmão do `actions-pinadas.ts`, que já está nesta lista pelo
+      # mesmo motivo. O que ele decide é se uma imagem de terceiro pode entrar
+      # por tag — não toca degrau, destino nem versão de branch. A doc dele é a
+      # mesma do irmão, `cadeia-de-suprimentos-do-ci.md`, e a regra
+      # `cadeia-de-suprimentos-do-ci` abaixo o vigia em `block`.
+      #
+      # `checksums-nao-espera-a-matriz.spec.ts` é o NONO: ele afere que o
+      # manifesto assinado da Release (RN-524) não depende da matriz de
+      # binários. É sobre RELEASE, e portanto o candidato mais plausível desta
+      # lista a pertencer à política — mas a política de branches é sobre
+      # DEGRAU (quem promove o quê, para onde) e sobre a VERSÃO que a função da
+      # branch decide, e nenhuma das duas aparece aqui: o que ele mede é o
+      # ARTEFATO que uma tag já cortada publica. A doc dele é a própria RN-524
+      # em `docs/business-rules.md`.
+      #
+      # O extglob EXCLUI os nove pelo nome e continua casando com todo o resto
       # — inclusive com script de política que ainda não existe. Falha fechado:
       # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
       # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
-      - "scripts/ci/!(coverage-floor|actions-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem|marca-de-credencial-do-runner)*"
+      - "scripts/ci/!(coverage-floor|actions-pinadas|imagens-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem|marca-de-credencial-do-runner|checksums-nao-espera-a-matriz)*"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
@@ -481,13 +497,20 @@ rules:
   # trocar um SHA por outro, não. `.github/workflows/*.yml` já é vigiado por
   # `checks-e-rulesets`, e repetir o glob aqui cobraria esta página em toda
   # atualização de action.
+  #
+  # `imagens-pinadas.ts` entra pelo MESMO critério, e o de terceiro que ele
+  # cobre é mais amplo que o do irmão: além do runner do CI (as imagens de
+  # `services:`), ele decide o que entra na imagem que publicamos no GHCR (as
+  # bases dos `FROM`) e o que sobe ao lado do Postgres de quem instalou o
+  # produto (o `docker-compose.install.yml`).
   - id: cadeia-de-suprimentos-do-ci
     watch:
       - "scripts/ci/actions-pinadas.ts"
+      - "scripts/ci/imagens-pinadas.ts"
     docs:
       - "docs/explanation/cadeia-de-suprimentos-do-ci.md"
     severity: block
-    note: "Regra nova sobre o que pode entrar no runner exige a regra escrita."
+    note: "Regra nova sobre o que pode entrar no runner, na imagem publicada ou na instalação exige a regra escrita."
 
   # O E2E de navegador é a única camada que roda contra o compose de PRODUÇÃO,
   # e a única cujo COMO RODAR não cabe num `pnpm test`. Quem chega no

@@ -2891,6 +2891,53 @@ their own sidecar, leaving the engine image free of copyleft, stays open as an
 
 ---
 
+## Bumping a third-party image {#subindo-imagem-de-terceiro}
+
+Every third-party image in `docker/`, `deploy/k8s/` and
+`.github/workflows/` is pinned **by digest**, with the tag it came from in a
+trailing comment ([ADR 0158](adr/0158-imagem-de-terceiro-por-digest.md)):
+
+```yaml
+image: neo4j@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61  # 5.26-community
+```
+
+That is a **freeze**, and the cost lands here: the image receives no security
+update until a person changes the digest. Dependabot's `docker` ecosystem is
+not enabled, so nothing proposes the bump for you.
+
+To move one — say, `neo4j` from `5.26-community` to `5.27-community`:
+
+```sh
+# 1. Confirm the tag resolves to an INDEX (a manifest list). If it does not,
+#    the pin loses multi-arch and linux/arm64 stops working.
+docker manifest inspect neo4j:5.27-community | head -3
+#    → "mediaType": "application/vnd.oci.image.index.v1+json"
+#      (or …distribution.manifest.list.v2+json)
+
+# 2. Read the index digest.
+docker buildx imagetools inspect neo4j:5.27-community --format '{{.Manifest.Digest}}'
+
+# 3. Write `neo4j@<digest>  # 5.27-community` EVERYWHERE that tag appears.
+grep -rn 'neo4j@sha256' docker/ deploy/k8s/ .github/workflows/
+
+# 4. The lint proves it.
+node scripts/ci/imagens-pinadas.ts
+```
+
+Step 3 is not optional bookkeeping: the check refuses **the same tag carrying
+two different digests**, because the dev compose and the CI service claiming
+the same version while running different bytes is how a green CI stops meaning
+anything.
+
+What the check does **not** cover, and why, is in
+[the CI supply chain](explanation/cadeia-de-suprimentos-do-ci.md#container-images-digest-with-the-tag-alongside):
+the four images the product publishes are already resolved by digest through
+`.release/images.json` and `make imagens-do-release`
+([ADR 0119](adr/0119-imagens-publicadas-no-ghcr-por-digest.md)) — never pin
+those by hand in the overlay, which deliberately holds the marker.
+
+---
+
 ## Adding a compatible provider {#adicionando-um-provider-compativel}
 
 Applies to any provider that speaks OpenAI's `/chat/completions` dialect —
