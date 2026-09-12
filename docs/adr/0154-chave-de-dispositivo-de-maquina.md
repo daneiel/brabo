@@ -141,12 +141,22 @@ CLI recusa fazer sozinho.
 
 ### 5. As units por projeto continuam funcionando, e a conversão é dita
 
-Binário novo com unit velha instalada não quebra: `service install` sem
-`--project` instala a unit de máquina, com `--project` instala a por projeto,
-e `status` responde sobre as duas. Quem tiver três units por projeto continua
-com três processos até rodar `service uninstall` em cada uma — e o `status`
-da unit de máquina **diz** que elas existem, em vez de deixar seis processos
-disputando três projetos em silêncio.
+Binário novo com unit velha instalada não quebra, e `status` responde sobre as
+duas. Quem tiver três units por projeto continua com três processos até rodar
+`service uninstall` em cada uma — e o `status` da unit de máquina **diz** que
+elas existem, em vez de deixar seis processos disputando três projetos em
+silêncio.
+
+> **Corrigido na implementação (RN-545).** Este ADR dizia que `service install`
+> **sem `--project`** instalaria a unit de máquina. Medido, não dá: a ausência
+> da flag **já tem significado** — `resolverProjeto` cai no
+> `brabo-runner.config.json` da pasta, e o caminho normal de quem usa o produto
+> hoje é rodar `install` sem flag nenhuma de dentro da pasta que o navegador
+> configurou. Ao pé da letra, a regra converteria **em silêncio** a instalação
+> de quem já usa o produto — o oposto do que este mesmo ponto promete. O
+> discriminador é a flag **`--machine`**, explícita. Editado em vez de
+> contrariado porque este ADR ainda é `Proposed`: ADR **aceito** nunca se
+> edita, o novo referencia o antigo.
 
 ## O que este ADR recusa explicitamente
 

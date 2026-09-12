@@ -1,7 +1,9 @@
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { NOME_ARQUIVO_CHAVE, NOME_ARQUIVO_CONFIG } from './device-key.ts';
 import {
+  ALVO_DE_MAQUINA,
+  alvoDeProjeto,
   CODIGO_POR_ESTADO,
   consultarStatus,
   desinstalar,
@@ -9,6 +11,7 @@ import {
   instalar,
   projectIdValidoParaServico,
   status,
+  type BaseParaServico,
   type ContextoDoServico,
   type ResultadoDeComando,
   type SistemaDeServico,
@@ -50,6 +53,13 @@ class SistemaFalso implements SistemaDeServico {
   existeArquivo(caminho: string): boolean {
     return this.arquivos.has(caminho);
   }
+  listarPasta(caminho: string): string[] {
+    // O mapa de arquivos É o disco falso: a pasta de um caminho é o `dirname`
+    // dele, e ausência de pasta é lista vazia — como no adaptador real.
+    return [...this.arquivos.keys()]
+      .filter((arquivo) => dirname(arquivo) === caminho)
+      .map((arquivo) => arquivo.slice(caminho.length + 1));
+  }
   rodar(comando: string, args: string[]): ResultadoDeComando {
     const linha = `${comando} ${args.join(' ')}`;
     this.comandos.push(linha);
@@ -67,17 +77,25 @@ function contexto(parcial: Partial<ContextoDoServico> = {}): ContextoDoServico {
     uid: 1000,
     comandoDoRunner: ['/usr/bin/node', '/opt/brabo/index.cjs'],
     path: '/usr/local/bin:/usr/bin:/bin',
+    apiUrlDoAmbiente: null,
     sistema: new SistemaFalso(),
     ...parcial,
   };
 }
 
-const depsInstalar = (comConfig = true, comChave = true) => ({
+const BASE = `${HOME}/projetos`;
+
+const depsInstalar = (
+  comConfig = true,
+  comChave = true,
+  base: BaseParaServico = { estado: 'ok', base: BASE },
+) => ({
   lerConfig: () =>
     comConfig ? { projectId: PROJETO, apiUrl: 'https://brabo.example' } : null,
   lerChave: () => (comChave ? { deviceKeyId: 'chave-123' } : null),
   resolverDir: (bruto: string, cwd: string) => resolve(cwd, bruto),
   validarDir: () => {},
+  resolverBase: () => base,
 });
 
 const depsSimples = (comConfig = true) => ({
@@ -240,7 +258,7 @@ describe('service install (RN-518)', () => {
     expect(sistema.arquivos.has(esperado)).toBe(true);
     expect(sistema.arquivos.has(UNIT_LINUX)).toBe(false);
     // E `status` alcança exatamente a mesma unit, pela mesma derivação.
-    expect(consultarStatus(ctx, PROJETO)?.caminho).toBe(esperado);
+    expect(consultarStatus(ctx, alvoDeProjeto(PROJETO))?.caminho).toBe(esperado);
   });
 
   it('repassa a recusa da RN-434 (--dir fora do $HOME no Linux) sem escrever', () => {
@@ -357,11 +375,13 @@ describe('service uninstall (RN-518)', () => {
     expect(desinstalar(ctx, depsSimples()).fluxo).toBe('erro');
   });
 
-  it('sem projeto resolvível, RECUSA em vez de adivinhar', () => {
+  it('sem espécie resolvível, RECUSA em vez de adivinhar — e diz o que existe', () => {
     const ctx = contexto({ argv: ['node', 'x', 'service', 'uninstall'] });
     const resposta = desinstalar(ctx, depsSimples(false));
     expect(resposta.fluxo).toBe('erro');
-    expect(resposta.linhas.join('\n')).toContain('QUAL projeto remover');
+    const texto = resposta.linhas.join('\n');
+    expect(texto).toContain('precisa saber O QUE remover');
+    expect(texto).toContain('Não há unit nenhuma instalada');
   });
 });
 
@@ -379,7 +399,7 @@ describe('service status: os QUATRO estados NÃO colapsam (RN-518/RN-088)', () =
 
     const resposta = status(ctx, depsSimples());
 
-    expect(consultarStatus(ctx, PROJETO)?.estado).toBe('nao-instalado');
+    expect(consultarStatus(ctx, alvoDeProjeto(PROJETO))?.estado).toBe('nao-instalado');
     expect(resposta.codigo).toBe(4);
     expect(resposta.linhas.join('\n')).toContain('NÃO INSTALADO');
     expect(sistema.comandos).toEqual([]);
@@ -439,7 +459,7 @@ describe('service status: os QUATRO estados NÃO colapsam (RN-518/RN-088)', () =
     });
     const ctx = contexto({ sistema, argv: ['node', 'x', 'service', 'status'] });
 
-    expect(consultarStatus(ctx, PROJETO)?.estado).toBe('nao-consegui-perguntar');
+    expect(consultarStatus(ctx, alvoDeProjeto(PROJETO))?.estado).toBe('nao-consegui-perguntar');
   });
 
   it('macOS: com PID é rodando; carregado sem PID e não carregado são parado', () => {
@@ -453,13 +473,13 @@ describe('service status: os QUATRO estados NÃO colapsam (RN-518/RN-088)', () =
     const chave = `launchctl list dev.brabo.runner.${PROJETO}`;
 
     sistema.respostas.set(chave, { estado: 'executou', codigo: 0, saida: '{ "PID" = 4242; }' });
-    expect(consultarStatus(ctx, PROJETO)?.estado).toBe('rodando');
+    expect(consultarStatus(ctx, alvoDeProjeto(PROJETO))?.estado).toBe('rodando');
 
     sistema.respostas.set(chave, { estado: 'executou', codigo: 0, saida: '{ "LastExitStatus" = 0; }' });
-    expect(consultarStatus(ctx, PROJETO)?.estado).toBe('parado');
+    expect(consultarStatus(ctx, alvoDeProjeto(PROJETO))?.estado).toBe('parado');
 
     sistema.respostas.set(chave, { estado: 'executou', codigo: 113, saida: 'Could not find service' });
-    expect(consultarStatus(ctx, PROJETO)?.estado).toBe('parado');
+    expect(consultarStatus(ctx, alvoDeProjeto(PROJETO))?.estado).toBe('parado');
   });
 
   it('os quatro códigos de saída são distintos — nenhum estado empresta o do outro', () => {
@@ -499,5 +519,344 @@ describe('vocabulário do subcomando', () => {
     expect(projectIdValidoParaServico('a b')).toBe(false);
     expect(projectIdValidoParaServico('')).toBe(false);
     expect(projectIdValidoParaServico('/absoluto')).toBe(false);
+  });
+});
+
+// ------------------------------------------------- unit de máquina (RN-545)
+
+const UNIT_MAQUINA_LINUX = `${HOME}/.config/systemd/user/brabo-runner.service`;
+const PLIST_MAQUINA_MAC = `${HOME}/Library/LaunchAgents/dev.brabo.runner.plist`;
+
+/** Pasta SEM `brabo-runner.config.json` — a do agente de máquina. */
+const PASTA_DA_MAQUINA = `${HOME}/.config/brabo`;
+
+const depsDeMaquina = (
+  comChave = true,
+  base: BaseParaServico = { estado: 'ok', base: BASE },
+) => ({
+  // Chave SEM config: o config é por PROJETO, e a pasta da máquina não o tem.
+  lerConfig: () => null,
+  lerChave: () => (comChave ? { deviceKeyId: 'chave-da-maquina' } : null),
+  resolverDir: (bruto: string, cwd: string) => resolve(cwd, bruto),
+  validarDir: () => {},
+  resolverBase: () => base,
+});
+
+describe('service install --machine (RN-545)', () => {
+  function ctxDeMaquina(sistema: SistemaFalso, extra: string[] = []): ContextoDoServico {
+    return contexto({
+      sistema,
+      cwd: PASTA_DA_MAQUINA,
+      argv: ['node', 'x', 'service', 'install', '--machine', ...extra],
+    });
+  }
+
+  it('grava a unit SEM --project e SEM --dir — é a ausência de --project que põe o processo no modo de máquina', () => {
+    const sistema = new SistemaFalso();
+    const resposta = instalar(ctxDeMaquina(sistema), depsDeMaquina());
+
+    expect(resposta.codigo).toBe(0);
+    const unit = sistema.arquivos.get(UNIT_MAQUINA_LINUX);
+    expect(unit).toBeDefined();
+    expect(unit).not.toContain('"--project"');
+    expect(unit).not.toContain('"--dir"');
+    // O `WorkingDirectory` é onde a CREDENCIAL está: é de lá que
+    // `lerArgumentos` lê a chave de dispositivo sob systemd/launchd.
+    expect(unit).toContain(`WorkingDirectory="${PASTA_DA_MAQUINA}"`);
+    // `Restart=on-abnormal` fica byte a byte — lista vazia sai com 0 (RN-544),
+    // e `on-failure` reergueria uma recusa fatal de join em laço.
+    expect(unit).toContain('Restart=on-abnormal');
+    expect(unit).not.toContain('Restart=on-failure');
+    // A unit por projeto NÃO foi tocada nem criada.
+    expect(sistema.arquivos.has(UNIT_LINUX)).toBe(false);
+    expect(sistema.comandos).toEqual([
+      'systemctl --user daemon-reload',
+      'systemctl --user enable --now brabo-runner.service',
+    ]);
+  });
+
+  it('o nome da unit de máquina NÃO pode colidir com projectId nenhum válido', () => {
+    const sistema = new SistemaFalso();
+    instalar(ctxDeMaquina(sistema), depsDeMaquina());
+    instalar(
+      contexto({ sistema, argv: ['node', 'x', 'service', 'install', '--project', PROJETO] }),
+      depsInstalar(),
+    );
+
+    // Só falha se um dos dois sobrescrever o outro. Ambos existem, com nomes
+    // distintos, e o de máquina não termina em `-<id>.service`.
+    expect(sistema.arquivos.has(UNIT_MAQUINA_LINUX)).toBe(true);
+    expect(UNIT_MAQUINA_LINUX).not.toBe(UNIT_LINUX);
+    // O caractere que separa as duas espécies: `-` no projeto, `.` na máquina.
+    // Um projectId vazio produziria a colisão, e `PROJECT_ID_VALIDO` o recusa.
+    expect(projectIdValidoParaServico('')).toBe(false);
+    expect(`brabo-runner-${'a'}.service`).not.toBe('brabo-runner.service');
+  });
+
+  it('congela XDG_CONFIG_HOME na unit — é ela que decide onde a base mora, e systemd não repassa o ambiente do shell', () => {
+    const sistema = new SistemaFalso();
+    const ctx = contexto({
+      sistema,
+      cwd: PASTA_DA_MAQUINA,
+      xdgConfigHome: '/home/dev/.cfg',
+      argv: ['node', 'x', 'service', 'install', '--machine'],
+    });
+
+    instalar(ctx, depsDeMaquina());
+
+    const unit = sistema.arquivos.get('/home/dev/.cfg/systemd/user/brabo-runner.service');
+    expect(unit).toContain('Environment=XDG_CONFIG_HOME=/home/dev/.cfg');
+    // O VALOR da base NÃO vai para a unit: trocá-la é editar o arquivo e
+    // reiniciar, nunca reinstalar.
+    expect(unit).not.toContain('"--base"');
+  });
+
+  it('macOS: o Label não leva projectId, e o log perde o sufixo', () => {
+    const sistema = new SistemaFalso();
+    const ctx = contexto({
+      sistema,
+      plataforma: 'darwin',
+      cwd: PASTA_DA_MAQUINA,
+      argv: ['node', 'x', 'service', 'install', '--machine'],
+    });
+
+    expect(instalar(ctx, depsDeMaquina()).codigo).toBe(0);
+    const plist = sistema.arquivos.get(PLIST_MAQUINA_MAC);
+    expect(plist).toContain('<string>dev.brabo.runner</string>');
+    expect(plist).toContain(`<string>${HOME}/Library/Logs/brabo-runner.log</string>`);
+    expect(plist).toContain('<key>Crashed</key>');
+  });
+
+  it('usa BRABO_API_URL do ambiente quando não há --api-url — não há config de projeto que responda por ela', () => {
+    const sistema = new SistemaFalso();
+    const ctx = contexto({
+      sistema,
+      cwd: PASTA_DA_MAQUINA,
+      apiUrlDoAmbiente: 'https://brabo.interno',
+      argv: ['node', 'x', 'service', 'install', '--machine'],
+    });
+
+    instalar(ctx, depsDeMaquina());
+
+    expect(sistema.arquivos.get(UNIT_MAQUINA_LINUX)).toContain(
+      '"--api-url" "https://brabo.interno"',
+    );
+  });
+
+  it('RECUSA quando a pasta tem brabo-runner.config.json — o serviço subiria em modo de PROJETO, em silêncio', () => {
+    const sistema = new SistemaFalso();
+    const resposta = instalar(ctxDeMaquina(sistema), {
+      ...depsDeMaquina(),
+      lerConfig: () => ({ projectId: PROJETO, apiUrl: 'https://brabo.example' }),
+    });
+
+    expect(resposta.fluxo).toBe('erro');
+    const texto = resposta.linhas.join('\n');
+    expect(texto).toContain(NOME_ARQUIVO_CONFIG);
+    expect(texto).toContain('modo de projeto');
+    expect(sistema.arquivos.size).toBe(0);
+  });
+
+  it('RECUSA sem base consentida — instalar um serviço que sai no primeiro boot é pior que não instalar', () => {
+    const sistema = new SistemaFalso();
+    const resposta = instalar(
+      ctxDeMaquina(sistema),
+      depsDeMaquina(true, { estado: 'ausente' }),
+    );
+
+    expect(resposta.fluxo).toBe('erro');
+    expect(resposta.linhas.join('\n')).toContain('BASE de projetos consentida');
+    expect(sistema.arquivos.size).toBe(0);
+  });
+
+  it('RECUSA base inválida repassando a mensagem de base-guard, sem gravar', () => {
+    const sistema = new SistemaFalso();
+    const resposta = instalar(
+      ctxDeMaquina(sistema),
+      depsDeMaquina(true, { estado: 'recusada', mensagem: 'base precisa ser absoluta' }),
+    );
+
+    expect(resposta.fluxo).toBe('erro');
+    expect(resposta.linhas[0]).toBe('base precisa ser absoluta');
+    expect(sistema.arquivos.size).toBe(0);
+  });
+
+  it('RECUSA sem chave de dispositivo — um serviço nunca carrega token, nem o de máquina', () => {
+    const sistema = new SistemaFalso();
+    const resposta = instalar(ctxDeMaquina(sistema), depsDeMaquina(false));
+
+    expect(resposta.fluxo).toBe('erro');
+    expect(resposta.linhas.join('\n')).toContain('nunca por token');
+    expect(sistema.arquivos.size).toBe(0);
+  });
+
+  it('RECUSA --machine junto de --project: são as duas espécies, e pedir as duas não é um pedido', () => {
+    const sistema = new SistemaFalso();
+    const resposta = instalar(ctxDeMaquina(sistema, ['--project', PROJETO]), depsDeMaquina());
+
+    expect(resposta.fluxo).toBe('erro');
+    expect(resposta.linhas.join('\n')).toContain('DUAS espécies');
+    expect(sistema.arquivos.size).toBe(0);
+  });
+});
+
+describe('as duas espécies NÃO se sobrepõem (RN-545)', () => {
+  it('install --machine RECUSA com unit por projeto no disco, sem remover nada', () => {
+    const sistema = new SistemaFalso();
+    instalar(
+      contexto({ sistema, argv: ['node', 'x', 'service', 'install'] }),
+      depsInstalar(),
+    );
+    sistema.comandos.length = 0;
+
+    const resposta = instalar(
+      contexto({
+        sistema,
+        cwd: PASTA_DA_MAQUINA,
+        argv: ['node', 'x', 'service', 'install', '--machine'],
+      }),
+      depsDeMaquina(),
+    );
+
+    expect(resposta.fluxo).toBe('erro');
+    const texto = resposta.linhas.join('\n');
+    expect(texto).toContain(`uninstall --project ${PROJETO}`);
+    expect(texto).toContain('Nada foi removido nem gravado');
+    // A unit que já existia continua intacta, e nenhuma nova apareceu.
+    expect(sistema.arquivos.has(UNIT_LINUX)).toBe(true);
+    expect(sistema.arquivos.has(UNIT_MAQUINA_LINUX)).toBe(false);
+    expect(sistema.comandos).toEqual([]);
+  });
+
+  it('install por projeto RECUSA com a unit de máquina no disco — o inverso, pelo mesmo motivo', () => {
+    const sistema = new SistemaFalso();
+    instalar(
+      contexto({
+        sistema,
+        cwd: PASTA_DA_MAQUINA,
+        argv: ['node', 'x', 'service', 'install', '--machine'],
+      }),
+      depsDeMaquina(),
+    );
+    sistema.comandos.length = 0;
+
+    const resposta = instalar(
+      contexto({ sistema, argv: ['node', 'x', 'service', 'install'] }),
+      depsInstalar(),
+    );
+
+    expect(resposta.fluxo).toBe('erro');
+    expect(resposta.linhas.join('\n')).toContain('uninstall --machine');
+    expect(sistema.arquivos.has(UNIT_LINUX)).toBe(false);
+    expect(sistema.arquivos.has(UNIT_MAQUINA_LINUX)).toBe(true);
+    expect(sistema.comandos).toEqual([]);
+  });
+
+  it('status --machine DIZ que há units por projeto, e o código de saída NÃO as soma', () => {
+    const sistema = new SistemaFalso();
+    instalar(
+      contexto({ sistema, argv: ['node', 'x', 'service', 'install'] }),
+      depsInstalar(),
+    );
+    sistema.arquivos.set(UNIT_MAQUINA_LINUX, 'WorkingDirectory="/x"\n');
+    sistema.comandos.length = 0;
+    sistema.respostas.set('systemctl --user is-active brabo-runner.service', {
+      estado: 'executou',
+      codigo: 0,
+      saida: 'active\n',
+    });
+
+    const resposta = status(
+      contexto({ sistema, argv: ['node', 'x', 'service', 'status', '--machine'] }),
+      depsSimples(),
+    );
+
+    // O código responde sobre a unit PERGUNTADA, e só ela.
+    expect(resposta.codigo).toBe(CODIGO_POR_ESTADO.rodando);
+    const texto = resposta.linhas.join('\n');
+    expect(texto).toContain('agente de MÁQUINA');
+    expect(texto).toContain('INSTALADO E RODANDO');
+    expect(texto).toContain(`uninstall --project ${PROJETO}`);
+    // Presença lida do disco, e a saída diz isso — nunca um estado inventado.
+    expect(texto).toContain('não foi perguntado ao gerenciador');
+    expect(sistema.comandos).toEqual(['systemctl --user is-active brabo-runner.service']);
+  });
+
+  it('status de um projeto DIZ que a unit de máquina existe, e não pergunta o estado dela', () => {
+    const sistema = new SistemaFalso();
+    sistema.arquivos.set(UNIT_MAQUINA_LINUX, 'WorkingDirectory="/x"\n');
+
+    const resposta = status(
+      contexto({ sistema, argv: ['node', 'x', 'service', 'status'] }),
+      depsSimples(),
+    );
+
+    expect(resposta.codigo).toBe(CODIGO_POR_ESTADO['nao-instalado']);
+    expect(resposta.linhas.join('\n')).toContain('unit de MÁQUINA instalada');
+    expect(sistema.comandos).toEqual([]);
+  });
+
+  it('status sem projeto resolvível responde sobre a MÁQUINA, e nomeia --project para quem queria a outra', () => {
+    const sistema = new SistemaFalso();
+    const resposta = status(
+      contexto({ sistema, argv: ['node', 'x', 'service', 'status'] }),
+      depsSimples(false),
+    );
+
+    expect(resposta.codigo).toBe(CODIGO_POR_ESTADO['nao-instalado']);
+    const texto = resposta.linhas.join('\n');
+    expect(texto).toContain('agente de MÁQUINA');
+    expect(texto).toContain('--project <projectId>');
+  });
+
+  it('uninstall --machine remove só a unit de máquina; a do projeto fica intacta', () => {
+    const sistema = new SistemaFalso();
+    instalar(
+      contexto({ sistema, argv: ['node', 'x', 'service', 'install'] }),
+      depsInstalar(),
+    );
+    sistema.arquivos.set(UNIT_MAQUINA_LINUX, `WorkingDirectory="${PASTA_DA_MAQUINA}"\n`);
+    sistema.arquivos.set(join(PASTA_DA_MAQUINA, NOME_ARQUIVO_CHAVE), '{}');
+
+    const resposta = desinstalar(
+      contexto({ sistema, argv: ['node', 'x', 'service', 'uninstall', '--machine'] }),
+      depsSimples(),
+    );
+
+    expect(resposta.codigo).toBe(0);
+    expect(sistema.arquivos.has(UNIT_MAQUINA_LINUX)).toBe(false);
+    expect(sistema.arquivos.has(join(PASTA_DA_MAQUINA, NOME_ARQUIVO_CHAVE))).toBe(false);
+    // A unit por projeto NÃO é removida — é a garantia do ADR 0154 ponto 5.
+    expect(sistema.arquivos.has(UNIT_LINUX)).toBe(true);
+    expect(sistema.comandos).toContain(
+      'systemctl --user disable --now brabo-runner.service',
+    );
+  });
+
+  it('uninstall sem espécie nomeada RECUSA e LISTA as duas — remover a errada apaga a chave errada', () => {
+    const sistema = new SistemaFalso();
+    sistema.arquivos.set(UNIT_LINUX, 'WorkingDirectory="/x"\n');
+    sistema.arquivos.set(UNIT_MAQUINA_LINUX, 'WorkingDirectory="/y"\n');
+
+    const resposta = desinstalar(
+      contexto({ sistema, argv: ['node', 'x', 'service', 'uninstall'] }),
+      depsSimples(false),
+    );
+
+    expect(resposta.fluxo).toBe('erro');
+    const texto = resposta.linhas.join('\n');
+    expect(texto).toContain('--machine');
+    expect(texto).toContain(`--project ${PROJETO}`);
+    // NADA foi removido: a recusa é o comportamento, não um passo intermediário.
+    expect(sistema.arquivos.has(UNIT_LINUX)).toBe(true);
+    expect(sistema.arquivos.has(UNIT_MAQUINA_LINUX)).toBe(true);
+  });
+
+  it('consultarStatus aceita os DOIS alvos e alcança arquivos diferentes', () => {
+    const sistema = new SistemaFalso();
+    const ctx = contexto({ sistema, argv: ['node', 'x', 'service', 'status'] });
+
+    expect(consultarStatus(ctx, ALVO_DE_MAQUINA)?.caminho).toBe(UNIT_MAQUINA_LINUX);
+    expect(consultarStatus(ctx, alvoDeProjeto(PROJETO))?.caminho).toBe(UNIT_LINUX);
   });
 });

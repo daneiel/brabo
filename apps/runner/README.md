@@ -226,8 +226,8 @@ O que muda no comportamento, e vale saber antes de operar:
 
 O espelho (RN-516) e o `workspace_create` (RN-532) continuam idênticos: os dois
 são por projeto e viajam na concessão do `join` **daquela** conexão — é isso que
-já os torna corretos com N. A unit de serviço continua sendo **por projeto**
-(RN-518); a unit por máquina é entrega à parte.
+já os torna corretos com N. Desde a RN-545, `service install --machine` põe este
+processo de pé como serviço de usuário — ver *Serviço de usuário*, abaixo.
 
 ### Rodando direto do checkout do monorepo (sem instalar via npm)
 
@@ -252,6 +252,11 @@ aberto, instale-o como **serviço de usuário** — `systemd --user` no Linux,
 brabo-runner service install
 brabo-runner service status
 brabo-runner service uninstall
+
+# ou, para o agente desta MÁQUINA (atende todos os seus projetos em modo runner)
+brabo-runner service install --machine
+brabo-runner service status --machine
+brabo-runner service uninstall --machine
 ```
 
 - **Nível de usuário, sempre.** Nunca serviço de sistema, nunca root: rodar
@@ -261,10 +266,32 @@ brabo-runner service uninstall
 - **Windows fica fora de escopo**, por decisão declarada: serviço de usuário
   ali é um terceiro mecanismo, não uma variação dos dois. Os três subcomandos
   recusam nomeando a plataforma; rodar em primeiro plano continua funcionando.
-- **Uma unit por projeto** (`brabo-runner-<projectId>.service` /
-  `dev.brabo.runner.<projectId>`), porque o servidor já aceita só um runner por
-  projeto. `--project` e `--dir` seguem opcionais: sem eles valem o
-  `brabo-runner.config.json` e a pasta corrente, como no resto do CLI.
+- **DUAS espécies de unit, e elas convivem** (ADR 0154 ponto 4, RN-545). A de
+  **projeto** (`brabo-runner-<projectId>.service` /
+  `dev.brabo.runner.<projectId>`) é o comportamento de sempre, byte a byte:
+  `--project` e `--dir` seguem opcionais, e sem eles valem o
+  `brabo-runner.config.json` e a pasta corrente. A de **máquina**
+  (`brabo-runner.service` / `dev.brabo.runner`, sem sufixo) roda o agente do
+  *Agente de máquina* descrito acima — um processo, uma conexão por projeto.
+  Os nomes não colidem: o `projectId` nunca é vazio, então o de projeto sempre
+  tem um `-` onde o de máquina tem um `.`.
+- **A espécie nova é opt-in explícito (`--machine`)**, e nunca "a ausência de
+  `--project`": o caminho normal de hoje é rodar `install` sem flag nenhuma de
+  dentro da pasta configurada, com o `brabo-runner.config.json` respondendo
+  quem é o projeto — tratar isso como "máquina" converteria em silêncio a
+  instalação de quem já usa o produto. `--machine` junto de `--project` é
+  recusa nomeada.
+- **`install --machine` exige base consentida** (RN-529) e recusa uma pasta que
+  tenha `brabo-runner.config.json`: sem base o agente de máquina não sobe, e
+  com esse arquivo no `WorkingDirectory` o serviço subiria em modo de
+  **projeto**, em silêncio, atendendo um só. A `XDG_CONFIG_HOME` vai
+  **congelada** na unit quando está posta (é ela que decide onde o arquivo da
+  base mora, e nenhum dos dois gerenciadores repassa o ambiente do shell); o
+  **valor** da base não vai — trocá-la é editar o arquivo e reiniciar.
+- **`install` recusa quando a OUTRA espécie já está instalada**, nomeando cada
+  unit e o `uninstall` de cada uma, sem remover nem gravar nada. As duas juntas
+  seriam dois processos disputando o mesmo projeto, e o servidor negaria um
+  deles. Não há `--force`.
 - **A credencial é a chave de dispositivo da pasta**, e só ela.
   `--token`/`BRABO_ACCOUNT_TOKEN` são ignorados de propósito — gravá-los num
   arquivo de unit os deixaria em disco, e este CLI nunca grava credencial em
@@ -275,10 +302,19 @@ brabo-runner service uninstall
   nunca chutada a partir do diretório corrente; sem unit, passe `--dir`. A
   chave sai **deste disco** — ela **não** é revogada no servidor, o que se faz
   pela tela do projeto.
+- **`uninstall` sem espécie nomeada RECUSA** e lista o que existe no disco, com
+  o comando exato de cada um. Ele não herda o default de `status` de propósito:
+  ler a espécie errada custa uma linha errada, remover a errada custa um
+  serviço e uma chave de dispositivo.
 - **`status` responde um de quatro estados**, com frase e código de saída
   próprios e sem colapsar nenhum: não instalado (`4`), instalado e rodando
   (`0`), instalado e parado (`3`), e instalado com o gerenciador de serviços
-  sem responder (`5`) — este último nunca é apresentado como "parado".
+  sem responder (`5`) — este último nunca é apresentado como "parado". Com as
+  duas espécies no disco, o **código continua sendo o da unit perguntada** — os
+  quatro não viram oito nem se somam —, e a outra aparece em **texto**, como
+  presença lida do DISCO, dizendo que o estado dela não foi perguntado ao
+  gerenciador. Sem `--machine` e sem projeto resolvível, a resposta é sobre a
+  unit de **máquina**, e a saída nomeia `--project` para quem queria a outra.
 
 O `PATH` do momento da instalação vai **congelado** dentro da unit (os dois
 gerenciadores dão ao serviço um PATH mínimo, e o runner chama `git` e

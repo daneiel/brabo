@@ -77,7 +77,7 @@ Uma entregável cada. A coluna "depende de" é que ordena.
 | 1 | este documento, os ADRs 0154/0155 e a faixa de RN | — | não toca `apps/`, `docker/`, `scripts/`, `install.sh`; não edita ADR aceito |
 | 2 | **FECHADA** — api: `project_id` nullable, chave de máquina aceita em `runner-ticket`, `GET runner/projects` ([RN-543](../business-rules.md#rn-543)) | 1 | não toca o engine; não afrouxa papel de rota nenhuma |
 | 3 | **FECHADA** — runner: N conexões, uma por projeto, descobertas pela rota ([RN-544](../business-rules.md#rn-544)) | 2 | não toca `RunnerReadiness`, o espelho nem `workspace_create` |
-| 4 | runner: unit por máquina no `service install`, convivendo com as por projeto (RN-545) | 3 | não remove a unit por projeto; não muda `Restart=on-abnormal` |
+| 4 | **FECHADA** — runner: unit por máquina no `service install`, convivendo com as por projeto ([RN-545](../business-rules.md#rn-545)) | 3 | não remove a unit por projeto; não muda `Restart=on-abnormal` |
 | 5 | **FECHADA** — api: `POST /internal/first-account`, conta verificada + workspace pessoal, `409` com qualquer usuário ([RN-546](../business-rules.md#rn-546)) | 1 | não cria rota pública; não toca o registro normal |
 | 6 | `install.sh`: consentimento, conta, chave de máquina e `service install` (RN-547) | 4, 5 | não grava senha em lugar nenhum; sem TTY relata e sai 0 |
 | 7 | **FECHADA** — web: a tela do projeto reconhece agente de máquina já pareado ([RN-548](../business-rules.md#rn-548)) | 3 | não remove o fluxo do ADR 0118 |
@@ -132,6 +132,67 @@ E o que segue **declarado, não feito**: a `apiUrl` no modo de máquina vem de
 é por PROJETO — quem escreve a flag é a unit por máquina, da sessão 4. A unit
 continua por projeto: esta sessão mudou o PROCESSO, não o serviço.
 
+### O que a sessão 4 fechou, e as três decisões que ela teve de tomar
+
+O quinto e último acoplamento da tabela acima fechou: `service install
+--machine` instala `brabo-runner.service` / `dev.brabo.runner`, sem sufixo, e
+põe de pé o processo que a sessão 3 criou. A unit por projeto **não foi
+removida nem renomeada**, `Restart=on-abnormal` ficou byte a byte (trocá-lo
+desfaria também a decisão da sessão 3 de fazer lista vazia sair com 0), e nada
+na api, no engine ou no web foi tocado.
+
+Uma medição mudou o mecanismo, e ela contraria a letra do ADR 0154 ponto 5.
+O ADR escreveu *"`service install` sem `--project` instala a unit de máquina"*;
+`resolverProjeto` tem **duas** fontes, e o caminho normal de hoje é rodar
+`install` sem flag nenhuma de dentro da pasta que o navegador configurou — é o
+`brabo-runner.config.json` que responde. Ao pé da letra, o ADR converteria em
+silêncio a instalação de quem já usa o produto, que é o oposto do que o mesmo
+ponto 5 promete. Então o discriminador virou a flag **`--machine`**, opt-in
+explícito, com as duas fontes de projeto intactas.
+
+As três decisões que o recorte deixava em aberto, registradas na
+[RN-545](../business-rules.md#rn-545):
+
+- **`status` responde sobre a espécie perguntada, e o código não soma.** Os
+  quatro estados e os quatro códigos (RN-088) não viram oito; a outra espécie
+  aparece em TEXTO, como presença lida do **disco**, dizendo que o estado dela
+  não foi perguntado ao gerenciador. Sem `--machine` e sem projeto resolvível, a
+  resposta é sobre a **máquina** — a única unit cujo nome não precisa de
+  argumento.
+- **`install` RECUSA quando a outra espécie já está instalada.** Não remove
+  nada, não grava nada, e nomeia o `uninstall` de cada unit encontrada. Sem
+  `--force`: as duas juntas seriam dois processos disputando o mesmo projeto, e
+  o servidor negaria um deles. A garantia do ponto 5 (unit já instalada continua
+  funcionando) fica intacta — o que se recusa é criar a sobreposição agora.
+- **`uninstall` sem espécie nomeada não remove nada**, e lista o que existe.
+  Ele não herda o default de `status` de propósito: ler a espécie errada custa
+  uma linha errada, remover a errada custa um serviço e uma chave.
+
+Duas recusas próprias do `install --machine` não estavam no recorte e são
+medidas: a pasta não pode ter `brabo-runner.config.json` (o serviço subiria em
+modo de PROJETO, em silêncio, atendendo um só) e a base precisa estar consentida
+(sem ela o agente sai em `uso()` no primeiro boot). A unit congela
+`XDG_CONFIG_HOME` — é ela que decide onde o arquivo da base mora, e nenhum dos
+dois gerenciadores repassa o ambiente do shell — mas **nunca** o valor da base.
+
+E o que segue **declarado, não feito**: o `install --machine` não sabe se a
+chave daquela pasta é mesmo de máquina (em disco as duas espécies são o mesmo
+arquivo, e quem sabe é o servidor), então uma pasta com chave de projeto instala
+a unit sem erro e a recusa aparece no primeiro boot. E ninguém CRIA chave de
+máquina ainda — é a sessão 6.
+
+### O que a sessão 5 fechou, e a decisão que o ADR 0155 não tinha
+
+A sessão 5 fechou com uma decisão que o ADR 0155 não tinha enfrentado, e ela
+vale para quem pegar a sessão 6: `provisionarUsuario` **recusa rodar com
+`NODE_ENV=production`**, e o instalador roda exatamente lá. Em vez de
+`BRABO_FORCE_SEED`, o núcleo virou `ProvisionarUsuarioUseCase` e **a recusa
+ficou no script** — o que ela protege é senha CONHECIDA criada SEM interação
+humana, e a rota é outra categoria. A sessão 5 também acrescentou o que o ADR
+não dizia e a [RN-410](../business-rules.md#rn-410) exige: o **workspace
+pessoal** nasce na mesma transação, senão a instalação fecharia com um login
+que atravessa e um dashboard onde "Novo projeto" não tem onde criar.
+
 ### O que a sessão 7 fechou, e as três decisões que ela teve de tomar
 
 A marca de espécie que a sessão 2 acrescentou à listagem — *"sem elas na lista,
@@ -170,18 +231,6 @@ registrada à mão. O comando oferecido é
 máquina chega com a unit da sessão 4. Uma chave de PROJETO ativa não muda o
 painel: é o defeito irmão, um escopo abaixo. E a tela de listar/revogar chave
 continua não existindo.
-
-### O que a sessão 5 fechou, e a decisão que o ADR 0155 não tinha
-
-A sessão 5 fechou com uma decisão que o ADR 0155 não tinha enfrentado, e ela
-vale para quem pegar a sessão 6: `provisionarUsuario` **recusa rodar com
-`NODE_ENV=production`**, e o instalador roda exatamente lá. Em vez de
-`BRABO_FORCE_SEED`, o núcleo virou `ProvisionarUsuarioUseCase` e **a recusa
-ficou no script** — o que ela protege é senha CONHECIDA criada SEM interação
-humana, e a rota é outra categoria. A sessão 5 também acrescentou o que o ADR
-não dizia e a [RN-410](../business-rules.md#rn-410) exige: o **workspace
-pessoal** nasce na mesma transação, senão a instalação fecharia com um login
-que atravessa e um dashboard onde "Novo projeto" não tem onde criar.
 
 Faixa reservada: **RN-543..555**. ADRs **0154** e **0155**. A RN-541 já está
 alocada em branch não mergeada — o salto é deliberado, pelo critério que a

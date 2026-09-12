@@ -21,7 +21,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import type { ResultadoDeComando, SistemaDeServico } from './servico.ts';
 
 /** `systemctl`/`launchctl` respondem em milissegundos; um que não responde é problema. */
@@ -57,6 +57,17 @@ export const sistemaDeServicoReal: SistemaDeServico = {
 
   existeArquivo(caminho) {
     return existsSync(caminho);
+  },
+
+  listarPasta(caminho) {
+    try {
+      return readdirSync(caminho);
+    } catch {
+      // Pasta ausente é o caso normal de quem nunca instalou serviço nenhum;
+      // sem permissão e "é um arquivo" levam ao mesmo lugar. Ver o docblock de
+      // `listarPasta` em `servico.ts` para por que os três colapsam aqui.
+      return [];
+    }
   },
 
   rodar(comando, args): ResultadoDeComando {

@@ -11563,6 +11563,157 @@ default declarado); credencial de LLM (é de quem vai gastar,
 - **ADR:** [0155](adr/0155-a-primeira-conta-nasce-no-terminal.md), que depende
   do [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
 
+## A unit de MÁQUINA, convivendo com as por projeto (RN-545)
+
+### RN-545 — `service install --machine` instala UMA unit para a máquina, e as duas espécies não se sobrepõem {#rn-545}
+
+A [RN-544](#rn-544) fez o agente de máquina existir como PROCESSO — N conexões,
+uma por projeto descoberto pela rota — e declarou por escrito o que faltava:
+*"a unit continua sendo POR PROJETO; este PR muda o PROCESSO, não o serviço"*.
+Esta RN é a outra metade, e é o quinto e último dos cinco acoplamentos que o
+[ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md) mediu
+(`apps/runner/src/servico.ts:264,391`). Os outros quatro já estão fechados ou
+declarados intocáveis: os itens 1, 2 e 3 descrevem uma CONEXÃO e N conexões os
+satisfazem byte a byte, e o item 4 fechou na [RN-543](#rn-543).
+
+**O nome da unit de máquina não pode colidir com `projectId` nenhum, e não
+colide por construção.** `brabo-runner.service` / `dev.brabo.runner`, sem
+sufixo, contra `brabo-runner-<projectId>.service` /
+`dev.brabo.runner.<projectId>`. `PROJECT_ID_VALIDO` exige **ao menos um
+caractere**, então o nome de projeto sempre tem um `-` (ou um `.` de separação,
+no launchd) onde o de máquina termina — os dois nunca produzem a mesma string.
+É travado por teste, e não por leitura da regex.
+
+**A camada de plataforma passa a ser chaveada por ESPÉCIE, não por
+`projectId`.** Seis dos oito membros de `PlataformaDeServico` recebiam
+`projectId: string`; eles passam a receber `AlvoDaUnidade`, um tipo discriminado
+(`{especie:'projeto', projectId}` | `{especie:'maquina'}`) — e nunca
+`projectId: string | null`, porque com o nulo cada membro decidiria sozinho o
+que fazer com ele e o compilador não cobraria nenhum. `PlanoDeInstalacao` vira
+união pelo mesmo motivo: os três campos do plano de projeto perdem sentido na
+máquina, onde não há projeto, não há `--dir` (cada raiz sai da base) e a api não
+pode vir de um arquivo que é por projeto. `caminhoDaUnidade` DESCEU de membro
+para função, porque as duas plataformas respondiam a mesma coisa — pasta mais
+nome — e manter duas implementações idênticas era a chance de elas divergirem
+quando a segunda espécie chegasse.
+
+**O discriminador é a flag `--machine`, e NUNCA a ausência de `--project`.** O
+ADR 0154 ponto 5 escreveu *"`service install` sem `--project` instala a unit de
+máquina"*, e isso foi medido nesta sessão e **não** pôde ser implementado ao pé
+da letra: `resolverProjeto` tem DUAS fontes, e o caminho normal de hoje é rodar
+`install` sem flag nenhuma de dentro da pasta que o navegador configurou — é o
+`brabo-runner.config.json` que responde. Tratar "sem `--project`" como "máquina"
+converteria em silêncio a instalação de quem já usa o produto, que é exatamente
+o que o ponto 5 do mesmo ADR promete não fazer. Então a espécie nova é **opt-in
+explícito**, as duas fontes de projeto ficam byte a byte, e `--machine` junto de
+`--project` é recusa nomeada em vez de precedência inventada.
+
+**`install --machine` recusa mais que a metade de projeto, e as duas recusas
+próprias são medidas.** A primeira: a pasta não pode ter
+`brabo-runner.config.json`. `lerArgumentos` resolve o `projectId` por esse
+arquivo quando `--project` falta, e o modo de máquina é justamente "sem
+`projectId`" — uma unit de máquina cujo `WorkingDirectory` tenha esse arquivo
+subiria o processo em modo de PROJETO, em silêncio, atendendo UM projeto e
+chamando-se agente da máquina. A segunda: sem **base consentida**
+([RN-529](#rn-529)) o agente de máquina sai em `uso()` no primeiro boot
+([RN-544](#rn-544)), e gravar um serviço que nunca sobe é a "instalação errada
+de pé" que este módulo recusa em toda parte — a base entra INJETADA
+(`DependenciasDeInstalacao.resolverBase`), como as outras quatro dependências,
+para que `servico.ts` continue sem ler disco nem ambiente por conta própria.
+
+**A unit congela `XDG_CONFIG_HOME`, e nunca o VALOR da base.** É a mesma decisão
+do `PATH` da [RN-518](#rn-518), com uma consequência maior: é essa variável que
+decide ONDE o arquivo da base mora (`base.ts`), e `systemd --user` não repassa o
+ambiente do shell de quem instalou — sem ela, um usuário com a variável apontada
+para fora de `~/.config` teria o serviço lendo a base errada, ou nenhuma. O
+valor da base fica fora de propósito: trocá-la continua sendo editar o arquivo e
+reiniciar, nunca reinstalar, que é o que o docblock de `base.ts` já defendia ao
+rejeitar "só a flag `--base`".
+
+**A `apiUrl` da unit de máquina lê `BRABO_API_URL`, e a de projeto não.** A
+precedência do plano de PROJETO fica byte a byte (`--api-url` › config daquela
+pasta › default), porque lá existe um arquivo respondendo. No de máquina esse
+arquivo é por projeto e não serve, então sem a variável a única alternativa a
+`--api-url` seria o default `localhost` — instalar de um shell com
+`BRABO_API_URL` posta geraria em silêncio uma unit apontando para o lugar
+errado. Ela entra no `ContextoDoServico` (`apiUrlDoAmbiente`), nunca lida
+diretamente do `process.env`.
+
+**`install` RECUSA quando a outra espécie já está instalada, e nada é
+removido.** O agente de máquina atende TODO projeto em modo `runner` do dono da
+chave; somar a ele uma unit por projeto (ou o contrário) põe dois processos
+disputando o mesmo `terminal:<projectId>`, e o servidor nega um dos dois —
+provavelmente o que a pessoa acabou de instalar, que é a pior ordem possível
+para descobrir o problema. É recusa pelo MESMO critério da recusa de root que já
+mora nesse arquivo: *"instalar e avisar deixaria a instalação errada de pé, e a
+mensagem seria lida uma vez só"*. A unit que já existe fica intacta, a mensagem
+nomeia o `uninstall` de cada uma, e **não há `--force`** — uma flag que derruba
+uma guarda cujo sintoma é silencioso devolve o sintoma silencioso. Isto NÃO
+contradiz o ponto 5 do ADR: o que ele garante é que unit por projeto já
+instalada continua funcionando, e ela continua, byte a byte; o que se recusa é
+criar a sobreposição AGORA.
+
+**`status` responde sobre a espécie perguntada, e os quatro estados não viram
+oito.** O código de saída continua sendo o da unit PERGUNTADA
+([RN-088](#rn-088)) — somar as duas apagaria qual delas está pedindo atenção, do
+mesmo jeito que somar as cinco filas de decisão apagaria qual fila é qual. A
+coexistência aparece em TEXTO, e é resposta do **DISCO**: as units da outra
+espécie são listadas pelo nome, sem perguntar o estado de cada uma ao
+gerenciador, e a saída DIZ que não perguntou. É o ponto 5 do ADR 0154 cumprido —
+*"deixar seis processos disputando três projetos em silêncio"* é o defeito que
+esse bloco existe para impedir. Sem `--machine` e sem projeto resolvível, o
+principal é a unit de **máquina** (a única cujo nome não precisa de argumento) e
+a saída nomeia `--project` para quem queria a outra; antes desta RN a mesma
+entrada respondia "precisa saber QUAL projeto", que é uma pergunta e não uma
+resposta para quem tem exatamente a instalação que o instalador produz.
+
+**`uninstall` NÃO herda esse default, e a assimetria é deliberada.** Ler a
+espécie errada custa uma linha errada; remover a espécie errada custa um serviço
+e uma chave de dispositivo. Sem `--machine` e sem projeto resolvível ele RECUSA,
+listando o que existe no disco com o comando exato de cada um — e nunca remove
+as duas, que seria remover mais do que foi pedido.
+
+**`Restart=on-abnormal` fica byte a byte, nas duas espécies.** Exit 1 é recusa
+fatal de join ou teto de tentativas esgotado, e reiniciar seria o laço que o CLI
+recusa fazer sozinho ([RN-514](#rn-514)). Mais: a RN-544 fez **lista vazia sair
+com 0** justamente para que `on-abnormal` não reerga o serviço numa instalação
+nova, onde não há o que atender — trocar por `on-failure` desfaria as duas
+decisões de uma vez.
+
+- **Código:** `apps/runner/src/servico.ts` (`AlvoDaUnidade`, `ALVO_DE_MAQUINA`,
+  `alvoDeProjeto`, `resolverEspecie`, `PlanoDeInstalacao` como união,
+  `caminhoDaUnidade`/`projetosInstalados`/`maquinaInstalada`,
+  `prepararPlanoDeProjeto`/`prepararPlanoDeMaquina`, `recusaDeSobreposicao`,
+  `linhasDoQueExiste`/`linhasDeCoexistencia`,
+  `ContextoDoServico.apiUrlDoAmbiente`,
+  `DependenciasDeInstalacao.resolverBase`, `SistemaDeServico.listarPasta`);
+  `apps/runner/src/servico-sistema.ts` (`listarPasta` sobre `readdirSync`);
+  `apps/runner/src/index.ts` (o adaptador de `resolverBase` sobre
+  `resolverBaseConsentida`, `apiUrlDoAmbiente`, o texto de uso)
+- **Teste:** `apps/runner/src/servico.spec.ts` — `service install --machine` (a
+  unit sem `--project`/`--dir`, a ausência de colisão de nome, o congelamento de
+  `XDG_CONFIG_HOME` sem o valor da base, o Label e o log do launchd, o
+  `BRABO_API_URL`) e as cinco recusas próprias (config de projeto na pasta, sem
+  base, base inválida, sem chave, `--machine` com `--project`); e as duas
+  espécies não se sobrepondo (recusa nos DOIS sentidos sem remover nada, o
+  `status` de cada lado dizendo da outra sem somar código nem perguntar ao
+  gerenciador, o `status` sem argumento caindo na máquina, o
+  `uninstall --machine` deixando a de projeto intacta, e o `uninstall` sem
+  espécie recusando e listando as duas)
+- **Lacuna DECLARADA:** o `install --machine` **não sabe** se a chave daquela
+  pasta é mesmo de máquina — em disco as duas espécies são o mesmo arquivo, uma
+  JWK com `kid` ([RN-475](#rn-475)), e quem sabe é o SERVIDOR
+  ([RN-544](#rn-544)). Uma pasta com chave de PROJETO instala a unit sem erro, e
+  a recusa aparece só no primeiro boot, como `CredencialNaoEDeMaquinaError`.
+  Verificar no `install` exigiria uma chamada de rede num subcomando que hoje
+  não faz nenhuma, e inventar um palpite local produziria a segunda fonte de
+  verdade que a RN-544 recusou. E ninguém CRIA chave de máquina ainda: quem
+  registra é o `install.sh`
+  ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 4), na
+  sessão 6 — esta sessão entrega o subcomando que ele vai chamar
+- **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+- **Origem:** FASE 30, sessão 4 —
+
 ---
 
 ## A tela reconhece um agente local de MÁQUINA já pareado (RN-548, FASE 30)
