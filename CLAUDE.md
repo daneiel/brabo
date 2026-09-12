@@ -361,7 +361,18 @@ criada SEM interação humana e não o trio de escritas (não use
   que a RN-519 fechou renascido. A lacuna da TELA fica MAIOR com isso, e
   continua declarada. E ninguém CRIA chave de máquina ainda: quem registra é o
   `install.sh` (ADR 0155 ponto 4), noutra sessão da FASE 30 — a rota nasce no
-  PR que tiver o primeiro chamador real
+  PR que tiver o primeiro chamador real. Desde a RN-548 o web CONSOME essa
+  listagem — `RunnerOnboardingPanel` reconhece máquina já pareada e para de
+  mandar parear —, e isso NÃO fecha a lacuna: ler para reconhecer é outra coisa
+  que listar para revogar, e o painel de propósito não lista chave nem oferece
+  revogação. O que ele diz é o CUSTO da espécie (revogar derruba o agente em
+  todos os projetos do dono), e o que ele NUNCA diz é que o agente está de pé:
+  chave registrada prova pareamento e não processo vivo — a régua do
+  `workspaceVerifiedAt` (RN-468) um passo antes —, e a lista é da CONTA e não
+  do navegador, então nem "esta máquina está pareada" cabe. É por essas duas
+  ressalvas que o fluxo do ADR 0118 NÃO foi removido: ele muda de LUGAR (um
+  `<details>` com o rótulo do caso que resolve), e aposentá-lo segue sendo o
+  BRB-031
 - **A credencial de git some quando o container do runner já está ativo, e
   isso é o caminho COMUM, não uma borda.** `RunnerReadiness` (RN-507)
   exige container `running` REGISTRADO antes de QUALQUER operação de

@@ -647,6 +647,36 @@ export interface RunnerDeviceKeySummary {
   createdAt: string;
 }
 
+/**
+ * A ESPÉCIE de uma chave de dispositivo (ADR 0154, RN-543).
+ *
+ * `projeto` é a do ADR 0118 — presa ao projeto em que o navegador a gerou.
+ * `maquina` é a que descreve a MÁQUINA (`project_id` nulo no banco): ela
+ * aparece na listagem de TODO projeto que atende, e revogá-la derruba o
+ * agente local em todos eles.
+ */
+export type RunnerDeviceKeyEspecie = 'projeto' | 'maquina';
+
+/**
+ * Uma linha de `GET /projects/:projectId/runner-device-keys` (RN-519) — mais
+ * campos que `RunnerDeviceKeySummary`, que é só o eco do registro.
+ *
+ * Inclui as REVOGADAS de propósito: sumir com a linha faria a tela afirmar
+ * que a chave nunca existiu. `lastUsedAt` nulo é o sinal da chave ÓRFÃ —
+ * registrada e nunca usada por runner nenhum. `projectId` nulo é a marca de
+ * banco da chave de máquina; `especie` é a mesma informação já resolvida, e é
+ * por ela que a tela decide (ver `lib/agente-de-maquina.ts`).
+ */
+export interface RunnerDeviceKeyListItem {
+  id: string;
+  name: string;
+  projectId: string | null;
+  especie: RunnerDeviceKeyEspecie;
+  createdAt: string;
+  revokedAt: string | null;
+  lastUsedAt: string | null;
+}
+
 export type BudgetPolicy = 'block' | 'allow';
 
 // Custo por AGENTE numa sessão (Fase 4a — painel do time). Espelha

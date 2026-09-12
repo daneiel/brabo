@@ -80,6 +80,7 @@ import type {
   PersonalAccessTokenIssued,
   PersonalAccessTokenAdminSummary,
   RunnerDeviceKeySummary,
+  RunnerDeviceKeyListItem,
   Workspace,
   WorkspaceSummary,
   WorkspaceWithRole,
@@ -418,6 +419,17 @@ export const registerRunnerDeviceKey = (
     `/projects/${projectId}/runner-device-keys`,
     input,
   );
+/**
+ * As chaves de dispositivo PRÓPRIAS que servem este projeto (RN-519) —
+ * inclusive as de MÁQUINA (`especie: 'maquina'`), que servem todo projeto do
+ * dono sem pertencer a nenhum (ADR 0154, RN-543).
+ *
+ * Quem consome hoje é o reconhecimento de agente de máquina do
+ * `RunnerOnboardingPanel` (`lib/agente-de-maquina.ts`, RN-548). A TELA de
+ * listar e revogar chave continua não existindo — é frente própria.
+ */
+export const listRunnerDeviceKeys = (projectId: string) =>
+  get<RunnerDeviceKeyListItem[]>(`/projects/${projectId}/runner-device-keys`);
 export const revokeRunnerDeviceKey = (projectId: string, deviceKeyId: string) =>
   del<void>(`/projects/${projectId}/runner-device-keys/${deviceKeyId}`);
 

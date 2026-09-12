@@ -39,12 +39,27 @@ let carimboDoProjeto: string | null = null;
 
 vi.mock('../lib/api-client', () => ({
   API_URL: 'https://api.brabo.example',
+  // Campo explícito e não parâmetro-propriedade: `erasableSyntaxOnly` recusa
+  // o atalho, e o `tsconfig` do web o liga.
+  ApiError: class ApiError extends Error {
+    status: number;
+    constructor(status: number) {
+      super(`api error ${status}`);
+      this.status = status;
+    }
+  },
   getProject: () =>
     Promise.resolve({
       id: 'proj-1',
       workspacePath: null,
       workspaceVerifiedAt: carimboDoProjeto,
     }),
+  // O reconhecimento de máquina já pareada (RN-548), que o painel embutido
+  // consulta. Sem chave de MÁQUINA ele não renderiza nada, e este arquivo
+  // continua afirmando o que afirmava.
+  listWorkspaces: () =>
+    Promise.resolve([{ workspace: { id: 'ws-1' }, role: 'maintainer' }]),
+  listRunnerDeviceKeys: () => Promise.resolve([]),
 }));
 
 function novaInstanciaI18n() {

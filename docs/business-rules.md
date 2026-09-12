@@ -11713,4 +11713,118 @@ decisões de uma vez.
   sessão 6 — esta sessão entrega o subcomando que ele vai chamar
 - **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
 - **Origem:** FASE 30, sessão 4 —
+
+---
+
+## A tela reconhece um agente local de MÁQUINA já pareado (RN-548, FASE 30)
+
+### RN-548 — Com chave de MÁQUINA ativa, o painel do runner para de mandar parear e passa a dizer o que falta — sem nunca afirmar que o agente está de pé {#rn-548}
+
+Sessão 7 da [FASE 30](explanation/fase-30-runner-por-maquina.md), decidida pelo
+[ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md). É a metade de WEB da
+identidade de máquina: a [RN-543](#rn-543) fez a listagem de chaves marcar a
+ESPÉCIE (`projeto` | `maquina`) *"para que uma chave de máquina não ficasse
+invisível em toda tela"*, e ficou sem consumidor. Esta RN é o consumidor.
+
+**O defeito, medido.** `RunnerOnboardingPanel` é o painel que os TRÊS pontos de
+onboarding montam (`TerminalPanel`, `FolderBrowserModal` e o passo `workspace`
+do `NewProjectWizard`), e ele tinha uma pergunta só: *"configure a pasta"*.
+Com a chave de máquina do ADR 0154, essa pergunta passa a estar errada no caso
+mais comum — a máquina já foi pareada, o que falta é o agente estar rodando.
+Mandar a pessoa repetir o pareamento que a máquina já tem é o painel
+respondendo à pergunta errada, com um fluxo que termina no terminal dela.
+
+**Sete estados, e nenhum vira o outro
+([RN-088](#rn-088)/[RN-470](business-rules/custo.md#rn-470)).** `semPapel`
+(não perguntamos),
+`verificando` (perguntamos e não voltou), `naoSei` (a pergunta falhou),
+`semChaveDeMaquina` (voltou e não há), `revogada` (houve e foi revogada),
+`pareadaNuncaUsada` (há chave ativa que agente nenhum usou — a ÓRFÃ da
+[RN-519](#rn-519) renascida na espécie nova) e `pareada`. **"Não sei" nunca
+vira "não tem"**, e os dois vazios têm textos diferentes porque o gesto é
+diferente: um pede parear, o outro explica por que o agente parou de conectar.
+A falha é derivada de `isError` e não de haver `status` — erro de rede não tem
+status, e derivá-la do status deixaria um `fetch` recusado girando em
+"verificando…" para sempre, que é mentira por omissão depois de dez segundos.
+`semChaveDeMaquina` é o único que renderiza NADA, e de propósito: o painel
+inteiro já É a resposta para "nenhuma máquina pareada".
+
+**Reconhecer NÃO é dizer que o agente está de pé, e a régua é a de sempre.**
+`workspaceVerifiedAt` é registro de uma confirmação e não batimento
+([RN-468](#rn-468)); chave registrada é a mesma coisa um passo antes — ela
+prova que a máquina foi pareada um dia, nunca que há processo vivo agora. Uma
+tela que confundisse as duas seria PIOR que a de hoje, porque a de hoje ao
+menos não mente. Por isso o tom do alerta é `accent` e nunca `success` (verde
+leria como "está de pé" — a mesma aritmética que `AmbienteDoProjeto` faz na
+linha do runner), a ressalva é dita em texto ao lado, e quem responde pelo
+AGORA continua sendo a `EsperaDoRunner` ([RN-474](#rn-474)), REUSADA e não
+reescrita: reconhecida a máquina, o que falta é o agente CONECTAR, que é
+exatamente a pergunta dela.
+
+**E há um segundo limite, que o dado impõe e nenhuma redação apaga: a lista é
+da CONTA, não deste navegador.** `runner_device_keys` não sabe de que máquina o
+navegador está falando, então o mais forte que a tela pode afirmar é *"sua
+conta tem uma máquina pareada"* — nunca *"esta máquina está pareada"*. É por
+isso que o fluxo do navegador
+([ADR 0118](adr/0118-configuracao-do-runner-pelo-navegador.md)) **não é
+removido**: ele muda de LUGAR, para um `<details>` cujo rótulo nomeia o único
+caso em que ainda é a resposta ("estou em outra máquina"). Aposentá-lo é o
+`BRB-031`, decisão do mantenedor, e não consequência desta entrega.
+
+**A ESPÉCIE aparece, e o que aparece é o CUSTO dela.** O painel não lista
+chaves nem oferece revogação — isso é a tela que o web nunca ganhou, a metade
+aberta da RN-519, e é frente própria. O que
+ele diz é o que a espécie significa para quem lê: uma chave de máquina atende
+TODOS os projetos do dono em modo `runner`, e revogá-la derruba o agente local
+em todos eles ([RN-520](#rn-520), cujo alcance `{projeto, usuário}` não muda
+aqui). Sem essa frase, a marca da RN-543 seria decoração.
+
+**O papel é o do ENDPOINT, e a api é a autoridade.** O mínimo sai de
+`roleAtLeast` ([RN-102](business-rules/custo.md#rn-102)) contra `developer`, o
+que `RunnerDeviceKeysController` exige nas três rotas — a tela deixa de
+perguntar o que a api negaria, e diz por quê UMA vez em TEXTO (`title` em
+elemento `disabled` não abre no Chromium). Isso **não é fronteira de
+segurança**: quem recusa é o `RolesGuard`. O 403 de verdade cai no MESMO
+estado, e não é redundância — o papel lido é o de WORKSPACE e quem autoriza é
+o EFETIVO do projeto ([RN-471](#rn-471)), uma SOBREPOSIÇÃO nos dois sentidos:
+o proxy evita a pergunta obviamente perdida, a api corrige o proxy.
+
+**Onde aparece, e por que não é igual nos três montadores.** O reconhecimento é
+por PROJETO, porque a rota é `GET /projects/:projectId/runner-device-keys` —
+existe em `TerminalPanel` e `FolderBrowserModal`, que sempre têm projeto, e no
+`NewProjectWizard` só DEPOIS da criação antecipada ([RN-437](#rn-437)). Sem
+`projectId` não há a quem perguntar e o painel fica byte a byte como era. A
+diferença não é escolha de desenho: é a forma do endpoint.
+
+- **Código:** `apps/web/src/lib/agente-de-maquina.ts` (a derivação inteira —
+  `reconhecerAgenteDeMaquina`, `podeLerChavesDeDispositivo`,
+  `maquinaJaPareada`), `apps/web/src/components/RunnerOnboardingPanel.tsx:173`
+  (as duas consultas e o `ReconhecimentoDeMaquina`),
+  `apps/web/src/components/RunnerOnboardingPanel.module.css`
+  (`.reconhecimento`, `.gesto`), `apps/web/src/lib/api-client.ts:421`
+  (`listRunnerDeviceKeys`), `apps/web/src/lib/api-types.ts:644`
+  (`RunnerDeviceKeyListItem`, `RunnerDeviceKeyEspecie`),
+  `apps/web/src/locales/{en,pt-BR}/terminal.json` (`agenteDeMaquina.*`)
+- **Teste:** `apps/web/src/lib/agente-de-maquina.test.ts` — o caminho feliz
+  (ativa e usada, com o uso MAIS RECENTE entre N) e os sete estados sem
+  colapso, inclusive a falha SEM status e a chave de PROJETO que NÃO conta;
+  `apps/web/src/components/RunnerOnboardingPanel.test.tsx` — o painel
+  anunciando o pareamento com o gesto do serviço e o fluxo do ADR 0118
+  recolhido e ainda alcançável, as duas ressalvas ("não é agente rodando",
+  "é da sua CONTA") mais a do alcance, a chave REVOGADA voltando a mandar
+  parear, a consulta falhada dizendo que não sabe, o papel abaixo de
+  `developer` sem chamar a rota, e o wizard sem `projectId` sem a quem
+  perguntar
+- **Lacuna DECLARADA:** ninguém CRIA chave de máquina ainda (é o `install.sh`,
+  ADR 0155 ponto 4, sessão 6), então hoje esta tela só é exercitável com uma
+  chave registrada à mão — a mesma metade que as RN-543 e RN-544 já
+  declaravam. O comando que o painel oferece é
+  `brabo-runner service status --project <id>`, a forma que existe HOJE; a
+  forma por máquina chega com a unit da sessão 4. Uma chave de PROJETO ativa
+  NÃO muda o painel: é o defeito irmão, um escopo abaixo, e fechá-lo é decisão
+  à parte. E o web continua sem TELA onde listar ou revogar chave de
+  dispositivo (a metade aberta da [RN-519](#rn-519)) — esta entrega consome a
+  listagem e não a constrói
+- **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
+- **Origem:** FASE 30, sessão 7 —
   [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
