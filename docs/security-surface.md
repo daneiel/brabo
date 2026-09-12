@@ -376,6 +376,24 @@ reason in the URL.
   route ever starts returning the already-authenticated URL, the token
   would end up in `.git/config`, inside the folder where the dev agent has
   auto-approved reads.
+
+  In `runner` mode that per-invocation injection travels one more hop — the
+  `env` field of the `exec` message ([RN-507](business-rules.md#rn-507)) — and
+  it stops at the container boundary: the product's Docker port has **no `env`
+  field**, deliberately ([ADR 0130](adr/0130-broker-de-container.md)), so a
+  command routed into the container by `docker exec` can never carry the token.
+  That containment held; what did not was the reporting. Until
+  [RN-558](business-rules.md#rn-558) the runner ran such a command **anyway**,
+  with the credential helper installed and the variables empty, and the
+  resulting authentication failure was indistinguishable from a bad token or a
+  broken network — on the *common* path, since the registered `running`
+  container that RN-507 demands exists only because that same runner brought it
+  up. The runner now **refuses** the pair (credential present, container
+  active) before executing anything, and the engine classifies the refusal with
+  origin `politica` rather than `codigo`. The refusal text names neither the
+  variables nor their values, only how many there were. The credential still
+  does not cross, and that half is declared open: authenticated clone/fetch in
+  `runner` mode requires the container stopped.
 - **The PO's three read routes** — `GET /internal/projects/:projectId/business-rules`,
   `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules/autenticacao.md#rn-164))
   and `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407)) —

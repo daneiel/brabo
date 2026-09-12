@@ -11435,6 +11435,143 @@ não tem chamador em `apps/web` — medido; a única ocorrência é o tipo gerad
 
 ---
 
+## A credencial que não atravessa o container do agente local (RN-558)
+
+### RN-558 — Credencial no `exec` com container ativo é RECUSADA pelo runner, com desfecho nomeado e origem `politica` {#rn-558}
+
+Lacuna declarada por escrito ao fechar a [RN-507](#rn-507)/[RN-508](#rn-508)
+([ADR 0145](adr/0145-docker-pre-requisito-do-runner.md)) e medida de novo aqui,
+elo por elo, antes de qualquer linha ser escrita.
+
+**A cadeia, medida.** `Engine.Runners.RunnerReadiness.verificar/1`
+(`runner_readiness.ex:52`) exige container `running` REGISTRADO antes de
+QUALQUER operação de `Engine.Actions.Workspace.RunnerGit` — inclusive o
+`git fetch` autenticado inicial, que sai de `fetch!/3`
+(`runner_git.ex:210`, via `exec/4` em `:280`). A ÚNICA forma de esse registro
+existir num projeto `runner` é o MESMO runner ter subido o próprio container
+([ADR 0137](adr/0137-o-runner-sobe-o-container-do-projeto.md)), e é esse mesmo
+sucesso que marca `estado.containerAtivo` nele
+(`apps/runner/src/index.ts:764`, em `tratarContainerStart`). Com
+`containerAtivo` setado, `tratarExec` rota o comando para dentro do container
+(`index.ts:670`–`672`), e a operação `exec` de `packages/docker-port` **não tem
+campo de `env`** — de propósito ([ADR 0130](adr/0130-broker-de-container.md):
+sem `-e` livre nenhum). O campo `env` que a RN-507 acrescentou ao par
+`exec`/`exec_result` (`RunnerRouter.exec/5`, `runner_router.ex:50`;
+`ExecMessage.env`, `apps/runner/src/channel.ts:57`) só é aplicado no caminho
+HOST, onde `apps/runner/src/exec.ts:94` o MESCLA sobre `process.env`.
+
+Resultado: no instante em que a RN-507 deixa o `fetch` autenticado rodar, o
+container quase sempre já está de pé no MESMO runner — e era aí que a
+credencial ([ADR 0056](adr/0056-o-engine-trabalha-em-repositorio-remoto.md),
+`GitAuth.env_de_auth/1`) era descartada, **em silêncio, sem erro**. O `git`
+rodava com o helper efêmero instalado por `-c` e as duas variáveis VAZIAS, e
+saía com falha de autenticação — indistinguível de token inválido, permissão
+errada ou rede fora. A pessoa caçava a coisa errada, e o produto não dizia
+nada.
+
+**A correção é o desfecho NOMEADO, não a entrega da credencial.** O `docker
+exec` continua sem campo de `env` — mexer nisso é mudar a porta de contenção,
+e é decisão de ADR, não recorte (ver a lacuna declarada abaixo). O que muda é
+que o par (`env` presente, container ativo) deixa de ser executado e passa a
+ser **recusado**, com marca, mensagem e origem.
+
+**Quem recusa é o RUNNER, e só ele pode.** É o único processo que sabe as duas
+metades ao mesmo tempo: que o comando carrega credencial e que ele vai para
+dentro do container. O engine não sabe a segunda, e isso foi MEDIDO:
+`estado.containerAtivo` nasce `null` a cada execução do runner
+(`index.ts:1391`) e só é setado por `tratarContainerStart`, então um container
+`running` REGISTRADO no banco **não implica** container ativo naquele processo
+— um runner reiniciado com o container de pé roteia pro HOST, e ali a
+credencial chega normalmente. Subir a checagem para `RunnerReadiness` ou para
+`RunnerGit` recusaria um caminho que funciona. E `RunnerReadiness` fica BYTE A
+BYTE como está: ela não ganha flag nem quarta pré-condição — é a mesma regra
+que a [RN-516](#rn-516) já enunciou sobre não lhe pendurar uma flag "pula
+container".
+
+**A MARCA é constante de PROTOCOLO, não detalhe de mensagem.**
+`MARCA_DE_CREDENCIAL_NAO_ENTREGUE` (`index.ts`) e `@marca`
+(`credencial_de_git.ex`) carregam o MESMO token, e é por ele — não pela frase —
+que o engine reconhece a recusa depois de ela ter atravessado um `rescue` e
+virado string solta. Mudar um lado só não quebra compilação de nada: a recusa
+continua acontecendo e só a CLASSIFICAÇÃO volta a errar, que é a forma exata do
+defeito que esta RN fecha. Nenhuma das duas suítes alcança a outra linguagem
+(ExUnit não lê TypeScript, o vitest do runner não lê Elixir), então a guarda
+mora em `scripts/ci/`, com os outros testes que leem o repositório inteiro como
+texto.
+
+**A origem é `politica`, e a escolha aponta AÇÃO.** As quatro do
+[ADR 0020](adr/0020-destravar-gates-qa-secops.md) não distribuem culpa, dizem o que
+fazer. Isto não é cláusula que ninguém escreveu (`codigo`) nem rede que caiu
+(`infra`): é a contenção do ADR 0130 funcionando como desenhada, contra um caso
+que ela não previu. Quem lê `politica` sabe que não há bug para caçar — há uma
+decisão de produto pendente. `Engine.Runners.CredencialDeGit.desfecho/1`
+acrescenta UM caso e não reclassifica nenhum outro: qualquer outra falha de
+worktree mantém byte a byte `{"falha ao preparar o worktree", "codigo"}`, nos
+DOIS dev agents (o real e o Noop, que existe para exercitar ESTE caminho e não
+uma cópia dele).
+
+**O `env` nunca aparece na recusa — só a CONTAGEM.** A invariante da RN-507 é
+que `msg.env` não vai para log nenhum, e esta saída vai para o event log do
+produto: a recusa diz "2 variável(is) de ambiente", jamais um nome ou um valor.
+O número já diz o que se precisa saber ali.
+
+**O que NÃO é afetado, confirmado por leitura:** repositório `local` (provider
+sem token) — `GitAuth.env_de_auth/1` devolve `[]`, `fetch!/3` converte para
+`nil`, o campo nem entra no payload, e a recusa não dispara; os modos
+`container` e `mounted` — nunca passam por `RunnerGit` (`Workspace.ensure!/4`
+bifurca por `execution_mode` e só `runner` vai para lá), e o container deles
+sobe pelo broker, do outro lado da rede; e comando de terminal comum, que nunca
+carregou `env`. `workspace_create` também carrega `env`, e também não é afetado:
+ele roda no HOST (`criarPastaDoProjeto`), não no container.
+
+- **Código:** `apps/runner/src/index.ts` (`MARCA_DE_CREDENCIAL_NAO_ENTREGUE` e
+  a recusa no topo de `tratarExec`), `apps/runner/src/channel.ts`
+  (o docblock de `ExecMessage.env`, que prometia "roda só sem a credencial"),
+  `apps/engine/lib/engine/runners/credencial_de_git.ex` (novo — a marca,
+  `recusada?/1`, `mensagem/2` e `desfecho/1`),
+  `apps/engine/lib/engine/actions/workspace/runner_git.ex` (a cláusula nova em
+  `fetch!/3`, antes da genérica, e o moduledoc),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex` e
+  `apps/engine/lib/engine/dev/noop_dev_agent_server.ex` (o desfecho de
+  `{:error, reason}` na criação do worktree)
+- **Teste:** `apps/runner/src/index-handlers.spec.ts`, bloco *"a credencial não
+  atravessa o docker exec (RN-558)"* — o caminho feliz (sem container, o `env`
+  chega ao host e nada é recusado), o caso de falha (com container, recusa
+  nomeada e `docker.exec` NÃO chamado), a prova negativa de que nome e valor
+  das variáveis não vazam na saída, e `env` vazio não virando recusa;
+  `apps/engine/test/engine/actions/workspace_runner_test.exs` (os dois testes
+  `RN-558`: a recusa que vira mensagem nomeada com origem `politica`, e a falha
+  REAL do fetch que mantém a mensagem de sempre com origem `codigo` — o par
+  negativo que prova que a cláusula nova não sequestrou a antiga);
+  `scripts/ci/marca-de-credencial-do-runner.spec.ts` (a marca idêntica nos dois
+  lados). Verificado por mutação: neutralizar a cláusula de `fetch!/3` reprova
+  o teste do engine com a mensagem antiga à vista
+- **Lacuna DECLARADA, que é a METADE que continua aberta:** a credencial
+  continua **não atravessando** o `docker exec`. Clone/fetch de repositório
+  remoto AUTENTICADO em modo `runner` segue impossível com o container de pé —
+  o que mudou é que agora ele falha DIZENDO isso, em vez de parecer erro de
+  token. Fechar exige decidir COMO uma operação credenciada fala com um `docker
+  exec` sem campo de `env`, e as opções conhecidas mexem todas na porta de
+  contenção do ADR 0130 (dar `env` à operação; um arquivo de credencial montado
+  e apagado; rodar o `fetch` no host mesmo com container ativo, o que quebraria
+  o invariante de que o trabalho acontece dentro do container). É ADR, nunca
+  correção de passagem. Fica declarada também uma ADJACÊNCIA medida e não
+  corrigida: a recusa acontece DEPOIS de `init_from_bare!/5` já ter feito
+  `mkdir`/`git init`/`remote add`, e o `git_dir?/2` de `ensure!/5` marca o
+  workspace como pronto numa tentativa seguinte por encontrar o `.git` — então
+  a segunda tentativa não repete a recusa, ela falha adiante no `worktree add`.
+  É comportamento PRÉ-EXISTENTE da idempotência de `ensure!/5` (vale para
+  qualquer `fetch` que falhe, não só para este) e corrigi-lo é entrega própria
+- **ADR:** nenhum novo — a entrega não move fronteira nenhuma. Ela CONSOME o
+  [0130](adr/0130-broker-de-container.md) (a porta sem `env`), o
+  [0137](adr/0137-o-runner-sobe-o-container-do-projeto.md) (o container na
+  máquina do usuário), o [0145](adr/0145-docker-pre-requisito-do-runner.md) (a
+  pré-condição e o campo `env`) e o [0020](adr/0020-destravar-gates-qa-secops.md) (as
+  quatro origens)
+- **Origem:** `AT-053` — a lacuna que o ADR 0145 deixou declarada por escrito
+
+---
+
 ## A primeira conta de uma instalação nasce no terminal (RN-546)
 
 ### RN-546 — Rota interna cria a PRIMEIRA conta, já verificada, e recusa quando existe qualquer usuário {#rn-546}

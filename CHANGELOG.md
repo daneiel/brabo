@@ -1066,6 +1066,34 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **runner**: a credencial de git que não atravessa o container do agente local
+  deixa de sumir em silêncio — o comando passa a ser **recusado** com desfecho
+  nomeado, em vez de rodar sem ela e falhar como se o token estivesse errado
+  (`AT-053`, [RN-558](docs/business-rules.md#rn-558)).
+
+  Num projeto em modo Runner, o container `running` que a
+  [RN-507](docs/business-rules.md#rn-507) exige antes de qualquer operação de
+  git só existe porque o **mesmo** runner o subiu — e é esse mesmo sucesso que
+  o faz rotear todo comando para dentro dele, por um `docker exec` que **não
+  tem campo de `env`**, de propósito
+  ([ADR 0130](docs/adr/0130-broker-de-container.md)). Ou seja: no instante em
+  que o `git fetch` autenticado ganhava permissão para rodar, o container já
+  estava de pé e a credencial era descartada sem erro nenhum. Clone e fetch de
+  repositório remoto autenticado falhavam no caminho **comum**, e quem
+  investigava caçava token, permissão e rede.
+
+  O runner agora recusa esse par (credencial + container ativo) antes de
+  executar qualquer coisa, e o engine traduz a recusa numa mensagem que diz o
+  que aconteceu e por quê, com **origem `politica`** — não `codigo` — para quem
+  tria a rodada seguinte saber que não há bug para caçar. A saída nunca cita
+  nome nem valor de variável de ambiente, só a contagem.
+
+  **O que continua aberto, declarado:** a credencial segue não atravessando o
+  `docker exec`, então clone/fetch autenticado em modo Runner continua exigindo
+  o container parado. Entregar a credencial mexeria na porta de contenção do
+  Docker, e isso é decisão de ADR. Repositório local e os modos Container e
+  Montado não são afetados.
+
 - **api**: mudar o **próprio papel** passa a ser recusado com **403** nas duas
   rotas de associação, nos dois sentidos — e o upsert de workspace, que não
   tinha teto nenhum, ganha o dele (`BRB-002`, **P1**,

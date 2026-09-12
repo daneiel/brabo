@@ -635,9 +635,63 @@ export interface EstadoDoRunner {
   base: string | null;
 }
 
+/**
+ * A MARCA da recusa da RN-558 — o único vínculo entre esta recusa e quem a
+ * classifica do outro lado (`Engine.Runners.CredencialDeGit`, no engine).
+ *
+ * É uma constante de PROTOCOLO, não um detalhe de mensagem: o engine decide a
+ * ORIGEM da falha (`politica`, ADR 0020) procurando este texto na saída, e o
+ * resto da frase é para um humano ler. Mudá-la aqui sem mudar lá faz a falha
+ * voltar a ser classificada como defeito de código — exatamente o diagnóstico
+ * errado que esta entrega existe para acabar.
+ */
+export const MARCA_DE_CREDENCIAL_NAO_ENTREGUE = 'credencial-nao-atravessa-o-container';
+
 export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Promise<void> {
   const canal = estado.canalAtual;
   if (!canal) return; // conexão caiu entre o recebimento e o tratamento — nada a responder
+
+  // RN-558 — a credencial não atravessa o `docker exec`, e a recusa é AQUI.
+  //
+  // Este processo é o ÚNICO que sabe as duas metades ao mesmo tempo: que o
+  // comando veio com credencial (`msg.env`, ADR 0056/RN-507) e que ele será
+  // roteado para DENTRO do container (`containerAtivo`, ADR 0137). O engine
+  // não sabe a segunda — `containerAtivo` nasce `null` a cada execução do
+  // runner e só é setado por `tratarContainerStart`, então um container
+  // `running` REGISTRADO no banco não implica container ativo NESTE processo
+  // (runner reiniciado com o container de pé roteia pro HOST, e aí a
+  // credencial chega). Por isso a checagem não pode subir para
+  // `RunnerReadiness` nem para `RunnerGit`.
+  //
+  // Recusar em vez de rodar: o `docker exec` não tem campo de `env` (ADR 0130,
+  // sem `-e` livre), então o comando rodaria com o helper de credencial
+  // instalado e as variáveis VAZIAS — um `git fetch` com senha em branco
+  // contra o provider remoto, que falha como erro de autenticação e ainda
+  // gasta uma tentativa de login real. Nada é executado.
+  if (estado.containerAtivo && msg.env && Object.keys(msg.env).length > 0) {
+    // A CONTAGEM, nunca os nomes nem os valores: a invariante da RN-507 é que
+    // `msg.env` não aparece em log nenhum, e esta saída vai para o event log
+    // do produto. O número já diz que havia credencial, que é o que se precisa
+    // saber aqui.
+    const quantas = Object.keys(msg.env).length;
+    const explicacao =
+      `[runner recusou o comando: ${MARCA_DE_CREDENCIAL_NAO_ENTREGUE}] ` +
+      `o comando veio com credencial (${quantas} variável(is) de ambiente, ADR 0056), ` +
+      `mas este runner tem um container ativo e roteia todo comando para dentro ` +
+      `dele por \`docker exec\`, que NÃO tem campo de \`env\` (ADR 0130: sem \`-e\` ` +
+      `livre, de propósito). Executar assim descartaria a credencial em silêncio e ` +
+      `a falha apareceria como erro de autenticação do git. NADA foi executado. ` +
+      `Enquanto a metade que falta não existir, um repositório remoto autenticado ` +
+      `em modo \`runner\` não pode ser clonado com o container de pé.`;
+    console.warn(`exec ${msg.ref}: recusado — ${MARCA_DE_CREDENCIAL_NAO_ENTREGUE}`);
+    enviarExecResult(canal, {
+      ref: msg.ref,
+      exitCode: -1,
+      output: explicacao,
+      timedOut: false,
+    });
+    return;
+  }
 
   let cwd: string;
   try {
@@ -663,10 +717,10 @@ export async function tratarExec(estado: EstadoDoRunner, msg: ExecMessage): Prom
   console.log(`exec ${msg.ref}: ${msg.command} (cwd=${cwd})`);
   // `env` só se aplica ao caminho HOST (`executarComando`/`spawn`) — o
   // container (`docker exec`, via `packages/docker-port`) não tem campo de
-  // `env` na operação, de propósito (ADR 0130: sem `-e` livre nenhum). Um
-  // `exec` com `env` despachado enquanto este runner tem container ativo
-  // ainda roda — só não carrega a credencial; ver o moduledoc de
-  // `Engine.Actions.Workspace.RunnerGit` para o que isso implica hoje.
+  // `env` na operação, de propósito (ADR 0130: sem `-e` livre nenhum). Desde a
+  // RN-558, o par (`env` presente, container ativo) já foi RECUSADO acima com
+  // desfecho nomeado: daqui para baixo, ou não há `env`, ou não há container —
+  // nunca um `env` descartado em silêncio.
   const resultado = estado.containerAtivo
     ? await executarComandoNoContainer(estado, estado.containerAtivo, msg.command, cwd)
     : await executarComando(msg.command, cwd, { env: msg.env });

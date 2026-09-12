@@ -182,6 +182,30 @@ a pasta criada é a do projeto do ponto de vista do servidor, mas a raiz que
 trocá-la em runtime moveria uma fronteira de contenção por causa de uma
 mensagem de rede.
 
+### A credencial de git NÃO entra no container, e a recusa diz isso (RN-558)
+
+Quando este runner subiu o container do projeto (`container_start`, ADR 0137),
+ele passa a rotear **todo** comando para dentro dele por `docker exec` — e a
+porta de Docker do produto **não tem campo de `env`**, de propósito (ADR 0130:
+sem `-e` livre nenhum). A credencial de git (ADR 0056) só existe no ambiente do
+processo filho do caminho **HOST**.
+
+Até a RN-558 o comando rodava assim mesmo, com o helper de credencial instalado
+e as variáveis **vazias**: o `git fetch` saía com falha de autenticação, e quem
+investigava caçava token, permissão ou rede. E esse é o caminho **comum**, não
+uma borda — o container `running` que o servidor exige antes de qualquer
+operação de git (RN-507) só existe porque **este mesmo runner** o subiu.
+
+Agora o runner **recusa** esse par antes de executar qualquer coisa, com uma
+saída que diz o que aconteceu, por quê, e que **nada** foi executado. A recusa
+nunca cita nome nem valor das variáveis — só quantas eram.
+
+**O que isso significa na prática:** clonar ou atualizar um repositório
+**remoto autenticado** em modo runner só funciona com o container **parado**.
+Repositório local (sem credencial) não é afetado, nem `workspace_create`, que
+roda no host. Entregar a credencial ao `docker exec` mexeria na porta de
+contenção e é decisão à parte — a metade aberta está declarada na RN-558.
+
 ### Agente de MÁQUINA: sem `--project`, uma conexão por projeto (RN-544)
 
 Com uma **chave de dispositivo de máquina** (ADR 0154, RN-543) e uma **base

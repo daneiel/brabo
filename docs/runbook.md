@@ -47,6 +47,7 @@ Start with triage.
 | I need a device key for the machine and there is no browser (a fresh install, a headless box) | [Device key from the terminal](#chave-de-dispositivo-pelo-terminal) |
 | the installer finished with a **"O que ficou pendente"** block, or a fresh install has no account, no machine key, or no agent service | [When the installer does not close the installation](#instalador-nao-fecha) |
 | the project folder never appears on the user's machine, and the engine log says `workspace_create: o projeto <id> não criou pasta` | [The project folder never appears](#pasta-do-projeto-nunca-aparece) |
+| a dev agent in a `runner` project is blocked preparing its worktree, naming `credencial-nao-atravessa-o-container`, with origin `politica` | [Authenticated clone in Runner mode](#credencial-nao-atravessa-o-container) |
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
 | provisioning a repository fails with `permission denied: /data/git-repos/<slug>.git`, or `permissions.json` can't be written | [Dev containers write as your user, not root](#dev-containers-nao-root) |
@@ -636,6 +637,42 @@ exists to create.
 A folder that already exists as a git repository is a **success**, not an
 error: the operation is idempotent and reports `ja-era-repositorio` in the
 runner's log.
+
+### Authenticated clone in Runner mode is refused while the container is up {#credencial-nao-atravessa-o-container}
+
+**Symptom:** a dev agent in a `runner` project is blocked preparing its
+worktree, and the diagnosis says the credential could not be delivered, naming
+`credencial-nao-atravessa-o-container`. The blocked task's origin is
+`politica`, not `codigo`.
+
+**This is not a bug to chase, and that is exactly what the origin is telling
+you** ([RN-558](business-rules.md#rn-558)). The credential for an authenticated
+remote (`ADR 0056`) can only travel in the `env` field of the `exec` message,
+and that field applies to the **host** path only: the product's Docker port has
+no `env` field, deliberately ([ADR 0130](adr/0130-broker-de-container.md), no
+free `-e`). When the runner has brought the project's container up, it routes
+every command into it — so the credential has nowhere to go.
+
+Before RN-558 the command ran anyway, with the variables empty, and you saw a
+plain authentication failure. Now it is refused before executing, and nothing
+runs. The refusal never prints variable names or values, only the count.
+
+**What to do today:**
+
+1. Stop the project's container (the `/containers` page, "Parar") and let the
+   worktree materialise — on the host path the credential is delivered
+   normally, and the initial `fetch` succeeds.
+2. Bring the container back up and carry on; the clone is idempotent and is not
+   repeated.
+
+A **local** repository (no token) is unaffected, and so are `container` and
+`mounted` projects — they never go through this path. So is
+`workspace_create`, which runs on the host.
+
+**What is still open, declared:** the credential continues not to cross the
+`docker exec`. Closing that means deciding how a credentialed operation talks
+to a `docker exec` with no `env` field, and every known option touches the
+containment boundary — an ADR, not a fix in passing.
 
 ### Dev containers write as your user, not root {#dev-containers-nao-root}
 
