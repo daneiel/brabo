@@ -704,6 +704,21 @@ function verificarContagensEmProsa() {
       oque: 'a contagem de ADRs',
     },
     {
+      // O `description` do FRONTMATTER do próprio índice, e ele ficou de fora
+      // até 2026-09-12 dizendo **134** com 156 ADRs escritos — deriva de 22,
+      // no arquivo cuja única função é indexar ADRs. Passou despercebido
+      // porque `verificarIndiceAdr` confere outra coisa (que nenhum ADR está
+      // órfão) e estava verde o tempo todo: duas aferições sobre o mesmo
+      // arquivo, nenhuma sobre este campo. É o modo de falha do "68 ADRs" do
+      // CONTRIBUTING.md, com um agravante — frontmatter não se lê ao revisar
+      // a prosa, então a deriva aqui é mais silenciosa que em qualquer outra
+      // linha desta tabela.
+      arquivo: 'docs/adr/index.md',
+      padrao: /Brabo's (\d+) architectural decision records/,
+      esperado: total,
+      oque: 'a contagem de ADRs',
+    },
+    {
       // `CONTRIBUTING.md` ficou de FORA quando as aferições nasceram, e o
       // preço apareceu: a frase dizia "68 ADRs" com 126 escritos — quase o
       // dobro, e no parágrafo que pede a alguém de fora que não contradiga uma
