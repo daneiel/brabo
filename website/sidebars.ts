@@ -126,6 +126,7 @@ const sidebars: SidebarsConfig = {
         'explanation/historico-de-fases',
         'explanation/fase-28-pasta-do-usuario',
         'explanation/fase-29-instalacao-de-uma-linha',
+        'explanation/fase-30-runner-por-maquina',
       ],
     },
     {

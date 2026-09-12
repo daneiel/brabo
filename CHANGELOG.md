@@ -26,6 +26,46 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **instalador**: o `install.sh` passa a saber **qual** versão está instalada e
+  a oferta muda conforme a relação com a que vai instalar
+  ([RN-542](docs/business-rules.md#rn-542)).
+
+  A informação sempre esteve no `images.json` da Release (`"versao"`, ao lado de
+  `commit`) e era ignorada — liam-se só `repositorio` e `digest`. Agora as
+  imagens são resolvidas **antes** da detecção, porque saber o que entra é
+  pré-requisito de perguntar se o que existe sai; o marcador sobe para
+  `schemaVersion: 2` e grava `versao` e `commit`.
+
+  Versão **maior** oferece *"Atualizar 5.0.0 → 5.1.0?"* com default **sim** — é
+  o que a pessoa veio fazer, e o backup provado torna reversível. **Igual**
+  pergunta se quer reinstalar do zero mesmo assim, default não. **Menor** nomeia
+  o rebaixamento e avisa que migração de banco não anda para trás, default não.
+  Marcador de schema 1 não tem versão: o script **diz isso** e não adivinha.
+
+  Em qualquer ramo a instalação é apagada e recriada do zero, nunca subida por
+  cima — a cadeia backup → **PROVAR** → perguntar → apagar → instalar →
+  restaurar ([RN-530](docs/business-rules.md#rn-530)) não muda.
+
+- **bootstrap**: item novo *Docker › Instalar (install.sh)*, que **relata** o
+  plano do instalador sem tocar em nada, com o comando de uma linha na nota.
+
+  Ele relata em vez de instalar por mecânica e não por preferência: item de menu
+  roda com stdin em `/dev/null` para o menu seguir lendo teclas do mesmo
+  terminal, e este instalador existe para perguntar. Mesmo desenho do item
+  *Base de projetos* ([RN-511](docs/business-rules.md#rn-511)).
+
+- **docs**: planejamento da FASE 30 — a identidade do agente local deixa de ser
+  por projeto e passa a ser da máquina
+  ([ADR 0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md),
+  [ADR 0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md)).
+
+  Medindo os cinco acoplamentos de "um runner por projeto", **três não precisam
+  mudar**: o tópico, o socket id e o ticket descrevem uma CONEXÃO, e N conexões
+  os satisfazem byte a byte. Nada no engine muda. E um achado que a fase
+  endereça: numa instalação nova **ninguém consegue entrar** — o `.env` gerado
+  não tem variável de e-mail, `MAIL_TRANSPORT` cai em `log` e o registro exige
+  verificar e-mail.
+
 - **web**: o assistente de criação pede o **destino antes do nome**, num passo
   só, e perde o passo que não era escolha.
 

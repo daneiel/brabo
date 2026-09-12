@@ -2514,6 +2514,28 @@ from another version is damage that gives no warning. The order is backup →
 middle is what gives the installer the right to delete
 ([RN-530](business-rules.md#rn-530)).
 
+And it knows **which** version it is replacing ([RN-542](business-rules.md#rn-542)).
+The images are resolved **before** detection runs, so the question is never
+blind: the marker records the installed `versao`, the manifest carries the one
+about to be installed, and the offer is specific to the relation between them.
+
+| relation | what it offers | default |
+|---|---|---|
+| newer | *"Atualizar 5.0.0 → 5.1.0?"* | **yes** — it is what you came to do, and the proven backup makes it reversible |
+| same | *"Já é a 5.0.0. Reinstalar do zero mesmo assim?"* | no — there is no gain to offer |
+| older | names it a **downgrade**, warning that database migrations do not run backwards | no — it may have no way back |
+| unknown | a marker from schema 1 has no version; it says so, and does not guess | no |
+
+Whichever branch you take, the installation is **deleted and recreated from
+scratch** rather than started on top of the old volumes. Half a migration is
+worse than none.
+
+An `install.sh` invoked from the `pnpm bootstrap` menu (*Docker › Instalar*)
+only **reports** the plan. That is mechanical, not a preference: a menu item
+runs with stdin on `/dev/null` so the menu can keep reading keys from the same
+terminal, and this installer is built to *ask*. The note on the item carries
+the one-line command that installs for real.
+
 > **What it does not do:** bring up the container **broker** — that service is
 > absent from the installation compose because its image is not published, and
 > without it a project in **mounted** mode cannot start a container

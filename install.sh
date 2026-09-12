@@ -65,7 +65,7 @@ sha_do_cosign() {
 IDENTIDADE_REGEX="^https://github.com/${REPO}/\.github/workflows/build-runner-binaries\.yml@"
 EMISSOR_OIDC='https://token.actions.githubusercontent.com'
 
-MARCADOR_SCHEMA=1
+MARCADOR_SCHEMA=2
 COMPOSE_DE_INSTALACAO='docker/docker-compose.install.yml'
 
 # Fonte das imagens. `ghcr` é o default: as quatro publicadas, por DIGEST,
@@ -145,6 +145,49 @@ ler_marcador() {
   [ -f "$arquivo" ] && cat "$arquivo" || true
 }
 
+# Um campo de topo do marcador, sem `jq` — que não se pode assumir na máquina
+# de quem instala (o mesmo motivo pelo qual `resolver_imagens_do_ghcr` compacta
+# o JSON com `tr` em vez de parseá-lo).
+#
+# Só campos de TOPO, e é o bastante: `versao`, `commit` e `schemaVersion` são
+# todos de topo. Um marcador de schema 1 não tem `versao`, e a ausência devolve
+# vazio — que é o que faz "instalação anterior a esta versão" ser um estado
+# NOMEADO em vez de um erro de parse.
+campo_do_marcador() {
+  local chave="$1" json="$2"
+  printf '%s' "$json" | tr -d '\n' | tr -s ' ' \
+    | grep -o "\"${chave}\": *\"[^\"]*\"" | head -n1 | cut -d\" -f4 || true
+}
+
+# Compara duas versões semver. Ecoa `maior`, `menor` ou `igual` — nunca um
+# código de saída, porque sob `set -e` um `return 1` legítimo mataria o script.
+#
+# Implementado à mão e NÃO com `sort -V`: o BSD `sort` do macOS ganhou `-V`
+# tarde e este script roda na máquina dos outros — é a mesma disciplina que já
+# fez o `case` de `sha_do_cosign` recusar array associativo por causa do bash
+# 3.2. Sufixo de pré-lançamento (`-rc.1`) é CORTADO antes de comparar: o
+# produto não publica pré-lançamento hoje, e tratá-lo pela metade seria pior
+# que declarar que não se trata.
+comparar_versoes() {
+  # `.0.0` no fim NORMALIZA o número de campos, e não é zelo: `cut -d.` sobre
+  # uma string SEM ponto devolve a linha inteira, não vazio — então "5" fazia o
+  # segundo campo valer "5" em vez de "0", e `5.0.0` vs `5` respondia `menor`.
+  # Achado por teste, não por leitura.
+  local a="${1%%-*}.0.0" b="${2%%-*}.0.0" i ai bi
+  i=1
+  while [ "$i" -le 3 ]; do
+    ai="$(printf '%s' "$a" | cut -d. -f"$i")"; ai="${ai:-0}"
+    bi="$(printf '%s' "$b" | cut -d. -f"$i")"; bi="${bi:-0}"
+    # Não-numérico vira 0 em vez de quebrar a aritmética do shell.
+    case "$ai" in (*[!0-9]*|'') ai=0 ;; esac
+    case "$bi" in (*[!0-9]*|'') bi=0 ;; esac
+    if [ "$ai" -gt "$bi" ]; then printf 'maior\n'; return 0; fi
+    if [ "$ai" -lt "$bi" ]; then printf 'menor\n'; return 0; fi
+    i=$(( i + 1 ))
+  done
+  printf 'igual\n'
+}
+
 # --------------------------------------------------------------------------
 # Detecção — NOMEIA o que achou antes de qualquer pergunta
 # --------------------------------------------------------------------------
@@ -213,6 +256,16 @@ imprimir_estado() {
   printf 'marcador\t%s\n' "$marcador"
   if [ -f "$marcador" ]; then
     printf 'marcador-existe\tsim\n'
+    local conteudo versao_inst schema
+    conteudo="$(ler_marcador)"
+    versao_inst="$(campo_do_marcador versao "$conteudo")"
+    schema="$(printf '%s' "$conteudo" | tr -d '\n' | grep -o '"schemaVersion": *[0-9]*' | grep -o '[0-9]*$' || true)"
+    printf 'marcador-schema\t%s\n' "${schema:-desconhecido}"
+    if [ -n "$versao_inst" ]; then
+      printf 'versao-instalada\t%s\n' "$versao_inst"
+    else
+      printf 'versao-instalada\tnao-registrada\n'
+    fi
   else
     printf 'marcador-existe\tnao\n'
   fi
@@ -229,6 +282,11 @@ imprimir_estado() {
 imprimir_plano() {
   printf 'verificar-origem\tfaz\to checksums.txt assinado da Release, e o hash deste próprio arquivo nele\n'
   printf 'detectar\tfaz\tmarcador quando existe; sinais quando não, nomeando o que achou\n'
+  printf 'comparar-versao\tfaz\ta do marcador contra a do manifesto, ANTES de perguntar o que quer que seja\n'
+  printf 'atualizar\tpergunta\tversão maior: default SIM, e a instalação atual é recriada do zero\n'
+  printf 'reinstalar-mesma-versao\tpergunta\tversão igual: default NÃO — não há ganho a oferecer\n'
+  printf 'rebaixar\tpergunta\tversão menor: default NÃO, avisando que migração de banco não anda para trás\n'
+  printf 'instalar-por-cima\tnunca\tou se migra (com backup provado), ou se para\n'
   printf 'perguntar\tfaz\texige TTY; sem TTY relata e sai 0\n'
   printf 'gravar-marcador\tfaz\t%s\n' "$(caminho_do_marcador)"
   printf 'escolher-fonte\tfaz\t--source=ghcr (digest verificado) ou --source=local (bake, árvore limpa em tag)\n'
@@ -350,6 +408,14 @@ resolver_imagens_do_ghcr() {
   local compacto
   compacto="$(tr -d '\n' < "$json" | tr -s ' ')"
 
+  # A versão SEMPRE esteve no manifesto (`"versao": "5.0.0"`, ao lado de
+  # `commit` e `publicadoEm`) e este script a ignorava — lia só `repositorio` e
+  # `digest`. É ela que torna a segunda execução uma DECISÃO ("a instalada é a
+  # 5.0.0, esta é a 5.1.0") em vez da pergunta cega que era antes.
+  VERSAO_A_INSTALAR="$(printf '%s' "$compacto" | grep -o '"versao": *"[^"]*"' | head -n1 | cut -d'"' -f4)"
+  COMMIT_A_INSTALAR="$(printf '%s' "$compacto" | grep -o '"commit": *"[^"]*"' | head -n1 | cut -d'"' -f4)"
+  [ -n "$VERSAO_A_INSTALAR" ] || recusar 'o manifesto não traz a versão — sem ela não há como comparar com o que já está instalado.'
+
   local alvo var repo digest entrada
   for alvo in api engine web backup; do
     entrada="$(printf '%s' "$compacto" | grep -o "{[^{}]*\"alvo\": *\"${alvo}\"[^{}]*}" || true)"
@@ -373,6 +439,12 @@ resolver_imagens_locais() {
     || recusar "--source=local exige árvore LIMPA: uma imagem construída de árvore suja não é a versão que ela diz ser."
   git describe --exact-match --tags >/dev/null 2>&1 \
     || recusar "--source=local exige estar numa TAG (git describe --exact-match)."
+
+  # A versão vem da TAG, e é confiável justamente porque as duas recusas acima
+  # já passaram: árvore limpa e em tag. É o mesmo par (versão, commit) que o
+  # GHCR traz no manifesto, pela outra ponta.
+  VERSAO_A_INSTALAR="$(git describe --exact-match --tags | sed 's/^v//')"
+  COMMIT_A_INSTALAR="$(git rev-parse --short=12 HEAD)"
 
   dizer 'Construindo as quatro imagens (docker buildx bake)…'
   docker buildx bake -f docker-bake.hcl || recusar 'o build local falhou.'
@@ -577,14 +649,49 @@ main() {
 
   verificar_a_si_mesmo "$plataforma"
 
+  # As imagens são resolvidas ANTES da detecção, e a ordem é a decisão: saber
+  # O QUE se vai instalar é pré-requisito para perguntar se apaga o que existe.
+  # Antes, a pergunta de migração vinha primeiro e era cega — ela não tinha como
+  # dizer "a instalada é a 5.0.0 e esta é a 5.1.0", que é a única informação com
+  # que alguém decide. Resolver é barato e sem efeito: baixa um manifesto (ghcr)
+  # ou confere que a árvore está limpa e em tag (local).
+  dizer ''
+  dizer "${C_BOLD}Imagens (--source=${FONTE})${C_RESET}"
+  local tmp_imagens
+  tmp_imagens="$(mktemp -d)"
+  if [ "$FONTE" = 'ghcr' ]; then
+    resolver_imagens_do_ghcr "$tmp_imagens"
+  else
+    resolver_imagens_locais
+  fi
+  rm -rf "$tmp_imagens"
+  ok "versão a instalar: ${VERSAO_A_INSTALAR} (${COMMIT_A_INSTALAR})"
+
   dizer ''
   dizer "${C_BOLD}O que já existe nesta máquina${C_RESET}"
   local marcador sinais
   marcador="$(ler_marcador)"
   sinais="$(detectar_por_sinais)"
 
+  VERSAO_INSTALADA=''
+  RELACAO='desconhecida'
   if [ -n "$marcador" ]; then
     ok "marcador de instalação: $(caminho_do_marcador)"
+    VERSAO_INSTALADA="$(campo_do_marcador versao "$marcador")"
+    if [ -n "$VERSAO_INSTALADA" ]; then
+      RELACAO="$(comparar_versoes "$VERSAO_A_INSTALAR" "$VERSAO_INSTALADA")"
+      case "$RELACAO" in
+        maior) ok "instalada ${VERSAO_INSTALADA} → esta é ${VERSAO_A_INSTALAR}: é ATUALIZAÇÃO." ;;
+        igual) ok "instalada ${VERSAO_INSTALADA}: é a MESMA versão que esta." ;;
+        menor) dizer "  Instalada ${VERSAO_INSTALADA}, esta é ${VERSAO_A_INSTALAR}: seria REBAIXAMENTO." ;;
+      esac
+    else
+      # Marcador de schema 1 — gravado antes de a versão existir nele. É um
+      # estado NOMEADO, e não um erro: a instalação é real, só não se sabe qual.
+      dizer '  O marcador é de um schema anterior e não registra versão.'
+      dizer '  Não dá para dizer se esta instalação sobe, desce ou repete —'
+      dizer '  e o instalador não adivinha.'
+    fi
     detalhe "$marcador"
   elif [ -n "$sinais" ]; then
     dizer 'Não há marcador, mas há sinais de uma instalação anterior a esta versão:'
@@ -598,21 +705,57 @@ main() {
     ok 'nenhuma instalação anterior encontrada'
   fi
 
-  # Se há instalação anterior, a migração é oferecida ANTES de tudo: ela é o
-  # único caminho que apaga, e apagar depois de já ter subido metade da coisa
-  # nova seria a pior ordem possível.
+  # A migração é oferecida antes de qualquer EFEITO: ela é o único caminho que
+  # apaga, e apagar depois de já ter subido metade da coisa nova seria a pior
+  # ordem possível. Só a resolução das imagens a precede, e de propósito — ela
+  # não tem efeito nenhum, e é o que dá à pergunta as duas versões.
+  # A oferta é ESPECÍFICA por relação de versão, e não mais uma pergunta cega.
+  # O que NÃO muda em nenhum dos ramos: o caminho é sempre backup -> PROVAR ->
+  # perguntar -> apagar -> instalar -> restaurar (ADR 0150), e é a PROVA no meio
+  # que dá ao instalador o direito de apagar. Reinstalar do zero em vez de subir
+  # por cima é a decisão do usuário desta entrega — `up` sobre volumes de outra
+  # versão é o tipo de estrago que não avisa, e meia migração é pior que
+  # nenhuma.
   MIGRAR_DE=''
   if [ -n "$marcador" ] || [ -n "$sinais" ]; then
     if [ -t 0 ]; then
-      dizer ''
-      printf 'Migrar esta instalação (backup, prova de restauração, e só então apagar)? [s/N] '
-      local quer_migrar; read -r quer_migrar || quer_migrar=''
-      case "$quer_migrar" in
-        s|S|sim|SIM)
-          migrar_instalacao_anterior "${BRABO_BACKUP_HOST_DIR:-${PWD}/brabo-backup-$(date -u +%Y%m%d%H%M%S)}"
+      local pergunta resposta_migrar
+      case "$RELACAO" in
+        maior)
+          pergunta="Atualizar ${VERSAO_INSTALADA} → ${VERSAO_A_INSTALAR}? A instalação atual é apagada e recriada do zero, depois do backup ser PROVADO. [S/n] "
           ;;
-        *) recusar 'instalar por cima de uma instalação existente não é oferecido: ou se migra, ou se para. Um `up` sobre volumes de outra versão é o tipo de estrago que não avisa.' ;;
+        igual)
+          pergunta="Já é a ${VERSAO_INSTALADA}. Reinstalar do zero mesmo assim (backup, prova, apaga e recria)? [s/N] "
+          ;;
+        menor)
+          pergunta="ATENÇÃO: rebaixar ${VERSAO_INSTALADA} → ${VERSAO_A_INSTALAR}. O dump restaurado vem de uma versão MAIS NOVA, e migração de banco não anda para trás — o restore pode falhar ou deixar o schema à frente do código. Continuar? [s/N] "
+          ;;
+        *)
+          pergunta='Migrar esta instalação (backup, prova de restauração, e só então apagar)? [s/N] '
+          ;;
       esac
+
+      dizer ''
+      printf '%s' "$pergunta"
+      read -r resposta_migrar || resposta_migrar=''
+
+      # Só o ramo `maior` tem default SIM, e é o único que pode: atualizar é o
+      # que a pessoa veio fazer, e o passo é reversível pelo backup que acabou
+      # de ser provado. Reinstalar a mesma versão e rebaixar exigem um "s"
+      # digitado — o primeiro porque não tem ganho nenhum a oferecer, o segundo
+      # porque pode não ter volta.
+      if [ "$RELACAO" = 'maior' ]; then
+        case "$resposta_migrar" in
+          n|N|nao|NAO|não|NÃO) recusar 'instalar por cima de uma instalação existente não é oferecido: ou se migra, ou se para.' ;;
+        esac
+      else
+        case "$resposta_migrar" in
+          s|S|sim|SIM) ;;
+          *) recusar 'instalar por cima de uma instalação existente não é oferecido: ou se migra, ou se para.' ;;
+        esac
+      fi
+
+      migrar_instalacao_anterior "${BRABO_BACKUP_HOST_DIR:-${PWD}/brabo-backup-$(date -u +%Y%m%d%H%M%S)}"
     fi
   fi
 
@@ -635,17 +778,6 @@ main() {
     s|S|sim|SIM) ;;
     *) dizer 'Nada foi gravado.'; exit 0 ;;
   esac
-
-  dizer ''
-  dizer "${C_BOLD}Imagens (--source=${FONTE})${C_RESET}"
-  local tmp_imagens
-  tmp_imagens="$(mktemp -d)"
-  if [ "$FONTE" = 'ghcr' ]; then
-    resolver_imagens_do_ghcr "$tmp_imagens"
-  else
-    resolver_imagens_locais
-  fi
-  rm -rf "$tmp_imagens"
 
   consentir_base
   gerar_segredos
@@ -704,6 +836,8 @@ ENV
   cat > "$(caminho_do_marcador)" <<JSON
 {
   "schemaVersion": ${MARCADOR_SCHEMA},
+  "versao": "${VERSAO_A_INSTALAR}",
+  "commit": "${COMMIT_A_INSTALAR}",
   "instaladoEm": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "plataforma": "${plataforma}",
   "fonte": "${FONTE}",
