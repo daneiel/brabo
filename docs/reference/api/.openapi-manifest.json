@@ -1,6 +1,6 @@
 {
   "_": "Gerado por `pnpm docs:generate`. Não edite — é a trava do que está em docs/reference/api/.",
-  "openapiSha256": "60cda39dbf97f89e5fff745053d48b417b43584a1b64eae7ef0ff1ce048c31c1",
+  "openapiSha256": "dffb6e30fe3c3672a9adad32bcd0c19a64dc506367dc8abaee3af3ab626187a8",
   "arquivos": {
     "actions-controller-approve-always.ParamsDetails.json": "f51f6d74f8b4a7e9c8f70cef93e0d026d63e77123672029da660c802def3ad0e",
     "actions-controller-approve-always.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
@@ -673,8 +673,8 @@
     "projects-controller-mirror-state-route.api.mdx": "fc154a410c54dbe9a80d1d84d8a42e2329011be4968a91fcfe484f4d935dfbbb",
     "projects-controller-remove-member.ParamsDetails.json": "7f87dc35166818e99b656be8c605582af335cf2f4da8f7415fd7cc29e3aa1583",
     "projects-controller-remove-member.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
-    "projects-controller-remove-member.StatusCodes.json": "0e6e14beecb465c3f085cdf6cc162b5381842b6c281301814e41163ad8961566",
-    "projects-controller-remove-member.api.mdx": "8b8041904a4cafb527cbd9dc419878715940617c41f630be5c766f8b41be8c69",
+    "projects-controller-remove-member.StatusCodes.json": "de3c7ddee622e6f0e2fca91cb796c78e74269615d1ca2db66f82afd03f184067",
+    "projects-controller-remove-member.api.mdx": "742472ee2ecf8021c12f49bc1aa3111626386ccd79e83a1f5eb2c6a0cf0507ea",
     "projects-controller-remove.ParamsDetails.json": "f1cf321fa2c84a7ad647e71995c44bdb32efe0baf7ce03ee78703c9e1a2ea0e3",
     "projects-controller-remove.RequestSchema.json": "5c19ddd3f07db8837eba27428337baee978eb883f872b5146c1ba6b6066cccf2",
     "projects-controller-remove.StatusCodes.json": "94c62ca3e832ad38d9e46d614118f17eec92b307cc767630f0d6154b33f1d7cd",

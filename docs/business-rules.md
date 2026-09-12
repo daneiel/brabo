@@ -10985,3 +10985,91 @@ recusar `curl | sh`). É o mesmo desenho do item *Base de projetos*
   entender que já há uma versão e verificar se será uma nova versão a ser
   executada ou não... caso seja uma nova ou escolhido isso pelo usuário deverá
   deletar a anterior e instalar do zero para evitar possíveis erros"*
+
+## O teto de auto-rebaixamento também na REMOÇÃO (RN-556)
+
+### RN-556 — Remover a própria linha de `project_members` é recusado com 403 quando o efeito líquido é rebaixamento {#rn-556}
+
+> **Sobre o número.** O salto de [RN-542](#rn-542) para 556 é deliberado: a
+> faixa 543–555 está reservada para a FASE 30, que já a alocou em branches em
+> voo. Alocar aqui produziria a colisão que este repositório já observou três
+> vezes no mesmo instante (ADR 0148 ×2, RN-522 ×2, RN-523 ×2), resolvida depois
+> pela DATA. Nada foi pulado por engano.
+
+O [ADR 0127](adr/0127-tetos-de-rebaixamento-em-project-members.md) pôs os dois
+tetos da [RN-472](#rn-472) só no caminho de ESCRITA e declarou o terceiro
+movimento aberto, por escrito e com o custo estimado: *"`RemoveProjectMemberUseCase`
+NÃO ganhou teto… A premissa de que 'a remoção é sempre benigna' é falsa, e fica
+escrita aqui para não ser redescoberta"*. Esta RN fecha essa porta — é o
+`BRB-001`, P1 de segurança.
+
+**Remover não apaga um papel, TROCA o papel efetivo.** `ResolveEffectiveRoleUseCase.forProject`
+é `projectRole ?? workspaceRole` ([RN-471](#rn-471)), e a sobreposição vale nos
+DOIS sentidos. Some a linha de projeto, o efetivo passa a resolver pelo segundo
+termo — que pode ser MENOR. Um `maintainer` cuja autoridade vinha da linha de
+projeto, `viewer` no workspace, removia a própria linha e caía para `viewer`
+sem volta pela tela: repor é `POST :projectId/members`, que pede o `maintainer`
+recém-abandonado. Sem papel de workspace nenhum, a queda é para acesso NENHUM.
+
+**É o teto 2, não um teto novo.** `ehAutoRebaixamento` compara o papel efetivo
+de HOJE com o de DEPOIS, e nunca precisou saber por qual rota o segundo chegou:
+no `add` o papel-depois vem do corpo, na remoção vem do workspace.
+`remocaoEhAutoRebaixamento` é essa aplicação, e DELEGA — não reimplementa
+comparação nenhuma. Ela existe como função própria por UM caso que a assinatura
+da outra não sabe enunciar: ator sem papel de workspace, onde o papel-depois é
+"nenhum", que não é um `Role`. Esse caso é o rebaixamento máximo e recusa.
+
+| movimento | desfecho |
+|---|---|
+| remover a própria linha, workspace com o MESMO papel | passa — é como alguém sai da lista |
+| remover a própria linha, workspace com papel MENOR | **403** |
+| remover a própria linha, SEM papel de workspace | **403** — a queda é para acesso nenhum |
+| remover a linha de OUTRA pessoa, mesmo que ela caia | passa — capacidade legítima de sempre |
+| remover a linha que restringia o `owner` do WORKSPACE | passa — só pode ELEVAR |
+
+**O teto 1 não ganha par, e a ausência é decisão.** `owner` é o topo do
+`ROLE_ORDER`: remover a linha de projeto de quem é `owner` no workspace só pode
+elevar o efetivo dele, ou mantê-lo. Mais que inofensivo, é a ÚNICA forma de
+desfazer uma restrição que o teto 1 impede de criar. Um teto ali recusaria só
+movimentos benignos e tornaria permanente o estado que o ADR 0127 nasceu para
+eliminar. Está escrito ao lado da função e fixado em teste.
+
+**Sem limiar, como o teto 2 — e o preço vem junto.** A recusa é "a si mesmo",
+não "abaixo de `maintainer`", pelo mesmo motivo da RN-472: um limiar copiaria um
+número do `@RequireRole` do controller para dentro do domínio e envelheceria
+calado se a rota mudasse de mínimo. O preço declarado é a auto-remoção de quem
+tem `owner` no projeto e `maintainer` no workspace: reversível, e recusada
+também. Era o único movimento benigno que passava antes e passa a recusar; segue
+alcançável por outro `maintainer`.
+
+**A mensagem é PRÓPRIA.** Quem clicou "remover" não pediu para mudar papel
+nenhum, então `MENSAGEM_TETO_AUTO_REBAIXAMENTO_POR_REMOCAO` diz o MECANISMO —
+sem a linha de projeto o papel cai para o do workspace, e voltar exige o papel
+abandonado — em vez de reusar a frase do `add`, que falaria de um movimento que
+a pessoa não fez.
+
+**A tela não muda, e a recusa aparece.** `MembersSection.handleRemove` já
+mostra `mensagemDaApi(erro, …)` num toast ([RN-471](#rn-471)), então a frase da
+api chega sem uma linha de web. Diferente do teto 1, este gate É calculável no
+cliente — mas calcular só ele produziria o meio-gate que o ADR 0127 recusou.
+
+- **Código:** `apps/api/src/domain/iam/tetos-de-rebaixamento.ts`
+  (`remocaoEhAutoRebaixamento` e `MENSAGEM_TETO_AUTO_REBAIXAMENTO_POR_REMOCAO`,
+  mais o comentário que diz por que o teto 1 não tem par),
+  `apps/api/src/application/use-cases/iam/remove-project-member.use-case.ts`
+  (a assinatura com `atorId` e as duas leituras de papel),
+  `apps/api/src/interfaces/http/iam/projects.controller.ts`
+  (`@CurrentUser()` no `@Delete(':projectId/members/:userId')`, a descrição
+  corrigida e o `@ApiForbiddenResponse`),
+  `apps/api/src/application/use-cases/iam/resolve-effective-role.use-case.ts`
+  (INTOCADO — `projectRole ?? workspaceRole` segue como está)
+- **Teste:** `apps/api/test/application/use-cases/iam/tetos-de-rebaixamento.use-case.spec.ts`,
+  bloco *"Teto 2 pela outra porta — a remoção da própria linha"* (as três
+  recusas; a auto-remoção benigna; remover outra pessoa; e a remoção que
+  devolve o projeto ao `owner` do workspace). O primeiro deles é o teste de
+  lacuna do ADR 0127 INVERTIDO, com o nome guardando a origem
+- **ADR:** [0156](adr/0156-teto-de-auto-rebaixamento-na-remocao.md), que
+  referencia o [0127](adr/0127-tetos-de-rebaixamento-em-project-members.md) e
+  fecha a lacuna que ele declarou
+- **Origem:** `BRB-001`, P1 de Segurança do registro do mantenedor — a lacuna
+  que o ADR 0127 escreveu com a frase *"quem for fechá-lo vê o teste falhar"*
