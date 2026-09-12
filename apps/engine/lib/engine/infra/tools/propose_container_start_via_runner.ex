@@ -19,9 +19,11 @@ defmodule Engine.Infra.Tools.ProposeContainerStartViaRunner do
   intercepta esta tool e CONSULTA LOCALMENTE (sem HTTP — `Project.get/1` e
   `Engine.Runners.Registry.connected?/1` rodam no MESMO processo BEAM) o
   `execution_mode` e a presença de um runner conectado, ANTES de propor —
-  recusando com motivo NOMEADO em vez de propor às cegas (a lacuna que a
-  RN-494 deixou declarada para `propose_container_start` continua aberta lá,
-  mas não se repete aqui: esta tool nasce sabendo negar).
+  recusando com motivo NOMEADO em vez de propor às cegas. A lacuna que a
+  RN-494 deixou declarada para `propose_container_start` FECHOU na RN-566:
+  as duas passam pela MESMA `recusa_local_de_subida/2`, cada uma com a sua
+  cláusula. O que segue exclusivo desta tool é a segunda pergunta — há
+  runner conectado agora? —, que só faz sentido no modo `runner`.
 
   `run/2` fica só como salvaguarda de behaviour (`@behaviour
   Engine.Harness.Tool` exige as três callbacks) — NUNCA deveria ser chamado

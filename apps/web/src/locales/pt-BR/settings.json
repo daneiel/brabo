@@ -436,6 +436,44 @@
       "copiedButton": "Copiado"
     }
   },
+  "runnerDeviceKeys": {
+    "title": "Chaves de dispositivo",
+    "eyebrow": "Runner local · RN-519 · RN-561",
+    "subtitle": "Uma chave de dispositivo autentica o brabo-runner sem token digitado à mão: o par Ed25519 nasce na sua máquina ou no seu navegador, e só a metade pública chega aqui. A lista é a das SUAS chaves que servem este projeto, inclusive as já revogadas — sumir com a linha faria esta tela afirmar que a chave nunca existiu.",
+    "subtitleAlcance": "Uma chave de MÁQUINA atende todos os seus projetos em modo runner e por isso aparece na lista de todos eles: revogá-la derruba o agente local em todos, não só neste.",
+    "subtitleNaoEBatimento": "Chave registrada não é agente rodando: ela prova que o dispositivo foi pareado um dia, nunca que o agente está de pé agora — quem sabe do agora é o terminal do projeto.",
+    "subtitleNeedsDeveloper": "Listar e revogar chave de dispositivo exige papel developer neste projeto, então esta tela não pediu a lista à api.",
+    "verificando": "Carregando suas chaves de dispositivo…",
+    "naoSei": "Não consegui ler suas chaves de dispositivo. Isso não quer dizer que não haja nenhuma — quer dizer que não sei.",
+    "emptyMessage": "Nenhuma chave de dispositivo sua serve este projeto.",
+    "orfa": "Chave ativa que nenhum agente local usou ainda costuma ser sobra de um fluxo de configuração interrompido — ela é inerte, mas continua valendo. Se não reconhecer, revogue.",
+    "table": {
+      "name": "Nome",
+      "especie": "Espécie",
+      "especieMaquina": "máquina",
+      "especieProjeto": "projeto",
+      "created": "Criada",
+      "lastUsed": "Último uso",
+      "lastUsedNever": "nunca usada",
+      "status": "Status",
+      "statusActive": "ativa",
+      "statusRevoked": "revogada",
+      "revokeAria": "Revogar {{name}}",
+      "revokeTitle": "Revogar"
+    },
+    "toast": {
+      "revokeErrorTitle": "Não consegui revogar a chave"
+    },
+    "modal": {
+      "title": "Revogar chave de dispositivo",
+      "body": "Revogar “{{name}}” é definitivo: ela para de autenticar o agente local, e criar outra é um fluxo novo.",
+      "alcanceMaquina": "Esta é uma chave de MÁQUINA: ela atende todos os seus projetos em modo runner, e revogá-la derruba o agente local em todos eles — não só neste projeto.",
+      "alcanceProjeto": "Esta é uma chave de PROJETO: revogá-la derruba o agente local no projeto dela.",
+      "colateral": "Derrubar alcança {projeto, usuário} e nunca uma chave em particular: outro runner seu no mesmo projeto também cai, mesmo autenticado por outra credencial — e reconecta sozinho se a credencial dele ainda valer.",
+      "cancel": "Cancelar",
+      "confirm": "Revogar"
+    }
+  },
   "instructionVersions": {
     "title": "Histórico de instruções",
     "eyebrow": "versionamento por agente",

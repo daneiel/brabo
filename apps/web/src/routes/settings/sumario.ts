@@ -12,7 +12,7 @@
  * ## A ordem é a do BARREL, e o agrupamento é uma LEITURA dela
  *
  * `SECOES_DE_CONFIGURACOES` está na MESMA ordem em que
- * `ProjectSettingsTab.tsx` compõe as 17 seções — e tem de continuar assim: o
+ * `ProjectSettingsTab.tsx` compõe as 18 seções — e tem de continuar assim: o
  * scroll-spy decide a seção vigente pela PRIMEIRA folha visível nesta ordem, e
  * uma lista fora de ordem faria o sumário marcar uma seção enquanto a tela
  * mostra outra.
@@ -59,6 +59,7 @@ export const SECOES_DE_CONFIGURACOES = [
   { chave: 'model-catalog', grupo: 'modelos', ns: 'models', titulo: 'catalog.title' },
   { chave: 'members', grupo: 'pessoas', ns: 'settings', titulo: 'members.title' },
   { chave: 'access-tokens', grupo: 'pessoas', ns: 'settings', titulo: 'personalAccessTokens.title' },
+  { chave: 'device-keys', grupo: 'pessoas', ns: 'settings', titulo: 'runnerDeviceKeys.title' },
   { chave: 'proficiency', grupo: 'pessoas', ns: 'settings', titulo: 'proficiency.title' },
   { chave: 'instructions', grupo: 'avancado', ns: 'settings', titulo: 'instructionVersions.title' },
   { chave: 'approval-matrix', grupo: 'avancado', ns: 'settings', titulo: 'matrix.title' },

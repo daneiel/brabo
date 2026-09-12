@@ -436,6 +436,44 @@
       "copiedButton": "Copied"
     }
   },
+  "runnerDeviceKeys": {
+    "title": "Device keys",
+    "eyebrow": "Local runner · RN-519 · RN-561",
+    "subtitle": "A device key authenticates brabo-runner without a hand-typed token: the Ed25519 pair is born on your machine or in your browser, and only the public half ever reaches here. This lists YOUR keys that serve this project, revoked ones included — dropping the row would make this screen claim the key never existed.",
+    "subtitleAlcance": "A MACHINE key serves every project of yours in runner mode, which is why it shows up in all of their lists: revoking it drops the local agent in all of them, not just this one.",
+    "subtitleNaoEBatimento": "A registered key is not a running agent: it proves the device was paired once, never that the agent is up right now — what knows about right now is the project terminal.",
+    "subtitleNeedsDeveloper": "Listing and revoking device keys requires the developer role on this project, so this screen did not ask the api for the list.",
+    "verificando": "Loading your device keys…",
+    "naoSei": "I couldn't read your device keys. That doesn't mean there are none — it means I don't know.",
+    "emptyMessage": "No device key of yours serves this project.",
+    "orfa": "An active key no local agent has ever used is usually left over from an interrupted setup flow — it is inert, but it still works. Revoke it if you don't recognize it.",
+    "table": {
+      "name": "Name",
+      "especie": "Kind",
+      "especieMaquina": "machine",
+      "especieProjeto": "project",
+      "created": "Created",
+      "lastUsed": "Last used",
+      "lastUsedNever": "never used",
+      "status": "Status",
+      "statusActive": "active",
+      "statusRevoked": "revoked",
+      "revokeAria": "Revoke {{name}}",
+      "revokeTitle": "Revoke"
+    },
+    "toast": {
+      "revokeErrorTitle": "Couldn't revoke the key"
+    },
+    "modal": {
+      "title": "Revoke device key",
+      "body": "Revoking “{{name}}” is final: it stops authenticating the local agent, and creating another one is a new flow.",
+      "alcanceMaquina": "This is a MACHINE key: it serves every project of yours in runner mode, and revoking it drops the local agent in all of them — not just this project.",
+      "alcanceProjeto": "This is a PROJECT key: revoking it drops the local agent in its project.",
+      "colateral": "Dropping reaches {project, user} and never one particular key: another runner of yours in the same project also falls, even authenticated with a different credential — and reconnects on its own if that credential is still valid.",
+      "cancel": "Cancel",
+      "confirm": "Revoke"
+    }
+  },
   "instructionVersions": {
     "title": "Instruction history",
     "eyebrow": "per-agent versioning",

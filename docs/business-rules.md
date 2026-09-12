@@ -9395,6 +9395,10 @@ ALCANCE ([RN-520](#rn-520)), não amplitude.
   Esta entrega é a metade server-side; a lacuna do `CLAUDE.md` fecha pela
   metade — a api passa a poder listar e revogar, e `apps/web` ainda não tem
   onde fazê-lo
+- **A outra metade FECHOU na [RN-561](#rn-561):** a aba Configurações ganhou a
+  seção que lista e revoga, marcando a ESPÉCIE de cada chave. O que segue
+  aberto daqui é a visão de `maintainer` (acima, por decisão) e o alvo
+  `{projeto, usuário}` da desconexão ([RN-520](#rn-520))
 
 ---
 
@@ -11091,7 +11095,9 @@ existe para matar.
   (`projectId: string | null`), para o consumidor futuro não ter o que mudar
   ali. E o web continua sem tela onde listar ou revogar chave de dispositivo
   (a metade aberta da RN-519): a espécie nova torna a lacuna maior, e ela fica
-  declarada, não fechada aqui.
+  declarada, não fechada aqui. **FECHADA depois pela [RN-561](#rn-561)**, que é
+  a tela — e a marca de espécie criada aqui é o que ela usa para não mentir
+  sobre o alcance de revogar.
 - **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
 - **Origem:** FASE 30, sessão 2 —
   [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
@@ -12106,7 +12112,10 @@ diferença não é escolha de desenho: é a forma do endpoint.
   NÃO muda o painel: é o defeito irmão, um escopo abaixo, e fechá-lo é decisão
   à parte. E o web continua sem TELA onde listar ou revogar chave de
   dispositivo (a metade aberta da [RN-519](#rn-519)) — esta entrega consome a
-  listagem e não a constrói
+  listagem e não a constrói. **FECHADA depois pela [RN-561](#rn-561)**, que a
+  constrói: a seção de Configurações reusa `podeLerChavesDeDispositivo` daqui
+  e a MESMA `queryKey`, e por isso revogar por lá invalida o reconhecimento
+  deste painel
 - **ADR:** [0154](adr/0154-chave-de-dispositivo-de-maquina.md)
 - **Origem:** FASE 30, sessão 7 —
   [o recorte da fase](explanation/fase-30-runner-por-maquina.md)
@@ -12809,6 +12818,10 @@ interrupção sem causa.
 - **ADR:** [0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)
 - **Origem:** AT-050 (EP-021/HS-034)
 
+---
+
+## A rotação da chave mestra deixa de ser tentativa e erro (RN-562, RN-563)
+
 ### RN-562 — A rotação da chave mestra é provada ponta a ponta, nas duas tabelas {#rn-562}
 
 O procedimento com o pior desfecho do [Runbook](runbook.md#rotacao-da-chave-mestra)
@@ -12922,3 +12935,202 @@ que já existia passa a nomear as DUAS.
   contando como pendente
 - **ADR:** [0158](adr/0158-o-id-da-chave-mestra-gravado-no-envelope.md)
 - **Origem:** AT-034 (EP-015/HS-022), finding `BRB-016`
+
+---
+
+## A chave de dispositivo ganha tela, e a tela diz o alcance de revogar (RN-561)
+
+### RN-561 — A aba Configurações lista e revoga chave de dispositivo, marcando a ESPÉCIE — porque revogar a de MÁQUINA derruba o agente local em TODOS os projetos do dono {#rn-561}
+
+A metade que faltava da [RN-519](#rn-519), declarada por escrito desde então no
+`CLAUDE.md`: *"o que segue aberto é só a TELA: `apps/web` não tem onde listar
+nem revogar, então quem quiser revogar chama a rota"*. As duas rotas existem —
+o `DELETE` desde o
+[ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md) e o
+`GET` desde a RN-519 —, e **tela nenhuma as usava**. Esta RN é a tela, e ela
+**não abre rota nova**: o que a listagem já devolve basta para desenhar tudo o
+que segue.
+
+**Onde ela mora, e por que de PROJETO.** Ela leva a aba Configurações de 17 para
+**18** seções e é a **13ª na ordem de render** (`device-keys`, grupo `pessoas`,
+logo depois de `access-tokens` — a vizinha que faz o mesmo com PAT); a ordem do
+registro é a MESMA do barrel, porque é ela que o scroll-spy usa. De projeto
+porque o endpoint é
+`/projects/:projectId/runner-device-keys`: uma tela de CONTA exigiria rota nova,
+e o recorte é sobre a que existe.
+
+**A ESPÉCIE aparece, e não é enfeite — é o alcance da única ação irreversível
+da tela.** Desde a [RN-543](#rn-543) a listagem marca `projeto` | `maquina`, e
+uma chave de MÁQUINA (`project_id` nulo) **serve todos os projetos do dono** e
+por isso aparece na lista de TODOS eles. Mostrá-la sem a marca faria a tela
+afirmar que é "a chave deste projeto", e quem clicasse em revogar acharia que
+derruba o agente local aqui quando derruba **em todos** — a tela mentiria
+justamente sobre o que menos pode errar. A marca é `warning` para a de máquina
+e `muted` para a de projeto, e **nunca `success`**: verde leria como "está de
+pé", que é a aritmética que a [RN-548](#rn-548) já recusou.
+
+**A confirmação DEPENDE da espécie, e diz também o custo colateral.** Revogar
+abre um diálogo com TRÊS frases, e a do meio é a que muda: a de máquina nomeia
+*todos os seus projetos em modo runner* (o laço de
+`RevokeRunnerDeviceKeyUseCase` sobre `listRunnerModeReachableBy`), a de projeto
+nomeia *o projeto dela*. Um texto só para as duas mentiria numa das metades. A
+terceira frase é o custo que a [RN-520](#rn-520) declarou e que esta entrega
+**não muda**: o alvo da desconexão é `{projeto, usuário}` e nunca `{chave}`, então
+outro runner do mesmo usuário no mesmo projeto também cai — mesmo autenticado
+por PAT ou por outra chave — e reconecta sozinho se a credencial dele ainda
+valer.
+
+**Uso registrado NÃO é agente de pé, e o vocabulário é o MESMO da RN-548.**
+`lastUsedAt` é a classe de dado do `workspaceVerifiedAt` ([RN-468](#rn-468)):
+registro de uma confirmação, nunca batimento. A ressalva é dita em TEXTO na
+legenda, e a coluna de status fala de REVOGAÇÃO ("ativa"/"revogada", um fato
+sobre a linha), nunca de conexão — quem sabe do AGORA continua sendo o canal do
+terminal. Inventar um segundo vocabulário para a mesma distinção seria a tela
+dizendo a mesma coisa de dois jeitos, e um dos dois envelheceria.
+
+**Cinco estados, e nenhum vira o outro
+([RN-088](#rn-088)/[RN-470](business-rules/custo.md#rn-470)).** Nenhuma chave
+("Nenhuma chave de dispositivo sua serve este projeto"), chave REVOGADA (que
+**continua na lista** por decisão da RN-519 — sumir com a linha faria a tela
+afirmar que nunca existiu, e ela não ganha botão porque revogar de novo, ainda
+que idempotente na api, sugeriria efeito que não sobrou), `lastUsedAt` NULO (a
+chave ÓRFÃ da [RN-473](#rn-473): registrada por uma aba que fechou no meio do
+fluxo e nunca usada por runner nenhum — texto próprio, e uma explicação abaixo
+da tabela que só aparece quando existe uma, porque explicar o que não ocorre é
+ruído), "ainda não carregou" e "não consegui ler". **"Não sei" nunca vira "não
+tem".**
+
+**O papel é o do ENDPOINT, e é o EFETIVO do projeto.** O mínimo é `developer`
+— o que `RunnerDeviceKeysController` exige nas TRÊS rotas
+([RN-102](business-rules/custo.md#rn-102)) — e a comparação sai da MESMA função
+que a RN-548 criou (`podeLerChavesDeDispositivo`, sobre `roleAtLeast`), nunca
+uma segunda régua e nunca `role === 'x' || role === 'y'` à mão. O que muda em
+relação à RN-548 é o INSUMO: lá o painel lia o papel de WORKSPACE e **declarava**
+a lacuna, porque monta em lugares que não buscam `project_members`; aqui os
+dados estão à mão — a seção mora na mesma aba que `MembersSection`, com a MESMA
+`queryKey`, e o react-query deduplica —, então o papel é composto como no caso
+de uso (`projectRole ?? workspaceRole`, uma SOBREPOSIÇÃO nos dois sentidos,
+[RN-471](#rn-471)) e a lacuna **fecha** em vez de se repetir. Papel AUSENTE não
+é papel INSUFICIENTE: enquanto a lista de membros está em voo a tela diz que
+está verificando, e não acusa quem lê de não alcançar `developer`. Quem não
+alcança **continua vendo** a seção inteira, o que uma chave de dispositivo é e o
+que revogar a de máquina custa — some o CONTROLE, nunca a INFORMAÇÃO
+([ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)) —, e o motivo é dito UMA vez
+em TEXTO (`title` em elemento `disabled` não abre no Chromium). Como as três
+rotas pedem o MESMO papel, quem não alcança também não vê a LISTA: a tela deixa
+de perguntar o que a api negaria, em vez de transformar um 403 previsível em
+"não consegui ler". Isto **não é fronteira de segurança** — quem recusa é o
+`RolesGuard`.
+
+**Uma por vez, e por isso não há desfecho de lote.** A tela não oferece
+"revogar todas", então a régua da [RN-469](#rn-469) — ação de UI que vira N
+chamadas não é transação, e a tela diz isso — não se aplica: oferecer o lote
+criaria um desfecho parcial a narrar para uma ação que ninguém pediu. Falha na
+revogação mostra a frase da PRÓPRIA api e a linha **continua** na lista.
+
+- **Código:** `apps/web/src/routes/settings/RunnerDeviceKeysSection.tsx:76`
+  (a seção inteira; o papel efetivo em `:107`, a consulta em `:130`, a
+  confirmação por espécie em `:326`);
+  `apps/web/src/routes/settings/sumario.ts:62` (a entrada nova, 13ª na ordem de
+  render, das 18);
+  `apps/web/src/routes/ProjectSettingsTab.tsx:86` (a composição, na MESMA
+  ordem); `apps/web/src/locales/{en,pt-BR}/settings.json`
+  (`runnerDeviceKeys.*`). Consome `listRunnerDeviceKeys`/
+  `revokeRunnerDeviceKey` (`apps/web/src/lib/api-client.ts:431`) e
+  `podeLerChavesDeDispositivo` (`apps/web/src/lib/agente-de-maquina.ts:68`) sem
+  alterar nenhum dos dois
+- **Teste:** `apps/web/src/routes/settings/chaves-de-dispositivo.test.tsx` — as
+  duas espécies marcadas na mesma lista; a revogada que fica, marcada e sem
+  botão; a órfã com texto próprio e a explicação que NÃO aparece sem ela; vazio
+  e falha com textos diferentes; a ressalva de que uso registrado não é agente
+  de pé; o aviso de alcance nas DUAS espécies, com a chamada saindo só depois
+  de confirmar; cancelar sem revogar; a falha trazendo a frase da api com a
+  chave ainda na lista; `viewer` sem chamar a rota e com o motivo em texto; a
+  sobreposição do papel de projeto nos DOIS sentidos; e o papel ausente que
+  diz "verificando" em vez de acusar
+- **Fica declarado e NÃO fecha:** (1) o **alvo da revogação** continua sendo
+  `{projeto, usuário}` e nunca `{chave}` — a tela DIZ isso e não muda, porque
+  mudar exige coluna nova em `runner_socket_tickets` e contrato novo de auth
+  (RN-520), frente própria com ADR; (2) numa instalação **sem PROJETO**, a
+  chave de máquina recém-criada pela [RN-552](#rn-552) segue **inalcançável**:
+  as duas rotas são de projeto, e sem projeto não há a quem perguntar; (3) a
+  visão de `maintainer` (listar/revogar de qualquer usuário) continua FORA por
+  decisão da RN-519, não por omissão desta tela; (4) sem E2E de navegador — o
+  que se prova aqui é o que a tela AFIRMA, e isso a suíte de componente prova
+- **Origem:** AT-012 (EP-003/HS-007)
+
+---
+
+### RN-566 — O Infra Lead recusa `container_start` por MODO antes de propor: a lacuna da RN-494 fecha na tool que a declarava {#rn-566}
+
+`propose_container_start` propunha às cegas. `dispatch_container_start/2`
+montava o payload e chamava `EngineApiClient.propose_action(...)` direto — sem
+uma leitura de projeto entre uma coisa e outra, e com **zero** ocorrências de
+`execution_mode` na tool inteira. Num projeto `runner` a proposta só podia
+terminar em falha: desde a [RN-507](#rn-507)/[ADR 0145](adr/0145-docker-pre-requisito-do-runner.md)
+`container_start` **não atende** esse modo, porque o payload dela ELEGE uma
+candidata do roteamento do Arquiteto ([ADR 0131](adr/0131-roteamento-de-modulos-para-infra.md))
+e em `runner` não há roteamento contra o qual eleger — o tipo daquele modo é
+[`container_start_via_runner`](#rn-508).
+
+**A régua não é nova, e não nasceu uma segunda.** A tool irmã já recusava
+localmente ([RN-508](#rn-508)) e a página `/containers` já ramificava por
+DESTINO ([RN-521](#rn-521), `acaoDeSubidaDoModo`): `container` e `mounted`
+sobem pelo BROKER, `runner` sobe pelo agente local ([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)/[RN-503](#rn-503)).
+O que esta regra faz é dar à tool que faltava a MESMA régua — uma leitura de
+projeto (`recusa_local_de_subida/2`, que devolve `nil` ou motivo) e uma
+CLÁUSULA por tool (`recusa_por_modo/3`). Duas réguas paralelas divergiriam no
+primeiro modo novo do enum.
+
+**A recusa de `container_start` é lista de PERMITIDOS**, como a do próprio
+broker: `container`/`mounted` passam, `runner` é recusado NOMEANDO a tool
+irmã, e modo novo no enum nasce recusado com mensagem em vez de proposto por
+omissão. Projeto inexistente também recusa — mesma cláusula das duas tools.
+
+**A recusa é ENTRADA do laço** ([RN-163](business-rules/autenticacao.md#rn-163)): texto de RESULTADO de
+ferramenta, que o modelo lê e usa para chamar a tool certa. Nunca
+`agent.error`, nunca fim de turno, nunca `proposed_action` — a api não é
+chamada. E **não é silêncio**: o `emit` do `tool.call` passou a acontecer
+ANTES da recusa nas DUAS tools (na irmã ele estava dentro do ramo que propõe),
+como no `dispatch_tool/2` genérico do mesmo módulo — recusa sem rastro no
+event log é a chamada sumindo do timeline do humano.
+
+**As leituras são LOCAIS, e isso é a decisão.** `Project.get/1` e
+`Engine.Runners.Registry.connected?/1` rodam no MESMO processo BEAM do Infra
+Lead; um HTTP à api aqui poria uma chamada de rede dentro do laço do agente.
+O custo declarado no `CLAUDE.md` — *"corrigir exigiria tocar o
+prompt/instrução do Infra Lead"* — **não se confirmou**: nenhuma linha de
+prompt mudou, e o texto da recusa é o que o modelo lê como resultado.
+
+**O que esta regra NÃO fecha, e é metade da lacuna:** a proposta cega por
+AUSÊNCIA DE IMAGEM continua possível em `container`/`mounted`. A recusa aqui é
+sobre MODO, e exigir imagem decidida inverteria a ordem — eleger a imagem é
+justamente o que essa proposta FAZ ([RN-491](#rn-491)). A `/containers` checa
+as TRÊS coisas (imagem decidida, modo, pasta confirmada) porque tem um humano
+clicando; o agente passa a checar UMA. `GetInfraContextUseCase` segue sem
+`executionMode` — enriquecer o contexto do Infra Lead é frente à parte.
+`container_stop`/`container_remove` não entram: são propostas pela tela, nunca
+por agente ([RN-495](#rn-495)).
+
+Nenhum teto muda: `container_start` segue `proposed_action` de verdade,
+`maintainer`, nunca semeada em auto-aprovação, e `container_remove` segue no
+teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
+
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:299` (o
+  dispatch de `container_start` consultando antes de propor), `:401`
+  (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:417` (a
+  cláusula de `container_start`: lista de permitidos), `:420` (a recusa
+  nomeando `container_start_via_runner`), `:435` (a cláusula da irmã, com a
+  segunda pergunta — runner conectado), `:342` (o `emit` do `tool.call`
+  movido para antes da recusa);
+  `apps/engine/lib/engine/infra/tools/propose_container_start.ex`
+  (moduledoc — a tool deixou de propor às cegas)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:397`
+  (caminho feliz em `mounted` — o broker atende os dois), `:423` (caso de
+  falha: `runner` recusa NOMEADO, `propose_action` nunca chamada, o `tool.call`
+  narrado mesmo assim), `:464` (projeto inexistente), `:355` (o caminho feliz
+  de `container`, que passou a exigir a linha no banco)
+- **ADR:** [0144](adr/0144-a-segunda-raiz-do-broker.md),
+  [0145](adr/0145-docker-pre-requisito-do-runner.md)
+- **Origem:** AT-048 (EP-020/HS-032) — a lacuna declarada no `CLAUDE.md` desde
+  a [RN-494](#rn-494)

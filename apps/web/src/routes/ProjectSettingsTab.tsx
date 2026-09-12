@@ -1,5 +1,5 @@
 /**
- * A aba Configurações — ENTRADA e BARREL das 17 seções (ADR 0125).
+ * A aba Configurações — ENTRADA e BARREL das 18 seções (ADR 0125).
  *
  * As seções moram uma por arquivo em `./settings/`. Este arquivo continua
  * existindo neste CAMINHO, com os mesmos 11 nomes exportados, porque o caminho
@@ -18,7 +18,7 @@
  * O que ele passou a guardar é NAVEGAÇÃO, e só ela: `ProvedorDoSumario` mantém
  * quais seções estão montadas, qual está vigente na rolagem e como chegar a
  * uma delas. É o oposto do caso acima — a pergunta "que seções existem agora?"
- * não é respondível de dentro de nenhuma seção, e sete das 17 renderizam
+ * não é respondível de dentro de nenhuma seção, e sete das 18 renderizam
  * `null` em condição normal. A ordem de render abaixo é a MESMA de
  * `settings/sumario.ts`, e as duas não podem divergir: é ela que decide qual
  * entrada o sumário marca enquanto o leitor rola.
@@ -35,6 +35,7 @@ import { AreaModelsSection } from './settings/AreaModelsSection';
 import { CatalogoDeModelos } from './settings/CatalogoDeModelos';
 import { MembersSection } from './settings/MembersSection';
 import { PersonalAccessTokensSection } from './settings/PersonalAccessTokensSection';
+import { RunnerDeviceKeysSection } from './settings/RunnerDeviceKeysSection';
 import { ProficiencySection } from './settings/ProficiencySection';
 import { InstructionVersionsSection } from './settings/InstructionVersionsSection';
 import { MatrixSection } from './settings/MatrixSection';
@@ -82,6 +83,7 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
           <CatalogoDeModelos projectId={projectId} />
           <MembersSection projectId={projectId} />
           <PersonalAccessTokensSection projectId={projectId} />
+          <RunnerDeviceKeysSection projectId={projectId} />
           <ProficiencySection projectId={projectId} />
           <InstructionVersionsSection projectId={projectId} />
           <MatrixSection />

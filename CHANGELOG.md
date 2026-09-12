@@ -63,6 +63,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   rodar só sob invocação direta — importá-lo de um spec rodava a rotação. O
   nome do script e a invocação do runbook não mudaram.
 
+- **web**: a aba **Configurações** ganha a seção **Chaves de dispositivo** —
+  listar e revogar a chave que autentica o `brabo-runner`, o que até aqui só
+  dava para fazer chamando a rota na mão
+  ([RN-561](docs/business-rules.md#rn-561)).
+
+  As duas rotas existiam desde a RN-519, sem tela nenhuma. A seção consome as
+  duas e não abre nenhuma outra: mostra as suas chaves que servem o projeto —
+  **as revogadas inclusive**, porque sumir com a linha faria a tela afirmar que
+  a chave nunca existiu —, marca a **espécie** de cada uma e diz quando cada
+  uma foi usada pela última vez.
+
+  A marca de espécie é o que decide o alcance de revogar, e por isso a
+  confirmação muda com ela: uma chave de **máquina** atende todos os seus
+  projetos em modo runner, e revogá-la derruba o agente local **em todos**; uma
+  de **projeto** derruba no projeto dela. O diálogo diz também o custo que já
+  valia: derrubar alcança `{projeto, usuário}` e não uma chave em particular,
+  então outro runner seu no mesmo projeto cai junto e reconecta sozinho se a
+  credencial dele ainda valer.
+
+  Uso registrado **não é** agente de pé — a tela diz isso em texto, e "ativa"
+  fala da chave, nunca de conexão. Chave ativa que nenhum agente usou (a que
+  sobra de um fluxo de configuração interrompido) tem texto próprio, distinto
+  de "nenhuma chave" e de "não consegui ler". Listar e revogar exigem papel
+  `developer` no projeto; quem não alcança continua vendo a seção e o que
+  revogar custa, com o motivo dito uma vez.
+
 - **web**: converter um projeto para **Pasta montada** passa a abrir o mesmo
   **navegador de pastas** da criação, em vez de pedir o caminho no escuro
   ([RN-559](docs/business-rules.md#rn-559)).
@@ -1140,6 +1166,27 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   Mesma escolha, pelo mesmo motivo, do golden-set do RAG.
 
 ### Correções
+
+- **engine**: o Infra Lead deixa de propor `container_start` para um projeto
+  `runner` — recusa **local e nomeada**, antes de chamar a api
+  ([RN-566](docs/business-rules.md#rn-566)).
+
+  `propose_container_start` montava o payload e chamava a api direto, sem ler
+  o projeto. Num projeto `runner` essa proposta só podia terminar em falha: o
+  payload dela elege uma imagem candidata do roteamento do Arquiteto, e naquele
+  modo não há roteamento contra o qual eleger — o tipo certo é
+  `container_start_via_runner`. Agora a tool lê o `execution_mode` no mesmo
+  processo (sem HTTP, sem chamada de rede no laço do agente) e recusa dizendo
+  qual tool usar; `container` e `mounted` seguem propondo, pelo broker.
+
+  A régua é a que já existia dos dois lados — a tool irmã e a página
+  `/containers` —, agora numa função só com uma cláusula por tool. E a recusa
+  não vira silêncio: ela é resultado de ferramenta que o modelo lê, e a chamada
+  continua narrada no event log, o que a tool irmã ainda não fazia.
+
+  **O que continua possível:** propor sem imagem decidida em
+  `container`/`mounted`. A recusa aqui é sobre MODO; a tela checa as três
+  coisas porque tem um humano clicando.
 
 - **chore**: as dependências vulneráveis dos dois lockfiles, **e o que não
   fecha, dito por nome**.
