@@ -129,6 +129,7 @@ estado lido do repositório e não da conversa.
 | FASE 29 (sessão 5) — o backup passa a cobrir o que perder dói | ADR 0152, RN-528 |
 | FASE 29 (sessão 9) — o picker do modo Runner volta a ler o disco de quem escolhe | ADR 0151, RN-533 |
 | O runner reconectava sozinho com um ticket morto | RN-108 |
+| O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
 
 ## Estado atual e aberto
 
@@ -823,10 +824,18 @@ pescar o link em `docker compose logs api`.
   com a regra pura em `domain/iam/tetos-de-rebaixamento.ts`, não no
   `RolesGuard` — o guard autoriza o CHAMADOR contra o `@RequireRole` da rota e
   não vê corpo nem alvo, e estes tetos são sobre o ALVO e sobre a relação
-  ator↔alvo. Segue possível e declarado: rebaixar outro `maintainer`,
-  auto-PROMOÇÃO, o `POST workspaces/:id/members` (sem teto nenhum) e o
-  auto-rebaixamento pela REMOÇÃO — remover a própria linha é benigno quando o
-  papel de workspace segura a queda e irreversível quando não segura.
+  ator↔alvo. O teto 2 vale por DUAS portas desde o ADR 0156 (RN-556): a
+  REMOÇÃO da própria linha também é 403 quando o efeito líquido é rebaixamento
+  — remover não apaga um papel, TROCA o efetivo pelo do workspace, que pode ser
+  menor (ou não existir). `remocaoEhAutoRebaixamento` DELEGA a
+  `ehAutoRebaixamento` passando o papel de workspace como o papel pedido — não
+  escreva uma segunda régua. O teto 1 NÃO tem par na remoção, de propósito:
+  `owner` é o topo do `ROLE_ORDER`, então tirar a linha de um `owner` de
+  workspace só pode ELEVAR o efetivo dele, e é a única forma de desfazer a
+  restrição que o teto 1 impede de criar. Segue possível e declarado: rebaixar
+  outro `maintainer`, auto-PROMOÇÃO, o `POST workspaces/:id/members` (sem teto
+  nenhum), e a auto-remoção quando o workspace segura o MESMO papel — essa é
+  benigna e continua passando.
 - O projeto escolhe ONDE o código mora, na criação (RN-169/RN-421/RN-422,
   ADR 0072/0104) — e pode CONVERTER depois, sem recriar o projeto, por
   `PUT projects/:projectId/execution-mode` (`maintainer`, RN-447..450, ADR

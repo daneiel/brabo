@@ -752,6 +752,32 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **api**: remover a **própria** linha de `project_members` passa a ser recusado
+  com **403** quando o efeito líquido é rebaixamento — o teto de
+  auto-rebaixamento chega à outra porta
+  ([RN-556](docs/business-rules.md#rn-556),
+  [ADR 0156](docs/adr/0156-teto-de-auto-rebaixamento-na-remocao.md), BRB-001).
+
+  O [ADR 0127](docs/adr/0127-tetos-de-rebaixamento-em-project-members.md) pôs os
+  dois tetos só no caminho de escrita e deixou este movimento aberto **por
+  escrito**, fixado num teste cujo nome documentava o buraco. Remover não apaga
+  um papel, **troca** o papel efetivo: `projectRole ?? workspaceRole`
+  ([RN-471](docs/business-rules.md#rn-471)) passa a resolver pelo segundo termo,
+  então um `maintainer` cuja autoridade vinha da linha de projeto, `viewer` no
+  workspace, caía para `viewer` **sem volta pela tela** — repor é
+  `POST :projectId/members`, que pede o `maintainer` recém-abandonado.
+
+  É o teto 2 reusado, não um teto novo: `remocaoEhAutoRebaixamento` delega a
+  `ehAutoRebaixamento` passando o papel de workspace como o papel pedido. O teto
+  do `owner` de workspace **não** ganha par, e a ausência é decisão — `owner` é
+  o topo do `ROLE_ORDER`, então a remoção só pode elevar.
+
+  **Muda um movimento que passava:** a auto-remoção de quem tem `owner` no
+  projeto e `maintainer` no workspace é reversível e passa a ser recusada
+  também — o preço declarado de o teto ser "a si mesmo", sem limiar. Segue
+  alcançável por outro `maintainer`. A tela não muda: `MembersSection` já mostra
+  a frase da api num toast.
+
 - **docs**: o glossário dizia **"Seven closed schemas"** com **onze** escritos —
   e agora a contagem é aferida, não lembrada (BRB-022).
 

@@ -679,11 +679,30 @@ reason in the URL.
   `domain/actions/decide.ts` ([RN-418](business-rules.md#rn-418)): no
   configuration key, nothing that can enable them. The `owner` being
   protected is `workspace_members.role`, never `workspaces.created_by`.
-  What the caps do NOT cover is written down in the ADR and in the RN, and
-  the shortest one to know here is that `DELETE
-  /projects/:projectId/members/:userId` gained NO cap: removing your own row
-  drops you to your workspace role, which is benign when that role catches
-  the fall and an irreversible self-downgrade when it doesn't.
+  What the caps do NOT cover is written down in the ADR and in the RN.
+- **`DELETE /projects/:projectId/members/:userId` is also `role:maintainer`
+  and also not sufficient** — the second door of the self-downgrade cap
+  ([ADR 0156](adr/0156-teto-de-auto-rebaixamento-na-remocao.md),
+  [RN-556](business-rules.md#rn-556)). ADR 0127 left this route capless on a
+  premise that turned out to be false — *"removal is benign"*. Deleting the
+  `project_members` row does not erase a role: it **swaps** the effective
+  one, because `forProject` is `projectRole ?? workspaceRole`
+  ([RN-471](business-rules.md#rn-471)). A `maintainer` by project row who is
+  `viewer` in the workspace downgraded themselves, irreversibly through the
+  UI — putting the row back is `POST :projectId/members`, which demands the
+  `maintainer` just given up; with **no** workspace role at all, the fall is
+  to no access. The cap is now applied by `RemoveProjectMemberUseCase`,
+  which had to start receiving the ACTOR (the route did not pass it, so no
+  cap could have been applied), and the rule REUSES
+  `ehAutoRebaixamento` — `remocaoEhAutoRebaixamento` delegates to it with
+  the workspace role in place of the requested one, never a second ruler.
+  Cap 1 has **no** counterpart here, by decision fixed in a test: `owner` is
+  the top of `ROLE_ORDER`, so removing a project row can only RAISE that
+  user's effective role — and it is precisely how the restriction cap 1
+  forbids creating gets undone. Declared price, since cap 2 has no
+  threshold: self-removal from project `owner` to workspace `maintainer` is
+  reversible and is refused too — the only benign movement that changes
+  outcome, still reachable through another `maintainer`.
 - **`jwt` with no role doesn't mean without authorization.** On
   `/users/me/*` the scope is the user themselves; on `GET /workspaces`
   the listing is already filtered by the caller's membership.
