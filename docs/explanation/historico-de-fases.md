@@ -3045,3 +3045,103 @@ conseguir escrever no que se acabou de restaurar). Neo4j recebe REPROJEÇÃO e
 não backup — não construída aqui (BRB-018): instalação migrada nasce com o
 grafo VAZIO, degradação nomeada e não perda de dado (o RAG vive no pgvector,
 dentro do dump)
+
+### FASE 30 — o agente local da máquina (ADRs 0154/0155, RN-543..552, fecha na sessão 8 com a RN-549)
+A FASE 29 entregou instalar numa linha e PAROU em dois pontos que o próprio
+produto já declarava por escrito: o agente local continuava pareado por
+PROJETO (quem quisesse usar o binário instalado voltava ao navegador para colar
+um comando no terminal), e **ninguém conseguia entrar** — o `.env` gerado não
+tem variável de e-mail, `MAIL_TRANSPORT` cai em `log` e o registro exige
+verificar e-mail, então a saída era pescar o link em `docker compose logs api`.
+Os dois se resolviam no mesmo lugar, e é isso que fez uma fase só. O achado que
+definiu o TAMANHO dela veio de remedir com `arquivo:linha` a afirmação da FASE
+29 de que "um runner por projeto está imposto em cinco lugares": **três dos
+cinco não precisavam mudar**, porque tópico, socket id e ticket descrevem uma
+CONEXÃO, e um processo que abra N conexões — uma por projeto — os satisfaz byte
+a byte, preservando a recusa de segundo runner no mesmo projeto, que é garantia
+real e não acidente. **Nada no engine mudou na fase inteira**, e foi o que
+manteve `RunnerReadiness`, o espelho e `workspace_create` intactos. O que sobrou
+foi o que é do PROCESSO: a credencial (`runner_device_keys.project_id` vira
+nullable, RN-543 — e a listagem passa a devolver as DUAS espécies marcadas,
+senão uma chave de máquina seria invisível e permanente, o defeito que a RN-519
+fechou renascido) e a unit (RN-545, `service install --machine`, uma por
+máquina, CONVIVENDO com as por projeto). Duas decisões contrariaram a letra dos
+ADRs e as duas foram MEDIDAS: o discriminador da unit é a flag `--machine` e não
+a ausência de `--project` (`resolverProjeto` tem duas fontes, e o caminho normal
+é rodar `install` sem flag de dentro da pasta que o navegador configurou — ao pé
+da letra, o ADR converteria em silêncio a instalação de quem já usa o produto), e
+`install` RECUSA quando a outra espécie já está instalada, sem `--force`, porque
+as duas juntas seriam dois processos disputando o mesmo projeto. A sessão 6
+tocaria três workspaces de uma vez e foi DIVIDIDA em três, com as duas peças
+disjuntas saindo antes e o `install.sh` depois delas, como orquestrador e nada
+mais. Dessa divisão saiu a revisão mais interessante da fase: com ZERO conexões
+o agente deixou de SAIR e passou a ESPERAR, reconsultando a 15s/30s/60s
+(RN-550) — o argumento da RN-544 contra repesquisa continua inteiro onde ele
+vale (lista que volta MENOR é ambígua, e derrubar conexão VIVA por ambiguidade
+troca estado certo por palpite), e com zero conexões não há nada a derrubar; o
+que caiu foi o argumento do `exit 0` ("um serviço ativo que não faz nada"),
+porque o processo passou a fazer algo e a DIZER que faz. Medido: `Restart=on-abnormal`
+**não olha código de saída**, então nenhuma unit mudou e o efeito é a de máquina
+ficar `active (running)` de verdade. A outra peça (RN-551) fecha o "ninguém CRIA
+chave de máquina" pelo lado do agente, e a decisão ali é o CORTE: o CLI **não**
+fala com a api, porque quem registra é o instalador com o `BRABO_SERVICE_TOKEN`
+— cada lado guarda um segredo e nenhum vê o do outro. Disso decorre o desenho de
+dois passos, e dele decorre o invariante: o `kid` É o id do registro e só existe
+depois dele, então o `create` grava um `.parcial` que o leitor ignora e o
+`finish` grava o nome de verdade — **o arquivo que o runner lê nunca existe sem
+`kid`**, o defeito da RN-475 tornado impossível por construção. A metade de api
+(RN-552) declarou o custo em vez de escondê-lo: a credencial é o service token,
+e um token vazado passa a poder FABRICAR credencial duradoura — por isso três
+contenções vivem na ROTA e não no texto (não há `userId` no corpo; registrar
+SUBSTITUI as chaves de máquina ativas do dono na mesma transação, então máquina
+reinstalada passa e mil chaves são impossíveis por cláusula, sem número que
+envelheça; e JWK com `d` é recusada por nome). A sessão 6 (RN-547) encadeou os
+cinco comandos e fixou três regras: elo do meio que falha não desfaz nada, vira
+linha nomeada num bloco final e o script SEMPRE sai 0 (desfazer exigiria apagar
+conta e revogar chave, e não há rota para isso nem deveria haver uma que o
+instalador chame sozinho); idempotência é o CÓDIGO HTTP, e `409` é desfecho
+ESPERADO e não falha, com `000` tratado à parte para "a api não subiu" não ser
+lido como "a api recusou"; e a senha viaja pelo STDIN do `curl`, nunca por
+`argv`, porque `/proc/<pid>/cmdline` é legível por qualquer usuário da máquina.
+Achado dessa sessão: o `--help` MENTIA havia meses (*"ESTA VERSÃO NÃO INSTALA
+NADA"*) porque ele imprime o cabeçalho, que é comentário, e a regra que proíbe
+falar de "sessões de fase" só lia linhas de código. A sessão 7 (RN-548) deu
+consumidor à marca de espécie, e a decisão foi de HONESTIDADE: com chave e sem
+conexão viva — o caso mais comum — a tela diz as duas coisas que sabe e nomeia
+as duas que não sabe (*chave registrada não é agente rodando*, *a lista é da sua
+CONTA e não deste navegador*), tom `accent` e nunca `success`. A sessão 8
+(RN-549) é a única que podia provar o conjunto, e ela ESTENDEU o workflow que a
+FASE 29 já tinha em vez de criar um segundo. A decisão central dela é o SINAL:
+`perguntarEstado` mapeia `activating` para `rodando` — com razão —, então
+`systemctl is-active` e `service status --machine` dariam verde a um processo
+que vai morrer em dois segundos; o sinal escolhido é a LINHA que o agente
+escreve ao entrar na espera, que só existe depois de ele ter lido a chave,
+tirado ticket, falado com a api e recebido lista VAZIA, e que é um FATO GRAVADO
+e não uma amostragem de estado. O desfecho se prova pela API e não pelo
+navegador, porque o sujeito da afirmação é o AGENTE e o que ele observa é
+`GET /runner/projects` — um navegador criaria o projeto pela mesma rota com uma
+camada a mais que falha por motivos alheios, e a asserção continuaria sendo a
+linha do journal. E o E2E segue FORA de `pull_request`, com a consequência
+declarada em vez de escondida (**o PR que o escreveu não o executou**): abrir
+essa porta é dar ao instalador um jeito de pular a verificação de origem, que é
+o que o ADR 0150 recusa — daí a metade que roda em PR ser um TESTE
+(`scripts/dev/install-e2e.spec.ts`), guardando as duas formas de o workflow
+apodrecer calado, o gate afrouxado e a frase do `install.sh` reescrita (que faz
+as asserções não falharem, e sim SUMIREM). Dois defeitos apareceram, os dois
+invisíveis porque o workflow nunca rodou: as respostas do TTY começavam por
+`nao-migrar`, que numa máquina limpa cai na pergunta do MARCADOR e fazia o
+script sair 0 dizendo "Nada foi gravado"; e o ACHADO que ficou como achado — o
+`install.sh` publicado **não sobe nada sozinho numa máquina limpa**, porque
+`docker/docker-compose.install.yml` (com `./postgres/init.sql` junto) não é
+asset da Release, não entra no `checksums.txt` assinado e ele não o baixa em
+lugar nenhum, então quem segue o `curl … install.sh` do runbook morre em "no
+such file or directory" DEPOIS de já ter verificado assinatura e gravado o
+`.env`. Consertar é decidir entre asset assinado e clone, e é entrega própria.
+O que a fase deixou DECLARADO e não feito: a revogação continua alcançando
+`{projeto, usuário}` e nunca `{chave}`, e agora custa mais (derruba o agente em
+TODOS os projetos daquela máquina); não há tela onde listar e revogar chave de
+dispositivo, e a fase acrescentou uma espécie a listar sem construir a tela — a
+lacuna ficou MAIOR, de propósito; um processo por máquina é ponto único de
+falha, preço do desenho; e `install --machine` continua sem saber se a chave
+daquela pasta é mesmo de máquina, porque em disco as duas espécies são o mesmo
+arquivo e quem sabe é o servidor

@@ -26,6 +26,35 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **ci**: o E2E do instalador passa a provar a instalação **inteira** numa
+  máquina limpa — os cinco elos do fechamento, o agente local de pé esperando, e
+  o primeiro projeto em modo Runner sendo pego sem ninguém voltar ao terminal
+  ([RN-549](docs/business-rules.md#rn-549)).
+
+  `.github/workflows/install-e2e.yml` já existia e parava no `.env`. Ele agora
+  segue até o fim: a conta criada no terminal **atravessa o login** sem link de
+  verificação nenhum, a chave desta máquina é registrada e carimbada com o
+  `kid`, a unit por máquina sobe, e o agente fica de pé — provado pela linha que
+  ele escreve ao entrar na espera, nunca por `systemctl is-active`, que responde
+  "de pé" para quem vai morrer dois segundos depois. Então um projeto nasce pela
+  api e o agente o pega sozinho.
+
+  **O que ele NÃO prova, e vale dizer:** ele continua fora de `pull_request` —
+  o instalador verifica a própria origem contra um manifesto assinado que só
+  existe depois de uma tag final, e a única forma de rodar em PR seria dar-lhe
+  uma porta para pular essa verificação. A primeira execução real é a próxima
+  tag. O que roda em PR é `scripts/dev/install-e2e.spec.ts`, que guarda o gate
+  e o contrato de frases entre o workflow e o `install.sh`.
+
+  **Achado, declarado e não corrigido aqui:** o `install.sh` publicado não
+  consegue subir nada sozinho numa máquina limpa — `docker/docker-compose.install.yml`
+  (e o `./postgres/init.sql` que ele bind-monta) não é asset da Release, não
+  entra no `checksums.txt` assinado, e o script não o baixa em lugar nenhum.
+  Quem segue o `curl … install.sh` do runbook morre em *"no such file or
+  directory"* depois de já ter verificado assinatura e gravado o `.env`.
+  Corrigir é decidir entre publicar o compose assinado e fazer o instalador
+  clonar — entrega própria.
+
 - **install**: o instalador **fecha a instalação** — cria a primeira conta,
   registra a chave desta máquina e sobe o agente local como serviço
   ([RN-547](docs/business-rules.md#rn-547),

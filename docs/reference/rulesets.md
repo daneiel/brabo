@@ -470,10 +470,17 @@ The `v*` pattern covers the three forms the pipeline creates: `-dev.N`,
 >
 > A final tag also fires `install-e2e.yml`, which exercises the published
 > `install.sh` on a **clean machine** — which is what an ephemeral Actions
-> runner is. It does not run on `pull_request`, and the reason is the same one
-> that keeps signing out of PRs: the signed manifest only exists after a final
-> tag, and making the script run there would mean giving it a door to skip
-> verification ([RN-534](../business-rules.md#rn-534)).
+> runner is. Since [RN-549](../business-rules.md#rn-549) it goes all the way to
+> the end: the five links that close the installation, the local agent standing
+> up and waiting, and the first `runner` project being picked up. It does not
+> run on `pull_request`, and the reason is the same one that keeps signing out
+> of PRs: the signed manifest only exists after a final tag, and making the
+> script run there would mean giving it a door to skip verification
+> ([RN-534](../business-rules.md#rn-534)). The consequence is stated rather than
+> hidden — **the PR that writes a change to this workflow does not run it** —
+> and what does run on every PR is `scripts/dev/install-e2e.spec.ts`, which
+> fails if the trigger gains `pull_request` or if a phrase the workflow greps
+> for stops existing in `install.sh`.
 >
 > Since [ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md),
 > `build-runner-binaries.yml` has **two** jobs rather than one: the

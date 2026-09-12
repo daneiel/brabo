@@ -2673,7 +2673,24 @@ volumes only go with confirmation, listed one by one first.
 
 It brings the stack up from **its own compose**
 (`docker/docker-compose.install.yml`), which takes the images from variables
-and builds nothing. Two sources:
+and builds nothing.
+
+> **Known gap, measured in FASE 30 session 8
+> ([RN-549](business-rules.md#rn-549)): that compose file is not something the
+> installer fetches.** The path is relative to the directory the script runs
+> from, the file is **not** a Release asset, it is **not** in the signed
+> `checksums.txt`, and `install.sh` downloads it nowhere — its only downloads
+> are `cosign`, the image manifest, its own hash and the runner binary. The
+> compose additionally bind-mounts `./postgres/init.sql`, so it is **three**
+> files, not one. Running the one-liner above in an empty directory therefore
+> fails with *"no such file or directory"* **after** the script has already
+> verified its signature, asked for the base and written `.env`. Until this is
+> decided (publish the compose as a signed asset, or have the installer clone),
+> run the installer from a **checkout of the repository at the tag you are
+> installing** — that is what puts `docker/` next to it. The installer E2E does
+> the same thing by hand, in a step that says it is a finding.
+
+Two sources:
 
 ```sh
 install.sh                  # --source=ghcr (default): by digest, signature verified
