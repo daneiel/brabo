@@ -43,6 +43,8 @@ Start with triage.
 | approving `container_start` on a mounted project fails saying the api couldn't create or reach the folder | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | `pnpm dev` refuses to start, saying `BRABO_PROJECTS_BASE` overlaps the Brabo checkout | [Project in Mounted mode: the projects base](#projeto-no-modo-local) |
 | `brabo-runner` exits with `base de projetos recusada`, or prints `base de projetos: nenhuma configurada` when I expected a base | [The runner's base of projects](#base-do-runner) |
+| `brabo-runner` sits printing `nada a atender AINDA`, or the machine unit is up but no project is being served | [The machine agent](#agente-de-maquina) |
+| I need a device key for the machine and there is no browser (a fresh install, a headless box) | [Device key from the terminal](#chave-de-dispositivo-pelo-terminal) |
 | the project folder never appears on the user's machine, and the engine log says `workspace_create: o projeto <id> não criou pasta` | [The project folder never appears](#pasta-do-projeto-nunca-aparece) |
 | `apps/api/dist`/`node_modules`, or a file an agent wrote to a project folder, is owned by `root` and I can't edit it without `sudo` | [Dev containers write as your user, not root](#dev-containers-nao-root) |
 | I want to bring up the container broker, or it answers `permission denied` on the Docker socket | [The container broker](#broker-de-container) |
@@ -393,6 +395,14 @@ cat "${XDG_CONFIG_HOME:-$HOME/.config}/brabo/runner.json"
 exactly as it always did; what it can't do is host a project folder created
 later. The startup line says which of the two states you're in, always.
 
+That folder is no longer configuration only: since
+[RN-551](business-rules.md#rn-551) it is also where
+`brabo-runner device-key create` puts the machine's **private** device key
+(`brabo-runner-device-key.jwk.json`, mode 600) — see
+[Device key from the terminal](#chave-de-dispositivo-pelo-terminal). Back it up
+the way you'd back up a secret, or don't back it up at all and re-pair: the key
+is revocable and replaceable, and nothing else in the product can read it.
+
 **Refusals, and why the disposition differs.** The base is refused when it is
 relative, has `..`, is `/`, points at an existing file, sits outside `$HOME`
 on Linux (the same rule `--dir` has had since
@@ -428,13 +438,30 @@ with `--project` did not change at all. Reading the output:
 - **`a api recusou a descoberta de projetos: esta credencial está presa a um
   PROJETO`** — a 403. The credential in use (a PAT, or a device key from the
   browser flow) names one project and has nothing to discover. Run it with
-  `--project <projectId>` instead, or register a machine key. On disk the two
-  species are the same file, so the runner does not guess: the server is the
-  authority and its message is relayed verbatim.
-- **`nenhum projeto em modo "runner" para esta conta`** — this is the **normal**
-  state of a fresh install, and the process exits **0** on purpose, so
-  `Restart=on-abnormal` does not resurrect it. Create a project in Runner mode
-  and start the agent again: **the list is read only at start**, never polled.
+  `--project <projectId>` instead, or pair a machine key — the key material is
+  made right here (`brabo-runner device-key create`, see
+  [below](#chave-de-dispositivo-pelo-terminal)), and registering the public
+  half is what the installer does. On disk the two species are the same file,
+  so the runner does not guess: the server is the authority and its message is
+  relayed verbatim.
+- **`nenhum projeto em modo "runner" para esta conta — nada a atender AINDA`** —
+  this is the **normal** state of a fresh install, and since
+  [RN-550](business-rules.md#rn-550) the process **stays up and keeps asking**:
+  15s, then 30s, then 60s between calls, repeating forever, until the first
+  project shows up. Nobody has to come back to the terminal — create the
+  project in Runner mode on the web and the agent picks it up. The polling
+  **stops** the moment the first connection is live: from then on the list is
+  read only at start, because a list that comes back *smaller* is ambiguous and
+  dropping a live connection over that ambiguity would trade a known state for
+  a guess. Waiting has no ceiling; **failing does** — ten consecutive failed
+  calls and the process exits 1 naming the count (any answer, empty included,
+  resets the counter). Every 30 empty answers it prints a heartbeat saying how
+  many calls there have been, so "waiting" never looks like "stuck" in
+  `journalctl`. `Restart=on-abnormal` is unchanged in both unit species — it
+  never looked at the exit code to begin with; what changes is that the machine
+  unit is now genuinely `active (running)`, and `brabo-runner service status
+  --machine` answers `rodando` (0) on a fresh install where it used to answer
+  `parado` (3).
 - **`[<projeto>] NÃO será atendido`** — that project's folder was refused (the
   segment escaped the base, or the target exists and is not a directory). The
   others keep going. Only if NONE is left does the process exit 1.
@@ -447,6 +474,54 @@ with `--project` did not change at all. Reading the output:
 
 Every line of the connection loop is prefixed with the project name. If a
 message has no prefix, it came from the single-project mode.
+
+### Device key from the terminal {#chave-de-dispositivo-pelo-terminal}
+
+**Symptom:** a machine needs a device key and there is no browser to run the
+project screen's automatic setup — a fresh install, a headless box, or the
+machine agent above refusing with `esta credencial está presa a um PROJETO`.
+
+Since [RN-551](business-rules.md#rn-551)
+([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) point 4) the pair
+is generated **on the machine**, in two steps:
+
+```bash
+# 1) generate here; the PUBLIC JWK is the only thing on stdout
+PUB=$(brabo-runner device-key create)
+
+# 2) register that public key with the api — whoever holds the credential to
+#    register does this; the CLI never talks to the api
+ID=$(… POST {"name":"…","publicKeyJwk":'"$PUB"'} … | jq -r .id)
+
+# 3) stamp the registration id as the JWK's `kid` and write the real file
+brabo-runner device-key finish --id "$ID"
+```
+
+- **Two steps, because of the `kid`.** It IS the registration id on the server
+  ([RN-475](business-rules.md#rn-475)) and only exists after the public half is
+  registered; a private key written before it is useless and the CLI refuses it
+  forever. So `create` writes `brabo-runner-device-key.jwk.json.parcial`, a
+  name the reader ignores, and `finish` writes the real one. **The file the
+  runner reads never exists without a `kid`** — an interruption between the two
+  leaves a `.parcial` the runner ignores and the next `create` names.
+- **Where:** `$XDG_CONFIG_HOME/brabo/` (else `~/.config/brabo/`), next to
+  `runner.json`, at mode 600; `--dir <folder>` writes somewhere else (a project
+  folder, say). That folder is what the machine unit's `--dir` should point at
+  (`brabo-runner service install --machine --dir <folder>`,
+  [RN-545](business-rules.md#rn-545)) — the runner reads the key from the
+  folder it RUNS in, never from a global path it guesses.
+- **stdout is for scripts, stderr is for people.** `create` prints only the
+  public JWK; `finish`, only the path of the finished file.
+- **Refusals:** `finish` without a `create` (nothing to stamp), without `--id`,
+  with an `--id` that still has the whole JSON response in it, a `.parcial`
+  that isn't a private Ed25519 JWK, and — in both commands — a COMPLETE key
+  already in place. That last one has no `--force`: replacing the key of an
+  already-paired machine silently would leave an agent signing with a key the
+  server doesn't know. Revoke the current key
+  ([RN-519](business-rules.md#rn-519)), delete the file, then `create` again.
+- The CLI does **not** claim which species the key is. On disk a machine key
+  and a project key are the same file; the route that registered the public
+  half is what decides.
 
 ### The project folder never appears on the user's machine {#pasta-do-projeto-nunca-aparece}
 
@@ -2580,9 +2655,14 @@ the one-line command that installs for real.
 > without it a project in **mounted** mode cannot start a container
 > ([ADR 0144](adr/0144-a-segunda-raiz-do-broker.md)); the **runner** mode uses
 > the Docker on that machine and does not depend on it. It also does not
-> **pair** the local agent with a project: the binary and the base are ready,
-> but the device key and `brabo-runner.config.json` still come from the
-> project screen ([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)).
+> **pair** the local agent: the binary and the base are ready, and the key
+> material can now be made right there
+> (`brabo-runner device-key create`, [RN-551](business-rules.md#rn-551)), but
+> `install.sh` does not yet chain the three commands — registering the public
+> half and installing the machine unit are a later session of the phase
+> ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) point 4). For a
+> project-bound pairing, the device key and `brabo-runner.config.json` still
+> come from the project screen ([ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)).
 > Inspect the whole thing with `install.sh --print-plan`, which touches nothing.
 
 ---

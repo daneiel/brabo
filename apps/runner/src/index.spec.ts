@@ -1,9 +1,12 @@
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer, type Server } from 'node:http';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { exportJWK, generateKeyPair } from 'jose';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { SUFIXO_PARCIAL } from './criar-chave-de-dispositivo.ts';
 import { NOME_ARQUIVO_CHAVE, NOME_ARQUIVO_CONFIG } from './device-key.ts';
 
 /**
@@ -205,4 +208,132 @@ describe('brabo-runner sem --project: o agente de MÁQUINA exige base (RN-544)',
     expect(stderr).toContain('kid');
     expect(stderr).not.toContain('BASE de projetos consentida');
   });
+});
+
+/**
+ * O TERCEIRO defeito de junção possível neste arquivo (RN-551), e ele tem duas
+ * metades que nenhum teste de unidade de `criar-chave-de-dispositivo.ts` pega:
+ *
+ * 1. o despacho de `device-key` acontece ANTES de `lerArgumentos` — se ele
+ *    estivesse depois, CRIAR a credencial exigiria já ter uma, que é a volta
+ *    completa ao mesmo problema que o subcomando existe para resolver;
+ * 2. o stdout carrega SÓ a JWK pública. É esse o contrato de que o `install.sh`
+ *    depende (`PUB=$(brabo-runner device-key create)`), e ele vive na fronteira
+ *    entre o módulo e o `console.log`/`console.error` de `main()` — o módulo
+ *    devolve os dois campos certos e o CLI poderia imprimir os dois no mesmo
+ *    lugar sem nenhum teste reclamar.
+ */
+describe('brabo-runner device-key é despachado antes de exigir credencial (RN-551)', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(homedir(), '.brabo-runner-chave-spec-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('`device-key create` roda numa pasta SEM credencial nenhuma, e o stdout é só a JWK pública', () => {
+    const { stdout, stderr, status } = rodarNaPasta(dir, ['device-key', 'create', '--dir', dir]);
+
+    expect(status).toBe(0);
+    // Uma linha, um JSON, nada além: é isso que `$(...)` captura.
+    const publica = JSON.parse(stdout.trim()) as Record<string, unknown>;
+    expect(publica).toMatchObject({ kty: 'OKP', crv: 'Ed25519' });
+    expect(publica.d).toBeUndefined();
+    // Tudo que é para humano ficou do outro lado, incluindo o próximo passo.
+    expect(stderr).toContain('device-key finish');
+    expect(stderr).not.toContain('uso: brabo-runner --project');
+    // E o nome que o runner LÊ ainda não existe: sem `kid`, não há chave.
+    expect(existsSync(join(dir, NOME_ARQUIVO_CHAVE))).toBe(false);
+    expect(existsSync(join(dir, `${NOME_ARQUIVO_CHAVE}${SUFIXO_PARCIAL}`))).toBe(true);
+  });
+
+  it('subcomando desconhecido cai no uso DE DEVICE-KEY, não no do CLI inteiro', () => {
+    const { stderr, status } = rodarNaPasta(dir, ['device-key', 'gerar']);
+
+    expect(status).toBe(2);
+    expect(stderr).toContain('uso: brabo-runner device-key create');
+    expect(stderr).not.toContain('uso: brabo-runner --project');
+  });
+});
+
+/**
+ * A RN-550 no PROCESSO, e ela só se prova aqui: o defeito era o processo SAIR
+ * (`return` de `rodarComoAgenteDeMaquina`, código 0), e "não saiu" é uma
+ * afirmação sobre o processo, não sobre uma função. A cadência, o teto e o
+ * batimento são de `espera-de-projetos.spec.ts`, com relógio injetado — aqui
+ * basta atravessar a junção uma vez.
+ *
+ * A api é um `http.Server` de mentira que devolve `[]`: sem ele, o caminho
+ * morreria no `fetch` antes de chegar na decisão que este teste existe para
+ * cobrir. Nada do engine é tocado — com lista vazia não há conexão a abrir.
+ */
+describe('agente de MÁQUINA com lista vazia FICA DE PÉ e reconsulta (RN-550)', () => {
+  let dir: string;
+  let base: string;
+  let servidor: Server;
+  let porta: number;
+  let chamadas: number;
+
+  beforeEach(async () => {
+    dir = mkdtempSync(join(homedir(), '.brabo-runner-espera-spec-'));
+    base = join(dir, 'projetos');
+    mkdirSync(base);
+
+    // Chave de dispositivo de VERDADE: o JWT de descoberta é assinado com ela,
+    // e uma JWK forjada morreria em `importJWK` antes da primeira consulta.
+    const par = await generateKeyPair('EdDSA', { crv: 'Ed25519', extractable: true });
+    writeFileSync(
+      join(dir, NOME_ARQUIVO_CHAVE),
+      JSON.stringify({ ...(await exportJWK(par.privateKey)), kid: 'reg-de-teste' }),
+    );
+
+    chamadas = 0;
+    servidor = createServer((_req, res) => {
+      chamadas++;
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end('[]');
+    });
+    await new Promise<void>((pronto) => {
+      servidor.listen(0, '127.0.0.1', pronto);
+    });
+    const endereco = servidor.address();
+    porta = typeof endereco === 'object' && endereco !== null ? endereco.port : 0;
+  });
+
+  afterEach(() => {
+    servidor.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('não sai com 0: diz que ESPERA e continua vivo — era aqui que a instalação nova ficava sem agente', async () => {
+    const filho = spawn(
+      process.execPath,
+      [CLI, '--api-url', `http://127.0.0.1:${porta}`, '--base', base],
+      { cwd: dir, env: { ...process.env, INIT_CWD: dir, BRABO_ACCOUNT_TOKEN: '' } },
+    );
+    let saida = '';
+    filho.stdout.on('data', (pedaco: Buffer) => {
+      saida += pedaco.toString();
+    });
+    filho.stderr.on('data', (pedaco: Buffer) => {
+      saida += pedaco.toString();
+    });
+
+    try {
+      // Tempo de sobra para `node-pty`, a consulta e a linha — e MUITO menos
+      // que o primeiro degrau da cadência, para o teste não depender dela.
+      await new Promise((r) => setTimeout(r, 5_000));
+
+      expect(chamadas).toBe(1);
+      expect(saida).toContain('FICA DE PÉ');
+      expect(saida).toContain('reconsulta a lista');
+      // A asserção que carrega a RN: o processo NÃO terminou.
+      expect(filho.exitCode).toBeNull();
+    } finally {
+      filho.kill('SIGTERM');
+    }
+  }, 30_000);
 });

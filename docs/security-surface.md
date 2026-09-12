@@ -539,7 +539,15 @@ reason in the URL.
 
   Since [RN-544](business-rules.md#rn-544) the route has its CONSUMER: run
   without `--project`, `brabo-runner` calls it at start and opens **one
-  connection per project listed**, each rooted at
+  connection per project listed** — and, since
+  [RN-550](business-rules.md#rn-550), when that list comes back **empty** it
+  keeps calling, on a declared cadence (15s, 30s, then 60s repeating), until
+  the first project shows up. That polling is bounded on the failure side, not
+  on the waiting side: ten consecutive failed calls and the process exits 1
+  naming the count, any answer (empty included) resets the counter, and the
+  moment one connection is live the polling **stops** — with a live connection
+  the list is still read only at start, for the reason below. Each connection
+  is rooted at
   `<base>/<workspaceDirName>` through the same guards
   (`resolverPastaDoProjetoNaBase`, then RN-434/RN-435). Three things about
   that belong on this page. First, **nothing on the engine changed**: the
@@ -581,7 +589,19 @@ reason in the URL.
   session JWT**, unlike `runner-ticket` above — the browser, already
   logged in, registers the Ed25519 public key it just generated (the
   private half never leaves it) before offering the runner binary for
-  download. `POST` persists the public key only — there's no "raw secret"
+  download. Since [RN-551](business-rules.md#rn-551) the browser is no longer
+  the only generator: `brabo-runner device-key create` generates the pair on
+  the MACHINE and writes the private half to disk, mode 600, under
+  `$XDG_CONFIG_HOME/brabo/` (else `~/.config/brabo/`). What that changes for
+  this page is the shape of the secret, not its travel: the private half still
+  never crosses the wire, and only the public JWK and the registration `id`
+  ever do. What that CLI deliberately does not have is a credential to
+  register with — the registration stays with whoever holds the service token
+  (the installer, [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+  point 1), so each side holds exactly one secret and neither sees the other's.
+  The file the runner reads never exists without its `kid`: `create` writes a
+  `.parcial` name the reader ignores, and `finish --id <id>` stamps and
+  renames. `POST` persists the public key only — there's no "raw secret"
   to hand back the way `IssuePersonalAccessTokenUseCase` does, because
   the client already holds the only secret involved (the private key) and
   the api never sees it. `GET` lists the caller's own keys, revoked ones
@@ -602,10 +622,14 @@ reason in the URL.
   project of its owner, so it shows up in every project's listing — without
   that it would be invisible and permanent in every screen, the very defect
   RN-519 closed, reborn in the new species. The `POST` still creates only
-  project-bound keys: nothing in the api creates a machine key yet (the
-  `install.sh` does, [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md),
-  in a later session of the phase). Revoking a MACHINE key asks the engine to
-  drop the live runner in EACH runner-mode project its owner reaches — one
+  project-bound keys: no route in the api registers a machine key yet. The
+  KEY MATERIAL of one, however, can already be produced — `brabo-runner
+  device-key create` ([RN-551](business-rules.md#rn-551)) generates the pair on
+  the machine and prints the public JWK for whoever registers it; the route
+  that accepts it, and the `install.sh` that chains the two, are later sessions
+  of the phase ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)).
+  Revoking a MACHINE key asks the engine to drop the live runner in EACH
+  runner-mode project its owner reaches — one
   `{project, user}` call per project, the engine untouched.
 - **Revoking a device key now reaches the LIVE connection, and the target
   is `{project, user}` — never `{key}`**
@@ -632,7 +656,14 @@ reason in the URL.
   The `maintainer` view the PAT has (RN-427, list/revoke of ANY user)
   stays OUT for device keys — now by decision, not omission: that pair was
   born of incident response to a SHARED secret circulating, and a device
-  key's private half never leaves the browser that made it.
+  key's private half never leaves the machine that made it. That sentence used
+  to say "the browser that made it", and [RN-551](business-rules.md#rn-551)
+  widened the maker without weakening the claim: the terminal is now a second
+  generator, and the private half still never travels — what leaves is the
+  public JWK. What DID change is where it rests: a key made in the browser
+  lands in a project folder the user picked, one made by the CLI lands in
+  `$XDG_CONFIG_HOME/brabo/` at mode 600. Neither is reachable by the api, which
+  is what the decision above depends on.
 - **The `engine-service` routes aren't "internal" by naming convention.**
   What protects them is `EngineServiceGuard` comparing
   `X-Brabo-Service-Token` against the shared secret in constant time, plus

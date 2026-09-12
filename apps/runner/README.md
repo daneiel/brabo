@@ -208,13 +208,23 @@ o CLI repassa nomeando o conserto (`--project`).
 
 O que muda no comportamento, e vale saber antes de operar:
 
-- **A lista é consultada só no start.** Projeto criado depois disso entra
-  quando o agente reconectar — repesquisar periodicamente faria uma lista que
-  volta menor (projeto apagado? convertido? 500 transitório?) derrubar conexão
-  viva por ambiguidade.
-- **Lista vazia é normal**, e o processo sai com **0**: é o estado de toda
-  instalação nova, e ficar de pé com zero conexões seria um serviço "ativo" que
-  não faz nada.
+- **Com pelo menos uma conexão viva, a lista é consultada só no start.**
+  Projeto criado depois disso entra quando o agente reconectar — repesquisar
+  periodicamente faria uma lista que volta menor (projeto apagado? convertido?
+  500 transitório?) derrubar conexão viva por ambiguidade.
+- **Lista vazia é normal, e o agente FICA DE PÉ esperando** (RN-550): é o
+  estado de toda instalação nova, e com **zero** conexões não há nada a
+  derrubar nem ambiguidade a resolver — qualquer projeto que apareça é ganho
+  puro. Ele reconsulta a cada **15s, 30s e depois 60s** (o último se repete
+  para sempre) e **para de reconsultar** assim que a primeira lista não-vazia
+  chega. Esperar não tem teto; **dez falhas seguidas** da consulta, sim: aí o
+  processo sai com 1 nomeando o número. Uma consulta que responde — inclusive
+  vazio — zera esse contador. A cada 30 consultas sem projeto ele imprime um
+  batimento dizendo quantas foram, para "esperando" não se parecer com
+  "travado" no `journalctl`.
+- **Lista não-vazia com todos os projetos recusados continua saindo com 1.** É
+  a exceção declarada da regra acima: ali cada recusa nomeia um defeito local
+  com conserto próprio, e reconsultar repetiria as mesmas linhas para sempre.
 - **O teto de tentativas e a recusa de join são POR PROJETO.** Um projeto
   recusado (segundo runner no mesmo projeto, ticket inválido) ou que esgotou as
   tentativas encerra sozinho, **nomeado**, e os demais seguem. Só quando nenhum
@@ -240,6 +250,46 @@ pnpm --filter runner start -- --project <projectId> --dir <pasta-absoluta> --tok
 
 Requer **Node.js 22.6 ou mais recente** (o *type stripping* nativo de `.ts`
 que este caminho usa só existe a partir daí).
+
+## Chave de dispositivo pelo terminal (`device-key create | finish`)
+
+O par Ed25519 pode nascer **nesta máquina**, sem passar pelo navegador (ADR
+0155 ponto 4, RN-551) — é como o instalador pareia o agente numa instalação
+nova. A metade privada **nunca viaja**.
+
+```sh
+# 1) gera o par aqui e imprime a JWK PÚBLICA (uma linha, no stdout)
+PUB=$(brabo-runner device-key create)
+
+# 2) registre essa pública na api — quem faz isso é quem tem a credencial
+#    para registrar (o instalador, com o service token), nunca este CLI
+ID=$(… POST {"name": "…", "publicKeyJwk": '"$PUB"'} … | jq -r .id)
+
+# 3) carimba o `kid` (que É o id do registro) e grava a chave de verdade
+brabo-runner device-key finish --id "$ID"
+```
+
+- **São dois passos por causa do `kid`.** Ele é o id do registro **no
+  servidor** (RN-475) — o único vínculo entre o arquivo em disco e a chave
+  pública que a api guarda —, e só existe depois do registro. Uma privada
+  gravada antes dele nasce inútil, e o CLI a recusa sempre. Por isso o `create`
+  grava em `brabo-runner-device-key.jwk.json.parcial`, um nome que o runner
+  **não** procura: o arquivo que ele lê ou está completo ou não existe.
+- **Onde:** `$XDG_CONFIG_HOME/brabo/` (senão `~/.config/brabo/`), ao lado do
+  `runner.json` — é a chave da **máquina**, e ela não tem pasta de projeto onde
+  morar. `--dir <pasta>` aponta para outro destino (por exemplo, a pasta de um
+  projeto). A privada é gravada em **modo 600**; a pasta, quando é este comando
+  que a cria, em 700.
+- **stdout é para script, stderr é para gente.** O `create` imprime só a JWK
+  pública no stdout; o `finish`, só o caminho do arquivo. Todo o resto —
+  inclusive o próximo comando a rodar — sai no stderr.
+- **Sobrescrever chave completa é recusado**, e não há `--force`: trocar a
+  identidade de uma máquina já pareada em silêncio deixaria um agente
+  assinando com uma chave que o servidor não conhece. Revogue a chave atual,
+  apague o arquivo e recomece pelo `create`.
+- Este CLI **não** afirma de que espécie é a chave que ele cria — em disco, a
+  de máquina e a de projeto são o mesmo arquivo. Quem sabe é a rota que
+  registrou a pública.
 
 ## Serviço de usuário (`service install | uninstall | status`)
 

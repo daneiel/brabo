@@ -16,7 +16,10 @@
  *
  * Ver o docblock de cada módulo para o desenho de cada parte:
  * `auth.ts` (autenticação + ticket), `device-key.ts` (leitura do config/
- * chave local do modo automático), `channel.ts` (protocolo Phoenix),
+ * chave local do modo automático), `criar-chave-de-dispositivo.ts` (o outro
+ * lado: gerar o par NESTA máquina — RN-551), `espera-de-projetos.ts` (o agente
+ * de máquina esperando o primeiro projeto — RN-550),
+ * `channel.ts` (protocolo Phoenix),
  * `exec.ts` (execução não-interativa), `pty.ts` (terminal interativo),
  * `guard.ts` (barreira best-effort de `cwd`), `fs-browser.ts` (navegação
  * de pasta local, sem a barreira de `guard.ts` — ver o docblock dele),
@@ -63,6 +66,7 @@ import {
   type PtyOpenMessage,
   type WorkspaceCreateMessage,
 } from './channel.ts';
+import { rodarSubcomandoDeChave } from './criar-chave-de-dispositivo.ts';
 import {
   estadoDaChaveDeDispositivo,
   explicacaoDaChaveRecusada,
@@ -85,6 +89,10 @@ import {
   PONTO_DE_MONTAGEM,
   type DockerPort,
 } from '@brabo/docker-port';
+import {
+  CADENCIA_DA_ESPERA_MS,
+  esperarPrimeiroProjeto,
+} from './espera-de-projetos.ts';
 import { mesmoCaminho } from './espelho-guard.ts';
 import { sincronizarEspelho } from './espelho.ts';
 import { executarComando } from './exec.ts';
@@ -195,6 +203,13 @@ function uso(): never {
     'Autenticação: --token <brb_...>, ou BRABO_ACCOUNT_TOKEN no ambiente. Gere em ' +
       'Configurações do projeto → Tokens de acesso — nunca gravado em disco por este ' +
       'CLI. Sem token, a chave de dispositivo local (modo automático) é usada.',
+  );
+  console.error(
+    'chave de dispositivo NESTA máquina (ADR 0155 ponto 4): "brabo-runner device-key create" ' +
+      'gera um par Ed25519 aqui, imprime a JWK PÚBLICA no stdout (para o script registrar na ' +
+      'api) e guarda a privada, que nunca viaja; "brabo-runner device-key finish --id <id>" ' +
+      'carimba o id do registro como "kid" e grava o arquivo que este CLI lê. São dois passos ' +
+      'porque o "kid" É o id do servidor, e uma privada gravada antes dele nasce inútil.',
   );
   console.error(
     'serviço de usuário: "brabo-runner service install|uninstall|status" instala o runner ' +
@@ -1258,6 +1273,23 @@ async function main(): Promise<void> {
     process.exit(resposta.codigo);
   }
 
+  // Mesmo lugar e mesmo motivo de `service` (RN-551): criar a credencial não
+  // pode exigir credencial. A diferença é a SAÍDA — aqui tudo que é para
+  // humano vai no stderr, e o stdout carrega no máximo um valor, numa linha,
+  // para `PUB=$(brabo-runner device-key create)` funcionar num script.
+  if (process.argv[2] === 'device-key') {
+    const resposta = await rodarSubcomandoDeChave({
+      argv: process.argv,
+      cwd: process.env.INIT_CWD ?? process.cwd(),
+      home: homedir(),
+      xdgConfigHome: process.env.XDG_CONFIG_HOME ?? null,
+      plataforma: process.platform,
+    });
+    for (const linha of resposta.linhas) console.error(linha);
+    if (resposta.stdout !== null) console.log(resposta.stdout);
+    process.exit(resposta.codigo);
+  }
+
   const args = lerArgumentos(process.argv);
 
   const autenticacaoDescricao =
@@ -1388,7 +1420,7 @@ function rotuloDoProjeto(projeto: ProjetoDoRunner): string {
  * O agente de MÁQUINA (RN-544): N conexões, uma por projeto, descobertas pela
  * rota `GET /runner/projects`.
  *
- * ## A lista é consultada UMA vez, no start — e isso é decisão
+ * ## A lista é consultada UMA vez, no start — COM conexão viva (RN-550)
  *
  * Repesquisar periodicamente foi considerado e recusado. Custa uma chamada
  * recorrente à api por um evento raro (criar projeto em modo `runner`), e o
@@ -1397,18 +1429,19 @@ function rotuloDoProjeto(projeto: ProjetoDoRunner): string {
  * transitório se disfarçando dos três. Derrubar uma conexão VIVA e funcionando
  * por causa dessa ambiguidade seria trocar um estado certo por um palpite.
  *
- * Então o processo DIZ, ao subir, que a lista é daquele instante, e o gesto
- * para pegar um projeto novo é reconectar o agente — o que o serviço de
- * usuário (RN-518) torna um comando só.
+ * Então, com pelo menos UMA conexão de pé, o processo DIZ ao subir que a lista
+ * é daquele instante, e o gesto para pegar um projeto novo é reconectar o
+ * agente — o que o serviço de usuário (RN-518) torna um comando só.
  *
- * ## Lista VAZIA é estado NORMAL, e o processo sai com 0
+ * ## Lista VAZIA é estado NORMAL, e o agente FICA DE PÉ esperando (RN-550)
  *
  * É o estado de toda máquina recém-instalada: o instalador sobe o agente antes
- * de existir projeto nenhum (ADR 0155). Não é erro, e por isso não é código de
- * saída de erro — `Restart=on-abnormal` (RN-518) não o reergue, que é o certo:
- * não há o que reerguer até alguém criar um projeto. Ficar de pé com zero
- * conexões seria um serviço "ativo" que não faz nada, e o `status` da unit
- * passaria a mentir.
+ * de existir projeto nenhum (ADR 0155). Não é erro — e, desde a RN-550, também
+ * não é fim de processo: com ZERO conexões não há nada a derrubar e nenhuma
+ * ambiguidade a resolver, então o agente espera e RECONSULTA
+ * (`espera-de-projetos.ts`), parando de reconsultar no instante em que a
+ * primeira lista não-vazia chega. A assimetria é o desenho, e o docblock
+ * daquele módulo é quem a justifica inteira.
  *
  * ## Um projeto recusado não derruba os outros
  *
@@ -1427,15 +1460,35 @@ async function rodarComoAgenteDeMaquina(
     deveParar: () => boolean;
   },
 ): Promise<void> {
-  const projetos = await listarProjetosDoRunner(args.apiUrl, args.credencial);
+  let projetos = await listarProjetosDoRunner(args.apiUrl, args.credencial);
 
   if (projetos.length === 0) {
+    // RN-550. O agente NÃO sai: ele espera e reconsulta, porque com zero
+    // conexões não há estado certo a trocar por palpite nenhum. A cadência e o
+    // teto são de `espera-de-projetos.ts`, e ditos aqui para quem lê o log não
+    // ter de abrir o código para saber o que esperar.
     console.log(
-      'nenhum projeto em modo "runner" para esta conta — nada a atender. Isto é o ' +
-        'estado NORMAL de uma instalação nova: crie um projeto em modo Runner e suba ' +
-        'o agente de novo (a lista é consultada só no start).',
+      'nenhum projeto em modo "runner" para esta conta — nada a atender AINDA. Isto é o ' +
+        'estado NORMAL de uma instalação nova (ADR 0155), e o agente FICA DE PÉ: ele ' +
+        `reconsulta a lista a cada ${CADENCIA_DA_ESPERA_MS.map((ms) => `${ms / 1000}s`).join('/')} ` +
+        '(o último se repete) até o primeiro projeto aparecer. Crie o projeto em modo Runner ' +
+        'na web — ninguém precisa voltar a este terminal.',
     );
-    return;
+
+    const desfecho = await esperarPrimeiroProjeto({
+      listar: () => listarProjetosDoRunner(args.apiUrl, args.credencial),
+      esperar,
+      deveParar: ctx.deveParar,
+      log: (linha) => console.log(linha),
+      erro: (linha) => console.error(linha),
+    });
+
+    if (desfecho.tipo === 'parado') return; // SIGINT/SIGTERM: `encerrar` já saiu com 0
+    if (desfecho.tipo === 'desistiu') {
+      console.error(desfecho.mensagem);
+      process.exit(1);
+    }
+    projetos = desfecho.projetos;
   }
 
   const plano = planejarConexoes(args.base, projetos, {
@@ -1471,6 +1524,13 @@ async function rodarComoAgenteDeMaquina(
   }
 
   if (alvos.length === 0) {
+    // Zero conexões, e MESMO ASSIM sai com 1 — a única exceção à RN-550, e ela
+    // é deliberada: aqui a lista NÃO está vazia, e cada recusa acima nomeia um
+    // defeito local concreto (segmento que escapa da base, pasta que é um
+    // arquivo) com conserto próprio. Esperar e reconsultar repetiria as mesmas
+    // recusas indefinidamente, enterrando no log a linha que diz o que
+    // consertar. A espera da RN-550 é para "ainda não existe projeto", nunca
+    // para "existe e eu não consigo atendê-lo".
     console.error(
       `os ${projetos.length} projeto(s) listados foram recusados — nenhuma conexão a abrir.`,
     );
