@@ -60,6 +60,46 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `--api-url`/`BRABO_API_URL`/default, e a unit de serviço continua sendo por
   projeto — este PR muda o processo, não o serviço.
 
+- **runner**: `brabo-runner service install --machine` passa a instalar uma unit
+  **da máquina** (`brabo-runner.service` / `dev.brabo.runner`), que roda o modo
+  acima e **convive** com as units por projeto
+  ([RN-545](docs/business-rules.md#rn-545),
+  [ADR 0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md)).
+
+  A unit por projeto **não foi removida nem renomeada**, e
+  `Restart=on-abnormal` fica byte a byte nas duas espécies. O discriminador é a
+  flag `--machine`, e nunca a ausência de `--project`: o caminho normal de hoje
+  é rodar `install` sem flag nenhuma de dentro da pasta configurada, com o
+  `brabo-runner.config.json` respondendo quem é o projeto, e tratar isso como
+  "máquina" converteria em silêncio a instalação de quem já usa o produto.
+
+  **`install --machine` recusa** sem base consentida
+  ([RN-529](docs/business-rules.md#rn-529)), sem chave de dispositivo, e quando
+  a pasta tem `brabo-runner.config.json` — nesse último caso o serviço subiria
+  em modo de **projeto**, em silêncio, atendendo um só. A unit congela
+  `XDG_CONFIG_HOME` quando ela está posta (é ela que decide onde o arquivo da
+  base mora, e nenhum dos dois gerenciadores repassa o ambiente do shell); o
+  **valor** da base não vai para a unit.
+
+  **`install` também recusa quando a OUTRA espécie já está instalada**, nomeando
+  cada unit e o `uninstall` de cada uma, sem remover nem gravar nada — as duas
+  juntas seriam dois processos disputando o mesmo projeto, e o servidor negaria
+  um deles. Não há `--force`.
+
+  **Mudança de comportamento em `status` e `uninstall`:** `status` sem
+  `--project` e sem `brabo-runner.config.json` na pasta passa a responder sobre
+  a unit de **máquina** (antes recusava com "precisa saber QUAL projeto",
+  código 2), nomeando `--project` para quem queria a outra; os quatro estados e
+  os quatro códigos ficam como estão, e a espécie coexistente aparece em texto,
+  como presença lida do disco. `uninstall` sem espécie nomeada continua
+  recusando e agora **lista** o que existe no disco, com o comando de cada um.
+
+  **Declarado e não feito:** o `install --machine` não sabe se a chave daquela
+  pasta é mesmo de máquina — em disco as duas espécies são o mesmo arquivo, e
+  quem sabe é o servidor —, então uma pasta com chave de projeto instala a unit
+  sem erro e a recusa aparece no primeiro boot. E ninguém cria chave de máquina
+  ainda: quem registra é o `install.sh`, na sessão 6 desta fase.
+
 - **api**: a primeira conta de uma instalação passa a nascer **pelo terminal**,
   por uma rota interna que **recusa quando já existe qualquer usuário**
   ([RN-546](docs/business-rules.md#rn-546),

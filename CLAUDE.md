@@ -130,6 +130,7 @@ estado lido do repositório e não da conversa.
 | FASE 29 (sessão 9) — o picker do modo Runner volta a ler o disco de quem escolhe | ADR 0151, RN-533 |
 | FASE 30 (sessão 2) — a chave de dispositivo passa a poder ser da MÁQUINA | ADR 0154, RN-543 |
 | FASE 30 (sessão 3) — o agente local abre N conexões, uma por projeto | ADR 0154, RN-544 |
+| FASE 30 (sessão 4) — a unit de MÁQUINA, convivendo com as por projeto | ADR 0154, RN-545 |
 | O runner reconectava sozinho com um ticket morto | RN-108 |
 | O teto de auto-rebaixamento chega à REMOÇÃO (BRB-001) | O ADR 0127 pôs os dois tetos só no `add` e declarou esta porta aberta POR ESCRITO, com o custo estimado e um teste cujo nome documentava o buraco. Remover a linha de `project_members` não apaga um papel, TROCA o efetivo — `projectRole ?? workspaceRole` passa a resolver pelo segundo termo —, então `maintainer` pela linha de projeto com `viewer` no workspace se rebaixava sozinho, sem volta pela tela (repor pede o `maintainer` recém-abandonado); sem papel de workspace, a queda é para acesso NENHUM. É o teto 2 REUSADO: `remocaoEhAutoRebaixamento` delega a `ehAutoRebaixamento` com o papel de workspace no lugar do papel pedido, e existe como função própria por UM caso que a outra assinatura não sabe enunciar (papel-depois "nenhum" não é um `Role`). O teto 1 não ganha par, e a ausência é DECISÃO escrita ao lado da função: `owner` é o topo do `ROLE_ORDER`, remover só pode elevar, e é assim que se desfaz a restrição que o teto 1 impede de criar. Sem limiar como o teto 2, então o preço vem junto e é declarado — a auto-remoção de `owner` de projeto para `maintainer` de workspace é reversível e CAI TAMBÉM, único movimento benigno que passava e passa a recusar. Mensagem PRÓPRIA (quem clicou "remover" não pediu mudança de papel), tela intocada (o toast já mostra a frase da api) | RN-556, ADR 0156 |
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
@@ -162,9 +163,13 @@ nasceu, e o registro normal fica byte a byte. O `install.sh` que consome a rota
 A sessão 3 (RN-544) fechou a metade do RUNNER e confirmou a medição: o agente
 local abre N conexões de verdade, uma por projeto descoberto pela rota, e
 **nada no engine mudou** — nem o espelho, nem o `workspace_create`, nem um
-handler. O que segue sem existir é quem CRIA chave de máquina (sessão 6) e a
-unit POR MÁQUINA (sessão 4): a unit continua por projeto, e o modo novo só é
-exercitável com chave registrada à mão.
+handler. A sessão 4 (RN-545) fechou o QUINTO e último acoplamento: a unit de
+MÁQUINA existe (`service install --machine`) e CONVIVE com as por projeto, sem
+remover nem renomear nenhuma e sem tocar `Restart=on-abnormal`. O que segue sem
+existir é quem CRIA chave de máquina (sessão 6): o modo novo só é exercitável
+com chave registrada à mão, e o `install --machine` não sabe distinguir chave de
+máquina de chave de projeto — em disco são o mesmo arquivo, e a recusa só chega
+no primeiro boot.
 Duas coisas dessa sessão são régua daqui pra frente — `provisionarUsuario`
 (seed/smoke) teve o NÚCLEO extraído para `ProvisionarUsuarioUseCase` e MANTEVE
 a recusa de `NODE_ENV=production`, porque o que ela protege é senha CONHECIDA
@@ -501,12 +506,35 @@ criada SEM interação humana e não o trio de escritas (não use
   Bun não consegue embutir sozinho. Desde a RN-518 (ADR 0147 ponto 5) ele
   também se INSTALA — `brabo-runner service install|uninstall|status`, nível
   de USUÁRIO sempre (`systemd --user`/`LaunchAgent`), com root RECUSADO e
-  Windows recusado por NOME; uma unit por PROJETO, `Restart=on-abnormal` e
+  Windows recusado por NOME; `Restart=on-abnormal` e
   nunca `on-failure` (exit 1 é recusa fatal de join ou teto esgotado, e
   reiniciar seria o laço que o CLI recusa fazer), autenticação por CHAVE DE
   DISPOSITIVO e nunca por token (uma unit com token o deixaria em disco), e
   `status` com QUATRO estados e quatro códigos de saída — a primeira resposta
-  vem do DISCO, então ela continua certa numa máquina sem gerenciador.
+  vem do DISCO, então ela continua certa numa máquina sem gerenciador. Desde a
+  RN-545 (ADR 0154 ponto 4) são DUAS ESPÉCIES de unit e elas CONVIVEM: a de
+  PROJETO (`brabo-runner-<projectId>.service`/`dev.brabo.runner.<projectId>`,
+  byte a byte como sempre) e a de MÁQUINA (`brabo-runner.service`/
+  `dev.brabo.runner`, sem sufixo), que roda o modo de N conexões da RN-544. Os
+  nomes não colidem por CONSTRUÇÃO (`projectId` nunca é vazio, então o de
+  projeto sempre tem um `-` onde o de máquina termina), e isso é travado por
+  teste. O discriminador é a flag `--machine` e NUNCA a ausência de
+  `--project` — o ADR dizia o contrário e foi MEDIDO: `resolverProjeto` tem
+  DUAS fontes, e o caminho normal é rodar `install` sem flag de dentro da pasta
+  que o navegador configurou, então a letra do ADR converteria em silêncio a
+  instalação de quem já usa o produto. `install --machine` RECUSA sem base
+  consentida, sem chave, e quando a pasta tem `brabo-runner.config.json` (o
+  serviço subiria em modo de PROJETO, em silêncio, atendendo um só), e a unit
+  congela `XDG_CONFIG_HOME` mas NUNCA o valor da base — trocar a base é editar
+  o arquivo e reiniciar, nunca reinstalar. `install` também RECUSA quando a
+  OUTRA espécie já está instalada, nomeando o `uninstall` de cada unit, sem
+  remover nem gravar nada e sem `--force`: as duas juntas seriam dois processos
+  disputando o mesmo projeto. `status` responde sobre a espécie PERGUNTADA (os
+  quatro códigos NÃO viram oito nem se somam) e diz em TEXTO que a outra
+  existe, como presença lida do DISCO; sem `--machine` e sem projeto resolvível
+  ele cai na MÁQUINA. `uninstall` NÃO herda esse default e recusa listando o
+  que existe — ler a espécie errada custa uma linha, remover a errada custa um
+  serviço e uma chave.
   Desde a RN-529 (ADR 0151 pontos 1 e 2) ele também pode nascer com uma
   BASE — a pasta da máquina do usuário sob a qual cada projeto é uma
   SUBPASTA. Ela é LOCAL e NUNCA chega pela rede (o desenho do broker, ADR
