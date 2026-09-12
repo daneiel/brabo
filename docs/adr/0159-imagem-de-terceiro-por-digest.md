@@ -1,4 +1,4 @@
-# 0158 — Imagem de terceiro entra por digest, e o lint reprova quem esquecer
+# 0159 — Imagem de terceiro entra por digest, e o lint reprova quem esquecer
 
 ## Status
 

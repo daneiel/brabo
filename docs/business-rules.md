@@ -12823,6 +12823,124 @@ interrupção sem causa.
 
 ---
 
+## A rotação da chave mestra deixa de ser tentativa e erro (RN-562, RN-563)
+
+### RN-562 — A rotação da chave mestra é provada ponta a ponta, nas duas tabelas {#rn-562}
+
+O procedimento com o pior desfecho do [Runbook](runbook.md#rotacao-da-chave-mestra)
+passa a ter verificação NOMEADA: um teste percorre a rotação inteira —
+**cifra com K1, publica K2, reenvelopa, descarta K1 e ainda decifra** — contra
+`user_credentials` **e** `project_git_connections`, com Postgres de verdade.
+
+**Por que de integração, e não mais um caso unitário.** O que já existia
+(`envelope-encryption.service.spec.ts`, o describe `rotação da chave mestra`)
+exercita `encrypt`/`decrypt`/`rewrap` em memória, e isso não prova a única coisa
+que o passo 3 do runbook depende: que o script percorre **as duas** tabelas.
+Convertendo metade do acervo e reportando sucesso, descartar a chave velha
+tornaria a outra metade ilegível para sempre. A prova disso é a asserção sobre
+as duas linhas — e ela reprova quando a lista de tabelas do script encolhe.
+
+**A idempotência entra no mesmo teste**, porque é a propriedade que o runbook
+promete a quem interrompe o script: a segunda rodada reporta
+`re-embrulhados=0` e `já na chave atual=1` nas duas tabelas.
+
+**Uma linha ilegível não aborta as outras.** Registro embrulhado por uma
+TERCEIRA chave — o caso que o runbook chama de "veio de outro ambiente" — é
+contado, identificado por tabela e id, e deixa as demais seguirem; o envelope
+dele fica intocado.
+
+**O que o teste exigiu do código:** `rewrap-deks.ts` era um `main()` disparado
+na CARGA do módulo, então importá-lo de um spec rodaria a rotação. O núcleo
+virou `reenvelopar(db, cofre, reportarFalha)`, exportado, e `main()` — que lê
+ambiente, abre o pool, imprime e escolhe o código de saída — passou a rodar só
+sob `require.main === module`. O nome do script e a invocação do runbook
+(`node scripts/rewrap-deks.js`) NÃO mudaram.
+
+**Nenhuma chave e nenhum segredo é literal no teste**: os dois nascem de
+`randomBytes` a cada rodada. Passphrase constante em fixture é string com cara
+de segredo indo para o histórico, e o gitleaks varre branches.
+
+- **Código:** `apps/api/src/scripts/rewrap-deks.ts:93` (`reenvelopar`, a função
+  exportada), `:100` (a lista das duas tabelas, que é o que o teste fixa),
+  `:209` (o `require.main === module` que impede a importação de rotacionar)
+- **Teste:** `apps/api/test/scripts/rewrap-deks.spec.ts` — o caminho feliz
+  (a sequência K1 → K1+K2 → reenvelopa → só K2), a idempotência, e o caso de
+  falha da linha de outro ambiente, que também assere que o relato NÃO carrega
+  segredo nenhum
+- **Origem:** AT-033 (EP-015/HS-022), finding `BRB-010`
+
+### RN-563 — O envelope diz qual chave o embrulhou, e esse rótulo nunca decide se ele abre {#rn-563}
+
+`user_credentials` e `project_git_connections` ganham `key_id text` **anulável**
+— a impressão digital da chave mestra que embrulhou aquele DEK. Com ela, a
+pergunta que decide o passo 3 da rotação (*"ainda há credencial na chave
+velha?"*) vira uma consulta:
+
+```sql
+select count(*) from user_credentials      where key_id is distinct from '<atual>'
+union all
+select count(*) from project_git_connections where key_id is distinct from '<atual>';
+```
+
+`IS DISTINCT FROM`, e nunca `<>`: com `<>`, a linha de `key_id` NULO — o acervo
+anterior a esta coluna — sumiria da contagem, e *"não sei qual chave"* viraria
+*"já está na atual"*, que é a leitura que faz alguém descartar a chave velha
+cedo demais.
+
+**O valor é `HMAC-SHA256(chave derivada, 'brabo-master-key-id')` truncado a 8
+bytes**, e não um contador no `.env` nem um hash da passphrase. Não há oráculo
+novo, e isso foi MEDIDO, não suposto: quem lê o banco já tem um oráculo de
+verificação perfeito — o próprio envelope é AES-256-GCM, que autentica, então
+testar uma passphrase candidata já custava um `scrypt` e um decipher. Testá-la
+contra a impressão custa o MESMO `scrypt`. E não há variável nova para o
+operador errar: o valor é função pura da chave que ele já publicou.
+
+**O rótulo é OBSERVABILIDADE, nunca AUTORIDADE.** `decrypt` fica byte a byte
+como estava — tenta a atual, cai para a anterior, o GCM decide — e `rewrap`
+continua decidindo "já está na chave atual" pela TENTATIVA. Confiar no rótulo
+faria uma linha que MENTE (rótulo "atual", envelope na chave velha) ser pulada
+em silêncio, ficar fora da contagem de re-embrulhados, e o passo 3 a tornaria
+ilegível para sempre. Metadado incoerente vira perda de segredo; é por isso que
+o teste que fixa esta regra é o de uma linha mentirosa sendo re-embrulhada
+assim mesmo.
+
+**O que o rótulo compra na falha:** quando NENHUMA das duas chaves abre, a
+mensagem deixa de ser genérica e nomeia o caso — "veio de outro ambiente"
+(rótulo desconhecido), "rótulo incoerente ou registro adulterado" (rótulo diz
+atual e não abre) e "não tem key_id" (linha anterior a esta coluna) são
+diagnósticos diferentes com ações diferentes. Nenhuma dessas mensagens carrega
+passphrase, chave derivada ou conteúdo do segredo — só impressões digitais.
+
+**Sem migração do acervo.** O `key_id` nasce na próxima escrita (`encrypt` e
+`rewrap` o gravam). As linhas de hoje ficam `NULL`, e numa instalação existente
+a consulta só passa a valer depois da primeira rotação. Forçar re-embrulho de
+tudo só para preencher a coluna transformaria observabilidade em operação de
+risco sobre todas as credenciais.
+
+**O operador precisa da impressão corrente**, senão a coluna não se compara
+contra nada: a api a registra no boot em uma linha, e a advertência de rotação
+que já existia passa a nomear as DUAS.
+
+- **Código:** `apps/api/src/infrastructure/security/envelope-encryption.service.ts:130`
+  (`impressaoDigital`), `:107` (a linha de boot), `:113` (a advertência com as
+  duas), `:226` (o diagnóstico de `rewrap`), `:251` (`diagnosticoDaChave`);
+  `apps/api/src/db/schema/llm.ts:259` e `apps/api/src/db/schema/git.ts:76`
+  (a coluna nas duas tabelas); migration
+  `apps/api/src/db/migrations/0059_key_id_no_envelope.sql`
+- **Teste:** o describe `key_id da chave mestra` em
+  `apps/api/test/infrastructure/security/envelope-encryption.service.spec.ts`
+  — o caminho feliz (impressão estável e determinística, gravada por `encrypt`
+  e por `rewrap`), **a prova de que o rótulo não decide** (linha mentirosa é
+  re-embrulhada), a linha legada sem rótulo, e os dois casos de falha
+  (mensagem que nomeia a chave sem vazar segredo; "sem rótulo" dito como tal).
+  A consulta em SQL de verdade está em
+  `apps/api/test/scripts/rewrap-deks.spec.ts`, incluindo o caso da linha `NULL`
+  contando como pendente
+- **ADR:** [0158](adr/0158-o-id-da-chave-mestra-gravado-no-envelope.md)
+- **Origem:** AT-034 (EP-015/HS-022), finding `BRB-016`
+
+---
+
 ## A chave de dispositivo ganha tela, e a tela diz o alcance de revogar (RN-561)
 
 ### RN-561 — A aba Configurações lista e revoga chave de dispositivo, marcando a ESPÉCIE — porque revogar a de MÁQUINA derruba o agente local em TODOS os projetos do dono {#rn-561}
