@@ -26,6 +26,34 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **web**: o painel de onboarding do runner **reconhece uma máquina já
+  pareada** e para de mandar parear de novo
+  ([RN-548](docs/business-rules.md#rn-548),
+  [ADR 0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md)).
+
+  É o consumidor da marca de espécie que a
+  [RN-543](docs/business-rules.md#rn-543) acrescentou à listagem de chaves.
+  Com chave de **máquina** ativa, o painel anuncia o pareamento, nomeia as
+  chaves e a data do último uso, e oferece o gesto que falta — conferir o
+  serviço do agente local — em vez de repetir um fluxo que termina no terminal
+  de quem já o percorreu. Vale nos três lugares onde o painel é montado (aba
+  Código, seletor de pasta e o passo de workspace do assistente de projeto
+  novo, este último só depois de o projeto existir).
+
+  **O que ele NÃO diz:** que o agente está de pé. Chave registrada prova
+  pareamento, nunca processo vivo — a mesma régua de
+  `workspaceVerifiedAt` ([RN-468](docs/business-rules.md#rn-468)) —, e a lista
+  é da **conta**, não deste navegador: quem estiver numa segunda máquina
+  continua precisando pareá-la. As duas ressalvas estão na tela, e é por elas
+  que o fluxo de configuração pelo navegador
+  ([ADR 0118](docs/adr/0118-configuracao-do-runner-pelo-navegador.md))
+  **não foi removido** — ele fica recolhido, a um clique, com o rótulo do caso
+  que resolve.
+
+  Consulta falhada diz que **não sabe**, e nunca que não há máquina pareada;
+  chave revogada volta a mandar parear, com o motivo; e quem não alcança
+  `developer` no projeto vê, em texto, por que a checagem não foi feita.
+
 - **runner**: o `brabo-runner` passa a poder rodar **sem `--project`**, abrindo
   **uma conexão por projeto** descoberto em `GET /runner/projects`
   ([RN-544](docs/business-rules.md#rn-544),

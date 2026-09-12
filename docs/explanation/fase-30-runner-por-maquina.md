@@ -80,7 +80,7 @@ Uma entregável cada. A coluna "depende de" é que ordena.
 | 4 | runner: unit por máquina no `service install`, convivendo com as por projeto (RN-545) | 3 | não remove a unit por projeto; não muda `Restart=on-abnormal` |
 | 5 | **FECHADA** — api: `POST /internal/first-account`, conta verificada + workspace pessoal, `409` com qualquer usuário ([RN-546](../business-rules.md#rn-546)) | 1 | não cria rota pública; não toca o registro normal |
 | 6 | `install.sh`: consentimento, conta, chave de máquina e `service install` (RN-547) | 4, 5 | não grava senha em lugar nenhum; sem TTY relata e sai 0 |
-| 7 | web: a tela do projeto reconhece agente de máquina já pareado (RN-548) | 3 | não remove o fluxo do ADR 0118 |
+| 7 | **FECHADA** — web: a tela do projeto reconhece agente de máquina já pareado ([RN-548](../business-rules.md#rn-548)) | 3 | não remove o fluxo do ADR 0118 |
 | 8 | E2E em máquina limpa, docmap, `docs:check` (RN-549) | 6, 7 | não afrouxa gate para o E2E passar |
 
 ### O que a sessão 2 fechou, e o que ela deixou declarado
@@ -132,6 +132,45 @@ E o que segue **declarado, não feito**: a `apiUrl` no modo de máquina vem de
 é por PROJETO — quem escreve a flag é a unit por máquina, da sessão 4. A unit
 continua por projeto: esta sessão mudou o PROCESSO, não o serviço.
 
+### O que a sessão 7 fechou, e as três decisões que ela teve de tomar
+
+A marca de espécie que a sessão 2 acrescentou à listagem — *"sem elas na lista,
+uma chave de máquina seria invisível em toda tela"* — ganhou consumidor. O
+painel de onboarding do runner passa a reconhecer chave de MÁQUINA ativa e, com
+ela, para de mandar parear: o que falta não é pareamento, é o agente estar
+rodando. Nada da api, do engine ou do runner foi tocado.
+
+As três decisões que o recorte deixava em aberto, e o que cada uma virou
+(a [RN-548](../business-rules.md#rn-548) tem o porquê inteiro):
+
+- **Onde aparece: no PAINEL, e por isso nos três montadores de uma vez — mas
+  não com o mesmo resultado.** O reconhecimento é por PROJETO, porque a rota é
+  `GET /projects/:projectId/runner-device-keys`: `TerminalPanel` e
+  `FolderBrowserModal` sempre têm projeto, e o `NewProjectWizard` só depois da
+  criação antecipada ([RN-437](../business-rules.md#rn-437)). Sem `projectId`
+  não há a quem perguntar. `AmbienteDoProjeto` foi CONSIDERADO e recusado: o
+  docblock dele já declara que presença de runner é conhecimento de primeira
+  mão do canal, e uma linha sobre chave registrada ali seria um terceiro proxy
+  competindo com um sinal mais forte — e sobre a MÁQUINA, não sobre o projeto.
+- **Com chave e sem conexão viva — o caso mais comum — a tela diz as duas
+  coisas que sabe e nomeia as duas que não sabe.** Anuncia o pareamento (com os
+  nomes das chaves e a data do último uso), e ao lado: *chave registrada não é
+  agente rodando* e *a lista é da sua CONTA, não deste navegador*. É a régua do
+  `workspaceVerifiedAt` aplicada um passo antes, tom `accent` e nunca `success`
+  incluído. O gesto que ela oferece é conferir o SERVIÇO na máquina pareada, e
+  quem responde pelo agora continua sendo a `EsperaDoRunner`, reusada.
+- **A espécie aparece pelo CUSTO dela, não como rótulo.** O painel não lista
+  chaves nem revoga — diz que uma chave de máquina atende todos os projetos do
+  dono, e que revogá-la derruba o agente local em todos eles.
+
+E o que segue **declarado, não feito**: ninguém CRIA chave de máquina ainda (é o
+`install.sh`, sessão 6), então hoje a tela só é exercitável com uma chave
+registrada à mão. O comando oferecido é
+`brabo-runner service status --project <id>`, a forma que existe hoje — a por
+máquina chega com a unit da sessão 4. Uma chave de PROJETO ativa não muda o
+painel: é o defeito irmão, um escopo abaixo. E a tela de listar/revogar chave
+continua não existindo.
+
 ### O que a sessão 5 fechou, e a decisão que o ADR 0155 não tinha
 
 A sessão 5 fechou com uma decisão que o ADR 0155 não tinha enfrentado, e ela
@@ -172,7 +211,10 @@ Declarado nos dois ADRs, e repetido aqui porque é o que dá sentido ao resto:
   aqui ele chega. Fechar exige mudar o alvo da revogação, que é frente própria.
 - **Não há tela onde listar e revogar chave de dispositivo.** A RN-519 abriu o
   `GET` na api; o web nunca ganhou a tela. A fase acrescenta uma espécie de
-  chave a listar e não constrói a tela — a lacuna fica maior, e declarada.
+  chave a listar e não constrói a tela — a lacuna fica maior, e declarada. A
+  [RN-548](../business-rules.md#rn-548) passa a CONSUMIR essa listagem no
+  painel de onboarding, o que não a fecha: ler para reconhecer é outra coisa
+  que listar para revogar.
 - **Ponto único de falha.** Um processo por máquina no lugar de N: o serviço
   cair tira o agente de todos os projetos. É o preço do desenho, não um
   descuido.

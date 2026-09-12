@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { API_URL, getProject } from '../lib/api-client';
+import { API_URL, ApiError, getProject, listRunnerDeviceKeys } from '../lib/api-client';
+import { useCurrentWorkspaceWithRole } from '../lib/hooks';
+import {
+  maquinaJaPareada,
+  podeLerChavesDeDispositivo,
+  reconhecerAgenteDeMaquina,
+  type ReconhecimentoDeAgenteDeMaquina,
+} from '../lib/agente-de-maquina';
 import {
   baixarKitManual,
   configurarPastaAutomaticamente,
@@ -102,6 +109,33 @@ function ehCancelamentoDoSeletor(erro: unknown): boolean {
  * na máquina de ninguém, e a File System Access API não preserva o bit de
  * execução. O que este painel faz é encolhê-lo a uma linha e um clique de
  * cópia — nunca fingir que ele sumiu.
+ *
+ * ## O reconhecimento de máquina já pareada (RN-548, ADR 0154)
+ *
+ * Desde a RN-543 a listagem de chaves marca a ESPÉCIE, e é daqui que essa
+ * marca é consumida: quando a conta já tem chave de MÁQUINA ativa, mandar a
+ * pessoa repetir o pareamento que a máquina já tem é o painel respondendo à
+ * pergunta errada. A derivação inteira — sete estados, nenhum virando o
+ * outro — mora em `lib/agente-de-maquina.ts`, fora do componente, porque a
+ * regra é sobre o DADO e o componente é sobre o desenho.
+ *
+ * **Reconhecer NÃO é dizer que o agente está de pé.** Chave registrada prova
+ * pareamento, nunca processo vivo (RN-468, a régua do `workspaceVerifiedAt`),
+ * e a lista é da CONTA e não deste navegador — então nem "esta máquina está
+ * pareada" a tela pode afirmar. Os dois limites são ditos em texto, ao lado
+ * do reconhecimento, e é por eles que o caminho do ADR 0118 **continua
+ * alcançável em todos os estados**: ele apenas deixa de ser o primeiro,
+ * recolhido para um `<details>` cujo rótulo nomeia o caso que ele resolve
+ * ("esta máquina é outra"). Nada é removido — aposentá-lo é o BRB-031, e é
+ * decisão do mantenedor.
+ *
+ * **Onde isso aparece, e por que não é igual nos três montadores.** O
+ * reconhecimento é por PROJETO, porque a rota é
+ * `GET /projects/:projectId/runner-device-keys` — então ele existe em
+ * `TerminalPanel` e `FolderBrowserModal`, que sempre têm um projeto, e no
+ * `NewProjectWizard` só DEPOIS da criação antecipada (RN-437): sem
+ * `projectId` não há a quem perguntar, e o painel fica byte a byte como era.
+ * A diferença não é escolha de desenho, é a forma do endpoint.
  */
 export function RunnerOnboardingPanel({
   projectId,
@@ -129,6 +163,32 @@ export function RunnerOnboardingPanel({
   });
   const caminhoDoProjeto =
     caminhoSugerido ?? projetoQuery.data?.workspacePath ?? undefined;
+
+  /**
+   * O papel de quem está olhando — de WORKSPACE, com o limite declarado em
+   * `EntradaDoReconhecimento.papel`: quem autoriza do outro lado é o EFETIVO
+   * do projeto (RN-471). Serve para não pedir uma listagem que a api vai
+   * recusar; o 403 de verdade também é tratado, logo abaixo.
+   */
+  const { data: workspaceComPapel } = useCurrentWorkspaceWithRole();
+  const chavesQuery = useQuery({
+    queryKey: ['runner-device-keys', projectId],
+    queryFn: () => listRunnerDeviceKeys(projectId!),
+    enabled: Boolean(projectId) && podeLerChavesDeDispositivo(workspaceComPapel?.role),
+    // Credencial registrada não muda sozinha enquanto esta tela está aberta, e
+    // o que muda — o agente conectar — é a `EsperaDoRunner` quem sonda. Um
+    // `refetchInterval` aqui seria uma segunda sonda respondendo a pergunta de
+    // outra.
+    retry: false,
+  });
+  const reconhecimento = reconhecerAgenteDeMaquina({
+    papel: workspaceComPapel?.role,
+    chaves: chavesQuery.data,
+    carregando: chavesQuery.isPending,
+    falhou: chavesQuery.isError,
+    statusDoErro: chavesQuery.error instanceof ApiError ? chavesQuery.error.status : null,
+  });
+  const jaPareada = maquinaJaPareada(reconhecimento);
 
   const [suportaFS] = useState(() => suportaEscritaDeArquivos());
   const [plataforma, setPlataforma] = useState<RunnerPlatform | null>(null);
@@ -217,13 +277,14 @@ export function RunnerOnboardingPanel({
     caminho: caminhoDoProjeto?.trim() || t('runnerOnboarding.placeholderPath'),
   });
 
-  return (
-    <div className={[styles.painel, className].filter(Boolean).join(' ')} role="status">
-      <TerminalIcon size={22} />
-      <p className={styles.mensagem}>
-        {mensagem || (projectId ? t('runnerOnboarding.defaultMessage') : t('runnerOnboarding.noProjectMessage'))}
-      </p>
-
+  /*
+   * O pareamento do ADR 0118 — o aviso do passo humano e os botões — num
+   * bloco só, porque ele muda de LUGAR (primeiro plano ou dentro do
+   * `<details>`) e nunca de conteúdo. Duplicar o JSX nos dois ramos faria as
+   * duas cópias divergirem exatamente uma vez.
+   */
+  const blocoDePareamento = projectId && (
+    <>
       {/* O passo humano é anunciado ANTES do clique, não só no fim.
           `passoHumano` já existia — mas só era renderizado no estado de
           SUCESSO, depois de a pessoa escolher a pasta e esperar. Quem clica
@@ -236,46 +297,81 @@ export function RunnerOnboardingPanel({
           O texto do sucesso CONTINUA lá: aqui ele avisa que o passo VAI
           existir, lá ele explica POR QUE existe. São duas perguntas
           diferentes, feitas em momentos diferentes. */}
-      {projectId && estado.fase === 'idle' && (
+      {estado.fase === 'idle' && (
         <p className={styles.avisoPassoHumano}>
           {t('runnerOnboarding.avisoTerminalAntes')}
         </p>
       )}
 
-      {projectId && (
-        <div className={styles.acoesAutomaticas}>
-          {modoAutomatico ? (
-            <Button type="button" onClick={() => void handleConfigurarAutomaticamente()} loading={estado.fase === 'configurando'}>
-              {estado.fase === 'configurando'
-                ? t('runnerOnboarding.autoConfiguring')
-                : t('runnerOnboarding.autoConfigureButton')}
+      <div className={styles.acoesAutomaticas}>
+        {modoAutomatico ? (
+          <Button type="button" onClick={() => void handleConfigurarAutomaticamente()} loading={estado.fase === 'configurando'}>
+            {estado.fase === 'configurando'
+              ? t('runnerOnboarding.autoConfiguring')
+              : t('runnerOnboarding.autoConfigureButton')}
+          </Button>
+        ) : (
+          <>
+            {!detectandoPlataforma && plataforma === null && (
+              <label className={styles.selecaoPlataforma}>
+                {t('runnerOnboarding.platformSelectLabel')}
+                <select
+                  value={plataformaManual}
+                  onChange={(e) => setPlataformaManual(e.target.value as RunnerPlatform)}
+                >
+                  {plataformasSuportadas().map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <Button type="button" variant="secondary" onClick={() => void handleBaixarKit()} loading={estado.fase === 'baixando'}>
+              {estado.fase === 'baixando'
+                ? t('runnerOnboarding.downloadingKit')
+                : t('runnerOnboarding.downloadKitButton')}
             </Button>
-          ) : (
-            <>
-              {!detectandoPlataforma && plataforma === null && (
-                <label className={styles.selecaoPlataforma}>
-                  {t('runnerOnboarding.platformSelectLabel')}
-                  <select
-                    value={plataformaManual}
-                    onChange={(e) => setPlataformaManual(e.target.value as RunnerPlatform)}
-                  >
-                    {plataformasSuportadas().map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <Button type="button" variant="secondary" onClick={() => void handleBaixarKit()} loading={estado.fase === 'baixando'}>
-                {estado.fase === 'baixando'
-                  ? t('runnerOnboarding.downloadingKit')
-                  : t('runnerOnboarding.downloadKitButton')}
-              </Button>
-              <p className={styles.detalhe}>{t('runnerOnboarding.downloadKitNote')}</p>
-            </>
-          )}
-        </div>
+            <p className={styles.detalhe}>{t('runnerOnboarding.downloadKitNote')}</p>
+          </>
+        )}
+      </div>
+    </>
+  );
+
+  return (
+    <div className={[styles.painel, className].filter(Boolean).join(' ')} role="status">
+      <TerminalIcon size={22} />
+      <p className={styles.mensagem}>
+        {mensagem || (projectId ? t('runnerOnboarding.defaultMessage') : t('runnerOnboarding.noProjectMessage'))}
+      </p>
+
+      {projectId && (
+        <ReconhecimentoDeMaquina
+          reconhecimento={reconhecimento}
+          projectId={projectId}
+          // UMA espera por tela, e a regra não muda com o reconhecimento: se a
+          // pessoa entrou no `<details>` e configurou a pasta mesmo assim, quem
+          // mostra a espera é o bloco de sucesso, que é o passo mais recente.
+          // Duas esperas seriam duas sondas, dois tetos e — no pior caso — duas
+          // frases discordando sobre o mesmo carimbo.
+          mostrarEspera={
+            mostrarEspera && estado.fase !== 'sucesso' && estado.fase !== 'kitBaixado'
+          }
+        />
+      )}
+
+      {/* O caminho do ADR 0118 NUNCA some — ele muda de lugar. Reconhecida a
+          máquina, o primeiro plano passa a ser "o agente não está de pé", e
+          parear vai para um `<details>` cujo rótulo nomeia o único caso em que
+          ele ainda é a resposta: você está em OUTRA máquina. */}
+      {jaPareada ? (
+        <details className={styles.manual}>
+          <summary>{t('agenteDeMaquina.parearMesmoAssim')}</summary>
+          <div className={styles.instrucao}>{blocoDePareamento}</div>
+        </details>
+      ) : (
+        blocoDePareamento
       )}
 
       {estado.fase === 'erro' && (
@@ -340,6 +436,91 @@ export function RunnerOnboardingPanel({
           {t('runnerOnboarding.retryButton')}
         </Button>
       )}
+    </div>
+  );
+}
+
+/**
+ * O bloco que reconhece — ou recusa reconhecer — um agente local de máquina já
+ * pareado (RN-548).
+ *
+ * Sete estados chegam aqui e **seis** renderizam alguma coisa.
+ * `semChaveDeMaquina` renderiza NADA de propósito, e isso não é um vazio
+ * escondido: o painel inteiro já É a resposta para "nenhuma máquina pareada",
+ * e uma linha dizendo isso ao lado do botão de parear seria a tela repetindo
+ * em prosa o que o botão diz em ação. Os outros seis afirmam coisas que o
+ * painel sozinho não afirma — inclusive os dois que afirmam ignorância.
+ */
+function ReconhecimentoDeMaquina({
+  reconhecimento,
+  projectId,
+  mostrarEspera,
+}: {
+  reconhecimento: ReconhecimentoDeAgenteDeMaquina;
+  projectId: string;
+  mostrarEspera: boolean;
+}) {
+  const { t, i18n } = useTranslation('terminal');
+
+  if (reconhecimento.estado === 'semChaveDeMaquina') return null;
+
+  if (reconhecimento.estado === 'verificando') {
+    return <p className={styles.detalhe}>{t('agenteDeMaquina.verificando')}</p>;
+  }
+
+  // Os dois textos de ignorância, e eles são DIFERENTES: num sabemos por que
+  // não perguntamos, no outro perguntamos e não obtivemos resposta. Nenhum dos
+  // dois vira "não há máquina pareada" (RN-470).
+  if (reconhecimento.estado === 'semPapel') {
+    return <p className={styles.avisoPassoHumano}>{t('agenteDeMaquina.semPapel')}</p>;
+  }
+  if (reconhecimento.estado === 'naoSei') {
+    return <p className={styles.avisoPassoHumano}>{t('agenteDeMaquina.naoSei')}</p>;
+  }
+
+  const nomes = reconhecimento.nomes.join(', ');
+
+  if (reconhecimento.estado === 'revogada') {
+    return (
+      <Alert tone="warning">
+        {t('agenteDeMaquina.revogada', { nomes })} {t('agenteDeMaquina.alcance')}
+      </Alert>
+    );
+  }
+
+  return (
+    <div className={styles.reconhecimento}>
+      {/* `accent`, nunca `success`: verde aqui leria como "está de pé", que é
+          exatamente a afirmação que este dado não sustenta — a mesma
+          aritmética de tom que `AmbienteDoProjeto` faz na linha do runner. */}
+      <Alert tone="accent">
+        {reconhecimento.estado === 'pareada'
+          ? t('agenteDeMaquina.pareada', {
+              nomes,
+              data: new Date(reconhecimento.ultimoUso).toLocaleString(i18n.language),
+            })
+          : t('agenteDeMaquina.pareadaNuncaUsada', { nomes })}
+      </Alert>
+
+      {/* As três ressalvas, e nenhuma é opcional: a primeira separa "pareada"
+          de "rodando" (RN-468), a segunda separa "sua conta" de "este
+          navegador" — sem ela, o `<details>` de parear pareceria um caminho
+          morto para quem está numa segunda máquina — e a terceira diz o que a
+          ESPÉCIE custa: revogar esta chave derruba o agente em todo projeto. */}
+      <p className={styles.detalhe}>{t('agenteDeMaquina.ressalvaNaoEBatimento')}</p>
+      <p className={styles.detalhe}>{t('agenteDeMaquina.ressalvaDaConta')}</p>
+      <p className={styles.detalhe}>{t('agenteDeMaquina.alcance')}</p>
+
+      <p className={styles.gesto}>{t('agenteDeMaquina.gesto')}</p>
+      <code className={styles.comando}>
+        {t('agenteDeMaquina.comandoDeServico', { projectId })}
+      </code>
+
+      {/* A espera da RN-474, reusada: reconhecida a máquina, o que falta é o
+          agente CONECTAR, e essa é exatamente a pergunta que ela responde
+          sozinha. `mostrarEspera` continua sendo quem impede a segunda espera
+          na mesma tela (o `FolderBrowserModal` monta a dele no topo). */}
+      {mostrarEspera && <EsperaDoRunner projectId={projectId} />}
     </div>
   );
 }

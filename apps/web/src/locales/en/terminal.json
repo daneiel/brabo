@@ -66,5 +66,19 @@
     "semResposta": "We did not see the runner connect within {{minutos}} minutes.",
     "semRespostaRessalva": "That is not proof it is not running: check the terminal where you pasted the command, and if this project had already been confirmed with the same folder, the stamp is not rewritten — the Code tab is what knows about right now.",
     "procurarDeNovo": "Look again"
+  },
+  "agenteDeMaquina": {
+    "verificando": "Checking whether your account already has a paired machine…",
+    "semPapel": "Device keys belong to each person, and listing yours needs the developer role on this project — so this screen did not check whether you already have a paired machine.",
+    "naoSei": "I could not check whether your account already has a paired machine. That does not mean it has none — it means I do not know.",
+    "pareada": "Your account already has a paired machine: {{nomes}}. A local agent last used that key on {{data}}.",
+    "pareadaNuncaUsada": "Your account already has a paired machine: {{nomes}} — and no local agent has used that key yet.",
+    "revogada": "This account's machine key ({{nomes}}) is revoked: no local agent connects with it. Pair again below.",
+    "ressalvaNaoEBatimento": "A registered key is not a running agent: it proves the machine was paired once, never that the agent is up right now.",
+    "ressalvaDaConta": "This list belongs to your ACCOUNT, not to this browser: if you are on another machine, that one still needs pairing.",
+    "alcance": "A machine key serves every project of yours in runner mode — revoking it takes the local agent down in all of them.",
+    "gesto": "On the paired machine, check the local agent's service:",
+    "comandoDeServico": "brabo-runner service status --project {{projectId}}",
+    "parearMesmoAssim": "I'm on another machine — pair this one too"
   }
 }

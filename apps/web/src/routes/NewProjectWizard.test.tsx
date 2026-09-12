@@ -38,6 +38,15 @@ vi.mock('../lib/api-client', () => ({
   // decide se o card "Pasta montada" é sequer oferecido, então todo teste
   // que chega ao passo de workspace passa por aqui.
   getProjectsBase: (...a: unknown[]) => getProjectsBase(...a),
+  // O reconhecimento de máquina já pareada (RN-548) do `RunnerOnboardingPanel`
+  // embutido no passo de workspace. Ele só pergunta DEPOIS da criação
+  // antecipada (RN-437), porque a rota é por projeto; sem chave de MÁQUINA o
+  // painel fica byte a byte como era.
+  listWorkspaces: () =>
+    Promise.resolve([{ workspace: { id: 'ws-1' }, role: 'maintainer' }]),
+  listRunnerDeviceKeys: () => Promise.resolve([]),
+  getProject: () =>
+    Promise.resolve({ id: 'proj-1', workspacePath: null, workspaceVerifiedAt: null }),
   mensagemDaApi: (erro: unknown) => (erro instanceof Error ? erro.message : 'Erro'),
 }));
 

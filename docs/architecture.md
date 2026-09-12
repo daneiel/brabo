@@ -319,6 +319,25 @@ stamp changes. One wait per screen: `RunnerOnboardingPanel` takes
 STATES whose disk it is listing, in both origins — the only hint before that was
 a shortcut's label, which names a place, not a machine.
 
+**The panel also RECOGNISES a machine that is already paired**
+([RN-548](business-rules.md#rn-548), [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)).
+`listRunnerDeviceKeys` in `lib/api-client.ts` reads
+`GET /projects/:projectId/runner-device-keys`, which since
+[RN-543](business-rules.md#rn-543) marks each key's SPECIES — and the whole
+derivation lives outside the component, in `lib/agente-de-maquina.ts`, because
+the rule is about the DATA and the component is about the design. Seven states,
+none collapsing into another, and failure is derived from `isError` rather than
+from a status, so a network error says "I don't know" instead of spinning in
+"checking…" forever. A registered key is NOT a running agent — the same
+discipline `workspaceVerifiedAt` already imposes — and the list belongs to the
+ACCOUNT, not to this browser, so the strongest sentence available is "your
+account has a paired machine". Both limits are stated on screen, and they are
+why the [ADR 0118](adr/0118-configuracao-do-runner-pelo-navegador.md) flow is
+not removed: it moves into a `<details>` whose label names the case it still
+answers ("I'm on another machine"). The read's minimum comes from `roleAtLeast`
+against the ENDPOINT's `developer`, and a real 403 lands in the same state —
+the workspace role is a proxy, the api is the authority.
+
 **The Code tab (PHASE 26) is the same read pattern**, applied to code
 instead of events: `getContainerState`/`getCodeTree`/`getCodeFile`/
 `searchCode`/`getCodeDiff` in `lib/api-client.ts` mirror the api's read

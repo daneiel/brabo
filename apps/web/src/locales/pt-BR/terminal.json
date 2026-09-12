@@ -66,5 +66,19 @@
     "semResposta": "Não vimos o runner conectar em {{minutos}} minutos.",
     "semRespostaRessalva": "Isso não prova que ele não está rodando: confira o terminal onde você colou o comando e, se este projeto já tinha sido confirmado antes com a mesma pasta, o carimbo não é reescrito — quem sabe do agora é a aba Código.",
     "procurarDeNovo": "Procurar de novo"
+  },
+  "agenteDeMaquina": {
+    "verificando": "Verificando se sua conta já tem uma máquina pareada…",
+    "semPapel": "Chave de dispositivo é de cada pessoa, e listar as suas exige papel developer neste projeto — por isso esta tela não checou se você já tem uma máquina pareada.",
+    "naoSei": "Não consegui checar se sua conta já tem uma máquina pareada. Isso não quer dizer que não tenha — quer dizer que não sei.",
+    "pareada": "Sua conta já tem máquina pareada: {{nomes}}. Um agente local usou essa chave pela última vez em {{data}}.",
+    "pareadaNuncaUsada": "Sua conta já tem máquina pareada: {{nomes}} — e nenhum agente local usou essa chave ainda.",
+    "revogada": "A chave de máquina desta conta ({{nomes}}) está revogada: nenhum agente local se conecta com ela. Parear de novo abaixo.",
+    "ressalvaNaoEBatimento": "Chave registrada não é agente rodando: ela prova que a máquina foi pareada um dia, nunca que o agente está de pé agora.",
+    "ressalvaDaConta": "A lista é da sua CONTA, não deste navegador: se você está em outra máquina, esta ainda precisa ser pareada.",
+    "alcance": "Uma chave de máquina atende todos os seus projetos em modo runner — revogá-la derruba o agente local em todos eles.",
+    "gesto": "Na máquina pareada, confira o serviço do agente local:",
+    "comandoDeServico": "brabo-runner service status --project {{projectId}}",
+    "parearMesmoAssim": "Estou em outra máquina — parear esta também"
   }
 }
