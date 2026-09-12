@@ -1,0 +1,69 @@
+---
+id: internal-machine-device-keys-controller-registrar-chave
+title: "Registers the MACHINE device key of a fresh installation"
+description: "For the one-line installer, right after it creates the first account: the local agent needs a credential, and the only one that existed was bound to a PROJECT — in an installation that has none yet. The pair is generated ON THE MACHINE and only the public half arrives here; write the returned `id` into the private JWK as `kid` (RN-475), which is the only link between the file on disk and the public half on the server. There is no `userId` in the body ON PURPOSE: the owner is the installation's SOLE user, resolved by the api, so holding the service token never means choosing whose credential to mint. Registering REPLACES: the owner's active machine keys are revoked in the same transaction, so a reinstalled machine works and a thousand machine keys cannot exist. Project keys (ADR 0118) are never touched."
+sidebar_label: "Registers the MACHINE device key of a fresh installation"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Registers the MACHINE device key of a fresh installation"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/machine-device-keys"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+For the one-line installer, right after it creates the first account: the local agent needs a credential, and the only one that existed was bound to a PROJECT — in an installation that has none yet. The pair is generated ON THE MACHINE and only the public half arrives here; write the returned `id` into the private JWK as `kid` (RN-475), which is the only link between the file on disk and the public half on the server. There is no `userId` in the body ON PURPOSE: the owner is the installation's SOLE user, resolved by the api, so holding the service token never means choosing whose credential to mint. Registering REPLACES: the owner's active machine keys are revoked in the same transaction, so a reinstalled machine works and a thousand machine keys cannot exist. Project keys (ADR 0118) are never touched.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-machine-device-keys-controller-registrar-chave.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-machine-device-keys-controller-registrar-chave.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-machine-device-keys-controller-registrar-chave.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

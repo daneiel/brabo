@@ -601,10 +601,11 @@ reason in the URL.
   which is which (`especie`): a MACHINE key (`projectId: null`) serves every
   project of its owner, so it shows up in every project's listing — without
   that it would be invisible and permanent in every screen, the very defect
-  RN-519 closed, reborn in the new species. The `POST` still creates only
-  project-bound keys: nothing in the api creates a machine key yet (the
-  `install.sh` does, [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md),
-  in a later session of the phase). Revoking a MACHINE key asks the engine to
+  RN-519 closed, reborn in the new species. This `POST` still creates only
+  project-bound keys; the one that creates MACHINE keys is
+  `POST /internal/machine-device-keys`, below
+  ([RN-552](business-rules.md#rn-552)) — a different route, a different
+  credential and a different caller. Revoking a MACHINE key asks the engine to
   drop the live runner in EACH runner-mode project its owner reaches — one
   `{project, user}` call per project, the engine untouched.
 - **Revoking a device key now reaches the LIVE connection, and the target
@@ -674,6 +675,48 @@ reason in the URL.
   need an advisory lock over the absence of rows, and that is not where the
   containment lives — whoever reaches this route already holds the service
   token, i.e. already controls the installation.
+- **`POST /internal/machine-device-keys` MINTS A DURABLE USER CREDENTIAL from
+  a machine secret** ([RN-552](business-rules.md#rn-552),
+  [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) point 4). This is
+  the sharpest edge the service token has, and it is declared here for the same
+  reason its sibling above is: the installer's next step after creating the
+  first account is pairing the local agent, and pairing needs a credential —
+  the only one that existed was bound to a PROJECT, in an installation that has
+  none yet.
+
+  **What it costs, said plainly:** a leaked `BRABO_SERVICE_TOKEN` can now
+  FABRICATE a device key that acts as a user against role-checked routes
+  (`POST .../runner-ticket`, and through it the runner channel), instead of
+  only talking to the internal routes. The alternative credential — the
+  freshly created user's own — was considered and refused because it
+  contradicts [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+  itself: the password is read at the TTY, *used and discarded*, and point 5
+  states the installer *"does not log in for anybody"*, which is why the
+  first-account response deliberately carries no session token. Requiring it
+  here would force the installer to create, on the machine, the very live
+  session that ADR refused to create.
+
+  Three containments live in the ROUTE, not in this paragraph. **There is no
+  `userId` in the body**: the owner is the installation's SOLE user, resolved
+  by the api, so the token never buys the choice of whose credential to mint —
+  with zero users or more than one it refuses with `409` and writes nothing,
+  the same shape of condition as first-account (about the installation, never
+  about the argument), and it goes quiet for good once the installation has a
+  team. **Registering REPLACES**: the owner's active machine keys are revoked
+  in the same transaction, so a reinstalled machine is a legitimate case and a
+  thousand machine keys are impossible — bounded by a clause, not by a number
+  that ages. **A private JWK is refused by name**: `d` present answers `400`
+  saying what arrived, by the same domain rule the browser registration uses,
+  because storing a private half is the worst outcome this route has.
+
+  What the key grants is not widened: it gives the local agent exactly the
+  projects its owner already reaches at `developer`, resolved against the
+  project asked for ([RN-543](business-rules.md#rn-543)). Two gaps are declared
+  rather than hidden: there is no `GET` and no `DELETE` here (listing would
+  publish a person's credential inventory to whoever holds only the machine
+  secret; revoking already exists where it has a human owner), and on an
+  installation that has no project yet no screen reaches a machine key at all —
+  which is exactly why registering replaces instead of leaving orphans behind.
 - **`/docs` and `/docs-json` are NOT in the table, and that's a known
   gap.** The Swagger UI is mounted by `SwaggerModule.setup()` at the
   Express level, not as a controller, and the test enumerates via
@@ -985,6 +1028,7 @@ reason in the URL.
 | POST | `/internal/projects/:projectId/mirror-sync-result` | engine-service |
 | GET | `/internal/projects/:projectId/container-spec` | engine-service |
 | POST | `/internal/first-account` | engine-service |
+| POST | `/internal/machine-device-keys` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |

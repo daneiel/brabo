@@ -26,6 +26,42 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: nasce a rota que **registra a chave de dispositivo de MÁQUINA** —
+  `POST /internal/machine-device-keys`
+  ([RN-552](docs/business-rules.md#rn-552),
+  [ADR 0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 4).
+
+  É a lacuna que a [RN-543](docs/business-rules.md#rn-543) declarou por escrito
+  e deixou aberta de propósito — *"nenhuma rota da api cria chave de máquina
+  ainda; isso é o `install.sh`, e nasce com o primeiro chamador"*. O chamador
+  chegou. Corpo `{ name, publicKeyJwk }`, resposta
+  `{ id, userId, name, createdAt, replacedKeyIds }`; o `id` é o que vai gravado
+  dentro da JWK privada, no `kid` ([RN-475](docs/business-rules.md#rn-475)).
+
+  **A credencial é o `BRABO_SERVICE_TOKEN`**, a mesma da primeira conta: é o
+  mesmo instalador, no mesmo minuto, e o token prova controle da máquina.
+  Exigir a credencial do usuário recém-criado obrigaria o instalador a fazer
+  login com a senha que ele lê no TTY e **descarta**, o que o próprio ADR 0155
+  recusa. **O que isso custa está declarado** em
+  [`docs/security-surface.md`](docs/security-surface.md): um service token
+  vazado passa a poder fabricar uma credencial de acesso duradoura, e não só
+  falar com as rotas internas.
+
+  **Três contenções, na rota e não no texto:** não há `userId` no corpo — o
+  dono é o usuário ÚNICO da instalação, e com zero ou mais de um a rota recusa
+  com `409` sem escrever nada, como a da primeira conta recusa; registrar
+  **substitui** as chaves de máquina ativas do dono, na mesma transação (máquina
+  reinstalada é caso legítimo, mil chaves de máquina são impossíveis), e as de
+  projeto nunca são tocadas; e uma JWK com `d` — a metade **privada** — responde
+  `400` dizendo o que chegou, em vez de ser gravada.
+
+  Sem migration: a coluna `project_id` já é nullable desde a RN-543. Numa
+  instalação com duas pessoas a rota deixa de funcionar, e isso é o desenho.
+
+- **api**: o registro de chave de dispositivo **pelo navegador** passa a
+  recusar uma JWK **privada** (com `d`) com `400`, em vez de armazená-la. A
+  régua de forma virou uma só, no domínio, chamada pelos dois registradores.
+
 - **web**: o painel de onboarding do runner **reconhece uma máquina já
   pareada** e para de mandar parear de novo
   ([RN-548](docs/business-rules.md#rn-548),
