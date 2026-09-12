@@ -11156,7 +11156,7 @@ movimento que o ADR 0156 protegeu por escrito.
 recebe a frase de rebaixamento (não foi o que fez), e quem esbarra no teto do
 workspace não é mandado falar com um `maintainer` — lá o papel que desfaz é
 `owner`. Mesma disciplina do ponto 5 da [RN-556](#rn-556) e da
-[RN-470](#rn-470).
+[RN-470](business-rules/custo.md#rn-470).
 
 **O papel do ator vem do repositório, não do `ResolveEffectiveRoleUseCase`** —
 o inverso da escolha da RN-556, pela mesma razão que ela deu: nos casos de uso

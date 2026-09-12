@@ -150,7 +150,7 @@ que este ADR não abriu.
 nenhuma serve para duas coisas: quem tentou se promover não recebe a frase de
 rebaixamento (não foi o que fez), e quem esbarra no teto do workspace não é
 mandado falar com um `maintainer` — lá o papel que desfaz é `owner`. É a mesma
-disciplina do ponto 5 do ADR 0156 e da [RN-470](../business-rules.md#rn-470):
+disciplina do ponto 5 do ADR 0156 e da [RN-470](../business-rules/custo.md#rn-470):
 não colapsar dois estados por eles compartilharem um desfecho.
 
 **7. O papel do ator vem do repositório, não do
