@@ -24,6 +24,10 @@ rules:
       # Fase 12d: os casos de uso de backlog decidem QUEM promove uma história
       # (RN-048) — regra de negócio que não mora no diretório `domain/`.
       - "apps/api/src/application/use-cases/backlog/**"
+      # AT-046: o gerador decide O QUE da fonte chega ao web e ao engine
+      # (áreas nos dois, lista solo só no web). Mudar essa cobertura muda o
+      # que RN-054/RN-440 afirmam, e o gerador mora fora de `domain/`.
+      - "apps/api/scripts/gerar-areas.ts"
     # A RN pode morar em QUALQUER um dos três arquivos desde que o
     # `business-rules.md` foi partido por tamanho (Custo e Autenticação
     # sozinhas eram metade de uma página de 640 KB). Disjunção, não

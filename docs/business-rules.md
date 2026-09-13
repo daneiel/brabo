@@ -702,6 +702,9 @@ compared api against web — the engine silently diverged. Now
 `apps/web/src/lib/agent-areas.generated.ts` and
 `apps/engine/lib/engine/agents/areas.ex` are produced by
 `pnpm --filter api gerar:areas`, and the test fails what's stale on disk.
+Since AT-046 the same generator also writes `SOLO_CONVERSATIONAL_AGENTS`
+(RN-440) into the web file — and only there, since the engine has no reader
+for it.
 The list is still the CATALOG; `agent_areas` is the per-project STATE
 (RN-094), and the two answer different questions.
 
@@ -5102,18 +5105,26 @@ divergir do backend. `addressableAgents()` (`apps/api/src/domain/agents/agent-ar
 
 `SOLO_CONVERSATIONAL_AGENTS` é uma lista PRÓPRIA, não derivada do roster
 `apps/web/src/lib/agents.ts` (que também lista agentes de gate e o
-Psicólogo/Anamnese, nenhum endereçável por handoff) nem do gerador
-`gerar:areas` (Fase 18, que só cobre `AGENT_AREAS`). O mirror manual do
-lado web (`apps/web/src/lib/agents.ts`, mesma constante) não é cruzado por
-teste automático com o do lado api — divergir produz, no pior caso, uma
-opção velha no seletor que o backend ainda recusa com 400, nunca uma
-escrita indevida.
+Psicólogo/Anamnese, nenhum endereçável por handoff). A direção da derivação
+é a da api para o web: desde a AT-046 a cópia do web deixou de ser mirror
+MANUAL e sai do MESMO gerador das áreas (`pnpm --filter api gerar:areas`,
+Fase 18), em `apps/web/src/lib/agent-areas.generated.ts`, que `agents.ts`
+só reexporta. `agent-areas.spec.ts` reprova quando o disco diverge do que o
+gerador produz, e a lista gerada sai `as const satisfies readonly AgentKey[]`
+— um nome que o roster do web não conhece quebra o build do web. O engine
+NÃO recebe a lista (não há consumidor lá). Mesmo com as duas cópias
+travadas, quem decide o que é aceito continua sendo o
+`RequestManualHandoffUseCase`.
 
 - **Onde:** `apps/api/src/domain/agents/agent-areas.ts` (`addressableAgents`,
   `SOLO_CONVERSATIONAL_AGENTS`); `apps/api/src/application/use-cases/agents/request-manual-handoff.use-case.ts`;
-  `apps/web/src/lib/agents.ts` (mirror manual)
+  `apps/api/scripts/gerar-areas.ts` (`renderWeb`, que escreve a lista no
+  web); `apps/web/src/lib/agent-areas.generated.ts` (cópia GERADA,
+  reexportada por `apps/web/src/lib/agents.ts`)
 - **Teste:** `apps/api/test/domain/agents/agent-areas.spec.ts`
-  (`describe('addressableAgents (ADR 0109)')`); `apps/api/test/application/use-cases/agents/request-manual-handoff.use-case.spec.ts`
+  (`describe('addressableAgents (ADR 0109)')` e
+  `describe('a lista solo sai do gerador para o web (AT-046)')`, mais o
+  aferidor de frescor do arquivo do web); `apps/api/test/application/use-cases/agents/request-manual-handoff.use-case.spec.ts`
   (recusa subagente E recusa agente desconhecido); `apps/web/src/lib/agents.test.ts`
 - **ADR:** [0109](adr/0109-handoff-manual-a-agente-a-escolha.md)
 - **Origem:** backlog do modelo de time — item aberto desde a FASE 13c,
@@ -13202,6 +13213,67 @@ pode depender dela — é justamente por depender dela que ele não saía.
   falhando inteira, o job gasta as duas esperas antes de recusar
 - **ADR:** [0149](adr/0149-assinatura-dos-artefatos-publicados.md)
 - **Origem:** AT-051 (EP-009/HS-035)
+
+### RN-567 — `proposed_action.created` diz QUAL regra decidiu: o `reason` de `decide()` passa a sobreviver quando a ação passa {#rn-567}
+
+`decide()` sempre devolveu um par — `policy` e `reason` —, e a razão é
+escrita em todos os pontos de retorno: o IAM insuficiente, o piso do
+container ([RN-492](#rn-492)), `agent_autonomy`, as linhas do
+`permissions.json`, o comando composto, e cada teto absoluto. Mas
+`ProposeActionUseCase` só a guardava num lugar: `rejectionReason`, que
+`initialStatusFor` preenche **só** quando a política nega. Numa
+auto-aprovação — o desfecho que mais precisa de auditoria — o event log
+dizia *"a política decidiu"* ([RN-049](business-rules/custo.md#rn-049)) e
+nunca *qual* regra. `status` tornou a auto-aprovação distinguível de um
+clique; o motivo é o degrau seguinte.
+
+**A regra:** o payload do evento de SESSÃO `proposed_action.created` ganha
+`reason`, com a string de `decide()` **como está**, nos TRÊS desfechos —
+`auto_approved`, `pending` e `denied`. Não nasce segunda régua
+"estruturada": a string já é a fonte, e um enum paralelo divergiria dela no
+primeiro teto novo. No `denied` o valor é o MESMO que vira
+`rejectionReason`.
+
+**O outbox NÃO ganha o campo, e isso é decisão.** A linha de outbox
+`proposed_action.created` é contrato api↔engine, e nenhum consumidor do
+engine lê o motivo; alargar contrato sem consumidor é o corte que o
+[ADR 0153](adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.md) nomeia. A
+linha `session_event.appended` que `AppendSessionEventUseCase` grava para o
+mesmo evento carrega só `eventId`/`seq`/`type`, então o motivo também não
+vaza por ela.
+
+**Ausente não é "sem motivo".** Evento gravado antes desta regra não tem o
+campo, e não há reprocessamento nem coluna nova: quem lê trata `reason`
+ausente como "não registrado". Todo evento novo tem o campo, porque
+`Decision.reason` é `string` obrigatória no tipo.
+
+Nada em `decide()` muda — nenhum teto, nenhum veredito, nenhuma string. A
+tela também não muda nesta regra: o motivo passa a EXISTIR no log, e
+mostrá-lo é outra entrega.
+
+**O que o motivo NÃO diz, declarado:** ele nomeia a regra, não a RAIZ do
+escopo — o ponto 7 do [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md)
+pedia *qual raiz* autorizou, e `escopo: cd dentro da pasta do projeto` não
+carrega o caminho. No comando composto, a razão diz que todos os segmentos
+bateram em `allow`, sem dizer qual padrão casou qual segmento. E as linhas
+do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
+`matchAgainstFile`) — o mesmo comando que já mora em
+`proposed_actions.payload` e no card de aprovação.
+
+- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:188`
+  (`reason` no payload do evento de sessão), `:151` (o comentário do outbox
+  sem o campo), `:159` (o payload do outbox, intacto), `:259` (o
+  `rejectionReason`, que continua só no `deny`);
+  `apps/api/src/domain/actions/decide.ts:237` (`Decision`, a fonte da string)
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:617`
+  (caminho feliz: auto-aprovação grava `agent_autonomy: auto_approve`),
+  `:640` (`require_approval` pelo default e pelo teto da trava de merge),
+  `:668` (`deny` com o mesmo texto do `rejectionReason`), `:686` (o outbox
+  sem `reason`)
+- **ADR:** [0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md),
+  [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7,
+  parcialmente)
+- **Origem:** AT-066
 
 ### RN-568 — A presença de QA, SecOps e dos membros de área no painel do time é decidida pela sessão INTEIRA, não pela janela de 200 eventos {#rn-568}
 

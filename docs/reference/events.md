@@ -68,7 +68,7 @@ A row in `session_events`, append-only, with a `seq` that's dense per session
 
 | type | when |
 |---|---|
-| `proposed_action.created` | the action was born — before any execution. `payload.status` says how it was born (`pending`, `auto_approved` or `denied`), and that's what distinguishes a human decision from policy ([RN-049](../business-rules/custo.md#rn-049)) |
+| `proposed_action.created` | the action was born — before any execution. `payload.status` says how it was born (`pending`, `auto_approved` or `denied`), and that's what distinguishes a human decision from policy ([RN-049](../business-rules/custo.md#rn-049)). `payload.reason` says WHICH policy rule decided — the string `decide()` returns, on all three outcomes; absent on events recorded before the rule existed, which means "not recorded", never "no reason". The outbox row of the same name does NOT carry it ([RN-567](../business-rules.md#rn-567)) |
 | `proposed_action.approved` | decided by the user — `actor` is **whoever clicked**. Auto-approval does NOT go through here: it shows up in `created` with `status: auto_approved` and an agent actor |
 | `proposed_action.denied` | denied — terminal state. `actor` is whoever refused it, and `payload.reason` is the reason |
 | `proposed_action.executed` | executed successfully |

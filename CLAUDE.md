@@ -140,6 +140,7 @@ estado lido do repositório e não da conversa.
 | A conversão de modo deixa de ser um salto no escuro (AT-049/AT-050) | RN-559, RN-560 |
 | A rotação da chave mestra, provada e observável (AT-033/AT-034) | ADR 0158, RN-562, RN-563 |
 | O Infra Lead recusa `container_start` por modo antes de propor (AT-048) | RN-566 |
+| O motivo da política no `proposed_action.created` (AT-066) | RN-567 |
 | Imagem de terceiro por digest, e o lint irmão (AT-036, BRB-004) | ADR 0159 |
 | O `checksums.txt` deixa de ser refém da matriz (AT-051) | RN-565 |
 | A credencial que sumia no `docker exec` do runner (AT-053) | Lacuna que o ADR 0145 declarou POR ESCRITO e mediu: o container `running` que a RN-507 exige antes de qualquer operação de `RunnerGit` só existe porque o MESMO runner o subiu, e é esse mesmo sucesso que o faz rotear todo comando para dentro dele — por um `docker exec` sem campo de `env` (ADR 0130, sem `-e` livre). O `git fetch` autenticado rodava com o helper instalado e as variáveis VAZIAS, e a falha chegava como token inválido ou rede fora: o caminho COMUM, não uma borda. Entregou-se a metade do SILÊNCIO, nunca a do `env`: o par (`env` presente, container ativo) passa a ser RECUSADO antes de executar, com marca de PROTOCOLO partida entre duas linguagens, mensagem que diz o quê e por quê, e origem `politica` — não `codigo`, porque não há cláusula faltando, há decisão de produto pendente. Quem recusa é o RUNNER e só ele pode: `containerAtivo` nasce `null` a cada execução, então container `running` REGISTRADO no banco NÃO implica container ativo NAQUELE processo, e um runner reiniciado com o container de pé roteia pro HOST, onde a credencial chega — subir a checagem recusaria um caminho que funciona, e `RunnerReadiness` fica byte a byte como está. A saída nunca cita nome nem valor de variável, só a CONTAGEM (a invariante da RN-507 sobrevive intacta). Metade aberta declarada, e a adjacência também: a idempotência de `ensure!` marca o workspace pronto na segunda tentativa por achar o `.git`, e ela falha adiante em vez de repetir a recusa | RN-558 |
@@ -343,8 +344,6 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   consequências — `mirrorPath` zerado, `workspaceVerifiedAt` nulo e container
   removido seguem ditos só no caso de uso e nas RNs. Migrar conteúdo entre
   modos continua fora, sem dono
-- Mirror web de `SOLO_CONVERSATIONAL_AGENTS` sem teste cruzado com a api
-  (pior caso: opção velha que o backend recusa com 400)
 - `ExecutionModeSection` ENCOLHEU para o ramo `runner` (RN-559): converter para
   `mounted` abre o MESMO `FolderBrowserModal` da criação, com
   `origem: { tipo: 'api', workspaceId }` — mesmo componente, mesmo endpoint,
@@ -1379,7 +1378,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - A lista de áreas tem UMA fonte —
   `apps/api/src/domain/agents/agent-areas.ts`. As cópias do web e do
   engine são GERADAS por `pnpm --filter api gerar:areas` e reprovam em
-  teste se estiverem velhas; nunca as edite à mão (FASE 18). Área nova
+  teste se estiverem velhas; nunca as edite à mão (FASE 18). O mesmo
+  gerador escreve `SOLO_CONVERSATIONAL_AGENTS` (RN-440) SÓ no web, porque
+  o engine não a lê — não o estenda para lá sem consumidor. Área nova
   continua sendo decisão de produto, com ADR. A lista é o CATÁLOGO; a
   tabela `agent_areas` é o ESTADO por projeto, e nasce com ele (RN-094).
 - `docs/fluxo.yml` é a terceira peça do modelo de time, ao lado do
