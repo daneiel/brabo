@@ -702,6 +702,9 @@ compared api against web — the engine silently diverged. Now
 `apps/web/src/lib/agent-areas.generated.ts` and
 `apps/engine/lib/engine/agents/areas.ex` are produced by
 `pnpm --filter api gerar:areas`, and the test fails what's stale on disk.
+Since AT-046 the same generator also writes `SOLO_CONVERSATIONAL_AGENTS`
+(RN-440) into the web file — and only there, since the engine has no reader
+for it.
 The list is still the CATALOG; `agent_areas` is the per-project STATE
 (RN-094), and the two answer different questions.
 
@@ -5102,18 +5105,26 @@ divergir do backend. `addressableAgents()` (`apps/api/src/domain/agents/agent-ar
 
 `SOLO_CONVERSATIONAL_AGENTS` é uma lista PRÓPRIA, não derivada do roster
 `apps/web/src/lib/agents.ts` (que também lista agentes de gate e o
-Psicólogo/Anamnese, nenhum endereçável por handoff) nem do gerador
-`gerar:areas` (Fase 18, que só cobre `AGENT_AREAS`). O mirror manual do
-lado web (`apps/web/src/lib/agents.ts`, mesma constante) não é cruzado por
-teste automático com o do lado api — divergir produz, no pior caso, uma
-opção velha no seletor que o backend ainda recusa com 400, nunca uma
-escrita indevida.
+Psicólogo/Anamnese, nenhum endereçável por handoff). A direção da derivação
+é a da api para o web: desde a AT-046 a cópia do web deixou de ser mirror
+MANUAL e sai do MESMO gerador das áreas (`pnpm --filter api gerar:areas`,
+Fase 18), em `apps/web/src/lib/agent-areas.generated.ts`, que `agents.ts`
+só reexporta. `agent-areas.spec.ts` reprova quando o disco diverge do que o
+gerador produz, e a lista gerada sai `as const satisfies readonly AgentKey[]`
+— um nome que o roster do web não conhece quebra o build do web. O engine
+NÃO recebe a lista (não há consumidor lá). Mesmo com as duas cópias
+travadas, quem decide o que é aceito continua sendo o
+`RequestManualHandoffUseCase`.
 
 - **Onde:** `apps/api/src/domain/agents/agent-areas.ts` (`addressableAgents`,
   `SOLO_CONVERSATIONAL_AGENTS`); `apps/api/src/application/use-cases/agents/request-manual-handoff.use-case.ts`;
-  `apps/web/src/lib/agents.ts` (mirror manual)
+  `apps/api/scripts/gerar-areas.ts` (`renderWeb`, que escreve a lista no
+  web); `apps/web/src/lib/agent-areas.generated.ts` (cópia GERADA,
+  reexportada por `apps/web/src/lib/agents.ts`)
 - **Teste:** `apps/api/test/domain/agents/agent-areas.spec.ts`
-  (`describe('addressableAgents (ADR 0109)')`); `apps/api/test/application/use-cases/agents/request-manual-handoff.use-case.spec.ts`
+  (`describe('addressableAgents (ADR 0109)')` e
+  `describe('a lista solo sai do gerador para o web (AT-046)')`, mais o
+  aferidor de frescor do arquivo do web); `apps/api/test/application/use-cases/agents/request-manual-handoff.use-case.spec.ts`
   (recusa subagente E recusa agente desconhecido); `apps/web/src/lib/agents.test.ts`
 - **ADR:** [0109](adr/0109-handoff-manual-a-agente-a-escolha.md)
 - **Origem:** backlog do modelo de time — item aberto desde a FASE 13c,

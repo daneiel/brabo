@@ -337,8 +337,6 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   consequências — `mirrorPath` zerado, `workspaceVerifiedAt` nulo e container
   removido seguem ditos só no caso de uso e nas RNs. Migrar conteúdo entre
   modos continua fora, sem dono
-- Mirror web de `SOLO_CONVERSATIONAL_AGENTS` sem teste cruzado com a api
-  (pior caso: opção velha que o backend recusa com 400)
 - `ExecutionModeSection` ENCOLHEU para o ramo `runner` (RN-559): converter para
   `mounted` abre o MESMO `FolderBrowserModal` da criação, com
   `origem: { tipo: 'api', workspaceId }` — mesmo componente, mesmo endpoint,
@@ -1373,7 +1371,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - A lista de áreas tem UMA fonte —
   `apps/api/src/domain/agents/agent-areas.ts`. As cópias do web e do
   engine são GERADAS por `pnpm --filter api gerar:areas` e reprovam em
-  teste se estiverem velhas; nunca as edite à mão (FASE 18). Área nova
+  teste se estiverem velhas; nunca as edite à mão (FASE 18). O mesmo
+  gerador escreve `SOLO_CONVERSATIONAL_AGENTS` (RN-440) SÓ no web, porque
+  o engine não a lê — não o estenda para lá sem consumidor. Área nova
   continua sendo decisão de produto, com ADR. A lista é o CATÁLOGO; a
   tabela `agent_areas` é o ESTADO por projeto, e nasce com ele (RN-094).
 - `docs/fluxo.yml` é a terceira peça do modelo de time, ao lado do
