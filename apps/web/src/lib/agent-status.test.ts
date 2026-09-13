@@ -619,3 +619,84 @@ describe('rosterFromFacts — a mesma regra nos dois caminhos', () => {
     ).toContain('staff');
   });
 });
+
+/**
+ * RN-568 — a presença de qa/secops e dos membros de área deixa de ser decidida
+ * só pela janela de 200 eventos: o resumo do projeto (RN-090) agrega a sessão
+ * inteira, e entra como `agregado`, que SOMA à janela e nunca a substitui.
+ */
+describe('deriveAgentRoster — agregado da sessão inteira (RN-568)', () => {
+  // A cauda de uma sessão longa: nenhum `pr.gate_changed` nem delegação — os
+  // dois já saíram dos últimos 200.
+  const cauda = [ev('agent.status', 'criativo', { status: 'working' })];
+
+  it('gate fora da janela: o agregado traz QA e SecOps de volta', () => {
+    const soJanela = deriveAgentRoster(cauda, moduleMap, true, []);
+    expect(soJanela.map((r) => r.id)).not.toContain('qa');
+    expect(soJanela.map((r) => r.id)).not.toContain('secops');
+
+    const comAgregado = deriveAgentRoster(cauda, moduleMap, true, [], new Set(), {
+      gatesEverOpened: true,
+    });
+    expect(comAgregado.map((r) => r.id)).toEqual(
+      expect.arrayContaining(['qa', 'secops']),
+    );
+    // Só a PRESENÇA vem do agregado — o status continua lido da janela, que
+    // não tem gate nenhum aberto agora.
+    expect(statusOf(comAgregado, 'qa')).toBe('ocioso');
+  });
+
+  it('delegação fora da janela: o agregado traz o membro de área de volta', () => {
+    const roster = deriveAgentRoster(cauda, moduleMap, true, [], new Set(), {
+      gatesEverOpened: true,
+      delegatedSubagents: ['qa-automacao'],
+    });
+    expect(roster.map((r) => r.id)).toContain('qa-automacao');
+    expect(roster.map((r) => r.id)).not.toContain('qa-performance-seguranca');
+  });
+
+  it('sem agregado, a janela decide sozinha, como antes', () => {
+    const gate = ev('pr.gate_changed', 'qa', { gateStatus: 'awaiting_qa' });
+    expect(deriveAgentRoster(cauda, moduleMap, true, []).map((r) => r.id)).not.toContain('qa');
+    expect(deriveAgentRoster([gate], moduleMap, true, []).map((r) => r.id)).toContain('qa');
+    expect(
+      deriveAgentRoster([gate], moduleMap, true, [], new Set(), {}).map((r) => r.id),
+    ).toContain('qa');
+  });
+
+  it('`false` agregado é respeitado quando a janela também não viu gate', () => {
+    const roster = deriveAgentRoster(cauda, moduleMap, true, [], new Set(), {
+      gatesEverOpened: false,
+      delegatedSubagents: [],
+    });
+    expect(roster.map((r) => r.id)).not.toContain('qa');
+    expect(roster.map((r) => r.id)).not.toContain('secops');
+  });
+
+  it('`false` agregado NÃO esconde um gate que a janela VIU — resumo atrasado não é prova de ausência', () => {
+    const janela = [
+      ev('pr.gate_changed', 'qa', { gateStatus: 'awaiting_qa' }),
+      ev('delegation.completed', 'qa', { subagent: 'qa-automacao' }),
+    ];
+    const roster = deriveAgentRoster(janela, moduleMap, true, [], new Set(), {
+      gatesEverOpened: false,
+      delegatedSubagents: [],
+    });
+    expect(roster.map((r) => r.id)).toEqual(
+      expect.arrayContaining(['qa', 'secops', 'qa-automacao']),
+    );
+    expect(statusOf(roster, 'qa')).toBe('trabalhando');
+  });
+
+  it('`rosterFactsFromEvents` une as delegações sem repetir o mesmo membro', () => {
+    const fatos = rosterFactsFromEvents(
+      [ev('delegation.completed', 'qa', { subagent: 'qa-automacao' })],
+      moduleMap,
+      true,
+      [],
+      { gatesEverOpened: true, delegatedSubagents: ['qa-automacao', 'qa-performance-seguranca'] },
+    );
+    expect(fatos.gatesEverOpened).toBe(true);
+    expect(fatos.delegatedSubagents).toEqual(['qa-automacao', 'qa-performance-seguranca']);
+  });
+});

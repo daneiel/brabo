@@ -264,28 +264,55 @@ export interface RosterFacts {
   staffActive: boolean;
 }
 
+/**
+ * RN-568 — o que o resumo do projeto (RN-090) já sabe da sessão INTEIRA e a
+ * janela de eventos não consegue saber: os dois fatos de presença que nascem
+ * de eventos que podem ter saído dos últimos 200.
+ *
+ * Cada campo é OPCIONAL, e ausente quer dizer "não li", nunca "não houve":
+ * sem ele, o fato sai só da janela, exatamente como antes. Presente, ele se
+ * SOMA à janela (OU lógico / união) em vez de substituí-la, e isso não é
+ * afrouxamento — os dois fatos são MONÓTONOS dentro de uma sessão (gate que
+ * abriu não desabre, delegação registrada não some), então a janela nunca dá
+ * falso positivo, só falso negativo. Um `false` agregado que discorde de um
+ * gate VISTO na janela é resumo atrasado (as duas leituras têm cadências
+ * próprias de poll), não prova de ausência, e não pode esconder QA.
+ *
+ * Quem chama responde por ser a MESMA sessão: o resumo agrega a sessão mais
+ * RECENTE do projeto, e a aba Executores lê a sessão de EXECUÇÃO vigente —
+ * as duas só coincidem enquanto nenhuma sessão nova nasceu depois.
+ */
+export interface AgregadoDaSessao {
+  gatesEverOpened?: boolean;
+  delegatedSubagents?: readonly string[];
+}
+
 /** Extrai os fatos de presença do event log (caminho do painel do time). */
 export function rosterFactsFromEvents(
   events: SessionEvent[],
   moduleMap: ModuleMap | null | undefined,
   executionActivated: boolean,
   handoffs: Handoff[],
+  agregado: AgregadoDaSessao = {},
 ): RosterFacts {
   const delegatedSubagents = [
-    ...new Set(
-      events
+    ...new Set([
+      ...events
         .filter((e) => e.type.startsWith('delegation.'))
         .map((e) => (e.payload as DelegationEventPayload).subagent)
         .filter((s): s is string => !!s),
-    ),
+      ...(agregado.delegatedSubagents ?? []),
+    ]),
   ];
 
   return {
     executionActivated,
     moduleNames: (moduleMap?.modules ?? []).map((m) => m.name),
-    gatesEverOpened: events.some(
-      (e) => e.type === 'pr.gate_changed' || e.type === 'infra.gate_changed',
-    ),
+    gatesEverOpened:
+      agregado.gatesEverOpened === true ||
+      events.some(
+        (e) => e.type === 'pr.gate_changed' || e.type === 'infra.gate_changed',
+      ),
     delegatedSubagents,
     infraActive: handoffs.some(
       (h) => h.toAgent === 'infra' && h.status === 'accepted',
@@ -369,6 +396,10 @@ export function rosterFromFacts(
  * (`pushAreaMembers`). Quem AGRUPA visualmente (lead + membros recolhíveis)
  * é o componente que renderiza, via `areaFor` — este módulo só decide QUEM
  * está na roster e o status de cada um.
+ *
+ * `agregado` (RN-568) leva à presença de qa/secops e dos membros de área o
+ * que o resumo do projeto sabe da sessão inteira — ver `AgregadoDaSessao`.
+ * Só a PRESENÇA muda: o STATUS de cada um continua lido da janela.
  */
 export function deriveAgentRoster(
   events: SessionEvent[],
@@ -376,6 +407,7 @@ export function deriveAgentRoster(
   executionActivated: boolean,
   handoffs: Handoff[],
   pendingActionAgentIds: ReadonlySet<string> = new Set(),
+  agregado: AgregadoDaSessao = {},
 ): RosterEntry[] {
   const pendentes = new Set(pendingActionAgentIds);
   const facts = rosterFactsFromEvents(
@@ -383,6 +415,7 @@ export function deriveAgentRoster(
     moduleMap,
     executionActivated && !!moduleMap,
     handoffs,
+    agregado,
   );
 
   // Cada família de agente narra o próprio estado de um jeito, e é isto que o

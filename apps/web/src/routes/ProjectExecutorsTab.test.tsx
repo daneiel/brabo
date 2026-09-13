@@ -357,15 +357,16 @@ describe('ProjectExecutorsTab — executionActivated vem do resumo, não da jane
   it('resumo com `executionActivated: false` continua mostrando o estado vazio, mesmo com dev.started na janela', async () => {
     // Regressão: `dev.started` sozinho não bota dev-backend na roster — quem
     // decide é `executionActivated` (agora do resumo) cruzado com o
-    // module_map. Sem `pr.gate_changed`/`infra.gate_changed` na janela
-    // (`gatesEverOpened` continua window-derived, ver limitação documentada
-    // em ProjectExecutorsTab.tsx), o grupo de executores fica vazio de
+    // module_map. Sem gate nem na janela nem no resumo (RN-568: o resumo
+    // também decide a presença de QA), o grupo de executores fica vazio de
     // verdade.
     listSessionEvents.mockResolvedValue({
       items: [EVENTOS[0], EVENTOS[2]], // agent.status + dev.started, sem gate
       nextCursor: null,
     });
-    getProjectsSummary.mockResolvedValue([resumo({ executionActivated: false })]);
+    getProjectsSummary.mockResolvedValue([
+      resumo({ executionActivated: false, gatesEverOpened: false }),
+    ]);
 
     montar();
 
@@ -373,5 +374,41 @@ describe('ProjectExecutorsTab — executionActivated vem do resumo, não da jane
       await screen.findByText(/Nenhum dev agent ou QA entrou em ação nesta sessão ainda/),
     ).toBeInTheDocument();
     expect(screen.queryByText('dev-backend')).not.toBeInTheDocument();
+  });
+});
+
+describe('ProjectExecutorsTab — presença de QA vem do resumo, não da janela de 200 eventos (RN-568)', () => {
+  // A cauda de uma sessão longa: o `pr.gate_changed` e a delegação já saíram
+  // dos últimos 200 — sobra só o que não traz QA para a roster.
+  const CAUDA = [EVENTOS[0], EVENTOS[1], EVENTOS[2]];
+
+  it('gate e delegação fora da janela: o resumo agregado ainda traz QA e o membro de área', async () => {
+    listSessionEvents.mockResolvedValue({ items: CAUDA, nextCursor: null });
+    getProjectsSummary.mockResolvedValue([
+      resumo({ gatesEverOpened: true, delegatedSubagents: ['qa-automacao'] }),
+    ]);
+
+    montar();
+
+    expect(await screen.findByText('QA de Automação')).toBeInTheDocument();
+    expect(screen.getAllByText('QA').length).toBeGreaterThan(0);
+  });
+
+  it('resumo de OUTRA sessão não decide nada — a janela volta a decidir sozinha', async () => {
+    // O resumo agrega a sessão mais RECENTE do projeto; esta aba lê a de
+    // EXECUÇÃO. Uma ideação aberta depois faz as duas divergirem.
+    listSessionEvents.mockResolvedValue({ items: CAUDA, nextCursor: null });
+    getProjectsSummary.mockResolvedValue([
+      {
+        ...resumo({ gatesEverOpened: true, delegatedSubagents: ['qa-automacao'] }),
+        latestSessionId: 'sess-ideacao-posterior',
+      },
+    ]);
+
+    montar();
+
+    expect(await screen.findByText('dev-backend')).toBeInTheDocument();
+    expect(screen.queryByText('QA de Automação')).not.toBeInTheDocument();
+    expect(screen.queryByText('QA')).not.toBeInTheDocument();
   });
 });

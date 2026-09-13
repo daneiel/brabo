@@ -92,24 +92,33 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const pendingActionAgentIds = new Set(
     actions.filter((a) => a.status === 'pending').map((a) => a.actor.id),
   );
-  // LIMITAÇÃO CONHECIDA, não corrigida aqui: `deriveAgentRoster` também
-  // decide QA/SecOps por `gatesEverOpened`, calculado por dentro de
-  // `rosterFactsFromEvents` direto sobre a MESMA janela de 200 eventos —
-  // sofre da classe de defeito acima (`pr.gate_changed`/`infra.gate_changed`
-  // saindo da janela numa sessão longa). O resumo do workspace já carrega o
-  // valor agregado certo (`ProjectCardSummary.roster.gatesEverOpened`), mas
-  // corrigi-lo aqui exigiria mudar a ASSINATURA de `deriveAgentRoster`/
-  // `rosterFactsFromEvents` (aceitar um override, como já existe para
-  // `executionActivated`) — fora do escopo desta correção, que não deve
-  // tocar `lib/agent-status.ts`. Duplicar a regra de presença no call site em
-  // vez disso é pior: o próprio comentário de `RosterFacts` explica por que
-  // duas fontes da mesma regra divergem no primeiro agente novo.
+  // RN-568 — a presença de QA/SecOps (`gatesEverOpened`) e dos membros de
+  // área (`delegatedSubagents`) sofria da MESMA classe de defeito acima
+  // (`pr.gate_changed`/`infra.gate_changed` e delegações saindo da janela
+  // numa sessão longa). O resumo já agrega os dois sobre a sessão inteira, e
+  // vai como `agregado` — que SOMA à janela, nunca a substitui; a regra de
+  // presença continua uma só (`rosterFromFacts`).
+  //
+  // A guarda de sessão NÃO é enfeite aqui: o resumo agrega a sessão mais
+  // RECENTE do projeto, e esta aba lê a sessão de EXECUÇÃO vigente (RN-139).
+  // Uma ideação aberta depois faz as duas divergirem, e aí o agregado é de
+  // OUTRA sessão — a janela volta a decidir sozinha, como antes.
+  // `executionActivated`, logo acima, é lido do resumo SEM essa guarda: o
+  // mesmo descasamento o afeta, e segue declarado, não corrigido aqui.
+  const agregado =
+    projectSummary && projectSummary.latestSessionId === sessionId
+      ? {
+          gatesEverOpened: projectSummary.roster.gatesEverOpened,
+          delegatedSubagents: projectSummary.roster.delegatedSubagents,
+        }
+      : undefined;
   const roster = deriveAgentRoster(
     events,
     architecture?.moduleMap,
     executionActivated,
     handoffs,
     pendingActionAgentIds,
+    agregado,
   );
   const progressByAgent = deriveExecutionProgress(events);
   const { data: tokenUsage } = useSessionTokenUsage(projectId, sessionId);
