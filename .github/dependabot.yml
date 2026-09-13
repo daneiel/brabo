@@ -15,6 +15,12 @@
 #
 # Este arquivo NÃO desliga security update: isso é chave da interface, e só o
 # dono do repositório alcança. O que ele faz é as duas coisas que cabem aqui.
+#
+# E todo PR de dependência entra pela `dev` (`target-branch: dev`), nunca
+# direto na `main`: chega lá pela promoção `dev → qa → main`, como o resto.
+# `target-branch` só vale para atualização de VERSÃO — security update o GitHub
+# abre sempre contra a branch default, e quem o traz para a `dev` é o
+# `.github/workflows/dependabot-para-dev.yml`.
 version: 2
 updates:
   # 1. LIGA o que a doc já nomeava como dívida: as actions de terceiro estão
@@ -28,6 +34,7 @@ updates:
   #    ninguém troque isso por uma tag.
   - package-ecosystem: github-actions
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
       day: monday
@@ -47,11 +54,13 @@ updates:
   #    tem lockfile próprio, e o Dependabot já as enxerga separadas.
   - package-ecosystem: npm
     directory: /
+    target-branch: dev
     schedule:
       interval: monthly
     open-pull-requests-limit: 0
   - package-ecosystem: npm
     directory: /website
+    target-branch: dev
     schedule:
       interval: monthly
     open-pull-requests-limit: 0

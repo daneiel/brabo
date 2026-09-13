@@ -1054,6 +1054,16 @@ o RACIOCÍNIO da triagem, que continua valendo.
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   únicas exceções de push: tags (bot de release) e .release/gate.json
   (bot do gate).
+- PR do Dependabot entra pela `dev`, nunca direto na `main` — chega lá pela
+  promoção, como o resto. `target-branch: dev` cobre atualização de VERSÃO;
+  SECURITY update o GitHub abre sempre contra a branch default (`main`), e
+  `.github/workflows/dependabot-para-dev.yml` FECHA o que a `dev` já corrige
+  (versão resolvida >= primeira corrigida do ALERTA, nunca o "to" do PR, que é
+  a mais nova e não a mínima) e REDIRECIONA o resto — na dúvida redireciona,
+  nunca fecha. O gatilho que vale é `push` na `dev`: `pull_request_target` e
+  `pull_request` não enxergam workflow que só existe na `dev`. Depois de
+  redirecionar, os checks da `dev` só rodam com `@dependabot rebase` de quem
+  tem escrita (evento do `GITHUB_TOKEN` não dispara workflow).
 - Toda branch cujo PR é mergeado é ARQUIVADA automaticamente
   (`.github/workflows/archive-merged-branch.yml`) — move de
   `refs/heads/<nome>` para `refs/archive/<nome>`, nunca apaga: histórico

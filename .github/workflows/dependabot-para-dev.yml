@@ -1,0 +1,98 @@
+name: dependabot-para-dev
+
+# Dependência entra pela `dev`, como todo o resto, e chega à `main` pela
+# promoção `dev → qa → main`. Fonte da política:
+# docs/explanation/branching-policy.md, "Dependabot enters through dev".
+#
+# O `target-branch: dev` do `.github/dependabot.yml` resolve as atualizações de
+# VERSÃO. Os SECURITY UPDATES são chave da interface e o GitHub os abre SEMPRE
+# contra a branch default (`main`), ignorando `target-branch`. Este workflow
+# pega cada um deles e faz UMA de duas coisas, decidida por
+# `scripts/ci/dependabot-para-dev.ts` (testado):
+#
+# - FECHA com justificativa, quando a `dev` já resolve toda dependência do PR
+#   em versão >= a primeira corrigida do alerta (o #526 e o #553);
+# - REDIRECIONA a base para `dev` em qualquer outro caso, inclusive a dúvida.
+#
+# OS GATILHOS são três, e o principal é o menos óbvio. `pull_request_target` e
+# `schedule` só enxergam o workflow na branch DEFAULT, e `pull_request` roda o
+# workflow do merge entre a head (que o Dependabot cria a partir da `main`) e a
+# base (`main`) — nenhum dos três vê um arquivo que só existe na `dev`, e a
+# `main` só avança pela escada (a mesma armadilha medida no `pr-police.yml`).
+# `push` na `dev` roda o workflow DA `dev`: a cada merge ali, a varredura trata
+# todo PR aberto do Dependabot contra `main`. `workflow_dispatch` é para não
+# esperar o próximo merge; `pull_request_target` passa a valer, instantâneo,
+# quando este arquivo chegar à `main`.
+#
+# Não é check required e nunca executa código do PR: o checkout é da `dev`, e o
+# corpo do PR é lido pela API para um arquivo — nunca interpolado no shell.
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+  pull_request_target:
+    types: [opened, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  # Lê os alertas abertos para achar a primeira versão CORRIGIDA. Se a leitura
+  # falhar, a decisão compara com o destino do PR — mais estrita, então só pode
+  # redirecionar a mais, nunca fechar a mais.
+  security-events: read
+
+concurrency:
+  group: dependabot-para-dev
+  cancel-in-progress: false
+
+jobs:
+  varrer:
+    name: Dependabot entra pela dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: dev
+          persist-credentials: false
+
+      - name: Decidir e aplicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          TMP="$(mktemp -d)"
+          if ! gh api --paginate "repos/${REPO}/dependabot/alerts?state=open&per_page=100" \
+               | jq -s 'add // []' > "$TMP/alertas.json" 2>"$TMP/alertas.err"; then
+            echo "::warning::alertas do Dependabot ilegíveis — comparando com o destino do PR ($(head -c 200 "$TMP/alertas.err"))"
+            echo '[]' > "$TMP/alertas.json"
+          fi
+
+          PRS="$(gh pr list --repo "$REPO" --state open --base main --author 'app/dependabot' \
+                   --json number -q '.[].number')"
+          if [ -z "$PRS" ]; then
+            echo "nenhum PR do Dependabot aberto contra main"
+            exit 0
+          fi
+
+          for N in $PRS; do
+            gh pr view "$N" --repo "$REPO" --json body -q .body > "$TMP/corpo-$N.md"
+            RESULTADO="$(node scripts/ci/dependabot-para-dev.ts "$TMP/corpo-$N.md" . "$TMP/alertas.json")"
+            DECISAO="$(jq -r .decisao <<<"$RESULTADO")"
+            MOTIVO="$(jq -r .motivo <<<"$RESULTADO")"
+            echo "#$N → $DECISAO: $MOTIVO"
+
+            if [ "$DECISAO" = "fechar" ]; then
+              gh pr close "$N" --repo "$REPO" --comment "Fechado sem merge pelo \`dependabot-para-dev\`: ${MOTIVO}. A correção já está na \`dev\` e chega à \`main\` pela promoção \`dev → qa → main\`."
+            else
+              gh pr edit "$N" --repo "$REPO" --base dev
+              # Evento gerado pelo GITHUB_TOKEN não dispara workflow: os checks
+              # da `dev` NÃO rodam sozinhos depois da troca de base. Quem tem
+              # escrita comenta `@dependabot rebase` (o Dependabot não aceita o
+              # comando vindo deste bot).
+              gh pr comment "$N" --repo "$REPO" --body "Base trocada de \`main\` para \`dev\` pelo \`dependabot-para-dev\`: ${MOTIVO}. Os checks da \`dev\` não rodam sozinhos depois da troca — comente \`@dependabot rebase\` para dispará-los."
+            fi
+          done

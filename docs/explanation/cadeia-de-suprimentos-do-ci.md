@@ -235,6 +235,12 @@ Declared, not fixed:
   interface switch**, reachable only by the repository owner; until
   someone decides, that job keeps failing on alerts that the overrides
   already closed.
+
+  Every Dependabot PR enters through `dev` (`target-branch: dev` on the
+  three entries). Security updates ignore that key and open against the
+  default branch, so `dependabot-para-dev.yml` closes the ones `dev`
+  already fixes and retargets the rest — see *Dependabot enters through
+  dev* in `branching-policy.md`.
 - **npm/pnpm dependencies aren't attested.** The lockfile pins versions
   and integrity hashes, which is real, but there's no provenance check
   (`npm audit signatures` or equivalent) in any job.
