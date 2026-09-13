@@ -2,7 +2,7 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
-## Unreleased
+## v6.0.0 — 2026-09-13
 
 ### ⚠ Mudanças incompatíveis
 
@@ -26,6 +26,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   seguinte**: o job deixou de depender da matriz
   ([RN-565](docs/business-rules.md#rn-565)), que é o que fazia o
   `darwin-x64` segurá-lo por 24h.
+
+- **api**: o proxy do binário recusa Release sem checksums.txt (64b365a79)
 
 ### Novidades
 
@@ -1178,6 +1180,46 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   exigiria uma porta para pular a verificação — a porta que o ADR 0150 recusa.
   Mesma escolha, pelo mesmo motivo, do golden-set do RAG.
 
+- **api**: proposed_action.created carrega o motivo da decisão de política (37e4d6359)
+- **api**: a rotação da chave mestra deixa de ser tentativa e erro (cacbded62)
+- **web**: a tela de chaves de dispositivo, marcando a espécie de cada chave (3a6f9c8c7)
+- **web**: a conversão de modo escolhe a pasta e para de prometer migração (RN-559, RN-560) (e5ac7f52a)
+- **install**: o instalador fecha a instalação — conta, chave da máquina e serviço (2cbcf48e0)
+- **runner**: o agente espera o primeiro projeto, e a chave nasce no terminal (8e9b88f05)
+- **api**: registrar chave de dispositivo de MÁQUINA pelo instalador (e3e904a17)
+- **web**: a tela reconhece um agente local de máquina já pareado (RN-548) (ba846db3e)
+- **runner**: a unit de MÁQUINA, convivendo com as por projeto (RN-545) (83a70a598)
+- **runner**: o agente local abre N conexões, uma por projeto (RN-544) (c0c04955f)
+- **api**: a chave de dispositivo passa a poder ser da MÁQUINA (RN-543) (71ff31304)
+- **api**: a primeira conta da instalação nasce por rota interna, e recusa se já houver usuário (ab2d36068)
+- **instalador**: o install.sh compara a versão antes de perguntar (cb5afec2c)
+- **web**: o assistente pede o destino antes do nome, num passo só (ab9dc06a3)
+- **web,api**: criar projeto não provisiona; o git nasce no handoff (RN-541/522) (4b992125e)
+- **api**: artefatos dos agentes projetados em arquivo, numa pasta docs/ (56e4b79f6)
+- **web**: o picker do modo Runner volta a ler o disco do usuário (RN-533) (ee5035335)
+- **ci**: o instalador entra no manifesto assinado e roda em máquina limpa (RN-534) (3ed122225)
+- **engine,runner**: a base do agente local ganha um consumidor (RN-532) (3d918e523)
+- **install**: uma base para os dois lados, e o agente local já executável (RN-531) (b35ef7f7c)
+- **install**: migrar exige backup PROVADO antes de apagar (RN-530) (bef2c852e)
+- **docker**: backup cobre git_local_repos, aceita disco e restaura contra compose (RN-528) (adf0d6073)
+- **runner**: a base consentida, e cada projeto como subpasta dela (RN-529) (1e7a27113)
+- **install,docker**: a instalação sobe de um compose próprio (RN-527) (b4ee01ec5)
+- **api,web**: o proxy do binário confere o hash e recusa o que não confere (RN-525) (42943eb91)
+- **install**: o instalador que verifica a origem e ainda não instala (RN-526) (67ec0b5f8)
+- **ci**: a esteira assina o que publica, e verifica no mesmo run (RN-524) (0d4ed82db)
+- **engine**: sumarização do ContextManager resolve o template do grafo (8bcb7ae38)
+- **engine**: assess_implementability dispara o threat model de design do appsec (RN-522) (c31a27c9a)
+- **web,api**: subir container pela tela, nos três modos (5e6660c60)
+- **api,engine**: a revogação de chave de dispositivo deixa de ser cega e alcança a conexão viva (ad67a9be5)
+- **runner**: o agente local vira serviço de usuário (6949fc910)
+- **api,engine,runner,web**: o estado do espelho fica visível (221f6febb)
+- **engine,runner**: o espelho copia o trabalho para a pasta do usuário (f8b4e554f)
+- **api**: o destino do espelho é por projeto, e a api valida só o léxico (586bef364)
+- **runner,engine**: capacidades declaradas no join do agente local (19903dc7f)
+- **web**: o assistente oferece Pasta montada quando a base existe (65a78e76b)
+- **docker**: o broker sobe por padrão no compose local, e só nele (a2fa712ad)
+- **scripts**: consentimento da base de projetos no bootstrap (902d7c2bd)
+
 ### Correções
 
 - **web**: QA, SecOps e os membros de área (`qa-automacao`, …) **deixam de
@@ -1828,6 +1870,38 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   [RN-470](docs/business-rules/custo.md#rn-470) — tela não colapsa dois estados
   — voltando a ser cumprida.
 
+- **ci**: o aviso de alerta ilegível diz por quê, e a doc registra a medição (4c82bb51b)
+- **web**: presença de QA/SecOps no painel pelo agregado da sessão, não pela janela de 200 (d1e44c166)
+- **ci**: em Dockerfile a tag do digest vai na linha DE CIMA, não no fim do FROM (7c946f507)
+- **ci**: o checksums.txt assinado deixa de ser refém da matriz de binários (d675d2f85)
+- **engine**: o Infra Lead recusa container_start por modo antes de propor (32f72c36a)
+- **runner**: a recusa de contenção vence a da credencial (RN-558) (ca486bbfa)
+- **runner**: a credencial que sumia no docker exec passa a recusar nomeando (RN-558) (b4c5dc90b)
+- **web**: dublê de `ApiError` sem parâmetro-propriedade nos três mocks (310e19d38)
+- **api**: teto de auto-movimento no upsert de workspace, e a auto-promoção fecha (b8f5bcc8e)
+- **docker**: a oferta de fonte viaja dentro da imagem do engine (200464d65)
+- **api**: teto de auto-rebaixamento também na remoção de membro de projeto (7f43cfbc8)
+- **docs**: o glossário dizia sete schemas de artefato, e são onze (2b1a514e3)
+- **ci**: o claude-review pula PR de bot pelo TIPO, não por uma lista (a9e935fe4)
+- **runner,ci**: os binários de macOS e Windows nunca construíram (599516d2a)
+- **changelog**: o corte de versão consome o Unreleased em vez de enterrá-lo (56a5ca2cf)
+- **install,ci**: a detecção do instalador ganha teto, e o teste dela ganha margem (68a0c5cd4)
+- **docs**: o texto trazido citava RNs que ficaram no outro PR (1b6809016)
+- **docs**: as RN-070/071 moram em business-rules/custo.md (b75bd527a)
+- **ci,engine,api**: o golden-set do RAG nunca rodou verde, e agora mede (22c636de7)
+- **install**: o instalador para de anunciar que não faz o que faz (0d568d656)
+- traz a correção do auto-reconnect para a integração, e fecha a FASE 29 (23a3d9e8b)
+- **docs**: contagem de RNs após integrar a sessão 8 (390 → 391) (6c93fd7c5)
+- **docker,install**: o serviço backup entra no compose de instalação (513fd5631)
+- **runner**: corrige o arquivo:linha da proibição citada no base-guard (c21bb0d36)
+- **docker,engine**: mapeia no compose as flags que ligam Anamnese e Psicólogo (RN-523) (103941132)
+- **runner,web**: neutraliza o auto-reconnect do Phoenix.Socket (RN-108) (0c13c5d58)
+- **dev,api**: o reset total sobrevive a si mesmo e para de mentir no fim (718b859e2)
+- **web**: o painel para de dizer "trabalhando" sobre quem está parado (349860b52)
+- **api**: a sessão para de morrer com dev agent bloqueado por container (55f3b0777)
+- **api**: a spec do runner ia sem projectId, e o caminho nunca subiu container (a53c008ff)
+- **docker**: o broker sobe de verdade no compose local, sem abrir a rede (4e7e97147)
+
 ### Testes
 
 - **ci**: nasce `scripts/ci/vocabulario-de-eventos-dev.spec.ts`, que compara o
@@ -1870,6 +1944,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   nenhum, a comparação foi isolada em `semDecisao` e provada com três casos
   fabricados. A mensagem de falha nomeia o tipo, diz os dois lugares onde
   decidir e cita o `exp004`, no mesmo tom da que já existia.
+
+- **ci**: o E2E do instalador prova a instalação inteira em máquina limpa (RN-549) (3e3a8f490)
+- **bootstrap**: o item novo do menu entra na contagem travada (f8c63faae)
+- **e2e**: a chave de dispositivo ganha o E2E de navegador que nunca teve (972e91fe8)
 
 ### Documentação
 
@@ -1948,6 +2026,51 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   consumidor real. A camada de plataforma continua parada e passa a dizer
   honestamente por quê: não falta uma flag, falta um ambiente.
 
+- **areas**: RN-054/RN-440 e CLAUDE.md dizem que a lista solo é gerada (2eb3d2496)
+- **business-rules**: a RN-561 dizia "18ª entrada", e a entrada é a 13ª (ff338f5d1)
+- **business-rules**: a RN-558 dizia "no topo de tratarExec", e não é mais (0fcebf871)
+- **business-rules**: o arquivo:linha da RN-558 aponta o arquivo DEPOIS da mudança (122cd3fa8)
+- **docmap**: o sétimo script que lê o repositório como texto sai da regra de branches (392029895)
+- três documentos que contradizem o código, e a aferição que faltava (3df7ed108)
+- três contagens e dois bullets que mentiam, e a aferição que faltava (01f5daffa)
+- **claude**: a régua de criar usuário sobrevive ao fechamento da FASE 30 (b7c4e65e1)
+- **adr**: o ADR 0154 dizia `install` sem `--project`, e medido não dá (631b45909)
+- **brb,claude**: BRB-017 e BRB-028 medidos contra a dev, e o bullet do appsec sai (792037882)
+- **rn,adr**: a RN-470 mora em custo.md, e os dois links apontavam para o arquivo errado (8b290c0ec)
+- **runbook,docmap**: a verificação da oferta de fonte, e a sexta exclusão (c389d7a4c)
+- **security-surface**: a segunda porta do teto de auto-rebaixamento (a54c5f225)
+- planeja a FASE 30 e reduz o índice do CLAUDE.md a ponteiro (034714c14)
+- **branching**: o corte de versão consome o Unreleased, e a política diz isso (a24f2dfd6)
+- **runbook**: o teto de 5s da detecção é contrato do instalador (ed5bd628d)
+- contagem de RNs após integrar a dev (394 → 395) (9fccd3fbd)
+- **changelog**: as entradas do provisionamento adiado, renumeradas (459c4835b)
+- **changelog**: a entrada dos artefatos em arquivo (1b8485ef7)
+- **gates**: o quarto padrão do registro — o gate que fluxo.yml já atribuía (a438b21b4)
+- registra a resolução das três colisões de numeração (eecb3693c)
+- **adr**: renumera o ADR do DEPLOY_ENABLED de 0148 para 0153 (f56f3ba78)
+- renumera a RN das flags no compose de 523 para 540 (07cb0805f)
+- renumera a RN do gatilho do appsec de 522 para 539 (2e0ebfa5c)
+- **fase-29**: planeja a instalação de uma linha (ADRs 0149-0152) (213fbcc74)
+- **adr**: DEPLOY_ENABLED, o gatilho que dez documentos citam e nenhum cria (a2a4f1013)
+- **config**: `up --wait` só prova o que tem healthcheck (2e407c375)
+- **fase-28**: o agente local entra no docmap, e a fase registra onde desviou (30db82e34)
+- **fase-28**: base consentida no bootstrap e agente local com capacidades (285d458e5)
+- **changelog**: v5.0.0 (b69cc0e58)
+
+### Refatorações
+
+- **areas**: lista solo do web sai do gerador das áreas (ecfcf8926)
+
+### Manutenção
+
+- **ci**: PR do Dependabot entra pela dev, e o que a dev já corrige fecha sozinho (ff9d7e82e)
+- **ci**: imagem de terceiro entra por digest, e o lint irmão reprova quem esquecer (a89ddf206)
+- **deps**: as dependências vulneráveis dos dois lockfiles, e o que não fecha (73f103dbf)
+- **ci**: dependabot.yml — liga as actions, cala o ruído de rotina (b77d12719)
+- tira o `.env.bak` do repositório e ensina o .gitignore a recusá-lo (0d250a37f)
+- **deps**: sobe o piso do nodemailer para 9.1.0 (bf5704642)
+- **deps**: fecha 4 HIGH do multer com override escopado (059d8e68e)
+- **docs**: separa a cobrança de internal-api.md da de security-surface.md (0d38b088a)
 
 ## v5.0.0 — 2026-09-05
 
