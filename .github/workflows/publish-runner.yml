@@ -102,7 +102,7 @@ jobs:
         run: |
           echo "::warning::sem NPM_TOKEN — publicação do @brabo/runner pulada para ${{ steps.alvo.outputs.tag }}. Gere um Automation Token para o escopo @brabo em npmjs.com e configure o segredo NPM_TOKEN para publicar de verdade."
 
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413  # v6.1.0
         if: env.TEM_NPM_TOKEN == 'true'
         with:
           version: ${{ env.PNPM_VERSION }}
