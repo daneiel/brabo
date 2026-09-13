@@ -176,8 +176,15 @@ jobs:
           fi
           grep -E '✓|✗|casos bateram' /tmp/golden-qa.log
 
+      - name: DIAGNÓSTICO (temporário) — ações propostas e eventos
+        if: always()
+        run: |
+          psql "$DATABASE_URL" -c "select e.session_id, e.seq, e.payload->>'status' as st, left(e.payload->>'reason', 90) as reason, left(pa.payload->>'command', 80) as cmd, pa.payload->>'cwd' as cwd from session_events e left join proposed_actions pa on pa.id::text = e.payload->>'actionId' where e.type = 'proposed_action.created' order by e.session_id, e.seq;" || true
+          psql "$DATABASE_URL" -c "select session_id, type, count(*) from session_events group by 1, 2 order by 1, 2;" || true
+          psql "$DATABASE_URL" -c "select session_id, seq, type, left(payload::text, 300) from session_events where type in ('agent.error', 'toolloop.limit_reached', 'session.closed') or type like 'session.%' order by 1, 2;" || true
+
       - name: Logs da api e do engine
         if: always()
         run: |
-          echo "--- api ---"; tail -200 /tmp/api.log || true
-          echo "--- engine ---"; grep -iE 'error|recus|container|terminal|actions/execute' /tmp/engine.log | tail -200 || true
+          echo "--- api ---"; grep -E 'ERROR|WARN|llm-turn →|actions →|execute' /tmp/api.log | grep -v Neo4j | tail -200 || true
+          echo "--- engine ---"; grep -iE 'error|recus|actions/execute' /tmp/engine.log | grep -v SELECT | tail -200 || true
