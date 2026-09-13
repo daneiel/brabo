@@ -65,9 +65,12 @@ jobs:
           set -euo pipefail
 
           TMP="$(mktemp -d)"
+          # O stderr do `gh` vai para o arquivo também: na primeira execução só o
+          # do `jq` ia, e o aviso saiu com o motivo VAZIO.
           if ! gh api --paginate "repos/${REPO}/dependabot/alerts?state=open&per_page=100" \
-               | jq -s 'add // []' > "$TMP/alertas.json" 2>"$TMP/alertas.err"; then
-            echo "::warning::alertas do Dependabot ilegíveis — comparando com o destino do PR ($(head -c 200 "$TMP/alertas.err"))"
+               > "$TMP/alertas.pag" 2>"$TMP/alertas.err" \
+             || ! jq -s 'add // []' "$TMP/alertas.pag" > "$TMP/alertas.json" 2>>"$TMP/alertas.err"; then
+            echo "::warning::alertas do Dependabot ilegíveis — comparando com o destino do PR ($(tr '\n' ' ' < "$TMP/alertas.err" | head -c 300))"
             echo '[]' > "$TMP/alertas.json"
           fi
 

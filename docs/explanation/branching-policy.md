@@ -274,6 +274,13 @@ merge there sweeps the open Dependabot PRs against `main`. `workflow_dispatch`
 avoids waiting for the next merge; `pull_request_target` becomes effective,
 and immediate, once the file reaches `main`.
 
+**Measured on the first run (2026-09-13):** the alert read **failed** with the
+workflow's `GITHUB_TOKEN`, so today every decision falls back to the PR's
+target version. The consequence is the safe one — a security PR that `dev`
+already fixes, like #553, is **retargeted** instead of closed, and closing it
+stays a manual step. The warning in the run log now carries the API's message;
+reading the alerts with a different credential is a separate decision.
+
 **Declared:** after a retarget, `dev`'s required checks do **not** run on
 their own — events created by `GITHUB_TOKEN` don't trigger workflows, and
 Dependabot doesn't accept commands from that bot. Someone with write access

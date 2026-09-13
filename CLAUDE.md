@@ -1066,7 +1066,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   (versão resolvida >= primeira corrigida do ALERTA, nunca o "to" do PR, que é
   a mais nova e não a mínima) e REDIRECIONA o resto — na dúvida redireciona,
   nunca fecha. O gatilho que vale é `push` na `dev`: `pull_request_target` e
-  `pull_request` não enxergam workflow que só existe na `dev`. Depois de
+  `pull_request` não enxergam workflow que só existe na `dev`. Medido na 1ª
+  execução: o `GITHUB_TOKEN` NÃO lê os alertas, então hoje a decisão compara com
+  o destino do PR e o redundante é REDIRECIONADO, não fechado. Depois de
   redirecionar, os checks da `dev` só rodam com `@dependabot rebase` de quem
   tem escrita (evento do `GITHUB_TOKEN` não dispara workflow).
 - Toda branch cujo PR é mergeado é ARQUIVADA automaticamente
