@@ -148,6 +148,7 @@ estado lido do repositório e não da conversa.
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
 | A chave de dispositivo ganha tela, e a tela diz o alcance de revogar (AT-012) | RN-561 |
 | A presença de QA/SecOps no painel pelo agregado da sessão, não pela janela (AT-047) | RN-568 |
+| A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
 
 ## Estado atual e aberto
 
@@ -560,7 +561,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `nodemailer` para SMTP real do `MailSender` (ADR 0096), atrás de
   `MAIL_TRANSPORT` — `log` continua o default, inclusive em produção;
   `neo4j-driver` para o grafo de conhecimento (ADR 0099) — memória
-  DERIVADA do event log, nunca fonte de verdade; pgvector CONTINUA sendo
+  DERIVADA do event log, nunca fonte de verdade, e por isso SEM backup (ADR
+  0152): o caminho de volta é `pnpm --filter api grafo:reprojetar` (RN-569),
+  que chama o MESMO `GraphEventTranslator` do projetor vivo — tipo novo
+  projetado ganha tradução ALI, nunca num segundo tradutor — e não toca a
+  outbox dele; `PromptTemplate` não vem do event log e volta por
+  `scripts/dev/seed-prompts.ts`; pgvector CONTINUA sendo
   o índice vetorial dos chunks, o grafo não guarda embedding
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
 - `apps/web`: React 19 + Vite + TanStack Query/Router; `react-i18next`+

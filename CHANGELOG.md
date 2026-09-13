@@ -29,6 +29,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: o grafo de conhecimento (Neo4j) passa a ser **reconstruível a partir
+  do event log** — `pnpm --filter api grafo:reprojetar`, ou
+  `node scripts/reprojetar-grafo.js` dentro da imagem, com `--project <uuid>`
+  opcional ([RN-569](docs/business-rules.md#rn-569)). É o mecanismo que o
+  [ADR 0152](docs/adr/0152-backup-de-volumes-contra-compose.md) já dava como
+  premissa ao recusar backup de `neo4j_data`: até aqui, instalação migrada ou
+  restaurada ficava com o grafo vazio sem caminho de volta.
+
+  A tradução evento → grafo saiu do projetor para frente para
+  `GraphEventTranslator`, e os dois caminhos a chamam — nunca um segundo
+  tradutor. O comando é idempotente (`MERGE`, nunca apaga), varre em lotes por
+  cursor, **não toca a outbox** do projetor vivo (pode rodar com a api de pé) e
+  falha nomeado: Neo4j desligado é recusado antes de ler o log, e projeto
+  inexistente é recusado sem gravar nada. Não reconstrói
+  `PromptTemplate`/`PromptVersion`, que não vêm do event log
+  (`scripts/dev/seed-prompts.ts`). Procedimento no runbook, seção *Losing the
+  graph*; prova em `make test-reprojecao`, que exige Neo4j de pé. O BRB-018
+  **segue aberto**: falta a prova no cluster local e a medição de tempo num
+  event log grande.
+
 - **api**: o evento de sessão `proposed_action.created` passa a carregar
   `reason` — **qual regra** da política decidiu, com a string que `decide()`
   já devolvia ([RN-567](docs/business-rules.md#rn-567)). Vale nos três
