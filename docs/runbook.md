@@ -23,7 +23,7 @@ Start with triage.
 | I lost data / want to verify the backup | [Restore](#restore) |
 | I want to verify or restore a backup on an install that has **no cluster** | [Restore](#restore) — `make test-restore-compose` |
 | a `local`-provider project lost its repository, or I'm moving an installation to another machine | [Recovering the bare repos](#restore-dos-bare-repos) |
-| the graph is empty after a restore or a migration | [Losing the graph](#perda-do-grafo) |
+| the graph is empty after a restore or a migration | [Losing the graph](#perda-do-grafo) — `grafo:reprojetar` |
 | LLM or git credential stopped decrypting | [Master key rotation](#rotacao-da-chave-mestra) |
 | everyone logged out at once, or account locked at login | [Auth key rotation](#rotacao-das-chaves-do-auth) |
 | cost per hour spiked | [Cost incident](#incidente-de-custo) |
@@ -1647,7 +1647,7 @@ making it is that "back up every volume" costs space while hiding what matters.
 |---|---|---|
 | `pgdata` | source of truth — event log, actions, pgvector, everything | yes, as a **logical dump**. Never a file copy of the data directory: copying a running Postgres produces a backup that may not restore |
 | `git_local_repos` | source of truth — the *bare* repos of `local`-provider projects | **yes**, and this was the hole. It is not reconstructible from Postgres: the event log holds the narrative, not the git objects |
-| `neo4j_data` | derived — a projection of the event log ([ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)) | no. The answer for derived memory is **reprojection**, not restore — see [Losing the graph](#perda-do-grafo) |
+| `neo4j_data` | derived — a projection of the event log ([ADR 0101](adr/0101-memoria-relacional-como-projecao-do-event-log.md)) | no. The answer for derived memory is **reprojection**, not restore — `grafo:reprojetar`, see [Losing the graph](#perda-do-grafo) |
 | `project_workspaces` | derived — worktrees the `WorktreeManager` recreates from the bare repo | no |
 | `ollama_data` | re-obtainable — models download again | no |
 | `brabo_projects_base` | the user's, not the product's | no, and the installer never deletes it |
@@ -1875,13 +1875,92 @@ oversight ([ADR 0152](adr/0152-backup-de-volumes-contra-compose.md), decision
 4). Restoring a possibly-stale projection next to a Postgres restored at another
 instant gives two derived states from different moments with nothing to
 reconcile them. The right answer for derived memory is to reproject from the
-source.
+source — and that command exists ([RN-569](business-rules.md#rn-569)):
 
-**That reprojection does not exist yet** — it is
-[BRB-018](reference/brb.md), and the phase that named the path deliberately did
-not build it. Until it does, a migrated or restored installation starts with an
-**empty graph**. The named effect: reads that depend on the graph degrade. The
-RAG is **not** affected — it lives in pgvector, which is inside the dump.
+```bash
+# Kubernetes (the script ships inside the api image)
+kubectl -n brabo exec deploy/api -- node scripts/reprojetar-grafo.js
+kubectl -n brabo exec deploy/api -- node scripts/reprojetar-grafo.js --project <project-uuid>
+
+# installation compose (same image as Kubernetes)
+docker compose -f docker/docker-compose.install.yml exec api node scripts/reprojetar-grafo.js
+
+# a dev checkout (DATABASE_URL and NEO4J_* pointing at the database and graph)
+pnpm --filter api grafo:reprojetar
+pnpm --filter api grafo:reprojetar -- --project <project-uuid>
+```
+
+Expected output:
+
+```
+[reprojetar] escopo: event log inteiro
+[reprojetar] eventos: 4 projetados, cursor 01M2DTREY0TBKHCHG9NWXYF0A4
+[reprojetar] sessões fechadas: 2 projetadas
+
+[reprojetar] resultado
+
+  eventos projetados=4  sessões fechadas projetadas=2  falhas=0
+  grafo agora (inteiro): nós=80  arestas=80
+```
+
+What it does, and what it guarantees:
+
+- **The same translation as the live projector.** Event → node/edge lives in
+  one class (`GraphEventTranslator`), called by both the forward projector and
+  this command. It reads `handoff.offered`, `psychologist.hypothesis_proposed`
+  and `anamnese.profile_updated` from `session_events`, and the `Interacao` of
+  every session in `closed`/`closed_abnormally` from `sessions` (closing a
+  session leaves no event in the log).
+- **Idempotent, and it never deletes.** Every write is a `MERGE` on a natural
+  key: running it twice gives the same graph, and **running it again is how you
+  retry** after a failure halfway. It only adds or converges; a node already in
+  the graph stays.
+- **In batches, by cursor.** `session_events` is walked in `id` order (ULID,
+  the primary key), 200 rows at a time — never the whole table in memory. The
+  progress line prints the cursor; `--after-event <id>` resumes the event phase
+  after it. Starting over is equally safe, just slower.
+- **It does not touch the outbox, so the api can stay up.** The live projector
+  keeps its progress in `outbox_events.processed_at`
+  (`aggregate_type = 'graph_projection'`); this command neither reads nor
+  writes that table, so it cannot steal, reopen or mark a row. Both write with
+  `MERGE` on the same keys.
+- **It fails named, never as silent success.** Neo4j unconfigured or
+  unreachable is refused *before* reading the log (an empty scope would
+  otherwise "succeed" with zero projected); Neo4j dropping mid-run stops with
+  the last event completed; an unknown `--project` is refused with nothing
+  written; an item with an incoherent payload is counted, named, and the run
+  exits `1` at the end.
+
+What it does **not** rebuild, and the one ordering caveat:
+
+- **`PromptTemplate`/`PromptVersion`** do not come from the event log. Their
+  source is the `prompts/` directory: re-send them with
+  `node scripts/dev/seed-prompts.ts` (idempotent by hash).
+- **`PerfilAnamnese` is a snapshot keyed by user + dimension, with no project.**
+  Last writer wins. A `--project` run replays only that project's profile
+  events, so it can leave a snapshot at that project's latest value when another
+  project wrote a newer one. The full run (no `--project`) walks the whole log in
+  order and restores the global latest — use it after losing the graph; keep
+  `--project` for a targeted repair.
+- **No time measurement on a large event log.** The only real run so far is the
+  development compose (98 events in `session_events`, 2.5 s end to end). How
+  long a full reprojection takes on a production-size log is unmeasured; the
+  command is safe to interrupt and run again.
+
+> **TODO(humano):** is there an acceptable ceiling for a full reprojection, or
+> may it run for hours in a maintenance window? Nothing read answers it, and it
+> decides whether batches by cursor are enough or the run needs scheduling.
+
+The proof is `make test-reprojecao`
+(`apps/api/test/scripts/reprojetar-grafo.spec.ts`): it builds a scenario with
+the forward projector, **wipes** that subgraph, reprojects, compares node and
+edge counts plus the list of keys, and reprojects again. It needs Neo4j up and
+skips without it — the api CI job has no Neo4j, so there it skips. It does not
+depend on a backup having happened, on purpose.
+
+The graph being empty until you run this has a named effect: reads that depend
+on the graph degrade. The RAG is **not** affected — it lives in pgvector, which
+is inside the dump.
 
 ### When the restore fails
 

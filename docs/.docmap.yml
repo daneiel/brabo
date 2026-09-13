@@ -355,6 +355,22 @@ rules:
     severity: warn
     note: "O agente local roda na máquina do usuário: o que ele DECLARA no join e o que ele instala são contrato, não detalhe."
 
+  # AT-032 (BRB-018, RN-569): o grafo não tem backup PORQUE é reprojetável
+  # (ADR 0152, decisão 4). Tipo novo traduzido para o grafo, ou mudança no que a
+  # reprojeção varre, muda o que o runbook promete ao operador que perdeu o
+  # grafo — e a tradução mora fora de `domain/`, então `dominio-e-regras` não a
+  # via. `warn`: o teste de cobertura dos tipos já reprova a divergência que
+  # importa (tipo projetável sem tradução).
+  - id: grafo-reprojecao
+    watch:
+      - "apps/api/src/application/graph-projection/**"
+      - "apps/api/src/scripts/reprojetar-grafo.ts"
+    docs:
+      - "docs/runbook.md"
+      - "docs/business-rules.md"
+    severity: warn
+    note: "O que a reprojeção reconstrói (e o que NÃO) é o que o runbook diz a quem perdeu o grafo."
+
   - id: deploy-e-runbook
     watch:
       - "deploy/k8s/**"

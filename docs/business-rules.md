@@ -10224,7 +10224,8 @@ velha ao lado de um Postgres restaurado noutro instante dá dois estados
 derivados de momentos diferentes, sem nada que os concilie. A reprojeção **não
 foi construída aqui** (é o BRB-018): até existir, instalação migrada nasce com
 o grafo VAZIO — degradação conhecida e nomeada, não perda de dado, porque o RAG
-vive no pgvector e vem no dump.
+vive no pgvector e vem no dump. Desde a [RN-569](#rn-569) ela existe
+(`grafo:reprojetar`), e o grafo vazio passa a durar até alguém rodá-la.
 
 - **Onde:** `docker/backup/lib.sh:28` (`destino_tipo`, a inferência que mantém o
   CronJob intacto), `:65` (`destino_esperar` perguntando por ESCRITA e não por
@@ -13339,3 +13340,73 @@ Declarado no comentário da tela, não corrigido aqui.
   pelo resumo)
 - **Origem:** AT-047 — a lacuna declarada no `CLAUDE.md` e nos comentários das
   duas telas
+
+### RN-569 — O grafo é reconstruído do event log pelo MESMO tradutor do projetor vivo, sem tocar a outbox, e nunca sai como sucesso calado {#rn-569}
+
+O [ADR 0152](adr/0152-backup-de-volumes-contra-compose.md) (decisão 4) recusou
+backup de `neo4j_data` apoiado numa premissa — *o grafo pode ser descartado
+porque pode ser reconstruído* — cujo mecanismo não existia: `grep` por
+`reprojet`/`reproject` em `apps/` e `scripts/` voltava vazio, e
+`application/graph-projection/` só tinha o projetor PARA FRENTE. Enquanto não
+existisse, o grafo não era descartável: era perdido.
+
+**A regra:** `apps/api/src/scripts/reprojetar-grafo.ts`
+(`pnpm --filter api grafo:reprojetar`; `node scripts/reprojetar-grafo.js` na
+imagem) reconstrói o grafo varrendo a fonte. Cinco decisões, cada uma com
+motivo:
+
+1. **Um tradutor só.** A tradução evento → nó/aresta SAIU do `GraphProjector`
+   para `GraphEventTranslator`, e os dois caminhos a chamam — o projetor chega à
+   fonte por uma linha de outbox, a reprojeção por cursor. Dois tradutores
+   divergiriam, e o divergente seria o que roda uma vez por ano. A superfície de
+   injeção do projetor NÃO mudou (ele monta o tradutor com as dependências que
+   já recebia). Um teste reprova tipo novo em `GRAPH_PROJECTABLE_EVENT_TYPES`
+   sem tradução.
+2. **As fontes são duas, e são as de verdade.** `handoff.offered`,
+   `psychologist.hypothesis_proposed` e `anamnese.profile_updated` saem de
+   `session_events`; a `Interacao` sai de `sessions` em
+   `closed`/`closed_abnormally`, porque fechar sessão é transição pura e não
+   deixa evento no log. `PromptTemplate`/`PromptVersion` NÃO saem do event log e
+   NÃO são reprojetados — voltam por `scripts/dev/seed-prompts.ts`.
+3. **Idempotente, em lotes, e nunca apaga.** Toda escrita é `MERGE` em chave
+   natural; rodar de novo é o jeito de retomar. `session_events` é varrida em
+   ordem de `id` (ULID, a chave primária), 200 por lote, e `--after-event`
+   retoma depois do cursor impresso. Com `--project`, só as sessões daquele
+   projeto.
+4. **Não toca a outbox.** O projetor vivo guarda o progresso em
+   `outbox_events.processed_at`; a reprojeção nem lê nem escreve essa tabela, e
+   por isso roda com a api de pé sem roubar, reabrir ou marcar linha.
+5. **Nunca sucesso calado.** Grafo desligado é recusado ANTES de ler o log (um
+   escopo vazio "passaria" com zero projetados); Neo4j que cai no meio para com
+   o último evento concluído; projeto inexistente é recusado sem gravar nada; e
+   item com payload incoerente é contado, nomeado, e o processo sai com 1.
+
+**O que esta regra NÃO fecha:** `PerfilAnamnese` é snapshot por usuário +
+dimensão, SEM projeto — o último a escrever vence —, então uma rodada com
+`--project` pode deixá-lo no valor daquele projeto quando outro escreveu depois;
+a rodada total restaura o último global. Não há medição de tempo em event log
+grande (a única rodada real foi o compose de dev, 98 eventos, 2,5 s), e a prova
+no cluster local que o BRB-018 pede não foi feita — ele segue aberto.
+
+- **Código:** `apps/api/src/application/graph-projection/graph-event-translator.ts:15`
+  (`EVENTOS_DO_LOG_PROJETAVEIS`), `:26` (`FECHAMENTOS_DE_SESSAO`), `:56` (o
+  tradutor), `:69` (`projetarEvento`), `:90` (`projetarFechamentoDeSessao`);
+  `apps/api/src/application/graph-projection/graph-projector.ts:77` (o projetor
+  monta o MESMO tradutor), `:141` (chega à fonte pela outbox e delega);
+  `apps/api/src/scripts/reprojetar-grafo.ts:124` (`montarTradutor`), `:145`
+  (`reprojetarGrafo`), `:154` (a recusa antes de ler), `:163` e `:169` (projeto
+  inexistente), `:187` (a fase dos eventos, por cursor), `:213` (a interrupção
+  nomeada), `:218` (a falha contada sem abortar o resto), `:230` (a fase das
+  sessões fechadas), `:301` (`lerArgumentos`), `:370` (só a invocação direta
+  reprojeta); `apps/api/package.json:44` (`grafo:reprojetar`); `Makefile:61`
+  (`test-reprojecao`)
+- **Teste:** `apps/api/test/scripts/reprojetar-grafo.spec.ts:349` (projetor para
+  frente → apaga o subgrafo → reprojeta o log inteiro → mesma contagem de nós e
+  arestas e mesma lista de chaves; a segunda rodada idêntica; a outbox intacta),
+  `:394` (por projeto), `:417` (projeto inexistente, nada gravado — caso de
+  falha), `:432` (grafo indisponível é erro nomeado — caso de falha), `:441`
+  (argumento desconhecido recusado), `:452` (o tradutor cobre exatamente os tipos
+  projetáveis); `apps/api/test/application/graph-projection/graph-projector.spec.ts`
+  (o projetor para frente, inalterado, sobre o tradutor extraído). Os quatro
+  primeiros exigem Neo4j de pé e PULAM sem ele — a CI do api não sobe Neo4j.
+- **Origem:** AT-032 (BRB-018) — a premissa do ADR 0152 sem mecanismo
