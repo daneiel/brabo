@@ -13419,3 +13419,79 @@ no cluster local que o BRB-018 pede não foi feita — ele segue aberto.
   (o projetor para frente, inalterado, sobre o tradutor extraído). Os quatro
   primeiros exigem Neo4j de pé e PULAM sem ele — a CI do api não sobe Neo4j.
 - **Origem:** AT-032 (BRB-018) — a premissa do ADR 0152 sem mecanismo
+
+### RN-570 — O instalador sobe a instalação só com arquivos que a Release assinou, conferidos antes de perguntar ou gravar qualquer coisa {#rn-570}
+
+A [RN-549](#rn-549) mediu, na primeira vez que o instalador rodou numa máquina
+limpa, que o `install.sh` publicado **não subia nada sozinho**: ele chamava
+`docker compose -f docker/docker-compose.install.yml`, um caminho RELATIVO ao
+diretório de onde rodava, e esse arquivo não era asset da Release, não entrava
+no `checksums.txt` assinado e não era baixado em lugar nenhum. Quem seguia o
+one-liner do runbook morria em *"no such file or directory"* DEPOIS de o script
+ter gravado o `.env` com os segredos. O mantenedor decidiu a saída em
+2026-09-13 — asset assinado, e não clone ([ADR 0160](adr/0160-o-compose-do-instalador-viaja-assinado.md)).
+
+**A regra:**
+
+1. **Quatro arquivos viajam com o instalador, no MESMO manifesto.** O compose de
+   instalação e os três que a instalação usa por caminho relativo — o
+   `postgres/init.sql` e o `ollama/pull-models.sh` que o compose bind-monta, e o
+   `backup/test-restore-compose.sh` que a migração ([RN-530](#rn-530)) executa —
+   são publicados como assets `brabo-install-*` pelo job `checksums` e entram no
+   `sha256sum` que gera o `checksums.txt` assinado. O quarto não estava no
+   contorno do E2E e foi achado ao implementar: numa pasta sem checkout a
+   migração morreria ali. O job confere cada linha do manifesto contra o arquivo
+   (`sha256sum -c --strict`) antes de anexar.
+2. **A tabela tem dois lados e um guarda.** Quem publica lê
+   `scripts/ci/assets-do-instalador.ts`; quem baixa lê o `case` de
+   `destino_do_asset_do_instalador` no `install.sh` (bash 3.2, sem Node). O spec
+   reprova a divergência entre os dois E deriva do compose todo bind-mount `./…`
+   que não estiver na tabela — que é exatamente como o defeito nasceu.
+3. **Verificar vem logo depois da própria origem, e antes de tudo.** O
+   instalador baixa os quatro e compara cada sha256 contra o `checksums.txt` que
+   `verificar_a_si_mesmo` já verificou (nunca um segundo download), por
+   igualdade EXATA de nome. As três recusas são distintas — asset não publicado,
+   manifesto que não o cobre, hash que não bate — e todas acontecem com a
+   máquina intocada.
+4. **Nunca cai no relativo.** `COMPOSE_DE_INSTALACAO` nasce VAZIO e só ganha um
+   caminho absoluto quando as cópias verificadas são postas sob a pasta da
+   instalação, no primeiro instante em que são precisas (a migração ou a
+   subida). O que já estiver lá é SUBSTITUÍDO, nunca lido — com `rm` antes do
+   `cp`, para um symlink não levar a escrita para fora.
+
+**O que esta regra NÃO fecha:** a prova ponta a ponta só acontece na primeira
+tag final depois do merge — o `install-e2e.yml` não roda em PR (ADR 0150) —, e
+nenhuma Release já publicada ganha os assets: elas seguem com o instalador
+antigo e o contorno de rodá-lo de dentro de um checkout na tag. E fica medida e
+NÃO corrigida a adjacência que o ADR 0160 declara: `test-restore-compose.sh`
+chama o Compose sem `--env-file`, o Compose procura o `.env` na pasta do
+compose e não na de onde se roda, e por isso a prova de restauração da
+migração tende a reprovar — desfecho seguro pela RN-530 (nada é apagado), mas a
+migração por compose não fecha.
+
+- **Código:** `install.sh:95` (`COMPOSE_DE_INSTALACAO` vazio até materializar),
+  `:435` (`ASSETS_DO_INSTALADOR`), `:437` (`destino_do_asset_do_instalador`, a
+  tabela do lado que baixa), `:462` (`baixar_e_verificar_os_arquivos_da_instalacao`),
+  `:469`/`:477`/`:480` (as três recusas), `:497`
+  (`materializar_os_arquivos_da_instalacao`), `:1146` (a migração materializa
+  antes do backup), `:1241` (a verificação logo depois da própria origem),
+  `:1407` (a subida materializa antes do `up`);
+  `scripts/ci/assets-do-instalador.ts:55` (a tabela do lado que publica), `:93`
+  (`problemasDoMapeamento`), `:135` (`prepararAssets`);
+  `.github/workflows/build-runner-binaries.yml:468` (os assets preparados do
+  checkout da tag), `:494` (no mesmo `sha256sum`), `:520` (a conferência
+  `--strict`), `:527` (anexados junto do manifesto)
+- **Teste:** `scripts/dev/install-arquivos-da-instalacao.spec.ts:144` (caminho
+  feliz contra uma Release de mentira), `:162` (asset ausente, `.env` nunca
+  gravado — caso de falha), `:179` (hash que não bate — caso de falha), `:191`
+  (manifesto que não cobre), `:202` (nome parecido não cobre), `:217`
+  (materializar sem verificar é recusa), `:225` (o que já estava é substituído,
+  e o symlink não leva a escrita para fora), `:258`/`:273`/`:280` (a ordem em
+  `main` e na migração); `scripts/ci/assets-do-instalador.spec.ts:89` (todo
+  bind-mount relativo é asset), `:114` (o `case` do shell é a tabela do
+  TypeScript), `:148`/`:152`/`:161` (a esteira assina, confere e anexa);
+  `scripts/dev/install-e2e.spec.ts:247` (o contorno manual não volta, e o E2E
+  afirma que o instalador os baixou), `:295` (o token que baixa o manifesto não
+  está no ambiente do instalador)
+- **Origem:** AT-026 — o achado da AT-008 (RN-549), decidido pelo mantenedor em
+  2026-09-13

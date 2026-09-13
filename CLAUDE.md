@@ -148,6 +148,7 @@ estado lido do repositório e não da conversa.
 | O teto de auto-movimento no upsert de WORKSPACE, e a auto-promoção (BRB-002) | Terceiro e último da linha. `AddWorkspaceMemberUseCase` era passa-adiante de doze linhas que NUNCA recebeu o ator, numa rota `@RequireRole('owner')` — a mesma classe de defeito um escopo ACIMA e mais grave, porque aqui não há nível acima para segurar a queda e `WorkspacesController` NÃO tem `@Delete` de membro (medido): um `owner` que se gravasse `viewer` perdia o workspace inteiro, e desfazer é a MESMA rota, que pede o `owner` recém-abandonado. O teto NÃO conta owners — a cláusula do ADR 0127 (*"se enuncia numa cláusula, não tem número para envelhecer"*) JÁ produz o invariante que a contagem existiria para garantir: nunca há zero donos, porque tirar o último exigiria que ele mesmo o fizesse. O teto 1 não tem par aqui, e foi CONSIDERADO e não espelhado: ele é regra sobre INVERSÃO DE HIERARQUIA, e o `@RequireRole('owner')` já a impede — somado à ausência de rota de remoção, pô-lo faria de `owner` um ESTADO ABSORVENTE, do qual ninguém sai por HTTP, que é a classe de estado que o ADR 0127 nasceu para eliminar, com o sinal trocado. Rebaixar OUTRO `owner` fica, reversível pela mesma rota. Junto, a auto-PROMOÇÃO — declarada nas Consequences do 0127 como capacidade que ficava, com teste fixando a permissão — vira BRECHA e fecha nas DUAS rotas de associação: das duas metades do movimento sobre o próprio papel, a de cima é a única que ESCALA privilégio, e o 0127 pôde dizer que os tetos dele não eram sobre escalação. Teste INVERTIDO, nome guardando a origem. A régua não foi copiada: virou UM classificador (`autoMovimentoDoProprioPapel`, devolve o SENTIDO porque a mensagem depende dele), e `ehAutoRebaixamento` sobreviveu como LEITURA dele por motivo de COMPORTAMENTO — alargá-la faria a REMOÇÃO recusar a auto-promoção, o movimento benigno que o ADR 0156 protegeu. Custo declarado: `maintainer` que precise de `owner` no projeto passa a depender de outra pessoa | ADR 0157, RN-557 |
 | A chave de dispositivo ganha tela, e a tela diz o alcance de revogar (AT-012) | RN-561 |
 | A presença de QA/SecOps no painel pelo agregado da sessão, não pela janela (AT-047) | RN-568 |
+| O compose do instalador viaja com ele, assinado (AT-026) | ADR 0160, RN-570 |
 | A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
 
 ## Estado atual e aberto
@@ -455,19 +456,20 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   PRÉ-EXISTENTE da idempotência, vale para qualquer `fetch` que falhe).
   Repositório `local` (sem credencial), os modos `container`/`mounted` e o
   `workspace_create` (roda no HOST) não são afetados
-- **O `install.sh` publicado NÃO sobe nada sozinho numa máquina limpa** — medido
-  na RN-549. Ele usa `docker compose -f docker/docker-compose.install.yml`, um
-  caminho RELATIVO ao diretório de onde roda, e esse arquivo NÃO é asset da
-  Release, NÃO entra no `checksums.txt` assinado e **ele não o baixa em lugar
-  nenhum** (as únicas descargas são o `cosign`, o manifesto, o próprio hash e o
-  binário do runner). Com o `./postgres/init.sql` que o compose bind-monta, são
-  TRÊS arquivos. Quem segue o `sh -c "$(curl … install.sh)"` do runbook morre em
-  "no such file or directory" DEPOIS de já ter verificado assinatura, escolhido a
-  base e gravado o `.env` — a saída de hoje é rodar o instalador de dentro de um
-  checkout na tag. Corrigir é decidir entre publicar o compose como asset
-  ASSINADO (RN-524) e fazer o instalador clonar: entrega própria, com ADR, nunca
-  de passagem. O `install-e2e.yml` traz os três à mão num passo que DIZ que é
-  achado, e `scripts/dev/install-e2e.spec.ts` cobra as duas metades
+- **O instalador sobe de uma pasta vazia desde a RN-570 (ADR 0160), mas só a
+  partir da PRÓXIMA tag final.** O compose de instalação e os três arquivos que
+  a instalação usa por caminho relativo viajam como assets `brabo-install-*` no
+  MESMO `checksums.txt` assinado, e o `install.sh` os confere antes de perguntar
+  ou gravar. Releases já publicadas NÃO ganham os assets (seguem exigindo
+  checkout na tag), e a prova ponta a ponta só roda depois de uma tag (o
+  `install-e2e.yml` não roda em PR). A tabela tem DOIS lados —
+  `scripts/ci/assets-do-instalador.ts` e o `case` do `install.sh` (bash 3.2, sem
+  Node) — e o spec reprova a divergência e todo bind-mount relativo do compose
+  fora dela: bind-mount novo no compose de instalação ENTRA NA TABELA, senão não
+  viaja. Adjacência medida e NÃO corrigida: `test-restore-compose.sh` chama o
+  Compose sem `--env-file`, o Compose procura o `.env` na pasta do compose, e a
+  prova de restauração da MIGRAÇÃO tende a reprovar — seguro pela RN-530 (nada
+  é apagado), mas a migração por compose não fecha
 - `install --machine` não sabe se a chave daquela pasta é mesmo de MÁQUINA — em
   disco as duas espécies são o mesmo arquivo (uma JWK com `kid`), e quem sabe é o
   SERVIDOR. Uma pasta com chave de projeto instala a unit sem erro, e a recusa só
