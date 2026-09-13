@@ -29,6 +29,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Novidades
 
+- **api**: o evento de sessão `proposed_action.created` passa a carregar
+  `reason` — **qual regra** da política decidiu, com a string que `decide()`
+  já devolvia ([RN-567](docs/business-rules.md#rn-567)). Vale nos três
+  desfechos (`auto_approved`, `pending`, `denied`): antes o motivo só
+  sobrevivia como `rejectionReason` quando a ação era negada, e uma
+  auto-aprovação dizia no log que a política decidiu sem dizer qual regra. O
+  outbox do mesmo evento **não** ganha o campo (nenhum consumidor no engine),
+  e eventos antigos seguem sem ele — ausente é "não registrado", nunca "sem
+  motivo". Nenhum veredito nem teto muda, e a tela não muda.
+
 - **api**: o envelope dos segredos do usuário passa a gravar **qual chave
   mestra o embrulhou** (`key_id`), e a rotação da chave deixa de ser cega
   ([RN-563](docs/business-rules.md#rn-563),
