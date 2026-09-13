@@ -1011,7 +1011,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   Trabalho nasce de dev com a taxonomia da política (breaking/,
   feature/, bugfix/, perf/, refactor/, chore/, docs/, test/);
   hotfix/ nasce de main. Formato funcao/descritivo,
-  regex ^.{0,30}/\S{0,32}$. Commits em conventional commits, pt-BR.
+  regex ^.{0,30}/\S{0,32}$. EXCEÇÃO nomeada: `dependabot/…` é branch
+  PERMITIDA sem critério de caracteres (sem limite de tamanho, qualquer número
+  de barras), mas só quando o AUTOR é o próprio Dependabot
+  (`ehBranchDoDependabot` em `scripts/ci/pr-police.ts`) — humano com esse
+  prefixo reprova em `FUNCAO-DESCONHECIDA`, senão o prefixo vira a porta para
+  escapar do formato. Commits em conventional commits, pt-BR.
   A FUNÇÃO da branch decide a VERSÃO (scripts/ci/version.ts): breaking/
   sobe MAJOR, feature/ sobe MINOR, todo o resto é PATCH. Mudança que
   exige ação do operador antes do deploy nasce em breaking/ mesmo quando

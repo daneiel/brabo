@@ -232,6 +232,25 @@ A pedagogical message doesn't teach a bot. The exemption is by
 **author**, not by prefix, so no one uses it as a loophole by naming a
 branch `dependabot/`.
 
+### Dependabot branches are allowed with no character limit
+
+Besides the generic bot exemption, the policy names Dependabot's branches
+explicitly: **`dependabot/…` is an allowed branch name, with no character
+criterion** — no 30/32 limit, any number of slashes. Real names from this
+repository: `dependabot/npm_and_yarn/npm_and_yarn-582a9020a7`,
+`dependabot/github_actions/dev/anthropics/claude-code-action-1.0.221` — the
+second one would fail the `funcao/descritivo` format as a work branch.
+
+It is a named rule (`PREFIXO_DO_DEPENDABOT` and `ehBranchDoDependabot` in
+`scripts/ci/pr-police.ts`), and it holds only when **both** are true: the head
+starts with `dependabot/` **and** the author is Dependabot itself
+(`dependabot[bot]`, `app/dependabot`, or `dependabot` with the API's
+`type: Bot`). A human who names a branch `dependabot/…` still goes through
+the whole rule and fails in `FUNCAO-DESCONHECIDA`, with a message saying the
+prefix is reserved and that a hand-made dependency bump is `chore/`. The rule
+does not check the destination: bringing a security PR from `main` to `dev`
+is the job of `dependabot-para-dev.yml` (next section).
+
 ## Dependabot enters through dev
 
 The exemption above is about the branch **name**. The **destination** is not

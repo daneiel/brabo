@@ -53,6 +53,33 @@ export const FUNCOES_DE_CORRECAO_ALTA = {
 
 export const FORMATO_DA_BRANCH = /^.{0,30}\/\S{0,32}$/;
 
+/**
+ * A branch que o Dependabot cria é PERMITIDA, e **sem critério de caracteres**.
+ *
+ * O nome dela é do bot, não de quem trabalha: `dependabot/npm_and_yarn/<grupo>-<hash>`
+ * ou `dependabot/github_actions/dev/actions/checkout-7.0.1` passam fácil dos 32
+ * caracteres do descritivo e têm mais de uma barra, e não há como ensinar a
+ * taxonomia ao Dependabot. É regra NOMEADA — e não só a isenção genérica de bot
+ * logo abaixo — para que a política diga, por escrito, que este nome é aceito.
+ *
+ * O prefixo sozinho NÃO basta: vale só quando o AUTOR é o próprio Dependabot.
+ * Humano que nomeie a branch `dependabot/...` continua na régua inteira (e
+ * reprova em `FUNCAO-DESCONHECIDA`), senão o prefixo viraria a porta para
+ * escapar do formato. O destino não é checado aqui: quem traz o PR de segurança
+ * de `main` para `dev` é o `dependabot-para-dev.yml`.
+ */
+export const PREFIXO_DO_DEPENDABOT = 'dependabot/';
+
+/** Logins com que o Dependabot abre PR (`app/dependabot` é a forma do `gh`). */
+const LOGINS_DO_DEPENDABOT: readonly string[] = ['dependabot[bot]', 'app/dependabot', 'dependabot'];
+
+export function ehBranchDoDependabot(head: string, autor?: string, tipoDoAutor?: string): boolean {
+  if (!head.startsWith(PREFIXO_DO_DEPENDABOT)) return false;
+  if (typeof autor !== 'string' || !LOGINS_DO_DEPENDABOT.includes(autor)) return false;
+  // `dependabot` sem sufixo só vale com o `type` da API dizendo que é app.
+  return autor !== 'dependabot' || tipoDoAutor === 'Bot';
+}
+
 export type Familia = 'trabalho' | 'promocao' | 'retropropagacao' | 'correcao-alta';
 
 export const FAMILIAS: readonly Familia[] = [
@@ -216,6 +243,9 @@ const SUGESTAO_POR_ENGANO: Record<string, string> = {
   fix: 'Correção comum é `bugfix`; incidente em produção é `hotfix`.',
   hotfixes: 'O singular: `hotfix`.',
   rcfix: 'A escada não tem mais `rc`. Correção achada em homologação é `bugfix`.',
+  dependabot:
+    'O prefixo `dependabot/` é reservado às branches que o próprio Dependabot cria. ' +
+    'Atualização de dependência feita à mão é `chore`.',
   feat: 'O nome completo: `feature`.',
   ci: 'Mudança de CI, tooling ou manutenção é `chore`.',
   build: 'Mudança de build é `chore`.',
@@ -232,8 +262,21 @@ export function avaliarPr(entrada: EntradaPr): Veredito {
   const violacoes: Violacao[] = [];
   const avisos: string[] = [];
 
-  // 1. Isenção primeiro. Mensagem pedagógica não ensina robô, e o Dependabot
-  //    não tem como aprender a taxonomia.
+  // 1. A branch do Dependabot, antes de tudo: permitida sem critério de
+  //    caracteres, desde que o autor seja ele (`PREFIXO_DO_DEPENDABOT`).
+  if (ehBranchDoDependabot(head, entrada.autor, entrada.tipoDoAutor)) {
+    return {
+      ok: true,
+      familia: null,
+      isento: true,
+      violacoes: [],
+      avisos: [
+        `branch do Dependabot (\`${PREFIXO_DO_DEPENDABOT}…\`): permitida sem critério de caracteres`,
+      ],
+    };
+  }
+
+  // 1b. Demais bots: isenção genérica. Mensagem pedagógica não ensina robô.
   if (ehAutorBot(entrada.autor, entrada.tipoDoAutor)) {
     return {
       ok: true,
