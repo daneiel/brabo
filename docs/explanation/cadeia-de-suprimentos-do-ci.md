@@ -52,6 +52,20 @@ The hashes come from the `checksums.txt` published with each release, on
 an independent download. A mismatch fails the job before the binary is
 ever executed.
 
+`propriedades.yml` (the scheduled property proofs, BRB-009) follows the same
+rule for the three binaries it needs to bring up a cluster — `k3d`, `helm`
+and `kubectl`, each with its hash in the workflow's `env:`. It installs them
+**before** running `deploy/k8s/bootstrap.sh`, and that order is the point:
+the bootstrap's own `ensure_k3d` downloads k3d with **no** checksum, and
+finding the binary already on `PATH` is what keeps it from downloading. A
+step fails the job if the versions pinned there drift from the ones the
+bootstrap would install. What that workflow still takes on trust, stated:
+the Helm charts come from their repositories by **version**, not digest
+(`deploy/k8s/helm/charts.env`), with whatever images those charts reference;
+and `k3d` pulls the `rancher/k3s` node image and its load-balancer image by
+the **tag baked into the k3d binary** — pinned, then, only as far as the k3d
+checksum pins it.
+
 The scanner versions have a second constraint: they must match
 `docker/engine/Dockerfile.prod`, because testing against a different
 scanner from the one that runs in production is a false green. The
