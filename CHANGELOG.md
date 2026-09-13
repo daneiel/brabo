@@ -1217,6 +1217,33 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   Releases já publicadas não ganham os assets e continuam exigindo rodar o
   instalador de dentro de um checkout na tag.
 
+- **k8s**: `make deploy-local` volta a subir o Brabo inteiro num cluster, e
+  `make smoke-k8s`, `make rollout-test` e `make test-restore` voltam a passar
+  nele. Estava quebrado em **sete** pontos empilhados, nenhum visível ao
+  `kubeconform` nem a check de PR nenhum, e todos achados pelas primeiras
+  rodadas do workflow agendado abaixo: o `imageName` do CNPG só com digest
+  (o webhook do operador o recusa — agora `:16.10@sha256:…`); o Secret-fonte
+  do bootstrap sem `NEO4J_PASSWORD`; a api sem `NEO4J_URI`/`NEO4J_USER` na
+  base (em produção ela não sobe sem as três); o StatefulSet do Neo4j
+  exportando `NEO4J_USER`/`NEO4J_PASSWORD`, que o entrypoint da imagem recusa
+  como config; o `migrate-api` sem privilégio para `CREATE EXTENSION vector`;
+  o `kind` da sessão (obrigatório desde a FASE 20) faltando no smoke e no
+  rollout-test do cluster; e o restore sem o pgvector na database que ele
+  cria.
+
+  Um deles **não era só do cluster local**: o `brabo-restore`, que é o
+  procedimento de incidente, morria em `COMMENT ON EXTENSION vector` sempre que
+  o papel da aplicação não é superusuário (CNPG, Postgres gerenciado) — só o
+  dono da extensão pode comentá-la. O restore passa a pular esse comentário,
+  que não carrega dado nenhum. E `make test-restore` deixa de esperar 30
+  minutos por um Job que já falhou. O `rollout-test` troca o `sleep 15`
+  por convergência com teto — e fica **declarado**, não corrigido, que ele já
+  acusou sessão órfã uma vez em quatro rodadas.
+
+  **Staging/prod** herdam da base só as duas variáveis do grafo e o nome das envs do Neo4j; o pgvector no `template1` é do cluster LOCAL — em
+  produção criar a extensão continua sendo ação do operador, como a migração
+  já dizia. Detalhe em [Scheduled property proofs](docs/runbook.md#provas-de-propriedade-agendadas).
+
 - **web**: QA, SecOps e os membros de área (`qa-automacao`, …) **deixam de
   sumir** do painel do time numa sessão de execução longa
   ([RN-568](docs/business-rules.md#rn-568)).
@@ -1866,6 +1893,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   — voltando a ser cumprida.
 
 ### Testes
+
+- **ci**: as três provas de propriedade do deploy em Kubernetes —
+  `make hpa-test`, `make rollout-test` e `make test-restore` — passam a rodar
+  **sem alguém lembrar** (BRB-009). Workflow novo,
+  `.github/workflows/propriedades.yml`, separado de `ci.yml` pelo mesmo motivo
+  do `golden-set-rag.yml`: semanal (`schedule`) mais `workflow_dispatch`, nunca
+  por PR e nunca check exigido. É o primeiro workflow do repositório que sobe
+  cluster: instala `k3d`/`helm`/`kubectl` por checksum pinado, roda o mesmo
+  `deploy/k8s/bootstrap.sh` de `make deploy-local` num runner hospedado, e
+  depois `make smoke-k8s` e os três alvos, cada um cronometrado no resumo do
+  run. Falha vira **issue por alvo**, e a segunda falha do mesmo alvo vira
+  comentário na issue aberta, não issue nova. O `BRB-009` continua **aberto**:
+  o critério pede também que uma quebra proposital do restore seja pega sem
+  humano e que a última execução boa fique numa métrica.
 
 - **ci**: nasce `scripts/ci/vocabulario-de-eventos-dev.spec.ts`, que compara o
   vocabulário `dev.*` **realmente emitido** por `apps/engine/lib/**/*.ex` com

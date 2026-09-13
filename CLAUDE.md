@@ -150,6 +150,7 @@ estado lido do repositório e não da conversa.
 | A presença de QA/SecOps no painel pelo agregado da sessão, não pela janela (AT-047) | RN-568 |
 | O compose do instalador viaja com ele, assinado (AT-026) | ADR 0160, RN-570 |
 | A reprojeção do grafo a partir do event log (AT-032, BRB-018) | RN-569 |
+| As três provas de propriedade agendadas num k3d do Actions (AT-035, BRB-009) | runbook, Scheduled property proofs |
 
 ## Estado atual e aberto
 
@@ -316,6 +317,14 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   contexto do Infra Lead com modo e presença de runner é frente à parte, mais
   cara. O ADR 0137 (RN-497) segue valendo: aprovar `container_start` em
   `mounted` pode dar certo de verdade, pelo broker
+- **O `rollout-test` acusou sessão órfã em UMA de quatro rodadas** do
+  `propriedades.yml` (BRB-009): `active` na api e sem dono nas três réplicas do
+  engine, 15s depois do rollout — nas rodadas verdes a convergência leva 3s,
+  então a leitura provável é corrida intermitente na adoção/drenagem, não
+  atraso. Declarado e NÃO corrigido: o workflow agendado existe para pegar
+  isto, e a próxima ocorrência sai com o teto esperado, a réplica de cada
+  sessão e as linhas do engine que citam a órfã. A correção é do engine, não
+  da prova — não afrouxe o teto para o verde voltar
 - Restart do engine com Dev Lead suspenso perde a inscrição no Wake (decisão
   segue visível em Aprovações) — ADR 0086
 - A aba de Código abre com 492px de moldura à esquerda (sidebar 264 + trilho

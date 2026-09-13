@@ -1978,7 +1978,126 @@ is inside the dump.
 | `there are N bare repo(s) … and NO archive` | this volume has no coverage: the archive is missing while the repos are not. Absent-and-empty is normal and reported differently |
 | `does not accept writes by this user (uid 70)` on `--restaurar` | the shared-volume ownership case — restore with `--user 0:0`, see [Recovering the bare repos](#restore-dos-bare-repos) |
 
+### Scheduled property proofs {#provas-de-propriedade-agendadas}
+
+`make test-restore`, `make rollout-test` and `make hpa-test` prove
+**properties**, not configuration — a backup that runs every night and does not
+restore passes all five alerts in `brabo-alerts.yaml`. Until BRB-009 they ran
+only when someone typed them. `.github/workflows/propriedades.yml` now runs
+them on a schedule, in a k3d cluster on a GitHub-hosted runner:
+
+1. installs `k3d`, `helm` and `kubectl` by pinned checksum;
+2. runs `deploy/k8s/bootstrap.sh` — the same bootstrap `make deploy-local`
+   runs, building the four production images from the checked-out tree (no
+   registry, no secret);
+3. runs `make smoke-k8s`, then `make hpa-test`, `make rollout-test` and
+   `make test-restore`, in the `Makefile`'s order, each one even when an earlier
+   one failed (a broken HPA must not hide a broken restore);
+4. writes each step's duration into the run summary.
+
+| trigger | when |
+|---|---|
+| `schedule` | weekly, Sunday 04:00 UTC |
+| `workflow_dispatch` | on demand, from the Actions tab (`gh workflow run propriedades.yml`) |
+
+**A failure opens an issue** titled `Prova de propriedade falhou: <target>`,
+one per target, and a repeat failure of the same target **comments on the open
+issue** instead of opening another. The bootstrap has a title of its own: with
+the cluster down, the three targets are `skipped`, and a skipped scheduled run
+is the silence this exists to break. Close the issue when the proof passes
+again. It is **not** a gate and not a required check — nothing waits on it.
+
+Measured on the runs that built the workflow (4 vCPUs, 15 GiB RAM, 87 GB of
+free disk on `ubuntu-latest`):
+
+| step | duration |
+|---|---|
+| bootstrap (image build + cluster + operators + app) | 705 s |
+| `make smoke-k8s` | 1 s |
+| `make hpa-test` | 19 s |
+| `make rollout-test` | 24 s |
+| `make test-restore` | 21 s |
+| whole job | 12 min 56 s |
+
+(First fully green run, `34784563928`, on 2026-09-13.)
+
+The cadence follows that cost. Almost all of it is the bootstrap, which a
+nightly run would pay seven times a week to re-prove properties whose code
+changes far less often than that; weekly keeps the alarm inside one sprint,
+and `workflow_dispatch` covers "I just touched the backup". The job timeout is
+90 minutes and the restore step alone is capped at 20 — see the comment on
+that step for why the cap belongs to the step and not to the script.
+
+**What the first runs found**, each one invisible to `kubeconform` and to
+every PR check, and each one fixed in the same change that created the
+workflow — `make deploy-local` had been broken on `dev` for weeks without
+anyone running it:
+
+1. The CNPG cluster's `imageName` pinned by digest alone
+   ([ADR 0159](adr/0159-imagem-de-terceiro-por-digest.md)) is refused by the
+   operator's webhook — *"Can't use just the image sha as we can't detect
+   upgrades"*. It now carries `:16.10@sha256:…`.
+2. The bootstrap's source Secret had no `NEO4J_PASSWORD`, which the base
+   `ExternalSecret` reads since the graph ([ADR 0099](adr/0099-neo4j-grafo-de-conhecimento-e-templates.md)):
+   `brabo-secrets` never materialized and every pod sat in
+   `CreateContainerConfigError`.
+3. The api got neither `NEO4J_URI` nor `NEO4J_USER` in the cluster, and in
+   production mode it refuses to boot without all three.
+4. The Neo4j StatefulSet exported `NEO4J_USER`/`NEO4J_PASSWORD`, which the
+   image's entrypoint turns into config keys and rejects (*"Unrecognized
+   setting"*) — the very defect a comment two lines below warned about. Those
+   manifests had never run in a cluster.
+5. `migrate-api` could not `CREATE EXTENSION vector` (the app role is not a
+   superuser), so the api came up with no tables. The local CNPG cluster now
+   creates it as superuser, in the app database and in `template1`.
+6. `deploy/k8s/smoke.sh` and `rollout-test.sh` never sent the session `kind`
+   that became mandatory in FASE 20 (`docker/smoke.sh` got it then), so both
+   failed with a 400 before proving anything.
+7. `make test-restore` died in `pg_restore` with *"permission denied to create
+   extension vector"* — the case the table above already names — because
+   nothing in the local cluster provided the extension to the database the
+   restore creates.
+8. With the extension provided, `pg_restore` still died — now with *"must be
+   owner of extension vector"*, on the dump's `COMMENT ON EXTENSION`: only the
+   extension's owner may comment on it, and wherever the app role is not a
+   superuser (CNPG, any managed Postgres) the extension belongs to another role.
+   **This one is not local to the cluster**: the same `brabo-restore` is the
+   incident procedure, so a real restore on such a Postgres would have failed
+   the same way. `restore.sh` now restores from the dump's table of contents
+   minus the extension comment — a description string the extension installs,
+   which no data and no validation depends on. Reproduced against a plain
+   `pgvector` container with a non-superuser role before and after the change.
+9. `deploy/k8s/test-restore.sh` waited with `kubectl wait
+   --for=condition=complete`, which never sees a Job that **failed**, so the
+   broken restore above spent the step's whole 20-minute cap to report what the
+   Job's log said in seconds (the script's own cap was 30). It now polls both
+   conditions and fails as soon as the Job is `Failed`.
+10. `rollout-test.sh` checked for orphans after a fixed `sleep 15`, which
+    cannot tell *still settling* from *orphaned for good*. It now polls up to a
+    ceiling (`ROLLOUT_CONVERGENCE_SECONDS`, default 120) and records, before the
+    rollout, which replica each session lived on — the old pods take their logs
+    with them.
+
+**Measured and NOT fixed: the rollout proof has failed once out of four
+runs that reached it.** With the same script and the same fixed wait, run
+`34773908653` passed and run `34775712706` reported an orphan — a session
+`active` in the api with no owner in any of the three engine replicas, 15 s
+after `rollout status` returned. The two runs with the bounded wait passed, and
+both converged in **3 s**, all five sessions adopted. A normal convergence
+of 3 s makes "the orphan just needed more than 15 s" the less likely reading;
+the more likely one is an intermittent race in adoption or drain that the fixed
+wait happened to catch. It is left as it is on purpose: the workflow exists to
+catch exactly this, and the next occurrence will now fail with the ceiling it
+waited, where each session lived before the rollout, and the engine lines that
+name the orphan. The fix belongs to the engine, not to this proof.
+
 ### Last verified run
+
+> **The scheduled workflow is now the source for this.** The latest run of
+> [`propriedades.yml`](#provas-de-propriedade-agendadas) — its summary table
+> and the absence of an open `Prova de propriedade falhou` issue — says when
+> the restore last passed on Kubernetes. The record below is kept as it was
+> written: it is the history of the first verification and of what it found.
 
 <!-- Update this section whenever you run the test on a new environment. -->
 
