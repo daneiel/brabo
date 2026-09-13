@@ -28,6 +28,16 @@ defmodule Engine.Projects.Project do
     # recusa, nunca roteia às cegas nem cai no fallback de container (que
     # não existe pra um projeto `runner`).
     field :workspace_verified_at, :utc_datetime
+    # O DESTINO do espelho na máquina do usuário (RN-515, gravado pela api;
+    # RN-516, lido aqui). `nil` é o estado NORMAL — projeto sem espelho é a
+    # maioria, e o produto nunca escolhe um destino sozinho.
+    #
+    # O engine só LÊ, e por dois motivos: decidir se o `join` do canal
+    # `terminal:<projectId>` EXIGE a capacidade `espelho`
+    # (`Engine.Runners.Capacidades`), e devolver o destino na concessão daquele
+    # join (`EngineWeb.TerminalChannel`) — o runner nunca o guarda em
+    # configuração própria, ele o recebe por conexão (ADR 0147 ponto 4).
+    field :mirror_path, :string
   end
 
   @doc """

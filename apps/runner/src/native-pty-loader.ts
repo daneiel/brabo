@@ -40,7 +40,7 @@
  * `conpty_console_list.node`), não este módulo.
  */
 
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -65,13 +65,20 @@ function rodandoComoBinarioCompilado(): boolean {
  * sozinhos, sem precisar reescrever nada dentro do pacote.
  */
 function extrairParaDiretorioReal(
-  arquivos: ReadonlyArray<{ relPath: string; embeddedPath: string }>,
+  arquivos: ReadonlyArray<{ relPath: string; embeddedPath: string; exec?: boolean }>,
 ): string {
   const raiz = mkdtempSync(join(tmpdir(), 'brabo-runner-native-pty-'));
-  for (const { relPath, embeddedPath } of arquivos) {
+  for (const { relPath, embeddedPath, exec } of arquivos) {
     const destino = join(raiz, relPath);
     mkdirSync(dirname(destino), { recursive: true });
     writeFileSync(destino, readFileSync(embeddedPath));
+    // O bit de execução NÃO sobrevive a `writeFileSync`, e há arquivos aqui
+    // que precisam dele: o `spawn-helper` do macOS é EXECUTADO pelo C++ do
+    // node-pty (`lib/unixTerminal.js` monta `native.dir + '/spawn-helper'`),
+    // e no Windows o `winpty-agent.exe`/`OpenConsole.exe` são o back-end do
+    // PTY. Extraído sem o bit, o erro é o mesmo de arquivo ausente —
+    // `posix_spawnp failed` —, e é assim que ele aparecia em toda tag.
+    if (exec) chmodSync(destino, 0o755);
   }
   return raiz;
 }

@@ -1,0 +1,69 @@
+---
+id: runner-projects-controller-list-runner-projects
+title: "Lista os projetos em modo 'runner' que este agente local atende"
+description: "Autenticada por uma chave de dispositivo de MÁQUINA (ADR 0154) — NUNCA por JWT de sessão, e nunca por uma credencial presa a um projeto, que responde 403. Devolve os projetos em `execution_mode: 'runner'` nos quais o dono da chave alcança pelo menos `developer` (o mesmo mínimo de `POST .../runner-ticket`), com o nome da pasta e o estado de verificação de cada um. O agente pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter pasta que não é projeto nenhum."
+sidebar_label: "Lista os projetos em modo 'runner' que este agente local atende"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lista os projetos em modo 'runner' que este agente local atende"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/runner/projects"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Autenticada por uma chave de dispositivo de MÁQUINA (ADR 0154) — NUNCA por JWT de sessão, e nunca por uma credencial presa a um projeto, que responde 403. Devolve os projetos em `execution_mode: "runner"` nos quais o dono da chave alcança pelo menos `developer` (o mesmo mínimo de `POST .../runner-ticket`), com o nome da pasta e o estado de verificação de cada um. O agente pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter pasta que não é projeto nenhum.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./runner-projects-controller-list-runner-projects.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./runner-projects-controller-list-runner-projects.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./runner-projects-controller-list-runner-projects.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

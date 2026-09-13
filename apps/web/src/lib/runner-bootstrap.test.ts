@@ -171,6 +171,46 @@ describe('baixarBinario', () => {
 
     await expect(baixarBinario('linux-x64')).rejects.toThrow(/502/);
   });
+
+  // RN-525 — os desfechos de recusa do proxy pedem ações DIFERENTES de quem
+  // chamou, e o status 502 sozinho não os separa. O `motivo` do corpo é o que
+  // permite distinguir "essa release não assina nada" (use o npm) de "os
+  // bytes não batem com o manifesto" (incidente).
+  it('recusa da api: a frase dela chega junto, e o motivo fica acessível', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 502,
+        json: () =>
+          Promise.resolve({
+            statusCode: 502,
+            message: 'Esta release não publica checksums.txt.',
+            motivo: 'release_sem_manifesto',
+          }),
+      }),
+    );
+
+    const erro = await baixarBinario('linux-x64').catch((e) => e);
+    expect(erro.message).toMatch(/502/);
+    expect(erro.message).toContain('não publica checksums.txt');
+    expect(erro.motivo).toBe('release_sem_manifesto');
+  });
+
+  it('corpo que não é JSON não vira uma segunda exceção', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 504,
+        json: () => Promise.reject(new Error('não é JSON')),
+      }),
+    );
+
+    const erro = await baixarBinario('linux-x64').catch((e) => e);
+    expect(erro.message).toMatch(/504/);
+    expect(erro.motivo).toBeUndefined();
+  });
 });
 
 describe('configurarPastaAutomaticamente', () => {

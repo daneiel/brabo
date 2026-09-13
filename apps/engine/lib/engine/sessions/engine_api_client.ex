@@ -507,6 +507,24 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Reporta o DESFECHO de uma rodada do espelho (RN-517, ADR 0147 ponto 7) —
+  telemetria de conexão, gravada numa tabela própria da api e NUNCA no event
+  log (a rodada não tem sessão, e `session_events.session_id` é `NOT NULL`;
+  é o mesmo raciocínio que fez `rag_searches` virar tabela, RN-479).
+
+  `resultado` é o mapa que o runner empurrou em `mirror_sync_result`, já
+  normalizado por `EngineWeb.TerminalChannel`: `ok` (obrigatório) mais
+  `destination`/`filesCopied`/`filesSkipped`/`filesRefused`/`error`.
+
+  `{:ok, %{"recorded" => true, "status" => _}}` ou `{:error, term}`. Quem
+  chama só LOGA o erro: gravar telemetria jamais derruba o que ela mede — a
+  cópia já terminou quando isto é chamado, e uma falha aqui não pode derrubar
+  o canal do runner.
+  """
+  @callback report_mirror_sync(project_id :: String.t(), resultado :: map()) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Roda um comando de terminal DENTRO do container real do projeto (ADR
   0134, RN-492) — proxy síncrono até o broker, via
   `POST internal/projects/:projectId/container-exec`. Só chamado por
@@ -541,6 +559,9 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def executar_comando_no_container(project_id, comando, cwd, timeout_ms),
     do: impl().executar_comando_no_container(project_id, comando, cwd, timeout_ms)
+
+  def report_mirror_sync(project_id, resultado),
+    do: impl().report_mirror_sync(project_id, resultado)
 
   def rag_search(project_id, query, top_k, opts \\ []),
     do: impl().rag_search(project_id, query, top_k, opts)
@@ -1350,6 +1371,11 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       path: path,
       actorId: user_id
     })
+  end
+
+  @impl true
+  def report_mirror_sync(project_id, resultado) do
+    post_returning("/internal/projects/#{project_id}/mirror-sync-result", resultado)
   end
 
   @impl true

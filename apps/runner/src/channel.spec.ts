@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  CAPACIDADES_DO_RUNNER,
+  capacidadesDoRunner,
   conectarCanal,
+  enviarWorkspaceCreateResult,
+  espelhoConcedidoDaResposta,
   enviarContainerRemoveResult,
   enviarContainerStartResult,
   enviarContainerStopResult,
@@ -69,6 +73,8 @@ class SocketFalso implements SocketLike {
   canal: CanalFalso;
   desconectado = false;
   onCloseCb: (() => void) | null = null;
+  /** O que o runner DECLAROU no join (RN-514) — tópico e params. */
+  canaisPedidos: { topic: string; params?: object }[] = [];
 
   constructor(canal: CanalFalso) {
     this.canal = canal;
@@ -84,13 +90,34 @@ class SocketFalso implements SocketLike {
   onClose(cb: () => void): void {
     this.onCloseCb = cb;
   }
-  channel(): ChannelLike {
+  channel(topic: string, params?: object): ChannelLike {
+    this.canaisPedidos.push({ topic, params });
     return this.canal;
   }
 }
 
-function fabricaFalsa(canal: CanalFalso): CriarSocket {
-  return () => new SocketFalso(canal);
+function fabricaFalsa(canal: CanalFalso, sockets?: SocketFalso[]): CriarSocket {
+  return () => {
+    const socket = new SocketFalso(canal);
+    sockets?.push(socket);
+    return socket;
+  };
+}
+
+/**
+ * Variante da fábrica que GUARDA o que foi passado ao construtor do `Socket`
+ * — url e opções. É a única forma de assertar a neutralização do
+ * auto-reconnect: um teste que só verifique "conecta" passava com o defeito
+ * de pé, e passou, por várias versões (ver o docblock de `channel.ts`).
+ */
+function fabricaQueGuardaOpcoes(
+  canal: CanalFalso,
+  registro: { url: string; opts: Parameters<CriarSocket>[1] }[],
+): CriarSocket {
+  return (url, opts) => {
+    registro.push({ url, opts });
+    return new SocketFalso(canal);
+  };
 }
 
 const handlersVazios = {
@@ -104,6 +131,8 @@ const handlersVazios = {
   onContainerStart: vi.fn(),
   onContainerStop: vi.fn(),
   onContainerRemove: vi.fn(),
+  onMirrorSync: vi.fn(),
+  onWorkspaceCreate: vi.fn(),
 };
 
 describe('conectarCanal', () => {
@@ -335,6 +364,326 @@ describe('conectarCanal', () => {
 
     expect(canal.pushes).toEqual([
       { event: 'workspace_confirm', payload: { path: '/home/voce/projetos/loja' } },
+    ]);
+  });
+
+  /**
+   * ADR 0147 ponto 1 / RN-514 — o join deixou de ser mudo deste lado. A
+   * asserção é sobre o CONTEÚDO dos params, não sobre a chamada ter
+   * acontecido: params vazios eram justamente o estado anterior, e um teste
+   * que só checasse "chamou `channel()`" passaria com eles.
+   */
+  it('declara as capacidades que sabe executar nos params do join', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const sockets: SocketFalso[] = [];
+
+    await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: handlersVazios,
+      criarSocket: fabricaFalsa(canal, sockets),
+    });
+
+    expect(sockets).toHaveLength(1);
+    expect(sockets[0]!.canaisPedidos).toEqual([
+      { topic: 'terminal:p1', params: { capacidades: ['exec', 'pty', 'espelho'] } },
+    ]);
+  });
+
+  /**
+   * RN-516 — `espelho` entra na lista SÓ AGORA, e a asserção é sobre a lista
+   * inteira de propósito: o que a negociação existe para impedir é declarar o
+   * que não se implementa, e uma asserção frouxa (`toContain`) deixaria passar
+   * um nome acrescentado antes do código dele existir.
+   */
+  it('declara as TRÊS capacidades incondicionais — nem uma a mais', () => {
+    expect([...CAPACIDADES_DO_RUNNER]).toEqual(['exec', 'pty', 'espelho']);
+  });
+
+  /**
+   * ADR 0151 ponto 4 / RN-532 — `workspace` é a única cujo direito de ser
+   * declarada depende do ESTADO desta execução, e não da versão do binário:
+   * sem base consentida não há onde criar pasta, e declará-la mesmo assim é
+   * exatamente o defeito que a negociação existe para impedir.
+   */
+  it('só declara `workspace` quando ESTA execução tem base consentida', () => {
+    expect(capacidadesDoRunner(null)).toEqual(['exec', 'pty', 'espelho']);
+    expect(capacidadesDoRunner('/home/voce/projetos')).toEqual([
+      'exec',
+      'pty',
+      'espelho',
+      'workspace',
+    ]);
+  });
+
+  it('os params do join carregam o que `capacidades` mandar, não a lista fixa', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const sockets: SocketFalso[] = [];
+
+    await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: handlersVazios,
+      capacidades: capacidadesDoRunner('/home/voce/projetos'),
+      criarSocket: fabricaFalsa(canal, sockets),
+    });
+
+    expect(sockets[0]!.canaisPedidos).toEqual([
+      {
+        topic: 'terminal:p1',
+        params: { capacidades: ['exec', 'pty', 'espelho', 'workspace'] },
+      },
+    ]);
+  });
+
+  it('recusa por capacidade vira JoinRecusadoError (fatal, sem retry) com a mensagem do servidor legível', async () => {
+    const motivo = {
+      reason:
+        'este projeto exige a(s) capacidade(s) `espelho`, que o brabo-runner ' +
+        'conectado não declarou no join — o binário está desatualizado.',
+    };
+    const canal = new CanalFalso({ status: 'error', resp: motivo });
+
+    const erro = await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: handlersVazios,
+      criarSocket: fabricaFalsa(canal),
+    }).catch((e: unknown) => e);
+
+    expect(erro).toBeInstanceOf(JoinRecusadoError);
+    // `index.ts` imprime `erro.message` e encerra — é a única chance de
+    // explicar, então a razão do servidor tem que sobreviver até ali.
+    expect((erro as JoinRecusadoError).message).toContain('espelho');
+    expect((erro as JoinRecusadoError).motivo).toEqual(motivo);
+  });
+
+  /**
+   * ADR 0147 pontos 4 e 8 / RN-516 — o destino viaja na CONCESSÃO do join, e
+   * a mensagem `mirror_sync` só é entregue ao handler; quem confere o destino
+   * contra a concessão é `tratarMirrorSync` (`index.ts`), testado em
+   * `index-handlers.spec.ts`.
+   */
+  it('o destino do espelho vem na resposta do join e fica em `espelho`', async () => {
+    const canal = new CanalFalso({
+      status: 'ok',
+      resp: { espelho: { destino: '/home/voce/espelhos/loja' } },
+    });
+
+    const conectado = await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: handlersVazios,
+      criarSocket: fabricaFalsa(canal),
+    });
+
+    expect(conectado.espelho).toEqual({ destino: '/home/voce/espelhos/loja' });
+  });
+
+  it('join sem concessão de espelho: `espelho` é null — o estado NORMAL', async () => {
+    const canal = new CanalFalso({ status: 'ok', resp: {} });
+
+    const conectado = await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: handlersVazios,
+      criarSocket: fabricaFalsa(canal),
+    });
+
+    expect(conectado.espelho).toBeNull();
+  });
+
+  it('espelhoConcedidoDaResposta ignora resposta malformada em vez de inventar destino', () => {
+    expect(espelhoConcedidoDaResposta(undefined)).toBeNull();
+    expect(espelhoConcedidoDaResposta({ espelho: null })).toBeNull();
+    expect(espelhoConcedidoDaResposta({ espelho: { destino: '' } })).toBeNull();
+    expect(espelhoConcedidoDaResposta({ espelho: { destino: 42 } })).toBeNull();
+    expect(espelhoConcedidoDaResposta({ espelho: { destino: '/x' } })).toEqual({
+      destino: '/x',
+    });
+  });
+
+  it('mirror_sync chega ao handler com destino e momento; sem `destino` não chega', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const onMirrorSync = vi.fn();
+
+    await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: { ...handlersVazios, onMirrorSync },
+      criarSocket: fabricaFalsa(canal),
+    });
+
+    canal.simularRecebimento('mirror_sync', {
+      ref: 'm1',
+      destino: '/home/voce/espelhos/loja',
+      momento: 'commit',
+    });
+    expect(onMirrorSync).toHaveBeenCalledWith({
+      ref: 'm1',
+      destino: '/home/voce/espelhos/loja',
+      momento: 'commit',
+    });
+
+    // `momento` ausente é rastro que falta, não motivo pra descartar a rodada.
+    canal.simularRecebimento('mirror_sync', { ref: 'm2', destino: '/x' });
+    expect(onMirrorSync).toHaveBeenCalledWith({
+      ref: 'm2',
+      destino: '/x',
+      momento: 'desconhecido',
+    });
+
+    // Sem `destino` não há o que conferir contra a concessão — a mensagem não
+    // vira "sincronize para onde você achar".
+    canal.simularRecebimento('mirror_sync', { ref: 'm3' });
+    expect(onMirrorSync).toHaveBeenCalledTimes(2);
+  });
+
+  // RN-108 — "reconexão, inclusive automática, sempre busca ticket novo".
+  //
+  // O que este teste assere é a OPÇÃO passada ao construtor do `Socket`, e
+  // não o comentário do módulo nem "o runner conectou". Sem a opção, o
+  // auto-reconnect embutido do phoenix.js repete com os MESMOS params — o
+  // mesmo ticket já consumido — a cada ~5,13s (teto do backoff interno),
+  // para sempre, em paralelo com a política de `index.ts`. Medido em
+  // execução real: 61 recusas do `EngineWeb.RunnerSocket` em poucas horas e
+  // 530 requisições num minuto contra o teto de 300 do `RATE_LIMIT_USER`,
+  // debitadas do usuário dono da conta — que via 429 no navegador.
+  it('neutraliza o auto-reconnect do Phoenix.Socket — ticket de uso único nunca é repetido (RN-108)', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const registro: { url: string; opts: Parameters<CriarSocket>[1] }[] = [];
+
+    await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: handlersVazios,
+      criarSocket: fabricaQueGuardaOpcoes(canal, registro),
+    });
+
+    expect(registro).toHaveLength(1);
+    const primeiro = registro[0];
+    if (!primeiro) throw new Error('a fábrica não foi chamada');
+    // O ticket viaja nos params — é justamente ele que o auto-reconnect
+    // repetiria.
+    expect(primeiro.opts.params).toEqual({ ticket: 't1' });
+
+    const { reconnectAfterMs } = primeiro.opts;
+    expect(reconnectAfterMs).toBeDefined();
+    // Um dia inteiro, como no web: na prática nunca dispara dentro da vida
+    // do socket. A asserção é sobre a ORDEM de grandeza, não sobre o número.
+    expect(reconnectAfterMs()).toBeGreaterThan(60 * 60 * 1000);
+  });
+});
+
+/**
+ * ADR 0151 ponto 3 / RN-532 — o par `workspace_create`/`workspace_create_result`.
+ * O que se prova aqui é o CONTRATO do payload: sem `projectId` ou sem
+ * `segmento` não há pedido, e "crie a pasta que você achar" é exatamente a
+ * forma que este protocolo não pode ter.
+ */
+describe('workspace_create (ADR 0151, RN-532)', () => {
+  async function canalJoined() {
+    const canal = new CanalFalso({ status: 'ok' });
+    const conexao = await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: { ...handlersVazios, onWorkspaceCreate: vi.fn() },
+      criarSocket: fabricaFalsa(canal),
+    });
+    return { canal, conexao };
+  }
+
+  it('entrega o pedido com `repoUrl`/`env` quando eles vêm, e sem eles quando não vêm', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const onWorkspaceCreate = vi.fn();
+
+    await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: { ...handlersVazios, onWorkspaceCreate },
+      criarSocket: fabricaFalsa(canal),
+    });
+
+    canal.simularRecebimento('workspace_create', {
+      ref: 'w1',
+      projectId: 'p-1',
+      segmento: 'loja',
+    });
+    canal.simularRecebimento('workspace_create', {
+      ref: 'w2',
+      projectId: 'p-1',
+      segmento: 'loja',
+      repoUrl: 'https://exemplo/loja.git',
+      env: { GIT_ASKPASS: '/bin/true' },
+    });
+
+    expect(onWorkspaceCreate).toHaveBeenNthCalledWith(1, {
+      ref: 'w1',
+      projectId: 'p-1',
+      segmento: 'loja',
+      repoUrl: undefined,
+      env: undefined,
+    });
+    expect(onWorkspaceCreate).toHaveBeenNthCalledWith(2, {
+      ref: 'w2',
+      projectId: 'p-1',
+      segmento: 'loja',
+      repoUrl: 'https://exemplo/loja.git',
+      env: { GIT_ASKPASS: '/bin/true' },
+    });
+  });
+
+  it('payload sem `segmento` (ou sem `projectId`) é DESCARTADO — nunca um pedido vago', async () => {
+    const canal = new CanalFalso({ status: 'ok' });
+    const onWorkspaceCreate = vi.fn();
+
+    await conectarCanal({
+      engineWsUrl: 'ws://fake/runner/websocket',
+      ticket: 't1',
+      projectId: 'p1',
+      handlers: { ...handlersVazios, onWorkspaceCreate },
+      criarSocket: fabricaFalsa(canal),
+    });
+
+    canal.simularRecebimento('workspace_create', { ref: 'w3', projectId: 'p-1' });
+    canal.simularRecebimento('workspace_create', { ref: 'w4', segmento: 'loja' });
+    // `env` malformado nunca vira ambiente arbitrário do processo filho.
+    canal.simularRecebimento('workspace_create', {
+      ref: 'w5',
+      projectId: 'p-1',
+      segmento: 'loja',
+      env: { NUMERO: 7 },
+    });
+
+    expect(onWorkspaceCreate).toHaveBeenCalledTimes(1);
+    expect(onWorkspaceCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ ref: 'w5', env: undefined }),
+    );
+  });
+
+  it('`enviarWorkspaceCreateResult` empurra o desfecho pelo mesmo `ref`', async () => {
+    const { canal, conexao } = await canalJoined();
+
+    enviarWorkspaceCreateResult(conexao.channel, {
+      ref: 'w1',
+      sucesso: true,
+      caminho: '/home/voce/projetos/loja',
+    });
+
+    expect(canal.pushes).toEqual([
+      {
+        event: 'workspace_create_result',
+        payload: { ref: 'w1', sucesso: true, caminho: '/home/voce/projetos/loja' },
+      },
     ]);
   });
 });

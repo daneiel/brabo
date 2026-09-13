@@ -1,0 +1,69 @@
+---
+id: internal-first-account-controller-criar
+title: "Creates the FIRST account of an installation, already verified"
+description: "For the one-line installer, which runs where no mail transport is configured: the generated `.env` carries no mail variable, `MAIL_TRANSPORT` falls to `log`, and normal registration waits on an e-mail that never arrives. The account is born verified because whoever runs the installer already proved something STRONGER than controlling a mailbox — they control the machine, the `.env` and the Docker daemon. Normal registration is untouched. Refuses with 409 when the installation has ANY user: the condition is about the installation, not about this e-mail, so a migration restore silences the step by the same test. The password is never generated here and never stored anywhere but as an argon2id hash; the personal workspace (RN-410) is born in the same transaction."
+sidebar_label: "Creates the FIRST account of an installation, already verified"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Creates the FIRST account of an installation, already verified"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/first-account"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+For the one-line installer, which runs where no mail transport is configured: the generated `.env` carries no mail variable, `MAIL_TRANSPORT` falls to `log`, and normal registration waits on an e-mail that never arrives. The account is born verified because whoever runs the installer already proved something STRONGER than controlling a mailbox — they control the machine, the `.env` and the Docker daemon. Normal registration is untouched. Refuses with 409 when the installation has ANY user: the condition is about the installation, not about this e-mail, so a migration restore silences the step by the same test. The password is never generated here and never stored anywhere but as an argon2id hash; the personal workspace (RN-410) is born in the same transaction.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-first-account-controller-criar.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-first-account-controller-criar.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-first-account-controller-criar.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

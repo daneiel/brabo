@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { getProject, listModels } from '../lib/api-client';
-import type { ExecutionMode } from '../lib/api-types';
+import { getMirrorState, getProject, listModels } from '../lib/api-client';
+import type { ExecutionMode, MirrorState } from '../lib/api-types';
 import { LinhaDeSinal } from './SinaisDoAmbiente';
 import sinais from './SinaisDoAmbiente.module.css';
 
@@ -58,11 +58,36 @@ const CHAVE_DO_MODO: Record<ExecutionMode, string> = {
  * `workspaceVerifiedAt` é nulo por definição (a conversão de modo o zera,
  * RN-450) e uma linha "nunca confirmada" ali seria uma ausência inventada.
  *
- * ## Nenhuma requisição a mais
+ * ## O que a linha do ESPELHO diz (RN-517, ADR 0147 ponto 7)
  *
- * As duas consultas reusam as chaves que a página já usa: `['project', id]`
- * é a mesma de `ProjectPage` e `['models', id]` a mesma da própria Visão
- * geral. O TanStack devolve do cache.
+ * Ela só existe em projeto que TEM destino declarado (`mirrorPath`), pela
+ * mesma razão da linha do runner logo acima: num projeto sem espelho, "nunca
+ * sincronizou" seria uma ausência inventada — não há o que sincronizar.
+ *
+ * Os TRÊS estados da RN-088 têm três frases DIFERENTES, e nenhuma vira a
+ * outra: "nunca sincronizou" (nenhuma rodada reportada), "sincronizou"
+ * (com contagem, e o zero tem frase própria — "não havia nada a copiar" é um
+ * desfecho, não um vazio) e "falhou" (com o erro nomeado na ressalva). Um
+ * traço servindo às três seria a tela recusando nomear o que sabe (RN-470).
+ *
+ * Data ABSOLUTA com ressalva, nunca bolinha verde de "está de pé" — o mesmo
+ * precedente de `workspaceVerifiedAt` acima: o carimbo diz que uma rodada
+ * aconteceu, não que o espelho esteja sincronizado agora com o que mudou
+ * desde então (o gatilho é um momento nomeado, o commit, não um watcher).
+ * E quando o destino da última rodada difere do declarado hoje, a ressalva
+ * DIZ isso: a concessão viaja no join e só muda quando o runner reconecta
+ * (RN-516), então afirmar a data de ontem sobre a pasta de hoje seria a tela
+ * mentindo por omissão.
+ *
+ * ## Requisições
+ *
+ * As duas primeiras consultas reusam as chaves que a página já usa:
+ * `['project', id]` é a mesma de `ProjectPage` e `['models', id]` a mesma da
+ * própria Visão geral — o TanStack devolve do cache. A terceira
+ * (`['mirror-state', id]`) é uma chamada A MAIS, e ela só sai quando o
+ * projeto tem destino: pendurar o estado do espelho na leitura de projeto
+ * custaria uma consulta em toda tela que carrega um projeto, para um dado que
+ * quase nenhuma delas mostra.
  */
 export function AmbienteDoProjeto({ projectId }: { projectId: string }) {
   const { t, i18n } = useTranslation('overview');
@@ -77,6 +102,15 @@ export function AmbienteDoProjeto({ projectId }: { projectId: string }) {
   });
 
   const project = projectQuery.data;
+  const temEspelho = Boolean(project?.mirrorPath);
+  const mirrorQuery = useQuery({
+    queryKey: ['mirror-state', projectId],
+    queryFn: () => getMirrorState(projectId),
+    // Sem destino declarado não há estado a mostrar, e a linha nem aparece —
+    // buscar mesmo assim seria uma chamada por projeto para nada.
+    enabled: temEspelho,
+  });
+
   const modelosLocais = modelsQuery.data
     ? Object.values(modelsQuery.data.local).flat().length
     : null;
@@ -122,6 +156,23 @@ export function AmbienteDoProjeto({ projectId }: { projectId: string }) {
           />
         )}
 
+        {temEspelho && (
+          <LinhaDeSinal
+            rotulo={t('ambiente.espelho')}
+            valor={valorDoEspelho(mirrorQuery.data, t, i18n.language)}
+            // `erro` só no estado que É um erro; nunca `ok`, pela mesma razão
+            // da linha do runner: verde leria como "está sincronizado agora".
+            tom={
+              mirrorQuery.data?.status === 'failed'
+                ? 'erro'
+                : mirrorQuery.data
+                  ? 'neutro'
+                  : 'aguardando'
+            }
+            ressalva={ressalvaDoEspelho(mirrorQuery.data, project?.mirrorPath, t)}
+          />
+        )}
+
         <LinhaDeSinal
           rotulo={t('ambiente.modelosLocais')}
           valor={
@@ -139,4 +190,64 @@ export function AmbienteDoProjeto({ projectId }: { projectId: string }) {
       </ul>
     </div>
   );
+}
+
+type Traducao = ReturnType<typeof useTranslation<'overview'>>['t'];
+
+/**
+ * Uma frase por estado, e o zero tem a sua (RN-088/RN-470). O que a tela
+ * NUNCA faz aqui é usar o mesmo texto para "nunca rodou" e para "rodou e não
+ * copiou nada": são desfechos diferentes e o usuário age diferente em cada um.
+ */
+function valorDoEspelho(
+  estado: MirrorState | undefined,
+  t: Traducao,
+  idioma: string,
+): string {
+  if (!estado) return t('ambiente.carregando');
+  if (estado.status === 'never') return t('ambiente.espelhoNunca');
+
+  const data = estado.lastSyncedAt
+    ? new Date(estado.lastSyncedAt).toLocaleString(idioma)
+    : null;
+
+  if (estado.status === 'failed') {
+    // A última cópia BOA continua na frase quando existe: é a informação mais
+    // útil que a tela tem enquanto o espelho está quebrado, e foi para não
+    // perdê-la que o erro nunca apaga o sucesso no banco.
+    return data
+      ? t('ambiente.espelhoFalhouComUltima', { data })
+      : t('ambiente.espelhoFalhou');
+  }
+
+  if (estado.filesCopied === 0) return t('ambiente.espelhoSemNovidade', { data });
+  return t('ambiente.espelhoValor', { count: estado.filesCopied ?? 0, data });
+}
+
+/**
+ * A ressalva carrega o erro quando falhou; senão, diz o que a data significa —
+ * e acrescenta o aviso de destino trocado, que é a única situação em que a
+ * data é sobre outra pasta.
+ */
+function ressalvaDoEspelho(
+  estado: MirrorState | undefined,
+  destinoDeHoje: string | null | undefined,
+  t: Traducao,
+): string | undefined {
+  if (!estado) return undefined;
+  if (estado.status === 'never') return t('ambiente.espelhoRessalvaNunca');
+
+  const trocou =
+    estado.lastDestination !== null &&
+    destinoDeHoje != null &&
+    estado.lastDestination !== destinoDeHoje;
+
+  const aviso = trocou
+    ? ` ${t('ambiente.espelhoDestinoTrocado', { destino: estado.lastDestination })}`
+    : '';
+
+  if (estado.status === 'failed') {
+    return `${t('ambiente.espelhoRessalvaErro', { erro: estado.lastError ?? '' })}${aviso}`;
+  }
+  return `${t('ambiente.espelhoRessalva')}${aviso}`;
 }

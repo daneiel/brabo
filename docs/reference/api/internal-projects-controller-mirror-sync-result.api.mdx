@@ -1,0 +1,69 @@
+---
+id: internal-projects-controller-mirror-sync-result
+title: "The local agent reports the outcome of a mirror round (RN-517)"
+description: "Called only by the engine, after the runner pushes `mirror_sync_result` over the channel — the SAME path as `workspace_confirm` (runner → channel → engine → api), never a second mechanism: the engine reports, it does not write the table. This is TELEMETRY, not a domain event: never `session_events` (a mirror round has no session and `session_id` is `NOT NULL`, the same reasoning that made `rag_searches` a table) and never a `proposed_action` (the mirror write is configuration the user declared, not an agent asking to act). `ok` is what decides the outcome — never the presence of a count or of a message: a round that copied 0 files is normal and must not be indistinguishable from one that never ran. Recording never breaks what it measures: the copy is already done when this is called, and the engine only logs a refusal here. A project whose destination was cleared meanwhile STILL records — the round happened, and its error is usually what explains what went wrong."
+sidebar_label: "The local agent reports the outcome of a mirror round (RN-517)"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "post api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"The local agent reports the outcome of a mirror round (RN-517)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/internal/projects/{projectId}/mirror-sync-result"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Called only by the engine, after the runner pushes `mirror_sync_result` over the channel — the SAME path as `workspace_confirm` (runner → channel → engine → api), never a second mechanism: the engine reports, it does not write the table. This is TELEMETRY, not a domain event: never `session_events` (a mirror round has no session and `session_id` is `NOT NULL`, the same reasoning that made `rag_searches` a table) and never a `proposed_action` (the mirror write is configuration the user declared, not an agent asking to act). `ok` is what decides the outcome — never the presence of a count or of a message: a round that copied 0 files is normal and must not be indistinguishable from one that never ran. Recording never breaks what it measures: the copy is already done when this is called, and the engine only logs a refusal here. A project whose destination was cleared meanwhile STILL records — the round happened, and its error is usually what explains what went wrong.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./internal-projects-controller-mirror-sync-result.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./internal-projects-controller-mirror-sync-result.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./internal-projects-controller-mirror-sync-result.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

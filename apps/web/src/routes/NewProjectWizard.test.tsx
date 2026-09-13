@@ -13,6 +13,7 @@ const createProject = vi.fn();
 const listCredentials = vi.fn();
 const registerGitCredential = vi.fn();
 const listProjectFolders = vi.fn();
+const getProjectsBase = vi.fn();
 
 vi.mock('../lib/api-client', () => ({
   ApiError: class ApiError extends Error {
@@ -33,6 +34,19 @@ vi.mock('../lib/api-client', () => ({
   // O navegador de pastas passou a ser servido pela api (RN-504): o modal
   // usa `criarFsBrowserViaApi`, que fala com estas duas.
   listProjectFolders: (...a: unknown[]) => listProjectFolders(...a),
+  // A base dos projetos montados (ADR 0141/0146 ponto 4, RN-513): é ELA que
+  // decide se o card "Pasta montada" é sequer oferecido, então todo teste
+  // que chega ao passo de workspace passa por aqui.
+  getProjectsBase: (...a: unknown[]) => getProjectsBase(...a),
+  // O reconhecimento de máquina já pareada (RN-548) do `RunnerOnboardingPanel`
+  // embutido no passo de workspace. Ele só pergunta DEPOIS da criação
+  // antecipada (RN-437), porque a rota é por projeto; sem chave de MÁQUINA o
+  // painel fica byte a byte como era.
+  listWorkspaces: () =>
+    Promise.resolve([{ workspace: { id: 'ws-1' }, role: 'maintainer' }]),
+  listRunnerDeviceKeys: () => Promise.resolve([]),
+  getProject: () =>
+    Promise.resolve({ id: 'proj-1', workspacePath: null, workspaceVerifiedAt: null }),
   mensagemDaApi: (erro: unknown) => (erro instanceof Error ? erro.message : 'Erro'),
 }));
 
@@ -40,11 +54,11 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
 }));
 
-// O `FolderBrowserModal` real é montado quando "Procurar pasta" abre. Desde a
-// RN-504 ele fala com a API (`listProjectFolders`, mockada acima) e não mais
-// com o canal Phoenix — este dublê fica porque o módulo do canal segue
-// importado pelo componente, e sem ele o `Socket` do phoenix.js tentaria
-// conectar de verdade se algum caminho voltasse a usá-lo.
+// O `FolderBrowserModal` real é montado quando "Procurar pasta" abre, e o
+// transporte depende do MODO (RN-533): `mounted` fala com a API
+// (`listProjectFolders`, mockada acima) e `runner` fala com o canal Phoenix —
+// que este dublê substitui, para o `Socket` do phoenix.js não tentar conectar
+// de verdade.
 const { connectFsBrowserChannelMock } = vi.hoisted(() => {
   const fakeChannel = {
     listarDiretorio: vi.fn().mockResolvedValue({ path: '/home/user', entradas: [] }),
@@ -72,11 +86,21 @@ function montar() {
   );
 }
 
-/** Avança do passo 1 (modo) e 2 (provider) até o de nome e visibilidade. */
-async function ateVisibilidade(provider: 'GitHub' | 'Local') {
+/**
+ * Avança do passo 1 (modo) até o de nome e visibilidade.
+ *
+ * CRIAR não tem mais passo de provider (RN-541): o git nasce no handoff ao
+ * Dev Lead, sempre `local`, então perguntar "onde hospedar" aqui seria
+ * perguntar por uma decisão que a tela não usa. O parâmetro sobrevive para os
+ * casos que exercitam a ADOÇÃO, onde o provider é obrigatório.
+ */
+async function ateVisibilidade(provider: 'GitHub' | 'Local', adotando = false) {
   montar();
-  fireEvent.click(screen.getByText('Criar novo'));
+  fireEvent.click(screen.getByText(adotando ? 'Adotar existente' : 'Criar novo'));
   fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+  if (!adotando) return;
+
   fireEvent.click(screen.getByText(provider));
   fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
@@ -90,19 +114,50 @@ async function ateVisibilidade(provider: 'GitHub' | 'Local') {
   }
 }
 
-/** Do passo 1 até o de workspace, no provider Local (sem credencial). */
+/**
+ * Do passo 1 até onde se escolhe o destino, no provider Local.
+ *
+ * Destino e identificação são UM passo agora: `ateVisibilidade` já chega
+ * nele, e preencher o nome não avança mais para outra tela — os dois campos
+ * convivem, com o destino acima. O nome continua sendo preenchido aqui
+ * porque o gate do passo é a CONJUNÇÃO dos dois, e sem ele o "Continuar"
+ * fica inerte.
+ */
 async function ateWorkspace() {
   await ateVisibilidade('Local');
   fireEvent.change(screen.getByLabelText('Nome do projeto'), {
     target: { value: 'Loja' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-  await screen.findByText('Onde o código vai morar');
+}
+
+const BASE = '/home/user/projetos-brabo';
+
+/**
+ * O mesmo caminho, numa instalação COM base consentida (ADR 0146 ponto 4).
+ *
+ * O mock precisa ser armado ANTES de montar o assistente: a consulta nasce
+ * com ele, não com o passo. O `findByText` do card espera a resposta chegar
+ * — até lá o card não existe, por decisão (RN-513).
+ */
+async function ateWorkspaceComBase(base: string = BASE) {
+  getProjectsBase.mockResolvedValue({ projectsBase: base });
+  await ateWorkspace();
+  await screen.findByText('Pasta montada');
+}
+
+/** A classe do card selecionado é hasheada pelo CSS module — só o sufixo importa. */
+function estaSelecionado(rotulo: string): boolean {
+  const botao = screen.getByText(rotulo).closest('button');
+  return /selected/.test(botao?.className ?? '');
 }
 
 beforeEach(async () => {
   await i18n.changeLanguage('pt-BR');
   vi.clearAllMocks();
+  // O default dos testes é a instalação SEM base — o estado de quem clonou
+  // o produto e ainda não rodou o consentimento do `pnpm bootstrap`. Quem
+  // precisa do modo Pasta montada liga a base explicitamente.
+  getProjectsBase.mockResolvedValue({ projectsBase: null });
   listProjectFolders.mockResolvedValue({
     base: '/home/user/brabo',
     path: '/home/user/brabo',
@@ -125,36 +180,34 @@ afterAll(() => {
 });
 
 /**
- * O aviso do repositório privado no GitHub.
+ * O passo de provider, e de quem ele é.
  *
- * No plano gratuito, repositório privado NÃO aceita proteção de branch — e o
- * bootstrap descobre isso no último passo, com o repositório já criado e a
- * mensagem crua da API na tela. Era tarde demais para uma decisão que se toma
- * dois passos antes.
+ * O aviso do repositório privado no GitHub morava aqui e MORREU com a
+ * RN-541: ele só aparecia no passo de visibilidade da CRIAÇÃO, quando o
+ * provider era `github` — e criar deixou de perguntar provider, porque
+ * deixou de criar repositório. O aviso virou código que nunca dispara, e
+ * saiu junto.
+ *
+ * No lugar dele, o que precisa de garantia agora é a regra nova: a criação
+ * não pergunta onde hospedar, e a adoção continua perguntando — sem
+ * provider não há repositório existente para apontar.
  */
-describe('NewProjectWizard — aviso de repositório privado', () => {
-  it('avisa quando o provider é GitHub e a visibilidade é privada', async () => {
-    await ateVisibilidade('GitHub');
+describe('NewProjectWizard — o provider é da adoção', () => {
+  it('criar não passa por provider: do modo vai direto para nome', async () => {
+    montar();
+    fireEvent.click(screen.getByText('Criar novo'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    expect(
-      await screen.findByText(/não aceita proteção de branch/i),
-    ).toBeTruthy();
+    expect(await screen.findByLabelText('Nome do projeto')).toBeTruthy();
+    expect(screen.queryByText('GitHub')).toBeNull();
   });
 
-  it('some ao escolher Público — lá a proteção funciona', async () => {
-    await ateVisibilidade('GitHub');
-    await screen.findByText(/não aceita proteção de branch/i);
+  it('adotar continua perguntando o provider', async () => {
+    montar();
+    fireEvent.click(screen.getByText('Adotar existente'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Público' }));
-
-    expect(screen.queryByText(/não aceita proteção de branch/i)).toBeNull();
-  });
-
-  /** O limite é do GitHub. Repetir o aviso no Local seria mentira. */
-  it('não aparece no provider Local, que não tem plano nenhum', async () => {
-    await ateVisibilidade('Local');
-
-    expect(screen.queryByText(/não aceita proteção de branch/i)).toBeNull();
+    expect(await screen.findByText('GitHub')).toBeTruthy();
   });
 });
 
@@ -172,7 +225,6 @@ describe('NewProjectWizard — onde o código vai morar', () => {
 
     // Avança sem digitar nada: é o comportamento de sempre.
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
 
     await waitFor(() => expect(createProject).toHaveBeenCalled());
@@ -185,13 +237,12 @@ describe('NewProjectWizard — onde o código vai morar', () => {
 
   it('Pasta montada manda o caminho digitado, e só ele', async () => {
     createProject.mockResolvedValue({ id: 'proj-1' });
-    await ateWorkspace();
+    await ateWorkspaceComBase();
 
     fireEvent.click(screen.getByText('Pasta montada'));
     fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
       target: { value: '/home/voce/projetos/loja' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
 
@@ -204,12 +255,25 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     });
   });
 
-  it('Pasta montada sem caminho não avança — a tela não deixa mandar o que a api recusaria', async () => {
-    await ateWorkspace();
+  /**
+   * A sugestão `<base>/<slug>` preenche o campo (RN-501/RN-513) — apagá-la é
+   * escolha do usuário, e a tela NÃO a reescreve por cima. Sem caminho
+   * nenhum, o passo continua travado: a régua de avanço é
+   * `canAdvanceFromWorkspace`, que a pré-seleção não relaxou.
+   */
+  it('Pasta montada com o campo apagado não avança, e a sugestão não volta sozinha', async () => {
+    await ateWorkspaceComBase();
 
     fireEvent.click(screen.getByText('Pasta montada'));
+    const campo = screen.getByLabelText('Caminho da pasta');
+    expect(campo).toHaveValue(`${BASE}/loja`);
 
-    expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled();
+    fireEvent.change(campo, { target: { value: '' } });
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled(),
+    );
+    expect(screen.getByLabelText('Caminho da pasta')).toHaveValue('');
   });
 
   it('a RECUSA da api aparece na tela com a instrução de montagem, não como toast genérico', async () => {
@@ -221,13 +285,12 @@ describe('NewProjectWizard — onde o código vai morar', () => {
           'No docker/docker-compose.yml, acrescente a mesma linha aos serviços "api" e "engine".',
       }),
     );
-    await ateWorkspace();
+    await ateWorkspaceComBase();
 
     fireEvent.click(screen.getByText('Pasta montada'));
     fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
       target: { value: '/home/voce/projetos/loja' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
 
@@ -256,13 +319,15 @@ describe('NewProjectWizard — onde o código vai morar', () => {
       arquivos: 0,
       simbolicos: 0,
     });
-    await ateWorkspace();
+    await ateWorkspaceComBase();
     fireEvent.click(screen.getByText('Pasta montada'));
 
     fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
 
     expect(await screen.findByText('clientes')).toBeTruthy();
-    expect(listProjectFolders).toHaveBeenCalledWith('ws-1');
+    // O modal abre NA sugestão que a tela já tinha escrito no campo
+    // (`<base>/<slug>`, RN-513) — antes dela existir, abria na base.
+    expect(listProjectFolders).toHaveBeenCalledWith('ws-1', `${BASE}/loja`);
     expect(createProject).not.toHaveBeenCalled();
     // O canal do runner não é sequer aberto: o transporte é outro.
     expect(connectFsBrowserChannelMock).not.toHaveBeenCalled();
@@ -296,7 +361,6 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     expect(screen.getByText(/--token/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
 
     await waitFor(() => expect(createProject).toHaveBeenCalled());
@@ -318,16 +382,170 @@ describe('NewProjectWizard — onde o código vai morar', () => {
 });
 
 /**
+ * A base decide o que a criação OFERECE (RN-513, ADR 0146 ponto 4).
+ *
+ * As duas metades já eram regra desde o ADR 0141 (RN-500, "não oferecer sem
+ * base") e o ADR 0142 (RN-501, "sugerir `<base>/<slug>`"), e nenhuma das
+ * duas tinha chegado ao cliente: `GET .../projects-base` não tinha chamador
+ * nenhum, e o card era oferecido incondicionalmente. O que é NOVO aqui é a
+ * pré-seleção, que revisa o default do ADR 0072 só para a instalação local.
+ */
+describe('NewProjectWizard — a base de projetos decide o que é oferecido', () => {
+  it('com base, Pasta montada é o pré-selecionado e o campo abre com <base>/<slug>', async () => {
+    await ateWorkspaceComBase();
+
+    expect(estaSelecionado('Pasta montada')).toBe(true);
+    expect(estaSelecionado('Container')).toBe(false);
+    // O campo de caminho só existe fora do modo Container: a presença dele
+    // já prova o modo vigente, e o valor prova a sugestão.
+    expect(screen.getByLabelText('Caminho da pasta')).toHaveValue(
+      `${BASE}/loja`,
+    );
+    expect(getProjectsBase).toHaveBeenCalledWith('ws-1');
+  });
+
+  it('a sugestão acompanha o nome enquanto ninguém digitou por cima', async () => {
+    await ateWorkspaceComBase();
+    expect(screen.getByLabelText('Caminho da pasta')).toHaveValue(
+      `${BASE}/loja`,
+    );
+
+    // Sem ida e volta: nome e destino estão no MESMO passo agora, e avançar
+    // aqui sairia da tela onde o caminho é visível.
+    fireEvent.change(screen.getByLabelText('Nome do projeto'), {
+      target: { value: 'Loja Nova' },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Caminho da pasta')).toHaveValue(
+        `${BASE}/loja-nova`,
+      ),
+    );
+  });
+
+  it('caminho digitado NUNCA é sobrescrito pela sugestão, nem quando o nome muda', async () => {
+    await ateWorkspaceComBase();
+    fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
+      target: { value: `${BASE}/minha-pasta` },
+    });
+
+    // Sem ida e volta: nome e destino estão no MESMO passo agora, e avançar
+    // aqui sairia da tela onde o caminho é visível.
+    fireEvent.change(screen.getByLabelText('Nome do projeto'), {
+      target: { value: 'Loja Nova' },
+    });
+    await screen.findByText('Onde o código vai morar');
+
+    expect(screen.getByLabelText('Caminho da pasta')).toHaveValue(
+      `${BASE}/minha-pasta`,
+    );
+  });
+
+  /**
+   * `projectsBase: null` é estado NORMAL — a instalação não tem
+   * `BRABO_PROJECTS_BASE`. Oferecer o modo aqui terminaria na recusa da api
+   * (400) depois de o usuário ter escolhido, digitado e chegado ao fim.
+   */
+  it('sem base, o card Pasta montada não existe e Container segue selecionado', async () => {
+    getProjectsBase.mockResolvedValue({ projectsBase: null });
+    await ateWorkspace();
+
+    // Espera a resposta chegar: se o card fosse aparecer, apareceria aqui.
+    await waitFor(() => expect(getProjectsBase).toHaveBeenCalled());
+    expect(screen.queryByText('Pasta montada')).toBeNull();
+    expect(estaSelecionado('Container')).toBe(true);
+    // Os outros dois continuam onde estavam — nada além de `mounted` sai.
+    expect(screen.getByText('Runner local')).toBeTruthy();
+  });
+
+  /**
+   * Consulta que FALHA não é permissão para oferecer: "não sei" não vira
+   * "tem", pela mesma régua da RN-088/RN-468 e dos ADRs 0041/0042
+   * (capability só se declara quando provada).
+   */
+  it('consulta recusada (403) não oferece Pasta montada — desconhecido não vira oferta', async () => {
+    const { ApiError } = await import('../lib/api-client');
+    getProjectsBase.mockRejectedValue(
+      new (ApiError as new (s: number, b: unknown) => Error)(403, {
+        message: 'Forbidden',
+      }),
+    );
+    await ateWorkspace();
+
+    await waitFor(() => expect(getProjectsBase).toHaveBeenCalled());
+    expect(screen.queryByText('Pasta montada')).toBeNull();
+    expect(estaSelecionado('Container')).toBe(true);
+  });
+
+  /**
+   * A base chega por rede, sempre DEPOIS do primeiro render. Trocar o modo
+   * debaixo da mão de quem já clicou é defeito, não conveniência.
+   */
+  it('quem escolheu Container antes de a base chegar não é sobrescrito', async () => {
+    let liberar!: (v: { projectsBase: string | null }) => void;
+    getProjectsBase.mockReturnValue(
+      new Promise<{ projectsBase: string | null }>((resolve) => {
+        liberar = resolve;
+      }),
+    );
+    await ateWorkspace();
+
+    // Ainda DESCONHECIDA: só Container e Runner na tela.
+    expect(screen.queryByText('Pasta montada')).toBeNull();
+    fireEvent.click(screen.getByText('Container'));
+
+    liberar({ projectsBase: BASE });
+
+    // O card passa a existir (a base existe), mas a escolha humana fica.
+    expect(await screen.findByText('Pasta montada')).toBeTruthy();
+    expect(estaSelecionado('Container')).toBe(true);
+    expect(estaSelecionado('Pasta montada')).toBe(false);
+    expect(screen.queryByLabelText('Caminho da pasta')).toBeNull();
+  });
+
+  /**
+   * O aviso do modo montado tem DOIS estados, e são os dois que o backend
+   * tem (RN-500/RN-501): sob a base a criação passa e a pasta nem precisa
+   * existir; fora dela a api recusa com 400.
+   */
+  it('caminho fora da base avisa da recusa nomeando a base; sob a base, nota neutra', async () => {
+    await ateWorkspaceComBase();
+
+    // `getAllByText`: o `<Trans>` quebra a frase em `<strong>`/`<code>`, e a
+    // asserção é sobre a FRASE estar na tela, não sobre quantos nós a
+    // carregam. As duas frases escolhidas são exclusivas de cada estado — o
+    // card do modo já diz "dentro da base de projetos" o tempo todo.
+    expect(
+      screen.getAllByText(/não precisa existir ainda/i).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/recusa a criação/i)).toHaveLength(0);
+
+    fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
+      target: { value: '/tmp/fora' },
+    });
+
+    await waitFor(() =>
+      expect(screen.getAllByText(/recusa a criação/i).length).toBeGreaterThan(
+        0,
+      ),
+    );
+    expect(screen.queryAllByText(/não precisa existir ainda/i)).toHaveLength(0);
+    // O aviso NOMEIA a base, em vez de mandar procurar a variável.
+    expect(screen.getAllByText(BASE).length).toBeGreaterThan(0);
+  });
+});
+
+/**
  * Navegação de pasta ANTECIPADA no modo Runner (RN-437, ADR 0108).
  *
  * `ADR 0107` tinha declarado como lacuna: "Procurar pasta..." não conseguia
  * ancorar num projeto porque ele só nascia na confirmação.
  *
- * Desde a RN-504 o MODAL já não depende disso — ele navega a base pela api,
- * nos dois modos. A criação antecipada, porém, CONTINUA no assistente, e é
- * por isso que estes casos seguem aqui: ela é removida no PR seguinte deste
- * plano, junto com o modo `runner` na criação, e até lá o comportamento tem
- * de continuar coberto.
+ * A RN-504 apontou o MODAL para a api nos dois modos, e a criação antecipada
+ * ficou sem consumidor. A RN-533 (ADR 0151 ponto 7) a devolve ao seu propósito
+ * original: no modo `runner` o modal fala com o AGENTE LOCAL, e o ticket desse
+ * canal é escopado a um `projectId` real — sem projeto criado não há como
+ * navegar o disco da máquina do usuário.
  */
 describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', () => {
   async function ateWorkspaceRunner() {
@@ -351,16 +569,61 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
       executionMode: 'runner',
       workspacePath: '/home/voce/projetos/loja',
     });
-    // A criação antecipada CONTINUA acontecendo (é o caminho que o PR
-    // seguinte do plano remove); o que mudou é que o modal já não usa o id
-    // criado — ele navega a base pela api. Manter esta asserção provaria o
-    // contrário do código.
-    // O caminho já digitado vira a pasta de abertura, e o workspace é o que
-    // ancora o transporte.
+    // O id criado é usado: é ele que ancora o canal do agente local (RN-533).
     await waitFor(() =>
-      expect(listProjectFolders).toHaveBeenCalledWith('ws-1', '/home/voce/projetos/loja'),
+      expect(connectFsBrowserChannelMock).toHaveBeenCalledWith('proj-runner-1'),
     );
+    // E a api NÃO é consultada — o disco que interessa aqui é o da máquina do
+    // usuário, não a base do servidor.
+    expect(listProjectFolders).not.toHaveBeenCalled();
+  });
+
+  /**
+   * O modo decide o TRANSPORTE, e são duas perguntas diferentes (RN-533).
+   *
+   * Sem este par de asserções, apontar os dois modos para o mesmo lugar volta
+   * a passar despercebido: as duas listagens renderizam igual, e a diferença
+   * só aparece no CONTEÚDO — que num ambiente de teste é um dublê.
+   */
+  it('o modo decide o transporte: `runner` pelo agente local, `mounted` pela api', async () => {
+    createProject.mockResolvedValue({ id: 'proj-runner-1' });
+    getProjectsBase.mockResolvedValue({ projectsBase: BASE });
+    await ateWorkspace();
+    await screen.findByText('Pasta montada');
+
+    fireEvent.click(screen.getByText('Runner local'));
+    fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
+    await waitFor(() =>
+      expect(connectFsBrowserChannelMock).toHaveBeenCalledWith('proj-runner-1'),
+    );
+    expect(listProjectFolders).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
+
+    connectFsBrowserChannelMock.mockClear();
+    fireEvent.click(screen.getByText('Pasta montada'));
+    fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
+    await waitFor(() => expect(listProjectFolders).toHaveBeenCalled());
     expect(connectFsBrowserChannelMock).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Falhar a criação antecipada NÃO abre o modal (RN-533).
+   *
+   * O defeito que isto impede é silencioso: abrir "no que der" cairia no
+   * transporte de api e mostraria a base do SERVIDOR a quem acabou de
+   * escolher o modo em que a pasta mora na máquina dele — descoberto pelo
+   * conteúdo, nunca por um erro.
+   */
+  it('criação antecipada que falha não abre o navegador em transporte nenhum', async () => {
+    createProject.mockRejectedValue(new Error('api fora'));
+    await ateWorkspaceRunner();
+
+    fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
+
+    await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
+    expect(connectFsBrowserChannelMock).not.toHaveBeenCalled();
+    expect(listProjectFolders).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument();
   });
 
   it('sem digitar nada ainda, cria com o caminho PLACEHOLDER — nunca com o campo vazio', async () => {
@@ -390,7 +653,7 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
     fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
     fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
 
-    await waitFor(() => expect(listProjectFolders).toHaveBeenCalled());
+    await waitFor(() => expect(connectFsBrowserChannelMock).toHaveBeenCalled());
     expect(createProject).toHaveBeenCalledTimes(1);
   });
 
@@ -409,11 +672,11 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
 
     // Volta ao passo de detalhes e muda o nome — invalida o snapshot que
     // autorizou o projeto anterior.
-    fireEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    // Sem ida e volta: nome e destino estão no MESMO passo agora, e avançar
+    // aqui sairia da tela onde o caminho é visível.
     fireEvent.change(screen.getByLabelText('Nome do projeto'), {
       target: { value: 'Loja Nova' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     await screen.findByText('Onde o código vai morar');
 
     fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
@@ -436,8 +699,7 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
     await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
     fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' })); // workspace → policy
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' })); // policy → confirm
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' })); // destino+nome → confirm
     fireEvent.click(screen.getByRole('button', { name: 'Provisionar' }));
 
     // `createProject` já tinha sido chamado uma vez ao navegar — este

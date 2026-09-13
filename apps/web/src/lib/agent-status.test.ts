@@ -255,6 +255,77 @@ describe('deriveAgentRoster — status', () => {
       expect(statusOf(roster, 'dev-core')).toBe('ocioso');
     });
   });
+
+  describe('RN-502/ADR 0143 — esperar algo de fora não é trabalhar', () => {
+    // O cenário do `exp004`: cinco dev agents subiram, `try_claim/2` recusou
+    // por não haver container REGISTRADO como `running`, e cada um emitiu
+    // `dev.blocked_by_container` — e ficou HORAS assim, esperando um humano
+    // subir o container. O painel dizia `trabalhando` sobre exatamente quem
+    // precisava de atenção, porque o tipo não estava em `DEV_STATUS_EVENTS`.
+    it('dev.blocked_by_container deixa o dev aguardando, nunca trabalhando', () => {
+      const roster = deriveAgentRoster(
+        [
+          ev('dev.started', 'dev-core', { module: 'core' }),
+          ev('dev.blocked_by_container', 'dev-core', {
+            module: 'core',
+            reason: 'o projeto não tem container REGISTRADO como `running`',
+          }),
+        ],
+        moduleMap,
+        true,
+        [],
+      );
+      expect(statusOf(roster, 'dev-core')).not.toBe('trabalhando');
+      expect(statusOf(roster, 'dev-core')).toBe('aguardando');
+    });
+
+    // Mesmo caso semântico: o agente propôs e parou até um humano decidir.
+    // Aqui a lista de pendências (`pendingActionAgentIds`) pode nem ter
+    // chegado à tela ainda — o evento é a fonte que o painel já tem em mãos.
+    it('dev.awaiting_approval deixa o dev aguardando, nunca trabalhando', () => {
+      const roster = deriveAgentRoster(
+        [
+          ev('dev.working', 'dev-core', { taskId: 't1' }),
+          ev('dev.awaiting_approval', 'dev-core', { taskId: 't1', pendentes: 2 }),
+        ],
+        moduleMap,
+        true,
+        [],
+      );
+      expect(statusOf(roster, 'dev-core')).not.toBe('trabalhando');
+      expect(statusOf(roster, 'dev-core')).toBe('aguardando');
+    });
+
+    // `dev.error` era INVISÍVEL (nem na lista): o painel voltava ao
+    // `dev.working` anterior e dizia `trabalhando` sobre um agente que caiu
+    // em `:idle` por falha no claim (`AgentIo.claim_e_rodar/2`).
+    it('dev.error deixa o dev em falhou, nunca trabalhando', () => {
+      const roster = deriveAgentRoster(
+        [
+          ev('dev.working', 'dev-core', { taskId: 't1' }),
+          ev('dev.error', 'dev-core', { reason: '{:error, 503}' }),
+        ],
+        moduleMap,
+        true,
+        [],
+      );
+      expect(statusOf(roster, 'dev-core')).not.toBe('trabalhando');
+      expect(statusOf(roster, 'dev-core')).toBe('falhou');
+    });
+
+    it('o evento mais recente ainda manda — voltar a trabalhar apaga a espera', () => {
+      const roster = deriveAgentRoster(
+        [
+          ev('dev.blocked_by_container', 'dev-core', { module: 'core' }),
+          ev('dev.working', 'dev-core', { taskId: 't1' }),
+        ],
+        moduleMap,
+        true,
+        [],
+      );
+      expect(statusOf(roster, 'dev-core')).toBe('trabalhando');
+    });
+  });
 });
 
 describe('deriveAgentRoster — subagentes de área (Fase 8b/8c, no painel — Fase 8d)', () => {
@@ -546,5 +617,86 @@ describe('rosterFromFacts — a mesma regra nos dois caminhos', () => {
     expect(
       deriveAgentRoster([], null, false, [handoffInfra, handoffStaff]).map((r) => r.id),
     ).toContain('staff');
+  });
+});
+
+/**
+ * RN-568 — a presença de qa/secops e dos membros de área deixa de ser decidida
+ * só pela janela de 200 eventos: o resumo do projeto (RN-090) agrega a sessão
+ * inteira, e entra como `agregado`, que SOMA à janela e nunca a substitui.
+ */
+describe('deriveAgentRoster — agregado da sessão inteira (RN-568)', () => {
+  // A cauda de uma sessão longa: nenhum `pr.gate_changed` nem delegação — os
+  // dois já saíram dos últimos 200.
+  const cauda = [ev('agent.status', 'criativo', { status: 'working' })];
+
+  it('gate fora da janela: o agregado traz QA e SecOps de volta', () => {
+    const soJanela = deriveAgentRoster(cauda, moduleMap, true, []);
+    expect(soJanela.map((r) => r.id)).not.toContain('qa');
+    expect(soJanela.map((r) => r.id)).not.toContain('secops');
+
+    const comAgregado = deriveAgentRoster(cauda, moduleMap, true, [], new Set(), {
+      gatesEverOpened: true,
+    });
+    expect(comAgregado.map((r) => r.id)).toEqual(
+      expect.arrayContaining(['qa', 'secops']),
+    );
+    // Só a PRESENÇA vem do agregado — o status continua lido da janela, que
+    // não tem gate nenhum aberto agora.
+    expect(statusOf(comAgregado, 'qa')).toBe('ocioso');
+  });
+
+  it('delegação fora da janela: o agregado traz o membro de área de volta', () => {
+    const roster = deriveAgentRoster(cauda, moduleMap, true, [], new Set(), {
+      gatesEverOpened: true,
+      delegatedSubagents: ['qa-automacao'],
+    });
+    expect(roster.map((r) => r.id)).toContain('qa-automacao');
+    expect(roster.map((r) => r.id)).not.toContain('qa-performance-seguranca');
+  });
+
+  it('sem agregado, a janela decide sozinha, como antes', () => {
+    const gate = ev('pr.gate_changed', 'qa', { gateStatus: 'awaiting_qa' });
+    expect(deriveAgentRoster(cauda, moduleMap, true, []).map((r) => r.id)).not.toContain('qa');
+    expect(deriveAgentRoster([gate], moduleMap, true, []).map((r) => r.id)).toContain('qa');
+    expect(
+      deriveAgentRoster([gate], moduleMap, true, [], new Set(), {}).map((r) => r.id),
+    ).toContain('qa');
+  });
+
+  it('`false` agregado é respeitado quando a janela também não viu gate', () => {
+    const roster = deriveAgentRoster(cauda, moduleMap, true, [], new Set(), {
+      gatesEverOpened: false,
+      delegatedSubagents: [],
+    });
+    expect(roster.map((r) => r.id)).not.toContain('qa');
+    expect(roster.map((r) => r.id)).not.toContain('secops');
+  });
+
+  it('`false` agregado NÃO esconde um gate que a janela VIU — resumo atrasado não é prova de ausência', () => {
+    const janela = [
+      ev('pr.gate_changed', 'qa', { gateStatus: 'awaiting_qa' }),
+      ev('delegation.completed', 'qa', { subagent: 'qa-automacao' }),
+    ];
+    const roster = deriveAgentRoster(janela, moduleMap, true, [], new Set(), {
+      gatesEverOpened: false,
+      delegatedSubagents: [],
+    });
+    expect(roster.map((r) => r.id)).toEqual(
+      expect.arrayContaining(['qa', 'secops', 'qa-automacao']),
+    );
+    expect(statusOf(roster, 'qa')).toBe('trabalhando');
+  });
+
+  it('`rosterFactsFromEvents` une as delegações sem repetir o mesmo membro', () => {
+    const fatos = rosterFactsFromEvents(
+      [ev('delegation.completed', 'qa', { subagent: 'qa-automacao' })],
+      moduleMap,
+      true,
+      [],
+      { gatesEverOpened: true, delegatedSubagents: ['qa-automacao', 'qa-performance-seguranca'] },
+    );
+    expect(fatos.gatesEverOpened).toBe(true);
+    expect(fatos.delegatedSubagents).toEqual(['qa-automacao', 'qa-performance-seguranca']);
   });
 });

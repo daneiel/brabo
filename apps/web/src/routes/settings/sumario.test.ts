@@ -11,7 +11,7 @@ import {
 /**
  * O registro sozinho — o que ele promete antes de qualquer tela existir.
  *
- * O acordo entre o registro e o JSX do barrel (as 17 seções, montadas, com
+ * O acordo entre o registro e o JSX do barrel (as 18 seções, montadas, com
  * âncora) é o que `SumarioDeConfiguracoes.test.tsx` verifica; aqui ficam as
  * propriedades que não precisam de DOM.
  */

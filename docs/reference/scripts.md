@@ -136,10 +136,11 @@ Source: each package's `package.json` and the root `Makefile`.
 | `make hpa-test` | Fills the Oban queue and proves the engine's HPA scales |
 | `make rollout-test` | Opens active sessions, does a rollout restart and proves none is orphaned |
 | `make test-restore` | Triggers a real backup, restores it into a new database and validates it |
+| `make test-restore-compose` | Same proof as test-restore, against docker compose (no cluster) |
 | `make k8s-validate` | Renders the overlays and validates them against the Kubernetes schema |
 | `make k8s-logs` | Last lines from each workload |
 | `make k8s-down` | Removes the local cluster |
 
 ---
 
-97 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+98 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.

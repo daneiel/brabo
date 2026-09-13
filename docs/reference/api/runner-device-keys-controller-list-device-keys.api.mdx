@@ -1,0 +1,69 @@
+---
+id: runner-device-keys-controller-list-device-keys
+title: "Lista as próprias chaves de dispositivo deste projeto"
+description: "Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum. Desde a RN-543 inclui também as chaves de MÁQUINA do chamador (`especie: 'maquina'`, `projectId` nulo), que servem este projeto sem pertencer a ele — sem elas na lista, uma chave de máquina seria invisível em toda tela."
+sidebar_label: "Lista as próprias chaves de dispositivo deste projeto"
+hide_title: true
+hide_table_of_contents: true
+api: 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
+sidebar_class_name: "get api-method"
+info_path: ../docs/reference/api/brabo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Lista as próprias chaves de dispositivo deste projeto"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/projects/{projectId}/runner-device-keys"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum. Desde a RN-543 inclui também as chaves de MÁQUINA do chamador (`especie: "maquina"`, `projectId` nulo), que servem este projeto sem pertencer a ele — sem elas na lista, uma chave de máquina seria invisível em toda tela.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./runner-device-keys-controller-list-device-keys.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./runner-device-keys-controller-list-device-keys.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./runner-device-keys-controller-list-device-keys.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

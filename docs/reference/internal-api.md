@@ -91,6 +91,7 @@ service token** — a secret shared via env, rotatable, in the
 | api → engine | `EngineWeb.Plugs.VerifyServiceToken` | `Plug.Crypto.secure_compare/2` |
 | broker → api | `EngineServiceGuard` | `comparaEmTempoConstante` |
 | api → broker | `tokenConfere` (`apps/broker/src/config.ts`) | `timingSafeEqual` |
+| `install.sh` → api | `EngineServiceGuard` | `comparaEmTempoConstante` |
 
 The broker ([ADR 0130](../adr/0130-broker-de-container.md)) joined this table
 without changing it: same header, same secret, same rotation. It answers `401`
@@ -553,14 +554,106 @@ authorized by their role in the workspace. Routing it through the service token
 would replace a per-user authorization with a shared secret, on a route whose
 entire job is to expose part of the operator's filesystem topology.
 
-It also replaces the two mechanisms that used to do this job, and both of them
-lived OUTSIDE this contract: `FolderBrowserModal` navigated through the runner's
-own websocket (`fs_list_dir`/`fs_home_dir`, the `terminal:<projectId>` channel —
-so the listing came from the user's machine, never from the server), and
+The two mechanisms that used to do this job both lived OUTSIDE this contract:
+`FolderBrowserModal` navigated through the runner's own websocket
+(`fs_list_dir`/`fs_home_dir`, the `terminal:<projectId>` channel — so the
+listing came from the user's machine, never from the server), and
 `RunnerOnboardingPanel` used `showDirectoryPicker`, which hands back a browser
-handle and never an absolute path. With the runner leaving project creation, the
-api is the only party that can answer — and it answers about the ONE folder it
-can see, the base above.
+handle and never an absolute path.
+
+This route replaced the first one for the `mounted` mode, and only for it. RN-504
+had pointed BOTH modes here on the premise that the `runner` mode would leave
+project creation; it didn't, and
+[RN-533](../business-rules.md#rn-533) ([ADR 0151](../adr/0151-base-consentida-no-runner.md)
+point 7) sent the `runner` picker back to the channel. The two are not
+redundant — they read different disks, and neither can answer for the other: this
+route answers about the ONE folder the api can see, the base above; the channel
+answers about the machine the server cannot see at all. Nothing about this
+route's contract changed with that.
+
+#### And neither is declaring the mirror destination
+
+`PUT /projects/:projectId/mirror-path` ([RN-515](../business-rules.md#rn-515),
+[ADR 0147](../adr/0147-agente-local-com-capacidades.md) point 4) stores the
+folder the `espelho` capability copies a project's work to — a folder OUTSIDE
+the mounted base. It is a **public** route on the `projects` controller,
+`@RequireRole('maintainer')`, documented in
+[the security surface](../security-surface.md), for the same reason as the
+picker above: the caller is a PERSON configuring their project, not the engine
+reading something it cannot get from the database.
+
+This route only decides **where the destination lives and what counts as a
+valid one**. The protocol that carries it to the runner and the copy itself
+are the engine's and the runner's, and they exist since
+[RN-516](../business-rules.md#rn-516) — **with no new internal route**, which
+is the point worth writing down here. The engine reads the column directly —
+`mirror_path` on `projects`, `null` when the project has no mirror, which is
+the normal state — through the same `Engine.Projects.Project` reads it already
+uses for `workspace_path` and `execution_mode`, and the value also rides along
+every project response (`ProjectResponseDto.mirrorPath`), so the web needs
+none either.
+
+Where the destination reaches the runner is the **`join` reply of the
+`terminal:<projectId>` channel**, and nowhere else: when the project has a
+destination and the `espelho` capability was granted, the reply carries
+`%{espelho: %{destino: "<path>"}}`. The runner refuses `mirror_sync` for any
+destination that was not granted on that connection — never a global setting
+on its side, never an environment variable, because a global destination would
+land project B's artifact in project A's folder and the user would find out
+from the content, not from an error. Two consequences follow, both deliberate:
+a declared destination makes `espelho` a **required** capability, so a
+`brabo-runner` older than that version stops connecting to that project (named
+refusal, fatal, no retry — see [RN-514](../business-rules.md#rn-514)); and
+changing the destination while a runner is connected requires reconnecting it,
+because the grant belongs to the join.
+
+One asymmetry worth writing down: the api validates this path **lexically
+only**, and says so. It has no disk to ask — the destination lives on the
+user's machine, exactly as in `runner` mode. The `realpath` half of the guard
+(a symlink in some segment of the destination pointing back into the source)
+is the runner's (`apps/runner/src/espelho-guard.ts`, RN-516), and nothing in
+this contract should be read as the api having already established it.
+
+### What the mirror round DID — the report, which IS a new route ([RN-517](../business-rules.md#rn-517))
+
+| method | path |
+|---|---|
+| POST | `/internal/projects/:projectId/mirror-sync-result` (**not** session-scoped) |
+
+The same exception, one step later, and for the same reason: the only party
+that knows what happened on the user's machine is the `brabo-runner`. It
+pushes `mirror_sync_result` over the `terminal:<projectId>` channel after the
+round FINISHES — never an optimistic "ok" before it — and the engine forwards
+it here (`Engine.Sessions.EngineApiClient.report_mirror_sync/2`). The channel
+handler is modelled on `workspace_confirm` below, deliberately: it is the only
+precedent of the runner telling the server something about itself, and a
+second mechanism would be a second source of the same truth.
+
+The engine does NOT write the table. It translates the protocol's pt-BR
+vocabulary (`sucesso`/`erro`/`destino`/`copiados`, the same shape as
+`container_start_result`) into this route's body (`ok`/`error`/`destination`/
+`filesCopied`) and posts it. `ok` is never inferred from a count being present:
+a round that copied 0 files is normal, and inferring would make it
+indistinguishable from a round that never ran.
+
+The api writes `project_mirror_states` — a TABLE, never the event log, because
+a mirror round has no session and `session_events.session_id` is `NOT NULL`
+(the same reasoning that made `rag_searches` a table,
+[RN-479](../business-rules.md#rn-479)) — and never a `proposed_action`, because
+the mirror write is configuration the user declared, not an agent asking to
+act.
+
+**Recording never breaks what it measures.** The copy has already happened when
+this route is called; a `404`, a timeout or any other refusal is only LOGGED by
+the channel handler, and the runner's connection is untouched. That is also why
+a project whose destination was cleared meanwhile still records: the round
+happened, and its error is usually what explains what went wrong.
+
+What the screen reads is a **public** route, not this one:
+`GET /projects/:projectId/mirror-state` (`viewer`), which resolves the three
+states of [RN-088](../business-rules.md#rn-088) — `never` (absent row), `synced`
+(possibly with `filesCopied: 0`) and `failed` — on the api side, so the rule
+that decides which of the two timestamps is current has a single source.
 
 ### Workspace confirmation by the runner — the WRITE, which is a new route ([RN-423](../business-rules.md#rn-423))
 
@@ -915,9 +1008,114 @@ dev agent's terminal command inside a running container
 `container` **and** `mounted` projects; only `runner` goes to the runner
 instead.
 
+## install.sh → api
+
+Since [RN-546](../business-rules.md#rn-546) /
+[ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md) there is a FOURTH
+caller, and it is not a long-lived service: the **one-line installer**, once,
+at the end of an installation.
+
+| method | path |
+|---|---|
+| POST | `/internal/first-account` (**not** session-scoped, **not** project-scoped) |
+| POST | `/internal/machine-device-keys` (idem — [RN-552](../business-rules.md#rn-552)) |
+
+Same authentication as everything above — and here the choice of mechanism is
+doing more work than usual. `BRABO_SERVICE_TOKEN` is generated by `install.sh`
+itself and written into the `.env` at mode `600`, so presenting it proves
+control of the **machine**, which is exactly the credential this step wants.
+
+**Why the route exists at all.** A fresh installation lets nobody in. The
+generated `.env` carries no mail variable, `MAIL_TRANSPORT` falls to `log`, and
+normal registration waits on a verification e-mail that is never sent — the
+only way through is fishing the link out of `docker compose logs api`. So the
+installer creates the first account itself, with the password typed at the TTY,
+and the account is born **already verified**.
+
+**Why being born verified is not a loosening.** What e-mail verification proves
+is *"this person controls this mailbox"*. Whoever is running the installer has
+already proved something stronger — the machine, the `.env` with all five
+secrets, and the Docker daemon. Demanding the weaker proof, over a channel the
+installation knows is switched off, is theatre. Normal registration is
+untouched.
+
+**It refuses when the installation has ANY user** (`409`). The condition is
+about the INSTALLATION, not about the e-mail asked for — an e-mail nobody has
+ever used is refused just the same. That is what separates this from an account
+creator: there is no way to keep calling it with different addresses. A
+migration restore ([RN-530](../business-rules.md#rn-530)) silences the step by
+the same test.
+
+**No public route was born.** A public "create the first owner" route is a race
+between whoever installed and whoever scanned the port, and losing that race
+loses the installation — `owner` of the first workspace is not a role you
+recover over HTTP.
+
+**What travels, and what never does.** The body is `{ email, senha, nome? }`;
+the response is `{ userId, email, workspaceId }`. The password is used and
+discarded — never in the `.env`, never in the installer's marker, never in a
+log — and it is never generated by any code, so no installation is born with a
+password someone else knows. The personal workspace
+([RN-410](../business-rules.md#rn-410)) is created in the SAME transaction: an
+account without one would log in to a dashboard where "New project" has nowhere
+to create.
+
+There is no `GET` asking "does this installation have a user?". The `POST`
+already answers it with `201` or `409`, and a read route would publish the same
+fact with one more surface — one whose answer is precisely the signal a scanner
+wants.
+
+### The step after it: the MACHINE device key
+
+The installer does not stop at the account. Its next step
+([ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md) point 4) is to
+pair the local agent, and pairing needs a credential — the only one that
+existed was bound to a PROJECT
+([ADR 0118](../adr/0118-configuracao-do-runner-pelo-navegador.md)), in an
+installation that has no project yet. Since
+[RN-543](../business-rules.md#rn-543) a machine key is just a device key with
+`project_id NULL`; what was missing was a route that creates one, and
+[RN-552](../business-rules.md#rn-552) is it.
+
+**The credential is the same service token, and the alternative was refused for
+a written reason.** Requiring the freshly created user's own credential would
+force a login with the password typed at the TTY — a password that is *used and
+discarded* by decision, on a route whose own ADR says the installer *"does not
+log in for anybody"*, which is why the first-account response carries no session
+token. Proving control of the machine is what this step is actually about, and
+the service token proves exactly that.
+
+**What travels.** The body is `{ name, publicKeyJwk }` and the response is
+`{ id, userId, name, createdAt, replacedKeyIds }`. The pair is generated ON THE
+MACHINE and only the public half is sent; a JWK carrying `d` is refused with
+`400` that says so, never stored. The `id` is the field that matters: it goes
+INSIDE the private JWK as `kid` ([RN-475](../business-rules.md#rn-475)), the
+only link between the file on disk and the public half on the server — every
+step downstream only passes it along.
+
+**There is no `userId` in the body, and that absence is the containment.** The
+owner is the installation's SOLE user, resolved by the api; with none or more
+than one it answers `409` and writes nothing. Same shape as the first account's
+condition — about the INSTALLATION, never about the argument asked for — so
+holding the token never buys the choice of whose credential to mint, and the
+route goes quiet for good once the installation has a team.
+
+**Registering REPLACES.** The owner's active MACHINE keys are revoked in the
+same transaction and their ids come back in `replacedKeyIds`. A reinstalled
+machine is a legitimate case and keeps working; a thousand machine keys become
+impossible, bounded by a clause rather than by a number that would age. Project
+keys are never touched — they came from the browser flow this route knows
+nothing about.
+
+There is no `GET` and no `DELETE` here either. Listing would publish a person's
+credential inventory to whoever holds only the machine secret, and revoking
+already exists where it has a human owner
+(`DELETE /projects/:projectId/runner-device-keys/:deviceKeyId`, which matches by
+`{id, user}` and never by project).
+
 ## api → engine
 
-Nineteen command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
+Twenty command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
 
 | method | path | what it triggers |
 |---|---|---|
@@ -938,6 +1136,20 @@ Nineteen command routes, plus the health ones. Under `/internal` with `VerifySer
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalidates the instruction cache |
 | POST | `/actions/execute` · `/actions/execute-git` | executes an **already approved** action |
 | POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | asks the RUNNER connected to the project to start/stop/remove its container ([RN-497](../business-rules.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — only for `mounted`/`runner` projects; `container` still goes through the broker, never here |
+| POST | `/projects/:id/runner/disconnect` | drops the LIVE connection of that user's runner in the project ([RN-520](../business-rules.md#rn-520), [ADR 0147](../adr/0147-agente-local-com-capacidades.md)) — called when a device key is revoked; always `200`, with `desfecho` = `derrubado` \| `sem_runner` \| `de_outro_dono` \| `timeout` |
+
+**`runner/disconnect` is the other half of a revocation, and it is the api that
+owns the decision.** `RevokeRunnerDeviceKeyUseCase` writes the revocation
+first, then asks here — the opposite order would leave a window in which the
+runner falls and reconnects with the key still valid. The engine does NOT read
+the device-key table: it only reaches the channel pid
+(`Engine.Runners.Registry.whereis/1`), compares the `user_id` of that
+connection, drops the transport and stops. And the api does NOT talk to the
+channel. The target is `{project, user}` and never `{key}`, because
+`runner_socket_tickets` stores `project_id`/`user_id`/`kind` and nothing else —
+the declared cost is in [RN-520](../business-rules.md#rn-520). Every outcome is
+a `200`: from the caller's side the `DELETE` is 204 and idempotent, and a
+revocation cannot fail because nobody happened to be connected.
 
 **The three `containers/*` routes are the mirror of `container-exec` below, in
 the opposite direction.** `container-exec` is the ENGINE asking the api to run
@@ -948,6 +1160,49 @@ The response is always `200`, `{ sucesso: false, motivoCodigo, motivo }` for
 "no runner connected"/"timeout", `{ sucesso: false, motivo }` for "the runner
 tried and refused" — never an HTTP error status for either, same discipline
 as `container-exec`.
+
+**The `spec` of `containers/start` is opaque to the engine and exact for the
+runner.** `ContainerCommandController.start/2` forwards the map without
+reading a single field of it, so the contract is between the two ends: the api
+composes the ten fields of `EspecificacaoDeContainerParaRunner`
+(`workspaceDirName`, `projectId`, `projectSlug`, `workspaceId`, `imagem`,
+`imagemVersao`, `rede`, `cpus`, `memoriaMb`, `pidsLimit`) and the runner hands
+that map, plus the `raizDoProjeto` only it knows, to `especificacaoValidada`
+(`packages/docker-port`), which refuses the whole specification if any of them
+is missing. It refused every time until [RN-508](../business-rules.md#rn-508)
+was made true in code: `projectId` was never copied, so this path never
+started a container. Since nothing in the middle validates the map, a missing
+field would be invisible to all three suites — the chain is what
+`apps/api/test/contract/especificacao-de-container-para-runner.contract.spec.ts`
+proves, running the api's payload through the real validator, and it also pins
+`raizDoProjeto` as the one field the server never sends (no absolute host path
+crosses the wire, [ADR 0130](../adr/0130-broker-de-container.md)).
+
+`containers/stop` and `containers/remove` do NOT carry a spec: they send
+`workspaceDirName` and nothing else, because on the other side they only need
+`nomeDeWorkspaceValidado` to derive the container name. One field asked, one
+field sent — they were checked against the same validator and are correct.
+
+#### Who ASKS for `containers/start` changed, and it is still not an internal route
+
+Until [RN-521](../business-rules.md#rn-521) there was exactly ONE way to reach
+these three routes: the Infra Lead, inside a session, calling its own tool. When
+that path failed on a real `exp004` run there was no way to retry a machine
+operation except opening a new session and talking to an agent — five dev agents
+sat for hours emitting `dev.blocked_by_container`.
+
+The human path added by RN-521 lives on the global containers page
+(`/containers`) and does **not** add an internal route, nor bypass one. The
+click proposes a `proposed_action` through the PUBLIC api
+(`POST /projects/:id/sessions/:sessionId/actions`, `maintainer`), branching by
+`execution_mode` exactly as the backend already did:
+`container`/`mounted` propose `container_start` (broker) and `runner` proposes
+`container_start_via_runner`. Only the APPROVAL of that action reaches here —
+`ExecuteContainerStartViaRunnerUseCase` composing the ten-field spec above and
+calling `POST /projects/:id/containers/start`. The order is the invariant, not a
+detail: the api decides, the engine executes, and a screen that could ask the
+engine directly would be a back door around the approval pipeline, the same
+reason `/actions/execute` exists as it does.
 
 The two handoff offers come from the **same** confirmation of architecture
 ready, and they are separate routes on purpose: Infra and Dev are areas with independent

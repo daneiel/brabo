@@ -22,10 +22,36 @@ changes behavior by being edited in production: the registry DESCRIBES the
 gates, it doesn't apply them. It travels inside the api image; see the
 [runbook](../runbook.md#registro-de-gates).
 
+> **`up --wait` only proves what has a healthcheck.** In the development
+> compose, `api`, `engine` and `web` had none, so `docker compose up --wait`
+> reported them ready the moment the container started — before the process
+> was listening. That is how a container could die seconds later with the
+> command still reporting success. The three now carry the same check their
+> production images already declare in the Dockerfile (`/health` for api and
+> engine, which touches the database; `/` for the Vite server). The container
+> broker got its own in a separate change; `postgres` and `neo4j` always had
+> one. Nothing here is an environment variable — it is written down because
+> `--wait` is the thing scripts trust, and a service without a healthcheck
+> makes it lie.
+
 The defaults below were extracted from the code, not from prior
 documentation. The **when it fails** column is the part that saves time:
 almost every variable has a default that works in development and a specific
 failure mode in production.
+
+> **A variable only reaches the process if the compose maps it.** `docker
+> compose` does not forward the host environment into a container: a variable
+> arrives if — and only if — it is written in that service's `environment:`
+> (or an `env_file`). This is not a detail; it is how `ANAMNESE_ENABLED` and
+> `PSYCHOLOGIST_ENABLED` stayed silently unreachable while three places in the
+> code promised the 2026-08-10 pause was reversible with `X=true` plus a
+> restart. Measured inside the running engine container, they came back empty
+> and `runtime.exs` fell back to `"false"` — no error anywhere. Every boolean
+> flag the engine reads is now mapped in both compose files, with the code's
+> own default, and `scripts/ci/flags-do-engine-no-compose.spec.ts` fails the
+> build for the next one that isn't ([RN-540](../business-rules.md#rn-540)).
+> Kubernetes is deliberately outside that rule: a Deployment/ConfigMap
+> intercepts nothing, so there is no broken switch to fix there.
 
 > **Development defaults are insecure on purpose.** Values like
 > `dev-master-key-change-me` exist so `pnpm dev` comes up without ceremony. In
@@ -37,6 +63,27 @@ failure mode in production.
 > down. See [RN-114](../business-rules/custo.md#rn-114) for the four that joined the
 > original `GIT_OAUTH_STATE_SECRET`.
 
+## Installation compose (`docker-compose.install.yml`)
+
+The compose that runs on an **installed** machine takes the four product
+images from **mandatory variables**, with no default — `install.sh` writes them
+into `.env`:
+
+| variable | what |
+|---|---|
+| `BRABO_API_IMAGE` | full reference of the api image; `ghcr.io/…@sha256:…` when the source is GHCR, `brabo-api:prod` when built locally |
+| `BRABO_ENGINE_IMAGE` | same, for the engine |
+| `BRABO_WEB_IMAGE` | same, for the web |
+
+They are `${VAR:?…}` on purpose. With a default, a missing variable would bring
+half the stack up on an image nobody picked, and the mistake would show up as
+strange behaviour instead of a refusal.
+
+These are **not** in the generated inventory below: the generator scans
+`apps/`, and these are read by Compose, not by product code
+([RN-527](../business-rules.md#rn-527)).
+
+
 ## api
 
 ### Essentials
@@ -45,6 +92,7 @@ failure mode in production.
 |---|---|---|
 | `DATABASE_URL` | `postgres://brabo:brabo@localhost:5432/brabo` | without it, nothing comes up |
 | `PORT` | `3000` | — |
+| `API_JSON_BODY_LIMIT` | `10mb` | ceiling for the JSON body the api accepts, applied to the parser registered in `main.ts` before any route. It exists so that a change to the engine's transport ceiling (`TRANSPORT_MAX_BODY_BYTES`, 8 MiB) doesn't require a new deploy — the default keeps headroom over it. Too small, and a large context turn comes back as **413** |
 | `NODE_ENV` | — | `production` turns on strict CORS and key validation |
 | `API_PUBLIC_URL` | `http://localhost:3000` | used in git OAuth callbacks; wrong = broken callback |
 | `ENGINE_URL` | `http://localhost:4000` in code, `http://engine:4000` in Compose | synchronous api→engine commands fail. **Leave it empty in `.env`**: set there, it wins over the Compose default and the api tries to talk to `localhost:4000` from inside its own container — every session activation dies with `ECONNREFUSED` and the frontend never moves. Each environment already has the right default without the line |
@@ -196,8 +244,31 @@ under — `BRABO_PROJECTS_BASE`, one per installation
 
 ```bash
 # .env — ABSOLUTE. `~` is not expanded by Compose.
-BRABO_PROJECTS_BASE=/home/voce/brabo
+BRABO_PROJECTS_BASE=/home/voce/projetos-brabo
 ```
+
+You don't have to write that line by hand. Since
+[ADR 0146](../adr/0146-base-consentida-no-bootstrap.md), `pnpm bootstrap` →
+**Docker › Base de projetos** runs `scripts/dev/consentir-base.mjs`, which
+proposes `$HOME/projetos-brabo`, refuses anything overlapping either the Brabo
+checkout or `PROJECT_WORKSPACES_HOST_DIR` (two roots with opposite owners —
+sharing a folder would make a Mounted project called `loja` land on top of a
+Container project whose `workspace_dir_name` is also `loja`), **proves** on
+macOS and Windows that Docker can actually see the folder by mounting it, and
+only then writes the variable.
+
+The proof is a mount, never a read of Docker Desktop's `settings.json`: that
+file is undocumented, differs across versions and platforms, and describes what
+the user configured rather than what the daemon will do — the same rule the
+product already applies to LLM providers, where a capability is declared only
+when proved by execution. It has **three** outcomes and they don't collapse:
+proved, refused (the variable is not written), and *couldn't prove* — no local
+image to mount with — which writes the variable and says loudly that the proof
+did not run.
+
+Run from the menu it only **reports**: every bootstrap menu item runs with
+stdin from `/dev/null` on purpose, so it cannot ask. To choose, run
+`node scripts/dev/consentir-base.mjs` in your own terminal.
 
 ```yaml
 # docker/docker-compose.yml — on BOTH `api` and `engine`, already written
@@ -244,6 +315,7 @@ preflight because it runs on the host, and the api can only compare against
 | `NEO4J_USER` | `neo4j` (dev) | reaches the container with the same default the `neo4j` service uses for `NEO4J_AUTH`, so set it only to CHANGE the user — changing it there changes both sides at once. Two independent defaults would leave the api authenticating with credentials the server no longer has |
 | `NEO4J_PASSWORD` 🔒 | `dev-neo4j-password-change-me` (dev only) | same pairing rule as `NEO4J_USER`. **No public default in production** on purpose — there's no plausible "example value" for a database password, and `docker-compose.prod.yml` keeps `NEO4J_AUTH` empty so the official image's own entrypoint refuses to start rather than booting with a guessable one |
 | `GRAPH_PROJECTOR_INTERVAL_MS` | `2000` | period of the poller that drains the outbox's `graph_projection` queue and writes handoffs/hypotheses/profiles/interactions to the graph (RN-416) |
+| `ARTIFACT_PROJECTOR_INTERVAL_MS` | `2000` | period of the poller that drains the outbox's `artifact_projection` queue and writes each agent's artifacts as Markdown under the project's `docs/` folder ([RN-523](../business-rules.md#rn-523)). A DERIVED projection: the event log stays the source, and the folder can be deleted and rebuilt |
 
 ### Observability
 
@@ -305,20 +377,20 @@ preflight because it runs on the host, and the api can only compare against
 
 | variable | default | note |
 |---|---|---|
-| `PSYCHOLOGIST_ENABLED` | `false` | GLOBAL pause of NEW rounds (automatic and on-demand) — the user's product decision on 2026-08-10, not a bug, same pattern as `ANAMNESE_ENABLED` below. Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-117](../business-rules/autenticacao.md#rn-117)) |
+| `PSYCHOLOGIST_ENABLED` | `false` | GLOBAL pause of NEW rounds (automatic and on-demand) — the user's product decision on 2026-08-10, not a bug, same pattern as `ANAMNESE_ENABLED` below. Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-117](../business-rules/autenticacao.md#rn-117)). No boot key pairs with it: the Psychologist's automatic trigger is session close, not a tick |
 | `PSYCHOLOGIST_TRIAGE_THRESHOLD` | `20` | events in the session that separate a **light** analysis from a **heavy** one |
 | `PSYCHOLOGIST_MAX_ITERATIONS_LEVE` / `_PESADA` | `4` / `8` | — |
 | `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` | `50000` / `300000` | USD 0.05 and USD 0.30 per analysis |
 | `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` / `_PESADA` | `50` / `400` | how many events go into the prompt |
 | `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` | `600` | truncation of each event's payload |
 | `PSYCHOLOGIST_RAG_TOP_K` | `3` | how many relevant `rag_search` snippets go into the context, deducted from the recent-events ceiling above ([RN-417](../business-rules.md#rn-417)) |
-| `GRAPH_TEMPLATES_ENABLED` | `false` | turns on resolving `psychologist-kickoff`/`anamnese-kickoff` as a graph template — key SHARED between Psychologist and Anamnese (RN-417), not to be confused with `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` above |
+| `GRAPH_TEMPLATES_ENABLED` | `false` | turns on resolving `psychologist-kickoff`/`anamnese-kickoff`/`context-manager-summarize` as a graph template — key SHARED between Psychologist, Anamnese and the `ContextManager`'s summarization prompt ([RN-417](../business-rules.md#rn-417)), not to be confused with `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` above. Off (the default) means the graph API is never even called; on, any failure falls back to the inline text with no error |
 
 ### Anamnese
 
 | variable | default | note |
 |---|---|---|
-| `ANAMNESE_ENABLED` | `false` | GLOBAL pause of NEW rounds (periodic and on-demand) — the user's product decision on 2026-08-10, not a bug. Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-115](../business-rules/autenticacao.md#rn-115)) |
+| `ANAMNESE_ENABLED` | `false` | GLOBAL pause of NEW rounds (periodic and on-demand) — the user's product decision on 2026-08-10, not a bug. Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-115](../business-rules/autenticacao.md#rn-115)). **On its own it is not enough for the PERIODIC round**: `START_ANAMNESE` (boot key, below) also has to be `true`, and the two answer different questions |
 | `ANAMNESE_INTERVAL_SECONDS` | `900` | 15 min between runs |
 | `ANAMNESE_MIN_EVENTS` | `10` | below this it doesn't run — avoids profiling on noise |
 | `ANAMNESE_INITIAL_WINDOW_DAYS` | `30` | window of the first run |
@@ -400,18 +472,37 @@ inlines it into `import.meta.env` → `runtime-config.ts` reads it →
 
 ## Backup
 
-Consumed by the CronJob, not by the apps. Details in
-[Restore](../runbook.md#restore).
+Consumed by the backup image, not by the apps — as a CronJob on Kubernetes and
+as `docker compose run --rm backup …` on a compose install. Details in
+[Restore](../runbook.md#restore); the reasoning is
+[ADR 0152](../adr/0152-backup-de-volumes-contra-compose.md).
+
+**The destination is one of two, and the choice is `BACKUP_DIR`.** Set it and
+the backup goes to disk; leave it empty and it goes to S3, which is what the
+Kubernetes CronJob does. The five `BACKUP_S3_*` variables stopped being
+unconditionally required: they are the configuration of *one* destination, and
+demanding a bucket before you can migrate demands infrastructure a single-machine
+install never asked for.
 
 | variable | default | note |
 |---|---|---|
-| `BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET` | — | S3-compatible destination |
+| `BACKUP_DIR` | — (S3) | destination **directory**. Set ⇒ disk; empty ⇒ S3. In the compose service it defaults to `/backups` |
+| `BRABO_BACKUP_HOST_DIR` | `backup_local` (named volume) | host path mounted at `/backups`. The named-volume default verifies a backup; it is the **wrong** destination to migrate with, because `docker compose down -v` deletes it along with what it was meant to save |
+| `BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET` | — | S3-compatible destination; required only when `BACKUP_DIR` is empty |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | — | bucket credential |
 | `BACKUP_KEEP_DAILY` | `7` | retention by **count**, not by age |
 | `BACKUP_KEEP_WEEKLY` | `4` | — |
+| `GIT_REPOS_DIR` | `/data/git-repos` | the bare repos of `local`-provider projects. Absent ⇒ the step is **skipped and said so** (the Kubernetes CronJob does not mount this volume) |
 | `RESTORE_DB` | — | name of the restore's destination database |
 | `RESTORE_PREFIX` | `daily/` | `weekly/` to restore from a weekly copy |
+| `RESTORE_GIT_PREFIX` | `git-daily/` | `git-weekly/` for the weekly copy of the bare repos |
+| `RESTORE_GIT_FORCE` | — | `1` allows extracting **over** existing bare repos. Off by default: overlaying two repository states produces a mix that no `git` complains about |
 | `RESTORE_ADMIN_URL` | — | connection with `CREATEDB` permission; in production it's separate from `DATABASE_URL` |
+
+Four prefixes, not two: `daily/` and `weekly/` hold the Postgres dumps,
+`git-daily/` and `git-weekly/` the bare-repo archives. They are kept apart
+because retention is by **count** — two kinds of file under one prefix would
+make "keep 7" mean three and a half backups.
 
 ## Local inference (containers)
 
@@ -426,6 +517,19 @@ strangely. The symptom table is in
 | `OLLAMA_MAX_LOADED_MODELS` | with a high `OLLAMA_KEEP_ALIVE`, models pile up until memory overflows |
 | `OLLAMA_KEEP_ALIVE` | how long the model stays resident |
 | `DEMO_QA_MODEL` | points the QA gate to an API model — the per-agent binding wins over the project's |
+
+> **The `ollama` image version is not a variable — it is a digest.** Like every
+> third-party image in `docker/`, it is pinned as
+> `ollama/ollama@sha256:…  # 0.33.1`
+> ([ADR 0159](../adr/0159-imagem-de-terceiro-por-digest.md)), and the same
+> digest is used by `ci.yml`/`golden-set-rag.yml`, because the RAG golden-set
+> floor is keyed by model rather than by environment
+> ([ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md)). So an
+> inference behaviour that changed between two `docker compose pull`s is no
+> longer a possible cause: nothing moves unless someone edits the digest.
+> Bumping it is [a runbook procedure](../runbook.md#subindo-imagem-de-terceiro),
+> and `scripts/ci/imagens-pinadas.ts` refuses a bump that reaches only some of
+> the places the tag appears.
 
 ---
 
@@ -455,25 +559,47 @@ logs work without it; traces still require the cluster.
 
 The broker ([ADR 0130](../adr/0130-broker-de-container.md)) is the only process
 in the product that talks to a Docker daemon on the server, and the only service
-with `/var/run/docker.sock` mounted. It ships under
-`profiles: ["container-broker"]` in both compose files, so **it does not come up
-by default** — giving every development machine access to the host's Docker in
-exchange for nothing would be a posture change with no counterpart. Bring it up
-with:
+with `/var/run/docker.sock` mounted. **Locally it comes up with `pnpm dev`; in
+production it stays under `profiles: ["container-broker"]`.** The two compose
+files differ on purpose ([ADR 0146](../adr/0146-base-consentida-no-bootstrap.md),
+point 3) — do not uniformize them.
+
+It used to be off by default in both, on the grounds that nothing called it yet.
+That premise died: it has four real callers, and
+[ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md) made **Mounted** mode bring
+its container up through the broker — so with the profile off, the default local
+mode ended in `BrokerIndisponivelError`. What sustains the asymmetry is what the
+socket means on each side: whoever runs `pnpm dev` already holds it (they are
+running `docker compose`), while in production it is a real privilege boundary
+and the operator is not the developer.
+
+This changes **when** the broker runs, never **what** it accepts: the five
+containment layers are untouched, and it still receives a `projectId` plus one of
+five operations, with no parameter anywhere to write `privileged` or a free `-v`.
+
+Coming up by default is what exposed a defect that had never mattered: the local
+image installed its dependencies on START, and the broker's only network is
+`internal: true`, so there is no registry to reach — the container died with
+`getaddrinfo EAI_AGAIN registry.npmjs.org`, and with no healthcheck `up --wait`
+still printed `Healthy`. Dependencies now install at BUILD time and the service
+has a healthcheck; the network was not touched, and must not be. The operational
+detail lives in the [runbook](../runbook.md#broker-de-container).
+
+In production, bring it up explicitly:
 
 ```bash
-docker compose -f docker/docker-compose.yml --env-file .env \
+docker compose -f docker/docker-compose.prod.yml \
   --profile container-broker up -d broker
 ```
 
 | variable | default | when it fails |
 |---|---|---|
-| `BROKER_URL` | empty (read by the **api**) | Empty is a NORMAL state: whoever reads a container's observed state then says "not observed" instead of inheriting the recorded one ([RN-486](../business-rules.md#rn-486)). Point it at `http://broker:8090` when the profile is on |
+| `BROKER_URL` | empty (read by the **api**) | Empty is a NORMAL state: whoever reads a container's observed state then says "not observed" instead of inheriting the recorded one ([RN-486](../business-rules.md#rn-486)). Point it at `http://broker:8090` — locally the broker is up by default, so this is what connects the api to it |
 | `BROKER_PORT` | `8090` | Port the broker listens on. It publishes NOTHING to the host — only the api reaches it, through the `internal: true` compose network |
 | `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` in development | The SAME secret as api ↔ engine, in the same header. With `NODE_ENV=production` the broker refuses to boot when it is empty, when it is the repository's public literal, or under 16 characters — the RN-114 rule, which here guards a process that talks to the host's Docker |
 | `API_URL` | `http://api:3000` | Where the broker READS the Architect's decision. It does not receive a container spec; it comes and gets one ([RN-485](../business-rules.md#rn-485)) |
 | `PROJECT_WORKSPACES_HOST_ROOT` | — | The project folders' root **on the HOST**, not inside any container. Without it, `start` refuses naming this variable and the other four operations keep working. Do not confuse it with `PROJECT_WORKSPACES_ROOT`, which is the path inside the containers: `-v` is resolved by the DAEMON against the host filesystem, and a path from inside the api would make it create and mount an EMPTY folder |
-| `DOCKER_GID` | `999` (compose) | The gid of the host's `docker` group (`getent group docker \| cut -d: -f3`). The socket is `root:docker` and the broker runs non-root, so compose uses `group_add`. The default is the most common one and is wrong on several distributions — getting it wrong produces "permission denied" on the socket, which `DockerIndisponivelError` names with the group hint |
+| `DOCKER_GID` | `999` (compose) | The gid of the host's `docker` group (`getent group docker \| cut -d: -f3`). The socket is `root:docker` and the broker runs non-root, so compose uses `group_add`. The default is the most common one and is wrong on several distributions. Since [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md) this matters on EVERY development machine, not only where someone turned the profile on — getting it wrong does not break the boot, it breaks the use: every operation dies with "permission denied" on the socket, surfacing only when someone proposes `container_start`. `pnpm dev` reports the state of this variable on every run ([RN-512](../business-rules.md#rn-512)), and says "does not apply" on a machine with no `docker` group rather than accusing it |
 
 `PROJECT_WORKSPACES_HOST_ROOT` has no default and cannot be derived from a
 managed Docker volume — pair it with `PROJECT_WORKSPACES_HOST_DIR` (above) and
@@ -528,6 +654,55 @@ running as root from before this change needs a one-time `chown` of the
 
 ---
 
+## Tooling variables (not product)
+
+Everything above is **product**: what whoever operates an installation sets in
+the deployment `.env`. What follows is **tooling** — read only by CI and by
+whoever develops Brabo. None of it belongs in an operator's `.env`, and that
+distinction is the reason the inventory below marks each source.
+
+### Demo and seed scripts — `apps/api/scripts/`
+
+They drive real agents against a local Ollama, so what they take is a **model
+name** and a **deadline**. Every one of them has a default and none is
+required.
+
+| variable | default | what it changes |
+|---|---|---|
+| `DEMO_MODEL` | `qwen2.5-coder:7b` | the model every demo script uses, unless one of the ones below overrides it for a specific role |
+| `DEMO_QA_MODEL` | `DEMO_MODEL` | only the QA agent, in the PR-gates demos — so you can judge with a model other than the one that wrote the code |
+| `DEMO_WORKFLOWS_MODEL` | `DEMO_MODEL` | only the Infra agent in the GitHub-workflows demo |
+| `DEMO_MODEL_LEVE` | `qwen2.5-coder:7b` | the Psychologist's **light** model (the one the cheap pass uses) |
+| `DEMO_MODEL_PESADO` | `qwen-psicologo-pesado:latest` | the Psychologist's **heavy** model. It's a local `Modelfile` variant, not a published tag — hence the one below |
+| `DEMO_OLLAMA_COPY_FROM` | `qwen2.5-coder:7b` | the base the demo copies from when it has to create the heavy model on the local Ollama |
+| `DEMO_TIMEOUT_MS` | `1800000` (30 min); `900000` in the dev-agent demo | how long the script waits for the run to finish before giving up |
+| `DEMO_ANAMNESE_TIMEOUT_MS` | `900000` (15 min) | the same deadline, for the Anamnesis demo |
+| `DEMO_PSICOLOGO_TIMEOUT_MS` | `600000` (10 min) | the same deadline, for the Psychologist demo |
+| `GOLDEN_SET_QA_MODEL` | `qwen2.5-coder:latest` | the model that `seed-golden-set-qa.ts` records as the judge of the QA golden set ([ADR 0123](../adr/0123-julgamento-semantico-do-qa-de-automacao.md)) |
+
+`NOME`, which the inventory below lists under this source, **is not a
+variable**: it's the literal `process.env.NOME` inside a prompt string in
+`demo-pr-gates.ts`, teaching the agent how to replace a hardcoded secret. The
+inventory extracts by pattern and has no way to tell a mention from a read —
+it's listed here instead of being filtered at the source, because a
+name-by-name ignore list is a second place to keep in sync.
+
+### Browser E2E — `e2e/`
+
+`e2e/` isn't a workspace member ([ADR 0120](../adr/0120-e2e-de-navegador-com-playwright.md)) and runs against the
+**production compose**, which is why its addresses are the published ports and
+not the dev ones. The credentials are the seed account's — the same ones
+`docker/smoke.sh` creates.
+
+| variable | default | what it changes |
+|---|---|---|
+| `E2E_API_URL` | `http://localhost:3000` | where the suite's HTTP support hits the api |
+| `E2E_WEB_URL` | `http://localhost:8088` | the `baseURL` Playwright opens, and the origin the CSRF assertion depends on |
+| `E2E_USER` | `owner@brabo.dev` | the account the suite logs in with |
+| `E2E_PASSWORD` | the seed password hardcoded in `e2e/suporte/api.ts` | that account's password. It's the password of a **local seed**, never a real one — it isn't repeated here so that the only copy stays the one in the code |
+
+---
+
 ## Full inventory
 
 The tables above explain **what each variable does**. This section is the
@@ -539,11 +714,15 @@ anyone noticing.
 
 > ⚠️ Block generated by `pnpm docs:generate`. Do not edit by hand — the next build overwrites it.
 
-Inventory extracted from the code: **131 variables** read at runtime. **2** still have no description in the tables above.
+Inventory extracted from the code: **157 variables** read at runtime. **2** still have no description in the tables above.
 
-**api** — 58 variables
+Each source is marked **product** — what whoever operates the installation sets in the deployment `.env` — or **tooling**, read only by CI and by whoever develops the product. A tooling variable never belongs in an operator's `.env`.
 
+**api** — 65 variables · product
+
+- `API_JSON_BODY_LIMIT` <sub>(apps/api/src/main.ts)</sub>
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
+- `ARTIFACT_PROJECTOR_INTERVAL_MS` <sub>(apps/api/src/application/artifact-projection/artifact-projector.ts)</sub>
 - `AUTH_ACCESS_TOKEN_TTL_MS` <sub>(apps/api/src/infrastructure/security/ed25519-access-token-issuer.ts)</sub>
 - `AUTH_EMAIL_TOKEN_TTL_MS` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
 - `AUTH_IP_ATTEMPT_THRESHOLD` <sub>(apps/api/src/application/use-cases/auth/auth-config.ts)</sub>
@@ -565,6 +744,7 @@ Inventory extracted from the code: **131 variables** read at runtime. **2** stil
 - `BRABO_SEED_PASSWORD` <sub>(apps/api/src/db/seed.ts)</sub>
 - `BRABO_SERVICE_TOKEN` <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub>
 - `BRABO_SERVICE_TOKEN_PREVIOUS` <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub>
+- `BRABO_VERSION` <sub>(apps/api/src/tracing.ts)</sub>
 - `BROKER_URL` <sub>(apps/api/src/infrastructure/http-clients/container-broker.client.ts)</sub>
 - `CREDENTIALS_MASTER_KEY` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `CREDENTIALS_MASTER_KEY_PREVIOUS` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
@@ -589,6 +769,10 @@ Inventory extracted from the code: **131 variables** read at runtime. **2** stil
 - `NEO4J_USER` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `NODE_ENV` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `OLLAMA_HOST` <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub>
+- `OTEL_DIAG_LOG` <sub>(apps/api/src/tracing.ts)</sub>
+- `OTEL_EXPORTER_OTLP_ENDPOINT` <sub>(apps/api/src/tracing.ts)</sub>
+- `OTEL_SERVICE_NAME` <sub>(apps/api/src/tracing.ts)</sub>
+- `PORT` <sub>(apps/api/src/main.ts)</sub>
 - `PROJECT_WORKSPACES_ROOT` <sub>(apps/api/src/infrastructure/filesystem/project-workspaces-root.ts)</sub>
 - `RATE_LIMIT_ENABLED` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
 - `RATE_LIMIT_IP` <sub>(apps/api/src/interfaces/http/shared/rate-limit.guard.ts)</sub>
@@ -602,7 +786,7 @@ Inventory extracted from the code: **131 variables** read at runtime. **2** stil
 - `SMTP_USER` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
 - `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/mail/smtp-mail-sender.ts)</sub>
 
-**engine** — 62 variables
+**engine** — 62 variables · product
 
 - `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -667,14 +851,14 @@ Inventory extracted from the code: **131 variables** read at runtime. **2** stil
 - `TRANSPORT_MAX_BODY_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
-**web** — 4 variables
+**web** — 4 variables · product
 
 - `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_BRABO_VERSION` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 
-**broker** — 7 variables
+**broker** — 7 variables · product
 
 - `API_URL` <sub>(apps/broker/src/config.ts)</sub>
 - `BRABO_PROJECTS_HOST_BASE` <sub>(apps/broker/src/config.ts)</sub>
@@ -683,6 +867,31 @@ Inventory extracted from the code: **131 variables** read at runtime. **2** stil
 - `BROKER_PORT` <sub>(apps/broker/src/config.ts)</sub>
 - `NODE_ENV` <sub>(apps/broker/src/config.ts)</sub>
 - `PROJECT_WORKSPACES_HOST_ROOT` <sub>(apps/broker/src/config.ts)</sub>
+
+**api/scripts** — 15 variables · tooling
+
+- `DATABASE_URL` <sub>(apps/api/scripts/demo-repo-bootstrap.ts)</sub>
+- `DEMO_ANAMNESE_TIMEOUT_MS` <sub>(apps/api/scripts/demo-anamnese.ts)</sub>
+- `DEMO_MODEL` <sub>(apps/api/scripts/demo-anamnese.ts)</sub>
+- `DEMO_MODEL_LEVE` <sub>(apps/api/scripts/demo-psicologo.ts)</sub>
+- `DEMO_MODEL_PESADO` <sub>(apps/api/scripts/demo-psicologo.ts)</sub>
+- `DEMO_OLLAMA_COPY_FROM` <sub>(apps/api/scripts/demo-psicologo.ts)</sub>
+- `DEMO_PSICOLOGO_TIMEOUT_MS` <sub>(apps/api/scripts/demo-psicologo.ts)</sub>
+- `DEMO_QA_MODEL` <sub>(apps/api/scripts/demo-pr-gates-area-qa.ts)</sub>
+- `DEMO_TIMEOUT_MS` <sub>(apps/api/scripts/demo-dev-agent-real.ts)</sub>
+- `DEMO_WORKFLOWS_MODEL` <sub>(apps/api/scripts/demo-infra-workflows-github.ts)</sub>
+- `GIT_LOCAL_REPOS_ROOT` <sub>(apps/api/scripts/demo-repo-bootstrap.ts)</sub>
+- `GOLDEN_SET_QA_MODEL` <sub>(apps/api/scripts/seed-golden-set-qa.ts)</sub>
+- `NOME` <sub>(apps/api/scripts/demo-pr-gates.ts)</sub>
+- `OLLAMA_HOST` <sub>(apps/api/scripts/demo-psicologo.ts)</sub>
+- `RATE_LIMIT_WINDOW_MS` <sub>(apps/api/scripts/relatorio-seguranca-runtime.ts)</sub>
+
+**e2e** — 4 variables · tooling
+
+- `E2E_API_URL` <sub>(e2e/suporte/api.ts)</sub>
+- `E2E_PASSWORD` <sub>(e2e/suporte/api.ts)</sub>
+- `E2E_USER` <sub>(e2e/suporte/api.ts)</sub>
+- `E2E_WEB_URL` <sub>(e2e/playwright.config.ts)</sub>
 <!-- END:GENERATED:env-inventario -->
 
 ---

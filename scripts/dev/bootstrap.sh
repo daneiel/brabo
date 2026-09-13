@@ -161,7 +161,7 @@ COMPOSE="docker compose -f docker/docker-compose.yml --env-file .env"
 
 ROTULO["."]="Brabo";     FILHOS["."]="1 2 3 4"
 
-ROTULO["1"]="Docker";    FILHOS["1"]="1.1 1.2 1.3 1.4 1.5"
+ROTULO["1"]="Docker";    FILHOS["1"]="1.1 1.2 1.3 1.4 1.5 1.6 1.7"
 ROTULO["2"]="K8s";       FILHOS["2"]="2.1 2.2 2.3"
 ROTULO["3"]="Database";  FILHOS["3"]="3.1 3.2 3.3 3.4"
 ROTULO["4"]="Test";      FILHOS["4"]="4.1 4.2 4.3 4.4 4.5 4.6"
@@ -194,14 +194,19 @@ ROTULO["1.1.2"]="Api";    CMD["1.1.2"]="${COMPOSE} up -d --build api"
 ROTULO["1.1.3"]="Engine"; CMD["1.1.3"]="${COMPOSE} up -d --build engine"
 ROTULO["1.1.4"]="Web";    CMD["1.1.4"]="${COMPOSE} up -d --build web"
 
-# Reset total: rebuild + apaga o banco + sobe até saudável + migra + semeia,
-# numa tacada só — ver scripts/dev/reset-total.sh. É a única folha de Docker
-# que também mexe no banco, e por isso pede confirmação PRÓPRIA
+# Reset total: rebuild + para api e engine + apaga o banco + migra + sobe até
+# saudável + semeia, numa tacada só — ver scripts/dev/reset-total.sh. É a única
+# folha de Docker que também mexe no banco, e por isso pede confirmação PRÓPRIA
 # (`confirmar_reset`, não `confirmar` — essa é só do Database › Delete) e não
 # exige o Postgres já de pé: o próprio comando sobe o compose do zero.
+#
+# A ORDEM importa e está na tela de confirmação: apagar o banco embaixo de api e
+# engine VIVOS matava os dois (o Rehydrator do engine consulta uma tabela que
+# acabou de sumir), e nada os reerguia — o script terminava anunciando sucesso
+# com o ambiente quebrado.
 ROTULO["1.4"]="Reset total"; CMD["1.4"]="bash scripts/dev/reset-total.sh"
 ESTADO["1.4"]="confirmar_reset"
-NOTA["1.4"]="rebuild + apaga o banco + sobe até saudável + migra + semeia (credenciais de .env inclusas)"
+NOTA["1.4"]="para api/engine, apaga o banco, migra, sobe até saudável e semeia (credenciais de .env inclusas)"
 
 # Reconfigurar Ollama: esquece a decisão host/container gravada em `.env` por
 # scripts/dev/preflight.mjs (RN de detecção de Ollama nativo), forçando a
@@ -211,6 +216,34 @@ NOTA["1.4"]="rebuild + apaga o banco + sobe até saudável + migra + semeia (cre
 # tela de confirmação: essa régua é só para o que apaga banco.
 ROTULO["1.5"]="Reconfigurar Ollama"; CMD["1.5"]="bash scripts/dev/reconfigurar-ollama.sh"
 NOTA["1.5"]="remove OLLAMA_MODE/OLLAMA_HOST de .env — a próxima subida pergunta de novo"
+
+# Base de projetos: o consentimento do ADR 0146 — qual pasta do SEU disco os
+# containers enxergam, e portanto onde um projeto "Pasta montada" pode morar.
+# Daqui o script só RELATA: item de menu roda com stdin em /dev/null (ver o
+# comentário do `exec bash -c` mais abaixo), então perguntar é impossível — e a
+# saída diz o comando que pergunta. Mesmo motivo pelo qual 1.5 não pergunta.
+ROTULO["1.6"]="Base de projetos"; CMD["1.6"]="node scripts/dev/consentir-base.mjs"
+NOTA["1.6"]="relata BRABO_PROJECTS_BASE; para escolher, rode o script no seu terminal"
+
+# Instalar: o caminho de instalação do produto é o `install.sh` da raiz, e não
+# os itens de Deploy/Create acima — eles operam o compose de DESENVOLVIMENTO
+# (build local, bind mounts, seed de demonstração), enquanto o instalador baixa
+# as imagens publicadas por DIGEST, gera os segredos, sobe o compose de
+# instalação e instala o agente local. Públicos diferentes: quem desenvolve o
+# Brabo e quem usa o Brabo.
+#
+# Daqui ele só RELATA — e a razão é a mesma do 1.6, mecânica e não preferência:
+# item de menu roda com stdin em /dev/null (ver `exec bash -c` mais abaixo), e o
+# instalador é desenhado para PERGUNTAR (é por isso que o ADR 0150 recusa
+# `curl | sh`: com o pipe o stdin É o download e nenhum `read` funciona). Um
+# instalador que não pode perguntar escolheria sozinho onde criar pasta na
+# máquina de alguém, e a régua deste produto é a oposta.
+#
+# `--print-plan` é exatamente o que cabe num item de menu: diz o que ele FARIA,
+# incluindo a comparação de versão e os três desfechos dela, sem tocar em nada e
+# sem precisar de TTY. A NOTA carrega o comando que instala de verdade.
+ROTULO["1.7"]="Instalar (install.sh)"; CMD["1.7"]="bash install.sh --print-plan"
+NOTA["1.7"]="relata o plano; para instalar, rode no seu terminal: sh -c \"\$(curl -fsSL https://github.com/daneiel/brabo/releases/latest/download/install.sh)\""
 
 # -- 2. K8s -----------------------------------------------------------------
 # Só `All` existe: o bootstrap do cluster instala api, engine e web juntos, e
@@ -570,8 +603,9 @@ confirmar_reset_total() {
   local linha=$(( ALTURA_BANNER + 2 )) resposta
   limpar_corpo
   mover "${linha}" 1;       printf '  %s%sIsto reconstrói as imagens, apaga TODAS as tabelas e semeia de novo.%s' "${C_BOLD}" "${C_WARNING}" "${C_RESET}"
-  mover $(( linha + 2 )) 1; printf '  %sOrdem: preflight, build + up --wait, DROP SCHEMA (api e engine), migrate, seed.%s' "${C_MUTED}" "${C_RESET}"
-  mover $(( linha + 3 )) 1; printf '  %sCredenciais de provider em .env (*_TEST_KEY) entram já ativas no owner.%s' "${C_MUTED}" "${C_RESET}"
+  mover $(( linha + 2 )) 1; printf '  %sOrdem: preflight, build, PARA api e engine, DROP SCHEMA, migrate, up --wait, seed.%s' "${C_MUTED}" "${C_RESET}"
+  mover $(( linha + 3 )) 1; printf '  %sA api e o engine ficam fora do ar durante o apagamento — e voltam antes do seed.%s' "${C_MUTED}" "${C_RESET}"
+  mover $(( linha + 4 )) 1; printf '  %sCredenciais de provider em .env (*_TEST_KEY) entram já ativas no owner.%s' "${C_MUTED}" "${C_RESET}"
   rodape "$(( LINHAS - 4 ))" "digite ${C_TEXT}RESET${C_MUTED} e Enter para confirmar — qualquer outra coisa cancela"
 
   mover "$(( LINHAS - 1 ))" 1; printf '\033[2K  '

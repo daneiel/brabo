@@ -24,6 +24,10 @@ rules:
       # Fase 12d: os casos de uso de backlog decidem QUEM promove uma história
       # (RN-048) — regra de negócio que não mora no diretório `domain/`.
       - "apps/api/src/application/use-cases/backlog/**"
+      # AT-046: o gerador decide O QUE da fonte chega ao web e ao engine
+      # (áreas nos dois, lista solo só no web). Mudar essa cobertura muda o
+      # que RN-054/RN-440 afirmam, e o gerador mora fora de `domain/`.
+      - "apps/api/scripts/gerar-areas.ts"
     # A RN pode morar em QUALQUER um dos três arquivos desde que o
     # `business-rules.md` foi partido por tamanho (Custo e Autenticação
     # sozinhas eram metade de uma página de 640 KB). Disjunção, não
@@ -65,6 +69,20 @@ rules:
     docs: ["docs/business-rules.md"]
     severity: block
     note: "A confirmação em duas etapas do pull é regra de negócio (RN-462) fora de domain/; RN alterada exige arquivo:linha atualizado e o teste que a cobre."
+
+  # A regra de PRESENÇA da roster (quem aparece no painel do time e no card do
+  # dashboard) mora no WEB, não em `domain/`: `rosterFromFacts` é a regra
+  # única das duas fontes (RN-090/RN-287), e `rosterFactsFromEvents` decide de
+  # onde vêm os fatos (RN-411, RN-568). Nenhuma regra observava esse arquivo, e
+  # as RNs dele citam arquivo:linha que anda a cada mudança. `warn`, não
+  # `block`: boa parte das mudanças aqui é de STATUS e de apresentação, e cobrar
+  # RN de toda uma ensinaria a usar o escape hatch por reflexo.
+  - id: roster-de-agentes
+    watch:
+      - "apps/web/src/lib/agent-status.ts"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Presença e status da roster são regra de negócio fora de domain/ (RN-090, RN-287, RN-411, RN-568); mudança aqui costuma mover o arquivo:linha dessas RNs."
 
   # ------------------------------------------------------------------ dados
 
@@ -114,10 +132,27 @@ rules:
     docs: ["docs/reference/internal-api.md"]
     severity: block
 
+  # DIVIDIDA na FASE 29, e o motivo é o mesmo que este arquivo já usa duas
+  # vezes (a separação de `checks-e-rulesets` e a exclusão de `scripts/ci/`):
+  # a regra era uma conjunção — `docs:` exige TODOS —, então QUALQUER mudança
+  # em QUALQUER controller HTTP cobrava também `internal-api.md`, que
+  # documenta as rotas `/internal/*` entre api e engine. Uma rota pública não
+  # tem o que dizer ali, e cobrar isso ensina a usar o escape hatch por
+  # reflexo — aí ele para de significar alguma coisa.
+  #
+  # `security-surface.md` continua cobrindo TODO controller, e tem de
+  # continuar: ele é o inventário de TODAS as rotas, e um teste
+  # (`route-surface.spec.ts`) reprova rota sem linha.
   - id: superficie-http
     watch:
       - "apps/api/src/interfaces/http/**"
-    docs: ["docs/security-surface.md", "docs/reference/internal-api.md"]
+    docs: ["docs/security-surface.md"]
+    severity: block
+
+  - id: superficie-http-interna
+    watch:
+      - "apps/api/src/interfaces/http/internal/**"
+    docs: ["docs/reference/internal-api.md"]
     severity: block
     note: "Rota nova sem classificação já quebra route-surface.spec.ts; a doc é a fonte dele."
 
@@ -300,6 +335,26 @@ rules:
     severity: warn
     note: "Cinco operações, e a especificação é COMPUTADA — mudar isso muda o contrato e o runbook."
 
+  # O `brabo-runner` é o ÚNICO processo do produto que roda na máquina do
+  # USUÁRIO, e ele não tinha regra nenhuma aqui — `apps/broker/**` tem desde o
+  # ADR 0130, `apps/runner/**` nunca teve. Enquanto o agente local era só
+  # "executa comando aprovado" isso quase passava; deixou de passar na FASE 28,
+  # que lhe deu capacidades declaradas no join (RN-514), a cópia para uma pasta
+  # do usuário (RN-516) e instalação como serviço (RN-518) — três mecanismos
+  # cujo contrato mora em doc, e nenhum obrigava a tocar doc nenhuma.
+  # `warn` e não `block` pelo mesmo motivo do broker: a superfície é fechada
+  # (o protocolo do canal e os subcomandos do CLI), e capacidade nova é decisão
+  # de produto com ADR, que o `adr-trigger` já cobra.
+  - id: agente-local
+    watch:
+      - "apps/runner/**"
+    docs:
+      - "apps/runner/README.md"
+      - "docs/security-surface.md"
+      - "docs/runbook.md"
+    severity: warn
+    note: "O agente local roda na máquina do usuário: o que ele DECLARA no join e o que ele instala são contrato, não detalhe."
+
   - id: deploy-e-runbook
     watch:
       - "deploy/k8s/**"
@@ -345,11 +400,61 @@ rules:
       # vira risco assumido, e isso não toca degrau, destino nem versão. A doc
       # dele é `cadeia-de-suprimentos-do-ci.md`, onde o risco está declarado.
       #
-      # O extglob EXCLUI os três pelo nome e continua casando com todo o resto
+      # `vocabulario-de-eventos-dev.spec.ts` é o QUARTO pelo mesmo critério: ele
+      # compara o vocabulário `dev.*` emitido pelo engine com as listas que a
+      # api consulta (RN-411) e com o mapa que o painel do time consulta
+      # (`apps/web/src/lib/agent-status.ts`), e mora aqui só porque lê TRÊS
+      # apps como texto — `scripts/ci/` é onde vivem os testes que leem o
+      # repositório inteiro. Degrau, destino e versão de branch não aparecem
+      # nele; a doc dele é a própria RN-411 em `docs/business-rules.md`.
+      #
+      # `flags-do-engine-no-compose.spec.ts` é o QUINTO, pelo mesmo critério: ele
+      # compara as flags booleanas que `apps/engine/config/runtime.exs` lê com o
+      # `environment:` do serviço `engine` dos dois composes (RN-540), e mora
+      # aqui porque lê o repositório inteiro como texto — a mesma razão do
+      # `vocabulario-de-eventos-dev.spec.ts` acima. Degrau, destino e versão de
+      # branch não aparecem nele; a doc dele é a própria RN-540 em
+      # `docs/business-rules.md`, e as duas que o `config-e-inferencia` já cobra
+      # em `block` (`docs/reference/configuration.md` e `docs/runbook.md`).
+      #
+      # `oferta-de-fonte-na-imagem.spec.ts` é o SEXTO, pelo mesmo critério: ele
+      # verifica que o `THIRD_PARTY_NOTICES.md` é copiado para dentro da imagem
+      # do engine (BRB-017) e que o documento não afirma mais que nenhuma imagem
+      # é publicada. Mora aqui porque lê `docker/`, a raiz e o `.dockerignore`
+      # como texto — a mesma razão dos dois acima. Degrau, destino e versão de
+      # branch não aparecem nele; a doc dele é `docs/runbook.md`, na seção de
+      # verificação de artefato publicado, que a regra `config-e-inferencia` já
+      # cobra em `block` pelo mesmo Dockerfile.
+      #
+      # `marca-de-credencial-do-runner.spec.ts` é o SÉTIMO, pelo mesmo critério:
+      # ele compara a MARCA da recusa da RN-558 nos dois lados em que ela vive —
+      # `apps/runner/src/index.ts` (TypeScript) e
+      # `apps/engine/lib/engine/runners/credencial_de_git.ex` (Elixir) —, e mora
+      # aqui porque nenhuma das duas suítes alcança a outra linguagem, que é a
+      # mesma razão dos três acima. Degrau, destino e versão de branch não
+      # aparecem nele; a doc dele é a própria RN-558 em `docs/business-rules.md`.
+      #
+      # `imagens-pinadas.ts` é o OITAVO, e pelo critério mais direto de todos:
+      # ele é o irmão do `actions-pinadas.ts`, que já está nesta lista pelo
+      # mesmo motivo. O que ele decide é se uma imagem de terceiro pode entrar
+      # por tag — não toca degrau, destino nem versão de branch. A doc dele é a
+      # mesma do irmão, `cadeia-de-suprimentos-do-ci.md`, e a regra
+      # `cadeia-de-suprimentos-do-ci` abaixo o vigia em `block`.
+      #
+      # `checksums-nao-espera-a-matriz.spec.ts` é o NONO: ele afere que o
+      # manifesto assinado da Release (RN-524) não depende da matriz de
+      # binários. É sobre RELEASE, e portanto o candidato mais plausível desta
+      # lista a pertencer à política — mas a política de branches é sobre
+      # DEGRAU (quem promove o quê, para onde) e sobre a VERSÃO que a função da
+      # branch decide, e nenhuma das duas aparece aqui: o que ele mede é o
+      # ARTEFATO que uma tag já cortada publica. A doc dele é a própria RN-524
+      # em `docs/business-rules.md`.
+      #
+      # O extglob EXCLUI os nove pelo nome e continua casando com todo o resto
       # — inclusive com script de política que ainda não existe. Falha fechado:
       # esquecer de adicionar um arquivo novo à regra é impossível, esquecer de
       # excluir um é que dá trabalho, e esse trabalho aparece como cobrança.
-      - "scripts/ci/!(coverage-floor|actions-pinadas|auditoria-de-dependencias)*"
+      - "scripts/ci/!(coverage-floor|actions-pinadas|imagens-pinadas|auditoria-de-dependencias|vocabulario-de-eventos-dev|flags-do-engine-no-compose|oferta-de-fonte-na-imagem|marca-de-credencial-do-runner|checksums-nao-espera-a-matriz)*"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
@@ -380,6 +485,19 @@ rules:
   # mudanças que não tinham nada a ver com ele. Regra que cobra o que não faz
   # sentido ensina a usar o escape hatch por reflexo, e aí ele para de
   # significar alguma coisa.
+  # O `install.sh` mora na RAIZ, e até a FASE 29 nenhuma regra cobria arquivo
+  # novo ali: todos os globs de raiz são nomes LITERAIS (`.env.example`,
+  # `Makefile`, `package.json`, `GOVERNANCE.md`). Um instalador que roda na
+  # máquina de quem instala é precisamente o que não pode mudar sem a doc
+  # acompanhar — o que ele verifica, e o que ele NUNCA apaga, são contrato.
+  - id: instalador
+    watch:
+      - "install.sh"
+    docs:
+      - "docs/runbook.md"
+    severity: warn
+    note: "O que o instalador verifica, e o que ele nunca apaga, são contrato."
+
   - id: checks-e-rulesets
     watch:
       - ".github/workflows/*.yml"
@@ -397,13 +515,20 @@ rules:
   # trocar um SHA por outro, não. `.github/workflows/*.yml` já é vigiado por
   # `checks-e-rulesets`, e repetir o glob aqui cobraria esta página em toda
   # atualização de action.
+  #
+  # `imagens-pinadas.ts` entra pelo MESMO critério, e o de terceiro que ele
+  # cobre é mais amplo que o do irmão: além do runner do CI (as imagens de
+  # `services:`), ele decide o que entra na imagem que publicamos no GHCR (as
+  # bases dos `FROM`) e o que sobe ao lado do Postgres de quem instalou o
+  # produto (o `docker-compose.install.yml`).
   - id: cadeia-de-suprimentos-do-ci
     watch:
       - "scripts/ci/actions-pinadas.ts"
+      - "scripts/ci/imagens-pinadas.ts"
     docs:
       - "docs/explanation/cadeia-de-suprimentos-do-ci.md"
     severity: block
-    note: "Regra nova sobre o que pode entrar no runner exige a regra escrita."
+    note: "Regra nova sobre o que pode entrar no runner, na imagem publicada ou na instalação exige a regra escrita."
 
   # O E2E de navegador é a única camada que roda contra o compose de PRODUÇÃO,
   # e a única cujo COMO RODAR não cabe num `pnpm test`. Quem chega no

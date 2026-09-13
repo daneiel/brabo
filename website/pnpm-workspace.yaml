@@ -36,7 +36,11 @@ overrides:
   # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/api`, via
   # `eslint` → `@eslint/eslintrc`, e aqui via `openapi-to-postmanv2` /
   # `@11ty/gray-matter` (subárvore do `docusaurus-theme-openapi-docs`).
-  js-yaml@>=4.0.0 <4.3.1: 4.3.1
+  #
+  # Teto subiu de 4.3.1 para 4.3.2 (GHSA-2883-xcg3-v3hh), junto com o da raiz.
+  # Alerta que o Dependabot ainda não abriu — quem o achou foi o
+  # `pnpm --dir website audit`.
+  js-yaml@>=4.0.0 <4.3.2: 4.3.2
   # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/web`, dependência de
   # runtime direta (ADR 0068), e aqui via `@docusaurus/theme-mermaid`.
   mermaid@>=11.0.0-alpha.1 <11.16.1: 11.16.1
@@ -46,7 +50,20 @@ overrides:
   postcss@<8.5.23: 8.5.23
   # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/api`, via `ajv` →
   # `@angular-devkit/core`, e aqui via `@redocly/ajv`.
-  fast-uri@>=3.0.0 <3.1.5: 3.1.5
+  #
+  # Teto subiu de 3.1.5 para 3.1.6 com quatro advisories novas (alertas
+  # #46..#49 deste lockfile): a 3.1.5 que este override fixava virou a versão
+  # vulnerável. Os dois arquivos sobem JUNTOS — deixar um para trás faz o lado
+  # esquecido resolver a faixa vulnerável em silêncio, que é o motivo de a
+  # entrada ser duplicada desde o ADR 0117.
+  fast-uri@>=3.0.0 <3.1.6: 3.1.6
+  # Ver `../pnpm-workspace.yaml` — lá a origem é de PRODUÇÃO (`express` ←
+  # `@nestjs/platform-express` e `@gitbeaker/rest`); aqui é `body-parser` ←
+  # `express@4.22.2` ← `webpack-dev-server`, que só roda em `docusaurus start`
+  # e nunca no `build`.
+  #
+  # 2 MODERATE · GHSA-4mjr-xmp4-gh2g e GHSA-x5fp-wj9c-mxmx (alertas #44/#45).
+  qs@>=6.0.0 <6.16.0: 6.16.0
   # Ver `../pnpm-workspace.yaml` — já era o caso canônico de origem dupla:
   # `jsdom` em `apps/web`, `cheerio` aqui
   # (`@easyops-cn/docusaurus-search-local`).
@@ -71,3 +88,37 @@ overrides:
   # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/web` (o `dompurify`
   # só chega pelo `mermaid` acima, dos dois lados).
   dompurify@>=3.0.0 <3.4.13: 3.4.13
+
+# ------------------------------------------------------------------------
+# O que NÃO tem override, e por quê. Esta seção existe porque fechar três de
+# quatro sem nomear o quarto transforma um painel honesto num painel que
+# PARECE resolvido — e os dois que sobram aqui são os HIGH.
+#
+# O argumento de ALCANCE vale para os dois, e é o do ADR 0117: `website/` tem
+# lockfile próprio justamente porque **nada da árvore do Docusaurus chega a
+# imagem nenhuma**. Nenhuma das quatro imagens publicadas no GHCR (ADR 0119)
+# instala estas dependências; o que o site publica é HTML estático. O alcance
+# é a máquina de quem CONSTRÓI a documentação — o runner do CI e o checkout de
+# quem roda `pnpm docs:build` —, nunca a instalação de ninguém. Isso reduz a
+# severidade real; não a zera, e por isso está escrito em vez de esquecido.
+#
+#   · `image-size@2.0.2` — HIGH · GHSA-5p2g-fcmc-qvqq e GHSA-w3rx-r6r6-pgpr
+#     (alertas #41/#42). **NÃO EXISTE VERSÃO CORRIGIDA**: o `first_patched_
+#     version` dos dois avisos é nulo. Um item sem patch não se "resolve" —
+#     ou se troca quem o puxa, ou se aceita o risco por escrito. Quem o puxa é
+#     `@docusaurus/mdx-loader@3.10.2`, que é o núcleo do Docusaurus: trocar
+#     significa trocar o gerador do site. Fica aceito, e a entrada some no dia
+#     em que o upstream publicar correção.
+#
+#   · `@faker-js/faker@5.5.3` — HIGH · GHSA-qxc2-j82w-r537 (alerta #43), com
+#     correção em 10.5.0. **Tem patch e mesmo assim não sobe**, e isso foi
+#     MEDIDO, não suposto: `postman-collection@5.3.1` pina `@faker-js/faker`
+#     em `5.5.3` EXATO (não é faixa) e usa a API da v5 que sumiu na v8
+#     (`faker.address`, `faker.random.*`, `faker.datatype.number`,
+#     `faker.phone.phoneNumberFormat`). Com o override aplicado, o
+#     `pnpm docs:build` REPROVA — `Docusaurus could not load module …
+#     docusaurus-plugin-openapi-docs/lib/index.js`, com
+#     `TypeError: Cannot read properties of undefined (reading 'city')` como
+#     causa, no `require` de `dynamic-variables.js`. São cinco majors de
+#     distância e o pai não tem versão nova; fechar o alerta custaria a
+#     documentação inteira.

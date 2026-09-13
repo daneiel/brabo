@@ -260,4 +260,102 @@ defmodule Engine.Harness.ContextManagerTest do
     contents = Enum.map(out.messages, &Map.get(&1, "content"))
     assert Enum.any?(contents, &(&1 =~ "RESUMO"))
   end
+
+  # ------------------------------------------------------------------------
+  # Template do grafo (RN-413/RN-417, ADR 0101): o prompt de sumarização é o
+  # QUARTO consumidor da mesma flag compartilhada `:graph_templates_enabled?`.
+  # Um contexto que FORÇA a compactação, reusado pelos três casos abaixo — o
+  # que muda entre eles é só de onde o texto do prompt vem.
+  # ------------------------------------------------------------------------
+  defp ctx_que_compacta do
+    long = String.duplicate("conteúdo antigo e verboso ", 20)
+
+    %{
+      project_id: "proj-1",
+      session_id: "sess-1",
+      agent: "echo",
+      messages: [
+        msg("system", "PROMPT DO SISTEMA", true),
+        msg("assistant", long <> " turno antigo", false),
+        msg("assistant", "resposta recente", false)
+      ],
+      context_window: 1,
+      compaction_keep_recent: 1
+    }
+  end
+
+  # O prompt que o sumarizador recebeu — o fake notifica `{:llm_turn, agent,
+  # messages, tools}` a cada chamada, e o agente é sempre "context-manager".
+  defp prompt_do_sumarizador do
+    receive do
+      {:llm_turn, "context-manager", [%{"content" => content} | _], _tools} -> content
+    after
+      0 -> flunk("o sumarizador nunca foi chamado")
+    end
+  end
+
+  describe "template do grafo (get_prompt_template, flag graph_templates_enabled?)" do
+    setup do
+      Application.put_env(:engine, :graph_templates_enabled?, true)
+      on_exit(fn -> Application.delete_env(:engine, :graph_templates_enabled?) end)
+      :ok
+    end
+
+    test "com sucesso, o prompt é o corpo do template com {{turnos}} substituído" do
+      Process.put(:fake_prompt_template, %{
+        "name" => "context-manager-summarize",
+        "version" => "1",
+        "body" => "TEMPLATE DO GRAFO:\n{{turnos}}\nFIM",
+        "hash" => "abc"
+      })
+
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("RESUMO")])
+
+      assert {:ok, _out} = ContextManager.maybe_compact(ctx_que_compacta())
+
+      assert_received {:prompt_template_fetched, "context-manager-summarize", nil}
+
+      content = prompt_do_sumarizador()
+      assert content =~ "TEMPLATE DO GRAFO:"
+      assert content =~ "FIM"
+      # `{{turnos}}` foi substituído pelo MESMO corpo que a trilha inline monta
+      # (`<role>: <content>`), não por um retrato diferente.
+      assert content =~ "assistant: conteúdo antigo e verboso"
+      refute content =~ "{{"
+      # a frase inline não vaza quando o template resolve
+      refute content =~ "Resuma concisamente os turnos abaixo"
+    end
+
+    test "com falha (template não semeado/api fora), cai no inline sem erro" do
+      Process.put(:fake_prompt_template, {:error, :not_found})
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("RESUMO")])
+
+      assert {:ok, out} = ContextManager.maybe_compact(ctx_que_compacta())
+
+      assert_received {:prompt_template_fetched, "context-manager-summarize", nil}
+
+      content = prompt_do_sumarizador()
+      assert content =~ "Resuma concisamente os turnos abaixo, preservando decisões e fatos:"
+      assert content =~ "assistant: conteúdo antigo e verboso"
+      refute content =~ "{{"
+
+      # degradou SEM erro: a compactação terminou normalmente e o resumo entrou
+      contents = Enum.map(out.messages, &Map.get(&1, "content"))
+      assert Enum.any?(contents, &(&1 =~ "RESUMO"))
+    end
+  end
+
+  test "flag desligada (default): prompt inline e a api do grafo nunca é chamada" do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("RESUMO")])
+
+    assert {:ok, out} = ContextManager.maybe_compact(ctx_que_compacta())
+
+    refute_received {:prompt_template_fetched, _name, _version}
+
+    content = prompt_do_sumarizador()
+    assert content =~ "Resuma concisamente os turnos abaixo, preservando decisões e fatos:"
+
+    contents = Enum.map(out.messages, &Map.get(&1, "content"))
+    assert Enum.any?(contents, &(&1 =~ "RESUMO"))
+  end
 end

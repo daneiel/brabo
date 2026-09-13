@@ -67,9 +67,30 @@ tool that lets someone authenticate would be backwards. `platform` is a
 closed allowlist (`linux-x64`/`linux-arm64`/`darwin-x64`/`darwin-arm64`/
 `win32-x64`), never interpolated raw into the GitHub URL — closing the
 SSRF/path-injection vector an open parameter would leave. The resolved
-asset URL (never the bytes) is cached in memory for a few minutes,
-purely to stay under GitHub's unauthenticated rate limit under
-concurrent downloads.
+asset URL (never the binary's bytes) is cached in memory for a few
+minutes, purely to stay under GitHub's unauthenticated rate limit under
+concurrent downloads; since session 3 of FASE 29 the parsed
+`checksums.txt` — a few hundred bytes of *text* — is memoised in that
+same entry, so hash and binary always come from the same release.
+
+Since [RN-525](business-rules.md#rn-525) ([ADR 0149](adr/0149-assinatura-dos-artefatos-publicados.md))
+the route no longer streams unverified bytes: it checks the sha256 of
+what it downloaded against the release's `checksums.txt` and answers
+**502 with a named `motivo`** when it cannot — including when the
+release publishes no manifest at all, which is a *refusal*, never bytes
+served with a warning. Read the guarantee narrowly: this is **integrity
+against the manifest, not provenance**. The route does **not** verify
+the manifest's `cosign` signature (`checksums.txt.bundle`), so anyone
+who can rewrite the Release rewrites both files and passes. Both ways to
+close it were measured and refused for now — `cosign` in the image is
+155 MB, and `@sigstore/verify` would make a `@Public()` route depend on
+a second third-party host (`tuf-repo-cdn.sigstore.dev`) to check
+something no Release carries yet. The consumer that *does* verify the
+signature is `install.sh`. Because verifying the hash means reading
+every byte, the download lands in a temporary file under `/tmp` (the
+pod's `emptyDir`, mounted because the rootfs is read-only) with a
+256 MiB ceiling, and is streamed back only after the hash matches —
+never buffered in the 512Mi process.
 
 ### First-party auth
 
@@ -190,6 +211,95 @@ reason in the URL.
   `UpdateProjectDto` deliberately omits both fields, otherwise
   `PartialType(CreateProjectDto)` would expose them on a `PATCH` with no
   guard at all.
+- **`GET /workspaces/:workspaceId/containers` now lists EVERY project of the
+  workspace, and the page it feeds became the human path to START a container**
+  ([RN-521](business-rules.md#rn-521),
+  [ADR 0136](adr/0136-pagina-global-de-containers.md)). The role did not change
+  (`viewer`, as it already was) and neither did the scope: it still answers only
+  for projects of the workspace the caller can see. What changed is the row set
+  — a project that never provisioned a container used to be ABSENT and now
+  appears with `registrado: null`, a THIRD state that is neither `stopped` nor
+  "could not be observed". The read is still bounded the same way: three batched
+  queries regardless of project count, and at most
+  `TETO_DE_VERIFICACOES_POR_CARGA` (20) broker calls per load, with rows that
+  have no container never eligible and therefore never able to crowd out a real
+  one.
+
+  **Nothing on this page acts directly.** Stopping, removing and starting are
+  all `proposed_action`, always with a HUMAN clicking, never an agent, and every
+  ceiling in `decide.ts` is untouched: both start types require `maintainer`,
+  and `container_remove` stays in the absolute ceiling of the privileged-command
+  family ([RN-418](business-rules.md#rn-418)) — never auto-approvable, "always
+  allow" refused at the source. The screen branches the start action by
+  `execution_mode` exactly as the backend does
+  ([RN-497](business-rules.md#rn-497)/[RN-503](business-rules.md#rn-503)):
+  `container`/`mounted` propose `container_start` (broker) and `runner` proposes
+  `container_start_via_runner` (local agent), with the payload each schema
+  actually accepts.
+
+  The screen's own refusals are honesty, not enforcement: it does not offer the
+  button with no image decided (the RN-105 gate, valid in all THREE modes since
+  [RN-494](business-rules.md#rn-494)), nor for a `runner` project whose folder no
+  local agent ever confirmed, nor to a role below `maintainer` — and it says
+  which of the three it is, in text. **Who refuses for real is still the
+  `RolesGuard` and the use cases.** The role read here is the WORKSPACE one, not
+  the effective project role (`projectRole ?? workspaceRole`,
+  [RN-471](business-rules.md#rn-471)): a member demoted inside one project still
+  sees the button and gets a 403, a declared cost of not paying an N+1 of
+  `project_members` on a cross-project page.
+- **`PUT /projects/:projectId/mirror-path` writes a path on the USER's
+  machine, and the api never sees that machine** ([RN-515](business-rules.md#rn-515),
+  [ADR 0147](adr/0147-agente-local-com-capacidades.md), point 4). It stores
+  the destination the `espelho` capability copies the project's work to — a
+  folder OUTSIDE the mounted base, which is precisely why a bind mount cannot
+  reach it and a local agent has to.
+
+  The minimum is `maintainer`, the same as `execution-mode` and
+  `projects-base` above, and for the same reason: this route is about a path
+  on the operator's own filesystem, not about project metadata.
+
+  What the api can validate here is ONLY the LEXICAL shape, and the refusal
+  message says so. It reuses `caminhoDeWorkspaceLocalValido` — absolute, no
+  `..`/`.`, never the root, never a system folder, never overlapping Brabo's
+  own checkout — exactly as `runner` creation does ([RN-423](business-rules.md#rn-423)),
+  and for the same reason: there is no disk here to ask. It does NOT require
+  `BRABO_PROJECTS_BASE`, because being outside the base is the point.
+
+  Two refusals are specific to this route. The destination may not be inside
+  `workspacePath` nor contain it — the same loop seen from both sides, since
+  writing the mirror inside its own source makes the mirror copy itself — and
+  the comparison is by SEGMENT (`dentroDoEscopo`), so `/base-outra` is not
+  inside `/base`. And a project in `execution_mode: container` may not have a
+  destination at all: its source is a managed volume ON THE SERVER, and the
+  process that would copy runs on the USER's machine, which cannot see it.
+  Both are **400**.
+
+  The other half of the guard — resolving symlinks with `realpath`, so a link
+  in any segment of the destination cannot point back into the source — is the
+  RUNNER's, on the machine where both paths actually exist. **This route does
+  not establish that guarantee**; it only rules out the loop as WRITTEN.
+  Clearing is `mirrorPath: null`, and the key is required: omitting it would
+  be indistinguishable from asking to clear, and clearing in silence is the
+  defect. Writing the mirror is never a `proposed_action` — it is
+  configuration the user declared, not an agent asking to act.
+- **`GET /projects/:projectId/mirror-state` is `viewer`, one notch below the
+  route that WRITES the destination** ([RN-517](business-rules.md#rn-517),
+  [ADR 0147](adr/0147-agente-local-com-capacidades.md), point 7). It returns
+  what the last mirror round did: which of the three states is current
+  (`never` | `synced` | `failed`), the last successful sync with its counts,
+  the frozen destination of that round, and the last error.
+
+  The asymmetry with `PUT .../mirror-path` (`maintainer`) is deliberate and
+  is the rule of [RN-102](business-rules/custo.md#rn-102) applied: the minimum
+  belongs to the ENDPOINT, and this one only READS. The destination itself
+  already rides on every project read (`GET /projects/:projectId`,
+  `viewer`), so requiring `maintainer` here would lock information away from
+  someone who already sees it in the same project — the worse of the two
+  defects, because it is invisible to whoever lost the capability.
+
+  What it does NOT expose is worth stating: no file names, no content, no
+  path other than the destination the caller can already read. The counts
+  are counts.
 - **`GET /workspaces/:workspaceId/projects-base` reveals a piece of the
   operator's filesystem topology, and that's why it isn't `viewer`**
   ([ADR 0141](adr/0141-base-unica-dos-projetos-montados.md),
@@ -266,6 +376,24 @@ reason in the URL.
   route ever starts returning the already-authenticated URL, the token
   would end up in `.git/config`, inside the folder where the dev agent has
   auto-approved reads.
+
+  In `runner` mode that per-invocation injection travels one more hop — the
+  `env` field of the `exec` message ([RN-507](business-rules.md#rn-507)) — and
+  it stops at the container boundary: the product's Docker port has **no `env`
+  field**, deliberately ([ADR 0130](adr/0130-broker-de-container.md)), so a
+  command routed into the container by `docker exec` can never carry the token.
+  That containment held; what did not was the reporting. Until
+  [RN-558](business-rules.md#rn-558) the runner ran such a command **anyway**,
+  with the credential helper installed and the variables empty, and the
+  resulting authentication failure was indistinguishable from a bad token or a
+  broken network — on the *common* path, since the registered `running`
+  container that RN-507 demands exists only because that same runner brought it
+  up. The runner now **refuses** the pair (credential present, container
+  active) before executing anything, and the engine classifies the refusal with
+  origin `politica` rather than `codigo`. The refusal text names neither the
+  variables nor their values, only how many there were. The credential still
+  does not cross, and that half is declared open: authenticated clone/fetch in
+  `runner` mode requires the container stopped.
 - **The PO's three read routes** — `GET /internal/projects/:projectId/business-rules`,
   `GET /internal/projects/:projectId/backlog` ([RN-164](business-rules/autenticacao.md#rn-164))
   and `GET /internal/projects/:projectId/product-metrics` ([RN-407](business-rules.md#rn-407)) —
@@ -286,6 +414,43 @@ reason in the URL.
   (`caminhoDeWorkspaceLocalValido`) — system root and overlap with the
   Brabo checkout remain forbidden even coming from the runner. `400` if the
   project isn't in `runner` mode.
+
+  Since [ADR 0151](adr/0151-base-consentida-no-runner.md)
+  ([RN-529](business-rules.md#rn-529)) the runner can ALSO be born with a
+  **base** — one folder of that machine under which each project is a
+  subfolder. Two things about it belong on this page. First, the base is
+  **local and never arrives over the wire**: it comes from `--base` or from
+  `$XDG_CONFIG_HOME/brabo/runner.json`, never from a server field, so the
+  invariant of [ADR 0130](adr/0130-broker-de-container.md)/
+  [ADR 0144](adr/0144-a-segunda-raiz-do-broker.md) holds on this side too —
+  whoever owns the root is whoever executes, and only the **relative
+  segment** travels. `resolverPastaDoProjetoNaBase` refuses an ABSOLUTE
+  segment lexically rather than reinterpreting it. Second, the base does
+  **not** enter the validation of `--dir`, exactly as the base rule stays out
+  of the api's lexical predicate: a project whose folder predates the base
+  keeps working. The guard is a THIRD sibling of `guard.ts`, reusing
+  `dentroDoEscopo`/`realpathMaisProximo`/`semBarraFinal` and the same
+  lexical-then-`realpath` double pass — and it inherits the same TOCTOU
+  caveat in writing: best-effort, never the security boundary.
+
+  Since [RN-532](business-rules.md#rn-532) (same ADR, points 3 to 6) that
+  base has a CONSUMER: the `workspace_create`/`workspace_create_result`
+  pair. Three things about it belong on this page. First, **no new write
+  route was born**: having created the folder, the runner pushes the
+  `workspace_confirm` that already existed, and it is that one — through
+  this very endpoint — that stamps `workspace_verified_at`. The engine
+  still does not write the table, and the single path that stamps stays
+  single. Second, what travels is the **relative segment**, never an
+  absolute path, and the runner refuses an absolute one lexically. Third,
+  the capability `workspace` is the only one of the four whose declaration
+  depends on the runner's STATE rather than its version — it is declared
+  only when a base was consented — so it is by that declaration, and by
+  nothing else, that the server learns a base exists. Nobody REQUIRES it at
+  join time: a runner without a base connects and serves its project as
+  always, and only `workspace_create` is refused, with a NAMED answer.
+  Creating that folder is consented configuration, not an agent asking to
+  act: it is **not** a `proposed_action`, and no ceiling in `decide.ts`
+  gains an exception.
 - **`POST /internal/projects/:projectId/container-exec`** ([RN-492](business-rules.md#rn-492),
   [ADR 0134](adr/0134-dev-agents-executam-dentro-do-container.md)) is called
   only by the engine, when `Engine.Actions.TerminalExecutor` decided a
@@ -296,6 +461,22 @@ reason in the URL.
   unreachable one (`{ sucesso: false, motivo }` is the normal shape, per
   RN-486 — a `running` row never guarantees the container is up right
   now), so a dead container is a regular failed command, not a 5xx.
+- **`POST /internal/projects/:projectId/mirror-sync-result`** ([RN-517](business-rules.md#rn-517),
+  [ADR 0147](adr/0147-agente-local-com-capacidades.md), point 7) is called
+  only by the engine, after the runner pushes `mirror_sync_result` over the
+  channel — never directly by the runner, which doesn't hold the service
+  token. The same shape and the same path as `workspace-verification` above,
+  and for the same reason: the runner is the only party that knows what
+  happened on the user's machine, and the engine repasses rather than writing
+  the table itself.
+
+  It writes TELEMETRY and nothing else: a row in `project_mirror_states`,
+  never the event log (a mirror round has no session and
+  `session_events.session_id` is `NOT NULL`) and never a `proposed_action`.
+  The body carries an outcome, three counts and an error message — no path
+  the api acts on, nothing executed, nothing granted. Recording never breaks
+  what it measures: the copy is already finished when this is called, and a
+  refusal here is only logged by the engine.
 - **`GET /internal/projects/:projectId/container-spec`** ([ADR 0130](adr/0130-broker-de-container.md),
   [RN-485](business-rules.md#rn-485)) is the only `engine-service` route whose
   caller is NOT the engine — it is the container **broker**, the single process
@@ -342,20 +523,170 @@ reason in the URL.
   (issue/list/revoke the PAT itself, plus the two `maintainer` ones —
   RN-427, list/revoke of ANY user in the project) remain regular session
   JWT — only the route the TOKEN ITSELF authenticates changes mechanism.
-- **The two `/projects/:projectId/runner-device-keys` routes ARE regular
+- **`GET /runner/projects` is classified `jwt` and accepts NO session JWT at
+  all** ([RN-543](business-rules.md#rn-543),
+  [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)). It is the route by
+  which a MACHINE agent discovers the projects it serves, and it is the first
+  `@RequirePatAuth()` route with no `:projectId` in the path — which is exactly
+  what it exists to solve: the caller does not yet know which projects there
+  are. Two consequences, both pinned by tests:
+  - **Only a MACHINE credential gets in** (`runner_device_keys.project_id`
+    NULL). A credential bound to a project — a PAT, or a device key from the
+    ADR 0118 flow — describes one project and has nothing to discover;
+    `PatAuthGuard` refuses it with 403 and a message of its OWN, never the
+    "wrong project" one, which would lie about the reason. The comparison that
+    refuses key-of-A-on-B was NOT removed: it disappears only for `null`, and
+    both directions are pinned.
+  - **There is no `@RequireRole`, because there is no project to resolve one
+    against.** The `developer` minimum — the SAME as `runner-ticket` — is
+    applied PER ROW inside `ListRunnerProjectsUseCase`, with the product's
+    single ruler (`ResolveEffectiveRoleUseCase.forProject`). Nothing is
+    loosened: what comes out is exactly the set of projects for which
+    `runner-ticket` would already authorize this user. The automatic
+    classifier reads `@RequireRole` and sees no mechanism, so it lands on
+    `jwt` — the same approximation this document already corrects in prose for
+    `runner-ticket` above. The route never touches a session JWT:
+    `JwtAuthGuard` abstains on `@RequirePatAuth()` routes, and the public key
+    `PatAuthGuard` verifies comes from `runner_device_keys`, never from the
+    session issuer.
+
+  It returns the project id, name, `workspaceDirName` and the verification
+  state — never an absolute path. What crosses the wire is the SEGMENT, and
+  the root belongs to whoever executes, the same invariant as the broker
+  (ADR 0144) and the runner base (ADR 0151).
+
+  Since [RN-544](business-rules.md#rn-544) the route has its CONSUMER: run
+  without `--project`, `brabo-runner` calls it at start and opens **one
+  connection per project listed** — and, since
+  [RN-550](business-rules.md#rn-550), when that list comes back **empty** it
+  keeps calling, on a declared cadence (15s, 30s, then 60s repeating), until
+  the first project shows up. That polling is bounded on the failure side, not
+  on the waiting side: ten consecutive failed calls and the process exits 1
+  naming the count, any answer (empty included) resets the counter, and the
+  moment one connection is live the polling **stops** — with a live connection
+  the list is still read only at start, for the reason below. Each connection
+  is rooted at
+  `<base>/<workspaceDirName>` through the same guards
+  (`resolverPastaDoProjetoNaBase`, then RN-434/RN-435). Three things about
+  that belong on this page. First, **nothing on the engine changed**: the
+  `terminal:<projectId>` topic, the socket id and the ticket describe a
+  CONNECTION, and N connections satisfy them byte for byte — the refusal of a
+  second runner on the same project is untouched, and so are the mirror
+  ([RN-516](business-rules.md#rn-516)) and `workspace_create`
+  ([RN-532](business-rules.md#rn-532)), both of which already travelled in
+  the grant of THAT connection's join. Second, the discovery JWT carries **no
+  `projectId` claim** — the guard compares `payload.projectId !==
+  request.params.projectId`, and on a route with no project in the path both
+  must be `undefined`; signing an invented project id there would be refused
+  with a 403 that says the wrong thing. Third, **the runner never guesses the
+  species of its own key**: on disk a machine key and a project key are the
+  same file (a private JWK with a `kid`), the server is the one that knows,
+  and the named 403 is relayed with its own message and its own fix
+  (`--project`) instead of being flattened into a generic connection failure.
+  The new mode requires BOTH a machine credential and a **consented base** —
+  without a base there is nowhere to derive each project's folder from, and
+  inventing one would write a path on the user's disk they never consented
+  to; without both, running with no `--project` still prints usage.
+- **A client of the `/runner` socket must NEVER let `phoenix.js` reconnect on
+  its own** ([RN-108](business-rules/autenticacao.md#rn-108)). The ticket is
+  single-use, and the built-in auto-reconnect repeats the SAME `params` — so a
+  socket built without `reconnectAfterMs` retries a dead ticket forever. This
+  is not hypothetical: `apps/runner/src/channel.ts` shipped that way while its
+  own docblock claimed the opposite, and it was measured in real use — the same
+  ticket refused every ~5.13s (the ceiling of the library's internal backoff),
+  61 `REFUSED CONNECTION TO EngineWeb.RunnerSocket` in a few hours, and, on top
+  of the runner's OWN retry policy, 530 requests in one minute against the
+  300 req/min `RATE_LIMIT_USER` ceiling. The limit is **per user**, so the
+  denial of service landed on the account owner's BROWSER, as a 429 — an
+  unauthenticated third party is not involved, but a misbuilt client is enough
+  to lock its own user out. Reconnection is always the caller's own policy,
+  with a fresh ticket each attempt; the option is now REQUIRED by the type
+  (`OpcoesDoSocket`) and asserted by a test over the option passed to the
+  constructor, since a test that only checks "it connects" passed throughout.
+- **The three `/projects/:projectId/runner-device-keys` routes ARE regular
   session JWT**, unlike `runner-ticket` above — the browser, already
   logged in, registers the Ed25519 public key it just generated (the
   private half never leaves it) before offering the runner binary for
-  download. `POST` persists the public key only — there's no "raw secret"
+  download. Since [RN-551](business-rules.md#rn-551) the browser is no longer
+  the only generator: `brabo-runner device-key create` generates the pair on
+  the MACHINE and writes the private half to disk, mode 600, under
+  `$XDG_CONFIG_HOME/brabo/` (else `~/.config/brabo/`). What that changes for
+  this page is the shape of the secret, not its travel: the private half still
+  never crosses the wire, and only the public JWK and the registration `id`
+  ever do. What that CLI deliberately does not have is a credential to
+  register with — the registration stays with whoever holds the service token
+  (the installer, [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+  point 1), so each side holds exactly one secret and neither sees the other's.
+  The file the runner reads never exists without its `kid`: `create` writes a
+  `.parcial` name the reader ignores, and `finish --id <id>` stamps and
+  renames. `POST` persists the public key only — there's no "raw secret"
   to hand back the way `IssuePersonalAccessTokenUseCase` does, because
   the client already holds the only secret involved (the private key) and
-  the api never sees it. `DELETE` revokes the caller's own key,
-  idempotently, same shape as the PAT's self-service revoke. `PatAuthGuard`
+  the api never sees it. `GET` lists the caller's own keys, revoked ones
+  included ([RN-519](business-rules.md#rn-519)) — it is what makes
+  revocation reachable at all, and until it existed an orphan key (tab
+  closed midway through the automatic-setup flow) was invisible and
+  permanent. It never returns the public JWK: what the list exists for is
+  revoking, and `lastUsedAt: null` is the signal of the orphan. `DELETE`
+  revokes the caller's own key, idempotently, same shape as the PAT's
+  self-service revoke. `PatAuthGuard`
   is what LATER accepts a JWT signed by that key's private half on
   `runner-ticket`, looked up by the `kid` header matching this table's
   `id`; the guard checks the key hasn't been revoked but never an
   expiry — the key itself doesn't expire, only the short-TTL (≤60s,
-  `exp - iat`) JWT the runner signs with it each time.
+  `exp - iat`) JWT the runner signs with it each time. Since
+  [RN-543](business-rules.md#rn-543) the `GET` returns TWO species and SAYS
+  which is which (`especie`): a MACHINE key (`projectId: null`) serves every
+  project of its owner, so it shows up in every project's listing — without
+  that it would be invisible and permanent in every screen, the very defect
+  RN-519 closed, reborn in the new species. This `POST` still creates only
+  project-bound keys; the one that creates MACHINE keys is
+  `POST /internal/machine-device-keys`, below
+  ([RN-552](business-rules.md#rn-552)) — a different route, a different
+  credential and a different caller. The KEY MATERIAL it registers is produced
+  on the machine: `brabo-runner device-key create`
+  ([RN-551](business-rules.md#rn-551)) generates the Ed25519 pair locally and
+  prints only the public JWK, so the private half never travels. Since
+  [RN-547](business-rules.md#rn-547) the `install.sh` **chains the two** at the
+  end of an installation, and installs the machine unit with the resulting key
+  ([ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)) — which is what
+  makes this route's declared cost a live one rather than a hypothetical.
+  Revoking a MACHINE key asks the engine to drop the live runner in EACH
+  runner-mode project its owner reaches — one
+  `{project, user}` call per project, the engine untouched.
+- **Revoking a device key now reaches the LIVE connection, and the target
+  is `{project, user}` — never `{key}`**
+  ([RN-520](business-rules.md#rn-520), [ADR 0147](adr/0147-agente-local-com-capacidades.md)
+  point 6). `DELETE` used to stop only the NEXT ticket: a `brabo-runner`
+  already connected kept its `terminal:<projectId>` channel alive, running
+  approved commands with the revoked key, until it fell on its own. The
+  api now asks the engine (`POST /internal/projects/:projectId/runner/disconnect`)
+  to drop it, and the engine reaches the channel pid — the api never talks
+  to the channel, and the engine never reads the key table.
+  The precision that does NOT exist is per-credential, and that's a
+  property of the ticket path rather than a preference:
+  `runner_socket_tickets` stores `project_id`/`user_id`/`kind` and nothing
+  else, so which PAT or which `kid` opened that socket dies in
+  `PatAuthGuard` and never reaches the engine. **Declared cost:** a runner
+  of the SAME user connected with a PAT, or with another key of the same
+  project, also falls — and reconnects by itself, because the next round
+  asks for a fresh ticket and a credential that still holds gets one. A
+  runner of another user in the same project is left alone. Dropping the
+  connection is a SIDE EFFECT: engine down, no runner connected or a
+  timeout can never make the `DELETE` (204, idempotent) fail or turn 5xx —
+  the same rule as `rag_searches` ([RN-479](business-rules.md#rn-479)) and
+  `mirror_sync_result` ([RN-517](business-rules.md#rn-517)).
+  The `maintainer` view the PAT has (RN-427, list/revoke of ANY user)
+  stays OUT for device keys — now by decision, not omission: that pair was
+  born of incident response to a SHARED secret circulating, and a device
+  key's private half never leaves the machine that made it. That sentence used
+  to say "the browser that made it", and [RN-551](business-rules.md#rn-551)
+  widened the maker without weakening the claim: the terminal is now a second
+  generator, and the private half still never travels — what leaves is the
+  public JWK. What DID change is where it rests: a key made in the browser
+  lands in a project folder the user picked, one made by the CLI lands in
+  `$XDG_CONFIG_HOME/brabo/` at mode 600. Neither is reachable by the api, which
+  is what the decision above depends on.
 - **The `engine-service` routes aren't "internal" by naming convention.**
   What protects them is `EngineServiceGuard` comparing
   `X-Brabo-Service-Token` against the shared secret in constant time, plus
@@ -363,6 +694,82 @@ reason in the URL.
   sit **outside the JWT** via `@ServiceRoute()`: the user token doesn't
   work here and the service token doesn't work on any other route — the
   two mechanisms never overlap ([RN-035](business-rules/autenticacao.md#rn-035)).
+- **`POST /internal/first-account` is a second path that creates a USER, and
+  it works in production** ([RN-546](business-rules.md#rn-546),
+  [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)). Declared here
+  rather than left to be discovered. Normal registration is the first path and
+  it is untouched; this one exists because a fresh one-line installation lets
+  nobody in — the generated `.env` has no mail variable, `MAIL_TRANSPORT`
+  falls to `log`, and registration waits on an e-mail nobody sends.
+
+  It is narrow by construction, on three independent counts. **It is
+  `engine-service`**, so what opens it is `BRABO_SERVICE_TOKEN` — which
+  `install.sh` itself generated and wrote at mode `600`, making it a proof of
+  control over the MACHINE, not over a mailbox. **It refuses with `409` when
+  the installation has ANY user**, a condition about the installation and not
+  about the e-mail asked for, so it cannot be called repeatedly with different
+  addresses, and it goes quiet forever once anyone exists (including after a
+  migration restore, [RN-530](business-rules.md#rn-530)). **And no public route
+  was born**: a public "create the first owner" is a race between whoever
+  installed and whoever scanned the port, and `owner` of the first workspace is
+  not a role anyone recovers over HTTP.
+
+  The account is born with its e-mail already verified, and that is the one
+  thing this route relaxes — for a named case, never for the other path. What
+  verification proves is *"this person controls this mailbox"*; whoever runs
+  the installer has already proved the machine, the `.env` and the Docker
+  daemon. The password is typed at the TTY, read without echo, hashed with
+  argon2id and discarded: never in the `.env`, never in the marker, never in a
+  log, and never generated by any code.
+
+  One window is declared rather than closed: the "is there any user?" check
+  runs inside the transaction, but `READ COMMITTED` does not stop two
+  concurrent calls with different e-mails from both passing. Closing it would
+  need an advisory lock over the absence of rows, and that is not where the
+  containment lives — whoever reaches this route already holds the service
+  token, i.e. already controls the installation.
+- **`POST /internal/machine-device-keys` MINTS A DURABLE USER CREDENTIAL from
+  a machine secret** ([RN-552](business-rules.md#rn-552),
+  [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md) point 4). This is
+  the sharpest edge the service token has, and it is declared here for the same
+  reason its sibling above is: the installer's next step after creating the
+  first account is pairing the local agent, and pairing needs a credential —
+  the only one that existed was bound to a PROJECT, in an installation that has
+  none yet.
+
+  **What it costs, said plainly:** a leaked `BRABO_SERVICE_TOKEN` can now
+  FABRICATE a device key that acts as a user against role-checked routes
+  (`POST .../runner-ticket`, and through it the runner channel), instead of
+  only talking to the internal routes. The alternative credential — the
+  freshly created user's own — was considered and refused because it
+  contradicts [ADR 0155](adr/0155-a-primeira-conta-nasce-no-terminal.md)
+  itself: the password is read at the TTY, *used and discarded*, and point 5
+  states the installer *"does not log in for anybody"*, which is why the
+  first-account response deliberately carries no session token. Requiring it
+  here would force the installer to create, on the machine, the very live
+  session that ADR refused to create.
+
+  Three containments live in the ROUTE, not in this paragraph. **There is no
+  `userId` in the body**: the owner is the installation's SOLE user, resolved
+  by the api, so the token never buys the choice of whose credential to mint —
+  with zero users or more than one it refuses with `409` and writes nothing,
+  the same shape of condition as first-account (about the installation, never
+  about the argument), and it goes quiet for good once the installation has a
+  team. **Registering REPLACES**: the owner's active machine keys are revoked
+  in the same transaction, so a reinstalled machine is a legitimate case and a
+  thousand machine keys are impossible — bounded by a clause, not by a number
+  that ages. **A private JWK is refused by name**: `d` present answers `400`
+  saying what arrived, by the same domain rule the browser registration uses,
+  because storing a private half is the worst outcome this route has.
+
+  What the key grants is not widened: it gives the local agent exactly the
+  projects its owner already reaches at `developer`, resolved against the
+  project asked for ([RN-543](business-rules.md#rn-543)). Two gaps are declared
+  rather than hidden: there is no `GET` and no `DELETE` here (listing would
+  publish a person's credential inventory to whoever holds only the machine
+  secret; revoking already exists where it has a human owner), and on an
+  installation that has no project yet no screen reaches a machine key at all —
+  which is exactly why registering replaces instead of leaving orphans behind.
 - **`/docs` and `/docs-json` are NOT in the table, and that's a known
   gap.** The Swagger UI is mounted by `SwaggerModule.setup()` at the
   Express level, not as a controller, and the test enumerates via
@@ -468,11 +875,65 @@ reason in the URL.
   `domain/actions/decide.ts` ([RN-418](business-rules.md#rn-418)): no
   configuration key, nothing that can enable them. The `owner` being
   protected is `workspace_members.role`, never `workspaces.created_by`.
-  What the caps do NOT cover is written down in the ADR and in the RN, and
-  the shortest one to know here is that `DELETE
-  /projects/:projectId/members/:userId` gained NO cap: removing your own row
-  drops you to your workspace role, which is benign when that role catches
-  the fall and an irreversible self-downgrade when it doesn't.
+  What the caps do NOT cover is written down in the ADR and in the RN.
+- **`DELETE /projects/:projectId/members/:userId` is also `role:maintainer`
+  and also not sufficient** — the second door of the self-downgrade cap
+  ([ADR 0156](adr/0156-teto-de-auto-rebaixamento-na-remocao.md),
+  [RN-556](business-rules.md#rn-556)). ADR 0127 left this route capless on a
+  premise that turned out to be false — *"removal is benign"*. Deleting the
+  `project_members` row does not erase a role: it **swaps** the effective
+  one, because `forProject` is `projectRole ?? workspaceRole`
+  ([RN-471](business-rules.md#rn-471)). A `maintainer` by project row who is
+  `viewer` in the workspace downgraded themselves, irreversibly through the
+  UI — putting the row back is `POST :projectId/members`, which demands the
+  `maintainer` just given up; with **no** workspace role at all, the fall is
+  to no access. The cap is now applied by `RemoveProjectMemberUseCase`,
+  which had to start receiving the ACTOR (the route did not pass it, so no
+  cap could have been applied), and the rule REUSES
+  `ehAutoRebaixamento` — `remocaoEhAutoRebaixamento` delegates to it with
+  the workspace role in place of the requested one, never a second ruler.
+  Cap 1 has **no** counterpart here, by decision fixed in a test: `owner` is
+  the top of `ROLE_ORDER`, so removing a project row can only RAISE that
+  user's effective role — and it is precisely how the restriction cap 1
+  forbids creating gets undone. Declared price, since cap 2 has no
+  threshold: self-removal from project `owner` to workspace `maintainer` is
+  reversible and is refused too — the only benign movement that changes
+  outcome, still reachable through another `maintainer`.
+- **`POST /workspaces/:workspaceId/members` is `role:owner` in the table, and
+  that is no longer the whole answer either** — the third route of this family
+  ([ADR 0157](adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.md),
+  [RN-557](business-rules.md#rn-557)). ADR 0127 named this route as the same
+  class of defect *one scope up*, and ADR 0156 left it as a separate decision;
+  it was a twelve-line passthrough that **never received the actor**, so no cap
+  could have been applied. It is worse here than in the project for two reasons
+  that do not exist there: no level above catches the fall (in a project,
+  demoting yourself drops the effective role to the workspace one, which often
+  holds), and **there is no member `@Delete` at all** on this controller
+  (measured) — undoing is this same route, demanding the `owner` just
+  abandoned. So `AddWorkspaceMemberUseCase` now takes the actor and refuses
+  **changing YOUR OWN role with 403, in both directions**. The cap does **not
+  count owners**, on purpose: the clause has no number to age (ADR 0127's
+  criterion), and it already produces the invariant a count would exist to
+  guarantee — a workspace never reaches zero owners, since removing the last
+  one would require that owner to do it. Cap 1 has **no counterpart in this
+  scope**, considered rather than mirrored: it is a rule about *hierarchy
+  inversion*, and `@RequireRole('owner')` already makes inversion impossible —
+  whoever can call is never below whoever they touch. Adding it, on top of the
+  missing removal route, would make `owner` an absorbing state nobody leaves
+  over HTTP, which is the class of state ADR 0127 was born to eliminate.
+  Demoting **another** owner therefore stays allowed — the only way ownership
+  gets revoked, and reversible through the same route by any remaining owner.
+- **Self-PROMOTION is now refused on both association routes**, which changes
+  `POST /projects/:projectId/members` too. ADR 0127 had recorded it as a
+  capability that stayed (*"the caps are about going down"*); ADR 0157 revises
+  that. Both halves are one movement — a person deciding alone what authority
+  they hold — and the upward half is the only one that **escalates privilege**,
+  the very thing ADR 0127 could claim its caps never did. Rewriting the SAME
+  role still passes: an idempotent upsert is not a movement. The comparison
+  stayed in one place: `autoMovimentoDoProprioPapel` returns the SENSE instead
+  of a boolean (the caller needs it to pick the message), and
+  `ehAutoRebaixamento` survives as a reading of it so that the REMOVAL door
+  keeps seeing only the downward half, as ADR 0156 decided.
 - **`jwt` with no role doesn't mean without authorization.** On
   `/users/me/*` the scope is the user themselves; on `GET /workspaces`
   the listing is already filtered by the caller's membership.
@@ -617,7 +1078,10 @@ reason in the URL.
 | GET | `/internal/projects/:projectId/product-metrics` | engine-service |
 | POST | `/internal/projects/:projectId/workspace-verification` | engine-service |
 | POST | `/internal/projects/:projectId/container-exec` | engine-service |
+| POST | `/internal/projects/:projectId/mirror-sync-result` | engine-service |
 | GET | `/internal/projects/:projectId/container-spec` | engine-service |
+| POST | `/internal/first-account` | engine-service |
+| POST | `/internal/machine-device-keys` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
@@ -628,6 +1092,7 @@ reason in the URL.
 | POST | `/internal/sessions/:sessionId/tasks/claim` | engine-service |
 | POST | `/internal/sessions/:sessionId/termination` | engine-service |
 | GET | `/` | jwt |
+| GET | `/runner/projects` | jwt |
 | GET | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials/:provider/test` | jwt |
@@ -641,6 +1106,8 @@ reason in the URL.
 | GET | `/projects/:projectId` | role:viewer |
 | PATCH | `/projects/:projectId` | role:maintainer |
 | PUT | `/projects/:projectId/execution-mode` | role:maintainer |
+| PUT | `/projects/:projectId/mirror-path` | role:maintainer |
+| GET | `/projects/:projectId/mirror-state` | role:viewer |
 | GET | `/projects/:projectId/models` | role:viewer |
 | GET | `/projects/:projectId/actions` | role:developer |
 | GET | `/projects/:projectId/agent-autonomy` | role:maintainer |
@@ -707,6 +1174,7 @@ reason in the URL.
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId` | role:developer |
 | DELETE | `/projects/:projectId/personal-access-tokens/:tokenId/admin` | role:maintainer |
 | POST | `/projects/:projectId/runner-device-keys` | role:developer |
+| GET | `/projects/:projectId/runner-device-keys` | role:developer |
 | DELETE | `/projects/:projectId/runner-device-keys/:deviceKeyId` | role:developer |
 | GET | `/projects/:projectId/proficiency` | role:viewer |
 | DELETE | `/projects/:projectId/proficiency/me` | role:viewer |

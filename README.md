@@ -110,12 +110,12 @@ código num ambiente que já existe (por isso é o único com escolha por servi�
 
 | área | itens |
 |---|---|
-| **1. Docker** | `Deploy` → All · Api · Engine · Web — `Create` — `Destroy` |
+| **1. Docker** | `Deploy` → All · Api · Engine · Web — `Create` — `Destroy` — `Reset total` — `Reconfigurar Ollama` — `Base de projetos` |
 | **2. K8s** | `Deploy` → All — `Create` — `Destroy` |
-| **3. Database** | `Generate` — `Migrate` — `Delete` |
+| **3. Database** | `Generate` — `Migrate` — `Seed` — `Delete` |
 | **4. Test** | All · Api · Engine · Web · Smoke · Docs |
 
-Três coisas que o menu faz e vale saber:
+Quatro coisas que o menu faz e vale saber:
 
 - **`Docker › Destroy` preserva os volumes** (`down`, nunca `down -v`): destruir
   containers não é destruir dados.
@@ -127,6 +127,16 @@ Três coisas que o menu faz e vale saber:
   roda na primeira inicialização do volume, então um `DROP SCHEMA` puro faria a
   migração seguinte falhar. Como o engine divide o mesmo banco, o script avisa
   que recuperar exige `pnpm db:migrate` **e** `pnpm engine:migrate`.
+- **`Docker › Reset total` para a api e o engine antes de apagar** — esses
+  dois, e nenhum outro: são os que mantêm conexão viva com o banco, e um
+  `DROP SCHEMA` embaixo deles mata os processos sem que nada os reerga (o
+  engine morre dentro do próprio drop, porque o `Rehydrator` consulta uma
+  tabela que acabou de sumir). Depois de migrar ele sobe tudo de novo, espera
+  ficar saudável e semeia; no fim **pergunta** o `/health` da api e do engine e
+  o `/` do web antes de dizer qualquer coisa — se algum não responder, ele
+  nomeia e sai com código 1, em vez de anunciar sucesso. É a segunda tela que
+  pede confirmação (digitando `RESET`), e não remove volumes. Detalhes em
+  [`docs/runbook.md`](docs/runbook.md#reset-total).
 
 **Opções de linha de comando:**
 
@@ -205,7 +215,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Introdução](docs/intro.md) | o panorama |
 | [Primeiros passos](docs/getting-started.md) | do clone ao primeiro turno de agente |
 | [Arquitetura](docs/architecture.md) | code map, fronteiras, invariantes, dívida técnica |
-| [Regras de negócio](docs/business-rules.md) | as 371 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
+| [Regras de negócio](docs/business-rules.md) | as 421 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
 | [Runbook](docs/runbook.md) | deploy, rollout, restore, rotação de chave, incidente de custo |
 | [Glossário](docs/glossary.md) | harness, gate, handoff, DEK, outbox, ciclo K |
 | [Observabilidade](docs/explanation/observability.md) | como se segue uma ação pelos três processos: trace, log e o caminho entre camadas |
@@ -216,7 +226,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Artefatos](docs/reference/artifacts.md) | os nove schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de quinze operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 144 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 158 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Governança](GOVERNANCE.md) | modelo hoje (mantenedor único), os três papéis do modo `community` e o critério de quem entra em cada um |
@@ -281,7 +291,9 @@ Um Postgres, uma database (`brabo`), dois schemas para nunca colidir:
 
 - **api (Drizzle)** — domínio em `public`; migrações em
   `apps/api/src/db/migrations/`, aplicadas com `pnpm db:migrate`
-  (`pnpm db:generate` depois de mudar `apps/api/src/db/schema.ts`).
+  (`pnpm db:generate` depois de mudar `apps/api/src/db/schema/<agregado>.ts` —
+  um arquivo por agregado desde o [ADR 0121](docs/adr/0121-schema-dividido-por-agregado-de-dominio.md);
+  `db/schema.ts` é só o barrel de `export *`).
 - **engine (Ecto/Oban)** — domínio e Oban em `engine`, via
   `migration_default_prefix`. Migrações em `apps/engine/priv/repo/migrations/`.
 
@@ -455,7 +467,7 @@ fonte de sistema, e título e corpo ficavam indistinguíveis.
 
 ## Estado
 
-**Fases 1 a 26 concluídas**, versão **v4.0.1** ([CHANGELOG](CHANGELOG.md)).
+**Fases 1 a 26 concluídas**, versão **v5.0.0** ([CHANGELOG](CHANGELOG.md)).
 Esteira de release exercitada de ponta a ponta, auth first-party sem Keycloak,
 nove providers de LLM sobre uma base única, e a cadeia inteira provada contra um
 GitHub real — adoção do repositório, promoção de história, dev agent escrevendo

@@ -29,7 +29,23 @@ import type { TerminalChannelHandlers } from '../../lib/terminal-channel';
  */
 vi.mock('../../lib/api-client', () => ({
   API_URL: 'https://api.brabo.example',
+  // Campo explícito e não parâmetro-propriedade: `erasableSyntaxOnly` recusa
+  // o atalho, e o `tsconfig` do web o liga.
+  ApiError: class ApiError extends Error {
+    status: number;
+    constructor(status: number) {
+      super(`api error ${status}`);
+      this.status = status;
+    }
+  },
   getProject: () => Promise.resolve({ id: 'proj-1', workspacePath: null }),
+  // O reconhecimento de máquina já pareada (RN-548) pergunta duas coisas: o
+  // papel de quem olha e as chaves de dispositivo dele. Sem chave de MÁQUINA
+  // o painel fica byte a byte como era — que é o estado que este arquivo
+  // afirma.
+  listWorkspaces: () =>
+    Promise.resolve([{ workspace: { id: 'ws-1' }, role: 'maintainer' }]),
+  listRunnerDeviceKeys: () => Promise.resolve([]),
 }));
 
 function novaInstanciaI18n() {

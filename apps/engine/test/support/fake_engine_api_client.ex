@@ -60,7 +60,15 @@ defmodule Engine.Sessions.FakeEngineApiClient do
 
   @impl true
   def list_events(_project_id, _session_id) do
-    {:ok, Process.get(:fake_events, [])}
+    # Erro scriptável via :fake_events_error — mesmo padrão de
+    # :fake_append_event_error/:fake_handoff_error. Sem ele não havia como
+    # exercitar o ramo "não consegui ler o histórico da sessão" de quem lê o
+    # event log (RN-539: histórico ilegível não prova ausência de artefato,
+    # então nada é disparado).
+    case Process.get(:fake_events_error) do
+      nil -> {:ok, Process.get(:fake_events, [])}
+      reason -> {:error, reason}
+    end
   end
 
   @impl true
@@ -659,6 +667,23 @@ defmodule Engine.Sessions.FakeEngineApiClient do
       nil -> {:ok, %{"verified" => true, "workspacePath" => path}}
       resultado -> resultado
     end
+  end
+
+  # RN-517 (ADR 0147 ponto 7) — scriptável por APPLICATION ENV
+  # (`:fake_report_mirror_sync`, tipicamente `{:error, motivo}` pra exercitar a
+  # falha do HTTP interno, que o canal só LOGA) e não pelo dicionário de
+  # processo como `confirm_workspace`: quem chama isto é o processo do CANAL,
+  # e um `Process.put` no processo do TESTE nunca chegaria lá. Default aceita
+  # e devolve o ACK que a api devolveria.
+  @impl true
+  def report_mirror_sync(project_id, resultado) do
+    notify({:report_mirror_sync, project_id, resultado})
+
+    Application.get_env(
+      :engine,
+      :fake_report_mirror_sync,
+      {:ok, %{"recorded" => true, "status" => if(resultado[:ok], do: "synced", else: "failed")}}
+    )
   end
 
   # ADR 0134, RN-492 — scriptável via `:fake_container_exec`

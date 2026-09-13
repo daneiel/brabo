@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import {
   RunnerDeviceKeyRepository,
   type ChaveDeDispositivoResumo,
@@ -17,6 +17,10 @@ function paraResumo(
     id: linha.id,
     name: linha.name,
     projectId: linha.projectId,
+    // A espécie é DERIVADA de `projectId` aqui, num lugar só (RN-543) — não
+    // há coluna para ela, e não deve haver: duas fontes para o mesmo fato
+    // divergem, e a coluna é a que a FK garante.
+    especie: linha.projectId === null ? 'maquina' : 'projeto',
     createdAt: linha.createdAt,
     revokedAt: linha.revokedAt,
     lastUsedAt: linha.lastUsedAt,
@@ -66,6 +70,30 @@ export class DrizzleRunnerDeviceKeyRepository extends RunnerDeviceKeyRepository 
     return linha ?? null;
   }
 
+  async listarDoUsuarioNoProjeto(
+    userId: string,
+    projectId: string,
+  ): Promise<ChaveDeDispositivoResumo[]> {
+    const db = currentDb(this.rootDb);
+    const linhas = await db
+      .select()
+      .from(runnerDeviceKeys)
+      .where(
+        and(
+          eq(runnerDeviceKeys.userId, userId),
+          // As do projeto E as de MÁQUINA (RN-543): uma chave de máquina
+          // serve este projeto, e não aparecer em listagem nenhuma a
+          // tornaria invisível e permanente — o defeito que a RN-519
+          // fechou, renascido na espécie nova.
+          or(
+            eq(runnerDeviceKeys.projectId, projectId),
+            isNull(runnerDeviceKeys.projectId),
+          ),
+        ),
+      );
+    return linhas.map(paraResumo);
+  }
+
   async revogar(
     id: string,
     userId: string,
@@ -96,6 +124,27 @@ export class DrizzleRunnerDeviceKeyRepository extends RunnerDeviceKeyRepository 
         and(eq(runnerDeviceKeys.id, id), eq(runnerDeviceKeys.userId, userId)),
       );
     return existente ? paraResumo(existente) : null;
+  }
+
+  async revogarChavesDeMaquina(
+    userId: string,
+    motivo: string,
+  ): Promise<string[]> {
+    const db = currentDb(this.rootDb);
+    const revogadas = await db
+      .update(runnerDeviceKeys)
+      .set({ revokedAt: new Date(), revokedReason: motivo })
+      .where(
+        and(
+          eq(runnerDeviceKeys.userId, userId),
+          // `IS NULL` é o que faz destas as chaves de MÁQUINA (RN-543) —
+          // as de projeto ficam intactas, de propósito.
+          isNull(runnerDeviceKeys.projectId),
+          isNull(runnerDeviceKeys.revokedAt),
+        ),
+      )
+      .returning({ id: runnerDeviceKeys.id });
+    return revogadas.map((linha) => linha.id);
   }
 
   async tocarUso(id: string): Promise<void> {

@@ -350,10 +350,14 @@ defmodule Engine.Infra.InfraLeadServerTest do
     refute_received {:propose_action, _, _, _}
   end
 
-  # --- `propose_container_start` (ADR 0131/RN-487) ---
+  # --- `propose_container_start` (ADR 0131/RN-487; recusa por modo: RN-566) ---
 
   test "propose_container_start é interceptada, chama propose_action com container_start, e NÃO halts",
        %{state: state} do
+    # Desde a RN-566 o dispatch LÊ o projeto antes de propor: sem linha no
+    # banco a recusa é "projeto não encontrado", e nada seria proposto.
+    insert_project!(state.project_id, "container")
+
     Process.put(:fake_infra_context, %{
       "moduleMap" => nil,
       "adrs" => [],
@@ -388,6 +392,97 @@ defmodule Engine.Infra.InfraLeadServerTest do
     # A segunda resposta scriptada só é alcançada se o loop CONTINUOU.
     assert_received {:event_appended, _pid, _sid,
                      %{type: "agent.response", payload: %{content: "pronto-cs"}}}
+  end
+
+  test "propose_container_start em projeto `mounted`: PROPÕE — o broker atende os dois (ADR 0144)",
+       %{state: state} do
+    insert_project!(state.project_id, "mounted")
+
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_propose_action, %{"id" => "pa-cs-mounted", "status" => "pending"})
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_container_start", %{
+        "imagem" => "node:22-bookworm-slim",
+        "rationale" => "candidata roteada pelo Arquiteto para o módulo api"
+      }),
+      FakeEngineApiClient.final_response("pronto-cs-mounted")
+    ])
+
+    assert {:noreply, _new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    assert_received {:propose_action, "container_start", %{kind: "agent", id: "infra"}, payload}
+    assert payload.imagem == "node:22-bookworm-slim"
+  end
+
+  test "propose_container_start em projeto `runner`: recusa NOMEADA apontando a tool irmã, NUNCA propõe (RN-566)",
+       %{state: state} do
+    insert_project!(state.project_id, "runner")
+
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_container_start", %{
+        "imagem" => "node:22-bookworm-slim",
+        "rationale" => "candidata roteada pelo Arquiteto para o módulo api"
+      }),
+      FakeEngineApiClient.final_response("depois-de-recusar-cs")
+    ])
+
+    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    # A metade que importa: a api NUNCA foi chamada.
+    refute_received {:propose_action, "container_start", _, _}
+
+    # A recusa é ENTRADA do laço (RN-163) — texto de resultado de ferramenta,
+    # NOMEANDO o caminho certo. O loop continuou e o turno concluiu.
+    recusa =
+      Enum.find(new_state.messages, &(&1["name"] == "propose_container_start"))
+
+    assert recusa["role"] == "tool"
+    assert recusa["content"] =~ "runner"
+    assert recusa["content"] =~ "container_start_via_runner"
+
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "agent.response", payload: %{content: "depois-de-recusar-cs"}}}
+
+    # E a recusa NÃO é silêncio no event log: a chamada de ferramenta que o
+    # modelo fez continua narrada, mesmo tendo sido recusada localmente.
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "tool.call", payload: %{tool: "propose_container_start"}}}
+  end
+
+  test "propose_container_start com projeto inexistente: recusa, NUNCA propõe", %{state: state} do
+    # SEM insert_project!/2 — nenhuma linha em public.projects.
+    Process.put(:fake_infra_context, %{
+      "moduleMap" => nil,
+      "adrs" => [],
+      "gitProvider" => "github"
+    })
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_container_start", %{
+        "imagem" => "node:22-bookworm-slim",
+        "rationale" => "candidata roteada pelo Arquiteto para o módulo api"
+      }),
+      FakeEngineApiClient.final_response("depois-de-recusar-sem-projeto")
+    ])
+
+    assert {:noreply, new_state} = InfraLeadServer.handle_cast(:kickoff, state)
+
+    refute_received {:propose_action, "container_start", _, _}
+
+    recusa = Enum.find(new_state.messages, &(&1["name"] == "propose_container_start"))
+    assert recusa["content"] =~ "projeto não encontrado"
   end
 
   # --- `container_start_via_runner` (RN-508, ADR 0145) ---
@@ -457,6 +552,12 @@ defmodule Engine.Infra.InfraLeadServerTest do
                        type: "agent.response",
                        payload: %{content: "depois-de-recusar"}
                      }}
+
+    # RN-566: a recusa deixou de ser silêncio no event log — a chamada que o
+    # modelo fez é narrada mesmo quando recusada localmente, como no
+    # `dispatch_tool/2` genérico.
+    assert_received {:event_appended, _pid, _sid,
+                     %{type: "tool.call", payload: %{tool: "container_start_via_runner"}}}
   end
 
   test "projeto NÃO runner (container): recusa nomeada apontando pra propose_container_start", %{

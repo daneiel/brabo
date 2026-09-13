@@ -12,6 +12,13 @@
 
 const API = process.env.E2E_API_URL ?? 'http://localhost:3000';
 
+/**
+ * A origem da api, para quem precisa emiti-la DENTRO do navegador — é o que
+ * torna a chamada cruzada (`:8088` → `:3000`) em vez de mais um `fetch` do
+ * Node, que não passa por preflight nenhum.
+ */
+export const API_URL = API;
+
 /** O usuário que o seed do compose de produção provisiona (ver `smoke.sh`). */
 export const USUARIO = {
   email: process.env.E2E_USER ?? 'owner@brabo.dev',
@@ -45,8 +52,29 @@ function exigirId(corpo: Record<string, unknown>, oque: string): string {
   return id;
 }
 
+/**
+ * O token de semeadura da execução INTEIRA, memoizado.
+ *
+ * Não é cache por performance — é o mesmo motivo do projeto `setup`: o
+ * lockout por IP não zera no sucesso, ele drena por tempo, e cada arquivo de
+ * spec que chamasse `autenticar()` no seu `beforeAll` gastaria mais um do
+ * balde. Com `workers: 1` e `fullyParallel: false`, os arquivos rodam no
+ * MESMO processo, então esta promessa é compartilhada entre eles e a suite
+ * inteira custa UM login de semeadura, quantos specs venham a existir.
+ *
+ * O access token da api é de vida curta, e é por isso que isto é memoizado
+ * por EXECUÇÃO e não persistido em disco: uma execução leva minutos, e a
+ * próxima começa do zero.
+ */
+let tokenDaExecucao: Promise<string> | null = null;
+
 /** Login pelo endpoint da api, para obter o Bearer que semeia o resto. */
-export async function autenticar(): Promise<string> {
+export function autenticar(): Promise<string> {
+  tokenDaExecucao ??= fazerLogin();
+  return tokenDaExecucao;
+}
+
+async function fazerLogin(): Promise<string> {
   const resposta = await fetch(`${API}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -58,9 +86,10 @@ export async function autenticar(): Promise<string> {
     // (`AUTH_LOCKOUT_IP_THRESHOLDS`, default `20:30,30:120`, janela de 15
     // minutos), que responde com o MESMO 401 uniforme de credencial
     // inválida, de propósito: distinguir os dois seria dizer ao atacante
-    // quando ele acertou o e-mail. Cada execução gasta ~3 logins; repetir a
-    // suite muitas vezes seguidas estoura o balde. Sem esta mensagem, a
-    // próxima pessoa caça um bug de credencial que não existe.
+    // quando ele acertou o e-mail. Cada execução gasta 3 logins — o `setup`,
+    // o spec de autenticação e ESTE, memoizado para a suite inteira —, e
+    // repetir a suite muitas vezes seguidas estoura o balde. Sem esta
+    // mensagem, a próxima pessoa caça um bug de credencial que não existe.
     throw new Error(
       'POST /auth/login respondeu 401. A senha é fixa, então isto provavelmente ' +
         'NÃO é credencial errada: é o lockout por IP (401 uniforme, por desenho). ' +
@@ -135,4 +164,57 @@ export async function semearSessao(token: string): Promise<SessaoSemeada> {
   }
 
   return { workspaceId, projectId, sessionId };
+}
+
+/**
+ * Cria workspace → projeto no modo `runner`.
+ *
+ * Modo `runner` e não o `container` de `semearSessao` porque é ele — e só ele
+ * — que `POST /projects/:projectId/runner-ticket` atende: a rota recusa com
+ * 400 em qualquer outro modo (`RequestRunnerTicketUseCase`, RN-421/ADR 0104).
+ * E é essa rota que prova, do lado do SERVIDOR, que a chave de dispositivo
+ * gerada e registrada pelo navegador autentica de verdade.
+ *
+ * O caminho é só um LÉXICO válido, e isso basta: desde a RN-423/RN-501 a
+ * criação em modo `runner` não toca disco nenhum — quem confirma a pasta é o
+ * `brabo-runner` conectando, e nenhum runner conecta nesta suite. `/home/…`
+ * de propósito: fora das raízes de sistema que `caminhoDeWorkspaceLocalValido`
+ * recusa, e fora do `cwd` da api (o checkout do Brabo, recusado nos DOIS
+ * sentidos).
+ */
+export async function semearProjetoRunner(token: string): Promise<{
+  workspaceId: string;
+  projectId: string;
+}> {
+  const cabecalhos = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+  const sufixo = `${Date.now()}`;
+
+  const workspace = await json(
+    await fetch(`${API}/workspaces`, {
+      method: 'POST',
+      headers: cabecalhos,
+      body: JSON.stringify({ name: `E2E chave ${sufixo}`, slug: `e2e-chave-${sufixo}` }),
+    }),
+    'POST /workspaces',
+  );
+  const workspaceId = exigirId(workspace, 'workspace');
+
+  const projeto = await json(
+    await fetch(`${API}/workspaces/${workspaceId}/projects`, {
+      method: 'POST',
+      headers: cabecalhos,
+      body: JSON.stringify({
+        name: `E2E chave ${sufixo}`,
+        slug: `e2e-chave-${sufixo}`,
+        executionMode: 'runner',
+        workspacePath: `/home/e2e-runner/${sufixo}`,
+      }),
+    }),
+    'POST /workspaces/:id/projects (runner)',
+  );
+
+  return { workspaceId, projectId: exigirId(projeto, 'projeto') };
 }

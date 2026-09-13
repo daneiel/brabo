@@ -2,24 +2,2678 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### ⚠ Mudanças incompatíveis
+
+- **api**: `GET /runner-releases/binary` passa a **recusar com 502** a Release
+  que não publica `checksums.txt` — recusa nomeada, nunca aviso
+  ([RN-525](docs/business-rules.md#rn-525)).
+
+  Nenhuma Release publicada até aqui tem esse asset: o job `checksums` nasceu
+  nesta fase e só roda numa tag final. Então, entre este deploy e a primeira
+  tag que publicar o manifesto, o passo do download do binário no onboarding
+  pelo navegador ([ADR 0118](docs/adr/0118-configuracao-automatica-do-runner-pelo-navegador.md))
+  responde 502 **em toda plataforma**. É o desenho: a alternativa seria servir
+  bytes que não se pôde conferir. O caminho alternativo continua de pé, e é o
+  que a própria mensagem aponta — `npm install -g @brabo/runner`.
+
+  **O que o operador faz:** cortar uma tag final depois deste merge, e
+  conferir que `build-runner-binaries.yml` chegou ao job `checksums`. Ele está
+  vermelho nas três últimas runs (`darwin-arm64` em `--self-test-pty`,
+  `win32-x64` em `node-pty` sem `.node`); o manifesto sai cobrindo os binários
+  que construíram — hoje, os dois de Linux —, e **em minutos, não no dia
+  seguinte**: o job deixou de depender da matriz
+  ([RN-565](docs/business-rules.md#rn-565)), que é o que fazia o
+  `darwin-x64` segurá-lo por 24h.
+
+### Novidades
+
+- **api**: o evento de sessão `proposed_action.created` passa a carregar
+  `reason` — **qual regra** da política decidiu, com a string que `decide()`
+  já devolvia ([RN-567](docs/business-rules.md#rn-567)). Vale nos três
+  desfechos (`auto_approved`, `pending`, `denied`): antes o motivo só
+  sobrevivia como `rejectionReason` quando a ação era negada, e uma
+  auto-aprovação dizia no log que a política decidiu sem dizer qual regra. O
+  outbox do mesmo evento **não** ganha o campo (nenhum consumidor no engine),
+  e eventos antigos seguem sem ele — ausente é "não registrado", nunca "sem
+  motivo". Nenhum veredito nem teto muda, e a tela não muda.
+
+- **api**: o envelope dos segredos do usuário passa a gravar **qual chave
+  mestra o embrulhou** (`key_id`), e a rotação da chave deixa de ser cega
+  ([RN-563](docs/business-rules.md#rn-563),
+  [ADR 0158](docs/adr/0158-o-id-da-chave-mestra-gravado-no-envelope.md)).
+
+  A pergunta que decide o passo 3 do runbook — *"ainda há credencial na chave
+  velha?"* — vira uma consulta SQL, em vez de rodar o script de novo e ler a
+  contagem que ele imprime. E, quando nenhuma das duas chaves abre um registro,
+  a mensagem passa a distinguir "veio de outro ambiente" de "rótulo incoerente
+  ou registro adulterado" de "linha anterior a esta coluna" — antes eram a
+  mesma falha genérica.
+
+  O rótulo é **observabilidade, nunca autoridade**: `decrypt` não mudou uma
+  linha, e quem decide se o envelope abre continua sendo o AES-GCM. Uma linha
+  cujo rótulo mente é re-embrulhada assim mesmo, e há teste fixando isso.
+
+  **O que o operador faz:** nada — a migration acrescenta duas colunas
+  anuláveis, e o `key_id` nasce na próxima escrita. Numa instalação existente,
+  a consulta de progresso só passa a valer depois da primeira rotação; antes
+  dela tudo é `NULL`, e `NULL` conta como pendente, de propósito. A impressão
+  digital da chave corrente sai numa linha no log do boot da api, que é o valor
+  contra o qual a consulta compara.
+
+- **api**: a rotação da chave mestra ganha **verificação nomeada**, ponta a
+  ponta e nas duas tabelas ([RN-562](docs/business-rules.md#rn-562)).
+
+  Era o procedimento com o pior desfecho do runbook e o único cuja linha de
+  verificação dizia "ver abaixo": `apps/api/src/scripts/rewrap-deks.ts` nunca
+  teve teste nenhum. Agora um spec percorre a sequência inteira — cifra com K1,
+  publica K2, reenvelopa, descarta K1 e ainda decifra — contra Postgres de
+  verdade e contra `user_credentials` **e** `project_git_connections`, mais a
+  idempotência e a linha ilegível que é contada sem abortar as outras.
+
+  O núcleo do script virou `reenvelopar()`, exportado, e o `main()` passou a
+  rodar só sob invocação direta — importá-lo de um spec rodava a rotação. O
+  nome do script e a invocação do runbook não mudaram.
+
+- **web**: a aba **Configurações** ganha a seção **Chaves de dispositivo** —
+  listar e revogar a chave que autentica o `brabo-runner`, o que até aqui só
+  dava para fazer chamando a rota na mão
+  ([RN-561](docs/business-rules.md#rn-561)).
+
+  As duas rotas existiam desde a RN-519, sem tela nenhuma. A seção consome as
+  duas e não abre nenhuma outra: mostra as suas chaves que servem o projeto —
+  **as revogadas inclusive**, porque sumir com a linha faria a tela afirmar que
+  a chave nunca existiu —, marca a **espécie** de cada uma e diz quando cada
+  uma foi usada pela última vez.
+
+  A marca de espécie é o que decide o alcance de revogar, e por isso a
+  confirmação muda com ela: uma chave de **máquina** atende todos os seus
+  projetos em modo runner, e revogá-la derruba o agente local **em todos**; uma
+  de **projeto** derruba no projeto dela. O diálogo diz também o custo que já
+  valia: derrubar alcança `{projeto, usuário}` e não uma chave em particular,
+  então outro runner seu no mesmo projeto cai junto e reconecta sozinho se a
+  credencial dele ainda valer.
+
+  Uso registrado **não é** agente de pé — a tela diz isso em texto, e "ativa"
+  fala da chave, nunca de conexão. Chave ativa que nenhum agente usou (a que
+  sobra de um fluxo de configuração interrompido) tem texto próprio, distinto
+  de "nenhuma chave" e de "não consegui ler". Listar e revogar exigem papel
+  `developer` no projeto; quem não alcança continua vendo a seção e o que
+  revogar custa, com o motivo dito uma vez.
+
+- **web**: converter um projeto para **Pasta montada** passa a abrir o mesmo
+  **navegador de pastas** da criação, em vez de pedir o caminho no escuro
+  ([RN-559](docs/business-rules.md#rn-559)).
+
+  `ExecutionModeSection` era o único dos cinco lugares do produto em que se
+  escolhe uma pasta e não havia navegador nenhum. Ele entra com o mesmo
+  componente e o mesmo transporte que o assistente de criação usa para esse
+  modo — a base do servidor, escopada ao workspace —, e nada muda em quem
+  valida o caminho: continua sendo a api.
+
+  A seção também passa a dizer o que sabe sobre a base da instalação, com
+  texto diferente para cada coisa: consultando, não deu para saber, não existe,
+  ou existe (e aí ela é nomeada). O botão fica na tela apagado nos três
+  primeiros, com o motivo escrito ao lado — nunca escondido.
+
+  **O que continua como estava:** converter para o modo **Runner** segue com o
+  caminho digitado, e agora a tela **diz por quê** — o navegador daquele modo
+  precisa de um runner já conectado ao projeto, que só passa a existir depois
+  que a conversão salva. Converter primeiro e conectar o runner depois é a
+  ordem, e ela não mudou aqui.
+
+- **web**: o aviso da conversão de modo **para de prometer** uma migração que
+  nunca aconteceu ([RN-560](docs/business-rules.md#rn-560)).
+
+  Ele dizia "isto migra a pasta de trabalho do agente", nos dois idiomas. A
+  conversão move a **política** do projeto (o `permissions.json`, com as regras
+  intactas), zera a confirmação de pasta e o destino do espelho, e desprovisiona
+  o container — e não copia nem move **uma linha** do conteúdo da pasta. Agora o
+  aviso diz as três coisas separadas: o que a conversão recusa, o que ela leva e
+  o que ela **não** leva, **nomeando o caminho antigo** — que some da tela no
+  instante em que a conversão salva. Quando não há caminho a nomear (o projeto é
+  Container), ele aponta a pasta gerenciada no servidor.
+
+  **O que isso não faz:** o trabalho não commitado continua ficando para trás,
+  exatamente como antes. O que mudou é a tela parar de afirmar o contrário — e
+  ela não promete detectar diff, porque olhar o disco é impossível de responder
+  para o modo Runner do lado do servidor.
+
+- **ci**: o E2E do instalador passa a provar a instalação **inteira** numa
+  máquina limpa — os cinco elos do fechamento, o agente local de pé esperando, e
+  o primeiro projeto em modo Runner sendo pego sem ninguém voltar ao terminal
+  ([RN-549](docs/business-rules.md#rn-549)).
+
+  `.github/workflows/install-e2e.yml` já existia e parava no `.env`. Ele agora
+  segue até o fim: a conta criada no terminal **atravessa o login** sem link de
+  verificação nenhum, a chave desta máquina é registrada e carimbada com o
+  `kid`, a unit por máquina sobe, e o agente fica de pé — provado pela linha que
+  ele escreve ao entrar na espera, nunca por `systemctl is-active`, que responde
+  "de pé" para quem vai morrer dois segundos depois. Então um projeto nasce pela
+  api e o agente o pega sozinho.
+
+  **O que ele NÃO prova, e vale dizer:** ele continua fora de `pull_request` —
+  o instalador verifica a própria origem contra um manifesto assinado que só
+  existe depois de uma tag final, e a única forma de rodar em PR seria dar-lhe
+  uma porta para pular essa verificação. A primeira execução real é a próxima
+  tag. O que roda em PR é `scripts/dev/install-e2e.spec.ts`, que guarda o gate
+  e o contrato de frases entre o workflow e o `install.sh`.
+
+  **Achado, declarado e não corrigido aqui:** o `install.sh` publicado não
+  consegue subir nada sozinho numa máquina limpa — `docker/docker-compose.install.yml`
+  (e o `./postgres/init.sql` que ele bind-monta) não é asset da Release, não
+  entra no `checksums.txt` assinado, e o script não o baixa em lugar nenhum.
+  Quem segue o `curl … install.sh` do runbook morre em *"no such file or
+  directory"* depois de já ter verificado assinatura e gravado o `.env`.
+  Corrigir é decidir entre publicar o compose assinado e fazer o instalador
+  clonar — entrega própria.
+
+- **install**: o instalador **fecha a instalação** — cria a primeira conta,
+  registra a chave desta máquina e sobe o agente local como serviço
+  ([RN-547](docs/business-rules.md#rn-547),
+  [ADR 0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md)).
+
+  Até aqui uma instalação nova terminava dizendo "Pronto" com um login que
+  ninguém atravessava: o `.env` gerado não tem variável de e-mail nenhuma,
+  `MAIL_TRANSPORT` cai em `log`, e o registro normal exige verificar e-mail —
+  a única saída era pescar o link em `docker compose logs api`. E o agente
+  local ficava instalado sem credencial, esperando alguém voltar ao navegador.
+
+  O instalador agora **pergunta** e-mail e senha no terminal (sem eco,
+  confirmada), cria a conta já verificada, gera o par Ed25519 nesta máquina,
+  registra só a metade pública e instala a unit por máquina. O agente sobe
+  **sem projeto nenhum**, que é o estado normal de uma instalação nova: ele
+  fica de pé esperando e pega o primeiro projeto em modo Runner criado na web,
+  sem ninguém voltar ao terminal.
+
+  **O que ele não faz, e diz:** não grava a senha em lugar algum (nem no
+  `.env`, nem no marcador, nem em log), não liga SMTP (`MAIL_TRANSPORT=log`
+  continua o default) e não pede credencial de LLM. Sem terminal interativo,
+  relata e sai 0.
+
+  **O que acontece quando um passo falha:** nada é desfeito e tudo é relatado.
+  Cada falha vira uma linha nomeada num bloco "O que ficou pendente", no fim,
+  com o comando exato para repetir. Em especial: `service install --machine`
+  **recusa** quando já há unit por projeto instalada — caso comum numa máquina
+  de desenvolvedor —, e a recusa chega inteira, com o `uninstall` de cada unit
+  que ela nomeia. Rodar o instalador de novo numa instalação que já tem gente
+  não é erro: as rotas respondem `409`, o passo se cala dizendo por quê, e isso
+  não conta como pendência.
+
+  O marcador (`$XDG_STATE_HOME/brabo/install-state.json`) sobe para
+  `schemaVersion: 3` e ganha `ownerEmail` — identificação, nunca segredo.
+
+- **api**: nasce a rota que **registra a chave de dispositivo de MÁQUINA** —
+  `POST /internal/machine-device-keys`
+  ([RN-552](docs/business-rules.md#rn-552),
+  [ADR 0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md) ponto 4).
+
+  É a lacuna que a [RN-543](docs/business-rules.md#rn-543) declarou por escrito
+  e deixou aberta de propósito — *"nenhuma rota da api cria chave de máquina
+  ainda; isso é o `install.sh`, e nasce com o primeiro chamador"*. O chamador
+  chegou. Corpo `{ name, publicKeyJwk }`, resposta
+  `{ id, userId, name, createdAt, replacedKeyIds }`; o `id` é o que vai gravado
+  dentro da JWK privada, no `kid` ([RN-475](docs/business-rules.md#rn-475)).
+
+  **A credencial é o `BRABO_SERVICE_TOKEN`**, a mesma da primeira conta: é o
+  mesmo instalador, no mesmo minuto, e o token prova controle da máquina.
+  Exigir a credencial do usuário recém-criado obrigaria o instalador a fazer
+  login com a senha que ele lê no TTY e **descarta**, o que o próprio ADR 0155
+  recusa. **O que isso custa está declarado** em
+  [`docs/security-surface.md`](docs/security-surface.md): um service token
+  vazado passa a poder fabricar uma credencial de acesso duradoura, e não só
+  falar com as rotas internas.
+
+  **Três contenções, na rota e não no texto:** não há `userId` no corpo — o
+  dono é o usuário ÚNICO da instalação, e com zero ou mais de um a rota recusa
+  com `409` sem escrever nada, como a da primeira conta recusa; registrar
+  **substitui** as chaves de máquina ativas do dono, na mesma transação (máquina
+  reinstalada é caso legítimo, mil chaves de máquina são impossíveis), e as de
+  projeto nunca são tocadas; e uma JWK com `d` — a metade **privada** — responde
+  `400` dizendo o que chegou, em vez de ser gravada.
+
+  Sem migration: a coluna `project_id` já é nullable desde a RN-543. Numa
+  instalação com duas pessoas a rota deixa de funcionar, e isso é o desenho.
+
+- **api**: o registro de chave de dispositivo **pelo navegador** passa a
+  recusar uma JWK **privada** (com `d`) com `400`, em vez de armazená-la. A
+  régua de forma virou uma só, no domínio, chamada pelos dois registradores.
+
+- **runner**: o agente de **máquina** com zero projetos **fica de pé e
+  reconsulta a lista**, em vez de sair — e ganha
+  `brabo-runner device-key create|finish`, que gera o par Ed25519 **nesta
+  máquina** ([RN-550](docs/business-rules.md#rn-550),
+  [RN-551](docs/business-rules.md#rn-551),
+  [ADR 0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md)).
+
+  As duas peças fecham a instalação de uma linha do lado do agente local: numa
+  máquina recém-instalada não há projeto nenhum, e o agente **espera** — 15s,
+  30s e depois 60s entre consultas, para sempre — até o primeiro projeto
+  aparecer na web. Ninguém volta ao terminal. A regra é assimétrica de
+  propósito: **com conexão viva, a lista continua sendo consultada só no
+  start** ([RN-544](docs/business-rules.md#rn-544)), porque uma lista que volta
+  menor é ambígua e derrubar conexão viva por ambiguidade seria trocar estado
+  certo por palpite. Com zero conexões não há nada a derrubar, e a reconsulta
+  **para** assim que a primeira conexão sobe.
+
+  Esperar não tem teto; **falhar tem**: dez consultas seguidas sem resposta e o
+  processo sai com 1, nomeando o número. Uma consulta que responde — inclusive
+  vazio, que é resposta — zera o contador, e uma credencial que a api recusa
+  por espécie continua sendo fatal na hora. O processo **diz** a cadência ao
+  entrar na espera e bate um batimento a cada 30 consultas, com o número delas:
+  ficar de pé em silêncio faria "esperando" e "travado" parecerem a mesma
+  coisa. `Restart=on-abnormal` **não muda** em nenhuma das duas espécies de
+  unit — ele nunca olhou código de saída —, e o efeito prático é a unit de
+  máquina passar a ficar `active (running)` de verdade: `service status
+  --machine` responde `rodando` (0) onde antes respondia `parado` (3).
+
+  `device-key create` imprime a **JWK pública** no stdout (uma linha, para um
+  script capturar com `$(…)`) e grava a privada num arquivo **parcial**, em
+  modo 600; `device-key finish --id <id>` carimba o `kid` — o id que a api
+  devolve ao registrar a pública — e só então grava o nome que o runner lê. São
+  dois passos porque esse `kid` **é** o id do servidor
+  ([RN-475](docs/business-rules.md#rn-475)), e uma privada gravada antes dele
+  nasce inútil: entre um comando e outro o arquivo que o CLI lê simplesmente
+  não existe. O destino padrão é `$XDG_CONFIG_HOME/brabo/` (senão
+  `~/.config/brabo/`), ao lado do `runner.json`, e `--dir` aponta para outra
+  pasta quando for uma chave de projeto.
+
+  **Declarado e não feito:** o CLI **não** fala com a api — quem registra a
+  pública é o instalador, com o `BRABO_SERVICE_TOKEN`, e dar esse segredo ao
+  agente seria ampliar muito o que ele pode. A rota de chave de máquina e o
+  `install.sh` que encadeia os três comandos são outras sessões da FASE 30.
+
+- **web**: o painel de onboarding do runner **reconhece uma máquina já
+  pareada** e para de mandar parear de novo
+  ([RN-548](docs/business-rules.md#rn-548),
+  [ADR 0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md)).
+
+  É o consumidor da marca de espécie que a
+  [RN-543](docs/business-rules.md#rn-543) acrescentou à listagem de chaves.
+  Com chave de **máquina** ativa, o painel anuncia o pareamento, nomeia as
+  chaves e a data do último uso, e oferece o gesto que falta — conferir o
+  serviço do agente local — em vez de repetir um fluxo que termina no terminal
+  de quem já o percorreu. Vale nos três lugares onde o painel é montado (aba
+  Código, seletor de pasta e o passo de workspace do assistente de projeto
+  novo, este último só depois de o projeto existir).
+
+  **O que ele NÃO diz:** que o agente está de pé. Chave registrada prova
+  pareamento, nunca processo vivo — a mesma régua de
+  `workspaceVerifiedAt` ([RN-468](docs/business-rules.md#rn-468)) —, e a lista
+  é da **conta**, não deste navegador: quem estiver numa segunda máquina
+  continua precisando pareá-la. As duas ressalvas estão na tela, e é por elas
+  que o fluxo de configuração pelo navegador
+  ([ADR 0118](docs/adr/0118-configuracao-do-runner-pelo-navegador.md))
+  **não foi removido** — ele fica recolhido, a um clique, com o rótulo do caso
+  que resolve.
+
+  Consulta falhada diz que **não sabe**, e nunca que não há máquina pareada;
+  chave revogada volta a mandar parear, com o motivo; e quem não alcança
+  `developer` no projeto vê, em texto, por que a checagem não foi feita.
+
+- **runner**: o `brabo-runner` passa a poder rodar **sem `--project`**, abrindo
+  **uma conexão por projeto** descoberto em `GET /runner/projects`
+  ([RN-544](docs/business-rules.md#rn-544),
+  [ADR 0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md)).
+
+  É o consumidor que faltava para a [RN-543](docs/business-rules.md#rn-543). O
+  modo antigo fica **byte a byte**: `--project`/`--dir` com credencial de
+  projeto, inclusive o fluxo do navegador
+  ([ADR 0118](docs/adr/0118-configuracao-do-runner-pelo-navegador.md)), é uma
+  conexão só e o desfecho dela segue sendo o do processo. O modo novo exige as
+  duas coisas — credencial de máquina e **base consentida**
+  ([RN-529](docs/business-rules.md#rn-529)) —, e sem base rodar sem
+  `--project` continua caindo no bloco de uso, dizendo o que faltou. A pasta de
+  cada projeto é `<base>/<workspaceDirName>`, pelas mesmas guardas de sempre.
+
+  **Nada no engine mudou**: o tópico `terminal:<projectId>`, o socket id e o
+  ticket descrevem uma CONEXÃO, e N conexões os satisfazem byte a byte — a
+  recusa de segundo runner no mesmo projeto fica intacta. O espelho
+  ([RN-516](docs/business-rules.md#rn-516)) e o `workspace_create`
+  ([RN-532](docs/business-rules.md#rn-532)) também não mudaram: os dois já
+  viajavam na concessão do `join` daquela conexão.
+
+  **Mudança de comportamento no laço:** o teto de tentativas e a recusa de join
+  deixam de ser do PROCESSO e passam a ser do PROJETO. Um projeto que recusa ou
+  esgota encerra sozinho, nomeado, e os demais seguem; só quando nenhum sobra o
+  processo sai com 1, com o desfecho de cada um. A lista de projetos é
+  consultada **só no start** — projeto criado depois entra quando o agente
+  reconectar — e uma lista **vazia é estado normal**, com saída 0 *(o que a
+  [RN-550](docs/business-rules.md#rn-550), acima, revisa: com zero conexões o
+  agente passa a ficar de pé e reconsultar; com conexão viva, a consulta segue
+  sendo só no start)*.
+
+  **Declarado e não feito:** ninguém cria chave de máquina ainda (é o
+  `install.sh`, sessão 6), a `apiUrl` no modo de máquina vem de
+  `--api-url`/`BRABO_API_URL`/default, e a unit de serviço continua sendo por
+  projeto — este PR muda o processo, não o serviço.
+
+- **runner**: `brabo-runner service install --machine` passa a instalar uma unit
+  **da máquina** (`brabo-runner.service` / `dev.brabo.runner`), que roda o modo
+  acima e **convive** com as units por projeto
+  ([RN-545](docs/business-rules.md#rn-545),
+  [ADR 0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md)).
+
+  A unit por projeto **não foi removida nem renomeada**, e
+  `Restart=on-abnormal` fica byte a byte nas duas espécies. O discriminador é a
+  flag `--machine`, e nunca a ausência de `--project`: o caminho normal de hoje
+  é rodar `install` sem flag nenhuma de dentro da pasta configurada, com o
+  `brabo-runner.config.json` respondendo quem é o projeto, e tratar isso como
+  "máquina" converteria em silêncio a instalação de quem já usa o produto.
+
+  **`install --machine` recusa** sem base consentida
+  ([RN-529](docs/business-rules.md#rn-529)), sem chave de dispositivo, e quando
+  a pasta tem `brabo-runner.config.json` — nesse último caso o serviço subiria
+  em modo de **projeto**, em silêncio, atendendo um só. A unit congela
+  `XDG_CONFIG_HOME` quando ela está posta (é ela que decide onde o arquivo da
+  base mora, e nenhum dos dois gerenciadores repassa o ambiente do shell); o
+  **valor** da base não vai para a unit.
+
+  **`install` também recusa quando a OUTRA espécie já está instalada**, nomeando
+  cada unit e o `uninstall` de cada uma, sem remover nem gravar nada — as duas
+  juntas seriam dois processos disputando o mesmo projeto, e o servidor negaria
+  um deles. Não há `--force`.
+
+  **Mudança de comportamento em `status` e `uninstall`:** `status` sem
+  `--project` e sem `brabo-runner.config.json` na pasta passa a responder sobre
+  a unit de **máquina** (antes recusava com "precisa saber QUAL projeto",
+  código 2), nomeando `--project` para quem queria a outra; os quatro estados e
+  os quatro códigos ficam como estão, e a espécie coexistente aparece em texto,
+  como presença lida do disco. `uninstall` sem espécie nomeada continua
+  recusando e agora **lista** o que existe no disco, com o comando de cada um.
+
+  **Declarado e não feito:** o `install --machine` não sabe se a chave daquela
+  pasta é mesmo de máquina — em disco as duas espécies são o mesmo arquivo, e
+  quem sabe é o servidor —, então uma pasta com chave de projeto instala a unit
+  sem erro e a recusa aparece no primeiro boot. E ninguém cria chave de máquina
+  ainda: quem registra é o `install.sh`, na sessão 6 desta fase.
+
+- **api**: a primeira conta de uma instalação passa a nascer **pelo terminal**,
+  por uma rota interna que **recusa quando já existe qualquer usuário**
+  ([RN-546](docs/business-rules.md#rn-546),
+  [ADR 0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md)).
+
+  `POST /internal/first-account` (`engine-service`, `BRABO_SERVICE_TOKEN`) cria
+  o usuário com o e-mail **já verificado** e o workspace pessoal
+  ([RN-410](docs/business-rules.md#rn-410)) na mesma transação. Existe porque
+  numa instalação nova ninguém consegue entrar: o `.env` gerado não tem
+  variável de e-mail, `MAIL_TRANSPORT` cai em `log` e o registro espera uma
+  confirmação que nunca é enviada — a saída era pescar o link em
+  `docker compose logs api`.
+
+  **Superfície nova, declarada:** passa a existir um segundo caminho de criação
+  de usuário que funciona em produção. Ele é estreito em três contagens
+  independentes (primeira conta, rota interna, service token), responde `409`
+  havendo QUALQUER usuário — condição sobre a instalação, não sobre o e-mail
+  pedido — e some assim que a instalação tem gente. Nenhuma rota pública de
+  "criar o primeiro owner" nasceu, e o registro normal fica byte a byte.
+
+  `provisionarUsuario` (seed/smoke) teve o núcleo extraído para
+  `ProvisionarUsuarioUseCase` e **manteve** a recusa de rodar com
+  `NODE_ENV=production`: o que ela protege é senha conhecida criada sem
+  interação humana, e não o trio de escritas. A senha desta rota é escolhida
+  por um humano, hasheada e descartada — nunca no `.env`, no marcador nem em
+  log, e nunca gerada por código.
+
+  **O `install.sh` que consome a rota é a próxima sessão** e não entrou aqui.
+
+- **api**: a chave de dispositivo do runner passa a poder ser da **máquina**, e
+  não só de um projeto ([RN-543](docs/business-rules.md#rn-543),
+  [ADR 0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md)).
+
+  `runner_device_keys.project_id` vira nullable, e `NULL` significa "chave de
+  máquina": ela vale para qualquer projeto em que o **dono** dela alcance o
+  papel que a rota já exige. Mesma tabela, mesmo `kid`, mesma revogação —
+  tabela irmã foi considerada e recusada no ADR.
+
+  **Nenhum teto novo, e nenhum afrouxado.** A comparação que impede a chave do
+  projeto A servir o projeto B continua byte a byte e some **só** para
+  `project_id` nulo, onde não há o que comparar; aí o papel se resolve contra o
+  projeto **pedido**, como sempre. Papel insuficiente segue 403. O ramo do
+  Personal Access Token não muda.
+
+  Rota nova: `GET /runner/projects` devolve os projetos em modo `runner` nos
+  quais o chamador alcança `developer` — o mesmo mínimo de `runner-ticket` —,
+  com o nome da pasta e o estado de verificação. É a primeira rota autenticada
+  por credencial de dispositivo **sem projeto no caminho**, e por isso só
+  aceita credencial de máquina: uma presa a um projeto responde 403 com
+  mensagem própria. O agente pergunta em vez de varrer o disco.
+
+  **Nada no engine muda**: o tópico, o socket id e o ticket descrevem uma
+  conexão, e N conexões os satisfazem byte a byte.
+
+- **api**: a listagem de chaves de dispositivo
+  ([RN-519](docs/business-rules.md#rn-519)) passa a devolver **duas espécies** e
+  a dizer qual é qual (`especie: "projeto" | "maquina"`, `projectId` nulo na de
+  máquina). Uma chave de máquina serve todo projeto do dono, então aparece na
+  listagem de todos — sem isso ela seria invisível e permanente em toda tela.
+
+  Revogar uma chave de **máquina** derruba o agente local em **todos** os
+  projetos em modo `runner` daquele dono, um `{projeto, usuário}` por projeto —
+  o custo que a FASE 29 declarou por antecipação, chegando aqui sem tocar o
+  engine.
+
+- **instalador**: o `install.sh` passa a saber **qual** versão está instalada e
+  a oferta muda conforme a relação com a que vai instalar
+  ([RN-542](docs/business-rules.md#rn-542)).
+
+  A informação sempre esteve no `images.json` da Release (`"versao"`, ao lado de
+  `commit`) e era ignorada — liam-se só `repositorio` e `digest`. Agora as
+  imagens são resolvidas **antes** da detecção, porque saber o que entra é
+  pré-requisito de perguntar se o que existe sai; o marcador sobe para
+  `schemaVersion: 2` e grava `versao` e `commit`.
+
+  Versão **maior** oferece *"Atualizar 5.0.0 → 5.1.0?"* com default **sim** — é
+  o que a pessoa veio fazer, e o backup provado torna reversível. **Igual**
+  pergunta se quer reinstalar do zero mesmo assim, default não. **Menor** nomeia
+  o rebaixamento e avisa que migração de banco não anda para trás, default não.
+  Marcador de schema 1 não tem versão: o script **diz isso** e não adivinha.
+
+  Em qualquer ramo a instalação é apagada e recriada do zero, nunca subida por
+  cima — a cadeia backup → **PROVAR** → perguntar → apagar → instalar →
+  restaurar ([RN-530](docs/business-rules.md#rn-530)) não muda.
+
+- **bootstrap**: item novo *Docker › Instalar (install.sh)*, que **relata** o
+  plano do instalador sem tocar em nada, com o comando de uma linha na nota.
+
+  Ele relata em vez de instalar por mecânica e não por preferência: item de menu
+  roda com stdin em `/dev/null` para o menu seguir lendo teclas do mesmo
+  terminal, e este instalador existe para perguntar. Mesmo desenho do item
+  *Base de projetos* ([RN-511](docs/business-rules.md#rn-511)).
+
+- **docs**: planejamento da FASE 30 — a identidade do agente local deixa de ser
+  por projeto e passa a ser da máquina
+  ([ADR 0154](docs/adr/0154-chave-de-dispositivo-de-maquina.md),
+  [ADR 0155](docs/adr/0155-a-primeira-conta-nasce-no-terminal.md)).
+
+  Medindo os cinco acoplamentos de "um runner por projeto", **três não precisam
+  mudar**: o tópico, o socket id e o ticket descrevem uma CONEXÃO, e N conexões
+  os satisfazem byte a byte. Nada no engine muda. E um achado que a fase
+  endereça: numa instalação nova **ninguém consegue entrar** — o `.env` gerado
+  não tem variável de e-mail, `MAIL_TRANSPORT` cai em `log` e o registro exige
+  verificar e-mail.
+
+- **web**: o assistente de criação pede o **destino antes do nome**, num passo
+  só, e perde o passo que não era escolha.
+
+  O nome vinha antes do destino, e é o destino que decide se existe campo de
+  caminho — pedir o nome primeiro era mostrar a consequência depois da escolha
+  fácil. Os dois viram **um** passo, com o destino acima; o gate dele é a
+  **conjunção** dos dois que existiam, e um `||` no lugar do `&&` deixaria
+  avançar sem nome.
+
+  O passo **"Política de branches"** sai por não ser escolha nenhuma: o payload
+  de criação nunca teve campo de política, e o bootstrap roda igual na api. Uma
+  tela que pergunta o que não usa ensina que ali há decisão. O que ele mostrava
+  de útil — quantos passos de Gitflow vêm a seguir — **continua no resumo do
+  Confirmar**, que é onde se aprova.
+
+  **O modo Runner continua sendo oferecido na criação**, e a criação antecipada
+  de projeto ([RN-437](docs/business-rules.md#rn-437)) continua existindo: as
+  duas são a âncora do picker que lê o disco do usuário
+  ([RN-533](docs/business-rules.md#rn-533)). O commit de origem desta mudança
+  removia as duas, e essa metade foi deliberadamente deixada de fora.
+
+- **web**: **criar um projeto deixa de criar repositório git** (RN-541). Criar e
+  provisionar eram o mesmo gesto, e o que os unia era uma TELA: a página de
+  provisionamento dispara `provisionRepository` no efeito de montagem e é o
+  ÚNICO chamador dele no web, e o assistente navegava para lá ao confirmar. O
+  dono do produto quer o contrário — o que se gera por ora segue **sem git**, e
+  o repositório nasce quando o desenvolvimento começa: no **handoff do Arquiteto
+  ao Dev Lead**.
+
+  **O mecanismo do adiamento é não navegar para aquela tela.** Ao criar, o
+  assistente vai direto para a página do projeto; nada precisou ser desligado,
+  porque deixar de visitar a rota É o adiamento. Ela continua existindo e
+  alcançável — o Dashboard leva a ela quando o provisionamento FALHOU.
+
+  **Provider e credencial saem da criação** e ficam na adoção, que por
+  construção aponta para um repositório que já existe. Criar passa a ter TRÊS
+  passos; adotar, quatro ou cinco. E a tela de Confirmar deixa de anunciar "N
+  passos de Gitflow" — passaria a mentir no instante em que o bootstrap deixou
+  de rodar ali — e diz QUANDO o repositório nasce.
+
+  Saiu junto o aviso "no plano gratuito do GitHub, repositório privado não
+  aceita proteção de branch": não por ter deixado de ser verdade, mas por ter
+  ficado inalcançável — a condição era `provider === 'github'`, e ao criar não
+  há mais provider escolhido.
+
+  **Consequência declarada:** entre a criação e o handoff o projeto existe sem
+  repositório. Nada quebra (a api responde `null` e não 404, e a tela do projeto
+  já tem o estado "repositório não provisionado"), mas todo caminho que precise
+  de working tree falha NOMEADO até lá. **O gatilho vem na entrega seguinte** —
+  sem ele, um projeto criado hoje ficaria sem repositório para sempre.
+
+- **api**: o repositório git do projeto passa a nascer no **aceite do handoff do
+  Arquiteto para o Dev Lead** (RN-522). É o gatilho que a RN-541 tinha declarado
+  pendente — sem ele, um projeto criado ficaria sem repositório para sempre,
+  porque `ProvisioningPage` era o único chamador de `provisionRepository` no web
+  e a criação deixou de navegar para lá.
+
+  O momento é o aceite do handoff, e **não** a ativação da execução: são
+  instantes distintos, nesta ordem, e é no primeiro que "o desenvolvimento
+  começou" passa a ser verdade. O ramo mora em `AcceptHandoffUseCase`, ao lado
+  do ramo `infra` que já existia e pela mesma razão de ordem — o efeito acontece
+  **antes** do `activateAgent`, para o agente acordar num projeto que já tem
+  onde trabalhar.
+
+  **Sempre `local`**, porque é o único provider que não pede credencial nenhuma:
+  o `LocalGitProvider.createRepo` sequer lê o `accessToken` que a assinatura
+  aceita. É isso que torna um provisionamento **automático** possível — ninguém
+  escolheu hospedagem no meio do aceite, então não há credencial a resolver nem
+  pergunta a fazer. Publicar num provider remoto continua sendo caminho separado
+  (adoção, ou conversão em Configurações), declarado.
+
+  **A falha nunca derruba o aceite.** O caso de uso não tem transação: quando o
+  provisionamento roda, a transição para `accepted` e o evento `handoff.accepted`
+  já estão commitados, e um throw devolveria 500 sobre um handoff que no banco
+  foi aceito — além de impedir a ativação do agente por causa de uma falha de
+  git. O desfecho vai para o event log como `repository.provision_failed`, com
+  origem e a mensagem real, e o aceite segue.
+
+  Um caso que deliberadamente **não** é falha: projeto que ADOTOU um
+  repositório. A recusa da RN-045 existe para não rodar bootstrap em repositório
+  de terceiro, mas o projeto TEM repositório — registrar isso como falha
+  mentiria sobre o estado dele, então o ramo sai antes. Repositório `created`
+  que já existe não é pulado: cai na idempotência que o caso de uso já promete,
+  e é assim que um bootstrap interrompido se completa.
+- **api**: os artefatos dos agentes passam a virar **arquivo**, numa pasta
+  `docs/` organizada por agente dentro do workspace do projeto (RN-523,
+  [ADR 0148](docs/adr/0148-artefatos-projetados-em-arquivo.md)). Todo artefato
+  vive hoje só no event log — `emit_artifact.ex` diz literalmente que *"não há
+  tabela de artefatos"* —, o que continua certo para a FONTE e não muda aqui. O
+  que muda é que essa memória não chegava a lugar nenhum que uma pessoa
+  abrisse: quem abre a pasta do projeto no editor não encontrava nada do
+  raciocínio que produziu o código, e desde a RN-521/RN-522 há um intervalo
+  inteiro — entre a criação e o handoff do Arquiteto — em que o projeto não tem
+  nem repositório.
+
+  É **projeção derivada**, no mesmo sentido estrito que o ADR 0101 deu ao grafo
+  Neo4j: a fonte é o evento, a pasta pode ser apagada inteira e reconstruída, e
+  **nada no produto lê dela**. O mecanismo copia o `GraphProjector` peça por
+  peça (poller próprio, `drainOnce()` público, lote de 50, `markProcessed` só
+  após sucesso) e usa um `aggregate_type` PRÓPRIO, porque `Engine.Outbox.Drain`
+  só drena `session`/`task`/`container` e disputar a linha `'session'` seria
+  perder a corrida contra ele quase sempre.
+
+  **Lista de PERMITIDOS**, não de excluídos: tipo novo nasce fora da projeção.
+  Ficam de fora `qa_verdict`, `secops_verdict`, `task_blocked` e
+  `infra_delegation_files` — desfechos operacionais, não documentos; um
+  veredito de gate por task encheria a pasta de arquivos que ninguém abre.
+  Os quatro tipos **versionados** sobrescrevem o mesmo arquivo (a pasta mostra
+  o vigente, o histórico continua no event log); os append-only levam o `seq`
+  do evento no nome, sem o qual dois artefatos de mesmo tipo e título
+  colidiriam e o segundo apagaria o primeiro.
+
+  **Duas barreiras contra o filesystem**, porque o nome sai do título que o
+  MODELO escreveu: `slugDeArquivo` deriva o nome de um alfabeto fechado, e a
+  escrita confere de novo com `relative()` antes de abrir. Confiar só na
+  primeira faria a segurança depender de nenhuma mudança futura de slug deixar
+  passar um separador — a contenção que o ADR 0130 recusa por princípio.
+
+  **A projeção nunca derruba a fonte**: nenhum throw escapa do ciclo, e o item
+  que falha permanece na fila para o ciclo seguinte. Em modo `runner` a pasta
+  desvia para a raiz gerenciada, pelo mesmo motivo físico do `permissions.json`
+  (RN-478) — custo declarado: ali ela não fica ao lado do código. E a escrita
+  **não** passa por `proposed_action`: não é agente pedindo para agir, é o
+  sistema materializando algo que já é fato, e pô-la na fila encheria as
+  aprovações de uma decisão rotineira por artefato.
+
+- **engine**: `assess_implementability` do Dev Lead passa a disparar o
+  **threat model de design** do appsec — o gatilho que `docs/fluxo.yml`
+  declarava como lacuna e já nomeava (RN-539).
+
+  `Engine.Gates.SecOpsAgentServer.run_design/2` (RN-360, ADR 0090) estava
+  implementado, testado e **sem chamador de produção nenhum**: a única menção
+  fora de teste era um comentário em `artifact_schemas.ex`, e o campo
+  `acionamento` do papel `appsec` dizia, com todas as letras, que o gatilho
+  natural era `assess_implementability` do Dev Lead — "fora do escopo desta
+  entrega". Passou a ser o escopo desta: `run_assessment/2` chama
+  `Engine.Gates.Dispatcher.run_appsec_design/2`, sexto callback do behaviour e
+  cópia estrutural de `run_qa_estrategia/3`, trocável em teste pelo mesmo
+  motivo dos cinco vizinhos.
+
+  Ele dispara **em paralelo** e **não bloqueia o parecer**. O ramo `:sem_plano`
+  fica byte a byte como era — já devolve erro pedindo ao modelo que chame de
+  novo (RN-163) —, e empilhar ali uma segunda espera faria o gate
+  `implementavel` depender de **duas** produções assíncronas em vez de uma,
+  queimando dois turnos do Dev Lead onde hoje se queima um. O threat model
+  chega a quem precisa pelo caminho que a RN-361 já definiu: handoff para
+  `arquiteto`, `dev-lead` e `infra`.
+
+  E dispara **uma vez só por story**. Como o modelo é instruído a rechamar
+  `assess_implementability`, sem guarda cada retentativa custaria outra rodada
+  de LLM do appsec e mais três handoffs sobre a mesma story: só dispara quando
+  não existe `artifact.threat_model` daquela `storyId` no histórico. A
+  pergunta é **existe**, não **qual** — o oposto do plano de teste, onde o mais
+  recente vence porque uma story pode ser reavaliada. O histórico é lido
+  **uma** vez por chamada e as duas perguntas saem da mesma lista (dois
+  `list_events/2` na mesma invocação seriam o amplificador que o ADR 0060
+  recusa, e este caminho é quente justamente pela retentativa); histórico
+  ilegível e args inválidos **não** disparam nada — ausência de resposta não é
+  prova de ausência de artefato, e a cláusula de fallback nem sabe qual é a
+  story.
+
+  O que **não** mudou: nenhuma rota HTTP nova (ninguém aciona o appsec direto),
+  nenhum teto tocado, `decide.ts` e `docs/gates.yml` intocados, e as mensagens
+  dos dois desfechos de `run_assessment/2` idênticas — em especial a de
+  `:sem_plano`, que sequer menciona o appsec: prometer ao modelo algo que ele
+  não vai receber ali é o defeito que a RN-163 fecha. Custo aceito e declarado:
+  uma chamada de LLM a mais por story avaliada, no mesmo calibre da
+  QA-estratégia que já rodava desse ponto.
+- **engine**: o prompt de sumarização do `ContextManager` passa a resolver o
+  template `context-manager-summarize` do grafo, com o texto inline como
+  fallback obrigatório — fecha o ÚLTIMO dos quatro templates da leva da RN-413
+  sem consumidor (RN-417).
+
+  A [ADR 0101](docs/adr/0101-memoria-relacional-como-projecao-do-event-log.md)
+  declarou a lacuna com todas as letras: *"`context-manager-summarize` is the
+  only one of the first wave's four templates still not consumed by any
+  agent"*. O template existia em `prompts/`, já era semeado pelo seeder
+  genérico (`scripts/dev/seed-prompts.ts`, que varre `prompts/*.md`) e tinha
+  `{{turnos}}` documentado — mas o `.ex` seguia com o prompt como literal, e
+  editar o `.md` não mudava nada em lugar nenhum. Era código morto
+  documentado.
+
+  `summarize/2` ganha `prompt/1`, cópia fiel do molde dos DOIS consumidores
+  que já existiam (`AnamneseWorker.initial_message/1`,
+  `PsychologistWorker.render_kickoff/4`): a MESMA flag compartilhada
+  `graph_templates_enabled?` (`GRAPH_TEMPLATES_ENABLED`, default `false`) — e
+  não uma chave nova por agente, pelo motivo que o comentário do
+  `anamnese_worker.ex` já registrava: rollout de "consumo de template do
+  grafo" é decisão por PRODUTO, compartilhada entre os agentes. Qualquer
+  desfecho que não seja `{:ok, %{"body" => corpo}}` com corpo binário
+  não-vazio cai no inline, **sem erro e sem log de erro** — flag desligada,
+  template ainda não semeado e api do grafo fora do ar são o MESMO caminho de
+  degradação, e distingui-los aqui produziria log de erro para o caso normal.
+  Com a flag desligada (o default) a api nem chega a ser chamada, e o
+  comportamento fica idêntico ao de antes.
+
+  Duas coisas que NÃO mudaram, de propósito. O render é função privada
+  PRÓPRIA, não um helper compartilhado — o repositório duplica esse render nos
+  três consumidores porque o conjunto de placeholders é do template, não do
+  mecanismo. E o fallback determinístico de quando o MODELO falha
+  (`"(N turnos anteriores omitidos)"`) NÃO passa pelo template: é
+  comportamento de código, não texto de prompt, como o próprio
+  `prompts/context-manager-summarize.md` já declarava.
+
+  Sem RN nova: o mecanismo "template do grafo com fallback inline obrigatório"
+  já é a RN-417, e este é o terceiro consumidor da MESMA regra, não uma regra
+  diferente — a prosa dela foi ampliada. O ADR 0101 está aceito e NÃO foi
+  editado; o fechamento da lacuna que ele declarou fica registrado aqui e no
+  `CLAUDE.md`.
+- **web**: o navegador de pastas do assistente de criação volta a ler o disco da
+  MÁQUINA DO USUÁRIO no modo Runner, e a tela passa a dizer de quem é o disco
+  (RN-533, [ADR 0151](docs/adr/0151-base-consentida-no-runner.md) ponto 7).
+
+  Um navegador servia DOIS modos que leem discos diferentes. A
+  [RN-504](docs/business-rules.md#rn-504) apontou os dois para a api — certo
+  para `mounted`, cuja pasta mora sob `BRABO_PROJECTS_BASE`, no SERVIDOR — e
+  declarou o preço: para `runner`, a lista deixava de ser a máquina do usuário
+  e passava a ser a base. Aquilo foi aceito porque o modo `runner` sairia da
+  criação de projeto, o que **não aconteceu**. Enquanto durou, escolher
+  `runner` e clicar "Procurar pasta…" navegava um disco que não é o daquele
+  projeto — e nada na tela dizia isso, então o erro só apareceria pelo
+  CONTEÚDO da lista. Agora o MODO decide o transporte: `mounted` segue pela
+  api, byte a byte; `runner` volta a `fs_list_dir`, ancorado no projeto que a
+  [RN-437](docs/business-rules.md#rn-437) já criava antecipadamente (e que a
+  RN-504 tinha deixado sem consumidor). Criação antecipada que falha **não**
+  abre o modal em transporte nenhum.
+
+  **Sem agente local conectado, o modo continua oferecido — quem declara é o
+  picker.** A [RN-513](docs/business-rules.md#rn-513) esconde `mounted` sem
+  base porque ali a api TEM sinal e a criação terminaria em 400 sem conserto na
+  tela; aqui não existe sinal de presença de runner na api
+  ([RN-521](docs/business-rules.md#rn-521)), e esconder o modo seria decidir
+  "não tem" a partir de "não sei" ([RN-088](docs/business-rules.md#rn-088)/
+  [RN-468](docs/business-rules.md#rn-468)). O modo também não está quebrado sem
+  runner — o caminho é confirmado depois, pelo CLI
+  ([RN-423](docs/business-rules.md#rn-423)) —, então a declaração vai para o
+  único lugar que de fato pergunta.
+
+  **Os dois desfechos não colapsam**, e o motivo é DISCRIMINADO: `sem-agente`
+  (o servidor AFIRMA que não há runner) × `sem-resposta` (teto, socket caído,
+  ticket recusado — ignorância, dita como ignorância). O componente decidia
+  por `includes('Nenhum runner conectado')`, casando uma frase em pt-BR que
+  mora num `.ex` do engine — o que a
+  [RN-532](docs/business-rules.md#rn-532) recusa por escrito do outro lado. O
+  casamento sobrou em um lugar só, e frase reescrita no engine cai em
+  `sem-resposta`, nunca em "há agente".
+
+  **A espera é a da [RN-474](docs/business-rules.md#rn-474), reusada:** mesmos
+  três estados, mesmo teto de 3 minutos, mesmo sinal — e agora ela refaz a
+  listagem sozinha quando o agente aparece, em vez de deixar a pessoa clicando
+  para descobrir. Uma espera por tela, nunca duas.
+
+- **engine,runner**: a base do agente local ganha um CONSUMIDOR — a pasta de um
+  projeto passa a nascer pelo canal, com `workspace_create`/
+  `workspace_create_result` (RN-532,
+  [ADR 0151](docs/adr/0151-base-consentida-no-runner.md) pontos 3 a 6).
+
+  A [RN-529](docs/business-rules.md#rn-529) deu ao `brabo-runner` uma BASE e
+  declarou por escrito que **nada a consumia**. Agora o engine manda o
+  `projectId` e o **segmento relativo** — nunca um caminho absoluto, o
+  invariante do [ADR 0130](docs/adr/0130-broker-de-container.md)/
+  [0144](docs/adr/0144-a-segunda-raiz-do-broker.md): quem tem a raiz é quem
+  executa —, e o runner faz `mkdir -p` e inicializa (ou clona) o repositório.
+
+  **Nenhuma rota nova de gravação nasce.** Tendo dado certo, o runner empurra o
+  `workspace_confirm` que existe desde a
+  [RN-423](docs/business-rules.md#rn-423), e é ELE que grava, pelo caminho já
+  construído (canal → engine → HTTP interno → `ConfirmProjectWorkspaceUseCase`).
+  O engine continua **não escrevendo a tabela**, e o único caminho que carimba
+  `workspace_verified_at` continua sendo um só. A ORDEM é o mecanismo: o
+  confirm vai ANTES do resultado, e como os dois chegam ao mesmo processo de
+  canal em ordem, o carimbo já existe quando quem pediu destrava.
+
+  O par novo é de **pedido com resposta** (o molde de `exec`/`exec_result`) e
+  não podia ser modelado no `workspace_confirm`, que é **unidirecional**. E
+  `workspace.verified` **não existe** neste repositório — o que existe é o
+  evento `project.workspace_verified` e a coluna `workspace_verified_at`.
+
+  **A capacidade `workspace` entra no vocabulário na sessão em que o código
+  entra**, dos dois lados. Ela é a única das quatro cuja declaração depende do
+  ESTADO da execução e não da versão do binário — o runner só a declara quando
+  tem base consentida —, e é por essa linha, e por mais nenhuma, que o servidor
+  sabe que existe base. **Ninguém a exige no join**: runner sem base conecta e
+  atende o projeto dele como sempre; só `workspace_create` é recusado, com
+  resposta NOMEADA pelo mesmo `ref`, nunca um timeout.
+
+  Predicado **próprio** (`Engine.Runners.PastaDoProjeto`), DUAS pré-condições, e
+  `RunnerReadiness` fica **byte a byte** — nunca uma flag "pula container", pelo
+  motivo que o ADR 0147 já tinha escrito. Aqui a terceira pré-condição seria
+  além de desnecessária **circular**: um projeto `runner` só chega a ter
+  container `running` depois de o runner o subir, e o container sobe sobre a
+  pasta que esta mensagem existe para criar.
+
+  Erro é NOMEADO em cinco motivos que não colapsam (`sem-base`, `segmento`,
+  `nao-e-pasta`, `mkdir`, `git`), e falha do repositório nunca vira plano B.
+  Pasta que já é repositório volta como **sucesso** (`ja-era-repositorio`), pela
+  mesma disposição idempotente de `ConfirmProjectWorkspaceUseCase`.
+
+  Isto **não** é `proposed_action` e nenhum teto de `decide.ts` ganha exceção:
+  criar a pasta que o usuário acabou de pedir é configuração consentida, a mesma
+  linha que o espelho já estabeleceu ([RN-516](docs/business-rules.md#rn-516)).
+  Fica declarado e NÃO feito: quem CHAMA `PastaDoProjeto.criar/3` — o caminho
+  web→api→engine é de outra sessão.
+
+- **api,web**: `GET /runner-releases/binary` deixa de transmitir bytes sem
+  verificar nada — ele confere o **sha256 contra o `checksums.txt` da mesma
+  release** e **recusa** quando não pode conferir (RN-525,
+  [ADR 0149](docs/adr/0149-assinatura-dos-artefatos-publicados.md)).
+
+  A rota é `@Public()` e é o passo 4 do fluxo de configuração pelo navegador
+  ([RN-473](docs/business-rules.md#rn-473)). Ela validava a **entrada**
+  (`platform` contra uma allowlist fechada) e fazia `pipe` dos bytes do GitHub
+  direto para o cliente — o BRB-005 nomeia isso, e a RN-524 assinou os
+  artefatos sem tocar este consumidor, de propósito. Agora nenhum byte não
+  conferido chega ao cliente: a resposta só **começa** depois de o hash bater,
+  e o header `Content-Digest` (RFC 9530) repete o que foi conferido.
+
+  **O que ela NÃO faz está escrito onde ela é feita.** A assinatura do
+  manifesto (`checksums.txt.bundle`) **não** é verificada: isto é integridade
+  contra o manifesto, **não procedência** — quem reescreva a Release reescreve
+  os dois arquivos e passa. Os dois caminhos foram MEDIDOS e recusados:
+  `cosign` na imagem da api é **155 MB** contra um runtime Alpine + Node, e
+  `@sigstore/verify`+`@sigstore/tuf` é barato (**2,5 MB, 12 pacotes**) mas faz
+  `getTrustedRoot()` refrescar metadados TUF contra `tuf-repo-cdn.sigstore.dev`
+  — uma rota pública passaria a depender de um **segundo** host de terceiro
+  para verificar algo que **nenhuma Release carrega ainda** (o job `checksums`
+  só roda numa tag final), e capability sem prova não se declara
+  ([ADRs 0041/0042](docs/adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)). Quem verifica
+  assinatura é o `install.sh`, com `cosign` de verdade. BRB-005 fica **aberto**
+  para essa metade, e o registro diz isso em vez de anunciar o item fechado.
+
+  **Release sem `checksums.txt` recusa, não serve avisando.** Um aviso que se
+  aceita clicando é uma verificação que não existe — e apagar 400 bytes da
+  Release seria o downgrade mais barato possível. O custo está medido: a v5.0.0
+  tem dois binários e nenhum manifesto, e o passo do binário é **best-effort**
+  no navegador (RN-473, passo 4), caindo em `npm install -g @brabo/runner`, que
+  não depende de release nenhuma.
+
+  **Os desfechos de 502 não colapsam.** A recusa carrega `motivo` no corpo —
+  `plataforma_nao_publicada`, `release_sem_manifesto`,
+  `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou`,
+  `hash_divergente` —, porque cada um pede uma ação diferente de quem chamou, e
+  o status sozinho não os separa (régua da RN-470 numa resposta de api).
+  `baixarBinario` no web passa a ler `message` e `motivo`, e a frase da api
+  chega em `falhaDoBinario`.
+
+  **Conferir hash exige ler todos os bytes, e isso passa pelo disco.** Os
+  binários têm ~79 MB e o pod da api tem `limits.memory: 512Mi`: bufferizar
+  seria exaustão trivial numa rota pública, e cachear os bytes seria pior. Eles
+  descem em stream para um arquivo temporário em `/tmp` (o `emptyDir` que
+  existe porque o rootfs é read-only), com o hash calculado no caminho e um
+  teto de 256 MiB, e o arquivo é relido em stream **só depois** de bater —
+  memória constante. O cache de URLs (5 min) fica, e passa a guardar também o
+  manifesto já parseado, na **mesma** entrada: em janelas diferentes, uma
+  release publicada no meio faria o hash novo ser conferido contra o binário
+  velho, e o desfecho pareceria adulteração.
+- **runner**: o `brabo-runner` passa a poder nascer com uma **base de
+  projetos** — uma pasta da máquina do usuário sob a qual cada projeto é uma
+  **subpasta** (RN-529, [ADR 0151](docs/adr/0151-base-consentida-no-runner.md)
+  pontos 1 e 2).
+
+  Ele não tinha noção nenhuma de base: a única raiz era `--dir`, e `estado.dir`
+  é **um** caminho, singular, o do projeto daquela conexão. Não havia constante,
+  variável nem campo dizendo onde os projetos moram naquela máquina — a palavra
+  só aparecia em comentário.
+
+  A base é **local e nunca chega pela rede**, o desenho do broker
+  ([ADR 0144](docs/adr/0144-a-segunda-raiz-do-broker.md)) aplicado ao agente
+  local: quem tem a raiz é quem executa, e o que atravessa é o **segmento
+  relativo** — segmento absoluto é recusado por léxico, nunca reinterpretado.
+  Duas fontes, com a flag vencendo: `--base <caminho>` e
+  `$XDG_CONFIG_HOME/brabo/runner.json` (senão `~/.config/brabo/runner.json`),
+  que é onde o instalador a gravará. Arquivo de USUÁRIO e não de projeto de
+  propósito: a base é **uma** para N projetos, e guardá-la no
+  `brabo-runner.config.json` — que é por projeto, vive dentro da pasta do
+  projeto e é escrito pelo navegador — daria N cópias com N chances de divergir.
+  Variável de ambiente foi recusada por duas razões: `BRABO_PROJECTS_BASE` já é
+  a base dos projetos `mounted` do lado **servidor** (a colisão de namespace
+  que o [ADR 0141](docs/adr/0141-base-unica-dos-projetos-montados.md) recusou
+  por escrito), e sob `systemd --user`/LaunchAgent o ambiente é o da unit, não
+  o do shell de quem instalou.
+
+  **`--dir` não muda de significado, e a base não entra na validação dele** —
+  a proibição da api transposta: assim como a regra da base fica fora de
+  `caminhoDeWorkspaceLocalValido` porque aquele predicado roda em toda leitura,
+  aqui um projeto legado fora da base segue válido. A base decide **só** onde
+  uma pasta de projeto nova nasce; quebrar `--dir` seria `breaking/` sem ganho,
+  contra o binário legado da RN-514.
+
+  A guarda (`base-guard.ts`) é o **terceiro irmão** de `guard.ts`, ao lado de
+  `espelho-guard.ts`: reusa `semBarraFinal`/`dentroDoEscopo`/
+  `realpathMaisProximo`, a dupla passada léxica-depois-`realpath`, e
+  `validarDirDentroDoHomeNoLinux` inteira — nenhuma quarta cópia da régua
+  (RN-515). Da recusa de laço do espelho reusa o que é régua (comparação por
+  **segmento**, para `/base-outra` não contar como dentro de `/base`) e não a
+  função, que lançaria um erro de espelho para uma base malformada. E o laço
+  aqui é **assimétrico**: a pasta do projeto dentro da base é o arranjo normal;
+  a base dentro da pasta do projeto é o defeito.
+
+  Recusa tem disposição por **fonte**, e nenhuma é silenciosa: pela flag,
+  código 2 (a mesma disposição de `--dir` recusado); pelo arquivo, mensagem em
+  `stderr` nomeando o que se perde, e o runner segue sem base. Arquivo que
+  existe e não declara `base` é ausência, não recusa. A linha de startup diz a
+  base nos dois estados.
+
+  Best-effort por invariante, com a ressalva de TOCTOU herdada por escrito: a
+  fronteira de segurança continua sendo autenticação + pipeline de aprovação +
+  o consentimento de quem rodou o CLI. Fica declarado e **não** feito aqui: o
+  par `workspace_create`/`workspace_create_result` e a capacidade `workspace`
+  (pontos 3 a 6 do ADR) — a base existe e é validada, mas nada ainda a consome
+  para criar pasta.
+- **docker**: o backup passa a cobrir **os dois** volumes que são fonte de
+  verdade, aceita destino em **disco** e ganha um restore que roda **contra
+  compose**, sem cluster (RN-528).
+
+  O achado é `git_local_repos`: um projeto com provider `local` guarda o
+  repositório *bare* ali dentro, e **nenhum backup o cobria** — em ambiente
+  nenhum. Ele não é reconstruível a partir do Postgres, porque o event log
+  guarda a narrativa e não os objetos do git; perder o volume é perder o código
+  que os agentes produziram. A prosa do `docs/runbook.md` afirmava o contrário
+  ("the real repositories live in GitHub/GitLab"), e é essa frase que explica
+  como o volume passou anos sem cobertura: ela vale para `github`/`gitlab`, e
+  para `local` não existe upstream nenhum.
+
+  O movimento fácil seria copiar os sete volumes, e ele é errado
+  ([ADR 0152](docs/adr/0152-backup-de-volumes-contra-compose.md), decisão 1):
+  `neo4j_data` e `project_workspaces` são DERIVADOS, `ollama_data` é
+  re-obtenível e `brabo_projects_base` é do usuário — copiá-los dá impressão de
+  cobertura sem acrescentar recuperação. Fonte de verdade são dois: `pgdata`,
+  que continua como dump lógico e nunca como cópia do diretório de dados de um
+  Postgres em execução, e `git_local_repos`, que entra agora.
+
+  A garantia do arquivo dos repos é **declarada e menor do que "snapshot"**:
+  consistência por REFERÊNCIA (o git escreve os objetos antes de mover a ref, e
+  troca a ref por rename atômico), sem instante global e sem `git fsck` — a
+  imagem não tem git, de propósito. Um `gc` concorrente vira **falha** e não
+  arquivo parcial, porque o status do `tar` é capturado num arquivo: em POSIX
+  `sh` o status de um cano é o do último comando, e um arquivo incompleto que se
+  anuncia como bom é pior do que uma execução falha, que ao menos vira linha
+  `failed` em `backup_runs` e alerta.
+
+  As cinco variáveis de S3 deixam de ser obrigatórias e viram o que já eram na
+  prática — a configuração de UM dos destinos. Numa instalação de máquina única,
+  exigir um bucket para poder migrar é exigir infraestrutura que o instalador
+  não pede. A escolha é `BACKUP_DIR`; ausente, o destino continua sendo S3, que
+  é como o CronJob do k8s segue rodando sem uma linha de mudança.
+
+  `make test-restore-compose` é o `make test-restore` de quem não tem cluster:
+  dispara um backup REAL pela mesma imagem e o mesmo comando de produção e chama
+  o MESMO `brabo-restore`, com as MESMAS três validações. Muda o invólucro,
+  nunca o julgamento — e `deploy/k8s/test-restore.sh` fica **intacto**, porque
+  unificá-los faria o caminho de compose depender de `kubectl`. Nasce também o
+  serviço `backup` no `docker-compose.prod.yml` (sob `profiles`, `restart:
+  "no"`), que nunca tinha existido ali.
+
+  Restaurar os repos é comando **irmão** (`brabo-restore-git`) e não fase do
+  outro: são dois artefatos com dois julgamentos, e juntá-los faria uma falha de
+  git reprovar a validação do event log. Ele verifica por default, só escreve
+  com `--restaurar`, e recusa extrair por cima de repos existentes.
+
+  Rodando de verdade apareceu um defeito que a leitura não daria:
+  `git_local_repos` é compartilhado por três imagens com uids diferentes e
+  carrega o dono de quem o montou primeiro (medido: `1000:1000`, modo 0755),
+  enquanto a imagem de backup roda como uid 70 — a extração morria no meio com
+  `Permission denied`, deixando o volume pela metade. Agora a recusa vem ANTES
+  do `tar`, nomeando `--user 0:0`, e o que é extraído como root é devolvido ao
+  dono do DIRETÓRIO: sem isso o volume voltaria íntegro e inútil, com api e
+  engine sem conseguir escrever no que acabou de ser restaurado.
+
+  O Neo4j recebe **reprojeção, não backup** — restaurar uma projeção velha ao
+  lado de um Postgres restaurado noutro instante dá dois estados derivados de
+  momentos diferentes, sem nada que os concilie. A reprojeção não é construída
+  aqui (é o `BRB-018`): até existir, instalação migrada nasce com o grafo
+  **vazio**, degradação conhecida e nomeada, não perda de dado — o RAG vive no
+  pgvector e vem no dump.
+
+- **web,api**: a página `/containers` passa a listar **todo projeto do
+  workspace**, tenha ele container registrado ou não, e vira o **caminho
+  humano** de subir um container — ramificado por `execution_mode` (RN-521).
+
+  Subir o container tinha **um** caminho: o Infra Lead, dentro de uma sessão,
+  pela ferramenta dele. Numa execução real do `exp004` (modo `runner`) a
+  `container_start_via_runner` falhou pelo defeito que a RN-508 fechou, e não
+  havia como **tentar de novo**: cinco dev agents ficaram horas emitindo
+  `dev.blocked_by_container` e a única saída era abrir sessão nova e conversar
+  com um agente para reexecutar uma operação de máquina. A página global
+  ([ADR 0136](docs/adr/0136-pagina-global-de-containers.md)) já era o lugar
+  onde um humano decide ciclo de vida — mas a régua era "uma linha por projeto
+  que já tem `project_containers`", e uma subida que falha **antes** de
+  registrar não deixa linha: a tela escondia exatamente o projeto para o qual
+  precisava existir.
+
+  O read model troca INNER por **LEFT JOIN** e `registrado` vira `null` para
+  quem nunca provisionou — um **terceiro estado** com nome próprio ("nunca
+  provisionado"), que não é `stopped` (um container que existiu e parou) nem
+  "não observado" (que é sobre o daemon). A coluna Observado ganha o terceiro
+  motivo, `sem_container_registrado`. A lista alargou e o **orçamento não**:
+  projeto sem container não tem o que observar, então nunca é elegível e nunca
+  ocupa uma das 20 vagas de `TETO_DE_VERIFICACOES_POR_CARGA` — num workspace
+  com centenas de projetos vazios, quem tem container de verdade continua
+  verificado exatamente como antes, e continuam sendo **três** consultas em
+  lote, quantos projetos forem.
+
+  A ação segue a mesma régua do backend (RN-497/RN-503): `container` e
+  `mounted` propõem `container_start` (broker) e `runner` propõe
+  `container_start_via_runner` (agente local). Os dois **payloads** são
+  diferentes de propósito e não se copiam — o primeiro carrega a eleição de
+  imagem, lida da decisão vigente no clique; o segundo tem schema **só com
+  `rationale`** (RN-508), porque sobe a imagem já decidida e não elege nada.
+
+  E a tela **não propõe o que já se sabe que vai falhar**: sem imagem decidida
+  (o portão da RN-105, válido nos três modos desde a RN-494), num projeto
+  `runner` cuja pasta agente local nenhum jamais confirmou, ou para papel
+  abaixo de `maintainer` (o mínimo do **endpoint**, por `roleAtLeast` —
+  RN-102), o botão fica inerte e o motivo é dito **em texto**, uma vez, cada
+  recusa com o seu (`title` em elemento `disabled` não abre no Chromium). Quem
+  não pode continua **vendo** estado, imagem e recursos (ADR 0064). O que a
+  tela não sabe ela declara: `workspaceVerifiedAt` é registro de **uma**
+  confirmação e nunca batimento (RN-468), então a linha do `runner` oferece o
+  botão **com ressalva escrita** em vez de prometer que o agente está de pé.
+
+  Nenhum teto se mexeu: toda proposta daqui é `proposed_action` com um
+  **humano** clicando, e `container_remove` continua no teto absoluto da
+  RN-418. `decide.ts` fica byte a byte.
+
+- **ci**: toda tag final passa a **assinar o que publica**, e a verificar o que
+  assinou no mesmo run ([RN-524](docs/business-rules.md#rn-524),
+  [ADR 0149](docs/adr/0149-assinatura-dos-artefatos-publicados.md)).
+
+  O produto não assinava **nada**: procurar `cosign`, `sigstore`, `slsa` ou
+  `attestation` em `.github/`, `scripts/` e `docker/` devolvia uma ocorrência
+  só, e ela não cobria nem imagem nem binário (`npm publish --provenance`, do
+  pacote npm do runner). `release.yml` publicava as quatro imagens sem
+  `id-token: write`; `build-runner-binaries.yml` subia os cinco binários com
+  `gh release upload` e **nada mais** — enquanto os `sha256sum -c` que já
+  existem no repositório verificam binário **de terceiro**, que é exatamente o
+  padrão que o produto sabia aplicar e nunca aplicou a si mesmo. Era o
+  **BRB-005**, e é o que barrou o instalador de uma linha na FASE 28.
+
+  As imagens são assinadas **por DIGEST**, lido de `.release/images.json` —
+  nunca por tag: assinar `:5.0.0` atestaria o que aquela tag apontava no
+  instante da assinatura, e tag é ponteiro móvel. Os binários ganham **UM**
+  `checksums.txt` assinado, num job `checksums` que espera a matriz — e não
+  cinco assinaturas, porque quem verifica quatro e esquece o quinto não tem
+  como saber que esqueceu. O job roda com `if: always()` de propósito (a matriz
+  é `fail-fast: false`, e um alvo que não construiu não pode negar manifesto
+  aos outros quatro) e **nomeia os alvos que o manifesto não cobre**.
+
+  Keyless, e a razão é o histórico do próprio repositório: uma chave privada
+  seria mais um segredo de CI, e um PAT já expirou em silêncio e reprovou duas
+  runs do `tag-release` (ADR 0139). Os dois workflows **verificam antes de
+  publicar** — assinatura que ninguém tenta verificar é um arquivo a mais, e a
+  falha apareceria só na máquina de quem instala.
+
+  O procedimento de verificação para quem baixa está no
+  [runbook](docs/runbook.md#verificar-artefato-publicado), com as duas flags de
+  `--certificate-*` obrigatórias: sem elas o `cosign` aceitaria uma assinatura
+  válida **de qualquer um**, que é o defeito que o mecanismo existe para
+  fechar. O que **não** entra: code-signing de sistema operacional dos binários
+  (notarização, Authenticode), que exige identidade paga e segue no backlog; e
+  o proxy `GET /runner-releases/binary`, que continua sem verificar nada.
+
+- **install**: nasce o `install.sh` — versionado no repositório, publicado como
+  asset da Release, e **porta única** de instalação
+  ([RN-526](docs/business-rules.md#rn-526),
+  [ADR 0150](docs/adr/0150-instalador-de-uma-linha.md)).
+
+  A forma de invocação é `sh -c "$(curl -fsSL …)"` e **nunca** `curl … | sh`,
+  por um motivo mecânico: com o script chegando pelo pipe, o `stdin` do
+  processo **é** o download, e qualquer `read` para perguntar lê bytes do
+  próprio script ou encontra EOF. Um instalador que não consegue perguntar
+  escolheria sozinho onde criar pastas no computador de alguém.
+
+  Ele **verifica a própria origem** antes de agir — a assinatura do
+  `checksums.txt` da Release (RN-524) e o hash deste arquivo dentro do
+  manifesto verificado —, com o `cosign` pinado por versão e conferido por
+  `sha256sum` contra o hash escrito no script. A **detecção nomeia o que
+  achou** (marcador, ou sinais: compose `brabo*`, units do runner, binário no
+  PATH) antes de qualquer pergunta; sem TTY ele **relata e sai 0**.
+
+  E **nunca apaga pasta de usuário**: a base de projetos e a pasta de espelho
+  estão fora do alcance de qualquer confirmação, pela mesma régua do espelho
+  (RN-516) — pasta de usuário é acúmulo, não estado do produto.
+
+  **Esta versão não instala nada**, e diz isso na saída em vez de terminar em
+  silêncio: subir o compose, gerar segredos e instalar o runner são as sessões
+  seguintes. `--print-plan` e `--print-state` expõem a DECISÃO sem TTY, sem
+  rede e sem efeito — é o que `scripts/dev/install.spec.ts` exercita, no molde
+  do `--print-commands` do `bootstrap.sh`. A raiz do repositório não era
+  coberta por regra de docmap nenhuma (todos os globs de raiz são nomes
+  literais); nasce a regra `instalador`.
+
+- **install,docker**: o instalador passa a **subir de verdade**, de um compose
+  PRÓPRIO da instalação ([RN-527](docs/business-rules.md#rn-527),
+  [ADR 0150](docs/adr/0150-instalador-de-uma-linha.md)).
+
+  Nasce `docker/docker-compose.install.yml`, gerado a partir do de produção e
+  diferente dele em três pontos: as quatro imagens vêm de **variável
+  obrigatória** (`${BRABO_API_IMAGE:?…}` — com default, uma variável ausente
+  subiria metade da stack com uma imagem que ninguém escolheu), **nenhum bloco
+  `build:`** sobrevive, e o serviço **`broker` não existe**, porque a imagem
+  dele não é publicada. O `docker-compose.prod.yml` fica intacto: ele se
+  declara compose de **validação** e é o que o `smoke.sh` usa construindo local.
+
+  O custo dos dois arquivos é declarado, e o teto é mecânico —
+  `scripts/dev/composes-em-conformidade.spec.ts` reprova se o de instalação
+  ganhar serviço, volume ou porta que o de validação não tenha, se algum
+  `build:` sobreviver, ou se uma imagem de terceiro afrouxar.
+
+  `--source=ghcr` (default) resolve por **digest** do `images.json` da Release;
+  `--source=local` roda `buildx bake` e exige **árvore limpa em tag**. Os cinco
+  segredos de RN-114 mais o `NEO4J_PASSWORD` nascem com `openssl rand` no molde
+  do `smoke.sh`, e o `.env` é criado **vazio e com modo 600 ANTES** de receber
+  conteúdo — criar com o umask e apertar depois deixaria uma janela em que os
+  segredos são legíveis.
+
+  Duas coisas do plano não sobreviveram ao disco, por motivos opostos: **não há
+  passo de migrate**, porque o compose já encadeia `api` → `migrate-api` com
+  `service_completed_successfully` e um segundo lugar mandando migrar seria a
+  segunda fonte da mesma verdade; e o **`smoke.sh` não é reusado**, porque ele
+  constrói (`--build`) o que a instalação acabou de baixar por digest e derruba
+  a stack no fim. No lugar dele, o instalador **pergunta antes de afirmar**:
+  `/health` da api e do engine antes de dizer que instalou — a régua que o
+  `reset-total.sh` custou a aprender.
+
+- **install**: migrar uma instalação existente passa a ser possível, e o
+  instalador **só ganha o direito de apagar depois de provar que restaura**
+  ([RN-530](docs/business-rules.md#rn-530)).
+
+  A ordem é backup → **provar** → perguntar → apagar → instalar → restaurar, e
+  o passo do meio é o que dá sentido ao resto: um backup que ninguém tentou
+  restaurar é um arquivo, e a hora de descobrir isso não é depois do `down -v`.
+  A prova roda `docker/backup/test-restore-compose.sh`, com as mesmas três
+  validações de sempre. Backup que falha, ou prova que falha, **param a
+  migração sem apagar nada**.
+
+  O destino do backup é uma pasta do **host** — o default do compose é o volume
+  nomeado `backup_local`, que o `down -v` apagaria junto com o que se quer
+  preservar. E instalar por cima sem migrar não é oferecido: um `up` sobre
+  volumes de outra versão é o tipo de estrago que não avisa.
+
+  O que nunca é apagado continua nunca sendo: a base de projetos (com
+  `BRABO_PROJECTS_BASE` apontando para o host, a linha é bind-mount, e `down
+  -v` não toca bind), a pasta de espelho, e o backup recém-provado.
+
+- **install**: o instalador consente **uma** base para os dois lados e instala o
+  agente local **já executável** ([RN-531](docs/business-rules.md#rn-531)).
+
+  A base perguntada uma vez é gravada em `BRABO_PROJECTS_BASE` (servidor) e no
+  campo `base` do `runner.json` (agente local): o que difere entre `mounted` e
+  `runner` é **quem executa**, não onde o código mora, e duas bases para a
+  mesma pasta seriam a colisão que o ADR 0141 recusou. Recusada quando não é
+  absoluta, quando fica dentro do checkout e quando o contém — os dois
+  sentidos.
+
+  O binário é conferido contra o **mesmo** `checksums.txt` assinado que o
+  script já verificou para conferir a si mesmo, e instalado com
+  `install -m 0755`. **Isso fecha o BRB-031**: o `chmod +x` manual sobreviveu à
+  FASE 28 porque a instalação não vinha de um artefato versionado — quem
+  chegava a rodar `service install` já precisara tornar o binário executável
+  para chegar ao comando. Release sem o binário da plataforma não interrompe a
+  instalação; o resto está de pé e a mensagem aponta o caminho do npm.
+
+- **ci,install**: o instalador entra no manifesto assinado e passa a ser
+  exercitado numa máquina limpa ([RN-534](docs/business-rules.md#rn-534)).
+
+  A primeira metade fecha um ciclo que estava aberto: o `install.sh` confere o
+  **próprio hash** contra o `checksums.txt` assinado (RN-526), e **nada o
+  colocava lá**. Agora o job `checksums` o inclui no manifesto e o anexa à
+  Release, a partir do checkout da tag — o mesmo commit que produziu o resto do
+  que está sendo assinado.
+
+  A segunda é o `install-e2e.yml`: numa máquina limpa, prova que o plano não
+  deixou de prometer o que nunca apaga, que o estado não inventa marcador nem
+  sinais, que **sem TTY** o instalador relata, sai 0 e não grava — e, com um
+  terminal de verdade simulado por `script -qec` (não um pipe, que é o que
+  mataria o consentimento), que a instalação completa verifica assinatura,
+  confere o próprio hash e deixa o `.env` em modo 600.
+
+  **Ele não roda em `pull_request`**, e isso é decisão declarada: o manifesto
+  assinado só existe depois de uma tag final, e fazer o script rodar em PR
+  exigiria uma porta para pular a verificação — a porta que o ADR 0150 recusa.
+  Mesma escolha, pelo mesmo motivo, do golden-set do RAG.
+
+### Correções
+
+- **web**: QA, SecOps e os membros de área (`qa-automacao`, …) **deixam de
+  sumir** do painel do time numa sessão de execução longa
+  ([RN-568](docs/business-rules.md#rn-568)).
+
+  A Visão geral e a aba Executores decidiam a presença deles pelos últimos 200
+  eventos da sessão — e o `pr.gate_changed` e as delegações que os trazem são
+  dos primeiros de uma execução. O resumo do workspace já agregava os dois
+  fatos sobre a sessão inteira, e as duas telas passam a usá-lo, como já faziam
+  com `executionActivated`. O agregado SOMA à janela e nunca a substitui: sem
+  resumo carregado, ou com o resumo apontando outra sessão, a tela decide pela
+  janela como antes. Só a presença muda; o status de cada agente continua lido
+  dos eventos, e nenhuma requisição nova foi acrescentada.
+- **engine**: o Infra Lead deixa de propor `container_start` para um projeto
+  `runner` — recusa **local e nomeada**, antes de chamar a api
+  ([RN-566](docs/business-rules.md#rn-566)).
+
+  `propose_container_start` montava o payload e chamava a api direto, sem ler
+  o projeto. Num projeto `runner` essa proposta só podia terminar em falha: o
+  payload dela elege uma imagem candidata do roteamento do Arquiteto, e naquele
+  modo não há roteamento contra o qual eleger — o tipo certo é
+  `container_start_via_runner`. Agora a tool lê o `execution_mode` no mesmo
+  processo (sem HTTP, sem chamada de rede no laço do agente) e recusa dizendo
+  qual tool usar; `container` e `mounted` seguem propondo, pelo broker.
+
+  A régua é a que já existia dos dois lados — a tool irmã e a página
+  `/containers` —, agora numa função só com uma cláusula por tool. E a recusa
+  não vira silêncio: ela é resultado de ferramenta que o modelo lê, e a chamada
+  continua narrada no event log, o que a tool irmã ainda não fazia.
+
+  **O que continua possível:** propor sem imagem decidida em
+  `container`/`mounted`. A recusa aqui é sobre MODO; a tela checa as três
+  coisas porque tem um humano clicando.
+- **ci**: o `checksums.txt` assinado **deixa de ser refém da matriz de
+  binários** ([RN-565](docs/business-rules.md#rn-565)).
+
+  O job `checksums` tinha `needs: build`. O `always()` garantia que ele
+  RODASSE mesmo com a matriz falhando, nunca QUANDO — e "quando" está medido
+  nas três tags que existem: `darwin-x64` (`macos-13`) fica **24h00m01s** na
+  fila e é cancelado pelo teto do Actions, o MESMO número em `v4.0.0`,
+  `v4.0.1` e `v5.0.0`, enquanto os outros quatro jobs terminam em no máximo
+  **4m18s**. O manifesto só podia nascer um dia depois da Release — e, para
+  quem instala nesse intervalo, um manifesto que atrasa é um manifesto
+  ausente: o download recusa com `release_sem_manifesto`
+  ([RN-525](docs/business-rules.md#rn-525)) e o `install.sh` recusa junto
+  ([RN-526](docs/business-rules.md#rn-526)), **em todas as plataformas,
+  inclusive as duas que anexaram**.
+
+  O job passa a esperar os **assets**, não os **jobs**, com teto: 600s pela
+  Release (que, ausente, continua sendo erro nomeado — este workflow só
+  ANEXA) e 1200s pelos binários. O segundo número é o `timeout-minutes: 20`
+  do próprio job `build`, isto é, o máximo que um alvo **com runner** pode
+  demorar depois de começar; o que ele deliberadamente não cobre é o tempo de
+  **fila**. O laço sai cedo quando os cinco chegam.
+
+  **Nada do que o job faz muda:** um manifesto e não cinco assinaturas,
+  `cosign` keyless, verificação antes de anexar
+  ([RN-524](docs/business-rules.md#rn-524)). E `darwin-x64` continua não
+  construindo — trocar o label, tirar a plataforma ou pagar runner é decisão
+  de dono, e o manifesto não pode depender dela.
+
+- **chore**: toda **imagem de terceiro** passa a entrar por **digest**, com a
+  tag num comentário ao lado, e um lint reprova quem esquecer
+  ([ADR 0159](docs/adr/0159-imagem-de-terceiro-por-digest.md), `BRB-004`).
+
+  O argumento já estava escrito para o vizinho — *"tag é ponteiro que o dono
+  move sem aviso, e quem move executa código no runner que tem o checkout e
+  os segredos"* — e valia igual para `image:`. As **37** referências de
+  terceiro estavam por tag, e três dos lugares onde elas rodam não são o dia
+  a dia: os `FROM` são a base das quatro imagens que publicamos e assinamos;
+  quatro estão no compose que sobe **na máquina de quem instalou**, ao lado
+  das próprias, que já vinham por digest; e quatro são `services:` de
+  `ci.yml`/`golden-set-rag.yml`, que é literalmente o runner que a regra das
+  actions protege, alcançado pela outra porta.
+
+  `scripts/ci/imagens-pinadas.ts` roda no job `lint`, irmão de
+  `actions-pinadas.ts`, e reprova três coisas: referência mutável, digest sem
+  a tag em comentário, e a **mesma tag com dois digests diferentes** — este
+  último transforma em mecanismo a promessa que o `golden-set-rag.yml` fazia
+  em comentário, de rodar a mesma versão do compose de dev.
+
+  **Em Dockerfile a tag vai na linha DE CIMA**, e isso foi aprendido errando: o
+  parser do Docker só reconhece `#` no início da linha, então
+  `FROM x@sha256:… # tag` é um `FROM` com três argumentos e o build morre em
+  `FROM requires either one or three arguments` — enquanto o `hadolint`, que
+  tem parser próprio, passava. O comentário é **um token**, sem espaço, nos
+  dois formatos: é o que separa a tag da prosa que já mora acima de quase todo
+  `FROM`.
+
+  **O que ele NÃO cobre, por decisão:** as quatro imagens do próprio produto.
+  Não há terceiro que as mova, `brabo-api:prod` é tag LOCAL cujo digest não
+  existe antes do build, e onde elas atravessam um registry o
+  [ADR 0119](docs/adr/0119-imagens-publicadas-no-ghcr-por-digest.md) já as
+  resolve — o overlay guarda o MARCADOR de propósito.
+
+  **O preço, declarado:** digest congela, e imagem congelada não recebe
+  correção de segurança até alguém trocar o digest à mão. O ecossistema
+  `docker` do Dependabot **não** foi ligado; é decisão à parte. Subir um
+  digest é [procedimento de runbook](docs/runbook.md#subindo-imagem-de-terceiro).
+
+- **chore**: as dependências vulneráveis dos dois lockfiles, **e o que não
+  fecha, dito por nome**.
+
+  **Nenhum dos alertas corrigidos aqui era exposição de produção em execução,
+  com UMA exceção — e a exceção contradiz o levantamento.** A medição que
+  motivou esta mudança dizia que os quatro do produto eram `devDependency`;
+  `pnpm why qs --prod -r` mostra o contrário, por **dois** caminhos em
+  `dependencies` de `apps/api`: `express@5.2.1` ← `@nestjs/platform-express`
+  (via `body-parser`) e `@gitbeaker/core` ← `@gitbeaker/rest`. Os outros três
+  — `fast-uri`, `vitest`/`@vitest/mocker` e `esbuild` — são de fato dev-only,
+  com `--prod -r` vazio e controle feito em `nodemailer` e `multer`, que
+  aparecem.
+
+  **Produto** (`pnpm-lock.yaml`): `fast-uri` 3.1.5 → **3.1.6** (4 HIGH novas),
+  `qs` 6.15.3 → **6.16.0** (2 MODERATE, o único de produção), `vitest` e
+  `@vitest/mocker` 4.1.10 → **4.1.11** (1 MODERATE) e `esbuild` 0.27.7 →
+  **0.28.1** (1 LOW, e era só dedupe: a 0.28.1 já estava na árvore por
+  `webpack`). Junto, `js-yaml` 4.3.1 → **4.3.2** — advisory que **o Dependabot
+  ainda não abriu** e que o `pnpm audit` local achou, porque o painel mede a
+  `main` e o `audit` mede o que se está desenvolvendo. `pnpm audit` do produto
+  fica **limpo**.
+
+  **Website** (`website/pnpm-lock.yaml`, lockfile próprio — ADR 0117):
+  `fast-uri` e `qs` pelas mesmas faixas, mais o `js-yaml`.
+
+  **O que NÃO fecha, e os dois são HIGH:**
+  `image-size@2.0.2` **não tem versão corrigida** — o `first_patched_version`
+  dos dois avisos é nulo, e quem o puxa é `@docusaurus/mdx-loader`, o núcleo do
+  Docusaurus. `@faker-js/faker@5.5.3` **tem** correção (10.4.1+) e mesmo assim
+  não sobe: `postman-collection@5.3.1` o pina em `5.5.3` EXATO e usa a API da
+  v5 que sumiu na v8, e com o override aplicado o `pnpm docs:build` **reprova**
+  (`Docusaurus could not load module … docusaurus-plugin-openapi-docs`, causa
+  `TypeError: Cannot read properties of undefined (reading 'city')`). Medido,
+  não suposto. Os dois estão escritos em `website/pnpm-workspace.yaml`, numa
+  seção que existe para que fechar três de quatro não vire um painel que
+  *parece* resolvido. O argumento de alcance é o do ADR 0117: nada de
+  `website/` chega a imagem nenhuma.
+
+  **Sem `pnpm.overrides` novo em `package.json`** — e não porque o repositório
+  não use overrides: ele já tem catorze na raiz e treze no website, todos em
+  `pnpm-workspace.yaml`, cada um com advisory e caminho do `pnpm why` ao lado.
+  Três das cinco mudanças são **subida de TETO de faixa que já existia**
+  (`fast-uri`, `js-yaml`), pela disciplina 1 do próprio arquivo; `qs` e a
+  segunda faixa de `esbuild` são entradas novas, no mesmo molde. `vitest` não
+  precisou de override: é `devDependency` DIRETA em seis pacotes e a 4.1.11
+  cabe no `^4.1.10` que eles já pediam.
+
+  Os alertas de `multer` e `nodemailer` **não são trabalho**: a `dev` já está
+  em 2.3.0 e 9.1.1. Eles apagam quando a promoção `dev → qa → main` andar.
+
+- **runner**: a credencial de git que não atravessa o container do agente local
+  deixa de sumir em silêncio — o comando passa a ser **recusado** com desfecho
+  nomeado, em vez de rodar sem ela e falhar como se o token estivesse errado
+  (`AT-053`, [RN-558](docs/business-rules.md#rn-558)).
+
+  Num projeto em modo Runner, o container `running` que a
+  [RN-507](docs/business-rules.md#rn-507) exige antes de qualquer operação de
+  git só existe porque o **mesmo** runner o subiu — e é esse mesmo sucesso que
+  o faz rotear todo comando para dentro dele, por um `docker exec` que **não
+  tem campo de `env`**, de propósito
+  ([ADR 0130](docs/adr/0130-broker-de-container.md)). Ou seja: no instante em
+  que o `git fetch` autenticado ganhava permissão para rodar, o container já
+  estava de pé e a credencial era descartada sem erro nenhum. Clone e fetch de
+  repositório remoto autenticado falhavam no caminho **comum**, e quem
+  investigava caçava token, permissão e rede.
+
+  O runner agora recusa esse par (credencial + container ativo) antes de
+  executar qualquer coisa, e o engine traduz a recusa numa mensagem que diz o
+  que aconteceu e por quê, com **origem `politica`** — não `codigo` — para quem
+  tria a rodada seguinte saber que não há bug para caçar. A saída nunca cita
+  nome nem valor de variável de ambiente, só a contagem.
+
+  **O que continua aberto, declarado:** a credencial segue não atravessando o
+  `docker exec`, então clone/fetch autenticado em modo Runner continua exigindo
+  o container parado. Entregar a credencial mexeria na porta de contenção do
+  Docker, e isso é decisão de ADR. Repositório local e os modos Container e
+  Montado não são afetados.
+
+- **api**: mudar o **próprio papel** passa a ser recusado com **403** nas duas
+  rotas de associação, nos dois sentidos — e o upsert de workspace, que não
+  tinha teto nenhum, ganha o dele (`BRB-002`, **P1**,
+  [RN-557](docs/business-rules.md#rn-557)).
+
+  `AddWorkspaceMemberUseCase` era um passa-adiante de doze linhas que **nunca
+  recebeu o ator**, numa rota `@RequireRole('owner')`. É a mesma classe de
+  defeito de `project_members` um escopo acima e mais grave: aqui não há nível
+  acima para segurar a queda, e **não existe rota que remova membro de
+  workspace** — um `owner` que se gravasse `viewer` perdia o workspace inteiro,
+  e desfazer é essa mesma rota, que pede o `owner` recém-abandonado.
+
+  Junto, a **auto-promoção** deixa de passar, também no projeto. O
+  [ADR 0127](docs/adr/0127-tetos-de-rebaixamento-em-project-members.md) a tinha
+  registrado como capacidade que ficava, com teste fixando a permissão; o
+  [ADR 0157](docs/adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.md)
+  a chama de brecha, porque das duas metades do movimento sobre o próprio papel
+  a de cima é a única que **escala privilégio**. O teste foi INVERTIDO, e o nome
+  guarda a origem.
+
+  **Custo declarado:** um `maintainer` legítimo que precise de `owner` no
+  projeto passa a depender de outra pessoa — continua alcançável por qualquer
+  outro `maintainer` ou pelo `owner` do workspace. Reescrever o MESMO papel
+  segue passando (upsert idempotente não é movimento), e um `owner` rebaixando
+  **outro** `owner` também: é a única forma de revogar propriedade, e o teto do
+  `owner` do workspace deliberadamente não tem par neste escopo.
+
+- **docker**: a oferta escrita de fonte passa a viajar **dentro** da imagem do
+  engine, em `/usr/share/doc/brabo/THIRD_PARTY_NOTICES.md` (BRB-017, **P1**).
+
+  A imagem embute `git`, `busybox`, `libgcc`/`libstdc++` e outras 18 apk sob
+  GPL, mais os quatro scanners que o engine invoca. Executá-los como processo
+  separado não contamina o Brabo, que segue MIT — mas **distribuir** a imagem
+  exige que quem a recebe possa obter o fonte correspondente, e desde o
+  [ADR 0119](docs/adr/0119-imagens-publicadas-no-ghcr-por-digest.md) ela é
+  publicada no GHCR a cada tag final.
+
+  A oferta só cumpre o papel onde o binário está: quem faz `docker pull` não
+  tem o repositório, e uma oferta que só existe no GitHub não acompanha a cópia
+  que a pessoa recebeu.
+
+  Junto, o `THIRD_PARTY_NOTICES.md` deixa de afirmar o contrário do que o
+  repositório faz — ele dizia *"Hoje nenhuma imagem é publicada em registry…
+  o que segue é informativo"*, verdadeiro em 2026-07-27 e superado pelo ADR
+  0119. `scripts/ci/oferta-de-fonte-na-imagem.spec.ts` trava as duas coisas.
+
+- **api**: remover a **própria** linha de `project_members` passa a ser recusado
+  com **403** quando o efeito líquido é rebaixamento — o teto de
+  auto-rebaixamento chega à outra porta
+  ([RN-556](docs/business-rules.md#rn-556),
+  [ADR 0156](docs/adr/0156-teto-de-auto-rebaixamento-na-remocao.md), BRB-001).
+
+  O [ADR 0127](docs/adr/0127-tetos-de-rebaixamento-em-project-members.md) pôs os
+  dois tetos só no caminho de escrita e deixou este movimento aberto **por
+  escrito**, fixado num teste cujo nome documentava o buraco. Remover não apaga
+  um papel, **troca** o papel efetivo: `projectRole ?? workspaceRole`
+  ([RN-471](docs/business-rules.md#rn-471)) passa a resolver pelo segundo termo,
+  então um `maintainer` cuja autoridade vinha da linha de projeto, `viewer` no
+  workspace, caía para `viewer` **sem volta pela tela** — repor é
+  `POST :projectId/members`, que pede o `maintainer` recém-abandonado.
+
+  É o teto 2 reusado, não um teto novo: `remocaoEhAutoRebaixamento` delega a
+  `ehAutoRebaixamento` passando o papel de workspace como o papel pedido. O teto
+  do `owner` de workspace **não** ganha par, e a ausência é decisão — `owner` é
+  o topo do `ROLE_ORDER`, então a remoção só pode elevar.
+
+  **Muda um movimento que passava:** a auto-remoção de quem tem `owner` no
+  projeto e `maintainer` no workspace é reversível e passa a ser recusada
+  também — o preço declarado de o teto ser "a si mesmo", sem limiar. Segue
+  alcançável por outro `maintainer`. A tela não muda: `MembersSection` já mostra
+  a frase da api num toast.
+
+- **docs**: o glossário dizia **"Seven closed schemas"** com **onze** escritos —
+  e agora a contagem é aferida, não lembrada (BRB-022).
+
+  Os quatro que faltavam nasceram depois da frase e ninguém voltou a ela:
+  `decision_record` ([RN-505](docs/business-rules.md#rn-505)), `plano_de_teste`,
+  `prototipo_navegavel` e `threat_model`. É o mesmo modo de falha do "68 ADRs"
+  do `CONTRIBUTING.md`, que já tinha aferição desde então.
+
+  `pnpm docs:check` passa a derivar o número de
+  `Engine.Harness.ArtifactSchemas` — o módulo que VALIDA a emissão, nunca outra
+  prosa — de modo que schema novo entra na conta sozinho. Provado por mutação
+  nos dois sentidos: mexer no número reprova com `DESATUAL`, reescrever a frase
+  reprova com `CEGO`.
+
+- **ci**: o `claude-review` para de reprovar em PR aberto por bot.
+
+  A condição que o pulava enumerava **um login** (`github-actions[bot]`) — e
+  enumeração acerta enquanto o conjunto não muda. O `dependabot.yml` entrou no
+  PR #520, e o PR #526 reprovou com a **mesma** mensagem dos #64/#65, cuja
+  lição já estava escrita no comentário logo acima da linha.
+
+  Passa a testar o `type` do autor, espelhando `ehAutorBot`
+  (`scripts/ci/pr-police.ts`) em vez de um teste mais fraco, com o sufixo
+  `[bot]` do login como rede — o GitHub não permite `[` em login humano, então
+  ele não é forjável. O padrão já existia no repositório: `pr-police.yml` passa
+  `user.type` desde sempre.
+
+  Para o Dependabot há ainda um motivo que fecha a porta sozinho: os PRs dele
+  rodam com o **cofre de segredos do Dependabot**, separado do de Actions, e
+  `CLAUDE_CODE_OAUTH_TOKEN` chega vazio. Mesmo liberando o ator, a revisão não
+  teria credencial — e um check que falha por segredo ausente é pior que um
+  pulado, porque parece defeito de código.
+
+- **runner,ci**: os binários de **macOS** e **Windows** nunca construíram — e
+  a matriz reprovava em toda tag, sempre pelo mesmo passo, por **duas** causas
+  diferentes.
+
+  **`darwin-arm64`** morria no `--self-test-pty` com `posix_spawnp failed`. O
+  `node-pty` precisa do **`spawn-helper`** ao lado do binding — `lib/unixTerminal.js`
+  monta `native.dir + '/spawn-helper'` e o C++ o executa —, e o build embutia
+  só `*.node`. Agora todo arquivo do diretório nativo entra (menos `.pdb`,
+  símbolo de depuração), e os executáveis são extraídos **com o bit de
+  execução**: `writeFileSync` não o preserva, e sem ele o erro é idêntico ao
+  de arquivo ausente.
+
+  **`win32-x64`** morria antes, no build, com *"build/Release existe mas não
+  tem nenhum .node dentro"*. É verdade e é o normal: o `post-install.js` do
+  node-pty limpa aquela pasta e move o `conpty/` para lá, enquanto os `.node`
+  vêm do `prebuilds/win32-x64`. A escolha do diretório passa a ser por
+  **conteúdo** — o que tem `.node` — e não por existência.
+
+  **E o workflow ganha modo de ENSAIO** (`workflow_dispatch` com a tag vazia):
+  constrói e roda o smoke nas cinco plataformas a partir de uma branch, sem
+  anexar nada. Era o que faltava para uma falha de plataforma aparecer antes
+  do corte, e não com a Release já publicada.
+
+  As duas correções têm teste com os layouts **fabricados** de cada
+  plataforma: nenhuma das duas falhas aparece no Linux, que é onde
+  `build:bin` roda antes do CI.
+
+- **changelog**: a prosa escrita nos PRs **nunca chegava à versão publicada**.
+
+  `scripts/changelog.mjs` fazia `prepend` da seção gerada dos commits e
+  deixava o `## Unreleased` **intacto logo abaixo** — para sempre. Como é ali
+  que cada PR escreve o porquê da mudança, o que a versão levava eram só as
+  linhas curtas geradas dos commits, e a explicação ficava órfã, num
+  `## Unreleased` enterrado que ninguém mais leria. Havia **cinco** deles no
+  arquivo, entre versões, de 2026-08-03 a 2026-09-04.
+
+  Agora o corte **consome** o `## Unreleased`: as subseções são fundidas por
+  título, e a ordem dentro de cada uma é deliberada — primeiro o que foi
+  REDIGIDO (explica), depois o inventário dos commits (prova o que entrou).
+  Subseção que só existe num dos lados entra inteira.
+
+  As cinco órfãs foram **reparadas**, cada uma fundida na versão a que
+  pertencia, pela mesma regra. Conferido: as 941 linhas de item do arquivo
+  continuam 941, e nenhuma versão ficou com subseção repetida.
+
+- **install**: a detecção do instalador podia ficar pendurada no Docker, e o
+  teste dela reprovava PR de qualquer assunto.
+
+  `detectar_por_sinais` chama `docker compose ls`, que fala com o daemon.
+  Medido: **~0,2s** numa máquina com Docker de pé e **7,15s** num runner de CI
+  na primeira chamada. Sem teto, um daemon lento — ou parado atrás de um
+  socket que existe — deixaria a detecção pendurada **antes da primeira
+  pergunta**, e quem instala veria um script que não faz nada.
+
+  Agora a chamada tem **teto de 5s**, e estourá-lo não é erro: é o mesmo
+  desfecho de não haver Docker nenhum, com o resto dos sinais seguindo normal.
+
+  O teste tinha o outro lado do mesmo problema: os três casos que SPAWNAM o
+  script viviam com o default de 5s do vitest, sem margem para o teto ser
+  exercido e o processo ainda terminar. Foi o que reprovou o CI de um PR que
+  não toca o instalador. A margem é do teste; o teto que protege quem instala
+  é o do script.
+
+- **docker,engine,docs**: as flags que ligam a **Anamnese** e o **Psicólogo**
+  não estavam mapeadas no `environment:` do serviço `engine` de compose
+  nenhum — a pausa que três lugares do código chamavam de **reversível** não
+  era reversível em ambiente nenhum (RN-540).
+
+  **O que se prometia.** O docblock de `AnamneseSchedulerWorker.enabled?/0`
+  dizia, desde 2026-08-10: *"não é bug, é pausa reversível. Ligar de volta é
+  `ANAMNESE_ENABLED=true` e reiniciar o engine."* O de
+  `PsychologistWorker.enabled?/0` dizia o mesmo com o outro nome, e
+  `docs/reference/configuration.md` repetia.
+
+  **O que acontecia.** `docker compose` **não repassa o ambiente do host** ao
+  container: uma variável chega ao processo se, e só se, estiver escrita no
+  `environment:` daquele serviço. O `engine` mapeava **treze** variáveis de
+  Anamnese/Psicólogo — todas **tetos de custo** (`ANAMNESE_INTERVAL_SECONDS`,
+  `ANAMNESE_BUDGET_MICROS`, `PSYCHOLOGIST_TRIAGE_THRESHOLD`, …) — e nenhuma
+  das duas que decidem se os agentes rodam. `ANAMNESE_ENABLED=true` no `.env`
+  era inerte: `runtime.exs` caía no default `"false"` e os dois seguiam
+  desligados **em silêncio, sem erro**.
+
+  **A medição**, no compose de dev de pé, antes da correção:
+
+  ```
+  $ docker compose … exec -T engine sh -lc \
+      'echo "[$START_ANAMNESE] [$ANAMNESE_ENABLED] [$PSYCHOLOGIST_ENABLED]"'
+  [true] [] []
+  ```
+
+  Origem provável: quando o default do código virou `false`, ninguém precisou
+  da variável para **desligar** — só quem tenta **ligar** descobre que o fio
+  não existe, e essa pessoa aparece meses depois.
+
+  **O que mudou.** As oito flags booleanas que o `runtime.exs` lê passam a
+  estar mapeadas nos **dois** composes, cada uma com o **mesmo default do
+  código**. As quatro que faltavam além das duas do título
+  (`START_MODEL_SYNC`, `START_GATE_RESCUE`, `GRAPH_TEMPLATES_ENABLED`,
+  `GRAPH_INSTRUCTION_TEMPLATES_ENABLED`) entram junto porque são o **mesmo
+  defeito**, achado pelo próprio mecanismo deste PR: deixá-las de fora exigiria
+  quatro exceções sem motivo, e um mecanismo com quatro exceções de
+  conveniência é decorativo. Nenhuma linha muda comportamento — todas repetem
+  o default que já valia.
+
+  **O que NÃO mudou.** A decisão de produto de 2026-08-10 segue intacta: os
+  dois nascem `false` nos dois arquivos, e nada aqui liga agente nenhum. O que
+  passou a existir é o **interruptor**. E `ANAMNESE_ENABLED=true` sozinho
+  continua não bastando para a rodada periódica: `START_ANAMNESE` é a chave de
+  **boot** (decide se o tick é agendado) e as duas respondem perguntas
+  diferentes — o `.env.example` agora explica as duas lado a lado. O
+  Psicólogo tem só a flag de produto, porque o gatilho automático dele é o
+  fechamento de sessão, não um tick.
+
+  **`deploy/k8s/` não muda, e é coerência e não omissão.** Lá não existe a
+  camada que quebra: um Deployment/ConfigMap não intercepta nada, a variável é
+  escrita onde toda variável é escrita, e o `brabo-config` tem **quatro**
+  literais (endereços de serviço e nível de log do web) — sem nenhum dos treze
+  tetos nem `START_ANAMNESE`. Não há interruptor sem fio a consertar ali.
+
+  **O mecanismo**, que é o ponto: `scripts/ci/flags-do-engine-no-compose.spec.ts`
+  **deriva** do `runtime.exs` toda flag booleana
+  (`System.get_env("X", "true"|"false") == "true"`) e reprova nomeando a que
+  faltar em qualquer dos dois composes — e, no de dev, a que divergir do
+  default do código. A lista é derivada e não travada à mão porque das 58
+  variáveis do arquivo a maioria são tetos numéricos com default bom ou coisas
+  de release, legitimamente ausentes; o recorte que não admite ausência é o das
+  booleanas, porque uma flag existe para ser virada. Provado reintroduzindo o
+  defeito: as duas checagens reprovam.
+- **ci,engine,api**: o golden-set do RAG em CI
+  ([RN-498](docs/business-rules.md#rn-498)) **nunca rodou verde uma vez** —
+  cinco execuções agendadas seguidas, três defeitos empilhados.
+
+  **1. O Mix recusava antes de começar.** `mix golden_set.rag` é alias que
+  chama `test`, e fora do ambiente `:test` o Mix para com `** (Mix) "mix test"
+  is running in the "dev" environment`. `def cli` no `mix.exs` do engine passa
+  a declarar `preferred_envs` para as duas tasks de golden-set — o comando
+  curto é o único documentado em toda parte, e é ele que precisava funcionar.
+
+  **2. O job nunca subiu a api**, e o teste PULA quando `API_URL` não responde
+  ([ADR 0132](docs/adr/0132-golden-set-de-acerto-do-rag.md)) — corrigido o
+  item 1, o workflow ficaria verde sem medir nada. Agora sobe a api de verdade
+  e espera o `/health`: satisfazer a pré-condição, nunca afrouxar o teste.
+
+  **3. O seed morria em 409.** Ele criava o projeto como `runner` para escapar
+  do portão da imagem, apoiado numa isenção que a
+  [RN-494](docs/business-rules.md#rn-494) revogou — e o comentário do script
+  ainda citava a regra morta. Agora ele atravessa o portão pelo caminho real,
+  decidindo a imagem por `DecidirImagemDoProjetoUseCase`, o mesmo caso de uso
+  do Arquiteto.
+
+  **E o job passa a reprovar quando o golden-set não MEDE.** A guarda é a
+  linha de resultado, que só sai depois dos 17 casos. Ela é necessária porque
+  o `{:skip, motivo}` que o teste devolve do corpo **é inerte** — não há skip
+  em runtime no ExUnit —, e foi o que se viu ao medir: com o seed morto em
+  409, `Result: 1 passed`.
+
+  Medido depois das três correções, pelo caminho que o job passa a percorrer:
+  **17/17 no top-5**, igual às rodadas manuais que gravaram o piso.
+- **install**: o `install.sh` anunciava a quem instala que **não** migrava uma
+  instalação anterior e **não** instalava o agente local — as duas coisas que
+  ele faz.
+
+  Era o texto da sessão que declarou as duas pendentes, sobrevivendo às sessões
+  que as construíram: `migrar_instalacao_anterior` e `instalar_o_runner`
+  existem e são chamadas no fluxo principal, e o `--print-plan` já dizia `faz`
+  nas duas linhas. Quem lia o final da instalação ficava procurando um passo
+  que já tinha acontecido. O mesmo bloco vivia no runbook, e caiu junto.
+
+  No lugar, o instalador diz o que de fato **não** faz: não sobe o **broker**
+  (o serviço não existe no compose de instalação, porque a imagem dele não é
+  publicada — e sem ele um projeto em modo **Pasta montada** não sobe
+  container, enquanto o modo **Runner** usa o Docker da própria máquina), e não
+  **pareia** o agente local com um projeto — o binário e a base ficam prontos,
+  mas a chave de dispositivo e o `brabo-runner.config.json` continuam vindo da
+  tela do projeto.
+
+  **O mecanismo contra a terceira repetição é do destinatário, não da frase:**
+  `install.spec.ts` passa a reprovar menção a "sessão N" ou "FASE N" nas linhas
+  de CÓDIGO do script. Quem roda o instalador não sabe o que é uma sessão de
+  fase, e uma pendência de plano nunca é notícia para ele — comentário segue
+  livre, que é onde a decisão mora.
+
+- **runner,web**: o `brabo-runner` reconectava **sozinho, para sempre, com um
+  ticket morto** — e a conta era paga pelo usuário, em **429** na tela dele
+  (RN-108).
+
+  **Medido em execução real.** O log do engine mostrava o MESMO ticket
+  (`lpd719PD4T0TLZHLN_4k8k3Y…`) recusado repetidamente a cada **~5,13 s** —
+  exatamente o teto do backoff interno do `phoenix.js`, cujo `reconnectAfterMs`
+  padrão satura em 5000 ms —, somando **61 `REFUSED CONNECTION TO
+  EngineWeb.RunnerSocket`** em poucas horas. Somado à política PRÓPRIA de
+  reconexão do runner (essa correta: ticket fresco por rodada, backoff
+  `[1s, 2s, 5s, 10s, 30s]`, teto de tentativas seguidas), deu **530
+  requisições num minuto** — quatro minutos seguidos acima do teto de **300
+  req/min** do `RATE_LIMIT_USER`. E o rate limit é por **usuário**: quem via o
+  429 era o NAVEGADOR da pessoa, pagando pelo que o runner estourou.
+
+  **A causa.** `apps/runner/src/channel.ts` construía o socket com
+  `new Socket(engineWsUrl, { params: { ticket } })` — **sem**
+  `reconnectAfterMs`. O auto-reconnect embutido do `Phoenix.Socket` fica ativo
+  e repete com os MESMOS params, e o ticket do socket é de **uso único**
+  (RN-108): consumido na primeira conexão, toda tentativa seguinte é recusada.
+  O `apps/web/src/lib/session-channel.ts` sempre fez certo e é o modelo — o
+  runner copiou o **comentário** e não a linha.
+
+  **O agravante.** O docblock do próprio `channel.ts` AFIRMAVA a correção que
+  o código não fazia: *"`reconnectAfterMs` embutido do `Phoenix.Socket` é por
+  isso neutralizado"*. Nada neutralizava. Um revisor que lesse o comentário
+  parava de procurar exatamente ali — por isso o comentário passou a
+  **registrar que já esteve lá sem lastro**, a opção virou **obrigatória no
+  tipo** (`OpcoesDoSocket`, erro de compilação e não lembrança) e existe teste
+  que assere a **opção passada ao construtor**, não o comentário: um teste que
+  só verificasse "conecta" passava com o defeito de pé — e passou.
+
+  **A segunda consequência é pior que o 429.** Enquanto está nesse laço o
+  runner **não está conectado**, então `RunnerReadiness` (RN-507) recusa e o
+  projeto parece "sem agente local" — parte do que se via como "o container não
+  sobe" era isto.
+
+  Junto, na mesma causa: `conectarERodar` (`index.ts`) nunca descartava a
+  conexão caída, então o `Socket` da rodada anterior seguia vivo depois de o
+  laço já ter criado outro, e cada queda deixava mais um objeto tentando com o
+  ticket morto — agora `conexao.desconectar()` é explícito.
+
+  **Varredura dos outros construtores de `Socket`:**
+  `apps/web/src/lib/fs-browser-channel.ts` tinha a MESMA linha de defeito
+  (mesmo ticket de uso único, e sem política própria de reconexão — o
+  `onClose` dele manda "feche e reabra") e foi corrigido junto, com o mesmo
+  teste. `session-channel.ts` e `terminal-channel.ts` já estavam corretos.
+
+- **dev**: `scripts/dev/reset-total.sh` terminava dizendo **"reset completo"**
+  com o ambiente quebrado, e essa frase era **mentira por construção** — ela
+  era um `echo` fixo no fim de um script que nunca perguntava nada sobre o
+  estado do que tinha acabado de mexer.
+
+  **O que quebrava.** A ordem era `up --wait` → `DROP SCHEMA` → `migrate` →
+  `seed`, ou seja: **o banco era destruído embaixo de processos vivos.** No
+  `DROP SCHEMA engine CASCADE` o engine morre na hora —
+  `Engine.Sessions.Rehydrator` consulta `engine.session_states`, que acabou de
+  sumir: `(Postgrex.Error) ERROR 42P01 (undefined_table) relation
+  "engine.session_states" does not exist`. As migrations rodavam depois e
+  recriavam tudo, mas **nada reergue um processo morto**: o engine ficava
+  `Exited (1)` e o seed falhava no passo que ativa a sessão (api → engine) com
+  `TypeError: fetch failed … ECONNREFUSED`. O registro anterior do mesmo
+  fenômeno visto do outro lado ("o reset derruba a api") tem esta causa raiz
+  idêntica.
+
+  **O que passa a valer.** A ordem é `preflight` → `build` → **`stop api
+  engine`** → `up postgres` → `DROP SCHEMA` → `migrate` → `up --wait` (tudo) →
+  `seed` → **verificação**. Param-se **dois** serviços e nenhum a mais, por um
+  critério objetivo — quem mantém conexão viva com o Postgres do compose: a
+  api (pool do Drizzle, `public`/`drizzle`) e o engine (Ecto/Oban, `engine`).
+  `web` é servidor do Vite e não fala com banco, `neo4j` é outro banco que
+  este reset não toca, e o `broker` só fala HTTP com a api. Parar de menos
+  deixa o defeito; parar de mais transforma um reset de banco numa derrubada
+  do ambiente inteiro.
+
+  **A frase final deixou de ser fixa.** Antes de afirmar, o script **pergunta**
+  — `wget` contra `/health` da api e do engine e contra `/` do web, de DENTRO
+  de cada container —, imprime `docker compose ps` e só então conclui; se algum
+  não responder, ele diz **quais** e sai com código 1. E qualquer falha no meio
+  agora tem desfecho nomeado (`RESET INCOMPLETO — parou em: <passo>`), em vez
+  de deixar a última linha de log de um comando qualquer como explicação.
+
+- **dev**: `--wait` não provava nada sobre `api`, `engine` e `web` no compose
+  de desenvolvimento — os três **não tinham `healthcheck`**, então
+  `docker compose up --wait` esperava o container ficar `running` e seguia em
+  frente. Foi exatamente assim que o broker morreu em silêncio antes de ganhar
+  o dele, e é por isso que o reset conseguia terminar com a api em
+  `Exited (1)`. Os três ganham `healthcheck` — o **mesmo teste** que as imagens
+  de produção já faziam por `HEALTHCHECK` no Dockerfile (`/health` na api e no
+  engine, que tocam o Postgres de propósito; `/`, a página, no Vite do web),
+  com `start_period` dimensionado para o boot de dev, que roda
+  `pnpm install`/`mix deps.get` antes de escutar. Passa a valer para todo
+  `up --wait`, não só para o reset.
+
+- **dev**: os três passos de HOST do reset (`db:migrate`, `engine:migrate`,
+  `seed`) caíam nos defaults embutidos no código — `localhost:5432` do
+  `drizzle.config.ts`, `localhost:4000` do `ApiToEngineClient`. Com
+  `API_PORT`/`ENGINE_PORT` trocados no `.env` (knobs que o compose oferece), o
+  seed conversava com **qualquer** engine que estivesse na 4000, não com o
+  desta stack; e um `DATABASE_URL` exportado no shell de quem chama — o valor
+  do `.env` aponta para o hostname `postgres`, que não resolve no host —
+  quebrava as migrations com `EAI_AGAIN`. O script agora **pergunta ao próprio
+  compose** qual porta ele publicou (`docker compose port`) e passa
+  `DATABASE_URL`/`ENGINE_URL` na frente de cada comando de host, nunca por
+  `export` (exportar contaminaria a interpolação do `up` seguinte).
+
+- **api**: `apps/api/src/db/seed.ts` não era idempotente, e rodá-lo de novo
+  deixava quem tentava se recuperar **pior do que estava**: usuários,
+  credenciais, modelos, curadoria, bindings e instruções já passavam por
+  `upsert`, mas o workspace, o projeto e a sessão eram `create` puro — a
+  segunda rodada escrevia metade das coisas e então morria em
+  `duplicate key value violates unique constraint "workspaces_slug_unique"`,
+  uma mensagem de Postgres que não aponta para nada. Rodar de novo é o caso
+  **normal**, não a exceção: o `bootstrap.sh` do k8s chama o seed com
+  `BRABO_FORCE_SEED=1` contra um cluster que pode já estar semeado, e quem vê o
+  reset falhar tenta rodar só o seed. Os três registros de demonstração passam
+  a ser **reaproveitados** quando já existem (workspace por slug, projeto por
+  slug, sessão pelo nome), e a sessão reencontrada **não** é reativada nem
+  ganha os 5 eventos de novo — eles são append-only, e cada rodada empilharia
+  mais cinco numa timeline que existe para demonstrar cinco.
+
+- **api**: a sessão parava de ser segurada quando os dev agents estavam
+  bloqueados **esperando container**. `GetSessionPendingWorkUseCase` é o que
+  impede o heartbeat de 30s (`session_heartbeat_timeout_ms`) de fechar uma
+  sessão com trabalho pendurado, e o **quarto sinal** dele (RN-411) enxerga
+  dev agents pelo vocabulário próprio `dev.*`. O engine emite **nove** tipos;
+  a lista `DEV_EVENT_TYPES` que o caso de uso **consulta** conhecia **oito** —
+  faltava `dev.blocked_by_container`, que nasceu depois dela
+  (RN-502/[ADR 0143](docs/adr/0143-agentes-de-dev-so-depois-do-container.md)).
+  Como é a lista consultada, o evento era **invisível**: a api não o via nem
+  para ignorá-lo.
+
+  **A prova, do event log de uma execução real** (projeto `exp004`, sessão
+  `f782257e`): 22:41:37 a sessão é criada; 22:41:38 chegam `execution.activated`,
+  cinco `dev.started` e cinco `dev.blocked_by_container`; **22:42:07** o engine
+  fecha por `heartbeat_timeout` — **30 segundos cravados**. Às **22:55:38** o
+  usuário aprova um merge e um `action.git_merge` é gravado, **13 minutos**
+  depois de a sessão constar como fechada; às **23:14:41** os cinco agentes
+  emitem `dev.blocked_by_container` de novo, **32 minutos** depois. O último
+  evento **visível** por agente era `dev.started`, que está deliberadamente
+  fora da régua de "pendente". Com o tipo na lista, os cinco teriam segurado a
+  sessão — eles esperavam um **humano** subir o container, que é a definição
+  de trabalho pendente que os outros quatro sinais já usam. O efeito colateral
+  é o que o próprio docblock do caso de uso antecipa: eventos continuam sendo
+  gravados numa sessão que o banco dá por encerrada, envenenando toda métrica
+  por sessão (duração, custo, "quantas terminaram bem").
+
+  O tipo entra nas **duas** listas — `DEV_EVENT_TYPES` (senão não é sequer
+  consultado) e `DEV_PENDING_TYPES` (é espera por ação humana, como
+  `dev.idle_tripped` e `dev.awaiting_approval`).
+
+- **web**: o painel do time dizia **"trabalhando"** sobre dev agents que
+  estavam **parados esperando** — e sobre exatamente quem precisava de
+  atenção. `DEV_STATUS_EVENTS` (`apps/web/src/lib/agent-status.ts`) não
+  conhecia `dev.blocked_by_container`
+  (RN-502/[ADR 0143](docs/adr/0143-agentes-de-dev-so-depois-do-container.md))
+  nem `dev.awaiting_approval`, e os dois caíam no
+  `default: return 'trabalhando'` do `switch` de `devStatus`. É a **terceira**
+  instância da mesma deriva — o engine ganhou um tipo de evento e as cópias do
+  vocabulário ficaram para trás; as duas anteriores foram a lista do heartbeat
+  na api (acima) e o inventário gerado de `docs/reference/events.md`. No
+  `exp004`, cinco dev agents ficaram **horas** bloqueados esperando um humano
+  subir o container, com o painel dizendo que trabalhavam.
+
+  Os dois passam a valer **`aguardando`** — o mesmo estado que
+  `dev.awaiting_gate` já usava, porque é o mesmo caso: o agente não segue até
+  que algo **fora** dele aconteça (um gate terminar, uma aprovação sair, um
+  container subir). **Sem estado novo** em `AgentStatus`. Junto, a mesma
+  mentira em `dev.error`, que não estava em lista nenhuma e por isso era
+  invisível: o painel voltava ao `dev.working` anterior e dizia "trabalhando"
+  sobre um agente que caiu em `:idle` por falha de claim
+  (`AgentIo.claim_e_rodar/2`) — agora é `falhou`, concordando com os outros
+  emissores dele, que já são seguidos de `backlog.task_blocked`.
+
+  A correção estrutural é a lista **deixar de ser lista**: `DEV_STATUS_EVENTS`
+  vira **mapa** `tipo -> AgentStatus` e o `default` some. Numa lista, "estar
+  presente" e "ter um estado decidido" eram duas coisas separadas, e era no vão
+  entre elas que o defeito morava; no mapa a chave **é** a decisão. Esquecer um
+  tipo passa a torná-lo **invisível** (o painel mostra o evento conhecido
+  anterior, no limite `ocioso`), nunca "trabalhando". Zero RN nova: é a
+  [RN-470](docs/business-rules/custo.md#rn-470) — tela não colapsa dois estados
+  — voltando a ser cumprida.
+
+### Testes
+
+- **ci**: nasce `scripts/ci/vocabulario-de-eventos-dev.spec.ts`, que compara o
+  vocabulário `dev.*` **realmente emitido** por `apps/engine/lib/**/*.ex` com
+  as duas listas do caso de uso e **reprova** quando divergirem, nomeando o
+  tipo que falta e dizendo o que fazer com ele. Só acrescentar a string
+  deixaria o décimo tipo repetir a história: o comentário da lista afirmava
+  ser "o vocabulário completo… confirmado por leitura direta do código do
+  engine" e estava **certo quando foi escrito** — foi essa afirmação que
+  envelheceu calada, e agora quem a mantém verdadeira é mecanismo.
+
+  Ele **compara** em vez de **gerar** (o precedente de `agent-areas.ts`)
+  porque só **metade** do par é derivável do engine: `DEV_EVENT_TYPES` é
+  mecânica, mas `DEV_PENDING_TYPES` é **julgamento** — quais estados
+  significam "um humano precisa agir" (`dev.idle` e `dev.started` estão fora
+  de propósito). Um gerador escreveria metade e teria de adivinhar a outra;
+  comparar reprova, nomeia e obriga a decisão humana, sem passo de build novo.
+  Ele vive em `scripts/ci/` porque lê **dois apps** como texto, e roda no CI
+  em `pnpm --filter @brabo/scripts test` (job `test-packages`).
+
+  Sem terceiro extrator: `ler`/`arquivos`/`grepTodos` e a varredura de tipos
+  de evento saem de `scripts/docs/generate.mjs` para
+  `scripts/docs/fontes.mjs`, agora compartilhada entre o inventário gerado de
+  `docs/reference/events.md` e este teste — dois regex respondendo "o que o
+  engine emite?" é a mesma classe de defeito que ele pega. A saída de
+  `pnpm docs:generate` fica byte a byte.
+
+- **ci**: o mesmo teste cruzado passa a cobrir o **web**, e não só a api — a
+  terceira instância da deriva (acima) mostrou que a api não era o único lugar
+  onde uma cópia do vocabulário `dev.*` envelhece calada. O desenho **não** é
+  idêntico ao da api, porque o caso não é: na api todo tipo tem de ser
+  conhecido (o heartbeat precisa ver o evento nem que seja para ignorá-lo), no
+  painel um tipo **pode** legitimamente não interessar. O que é inaceitável é
+  ficar de fora por **esquecimento**. Então a exigência é uma **decisão
+  explícita por tipo**, em um de dois lugares que se leem: `DEV_STATUS_EVENTS`
+  (o mapa `tipo -> AgentStatus`) ou `DEV_STATUS_EVENTS_FORA`
+  (`tipo -> motivo`, para o que o painel decide ignorar). O segundo está
+  **vazio** hoje, e essa é a resposta certa — existe para que a saída seja
+  declarar, nunca omitir. Como vazio ele não é exercitado por dado real
+  nenhum, a comparação foi isolada em `semDecisao` e provada com três casos
+  fabricados. A mensagem de falha nomeia o tipo, diz os dois lugares onde
+  decidir e cita o `exp004`, no mesmo tom da que já existia.
+
+### Documentação
+
+- **docs**: três documentos que contradiziam o código, e o aferidor que faltava
+  para cada um.
+
+  **O `db:generate` mandava editar o barrel.** `README.md:294` e
+  `docs/getting-started.md:267` mandavam rodar `pnpm db:generate` "depois de
+  mudar `apps/api/src/db/schema.ts`" — que desde o
+  [ADR 0121](docs/adr/0121-schema-dividido-por-agregado-de-dominio.md) é só um
+  barrel de `export *`. Instrução errada custa mais que número errado: o comando
+  **roda**, o Drizzle não vê diff nenhum, e quem seguiu a instrução conclui que
+  o comando está quebrado, não a frase. São as duas primeiras coisas que alguém
+  lê — a pior posição possível para uma instrução morta. Medidas as outras
+  quatro ocorrências de `db:generate` em `docs/`: nenhuma reproduz (duas são
+  inventário gerado, duas são o ADR 0121 citando o comando como PROVA).
+
+  **O `description` do `branching-policy.md` anunciava a escada de quatro
+  degraus.** `dev → qa → rc → main` no frontmatter, com o corpo do **mesmo
+  arquivo** explicando a partir da linha 54 que o `rc` saiu da política
+  ([ADR 0030](docs/adr/0030-politica-de-branches-mecanizada.md)). O arquivo se contradizia
+  consigo mesmo, e o `description` é a metade que se lê primeiro: é ele que
+  alimenta o card da busca local do site e o `<meta>` da página. Ocorrência
+  única no repositório. **O `rc` continua em `PROTECTED_BRANCHES`, e continua
+  certo** — não sobrou lixo ali, é decisão; e o enum `bootstrap_step` mantém
+  `create_rc_branch` pelo mesmo motivo.
+
+  **O inventário de variáveis não via duas árvores inteiras.**
+  `apps/api/scripts/` e `e2e/` ficavam de fora de `gerarEnv()`, e o
+  `docs:check` passava verde sobre elas. Junto entrou a mesma armadilha
+  pré-existente na api: `**/` no pathspec do git exige pelo menos um nível de
+  diretório, então o que mora direto em `apps/api/src/` escapava — e escondia
+  `API_JSON_BODY_LIMIT` (`apps/api/src/main.ts:59`), que é variável de
+  **produto**, o teto do corpo JSON que a api aceita. O inventário passa de 132
+  para 157 variáveis, cada fonte agora marcada `product` ou `tooling` — sem
+  isso `E2E_PASSWORD` apareceria ao lado de `SMTP_HOST` numa lista que um
+  operador lê para configurar a máquina dele. As 15 lacunas que a varredura
+  nova abriu foram escritas em prosa na mesma mudança (duas seções novas em
+  `docs/reference/configuration.md`); seguem abertas as **duas**
+  pré-existentes, de `HUGGINGFACE_*`.
+
+  **O que trava as duas primeiras daqui em diante:**
+  `verificarFrasesAncoradasNoCodigo` em `scripts/docs/generate.mjs`, no molde
+  da tabela das contagens em prosa — uma entrada por frase, um comentário por
+  entrada dizendo o que ela custou. A diferença é que o esperado não é um
+  número: a escada vem de `ESCADA` em `scripts/ci/pr-police.ts` (**nunca** de
+  `PROTECTED_BRANCHES`, que derivaria de volta a frase errada), e o destino do
+  `db:generate` vem de `schema.ts` conter ou não um `pgTable(`. Exercitado por
+  mutação nos dois sentidos: doc errada com código certo **reprova**, código
+  mudado com doc certa **reprova**, frase reescrita vira `CEGO`, e a fonte
+  sumindo também. O terceiro caso não ganhou aferidor de frase porque ele é o
+  próprio aferidor — o que faltava era escopo.
+
+- **adr**: [ADR 0153](docs/adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.md)
+  — `DEPLOY_ENABLED` é citado como gatilho de ativação por **dez documentos**
+  (os ADRs 0089/0091/0092 no próprio campo Status, `fluxo.yml` em três lugares,
+  `gates.yml` no gate `operavel`, mais `business-rules.md`, `backlog.md`,
+  `modelo-de-time.md`, `auditoria-fluxo-vs-codigo.md`, `historico-de-fases.md` e
+  o `CLAUDE.md`) e **não existe em lugar nenhum do código**: as duas únicas
+  ocorrências são COMENTÁRIOS (`external-effect.ts:144`,
+  `listar_metricas_de_produto.ex:185`). Dez documentos apontam para um
+  interruptor que não tem parede.
+
+  Achado que não é sobre deploy: o gate **`deployavel`** é declarado como
+  `gate_saida` de `area-infra` em `fluxo.yml:247` e **não estava no registro**
+  `docs/gates.yml` — exatamente a inconsistência que o cruzamento entre as três
+  peças do modelo de time pegaria, e o segundo achado desse tipo. Ele entra
+  agora, `status: planned` e `severidade: warn` (RN-070/071 proíbem promover a
+  `block` sem script de verificação), no molde exato do `operavel`.
+
+  **Nada muda em runtime**: nenhuma variável nova, nenhum default alterado,
+  nenhum gate avaliado que não fosse antes. A alternativa considerada e
+  **recusada** foi criar a variável agora com default `false` — uma variável que
+  nenhum código lê é a mesma promessa vazia que o ADR denuncia, agora com uma
+  linha de configuração para sustentá-la; ela nasce no PR que tiver o primeiro
+  consumidor real. A camada de plataforma continua parada e passa a dizer
+  honestamente por quê: não falta uma flag, falta um ambiente.
+
+
+## v5.0.0 — 2026-09-05
+
+### ⚠ Mudanças incompatíveis
+
+- **config**: uma base única para os projetos montados, por identidade (e27695564)
+
+### Novidades
+
+- **engine,runner,api**: Docker vira pré-requisito real do modo runner (49c077e7c)
+- **api**: "sempre permitir" de dev-de-módulo escopa agent_autonomy por agente (a1768ce2c)
+- **engine**: decision_record reusa emit_artifact genérico nos 5 conversacionais restantes (09eed4cf0)
+- **api**: a pasta montada nasce quando o container sobe (ADR 0142, RN-501) (54df79826)
+- **api,web**: o navegador de pastas passa a ser servido pela api (e187cd988)
+- **api,broker**: projeto montado sobe container pelo broker, com localizador discriminado (8b649ae96)
+- **engine,api**: dev agent só reivindica task com container de pé (ADR 0142, RN-501) (696f077d8)
+
+### Correções
+
+- **ci**: limpeza do pacote GHCR efêmero apaga o pacote, não a versão (c30c7b3cf)
+- **web**: o aviso do modo Pasta montada descrevia o remédio que morreu (5f587e7a6)
+- **web**: o handoff da Infra ganha card acionável fora do fio (RN-499) (a26ddd84d)
+- **docker**: as três variáveis do Neo4j chegam à api em dev (cc993485d)
+
+### Desempenho
+
+- **ci**: checa a visibilidade default do pacote GHCR efêmero (d8cbf0e23)
+- **ci**: mede push/pull via GHCR no job de imagens (instrumento temporário) (b92fc051a)
+- **ci**: troca cópia por symlink no cache do trivy (achado do PR) (22a52cef9)
+- **ci**: paraleliza os quatro scans do Trivy no job de imagens (f00b07f72)
+- **ci**: divide o job de testes TS em três jobs paralelos (19889a829)
+- **api**: banco por worker na suíte de testes, destravando fileParallelism (803a294e6)
+
+### Documentação
+
+- **ci**: rejeita GHCR (registry) como transporte entre jobs, medido de verdade (172c4c6a9)
+- **changelog**: quarto run (pós-merge do dev) fecha a amostra do trivy (af4e3ef08)
+- **changelog**: terceiro run do PR mostra variância — corrige o número único (4a21529b2)
+- **changelog**: números reais medidos no PR (achado do gha cache aquecido) (580d35893)
+- **ci**: registra a variância real medida em test-api (177s/388s/172s) (21815eb46)
+- **ci**: registra os números reais da divisão do job de testes TS (5ce7a4e50)
+- **business-rules**: renumera RN-505 duplicada e fecha resíduo do RN-507 (56acdd0e7)
+- declara a lacuna da credencial de git quando o container do runner já está ativo (504e97daf)
+- corrige contagem de RNs no README (368 → 371) (85f3c1e17)
+- preenche o TODO(humano) do rulesets.md com o número real de CI (eaf0c72b6)
+- reconcilia as contagens depois do merge da #482 (1ffcc28c7)
+- **business-rules**: crase aninhada na RN-501 quebrava o code span (780e2189e)
+- **api**: security-surface e internal-api descrevem a validação adiada (7365f8be0)
+- renumera para ADR 0143 e RN-502 (colisão com a #484) (26aa21802)
+- **i18n**: a tradução pt-BR do runbook diz que projeto montado sobe pelo broker (a35f8545e)
+- **engine,api**: os comentários descrevem o mundo depois da RN-501 (1bf20d116)
+- **i18n**: a tradução pt-BR do runbook acompanha o interruptor do grafo (523940b21)
+- **config**: a prosa das três variáveis do Neo4j descreve o que o código faz (0d924a215)
+- **changelog**: v4.0.1 (41d50c57e)
+
+### Manutenção
+
+- **docs**: a RN vira 503 e o ADR vira 0144, por alocação do coordenador (2245f2016)
+
+
 ## v4.0.1 — 2026-09-04
 
 ### Correções
 
+- **api**: `container_start_via_runner` volta a poder subir container — ela
+  **nunca subiu nenhum**, desde que nasceu (RN-508,
+  [ADR 0145](docs/adr/0145-docker-pre-requisito-do-runner.md)). A ação
+  terminava `failed` em 100% das vezes com *"especificação de container
+  recusada em `projectId`: esperava texto não vazio, recebi undefined"*, e o
+  que se via numa execução real (`exp004`, modo `runner`, workspace confirmado
+  e runner conectado) era o **efeito** disso: nenhum dev agent reivindicava
+  tarefa e nada era escrito na pasta do usuário. Esse segundo bloqueio estava
+  CERTO — sem container REGISTRADO `running`, `RunnerReadiness` recusa (RN-507)
+  e `try_claim` recusa emitindo um `dev.blocked_by_container` por módulo
+  (RN-502, [ADR 0143](docs/adr/0143-agentes-de-dev-so-depois-do-container.md)). O
+  errado era o passo anterior.
+
+  **A causa: um campo.** `EspecificacaoDeContainerParaRunner` nasceu com NOVE
+  campos, sem `projectId`, e `ExecuteContainerStartViaRunnerUseCase` copiava
+  exatamente esses nove de `SpecDeContainer` — que sempre teve o `projectId`
+  ali, à mão. O engine repassa o mapa **opacamente**
+  (`ContainerCommandController.start/2` não lê campo nenhum), então nada se
+  perdia no meio: o runner entregava o que recebeu a `especificacaoValidada`
+  (`packages/docker-port`), que exige `projectId` como texto não vazio e recusa
+  a especificação inteira antes de qualquer `docker run`. O campo só vira o
+  rótulo `brabo.project.id` — barato de mandar, e a validação é dura de
+  propósito. Por contraste, o caminho do BROKER sempre funcionou porque ele
+  **busca** a spec na api (`GET /internal/projects/:id/container-spec`) e
+  recebe o `SpecDeContainer` inteiro; era por isso que só o modo `runner`
+  quebrava.
+
+  **Por que três suítes verdes não pegaram.** Cada elo testava a si mesmo com o
+  próprio fixture: o teste do caso de uso afirmava o objeto que ele mesmo
+  esperava, `apps/runner/src/index-handlers.spec.ts` montava um fixture de spec
+  **com** `projectId`, e o engine não olha o mapa. Ninguém exercitava a
+  CORRENTE — o objeto que a api de fato compõe, contra o validador que de fato
+  o recebe. O que passa a ser garantido é exatamente isso:
+  `apps/api/test/contract/especificacao-de-container-para-runner.contract.spec.ts`
+  roda o caso de uso REAL, captura o payload entregue ao `ApiToEngineClient` e
+  o atravessa pelo `especificacaoValidada` REAL, do jeito que
+  `tratarContainerStart` faz (acrescentando só a `raizDoProjeto`, que o runner
+  enche sozinho). Ele também trava o CONJUNTO de campos: `raizDoProjeto` é o
+  único que a api não manda, então a próxima divergência — campo novo de um
+  lado sem o outro — reprova em vez de virar uma segunda caçada.
+
+  O teste mora na suíte da api porque é o único lugar onde os dois lados
+  existem vivos ao mesmo tempo (`packages/docker-port` e `apps/runner` não
+  podem importar um caso de uso do NestJS, e inverter a dependência seria pior
+  que o defeito). O import é RELATIVO, nunca `@brabo/docker-port`: o invariante
+  de `test/api-nao-consome-docker-port.spec.ts` segue verde, e ele foi
+  **estendido** na mesma entrega para também reprovar um import relativo ao
+  pacote a partir de `src/` — que é o que de fato quebraria o boot em produção,
+  e que a busca por nome de pacote deixava passar.
+
+  Os irmãos foram conferidos e estão CERTOS: `container_stop`/
+  `container_remove` via runner mandam só `workspaceDirName`, e do outro lado
+  só `nomeDeWorkspaceValidado` é chamado — um campo pedido, um campo enviado.
+  E `projectId` era a única divergência: com ele, os dez campos da api mais a
+  `raizDoProjeto` do runner fecham exatamente a `EntradaDeEspecificacao`.
+
+  A prova ponta a ponta continua exigindo um humano (rodar o `brabo-runner`, a
+  Infra propor, alguém aprovar) — o que esta entrega garante é que o payload
+  para de ser recusado antes de chegar lá.
+
+- **docker**: o **broker sobe de verdade** no compose local, e o `up --wait`
+  para de dar verde falso. A [RN-512](docs/business-rules.md#rn-512)
+  ([ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) ponto 3) tirou o
+  broker do `profiles` justamente para ele estar de pé em desenvolvimento — e
+  ele **nunca subiu**: `docker compose up -d broker` terminava em
+  `Exited (1)` cinco segundos depois, e `container_start` numa máquina de
+  desenvolvimento continuava dando `BrokerIndisponivelError`, exatamente o
+  sintoma que a decisão existia para eliminar.
+
+  **Por que ninguém tinha visto.** Enquanto o serviço viveu sob profile, quem
+  o subia de propósito era o mesmo que já sabia o que esperar; a primeira
+  subida por padrão foi também a primeira vez que alguém reparou. E ela
+  aconteceu no reset total, que anuncia `brabo-broker-1 Healthy` — o serviço
+  **não tinha healthcheck**, então `up --wait` considera saudável qualquer
+  container que INICIOU, e o reset terminava dizendo "reset completo" com o
+  processo já morto.
+
+  **A causa.** `docker/broker/Dockerfile` preparava o pnpm com `corepack` como
+  **root**, no build (o cache fica em `/root/.cache/node/corepack`), e o
+  container roda como uid 1000 — que não lê aquilo. Sem cache, o corepack trata
+  o pnpm como ausente e tenta **baixá-lo** no start; a única rede do broker é
+  `internal: true`, então a tentativa morre com
+  `getaddrinfo EAI_AGAIN registry.npmjs.org` e o processo sai com 1. O `CMD`
+  ainda faria `pnpm install` em runtime, pelo mesmo caminho. `docker/api/
+  Dockerfile` tem o **mesmo** padrão de corepack e sobe: a diferença nunca foi
+  o Dockerfile, foi o egress.
+
+  **A correção tira o registry do caminho de RUNTIME, e não abre a rede.** A
+  rede `internal: true` é a primeira das cinco camadas de contenção do
+  [ADR 0130](docs/adr/0130-broker-de-container.md) — um processo que fala com o
+  socket do Docker do host não alcança a internet, e isso não se negocia por
+  conveniência de build. Foram as duas direções, porque as duas eram
+  necessárias: `COREPACK_HOME` passa a apontar para `/opt/corepack`, preparado
+  no build e com o dono do uid de runtime, e o `pnpm install` migra do `CMD`
+  para um passo de **BUILD**, onde há rede.
+
+  **A parte que exigiu desenho: os três volumes nomeados de `node_modules`.**
+  O compose monta um volume por cima de cada um deles, e o Docker só semeia um
+  volume a partir da imagem quando ele está **vazio** — instalar na imagem
+  chegaria na primeira subida e nunca mais, deixando velho, em silêncio, todo
+  volume que já existe (e quem subiu o broker quebrado tem os três). Por isso a
+  árvore instalada é guardada **fora** de `/workspace` (que o bind mount cobre
+  inteiro) e o novo `docker/broker/entrypoint.sh` **reconcilia** os três contra
+  ela, carimbando com o sha256 do `pnpm-lock.yaml` do build. O mesmo carimbo
+  responde a segunda pergunta: comparado com o lockfile da árvore de trabalho,
+  ele diz que a imagem está velha — e **avisa** em vez de recusar subir, porque
+  o broker não tem dependência de runtime além do link de workspace para
+  `@brabo/docker-port`, e trocar um aviso por uma indisponibilidade seria pior.
+
+  **Healthcheck no serviço**, que é a outra metade do defeito: `wget` do
+  busybox contra `127.0.0.1:8090/health`, **de dentro** do container — ele não
+  publica porta, e não deve. É o mesmo teste que o `Dockerfile.prod` já fazia. O
+  `/health` fala do PROCESSO e nunca do daemon: reprovar por Docker fora do ar
+  produziria um laço de reinício que não resolve nada.
+
+  O compose de **produção não sofre disto** e não muda: `Dockerfile.prod` já
+  instala e empacota em estágio de build, remove `corepack`/`npm` da imagem
+  final, roda `node index.cjs` e já tinha `HEALTHCHECK`.
+
+  Junto, três blocos de comentário que a mesma decisão tinha deixado para trás:
+  `.env.example` ainda dizia que o broker "NÃO sobe por padrão: está sob o
+  profile `container-broker` nos dois composes" vinte linhas acima do bloco que
+  explica que ele passou a subir; e `BRABO_PROJECTS_HOST_BASE` continuava
+  descrita como "nada a consome ainda" nos dois composes e no `.env.example`,
+  superada pelo [ADR 0144](docs/adr/0144-a-segunda-raiz-do-broker.md)
+  ([RN-503](docs/business-rules.md#rn-503)).
+
+- **engine**: o comando de terminal do dev agent **não cai mais fora do
+  container** em silêncio (RN-502). `container` sem container `running` caía
+  em `:caminho_de_sempre`, isto é, `System.cmd` dentro do processo do engine —
+  o mesmo processo que fala com o banco, com a api e com todos os outros
+  projetos —, então o isolamento do ADR 0134 valia só no caminho feliz e a
+  ausência dele não recusava: degradava, e degradava calada. Agora recusa
+  (`failed_result` com o motivo nomeado), espelhando o
+  `:recusar_nao_verificado`/`:recusar_runner_desconectado` que o modo `runner`
+  já tinha. `mounted` entra no mesmo ramo — com container `running` atravessa
+  pro broker igual a `container`, sem ele recusa — e o catch-all
+  `:caminho_de_sempre` encolhe para o que sempre deveria ter sido sozinho:
+  projeto inexistente ou id malformado. Consequência declarada: projeto sem
+  container de pé para de trabalhar, e diz por quê
+
+- **web**: o handoff para a **Infra** volta a ser aceitável — por um card
+  próprio, fora do fio (RN-499). O filtro `AGENTES_DE_CHAT` de
+  `offeredHandoff` (RN-136) exclui `infra` **e está certo em excluir**: o
+  Infra Lead não tem cláusula de `message` no engine, e alargar a lista faria
+  o composer mandar mensagem que seria roteada em silêncio para o Criativo. O
+  que não estava certo era a consequência que o comentário do próprio código
+  registrava como aceita — *"como Infra nunca é aceito por AQUI … na prática,
+  nunca"*: `acceptHandoff` tinha **um único consumidor**, o card do fio, atrás
+  daquele filtro. Resultado: `OfferInfraHandoffUseCase` oferecia o handoff, ele
+  ficava `offered` para sempre, o Infra Lead nunca era ativado, nunca propunha
+  `container_start`, e nenhum projeto de nenhum modo chegava a ter container de
+  pé — uma capacidade inteira inalcançável por tela nenhuma. Agora existe um
+  card acionável na faixa entre o fio e o composer (a mesma que já hospeda o
+  handoff manual, declarada como o lugar das ações de handoff que **não** são
+  conversa), chamando o `acceptHandoff` que já existia. Ele diz a consequência
+  do clique — o Infra Lead assume o provisionamento e vai **propor** a subida
+  do container, proposta que ainda passa pelo pipeline de aprovação de sempre —
+  e some pelo mesmo `activeFor` do card do fio quando a Infra já está ativa. O
+  `handoff.offered` da Infra continua **narrado** no fio como divisor mudo, e
+  nenhum handoff conversacional muda de forma
+
 - **ci**: o anexo do binário espera a Release em vez de ler a ausência dela (35ba788ac)
 
-### Documentação
-
-- **ci**: o comentário do audit descreve o que os dois auditores fazem (aaf84ae04)
-- **changelog**: v4.0.0 (48dc81813)
-
-### Manutenção
-
-- **engine**: mint 1.10.0 fecha duas advisories de DoS (a71b984fb)
-
-## Unreleased
-
 ### Novidades
+
+- **runner**: o agente local vira **serviço de usuário** —
+  `brabo-runner service install | uninstall | status` (RN-518,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 5). Até aqui
+  o runner era **só primeiro plano**: um processo encerrado por SIGINT/SIGTERM,
+  que morre com o terminal e não volta com a sessão do usuário. O precedente
+  era zero — nenhuma menção a `systemd`, `launchd` ou `LaunchAgent` no
+  workspace.
+
+  **Nível de usuário SEMPRE, e root é RECUSA e não aviso.** `systemd --user` no
+  Linux, `LaunchAgent` no macOS. Não é preferência de empacotamento: o docblock
+  de `apps/runner/src/guard.ts` declara *"o runner roda NA máquina do usuário,
+  com os privilégios DELE"* como a premissa em que as três fronteiras reais do
+  produto se apoiam — e a guarda de `cwd` é best-effort **por escrito**. Um
+  serviço de sistema rodando como root deixaria essa guarda como a única coisa
+  entre um comando aprovado e o disco da máquina. Por isso `install` com uid 0
+  recusa **sem escrever arquivo nenhum e sem rodar comando nenhum**:
+  instalar-e-avisar deixaria a instalação errada de pé, e o aviso seria lido
+  uma vez só.
+
+  **Windows fica fora de escopo, declarado.** A matriz de build já produz o
+  binário (ADR 0112), mas serviço de usuário ali é um **terceiro mecanismo**
+  (Serviços do SO com conta de usuário, ou Agendador de Tarefas no logon) — não
+  uma variação dos dois. Os três subcomandos recusam **nomeando a plataforma** e
+  apontando o caminho que continua funcionando; nunca falha muda, nunca um
+  "instalado" que não instalou nada.
+
+  **Uma unit por PROJETO**, `brabo-runner-<id>.service` /
+  `dev.brabo.runner.<id>`, porque o servidor já impõe um runner por projeto (um
+  segundo `join` no mesmo `terminal:<projectId>` é recusado). Nomear pela pasta
+  permitiria instalar duas units que nunca podem estar de pé juntas, e a
+  segunda apareceria como falha de conexão em vez de erro de instalação.
+  `uninstall`/`status` alcançam exatamente a mesma unit porque derivam o nome do
+  mesmo `projectId`, resolvido pelas mesmas duas fontes na mesma ordem do CLI de
+  sempre (`--project`, senão `brabo-runner.config.json`), e a pasta sai do
+  `resolverDir` de `guard.ts` — nenhuma régua nova. No Linux o arquivo vai para
+  onde o systemd PROCURA, com a precedência dele (`$XDG_CONFIG_HOME/systemd/user`,
+  senão `~/.config/systemd/user`): escrever sempre no segundo faria a unit
+  nascer onde o gerenciador nunca olha.
+
+  **`Restart=on-abnormal`, e nunca `on-failure`** (no plist: `KeepAlive` com
+  `Crashed`, nunca `SuccessfulExit`). O runner sai com 1 quando o join foi
+  RECUSADO — ticket inválido, outro runner no projeto, capacidade que falta
+  (RN-514) — ou quando esgotou o próprio teto de tentativas, e as duas coisas
+  são "pare e chame um humano": `on-failure` reiniciaria em laço uma recusa que
+  o CLI recusa reintentar sozinho. O `PATH` vai **congelado** na unit, com o
+  custo declarado dentro dela: os dois gerenciadores dão ao serviço um PATH
+  mínimo e o runner chama `git` (o espelho, RN-516) e `docker` (ADR 0137) —
+  sem isso o serviço subiria perfeitamente e as duas funções falhariam com "não
+  encontrado".
+
+  **Um serviço autentica por CHAVE DE DISPOSITIVO, nunca por token**:
+  `--token`/`BRABO_ACCOUNT_TOKEN` são ignorados de propósito, porque gravá-los
+  num arquivo de unit os deixaria em disco — e este CLI nunca gravou credencial
+  em disco. A RN-434 roda igual, pela MESMA função: unit apontando para fora do
+  `$HOME` no Linux é recusada, senão a unit contornaria pela porta dos fundos o
+  que a flag já recusa.
+
+  **`uninstall` remove os três, e a pasta sai da UNIT — nunca do `cwd`.** O
+  arquivo de unit, o `brabo-runner.config.json` e o
+  `brabo-runner-device-key.jwk.json`; o `WorkingDirectory` é lido de volta do
+  próprio arquivo, que é o registro do que foi instalado. Sem unit não há
+  registro, e aí os dois arquivos só saem com `--dir` explícito: adivinhar pelo
+  `cwd` apagaria a chave de um projeto que ninguém pediu para remover. E a
+  mensagem DIZ o que ele não fez — **a chave saiu deste disco, não do
+  servidor**; a pública continua em `runner_device_keys` e revogá-la é outra
+  coisa. Um "removido" que deixasse a pessoa achar que revogou seria pior que
+  não remover nada.
+
+  **`status` responde QUATRO estados, sem colapsar nenhum** (RN-088): não
+  instalado, instalado e rodando, instalado e parado, e instalado-e-não-consegui
+  -perguntar. A primeira resposta vem do **disco** (há arquivo de unit?), e é
+  por isso que ela continua certa numa máquina onde o gerenciador não existe;
+  `spawn` que falhou nunca vira "o gerenciador disse não", e palavra que o CLI
+  não sabe interpretar também cai em "não consegui perguntar" em vez de virar
+  "parado" por chute. Cada estado tem frase própria **e código de saída próprio**
+  (0/3/4/5 — 1 e 2 ficam de fora porque já significam falha genérica e erro de
+  uso): um `exit(1)` único para os três "não está rodando" colapsaria pelo
+  código o que a frase separa. Ativação que falha é um desfecho à parte, com o
+  arquivo mantido e o comando pendente nomeado.
+
+  Nada aqui é `proposed_action` — é o usuário rodando um comando na própria
+  máquina, sobre o próprio serviço. **BRB-031 NÃO fecha aqui**: quem chega a
+  rodar `service install` já precisou tornar o binário executável, e o ADR 0147
+  amarra a morte do `chmod +x` à instalação vir do bootstrap versionado do ADR
+  0146, que esta entrega não toca. Também fora, por decisão:
+  `start`/`stop`/`restart` (quem gerencia o ciclo de vida é o gerenciador do SO;
+  duplicá-lo no CLI criaria uma segunda fonte de verdade sobre o estado).
+
+- **api,engine**: a **revogação de chave de dispositivo** deixa de ser cega, e
+  passa a alcançar a conexão viva (RN-519/RN-520,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 6). Eram
+  DUAS metades, e as duas estavam abertas.
+
+  **Ninguém revoga o que não consegue ver.** O `RunnerDeviceKeysController`
+  tinha `@Post()` e `@Delete()` e listagem NENHUMA — nem a do próprio dono —,
+  então uma chave órfã (aba fechada no meio do fluxo da RN-473) era inerte,
+  invisível e permanente. Entra `@Get()`, `developer`, no mesmo formato que o
+  PAT já tem, escopado ao usuário no WHERE do repositório. A chave REVOGADA
+  continua na lista (sumir com ela faria a tela afirmar que nunca existiu), e
+  `lastUsedAt` nulo é o sinal da órfã. Nunca devolve a JWK pública: o que a
+  lista existe para permitir é revogar. O docblock que declarava o corte
+  errado — *"sem a visão de `maintainer`"* — passa a descrever o que o código
+  faz, e a visão de `maintainer` (RN-427) continua fora **por decisão**: aquela
+  nasceu de incidente com segredo COMPARTILHADO, e a metade privada de uma
+  chave de dispositivo nunca sai do navegador que a gerou.
+
+  **Revogar só impedia ticket NOVO.** Um `brabo-runner` já conectado mantinha o
+  canal `terminal:<projectId>` de pé — executando comando aprovado — com a
+  chave revogada, até cair sozinho. Agora a api manda o comando
+  (`POST /internal/projects/:projectId/runner/disconnect`, vigésima rota
+  interna) e o **engine** alcança o pid que o `Registry` já entregava; o engine
+  não lê a tabela de chaves e a api não fala com o canal. Ele derruba o
+  TRANSPORTE, não só o processo do canal (`EngineWeb.RunnerSocket.id/1` deixa
+  de ser `nil`, e o mecanismo é o `Endpoint.broadcast(id, "disconnect", %{})`
+  documentado do Phoenix): parar só o canal deixaria o socket vivo e o cliente
+  reentrando no tópico para sempre com um ticket já consumido.
+
+  **O alvo é `{projeto, usuário}` e nunca `{chave}`**, e isso é propriedade do
+  caminho do ticket: `runner_socket_tickets` guarda `project_id`/`user_id`/`kind`
+  e nada mais, então qual PAT ou qual `kid` abriu aquele socket morre no
+  `PatAuthGuard`. Custo DECLARADO — um runner do MESMO usuário conectado com
+  PAT ou com outra chave também cai, e reconecta sozinho se a credencial dele
+  ainda valer. Runner de outro usuário no mesmo projeto fica de pé, e o
+  desfecho diz isso (`de_outro_dono`) em vez de um `:ok` que não descreve nada.
+
+  **Derrubar nunca derruba a revogação**: o `DELETE` continua 204 e idempotente
+  — engine fora do ar, nenhum runner conectado ou timeout viram LOG, nunca
+  exceção, a mesma régua de `rag_searches` (RN-479) e do `mirror_sync_result`
+  (RN-517). Revoga PRIMEIRO e derruba depois (o contrário deixaria janela para
+  reconectar com a chave viva), e o projeto sai da LINHA revogada, nunca da
+  URL. Desfecho desconhecido vindo do engine vira `timeout` e nunca
+  `derrubado`. Fica declarado: **tela nenhuma** — esta entrega é a metade
+  server-side, e o web ainda não tem onde listar nem revogar.
+
+- **api,engine,runner,web**: o **estado do espelho** fica visível, e os três
+  estados não colapsam (RN-517,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 7). A RN-516
+  fez o espelho copiar de verdade e deixou o `mirror_sync` **fire-and-forget**
+  de propósito — sem `mirror_sync_result` no protocolo, porque o formato da
+  telemetria era decisão desta entrega. Esta fecha o laço.
+
+  **O caminho é o de `workspace_confirm`, e nenhum outro**: o runner empurra
+  `mirror_sync_result` no canal DEPOIS de a rodada terminar, o engine repassa
+  pela api interna (`POST /internal/projects/:projectId/mirror-sync-result`) e a
+  api grava. O engine **não escreve a tabela** — um segundo caminho de escrita
+  seria a segunda fonte da mesma verdade. Nunca um "ok" otimista antes do fim:
+  o que sobe são as três contagens que a cópia devolveu (copiados, pulados,
+  recusados, nunca recontadas) ou o erro nomeado, e as TRÊS saídas de
+  `tratarMirrorSync` reportam — inclusive a recusa por destino não concedido,
+  que hoje sumia no log local.
+
+  **TABELA (`project_mirror_states`), nunca event log**, pelo mesmo motivo que
+  fez `rag_searches` virar tabela (RN-479): uma rodada de espelho não tem
+  sessão e `session_events.session_id` é `NOT NULL`, então o event log perderia
+  a coisa inteira. E nunca `proposed_action`: a escrita do espelho é
+  configuração que o usuário declarou, não um agente pedindo para agir.
+
+  **Os TRÊS estados da RN-088, sem colapso**: "nunca sincronizou" é a linha
+  AUSENTE, "sincronizou e não copiou nada" é linha presente com
+  `files_copied = 0` (um desfecho, não um vazio) e "falhou" é o erro mais
+  recente que o último sucesso. **Sucesso e erro convivem na mesma linha** —
+  as duas escritas mencionam colunas disjuntas e nenhuma apaga a outra —, e é
+  isso que permite a tela dizer *"a última rodada falhou; a última cópia boa
+  foi ontem, com 412 arquivos"* em vez de perder a informação mais útil que ela
+  tem. O `destination` vai CONGELADO na linha, como a `image_version` de
+  `project_containers` e os pesos de `rag_searches`: mostrar o destino de AGORA
+  sobre uma cópia de ontem seria afirmar sobre uma pasta que aquela rodada
+  nunca tocou, e os dois divergem de verdade porque a concessão viaja no join.
+
+  **Gravar telemetria jamais derruba o que ela mede**: a cópia já terminou
+  quando o reporte sai, a recusa da api vira log e o canal do runner segue
+  vivo; sem canal o runner não reporta e não lança. Projeto cujo destino foi
+  limpo no meio **ainda registra** — a rodada aconteceu, e o erro dela é o que
+  costuma explicar o que houve.
+
+  **Na tela**, a linha entra na coluna lateral da Visão geral
+  (`AmbienteDoProjeto`) e **só aparece em projeto que tem destino** — num
+  projeto sem espelho, "nunca sincronizou" seria uma ausência inventada. Data
+  absoluta com ressalva, nunca bolinha verde de "está de pé": o carimbo diz que
+  uma rodada aconteceu, não que a pasta esteja em dia com o que mudou depois
+  (o gatilho é um momento nomeado, o commit — nunca um watcher). Quando o
+  destino declarado hoje difere do daquela rodada, a linha DIZ isso.
+
+  Rota nova de leitura `GET /projects/:projectId/mirror-state` (`viewer`, o
+  mesmo mínimo de ler o projeto, que já carrega o destino), com o `status`
+  resolvido na api para a regra dos três estados ter uma fonte só. Nada aqui
+  alarma, notifica ou reexecuta uma rodada que falhou — declarado, não feito.
+
+- **engine,runner**: o **espelho** passa a existir de verdade — o agente local
+  copia o trabalho para a pasta que o usuário declarou (RN-516,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) pontos 2, 3, 4 e 8).
+  É a metade B da sessão 6: a RN-515 decidiu onde o destino mora e não copiou
+  nada; esta decide como ele chega ao agente, o que é copiado e quando.
+
+  **O destino viaja na CONCESSÃO do `join`, nunca em configuração do runner.**
+  A resposta do `join` do canal `terminal:<projectId>` deixou de ser vazia para
+  o papel `:runner`: com destino declarado e a capacidade `espelho` concedida,
+  ela carrega `%{espelho: %{destino: "<caminho>"}}`. O runner guarda isso na
+  conexão — morre com ela — e **recusa `mirror_sync` para destino que não lhe
+  foi concedido naquela conexão**. Nunca variável de ambiente, nunca arquivo
+  local: um destino global faria o artefato do projeto B aterrissar na pasta do
+  projeto A, e o usuário descobriria isso pelo conteúdo, não por um erro.
+  Consequência declarada: **trocar o destino com o runner conectado exige
+  reconectá-lo**.
+
+  ⚠ **Custo real, e ele é o primeiro disparo do mecanismo da RN-514:**
+  `mirror_path` não-nulo passa a **EXIGIR** a capacidade `espelho` no join, e um
+  `brabo-runner` anterior a esta versão conectado a um projeto com destino
+  **deixa de conectar** — recusa explícita e nomeada (fatal, sem retry, dizendo
+  para atualizar o binário), nunca degradação silenciosa. É **opt-in**: só
+  acontece onde alguém configurou um destino, e projeto sem espelho (a maioria)
+  não muda em nada. O custo está declarado no próprio ADR 0147, e quem instalou
+  pelo fluxo do ADR 0118 não tem atualização automática. `espelho` não entra no
+  mapa por `execution_mode`: quem exige é o **dado**, não o modo.
+
+  **As TRÊS recusas da guarda, com a passada de `realpath` que só existe aqui.**
+  `apps/runner/src/espelho-guard.ts` nasce **irmão de `guard.ts`, não uma
+  extensão dele**: reusa os três helpers de comparação de caminho e a dupla
+  passada léxica-depois-`realpath`, e **herda por escrito a ressalva de
+  TOCTOU** — best-effort, não fronteira de segurança. Recusa symlink que escape
+  do destino, destino que **contenha** o workspace e destino **dentro** dele —
+  os dois últimos são o mesmo laço em sentidos opostos. A api já recusou a
+  metade léxica (RN-515) e diz que é só o léxico; `destino/atalho ->
+  /caminho/do/projeto` passa por lá sem ser visto porque a api não tem disco
+  onde resolvê-lo. Achado implementando: `realpathMaisProximo` cai no primeiro
+  ancestral que existe, e o destino quase nunca existe — colapsar os dois lados
+  no ancestral faria `/base-outra` e `/base` virarem ambos `/`, recusando toda
+  pasta irmã; por isso a segunda passada resolve o ancestral e **recoloca o
+  sufixo**. E há uma segunda metade **por arquivo**: um `destino/sub` que é link
+  para `/etc` faria a cópia de `sub/passwd` escrever fora com o destino em si
+  perfeitamente válido.
+
+  **Uma direção, e NUNCA apaga.** Workspace → destino. Nunca `--delete`, nunca
+  `unlink`, nunca `rm`: **arquivo apagado no workspace permanece no destino**.
+  A pasta do usuário não é réplica, é acúmulo — um agente que apaga arquivo na
+  pasta pessoal de alguém por causa de um `git clean` do outro lado é a surpresa
+  que o produto existe para não produzir. Sobrescrever o que mudou é esperado;
+  remover nunca é. Preço declarado: o destino só cresce, e nada o limpa.
+
+  **O que se copia é a LISTA DO GIT, e nada mais** — rastreados
+  (`git ls-files`) mais não-rastreados-não-ignorados
+  (`git ls-files --others --exclude-standard`). Isso é exatamente "o trabalho":
+  pula `node_modules`, `dist`, saída de build e o próprio `.git` **sem lista de
+  exclusão nenhuma**, que envelheceria a cada stack nova. Git que falha ou pasta
+  que não é repositório **falham com motivo nomeado** — nunca um `cp -r` de tudo
+  como plano B. Duas propriedades verificadas e declaradas: repositório git
+  aninhado volta como UMA entrada de diretório e não é descido (o worktree de
+  cada dev agent é um desses — o espelho mostra o **checkout principal**, nunca
+  o trabalho ainda isolado num worktree), e symlink na origem é pulado. O que
+  fica de fora é CONTADO, nunca engolido.
+
+  **Predicado PRÓPRIO, e o espelho não exige Docker.**
+  `Engine.Runners.RunnerReadiness` fica **byte a byte como está** — o módulo
+  novo não o chama nem o estende. O espelho tem DUAS pré-condições (workspace
+  confirmado, runner conectado) e não a terceira da RN-507: um
+  `RunnerReadiness` com flag "pula container" é o mecanismo pelo qual essa
+  terceira cairia por acidente para o `exec`, e o ADR 0145 existe para ela não
+  cair. Cópia de arquivo na máquina do usuário não tem container de onde cair em
+  silêncio, e o espelho é justamente a capacidade que deve funcionar para quem
+  não quer Docker.
+
+  **Gatilho por MOMENTO NOMEADO, nunca watcher.** O engine empurra `mirror_sync`
+  do **commit bem-sucedido** — nunca `fs.watch`, que seria trabalho ilimitado
+  disparado por qualquer coisa, inclusive pelas escritas do próprio espelho, que
+  é laço. Fire-and-forget: sem `from`, sem `pending_execs` e sem
+  `mirror_sync_result`, porque a telemetria da sincronização é o ponto 7 do ADR,
+  de outra sessão. Falha vira log local, nunca exceção que derruba o runner e
+  nunca silêncio.
+
+  **Declarado e NÃO ligado:** o segundo momento nomeado do ponto 8, "fim de
+  turno de agente". O engine tem duas coisas disjuntas com esse nome e nenhuma é
+  enganche não-ambíguo — `TurnoAssincrono.finalizar/1` fecha o turno dos seis
+  conversacionais, que não têm ferramenta de escrita no workspace, e também
+  dispara em crash e em cancelamento; `AgentIo.finish_task/3` não é fronteira de
+  ociosidade (reivindica a próxima task na mesma chamada) e o que o dev agent
+  escreve mora no worktree, que o espelho não desce. Escolher um seria inventar
+  produto onde o ADR nomeou um momento sem nomear uma função.
+
+  A escrita do espelho **não** é `proposed_action`, e nada disso encosta em
+  `decide.ts`, tetos, event log, portão de imagem ou nas operações do broker.
+- **api**: o **destino do espelho** passa a existir, e ele é **por projeto**
+  (RN-515, [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 4).
+  Coluna nova `projects.mirror_path` (nullable), campo `mirrorPath` no projeto
+  e rota `PUT /projects/:projectId/mirror-path` (`maintainer`, o mesmo mínimo
+  de `execution-mode` e de `projects-base`: a rota fala de um caminho do
+  computador do operador). O valor **volta em toda leitura de projeto**, então
+  nem a implementação do espelho nem a tela de estado precisam de rota nova.
+
+  **Por projeto e nunca global** — nem configuração no runner, nem variável de
+  ambiente. Um destino global faria o artefato do projeto B aterrissar na pasta
+  do projeto A, e o usuário descobriria isso **pelo conteúdo, não por um erro**.
+  E **`null` é o estado NORMAL**, não uma pendência: projeto sem espelho é a
+  maioria, e o produto nunca escolhe um destino sozinho. Limpar é
+  `{"mirrorPath": null}` — a chave é **obrigatória**, e omiti-la é 400, porque
+  um corpo que omite o campo seria indistinguível de "limpe" e limpar em
+  silêncio é justamente o defeito.
+
+  **A api valida só o LÉXICO, e a mensagem dela DIZ que é só o léxico.** Ela
+  não enxerga a máquina onde o destino vai existir — é a situação do modo
+  `runner` (RN-423), não a do `mounted`, cuja pasta acaba dentro da base que a
+  api alcança de verdade. Por isso reusa `caminhoDeWorkspaceLocalValido`, o
+  MESMO predicado da criação e da conversão, em vez de escrever uma quarta
+  cópia da mesma régua; e **não** exige `BRABO_PROJECTS_BASE`, porque o destino
+  do espelho é por definição a pasta que a base não cobre.
+
+  **Duas recusas próprias, e elas são o conteúdo da regra.** Destino DENTRO do
+  `workspacePath` e destino que CONTÉM ele são o mesmo laço em sentidos opostos
+  (escrever o espelho dentro da origem faz o espelho copiar o próprio espelho),
+  e a comparação é por **SEGMENTO** — `/base-outra` NÃO está dentro de `/base`,
+  e um `startsWith` cru taxaria uma pasta irmã legítima. E projeto
+  `execution_mode: container` **não pode ter destino nenhum**: a origem é um
+  volume gerenciado no SERVIDOR, e quem copiaria é um processo na máquina do
+  USUÁRIO, que não a enxerga — recusa NOMEADA, porque um destino gravado que
+  jamais recebe nada é pior que a recusa, já que parece configurado. Pelo mesmo
+  motivo, **converter o modo ZERA o destino** (mesma forma de
+  `workspaceVerifiedAt`, e com uma razão a mais: os dois sentidos do laço foram
+  validados contra o `workspacePath` ANTIGO).
+
+  **Esta é a metade LÉXICA da guarda, e só ela.** A outra é `realpath`, e é do
+  RUNNER (`espelho-guard.ts`), na máquina onde os dois caminhos existem de
+  verdade: um symlink em qualquer segmento do destino apontando de volta para a
+  origem passa por aqui sem ser visto. A api não garantiu o laço; ela impediu o
+  laço ESCRITO — e o comentário no código diz isso, para ninguém achar o
+  contrário. **Nada aqui copia arquivo nenhum**: `mirror_sync`, o protocolo e a
+  cópia são a metade B desta sessão, no engine e no runner.
+
+  E, declarado: a escrita do espelho **não** é `proposed_action`. É
+  configuração que o usuário declarou, não um agente pedindo para agir —
+  sincronizar por comando de terminal cairia no escopo de caminho do ADR 0055 e
+  viraria fila de aprovações rotineiras, corroendo o teto que dá sentido ao
+  clique. Nenhum teto absoluto, o event log, o portão da imagem nos três modos,
+  as cinco operações do broker e o CHECK
+  `projects_workspace_path_casa_com_modo` seguem intocados — a coluna nova é
+  independente dele, e a migration é um `ADD COLUMN` e nada mais.
+- **runner,engine**: o `join` do agente local **deixa de ser mudo** — o runner
+  DECLARA nas params o que sabe fazer e o servidor CONCEDE a interseção com o
+  vocabulário que conhece (RN-514,
+  [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) ponto 1). Três
+  capacidades: `exec` (ADR 0104), `pty` (ADR 0103) e `espelho` — e o runner
+  declara **só as duas primeiras**, porque declarar o que não se implementa é
+  exatamente o defeito que a negociação existe para impedir. `espelho` entra
+  como **nome do vocabulário e nada mais**; quem o implementa é a sessão
+  seguinte da FASE 28.
+
+  O que isso fecha: até aqui o servidor **não tinha como saber** se o binário do
+  outro lado entendia uma mensagem nova — a mensagem chegava, o handler não
+  existia, e **nada acontecia**, sem erro e sem log. Agora o conjunto concedido
+  vive em `socket.assigns` (nunca em tabela: capacidade é propriedade DAQUELA
+  conexão, e uma tabela poderia afirmar que um runner sabe algo que o processo
+  conectado agora não sabe), e **mensagem sem a capacidade concedida é RECUSADA
+  com resposta nomeada**: `exec` responde no mesmo formato de `exec_result`
+  (`exitCode` 126, a causa no `output`) em vez de deixar o `RunnerRouter`
+  esperar até o timeout, e `pty_*` não é relayado — a aba recebe `pty_error`
+  nomeado em vez de ficar em "carregando" para sempre.
+
+  **Nada muda para nenhum runner instalado hoje.** Params ausentes ou vazios são
+  o binário LEGADO e concedem `{exec, pty}` — isso é **fato, não benevolência**:
+  todo binário anterior a esta mudança sabe fazer as duas, são as funções com
+  que o runner nasceu. Recusar quem não declara faria todo runner instalado
+  parar de conectar, que seria `breaking/` e MAJOR. Capacidade declarada que o
+  servidor não conhece é **ignorada**, nunca motivo de recusa: um runner mais
+  NOVO que o engine tem que conseguir conectar.
+
+  A recusa por capacidade EXIGIDA e não declarada nasce implementada e testada,
+  e **não dispara na prática hoje** — `runner` exige `exec` (que todo binário
+  tem), `container`/`mounted` não exigem nada, e **nada exige `espelho` ainda**.
+  Isso é o desenho, não pendência. Quando dispara, o `{:error, %{reason: ...}}`
+  NOMEIA a capacidade que falta e manda atualizar o binário, e o CLI já trata a
+  recusa como fatal sem retry. `Engine.Runners.RunnerReadiness` fica byte a byte
+  como está (ADR 0147 ponto 3), e nenhum teto, nenhuma decisão de aprovação e
+  nenhum evento do log foram tocados.
+
+- **web**: o assistente de novo projeto passa a **oferecer Pasta montada quando
+  a base existe** — e a **pré-selecioná-la**, com `<base>/<slug>` sugerido e
+  editável (RN-513,
+  [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) ponto 4). Sem base
+  (`projectsBase: null`), o card **não é oferecido** e `container` continua o
+  padrão.
+
+  Duas metades disto **já eram regra e nunca tinham chegado à tela**: "não
+  oferecer sem base" é a RN-500, e "sugerir `<base>/<slug>`" é a RN-501, cujo
+  ADR 0142 adiou a validação de disco justamente para que o assistente pudesse
+  propor uma pasta que ainda não existe. Até aqui,
+  `GET /workspaces/:workspaceId/projects-base` não tinha **chamador nenhum** no
+  web e o card era oferecido incondicionalmente — numa instalação sem
+  `BRABO_PROJECTS_BASE`, escolher o modo terminava numa recusa 400 da api
+  depois de a pessoa ter escolhido, digitado o caminho e chegado ao fim do
+  assistente. O que é **novo** é a pré-seleção, que revisa o default do ADR
+  0072 **só para a instalação local**, onde a base foi consentida por um humano
+  no host (RN-511). O enum `project_execution_mode` não muda, nenhum modo novo
+  nasce, e a conversão de modo (ADR 0111) não é tocada.
+
+  **Desconhecido não vira oferta.** Enquanto a resposta não chegou, e também
+  quando a consulta **falha** (403, rede, api fora), o card não aparece e
+  `container` segue selecionado: falha não é permissão para oferecer um modo
+  cuja pré-condição não se conseguiu confirmar — é a régua da RN-088/RN-468 (o
+  produto não colapsa "não sei" com "não tem") e a dos ADRs 0041/0042, onde
+  capability só se declara quando provada. A consulta nasce com o **assistente**
+  e não com o passo, que é o quinto: montada ali, o card apareceria piscando com
+  a pessoa já olhando a tela.
+
+  **Nem a pré-seleção nem a sugestão passam por cima de ninguém.** A base chega
+  por rede, sempre depois do primeiro render, então a escolha humana fica
+  guardada separada do modo vigente e vence a pré-seleção — trocar o modo
+  debaixo da mão de quem já clicou é defeito, não conveniência. E a sugestão só
+  escreve no campo vazio ou por cima da sugestão anterior dela mesma; caminho
+  digitado nunca é reescrito, nem quando o nome do projeto muda, e slug vazio (a
+  adoção) deixa o campo vazio em vez de inventar segmento.
+
+  **O aviso do modo parou de mentir.** O texto era anterior ao ADR 0141 e dizia
+  que o caminho era livre e só funcionaria se o usuário o montasse — as duas
+  coisas deixaram de ser verdade quando a base virou uma só, montada por
+  identidade. Agora são os **dois estados que o backend realmente tem**: sob a
+  base, nota neutra (a criação passa, e a pasta nem precisa existir — a Infra a
+  cria ao subir o container); fora dela, aviso de que a api **recusa a criação**,
+  **nomeando** a base em vez de mandar procurar a variável. Campo vazio não é
+  "fora da base", e a comparação é por **segmento** — `/base-outra` não está
+  dentro de `/base`.
+
+- **docker,scripts**: o **broker de container sobe por padrão no compose local**,
+  e continua sob `profiles: ["container-broker"]` em produção (RN-512,
+  [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) ponto 3). Os dois
+  arquivos passam a divergir **de propósito** — não uniformize.
+
+  O broker nasceu sob profile com uma justificativa que o ADR 0130 escreveu:
+  *"dar acesso ao Docker do host a um processo que nada chama ainda seria uma
+  mudança de postura para toda máquina de desenvolvimento, em troca de nada"*.
+  As duas metades morreram. **"Nada o chama" é falso** desde os ADRs
+  0133/0134/0136 — ele tem quatro chamadores reais. E **"em troca de nada"
+  deixou de descrever a troca** quando o ADR 0144 fez `mounted` subir container
+  PELO BROKER e o ADR 0146 tornou `mounted` o padrão local: com o profile
+  desligado, o modo padrão terminava em `BrokerIndisponivelError`.
+
+  **A assimetria é o que o socket significa de cada lado.** Quem roda `pnpm dev`
+  já tem o socket do Docker — está rodando `docker compose`, contra o daemon do
+  próprio host —, então o broker recebê-lo não concede nada que o operador já
+  não possua; a superfície marginal é o HTTP dele, que não publica porta, vive
+  numa rede `internal: true` e compara `BRABO_SERVICE_TOKEN` em tempo constante.
+  Em produção o cálculo é o oposto: o socket é fronteira de privilégio de
+  verdade e o operador não é o desenvolvedor.
+
+  **As cinco camadas de contenção não são tocadas.** Isto muda QUANDO o broker
+  roda, nunca O QUE ele aceita — ele continua recebendo `projectId` e uma das
+  cinco operações, sem parâmetro nenhum onde se escreva `privileged` ou um `-v`
+  livre. A contenção nunca foi o profile.
+
+  Consequência ambiental, e a razão de ela ganhar relato: **`DOCKER_GID` passa a
+  importar para toda máquina de desenvolvimento**, não só para quem ligava o
+  profile de propósito. Errar o gid **não quebra o boot** — o broker sobe
+  normalmente —, quebra o USO: toda operação morre com `permission denied` no
+  socket, e o sintoma aparece muito depois, quando alguém propõe
+  `container_start`. Por isso `pnpm dev` passa a **relatar** o estado dele a cada
+  subida, comparando com o grupo real da máquina. O relato tem três desfechos que
+  não colapsam — bate, diverge (dizendo se o valor efetivo veio do `.env` ou do
+  default, porque as duas pedem instruções diferentes) e **não se aplica**, sem
+  grupo `docker` (Docker Desktop, rootless), que não é erro nem "não consegui".
+  Ele **nunca bloqueia**.
+
+- **scripts**: `pnpm bootstrap` ganha o passo **Docker › Base de projetos** — o
+  consentimento que faltava para o modo **Pasta montada** existir na prática
+  (RN-511, [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md)). A RN-500
+  já dizia o que fazer sem base (`projectsBase: null`, o modo não é oferecido);
+  o que não existia era alguém **pedir** que ela fosse configurada, e por isso
+  um modo pronto ficou inalcançável para quem instala o produto.
+
+  O passo propõe `$HOME/projetos-brabo` — e **não** `$HOME/brabo-projetos`, que
+  o `.env.example` já usa como exemplo de `PROJECT_WORKSPACES_HOST_DIR`, a raiz
+  que o PRODUTO gerencia; propor o mesmo nome para as duas seria andar para
+  dentro da colisão que o ADR 0141 recusou, em que `<base>/loja` cai na mesma
+  pasta física de um projeto `container` chamado `loja` e o bootstrap dá
+  `git init` no projeto do outro. **O nome é só a esquiva; a proteção é
+  mecanismo:** `validarBase` recusa, nos dois sentidos, a base sobreposta ao
+  checkout do Brabo **ou** àquela raiz — e vale para o caminho digitado, não só
+  para o default.
+
+  **O compartilhamento do Docker Desktop é provado MONTANDO**, nunca lido do
+  `settings.json` — a régua de "capability só se declara quando provada por
+  execução" (ADR 0041/0042) aplicada ao host. A prova é uma **sentinela**, não
+  um `ls` seco: pasta vazia e pasta não compartilhada produzem a mesma listagem
+  vazia, então o script escreve um arquivo e pergunta se o container o enxerga.
+  Três desfechos que não colapsam — provado, reprovado (não grava a variável) e
+  *não consegui provar* (grava, e diz em voz alta que a prova não rodou).
+
+  **Sem TTY, relata em vez de consentir.** Do menu o script só pode relatar:
+  todo item roda com stdin em `/dev/null`, de propósito, senão qualquer coisa
+  que leia stdin rouba as setas do usuário — e a saída diz o comando que
+  pergunta. Pelo mesmo motivo o `preflight.mjs` passa a **relatar** o estado da
+  base junto do que já reporta, e nunca a perguntar: a resposta é um caminho no
+  disco de alguém, e não há default que se aplique em silêncio.
+
+  Dois efeitos colaterais de higiene: `lerEnv`/`escreverEnv` saem do
+  `preflight.mjs` para `scripts/dev/env-file.mjs` (aquele arquivo roda
+  `await main()` no topo, então importá-lo subiria o preflight inteiro — o mesmo
+  argumento que já criara o `base-de-projetos.mjs`), e as **três** sugestões de
+  caminho que o repositório dava para essa variável, todas diferentes entre si,
+  passam a ser uma só.
 
 - **api,broker**: projeto no modo **Pasta montada** passa a ter container de
   verdade, e ele sobe **no servidor**, pelo broker — como o modo Container já
@@ -148,42 +2802,53 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   container via runner) depende de uma tool que outra frente do mesmo plano
   está criando em paralelo e é o próximo passo, não implementada aqui
 
-### Correções
+### Documentação
 
-- **engine**: o comando de terminal do dev agent **não cai mais fora do
-  container** em silêncio (RN-502). `container` sem container `running` caía
-  em `:caminho_de_sempre`, isto é, `System.cmd` dentro do processo do engine —
-  o mesmo processo que fala com o banco, com a api e com todos os outros
-  projetos —, então o isolamento do ADR 0134 valia só no caminho feliz e a
-  ausência dele não recusava: degradava, e degradava calada. Agora recusa
-  (`failed_result` com o motivo nomeado), espelhando o
-  `:recusar_nao_verificado`/`:recusar_runner_desconectado` que o modo `runner`
-  já tinha. `mounted` entra no mesmo ramo — com container `running` atravessa
-  pro broker igual a `container`, sem ele recusa — e o catch-all
-  `:caminho_de_sempre` encolhe para o que sempre deveria ter sido sozinho:
-  projeto inexistente ou id malformado. Consequência declarada: projeto sem
-  container de pé para de trabalhar, e diz por quê
+- **docs**: nasce a **FASE 28 (pasta do usuário)** — só decisão, nenhuma linha de
+  código de produto. O problema que ela ataca: nenhum dos três modos de execução
+  entrega a coisa mais simples que um usuário espera, que é abrir o editor e ver
+  o trabalho acontecendo numa pasta dele. O caso instrutivo é o `mounted`, que
+  está **pronto e inalcançável** — o ADR 0141 construiu a base única e o ADR 0142
+  tornou possível sugerir um caminho que ainda não existe, mas nada no produto
+  pede que `BRABO_PROJECTS_BASE` seja configurada, e `GET .../projects-base` não
+  tem chamador no web.
 
-- **web**: o handoff para a **Infra** volta a ser aceitável — por um card
-  próprio, fora do fio (RN-499). O filtro `AGENTES_DE_CHAT` de
-  `offeredHandoff` (RN-136) exclui `infra` **e está certo em excluir**: o
-  Infra Lead não tem cláusula de `message` no engine, e alargar a lista faria
-  o composer mandar mensagem que seria roteada em silêncio para o Criativo. O
-  que não estava certo era a consequência que o comentário do próprio código
-  registrava como aceita — *"como Infra nunca é aceito por AQUI … na prática,
-  nunca"*: `acceptHandoff` tinha **um único consumidor**, o card do fio, atrás
-  daquele filtro. Resultado: `OfferInfraHandoffUseCase` oferecia o handoff, ele
-  ficava `offered` para sempre, o Infra Lead nunca era ativado, nunca propunha
-  `container_start`, e nenhum projeto de nenhum modo chegava a ter container de
-  pé — uma capacidade inteira inalcançável por tela nenhuma. Agora existe um
-  card acionável na faixa entre o fio e o composer (a mesma que já hospeda o
-  handoff manual, declarada como o lugar das ações de handoff que **não** são
-  conversa), chamando o `acceptHandoff` que já existia. Ele diz a consequência
-  do clique — o Infra Lead assume o provisionamento e vai **propor** a subida
-  do container, proposta que ainda passa pelo pipeline de aprovação de sempre —
-  e some pelo mesmo `activeFor` do card do fio quando a Infra já está ativa. O
-  `handoff.offered` da Infra continua **narrado** no fio como divisor mudo, e
-  nenhum handoff conversacional muda de forma
+  O [ADR 0146](docs/adr/0146-base-consentida-no-bootstrap.md) decide o
+  consentimento no host: base padrão `$HOME/projetos-brabo` (e **não**
+  `$HOME/brabo-projetos`, que `.env.example` já usa como exemplo de
+  `PROJECT_WORKSPACES_HOST_DIR` — a conflação que o ADR 0141 recusou), gravada
+  por um script **Node** e nunca em bash, porque item de menu do `bootstrap.sh`
+  roda com stdin em `/dev/null` e **por construção não consegue perguntar**. O
+  compartilhamento do Docker Desktop é **provado montando**, nunca lido do
+  `settings.json` — a mesma régua de "capability só se declara quando provada"
+  dos ADRs 0041/0042. E o broker sai do `profiles` **no compose local, só nele**:
+  a justificativa original ("nada o chama... em troca de nada") morreu quando os
+  ADRs 0133/0136 lhe deram quatro chamadores e o ADR 0144 fez `mounted` subir
+  container por ele.
+
+  O [ADR 0147](docs/adr/0147-agente-local-com-capacidades.md) decide o agente
+  local: **um** binário que declara capacidades (`espelho`, `exec`, `pty`) no
+  `join` — hoje mudo dos dois lados —, com o servidor concedendo só o que o
+  `execution_mode` exige. O espelho vai numa direção e **nunca apaga**; não exige
+  Docker, e ganha predicado **próprio** em vez de um `RunnerReadiness` com flag.
+  Achado no caminho: a revogação de chave de dispositivo é **cega** — um
+  `developer` não consegue listar nem as próprias chaves (PATs têm cinco rotas,
+  chaves de dispositivo têm duas), e revogar hoje só impede ticket novo, sem
+  derrubar o canal vivo.
+
+  A linha que dá forma ao resto, declarada nos dois: **consentimento de
+  configuração não é aprovação de ação** — a escrita do espelho não passa por
+  `proposed_action` porque não é agente pedindo para agir; fazê-la por comando de
+  terminal cairia no escopo do ADR 0055 e viraria fila de aprovações rotineiras.
+
+  Faixa **RN-511 a RN-520** reservada para as sessões 2 a 9, com o método de
+  contagem registrado — e o salto sobre a RN-510 é deliberado, porque ela já
+  estava alocada numa branch ainda não mergeada. Contar só `dev` a devolveria e
+  recriaria a colisão de âncora da RN-505, que sobreviveu semanas porque
+  `docs:build` reprova âncora **inexistente**, nunca âncora duplicada.
+
+- **ci**: o comentário do audit descreve o que os dois auditores fazem (aaf84ae04)
+- **changelog**: v4.0.0 (48dc81813)
 
 ### Funcionalidades
 
@@ -470,257 +3135,68 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   apagar o pacote inteiro, verificado funcionando (as quatro imagens
   efêmeras sumiram do GHCR, confirmado manualmente na aba Packages).
 
-## v4.0.0 — 2026-09-04
-
-### ⚠ Mudanças incompatíveis
-
-- **api,web**: o portão de imagem vale nos três modos de execução (ADR 0135, RN-494) (#458) (a7c299716)
-- **runner**: publicar @brabo/runner no npm via tsup (ADR 0106) (a1135b6d1)
-- **auth**: marca a chegada do login social como breaking (17c512846)
-- **api**: lint, registra o ADR 0079 e marca a quebra (7342303d6)
-
-### Novidades
-
-- **ci**: o alarme de merge de esteira ganha destinatário (ADR 0139) (f95d4165a)
-- **engine,api,ci**: golden-set do RAG passa a rodar em CI, agendado (ADR 0138, RN-498) (#461) (1eb71c322)
-- **runner,engine,api**: o runner sobe o container do projeto na máquina do usuário (ADR 0137, RN-497) (#460) (108d81cc7)
-- **api,web**: página global de containers (ADR 0136, RN-495/496) (#459) (11b49cb72)
-- **api,engine**: dev agents executam DENTRO do container do projeto (ADR 0134, RN-492/493) (#457) (eb32fa72c)
-- **api,engine,web**: a Infra elege entre as candidatas do Arquiteto e sobe o container (ADR 0133, RN-491) (#456) (d86b3b6a2)
-- **api,engine,web**: o Arquiteto roteia módulos para a Infra com imagem CANDIDATA (ADR 0131, RN-487) (#455) (e27637347)
-- **api,engine,docs**: o RAG ganha golden-set de acerto, e o gate rag-acertivo nasce warn (ADR 0132, RN-490) (#454) (14e6e1b2b)
-- **api,web,runner,broker**: o broker de container fala com o daemon, e a porta MOVE de onde nasceu (ADR 0130, RN-485/486) (#453) (cafd5034a)
-- **api,web,engine**: telemetria de busca do RAG — a medição existe antes de calibrar (RN-479/480/481, ADR 0129) (#452) (4a96d14a4)
-- **api,web,docker**: um modelo para os 17 agentes, e provisionamento que não fica calado (RN-476/477) (#450) (2d4446411)
-- **runner**: a porta de Docker nasce com o CLI, e a prova de empacotamento diz por quê (ADR 0128) (#448) (1ecc3883c)
-- **web**: a pasta vem antes do runner, e o binário deixa de ser bloqueio (RN-473/474) (#446) (a7295433c)
-- **web**: cascata de modelo como cadeia visível nas Configurações (RN-470) (#439) (d18f95c82)
-- **web**: salvar por seção no Paralelismo e no Teto de gasto (RN-469) (#438) (09e7ef4c7)
-- **web**: login em duas colunas e estado de ambiente onde há identidade (RN-468) (#437) (8b0f7a3c0)
-- **web**: padrão único de valor herdado nas Configurações (#436) (b18df5011)
-- **web**: sumário ancorado das 17 seções de Configurações (#435) (8cd07991a)
-- **web**: painel "precisa de você" com as cinco filas de decisão separadas (RN-467) (#434) (91dbf21b3)
-- **web**: trilho vertical de navegação do projeto e revisão da RN-201 (ADR 0126) (#433) (be1ac2e18)
-- **docs**: docs:check afere as contagens de RN e de provider, não só a de ADR (#417) (8f41df73d)
-- **ci,k8s**: publica as quatro imagens no GHCR e fixa o overlay por digest (#416) (2ce4f0a69)
-- **api,web,runner**: configura o brabo-runner pelo navegador com chave de dispositivo (#415) (561ea7a5f)
-- **web**: gera ActionType a partir do OpenAPI, fecha cópia manual que já divergiu 2x (#413) (5752f6b8c)
-- Ollama nativo no bootstrap + catálogo local via Hugging Face (#399) (bc3454148)
-- **engine,web**: faixa de atividade do turno na tela de Sessão (#393) (b8a91714a)
-- **engine**: broadcast efêmero de tool.call e teto de iterações não termina calado (#392) (5d93085a3)
-- **web**: dicionário ferramenta→frase para a faixa de atividade da sessão (#390) (1387564fb)
-- **ci**: arquiva automaticamente toda branch cujo PR é mergeado (#385) (cc9c8963a)
-- **api,web**: anexar pasta local como referência de leitura no Chat RAG (#388) (b2bab2c39)
-- **scripts,api**: Docker › Reset total no bootstrap, com credencial pré-salva no seed (864ac0629)
-- **api,web**: converter execution_mode de projeto existente, sem recriar (RN-447..450, ADR 0111) (ffbc98528)
-- **runner**: binário standalone via bun build --compile, matriz de 5 plataformas (ADR 0109) (300ab0786)
-- **api,web**: budget de área — teto de gasto opcional, aditivo (ADR 0109, RN-440) (b74873036)
-- **api,web**: handoff manual a agente à escolha (ADR 0109) (43667eb96)
-- **api,web,runner**: runner local conecta de verdade, navegador de pastas redesenhado e Onda 6b de i18n (5dd5ce6e9)
-- **api,web**: maintainer revoga PAT de outro usuário; backlog atualizado (RN-427) (4ca360321)
-- **runner**: Personal Access Token substitui login replicado (ADR 0105) (6570af80a)
-- **api,engine,web,runner**: execution_mode em três valores, workspace verificado pelo runner (ce9708f7e)
-- fundação de i18n — react-i18next na web, preferência de idioma no servidor, Docusaurus multi-locale (1a35ccdfb)
-- abas agrupadas, aba PRs project-wide, pasta local via Runner e correção do carrossel do PO (ea4f945a4)
-- **api,engine,web,runner**: execução na máquina do usuário e teto absoluto pra git/sudo (c814b9925)
-- **api,engine**: consumo do grafo de conhecimento — templates, relevância e projeção da outbox (bf3f7e6cb)
-- **api,engine**: fundação do grafo de conhecimento — Neo4j, rag_search, templates de prompt (a42537860)
-- **api,web**: "N agentes online" no dashboard com status ao vivo (28a36aa59)
-- **api,web**: SMTP real no MailSender, atrás de MAIL_TRANSPORT (ADR 0096) (4eb25bc55)
-- **api,engine**: PO ganha leitura de métricas de produto (RN-407) (e7402305b)
-- **api,web**: gate necessidade-validada fecha a auditoria fluxo.yml x codigo (9095ad4fb)
-- **api**: revalida RN-160 no backend e efetiva a delegacao Dev Lead -> dev (b048055bc)
-- **engine,api**: gate implementavel ativo — QA-estratégia como segundo momento do qa-lead (ADR 0090) (a8fbc0537)
-- **engine,api,web**: Staff ganha código, dormente para disparo automático (ADR 0088) (005595fc3)
-- **engine,web,api**: o UX Designer entra como quinto agente conversacional (ADR 0087) (000512c89)
-- **api**: dbre vira linter de migration e relatório de backup (ADR 0093) (a70ff5326)
-- **api**: analytics e delivery-metricas viram relatório do medicao (ADR 0089) (c317c398e)
-- **engine**: appsec vira o segundo momento do secops — threat model de design (RN-360/361, ADR 0090) (559b3dfff)
-- **api**: platform como script de relatório de telemetria sob demanda (de0bf980c)
-- **api**: relatório de segurança em runtime sobre rate_limit_hits (ADR 0091) (61b82b934)
-- **engine,api**: o plano do Dev Lead vira proposed_action e suspende o turno (ADR 0086) (fb24863b6)
-- **api,web**: login social (GitHub/GitLab), reusando emissão de sessão e cliente OAuth (dd1f5dcfa)
-- **web,api**: aba Terminal mostra o estado real do container (RN-267/268) (71ae6928c)
-- **web**: aba Chat RAG — busca híbrida, citação e cobertura do índice (677a04b5e)
-- **api**: pipeline de indexação e busca híbrida do Chat RAG (9997641ee)
-- **api**: ciclo de vida do container como tabela, sem orquestrador (ADR 0081) (cb261a98e)
-- **web**: virtualização de linha e minimapa na aba Code (RN-239..242) (18ba1a4a2)
-- **api**: tabela de chunks para o Chat RAG, vetor e tsvector juntos (617deeae3)
-- **web**: aba de Gastos ganha provider, orçamento por projeto e alertas (428de2e92)
-- **web**: KPIs, filtros e selos de status na aba Criativo (6191b44b3)
-- **web**: painel inferior de 4 abas e status bar honesta na aba Código (fe37d8ecb)
-- **web**: moldura de tela conforme handoff, e o registro de abas diverge dele (ADR 0078) (1edca7405)
-- **web**: sidebar recolhe, projetos expansíveis e seção Atividades (RN-195..201) (a51432116)
-- **web,docs**: ranking de modelos por capacidade sem nota inventada (RN-210, ADR 0079) (8c3ddec2a)
-- **api**: embeddings no contrato de LLMProvider (RN-189..191, ADR 0075) (aef35cc3d)
-- **api**: provider volta a ser dimensão de gasto, contido por tipo (RN-186..188) (89fb7692e)
-- **web,design**: o tema claro deixa de ser inalcançável, e passa a ser medido (e5df101cd)
-- **web**: o painel da sessão agrupa, ordena e diz o que não mostra (2d664ea99)
-- **web**: o fio da sessão diz quem fala, com qual modelo e o que pergunta (8904ae0f0)
-- **docs**: a documentação estável publica em /prd (26e205d5e)
-- **api,web**: projeto escolhe entre pasta do usuário e container (3cac71a76)
-- **engine,api**: o PO lê o que já existe e é cobrado pela história (86607605f)
-- **scripts**: rolar o log da execução no menu do bootstrap (0c1731924)
-
-### Correções
-
-- **api,web,engine**: o permissions.json mora onde a api alcança; o escopo do terminal, no host (RN-478) (#451) (9ea30060d)
-- **web,runner**: a JWK privada nasce com o `kid` do registro, e a recusa do CLI diz o que houve (RN-475) (#447) (179c749b2)
-- **api**: dois tetos de rebaixamento em project_members (ADR 0127, RN-472) (#445) (30cd83cf1)
-- **web**: a seção de Membros respeita o papel, e as duas ações caladas falam (RN-471) (#444) (6f3cfe85c)
-- **web**: a tabela de modelo por agente respeita o papel de quem olha (RN-102) (#443) (efb61ce15)
-- **web**: o seletor de modelo de agente e de área abre com "aptos para agentes" marcado (#442) (62eebad55)
-- **web**: trocar o modelo de um agente deixa de falhar em silêncio (#441) (aa50970ec)
-- **web**: "voltar a herdar" deixa de falhar em silêncio quando o agente já herdava (#440) (069a4ab74)
-- **docs**: escapa barra invertida antes do pipe em generate.mjs (#398) (08de8e9e4)
-- **web**: aba Insights diz quando o Psicólogo está pausado (#387) (48e6e58ee)
-- **web**: aba PRs deixa de mostrar o gate do Código como erro genérico (#386) (d64cbec6b)
-- **api**: quebra de linha do prettier em seed.ts (CI) (cac4535ce)
-- **runner**: --dir relativo resolve contra INIT_CWD, não o cwd rebaseado do pnpm (RN-453) (3426d1712)
-- renumera ADR 0109→0112 e RN-440/441→RN-451/452 (colisão entre PRs paralelas) (666d58e0c)
-- renumera ADR 0109→0110 e RN-440→RN-443 (colisão entre PRs paralelas) (eb452183b)
-- resolve as 4 falhas de CI da PR #377 (8208b32e6)
-- corrige quebra de compilação e testes da fundação de i18n (Onda 6b) (022d234ca)
-- **docs,engine**: regenera events.md com project.workspace_verified e corrige formatação do teste do canal (3df121312)
-- **docker,engine**: senha do neo4j no smoke volta a ser hex, bandit sobe a 1.12.5 (88b5bdb74)
-- inclui a mudança do engine da Onda 4 (esquecida no commit anterior) (8d40cee9f)
-- **docker**: senha efêmera do neo4j no smoke não pode conter barra (9c5d6235c)
-- **docker**: neo4j chega configurado na imagem de produção e no smoke (bdfb22f28)
-- **docker**: neo4j chega configurado na imagem de produção e no smoke (5828074a8)
-- **docker**: neo4j chega configurado na imagem de produção e no smoke (598cd1be6)
-- **api,docs**: corrige drift de docs, formatação e teste com import estático flagrados pelo CI (a190b3258)
-- **api,engine,web**: corrige 413 nas PRs e Executores vazio com execução ativa (7a0ca9b60)
-- **business-rules**: renumera RN-410 para RN-411 (colisao com PR #361) (e5fba21f0)
-- **api**: dev agent trabalhando ou travado segura a sessão de execução (033c9963a)
-- **api**: cria workspace pessoal automático no cadastro de conta nova (9bd1f649b)
-- **docs**: drift.mjs reconhece arquivo-raiz fora de docs/ como satisfeito (8dd665bc2)
-- **api**: formatação do DTO de métricas de produto (prettier) (f9037da11)
-- **docs**: restaura o cabeçalho ### RN-340 perdido na resolução do merge (968ccb9a7)
-- **web**: ApprovalCard.ACTION_ICON exaustivo pra assess_implementability (f2cc17be9)
-- **engine,web**: revisão pós-implementação do ADR 0086 (b2f82f43b)
-- **api**: lint da frente de login social — só formatação (prettier) (da521ffbb)
-- **web**: fecha o que sobrou da varredura de acessibilidade (PROGRAMA 28, Onda 5/H5) (cd1bbef1b)
-- **api**: lint da frente RAG — prettier e any implícito em listarArquivosMarkdown (8ddbe8143)
-- **web**: faixa de arquivo do diff em ApprovalCard ganha aria-controls (defbb0ea3)
-- **web**: foco visível em Select, Modal e ProjectCard (ADR 0036) (9de6e2a6b)
-- **ci**: dispensa seis CVEs de Go stdlib no gitleaks e no actionlint (538069d43)
-- **api,docs**: formatação do prettier e a fronteira de gasto na doc (0980c77b7)
-- **docker,web**: ENGINE_URL do .env impedia ativar sessão dentro do container (29bbb46d5)
-- **scripts**: a regex que extrai o script do 404 aceita qualquer caixa (586b75ef9)
-- **web**: a entrada de teste de afundarDesfechos declara a origem (267edfb99)
-- **web**: o evento citado nunca cai em grupo fechado do feed (3c1baffb2)
-- **engine**: falha no frame final não derruba mais o agente (02102056f)
-- **web**: handoff e aprovação como desfecho do turno (2cf6c6fad)
-- **api,docs**: tipa o statSync e documenta o que o modo Local muda (e26b3cb46)
-- **ci**: dispensa duas CVEs de Go stdlib no gitleaks e no actionlint (d53aecda3)
-- **engine**: o Criativo cumpre a promessa de tentar de novo (43db01cdd)
-
-### Refatorações
-
-- **web**: divide o ProjectSettingsTab.tsx em um arquivo por seção (ADR 0125) (#431) (2a1f8230e)
-- **web**: extrai hook useTurnoDoAgente do SessionPage.tsx (ADR 0124) (#430) (5c6eeda7c)
-- **web**: termina a deduplicação do arme de turno no SessionPage.tsx (#429) (92b9f66d5)
-- **web**: extrai hook useSessionReadiness do SessionPage.tsx (ADR 0122) (#427) (4d552771a)
-- **web**: extrai helpers de árvore de backlog e ContextAside do SessionPage.tsx (ADR 0122) (#426) (6374ced41)
-- **web**: extrai StructuredQuestionCard do SessionPage.tsx (ADR 0122) (#425) (7b27fd6f5)
-- **web**: extrai StorySlide do SessionPage.tsx (ADR 0122) (#423) (af907c2e7)
-- **web**: extrai helpers puros de timeline do SessionPage.tsx (ADR 0122) (#422) (f4dbeb833)
-- **api**: divide o schema.ts por agregado de domínio, atrás de um barrel (#421) (aeb045e11)
-- **web**: migra o painel inferior do CodeShell para o Disclosure (24f7ffab4)
-- **web**: migra o colapso de pasta do CodeExplorer para o Disclosure (4de38fe1b)
-- **web**: migra AgentTimelineTree (ramo e marco) para o Disclosure (58d74a326)
-- **web**: migra ModelCatalogSection para o Disclosure compartilhado (ec28ea1fa)
-- **web**: monta a árvore de backlog uma vez só no painel (76348b526)
-
-### Documentação
-
-- divide o business-rules.md pelas duas seções que eram metade dele (#418) (1ab674541)
-- corrige contagem de RNs no README (#412) (5933d5d02)
-- **backlog**: marca itens fechados da revisão externa e remove seção duplicada (#411) (fe2fa6e36)
-- **backlog**: registra triagem da revisão externa de 2026-08-28 (#404) (8467ee176)
-- move narrativa histórica do CLAUDE.md para docs/explanation/historico-de-fases.md (#389) (25594eaeb)
-- registra o painel de Problemas/lint/testes no backlog (392272538)
-- registra a rota PUT .../agent-areas/:key/budget em security-surface.md (a3dd63f02)
-- registrar as rotas de maintainer do PAT em internal-api.md (RN-427) (000ba0834)
-- revisar internal-api.md para as novas rotas de auth/PAT (09f711a80)
-- adicionar entrada de CHANGELOG do PAT do runner (ADR 0105) (139ce5ee6)
-- **api**: documenta a rota nova de confirmação do workspace e o gate workspace-verificado (b97995ecb)
-- **adr**: reconcilia ADR 0072 x ADR 0103 com execution_mode em três valores (8bfc67a1d)
-- **runbook**: neo4j entra na família dos segredos que não sobem com default (f7c9c19fc)
-- **runbook**: neo4j entra na família dos segredos que não sobem com default (554f1c6f9)
-- **runbook**: neo4j entra na família dos segredos que não sobem com default (d8824c8de)
-- **reference**: atualiza permissions.md com o teto absoluto de git/sudo (d584f85e3)
-- **reference**: atualiza internal-api.md com o caminho de escrita do GraphProjector (50614ba91)
-- **api,engine**: preenche descrição das variáveis novas em configuration.md (9bdd3e85e)
-- **api**: regenera configuration.md com GRAPH_PROJECTOR_INTERVAL_MS (38737f368)
-- **reference**: documenta as rotas internas do grafo de conhecimento e rag_search (75e04a085)
-- **api**: regenera configuration.md após o rebase que trouxe API_JSON_BODY_LIMIT (4b0024baf)
-- **runbook**: documenta API_JSON_BODY_LIMIT/TRANSPORT_MAX_BODY_BYTES no ambiente de inferência (92de35055)
-- **adr**: renumera para 0097/RN-409 apos rebase e corrige contagens (2a9e22c27)
-- **business-rules**: corrige slugs dos ADRs linkados na RN-408 (1620e50ad)
-- **governance**: GOVERNANCE.md fecha o TODO(humano) do modo community (2af710fae)
-- satisfaz o drift check da onda 6 (internal-api.md, gates.md) (90900bbb9)
-- **adr**: registra ADR 0094 e fecha a Onda 2 da auditoria fluxo.yml x codigo (60a664bd0)
-- **gates**: satisfaz o drift check da regra registro-de-gates (7c8052e8a)
-- **fluxo**: onda 1 da auditoria fluxo.yml x codigo em dia (7b8965540)
-- **scripts**: regenera scripts.md com os comandos da onda (analise:funil, relatorio:seguranca-runtime, relatorio:telemetria) (20cb33956)
-- **reference**: registra artifact.threat_model em artifacts.md e events.md (afe04eb6e)
-- **artifacts**: documenta o schema prototipo_navegavel (ADR 0087) (4d420831f)
-- **adr**: atualiza contagem de ADRs após o 0086 (drift do CI) (745aff040)
-- **fluxo**: auditoria fluxo.yml x codigo (ADR 0085) — divergencias, lacunas e ondas (959a26ffa)
-- **CLAUDE.md**: registra fluxo.yml como terceira peça do modelo de time (52e49105c)
-- **fluxo**: registro declarativo de papéis do time (ADR 0085) (5fd78d92d)
-- **onda-5**: CHANGELOG e os parágrafos de G3/F2/I; revoga a proibição de login social do CLAUDE.md (e7071f284)
-- **reference**: regenera .openapi-manifest.json após o merge com dev (3141dc6aa)
-- **runbook,internal-api**: callback do login social não registrado, e a rota fora do escopo da api interna (3d66c2ed8)
-- **reference**: regenera configuration.md (API_PUBLIC_URL agora lido por start-social-login.use-case.ts) (4ea8af3ce)
-- **internal-api**: registra GET .../container/lifecycle como fora do escopo (985a3ed81)
-- **onda-4**: RN-239..242, RN-249..251, CHANGELOG e os parágrafos de G2/F1 (f9d9f01f9)
-- **business-rules,internal-api**: RN-231..238 do RAG e a rota sem contraparte interna (abb1fca43)
-- **adr**: registra o ADR 0080 (busca híbrida) e regenera a referência (c5e27aa75)
-- **onda-3**: RN-211..218, RN-227..230, CHANGELOG e o parágrafo de H3 (89451e53b)
-- **business-rules**: RN-219..226 desta frente (51a531ff4)
-- **claude**: integra o parágrafo desta frente (989987ec9)
-- **claude**: integra o parágrafo desta frente (203be0447)
-- **claude**: registra o achado desta frente (7c2d36ce6)
-- **claude**: integra o parágrafo desta frente (f1fdd0dda)
-- **security**: a rota do owner concede mais, e a nota diz isso (bd6288686)
-- **runbook**: triagem para sessão que não sai de `created` (162cd4934)
-- **business-rules**: RN-059 registra a queda e a segunda barreira (ba9fd8e69)
-- **policy**: a PR do CHANGELOG carrega a versão nos dois arquivos (1ad52dfad)
-- **changelog**: v3.1.0 (a048f9991)
-- a invariante e o verbete que as três RNs mexeram (c6fd96b42)
-- **engine**: atualiza comentário de emit_response após a RN-163 (bcb544718)
-
 ### Testes
 
-- **engine,api**: golden-set de regressão do julgamento semântico do QA de Automação (ADR 0123) (#428) (d07e0a11d)
-- **e2e,ci**: E2E de navegador contra o compose de produção (ADR 0120) (#420) (cc0267f05)
-- **web**: mock de api-client exporta mensagemDaApi no caso de falha (44328ee11)
+- **e2e**: a chave de dispositivo do runner ganha o E2E de navegador que nunca
+  teve — `e2e/testes/chave-de-dispositivo.spec.ts`, terceiro spec da camada do
+  [ADR 0120](docs/adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md).
+  A lacuna era exata: `apps/web/src/lib/runner-bootstrap.test.ts` faz
+  `vi.stubGlobal('crypto', …)` em todo teste que toca chave, então **a suíte
+  do web nunca gerou uma chave Ed25519 nem exportou uma JWK de verdade** — e
+  não podia, porque `crypto.subtle.generateKey({name:'Ed25519'})` não existe
+  em jsdom. Foi por essa fresta que a [RN-475](docs/business-rules.md#rn-475)
+  passou: o `kid` ausente na JWK privada fazia o modo automático do ADR 0118
+  **nunca autenticar**, e o teste que deixou passar afirmava que o arquivo
+  fora ABERTO, nunca o que havia dentro dele.
+
+  **O que ele prova**, num Chromium real contra o compose de produção: o par
+  Ed25519 é gerado na página (origem `:8088`); a pública é registrada em
+  `POST /projects/:id/runner-device-keys` por chamada **cruzada** (com
+  preflight, porque `Authorization` não é cabeçalho simples); a JWK privada
+  exportada carrega `kid` **igual ao `id` que o servidor devolveu**, é mesmo a
+  privada (`kty: OKP`, `crv: Ed25519`, `d` presente) e a pública **não** leva
+  `kid`; e — a asserção que a suíte do web não tem como obter — um JWT EdDSA
+  assinado com essa chave, com o `kid` lido **de volta do arquivo**, é
+  ACEITO por `POST .../runner-ticket` (201, `PatAuthGuard` achando a pública
+  por esse `kid`). O segundo teste cobre a
+  [RN-519](docs/business-rules.md#rn-519): a chave aparece em `GET
+  .../runner-device-keys`, a resposta **nunca** traz JWK (nem `publicKeyJwk`
+  nem `d`, comparado sobre o texto bruto), a revogada **continua na lista**
+  com `revokedAt` preenchido, e o MESMO JWT ainda dentro do TTL passa a ser
+  recusado com 401 — revogar é revogar, não sumir de uma tela.
+
+  **Provado por mutação, duas vezes** (a disciplina do ADR 0120): tirar o
+  `kid` do arquivo derruba a asserção direta; tirar o `kid` **e** a asserção
+  faz a api responder exatamente `401 Token ausente ou inválido` — a RN-475
+  reproduzida ponta a ponta.
+
+  **O que ele NÃO prova, declarado no spec e no `e2e/README.md`:** a metade de
+  INTERFACE. `configurarPastaAutomaticamente` começa por
+  `showDirectoryPicker`, e o Playwright não concede esse handle — então o
+  fluxo não passa pelo `RunnerOnboardingPanel` e o código de
+  `runner-bootstrap.ts` **não é o que roda ali**: os passos são reproduzidos
+  na página, na mesma ordem e com as mesmas chamadas de Web Crypto. Este spec
+  prova que a CADEIA aceita uma chave feita assim; `runner-bootstrap.test.ts`,
+  com o dublê, prova que o MÓDULO a faz assim. A gravação dos três arquivos em
+  disco (RN-466) fica fora pelo mesmo motivo.
+
+  Achado ao rodar de verdade, e agora documentado: **só UM spec por execução
+  pode usar o estado do `setup`.** O `brabo_refresh` gravado vale uma vez —
+  `RefreshUseCase` rotaciona e tem detecção de REUSO que revoga a família
+  inteira —, então um segundo contexto de navegador com o mesmo cookie derruba
+  a sessão dos specs seguintes, e o vermelho aparece no PRÓXIMO arquivo,
+  acusando o mecanismo dele. Não é defeito de produto (reuse detection é o
+  desenho); é uma restrição da camada, agora com seção própria no README. O
+  spec novo opta por sair do estado, porque só precisa da ORIGEM. Junto:
+  `autenticar()` passa a memoizar o token por execução, então a suíte custa
+  **3 logins fixos** contra o lockout por IP, por mais specs que venham.
 
 ### Manutenção
 
-- **ci**: timeout repetido do pnpm audit vira risco assumido (ADR 0140) (13603dddc)
-- **ci**: aceita a CVE-2026-56854 no binário oficial do gitleaks (#449) (5006ab681)
-- **ci,k8s**: pina as actions dos 15 workflows que sobraram, com check (#419) (9fafafa9c)
-- **deps,ci**: isola website em lockfile próprio, fora do pnpm audit do produto (#414) (08194006b)
-- **ci**: piso de cobertura em api, web e engine (ratchet) (#410) (406f91e1a)
-- **ci**: checksum verification and SHA-pinned actions (#408) (4723a46e5)
-- três limpezas independentes de higiene de repositório (#403) (9cd61e0e5)
-- **docker**: fixa versão do ollama nos dois compose (#401) (5b9916d4a)
-- **docker**: mapeia UID/GID do host para os containers de dev, sem root (#406) (9256471d4)
-- **docs**: unifica agents.md e claude.md via symlink (#402) (530c99dee)
-- **deps**: atualiza override do nanoid — advisory revisado exige 3.3.18 (#400) (f4fa6799c)
-- **deps**: atualiza override do nanoid — advisory revisado exige 3.3.18 (#395) (3d34fc910)
-- **engine**: mix format (frente staff) (4af7e075d)
-- **engine**: mix format (frente ux-designer) (228bcde6e)
-- **docs**: contagem de ADRs após o merge de H2 (#325) (58606ff00)
-- **adr**: renumera 0079 -> 0077 (7a9256d84)
-- **docs**: contagem de ADRs e o parágrafo do CLAUDE.md desta frente (5bed6a925)
-- **docs**: contagem de ADRs após o merge da #319 (a278b5867)
-- **design**: o handoff atualizado entra no repo — 10 telas (f5f771ac6)
+- **engine**: mint 1.10.0 fecha duas advisories de DoS (a71b984fb)
 
-## Unreleased
+
+## v4.0.0 — 2026-09-04
 
 ### ⚠ Mudanças incompatíveis
 
@@ -746,6 +3222,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   broker (`ModoDeExecucaoNaoSuportadoError`), que já falha alto e nomeado
   em vez de calado. Ver [ADR 0135](docs/adr/0135-portao-de-imagem-nos-tres-modos.md)
   e RN-494 (revisa RN-169/RN-421)
+
+- **api,web**: o portão de imagem vale nos três modos de execução (ADR 0135, RN-494) (#458) (a7c299716)
+- **runner**: publicar @brabo/runner no npm via tsup (ADR 0106) (a1135b6d1)
+- **auth**: marca a chegada do login social como breaking (17c512846)
+- **api**: lint, registra o ADR 0079 e marca a quebra (7342303d6)
 
 ### Correções
 
@@ -818,6 +3299,774 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `workspace_path` do projeto quando o basename dele bate com a pasta
   escolhida; quando não bate, sai sem prefixo, porque um `cd` para o lugar
   errado seria a tela afirmando o que não sabe (RN-473, RN-477)
+
+- **web, runner**: o **modo automático** do runner local — configurar a pasta
+  pelo navegador e rodar `brabo-runner` sem flag nenhuma — **nunca funcionou**,
+  desde que nasceu. O navegador gerava o par de chaves, registrava a metade
+  pública no projeto e gravava a privada na pasta, mas **descartava o `id` que
+  a api devolvia no registro** — nos dois caminhos, o automático e o kit
+  manual. Esse `id` é o **`kid`** da JWK, e é o único vínculo entre o arquivo
+  em disco e a chave pública guardada no servidor: sem ele, o CLI recusa a
+  chave (ele só repassa `jwk.kid`, nunca inventa um id) e a api não teria como
+  achar a pública para verificar a assinatura. O resultado era uma pasta com
+  aparência de configurada, uma chave inerte no projeto, e o CLI caindo no
+  modo manual sem dizer por quê. Agora o registro e a exportação da privada
+  acontecem **numa função só**, com o `id` fluindo dentro dela — descartá-lo
+  de novo exigiria apagar código, não esquecer uma linha. E o teste que
+  deixou isso passar mudou de pergunta: ele afirmava que o arquivo tinha sido
+  **aberto**, e passa a afirmar **o que foi escrito nele** (RN-475)
+- **runner**: a recusa da chave de dispositivo **diz o que houve**. Um arquivo
+  `brabo-runner-device-key.jwk.json` **presente e inválido** produzia
+  exatamente a mesma saída de um arquivo **ausente** — o bloco de uso, que
+  fala de `--project`/`--dir`/`--token` e não menciona o arquivo —, porque a
+  leitura devolve `null` nos dois casos (de propósito: ela nunca lança, e a
+  ausência é o caminho normal de quem usa flags). Quem tinha uma pasta
+  configurada era mandado investigar a configuração, que estava certa. A
+  leitura continua não lançando; o que mudou é que o CLI passa a **distinguir
+  os quatro estados** (ausente, JSON inválido, sem `kid`, válida) e a imprimir
+  a recusa **nomeada** — o arquivo, o motivo e as duas saídas (regravar a
+  pasta pelo navegador, ou usar `--token` enquanto isso) — em vez do texto
+  sobre flags. Ausente segue caindo no bloco de uso, que é a resposta certa
+  para quem não configurou nada (RN-475)
+- **api**: associar alguém a um projeto (`POST projects/:projectId/members`)
+  passa a recusar com **403** os **dois movimentos de rebaixamento** que
+  produziam estado sem volta. Um `maintainer` podia (1) rebaixar o **`owner` do
+  workspace** a `viewer` num projeto — o dono perdia o próprio projeto, e
+  restaurar exigia o `maintainer` que ele acabara de perder ali — e (2) **se
+  rebaixar sem poder desfazer**, porque desfazer é a mesma rota, que pede
+  `maintainer`. Agora: **ninguém rebaixa quem é `owner` do workspace** (lido de
+  `workspace_members.role`, nunca de `workspaces.created_by`) e **ninguém
+  rebaixa a si mesmo** (sem limiar; **subir** o próprio papel segue passando).
+  A **sobreposição continua valendo nos dois sentidos** — restringir um
+  `developer` de workspace a `viewer` num projeto sensível é capacidade
+  deliberada e não foi tocada. As **três descrições de OpenAPI** que prometiam
+  "the higher of this one and what the person already has" e "includes whoever
+  inherits access from the workspace" passam a descrever o que o código faz.
+  A tela ainda oferece o rebaixamento que a api recusa (ela não tem como
+  calcular o primeiro teto), mas **a recusa aparece** no toast, com a frase da
+  api — o gate do `Select` é PR à parte.
+  Ver [ADR 0127](docs/adr/0127-tetos-de-rebaixamento-em-project-members.md) e
+  RN-472.
+- **web**: em **Configurações**, a seção **Membros e papéis** passa a
+  **respeitar o papel de quem está olhando**, e suas duas ações caladas passam a
+  ter desfecho. Ela não checava papel nenhum: **convidar**, **trocar o papel de
+  alguém** e **remover** apareciam ativas para todo mundo, **`viewer`
+  incluído**, e a api recusava com 403 — e duas delas nem diziam isso, porque
+  não tinham tratamento de erro: a recusa virava silêncio na tela e ruído no
+  console. Remover um membro em silêncio era o pior dos três, por ser ação
+  consequente e sem volta pela tela. O mínimo **não** foi copiado da seção de
+  modelos logo acima: **Modelos por agente** exige `developer` e as três ações
+  daqui exigem `maintainer`, porque a régua é do **endpoint**, nunca da tela ao
+  lado. E o papel usado é o **efetivo do projeto**, não o do workspace — o
+  limite que a correção anterior tinha declarado. Não é uma lacuna nova nem uma
+  segunda: é a **mesma**, vista da seção que tem como fechá-la, porque esta já
+  busca a lista de membros do projeto e daí sai o papel de quem olha, composto
+  exatamente como a api o compõe. Quem não pode editar **continua lendo tudo** —
+  o papel de cada membro segue visível no seletor apagado —, e o motivo é dito
+  **uma vez, em texto**, na legenda. A legenda também passa a dizer **duas
+  coisas que a tela afirmava sem querer**: que o papel desta tabela **substitui**
+  o do workspace neste projeto, **nos dois sentidos** (pôr `viewer` aqui rebaixa
+  de verdade, inclusive quem é `owner` do workspace — o seletor não é uma
+  sugestão inofensiva), e que quem alcança o projeto **só pelo workspace não
+  aparece na lista**. **Convidar** manteve de propósito a dica fixa em vez da
+  frase da api: ali o ID é digitado à mão, e o erro que se alcança de verdade
+  responde `500`, cuja frase seria pior que a dica (RN-471)
+- **web**: em **Configurações**, a tabela **Modelos por agente** passa a
+  **respeitar o papel de quem está olhando**. Ela não checava papel nenhum: o
+  seletor de modelo e o "voltar a herdar" de cada linha apareciam clicáveis para
+  todo mundo, **`viewer` incluído**, e a api recusava com 403. Desde as
+  correções acima esse 403 pelo menos vira mensagem — o que não bastava:
+  oferecer um controle que só existe para ser recusado é a tela mentindo sobre o
+  que a pessoa pode fazer. O mínimo **não** foi copiado da seção irmã logo
+  abaixo: **Modelo por área** exige `maintainer` e **Modelos por agente** exige
+  `developer`, porque o vínculo da área alcança o lead e todos os subagentes de
+  uma vez e o do agente alcança um agente (RN-102). Copiar teria trocado o
+  defeito pelo **inverso**, e o inverso é pior — oferecer o que será recusado ao
+  menos termina numa mensagem, enquanto trancar quem podia editar é invisível
+  para quem perdeu a capacidade. Quem não pode editar **continua vendo tudo**: o
+  modelo vigente no gatilho, a cadeia de origem inteira e o próprio "voltar a
+  herdar", que é o que diz que aquele agente divergiu — some o controle, nunca a
+  informação. O motivo é dito **uma vez, em texto**, na legenda da seção, e não
+  como dica em cada linha: dica de mouse em controle desabilitado não abre no
+  Chromium, e explicação que não aparece é a mesma ausência com mais código. A
+  comparação de papéis saiu das telas e virou `roleAtLeast` sobre a hierarquia
+  que já existia — **Modelo por área** passou a usá-lo com o mesmo mínimo de
+  antes. Nada disso é fronteira de segurança: quem recusa continua sendo a api
+  (RN-102)
+- **web**: em **Configurações**, o seletor de modelo de **Modelos por agente** e
+  o de **Modelo por área** passam a abrir com o filtro **"aptos para agentes"
+  já marcado**. O filtro existe desde a Fase 9c e **nenhuma tela o ligava** — o
+  seletor abria oferecendo modelos sem *tool calling*, cujo clique a api recusa
+  com 422, e a frase da recusa manda a pessoa justamente para o filtro que
+  ninguém tinha ligado. Quem passa a ligá-lo não é escolhido por tela e sim pelo
+  **escopo do vínculo**: `assertModelFitsBindingScope` exige *tool calling* em
+  `agent` e em `area` e em mais nenhum, então as duas telas que gravam nesses
+  escopos abrem filtradas e o **seletor da sessão continua sem filtro** — ali a
+  api aceita modelo de conversa de propósito, e marcar esconderia o que o
+  domínio permite. Isto torna **improvável a causa mais comum** de recusa, nunca
+  impossível: as outras duas (modelo desativado no workspace, modelo sumido do
+  provider — RN-043) continuam alcançáveis daqui, o modelo indisponível segue
+  **listado e marcado**, e a mensagem de falha da correção anterior continua
+  sendo o que conta o desfecho. É o **estado inicial** de uma caixa de seleção,
+  não uma trava: desmarcar volta a listar o catálogo inteiro. Como consequência,
+  o seletor passa a **dizer quando o filtro esconde o modelo vigente** — o
+  vínculo herdado do projeto ou do workspace pode ser de conversa (esses dois
+  níveis nunca exigiram *tool calling*), e sem o aviso o gatilho mostrava um
+  nome que a lista aberta não continha, sem nada marcado. A causa é nomeada
+  porque só existe um filtro ali; quando a lista inteira fica vazia, quem fala
+  continua sendo o texto de lista vazia, que já manda desmarcar (RN-040)
+- **web**: em **Configurações**, escolher um modelo no seletor de uma linha de
+  **Modelos por agente** e ter o pedido recusado não produzia nada na tela: a
+  pessoa clicava, o dropdown fechava, a linha continuava no modelo antigo e o
+  erro só existia no console. Mesma classe de defeito da correção logo abaixo, e
+  na função vizinha do mesmo arquivo — `handleModelChange` não tinha `try/catch`
+  e era chamada do `onSelect` do seletor, então toda recusa da api virava
+  *unhandled promise rejection*. A recusa é alcançável de dentro do próprio
+  seletor: o modelo que sumiu do provider aparece na lista **marcado** em vez de
+  escondido (senão o vínculo que aponta para ele ficaria sem explicação), e a
+  lista é cacheada, então o modelo pode ter sido desligado no catálogo depois da
+  última leitura — nos dois casos a api recusa com 422. Agora a falha aparece,
+  com a mensagem da api e tom de falha. **O 404 aqui NÃO ganha desfecho
+  próprio**, ao contrário da correção de "voltar a herdar": aquele endpoint tem
+  **uma** causa de 404 e por isso o cliente pôde nomeá-la; este recusa por sete
+  caminhos e nenhum status identifica um deles sozinho — o 404 sozinho tem duas
+  causas ("Modelo não encontrado" e "Projeto não encontrado"), e escolher uma das
+  frases seria a tela afirmando o que não sabe. O contraste está comentado no
+  código, ao lado das duas funções. Nada de otimista foi introduzido: a coluna
+  **Modelo vigente** continua exibindo o vínculo que a api confirmou, e a linha
+  só é relida no sucesso — na recusa nada mudou no banco (RN-470)
+- **web**: em **Configurações**, clicar em "voltar a herdar" numa linha de
+  **Modelos por agente** que já herdava não fazia nada visível — nem confirmava,
+  nem reclamava. O botão aparece em toda origem `agent` de propósito (RN-470): a
+  cadeia do cliente não consegue separar o agente com modelo próprio daquele que
+  herdou o do **Criativo**, e nesse caso não há linha para apagar, então a api
+  responde 404 — ela está certa, "apaguei o que não existia" e "apaguei" não são
+  a mesma resposta. O que faltava era do lado do cliente: a função não tinha
+  `try/catch` e era chamada de um `onClick`, então toda recusa virava *unhandled
+  promise rejection* — silêncio na tela e ruído no console. Agora os três
+  desfechos são distintos, na gramática que **Modelo por área** já usava. O 404
+  ganhou desfecho **próprio** e não o das outras falhas, porque para quem clicou
+  ele não é falha: o estado pedido — o agente herda — **já é verdade**. A tela
+  diz isso na língua de quem está lendo, em vez de repassar a frase pt-BR que a
+  api crava no código (o idioma default do web é `en`), e ela pode dizer porque
+  este endpoint tem **uma** causa de 404: papel insuficiente é 403 e `scope_id`
+  malformado não é 404. Nos dois desfechos a linha é relida — se a api diz que
+  não havia binding, quem estava desatualizada era a tela. Qualquer outro status
+  continua sendo erro de verdade, com a mensagem da api e tom de falha
+- **engine,api,web**: a aba Insights, com zero hipóteses, mostrava "Sem
+  hipóteses ainda — o Psicólogo analisa cada sessão encerrada" mesmo com
+  `PSYCHOLOGIST_ENABLED=false` — indistinguível de "ainda ativo, só não
+  rodou". A tela nunca chegava perto do botão "Reanalisar" (só existe com
+  uma rodada de análise já feita), então nunca esbarrava no 503 que
+  denunciava a pausa. `GET /projects/:projectId/psychologist/status`
+  (`role:viewer`, sem efeito colateral) lê a flag global de antemão; a
+  tela agora diz "O Psicólogo está pausado — nenhuma sessão é analisada
+  até ser reativado" quando é o caso, e mantém a frase original quando de
+  fato ainda está ativo (RN-454)
+- **web**: a aba PRs mostrava o 409 do portão do container (RN-105 — o
+  Arquiteto ainda não decidiu qual imagem sobe para o projeto) como erro
+  transitório genérico, com botão "Tentar de novo" — a afordância errada
+  para um estado estável que só se resolve quando o Arquiteto decide, nunca
+  clicando de novo. A apresentação dedicada que a aba Code já tinha
+  (RN-107) foi extraída para `ContainerImageGateNotice`
+  (`components/ContainerImageGate.tsx`) e a aba PRs (`code/PrListAndDiff.tsx`)
+  passou a reconhecer o mesmo 409 (`isContainerImageGateError`,
+  `lib/api-client.ts`) e mostrar o mesmo estado. Placeholder truncado no
+  campo "Já sabe o id?" corrigido junto (largura do input de 200px para
+  260px).
+- **docker,scripts,deploy**: `gemma:1b` não existe no registry da Ollama
+  (`manifest unknown`) — só `gemma3:1b` existe. `ollama-model-loader`
+  sempre falhava e travava qualquer `docker compose up --wait`. Corrigido
+  em `docker-compose.yml`/`.prod.yml`, `.env.example`,
+  `docker/ollama/pull-models.sh`, `scripts/dev/verificar-modelos-ollama.sh`
+  e `deploy/k8s/base/ollama/job-model-loader.yaml` (RN-415).
+- **scripts**: `Database › Delete` nunca dropava de verdade — `DROP SCHEMA
+  public CASCADE` não alcança `engine.*` (Ecto/Oban vive em schema PRÓPRIO)
+  nem `drizzle.__drizzle_migrations` (controle do drizzle-kit, também em
+  schema próprio). Resultado real: `mix ecto.migrate` batia em
+  `duplicate_table` e `pnpm db:migrate` — sem erro nenhum — não recriava
+  NENHUMA tabela da api, porque via o controle do drizzle-kit intacto e
+  concluía que já tinha rodado tudo. `Delete`/`Reset total` agora dropam
+  `engine` e `drizzle` também.
+
+- **api,web**: converter `execution_mode` de um projeto EXISTENTE, sem
+  recriá-lo — fecha a correção que a Onda 1 do runner (ADR 0104) já tinha
+  registrado em `docs/explanation/backlog.md` (o item 4 daquele ADR dizia
+  que a conversão já era possível, e não era). Rota dedicada, `PUT
+  projects/:projectId/execution-mode` (`maintainer`), que orquestra a
+  migração em vez de um `PATCH` que só trocaria a coluna: relocaliza o
+  `permissions.json` para o novo escopo (o CONTEÚDO não muda), encerra o
+  ciclo de vida do container ao SAIR de `container` (ADR 0081), zera
+  `workspaceVerifiedAt` em toda conversão real e recusa com 409 enquanto
+  qualquer dev agent do projeto estiver trabalhando ou travado — ele não
+  re-resolve o worktree sozinho por baixo da troca. Nova seção em
+  Configurações do projeto, com o mesmo aviso e a mesma copy dos três
+  modos do wizard de criação (RN-447..450, ADR 0111)
+- **api,web**: handoff manual a agente à escolha (ADR 0109), fechando item
+  de backlog aberto desde a FASE 13c. `SessionPage.tsx` ganha um seletor
+  ("Endereçar handoff a...") sobre `addressableAgents()` (lead de área ∪
+  agente conversacional solo), que POSTa em `POST
+  .../sessions/:sessionId/handoffs` — mesmo `CreateHandoffUseCase` que um
+  agente já usa para oferecer handoff, com `actor: {kind:'user'}`
+  registrando que quem decidiu foi um humano. O caso real que motivou:
+  Staff (ADR 0088) e `ux-designer` (ADR 0087) tinham plumbing de engine
+  pronto e NENHUM caminho humano até eles — os dois entram em
+  `AGENTES_DE_CHAT` na mesma mudança (RN-440/RN-441)
+- **api,web**: budget por ÁREA (`agent_areas.budget_micros`/`spent_micros`)
+  fecha o item do backlog do ADR 0038 — teto de gasto opcional, configurável
+  por lead em Configurações (`maintainer`), ADITIVO aos budgets de projeto
+  e sessão que já existiam (nunca cascata: os três são checados
+  independentemente, e qualquer um bloqueado já recusa a chamada). `null`
+  é o default (sem teto); o gasto acumulado da área soma SEMPRE, com ou sem
+  teto configurado, o que já mostra o gasto real por área antes de alguém
+  configurar um limite. Rota `PUT projects/:projectId/agent-areas/:key/budget`
+  (`maintainer`), e a rota `GET agent-areas` já existente passa a devolver
+  `budgetMicros`/`spentMicros` (RN-443, ADR 0110)
+- **runner**: binário standalone do `@brabo/runner` — download direto de
+  `dist-bin/brabo-runner-<plataforma>-<arquitetura>[.exe]` numa GitHub
+  Release, sem Node/npm/node-gyp instalado na máquina. `bun build --compile`
+  empacota o CLI num único executável, com o `.node` nativo do `node-pty`
+  embutido (`with { type: 'file' }`) e extraído pra um diretório real em
+  runtime — o mecanismo completo, e o que ficou VALIDADO por execução real
+  em cada plataforma (só `linux-x64` neste sandbox; as outras quatro por
+  reasoning + a primeira execução real de CI na próxima tag), está no ADR
+  0112. Cinco plataformas (`linux-x64`, `linux-arm64`, `darwin-x64`,
+  `darwin-arm64`, `win32-x64`), cada uma construída no seu runner NATIVO
+  (`build-runner-binaries.yml`, mesmo gatilho de tag final de
+  `publish-runner.yml`) e anexada à Release já existente. Fecha o item de
+  backlog do ADR 0104 ("binário standalone (pkg/bun build --compile)"),
+  companion do ADR 0106 (RN-451/452)
+- **web**: `FolderBrowserModal` vira um explorador de três colunas —
+  atalhos ("Pasta pessoal", "Raiz"), lista central com breadcrumb e um
+  painel de detalhes —, seguindo a referência visual do dono do produto
+  (picker estilo GNOME Files/GTK). Um clique agora SELECIONA (destaca e
+  atualiza os detalhes) e duplo clique ENTRA — antes um único clique já
+  navegava. A lista deixou de esconder arquivos: eles aparecem visualmente
+  apagados e sem gesto nenhum, só pasta continua navegável/selecionável. O
+  botão final foi renomeado para "Usar esta pasta" (RN-436)
+- **api,web**: no modo de projeto `runner`, "Procurar pasta..." passa a
+  criar o projeto ANTECIPADAMENTE — ao clicar, não só na confirmação —
+  fechando a lacuna que o ADR 0107 já tinha declarado (o ticket do canal do
+  Runner precisa de um `projectId` real). Reuso por SNAPSHOT de identidade
+  (nome/repositório a adotar), nunca pelo caminho digitado: clicar de novo
+  sem mudar a identidade reabre o MESMO projeto, e a confirmação final
+  reusa em vez de criar de novo. O modo `mounted` não muda — continua sem
+  projeto até a confirmação, porque ali a validação de caminho toca disco
+  na criação (RN-437, ADR 0108)
+- **web**: `fs-browser-channel.ts` tinha o mesmo bug de path duplicado que a
+  RN-433 já tinha corrigido no `terminal-channel.ts` irmão (concatenava
+  `/runner/websocket` a um `engineWsUrl` que já vem pronto), então a
+  navegação de pasta contra um engine real caía direto em "a conexão com o
+  runner caiu". Achado ao verificar a RN-437 ponta a ponta — o módulo não
+  tinha teste próprio até agora (RN-438)
+- **api,web**: `maintainer` passa a revogar o Personal Access Token de
+  QUALQUER usuário do projeto — resposta a incidente (dev desligado com
+  token vazando), item declarado fora de escopo pelo ADR 0105. Rotas
+  separadas (`GET .../personal-access-tokens/all`,
+  `DELETE .../personal-access-tokens/:tokenId/admin`, ambas
+  `@RequireRole('maintainer')`), escopo por `projectId` em vez de
+  `userId` — a autorevogação de cada usuário não muda. Sub-lista nova em
+  Configurações do projeto, visível só para `owner`/`maintainer`, com o
+  e-mail do dono de cada token (RN-427, extensão do ADR 0105)
+- **runner**: `@brabo/runner` publicado no npm — `npm install -g
+  @brabo/runner` instala o CLI sem precisar clonar o monorepo. `tsup`
+  empacota `apps/runner` num `dist/index.cjs` único (`node-pty`
+  continua dependência separada, é binding nativo); publicação a cada
+  tag final via workflow próprio (`publish-runner.yml`), paralelo ao
+  `release.yml`. Fecha o backlog do ADR 0104 (ADR 0106)
+- **api,web,runner**: Personal Access Token (`brb_…`) pro `brabo-runner`,
+  fechando o item de backlog do ADR 0104 que bloqueava
+  `npm publish @brabo/runner`. `apps/runner/src/auth.ts` deixa de
+  replicar login (e-mail/senha interativos, cookies persistidos em
+  `~/.brabo/runner-credentials.json`) — o CLI passa a receber um token
+  de longa duração via `--token`/`BRABO_ACCOUNT_TOKEN`, emitido em
+  Configurações do projeto, revogável, com expiração opcional, escopado
+  a UM projeto. O token nunca autentica fora de
+  `POST /projects/:projectId/runner-ticket`, por construção
+  (`IS_PAT_ROUTE_KEY`/`@RequirePatAuth()` + `PatAuthGuard` de rota, nunca
+  um branch no `JwtAuthGuard` global) — nem sob papel elevado, nem em
+  nenhuma outra rota (RN-424/425/426, ADR 0105)
+- **api,engine,web,runner**: `execution_mode` do projeto passa a ter TRÊS
+  valores — `container` (default, inalterado), `mounted` (o antigo `local`,
+  renomeado) e `runner` (novo: pasta do usuário SEM bind-mount, confirmada
+  por um `brabo-runner` conectado). Reconcilia os ADRs 0072 e 0103: antes,
+  o roteamento pro runner reusava a mesma flag do modo `local`, então
+  usar o runner de verdade exigia passar pela validação de bind-mount que
+  ele não precisa. Criação de projeto `runner` valida só o caminho
+  (léxico, sem tocar disco); o runner confirma o caminho de verdade ao
+  conectar (`POST /internal/projects/:projectId/workspace-verification`,
+  novo), sobrescrevendo o que foi digitado — ele é a fonte da verdade.
+  Comando de agente roteado a um projeto `runner` sem workspace verificado
+  ou sem runner conectado é RECUSADO explicitamente, nunca cai no
+  fallback de container (RN-421/422/423, ADR 0104)
+- **runner**: no Linux, `brabo-runner --dir` só aceita um caminho dentro do
+  `$HOME` do usuário (o próprio home ou uma subpasta dele) — caminho fora
+  dessa árvore (`/etc`, `/root`, outra conta em `/home`, etc.) é recusado
+  na inicialização do CLI, com mensagem explicando o motivo. Fora do
+  Linux o comportamento não muda (RN-434, ADR 0104)
+- **runner**: `brabo-runner --dir` apontando para uma pasta que ainda não
+  existe deixa de ser erro fatal — a pasta é criada automaticamente
+  (`mkdir -p`), sempre DEPOIS de passar pela checagem do `$HOME` no Linux
+  (RN-434), então um caminho fora do home continua recusado mesmo quando
+  ainda não existe. `--dir` apontando para um arquivo já existente
+  continua erro real — nunca sobrescrito silenciosamente (RN-435, ADR
+  0104)
+- **api,web**: fundação de i18n — coluna `locale` em `users` (`'pt-BR'|'en'`,
+  default `'pt-BR'`), embutida no corpo de `/auth/login`/`/auth/refresh` (sem
+  chamada extra) via `EmitirSessaoUseCase`; `GET/PATCH /users/me/preferences`
+  como via redundante para a `AccountPage` nova (`/account`, fora do escopo
+  de projeto, link no rodapé da sidebar). `react-i18next`+`i18next` como
+  dependência nova de `apps/web`, isolada atrás de `lib/i18n.ts`/
+  `lib/idioma.ts` (mesmo desenho de `tema.ts` — servidor é a fonte de
+  verdade, `localStorage` só evita flash no primeiro paint). `en` é o idioma
+  default do app a partir de agora; `pt-BR` continua disponível. Docusaurus
+  (`website/`) ganhou `i18n.defaultLocale: 'en'`/`locales: ['en', 'pt-BR']`,
+  com o snapshot pt-BR atual de `docs/` preservado em
+  `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` antes de
+  `docs/` virar a fonte em inglês, e uma regra `warn` nova no docmap
+  (`traducao-pt-br`) cobrindo o drift entre as duas árvores. Extração em
+  massa do resto da interface e tradução de `docs/` são a próxima etapa,
+  em andamento (RN-432)
+- **web**: navegação por abas agrupadas — a régua de 11 abas do projeto vira
+  6 no topo (Visão geral, Agentes ▾, Dev ▾, Documentação ▾, Gastos,
+  Configurações), com `GroupedTabs` novo por cima do `Tabs` existente. Chat
+  e Chat RAG viram UMA aba com um controle segmentado interno
+  ("Conversar"/"Buscar") — a distinção de negócio entre os dois (RN-202)
+  não muda, só o contêiner de UI
+- **api,web**: aba **PRs** — listagem de pull requests do PROJETO inteiro,
+  direto do provider de git (nunca escopada a uma sessão), resolvendo o bug
+  em que a revisão de uma PR proposta numa sessão antiga sumia da tela assim
+  que uma sessão nova nascia. Novo cruzamento project-wide de ações
+  pendentes (`GET /projects/:id/actions?status=pending&actionType=`) acha a
+  proposta de merge correspondente independente de qual sessão a criou, e a
+  decisão usa o `sessionId` da própria ação. Botão "Merge" propõe
+  `git_merge` (primeira produtora real pela UI), desabilitado quando o gate
+  do dev agent bloqueou a task; a trava de branch protegida continua
+  absoluta (RN-154). `git_merge` ganhou corpo próprio no card de aprovação
+  em vez do despejo de JSON cru (RN-430)
+- **web**: aba própria **Arquitetura**, extraída da Visão Geral (module_map,
+  diagrama C4, ADRs, pendências de validação cruzada); a Visão Geral passa a
+  mostrar um resumo condensado com link "Ver arquitetura completa →".
+  Primeiro lightbox do design system: `C4DiagramView` ganha botão de
+  ampliar por diagrama, abrindo o SVG em tela cheia sobre `Modal`
+  (`size="full"`, novo) (RN-431)
+- **api,web,engine,runner**: navegação de pasta local via o Runner — dois
+  eventos novos no MESMO canal `terminal:<projectId>` (`fs_list_dir`/
+  `fs_home_dir`), relay puro do engine, exatamente como o PTY.
+  `FolderBrowserModal` (breadcrumb, subpastas, `..`, "Selecionar esta
+  pasta") integrado à criação de projeto e reaproveitável onde o projeto já
+  existe; sem runner conectado, `RunnerOnboardingPanel` (novo, compartilhado
+  com a aba Terminal) explica a instalação em vez de travar carregando. A
+  api continua sem enumerar filesystem nenhum — nenhuma rota nova (RN-429,
+  ADR 0107, revisa a ADR 0072)
+- **web**: corrigido o carrossel de promoção de histórias do PO, que
+  degradava silenciosamente para card único (ou sumia) em sessão longa —
+  a leva pendente agora vem de `useBacklog` (completo, sem janela) em vez
+  de um scan sobre os últimos 200 eventos, mesma classe de bug que a
+  RN-180 já corrigiu em `ContextAside` (RN-427)
+- **api,engine,web,runner**: execução de agente na máquina do usuário —
+  `apps/runner` (workspace novo, CLI `brabo-runner`) conecta ao engine
+  por canal Phoenix com ticket de uso único, executa comando de agente
+  já aprovado no `$SHELL` do usuário e abre terminal PTY interativo na
+  aba Code. Roteamento sempre acontece depois do pipeline de aprovação
+  normal; sem runner conectado, o comportamento de sempre (container)
+  continua. Junto: `git push`/PR/deploy e `sudo`/`doas` saem de `deny`
+  incondicional e viram teto absoluto — sempre pedem aprovação humana,
+  nunca auto-aprováveis mesmo com modo automático ligado, decisão
+  global do dono do produto (RN-418/419/420, ADR 0102/0103)
+- **api,engine**: consumo do grafo de conhecimento — ux-designer,
+  Psicólogo e Anamnese passam a resolver o kickoff/identidade a partir de
+  um template versionado do grafo (com fallback obrigatório pro texto
+  inline, atrás de duas flags separadas, default desligadas). Psicólogo e
+  Anamnese ganham uma segunda fonte de contexto: `rag_search` busca
+  trechos RELEVANTES ao gatilho da análise, compondo (nunca substituindo)
+  a leitura de eventos recentes/janela temporal existente, sempre dentro
+  do orçamento de tokens já declarado. O grafo passa a se escrever
+  sozinho — `GraphProjector` drena uma fila própria da outbox
+  transacional e projeta handoffs, hipóteses do Psicólogo, perfis da
+  Anamnese e fechamento de sessão, sem o engine nunca escrever no grafo
+  diretamente (RN-416/417, ADR 0101)
+- **api,engine**: fundação do grafo de conhecimento — Neo4j (`neo4j-driver`
+  na api, memória DERIVADA do event log, nunca fonte de verdade) para
+  templates de prompt versionados (idempotentes por hash) e memória
+  relacional (interações, hipóteses do Psicólogo, perfis da Anamnese,
+  handoffs). pgvector continua sendo o índice vetorial dos chunks — sem
+  duplicar embedding em dois bancos. Tool nova `rag_search` para os
+  agentes do engine, fechando o maior vão do RAG existente (nenhum agente
+  o consultava até agora); `ollama-model-loader` garante `gemma:1b`,
+  `yi-coder:1.5b` e `nomic-embed-text` no boot, fechando um bug real
+  separado (`nomic-embed-text` nunca era puxado automaticamente).
+  Primeira leva de templates extraída para `prompts/*.md`, sem editar
+  nenhum `.ex` ainda. Padrão inspirado no repositório
+  [ErickWendel/neo4j-ai-experiments](https://github.com/ErickWendel/neo4j-ai-experiments)
+  (RN-413/414/415, ADR 0099/0100)
+- **web,design**: o tema claro deixa de ser inalcançável — `public/theme-boot.js` aplica `data-theme` a partir de `localStorage['brabo.theme']` antes do primeiro paint (arquivo, não script inline, porque a imagem serve sob `script-src 'self'`), e `src/lib/tema.ts` é a API que o shell consome para alternar (ADR 0074, RN-182/RN-183)
+- **design**: os tokens que faltavam do handoff — escala `--fs-*`, raios `--r-xs`/`--r-sm` (mais alias para `--r-md`/`--r-lg`/`--r-pill`), métricas do shell (`--sidebar-w`, `--sidebar-w-collapsed`, `--header-h`, `--tabs-h`) e os nomes `--font-display`/`--shadow-modal` como ALIAS dos existentes
+- **design**: a paleta de realce passa a ter os oito papéis do handoff com prefixo `--syntax-*`, valor próprio por tema e 4,5:1 contra `--code-bg` nos dois — cinco dos oito valores do handoff foram recusados por medição (RN-185)
+- **web**: scrollbar customizada em `--border-strong`, raio 6px e borda na cor da superfície, nos dois temas
+- **api**: o relatório de gasto do workspace (`GET
+  /workspaces/:id/spend-report`, papel `owner`) ganhou a quebra por
+  **provider** e blocos separados de **pessoa** e **agente** — `porProvider`,
+  `porOwner` e `porAgente` (ADR 0076, RN-186/188). O relatório do membro
+  (`GET /projects/:id/spend/me`) **não mudou**: continua sem provider e sem
+  credencial, e agora a garantia é do TIPO — pedir a dimensão com escopo de
+  ator não compila (RN-187).
+- **web**: a aba Configurações ganha "Melhores modelos por capacidade" —
+  para código, documentação, análise, imagem e conversa, mostra o modelo mais
+  usado pelos agentes deste projeto entre os que a curadoria do workspace
+  marcou para aquele uso, com custo como desempate. Sem coluna de "nota":
+  o handoff pedia um score por capacidade, mas é dado fictício do mock — o
+  produto não mede qualidade de modelo em lugar nenhum (ADR 0077, RN-210)
+- **web**: a sidebar recolhe (264px ↔ 62px, trilha de ícones por projeto)
+  com preferência persistida; projetos ficam expansíveis (N ao mesmo tempo)
+  revelando as abas de cada um; nova seção **Atividades**, agrupada por
+  agente e, quando o módulo tem paralelização, por INSTÂNCIA real
+  (`dev-<modulo>`/`dev-<modulo>-2`, nunca um contador inventado); botão de
+  tema no rodapé; os dois itens globais sem rota ("Chat global"/
+  "Configurações") saem — só Projetos e Atividades são globais. A aba
+  Código recolhe a sidebar automaticamente, sem gravar a preferência
+  (RN-195..201)
+- **web**: moldura de tela conforme o handoff — cabeçalho do projeto com
+  `--header-h` (piso de 60px, sem cortar o alerta de orçamento), régua de abas
+  com `box-shadow: inset 0 -2px 0 var(--accent)` em vez de `border-bottom`,
+  rolagem horizontal em telas estreitas, e container de conteúdo com largura
+  máxima de 1040px. O rótulo "Code" virou "Código" (ADR 0078).
+- **web**: aba de Gastos ganha quebra por provider (Ranking, RN-211), bloco
+  de orçamento por projeto com o `TokenMeter` existente (RN-212) e alerta
+  de custo lido do orçamento (RN-213). KPI de economia com modelo local
+  fica de fora, declarado — falta preço contrafactual defensável (RN-214)
+- **web**: o painel inferior da aba Código ganha as quatro abas do handoff
+  (Terminal, Problemas, Diff de PR, Saída) — Problemas e Saída nascem com
+  estado vazio honesto, sem lint/teste ou stream de comando inventados
+  (RN-215/216) — e a status bar de 24px passa a mostrar `↑N ↓M` real da
+  branch e a linguagem do arquivo ativo (RN-217); abas do painel ganham
+  foco visível (RN-218)
+- **web**: a aba Criativo ganhou os 4 KPIs do handoff (sessões no projeto,
+  ativas agora, taxa ideação→commit, custo do mês), filtros pill
+  (todas/ativas/fechadas/abortadas) e selos de status para os 5 estados
+  reais da sessão — `closing` com selo próprio "encerrando", nunca fundido
+  com "fechada" (RN-227..230)
+- **api**: pipeline de indexação (`docs`/`adr`/`session`, chunking por
+  heading/parágrafo com 1200 caracteres e 150 de sobreposição) e busca
+  híbrida (vetor + léxico, pesos 0.6/0.4, limiar 0.2) do Chat RAG, com
+  degradação honesta quando o provider de embedding está indisponível e
+  três rotas novas (`POST .../rag/search`, `POST .../rag/reindex`,
+  `GET .../rag/coverage`) — RN-231..238, ADR 0080
+- **web**: virtualização de linha na aba Código — arquivo de 5.000 linhas
+  renderiza uma janela pequena de nós de DOM, não o arquivo inteiro — e
+  minimapa em `<canvas>` reaproveitando a tokenização já feita pelo realce
+  de sintaxe, sem segundo passe sobre o arquivo (RN-239..242)
+- **api**: ciclo de vida do container como tabela de estado
+  (`project_containers`, migração `0046`), sem orquestrador — máquina de
+  estados pura (`provisioning → running ⇄ stopped`, `failed`, `removed`),
+  primeira transição exigindo a imagem já decidida pelo Arquiteto e
+  congelando versão/recursos; nenhuma chamada real a Docker ainda
+  (RN-243..248, ADR 0081)
+- **web**: a aba **Chat RAG** (`key: 'rag'`), separada da aba Chat
+  (`sessions`, que continua sendo conversa com agente ativado) — busca com
+  filtro de escopo (docs/ADR/sessões), citações navegáveis (origem de
+  sessão leva ao evento exato; origem de arquivo mostra caminho/heading,
+  sem link — a aba Código não tem deep-link por caminho ainda), painel de
+  cobertura do índice com contagem REAL (nunca "reindexado há Xmin"
+  inventado) e botão de reindexar restrito a `maintainer`/`owner`. Avisa
+  quando a busca degradou para só léxica por falta de embedding
+  (RN-252..254, ADR 0082)
+- **api,web**: primeira exposição HTTP do ciclo de vida do container
+  (`GET .../container/lifecycle`, role:viewer) e a aba Terminal passa a
+  mostrar esse estado real (status, motivo de falha) sob o texto
+  explicativo que já existia — nunca um terminal simulado, porque não há
+  container real rodando ainda (FASE 25b segue cortada) (RN-267/268,
+  ADR 0083)
+- **api,web**: login social via GitHub/GitLab — revoga a proibição do
+  backlog do ADR 0031 só para esta capacidade. Reusa o mesmo app OAuth da
+  conexão de git (zero variável de ambiente nova) e a emissão de sessão do
+  login por senha; vincular a conta existente exige e-mail verificado pelo
+  provider, contra account takeover; conta provisionada nasce sem senha.
+  Branch `breaking/`: o operador precisa cadastrar um segundo callback
+  OAuth no provider antes do deploy (RN-272..283, ADR 0084)
+- **api,engine**: o plano de execução do Dev Lead (quantos agentes por
+  módulo e por quê) vira uma decisão real em Aprovações — antes só narrava
+  no fio, sem pipeline de aprovação nenhum. Enquanto ela não é decidida, a
+  conversa com o Dev Lead PAUSA: é a primeira vez que um agente
+  conversacional suspende esperando aprovação humana no meio do turno
+  síncrono (RN-284, ADR 0086)
+- **engine,web**: o UX Designer entra como o quinto agente conversacional
+  (Criativo, PO, Arquiteto, Dev Lead e agora ele), SOLO e sem área —
+  antecipado pelo dono do produto antes do gatilho de separação declarado
+  em `docs/fluxo.yml` ter disparado. Kickoff a partir do product brief do
+  Criativo; a única ferramenta, `propose_prototype`, registra personas,
+  jornadas e o protótipo navegável (`artifact.prototipo_navegavel`, sem
+  tabela nem rota nova na api) e oferece o mesmo artefato como handoff ao
+  PO e ao Dev Lead. `teste-de-usabilidade` fica fora de alcance (exige
+  usuário humano real); `metricas-de-uso` segue lacuna declarada
+  (RN-285..287, ADR 0087)
+- **engine,api,web**: o Staff/Principal Engineer ganha CÓDIGO — sexto
+  agente conversacional solo (`propose_rfc`: problema, opções com
+  trade-offs, recomendação e PoC descartável, devolvido ao Arquiteto por
+  handoff no mesmo tool call), acionável MANUALMENTE por handoff aceito
+  endereçado a "staff" (caminho genérico, sem entrar em
+  `USER_STARTED_AGENTS`). O gatilho AUTOMÁTICO (a Anamnese notando um
+  problema sistêmico recorrente) segue pendente enquanto
+  `ANAMNESE_ENABLED=false` — dormente para disparo automático, não para
+  acionamento manual (RN-305/306, ADR 0088)
+- **api,engine**: o gate `implementavel` sai de `planned` para `active` — o
+  Dev Lead ganha `assess_implementability`, o parecer de implementabilidade
+  de uma story (viável/inviável, com justificativa), a partir do plano de
+  teste que a QA-estratégia produz. A QA-estratégia deixa de ser papel
+  `proposto` em `docs/fluxo.yml`: é o próprio `qa-lead`, num SEGUNDO
+  momento (mesmo processo, entregável separado do veredito de PR) — sem
+  worktree, sem task, PRE-DEV. O parecer nasce `proposed_action`, mesmo
+  padrão do plano de execução (RN-340/341, ADR 0090)
+- **engine**: o papel `appsec` (`docs/fluxo.yml`) ganha o segundo momento do
+  secops — threat model de DESIGN (checklist STRIDE-lite) sobre a story e o
+  module_map vigente, ANTES de existir código ou PR. Roda no MESMO processo
+  do `SecOpsAgentServer` (`run_design/2`, sem worktree/task_id), termina
+  emitindo `artifact.threat_model` e criando handoff para arquiteto, dev-lead
+  e o lead de Infra. `run_design/2` já é acionável, mas nenhum caminho aciona
+  sozinho ainda — o gatilho automático fica para a frente `qa-estrategia`
+  (RN-360/361, ADR 0090)
+- **api**: novo script `pnpm --filter api analise:funil -- --projeto
+  <uuid> [--json]` — os papéis `analytics`/`delivery-metricas` de
+  `docs/fluxo.yml` (antes `status: proposto`) viram `active`, entregues
+  como RELATÓRIO puro (mesmo formato de `medir-execucao.ts`, sem agente,
+  sem GenServer). Mede funil real sessão → commit → PR → merge, lead time
+  real e deployment frequency real em branch protegida, todos extraídos
+  de `proposed_actions.execution_result`. Declara, de propósito, três
+  métricas sem caminho para existir hoje: funil de produto completo
+  (ideação → commit), evidência de adoção por feature e MTTR/change
+  failure rate (RN-320..322, ADR 0089)
+- **api**: `pnpm --filter api relatorio:seguranca-runtime` — o papel
+  `secops-runtime` (`docs/fluxo.yml`) antecipado como SCRIPT, não agente,
+  sobre o dado que o `RateLimitGuard` já coleta hoje (`rate_limit_hits`):
+  ranking de baldes (usuário/IP) com mais hits e distribuição temporal dos
+  picos, com a janela de retenção (curta, poucos minutos) sempre declarada.
+  Detecção automática de incidente, resposta a incidente e postmortem de
+  segurança seguem FORA — dependem de tráfego de produção real, que não
+  existe — e o relatório lista essa lacuna, sem simular incidente de
+  exemplo (RN-375..377, ADR 0091)
+- **api**: o papel `platform` (`docs/fluxo.yml`, `status: planned` —
+  ativação ainda pendente de `DEPLOY_ENABLED`, que não existe) ganha uma
+  primeira entrega honesta: `pnpm --filter api relatorio:telemetria
+  [--projeto <uuid>] [--json]`, um SCRIPT (não agente) que lê sob demanda as
+  mesmas fontes do `DomainGaugesCollector` — sessões ativas/closing e tasks
+  bloqueadas por projeto, estado do último backup — e linka para os
+  dashboards/alertas/runbook já versionados, sem duplicar. A saída declara
+  explicitamente o que NÃO mede: SLO numérico (nenhum definido), postmortem
+  (sem incidente real) e telemetria automática em loop fechado
+  (RN-385/386, ADR 0092)
+- **api**: o papel `dbre` vira dois scripts mecânicos —
+  `lint:migracao` varre `apps/api/src/db/migrations/*.sql` e sinaliza
+  `DROP TABLE`/`TRUNCATE`/`DROP COLUMN`/`ALTER COLUMN ... TYPE`/`ADD
+  COLUMN ... NOT NULL` sem `DEFAULT` (informativo, não bloqueia CI ainda);
+  `relatorio:backup` lê `backup_runs` sob demanda com a mesma lógica do
+  `DomainGaugesCollector`, citando o procedimento de restore já testado
+  em `docs/runbook.md`. Plano de capacidade e tuning seguem declarados
+  como lacuna — exigem volume real de dados, que não existe hoje
+  (RN-400..403, ADR 0093)
+- **api**: a delegação Dev Lead → `dev-<modulo>` vira DADO auditável em
+  `delegations` (`area: 'dev'`), fechando o item que o ADR 0053 (item 5)
+  tinha declarado fora de escopo. `status: 'completed'` é redefinido para
+  esta área — significa "o agente foi ativado", não "parecer emitido" como
+  em QA/Infra —, e `parecerArtifactId` aponta para o `artifact.module_map`
+  mais recente do projeto, o artefato que justificou a decisão de delegar
+  (RN-405, ADR 0094, auditoria fluxo.yml × código, item B1)
+- **api,web**: o gate `necessidade-validada` (Criativo → PO) ganha um
+  terceiro botão dedicado, "Confirmar necessidade validada", no mesmo
+  padrão de "Confirmar arquitetura pronta" — confirmação humana SEPARADA
+  do Criativo, nunca o modelo se autovalidando. Habilita só depois de
+  `confirm_readiness` já ter consolidado o `product_brief`; grava
+  `necessity.validated` sem sinalizar o engine, porque o handoff
+  Criativo→PO já aconteceu antes. `docs/gates.yml` ganha o gate
+  correspondente (`active`, `warn`) (RN-406, ADR 0095, auditoria
+  fluxo.yml × código, item B2 — última onda do plano)
+- **api,engine**: o PO ganha a terceira ferramenta de leitura,
+  `listar_metricas_de_produto` — o mesmo relatório de funil de entrega e
+  DORA parcial do script `analise:funil` (ADR 0089), agora legível dentro
+  do turno (`GET /internal/projects/:projectId/product-metrics`). As
+  funções de cálculo puras e a query migraram para
+  `apps/api/src/application/services/funil-metrics.ts`, reexportadas pelo
+  script sem mudar comportamento. Fecha o item B4 — a ÚLTIMA pendência da
+  auditoria fluxo.yml × código (RN-407)
+- **api,web**: SMTP real no `MailSender`, fechando o item de backlog aberto
+  desde o corte do Keycloak. `MAIL_TRANSPORT=smtp` (default continua `log`,
+  inclusive em produção) liga o envio de verdade via `nodemailer`, com
+  `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM` validados no boot em
+  produção pelo mesmo padrão da RN-114 (RN-408, ADR 0096). A investigação
+  achou uma lacuna real: `email_verification` não tinha rota web — nova tela
+  `/verificar-email` fecha isso, espelhando `/definir-senha`
+- **api,web**: o card do dashboard mostra "N online" — quantos agentes estão
+  trabalhando ou com pendência esperando decisão AGORA, nunca tamanho de
+  equipe ou presença histórica. Soma dev agents (`engine.dev_agent_states`,
+  agregado em lote) e agentes conversacionais (último `agent.status` da
+  sessão mais recente); QA/SecOps nunca contam, porque não emitem
+  `agent.status` (veredito único por invocação). Fecha o item de backlog
+  "N agentes online" no dashboard (RN-409, ADR 0097)
+
+- **api,engine**: corrigido o `413 request entity too large` que estourava
+  em PRs legítimas no gate de QA/SecOps — causa era da própria api do
+  Brabo, nunca do provider de LLM. A api nunca configurava limite de body
+  do Express (valia o default de 100 KB contra os 8 MB que o Phoenix
+  aceita); `API_JSON_BODY_LIMIT` (default 10 MB) fecha essa ponta. No
+  engine, a compactação de contexto era estruturalmente inalcançável antes
+  do estouro — a estimativa de tokens não contava `toolCalls` e a janela
+  usava só a janela do modelo (128k, ~350 KB antes de compactar); a janela
+  efetiva agora é `min(context_window, teto_de_transporte)`, com corte
+  sempre em fronteira de iteração do `ToolLoop` (RN-412, ADR 0098)
+- **api,web**: a aba Executores/Visão Geral não fica mais vazia com
+  execução real rolando — `executionActivated` era derivado da janela dos
+  últimos 200 eventos, e `execution.activated` (um dos primeiros eventos
+  da sessão) saía dessa janela em qualquer execução longa, apagando o
+  roster inteiro. As duas telas passam a usar o valor agregado sobre
+  TODOS os eventos que o resumo do workspace já calculava (RN-090). A
+  régua de trabalho pendente (`DEV_PENDING_TYPES`) ganhou
+  `dev.awaiting_gate`/`dev.awaiting_approval` — o heartbeat não fecha mais
+  a sessão com dev agent esperando o gate ou uma aprovação (RN-412,
+  estende a RN-411)
+- **api**: sessão de execução não fecha mais por baixo de dev agent
+  trabalhando ou travado esperando desbloqueio — o heartbeat de 30s só
+  enxergava `agent.status` (vocabulário dos conversacionais), e dev agents
+  usam vocabulário próprio (`dev.*`). Quarto sinal em
+  `GetSessionPendingWorkUseCase`: último evento `dev.working`/`dev.blocked`/
+  `dev.idle_tripped` de qualquer `dev-<modulo>` segura a sessão; `dev.idle`
+  não. Achado numa sessão de execução real com cinco dev agents em
+  `idle_tripped` (RN-411)
+- **api**: toda conta NOVA (registro por e-mail/senha ou login social)
+  ganha um workspace pessoal automático, na mesma transação que cria a
+  conta — antes `RegisterUseCase`/`SocialLoginCallbackUseCase` criavam
+  usuário e credencial mas nenhum workspace, e o botão "Novo projeto" do
+  dashboard silenciosamente não fazia nada. Nome/slug saem de uma função
+  única, `nomeESlugDoWorkspacePessoal`, e o slug leva sempre um sufixo do
+  id do usuário para ser único sem round-trip ao banco (RN-410)
+- **api**: "Confirmar arquitetura pronta" (RN-160) agora é revalidado no
+  BACKEND — antes só a UI desabilitava o botão sem história promovida do
+  backlog, e uma chamada HTTP direta a `POST
+  /agents/arquiteto/handoff-infra` ignorava a regra por completo. Recusa
+  ANTES de gravar qualquer evento ou sinalizar o engine (RN-404, ADR 0094,
+  auditoria fluxo.yml × código, item B6)
+
+- **web**: os seis colapsos ad-hoc restantes migram para o `Disclosure`
+  compartilhado (`ModelCatalogSection`, `AgentTimelineTree`,
+  `code/CodeExplorer.tsx`, `code/CodeShell.tsx`) — o marco com detalhe de
+  `AgentTimelineTree` tinha alvo de clique de 20px, abaixo do piso de 24px
+  do WCAG 2.2 AA (2.5.8); a faixa de arquivo do diff em `ApprovalCard` NÃO
+  migrou (animação própria de chevron que o componente genérico não
+  replica) e ganhou só o `aria-controls` que faltava (RN-249..251)
+- **web**: fecha o resto da varredura de acessibilidade — alvos de toque
+  abaixo do piso de 32px do handoff em botões de ícone da sidebar
+  (colapsada e expandida), ações destrutivas de Aprovações/Configurações e
+  o botão de fechar do `Toast` (que não tinha tamanho explícito nenhum, e
+  também ganhou `:focus-visible`); quatro alvos abaixo do piso de 24px do
+  WCAG corrigidos em telas reais. `aria-expanded` da sidebar auditado e já
+  estava correto nos dois controles
+
+- **web**: os valores de espaçamento da régua de abas do projeto, que viviam
+  como override de CSS de descendente em `ProjectPage.module.css` desde a
+  FASE 16, migraram para `Tabs.module.css` — pendência declarada fechada
+- **web**: a régua de abas do projeto (`Tabs.module.css`) ganhou
+  `:focus-visible` — navegar por Tab não mostrava indicação de foco nenhuma;
+  achado pela frente de acessibilidade, corrigido no mesmo padrão de
+  `Input.module.css` (ADR 0036), com anel `inset` (a régua rola
+  horizontalmente e um anel para fora seria cortado)
+
+- **design**: seis tokens do tema claro corrigidos até passarem AA — `--accent` 3,56 → 4,81:1, `--warning` 3,15 → 4,98:1, `--success` 3,89 → 5,12:1, `--violet` 4,16 → 4,95:1 e `--text-muted` 2,76 → 5,17:1 contra o fundo que os cobrava, mais `--accent-hover` um degrau abaixo; o tema escuro não mudou nenhum valor e a dívida dele segue travada nos mesmos cinco números (ADR 0074, RN-184)
+- **web**: o contraste passa a ser medido nos DOIS temas nos três arquivos que o medem — o teste que afirmava que "nada na app define `data-theme=light`" e que três pares reprovavam foi invertido junto com o produto
+- **web**: cor de agente e o `#fff` do botão `.success` saem de token (`var(--violet)`, `var(--on-accent)`); três cores de agente sem contraparte semântica ficam declaradas no arquivo, não inventadas
+- **web**: `Select`, `Modal` (botão de fechar) e `ProjectCard` ganham
+  `:focus-visible` no mesmo tratamento calibrado de `Input.module.css`
+  (ADR 0036, incluindo o bloco de `forced-colors`) — nenhum dos três tinha
+  indicação de foco própria alcançável só por teclado. O botão de fechar do
+  `Modal` também sobe de 30px para 32px, o piso de alvo de toque em desktop.
+  `Table` e `Badge` foram auditados e não precisaram de mudança: nenhum dos
+  dois expõe afordância interativa própria — linha de `Table` é apresentação
+  pura (quem precisa de linha clicável já usa `<button>`/`<a>` dentro da
+  célula, via `render`) e `Badge` não é usado com `onClick` em lugar nenhum
+  do produto hoje.
+
+- **docker,web**: o terminal do runner local (Code → Dev → Terminal, ADR
+  0103/0104) ficava preso em "Abrindo terminal..." para sempre em projeto
+  no modo `runner`, com o socket falhando em loop no console do browser.
+  Três causas empilhadas: `ENGINE_PUBLIC_URL` não tinha default nenhum em
+  `docker/docker-compose.yml` — o fallback do código caía em `ENGINE_URL`
+  (`http://engine:4000`, hostname que só resolve DENTRO da rede do
+  Compose, inalcançável pelo browser); `apps/web/src/lib/terminal-channel.ts`
+  nunca desligava a reconexão automática do `phoenix.js`, então um socket
+  que nunca abre (URL errada, engine fora do ar) girava sozinho pra sempre
+  em silêncio em vez de mostrar erro; e o mesmo módulo concatenava
+  `/runner/websocket` a um `engineWsUrl` que a api já devolve PRONTO
+  (`ws://host:porta/runner`) — o `Socket` do `phoenix.js` ainda acrescenta
+  `/websocket` sozinho, e o path duplicado (`/runner/runner/websocket/
+  websocket`) era recusado pelo engine (`NoRouteError`), o defeito que de
+  fato impedia a conexão, só visível depois de corrigir os dois primeiros.
+  Compose ganhou o mesmo default que `VITE_ENGINE_URL` já usa
+  (`http://localhost:4000`); o canal do terminal ganhou timeout próprio de
+  8s que chama `onErro` e desconecta, em vez de depender do backoff nativo
+  do Phoenix; e parou de concatenar path no `engineWsUrl`. Verificado
+  ponta a ponta contra o engine real (RN-433)
+- **api**: `POST .../runner-ticket` (autenticação por Personal Access
+  Token, ADR 0105) sempre respondia `403 "Não autenticado"`, mesmo com um
+  PAT válido — o runner local nunca conseguia conectar por essa via.
+  `RolesGuard`, guard GLOBAL, rodava antes de `PatAuthGuard`, guard local
+  da rota (ordem do Nest, não configurável pelo controller), e recusava
+  toda chamada com `request.user` ainda vazio antes do `PatAuthGuard`
+  sequer autenticar. Um segundo defeito, escondido atrás do primeiro:
+  `PatAuthGuard` comparava o token bruto direto contra o hash gravado no
+  banco, em vez de hashear antes de comparar — nunca teria funcionado
+  mesmo sem o problema de ordem. `RolesGuard` passa a se abster em rota
+  `@RequirePatAuth()` (mesmo desvio que `JwtAuthGuard` já tinha) e
+  `PatAuthGuard` passa a autenticar E autorizar (`@RequireRole`) no MESMO
+  guard. Verificado com o `brabo-runner` conectando de verdade a um
+  projeto real (RN-439)
+
+- **api,web,engine**: o permissions.json mora onde a api alcança; o escopo do terminal, no host (RN-478) (#451) (9ea30060d)
+- **web,runner**: a JWK privada nasce com o `kid` do registro, e a recusa do CLI diz o que houve (RN-475) (#447) (179c749b2)
+- **api**: dois tetos de rebaixamento em project_members (ADR 0127, RN-472) (#445) (30cd83cf1)
+- **web**: a seção de Membros respeita o papel, e as duas ações caladas falam (RN-471) (#444) (6f3cfe85c)
+- **web**: a tabela de modelo por agente respeita o papel de quem olha (RN-102) (#443) (efb61ce15)
+- **web**: o seletor de modelo de agente e de área abre com "aptos para agentes" marcado (#442) (62eebad55)
+- **web**: trocar o modelo de um agente deixa de falhar em silêncio (#441) (aa50970ec)
+- **web**: "voltar a herdar" deixa de falhar em silêncio quando o agente já herdava (#440) (069a4ab74)
+- **docs**: escapa barra invertida antes do pipe em generate.mjs (#398) (08de8e9e4)
+- **web**: aba Insights diz quando o Psicólogo está pausado (#387) (48e6e58ee)
+- **web**: aba PRs deixa de mostrar o gate do Código como erro genérico (#386) (d64cbec6b)
+- **api**: quebra de linha do prettier em seed.ts (CI) (cac4535ce)
+- **runner**: --dir relativo resolve contra INIT_CWD, não o cwd rebaseado do pnpm (RN-453) (3426d1712)
+- renumera ADR 0109→0112 e RN-440/441→RN-451/452 (colisão entre PRs paralelas) (666d58e0c)
+- renumera ADR 0109→0110 e RN-440→RN-443 (colisão entre PRs paralelas) (eb452183b)
+- resolve as 4 falhas de CI da PR #377 (8208b32e6)
+- corrige quebra de compilação e testes da fundação de i18n (Onda 6b) (022d234ca)
+- **docs,engine**: regenera events.md com project.workspace_verified e corrige formatação do teste do canal (3df121312)
+- **docker,engine**: senha do neo4j no smoke volta a ser hex, bandit sobe a 1.12.5 (88b5bdb74)
+- inclui a mudança do engine da Onda 4 (esquecida no commit anterior) (8d40cee9f)
+- **docker**: senha efêmera do neo4j no smoke não pode conter barra (9c5d6235c)
+- **docker**: neo4j chega configurado na imagem de produção e no smoke (bdfb22f28)
+- **docker**: neo4j chega configurado na imagem de produção e no smoke (5828074a8)
+- **docker**: neo4j chega configurado na imagem de produção e no smoke (598cd1be6)
+- **api,docs**: corrige drift de docs, formatação e teste com import estático flagrados pelo CI (a190b3258)
+- **api,engine,web**: corrige 413 nas PRs e Executores vazio com execução ativa (7a0ca9b60)
+- **business-rules**: renumera RN-410 para RN-411 (colisao com PR #361) (e5fba21f0)
+- **api**: dev agent trabalhando ou travado segura a sessão de execução (033c9963a)
+- **api**: cria workspace pessoal automático no cadastro de conta nova (9bd1f649b)
+- **docs**: drift.mjs reconhece arquivo-raiz fora de docs/ como satisfeito (8dd665bc2)
+- **api**: formatação do DTO de métricas de produto (prettier) (f9037da11)
+- **docs**: restaura o cabeçalho ### RN-340 perdido na resolução do merge (968ccb9a7)
+- **web**: ApprovalCard.ACTION_ICON exaustivo pra assess_implementability (f2cc17be9)
+- **engine,web**: revisão pós-implementação do ADR 0086 (b2f82f43b)
+- **api**: lint da frente de login social — só formatação (prettier) (da521ffbb)
+- **web**: fecha o que sobrou da varredura de acessibilidade (PROGRAMA 28, Onda 5/H5) (cd1bbef1b)
+- **api**: lint da frente RAG — prettier e any implícito em listarArquivosMarkdown (8ddbe8143)
+- **web**: faixa de arquivo do diff em ApprovalCard ganha aria-controls (defbb0ea3)
+- **web**: foco visível em Select, Modal e ProjectCard (ADR 0036) (9de6e2a6b)
+- **ci**: dispensa seis CVEs de Go stdlib no gitleaks e no actionlint (538069d43)
+- **api,docs**: formatação do prettier e a fronteira de gasto na doc (0980c77b7)
+- **docker,web**: ENGINE_URL do .env impedia ativar sessão dentro do container (29bbb46d5)
+- **scripts**: a regex que extrai o script do 404 aceita qualquer caixa (586b75ef9)
+- **web**: a entrada de teste de afundarDesfechos declara a origem (267edfb99)
+- **web**: o evento citado nunca cai em grupo fechado do feed (3c1baffb2)
+- **engine**: falha no frame final não derruba mais o agente (02102056f)
+- **web**: handoff e aprovação como desfecho do turno (2cf6c6fad)
+- **api,docs**: tipa o statSync e documenta o que o modo Local muda (e26b3cb46)
+- **ci**: dispensa duas CVEs de Go stdlib no gitleaks e no actionlint (d53aecda3)
+- **engine**: o Criativo cumpre a promessa de tentar de novo (43db01cdd)
 
 ### Novidades
 
@@ -1539,609 +4788,86 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   82 777 288 → 82 789 576 bytes — o crescimento é código, não dependência
   (ADR 0128)
 
-### Correções
-
-- **web, runner**: o **modo automático** do runner local — configurar a pasta
-  pelo navegador e rodar `brabo-runner` sem flag nenhuma — **nunca funcionou**,
-  desde que nasceu. O navegador gerava o par de chaves, registrava a metade
-  pública no projeto e gravava a privada na pasta, mas **descartava o `id` que
-  a api devolvia no registro** — nos dois caminhos, o automático e o kit
-  manual. Esse `id` é o **`kid`** da JWK, e é o único vínculo entre o arquivo
-  em disco e a chave pública guardada no servidor: sem ele, o CLI recusa a
-  chave (ele só repassa `jwk.kid`, nunca inventa um id) e a api não teria como
-  achar a pública para verificar a assinatura. O resultado era uma pasta com
-  aparência de configurada, uma chave inerte no projeto, e o CLI caindo no
-  modo manual sem dizer por quê. Agora o registro e a exportação da privada
-  acontecem **numa função só**, com o `id` fluindo dentro dela — descartá-lo
-  de novo exigiria apagar código, não esquecer uma linha. E o teste que
-  deixou isso passar mudou de pergunta: ele afirmava que o arquivo tinha sido
-  **aberto**, e passa a afirmar **o que foi escrito nele** (RN-475)
-- **runner**: a recusa da chave de dispositivo **diz o que houve**. Um arquivo
-  `brabo-runner-device-key.jwk.json` **presente e inválido** produzia
-  exatamente a mesma saída de um arquivo **ausente** — o bloco de uso, que
-  fala de `--project`/`--dir`/`--token` e não menciona o arquivo —, porque a
-  leitura devolve `null` nos dois casos (de propósito: ela nunca lança, e a
-  ausência é o caminho normal de quem usa flags). Quem tinha uma pasta
-  configurada era mandado investigar a configuração, que estava certa. A
-  leitura continua não lançando; o que mudou é que o CLI passa a **distinguir
-  os quatro estados** (ausente, JSON inválido, sem `kid`, válida) e a imprimir
-  a recusa **nomeada** — o arquivo, o motivo e as duas saídas (regravar a
-  pasta pelo navegador, ou usar `--token` enquanto isso) — em vez do texto
-  sobre flags. Ausente segue caindo no bloco de uso, que é a resposta certa
-  para quem não configurou nada (RN-475)
-- **api**: associar alguém a um projeto (`POST projects/:projectId/members`)
-  passa a recusar com **403** os **dois movimentos de rebaixamento** que
-  produziam estado sem volta. Um `maintainer` podia (1) rebaixar o **`owner` do
-  workspace** a `viewer` num projeto — o dono perdia o próprio projeto, e
-  restaurar exigia o `maintainer` que ele acabara de perder ali — e (2) **se
-  rebaixar sem poder desfazer**, porque desfazer é a mesma rota, que pede
-  `maintainer`. Agora: **ninguém rebaixa quem é `owner` do workspace** (lido de
-  `workspace_members.role`, nunca de `workspaces.created_by`) e **ninguém
-  rebaixa a si mesmo** (sem limiar; **subir** o próprio papel segue passando).
-  A **sobreposição continua valendo nos dois sentidos** — restringir um
-  `developer` de workspace a `viewer` num projeto sensível é capacidade
-  deliberada e não foi tocada. As **três descrições de OpenAPI** que prometiam
-  "the higher of this one and what the person already has" e "includes whoever
-  inherits access from the workspace" passam a descrever o que o código faz.
-  A tela ainda oferece o rebaixamento que a api recusa (ela não tem como
-  calcular o primeiro teto), mas **a recusa aparece** no toast, com a frase da
-  api — o gate do `Select` é PR à parte.
-  Ver [ADR 0127](docs/adr/0127-tetos-de-rebaixamento-em-project-members.md) e
-  RN-472.
-- **web**: em **Configurações**, a seção **Membros e papéis** passa a
-  **respeitar o papel de quem está olhando**, e suas duas ações caladas passam a
-  ter desfecho. Ela não checava papel nenhum: **convidar**, **trocar o papel de
-  alguém** e **remover** apareciam ativas para todo mundo, **`viewer`
-  incluído**, e a api recusava com 403 — e duas delas nem diziam isso, porque
-  não tinham tratamento de erro: a recusa virava silêncio na tela e ruído no
-  console. Remover um membro em silêncio era o pior dos três, por ser ação
-  consequente e sem volta pela tela. O mínimo **não** foi copiado da seção de
-  modelos logo acima: **Modelos por agente** exige `developer` e as três ações
-  daqui exigem `maintainer`, porque a régua é do **endpoint**, nunca da tela ao
-  lado. E o papel usado é o **efetivo do projeto**, não o do workspace — o
-  limite que a correção anterior tinha declarado. Não é uma lacuna nova nem uma
-  segunda: é a **mesma**, vista da seção que tem como fechá-la, porque esta já
-  busca a lista de membros do projeto e daí sai o papel de quem olha, composto
-  exatamente como a api o compõe. Quem não pode editar **continua lendo tudo** —
-  o papel de cada membro segue visível no seletor apagado —, e o motivo é dito
-  **uma vez, em texto**, na legenda. A legenda também passa a dizer **duas
-  coisas que a tela afirmava sem querer**: que o papel desta tabela **substitui**
-  o do workspace neste projeto, **nos dois sentidos** (pôr `viewer` aqui rebaixa
-  de verdade, inclusive quem é `owner` do workspace — o seletor não é uma
-  sugestão inofensiva), e que quem alcança o projeto **só pelo workspace não
-  aparece na lista**. **Convidar** manteve de propósito a dica fixa em vez da
-  frase da api: ali o ID é digitado à mão, e o erro que se alcança de verdade
-  responde `500`, cuja frase seria pior que a dica (RN-471)
-- **web**: em **Configurações**, a tabela **Modelos por agente** passa a
-  **respeitar o papel de quem está olhando**. Ela não checava papel nenhum: o
-  seletor de modelo e o "voltar a herdar" de cada linha apareciam clicáveis para
-  todo mundo, **`viewer` incluído**, e a api recusava com 403. Desde as
-  correções acima esse 403 pelo menos vira mensagem — o que não bastava:
-  oferecer um controle que só existe para ser recusado é a tela mentindo sobre o
-  que a pessoa pode fazer. O mínimo **não** foi copiado da seção irmã logo
-  abaixo: **Modelo por área** exige `maintainer` e **Modelos por agente** exige
-  `developer`, porque o vínculo da área alcança o lead e todos os subagentes de
-  uma vez e o do agente alcança um agente (RN-102). Copiar teria trocado o
-  defeito pelo **inverso**, e o inverso é pior — oferecer o que será recusado ao
-  menos termina numa mensagem, enquanto trancar quem podia editar é invisível
-  para quem perdeu a capacidade. Quem não pode editar **continua vendo tudo**: o
-  modelo vigente no gatilho, a cadeia de origem inteira e o próprio "voltar a
-  herdar", que é o que diz que aquele agente divergiu — some o controle, nunca a
-  informação. O motivo é dito **uma vez, em texto**, na legenda da seção, e não
-  como dica em cada linha: dica de mouse em controle desabilitado não abre no
-  Chromium, e explicação que não aparece é a mesma ausência com mais código. A
-  comparação de papéis saiu das telas e virou `roleAtLeast` sobre a hierarquia
-  que já existia — **Modelo por área** passou a usá-lo com o mesmo mínimo de
-  antes. Nada disso é fronteira de segurança: quem recusa continua sendo a api
-  (RN-102)
-- **web**: em **Configurações**, o seletor de modelo de **Modelos por agente** e
-  o de **Modelo por área** passam a abrir com o filtro **"aptos para agentes"
-  já marcado**. O filtro existe desde a Fase 9c e **nenhuma tela o ligava** — o
-  seletor abria oferecendo modelos sem *tool calling*, cujo clique a api recusa
-  com 422, e a frase da recusa manda a pessoa justamente para o filtro que
-  ninguém tinha ligado. Quem passa a ligá-lo não é escolhido por tela e sim pelo
-  **escopo do vínculo**: `assertModelFitsBindingScope` exige *tool calling* em
-  `agent` e em `area` e em mais nenhum, então as duas telas que gravam nesses
-  escopos abrem filtradas e o **seletor da sessão continua sem filtro** — ali a
-  api aceita modelo de conversa de propósito, e marcar esconderia o que o
-  domínio permite. Isto torna **improvável a causa mais comum** de recusa, nunca
-  impossível: as outras duas (modelo desativado no workspace, modelo sumido do
-  provider — RN-043) continuam alcançáveis daqui, o modelo indisponível segue
-  **listado e marcado**, e a mensagem de falha da correção anterior continua
-  sendo o que conta o desfecho. É o **estado inicial** de uma caixa de seleção,
-  não uma trava: desmarcar volta a listar o catálogo inteiro. Como consequência,
-  o seletor passa a **dizer quando o filtro esconde o modelo vigente** — o
-  vínculo herdado do projeto ou do workspace pode ser de conversa (esses dois
-  níveis nunca exigiram *tool calling*), e sem o aviso o gatilho mostrava um
-  nome que a lista aberta não continha, sem nada marcado. A causa é nomeada
-  porque só existe um filtro ali; quando a lista inteira fica vazia, quem fala
-  continua sendo o texto de lista vazia, que já manda desmarcar (RN-040)
-- **web**: em **Configurações**, escolher um modelo no seletor de uma linha de
-  **Modelos por agente** e ter o pedido recusado não produzia nada na tela: a
-  pessoa clicava, o dropdown fechava, a linha continuava no modelo antigo e o
-  erro só existia no console. Mesma classe de defeito da correção logo abaixo, e
-  na função vizinha do mesmo arquivo — `handleModelChange` não tinha `try/catch`
-  e era chamada do `onSelect` do seletor, então toda recusa da api virava
-  *unhandled promise rejection*. A recusa é alcançável de dentro do próprio
-  seletor: o modelo que sumiu do provider aparece na lista **marcado** em vez de
-  escondido (senão o vínculo que aponta para ele ficaria sem explicação), e a
-  lista é cacheada, então o modelo pode ter sido desligado no catálogo depois da
-  última leitura — nos dois casos a api recusa com 422. Agora a falha aparece,
-  com a mensagem da api e tom de falha. **O 404 aqui NÃO ganha desfecho
-  próprio**, ao contrário da correção de "voltar a herdar": aquele endpoint tem
-  **uma** causa de 404 e por isso o cliente pôde nomeá-la; este recusa por sete
-  caminhos e nenhum status identifica um deles sozinho — o 404 sozinho tem duas
-  causas ("Modelo não encontrado" e "Projeto não encontrado"), e escolher uma das
-  frases seria a tela afirmando o que não sabe. O contraste está comentado no
-  código, ao lado das duas funções. Nada de otimista foi introduzido: a coluna
-  **Modelo vigente** continua exibindo o vínculo que a api confirmou, e a linha
-  só é relida no sucesso — na recusa nada mudou no banco (RN-470)
-- **web**: em **Configurações**, clicar em "voltar a herdar" numa linha de
-  **Modelos por agente** que já herdava não fazia nada visível — nem confirmava,
-  nem reclamava. O botão aparece em toda origem `agent` de propósito (RN-470): a
-  cadeia do cliente não consegue separar o agente com modelo próprio daquele que
-  herdou o do **Criativo**, e nesse caso não há linha para apagar, então a api
-  responde 404 — ela está certa, "apaguei o que não existia" e "apaguei" não são
-  a mesma resposta. O que faltava era do lado do cliente: a função não tinha
-  `try/catch` e era chamada de um `onClick`, então toda recusa virava *unhandled
-  promise rejection* — silêncio na tela e ruído no console. Agora os três
-  desfechos são distintos, na gramática que **Modelo por área** já usava. O 404
-  ganhou desfecho **próprio** e não o das outras falhas, porque para quem clicou
-  ele não é falha: o estado pedido — o agente herda — **já é verdade**. A tela
-  diz isso na língua de quem está lendo, em vez de repassar a frase pt-BR que a
-  api crava no código (o idioma default do web é `en`), e ela pode dizer porque
-  este endpoint tem **uma** causa de 404: papel insuficiente é 403 e `scope_id`
-  malformado não é 404. Nos dois desfechos a linha é relida — se a api diz que
-  não havia binding, quem estava desatualizada era a tela. Qualquer outro status
-  continua sendo erro de verdade, com a mensagem da api e tom de falha
-- **engine,api,web**: a aba Insights, com zero hipóteses, mostrava "Sem
-  hipóteses ainda — o Psicólogo analisa cada sessão encerrada" mesmo com
-  `PSYCHOLOGIST_ENABLED=false` — indistinguível de "ainda ativo, só não
-  rodou". A tela nunca chegava perto do botão "Reanalisar" (só existe com
-  uma rodada de análise já feita), então nunca esbarrava no 503 que
-  denunciava a pausa. `GET /projects/:projectId/psychologist/status`
-  (`role:viewer`, sem efeito colateral) lê a flag global de antemão; a
-  tela agora diz "O Psicólogo está pausado — nenhuma sessão é analisada
-  até ser reativado" quando é o caso, e mantém a frase original quando de
-  fato ainda está ativo (RN-454)
-- **web**: a aba PRs mostrava o 409 do portão do container (RN-105 — o
-  Arquiteto ainda não decidiu qual imagem sobe para o projeto) como erro
-  transitório genérico, com botão "Tentar de novo" — a afordância errada
-  para um estado estável que só se resolve quando o Arquiteto decide, nunca
-  clicando de novo. A apresentação dedicada que a aba Code já tinha
-  (RN-107) foi extraída para `ContainerImageGateNotice`
-  (`components/ContainerImageGate.tsx`) e a aba PRs (`code/PrListAndDiff.tsx`)
-  passou a reconhecer o mesmo 409 (`isContainerImageGateError`,
-  `lib/api-client.ts`) e mostrar o mesmo estado. Placeholder truncado no
-  campo "Já sabe o id?" corrigido junto (largura do input de 200px para
-  260px).
-- **docker,scripts,deploy**: `gemma:1b` não existe no registry da Ollama
-  (`manifest unknown`) — só `gemma3:1b` existe. `ollama-model-loader`
-  sempre falhava e travava qualquer `docker compose up --wait`. Corrigido
-  em `docker-compose.yml`/`.prod.yml`, `.env.example`,
-  `docker/ollama/pull-models.sh`, `scripts/dev/verificar-modelos-ollama.sh`
-  e `deploy/k8s/base/ollama/job-model-loader.yaml` (RN-415).
-- **scripts**: `Database › Delete` nunca dropava de verdade — `DROP SCHEMA
-  public CASCADE` não alcança `engine.*` (Ecto/Oban vive em schema PRÓPRIO)
-  nem `drizzle.__drizzle_migrations` (controle do drizzle-kit, também em
-  schema próprio). Resultado real: `mix ecto.migrate` batia em
-  `duplicate_table` e `pnpm db:migrate` — sem erro nenhum — não recriava
-  NENHUMA tabela da api, porque via o controle do drizzle-kit intacto e
-  concluía que já tinha rodado tudo. `Delete`/`Reset total` agora dropam
-  `engine` e `drizzle` também.
-
-- **api,web**: converter `execution_mode` de um projeto EXISTENTE, sem
-  recriá-lo — fecha a correção que a Onda 1 do runner (ADR 0104) já tinha
-  registrado em `docs/explanation/backlog.md` (o item 4 daquele ADR dizia
-  que a conversão já era possível, e não era). Rota dedicada, `PUT
-  projects/:projectId/execution-mode` (`maintainer`), que orquestra a
-  migração em vez de um `PATCH` que só trocaria a coluna: relocaliza o
-  `permissions.json` para o novo escopo (o CONTEÚDO não muda), encerra o
-  ciclo de vida do container ao SAIR de `container` (ADR 0081), zera
-  `workspaceVerifiedAt` em toda conversão real e recusa com 409 enquanto
-  qualquer dev agent do projeto estiver trabalhando ou travado — ele não
-  re-resolve o worktree sozinho por baixo da troca. Nova seção em
-  Configurações do projeto, com o mesmo aviso e a mesma copy dos três
-  modos do wizard de criação (RN-447..450, ADR 0111)
-- **api,web**: handoff manual a agente à escolha (ADR 0109), fechando item
-  de backlog aberto desde a FASE 13c. `SessionPage.tsx` ganha um seletor
-  ("Endereçar handoff a...") sobre `addressableAgents()` (lead de área ∪
-  agente conversacional solo), que POSTa em `POST
-  .../sessions/:sessionId/handoffs` — mesmo `CreateHandoffUseCase` que um
-  agente já usa para oferecer handoff, com `actor: {kind:'user'}`
-  registrando que quem decidiu foi um humano. O caso real que motivou:
-  Staff (ADR 0088) e `ux-designer` (ADR 0087) tinham plumbing de engine
-  pronto e NENHUM caminho humano até eles — os dois entram em
-  `AGENTES_DE_CHAT` na mesma mudança (RN-440/RN-441)
-- **api,web**: budget por ÁREA (`agent_areas.budget_micros`/`spent_micros`)
-  fecha o item do backlog do ADR 0038 — teto de gasto opcional, configurável
-  por lead em Configurações (`maintainer`), ADITIVO aos budgets de projeto
-  e sessão que já existiam (nunca cascata: os três são checados
-  independentemente, e qualquer um bloqueado já recusa a chamada). `null`
-  é o default (sem teto); o gasto acumulado da área soma SEMPRE, com ou sem
-  teto configurado, o que já mostra o gasto real por área antes de alguém
-  configurar um limite. Rota `PUT projects/:projectId/agent-areas/:key/budget`
-  (`maintainer`), e a rota `GET agent-areas` já existente passa a devolver
-  `budgetMicros`/`spentMicros` (RN-443, ADR 0110)
-- **runner**: binário standalone do `@brabo/runner` — download direto de
-  `dist-bin/brabo-runner-<plataforma>-<arquitetura>[.exe]` numa GitHub
-  Release, sem Node/npm/node-gyp instalado na máquina. `bun build --compile`
-  empacota o CLI num único executável, com o `.node` nativo do `node-pty`
-  embutido (`with { type: 'file' }`) e extraído pra um diretório real em
-  runtime — o mecanismo completo, e o que ficou VALIDADO por execução real
-  em cada plataforma (só `linux-x64` neste sandbox; as outras quatro por
-  reasoning + a primeira execução real de CI na próxima tag), está no ADR
-  0112. Cinco plataformas (`linux-x64`, `linux-arm64`, `darwin-x64`,
-  `darwin-arm64`, `win32-x64`), cada uma construída no seu runner NATIVO
-  (`build-runner-binaries.yml`, mesmo gatilho de tag final de
-  `publish-runner.yml`) e anexada à Release já existente. Fecha o item de
-  backlog do ADR 0104 ("binário standalone (pkg/bun build --compile)"),
-  companion do ADR 0106 (RN-451/452)
-- **web**: `FolderBrowserModal` vira um explorador de três colunas —
-  atalhos ("Pasta pessoal", "Raiz"), lista central com breadcrumb e um
-  painel de detalhes —, seguindo a referência visual do dono do produto
-  (picker estilo GNOME Files/GTK). Um clique agora SELECIONA (destaca e
-  atualiza os detalhes) e duplo clique ENTRA — antes um único clique já
-  navegava. A lista deixou de esconder arquivos: eles aparecem visualmente
-  apagados e sem gesto nenhum, só pasta continua navegável/selecionável. O
-  botão final foi renomeado para "Usar esta pasta" (RN-436)
-- **api,web**: no modo de projeto `runner`, "Procurar pasta..." passa a
-  criar o projeto ANTECIPADAMENTE — ao clicar, não só na confirmação —
-  fechando a lacuna que o ADR 0107 já tinha declarado (o ticket do canal do
-  Runner precisa de um `projectId` real). Reuso por SNAPSHOT de identidade
-  (nome/repositório a adotar), nunca pelo caminho digitado: clicar de novo
-  sem mudar a identidade reabre o MESMO projeto, e a confirmação final
-  reusa em vez de criar de novo. O modo `mounted` não muda — continua sem
-  projeto até a confirmação, porque ali a validação de caminho toca disco
-  na criação (RN-437, ADR 0108)
-- **web**: `fs-browser-channel.ts` tinha o mesmo bug de path duplicado que a
-  RN-433 já tinha corrigido no `terminal-channel.ts` irmão (concatenava
-  `/runner/websocket` a um `engineWsUrl` que já vem pronto), então a
-  navegação de pasta contra um engine real caía direto em "a conexão com o
-  runner caiu". Achado ao verificar a RN-437 ponta a ponta — o módulo não
-  tinha teste próprio até agora (RN-438)
-- **api,web**: `maintainer` passa a revogar o Personal Access Token de
-  QUALQUER usuário do projeto — resposta a incidente (dev desligado com
-  token vazando), item declarado fora de escopo pelo ADR 0105. Rotas
-  separadas (`GET .../personal-access-tokens/all`,
-  `DELETE .../personal-access-tokens/:tokenId/admin`, ambas
-  `@RequireRole('maintainer')`), escopo por `projectId` em vez de
-  `userId` — a autorevogação de cada usuário não muda. Sub-lista nova em
-  Configurações do projeto, visível só para `owner`/`maintainer`, com o
-  e-mail do dono de cada token (RN-427, extensão do ADR 0105)
-- **runner**: `@brabo/runner` publicado no npm — `npm install -g
-  @brabo/runner` instala o CLI sem precisar clonar o monorepo. `tsup`
-  empacota `apps/runner` num `dist/index.cjs` único (`node-pty`
-  continua dependência separada, é binding nativo); publicação a cada
-  tag final via workflow próprio (`publish-runner.yml`), paralelo ao
-  `release.yml`. Fecha o backlog do ADR 0104 (ADR 0106)
-- **api,web,runner**: Personal Access Token (`brb_…`) pro `brabo-runner`,
-  fechando o item de backlog do ADR 0104 que bloqueava
-  `npm publish @brabo/runner`. `apps/runner/src/auth.ts` deixa de
-  replicar login (e-mail/senha interativos, cookies persistidos em
-  `~/.brabo/runner-credentials.json`) — o CLI passa a receber um token
-  de longa duração via `--token`/`BRABO_ACCOUNT_TOKEN`, emitido em
-  Configurações do projeto, revogável, com expiração opcional, escopado
-  a UM projeto. O token nunca autentica fora de
-  `POST /projects/:projectId/runner-ticket`, por construção
-  (`IS_PAT_ROUTE_KEY`/`@RequirePatAuth()` + `PatAuthGuard` de rota, nunca
-  um branch no `JwtAuthGuard` global) — nem sob papel elevado, nem em
-  nenhuma outra rota (RN-424/425/426, ADR 0105)
-- **api,engine,web,runner**: `execution_mode` do projeto passa a ter TRÊS
-  valores — `container` (default, inalterado), `mounted` (o antigo `local`,
-  renomeado) e `runner` (novo: pasta do usuário SEM bind-mount, confirmada
-  por um `brabo-runner` conectado). Reconcilia os ADRs 0072 e 0103: antes,
-  o roteamento pro runner reusava a mesma flag do modo `local`, então
-  usar o runner de verdade exigia passar pela validação de bind-mount que
-  ele não precisa. Criação de projeto `runner` valida só o caminho
-  (léxico, sem tocar disco); o runner confirma o caminho de verdade ao
-  conectar (`POST /internal/projects/:projectId/workspace-verification`,
-  novo), sobrescrevendo o que foi digitado — ele é a fonte da verdade.
-  Comando de agente roteado a um projeto `runner` sem workspace verificado
-  ou sem runner conectado é RECUSADO explicitamente, nunca cai no
-  fallback de container (RN-421/422/423, ADR 0104)
-- **runner**: no Linux, `brabo-runner --dir` só aceita um caminho dentro do
-  `$HOME` do usuário (o próprio home ou uma subpasta dele) — caminho fora
-  dessa árvore (`/etc`, `/root`, outra conta em `/home`, etc.) é recusado
-  na inicialização do CLI, com mensagem explicando o motivo. Fora do
-  Linux o comportamento não muda (RN-434, ADR 0104)
-- **runner**: `brabo-runner --dir` apontando para uma pasta que ainda não
-  existe deixa de ser erro fatal — a pasta é criada automaticamente
-  (`mkdir -p`), sempre DEPOIS de passar pela checagem do `$HOME` no Linux
-  (RN-434), então um caminho fora do home continua recusado mesmo quando
-  ainda não existe. `--dir` apontando para um arquivo já existente
-  continua erro real — nunca sobrescrito silenciosamente (RN-435, ADR
-  0104)
-- **api,web**: fundação de i18n — coluna `locale` em `users` (`'pt-BR'|'en'`,
-  default `'pt-BR'`), embutida no corpo de `/auth/login`/`/auth/refresh` (sem
-  chamada extra) via `EmitirSessaoUseCase`; `GET/PATCH /users/me/preferences`
-  como via redundante para a `AccountPage` nova (`/account`, fora do escopo
-  de projeto, link no rodapé da sidebar). `react-i18next`+`i18next` como
-  dependência nova de `apps/web`, isolada atrás de `lib/i18n.ts`/
-  `lib/idioma.ts` (mesmo desenho de `tema.ts` — servidor é a fonte de
-  verdade, `localStorage` só evita flash no primeiro paint). `en` é o idioma
-  default do app a partir de agora; `pt-BR` continua disponível. Docusaurus
-  (`website/`) ganhou `i18n.defaultLocale: 'en'`/`locales: ['en', 'pt-BR']`,
-  com o snapshot pt-BR atual de `docs/` preservado em
-  `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` antes de
-  `docs/` virar a fonte em inglês, e uma regra `warn` nova no docmap
-  (`traducao-pt-br`) cobrindo o drift entre as duas árvores. Extração em
-  massa do resto da interface e tradução de `docs/` são a próxima etapa,
-  em andamento (RN-432)
-- **web**: navegação por abas agrupadas — a régua de 11 abas do projeto vira
-  6 no topo (Visão geral, Agentes ▾, Dev ▾, Documentação ▾, Gastos,
-  Configurações), com `GroupedTabs` novo por cima do `Tabs` existente. Chat
-  e Chat RAG viram UMA aba com um controle segmentado interno
-  ("Conversar"/"Buscar") — a distinção de negócio entre os dois (RN-202)
-  não muda, só o contêiner de UI
-- **api,web**: aba **PRs** — listagem de pull requests do PROJETO inteiro,
-  direto do provider de git (nunca escopada a uma sessão), resolvendo o bug
-  em que a revisão de uma PR proposta numa sessão antiga sumia da tela assim
-  que uma sessão nova nascia. Novo cruzamento project-wide de ações
-  pendentes (`GET /projects/:id/actions?status=pending&actionType=`) acha a
-  proposta de merge correspondente independente de qual sessão a criou, e a
-  decisão usa o `sessionId` da própria ação. Botão "Merge" propõe
-  `git_merge` (primeira produtora real pela UI), desabilitado quando o gate
-  do dev agent bloqueou a task; a trava de branch protegida continua
-  absoluta (RN-154). `git_merge` ganhou corpo próprio no card de aprovação
-  em vez do despejo de JSON cru (RN-430)
-- **web**: aba própria **Arquitetura**, extraída da Visão Geral (module_map,
-  diagrama C4, ADRs, pendências de validação cruzada); a Visão Geral passa a
-  mostrar um resumo condensado com link "Ver arquitetura completa →".
-  Primeiro lightbox do design system: `C4DiagramView` ganha botão de
-  ampliar por diagrama, abrindo o SVG em tela cheia sobre `Modal`
-  (`size="full"`, novo) (RN-431)
-- **api,web,engine,runner**: navegação de pasta local via o Runner — dois
-  eventos novos no MESMO canal `terminal:<projectId>` (`fs_list_dir`/
-  `fs_home_dir`), relay puro do engine, exatamente como o PTY.
-  `FolderBrowserModal` (breadcrumb, subpastas, `..`, "Selecionar esta
-  pasta") integrado à criação de projeto e reaproveitável onde o projeto já
-  existe; sem runner conectado, `RunnerOnboardingPanel` (novo, compartilhado
-  com a aba Terminal) explica a instalação em vez de travar carregando. A
-  api continua sem enumerar filesystem nenhum — nenhuma rota nova (RN-429,
-  ADR 0107, revisa a ADR 0072)
-- **web**: corrigido o carrossel de promoção de histórias do PO, que
-  degradava silenciosamente para card único (ou sumia) em sessão longa —
-  a leva pendente agora vem de `useBacklog` (completo, sem janela) em vez
-  de um scan sobre os últimos 200 eventos, mesma classe de bug que a
-  RN-180 já corrigiu em `ContextAside` (RN-427)
-- **api,engine,web,runner**: execução de agente na máquina do usuário —
-  `apps/runner` (workspace novo, CLI `brabo-runner`) conecta ao engine
-  por canal Phoenix com ticket de uso único, executa comando de agente
-  já aprovado no `$SHELL` do usuário e abre terminal PTY interativo na
-  aba Code. Roteamento sempre acontece depois do pipeline de aprovação
-  normal; sem runner conectado, o comportamento de sempre (container)
-  continua. Junto: `git push`/PR/deploy e `sudo`/`doas` saem de `deny`
-  incondicional e viram teto absoluto — sempre pedem aprovação humana,
-  nunca auto-aprováveis mesmo com modo automático ligado, decisão
-  global do dono do produto (RN-418/419/420, ADR 0102/0103)
-- **api,engine**: consumo do grafo de conhecimento — ux-designer,
-  Psicólogo e Anamnese passam a resolver o kickoff/identidade a partir de
-  um template versionado do grafo (com fallback obrigatório pro texto
-  inline, atrás de duas flags separadas, default desligadas). Psicólogo e
-  Anamnese ganham uma segunda fonte de contexto: `rag_search` busca
-  trechos RELEVANTES ao gatilho da análise, compondo (nunca substituindo)
-  a leitura de eventos recentes/janela temporal existente, sempre dentro
-  do orçamento de tokens já declarado. O grafo passa a se escrever
-  sozinho — `GraphProjector` drena uma fila própria da outbox
-  transacional e projeta handoffs, hipóteses do Psicólogo, perfis da
-  Anamnese e fechamento de sessão, sem o engine nunca escrever no grafo
-  diretamente (RN-416/417, ADR 0101)
-- **api,engine**: fundação do grafo de conhecimento — Neo4j (`neo4j-driver`
-  na api, memória DERIVADA do event log, nunca fonte de verdade) para
-  templates de prompt versionados (idempotentes por hash) e memória
-  relacional (interações, hipóteses do Psicólogo, perfis da Anamnese,
-  handoffs). pgvector continua sendo o índice vetorial dos chunks — sem
-  duplicar embedding em dois bancos. Tool nova `rag_search` para os
-  agentes do engine, fechando o maior vão do RAG existente (nenhum agente
-  o consultava até agora); `ollama-model-loader` garante `gemma:1b`,
-  `yi-coder:1.5b` e `nomic-embed-text` no boot, fechando um bug real
-  separado (`nomic-embed-text` nunca era puxado automaticamente).
-  Primeira leva de templates extraída para `prompts/*.md`, sem editar
-  nenhum `.ex` ainda. Padrão inspirado no repositório
-  [ErickWendel/neo4j-ai-experiments](https://github.com/ErickWendel/neo4j-ai-experiments)
-  (RN-413/414/415, ADR 0099/0100)
-- **web,design**: o tema claro deixa de ser inalcançável — `public/theme-boot.js` aplica `data-theme` a partir de `localStorage['brabo.theme']` antes do primeiro paint (arquivo, não script inline, porque a imagem serve sob `script-src 'self'`), e `src/lib/tema.ts` é a API que o shell consome para alternar (ADR 0074, RN-182/RN-183)
-- **design**: os tokens que faltavam do handoff — escala `--fs-*`, raios `--r-xs`/`--r-sm` (mais alias para `--r-md`/`--r-lg`/`--r-pill`), métricas do shell (`--sidebar-w`, `--sidebar-w-collapsed`, `--header-h`, `--tabs-h`) e os nomes `--font-display`/`--shadow-modal` como ALIAS dos existentes
-- **design**: a paleta de realce passa a ter os oito papéis do handoff com prefixo `--syntax-*`, valor próprio por tema e 4,5:1 contra `--code-bg` nos dois — cinco dos oito valores do handoff foram recusados por medição (RN-185)
-- **web**: scrollbar customizada em `--border-strong`, raio 6px e borda na cor da superfície, nos dois temas
-- **api**: o relatório de gasto do workspace (`GET
-  /workspaces/:id/spend-report`, papel `owner`) ganhou a quebra por
-  **provider** e blocos separados de **pessoa** e **agente** — `porProvider`,
-  `porOwner` e `porAgente` (ADR 0076, RN-186/188). O relatório do membro
-  (`GET /projects/:id/spend/me`) **não mudou**: continua sem provider e sem
-  credencial, e agora a garantia é do TIPO — pedir a dimensão com escopo de
-  ator não compila (RN-187).
-- **web**: a aba Configurações ganha "Melhores modelos por capacidade" —
-  para código, documentação, análise, imagem e conversa, mostra o modelo mais
-  usado pelos agentes deste projeto entre os que a curadoria do workspace
-  marcou para aquele uso, com custo como desempate. Sem coluna de "nota":
-  o handoff pedia um score por capacidade, mas é dado fictício do mock — o
-  produto não mede qualidade de modelo em lugar nenhum (ADR 0077, RN-210)
-- **web**: a sidebar recolhe (264px ↔ 62px, trilha de ícones por projeto)
-  com preferência persistida; projetos ficam expansíveis (N ao mesmo tempo)
-  revelando as abas de cada um; nova seção **Atividades**, agrupada por
-  agente e, quando o módulo tem paralelização, por INSTÂNCIA real
-  (`dev-<modulo>`/`dev-<modulo>-2`, nunca um contador inventado); botão de
-  tema no rodapé; os dois itens globais sem rota ("Chat global"/
-  "Configurações") saem — só Projetos e Atividades são globais. A aba
-  Código recolhe a sidebar automaticamente, sem gravar a preferência
-  (RN-195..201)
-- **web**: moldura de tela conforme o handoff — cabeçalho do projeto com
-  `--header-h` (piso de 60px, sem cortar o alerta de orçamento), régua de abas
-  com `box-shadow: inset 0 -2px 0 var(--accent)` em vez de `border-bottom`,
-  rolagem horizontal em telas estreitas, e container de conteúdo com largura
-  máxima de 1040px. O rótulo "Code" virou "Código" (ADR 0078).
-- **web**: aba de Gastos ganha quebra por provider (Ranking, RN-211), bloco
-  de orçamento por projeto com o `TokenMeter` existente (RN-212) e alerta
-  de custo lido do orçamento (RN-213). KPI de economia com modelo local
-  fica de fora, declarado — falta preço contrafactual defensável (RN-214)
-- **web**: o painel inferior da aba Código ganha as quatro abas do handoff
-  (Terminal, Problemas, Diff de PR, Saída) — Problemas e Saída nascem com
-  estado vazio honesto, sem lint/teste ou stream de comando inventados
-  (RN-215/216) — e a status bar de 24px passa a mostrar `↑N ↓M` real da
-  branch e a linguagem do arquivo ativo (RN-217); abas do painel ganham
-  foco visível (RN-218)
-- **web**: a aba Criativo ganhou os 4 KPIs do handoff (sessões no projeto,
-  ativas agora, taxa ideação→commit, custo do mês), filtros pill
-  (todas/ativas/fechadas/abortadas) e selos de status para os 5 estados
-  reais da sessão — `closing` com selo próprio "encerrando", nunca fundido
-  com "fechada" (RN-227..230)
-- **api**: pipeline de indexação (`docs`/`adr`/`session`, chunking por
-  heading/parágrafo com 1200 caracteres e 150 de sobreposição) e busca
-  híbrida (vetor + léxico, pesos 0.6/0.4, limiar 0.2) do Chat RAG, com
-  degradação honesta quando o provider de embedding está indisponível e
-  três rotas novas (`POST .../rag/search`, `POST .../rag/reindex`,
-  `GET .../rag/coverage`) — RN-231..238, ADR 0080
-- **web**: virtualização de linha na aba Código — arquivo de 5.000 linhas
-  renderiza uma janela pequena de nós de DOM, não o arquivo inteiro — e
-  minimapa em `<canvas>` reaproveitando a tokenização já feita pelo realce
-  de sintaxe, sem segundo passe sobre o arquivo (RN-239..242)
-- **api**: ciclo de vida do container como tabela de estado
-  (`project_containers`, migração `0046`), sem orquestrador — máquina de
-  estados pura (`provisioning → running ⇄ stopped`, `failed`, `removed`),
-  primeira transição exigindo a imagem já decidida pelo Arquiteto e
-  congelando versão/recursos; nenhuma chamada real a Docker ainda
-  (RN-243..248, ADR 0081)
-- **web**: a aba **Chat RAG** (`key: 'rag'`), separada da aba Chat
-  (`sessions`, que continua sendo conversa com agente ativado) — busca com
-  filtro de escopo (docs/ADR/sessões), citações navegáveis (origem de
-  sessão leva ao evento exato; origem de arquivo mostra caminho/heading,
-  sem link — a aba Código não tem deep-link por caminho ainda), painel de
-  cobertura do índice com contagem REAL (nunca "reindexado há Xmin"
-  inventado) e botão de reindexar restrito a `maintainer`/`owner`. Avisa
-  quando a busca degradou para só léxica por falta de embedding
-  (RN-252..254, ADR 0082)
-- **api,web**: primeira exposição HTTP do ciclo de vida do container
-  (`GET .../container/lifecycle`, role:viewer) e a aba Terminal passa a
-  mostrar esse estado real (status, motivo de falha) sob o texto
-  explicativo que já existia — nunca um terminal simulado, porque não há
-  container real rodando ainda (FASE 25b segue cortada) (RN-267/268,
-  ADR 0083)
-- **api,web**: login social via GitHub/GitLab — revoga a proibição do
-  backlog do ADR 0031 só para esta capacidade. Reusa o mesmo app OAuth da
-  conexão de git (zero variável de ambiente nova) e a emissão de sessão do
-  login por senha; vincular a conta existente exige e-mail verificado pelo
-  provider, contra account takeover; conta provisionada nasce sem senha.
-  Branch `breaking/`: o operador precisa cadastrar um segundo callback
-  OAuth no provider antes do deploy (RN-272..283, ADR 0084)
-- **api,engine**: o plano de execução do Dev Lead (quantos agentes por
-  módulo e por quê) vira uma decisão real em Aprovações — antes só narrava
-  no fio, sem pipeline de aprovação nenhum. Enquanto ela não é decidida, a
-  conversa com o Dev Lead PAUSA: é a primeira vez que um agente
-  conversacional suspende esperando aprovação humana no meio do turno
-  síncrono (RN-284, ADR 0086)
-- **engine,web**: o UX Designer entra como o quinto agente conversacional
-  (Criativo, PO, Arquiteto, Dev Lead e agora ele), SOLO e sem área —
-  antecipado pelo dono do produto antes do gatilho de separação declarado
-  em `docs/fluxo.yml` ter disparado. Kickoff a partir do product brief do
-  Criativo; a única ferramenta, `propose_prototype`, registra personas,
-  jornadas e o protótipo navegável (`artifact.prototipo_navegavel`, sem
-  tabela nem rota nova na api) e oferece o mesmo artefato como handoff ao
-  PO e ao Dev Lead. `teste-de-usabilidade` fica fora de alcance (exige
-  usuário humano real); `metricas-de-uso` segue lacuna declarada
-  (RN-285..287, ADR 0087)
-- **engine,api,web**: o Staff/Principal Engineer ganha CÓDIGO — sexto
-  agente conversacional solo (`propose_rfc`: problema, opções com
-  trade-offs, recomendação e PoC descartável, devolvido ao Arquiteto por
-  handoff no mesmo tool call), acionável MANUALMENTE por handoff aceito
-  endereçado a "staff" (caminho genérico, sem entrar em
-  `USER_STARTED_AGENTS`). O gatilho AUTOMÁTICO (a Anamnese notando um
-  problema sistêmico recorrente) segue pendente enquanto
-  `ANAMNESE_ENABLED=false` — dormente para disparo automático, não para
-  acionamento manual (RN-305/306, ADR 0088)
-- **api,engine**: o gate `implementavel` sai de `planned` para `active` — o
-  Dev Lead ganha `assess_implementability`, o parecer de implementabilidade
-  de uma story (viável/inviável, com justificativa), a partir do plano de
-  teste que a QA-estratégia produz. A QA-estratégia deixa de ser papel
-  `proposto` em `docs/fluxo.yml`: é o próprio `qa-lead`, num SEGUNDO
-  momento (mesmo processo, entregável separado do veredito de PR) — sem
-  worktree, sem task, PRE-DEV. O parecer nasce `proposed_action`, mesmo
-  padrão do plano de execução (RN-340/341, ADR 0090)
-- **engine**: o papel `appsec` (`docs/fluxo.yml`) ganha o segundo momento do
-  secops — threat model de DESIGN (checklist STRIDE-lite) sobre a story e o
-  module_map vigente, ANTES de existir código ou PR. Roda no MESMO processo
-  do `SecOpsAgentServer` (`run_design/2`, sem worktree/task_id), termina
-  emitindo `artifact.threat_model` e criando handoff para arquiteto, dev-lead
-  e o lead de Infra. `run_design/2` já é acionável, mas nenhum caminho aciona
-  sozinho ainda — o gatilho automático fica para a frente `qa-estrategia`
-  (RN-360/361, ADR 0090)
-- **api**: novo script `pnpm --filter api analise:funil -- --projeto
-  <uuid> [--json]` — os papéis `analytics`/`delivery-metricas` de
-  `docs/fluxo.yml` (antes `status: proposto`) viram `active`, entregues
-  como RELATÓRIO puro (mesmo formato de `medir-execucao.ts`, sem agente,
-  sem GenServer). Mede funil real sessão → commit → PR → merge, lead time
-  real e deployment frequency real em branch protegida, todos extraídos
-  de `proposed_actions.execution_result`. Declara, de propósito, três
-  métricas sem caminho para existir hoje: funil de produto completo
-  (ideação → commit), evidência de adoção por feature e MTTR/change
-  failure rate (RN-320..322, ADR 0089)
-- **api**: `pnpm --filter api relatorio:seguranca-runtime` — o papel
-  `secops-runtime` (`docs/fluxo.yml`) antecipado como SCRIPT, não agente,
-  sobre o dado que o `RateLimitGuard` já coleta hoje (`rate_limit_hits`):
-  ranking de baldes (usuário/IP) com mais hits e distribuição temporal dos
-  picos, com a janela de retenção (curta, poucos minutos) sempre declarada.
-  Detecção automática de incidente, resposta a incidente e postmortem de
-  segurança seguem FORA — dependem de tráfego de produção real, que não
-  existe — e o relatório lista essa lacuna, sem simular incidente de
-  exemplo (RN-375..377, ADR 0091)
-- **api**: o papel `platform` (`docs/fluxo.yml`, `status: planned` —
-  ativação ainda pendente de `DEPLOY_ENABLED`, que não existe) ganha uma
-  primeira entrega honesta: `pnpm --filter api relatorio:telemetria
-  [--projeto <uuid>] [--json]`, um SCRIPT (não agente) que lê sob demanda as
-  mesmas fontes do `DomainGaugesCollector` — sessões ativas/closing e tasks
-  bloqueadas por projeto, estado do último backup — e linka para os
-  dashboards/alertas/runbook já versionados, sem duplicar. A saída declara
-  explicitamente o que NÃO mede: SLO numérico (nenhum definido), postmortem
-  (sem incidente real) e telemetria automática em loop fechado
-  (RN-385/386, ADR 0092)
-- **api**: o papel `dbre` vira dois scripts mecânicos —
-  `lint:migracao` varre `apps/api/src/db/migrations/*.sql` e sinaliza
-  `DROP TABLE`/`TRUNCATE`/`DROP COLUMN`/`ALTER COLUMN ... TYPE`/`ADD
-  COLUMN ... NOT NULL` sem `DEFAULT` (informativo, não bloqueia CI ainda);
-  `relatorio:backup` lê `backup_runs` sob demanda com a mesma lógica do
-  `DomainGaugesCollector`, citando o procedimento de restore já testado
-  em `docs/runbook.md`. Plano de capacidade e tuning seguem declarados
-  como lacuna — exigem volume real de dados, que não existe hoje
-  (RN-400..403, ADR 0093)
-- **api**: a delegação Dev Lead → `dev-<modulo>` vira DADO auditável em
-  `delegations` (`area: 'dev'`), fechando o item que o ADR 0053 (item 5)
-  tinha declarado fora de escopo. `status: 'completed'` é redefinido para
-  esta área — significa "o agente foi ativado", não "parecer emitido" como
-  em QA/Infra —, e `parecerArtifactId` aponta para o `artifact.module_map`
-  mais recente do projeto, o artefato que justificou a decisão de delegar
-  (RN-405, ADR 0094, auditoria fluxo.yml × código, item B1)
-- **api,web**: o gate `necessidade-validada` (Criativo → PO) ganha um
-  terceiro botão dedicado, "Confirmar necessidade validada", no mesmo
-  padrão de "Confirmar arquitetura pronta" — confirmação humana SEPARADA
-  do Criativo, nunca o modelo se autovalidando. Habilita só depois de
-  `confirm_readiness` já ter consolidado o `product_brief`; grava
-  `necessity.validated` sem sinalizar o engine, porque o handoff
-  Criativo→PO já aconteceu antes. `docs/gates.yml` ganha o gate
-  correspondente (`active`, `warn`) (RN-406, ADR 0095, auditoria
-  fluxo.yml × código, item B2 — última onda do plano)
-- **api,engine**: o PO ganha a terceira ferramenta de leitura,
-  `listar_metricas_de_produto` — o mesmo relatório de funil de entrega e
-  DORA parcial do script `analise:funil` (ADR 0089), agora legível dentro
-  do turno (`GET /internal/projects/:projectId/product-metrics`). As
-  funções de cálculo puras e a query migraram para
-  `apps/api/src/application/services/funil-metrics.ts`, reexportadas pelo
-  script sem mudar comportamento. Fecha o item B4 — a ÚLTIMA pendência da
-  auditoria fluxo.yml × código (RN-407)
-- **api,web**: SMTP real no `MailSender`, fechando o item de backlog aberto
-  desde o corte do Keycloak. `MAIL_TRANSPORT=smtp` (default continua `log`,
-  inclusive em produção) liga o envio de verdade via `nodemailer`, com
-  `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM` validados no boot em
-  produção pelo mesmo padrão da RN-114 (RN-408, ADR 0096). A investigação
-  achou uma lacuna real: `email_verification` não tinha rota web — nova tela
-  `/verificar-email` fecha isso, espelhando `/definir-senha`
-- **api,web**: o card do dashboard mostra "N online" — quantos agentes estão
-  trabalhando ou com pendência esperando decisão AGORA, nunca tamanho de
-  equipe ou presença histórica. Soma dev agents (`engine.dev_agent_states`,
-  agregado em lote) e agentes conversacionais (último `agent.status` da
-  sessão mais recente); QA/SecOps nunca contam, porque não emitem
-  `agent.status` (veredito único por invocação). Fecha o item de backlog
-  "N agentes online" no dashboard (RN-409, ADR 0097)
+- **ci**: o alarme de merge de esteira ganha destinatário (ADR 0139) (f95d4165a)
+- **engine,api,ci**: golden-set do RAG passa a rodar em CI, agendado (ADR 0138, RN-498) (#461) (1eb71c322)
+- **runner,engine,api**: o runner sobe o container do projeto na máquina do usuário (ADR 0137, RN-497) (#460) (108d81cc7)
+- **api,web**: página global de containers (ADR 0136, RN-495/496) (#459) (11b49cb72)
+- **api,engine**: dev agents executam DENTRO do container do projeto (ADR 0134, RN-492/493) (#457) (eb32fa72c)
+- **api,engine,web**: a Infra elege entre as candidatas do Arquiteto e sobe o container (ADR 0133, RN-491) (#456) (d86b3b6a2)
+- **api,engine,web**: o Arquiteto roteia módulos para a Infra com imagem CANDIDATA (ADR 0131, RN-487) (#455) (e27637347)
+- **api,engine,docs**: o RAG ganha golden-set de acerto, e o gate rag-acertivo nasce warn (ADR 0132, RN-490) (#454) (14e6e1b2b)
+- **api,web,runner,broker**: o broker de container fala com o daemon, e a porta MOVE de onde nasceu (ADR 0130, RN-485/486) (#453) (cafd5034a)
+- **api,web,engine**: telemetria de busca do RAG — a medição existe antes de calibrar (RN-479/480/481, ADR 0129) (#452) (4a96d14a4)
+- **api,web,docker**: um modelo para os 17 agentes, e provisionamento que não fica calado (RN-476/477) (#450) (2d4446411)
+- **runner**: a porta de Docker nasce com o CLI, e a prova de empacotamento diz por quê (ADR 0128) (#448) (1ecc3883c)
+- **web**: a pasta vem antes do runner, e o binário deixa de ser bloqueio (RN-473/474) (#446) (a7295433c)
+- **web**: cascata de modelo como cadeia visível nas Configurações (RN-470) (#439) (d18f95c82)
+- **web**: salvar por seção no Paralelismo e no Teto de gasto (RN-469) (#438) (09e7ef4c7)
+- **web**: login em duas colunas e estado de ambiente onde há identidade (RN-468) (#437) (8b0f7a3c0)
+- **web**: padrão único de valor herdado nas Configurações (#436) (b18df5011)
+- **web**: sumário ancorado das 17 seções de Configurações (#435) (8cd07991a)
+- **web**: painel "precisa de você" com as cinco filas de decisão separadas (RN-467) (#434) (91dbf21b3)
+- **web**: trilho vertical de navegação do projeto e revisão da RN-201 (ADR 0126) (#433) (be1ac2e18)
+- **docs**: docs:check afere as contagens de RN e de provider, não só a de ADR (#417) (8f41df73d)
+- **ci,k8s**: publica as quatro imagens no GHCR e fixa o overlay por digest (#416) (2ce4f0a69)
+- **api,web,runner**: configura o brabo-runner pelo navegador com chave de dispositivo (#415) (561ea7a5f)
+- **web**: gera ActionType a partir do OpenAPI, fecha cópia manual que já divergiu 2x (#413) (5752f6b8c)
+- Ollama nativo no bootstrap + catálogo local via Hugging Face (#399) (bc3454148)
+- **engine,web**: faixa de atividade do turno na tela de Sessão (#393) (b8a91714a)
+- **engine**: broadcast efêmero de tool.call e teto de iterações não termina calado (#392) (5d93085a3)
+- **web**: dicionário ferramenta→frase para a faixa de atividade da sessão (#390) (1387564fb)
+- **ci**: arquiva automaticamente toda branch cujo PR é mergeado (#385) (cc9c8963a)
+- **api,web**: anexar pasta local como referência de leitura no Chat RAG (#388) (b2bab2c39)
+- **scripts,api**: Docker › Reset total no bootstrap, com credencial pré-salva no seed (864ac0629)
+- **api,web**: converter execution_mode de projeto existente, sem recriar (RN-447..450, ADR 0111) (ffbc98528)
+- **runner**: binário standalone via bun build --compile, matriz de 5 plataformas (ADR 0109) (300ab0786)
+- **api,web**: budget de área — teto de gasto opcional, aditivo (ADR 0109, RN-440) (b74873036)
+- **api,web**: handoff manual a agente à escolha (ADR 0109) (43667eb96)
+- **api,web,runner**: runner local conecta de verdade, navegador de pastas redesenhado e Onda 6b de i18n (5dd5ce6e9)
+- **api,web**: maintainer revoga PAT de outro usuário; backlog atualizado (RN-427) (4ca360321)
+- **runner**: Personal Access Token substitui login replicado (ADR 0105) (6570af80a)
+- **api,engine,web,runner**: execution_mode em três valores, workspace verificado pelo runner (ce9708f7e)
+- fundação de i18n — react-i18next na web, preferência de idioma no servidor, Docusaurus multi-locale (1a35ccdfb)
+- abas agrupadas, aba PRs project-wide, pasta local via Runner e correção do carrossel do PO (ea4f945a4)
+- **api,engine,web,runner**: execução na máquina do usuário e teto absoluto pra git/sudo (c814b9925)
+- **api,engine**: consumo do grafo de conhecimento — templates, relevância e projeção da outbox (bf3f7e6cb)
+- **api,engine**: fundação do grafo de conhecimento — Neo4j, rag_search, templates de prompt (a42537860)
+- **api,web**: "N agentes online" no dashboard com status ao vivo (28a36aa59)
+- **api,web**: SMTP real no MailSender, atrás de MAIL_TRANSPORT (ADR 0096) (4eb25bc55)
+- **api,engine**: PO ganha leitura de métricas de produto (RN-407) (e7402305b)
+- **api,web**: gate necessidade-validada fecha a auditoria fluxo.yml x codigo (9095ad4fb)
+- **api**: revalida RN-160 no backend e efetiva a delegacao Dev Lead -> dev (b048055bc)
+- **engine,api**: gate implementavel ativo — QA-estratégia como segundo momento do qa-lead (ADR 0090) (a8fbc0537)
+- **engine,api,web**: Staff ganha código, dormente para disparo automático (ADR 0088) (005595fc3)
+- **engine,web,api**: o UX Designer entra como quinto agente conversacional (ADR 0087) (000512c89)
+- **api**: dbre vira linter de migration e relatório de backup (ADR 0093) (a70ff5326)
+- **api**: analytics e delivery-metricas viram relatório do medicao (ADR 0089) (c317c398e)
+- **engine**: appsec vira o segundo momento do secops — threat model de design (RN-360/361, ADR 0090) (559b3dfff)
+- **api**: platform como script de relatório de telemetria sob demanda (de0bf980c)
+- **api**: relatório de segurança em runtime sobre rate_limit_hits (ADR 0091) (61b82b934)
+- **engine,api**: o plano do Dev Lead vira proposed_action e suspende o turno (ADR 0086) (fb24863b6)
+- **api,web**: login social (GitHub/GitLab), reusando emissão de sessão e cliente OAuth (dd1f5dcfa)
+- **web,api**: aba Terminal mostra o estado real do container (RN-267/268) (71ae6928c)
+- **web**: aba Chat RAG — busca híbrida, citação e cobertura do índice (677a04b5e)
+- **api**: pipeline de indexação e busca híbrida do Chat RAG (9997641ee)
+- **api**: ciclo de vida do container como tabela, sem orquestrador (ADR 0081) (cb261a98e)
+- **web**: virtualização de linha e minimapa na aba Code (RN-239..242) (18ba1a4a2)
+- **api**: tabela de chunks para o Chat RAG, vetor e tsvector juntos (617deeae3)
+- **web**: aba de Gastos ganha provider, orçamento por projeto e alertas (428de2e92)
+- **web**: KPIs, filtros e selos de status na aba Criativo (6191b44b3)
+- **web**: painel inferior de 4 abas e status bar honesta na aba Código (fe37d8ecb)
+- **web**: moldura de tela conforme handoff, e o registro de abas diverge dele (ADR 0078) (1edca7405)
+- **web**: sidebar recolhe, projetos expansíveis e seção Atividades (RN-195..201) (a51432116)
+- **web,docs**: ranking de modelos por capacidade sem nota inventada (RN-210, ADR 0079) (8c3ddec2a)
+- **api**: embeddings no contrato de LLMProvider (RN-189..191, ADR 0075) (aef35cc3d)
+- **api**: provider volta a ser dimensão de gasto, contido por tipo (RN-186..188) (89fb7692e)
+- **web,design**: o tema claro deixa de ser inalcançável, e passa a ser medido (e5df101cd)
+- **web**: o painel da sessão agrupa, ordena e diz o que não mostra (2d664ea99)
+- **web**: o fio da sessão diz quem fala, com qual modelo e o que pergunta (8904ae0f0)
+- **docs**: a documentação estável publica em /prd (26e205d5e)
+- **api,web**: projeto escolhe entre pasta do usuário e container (3cac71a76)
+- **engine,api**: o PO lê o que já existe e é cobrado pela história (86607605f)
+- **scripts**: rolar o log da execução no menu do bootstrap (0c1731924)
 
 ### Documentação
 
@@ -2157,133 +4883,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   aberto" (decisões de produto em aberto, cortes/pausas vigentes, lacunas
   aceitas e pendências com dono humano — sem duplicar o que já fechou).
   CLAUDE.md cai para a faixa de 30–45 KB.
-
-### Correções
-
-- **api,engine**: corrigido o `413 request entity too large` que estourava
-  em PRs legítimas no gate de QA/SecOps — causa era da própria api do
-  Brabo, nunca do provider de LLM. A api nunca configurava limite de body
-  do Express (valia o default de 100 KB contra os 8 MB que o Phoenix
-  aceita); `API_JSON_BODY_LIMIT` (default 10 MB) fecha essa ponta. No
-  engine, a compactação de contexto era estruturalmente inalcançável antes
-  do estouro — a estimativa de tokens não contava `toolCalls` e a janela
-  usava só a janela do modelo (128k, ~350 KB antes de compactar); a janela
-  efetiva agora é `min(context_window, teto_de_transporte)`, com corte
-  sempre em fronteira de iteração do `ToolLoop` (RN-412, ADR 0098)
-- **api,web**: a aba Executores/Visão Geral não fica mais vazia com
-  execução real rolando — `executionActivated` era derivado da janela dos
-  últimos 200 eventos, e `execution.activated` (um dos primeiros eventos
-  da sessão) saía dessa janela em qualquer execução longa, apagando o
-  roster inteiro. As duas telas passam a usar o valor agregado sobre
-  TODOS os eventos que o resumo do workspace já calculava (RN-090). A
-  régua de trabalho pendente (`DEV_PENDING_TYPES`) ganhou
-  `dev.awaiting_gate`/`dev.awaiting_approval` — o heartbeat não fecha mais
-  a sessão com dev agent esperando o gate ou uma aprovação (RN-412,
-  estende a RN-411)
-- **api**: sessão de execução não fecha mais por baixo de dev agent
-  trabalhando ou travado esperando desbloqueio — o heartbeat de 30s só
-  enxergava `agent.status` (vocabulário dos conversacionais), e dev agents
-  usam vocabulário próprio (`dev.*`). Quarto sinal em
-  `GetSessionPendingWorkUseCase`: último evento `dev.working`/`dev.blocked`/
-  `dev.idle_tripped` de qualquer `dev-<modulo>` segura a sessão; `dev.idle`
-  não. Achado numa sessão de execução real com cinco dev agents em
-  `idle_tripped` (RN-411)
-- **api**: toda conta NOVA (registro por e-mail/senha ou login social)
-  ganha um workspace pessoal automático, na mesma transação que cria a
-  conta — antes `RegisterUseCase`/`SocialLoginCallbackUseCase` criavam
-  usuário e credencial mas nenhum workspace, e o botão "Novo projeto" do
-  dashboard silenciosamente não fazia nada. Nome/slug saem de uma função
-  única, `nomeESlugDoWorkspacePessoal`, e o slug leva sempre um sufixo do
-  id do usuário para ser único sem round-trip ao banco (RN-410)
-- **api**: "Confirmar arquitetura pronta" (RN-160) agora é revalidado no
-  BACKEND — antes só a UI desabilitava o botão sem história promovida do
-  backlog, e uma chamada HTTP direta a `POST
-  /agents/arquiteto/handoff-infra` ignorava a regra por completo. Recusa
-  ANTES de gravar qualquer evento ou sinalizar o engine (RN-404, ADR 0094,
-  auditoria fluxo.yml × código, item B6)
-
-- **web**: os seis colapsos ad-hoc restantes migram para o `Disclosure`
-  compartilhado (`ModelCatalogSection`, `AgentTimelineTree`,
-  `code/CodeExplorer.tsx`, `code/CodeShell.tsx`) — o marco com detalhe de
-  `AgentTimelineTree` tinha alvo de clique de 20px, abaixo do piso de 24px
-  do WCAG 2.2 AA (2.5.8); a faixa de arquivo do diff em `ApprovalCard` NÃO
-  migrou (animação própria de chevron que o componente genérico não
-  replica) e ganhou só o `aria-controls` que faltava (RN-249..251)
-- **web**: fecha o resto da varredura de acessibilidade — alvos de toque
-  abaixo do piso de 32px do handoff em botões de ícone da sidebar
-  (colapsada e expandida), ações destrutivas de Aprovações/Configurações e
-  o botão de fechar do `Toast` (que não tinha tamanho explícito nenhum, e
-  também ganhou `:focus-visible`); quatro alvos abaixo do piso de 24px do
-  WCAG corrigidos em telas reais. `aria-expanded` da sidebar auditado e já
-  estava correto nos dois controles
-
-- **web**: os valores de espaçamento da régua de abas do projeto, que viviam
-  como override de CSS de descendente em `ProjectPage.module.css` desde a
-  FASE 16, migraram para `Tabs.module.css` — pendência declarada fechada
-- **web**: a régua de abas do projeto (`Tabs.module.css`) ganhou
-  `:focus-visible` — navegar por Tab não mostrava indicação de foco nenhuma;
-  achado pela frente de acessibilidade, corrigido no mesmo padrão de
-  `Input.module.css` (ADR 0036), com anel `inset` (a régua rola
-  horizontalmente e um anel para fora seria cortado)
-
-- **design**: seis tokens do tema claro corrigidos até passarem AA — `--accent` 3,56 → 4,81:1, `--warning` 3,15 → 4,98:1, `--success` 3,89 → 5,12:1, `--violet` 4,16 → 4,95:1 e `--text-muted` 2,76 → 5,17:1 contra o fundo que os cobrava, mais `--accent-hover` um degrau abaixo; o tema escuro não mudou nenhum valor e a dívida dele segue travada nos mesmos cinco números (ADR 0074, RN-184)
-- **web**: o contraste passa a ser medido nos DOIS temas nos três arquivos que o medem — o teste que afirmava que "nada na app define `data-theme=light`" e que três pares reprovavam foi invertido junto com o produto
-- **web**: cor de agente e o `#fff` do botão `.success` saem de token (`var(--violet)`, `var(--on-accent)`); três cores de agente sem contraparte semântica ficam declaradas no arquivo, não inventadas
-- **web**: `Select`, `Modal` (botão de fechar) e `ProjectCard` ganham
-  `:focus-visible` no mesmo tratamento calibrado de `Input.module.css`
-  (ADR 0036, incluindo o bloco de `forced-colors`) — nenhum dos três tinha
-  indicação de foco própria alcançável só por teclado. O botão de fechar do
-  `Modal` também sobe de 30px para 32px, o piso de alvo de toque em desktop.
-  `Table` e `Badge` foram auditados e não precisaram de mudança: nenhum dos
-  dois expõe afordância interativa própria — linha de `Table` é apresentação
-  pura (quem precisa de linha clicável já usa `<button>`/`<a>` dentro da
-  célula, via `render`) e `Badge` não é usado com `onClick` em lugar nenhum
-  do produto hoje.
-
-### Correções
-
-- **docker,web**: o terminal do runner local (Code → Dev → Terminal, ADR
-  0103/0104) ficava preso em "Abrindo terminal..." para sempre em projeto
-  no modo `runner`, com o socket falhando em loop no console do browser.
-  Três causas empilhadas: `ENGINE_PUBLIC_URL` não tinha default nenhum em
-  `docker/docker-compose.yml` — o fallback do código caía em `ENGINE_URL`
-  (`http://engine:4000`, hostname que só resolve DENTRO da rede do
-  Compose, inalcançável pelo browser); `apps/web/src/lib/terminal-channel.ts`
-  nunca desligava a reconexão automática do `phoenix.js`, então um socket
-  que nunca abre (URL errada, engine fora do ar) girava sozinho pra sempre
-  em silêncio em vez de mostrar erro; e o mesmo módulo concatenava
-  `/runner/websocket` a um `engineWsUrl` que a api já devolve PRONTO
-  (`ws://host:porta/runner`) — o `Socket` do `phoenix.js` ainda acrescenta
-  `/websocket` sozinho, e o path duplicado (`/runner/runner/websocket/
-  websocket`) era recusado pelo engine (`NoRouteError`), o defeito que de
-  fato impedia a conexão, só visível depois de corrigir os dois primeiros.
-  Compose ganhou o mesmo default que `VITE_ENGINE_URL` já usa
-  (`http://localhost:4000`); o canal do terminal ganhou timeout próprio de
-  8s que chama `onErro` e desconecta, em vez de depender do backoff nativo
-  do Phoenix; e parou de concatenar path no `engineWsUrl`. Verificado
-  ponta a ponta contra o engine real (RN-433)
-- **api**: `POST .../runner-ticket` (autenticação por Personal Access
-  Token, ADR 0105) sempre respondia `403 "Não autenticado"`, mesmo com um
-  PAT válido — o runner local nunca conseguia conectar por essa via.
-  `RolesGuard`, guard GLOBAL, rodava antes de `PatAuthGuard`, guard local
-  da rota (ordem do Nest, não configurável pelo controller), e recusava
-  toda chamada com `request.user` ainda vazio antes do `PatAuthGuard`
-  sequer autenticar. Um segundo defeito, escondido atrás do primeiro:
-  `PatAuthGuard` comparava o token bruto direto contra o hash gravado no
-  banco, em vez de hashear antes de comparar — nunca teria funcionado
-  mesmo sem o problema de ordem. `RolesGuard` passa a se abster em rota
-  `@RequirePatAuth()` (mesmo desvio que `JwtAuthGuard` já tinha) e
-  `PatAuthGuard` passa a autenticar E autorizar (`@RequireRole`) no MESMO
-  guard. Verificado com o `brabo-runner` conectando de verdade a um
-  projeto real (RN-439)
-
-### Desempenho
-
-- **api**: índice `token_usage(created_at)` (migração `0044`). Medido pelo ADR
-  0063 a 525 mil linhas: o relatório do workspace sai de 55 ms para 32 ms e o
-  do membro de 38 ms para 19 ms — os dois planos deixam de ser *seq scan*.
-
-### Documentação
 
 - **docs,web,api**: Onda 6b (i18n) — a extração em massa da interface e a
   tradução de `docs/` que a Onda 6a (RN-432) tinha deixado como "próxima
@@ -2321,6 +4920,70 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   português) e uma fatia de componentes `.tsx` menores seguem como o que
   falta pra fechar a onda por completo — ver o CLAUDE.md pro estado
   atualizado.
+
+- divide o business-rules.md pelas duas seções que eram metade dele (#418) (1ab674541)
+- corrige contagem de RNs no README (#412) (5933d5d02)
+- **backlog**: marca itens fechados da revisão externa e remove seção duplicada (#411) (fe2fa6e36)
+- **backlog**: registra triagem da revisão externa de 2026-08-28 (#404) (8467ee176)
+- move narrativa histórica do CLAUDE.md para docs/explanation/historico-de-fases.md (#389) (25594eaeb)
+- registra o painel de Problemas/lint/testes no backlog (392272538)
+- registra a rota PUT .../agent-areas/:key/budget em security-surface.md (a3dd63f02)
+- registrar as rotas de maintainer do PAT em internal-api.md (RN-427) (000ba0834)
+- revisar internal-api.md para as novas rotas de auth/PAT (09f711a80)
+- adicionar entrada de CHANGELOG do PAT do runner (ADR 0105) (139ce5ee6)
+- **api**: documenta a rota nova de confirmação do workspace e o gate workspace-verificado (b97995ecb)
+- **adr**: reconcilia ADR 0072 x ADR 0103 com execution_mode em três valores (8bfc67a1d)
+- **runbook**: neo4j entra na família dos segredos que não sobem com default (f7c9c19fc)
+- **runbook**: neo4j entra na família dos segredos que não sobem com default (554f1c6f9)
+- **runbook**: neo4j entra na família dos segredos que não sobem com default (d8824c8de)
+- **reference**: atualiza permissions.md com o teto absoluto de git/sudo (d584f85e3)
+- **reference**: atualiza internal-api.md com o caminho de escrita do GraphProjector (50614ba91)
+- **api,engine**: preenche descrição das variáveis novas em configuration.md (9bdd3e85e)
+- **api**: regenera configuration.md com GRAPH_PROJECTOR_INTERVAL_MS (38737f368)
+- **reference**: documenta as rotas internas do grafo de conhecimento e rag_search (75e04a085)
+- **api**: regenera configuration.md após o rebase que trouxe API_JSON_BODY_LIMIT (4b0024baf)
+- **runbook**: documenta API_JSON_BODY_LIMIT/TRANSPORT_MAX_BODY_BYTES no ambiente de inferência (92de35055)
+- **adr**: renumera para 0097/RN-409 apos rebase e corrige contagens (2a9e22c27)
+- **business-rules**: corrige slugs dos ADRs linkados na RN-408 (1620e50ad)
+- **governance**: GOVERNANCE.md fecha o TODO(humano) do modo community (2af710fae)
+- satisfaz o drift check da onda 6 (internal-api.md, gates.md) (90900bbb9)
+- **adr**: registra ADR 0094 e fecha a Onda 2 da auditoria fluxo.yml x codigo (60a664bd0)
+- **gates**: satisfaz o drift check da regra registro-de-gates (7c8052e8a)
+- **fluxo**: onda 1 da auditoria fluxo.yml x codigo em dia (7b8965540)
+- **scripts**: regenera scripts.md com os comandos da onda (analise:funil, relatorio:seguranca-runtime, relatorio:telemetria) (20cb33956)
+- **reference**: registra artifact.threat_model em artifacts.md e events.md (afe04eb6e)
+- **artifacts**: documenta o schema prototipo_navegavel (ADR 0087) (4d420831f)
+- **adr**: atualiza contagem de ADRs após o 0086 (drift do CI) (745aff040)
+- **fluxo**: auditoria fluxo.yml x codigo (ADR 0085) — divergencias, lacunas e ondas (959a26ffa)
+- **CLAUDE.md**: registra fluxo.yml como terceira peça do modelo de time (52e49105c)
+- **fluxo**: registro declarativo de papéis do time (ADR 0085) (5fd78d92d)
+- **onda-5**: CHANGELOG e os parágrafos de G3/F2/I; revoga a proibição de login social do CLAUDE.md (e7071f284)
+- **reference**: regenera .openapi-manifest.json após o merge com dev (3141dc6aa)
+- **runbook,internal-api**: callback do login social não registrado, e a rota fora do escopo da api interna (3d66c2ed8)
+- **reference**: regenera configuration.md (API_PUBLIC_URL agora lido por start-social-login.use-case.ts) (4ea8af3ce)
+- **internal-api**: registra GET .../container/lifecycle como fora do escopo (985a3ed81)
+- **onda-4**: RN-239..242, RN-249..251, CHANGELOG e os parágrafos de G2/F1 (f9d9f01f9)
+- **business-rules,internal-api**: RN-231..238 do RAG e a rota sem contraparte interna (abb1fca43)
+- **adr**: registra o ADR 0080 (busca híbrida) e regenera a referência (c5e27aa75)
+- **onda-3**: RN-211..218, RN-227..230, CHANGELOG e o parágrafo de H3 (89451e53b)
+- **business-rules**: RN-219..226 desta frente (51a531ff4)
+- **claude**: integra o parágrafo desta frente (989987ec9)
+- **claude**: integra o parágrafo desta frente (203be0447)
+- **claude**: registra o achado desta frente (7c2d36ce6)
+- **claude**: integra o parágrafo desta frente (f1fdd0dda)
+- **security**: a rota do owner concede mais, e a nota diz isso (bd6288686)
+- **runbook**: triagem para sessão que não sai de `created` (162cd4934)
+- **business-rules**: RN-059 registra a queda e a segunda barreira (ba9fd8e69)
+- **policy**: a PR do CHANGELOG carrega a versão nos dois arquivos (1ad52dfad)
+- **changelog**: v3.1.0 (a048f9991)
+- a invariante e o verbete que as três RNs mexeram (c6fd96b42)
+- **engine**: atualiza comentário de emit_response após a RN-163 (bcb544718)
+
+### Desempenho
+
+- **api**: índice `token_usage(created_at)` (migração `0044`). Medido pelo ADR
+  0063 a 525 mil linhas: o relatório do workspace sai de 55 ms para 32 ms e o
+  do membro de 38 ms para 19 ms — os dois planos deixam de ser *seq scan*.
 
 ### CI
 
@@ -2615,6 +5278,26 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `ProficiencySection.test.tsx`, o único que renderiza as 17 seções de uma
   vez. Fecha a linha de dívida nas DUAS metades
 
+- **ci**: timeout repetido do pnpm audit vira risco assumido (ADR 0140) (13603dddc)
+- **ci**: aceita a CVE-2026-56854 no binário oficial do gitleaks (#449) (5006ab681)
+- **ci,k8s**: pina as actions dos 15 workflows que sobraram, com check (#419) (9fafafa9c)
+- **deps,ci**: isola website em lockfile próprio, fora do pnpm audit do produto (#414) (08194006b)
+- **ci**: piso de cobertura em api, web e engine (ratchet) (#410) (406f91e1a)
+- **ci**: checksum verification and SHA-pinned actions (#408) (4723a46e5)
+- três limpezas independentes de higiene de repositório (#403) (9cd61e0e5)
+- **docker**: fixa versão do ollama nos dois compose (#401) (5b9916d4a)
+- **docker**: mapeia UID/GID do host para os containers de dev, sem root (#406) (9256471d4)
+- **docs**: unifica agents.md e claude.md via symlink (#402) (530c99dee)
+- **deps**: atualiza override do nanoid — advisory revisado exige 3.3.18 (#400) (f4fa6799c)
+- **deps**: atualiza override do nanoid — advisory revisado exige 3.3.18 (#395) (3d34fc910)
+- **engine**: mix format (frente staff) (4af7e075d)
+- **engine**: mix format (frente ux-designer) (228bcde6e)
+- **docs**: contagem de ADRs após o merge de H2 (#325) (58606ff00)
+- **adr**: renumera 0079 -> 0077 (7a9256d84)
+- **docs**: contagem de ADRs e o parágrafo do CLAUDE.md desta frente (5bed6a925)
+- **docs**: contagem de ADRs após o merge da #319 (a278b5867)
+- **design**: o handoff atualizado entra no repo — 10 telas (f5f771ac6)
+
 ### Mudanças internas
 
 - **runner,broker**: a porta de Docker do ADR 0128 **muda de casa** —
@@ -2640,6 +5323,30 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   Acrescentar campo à porta merece nota porque a régua deste desenho é não
   acrescentar parâmetro; a régua vale para o que AFROUXA, e este aperta (ADR 0130)
 
+### Refatorações
+
+- **web**: divide o ProjectSettingsTab.tsx em um arquivo por seção (ADR 0125) (#431) (2a1f8230e)
+- **web**: extrai hook useTurnoDoAgente do SessionPage.tsx (ADR 0124) (#430) (5c6eeda7c)
+- **web**: termina a deduplicação do arme de turno no SessionPage.tsx (#429) (92b9f66d5)
+- **web**: extrai hook useSessionReadiness do SessionPage.tsx (ADR 0122) (#427) (4d552771a)
+- **web**: extrai helpers de árvore de backlog e ContextAside do SessionPage.tsx (ADR 0122) (#426) (6374ced41)
+- **web**: extrai StructuredQuestionCard do SessionPage.tsx (ADR 0122) (#425) (7b27fd6f5)
+- **web**: extrai StorySlide do SessionPage.tsx (ADR 0122) (#423) (af907c2e7)
+- **web**: extrai helpers puros de timeline do SessionPage.tsx (ADR 0122) (#422) (f4dbeb833)
+- **api**: divide o schema.ts por agregado de domínio, atrás de um barrel (#421) (aeb045e11)
+- **web**: migra o painel inferior do CodeShell para o Disclosure (24f7ffab4)
+- **web**: migra o colapso de pasta do CodeExplorer para o Disclosure (4de38fe1b)
+- **web**: migra AgentTimelineTree (ramo e marco) para o Disclosure (58d74a326)
+- **web**: migra ModelCatalogSection para o Disclosure compartilhado (ec28ea1fa)
+- **web**: monta a árvore de backlog uma vez só no painel (76348b526)
+
+### Testes
+
+- **engine,api**: golden-set de regressão do julgamento semântico do QA de Automação (ADR 0123) (#428) (d07e0a11d)
+- **e2e,ci**: E2E de navegador contra o compose de produção (ADR 0120) (#420) (cc0267f05)
+- **web**: mock de api-client exporta mensagemDaApi no caso de falha (44328ee11)
+
+
 ## v3.1.0 — 2026-08-13
 
 ### Novidades
@@ -2659,147 +5366,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - atualiza README, CLAUDE.md e onboarding até o estado de hoje (285db8cd)
 - **changelog**: v3.0.0 (5b14cd57)
 
+
 ## v3.0.0 — 2026-08-13
-
-### ⚠ Mudanças incompatíveis
-
-- registra a quebra que o container por projeto introduz (54408462)
-
-### Novidades
-
-- **engine,api,web**: Criativo pode fazer perguntas estruturadas (RN-162) (14b2636f)
-- **web**: gate de história promovida no botão do Arquiteto e fusão condicional handoff+execução (RN-160, RN-161) (a5433682)
-- **web**: markdown leve no chat com highlight (RN-158) e artefatos gerados agrupados por agente (RN-159) (f3bc4e03)
-- **api,web**: "auto mode" no ApprovalCard — autonomia pra qualquer ação de um agente (RN-153/154) (4cdb5e8e)
-- **code**: vincula branch de dev agent ao módulo dono (RN-152) (ee870790)
-- **api,engine,web**: diagrama C4 do Arquiteto na Visão Geral do projeto (61fc8af3)
-- **web**: carrossel de histórias com promoção pendente no fio do PO (80ad9003)
-- **web,api,engine**: botão de prontidão do Arquiteto, modelo no agent.response e ícone no grupo colapsado (ee338c40)
-- **engine**: gate sobrevive a restart no meio do ciclo (ADR 0067, RN-136) (ee919d3e)
-- **web**: botão volta ao projeto e promoção de história inline no fio (b9add0ea)
-- **web**: handoff aceito inline no fio, com link do PO pro Backlog (d53ac38e)
-- **engine,api,web**: botão Parar cancela de verdade o turno do agente (RN-121) (55979ca1)
-- **web**: aba Executores separa dev agent e QA do time misturado (76e3b56c)
-- **web**: árvore do time abre os 5 últimos e expande detalhe de execução (8f1e12c8)
-- **web**: permite renomear sessão direto da lista do projeto (da8ccde3)
-- **api,engine,web**: desativa o Psicólogo globalmente por decisão do usuário (9016a3d3)
-- **engine,api,web**: a Anamnese pode ser pausada globalmente (100dc51d)
-- **web**: lista navegável de PRs no painel de diff da aba Code (fedaef2d)
-- **web**: dropdown rico de branches na aba Code (baf8edd8)
-- **web**: blame no editor da aba Code, sob demanda (RN-113) (7ffe472b)
-- **api**: fundação de blame, PRs navegáveis e branch rica na aba Code (11594f05)
-- **api,engine**: a pasta do workspace do projeto ganha nome legível (4cda77a9)
-- **api,engine,web**: o socket da sessão exige ticket opaco de uso único (fc0b24d4)
-- **docker**: PROJECT_WORKSPACES_HOST_DIR aponta o workspace para pasta real (36c1690c)
-- **web**: a aba Code, só leitura — explorador, busca, editor com realce de sintaxe e diff de PR (9cea55e4)
-- **api,web**: modelo de LLM vira padrão herdável por área (bd7f69a7)
-- **api,engine**: container por projeto — o Arquiteto decide a imagem, a fronteira deixa de ser só política (7014d722)
-- **web**: o tipo da sessão vira lugar — abas Criativo e Chat (0dde807a)
-- **api,web**: o mesmo gasto para duas audiências (506f39b9)
-- **web,api**: Atividades pagina por cursor e o sino ordena do mais recente (4d8a7b8a)
-- **api,web**: a sessão nasce com tipo, ganha nome e uma saída (a42cb53f)
-- **web**: toda aprovação diz o que faz, e o payload cru nasce colapsado (d247cd85)
-- **api**: a superfície de leitura de código da aba Code, contida e com orçamento (55ace0cb)
-- **api,shared**: arvore e diff de PR no contrato de git, provados pela suite (2c8ea308)
-
-### Correções
-
-- **engine,docs**: mix format + regenera inventário de eventos (dd3a52fa)
-- **business-rules**: corrige link relativo do ADR 0069 na RN-161 (200af4f5)
-- **web**: corrige ordenação da timeline, indicador de 5s e aviso do PO (f88589fe)
-- **api,web**: badge da sidebar mostra aprovações pendentes, não atividade não lida (RN-151) (28ae04c6)
-- **engine**: search_workspace trunca por quantidade de hits e por bytes (RN-150) (479eb3de)
-- **api**: CodeQL reconhece a sanitização de segmento de URL interna (RN-128) (acadfe46)
-- **api**: amplia allowlist de terminal do dev agent para subcomandos git de leitura (c13f0100)
-- **engine,web**: Criativo recusa handoff ao PO sem regra de negócio nenhuma (7f0a4b6d)
-- **engine**: read_file trunca conteúdo grande, evitando 413 do provider (2cb84851)
-- **web**: aba Criativo não lista mais a sessão de execução vigente (39390472)
-- **api,web**: aba Executores lê a sessão de execução vigente, não a mais recente do projeto (ba9f7dfa)
-- **web**: prioridade do handoff pro Dev Lead, ativação inline e colapso por agente no fio (d9ebaae2)
-- **api**: ativar execução fecha a sessão de chat que originou o pedido (7947cc83)
-- **api**: sessão do bootstrap de Git nasce com nome default "git-bootstrap" (34139d19)
-- **web**: três corridas confirmadas ao vivo em SessionPage.tsx (RN-129) (ec35d232)
-- **web**: write_file mostra corpo próprio na aprovação, e payload vazio vira mensagem clara (04c1f7ea)
-- **engine**: ToolLoop nunca grava agent.response vazio, estende RN-059 (2833f326)
-- **api**: valida query array e segmento de URL interna (CodeQL crítico) (ac55537a)
-- **ci**: libera git log/blame/show pro claude-review não travar em permissão (336e03b6)
-- **docs**: regenera events.md com o arquivo certo pro agent.done/status (ec66743d)
-- **api,web**: sessão de chat consistente — modelo, duplicata, ideação e roteamento (5762dc39)
-- **api**: heartbeat não fecha sessão com agente em turno após handoff (a2e75275)
-- **web**: pista no convite perdido e indicador de agente trabalhando (5de8c6db)
-- **web**: marca "Brabo" da sidebar navega para o dashboard (8aa31f02)
-- **engine**: perform/1 do scheduler da Anamnese confere a flag global (ef07468c)
-- **web**: reconcilia turno do agente mesmo sem agent.done do canal (dbeddc97)
-- **api**: lint (prettier + type assertion desnecessária) e docs vale-revisar (29fba8ea)
-- **api,engine**: os quatro segredos irmãos do GIT_OAUTH_STATE_SECRET também recusam o default em produção (0df9047c)
-- **docker**: o smoke manda o kind, que a rota de sessão passou a exigir (7a9c5c0c)
-- **web**: o typecheck do CI inclui os testes, e o do editor não (069325db)
-- **api**: a área de agentes nasce com o projeto, e o backfill alcança os antigos (5ccbb861)
-
-### Refatorações
-
-- **web**: o teto do nome da sessão vive num lugar só (87c4530b)
-- **web**: o metadado truncado da sessão fica legível no hover (133fd31d)
-- **web**: Aprovações e Configurações conforme o handoff (6b7cb551)
-- **web**: Projeto e Sessão conforme o handoff de design (b1ba2a71)
-- **web,design**: login e lista de projetos conforme o handoff (f96f7a63)
-- **web**: rótulo de sessão vira helper e os cinco inline migram (00b4529a)
-- **web**: Disclosure no design system, sem migrar call site nenhum (70b76829)
-- **web**: as abas do projeto derivam de um registro só (2a699882)
-
-### Documentação
-
-- **business-rules**: RN-162 — perguntas estruturadas do Criativo (PR #292) (eafccac2)
-- **internal-api**: documenta que RN-162 reusa /sessions/:id/agent/message (345bbe0e)
-- **business-rules**: RN-160 e RN-161 — gate do Arquiteto e fusão handoff/execução (PR #290) (423d38bc)
-- **business-rules**: RN-158 e RN-159 — markdown e artefatos gerados (PR #288) (cb1f468e)
-- **business-rules**: RN-155 a RN-157 — ordenação da timeline (PR #286) (93f550c0)
-- **changelog**: consolida a onda 1 do exp003 (5 PRs) (87f473e3)
-- **security-surface,internal-api**: documenta a curinga do agent_autonomy de verdade (6a706576)
-- **business-rules**: corrige colisão de numeração RN-141 -> RN-144 (b85a0e21)
-- **business-rules**: corrige colisão de numeração RN-141 -> RN-142 (ad7273c1)
-- **business-rules**: corrige colisão de numeração RN-141 -> RN-143 (f353770a)
-- **api**: documenta os subcomandos git de leitura na allowlist do dev agent (6281cd1e)
-- **business-rules**: corrige colisão de numeração RN-136 -> RN-139 (c2ec03a1)
-- **business-rules**: corrige colisão de numeração RN-136 -> RN-140 (12c0f3d8)
-- **security-surface,internal-api**: documenta originSessionId da ativação de execução (4f5b7696)
-- **business-rules**: corrige colisão de numeração RN-129 -> RN-131 (9166452d)
-- **web**: documenta write_file no corpo próprio da aprovação (RN-096) (fcf19253)
-- **engine,api**: documenta a rota interna de cancelamento (RN-121) (b326001c)
-- **business-rules**: renumera RN-114 da Anamnese para RN-115 (edc96dab)
-- **business-rules**: renumera RN-110 dos segredos irmãos para RN-114 (b7f1d34c)
-- **runbook,getting-started**: dono root no bind mount, e como migrar workspaces existentes (7919e897)
-- **architecture**: a aba Code entra na descricao do contrato web-api (e577700f)
-- contagem de ADRs pos-merge de origin/dev (64) e manifesto regenerado (86ae1043)
-- **reference**: a cascata de binding ganha área, na página de providers (b3c026de)
-- **runbook**: o smoke cria sessão consultiva, e por que é ela que prova a rota (63d1883a)
-- **referencia**: a trava do tipo de sessão na api interna e nos artefatos (3864a4a1)
-- **architecture**: lib/aprovacoes.ts e a união ActionType que envelhece (4b604731)
-- **validacao**: 9ª e 10ª execuções, as de dois módulos, e o achado AF (3426928c)
-- **changelog**: a entrada vai para a secao Unreleased que ja existia (13b00324)
-- **business-rules,architecture**: as quatro capabilities de git na RN-028 (be746d7d)
-- **claude**: o programa 16-26, e o CLAUDE.md na definição de pronto (023b7940)
-- **claude**: o estado das fases depois da 15, e o que o uso ensinou (24cbb48c)
-- **changelog**: v2.5.1 (0e7072d3)
-
-### Testes
-
-- **web**: a sigla do conector conferida na tela, não na função (b806d810)
-
-### CI
-
-- recarrega o corpo da PR (a dispensa do drift estava entre crases, de novo) (7a91b96d)
-- recarrega o corpo da PR (a dispensa do drift estava entre crases) (fa408874)
-
-### Manutenção
-
-- **web**: árvore de Executores porta o skin de bolha do chat do Criativo (56b84620)
-- **docs**: renumera RN-123 do handoff inline pra RN-125 (e4fbeca5)
-- **docs**: desfaz colisão de RN-118 entre PR #247 e #248 (40332299)
-- **docs**: renumera RN-121 do cancelamento de turno para RN-122 (9162f8cf)
-- **design**: o handoff entra no repo e os tokens fecham contra ele (05e02860)
-
-## Unreleased
 
 ### Novidades
 
@@ -3029,6 +5597,41 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   503 (distinto do 409 de "projeto sem sessão"); o botão correspondente nas
   Configurações do projeto descobre o estado no primeiro clique e mantém a
   explicação visível na tela
+
+- **engine,api,web**: Criativo pode fazer perguntas estruturadas (RN-162) (14b2636f)
+- **web**: gate de história promovida no botão do Arquiteto e fusão condicional handoff+execução (RN-160, RN-161) (a5433682)
+- **web**: markdown leve no chat com highlight (RN-158) e artefatos gerados agrupados por agente (RN-159) (f3bc4e03)
+- **api,web**: "auto mode" no ApprovalCard — autonomia pra qualquer ação de um agente (RN-153/154) (4cdb5e8e)
+- **code**: vincula branch de dev agent ao módulo dono (RN-152) (ee870790)
+- **api,engine,web**: diagrama C4 do Arquiteto na Visão Geral do projeto (61fc8af3)
+- **web**: carrossel de histórias com promoção pendente no fio do PO (80ad9003)
+- **web,api,engine**: botão de prontidão do Arquiteto, modelo no agent.response e ícone no grupo colapsado (ee338c40)
+- **engine**: gate sobrevive a restart no meio do ciclo (ADR 0067, RN-136) (ee919d3e)
+- **web**: botão volta ao projeto e promoção de história inline no fio (b9add0ea)
+- **web**: handoff aceito inline no fio, com link do PO pro Backlog (d53ac38e)
+- **engine,api,web**: botão Parar cancela de verdade o turno do agente (RN-121) (55979ca1)
+- **web**: aba Executores separa dev agent e QA do time misturado (76e3b56c)
+- **web**: árvore do time abre os 5 últimos e expande detalhe de execução (8f1e12c8)
+- **web**: permite renomear sessão direto da lista do projeto (da8ccde3)
+- **api,engine,web**: desativa o Psicólogo globalmente por decisão do usuário (9016a3d3)
+- **engine,api,web**: a Anamnese pode ser pausada globalmente (100dc51d)
+- **web**: lista navegável de PRs no painel de diff da aba Code (fedaef2d)
+- **web**: dropdown rico de branches na aba Code (baf8edd8)
+- **web**: blame no editor da aba Code, sob demanda (RN-113) (7ffe472b)
+- **api**: fundação de blame, PRs navegáveis e branch rica na aba Code (11594f05)
+- **api,engine**: a pasta do workspace do projeto ganha nome legível (4cda77a9)
+- **api,engine,web**: o socket da sessão exige ticket opaco de uso único (fc0b24d4)
+- **docker**: PROJECT_WORKSPACES_HOST_DIR aponta o workspace para pasta real (36c1690c)
+- **web**: a aba Code, só leitura — explorador, busca, editor com realce de sintaxe e diff de PR (9cea55e4)
+- **api,web**: modelo de LLM vira padrão herdável por área (bd7f69a7)
+- **api,engine**: container por projeto — o Arquiteto decide a imagem, a fronteira deixa de ser só política (7014d722)
+- **web**: o tipo da sessão vira lugar — abas Criativo e Chat (0dde807a)
+- **api,web**: o mesmo gasto para duas audiências (506f39b9)
+- **web,api**: Atividades pagina por cursor e o sino ordena do mais recente (4d8a7b8a)
+- **api,web**: a sessão nasce com tipo, ganha nome e uma saída (a42cb53f)
+- **web**: toda aprovação diz o que faz, e o payload cru nasce colapsado (d247cd85)
+- **api**: a superfície de leitura de código da aba Code, contida e com orçamento (55ace0cb)
+- **api,shared**: arvore e diff de PR no contrato de git, provados pela suite (2c8ea308)
 
 ### Correções
 
@@ -3266,8 +5869,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `READ_FILE_MAX_BYTES` (default 32 KiB), com marca dizendo o arquivo e os
   dois tamanhos (RN-141)
 
-### Correções
-
 - **engine,web**: confirmar prontidão ("Estou pronto para produzir") numa
   conversa sem NENHUMA regra de negócio capturada criava o `product_brief`
   e oferecia o handoff ao PO mesmo assim (RN-142). `CriativoServer` agora
@@ -3277,6 +5878,42 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   (mesmo padrão do cancelamento, RN-122). O botão nasce `disabled` com a
   dica do porquê, lendo a mesma fonte que já alimenta o painel "Regras de
   negócio"
+
+- **web**: Timeline da sessão: ordenação de cards de aprovação misturados
+  com eventos (RN-155), texto do indicador de espera de 5s (RN-156), e
+  formato de aviso da criação de épico/história pelo PO (RN-157)
+
+- **engine,docs**: mix format + regenera inventário de eventos (dd3a52fa)
+- **business-rules**: corrige link relativo do ADR 0069 na RN-161 (200af4f5)
+- **web**: corrige ordenação da timeline, indicador de 5s e aviso do PO (f88589fe)
+- **api,web**: badge da sidebar mostra aprovações pendentes, não atividade não lida (RN-151) (28ae04c6)
+- **engine**: search_workspace trunca por quantidade de hits e por bytes (RN-150) (479eb3de)
+- **api**: CodeQL reconhece a sanitização de segmento de URL interna (RN-128) (acadfe46)
+- **api**: amplia allowlist de terminal do dev agent para subcomandos git de leitura (c13f0100)
+- **engine,web**: Criativo recusa handoff ao PO sem regra de negócio nenhuma (7f0a4b6d)
+- **engine**: read_file trunca conteúdo grande, evitando 413 do provider (2cb84851)
+- **web**: aba Criativo não lista mais a sessão de execução vigente (39390472)
+- **api,web**: aba Executores lê a sessão de execução vigente, não a mais recente do projeto (ba9f7dfa)
+- **web**: prioridade do handoff pro Dev Lead, ativação inline e colapso por agente no fio (d9ebaae2)
+- **api**: ativar execução fecha a sessão de chat que originou o pedido (7947cc83)
+- **api**: sessão do bootstrap de Git nasce com nome default "git-bootstrap" (34139d19)
+- **web**: três corridas confirmadas ao vivo em SessionPage.tsx (RN-129) (ec35d232)
+- **web**: write_file mostra corpo próprio na aprovação, e payload vazio vira mensagem clara (04c1f7ea)
+- **engine**: ToolLoop nunca grava agent.response vazio, estende RN-059 (2833f326)
+- **api**: valida query array e segmento de URL interna (CodeQL crítico) (ac55537a)
+- **ci**: libera git log/blame/show pro claude-review não travar em permissão (336e03b6)
+- **docs**: regenera events.md com o arquivo certo pro agent.done/status (ec66743d)
+- **api,web**: sessão de chat consistente — modelo, duplicata, ideação e roteamento (5762dc39)
+- **api**: heartbeat não fecha sessão com agente em turno após handoff (a2e75275)
+- **web**: pista no convite perdido e indicador de agente trabalhando (5de8c6db)
+- **web**: marca "Brabo" da sidebar navega para o dashboard (8aa31f02)
+- **engine**: perform/1 do scheduler da Anamnese confere a flag global (ef07468c)
+- **web**: reconcilia turno do agente mesmo sem agent.done do canal (dbeddc97)
+- **api**: lint (prettier + type assertion desnecessária) e docs vale-revisar (29fba8ea)
+- **api,engine**: os quatro segredos irmãos do GIT_OAUTH_STATE_SECRET também recusam o default em produção (0df9047c)
+- **docker**: o smoke manda o kind, que a rota de sessão passou a exigir (7a9c5c0c)
+- **web**: o typecheck do CI inclui os testes, e o do editor não (069325db)
+- **api**: a área de agentes nasce com o projeto, e o backfill alcança os antigos (5ccbb861)
 
 ### Refatorações
 
@@ -3290,11 +5927,71 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   estrutura de árvore (ramo por agente, marco por linha) e o comportamento
   de expandir/colapsar não mudam
 
-### Correções
+- **web**: o teto do nome da sessão vive num lugar só (87c4530b)
+- **web**: o metadado truncado da sessão fica legível no hover (133fd31d)
+- **web**: Aprovações e Configurações conforme o handoff (6b7cb551)
+- **web**: Projeto e Sessão conforme o handoff de design (b1ba2a71)
+- **web,design**: login e lista de projetos conforme o handoff (f96f7a63)
+- **web**: rótulo de sessão vira helper e os cinco inline migram (00b4529a)
+- **web**: Disclosure no design system, sem migrar call site nenhum (70b76829)
+- **web**: as abas do projeto derivam de um registro só (2a699882)
 
-- **web**: Timeline da sessão: ordenação de cards de aprovação misturados
-  com eventos (RN-155), texto do indicador de espera de 5s (RN-156), e
-  formato de aviso da criação de épico/história pelo PO (RN-157)
+### ⚠ Mudanças incompatíveis
+
+- registra a quebra que o container por projeto introduz (54408462)
+
+### Documentação
+
+- **business-rules**: RN-162 — perguntas estruturadas do Criativo (PR #292) (eafccac2)
+- **internal-api**: documenta que RN-162 reusa /sessions/:id/agent/message (345bbe0e)
+- **business-rules**: RN-160 e RN-161 — gate do Arquiteto e fusão handoff/execução (PR #290) (423d38bc)
+- **business-rules**: RN-158 e RN-159 — markdown e artefatos gerados (PR #288) (cb1f468e)
+- **business-rules**: RN-155 a RN-157 — ordenação da timeline (PR #286) (93f550c0)
+- **changelog**: consolida a onda 1 do exp003 (5 PRs) (87f473e3)
+- **security-surface,internal-api**: documenta a curinga do agent_autonomy de verdade (6a706576)
+- **business-rules**: corrige colisão de numeração RN-141 -> RN-144 (b85a0e21)
+- **business-rules**: corrige colisão de numeração RN-141 -> RN-142 (ad7273c1)
+- **business-rules**: corrige colisão de numeração RN-141 -> RN-143 (f353770a)
+- **api**: documenta os subcomandos git de leitura na allowlist do dev agent (6281cd1e)
+- **business-rules**: corrige colisão de numeração RN-136 -> RN-139 (c2ec03a1)
+- **business-rules**: corrige colisão de numeração RN-136 -> RN-140 (12c0f3d8)
+- **security-surface,internal-api**: documenta originSessionId da ativação de execução (4f5b7696)
+- **business-rules**: corrige colisão de numeração RN-129 -> RN-131 (9166452d)
+- **web**: documenta write_file no corpo próprio da aprovação (RN-096) (fcf19253)
+- **engine,api**: documenta a rota interna de cancelamento (RN-121) (b326001c)
+- **business-rules**: renumera RN-114 da Anamnese para RN-115 (edc96dab)
+- **business-rules**: renumera RN-110 dos segredos irmãos para RN-114 (b7f1d34c)
+- **runbook,getting-started**: dono root no bind mount, e como migrar workspaces existentes (7919e897)
+- **architecture**: a aba Code entra na descricao do contrato web-api (e577700f)
+- contagem de ADRs pos-merge de origin/dev (64) e manifesto regenerado (86ae1043)
+- **reference**: a cascata de binding ganha área, na página de providers (b3c026de)
+- **runbook**: o smoke cria sessão consultiva, e por que é ela que prova a rota (63d1883a)
+- **referencia**: a trava do tipo de sessão na api interna e nos artefatos (3864a4a1)
+- **architecture**: lib/aprovacoes.ts e a união ActionType que envelhece (4b604731)
+- **validacao**: 9ª e 10ª execuções, as de dois módulos, e o achado AF (3426928c)
+- **changelog**: a entrada vai para a secao Unreleased que ja existia (13b00324)
+- **business-rules,architecture**: as quatro capabilities de git na RN-028 (be746d7d)
+- **claude**: o programa 16-26, e o CLAUDE.md na definição de pronto (023b7940)
+- **claude**: o estado das fases depois da 15, e o que o uso ensinou (24cbb48c)
+- **changelog**: v2.5.1 (0e7072d3)
+
+### Testes
+
+- **web**: a sigla do conector conferida na tela, não na função (b806d810)
+
+### CI
+
+- recarrega o corpo da PR (a dispensa do drift estava entre crases, de novo) (7a91b96d)
+- recarrega o corpo da PR (a dispensa do drift estava entre crases) (fa408874)
+
+### Manutenção
+
+- **web**: árvore de Executores porta o skin de bolha do chat do Criativo (56b84620)
+- **docs**: renumera RN-123 do handoff inline pra RN-125 (e4fbeca5)
+- **docs**: desfaz colisão de RN-118 entre PR #247 e #248 (40332299)
+- **docs**: renumera RN-121 do cancelamento de turno para RN-122 (9162f8cf)
+- **design**: o handoff entra no repo e os tokens fecham contra ele (05e02860)
+
 
 ## v2.5.1 — 2026-08-08
 
@@ -3309,58 +6006,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **branching**: a ordem do escape da célula, na política (06e3d61c)
 - **changelog**: v2.5.0 (b3cc60e6)
 
+
 ## v2.5.0 — 2026-08-08
-
-### Novidades
-
-- **engine,api**: o Dev Lead existe, e e o unico endereco externo da execucao (ba62b6eb)
-- **api,engine**: a Anamnese propoe subir o teto, e gastar nunca se auto-aprova (73fb8426)
-- **api,web**: o teto de paralelismo configuravel, e enfim consultado (44cdc2f1)
-- **api**: o lead decide o paralelismo, e acima do teto você autoriza (daa3ab3f)
-- **api,web**: o painel deriva a esteira do registro de gates (d55ccd7d)
-
-### Correções
-
-- **api,docs**: lint da api e o contrato web na arquitetura (87a2d701)
-- **web**: renumera as regras para RN-088 e RN-089 (24c168b7)
-- **web**: 429 virava tela branca, e a app respondia com mais tráfego (7dfdd8e6)
-- **engine**: a corrida do worktree entre dois dev agents (58be13d1)
-- **validacao**: a assercao afirma a REGRA, e o Arquiteto decide os modulos (93e4e753)
-- **validacao**: --historias nao chegava ao resto do script (a214f593)
-- **engine**: o plano do Dev Lead encerra o turno (9bd97241)
-- mix format no tool_loop e o inventario de variaveis regenerado (9d34d4da)
-- **engine**: o teto de iteracoes e por TIPO de agente (fb3a1975)
-
-### Desempenho
-
-- **web,api**: o sino manda onde parou de ler, e pergunta uma vez só (0eeb87be)
-- **web,api**: o dashboard lê o workspace, não um projeto de cada vez (a3cee5ab)
-
-### Documentação
-
-- registra o achado AE e corrige a contabilidade do backlog (6663209c)
-- CLAUDE.md com o estado real das fases 14 e 15 (97fa990a)
-- a rota de handoff ao Dev Lead na api interna (4ab8e3a8)
-- regenera a referencia OpenAPI (43042a88)
-- as rotas de area e a assimetria do parallelize (f77bb229)
-- **runbook**: o sintoma de teto de iteracoes baixo demais (18ee7233)
-- a rota publica de gates e a RN-084 da esteira derivada (88e68500)
-- architecture.md registra agent_areas no modelo de dados (04bd39b9)
-- permissions.md documenta o tipo de ação parallelize (86e4090b)
-- CLAUDE.md com o estado real das fases depois da v2.4.0 (457af4f7)
-- **changelog**: v2.4.0 (d266af6e)
-
-### Testes
-
-- **validacao**: --modulos 2, para o paralelismo FAZER sentido (510c5855)
-- **validacao**: duas historias no mesmo modulo, e o teto exercitado (80287a06)
-- **engine**: restaurar env com nil apagava o default (de0ab417)
-
-### Manutenção
-
-- **deps**: fecha 5 alertas do Dependabot com overrides escopados (50efe887)
-
-## Unreleased
 
 ### Novidades
 
@@ -3440,6 +6087,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   defeito dos 3.824 req/min do dashboard. A credencial gasta é a do **owner**
   (RN-058/RN-082), como na escrita. Ver [ADR
   0060](docs/adr/0060-superficie-de-leitura-de-codigo.md).
+
+- **engine,api**: o Dev Lead existe, e e o unico endereco externo da execucao (ba62b6eb)
+- **api,engine**: a Anamnese propoe subir o teto, e gastar nunca se auto-aprova (73fb8426)
+- **api,web**: o teto de paralelismo configuravel, e enfim consultado (44cdc2f1)
+- **api**: o lead decide o paralelismo, e acima do teto você autoriza (daa3ab3f)
+- **api,web**: o painel deriva a esteira do registro de gates (d55ccd7d)
 
 ### Correções
 
@@ -3545,6 +6198,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   jsdom não mede layout. Junto, dois alvos de clique que estavam abaixo do piso
   de 24px da WCAG 2.2 AA (os chips de evidência da hipótese e o de diff no
   histórico de instruções)
+
+- **api,docs**: lint da api e o contrato web na arquitetura (87a2d701)
+- **web**: renumera as regras para RN-088 e RN-089 (24c168b7)
+- **web**: 429 virava tela branca, e a app respondia com mais tráfego (7dfdd8e6)
+- **engine**: a corrida do worktree entre dois dev agents (58be13d1)
+- **validacao**: a assercao afirma a REGRA, e o Arquiteto decide os modulos (93e4e753)
+- **validacao**: --historias nao chegava ao resto do script (a214f593)
+- **engine**: o plano do Dev Lead encerra o turno (9bd97241)
+- mix format no tool_loop e o inventario de variaveis regenerado (9d34d4da)
+- **engine**: o teto de iteracoes e por TIPO de agente (fb3a1975)
+
 ### Refatorações
 
 - **web**: as telas de **Projeto** e **Sessão** passam a seguir o handoff de
@@ -3633,6 +6297,34 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   não pintura, e seguem declaradas: o "Continuar com GitHub" do login e o
   indicador "N agentes online"
 
+- **deps**: fecha 5 alertas do Dependabot com overrides escopados (50efe887)
+
+### Desempenho
+
+- **web,api**: o sino manda onde parou de ler, e pergunta uma vez só (0eeb87be)
+- **web,api**: o dashboard lê o workspace, não um projeto de cada vez (a3cee5ab)
+
+### Documentação
+
+- registra o achado AE e corrige a contabilidade do backlog (6663209c)
+- CLAUDE.md com o estado real das fases 14 e 15 (97fa990a)
+- a rota de handoff ao Dev Lead na api interna (4ab8e3a8)
+- regenera a referencia OpenAPI (43042a88)
+- as rotas de area e a assimetria do parallelize (f77bb229)
+- **runbook**: o sintoma de teto de iteracoes baixo demais (18ee7233)
+- a rota publica de gates e a RN-084 da esteira derivada (88e68500)
+- architecture.md registra agent_areas no modelo de dados (04bd39b9)
+- permissions.md documenta o tipo de ação parallelize (86e4090b)
+- CLAUDE.md com o estado real das fases depois da v2.4.0 (457af4f7)
+- **changelog**: v2.4.0 (d266af6e)
+
+### Testes
+
+- **validacao**: --modulos 2, para o paralelismo FAZER sentido (510c5855)
+- **validacao**: duas historias no mesmo modulo, e o teto exercitado (80287a06)
+- **engine**: restaurar env com nil apagava o default (de0ab417)
+
+
 ## v2.4.0 — 2026-08-07
 
 ### Novidades
@@ -3703,6 +6395,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Documentação
 
 - **changelog**: v2.3.0 (6f6f5be4)
+
 
 ## v2.3.0 — 2026-08-07
 
@@ -3809,6 +6502,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - os achados da execução real em docs/, e quatro deles corrigidos (4dd7a073)
 - **engine,docs**: formato do Elixir e as três docs que o drift cobrava (e01ee61f)
 - **ci**: o release passa a escrever a versão do README junto do CHANGELOG (41f02548)
+
 
 ## v2.2.0 — 2026-08-04
 
@@ -3920,6 +6614,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **design-sync**: re-sync do design system — 66 componentes no Claude Design (3c9b6ad8)
 
+
 ## v2.1.0 — 2026-08-03
 
 ### Novidades
@@ -3939,28 +6634,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **changelog**: v2.0.0 (9336246)
 
+
 ## v2.0.0 — 2026-08-03
-
-### ⚠ Mudanças incompatíveis
-
-- **api,web**: a curadoria de modelo passa a ser por workspace (aae747d)
-
-### Novidades
-
-- **api**: Ollama e Anthropic descobrem o próprio catálogo (3b8a54e)
-
-### Correções
-
-- **api**: o preço da Vultr é oficial e nenhuma troca de preço escapa da auditoria (acf0ad1)
-- **ci**: PR de workflow nascia sem checks, e quebra não chegava ao changelog (44dec9b)
-- **scripts,ci**: o CHANGELOG e as notas de release estavam vazios (9976b70)
-
-### Documentação
-
-- **api**: a rota interna de sync não é "do workspace inteiro" (0962c05)
-- **branching**: o CHANGELOG volta por PR depois do release (fc570b6)
-
-## Unreleased
 
 ### Novidades
 
@@ -4037,97 +6712,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   viajar dentro da imagem de produção — sem isso a rota funcionaria em
   desenvolvimento e responderia erro só em produção, porque `docs/` inteiro é
   ignorado no build
-
-### Correções
-
-- **web**: erro de carregamento parou de virar **tela branca**. Abrir um projeto
-  com a api limitando por `429` devolvia a área principal inteiramente vazia —
-  sem mensagem, sem estado de erro, sem esqueleto —, porque a tela testava
-  `if (!project) return null` e com isso tratava "a api recusou" e "ainda não
-  chegou" como a mesma coisa. Agora a tela DIZ o que houve, com a frase que a
-  api mandou (é ela que sabe a diferença entre "tente em instantes" e "você não
-  tem acesso"), o `trace_id` para quem for investigar e um botão de tentar de
-  novo. No dashboard o defeito era pior que branco: `!projects` também era
-  verdadeiro no erro, então a tela convidava a **criar o primeiro projeto** de
-  um workspace que podia ter vinte. A barra lateral também fala, com o texto
-  cabendo nos 248px que ela tem (RN-088)
-- **web**: a app parou de responder ao rate limit da api com **mais tráfego**.
-  Uma sessão real acumulou 1128 erros `429` num console só: o TanStack Query
-  retentava três vezes cada falha e os ~25 polls de 3 a 5 segundos seguiam
-  batendo na mesma porta, num laço que impedia a janela deslizante do limite de
-  se refazer. Agora 4xx não se retenta — 429 é literalmente o servidor pedindo
-  para parar, e 401 já renovou a sessão por dentro — e todo poll para quando a
-  query erra, voltando sozinho no foco da janela, na remontagem da tela ou no
-  botão de tentar de novo. 5xx e falha de rede continuam com as três
-  tentativas, que ali é a reação certa
-- **web**: projetos de **mesmo nome** deixam de ser indistinguíveis na barra
-  lateral. Uma execução de validação criou vinte `validacao-real`, e as vinte
-  linhas eram idênticas. Quem repete nome passa a mostrar o id abreviado e a
-  data de criação, que já vinham no payload; nome único não ganha legenda
-  nenhuma, porque desempate em toda linha seria ruído no lugar com menos espaço
-  da tela
-- **engine**: o Psicólogo parou de analisar sessão **sem nada a analisar**. Uma
-  sessão cujo log inteiro era provisionamento de repositório passava pelo
-  critério de tamanho, ganhava a análise, e o modelo — sem evento algum para
-  citar — inventava `seq` inexistentes até a validação de evidência rejeitar e
-  ele desistir, com o orçamento já gasto. A contagem que decide se vale a pena
-  agora desconta os passos de máquina do bootstrap e o rastro que os próprios
-  analistas deixam na sessão: contar o turno anterior do Psicólogo fazia uma
-  sessão vazia parecer povoada a partir da primeira análise, e cada retentativa
-  a enchia mais. Não havendo material, a análise não roda e o desfecho fica no
-  log como `psychologist.analysis_skipped` — inclusive no reprocessamento
-  manual, onde quem clicou recebe o motivo em vez de uma hipótese inventada
-
-- **engine**: regra de negócio com título já registrado **no projeto** passa a
-  ser recusada na emissão. Rodar o Criativo duas vezes deixava as mesmas regras
-  duplicadas, metade delas órfãs; como o artefato é um evento de domínio, e
-  evento não é apagado nem editado, a entrada é o único momento em que dá para
-  recusar. A checagem é por projeto e não por sessão, que é onde a duplicata
-  nasce — a segunda rodada abre sessão nova. O erro volta ao modelo, que segue
-  para a próxima regra
-
-- **api**: o PO parou de criar história com título idêntico a uma que já existe
-  no projeto, e passa a **avisar** quando uma história nova não acrescenta
-  cobertura nenhuma — todas as regras que ela cita já estavam cobertas por
-  outra. São respostas diferentes de propósito: título repetido é erro e
-  bloqueia; justificativa repetida é suspeita e vira
-  `backlog.story_overlap_warned`, porque um segundo recorte da mesma regra pode
-  ser legítimo e quem julga isso é o usuário. Sobreposição **semântica** — dois
-  títulos diferentes para o mesmo endpoint — continua passando, e há teste
-  afirmando esse limite em vez de deixá-lo implícito
-
-- **api**: o bootstrap de Gitflow morria no primeiro passo em **todo projeto
-  GitHub novo**. Repositório recém-criado não tem commit nenhum, e aí a Git
-  Data API inteira do GitHub responde `409 Git Repository is empty` — o
-  provider tratava só `404` e nunca alcançava o próprio caminho de "primeiro
-  commit" que já tinha escrito. Agora o commit inicial sai pela Contents API,
-  que é a única que funciona em repo vazio. O backend falso dos testes também
-  foi corrigido: ele respondia `404` onde o GitHub responde `409`, e era por
-  isso que a suite ficava verde enquanto o produto quebrava
-- **web**: o wizard avisa, ao escolher **repositório privado no GitHub**, que o
-  plano gratuito não aceita proteção de branch — antes a limitação só aparecia
-  no último passo do bootstrap, com o repositório já criado e a mensagem crua
-  da API na tela
-
-- **ci**: a PR de changelog que o release abre passa a trazer junto a versão
-  anunciada no `README.md`. Sem isso, o check de versão (novo nesta rodada)
-  reprovaria toda PR de release — que é aberta pelo bot e só toca o CHANGELOG,
-  então nasceria vermelha esperando uma mão humana que a política não prevê
-
-### ⚠ Mudanças incompatíveis
-
-- **api**: `GET /models` deixou de existir. A lista do seletor virou
-  `GET /projects/:projectId/models` porque a curadoria passou a ser **por
-  workspace** (ADR 0049): `models.is_active` era uma coluna para a instalação
-  inteira, e um owner do workspace A ligando um modelo o ligava para o B — com
-  o gasto caindo no orçamento de quem não decidiu nada. O catálogo em si
-  continua global (nome, preço e capabilities são fato do provider); só a
-  decisão "aparece no seletor?" mudou de lugar, para a tabela nova
-  `workspace_models`. A migração `0034` dá a cada workspace existente
-  exatamente o que ele enxergava antes, **antes** de derrubar a coluna. Quem
-  consome a api por fora precisa trocar a rota; a UI já foi junto
-
-### Novidades
 
 - **api,web**: o catálogo passa a saber **quais modelos leem imagem, quais
   geram imagem e quais fazem thinking**, e a tela filtra por isso. O sync nunca
@@ -4225,7 +6809,83 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   hub e não ao fabricante do modelo; nas APIs diretas isso não se repete, já que
   a própria linha diz o provider
 
+- **api**: Ollama e Anthropic descobrem o próprio catálogo (3b8a54e)
+
 ### Correções
+
+- **web**: erro de carregamento parou de virar **tela branca**. Abrir um projeto
+  com a api limitando por `429` devolvia a área principal inteiramente vazia —
+  sem mensagem, sem estado de erro, sem esqueleto —, porque a tela testava
+  `if (!project) return null` e com isso tratava "a api recusou" e "ainda não
+  chegou" como a mesma coisa. Agora a tela DIZ o que houve, com a frase que a
+  api mandou (é ela que sabe a diferença entre "tente em instantes" e "você não
+  tem acesso"), o `trace_id` para quem for investigar e um botão de tentar de
+  novo. No dashboard o defeito era pior que branco: `!projects` também era
+  verdadeiro no erro, então a tela convidava a **criar o primeiro projeto** de
+  um workspace que podia ter vinte. A barra lateral também fala, com o texto
+  cabendo nos 248px que ela tem (RN-088)
+- **web**: a app parou de responder ao rate limit da api com **mais tráfego**.
+  Uma sessão real acumulou 1128 erros `429` num console só: o TanStack Query
+  retentava três vezes cada falha e os ~25 polls de 3 a 5 segundos seguiam
+  batendo na mesma porta, num laço que impedia a janela deslizante do limite de
+  se refazer. Agora 4xx não se retenta — 429 é literalmente o servidor pedindo
+  para parar, e 401 já renovou a sessão por dentro — e todo poll para quando a
+  query erra, voltando sozinho no foco da janela, na remontagem da tela ou no
+  botão de tentar de novo. 5xx e falha de rede continuam com as três
+  tentativas, que ali é a reação certa
+- **web**: projetos de **mesmo nome** deixam de ser indistinguíveis na barra
+  lateral. Uma execução de validação criou vinte `validacao-real`, e as vinte
+  linhas eram idênticas. Quem repete nome passa a mostrar o id abreviado e a
+  data de criação, que já vinham no payload; nome único não ganha legenda
+  nenhuma, porque desempate em toda linha seria ruído no lugar com menos espaço
+  da tela
+- **engine**: o Psicólogo parou de analisar sessão **sem nada a analisar**. Uma
+  sessão cujo log inteiro era provisionamento de repositório passava pelo
+  critério de tamanho, ganhava a análise, e o modelo — sem evento algum para
+  citar — inventava `seq` inexistentes até a validação de evidência rejeitar e
+  ele desistir, com o orçamento já gasto. A contagem que decide se vale a pena
+  agora desconta os passos de máquina do bootstrap e o rastro que os próprios
+  analistas deixam na sessão: contar o turno anterior do Psicólogo fazia uma
+  sessão vazia parecer povoada a partir da primeira análise, e cada retentativa
+  a enchia mais. Não havendo material, a análise não roda e o desfecho fica no
+  log como `psychologist.analysis_skipped` — inclusive no reprocessamento
+  manual, onde quem clicou recebe o motivo em vez de uma hipótese inventada
+
+- **engine**: regra de negócio com título já registrado **no projeto** passa a
+  ser recusada na emissão. Rodar o Criativo duas vezes deixava as mesmas regras
+  duplicadas, metade delas órfãs; como o artefato é um evento de domínio, e
+  evento não é apagado nem editado, a entrada é o único momento em que dá para
+  recusar. A checagem é por projeto e não por sessão, que é onde a duplicata
+  nasce — a segunda rodada abre sessão nova. O erro volta ao modelo, que segue
+  para a próxima regra
+
+- **api**: o PO parou de criar história com título idêntico a uma que já existe
+  no projeto, e passa a **avisar** quando uma história nova não acrescenta
+  cobertura nenhuma — todas as regras que ela cita já estavam cobertas por
+  outra. São respostas diferentes de propósito: título repetido é erro e
+  bloqueia; justificativa repetida é suspeita e vira
+  `backlog.story_overlap_warned`, porque um segundo recorte da mesma regra pode
+  ser legítimo e quem julga isso é o usuário. Sobreposição **semântica** — dois
+  títulos diferentes para o mesmo endpoint — continua passando, e há teste
+  afirmando esse limite em vez de deixá-lo implícito
+
+- **api**: o bootstrap de Gitflow morria no primeiro passo em **todo projeto
+  GitHub novo**. Repositório recém-criado não tem commit nenhum, e aí a Git
+  Data API inteira do GitHub responde `409 Git Repository is empty` — o
+  provider tratava só `404` e nunca alcançava o próprio caminho de "primeiro
+  commit" que já tinha escrito. Agora o commit inicial sai pela Contents API,
+  que é a única que funciona em repo vazio. O backend falso dos testes também
+  foi corrigido: ele respondia `404` onde o GitHub responde `409`, e era por
+  isso que a suite ficava verde enquanto o produto quebrava
+- **web**: o wizard avisa, ao escolher **repositório privado no GitHub**, que o
+  plano gratuito não aceita proteção de branch — antes a limitação só aparecia
+  no último passo do bootstrap, com o repositório já criado e a mensagem crua
+  da API na tela
+
+- **ci**: a PR de changelog que o release abre passa a trazer junto a versão
+  anunciada no `README.md`. Sem isso, o check de versão (novo nesta rodada)
+  reprovaria toda PR de release — que é aberta pelo bot e só toca o CHANGELOG,
+  então nasceria vermelha esperando uma mão humana que a política não prevê
 
 - **api**: o **refresh de sessão voltou a funcionar no browser** — na prática,
   nunca funcionou. O cookie `brabo_csrf` era gravado com `Path=/auth`, junto do
@@ -4357,6 +7017,31 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   taxonomia** — o `pr-police` reprova. É o engano mais comum, e a doc o
   induzia
 
+- **api**: o preço da Vultr é oficial e nenhuma troca de preço escapa da auditoria (acf0ad1)
+- **ci**: PR de workflow nascia sem checks, e quebra não chegava ao changelog (44dec9b)
+- **scripts,ci**: o CHANGELOG e as notas de release estavam vazios (9976b70)
+
+### ⚠ Mudanças incompatíveis
+
+- **api**: `GET /models` deixou de existir. A lista do seletor virou
+  `GET /projects/:projectId/models` porque a curadoria passou a ser **por
+  workspace** (ADR 0049): `models.is_active` era uma coluna para a instalação
+  inteira, e um owner do workspace A ligando um modelo o ligava para o B — com
+  o gasto caindo no orçamento de quem não decidiu nada. O catálogo em si
+  continua global (nome, preço e capabilities são fato do provider); só a
+  decisão "aparece no seletor?" mudou de lugar, para a tabela nova
+  `workspace_models`. A migração `0034` dá a cada workspace existente
+  exatamente o que ele enxergava antes, **antes** de derrubar a coluna. Quem
+  consome a api por fora precisa trocar a rota; a UI já foi junto
+
+- **api,web**: a curadoria de modelo passa a ser por workspace (aae747d)
+
+### Documentação
+
+- **api**: a rota interna de sync não é "do workspace inteiro" (0962c05)
+- **branching**: o CHANGELOG volta por PR depois do release (fc570b6)
+
+
 ## v1.4.0 — 2026-08-02
 
 ### Novidades
@@ -4403,6 +7088,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - escopo da FASE 12 no CLAUDE.md, e a 11 fecha no Status (706d48b)
 - runbook cobre a derivação de WEB_ORIGIN a partir de WEB_PORT (09f5098)
 
+
 ## v1.3.0 — 2026-08-01
 
 ### Novidades
@@ -4423,6 +7109,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - runbook de condução da 10b e o texto de entrada da sessão 0 (ed2cd39)
 - CLAUDE.md admite o que as Fases 8 e 9 não entregaram (b999249)
 - missão de dogfooding da Fase 10 e insumos do PO (0e27ecd)
+
 
 ## v1.2.0 — 2026-07-30
 
@@ -4460,17 +7147,20 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ci**: aceita CVE-2026-56852 no binário do gitleaks, com prazo (c0bd99d)
 - **design-sync**: sincroniza o DS com o Input da Fase 7a (752634a)
 
+
 ## v1.1.2 — 2026-07-28
 
 ### Documentação
 
 - corrige o que a doc afirmava sobre estado que mudou nesta sessão (1055e5e)
 
+
 ## v1.1.1 — 2026-07-27
 
 ### Manutenção
 
 - **ci**: torna a Release republicável e documenta as seis tags órfãs (bb517ee)
+
 
 ## v1.1.0 — 2026-07-27
 
@@ -4487,6 +7177,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **ci**: paraleliza o build da release e conserta o cache do Elixir (13dd7e0)
 
+
 ## v1.0.1 — 2026-07-27
 
 ### Correções
@@ -4501,6 +7192,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Manutenção
 
 - **ci**: fecha os três checks que a FASE 7 deixou vermelhos (5f75f93)
+
 
 ## v1.0.0 — 2026-07-27
 
@@ -4541,6 +7233,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - remove o Keycloak do compose, dos manifests e dos scripts (796e133)
 
+
 ## v0.3.1 — 2026-07-27
 
 ### Correções
@@ -4550,6 +7243,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Documentação
 
 - CI confere as contagens de ADR escritas em prosa (3efb89a)
+
 
 ## v0.3.0 — 2026-07-27
 
@@ -4565,6 +7259,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Documentação
 
 - **pages**: link para o site publicado e um build de site por PR (a05518b)
+
 
 ## v0.2.0 — 2026-07-27
 
@@ -4594,6 +7289,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Manutenção
 
 - **ci**: escada de três degraus e CI sem gatilho de push (#46) (b52bf00)
+
 
 ## v0.1.0 — 2026-07-26
 

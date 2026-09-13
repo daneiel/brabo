@@ -96,3 +96,72 @@ export function canAdvanceFromDetails(
     ? campos.externalId.trim().length > 0
     : campos.name.trim().length > 0;
 }
+
+// --- A base dos projetos montados (ADR 0141/0142, RN-500/501, RN-513) ---
+
+/**
+ * Tira as barras finais SEM regex, igual a `semBarraFinal` do
+ * `path-scope.ts` da api — `/base/` e `/base` são o MESMO lugar, e a base
+ * chega da configuração do operador, que pode ter digitado a barra.
+ *
+ * Sem regex pelo mesmo motivo de lá: `\/+$` degrada em O(n²) numa string
+ * cheia de barras (`js/polynomial-redos`). O laço é O(n) e equivalente.
+ */
+function semBarraFinal(caminho: string): string {
+  let fim = caminho.length;
+  while (fim > 0 && caminho[fim - 1] === '/') fim--;
+  return caminho.slice(0, fim);
+}
+
+/**
+ * O caminho SUGERIDO para um projeto `mounted`: `<base>/<slug>` (RN-501,
+ * ADR 0142 — a validação de disco foi adiada JUSTAMENTE para que o
+ * assistente pudesse propor uma pasta que ainda não existe).
+ *
+ * Devolve string VAZIA quando não há o que compor — base ausente, base
+ * degenerada (`/`, `//`) ou slug vazio (o caso da adoção, onde o nome do
+ * projeto vem do provider e o slug local nunca é preenchido). Vazio é a
+ * resposta certa e não um erro: inventar um segmento seria a tela decidindo
+ * o nome da pasta do usuário.
+ *
+ * A sugestão é só isso — o campo continua EDITÁVEL, e quem libera o passo
+ * continua sendo `canAdvanceFromWorkspace`.
+ */
+export function caminhoSugeridoNaBase(
+  base: string | null,
+  slug: string,
+): string {
+  if (base === null) return '';
+  const raiz = semBarraFinal(base.trim());
+  const nome = slug.trim();
+  if (raiz.length === 0 || nome.length === 0) return '';
+  return `${raiz}/${nome}`;
+}
+
+/**
+ * O caminho está DENTRO da base de projetos montados?
+ *
+ * Espelha `dentroDaBaseDeProjetos` da api (que é `dentroDoEscopo`, do escopo
+ * de terminal do ADR 0055): comparação por SEGMENTO, nunca `startsWith` cru
+ * — `/base-outra` **não** está dentro de `/base`, embora a string comece
+ * igual. A própria base conta como dentro, como lá.
+ *
+ * Isto NÃO é a validação: quem recusa (400) é a api, em
+ * `resolverWorkspacePath`. Aqui serve só para a tela dizer qual dos dois
+ * estados o caminho digitado está — sob a base consentida, ou fora dela e
+ * portanto recusado na criação (RN-500/501).
+ *
+ * Base ausente devolve `false`, e é a resposta correta à pergunta feita:
+ * não existe pasta dentro de uma base que não existe. Quem precisa
+ * distinguir "fora da base" de "não há base" pergunta pela base.
+ */
+export function caminhoDentroDaBase(
+  caminho: string,
+  base: string | null,
+): boolean {
+  if (base === null) return false;
+  const raiz = semBarraFinal(base.trim());
+  const alvo = semBarraFinal(caminho.trim());
+  if (raiz.length === 0 || alvo.length === 0) return false;
+  return alvo === raiz || alvo.startsWith(`${raiz}/`);
+}

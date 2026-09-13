@@ -22,11 +22,13 @@ import { listProjectFolders, mensagemDaApi } from './api-client';
  * (`showDirectoryPicker` devolve um handle do navegador, nunca um caminho
  * absoluto — e é caminho absoluto que `projects.workspace_path` guarda).
  *
- * O de runner FICA, e isso é decisão declarada do dono do produto: o runner
- * sai da interface de criação, mas o binário segue sendo refinado. Depois
- * desta entrega ele tem ZERO chamadores no web — se o refino escorregar, o
- * honesto é apagar o módulo daqui, e nada disso toca o protocolo em
- * `apps/runner/src/channel.ts` de qualquer forma.
+ * O de runner voltou a ter CHAMADOR na RN-533 (ADR 0151 ponto 7), e a divisão
+ * passou a ser por MODO: `mounted` pergunta à api, porque a pasta dele mora
+ * dentro da base do SERVIDOR e é o servidor quem a enxerga; `runner` pergunta
+ * ao agente local, porque a pasta dele mora numa máquina que o servidor não
+ * enxerga — e, escopado à base servida pela api, o picker do modo `runner`
+ * listava um disco que não é o daquele projeto. Dois transportes para duas
+ * perguntas diferentes, e não um sobrando.
  */
 
 export interface FsEntrada {
@@ -34,10 +36,35 @@ export interface FsEntrada {
   isDir: boolean;
 }
 
+/**
+ * POR QUE a leitura falhou, para o CHAMADOR decidir — nunca para ele ler.
+ *
+ * A lição é a da RN-532, escrita do lado do runner: *"o texto é para um humano
+ * ler, o motivo é para o outro lado DECIDIR, e colapsá-los obrigaria o engine a
+ * casar substring de pt-BR"*. Era exatamente o que este lado fazia até a
+ * RN-533 — `FolderBrowserModal` decidia mostrar o painel de onboarding com
+ * `erro?.includes('Nenhum runner conectado')`, casando uma frase que mora no
+ * `terminal_channel.ex` e que ninguém prometeu não reescrever.
+ *
+ * Só o transporte do RUNNER preenche. O de api NÃO preenche nunca, e isso é a
+ * decisão e não uma omissão: uma recusa da api é uma recusa da api — ela tem
+ * mensagem própria, que ENSINA (nomeia a base e diz o que fazer), e não existe
+ * agente local a instalar para consertá-la.
+ *
+ * - `sem-agente` — o engine respondeu que não há runner conectado ao projeto.
+ *   É um FATO do servidor, não um palpite.
+ * - `sem-resposta` — ninguém respondeu a tempo (teto da requisição), o socket
+ *   caiu, ou o ticket não saiu. NÃO é o mesmo que `sem-agente`: aqui não se
+ *   sabe se há agente, e o texto de tela diz isso (RN-088/RN-468).
+ */
+export type MotivoDeFalhaDoAgente = 'sem-agente' | 'sem-resposta';
+
 export interface ListagemResultado {
   path: string;
   entradas: FsEntrada[];
   erro?: string;
+  /** Ver {@link MotivoDeFalhaDoAgente}. Só o transporte do runner preenche. */
+  motivo?: MotivoDeFalhaDoAgente;
   /**
    * Quantos itens ficaram de FORA de `entradas`, e por quê.
    *
@@ -55,6 +82,8 @@ export interface ListagemResultado {
 export interface DiretorioInicialResultado {
   path?: string;
   erro?: string;
+  /** Ver {@link MotivoDeFalhaDoAgente}. Só o transporte do runner preenche. */
+  motivo?: MotivoDeFalhaDoAgente;
 }
 
 export interface FsBrowser {
