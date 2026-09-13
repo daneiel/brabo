@@ -71,6 +71,14 @@ de Node, npm nem toolchain de compilação instalados:
 | macOS Apple Silicon | `brabo-runner-darwin-arm64` |
 | Windows x64 | `brabo-runner-win32-x64.exe` |
 
+> A tabela é a MATRIZ, não o que cada Release tem: até a `v5.0.0` só os dois
+> binários Linux chegaram a ser anexados (confira com `gh release view`). O
+> `darwin-x64` em particular não é publicado: o runner `macos-13` foi
+> aposentado pelo GitHub, e no `macos-15-intel` o binário constrói mas
+> reprova no `--self-test-pty`, por um bug do Bun com o `node-pty` no macOS
+> (oven-sh/bun#25822). Detalhe no comentário da matriz em
+> `.github/workflows/build-runner-binaries.yml`.
+
 ```sh
 # Linux/macOS
 chmod +x ./brabo-runner-<plataforma>

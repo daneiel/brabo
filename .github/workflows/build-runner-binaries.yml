@@ -74,6 +74,18 @@ jobs:
           # `node-gyp rebuild` compila local aqui como em `linux-x64`.
           - target: linux-arm64
             os: ubuntu-24.04-arm
+          # `macos-13` NÃO TEM RUNNER: a imagem macOS 13 foi aposentada pelo
+          # GitHub (changelog de 2025-09-19, fim em dez/2025), e o job fica
+          # 24h00m01s na fila e é cancelado nas três tags (`v4.0.0`, `v4.0.1`,
+          # `v5.0.0`) — de novo 30min na fila, sem runner, no ensaio de
+          # 2026-09-13 (run 34769280227). O label Intel que o GitHub oferece no
+          # lugar, `macos-15-intel`, FOI medido no mesmo dia e agenda em 3–22s
+          # (cinco runs) e CONSTRÓI — mas reprova no `--self-test-pty`: sob o
+          # Bun o `onData` do node-pty nunca entrega a saída do filho (bug
+          # aberto oven-sh/bun#25822, sem release corrigida; a MESMA prova
+          # passa sob Node no mesmo runner, run 34770476634). O label fica
+          # como está, de propósito: trocá-lo não faz o alvo publicar, e
+          # tirar a plataforma ou esperar o Bun é decisão de dono (AT-065).
           - target: darwin-x64
             os: macos-13
           - target: darwin-arm64

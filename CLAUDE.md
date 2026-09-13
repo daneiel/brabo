@@ -520,10 +520,21 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   exercitadas — o que falta aí é uma TAG, não uma sessão. `darwin-x64`
   (`macos-13`) é o único que nunca chegou a construir: ele fica **24h00m01s**
   na fila e é cancelado, o MESMO número nas três tags, que é o teto do
-  Actions batendo — ou seja, o job NUNCA FOI AGENDADO. A hipótese "fila
-  congestionada" está descartada pela ordem de grandeza; a que sobra é label
-  sem runner, e decidir entre trocar o label, tirar a plataforma (a promessa
-  vira quatro alvos, em ADR novo) ou pagar runner é decisão de dono. O que
+  Actions batendo — ou seja, o job NUNCA FOI AGENDADO. A causa está MEDIDA
+  (AT-065, 2026-09-13): `macos-13` é label SEM RUNNER, a imagem foi aposentada
+  pelo GitHub em dez/2025 (e ficou 30min na fila de novo, num ensaio por
+  `workflow_dispatch`). O label Intel que o GitHub oferece no lugar,
+  `macos-15-intel`, agenda em segundos e CONSTRÓI, mas reprova no
+  `--self-test-pty`: sob o Bun o `onData` do `node-pty` nunca entrega a saída
+  do filho — bug ABERTO do runtime (oven-sh/bun#25822, nenhuma release
+  corrigida), com a MESMA prova passando sob Node no mesmo runner. Ou seja, o
+  bloqueio deixou de ser runner (pagar runner não resolve) e passou a ser o
+  Bun, e a matriz segue com `macos-13` de propósito: trocar o label não faz o
+  alvo publicar. Decidir entre esperar o Bun (e aí trocar o label) ou tirar a
+  plataforma (a promessa vira quatro alvos, em ADR novo) é decisão de dono.
+  Não medido, mas o issue do Bun foi aberto em darwin ARM64: é provável que o
+  `darwin-arm64` esbarre no mesmo defeito depois do conserto do
+  `spawn-helper`, e aí "falta uma TAG" não bastaria para ele. O que
   DEIXOU de depender dessa decisão é o manifesto assinado: desde a RN-565 o
   job `checksums` não tem `needs: build`, então o `darwin-x64` na fila não
   segura mais o `checksums.txt` por um dia
