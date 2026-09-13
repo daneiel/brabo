@@ -232,9 +232,10 @@ hand (`mix golden_set.rag`), the same posture the QA Automation golden-set
 ([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)) still
 carries today. That stopped being true: `.github/workflows/golden-set-rag.yml`
 now runs `mix golden_set.rag` for real, against a real Ollama service —
-tractable here (and still not for the QA golden-set) because this one only
-calls the **embedding** model, CPU, deterministic, never a chat model doing
-judgment. What kept `severidade: warn` from becoming stale isn't that the
+it only calls the **embedding** model, CPU, deterministic, never a chat
+model doing judgment. (The claim that the QA golden-set was *not*
+tractable the same way was later measured, and the clock turned out not to
+be the obstacle — see the next section.) What kept `severidade: warn` from becoming stale isn't that the
 gate stayed manual — it's that the workflow is **scheduled** (nightly cron
 plus `workflow_dispatch`), never triggered by `pull_request`. `block` would
 still promise a check that gates a merge, and a scheduled run gates
@@ -242,6 +243,64 @@ nothing: a regression becomes visible within a day, never at PR time. The
 reason moved from "no CI can run this" to "this CI doesn't sit on the merge
 path" — `warn` keeps describing exactly what's true, just not the same
 truth it described before.
+
+## The QA golden-set in CI: the clock fits, the instrument doesn't measure
+
+The golden-set of the QA Automation agent's semantic judgment
+([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)) is what
+would give `qa-verificada`'s semantic step a trend signal. ADR 0123 and
+[ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md) both stated,
+without measuring, that running it in CI needed an API LLM secret or new
+infrastructure (a GPU runner). On 2026-09-13 (AT-067) it was measured, in
+the exact mold of `golden-set-rag.yml`: `ubuntu-latest`, no GPU, the same
+pinned `pgvector` and `ollama` service images, `qwen2.5-coder:latest`
+pulled into the job's own Ollama (with the dev compose's
+`OLLAMA_KEEP_ALIVE=1h`/`OLLAMA_CONTEXT_LENGTH=16384`), the api **and the
+engine** up as servers — the engine is extra relative to the RAG job,
+because it is the engine, called by the api through
+`POST /internal/actions/execute`, that runs the `npm test` the QA asks for.
+
+| run | model pull | setup until the mix task | `mix golden_set.qa` | whole job | score |
+|---|---|---|---|---|---|
+| [34769447405](https://github.com/daneiel/brabo/actions/runs/34769447405) | 15 s | ~3 min | 19 min 15 s | 22 min 09 s | 0/6 |
+| [34770869429](https://github.com/daneiel/brabo/actions/runs/34770869429) | 13 s | ~3 min | 22 min 53 s | 25 min 45 s | 0/6 |
+
+A chat turn of the 7B model on that runner's CPU took a median of ~20 s
+(10–34 s over the 23 turns the api log kept). **The clock fits**: a
+nightly or weekly job of under half an hour, no secret, no GPU. The
+"new infrastructure" half of the old sentence is refuted by measurement.
+
+**What does not fit is the instrument.** Both runs scored 0/6, below the
+recorded floor of 1/6 — and not because of the model's judgment. The
+event log of the second run shows why: every `npm test` the QA proposed was
+auto-approved (`permissions.json allow: npm test`) and then **refused by
+the engine**, because since [RN-502](../business-rules.md#rn-502)
+([ADR 0143](../adr/0143-agentes-de-dev-so-depois-do-container.md),
+2026-09-04) a `container` project with no `running` container does not run
+terminal commands anywhere. The seed script dates from 2026-08-30 and never
+registers a container. So no case can ever see `exit 0`, and
+`emit_qa_verdict` refuses `approved` without one — three of the six
+expected verdicts became impossible. The refusal message says "bring the
+project's container up (Infra proposes `container_start`)", and the model
+did what it read: in three cases it asked the terminal for
+`container_start` or `docker-compose up` (left `pending`, so
+`awaiting_approval`), and in one it repeated `npm test` sixty times until
+`toolloop.limit_reached` (`blocked(modelo)`). The remaining two stalled on
+their first call with an empty `command` — the unreliability ADR 0123
+already recorded for this model, independent of RN-502. Nothing here is
+CI-specific: the same refusal applies to a local run.
+
+That is why no `golden-set-qa.yml` was committed. A scheduled workflow
+that is red on every run for a reason unrelated to what it measures is
+worse than none — background red teaches people to ignore red. The design
+that was measured stays in the repository history (the workflow as of
+commit `e7d7d1b16`, including a temporary diagnostic step), ready for when
+the harness can measure again. Making it measure again means deciding how
+the golden-set runs the suite under RN-502 — a real container brought up
+through the broker by the seed, or something else — and that is a
+decision for a human. Relaxing the refusal so the harness passes is not
+one of the options: it would weaken the isolation RN-502 exists for, to
+make a test pass.
 
 ## A gate can be missing from the registry while `fluxo.yml` already assigns it
 

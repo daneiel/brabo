@@ -543,10 +543,25 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   fatia residual de `.tsx`; ao fechar, revisar Stack/Documentação deste
   arquivo para inglês como idioma primário
 - Golden-set de regressão do julgamento semântico do QA de Automação (ADR
-  0123) existe e roda manualmente (`mix golden_set.qa`, dentro de
-  `apps/engine`) contra Ollama local — nunca em CI. Ligar em CI exige
-  segredo de LLM de API OU infra nova (runner com GPU, passo de pull do
-  Ollama): decisão de um humano, não algo que se constrói escolhendo
+  0123) — a frase "ligar em CI exige segredo de LLM de API OU infra nova"
+  foi MEDIDA (AT-067, 2026-09-13) e a metade de INFRA caiu: num
+  `ubuntu-latest` sem GPU, no molde do `golden-set-rag.yml` (mais o ENGINE de
+  pé como servidor, porque é ele quem roda o `npm test`), o pull de
+  `qwen2.5-coder:latest` leva 13–15s, um turno de LLM ~20s de mediana, e
+  `mix golden_set.qa` roda de ponta a ponta em 19m15s e 22m53s (job inteiro
+  22–26min, runs 34769447405 e 34770869429). O RELÓGIO cabe; o INSTRUMENTO
+  não mede: desde a RN-502 (ADR 0143, 2026-09-04) o `npm test` é
+  auto-aprovado e RECUSADO pelo engine (projeto `container` sem container
+  `running` — o seed, de 2026-08-30, nunca registra um), nenhum caso vê
+  `exit 0`, `approved` fica impossível, e o modelo, lendo a recusa, pede
+  `container_start`/`docker-compose up` (ficam `pending`) ou repete
+  `npm test` até o teto de 60 — 0/6 nas duas rodadas, abaixo do piso 1/6.
+  Vale igual na máquina local. Por isso NÃO nasceu `golden-set-qa.yml`
+  (vermelho toda noite por motivo alheio ao que mede); o desenho medido fica
+  no histórico (`e7d7d1b16`) e a narrativa em `docs/explanation/gates.md`.
+  O que segue com dono humano é decidir COMO o golden-set executa a suíte
+  sob a RN-502 (container de verdade pelo broker no seed, ou outra coisa) —
+  afrouxar a recusa para o harness passar NÃO é opção
 - Golden-set de acerto do RAG (ADR 0132, RN-490) — a metade "nunca em CI"
   FECHOU na Etapa 3 (ADR 0138, RN-498): `.github/workflows/golden-set-rag.yml`
   roda `mix golden_set.rag` de verdade, agendado (o gate `rag-acertivo`
