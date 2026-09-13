@@ -13192,6 +13192,15 @@ cinco assinaturas. E um alvo que anexe DEPOIS do teto não fica órfão: o
 label, tirar a plataforma ou pagar runner é decisão de dono, e o manifesto não
 pode depender dela — é justamente por depender dela que ele não saía.
 
+> Medido depois, na AT-065 (2026-09-13, por `workflow_dispatch` em ensaio):
+> `macos-13` é label sem runner (imagem aposentada pelo GitHub em dez/2025;
+> 30min na fila, cancelado, run `34769280227`). `macos-15-intel` agenda em
+> 3–22s e constrói, mas reprova no `--self-test-pty` porque, sob o Bun, o
+> `onData` do `node-pty` não entrega a saída do filho (oven-sh/bun#25822,
+> aberto); a mesma prova passa sob Node no mesmo runner (run `34770476634`).
+> A decisão pendente deixou de ser de runner e passou a ser esperar o Bun ou
+> tirar a plataforma. A regra acima não muda com isso.
+
 - **Código:** `.github/workflows/build-runner-binaries.yml:266` (o job, agora
   sem `needs:`), `:299` (`timeout-minutes: 40`, que cabe as duas esperas),
   `:309` (`ALVOS_ESPERADOS` no JOB, para os dois passos lerem a mesma lista),

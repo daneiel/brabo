@@ -485,12 +485,22 @@ The `v*` pattern covers the three forms the pipeline creates: `-dev.N`,
 > Since [ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md),
 > `build-runner-binaries.yml` has **two** jobs rather than one: the
 > `build` matrix (five targets, `fail-fast: false`) and a `checksums`
-> job that waits for it. The second runs with `if: always()` on
-> purpose — a target that failed to build must not deny the other four
-> a signed manifest — and it names in the log which targets the manifest
-> does **not** cover, because a `checksums.txt` that lists four and stays
-> quiet about the fifth is worse than none: whoever verifies the four
-> concludes they verified the release.
+> job. Since [RN-565](../business-rules.md#rn-565) the second one has no
+> `needs:` on the matrix — it waits, with a ceiling, for the Release
+> **assets** rather than the slowest job — so a target that failed to build,
+> or never got a runner, does not deny the others a signed manifest. It
+> names in the log which targets the manifest does **not** cover, because a
+> `checksums.txt` that lists four and stays quiet about the fifth is worse
+> than none: whoever verifies the four concludes they verified the release.
+>
+> The `darwin-x64` target is the one that never gets a runner, and the cause
+> is measured (AT-065, 2026-09-13): its `macos-13` label points at an image
+> GitHub retired in December 2025. The Intel replacement, `macos-15-intel`,
+> is scheduled within seconds and builds, but fails `--self-test-pty` under
+> Bun (the `node-pty` `onData` never fires — an open Bun bug), so the label
+> was left unchanged pending an owner decision. A workflow run with an empty
+> `tag` input is a dry run: it builds and smoke-tests without attaching
+> anything, which is how that was measured without cutting a tag.
 
 ### Bypass
 
