@@ -232,6 +232,53 @@ A pedagogical message doesn't teach a bot. The exemption is by
 **author**, not by prefix, so no one uses it as a loophole by naming a
 branch `dependabot/`.
 
+## Dependabot enters through dev
+
+The exemption above is about the branch **name**. The **destination** is not
+exempt: a dependency update enters through `dev`, like everything else, and
+reaches `main` through the `dev → qa → main` promotion. A dependency merged
+straight into `main` skips the ladder and makes `main` diverge from the branch
+where the work happens.
+
+Two mechanisms, because GitHub treats the two kinds of update differently:
+
+- **Version updates** obey `target-branch: dev` in `.github/dependabot.yml`.
+- **Security updates** are switched on in the repository interface and GitHub
+  always opens them against the **default** branch (`main`), ignoring
+  `target-branch`. `.github/workflows/dependabot-para-dev.yml` takes each open
+  Dependabot PR against `main` and does one of two things, decided by a tested
+  pure function
+  ([`scripts/ci/dependabot-para-dev.ts`](https://github.com/daneiel/brabo/blob/dev/scripts/ci/dependabot-para-dev.ts)):
+  - **close** it with the justification, when `dev`'s lockfile already
+    resolves every dependency of the PR only at versions `>=` the threshold;
+  - **retarget** it to `dev` in every other case — a version below the
+    threshold, a package missing from the lockfile, a version that doesn't
+    compare, a body it can't read.
+
+The **threshold** is the first *patched* version of the open alerts for that
+package in that lockfile, and only without an alert is it the PR's target
+version. The difference was measured on PR #553: it bumped `@vitest/mocker`
+to `5.0.0` while `dev` resolved `4.1.11`, which is exactly the alert's first
+patched version — Dependabot proposes the **newest** version, not the smallest
+one that fixes. If the alerts can't be read, the comparison falls back to the
+target version, which is stricter: it can only retarget more, never close
+more. **In doubt, the PR is retargeted, never closed.**
+
+The workflow runs on **push to `dev`**, and that trigger is the one that
+matters. `pull_request_target` and `schedule` only see workflows on the
+default branch, and `pull_request` runs the workflow from the merge of a head
+Dependabot created from `main` with `main` — none of them sees a file that
+exists only on `dev`, and `main` only advances through the ladder (the same
+trap measured in `pr-police.yml`). A push to `dev` runs `dev`'s copy, so every
+merge there sweeps the open Dependabot PRs against `main`. `workflow_dispatch`
+avoids waiting for the next merge; `pull_request_target` becomes effective,
+and immediate, once the file reaches `main`.
+
+**Declared:** after a retarget, `dev`'s required checks do **not** run on
+their own — events created by `GITHUB_TOKEN` don't trigger workflows, and
+Dependabot doesn't accept commands from that bot. Someone with write access
+comments `@dependabot rebase`; the workflow's comment says so on the PR.
+
 ## Who approves
 
 The approval requirement has **two modes**, chosen by the repository
