@@ -1200,6 +1200,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **instalador**: o `sh -c "$(curl … install.sh)"` do runbook **passa a subir a
+  instalação numa pasta vazia**
+  ([RN-570](docs/business-rules.md#rn-570), [ADR 0160](docs/adr/0160-o-compose-do-instalador-viaja-assinado.md)).
+
+  Até aqui o instalador publicado subia a pilha com um compose que não trazia —
+  caminho relativo, fora da Release e do manifesto — e morria em *"no such file
+  or directory"* depois de já ter gravado o `.env`. O compose de instalação e os
+  três arquivos que a instalação usa por caminho relativo passam a ser assets da
+  Release (`brabo-install-*`), no MESMO `checksums.txt` assinado que cobre o
+  binário do runner, e o instalador os baixa e confere logo depois de verificar
+  a si mesmo, **antes** de perguntar ou gravar qualquer coisa; asset ausente,
+  não coberto pelo manifesto ou com hash divergente é recusa nomeada com a
+  máquina intocada. Um `docker/` que já esteja na pasta é substituído pela cópia
+  verificada, nunca lido no lugar dela. Vale a partir da próxima tag final: as
+  Releases já publicadas não ganham os assets e continuam exigindo rodar o
+  instalador de dentro de um checkout na tag.
+
 - **web**: QA, SecOps e os membros de área (`qa-automacao`, …) **deixam de
   sumir** do painel do time numa sessão de execução longa
   ([RN-568](docs/business-rules.md#rn-568)).

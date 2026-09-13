@@ -13,7 +13,9 @@
 # de consentimento do `pnpm bootstrap`, que sem TTY relata em vez de consentir).
 #
 # O QUE ELE FAZ, em ordem: verifica a própria origem contra o manifesto
-# assinado da Release, resolve as imagens, detecta o que já existe na máquina,
+# assinado da Release, baixa e verifica contra o MESMO manifesto os arquivos que
+# sobem a instalação (o compose e o que ele monta), resolve as imagens, detecta
+# o que já existe na máquina,
 # migra (com backup PROVADO) se houver instalação anterior, sobe o compose,
 # instala o agente local e FECHA a instalação — cria a primeira conta, registra
 # a chave de dispositivo desta máquina e sobe o agente como serviço. Cada passo
@@ -77,7 +79,21 @@ EMISSOR_OIDC='https://token.actions.githubusercontent.com'
 # schema 3 é estado normal (migração, ou o passo de conta recusado), e nada
 # deriva comportamento dela.
 MARCADOR_SCHEMA=3
-COMPOSE_DE_INSTALACAO='docker/docker-compose.install.yml'
+
+# Onde a Release desta instalação publica o que ele baixa. As descargas que já
+# existiam escrevem a URL inteira; os arquivos da instalação (ADR 0160) passam
+# por esta, porque são quatro no mesmo laço.
+URL_DA_RELEASE="https://github.com/${REPO}/releases/latest/download"
+
+# Os caminhos ABSOLUTOS das cópias verificadas, preenchidos por
+# `materializar_os_arquivos_da_instalacao` — e VAZIOS até lá, de propósito. Até
+# o ADR 0160 este era a constante 'docker/docker-compose.install.yml', relativa
+# ao diretório de onde o script rodava e apontando para um arquivo que nada
+# trazia: numa pasta vazia a subida morria DEPOIS de o `.env` já estar gravado.
+# Vazio, um uso antes da hora falha no `docker compose -f ''` em vez de ler em
+# silêncio um arquivo que ninguém verificou.
+COMPOSE_DE_INSTALACAO=''
+PROVA_DE_RESTAURACAO=''
 
 # O cabeçalho das rotas internas da api — o mesmo `CABECALHO_SERVICE_TOKEN` de
 # `apps/api/src/interfaces/http/auth/engine-service.guard.ts`. É por ele, e só
@@ -303,6 +319,8 @@ imprimir_estado() {
 # espelho nunca apaga; o instalador tampouco).
 imprimir_plano() {
   printf 'verificar-origem\tfaz\to checksums.txt assinado da Release, e o hash deste próprio arquivo nele\n'
+  printf 'verificar-arquivos-da-instalacao\tfaz\to compose e o que ele monta, baixados da Release e conferidos no mesmo manifesto ANTES de qualquer pergunta\n'
+  printf 'usar-arquivo-nao-verificado\tnunca\tum docker/ que já esteja na pasta é substituído pela cópia verificada, nunca lido no lugar dela\n'
   printf 'detectar\tfaz\tmarcador quando existe; sinais quando não, nomeando o que achou\n'
   printf 'comparar-versao\tfaz\ta do marcador contra a do manifesto, ANTES de perguntar o que quer que seja\n'
   printf 'atualizar\tpergunta\tversão maior: default SIM, e a instalação atual é recriada do zero\n'
@@ -313,7 +331,7 @@ imprimir_plano() {
   printf 'gravar-marcador\tfaz\t%s\n' "$(caminho_do_marcador)"
   printf 'escolher-fonte\tfaz\t--source=ghcr (digest verificado) ou --source=local (bake, árvore limpa em tag)\n'
   printf 'gerar-segredos\tfaz\tos cinco de RN-114 mais NEO4J_PASSWORD, no .env com modo 600\n'
-  printf 'subir-compose\tfaz\t%s, com --wait; as migrações vêm no encadeamento\n' "$COMPOSE_DE_INSTALACAO"
+  printf 'subir-compose\tfaz\tdocker/docker-compose.install.yml (a cópia verificada, sob a pasta de onde o script roda), com --wait; as migrações vêm no encadeamento\n'
   printf 'conferir-saude\tfaz\t/health da api e do engine, antes de dizer que instalou\n'
   printf 'consentir-base\tfaz\tUMA base para os dois lados: .env do servidor e runner.json do agente\n'
   printf 'instalar-runner\tfaz\tbinário verificado contra o manifesto assinado, instalado com bit de execução\n'
@@ -391,6 +409,115 @@ verificar_a_si_mesmo() {
     recusar "o hash deste arquivo não está no manifesto assinado. Ou ele foi alterado, ou não é o instalador desta Release."
   fi
   ok 'este arquivo é o que a Release publicou'
+}
+
+# --------------------------------------------------------------------------
+# Os arquivos que sobem a instalação — assets da Release, verificados (RN-570)
+# --------------------------------------------------------------------------
+
+# O defeito que isto fecha, medido pela AT-008 (RN-549): o script subia a pilha
+# com um compose que NÃO trazia. O caminho era relativo ao diretório de onde ele
+# rodava, o arquivo não era asset da Release, não entrava no manifesto e não era
+# baixado em lugar nenhum — e o compose ainda bind-montava mais dois. Numa pasta
+# vazia, a subida morria em "no such file or directory" DEPOIS de o `.env` com
+# os segredos estar gravado.
+#
+# A saída decidida (ADR 0160) foi publicá-los como assets e pô-los no MESMO
+# `checksums.txt` assinado que já cobre este script e o binário do runner. A
+# alternativa — clonar o repositório na tag — foi recusada: trocaria a cadeia
+# de assinatura por confiança no transporte do `git`, e acrescentaria uma
+# dependência que a máquina limpa pode não ter.
+#
+# asset da Release -> caminho sob a pasta da instalação. A MESMA tabela de
+# `scripts/ci/assets-do-instalador.ts`, que é quem os publica; o spec daquele
+# arquivo lê este `case` e reprova se as duas divergirem. `case` e não array
+# associativo pelo motivo de `sha_do_cosign`: o bash 3.2 do macOS.
+ASSETS_DO_INSTALADOR='brabo-install-compose.yml brabo-install-postgres-init.sql brabo-install-ollama-pull-models.sh brabo-install-backup-test-restore.sh'
+
+destino_do_asset_do_instalador() {
+  case "$1" in
+    brabo-install-compose.yml)            echo 'docker/docker-compose.install.yml' ;;
+    brabo-install-postgres-init.sql)      echo 'docker/postgres/init.sql' ;;
+    brabo-install-ollama-pull-models.sh)  echo 'docker/ollama/pull-models.sh' ;;
+    brabo-install-backup-test-restore.sh) echo 'docker/backup/test-restore-compose.sh' ;;
+    *) return 1 ;;
+  esac
+}
+
+# A pasta TEMPORÁRIA onde as cópias verificadas esperam para ser usadas.
+# Preenchida só quando os quatro passaram.
+ARQUIVOS_VERIFICADOS=''
+
+# Baixa cada asset e confere o sha256 contra o `checksums.txt` que
+# `verificar_a_si_mesmo` JÁ verificou — o mesmo arquivo, nunca um segundo
+# download, pelo motivo que aquela função escreve. Roda ANTES de qualquer
+# pergunta e de qualquer gravação: a falha que isto substitui aparecia depois do
+# `.env`, e uma recusa aqui deixa a máquina exatamente como estava.
+#
+# As três recusas são NOMEADAS e distintas, porque pedem ações diferentes: o
+# asset não publicado (a Release é anterior ao ADR 0160, ou saiu pela metade), o
+# manifesto que não o cobre, e o hash que não bate (que é incidente). Nenhuma
+# delas cai num arquivo do diretório atual: não há caminho de volta para o
+# relativo, e é isso que o spec do E2E cobra.
+baixar_e_verificar_os_arquivos_da_instalacao() {
+  local url="$1" tmp="$2" pasta asset esperado obtido
+  pasta="${tmp}/arquivos-da-instalacao"
+  mkdir -p "$pasta"
+
+  for asset in $ASSETS_DO_INSTALADOR; do
+    if ! curl -fsSL -o "${pasta}/${asset}" "${url}/${asset}"; then
+      recusar "a Release não publica ${asset}, e sem ele a instalação não sobe. Nada foi gravado — e este script não usa, no lugar dele, um arquivo que já esteja nesta pasta."
+    fi
+
+    # `awk` com igualdade EXATA de campo, e não `grep`: o nome tem pontos, que
+    # num padrão casam qualquer caractere. O `*` é o modo binário do
+    # `sha256sum`, que a esteira não usa mas um manifesto válido pode ter.
+    esperado="$(awk -v nome="$asset" '$2 == nome || $2 == "*" nome { print tolower($1); exit }' "${tmp}/checksums.txt")"
+    [ -n "$esperado" ] \
+      || recusar "o manifesto assinado não cobre ${asset} — recusa, não aviso. Nada foi gravado."
+    obtido="$(sha256sum "${pasta}/${asset}" | cut -d' ' -f1 | tr '[:upper:]' '[:lower:]')"
+    [ "$esperado" = "$obtido" ] \
+      || recusar "${asset} NÃO bate com o manifesto assinado. Nada foi gravado. Isso não é um aviso: pare e investigue."
+  done
+
+  ARQUIVOS_VERIFICADOS="$pasta"
+  ok 'arquivos da instalação verificados contra o manifesto assinado'
+}
+
+# Põe as cópias verificadas sob a pasta da instalação — a mesma do `.env` — e
+# preenche os dois caminhos ABSOLUTOS que o resto do script usa. Chamada no
+# primeiro instante em que um deles é preciso (a migração, ou a subida), nunca
+# antes: o caminho sem TTY promete que nada foi gravado.
+#
+# O que já estiver no destino é SUBSTITUÍDO, nunca lido: numa atualização é o
+# compose da versão anterior, e subir a nova com ele seria o `up` sobre outra
+# versão que a migração existe para evitar. `rm` antes de copiar, para que um
+# symlink no destino não leve a escrita para outro lugar.
+ARQUIVOS_MATERIALIZADOS_EM=''
+materializar_os_arquivos_da_instalacao() {
+  local raiz="$1" asset relativo destino
+  if [ "$ARQUIVOS_MATERIALIZADOS_EM" = "$raiz" ]; then return 0; fi
+  [ -n "$ARQUIVOS_VERIFICADOS" ] \
+    || recusar 'os arquivos da instalação não foram verificados — este script não sobe compose que não conferiu.'
+
+  for asset in $ASSETS_DO_INSTALADOR; do
+    relativo="$(destino_do_asset_do_instalador "$asset")" \
+      || recusar "sem destino conhecido para ${asset}."
+    destino="${raiz}/${relativo}"
+    mkdir -p "$(dirname "$destino")" || recusar "não consegui criar $(dirname "$destino")."
+    if [ -f "$destino" ] && [ ! -L "$destino" ] \
+      && [ "$(sha256sum "$destino" | cut -d' ' -f1)" != "$(sha256sum "${ARQUIVOS_VERIFICADOS}/${asset}" | cut -d' ' -f1)" ]; then
+      detalhe "  ${relativo}: o que estava aqui é substituído pela cópia verificada"
+    fi
+    rm -f "$destino"
+    cp "${ARQUIVOS_VERIFICADOS}/${asset}" "$destino" || recusar "não consegui gravar ${destino}."
+    chmod 0644 "$destino"
+  done
+
+  COMPOSE_DE_INSTALACAO="${raiz}/$(destino_do_asset_do_instalador brabo-install-compose.yml)"
+  PROVA_DE_RESTAURACAO="${raiz}/$(destino_do_asset_do_instalador brabo-install-backup-test-restore.sh)"
+  ARQUIVOS_MATERIALIZADOS_EM="$raiz"
+  ok "arquivos da instalação gravados em ${raiz}/docker (as cópias verificadas)"
 }
 
 # --------------------------------------------------------------------------
@@ -1014,6 +1141,10 @@ migrar_instalacao_anterior() {
   dizer "${C_BOLD}Migrando a instalação existente${C_RESET}"
   mkdir -p "$destino" || recusar "não consegui criar a pasta de backup: ${destino}"
 
+  # O backup e a prova sobem pelo compose DESTA versão, verificado — nunca pelo
+  # que a instalação anterior deixou na pasta.
+  materializar_os_arquivos_da_instalacao "$PWD"
+
   # 1. backup
   dizer 'Backup do Postgres e dos repositórios git locais…'
   BACKUP_DIR=/backups docker compose -f "$COMPOSE_DE_INSTALACAO" --env-file "$PWD/.env" \
@@ -1022,8 +1153,8 @@ migrar_instalacao_anterior() {
 
   # 2. provar que restaura, ANTES de apagar
   dizer 'Provando que o backup restaura…'
-  BRABO_COMPOSE_FILE="${PWD}/${COMPOSE_DE_INSTALACAO}" BACKUP_DIR=/backups \
-    bash docker/backup/test-restore-compose.sh \
+  BRABO_COMPOSE_FILE="$COMPOSE_DE_INSTALACAO" BACKUP_DIR=/backups \
+    bash "$PROVA_DE_RESTAURACAO" \
     || recusar "o backup NÃO restaurou. Nada foi apagado. Um backup que não restaura não autoriza deleção nenhuma."
   ok 'backup provado'
 
@@ -1103,6 +1234,11 @@ main() {
   esac
 
   verificar_a_si_mesmo "$plataforma"
+
+  # Logo depois da própria origem, e ANTES de tudo o que pergunta ou grava
+  # (RN-570): é o que faz a falta de um arquivo da instalação ser uma recusa
+  # numa máquina intocada, e não a morte da subida com o `.env` já gravado.
+  baixar_e_verificar_os_arquivos_da_instalacao "$URL_DA_RELEASE" "$TMP_VERIFICACAO"
 
   # As imagens são resolvidas ANTES da detecção, e a ordem é a decisão: saber
   # O QUE se vai instalar é pré-requisito para perguntar se apaga o que existe.
@@ -1268,6 +1404,7 @@ ENV
   # `service_completed_successfully` — as migrações rodam na ordem, e a subida
   # espera por elas. Não há passo de migrate separado, e não deve haver: dois
   # lugares mandando migrar é a segunda fonte da mesma verdade.
+  materializar_os_arquivos_da_instalacao "$PWD"
   docker compose -f "$COMPOSE_DE_INSTALACAO" --env-file "$env_arquivo" up -d --wait \
     || recusar 'a subida falhou. Nada foi desfeito: `docker compose -f '"$COMPOSE_DE_INSTALACAO"' logs` mostra o quê.'
 
@@ -1312,7 +1449,7 @@ ENV
   "caminhos": {
     "env": "${env_arquivo}",
     "baseDeProjetos": "${BASE_DE_PROJETOS}",
-    "compose": "${PWD}/${COMPOSE_DE_INSTALACAO}"
+    "compose": "${COMPOSE_DE_INSTALACAO}"
   }
 }
 JSON

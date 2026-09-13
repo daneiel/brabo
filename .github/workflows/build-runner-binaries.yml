@@ -275,6 +275,11 @@ jobs:
   # pela metade: quem verifica quatro e esquece o quinto não tem como saber
   # que esqueceu. Um manifesto assinado cobre o conjunto com uma verificação
   # só, e é o formato que qualquer consumidor sabe ler.
+  #
+  # O conjunto não é só de binários: o `install.sh` desta tag e, desde o ADR
+  # 0160, os arquivos que ele baixa para subir a instalação (o compose e o que
+  # ele monta, nomeados em `scripts/ci/assets-do-instalador.ts`) entram no MESMO
+  # manifesto — uma cadeia, não duas.
   checksums:
     name: checksums.txt assinado
     # SEM `needs: build`, e a ausência É a correção — não um esquecimento.
@@ -353,6 +358,15 @@ jobs:
 
       - name: Instalar o cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
+
+      # Node só para `scripts/ci/assets-do-instalador.ts` (ADR 0160), que diz
+      # QUAIS arquivos do checkout viram asset e com que nome. O `node` que o
+      # `ubuntu-latest` traz não executa `.ts` por type stripping; a versão é a
+      # MESMA do job `build`, e nada aqui roda `pnpm install` — o script não
+      # tem dependência de pacote de propósito.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       # A espera que o `needs: build` fazia, agora com TETO e olhando o que
       # importa: os ASSETS, não os jobs.
@@ -443,6 +457,18 @@ jobs:
           # que está sendo assinado aqui.
           cp "${GITHUB_WORKSPACE}/install.sh" .
 
+          # Os arquivos que o `install.sh` baixa para SUBIR a instalação
+          # (ADR 0160, RN-570): o compose e o que ele monta. Entram no MESMO
+          # manifesto, e é isso que dá a eles a mesma cadeia do binário — o
+          # instalador os confere contra este arquivo antes de gravar qualquer
+          # coisa. Até aqui ele usava um caminho relativo que nada trazia, e a
+          # instalação morria depois do `.env`. Vêm do checkout DESTA tag, pelo
+          # motivo do `install.sh` acima; a tabela nome-do-asset -> caminho mora
+          # no script, e o `stdout` dele é um nome por linha.
+          ASSETS_DO_INSTALADOR="$(node "${GITHUB_WORKSPACE}/scripts/ci/assets-do-instalador.ts" preparar "${GITHUB_WORKSPACE}" .)"
+          [ -n "$ASSETS_DO_INSTALADOR" ] \
+            || { echo "::error::nenhum asset do instalador preparado — sem eles o install.sh desta tag recusa em toda máquina."; exit 1; }
+
           presentes=''
           faltando=''
           for alvo in $ALVOS_ESPERADOS; do
@@ -461,7 +487,11 @@ jobs:
           # O manifesto DIZ o que cobre. Um checksums que lista quatro e cala
           # sobre o quinto é pior que nenhum: quem verifica os quatro conclui
           # que verificou a release.
-          sha256sum brabo-runner-* install.sh > checksums.txt
+          # `$ASSETS_DO_INSTALADOR` sem aspas de propósito: é uma lista, um nome
+          # por linha, e nenhum nome tem espaço (o script recusa a tabela que
+          # tiver).
+          # shellcheck disable=SC2086
+          sha256sum brabo-runner-* install.sh $ASSETS_DO_INSTALADOR > checksums.txt
           echo "cobre:${presentes}" >&2
           if [ -n "${faltando# }" ]; then
             echo "::warning::o manifesto NÃO cobre:${faltando} — esses alvos não têm binário anexado a $TAG."
@@ -482,9 +512,17 @@ jobs:
             --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
             checksums.txt
 
+          # E cada linha do manifesto contra o arquivo que ele descreve, no
+          # mesmo run. A assinatura prova quem escreveu o manifesto; isto prova
+          # que o que vai ser anexado é o que ele diz — binários, `install.sh`
+          # e os assets do instalador. `--strict` reprova linha malformada em
+          # vez de pulá-la.
+          sha256sum -c --strict checksums.txt
+
           # `--clobber`: este job pode reexecutar por dispatch depois de um
           # alvo ser reanexado, e aí o manifesto TEM de ser substituído — ao
           # contrário do binário, cujo passo é idempotente porque o mesmo
           # arquivo não muda.
-          gh release upload "$TAG" checksums.txt checksums.txt.bundle install.sh --clobber
-          echo "anexados: checksums.txt, checksums.txt.bundle e install.sh -> $TAG"
+          # shellcheck disable=SC2086
+          gh release upload "$TAG" checksums.txt checksums.txt.bundle install.sh $ASSETS_DO_INSTALADOR --clobber
+          echo "anexados: checksums.txt, checksums.txt.bundle, install.sh e os assets do instalador -> $TAG"

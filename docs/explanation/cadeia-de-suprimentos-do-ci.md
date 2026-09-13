@@ -256,6 +256,19 @@ Declared, not fixed:
   and the failure would otherwise surface on the machine of whoever
   installs — the worst place to find it.
 
+  Since [ADR 0160](../adr/0160-o-compose-do-instalador-viaja-assinado.md)
+  that manifest covers more than binaries: `install.sh` and the four files it
+  needs to bring an installation up — the install compose and the three files
+  it uses by relative path, published as `brabo-install-*` assets from the
+  tag's checkout — are lines in the **same** `checksums.txt`, and the job runs
+  `sha256sum -c --strict` on it before attaching anything. The installer
+  checks each of the four against that manifest before it asks or writes
+  anything ([RN-570](../business-rules.md#rn-570)). Until then the compose
+  was the one thing the installer used that nothing verified — nor even
+  downloaded. The list lives in `scripts/ci/assets-do-instalador.ts`, and its
+  spec fails when the installer's own copy of it diverges or when the compose
+  gains a relative bind-mount that is not on it.
+
   What this does **not** cover, and is a different item: **code-signing
   the runner binaries** for the OS (macOS notarization, Windows
   Authenticode), which needs a paid signing identity and stays in

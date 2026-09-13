@@ -2858,22 +2858,41 @@ volumes only go with confirmation, listed one by one first.
 
 It brings the stack up from **its own compose**
 (`docker/docker-compose.install.yml`), which takes the images from variables
-and builds nothing.
+and builds nothing — and it **downloads that compose from the Release**
+([RN-570](business-rules.md#rn-570),
+[ADR 0160](adr/0160-o-compose-do-instalador-viaja-assinado.md)). Four files
+travel with the installer as `brabo-install-*` assets, in the **same** signed
+`checksums.txt` that covers the runner binary: the compose, the
+`postgres/init.sql` and `ollama/pull-models.sh` it bind-mounts, and the
+`backup/test-restore-compose.sh` the migration runs. Right after verifying
+itself — before any question, before writing anything — the script downloads
+the four and checks each hash against that manifest. Three named refusals, all
+on an untouched machine:
 
-> **Known gap, measured in FASE 30 session 8
-> ([RN-549](business-rules.md#rn-549)): that compose file is not something the
-> installer fetches.** The path is relative to the directory the script runs
-> from, the file is **not** a Release asset, it is **not** in the signed
-> `checksums.txt`, and `install.sh` downloads it nowhere — its only downloads
-> are `cosign`, the image manifest, its own hash and the runner binary. The
-> compose additionally bind-mounts `./postgres/init.sql`, so it is **three**
-> files, not one. Running the one-liner above in an empty directory therefore
-> fails with *"no such file or directory"* **after** the script has already
-> verified its signature, asked for the base and written `.env`. Until this is
-> decided (publish the compose as a signed asset, or have the installer clone),
-> run the installer from a **checkout of the repository at the tag you are
-> installing** — that is what puts `docker/` next to it. The installer E2E does
-> the same thing by hand, in a step that says it is a finding.
+| message starts with | means | do |
+|---|---|---|
+| *"a Release não publica …"* | the Release predates ADR 0160, or its publishing step failed half-way | install from a checkout of the repository at that tag, or wait for the next release |
+| *"o manifesto assinado não cobre …"* | the manifest exists but has no line for that asset | same as above — the Release is incomplete |
+| *"… NÃO bate com o manifesto assinado"* | the downloaded file is not what the signed manifest describes | **stop and treat it as an incident**; do not retry around it |
+
+The verified copies are written under `docker/` in the folder you ran the
+script from — the same folder as `.env` — only when they are first needed.
+Whatever was already there (the previous version's compose, on an upgrade) is
+**replaced, never read**, and the script names what it replaced; from inside a
+git checkout at another commit that leaves `git status` dirty.
+
+> **Releases published before ADR 0160 do not carry these assets.** Their
+> installer still uses the relative path, and the one-liner above fails in an
+> empty directory with *"no such file or directory"* after writing `.env` (the
+> gap [RN-549](business-rules.md#rn-549) measured). For those tags, run the
+> installer from a checkout of the repository at the tag you are installing.
+
+> **Measured and not fixed:** on the *migration* path, the restore proof
+> (`test-restore-compose.sh`) calls Compose without `--env-file`, and Compose
+> looks for `.env` next to the compose file, not in the directory you run from.
+> With the compose under `docker/` and `.env` one level up, the proof tends to
+> fail — which is the safe outcome ([RN-530](business-rules.md#rn-530): nothing
+> is deleted), but a compose-to-compose migration does not complete.
 
 Two sources:
 

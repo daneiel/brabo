@@ -92,6 +92,10 @@ const OUTRAS_FRASES_ASSERIDAS: readonly string[] = [
   'assinatura do manifesto confere',
   'este arquivo é o que a Release publicou',
   'Sem terminal interativo',
+  // RN-570: os arquivos da instalação vêm da Release, conferidos, e é o próprio
+  // instalador que os grava.
+  'arquivos da instalação verificados contra o manifesto assinado',
+  'arquivos da instalação gravados em ',
   // A prova NEGATIVA da RN-547: nenhuma pendência é o que afirma que os cinco
   // elos fecharam, inclusive os que o workflow não sabe nomear.
   'O que ficou pendente',
@@ -240,23 +244,63 @@ describe('o E2E prova o agente, e diz o que ele NÃO prova', () => {
     expect(primeiro).not.toContain('--arg senha');
   });
 
-  it('declara que traz à mão os arquivos que o instalador não baixa', () => {
-    // O achado da sessão 8: `docker/docker-compose.install.yml` não é asset da
-    // Release, não entra no `checksums.txt` assinado, e o `install.sh` não o
-    // baixa. Enquanto for assim, o passo tem de existir E dizer por quê — um
-    // `curl` mudo aqui viraria, em pouco tempo, "sempre foi assim".
-    const achado = passo('achado declarado');
-    expect(comandos(achado)).toContain('docker/docker-compose.install.yml');
-    expect(comandos(achado)).toContain('docker/postgres/init.sql');
+  it('não traz mais à mão os arquivos da instalação — e afirma que o instalador os trouxe', () => {
+    // O achado da sessão 8 (RN-549): o compose de instalação e os dois arquivos
+    // que ele monta não viajavam com o `install.sh`, e o workflow os trazia da
+    // tag num passo "achado declarado". Este teste cobrava as DUAS metades —
+    // o passo existir E o instalador não baixar — para o contorno não virar o
+    // normal. Desde a RN-570 (ADR 0160) o instalador os baixa e confere contra
+    // o manifesto assinado, e a cobrança se INVERTE: o contorno não pode voltar.
+    const nomes = passos().map((p) => p.name);
+    expect(nomes.some((n) => n.includes('achado declarado'))).toBe(false);
+    for (const p of passos()) {
+      expect(comandos(p), p.name).not.toContain('raw.githubusercontent.com');
+    }
 
-    // E a outra metade do achado, medida: o instalador USA o compose e nunca o
-    // BAIXA. No dia em que ele baixar, este teste reprova — e o certo então é
-    // apagar o passo de cima, não relaxar aqui.
-    expect(instalador()).toContain("COMPOSE_DE_INSTALACAO='docker/docker-compose.install.yml'");
-    const descargas = instalador()
-      .split('\n')
-      .filter((linha) => /curl -fsSL -o/.test(linha))
-      .join('\n');
-    expect(descargas).not.toContain('docker-compose.install.yml');
+    // A pasta começa SEM `docker/` — o job não tem checkout —, e o passo que
+    // afirma isso vem antes de qualquer execução do instalador.
+    const limpa = comandos(passo('Nenhum arquivo da instalação trazido à mão'));
+    expect(limpa).toContain('test ! -e docker');
+    const ordem = passos().map((p) => p.name);
+    expect(ordem.indexOf('Nenhum arquivo da instalação trazido à mão')).toBeLessThan(
+      ordem.findIndex((n) => n.includes('Sem TTY')),
+    );
+
+    // Sem TTY, nas duas plataformas: verificou, e não gravou nada na pasta.
+    const semTty = comandos(passo('Sem TTY'));
+    expect(semTty).toContain('arquivos da instalação verificados contra o manifesto assinado');
+    expect(semTty).toContain('test ! -e docker');
+
+    // Com TTY: gravou, e o que gravou é byte a byte o que a Release assinou.
+    const completa = comandos(passo('Instalação completa'));
+    expect(completa).toContain('arquivos da instalação gravados em ');
+    const conferencia = comandos(passo('são os que a Release assinou'));
+    expect(conferencia).toContain('--pattern checksums.txt');
+    expect(conferencia).toContain('sha256sum -c --strict');
+    for (const asset of [
+      'brabo-install-compose.yml',
+      'brabo-install-postgres-init.sql',
+      'brabo-install-ollama-pull-models.sh',
+      'brabo-install-backup-test-restore.sh',
+    ]) {
+      expect(conferencia).toContain(asset);
+      // E do outro lado do contrato: o instalador baixa este nome.
+      expect(instalador()).toContain(asset);
+    }
+
+    // O instalador não guarda mais caminho relativo de compose.
+    expect(instalador()).not.toContain("COMPOSE_DE_INSTALACAO='docker/docker-compose.install.yml'");
+  });
+
+  it('o token que baixa o manifesto não está no ambiente do instalador', () => {
+    // A conferência precisa de `GH_TOKEN`; o instalador não. Por isso ela é um
+    // passo à parte, e o passo que roda o instalador não declara `env:`.
+    const doc = parse(workflow()) as {
+      jobs: Record<string, { steps: ReadonlyArray<{ name?: string; env?: Record<string, string> }> }>;
+    };
+    const instalacao = Object.values(doc.jobs)
+      .flatMap((j) => j.steps)
+      .find((p) => p.name?.includes('Instalação completa'));
+    expect(instalacao?.env).toBeUndefined();
   });
 });
